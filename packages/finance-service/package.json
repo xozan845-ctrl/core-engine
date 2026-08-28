@@ -1,0 +1,44 @@
+{
+  "name": "@core/finance-service",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Finanzas y contabilidad: proyecciones financieras (cap. 8), contabilidad por partida doble y regimen fiscal multijurisdiccion (Nicaragua inicial, cap. 4.4)",
+  "main": "dist/main.js",
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "start": "node dist/main.js",
+    "test": "jest --runInBand"
+  },
+  "dependencies": {
+    "@core/shared": "file:../shared",
+    "@nestjs/common": "^11.0.0",
+    "@nestjs/core": "^11.0.0",
+    "@nestjs/platform-express": "^11.0.0",
+    "class-transformer": "^0.5.1",
+    "class-validator": "^0.14.1",
+    "node-cron": "^3.0.3",
+    "reflect-metadata": "^0.2.2",
+    "rxjs": "^7.8.1"
+  },
+  "devDependencies": {
+    "@types/express": "^5.0.0",
+    "@types/jest": "^29.5.14",
+    "@types/node": "^22.10.5",
+    "@types/node-cron": "^3.0.11",
+    "jest": "^29.7.0",
+    "ts-jest": "^29.2.5",
+    "typescript": "^5.7.2"
+  },
+  "jest": {
+    "moduleFileExtensions": ["js", "json", "ts"],
+    "rootDir": "src",
+    "testRegex": ".*\\.spec\\.ts$",
+    "transform": {
+      "^.+\\.(t|j)s$": "ts-jest"
+    },
+    "moduleNameMapper": {
+      "^@core/shared$": "<rootDir>/../../shared/src/index.ts"
+    },
+    "testEnvironment": "node"
+  }
+}

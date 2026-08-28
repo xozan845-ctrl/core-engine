@@ -1,0 +1,45 @@
+{
+  "name": "@bodegahub/qa-harness",
+  "version": "1.0.0",
+  "description": "QA Harness agresivo para BodegaHub Core Engine - Testing automatizado con reporte ultra detallado",
+  "type": "module",
+  "main": "src/index.ts",
+  "scripts": {
+    "start": "node src/index.ts",
+    "test": "node src/index.ts --suites 01-auth,02-role-access --format html",
+    "test:full": "node src/index.ts --format all",
+    "test:security": "node src/index.ts --suites 01-auth,02-role-access,11-fuzzing",
+    "test:business": "node src/index.ts --suites 03-catalog,04-stores,05-orders,06-cart,07-logistics,08-commissions,09-finanzas",
+    "test:load": "node src/index.ts --suites 13-load --load agresivo --concurrency 100",
+    "test:concurrency": "node src/index.ts --suites 12-concurrency",
+    "test:static": "node src/index.ts --suites 15-static",
+    "test:queue": "node src/index.ts --suites 14-queue",
+    "report:html": "node src/index.ts --format html --output ./reports",
+    "report:md": "node src/index.ts --format md --output ./reports",
+    "report:json": "node src/index.ts --format json --output ./reports",
+    "clean": "rm -rf reports"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "keywords": [
+    "qa",
+    "testing",
+    "bodegahub",
+    "core-engine",
+    "aggressive-testing",
+    "roost",
+    "automated-testing"
+  ],
+  "author": "BodegaHub Team",
+  "license": "MIT",
+  "dependencies": {
+    "pg": "^8.11.0",
+    "jsonwebtoken": "^9.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "@types/pg": "^8.10.0",
+    "@types/jsonwebtoken": "^9.0.0"
+  }
+}

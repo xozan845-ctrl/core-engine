@@ -1,0 +1,272 @@
+# Core Engine · BodegaHub
+# Entorno de desarrollo completo (doc 6.4): microservicios + Postgres
+# (supabase-compatible) + RabbitMQ (AD-02) + observabilidad (doc 5.3).
+
+x-servicio-base: &servicio-base
+  build:
+    context: .
+    dockerfile: Dockerfile
+  env_file:
+    - .env
+  depends_on:
+    postgres:
+      condition: service_healthy
+    rabbitmq:
+      condition: service_healthy
+  networks:
+    - bodegahub
+  restart: unless-stopped
+
+services:
+  # ── Datos y BaaS (AD-08: Supabase-compatible, SQL estandar en Docker) ──
+  postgres:
+    image: postgres:16-alpine
+    container_name: bodegahub-postgres
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-bodegahub}
+      POSTGRES_USER: ${POSTGRES_USER:-bodegahub}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD requerida en .env}
+    volumes:
+      - pg_data:/var/lib/postgresql/data
+      # Solo el esquema estandar entra en Docker local; 99_rls.sql (Supabase)
+      # vive en infra/db/supabase/ y se aplica manualmente en staging/prod.
+      - ./infra/db/init:/docker-entrypoint-initdb.d:ro
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-bodegahub} -d ${POSTGRES_DB:-bodegahub}"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+    networks:
+      - bodegahub
+
+  # ── Broker de mensajeria (AD-02: RabbitMQ con DLQ) ─────────────────────
+  rabbitmq:
+    image: rabbitmq:3.13-management-alpine
+    container_name: bodegahub-rabbitmq
+    # (barrido A07/A08): guest deshabilitado en loopback; credencial dedicada
+    # desde el .env (conf aplicado en el arranque)
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+      - ./infra/rabbitmq/rabbitmq.conf:/etc/rabbitmq/rabbitmq.conf:ro
+    ports:
+      - "15672:15672"
+    healthcheck:
+      test: ["CMD-SHELL", "rabbitmq-diagnostics -q ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+    networks:
+      - bodegahub
+
+  # ── Exportadores (doc 5.3: integracion con Prometheus) ──────────────────
+  rabbitmq-exporter:
+    image: kbudde/rabbitmq-exporter:1.0.0
+    container_name: bodegahub-rabbitmq-exporter
+    environment:
+      RABBIT_URL: "http://${RABBITMQ_USER:-bodegahub}:${RABBITMQ_PASSWORD:?RABBITMQ_PASSWORD requerida en .env}@rabbitmq:15672"
+      RABBIT_USER: "${RABBITMQ_USER:-bodegahub}"
+      RABBIT_PASSWORD: "${RABBITMQ_PASSWORD:?RABBITMQ_PASSWORD requerida en .env}"
+      RABBIT_EXPORTERS: "exchange,node,overview,queue"
+      RABBITMQ_EXPORTER_PORT: 9419
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+    networks:
+      - bodegahub
+
+  postgres-exporter:
+    image: quay.io/prometheuscommunity/postgres-exporter:v0.15.0
+    container_name: bodegahub-postgres-exporter
+    environment:
+      DATA_SOURCE_NAME: "postgresql://${POSTGRES_USER:-bodegahub}:${POSTGRES_PASSWORD:?POSTGRES_PASSWORD requerida en .env}@postgres:5432/${POSTGRES_DB:-bodegahub}?sslmode=disable"
+      PG_EXPORTER_EXTEND_QUERY_PATH: "/etc/postgres_exporter/queries.yaml"
+    command:
+      - "--config.file=/etc/postgres_exporter.yml"
+      - "--collector.stat_statements"
+    volumes:
+      - ./infra/prometheus/postgres_exporter.yml:/etc/postgres_exporter.yml:ro
+      - ./infra/prometheus/queries.yaml:/etc/postgres_exporter/queries.yaml:ro
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - bodegahub
+
+  node-exporter:
+    image: prom/node-exporter:v1.8.2
+    container_name: bodegahub-node-exporter
+    pid: host
+    volumes:
+      - /proc:/proc:ro
+      - /sys:/sys:ro
+      - /:/rootfs:ro
+    command:
+      - "--path.procfs=/proc"
+      - "--path.sysfs=/sys"
+      - "--collector.filesystem.mount-points-exclude=^/(sys|proc|dev|host)"
+      - "--path.rootfs=/rootfs"
+    networks:
+      - bodegahub
+
+  cadvisor:
+    image: gcr.io/cadvisor/cadvisor:v0.49.1
+    container_name: bodegahub-cadvisor
+    volumes:
+      - /:/rootfs:ro
+      - /var/run:/var/run:ro
+      - /sys:/sys:ro
+      - /var/lib/docker/:/var/lib/docker:ro
+    networks:
+      - bodegahub
+
+  # ── API Gateway (punto de entrada unico) ───────────────────────────────
+  gateway:
+    <<: *servicio-base
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        SERVICIO: api-gateway
+    container_name: bodegahub-gateway
+    environment:
+      SERVICIO: api-gateway
+      PORT: 8080
+      OUTBOX_TABLA: identity.outbox
+    ports:
+      - "8080:8080"
+    networks:
+      - bodegahub
+
+  # ── Microservicios por dominio (Tabla 7) ───────────────────────────────
+  identity-service:
+    <<: *servicio-base
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        SERVICIO: identity-service
+    environment:
+      SERVICIO: identity-service
+      PORT: 3001
+      OUTBOX_TABLA: identity.outbox
+
+  catalog-service:
+    <<: *servicio-base
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        SERVICIO: catalog-service
+    environment:
+      SERVICIO: catalog-service
+      PORT: 3002
+      OUTBOX_TABLA: catalog.outbox
+
+  stores-service:
+    <<: *servicio-base
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        SERVICIO: stores-service
+    environment:
+      SERVICIO: stores-service
+      PORT: 3003
+      OUTBOX_TABLA: stores.outbox
+
+  orders-service:
+    <<: *servicio-base
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        SERVICIO: orders-service
+    environment:
+      SERVICIO: orders-service
+      PORT: 3004
+      OUTBOX_TABLA: orders.outbox
+
+  logistics-service:
+    <<: *servicio-base
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        SERVICIO: logistics-service
+    environment:
+      SERVICIO: logistics-service
+      PORT: 3005
+      OUTBOX_TABLA: logistics.outbox
+
+  commissions-service:
+    <<: *servicio-base
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        SERVICIO: commissions-service
+    environment:
+      SERVICIO: commissions-service
+      PORT: 3006
+      OUTBOX_TABLA: commissions.outbox
+
+  finance-service:
+    <<: *servicio-base
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        SERVICIO: finance-service
+    environment:
+      SERVICIO: finance-service
+      PORT: 3007
+      OUTBOX_TABLA: finance.outbox
+      COMMISSION_RATE: 0.12
+
+  field-service:
+    <<: *servicio-base
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        SERVICIO: field-service
+    environment:
+      SERVICIO: field-service
+      PORT: 3008
+      OUTBOX_TABLA: field.outbox
+
+  # ── Observabilidad (doc 5.3: Prometheus + Grafana) ─────────────────────
+  prometheus:
+    image: prom/prometheus:v2.55.1
+    container_name: bodegahub-prometheus
+    volumes:
+      - ./infra/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./infra/prometheus/rules:/etc/prometheus/rules:ro
+    networks:
+      - bodegahub
+
+  grafana:
+    image: grafana/grafana:11.3.0
+    container_name: bodegahub-grafana
+    environment:
+      GF_SECURITY_ADMIN_USER: admin
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:?GRAFANA_ADMIN_PASSWORD requerida en .env}
+      GF_AUTH_ANONYMOUS_ENABLED: "false"
+    volumes:
+      - ./infra/grafana/provisioning:/etc/grafana/provisioning:ro
+    ports:
+      - "3000:3000"
+    depends_on:
+      - prometheus
+    networks:
+      - bodegahub
+
+volumes:
+  pg_data:
+  rabbitmq_data:
+
+networks:
+  bodegahub:
+    name: bodegahub

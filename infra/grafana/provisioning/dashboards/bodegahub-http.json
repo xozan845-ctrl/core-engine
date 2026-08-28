@@ -1,0 +1,165 @@
+{
+    "title":  "BodegaHub - HTTP Requests \u0026 Latency",
+    "uid":  "bodegahub-http",
+    "timezone":  "browser",
+    "refresh":  "10s",
+    "time":  {
+                 "from":  "now-15m",
+                 "to":  "now"
+             },
+    "panels":  [
+                   {
+                       "type":  "timeseries",
+                       "title":  "Peticiones/s por servicio",
+                       "gridPos":  {
+                                       "x":  0,
+                                       "y":  0,
+                                       "w":  12,
+                                       "h":  8
+                                   },
+                       "datasource":  "Prometheus",
+                       "targets":  [
+                                       {
+                                           "expr":  "sum by (servicio) (rate(http_peticiones_total[5m]))",
+                                           "legendFormat":  "{{servicio}}",
+                                           "refId":  "A"
+                                       }
+                                   ],
+                       "fieldConfig":  {
+                                           "defaults":  {
+                                                            "unit":  "reqps",
+                                                            "custom":  {
+                                                                           "lineWidth":  2
+                                                                       }
+                                                        }
+                                       }
+                   },
+                   {
+                       "type":  "timeseries",
+                       "title":  "Latencia p99 por servicio (ms)",
+                       "gridPos":  {
+                                       "x":  12,
+                                       "y":  0,
+                                       "w":  12,
+                                       "h":  8
+                                   },
+                       "datasource":  "Prometheus",
+                       "targets":  [
+                                       {
+                                           "expr":  "histogram_quantile(0.99, sum by (servicio, le) (rate(http_peticion_latencia_ms_bucket[5m])))",
+                                           "legendFormat":  "{{servicio}}",
+                                           "refId":  "A"
+                                       }
+                                   ],
+                       "fieldConfig":  {
+                                           "defaults":  {
+                                                            "unit":  "ms",
+                                                            "custom":  {
+                                                                           "lineWidth":  2
+                                                                       },
+                                                            "thresholds":  {
+                                                                               "mode":  "absolute",
+                                                                               "steps":  [
+                                                                                             {
+                                                                                                 "value":  null,
+                                                                                                 "color":  "green"
+                                                                                             },
+                                                                                             {
+                                                                                                 "value":  400,
+                                                                                                 "color":  "orange"
+                                                                                             },
+                                                                                             {
+                                                                                                 "value":  800,
+                                                                                                 "color":  "red"
+                                                                                             }
+                                                                                         ]
+                                                                           }
+                                                        }
+                                       }
+                   },
+                   {
+                       "type":  "timeseries",
+                       "title":  "Errores 5xx/s por servicio",
+                       "gridPos":  {
+                                       "x":  0,
+                                       "y":  8,
+                                       "w":  12,
+                                       "h":  8
+                                   },
+                       "datasource":  "Prometheus",
+                       "targets":  [
+                                       {
+                                           "expr":  "sum by (servicio) (rate(http_peticiones_total{status=~\"5..\"}[5m]))",
+                                           "legendFormat":  "{{servicio}}",
+                                           "refId":  "A"
+                                       }
+                                   ],
+                       "fieldConfig":  {
+                                           "defaults":  {
+                                                            "unit":  "reqps"
+                                                        }
+                                       }
+                   },
+                   {
+                       "type":  "stat",
+                       "title":  "Total peticiones (último min)",
+                       "gridPos":  {
+                                       "x":  12,
+                                       "y":  8,
+                                       "w":  6,
+                                       "h":  4
+                                   },
+                       "datasource":  "Prometheus",
+                       "targets":  [
+                                       {
+                                           "expr":  "sum(rate(http_peticiones_total[5m]))",
+                                           "refId":  "A"
+                                       }
+                                   ],
+                       "fieldConfig":  {
+                                           "defaults":  {
+                                                            "unit":  "reqps"
+                                                        }
+                                       }
+                   },
+                   {
+                       "type":  "stat",
+                       "title":  "Tasa error 5xx global",
+                       "gridPos":  {
+                                       "x":  18,
+                                       "y":  8,
+                                       "w":  6,
+                                       "h":  4
+                                   },
+                       "datasource":  "Prometheus",
+                       "targets":  [
+                                       {
+                                           "expr":  "sum(rate(http_peticiones_total{status=~\"5..\"}[5m])) / sum(rate(http_peticiones_total[5m])) * 100",
+                                           "refId":  "A"
+                                       }
+                                   ],
+                       "fieldConfig":  {
+                                           "defaults":  {
+                                                            "unit":  "percent",
+                                                            "thresholds":  {
+                                                                               "mode":  "absolute",
+                                                                               "steps":  [
+                                                                                             {
+                                                                                                 "value":  null,
+                                                                                                 "color":  "green"
+                                                                                             },
+                                                                                             {
+                                                                                                 "value":  1,
+                                                                                                 "color":  "orange"
+                                                                                             },
+                                                                                             {
+                                                                                                 "value":  5,
+                                                                                                 "color":  "red"
+                                                                                             }
+                                                                                         ]
+                                                                           }
+                                                        }
+                                       }
+                   }
+               ]
+}

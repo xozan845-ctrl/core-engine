@@ -1,0 +1,9 @@
+# Postgres Exporter v0.15.0 Configuration
+# BodegaHub - Métricas PostgreSQL avanzadas
+#
+# NOTA: En v0.15.0 el config file solo soporta auth_modules (multi-target).
+# Los collectors se habilitan con flags CLI (--collector.stat_statements, etc).
+# Las queries personalizadas se cargan via PG_EXPORTER_EXTEND_QUERY_PATH -> queries.yaml
+
+# auth_modules (opcional - para multi-target /probe). No usado por defecto.
+auth_modules: {}

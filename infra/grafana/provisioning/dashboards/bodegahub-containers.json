@@ -1,0 +1,166 @@
+{
+    "title": "BodegaHub - Containers & Infra",
+    "uid": "bodegahub-containers",
+    "timezone": "browser",
+    "refresh": "10s",
+    "time": { "from": "now-15m", "to": "now" },
+    "panels": [
+        {
+            "type": "timeseries",
+            "title": "CPU Usage % por contenedor",
+            "gridPos": { "x": 0, "y": 0, "w": 12, "h": 8 },
+            "datasource": "Prometheus",
+            "targets": [
+                {
+                    "expr": "sum by (id, name, image) (rate(container_cpu_usage_seconds_total{id=~\"/docker/.*\"}[5m])) * 100",
+                    "legendFormat": "{{name}} ({{image}}) %",
+                    "refId": "A"
+                }
+            ],
+            "fieldConfig": {
+                "defaults": {
+                    "unit": "percent",
+                    "thresholds": {
+                        "mode": "absolute",
+                        "steps": [
+                            { "value": null, "color": "green" },
+                            { "value": 70, "color": "orange" },
+                            { "value": 90, "color": "red" }
+                        ]
+                    }
+                }
+            }
+        },
+        {
+            "type": "timeseries",
+            "title": "Memory Usage (MB) por contenedor",
+            "gridPos": { "x": 12, "y": 0, "w": 12, "h": 8 },
+            "datasource": "Prometheus",
+            "targets": [
+                {
+                    "expr": "container_memory_usage_bytes{id=~\"/docker/.*\"} / 1024 / 1024",
+                    "legendFormat": "{{name}} MB",
+                    "refId": "A"
+                },
+                {
+                    "expr": "container_spec_memory_limit_bytes{id=~\"/docker/.*\"} / 1024 / 1024",
+                    "legendFormat": "{{name}} limit MB",
+                    "refId": "B"
+                }
+            ],
+            "fieldConfig": { "defaults": { "unit": "decmegabytes" } }
+        },
+        {
+            "type": "timeseries",
+            "title": "Memory Usage % (usage/limit)",
+            "gridPos": { "x": 0, "y": 8, "w": 12, "h": 8 },
+            "datasource": "Prometheus",
+            "targets": [
+                {
+                    "expr": "container_memory_usage_bytes{id=~\"/docker/.*\"} / container_spec_memory_limit_bytes{id=~\"/docker/.*\"} * 100",
+                    "legendFormat": "{{name}} %",
+                    "refId": "A"
+                }
+            ],
+            "fieldConfig": {
+                "defaults": {
+                    "unit": "percent",
+                    "min": 0,
+                    "max": 100,
+                    "thresholds": {
+                        "mode": "absolute",
+                        "steps": [
+                            { "value": null, "color": "green" },
+                            { "value": 75, "color": "orange" },
+                            { "value": 90, "color": "red" }
+                        ]
+                    }
+                }
+            }
+        },
+        {
+            "type": "timeseries",
+            "title": "Network I/O (MB/s) por contenedor",
+            "gridPos": { "x": 12, "y": 8, "w": 12, "h": 8 },
+            "datasource": "Prometheus",
+            "targets": [
+                {
+                    "expr": "sum by (interface) (rate(container_network_receive_bytes_total{id=\"/\"}[5m])) / 1024 / 1024",
+                    "legendFormat": "{{interface}} rx MB/s",
+                    "refId": "A"
+                },
+                {
+                    "expr": "sum by (interface) (rate(container_network_transmit_bytes_total{id=\"/\"}[5m])) / 1024 / 1024",
+                    "legendFormat": "{{interface}} tx MB/s",
+                    "refId": "B"
+                }
+            ],
+            "fieldConfig": { "defaults": { "unit": "MBps" } }
+        },
+        {
+            "type": "timeseries",
+            "title": "Disk I/O (MB/s) por contenedor",
+            "gridPos": { "x": 0, "y": 16, "w": 12, "h": 8 },
+            "datasource": "Prometheus",
+            "targets": [
+                {
+                    "expr": "rate(container_fs_reads_bytes_total{id=~\"/docker/.*\"}[5m]) / 1024 / 1024",
+                    "legendFormat": "{{name}} read MB/s",
+                    "refId": "A"
+                },
+                {
+                    "expr": "rate(container_fs_writes_bytes_total{id=~\"/docker/.*\"}[5m]) / 1024 / 1024",
+                    "legendFormat": "{{name}} write MB/s",
+                    "refId": "B"
+                }
+            ],
+            "fieldConfig": { "defaults": { "unit": "MBps" } }
+        },
+        {
+            "type": "timeseries",
+            "title": "Host FS Usage % (root filesystem)",
+            "gridPos": { "x": 12, "y": 16, "w": 12, "h": 8 },
+            "datasource": "Prometheus",
+            "targets": [
+                {
+                    "expr": "container_fs_usage_bytes{id=\"/\"} / container_fs_limit_bytes{id=\"/\"} * 100",
+                    "legendFormat": "{{device}} %",
+                    "refId": "A"
+                }
+            ],
+            "fieldConfig": { "defaults": { "unit": "percent" } }
+        },
+        {
+            "type": "stat",
+            "title": "Contenedores Up",
+            "gridPos": { "x": 0, "y": 24, "w": 6, "h": 4 },
+            "datasource": "Prometheus",
+            "targets": [
+                { "expr": "count(container_memory_usage_bytes{id=~\"/docker/.*\"})", "refId": "A" }
+            ],
+            "fieldConfig": { "defaults": { "unit": "short", "thresholds": { "mode": "absolute", "steps": [{ "value": null, "color": "green" }, { "value": 10, "color": "orange" }] } } }
+        },
+        {
+            "type": "stat",
+            "title": "Total Contenedores",
+            "gridPos": { "x": 6, "y": 24, "w": 6, "h": 4 },
+            "datasource": "Prometheus",
+            "targets": [
+                { "expr": "count by (name) (container_memory_usage_bytes{id=~\"/docker/.*\"})", "legendFormat": "{{name}}", "refId": "A" }
+            ],
+            "fieldConfig": { "defaults": { "unit": "short", "thresholds": { "mode": "absolute", "steps": [{ "value": null, "color": "green" }, { "value": 10, "color": "orange" }] } } }
+        },
+        {
+            "type": "table",
+            "title": "Resumen por contenedor",
+            "gridPos": { "x": 12, "y": 24, "w": 12, "h": 12 },
+            "datasource": "Prometheus",
+            "targets": [
+                { "expr": "container_memory_usage_bytes{id=~\"/docker/.*\"} / 1024 / 1024", "format": "table", "refId": "A" },
+                { "expr": "container_memory_usage_bytes{id=~\"/docker/.*\"} / container_spec_memory_limit_bytes{id=~\"/docker/.*\"} * 100", "format": "table", "refId": "B" },
+                { "expr": "rate(container_cpu_usage_seconds_total{id=~\"/docker/.*\"}[5m]) * 100", "format": "table", "refId": "C" }
+            ],
+            "fieldConfig": { "defaults": { "custom": { "align": "center" } } }
+        }
+    ]
+}

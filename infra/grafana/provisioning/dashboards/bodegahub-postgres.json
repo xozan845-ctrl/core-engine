@@ -1,0 +1,1152 @@
+{
+  "title": "BodegaHub - PostgreSQL",
+  "uid": "bodegahub-postgres",
+  "timezone": "browser",
+  "refresh": "10s",
+  "time": {
+    "from": "now-15m",
+    "to": "now"
+  },
+  "panels": [
+    {
+      "type": "timeseries",
+      "title": "Conexiones activas / maximas",
+      "gridPos": {
+        "x": 0,
+        "y": 0,
+        "w": 12,
+        "h": 8
+      },
+      "datasource": "Prometheus",
+      "targets": [
+        {
+          "expr": "pg_stat_database_numbackends{datname=\"bodegahub\"}",
+          "legendFormat": "activas",
+          "refId": "A"
+        },
+        {
+          "expr": "pg_settings_max_connections",
+          "legendFormat": "max_connections",
+          "refId": "B"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "value": null,
+                "color": "green"
+              },
+              {
+                "value": 80,
+                "color": "orange"
+              },
+              {
+                "value": 95,
+                "color": "red"
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "type": "timeseries",
+      "title": "Cache Hit Ratio (%)",
+      "gridPos": {
+        "x": 12,
+        "y": 0,
+        "w": 12,
+        "h": 8
+      },
+      "datasource": "Prometheus",
+      "targets": [
+        {
+          "expr": "pg_stat_database_blks_hit / (pg_stat_database_blks_hit + pg_stat_database_blks_read) * 100",
+          "legendFormat": "hit_ratio_%",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent",
+          "min": 0,
+          "max": 100,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "value": null,
+                "color": "green"
+              },
+              {
+                "value": 95,
+                "color": "orange"
+              },
+              {
+                "value": 90,
+                "color": "red"
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "type": "timeseries",
+      "title": "Tuples: inserts/updates/deletes/s (por tabla schema)",
+      "gridPos": {
+        "x": 0,
+        "y": 8,
+        "w": 12,
+        "h": 8
+      },
+      "datasource": "Prometheus",
+      "targets": [
+        {
+          "expr": "sum by (schemaname, relname) (rate(pg_stat_user_tables_n_tup_ins[5m]))",
+          "legendFormat": "ins {{schemaname}}.{{relname}}",
+          "refId": "A"
+        },
+        {
+          "expr": "sum by (schemaname, relname) (rate(pg_stat_user_tables_n_tup_upd[5m]))",
+          "legendFormat": "upd {{schemaname}}.{{relname}}",
+          "refId": "B"
+        },
+        {
+          "expr": "sum by (schemaname, relname) (rate(pg_stat_user_tables_n_tup_del[5m]))",
+          "legendFormat": "del {{schemaname}}.{{relname}}",
+          "refId": "C"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "reqps"
+        }
+      }
+    },
+    {
+      "type": "timeseries",
+      "title": "Indices: scans/s y tuples read/s",
+      "gridPos": {
+        "x": 12,
+        "y": 8,
+        "w": 12,
+        "h": 8
+      },
+      "datasource": "Prometheus",
+      "targets": [
+        {
+          "expr": "sum by (schemaname, relname) (rate(pg_stat_user_tables_idx_scan[5m]))",
+          "legendFormat": "idx_scan {{schemaname}}.{{relname}}",
+          "refId": "A"
+        },
+        {
+          "expr": "sum by (schemaname, relname) (rate(pg_stat_user_tables_idx_tup_fetch[5m]))",
+          "legendFormat": "idx_read {{schemaname}}.{{relname}}",
+          "refId": "B"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "reqps"
+        }
+      }
+    },
+    {
+      "type": "timeseries",
+      "title": "Tamano de BD y tablas mayores (MB)",
+      "gridPos": {
+        "x": 0,
+        "y": 16,
+        "w": 12,
+        "h": 8
+      },
+      "datasource": "Prometheus",
+      "targets": [
+        {
+          "expr": "pg_database_size_bytes{datname=\"bodegahub\"} / 1024 / 1024",
+          "legendFormat": "bodegahub total MB",
+          "refId": "A"
+        },
+        {
+          "expr": "pg_stat_user_tables_table_size_bytes / 1024 / 1024",
+          "legendFormat": "{{schemaname}}.{{relname}} MB",
+          "refId": "B"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "decmegabytes"
+        }
+      }
+    },
+    {
+      "type": "timeseries",
+      "title": "Tuplas vivas/muertas por tabla",
+      "gridPos": {
+        "x": 12,
+        "y": 16,
+        "w": 12,
+        "h": 8
+      },
+      "datasource": "Prometheus",
+      "targets": [
+        {
+          "expr": "pg_stat_user_tables_n_live_tup",
+          "legendFormat": "live {{schemaname}}.{{relname}}",
+          "refId": "A"
+        },
+        {
+          "expr": "pg_stat_user_tables_n_dead_tup",
+          "legendFormat": "dead {{schemaname}}.{{relname}}",
+          "refId": "B"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short"
+        }
+      }
+    },
+    {
+      "type": "stat",
+      "title": "Bloqueos activos",
+      "gridPos": {
+        "x": 0,
+        "y": 24,
+        "w": 6,
+        "h": 4
+      },
+      "datasource": "Prometheus",
+      "targets": [
+        {
+          "expr": "sum(pg_locks_count{datname=\"bodegahub\"})",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short"
+        }
+      }
+    },
+    {
+      "type": "stat",
+      "title": "Transacciones commit/rollback/s",
+      "gridPos": {
+        "x": 6,
+        "y": 24,
+        "w": 6,
+        "h": 4
+      },
+      "datasource": "Prometheus",
+      "targets": [
+        {
+          "expr": "rate(pg_stat_database_xact_commit[5m])",
+          "legendFormat": "commit/s",
+          "refId": "A"
+        },
+        {
+          "expr": "rate(pg_stat_database_xact_rollback[5m])",
+          "legendFormat": "rollback/s",
+          "refId": "B"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "reqps"
+        }
+      }
+    },
+    {
+      "type": "row",
+      "title": "Performance de Queries (pg_stat_statements)",
+      "gridPos": {
+        "x": 0,
+        "y": 28,
+        "w": 24,
+        "h": 1
+      },
+      "collapsed": false,
+      "panels": []
+    },
+    {
+      "id": 101,
+      "type": "timeseries",
+      "title": "Top queries por latencia media (ms)",
+      "gridPos": {
+        "x": 0,
+        "y": 29,
+        "w": 12,
+        "h": 8
+      },
+      "datasource": "Prometheus",
+      "targets": [
+        {
+          "expr": "topk(10, pg_query_latency_mean_time_ms)",
+          "legendFormat": "{{query_preview}}",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ms",
+          "custom": {
+            "lineWidth": 1
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "value": null,
+                "color": "green"
+              },
+              {
+                "value": 100,
+                "color": "orange"
+              },
+              {
+                "value": 1000,
+                "color": "red"
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "id": 102,
+      "type": "timeseries",
+      "title": "Ejecuciones/s por query (calls)",
+      "gridPos": {
+        "x": 12,
+        "y": 29,
+        "w": 12,
+        "h": 8
+      },
+      "datasource": "Prometheus",
+      "targets": [
+        {
+          "expr": "topk(10, rate(pg_query_latency_calls[5m]))",
+          "legendFormat": "{{query_preview}}",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ops",
+          "custom": {
+            "lineWidth": 1
+          }
+        }
+      }
+    },
+    {
+      "id": 103,
+      "type": "timeseries",
+      "title": "Cache hit ratio por query (%)",
+      "gridPos": {
+        "x": 0,
+        "y": 37,
+        "w": 12,
+        "h": 8
+      },
+      "datasource": "Prometheus",
+      "targets": [
+        {
+          "expr": "topk(10, pg_query_cache_efficiency_cache_hit_ratio_pct)",
+          "legendFormat": "{{query_preview}}",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent",
+          "min": 0,
+          "max": 100,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "value": null,
+                "color": "red"
+              },
+              {
+                "value": 80,
+                "color": "orange"
+              },
+              {
+                "value": 95,
+                "color": "green"
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "id": 104,
+      "type": "timeseries",
+      "title": "Bloques temporales escritos/s (work_mem)",
+      "gridPos": {
+        "x": 12,
+        "y": 37,
+        "w": 12,
+        "h": 8
+      },
+      "datasource": "Prometheus",
+      "targets": [
+        {
+          "expr": "topk(10, rate(pg_query_temp_usage_temp_blks_written[5m]))",
+          "legendFormat": "{{query_preview}}",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ops",
+          "custom": {
+            "lineWidth": 1
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "value": null,
+                "color": "green"
+              },
+              {
+                "value": 10,
+                "color": "orange"
+              },
+              {
+                "value": 100,
+                "color": "red"
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "type": "row",
+      "title": "Vacuum & Analyze (progreso)",
+      "gridPos": {
+        "x": 0,
+        "y": 45,
+        "w": 24,
+        "h": 1
+      },
+      "collapsed": false,
+      "panels": []
+    },
+    {
+      "id": 105,
+      "type": "stat",
+      "title": "Vacuum en progreso",
+      "gridPos": {
+        "x": 0,
+        "y": 46,
+        "w": 4,
+        "h": 4
+      },
+      "datasource": "Prometheus",
+      "targets": [
+        {
+          "expr": "count(pg_vacuum_progress_progress_pct{datname=\"bodegahub\"})",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "value": null,
+                "color": "green"
+              },
+              {
+                "value": 1,
+                "color": "orange"
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "id": 106,
+      "type": "stat",
+      "title": "Progreso vacuum actual (%)",
+      "gridPos": {
+        "x": 4,
+        "y": 46,
+        "w": 4,
+        "h": 4
+      },
+      "datasource": "Prometheus",
+      "targets": [
+        {
+          "expr": "max(pg_vacuum_progress_progress_pct{datname=\"bodegahub\"})",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent",
+          "min": 0,
+          "max": 100,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "value": null,
+                "color": "green"
+              },
+              {
+                "value": 50,
+                "color": "orange"
+              },
+              {
+                "value": 90,
+                "color": "red"
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "id": 107,
+      "type": "stat",
+      "title": "Analyze en progreso",
+      "gridPos": {
+        "x": 8,
+        "y": 46,
+        "w": 4,
+        "h": 4
+      },
+      "datasource": "Prometheus",
+      "targets": [
+        {
+          "expr": "count(pg_analyze_progress_phase{datname=\"bodegahub\"})",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "value": null,
+                "color": "green"
+              },
+              {
+                "value": 1,
+                "color": "orange"
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "id": 108,
+      "type": "stat",
+      "title": "Fase vacuum actual",
+      "gridPos": {
+        "x": 12,
+        "y": 46,
+        "w": 4,
+        "h": 4
+      },
+      "datasource": "Prometheus",
+      "targets": [
+        {
+          "expr": "pg_vacuum_progress_phase{datname=\"bodegahub\"}",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "value": null,
+                "color": "green"
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "id": 109,
+      "type": "stat",
+      "title": "Heap blocks escaneados",
+      "gridPos": {
+        "x": 16,
+        "y": 46,
+        "w": 4,
+        "h": 4
+      },
+      "datasource": "Prometheus",
+      "targets": [
+        {
+          "expr": "sum(pg_vacuum_progress_heap_blks_scanned{datname=\"bodegahub\"})",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short"
+        }
+      }
+    },
+    {
+      "id": 110,
+      "type": "stat",
+      "title": "Indices vacunados (total)",
+      "gridPos": {
+        "x": 20,
+        "y": 46,
+        "w": 4,
+        "h": 4
+      },
+      "datasource": "Prometheus",
+      "targets": [
+        {
+          "expr": "sum(pg_vacuum_progress_index_vacuum_count{datname=\"bodegahub\"})",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short"
+        }
+      }
+    },
+    {
+      "type": "row",
+      "title": "Locks & Wait Events",
+      "gridPos": {
+        "x": 0,
+        "y": 50,
+        "w": 24,
+        "h": 1
+      },
+      "collapsed": false,
+      "panels": []
+    },
+    {
+      "id": 111,
+      "type": "timeseries",
+      "title": "Locks por modo/objeto",
+      "gridPos": {
+        "x": 0,
+        "y": 51,
+        "w": 12,
+        "h": 8
+      },
+      "datasource": "Prometheus",
+      "targets": [
+        {
+          "expr": "pg_lock_details_lock_count",
+          "legendFormat": "{{mode}} {{locktype}}",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "custom": {
+            "lineWidth": 1
+          }
+        }
+      }
+    },
+    {
+      "id": 112,
+      "type": "timeseries",
+      "title": "Sesiones en espera por evento",
+      "gridPos": {
+        "x": 12,
+        "y": 51,
+        "w": 12,
+        "h": 8
+      },
+      "datasource": "Prometheus",
+      "targets": [
+        {
+          "expr": "pg_wait_events_count{datname=\"bodegahub\"}",
+          "legendFormat": "{{wait_event_type}}/{{wait_event}}",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "custom": {
+            "lineWidth": 1
+          }
+        }
+      }
+    },
+    {
+      "id": 113,
+      "type": "table",
+      "title": "Queries bloqueadas (deadlock)",
+      "gridPos": {
+        "x": 0,
+        "y": 59,
+        "w": 24,
+        "h": 8
+      },
+      "datasource": "Prometheus",
+      "targets": [
+        {
+          "expr": "pg_blocked_queries_blocked_duration_s",
+          "format": "table",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "align": "left"
+          },
+          "unit": "s"
+        }
+      }
+    },
+    {
+      "type": "row",
+      "title": "Checkpoint & WAL",
+      "gridPos": {
+        "x": 0,
+        "y": 67,
+        "w": 24,
+        "h": 1
+      },
+      "collapsed": false,
+      "panels": []
+    },
+    {
+      "id": 114,
+      "type": "timeseries",
+      "title": "Checkpoints (timed vs solicitados)",
+      "gridPos": {
+        "x": 0,
+        "y": 68,
+        "w": 12,
+        "h": 8
+      },
+      "datasource": "Prometheus",
+      "targets": [
+        {
+          "expr": "rate(pg_bgwriter_stats_checkpoints_timed[5m])",
+          "legendFormat": "timed",
+          "refId": "A"
+        },
+        {
+          "expr": "rate(pg_bgwriter_stats_checkpoints_req[5m])",
+          "legendFormat": "solicitados",
+          "refId": "B"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ops",
+          "custom": {
+            "lineWidth": 1
+          }
+        }
+      }
+    },
+    {
+      "id": 115,
+      "type": "timeseries",
+      "title": "WAL generado (bytes) y pendiente",
+      "gridPos": {
+        "x": 12,
+        "y": 68,
+        "w": 12,
+        "h": 8
+      },
+      "datasource": "Prometheus",
+      "targets": [
+        {
+          "expr": "pg_wal_stats_wal_bytes_total",
+          "legendFormat": "total",
+          "refId": "A"
+        },
+        {
+          "expr": "pg_wal_stats_wal_bytes_pending",
+          "legendFormat": "pendiente flush",
+          "refId": "B"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "bytes",
+          "custom": {
+            "lineWidth": 1
+          }
+        }
+      }
+    },
+    {
+      "id": 116,
+      "type": "timeseries",
+      "title": "Buffers escritos (bgwriter vs checkpoints)",
+      "gridPos": {
+        "x": 0,
+        "y": 76,
+        "w": 12,
+        "h": 8
+      },
+      "datasource": "Prometheus",
+      "targets": [
+        {
+          "expr": "rate(pg_bgwriter_stats_buffers_checkpoint[5m])",
+          "legendFormat": "checkpoint",
+          "refId": "A"
+        },
+        {
+          "expr": "rate(pg_bgwriter_stats_buffers_clean[5m])",
+          "legendFormat": "bgwriter",
+          "refId": "B"
+        },
+        {
+          "expr": "rate(pg_bgwriter_stats_buffers_backend[5m])",
+          "legendFormat": "backend",
+          "refId": "C"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ops",
+          "custom": {
+            "lineWidth": 1
+          }
+        }
+      }
+    },
+    {
+      "id": 117,
+      "type": "timeseries",
+      "title": "Checkpoint write/sync time",
+      "gridPos": {
+        "x": 12,
+        "y": 76,
+        "w": 12,
+        "h": 8
+      },
+      "datasource": "Prometheus",
+      "targets": [
+        {
+          "expr": "rate(pg_bgwriter_stats_checkpoint_write_time[5m])",
+          "legendFormat": "write",
+          "refId": "A"
+        },
+        {
+          "expr": "rate(pg_bgwriter_stats_checkpoint_sync_time[5m])",
+          "legendFormat": "sync",
+          "refId": "B"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ms",
+          "custom": {
+            "lineWidth": 1
+          }
+        }
+      }
+    },
+    {
+      "type": "row",
+      "title": "Temp Files & Bloat",
+      "gridPos": {
+        "x": 0,
+        "y": 84,
+        "w": 24,
+        "h": 1
+      },
+      "collapsed": false,
+      "panels": []
+    },
+    {
+      "id": 118,
+      "type": "timeseries",
+      "title": "Archivos temporales (work_mem insuficiente)",
+      "gridPos": {
+        "x": 0,
+        "y": 85,
+        "w": 12,
+        "h": 8
+      },
+      "datasource": "Prometheus",
+      "targets": [
+        {
+          "expr": "rate(pg_temp_files_temp_files{datname=\"bodegahub\"}[5m])",
+          "legendFormat": "archivos/s",
+          "refId": "A"
+        },
+        {
+          "expr": "rate(pg_temp_files_temp_bytes{datname=\"bodegahub\"}[5m])",
+          "legendFormat": "bytes/s",
+          "refId": "B"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "custom": {
+            "lineWidth": 1
+          }
+        }
+      }
+    },
+    {
+      "id": 119,
+      "type": "table",
+      "title": "Dead tuples por tabla (candidatos a VACUUM)",
+      "gridPos": {
+        "x": 12,
+        "y": 85,
+        "w": 12,
+        "h": 8
+      },
+      "datasource": "Prometheus",
+      "targets": [
+        {
+          "expr": "pg_table_bloat_dead_tuple_pct > 0",
+          "format": "table",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "align": "left"
+          },
+          "unit": "percent"
+        }
+      }
+    },
+    {
+      "id": 120,
+      "type": "stat",
+      "title": "Deadlocks totales",
+      "gridPos": {
+        "x": 0,
+        "y": 93,
+        "w": 4,
+        "h": 4
+      },
+      "datasource": "Prometheus",
+      "targets": [
+        {
+          "expr": "pg_temp_files_deadlocks{datname=\"bodegahub\"}",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "value": null,
+                "color": "green"
+              },
+              {
+                "value": 1,
+                "color": "orange"
+              },
+              {
+                "value": 5,
+                "color": "red"
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "id": 121,
+      "type": "stat",
+      "title": "Maxwritten_clean (bgwriter saturado)",
+      "gridPos": {
+        "x": 4,
+        "y": 93,
+        "w": 4,
+        "h": 4
+      },
+      "datasource": "Prometheus",
+      "targets": [
+        {
+          "expr": "rate(pg_bgwriter_stats_maxwritten_clean[5m])",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ops",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "value": null,
+                "color": "green"
+              },
+              {
+                "value": 1,
+                "color": "orange"
+              },
+              {
+                "value": 5,
+                "color": "red"
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "id": 122,
+      "type": "stat",
+      "title": "Replicas conectadas",
+      "gridPos": {
+        "x": 8,
+        "y": 93,
+        "w": 4,
+        "h": 4
+      },
+      "datasource": "Prometheus",
+      "targets": [
+        {
+          "expr": "count(pg_replication_stats_replay_lag_bytes)",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short"
+        }
+      }
+    },
+    {
+      "id": 123,
+      "type": "stat",
+      "title": "Replication slots activos",
+      "gridPos": {
+        "x": 12,
+        "y": 93,
+        "w": 4,
+        "h": 4
+      },
+      "datasource": "Prometheus",
+      "targets": [
+        {
+          "expr": "sum(pg_replication_slot_details_active)",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short"
+        }
+      }
+    },
+    {
+      "id": 124,
+      "type": "stat",
+      "title": "Max lag replicacion (bytes)",
+      "gridPos": {
+        "x": 16,
+        "y": 93,
+        "w": 4,
+        "h": 4
+      },
+      "datasource": "Prometheus",
+      "targets": [
+        {
+          "expr": "max(pg_replication_stats_replay_lag_bytes)",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "bytes",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "value": null,
+                "color": "green"
+              },
+              {
+                "value": 1048576,
+                "color": "orange"
+              },
+              {
+                "value": 10485760,
+                "color": "red"
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "id": 125,
+      "type": "timeseries",
+      "title": "Replication lag por replica (bytes)",
+      "gridPos": {
+        "x": 0,
+        "y": 97,
+        "w": 24,
+        "h": 8
+      },
+      "datasource": "Prometheus",
+      "targets": [
+        {
+          "expr": "pg_replication_stats_sent_lag_bytes",
+          "legendFormat": "{{application_name}} sent",
+          "refId": "A"
+        },
+        {
+          "expr": "pg_replication_stats_flush_lag_bytes",
+          "legendFormat": "{{application_name}} flush",
+          "refId": "B"
+        },
+        {
+          "expr": "pg_replication_stats_replay_lag_bytes",
+          "legendFormat": "{{application_name}} replay",
+          "refId": "C"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "bytes",
+          "custom": {
+            "lineWidth": 1
+          }
+        }
+      }
+    }
+  ]
+}

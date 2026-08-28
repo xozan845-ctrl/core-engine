@@ -1,0 +1,438 @@
+# Extended queries para Postgres Exporter v0.15.0
+# Formato: mapa de queries (UserQueries map[string]UserQuery)
+# BodegaHub - Métricas PostgreSQL avanzadas
+
+# 1. pg_stat_statements - Top queries por latencia
+pg_query_latency:
+  query: |
+    SELECT
+      queryid,
+      LEFT(query, 100) as query_preview,
+      calls,
+      total_exec_time / 1000 as total_time_s,
+      mean_exec_time as mean_time_ms,
+      rows,
+      shared_blks_hit,
+      shared_blks_read,
+      temp_blks_written,
+      blk_read_time,
+      blk_write_time
+    FROM pg_stat_statements
+    WHERE mean_exec_time > 10
+    ORDER BY mean_exec_time DESC
+    LIMIT 20
+  metrics:
+    - queryid:
+        usage: LABEL
+    - query_preview:
+        usage: LABEL
+    - calls:
+        usage: COUNTER
+        description: "Numero de ejecuciones de la query"
+    - total_time_s:
+        usage: GAUGE
+        description: "Tiempo total de ejecucion en segundos"
+    - mean_time_ms:
+        usage: GAUGE
+        description: "Tiempo medio de ejecucion en milisegundos"
+    - rows:
+        usage: COUNTER
+        description: "Filas retornadas"
+    - shared_blks_hit:
+        usage: COUNTER
+        description: "Bloques compartidos en cache"
+    - shared_blks_read:
+        usage: COUNTER
+        description: "Bloques compartidos leidos de disco"
+    - temp_blks_written:
+        usage: COUNTER
+        description: "Bloques temporales escritos a disco (presion work_mem)"
+    - blk_read_time:
+        usage: COUNTER
+        description: "Tiempo lectura de bloques (ms)"
+    - blk_write_time:
+        usage: COUNTER
+        description: "Tiempo escritura de bloques (ms)"
+
+# 2. pg_stat_statements - Cache efficiency por query
+pg_query_cache_efficiency:
+  query: |
+    SELECT
+      queryid,
+      LEFT(query, 100) as query_preview,
+      CASE WHEN (shared_blks_hit + shared_blks_read) > 0
+           THEN round(shared_blks_hit::numeric / (shared_blks_hit + shared_blks_read) * 100, 2)
+           ELSE 0 END as cache_hit_ratio_pct,
+      shared_blks_hit,
+      shared_blks_read
+    FROM pg_stat_statements
+    WHERE (shared_blks_hit + shared_blks_read) > 0
+    ORDER BY cache_hit_ratio_pct ASC
+    LIMIT 20
+  metrics:
+    - queryid:
+        usage: LABEL
+    - query_preview:
+        usage: LABEL
+    - cache_hit_ratio_pct:
+        usage: GAUGE
+        description: "Cache hit ratio por query (%)"
+    - shared_blks_hit:
+        usage: COUNTER
+    - shared_blks_read:
+        usage: COUNTER
+
+# 3. pg_stat_statements - Temp files / work_mem pressure
+pg_query_temp_usage:
+  query: |
+    SELECT
+      queryid,
+      LEFT(query, 100) as query_preview,
+      temp_blks_read,
+      temp_blks_written,
+      blk_read_time,
+      blk_write_time
+    FROM pg_stat_statements
+    WHERE temp_blks_written > 0 OR temp_blks_read > 0
+    ORDER BY temp_blks_written DESC
+    LIMIT 20
+  metrics:
+    - queryid:
+        usage: LABEL
+    - query_preview:
+        usage: LABEL
+    - temp_blks_read:
+        usage: COUNTER
+        description: "Bloques temporales leidos de disco"
+    - temp_blks_written:
+        usage: COUNTER
+        description: "Bloques temporales escritos a disco (presion work_mem)"
+    - blk_read_time:
+        usage: COUNTER
+    - blk_write_time:
+        usage: COUNTER
+
+# 4. Vacuum progress
+pg_vacuum_progress:
+  query: |
+    SELECT
+      pid,
+      datname,
+      relid::regclass::text as relation,
+      phase,
+      heap_blks_total,
+      heap_blks_scanned,
+      heap_blks_vacuumed,
+      index_vacuum_count,
+      round(heap_blks_scanned::numeric / NULLIF(heap_blks_total, 0) * 100, 2) as progress_pct
+    FROM pg_stat_progress_vacuum
+  metrics:
+    - pid:
+        usage: LABEL
+    - datname:
+        usage: LABEL
+    - relation:
+        usage: LABEL
+    - phase:
+        usage: LABEL
+    - heap_blks_total:
+        usage: GAUGE
+    - heap_blks_scanned:
+        usage: GAUGE
+    - heap_blks_vacuumed:
+        usage: GAUGE
+    - index_vacuum_count:
+        usage: GAUGE
+    - progress_pct:
+        usage: GAUGE
+        description: "Progreso del vacuum (%)"
+
+# 5. Analyze progress
+pg_analyze_progress:
+  query: |
+    SELECT
+      pid,
+      datname,
+      relid::regclass::text as relation,
+      phase,
+      sample_blks_total,
+      sample_blks_scanned,
+      ext_stats_total,
+      ext_stats_computed,
+      child_tables_total,
+      child_tables_done
+    FROM pg_stat_progress_analyze
+  metrics:
+    - pid:
+        usage: LABEL
+    - datname:
+        usage: LABEL
+    - relation:
+        usage: LABEL
+    - phase:
+        usage: LABEL
+    - sample_blks_total:
+        usage: GAUGE
+    - sample_blks_scanned:
+        usage: GAUGE
+    - ext_stats_total:
+        usage: GAUGE
+    - ext_stats_computed:
+        usage: GAUGE
+
+# 6. Lock contention - locks por modo
+pg_lock_details:
+  query: |
+    SELECT
+      mode,
+      locktype,
+      COUNT(*) as lock_count,
+      COUNT(DISTINCT pid) as distinct_pids
+    FROM pg_locks
+    WHERE granted
+    GROUP BY mode, locktype
+  metrics:
+    - mode:
+        usage: LABEL
+    - locktype:
+        usage: LABEL
+    - lock_count:
+        usage: GAUGE
+        description: "Numero de locks retenidos"
+    - distinct_pids:
+        usage: GAUGE
+
+# 7. Blocked queries
+pg_blocked_queries:
+  query: |
+    SELECT
+      blocked_locks.pid AS blocked_pid,
+      blocked_activity.usename AS blocked_user,
+      blocking_locks.pid AS blocking_pid,
+      blocking_activity.usename AS blocking_user,
+      LEFT(blocked_activity.query, 80) AS blocked_statement,
+      LEFT(blocking_activity.query, 80) AS blocking_statement,
+      EXTRACT(EPOCH FROM (now() - blocked_activity.query_start)) AS blocked_duration_s
+    FROM pg_catalog.pg_locks blocked_locks
+    JOIN pg_catalog.pg_stat_activity blocked_activity ON blocked_activity.pid = blocked_locks.pid
+    JOIN pg_catalog.pg_locks blocking_locks ON blocking_locks.locktype = blocked_locks.locktype
+      AND blocking_locks.database IS NOT DISTINCT FROM blocked_locks.database
+      AND blocking_locks.relation IS NOT DISTINCT FROM blocked_locks.relation
+      AND blocking_locks.page IS NOT DISTINCT FROM blocked_locks.page
+      AND blocking_locks.tuple IS NOT DISTINCT FROM blocked_locks.tuple
+      AND blocking_locks.virtualxid IS NOT DISTINCT FROM blocked_locks.virtualxid
+      AND blocking_locks.transactionid IS NOT DISTINCT FROM blocked_locks.transactionid
+      AND blocking_locks.classid IS NOT DISTINCT FROM blocked_locks.classid
+      AND blocking_locks.objid IS NOT DISTINCT FROM blocked_locks.objid
+      AND blocking_locks.objsubid IS NOT DISTINCT FROM blocked_locks.objsubid
+      AND blocking_locks.pid != blocked_locks.pid
+    JOIN pg_catalog.pg_stat_activity blocking_activity ON blocking_activity.pid = blocking_locks.pid
+    WHERE NOT blocked_locks.granted
+  metrics:
+    - blocked_pid:
+        usage: LABEL
+    - blocked_user:
+        usage: LABEL
+    - blocking_pid:
+        usage: LABEL
+    - blocking_user:
+        usage: LABEL
+    - blocked_statement:
+        usage: LABEL
+    - blocking_statement:
+        usage: LABEL
+    - blocked_duration_s:
+        usage: GAUGE
+        description: "Duracion de la query bloqueada (segundos)"
+
+# 8. Wait events
+pg_wait_events:
+  query: |
+    SELECT
+      datname,
+      wait_event_type,
+      wait_event,
+      COUNT(*) as count
+    FROM pg_stat_activity
+    WHERE wait_event IS NOT NULL
+    GROUP BY datname, wait_event_type, wait_event
+  metrics:
+    - datname:
+        usage: LABEL
+    - wait_event_type:
+        usage: LABEL
+    - wait_event:
+        usage: LABEL
+    - count:
+        usage: GAUGE
+        description: "Sesiones esperando en este evento"
+
+# 9. Checkpoint / bgwriter stats
+pg_bgwriter_stats:
+  query: |
+    SELECT
+      checkpoints_timed,
+      checkpoints_req,
+      checkpoint_write_time,
+      checkpoint_sync_time,
+      buffers_checkpoint,
+      buffers_clean,
+      maxwritten_clean,
+      buffers_backend,
+      buffers_backend_fsync,
+      buffers_alloc
+    FROM pg_stat_bgwriter
+  metrics:
+    - checkpoints_timed:
+        usage: COUNTER
+    - checkpoints_req:
+        usage: COUNTER
+    - checkpoint_write_time:
+        usage: COUNTER
+    - checkpoint_sync_time:
+        usage: COUNTER
+    - buffers_checkpoint:
+        usage: COUNTER
+    - buffers_clean:
+        usage: COUNTER
+    - maxwritten_clean:
+        usage: COUNTER
+    - buffers_backend:
+        usage: COUNTER
+    - buffers_backend_fsync:
+        usage: COUNTER
+    - buffers_alloc:
+        usage: COUNTER
+
+# 10. WAL stats
+pg_wal_stats:
+  query: |
+    SELECT
+      pg_wal_lsn_diff(pg_current_wal_lsn(), '0/0') as wal_bytes_total,
+      pg_wal_lsn_diff(pg_current_wal_lsn(), pg_current_wal_insert_lsn()) as wal_bytes_pending
+  metrics:
+    - wal_bytes_total:
+        usage: GAUGE
+        description: "Total de bytes WAL generados"
+    - wal_bytes_pending:
+        usage: GAUGE
+        description: "Bytes WAL pendientes de flush"
+
+# 11. Temp files / work_mem pressure (database level)
+pg_temp_files:
+  query: |
+    SELECT
+      datname,
+      temp_files,
+      temp_bytes,
+      deadlocks,
+      blk_read_time,
+      blk_write_time
+    FROM pg_stat_database
+  metrics:
+    - datname:
+        usage: LABEL
+    - temp_files:
+        usage: COUNTER
+        description: "Archivos temporales creados (presion work_mem)"
+    - temp_bytes:
+        usage: COUNTER
+        description: "Tamano total de archivos temporales"
+    - deadlocks:
+        usage: COUNTER
+    - blk_read_time:
+        usage: COUNTER
+    - blk_write_time:
+        usage: COUNTER
+
+# 12. Bloat estimation (dead tuples)
+pg_table_bloat:
+  query: |
+    SELECT
+      schemaname,
+      relname,
+      pg_relation_size(relid) as size_bytes,
+      n_live_tup,
+      n_dead_tup,
+      CASE WHEN n_live_tup > 0 THEN round(n_dead_tup::numeric / n_live_tup * 100, 2) ELSE 0 END as dead_tuple_pct
+    FROM pg_stat_user_tables
+    WHERE n_dead_tup > 0
+    ORDER BY dead_tuple_pct DESC
+    LIMIT 20
+  metrics:
+    - schemaname:
+        usage: LABEL
+    - relname:
+        usage: LABEL
+    - size_bytes:
+        usage: GAUGE
+        description: "Tamano de la tabla (bytes)"
+    - n_live_tup:
+        usage: GAUGE
+    - n_dead_tup:
+        usage: GAUGE
+    - dead_tuple_pct:
+        usage: GAUGE
+        description: "Porcentaje de dead tuples"
+
+# 13. Replication stats
+pg_replication_stats:
+  query: |
+    SELECT
+      pid::text as pid,
+      usename,
+      application_name,
+      client_addr::text as client_addr,
+      state,
+      sync_state,
+      pg_wal_lsn_diff(pg_current_wal_lsn(), sent_lsn) as sent_lag_bytes,
+      pg_wal_lsn_diff(pg_current_wal_lsn(), write_lsn) as write_lag_bytes,
+      pg_wal_lsn_diff(pg_current_wal_lsn(), flush_lsn) as flush_lag_bytes,
+      pg_wal_lsn_diff(pg_current_wal_lsn(), replay_lsn) as replay_lag_bytes
+    FROM pg_stat_replication
+  metrics:
+    - pid:
+        usage: LABEL
+    - usename:
+        usage: LABEL
+    - application_name:
+        usage: LABEL
+    - client_addr:
+        usage: LABEL
+    - state:
+        usage: LABEL
+    - sync_state:
+        usage: LABEL
+    - sent_lag_bytes:
+        usage: GAUGE
+    - write_lag_bytes:
+        usage: GAUGE
+    - flush_lag_bytes:
+        usage: GAUGE
+    - replay_lag_bytes:
+        usage: GAUGE
+
+# 14. Replication slots (detalle por slot)
+pg_replication_slot_details:
+  query: |
+    SELECT
+      slot_name,
+      plugin,
+      slot_type,
+      database,
+      active::int as active,
+      pg_wal_lsn_diff(pg_current_wal_lsn(), restart_lsn) as restart_lag_bytes
+    FROM pg_replication_slots
+  metrics:
+    - slot_name:
+        usage: LABEL
+    - plugin:
+        usage: LABEL
+    - slot_type:
+        usage: LABEL
+    - database:
+        usage: LABEL
+    - active:
+        usage: GAUGE
+    - restart_lag_bytes:
+        usage: GAUGE

@@ -1,0 +1,44 @@
+# Core Engine · BodegaHub
+# Dockerfile para los microservicios NestJS del workspace.
+# Contexto de build: raiz del workspace (contiene package.json + workspaces).
+# Uso: docker build -f packages/<svc>/Dockerfile --build-arg SERVICIO=<svc> .
+
+FROM node:24-alpine AS build
+WORKDIR /app
+
+ARG SERVICIO
+ENV SERVICIO=$SERVICIO
+
+# dependencias del workspace (npm ci con package-lock)
+COPY package.json tsconfig.base.json ./
+COPY packages/shared/package.json packages/shared/
+COPY packages/$SERVICIO/package.json packages/$SERVICIO/
+RUN npm ci --no-audit --no-fund --workspaces --include-workspace-root
+
+# codigo fuente
+COPY packages/shared packages/shared
+COPY packages/$SERVICIO packages/$SERVICIO
+
+# compilacion (shared primero: dependencia de compilacion)
+RUN npm run build -w @core/shared && npm run build -w @core/$SERVICIO
+
+FROM node:24-alpine AS runtime
+WORKDIR /app
+ENV NODE_ENV=production
+
+ARG SERVICIO
+ENV SERVICIO=$SERVICIO
+
+# solo la app compilada + node_modules de produccion
+COPY --from=build /app/node_modules ./node_modules
+COPY --from=build /app/packages/shared/dist ./packages/shared/dist
+COPY --from=build /app/packages/$SERVICIO/dist ./packages/$SERVICIO/dist
+COPY --from=build /app/packages/$SERVICIO/package.json ./packages/$SERVICIO/package.json
+COPY --from=build /app/packages/shared/package.json ./packages/shared/package.json
+
+# el workspace raiz necesita existir para que @core/shared se resuelva
+COPY --from=build /app/package.json ./
+
+EXPOSE 3000
+USER node
+CMD ["node", "packages/$SERVICIO/dist/main.js"]

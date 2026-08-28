@@ -1,0 +1,116 @@
+# Reglas de alerta para BodegaHub Core Engine
+groups:
+  - name: bodegahub-critical
+    rules:
+
+    # --- Servicios caídos ---
+    - alert: ServicioCaido
+      expr: absent(up{job="bodegahub-servicios"} == 1)
+      for: 1m
+      labels:
+        severity: critical
+      annotations:
+        summary: "Servicio caído ({{ $labels.instance }})"
+        description: "El servicio {{ $labels.instance }} no responde /metrics"
+
+    # --- Event loop lag crítico ---
+    - alert: EventLoopLagAlto
+      expr: nodejs_eventloop_lag_p99_seconds{job=~"bodegahub-servicios"} > 0.1
+      for: 2m
+      labels: { severity: critical }
+      annotations:
+        summary: "Event loop lag > 100ms ({{ $labels.instance }})"
+        description: "El servicio {{ $labels.instance }} tiene lag > 100ms"
+
+    # --- GC duration ---
+    - alert: GCDurationAlto
+      expr: rate(nodejs_gc_duration_seconds_sum{kind="major"}[5m]) / rate(nodejs_gc_duration_seconds_count{kind="major"}[5m]) > 1
+      for: 3m
+      labels: { severity: warning }
+      annotations:
+        summary: "Major GC > 1s ({{ $labels.instance }})"
+        description: "GC mayor duración promedio > 1 segundo"
+
+    # --- Heap usage (nota: high ratio es normal en V8; se alerta solo si heap_used > 500MB) ---
+    - alert: HeapUsageCritico
+      expr: nodejs_heap_size_used_bytes{job=~"bodegahub-servicios"} > 500 * 1024 * 1024
+      for: 5m
+      labels: { severity: critical }
+      annotations:
+        summary: "Heap usage > 500MB ({{ $labels.instance }})"
+        description: "Servicio {{ $labels.instance }} usando >500MB de heap V8"
+
+    # --- Postgres ---
+    - alert: PostgresConexionesAltas
+      expr: pg_stat_database_numbackends{datname="bodegahub"} > 80
+      for: 1m
+      labels: { severity: warning }
+      annotations:
+        summary: "Muchas conexiones PG ({{ $value }} activas)"
+        description: "PostgreSQL tiene {{ $value }} conexiones activas (>80)"
+
+    - alert: PostgresCacheHitBajo
+      expr: (pg_stat_database_blks_hit / (pg_stat_database_blks_hit + pg_stat_database_blks_read)) * 100 < 95
+      for: 5m
+      labels: { severity: warning }
+      annotations:
+        summary: "Cache hit ratio < 95% en PostgreSQL"
+        description: "Cache hit ratio cayó a {{ $value }}%"
+
+    - alert: PostgresDeadTuplesAltos
+      expr: sum(pg_stat_user_tables_n_dead_tup) > 100
+      for: 5m
+      labels: { severity: warning }
+      annotations:
+        summary: "Dead tuples acumulados (>100)"
+        description: "PostgreSQL tiene {{ $value }} dead tuples acumulados"
+
+    # --- RabbitMQ ---
+    - alert: RabbitMQQueueBacklog
+      expr: max by (queue) (rabbitmq_queue_messages) > 1000
+      for: 1m
+      labels: { severity: warning }
+      annotations:
+        summary: "Queue backlog ({{ $labels.queue }}): {{ $value }} mensajes"
+
+    - alert: RabbitMQLowConsumers
+      expr: sum(rabbitmq_queue_consumers) < 3
+      for: 5m
+      labels: { severity: critical }
+      annotations:
+        summary: "Menos de 3 consumidores en RabbitMQ"
+        description: "Solo {{ $value }} consumidores activos"
+
+    # --- HTTP ---
+    - alert: HTTPErrorRateAlto
+      expr: sum(rate(http_peticiones_total{status=~"5.."}[5m])) / sum(rate(http_peticiones_total[5m])) * 100 > 5
+      for: 1m
+      labels: { severity: critical }
+      annotations:
+        summary: "Tasa de error 5xx > 5% ({{ $value }}%)"
+        description: "Error rate HTTP 5xx elevada"
+
+    - alert: HTTPLatenciaAlta
+      expr: histogram_quantile(0.99, sum by (servicio, le) (rate(http_peticion_latencia_ms_bucket[5m]))) > 800
+      for: 2m
+      labels: { severity: warning }
+      annotations:
+        summary: "Latencia p99 > 800ms ({{ $labels.servicio }})"
+        description: "Servicio {{ $labels.servicio }} con latencia p99 = {{ $value }}ms"
+
+    # --- Sistema ---
+    - alert: ContainerMemoriaAlta
+      expr: (container_memory_usage_bytes{name!=""} / container_spec_memory_limit_bytes{name!=""} * 100 > 90) and (container_spec_memory_limit_bytes{name!=""} > 0)
+      for: 2m
+      labels: { severity: warning }
+      annotations:
+        summary: "Memory uso > 90% ({{ $labels.name }})"
+        description: "Contenedor {{ $labels.name }} usa {{ $value }}% de memoria límite"
+
+    - alert: DiskUsageCritico
+      expr: (node_filesystem_size_bytes - node_filesystem_avail_bytes) / node_filesystem_size_bytes * 100 > 90
+      for: 1m
+      labels: { severity: critical }
+      annotations:
+        summary: "Disco > 90% usado ({{ $labels.instance }})"
+        description: "Filesystem en {{ $labels.instance }} está {{ $value }}% lleno"

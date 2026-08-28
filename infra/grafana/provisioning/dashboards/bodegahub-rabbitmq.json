@@ -1,0 +1,199 @@
+{
+    "title":  "BodegaHub - RabbitMQ Overview",
+    "uid":  "bodegahub-rabbitmq",
+    "timezone":  "browser",
+    "refresh":  "10s",
+    "time":  {
+                 "from":  "now-15m",
+                 "to":  "now"
+             },
+    "panels":  [
+                   {
+                       "type":  "timeseries",
+                       "title":  "Mensajes en cola (por queue)",
+                       "gridPos":  {
+                                       "x":  0,
+                                       "y":  0,
+                                       "w":  12,
+                                       "h":  8
+                                   },
+                       "datasource":  "Prometheus",
+                       "targets":  [
+                                       {
+                                           "expr":  "rabbitmq_queue_messages",
+                                           "legendFormat":  "{{queue}}",
+                                           "refId":  "A"
+                                       }
+                                   ],
+                       "fieldConfig":  {
+                                           "defaults":  {
+                                                            "unit":  "short"
+                                                        }
+                                       }
+                   },
+                   {
+                       "type":  "timeseries",
+                       "title":  "Tasa de mensajes publicados/s (por queue)",
+                       "gridPos":  {
+                                       "x":  12,
+                                       "y":  0,
+                                       "w":  12,
+                                       "h":  8
+                                   },
+                       "datasource":  "Prometheus",
+                       "targets":  [
+                                       {
+                                           "expr":  "sum by (queue) (rate(rabbitmq_queue_messages_published_total[5m]))",
+                                           "legendFormat":  "{{queue}}",
+                                           "refId":  "A"
+                                       }
+                                   ],
+                       "fieldConfig":  {
+                                           "defaults":  {
+                                                            "unit":  "reqps"
+                                                        }
+                                       }
+                   },
+                   {
+                       "type":  "timeseries",
+                       "title":  "Tasa de mensajes entregados/ack vs no-ack",
+                       "gridPos":  {
+                                       "x":  0,
+                                       "y":  8,
+                                       "w":  12,
+                                       "h":  8
+                                   },
+                       "datasource":  "Prometheus",
+                       "targets":  [
+                                       {
+                                           "expr":  "sum by (queue) (rate(rabbitmq_queue_messages_delivered_total[5m]))",
+                                           "legendFormat":  "delivered {{queue}}",
+                                           "refId":  "A"
+                                       },
+                                       {
+                                           "expr":  "sum by (queue) (rate(rabbitmq_queue_messages_ack_total[5m]))",
+                                           "legendFormat":  "acked {{queue}}",
+                                           "refId":  "B"
+                                       },
+                                       {
+                                           "expr":  "rabbitmq_queue_messages_unacknowledged",
+                                           "legendFormat":  "unacked {{queue}}",
+                                           "refId":  "C"
+                                       }
+                                   ],
+                       "fieldConfig":  {
+                                           "defaults":  {
+                                                            "unit":  "short"
+                                                        }
+                                       }
+                   },
+                   {
+                       "type":  "stat",
+                       "title":  "Consumers activos totales",
+                       "gridPos":  {
+                                       "x":  12,
+                                       "y":  8,
+                                       "w":  6,
+                                       "h":  4
+                                   },
+                       "datasource":  "Prometheus",
+                       "targets":  [
+                                       {
+                                           "expr":  "sum(rabbitmq_queue_consumers)",
+                                           "refId":  "A"
+                                       }
+                                   ],
+                       "fieldConfig":  {
+                                           "defaults":  {
+                                                            "unit":  "short",
+                                                            "thresholds":  {
+                                                                               "mode":  "absolute",
+                                                                               "steps":  [
+                                                                                             {
+                                                                                                 "value":  null,
+                                                                                                 "color":  "green"
+                                                                                             },
+                                                                                             {
+                                                                                                 "value":  1,
+                                                                                                 "color":  "orange"
+                                                                                             }
+                                                                                         ]
+                                                                           }
+                                                        }
+                                       }
+                   },
+                   {
+                       "type":  "stat",
+                       "title":  "Conexiones abiertas",
+                       "gridPos":  {
+                                       "x":  18,
+                                       "y":  8,
+                                       "w":  6,
+                                       "h":  4
+                                   },
+                       "datasource":  "Prometheus",
+                       "targets":  [
+                                       {
+                                           "expr":  "rabbitmq_connections",
+                                           "refId":  "A"
+                                       }
+                                   ],
+                       "fieldConfig":  {
+                                           "defaults":  {
+                                                            "unit":  "short"
+                                                        }
+                                       }
+                   },
+                   {
+                       "type":  "timeseries",
+                       "title":  "Memoria RabbitMQ (bytes)",
+                       "gridPos":  {
+                                       "x":  0,
+                                       "y":  16,
+                                       "w":  12,
+                                       "h":  8
+                                   },
+                       "datasource":  "Prometheus",
+                       "targets":  [
+                                       {
+                                           "expr":  "rabbitmq_node_mem_used",
+                                           "legendFormat":  "RSS",
+                                           "refId":  "A"
+                                       },
+                                       {
+                                           "expr":  "rabbitmq_node_mem_limit",
+                                           "legendFormat":  "VMS limit",
+                                           "refId":  "B"
+                                       }
+                                   ],
+                       "fieldConfig":  {
+                                           "defaults":  {
+                                                            "unit":  "bytes"
+                                                        }
+                                       }
+                   },
+                   {
+                       "type":  "timeseries",
+                       "title":  "Mensajes en colas DLQ (dead letter)",
+                       "gridPos":  {
+                                       "x":  12,
+                                       "y":  16,
+                                       "w":  12,
+                                       "h":  8
+                                   },
+                       "datasource":  "Prometheus",
+                       "targets":  [
+{
+                                            "expr": "rabbitmq_queue_messages{queue=~\".*dlq\"}",
+                                            "legendFormat": "{{queue}}",
+                                            "refId": "A"
+                                        }
+                                   ],
+                       "fieldConfig":  {
+                                           "defaults":  {
+                                                            "unit":  "short"
+                                                        }
+                                       }
+                   }
+               ]
+}

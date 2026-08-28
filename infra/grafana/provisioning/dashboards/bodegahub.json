@@ -1,0 +1,101 @@
+{
+  "annotations": { "list": [] },
+  "editable": true,
+  "graphTooltip": 1,
+  "title": "BodegaHub · Core Engine",
+  "uid": "bodegahub-core",
+  "panels": [
+    {
+      "id": 1,
+      "title": "Latencia p99 por servicio (ms)",
+      "type": "timeseries",
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ms",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "yellow", "value": 300 },
+              { "color": "red", "value": 400 }
+            ]
+          }
+        }
+      },
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 0 },
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.99, sum by (le, servicio) (rate(http_peticion_latencia_ms_bucket[5m])))",
+          "legendFormat": "{{servicio}}"
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "title": "Peticiones por segundo (por servicio)",
+      "type": "timeseries",
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 0 },
+      "targets": [
+        {
+          "expr": "sum by (servicio) (rate(http_peticiones_total[5m]))",
+          "legendFormat": "{{servicio}}"
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "title": "Errores 5xx (%)",
+      "type": "timeseries",
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "yellow", "value": 0.005 },
+              { "color": "red", "value": 0.01 }
+            ]
+          }
+        }
+      },
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 8 },
+      "targets": [
+        {
+          "expr": "sum by (servicio) (rate(http_peticiones_total{status=~\"5..\"}[5m])) / clamp_min(sum by (servicio) (rate(http_peticiones_total[5m])), 1)",
+          "legendFormat": "{{servicio}}"
+        }
+      ]
+    },
+    {
+      "id": 4,
+      "title": "Mensajes pendientes (backlog de colas)",
+      "type": "stat",
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "fieldConfig": {
+        "defaults": {
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "red", "value": 1000 }
+            ]
+          }
+        }
+      },
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 8 },
+      "targets": [
+        {
+          "expr": "rabbitmq_global_messages_unacknowledged",
+          "legendFormat": "unacknowledged"
+        }
+      ]
+    }
+  ],
+  "schemaVersion": 39,
+  "tags": ["bodegahub", "microservicios"],
+  "time": { "from": "now-6h", "to": "now" }
+}
