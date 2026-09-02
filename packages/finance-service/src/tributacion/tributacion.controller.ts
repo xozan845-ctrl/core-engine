@@ -9,7 +9,7 @@ import {
   Declaracion,
 } from './tributacion.service';
 
-export class CrearJurisdiccionDto {
+export class CrearJurisdiccionRequestDto {
   @IsString()
   @MinLength(2)
   codigo_pais: string;
@@ -39,7 +39,7 @@ export class CrearJurisdiccionDto {
   leyes?: Record<string, string>;
 }
 
-export class CrearRegimenDto {
+export class CrearRegimenRequestDto {
   @IsString()
   @MinLength(2)
   jurisdiccion: string;
@@ -63,7 +63,7 @@ export class CrearRegimenDto {
   condicion_ingresos_anuales_cents?: number;
 }
 
-export class RegistrarSujetoDto {
+export class RegistrarSujetoRequestDto {
   @IsUUID()
   id: string;
 
@@ -87,7 +87,7 @@ export class RegistrarSujetoDto {
   es_plataforma?: boolean;
 }
 
-export class GenerarDeclaracionesDto {
+export class GenerarDeclaracionesRequestDto {
   @IsOptional()
   @IsIn(['IVA', 'IR', 'CUOTA_FIJA'])
   tipo?: string;
@@ -117,7 +117,7 @@ export class TributacionController {
   }
 
   @Post('jurisdicciones')
-  async crearJurisdiccion(@Body() dto: CrearJurisdiccionDto): Promise<Jurisdiccion> {
+  async crearJurisdiccion(@Body() dto: CrearJurisdiccionRequestDto): Promise<Jurisdiccion> {
     return this.tributacion.crearJurisdiccion({
       codigo_pais: dto.codigo_pais,
       nombre: dto.nombre,
@@ -136,7 +136,7 @@ export class TributacionController {
   }
 
   @Post('regimenes')
-  async crearRegimen(@Body() dto: CrearRegimenDto): Promise<RegimenFiscal> {
+  async crearRegimen(@Body() dto: CrearRegimenRequestDto): Promise<RegimenFiscal> {
     const regimen = await this.tributacion.crearRegimen(dto);
     if (!regimen) throw new NotFoundError('Regimen', dto.codigo);
     return regimen;
@@ -148,7 +148,7 @@ export class TributacionController {
   }
 
   @Post('sujetos')
-  async registrarSujeto(@Body() dto: RegistrarSujetoDto): Promise<SujetoTributario> {
+  async registrarSujeto(@Body() dto: RegistrarSujetoRequestDto): Promise<SujetoTributario> {
     const sujeto = await this.tributacion.registrarSujeto(dto);
     if (!sujeto) throw new NotFoundError('Sujeto', dto.id);
     return sujeto;
@@ -172,7 +172,7 @@ export class TributacionController {
 
   /** Genera las declaraciones del periodo (por defecto el mes anterior). */
   @Post('declaraciones/generar')
-  async generar(@Body() dto: GenerarDeclaracionesDto): Promise<Declaracion[]> {
+  async generar(@Body() dto: GenerarDeclaracionesRequestDto): Promise<Declaracion[]> {
     const periodo = dto.inicio && dto.fin ? { inicio: dto.inicio, fin: dto.fin } : undefined;
     return this.tributacion.generarDeclaraciones(periodo);
   }

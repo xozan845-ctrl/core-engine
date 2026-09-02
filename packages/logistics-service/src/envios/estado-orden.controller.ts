@@ -15,7 +15,7 @@ import {
 } from '@core/shared';
 import { EnviosService, Envio, OrdenExterna } from './envios.service';
 
-export class AvanzarEstadoDto {
+export class AvanzarEstadoRequestDto {
   @IsIn(['en_preparacion', 'enviada', 'entregada', 'cancelada', 'devuelta'])
   estado: string;
 
@@ -37,7 +37,7 @@ export class EstadoOrdenController {
   @Roles(ROLES.ADMIN, ROLES.LOGISTICA)
   async avanzar(
     @Param('id') id: string,
-    @Body() dto: AvanzarEstadoDto,
+    @Body() dto: AvanzarEstadoRequestDto,
     @UsuarioActual() usuario: UsuarioContexto,
   ): Promise<OrdenExterna> {
     if (!['en_preparacion', 'enviada', 'entregada', 'cancelada', 'devuelta'].includes(dto.estado)) {

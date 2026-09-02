@@ -14,7 +14,7 @@ import {
 import { Roles, ROLES, UsuarioActual, UsuarioContexto, NotFoundError } from '@core/shared';
 import { ContabilidadService, Asiento, Cuenta, ParametrosAsiento } from './contabilidad.service';
 
-export class DetalleAsientoDto {
+export class DetalleAsientoRequestDto {
   @IsString()
   cuenta_codigo: string;
 
@@ -35,7 +35,7 @@ export class DetalleAsientoDto {
   orden?: number;
 }
 
-export class CrearAsientoDto {
+export class CrearAsientoRequestDto {
   @IsString()
   @MinLength(3)
   concepto: string;
@@ -58,11 +58,11 @@ export class CrearAsientoDto {
 
   @ArrayMinSize(2)
   @ValidateNested({ each: true })
-  @Type(() => DetalleAsientoDto)
-  detalles: DetalleAsientoDto[];
+  @Type(() => DetalleAsientoRequestDto)
+  detalles: DetalleAsientoRequestDto[];
 }
 
-export class CrearCuentaDto {
+export class CrearCuentaRequestDto {
   @IsString()
   codigo: string;
 
@@ -81,7 +81,7 @@ export class CrearCuentaDto {
   nivel?: number;
 }
 
-export class EstadoCuentaDto {
+export class EstadoCuentaRequestDto {
   @IsIn(['activa', 'inactiva'])
   estado: string;
 }
@@ -101,12 +101,12 @@ export class ContabilidadController {
   }
 
   @Post('cuentas')
-  async crearCuenta(@Body() dto: CrearCuentaDto): Promise<Cuenta> {
+  async crearCuenta(@Body() dto: CrearCuentaRequestDto): Promise<Cuenta> {
     return this.contabilidad.crearCuenta(dto);
   }
 
   @Post('cuentas/:codigo/estado')
-  async estadoCuenta(@Param('codigo') codigo: string, @Body() dto: EstadoCuentaDto): Promise<Cuenta> {
+  async estadoCuenta(@Param('codigo') codigo: string, @Body() dto: EstadoCuentaRequestDto): Promise<Cuenta> {
     const cuenta = await this.contabilidad.estadoCuenta(codigo, dto.estado as 'activa' | 'inactiva');
     if (!cuenta) throw new NotFoundError('Cuenta', codigo);
     return cuenta;
@@ -125,7 +125,7 @@ export class ContabilidadController {
   /** Asiento manual del administrador (bitacora append-only). */
   @Post('asientos')
   async registrar(
-    @Body() dto: CrearAsientoDto,
+    @Body() dto: CrearAsientoRequestDto,
     @UsuarioActual() usuario: UsuarioContexto,
   ): Promise<Asiento> {
     return this.contabilidad.registrar({

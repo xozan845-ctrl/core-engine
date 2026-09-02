@@ -1,6 +1,6 @@
 import { IsBoolean, IsInt, IsNotEmpty, IsOptional, IsString, Max, Min } from 'class-validator';
 
-export class AgregarItemDto {
+export class AgregarItemRequestDto {
   @IsString()
   @IsNotEmpty()
   oferta_id: string;
@@ -11,7 +11,7 @@ export class AgregarItemDto {
   cantidad: number;
 }
 
-export class ActualizarCantidadDto {
+export class ActualizarCantidadRequestDto {
   /** 0 elimina el item del carrito. */
   @IsInt()
   @Min(0)
@@ -20,7 +20,7 @@ export class ActualizarCantidadDto {
 }
 
 /** Opcional: marcar el checkout como "crear orden desde el carrito" (Tabla 21). */
-export class UsarCarritoDto {
+export class UsarCarritoRequestDto {
   @IsOptional()
   @IsBoolean()
   usar_carrito?: boolean;

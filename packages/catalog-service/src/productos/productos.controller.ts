@@ -12,7 +12,7 @@ import {
 import { ProductosService, Producto } from './productos.service';
 import { Pagina, Roles, UsuarioContexto, UsuarioActual, ROLES, NotFoundError } from '@core/shared';
 
-export class CrearProductoDto {
+export class CrearProductoRequestDto {
   @IsString()
   @Matches(/^[A-Za-z0-9\-]{2,32}$/, { message: 'SKU invalido (letras, numeros y guiones, 2-32)' })
   sku: string;
@@ -39,7 +39,7 @@ export class CrearProductoDto {
   stock: number;
 }
 
-export class ActualizarProductoDto {
+export class ActualizarProductoRequestDto {
   @IsOptional()
   @IsString()
   @Length(2, 200)
@@ -68,7 +68,7 @@ export class ActualizarProductoDto {
   motivo?: string;
 }
 
-export class ListarProductosDto {
+export class ListarProductosRequestDto {
   @IsOptional()
   @IsString()
   q?: string;
@@ -97,7 +97,7 @@ export class ProductosController {
 
   /** GET /api/v1/catalog/productos — listado publico con filtros y paginacion. */
   @Get('productos')
-  async listar(@Query() query: ListarProductosDto): Promise<Pagina<Producto>> {
+  async listar(@Query() query: ListarProductosRequestDto): Promise<Pagina<Producto>> {
     return this.productos.listar(query as unknown as Record<string, unknown>);
   }
 
@@ -115,7 +115,7 @@ export class ProductosController {
   @Post('productos')
   @Roles(ROLES.ADMIN)
   async crear(
-    @Body() dto: CrearProductoDto,
+    @Body() dto: CrearProductoRequestDto,
     @UsuarioActual() usuario: UsuarioContexto,
   ): Promise<Producto> {
     return this.productos.crear({ ...dto, precio_base: dto.precio_base });
@@ -124,7 +124,7 @@ export class ProductosController {
   /** PATCH /api/v1/catalog/productos/:id — edicion (admin; RN-08 historico). */
   @Patch('productos/:id')
   @Roles(ROLES.ADMIN)
-  async actualizar(@Param('id') id: string, @Body() dto: ActualizarProductoDto): Promise<Producto> {
+  async actualizar(@Param('id') id: string, @Body() dto: ActualizarProductoRequestDto): Promise<Producto> {
     return this.productos.actualizar(id, dto);
   }
 }

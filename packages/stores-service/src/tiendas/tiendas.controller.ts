@@ -3,7 +3,7 @@ import { IsOptional, IsString, Length } from 'class-validator';
 import { TiendasService, Tienda } from './tiendas.service';
 import { Roles, ROLES, UsuarioActual, UsuarioContexto, NotFoundError } from '@core/shared';
 
-export class CrearTiendaDto {
+export class CrearTiendaRequestDto {
   @IsString()
   @Length(2, 100)
   nombre: string;
@@ -19,7 +19,7 @@ export class TiendasController {
 
   @Post('tienda')
   @Roles(ROLES.VENDEDOR)
-  async crear(@Body() dto: CrearTiendaDto, @UsuarioActual() usuario: UsuarioContexto): Promise<Tienda> {
+  async crear(@Body() dto: CrearTiendaRequestDto, @UsuarioActual() usuario: UsuarioContexto): Promise<Tienda> {
     return this.tiendas.crear(usuario.user_id, dto.nombre, dto.descripcion);
   }
 

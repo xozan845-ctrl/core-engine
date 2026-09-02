@@ -9,7 +9,7 @@ import {
 } from '@core/shared';
 import { LiquidacionesService, Liquidacion, Periodo } from './liquidaciones.service';
 
-export class EstadoLiquidacionDto {
+export class EstadoLiquidacionRequestDto {
   @IsIn(['pagada'])
   estado: string;
 }

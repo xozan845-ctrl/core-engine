@@ -9,7 +9,7 @@ import {
 } from '@nestjs/common';
 import { Roles, ROLES, UsuarioActual, UsuarioContexto } from '@core/shared';
 import { CarritoService, CarritoVista } from './carrito.service';
-import { AgregarItemDto, ActualizarCantidadDto } from './carrito.dtos';
+import { AgregarItemRequestDto, ActualizarCantidadRequestDto } from './carrito.dtos';
 
 /**
  * Carrito del comprador (RN-05): expira tras 30 minutos de inactividad y no
@@ -28,7 +28,7 @@ export class CarritoController {
   @Post('items')
   @Roles(ROLES.COMPRADOR)
   async agregar(
-    @Body() dto: AgregarItemDto,
+    @Body() dto: AgregarItemRequestDto,
     @UsuarioActual() usuario: UsuarioContexto,
   ): Promise<CarritoVista> {
     return this.carritos.agregar(usuario.user_id, dto.oferta_id, dto.cantidad);
@@ -38,7 +38,7 @@ export class CarritoController {
   @Roles(ROLES.COMPRADOR)
   async actualizar(
     @Param('ofertaId') ofertaId: string,
-    @Body() dto: ActualizarCantidadDto,
+    @Body() dto: ActualizarCantidadRequestDto,
     @UsuarioActual() usuario: UsuarioContexto,
   ): Promise<CarritoVista> {
     return this.carritos.actualizarCantidad(usuario.user_id, ofertaId, dto.cantidad);

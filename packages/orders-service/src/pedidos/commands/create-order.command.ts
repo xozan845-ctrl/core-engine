@@ -11,7 +11,7 @@ import {
   ValidateNested,
 } from 'class-validator';
 
-export class ItemOrdenDto {
+export class ItemOrdenRequestDto {
   @IsString()
   oferta_id: string;
 
@@ -32,8 +32,8 @@ export class CreateOrderCommand {
   @IsOptional()
   @IsArray()
   @ValidateNested({ each: true })
-  @Type(() => ItemOrdenDto)
-  items?: ItemOrdenDto[];
+  @Type(() => ItemOrdenRequestDto)
+  items?: ItemOrdenRequestDto[];
 
   @IsOptional()
   @IsBoolean()

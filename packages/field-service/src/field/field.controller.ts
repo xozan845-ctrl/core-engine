@@ -9,28 +9,28 @@ import {
 } from '@core/shared';
 import { FieldService } from './field.service';
 import {
-  CrearPersonalDto,
-  ActualizarPersonalDto,
-  CrearClienteDto,
-  ActualizarClienteDto,
-  CrearVehiculoDto,
-  ActualizarVehiculoDto,
-  CrearRutaDto,
-  ActualizarRutaDto,
-  ParadaDto,
-  AsignarRutaDto,
-  CrearPedidoDto,
-  ActualizarPedidoDto,
-  CambiarEstadoPedidoDto,
-  CrearAsistenciaDto,
-  CrearIncidenciaDto,
-  ActualizarIncidenciaDto,
-  CrearTrackingDto,
-  CrearVisitaDto,
-  GuardarCumplimientoDto,
-  UbicacionDto,
-  SyncDto,
-  TrackingBulkDto,
+  CrearPersonalRequestDto,
+  ActualizarPersonalRequestDto,
+  CrearClienteRequestDto,
+  ActualizarClienteRequestDto,
+  CrearVehiculoRequestDto,
+  ActualizarVehiculoRequestDto,
+  CrearRutaRequestDto,
+  ActualizarRutaRequestDto,
+  ParadaRequestDto,
+  AsignarRutaRequestDto,
+  CrearPedidoRequestDto,
+  ActualizarPedidoRequestDto,
+  CambiarEstadoPedidoRequestDto,
+  CrearAsistenciaRequestDto,
+  CrearIncidenciaRequestDto,
+  ActualizarIncidenciaRequestDto,
+  CrearTrackingRequestDto,
+  CrearVisitaRequestDto,
+  GuardarCumplimientoRequestDto,
+  UbicacionRequestDto,
+  SyncRequestDto,
+  TrackingBulkRequestDto,
 } from './field.dtos';
 
 @Controller('api/v1/field')
@@ -57,12 +57,12 @@ export class FieldController {
   }
   @Post('personal')
   @Roles(...ROLES_LOGISTICA)
-  crearPersonal(@UsuarioActual() u: UsuarioContexto, @Body() dto: CrearPersonalDto) {
+  crearPersonal(@UsuarioActual() u: UsuarioContexto, @Body() dto: CrearPersonalRequestDto) {
     return this.field.crearPersonal(this.tenant(u), dto);
   }
   @Patch('personal/:id')
   @Roles(...ROLES_LOGISTICA)
-  actualizarPersonal(@UsuarioActual() u: UsuarioContexto, @Param('id') id: string, @Body() dto: ActualizarPersonalDto) {
+  actualizarPersonal(@UsuarioActual() u: UsuarioContexto, @Param('id') id: string, @Body() dto: ActualizarPersonalRequestDto) {
     return this.field.actualizarPersonal(this.tenant(u), id, dto);
   }
   @Delete('personal/:id')
@@ -77,7 +77,7 @@ export class FieldController {
   }
   @Patch('personal/:id/ubicacion')
   @Roles(...ROLES_LOGISTICA)
-  actualizarUbicacion(@UsuarioActual() u: UsuarioContexto, @Param('id') id: string, @Body() dto: UbicacionDto) {
+  actualizarUbicacion(@UsuarioActual() u: UsuarioContexto, @Param('id') id: string, @Body() dto: UbicacionRequestDto) {
     return this.field.actualizarUbicacion(this.tenant(u), id, dto);
   }
 
@@ -94,12 +94,12 @@ export class FieldController {
   }
   @Post('clientes')
   @Roles(...ROLES_LOGISTICA)
-  crearCliente(@UsuarioActual() u: UsuarioContexto, @Body() dto: CrearClienteDto) {
+  crearCliente(@UsuarioActual() u: UsuarioContexto, @Body() dto: CrearClienteRequestDto) {
     return this.field.crearCliente(this.tenant(u), dto);
   }
   @Patch('clientes/:id')
   @Roles(...ROLES_LOGISTICA)
-  actualizarCliente(@UsuarioActual() u: UsuarioContexto, @Param('id') id: string, @Body() dto: ActualizarClienteDto) {
+  actualizarCliente(@UsuarioActual() u: UsuarioContexto, @Param('id') id: string, @Body() dto: ActualizarClienteRequestDto) {
     return this.field.actualizarCliente(this.tenant(u), id, dto);
   }
   @Delete('clientes/:id')
@@ -121,12 +121,12 @@ export class FieldController {
   }
   @Post('vehiculos')
   @Roles(ROLES.ADMIN, ROLES.COORDINADOR, ROLES.SUPERVISOR)
-  crearVehiculo(@UsuarioActual() u: UsuarioContexto, @Body() dto: CrearVehiculoDto) {
+  crearVehiculo(@UsuarioActual() u: UsuarioContexto, @Body() dto: CrearVehiculoRequestDto) {
     return this.field.crearVehiculo(this.tenant(u), dto);
   }
   @Patch('vehiculos/:id')
   @Roles(ROLES.ADMIN, ROLES.COORDINADOR, ROLES.SUPERVISOR)
-  actualizarVehiculo(@UsuarioActual() u: UsuarioContexto, @Param('id') id: string, @Body() dto: ActualizarVehiculoDto) {
+  actualizarVehiculo(@UsuarioActual() u: UsuarioContexto, @Param('id') id: string, @Body() dto: ActualizarVehiculoRequestDto) {
     return this.field.actualizarVehiculo(this.tenant(u), id, dto);
   }
   @Delete('vehiculos/:id')
@@ -148,12 +148,12 @@ export class FieldController {
   }
   @Post('rutas')
   @Roles(ROLES.ADMIN, ROLES.COORDINADOR, ROLES.SUPERVISOR)
-  crearRuta(@UsuarioActual() u: UsuarioContexto, @Body() dto: CrearRutaDto) {
+  crearRuta(@UsuarioActual() u: UsuarioContexto, @Body() dto: CrearRutaRequestDto) {
     return this.field.crearRuta(this.tenant(u), dto);
   }
   @Patch('rutas/:id')
   @Roles(ROLES.ADMIN, ROLES.COORDINADOR, ROLES.SUPERVISOR)
-  actualizarRuta(@UsuarioActual() u: UsuarioContexto, @Param('id') id: string, @Body() dto: ActualizarRutaDto) {
+  actualizarRuta(@UsuarioActual() u: UsuarioContexto, @Param('id') id: string, @Body() dto: ActualizarRutaRequestDto) {
     return this.field.actualizarRuta(this.tenant(u), id, dto);
   }
   @Delete('rutas/:id')
@@ -163,7 +163,7 @@ export class FieldController {
   }
   @Post('rutas/:id/paradas')
   @Roles(ROLES.ADMIN, ROLES.COORDINADOR, ROLES.SUPERVISOR)
-  agregarParada(@UsuarioActual() u: UsuarioContexto, @Param('id') id: string, @Body() dto: ParadaDto) {
+  agregarParada(@UsuarioActual() u: UsuarioContexto, @Param('id') id: string, @Body() dto: ParadaRequestDto) {
     return this.field.agregarParada(this.tenant(u), id, dto);
   }
   @Patch('rutas/:id/paradas/:paradaId')
@@ -172,13 +172,13 @@ export class FieldController {
     @UsuarioActual() u: UsuarioContexto,
     @Param('id') id: string,
     @Param('paradaId') paradaId: string,
-    @Body() dto: ParadaDto,
+    @Body() dto: ParadaRequestDto,
   ) {
     return this.field.actualizarParada(this.tenant(u), id, paradaId, dto);
   }
   @Post('rutas/:id/asignar')
   @Roles(ROLES.ADMIN, ROLES.COORDINADOR, ROLES.SUPERVISOR)
-  asignarRuta(@UsuarioActual() u: UsuarioContexto, @Param('id') id: string, @Body() dto: AsignarRutaDto) {
+  asignarRuta(@UsuarioActual() u: UsuarioContexto, @Param('id') id: string, @Body() dto: AsignarRutaRequestDto) {
     return this.field.asignarRuta(this.tenant(u), id, dto);
   }
 
@@ -200,12 +200,12 @@ export class FieldController {
   }
   @Post('pedidos')
   @Roles(ROLES.ADMIN, ROLES.COORDINADOR, ROLES.SUPERVISOR, ROLES.OPERATIVO)
-  crearPedido(@UsuarioActual() u: UsuarioContexto, @Body() dto: CrearPedidoDto) {
+  crearPedido(@UsuarioActual() u: UsuarioContexto, @Body() dto: CrearPedidoRequestDto) {
     return this.field.crearPedido(this.tenant(u), dto);
   }
   @Patch('pedidos/:id')
   @Roles(ROLES.ADMIN, ROLES.COORDINADOR, ROLES.SUPERVISOR, ROLES.OPERATIVO)
-  actualizarPedido(@UsuarioActual() u: UsuarioContexto, @Param('id') id: string, @Body() dto: ActualizarPedidoDto) {
+  actualizarPedido(@UsuarioActual() u: UsuarioContexto, @Param('id') id: string, @Body() dto: ActualizarPedidoRequestDto) {
     return this.field.actualizarPedido(this.tenant(u), id, dto);
   }
   @Delete('pedidos/:id')
@@ -215,7 +215,7 @@ export class FieldController {
   }
   @Patch('pedidos/:id/estado')
   @Roles(ROLES.ADMIN, ROLES.COORDINADOR, ROLES.SUPERVISOR, ROLES.OPERATIVO)
-  cambiarEstadoPedido(@UsuarioActual() u: UsuarioContexto, @Param('id') id: string, @Body() dto: CambiarEstadoPedidoDto) {
+  cambiarEstadoPedido(@UsuarioActual() u: UsuarioContexto, @Param('id') id: string, @Body() dto: CambiarEstadoPedidoRequestDto) {
     return this.field.cambiarEstadoPedido(this.tenant(u), id, dto);
   }
 
@@ -231,7 +231,7 @@ export class FieldController {
   }
   @Post('asistencia')
   @Roles(...ROLES_LOGISTICA)
-  registrarAsistencia(@UsuarioActual() u: UsuarioContexto, @Body() dto: CrearAsistenciaDto) {
+  registrarAsistencia(@UsuarioActual() u: UsuarioContexto, @Body() dto: CrearAsistenciaRequestDto) {
     return this.field.registrarAsistencia(this.tenant(u), dto);
   }
 
@@ -252,12 +252,12 @@ export class FieldController {
   }
   @Post('incidencias')
   @Roles(...ROLES_LOGISTICA)
-  crearIncidencia(@UsuarioActual() u: UsuarioContexto, @Body() dto: CrearIncidenciaDto) {
+  crearIncidencia(@UsuarioActual() u: UsuarioContexto, @Body() dto: CrearIncidenciaRequestDto) {
     return this.field.crearIncidencia(this.tenant(u), dto);
   }
   @Patch('incidencias/:id')
   @Roles(...ROLES_LOGISTICA)
-  actualizarIncidencia(@UsuarioActual() u: UsuarioContexto, @Param('id') id: string, @Body() dto: ActualizarIncidenciaDto) {
+  actualizarIncidencia(@UsuarioActual() u: UsuarioContexto, @Param('id') id: string, @Body() dto: ActualizarIncidenciaRequestDto) {
     return this.field.actualizarIncidencia(this.tenant(u), id, dto);
   }
   @Delete('incidencias/:id')
@@ -279,7 +279,7 @@ export class FieldController {
   }
   @Post('tracking')
   @Roles(...ROLES_LOGISTICA)
-  registrarTracking(@UsuarioActual() u: UsuarioContexto, @Body() dto: TrackingBulkDto) {
+  registrarTracking(@UsuarioActual() u: UsuarioContexto, @Body() dto: TrackingBulkRequestDto) {
     return this.field.registrarTracking(this.tenant(u), dto.registros);
   }
 
@@ -295,7 +295,7 @@ export class FieldController {
   }
   @Post('visitas')
   @Roles(...ROLES_LOGISTICA)
-  registrarVisita(@UsuarioActual() u: UsuarioContexto, @Body() dto: CrearVisitaDto) {
+  registrarVisita(@UsuarioActual() u: UsuarioContexto, @Body() dto: CrearVisitaRequestDto) {
     return this.field.registrarVisita(this.tenant(u), dto);
   }
 
@@ -307,14 +307,15 @@ export class FieldController {
   }
   @Post('cumplimiento')
   @Roles(ROLES.ADMIN, ROLES.COORDINADOR, ROLES.SUPERVISOR)
-  guardarCumplimiento(@UsuarioActual() u: UsuarioContexto, @Body() dto: GuardarCumplimientoDto) {
+  guardarCumplimiento(@UsuarioActual() u: UsuarioContexto, @Body() dto: GuardarCumplimientoRequestDto) {
     return this.field.guardarCumplimiento(this.tenant(u), dto);
   }
 
   // ── sync offline (app-test) ───────────────────────────────────────────
   @Post('sync')
   @Roles(...ROLES_LOGISTICA)
-  sincronizar(@UsuarioActual() u: UsuarioContexto, @Body() dto: SyncDto) {
+  sincronizar(@UsuarioActual() u: UsuarioContexto, @Body() dto: SyncRequestDto) {
     return this.field.sincronizar(this.tenant(u), dto.operaciones);
   }
 }
+

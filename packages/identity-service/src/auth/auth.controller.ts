@@ -22,7 +22,7 @@ import {
   ForbiddenError,
 } from '@core/shared';
 
-export class RegistroDto {
+export class RegistroRequestDto {
   @IsString()
   @Length(2, 120)
   nombre: string;
@@ -40,7 +40,7 @@ export class RegistroDto {
   rol: (typeof ROLES)[keyof typeof ROLES];
 }
 
-export class LoginDto {
+export class LoginRequestDto {
   /** require_tld:false admite TLDs de desarrollo (.test) y correos internos. */
   @IsEmail({ require_tld: false })
   correo: string;
@@ -49,7 +49,7 @@ export class LoginDto {
   contrasena: string;
 }
 
-export class CrearUsuarioDto {
+export class CrearUsuarioRequestDto {
   @IsString()
   @Length(2, 120)
   nombre: string;
@@ -75,7 +75,7 @@ export class CrearUsuarioDto {
   personal_id?: string;
 }
 
-export class CambiarContrasenaDto {
+export class CambiarContrasenaRequestDto {
   @IsString()
   @MinLength(1)
   actual: string;
@@ -85,12 +85,12 @@ export class CambiarContrasenaDto {
   nueva: string;
 }
 
-export class RestablecerContrasenaDto {
+export class RestablecerContrasenaRequestDto {
   @IsEmail({ require_tld: false })
   correo: string;
 }
 
-export class VincularPersonalDto {
+export class VincularPersonalRequestDto {
   /** Id de la ficha de personal en field-service (logistica de campo). */
   @IsString()
   @Length(1, 100)
@@ -112,14 +112,14 @@ export class AuthController {
 
   /** POST /api/v1/auth/registro — alta de vendedor o comprador (Tabla 21). */
   @Post('registro')
-  async registrar(@Body() dto: RegistroDto): Promise<Sesion> {
+  async registrar(@Body() dto: RegistroRequestDto): Promise<Sesion> {
     return this.auth.registrar(dto);
   }
 
   /** POST /api/v1/auth/login — JWT + refresh (Tabla 21). */
   @HttpCode(200)
   @Post('login')
-  async login(@Body() dto: LoginDto): Promise<Sesion> {
+  async login(@Body() dto: LoginRequestDto): Promise<Sesion> {
     return this.auth.login(dto.correo, dto.contrasena);
   }
 
@@ -138,7 +138,7 @@ export class AuthController {
    */
   @Post('crear-usuario')
   async crearUsuario(
-    @Body() dto: CrearUsuarioDto,
+    @Body() dto: CrearUsuarioRequestDto,
     @UsuarioActual() usuario: UsuarioContexto,
   ): Promise<Usuario> {
     if (!usuario) throw new UnauthorizedError('Token invalido o ausente.');
@@ -163,7 +163,7 @@ export class AuthController {
   /** POST /api/v1/auth/cambiar-contrasena — cambio autenticado (app: cambiar-contrasena). */
   @Post('cambiar-contrasena')
   async cambiarContrasena(
-    @Body() dto: CambiarContrasenaDto,
+    @Body() dto: CambiarContrasenaRequestDto,
     @UsuarioActual() usuario: UsuarioContexto,
   ): Promise<{ ok: true }> {
     if (!usuario) throw new UnauthorizedError('Token invalido o ausente.');
@@ -177,7 +177,7 @@ export class AuthController {
    * conecta a Supabase Auth/SMTP en staging/prod.
    */
   @Post('restablecer-contrasena')
-  async restablecerContrasena(@Body() dto: RestablecerContrasenaDto): Promise<{ ok: true }> {
+  async restablecerContrasena(@Body() dto: RestablecerContrasenaRequestDto): Promise<{ ok: true }> {
     const existe = await this.usuarios.encontrarPorCorreo(dto.correo);
     if (!existe) {
       // No revelar si existe o no (OWASP A07): siempre responde ok.
@@ -203,7 +203,7 @@ export class AuthController {
    */
   @Post('vincular-personal')
   async vincularPersonal(
-    @Body() dto: VincularPersonalDto,
+    @Body() dto: VincularPersonalRequestDto,
     @UsuarioActual() usuario: UsuarioContexto,
   ): Promise<{ ok: true }> {
     if (!usuario) throw new UnauthorizedError('Token invalido o ausente.');
@@ -214,3 +214,4 @@ export class AuthController {
     return { ok: true };
   }
 }
+

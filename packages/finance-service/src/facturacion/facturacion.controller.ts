@@ -3,7 +3,7 @@ import { IsIn, IsOptional, IsString, IsUUID } from 'class-validator';
 import { Roles, ROLES, NotFoundError } from '@core/shared';
 import { FacturacionService, Comprobante } from './facturacion.service';
 
-export class EmitirComprobanteDto {
+export class EmitirComprobanteRequestDto {
   @IsIn(['FACTURA', 'NOTA_CREDITO'])
   tipo: 'FACTURA' | 'NOTA_CREDITO';
 
@@ -47,7 +47,7 @@ export class FacturacionController {
   }
 
   @Post()
-  async emitir(@Body() dto: EmitirComprobanteDto): Promise<Comprobante> {
+  async emitir(@Body() dto: EmitirComprobanteRequestDto): Promise<Comprobante> {
     return this.facturacion.emitir(dto.tipo, dto.orden_id, {
       cliente_id: dto.cliente_id,
       razon_social: dto.razon_social,

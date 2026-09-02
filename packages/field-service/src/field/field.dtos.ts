@@ -13,7 +13,7 @@ import {
 } from 'class-validator';
 
 // ── personal ─────────────────────────────────────────────────────────────
-export class CrearPersonalDto {
+export class CrearPersonalRequestDto {
   @IsString() nombre: string;
   @IsOptional() @IsString() apellido?: string;
   @IsOptional() @IsIn(['conductor', 'auxiliar', 'supervisor', 'coordinador']) cargo?: string;
@@ -29,7 +29,7 @@ export class CrearPersonalDto {
   @IsOptional() @IsNumber() ubicacionPrecision?: number;
   @IsOptional() @IsDateString() ubicacionTs?: string;
 }
-export class ActualizarPersonalDto {
+export class ActualizarPersonalRequestDto {
   @IsOptional() @IsString() nombre?: string;
   @IsOptional() @IsString() apellido?: string;
   @IsOptional() @IsIn(['conductor', 'auxiliar', 'supervisor', 'coordinador']) cargo?: string;
@@ -47,7 +47,7 @@ export class ActualizarPersonalDto {
 }
 
 // ── clientes ─────────────────────────────────────────────────────────────
-export class CrearClienteDto {
+export class CrearClienteRequestDto {
   @IsString() nombreCompleto: string;
   @IsOptional() @IsString() tipoDocumento?: string;
   @IsOptional() @IsString() numeroDocumento?: string;
@@ -63,7 +63,7 @@ export class CrearClienteDto {
   @IsOptional() @IsString() notasAdicionales?: string;
   @IsOptional() @IsString() urlGoogleMaps?: string;
 }
-export class ActualizarClienteDto {
+export class ActualizarClienteRequestDto {
   @IsOptional() @IsString() nombreCompleto?: string;
   @IsOptional() @IsString() tipoDocumento?: string;
   @IsOptional() @IsString() numeroDocumento?: string;
@@ -81,7 +81,7 @@ export class ActualizarClienteDto {
 }
 
 // ── vehiculos ────────────────────────────────────────────────────────────
-export class CrearVehiculoDto {
+export class CrearVehiculoRequestDto {
   @IsString() placa: string;
   @IsOptional() @IsIn(['camioneta', 'furgon', 'camion', 'moto', 'otro']) tipo?: string;
   @IsOptional() @IsString() marca?: string;
@@ -99,7 +99,7 @@ export class CrearVehiculoDto {
   @IsOptional() @IsString() conductorId?: string;
   @IsOptional() @IsString() rutaActivaId?: string;
 }
-export class ActualizarVehiculoDto {
+export class ActualizarVehiculoRequestDto {
   @IsOptional() @IsString() placa?: string;
   @IsOptional() @IsIn(['camioneta', 'furgon', 'camion', 'moto', 'otro']) tipo?: string;
   @IsOptional() @IsString() marca?: string;
@@ -119,7 +119,7 @@ export class ActualizarVehiculoDto {
 }
 
 // ── rutas ────────────────────────────────────────────────────────────────
-export class CrearRutaDto {
+export class CrearRutaRequestDto {
   @IsString() nombre: string;
   @IsOptional() @IsString() descripcion?: string;
   @IsOptional() @IsIn(['pendiente', 'en_curso', 'completada', 'cancelada']) estado?: string;
@@ -128,7 +128,7 @@ export class CrearRutaDto {
   @IsOptional() @IsDateString() fechaInicio?: string;
   @IsOptional() @IsDateString() fechaFin?: string;
 }
-export class ActualizarRutaDto {
+export class ActualizarRutaRequestDto {
   @IsOptional() @IsString() nombre?: string;
   @IsOptional() @IsString() descripcion?: string;
   @IsOptional() @IsIn(['pendiente', 'en_curso', 'completada', 'cancelada']) estado?: string;
@@ -137,7 +137,7 @@ export class ActualizarRutaDto {
   @IsOptional() @IsDateString() fechaInicio?: string;
   @IsOptional() @IsDateString() fechaFin?: string;
 }
-export class ParadaDto {
+export class ParadaRequestDto {
   @IsOptional() @IsString() rutaId?: string;
   @IsOptional() @IsInt() @Min(0) orden?: number;
   @IsString() nombre: string;
@@ -154,13 +154,13 @@ export class ParadaDto {
   @IsOptional() @IsString() notas?: string;
   @IsOptional() @IsString() tipoCombustible?: string;
 }
-export class AsignarRutaDto {
+export class AsignarRutaRequestDto {
   @IsOptional() @IsArray() personalIds?: string[];
   @IsOptional() @IsString() vehiculoId?: string;
 }
 
 // ── pedidos ──────────────────────────────────────────────────────────────
-export class CrearPedidoDto {
+export class CrearPedidoRequestDto {
   @IsOptional() @IsString() cliente?: string;
   @IsOptional() @IsString() clienteId?: string;
   @IsOptional() @IsString() direccionEntrega?: string;
@@ -170,7 +170,7 @@ export class CrearPedidoDto {
   @IsOptional() @IsString() rutaId?: string;
   @IsOptional() @IsString() notas?: string;
 }
-export class ActualizarPedidoDto {
+export class ActualizarPedidoRequestDto {
   @IsOptional() @IsString() cliente?: string;
   @IsOptional() @IsString() clienteId?: string;
   @IsOptional() @IsString() direccionEntrega?: string;
@@ -180,13 +180,13 @@ export class ActualizarPedidoDto {
   @IsOptional() @IsString() rutaId?: string;
   @IsOptional() @IsString() notas?: string;
 }
-export class CambiarEstadoPedidoDto {
+export class CambiarEstadoPedidoRequestDto {
   @IsIn(['pendiente', 'asignado', 'en_camino', 'entregado', 'fallido', 'cancelado']) estado: string;
   @IsOptional() @IsString() motivo?: string;
 }
 
 // ── asistencia ────────────────────────────────────────────────────────────
-export class CrearAsistenciaDto {
+export class CrearAsistenciaRequestDto {
   @IsString() personalId: string;
   @IsIn(['entrada', 'salida']) tipo: string;
   @IsOptional() @IsDateString() timestamp?: string;
@@ -203,7 +203,7 @@ export class CrearAsistenciaDto {
 }
 
 // ── incidencias ───────────────────────────────────────────────────────────
-export class CrearIncidenciaDto {
+export class CrearIncidenciaRequestDto {
   @IsIn(['mecanica', 'accidente', 'salud', 'clima', 'otro']) tipo: string;
   @IsOptional() @IsIn(['abierta', 'en_progreso', 'resuelta']) estado?: string;
   @IsString() descripcion: string;
@@ -212,7 +212,7 @@ export class CrearIncidenciaDto {
   @IsOptional() @IsString() rutaId?: string;
   @IsOptional() @IsString() resolucion?: string;
 }
-export class ActualizarIncidenciaDto {
+export class ActualizarIncidenciaRequestDto {
   @IsOptional() @IsIn(['mecanica', 'accidente', 'salud', 'clima', 'otro']) tipo?: string;
   @IsOptional() @IsIn(['abierta', 'en_progreso', 'resuelta']) estado?: string;
   @IsOptional() @IsString() descripcion?: string;
@@ -223,7 +223,7 @@ export class ActualizarIncidenciaDto {
 }
 
 // ── tracking ──────────────────────────────────────────────────────────────
-export class CrearTrackingDto {
+export class CrearTrackingRequestDto {
   @IsString() personalId: string;
   @IsNumber() latitud: number;
   @IsNumber() longitud: number;
@@ -232,12 +232,12 @@ export class CrearTrackingDto {
   @IsOptional() @IsNumber() rumbo?: number;
   @IsOptional() @IsDateString() timestamp?: string;
 }
-export class TrackingBulkDto {
-  @IsArray() registros: CrearTrackingDto[];
+export class TrackingBulkRequestDto {
+  @IsArray() registros: CrearTrackingRequestDto[];
 }
 
 // ── visitas (telemetria) ─────────────────────────────────────────────────
-export class CrearVisitaDto {
+export class CrearVisitaRequestDto {
   @IsString() personalId: string;
   @IsOptional() @IsString() clienteId?: string;
   @IsOptional() @IsString() rutaId?: string;
@@ -253,14 +253,14 @@ export class CrearVisitaDto {
 }
 
 // ── cumplimiento ──────────────────────────────────────────────────────────
-export class GuardarCumplimientoDto {
+export class GuardarCumplimientoRequestDto {
   @IsString() rutaId: string;
   @IsDateString() fecha: string;
   @IsObject() metricas: Record<string, unknown>;
 }
 
 // ── ubicacion de personal ─────────────────────────────────────────────────
-export class UbicacionDto {
+export class UbicacionRequestDto {
   @IsNumber() lat: number;
   @IsNumber() lng: number;
   @IsOptional() @IsNumber() precision?: number;
@@ -268,10 +268,11 @@ export class UbicacionDto {
 }
 
 // ── sync offline ─────────────────────────────────────────────────────────
-export class SyncOperacionDto {
+export class SyncOperacionRequestDto {
   @IsString() tipo: string;
   @IsObject() payload: Record<string, unknown>;
 }
-export class SyncDto {
-  @IsArray() operaciones: SyncOperacionDto[];
+export class SyncRequestDto {
+  @IsArray() operaciones: SyncOperacionRequestDto[];
 }
+

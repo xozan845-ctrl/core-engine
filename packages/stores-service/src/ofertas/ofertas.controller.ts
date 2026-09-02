@@ -11,7 +11,7 @@ import {
   NotFoundError,
 } from '@core/shared';
 
-export class PublicarProductoDto {
+export class PublicarProductoRequestDto {
   @IsString()
   producto_id: string;
 
@@ -22,7 +22,7 @@ export class PublicarProductoDto {
   margen: number;
 }
 
-export class CambiarMargenDto {
+export class CambiarMargenRequestDto {
   @IsInt()
   @Min(0)
   @Max(90)
@@ -40,7 +40,7 @@ export class OfertasController {
   @Post('vendedores/productos')
   @Roles(ROLES.VENDEDOR)
   async publicar(
-    @Body() dto: PublicarProductoDto,
+    @Body() dto: PublicarProductoRequestDto,
     @UsuarioActual() usuario: UsuarioContexto,
   ): Promise<Oferta> {
     return this.ofertas.publicar(usuario.user_id, dto.producto_id, dto.margen);
@@ -51,7 +51,7 @@ export class OfertasController {
   @Roles(ROLES.VENDEDOR)
   async cambiarMargen(
     @Param('id') id: string,
-    @Body() dto: CambiarMargenDto,
+    @Body() dto: CambiarMargenRequestDto,
     @UsuarioActual() usuario: UsuarioContexto,
   ): Promise<Oferta> {
     return this.ofertas.cambiarMargen(id, usuario.user_id, dto.margen);

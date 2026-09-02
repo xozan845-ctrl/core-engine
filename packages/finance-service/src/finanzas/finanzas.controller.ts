@@ -17,7 +17,7 @@ import { ProyeccionesService, Proyeccion, SupuestosProyeccion } from './proyecci
 import { KpisService, KpisFinancieros } from './kpis.service';
 import { AlertasService } from './alertas.service';
 
-export class SupuestosDto {
+export class SupuestosRequestDto {
   @IsInt()
   @Min(1)
   @Max(60)
@@ -69,14 +69,14 @@ export class SupuestosDto {
   tasa_descuento_mensual?: number;
 }
 
-export class CrearProyeccionDto {
+export class CrearProyeccionRequestDto {
   @IsString()
   @MinLength(3)
   nombre: string;
 
   @ValidateNested()
-  @Type(() => SupuestosDto)
-  supuestos: SupuestosDto;
+  @Type(() => SupuestosRequestDto)
+  supuestos: SupuestosRequestDto;
 }
 
 /**
@@ -93,7 +93,7 @@ export class FinanzasController {
   ) {}
 
   @Post('proyecciones')
-  async crear(@Body() dto: CrearProyeccionDto): Promise<Proyeccion> {
+  async crear(@Body() dto: CrearProyeccionRequestDto): Promise<Proyeccion> {
     return this.proyecciones.crear(dto.nombre, dto.supuestos as SupuestosProyeccion);
   }
 

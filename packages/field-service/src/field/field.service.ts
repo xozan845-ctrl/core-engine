@@ -2,27 +2,27 @@ import { Injectable } from '@nestjs/common';
 import { randomUUID } from 'crypto';
 import { PgService, DomainError, NotFoundError, Logger } from '@core/shared';
 import {
-  CrearPersonalDto,
-  ActualizarPersonalDto,
-  CrearClienteDto,
-  ActualizarClienteDto,
-  CrearVehiculoDto,
-  ActualizarVehiculoDto,
-  CrearRutaDto,
-  ActualizarRutaDto,
-  ParadaDto,
-  AsignarRutaDto,
-  CrearPedidoDto,
-  ActualizarPedidoDto,
-  CambiarEstadoPedidoDto,
-  CrearAsistenciaDto,
-  CrearIncidenciaDto,
-  ActualizarIncidenciaDto,
-  CrearTrackingDto,
-  CrearVisitaDto,
-  GuardarCumplimientoDto,
-  UbicacionDto,
-  SyncOperacionDto,
+  CrearPersonalRequestDto,
+  ActualizarPersonalRequestDto,
+  CrearClienteRequestDto,
+  ActualizarClienteRequestDto,
+  CrearVehiculoRequestDto,
+  ActualizarVehiculoRequestDto,
+  CrearRutaRequestDto,
+  ActualizarRutaRequestDto,
+  ParadaRequestDto,
+  AsignarRutaRequestDto,
+  CrearPedidoRequestDto,
+  ActualizarPedidoRequestDto,
+  CambiarEstadoPedidoRequestDto,
+  CrearAsistenciaRequestDto,
+  CrearIncidenciaRequestDto,
+  ActualizarIncidenciaRequestDto,
+  CrearTrackingRequestDto,
+  CrearVisitaRequestDto,
+  GuardarCumplimientoRequestDto,
+  UbicacionRequestDto,
+  SyncOperacionRequestDto,
 } from './field.dtos';
 
 type Mapa = Record<string, string>;
@@ -307,10 +307,10 @@ export class FieldService {
   obtenerPersonal(tenant: string, id: string) {
     return this.obtener('personal', tenant, id);
   }
-  crearPersonal(tenant: string, dto: CrearPersonalDto) {
+  crearPersonal(tenant: string, dto: CrearPersonalRequestDto) {
     return this.insertar('personal', tenant, undefined, dto, MAP_PERSONAL, DEF_PERSONAL, false);
   }
-  actualizarPersonal(tenant: string, id: string, dto: ActualizarPersonalDto) {
+  actualizarPersonal(tenant: string, id: string, dto: ActualizarPersonalRequestDto) {
     return this.actualizar('personal', tenant, id, dto, MAP_PERSONAL);
   }
   eliminarPersonal(tenant: string, id: string) {
@@ -330,7 +330,7 @@ export class FieldService {
       timestamp: p.ubicacion_ts,
     };
   }
-  async actualizarUbicacion(tenant: string, id: string, dto: UbicacionDto) {
+  async actualizarUbicacion(tenant: string, id: string, dto: UbicacionRequestDto) {
     await this.obtener('personal', tenant, id);
     return this.actualizar('personal', tenant, id, dto, {
       ubicacionLat: 'ubicacion_lat',
@@ -347,10 +347,10 @@ export class FieldService {
   obtenerCliente(tenant: string, id: string) {
     return this.obtener('clientes', tenant, id);
   }
-  crearCliente(tenant: string, dto: CrearClienteDto) {
+  crearCliente(tenant: string, dto: CrearClienteRequestDto) {
     return this.insertar('clientes', tenant, undefined, dto, MAP_CLIENTES, DEF_CLIENTES, false);
   }
-  actualizarCliente(tenant: string, id: string, dto: ActualizarClienteDto) {
+  actualizarCliente(tenant: string, id: string, dto: ActualizarClienteRequestDto) {
     return this.actualizar('clientes', tenant, id, dto, MAP_CLIENTES);
   }
   eliminarCliente(tenant: string, id: string) {
@@ -364,10 +364,10 @@ export class FieldService {
   obtenerVehiculo(tenant: string, id: string) {
     return this.obtener('vehiculos', tenant, id);
   }
-  crearVehiculo(tenant: string, dto: CrearVehiculoDto) {
+  crearVehiculo(tenant: string, dto: CrearVehiculoRequestDto) {
     return this.insertar('vehiculos', tenant, undefined, dto, MAP_VEHICULOS, DEF_VEHICULOS, false);
   }
-  actualizarVehiculo(tenant: string, id: string, dto: ActualizarVehiculoDto) {
+  actualizarVehiculo(tenant: string, id: string, dto: ActualizarVehiculoRequestDto) {
     return this.actualizar('vehiculos', tenant, id, dto, MAP_VEHICULOS);
   }
   eliminarVehiculo(tenant: string, id: string) {
@@ -409,22 +409,22 @@ export class FieldService {
     (r as Record<string, unknown>).paradas = paradas;
     return r;
   }
-  crearRuta(tenant: string, dto: CrearRutaDto) {
+  crearRuta(tenant: string, dto: CrearRutaRequestDto) {
     return this.insertar('rutas', tenant, undefined, dto, MAP_RUTAS, DEF_RUTAS, false);
   }
-  actualizarRuta(tenant: string, id: string, dto: ActualizarRutaDto) {
+  actualizarRuta(tenant: string, id: string, dto: ActualizarRutaRequestDto) {
     return this.actualizar('rutas', tenant, id, dto, MAP_RUTAS);
   }
   eliminarRuta(tenant: string, id: string) {
     return this.eliminar('rutas', tenant, id);
   }
-  async agregarParada(tenant: string, rutaId: string, dto: ParadaDto) {
+  async agregarParada(tenant: string, rutaId: string, dto: ParadaRequestDto) {
     await this.obtener('rutas', tenant, rutaId);
     // Inyectar el ruta_id del path param (el DTO lo trae opcional y puede venir vacío)
     const conRuta = { ...(dto as unknown as Record<string, unknown>), rutaId };
     return this.insertar('paradas', tenant, undefined, conRuta, MAP_PARADAS, DEF_PARADAS, false);
   }
-  async actualizarParada(tenant: string, rutaId: string, paradaId: string, dto: ParadaDto) {
+  async actualizarParada(tenant: string, rutaId: string, paradaId: string, dto: ParadaRequestDto) {
     // verifica pertenencia a la ruta y tenant
     const parada = await this.pg.queryOne<{ id: string; ruta_id: string }>(
       `SELECT id, ruta_id FROM field.paradas WHERE tenant_id = $1 AND id = $2`,
@@ -434,7 +434,7 @@ export class FieldService {
     if (parada.ruta_id !== rutaId) throw new DomainError('PARADA_INVALIDA', 'La parada no pertenece a la ruta indicada.');
     return this.actualizar('paradas', tenant, paradaId, dto, MAP_PARADAS);
   }
-  async asignarRuta(tenant: string, rutaId: string, dto: AsignarRutaDto) {
+  async asignarRuta(tenant: string, rutaId: string, dto: AsignarRutaRequestDto) {
     const sets: string[] = [];
     const vals: unknown[] = [];
     let i = 1;
@@ -468,16 +468,16 @@ export class FieldService {
   obtenerPedido(tenant: string, id: string) {
     return this.obtener('pedidos', tenant, id);
   }
-  crearPedido(tenant: string, dto: CrearPedidoDto) {
+  crearPedido(tenant: string, dto: CrearPedidoRequestDto) {
     return this.insertar('pedidos', tenant, undefined, dto, MAP_PEDIDOS, DEF_PEDIDOS, false);
   }
-  actualizarPedido(tenant: string, id: string, dto: ActualizarPedidoDto) {
+  actualizarPedido(tenant: string, id: string, dto: ActualizarPedidoRequestDto) {
     return this.actualizar('pedidos', tenant, id, dto, MAP_PEDIDOS);
   }
   eliminarPedido(tenant: string, id: string) {
     return this.eliminar('pedidos', tenant, id);
   }
-  cambiarEstadoPedido(tenant: string, id: string, dto: CambiarEstadoPedidoDto) {
+  cambiarEstadoPedido(tenant: string, id: string, dto: CambiarEstadoPedidoRequestDto) {
     return this.actualizar('pedidos', tenant, id, { estado: dto.estado } as Record<string, unknown>, MAP_PEDIDOS);
   }
 
@@ -488,7 +488,7 @@ export class FieldService {
     if (filtro.fecha) extras.push({ col: 'DATE(registrado_en)', val: filtro.fecha });
     return this.listar('asistencia', tenant, extras);
   }
-  registrarAsistencia(tenant: string, dto: CrearAsistenciaDto) {
+  registrarAsistencia(tenant: string, dto: CrearAsistenciaRequestDto) {
     return this.insertar('asistencia', tenant, undefined, dto, MAP_ASISTENCIA, {}, false);
   }
 
@@ -502,10 +502,10 @@ export class FieldService {
   obtenerIncidencia(tenant: string, id: string) {
     return this.obtener('incidencias', tenant, id);
   }
-  crearIncidencia(tenant: string, dto: CrearIncidenciaDto) {
+  crearIncidencia(tenant: string, dto: CrearIncidenciaRequestDto) {
     return this.insertar('incidencias', tenant, undefined, dto, MAP_INCIDENCIAS, DEF_INCIDENCIAS, false);
   }
-  actualizarIncidencia(tenant: string, id: string, dto: ActualizarIncidenciaDto) {
+  actualizarIncidencia(tenant: string, id: string, dto: ActualizarIncidenciaRequestDto) {
     return this.actualizar('incidencias', tenant, id, dto, MAP_INCIDENCIAS);
   }
   eliminarIncidencia(tenant: string, id: string) {
@@ -520,7 +520,7 @@ export class FieldService {
     if (filtro.hasta) extras.push({ col: 'registrado_en <=', val: filtro.hasta });
     return this.listar('tracking', tenant, extras, 'registrado_en');
   }
-  registrarTracking(tenant: string, registros: CrearTrackingDto[]) {
+  registrarTracking(tenant: string, registros: CrearTrackingRequestDto[]) {
     return Promise.all(
       registros.map((r) => this.insertar('tracking', tenant, undefined, r, MAP_TRACKING, {}, false)),
     );
@@ -533,7 +533,7 @@ export class FieldService {
     if (filtro.fecha) extras.push({ col: 'DATE(created_at)', val: filtro.fecha });
     return this.listar('visitas', tenant, extras);
   }
-  registrarVisita(tenant: string, dto: CrearVisitaDto) {
+  registrarVisita(tenant: string, dto: CrearVisitaRequestDto) {
     return this.insertar('visitas', tenant, undefined, dto, MAP_VISITAS, DEF_VISITAS, false);
   }
 
@@ -546,7 +546,7 @@ export class FieldService {
     if (!fila) throw new NotFoundError('cumplimiento', `${rutaId}/${fecha}`);
     return fila;
   }
-  async guardarCumplimiento(tenant: string, dto: GuardarCumplimientoDto & { rutaId: string; fecha: string }) {
+  async guardarCumplimiento(tenant: string, dto: GuardarCumplimientoRequestDto & { rutaId: string; fecha: string }) {
     const metricas = dto.metricas && typeof dto.metricas === 'object' ? JSON.stringify(dto.metricas) : '{}';
     const fila = await this.pg.queryOne(
       `INSERT INTO field.cumplimiento (tenant_id, ruta_id, fecha, metricas, updated_at)
@@ -560,7 +560,7 @@ export class FieldService {
   }
 
   // ── sync offline (app-test) ───────────────────────────────────────────
-  async sincronizar(tenant: string, operaciones: SyncOperacionDto[]): Promise<
+  async sincronizar(tenant: string, operaciones: SyncOperacionRequestDto[]): Promise<
     { tipo: string; id?: string; ok: boolean; error?: string }[]
   > {
     const resultado: { tipo: string; id?: string; ok: boolean; error?: string }[] = [];
@@ -590,3 +590,4 @@ export class FieldService {
     return resultado;
   }
 }
+
