@@ -1,8 +1,8 @@
 /**
  * Topologia del bus (AD-02): RabbitMQ con colas por consumidor y DLQ (AD-04).
  */
-export const EXCHANGE_EVENTS = 'bodegahub.events'; // topic
-export const EXCHANGE_DLQ = 'bodegahub.dlq'; // topic
+export const EXCHANGE_EVENTS = 'core-engine.events'; // topic
+export const EXCHANGE_DLQ = 'core-engine.dlq'; // topic
 
 export interface ColaConfig {
   /** Nombre de la cola consumidora. */

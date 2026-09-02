@@ -1,4 +1,4 @@
-# Core Engine · BodegaHub
+# Core Engine · Core Engine
 # Dockerfile unico para todos los microservicios del workspace (NestJS).
 # Contexto de build: raiz del workspace.
 # Uso: docker build --build-arg SERVICIO=<nombre-del-paquete> .

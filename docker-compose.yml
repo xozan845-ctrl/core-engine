@@ -1,4 +1,4 @@
-# Core Engine · BodegaHub
+# Core Engine · Core Engine
 # Entorno de desarrollo completo (doc 6.4): microservicios + Postgres
 # (supabase-compatible) + RabbitMQ (AD-02) + observabilidad (doc 5.3).
 
@@ -14,17 +14,17 @@ x-servicio-base: &servicio-base
     rabbitmq:
       condition: service_healthy
   networks:
-    - bodegahub
+    - core-engine
   restart: unless-stopped
 
 services:
   # ── Datos y BaaS (AD-08: Supabase-compatible, SQL estandar en Docker) ──
   postgres:
     image: postgres:16-alpine
-    container_name: bodegahub-postgres
+    container_name: core-engine-postgres
     environment:
-      POSTGRES_DB: ${POSTGRES_DB:-bodegahub}
-      POSTGRES_USER: ${POSTGRES_USER:-bodegahub}
+      POSTGRES_DB: ${POSTGRES_DB:-core-engine}
+      POSTGRES_USER: ${POSTGRES_USER:-core-engine}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD requerida en .env}
     volumes:
       - pg_data:/var/lib/postgresql/data
@@ -34,17 +34,17 @@ services:
     ports:
       - "5432:5432"
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-bodegahub} -d ${POSTGRES_DB:-bodegahub}"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-core-engine} -d ${POSTGRES_DB:-core-engine}"]
       interval: 5s
       timeout: 5s
       retries: 12
     networks:
-      - bodegahub
+      - core-engine
 
   # ── Broker de mensajeria (AD-02: RabbitMQ con DLQ) ─────────────────────
   rabbitmq:
     image: rabbitmq:3.13-management-alpine
-    container_name: bodegahub-rabbitmq
+    container_name: core-engine-rabbitmq
     # (barrido A07/A08): guest deshabilitado en loopback; credencial dedicada
     # desde el .env (conf aplicado en el arranque)
     volumes:
@@ -52,21 +52,22 @@ services:
       - ./infra/rabbitmq/rabbitmq.conf:/etc/rabbitmq/rabbitmq.conf:ro
     ports:
       - "15672:15672"
+      - "5672:5672"
     healthcheck:
       test: ["CMD-SHELL", "rabbitmq-diagnostics -q ping"]
       interval: 10s
       timeout: 5s
       retries: 12
     networks:
-      - bodegahub
+      - core-engine
 
   # ── Exportadores (doc 5.3: integracion con Prometheus) ──────────────────
   rabbitmq-exporter:
     image: kbudde/rabbitmq-exporter:1.0.0
-    container_name: bodegahub-rabbitmq-exporter
+    container_name: core-engine-rabbitmq-exporter
     environment:
-      RABBIT_URL: "http://${RABBITMQ_USER:-bodegahub}:${RABBITMQ_PASSWORD:?RABBITMQ_PASSWORD requerida en .env}@rabbitmq:15672"
-      RABBIT_USER: "${RABBITMQ_USER:-bodegahub}"
+      RABBIT_URL: "http://${RABBITMQ_USER:-core-engine}:${RABBITMQ_PASSWORD:?RABBITMQ_PASSWORD requerida en .env}@rabbitmq:15672"
+      RABBIT_USER: "${RABBITMQ_USER:-core-engine}"
       RABBIT_PASSWORD: "${RABBITMQ_PASSWORD:?RABBITMQ_PASSWORD requerida en .env}"
       RABBIT_EXPORTERS: "exchange,node,overview,queue"
       RABBITMQ_EXPORTER_PORT: 9419
@@ -74,13 +75,13 @@ services:
       rabbitmq:
         condition: service_healthy
     networks:
-      - bodegahub
+      - core-engine
 
   postgres-exporter:
     image: quay.io/prometheuscommunity/postgres-exporter:v0.15.0
-    container_name: bodegahub-postgres-exporter
+    container_name: core-engine-postgres-exporter
     environment:
-      DATA_SOURCE_NAME: "postgresql://${POSTGRES_USER:-bodegahub}:${POSTGRES_PASSWORD:?POSTGRES_PASSWORD requerida en .env}@postgres:5432/${POSTGRES_DB:-bodegahub}?sslmode=disable"
+      DATA_SOURCE_NAME: "postgresql://${POSTGRES_USER:-core-engine}:${POSTGRES_PASSWORD:?POSTGRES_PASSWORD requerida en .env}@postgres:5432/${POSTGRES_DB:-core-engine}?sslmode=disable"
       PG_EXPORTER_EXTEND_QUERY_PATH: "/etc/postgres_exporter/queries.yaml"
     command:
       - "--config.file=/etc/postgres_exporter.yml"
@@ -92,11 +93,11 @@ services:
       postgres:
         condition: service_healthy
     networks:
-      - bodegahub
+      - core-engine
 
   node-exporter:
     image: prom/node-exporter:v1.8.2
-    container_name: bodegahub-node-exporter
+    container_name: core-engine-node-exporter
     pid: host
     volumes:
       - /proc:/proc:ro
@@ -108,18 +109,18 @@ services:
       - "--collector.filesystem.mount-points-exclude=^/(sys|proc|dev|host)"
       - "--path.rootfs=/rootfs"
     networks:
-      - bodegahub
+      - core-engine
 
   cadvisor:
     image: gcr.io/cadvisor/cadvisor:v0.49.1
-    container_name: bodegahub-cadvisor
+    container_name: core-engine-cadvisor
     volumes:
       - /:/rootfs:ro
       - /var/run:/var/run:ro
       - /sys:/sys:ro
       - /var/lib/docker/:/var/lib/docker:ro
     networks:
-      - bodegahub
+      - core-engine
 
   # ── API Gateway (punto de entrada unico) ───────────────────────────────
   gateway:
@@ -129,7 +130,7 @@ services:
       dockerfile: Dockerfile
       args:
         SERVICIO: api-gateway
-    container_name: bodegahub-gateway
+    container_name: core-engine-gateway
     environment:
       SERVICIO: api-gateway
       PORT: 8080
@@ -137,7 +138,7 @@ services:
     ports:
       - "8080:8080"
     networks:
-      - bodegahub
+      - core-engine
 
   # ── Microservicios por dominio (Tabla 7) ───────────────────────────────
   identity-service:
@@ -240,16 +241,16 @@ services:
   # ── Observabilidad (doc 5.3: Prometheus + Grafana) ─────────────────────
   prometheus:
     image: prom/prometheus:v2.55.1
-    container_name: bodegahub-prometheus
+    container_name: core-engine-prometheus
     volumes:
       - ./infra/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
       - ./infra/prometheus/rules:/etc/prometheus/rules:ro
     networks:
-      - bodegahub
+      - core-engine
 
   grafana:
     image: grafana/grafana:11.3.0
-    container_name: bodegahub-grafana
+    container_name: core-engine-grafana
     environment:
       GF_SECURITY_ADMIN_USER: admin
       GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:?GRAFANA_ADMIN_PASSWORD requerida en .env}
@@ -261,12 +262,12 @@ services:
     depends_on:
       - prometheus
     networks:
-      - bodegahub
+      - core-engine
 
 volumes:
   pg_data:
   rabbitmq_data:
 
 networks:
-  bodegahub:
-    name: bodegahub
+  core-engine:
+    name: core-engine

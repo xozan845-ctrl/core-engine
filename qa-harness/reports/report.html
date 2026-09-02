@@ -1,0 +1,91 @@
+<!DOCTYPE html><html><head><meta charset="UTF-8"><title>BodegaHub QA Report</title>
+<style>
+body { font-family: sans-serif; max-width: 1200px; margin: 0 auto; padding: 20px; background: #1a1a2e; color: #e0e0e0; }
+h1 { color: #e94560; } h2 { color: #0f3460; border-bottom: 2px solid #e94560; }
+table { border-collapse: collapse; width: 100%; margin: 10px 0; background: #16213e; }
+th, td { border: 1px solid #0f3460; padding: 8px 12px; text-align: left; }
+th { background: #0f3460; color: #fff; }
+.pass { color: #00ff00; }
+.fail { color: #ff0000; }
+.skip { color: #ffaa00; }
+.resultado { padding: 10px; margin: 8px 0; border-radius: 5px; }
+.resultado.ok { background: rgba(0,255,0,0.1); border: 1px solid #00ff00; }
+.resultado.err { background: rgba(255,0,0,0.1); border: 1px solid #ff0000; }
+.resultado.skip { background: rgba(255,170,0,0.1); border: 1px solid #ffaa00; }
+.metrics { display: flex; gap: 20px; }
+.metric { background: #16213e; border-radius: 8px; padding: 15px; text-align: center; flex: 1; }
+.metric .val { font-size: 2em; font-weight: bold; }
+.metric .lbl { font-size: 0.8em; color: #888; }
+</style></head><body>
+<h1>BodegaHub · Core Engine — Reporte de Testing QA</h1>
+<p>Fecha: 2026-08-28T19:29:41.310Z | Proyecto: BodegaHub Core Engine</p>
+<div class="metrics">
+<div class="metric"><div class="val">405</div><div class="lbl">Pruebas</div></div>
+<div class="metric"><div class="val">404</div><div class="lbl">Éxito</div></div>
+<div class="metric"><div class="val">1</div><div class="lbl">Fallos</div></div>
+<div class="metric"><div class="val">0</div><div class="lbl">Saltos</div></div>
+</div>
+<h2>Detalles por suite</h2><div class="resultado ok"><h3>00-preflight</h3>
+<p>Resultado: OK | Pruebas: 1 | Éxito: 1 | Fallos: 0 | Saltos: 0</p>
+<p>Error(s): N/A</p>
+</div><div class="resultado ok"><h3>17-schema</h3>
+<p>Resultado: OK | Pruebas: 81 | Éxito: 81 | Fallos: 0 | Saltos: 0</p>
+<p>Error(s): N/A</p>
+</div><div class="resultado ok"><h3>18-field</h3>
+<p>Resultado: OK | Pruebas: 54 | Éxito: 54 | Fallos: 0 | Saltos: 0</p>
+<p>Error(s): N/A</p>
+</div><div class="resultado ok"><h3>19-identity</h3>
+<p>Resultado: OK | Pruebas: 35 | Éxito: 35 | Fallos: 0 | Saltos: 0</p>
+<p>Error(s): N/A</p>
+</div><div class="resultado ok"><h3>20-multitenant</h3>
+<p>Resultado: OK | Pruebas: 9 | Éxito: 9 | Fallos: 0 | Saltos: 0</p>
+<p>Error(s): N/A</p>
+</div><div class="resultado ok"><h3>01-auth</h3>
+<p>Resultado: OK | Pruebas: 14 | Éxito: 14 | Fallos: 0 | Saltos: 0</p>
+<p>Error(s): N/A</p>
+</div><div class="resultado ok"><h3>02-role-access</h3>
+<p>Resultado: OK | Pruebas: 20 | Éxito: 20 | Fallos: 0 | Saltos: 0</p>
+<p>Error(s): N/A</p>
+</div><div class="resultado ok"><h3>03-catalog</h3>
+<p>Resultado: OK | Pruebas: 12 | Éxito: 12 | Fallos: 0 | Saltos: 0</p>
+<p>Error(s): N/A</p>
+</div><div class="resultado ok"><h3>04-stores</h3>
+<p>Resultado: OK | Pruebas: 13 | Éxito: 13 | Fallos: 0 | Saltos: 0</p>
+<p>Error(s): N/A</p>
+</div><div class="resultado ok"><h3>05-orders</h3>
+<p>Resultado: OK | Pruebas: 15 | Éxito: 15 | Fallos: 0 | Saltos: 0</p>
+<p>Error(s): N/A</p>
+</div><div class="resultado ok"><h3>06-cart</h3>
+<p>Resultado: OK | Pruebas: 12 | Éxito: 12 | Fallos: 0 | Saltos: 0</p>
+<p>Error(s): N/A</p>
+</div><div class="resultado ok"><h3>07-logistics</h3>
+<p>Resultado: OK | Pruebas: 13 | Éxito: 13 | Fallos: 0 | Saltos: 0</p>
+<p>Error(s): N/A</p>
+</div><div class="resultado ok"><h3>08-commissions</h3>
+<p>Resultado: OK | Pruebas: 11 | Éxito: 11 | Fallos: 0 | Saltos: 0</p>
+<p>Error(s): N/A</p>
+</div><div class="resultado ok"><h3>09-finanzas</h3>
+<p>Resultado: OK | Pruebas: 16 | Éxito: 16 | Fallos: 0 | Saltos: 0</p>
+<p>Error(s): N/A</p>
+</div><div class="resultado ok"><h3>10-admin</h3>
+<p>Resultado: OK | Pruebas: 8 | Éxito: 8 | Fallos: 0 | Saltos: 0</p>
+<p>Error(s): N/A</p>
+</div><div class="resultado ok"><h3>11-fuzzing</h3>
+<p>Resultado: OK | Pruebas: 11 | Éxito: 11 | Fallos: 0 | Saltos: 0</p>
+<p>Error(s): N/A</p>
+</div><div class="resultado ok"><h3>12-concurrency</h3>
+<p>Resultado: OK | Pruebas: 5 | Éxito: 5 | Fallos: 0 | Saltos: 0</p>
+<p>Error(s): N/A</p>
+</div><div class="resultado ok"><h3>14-queue</h3>
+<p>Resultado: OK | Pruebas: 34 | Éxito: 34 | Fallos: 0 | Saltos: 0</p>
+<p>Error(s): N/A</p>
+</div><div class="resultado ok"><h3>16-owasp</h3>
+<p>Resultado: OK | Pruebas: 29 | Éxito: 28 | Fallos: 1 | Saltos: 0</p>
+<p>Error(s): </p>
+</div><div class="resultado ok"><h3>13-load</h3>
+<p>Resultado: OK | Pruebas: 5 | Éxito: 5 | Fallos: 0 | Saltos: 0</p>
+<p>Error(s): N/A</p>
+</div><div class="resultado ok"><h3>15-static</h3>
+<p>Resultado: OK | Pruebas: 7 | Éxito: 7 | Fallos: 0 | Saltos: 0</p>
+<p>Error(s): N/A</p>
+</div></body></html>

@@ -2,8 +2,8 @@
   "annotations": { "list": [] },
   "editable": true,
   "graphTooltip": 1,
-  "title": "BodegaHub · Core Engine",
-  "uid": "bodegahub-core",
+  "title": "Core Engine · Core Engine",
+  "uid": "core-engine-core",
   "panels": [
     {
       "id": 1,
@@ -96,6 +96,6 @@
     }
   ],
   "schemaVersion": 39,
-  "tags": ["bodegahub", "microservicios"],
+  "tags": ["core-engine", "microservicios"],
   "time": { "from": "now-6h", "to": "now" }
 }

@@ -1,6 +1,6 @@
-# Decisiones de Arquitectura (ADR) — BodegaHub Core Engine
+# Decisiones de Arquitectura (ADR) — Core Engine Core Engine
 
-Este archivo registra decisiones técnicas deliberadas que se apartan del texto literal del documento de referencia (BodegaHub_Informe.pdf) o que requieren justificación para auditoría. Cada decisión se enmarca como **ADR-XX** con estado, contexto y consecuencias.
+Este archivo registra decisiones técnicas deliberadas que se apartan del texto literal del documento de referencia (Core Engine_Informe.pdf) o que requieren justificación para auditoría. Cada decisión se enmarca como **ADR-XX** con estado, contexto y consecuencias.
 
 ---
 

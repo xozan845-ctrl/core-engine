@@ -1,5 +1,5 @@
 /**
- * Core Engine · BodegaHub
+ * Core Engine · Core Engine
  * Demo del flujo real (entregable cap. 7.1): alta de producto, oferta del
  * vendedor, compra, descuento de stock, orden, comision y liquidacion.
  *
@@ -8,8 +8,8 @@
  */
 
 const BASE = process.env.BASE_URL ?? 'http://localhost:8080';
-const ADMIN_EMAIL = process.env.ADMIN_EMAIL ?? 'admin@bodegahub.test';
-const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD ?? 'AdminBodegaHub2026!';
+const ADMIN_EMAIL = process.env.ADMIN_EMAIL ?? 'admin@core-engine.test';
+const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD ?? 'AdminCore Engine2026!';
 
 let pasos = 0;
 let fallidas = 0;
@@ -73,8 +73,8 @@ async function main() {
 
   // ── 1. Identidad ──────────────────────────────────────────────────────
   const suf = sufijo();
-  const correoVendedor = `vendedor.${suf}@bodegahub.test`;
-  const correoComprador = `comprador.${suf}@bodegahub.test`;
+  const correoVendedor = `vendedor.${suf}@core-engine.test`;
+  const correoComprador = `comprador.${suf}@core-engine.test`;
 
   paso('Administrador: login (RF-01, seed del arranque)');
   const loginAdmin = await api('POST', '/api/v1/auth/login', {

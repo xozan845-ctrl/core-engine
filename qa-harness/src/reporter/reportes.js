@@ -16,7 +16,7 @@ export class Reporta {
     this.errors = [];
     this.metadata = {
       version: '1.0.0',
-      project: 'BodegaHub Core Engine',
+      project: 'Core Engine Core Engine',
       date: new Date().toISOString(),
     };
     this.htmlReport = '';
@@ -52,9 +52,9 @@ export class Reporta {
   }
 
   generarMarkdown() {
-    let md = '# BodegaHub — Reporte de Testing QA\n';
+    let md = '# Core Engine — Reporte de Testing QA\n';
     md += `_Fecha: ${this.timestamp}_\n`;
-    md += `_Proyecto: BodegaHub Core Engine\n\n`;
+    md += `_Proyecto: Core Engine Core Engine\n\n`;
     md += `## Resumen\n\n`;
     md += `- **Pruebas:** ${this.totalTests}\n`;
     md += `- **Éxito:** ${this.totalPass}\n`;
@@ -75,7 +75,7 @@ export class Reporta {
   }
 
   generarHTML() {
-    let html = `<!DOCTYPE html><html><head><meta charset="UTF-8"><title>BodegaHub QA Report</title>
+    let html = `<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Core Engine QA Report</title>
 <style>
 body { font-family: sans-serif; max-width: 1200px; margin: 0 auto; padding: 20px; background: #1a1a2e; color: #e0e0e0; }
 h1 { color: #e94560; } h2 { color: #0f3460; border-bottom: 2px solid #e94560; }
@@ -94,8 +94,8 @@ th { background: #0f3460; color: #fff; }
 .metric .val { font-size: 2em; font-weight: bold; }
 .metric .lbl { font-size: 0.8em; color: #888; }
 </style></head><body>
-<h1>BodegaHub · Core Engine — Reporte de Testing QA</h1>
-<p>Fecha: ${this.timestamp} | Proyecto: BodegaHub Core Engine</p>
+<h1>Core Engine · Core Engine — Reporte de Testing QA</h1>
+<p>Fecha: ${this.timestamp} | Proyecto: Core Engine Core Engine</p>
 <div class="metrics">
 <div class="metric"><div class="val">${this.totalTests}</div><div class="lbl">Pruebas</div></div>
 <div class="metric"><div class="val">${this.totalPass}</div><div class="lbl">Éxito</div></div>

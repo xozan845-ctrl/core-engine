@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * BodegaHub · Core Engine — QA Harness
+ * Core Engine · Core Engine — QA Harness
  * Testing agresivo y automatizado para el proyecto.
  * Reporte ultra detallado: JSON, Markdown, HTML.
  * Evaluación de control y calidad.
@@ -74,7 +74,7 @@ config.suites = options.suites ?? config.suites ?? [];
 
 if (options.help) {
   console.log(`
-BodegaHub QA Harness — Testing agresivo automatizado
+Core Engine QA Harness — Testing agresivo automatizado
 
 Uso:
   node src/index.js [opciones]
@@ -119,7 +119,7 @@ Ejemplos:
 // ── Ejecutar runner ─────────────────────────────────────────────────────
 async function main() {
   console.log('╔══════════════════════════════════════════════════════════════╗');
-  console.log('║     BodegaHub · Core Engine — QA Harness v1.0.0             ║');
+  console.log('║     Core Engine · Core Engine — QA Harness v1.0.0             ║');
   console.log('║     Testing agresivo automatizado con reporte ultra detallado║');
   console.log('╚══════════════════════════════════════════════════════════════╝');
 

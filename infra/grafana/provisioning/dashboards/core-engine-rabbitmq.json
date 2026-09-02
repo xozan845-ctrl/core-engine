@@ -1,6 +1,6 @@
 {
-    "title":  "BodegaHub - RabbitMQ Overview",
-    "uid":  "bodegahub-rabbitmq",
+    "title":  "Core Engine - RabbitMQ Overview",
+    "uid":  "core-engine-rabbitmq",
     "timezone":  "browser",
     "refresh":  "10s",
     "time":  {

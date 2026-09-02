@@ -2,7 +2,7 @@
   "name": "core-engine",
   "version": "1.0.0",
   "private": true,
-  "description": "Core Engine - BodegaHub: plataforma de comercio electronico distribuido (microservicios NestJS + Supabase + Docker)",
+  "description": "Core Engine - Core Engine: plataforma de comercio electronico distribuido (microservicios NestJS + Supabase + Docker)",
   "workspaces": [
     "packages/shared",
     "packages/*"

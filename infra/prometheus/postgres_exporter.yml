@@ -1,5 +1,5 @@
 # Postgres Exporter v0.15.0 Configuration
-# BodegaHub - Métricas PostgreSQL avanzadas
+# Core Engine - Métricas PostgreSQL avanzadas
 #
 # NOTA: En v0.15.0 el config file solo soporta auth_modules (multi-target).
 # Los collectors se habilitan con flags CLI (--collector.stat_statements, etc).

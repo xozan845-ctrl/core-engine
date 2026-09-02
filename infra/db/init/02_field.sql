@@ -1,4 +1,4 @@
--- Core Engine · BodegaHub
+-- Core Engine · Core Engine
 -- Esquema field: dominio de logistica de campo (app-test). Multi-tenancy por
 -- tenant_id (AD-09): cada organizacion/logistica es un tenant y TODAS las
 -- consultas se filtran por tenant_id (defensa en profundidad junto con RLS).

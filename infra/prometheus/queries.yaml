@@ -1,6 +1,6 @@
 # Extended queries para Postgres Exporter v0.15.0
 # Formato: mapa de queries (UserQueries map[string]UserQuery)
-# BodegaHub - Métricas PostgreSQL avanzadas
+# Core Engine - Métricas PostgreSQL avanzadas
 
 # 1. pg_stat_statements - Top queries por latencia
 pg_query_latency:

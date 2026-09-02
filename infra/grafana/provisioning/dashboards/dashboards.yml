@@ -1,9 +1,9 @@
 apiVersion: 1
 
 providers:
-  - name: 'BodegaHub Dashboards'
+  - name: 'Core Engine Dashboards'
     orgId: 1
-    folder: 'BodegaHub'
+    folder: 'Core Engine'
     type: file
     disableDeletion: false
     updateIntervalSeconds: 10

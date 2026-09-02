@@ -1,7 +1,7 @@
-# BodegaHub · Core Engine
+# Core Engine · Core Engine
 
 Plataforma de comercio electronico distribuido (microservicios sobre Node.js/NestJS + TypeScript)
-conforme al documento **BodegaHub_Informe.docx v1.6**: CQRS + Event Sourcing en las ordenes,
+conforme al documento **Core Engine_Informe.docx v1.6**: CQRS + Event Sourcing en las ordenes,
 RabbitMQ con outbox y DLQ, Postgres/Supabase-compatible con esquema por dominio, API Gateway
 con autenticacion en el borde, observabilidad (Prometheus + Grafana) y suite de pruebas.
 
@@ -20,7 +20,7 @@ gateway (`http://localhost:8080/api/v1/...`). Los montos se manejan como **enter
    identity    catalog  stores    orders   logistics  commissions  finance
       :3001       :3002    :3003     :3004     :3005        :3006       :3007
         └─────────┴────────┴────────┴──────────┴───────────┴──────────┘
-               RabbitMQ · topic bodegahub.events (+ DLQ, AD-04) + Postgres 16
+               RabbitMQ · topic core-engine.events (+ DLQ, AD-04) + Postgres 16
 ```
 
 - **CQRS + Event Sourcing** solo en `orders` (alta tasa de escritura, cap. 3.2); el resto usa
@@ -48,7 +48,7 @@ gateway (`http://localhost:8080/api/v1/...`). Los montos se manejan como **enter
 | RN-07 | Liquidaciones quincenales (dias 1 y 15, cron America/Managua) |
 | RN-08 | Cambios de precio base van al historico; aplican solo a ofertas nuevas |
 
-Eventos del bus (topic `bodegahub.events`): `order.created`, `stock.reservado`,
+Eventos del bus (topic `core-engine.events`): `order.created`, `stock.reservado`,
 `stock.fallido`, `stock.reintegrado`, `payment.procesado`, `order.completado`,
 `comision.acreditada`, `devolucion.solicitada`, `shipment.started`, `stock.updated`,
 `order.status.updated`, `declaracion.generada`.
@@ -131,7 +131,7 @@ npm run demo    # flujo real sobre el stack levantado (scripts/smoke.mjs)
 ## Observabilidad
 
 Prometheus scrapea `/metrics` de los 8 servicios (`infra/prometheus/prometheus.yml`) y Grafana
-provisiona el dashboard `BodegaHub · Core Engine` (latencia p99, peticiones/s, errores 5xx,
+provisiona el dashboard `Core Engine · Core Engine` (latencia p99, peticiones/s, errores 5xx,
 backlog de RabbitMQ). Los logs son JSON estructurados con `x-request-id` correlacionado
 (AsyncLocalStorage).
 

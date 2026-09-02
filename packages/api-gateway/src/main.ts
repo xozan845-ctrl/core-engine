@@ -71,7 +71,7 @@ const servicios: [string, number][] = [
 
   // Swagger (DoD: la API esta documentada; versionado AD-05 /api/v1)
   const config = new DocumentBuilder()
-    .setTitle('BodegaHub · Core Engine API')
+    .setTitle('Core Engine · Core Engine API')
     .setDescription('API Gateway de la plataforma de comercio electronico distribuido')
     .setVersion('v1')
     .addBearerAuth()

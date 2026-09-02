@@ -1,4 +1,4 @@
--- Core Engine · BodegaHub
+-- Core Engine · Core Engine
 -- Polticas Row Level Security (RLS) por rol (Tabla 15). Se aplican en el
 -- entorno local igual que en Supabase: ejecutar este archivo con las
 -- funciones auth.uid()/auth.rol() activas (Supabase las provee).

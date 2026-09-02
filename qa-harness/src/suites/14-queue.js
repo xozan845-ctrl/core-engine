@@ -51,7 +51,7 @@ export async function suite14Queue(client, rabbit, pg, cfg) {
       data: { test: true },
     };
     // El publish via Management API esta deshabilitado en este broker (405)
-    const publishDLQ = await rabbit.publish('bodegahub.dlq', 'test.routing', testEvent);
+    const publishDLQ = await rabbit.publish('core-engine.dlq', 'test.routing', testEvent);
     resultados.push({ test: 'Publish exchange via Management API (405 = deshabilitado)', status: publishDLQ.status, pass: true });
 
     const rabbitInfo = await rabbit.getRabbitMQInfo();

@@ -1,4 +1,4 @@
--- Core Engine · BodegaHub
+-- Core Engine · Core Engine
 -- Esquemas por dominio (Tabla 7). SQL estandar y reproducible en Docker local
 -- y en Supabase (AD-08). Los servicios se conectan con un rol de aplicacion.
 

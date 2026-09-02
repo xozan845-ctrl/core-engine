@@ -73,7 +73,7 @@ export class ClientoHTTP {
 
 // ── Cliente RabbitMQ ──────────────────────────────────────────────
 export class ClientoRabbitMQ {
-  constructor(base = 'http://localhost:15672', user = 'bodegahub', pass = '0b66c112e3ceca4e3b6a648219c88c60') {
+  constructor(base = 'http://localhost:15672', user = 'core-engine', pass = '0b66c112e3ceca4e3b6a648219c88c60') {
     this.base = base;
     this.basic = 'Basic ' + Buffer.from(`${user}:${pass}`).toString('base64');
     this.colasDlq = [
@@ -152,7 +152,7 @@ export class ClientoRabbitMQ {
 export class ClientoPostgres {
   constructor() {
     // Use localhost from host, docker internal from containers
-    this.url = process.env.DATABASE_URL ?? 'postgres://bodegahub:88cf331f0740655a65ac11877f1dc619@localhost:5432/bodegahub';
+    this.url = process.env.DATABASE_URL ?? 'postgres://core_engine:88cf331f0740655a65ac11877f1dc619@localhost:5432/core_engine';
     this.pool = null;
   }
 

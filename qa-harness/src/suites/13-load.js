@@ -29,8 +29,8 @@ export async function suite13Carga(client, cfg) {
     for (let i = 0; i < iteraciones; i++) {
       const start = Date.now();
       const res = await client.post('/api/v1/auth/login', {
-        correo: 'admin@bodegahub.test',
-        contrasena: 'AdminBodegaHub2026!',
+        correo: 'admin@core-engine.test',
+        contrasena: 'AdminCore Engine2026!',
       });
       if (res.status === 200 || res.status === 429) {
         loginTimes.push(Date.now() - start);
@@ -81,8 +81,8 @@ export async function suite13Carga(client, cfg) {
     const ratePromises = [];
     for (let i = 0; i < 20; i++) {
       ratePromises.push(client.post('/api/v1/auth/login', {
-        correo: 'admin@bodegahub.test',
-        contrasena: 'AdminBodegaHub2026!',
+        correo: 'admin@core-engine.test',
+        contrasena: 'AdminCore Engine2026!',
       }));
     }
     const rateResults = await Promise.all(ratePromises);

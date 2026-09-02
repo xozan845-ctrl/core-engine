@@ -14,8 +14,8 @@ export async function suite01Autenticacion(client, cfg, adminToken) {
     let token = adminToken;
     if (!token) {
       const loginRes = await client.post('/api/v1/auth/login', {
-        correo: 'admin@bodegahub.test',
-        contrasena: 'AdminBodegaHub2026!',
+        correo: 'admin@core-engine.test',
+        contrasena: 'AdminCore Engine2026!',
       });
       if (loginRes.status === 200 || loginRes.status === 201) {
         token = loginRes.body.access_token;
@@ -41,8 +41,8 @@ export async function suite01Autenticacion(client, cfg, adminToken) {
     resultados.push({ test: 'Registro comprador', status: regC.status, pass: regC.status === 201 || regC.status === 200 });
 
     const loginRes = await client.post('/api/v1/auth/login', {
-      correo: 'admin@bodegahub.test',
-      contrasena: 'AdminBodegaHub2026!',
+      correo: 'admin@core-engine.test',
+      contrasena: 'AdminCore Engine2026!',
     });
     resultados.push({
       test: 'Login admin',
@@ -57,14 +57,14 @@ export async function suite01Autenticacion(client, cfg, adminToken) {
 
       const dup = await client.post('/api/v1/auth/registro', {
         nombre: 'Usuario Duplicado',
-        correo: 'admin@bodegahub.test',
+        correo: 'admin@core-engine.test',
         contrasena: 'Contrasena123!',
         rol: 'comprador',
       });
       resultados.push({ test: 'Registro email duplicado → 409', status: dup.status, pass: dup.status === 409 });
 
       const badPass = await client.post('/api/v1/auth/login', {
-        correo: 'admin@bodegahub.test',
+        correo: 'admin@core-engine.test',
         contrasena: 'ContrasenaIncorrecta1!',
       });
       resultados.push({ test: 'Login contraseña incorrecta → 401', status: badPass.status, pass: badPass.status === 401 });
@@ -106,7 +106,7 @@ export async function suite01Autenticacion(client, cfg, adminToken) {
       // login con contrasena corta: el login no valida politica (eso es del registro);
       // credenciales no validan -> 401
       const shortPass = await client.post('/api/v1/auth/login', {
-        correo: 'admin@bodegahub.test',
+        correo: 'admin@core-engine.test',
         contrasena: '12345',
       });
       resultados.push({ test: 'Login contraseña corta (<8) → 401', status: shortPass.status, pass: shortPass.status === 401 });

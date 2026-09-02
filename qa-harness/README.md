@@ -1,6 +1,6 @@
-# BodegaHub QA Harness
+# Core Engine QA Harness
 
-Herramienta de testing agresivo y automatizado para el proyecto **BodegaHub Core Engine**.
+Herramienta de testing agresivo y automatizado para el proyecto **Core Engine Core Engine**.
 
 ## Características
 
@@ -107,10 +107,10 @@ El harness lee automáticamente `.env` del proyecto padre. Variables relevantes:
 
 ```env
 BASE_URL=http://localhost:8080
-ADMIN_EMAIL=admin@bodegahub.test
-ADMIN_PASSWORD=AdminBodegaHub2026!
+ADMIN_EMAIL=admin@core-engine.test
+ADMIN_PASSWORD=AdminCore Engine2026!
 JWT_SECRET=dev_secret
-DATABASE_URL=postgres://bodegahub:bodegahub_dev@postgres:5432/bodegahub
+DATABASE_URL=postgres://core_engine:core_engine_dev@postgres:5432/core_engine
 INTERNAL_API_KEY=dev_internal_key
 QA_TIMEOUT=30000
 QA_CONCURRENCY=50
@@ -169,4 +169,4 @@ Inspirado en **Roost.ai** (testing agent automatizado):
 
 ## Licencia
 
-MIT - BodegaHub Team
+MIT - Core Engine Team

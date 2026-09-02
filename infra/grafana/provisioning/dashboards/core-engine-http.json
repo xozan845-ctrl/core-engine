@@ -1,6 +1,6 @@
 {
-    "title":  "BodegaHub - HTTP Requests \u0026 Latency",
-    "uid":  "bodegahub-http",
+    "title":  "Core Engine - HTTP Requests \u0026 Latency",
+    "uid":  "core-engine-http",
     "timezone":  "browser",
     "refresh":  "10s",
     "time":  {

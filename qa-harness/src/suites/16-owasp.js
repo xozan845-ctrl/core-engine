@@ -203,7 +203,7 @@ export async function suite16Owas(client, cfg, adminToken, vendedorToken, compra
 
     let bruteforce = 0;
     for (let i = 0; i < 12; i++) {
-      const b = await client.post('/api/v1/auth/login', { correo: 'admin@bodegahub.test', contrasena: 'Incorrecta123!' });
+      const b = await client.post('/api/v1/auth/login', { correo: 'admin@core-engine.test', contrasena: 'Incorrecta123!' });
       if (b.status === 429) bruteforce++;
     }
     r('A07 Brute force login mitigado (rate limit 429)', bruteforce >= 1, { detalle: `429s: ${bruteforce}/12` });
@@ -216,7 +216,7 @@ export async function suite16Owas(client, cfg, adminToken, vendedorToken, compra
     const fr = await client.get('/api/v1/orders', { authorization: `Bearer ${firmaRara}` });
     r('A08 JWT con firma ajena → 401 (integridad de token)', fr.status === 401, { status: fr.status });
 
-    const pub = await raw('http://localhost:15672/api/exchanges/%2F/bodegahub.events/publish', {
+    const pub = await raw('http://localhost:15672/api/exchanges/%2F/core-engine.events/publish', {
       method: 'POST', headers: { authorization: basic('guest', 'guest'), 'Content-Type': 'application/json' },
       body: JSON.stringify({ properties: {}, routing_key: 'orders.pedidos', payload: '{"x":1}', payload_encoding: 'string' }),
     });

@@ -19,7 +19,7 @@ export async function suite11Fuzzing(client, cfg, adminToken, vendedorToken) {
     const malJson = await client.post('/api/v1/auth/login', '{correo: "test"}', { 'Content-Type': 'application/json' });
     resultados.push({ test: 'JSON malformado → 400', status: malJson.status, pass: acepta(malJson.status, [400, 429]) });
 
-    const sqli = await client.post('/api/v1/auth/login', { correo: "admin' OR '1'='1", contrasena: 'AdminBodegaHub2026!' });
+    const sqli = await client.post('/api/v1/auth/login', { correo: "admin' OR '1'='1", contrasena: 'AdminCore Engine2026!' });
     resultados.push({ test: 'SQLi en correo → 400/401', status: sqli.status, pass: acepta(sqli.status, [400, 401, 429]) });
 
     const proto = await client.post('/api/v1/auth/login', {

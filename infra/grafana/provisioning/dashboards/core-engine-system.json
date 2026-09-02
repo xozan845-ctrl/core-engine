@@ -1,16 +1,16 @@
 {
-    "title":  "BodegaHub - Node.js Runtime (NestJS)",
-    "uid":  "bodegahub-nodejs",
+    "title":  "Core Engine - System Overview",
+    "uid":  "core-engine-system",
     "timezone":  "browser",
     "refresh":  "10s",
     "time":  {
-                 "from":  "now-15m",
+                 "from":  "now-1h",
                  "to":  "now"
              },
     "panels":  [
                    {
                        "type":  "timeseries",
-                       "title":  "Heap Used / Total (MB) - por servicio",
+                       "title":  "CPU Usage % (system-wide)",
                        "gridPos":  {
                                        "x":  0,
                                        "y":  0,
@@ -20,36 +20,8 @@
                        "datasource":  "Prometheus",
                        "targets":  [
                                        {
-                                           "expr":  "nodejs_heap_size_used_bytes{job=~\"bodegahub-servicios\"} / 1024 / 1024",
-                                           "legendFormat":  "{{job}} used MB",
-                                           "refId":  "A"
-                                       },
-                                       {
-                                           "expr":  "nodejs_heap_size_total_bytes{job=~\"bodegahub-servicios\"} / 1024 / 1024",
-                                           "legendFormat":  "{{job}} total MB",
-                                           "refId":  "B"
-                                       }
-                                   ],
-                       "fieldConfig":  {
-                                           "defaults":  {
-                                                            "unit":  "decmegabytes"
-                                                        }
-                                       }
-                   },
-                   {
-                       "type":  "timeseries",
-                       "title":  "Heap Usage % (used/total)",
-                       "gridPos":  {
-                                       "x":  12,
-                                       "y":  0,
-                                       "w":  12,
-                                       "h":  8
-                                   },
-                       "datasource":  "Prometheus",
-                       "targets":  [
-                                       {
-                                           "expr":  "nodejs_heap_size_used_bytes{job=~\"bodegahub-servicios\"} / nodejs_heap_size_total_bytes{job=~\"bodegahub-servicios\"} * 100",
-                                           "legendFormat":  "{{job}} %",
+                                           "expr":  "100 - (avg by (instance) (rate(node_cpu_seconds_total{mode=\"idle\"}[5m])) * 100)",
+                                           "legendFormat":  "{{instance}} %",
                                            "refId":  "A"
                                        }
                                    ],
@@ -70,7 +42,7 @@
                                                                                                  "color":  "orange"
                                                                                              },
                                                                                              {
-                                                                                                 "value":  85,
+                                                                                                 "value":  90,
                                                                                                  "color":  "red"
                                                                                              }
                                                                                          ]
@@ -80,47 +52,26 @@
                    },
                    {
                        "type":  "timeseries",
-                       "title":  "GC Duration (ms) - por tipo y servicio",
-                       "gridPos":  {
-                                       "x":  0,
-                                       "y":  8,
-                                       "w":  12,
-                                       "h":  8
-                                   },
-                       "datasource":  "Prometheus",
-                       "targets":  [
-                                       {
-                                           "expr":  "rate(nodejs_gc_duration_seconds_sum[5m]) / rate(nodejs_gc_duration_seconds_count[5m]) * 1000",
-                                           "legendFormat":  "{{job}} {{kind}} avg ms",
-                                           "refId":  "A"
-                                       }
-                                   ],
-                       "fieldConfig":  {
-                                           "defaults":  {
-                                                            "unit":  "ms"
-                                                        }
-                                       }
-                   },
-                   {
-                       "type":  "timeseries",
-                       "title":  "Event Loop Lag (ms) - p99",
+                       "title":  "Memory Usage % (system-wide)",
                        "gridPos":  {
                                        "x":  12,
-                                       "y":  8,
+                                       "y":  0,
                                        "w":  12,
                                        "h":  8
                                    },
                        "datasource":  "Prometheus",
                        "targets":  [
                                        {
-                                           "expr":  "nodejs_eventloop_lag_p99_seconds{job=~\"bodegahub-servicios\"} * 1000",
-                                           "legendFormat":  "{{job}} p99 ms",
+                                           "expr":  "(1 - (node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes)) * 100",
+                                           "legendFormat":  "{{instance}} %",
                                            "refId":  "A"
                                        }
                                    ],
                        "fieldConfig":  {
                                            "defaults":  {
-                                                            "unit":  "ms",
+                                                            "unit":  "percent",
+                                                            "min":  0,
+                                                            "max":  100,
                                                             "thresholds":  {
                                                                                "mode":  "absolute",
                                                                                "steps":  [
@@ -129,11 +80,11 @@
                                                                                                  "color":  "green"
                                                                                              },
                                                                                              {
-                                                                                                 "value":  50,
+                                                                                                 "value":  80,
                                                                                                  "color":  "orange"
                                                                                              },
                                                                                              {
-                                                                                                 "value":  100,
+                                                                                                 "value":  95,
                                                                                                  "color":  "red"
                                                                                              }
                                                                                          ]
@@ -143,7 +94,77 @@
                    },
                    {
                        "type":  "timeseries",
-                       "title":  "Event Loop Lag (ms) - p90 y p95",
+                       "title":  "Disk Usage % (por filesystem)",
+                       "gridPos":  {
+                                       "x":  0,
+                                       "y":  8,
+                                       "w":  12,
+                                       "h":  8
+                                   },
+                       "datasource":  "Prometheus",
+                       "targets":  [
+                                       {
+                                           "expr":  "(node_filesystem_size_bytes - node_filesystem_avail_bytes) / node_filesystem_size_bytes * 100",
+                                           "legendFormat":  "{{instance}} {{mountpoint}} %",
+                                           "refId":  "A"
+                                       }
+                                   ],
+                       "fieldConfig":  {
+                                           "defaults":  {
+                                                            "unit":  "percent",
+                                                            "min":  0,
+                                                            "max":  100,
+                                                            "thresholds":  {
+                                                                               "mode":  "absolute",
+                                                                               "steps":  [
+                                                                                             {
+                                                                                                 "value":  null,
+                                                                                                 "color":  "green"
+                                                                                             },
+                                                                                             {
+                                                                                                 "value":  80,
+                                                                                                 "color":  "orange"
+                                                                                             },
+                                                                                             {
+                                                                                                 "value":  90,
+                                                                                                 "color":  "red"
+                                                                                             }
+                                                                                         ]
+                                                                           }
+                                                        }
+                                       }
+                   },
+                   {
+                       "type":  "timeseries",
+                       "title":  "Network I/O (MB/s) - system",
+                       "gridPos":  {
+                                       "x":  12,
+                                       "y":  8,
+                                       "w":  12,
+                                       "h":  8
+                                   },
+                       "datasource":  "Prometheus",
+                       "targets":  [
+                                       {
+                                           "expr":  "rate(node_network_receive_bytes_total[5m]) / 1024 / 1024",
+                                           "legendFormat":  "{{instance}} {{device}} rx MB/s",
+                                           "refId":  "A"
+                                       },
+                                       {
+                                           "expr":  "rate(node_network_transmit_bytes_total[5m]) / 1024 / 1024",
+                                           "legendFormat":  "{{instance}} {{device}} tx MB/s",
+                                           "refId":  "B"
+                                       }
+                                   ],
+                       "fieldConfig":  {
+                                           "defaults":  {
+                                                            "unit":  "MBps"
+                                                        }
+                                       }
+                   },
+                   {
+                       "type":  "timeseries",
+                       "title":  "Disk I/O (MB/s) - system",
                        "gridPos":  {
                                        "x":  0,
                                        "y":  16,
@@ -153,25 +174,25 @@
                        "datasource":  "Prometheus",
                        "targets":  [
                                        {
-                                           "expr":  "nodejs_eventloop_lag_p90_seconds{job=~\"bodegahub-servicios\"} * 1000",
-                                           "legendFormat":  "{{job}} p90 ms",
+                                           "expr":  "rate(node_disk_read_bytes_total[5m]) / 1024 / 1024",
+                                           "legendFormat":  "{{instance}} {{device}} read MB/s",
                                            "refId":  "A"
                                        },
                                        {
-                                           "expr":  "nodejs_eventloop_lag_p99_seconds{job=~\"bodegahub-servicios\"} * 1000",
-                                           "legendFormat":  "{{job}} p99 ms",
+                                           "expr":  "rate(node_disk_written_bytes_total[5m]) / 1024 / 1024",
+                                           "legendFormat":  "{{instance}} {{device}} write MB/s",
                                            "refId":  "B"
                                        }
                                    ],
                        "fieldConfig":  {
                                            "defaults":  {
-                                                            "unit":  "ms"
+                                                            "unit":  "MBps"
                                                         }
                                        }
                    },
                    {
                        "type":  "timeseries",
-                       "title":  "Active Handles / Requests",
+                       "title":  "Load Average (1m, 5m, 15m)",
                        "gridPos":  {
                                        "x":  12,
                                        "y":  16,
@@ -181,14 +202,19 @@
                        "datasource":  "Prometheus",
                        "targets":  [
                                        {
-                                           "expr":  "nodejs_active_handles_total{job=~\"bodegahub-servicios\"}",
-                                           "legendFormat":  "{{job}} handles total",
+                                           "expr":  "node_load1",
+                                           "legendFormat":  "{{instance}} 1m",
                                            "refId":  "A"
                                        },
                                        {
-                                           "expr":  "nodejs_active_requests_total{job=~\"bodegahub-servicios\"}",
-                                           "legendFormat":  "{{job}} requests total",
+                                           "expr":  "node_load5",
+                                           "legendFormat":  "{{instance}} 5m",
                                            "refId":  "B"
+                                       },
+                                       {
+                                           "expr":  "node_load15",
+                                           "legendFormat":  "{{instance}} 15m",
+                                           "refId":  "C"
                                        }
                                    ],
                        "fieldConfig":  {
@@ -199,70 +225,70 @@
                    },
                    {
                        "type":  "stat",
-                       "title":  "Uptime por servicio (horas)",
+                       "title":  "Uptime (días)",
                        "gridPos":  {
                                        "x":  0,
                                        "y":  24,
-                                       "w":  18,
+                                       "w":  6,
                                        "h":  4
                                    },
                        "datasource":  "Prometheus",
                        "targets":  [
                                        {
-                                           "expr":  "(time() - process_start_time_seconds{job=~\"bodegahub-servicios\"}) / 3600",
-                                           "legendFormat":  "{{job}} h",
+                                           "expr":  "node_time_seconds - node_boot_time_seconds",
+                                           "legendFormat":  "{{instance}} días",
                                            "refId":  "A"
                                        }
                                    ],
                        "fieldConfig":  {
                                            "defaults":  {
-                                                            "unit":  "hours"
+                                                            "unit":  "days"
                                                         }
                                        }
                    },
                    {
-                       "type":  "timeseries",
-                       "title":  "CPU Usage % (process_cpu_seconds_total rate)",
+                       "type":  "stat",
+                       "title":  "CPU Cores",
                        "gridPos":  {
-                                       "x":  0,
-                                       "y":  28,
-                                       "w":  12,
-                                       "h":  8
+                                       "x":  6,
+                                       "y":  24,
+                                       "w":  6,
+                                       "h":  4
                                    },
                        "datasource":  "Prometheus",
                        "targets":  [
                                        {
-                                           "expr":  "rate(process_cpu_seconds_total{job=~\"bodegahub-servicios\"}[5m]) * 100",
-                                           "legendFormat":  "{{job}} %",
+                                           "expr":  "count(node_cpu_seconds_total{mode=\"idle\"}) by (instance)",
+                                           "legendFormat":  "{{instance}} cores",
                                            "refId":  "A"
                                        }
                                    ],
                        "fieldConfig":  {
                                            "defaults":  {
-                                                            "unit":  "percent"
+                                                            "unit":  "short"
                                                         }
                                        }
                    },
                    {
-                       "type":  "timeseries",
-                       "title":  "Memory RSS (MB) por servicio",
+                       "type":  "stat",
+                       "title":  "Total RAM (GB)",
                        "gridPos":  {
                                        "x":  12,
-                                       "y":  28,
-                                       "w":  12,
-                                       "h":  8
+                                       "y":  24,
+                                       "w":  6,
+                                       "h":  4
                                    },
                        "datasource":  "Prometheus",
                        "targets":  [
                                        {
-                                           "expr":  "process_resident_memory_bytes{job=~\"bodegahub-servicios\"} / 1024 / 1024",
-                                           "legendFormat":  "{{job}} MB",
+                                           "expr":  "node_memory_MemTotal_bytes / 1024 / 1024 / 1024",
+                                           "legendFormat":  "{{instance}} GB",
                                            "refId":  "A"
                                        }
                                    ],
                        "fieldConfig":  {
                                            "defaults":  {
-                                                            "unit":  "decmegabytes"
+                                                            "unit":  "gigabytes"
                                                         }
                                        }
                    }

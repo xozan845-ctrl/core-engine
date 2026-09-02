@@ -1,7 +1,7 @@
 {
-    "title":  "BodegaHub - Alerts \u0026 Health Summary",
-    "uid":  "bodegahub-alerts",
-    "description":  "Single-pane-of-glass: estado de salud y alertas activas de toda la plataforma BodegaHub. NOTA: heap usage alto (\u003e85%) es COMPORTAMIENTO NORMAL de V8 (GC eficiente); el dashboard de Node.js muestra el contexto completo.",
+    "title":  "Core Engine - Alerts \u0026 Health Summary",
+    "uid":  "core-engine-alerts",
+    "description":  "Single-pane-of-glass: estado de salud y alertas activas de toda la plataforma Core Engine. NOTA: heap usage alto (\u003e85%) es COMPORTAMIENTO NORMAL de V8 (GC eficiente); el dashboard de Node.js muestra el contexto completo.",
     "timezone":  "browser",
     "refresh":  "10s",
     "time":  {
@@ -18,7 +18,7 @@
                                                            "uid":  "prometheus"
                                                        },
                                         "refresh":  1,
-                                        "query":  "label_values(nodejs_heap_size_used_bytes{job=~\"bodegahub-servicios\"}, instance)",
+                                        "query":  "label_values(nodejs_heap_size_used_bytes{job=~\"core-engine-servicios\"}, instance)",
                                         "includeAll":  true,
                                         "multi":  true,
                                         "allValue":  ".*",
@@ -42,7 +42,7 @@
                        "datasource":  "Prometheus",
                        "targets":  [
                                        {
-                                           "expr":  "count(up{job=\"bodegahub-servicios\"} == 1)",
+                                           "expr":  "count(up{job=\"core-engine-servicios\"} == 1)",
                                            "legendFormat":  "servicios_up",
                                            "refId":  "A"
                                        }
@@ -80,7 +80,7 @@
                        "datasource":  "Prometheus",
                        "targets":  [
                                        {
-                                           "expr":  "count(up{job=\"bodegahub-servicios\"} == 0)",
+                                           "expr":  "count(up{job=\"core-engine-servicios\"} == 0)",
                                            "refId":  "A"
                                        }
                                    ],
@@ -194,7 +194,7 @@
                        "datasource":  "Prometheus",
                        "targets":  [
                                        {
-                                           "expr":  "nodejs_eventloop_lag_p99_seconds{job=~\"bodegahub-servicios\"} * 1000",
+                                           "expr":  "nodejs_eventloop_lag_p99_seconds{job=~\"core-engine-servicios\"} * 1000",
                                            "legendFormat":  "{{instance}}",
                                            "refId":  "A"
                                        }
@@ -274,7 +274,7 @@
                        "datasource":  "Prometheus",
                        "targets":  [
                                        {
-                                           "expr":  "nodejs_heap_size_used_bytes{job=~\"bodegahub-servicios\"} / 1024 / 1024",
+                                           "expr":  "nodejs_heap_size_used_bytes{job=~\"core-engine-servicios\"} / 1024 / 1024",
                                            "legendFormat":  "{{instance}}",
                                            "refId":  "A"
                                        }
@@ -314,7 +314,7 @@
                        "datasource":  "Prometheus",
                        "targets":  [
                                        {
-                                           "expr":  "pg_stat_database_numbackends{datname=\"bodegahub\"}",
+                                           "expr":  "pg_stat_database_numbackends{datname=\"core-engine\"}",
                                            "refId":  "A"
                                        }
                                    ],

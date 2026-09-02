@@ -15,11 +15,11 @@ export class SeedService implements OnApplicationBootstrap {
   async onApplicationBootstrap(): Promise<void> {
     const existe = await this.usuarios.existeAdmin();
     if (existe) return;
-    const email = process.env.ADMIN_EMAIL ?? 'admin@bodegahub.test';
-    const password = process.env.ADMIN_PASSWORD ?? 'AdminBodegaHub2026!';
+    const email = process.env.ADMIN_EMAIL ?? 'admin@core-engine.test';
+    const password = process.env.ADMIN_PASSWORD ?? 'AdminCore Engine2026!';
     try {
       const admin = await this.usuarios.crear({
-        nombre: 'Administrador BodegaHub',
+        nombre: 'Administrador Core Engine',
         correo: email,
         contrasena: password,
         rol: ROLES.ADMIN,

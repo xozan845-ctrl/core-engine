@@ -1,7 +1,7 @@
 {
-  "name": "@bodegahub/qa-harness",
+  "name": "@core-engine/qa-harness",
   "version": "1.0.0",
-  "description": "QA Harness agresivo para BodegaHub Core Engine - Testing automatizado con reporte ultra detallado",
+  "description": "QA Harness agresivo para Core Engine Core Engine - Testing automatizado con reporte ultra detallado",
   "type": "module",
   "main": "src/index.ts",
   "scripts": {
@@ -25,13 +25,13 @@
   "keywords": [
     "qa",
     "testing",
-    "bodegahub",
+    "core-engine",
     "core-engine",
     "aggressive-testing",
     "roost",
     "automated-testing"
   ],
-  "author": "BodegaHub Team",
+  "author": "Core Engine Team",
   "license": "MIT",
   "dependencies": {
     "pg": "^8.11.0",

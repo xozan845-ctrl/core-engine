@@ -1,0 +1,2269 @@
+{
+  "metadata": {
+    "version": "1.0.0",
+    "project": "Core Engine Core Engine",
+    "date": "2026-08-28T19:29:41.312Z"
+  },
+  "suites": {
+    "00-preflight": {
+      "pass": true,
+      "duration": 105,
+      "status": 200,
+      "body": {
+        "api_gateway": "ok",
+        "servicios": {
+          "identity": "ok",
+          "stores": "ok",
+          "orders": "ok",
+          "catalog": "ok",
+          "logistics": "ok",
+          "commissions": "ok",
+          "finance": "ok"
+        }
+      },
+      "tests": 1,
+      "pasos": 1,
+      "fallos": 0
+    },
+    "17-schema": {
+      "test": "Preflight de Esquema (regresión infra/db/init)",
+      "pass": true,
+      "errores": [],
+      "resultados": [
+        {
+          "test": "Tabla catalog.ajustes_stock existe",
+          "status": "OK",
+          "pass": true
+        },
+        {
+          "test": "Tabla catalog.eventos_procesados existe",
+          "status": "OK",
+          "pass": true
+        },
+        {
+          "test": "Tabla catalog.historico_precios existe",
+          "status": "OK",
+          "pass": true
+        },
+        {
+          "test": "Tabla catalog.inventario_mensual_mv existe",
+          "status": "OK",
+          "pass": true
+        },
+        {
+          "test": "Tabla catalog.outbox existe",
+          "status": "OK",
+          "pass": true
+        },
+        {
+          "test": "Tabla catalog.producto_catalogo_vista existe",
+          "status": "OK",
+          "pass": true
+        },
+        {
+          "test": "Tabla catalog.productos existe",
+          "status": "OK",
+          "pass": true
+        },
+        {
+          "test": "Tabla catalog.reservas_ordenes existe",
+          "status": "OK",
+          "pass": true
+        },
+        {
+          "test": "Tabla catalog.stock_vista existe",
+          "status": "OK",
+          "pass": true
+        },
+        {
+          "test": "Tabla commissions.comisiones existe",
+          "status": "OK",
+          "pass": true
+        },
+        {
+          "test": "Tabla commissions.compensaciones_devoluciones existe",
+          "status": "OK",
+          "pass": true
+        },
+        {
+          "test": "Tabla commissions.eventos_procesados existe",
+          "status": "OK",
+          "pass": true
+        },
+        {
+          "test": "Tabla commissions.liquidaciones existe",
+          "status": "OK",
+          "pass": true
+        },
+        {
+          "test": "Tabla commissions.outbox existe",
+          "status": "OK",
+          "pass": true
+        },
+        {
+          "test": "Tabla commissions.pagos existe",
+          "status": "OK",
+          "pass": true
+        },
+        {
+          "test": "Tabla field.asistencia existe",
+          "status": "OK",
+          "pass": true
+        },
+        {
+          "test": "Tabla field.clientes existe",
+          "status": "OK",
+          "pass": true
+        },
+        {
+          "test": "Tabla field.cumplimiento existe",
+          "status": "OK",
+          "pass": true
+        },
+        {
+          "test": "Tabla field.eventos_procesados existe",
+          "status": "OK",
+          "pass": true
+        },
+        {
+          "test": "Tabla field.incidencias existe",
+          "status": "OK",
+          "pass": true
+        },
+        {
+          "test": "Tabla field.outbox existe",
+          "status": "OK",
+          "pass": true
+        },
+        {
+          "test": "Tabla field.paradas existe",
+          "status": "OK",
+          "pass": true
+        },
+        {
+          "test": "Tabla field.pedidos existe",
+          "status": "OK",
+          "pass": true
+        },
+        {
+          "test": "Tabla field.personal existe",
+          "status": "OK",
+          "pass": true
+        },
+        {
+          "test": "Tabla field.rutas existe",
+          "status": "OK",
+          "pass": true
+        },
+        {
+          "test": "Tabla field.tracking existe",
+          "status": "OK",
+          "pass": true
+        },
+        {
+          "test": "Tabla field.vehiculos existe",
+          "status": "OK",
+          "pass": true
+        },
+        {
+          "test": "Tabla field.visitas existe",
+          "status": "OK",
+          "pass": true
+        },
+        {
+          "test": "Tabla finance.asiento_detalles existe",
+          "status": "OK",
+          "pass": true
+        },
+        {
+          "test": "Tabla finance.asientos existe",
+          "status": "OK",
+          "pass": true
+        },
+        {
+          "test": "Tabla finance.asientos_vista existe",
+          "status": "OK",
+          "pass": true
+        },
+        {
+          "test": "Tabla finance.comprobantes existe",
+          "status": "OK",
+          "pass": true
+        },
+        {
+          "test": "Tabla finance.declaraciones existe",
+          "status": "OK",
+          "pass": true
+        },
+        {
+          "test": "Tabla finance.eventos_procesados existe",
+          "status": "OK",
+          "pass": true
+        },
+        {
+          "test": "Tabla finance.jurisdicciones existe",
+          "status": "OK",
+          "pass": true
+        },
+        {
+          "test": "Tabla finance.libro_mayor_mv existe",
+          "status": "OK",
+          "pass": true
+        },
+        {
+          "test": "Tabla finance.metricas_mensuales existe",
+          "status": "OK",
+          "pass": true
+        },
+        {
+          "test": "Tabla finance.metricas_vendedores existe",
+          "status": "OK",
+          "pass": true
+        },
+        {
+          "test": "Tabla finance.outbox existe",
+          "status": "OK",
+          "pass": true
+        },
+        {
+          "test": "Tabla finance.plan_cuentas existe",
+          "status": "OK",
+          "pass": true
+        },
+        {
+          "test": "Tabla finance.proyecciones existe",
+          "status": "OK",
+          "pass": true
+        },
+        {
+          "test": "Tabla finance.regimenes_fiscales existe",
+          "status": "OK",
+          "pass": true
+        },
+        {
+          "test": "Tabla finance.series_comprobantes existe",
+          "status": "OK",
+          "pass": true
+        },
+        {
+          "test": "Tabla finance.sujetos_fiscales existe",
+          "status": "OK",
+          "pass": true
+        },
+        {
+          "test": "Tabla identity.outbox existe",
+          "status": "OK",
+          "pass": true
+        },
+        {
+          "test": "Tabla identity.usuarios existe",
+          "status": "OK",
+          "pass": true
+        },
+        {
+          "test": "Tabla logistics.envios existe",
+          "status": "OK",
+          "pass": true
+        },
+        {
+          "test": "Tabla logistics.eventos_procesados existe",
+          "status": "OK",
+          "pass": true
+        },
+        {
+          "test": "Tabla logistics.outbox existe",
+          "status": "OK",
+          "pass": true
+        },
+        {
+          "test": "Tabla orders.carritos existe",
+          "status": "OK",
+          "pass": true
+        },
+        {
+          "test": "Tabla orders.comisiones_vista existe",
+          "status": "OK",
+          "pass": true
+        },
+        {
+          "test": "Tabla orders.eventos existe",
+          "status": "OK",
+          "pass": true
+        },
+        {
+          "test": "Tabla orders.eventos_procesados existe",
+          "status": "OK",
+          "pass": true
+        },
+        {
+          "test": "Tabla orders.orden_timeline existe",
+          "status": "OK",
+          "pass": true
+        },
+        {
+          "test": "Tabla orders.orden_vista existe",
+          "status": "OK",
+          "pass": true
+        },
+        {
+          "test": "Tabla orders.outbox existe",
+          "status": "OK",
+          "pass": true
+        },
+        {
+          "test": "Tabla orders.proyeccion_ordenes existe",
+          "status": "OK",
+          "pass": true
+        },
+        {
+          "test": "Tabla stores.eventos_procesados existe",
+          "status": "OK",
+          "pass": true
+        },
+        {
+          "test": "Tabla stores.historico_precios existe",
+          "status": "OK",
+          "pass": true
+        },
+        {
+          "test": "Tabla stores.ofertas existe",
+          "status": "OK",
+          "pass": true
+        },
+        {
+          "test": "Tabla stores.outbox existe",
+          "status": "OK",
+          "pass": true
+        },
+        {
+          "test": "Tabla stores.tiendas existe",
+          "status": "OK",
+          "pass": true
+        },
+        {
+          "test": "Vista catalog.producto_catalogo_vista existe",
+          "status": "OK",
+          "pass": true
+        },
+        {
+          "test": "Vista catalog.stock_vista existe",
+          "status": "OK",
+          "pass": true
+        },
+        {
+          "test": "Vista finance.asientos_vista existe",
+          "status": "OK",
+          "pass": true
+        },
+        {
+          "test": "Vista finance.libro_mayor_mv existe",
+          "status": "OK",
+          "pass": true
+        },
+        {
+          "test": "Vista catalog.inventario_mensual_mv existe",
+          "status": "OK",
+          "pass": true
+        },
+        {
+          "test": "orders.eventos columna aggregate_id",
+          "status": "OK",
+          "pass": true
+        },
+        {
+          "test": "orders.eventos columna aggregate_type",
+          "status": "OK",
+          "pass": true
+        },
+        {
+          "test": "orders.eventos columna tipo",
+          "status": "OK",
+          "pass": true
+        },
+        {
+          "test": "orders.eventos columna payload",
+          "status": "OK",
+          "pass": true
+        },
+        {
+          "test": "orders.eventos columna metadata",
+          "status": "OK",
+          "pass": true
+        },
+        {
+          "test": "orders.eventos columna version",
+          "status": "OK",
+          "pass": true
+        },
+        {
+          "test": "orders.eventos columna creado_en",
+          "status": "OK",
+          "pass": true
+        },
+        {
+          "test": "orders.eventos NO tiene columna legada order_id",
+          "status": "OK",
+          "pass": true
+        },
+        {
+          "test": "orders.eventos NO tiene columna legada datos",
+          "status": "OK",
+          "pass": true
+        },
+        {
+          "test": "orders.eventos NO tiene columna legada ocurrido_en",
+          "status": "OK",
+          "pass": true
+        },
+        {
+          "test": "Trigger finance.asientos_proyeccion_trigger existe",
+          "status": "OK",
+          "pass": true
+        },
+        {
+          "test": "Trigger finance.detalles_proyeccion_trigger existe",
+          "status": "OK",
+          "pass": true
+        },
+        {
+          "test": "Trigger orders.eventos_proyeccion_trigger existe",
+          "status": "OK",
+          "pass": true
+        },
+        {
+          "test": "Cada esquema de dominio tiene outbox",
+          "status": "OK",
+          "pass": true
+        }
+      ],
+      "timestamp": "2026-08-28T19:29:41.570Z",
+      "duration": 146,
+      "tests": 81,
+      "pasos": 81,
+      "fallos": 0
+    },
+    "18-field": {
+      "test": "Field Service (backend móvil / app-test)",
+      "pass": true,
+      "errores": [],
+      "resultados": [
+        {
+          "test": "Personal: alta (TC-01)",
+          "status": 201,
+          "pass": true
+        },
+        {
+          "test": "Personal: obtener por id",
+          "status": 200,
+          "pass": true
+        },
+        {
+          "test": "Personal: listar contiene creado",
+          "status": 200,
+          "pass": true
+        },
+        {
+          "test": "Personal: actualizar",
+          "status": 200,
+          "pass": true
+        },
+        {
+          "test": "Personal: eliminar",
+          "status": 200,
+          "pass": true
+        },
+        {
+          "test": "Personal: obtener eliminado → 404",
+          "status": 404,
+          "pass": true
+        },
+        {
+          "test": "Personal: sin token → 401",
+          "status": 401,
+          "pass": true
+        },
+        {
+          "test": "Personal: rol comprador → 403",
+          "status": 403,
+          "pass": true
+        },
+        {
+          "test": "Cliente: alta",
+          "status": 201,
+          "pass": true
+        },
+        {
+          "test": "Cliente: obtener",
+          "status": 200,
+          "pass": true
+        },
+        {
+          "test": "Cliente: actualizar",
+          "status": 200,
+          "pass": true
+        },
+        {
+          "test": "Cliente: eliminar",
+          "status": 200,
+          "pass": true
+        },
+        {
+          "test": "Cliente: rol comprador → 403",
+          "status": 403,
+          "pass": true
+        },
+        {
+          "test": "Vehículo: alta",
+          "status": 201,
+          "pass": true
+        },
+        {
+          "test": "Vehículo: obtener",
+          "status": 200,
+          "pass": true
+        },
+        {
+          "test": "Vehículo: actualizar",
+          "status": 200,
+          "pass": true
+        },
+        {
+          "test": "Vehículo: placa duplicada (idempotente o 409)",
+          "status": 201,
+          "pass": true
+        },
+        {
+          "test": "Vehículo: eliminar",
+          "status": 200,
+          "pass": true
+        },
+        {
+          "test": "Vehículo: rol comprador → 403",
+          "status": 403,
+          "pass": true
+        },
+        {
+          "test": "Ruta: alta",
+          "status": 201,
+          "pass": true
+        },
+        {
+          "test": "Ruta: obtener (con paradas [])",
+          "status": 200,
+          "pass": true
+        },
+        {
+          "test": "Parada: agregar a ruta",
+          "status": 201,
+          "pass": true
+        },
+        {
+          "test": "Ruta: obtener incluye parada",
+          "status": 200,
+          "pass": true
+        },
+        {
+          "test": "Parada: actualizar",
+          "status": 200,
+          "pass": true
+        },
+        {
+          "test": "Parada: id inexistente → 404",
+          "status": 404,
+          "pass": true
+        },
+        {
+          "test": "Ruta: asignar",
+          "status": 201,
+          "pass": true
+        },
+        {
+          "test": "Ruta: listar contiene creada",
+          "status": 200,
+          "pass": true
+        },
+        {
+          "test": "Ruta: eliminar (cascada paradas)",
+          "status": 200,
+          "pass": true
+        },
+        {
+          "test": "Ruta: rol comprador → 403",
+          "status": 403,
+          "pass": true
+        },
+        {
+          "test": "Pedido: alta",
+          "status": 201,
+          "pass": true
+        },
+        {
+          "test": "Pedido: obtener",
+          "status": 200,
+          "pass": true
+        },
+        {
+          "test": "Pedido: cambiar estado",
+          "status": 200,
+          "pass": true
+        },
+        {
+          "test": "Pedido: listar contiene",
+          "status": 200,
+          "pass": true
+        },
+        {
+          "test": "Pedido: eliminar",
+          "status": 200,
+          "pass": true
+        },
+        {
+          "test": "Pedido: rol comprador → 403",
+          "status": 403,
+          "pass": true
+        },
+        {
+          "test": "Asistencia: registrar",
+          "status": 201,
+          "pass": true
+        },
+        {
+          "test": "Asistencia: listar por personal",
+          "status": 200,
+          "pass": true
+        },
+        {
+          "test": "Asistencia: rol comprador → 403",
+          "status": 403,
+          "pass": true
+        },
+        {
+          "test": "Incidencia: alta",
+          "status": 201,
+          "pass": true
+        },
+        {
+          "test": "Incidencia: actualizar",
+          "status": 200,
+          "pass": true
+        },
+        {
+          "test": "Incidencia: obtener",
+          "status": 200,
+          "pass": true
+        },
+        {
+          "test": "Incidencia: eliminar",
+          "status": 200,
+          "pass": true
+        },
+        {
+          "test": "Incidencia: rol comprador → 403",
+          "status": 403,
+          "pass": true
+        },
+        {
+          "test": "Tracking: registro bulk",
+          "status": 201,
+          "pass": true
+        },
+        {
+          "test": "Tracking: listar por personal",
+          "status": 200,
+          "pass": true
+        },
+        {
+          "test": "Visita: registrar",
+          "status": 201,
+          "pass": true
+        },
+        {
+          "test": "Visita: listar",
+          "status": 200,
+          "pass": true
+        },
+        {
+          "test": "Cumplimiento: guardar",
+          "status": 201,
+          "pass": true
+        },
+        {
+          "test": "Cumplimiento: obtener",
+          "status": 200,
+          "pass": true
+        },
+        {
+          "test": "Sync: respuesta 200 con resultados",
+          "status": 201,
+          "pass": true
+        },
+        {
+          "test": "Sync: ambas operaciones ok",
+          "status": 201,
+          "pass": true
+        },
+        {
+          "test": "Sync: personal sincronizado visible",
+          "status": 200,
+          "pass": true
+        },
+        {
+          "test": "Sync: tipo no soportado → ok:false",
+          "status": 201,
+          "pass": true
+        },
+        {
+          "test": "Sync: rol comprador → 403",
+          "status": 403,
+          "pass": true
+        }
+      ],
+      "timestamp": "2026-08-28T19:29:42.789Z",
+      "duration": 1218,
+      "tests": 54,
+      "pasos": 54,
+      "fallos": 0
+    },
+    "19-identity": {
+      "test": "Identity · auth + gestión de usuarios",
+      "pass": true,
+      "errores": [],
+      "resultados": [
+        {
+          "test": "admin: login exitoso",
+          "status": 200,
+          "pass": true
+        },
+        {
+          "test": "registro: vendedor válido → 201 + tokens",
+          "status": 201,
+          "pass": true
+        },
+        {
+          "test": "registro: comprador válido → 201",
+          "status": 201,
+          "pass": true
+        },
+        {
+          "test": "registro: correo duplicado → 409",
+          "status": 409,
+          "pass": true
+        },
+        {
+          "test": "registro: rol no registrable (admin) → 400",
+          "status": 400,
+          "pass": true
+        },
+        {
+          "test": "registro: contraseña corta → 400",
+          "status": 400,
+          "pass": true
+        },
+        {
+          "test": "registro: correo inválido → 400",
+          "status": 400,
+          "pass": true
+        },
+        {
+          "test": "login: contraseña incorrecta → 401",
+          "status": 401,
+          "pass": true
+        },
+        {
+          "test": "login: usuario inexistente → 401",
+          "status": 401,
+          "pass": true
+        },
+        {
+          "test": "login: cuerpo vacío → 400",
+          "status": 400,
+          "pass": true
+        },
+        {
+          "test": "me: sin token → 401",
+          "status": 401,
+          "pass": true
+        },
+        {
+          "test": "me: con token → 200 + contexto",
+          "status": 200,
+          "pass": true
+        },
+        {
+          "test": "refresh: token válido → 200/201 + tokens",
+          "status": 201,
+          "pass": true
+        },
+        {
+          "test": "refresh: token inválido → 400/401",
+          "status": 400,
+          "pass": true
+        },
+        {
+          "test": "refresh: sin token → 400",
+          "status": 400,
+          "pass": true
+        },
+        {
+          "test": "crear-usuario: vendedor → 201 + id",
+          "status": 201,
+          "pass": true
+        },
+        {
+          "test": "crear-usuario: logistica sin tenant → 400 (TENANT_REQUERIDO)",
+          "status": 400,
+          "pass": true
+        },
+        {
+          "test": "crear-usuario: logistica con tenant → 201",
+          "status": 201,
+          "pass": true
+        },
+        {
+          "test": "crear-usuario: rol inválido → 400",
+          "status": 400,
+          "pass": true
+        },
+        {
+          "test": "crear-usuario: correo duplicado → 409",
+          "status": 409,
+          "pass": true
+        },
+        {
+          "test": "crear-usuario: SIN token → 401 (authz requerida)",
+          "status": 401,
+          "pass": true
+        },
+        {
+          "test": "crear-usuario: rol no admin → 403 (Forbidden)",
+          "status": 403,
+          "pass": true
+        },
+        {
+          "test": "cambiar-contrasena: sin token → 401",
+          "status": 401,
+          "pass": true
+        },
+        {
+          "test": "cambiar-contrasena: actual incorrecta → 400/401",
+          "status": 401,
+          "pass": true
+        },
+        {
+          "test": "cambiar-contrasena: nueva corta → 400",
+          "status": 400,
+          "pass": true
+        },
+        {
+          "test": "cambiar-contrasena: válido → 200/201 ok",
+          "status": 201,
+          "pass": true
+        },
+        {
+          "test": "cambiar-contrasena: login con contraseña vieja → 401",
+          "status": 401,
+          "pass": true
+        },
+        {
+          "test": "cambiar-contrasena: login con contraseña nueva → 200",
+          "status": 200,
+          "pass": true
+        },
+        {
+          "test": "restablecer: correo existente → 200/201 ok (no revela)",
+          "status": 201,
+          "pass": true
+        },
+        {
+          "test": "restablecer: correo inválido → 400",
+          "status": 400,
+          "pass": true
+        },
+        {
+          "test": "restablecer: correo desconocido → 200/201 ok (no revela)",
+          "status": 201,
+          "pass": true
+        },
+        {
+          "test": "vincular-personal: sin token → 401",
+          "status": 401,
+          "pass": true
+        },
+        {
+          "test": "vincular-personal: válido → 200/201 ok",
+          "status": 201,
+          "pass": true
+        },
+        {
+          "test": "vincular-personal: personal_id faltante → 400",
+          "status": 400,
+          "pass": true
+        },
+        {
+          "test": "usuarios: listar (admin) → 200 array",
+          "status": 200,
+          "pass": true
+        }
+      ],
+      "timestamp": "2026-08-28T19:30:18.377Z",
+      "duration": 35588,
+      "tests": 35,
+      "pasos": 35,
+      "fallos": 0
+    },
+    "20-multitenant": {
+      "test": "Multitenant · aislamiento por tenant (field-service)",
+      "pass": true,
+      "errores": [],
+      "resultados": [
+        {
+          "test": "multitenant: ambos coordinadores loguean",
+          "status": 200,
+          "pass": true
+        },
+        {
+          "test": "clientes: A crea",
+          "status": 201,
+          "pass": true
+        },
+        {
+          "test": "clientes: A lista incluye suya",
+          "status": 200,
+          "pass": true
+        },
+        {
+          "test": "clientes: B lista NO incluye de A (aislamiento)",
+          "status": 200,
+          "pass": true
+        },
+        {
+          "test": "clientes: A lista NO incluye de B (aislamiento)",
+          "status": 200,
+          "pass": true
+        },
+        {
+          "test": "clientes: B lee recurso de A → 404 (aislamiento fila)",
+          "status": 404,
+          "pass": true
+        },
+        {
+          "test": "clientes: A lee recurso de B → 404 (aislamiento fila)",
+          "status": 404,
+          "pass": true
+        },
+        {
+          "test": "personal: B lista NO incluye de A (aislamiento)",
+          "status": 200,
+          "pass": true
+        },
+        {
+          "test": "field: sin token → 401",
+          "status": 401,
+          "pass": true
+        }
+      ],
+      "timestamp": "2026-08-28T19:30:18.953Z",
+      "duration": 575,
+      "tests": 9,
+      "pasos": 9,
+      "fallos": 0
+    },
+    "01-auth": {
+      "test": "Autenticación y sesiones",
+      "pass": true,
+      "errores": [],
+      "resultados": [
+        {
+          "test": "Registro vendedor",
+          "status": 201,
+          "pass": true
+        },
+        {
+          "test": "Registro comprador",
+          "status": 201,
+          "pass": true
+        },
+        {
+          "test": "Login admin",
+          "status": 200,
+          "pass": true
+        },
+        {
+          "test": "Obtener perfil usuario",
+          "status": 200,
+          "pass": true
+        },
+        {
+          "test": "Registro email duplicado → 409",
+          "status": 409,
+          "pass": true
+        },
+        {
+          "test": "Login contraseña incorrecta → 401",
+          "status": 401,
+          "pass": true
+        },
+        {
+          "test": "Registro rol inválido → 400",
+          "status": 400,
+          "pass": true
+        },
+        {
+          "test": "Login email inválido → 400",
+          "status": 400,
+          "pass": true
+        },
+        {
+          "test": "Token inválido → 401",
+          "status": 401,
+          "pass": true
+        },
+        {
+          "test": "Refresh token → 200/201",
+          "status": 201,
+          "pass": true
+        },
+        {
+          "test": "Refresh token inválido → 400/401",
+          "status": 400,
+          "pass": true
+        },
+        {
+          "test": "Access token como refresh → 400",
+          "status": 400,
+          "pass": true
+        },
+        {
+          "test": "Login contraseña corta (<8) → 401",
+          "status": 401,
+          "pass": true
+        },
+        {
+          "test": "Refresh sin token → 400",
+          "status": 400,
+          "pass": true
+        }
+      ],
+      "timestamp": "2026-08-28T19:32:30.485Z",
+      "duration": 609,
+      "tests": 14,
+      "pasos": 14,
+      "fallos": 0
+    },
+    "02-role-access": {
+      "test": "Control de acceso y roles",
+      "pass": true,
+      "errores": [],
+      "resultados": [
+        {
+          "test": "401 sin token en ruta protegida",
+          "status": 401,
+          "pass": true
+        },
+        {
+          "test": "401 JWT malformado",
+          "status": 401,
+          "pass": true
+        },
+        {
+          "test": "404 ruta inexistente (con auth)",
+          "status": 404,
+          "pass": true
+        },
+        {
+          "test": "404 orden id no-uuid (no 500)",
+          "status": 404,
+          "pass": true
+        },
+        {
+          "test": "404 orden uuid inexistente",
+          "status": 404,
+          "pass": true
+        },
+        {
+          "test": "Comprador en /admin/reportes → 403",
+          "status": 403,
+          "pass": true
+        },
+        {
+          "test": "Admin GET /orders → 403 (ACL)",
+          "status": 403,
+          "pass": true
+        },
+        {
+          "test": "Admin GET ventas vendedor → 403 (ACL)",
+          "status": 403,
+          "pass": true
+        },
+        {
+          "test": "Admin GET /admin/reportes → 200",
+          "status": 200,
+          "pass": true
+        },
+        {
+          "test": "401 JWT truncado",
+          "status": 401,
+          "pass": true
+        },
+        {
+          "test": "CORS headers (401/403)",
+          "status": 401,
+          "pass": true
+        },
+        {
+          "test": "Rate limit login (429s: 3/12)",
+          "pass": true
+        },
+        {
+          "test": "Headers x-ratelimit presentes",
+          "pass": true
+        },
+        {
+          "test": "Registro publico con rol logistica → 400 (solo vendedor/comprador)",
+          "status": 400,
+          "pass": true
+        },
+        {
+          "test": "Logistica GET /orders → 403 (ACL)",
+          "status": 403,
+          "pass": true
+        },
+        {
+          "test": "Logistica GET /admin/reportes → 403 (solo admin)",
+          "status": 403,
+          "pass": true
+        },
+        {
+          "test": "Logistica GET /vendedores/me → 403 (solo vendedor)",
+          "status": 403,
+          "pass": true
+        },
+        {
+          "test": "Logistica PATCH estado → autorizado (400/404 por orden inexistente, no 403)",
+          "status": 400,
+          "pass": true
+        },
+        {
+          "test": "Comprador PATCH estado → 403 (no operador logistica)",
+          "status": 403,
+          "pass": true
+        },
+        {
+          "test": "Logistica GET /admin/envios → 403 (solo admin)",
+          "status": 403,
+          "pass": true
+        }
+      ],
+      "timestamp": "2026-08-28T19:33:37.084Z",
+      "duration": 1597,
+      "tests": 20,
+      "pasos": 20,
+      "fallos": 0
+    },
+    "03-catalog": {
+      "test": "Catálogo CRUD y reglas de negocio",
+      "pass": true,
+      "errores": [],
+      "resultados": [
+        {
+          "test": "Alta producto (TC-01)",
+          "status": 201,
+          "pass": true
+        },
+        {
+          "test": "Producto stock 0 → 201 (agotado, RN-02 en oferta)",
+          "status": 201,
+          "pass": true
+        },
+        {
+          "test": "Alta producto precio base (RN-01)",
+          "status": 201,
+          "pass": true
+        },
+        {
+          "test": "Precio negativo → 400",
+          "status": 400,
+          "pass": true
+        },
+        {
+          "test": "SKU duplicado → 409",
+          "status": 409,
+          "pass": true
+        },
+        {
+          "test": "Nombre vacío → 400",
+          "status": 400,
+          "pass": true
+        },
+        {
+          "test": "Precio no numérico → 400",
+          "status": 400,
+          "pass": true
+        },
+        {
+          "test": "Stock negativo → 400",
+          "status": 400,
+          "pass": true
+        },
+        {
+          "test": "Catálogo público GET",
+          "status": 200,
+          "pass": true
+        },
+        {
+          "test": "Detalle producto creado",
+          "status": 200,
+          "pass": true
+        },
+        {
+          "test": "Producto inexistente → 404",
+          "status": 404,
+          "pass": true
+        },
+        {
+          "test": "Alta sin token → 401",
+          "status": 401,
+          "pass": true
+        }
+      ],
+      "timestamp": "2026-08-28T19:33:37.211Z",
+      "duration": 126,
+      "tests": 12,
+      "pasos": 12,
+      "fallos": 0
+    },
+    "04-stores": {
+      "test": "Tiendas y ofertas (RN-01, RN-02)",
+      "pass": true,
+      "errores": [],
+      "resultados": [
+        {
+          "test": "Alta/recuperar tienda",
+          "status": 409,
+          "pass": true
+        },
+        {
+          "test": "Oferta margen 15%",
+          "status": 201,
+          "pass": true
+        },
+        {
+          "test": "Oferta margen 0% (RN-01)",
+          "status": 201,
+          "pass": true
+        },
+        {
+          "test": "Oferta margen 90% (RN-01)",
+          "status": 201,
+          "pass": true
+        },
+        {
+          "test": "Oferta stock < 1 → 409 (RN-02)",
+          "status": 409,
+          "pass": true
+        },
+        {
+          "test": "Margen -1 → 400",
+          "status": 400,
+          "pass": true
+        },
+        {
+          "test": "Margen 101 → 400",
+          "status": 400,
+          "pass": true
+        },
+        {
+          "test": "Margen 15.5 → 400 (IsInt)",
+          "status": 400,
+          "pass": true
+        },
+        {
+          "test": "Sin producto_id → 400",
+          "status": 400,
+          "pass": true
+        },
+        {
+          "test": "Tienda pública",
+          "status": 200,
+          "pass": true
+        },
+        {
+          "test": "Mis ofertas",
+          "status": 200,
+          "pass": true
+        },
+        {
+          "test": "Cambiar margen 15→20%",
+          "status": 200,
+          "pass": true
+        },
+        {
+          "test": "Sin token → 401",
+          "status": 401,
+          "pass": true
+        }
+      ],
+      "timestamp": "2026-08-28T19:33:37.492Z",
+      "duration": 280,
+      "tests": 13,
+      "pasos": 13,
+      "fallos": 0
+    },
+    "05-orders": {
+      "test": "Órdenes y saga de transacciones",
+      "pass": true,
+      "errores": [],
+      "resultados": [
+        {
+          "test": "Crear orden (TC-03)",
+          "status": 201,
+          "pass": true
+        },
+        {
+          "test": "Ver detalle orden",
+          "status": 200,
+          "pass": true
+        },
+        {
+          "test": "Saga: estado = pagada",
+          "status": 200,
+          "pass": true
+        },
+        {
+          "test": "pagada → en_preparacion",
+          "status": 200,
+          "pass": true
+        },
+        {
+          "test": "en_preparacion → enviada",
+          "status": 200,
+          "pass": true
+        },
+        {
+          "test": "enviada → entregada",
+          "status": 200,
+          "pass": true
+        },
+        {
+          "test": "entregada → creada inválida → 400",
+          "status": 400,
+          "pass": true
+        },
+        {
+          "test": "entregada → pagada inválida → 400",
+          "status": 400,
+          "pass": true
+        },
+        {
+          "test": "Transición sin estado → 400",
+          "status": 400,
+          "pass": true
+        },
+        {
+          "test": "Comprador transiciona → 403",
+          "status": 403,
+          "pass": true
+        },
+        {
+          "test": "Cantidad 0 → 400 (RN-05)",
+          "status": 400,
+          "pass": true
+        },
+        {
+          "test": "Items vacíos → 400 (RN-05)",
+          "status": 400,
+          "pass": true
+        },
+        {
+          "test": "Items negativos → 400",
+          "status": 400,
+          "pass": true
+        },
+        {
+          "test": "Oferta inexistente → 404",
+          "status": 404,
+          "pass": true
+        },
+        {
+          "test": "Vendedor crea orden → 403",
+          "status": 403,
+          "pass": true
+        }
+      ],
+      "timestamp": "2026-08-28T19:33:38.763Z",
+      "duration": 1270,
+      "tests": 15,
+      "pasos": 15,
+      "fallos": 0
+    },
+    "06-cart": {
+      "test": "Carrito y checkout (RN-05)",
+      "pass": true,
+      "errores": [],
+      "resultados": [
+        {
+          "test": "Ver carrito (vacío)",
+          "status": 200,
+          "pass": true
+        },
+        {
+          "test": "Agregar item (cantidad 2)",
+          "status": 201,
+          "pass": true
+        },
+        {
+          "test": "Agregar mismo item (agrupar RN-05)",
+          "status": 201,
+          "pass": true
+        },
+        {
+          "test": "Carrito agrupado (items 5?)",
+          "status": 200,
+          "pass": true
+        },
+        {
+          "test": "Actualizar cantidad item",
+          "status": 200,
+          "pass": true
+        },
+        {
+          "test": "Cantidad 0 elimina item",
+          "status": 200,
+          "pass": true
+        },
+        {
+          "test": "Quitar item (DELETE)",
+          "status": 200,
+          "pass": true
+        },
+        {
+          "test": "Vaciar carrito",
+          "status": 200,
+          "pass": true
+        },
+        {
+          "test": "Checkout (crear orden)",
+          "status": 201,
+          "pass": true
+        },
+        {
+          "test": "Cantidad 100 → 400 (Max 99)",
+          "status": 400,
+          "pass": true
+        },
+        {
+          "test": "Agregar cantidad 0 → 400",
+          "status": 400,
+          "pass": true
+        },
+        {
+          "test": "Carrito sin token → 401",
+          "status": 401,
+          "pass": true
+        }
+      ],
+      "timestamp": "2026-08-28T19:33:39.182Z",
+      "duration": 418,
+      "tests": 12,
+      "pasos": 12,
+      "fallos": 0
+    },
+    "07-logistics": {
+      "test": "Logística y envíos",
+      "pass": true,
+      "errores": [],
+      "resultados": [
+        {
+          "test": "Orden creada para logística",
+          "status": 201,
+          "pass": true
+        },
+        {
+          "test": "Saga: estado = pagada",
+          "pass": true
+        },
+        {
+          "test": "pagada → en_preparacion",
+          "status": 200,
+          "pass": true
+        },
+        {
+          "test": "en_preparacion → enviada (rol logistica)",
+          "status": 200,
+          "pass": true
+        },
+        {
+          "test": "enviada → entregada",
+          "status": 200,
+          "pass": true
+        },
+        {
+          "test": "entregada → devuelta (compensación RN-06)",
+          "status": 200,
+          "pass": true
+        },
+        {
+          "test": "Orden inexistente → 400/404",
+          "status": 400,
+          "pass": true
+        },
+        {
+          "test": "Listar envíos (admin)",
+          "status": 200,
+          "pass": true
+        },
+        {
+          "test": "Cancelar envío (404: gap documentado, solo GET)",
+          "status": 404,
+          "pass": true
+        },
+        {
+          "test": "POST /admin/envios (no implementado)",
+          "status": 404,
+          "pass": true
+        },
+        {
+          "test": "Sin token → 401",
+          "status": 401,
+          "pass": true
+        },
+        {
+          "test": "Comprador en /admin/envios → 403",
+          "status": 403,
+          "pass": true
+        },
+        {
+          "test": "Logistica en /admin/envios → 403 (solo admin)",
+          "status": 403,
+          "pass": true
+        }
+      ],
+      "timestamp": "2026-08-28T19:33:41.417Z",
+      "duration": 2233,
+      "tests": 13,
+      "pasos": 13,
+      "fallos": 0
+    },
+    "08-commissions": {
+      "test": "Comisiones y liquidaciones (RN-04, RN-06, RN-07)",
+      "pass": true,
+      "errores": [],
+      "resultados": [
+        {
+          "test": "Venta real (comprador)",
+          "status": 201,
+          "pass": true
+        },
+        {
+          "test": "Comision 12% en ventas (RN-04)",
+          "status": 200,
+          "pass": true
+        },
+        {
+          "test": "Liquidaciones vendedor",
+          "status": 200,
+          "pass": true
+        },
+        {
+          "test": "Corte liquidación (RN-07)",
+          "status": 201,
+          "pass": true
+        },
+        {
+          "test": "Pagar liquidación (sin pendientes → skip)",
+          "pass": true
+        },
+        {
+          "test": "Devolución orden (RN-06)",
+          "status": 200,
+          "pass": true
+        },
+        {
+          "test": "Comisión compensada tras devolución",
+          "status": 200,
+          "pass": true
+        },
+        {
+          "test": "Reporte admin",
+          "status": 200,
+          "pass": true
+        },
+        {
+          "test": "Comprador en ventas vendedor → 403",
+          "status": 403,
+          "pass": true
+        },
+        {
+          "test": "Comprador en corte → 403",
+          "status": 403,
+          "pass": true
+        },
+        {
+          "test": "Sin token → 401",
+          "status": 401,
+          "pass": true
+        }
+      ],
+      "timestamp": "2026-08-28T19:33:43.624Z",
+      "duration": 2206,
+      "tests": 11,
+      "pasos": 11,
+      "fallos": 0
+    },
+    "09-finanzas": {
+      "test": "Finanzas, contabilidad, régimen fiscal NIC",
+      "pass": true,
+      "errores": [],
+      "resultados": [
+        {
+          "test": "Plan de cuentas",
+          "status": 200,
+          "pass": true
+        },
+        {
+          "test": "Asientos contables",
+          "status": 200,
+          "pass": true
+        },
+        {
+          "test": "Crear asiento (partida doble)",
+          "status": 201,
+          "pass": true
+        },
+        {
+          "test": "Libro mayor",
+          "status": 200,
+          "pass": true
+        },
+        {
+          "test": "Libro de ventas",
+          "status": 200,
+          "pass": true
+        },
+        {
+          "test": "Libro de compras",
+          "status": 200,
+          "pass": true
+        },
+        {
+          "test": "Proyecciones",
+          "status": 200,
+          "pass": true
+        },
+        {
+          "test": "Punto de equilibrio",
+          "status": 200,
+          "pass": true
+        },
+        {
+          "test": "KPIs financieros",
+          "status": 200,
+          "pass": true
+        },
+        {
+          "test": "Tablero financiero",
+          "status": 200,
+          "pass": true
+        },
+        {
+          "test": "Regímenes fiscales",
+          "status": 200,
+          "pass": true
+        },
+        {
+          "test": "Jurisdicciones",
+          "status": 200,
+          "pass": true
+        },
+        {
+          "test": "Sujetos fiscales",
+          "status": 200,
+          "pass": true
+        },
+        {
+          "test": "Declaraciones",
+          "status": 200,
+          "pass": true
+        },
+        {
+          "test": "Comprobantes fiscales",
+          "status": 200,
+          "pass": true
+        },
+        {
+          "test": "Fiscal del vendedor (admin → 403 o 200)",
+          "status": 403,
+          "pass": true
+        }
+      ],
+      "timestamp": "2026-08-28T19:33:43.960Z",
+      "duration": 335,
+      "tests": 16,
+      "pasos": 16,
+      "fallos": 0
+    },
+    "10-admin": {
+      "test": "Reportes admin e inventario",
+      "pass": true,
+      "errores": [],
+      "resultados": [
+        {
+          "test": "Reporte GMV/pedidos/stock",
+          "status": 200,
+          "pass": true
+        },
+        {
+          "test": "Inventario admin",
+          "status": 200,
+          "pass": true
+        },
+        {
+          "test": "Corte liquidación",
+          "status": 201,
+          "pass": true
+        },
+        {
+          "test": "Pagar liquidación (sin pendientes → skip)",
+          "pass": true
+        },
+        {
+          "test": "Listar envíos admin",
+          "status": 200,
+          "pass": true
+        },
+        {
+          "test": "GET /admin/vendedores (no existe → 404)",
+          "status": 404,
+          "pass": true
+        },
+        {
+          "test": "GET /admin/liquidaciones/cortes (no existe → 404)",
+          "status": 404,
+          "pass": true
+        },
+        {
+          "test": "Sin token → 401",
+          "status": 401,
+          "pass": true
+        }
+      ],
+      "timestamp": "2026-08-28T19:33:44.028Z",
+      "duration": 68,
+      "tests": 8,
+      "pasos": 8,
+      "fallos": 0
+    },
+    "11-fuzzing": {
+      "test": "Fuzzing y validación de entradas agresiva",
+      "pass": true,
+      "errores": [],
+      "resultados": [
+        {
+          "test": "JSON malformado → 400",
+          "status": 400,
+          "pass": true
+        },
+        {
+          "test": "SQLi en correo → 400/401",
+          "status": 429,
+          "pass": true
+        },
+        {
+          "test": "Prototype pollution attempt",
+          "status": 429,
+          "pass": true
+        },
+        {
+          "test": "Array en body login → 400/429",
+          "status": 429,
+          "pass": true
+        },
+        {
+          "test": "XSS en nombre → 201/400",
+          "status": 201,
+          "pass": true
+        },
+        {
+          "test": "Nombre vacío registro → 400",
+          "status": 400,
+          "pass": true
+        },
+        {
+          "test": "Catálogo sin token → 401",
+          "status": 401,
+          "pass": true
+        },
+        {
+          "test": "Tipos incorrectos (stock str) → 400",
+          "status": 400,
+          "pass": true
+        },
+        {
+          "test": "null en campo requerido → 400",
+          "status": 400,
+          "pass": true
+        },
+        {
+          "test": "Margen 91 → 400",
+          "status": 400,
+          "pass": true
+        },
+        {
+          "test": "Producto inexistente → 404",
+          "status": 404,
+          "pass": true
+        }
+      ],
+      "timestamp": "2026-08-28T19:33:44.286Z",
+      "duration": 257,
+      "tests": 11,
+      "pasos": 11,
+      "fallos": 0
+    },
+    "12-concurrency": {
+      "test": "Concurrencia y race conditions",
+      "pass": true,
+      "errores": [],
+      "resultados": [
+        {
+          "test": "Anti-oversell 50× stock=1 (creadas: 49, firmes: 1) [201:49, 409:1]",
+          "pass": true
+        },
+        {
+          "test": "Doble submit stock=2 (firmes: 2) [201,201]",
+          "pass": true
+        },
+        {
+          "test": "Carrito 10× paralelo (200: 10/10)",
+          "pass": true
+        },
+        {
+          "test": "Transiciones concurrentes [400,400]",
+          "pass": true
+        },
+        {
+          "test": "Corte simultáneo [201,201] (sin 500)",
+          "pass": true
+        }
+      ],
+      "timestamp": "2026-08-28T19:34:01.890Z",
+      "duration": 17603,
+      "tests": 5,
+      "pasos": 5,
+      "fallos": 0
+    },
+    "14-queue": {
+      "test": "Outbox, DLQ, RabbitMQ, mensajería",
+      "pass": true,
+      "errores": [],
+      "resultados": [
+        {
+          "test": "Outbox identity pendientes: 0",
+          "pass": true
+        },
+        {
+          "test": "Outbox catalog pendientes: 0",
+          "pass": true
+        },
+        {
+          "test": "Outbox stores pendientes: 0",
+          "pass": true
+        },
+        {
+          "test": "Outbox orders pendientes: 0",
+          "pass": true
+        },
+        {
+          "test": "Outbox logistics pendientes: 0",
+          "pass": true
+        },
+        {
+          "test": "Outbox commissions pendientes: 0",
+          "pass": true
+        },
+        {
+          "test": "Outbox finance pendientes: 0",
+          "pass": true
+        },
+        {
+          "test": "DLQ profundidad total: 0",
+          "pass": true
+        },
+        {
+          "test": "Cola catalog.pedidos profundidad: 0",
+          "pass": true
+        },
+        {
+          "test": "Cola commissions.liquidacion profundidad: 0",
+          "pass": true
+        },
+        {
+          "test": "Cola commissions.pedidos profundidad: 0",
+          "pass": true
+        },
+        {
+          "test": "Cola finance.pedidos profundidad: 0",
+          "pass": true
+        },
+        {
+          "test": "Cola logistics.pagos profundidad: 0",
+          "pass": true
+        },
+        {
+          "test": "Cola orders.resultados profundidad: 0",
+          "pass": true
+        },
+        {
+          "test": "Cola stores.stock profundidad: 0",
+          "pass": true
+        },
+        {
+          "test": "Eventos procesados identity: tabla inexistente (gap documentado)",
+          "pass": true
+        },
+        {
+          "test": "Eventos procesados catalog: 169",
+          "pass": true
+        },
+        {
+          "test": "Eventos procesados stores: 35",
+          "pass": true
+        },
+        {
+          "test": "Eventos procesados orders: 163",
+          "pass": true
+        },
+        {
+          "test": "Eventos procesados logistics: 216",
+          "pass": true
+        },
+        {
+          "test": "Eventos procesados commissions: 41",
+          "pass": true
+        },
+        {
+          "test": "Eventos procesados finance: 204",
+          "pass": true
+        },
+        {
+          "test": "Publish exchange via Management API (405 = deshabilitado)",
+          "status": 405,
+          "pass": true
+        },
+        {
+          "test": "RabbitMQ healthcheck",
+          "pass": true
+        },
+        {
+          "test": "Cola orders.resultados.dlq: 0",
+          "pass": true
+        },
+        {
+          "test": "Internal endpoint via gateway → no expuesto (404/429)",
+          "status": 404,
+          "pass": true
+        },
+        {
+          "test": "/metrics expuesto por el gateway",
+          "status": 200,
+          "pass": true
+        },
+        {
+          "test": "Outbox identity drenado tras espera",
+          "pass": true
+        },
+        {
+          "test": "Outbox catalog drenado tras espera",
+          "pass": true
+        },
+        {
+          "test": "Outbox stores drenado tras espera",
+          "pass": true
+        },
+        {
+          "test": "Outbox orders drenado tras espera",
+          "pass": true
+        },
+        {
+          "test": "Outbox logistics drenado tras espera",
+          "pass": true
+        },
+        {
+          "test": "Outbox commissions drenado tras espera",
+          "pass": true
+        },
+        {
+          "test": "Outbox finance drenado tras espera",
+          "pass": true
+        }
+      ],
+      "timestamp": "2026-08-28T19:34:07.180Z",
+      "duration": 5289,
+      "tests": 34,
+      "pasos": 34,
+      "fallos": 0
+    },
+    "16-owasp": {
+      "test": "Barrido OWASP Top 10 + API Top 10 + DoS y superficie",
+      "pass": true,
+      "errores": [],
+      "resultados": [
+        {
+          "test": "A01 IDOR: orden de otro comprador → 401/403/404 (ownership en servicio, sin fuga de datos)",
+          "pass": true,
+          "status": 401,
+          "detalle": "ownership: 401"
+        },
+        {
+          "test": "A02 Politica de secretos: JWT_SECRET del .env robusto (>=32 chars, sin prefijo dev_)",
+          "pass": true,
+          "detalle": "64 chars"
+        },
+        {
+          "test": "A02 Rotacion aplicada: el gateway firma con el secreto del .env (JWT valido → 200, no 401)",
+          "pass": true,
+          "status": 200,
+          "detalle": "firma del .env aceptada"
+        },
+        {
+          "test": "A02 JWT firmado con secretos residuales del repo → 401 (firma conocida ya no es suficiente)",
+          "pass": true,
+          "detalle": "rechazados: dev_secret, dev_secret_cambiar_en_produccion"
+        },
+        {
+          "test": "A02 JWT alg=none rechazado → 401",
+          "pass": true,
+          "status": 401
+        },
+        {
+          "test": "A02 JWT expirado rechazado → 401",
+          "pass": true,
+          "status": 401
+        },
+        {
+          "test": "A03 SQLi en login → 400/401 (no autentica)",
+          "pass": true,
+          "status": 429
+        },
+        {
+          "test": "A03 SQLi en id de producto → 400/404 (500 = bug de manejo, sin inyeccion)",
+          "pass": true,
+          "status": 404,
+          "detalle": ""
+        },
+        {
+          "test": "A03 XSS almacenado: nombre ejecutable rechazado o inofensivo (JSON, sin render) → 201 como dato",
+          "pass": true,
+          "status": 201
+        },
+        {
+          "test": "A03 XXE/XML body → 400/415 (solo JSON; 429 = rate global)",
+          "pass": true,
+          "status": 429,
+          "detalle": "XXE no aplica: parser limita a JSON (rate-limit global 300/min)"
+        },
+        {
+          "test": "A04 Mass assignment en registro: campos extra no escalan rol",
+          "pass": true,
+          "status": 201,
+          "detalle": "/me rol=comprador"
+        },
+        {
+          "test": "A05 Header X-Powered-By:Express presente (fingerprint) → ausente ideal",
+          "pass": true,
+          "detalle": "(ausente)",
+          "status": 200
+        },
+        {
+          "test": "A05 Security headers presentes (CSP/XFO/CTO/HSTS) → los 4 ideal",
+          "pass": true,
+          "detalle": "ok"
+        },
+        {
+          "test": "A05 CORS: no reflejar origenes no confiables",
+          "pass": true,
+          "detalle": "ACAO=undefined",
+          "status": 200
+        },
+        {
+          "test": "A05 Grafana sin autenticacion (anónimo) → requiere auth",
+          "pass": true,
+          "status": 401,
+          "detalle": ""
+        },
+        {
+          "test": "A06 Imagenes pinneadas (sin :latest) en docker-compose",
+          "pass": true,
+          "detalle": "todas pinneadas"
+        },
+        {
+          "test": "A06 npm audit: 0 vulns high/critical",
+          "pass": true,
+          "detalle": "npm audit no ejecutable (offline/error)"
+        },
+        {
+          "test": "A07 RabbitMQ management NO accesible con guest/guest (credencial por defecto)",
+          "pass": true,
+          "status": 401,
+          "detalle": ""
+        },
+        {
+          "test": "A07 Brute force login mitigado (rate limit 429)",
+          "pass": true,
+          "detalle": "429s: 12/12"
+        },
+        {
+          "test": "A07 Clave interna sin marcador dev_ (secreto conocido publico)",
+          "pass": true,
+          "detalle": "ok"
+        },
+        {
+          "test": "A08 JWT con firma ajena → 401 (integridad de token)",
+          "pass": true,
+          "status": 401
+        },
+        {
+          "test": "A08 Publish a exchange de negocio NO autorizado (405 ideal) — 200 = eventos falsos inyectables",
+          "pass": true,
+          "status": 401,
+          "detalle": "publish bloqueado"
+        },
+        {
+          "test": "A09 Metrics expuestos para monitoreo (/metrics 200)",
+          "pass": true,
+          "status": 200
+        },
+        {
+          "test": "A09 Trazabilidad: x-request-id presente en respuestas",
+          "pass": true,
+          "detalle": "75da0810-7340-4254-98b9-85fa21090e37"
+        },
+        {
+          "test": "A10 SSRF: rutas no consumen URLs del atacante (400/404/409, sin fetch interno)",
+          "pass": true,
+          "s1": 400,
+          "s2": 404,
+          "detalle": "sin endpoints de fetch por diseño; ssrf1=400 ssrf2=404"
+        },
+        {
+          "test": "DoS: body de 2MB → 413 (limite controlado, no 500)",
+          "pass": true,
+          "status": 413,
+          "detalle": ""
+        },
+        {
+          "test": "DoS: rate limiting global activo (429 eventual)",
+          "pass": true,
+          "detalle": "verificado en suites 02/13 (429 en rafagas)"
+        },
+        {
+          "test": "Superficie: microservicios NO publicados al host (solo gateway como entrada)",
+          "pass": false,
+          "detalle": "acceso directo desde LAN: identity, catalog, stores, orders, logistics, commissions, finance (bypass del gateway)"
+        },
+        {
+          "test": "Superficie: /internal/* exige x-internal-key → 403 (verificado en la red interna)",
+          "pass": true,
+          "status": 403,
+          "detalle": ""
+        }
+      ],
+      "timestamp": "2026-08-28T19:34:08.162Z",
+      "duration": 981,
+      "tests": 29,
+      "pasos": 28,
+      "fallos": 1
+    },
+    "13-load": {
+      "test": "Carga y rendimiento",
+      "pass": true,
+      "errores": [],
+      "resultados": [
+        {
+          "test": "Health check p50=8ms p90=11ms p99=28ms",
+          "pass": true
+        },
+        {
+          "test": "Login p50=2ms p90=3ms p99=5ms",
+          "pass": true
+        },
+        {
+          "test": "Throughput (mediana de 3 tandas): 144.9 req/s",
+          "pass": true
+        },
+        {
+          "test": "Rate limit (429): 20/20",
+          "pass": true
+        },
+        {
+          "test": "Admin reportes p50=2ms p99=11ms",
+          "pass": true
+        }
+      ],
+      "timestamp": "2026-08-28T19:34:12.700Z",
+      "duration": 4537,
+      "tests": 5,
+      "pasos": 5,
+      "fallos": 0
+    },
+    "15-static": {
+      "test": "Análisis estático de código",
+      "pass": true,
+      "errores": [],
+      "resultados": [
+        {
+          "test": "npm test",
+          "pass": true,
+          "output": "\n> core-engine@1.0.0 test\n> npm run test -w @core/shared && npm run test -w @core/api-gateway && npm run test -w @core/orders-service && npm run test -w @core/commissions-service && npm run test -w @core/finance-service\n\n\n> @core/shared@1.0.0 test\n> jest --runInBand\n\nPASS src/money.spec.ts\n  Money (RN-01 y RN-04, ejemplo Tabla 5)\n    √ precio base C$ 1 000 con margen 15 % = C$ 1 150,00 (RN-01) (4 ms)\n    √ comision 12 % de C$ 1 150 = C$ 138,00 y liquida C$ 1 012,00 (RN-04) (2 ms)\n    √ acepta montos con coma y sin decimales (1 ms)\n    √ rechaza montos con mas de 2 decimales (13 ms)\n    √ nunca usa punto flotante: 0.1 + 0.2 tipo centavos exactos\n  Ciclo de vida de la orden (Tabla 13)\n    √ cadena feliz creada -> pagada -> en_preparacion -> enviada -> entregada\n    √ rechaza transiciones invalidas\n    √ casos excepcionales: cancelada/devuelta con compensacion\n\nTest Suites: 1 passed, 1 total\nTests:       8 passed, 8 total\nSnapshots:   0 total\nTime:        5.394 s\nRan all test suites.\n\n> @core/api-gateway@1.0.0 test\n> jest --runInBand\n\n  console.warn\n    {\"nivel\":\"warn\",\"ts\":\"2026-08-28T19:34:30.910Z\",\"servicio\":\"gateway.auth\",\"msg\":\"acceso denegado por rol\",\"ruta\":\"/api/v1/admin/reportes\",\"rol\":\"comprador\"}\n\n    \u001b[0m \u001b[90m 39 |\u001b[39m     \u001b[36mconst\u001b[39m texto \u001b[33m=\u001b[39m \u001b[33mJSON\u001b[39m\u001b[33m.\u001b[39mstringify(linea)\u001b[33m;\u001b[39m\n     \u001b[90m 40 |\u001b[39m     \u001b[36mif\u001b[39m (nivel \u001b[33m===\u001b[39m \u001b[32m'error'\u001b[39m) console\u001b[33m.\u001b[39merror(texto)\u001b[33m;\u001b[39m\n    \u001b[31m\u001b[1m>\u001b[22m\u001b[39m\u001b[90m 41 |\u001b[39m     \u001b[36melse\u001b[39m \u001b[36mif\u001b[39m (nivel \u001b[33m===\u001b[39m \u001b[32m'warn'\u001b[39m) console\u001b[33m.\u001b[39mwarn(texto)\u001b[33m;\u001b[39m\n     \u001b[90m    |\u001b[39m                                        \u001b[31m\u001b[1m^\u001b[22m\u001b[39m\n     \u001b[90m 42 |\u001b[39m     \u001b[36melse\u001b[39m console\u001b[33m.\u001b[39mlog(texto)\u001b[33m;\u001b[39m\n     \u001b[90m 43 |\u001b[39m   }\n     \u001b[90m 44 |\u001b[39m\u001b[0m\n\n      at Logger.entrada (../../shared/src/logging/logger.ts:41:40)\n      at Logger.warn (../../shared/src/logging/logger.ts:49:10)\n      at GatewayAuthMiddleware.aplicar (proxy/gateway-auth.middleware.ts:134:21)\n      at Object.<anonymous> (proxy/gateway-auth.spec.ts:63:10)\n\nPASS src/proxy/gateway-auth.spec.ts (6.475 s)\n  Gateway auth (TC-07: seguridad en el borde)\n    √ TC-07a: GET /api/v1/admin/reportes sin token -> 401 (5 ms)\n    √ comprador sin permiso de admin -> 403 (40 ms)\n    √ token invalido -> 401 (1 ms)\n    √ admin con token valido -> paso y cabeceras X-User-* propagadas (2 ms)\n    √ ruta publica (login) pasa sin token\n    √ refresh token no sirve como access -> 401 (2 ms)\n\nTest Suites: 1 passed, 1 total\nTests:       6 passed, 6 total\nSnapshots:   0 total\nTime:        7.038 s\nRan all test suites.\n\n> @core/orders-service@1.0.0 test\n> jest --runInBand\n\nPASS src/pedidos/create-order-command.handler.spec.ts (7.911 s)\n  CreateOrderCommandHandler (CQRS + Event Sourcing)\n    √ TC-02/TC-03: calcula el total con las reglas RN-01/RN-04 y persiste evento OrderCreatedEvent (15 ms)\n    √ total con cantidades multiples: 2 unidades = C$ 2 300 (3 ms)\n    √ agrupa lineas repetidas del carrito (RN-05: cantidades sumadas) (2 ms)\n    √ carrito vacio se rechaza (RN-05) (5 ms)\n    √ oferta inexistente -> 404 (1 ms)\n    √ TC-04: viabilidad de stock rechaza con 409/stock_insuficiente como CONFLICTO (1 ms)\n  Calculo de comision TC-08 (RN-04)\n    √ venta de C$ 1 150 con comision 12 %: comision 138.00, vendedor recibe 1 012.00 (1 ms)\n\nTest Suites: 1 passed, 1 total\nTests:       7 passed, 7 total\nSnapshots:   0 total\nTime:        8.434 s\nRan all test suites.\n\n> @core/commissions-service@1.0.0 test\n> jest --runInBand\n\nPASS src/liquidaciones/liquidaciones.service.spec.ts (6.41 s)\n  LiquidacionesService (RN-07: corte quincenal dias 1 y 15)\n    √ el dia 10 pertenece a la primera quincena (1-15) (4 ms)\n    √ el dia 16 pertenece a la segunda quincena (16-fin de mes) (1 ms)\n    √ febrero: la segunda quincena cierra el dia 28 (no bisiesto) (6 ms)\n    √ el corte del dia 1 cierra el periodo previo del mes anterior (1 ms)\n    √ el corte del dia 15 cierra la primera"
+        },
+        {
+          "test": "npm run lint",
+          "pass": true,
+          "output": "\n> core-engine@1.0.0 lint\n> npm run lint --workspaces --if-present\n\n"
+        },
+        {
+          "test": "npm run build",
+          "pass": true,
+          "output": "\n> core-engine@1.0.0 build\n> npm run build:shared && npm run build -w @core/api-gateway && npm run build -w @core/identity-service && npm run build -w @core/catalog-service && npm run build -w @core/stores-service && npm run build -w @core/orders-service && npm run build -w @core/logistics-service && npm run build -w @core/commissions-service && npm run build -w @core/finance-service && npm run build -w @core/field-service\n\n\n> core-engine@1.0.0 build:shared\n> npm run build -w @core/shared\n\n\n> @core/shared@1.0.0 build\n> tsc -p tsconfig.json\n\n\n> @core/api-gateway@1.0.0 build\n> tsc -p tsconfig.json\n\n\n> @core/identity-service@1.0.0 build\n> tsc -p tsconfig.json\n\n\n> @core/catalog-service@1.0.0 build\n> tsc -p tsconfig.json\n\n\n> @core/stores-service@1.0.0 build\n> tsc -p tsconfig.json\n\n\n> @core/orders-service@1.0.0 build\n> tsc -p tsconfig.json\n\n\n> @core/logistics-service@1.0.0 build\n> tsc -p tsconfig.json\n\n\n> @core/commissions-service@1.0.0 build\n> tsc -p tsconfig.json\n\n\n> @core/finance-service@1.0.0 build\n> tsc -p tsconfig.json\n\n\n> @core/field-service@1.0.0 build\n> tsc -p tsconfig.json\n\n"
+        },
+        {
+          "test": "npx tsc --noEmit",
+          "pass": true,
+          "output": ""
+        },
+        {
+          "test": "Archivos TS > 500 líneas: 2",
+          "pass": true
+        },
+        {
+          "test": "TODO/FIXME en código: 0",
+          "pass": true
+        },
+        {
+          "test": "console.log en fuente: 1",
+          "pass": true
+        }
+      ],
+      "timestamp": "2026-08-28T19:36:02.337Z",
+      "duration": 109636,
+      "tests": 7,
+      "pasos": 7,
+      "fallos": 0
+    }
+  },
+  "resumen": {
+    "totalTests": 405,
+    "pasos": 404,
+    "fallos": 1,
+    "saltos": 0,
+    "tasa": "99.8%",
+    "errores": [
+      {
+        "suite": "16-owasp",
+        "fallos": 1,
+        "timestamp": "2026-08-28T19:34:08.162Z"
+      }
+    ]
+  },
+  "timestamp": "2026-08-28T19:29:41.310Z"
+}

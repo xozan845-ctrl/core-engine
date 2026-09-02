@@ -29,8 +29,8 @@ export class Configuracion {
     }
 
     this.baseUrl = config?.baseUrl ?? parsed?.BASE_URL ?? 'http://localhost:8080';
-    this.adminEmail = config?.adminEmail ?? parsed?.ADMIN_EMAIL ?? 'admin@bodegahub.test';
-    this.adminPassword = config?.adminPassword ?? parsed?.ADMIN_PASSWORD ?? 'AdminBodegaHub2026!';
+    this.adminEmail = config?.adminEmail ?? parsed?.ADMIN_EMAIL ?? 'admin@core-engine.test';
+    this.adminPassword = config?.adminPassword ?? parsed?.ADMIN_PASSWORD ?? 'AdminCore Engine2026!';
     this.timeoutMs = parseInt(config?.timeoutMs ?? parsed?.QA_TIMEOUT ?? '30000', 10);
     this.concurrency = parseInt(config?.concurrency ?? parsed?.QA_CONCURRENCY ?? '50', 10);
     this.fuzzRounds = parseInt(config?.fuzzRounds ?? parsed?.QA_FUZZ_ROUNDS ?? '10', 10);

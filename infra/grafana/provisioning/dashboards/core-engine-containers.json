@@ -1,6 +1,6 @@
 {
-    "title": "BodegaHub - Containers & Infra",
-    "uid": "bodegahub-containers",
+    "title": "Core Engine - Containers & Infra",
+    "uid": "core-engine-containers",
     "timezone": "browser",
     "refresh": "10s",
     "time": { "from": "now-15m", "to": "now" },

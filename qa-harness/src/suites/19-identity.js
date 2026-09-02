@@ -40,8 +40,8 @@ export async function suite19Identity({ client, pg, config }) {
     return client.post('/api/v1/auth/login', body);
   };
   const login = (correo, pass) => loginRaw({ correo, contrasena: pass });
-  const adminEmail = config.adminEmail || 'admin@bodegahub.test';
-  const adminPassword = config.adminPassword || 'AdminBodegaHub2026!';
+  const adminEmail = config.adminEmail || 'admin@core-engine.test';
+  const adminPassword = config.adminPassword || 'AdminCore Engine2026!';
   const suf = (config.sufijo || 'qa') + '-' + Date.now().toString().slice(-6);
 
   const loginAdmin = await login(adminEmail, adminPassword);

@@ -10,7 +10,7 @@ const PROM_URL = 'http://localhost:9090';
 function promQuery(q) {
   try {
     const url = `${PROM_URL}/api/v1/query?query=${encodeURIComponent(q)}`;
-    const out = execSync(`docker exec bodegahub-prometheus wget -qO- "${url}"`, {
+    const out = execSync(`docker exec core-engine-prometheus wget -qO- "${url}"`, {
       encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'], timeout: 20000,
     });
     return JSON.parse(out.trim());
@@ -72,7 +72,7 @@ const condPrefixes = fs.readFileSync('C:/Users/User/Desktop/core-engine/infra/pr
 
 function getMetricCatalog() {
   const url = `${PROM_URL}/api/v1/label/__name__/values`;
-  const out = execSync(`docker exec bodegahub-prometheus wget -qO- "${url}"`, {
+  const out = execSync(`docker exec core-engine-prometheus wget -qO- "${url}"`, {
     encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'], timeout: 30000,
   });
   const r = JSON.parse(out.trim());

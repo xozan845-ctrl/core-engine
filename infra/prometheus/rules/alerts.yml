@@ -1,11 +1,11 @@
-# Reglas de alerta para BodegaHub Core Engine
+# Reglas de alerta para Core Engine Core Engine
 groups:
-  - name: bodegahub-critical
+  - name: core-engine-critical
     rules:
 
     # --- Servicios caídos ---
     - alert: ServicioCaido
-      expr: absent(up{job="bodegahub-servicios"} == 1)
+      expr: absent(up{job="core-engine-servicios"} == 1)
       for: 1m
       labels:
         severity: critical
@@ -15,7 +15,7 @@ groups:
 
     # --- Event loop lag crítico ---
     - alert: EventLoopLagAlto
-      expr: nodejs_eventloop_lag_p99_seconds{job=~"bodegahub-servicios"} > 0.1
+      expr: nodejs_eventloop_lag_p99_seconds{job=~"core-engine-servicios"} > 0.1
       for: 2m
       labels: { severity: critical }
       annotations:
@@ -33,7 +33,7 @@ groups:
 
     # --- Heap usage (nota: high ratio es normal en V8; se alerta solo si heap_used > 500MB) ---
     - alert: HeapUsageCritico
-      expr: nodejs_heap_size_used_bytes{job=~"bodegahub-servicios"} > 500 * 1024 * 1024
+      expr: nodejs_heap_size_used_bytes{job=~"core-engine-servicios"} > 500 * 1024 * 1024
       for: 5m
       labels: { severity: critical }
       annotations:
@@ -42,7 +42,7 @@ groups:
 
     # --- Postgres ---
     - alert: PostgresConexionesAltas
-      expr: pg_stat_database_numbackends{datname="bodegahub"} > 80
+      expr: pg_stat_database_numbackends{datname="core-engine"} > 80
       for: 1m
       labels: { severity: warning }
       annotations:

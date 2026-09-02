@@ -52,8 +52,8 @@ export async function suite02Acceso(client, cfg, adminToken, compradorToken, log
 
     // 10. JWT truncado (token valido truncado) -> 401
     const loginTmp = await client.post('/api/v1/auth/login', {
-      correo: 'admin@bodegahub.test',
-      contrasena: 'AdminBodegaHub2026!',
+      correo: 'admin@core-engine.test',
+      contrasena: 'AdminCore Engine2026!',
     });
     if (loginTmp.status === 200 || loginTmp.status === 201) {
       const truncado = await client.get('/api/v1/orders', { authorization: 'Bearer ' + loginTmp.body.access_token.slice(0, -5) });
@@ -72,8 +72,8 @@ export async function suite02Acceso(client, cfg, adminToken, compradorToken, log
     const inicio = Date.now();
     for (let i = 0; i < 12; i++) {
       const r = await client.post('/api/v1/auth/login', {
-        correo: 'admin@bodegahub.test',
-        contrasena: 'AdminBodegaHub2026!',
+        correo: 'admin@core-engine.test',
+        contrasena: 'AdminCore Engine2026!',
       });
       if (r.status === 429) rateLimited++;
     }

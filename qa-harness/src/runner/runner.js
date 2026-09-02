@@ -89,7 +89,7 @@ export class Runner {
 
   async loginUsers() {
     // Login admin
-    const adminLogin = await this.loginConReintento('admin@bodegahub.test', 'AdminBodegaHub2026!');
+    const adminLogin = await this.loginConReintento('admin@core-engine.test', 'AdminCore Engine2026!');
     if (adminLogin.status === 200 || adminLogin.status === 201) {
       this.adminToken = adminLogin.body.access_token;
     }

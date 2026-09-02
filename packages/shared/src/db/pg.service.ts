@@ -3,7 +3,7 @@ import { Pool, PoolClient } from 'pg';
 import { Logger } from '../logging/logger';
 
 export interface PgConfig {
-  /** URL de conexion, ej: postgres://user:pass@host:5432/bodegahub */
+  /** URL de conexion, ej: postgres://user:pass@host:5432/core_engine */
   url: string;
 }
 

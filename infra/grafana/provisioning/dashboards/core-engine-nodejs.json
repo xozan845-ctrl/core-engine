@@ -1,16 +1,16 @@
 {
-    "title":  "BodegaHub - System Overview",
-    "uid":  "bodegahub-system",
+    "title":  "Core Engine - Node.js Runtime (NestJS)",
+    "uid":  "core-engine-nodejs",
     "timezone":  "browser",
     "refresh":  "10s",
     "time":  {
-                 "from":  "now-1h",
+                 "from":  "now-15m",
                  "to":  "now"
              },
     "panels":  [
                    {
                        "type":  "timeseries",
-                       "title":  "CPU Usage % (system-wide)",
+                       "title":  "Heap Used / Total (MB) - por servicio",
                        "gridPos":  {
                                        "x":  0,
                                        "y":  0,
@@ -20,8 +20,36 @@
                        "datasource":  "Prometheus",
                        "targets":  [
                                        {
-                                           "expr":  "100 - (avg by (instance) (rate(node_cpu_seconds_total{mode=\"idle\"}[5m])) * 100)",
-                                           "legendFormat":  "{{instance}} %",
+                                           "expr":  "nodejs_heap_size_used_bytes{job=~\"core-engine-servicios\"} / 1024 / 1024",
+                                           "legendFormat":  "{{job}} used MB",
+                                           "refId":  "A"
+                                       },
+                                       {
+                                           "expr":  "nodejs_heap_size_total_bytes{job=~\"core-engine-servicios\"} / 1024 / 1024",
+                                           "legendFormat":  "{{job}} total MB",
+                                           "refId":  "B"
+                                       }
+                                   ],
+                       "fieldConfig":  {
+                                           "defaults":  {
+                                                            "unit":  "decmegabytes"
+                                                        }
+                                       }
+                   },
+                   {
+                       "type":  "timeseries",
+                       "title":  "Heap Usage % (used/total)",
+                       "gridPos":  {
+                                       "x":  12,
+                                       "y":  0,
+                                       "w":  12,
+                                       "h":  8
+                                   },
+                       "datasource":  "Prometheus",
+                       "targets":  [
+                                       {
+                                           "expr":  "nodejs_heap_size_used_bytes{job=~\"core-engine-servicios\"} / nodejs_heap_size_total_bytes{job=~\"core-engine-servicios\"} * 100",
+                                           "legendFormat":  "{{job}} %",
                                            "refId":  "A"
                                        }
                                    ],
@@ -42,7 +70,7 @@
                                                                                                  "color":  "orange"
                                                                                              },
                                                                                              {
-                                                                                                 "value":  90,
+                                                                                                 "value":  85,
                                                                                                  "color":  "red"
                                                                                              }
                                                                                          ]
@@ -52,49 +80,7 @@
                    },
                    {
                        "type":  "timeseries",
-                       "title":  "Memory Usage % (system-wide)",
-                       "gridPos":  {
-                                       "x":  12,
-                                       "y":  0,
-                                       "w":  12,
-                                       "h":  8
-                                   },
-                       "datasource":  "Prometheus",
-                       "targets":  [
-                                       {
-                                           "expr":  "(1 - (node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes)) * 100",
-                                           "legendFormat":  "{{instance}} %",
-                                           "refId":  "A"
-                                       }
-                                   ],
-                       "fieldConfig":  {
-                                           "defaults":  {
-                                                            "unit":  "percent",
-                                                            "min":  0,
-                                                            "max":  100,
-                                                            "thresholds":  {
-                                                                               "mode":  "absolute",
-                                                                               "steps":  [
-                                                                                             {
-                                                                                                 "value":  null,
-                                                                                                 "color":  "green"
-                                                                                             },
-                                                                                             {
-                                                                                                 "value":  80,
-                                                                                                 "color":  "orange"
-                                                                                             },
-                                                                                             {
-                                                                                                 "value":  95,
-                                                                                                 "color":  "red"
-                                                                                             }
-                                                                                         ]
-                                                                           }
-                                                        }
-                                       }
-                   },
-                   {
-                       "type":  "timeseries",
-                       "title":  "Disk Usage % (por filesystem)",
+                       "title":  "GC Duration (ms) - por tipo y servicio",
                        "gridPos":  {
                                        "x":  0,
                                        "y":  8,
@@ -104,39 +90,20 @@
                        "datasource":  "Prometheus",
                        "targets":  [
                                        {
-                                           "expr":  "(node_filesystem_size_bytes - node_filesystem_avail_bytes) / node_filesystem_size_bytes * 100",
-                                           "legendFormat":  "{{instance}} {{mountpoint}} %",
+                                           "expr":  "rate(nodejs_gc_duration_seconds_sum[5m]) / rate(nodejs_gc_duration_seconds_count[5m]) * 1000",
+                                           "legendFormat":  "{{job}} {{kind}} avg ms",
                                            "refId":  "A"
                                        }
                                    ],
                        "fieldConfig":  {
                                            "defaults":  {
-                                                            "unit":  "percent",
-                                                            "min":  0,
-                                                            "max":  100,
-                                                            "thresholds":  {
-                                                                               "mode":  "absolute",
-                                                                               "steps":  [
-                                                                                             {
-                                                                                                 "value":  null,
-                                                                                                 "color":  "green"
-                                                                                             },
-                                                                                             {
-                                                                                                 "value":  80,
-                                                                                                 "color":  "orange"
-                                                                                             },
-                                                                                             {
-                                                                                                 "value":  90,
-                                                                                                 "color":  "red"
-                                                                                             }
-                                                                                         ]
-                                                                           }
+                                                            "unit":  "ms"
                                                         }
                                        }
                    },
                    {
                        "type":  "timeseries",
-                       "title":  "Network I/O (MB/s) - system",
+                       "title":  "Event Loop Lag (ms) - p99",
                        "gridPos":  {
                                        "x":  12,
                                        "y":  8,
@@ -146,25 +113,37 @@
                        "datasource":  "Prometheus",
                        "targets":  [
                                        {
-                                           "expr":  "rate(node_network_receive_bytes_total[5m]) / 1024 / 1024",
-                                           "legendFormat":  "{{instance}} {{device}} rx MB/s",
+                                           "expr":  "nodejs_eventloop_lag_p99_seconds{job=~\"core-engine-servicios\"} * 1000",
+                                           "legendFormat":  "{{job}} p99 ms",
                                            "refId":  "A"
-                                       },
-                                       {
-                                           "expr":  "rate(node_network_transmit_bytes_total[5m]) / 1024 / 1024",
-                                           "legendFormat":  "{{instance}} {{device}} tx MB/s",
-                                           "refId":  "B"
                                        }
                                    ],
                        "fieldConfig":  {
                                            "defaults":  {
-                                                            "unit":  "MBps"
+                                                            "unit":  "ms",
+                                                            "thresholds":  {
+                                                                               "mode":  "absolute",
+                                                                               "steps":  [
+                                                                                             {
+                                                                                                 "value":  null,
+                                                                                                 "color":  "green"
+                                                                                             },
+                                                                                             {
+                                                                                                 "value":  50,
+                                                                                                 "color":  "orange"
+                                                                                             },
+                                                                                             {
+                                                                                                 "value":  100,
+                                                                                                 "color":  "red"
+                                                                                             }
+                                                                                         ]
+                                                                           }
                                                         }
                                        }
                    },
                    {
                        "type":  "timeseries",
-                       "title":  "Disk I/O (MB/s) - system",
+                       "title":  "Event Loop Lag (ms) - p90 y p95",
                        "gridPos":  {
                                        "x":  0,
                                        "y":  16,
@@ -174,25 +153,25 @@
                        "datasource":  "Prometheus",
                        "targets":  [
                                        {
-                                           "expr":  "rate(node_disk_read_bytes_total[5m]) / 1024 / 1024",
-                                           "legendFormat":  "{{instance}} {{device}} read MB/s",
+                                           "expr":  "nodejs_eventloop_lag_p90_seconds{job=~\"core-engine-servicios\"} * 1000",
+                                           "legendFormat":  "{{job}} p90 ms",
                                            "refId":  "A"
                                        },
                                        {
-                                           "expr":  "rate(node_disk_written_bytes_total[5m]) / 1024 / 1024",
-                                           "legendFormat":  "{{instance}} {{device}} write MB/s",
+                                           "expr":  "nodejs_eventloop_lag_p99_seconds{job=~\"core-engine-servicios\"} * 1000",
+                                           "legendFormat":  "{{job}} p99 ms",
                                            "refId":  "B"
                                        }
                                    ],
                        "fieldConfig":  {
                                            "defaults":  {
-                                                            "unit":  "MBps"
+                                                            "unit":  "ms"
                                                         }
                                        }
                    },
                    {
                        "type":  "timeseries",
-                       "title":  "Load Average (1m, 5m, 15m)",
+                       "title":  "Active Handles / Requests",
                        "gridPos":  {
                                        "x":  12,
                                        "y":  16,
@@ -202,19 +181,14 @@
                        "datasource":  "Prometheus",
                        "targets":  [
                                        {
-                                           "expr":  "node_load1",
-                                           "legendFormat":  "{{instance}} 1m",
+                                           "expr":  "nodejs_active_handles_total{job=~\"core-engine-servicios\"}",
+                                           "legendFormat":  "{{job}} handles total",
                                            "refId":  "A"
                                        },
                                        {
-                                           "expr":  "node_load5",
-                                           "legendFormat":  "{{instance}} 5m",
+                                           "expr":  "nodejs_active_requests_total{job=~\"core-engine-servicios\"}",
+                                           "legendFormat":  "{{job}} requests total",
                                            "refId":  "B"
-                                       },
-                                       {
-                                           "expr":  "node_load15",
-                                           "legendFormat":  "{{instance}} 15m",
-                                           "refId":  "C"
                                        }
                                    ],
                        "fieldConfig":  {
@@ -225,70 +199,70 @@
                    },
                    {
                        "type":  "stat",
-                       "title":  "Uptime (días)",
+                       "title":  "Uptime por servicio (horas)",
                        "gridPos":  {
                                        "x":  0,
                                        "y":  24,
-                                       "w":  6,
+                                       "w":  18,
                                        "h":  4
                                    },
                        "datasource":  "Prometheus",
                        "targets":  [
                                        {
-                                           "expr":  "node_time_seconds - node_boot_time_seconds",
-                                           "legendFormat":  "{{instance}} días",
+                                           "expr":  "(time() - process_start_time_seconds{job=~\"core-engine-servicios\"}) / 3600",
+                                           "legendFormat":  "{{job}} h",
                                            "refId":  "A"
                                        }
                                    ],
                        "fieldConfig":  {
                                            "defaults":  {
-                                                            "unit":  "days"
+                                                            "unit":  "hours"
                                                         }
                                        }
                    },
                    {
-                       "type":  "stat",
-                       "title":  "CPU Cores",
+                       "type":  "timeseries",
+                       "title":  "CPU Usage % (process_cpu_seconds_total rate)",
                        "gridPos":  {
-                                       "x":  6,
-                                       "y":  24,
-                                       "w":  6,
-                                       "h":  4
+                                       "x":  0,
+                                       "y":  28,
+                                       "w":  12,
+                                       "h":  8
                                    },
                        "datasource":  "Prometheus",
                        "targets":  [
                                        {
-                                           "expr":  "count(node_cpu_seconds_total{mode=\"idle\"}) by (instance)",
-                                           "legendFormat":  "{{instance}} cores",
+                                           "expr":  "rate(process_cpu_seconds_total{job=~\"core-engine-servicios\"}[5m]) * 100",
+                                           "legendFormat":  "{{job}} %",
                                            "refId":  "A"
                                        }
                                    ],
                        "fieldConfig":  {
                                            "defaults":  {
-                                                            "unit":  "short"
+                                                            "unit":  "percent"
                                                         }
                                        }
                    },
                    {
-                       "type":  "stat",
-                       "title":  "Total RAM (GB)",
+                       "type":  "timeseries",
+                       "title":  "Memory RSS (MB) por servicio",
                        "gridPos":  {
                                        "x":  12,
-                                       "y":  24,
-                                       "w":  6,
-                                       "h":  4
+                                       "y":  28,
+                                       "w":  12,
+                                       "h":  8
                                    },
                        "datasource":  "Prometheus",
                        "targets":  [
                                        {
-                                           "expr":  "node_memory_MemTotal_bytes / 1024 / 1024 / 1024",
-                                           "legendFormat":  "{{instance}} GB",
+                                           "expr":  "process_resident_memory_bytes{job=~\"core-engine-servicios\"} / 1024 / 1024",
+                                           "legendFormat":  "{{job}} MB",
                                            "refId":  "A"
                                        }
                                    ],
                        "fieldConfig":  {
                                            "defaults":  {
-                                                            "unit":  "gigabytes"
+                                                            "unit":  "decmegabytes"
                                                         }
                                        }
                    }
