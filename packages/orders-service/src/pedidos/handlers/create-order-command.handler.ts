@@ -134,7 +134,7 @@ export class CreateOrderCommandHandler {
       tienda_id: primerItem?.tienda_id ?? '',
       estado: 'creada',
       total_cents: total.centavos,
-      comision_cents: Math.round(total.centavos * 0.12),
+      comision_cents: total.comision(0.12).centavos,
       moneda: 'C$',
       items,
       direccion_envio: null,

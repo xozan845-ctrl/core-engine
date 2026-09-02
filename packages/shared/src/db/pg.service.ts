@@ -1,6 +1,6 @@
 import { Injectable, OnModuleDestroy, OnModuleInit, Optional } from '@nestjs/common';
 import { Pool, PoolClient } from 'pg';
-import { Logger } from '../logging/logger';
+import { Logger, contextoActual } from '../logging/logger';
 
 export interface PgConfig {
   /** URL de conexion, ej: postgres://user:pass@host:5432/core_engine */
@@ -36,9 +36,17 @@ export class PgService implements OnModuleInit, OnModuleDestroy {
     }
   }
 
-  query<T = Record<string, unknown>>(text: string, params: unknown[] = []): Promise<T[]> {
+  async query<T = Record<string, unknown>>(text: string, params: unknown[] = []): Promise<T[]> {
     if (!this.pool) {
       return Promise.reject(new Error('Pool no inicializado.'));
+    }
+    const ctx = contextoActual();
+    if (ctx?.usuario_id) {
+      // Forzar transaccion para que set_config(..., true) se aplique y proteja RLS
+      return this.transaccion(async (client) => {
+        const r = await client.query(text, params);
+        return r.rows as T[];
+      });
     }
     return this.pool.query(text, params).then((r) => r.rows as T[]);
   }
@@ -54,6 +62,13 @@ export class PgService implements OnModuleInit, OnModuleDestroy {
     const client = await this.pool.connect();
     try {
       await client.query('BEGIN');
+      const ctx = contextoActual();
+      if (ctx?.usuario_id) {
+        // Inyectar claims JWT en la sesion transaccional para RLS en Supabase (Regla 2, database.md)
+        await client.query(`SELECT set_config('request.jwt.claims', $1, true)`, [
+          JSON.stringify({ sub: ctx.usuario_id, rol: ctx.rol ?? 'anon' }),
+        ]);
+      }
       const resultado = await fn(client);
       await client.query('COMMIT');
       return resultado;

@@ -132,7 +132,7 @@ export class EventsConsumer implements OnModuleInit {
   private async devolucion(evento: EventoBus<DevolucionSolicitadaData>): Promise<void> {
     const orden = await this.consultarOrden(evento.data.order_id);
     if (!orden) throw new Error('Orden no disponible para el asiento de devolucion.');
-    const comision = Math.round(Money.desdeCentavos(orden.total_cents).multiplicarPor(this.comisionTasa).centavos);
+    const comision = Money.desdeCentavos(orden.total_cents).comision(this.comisionTasa).centavos;
 
     await this.pg.transaccion(async (client) => {
       await this.contabilidad.registrarEnTransaccion(client, {

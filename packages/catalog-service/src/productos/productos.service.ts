@@ -267,17 +267,25 @@ export class ProductosService {
     try {
       await this.pg.transaccion(async (client) => {
         for (const item of items) {
+          // Bloqueo pesimista requerido por regla dorada (Data Integrity)
+          const lock = await client.query(
+            `SELECT stock FROM catalog.productos WHERE LOWER(sku) = LOWER($1) FOR UPDATE`,
+            [item.sku]
+          );
+          
+          if (lock.rowCount === 0 || lock.rows[0].stock < item.cantidad) {
+            fallidos.push({ sku: item.sku, cantidad: item.cantidad, motivo: 'stock_insuficiente' });
+            continue;
+          }
+
           const actualizado = await client.query(
             `UPDATE catalog.productos
              SET stock = stock - $2,
                  estado = CASE WHEN stock - $2 > 0 THEN 'disponible' ELSE 'agotado' END
-             WHERE LOWER(sku) = LOWER($1) AND stock >= $2
+             WHERE LOWER(sku) = LOWER($1)
              RETURNING sku`,
             [item.sku, item.cantidad],
           );
-          if (actualizado.rowCount === 0) {
-            fallidos.push({ sku: item.sku, cantidad: item.cantidad, motivo: 'stock_insuficiente' });
-          }
         }
         if (fallidos.length > 0) {
           throw new Error('STOCK_INSUFICIENTE');

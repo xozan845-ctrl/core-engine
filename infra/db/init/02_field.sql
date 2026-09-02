@@ -25,6 +25,7 @@ CREATE TABLE IF NOT EXISTS field.personal (
   ubicacion_precision double precision,
   ubicacion_ts        timestamptz,
   synced              boolean NOT NULL DEFAULT TRUE,
+  deleted_at          timestamptz,
   created_at          timestamptz NOT NULL DEFAULT NOW(),
   updated_at          timestamptz NOT NULL DEFAULT NOW()
 );
@@ -49,6 +50,7 @@ CREATE TABLE IF NOT EXISTS field.clientes (
   notas_adicionales   text,
   url_google_maps     text,
   synced              boolean NOT NULL DEFAULT TRUE,
+  deleted_at          timestamptz,
   created_at          timestamptz NOT NULL DEFAULT NOW(),
   updated_at          timestamptz NOT NULL DEFAULT NOW()
 );
@@ -75,6 +77,7 @@ CREATE TABLE IF NOT EXISTS field.vehiculos (
   conductor_id        uuid,
   ruta_activa_id      uuid,
   synced              boolean NOT NULL DEFAULT TRUE,
+  deleted_at          timestamptz,
   created_at          timestamptz NOT NULL DEFAULT NOW(),
   updated_at          timestamptz NOT NULL DEFAULT NOW()
 );
@@ -92,6 +95,7 @@ CREATE TABLE IF NOT EXISTS field.rutas (
   fecha_inicio        timestamptz,
   fecha_fin           timestamptz,
   synced              boolean NOT NULL DEFAULT TRUE,
+  deleted_at          timestamptz,
   created_at          timestamptz NOT NULL DEFAULT NOW(),
   updated_at          timestamptz NOT NULL DEFAULT NOW()
 );
@@ -117,6 +121,7 @@ CREATE TABLE IF NOT EXISTS field.paradas (
   notas               text,
   tipo_combustible    text,
   synced              boolean NOT NULL DEFAULT TRUE,
+  deleted_at          timestamptz,
   created_at          timestamptz NOT NULL DEFAULT NOW(),
   updated_at          timestamptz NOT NULL DEFAULT NOW()
 );
@@ -135,6 +140,7 @@ CREATE TABLE IF NOT EXISTS field.pedidos (
   ruta_id             uuid,
   notas               text,
   synced              boolean NOT NULL DEFAULT TRUE,
+  deleted_at          timestamptz,
   created_at          timestamptz NOT NULL DEFAULT NOW(),
   updated_at          timestamptz NOT NULL DEFAULT NOW()
 );
@@ -159,6 +165,7 @@ CREATE TABLE IF NOT EXISTS field.asistencia (
   justificacion       text,
   fotos_justificacion jsonb NOT NULL DEFAULT '[]',
   synced              boolean NOT NULL DEFAULT TRUE,
+  deleted_at          timestamptz,
   created_at          timestamptz NOT NULL DEFAULT NOW(),
   updated_at          timestamptz NOT NULL DEFAULT NOW()
 );
@@ -177,6 +184,7 @@ CREATE TABLE IF NOT EXISTS field.incidencias (
   ruta_id             uuid,
   resolucion          text,
   synced              boolean NOT NULL DEFAULT TRUE,
+  deleted_at          timestamptz,
   created_at          timestamptz NOT NULL DEFAULT NOW(),
   updated_at          timestamptz NOT NULL DEFAULT NOW()
 );
@@ -194,6 +202,7 @@ CREATE TABLE IF NOT EXISTS field.tracking (
   rumbo               double precision,
   registrado_en       timestamptz NOT NULL DEFAULT NOW(),
   synced              boolean NOT NULL DEFAULT TRUE,
+  deleted_at          timestamptz,
   created_at          timestamptz NOT NULL DEFAULT NOW(),
   updated_at          timestamptz NOT NULL DEFAULT NOW()
 );
@@ -217,6 +226,7 @@ CREATE TABLE IF NOT EXISTS field.visitas (
   duracion_minutos    integer,
   notas               text,
   synced              boolean NOT NULL DEFAULT TRUE,
+  deleted_at          timestamptz,
   created_at          timestamptz NOT NULL DEFAULT NOW(),
   updated_at          timestamptz NOT NULL DEFAULT NOW()
 );
@@ -229,6 +239,7 @@ CREATE TABLE IF NOT EXISTS field.cumplimiento (
   ruta_id             uuid NOT NULL,
   fecha               date NOT NULL,
   metricas            jsonb NOT NULL DEFAULT '{}',
+  deleted_at          timestamptz,
   created_at          timestamptz NOT NULL DEFAULT NOW(),
   updated_at          timestamptz NOT NULL DEFAULT NOW(),
   UNIQUE (tenant_id, ruta_id, fecha)

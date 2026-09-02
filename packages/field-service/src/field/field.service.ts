@@ -232,6 +232,7 @@ export class FieldService {
     if (upsert) {
       const sets = Object.values(map).map((c) => `${c} = EXCLUDED.${c}`);
       sets.push('updated_at = NOW()');
+      sets.push('deleted_at = NULL');
       sql += ` ON CONFLICT (id) DO UPDATE SET ${sets.join(', ')} RETURNING *`;
     } else {
       sql += ' RETURNING *';
@@ -265,7 +266,7 @@ export class FieldService {
     sets.push(`updated_at = $${i}`);
     vals.push(new Date());
     vals.push(tenant, id);
-    const sql = `UPDATE field.${tabla} SET ${sets.join(', ')} WHERE tenant_id = $${i + 1} AND id = $${i + 2} RETURNING *`;
+    const sql = `UPDATE field.${tabla} SET ${sets.join(', ')} WHERE tenant_id = $${i + 1} AND id = $${i + 2} AND deleted_at IS NULL RETURNING *`;
     const fila = await this.pg.queryOne<T>(sql, vals);
     if (!fila) throw new NotFoundError(tabla, id);
     return fila;
@@ -273,7 +274,7 @@ export class FieldService {
 
   private async obtener<T>(tabla: string, tenant: string, id: string): Promise<T> {
     const fila = await this.pg.queryOne<T>(
-      `SELECT * FROM field.${tabla} WHERE tenant_id = $1 AND id = $2`,
+      `SELECT * FROM field.${tabla} WHERE tenant_id = $1 AND id = $2 AND deleted_at IS NULL`,
       [tenant, id],
     );
     if (!fila) throw new NotFoundError(tabla, id);
@@ -286,13 +287,13 @@ export class FieldService {
     extras: { col: string; val: unknown }[] = [],
     orderBy = 'created_at',
   ): Promise<T[]> {
-    const cond = ['tenant_id = $1', ...extras.map((_, i) => `${extras[i].col} = $${i + 2}`)];
+    const cond = ['tenant_id = $1', 'deleted_at IS NULL', ...extras.map((_, i) => `${extras[i].col} = $${i + 2}`)];
     const sql = `SELECT * FROM field.${tabla} WHERE ${cond.join(' AND ')} ORDER BY ${orderBy} DESC LIMIT 2000`;
     return this.pg.query<T>(sql, [tenant, ...extras.map((e) => e.val)]);
   }
 
   private async eliminar(tabla: string, tenant: string, id: string): Promise<void> {
-    await this.pg.query(`DELETE FROM field.${tabla} WHERE tenant_id = $1 AND id = $2`, [tenant, id]);
+    await this.pg.query(`UPDATE field.${tabla} SET deleted_at = NOW() WHERE tenant_id = $1 AND id = $2`, [tenant, id]);
   }
 
   private requerirTenant(tenant?: string): string {
@@ -379,13 +380,13 @@ export class FieldService {
     let rutas: Record<string, unknown>[];
     if (personalId) {
       rutas = await this.pg.query(
-        `SELECT * FROM field.rutas WHERE tenant_id = $1 AND personal_asignado_ids ?| array[$2] ORDER BY created_at DESC LIMIT 2000`,
+        `SELECT * FROM field.rutas WHERE tenant_id = $1 AND personal_asignado_ids ?| array[$2] AND deleted_at IS NULL ORDER BY created_at DESC LIMIT 2000`,
         [tenant, personalId],
       );
     } else {
       rutas = await this.listar('rutas', tenant);
     }
-    const paradas = await this.pg.query<any>(`SELECT * FROM field.paradas WHERE tenant_id = $1`, [tenant]);
+    const paradas = await this.pg.query<any>(`SELECT * FROM field.paradas WHERE tenant_id = $1 AND deleted_at IS NULL`, [tenant]);
     const porRuta = new Map<string, any[]>();
     for (const p of paradas as any[]) {
       const arr = porRuta.get(p.ruta_id) ?? [];
@@ -402,7 +403,7 @@ export class FieldService {
   async obtenerRuta(tenant: string, id: string) {
     const r = await this.obtener('rutas', tenant, id);
     const paradas = await this.pg.query<any>(
-      `SELECT * FROM field.paradas WHERE tenant_id = $1 AND ruta_id = $2`,
+      `SELECT * FROM field.paradas WHERE tenant_id = $1 AND ruta_id = $2 AND deleted_at IS NULL`,
       [tenant, id],
     );
     paradas.sort((a, b) => (Number(a.orden) || 0) - (Number(b.orden) || 0));
@@ -427,7 +428,7 @@ export class FieldService {
   async actualizarParada(tenant: string, rutaId: string, paradaId: string, dto: ParadaRequestDto) {
     // verifica pertenencia a la ruta y tenant
     const parada = await this.pg.queryOne<{ id: string; ruta_id: string }>(
-      `SELECT id, ruta_id FROM field.paradas WHERE tenant_id = $1 AND id = $2`,
+      `SELECT id, ruta_id FROM field.paradas WHERE tenant_id = $1 AND id = $2 AND deleted_at IS NULL`,
       [tenant, paradaId],
     );
     if (!parada) throw new NotFoundError('parada', paradaId);

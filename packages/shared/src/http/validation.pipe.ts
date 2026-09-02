@@ -38,6 +38,8 @@ export class TrazabilidadInterceptor implements NestInterceptor {
     const contexto: ContextoCorrelacion = {
       request_id,
       servicio: this.servicio ?? process.env.SERVICIO ?? 'servicio',
+      usuario_id: req.headers?.['x-user-personal'] ?? req.headers?.['x-user-id'] ?? undefined,
+      rol: req.headers?.['x-user-rol'] ?? undefined,
     };
 
     // el handler corre dentro del contexto de correlacion: todos los logs que

@@ -3,6 +3,8 @@ import { AsyncLocalStorage } from 'async_hooks';
 export interface ContextoCorrelacion {
   request_id: string;
   servicio: string;
+  usuario_id?: string;
+  rol?: string;
 }
 
 const almacen = new AsyncLocalStorage<ContextoCorrelacion>();
