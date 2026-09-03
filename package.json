@@ -9,8 +9,8 @@
   ],
   "scripts": {
     "build:shared": "npm run build -w @core/shared",
-    "build": "npm run build:shared && npm run build -w @core/api-gateway && npm run build -w @core/identity-service && npm run build -w @core/catalog-service && npm run build -w @core/stores-service && npm run build -w @core/orders-service && npm run build -w @core/logistics-service && npm run build -w @core/commissions-service && npm run build -w @core/finance-service && npm run build -w @core/field-service",
-    "test": "npm run test -w @core/shared && npm run test -w @core/api-gateway && npm run test -w @core/orders-service && npm run test -w @core/commissions-service && npm run test -w @core/finance-service",
+    "build": "npm run build:shared && npm run build -w @core/api-gateway && npm run build -w @core/identity-service && npm run build -w @core/catalog-service && npm run build -w @core/stores-service && npm run build -w @core/orders-service && npm run build -w @core/logistics-service && npm run build -w @core/commissions-service && npm run build -w @core/finance-service && npm run build -w @core/field-service && npm run build -w @core/market-intelligence-service",
+    "test": "npm run test -w @core/shared && npm run test -w @core/api-gateway && npm run test -w @core/orders-service && npm run test -w @core/commissions-service && npm run test -w @core/finance-service && npm run test -w @core/market-intelligence-service",
     "start:field": "npm run start -w @core/field-service",
     "demo": "node scripts/smoke.mjs",
     "lint": "npm run lint --workspaces --if-present"

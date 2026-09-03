@@ -56,6 +56,7 @@ export const PUERTOS = {
   COMMISSIONS: 3006,
   FINANCE: 3007,
   FIELD: 3008,
+  INTELLIGENCE: 3009,
 } as const;
 
 export const NOMBRE_SERVICIOS = {
@@ -68,4 +69,5 @@ export const NOMBRE_SERVICIOS = {
   COMMISSIONS: 'commissions-service',
   FINANCE: 'finance-service',
   FIELD: 'field-service',
+  INTELLIGENCE: 'market-intelligence-service',
 } as const;

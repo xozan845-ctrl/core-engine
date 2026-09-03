@@ -39,6 +39,14 @@
     "moduleNameMapper": {
       "^@core/shared$": "<rootDir>/../../shared/src/index.ts"
     },
+    "collectCoverageFrom": ["**/*.(t|j)s", "!**/main.ts", "!**/*.module.ts"],
+    "coverageDirectory": "../coverage",
+    "coverageThreshold": {
+      "global": {
+        "lines": 80,
+        "branches": 80
+      }
+    },
     "testEnvironment": "node"
   }
 }

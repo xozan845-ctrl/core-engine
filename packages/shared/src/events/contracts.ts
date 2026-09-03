@@ -17,6 +17,8 @@ export const EVENTOS = {
   ASIENTO_REGISTRADO: 'asiento.registrado',
   DECLARACION_GENERADA: 'declaracion.generada',
   COMPROBANTE_EMITIDO: 'comprobante.emitido',
+  /** Emitido cuando una venta incluye contexto geoespacial/demografico opcional. */
+  VENTA_GEOLOCALIZADA: 'venta.geolocalizada',
 } as const;
 
 export type NombreEvento = (typeof EVENTOS)[keyof typeof EVENTOS];
@@ -26,6 +28,8 @@ export interface EventoBus<T = unknown> {
   event_id: string;
   tipo: NombreEvento;
   ocurrido_en: string; // ISO 8601
+  /** ID de correlacion de la peticion que origino el evento (doc 5.3: trazabilidad distribuida). */
+  request_id?: string;
   data: T;
 }
 
@@ -141,6 +145,38 @@ export interface ComprobanteEmitidoData {
   moneda: string;
 }
 
+/**
+ * Contexto geoespacial y demografico de una venta (inteligencia de mercado).
+ * Las coordenadas son completas para precision en mapas de calor.
+ * La demografia usa rangos anonimos para ciencias de datos sin vincular a PII exacta.
+ */
+export interface VentaGeolocalizadaData {
+  order_id: string;
+  vendedor_id: string;
+  /** SKUs vendidos (uno por item) — permite analisis por producto/zona. */
+  skus: string[];
+  monto_cents: number;
+  /** Coordenadas GPS completas del punto de venta (modelo Ubicacion del app-test). */
+  lat: number;
+  lng: number;
+  /** Precision del GPS en metros. */
+  precision?: number;
+  /** Velocidad en m/s en el momento del registro. */
+  velocidad?: number;
+  /** Rumbo en grados (0-360). */
+  rumbo?: number;
+  /** Rango de edad anonimizado (ciencias de datos, no PII exacta). */
+  rango_edad?: '18-24' | '25-34' | '35-44' | '45-54' | '55+';
+  /** Genero en rango anonimo. NS = No Especificado. */
+  genero?: 'M' | 'F' | 'NS';
+  /** Tipo de actividad del app-test. */
+  tipo_actividad?: 'impulsacion' | 'venta' | 'entrega' | 'reparto';
+  /** Resultado de visita al cliente (del app-test). */
+  resultado_visita?: 'visitado' | 'cerca_no_visitado' | 'no_visitado';
+  /** Distancia al cliente en metros (calculada en el frontend con Haversine). */
+  distancia_cliente_metros?: number;
+}
+
 /** Mapa tipo -> contrato valido (validacion simple en CI, Pact en staging). */
 export const CONTRATOS: Record<NombreEvento, { editor: string; consumidores: string[] }> = {
   [EVENTOS.ORDER_CREATED]: {
@@ -198,5 +234,9 @@ export const CONTRATOS: Record<NombreEvento, { editor: string; consumidores: str
   [EVENTOS.COMPROBANTE_EMITIDO]: {
     editor: 'Finanzas y Contabilidad',
     consumidores: ['Notificaciones'],
+  },
+  [EVENTOS.VENTA_GEOLOCALIZADA]: {
+    editor: 'Orders / Field (app-test)',
+    consumidores: ['Inteligencia de Mercado'],
   },
 };

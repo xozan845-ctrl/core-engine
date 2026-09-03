@@ -238,6 +238,18 @@ services:
       PORT: 3008
       OUTBOX_TABLA: field.outbox
 
+  market-intelligence-service:
+    <<: *servicio-base
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        SERVICIO: market-intelligence-service
+    environment:
+      SERVICIO: market-intelligence-service
+      PORT: 3009
+      OUTBOX_TABLA: intelligence.outbox
+
   # ── Observabilidad (doc 5.3: Prometheus + Grafana) ─────────────────────
   prometheus:
     image: prom/prometheus:v2.55.1

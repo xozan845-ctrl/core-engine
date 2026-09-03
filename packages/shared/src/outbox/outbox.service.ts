@@ -3,7 +3,7 @@ import { randomUUID } from 'crypto';
 import { PgService } from '../db/pg.service';
 import { RabbitService } from '../rabbitmq/rabbit.service';
 import { EventoBus, NombreEvento } from '../events/contracts';
-import { Logger } from '../logging/logger';
+import { Logger, contextoActual } from '../logging/logger';
 
 /**
  * Outbox (ADR-03): inserta eventos junto con la transaccion de negocio y un
@@ -44,10 +44,12 @@ export class OutboxService implements OnModuleInit, OnModuleDestroy {
     data: unknown,
   ): Promise<string> {
     const event_id = randomUUID();
+    const ctx = contextoActual();
     const evento: EventoBus = {
       event_id,
       tipo,
       ocurrido_en: new Date().toISOString(),
+      ...(ctx?.request_id ? { request_id: ctx.request_id } : {}),
       data,
     };
     await client.query(

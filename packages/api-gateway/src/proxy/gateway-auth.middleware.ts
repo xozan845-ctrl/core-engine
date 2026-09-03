@@ -91,6 +91,22 @@ export const POLITICAS_RUTAS: PoliticaRuta[] = [
     metodos: ['*'],
     roles: [...ROLES_LOGISTICA],
   },
+  // market-intelligence: admin ve todo, vendedor ve lo suyo, endpoints internos protegidos
+  {
+    patron: /^\/api\/v1\/inteligencia\/me\//,
+    metodos: ['GET'],
+    roles: [ROLES.VENDEDOR, ROLES.ADMIN],
+  },
+  {
+    patron: /^\/api\/v1\/inteligencia\//,
+    metodos: ['GET'],
+    roles: [ROLES.ADMIN],
+  },
+  {
+    patron: /^\/api\/v1\/inteligencia\/ventas\/registrar$/,
+    metodos: ['POST'],
+    roles: [ROLES.VENDEDOR, ROLES.COMPRADOR, ...ROLES_LOGISTICA],
+  },
 ];
 
 /**

@@ -61,6 +61,10 @@ export const COLAS: Record<string, ColaConfig> = {
       'stock.fallido',
     ],
   },
+  intelligence_ventas: {
+    cola: 'intelligence.venta_geo',
+    routingKeys: ['venta.geolocalizada'],
+  },
 };
 
 export const REINTENTOS_MAXIMOS = 3;

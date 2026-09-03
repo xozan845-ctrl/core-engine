@@ -78,6 +78,13 @@ export const DESTINOS: ServicioDestino[] = [
     url: process.env.FIELD_SERVICE_URL ?? 'http://field-service:3008',
     patrones: [{ patron: /^\/api\/v1\/field\//, metodos: ['*'] }],
   },
+  {
+    nombre: 'intelligence',
+    url: process.env.INTELLIGENCE_SERVICE_URL ?? 'http://market-intelligence-service:3009',
+    patrones: [
+      { patron: /^\/api\/v1\/inteligencia(\/|$)/, metodos: ['*'] },
+    ],
+  },
 ];
 
 /**
