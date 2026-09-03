@@ -10,6 +10,7 @@ import {
   Logger,
 } from '@core/shared';
 import { AgregadorService } from '../services/agregador.service';
+import { DataQualityService } from '../services/data-quality.service';
 
 /** Colas dedicadas del servicio de inteligencia. */
 const COLA_GEO    = 'intelligence.venta_geo';
@@ -33,6 +34,7 @@ export class VentasConsumer implements OnModuleInit {
     private readonly rabbit: RabbitService,
     private readonly pg: PgService,
     private readonly agregador: AgregadorService,
+    private readonly dataQuality: DataQualityService,
   ) {}
 
   async onModuleInit(): Promise<void> {
@@ -71,11 +73,26 @@ export class VentasConsumer implements OnModuleInit {
     if (evento.tipo !== EVENTOS.VENTA_GEOLOCALIZADA) return;
     if (await this.yaProcesado(evento.event_id)) return;
 
-    await this.agregador.procesarVentaGeolocalizada(
-      (evento as EventoBus<VentaGeolocalizadaData>).data,
-    );
+    const data = (evento as EventoBus<VentaGeolocalizadaData>).data;
+    
+    // Validación de Data Contract
+    const qualityResult = this.dataQuality.validarVentaGeolocalizada(data);
+    if (!qualityResult.isValid) {
+      this.logger.error({ msg: 'Evento venta.geolocalizada rechazado por Data Contract', event_id: evento.event_id, errors: qualityResult.errors });
+      // Persistir en tabla de auditoría (fire-and-forget)
+      void this.dataQuality.registrarEventoInvalido(
+        evento.event_id,
+        evento.tipo,
+        qualityResult.errors,
+        data,
+      );
+      await this.marcarProcesado(evento.event_id, evento.tipo);
+      return;
+    }
+
+    await this.agregador.procesarVentaGeolocalizada(data);
     await this.marcarProcesado(evento.event_id, evento.tipo);
-    this.logger.info({ msg: 'venta.geolocalizada procesada', event_id: evento.event_id });
+    this.logger.info({ msg: 'venta.geolocalizada procesada', event_id: evento.event_id, qualityTier: qualityResult.qualityTier });
   }
 
   private async manejarOrdenCompletada(evento: EventoBus): Promise<void> {

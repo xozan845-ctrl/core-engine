@@ -48,8 +48,8 @@ export class AgregadorService {
     // 2. Punto de calor (alta resolucion, un punto por venta)
     if (lat != null && lng != null) {
       await this.pg.query(
-        `INSERT INTO intelligence.puntos_calor (lat, lng, peso, vendedor_id, tipo, ocurrido_en)
-         VALUES ($1, $2, $3, $4, 'venta', NOW())`,
+        `INSERT INTO intelligence.puntos_calor (lat, lng, geom, peso, vendedor_id, tipo, ocurrido_en)
+         VALUES ($1, $2, ST_SetSRID(ST_MakePoint($2, $1), 4326), $3, $4, 'venta', NOW())`,
         [lat, lng, 1, vendedor_id],
       );
     }

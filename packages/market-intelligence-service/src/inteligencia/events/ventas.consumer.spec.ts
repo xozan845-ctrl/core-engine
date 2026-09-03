@@ -2,6 +2,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { VentasConsumer } from './ventas.consumer';
 import { RabbitService, PgService, EVENTOS, Logger } from '@core/shared';
 import { AgregadorService } from '../services/agregador.service';
+import { DataQualityService } from '../services/data-quality.service';
 
 // ── Mocks ───────────────────────────────────────────────────────────────────
 
@@ -18,6 +19,12 @@ const mockPg = {
 
 const mockAgregador = {
   procesarVentaGeolocalizada: jest.fn().mockResolvedValue(undefined),
+  procesarOrdenCompletada: jest.fn().mockResolvedValue(undefined),
+  procesarStockActualizado: jest.fn().mockResolvedValue(undefined),
+};
+
+const mockDataQuality = {
+  validarVentaGeolocalizada: jest.fn().mockReturnValue({ isValid: true }),
 };
 
 // Silenciar logs en tests
@@ -42,6 +49,7 @@ describe('VentasConsumer', () => {
         { provide: RabbitService, useValue: mockRabbit },
         { provide: PgService, useValue: mockPg },
         { provide: AgregadorService, useValue: mockAgregador },
+        { provide: DataQualityService, useValue: mockDataQuality },
       ],
     }).compile();
 

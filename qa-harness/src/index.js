@@ -107,6 +107,12 @@ Suites disponibles:
   13-load          Carga y rendimiento
   14-queue         Outbox, DLQ, RabbitMQ
   15-static        Análisis estático (lint, build, tests, debt)
+  16-owasp         OWASP Top 10 vulnerabilities testing
+  17-schema        Data contracts and database schemas
+  18-field         Field service (backend móvil) y multitenant
+  19-identity      Identity service auth
+  20-multitenant   Multitenant isolation
+  21-market-intelligence Market Intelligence, Analytics Predictivo y Geoespacial
 
 Ejemplos:
   node src/index.js --suites 01-auth,02-role-access --format html

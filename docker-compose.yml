@@ -20,7 +20,7 @@ x-servicio-base: &servicio-base
 services:
   # ── Datos y BaaS (AD-08: Supabase-compatible, SQL estandar en Docker) ──
   postgres:
-    image: postgres:16-alpine
+    image: postgis/postgis:16-3.4-alpine
     container_name: core-engine-postgres
     environment:
       POSTGRES_DB: ${POSTGRES_DB:-core-engine}

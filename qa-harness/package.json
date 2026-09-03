@@ -9,7 +9,7 @@
     "test": "node src/index.ts --suites 01-auth,02-role-access --format html",
     "test:full": "node src/index.ts --format all",
     "test:security": "node src/index.ts --suites 01-auth,02-role-access,11-fuzzing",
-    "test:business": "node src/index.ts --suites 03-catalog,04-stores,05-orders,06-cart,07-logistics,08-commissions,09-finanzas",
+    "test:business": "node src/index.ts --suites 03-catalog,04-stores,05-orders,06-cart,07-logistics,08-commissions,09-finanzas,21-market-intelligence",
     "test:load": "node src/index.ts --suites 13-load --load agresivo --concurrency 100",
     "test:concurrency": "node src/index.ts --suites 12-concurrency",
     "test:static": "node src/index.ts --suites 15-static",

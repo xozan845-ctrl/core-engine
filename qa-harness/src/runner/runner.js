@@ -26,6 +26,7 @@ import { suite17Esquema } from '../suites/17-schema.js';
 import { suite18Field } from '../suites/18-field.js';
 import { suite19Identity } from '../suites/19-identity.js';
 import { suite20Multitenant } from '../suites/20-multitenant.js';
+import { suite21MarketIntelligence } from '../suites/21-market-intelligence.js';
 
 export class Runner {
   constructor(config) {
@@ -209,6 +210,7 @@ export class Runner {
       if (activo('08-commissions')) await this.runSuite('08-commissions', () => suite08Comisiones(this.client, this.config, this.vendedorToken, this.adminToken, this.compradorToken));
       if (activo('09-finanzas')) await this.runSuite('09-finanzas', () => suite09Finanzas(this.client, this.config, this.adminToken));
       if (activo('10-admin')) await this.runSuite('10-admin', () => suite10Admin(this.client, this.config, this.adminToken));
+      if (activo('21-market-intelligence')) await this.runSuite('21-market-intelligence', () => suite21MarketIntelligence(this.client, this.config, this.adminToken));
     }
 
     // Suites de testing agresivo (auth opcional por suite)
