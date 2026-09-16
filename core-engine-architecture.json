@@ -1,0 +1,74 @@
+{
+  "schema_version": 1,
+  "diagram_type": "architecture",
+  "meta": {
+    "title": "Core Engine - Runtime Architecture",
+    "subtitle": "NestJS microservices monorepo: API Gateway fan-out, event-driven domain services via outbox, and per-domain Postgres schemas",
+    "output": "core-engine-architecture.html",
+    "visual_preset": "signal-flow",
+    "quality_profile": "standard",
+    "animation": "trace",
+    "views": [
+      { "id": "request-path", "label": "Primary request path", "focus": ["users", "gateway", "orders", "logistics", "commissions", "finance"], "note": "Follow a purchase order from the gateway through domain services to the event bus." },
+      { "id": "event-driven", "label": "Event-driven workflows", "focus": ["orders", "rabbitmq", "catalog", "finance"], "note": "See how order.created fans out via outbox and per-consumer queues." },
+      { "id": "data-ownership", "label": "Data ownership", "focus": ["catalog", "orders", "finance", "postgres"], "note": "Each service persists to its own Postgres schema; money stays in *_cents integers." }
+    ],
+    "repository": { "url": "https://github.com/xozan845-ctrl/core-engine.git", "provider": "github", "link_mode": "local-only", "revision": "c8fc222755e130ad548adc8196e14d4c4b494066" }
+  },
+  "components": [
+    { "id": "users", "type": "external", "label": "Clients", "sublabel": "web + mobile", "pos": [40, 400], "size": [120, 60] },
+    { "id": "gateway", "type": "security", "label": "API Gateway", "sublabel": "NestJS :8080", "pos": [250, 400], "size": [150, 70], "tag": "rate-limit 300/min", "sources": [{ "path": "packages/api-gateway/src/app.module.ts", "line": 1, "label": "Gateway module" }, { "path": "packages/api-gateway/src/proxy/proxy.service.ts", "line": 15, "label": "Routing table", "end_line": 88 }] },
+    { "id": "identity", "type": "backend", "label": "Identity", "sublabel": ":3001 auth", "pos": [540, 90], "size": [160, 56], "tag": "/auth, /usuarios", "sources": [{ "path": "packages/identity-service/src/main.ts", "line": 1, "label": "Service entry" }] },
+    { "id": "catalog", "type": "backend", "label": "Catalog", "sublabel": ":3002 productos", "pos": [540, 170], "size": [160, 56], "tag": "/catalog", "sources": [{ "path": "packages/catalog-service/src/main.ts", "line": 1, "label": "Service entry" }] },
+    { "id": "stores", "type": "backend", "label": "Stores", "sublabel": ":3003 tiendas", "pos": [540, 250], "size": [160, 56], "tag": "/tiendas", "sources": [{ "path": "packages/stores-service/src/main.ts", "line": 1, "label": "Service entry" }] },
+    { "id": "orders", "type": "backend", "label": "Orders", "sublabel": ":3004 CQRS+ES", "pos": [540, 330], "size": [160, 56], "tag": "/orders, /carrito", "sources": [{ "path": "packages/orders-service/src/main.ts", "line": 1, "label": "Service entry" }, { "path": "packages/orders-service/src/pedidos/pedidos.module.ts", "line": 4, "label": "Event store", "end_line": 6 }] },
+    { "id": "logistics", "type": "backend", "label": "Logistics", "sublabel": ":3005 envios", "pos": [540, 410], "size": [160, 56], "tag": "PATCH /estado", "sources": [{ "path": "packages/logistics-service/src/main.ts", "line": 1, "label": "Service entry" }, { "path": "packages/api-gateway/src/proxy/proxy.service.ts", "line": 42, "label": "Routes estado", "end_line": 48 }] },
+    { "id": "field", "type": "backend", "label": "Field Service", "sublabel": ":3008 app-test", "pos": [540, 490], "size": [160, 56], "tag": "/field", "sources": [{ "path": "packages/field-service/src/main.ts", "line": 1, "label": "Service entry" }] },
+    { "id": "commissions", "type": "backend", "label": "Commissions", "sublabel": ":3006 12%", "pos": [540, 570], "size": [160, 56], "tag": "/ventas, /liquidaciones", "sources": [{ "path": "packages/commissions-service/src/main.ts", "line": 1, "label": "Service entry" }] },
+    { "id": "finance", "type": "backend", "label": "Finance", "sublabel": ":3007 ledger", "pos": [540, 650], "size": [160, 56], "tag": "/finanzas", "sources": [{ "path": "packages/finance-service/src/main.ts", "line": 1, "label": "Service entry" }] },
+    { "id": "intelligence", "type": "backend", "label": "Intelligence", "sublabel": ":3009 analytics", "pos": [540, 730], "size": [160, 56], "tag": "/inteligencia", "sources": [{ "path": "packages/market-intelligence-service/src/main.ts", "line": 1, "label": "Service entry" }] },
+    { "id": "rabbitmq", "type": "messagebus", "label": "RabbitMQ", "sublabel": "core-engine.events", "pos": [930, 240], "size": [150, 60], "tag": "outbox, 3 retries", "sources": [{ "path": "packages/shared/src/rabbitmq/rabbit.constants.ts", "line": 4, "label": "Exchange + COLAS", "end_line": 68 }] },
+    { "id": "postgres", "type": "database", "label": "PostgreSQL 16", "sublabel": "schema por dominio", "pos": [1180, 260], "size": [150, 80], "tag": "*_cents money", "sources": [{ "path": "infra/db/init/01_esquemas.sql", "line": 7, "label": "Schemas + tables", "end_line": 15 }] },
+    { "id": "redis", "type": "external", "label": "Redis", "sublabel": "(opcional)", "pos": [980, 140], "size": [100, 46], "tag": "caché + idempotencia", "sources": [{ "path": "docs/golden-rules/architecture.md", "line": 9, "label": "Caché TTL obligatorio (rule 7)" }, { "path": "docs/golden-rules/data-integrity.md", "line": 6, "label": "Keys de idempotencia ≥1h/24h" }] },
+    { "id": "prometheus", "type": "backend", "label": "Prometheus", "sublabel": ":9090", "pos": [160, 840], "size": [150, 56], "tag": "scrape /metrics", "sources": [{ "path": "docker-compose.yml", "line": 254, "label": "Service prometheus", "end_line": 261 }, { "path": "infra/prometheus/prometheus.yml", "line": 24, "label": "Jobs: exporters" }] },
+    { "id": "grafana", "type": "frontend", "label": "Grafana", "sublabel": ":3000 UI", "pos": [400, 840], "size": [120, 56], "tag": "dashboards (as code)", "sources": [{ "path": "docker-compose.yml", "line": 263, "label": "Service grafana", "end_line": 275 }, { "path": "docs/golden-rules/telemetry.md", "line": 16, "label": "Dashboard as Code" }] }
+  ],
+  "boundaries": [
+    { "kind": "region", "label": "Core Engine", "wraps": ["gateway", "identity", "catalog", "stores", "orders", "logistics", "field", "commissions", "finance", "intelligence", "rabbitmq", "postgres"], "pad": 24 },
+    { "kind": "security-group", "label": "Domain services", "wraps": ["identity", "catalog", "stores", "orders", "logistics", "field", "commissions", "finance", "intelligence"], "pad": 16 },
+    { "kind": "region", "label": "Data & events", "wraps": ["rabbitmq", "postgres"], "pad": 16 },
+    { "kind": "region", "label": "Observabilidad", "wraps": ["prometheus", "grafana"], "pad": 16 }
+  ],
+  "connections": [
+    { "id": "users-to-gateway", "from": "users", "to": "gateway", "label": "HTTPS :8080", "variant": "emphasis" },
+    { "id": "gateway-to-identity", "from": "gateway", "to": "identity", "fromSide": "right", "toSide": "left" },
+    { "id": "gateway-to-catalog", "from": "gateway", "to": "catalog", "fromSide": "right", "toSide": "left" },
+    { "id": "gateway-to-stores", "from": "gateway", "to": "stores", "fromSide": "right", "toSide": "left" },
+    { "id": "gateway-to-orders", "from": "gateway", "to": "orders", "variant": "emphasis", "fromSide": "right", "toSide": "left" },
+    { "id": "gateway-to-logistics", "from": "gateway", "to": "logistics", "variant": "emphasis", "fromSide": "right", "toSide": "left" },
+    { "id": "gateway-to-field", "from": "gateway", "to": "field", "variant": "dashed", "fromSide": "right", "toSide": "left" },
+    { "id": "gateway-to-commissions", "from": "gateway", "to": "commissions", "fromSide": "right", "toSide": "left" },
+    { "id": "gateway-to-finance", "from": "gateway", "to": "finance", "fromSide": "right", "toSide": "left" },
+    { "id": "gateway-to-intelligence", "from": "gateway", "to": "intelligence", "variant": "dashed", "fromSide": "right", "toSide": "left" },
+    { "id": "orders-to-rabbitmq", "from": "orders", "to": "rabbitmq", "label": "order.created", "variant": "dashed", "fromSide": "right", "toSide": "left", "labelAt": [760, 342] },
+    { "id": "rabbitmq-to-catalog", "from": "rabbitmq", "to": "catalog", "label": "order.created - reserve", "variant": "emphasis", "fromSide": "left", "toSide": "right", "labelAt": [790, 182] },
+    { "id": "rabbitmq-to-orders", "from": "rabbitmq", "to": "orders", "label": "stock.reservado", "variant": "emphasis", "fromSide": "left", "toSide": "right", "labelAt": [760, 386] },
+    { "id": "rabbitmq-to-finance", "from": "rabbitmq", "to": "finance", "label": "eventos financieros", "variant": "emphasis", "fromSide": "left", "toSide": "right", "labelAt": [872, 645] },
+    { "id": "rabbitmq-to-stores", "from": "rabbitmq", "to": "stores", "label": "stock.sync", "variant": "emphasis", "fromSide": "left", "toSide": "right", "labelAt": [872, 240] },
+    { "id": "rabbitmq-to-logistics", "from": "rabbitmq", "to": "logistics", "label": "pago.aprobado", "variant": "emphasis", "fromSide": "left", "toSide": "right", "labelAt": [872, 405] },
+    { "id": "rabbitmq-to-commissions", "from": "rabbitmq", "to": "commissions", "label": "pedidos / liquidación", "variant": "emphasis", "fromSide": "left", "toSide": "right", "labelAt": [885, 528] },
+    { "id": "rabbitmq-to-intelligence", "from": "rabbitmq", "to": "intelligence", "label": "venta_geo", "variant": "emphasis", "fromSide": "left", "toSide": "right", "labelAt": [740, 758] },
+    { "id": "catalog-to-redis", "from": "catalog", "to": "redis", "label": "caché (opcional)", "variant": "dashed", "via": [[940, 198], [940, 163], [980, 163]], "labelAt": [960, 212] },
+    { "id": "catalog-to-db", "from": "catalog", "to": "postgres", "label": "stock + precios", "via": [[1134, 198], [1134, 280], [1180, 280]] },
+    { "id": "orders-to-db", "from": "orders", "to": "postgres", "label": "event store (append)", "variant": "emphasis", "via": [[1150, 358], [1150, 300], [1180, 300]], "labelAt": [880, 342] },
+    { "id": "finance-to-db", "from": "finance", "to": "postgres", "label": "ledger + CQRS views", "variant": "emphasis", "via": [[1160, 678], [1160, 320], [1180, 320]], "labelAt": [872, 645] }
+  ],
+  "cards": [
+    { "dot": "cyan", "title": "Gateway & Routing", "items": ["Single entry point :8080 (API v1)", "PATCH /orders/:id/estado -> Logistics (ADR-03)", "Rate limit 300/min, login 10/min", "Context headers: x-request-id, x-tenant, x-user-personal"] },
+    { "dot": "emerald", "title": "Domain Services", "items": ["9 services behind the gateway (incl. field-service y market-intelligence)", "Each service owns its Postgres schema", "CQRS + Event Sourcing only in orders-service", "Money always *_cents integers internally"] },
+    { "dot": "violet", "title": "Event-Driven (Outbox)", "items": ["Topic exchange: core-engine.events + core-engine.dlq", "Per-service outbox table, 1s poller", "Per-consumer queues: catalog.pedidos, stores.stock, orders.resultados, logistics.pagos, commissions.*, finance.*, intelligence.venta_geo", "DLQ: 3 retries, 500ms base exponential backoff"] },
+    { "dot": "amber", "title": "Shared Kernel", "items": ["@core/shared: Money, RabbitMQ, Outbox, Auth, Metrics", "DomainError + global filter: {codigo, mensaje, detalles}", "TrazabilidadInterceptor + AsyncLocalStorage (request_id en logs)", "JWT HS256: 15m access, 7d refresh"] },
+    { "dot": "rose", "title": "Finance & Data Own", "items": ["Append-only ledger: finance.asientos", "CQRS projections via triggers (ADR-07)", "Schemas per domain: identity, catalog, stores, orders, logistics, commissions, finance", "DGI Nicaragua: IVA 15%, Ley 822/842/787"] },
+    { "dot": "slate", "title": "Observabilidad & Cache", "items": ["Prometheus scrapea /metrics de los servicios + exporters (postgres, rabbitmq, node-exporter, cadvisor)", "Grafana :3000 — dashboards como código en infra/grafana/provisioning (GitOps, telemetry.md)", "Redis NO implementado: caché opcional con TTL máximo (rule 7) y keys de idempotencia ≥1h/24h (data-integrity)"] }
+  ]
+}
