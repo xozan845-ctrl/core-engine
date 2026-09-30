@@ -7,7 +7,7 @@ import { PgService, VentaGeolocalizadaData, Logger } from '@core/shared';
  * schema intelligence al procesar cada evento de venta o cambio de estado.
  *
  * Patron: INSERT ... ON CONFLICT DO UPDATE (upsert atomico) para garantizar
- * consistencia sin transacciones distribuidas (data-integrity.md regla 3).
+ * consistencia sin transacciones distribuidas (R-DI-3).
  */
 @Injectable()
 export class AgregadorService {
