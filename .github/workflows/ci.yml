@@ -18,7 +18,7 @@ jobs:
           cache: "npm"
       - name: Install dependencies
         run: npm ci --prefer-offline
-      - name: Security audit (Regla testing-and-qa.md #6)
+      - name: Security audit (Regla R-QA-6 — docs/rules/test/07-qa-gates.md)
         run: npm audit --audit-level=high
 
   test:

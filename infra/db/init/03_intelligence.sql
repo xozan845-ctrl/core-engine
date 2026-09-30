@@ -108,14 +108,14 @@ CREATE INDEX IF NOT EXISTS idx_intl_tend_fecha    ON intelligence.tendencias_tem
 CREATE INDEX IF NOT EXISTS idx_intl_tend_sku      ON intelligence.tendencias_temporales (sku);
 CREATE INDEX IF NOT EXISTS idx_intl_tend_vendedor ON intelligence.tendencias_temporales (vendedor_id);
 
--- ── eventos_procesados (idempotencia, data-integrity.md regla 4) ──────────
+-- ── eventos_procesados (idempotencia, R-DI-4) ─────────────────────────────
 CREATE TABLE IF NOT EXISTS intelligence.eventos_procesados (
   event_id     uuid PRIMARY KEY,
   tipo         text NOT NULL,
   procesado_en timestamptz NOT NULL DEFAULT NOW()
 );
 
--- ── outbox (patron ADR-03, architecture.md regla 3) ──────────────────────
+-- ── outbox (patron ADR-03, R-AR-3) ───────────────────────────────────────
 CREATE TABLE IF NOT EXISTS intelligence.outbox (
   event_id     uuid PRIMARY KEY,
   tipo         text NOT NULL,
