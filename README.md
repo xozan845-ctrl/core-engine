@@ -55,16 +55,18 @@ Eventos del bus (topic `core-engine.events`): `order.created`, `stock.reservado`
 
 ## Puesta en marcha
 
-> El proyecto vive en un disco **NTFS**: los workspaces de npm crean junctions a los paquetes
-> (`packages/*` → `node_modules/@core/*`). En discos exFAT/FAT32 (sin soporte de enlaces) `npm install`
-> falla con `EISDIR`; mueva el repositorio a NTFS o use `pnpm` con `node-linker=hoisted`.
+> **Enlaces de paquete:** los workspaces de npm crean symlinks a los paquetes
+> (`packages/*` → `node_modules/@core/*`). En discos **exFAT/FAT32** (sin soporte
+> de enlaces) `npm install` falla con `EISDIR`; mueva el repositorio a un sistema
+> de archivos con symlinks (ext4/APFS/NTFS). La instalación es siempre con npm
+> (R-EN-1).
 
 ```bash
 npm install                       # instala los workspaces (enlaza @core/shared, ...)
-npm run build                     # compila shared + los 8 microservicios
-npm test                          # suite: shared, gateway, orders, commissions, finance
+npm run build                     # compila shared + gateway + los 9 microservicios
+npm test                          # los 10 workspaces, cada uno con --coverage (175 tests / 23 suites)
 cp .env.example .env              # ajuste las claves/URLs si es necesario
-docker compose up -d --build      # Postgres + RabbitMQ + 8 servicios + Prometheus + Grafana
+docker compose up -d --build      # Postgres + RabbitMQ + gateway y 9 servicios + Prometheus + Grafana
 npm run demo                      # ejercicio end-to-end (TC-01..TC-08, RN-01..RN-08)
 ```
 
@@ -124,7 +126,7 @@ TC-07 seguridad del gateway (401/403), TC-08 comision 12 % y liquidacion al vend
 RN-05/RN-06/RN-07/RN-08, partida doble y regimen fiscal NIC.
 
 ```bash
-npm test        # 45 tests: money 8 · gateway 6 · orders 7 · liquidaciones 5 · finance 19
+npm test        # 175 tests / 23 suites en los 10 workspaces (cobertura por workspace, ratchet R-COV-1)
 npm run demo    # flujo real sobre el stack levantado (scripts/smoke.mjs)
 ```
 
