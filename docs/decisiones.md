@@ -140,10 +140,15 @@ Este archivo registra decisiones técnicas deliberadas que se apartan del texto 
   trasladadas de `ci/03` sin renumerar + `R-CD-9..13` nuevas de Dockploy),
   `docs/rules/git/00-entornos.md` (`R-GE-1..6`), enmienda `R-CI-1` con el
   gatillo de `staging` en `ci.yml`, y actualización de `R-PR-1`/`R-PR-8`/`R-GP-3`.
-- **Consecuencias**: se crearán las ramas `develop` y `staging` con branch
-  protection (una approval + checks + historial lineal); los hotfixes entran por
-  `hotfix/*` a `main` con backport obligatorio (R-GE-5/6); queda pendiente la
-  configuración de apps por entorno en Dockploy (Etapa D3).
+- **Consecuencias**: se crearon las ramas `develop` y `staging` con branch
+  protection en las tres ramas de entorno: **PR obligatorio sin aprobación**
+  (`required_approving_review_count: 0` — en repo unipersonal GitHub no cuenta la
+  aprobación del propio autor y bloquearía cada merge; la revisión sigue siendo
+  el cuerpo del PR con evidencia, R-PR-4), **4 checks de CI** (Security Gate,
+  ESLint, Unit Tests + Coverage, Build), **historial lineal** y sin push directo
+  ni force (ni admin). Los hotfixes entran por `hotfix/*` a `main` con backport
+  obligatorio (R-GE-5/6); la configuración de apps por entorno en Dockploy queda
+  documentada en el guion operativo `docs/dockploy-setup.md` (Etapa D3).
 - **Mitigación / pendiente**: si en el futuro se desea un pipeline de despliegue
   propio, R-CD-6/11 exigen pasar por `environment` con revisores; el gate de
   producción hoy es la promoción + verificaciones (R-CD-10/11).
