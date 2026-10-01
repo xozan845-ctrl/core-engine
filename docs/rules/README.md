@@ -24,8 +24,7 @@ rules/
 └── _meta/              ⚠️ documentos DERIVADOS — nunca normativos
     ├── CHECKLIST.md        herramienta de revisión de PR
     ├── AUDIT.md            snapshot del estado (se reescribe por auditoría)
-    ├── AUDIT-HISTORY.md    log append-only de auditorías
-    └── AUDIT-FRONTEND.md   snapshot heredado del proyecto origen (no aplica: aquí no hay frontend)
+    └── AUDIT-HISTORY.md    log append-only de auditorías (procedencia: proyecto origen + Core Engine)
 ```
 
 **Regla de estructura (la más importante de esta carpeta):**

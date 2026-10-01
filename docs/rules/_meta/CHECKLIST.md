@@ -21,6 +21,9 @@ Matriz completa en [`06-estandares-cobertura.md`](../test/06-estandares-cobertur
 | **Bug en producción** | ✅ regression | si aplica | si aplica | si es flujo visible |
 | Cambio de zona horaria/fecha | ✅ boundary | ✅ día local | ✅ doc semántica | ✅ R-E-4 |
 
+> Hoy el repo no tiene UI: la fila «Pantalla/flujo de usuario nuevo» aplica el
+> día que exista (G-2 es N/A y `R-COV-5` está reservado).
+
 ## 2. Universales (todo PR)
 
 - [ ] **R0** — Los tests asientan el requisito, no la implementación (nada de "actualizar el expected para que pase").
@@ -28,7 +31,7 @@ Matriz completa en [`06-estandares-cobertura.md`](../test/06-estandares-cobertur
 - [ ] **R-FL-3** — Nada depende de la timezone de la máquina (`TZ` fijada en setup).
 - [ ] **R-COV-1** — La cobertura no baja respecto a `main`.
 - [ ] **R-COV-2** — Todo archivo de `domain/` tocado tiene spec (o excepción documentada).
-- [ ] **R-COV-5** — El ratchet del frontend (`frontend/karma.conf.js`) está al día con el baseline medido; si subiste la cobertura, el gate sube con ella.
+- [ ] **R-COV-5** — N/A en este repo (sin frontend; ID **reservado**, nunca se reutiliza). Si algún día hay UI, su ratchet sigue el método de R-COV-1.
 - [ ] **G-7** — Lint/tsc/build en verde.
 
 ## 3. Unit ([`01-reglas-unit.md`](../test/01-reglas-unit.md))
@@ -42,6 +45,10 @@ Matriz completa en [`06-estandares-cobertura.md`](../test/06-estandares-cobertur
 
 ## 4. Integración API+BD ([`02-reglas-integracion.md`](../test/02-reglas-integracion.md))
 
+> Hoy no hay suites de integración en el repo (deuda **G-4**): la capa es
+> exigible cuando exista (R-I-12); estos ítems marcan lo que debe cumplir el
+> primer PR que la añada.
+
 - [ ] **R-I-1** — Todo endpoint tocado tiene ≥1 test happy-path con BD real.
 - [ ] **R-I-2** — Filtros/paginación: asertar conjunto **exacto** (conteo + IDs) y que la paginación conserva filtros.
 - [ ] **R-I-3** — Filtros `dateFrom/dateTo` cruzando medianoche local, asertando contra el día local (`TZ`), no UTC.
@@ -51,19 +58,24 @@ Matriz completa en [`06-estandares-cobertura.md`](../test/06-estandares-cobertur
 
 ## 5. Contrato ([`04-reglas-contrato.md`](../test/04-reglas-contrato.md))
 
+> Hoy no hay suites de contrato (deuda **G-5**, R-C-7): exigibles cuando existan.
+
 - [ ] **R-C-1** — Éxito: envelope `{ data, meta: { timestamp, path, method, statusCode } }`; en listas, paginación anidada en `data` (`{ data[], total, page, limit, totalPages }`); validado por schema. Errores sin `meta` (R-C-8).
-- [ ] **R-C-3** — Respuestas vía DTO; nunca entidades Prisma crudas ni campos sensibles.
+- [ ] **R-C-3** — Respuestas vía DTO; nunca entidades/rows de persistencia crudos ni campos sensibles.
 - [ ] **R-C-4** — Fechas ISO 8601 UTC con `Z`.
 - [ ] **R-C-5** — Semántica de `dateFrom`/`dateTo` = día local documentada.
 - [ ] **R-C-8** — Errores con shape consistente (400/401/403/404/409/500).
-- [ ] **R-C-11** — Campo nuevo: DTO + test de contrato + consumo en frontend en el mismo PR.
+- [ ] **R-C-11** — Campo nuevo: DTO + test de contrato + actualización de quien lo consume, en el mismo PR.
 
 ## 6. E2E ([`03-reglas-e2e.md`](../test/03-reglas-e2e.md))
 
-- [ ] **R-E-4** — Si toca asistencia/fechas: todos los registros listados pertenecen al día local seleccionado; día vecino NO aparece.
+> Hoy no hay E2E automatizado (deuda **G-6**): el smoke más cercano es
+> `docker compose up -d --build` + `npm run demo`.
+
+- [ ] **R-E-4** — Si toca fechas: todos los registros listados pertenecen al día local seleccionado; el día vecino NO aparece.
 - [ ] **R-E-8** — Cero errores de consola durante el flujo.
 - [ ] **R-E-9/10** — Verificación por datos (texto/conteos/URL), selectores estables (`data-testid`).
-- [ ] **R-E-11** — Suite hermética: fixtures en `prisma/seed.ts` (idempotente) o creados por el test; pasa contra BD recreada (`db push` + seed).
+- [ ] **R-E-11** — Suite hermética: fixtures idempotentes creados por el test o por un seed versionado en el repo; pasa contra BD recreada de cero.
 
 ## 7. Si es bug (antes de todo lo anterior)
 
@@ -73,14 +85,14 @@ Matriz completa en [`06-estandares-cobertura.md`](../test/06-estandares-cobertur
 
 ## 8. Antes de merge (CI)
 
-- [ ] **G-1** unit backend ✅
-- [ ] **G-2** unit frontend ✅
-- [ ] **G-3** cobertura ≥ ratchet ✅
-- [ ] **G-4** integración ✅
-- [ ] **G-5** contrato ✅
-- [ ] **G-7** lint/tsc/build ✅
-- [ ] **G-6** E2E Playwright — corre solo en push a main (no en PR); revisar tras mergear.
-- [ ] **G-8** spec OpenAPI — si el PR toca DTOs/endpoints, ejecuta `pnpm --filter zkteco-attendance-backend run swagger:export` y commitea `backend/docs/openapi.json` (CI hace `git diff --exit-code`).
+- [ ] **G-1** unit backend (job `test`, `npm test -- --coverage`) ✅
+- [ ] **G-2** unit frontend — **N/A** (sin frontend; ID reservado)
+- [ ] **G-3** cobertura ≥ `coverageThreshold` vigente por workspace (ratchet R-COV-1) ✅
+- [ ] **G-4** integración — ⏸ sin suites (exigible cuando existan, R-I-12)
+- [ ] **G-5** contrato — ⏸ sin suites (R-C-7)
+- [ ] **G-7** lint + build (jobs `lint` y `build`) ✅
+- [ ] **G-6** E2E de flujos — ⏸ sin job; smoke local `docker compose up -d --build` + `npm run demo`
+- [ ] **G-8** spec OpenAPI — ⏸ sin script de export ni paso `git diff --exit-code` en CI (R-C-7)
 
 ## 9. Git — antes de subir ([`rules/git/`](../git/README.md))
 
@@ -98,9 +110,9 @@ Matriz completa en [`06-estandares-cobertura.md`](../test/06-estandares-cobertur
 
 - [ ] **R-CI-1/2/3** — ¿Cambiaron gatillos, concurrencia o filtrado de eventos? Enmienda explícita de la regla, no edición silenciosa del YAML.
 - [ ] **R-CI-4/5** — Pipeline único justificado; `.github/**` revisado como código (stage con rutas, sin secretos, comandos verificables en local).
-- [ ] **R-EN-1/2** — `NODE_VERSION`/pnpm/`--frozen-lockfile` intactos; BD de job efímera, `DATABASE_URL` solo de job.
-- [ ] **R-EN-3/4** — Artifact solo en `failure()`; secretos únicamente en GitHub Secrets y nunca en logs.
-- [ ] **R-CD-2** — ¿Toca `release.yml`? La procedencia se verifica antes de publicar: commit en `main` **y** run de `ci.yml` en verde en ese mismo SHA.
+- [ ] **R-EN-1/2** — Node `"20"` fijo con cache de npm y `npm ci --prefer-offline` intactos; BD de job efímera exigible cuando exista suite con BD (hoy ningún job toca BD).
+- [ ] **R-EN-3/4** — Artifact de evidencia en **todos** los runs (`if: always()`); secretos únicamente en GitHub Secrets y nunca en logs.
+- [ ] **R-CD-2** — N/A hoy: no existe `release.yml` (los `R-CD-*` son exigibles cuando exista, `ci/03`). Cuando exista: commit en `main` **y** run de `ci.yml` en verde en ese mismo SHA antes de publicar.
 - [ ] **R-CD-7** — Ningún secreto como `ARG`/`ENV` de build ni en una capa de imagen; los secretos van en runtime.
 
 ## 11. PR — rama, cuerpo, checks y merge ([`rules/git/04-pr.md`](../git/04-pr.md))
