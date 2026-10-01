@@ -54,7 +54,7 @@ se reutiliza).
 | G-4 | Suite de integración API+BD en verde. | ⏸ sin suites de integración (exigible cuando existan, R-I-12). |
 | G-5 | Test de contrato en verde. | ⏸ sin suites de contrato (R-C-7). |
 | G-6 | E2E de flujos críticos en verde antes de release (puede ser etiqueta `release`, no cada PR). | ⏸ sin job E2E; lo más cercano hoy es el smoke local `docker compose up -d --build` + `npm run demo`. |
-| G-7 | ESLint/TS sin errores: `npm run build` (job `build`) ✅; lint sin configurar (0 configs ESLint, ningún workspace expone script `lint`). | ⏸ parcial — build ✅, lint pendiente. |
+| G-7 | Lint **y** build sin errores: `npm run lint` (ESLint, alcance `packages/*/src/**/*.ts`, job `lint`) + `npm run build` (job `build`). | ✅ |
 | G-8 | Swagger spec sincronizado (R-C-7): `git diff --exit-code` tras el export. | ⏸ sin paso de export en CI. |
 
 > `security-gate` (job `npm audit --audit-level=high` que encadena los demás) no

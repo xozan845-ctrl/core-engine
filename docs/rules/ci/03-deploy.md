@@ -4,7 +4,7 @@ Aplica a: versionado por tag, construcción y promoción de imágenes, y qué
 significa desplegar una release (`.github/workflows/release.yml`).
 
 > **Estado: N/A hoy.** Este repo no tiene `release.yml` (solo existe
-> [`ci.yml`](../../../.github/workflows/ci.yml), jobs `security-gate` → `test` →
+> [`ci.yml`](../../../.github/workflows/ci.yml), jobs `security-gate` → `lint`/`test` →
 > `build`); las reglas de abajo son el contrato exigible **el día que se cree
 > ese workflow** (R-CI-4), no la descripción de algo que existe. Hasta
 > entonces no se auditan como incumplimiento.
