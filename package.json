@@ -13,9 +13,14 @@
     "test": "npm run test -w @core/shared && npm run test -w @core/api-gateway && npm run test -w @core/orders-service && npm run test -w @core/commissions-service && npm run test -w @core/finance-service && npm run test -w @core/market-intelligence-service",
     "start:field": "npm run start -w @core/field-service",
     "demo": "node scripts/smoke.mjs",
-    "lint": "npm run lint --workspaces --if-present"
+    "lint": "eslint ."
   },
   "engines": {
     "node": ">=20"
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "eslint": "^10.11.0",
+    "typescript-eslint": "^8.71.0"
   }
 }

@@ -42,7 +42,7 @@ describe('EventsConsumer (idempotencia atomica y contabilidad)', () => {
     ({ event_id: 'evt-1', tipo: tipo as EventoBus['tipo'], ocurrido_en: '2026-08-01T00:00:00.000Z', data }) as EventoBus<T>;
 
   it('rechaza eventos ya procesados (dedup por event_id, sin tocar la contabilidad)', async () => {
-    const { servicio, dispatch, pg, contabilidad, metricas } = await crear();
+    const { dispatch, pg, contabilidad, metricas } = await crear();
     (pg.queryOne as jest.Mock).mockResolvedValue({ event_id: 'evt-1' }); // ya procesado
     await dispatch(evento(EVENTOS.PAYMENT_PROCESADO, { order_id: 'o1', monto_cents: 45000, estado: 'procesado', metodo: 'simulado' }));
     expect(pg.transaccion).not.toHaveBeenCalled();
@@ -51,7 +51,7 @@ describe('EventsConsumer (idempotencia atomica y contabilidad)', () => {
   });
 
   it('pago: asiento Caja/Fondos + metricas + marcado de idempotencia en la misma transaccion', async () => {
-    const { servicio, dispatch, client, contabilidad, metricas } = await crear();
+    const { dispatch, client, contabilidad, metricas } = await crear();
     await dispatch(evento<PaymentProcesadoData>(EVENTOS.PAYMENT_PROCESADO, { order_id: 'o1', monto_cents: 45000, estado: 'procesado', metodo: 'simulado' }));
 
     expect(contabilidad.registrarEnTransaccion).toHaveBeenCalledTimes(1);
@@ -73,7 +73,7 @@ describe('EventsConsumer (idempotencia atomica y contabilidad)', () => {
   });
 
   it('comision.acreditada: realiza el ingreso (RN-04), cuenta al vendedor y marca idempotencia', async () => {
-    const { servicio, dispatch, client, contabilidad, metricas } = await crear();
+    const { dispatch, client, contabilidad, metricas } = await crear();
     await dispatch(evento<ComisionAcreditadaData>(EVENTOS.COMISION_ACREDITADA, { order_id: 'o1', monto_cents: 5400, monto_vendedor_cents: 39600, vendedor_id: 'v1' }));
 
     const { detalles } = (contabilidad.registrarEnTransaccion as jest.Mock).mock.calls[0][1];
@@ -90,14 +90,14 @@ describe('EventsConsumer (idempotencia atomica y contabilidad)', () => {
   });
 
   it('order.created: alimenta el embudo (checkouts completados) con dedup en la misma tx', async () => {
-    const { servicio, dispatch, client, metricas } = await crear();
+    const { dispatch, client, metricas } = await crear();
     await dispatch(evento<OrdenData>(EVENTOS.ORDER_CREATED, { order_id: 'o1', cliente_id: 'c1', items: [], total_cents: 45000, estado: 'creada' }));
     expect(metricas.sumarMetrica).toHaveBeenCalledWith(client, 'checkouts_completados', 0, 1);
     expect((client.query as jest.Mock).mock.calls.find((c) => (c[0] as string).includes('eventos_procesados'))).toBeDefined();
   });
 
   it('devolucion.solicitada (RN-06): revierte la comision contra el acreedor del vendedor', async () => {
-    const { servicio, dispatch, client, contabilidad, metricas } = await crear();
+    const { dispatch, client, contabilidad, metricas } = await crear();
     jest.spyOn(globalThis, 'fetch').mockResolvedValue({
       ok: true,
       json: async () => ({ total_cents: 45000 }),

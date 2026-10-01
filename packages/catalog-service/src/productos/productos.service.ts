@@ -138,7 +138,7 @@ export class ProductosService {
     stock: number;
   }): Promise<Producto> {
     const sku = String(datos.sku).trim().toUpperCase();
-    if (!/^[A-Z0-9\-]{2,32}$/.test(sku)) {
+    if (!/^[A-Z0-9-]{2,32}$/.test(sku)) {
       throw new DomainError('SKU_INVALIDO', 'El SKU solo admite letras, numeros y guiones (2-32).');
     }
     if (datos.stock < 0 || !Number.isInteger(datos.stock)) {
@@ -278,7 +278,7 @@ export class ProductosService {
             continue;
           }
 
-          const actualizado = await client.query(
+          await client.query(
             `UPDATE catalog.productos
              SET stock = stock - $2,
                  estado = CASE WHEN stock - $2 > 0 THEN 'disponible' ELSE 'agotado' END

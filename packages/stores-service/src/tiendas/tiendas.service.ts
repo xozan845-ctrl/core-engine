@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { randomUUID } from 'crypto';
-import { PgService, DomainError, ConflictError, NotFoundError } from '@core/shared';
+import { PgService, DomainError, ConflictError } from '@core/shared';
 
 export interface Tienda {
   id: string;

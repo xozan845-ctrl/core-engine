@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { PgService, Money, ItemOrden } from '@core/shared';
+import { PgService, ItemOrden } from '@core/shared';
 
 /**
  * OrderView: proyeccion de lectura del lado CQRS (Tabla 8).

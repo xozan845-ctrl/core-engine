@@ -25,7 +25,6 @@ import {
   CrearAsistenciaRequestDto,
   CrearIncidenciaRequestDto,
   ActualizarIncidenciaRequestDto,
-  CrearTrackingRequestDto,
   CrearVisitaRequestDto,
   GuardarCumplimientoRequestDto,
   UbicacionRequestDto,

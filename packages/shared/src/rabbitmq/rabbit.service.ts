@@ -9,7 +9,7 @@ import {
   REINTENTOS_MAXIMOS,
   BACKOFF_BASE_MS,
 } from './rabbit.constants';
-import { NombreEvento, EventoBus } from '../events/contracts';
+import { EventoBus } from '../events/contracts';
 
 export interface ColaConNombre extends ColaConfig {
   nombre: string;
