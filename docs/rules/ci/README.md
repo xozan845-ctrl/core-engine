@@ -10,7 +10,7 @@ son reglas de testing y siguen en
 | Archivo | Contenido | IDs |
 |---|---|---|
 | `01-flujos.md` | Gatillos push/PR, concurrencia, sin `paths`, pipeline único, revisión de `.github/`, verificación de runs con `gh` | `R-CI` (1–6) |
-| `02-entorno.md` | Runner/Node/pnpm, BD efímera, artifacts de evidencia, secretos en CI | `R-EN` (1–4) |
+| `02-entorno.md` | Runner/Node/npm, evidencia (artifacts), BD efímera exigible, secretos en CI | `R-EN` (1–4) |
 | `03-deploy.md` | Release por tag, procedencia y CI verde, imágenes por digest, migraciones en despliegue, aprobación de producción, secretos en la imagen | `R-CD` (1–8) |
 
 > Área conforme a la regla de estructura: solo `README.md` + archivos `NN-tema.md`.
@@ -28,8 +28,8 @@ son reglas de testing y siguen en
 
 | ID | Exigencia en CI |
 |---|---|
-| G-1…G-8 | Gates de testing que los jobs deben dejar en verde ([`../test/06`](../test/06-estandares-cobertura.md)) |
-| R-E-11/12 | Suite E2E hermética; jobs con `TZ: America/Managua`, retry único y timeout por paso |
+| G-1…G-8 | Gates de testing (estado por gate ✅/⏸/N/A en [`../test/06`](../test/06-estandares-cobertura.md)) |
+| R-E-11/12 | Suite E2E hermética; exigible a los jobs E2E cuando existan (`TZ: America/Managua`, retry único y timeout por paso) |
 | R-I-12 | Suites ejecutables con BD efímera |
 | R-C-7 / G-8 | Spec OpenAPI sincronizado (`git diff --exit-code`) |
 | R-FL-1 | Tests intermitentes → quarantine con fecha |
@@ -51,21 +51,26 @@ estaba verde" — que es exactamente lo que la regla prohíbe.
 | `gh run view <id> --log-failed` | Log del job fallido del run → punto de partida del fix-forward (R-GP-3) |
 | `gh auth status` / `gh auth login` | Estado / autenticación (una vez por máquina) |
 | `gh release list` | ¿Hay ya una release para este tag? Un tag publicado no se mueve (R-CD-1) |
-| `gh run list --workflow release.yml` | Estado del run de la release: construido, publicado o abortado por procedencia (R-CD-2) |
+| `gh run list --workflow ci.yml` | Estado de la integración: los 3 jobs encadenados del único workflow (R-CI-4) |
+| `gh run list --workflow release.yml` | Estado del run de la release **(cuando exista `release.yml`, hoy no)**: construido, publicado o abortado por procedencia (R-CD-2) |
 
 La importancia es cerrar la evidencia: un cambio "terminado" es un commit con
 `completed success` en **su** run (R-CI-6). Todo lo demás es opinión.
 
 ## Pendientes
 
-- **Workflow de release aún no existe aquí**: las reglas `R-CD` de
-  [`03-deploy.md`](./03-deploy.md) se heredaron junto con el `release.yml` y el
-  `docker-compose.prod.yml` del proyecto origen; en este repo solo existe
-  [`ci.yml`](../../../.github/workflows/ci.yml) (jobs `security-gate`, `test`,
-  `build`). Definir el flujo de release de Core Engine —tag, build, imágenes,
-  despliegue— es una decisión de arquitectura y un cambio de regla.
-- **Contenido heredado a auditar**: `01-flujos.md` (jobs `backend`, `frontend`,
-  `e2e`, `playwright`), `02-entorno.md` (pnpm, Prisma, BD efímera por job) y
-  `03-deploy.md` describen el pipeline del proyecto origen, no el `ci.yml`
-  actual. Re-auditarlos contra el pipeline real es trabajo de la próxima
-  auditoría (R-COV-3).
+- **Workflow de release aún no existe aquí**: en este repo solo existe
+  [`ci.yml`](../../../.github/workflows/ci.yml) (jobs `security-gate` → `test` →
+  `build`), así que [`03-deploy.md`](./03-deploy.md) está marcado **N/A**: sus
+  reglas `R-CD` son el contrato exigible el día que exista un `release.yml`
+  (R-CI-4), no la descripción de algo existente. Definir el flujo de release de
+  Core Engine —tag, build, imágenes, despliegue— es una decisión de
+  arquitectura y un cambio de regla.
+- **`ci.yml` sin grupo de concurrencia**: R-CI-2 exige
+  `concurrency`/`cancel-in-progress` por ref y el workflow no lo declara, así
+  que pushes seguidos en la misma rama apilan runs en paralelo. Deuda de
+  configuración (no de redacción), recogida para la auditoría (R-COV-3).
+- **`01`/`02`/`03` alineados con el pipeline real** (2026-10-01): sus
+  descripciones ya coinciden con `ci.yml` (jobs, gatillos, comandos, rutas).
+  Cualquier referencia restante al pipeline heredado del proyecto origen fuera
+  de esta área se audita con R-COV-3.

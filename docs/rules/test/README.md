@@ -14,7 +14,7 @@ validaban el comportamiento erróneo de la implementación en vez del requisito
 | `03-reglas-e2e.md` | Reglas para E2E frontend → API → BD |
 | `04-reglas-contrato.md` | Reglas para contrato de API (shapes, paginación, fechas) |
 | `05-reglas-robustez.md` | Reglas de calidad: property-based, mutation, edge cases, regression-first |
-| `06-estandares-cobertura.md` | Umbrales de cobertura, gates de CI, anti-regresión |
+| `06-estandares-cobertura.md` | Umbrales de cobertura, gates de CI (con estado ✅/⏸/N/A por gate), anti-regresión |
 | `07-qa-gates.md` | Reglas doradas de QA: cobertura 80 %, suites independientes, edge cases, security gate (`R-QA`) |
 
 > Los documentos derivados de este área (**CHECKLIST, AUDIT, AUDIT-HISTORY**) no viven
@@ -76,7 +76,7 @@ npm test -- --coverage
 npm run test -w @core/orders-service
 npm run test -w @core/api-gateway
 
-# Compilación y lint (los otros dos pasos de CI)
+# Compilación (job `build`) — `npm run lint` hoy es no-op (sin configurar, ver Pendientes)
 npm run build
 npm run lint
 
@@ -88,7 +88,20 @@ docker compose up -d --build
 npm run demo
 ```
 
-> **Deuda conocida:** `06-estandares-cobertura.md` (gates `G-1..G-8`) describe el
-> pipeline del proyecto origen (jobs de frontend, Playwright, Swagger export,
-> Stryker). Este repo aún no los tiene configurados; adaptar esa familia de gates
-> a `ci.yml` real es trabajo de la próxima auditoría (R-COV-3).
+## Pendientes (deuda abierta)
+
+- **G-7 a medias**: `npm run lint` existe en la raíz pero es **no-op** — ningún
+  workspace expone script `lint` y no hay ninguna config ESLint en el repo, y
+  `ci.yml` no tiene paso de lint. Hasta configurarlo, G-7 se cumple solo con el
+  build.
+- **G-4/G-5/G-6/G-8 sin paso en CI**: no existen suites de integración,
+  contrato ni E2E ni paso de export OpenAPI en `ci.yml` (estado detallado en
+  [`06-estandares-cobertura.md`](./06-estandares-cobertura.md)).
+- **5 workspaces sin suite**: `catalog-service`, `identity-service`,
+  `stores-service`, `logistics-service` y `field-service` (R-QA-1 solo exceptúa
+  `field-service`; los otros cuatro son deuda de cobertura).
+- **`01`–`05` con referencias heredadas** (Prisma, frontend Angular,
+  `prisma/seed.ts`): re-auditarlos contra la implementación real (R-COV-3).
+
+Todas quedan registradas en [`../_meta/AUDIT.md`](../_meta/AUDIT.md) en la
+próxima auditoría (R-COV-3).
