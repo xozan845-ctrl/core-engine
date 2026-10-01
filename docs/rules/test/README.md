@@ -101,6 +101,13 @@ npm run demo
   `coverageThreshold` son el baseline del ratchet (R-COV-1: suben +5 por
   release). Aún sin specs: los `*.controller.ts`, `seed.service` y los
   `internal.controller`. `field-service` sigue sin suite (excepción de R-QA-1).
+- **Controllers y services sin spec (R-U-10/11, R-U-18)**: **0 de 25**
+  `*.controller.ts` y **21 de 39** `*.service.ts`/`*.consumer.ts` con spec —
+  todos preexistentes a los PRs que tocan esa capa; la presión la ejerce el
+  ratchet de cobertura (recuento completo en [`../_meta/AUDIT.md`](../_meta/AUDIT.md)).
+- **R-FL-3 sin cumplir**: ningún setup de Jest fija `TZ`; los specs actuales
+  no usan hora local, pero un spec futuro podría depender de la timezone de la
+  máquina sin que nada lo avise.
 - **`01`–`05` con referencias heredadas** (Prisma, frontend Angular,
   `prisma/seed.ts`): re-auditarlos contra la implementación real (R-COV-3).
 
