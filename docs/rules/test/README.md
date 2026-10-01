@@ -76,9 +76,9 @@ npm test -- --coverage
 npm run test -w @core/orders-service
 npm run test -w @core/api-gateway
 
-# Compilación (job `build`) — `npm run lint` hoy es no-op (sin configurar, ver Pendientes)
-npm run build
+# Lint (job `lint`) y compilación (job `build`) — G-7
 npm run lint
+npm run build
 
 # Puerta de seguridad (R-QA-6 / ci.yml "Security Gate")
 npm audit --audit-level=high
@@ -90,10 +90,9 @@ npm run demo
 
 ## Pendientes (deuda abierta)
 
-- **G-7 a medias**: `npm run lint` existe en la raíz pero es **no-op** — ningún
-  workspace expone script `lint` y no hay ninguna config ESLint en el repo, y
-  `ci.yml` no tiene paso de lint. Hasta configurarlo, G-7 se cumple solo con el
-  build.
+- **Tooling JS fuera del alcance de ESLint**: `eslint.config.mjs` cubre
+  `packages/*/src/**/*.ts` (el alcance de G-7); `qa-harness/`, `scripts/` y
+  `validate-dashboards.cjs` aún no se lintean (~160 errores acumulados).
 - **G-4/G-5/G-6/G-8 sin paso en CI**: no existen suites de integración,
   contrato ni E2E ni paso de export OpenAPI en `ci.yml` (estado detallado en
   [`06-estandares-cobertura.md`](./06-estandares-cobertura.md)).

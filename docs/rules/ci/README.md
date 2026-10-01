@@ -51,7 +51,7 @@ estaba verde" — que es exactamente lo que la regla prohíbe.
 | `gh run view <id> --log-failed` | Log del job fallido del run → punto de partida del fix-forward (R-GP-3) |
 | `gh auth status` / `gh auth login` | Estado / autenticación (una vez por máquina) |
 | `gh release list` | ¿Hay ya una release para este tag? Un tag publicado no se mueve (R-CD-1) |
-| `gh run list --workflow ci.yml` | Estado de la integración: los 3 jobs encadenados del único workflow (R-CI-4) |
+| `gh run list --workflow ci.yml` | Estado de la integración: los 4 jobs (`security-gate` → `lint`/`test` → `build`) del único workflow (R-CI-4) |
 | `gh run list --workflow release.yml` | Estado del run de la release **(cuando exista `release.yml`, hoy no)**: construido, publicado o abortado por procedencia (R-CD-2) |
 
 La importancia es cerrar la evidencia: un cambio "terminado" es un commit con
@@ -60,7 +60,7 @@ La importancia es cerrar la evidencia: un cambio "terminado" es un commit con
 ## Pendientes
 
 - **Workflow de release aún no existe aquí**: en este repo solo existe
-  [`ci.yml`](../../../.github/workflows/ci.yml) (jobs `security-gate` → `test` →
+  [`ci.yml`](../../../.github/workflows/ci.yml) (jobs `security-gate` → `lint`/`test` →
   `build`), así que [`03-deploy.md`](./03-deploy.md) está marcado **N/A**: sus
   reglas `R-CD` son el contrato exigible el día que exista un `release.yml`
   (R-CI-4), no la descripción de algo existente. Definir el flujo de release de
