@@ -1,28 +1,31 @@
-# 03 — Reglas de Tests E2E (frontend → API → BD)
+# 03 — Reglas de Tests E2E (stack completo: gateway → servicios → BD)
 
-Aplica a: pruebas que usan un navegador real (Puppeteer/Playwright) contra el
-stack completo (`ng serve` + NestJS + Postgres).
+Aplica a: pruebas que recorren el stack completo con infraestructura real
+(`docker compose`: gateway + servicios + Postgres + RabbitMQ). Hoy el repo **no
+tiene frontend** (G-2 N/A): los flujos se ejercitan a nivel de API/CLI — el
+precedente es el smoke `npm run demo` (`scripts/smoke.mjs`). Si algún día existe
+UI, la capa pasa a navegador real (Playwright) conservando estos IDs.
 
 ## Flujos críticos (obligatorios antes de cada release)
 
 | ID | Regla | Flujo |
 |---|---|---|
-| R-E-1 | Login correcto redirige al dashboard y renderiza datos reales de la API. | auth |
-| R-E-2 | Login con credenciales inválidas muestra error sin romper el formulario. | auth |
-| R-E-3 | CRUD completo de empleado: crear → aparece en la lista → editar → perfil → eliminar. | employees |
-| R-E-4 | **Filtro de asistencia por fecha**: seleccionar un día con datos aserta que TODOS los registros listados pertenecen al día local seleccionado (y que un registro de día vecino NO aparece). | attendance |
+| R-E-1 | Registro/login correcto: el token devuelto autentica `GET /auth/me` contra el perfil real de la BD. | auth |
+| R-E-2 | Login con credenciales inválidas → `401` con shape de error, sin token. | auth |
+| R-E-3 | Alta y publicación de producto + oferta: crear → visible en el catálogo → editar → despublicar. | catálogo |
+| R-E-4 | **Filtro por fecha**: seleccionar un día con datos aserta que TODOS los registros listados pertenecen al día local seleccionado (y que un registro de día vecino NO aparece). | fechas |
 | R-E-5 | Paginación conserva filtros y búsqueda. | listas |
-| R-E-6 | Guard de rol: usuario sin rol intenta acceder a ruta restringida → redirigido. | authz |
-| R-E-7 | Logout limpia sesión (recargar no restaura acceso). | auth |
+| R-E-6 | Guard de rol: usuario sin rol (o sin token) en un endpoint restringido → `403` (`401` sin token). | authz |
+| R-E-7 | Logout/refresh: el token viejo deja de servir (reuso → `401`). | auth |
 
 ## Calidad de ejecución
 
 | ID | Regla |
 |---|---|
-| R-E-8 | **Cero errores de consola** (`console.error`, excepciones no capturadas, 404/500 de red) durante el flujo. Un error de consola = test fallido. |
-| R-E-9 | Cada flujo verifica el resultado por **datos** (texto de celdas, conteo de filas, URL), no solo por screenshots. Screenshots son evidencia complementaria. |
-| R-E-10 | Los selectores deben ser estables (`data-testid` preferido; Selectors CSS/roles como alternativa). Prohibido depender de clases CSS generadas por el build. |
-| R-E-11 | **Suite hermética**: todo dato que un test necesita (usuarios, empleados, registros boundary) viene de `prisma/seed.ts` — idempotente (upserts; fechas fijas con offset local `-06:00` explícito) — o lo crea la propia prueba vía API. Prohibido depender del estado manual de la BD local. Verificable: la suite completa pasa contra una BD recreada desde cero (`prisma db push` + seed), que es lo que ejecuta G-6 en CI. |
+| R-E-8 | **Cero errores en los logs de los servicios** (5xx, excepciones no capturadas) durante el flujo. Con UI: además cero errores de consola. Un error = test fallido. |
+| R-E-9 | Cada flujo verifica el resultado por **datos** (cuerpo de la respuesta, conteos, estados en BD, URL), no solo por screenshots. Screenshots son evidencia complementaria. |
+| R-E-10 | Con UI (cuando exista): selectores estables (`data-testid` preferido; CSS/roles como alternativa), prohibido depender de clases generadas por el build. Sin UI: verificación por datos de respuesta (R-E-9). |
+| R-E-11 | **Suite hermética**: todo dato que un test necesita (usuarios, productos, registros boundary) viene del seed versionado en el repo (`infra/db/init/*.sql`, idempotente; fechas fijas con offset local `-06:00` explícito) — o lo crea la propia prueba vía API. Prohibido depender del estado manual de la BD local. Verificable: la suite completa pasa contra una BD recreada desde cero (init SQL), que es lo que ejecutará G-6 en CI cuando exista (hoy deuda). |
 | R-E-12 | Ejecución headless en CI con retry único para red; timeout explícito por paso, no global largo. Los jobs de CI que arrancan la app fijan `TZ: America/Managua` (paridad con local, R-I-3). |
 | R-E-13 | Los scripts E2E viven en el repo (no en `/tmp`), con `package.json` propio o script npm que instale sus dependencias. |
 
