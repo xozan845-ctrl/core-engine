@@ -115,7 +115,7 @@ Matriz completa en [`06-estandares-cobertura.md`](../test/06-estandares-cobertur
 - [ ] **R-EN-3/4** — Artifact de evidencia en **todos** los runs (`if: always()`); secretos únicamente en GitHub Secrets y nunca en logs.
 - [ ] **R-CD-2** — Contrato de release por tag ([`rules/cd/01`](../cd/01-despliegue.md)): hoy no existe `release.yml` (R-CD-1..8 futuros); cuando exista: commit en `main` **y** run de `ci.yml` en verde en ese mismo SHA antes de publicar.
 - [ ] **R-CD-7** — Ningún secreto como `ARG`/`ENV` de build ni en una capa de imagen; los secretos van en runtime.
-- [ ] **R-CD-9/10/11** — Entornos Dockploy: una app por rama (R-CD-9); producción solo por promoción `staging → main` (R-CD-10); gate de producción: `ci.yml` verde en el SHA promovido (R-CD-11).
+- [ ] **R-CD-9/10/11** — Dockploy: un proyecto con los environments `staging`/`produccion` y desarrollo local (R-CD-9); producción solo por promoción `staging → main` (R-CD-10); gate de producción: `ci.yml` verde en el SHA promovido (R-CD-11).
 
 ## 11. PR — rama, cuerpo, checks y merge ([`rules/git/04-pr.md`](../git/04-pr.md))
 

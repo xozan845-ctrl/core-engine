@@ -155,6 +155,33 @@ Este archivo registra decisiones técnicas deliberadas que se apartan del texto 
 
 ---
 
+## ADR-13: Entornos Dockploy — un proyecto, dos entornos, desarrollo local
+
+- **Fecha**: 2026-10-01
+- **Estado**: Aceptado
+- **Contexto**: el plan inicial del modelo CD preveía **tres aplicaciones
+  Dockploy** (desarrollo/stage/producción), replicando la pila 3 veces en el VPS:
+  coste fijo innecesario y ajeno al patrón habitual (el entorno de desarrollo no
+  se despliega). La revisión de fuentes de CD (continuousdelivery.com →
+  deployment pipeline y "deploy the same way to every environment";
+  Atlassian → trunk-based/GitFlow; análisis de coste staging vs entornos
+  efímeros) concluye que para 1–2 devs lo óptimo es **desarrollo local + un
+  checkpoint de staging + producción**, con infraestructura compartida y
+  aislamiento lógico ("nunca un recurso físico por entorno").
+- **Decisión**: un **solo proyecto Dockploy `core-engine` con dos environments** —
+  `staging` (rama `staging`) y `produccion` (rama `main`) — usando el
+  multi-tenancy nativo de Dockploy (variables y red por environment). El
+  **desarrollo corre local** (`docker compose up` + `npm run demo`) y `develop`
+  queda como rama de integración **sin despliegue**. Infraestructura compartida:
+  un Postgres con una base por entorno y un RabbitMQ con un vhost por entorno;
+  monitoreo solo en producción (+ opcional staging).
+- **Consecuencias**: `R-CD-9` enmendada (proyecto + environments, no app por
+  rama); `R-GE-1` aclarada (develop = integración/local); guion operativo
+  `docs/dockploy-setup.md` reescrito al modelo de 2 environments; la puerta de
+  seguridad (CI 4/4 → staging smoke → promoción a producción) no cambia.
+
+---
+
 ## Resumen de cumplimiento post-corrección
 
 | Ítem del documento          | Estado  | Nota |
