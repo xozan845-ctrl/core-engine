@@ -6,7 +6,7 @@
 > anteriores a 2026-10-01 pertenecen al proyecto origen y se conservan como
 > procedencia.
 
-- **Última auditoría:** 2026-10-01 (primera de Core Engine — Etapa 3 del plan de deudas; Etapas 1–2 completadas)
+- **Última auditoría:** 2026-10-01 (primera de Core Engine — la auditoría salió de la Etapa 3 del plan de deudas; las Etapas 1–5 del plan ya están implementadas: «Cerradas en este ciclo» abajo).
 - **Estado global:** 🟡 **CUMPLE PARCIAL** — gates **G-1, G-3 y G-7 efectivos y verdes en CI**, G-2 N/A y G-4/G-5/G-6/G-8 pendientes; deudas abiertas: capas de test enteras sin suites (integración, contrato, E2E, OpenAPI), robustez no implementada (property-based, mutación, fuzz), cobertura por debajo del objetivo 80/70, controllers sin specs y tooling JS fuera de ESLint.
 
 ## Resumen por capa
@@ -55,6 +55,8 @@
 | Controllers con spec | **0 de 25** | R-U-10/11 (al tocar endpoints) | ❌ deuda |
 | `*.service.ts` / `*.consumer.ts` sin spec | **21 de 39** | 0 (R-U-18, R-COV-2) | ❌ deuda |
 | Archivos `domain/` sin spec | **N/A** — 0 carpetas `domain/` en este repo | R-U-17 / R-COV-2 | N/A (estructura; IDs intactos) |
+| Código puro de `shared` sin spec | **6 de 7** (solo `money.spec.ts`) | 0 (R-U-17) | ❌ deuda |
+| Guards/pipes sin spec | `service-auth`, `validation.pipe` | 0 (R-U-15) | ❌ deuda |
 | Tests integración | 0 | ≥1 por flujo crítico (R-I-1) | ❌ deuda G-4 |
 | Tests contrato | 0 | ≥1 por shape (R-C-10) | ❌ deuda G-5 |
 | Tests E2E | 0 automatizados | 7 flujos (R-E-1..7) | ❌ deuda G-6 |
@@ -63,7 +65,7 @@
 | Fuzz de parsers | sin implementar | R-RB-1..4 | ❌ |
 | Lint | 0 errores / 47 warns | 0 errores (G-7) | ✅ |
 | Audit `high` | exit 0 | 0 (R-QA-6) | ✅ |
-| Historial lineal | 0 merge commits en 15 (5 PRs `--rebase`) | 0 (R-PR-7) | ✅ |
+| Historial lineal | 0 merge commits en `main` (7 PRs `--rebase` a la fecha de esta auditoría) | 0 (R-PR-7) | ✅ |
 
 ## Gates de CI (verificados contra `.github/workflows/ci.yml`)
 
@@ -89,16 +91,27 @@
 1. **G-4/G-5/G-6/G-8 — capas de test sin suites ni pasos en CI**: integración API+BD, contrato de API, E2E de flujos y export de OpenAPI. Son capas enteras sin cubrir, no porcentajes bajos; las reglas `R-I-*`/`R-C-*`/`R-E-*` ya son exigibles cuando una historia toque cada capa.
 2. **Robustez no implementada**: property-based (R-PB-1..3, sin `fast-check`), mutation testing (R-MT-1..3, nunca ejecutada — R-MT-1 la acota a mensual/pre-release, **no debe añadirse gate de PR**) y fuzz de parsers (R-RB-1..4).
 3. **Cobertura por debajo del objetivo 80/70**: solo `logistics` lo alcanza; los más bajos (`shared` 9.5, `commissions` 12.2, `market-intelligence` 15.4, `orders` 19.9, `api-gateway` 22.8 de líneas) suben por el ratchet +5/release (R-COV-1). En los 4 servicios nuevos aún no tienen specs: controllers, `seed.service` e `internal.controller`.
-4. **Controllers y services sin spec**: **0/25 controllers** (R-U-10/11) y **21/39 `*.service.ts`/`*.consumer.ts`** (R-U-18, R-COV-2) — todos preexistentes al PR que los introduce; el ratchet de cobertura es su presión.
+4. **Controllers, services y código puro sin spec**: **0/25 controllers** (R-U-10/11) y **21/39 `*.service.ts`/`*.consumer.ts`** (R-U-18, R-COV-2) — todos preexistentes al PR que los introduce; además **6 de 7 ficheros puros de `shared`** (`jwt.utils`, `order-state`, `pagination`, `errors`, `constants`, `contracts`) y guards/pipes (`service-auth`, `validation.pipe`) sin spec (R-U-17, R-U-15, revelados por la reescritura de la Etapa 5). El ratchet de cobertura es su presión.
 5. **Tooling JS fuera del alcance de ESLint**: `qa-harness/`, `scripts/` y `validate-dashboards.cjs` (~160 errores acumulados) no se lintean (alcance actual `packages/*/src/**/*.ts`).
 6. **R-CI-2 sin cumplir**: `ci.yml` no declara grupo de `concurrency` con `cancel-in-progress` — documentada como deuda en Etapa 2a, sin cerrar.
 7. **R-FL-3 sin cumplir**: ningún setup de Jest fija `TZ`; los specs actuales no usan hora local, pero un spec futuro podría depender de la timezone de la máquina sin aviso.
-8. **Herencias del proyecto origen en `test/01..05` y README raíz** (Prisma, Angular, `prisma/seed.ts`, ejemplos de asistencia): re-auditarlos y reescribirlos (Etapa 5 del plan de deudas, R-COV-3).
-9. **`tsconfig.tsbuildinfo` trackeados**: cualquier `npm run build` ensucia el árbol; higiene de repo pendiente (`chore` aparte, anotado en PR #4).
-10. **47 warnings `no-explicit-any`** en `packages/*/src` — auditables con cada auditoría (R-COV-3); no son errores (G-7), pero tampoco se monitorean con un gate.
+8. **`tsconfig.tsbuildinfo` trackeados**: cualquier `npm run build` ensucia el árbol; higiene de repo pendiente (`chore` aparte, anotado en PR #4).
+9. **47 warnings `no-explicit-any`** en `packages/*/src` — auditables con cada auditoría (R-COV-3); no son errores (G-7), pero tampoco se monitorean con un gate.
 
-### Cerradas en este ciclo (Etapas 1–3 del plan de deudas)
+### Cerradas en este ciclo (Etapas 1–5 del plan de deudas)
 
+- **Etapa 5: herencias del proyecto origen cerradas (deuda #8)** — `test/01..05`
+  reescritos a este repo: flujos E2E de comercio (sin dashboard/asistencia/
+  empleados), sin Prisma/Angular/ZK (`R-U-17` apunta ahora al código puro real
+  de `shared`, `R-MT` a `identity`/`orders`/`commissions`/`finance`, `R-RB` al
+  outbox/saga, `R-PB` al dinero); README raíz con recuentos reales (175 tests,
+  gateway + 9 servicios, sin recomendación `pnpm` — R-EN-1); `CHECKLIST`/R-COV-2
+  sin `domain/` y R-PR-8 sin Playwright. La reescritura dejó al descubierto
+  deudas nuevas (shared puro y guards/pipes sin specs — ver lista de abiertas).
+- **Etapa 4: npm audit de 4 moderate a 0 (R-QA-6)** — `node-cron@4`
+  (`uuid@8` fuera del árbol, v4 sin dependencias) y override scopeado
+  `@nestjs/swagger → js-yaml@5.4.2` (swagger 11.4.7 clava 5.3.0 exacto;
+  `swagger@12` exigiría Nest 12). Gate de CI intacto: R-QA-6 solo exige high.
 - **Etapa 3 (esta auditoría): deuda `_meta/` (R-COV-3)** — `AUDIT.md` reescrito a la realidad de Core Engine, `CHECKLIST.md` sin comandos ni archivos heredados (`pnpm`/`ztkeco`/`prisma`/`karma`), `AUDIT-FRONTEND.md` borrado (como preveía su propia fila en `_meta/README.md`), entrada nueva + procedencia marcadas en `AUDIT-HISTORY.md` y deuda del `_meta/README.md` cerrada.
 - **Etapa 2b: G-3 no era efectivo** — `npm test -- --coverage` nunca transmitía el flag a `jest` (0 tablas de cobertura en cualquier run) y los 6 thresholds legacy 80/80 incumplían su medición (12–48 %). Cerrado: cobertura por workspace en el script raíz, 10 tablas en CI y recalibración única al baseline medido.
 - **Etapa 2a: G-7 ampliado** — ESLint real (`eslint.config.mjs`, 0 errores) + job `lint` en CI.
@@ -109,7 +122,7 @@
 - **Local (2026-10-01, comandos de abajo):** `npm test` exit 0 → **175 tests / 23 suites** con **10 tablas de cobertura** y 0 `threshold not met` · `npm run lint` exit 0 (0 errores / 47 warnings) · `npm run build` exit 0 (0 errores TS) · `npm audit --audit-level=high` exit 0.
 - **Cobertura:** medición por workspace con `npm run test -w @core/<ws> -- --coverage` (×10) y método floor (R-COV-1); revalidación con umbral aplicado: 10/10 pasan.
 - **CI (R-COV-3: un gate no se marca ✅ sin run verde):** run `36886812250` sobre la cabeza del PR #5 = 4/4 jobs success (Security Gate 17s · ESLint 15s · Unit Tests + Coverage 1m18s · Build 26s), con **10 tablas de cobertura** en el log del job `test`; run `36887224095` sobre `main` = `f7282ca` → `completed success` (2m23s).
-- **Flujo de PR:** `gh pr list --state merged` → 5 PRs (#1–#5), todos mergeados con `--rebase` y sus runs de `main` verificados (R-PR-7/8); `git rev-list --merges --count origin/main` → **0** merge commits de 15.
+- **Flujo de PR:** `gh pr list --state merged` → 7 PRs (#1–#7) hasta esta auditoría, todos mergeados con `--rebase` y sus runs de `main` verificados (R-PR-7/8); `git rev-list --merges --count origin/main` → **0** merge commits de 18.
 
 ## Cómo re-auditar
 

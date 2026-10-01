@@ -71,6 +71,10 @@ El área `test/` es el ejemplo canónico al que apuntan las demás.
 - Las áreas `architecture/ data/ db/ gateway/ microservice/ observability/` nacieron
   de las "Reglas Doradas" que vivían sueltas en la raíz (heredadas de otro proyecto)
   y se convirtieron al formato `| ID | Regla |` con IDs propios al reorganizarse.
-- **Pendiente:** `_meta/AUDIT.md`, `_meta/CHECKLIST.md` y `_meta/AUDIT-HISTORY.md`
-  todavía son snapshots del proyecto origen (comandos `pnpm`, `backend/`, `prisma/`);
-  re-auditar este repo y reescribirlos (R-COV-3).
+- **Cerrado:** la deuda de los snapshots heredados en `_meta/` se resolvió en la
+  primera auditoría de Core Engine (Etapa 3, 2026-10-01, R-COV-3) y las
+  herencias de `test/01..05` y del README raíz en la Etapa 5 del plan de deudas
+  (Prisma, Angular, `prisma/seed.ts` y ejemplos de asistencia sustituidos por la
+  realidad de este repo). Queda como deuda lo que sigue sin implementar (capas
+  sin suites, robustez) — ver [`test/README.md`](./test/README.md) y
+  [`_meta/AUDIT.md`](./_meta/AUDIT.md).

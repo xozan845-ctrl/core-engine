@@ -11,7 +11,7 @@ validaban el comportamiento erróneo de la implementación en vez del requisito
 |---|---|
 | `01-reglas-unit.md` | Reglas para unit tests (utils, entidades, VO, use-cases, controllers) |
 | `02-reglas-integracion.md` | Reglas para tests API + BD reales (HTTP real, BD real) |
-| `03-reglas-e2e.md` | Reglas para E2E frontend → API → BD |
+| `03-reglas-e2e.md` | Reglas para E2E del stack completo (gateway → servicios → BD; hoy sin UI) |
 | `04-reglas-contrato.md` | Reglas para contrato de API (shapes, paginación, fechas) |
 | `05-reglas-robustez.md` | Reglas de calidad: property-based, mutation, edge cases, regression-first |
 | `06-estandares-cobertura.md` | Umbrales de cobertura, gates de CI (con estado ✅/⏸/N/A por gate), anti-regresión |
@@ -108,8 +108,11 @@ npm run demo
 - **R-FL-3 sin cumplir**: ningún setup de Jest fija `TZ`; los specs actuales
   no usan hora local, pero un spec futuro podría depender de la timezone de la
   máquina sin que nada lo avise.
-- **`01`–`05` con referencias heredadas** (Prisma, frontend Angular,
-  `prisma/seed.ts`): re-auditarlos contra la implementación real (R-COV-3).
+- **Deudas que la reescritura de `01`–`05` (Etapa 5) dejó al descubierto**:
+  **R-U-17** — `packages/shared/src` puro: solo `money` tiene spec (6 de 7
+  ficheros puros sin spec: `jwt.utils`, `order-state`, `pagination`, `errors`,
+  `constants`, `events/contracts`); **R-U-15** — guards/pipes sin spec
+  (`service-auth`, `validation.pipe`).
 
 Todas quedan registradas en [`../_meta/AUDIT.md`](../_meta/AUDIT.md) en la
 próxima auditoría (R-COV-3).
