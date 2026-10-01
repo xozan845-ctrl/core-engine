@@ -182,6 +182,29 @@ Este archivo registra decisiones técnicas deliberadas que se apartan del texto 
 
 ---
 
+## ADR-14: Historiales de entorno divergentes — no realinear; promoción por delta (R-GE-7)
+
+- **Fecha**: 2026-10-01
+- **Estado**: Aceptado
+- **Contexto**: `develop`, `staging` y `main` tienen el **mismo contenido pero
+  linajes distintos**: el contenido del modelo CD (D1/D4 y el modelo A) viajó al
+  pipeline por caminos separados (merges desde `develop` + recreaciones de
+  promoción), de modo que GitHub responde `This branch can't be rebased` en cada
+  promoción entre ramas de entorno y el paso de recreación del delta fue
+  necesario en todos los saltos.
+- **Decisión**: **no** se realinean los historiales (desproteger `staging`/`main`
+  + force-push) porque violaría `R-GP-3`/`R-GE-1` y reescribir el historial de
+  una rama de entorno no aporta contenido. En su lugar, cada promoción aplica el
+  paso de **R-GE-7**: rama nueva sobre la rama destino + cherry-pick del delta +
+  verificación de **árbol idéntico** (`git diff --quiet <origen>` = vacío) antes
+  de reabrir el PR. Una realineación futura solo se hace por enmienda explícita.
+- **Consecuencias**: cada promoción cuesta ~2–3 min extra (recreación +
+  verificación de árbol); el contenido entre ramas de entorno es idéntico en
+  cada salto (probado con `git diff --quiet`); el procedimiento está normado en
+  **R-GE-7** y queda cubierto por los checks de CI en cada PR.
+
+---
+
 ## Resumen de cumplimiento post-corrección
 
 | Ítem del documento          | Estado  | Nota |
