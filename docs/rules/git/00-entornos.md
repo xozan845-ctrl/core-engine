@@ -20,7 +20,15 @@ directo, sin fuerza, solo PR con checks en verde — R-PR-6, R-CD-9):
 | R-GE-4 | **`main` solo avanza por promoción**: nada se edita a mano en `main`; el único camino es el merge `staging → main` como decisión deliberada (R-GE-2). Un cambio que tumba producción se atiende con hotfix (R-GE-6) o rollback (R-CD-13), nunca con un push directo ni con un merge no promovido. |
 | R-GE-5 | **Backport obligatorio tras un hotfix**: todo cambio que entra a `main` por hotfix (R-GE-6) se re-aplica hacia `staging` y `develop` con PRs de vuelta, para que la siguiente promoción no revierta la corrección. Prohibido dejar `main` con cambios que `develop`/`staging` no tengan. |
 | R-GE-6 | **Hotfix de incidente**: un incidente en producción se corrige con una rama `hotfix/...` creada desde `main`, su PR a `main` con el fix y la evidencia en el cuerpo (R-GP-3: sin force, commit nuevo); tras el merge se verifica el run de `main` (R-PR-8), se ejecuta el smoke de producción (R-CD-12) y se aplica el backport (R-GE-5). |
-| R-GE-7 | **Promoción sin historiales duplicados**: si un PR de promoción reporta conflicto porque el contenido ya existe en la rama destino por otro camino (mismos cambios con SHAs distintos, p. ej. por un viaje previo por el pipeline), **no** se resuelve integrando historiales duplicados ni con force (R-GP-3): se cierra el PR con la razón (R-PR-9) y se recrea la promoción **desde la rama destino** (rama nueva sobre la destino + cherry-pick del delta de commits deseados), verificando que el árbol queda **idéntico** a la rama origen (`git diff --quiet <rama-origen>` = vacío) antes de reabrir el PR. Regla de oro: el contenido cuenta, no la procedencia de los SHAs. |
+| R-GE-7 | **Promoción por delta (sin historiales duplicados)**: si un PR de promoción no se puede rebasar porque el contenido ya existe en la rama destino por otro camino (mismos cambios con SHAs distintos — `This branch can't be rebased`), **no** se resuelve integrando historiales duplicados ni con force (R-GP-3): se cierra el PR con la razón (R-PR-9) y se recrea la promoción **desde la rama destino** (rama nueva sobre la destino + cherry-pick del delta de commits deseados), verificando que el árbol queda **idéntico** a la rama origen (`git diff --quiet <rama-origen>` = vacío) antes de reabrir el PR. Regla de oro: el contenido cuenta, no la procedencia de los SHAs. |
+
+> **Estado actual (ADR-14):** `develop`/`staging`/`main` tienen el mismo
+> contenido con **linajes distintos**, así que el paso de R-GE-7 es el
+> **procedimiento esperado** en cada promoción, no una excepción. Se descartó
+> realinear los historiales (desproteger + force a entornos) porque rompería
+> R-GP-3/R-GE-1 sin ganar contenido; una realineación futura requiere enmienda
+> explícita. Decisión completa en [`../../decisiones.md`](../../decisiones.md)
+> (ADR-14).
 
 > Este archivo fija el **modelo de ramas**; el despliegue físico en Dockploy
 > (proyecto con environments, gate de producción, rollback) vive en
