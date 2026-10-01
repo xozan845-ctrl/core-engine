@@ -33,7 +33,7 @@ aplican en staging/producción.
 |---|---|
 | `R-DB-2/3` | RLS y outbox en la misma transacción → `R-AR-3` (`../architecture/01-arquitectura.md`) |
 | `R-DB-5` | Soft delete ≠ `TRUNCATE` de tests → `R-I-10`/`R-E-11` (`../test/`) |
-| `R-DB-6` | Migraciones versionadas → `R-CD-5` (`../ci/03-deploy.md`) |
+| `R-DB-6` | Migraciones versionadas → `R-CD-5` (`../cd/01-despliegue.md`) |
 | `R-SB-5` | Secretos solo en env → `R-DS-1` (`../data/02-seguridad.md`) |
 
 ## Pendientes
