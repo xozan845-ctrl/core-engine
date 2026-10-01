@@ -1,7 +1,8 @@
 # 04 — Reglas de Contrato de API
 
 Aplica a: la forma de los payloads del API (`/api/v1/**`) y su documentación Swagger.
-El frontend consume estos contratos; un cambio inesperado rompe producción sin fallar
+Los consumidores (clientes futuros y los servicios internos vía `x-internal-key`)
+dependen de estos contratos; un cambio inesperado rompe producción sin fallar
 los tests unitarios de nadie.
 
 ## Shape de respuesta
@@ -10,7 +11,7 @@ los tests unitarios de nadie.
 |---|---|
 | R-C-1 | Toda respuesta de éxito sigue el envelope `{ data: T, meta: { timestamp, path, method, statusCode } }`. En listas paginadas la paginación va anidada dentro de `data`: `{ data: { data: T[], total, page, limit, totalPages }, meta }`. El test de contrato valida presencia y tipos en ambos niveles. Los errores **no** usan este envelope (ver R-C-8). |
 | R-C-2 | Toda respuesta sigue el patrón de API estándar del proyecto (éxito vs error) y el test de contrato lo valida con un schema (Zod/JSON-Schema o aserturas de shape). |
-| R-C-3 | Todo objeto de dominio expuesto en el API tiene un **DTO de respuesta**; el contrato se testea contra el DTO, nunca exponer entidades Prisma crudas (prohibido filtrar `password` u otros campos sensibles). |
+| R-C-3 | Todo objeto de dominio expuesto en el API tiene un **DTO de respuesta**; el contrato se testea contra el DTO, nunca exponer entidades/rows de persistencia crudos (prohibido filtrar `password` u otros campos sensibles). |
 
 ## Fechas
 
@@ -24,7 +25,7 @@ los tests unitarios de nadie.
 | ID | Regla |
 |---|---|
 | R-C-6 | Cambios incompatibles (renombrar/eliminar campo, cambiar tipo) solo en nueva versión `/api/v2`; test de contrato detecta la pérdida de campos. |
-| R-C-7 | Swagger se genera de los DTOs (no anotado a mano); el spec se commitea en `backend/docs/openapi.json` (`npm run swagger:export`) y CI lo bloquea con `git diff --exit-code` cuando está desfasado. |
+| R-C-7 | Swagger se genera de los DTOs (no anotado a mano); el spec se exporta a un JSON versionado en el repo y CI lo bloquea con `git diff --exit-code` cuando está desfasado. **Hoy sin script de export en `api-gateway` (deuda G-8)**: `@nestjs/swagger` está presente, el paso de export y el gate no existen. |
 
 ## Errores
 
@@ -38,4 +39,4 @@ los tests unitarios de nadie.
 | ID | Regla |
 |---|---|
 | R-C-10 | Existe un test de contrato que recorre los endpoints críticos y valida response shape contra schema. Se ejecuta en CI como parte de integración. |
-| R-C-11 | Si el frontend consume un campo nuevo, el PR que lo agrega incluye: campo en DTO + test de contrato + consumo en frontend (o marcado como futuro). |
+| R-C-11 | Si un consumidor (cliente o servicio vecino) consume un campo nuevo, el PR que lo agrega incluye: campo en DTO + test de contrato + actualización de quien lo consume (o marcado como futuro). |

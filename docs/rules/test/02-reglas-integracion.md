@@ -1,10 +1,11 @@
 # 02 — Reglas de Tests de Integración (API + BD)
 
-Aplica a: pruebas que levantan la app NestJS real (o módulos reales con Prisma)
-y ejecutan requests HTTP contra una **BD de test real** (Postgres de test, no mock).
+Aplica a: pruebas que levantan la app NestJS real (o módulos reales con la capa de
+datos real: SQL sobre Postgres) y ejecutan requests HTTP contra una **BD de test
+real** (Postgres de test, no mock).
 
 > Los mocks en los tests de controller prueban los mocks. Solo una prueba con BD real
-> valida consultas Prisma, filtros de fecha, paginación y transacciones.
+> valida consultas SQL, filtros de fecha, paginación y transacciones.
 
 ## Alcance mínimo por endpoint
 
@@ -34,12 +35,12 @@ y ejecutan requests HTTP contra una **BD de test real** (Postgres de test, no mo
 | ID | Regla |
 |---|---|
 | R-I-9 | Cada test crea/limpia sus datos (transacción rollback o seed/truncate por test). Prohibido depend del estado dejado por otro test. |
-| R-I-10 | El seed de test incluye datos **boundary** (registros en el límite del rango de fecha, empleados sin departamento, estados inactivos). |
-| R-I-11 | Las queries crudas de Prisma usadas por repositorios se prueban por lo menos una vez con BD real (detecta errores de mapeo de columnas/tipos). |
+| R-I-10 | El seed de test incluye datos **boundary** (registros en el límite del rango de fecha, recursos sin relación asociada — orden sin líneas, vendedor sin tienda — estados inactivos/cancelados). |
+| R-I-11 | Las queries SQL crudas usadas por los repositorios/servicios se prueban por lo menos una vez con BD real (detecta errores de mapeo de columnas/tipos). |
 
 ## Ejecución
 
 | ID | Regla |
 |---|---|
 | R-I-12 | Ejecutable con un comando (`npm run test:integration`), corriendo en CI, con BD de test efímera (docker o schema separado). |
-| R-I-13 | No requiere dispositivo ZK físico: todo externo (dispositivo, Clock) se inyecta con doble real del lado infraestructura, pero **el resto del stack es real**. |
+| R-I-13 | No requiere infraestructura externa real (broker RabbitMQ, servicios vecinos, Clock): esos bordes se doblan con dobles reales del lado de la infraestructura, pero **el resto del stack es real**. |
