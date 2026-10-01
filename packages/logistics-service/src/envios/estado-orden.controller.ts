@@ -38,7 +38,7 @@ export class EstadoOrdenController {
   async avanzar(
     @Param('id') id: string,
     @Body() dto: AvanzarEstadoRequestDto,
-    @UsuarioActual() usuario: UsuarioContexto,
+    @UsuarioActual() _usuario: UsuarioContexto,
   ): Promise<OrdenExterna> {
     if (!['en_preparacion', 'enviada', 'entregada', 'cancelada', 'devuelta'].includes(dto.estado)) {
       throw new DomainError('ESTADO_INVALIDO', 'Estado objetivo invalido para logistica.');

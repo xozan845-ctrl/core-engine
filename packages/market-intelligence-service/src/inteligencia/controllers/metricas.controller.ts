@@ -1,8 +1,7 @@
-import { Controller, Get, Query, UseGuards, Headers, Post, Body } from '@nestjs/common';
+import { Controller, Get, Query, Headers, Post, Body } from '@nestjs/common';
 import { InteligenciaService } from '../services/inteligencia.service';
 import { FiltrosInteligenciaDto } from '../models/dto/filtros.request.dto';
 import { MapaCalorResponseDto } from '../models/dto/mapa-calor.response.dto';
-import { ROLES, ClaveInternaGuard } from '@core/shared';
 
 @Controller('api/v1/inteligencia')
 export class MetricasController {

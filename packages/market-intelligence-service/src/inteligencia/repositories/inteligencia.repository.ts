@@ -5,7 +5,7 @@ import { PgService } from '@core/shared';
 export class InteligenciaRepository {
   constructor(private readonly pg: PgService) {}
 
-  async guardarHechosVenta(hechos: any[], clienteId?: string): Promise<void> {
+  async guardarHechosVenta(hechos: any[], _clienteId?: string): Promise<void> {
     if (hechos.length === 0) return;
     
     // Simplificado para el MVP.
@@ -48,7 +48,6 @@ export class InteligenciaRepository {
     if (filtros.centro_lat != null && filtros.centro_lng != null && filtros.radio_metros != null) {
       query += ` AND ST_DWithin(geom, ST_SetSRID(ST_MakePoint($${paramCount}, $${paramCount+1}), 4326)::geography, $${paramCount+2})`;
       params.push(filtros.centro_lng, filtros.centro_lat, filtros.radio_metros);
-      paramCount += 3;
     }
 
     return this.pg.query<{ lat: number; lng: number; peso: number; tipo: string }>(query, params);
@@ -219,7 +218,6 @@ export class InteligenciaRepository {
     if (filtros.vendedor_id) {
       query += ` AND vendedor_id = $${paramCount}`;
       params.push(filtros.vendedor_id);
-      paramCount++;
     }
 
     query += ` ORDER BY fecha ASC`;

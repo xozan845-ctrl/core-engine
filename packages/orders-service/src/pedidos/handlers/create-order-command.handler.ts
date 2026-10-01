@@ -189,7 +189,6 @@ export class CreateOrderCommandHandler {
 
   /** Replay: reconstruye la proyeccion desde la historia de eventos. */
   async reproyectar(orderId: string): Promise<OrderView | null> {
-    const historia = await this.eventStore.historiaDe(orderId);
     // Las proyecciones ya están actualizadas por trigger; solo devolvemos la vista actual
     return this.views.encontrar(orderId);
   }

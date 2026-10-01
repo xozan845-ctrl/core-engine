@@ -1,5 +1,5 @@
 import { Body, Controller, Get, Param, Patch, Post, Query } from '@nestjs/common';
-import { IsInt, IsOptional, IsString, Max, Min } from 'class-validator';
+import { IsInt, IsString, Max, Min } from 'class-validator';
 import { TiendasService } from '../tiendas/tiendas.service';
 import { OfertasService, Oferta } from './ofertas.service';
 import {

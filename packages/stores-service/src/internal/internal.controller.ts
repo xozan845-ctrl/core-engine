@@ -1,5 +1,5 @@
 import { Controller, Get, Query, UseGuards } from '@nestjs/common';
-import { ClaveInternaGuard, NotFoundError } from '@core/shared';
+import { ClaveInternaGuard } from '@core/shared';
 import { OfertasService } from '../ofertas/ofertas.service';
 
 /**

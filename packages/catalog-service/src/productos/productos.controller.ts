@@ -14,7 +14,7 @@ import { Pagina, Roles, UsuarioContexto, UsuarioActual, ROLES, NotFoundError } f
 
 export class CrearProductoRequestDto {
   @IsString()
-  @Matches(/^[A-Za-z0-9\-]{2,32}$/, { message: 'SKU invalido (letras, numeros y guiones, 2-32)' })
+  @Matches(/^[A-Za-z0-9-]{2,32}$/, { message: 'SKU invalido (letras, numeros y guiones, 2-32)' })
   sku: string;
 
   @IsString()
@@ -116,7 +116,7 @@ export class ProductosController {
   @Roles(ROLES.ADMIN)
   async crear(
     @Body() dto: CrearProductoRequestDto,
-    @UsuarioActual() usuario: UsuarioContexto,
+    @UsuarioActual() _usuario: UsuarioContexto,
   ): Promise<Producto> {
     return this.productos.crear({ ...dto, precio_base: dto.precio_base });
   }

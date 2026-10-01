@@ -1,5 +1,5 @@
 import { Controller, Get, Query } from '@nestjs/common';
-import { Roles, ROLES, UsuarioActual, UsuarioContexto, NotFoundError } from '@core/shared';
+import { Roles, ROLES, UsuarioActual, UsuarioContexto } from '@core/shared';
 import { TributacionService } from '../tributacion/tributacion.service';
 import { KpisService } from './kpis.service';
 

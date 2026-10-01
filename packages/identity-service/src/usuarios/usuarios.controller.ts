@@ -1,5 +1,5 @@
-import { Controller, Get, Param, UseGuards } from '@nestjs/common';
-import { ClaveInternaGuard, NotFoundError, UsuarioActual, UsuarioContexto } from '@core/shared';
+import { Controller, Get, Param } from '@nestjs/common';
+import { NotFoundError, UsuarioActual, UsuarioContexto } from '@core/shared';
 import { UsuariosService } from './usuarios.service';
 
 /**

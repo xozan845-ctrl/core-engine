@@ -2,7 +2,6 @@ import { Controller, Get, Param, Post, Query, UseGuards } from '@nestjs/common';
 import {
   ClaveInternaGuard,
   NotFoundError,
-  EVENTOS,
 } from '@core/shared';
 import { OrderViewRepository, OrderView } from './queries/order-view.repository';
 import { CreateOrderCommandHandler } from './handlers/create-order-command.handler';

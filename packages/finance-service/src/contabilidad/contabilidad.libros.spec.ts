@@ -32,10 +32,10 @@ describe('Contabilidad y facturacion (libros DGI e IVA)', () => {
   });
 
   describe('asiento de IVA al emitir comprobante (Ley 822)', () => {
-    const crearFacturacion = (emitir: boolean, contabilidad: ContabilidadService) => {
+    const crearFacturacion = (emitir: boolean, _contabilidad: ContabilidadService) => {
       const prev = process.env.EMITIR_COMPROBANTES_FISCALES;
       process.env.EMITIR_COMPROBANTES_FISCALES = String(emitir);
-      // eslint-disable-next-line @typescript-eslint/no-var-requires
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
       const { FacturacionService } = require('../facturacion/facturacion.service') as typeof import('../facturacion/facturacion.service');
       const pg = {
         query: jest.fn().mockResolvedValue([]),

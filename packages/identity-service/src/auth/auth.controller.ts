@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Headers, Param, Post, HttpCode } from '@nestjs/common';
+import { Body, Controller, Get, Headers, Post, HttpCode } from '@nestjs/common';
 import { IsEmail, IsIn, IsOptional, IsString, Length, MinLength } from 'class-validator';
 import {
   AuthService,
@@ -17,7 +17,6 @@ import {
   UsuarioActual,
   usuarioDesdeHeaders,
   DomainError,
-  NotFoundError,
   UnauthorizedError,
   ForbiddenError,
 } from '@core/shared';
