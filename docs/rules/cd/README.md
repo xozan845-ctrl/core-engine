@@ -13,7 +13,7 @@ entornos y Dockploy.
 | Archivo | Contenido | IDs |
 |---|---|---|
 | `01-despliegue.md` | Release por tag, procedencia y CI verde, imágenes por digest, migraciones solo hacia adelante, aprobación de producción, secretos en la imagen, dry-run | `R-CD` (1–8) |
-| `02-entornos.md` | Tres entornos en Dockploy (apps por rama), promoción y gate de producción, smoke post-despliegue, rollback | `R-CD` (9–13) |
+| `02-entornos.md` | Etapas (desarrollo local + stage + producción), un proyecto Dockploy con environments, promoción y gate de producción, smoke post-despliegue, rollback | `R-CD` (9–13) |
 
 > El modelo de ramas que estos despliegues consumen vive en
 > [`../git/00-entornos.md`](../git/00-entornos.md) (`R-GE-*`): aquí se despliega
@@ -28,11 +28,11 @@ entornos y Dockploy.
 
 ## Guía rápida del despliegue
 
-| Entorno | Rama (R-GE-1) | Deploy | Cómo llega |
+| Etapa | Rama (R-GE-1) | Dónde corre | Cómo llega |
 |---|---|---|---|
-| Desarrollo | `develop` | Dockploy app dev (auto) | PR de feature (R-GE-2) |
-| Stage | `staging` | Dockploy app stage (auto) | PR `develop → staging` |
-| Producción | `main` | Dockploy app prod (auto) | PR `staging → main` (R-GE-4) |
+| Desarrollo | `develop` | **local** (`docker compose up`) | PR de feature (R-GE-2); sin despliegue |
+| Stage | `staging` | Dockploy, environment `staging` | PR `develop → staging` |
+| Producción | `main` | Dockploy, environment `produccion` | PR `staging → main` (R-GE-4) |
 
 ## Pendientes y estado
 
@@ -41,10 +41,10 @@ entornos y Dockploy.
   `main` (Dockploy). Los `R-CD-1..8` son el contrato exigible el día que exista
   un workflow de release (R-CI-4); los `R-CD-9..13` describen el despliegue que
   **sí** existe hoy.
-- **Dockploy se configura fuera de este repo**: las apps por entorno (R-CD-9) y
-  la política de producción (R-CD-10/11) se documentan aquí; la configuración
-  concreta del VPS (nombres de app, BD por entorno) no se versiona y queda
-  registrada en la Etapa D3 del modelo.
+- **Dockploy se configura fuera de este repo**: un solo proyecto con los
+  environments `staging`/`produccion` (R-CD-9) y la política de producción
+  (R-CD-10/11) se documentan aquí; la configuración concreta del VPS queda
+  registrada en `docs/dockploy-setup.md` (Etapa D3).
 - **Traslado**: con la creación de esta área, `ci/` queda solo con integración
   (`R-CI`/`R-EN`); ver [`../ci/README.md`](../ci/README.md).
 
