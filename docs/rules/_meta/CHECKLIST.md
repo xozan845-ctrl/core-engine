@@ -129,5 +129,6 @@ Matriz completa en [`06-estandares-cobertura.md`](../test/06-estandares-cobertur
 - [ ] **R-PR-8** — Tras el merge, run de `ci.yml` en `completed success` **sobre el SHA nuevo de la rama de entorno** (`develop`/`staging`/`main`).
 - [ ] **R-PR-9** — Rama eliminada en local y `origin` al cerrar el PR.
 - [ ] **R-GE-2/3** — Si es PR de **promoción** (`develop → staging` o `staging → main`): evidencia del salto en el cuerpo (tests + smoke del entorno origen, R-CD-12) y verificación del run en la rama destino tras el merge (R-CD-11).
+- [ ] **R-GE-7** — Si el PR de promoción reporta **conflicto por historial duplicado**: se cierra con la razón y se recrea desde la rama destino con el delta (cherry-pick), verificando **árbol idéntico** (`git diff --quiet <origen>` = vacío).
 
 > Estado actual de los gates: ver [`AUDIT.md`](./AUDIT.md) (snapshot).
