@@ -48,7 +48,7 @@ rules/
 | `test/` | ✅ **activa** ⚠️ snapshot heredado | [`test/README.md`](./test/README.md) | Reglas de testing: unit, integración, E2E, contrato, robustez, cobertura, QA gates (IDs `R-U/R-I/R-E/R-C/…/R-QA`) |
 | `git/` | ✅ **activa** (sin auditar) | [`git/README.md`](./git/README.md) | Flujo git profesional: `git add`, `git commit -m`, `git push`, `gh pr` y el modelo de tres entornos (`develop` → `staging` → `main`, hotfix) (IDs `R-GA/R-GC/R-GP/R-PR/R-GE`) |
 | `ci/` | ✅ **activa** (sin auditar) | [`ci/README.md`](./ci/README.md) | CI: gatillos push/PR (incluye `staging`), entorno, evidencia (IDs `R-CI/R-EN`) |
-| `cd/` | ✅ **activa** (nueva 2026-10-01) | [`cd/README.md`](./cd/README.md) | Deploy continuo en Dockploy: tres entornos por rama, artefactos de release, gate de producción, smoke y rollback (IDs `R-CD` 1–13, venidas de `ci/03`) |
+| `cd/` | ✅ **activa** (2026-10-01) | [`cd/README.md`](./cd/README.md) | Deploy continuo en Dockploy: un proyecto con environments `staging`/`produccion` (desarrollo local, R-CD-9), artefactos de release, gate de producción, smoke y rollback (IDs `R-CD` 1–13, venidas de `ci/03`) |
 | `_meta/` | ⚠️ **no normativo** | [`_meta/README.md`](./_meta/README.md) | Derivados: checklist, snapshots de auditoría, histórico |
 
 ## Convenciones globales (aplican a todas las áreas)
