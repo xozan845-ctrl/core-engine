@@ -10,7 +10,7 @@ son la documentación viva de por qué existe cada línea.
 
 | Archivo | Contenido | Sufijo |
 |---|---|---|
-| `00-entornos.md` | Modelo de ramas: tres entornos (desarrollo/stage/producción), promoción, hotfix y backport | `R-GE` (1–6) |
+| `00-entornos.md` | Modelo de ramas: etapas (desarrollo local, stage, producción), promoción, hotfix, backport y promoción sin historiales duplicados | `R-GE` (1–7) |
 | `01-stage.md` | `git add`: stage explícito, atómico, sin artefactos ni secretos | `R-GA` (1–5) |
 | `02-commits.md` | `git commit`: Conventional Commits, unidad temática, verificación pre-commit | `R-GC` (1–7) |
 | `03-push.md` | `git push`: qué subir, cuándo, force-push, divergencia y verificación post-push | `R-GP` (1–7) |
@@ -24,7 +24,7 @@ son la documentación viva de por qué existe cada línea.
 
 | Prefijo | Rango | Archivo | Ámbito |
 |---|---|---|---|
-| `R-GE-*` | 1–6 | `00-entornos.md` | Entornos y promoción de ramas (`develop` → `staging` → `main`), hotfix |
+| `R-GE-*` | 1–7 | `00-entornos.md` | Etapas y promoción de ramas (`develop` → `staging` → `main`), hotfix, backport |
 | `R-GA-*` | 1–5 | `01-stage.md` | Stage (`git add`) |
 | `R-GC-*` | 1–7 | `02-commits.md` | Commit (`git commit -m`) |
 | `R-GP-*` | 1–7 | `03-push.md` | Push (`git push`) |
