@@ -122,6 +122,34 @@ Este archivo registra decisiones técnicas deliberadas que se apartan del texto 
 
 ---
 
+## ADR-12: Entrega continua con tres entornos (desarrollo → stage → producción)
+
+- **Fecha**: 2026-10-01
+- **Estado**: Aceptado
+- **Contexto**: el VPS (Dockploy) redispliega **producción en cada push a `main`**,
+  de modo que cualquier commit que pase los tests aterriza en producción sin
+  pasar por un entorno previo. `main` no tenía branch protection (HTTP 404) y
+  las reglas de despliegue (`R-CD` en `ci/03-deploy.md`) asumían "no hay a dónde
+  desplegar" — ambas cosas falsas frente a la realidad.
+- **Decisión**: modelo de **tres entornos por rama protegida** — `develop`
+  (desarrollo) → `staging` (stage) → `main` (producción), con promoción en un
+  solo sentido (PRs `develop → staging` y `staging → main`). A `main` solo llega
+  un merge de promoción con CI verde y smoke (R-GE-2/3, R-CD-11/12); el
+  auto-deploy de Dockploy en `main` se mantiene porque la promoción es la
+  barrera. Cambios normativos: nueva área `docs/rules/cd/` (`R-CD-1..8`
+  trasladadas de `ci/03` sin renumerar + `R-CD-9..13` nuevas de Dockploy),
+  `docs/rules/git/00-entornos.md` (`R-GE-1..6`), enmienda `R-CI-1` con el
+  gatillo de `staging` en `ci.yml`, y actualización de `R-PR-1`/`R-PR-8`/`R-GP-3`.
+- **Consecuencias**: se crearán las ramas `develop` y `staging` con branch
+  protection (una approval + checks + historial lineal); los hotfixes entran por
+  `hotfix/*` a `main` con backport obligatorio (R-GE-5/6); queda pendiente la
+  configuración de apps por entorno en Dockploy (Etapa D3).
+- **Mitigación / pendiente**: si en el futuro se desea un pipeline de despliegue
+  propio, R-CD-6/11 exigen pasar por `environment` con revisores; el gate de
+  producción hoy es la promoción + verificaciones (R-CD-10/11).
+
+---
+
 ## Resumen de cumplimiento post-corrección
 
 | Ítem del documento          | Estado  | Nota |
