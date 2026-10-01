@@ -3,6 +3,11 @@
 > Log **cronológico append-only** de todas las auditorías contra `rules/test/`
 > (baseline + Fases A/B/C). El estado actual consolidado vive en [`AUDIT.md`](./AUDIT.md);
 > este archivo nunca se reescribe, solo se le agrega una nueva entrada por auditoría (R-COV-3).
+>
+> ⚠️ **Procedencia:** las entradas fechadas entre 2026-09-25 y 2026-09-30 pertenecen
+> al **proyecto origen** (ZKTeco Attendance) y se conservan sin modificar como
+> procedencia del documento. A partir de **2026-10-01** el log registra las
+> auditorías de **Core Engine**.
 
 ---
 
@@ -636,3 +641,87 @@ checks y con merge commit. Justo lo contrario de lo que se hizo.
   cambio (`npm run build` falla idéntico sin tocar nada) y que la compilación es
   correcta vía `tsc -p tsconfig.build.json --outDir` a un directorio temporal.
   El build sí pasa en CI, que arranca de limpio.
+
+---
+
+# AUDIT (histórico) — Primera auditoría de Core Engine: `_meta/` reescrito a la realidad (R-COV-3)
+
+- **Fecha:** 2026-10-01
+- **Disparador:** Etapa 3 del plan de deudas. La deuda estaba declarada en
+  `_meta/README.md`: *"`CHECKLIST.md`, `AUDIT.md` y `AUDIT-HISTORY.md` aún
+  reflejan el proyecto origen (comandos `pnpm`, `backend/`, `prisma/`, jobs de
+  frontend). Se reescriben completos en la primera auditoría de Core Engine
+  (R-COV-3)."*
+- **Comando:** medición completa por workspace (`npm test` con `--coverage`
+  por workspace, ×10), `npm run lint`, `npm run build`,
+  `npm audit --audit-level=high`, `gh pr list --state merged`,
+  `git rev-list --merges --count origin/main`, inspección de `ci.yml` y de
+  `docs/rules/**`.
+- **Estado global:** 🟡 **CUMPLE PARCIAL** — G-1/G-3/G-7 efectivos y verdes en
+  CI; G-2 N/A; G-4/G-5/G-6/G-8 pendientes; deudas: capas sin suites, robustez
+  (PB/MT/RB) sin implementar, cobertura < objetivo, controllers sin specs.
+
+## Métricas medidas (Core Engine, 2026-10-01)
+
+| Métrica | Valor |
+|---|---|
+| Unit tests | **175 / 175** ✅ en **23 suites** / 10 workspaces (shared 8, api-gateway 6, orders 7, commissions 5, finance 44, market-intelligence 7, catalog 31, identity 24, stores 24, logistics 19) |
+| Cobertura (líneas/ramas por workspace) | shared 9.48/5.18 · api-gateway 22.79/8.08 · orders 19.94/13.84 · commissions 12.24/5.08 · finance 48.25/41.82 · market-intelligence 15.42/2.20 · catalog 66.22/76.47 · identity 44.77/52.77 · stores 57.74/72.09 · logistics 81.11/92.59 |
+| Gates `coverageThreshold` | **10/10** (floor medido, R-COV-1) |
+| Objetivo final 80/70 | **1/10** workspaces (`logistics`) |
+| Controllers con spec | **0 de 25** (R-U-10/11) |
+| `*.service.ts`/`*.consumer.ts` sin spec | **21 de 39** (R-U-18, R-COV-2) |
+| Carpetas `domain/` | **0** → R-U-17/R-COV-2 N/A por estructura (IDs reservados intactos) |
+| Integración / Contrato / E2E | **0 / 0 / 0** (deudas G-4, G-5, G-6) |
+| Property-based / Mutación / Fuzz | sin `fast-check` / sin Stryker / sin fuzz (R-PB, R-MT, R-RB) |
+| Lint | 0 errores / **47** warnings `no-explicit-any` |
+| Audit `high` | exit 0 (R-QA-6) |
+| Historial | **5 PRs** (#1–#5) `--rebase` · **0** merge commits de 15 |
+
+## Qué cambió en esta auditoría
+
+1. **`AUDIT.md` reescrito por completo** con lo medido hoy (snapshot de Core
+   Engine; el anterior describía el proyecto origen: 758 tests, `backend/`,
+   `pnpm`, Stryker, Playwright, karma — nada de eso existe aquí).
+2. **`CHECKLIST.md` sin referencias heredadas**: el comando `pnpm --filter
+   zkteco-attendance-backend run swagger:export` → deuda G-8 (no hay export en
+   este repo); `prisma/seed.ts` → fixtures de seed genéricos; `karma.conf.js`
+   → G-2/R-COV-5 marcados N/A; `R-EN-*` reescritos con las reglas reales de
+   `ci/02` (`Node 20` + `npm ci --prefer-offline`, BD efímera exigible cuando
+   exista suite que la necesite); `R-CD-*` marcados exigibles cuando exista
+   `release.yml` (hoy solo hay `ci.yml`).
+3. **`AUDIT-FRONTEND.md` borrado** — así lo preveía su propia fila en
+   `_meta/README.md` ("candidato a borrar cuando se re-audite por primera vez
+   este repo") y la entrada del árbol de `docs/rules/README.md`.
+4. **`_meta/README.md`**: deuda declarada en su blockquote, cerrada.
+5. **`AUDIT-HISTORY.md`**: nota de procedencia en la cabecera (las entradas
+   2026-09-25..30 son del proyecto origen) y esta entrada.
+6. **Nuevas deudas registradas en `AUDIT.md`** que antes no estaban en ningún
+   lado de este repo: `R-CI-2` (ci.yml sin `concurrency`), `R-FL-3` (ningún
+   setup fija `TZ`), contadores globales de controllers/services sin spec, y
+   las capas `G-4/G-5/G-6/G-8` + robustez (R-PB/R-MT/R-RB) como deudas
+   explícitas.
+
+## Contexto de las Etapas 1–2 (cerradas antes de esta auditoría)
+
+- **Etapa 1:** `ci/01..03`, `test/06` y `test/README` reescritos contra el
+  `ci.yml` real (R-CI-1 enmendado a 4 jobs); gates G-1..G-8 con estado.
+- **Etapa 2a:** ESLint real (`eslint.config.mjs`, alcance
+  `packages/*/src/**/*.ts`, 0 errores) + job `lint` en CI (G-7 ampliado).
+- **Etapa 2b:** suites unitarias de los 4 servicios que no tenían (98 tests) y
+  **G-3 hecho efectivo**: `npm test -- --coverage` no transmitía el flag a
+  `jest` (0 tablas de cobertura en cualquier run) y los 6 thresholds legacy
+  80/80 nunca se habían cumplido (12–48 % medidos). Cerrado con cobertura por
+  workspace en el script raíz, 10 tablas en CI y recalibración única al
+  baseline medido (enmienda en `test/06`).
+
+## Evidencia
+
+- **Local (2026-10-01):** `npm test` exit 0 (175/23, 10 tablas de cobertura, 0
+  `threshold not met`) · `npm run lint` exit 0 (0/47) · `npm run build` exit 0
+  (0 TS) · `npm audit --audit-level=high` exit 0.
+- **CI:** run `36886812250` (cabeza del PR #5) = 4/4 jobs success con 10
+  tablas de cobertura en el log del job `test`; run `36887224095` sobre
+  `main` = `f7282ca` → `completed success`.
+- **Reglas:** el snapshot completo queda en [`AUDIT.md`](./AUDIT.md); este
+  log solo registra el hecho de la auditoría (R-COV-3).

@@ -9,12 +9,14 @@ y se actualiza cuando éstas cambian.
 |---|---|---|
 | `CHECKLIST.md` | Herramienta de revisión de PR derivada de las reglas (remite a IDs) | Cuando cambian reglas que afecten revisión |
 | `AUDIT.md` | **Snapshot** del estado actual de cumplimiento — se reescribe completo | En cada auditoría (antes de cada release, R-COV-3) |
-| `AUDIT-HISTORY.md` | Log **append-only** del histórico de auditorías (baseline + fases) | Nunca se reescribe: solo se agrega la entrada nueva |
-| `AUDIT-FRONTEND.md` | ⚠️ **Heredado del proyecto origen** (familia `R-ES`): aquí no hay área `frontend/`, así que este snapshot no aplica. Candidato a borrar cuando se re-audite por primera vez este repo. | — |
+| `AUDIT-HISTORY.md` | Log **append-only** del histórico de auditorías (con procedencia del proyecto origen) | Nunca se reescribe: solo se agrega la entrada nueva |
 
-> **Deuda:** `CHECKLIST.md`, `AUDIT.md` y `AUDIT-HISTORY.md` aún reflejan el
-> proyecto origen (comandos `pnpm`, `backend/`, `prisma/`, jobs de frontend).
-> Se reescriben completos en la primera auditoría de Core Engine (R-COV-3).
+> **Historia (cerrada 2026-10-01):** la deuda que este README declaraba —
+> *"`CHECKLIST.md`, `AUDIT.md` y `AUDIT-HISTORY.md` aún reflejan el proyecto
+> origen… se reescriben completos en la primera auditoría de Core Engine"* — se
+> cerró en esa primera auditoría (R-COV-3): `AUDIT.md` y `CHECKLIST.md`
+> reescritos a este repo, y `AUDIT-FRONTEND.md` borrado tal como preveía su
+> fila de la tabla.
 
 ## Reglas de estructura
 
