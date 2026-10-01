@@ -18,8 +18,9 @@ rules/
 ├── observability/      ✅ activa (sin auditar) — logs/trazas y métricas/alertas (R-OB/R-TM)
 │
 ├── test/               ✅ activa — reglas de testing (R-U/R-I/R-E/R-C/…/R-QA)
-├── git/                ✅ activa (sin auditar) — flujo git (R-GA/R-GC/R-GP/R-PR)
-├── ci/                 ✅ activa (sin auditar) — CI y despliegue (R-CI/R-EN/R-CD)
+├── git/                ✅ activa (sin auditar) — flujo git y entornos (R-GA/R-GC/R-GP/R-PR/R-GE)
+├── ci/                 ✅ activa (sin auditar) — integración (R-CI/R-EN)
+├── cd/                 ✅ activa (nueva) — despliegue continuo en Dockploy (R-CD)
 │
 └── _meta/              ⚠️ documentos DERIVADOS — nunca normativos
     ├── CHECKLIST.md        herramienta de revisión de PR
@@ -30,9 +31,9 @@ rules/
 **Regla de estructura (la más importante de esta carpeta):**
 
 > Un **área** (`architecture/`, `data/`, `db/`, `gateway/`, `microservice/`,
-> `observability/`, `test/`, `git/`, `ci/`) solo contiene `README.md` + archivos de
-> reglas `NN-tema.md`. Todo documento derivado (audit, checklist, log, estado) vive
-> en `_meta/` y jamás dentro de un área.
+> `observability/`, `test/`, `git/`, `ci/`, `cd/`) solo contiene `README.md` +
+> archivos de reglas `NN-tema.md`. Todo documento derivado (audit, checklist,
+> log, estado) vive en `_meta/` y jamás dentro de un área.
 
 ## Áreas
 
@@ -45,8 +46,9 @@ rules/
 | `db/` | ✅ **activa** (sin auditar) | [`db/README.md`](./db/README.md) | Postgres: schema-per-service, RLS, transacciones, índices, soft delete, migraciones; Supabase: paridad, Auth, secretos (IDs `R-DB/R-SB`) |
 | `observability/` | ✅ **activa** (sin auditar) | [`observability/README.md`](./observability/README.md) | Logs JSON + `x-request-id`; métricas Prometheus, labels RED, dashboards as code, alertas (IDs `R-OB/R-TM`) |
 | `test/` | ✅ **activa** ⚠️ snapshot heredado | [`test/README.md`](./test/README.md) | Reglas de testing: unit, integración, E2E, contrato, robustez, cobertura, QA gates (IDs `R-U/R-I/R-E/R-C/…/R-QA`) |
-| `git/` | ✅ **activa** (sin auditar) | [`git/README.md`](./git/README.md) | Flujo git profesional: `git add`, `git commit -m`, `git push`, `gh pr` (IDs `R-GA/R-GC/R-GP/R-PR`) |
-| `ci/` | ✅ **activa** (sin auditar) | [`ci/README.md`](./ci/README.md) | CI: gatillos push/PR, entorno, evidencia y despliegue (IDs `R-CI/R-EN/R-CD`) |
+| `git/` | ✅ **activa** (sin auditar) | [`git/README.md`](./git/README.md) | Flujo git profesional: `git add`, `git commit -m`, `git push`, `gh pr` y el modelo de tres entornos (`develop` → `staging` → `main`, hotfix) (IDs `R-GA/R-GC/R-GP/R-PR/R-GE`) |
+| `ci/` | ✅ **activa** (sin auditar) | [`ci/README.md`](./ci/README.md) | CI: gatillos push/PR (incluye `staging`), entorno, evidencia (IDs `R-CI/R-EN`) |
+| `cd/` | ✅ **activa** (nueva 2026-10-01) | [`cd/README.md`](./cd/README.md) | Deploy continuo en Dockploy: tres entornos por rama, artefactos de release, gate de producción, smoke y rollback (IDs `R-CD` 1–13, venidas de `ci/03`) |
 | `_meta/` | ⚠️ **no normativo** | [`_meta/README.md`](./_meta/README.md) | Derivados: checklist, snapshots de auditoría, histórico |
 
 ## Convenciones globales (aplican a todas las áreas)
@@ -78,3 +80,9 @@ El área `test/` es el ejemplo canónico al que apuntan las demás.
   realidad de este repo). Queda como deuda lo que sigue sin implementar (capas
   sin suites, robustez) — ver [`test/README.md`](./test/README.md) y
   [`_meta/AUDIT.md`](./_meta/AUDIT.md).
+- **Modelo CD de tres entornos (2026-10-01):** `R-CD-*` se trasladaron de
+  `ci/03-deploy.md` a la nueva área [`cd/`](./cd/README.md) (mismas IDs, nunca
+  se renumeran) y se añadieron `R-CD-9..13` (entornos Dockploy, gate, smoke,
+  rollback) + `R-GE-*` en [`git/00-entornos.md`](./git/00-entornos.md); `R-CI-1`
+  se enmendó para incluir `staging` en los gatillos (`ci.yml`). La decisión
+  queda registrada en [`../../decisiones.md`](../../decisiones.md) como ADR-12.

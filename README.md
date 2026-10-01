@@ -92,6 +92,23 @@ seeds del plan contable NIC e indices). En **Supabase** (staging/prod) aplique a
 | prometheus | 9090 | — | `infra/prometheus/` |
 | grafana | 3000 | — | `infra/grafana/` |
 
+## Entornos y entrega (desarrollo → stage → producción)
+
+Tres entornos por rama protegida, desplegados por **Dockploy** en el VPS:
+
+| Entorno | Rama | App Dockploy |
+|---|---|---|
+| Desarrollo | `develop` | `core-engine-desarrollo` |
+| Stage | `staging` | `core-engine-stage` |
+| Producción | `main` | `core-engine-produccion` |
+
+Flujo: `feature/xxx` → PR → `develop`; luego PR `develop → staging`; y solo
+cuando stage está verificado (CI verde + smoke) PR `staging → main`. **A `main`
+solo se llega por promoción**: es la frontera de producción y Dockploy redepliega
+sus cambios automáticamente — el modelo de ramas es la garantía de que no se
+rompe producción. Modelo completo en `docs/rules/git/00-entornos.md` (R-GE) y
+despliegue en `docs/rules/cd/` (R-CD).
+
 ## API (resumen de Tabla 21, todas por el gateway)
 
 - `POST /api/v1/auth/registro|login|refresh`, `GET /api/v1/auth/me`

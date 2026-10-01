@@ -1,6 +1,7 @@
 # CHECKLIST — Revisión de PR
 
-> Resumen ejecutable de [`rules/test/`](../test/README.md) y [`rules/git/`](../git/README.md).
+> Resumen ejecutable de [`rules/test/`](../test/README.md), [`rules/git/`](../git/README.md) y
+> [`rules/cd/`](../cd/README.md).
 > Copiar en la descripción del PR y marcar. Cada ítem remite a su regla (detalle en
 > el archivo indicado por el Mapa de IDs del `README.md`). Las áreas de reglas
 > doradas (`../data/`, `../db/`, `../gateway/`, `../architecture/`,
@@ -102,8 +103,8 @@ Matriz completa en [`06-estandares-cobertura.md`](../test/06-estandares-cobertur
 - [ ] **R-GC-3/4** — Un commit = una unidad temática; cita el ID de regla si aplica (`(R-ES-6)`).
 - [ ] **R-GC-5** — Verificación del ámbito en verde antes del commit (G-7).
 - [ ] **R-GC-7** — Sin `--amend`/rebase de commits ya publicados en `origin`.
-- [ ] **R-GP-1/7** — `git log origin/main..HEAD` leído: solo commits propios y los previstos.
-- [ ] **R-GP-3/4/5** — Sin force a ramas compartidas, sin WIP subido, `pull --rebase` si diverge.
+- [ ] **R-GP-1/7** — `git log origin/develop..HEAD` (y `origin/main..HEAD`) leído: solo commits propios y los previstos.
+- [ ] **R-GP-3/4/5** — Sin force a ramas de entorno ni compartidas (R-GE-1), sin WIP subido, `pull --rebase` si diverge.
 - [ ] **R-GP-2/6 / R-CI-6** — Push con verificación verde y CI en verde tras el push, comprobado con `gh run list` / `gh run view` sobre el run del commit (no asumir el verde de un run anterior).
 
 ## 10. CI/CD — PRs que tocan `.github/` o definen flujos ([`rules/ci/`](../ci/README.md))
@@ -112,19 +113,21 @@ Matriz completa en [`06-estandares-cobertura.md`](../test/06-estandares-cobertur
 - [ ] **R-CI-4/5** — Pipeline único justificado; `.github/**` revisado como código (stage con rutas, sin secretos, comandos verificables en local).
 - [ ] **R-EN-1/2** — Node `"20"` fijo con cache de npm y `npm ci --prefer-offline` intactos; BD de job efímera exigible cuando exista suite con BD (hoy ningún job toca BD).
 - [ ] **R-EN-3/4** — Artifact de evidencia en **todos** los runs (`if: always()`); secretos únicamente en GitHub Secrets y nunca en logs.
-- [ ] **R-CD-2** — N/A hoy: no existe `release.yml` (los `R-CD-*` son exigibles cuando exista, `ci/03`). Cuando exista: commit en `main` **y** run de `ci.yml` en verde en ese mismo SHA antes de publicar.
+- [ ] **R-CD-2** — Contrato de release por tag ([`rules/cd/01`](../cd/01-despliegue.md)): hoy no existe `release.yml` (R-CD-1..8 futuros); cuando exista: commit en `main` **y** run de `ci.yml` en verde en ese mismo SHA antes de publicar.
 - [ ] **R-CD-7** — Ningún secreto como `ARG`/`ENV` de build ni en una capa de imagen; los secretos van en runtime.
+- [ ] **R-CD-9/10/11** — Entornos Dockploy: una app por rama (R-CD-9); producción solo por promoción `staging → main` (R-CD-10); gate de producción: `ci.yml` verde en el SHA promovido (R-CD-11).
 
 ## 11. PR — rama, cuerpo, checks y merge ([`rules/git/04-pr.md`](../git/04-pr.md))
 
-- [ ] **R-PR-1** — El cambio vive en una rama `tipo/ámbito-descripción` creada desde `main` al día; **nada se commiteó directo a `main`**.
+- [ ] **R-PR-1** — El cambio vive en una rama `tipo/ámbito-descripción` creada desde `develop` (o `main` en hotfix, R-GE-6); **nada se commiteó directo a una rama de entorno** (`develop`/`staging`/`main`).
 - [ ] **R-PR-2** — Un solo tema por PR: si el cuerpo dice "y además", se parte en dos (apiladas con `--base`, o en paralelo).
 - [ ] **R-PR-3** — Verificación del ámbito en verde antes de abrir; `[WIP]` en el título si se abre en rojo, y en ese caso no se mergea.
 - [ ] **R-PR-4** — Cuerpo con el checklist marcado y la tabla de verificaciones **ejecutadas** (comando + resultado), no "los tests pasan"; las capas que no aplican van justificadas.
 - [ ] **R-PR-5** — Commits con Conventional Commits e ID de regla; con más de 3 commits, el cuerpo declara qué vive en cada uno.
 - [ ] **R-PR-6** — `gh pr checks <n>` en verde **sobre el SHA de la cabeza**, no sobre un run anterior.
 - [ ] **R-PR-7** — Merge por `--rebase`; sin `--squash` ni merge commit.
-- [ ] **R-PR-8** — Tras el merge, run de `ci.yml` en `completed success` **sobre el SHA nuevo de `main`**, incluido G-6 si el PR toca un flujo de `main`.
+- [ ] **R-PR-8** — Tras el merge, run de `ci.yml` en `completed success` **sobre el SHA nuevo de la rama de entorno** (`develop`/`staging`/`main`).
 - [ ] **R-PR-9** — Rama eliminada en local y `origin` al cerrar el PR.
+- [ ] **R-GE-2/3** — Si es PR de **promoción** (`develop → staging` o `staging → main`): evidencia del salto en el cuerpo (tests + smoke del entorno origen, R-CD-12) y verificación del run en la rama destino tras el merge (R-CD-11).
 
 > Estado actual de los gates: ver [`AUDIT.md`](./AUDIT.md) (snapshot).
