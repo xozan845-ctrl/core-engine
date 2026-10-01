@@ -725,3 +725,69 @@ checks y con merge commit. Justo lo contrario de lo que se hizo.
   `main` = `f7282ca` → `completed success`.
 - **Reglas:** el snapshot completo queda en [`AUDIT.md`](./AUDIT.md); este
   log solo registra el hecho de la auditoría (R-COV-3).
+
+---
+
+# AUDIT (histórico) — Segunda auditoría de Core Engine: re-auditoría del área `test/` (R-COV-3)
+
+- **Fecha:** 2026-10-01
+- **Disparador:** solicitud explícita de auditar el proyecto **en las reglas de
+  testing** (R-COV-3). Primera re-auditoría completa desde la 1ª (Etapa 3):
+  entre ambas medió el plan de deudas Etapas 4–5 y el modelo CD (D1–D4).
+- **Comando:** `npm test` (10 workspaces con `--coverage`), `npm run lint`,
+  `npm run build`, `npm audit --audit-level=high / moderate`, conteo manual de
+  specs por capa, `gh pr list --state merged`, `git rev-list --merges
+  --count origin/main`, `gh run list --branch {main,staging,develop}`,
+  inspección de `ci.yml` y de `docs/rules/test/**`.
+- **Estado global:** 🟡 **CUMPLE PARCIAL** (sin cambios frente a la 1ª) — gates
+  G-1/G-3/G-7 ✅, G-2 N/A, G-4/G-5/G-6/G-8 ⏸; audit de dependencias a 0 en
+  high **y moderate** (novedad de la Etapa 4).
+
+## Métricas medidas (Core Engine, 2026-10-01)
+
+| Métrica | Valor |
+|---|---|
+| Unit tests | **175 / 175** ✅ en **23 suites** / 10 workspaces (shared 8, api-gateway 6, orders 7, commissions 5, finance 44, market-intelligence 7, catalog 31, identity 24, stores 24, logistics 19) — **idéntico a la 1ª auditoría** |
+| Cobertura (líneas/ramas) | idéntica al baseline: shared 9.48/5.18 · api-gateway 22.79/8.08 · orders 19.94/13.84 · commissions 12.24/5.08 · finance 48.25/41.82 · market-intelligence 15.42/2.20 · catalog 66.22/76.47 · identity 44.77/52.77 · stores 57.74/72.09 · logistics 81.11/92.59 |
+| Gates `coverageThreshold` | **10/10** (R-COV-1) · objetivo final 80/70: **1/10** (`logistics`) |
+| Controllers con spec | **0 de 25** (R-U-10/11) |
+| `*.service.ts`/`*.consumer.ts` sin spec | **21 de 39** (R-U-18, R-COV-2) |
+| Código puro de `shared` sin spec | **6 de 7** (solo `money.spec.ts`, R-U-17 tras Etapa 5) |
+| Guards/pipes sin spec | `service-auth`, `validation.pipe` (R-U-15) |
+| Integración / Contrato / E2E | 0 / 0 / 0 (G-4, G-5, G-6); OpenAPI sin export (G-8) |
+| Property-based / Mutación / Fuzz | sin `fast-check` / sin Stryker / sin fuzz (R-PB, R-MT, R-RB) |
+| Lint | 0 errores / 47 warnings |
+| Audit | `high` exit 0 **y `moderate` exit 0** (Etapa 4) |
+| Historial | **21 PRs** `--rebase` · **0** merge commits de 32 |
+
+## Qué cambió entre la 1ª y esta auditoría (y qué no)
+
+1. **No cambió nada del lado de testing**: desde la Etapa 5 no se tocó `src/`
+   (todo fue reglas, docs y CI/CD), así que tests, cobertura, thresholds y los
+   conteos de specs son los mismos de la 1ª auditoría.
+2. **Cambió el entorno**: `ci.yml` ganó la rama `staging` en los gatillos
+   (R-CI-1 enmendada, modelo CD D1) y las tres ramas de entorno están
+   protegidas (R-GE-1). Los gates de testing verificados en esta auditoría no
+   cambiaron de estado (3 ✅ · 1 N/A · 4 ⏸).
+3. **Audit a cero también en moderates**: la Etapa 4 (`node-cron@4` + override
+   `js-yaml@5.4.2`) dejó `npm audit --audit-level=moderate` en exit 0, además
+   del high que ya exigía R-QA-6.
+4. **Reglas adaptadas en la Etapa 5** (no deudas nuevas, sino reescritura a la
+   realidad): R-U-17 apunta al código puro de `shared`, R-E-1..7 a flujos de
+   comercio, R-MT a `identity`/`orders`/`commissions`/`finance`, R-RB a
+   outbox/saga/broker, R-PB al dinero.
+5. **Deudas sin resolver desde la 1ª auditoría** (registradas tal cual en
+   `AUDIT.md` §Deudas 1–9): capas G-4/5/6/8, robustez (PB/MT/RB), cobertura
+   objetivo, controllers/services/código puro sin spec, tooling JS fuera de
+   ESLint, R-CI-2 (concurrencia), R-FL-3 (TZ), tsbuildinfo, 47 warns.
+
+## Evidencia
+
+- **Local (2026-10-01):** `npm test` exit 0 (175/23, 10 tablas, 0
+  `threshold not met`) · `npm run lint` exit 0 (0/47) · `npm run build` exit 0
+  (0 TS) · `npm audit --audit-level=high` y `--audit-level=moderate` exit 0.
+- **CI:** run `36926380949` sobre `main` = `4c521a4` → `completed success`
+  (4/4 jobs); ramas `staging`/`develop` con runs verdes en sus últimos SHA
+  (verificado con `gh run list --branch …`).
+- **Reglas:** el snapshot completo queda en [`AUDIT.md`](./AUDIT.md); este
+  log solo registra el hecho de la auditoría (R-COV-3).
