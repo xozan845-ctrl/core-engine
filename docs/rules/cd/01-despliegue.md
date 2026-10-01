@@ -1,13 +1,13 @@
-# 03 — Release y despliegue
+# 01 — Release por tag e imágenes (`R-CD-1..8`)
 
-Aplica a: versionado por tag, construcción y promoción de imágenes, y qué
-significa desplegar una release (`.github/workflows/release.yml`).
+Reglas del pipeline de **artefactos de release** (tags, imágenes, migraciones),
+trasladadas de `ci/03-deploy.md` a esta área el 2026-10-01 sin renumerar.
 
-> **Estado: N/A hoy.** Este repo no tiene `release.yml` (solo existe
-> [`ci.yml`](../../../.github/workflows/ci.yml), jobs `security-gate` → `lint`/`test` →
-> `build`); las reglas de abajo son el contrato exigible **el día que se cree
-> ese workflow** (R-CI-4), no la descripción de algo que existe. Hasta
-> entonces no se auditan como incumplimiento.
+> **Estado hoy:** no existe `release.yml` y no se publican imágenes a ningún
+> registry: la entrega es build desde fuente (`Dockerfile` raíz) que Dockploy
+> despliega; el despliegue de entornos se rige por [`02-entornos.md`](./02-entornos.md)
+> (`R-CD-9..13`). Estas reglas son el contrato exigible el día que exista un
+> workflow de release (R-CI-4), no la descripción de algo que ya corre.
 
 | ID | Regla |
 |---|---|
@@ -16,20 +16,6 @@ significa desplegar una release (`.github/workflows/release.yml`).
 | R-CD-3 | **Construir una vez, promover por digest**: las imágenes se construyen una sola vez y de ahí en adelante se promueve por `@sha256:`, sin reconstruirlas. Un digest es inmutable y un tag de Docker es una etiqueta móvil: promover por tag rompe la reproducibilidad en cuanto algo vuelve a publicarse con el mismo nombre. Si hay que reconstruir, es otro tag y otro digest. |
 | R-CD-4 | **Trazabilidad**: cada imagen lleva etiquetas OCI con el origen (`org.opencontainers.image.revision` = SHA del commit, `source` = URL del repo) y se nombra con versión semver (`1.2.3`, `1.2`, `1`), `sha-<corto>` para identificar el commit sin depender de semver, y `latest` **solo** en releases no-prerelease. `latest` nunca apunta a una alpha ni a una rc. El digest de lo publicado queda en el resumen del run (`$GITHUB_STEP_SUMMARY`) de cada job de imagen. |
 | R-CD-5 | **Migraciones solo hacia adelante**: desplegar aplica el esquema **solo desde el DDL versionado en `infra/db/init/*.sql`** (R-DB-6), nunca una mutación ad-hoc de esquema (misma razón que R-EN-2 en CI), y el rollback de una release es **volver a desplegar el digest anterior**, nunca revertir el historial de migraciones: deshacer migraciones ya aplicadas en producción significa perder datos, y ninguna reversión de SQL es segura por defecto. Si una migración no es reversible, se documenta como tal en su commit y su plan de rollback es el digest anterior. |
-| R-CD-6 | **Producción exige aprobación, y hoy no hay a dónde desplegar**: el día que exista despliegue a una máquina, este va contra un `environment` con revisores obligatorios, de modo que ningún push llega solo a producción, y ningún runner self-hosted recibe secretos de producción. Mientras tanto —no hay host definido, ni credenciales de acceso, y el único compose del repo (`docker-compose.yml`) construye desde fuente (`build:`)— el workflow **publica imágenes y release pero no despliega en ninguna máquina**, y no debe hacerlo hasta que esa regla sea exigible. Publicar un artefacto es reversible; ejecutar migraciones sobre datos reales no lo es. |
+| R-CD-6 | **Producción exige aprobación — hoy materializada por la promoción**: hoy el deploy de producción lo dispara Dockploy con cada push a `main`; es aceptable **solo** porque a `main` solo llega el merge `staging → main` deliberado (R-GE-2/R-GE-4) con el run de `ci.yml` verde en el SHA promovido (R-PR-8/R-CD-11) y el smoke de stage superado (R-CD-12). Queda prohibido configurar un despliegue de producción que no pase por esa puerta (otra rama, un webhook suelto). Si algún día se desarrolla un pipeline de despliegue propio, este va contra un `environment` con revisores obligatorios, y ningún runner self-hosted recibe secretos de producción. Publicar un artefacto es reversible; ejecutar migraciones sobre datos reales no lo es. |
 | R-CD-7 | **Cero secretos en la imagen**: ninguna credencial entra como `ARG` ni como `ENV` de construcción, y ninguna queda en una capa. Los secretos se inyectan en tiempo de ejecución. Un secreto en una capa es un secreto público para quien pueda descargar la imagen, y las capas no se borran: se añaden. |
 | R-CD-8 | **Simulacro por defecto**: `workflow_dispatch` trae `dry_run: true` como valor por defecto, así que una ejecución manual construye las imágenes, las descarta y no publica nada. Publicar exige un tag, o bien `dry_run: false` explícito en la ejecución manual. Es la diferencia entre probar el proceso y cambiar el estado del mundo. |
-
-## Qué no cubre este archivo
-
-El despliegue a una máquina concreta **todavía no está definido**: no hay host,
-ni usuario de despliegue, ni credenciales de acceso, y el único compose del
-repo (`docker-compose.yml`) construye desde fuente (`build:`) en lugar de
-consumir imágenes de un registro.
-Decidir el modelo de distribución —registro y `image:` en el compose, frente a
-`docker compose build` en el servidor— es una decisión de arquitectura, no un
-detalle de workflow, y no se toma a la sombra de un fichero YAML.
-
-Mientras tanto R-CD-6 deja constancia de lo que sí es exigible cuando exista: el
-cambio de `docker-compose.yml` a `image:` con digest, y la primera vez que
-se aplique una migración en un entorno real, son cambios de regla.
