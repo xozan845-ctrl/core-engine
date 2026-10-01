@@ -69,7 +69,7 @@ validaban el comportamiento erróneo de la implementación en vez del requisito
 ## Cómo auditar (este repo)
 
 ```bash
-# Suite completa con cobertura (lo que corre CI: 6 workspaces con tests)
+# Suite completa con cobertura (lo que corre CI: 10 workspaces con tests)
 npm test -- --coverage
 
 # Un solo servicio
@@ -96,9 +96,11 @@ npm run demo
 - **G-4/G-5/G-6/G-8 sin paso en CI**: no existen suites de integración,
   contrato ni E2E ni paso de export OpenAPI en `ci.yml` (estado detallado en
   [`06-estandares-cobertura.md`](./06-estandares-cobertura.md)).
-- **5 workspaces sin suite**: `catalog-service`, `identity-service`,
-  `stores-service`, `logistics-service` y `field-service` (R-QA-1 solo exceptúa
-  `field-service`; los otros cuatro son deuda de cobertura).
+- **Cobertura inicial de los 4 servicios con suite nueva**: `catalog` 66 %,
+  `stores` 58 %, `identity` 45 % y `logistics` 81 % de líneas — sus
+  `coverageThreshold` son el baseline del ratchet (R-COV-1: suben +5 por
+  release). Aún sin specs: los `*.controller.ts`, `seed.service` y los
+  `internal.controller`. `field-service` sigue sin suite (excepción de R-QA-1).
 - **`01`–`05` con referencias heredadas** (Prisma, frontend Angular,
   `prisma/seed.ts`): re-auditarlos contra la implementación real (R-COV-3).
 

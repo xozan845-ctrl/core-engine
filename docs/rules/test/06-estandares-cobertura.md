@@ -28,7 +28,17 @@ Todo PR debe incluir las capas marcadas con ✅ para el tipo de cambio tocado.
 | Functions | ≥ 80% |
 
 - Cobertura medida con `npm test -- --coverage` (lo que ejecuta el job `test` de CI); los números se registran en `AUDIT.md` en cada auditoría (R-COV-3).
-- El gate mecánico actual son los `jest.coverageThreshold` de `packages/*/package.json` (`lines: 80`, `branches: 80`), presentes en los 6 workspaces con suite: `shared`, `api-gateway`, `orders-service`, `commissions-service`, `finance-service` y `market-intelligence-service`. Los otros workspaces no tienen suite (deuda, ver [`README.md`](./README.md)).
+- El gate mecánico son los `jest.coverageThreshold` de `packages/*/package.json`: **10 workspaces con suite**, todos con baseline medido redondeado a la baja (método de la línea de abajo) y subida +5 por release hasta la tabla:
+
+  | Workspace | Líneas | Ramas | | Workspace | Líneas | Ramas |
+  |---|---|---|---|---|---|---|---|
+  | `shared` | 9 | 5 | | `catalog-service` | 66 | 76 |
+  | `api-gateway` | 22 | 8 | | `identity-service` | 44 | 52 |
+  | `orders-service` | 19 | 13 | | `stores-service` | 57 | 72 |
+  | `commissions-service` | 12 | 5 | | `logistics-service` | 81 | 92 |
+  | `finance-service` | 48 | 41 | | `market-intelligence-service` | 15 | 2 |
+
+  **Enmienda (G-3, una única vez)**: los 6 workspaces preexistentes figuraban con `lines: 80 / branches: 80`, umbral que **nunca llegó a evaluarse** — `npm test -- --coverage` no transmitía el flag a `jest` (npm lo absorbía al final de la cadena de `-w`), así que G-3 estaba configurado pero no era efectivo. Se corrigió la invocación (el script raíz añade `-- --coverage` a cada workspace) y cada umbral se recalibró al baseline medido de la tabla; a partir de ahora el ratchet solo sube (nunca baja). Sin suite solo queda `field-service` (excepción de R-QA-1).
 - **Anti-inflado**: subir cobertura no puede lograrse agregando asserts triviales; el gate real es la mutación (R-MT-2).
 - **Ratchet (gate efectivo)**: la tabla es el objetivo final; el baseline se mide con el alcance de R-COV-4 redondeado a la baja (1 pt de margen de varianza) y sube **+5 puntos por release** hasta la tabla (tope: los mínimos de la tabla). Nunca baja (R-COV-1). Cada subida queda registrada en `AUDIT.md` (R-COV-3) y se vierte subiendo el `coverageThreshold` del workspace correspondiente.
 
@@ -67,5 +77,5 @@ se reutiliza).
 | R-COV-1 | Ningún PR puede **bajar** la cobertura global respecto a `main` (comparar reportes, no solo absoluto). |
 | R-COV-2 | Archivos de lógica de negocio sin spec → bloquea merge (R-U-17). Se puede verificar con un script que liste los `.ts` ejecutables (alcance de R-COV-4) sin `*.spec.ts` par. |
 | R-COV-3 | La auditoría `AUDIT.md` se actualiza en cada release con: cobertura actual, nº tests por capa, mutantes, deudas abiertas. Un gate solo se marca ✅ con evidencia de un **run verde de CI** (tener el paso configurado o pasar en local no basta). |
-| R-COV-4 | **Alcance del gate**: solo se mide lógica ejecutable. Hoy ningún workspace declara `coveragePathIgnorePatterns`, así que el gate mide la suite tal cual está configurada. Si se acota el alcance, las exclusiones admitidas son: módulos Nest (`*.module.ts`, wiring DI), DTOs (`/dto/`, `/dtos/`), mocks/fixtures (`/mocks/`), scripts CLI y bootstrap (`main.ts`), y cada exclusión nueva se documenta en `AUDIT.md`. El baseline medido con ese alcance fija los thresholds del ratchet. |
+| R-COV-4 | **Alcance del gate**: solo se mide lógica ejecutable. El alcance se define en `collectCoverageFrom` de cada `package.json#jest`: hoy `**/*.(t|j)s` excluyendo `main.ts` (bootstrap) y `*.module.ts` (wiring DI) — no se usa `coveragePathIgnorePatterns`. Exclusiones adicionales admitidas (DTOs `/dto/`, mocks `/mocks/`, scripts CLI) se añaden ahí y se documentan en `AUDIT.md`. El baseline medido con ese alcance fija los thresholds del ratchet. |
 | R-COV-5 | **N/A en este repo (sin frontend) — ID reservado, no reutilizar.** Regla heredada, exigible si algún día hay UI: el ratchet del frontend es norma, no una nota en el config — sigue el mismo método que el de Jest (baseline medido, redondeado a la baja con 1 pt de margen, +5 pts por release, tope en la tabla de umbrales y **nunca baja**, R-COV-1). Sin esta regla, G-3 protege solo los workspaces backend: la UI puede perder cobertura hasta el nivel del gate sin que nada lo note, porque un threshold obsoleto nunca falla. |
