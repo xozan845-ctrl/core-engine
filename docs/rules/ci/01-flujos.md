@@ -5,7 +5,7 @@ Aplica a: cuándo y cómo se ejecutan los jobs de integración
 
 | ID | Regla |
 |---|---|
-| R-CI-1 | **Gatillos**: todo push a `main` corre la CI completa (jobs `backend`, `frontend`, `e2e`, `playwright`); un PR hacia `main` corre todos los jobs **excepto** los de release (`playwright`/G-6, marcado `if: github.event_name == 'push'`); un push a rama sin PR no ejecuta nada. Cambiar este reparto exige enmienda explícita de esta regla. |
+| R-CI-1 | **Gatillos**: la CI completa — tres jobs encadenados `security-gate` → `test` → `build` — corre en todo push a `main` o `develop` y en todo PR hacia `main` o `develop` (un push a una rama con PR abierto dispara la vía `pull_request`); un push a cualquier otra rama sin PR no ejecuta nada (no está en el filtro de gatillos). Cambiar este reparto exige enmienda explícita de esta regla. |
 | R-CI-2 | **Concurrencia**: cada workflow declara un grupo por ref con `cancel-in-progress: true` — un push nuevo cancela el run anterior de la misma rama; prohibido apilar runs obsoletos. |
 | R-CI-3 | **Sin filtros `paths`**: todo evento push/PR ejecuta la CI completa, aunque el cambio sea solo de docs (decisión deliberada: nada pasa desapercibido). Introducir filtrado = enmienda de esta regla, nunca una optimización silenciosa. |
 | R-CI-4 | **Pipeline único**: `.github/workflows/ci.yml` es el único pipeline de integración. Un workflow adicional solo se acepta con un caso de uso que este archivo no cubra, documentado en este área antes de existir. |
