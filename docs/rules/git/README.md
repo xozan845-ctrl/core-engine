@@ -10,6 +10,7 @@ son la documentación viva de por qué existe cada línea.
 
 | Archivo | Contenido | Sufijo |
 |---|---|---|
+| `00-entornos.md` | Modelo de ramas: tres entornos (desarrollo/stage/producción), promoción, hotfix y backport | `R-GE` (1–6) |
 | `01-stage.md` | `git add`: stage explícito, atómico, sin artefactos ni secretos | `R-GA` (1–5) |
 | `02-commits.md` | `git commit`: Conventional Commits, unidad temática, verificación pre-commit | `R-GC` (1–7) |
 | `03-push.md` | `git push`: qué subir, cuándo, force-push, divergencia y verificación post-push | `R-GP` (1–7) |
@@ -23,6 +24,7 @@ son la documentación viva de por qué existe cada línea.
 
 | Prefijo | Rango | Archivo | Ámbito |
 |---|---|---|---|
+| `R-GE-*` | 1–6 | `00-entornos.md` | Entornos y promoción de ramas (`develop` → `staging` → `main`), hotfix |
 | `R-GA-*` | 1–5 | `01-stage.md` | Stage (`git add`) |
 | `R-GC-*` | 1–7 | `02-commits.md` | Commit (`git commit -m`) |
 | `R-GP-*` | 1–7 | `03-push.md` | Push (`git push`) |
@@ -35,15 +37,19 @@ son la documentación viva de por qué existe cada línea.
 > explícito (R-GA-1) y pasar la verificación de su ámbito (R-GC-5). Lo que no se
 > puede resumir en una frase, no se sube.
 >
-> **Y una rama es una unidad revisable.** `main` no recibe trabajo escrito a mano:
-> lo recibe de un PR con evidencia en el cuerpo (R-PR-4), checks verdes en su
-> cabeza (R-PR-6) y merge por rebase (R-PR-7). El resultado se comprueba en `main`,
-> no se da por cerrado en el PR (R-PR-8).
+> **Y una rama es una unidad revisable.** `develop` no recibe trabajo escrito a
+> mano: lo recibe de un PR con evidencia en el cuerpo (R-PR-4), checks verdes en
+> su cabeza (R-PR-6) y merge por rebase (R-PR-7). El resultado se comprueba en
+> la rama de entorno, no se da por cerrado en el PR (R-PR-8).
+>
+> **Y un merge a `main` es una promoción.** Producción (R-GE-1) solo recibe el
+> salto `staging → main` deliberado con CI verde y smoke (R-GE-2/3, R-CD-11/12);
+> nada se escribe a mano en `main` (R-GE-4).
 
 ## Convenciones (mantener el "punto fijo")
 
 1. **Formato de ID:** `R-<SUFIXO>-<n>` secuencial e incremental dentro del archivo.
-   Un sufijo pertenece a **un solo archivo** (GA, GC, GP). Nunca renumerar ni
+   Un sufijo pertenece a **un solo archivo** (GE, GA, GC, GP). Nunca renumerar ni
    reutilizar IDs existentes.
 2. **Formato de regla:** tabla `| ID | Regla |`; redacción en imperativo, concreta
    y verificable en un PR (si no se puede comprobar, no es una regla).
@@ -83,4 +89,5 @@ git rev-list --merges --count origin/main
 # checks verdes en la CABEZA del PR (R-PR-6) y verificación post-merge (R-PR-8)
 gh pr checks <n>
 gh run list --branch main --limit 3 --json headSha,conclusion,status
+gh run list --branch staging --limit 3 --json headSha,conclusion,status   # R-GE-1/3
 ```
