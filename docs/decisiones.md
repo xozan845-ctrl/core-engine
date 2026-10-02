@@ -205,6 +205,35 @@ Este archivo registra decisiones técnicas deliberadas que se apartan del texto 
 
 ---
 
+## ADR-15: Compose base + observabilidad opcional; valores dev/prod separados
+
+- **Fecha**: 2026-10-02
+- **Estado**: Aceptado
+- **Contexto**: Dockploy ejecuta `docker compose -f ./docker-compose.yml` con el
+  `.env` del entorno. El compose único incluía la observabilidad (Prometheus,
+  Grafana, exporters) y `grafana` exigía `GRAFANA_ADMIN_PASSWORD` con `:?`, así
+  que un despliegue de la **aplicación** fallaba por credenciales de dashboards
+  que no aplican a producción. Además mezclaba valores de desarrollo
+  (`.env.example` con `core_engine_dev`, `guest:guest`, secretos dev) con
+  producción, y los defaults del compose (`core-engine`) no coincidían con
+  `.env.example` (`core_engine`).
+- **Decisión**:
+  1. **`docker-compose.yml` = base** (app + Postgres + RabbitMQ): solo exige
+     `POSTGRES_PASSWORD` (+ variables de runtime del `.env`).
+  2. **`docker-compose.observability.yml` = overlay opcional** (Prometheus,
+     Grafana, exporters): se activa con `-f docker-compose.observability.yml` y
+     solo entonces exige `GRAFANA_ADMIN_PASSWORD` y `RABBITMQ_PASSWORD`.
+  3. **Plantillas de valores separadas**: `.env.example` (desarrollo) y
+     `.env.production.example` (producción, con `<CAMBIAR>` y secretos únicos).
+  4. Alinear los defaults del compose con `.env.example` (`core_engine`).
+- **Consecuencias**: Dockploy despliega la app sin requerir credenciales de
+  dashboards; dev y producción tienen plantillas y secretos separados; la
+  observabilidad es explícita. **Deuda anotada**: la credencial de RabbitMQ sigue
+  fija en `infra/rabbitmq/rabbitmq.conf` (no es paramétrica por entorno); moverla
+  a variable de entorno es trabajo pendiente.
+
+---
+
 ## Resumen de cumplimiento post-corrección
 
 | Ítem del documento          | Estado  | Nota |
