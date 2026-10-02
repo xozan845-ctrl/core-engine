@@ -1,0 +1,98 @@
+# Core Engine · Capa de observabilidad (OPCIONAL — overlay)
+# Prometheus + Grafana + exporters (doc 5.3). NO forma parte del núcleo: se
+# activa explícitamente para no exigir credenciales de dashboard en el
+# despliegue de la aplicación.
+#
+#   docker compose -f docker-compose.yml -f docker-compose.observability.yml up -d --build
+#
+# Requiere en el .env: RABBITMQ_PASSWORD, POSTGRES_PASSWORD y
+# GRAFANA_ADMIN_PASSWORD (la contraseña del dashboard). Ver `.env.example`
+# (dev) y `.env.production.example` (producción).
+
+services:
+  # ── Exportadores (doc 5.3: integracion con Prometheus) ──────────────────
+  rabbitmq-exporter:
+    image: kbudde/rabbitmq-exporter:1.0.0
+    container_name: core-engine-rabbitmq-exporter
+    environment:
+      RABBIT_URL: "http://${RABBITMQ_USER:-core-engine}:${RABBITMQ_PASSWORD:?RABBITMQ_PASSWORD requerida en .env}@rabbitmq:15672"
+      RABBIT_USER: "${RABBITMQ_USER:-core-engine}"
+      RABBIT_PASSWORD: "${RABBITMQ_PASSWORD:?RABBITMQ_PASSWORD requerida en .env}"
+      RABBIT_EXPORTERS: "exchange,node,overview,queue"
+      RABBITMQ_EXPORTER_PORT: 9419
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+    networks:
+      - core-engine
+
+  postgres-exporter:
+    image: quay.io/prometheuscommunity/postgres-exporter:v0.15.0
+    container_name: core-engine-postgres-exporter
+    environment:
+      DATA_SOURCE_NAME: "postgresql://${POSTGRES_USER:-core_engine}:${POSTGRES_PASSWORD:?POSTGRES_PASSWORD requerida en .env}@postgres:5432/${POSTGRES_DB:-core_engine}?sslmode=disable"
+      PG_EXPORTER_EXTEND_QUERY_PATH: "/etc/postgres_exporter/queries.yaml"
+    command:
+      - "--config.file=/etc/postgres_exporter.yml"
+      - "--collector.stat_statements"
+    volumes:
+      - ./infra/prometheus/postgres_exporter.yml:/etc/postgres_exporter.yml:ro
+      - ./infra/prometheus/queries.yaml:/etc/postgres_exporter/queries.yaml:ro
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - core-engine
+
+  node-exporter:
+    image: prom/node-exporter:v1.8.2
+    container_name: core-engine-node-exporter
+    pid: host
+    volumes:
+      - /proc:/proc:ro
+      - /sys:/sys:ro
+      - /:/rootfs:ro
+    command:
+      - "--path.procfs=/proc"
+      - "--path.sysfs=/sys"
+      - "--collector.filesystem.mount-points-exclude=^/(sys|proc|dev|host)"
+      - "--path.rootfs=/rootfs"
+    networks:
+      - core-engine
+
+  cadvisor:
+    image: gcr.io/cadvisor/cadvisor:v0.49.1
+    container_name: core-engine-cadvisor
+    volumes:
+      - /:/rootfs:ro
+      - /var/run:/var/run:ro
+      - /sys:/sys:ro
+      - /var/lib/docker/:/var/lib/docker:ro
+    networks:
+      - core-engine
+
+  # ── Prometheus + Grafana (doc 5.3) ─────────────────────────────────────
+  prometheus:
+    image: prom/prometheus:v2.55.1
+    container_name: core-engine-prometheus
+    volumes:
+      - ./infra/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./infra/prometheus/rules:/etc/prometheus/rules:ro
+    networks:
+      - core-engine
+
+  grafana:
+    image: grafana/grafana:11.3.0
+    container_name: core-engine-grafana
+    environment:
+      GF_SECURITY_ADMIN_USER: admin
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:?GRAFANA_ADMIN_PASSWORD requerida en .env}
+      GF_AUTH_ANONYMOUS_ENABLED: "false"
+    volumes:
+      - ./infra/grafana/provisioning:/etc/grafana/provisioning:ro
+    ports:
+      - "3000:3000"
+    depends_on:
+      - prometheus
+    networks:
+      - core-engine
