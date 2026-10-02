@@ -1,6 +1,15 @@
-# Core Engine · Core Engine
-# Entorno de desarrollo completo (doc 6.4): microservicios + Postgres
-# (supabase-compatible) + RabbitMQ (AD-02) + observabilidad (doc 5.3).
+# Core Engine · Núcleo de la aplicación (base)
+# Microservicios + Postgres (supabase-compatible) + RabbitMQ (AD-02).
+#
+# Este archivo es la base común a TODOS los entornos (dev/stage/producción):
+# sólo exige POSTGRES_PASSWORD (y las variables de runtime del .env).
+# La observabilidad (Prometheus/Grafana/exporters) es una capa OPCIONAL y vive
+# en `docker-compose.observability.yml` (se activa con -f; ver README).
+#
+#   app (dev/stage/prod): docker compose up -d --build
+#   app + dashboards:     docker compose -f docker-compose.yml -f docker-compose.observability.yml up -d --build
+#
+# Valores: dev en `.env.example`, producción en `.env.production.example`.
 
 x-servicio-base: &servicio-base
   build:
@@ -23,8 +32,8 @@ services:
     image: postgis/postgis:16-3.4-alpine
     container_name: core-engine-postgres
     environment:
-      POSTGRES_DB: ${POSTGRES_DB:-core-engine}
-      POSTGRES_USER: ${POSTGRES_USER:-core-engine}
+      POSTGRES_DB: ${POSTGRES_DB:-core_engine}
+      POSTGRES_USER: ${POSTGRES_USER:-core_engine}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD requerida en .env}
     volumes:
       - pg_data:/var/lib/postgresql/data
@@ -34,7 +43,7 @@ services:
     ports:
       - "5432:5432"
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-core-engine} -d ${POSTGRES_DB:-core-engine}"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-core_engine} -d ${POSTGRES_DB:-core_engine}"]
       interval: 5s
       timeout: 5s
       retries: 12
@@ -46,7 +55,7 @@ services:
     image: rabbitmq:3.13-management-alpine
     container_name: core-engine-rabbitmq
     # (barrido A07/A08): guest deshabilitado en loopback; credencial dedicada
-    # desde el .env (conf aplicado en el arranque)
+    # de `infra/rabbitmq/rabbitmq.conf` (default_user/default_pass).
     volumes:
       - rabbitmq_data:/var/lib/rabbitmq
       - ./infra/rabbitmq/rabbitmq.conf:/etc/rabbitmq/rabbitmq.conf:ro
@@ -58,67 +67,6 @@ services:
       interval: 10s
       timeout: 5s
       retries: 12
-    networks:
-      - core-engine
-
-  # ── Exportadores (doc 5.3: integracion con Prometheus) ──────────────────
-  rabbitmq-exporter:
-    image: kbudde/rabbitmq-exporter:1.0.0
-    container_name: core-engine-rabbitmq-exporter
-    environment:
-      RABBIT_URL: "http://${RABBITMQ_USER:-core-engine}:${RABBITMQ_PASSWORD:?RABBITMQ_PASSWORD requerida en .env}@rabbitmq:15672"
-      RABBIT_USER: "${RABBITMQ_USER:-core-engine}"
-      RABBIT_PASSWORD: "${RABBITMQ_PASSWORD:?RABBITMQ_PASSWORD requerida en .env}"
-      RABBIT_EXPORTERS: "exchange,node,overview,queue"
-      RABBITMQ_EXPORTER_PORT: 9419
-    depends_on:
-      rabbitmq:
-        condition: service_healthy
-    networks:
-      - core-engine
-
-  postgres-exporter:
-    image: quay.io/prometheuscommunity/postgres-exporter:v0.15.0
-    container_name: core-engine-postgres-exporter
-    environment:
-      DATA_SOURCE_NAME: "postgresql://${POSTGRES_USER:-core-engine}:${POSTGRES_PASSWORD:?POSTGRES_PASSWORD requerida en .env}@postgres:5432/${POSTGRES_DB:-core-engine}?sslmode=disable"
-      PG_EXPORTER_EXTEND_QUERY_PATH: "/etc/postgres_exporter/queries.yaml"
-    command:
-      - "--config.file=/etc/postgres_exporter.yml"
-      - "--collector.stat_statements"
-    volumes:
-      - ./infra/prometheus/postgres_exporter.yml:/etc/postgres_exporter.yml:ro
-      - ./infra/prometheus/queries.yaml:/etc/postgres_exporter/queries.yaml:ro
-    depends_on:
-      postgres:
-        condition: service_healthy
-    networks:
-      - core-engine
-
-  node-exporter:
-    image: prom/node-exporter:v1.8.2
-    container_name: core-engine-node-exporter
-    pid: host
-    volumes:
-      - /proc:/proc:ro
-      - /sys:/sys:ro
-      - /:/rootfs:ro
-    command:
-      - "--path.procfs=/proc"
-      - "--path.sysfs=/sys"
-      - "--collector.filesystem.mount-points-exclude=^/(sys|proc|dev|host)"
-      - "--path.rootfs=/rootfs"
-    networks:
-      - core-engine
-
-  cadvisor:
-    image: gcr.io/cadvisor/cadvisor:v0.49.1
-    container_name: core-engine-cadvisor
-    volumes:
-      - /:/rootfs:ro
-      - /var/run:/var/run:ro
-      - /sys:/sys:ro
-      - /var/lib/docker/:/var/lib/docker:ro
     networks:
       - core-engine
 
@@ -249,32 +197,6 @@ services:
       SERVICIO: market-intelligence-service
       PORT: 3009
       OUTBOX_TABLA: intelligence.outbox
-
-  # ── Observabilidad (doc 5.3: Prometheus + Grafana) ─────────────────────
-  prometheus:
-    image: prom/prometheus:v2.55.1
-    container_name: core-engine-prometheus
-    volumes:
-      - ./infra/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
-      - ./infra/prometheus/rules:/etc/prometheus/rules:ro
-    networks:
-      - core-engine
-
-  grafana:
-    image: grafana/grafana:11.3.0
-    container_name: core-engine-grafana
-    environment:
-      GF_SECURITY_ADMIN_USER: admin
-      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:?GRAFANA_ADMIN_PASSWORD requerida en .env}
-      GF_AUTH_ANONYMOUS_ENABLED: "false"
-    volumes:
-      - ./infra/grafana/provisioning:/etc/grafana/provisioning:ro
-    ports:
-      - "3000:3000"
-    depends_on:
-      - prometheus
-    networks:
-      - core-engine
 
 volumes:
   pg_data:
