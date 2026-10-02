@@ -64,10 +64,13 @@ Eventos del bus (topic `core-engine.events`): `order.created`, `stock.reservado`
 ```bash
 npm install                       # instala los workspaces (enlaza @core/shared, ...)
 npm run build                     # compila shared + gateway + los 9 microservicios
-npm test                          # los 10 workspaces, cada uno con --coverage (175 tests / 23 suites)
-cp .env.example .env              # ajuste las claves/URLs si es necesario
-docker compose up -d --build      # Postgres + RabbitMQ + gateway y 9 servicios + Prometheus + Grafana
+npm test                          # los 10 workspaces, cada uno con --coverage (358 tests)
+cp .env.example .env              # variables de DESARROLLO (producción: .env.production.example)
+docker compose up -d --build      # app: Postgres + RabbitMQ + gateway y 9 servicios
 npm run demo                      # ejercicio end-to-end (TC-01..TC-08, RN-01..RN-08)
+
+# Dashboards (opcional): añade Prometheus + Grafana + exporters al stack
+docker compose -f docker-compose.yml -f docker-compose.observability.yml up -d --build
 ```
 
 Postgres siembra automáticamente `infra/db/init/01_esquemas.sql` (esquemas, tablas, checks,
@@ -89,8 +92,8 @@ seeds del plan contable NIC e indices). En **Supabase** (staging/prod) aplique a
 | finance-service | 3007 | `finance` | `packages/finance-service` |
 | postgres | 5432 | todos | `infra/db/init/` |
 | rabbitmq (+ management) | 5672 / 15672 | — | — |
-| prometheus | 9090 | — | `infra/prometheus/` |
-| grafana | 3000 | — | `infra/grafana/` |
+| prometheus *(capa opcional)* | 9090 | — | `infra/prometheus/` |
+| grafana *(capa opcional)* | 3000 | — | `infra/grafana/` |
 
 ## Entornos y entrega (desarrollo → stage → producción)
 
@@ -131,11 +134,18 @@ Endpoints internos (servicio→servicio) protegidos con `x-internal-key`: `inter
 `internal/ofertas`, `internal/orders(/:id|transicion|reproyectar|historia)`, `internal/envios`,
 `internal/liquidaciones/*`.
 
-## Variables de entorno (`.env` → `.env.example`)
+## Variables de entorno (`docker-compose.yml` ← `.env`)
 
-`DATABASE_URL`/`POSTGRES_*`, `RABBITMQ_URL`, `JWT_SECRET` (+ TTLs), `INTERNAL_API_KEY`,
-`ADMIN_EMAIL/ADMIN_PASSWORD`, `COMMISSION_RATE`, `OUTBOX_TABLA` (por servicio, ej.
-`orders.outbox`), `*_SERVICE_URL` (URLs internas), `CORS_ORIGINS`, `LOG_LEVEL`.
+- **Desarrollo**: copia `.env.example` → `.env`.
+- **Producción**: usa `.env.production.example` (secretos reales y únicos por
+  entorno; en Dockploy, pestaña **Environment** del proyecto/entorno). `.env`
+  está en `.gitignore` y **nunca** se versiona (R-GA-4).
+
+Claves: `DATABASE_URL`/`POSTGRES_*`, `RABBITMQ_URL` (+ `RABBITMQ_USER/PASSWORD`),
+`JWT_SECRET` (+ TTLs), `INTERNAL_API_KEY`, `ADMIN_EMAIL/ADMIN_PASSWORD`,
+`COMMISSION_RATE`, `OUTBOX_TABLA` (por servicio, ej. `orders.outbox`),
+`*_SERVICE_URL` (URLs internas), `CORS_ORIGINS`, `LOG_LEVEL` y, si se activa la
+observabilidad, `GRAFANA_ADMIN_PASSWORD`.
 
 ## Pruebas
 
@@ -145,16 +155,19 @@ TC-07 seguridad del gateway (401/403), TC-08 comision 12 % y liquidacion al vend
 RN-05/RN-06/RN-07/RN-08, partida doble y regimen fiscal NIC.
 
 ```bash
-npm test        # 175 tests / 23 suites en los 10 workspaces (cobertura por workspace, ratchet R-COV-1)
+npm test        # 358 tests en los 10 workspaces (cobertura por workspace, ratchet R-COV-1)
 npm run demo    # flujo real sobre el stack levantado (scripts/smoke.mjs)
 ```
 
 ## Observabilidad
 
-Prometheus scrapea `/metrics` de los 8 servicios (`infra/prometheus/prometheus.yml`) y Grafana
-provisiona el dashboard `Core Engine · Core Engine` (latencia p99, peticiones/s, errores 5xx,
-backlog de RabbitMQ). Los logs son JSON estructurados con `x-request-id` correlacionado
-(AsyncLocalStorage).
+La observabilidad es una **capa opcional** (`docker-compose.observability.yml`):
+se activa con `docker compose -f docker-compose.yml -f docker-compose.observability.yml up`
+y exige `GRAFANA_ADMIN_PASSWORD` en el `.env`. Prometheus scrapea `/metrics` de
+los servicios (`infra/prometheus/prometheus.yml`) y Grafana provisiona el
+dashboard `Core Engine · Core Engine` (latencia p99, peticiones/s, errores 5xx,
+backlog de RabbitMQ). Los logs son JSON estructurados con `x-request-id`
+correlacionado (AsyncLocalStorage).
 
 ## Conmutacion a Supabase (produccion)
 
