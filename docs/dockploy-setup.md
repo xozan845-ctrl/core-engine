@@ -56,15 +56,22 @@ Pasos:
    el de producción **nunca** escucha otra rama.
 4. **Build**: mismo `Dockerfile` raíz; sin `ARG`/`ENV` de secretos en la imagen
    (se inyectan en las variables del service/environment — `R-CD-7`).
-5. **Puertos/red**: gateway expuesto en `8080` por environment (Docker asigna
+5. **Variables de entorno**: cada environment recibe las suyas en la pestaña
+   *Environment* (Dockploy las escribe al `.env` que consume el compose). La
+   plantilla de producción es **`.env.production.example`** (secretos reales y
+   únicos); dev usa `.env.example`. **El compose base solo exige
+   `POSTGRES_PASSWORD`** (+ las claves de runtime: `DATABASE_URL`, `RABBITMQ_URL`,
+   `JWT_SECRET`, `INTERNAL_API_KEY`, …). `GRAFANA_ADMIN_PASSWORD` y
+   `RABBITMQ_PASSWORD` solo hacen falta si se activa la capa de observabilidad.
+6. **Puertos/red**: gateway expuesto en `8080` por environment (Docker asigna
    puerto/host distinto); red aislada por environment (lo gestiona Dockploy).
-6. **Healthcheck**: `GET /health` del gateway de cada environment (para smoke y
+7. **Healthcheck**: `GET /health` del gateway de cada environment (para smoke y
    el healtcheck de Dockploy).
 
-> Existe la alternativa de **un solo service Docker Compose por environment**
-> (tipo de app "Docker Compose" de Dockploy): despliega la pila completa del
-> compose con sustitución de variables por environment — la más cercana al
-> `docker-compose.yml` del repo y a su `npm run demo`.
+> Dockploy corre **`docker-compose.yml`** (base: app + Postgres + RabbitMQ). La
+> observabilidad vive en **`docker-compose.observability.yml`** y es **opcional**:
+> solo se añade con `-f docker-compose.observability.yml` (y entonces sí exige
+> `GRAFANA_ADMIN_PASSWORD` y `RABBITMQ_PASSWORD`).
 
 ## 3. Infraestructura compartida (nunca un recurso físico por entorno)
 
@@ -72,7 +79,7 @@ Pasos:
 |---|---|---|
 | Postgres | **1 instancia**, una **base de datos** por entorno | `core_engine_staging` · `core_engine_produccion` |
 | RabbitMQ | **1 broker**, un **vhost** por entorno | `/staging` · `/produccion` o por base |
-| Prometheus/Grafana | **solo producción** (+ opcional staging); dev no | `produccion` |
+| Prometheus/Grafana | **capa opcional** (`docker-compose.observability.yml`); si se activa, exige `GRAFANA_ADMIN_PASSWORD` | `produccion` (+ opcional staging) |
 
 El esquema se aplica **solo desde el DDL versionado**
 (`infra/db/init/01_esquemas.sql` + `99_rls.sql` en Supabase) — `R-DB-6/R-CD-5`.
