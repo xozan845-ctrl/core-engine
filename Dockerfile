@@ -3,22 +3,24 @@
 # Contexto de build: raiz del workspace.
 # Uso: docker build --build-arg SERVICIO=<nombre-del-paquete> .
 
-FROM node:24-alpine AS build
+FROM node:20-alpine AS build
+# Node 20 = misma version que CI (R-EN-1); engines del repo pide >=20.
 WORKDIR /app
 
 ARG SERVICIO
 ENV SERVICIO=$SERVICIO
 
-# declaraciones de todos los workspaces (para npm ci) + escaneo ligero de codigo
+# declaraciones de todos los workspaces + escaneo ligero de codigo
 COPY package.json package-lock.json tsconfig.base.json ./
 COPY packages packages
 
-RUN npm install --no-audit --no-fund
+# instalacion reproducible desde el lock (R-EN-1): npm ci, no npm install
+RUN npm ci --prefer-offline --no-audit --no-fund
 
 # compilacion: shared primero (dependencia), luego el servicio objetivo
 RUN npm run build -w @core/shared && npm run build -w @core/$SERVICIO
 
-FROM node:24-alpine AS runtime
+FROM node:20-alpine AS runtime
 WORKDIR /app
 ENV NODE_ENV=production
 

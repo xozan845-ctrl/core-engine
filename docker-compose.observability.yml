@@ -13,7 +13,6 @@ services:
   # ── Exportadores (doc 5.3: integracion con Prometheus) ──────────────────
   rabbitmq-exporter:
     image: kbudde/rabbitmq-exporter:1.0.0
-    container_name: core-engine-rabbitmq-exporter
     environment:
       RABBIT_URL: "http://${RABBITMQ_USER:-core-engine}:${RABBITMQ_PASSWORD:?RABBITMQ_PASSWORD requerida en .env}@rabbitmq:15672"
       RABBIT_USER: "${RABBITMQ_USER:-core-engine}"
@@ -28,7 +27,6 @@ services:
 
   postgres-exporter:
     image: quay.io/prometheuscommunity/postgres-exporter:v0.15.0
-    container_name: core-engine-postgres-exporter
     environment:
       DATA_SOURCE_NAME: "postgresql://${POSTGRES_USER:-core_engine}:${POSTGRES_PASSWORD:?POSTGRES_PASSWORD requerida en .env}@postgres:5432/${POSTGRES_DB:-core_engine}?sslmode=disable"
       PG_EXPORTER_EXTEND_QUERY_PATH: "/etc/postgres_exporter/queries.yaml"
@@ -46,7 +44,6 @@ services:
 
   node-exporter:
     image: prom/node-exporter:v1.8.2
-    container_name: core-engine-node-exporter
     pid: host
     volumes:
       - /proc:/proc:ro
@@ -62,7 +59,6 @@ services:
 
   cadvisor:
     image: gcr.io/cadvisor/cadvisor:v0.49.1
-    container_name: core-engine-cadvisor
     volumes:
       - /:/rootfs:ro
       - /var/run:/var/run:ro
@@ -74,7 +70,6 @@ services:
   # ── Prometheus + Grafana (doc 5.3) ─────────────────────────────────────
   prometheus:
     image: prom/prometheus:v2.55.1
-    container_name: core-engine-prometheus
     volumes:
       - ./infra/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
       - ./infra/prometheus/rules:/etc/prometheus/rules:ro
@@ -83,7 +78,6 @@ services:
 
   grafana:
     image: grafana/grafana:11.3.0
-    container_name: core-engine-grafana
     environment:
       GF_SECURITY_ADMIN_USER: admin
       GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:?GRAFANA_ADMIN_PASSWORD requerida en .env}
