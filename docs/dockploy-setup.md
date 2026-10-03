@@ -100,7 +100,16 @@ Migraciones solo hacia adelante.
 > Desarrollo local: `docker compose up -d --build` + `npm run demo` es la
 > verificación equivalente antes de cualquier PR (R-GC-5).
 
-## 5. Rollback en producción (si algo sale mal)
+## 5. Checklist de seguridad y nombres (al desplegar producción)
+
+- **`CORS_ORIGINS`** con los dominios reales del frontend, **nunca `*`** en producción (R-DS).
+- **Rotar `ADMIN_PASSWORD`** tras el primer arranque (identity-service crea el admin en el primer inicio).
+- **Secretos únicos por entorno**: `POSTGRES_PASSWORD`, `JWT_SECRET`, `INTERNAL_API_KEY` y `RABBITMQ_PASSWORD` distintos en `staging` y `produccion`; **jamás** los valores de `.env.example` (dev). Plantilla: `.env.production.example`.
+- **Credencial de RabbitMQ**: hoy está fija en `infra/rabbitmq/rabbitmq.conf` (deuda, ADR-15). Si la cambias en el `.env`, actualiza también el conf o los servicios no autenticarán contra el broker.
+- **Nombre del proyecto/app**: debe ser `core-engine` con environments `staging`/`produccion` (R-CD-9). Si la app arrastra el nombre de otro proyecto (p. ej. `kb-coleccion-...`), renómbrala o recrea el proyecto para no mezclar entornos ajenos.
+- **Coexistencia de entornos**: `docker-compose.yml` **no** fija `container_name`, así que `staging` y `produccion` pueden correr a la vez en el mismo VPS sin colisionar.
+
+## 6. Rollback en producción (si algo sale mal)
 
 1. En Dockploy, **redeploy de la versión anterior** de la environment
    `produccion` (commit/digest previo) — `R-CD-13`.
@@ -108,7 +117,7 @@ Migraciones solo hacia adelante.
 3. Registrar el incidente y corregir por **hotfix** (`hotfix/*` → PR a `main`,
    `R-GE-6`) con **backport** a `staging` y `develop` (`R-GE-5`).
 
-## 6. Configuración "bloqueada" (no tocar)
+## 7. Configuración "bloqueada" (no tocar)
 
 - El auto-build de producción en push a `main` **es** la entrega (R-CD-10): se
   mantiene; lo que se añade es que ese push solo viene de `staging → main`.
@@ -116,7 +125,7 @@ Migraciones solo hacia adelante.
   local, R-CD-9) ni disparadores sueltos de despliegue (webhooks fuera del
   auto-deploy por rama) — `R-CD-6/R-CD-10`.
 
-## 7. Cierre de D3
+## 8. Cierre de D3
 
 Con los dos environments operativos y la tabla §4 completa:
 
