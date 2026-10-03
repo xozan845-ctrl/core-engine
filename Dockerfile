@@ -16,6 +16,9 @@ COPY packages packages
 
 # instalacion reproducible desde el lock (R-EN-1): npm ci, no npm install
 RUN npm ci --prefer-offline --no-audit --no-fund
+# npm workspaces anida algunas dependencias por workspace (p. ej. node-cron en
+# commissions/finance); crear el directorio asegura que el COPY del runtime no falle.
+RUN mkdir -p packages/$SERVICIO/node_modules
 
 # compilacion: shared primero (dependencia), luego el servicio objetivo
 RUN npm run build -w @core/shared && npm run build -w @core/$SERVICIO
@@ -33,6 +36,9 @@ COPY --from=build /app/packages/shared/dist ./packages/shared/dist
 COPY --from=build /app/packages/shared/package.json ./packages/shared/package.json
 COPY --from=build /app/packages/$SERVICIO/dist ./packages/$SERVICIO/dist
 COPY --from=build /app/packages/$SERVICIO/package.json ./packages/$SERVICIO/package.json
+# dependencias que npm anida bajo el propio workspace (no hoisted en la raiz):
+# sin esto, un servicio como commissions/finance no encuentra node-cron en runtime.
+COPY --from=build /app/packages/$SERVICIO/node_modules ./packages/$SERVICIO/node_modules
 
 USER node
 EXPOSE 3000
