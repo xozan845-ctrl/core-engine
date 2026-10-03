@@ -10,6 +10,10 @@
 #   app + dashboards:     docker compose -f docker-compose.yml -f docker-compose.observability.yml up -d --build
 #
 # Valores: dev en `.env.example`, producción en `.env.production.example`.
+#
+# Sin `container_name` fijo: Compose nombra cada contenedor con el proyecto
+# (`<proyecto>-<servicio>-1`), de modo que staging y produccion pueden coexistir
+# en el mismo VPS sin colisionar (R-CD-9).
 
 x-servicio-base: &servicio-base
   build:
@@ -30,7 +34,6 @@ services:
   # ── Datos y BaaS (AD-08: Supabase-compatible, SQL estandar en Docker) ──
   postgres:
     image: postgis/postgis:16-3.4-alpine
-    container_name: core-engine-postgres
     environment:
       POSTGRES_DB: ${POSTGRES_DB:-core_engine}
       POSTGRES_USER: ${POSTGRES_USER:-core_engine}
@@ -53,7 +56,6 @@ services:
   # ── Broker de mensajeria (AD-02: RabbitMQ con DLQ) ─────────────────────
   rabbitmq:
     image: rabbitmq:3.13-management-alpine
-    container_name: core-engine-rabbitmq
     # (barrido A07/A08): guest deshabilitado en loopback; credencial dedicada
     # de `infra/rabbitmq/rabbitmq.conf` (default_user/default_pass).
     volumes:
@@ -78,7 +80,6 @@ services:
       dockerfile: Dockerfile
       args:
         SERVICIO: api-gateway
-    container_name: core-engine-gateway
     environment:
       SERVICIO: api-gateway
       PORT: 8080
