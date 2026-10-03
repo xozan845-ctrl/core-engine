@@ -96,23 +96,24 @@ npm run demo
 - **G-4/G-5/G-6/G-8 sin paso en CI**: no existen suites de integración,
   contrato ni E2E ni paso de export OpenAPI en `ci.yml` (estado detallado en
   [`06-estandares-cobertura.md`](./06-estandares-cobertura.md)).
-- **Cobertura inicial de los 4 servicios con suite nueva**: `catalog` 66 %,
-  `stores` 58 %, `identity` 45 % y `logistics` 81 % de líneas — sus
-  `coverageThreshold` son el baseline del ratchet (R-COV-1: suben +5 por
-  release). Aún sin specs: los `*.controller.ts`, `seed.service` y los
-  `internal.controller`. `field-service` sigue sin suite (excepción de R-QA-1).
-- **Controllers y services sin spec (R-U-10/11, R-U-18)**: **0 de 25**
-  `*.controller.ts` y **21 de 39** `*.service.ts`/`*.consumer.ts` con spec —
-  todos preexistentes a los PRs que tocan esa capa; la presión la ejerce el
-  ratchet de cobertura (recuento completo en [`../_meta/AUDIT.md`](../_meta/AUDIT.md)).
+- **Cobertura (ratchet R-COV-1)**: los 10 workspaces cumplen su
+  `coverageThreshold`, y **4 de 10 ya alcanzan el objetivo 80/70** (`catalog`
+  96, `identity` 90, `stores` 91, `logistics` 100 de líneas). Los más bajos
+  siguen siendo `api-gateway` 22.8, `market-intelligence` 30.3, `commissions`
+  32.7 y `shared` 43.1 (suben +5 por release). `field-service` sigue sin suite
+  (excepción de R-QA-1).
+- **Specs pendientes (R-U-10/11, R-U-18)**: **24 de 25** `*.controller.ts` (el
+  único sin spec es `field-service`, exceptuado por R-QA-1) y **21 de 39**
+  `*.service.ts`/`*.consumer.ts` con spec — todos preexistentes a los PRs que
+  tocan esa capa; la presión la ejerce el ratchet (recuento en
+  [`../_meta/AUDIT.md`](../_meta/AUDIT.md)).
 - **R-FL-3 sin cumplir**: ningún setup de Jest fija `TZ`; los specs actuales
   no usan hora local, pero un spec futuro podría depender de la timezone de la
   máquina sin que nada lo avise.
-- **Deudas que la reescritura de `01`–`05` (Etapa 5) dejó al descubierto**:
-  **R-U-17** — `packages/shared/src` puro: solo `money` tiene spec (6 de 7
-  ficheros puros sin spec: `jwt.utils`, `order-state`, `pagination`, `errors`,
-  `constants`, `events/contracts`); **R-U-15** — guards/pipes sin spec
-  (`service-auth`, `validation.pipe`).
+
+**Cerrado en la 3ª auditoría (2026-10-03):** `shared` puro **7/7** con spec
+(R-U-17) y guards/pipes (`service-auth`, `validation.pipe`) testeados (R-U-15);
+controllers de **0/25 a 24/25**. Tests 175 → 358.
 
 Todas quedan registradas en [`../_meta/AUDIT.md`](../_meta/AUDIT.md) en la
 próxima auditoría (R-COV-3).

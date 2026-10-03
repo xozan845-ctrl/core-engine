@@ -725,7 +725,6 @@ checks y con merge commit. Justo lo contrario de lo que se hizo.
   `main` = `f7282ca` → `completed success`.
 - **Reglas:** el snapshot completo queda en [`AUDIT.md`](./AUDIT.md); este
   log solo registra el hecho de la auditoría (R-COV-3).
-
 ---
 
 # AUDIT (histórico) — Segunda auditoría de Core Engine: re-auditoría del área `test/` (R-COV-3)
@@ -789,5 +788,68 @@ checks y con merge commit. Justo lo contrario de lo que se hizo.
 - **CI:** run `36926380949` sobre `main` = `4c521a4` → `completed success`
   (4/4 jobs); ramas `staging`/`develop` con runs verdes en sus últimos SHA
   (verificado con `gh run list --branch …`).
+- **Reglas:** el snapshot completo queda en [`AUDIT.md`](./AUDIT.md); este
+  log solo registra el hecho de la auditoría (R-COV-3).
+
+---
+
+# AUDIT (histórico) — Tercera auditoría de Core Engine: salto de testing (Fase A/B) y deps al día (R-COV-3)
+
+- **Fecha:** 2026-10-03
+- **Disparador:** nueva auditoría solicitada (R-COV-3). La 2ª fue el 2026-10-01;
+  entre ambas mediaron la **Fase A** (código puro + guards/pipes), la **Fase B**
+  (controllers), la separación dev/prod del compose y la subida a **jest 30**.
+- **Comando:** `npm test` (10 workspaces con `--coverage`), `npm run lint`,
+  `npm run build`, `npm audit --audit-level=high / moderate`, conteo manual de
+  specs por capa, `gh pr list --state merged`, `git rev-list --merges
+  --count origin/main`, `gh run list --branch main`, inspección de `ci.yml` y de
+  `docs/rules/test/**`.
+- **Estado global:** 🟡 **CUMPLE PARCIAL** (sin cambio de color) — gates
+  G-1/G-3/G-7 ✅, G-2 N/A, G-4/G-5/G-6/G-8 ⏸; pero **el testing se ha duplicado**
+  (175 → 358 tests) y 4/10 workspaces ya alcanzan el objetivo 80/70. Audit de
+  dependencias a 0 en high **y** moderate.
+
+## Métricas medidas (Core Engine, 2026-10-03)
+
+| Métrica | Valor |
+|---|---|
+| Unit tests | **358 / 358** ✅ en **55 suites** / 10 workspaces (shared 58, api-gateway 6, orders 31, commissions 15, finance 77, market-intelligence 19, catalog 46, identity 45, stores 37, logistics 24) |
+| Cobertura (líneas/ramas) | shared 43.11/39.58 · api-gateway 22.79/12.82 · orders 44.20/23.16 · commissions 32.65/13.41 · finance 78.57/52.06 · market-intelligence 30.30/12.64 · catalog 96.00/83.50 · identity 90.04/76.69 · stores 90.84/85.48 · logistics 100.00/97.14 |
+| Gates `coverageThreshold` | **10/10** (floor; 0 `threshold not met`) · objetivo final 80/70: **4/10** (catalog, identity, stores, logistics) |
+| Controllers con spec | **24 de 25** (falta `field-service`, excepción R-QA-1) |
+| `*.service.ts`/`*.consumer.ts` sin spec | **21 de 39** (R-U-18, R-COV-2) |
+| Código puro de `shared` con spec | **7 de 7** (R-U-17) ✅ · guards/pipes (R-U-15) ✅ |
+| Integración / Contrato / E2E | 0 / 0 / 0 (G-4, G-5, G-6); OpenAPI sin export (G-8) |
+| Property-based / Mutación / Fuzz | sin `fast-check` / sin Stryker / sin fuzz (R-PB, R-MT, R-RB) |
+| Lint | 0 errores / 47 warnings |
+| Audit | `high` exit 0 **y `moderate` exit 0** (jest 30 cerró 29 `high` de devDeps) |
+| Historial | **65 PRs** `--rebase` · **0** merge commits de 48 |
+
+## Qué cambió entre la 2ª y esta auditoría
+
+1. **Fase A (R-U-17/R-U-15):** `shared` puro pasó de 6/7 a **7/7** con spec y
+   `service-auth`/`validation.pipe` quedaron testeados.
+2. **Fase B (R-U-10/11):** controllers de **0/25 a 24/25**; los 10 workspaces con
+   suite. `field-service` se mantiene **exceptuado (R-QA-1)** por no tener
+   infraestructura de tests (no se creó jest solo para su controller).
+3. **jest 29 → 30 (fix(deps), R-QA-6):** un aviso `high` nuevo y ajeno
+   (`braces`/`micromatch`, ~29 paquetes del árbol de jest 29) rompía el Security
+   Gate de TODOS los PRs. Se subió a jest 30 (su árbol no usa esos paquetes) con
+   `ts-jest@29.4.14` (soporta `^29 || ^30`). Audit `high` **29 → 0**, 358 tests
+   verdes sin tocar configs.
+4. **Separación dev/prod del compose (ADR-15) + imagen:** `docker-compose.yml`
+   base (solo `POSTGRES_PASSWORD`) + overlay de observabilidad opcional;
+   `Dockerfile` a `node:20-alpine` y `npm ci`; sin `container_name` fijo
+   (staging y produccion coexisten). No afecta a los gates de testing.
+5. **Sin cambios de estado en los gates**: siguen 3 ✅ · 1 N/A · 4 ⏸ (G-1/G-3/G-7
+   verdes; G-4/5/6/8 pendientes).
+
+## Evidencia
+
+- **Local (2026-10-03):** `npm test` exit 0 (358/55, 10 tablas, 0
+  `threshold not met`) · `npm run lint` exit 0 (0/47) · `npm run build` exit 0
+  (0 TS) · `npm audit --audit-level=high` y `--audit-level=moderate` exit 0.
+- **CI:** run `37135717753` sobre `main` = `c090ef5` → `completed success`
+  (4/4 jobs); ramas `staging`/`develop` con runs verdes en sus últimos SHA.
 - **Reglas:** el snapshot completo queda en [`AUDIT.md`](./AUDIT.md); este
   log solo registra el hecho de la auditoría (R-COV-3).
