@@ -112,6 +112,13 @@ export class ProxyService {
     const ruta = req.originalUrl;
     const politica = this.encontrarPolitica(ruta, req.method);
 
+    // Scrub defensivo: eliminar cualquier cabecera de identidad o interna
+    // que el cliente externo pudiera haber inyectado (R-GW-3 / R-DS-5)
+    for (const h of ['x-user-id', 'x-user-email', 'x-user-rol', 'x-user-nombre',
+      'x-tenant-id', 'x-personal-id', 'x-internal-key']) {
+      delete req.headers[h];
+    }
+
     // 1. autenticacion y roles en el borde
     this.auth.aplicar(req, res, () => undefined, politica);
     // si la politica ya respondio (401/403), no continuar el reenvio
