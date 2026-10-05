@@ -15,10 +15,10 @@ concurrency:
 jobs:
   security-gate:
     name: Security Gate (npm audit)
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
         with:
           node-version: "20"
           cache: "npm"
@@ -29,11 +29,11 @@ jobs:
 
   lint:
     name: ESLint
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     needs: security-gate
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
         with:
           node-version: "20"
           cache: "npm"
@@ -44,11 +44,11 @@ jobs:
 
   test:
     name: Unit Tests + Coverage
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     needs: security-gate
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
         with:
           node-version: "20"
           cache: "npm"
@@ -59,7 +59,7 @@ jobs:
       - name: Run tests with coverage
         run: npm test -- --coverage
       - name: Upload coverage report
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         if: always()
         with:
           name: coverage-report
@@ -68,11 +68,11 @@ jobs:
 
   build:
     name: Build all services
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     needs: [test, lint]
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
         with:
           node-version: "20"
           cache: "npm"
