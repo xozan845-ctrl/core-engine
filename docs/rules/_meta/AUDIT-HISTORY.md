@@ -853,3 +853,22 @@ checks y con merge commit. Justo lo contrario de lo que se hizo.
   (4/4 jobs); ramas `staging`/`develop` con runs verdes en sus últimos SHA.
 - **Reglas:** el snapshot completo queda en [`AUDIT.md`](./AUDIT.md); este
   log solo registra el hecho de la auditoría (R-COV-3).
+
+---
+
+# AUDIT (histórico) — Resolución de Hallazgos (4ª auditoría de Core Engine)
+
+- **Fecha:** 2026-10-05
+- **Estado global:** 🟡 CUMPLE PARCIAL (Fixes aplicados en PR #90)
+- **Disparador:** Auditoría de compliance post 3ª auditoría, descubriendo deudas no anotadas en el snapshot anterior.
+
+## Resumen de la Intervención
+
+1. **R-CI-2 (CI Concurrencia):** Añadido bloque de `concurrency` con `cancel-in-progress` en `ci.yml`.
+2. **R-OB-1 (Observabilidad):** Reemplazado `console.log` crudo en `market-intelligence-service` por `Logger.create(NOMBRE_SERVICIOS.INTELLIGENCE).info()` y tipado seguro en bootstrap.
+3. **R-GW-3 / R-DS-5 (Gateway Scrub):** Añadido borrado de headers de identidad e internos en `proxy.service.ts` antes de sobrescribirlos.
+4. **R-MS-6 (Graceful Shutdown):** Ejecutado `app.enableShutdownHooks()` en los 10 `main.ts` de los microservicios.
+5. **R-AR-3 / R-MS-5 (Outbox Env):** Variables documentadas explícitamente en `.env.example` y `.env.production.example`.
+6. **Higiene/Deuda:** Tracked `*.tsbuildinfo` removidos del repositorio.
+
+El PR #90 se completó utilizando convenciones atómicas (R-PR-1, R-GC-1..5) garantizando builds limpios y linter (0 errores). El snapshot central se sobreescribió en `AUDIT.md`.

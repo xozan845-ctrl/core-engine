@@ -6,11 +6,7 @@
 > anteriores a 2026-10-01 pertenecen al proyecto origen y se conservan como
 > procedencia.
 
-- **Última auditoría:** 2026-10-03 — **3ª de Core Engine** (R-COV-3), tras la
-  **Fase B** de specs de controllers, la Fase A (código puro/guards), la
-  separación dev/prod del compose y la subida a **jest 30** (cierra los `high` de
-  devDeps). Las deudas cerradas desde la 2ª auditoría están en «Cerradas en este
-  ciclo».
+- **Última auditoría:** 2026-10-05 — **4ª de Core Engine** (R-COV-3). Resolvió deudas de observabilidad (R-OB-1), seguridad en el Gateway (R-GW-3, R-DS-5), CI (R-CI-2) y shutdown de microservicios (R-MS-6).
 - **Estado global:** 🟡 **CUMPLE PARCIAL** — gates **G-1, G-3 y G-7 efectivos y
   verdes en CI**, G-2 N/A y G-4/G-5/G-6/G-8 pendientes; audit de dependencias a
   **0 (high y moderate)**; deudas abiertas: capas de test enteras sin suites
@@ -104,14 +100,22 @@
 3. **Cobertura por debajo del objetivo 80/70**: ya lo alcanzan 4/10 (`catalog`, `identity`, `stores`, `logistics`); los más bajos siguen siendo `api-gateway` 22.8, `market-intelligence` 30.3, `commissions` 32.7 y `shared` 43.1 de líneas — suben por el ratchet +5/release (R-COV-1).
 4. **Specs pendientes**: **`field-service` sin suite** (excepción **R-QA-1**; es el único de los 25 controllers sin spec) y **21 de 39 `*.service.ts`/`*.consumer.ts`** sin spec (R-U-18, R-COV-2) — preexistentes al PR que los introduce.
 5. **Tooling JS fuera del alcance de ESLint**: `qa-harness/`, `scripts/` y `validate-dashboards.cjs` (~160 errores acumulados) no se lintean (alcance actual `packages/*/src/**/*.ts`).
-6. **R-CI-2 sin cumplir**: `ci.yml` no declara grupo de `concurrency` con `cancel-in-progress`.
-7. **R-FL-3 sin cumplir**: ningún setup de Jest fija `TZ`; los specs actuales no usan hora local.
-8. **`tsconfig.tsbuildinfo` trackeados**: cualquier `npm run build` ensucia el árbol (higiene pendiente).
-9. **47 warnings `no-explicit-any`** en `packages/*/src` — auditables con cada auditoría (R-COV-3).
+6. **R-FL-3 sin cumplir**: ningún setup de Jest fija `TZ`; los specs actuales no usan hora local.
+7. **47 warnings `no-explicit-any`** en `packages/*/src` — auditables con cada auditoría (R-COV-3).
 
-### Cerradas en este ciclo (Etapas 1–5 + Fase A/B + deps/infra)
+### Cerradas en este ciclo (Auditoría 4ª)
 
-- **3ª auditoría (esta, 2026-10-03):** snapshot reescrito con evidencia fresca y
+- **4ª auditoría (esta, 2026-10-05):** Fixes inmediatos aplicados (PR #90):
+  - **R-CI-2:** Concurrencia añadida en `ci.yml` (`cancel-in-progress`).
+  - **R-OB-1:** Removido `console.log` en `market-intelligence-service` por `Logger` + manejador de error `.catch()`.
+  - **R-GW-3 / R-DS-5:** Gateway limpia headers internos (`x-user-id`, `x-internal-key`, etc) de clientes antes de evaluación.
+  - **R-MS-6:** Implementado `app.enableShutdownHooks()` en los 10 servicios para apagado limpio.
+  - **R-AR-3 / R-MS-5:** Documentada la variable `OUTBOX_TABLA` en las plantillas `.env`.
+  - **Higiene:** `*.tsbuildinfo` excluidos en `.gitignore` y eliminados del índice de git.
+
+### Histórico (Etapas 1–5 + Fase A/B + deps/infra)
+
+- **3ª auditoría (2026-10-03):** snapshot reescrito con evidencia fresca y
   entrada nueva en el histórico. Registra el salto de testing (175→358 tests) y
   de cobertura por la Fase A/B.
 - **Fase B — specs de controllers (R-U-10/11):** de **0/25 a 24/25**; los 10
