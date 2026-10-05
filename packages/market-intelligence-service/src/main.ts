@@ -8,6 +8,7 @@ async function bootstrap(): Promise<void> {
   app.useGlobalPipes(new DtoValidationPipe());
   app.useGlobalFilters(new DomainErrorFilter());
 
+  app.enableShutdownHooks();
   await app.listen(PUERTOS.INTELLIGENCE);
   Logger.create(NOMBRE_SERVICIOS.INTELLIGENCE).info({
     msg: 'market-intelligence-service listo',

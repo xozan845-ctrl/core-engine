@@ -26,6 +26,7 @@ async function bootstrap(): Promise<void> {
     res.type('text/plain').send(await metrics.texto()),
   );
   expressApp.get('/health', (_req: Request, res: Response) => res.json(metrics.salud()));
+  app.enableShutdownHooks();
   await app.listen(puerto);
   Logger.create(NOMBRE_SERVICIOS.FIELD).info({ msg: 'field-service listo', puerto });
 }
