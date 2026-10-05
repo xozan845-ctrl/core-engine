@@ -80,3 +80,5 @@ jobs:
         run: npm ci --prefer-offline
       - name: Build all packages
         run: npm run build
+      - name: Gate G-8 — spec OpenAPI sincronizado (R-DO-6, R-C-7)
+        run: npm run swagger:export && git diff --exit-code docs/openapi

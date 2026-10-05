@@ -1,0 +1,102 @@
+{
+  "openapi": "3.0.0",
+  "paths": {
+    "/api/v1/orders/{id}/estado": {
+      "patch": {
+        "operationId": "EstadoOrdenController_avanzar",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "description": "Id de la orden",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AvanzarEstadoRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Orden con el nuevo estado"
+          },
+          "400": {
+            "description": "Estado objetivo inválido (ESTADO_INVALIDO)"
+          }
+        },
+        "summary": "Avanzar el estado de una orden (logística)",
+        "tags": [
+          "Logística"
+        ]
+      }
+    },
+    "/api/v1/admin/envios": {
+      "get": {
+        "operationId": "EnviosAdminController_listar",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Guías de despacho con monto serializado"
+          }
+        },
+        "summary": "Listar guías de despacho (admin)",
+        "tags": [
+          "Logística"
+        ]
+      }
+    }
+  },
+  "info": {
+    "title": "Core Engine · logistics-service",
+    "description": "Logística y envíos — ciclo de vida de la orden y guías de despacho (Tabla 21)",
+    "version": "v1",
+    "contact": {}
+  },
+  "tags": [],
+  "servers": [],
+  "components": {
+    "securitySchemes": {
+      "bearer": {
+        "scheme": "bearer",
+        "bearerFormat": "JWT",
+        "type": "http"
+      }
+    },
+    "schemas": {
+      "AvanzarEstadoRequestDto": {
+        "type": "object",
+        "properties": {
+          "estado": {
+            "type": "string",
+            "description": "Estado objetivo del ciclo de vida de la orden",
+            "enum": [
+              "en_preparacion",
+              "enviada",
+              "entregada",
+              "cancelada",
+              "devuelta"
+            ],
+            "example": "enviada"
+          },
+          "motivo": {
+            "type": "string",
+            "description": "Motivo del cambio de estado",
+            "example": "despacho a ruta 3"
+          }
+        },
+        "required": [
+          "estado"
+        ]
+      }
+    }
+  }
+}
