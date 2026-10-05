@@ -13,7 +13,8 @@
     "test": "npm run test -w @core/shared -- --coverage && npm run test -w @core/api-gateway -- --coverage && npm run test -w @core/orders-service -- --coverage && npm run test -w @core/commissions-service -- --coverage && npm run test -w @core/finance-service -- --coverage && npm run test -w @core/market-intelligence-service -- --coverage && npm run test -w @core/catalog-service -- --coverage && npm run test -w @core/identity-service -- --coverage && npm run test -w @core/stores-service -- --coverage && npm run test -w @core/logistics-service -- --coverage",
     "start:field": "npm run start -w @core/field-service",
     "demo": "node scripts/smoke.mjs",
-    "lint": "eslint ."
+    "lint": "eslint .",
+    "swagger:export": "npm run build -w @core/shared && npm run build -w @core/logistics-service && npm run swagger:export -w @core/logistics-service"
   },
   "engines": {
     "node": ">=20"
