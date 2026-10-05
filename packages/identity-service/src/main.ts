@@ -1,4 +1,4 @@
-﻿import 'reflect-metadata';
+import 'reflect-metadata';
 import { NestFactory } from '@nestjs/core';
 import type { Request, Response } from 'express';
 import { AppModule } from './app.module';
@@ -29,6 +29,7 @@ async function bootstrap(): Promise<void> {
   );
   expressApp.get('/health', (_req: Request, res: Response) => res.json(metrics.salud()));
 
+  app.enableShutdownHooks();
   await app.listen(puerto);
   logger.info({ msg: 'identity-service listo', puerto });
 }
