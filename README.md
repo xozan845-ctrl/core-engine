@@ -77,8 +77,8 @@ npm run demo                      # ejercicio end-to-end (TC-01..TC-08, RN-01..R
 
 # Desarrollo: publica en el host los puertos de datos/broker (5432, 5672, 15672)
 docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d --build
-# Servicios fuera de producción (commissions, intelligence): activar con --profile extra
-docker compose --profile extra up -d --build
+# Servicios fuera de producción (commissions, intelligence): activar con el overlay extra
+docker compose -f docker-compose.yml -f docker-compose.extra.yml up -d --build
 # Dashboards (opcional): añade Prometheus + Grafana + exporters al stack
 docker compose -f docker-compose.yml -f docker-compose.observability.yml up -d --build
 ```
@@ -113,10 +113,10 @@ seeds del plan contable NIC e indices). En **Supabase** (staging/prod) aplique a
 > microservicio de dominio es accesible desde fuera**: se alcanzan por nombre de servicio
 > (`http://<servicio>:<puerto>`) dentro de la red `core-engine`, detrás del gateway.
 >
-> **Fuera de producción (por ahora):** `commissions-service` y `market-intelligence-service` **no se
-> arrancan** en un `docker compose up` normal (llevan `profiles: ["extra"]`); en desarrollo se
-> habilitan con `docker compose --profile extra up`. Sus rutas del gateway responderán 502 mientras
-> estén bajados.
+> **Fuera de producción (por ahora):** `commissions-service` y `market-intelligence-service` **no
+> viven en el compose base** (no se despliegan en producción); se activan con
+> `docker compose -f docker-compose.yml -f docker-compose.extra.yml up`. Sus rutas del gateway
+> responderán 502 mientras estén bajados.
 
 ## Entornos y entrega (desarrollo → stage → producción)
 
