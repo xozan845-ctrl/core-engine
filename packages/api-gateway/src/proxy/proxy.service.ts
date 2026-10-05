@@ -113,9 +113,13 @@ export class ProxyService {
     const politica = this.encontrarPolitica(ruta, req.method);
 
     // Scrub defensivo: eliminar cualquier cabecera de identidad o interna
-    // que el cliente externo pudiera haber inyectado (R-GW-3 / R-DS-5)
+    // que el cliente externo pudiera haber inyectado (R-GW-3 / R-DS-5).
+    // Se usan las constantes reales: la cabecera de tenant es `x-tenant`
+    // (TENANT_HEADER) y la de personal `x-user-personal` (PERSONAL_HEADER),
+    // que son las que leen los servicios; borrar nombres inexistentes no
+    // protegia contra el spoofing de tenant.
     for (const h of ['x-user-id', 'x-user-email', 'x-user-rol', 'x-user-nombre',
-      'x-tenant-id', 'x-personal-id', 'x-internal-key']) {
+      TENANT_HEADER, PERSONAL_HEADER, 'x-internal-key']) {
       delete req.headers[h];
     }
 
