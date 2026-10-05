@@ -21,6 +21,7 @@ rules/
 ├── git/                ✅ activa (sin auditar) — flujo git y entornos (R-GA/R-GC/R-GP/R-PR/R-GE)
 ├── ci/                 ✅ activa (sin auditar) — integración (R-CI/R-EN)
 ├── cd/                 ✅ activa (nueva) — despliegue continuo en Dockploy (R-CD)
+├── ai/                 ✅ activa (nueva) — contribuciones de IA (R-IA)
 │
 └── _meta/              ⚠️ documentos DERIVADOS — nunca normativos
     ├── CHECKLIST.md        herramienta de revisión de PR
@@ -49,6 +50,7 @@ rules/
 | `git/` | ✅ **activa** (sin auditar) | [`git/README.md`](./git/README.md) | Flujo git profesional: `git add`, `git commit -m`, `git push`, `gh pr` y el modelo de tres entornos (`develop` → `staging` → `main`, hotfix) (IDs `R-GA/R-GC/R-GP/R-PR/R-GE`) |
 | `ci/` | ✅ **activa** (sin auditar) | [`ci/README.md`](./ci/README.md) | CI: gatillos push/PR (incluye `staging`), entorno, evidencia (IDs `R-CI/R-EN`) |
 | `cd/` | ✅ **activa** (2026-10-01) | [`cd/README.md`](./cd/README.md) | Deploy continuo en Dockploy: un proyecto con environments `staging`/`produccion` (desarrollo local, R-CD-9), artefactos de release, gate de producción, smoke y rollback (IDs `R-CD` 1–13, venidas de `ci/03`) |
+| `ai/` | ✅ **activa** (nueva) | [`ai/README.md`](./ai/README.md) | Reglas obligatorias para IAs: contexto, atomicidad, uso correcto de tools y estricto apego al workflow (IDs `R-IA`) |
 | `_meta/` | ⚠️ **no normativo** | [`_meta/README.md`](./_meta/README.md) | Derivados: checklist, snapshots de auditoría, histórico |
 
 ## Convenciones globales (aplican a todas las áreas)
