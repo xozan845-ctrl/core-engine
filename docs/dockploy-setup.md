@@ -109,7 +109,7 @@ Migraciones solo hacia adelante.
 - **Nombre del proyecto/app**: debe ser `core-engine` con environments `staging`/`produccion` (R-CD-9). Si la app arrastra el nombre de otro proyecto (p. ej. `kb-coleccion-...`), renómbrala o recrea el proyecto para no mezclar entornos ajenos.
 - **Coexistencia de entornos**: `docker-compose.yml` **no** fija `container_name`, así que `staging` y `produccion` pueden correr a la vez en el mismo VPS sin colisionar.
 - **Puertos**: en producción/staging **solo se publica el `gateway` (8080)**; Postgres y RabbitMQ son **internos**. **No** uses `docker-compose.dev.yml` en producción (ese overlay abre `5432`/`5672`/`15672` solo para desarrollo).
-- **Servicios fuera de producción**: `commissions-service` y `market-intelligence-service` **no se despliegan por ahora** (llevan `profiles: ["extra"]` en el compose, así que no arrancan en el `up` de producción).
+- **Servicios fuera de producción**: `commissions-service` y `market-intelligence-service` **no se despliegan por ahora** (no están en el compose base; viven en `docker-compose.extra.yml`). El `up --remove-orphans` de producción **elimina** sus contenedores si venían de un despliegue anterior.
 
 ## 6. Rollback en producción (si algo sale mal)
 

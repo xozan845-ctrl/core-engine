@@ -261,16 +261,19 @@ Este archivo registra decisiones técnicas deliberadas que se apartan del texto 
 - **Contexto**: por ahora no se quieren desplegar `commissions-service` ni
   `market-intelligence-service` en producción; el `docker-compose.yml` base los
   levantaba junto al resto.
-- **Decisión**: marcarlos con `profiles: ["extra"]` en `docker-compose.yml`, de
-  modo que **no arrancan** en un `docker compose up` normal (lo que usa
-  producción/Dockploy) y se habilitan solo con `docker compose --profile extra up`
-  (desarrollo u otros entornos que los necesiten). Se mantienen definidos para
-  reactivarlos sin cambios cuando se decida.
+- **Decisión**: **sacar sus definiciones del compose base** (`docker-compose.yml`)
+  y llevarlas a un overlay **`docker-compose.extra.yml`** que no se usa en
+  producción; se activan con `docker compose -f docker-compose.yml -f
+  docker-compose.extra.yml up`. Al **no estar definidos** en el compose base, el
+  `up -d --remove-orphans` de producción **elimina** sus contenedores si venían
+  de un despliegue anterior (con `profiles` no se eliminaban: seguían definidos,
+  solo deshabilitados, y `--remove-orphans` no los toca).
 - **Consecuencias**: producción levanta gateway + 7 microservicios (identity,
   catalog, stores, orders, logistics, finance, field) + Postgres + RabbitMQ. Las
   rutas del gateway hacia commissions/intelligence responderán **502** mientras
   estén bajados (no se tocan las políticas de ruta; se registra como punto a
-  revisar si se alarga). Reversible: quitar el `profiles` y volver a incluirlos.
+  revisar si se alarga). Reversible: volver a mover las definiciones al compose
+  base.
 
 ---
 
