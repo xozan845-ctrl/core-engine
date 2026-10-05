@@ -234,6 +234,26 @@ Este archivo registra decisiones técnicas deliberadas que se apartan del texto 
 
 ---
 
+## ADR-16: Producción publica solo el gateway; puertos de datos/broker interna
+
+- **Fecha**: 2026-10-05
+- **Estado**: Aceptado
+- **Contexto**: el compose base publicaba al host `5432` (Postgres), `5672` y
+  `15672` (RabbitMQ) además del `gateway` (8080). Esos puertos no los necesita
+  ningún componente de producción (los servicios los alcanzan por la red interna
+  `core-engine`), y exponerlos al host amplía innecesariamente la superficie de
+  ataque.
+- **Decisión**: el `docker-compose.yml` base (válido para stage/producción)
+  **solo publica `gateway:8080`**. Los puertos de datos/broker para desarrollo
+  (`5432`, `5672`, `15672`) se mueven a un overlay **`docker-compose.dev.yml`**
+  que no se usa en producción. La capa de observabilidad sigue en
+  `docker-compose.observability.yml` (opcional; añade `grafana:3000`).
+- **Consecuencias**: producción/staging exponen un único puerto; en local se
+  abre la BD/broker con `docker compose -f docker-compose.yml -f docker-compose.dev.yml up`.
+  Ningún microservicio de dominio es accesible desde fuera de la red interna.
+
+---
+
 ## Resumen de cumplimiento post-corrección
 
 | Ítem del documento          | Estado  | Nota |
