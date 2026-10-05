@@ -79,6 +79,7 @@ const servicios: [string, number][] = [
   const documento = SwaggerModule.createDocument(app, config);
   SwaggerModule.setup('docs', app, documento);
 
+  app.enableShutdownHooks();
   await app.listen(puerto);
   logger.info({ msg: 'api-gateway listo', puerto, docs: '/docs' });
 }
