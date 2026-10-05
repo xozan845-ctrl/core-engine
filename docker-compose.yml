@@ -16,9 +16,11 @@
 # (postgres 5432, rabbitmq 5672/15672) viven en `docker-compose.dev.yml`.
 #
 # Servicios fuera de producción (por ahora): `commissions-service` y
-# `market-intelligence-service` llevan `profiles: ["extra"]`, así que NO
-# arrancan en un `docker compose up` normal (producción) y se activan solo con
-# `docker compose --profile extra up` (desarrollo/entornos que los necesiten).
+# `market-intelligence-service` NO se definen en este compose (base/producción);
+# viven en `docker-compose.extra.yml` y se activan en entornos que los necesiten
+# con `-f docker-compose.extra.yml`. Al no estar definidos aquí, un
+# `up --remove-orphans` de producción ELIMINA sus contenedores si venían de un
+# despliegue anterior (con `profiles` no se eliminaban: seguían definidos).
 # Sin `container_name` fijo: Compose nombra cada contenedor con el proyecto
 # (`<proyecto>-<servicio>-1`), de modo que staging y produccion pueden coexistir
 # en el mismo VPS sin colisionar (R-CD-9).
@@ -153,21 +155,6 @@ services:
       PORT: 3005
       OUTBOX_TABLA: logistics.outbox
 
-  commissions-service:
-    # NO se despliega en produccion por ahora: se activa con `--profile extra`
-    # (solo entornos que lo necesiten, p. ej. desarrollo).
-    profiles: ["extra"]
-    <<: *servicio-base
-    build:
-      context: .
-      dockerfile: Dockerfile
-      args:
-        SERVICIO: commissions-service
-    environment:
-      SERVICIO: commissions-service
-      PORT: 3006
-      OUTBOX_TABLA: commissions.outbox
-
   finance-service:
     <<: *servicio-base
     build:
@@ -192,21 +179,6 @@ services:
       SERVICIO: field-service
       PORT: 3008
       OUTBOX_TABLA: field.outbox
-
-  market-intelligence-service:
-    # NO se despliega en produccion por ahora: se activa con `--profile extra`
-    # (solo entornos que lo necesiten, p. ej. desarrollo).
-    profiles: ["extra"]
-    <<: *servicio-base
-    build:
-      context: .
-      dockerfile: Dockerfile
-      args:
-        SERVICIO: market-intelligence-service
-    environment:
-      SERVICIO: market-intelligence-service
-      PORT: 3009
-      OUTBOX_TABLA: intelligence.outbox
 
 volumes:
   pg_data:

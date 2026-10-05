@@ -1,0 +1,51 @@
+# Core Engine · Overlay de SERVICIOS FUERA DE PRODUCCIÓN (por ahora)
+# `commissions-service` y `market-intelligence-service` NO viven en el compose
+# base (`docker-compose.yml`), así que **no se despliegan en producción**.
+# Se activan solo en entornos que los necesiten (p. ej. desarrollo):
+#
+#   docker compose -f docker-compose.yml -f docker-compose.extra.yml up -d --build
+#
+# Como NO están definidos en el compose base, un `up -d --remove-orphans` de
+# producción (lo que corre Dockploy) **elimina** sus contenedores si venían de
+# un despliegue anterior. (Con `profiles` no se eliminaban: seguían definidos,
+# solo deshabilitados, y `--remove-orphans` no los toca.)
+
+x-servicio-extra: &servicio-extra
+  build:
+    context: .
+    dockerfile: Dockerfile
+  env_file:
+    - .env
+  depends_on:
+    postgres:
+      condition: service_healthy
+    rabbitmq:
+      condition: service_healthy
+  networks:
+    - core-engine
+  restart: unless-stopped
+
+services:
+  commissions-service:
+    <<: *servicio-extra
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        SERVICIO: commissions-service
+    environment:
+      SERVICIO: commissions-service
+      PORT: 3006
+      OUTBOX_TABLA: commissions.outbox
+
+  market-intelligence-service:
+    <<: *servicio-extra
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        SERVICIO: market-intelligence-service
+    environment:
+      SERVICIO: market-intelligence-service
+      PORT: 3009
+      OUTBOX_TABLA: intelligence.outbox
