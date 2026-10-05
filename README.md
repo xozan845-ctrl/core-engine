@@ -14,14 +14,20 @@ gateway (`http://localhost:8080/api/v1/...`). Los montos se manejan como **enter
 ```
                     ┌─────────────┐   TLS/CORS/Throttling en el borde
   Cliente ─────────▶│ API Gateway │  JWT HS256 (access 15 min + refresh 7 d)
-                    │   :8080     │  Politicas por ruta/rol (Tabla 21)
+                    │   :8080     │  Politicas por ruta/rol (Tabla 21) · UNICO puerto al host
                     └──────┬──────┘
-        ┌─────────┬────────┼────────┬──────────┬───────────┬──────────┐
-   identity    catalog  stores    orders   logistics  commissions  finance
-      :3001       :3002    :3003     :3004     :3005        :3006       :3007
-        └─────────┴────────┴────────┴──────────┴───────────┴──────────┘
+                           │  red interna Docker `core-engine` (microservicios sin puerto al host)
+        ┌──────────┬───────┴───┬──────────┬───────────┬────────────┬───────────┬─────────┬─────────────┐
+   identity     catalog     stores     orders    logistics   commissions    finance    field   intelligence
+      :3001        :3002      :3003      :3004       :3005        :3006        :3007     :3008       :3009
+        └──────────┴───────────┴──────────┴───────────┴────────────┴───────────┴─────────┴─────────────┘
                RabbitMQ · topic core-engine.events (+ DLQ, AD-04) + Postgres 16
 ```
+
+**Punto de entrada unico:** solo el servicio `gateway` publica un puerto al host (`8080:8080`); los
+nueve microservicios escuchan en `3001`–`3009` **solo dentro de la red interna Docker `core-engine`**
+y no tienen mapeo de puertos al host. Toda llamada externa pasa por
+`http://localhost:8080/api/v1/...` (o el dominio del gateway en stage/produccion).
 
 - **CQRS + Event Sourcing** solo en `orders` (alta tasa de escritura, cap. 3.2); el resto usa
   CRUD convencional sobre su propio esquema (baja tasa de escritura).
@@ -66,9 +72,11 @@ npm install                       # instala los workspaces (enlaza @core/shared,
 npm run build                     # compila shared + gateway + los 9 microservicios
 npm test                          # los 10 workspaces, cada uno con --coverage (358 tests)
 cp .env.example .env              # variables de DESARROLLO (producción: .env.production.example)
-docker compose up -d --build      # app: Postgres + RabbitMQ + gateway y 9 servicios
+docker compose up -d --build      # app: Postgres + RabbitMQ + gateway y 9 servicios (solo 8080 al host)
 npm run demo                      # ejercicio end-to-end (TC-01..TC-08, RN-01..RN-08)
 
+# Desarrollo: publica en el host los puertos de datos/broker (5432, 5672, 15672)
+docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d --build
 # Dashboards (opcional): añade Prometheus + Grafana + exporters al stack
 docker compose -f docker-compose.yml -f docker-compose.observability.yml up -d --build
 ```
@@ -80,20 +88,28 @@ seeds del plan contable NIC e indices). En **Supabase** (staging/prod) aplique a
 
 ### Servicios
 
-| Servicio | Puerto | Esquema | Fuente |
-|---|---|---|---|
-| api-gateway | 8080 | — | `packages/api-gateway` |
-| identity-service | 3001 | `identity` | `packages/identity-service` |
-| catalog-service | 3002 | `catalog` | `packages/catalog-service` |
-| stores-service | 3003 | `stores` | `packages/stores-service` |
-| orders-service | 3004 | `orders` | `packages/orders-service` |
-| logistics-service | 3005 | `logistics` | `packages/logistics-service` |
-| commissions-service | 3006 | `commissions` | `packages/commissions-service` |
-| finance-service | 3007 | `finance` | `packages/finance-service` |
-| postgres | 5432 | todos | `infra/db/init/` |
-| rabbitmq (+ management) | 5672 / 15672 | — | — |
-| prometheus *(capa opcional)* | 9090 | — | `infra/prometheus/` |
-| grafana *(capa opcional)* | 3000 | — | `infra/grafana/` |
+| Servicio | Puerto interno | Expuesto al host | Esquema | Fuente |
+|---|---|---|---|---|
+| api-gateway | 8080 | **Sí** (`8080:8080`) | — | `packages/api-gateway` |
+| identity-service | 3001 | No | `identity` | `packages/identity-service` |
+| catalog-service | 3002 | No | `catalog` | `packages/catalog-service` |
+| stores-service | 3003 | No | `stores` | `packages/stores-service` |
+| orders-service | 3004 | No | `orders` | `packages/orders-service` |
+| logistics-service | 3005 | No | `logistics` | `packages/logistics-service` |
+| commissions-service | 3006 | No | `commissions` | `packages/commissions-service` |
+| finance-service | 3007 | No | `finance` | `packages/finance-service` |
+| field-service | 3008 | No | `field` | `packages/field-service` |
+| market-intelligence-service | 3009 | No | `intelligence` | `packages/market-intelligence-service` |
+| postgres | 5432 | No *(dev: `docker-compose.dev.yml`)* | todos | `infra/db/init/` |
+| rabbitmq (+ management) | 5672 / 15672 | No *(dev: `docker-compose.dev.yml`)* | — | — |
+| prometheus *(capa opcional)* | 9090 | No (solo red interna) | — | `infra/prometheus/` |
+| grafana *(capa opcional)* | 3000 | Sí (`3000:3000`) | — | `infra/grafana/` |
+
+> **Aislamiento de red:** en producción/staging **solo `gateway` (8080)** publica puerto al host
+> (`grafana` 3000 solo si se activa la capa de observabilidad). Postgres y RabbitMQ son **internos**;
+> sus puertos al host se abren únicamente en desarrollo con `docker-compose.dev.yml`. **Ningún
+> microservicio de dominio es accesible desde fuera**: se alcanzan por nombre de servicio
+> (`http://<servicio>:<puerto>`) dentro de la red `core-engine`, detrás del gateway.
 
 ## Entornos y entrega (desarrollo → stage → producción)
 

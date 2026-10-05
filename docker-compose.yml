@@ -11,6 +11,9 @@
 #
 # Valores: dev en `.env.example`, producción en `.env.production.example`.
 #
+# Puertos: en este compose (base, válido para producción) SOLO se publica al
+# host el gateway (8080). Los puertos de datos/broker para desarrollo
+# (postgres 5432, rabbitmq 5672/15672) viven en `docker-compose.dev.yml`.
 # Sin `container_name` fijo: Compose nombra cada contenedor con el proyecto
 # (`<proyecto>-<servicio>-1`), de modo que staging y produccion pueden coexistir
 # en el mismo VPS sin colisionar (R-CD-9).
@@ -43,8 +46,6 @@ services:
       # Solo el esquema estandar entra en Docker local; 99_rls.sql (Supabase)
       # vive en infra/db/supabase/ y se aplica manualmente en staging/prod.
       - ./infra/db/init:/docker-entrypoint-initdb.d:ro
-    ports:
-      - "5432:5432"
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-core_engine} -d ${POSTGRES_DB:-core_engine}"]
       interval: 5s
@@ -61,9 +62,6 @@ services:
     volumes:
       - rabbitmq_data:/var/lib/rabbitmq
       - ./infra/rabbitmq/rabbitmq.conf:/etc/rabbitmq/rabbitmq.conf:ro
-    ports:
-      - "15672:15672"
-      - "5672:5672"
     healthcheck:
       test: ["CMD-SHELL", "rabbitmq-diagnostics -q ping"]
       interval: 10s
