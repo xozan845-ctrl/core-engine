@@ -1,0 +1,19 @@
+# Core Engine · Overlay de DESARROLLO (opcional)
+# Publica en el host los puertos de Postgres y RabbitMQ, SOLO para desarrollo
+# (conectar con un cliente de BD o abrir la UI de RabbitMQ en localhost).
+#
+# Producción NO usa este archivo: en producción/staging los servicios acceden a
+# Postgres y RabbitMQ por la red interna `core-engine`, y **únicamente el
+# gateway (8080)** se publica al host.
+#
+#   docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d --build
+
+services:
+  postgres:
+    ports:
+      - "5432:5432"
+
+  rabbitmq:
+    ports:
+      - "15672:15672"
+      - "5672:5672"
