@@ -14,6 +14,11 @@
 # Puertos: en este compose (base, válido para producción) SOLO se publica al
 # host el gateway (8080). Los puertos de datos/broker para desarrollo
 # (postgres 5432, rabbitmq 5672/15672) viven en `docker-compose.dev.yml`.
+#
+# Servicios fuera de producción (por ahora): `commissions-service` y
+# `market-intelligence-service` llevan `profiles: ["extra"]`, así que NO
+# arrancan en un `docker compose up` normal (producción) y se activan solo con
+# `docker compose --profile extra up` (desarrollo/entornos que los necesiten).
 # Sin `container_name` fijo: Compose nombra cada contenedor con el proyecto
 # (`<proyecto>-<servicio>-1`), de modo que staging y produccion pueden coexistir
 # en el mismo VPS sin colisionar (R-CD-9).
@@ -149,6 +154,9 @@ services:
       OUTBOX_TABLA: logistics.outbox
 
   commissions-service:
+    # NO se despliega en produccion por ahora: se activa con `--profile extra`
+    # (solo entornos que lo necesiten, p. ej. desarrollo).
+    profiles: ["extra"]
     <<: *servicio-base
     build:
       context: .
@@ -186,6 +194,9 @@ services:
       OUTBOX_TABLA: field.outbox
 
   market-intelligence-service:
+    # NO se despliega en produccion por ahora: se activa con `--profile extra`
+    # (solo entornos que lo necesiten, p. ej. desarrollo).
+    profiles: ["extra"]
     <<: *servicio-base
     build:
       context: .
