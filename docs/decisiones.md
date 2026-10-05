@@ -254,6 +254,26 @@ Este archivo registra decisiones técnicas deliberadas que se apartan del texto 
 
 ---
 
+## ADR-17: `commissions-service` y `market-intelligence-service` fuera de producción (temporal)
+
+- **Fecha**: 2026-10-05
+- **Estado**: Aceptado (temporal)
+- **Contexto**: por ahora no se quieren desplegar `commissions-service` ni
+  `market-intelligence-service` en producción; el `docker-compose.yml` base los
+  levantaba junto al resto.
+- **Decisión**: marcarlos con `profiles: ["extra"]` en `docker-compose.yml`, de
+  modo que **no arrancan** en un `docker compose up` normal (lo que usa
+  producción/Dockploy) y se habilitan solo con `docker compose --profile extra up`
+  (desarrollo u otros entornos que los necesiten). Se mantienen definidos para
+  reactivarlos sin cambios cuando se decida.
+- **Consecuencias**: producción levanta gateway + 7 microservicios (identity,
+  catalog, stores, orders, logistics, finance, field) + Postgres + RabbitMQ. Las
+  rutas del gateway hacia commissions/intelligence responderán **502** mientras
+  estén bajados (no se tocan las políticas de ruta; se registra como punto a
+  revisar si se alarga). Reversible: quitar el `profiles` y volver a incluirlos.
+
+---
+
 ## Resumen de cumplimiento post-corrección
 
 | Ítem del documento          | Estado  | Nota |
