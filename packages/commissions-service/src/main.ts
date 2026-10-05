@@ -1,4 +1,4 @@
-﻿import 'reflect-metadata';
+import 'reflect-metadata';
 import { NestFactory } from '@nestjs/core';
 import type { Request, Response } from 'express';
 import { AppModule } from './app.module';
@@ -26,6 +26,7 @@ async function bootstrap(): Promise<void> {
     res.type('text/plain').send(await metrics.texto()),
   );
   expressApp.get('/health', (_req: Request, res: Response) => res.json(metrics.salud()));
+  app.enableShutdownHooks();
   await app.listen(puerto);
   Logger.create(NOMBRE_SERVICIOS.COMMISSIONS).info({ msg: 'commissions-service listo', puerto });
 }
