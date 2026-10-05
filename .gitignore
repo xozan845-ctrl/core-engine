@@ -7,3 +7,4 @@ coverage/
 Thumbs.db
 packages/*/dist/
 packages/shared/dist/
+*.tsbuildinfo
