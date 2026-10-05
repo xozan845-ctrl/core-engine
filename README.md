@@ -77,6 +77,8 @@ npm run demo                      # ejercicio end-to-end (TC-01..TC-08, RN-01..R
 
 # Desarrollo: publica en el host los puertos de datos/broker (5432, 5672, 15672)
 docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d --build
+# Servicios fuera de producción (commissions, intelligence): activar con --profile extra
+docker compose --profile extra up -d --build
 # Dashboards (opcional): añade Prometheus + Grafana + exporters al stack
 docker compose -f docker-compose.yml -f docker-compose.observability.yml up -d --build
 ```
@@ -96,10 +98,10 @@ seeds del plan contable NIC e indices). En **Supabase** (staging/prod) aplique a
 | stores-service | 3003 | No | `stores` | `packages/stores-service` |
 | orders-service | 3004 | No | `orders` | `packages/orders-service` |
 | logistics-service | 3005 | No | `logistics` | `packages/logistics-service` |
-| commissions-service | 3006 | No | `commissions` | `packages/commissions-service` |
+| commissions-service | 3006 | No *(fuera de prod)* | `commissions` | `packages/commissions-service` |
 | finance-service | 3007 | No | `finance` | `packages/finance-service` |
 | field-service | 3008 | No | `field` | `packages/field-service` |
-| market-intelligence-service | 3009 | No | `intelligence` | `packages/market-intelligence-service` |
+| market-intelligence-service | 3009 | No *(fuera de prod)* | `intelligence` | `packages/market-intelligence-service` |
 | postgres | 5432 | No *(dev: `docker-compose.dev.yml`)* | todos | `infra/db/init/` |
 | rabbitmq (+ management) | 5672 / 15672 | No *(dev: `docker-compose.dev.yml`)* | — | — |
 | prometheus *(capa opcional)* | 9090 | No (solo red interna) | — | `infra/prometheus/` |
@@ -110,6 +112,11 @@ seeds del plan contable NIC e indices). En **Supabase** (staging/prod) aplique a
 > sus puertos al host se abren únicamente en desarrollo con `docker-compose.dev.yml`. **Ningún
 > microservicio de dominio es accesible desde fuera**: se alcanzan por nombre de servicio
 > (`http://<servicio>:<puerto>`) dentro de la red `core-engine`, detrás del gateway.
+>
+> **Fuera de producción (por ahora):** `commissions-service` y `market-intelligence-service` **no se
+> arrancan** en un `docker compose up` normal (llevan `profiles: ["extra"]`); en desarrollo se
+> habilitan con `docker compose --profile extra up`. Sus rutas del gateway responderán 502 mientras
+> estén bajados.
 
 ## Entornos y entrega (desarrollo → stage → producción)
 
