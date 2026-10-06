@@ -1,4 +1,5 @@
 import { Controller, Get, Query } from '@nestjs/common';
+import { ApiOperation, ApiQuery, ApiTags } from '@nestjs/swagger';
 import { Roles, ROLES, UsuarioActual, UsuarioContexto } from '@core/shared';
 import { TributacionService } from '../tributacion/tributacion.service';
 import { KpisService } from './kpis.service';
@@ -9,6 +10,7 @@ import { KpisService } from './kpis.service';
  * declaracion (cap. 4.4: "la plataforma documenta comisiones para su
  * declaracion"). Solo lectura para el vendedor (matriz RLS, tabla 8.15).
  */
+@ApiTags('Finanzas · Vendedor')
 @Controller('api/v1/vendedores')
 @Roles(ROLES.VENDEDOR)
 export class VendedorFiscalController {
@@ -18,6 +20,8 @@ export class VendedorFiscalController {
   ) {}
 
   @Get('me/fiscal')
+  @ApiOperation({ summary: 'Situación fiscal del vendedor (cap. 4.4)' })
+  @ApiQuery({ name: 'mes', required: false })
   async situacion(
     @UsuarioActual() usuario: UsuarioContexto,
     @Query('mes') mes?: string,
