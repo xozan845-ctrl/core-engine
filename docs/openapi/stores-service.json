@@ -1,0 +1,243 @@
+{
+  "openapi": "3.0.0",
+  "paths": {
+    "/internal/ofertas": {
+      "get": {
+        "operationId": "InternalController_porIds",
+        "parameters": [
+          {
+            "name": "ids",
+            "required": false,
+            "in": "query",
+            "description": "Ids de oferta separados por coma",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "summary": "Lote de ofertas por ids (servicio→servicio)",
+        "tags": [
+          "Tiendas (interno)"
+        ]
+      }
+    },
+    "/api/v1/vendedores/tienda": {
+      "post": {
+        "operationId": "TiendasController_crear",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CrearTiendaRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "summary": "Crear la tienda del vendedor autenticado",
+        "tags": [
+          "Tiendas"
+        ]
+      }
+    },
+    "/api/v1/vendedores/me/tienda": {
+      "get": {
+        "operationId": "TiendasController_miTienda",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "summary": "Tienda del vendedor autenticado",
+        "tags": [
+          "Tiendas"
+        ]
+      }
+    },
+    "/api/v1/vendedores/productos": {
+      "post": {
+        "operationId": "OfertasController_publicar",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PublicarProductoRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Oferta creada"
+          }
+        },
+        "summary": "Publicar un producto con margen (vendedor)",
+        "tags": [
+          "Tiendas"
+        ]
+      }
+    },
+    "/api/v1/vendedores/productos/{id}": {
+      "patch": {
+        "operationId": "OfertasController_cambiarMargen",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CambiarMargenRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "summary": "Cambiar el margen de una oferta (vendedor)",
+        "tags": [
+          "Tiendas"
+        ]
+      }
+    },
+    "/api/v1/vendedores/me/ofertas": {
+      "get": {
+        "operationId": "OfertasController_misOfertas",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "summary": "Listar las ofertas del vendedor autenticado",
+        "tags": [
+          "Tiendas"
+        ]
+      }
+    },
+    "/api/v1/tiendas/{id}": {
+      "get": {
+        "operationId": "OfertasController_tiendaPublica",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "404": {
+            "description": "Tienda inexistente (NO_ENCONTRADO)"
+          }
+        },
+        "summary": "Tienda pública con sus ofertas (ruta pública)",
+        "tags": [
+          "Tiendas"
+        ]
+      }
+    }
+  },
+  "info": {
+    "title": "Core Engine · stores-service",
+    "description": "Tiendas de vendedores: ofertas, precio final y estado (Tabla 21)",
+    "version": "v1",
+    "contact": {}
+  },
+  "tags": [],
+  "servers": [],
+  "components": {
+    "securitySchemes": {
+      "bearer": {
+        "scheme": "bearer",
+        "bearerFormat": "JWT",
+        "type": "http"
+      }
+    },
+    "schemas": {
+      "CrearTiendaRequestDto": {
+        "type": "object",
+        "properties": {
+          "nombre": {
+            "type": "string",
+            "description": "Nombre de la tienda",
+            "minLength": 2,
+            "maxLength": 100,
+            "example": "Mi tienda"
+          },
+          "descripcion": {
+            "type": "string",
+            "description": "Descripción de la tienda",
+            "example": "Ropa y accesorios"
+          }
+        },
+        "required": [
+          "nombre"
+        ]
+      },
+      "PublicarProductoRequestDto": {
+        "type": "object",
+        "properties": {
+          "producto_id": {
+            "type": "string",
+            "description": "Id del producto a publicar",
+            "example": "a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11"
+          },
+          "margen": {
+            "type": "number",
+            "description": "Margen en enteros (15 = 15 %). RN-01: 0 a 90",
+            "minimum": 0,
+            "maximum": 90,
+            "example": 15
+          }
+        },
+        "required": [
+          "producto_id",
+          "margen"
+        ]
+      },
+      "CambiarMargenRequestDto": {
+        "type": "object",
+        "properties": {
+          "margen": {
+            "type": "number",
+            "description": "Nuevo margen en enteros (0 a 90)",
+            "minimum": 0,
+            "maximum": 90,
+            "example": 20
+          }
+        },
+        "required": [
+          "margen"
+        ]
+      }
+    }
+  }
+}
