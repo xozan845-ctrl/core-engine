@@ -277,6 +277,35 @@ Este archivo registra decisiones técnicas deliberadas que se apartan del texto 
 
 ---
 
+## ADR-18: Sesiones revocables — logout por `jti` (R-GW-4)
+
+- **Fecha**: 2026-10-06
+- **Estado**: Aceptado
+- **Contexto**: la autenticación era **JWT stateless** sin persistencia: no
+  había logout ni forma de revocar el refresh token, aunque **R-GW-4** exige
+  ("los refresh tokens pueden revocarse cerrando sesión"). El access token
+  caducaba a los 900 s, pero un refresh filtrado era válido 7 días sin remedio, y
+  cambiar la contraseña no invalidaba nada.
+- **Decisión**: persistir cada sesión emitida en **`identity.sesiones`**,
+  identificada por el **`jti`** (uuid) incluido en el refresh token:
+  - `login`/`registro` crean la sesión; `refresh` solo renueva si la sesión sigue
+    activa (no revocada y no expirada).
+  - `POST /api/v1/auth/logout` (autenticado, cualquier rol) revoca la sesión del
+    `refresh_token` presentado o, si se omite, **todas** las del usuario.
+  - `cambiar-contrasena` revoca **todas** las sesiones (obliga a re-autenticar).
+  - Soft delete por `revocada_en` (R-DB-5); DDL canónico en
+    `infra/db/init/08_auth_sesiones.sql` (R-DB-6).
+- **Consecuencias**: el logout sí invalida el refresh (el access sigue válido
+  hasta su TTL de 900 s — lo que se revoca es el refresh, como pide R-GW-4). El
+  enrutado sigue **stateless** en el gateway (no consulta la BD) y no añade
+  latencia. No hay **rotación** de refresh en esta entrega (misma `jti` al
+  renovar); la rotación y el cierre selectivo de sesiones desde un listado quedan
+  como deuda si se piden. Sobre una BD ya inicializada el DDL debe aplicarse una
+  vez a mano (los scripts de `init/` solo corren en un volumen vacío); es
+  idempotente.
+
+---
+
 ## Resumen de cumplimiento post-corrección
 
 | Ítem del documento          | Estado  | Nota |
