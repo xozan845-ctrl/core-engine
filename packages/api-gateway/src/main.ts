@@ -1,7 +1,8 @@
 import { NestFactory } from '@nestjs/core';
-import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
+import { SwaggerModule } from '@nestjs/swagger';
 import type { Request, Response } from 'express';
 import { AppModule } from './app.module';
+import { OPENAPI_AGREGADO } from './openapi.agregado';
 import {
   MetricsService,
   DomainErrorFilter,
@@ -69,15 +70,8 @@ const servicios: [string, number][] = [
     res.json({ api_gateway: 'ok', servicios: estado });
   });
 
-  // Swagger (DoD: la API esta documentada; versionado AD-05 /api/v1)
-  const config = new DocumentBuilder()
-    .setTitle('Core Engine · Core Engine API')
-    .setDescription('API Gateway de la plataforma de comercio electronico distribuido')
-    .setVersion('v1')
-    .addBearerAuth()
-    .build();
-  const documento = SwaggerModule.createDocument(app, config);
-  SwaggerModule.setup('docs', app, documento);
+  // Swagger: documento AGREGADO de todos los microservicios (R-DO-6, gate G-8).
+  SwaggerModule.setup('docs', app, OPENAPI_AGREGADO);
 
   app.enableShutdownHooks();
   await app.listen(puerto);
