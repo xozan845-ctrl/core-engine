@@ -1,4 +1,5 @@
 import { Body, Controller, Get, Param, Post, Query } from '@nestjs/common';
+import { ApiOperation, ApiParam, ApiProperty, ApiQuery, ApiTags } from '@nestjs/swagger';
 import {
   ArrayMinSize,
   IsInt,
@@ -17,51 +18,62 @@ import { KpisService, KpisFinancieros } from './kpis.service';
 import { AlertasService } from './alertas.service';
 
 export class SupuestosRequestDto {
+  @ApiProperty({ description: 'Horizonte en meses (1-60)', minimum: 1, maximum: 60 })
   @IsInt()
   @Min(1)
   @Max(60)
   horizonte_meses: number;
 
+  @ApiProperty({ description: 'Vendedores iniciales', minimum: 1 })
   @IsInt()
   @Min(1)
   vendedores_iniciales: number;
 
+  @ApiProperty({ description: 'Entrada de vendedores por mes', minimum: 0 })
   @IsInt()
   @Min(0)
   entrada_vendedores_mes: number;
 
+  @ApiProperty({ description: 'Tasa de churn (0-1)', minimum: 0, maximum: 1 })
   @IsNumber()
   @Min(0)
   @Max(1)
   churn_tasa: number;
 
+  @ApiProperty({ description: 'Pedidos por vendedor por mes', type: [Number] })
   @ArrayMinSize(1)
   @IsInt({ each: true })
   @Min(0, { each: true })
   pedidos_por_vendedor: number[];
 
+  @ApiProperty({ description: 'Ticket promedio en centavos', minimum: 1 })
   @IsInt()
   @Min(1)
   ticket_promedio_cents: number;
 
+  @ApiProperty({ description: 'Tasa de comisión (0-1)', minimum: 0, maximum: 1 })
   @IsNumber()
   @Min(0)
   @Max(1)
   comision_tasa: number;
 
+  @ApiProperty({ description: 'Costos fijos en centavos', minimum: 0 })
   @IsInt()
   @Min(0)
   costos_fijos_cents: number;
 
+  @ApiProperty({ description: 'Costos fijos desde el mes 7 en centavos', required: false, minimum: 0 })
   @IsOptional()
   @IsInt()
   @Min(0)
   costos_fijos_desde_mes7_cents?: number;
 
+  @ApiProperty({ description: 'Inversión inicial en centavos', minimum: 0 })
   @IsInt()
   @Min(0)
   inversion_inicial_cents: number;
 
+  @ApiProperty({ description: 'Tasa de descuento mensual', required: false, minimum: 0 })
   @IsOptional()
   @IsNumber()
   @Min(0)
@@ -69,10 +81,12 @@ export class SupuestosRequestDto {
 }
 
 export class CrearProyeccionRequestDto {
+  @ApiProperty({ description: 'Nombre de la proyección', minLength: 3 })
   @IsString()
   @MinLength(3)
   nombre: string;
 
+  @ApiProperty({ description: 'Supuestos del modelo', type: SupuestosRequestDto })
   @ValidateNested()
   @Type(() => SupuestosRequestDto)
   supuestos: SupuestosRequestDto;
@@ -82,6 +96,7 @@ export class CrearProyeccionRequestDto {
  * GET/POST /api/v1/finanzas/{proyecciones,punto-equilibrio,kpis} — modelo
  * financiero del cap. 8: proyecciones auditables, KPIs y equilibrio.
  */
+@ApiTags('Finanzas · Modelo')
 @Controller('api/v1/finanzas')
 @Roles(ROLES.ADMIN)
 export class FinanzasController {
@@ -92,16 +107,20 @@ export class FinanzasController {
   ) {}
 
   @Post('proyecciones')
+  @ApiOperation({ summary: 'Crear una proyección financiera' })
   async crear(@Body() dto: CrearProyeccionRequestDto): Promise<Proyeccion> {
     return this.proyecciones.crear(dto.nombre, dto.supuestos as SupuestosProyeccion);
   }
 
   @Get('proyecciones')
+  @ApiOperation({ summary: 'Listar proyecciones' })
   async listar() {
     return this.proyecciones.listar();
   }
 
   @Get('proyecciones/:id')
+  @ApiOperation({ summary: 'Detalle de una proyección' })
+  @ApiParam({ name: 'id', description: 'Id de la proyección' })
   async detalle(@Param('id') id: string): Promise<Proyeccion> {
     const proyeccion = await this.proyecciones.obtener(id);
     if (!proyeccion) throw new NotFoundError('Proyeccion', id);
@@ -110,6 +129,11 @@ export class FinanzasController {
 
   /** Calculo puntual del punto de equilibrio (tablas 8.12 y 8.11 del informe). */
   @Get('punto-equilibrio')
+  @ApiOperation({ summary: 'Punto de equilibrio (tablas 8.12/8.11)' })
+  @ApiQuery({ name: 'costos_fijos_cents', required: false })
+  @ApiQuery({ name: 'ticket_promedio_cents', required: false })
+  @ApiQuery({ name: 'comision_tasa', required: false })
+  @ApiQuery({ name: 'horizonte_meses', required: false })
   async puntoEquilibrio(
     @Query('costos_fijos_cents') costosFijos?: string,
     @Query('ticket_promedio_cents') ticket?: string,
@@ -141,6 +165,8 @@ export class FinanzasController {
 
   /** KPIs financieros del periodo (tabla 8.8). */
   @Get('kpis')
+  @ApiOperation({ summary: 'KPIs financieros del periodo (tabla 8.8)' })
+  @ApiQuery({ name: 'mes', required: false })
   async kpisDelMes(@Query('mes') mes?: string): Promise<KpisFinancieros> {
     return this.kpis.kpis(mes);
   }
@@ -151,6 +177,7 @@ export class FinanzasController {
    * y cobertura por vendedor (8.7). Con los supuestos del informe por defecto.
    */
   @Get('proyecciones/sensibilidad')
+  @ApiOperation({ summary: 'Estudios de sensibilidad (8.7, 8.10, 8.11, 8.12)' })
   async sensibilidad(): Promise<{
     supuestos: SupuestosProyeccion;
     matriz_comision_gmv: ReturnType<ProyeccionesService['sensibilidadComisionGmv']>;
@@ -183,6 +210,7 @@ export class FinanzasController {
 
   /** Plan a 24 meses (8.6 + 8.9): cuenta de resultados por anio, ROI, mes 24. */
   @Get('proyecciones/plan-bienal')
+  @ApiOperation({ summary: 'Plan a 24 meses (8.6 + 8.9)' })
   async planBienal(): Promise<ReturnType<ProyeccionesService['planBienal']>> {
     const base: SupuestosProyeccion = {
       horizonte_meses: 12,
@@ -202,6 +230,9 @@ export class FinanzasController {
 
   /** Tablero financiero: KPIs + reglas de alerta por capa (tabla 8.10). */
   @Get('tablero')
+  @ApiOperation({ summary: 'Tablero financiero (KPIs + alertas, tabla 8.10)' })
+  @ApiQuery({ name: 'mes', required: false })
+  @ApiQuery({ name: 'costo_entrega_por_pedido_cents', required: false })
   async tablero(
     @Query('mes') mes?: string,
     @Query('costo_entrega_por_pedido_cents') costoEntrega?: string,
