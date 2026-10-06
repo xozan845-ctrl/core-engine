@@ -2649,6 +2649,31 @@ export const OPENAPI_AGREGADO = {
         ]
       }
     },
+    "/api/v1/auth/logout": {
+      "post": {
+        "operationId": "AuthController_logout",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LogoutRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Sesión cerrada"
+          }
+        },
+        "summary": "Cerrar sesión (revoca el refresh token)",
+        "tags": [
+          "Auth"
+        ]
+      }
+    },
     "/api/v1/auth/crear-usuario": {
       "post": {
         "operationId": "AuthController_crearUsuario",
@@ -5401,6 +5426,15 @@ export const OPENAPI_AGREGADO = {
           "correo",
           "contrasena"
         ]
+      },
+      "LogoutRequestDto": {
+        "type": "object",
+        "properties": {
+          "refresh_token": {
+            "type": "string",
+            "description": "Refresh token de la sesión a cerrar; si se omite, cierra todas"
+          }
+        }
       },
       "CrearUsuarioRequestDto": {
         "type": "object",
