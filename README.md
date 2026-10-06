@@ -150,12 +150,30 @@ en `docs/rules/cd/` (R-CD).
 - `GET /api/v1/admin/inventario`, `GET /api/v1/admin/envios`
 - `GET /api/v1/finanzas/asientos|proyecciones|kpis|punto-equilibrio` (admin),
   `POST /api/v1/finanzas/asientos`, `GET /api/v1/vendedores/me/fiscal`
-- Infra: `GET /health` (agregada por servicio), `GET /metrics`, Swagger en `/docs`
+- Infra: `GET /health` (agregada por servicio), `GET /metrics`, Swagger en `/docs` de cada servicio
 
 Endpoints internos (servicio→servicio) protegidos con `x-internal-key`: `internal/usuarios/:id`,
 `internal/vendedores`, `internal/productos/lote`, `internal/productos/sku/:sku`,
 `internal/ofertas`, `internal/orders(/:id|transicion|reproyectar|historia)`, `internal/envios`,
 `internal/liquidaciones/*`.
+
+## Contrato OpenAPI (Swagger)
+
+La **fuente de verdad** del contrato es la especificación OpenAPI de cada servicio
+(R-DO-6). Cada microservicio:
+
+- monta Swagger UI en **`/docs`** (su `main.ts` usa `crearDocumentoOpenApi`);
+- versiona su spec en **`docs/openapi/<servicio>.json`**.
+
+El spec se regenera y se verifica en CI con el **gate G-8** (`R-C-7`): el job *Build*
+ejecuta `npm run swagger:export` y falla si `docs/openapi` cambia sin commitear
+(`git diff --exit-code`). Al tocar un DTO hay que anotarlo con `@ApiProperty`.
+
+```bash
+npm run swagger:export   # regenera docs/openapi/*.json (sin BD/Rabbit; no arranca la app)
+```
+
+Cobertura actual: **149/149 endpoints** en 9 servicios.
 
 ## Variables de entorno (`docker-compose.yml` ← `.env`)
 
@@ -178,7 +196,7 @@ TC-07 seguridad del gateway (401/403), TC-08 comision 12 % y liquidacion al vend
 RN-05/RN-06/RN-07/RN-08, partida doble y regimen fiscal NIC.
 
 ```bash
-npm test        # 358 tests en los 10 workspaces (cobertura por workspace, ratchet R-COV-1)
+npm test        # 360 tests en los 10 workspaces (cobertura por workspace, ratchet R-COV-1)
 npm run demo    # flujo real sobre el stack levantado (scripts/smoke.mjs)
 ```
 
