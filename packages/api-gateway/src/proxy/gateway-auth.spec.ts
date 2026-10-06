@@ -104,4 +104,23 @@ describe('Gateway auth (TC-07: seguridad en el borde)', () => {
     auth.aplicar(req as never, res as never, next, politicaDe('/api/v1/orders', 'POST'));
     expect(res.statusCode).toBe(401);
   });
+
+  it('logout sin token -> 401 (revoca el refresh; R-GW-4)', () => {
+    const { req, res, next } = crearPeticion({ ruta: '/api/v1/auth/logout', metodo: 'POST' });
+    auth.aplicar(req as never, res as never, next, politicaDe('/api/v1/auth/logout', 'POST'));
+    expect(res.statusCode).toBe(401);
+    expect((res as unknown as { cuerpo: { codigo: string } }).cuerpo.codigo).toBe('NO_AUTORIZADO');
+  });
+
+  it('logout con token valido de cualquier rol -> pasa y propaga x-user-id', () => {
+    const token = firmarToken(
+      { sub: 'u-vend', email: 'v@t', rol: ROLES.VENDEDOR, tipo: 'access' },
+      secreto,
+      '900s',
+    );
+    const { req, res, next } = crearPeticion({ ruta: '/api/v1/auth/logout', metodo: 'POST', token });
+    auth.aplicar(req as never, res as never, next, politicaDe('/api/v1/auth/logout', 'POST'));
+    expect(next).toHaveBeenCalled();
+    expect((req.headers as Record<string, string>)['x-user-id']).toBe('u-vend');
+  });
 });
