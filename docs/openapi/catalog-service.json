@@ -1,0 +1,363 @@
+{
+  "openapi": "3.0.0",
+  "paths": {
+    "/internal/productos/lote": {
+      "get": {
+        "operationId": "InternalController_lote",
+        "parameters": [
+          {
+            "name": "skus",
+            "required": false,
+            "in": "query",
+            "description": "SKUs separados por coma",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "summary": "Lote de productos por SKUs (servicio→servicio)",
+        "tags": [
+          "Catálogo (interno)"
+        ]
+      }
+    },
+    "/internal/productos/sku/{sku}": {
+      "get": {
+        "operationId": "InternalController_porSku",
+        "parameters": [
+          {
+            "name": "sku",
+            "required": true,
+            "in": "path",
+            "description": "SKU del producto",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "summary": "Producto por SKU (servicio→servicio)",
+        "tags": [
+          "Catálogo (interno)"
+        ]
+      }
+    },
+    "/internal/productos/{id}": {
+      "get": {
+        "operationId": "InternalController_porId",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "description": "Id del producto",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "summary": "Producto por id (servicio→servicio)",
+        "tags": [
+          "Catálogo (interno)"
+        ]
+      }
+    },
+    "/internal/inventario/resumen": {
+      "get": {
+        "operationId": "InternalController_resumen",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "summary": "Resumen de inventario (servicio→servicio)",
+        "tags": [
+          "Catálogo (interno)"
+        ]
+      }
+    },
+    "/internal/inventario/lineas": {
+      "get": {
+        "operationId": "InternalController_lineas",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "summary": "Líneas de inventario (servicio→servicio)",
+        "tags": [
+          "Catálogo (interno)"
+        ]
+      }
+    },
+    "/api/v1/catalog/productos": {
+      "get": {
+        "operationId": "ProductosController_listar",
+        "parameters": [
+          {
+            "name": "q",
+            "required": false,
+            "in": "query",
+            "description": "Búsqueda por texto",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "estado",
+            "required": false,
+            "in": "query",
+            "description": "Filtrar por estado",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "categoria",
+            "required": false,
+            "in": "query",
+            "description": "Filtrar por categoría",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "pagina",
+            "required": false,
+            "in": "query",
+            "description": "Página (1-based)",
+            "schema": {
+              "minimum": 1,
+              "type": "number"
+            }
+          },
+          {
+            "name": "limite",
+            "required": false,
+            "in": "query",
+            "description": "Tamaño de página (máx 100)",
+            "schema": {
+              "minimum": 1,
+              "maximum": 100,
+              "type": "number"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "summary": "Listar productos (público, filtros y paginación)",
+        "tags": [
+          "Catálogo"
+        ]
+      },
+      "post": {
+        "operationId": "ProductosController_crear",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CrearProductoRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "summary": "Crear producto (admin, TC-01)",
+        "tags": [
+          "Catálogo"
+        ]
+      }
+    },
+    "/api/v1/catalog/productos/{id}": {
+      "get": {
+        "operationId": "ProductosController_detalle",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "description": "Id del producto",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "404": {
+            "description": "Producto inexistente (NO_ENCONTRADO)"
+          }
+        },
+        "summary": "Detalle de producto (público)",
+        "tags": [
+          "Catálogo"
+        ]
+      },
+      "patch": {
+        "operationId": "ProductosController_actualizar",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "description": "Id del producto",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ActualizarProductoRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "summary": "Editar producto (admin; RN-08 histórico)",
+        "tags": [
+          "Catálogo"
+        ]
+      }
+    },
+    "/api/v1/admin/inventario": {
+      "get": {
+        "operationId": "InventarioController_listar",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "summary": "Niveles de stock (admin; Tabla 21)",
+        "tags": [
+          "Catálogo"
+        ]
+      }
+    }
+  },
+  "info": {
+    "title": "Core Engine · catalog-service",
+    "description": "Catálogo maestro y control de stock (Tabla 21)",
+    "version": "v1",
+    "contact": {}
+  },
+  "tags": [],
+  "servers": [],
+  "components": {
+    "securitySchemes": {
+      "bearer": {
+        "scheme": "bearer",
+        "bearerFormat": "JWT",
+        "type": "http"
+      }
+    },
+    "schemas": {
+      "CrearProductoRequestDto": {
+        "type": "object",
+        "properties": {
+          "sku": {
+            "type": "string",
+            "description": "SKU del producto",
+            "pattern": "^[A-Za-z0-9-]{2,32}$",
+            "example": "SKU-001"
+          },
+          "nombre": {
+            "type": "string",
+            "description": "Nombre del producto",
+            "minLength": 2,
+            "maxLength": 200
+          },
+          "descripcion": {
+            "type": "string",
+            "description": "Descripción"
+          },
+          "categoria": {
+            "type": "string",
+            "description": "Categoría"
+          },
+          "precio_base": {
+            "type": "string",
+            "description": "Precio base decimal (ej: 1000.00) en córdobas; se guarda en centavos",
+            "example": "1000.00"
+          },
+          "stock": {
+            "type": "number",
+            "description": "Stock inicial",
+            "minimum": 0,
+            "example": 10
+          }
+        },
+        "required": [
+          "sku",
+          "nombre",
+          "precio_base",
+          "stock"
+        ]
+      },
+      "ActualizarProductoRequestDto": {
+        "type": "object",
+        "properties": {
+          "nombre": {
+            "type": "string",
+            "description": "Nombre del producto",
+            "minLength": 2,
+            "maxLength": 200
+          },
+          "descripcion": {
+            "type": "string",
+            "description": "Descripción"
+          },
+          "categoria": {
+            "type": "string",
+            "description": "Categoría"
+          },
+          "precio_base": {
+            "type": "string",
+            "description": "Precio base decimal (ej: 1000.00)"
+          },
+          "stock": {
+            "type": "number",
+            "description": "Stock",
+            "minimum": 0
+          },
+          "motivo": {
+            "type": "string",
+            "description": "Motivo del cambio (RN-08 histórico)"
+          }
+        }
+      }
+    }
+  }
+}
