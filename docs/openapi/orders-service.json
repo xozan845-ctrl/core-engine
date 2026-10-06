@@ -1,0 +1,568 @@
+{
+  "openapi": "3.0.0",
+  "paths": {
+    "/internal/orders/{id}/transicion": {
+      "post": {
+        "operationId": "InternoController_transicion",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "description": "Id de la orden",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "estado",
+            "required": true,
+            "in": "query",
+            "description": "Estado objetivo",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "motivo",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "summary": "Avanzar el ciclo de vida de la orden (logística→orders)",
+        "tags": [
+          "Pedidos (interno)"
+        ]
+      }
+    },
+    "/internal/orders/{id}": {
+      "get": {
+        "operationId": "InternoController_orden",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "description": "Id de la orden",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "summary": "Lectura completa de una orden (reportes/comisiones)",
+        "tags": [
+          "Pedidos (interno)"
+        ]
+      }
+    },
+    "/internal/orders": {
+      "get": {
+        "operationId": "InternoController_listar",
+        "parameters": [
+          {
+            "name": "estado",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "summary": "Listar órdenes (servicio→servicio)",
+        "tags": [
+          "Pedidos (interno)"
+        ]
+      }
+    },
+    "/internal/orders/{id}/reproyectar": {
+      "post": {
+        "operationId": "InternoController_reproyectar",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "description": "Id de la orden",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "summary": "Reproyectar una orden desde su historia (Event Sourcing)",
+        "tags": [
+          "Pedidos (interno)"
+        ]
+      }
+    },
+    "/internal/orders/{id}/historia": {
+      "get": {
+        "operationId": "InternoController_historia",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "description": "Id de la orden",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "summary": "Historia inmutable de eventos de una orden",
+        "tags": [
+          "Pedidos (interno)"
+        ]
+      }
+    },
+    "/api/v1/orders": {
+      "post": {
+        "operationId": "PedidosController_crear",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateOrderCommand"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "summary": "Crear una orden desde el carrito (comprador)",
+        "tags": [
+          "Pedidos"
+        ]
+      },
+      "get": {
+        "operationId": "PedidosController_misOrdenes",
+        "parameters": [
+          {
+            "name": "estado",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "summary": "Historial de órdenes del comprador autenticado",
+        "tags": [
+          "Pedidos"
+        ]
+      }
+    },
+    "/api/v1/orders/admin/todas": {
+      "get": {
+        "operationId": "PedidosController_todas",
+        "parameters": [
+          {
+            "name": "estado",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "limite",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "number"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "summary": "Listar todas las órdenes (admin)",
+        "tags": [
+          "Pedidos"
+        ]
+      }
+    },
+    "/api/v1/orders/vendedor/mis-ventas": {
+      "get": {
+        "operationId": "PedidosController_misVentas",
+        "parameters": [
+          {
+            "name": "estado",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "summary": "Órdenes del vendedor autenticado (mis ventas)",
+        "tags": [
+          "Pedidos"
+        ]
+      }
+    },
+    "/api/v1/orders/vendedor/comisiones": {
+      "get": {
+        "operationId": "PedidosController_comisiones",
+        "parameters": [
+          {
+            "name": "periodo",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "vendedorId",
+            "required": false,
+            "in": "query",
+            "description": "Solo admin",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "summary": "Comisiones por periodo (vendedor/admin)",
+        "tags": [
+          "Pedidos"
+        ]
+      }
+    },
+    "/api/v1/orders/tienda/{tiendaId}": {
+      "get": {
+        "operationId": "PedidosController_porTienda",
+        "parameters": [
+          {
+            "name": "tiendaId",
+            "required": true,
+            "in": "path",
+            "description": "Id de la tienda",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "estado",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "summary": "Órdenes de una tienda (vendedor dueño o admin)",
+        "tags": [
+          "Pedidos"
+        ]
+      }
+    },
+    "/api/v1/orders/{id}": {
+      "get": {
+        "operationId": "PedidosController_detalle",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "description": "Id de la orden",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "summary": "Estado/detalle de una orden (dueño o admin)",
+        "tags": [
+          "Pedidos"
+        ]
+      }
+    },
+    "/api/v1/orders/{id}/timeline": {
+      "get": {
+        "operationId": "PedidosController_timeline",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "description": "Id de la orden",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "summary": "Timeline de eventos de la orden (Event Sourcing)",
+        "tags": [
+          "Pedidos"
+        ]
+      }
+    },
+    "/api/v1/carrito": {
+      "get": {
+        "operationId": "CarritoController_ver",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "summary": "Ver el carrito del comprador (RN-05)",
+        "tags": [
+          "Carrito"
+        ]
+      },
+      "delete": {
+        "operationId": "CarritoController_vaciar",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "summary": "Vaciar el carrito",
+        "tags": [
+          "Carrito"
+        ]
+      }
+    },
+    "/api/v1/carrito/items": {
+      "post": {
+        "operationId": "CarritoController_agregar",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AgregarItemRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "summary": "Agregar un item al carrito",
+        "tags": [
+          "Carrito"
+        ]
+      }
+    },
+    "/api/v1/carrito/items/{ofertaId}": {
+      "patch": {
+        "operationId": "CarritoController_actualizar",
+        "parameters": [
+          {
+            "name": "ofertaId",
+            "required": true,
+            "in": "path",
+            "description": "Id de la oferta",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ActualizarCantidadRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "summary": "Actualizar la cantidad de un item (0 lo elimina)",
+        "tags": [
+          "Carrito"
+        ]
+      },
+      "delete": {
+        "operationId": "CarritoController_quitar",
+        "parameters": [
+          {
+            "name": "ofertaId",
+            "required": true,
+            "in": "path",
+            "description": "Id de la oferta",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "summary": "Quitar un item del carrito",
+        "tags": [
+          "Carrito"
+        ]
+      }
+    }
+  },
+  "info": {
+    "title": "Core Engine · orders-service",
+    "description": "Órdenes y transacciones: pedidos, carrito y comisiones (CQRS + Event Sourcing, Tabla 21)",
+    "version": "v1",
+    "contact": {}
+  },
+  "tags": [],
+  "servers": [],
+  "components": {
+    "securitySchemes": {
+      "bearer": {
+        "scheme": "bearer",
+        "bearerFormat": "JWT",
+        "type": "http"
+      }
+    },
+    "schemas": {
+      "ItemOrdenRequestDto": {
+        "type": "object",
+        "properties": {
+          "oferta_id": {
+            "type": "string",
+            "description": "Id de la oferta (vendedor-producto)"
+          },
+          "cantidad": {
+            "type": "number",
+            "description": "Cantidad (1-99)",
+            "minimum": 1,
+            "maximum": 99,
+            "example": 1
+          }
+        },
+        "required": [
+          "oferta_id",
+          "cantidad"
+        ]
+      },
+      "CreateOrderCommand": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "description": "Artículos de la orden",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ItemOrdenRequestDto"
+            }
+          },
+          "usar_carrito": {
+            "type": "boolean",
+            "description": "Crear la orden desde el carrito (RN-05)",
+            "example": false
+          }
+        }
+      },
+      "AgregarItemRequestDto": {
+        "type": "object",
+        "properties": {
+          "oferta_id": {
+            "type": "string",
+            "description": "Id de la oferta (vendedor-producto)",
+            "example": "a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11"
+          },
+          "cantidad": {
+            "type": "number",
+            "description": "Cantidad (1-99)",
+            "minimum": 1,
+            "maximum": 99,
+            "example": 2
+          }
+        },
+        "required": [
+          "oferta_id",
+          "cantidad"
+        ]
+      },
+      "ActualizarCantidadRequestDto": {
+        "type": "object",
+        "properties": {
+          "cantidad": {
+            "type": "number",
+            "description": "Cantidad (0 elimina el item; 1-99)",
+            "minimum": 0,
+            "maximum": 99,
+            "example": 3
+          }
+        },
+        "required": [
+          "cantidad"
+        ]
+      }
+    }
+  }
+}
