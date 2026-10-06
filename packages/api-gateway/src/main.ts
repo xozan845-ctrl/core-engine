@@ -3,6 +3,7 @@ import { SwaggerModule } from '@nestjs/swagger';
 import type { Request, Response } from 'express';
 import { AppModule } from './app.module';
 import { OPENAPI_AGREGADO } from './openapi.agregado';
+import { evaluarReadiness, codigoReadiness } from './health/readiness.utils';
 import {
   MetricsService,
   DomainErrorFilter,
@@ -44,30 +45,15 @@ async function bootstrap(): Promise<void> {
     res.type('text/plain').send(await metrics.texto()),
   );
 
-  // salud agregada: liveness del gateway + readiness de cada microservicio
-  expressApp.get('/health', async (_req: Request, res: Response) => {
-const servicios: [string, number][] = [
-      ['identity', 3001],
-      ['catalog', 3002],
-      ['stores', 3003],
-      ['orders', 3004],
-      ['logistics', 3005],
-      ['commissions', 3006],
-      ['finance', 3007],
-    ];
-    const estado: Record<string, string> = {};
-    await Promise.all(
-      servicios.map(async ([s, puertoSvc]) => {
-        const url = `http://${s}-service:${puertoSvc}/health`;
-        try {
-          const r = await fetch(url, { signal: AbortSignal.timeout(1500) });
-          estado[s] = r.ok ? 'ok' : `error:${r.status}`;
-        } catch {
-          estado[s] = 'caido';
-        }
-      }),
-    );
-    res.json({ api_gateway: 'ok', servicios: estado });
+  // Liveness: el gateway responde mientras el proceso esta vivo (healthcheck Docker).
+  expressApp.get('/health', (_req: Request, res: Response) =>
+    res.json({ api_gateway: 'ok', ...metrics.salud() }),
+  );
+
+  // Readiness (R-CD-12): 503 si algun microservicio de produccion no responde.
+  expressApp.get('/ready', async (_req: Request, res: Response) => {
+    const estado = await evaluarReadiness();
+    res.status(codigoReadiness(estado)).json(estado);
   });
 
   // Swagger: documento AGREGADO de todos los microservicios (R-DO-6, gate G-8).
