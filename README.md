@@ -169,6 +169,11 @@ El spec se regenera y se verifica en CI con el **gate G-8** (`R-C-7`): el job *B
 ejecuta `npm run swagger:export` y falla si `docs/openapi` cambia sin commitear
 (`git diff --exit-code`). Al tocar un DTO hay que anotarlo con `@ApiProperty`.
 
+El **API Gateway** sirve en su `/docs` el **documento agregado** de todos los
+servicios (vista única del contrato público): `scripts/swagger-aggregate.mjs`
+fusiona `docs/openapi/*.json` en `packages/api-gateway/src/openapi.agregado.ts`
+(generado, versionado y verificado por el gate G-8).
+
 ```bash
 npm run swagger:export   # regenera docs/openapi/*.json (sin BD/Rabbit; no arranca la app)
 ```
