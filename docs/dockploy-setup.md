@@ -65,8 +65,9 @@ Pasos:
    `RABBITMQ_PASSWORD` solo hacen falta si se activa la capa de observabilidad.
 6. **Puertos/red**: gateway expuesto en `8080` por environment (Docker asigna
    puerto/host distinto); red aislada por environment (lo gestiona Dockploy).
-7. **Healthcheck**: `GET /health` del gateway de cada environment (para smoke y
-   el healtcheck de Dockploy).
+7. **Healthcheck/Readiness**: `GET /health` (liveness del gateway; lo usa el
+   healthcheck de Dockploy) y `GET /ready` (readiness agregada: responde **503**
+   si algún microservicio de producción no está `ok`; lo usa el smoke, R-CD-12).
 
 > Dockploy corre **`docker-compose.yml`** (base: app + Postgres + RabbitMQ). La
 > observabilidad vive en **`docker-compose.observability.yml`** y es **opcional**:
@@ -91,7 +92,7 @@ Migraciones solo hacia adelante.
 |---|---|---|---|
 | 1 | Environment apunta a su rama (`staging` / `main`) | ☐ | ☐ |
 | 2 | Auto-deploy solo por push de esa rama | ☐ | ☐ |
-| 3 | `GET /health` → 200 con la pila levantada | ☐ | ☐ |
+| 3 | `GET /ready` → 200 (todos los servicios `ok`) con la pila levantada | ☐ | ☐ |
 | 4 | Un flujo de lectura real devuelve datos (smoke, `R-CD-12`) | ☐ | ☐ |
 | 5 | BD/vhost del entorno aislados (nada compartido) | ☐ | ☐ |
 | 6 | Secretos solo en variables de service/environment (`R-CD-7`) | ☐ | ☐ |
