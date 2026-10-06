@@ -8,6 +8,7 @@
     "build": "tsc -p tsconfig.json",
     "start": "node dist/main.js",
     "start:dev": "ts-node src/main.ts",
+    "swagger:export": "node dist/swagger-export.js",
     "test": "jest --runInBand"
   },
   "dependencies": {
@@ -15,6 +16,7 @@
     "@nestjs/common": "^11.0.0",
     "@nestjs/core": "^11.0.0",
     "@nestjs/platform-express": "^11.0.0",
+    "@nestjs/swagger": "^11.0.5",
     "bcryptjs": "^2.4.3",
     "class-transformer": "^0.5.1",
     "class-validator": "^0.14.1",
@@ -47,7 +49,9 @@
     "collectCoverageFrom": [
       "**/*.(t|j)s",
       "!**/main.ts",
-      "!**/*.module.ts"
+      "!**/*.module.ts",
+      "!**/swagger.ts",
+      "!**/swagger-export.ts"
     ],
     "coverageDirectory": "../coverage",
     "testEnvironment": "node",
