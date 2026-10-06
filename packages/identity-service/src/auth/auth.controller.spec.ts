@@ -18,7 +18,7 @@ function fabricar(): {
   usuarios: Record<string, jest.Mock>;
   controller: AuthController;
 } {
-  const auth = { registrar: jest.fn(), login: jest.fn(), refrescar: jest.fn() };
+  const auth = { registrar: jest.fn(), login: jest.fn(), refrescar: jest.fn(), cerrarSesion: jest.fn().mockResolvedValue(1) };
   const usuarios = {
     crear: jest.fn(),
     cambiarContrasena: jest.fn(),
@@ -105,7 +105,7 @@ describe('AuthController (api/v1/auth, R-U-10/11)', () => {
   });
 
   it('debe cambiar la contrasena del usuario autenticado', async () => {
-    const { usuarios, controller } = fabricar();
+    const { auth, usuarios, controller } = fabricar();
     await expect(
       controller.cambiarContrasena(
         { actual: 'vieja', nueva: 'nueva123' } as never,
@@ -113,6 +113,7 @@ describe('AuthController (api/v1/auth, R-U-10/11)', () => {
       ),
     ).resolves.toEqual({ ok: true });
     expect(usuarios.cambiarContrasena).toHaveBeenCalledWith('u-admin', 'vieja', 'nueva123');
+    expect(auth.cerrarSesion).toHaveBeenCalledWith('u-admin');
   });
 
   it('debe rechazar cambiar-contrasena cuando falta el contexto', async () => {
@@ -141,6 +142,25 @@ describe('AuthController (api/v1/auth, R-U-10/11)', () => {
   it('debe rechazar /me cuando falta el contexto', async () => {
     const { controller } = fabricar();
     await expect(controller.yo({})).rejects.toBeInstanceOf(UnauthorizedError);
+  });
+
+  it('debe cerrar solo la sesion indicada cuando el logout trae refresh_token', async () => {
+    const { auth, controller } = fabricar();
+    await expect(
+      controller.logout({ refresh_token: 'refresh-1' } as never, adminContexto as never),
+    ).resolves.toEqual({ ok: true });
+    expect(auth.cerrarSesion).toHaveBeenCalledWith('u-admin', 'refresh-1');
+  });
+
+  it('debe cerrar todas las sesiones cuando el logout no trae refresh_token', async () => {
+    const { auth, controller } = fabricar();
+    await expect(controller.logout({} as never, adminContexto as never)).resolves.toEqual({ ok: true });
+    expect(auth.cerrarSesion).toHaveBeenCalledWith('u-admin', undefined);
+  });
+
+  it('debe rechazar el logout cuando falta el contexto', async () => {
+    const { controller } = fabricar();
+    await expect(controller.logout({} as never, undefined as never)).rejects.toBeInstanceOf(UnauthorizedError);
   });
 
   it('debe vincular la ficha de personal y actualizar el nombre si viene', async () => {

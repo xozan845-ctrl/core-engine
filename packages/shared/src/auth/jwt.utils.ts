@@ -20,6 +20,8 @@ export interface TokenPayload {
   nombre?: string;
   tenant_id?: string;
   personal_id?: string;
+  /** Identificador de sesion (solo refresh): permite revocarla al cerrar sesion (R-GW-4). */
+  jti?: string;
 }
 
 const jwt = (() => {
@@ -69,6 +71,7 @@ export function crearRefreshToken(
   usuario: { id: string; email: string; rol: Rol; nombre?: string; tenant_id?: string; personal_id?: string },
   secreto: string,
   ttl: string,
+  jti?: string,
 ): string {
   return firmarToken(
     {
@@ -79,6 +82,7 @@ export function crearRefreshToken(
       nombre: usuario.nombre,
       tenant_id: usuario.tenant_id,
       personal_id: usuario.personal_id,
+      ...(jti ? { jti } : {}),
     },
     secreto,
     ttl,
