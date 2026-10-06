@@ -14,7 +14,7 @@
     "start:field": "npm run start -w @core/field-service",
     "demo": "node scripts/smoke.mjs",
     "lint": "eslint .",
-    "swagger:export": "npm run build && npm run swagger:export --workspaces --if-present"
+    "swagger:export": "npm run build && npm run swagger:export --workspaces --if-present && node scripts/swagger-aggregate.mjs && npm run build -w @core/api-gateway"
   },
   "engines": {
     "node": ">=20"
