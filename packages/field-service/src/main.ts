@@ -1,7 +1,9 @@
 import 'reflect-metadata';
 import { NestFactory } from '@nestjs/core';
+import { SwaggerModule } from '@nestjs/swagger';
 import type { Request, Response } from 'express';
 import { AppModule } from './app.module';
+import { crearDocumentoOpenApi } from './swagger';
 import {
   MetricsService,
   TrazabilidadInterceptor,
@@ -26,6 +28,7 @@ async function bootstrap(): Promise<void> {
     res.type('text/plain').send(await metrics.texto()),
   );
   expressApp.get('/health', (_req: Request, res: Response) => res.json(metrics.salud()));
+  SwaggerModule.setup('docs', app, crearDocumentoOpenApi(app));
   app.enableShutdownHooks();
   await app.listen(puerto);
   Logger.create(NOMBRE_SERVICIOS.FIELD).info({ msg: 'field-service listo', puerto });
