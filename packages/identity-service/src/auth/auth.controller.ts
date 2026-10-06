@@ -123,6 +123,13 @@ export class VincularPersonalRequestDto {
   nombre?: string;
 }
 
+export class LogoutRequestDto {
+  @ApiProperty({ description: 'Refresh token de la sesión a cerrar; si se omite, cierra todas', required: false })
+  @IsOptional()
+  @IsString()
+  refresh_token?: string;
+}
+
 @ApiTags('Auth')
 @Controller('api/v1/auth')
 export class AuthController {
@@ -158,6 +165,22 @@ export class AuthController {
       throw new DomainError('TOKEN_FALTANTE', 'El refresh_token es obligatorio.');
     }
     return this.auth.refrescar(body.refresh_token);
+  }
+
+  /**
+   * POST /api/v1/auth/logout — cierra la sesion (R-GW-4): revoca la sesion del
+   * refresh presentado o, si no se envia, todas las del usuario autenticado.
+   */
+  @Post('logout')
+  @ApiOperation({ summary: 'Cerrar sesión (revoca el refresh token)' })
+  @ApiResponse({ status: 200, description: 'Sesión cerrada' })
+  async logout(
+    @Body() dto: LogoutRequestDto,
+    @UsuarioActual() usuario: UsuarioContexto,
+  ): Promise<{ ok: true }> {
+    if (!usuario) throw new UnauthorizedError('Token invalido o ausente.');
+    await this.auth.cerrarSesion(usuario.user_id, dto.refresh_token);
+    return { ok: true };
   }
 
   /**
@@ -200,6 +223,8 @@ export class AuthController {
   ): Promise<{ ok: true }> {
     if (!usuario) throw new UnauthorizedError('Token invalido o ausente.');
     await this.usuarios.cambiarContrasena(usuario.user_id, dto.actual, dto.nueva);
+    // Cambiar la contrasena invalida las sesiones abiertas (R-GW-4, ADR-18).
+    await this.auth.cerrarSesion(usuario.user_id);
     return { ok: true };
   }
 
