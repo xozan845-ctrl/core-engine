@@ -1,0 +1,1348 @@
+{
+  "openapi": "3.0.0",
+  "paths": {
+    "/internal/finance/sujetos/{usuarioId}": {
+      "get": {
+        "operationId": "InternoController_sujeto",
+        "parameters": [
+          {
+            "name": "usuarioId",
+            "required": true,
+            "in": "path",
+            "description": "Id del usuario",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "summary": "Situación fiscal de un usuario (para identity)",
+        "tags": [
+          "Finanzas (interno)"
+        ]
+      }
+    },
+    "/internal/finance/declaraciones": {
+      "get": {
+        "operationId": "InternoController_declaraciones",
+        "parameters": [
+          {
+            "name": "tipo",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "periodo_inicio",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "estado",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "summary": "Declaraciones del periodo (reportes)",
+        "tags": [
+          "Finanzas (interno)"
+        ]
+      }
+    },
+    "/api/v1/finanzas/cuentas": {
+      "get": {
+        "operationId": "ContabilidadController_cuentas",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "summary": "Plan de cuentas",
+        "tags": [
+          "Finanzas · Contabilidad"
+        ]
+      },
+      "post": {
+        "operationId": "ContabilidadController_crearCuenta",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CrearCuentaRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "summary": "Crear una cuenta contable",
+        "tags": [
+          "Finanzas · Contabilidad"
+        ]
+      }
+    },
+    "/api/v1/finanzas/cuentas/{codigo}/estado": {
+      "post": {
+        "operationId": "ContabilidadController_estadoCuenta",
+        "parameters": [
+          {
+            "name": "codigo",
+            "required": true,
+            "in": "path",
+            "description": "Código de la cuenta",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EstadoCuentaRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "summary": "Cambiar el estado de una cuenta",
+        "tags": [
+          "Finanzas · Contabilidad"
+        ]
+      }
+    },
+    "/api/v1/finanzas/asientos": {
+      "get": {
+        "operationId": "ContabilidadController_libroDiario",
+        "parameters": [
+          {
+            "name": "desde",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "hasta",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "limite",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "summary": "Libro diario (asientos)",
+        "tags": [
+          "Finanzas · Contabilidad"
+        ]
+      },
+      "post": {
+        "operationId": "ContabilidadController_registrar",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CrearAsientoRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "summary": "Registrar un asiento manual",
+        "tags": [
+          "Finanzas · Contabilidad"
+        ]
+      }
+    },
+    "/api/v1/finanzas/asientos/{id}/anular": {
+      "post": {
+        "operationId": "ContabilidadController_anular",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "description": "Id del asiento",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "summary": "Anular un asiento",
+        "tags": [
+          "Finanzas · Contabilidad"
+        ]
+      }
+    },
+    "/api/v1/finanzas/libro-mayor/{cuenta}": {
+      "get": {
+        "operationId": "ContabilidadController_libroMayor",
+        "parameters": [
+          {
+            "name": "cuenta",
+            "required": true,
+            "in": "path",
+            "description": "Código de la cuenta",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "desde",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "hasta",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "summary": "Libro mayor por cuenta",
+        "tags": [
+          "Finanzas · Contabilidad"
+        ]
+      }
+    },
+    "/api/v1/finanzas/libro-ventas": {
+      "get": {
+        "operationId": "ContabilidadController_libroVentas",
+        "parameters": [
+          {
+            "name": "desde",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "hasta",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "summary": "Libro de ventas (DGI)",
+        "tags": [
+          "Finanzas · Contabilidad"
+        ]
+      }
+    },
+    "/api/v1/finanzas/libro-compras": {
+      "get": {
+        "operationId": "ContabilidadController_libroCompras",
+        "parameters": [
+          {
+            "name": "desde",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "hasta",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "summary": "Libro de compras (DGI)",
+        "tags": [
+          "Finanzas · Contabilidad"
+        ]
+      }
+    },
+    "/api/v1/finanzas/comprobantes": {
+      "get": {
+        "operationId": "FacturacionController_listar",
+        "parameters": [
+          {
+            "name": "desde",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "hasta",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "estado",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "summary": "Listar comprobantes fiscales",
+        "tags": [
+          "Finanzas · Facturación"
+        ]
+      },
+      "post": {
+        "operationId": "FacturacionController_emitir",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EmitirComprobanteRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "summary": "Emitir un comprobante (factura o nota de crédito)",
+        "tags": [
+          "Finanzas · Facturación"
+        ]
+      }
+    },
+    "/api/v1/finanzas/comprobantes/series": {
+      "get": {
+        "operationId": "FacturacionController_series",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "summary": "Series de comprobantes",
+        "tags": [
+          "Finanzas · Facturación"
+        ]
+      }
+    },
+    "/api/v1/finanzas/comprobantes/{id}/anular": {
+      "post": {
+        "operationId": "FacturacionController_anular",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "description": "Id del comprobante",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "summary": "Anular un comprobante",
+        "tags": [
+          "Finanzas · Facturación"
+        ]
+      }
+    },
+    "/api/v1/finanzas/jurisdicciones": {
+      "get": {
+        "operationId": "TributacionController_jurisdicciones",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "summary": "Listar jurisdicciones",
+        "tags": [
+          "Finanzas · Tributación"
+        ]
+      },
+      "post": {
+        "operationId": "TributacionController_crearJurisdiccion",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CrearJurisdiccionRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "summary": "Crear una jurisdicción",
+        "tags": [
+          "Finanzas · Tributación"
+        ]
+      }
+    },
+    "/api/v1/finanzas/regimenes": {
+      "get": {
+        "operationId": "TributacionController_regimenes",
+        "parameters": [
+          {
+            "name": "jurisdiccion",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "summary": "Listar regímenes fiscales",
+        "tags": [
+          "Finanzas · Tributación"
+        ]
+      },
+      "post": {
+        "operationId": "TributacionController_crearRegimen",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CrearRegimenRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "summary": "Crear un régimen fiscal",
+        "tags": [
+          "Finanzas · Tributación"
+        ]
+      }
+    },
+    "/api/v1/finanzas/sujetos": {
+      "get": {
+        "operationId": "TributacionController_sujetos",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "summary": "Listar sujetos tributarios",
+        "tags": [
+          "Finanzas · Tributación"
+        ]
+      },
+      "post": {
+        "operationId": "TributacionController_registrarSujeto",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RegistrarSujetoRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "summary": "Registrar un sujeto tributario",
+        "tags": [
+          "Finanzas · Tributación"
+        ]
+      }
+    },
+    "/api/v1/finanzas/sujetos/{id}/baja": {
+      "post": {
+        "operationId": "TributacionController_darDeBaja",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "description": "Id del sujeto",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "summary": "Dar de baja un sujeto tributario",
+        "tags": [
+          "Finanzas · Tributación"
+        ]
+      }
+    },
+    "/api/v1/finanzas/declaraciones": {
+      "get": {
+        "operationId": "TributacionController_declaraciones",
+        "parameters": [
+          {
+            "name": "tipo",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "periodo_inicio",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "estado",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "summary": "Listar declaraciones",
+        "tags": [
+          "Finanzas · Tributación"
+        ]
+      }
+    },
+    "/api/v1/finanzas/declaraciones/generar": {
+      "post": {
+        "operationId": "TributacionController_generar",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/GenerarDeclaracionesRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "summary": "Generar declaraciones del periodo",
+        "tags": [
+          "Finanzas · Tributación"
+        ]
+      }
+    },
+    "/api/v1/finanzas/declaraciones/{id}/presentar": {
+      "post": {
+        "operationId": "TributacionController_presentar",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "description": "Id de la declaración",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "summary": "Presentar una declaración",
+        "tags": [
+          "Finanzas · Tributación"
+        ]
+      }
+    },
+    "/api/v1/finanzas/declaraciones/{id}/pagar": {
+      "post": {
+        "operationId": "TributacionController_pagar",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "description": "Id de la declaración",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "summary": "Marcar una declaración como pagada",
+        "tags": [
+          "Finanzas · Tributación"
+        ]
+      }
+    },
+    "/api/v1/finanzas/proyecciones": {
+      "post": {
+        "operationId": "FinanzasController_crear",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CrearProyeccionRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "summary": "Crear una proyección financiera",
+        "tags": [
+          "Finanzas · Modelo"
+        ]
+      },
+      "get": {
+        "operationId": "FinanzasController_listar",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "summary": "Listar proyecciones",
+        "tags": [
+          "Finanzas · Modelo"
+        ]
+      }
+    },
+    "/api/v1/finanzas/proyecciones/{id}": {
+      "get": {
+        "operationId": "FinanzasController_detalle",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "description": "Id de la proyección",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "summary": "Detalle de una proyección",
+        "tags": [
+          "Finanzas · Modelo"
+        ]
+      }
+    },
+    "/api/v1/finanzas/punto-equilibrio": {
+      "get": {
+        "operationId": "FinanzasController_puntoEquilibrio",
+        "parameters": [
+          {
+            "name": "costos_fijos_cents",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "ticket_promedio_cents",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "comision_tasa",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "horizonte_meses",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "summary": "Punto de equilibrio (tablas 8.12/8.11)",
+        "tags": [
+          "Finanzas · Modelo"
+        ]
+      }
+    },
+    "/api/v1/finanzas/kpis": {
+      "get": {
+        "operationId": "FinanzasController_kpisDelMes",
+        "parameters": [
+          {
+            "name": "mes",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "summary": "KPIs financieros del periodo (tabla 8.8)",
+        "tags": [
+          "Finanzas · Modelo"
+        ]
+      }
+    },
+    "/api/v1/finanzas/proyecciones/sensibilidad": {
+      "get": {
+        "operationId": "FinanzasController_sensibilidad",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "summary": "Estudios de sensibilidad (8.7, 8.10, 8.11, 8.12)",
+        "tags": [
+          "Finanzas · Modelo"
+        ]
+      }
+    },
+    "/api/v1/finanzas/proyecciones/plan-bienal": {
+      "get": {
+        "operationId": "FinanzasController_planBienal",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "summary": "Plan a 24 meses (8.6 + 8.9)",
+        "tags": [
+          "Finanzas · Modelo"
+        ]
+      }
+    },
+    "/api/v1/finanzas/tablero": {
+      "get": {
+        "operationId": "FinanzasController_tablero",
+        "parameters": [
+          {
+            "name": "mes",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "costo_entrega_por_pedido_cents",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "summary": "Tablero financiero (KPIs + alertas, tabla 8.10)",
+        "tags": [
+          "Finanzas · Modelo"
+        ]
+      }
+    },
+    "/api/v1/vendedores/me/fiscal": {
+      "get": {
+        "operationId": "VendedorFiscalController_situacion",
+        "parameters": [
+          {
+            "name": "mes",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "summary": "Situación fiscal del vendedor (cap. 4.4)",
+        "tags": [
+          "Finanzas · Vendedor"
+        ]
+      }
+    }
+  },
+  "info": {
+    "title": "Core Engine · finance-service",
+    "description": "Finanzas y contabilidad: proyecciones (cap. 8), partida doble y régimen fiscal multijurisdicción (Tabla 21)",
+    "version": "v1",
+    "contact": {}
+  },
+  "tags": [],
+  "servers": [],
+  "components": {
+    "securitySchemes": {
+      "bearer": {
+        "scheme": "bearer",
+        "bearerFormat": "JWT",
+        "type": "http"
+      }
+    },
+    "schemas": {
+      "CrearCuentaRequestDto": {
+        "type": "object",
+        "properties": {
+          "codigo": {
+            "type": "string",
+            "description": "Código de la cuenta"
+          },
+          "nombre": {
+            "type": "string",
+            "description": "Nombre de la cuenta",
+            "minLength": 3
+          },
+          "tipo": {
+            "type": "string",
+            "description": "Tipo de cuenta",
+            "enum": [
+              "ACTIVO",
+              "PASIVO",
+              "CAPITAL",
+              "INGRESO",
+              "COSTO",
+              "GASTO"
+            ]
+          },
+          "naturaleza": {
+            "type": "string",
+            "description": "Naturaleza de la cuenta",
+            "enum": [
+              "DEUDORA",
+              "ACREEDORA"
+            ]
+          },
+          "nivel": {
+            "type": "number",
+            "description": "Nivel jerárquico"
+          }
+        },
+        "required": [
+          "codigo",
+          "nombre",
+          "tipo",
+          "naturaleza"
+        ]
+      },
+      "EstadoCuentaRequestDto": {
+        "type": "object",
+        "properties": {
+          "estado": {
+            "type": "string",
+            "description": "Estado de la cuenta",
+            "enum": [
+              "activa",
+              "inactiva"
+            ]
+          }
+        },
+        "required": [
+          "estado"
+        ]
+      },
+      "DetalleAsientoRequestDto": {
+        "type": "object",
+        "properties": {
+          "cuenta_codigo": {
+            "type": "string",
+            "description": "Código de cuenta contable"
+          },
+          "debe_cents": {
+            "type": "number",
+            "description": "Débito en centavos",
+            "minimum": 0
+          },
+          "haber_cents": {
+            "type": "number",
+            "description": "Crédito en centavos",
+            "minimum": 0
+          },
+          "concepto": {
+            "type": "string",
+            "description": "Concepto del detalle"
+          },
+          "orden": {
+            "type": "number",
+            "description": "Orden del detalle"
+          }
+        },
+        "required": [
+          "cuenta_codigo",
+          "debe_cents",
+          "haber_cents"
+        ]
+      },
+      "CrearAsientoRequestDto": {
+        "type": "object",
+        "properties": {
+          "concepto": {
+            "type": "string",
+            "description": "Concepto del asiento",
+            "minLength": 3
+          },
+          "fecha": {
+            "type": "string",
+            "description": "Fecha (ISO 8601)"
+          },
+          "tipo": {
+            "type": "string",
+            "description": "Tipo de asiento",
+            "enum": [
+              "INGRESO",
+              "EGRESO",
+              "AJUSTE",
+              "CIERRE",
+              "APERTURA",
+              "MANUAL"
+            ]
+          },
+          "referencia_tipo": {
+            "type": "string",
+            "description": "Tipo de referencia"
+          },
+          "referencia_id": {
+            "type": "string",
+            "description": "Id de referencia"
+          },
+          "detalles": {
+            "description": "Detalles del asiento (mínimo 2)",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/DetalleAsientoRequestDto"
+            }
+          }
+        },
+        "required": [
+          "concepto",
+          "detalles"
+        ]
+      },
+      "EmitirComprobanteRequestDto": {
+        "type": "object",
+        "properties": {
+          "tipo": {
+            "type": "string",
+            "description": "Tipo de comprobante",
+            "enum": [
+              "FACTURA",
+              "NOTA_CREDITO"
+            ]
+          },
+          "orden_id": {
+            "type": "string",
+            "description": "Id de la orden (UUID)"
+          },
+          "cliente_id": {
+            "type": "string",
+            "description": "Id del cliente"
+          },
+          "razon_social": {
+            "type": "string",
+            "description": "Razón social"
+          },
+          "ruc": {
+            "type": "string",
+            "description": "RUC"
+          }
+        },
+        "required": [
+          "tipo",
+          "orden_id"
+        ]
+      },
+      "CrearJurisdiccionRequestDto": {
+        "type": "object",
+        "properties": {
+          "codigo_pais": {
+            "type": "string",
+            "description": "Código de país (ISO)",
+            "minLength": 2
+          },
+          "nombre": {
+            "type": "string",
+            "description": "Nombre de la jurisdicción"
+          },
+          "moneda": {
+            "type": "string",
+            "description": "Moneda"
+          },
+          "simbolo_moneda": {
+            "type": "string",
+            "description": "Símbolo de la moneda"
+          },
+          "tasa_iva_por_mil": {
+            "type": "number",
+            "description": "Tasa de IVA por mil",
+            "minimum": 0
+          },
+          "tasa_ir_por_mil": {
+            "type": "number",
+            "description": "Tasa de IR por mil",
+            "minimum": 0
+          },
+          "periodicidad_declaracion": {
+            "type": "string",
+            "description": "Periodicidad de declaración"
+          },
+          "leyes": {
+            "type": "object",
+            "description": "Leyes aplicables (clave→texto)"
+          }
+        },
+        "required": [
+          "codigo_pais",
+          "nombre",
+          "moneda",
+          "simbolo_moneda",
+          "tasa_iva_por_mil",
+          "tasa_ir_por_mil"
+        ]
+      },
+      "CrearRegimenRequestDto": {
+        "type": "object",
+        "properties": {
+          "jurisdiccion": {
+            "type": "string",
+            "description": "Jurisdicción",
+            "minLength": 2
+          },
+          "codigo": {
+            "type": "string",
+            "description": "Código del régimen"
+          },
+          "nombre": {
+            "type": "string",
+            "description": "Nombre del régimen"
+          },
+          "descripcion": {
+            "type": "string",
+            "description": "Descripción"
+          },
+          "periodicidad": {
+            "type": "string",
+            "description": "Periodicidad"
+          },
+          "condicion_ingresos_anuales_cents": {
+            "type": "number",
+            "description": "Condición de ingresos anuales (centavos)"
+          }
+        },
+        "required": [
+          "jurisdiccion",
+          "codigo",
+          "nombre"
+        ]
+      },
+      "RegistrarSujetoRequestDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Id del sujeto (UUID)"
+          },
+          "jurisdiccion": {
+            "type": "string",
+            "description": "Jurisdicción"
+          },
+          "regimen_id": {
+            "type": "string",
+            "description": "Id del régimen (UUID)"
+          },
+          "razon_social": {
+            "type": "string",
+            "description": "Razón social"
+          },
+          "ruc": {
+            "type": "string",
+            "description": "RUC"
+          },
+          "es_plataforma": {
+            "type": "boolean",
+            "description": "¿Es la plataforma?"
+          }
+        },
+        "required": [
+          "id",
+          "razon_social"
+        ]
+      },
+      "GenerarDeclaracionesRequestDto": {
+        "type": "object",
+        "properties": {
+          "tipo": {
+            "type": "string",
+            "description": "Tipo de declaración",
+            "enum": [
+              "IVA",
+              "IR",
+              "CUOTA_FIJA"
+            ]
+          },
+          "inicio": {
+            "type": "string",
+            "description": "Inicio del periodo"
+          },
+          "fin": {
+            "type": "string",
+            "description": "Fin del periodo"
+          }
+        }
+      },
+      "SupuestosRequestDto": {
+        "type": "object",
+        "properties": {
+          "horizonte_meses": {
+            "type": "number",
+            "description": "Horizonte en meses (1-60)",
+            "minimum": 1,
+            "maximum": 60
+          },
+          "vendedores_iniciales": {
+            "type": "number",
+            "description": "Vendedores iniciales",
+            "minimum": 1
+          },
+          "entrada_vendedores_mes": {
+            "type": "number",
+            "description": "Entrada de vendedores por mes",
+            "minimum": 0
+          },
+          "churn_tasa": {
+            "type": "number",
+            "description": "Tasa de churn (0-1)",
+            "minimum": 0,
+            "maximum": 1
+          },
+          "pedidos_por_vendedor": {
+            "description": "Pedidos por vendedor por mes",
+            "type": "array",
+            "items": {
+              "type": "number"
+            }
+          },
+          "ticket_promedio_cents": {
+            "type": "number",
+            "description": "Ticket promedio en centavos",
+            "minimum": 1
+          },
+          "comision_tasa": {
+            "type": "number",
+            "description": "Tasa de comisión (0-1)",
+            "minimum": 0,
+            "maximum": 1
+          },
+          "costos_fijos_cents": {
+            "type": "number",
+            "description": "Costos fijos en centavos",
+            "minimum": 0
+          },
+          "costos_fijos_desde_mes7_cents": {
+            "type": "number",
+            "description": "Costos fijos desde el mes 7 en centavos",
+            "minimum": 0
+          },
+          "inversion_inicial_cents": {
+            "type": "number",
+            "description": "Inversión inicial en centavos",
+            "minimum": 0
+          },
+          "tasa_descuento_mensual": {
+            "type": "number",
+            "description": "Tasa de descuento mensual",
+            "minimum": 0
+          }
+        },
+        "required": [
+          "horizonte_meses",
+          "vendedores_iniciales",
+          "entrada_vendedores_mes",
+          "churn_tasa",
+          "pedidos_por_vendedor",
+          "ticket_promedio_cents",
+          "comision_tasa",
+          "costos_fijos_cents",
+          "inversion_inicial_cents"
+        ]
+      },
+      "CrearProyeccionRequestDto": {
+        "type": "object",
+        "properties": {
+          "nombre": {
+            "type": "string",
+            "description": "Nombre de la proyección",
+            "minLength": 3
+          },
+          "supuestos": {
+            "description": "Supuestos del modelo",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/SupuestosRequestDto"
+              }
+            ]
+          }
+        },
+        "required": [
+          "nombre",
+          "supuestos"
+        ]
+      }
+    }
+  }
+}
