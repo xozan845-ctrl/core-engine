@@ -1,0 +1,133 @@
+{
+  "openapi": "3.0.0",
+  "paths": {
+    "/api/v1/vendedores/me/liquidaciones": {
+      "get": {
+        "operationId": "LiquidacionesController_mias",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "summary": "Cortes/liquidaciones del vendedor autenticado",
+        "tags": [
+          "Comisiones · Liquidaciones"
+        ]
+      }
+    },
+    "/api/v1/admin/liquidaciones/corte": {
+      "post": {
+        "operationId": "LiquidacionesController_corteManual",
+        "parameters": [
+          {
+            "name": "inicio",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "fin",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "summary": "Ejecutar un corte de liquidaciones (admin)",
+        "tags": [
+          "Comisiones · Liquidaciones"
+        ]
+      }
+    },
+    "/api/v1/admin/liquidaciones/{id}/pagar": {
+      "post": {
+        "operationId": "LiquidacionesController_pagar",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "description": "Id de la liquidación",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "estado",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "summary": "Marcar una liquidación como pagada (RN-07)",
+        "tags": [
+          "Comisiones · Liquidaciones"
+        ]
+      }
+    },
+    "/api/v1/vendedores/me/ventas": {
+      "get": {
+        "operationId": "VentasController_estado",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "summary": "Estado de cuenta de ventas/comisiones del vendedor",
+        "tags": [
+          "Comisiones · Ventas"
+        ]
+      }
+    },
+    "/api/v1/admin/reportes": {
+      "get": {
+        "operationId": "ReportesController_kpis",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "summary": "KPIs de ventas e inventario (admin)",
+        "tags": [
+          "Comisiones · Reportes"
+        ]
+      }
+    }
+  },
+  "info": {
+    "title": "Core Engine · commissions-service",
+    "description": "Comisiones y liquidaciones de vendedores (fuera de producción)",
+    "version": "v1",
+    "contact": {}
+  },
+  "tags": [],
+  "servers": [],
+  "components": {
+    "securitySchemes": {
+      "bearer": {
+        "scheme": "bearer",
+        "bearerFormat": "JWT",
+        "type": "http"
+      }
+    },
+    "schemas": {}
+  }
+}
