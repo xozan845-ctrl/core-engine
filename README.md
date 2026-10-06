@@ -150,7 +150,7 @@ en `docs/rules/cd/` (R-CD).
 - `GET /api/v1/admin/inventario`, `GET /api/v1/admin/envios`
 - `GET /api/v1/finanzas/asientos|proyecciones|kpis|punto-equilibrio` (admin),
   `POST /api/v1/finanzas/asientos`, `GET /api/v1/vendedores/me/fiscal`
-- Infra: `GET /health` (agregada por servicio), `GET /metrics`, Swagger en `/docs` de cada servicio
+- Infra: `GET /health` (liveness) y `GET /ready` (readiness agregada de los 7 servicios), `GET /metrics`, Swagger en `/docs` de cada servicio
 
 Endpoints internos (servicio→servicio) protegidos con `x-internal-key`: `internal/usuarios/:id`,
 `internal/vendedores`, `internal/productos/lote`, `internal/productos/sku/:sku`,
