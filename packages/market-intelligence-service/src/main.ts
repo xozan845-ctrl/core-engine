@@ -1,5 +1,7 @@
 import { NestFactory } from '@nestjs/core';
+import { SwaggerModule } from '@nestjs/swagger';
 import { AppModule } from './app.module';
+import { crearDocumentoOpenApi } from './swagger';
 import { PUERTOS, NOMBRE_SERVICIOS, DtoValidationPipe, DomainErrorFilter, Logger } from '@core/shared';
 
 async function bootstrap(): Promise<void> {
@@ -8,6 +10,7 @@ async function bootstrap(): Promise<void> {
   app.useGlobalPipes(new DtoValidationPipe());
   app.useGlobalFilters(new DomainErrorFilter());
 
+  SwaggerModule.setup('docs', app, crearDocumentoOpenApi(app));
   app.enableShutdownHooks();
   await app.listen(PUERTOS.INTELLIGENCE);
   Logger.create(NOMBRE_SERVICIOS.INTELLIGENCE).info({

@@ -1,11 +1,13 @@
+import { ApiProperty } from '@nestjs/swagger';
+
 export class PuntoCalorDto {
-  lat: number;
-  lng: number;
-  peso: number;
-  tipo: string;
+  @ApiProperty() lat: number;
+  @ApiProperty() lng: number;
+  @ApiProperty() peso: number;
+  @ApiProperty() tipo: string;
 }
 
 export class MapaCalorResponseDto {
-  puntos: PuntoCalorDto[];
-  total_puntos: number;
+  @ApiProperty({ type: [PuntoCalorDto] }) puntos: PuntoCalorDto[];
+  @ApiProperty() total_puntos: number;
 }
