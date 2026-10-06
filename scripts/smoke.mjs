@@ -62,12 +62,12 @@ function sufijo() {
 }
 
 async function main() {
-  paso('Salud del ecosistema y aislado de la base');
-  const salud = await api('GET', '/health');
-  if (salud.status === 200 && salud.json?.api_gateway === 'ok') {
-    ok(`gateway ok · servicios: ${Object.keys(salud.json.servicios ?? {}).length}`);
+  paso('Readiness del ecosistema (R-CD-12: todos los servicios en pie)');
+  const ready = await api('GET', '/ready');
+  if (ready.status === 200 && ready.json?.status === 'ok') {
+    ok(`servicios ok: ${Object.keys(ready.json.servicios ?? {}).join(', ')}`);
   } else {
-    fail(`health=${salud.status}`);
+    fail(`readiness=${ready.status} ${JSON.stringify(ready.json?.servicios ?? ready.json)}`);
     process.exit(1);
   }
 
