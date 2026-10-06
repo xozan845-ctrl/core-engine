@@ -1,0 +1,465 @@
+{
+  "openapi": "3.0.0",
+  "paths": {
+    "/api/v1/inteligencia/mapa-calor": {
+      "get": {
+        "operationId": "MetricasController_getMapaCalor",
+        "parameters": [
+          {
+            "name": "desde",
+            "required": false,
+            "in": "query",
+            "description": "Fecha desde (ISO 8601)",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "hasta",
+            "required": false,
+            "in": "query",
+            "description": "Fecha hasta (ISO 8601)",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "sku",
+            "required": false,
+            "in": "query",
+            "description": "SKU",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "vendedor_id",
+            "required": false,
+            "in": "query",
+            "description": "Id del vendedor (UUID)",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "summary": "Mapa de calor de ventas (admin)",
+        "tags": [
+          "Inteligencia — Métricas"
+        ]
+      }
+    },
+    "/api/v1/inteligencia/me/mapa-calor": {
+      "get": {
+        "operationId": "MetricasController_getMiMapaCalor",
+        "parameters": [
+          {
+            "name": "x-user-personal",
+            "required": false,
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "desde",
+            "required": false,
+            "in": "query",
+            "description": "Fecha desde (ISO 8601)",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "hasta",
+            "required": false,
+            "in": "query",
+            "description": "Fecha hasta (ISO 8601)",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "sku",
+            "required": false,
+            "in": "query",
+            "description": "SKU",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "vendedor_id",
+            "required": false,
+            "in": "query",
+            "description": "Id del vendedor (UUID)",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "summary": "Mi mapa de calor (vendedor)",
+        "tags": [
+          "Inteligencia — Métricas"
+        ]
+      }
+    },
+    "/api/v1/inteligencia/rendimiento": {
+      "get": {
+        "operationId": "MetricasController_getRendimiento",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "summary": "Rendimiento de vendedores (admin)",
+        "tags": [
+          "Inteligencia — Métricas"
+        ]
+      }
+    },
+    "/api/v1/inteligencia/me/rendimiento": {
+      "get": {
+        "operationId": "MetricasController_getMiRendimiento",
+        "parameters": [
+          {
+            "name": "x-user-personal",
+            "required": false,
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "summary": "Mi rendimiento como vendedor",
+        "tags": [
+          "Inteligencia — Métricas"
+        ]
+      }
+    },
+    "/api/v1/inteligencia/cobertura": {
+      "get": {
+        "operationId": "MetricasController_getCobertura",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "summary": "Cobertura por zona (admin)",
+        "tags": [
+          "Inteligencia — Métricas"
+        ]
+      }
+    },
+    "/api/v1/inteligencia/demanda": {
+      "get": {
+        "operationId": "MetricasController_getDemanda",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "summary": "Demanda de productos (admin)",
+        "tags": [
+          "Inteligencia — Métricas"
+        ]
+      }
+    },
+    "/api/v1/inteligencia/tendencias": {
+      "get": {
+        "operationId": "MetricasController_getTendencias",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "summary": "Tendencias (admin)",
+        "tags": [
+          "Inteligencia — Métricas"
+        ]
+      }
+    },
+    "/api/v1/inteligencia/resumen": {
+      "get": {
+        "operationId": "MetricasController_getResumen",
+        "parameters": [
+          {
+            "name": "desde",
+            "required": false,
+            "in": "query",
+            "description": "Fecha desde (ISO 8601)",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "hasta",
+            "required": false,
+            "in": "query",
+            "description": "Fecha hasta (ISO 8601)",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "sku",
+            "required": false,
+            "in": "query",
+            "description": "SKU",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "vendedor_id",
+            "required": false,
+            "in": "query",
+            "description": "Id del vendedor (UUID)",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "summary": "Resumen de inteligencia de mercado (admin)",
+        "tags": [
+          "Inteligencia — Métricas"
+        ]
+      }
+    },
+    "/api/v1/inteligencia/ventas/registrar": {
+      "post": {
+        "operationId": "MetricasController_registrarVenta",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "summary": "Registrar una venta en inteligencia (ingesta manual)",
+        "tags": [
+          "Inteligencia — Métricas"
+        ]
+      }
+    },
+    "/api/v1/inteligencia/forecast/demanda": {
+      "get": {
+        "operationId": "PrediccionController_forecastDemanda",
+        "parameters": [
+          {
+            "name": "sku",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "dias",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Forecast de demanda por SKU (media móvil 7d)",
+        "tags": [
+          "Inteligencia — Predicción"
+        ]
+      }
+    },
+    "/api/v1/inteligencia/anomalias": {
+      "get": {
+        "operationId": "PrediccionController_anomalias",
+        "parameters": [
+          {
+            "name": "sku",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "vendedor_id",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "limite",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Detección de ventas anómalas por Z-score",
+        "tags": [
+          "Inteligencia — Predicción"
+        ]
+      }
+    },
+    "/api/v1/inteligencia/vendedores/{id}/score": {
+      "get": {
+        "operationId": "PrediccionController_scoreVendedor",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Score predictivo de un vendedor (churn, efectividad)",
+        "tags": [
+          "Inteligencia — Predicción"
+        ]
+      }
+    },
+    "/api/v1/inteligencia/me/score": {
+      "get": {
+        "operationId": "PrediccionController_miScore",
+        "parameters": [
+          {
+            "name": "x-user-id",
+            "required": true,
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Mi score predictivo como vendedor",
+        "tags": [
+          "Inteligencia — Predicción"
+        ]
+      }
+    },
+    "/api/v1/inteligencia/calidad": {
+      "get": {
+        "operationId": "PrediccionController_calidadDatos",
+        "parameters": [
+          {
+            "name": "horas",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Dashboard de calidad de datos del pipeline (últimas N horas)",
+        "tags": [
+          "Inteligencia — Predicción"
+        ]
+      }
+    }
+  },
+  "info": {
+    "title": "Core Engine · market-intelligence-service",
+    "description": "Inteligencia de mercado: métricas, mapa de calor y predicción (fuera de producción)",
+    "version": "v1",
+    "contact": {}
+  },
+  "tags": [],
+  "servers": [],
+  "components": {
+    "securitySchemes": {
+      "bearer": {
+        "scheme": "bearer",
+        "bearerFormat": "JWT",
+        "type": "http"
+      }
+    },
+    "schemas": {}
+  }
+}
