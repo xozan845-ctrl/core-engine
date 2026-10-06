@@ -50,6 +50,14 @@ describe('jwt.utils (firma y verificacion HS256, doc 4.3)', () => {
     expect(verificarToken<TokenPayload>(access, secreto).sub).toBe('u-1');
   });
 
+  it('debe incluir el jti en el refresh cuando se indica (revocacion de sesion, R-GW-4)', () => {
+    const usuario = { id: 'u-1', email: 'vendedor@core.local', rol: ROLES.VENDEDOR };
+    const conJti = crearRefreshToken(usuario, secreto, '7d', 'jti-1');
+    const sinJti = crearRefreshToken(usuario, secreto, '7d');
+    expect(verificarToken<TokenPayload>(conJti, secreto).jti).toBe('jti-1');
+    expect(verificarToken<TokenPayload>(sinJti, secreto).jti).toBeUndefined();
+  });
+
   it('debe firmar con HS256 y expiracion cuando se usa un ttl valido', () => {
     const token = firmarToken(payload, secreto, '1h');
     const claims = verificarToken<TokenPayload & { exp: number; iat: number }>(token, secreto);
