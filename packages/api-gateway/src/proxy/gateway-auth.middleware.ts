@@ -36,6 +36,8 @@ export const POLITICAS_RUTAS: PoliticaRuta[] = [
     { patron: /^\/api\/v1\/auth\/crear-usuario$/, metodos: ['POST'], roles: [ROLES.ADMIN] },
     // autenticado
     { patron: /^\/api\/v1\/auth\/me$/, metodos: ['GET'], roles: null }, // exige token (se valida abajo)
+    // logout: exige un access token valido (cualquier rol); revoca el refresh (R-GW-4)
+    { patron: /^\/api\/v1\/auth\/logout$/, metodos: ['POST'], roles: Object.values(ROLES) },
     // catálogo: escritura admin
     { patron: /^\/api\/v1\/catalog\/productos/, metodos: ['POST', 'PATCH', 'PUT', 'DELETE'], roles: [ROLES.ADMIN] },
     // vendedores
