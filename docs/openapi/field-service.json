@@ -1,0 +1,2146 @@
+{
+  "openapi": "3.0.0",
+  "paths": {
+    "/api/v1/field/personal": {
+      "get": {
+        "operationId": "FieldController_listarPersonal",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "summary": "Listar personal",
+        "tags": [
+          "Field (logística de campo)"
+        ]
+      },
+      "post": {
+        "operationId": "FieldController_crearPersonal",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CrearPersonalRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "summary": "Crear personal",
+        "tags": [
+          "Field (logística de campo)"
+        ]
+      }
+    },
+    "/api/v1/field/personal/{id}": {
+      "get": {
+        "operationId": "FieldController_obtenerPersonal",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "summary": "Obtener personal por id",
+        "tags": [
+          "Field (logística de campo)"
+        ]
+      },
+      "patch": {
+        "operationId": "FieldController_actualizarPersonal",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ActualizarPersonalRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "summary": "Actualizar personal",
+        "tags": [
+          "Field (logística de campo)"
+        ]
+      },
+      "delete": {
+        "operationId": "FieldController_eliminarPersonal",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "summary": "Eliminar personal",
+        "tags": [
+          "Field (logística de campo)"
+        ]
+      }
+    },
+    "/api/v1/field/personal/{id}/ubicacion": {
+      "get": {
+        "operationId": "FieldController_ubicacionPersonal",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "summary": "Ubicación del personal",
+        "tags": [
+          "Field (logística de campo)"
+        ]
+      },
+      "patch": {
+        "operationId": "FieldController_actualizarUbicacion",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UbicacionRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "summary": "Actualizar ubicación del personal",
+        "tags": [
+          "Field (logística de campo)"
+        ]
+      }
+    },
+    "/api/v1/field/clientes": {
+      "get": {
+        "operationId": "FieldController_listarClientes",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "summary": "Listar clientes de campo",
+        "tags": [
+          "Field (logística de campo)"
+        ]
+      },
+      "post": {
+        "operationId": "FieldController_crearCliente",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CrearClienteRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "summary": "Crear cliente de campo",
+        "tags": [
+          "Field (logística de campo)"
+        ]
+      }
+    },
+    "/api/v1/field/clientes/{id}": {
+      "get": {
+        "operationId": "FieldController_obtenerCliente",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "summary": "Obtener cliente por id",
+        "tags": [
+          "Field (logística de campo)"
+        ]
+      },
+      "patch": {
+        "operationId": "FieldController_actualizarCliente",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ActualizarClienteRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "summary": "Actualizar cliente de campo",
+        "tags": [
+          "Field (logística de campo)"
+        ]
+      },
+      "delete": {
+        "operationId": "FieldController_eliminarCliente",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "summary": "Eliminar cliente de campo",
+        "tags": [
+          "Field (logística de campo)"
+        ]
+      }
+    },
+    "/api/v1/field/vehiculos": {
+      "get": {
+        "operationId": "FieldController_listarVehiculos",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "summary": "Listar vehículos",
+        "tags": [
+          "Field (logística de campo)"
+        ]
+      },
+      "post": {
+        "operationId": "FieldController_crearVehiculo",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CrearVehiculoRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "summary": "Crear vehículo",
+        "tags": [
+          "Field (logística de campo)"
+        ]
+      }
+    },
+    "/api/v1/field/vehiculos/{id}": {
+      "get": {
+        "operationId": "FieldController_obtenerVehiculo",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "summary": "Obtener vehículo por id",
+        "tags": [
+          "Field (logística de campo)"
+        ]
+      },
+      "patch": {
+        "operationId": "FieldController_actualizarVehiculo",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ActualizarVehiculoRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "summary": "Actualizar vehículo",
+        "tags": [
+          "Field (logística de campo)"
+        ]
+      },
+      "delete": {
+        "operationId": "FieldController_eliminarVehiculo",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "summary": "Eliminar vehículo",
+        "tags": [
+          "Field (logística de campo)"
+        ]
+      }
+    },
+    "/api/v1/field/rutas": {
+      "get": {
+        "operationId": "FieldController_listarRutas",
+        "parameters": [
+          {
+            "name": "personalId",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "summary": "Listar rutas",
+        "tags": [
+          "Field (logística de campo)"
+        ]
+      },
+      "post": {
+        "operationId": "FieldController_crearRuta",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CrearRutaRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "summary": "Crear ruta",
+        "tags": [
+          "Field (logística de campo)"
+        ]
+      }
+    },
+    "/api/v1/field/rutas/{id}": {
+      "get": {
+        "operationId": "FieldController_obtenerRuta",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "summary": "Obtener ruta por id",
+        "tags": [
+          "Field (logística de campo)"
+        ]
+      },
+      "patch": {
+        "operationId": "FieldController_actualizarRuta",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ActualizarRutaRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "summary": "Actualizar ruta",
+        "tags": [
+          "Field (logística de campo)"
+        ]
+      },
+      "delete": {
+        "operationId": "FieldController_eliminarRuta",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "summary": "Eliminar ruta",
+        "tags": [
+          "Field (logística de campo)"
+        ]
+      }
+    },
+    "/api/v1/field/rutas/{id}/paradas": {
+      "post": {
+        "operationId": "FieldController_agregarParada",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ParadaRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "summary": "Agregar parada a la ruta",
+        "tags": [
+          "Field (logística de campo)"
+        ]
+      }
+    },
+    "/api/v1/field/rutas/{id}/paradas/{paradaId}": {
+      "patch": {
+        "operationId": "FieldController_actualizarParada",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "paradaId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ParadaRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "summary": "Actualizar parada de la ruta",
+        "tags": [
+          "Field (logística de campo)"
+        ]
+      }
+    },
+    "/api/v1/field/rutas/{id}/asignar": {
+      "post": {
+        "operationId": "FieldController_asignarRuta",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AsignarRutaRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "summary": "Asignar personal/vehículo a la ruta",
+        "tags": [
+          "Field (logística de campo)"
+        ]
+      }
+    },
+    "/api/v1/field/pedidos": {
+      "get": {
+        "operationId": "FieldController_listarPedidos",
+        "parameters": [
+          {
+            "name": "estado",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "rutaId",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "clienteId",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "summary": "Listar pedidos de campo",
+        "tags": [
+          "Field (logística de campo)"
+        ]
+      },
+      "post": {
+        "operationId": "FieldController_crearPedido",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CrearPedidoRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "summary": "Crear pedido de campo",
+        "tags": [
+          "Field (logística de campo)"
+        ]
+      }
+    },
+    "/api/v1/field/pedidos/{id}": {
+      "get": {
+        "operationId": "FieldController_obtenerPedido",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "summary": "Obtener pedido por id",
+        "tags": [
+          "Field (logística de campo)"
+        ]
+      },
+      "patch": {
+        "operationId": "FieldController_actualizarPedido",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ActualizarPedidoRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "summary": "Actualizar pedido de campo",
+        "tags": [
+          "Field (logística de campo)"
+        ]
+      },
+      "delete": {
+        "operationId": "FieldController_eliminarPedido",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "summary": "Eliminar pedido de campo",
+        "tags": [
+          "Field (logística de campo)"
+        ]
+      }
+    },
+    "/api/v1/field/pedidos/{id}/estado": {
+      "patch": {
+        "operationId": "FieldController_cambiarEstadoPedido",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CambiarEstadoPedidoRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "summary": "Cambiar estado del pedido",
+        "tags": [
+          "Field (logística de campo)"
+        ]
+      }
+    },
+    "/api/v1/field/asistencia": {
+      "get": {
+        "operationId": "FieldController_listarAsistencia",
+        "parameters": [
+          {
+            "name": "personalId",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "fecha",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "summary": "Listar asistencia",
+        "tags": [
+          "Field (logística de campo)"
+        ]
+      },
+      "post": {
+        "operationId": "FieldController_registrarAsistencia",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CrearAsistenciaRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "summary": "Registrar asistencia",
+        "tags": [
+          "Field (logística de campo)"
+        ]
+      }
+    },
+    "/api/v1/field/incidencias": {
+      "get": {
+        "operationId": "FieldController_listarIncidencias",
+        "parameters": [
+          {
+            "name": "estado",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "rutaId",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "summary": "Listar incidencias",
+        "tags": [
+          "Field (logística de campo)"
+        ]
+      },
+      "post": {
+        "operationId": "FieldController_crearIncidencia",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CrearIncidenciaRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "summary": "Crear incidencia",
+        "tags": [
+          "Field (logística de campo)"
+        ]
+      }
+    },
+    "/api/v1/field/incidencias/{id}": {
+      "get": {
+        "operationId": "FieldController_obtenerIncidencia",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "summary": "Obtener incidencia por id",
+        "tags": [
+          "Field (logística de campo)"
+        ]
+      },
+      "patch": {
+        "operationId": "FieldController_actualizarIncidencia",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ActualizarIncidenciaRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "summary": "Actualizar incidencia",
+        "tags": [
+          "Field (logística de campo)"
+        ]
+      },
+      "delete": {
+        "operationId": "FieldController_eliminarIncidencia",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "summary": "Eliminar incidencia",
+        "tags": [
+          "Field (logística de campo)"
+        ]
+      }
+    },
+    "/api/v1/field/tracking": {
+      "get": {
+        "operationId": "FieldController_listarTracking",
+        "parameters": [
+          {
+            "name": "personalId",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "desde",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "hasta",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "summary": "Listar tracking GPS",
+        "tags": [
+          "Field (logística de campo)"
+        ]
+      },
+      "post": {
+        "operationId": "FieldController_registrarTracking",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TrackingBulkRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "summary": "Registrar tracking GPS (lote)",
+        "tags": [
+          "Field (logística de campo)"
+        ]
+      }
+    },
+    "/api/v1/field/visitas": {
+      "get": {
+        "operationId": "FieldController_listarVisitas",
+        "parameters": [
+          {
+            "name": "personalId",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "fecha",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "summary": "Listar visitas (telemetría)",
+        "tags": [
+          "Field (logística de campo)"
+        ]
+      },
+      "post": {
+        "operationId": "FieldController_registrarVisita",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CrearVisitaRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "summary": "Registrar visita (telemetría)",
+        "tags": [
+          "Field (logística de campo)"
+        ]
+      }
+    },
+    "/api/v1/field/cumplimiento/{rutaId}/{fecha}": {
+      "get": {
+        "operationId": "FieldController_obtenerCumplimiento",
+        "parameters": [
+          {
+            "name": "rutaId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "fecha",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "summary": "Obtener cumplimiento de ruta/fecha",
+        "tags": [
+          "Field (logística de campo)"
+        ]
+      }
+    },
+    "/api/v1/field/cumplimiento": {
+      "post": {
+        "operationId": "FieldController_guardarCumplimiento",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/GuardarCumplimientoRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "summary": "Guardar cumplimiento de ruta",
+        "tags": [
+          "Field (logística de campo)"
+        ]
+      }
+    },
+    "/api/v1/field/sync": {
+      "post": {
+        "operationId": "FieldController_sincronizar",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SyncRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "summary": "Sincronizar operaciones offline",
+        "tags": [
+          "Field (logística de campo)"
+        ]
+      }
+    }
+  },
+  "info": {
+    "title": "Core Engine · field-service",
+    "description": "Logística de campo: personal, clientes, vehículos, rutas, pedidos, asistencia, incidencias, tracking, telemetría y sync offline",
+    "version": "v1",
+    "contact": {}
+  },
+  "tags": [],
+  "servers": [],
+  "components": {
+    "securitySchemes": {
+      "bearer": {
+        "scheme": "bearer",
+        "bearerFormat": "JWT",
+        "type": "http"
+      }
+    },
+    "schemas": {
+      "CrearPersonalRequestDto": {
+        "type": "object",
+        "properties": {
+          "nombre": {
+            "type": "string"
+          },
+          "apellido": {
+            "type": "string"
+          },
+          "cargo": {
+            "type": "string",
+            "enum": [
+              "conductor",
+              "auxiliar",
+              "supervisor",
+              "coordinador"
+            ]
+          },
+          "estado": {
+            "type": "string",
+            "enum": [
+              "activo",
+              "en_ruta",
+              "descansando",
+              "inactivo"
+            ]
+          },
+          "telefono": {
+            "type": "string"
+          },
+          "email": {
+            "type": "string"
+          },
+          "rutaAsignadaId": {
+            "type": "string"
+          },
+          "vehiculoAsignadoId": {
+            "type": "string"
+          },
+          "horaCheckIn": {
+            "type": "string"
+          },
+          "horaCheckOut": {
+            "type": "string"
+          },
+          "ubicacionLat": {
+            "type": "number"
+          },
+          "ubicacionLng": {
+            "type": "number"
+          },
+          "ubicacionPrecision": {
+            "type": "number"
+          },
+          "ubicacionTs": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "nombre"
+        ]
+      },
+      "ActualizarPersonalRequestDto": {
+        "type": "object",
+        "properties": {
+          "nombre": {
+            "type": "string"
+          },
+          "apellido": {
+            "type": "string"
+          },
+          "cargo": {
+            "type": "string",
+            "enum": [
+              "conductor",
+              "auxiliar",
+              "supervisor",
+              "coordinador"
+            ]
+          },
+          "estado": {
+            "type": "string",
+            "enum": [
+              "activo",
+              "en_ruta",
+              "descansando",
+              "inactivo"
+            ]
+          },
+          "telefono": {
+            "type": "string"
+          },
+          "email": {
+            "type": "string"
+          },
+          "rutaAsignadaId": {
+            "type": "string"
+          },
+          "vehiculoAsignadoId": {
+            "type": "string"
+          },
+          "horaCheckIn": {
+            "type": "string"
+          },
+          "horaCheckOut": {
+            "type": "string"
+          },
+          "ubicacionLat": {
+            "type": "number"
+          },
+          "ubicacionLng": {
+            "type": "number"
+          },
+          "ubicacionPrecision": {
+            "type": "number"
+          },
+          "ubicacionTs": {
+            "type": "string"
+          }
+        }
+      },
+      "UbicacionRequestDto": {
+        "type": "object",
+        "properties": {
+          "lat": {
+            "type": "number"
+          },
+          "lng": {
+            "type": "number"
+          },
+          "precision": {
+            "type": "number"
+          },
+          "timestamp": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "lat",
+          "lng"
+        ]
+      },
+      "CrearClienteRequestDto": {
+        "type": "object",
+        "properties": {
+          "nombreCompleto": {
+            "type": "string"
+          },
+          "tipoDocumento": {
+            "type": "string"
+          },
+          "numeroDocumento": {
+            "type": "string"
+          },
+          "tipoCliente": {
+            "type": "string",
+            "enum": [
+              "particular",
+              "minorista",
+              "mayorista",
+              "corporativo"
+            ]
+          },
+          "email": {
+            "type": "string"
+          },
+          "telefono": {
+            "type": "string"
+          },
+          "telefonoAlternativo": {
+            "type": "string"
+          },
+          "direccionPrincipal": {
+            "type": "string"
+          },
+          "direccionSecundaria": {
+            "type": "string"
+          },
+          "referenciasDireccion": {
+            "type": "string"
+          },
+          "lat": {
+            "type": "number"
+          },
+          "lng": {
+            "type": "number"
+          },
+          "notasAdicionales": {
+            "type": "string"
+          },
+          "urlGoogleMaps": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "nombreCompleto"
+        ]
+      },
+      "ActualizarClienteRequestDto": {
+        "type": "object",
+        "properties": {
+          "nombreCompleto": {
+            "type": "string"
+          },
+          "tipoDocumento": {
+            "type": "string"
+          },
+          "numeroDocumento": {
+            "type": "string"
+          },
+          "tipoCliente": {
+            "type": "string",
+            "enum": [
+              "particular",
+              "minorista",
+              "mayorista",
+              "corporativo"
+            ]
+          },
+          "email": {
+            "type": "string"
+          },
+          "telefono": {
+            "type": "string"
+          },
+          "telefonoAlternativo": {
+            "type": "string"
+          },
+          "direccionPrincipal": {
+            "type": "string"
+          },
+          "direccionSecundaria": {
+            "type": "string"
+          },
+          "referenciasDireccion": {
+            "type": "string"
+          },
+          "lat": {
+            "type": "number"
+          },
+          "lng": {
+            "type": "number"
+          },
+          "notasAdicionales": {
+            "type": "string"
+          },
+          "urlGoogleMaps": {
+            "type": "string"
+          }
+        }
+      },
+      "CrearVehiculoRequestDto": {
+        "type": "object",
+        "properties": {
+          "placa": {
+            "type": "string"
+          },
+          "tipo": {
+            "type": "string",
+            "enum": [
+              "camioneta",
+              "furgon",
+              "camion",
+              "moto",
+              "otro"
+            ]
+          },
+          "marca": {
+            "type": "string"
+          },
+          "modelo": {
+            "type": "string"
+          },
+          "anio": {
+            "type": "number",
+            "minimum": 1900
+          },
+          "estado": {
+            "type": "string",
+            "enum": [
+              "disponible",
+              "en_ruta",
+              "mantenimiento",
+              "fuera_de_servicio"
+            ]
+          },
+          "color": {
+            "type": "string"
+          },
+          "capacidadCargaKg": {
+            "type": "number"
+          },
+          "numeroChasis": {
+            "type": "string"
+          },
+          "numeroMotor": {
+            "type": "string"
+          },
+          "tipoCombustible": {
+            "type": "string"
+          },
+          "vencimientoSeguro": {
+            "type": "string"
+          },
+          "vencimientoCirculacion": {
+            "type": "string"
+          },
+          "notasAdicionales": {
+            "type": "string"
+          },
+          "conductorId": {
+            "type": "string"
+          },
+          "rutaActivaId": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "placa"
+        ]
+      },
+      "ActualizarVehiculoRequestDto": {
+        "type": "object",
+        "properties": {
+          "placa": {
+            "type": "string"
+          },
+          "tipo": {
+            "type": "string",
+            "enum": [
+              "camioneta",
+              "furgon",
+              "camion",
+              "moto",
+              "otro"
+            ]
+          },
+          "marca": {
+            "type": "string"
+          },
+          "modelo": {
+            "type": "string"
+          },
+          "anio": {
+            "type": "number",
+            "minimum": 1900
+          },
+          "estado": {
+            "type": "string",
+            "enum": [
+              "disponible",
+              "en_ruta",
+              "mantenimiento",
+              "fuera_de_servicio"
+            ]
+          },
+          "color": {
+            "type": "string"
+          },
+          "capacidadCargaKg": {
+            "type": "number"
+          },
+          "numeroChasis": {
+            "type": "string"
+          },
+          "numeroMotor": {
+            "type": "string"
+          },
+          "tipoCombustible": {
+            "type": "string"
+          },
+          "vencimientoSeguro": {
+            "type": "string"
+          },
+          "vencimientoCirculacion": {
+            "type": "string"
+          },
+          "notasAdicionales": {
+            "type": "string"
+          },
+          "conductorId": {
+            "type": "string"
+          },
+          "rutaActivaId": {
+            "type": "string"
+          }
+        }
+      },
+      "CrearRutaRequestDto": {
+        "type": "object",
+        "properties": {
+          "nombre": {
+            "type": "string"
+          },
+          "descripcion": {
+            "type": "string"
+          },
+          "estado": {
+            "type": "string",
+            "enum": [
+              "pendiente",
+              "en_curso",
+              "completada",
+              "cancelada"
+            ]
+          },
+          "personalIds": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "vehiculoAsignadoId": {
+            "type": "string"
+          },
+          "fechaInicio": {
+            "type": "string"
+          },
+          "fechaFin": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "nombre"
+        ]
+      },
+      "ActualizarRutaRequestDto": {
+        "type": "object",
+        "properties": {
+          "nombre": {
+            "type": "string"
+          },
+          "descripcion": {
+            "type": "string"
+          },
+          "estado": {
+            "type": "string",
+            "enum": [
+              "pendiente",
+              "en_curso",
+              "completada",
+              "cancelada"
+            ]
+          },
+          "personalIds": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "vehiculoAsignadoId": {
+            "type": "string"
+          },
+          "fechaInicio": {
+            "type": "string"
+          },
+          "fechaFin": {
+            "type": "string"
+          }
+        }
+      },
+      "ParadaRequestDto": {
+        "type": "object",
+        "properties": {
+          "rutaId": {
+            "type": "string"
+          },
+          "orden": {
+            "type": "number",
+            "minimum": 0
+          },
+          "nombre": {
+            "type": "string"
+          },
+          "direccion": {
+            "type": "string"
+          },
+          "lat": {
+            "type": "number"
+          },
+          "lng": {
+            "type": "number"
+          },
+          "completada": {
+            "type": "boolean"
+          },
+          "pedidoId": {
+            "type": "string"
+          },
+          "tipo": {
+            "type": "string",
+            "enum": [
+              "cliente",
+              "logistica"
+            ]
+          },
+          "clienteId": {
+            "type": "string"
+          },
+          "telefono": {
+            "type": "string"
+          },
+          "referencias": {
+            "type": "string"
+          },
+          "horarioAtencion": {
+            "type": "string"
+          },
+          "notas": {
+            "type": "string"
+          },
+          "tipoCombustible": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "nombre"
+        ]
+      },
+      "AsignarRutaRequestDto": {
+        "type": "object",
+        "properties": {
+          "personalIds": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "vehiculoId": {
+            "type": "string"
+          }
+        }
+      },
+      "CrearPedidoRequestDto": {
+        "type": "object",
+        "properties": {
+          "cliente": {
+            "type": "string"
+          },
+          "clienteId": {
+            "type": "string"
+          },
+          "direccionEntrega": {
+            "type": "string"
+          },
+          "lat": {
+            "type": "number"
+          },
+          "lng": {
+            "type": "number"
+          },
+          "estado": {
+            "type": "string",
+            "enum": [
+              "pendiente",
+              "asignado",
+              "en_camino",
+              "entregado",
+              "fallido",
+              "cancelado"
+            ]
+          },
+          "rutaId": {
+            "type": "string"
+          },
+          "notas": {
+            "type": "string"
+          }
+        }
+      },
+      "ActualizarPedidoRequestDto": {
+        "type": "object",
+        "properties": {
+          "cliente": {
+            "type": "string"
+          },
+          "clienteId": {
+            "type": "string"
+          },
+          "direccionEntrega": {
+            "type": "string"
+          },
+          "lat": {
+            "type": "number"
+          },
+          "lng": {
+            "type": "number"
+          },
+          "estado": {
+            "type": "string",
+            "enum": [
+              "pendiente",
+              "asignado",
+              "en_camino",
+              "entregado",
+              "fallido",
+              "cancelado"
+            ]
+          },
+          "rutaId": {
+            "type": "string"
+          },
+          "notas": {
+            "type": "string"
+          }
+        }
+      },
+      "CambiarEstadoPedidoRequestDto": {
+        "type": "object",
+        "properties": {
+          "estado": {
+            "type": "string",
+            "enum": [
+              "pendiente",
+              "asignado",
+              "en_camino",
+              "entregado",
+              "fallido",
+              "cancelado"
+            ]
+          },
+          "motivo": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "estado"
+        ]
+      },
+      "CrearAsistenciaRequestDto": {
+        "type": "object",
+        "properties": {
+          "personalId": {
+            "type": "string"
+          },
+          "tipo": {
+            "type": "string",
+            "enum": [
+              "entrada",
+              "salida"
+            ]
+          },
+          "timestamp": {
+            "type": "string"
+          },
+          "lat": {
+            "type": "number"
+          },
+          "lng": {
+            "type": "number"
+          },
+          "estadoPuntualidad": {
+            "type": "string",
+            "enum": [
+              "puntual",
+              "tardanza",
+              "salida_anticipada",
+              "salida_tardia"
+            ]
+          },
+          "enSede": {
+            "type": "boolean"
+          },
+          "horaRealLlegada": {
+            "type": "string"
+          },
+          "minutosRetrasoReal": {
+            "type": "number"
+          },
+          "monitoreoActivo": {
+            "type": "boolean"
+          },
+          "notas": {
+            "type": "string"
+          },
+          "justificacion": {
+            "type": "string"
+          },
+          "fotosJustificacion": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": [
+          "personalId",
+          "tipo",
+          "estadoPuntualidad"
+        ]
+      },
+      "CrearIncidenciaRequestDto": {
+        "type": "object",
+        "properties": {
+          "tipo": {
+            "type": "string",
+            "enum": [
+              "mecanica",
+              "accidente",
+              "salud",
+              "clima",
+              "otro"
+            ]
+          },
+          "estado": {
+            "type": "string",
+            "enum": [
+              "abierta",
+              "en_progreso",
+              "resuelta"
+            ]
+          },
+          "descripcion": {
+            "type": "string"
+          },
+          "personalId": {
+            "type": "string"
+          },
+          "vehiculoId": {
+            "type": "string"
+          },
+          "rutaId": {
+            "type": "string"
+          },
+          "resolucion": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "tipo",
+          "descripcion"
+        ]
+      },
+      "ActualizarIncidenciaRequestDto": {
+        "type": "object",
+        "properties": {
+          "tipo": {
+            "type": "string",
+            "enum": [
+              "mecanica",
+              "accidente",
+              "salud",
+              "clima",
+              "otro"
+            ]
+          },
+          "estado": {
+            "type": "string",
+            "enum": [
+              "abierta",
+              "en_progreso",
+              "resuelta"
+            ]
+          },
+          "descripcion": {
+            "type": "string"
+          },
+          "personalId": {
+            "type": "string"
+          },
+          "vehiculoId": {
+            "type": "string"
+          },
+          "rutaId": {
+            "type": "string"
+          },
+          "resolucion": {
+            "type": "string"
+          }
+        }
+      },
+      "CrearTrackingRequestDto": {
+        "type": "object",
+        "properties": {
+          "personalId": {
+            "type": "string"
+          },
+          "latitud": {
+            "type": "number"
+          },
+          "longitud": {
+            "type": "number"
+          },
+          "precision": {
+            "type": "number"
+          },
+          "velocidad": {
+            "type": "number"
+          },
+          "rumbo": {
+            "type": "number"
+          },
+          "timestamp": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "personalId",
+          "latitud",
+          "longitud"
+        ]
+      },
+      "TrackingBulkRequestDto": {
+        "type": "object",
+        "properties": {
+          "registros": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CrearTrackingRequestDto"
+            }
+          }
+        },
+        "required": [
+          "registros"
+        ]
+      },
+      "CrearVisitaRequestDto": {
+        "type": "object",
+        "properties": {
+          "personalId": {
+            "type": "string"
+          },
+          "clienteId": {
+            "type": "string"
+          },
+          "rutaId": {
+            "type": "string"
+          },
+          "tipoActividad": {
+            "type": "string",
+            "enum": [
+              "impulsacion",
+              "venta",
+              "entrega",
+              "reparto"
+            ]
+          },
+          "resultado": {
+            "type": "string",
+            "enum": [
+              "visitado",
+              "cerca_no_visitado",
+              "no_visitado"
+            ]
+          },
+          "lat": {
+            "type": "number"
+          },
+          "lng": {
+            "type": "number"
+          },
+          "distanciaAlCliente": {
+            "type": "number"
+          },
+          "horaLlegada": {
+            "type": "string"
+          },
+          "horaSalida": {
+            "type": "string"
+          },
+          "duracionMinutos": {
+            "type": "number"
+          },
+          "notas": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "personalId",
+          "tipoActividad"
+        ]
+      },
+      "GuardarCumplimientoRequestDto": {
+        "type": "object",
+        "properties": {
+          "rutaId": {
+            "type": "string"
+          },
+          "fecha": {
+            "type": "string"
+          },
+          "metricas": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "rutaId",
+          "fecha",
+          "metricas"
+        ]
+      },
+      "SyncOperacionRequestDto": {
+        "type": "object",
+        "properties": {
+          "tipo": {
+            "type": "string"
+          },
+          "payload": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "tipo",
+          "payload"
+        ]
+      },
+      "SyncRequestDto": {
+        "type": "object",
+        "properties": {
+          "operaciones": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SyncOperacionRequestDto"
+            }
+          }
+        },
+        "required": [
+          "operaciones"
+        ]
+      }
+    }
+  }
+}
