@@ -137,3 +137,24 @@ Con los dos environments operativos y la tabla §4 completa:
    y el smoke de producción (R-PR-8, R-CD-12) antes de cerrar.
 3. Actualizar la tabla de comprobación §4 en este doc si algo difiere de la
    práctica real.
+
+## 9. Errores frecuentes en el deploy (Dockploy)
+
+- **`required variable POSTGRES_PASSWORD is missing a value`** — falla en la
+  *interpolación* del compose, antes de construir. El environment no tiene
+  `POSTGRES_PASSWORD`. Dockploy escribe la pestaña *Environment* al `.env` que
+  consume el compose: añade ahí las variables de `.env.production.example`
+  (mínimo `POSTGRES_PASSWORD`; y para que arranquen los servicios:
+  `DATABASE_URL`, `RABBITMQ_URL`, `JWT_SECRET`, `INTERNAL_API_KEY`,
+  `ADMIN_EMAIL`, `ADMIN_PASSWORD`, `CORS_ORIGINS`). Valor fuerte y **único por
+  entorno** (R-CD-7). No hay default a propósito: mejor fallar al inicio que
+  arrancar con una contraseña débil.
+- **El proyecto/app no se llama `core-engine`** (p. ej.
+  `kb-coleccion-backend-corporativo-pegot2`): renómbralo/recrea el proyecto
+  (R-CD-9). Compose nombra los contenedores como `<proyecto>-<servicio>-1`, así
+  que un nombre ajeno no rompe el arranque, pero mezcla dominios/entornos.
+- **`commissions-service`/`market-intelligence-service` siguen corriendo** tras
+  un deploy: no están en el compose base; el `up --remove-orphans` los elimina.
+  Si persistieran:
+  `docker rm -f <proyecto>-commissions-service-1 <proyecto>-market-intelligence-service-1`
+  (ADR-17).
