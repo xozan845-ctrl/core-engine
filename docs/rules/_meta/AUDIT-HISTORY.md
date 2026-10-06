@@ -872,3 +872,33 @@ checks y con merge commit. Justo lo contrario de lo que se hizo.
 6. **Higiene/Deuda:** Tracked `*.tsbuildinfo` removidos del repositorio.
 
 El PR #90 se completó utilizando convenciones atómicas (R-PR-1, R-GC-1..5) garantizando builds limpios y linter (0 errores). El snapshot central se sobreescribió en `AUDIT.md`.
+
+---
+
+# AUDIT (histórico) — 5ª auditoría de Core Engine (cierre de G-8 / OpenAPI)
+
+- **Fecha:** 2026-10-06
+- **Comando:** `npm test -- --coverage`, `npm run lint`, `npm run build`, `npm run swagger:export`, `npm audit --audit-level=high|moderate`, inspección de `ci.yml`.
+- **Estado global:** 🟡 CUMPLE PARCIAL — **4 ✅ · 1 N/A · 3 ⏸** (G-8 pasa a ✅).
+
+## Resumen ejecutivo
+
+| Capa / gate | Antes (4ª) | Ahora (5ª) |
+|---|---|---|
+| Unit backend | 🟢 358/55 | 🟢 **360/56** |
+| OpenAPI (G-8) | 🟡 sin export ni gate | 🟢 **149/149 endpoints**, gate `git diff --exit-code` + agregado en el gateway |
+| Audit deps | 🟢 0 | 🟢 **0** (tras fix `proxy-addr`) |
+
+## Intervención
+
+1. **G-8 / R-DO-6 — OpenAPI:** patrón `swagger.ts` + `swagger-export.ts` en los 9 servicios, specs versionados en `docs/openapi/` (**149/149 endpoints**), **gate G-8** en el job `build` (`npm run swagger:export && git diff --exit-code`).
+2. **Agregado en el gateway (Fase 3):** `scripts/swagger-aggregate.mjs` fusiona los 9 specs (115 rutas / 50 schemas), con **detección de colisiones** path/schema; el resultado (`packages/api-gateway/src/openapi.agregado.ts`) lo sirve el gateway en `/docs`. Verificado end-to-end sin infra (`/docs` 200, `/docs-json` correcto).
+3. **Reglas R-DO:** oficializado `docs/rules/documentation/` (R-DO-1..7).
+4. **Deps (R-QA-6):** advisory `critical` nuevo en `proxy-addr` (vía `express`) → `overrides.proxy-addr = ^2.0.8`.
+5. **Estado de gates:** cierra **G-8** → **4 ✅ · 1 N/A · 3 ⏸** (G-4/G-5/G-6 pendientes).
+
+## Evidencia
+
+- **Local:** `npm test -- --coverage` exit 0 (360/56, 0 `threshold not met`) · lint 0/47 · build 0 TS · `swagger:export` idempotente · audit high/moderate 0.
+- **CI:** run `37505390920` sobre `main` = `f552627` → `completed success` (4/4 jobs, incluye el paso G-8).
+- **Snapshot:** estado consolidado reescrito en [`AUDIT.md`](./AUDIT.md).
