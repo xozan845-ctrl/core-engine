@@ -1,0 +1,475 @@
+{
+  "openapi": "3.0.0",
+  "paths": {
+    "/internal/usuarios/{id}": {
+      "get": {
+        "operationId": "InternalController_usuario",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "description": "Id del usuario",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "summary": "Usuario por id (servicio→servicio)",
+        "tags": [
+          "Usuarios (interno)"
+        ]
+      }
+    },
+    "/internal/vendedores": {
+      "get": {
+        "operationId": "InternalController_vendedores",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "summary": "Listar vendedores (servicio→servicio)",
+        "tags": [
+          "Usuarios (interno)"
+        ]
+      }
+    },
+    "/internal/contar-vendedores": {
+      "get": {
+        "operationId": "InternalController_contarVendedores",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "summary": "Contar vendedores (servicio→servicio)",
+        "tags": [
+          "Usuarios (interno)"
+        ]
+      }
+    },
+    "/api/v1/auth/registro": {
+      "post": {
+        "operationId": "AuthController_registrar",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RegistroRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Sesión creada (JWT + refresh)"
+          }
+        },
+        "summary": "Registrar vendedor o comprador",
+        "tags": [
+          "Auth"
+        ]
+      }
+    },
+    "/api/v1/auth/login": {
+      "post": {
+        "operationId": "AuthController_login",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LoginRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Sesión iniciada"
+          },
+          "401": {
+            "description": "Credenciales inválidas"
+          }
+        },
+        "summary": "Iniciar sesión (JWT + refresh)",
+        "tags": [
+          "Auth"
+        ]
+      }
+    },
+    "/api/v1/auth/refresh": {
+      "post": {
+        "operationId": "AuthController_refresh",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "refresh_token"
+                ],
+                "properties": {
+                  "refresh_token": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "summary": "Renovar la sesión con refresh token",
+        "tags": [
+          "Auth"
+        ]
+      }
+    },
+    "/api/v1/auth/crear-usuario": {
+      "post": {
+        "operationId": "AuthController_crearUsuario",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CrearUsuarioRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Usuario creado"
+          },
+          "403": {
+            "description": "Solo un administrador puede crear usuarios"
+          }
+        },
+        "summary": "Crear usuario (solo admin)",
+        "tags": [
+          "Auth"
+        ]
+      }
+    },
+    "/api/v1/auth/cambiar-contrasena": {
+      "post": {
+        "operationId": "AuthController_cambiarContrasena",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CambiarContrasenaRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "summary": "Cambiar la contraseña (autenticado)",
+        "tags": [
+          "Auth"
+        ]
+      }
+    },
+    "/api/v1/auth/restablecer-contrasena": {
+      "post": {
+        "operationId": "AuthController_restablecerContrasena",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RestablecerContrasenaRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "summary": "Solicitar restablecimiento de contraseña (público)",
+        "tags": [
+          "Auth"
+        ]
+      }
+    },
+    "/api/v1/auth/me": {
+      "get": {
+        "operationId": "AuthController_yo",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "summary": "Perfil de la sesión actual",
+        "tags": [
+          "Auth"
+        ]
+      }
+    },
+    "/api/v1/auth/vincular-personal": {
+      "post": {
+        "operationId": "AuthController_vincularPersonal",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/VincularPersonalRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "summary": "Vincular la ficha de personal del usuario autenticado",
+        "tags": [
+          "Auth"
+        ]
+      }
+    },
+    "/api/v1/usuarios": {
+      "get": {
+        "operationId": "UsuariosController_listar",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "summary": "Listar usuarios (admin)",
+        "tags": [
+          "Usuarios"
+        ]
+      }
+    },
+    "/api/v1/usuarios/{id}": {
+      "get": {
+        "operationId": "UsuariosController_obtener",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "description": "Id del usuario",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "404": {
+            "description": "Usuario inexistente o sin permiso"
+          }
+        },
+        "summary": "Perfil de un usuario (admin o el propio)",
+        "tags": [
+          "Usuarios"
+        ]
+      }
+    }
+  },
+  "info": {
+    "title": "Core Engine · identity-service",
+    "description": "Autenticación, sesiones y usuarios (Tabla 21)",
+    "version": "v1",
+    "contact": {}
+  },
+  "tags": [],
+  "servers": [],
+  "components": {
+    "securitySchemes": {
+      "bearer": {
+        "scheme": "bearer",
+        "bearerFormat": "JWT",
+        "type": "http"
+      }
+    },
+    "schemas": {
+      "RegistroRequestDto": {
+        "type": "object",
+        "properties": {
+          "nombre": {
+            "type": "string",
+            "description": "Nombre completo",
+            "minLength": 2,
+            "maxLength": 120,
+            "example": "Ana Pérez"
+          },
+          "correo": {
+            "type": "string",
+            "description": "Correo electrónico",
+            "example": "ana@tienda.test"
+          },
+          "contrasena": {
+            "type": "string",
+            "description": "Contraseña (mínimo 8 caracteres)",
+            "minLength": 8
+          },
+          "rol": {
+            "type": "string",
+            "description": "Rol registrable",
+            "enum": [
+              "vendedor",
+              "comprador"
+            ],
+            "example": "comprador"
+          }
+        },
+        "required": [
+          "nombre",
+          "correo",
+          "contrasena",
+          "rol"
+        ]
+      },
+      "LoginRequestDto": {
+        "type": "object",
+        "properties": {
+          "correo": {
+            "type": "string",
+            "description": "Correo electrónico",
+            "example": "ana@tienda.test"
+          },
+          "contrasena": {
+            "type": "string",
+            "description": "Contraseña",
+            "example": "secreto123"
+          }
+        },
+        "required": [
+          "correo",
+          "contrasena"
+        ]
+      },
+      "CrearUsuarioRequestDto": {
+        "type": "object",
+        "properties": {
+          "nombre": {
+            "type": "string",
+            "description": "Nombre completo",
+            "minLength": 2,
+            "maxLength": 120
+          },
+          "correo": {
+            "type": "string",
+            "description": "Correo electrónico"
+          },
+          "contrasena": {
+            "type": "string",
+            "description": "Contraseña (mínimo 8 caracteres)",
+            "minLength": 8
+          },
+          "rol": {
+            "type": "string",
+            "description": "Rol del usuario",
+            "enum": [
+              "vendedor",
+              "comprador",
+              "admin",
+              "logistica",
+              "coordinador",
+              "supervisor",
+              "operativo"
+            ]
+          },
+          "tenant_id": {
+            "type": "string",
+            "description": "Tenant (organización); obligatorio para roles de logística"
+          },
+          "personal_id": {
+            "type": "string",
+            "description": "Id de la ficha de personal en field-service"
+          }
+        },
+        "required": [
+          "nombre",
+          "correo",
+          "contrasena",
+          "rol"
+        ]
+      },
+      "CambiarContrasenaRequestDto": {
+        "type": "object",
+        "properties": {
+          "actual": {
+            "type": "string",
+            "description": "Contraseña actual"
+          },
+          "nueva": {
+            "type": "string",
+            "description": "Contraseña nueva (mínimo 8 caracteres)",
+            "minLength": 8
+          }
+        },
+        "required": [
+          "actual",
+          "nueva"
+        ]
+      },
+      "RestablecerContrasenaRequestDto": {
+        "type": "object",
+        "properties": {
+          "correo": {
+            "type": "string",
+            "description": "Correo electrónico de la cuenta"
+          }
+        },
+        "required": [
+          "correo"
+        ]
+      },
+      "VincularPersonalRequestDto": {
+        "type": "object",
+        "properties": {
+          "personal_id": {
+            "type": "string",
+            "description": "Id de la ficha de personal en field-service",
+            "minLength": 1,
+            "maxLength": 100
+          },
+          "nombre": {
+            "type": "string",
+            "description": "Nombre a reflejar en el perfil",
+            "maxLength": 120
+          }
+        },
+        "required": [
+          "personal_id"
+        ]
+      }
+    }
+  }
+}
