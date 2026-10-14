@@ -6,17 +6,21 @@
  * procesos aislados, con el reporter elegido. No conoce datos del proyecto:
  * todo lo específico llega por parámetro desde el CLI (composition root).
  */
-import { run } from 'node:test';
-import { spec, tap, dot, junit } from 'node:test/reporters';
-import { relative } from 'node:path';
-import { repoRoot, rulesDir as defaultRulesDir, toFileUrl } from './lib/paths.mjs';
+import { spawn } from 'node:child_process';
+import { relative, resolve } from 'node:path';
+import {
+  repoRoot,
+  rulesDir as defaultRulesDir,
+  scriptsRoot,
+  toFileUrl,
+} from './lib/paths.mjs';
 import { walkFiles } from './lib/fs.mjs';
 import { __setRegistration } from './suite.mjs';
 import { printSuitePlan, printCoverage } from './report.mjs';
 
-const REPORTERS = { spec, tap, dot, junit };
+const REPORTERS = new Set(['spec', 'tap', 'dot', 'junit']);
 
-async function discoverSuites(rulesDir) {
+export async function discoverSuites(rulesDir) {
   const files = walkFiles(rulesDir, (name) => name.endsWith('.test.mjs')).sort();
 
   __setRegistration(false);
@@ -37,8 +41,23 @@ async function discoverSuites(rulesDir) {
   }
 }
 
-function validateManifest(suites, requiredSuites) {
-  const discovered = new Set(suites.map((suite) => suite.id));
+export function validateManifest(suites, requiredSuites) {
+  const ids = suites.map((suite) => suite.id);
+  const duplicates = [...new Set(ids.filter((id, i) => ids.indexOf(id) !== i))];
+  if (duplicates.length > 0) {
+    throw new Error(`IDs de suite duplicados: ${duplicates.join(', ')}`);
+  }
+
+  const requiredIds = requiredSuites.map((suite) => suite.id);
+  const duplicateRequired = [
+    ...new Set(requiredIds.filter((id, i) => requiredIds.indexOf(id) !== i)),
+  ];
+  if (duplicateRequired.length > 0) {
+    throw new Error(`IDs duplicados en el manifiesto: ${duplicateRequired.join(', ')}`);
+  }
+
+  const discovered = new Map(suites.map((suite) => [suite.id, suite]));
+  const required = new Map(requiredSuites.map((suite) => [suite.id, suite]));
 
   const missing = requiredSuites
     .map((suite) => suite.id)
@@ -49,10 +68,25 @@ function validateManifest(suites, requiredSuites) {
     );
   }
 
-  const ids = suites.map((suite) => suite.id);
-  const duplicates = [...new Set(ids.filter((id, i) => ids.indexOf(id) !== i))];
-  if (duplicates.length > 0) {
-    throw new Error(`IDs de suite duplicados: ${duplicates.join(', ')}`);
+  const unexpected = suites
+    .map((suite) => suite.id)
+    .filter((id) => !required.has(id));
+  if (unexpected.length > 0) {
+    throw new Error(
+      `Suites descubiertas fuera del manifiesto (R-CI-7): ${unexpected.join(', ')}`,
+    );
+  }
+
+  const mismatches = requiredSuites.flatMap((entry) => {
+    const suite = discovered.get(entry.id);
+    if (!suite) return [];
+    const expected = resolve(scriptsRoot, entry.file);
+    return suite.file === expected
+      ? []
+      : [`${entry.id}: manifiesto=${relative(repoRoot, expected)}, descubierto=${relative(repoRoot, suite.file)}`];
+  });
+  if (mismatches.length > 0) {
+    throw new Error(`El archivo de la suite no coincide con el manifiesto:\n${mismatches.join('\n')}`);
   }
 }
 
@@ -64,18 +98,34 @@ function selectSuites(suites, { only, mode } = {}) {
   });
 }
 
-function execute(files, reporterName) {
-  const stream = run({ files });
-  const reporter = REPORTERS[reporterName] ?? spec;
-  stream.compose(reporter).pipe(process.stdout);
+export function execute(files, reporterName, { silent = false } = {}) {
+  if (!REPORTERS.has(reporterName)) {
+    throw new Error(
+      `Reporter desconocido: ${reporterName}. Usa: ${[...REPORTERS].join(' | ')}`,
+    );
+  }
 
-  let failed = false;
-  stream.on('test:fail', () => {
-    failed = true;
-  });
+  return new Promise((resolveExecution, rejectExecution) => {
+    const childEnv = { ...process.env };
+    // Si el motor se prueba desde `node --test`, esta variable convertiría el
+    // proceso aislado en hijo del test externo y filtraría la fixture fallida
+    // al padre aunque su exit code se estuviera verificando correctamente.
+    delete childEnv.NODE_TEST_CONTEXT;
 
-  return new Promise((resolve) => {
-    stream.on('end', () => resolve(failed ? 1 : 0));
+    // La fase de descubrimiento ya importó las suites con el registro apagado.
+    // Un proceso nuevo evita que la caché ESM convierta las assertions en un
+    // falso verde al intentar cargar esos mismos módulos por segunda vez.
+    const child = spawn(
+      process.execPath,
+      ['--test', `--test-reporter=${reporterName}`, ...files],
+      {
+        cwd: repoRoot,
+        env: childEnv,
+        stdio: silent ? 'ignore' : 'inherit',
+      },
+    );
+    child.once('error', rejectExecution);
+    child.once('exit', (code) => resolveExecution(code === 0 ? 0 : 1));
   });
 }
 
@@ -90,6 +140,7 @@ export async function runRules({
   only,
   mode,
   reporter = 'spec',
+  silent = false,
 } = {}) {
   const suites = await discoverSuites(rulesDir);
   validateManifest(suites, requiredSuites);
@@ -100,8 +151,12 @@ export async function runRules({
     return 1;
   }
 
-  printSuitePlan(selected);
-  const code = await execute(selected.map((suite) => suite.file), reporter);
-  if (docsRulesRoot) printCoverage({ suites, rulesRoot: docsRulesRoot });
+  if (!silent) printSuitePlan(selected);
+  const code = await execute(
+    selected.map((suite) => suite.file),
+    reporter,
+    { silent },
+  );
+  if (docsRulesRoot && !silent) printCoverage({ suites, rulesRoot: docsRulesRoot });
   return code;
 }

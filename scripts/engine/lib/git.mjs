@@ -19,8 +19,28 @@ function git(args, { allowFailure = false } = {}) {
   }
 }
 
+/**
+ * Resuelve la base de comparación local. En CI, la rama base declarada por el
+ * evento del PR siempre tiene prioridad.
+ */
+export function resolveBaseBranch({
+  currentBranch,
+  envBase,
+  mainBranch,
+  integrationBranch,
+}) {
+  if (envBase) return `origin/${envBase}`;
+
+  const localBase =
+    currentBranch === mainBranch || currentBranch.startsWith('hotfix/')
+      ? mainBranch
+      : integrationBranch;
+
+  return `origin/${localBase}`;
+}
+
 /** Rama actual y rama base, con soporte para el entorno de GitHub Actions. */
-export function getBranchContext(mainBranch) {
+export function getBranchContext(mainBranch, integrationBranch = mainBranch) {
   const envHead = process.env.GITHUB_HEAD_REF;
   const envBase = process.env.GITHUB_BASE_REF;
   let currentBranch = envHead || '';
@@ -30,7 +50,12 @@ export function getBranchContext(mainBranch) {
     currentBranch = (out ?? 'unknown').trim();
   }
 
-  const baseBranch = envBase ? `origin/${envBase}` : `origin/${mainBranch}`;
+  const baseBranch = resolveBaseBranch({
+    currentBranch,
+    envBase,
+    mainBranch,
+    integrationBranch,
+  });
   return { currentBranch, baseBranch };
 }
 
