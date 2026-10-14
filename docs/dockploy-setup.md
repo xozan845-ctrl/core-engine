@@ -12,8 +12,8 @@
 > construye desde el `Dockerfile` raíz en cada push: `release.yml` construye y
 > publica **una imagen por servicio** en GHCR al empujar un tag `vX.Y.Z`
 > (`R-CD-1..4`), `promote.yml` la mueve a `:stage`/`:prod` **por digest** (`R-CD-3`)
-> y el entorno arranca con **`docker-compose.stage.yml`** / **`docker-compose.prod.yml`**,
-> que consumen esas imágenes. Pasos nuevos: `docker login ghcr.io` en el host (o
+> y el entorno arranca con **`docker-compose.stage.yml`** (stage) / **`docker-compose.yml`**
+> (producción), que consumen esas imágenes. Pasos nuevos: `docker login ghcr.io` en el host (o
 > una credencial de registry en Dockploy) y `.env.stage` / `.env.production`
 > (plantillas `.env.stage.example` / `.env.production.example`). Runbook:
 > [`runbook-entrega.md`](./runbook-entrega.md).
@@ -22,7 +22,7 @@
 
 | Etapa | Rama | Dónde corre | Deploy | Riesgo |
 |---|---|---|---|---|
-| Desarrollo | `develop` (integración) | **local** (`docker compose up` + `npm run demo`) | no se despliega | nulo |
+| Desarrollo | `develop` (integración) | **local** (`docker compose -f docker-compose.dev.yml up` + `npm run demo`) | no se despliega | nulo |
 | Stage | `staging` | Dockploy `staging` | auto en push a `staging` | bajo (datos de prueba) |
 | Producción | `main` | Dockploy `produccion` | auto en push a `main` | **alto: clientes** |
 
@@ -39,8 +39,8 @@ ramas es la barrera.
 - **Credencial de registry para GHCR** (PAT con `read:packages`), o `docker login
   ghcr.io` en el VPS: las imágenes de la API son **privadas** y el entorno las
   consume promovidas (ver nota de arriba). Sin esto, el `pull` falla.
-- Verificar que el repo tiene los composes por entorno (`docker-compose.stage.yml`,
-  `docker-compose.prod.yml`) que consumen las imágenes de GHCR.
+- Verificar que el repo tiene los composes por entorno (`docker-compose.yml` de
+  producción, `docker-compose.stage.yml`) que consumen las imágenes de GHCR.
 - Tener a mano `.env.stage.example` / `.env.production.example` → variables por
   entorno (`DATABASE_URL`, `RABBITMQ_URL`, `JWT_SECRET`, `INTERNAL_API_KEY`,
   `ADMIN_EMAIL/ADMIN_PASSWORD`, `COMMISSION_RATE`, `OUTBOX_TABLA`, `*_SERVICE_URL`,
@@ -71,13 +71,13 @@ Pasos:
    ("redeploy on new commit") en cada environment apuntado **solo** a su rama;
    el de producción **nunca** escucha otra rama.
 4. **Imágenes (GHCR)**: cada environment consume la imagen **promovida**
-   (`:staging`/`:prod`) desde `docker-compose.stage.yml`/`docker-compose.prod.yml`,
+   (`:staging`/`:prod`) desde `docker-compose.yml` (prod)/`docker-compose.stage.yml`,
    sin construir en el host (`R-CD-3`); sin `ARG`/`ENV` de secretos en la imagen
    (se inyectan en las variables del service/environment — `R-CD-7`).
 5. **Variables de entorno**: cada environment recibe las suyas en la pestaña
    *Environment* (Dockploy las escribe al `.env` que consume el compose). La
    plantilla de producción es **`.env.production.example`** (secretos reales y
-   únicos); dev usa `.env.example`. **El compose base solo exige
+   únicos); dev usa `.env.example`. **El compose de producción solo exige
    `POSTGRES_PASSWORD`** (+ las claves de runtime: `DATABASE_URL`, `RABBITMQ_URL`,
    `JWT_SECRET`, `INTERNAL_API_KEY`, …). `GRAFANA_ADMIN_PASSWORD` y
    `RABBITMQ_PASSWORD` solo hacen falta si se activa la capa de observabilidad.
@@ -87,8 +87,8 @@ Pasos:
    healthcheck de Dockploy) y `GET /ready` (readiness agregada: responde **503**
    si algún microservicio de producción no está `ok`; lo usa el smoke, R-CD-12).
 
-> Dockploy corre el compose del entorno: **`docker-compose.stage.yml`** o
-> **`docker-compose.prod.yml`** (imágenes de GHCR + Postgres + RabbitMQ). La
+> Dockploy corre el compose del entorno: **`docker-compose.yml`** (producción) o
+> **`docker-compose.stage.yml`** (imágenes de GHCR + Postgres + RabbitMQ). La
 > observabilidad vive en **`docker-compose.observability.yml`** y es **opcional**:
 > solo se añade con `-f docker-compose.observability.yml` (y entonces sí exige
 > `GRAFANA_ADMIN_PASSWORD`).
@@ -117,7 +117,7 @@ Migraciones solo hacia adelante.
 | 6 | Secretos solo en variables de service/environment (`R-CD-7`) | ☐ | ☐ |
 | 7 | Rollback posible (redeploy de la versión/commit anterior) | ☐ | ☐ |
 
-> Desarrollo local: `docker compose up -d --build` + `npm run demo` es la
+> Desarrollo local: `docker compose -f docker-compose.dev.yml up -d --build` + `npm run demo` es la
 > verificación equivalente antes de cualquier PR (R-GC-5).
 
 ## 5. Checklist de seguridad y nombres (al desplegar producción)
@@ -128,8 +128,8 @@ Migraciones solo hacia adelante.
 - **Credencial de RabbitMQ**: ya **no** está en el repo; se inyecta por entorno desde `RABBITMQ_USER`/`RABBITMQ_PASSWORD` (ADR-21). Debe ser **única por entorno**. En un volumen ya inicializado, cambiar la variable **no** re-crea el usuario: rota la credencial por la gestión de RabbitMQ o recrea el volumen.
 - **Nombre del proyecto/app**: debe ser `core-engine` con environments `staging`/`produccion` (R-CD-9). Si la app arrastra el nombre de otro proyecto (p. ej. `kb-coleccion-...`), renómbrala o recrea el proyecto para no mezclar entornos ajenos.
 - **Coexistencia de entornos**: `docker-compose.yml` **no** fija `container_name`, así que `staging` y `produccion` pueden correr a la vez en el mismo VPS sin colisionar.
-- **Puertos**: en producción/staging **solo se publica el `gateway` (8080)**; Postgres y RabbitMQ son **internos**. **No** uses `docker-compose.dev.yml` en producción (ese overlay abre `5432`/`5672`/`15672` solo para desarrollo).
-- **Servicios fuera de producción**: `commissions-service` y `market-intelligence-service` **no se despliegan por ahora** (no están en el compose base; viven en `docker-compose.extra.yml`). El `up --remove-orphans` de producción **elimina** sus contenedores si venían de un despliegue anterior.
+- **Puertos**: en producción/staging **solo se publica el `gateway` (8080)**; Postgres y RabbitMQ son **internos**. **No** uses `docker-compose.dev.yml` en producción (ese entorno abre `5432`/`5672`/`15672` y construye local).
+- **Servicios fuera de producción**: `commissions-service` y `market-intelligence-service` **no se despliegan por ahora** (no están en `docker-compose.yml`; viven en `docker-compose.dev.yml`). El `up --remove-orphans` de producción **elimina** sus contenedores si venían de un despliegue anterior.
 
 ## 6. Rollback en producción (si algo sale mal)
 
@@ -142,7 +142,7 @@ Migraciones solo hacia adelante.
 ## 7. Configuración "bloqueada" (no tocar)
 
 - La entrega de producción son las **imágenes promovidas** (`:prod`) que consume
-  `docker-compose.prod.yml` (R-CD-3/R-CD-10). El gate de producción se mantiene:
+  `docker-compose.yml` (R-CD-3/R-CD-10). El gate de producción se mantiene:
   a `main` solo se llega por `staging → main`, y solo se promueve un tag cuyo
   commit tiene `ci.yml` verde (R-CD-2).
 - No creará un environment "desarrollo" siempre-encendido (el desarrollo es
@@ -180,7 +180,7 @@ Con los dos environments operativos y la tabla §4 completa:
   (`read:packages`) y `docker login ghcr.io`; además, la etiqueta `:staging`/`:prod`
   debe existir (alguien debe haber corrido `promote.yml` con un `source` publicado).
 - **`commissions-service`/`market-intelligence-service` siguen corriendo** tras
-  un deploy: no están en el compose base; el `up --remove-orphans` los elimina.
+  un deploy: no están en `docker-compose.yml` (producción); el `up --remove-orphans` los elimina.
   Si persistieran:
   `docker rm -f <proyecto>-commissions-service-1 <proyecto>-market-intelligence-service-1`
   (ADR-17).

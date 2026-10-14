@@ -71,7 +71,7 @@ Matriz completa en [`06-estandares-cobertura.md`](../test/06-estandares-cobertur
 ## 6. E2E ([`03-reglas-e2e.md`](../test/03-reglas-e2e.md))
 
 > Hoy no hay E2E automatizado (deuda **G-6**): el smoke más cercano es
-> `docker compose up -d --build` + `npm run demo`.
+> `docker compose -f docker-compose.dev.yml up -d --build` + `npm run demo`.
 
 - [ ] **R-E-4** — Si toca fechas: todos los registros listados pertenecen al día local seleccionado; el día vecino NO aparece.
 - [ ] **R-E-8** — Cero errores de consola durante el flujo.
@@ -92,7 +92,7 @@ Matriz completa en [`06-estandares-cobertura.md`](../test/06-estandares-cobertur
 - [ ] **G-4** integración — ⏸ sin suites (exigible cuando existan, R-I-12)
 - [ ] **G-5** contrato — ⏸ sin suites (R-C-7)
 - [ ] **G-7** lint + build (jobs `lint` y `build`) ✅
-- [ ] **G-6** E2E de flujos — ⏸ sin job; smoke local `docker compose up -d --build` + `npm run demo`
+- [ ] **G-6** E2E de flujos — ⏸ sin job; smoke local `docker compose -f docker-compose.dev.yml up -d --build` + `npm run demo`
 - [ ] **G-8** spec OpenAPI — ⏸ sin script de export ni paso `git diff --exit-code` en CI (R-C-7)
 
 ## 9. Git — antes de subir ([`rules/git/`](../git/README.md))

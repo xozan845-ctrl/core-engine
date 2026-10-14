@@ -7,7 +7,7 @@ import type { OpenAPIObject } from '@nestjs/swagger';
  * de la API (R-DO-6) y compartido por `main.ts` (sirve `/docs`) y el script
  * `swagger:export` (genera el spec versionado).
  *
- * NOTA: este servicio está fuera de producción por ahora (docker-compose.extra.yml,
+ * NOTA: este servicio está fuera de producción por ahora (docker-compose.dev.yml,
  * ADR-17); el contrato se documenta igualmente.
  */
 export function crearDocumentoOpenApi(app: INestApplication): OpenAPIObject {

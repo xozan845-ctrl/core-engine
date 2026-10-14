@@ -22,7 +22,7 @@
 | Unit frontend | N/A | No hay frontend en el repo (G-2 y R-COV-5 **reservados, nunca reutilizados**) |
 | Integración (API+BD) | 🔴 | **0 tests** — capa entera sin cubrir; deuda G-4 (R-I-* exigibles cuando la historia toque la capa) |
 | Contrato (API) | 🔴 | **0 tests**; deuda G-5 (R-C-7) |
-| E2E | 🔴 | **0 automatizados**; solo smoke local `docker compose up -d --build` + `npm run demo` (`scripts/smoke.mjs`); deuda G-6 |
+| E2E | 🔴 | **0 automatizados**; solo smoke local `docker compose -f docker-compose.dev.yml up -d --build` + `npm run demo` (`scripts/smoke.mjs`); deuda G-6 |
 | OpenAPI (spec) | 🟢 | Export por servicio (`swagger:export`) + spec versionado en `docs/openapi/` (**9 servicios, 149/149 endpoints**); **documento agregado** (115 rutas / 50 schemas) servido por el gateway en `/docs`; **gate G-8** en CI (`git diff --exit-code`) |
 | Property-based | 🔴 | Sin `fast-check` en ningún paquete (R-PB-1..3: dinero y ciclo de la orden) |
 | Mutation testing | 🔴 | Sin Stryker; la mutación **nunca se ha ejecutado** (R-MT-1..3; módulos críticos `identity`/`orders`/`commissions`/`finance`) |
@@ -82,7 +82,7 @@
 | G-3 Cobertura ≥ ratchet | ✅ | 10 `coverageThreshold` aplicados; el job `test` genera **10 tablas de cobertura** y 0 `threshold not met` |
 | G-4 Integración | ⏸ | Sin suites de integración (exigible cuando existan, R-I-12) |
 | G-5 Contrato | ⏸ | Sin suites de contrato (R-C-7) |
-| G-6 E2E de flujos | ⏸ | Sin job E2E; lo más cercano hoy es el smoke local `docker compose up -d --build` + `npm run demo` |
+| G-6 E2E de flujos | ⏸ | Sin job E2E; lo más cercano hoy es el smoke local `docker compose -f docker-compose.dev.yml up -d --build` + `npm run demo` |
 | G-7 Lint **y** build | ✅ | job `lint` → 0 errores; job `build` → 0 errores TS |
 | G-8 Swagger sync | ✅ | job `build` → `npm run swagger:export` + `git diff --exit-code docs/openapi packages/api-gateway/src/openapi.agregado.ts` (149/149 endpoints, agregado); run de `main` `37505390920` (`f552627`) = success |
 

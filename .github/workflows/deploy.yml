@@ -54,9 +54,9 @@ jobs:
         id: cfg
         run: |
           case "${{ github.event.inputs.environment }}" in
-            dev)   echo "files=-f docker-compose.yml -f docker-compose.dev.yml" >> "$GITHUB_OUTPUT"; echo "port=8080" >> "$GITHUB_OUTPUT"; echo "build=--build" >> "$GITHUB_OUTPUT" ;;
+            dev)   echo "files=-f docker-compose.dev.yml" >> "$GITHUB_OUTPUT"; echo "port=8080" >> "$GITHUB_OUTPUT"; echo "build=--build" >> "$GITHUB_OUTPUT" ;;
             stage) echo "files=-f docker-compose.stage.yml" >> "$GITHUB_OUTPUT"; echo "port=8080" >> "$GITHUB_OUTPUT"; echo "build=" >> "$GITHUB_OUTPUT" ;;
-            prod)  echo "files=-f docker-compose.prod.yml"  >> "$GITHUB_OUTPUT"; echo "port=8080" >> "$GITHUB_OUTPUT"; echo "build=" >> "$GITHUB_OUTPUT" ;;
+            prod)  echo "files=-f docker-compose.yml"  >> "$GITHUB_OUTPUT"; echo "port=8080" >> "$GITHUB_OUTPUT"; echo "build=" >> "$GITHUB_OUTPUT" ;;
           esac
 
       - name: 🚀 Bring the stack up

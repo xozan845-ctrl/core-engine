@@ -84,7 +84,7 @@ npm run build
 npm audit --audit-level=high
 
 # E2E end-to-end sobre el stack levantado (TC-01..TC-08, RN-01..RN-08)
-docker compose up -d --build
+docker compose -f docker-compose.dev.yml up -d --build
 npm run demo
 ```
 

@@ -3,7 +3,7 @@
  * Demo del flujo real (entregable cap. 7.1): alta de producto, oferta del
  * vendedor, compra, descuento de stock, orden, comision y liquidacion.
  *
- * Requiere el ecosistema levantado: docker compose up -d --build
+ * Requiere el ecosistema levantado: docker compose -f docker-compose.dev.yml up -d --build
  * Uso: node scripts/smoke.mjs
  */
 

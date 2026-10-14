@@ -1,19 +1,210 @@
-# Core Engine · Overlay de DESARROLLO (opcional)
-# Publica en el host los puertos de Postgres y RabbitMQ, SOLO para desarrollo
-# (conectar con un cliente de BD o abrir la UI de RabbitMQ en localhost).
+# Core Engine · DESARROLLO (construye las imágenes en local)
+# Entorno completo y autocontenido: Postgres + RabbitMQ + gateway + los 9
+# microservicios (incluye `commissions-service` y `market-intelligence-service`,
+# que NO se despliegan en producción). Publica al host los puertos de datos y
+# broker SOLO para desarrollo (conectar un cliente de BD o abrir la UI de
+# RabbitMQ en localhost).
 #
-# Producción NO usa este archivo: en producción/staging los servicios acceden a
-# Postgres y RabbitMQ por la red interna `core-engine`, y **únicamente el
-# gateway (8080)** se publica al host.
+# Variables: copiar `.env.example` → `.env` (sin commitear, R-CD-7).
+# Arranque:  docker compose -f docker-compose.dev.yml up -d --build
 #
-#   docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d --build
+# Observabilidad opcional:
+#   docker compose -f docker-compose.dev.yml -f docker-compose.observability.yml up -d --build
+#
+# Producción/pre-producción usan `docker-compose.yml` / `docker-compose.stage.yml`
+# (imágenes de GHCR, sin `build:`); este archivo nunca se despliega.
+
+x-servicio-base: &servicio-base
+  build:
+    context: .
+    dockerfile: Dockerfile
+  env_file:
+    - .env
+  depends_on:
+    postgres:
+      condition: service_healthy
+    rabbitmq:
+      condition: service_healthy
+  networks:
+    - core-engine
+  restart: unless-stopped
 
 services:
+  # ── Datos y BaaS (AD-08: Supabase-compatible, SQL estandar en Docker) ──
   postgres:
+    image: postgis/postgis:16-3.4-alpine
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-core_engine}
+      POSTGRES_USER: ${POSTGRES_USER:-core_engine}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD requerida en .env}
+    volumes:
+      - pg_data:/var/lib/postgresql/data
+      # Solo el esquema estandar entra en Docker local; 99_rls.sql (Supabase)
+      # vive en infra/db/supabase/ y se aplica manualmente en staging/prod.
+      - ./infra/db/init:/docker-entrypoint-initdb.d:ro
     ports:
       - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-core_engine} -d ${POSTGRES_DB:-core_engine}"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+    networks:
+      - core-engine
 
+  # ── Broker de mensajeria (AD-02: RabbitMQ con DLQ) ─────────────────────
   rabbitmq:
+    image: rabbitmq:3.13-management-alpine
+    # (barrido A07/A08): guest deshabilitado en loopback. La credencial viene del
+    # entorno (RABBITMQ_USER/RABBITMQ_PASSWORD), nunca de un fichero commiteado (R-CD-7).
+    environment:
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER:-core-engine}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD:?RABBITMQ_PASSWORD requerida}
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+      - ./infra/rabbitmq/rabbitmq.conf:/etc/rabbitmq/rabbitmq.conf:ro
     ports:
       - "15672:15672"
       - "5672:5672"
+    healthcheck:
+      test: ["CMD-SHELL", "rabbitmq-diagnostics -q ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+    networks:
+      - core-engine
+
+  # ── API Gateway (punto de entrada unico) ───────────────────────────────
+  gateway:
+    <<: *servicio-base
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        SERVICIO: api-gateway
+    environment:
+      SERVICIO: api-gateway
+      PORT: 8080
+      OUTBOX_TABLA: identity.outbox
+    ports:
+      - "8080:8080"
+    networks:
+      - core-engine
+
+  # ── Microservicios por dominio (Tabla 7) ───────────────────────────────
+  identity-service:
+    <<: *servicio-base
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        SERVICIO: identity-service
+    environment:
+      SERVICIO: identity-service
+      PORT: 3001
+      OUTBOX_TABLA: identity.outbox
+
+  catalog-service:
+    <<: *servicio-base
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        SERVICIO: catalog-service
+    environment:
+      SERVICIO: catalog-service
+      PORT: 3002
+      OUTBOX_TABLA: catalog.outbox
+
+  stores-service:
+    <<: *servicio-base
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        SERVICIO: stores-service
+    environment:
+      SERVICIO: stores-service
+      PORT: 3003
+      OUTBOX_TABLA: stores.outbox
+
+  orders-service:
+    <<: *servicio-base
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        SERVICIO: orders-service
+    environment:
+      SERVICIO: orders-service
+      PORT: 3004
+      OUTBOX_TABLA: orders.outbox
+
+  logistics-service:
+    <<: *servicio-base
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        SERVICIO: logistics-service
+    environment:
+      SERVICIO: logistics-service
+      PORT: 3005
+      OUTBOX_TABLA: logistics.outbox
+
+  commissions-service:
+    <<: *servicio-base
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        SERVICIO: commissions-service
+    environment:
+      SERVICIO: commissions-service
+      PORT: 3006
+      OUTBOX_TABLA: commissions.outbox
+
+  finance-service:
+    <<: *servicio-base
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        SERVICIO: finance-service
+    environment:
+      SERVICIO: finance-service
+      PORT: 3007
+      OUTBOX_TABLA: finance.outbox
+      COMMISSION_RATE: 0.12
+
+  field-service:
+    <<: *servicio-base
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        SERVICIO: field-service
+    environment:
+      SERVICIO: field-service
+      PORT: 3008
+      OUTBOX_TABLA: field.outbox
+
+  market-intelligence-service:
+    <<: *servicio-base
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        SERVICIO: market-intelligence-service
+    environment:
+      SERVICIO: market-intelligence-service
+      PORT: 3009
+      OUTBOX_TABLA: intelligence.outbox
+
+volumes:
+  pg_data:
+  rabbitmq_data:
+
+networks:
+  core-engine:
+    name: core-engine
