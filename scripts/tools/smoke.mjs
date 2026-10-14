@@ -4,7 +4,7 @@
  * vendedor, compra, descuento de stock, orden, comision y liquidacion.
  *
  * Requiere el ecosistema levantado: docker compose -f docker-compose.dev.yml up -d --build
- * Uso: node scripts/smoke.mjs
+ * Uso: npm run demo  (o `node scripts/cli.mjs smoke`)
  */
 
 const BASE = process.env.BASE_URL ?? 'http://localhost:8080';
@@ -38,7 +38,7 @@ async function api(metodo, ruta, cuerpo, token) {
     body: cuerpo ? JSON.stringify(cuerpo) : undefined,
   });
   const texto = await res.text();
-  let json = null;
+  let json;
   try {
     json = texto ? JSON.parse(texto) : null;
   } catch {
@@ -109,7 +109,6 @@ async function main() {
   else fail(`registro comprador → ${regC.status}`);
   const tokenVendedor = regV.json.access_token;
   const tokenComprador = regC.json.access_token;
-  const idVendedor = regV.json.usuario.id;
 
   // ── 2. Catálogo (TC-01) ───────────────────────────────────────────────
   paso('Admin da de alta el producto (TC-01: stock 10, precio base C$ 1 000)');
