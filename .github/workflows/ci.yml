@@ -13,6 +13,22 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  rules-check:
+    name: Rules (docs/rules + commits)
+    # Determinista en PR y en push a main; evita comparar ramas de largo recorrido
+    # en pushes de develop/staging (donde el diff contra main sería enorme).
+    if: github.event_name == 'pull_request' || github.ref == 'refs/heads/main'
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v5
+        with:
+          node-version: "20"
+      - name: Validate project rules (R-CI-9, R-GC-1..4)
+        run: node scripts/check-rules.mjs
+
   security-gate:
     name: Security Gate (npm audit)
     runs-on: ubuntu-24.04
