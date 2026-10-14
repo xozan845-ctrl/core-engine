@@ -171,7 +171,7 @@ Este archivo registra decisiones técnicas deliberadas que se apartan del texto 
 - **Decisión**: un **solo proyecto Dockploy `core-engine` con dos environments** —
   `staging` (rama `staging`) y `produccion` (rama `main`) — usando el
   multi-tenancy nativo de Dockploy (variables y red por environment). El
-  **desarrollo corre local** (`docker compose up` + `npm run demo`) y `develop`
+  **desarrollo corre local** (`docker compose -f docker-compose.dev.yml up` + `npm run demo`) y `develop`
   queda como rama de integración **sin despliegue**. Infraestructura compartida:
   un Postgres con una base por entorno y un RabbitMQ con un vhost por entorno;
   monitoreo solo en producción (+ opcional staging).
@@ -208,7 +208,7 @@ Este archivo registra decisiones técnicas deliberadas que se apartan del texto 
 ## ADR-15: Compose base + observabilidad opcional; valores dev/prod separados
 
 - **Fecha**: 2026-10-02
-- **Estado**: Aceptado
+- **Estado**: Aceptado (ampliado por ADR-22)
 - **Contexto**: Dockploy ejecuta `docker compose -f ./docker-compose.yml` con el
   `.env` del entorno. El compose único incluía la observabilidad (Prometheus,
   Grafana, exporters) y `grafana` exigía `GRAFANA_ADMIN_PASSWORD` con `:?`, así
@@ -237,7 +237,7 @@ Este archivo registra decisiones técnicas deliberadas que se apartan del texto 
 ## ADR-16: Producción publica solo el gateway; puertos de datos/broker interna
 
 - **Fecha**: 2026-10-05
-- **Estado**: Aceptado
+- **Estado**: Aceptado (revisado por ADR-22)
 - **Contexto**: el compose base publicaba al host `5432` (Postgres), `5672` y
   `15672` (RabbitMQ) además del `gateway` (8080). Esos puertos no los necesita
   ningún componente de producción (los servicios los alcanzan por la red interna
@@ -257,7 +257,7 @@ Este archivo registra decisiones técnicas deliberadas que se apartan del texto 
 ## ADR-17: `commissions-service` y `market-intelligence-service` fuera de producción (temporal)
 
 - **Fecha**: 2026-10-05
-- **Estado**: Aceptado (temporal)
+- **Estado**: Aceptado (temporal) — mecanismo de overlay sustituido por ADR-22
 - **Contexto**: por ahora no se quieren desplegar `commissions-service` ni
   `market-intelligence-service` en producción; el `docker-compose.yml` base los
   levantaba junto al resto.
@@ -303,6 +303,190 @@ Este archivo registra decisiones técnicas deliberadas que se apartan del texto 
   como deuda si se piden. Sobre una BD ya inicializada el DDL debe aplicarse una
   vez a mano (los scripts de `init/` solo corren en un volumen vacío); es
   idempotente.
+
+---
+
+## ADR-19: Dependencias de desarrollo — poda en la imagen y riesgo aceptado del tooling de test
+
+- **Fecha**: 2026-10-14
+- **Estado**: Aceptado
+- **Contexto**: la puerta de seguridad de CI (`npm audit --audit-level=high`,
+  R-QA-6) reportó **1 critical** (Handlebars, vía `ts-jest`) y **20 moderate**,
+  todas en la cadena de **test** (`jest`/`ts-jest`/`babel`/`js-yaml`/`argparse`/
+  `sprintf-js`). El critical se cerró fijando `handlebars@^4.7.10` por `overrides`
+  (bump no rompiente en 4.x). Las 20 moderate **no tienen fix sin un cambio mayor**
+  (el `fixAvailable` que propone npm apunta incluso a *bajadas* de `jest`), y
+  `npm audit fix` **no reduce** el número pero reescribe miles de líneas del lock
+  sin beneficio. Además, el `Dockerfile` copiaba **todo** `node_modules` al runtime,
+  incluidas esas devDependencies.
+- **Decisión**:
+  1. **Podar el runtime**: las imágenes de servicio ejecutan `npm prune --omit=dev`
+     tras compilar, de modo que el tooling de test **no viaja** en la imagen
+     publicada (R-CD-7/R-CD-14). Aplica al `Dockerfile` raíz, a la plantilla y a
+     los `packages/<servicio>/Dockerfile`.
+  2. **No forzar** un major de `jest`/`babel` solo por moderates **dev-only**; el
+     gate R-QA-6 se mantiene en `--audit-level=high` (bloquea `high`/`critical`).
+  3. Registrar el riesgo residual como **aceptado** y acotado a dependencias que
+     **no se despliegan**.
+- **Consecuencias**: el `node_modules` del runtime baja de ~190 MB a ~85 MB, se
+  elimina superficie de ataque en la imagen (no hay `jest`/`babel` en producción) y
+  el gate sigue bloqueando lo que importa. Los 20 moderate quedan como deuda
+  **visible** ligada al runner de tests; si se adopta `Vitest` (como en el
+  microservicio de almacenamiento) o un major de `jest` que los resuelva, se
+  revisará. Verificado con `docker build` real de `orders-service` y
+  `finance-service`.
+
+---
+
+## ADR-20: Migración del runner de pruebas de Jest a Vitest
+
+- **Fecha**: 2026-10-14
+- **Estado**: Aceptado
+- **Contexto**: las suites corrían con **Jest 30 + ts-jest** en los 10 workspaces.
+  Esa cadena arrastraba deuda de seguridad **dev-only** (20 moderate, ADR-19) y un
+  critical en `handlebars`; `npm audit fix` no los resolvía sin cambios mayores
+  (bajadas de `jest`), y el árbol de dependencias era enorme (~1200 paquetes).
+- **Decisión**: migrar a **Vitest 4** (compatible con Node 20 del CI):
+  - Config **por workspace** en `packages/*/vitest.config.ts` (antes `jest` en
+    `package.json`): specs `*.spec.ts`, entorno node, alias `@core/shared`,
+    cobertura **v8** con `thresholds` por servicio.
+  - API de test `jest.*` → `vi.*`; `jest.Mock` → `Mock` (`vitest`).
+  - **SWC** (`unplugin-swc`) para emitir metadatos de decoradores: esbuild (por
+    defecto en Vite/Vitest) no los emite y la **DI de NestJS** (`Test.createTestingModule`)
+    rompía. Afectaba a 2 specs de `market-intelligence-service`.
+  - `require()` dinámico → `import` estático (Vitest no resuelve `require` en ESM).
+  - Excluir `src/**/*.spec.ts` del `tsconfig` de build en los workspaces que no lo
+    hacían (evita que los specs viajen en `dist/`).
+  - El job `test` de CI pasa a `npm test` (el script raíz ya corre cada workspace
+    con `--coverage`; el `-- --coverage` extra duplicaba el flag y Vitest lo rechaza).
+- **Consecuencias**: `npm audit` baja a **0 vulnerabilidades** (desaparecen las 20
+  moderate y el critical de `handlebars`); el árbol de deps se reduce a ~377
+  paquetes; **385 tests** en verde. Los **umbrales de cobertura se recalibraron**
+  porque el proveedor y el alcance cambian (ahora instrumenta todos los ficheros
+  del alcance, como hacía `collectCoverageFrom`), según R-COV-4 y la tabla de
+  `test/06-estandares-cobertura.md`. Esta decisión **supersede** la parte de
+  devDependencies de ADR-19 (el riesgo aceptado de jest/babel deja de existir).
+
+---
+
+## ADR-21: Credencial de RabbitMQ por entorno (sin secreto en el repo)
+
+- **Fecha**: 2026-10-14
+- **Estado**: Aceptado
+- **Contexto**: `infra/rabbitmq/rabbitmq.conf` (versionado) fijaba
+  `default_user`/`default_pass` con una credencial de **desarrollo**, y los tres
+  composes (dev, stage y prod) montaban ese mismo fichero → la credencial de
+  RabbitMQ era **idéntica en todos los entornos y estaba commiteada**. La deuda
+  estaba anotada en ADR-15 y en `dockploy-setup.md` §5.
+- **Decisión**: retirar `default_user`/`default_pass` del conf (que conserva solo
+  el hardening: `loopback_users.guest=false`, `default_vhost`) e inyectar la
+  credencial por entorno desde `RABBITMQ_USER`/`RABBITMQ_PASSWORD` vía
+  `RABBITMQ_DEFAULT_USER`/`RABBITMQ_DEFAULT_PASS` en el servicio `rabbitmq` de
+  `docker-compose.yml`, `docker-compose.dev.yml` y `docker-compose.stage.yml`
+  (ADR-22).
+- **Consecuencias**: la credencial es **única por entorno** y ya **no hay un
+  secreto commiteado** (`R-CD-7`); dev no cambia (toma el valor de su `.env`).
+  En un volumen ya inicializado, `RABBITMQ_DEFAULT_*` **no** re-crea el usuario
+  (RabbitMQ solo crea el usuario por defecto en un volumen vacío): para aplicar
+  una credencial nueva en un entorno existente hay que rotarla por la gestión de
+  RabbitMQ o recrear el volumen. Cierra la deuda marcada en ADR-15.
+
+---
+
+## ADR-22: Un solo compose por entorno (dev/stage/prod); producción = `docker-compose.yml`
+
+- **Fecha**: 2026-10-14
+- **Estado**: Aceptado
+- **Contexto**: existían **cuatro** archivos de "entorno" y dos overlays. El
+  `docker-compose.yml` era una **base** que construía las imágenes en local (y que
+  dev usaba vía overlay de puertos), mientras que `docker-compose.prod.yml` y
+  `docker-compose.stage.yml` eran **idénticos entre sí** salvo el tag `:prod`/`:stage`
+  y el `env_file`, y a su vez **duplicaban la estructura completa** de la base
+  (mismo conjunto de servicios; sólo cambiaba `build:` por `image:`). Cualquier
+  cambio en un servicio había que replicarlo en 2–3 archivos, y `commissions-service`
+  / `market-intelligence-service` vivían aparte en `docker-compose.extra.yml`.
+- **Decisión**:
+  1. **`docker-compose.yml` = producción**: asume el contenido del antiguo
+     `docker-compose.prod.yml` (imágenes GHCR `:prod`, `env_file: .env.production`,
+     sin `build:`).
+  2. **`docker-compose.stage.yml` = pre-producción** (GHCR `:stage`, `.env.stage`),
+     sin cambios.
+  3. **`docker-compose.dev.yml` = desarrollo autocontenido**: construye local
+     (`build:`, `env_file: .env`), publica `8080` + `5432`/`5672`/`15672` e incluye
+     los **10 servicios** (absorbe el antiguo `docker-compose.extra.yml`).
+  4. Se **eliminan** `docker-compose.prod.yml` y `docker-compose.extra.yml`.
+  5. `docker-compose.observability.yml` sigue siendo una **capa opcional** que se
+     añade con `-f` a dev o a producción.
+  6. `deploy.yml` resuelve: dev → `-f docker-compose.dev.yml` (`--build`), stage →
+     `-f docker-compose.stage.yml`, prod → `-f docker-compose.yml` (sin `build`).
+     El test de reglas `R-CD-3` verifica que prod/stage no contengan `build:` y sí
+     las imágenes GHCR con `pull_policy: always`; dev debe tener `build:` y los 10 servicios.
+- **Consecuencias**: quedan **tres entornos = tres archivos** (dev, stage, prod),
+  sin la duplicación base/prod. `R-CD-3` se mantiene intacto (prod/stage consumen
+  GHCR sin reconstruir). Supersede parcialmente **ADR-15/16/17**: el "compose base"
+  pasa a ser el de producción, los puertos de datos/broker viven en el entorno dev
+  (ya no como overlay) y el overlay `extra` desaparece. **Trade-off asumido**: prod
+  y stage siguen compartiendo la lista de servicios entre sí; se aceptan como
+  entornos separados con imágenes y variables distintas.
+---
+
+## ADR-23: Arquitectura modular del motor de gobernanza (`scripts/`)
+
+- **Fecha**: 2026-10-14
+- **Estado**: Aceptado (implementado el 2026-10-14 en cuatro fases)
+- **Contexto**: `scripts/` es el mecanismo que mantiene el proyecto en su
+  **punto fijo**: ejecuta las reglas de `docs/rules` que son verificables por
+  máquina (job `rules-check` de CI, `npm run rules:check`). Hoy mezcla tres
+  responsabilidades —**motor de gobernanza**, utilidades de build
+  (`swagger-aggregate.mjs`) y demo E2E (`smoke.mjs`)— y dentro del motor no
+  separa infraestructura reutilizable de reglas del proyecto:
+  - `check-rules.mjs` descubre suites por **nombre de archivo** (`*.test.mjs`):
+    no hay registro ni metadata de qué IDs cubre cada suite.
+  - `helpers/repo.mjs` mezcla utilidades genéricas (git, paths) con datos del
+    proyecto (`MAIN_BRANCH`).
+  - `project.config.mjs` afirma ser "el único archivo a editar al portar el
+    motor", pero en la práctica hay que arrastrar el runner y los helpers.
+  - El regex de IDs y la ruta `scripts/rules` están **duplicados/hardcodeados**
+    en `meta.test.mjs`.
+  - El motor queda **fuera de ESLint** (~160 errores acumulados,
+    `docs/rules/test/README.md`) y no tiene tests propios.
+  - Con ~269 IDs de regla en `docs/rules` y sólo una veintena codificados, el
+    crecimiento por dominio no tiene dónde ocurrir.
+- **Decisión**: adoptar una arquitectura en capas con dependencias en un solo
+  sentido y un contrato explícito por suite.
+  1. **Capas**: `engine/` (infra reutilizable, **cero** conocimiento del
+     proyecto), `config/` (datos del proyecto), `rules/<dominio>/` (reglas
+     ejecutables), `tools/` (operaciones: smoke, swagger) y `cli.mjs` (único
+     entrypoint). Regla de dependencia: `rules → engine + config`;
+     `engine → nada del proyecto`; `tools → engine/lib`.
+  2. **Contrato `defineSuite`**: cada suite exporta
+     `{ id, area, rules[], mode: 'pure'|'repo', run }`. El runner descubre
+     **importando**, obtiene metadata y puede filtrar por modo/dominio y
+     **reportar cobertura de reglas**.
+  3. **Manifiesto** en `config/manifest.mjs`: lista de suites exigidas
+     (`{ id, archivo }`) que sucede a `REQUIRED_RULE_SUITES` preservando
+     **R-CI-7**; el mapa regla→suite se **deriva** de la metadata de cada suite
+     para el reporte de cobertura (qué reglas tienen check ejecutable y cuáles
+     son sólo-auditoría).
+  4. **`cli.mjs`** con subcomandos (`rules`, `smoke`, `swagger`); los
+     `npm scripts` (`rules:check`, `demo`, `swagger:export`) pasan a envoltorios,
+     sin ruptura para CI ni para el flujo local.
+  5. **El motor se valida a sí mismo**: `engine/lib/*` con tests propios y
+     `scripts/**` incorporado al alcance de ESLint (cierra la deuda declarada).
+- **Consecuencias**: añadir una regla pasa a ser *un archivo en
+  `rules/<dominio>/`*; portar el motor a otro repo del stack es `engine/` +
+  `config/` sin tocar `rules/`; las suites puras corren sin git ni red. El motor
+  **conserva `node:test`** (built-in, reporter `spec`), coherente con ADR-20 —
+  que migró a Vitest sólo los workspaces TypeScript—. La migración es
+  incremental en **4 fases**, cada una con `rules:check` verde y commit atómico
+  propio (**R-IA-6**); no cambia el comportamiento de ninguna regla. El diseño
+  detallado y el contrato viven en [`scripts/README.md`](../scripts/README.md).
+- **Implementado (2026-10-14):** las cuatro fases quedaron aplicadas; el motor
+  ahora se lintea y tiene autotests (`npm run test:engine`). El nuevo reporte de
+  cobertura destapó un hallazgo de gobernanza: **`R-CI-9` y `R-CD-22` se citaban
+  en los scripts sin existir en `docs/rules`** (rangos reales `R-CI` 1–6 y
+  `R-CD` 1–13). Resuelto definiendo **R-CI-7** (manifiesto de suites) y
+  **R-CD-14** (higiene de imagen) y ajustando las referencias.
 
 ---
 

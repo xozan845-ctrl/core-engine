@@ -1,3 +1,4 @@
+import type { Mock } from 'vitest';
 import { TiendasService } from './tiendas.service';
 import { DomainError, ConflictError } from '@core/shared';
 
@@ -5,8 +6,8 @@ import { DomainError, ConflictError } from '@core/shared';
 describe('TiendasService (una tienda por vendedor)', () => {
   const crear = () => {
     const pg = {
-      queryOne: jest.fn().mockResolvedValue(null),
-      query: jest.fn().mockResolvedValue([]),
+      queryOne: vi.fn().mockResolvedValue(null),
+      query: vi.fn().mockResolvedValue([]),
     };
     const servicio = new TiendasService(pg as never);
     return { servicio, pg };
@@ -34,20 +35,20 @@ describe('TiendasService (una tienda por vendedor)', () => {
 
     it('debe devolver ConflictError cuando el vendedor ya tiene tienda', async () => {
       const { servicio, pg } = crear();
-      (pg.queryOne as jest.Mock).mockResolvedValueOnce(tienda); // deVendedor -> existe
+      (pg.queryOne as Mock).mockResolvedValueOnce(tienda); // deVendedor -> existe
       await expect(servicio.crear('v1', 'Otra tienda')).rejects.toThrow(ConflictError);
-      const sqls = (pg.queryOne as jest.Mock).mock.calls.map((c) => c[0] as string);
+      const sqls = (pg.queryOne as Mock).mock.calls.map((c) => c[0] as string);
       expect(sqls.some((s) => s.includes('INSERT INTO stores.tiendas'))).toBe(false);
     });
 
     it('debe recortar el nombre y crear la tienda cuando todo es valido', async () => {
       const { servicio, pg } = crear();
-      (pg.queryOne as jest.Mock)
+      (pg.queryOne as Mock)
         .mockResolvedValueOnce(null) // sin tienda previa
         .mockResolvedValueOnce(tienda); // INSERT ... RETURNING
       const creada = await servicio.crear('v1', '  Mi tienda  ', '  venta  ');
       expect(creada.id).toBe('t1');
-      const [sql, params] = (pg.queryOne as jest.Mock).mock.calls[1];
+      const [sql, params] = (pg.queryOne as Mock).mock.calls[1];
       expect(sql).toContain('INSERT INTO stores.tiendas');
       expect(params[1]).toBe('v1');
       expect(params[2]).toBe('Mi tienda'); // trim aplicado
@@ -56,7 +57,7 @@ describe('TiendasService (una tienda por vendedor)', () => {
 
     it('debe lanzar DomainError cuando el INSERT no devuelve fila', async () => {
       const { servicio, pg } = crear();
-      (pg.queryOne as jest.Mock)
+      (pg.queryOne as Mock)
         .mockResolvedValueOnce(null)
         .mockResolvedValueOnce(null);
       await expect(servicio.crear('v1', 'Mi tienda')).rejects.toThrow(/no se pudo crear/i);
@@ -66,7 +67,7 @@ describe('TiendasService (una tienda por vendedor)', () => {
   describe('deVendedor', () => {
     it('debe consultar la tienda por vendedor_id', async () => {
       const { servicio, pg } = crear();
-      (pg.queryOne as jest.Mock).mockResolvedValue(tienda);
+      (pg.queryOne as Mock).mockResolvedValue(tienda);
       expect(await servicio.deVendedor('v1')).toEqual(tienda);
       expect(pg.queryOne).toHaveBeenCalledWith(expect.stringContaining('stores.tiendas'), ['v1']);
     });

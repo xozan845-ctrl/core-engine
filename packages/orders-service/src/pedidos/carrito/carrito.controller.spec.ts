@@ -1,3 +1,4 @@
+import type { Mock } from 'vitest';
 import 'reflect-metadata';
 import { CarritoController } from './carrito.controller';
 import type { CarritoService } from './carrito.service';
@@ -6,13 +7,13 @@ import { ROLES } from '@core/shared';
 const carrito = { comprador_id: 'u-c', items: [], total_cents: 0 };
 const comprador = { user_id: 'u-c', email: 'c@core.local', rol: ROLES.COMPRADOR };
 
-function fabricar(): { carritos: Record<string, jest.Mock>; controller: CarritoController } {
+function fabricar(): { carritos: Record<string, Mock>; controller: CarritoController } {
   const carritos = {
-    obtener: jest.fn(),
-    agregar: jest.fn(),
-    actualizarCantidad: jest.fn(),
-    quitar: jest.fn(),
-    vaciar: jest.fn(),
+    obtener: vi.fn(),
+    agregar: vi.fn(),
+    actualizarCantidad: vi.fn(),
+    quitar: vi.fn(),
+    vaciar: vi.fn(),
   };
   const controller = new CarritoController(carritos as unknown as CarritoService);
   return { carritos, controller };

@@ -1,0 +1,169 @@
+# scripts/ — Motor de gobernanza
+
+Este directorio es el **mecanismo que mantiene el proyecto en su punto fijo**:
+ejecuta de forma automática las reglas de [`docs/rules/`](../docs/rules/README.md)
+que son verificables por máquina, y aloja las operaciones que no son gobernanza
+(build de contrato, demo E2E).
+
+- **Reglas ejecutables:** job `rules-check` de CI (`.github/workflows/ci.yml`) y
+  `npm run rules:check`.
+- **Ancla normativa:** **R-CI-7** (existen todas las suites del manifiesto) y el
+  área [`ci/`](../docs/rules/ci/README.md).
+- **Decisión de arquitectura:** [ADR-23](../docs/decisiones.md).
+
+> Principio rector: el motor de reglas **se aplica a sí mismo** los estándares
+> del proyecto (tests propios, lint, contrato explícito). Un validador que no se
+> valida es una promesa, no una garantía.
+
+## Arquitectura
+
+Cinco capas con dependencias en **un solo sentido**.
+
+```
+scripts/
+├── README.md                 # este documento: contrato y mapa del motor
+├── cli.mjs                   # ÚNICO entrypoint (composition root)
+├── check-rules.mjs           # wrapper de compatibilidad -> cli.mjs rules
+│
+├── engine/                   # infra reutilizable (CERO conocimiento del proyecto)
+│   ├── runner.mjs            #   descubrimiento + manifiesto + ejecución
+│   ├── suite.mjs             #   contrato defineSuite(...)
+│   ├── report.mjs            #   plan de suites + cobertura de reglas
+│   └── lib/
+│       ├── paths.mjs         #   repoRoot, resolveInRepo(), toFileUrl()
+│       ├── fs.mjs            #   walkFiles, walkMarkdown, readText, readJson
+│       ├── git.mjs           #   wrappers seguros (execFileSync, sin interpolación)
+│       ├── commits.mjs       #   validateCommitSubject (pura, parametrizada)
+│       └── rules-docs.mjs    #   áreas, archivos NN-tema.md e IDs de docs/rules
+│
+├── config/                   # datos del proyecto (no código)
+│   ├── project.mjs           #   rama, servicios, scopes, rutas, tipos de commit
+│   └── manifest.mjs          #   suites exigidas (id + archivo)
+│
+├── rules/                    # reglas ejecutables, agrupadas por dominio
+│   ├── docs/structure.test.mjs     # integridad de docs/rules + manifiesto
+│   ├── git/commits.test.mjs        # R-GC-1..4 (puro)
+│   ├── git/branch.test.mjs         # R-GC-1..4 (contextual, commits del PR)
+│   ├── delivery/compose.test.mjs   # R-CD-1/3/7/8
+│   └── services/monorepo.test.mjs  # R-CD-3/4/7/22
+│
+└── tools/                    # operaciones (NO gobernanza)
+    ├── smoke.mjs
+    └── swagger-aggregate.mjs
+```
+
+### Regla de dependencia
+
+| Capa | Puede importar de | No puede importar de |
+|---|---|---|
+| `engine/` | Node built-ins | `config/`, `rules/`, `tools/` |
+| `config/` | — (sólo datos) | `engine/`, `rules/` |
+| `rules/` | `engine/`, `config/` | `tools/` |
+| `tools/` | `engine/lib/`, `config/` | `rules/` |
+| `cli.mjs` | todo (es el composition root) | — |
+
+Esto es lo que hace **portable** el motor: `engine/` + `config/` se copian a otro
+repo del stack sin arrastrar una sola regla.
+
+## Contrato de una suite
+
+Cada suite se declara con `defineSuite` y registra sus `test()` de `node:test`.
+El runner la descubre **importándola con el registro desactivado**: lee la
+metadata sin ejecutar los tests, y luego los ejecuta en procesos aislados.
+
+```js
+// scripts/rules/delivery/compose.test.mjs
+import { defineSuite } from '../../engine/suite.mjs';
+import { repoRoot } from '../../engine/lib/paths.mjs';
+import { readText } from '../../engine/lib/fs.mjs';
+
+export default defineSuite({
+  id: 'delivery-compose',
+  area: 'cd',                              // área de docs/rules que cubre
+  rules: ['R-CD-1', 'R-CD-3', 'R-CD-7', 'R-CD-8'],
+  mode: 'repo',                            // 'pure' (sin disco/git) | 'repo' (inspecciona el repo)
+  run: ({ test, assert }) => {
+    test('R-CD-3: los composes de stage/prod consumen GHCR', () => {
+      // …
+    });
+  },
+});
+```
+
+| Campo | Para qué sirve |
+|---|---|
+| `id` | Identificador único de la suite (reporte y filtros). |
+| `area` | Área de `docs/rules/` que la suite vigila. |
+| `rules` | IDs cubiertos → alimenta el **reporte de cobertura**. |
+| `mode` | `pure` corre sin git/red (rápido, local); `repo` inspecciona el repo real. |
+| `run` | Registra los `test(...)`; recibe `{ test, assert }` inyectados. |
+
+## Manifiesto (`config/manifest.mjs`)
+
+Sucede a `REQUIRED_RULE_SUITES` conservando **R-CI-7**: si falta una suite
+exigida, `rules:check` falla. Cada entrada liga el `id` de la suite con su
+archivo.
+
+```js
+export const requiredSuites = [
+  { id: 'docs-structure',    file: 'rules/docs/structure.test.mjs' },
+  { id: 'git-commits',       file: 'rules/git/commits.test.mjs' },
+  // …
+];
+```
+
+- El **runner** valida que toda suite del manifiesto haya sido descubierta (por
+  `id`) y que no haya `id` duplicados.
+- La suite `docs-structure` comprueba además que el **archivo** de cada entrada
+  exista (test etiquetado R-CI-7).
+
+## Reporte de cobertura
+
+Al terminar, el runner imprime cuántos IDs de regla tienen check ejecutable y
+**expone un hallazgo** cuando una suite cita un ID que no está definido en
+`docs/rules`:
+
+```
+Cobertura ejecutable: 11/235 IDs de regla tienen check.
+```
+
+> El reporte nació exponiendo un hallazgo real: `R-CI-9` y `R-CD-22` se citaban
+> en los scripts sin existir como reglas. Se resolvió definiendo **R-CI-7**
+> (manifiesto de suites) y **R-CD-14** (higiene de imagen) y ajustando las
+> referencias; hoy no hay hallazgos pendientes.
+
+## CLI
+
+```
+node scripts/cli.mjs rules [--only <id|area>] [--mode pure|repo] [--reporter spec|tap|dot|junit]
+node scripts/cli.mjs smoke
+node scripts/cli.mjs swagger
+```
+
+Los `npm scripts` de la raíz son **envoltorios** (sin ruptura para CI ni local):
+
+| npm script | Envuelve |
+|---|---|
+| `rules:check` | `node scripts/cli.mjs rules` |
+| `demo` | `node scripts/cli.mjs smoke` |
+| `swagger:export` | `node scripts/cli.mjs swagger` |
+| `test:engine` | `node --test "scripts/engine/**/*.test.mjs"` |
+
+## Cómo añadir una regla ejecutable
+
+1. Identifica el **dominio** y crea/edita su suite en `rules/<dominio>/`.
+2. Declara la suite con `defineSuite` (incluye el/los ID(s) en `rules`).
+3. Añade `{ id, file }` al `requiredSuites` del `manifest.mjs`.
+4. Ejecuta `npm run rules:check` en verde.
+5. La regla normativa sigue viviendo en `docs/rules/<area>/NN-tema.md`; el motor
+   sólo la **verifica**. La regla y su check entran en el **mismo PR**.
+
+## Estado
+
+El destino lo fija [ADR-23](../docs/decisiones.md) y la migración se completó en
+sus cuatro fases: `engine/lib/*` + `tools/` (fase 1 y 4), `config/*` + `rules/*`
+por dominio (fase 2), `runner` + `suite` + `cli` (fase 3), y lint + autotests del
+motor (fase 4).
+
+> El estado de cumplimiento (deuda, auditorías) **no vive aquí**: vive en
+> [`docs/rules/_meta/AUDIT.md`](../docs/rules/_meta/AUDIT.md) (R-DO-7).

@@ -1,0 +1,5 @@
+node_modules/
+
+# Salidas generadas por el harness (`npm run report:*`, `--output`): nunca versionar.
+reports/
+reports-*/

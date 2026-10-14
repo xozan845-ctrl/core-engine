@@ -1,3 +1,4 @@
+import type { Mock } from 'vitest';
 import 'reflect-metadata';
 import { ContabilidadController } from './contabilidad.controller';
 import type { ContabilidadService } from './contabilidad.service';
@@ -7,17 +8,17 @@ const asiento = { id: 'a-1', concepto: 'Venta', tipo: 'INGRESO', total_debe_cent
 const cuenta = { codigo: '1101', nombre: 'Caja', tipo: 'ACTIVO', naturaleza: 'DEUDORA' };
 const admin = { user_id: 'u-a', email: 'a@core.local', rol: ROLES.ADMIN };
 
-function fabricar(): { contabilidad: Record<string, jest.Mock>; controller: ContabilidadController } {
+function fabricar(): { contabilidad: Record<string, Mock>; controller: ContabilidadController } {
   const contabilidad = {
-    planDeCuentas: jest.fn(),
-    crearCuenta: jest.fn(),
-    estadoCuenta: jest.fn(),
-    libroDiario: jest.fn(),
-    registrar: jest.fn(),
-    anular: jest.fn(),
-    libroMayor: jest.fn(),
-    libroVentas: jest.fn(),
-    libroCompras: jest.fn(),
+    planDeCuentas: vi.fn(),
+    crearCuenta: vi.fn(),
+    estadoCuenta: vi.fn(),
+    libroDiario: vi.fn(),
+    registrar: vi.fn(),
+    anular: vi.fn(),
+    libroMayor: vi.fn(),
+    libroVentas: vi.fn(),
+    libroCompras: vi.fn(),
   };
   const controller = new ContabilidadController(contabilidad as unknown as ContabilidadService);
   return { contabilidad, controller };

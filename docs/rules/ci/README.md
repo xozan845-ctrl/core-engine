@@ -9,7 +9,7 @@ son reglas de testing y siguen en
 
 | Archivo | Contenido | IDs |
 |---|---|---|
-| `01-flujos.md` | Gatillos push/PR, concurrencia, sin `paths`, pipeline único, revisión de `.github/`, verificación de runs con `gh` | `R-CI` (1–6) |
+| `01-flujos.md` | Gatillos push/PR, concurrencia, sin `paths`, pipeline único, revisión de `.github/`, verificación de runs con `gh`, manifiesto de suites | `R-CI` (1–7) |
 | `02-entorno.md` | Runner/Node/npm, evidencia (artifacts), BD efímera exigible, secretos en CI | `R-EN` (1–4) |
 
 > El **despliegue** ya no vive en esta área: `R-CD-*` (1–13) se trasladaron a
@@ -22,7 +22,7 @@ son reglas de testing y siguen en
 
 | Prefijo | Rango | Archivo | Ámbito |
 |---|---|---|---|
-| `R-CI-*` | 1–6 | `01-flujos.md` | Flujos, ejecución y verificación de CI |
+| `R-CI-*` | 1–7 | `01-flujos.md` | Flujos, ejecución y verificación de CI |
 | `R-EN-*` | 1–4 | `02-entorno.md` | Entorno y evidencia en CI |
 
 > `R-CD-*` ya no se mapea aquí: ver el [Mapa de IDs](../cd/README.md) de `cd/`.

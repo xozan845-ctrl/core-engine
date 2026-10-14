@@ -1,4 +1,5 @@
-﻿import { EventsConsumer } from '../eventos/events.consumer';
+import type { Mock } from 'vitest';
+import { EventsConsumer } from '../eventos/events.consumer';
 import { EVENTOS, EventoBus, OrdenData, PaymentProcesadoData, ComisionAcreditadaData } from '@core/shared';
 import type { PoolClient } from 'pg';
 
@@ -9,28 +10,28 @@ import type { PoolClient } from 'pg';
  */
 describe('EventsConsumer (idempotencia atomica y contabilidad)', () => {
   const crear = async () => {
-    const client = { query: jest.fn().mockResolvedValue({ rows: [] }) } as unknown as PoolClient;
+    const client = { query: vi.fn().mockResolvedValue({ rows: [] }) } as unknown as PoolClient;
     const pg = {
-      queryOne: jest.fn().mockResolvedValue(null),
-      query: jest.fn().mockResolvedValue([]),
-      transaccion: jest.fn(async (fn: (c: PoolClient) => Promise<unknown>) => fn(client)),
+      queryOne: vi.fn().mockResolvedValue(null),
+      query: vi.fn().mockResolvedValue([]),
+      transaccion: vi.fn(async (fn: (c: PoolClient) => Promise<unknown>) => fn(client)),
     };
-    const contabilidad = { registrarEnTransaccion: jest.fn().mockResolvedValue({ id: 'a1' }) };
+    const contabilidad = { registrarEnTransaccion: vi.fn().mockResolvedValue({ id: 'a1' }) };
     const metricas = {
-      sumarMetrica: jest.fn().mockResolvedValue(undefined),
-      incrementarVendedor: jest.fn().mockResolvedValue(undefined),
+      sumarMetrica: vi.fn().mockResolvedValue(undefined),
+      incrementarVendedor: vi.fn().mockResolvedValue(undefined),
     };
     const rabbit = {
-      declararColas: jest.fn().mockResolvedValue(undefined),
-      consumir: jest.fn().mockResolvedValue(undefined),
-      activarReintento: jest.fn(),
+      declararColas: vi.fn().mockResolvedValue(undefined),
+      consumir: vi.fn().mockResolvedValue(undefined),
+      activarReintento: vi.fn(),
     };
     const servicio = new EventsConsumer(rabbit as never, pg as never, contabilidad as never, metricas as never);
     await servicio.onModuleInit();
     return {
       servicio,
       // el handler que el consumer registro en el bus (cableado real)
-      dispatch: (e: EventoBus) => (rabbit.consumir as jest.Mock).mock.calls[0][1](e),
+      dispatch: (e: EventoBus) => (rabbit.consumir as Mock).mock.calls[0][1](e),
       pg,
       client,
       contabilidad,
@@ -43,7 +44,7 @@ describe('EventsConsumer (idempotencia atomica y contabilidad)', () => {
 
   it('rechaza eventos ya procesados (dedup por event_id, sin tocar la contabilidad)', async () => {
     const { dispatch, pg, contabilidad, metricas } = await crear();
-    (pg.queryOne as jest.Mock).mockResolvedValue({ event_id: 'evt-1' }); // ya procesado
+    (pg.queryOne as Mock).mockResolvedValue({ event_id: 'evt-1' }); // ya procesado
     await dispatch(evento(EVENTOS.PAYMENT_PROCESADO, { order_id: 'o1', monto_cents: 45000, estado: 'procesado', metodo: 'simulado' }));
     expect(pg.transaccion).not.toHaveBeenCalled();
     expect(contabilidad.registrarEnTransaccion).not.toHaveBeenCalled();
@@ -55,7 +56,7 @@ describe('EventsConsumer (idempotencia atomica y contabilidad)', () => {
     await dispatch(evento<PaymentProcesadoData>(EVENTOS.PAYMENT_PROCESADO, { order_id: 'o1', monto_cents: 45000, estado: 'procesado', metodo: 'simulado' }));
 
     expect(contabilidad.registrarEnTransaccion).toHaveBeenCalledTimes(1);
-    const { detalles } = (contabilidad.registrarEnTransaccion as jest.Mock).mock.calls[0][1];
+    const { detalles } = (contabilidad.registrarEnTransaccion as Mock).mock.calls[0][1];
     expect(detalles).toEqual(
       expect.arrayContaining([
         expect.objectContaining({ cuenta_codigo: '1.1.1', debe_cents: 45000 }),
@@ -65,18 +66,18 @@ describe('EventsConsumer (idempotencia atomica y contabilidad)', () => {
     expect(metricas.sumarMetrica).toHaveBeenCalledWith(client, 'pedidos', 0, 1);
     expect(metricas.sumarMetrica).toHaveBeenCalledWith(client, 'gmv', 45000, 0);
     // dedup atomico: mismos argumentos que el insert de eventos_procesados
-    const marcar = (client.query as jest.Mock).mock.calls
+    const marcar = (client.query as Mock).mock.calls
       .map((c) => c[0] as string)
       .find((sql) => sql.includes('eventos_procesados'));
     expect(marcar).toBeDefined();
-    expect((client.query as jest.Mock).mock.calls.find((c) => (c[0] as string).includes('eventos_procesados'))[1]).toEqual(['evt-1', EVENTOS.PAYMENT_PROCESADO]);
+    expect((client.query as Mock).mock.calls.find((c) => (c[0] as string).includes('eventos_procesados'))[1]).toEqual(['evt-1', EVENTOS.PAYMENT_PROCESADO]);
   });
 
   it('comision.acreditada: realiza el ingreso (RN-04), cuenta al vendedor y marca idempotencia', async () => {
     const { dispatch, client, contabilidad, metricas } = await crear();
     await dispatch(evento<ComisionAcreditadaData>(EVENTOS.COMISION_ACREDITADA, { order_id: 'o1', monto_cents: 5400, monto_vendedor_cents: 39600, vendedor_id: 'v1' }));
 
-    const { detalles } = (contabilidad.registrarEnTransaccion as jest.Mock).mock.calls[0][1];
+    const { detalles } = (contabilidad.registrarEnTransaccion as Mock).mock.calls[0][1];
     expect(detalles).toEqual(
       expect.arrayContaining([
         expect.objectContaining({ cuenta_codigo: '2.1.2', debe_cents: 45000 }),
@@ -85,7 +86,7 @@ describe('EventsConsumer (idempotencia atomica y contabilidad)', () => {
       ]),
     );
     expect(metricas.incrementarVendedor).toHaveBeenCalledWith(client, 'v1', { ventas: 1, monto_cents: 45000, comision_cents: 5400 });
-    const marcar = (client.query as jest.Mock).mock.calls.find((c) => (c[0] as string).includes('eventos_procesados'));
+    const marcar = (client.query as Mock).mock.calls.find((c) => (c[0] as string).includes('eventos_procesados'));
     expect(marcar[1]).toEqual(['evt-1', EVENTOS.COMISION_ACREDITADA]);
   });
 
@@ -93,18 +94,18 @@ describe('EventsConsumer (idempotencia atomica y contabilidad)', () => {
     const { dispatch, client, metricas } = await crear();
     await dispatch(evento<OrdenData>(EVENTOS.ORDER_CREATED, { order_id: 'o1', cliente_id: 'c1', items: [], total_cents: 45000, estado: 'creada' }));
     expect(metricas.sumarMetrica).toHaveBeenCalledWith(client, 'checkouts_completados', 0, 1);
-    expect((client.query as jest.Mock).mock.calls.find((c) => (c[0] as string).includes('eventos_procesados'))).toBeDefined();
+    expect((client.query as Mock).mock.calls.find((c) => (c[0] as string).includes('eventos_procesados'))).toBeDefined();
   });
 
   it('devolucion.solicitada (RN-06): revierte la comision contra el acreedor del vendedor', async () => {
     const { dispatch, client, contabilidad, metricas } = await crear();
-    jest.spyOn(globalThis, 'fetch').mockResolvedValue({
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue({
       ok: true,
       json: async () => ({ total_cents: 45000 }),
     } as unknown as Response);
 
     await dispatch(evento(EVENTOS.DEVOLUCION_SOLICITADA, { order_id: 'o1', motivo: 'no le gusto', items: [] }));
-    const { detalles } = (contabilidad.registrarEnTransaccion as jest.Mock).mock.calls[0][1];
+    const { detalles } = (contabilidad.registrarEnTransaccion as Mock).mock.calls[0][1];
     expect(detalles).toEqual(
       expect.arrayContaining([
         expect.objectContaining({ cuenta_codigo: '4.1', debe_cents: 5400 }), // 12 % de 45 000
@@ -112,6 +113,6 @@ describe('EventsConsumer (idempotencia atomica y contabilidad)', () => {
       ]),
     );
     expect(metricas.sumarMetrica).toHaveBeenCalledWith(client, 'devoluciones', 0, 1);
-    expect((client.query as jest.Mock).mock.calls.find((c) => (c[0] as string).includes('eventos_procesados'))).toBeDefined();
+    expect((client.query as Mock).mock.calls.find((c) => (c[0] as string).includes('eventos_procesados'))).toBeDefined();
   });
 });

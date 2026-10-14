@@ -1,3 +1,4 @@
+import type { Mock } from 'vitest';
 import { OfertasService } from './ofertas.service';
 import { DomainError, ConflictError, NotFoundError } from '@core/shared';
 
@@ -33,19 +34,19 @@ describe('OfertasService (RN-01 / RN-02)', () => {
 
   const crear = () => {
     const pg = {
-      query: jest.fn().mockResolvedValue([]),
-      queryOne: jest.fn().mockResolvedValue(null),
+      query: vi.fn().mockResolvedValue([]),
+      queryOne: vi.fn().mockResolvedValue(null),
     };
     const servicio = new OfertasService(pg as never);
     return { servicio, pg };
   };
 
   const fetchResponde = (ok: boolean, body: unknown) =>
-    jest
+    vi
       .spyOn(globalThis, 'fetch')
       .mockResolvedValue({ ok, json: async () => body } as Response);
 
-  afterEach(() => jest.restoreAllMocks());
+  afterEach(() => vi.restoreAllMocks());
 
   describe('publicar (H-01 / TC-02)', () => {
     it('debe rechazar el margen cuando esta fuera del rango 0-90 sin tocar la BD', async () => {
@@ -57,37 +58,37 @@ describe('OfertasService (RN-01 / RN-02)', () => {
 
     it('debe rechazar el alta cuando el vendedor no tiene tienda sin consultar el catalogo', async () => {
       const { servicio } = crear();
-      const fetchSpy = jest.spyOn(globalThis, 'fetch');
+      const fetchSpy = vi.spyOn(globalThis, 'fetch');
       await expect(servicio.publicar('v1', 'p1', 25)).rejects.toThrow(/tienda/i);
       expect(fetchSpy).not.toHaveBeenCalled();
     });
 
     it('debe lanzar NotFoundError cuando el producto no existe en el catalogo', async () => {
       const { servicio, pg } = crear();
-      (pg.queryOne as jest.Mock).mockResolvedValueOnce({ id: 't1' }); // tienda
+      (pg.queryOne as Mock).mockResolvedValueOnce({ id: 't1' }); // tienda
       fetchResponde(false, { statusCode: 404 });
       await expect(servicio.publicar('v1', 'p1', 25)).rejects.toThrow(NotFoundError);
     });
 
     it('debe lanzar NotFoundError cuando el catalogo no responde (caida de red)', async () => {
       const { servicio, pg } = crear();
-      (pg.queryOne as jest.Mock).mockResolvedValueOnce({ id: 't1' });
-      jest.spyOn(globalThis, 'fetch').mockRejectedValue(new Error('red caida'));
+      (pg.queryOne as Mock).mockResolvedValueOnce({ id: 't1' });
+      vi.spyOn(globalThis, 'fetch').mockRejectedValue(new Error('red caida'));
       await expect(servicio.publicar('v1', 'p1', 25)).rejects.toThrow(NotFoundError);
     });
 
     it('debe prohibir publicar con stock 0 (RN-02)', async () => {
       const { servicio, pg } = crear();
-      (pg.queryOne as jest.Mock).mockResolvedValueOnce({ id: 't1' });
+      (pg.queryOne as Mock).mockResolvedValueOnce({ id: 't1' });
       fetchResponde(true, { ...productoExterno, stock: 0 });
       await expect(servicio.publicar('v1', 'p1', 25)).rejects.toThrow(ConflictError);
-      const sqls = (pg.queryOne as jest.Mock).mock.calls.map((c) => c[0] as string);
+      const sqls = (pg.queryOne as Mock).mock.calls.map((c) => c[0] as string);
       expect(sqls.some((s) => s.includes('INSERT INTO stores.ofertas'))).toBe(false);
     });
 
     it('debe devolver ConflictError cuando el producto ya esta publicado en la tienda', async () => {
       const { servicio, pg } = crear();
-      (pg.queryOne as jest.Mock)
+      (pg.queryOne as Mock)
         .mockResolvedValueOnce({ id: 't1' }) // tienda
         .mockResolvedValueOnce({ id: 'of-duplicada' }); // oferta existente
       fetchResponde(true, productoExterno);
@@ -96,7 +97,7 @@ describe('OfertasService (RN-01 / RN-02)', () => {
 
     it('debe calcular precio_venta = base x (1 + margen/100) y registrar historico (RN-01)', async () => {
       const { servicio, pg } = crear();
-      (pg.queryOne as jest.Mock)
+      (pg.queryOne as Mock)
         .mockResolvedValueOnce({ id: 't1' }) // tienda
         .mockResolvedValueOnce(null) // sin oferta duplicada
         .mockResolvedValueOnce(filaOferta); // INSERT ... RETURNING
@@ -108,7 +109,7 @@ describe('OfertasService (RN-01 / RN-02)', () => {
       expect(oferta.precio_venta).toBe('125.00'); // 100 x 1.25
       expect(oferta.margen).toBe(25);
       expect(oferta.estado).toBe('activa');
-      const [sqlInsert, params] = (pg.queryOne as jest.Mock).mock.calls[2];
+      const [sqlInsert, params] = (pg.queryOne as Mock).mock.calls[2];
       expect(sqlInsert).toContain('INSERT INTO stores.ofertas');
       expect(params[6]).toBe(10000); // precio_base_cents
       expect(params[7]).toBe(12500); // precio_venta_cents (enteros, A02)
@@ -132,13 +133,13 @@ describe('OfertasService (RN-01 / RN-02)', () => {
 
     it('debe prohibir editar la oferta de otro vendedor', async () => {
       const { servicio, pg } = crear();
-      (pg.queryOne as jest.Mock).mockResolvedValueOnce({ ...filaOferta, vendedor_id: 'otro' });
+      (pg.queryOne as Mock).mockResolvedValueOnce({ ...filaOferta, vendedor_id: 'otro' });
       await expect(servicio.cambiarMargen('of1', 'v1', 10)).rejects.toThrow(/dueno/);
     });
 
     it('debe recalcular precio_venta desde la base y auditar el cambio cuando es el dueno', async () => {
       const { servicio, pg } = crear();
-      (pg.queryOne as jest.Mock)
+      (pg.queryOne as Mock)
         .mockResolvedValueOnce({ ...filaOferta, vendedor_id: 'v1' }) // oferta
         .mockResolvedValueOnce({ ...filaOferta, margen: 10, precio_venta_cents: 11000 }); // UPDATE
       const oferta = await servicio.cambiarMargen('of1', 'v1', 10);
