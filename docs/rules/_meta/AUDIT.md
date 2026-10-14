@@ -22,7 +22,7 @@
 | Unit frontend | N/A | No hay frontend en el repo (G-2 y R-COV-5 **reservados, nunca reutilizados**) |
 | Integración (API+BD) | 🔴 | **0 tests** — capa entera sin cubrir; deuda G-4 (R-I-* exigibles cuando la historia toque la capa) |
 | Contrato (API) | 🔴 | **0 tests**; deuda G-5 (R-C-7) |
-| E2E | 🔴 | **0 automatizados**; solo smoke local `docker compose -f docker-compose.dev.yml up -d --build` + `npm run demo` (`scripts/smoke.mjs`); deuda G-6 |
+| E2E | 🔴 | **0 automatizados**; solo smoke local `docker compose -f docker-compose.dev.yml up -d --build` + `npm run demo` (`scripts/tools/smoke.mjs`); deuda G-6 |
 | OpenAPI (spec) | 🟢 | Export por servicio (`swagger:export`) + spec versionado en `docs/openapi/` (**9 servicios, 149/149 endpoints**); **documento agregado** (115 rutas / 50 schemas) servido por el gateway en `/docs`; **gate G-8** en CI (`git diff --exit-code`) |
 | Property-based | 🔴 | Sin `fast-check` en ningún paquete (R-PB-1..3: dinero y ciclo de la orden) |
 | Mutation testing | 🔴 | Sin Stryker; la mutación **nunca se ha ejecutado** (R-MT-1..3; módulos críticos `identity`/`orders`/`commissions`/`finance`) |
@@ -100,14 +100,14 @@
 2. **Robustez no implementada**: property-based (R-PB-1..3, sin `fast-check`), mutation testing (R-MT-1..3, nunca ejecutada — R-MT-1 la acota a mensual/pre-release, **no debe añadirse gate de PR**) y fuzz de parsers (R-RB-1..4).
 3. **Cobertura por debajo del objetivo 80/70**: ya lo alcanzan 4/10 (`catalog`, `identity`, `stores`, `logistics`); los más bajos siguen siendo `api-gateway` 22.8, `market-intelligence` 30.3, `commissions` 32.7 y `shared` 43.1 de líneas — suben por el ratchet +5/release (R-COV-1).
 4. **Specs pendientes**: **`field-service` sin suite** (excepción **R-QA-1**; es el único de los 25 controllers sin spec) y **21 de 39 `*.service.ts`/`*.consumer.ts`** sin spec (R-U-18, R-COV-2) — preexistentes al PR que los introduce.
-5. **Tooling JS fuera del alcance de ESLint**: `qa-harness/` y `scripts/` (~160 errores acumulados) no se lintean (alcance actual `packages/*/src/**/*.ts`).
+5. **Tooling JS parcialmente fuera del alcance de ESLint**: `qa-harness/` sigue sin lintearse; el motor de gobernanza (`scripts/**/*.mjs`) ya se lintea (ADR-23).
 6. **R-FL-3 sin cumplir**: ningún setup de Jest fija `TZ`; los specs actuales no usan hora local.
 7. **47 warnings `no-explicit-any`** en `packages/*/src` — auditables con cada auditoría (R-COV-3).
 
 ### Cerradas en este ciclo (Auditoría 5ª)
 
 - **5ª auditoría (esta, 2026-10-06):**
-  - **G-8 (OpenAPI):** export por servicio (`swagger.ts` + `swagger-export.ts` + script `swagger:export`), specs versionados en `docs/openapi/` (**149/149 endpoints** en 9 servicios), **gate G-8** en el job `build` (`git diff --exit-code`) y **documento agregado** fusionado por `scripts/swagger-aggregate.mjs` y servido por el **gateway en `/docs`** (115 rutas / 50 schemas). El agregador **aborta ante colisiones** de path/schema. Cumple **R-DO-6**.
+  - **G-8 (OpenAPI):** export por servicio (`swagger.ts` + `swagger-export.ts` + script `swagger:export`), specs versionados en `docs/openapi/` (**149/149 endpoints** en 9 servicios), **gate G-8** en el job `build` (`git diff --exit-code`) y **documento agregado** fusionado por `scripts/tools/swagger-aggregate.mjs` y servido por el **gateway en `/docs`** (115 rutas / 50 schemas). El agregador **aborta ante colisiones** de path/schema. Cumple **R-DO-6**.
   - **Reglas R-DO:** oficializado `docs/rules/documentation/` (R-DO-1..7).
   - **Deps (R-QA-6):** advisory `critical` nuevo en `proxy-addr` (rango `1.1.0–2.0.7`, vía `express`) → `overrides.proxy-addr = ^2.0.8`; `npm audit --audit-level=high` de nuevo **0**.
 

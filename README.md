@@ -166,7 +166,7 @@ ejecuta `npm run swagger:export` y falla si `docs/openapi` cambia sin commitear
 (`git diff --exit-code`). Al tocar un DTO hay que anotarlo con `@ApiProperty`.
 
 El **API Gateway** sirve en su `/docs` el **documento agregado** de todos los
-servicios (vista única del contrato público): `scripts/swagger-aggregate.mjs`
+servicios (vista única del contrato público): `scripts/tools/swagger-aggregate.mjs`
 fusiona `docs/openapi/*.json` en `packages/api-gateway/src/openapi.agregado.ts`
 (generado, versionado y verificado por el gate G-8).
 
@@ -198,7 +198,7 @@ RN-05/RN-06/RN-07/RN-08, partida doble y regimen fiscal NIC.
 
 ```bash
 npm test        # 360 tests en los 10 workspaces (cobertura por workspace, ratchet R-COV-1)
-npm run demo    # flujo real sobre el stack levantado (scripts/smoke.mjs)
+npm run demo    # flujo real sobre el stack levantado (scripts/tools/smoke.mjs)
 ```
 
 ## Observabilidad

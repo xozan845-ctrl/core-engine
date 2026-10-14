@@ -428,6 +428,65 @@ Este archivo registra decisiones técnicas deliberadas que se apartan del texto 
   (ya no como overlay) y el overlay `extra` desaparece. **Trade-off asumido**: prod
   y stage siguen compartiendo la lista de servicios entre sí; se aceptan como
   entornos separados con imágenes y variables distintas.
+---
+
+## ADR-23: Arquitectura modular del motor de gobernanza (`scripts/`)
+
+- **Fecha**: 2026-10-14
+- **Estado**: Aceptado (implementado el 2026-10-14 en cuatro fases)
+- **Contexto**: `scripts/` es el mecanismo que mantiene el proyecto en su
+  **punto fijo**: ejecuta las reglas de `docs/rules` que son verificables por
+  máquina (job `rules-check` de CI, `npm run rules:check`). Hoy mezcla tres
+  responsabilidades —**motor de gobernanza**, utilidades de build
+  (`swagger-aggregate.mjs`) y demo E2E (`smoke.mjs`)— y dentro del motor no
+  separa infraestructura reutilizable de reglas del proyecto:
+  - `check-rules.mjs` descubre suites por **nombre de archivo** (`*.test.mjs`):
+    no hay registro ni metadata de qué IDs cubre cada suite.
+  - `helpers/repo.mjs` mezcla utilidades genéricas (git, paths) con datos del
+    proyecto (`MAIN_BRANCH`).
+  - `project.config.mjs` afirma ser "el único archivo a editar al portar el
+    motor", pero en la práctica hay que arrastrar el runner y los helpers.
+  - El regex de IDs y la ruta `scripts/rules` están **duplicados/hardcodeados**
+    en `meta.test.mjs`.
+  - El motor queda **fuera de ESLint** (~160 errores acumulados,
+    `docs/rules/test/README.md`) y no tiene tests propios.
+  - Con ~269 IDs de regla en `docs/rules` y sólo una veintena codificados, el
+    crecimiento por dominio no tiene dónde ocurrir.
+- **Decisión**: adoptar una arquitectura en capas con dependencias en un solo
+  sentido y un contrato explícito por suite.
+  1. **Capas**: `engine/` (infra reutilizable, **cero** conocimiento del
+     proyecto), `config/` (datos del proyecto), `rules/<dominio>/` (reglas
+     ejecutables), `tools/` (operaciones: smoke, swagger) y `cli.mjs` (único
+     entrypoint). Regla de dependencia: `rules → engine + config`;
+     `engine → nada del proyecto`; `tools → engine/lib`.
+  2. **Contrato `defineSuite`**: cada suite exporta
+     `{ id, area, rules[], mode: 'pure'|'repo', run }`. El runner descubre
+     **importando**, obtiene metadata y puede filtrar por modo/dominio y
+     **reportar cobertura de reglas**.
+  3. **Manifiesto** en `config/manifest.mjs`: lista de suites exigidas
+     (`{ id, archivo }`) que sucede a `REQUIRED_RULE_SUITES` preservando
+     **R-CI-9**; el mapa regla→suite se **deriva** de la metadata de cada suite
+     para el reporte de cobertura (qué reglas tienen check ejecutable y cuáles
+     son sólo-auditoría).
+  4. **`cli.mjs`** con subcomandos (`rules`, `smoke`, `swagger`); los
+     `npm scripts` (`rules:check`, `demo`, `swagger:export`) pasan a envoltorios,
+     sin ruptura para CI ni para el flujo local.
+  5. **El motor se valida a sí mismo**: `engine/lib/*` con tests propios y
+     `scripts/**` incorporado al alcance de ESLint (cierra la deuda declarada).
+- **Consecuencias**: añadir una regla pasa a ser *un archivo en
+  `rules/<dominio>/`*; portar el motor a otro repo del stack es `engine/` +
+  `config/` sin tocar `rules/`; las suites puras corren sin git ni red. El motor
+  **conserva `node:test`** (built-in, reporter `spec`), coherente con ADR-20 —
+  que migró a Vitest sólo los workspaces TypeScript—. La migración es
+  incremental en **4 fases**, cada una con `rules:check` verde y commit atómico
+  propio (**R-IA-6**); no cambia el comportamiento de ninguna regla. El diseño
+  detallado y el contrato viven en [`scripts/README.md`](../scripts/README.md).
+- **Implementado (2026-10-14):** las cuatro fases quedaron aplicadas; el motor
+  ahora se lintea y tiene autotests (`npm run test:engine`). El nuevo reporte de
+  cobertura destapó un hallazgo de gobernanza: **`R-CI-9` y `R-CD-22` se citan en
+  los scripts pero no están definidos en `docs/rules`** (rangos reales `R-CI`
+  1–6 y `R-CD` 1–13). Se deja como deuda visible; definir o renumerar esos IDs
+  es un cambio normativo deliberado.
 
 ---
 

@@ -80,6 +80,10 @@ npm run test -w @core/api-gateway
 npm run lint
 npm run build
 
+# Motor de gobernanza: reglas ejecutables (job `rules-check`) y sus autotests
+npm run rules:check
+npm run test:engine
+
 # Puerta de seguridad (R-QA-6 / ci.yml "Security Gate")
 npm audit --audit-level=high
 
@@ -90,9 +94,9 @@ npm run demo
 
 ## Pendientes (deuda abierta)
 
-- **Tooling JS fuera del alcance de ESLint**: `eslint.config.mjs` cubre
-  `packages/*/src/**/*.ts` (el alcance de G-7); `qa-harness/` y `scripts/`
-  aún no se lintean (~160 errores acumulados).
+- **Tooling JS parcialmente fuera de ESLint**: `eslint.config.mjs` cubre
+  `packages/*/src/**/*.ts` (el alcance de G-7) y ahora también el motor de
+  gobernanza (`scripts/**/*.mjs`); `qa-harness/` sigue sin lintearse.
 - **G-4/G-5/G-6/G-8 sin paso en CI**: no existen suites de integración,
   contrato ni E2E ni paso de export OpenAPI en `ci.yml` (estado detallado en
   [`06-estandares-cobertura.md`](./06-estandares-cobertura.md)).
