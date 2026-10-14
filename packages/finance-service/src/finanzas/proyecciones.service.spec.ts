@@ -7,8 +7,8 @@ import { ProyeccionesService, SupuestosProyeccion } from './proyecciones.service
 describe('ProyeccionesService (cap. 8: modelo auditado del informe)', () => {
   const servicio = (() => {
     const fake = {
-      pg: { query: jest.fn(), queryOne: jest.fn(), transaccion: jest.fn() },
-      logger: { info: jest.fn(), warn: jest.fn(), error: jest.fn() },
+      pg: { query: vi.fn(), queryOne: vi.fn(), transaccion: vi.fn() },
+      logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn() },
     };
     return new ProyeccionesService(fake.pg as never);
   })();

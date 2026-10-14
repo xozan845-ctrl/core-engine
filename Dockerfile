@@ -24,7 +24,7 @@ RUN mkdir -p packages/$SERVICIO/node_modules
 RUN npm run build -w @core/shared && npm run build -w @core/$SERVICIO
 
 # El runtime NO lleva dependencias de desarrollo (R-CD-7/R-CD-22): tras compilar
-# se poda el arbol para no enviar tooling de test (jest, ts-jest, babel...).
+# se poda el arbol para no enviar tooling de test (vitest, swc, eslint…).
 RUN npm prune --omit=dev
 
 FROM node:20-alpine AS runtime

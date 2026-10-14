@@ -34,12 +34,12 @@ describe('AlertasService (tablero: reglas de alerta por capa)', () => {
     conProyeccion?: boolean;
   }) => {
     const kpis = {
-      kpis: jest.fn().mockResolvedValue(kpisBase(opciones.kpis)),
-      leerGMVReal: jest.fn().mockResolvedValue(opciones.gmvReal ?? null),
+      kpis: vi.fn().mockResolvedValue(kpisBase(opciones.kpis)),
+      leerGMVReal: vi.fn().mockResolvedValue(opciones.gmvReal ?? null),
     };
     const proyecciones = {
-      listar: jest.fn().mockResolvedValue(opciones.conProyeccion === false ? [] : [{ id: 'p1' }]),
-      obtener: jest.fn().mockResolvedValue(
+      listar: vi.fn().mockResolvedValue(opciones.conProyeccion === false ? [] : [{ id: 'p1' }]),
+      obtener: vi.fn().mockResolvedValue(
         opciones.filaProyectada ? { filas: [opciones.filaProyectada] } : { filas: [] },
       ),
     };

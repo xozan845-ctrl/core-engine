@@ -1,3 +1,4 @@
+import type { Mock } from 'vitest';
 import 'reflect-metadata';
 import { PedidosController } from './pedidos.controller';
 import type { CreateOrderCommandHandler } from './handlers/create-order-command.handler';
@@ -11,21 +12,21 @@ const vendedor = { user_id: 'u-v', email: 'v@core.local', rol: ROLES.VENDEDOR };
 const admin = { user_id: 'u-a', email: 'a@core.local', rol: ROLES.ADMIN };
 
 function fabricar(): {
-  handler: Record<string, jest.Mock>;
-  views: Record<string, jest.Mock>;
-  pedidos: Record<string, jest.Mock>;
+  handler: Record<string, Mock>;
+  views: Record<string, Mock>;
+  pedidos: Record<string, Mock>;
   controller: PedidosController;
 } {
-  const handler = { ejecutar: jest.fn(), transicionar: jest.fn(), reproyectar: jest.fn() };
+  const handler = { ejecutar: vi.fn(), transicionar: vi.fn(), reproyectar: vi.fn() };
   const views = {
-    listarTodo: jest.fn(),
-    listarDeVendedor: jest.fn(),
-    obtenerComisiones: jest.fn(),
-    listarDeTienda: jest.fn(),
-    listarDeCliente: jest.fn(),
-    obtenerTimeline: jest.fn(),
+    listarTodo: vi.fn(),
+    listarDeVendedor: vi.fn(),
+    obtenerComisiones: vi.fn(),
+    listarDeTienda: vi.fn(),
+    listarDeCliente: vi.fn(),
+    obtenerTimeline: vi.fn(),
   };
-  const pedidos = { detallePara: jest.fn() };
+  const pedidos = { detallePara: vi.fn() };
   const controller = new PedidosController(
     handler as unknown as CreateOrderCommandHandler,
     views as unknown as OrderViewRepository,

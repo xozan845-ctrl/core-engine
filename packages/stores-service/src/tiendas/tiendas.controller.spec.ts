@@ -1,3 +1,4 @@
+import type { Mock } from 'vitest';
 import 'reflect-metadata';
 import { TiendasController } from './tiendas.controller';
 import type { TiendasService } from './tiendas.service';
@@ -6,8 +7,8 @@ import { NotFoundError, ROLES } from '@core/shared';
 const tienda = { id: 't-1', vendedor_id: 'u-v', nombre: 'Mi tienda', descripcion: 'x' };
 const vendedor = { user_id: 'u-v', email: 'v@core.local', rol: ROLES.VENDEDOR };
 
-function fabricar(): { tiendas: Record<string, jest.Mock>; controller: TiendasController } {
-  const tiendas = { crear: jest.fn(), deVendedor: jest.fn() };
+function fabricar(): { tiendas: Record<string, Mock>; controller: TiendasController } {
+  const tiendas = { crear: vi.fn(), deVendedor: vi.fn() };
   const controller = new TiendasController(tiendas as unknown as TiendasService);
   return { tiendas, controller };
 }

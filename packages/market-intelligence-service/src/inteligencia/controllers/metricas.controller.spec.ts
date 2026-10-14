@@ -1,16 +1,17 @@
+import type { Mock } from 'vitest';
 import 'reflect-metadata';
 import { MetricasController } from './metricas.controller';
 import type { InteligenciaService } from '../services/inteligencia.service';
 
-function fabricar(): { inteligencia: Record<string, jest.Mock>; controller: MetricasController } {
+function fabricar(): { inteligencia: Record<string, Mock>; controller: MetricasController } {
   const inteligencia = {
-    obtenerMapaCalor: jest.fn(),
-    obtenerRendimientoVendedores: jest.fn(),
-    obtenerCoberturaZona: jest.fn(),
-    obtenerDemandaProductos: jest.fn(),
-    obtenerTendencias: jest.fn(),
-    obtenerResumen: jest.fn(),
-    registrarVenta: jest.fn(),
+    obtenerMapaCalor: vi.fn(),
+    obtenerRendimientoVendedores: vi.fn(),
+    obtenerCoberturaZona: vi.fn(),
+    obtenerDemandaProductos: vi.fn(),
+    obtenerTendencias: vi.fn(),
+    obtenerResumen: vi.fn(),
+    registrarVenta: vi.fn(),
   };
   const controller = new MetricasController(inteligencia as unknown as InteligenciaService);
   return { inteligencia, controller };

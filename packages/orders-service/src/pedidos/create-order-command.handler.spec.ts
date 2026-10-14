@@ -4,19 +4,19 @@ import { Money } from '@core/shared';
 
 class PgFake {
   async transaccion<T>(fn: (client: unknown) => Promise<T>): Promise<T> {
-    return fn({ query: jest.fn(async () => ({ rows: [] })) });
+    return fn({ query: vi.fn(async () => ({ rows: [] })) });
   }
 }
 
 class EventStoreFake {
-  appendEnTransaccion = jest.fn(async (_c: unknown, orderId: string, tipo: string, datos: unknown) => ({
+  appendEnTransaccion = vi.fn(async (_c: unknown, orderId: string, tipo: string, datos: unknown) => ({
     secuencia: 1,
     order_id: orderId,
     tipo,
     datos,
     ocurrido_en: new Date().toISOString(),
   }));
-  historiaDe = jest.fn();
+  historiaDe = vi.fn();
 }
 
 interface VistaFake {
@@ -34,7 +34,7 @@ interface VistaFake {
 class ViewsFake {
   private vistas = new Map<string, VistaFake>();
 
-  crearEnTransaccion = jest.fn(
+  crearEnTransaccion = vi.fn(
     async (_c: unknown, vista: Omit<VistaFake, 'total' | 'actualizado_en'>) => {
       this.vistas.set(vista.id, {
         ...vista,
@@ -43,22 +43,22 @@ class ViewsFake {
       });
     },
   );
-  actualizarEstado = jest.fn(async (id: string, estado: string, motivo?: string) => {
+  actualizarEstado = vi.fn(async (id: string, estado: string, motivo?: string) => {
     const v = this.vistas.get(id);
     if (v) {
       v.estado = estado;
       v.motivo = motivo;
     }
   });
-  encontrar = jest.fn(async (id: string) => this.vistas.get(id) ?? null);
-  listarDeCliente = jest.fn();
-  listarTodo = jest.fn();
-  reconstruirDeHistoria = jest.fn();
+  encontrar = vi.fn(async (id: string) => this.vistas.get(id) ?? null);
+  listarDeCliente = vi.fn();
+  listarTodo = vi.fn();
+  reconstruirDeHistoria = vi.fn();
 }
 
 class CarritoFake {
-  itemsParaCheckout = jest.fn(async () => []);
-  vaciarEnTransaccion = jest.fn();
+  itemsParaCheckout = vi.fn(async () => []);
+  vaciarEnTransaccion = vi.fn();
 }
 
 /** Preparo el handler con fetch mockeado (stores + catalog internos). */
@@ -76,7 +76,7 @@ function crearHandler(
     views as never,
     (carrito ?? new CarritoFake()) as never,
   );
-  global.fetch = jest.fn(
+  global.fetch = vi.fn(
     async (url: string | URL | Request, _init?: RequestInit) => {
       const u = String(url);
       if (u.includes('stores-service')) {

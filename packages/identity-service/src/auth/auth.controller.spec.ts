@@ -1,3 +1,4 @@
+import type { Mock } from 'vitest';
 import 'reflect-metadata';
 import { AuthController } from './auth.controller';
 import type { AuthService } from './auth.service';
@@ -14,17 +15,17 @@ const sesion = {
 const adminContexto = { user_id: 'u-admin', email: 'admin@core.local', rol: ROLES.ADMIN };
 
 function fabricar(): {
-  auth: Record<string, jest.Mock>;
-  usuarios: Record<string, jest.Mock>;
+  auth: Record<string, Mock>;
+  usuarios: Record<string, Mock>;
   controller: AuthController;
 } {
-  const auth = { registrar: jest.fn(), login: jest.fn(), refrescar: jest.fn(), cerrarSesion: jest.fn().mockResolvedValue(1) };
+  const auth = { registrar: vi.fn(), login: vi.fn(), refrescar: vi.fn(), cerrarSesion: vi.fn().mockResolvedValue(1) };
   const usuarios = {
-    crear: jest.fn(),
-    cambiarContrasena: jest.fn(),
-    vincularPersonal: jest.fn(),
-    actualizarPerfil: jest.fn(),
-    encontrarPorCorreo: jest.fn(),
+    crear: vi.fn(),
+    cambiarContrasena: vi.fn(),
+    vincularPersonal: vi.fn(),
+    actualizarPerfil: vi.fn(),
+    encontrarPorCorreo: vi.fn(),
   };
   const controller = new AuthController(
     auth as unknown as AuthService,

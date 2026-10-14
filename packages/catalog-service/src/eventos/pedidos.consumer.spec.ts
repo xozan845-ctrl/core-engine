@@ -1,3 +1,4 @@
+import type { Mock } from 'vitest';
 import { PedidosConsumer } from './pedidos.consumer';
 import { EVENTOS, COLAS, EventoBus, OrdenData, DevolucionSolicitadaData } from '@core/shared';
 
@@ -9,21 +10,21 @@ import { EVENTOS, COLAS, EventoBus, OrdenData, DevolucionSolicitadaData } from '
 describe('PedidosConsumer de catalog (RN-03 / RN-06)', () => {
   const crear = async () => {
     const rabbit = {
-      declararColas: jest.fn().mockResolvedValue(undefined),
-      consumir: jest.fn().mockResolvedValue(undefined),
-      activarReintento: jest.fn(),
+      declararColas: vi.fn().mockResolvedValue(undefined),
+      consumir: vi.fn().mockResolvedValue(undefined),
+      activarReintento: vi.fn(),
     };
-    const outbox = { insertar: jest.fn().mockResolvedValue(undefined) };
+    const outbox = { insertar: vi.fn().mockResolvedValue(undefined) };
     const productos = {
-      estaProcesado: jest.fn().mockResolvedValue(false),
-      registrarProcesado: jest.fn().mockResolvedValue(undefined),
-      reservarStock: jest.fn().mockResolvedValue({
+      estaProcesado: vi.fn().mockResolvedValue(false),
+      registrarProcesado: vi.fn().mockResolvedValue(undefined),
+      reservarStock: vi.fn().mockResolvedValue({
         ok: true,
         fallidos: [],
         stock_restante: [{ sku: 'sku-01', stock_restante: 4 }],
       }),
-      reintegrarStock: jest.fn().mockResolvedValue(undefined),
-      stockActualDe: jest.fn().mockResolvedValue([{ sku: 'sku-01', stock_restante: 9 }]),
+      reintegrarStock: vi.fn().mockResolvedValue(undefined),
+      stockActualDe: vi.fn().mockResolvedValue([{ sku: 'sku-01', stock_restante: 9 }]),
     };
     const consumer = new PedidosConsumer(rabbit as never, outbox as never, productos as never);
     await consumer.onModuleInit();
@@ -31,8 +32,8 @@ describe('PedidosConsumer de catalog (RN-03 / RN-06)', () => {
       rabbit,
       outbox,
       productos,
-      dispatch: (e: EventoBus) => (rabbit.consumir as jest.Mock).mock.calls[0][1](e),
-      cola: (rabbit.consumir as jest.Mock).mock.calls[0][0],
+      dispatch: (e: EventoBus) => (rabbit.consumir as Mock).mock.calls[0][1](e),
+      cola: (rabbit.consumir as Mock).mock.calls[0][0],
     };
   };
 
@@ -56,7 +57,7 @@ describe('PedidosConsumer de catalog (RN-03 / RN-06)', () => {
     await dispatch(evento(EVENTOS.ORDER_CREATED, ordenData));
 
     expect(productos.reservarStock).toHaveBeenCalledWith('o1', [{ sku: 'SKU-01', cantidad: 2 }]);
-    const emitidos = (outbox.insertar as jest.Mock).mock.calls.map((c) => c[0]);
+    const emitidos = (outbox.insertar as Mock).mock.calls.map((c) => c[0]);
     expect(emitidos).toContain(EVENTOS.STOCK_RESERVADO);
     expect(emitidos).toContain(EVENTOS.STOCK_UPDATED);
     expect(productos.registrarProcesado).toHaveBeenCalledWith('evt-1', EVENTOS.ORDER_CREATED);
@@ -64,14 +65,14 @@ describe('PedidosConsumer de catalog (RN-03 / RN-06)', () => {
 
   it('debe emitir stock.fallido cuando la reserva es rechazada por stock insuficiente', async () => {
     const { dispatch, outbox, productos } = await crear();
-    (productos.reservarStock as jest.Mock).mockResolvedValue({
+    (productos.reservarStock as Mock).mockResolvedValue({
       ok: false,
       fallidos: [{ sku: 'SKU-01', cantidad: 2, motivo: 'stock_insuficiente' }],
     });
 
     await dispatch(evento(EVENTOS.ORDER_CREATED, ordenData));
 
-    const emitidos = (outbox.insertar as jest.Mock).mock.calls.map((c) => c[0]);
+    const emitidos = (outbox.insertar as Mock).mock.calls.map((c) => c[0]);
     expect(emitidos).toEqual([EVENTOS.STOCK_FALLIDO]);
     expect(emitidos).not.toContain(EVENTOS.STOCK_RESERVADO);
     expect(productos.registrarProcesado).toHaveBeenCalled();
@@ -79,7 +80,7 @@ describe('PedidosConsumer de catalog (RN-03 / RN-06)', () => {
 
   it('debe ignorar el evento cuando el event_id ya fue procesado (idempotencia doc 5.2)', async () => {
     const { dispatch, outbox, productos } = await crear();
-    (productos.estaProcesado as jest.Mock).mockResolvedValue(true);
+    (productos.estaProcesado as Mock).mockResolvedValue(true);
 
     await dispatch(evento(EVENTOS.ORDER_CREATED, ordenData));
 
@@ -98,7 +99,7 @@ describe('PedidosConsumer de catalog (RN-03 / RN-06)', () => {
     await dispatch(evento(EVENTOS.DEVOLUCION_SOLICITADA, data));
 
     expect(productos.reintegrarStock).toHaveBeenCalledWith('o1', [{ sku: 'SKU-01', cantidad: 1 }]);
-    const emitidos = (outbox.insertar as jest.Mock).mock.calls.map((c) => c[0]);
+    const emitidos = (outbox.insertar as Mock).mock.calls.map((c) => c[0]);
     expect(emitidos).toContain(EVENTOS.STOCK_REINTEGRADO);
     expect(emitidos).toContain(EVENTOS.STOCK_UPDATED);
     expect(productos.stockActualDe).toHaveBeenCalledWith(['SKU-01']);

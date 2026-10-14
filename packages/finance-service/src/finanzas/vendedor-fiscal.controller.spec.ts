@@ -1,3 +1,4 @@
+import type { Mock } from 'vitest';
 import 'reflect-metadata';
 import { VendedorFiscalController } from './vendedor-fiscal.controller';
 import type { TributacionService } from '../tributacion/tributacion.service';
@@ -7,12 +8,12 @@ import { ROLES } from '@core/shared';
 const vendedor = { user_id: 'u-v', email: 'v@core.local', rol: ROLES.VENDEDOR };
 
 function fabricar(): {
-  tributacion: Record<string, jest.Mock>;
-  kpis: Record<string, jest.Mock>;
+  tributacion: Record<string, Mock>;
+  kpis: Record<string, Mock>;
   controller: VendedorFiscalController;
 } {
-  const tributacion = { sujetoFiscalDe: jest.fn() };
-  const kpis = { resumenDelVendedor: jest.fn() };
+  const tributacion = { sujetoFiscalDe: vi.fn() };
+  const kpis = { resumenDelVendedor: vi.fn() };
   const controller = new VendedorFiscalController(
     tributacion as unknown as TributacionService,
     kpis as unknown as KpisService,

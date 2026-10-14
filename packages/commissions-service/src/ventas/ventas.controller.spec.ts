@@ -1,3 +1,4 @@
+import type { Mock } from 'vitest';
 import 'reflect-metadata';
 import { VentasController } from './ventas.controller';
 import type { VentasService } from './ventas.service';
@@ -6,8 +7,8 @@ import { ROLES } from '@core/shared';
 const estado = { total_ventas_cents: 115000, comisiones_cents: 13800, liquidado_cents: 0 };
 const vendedor = { user_id: 'u-v', email: 'v@core.local', rol: ROLES.VENDEDOR };
 
-function fabricar(): { ventas: Record<string, jest.Mock>; controller: VentasController } {
-  const ventas = { estadoCuenta: jest.fn() };
+function fabricar(): { ventas: Record<string, Mock>; controller: VentasController } {
+  const ventas = { estadoCuenta: vi.fn() };
   const controller = new VentasController(ventas as unknown as VentasService);
   return { ventas, controller };
 }

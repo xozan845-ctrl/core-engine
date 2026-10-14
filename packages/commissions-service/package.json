@@ -8,7 +8,7 @@
     "build": "tsc -p tsconfig.json",
     "start": "node dist/main.js",
     "swagger:export": "node dist/swagger-export.js",
-    "test": "jest --runInBand"
+    "test": "vitest run"
   },
   "dependencies": {
     "@core/shared": "file:../shared",
@@ -24,40 +24,7 @@
   },
   "devDependencies": {
     "@types/express": "^5.0.0",
-    "@types/jest": "^30.0.0",
     "@types/node": "^22.10.5",
-    "jest": "^30.5.2",
-    "ts-jest": "^29.4.14",
     "typescript": "^5.7.2"
-  },
-  "jest": {
-    "moduleFileExtensions": [
-      "js",
-      "json",
-      "ts"
-    ],
-    "rootDir": "src",
-    "testRegex": ".*\\.spec\\.ts$",
-    "transform": {
-      "^.+\\.(t|j)s$": "ts-jest"
-    },
-    "moduleNameMapper": {
-      "^@core/shared$": "<rootDir>/../../shared/src/index.ts"
-    },
-    "collectCoverageFrom": [
-      "**/*.(t|j)s",
-      "!**/main.ts",
-      "!**/*.module.ts",
-      "!**/swagger.ts",
-      "!**/swagger-export.ts"
-    ],
-    "coverageDirectory": "../coverage",
-    "coverageThreshold": {
-      "global": {
-        "lines": 12,
-        "branches": 5
-      }
-    },
-    "testEnvironment": "node"
   }
 }

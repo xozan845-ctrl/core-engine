@@ -1,3 +1,4 @@
+import type { Mock } from 'vitest';
 import 'reflect-metadata';
 import { EstadoOrdenController, EnviosAdminController } from './estado-orden.controller';
 import type { EnviosService } from './envios.service';
@@ -7,8 +8,8 @@ const orden = { id: 'o-1', estado: 'enviada' };
 const envio = { id: 'e-1', order_id: 'o-1', estado: 'en_preparacion' };
 const logistica = { user_id: 'u-l', email: 'l@core.local', rol: ROLES.LOGISTICA };
 
-function fabricar(): { envios: Record<string, jest.Mock>; controller: EstadoOrdenController } {
-  const envios = { avanzarEstadoOrden: jest.fn(), listar: jest.fn() };
+function fabricar(): { envios: Record<string, Mock>; controller: EstadoOrdenController } {
+  const envios = { avanzarEstadoOrden: vi.fn(), listar: vi.fn() };
   const controller = new EstadoOrdenController(envios as unknown as EnviosService);
   return { envios, controller };
 }
@@ -42,7 +43,7 @@ describe('EstadoOrdenController (api/v1/orders/:id/estado, Tabla 21, R-U-10/11)'
 
 describe('EnviosAdminController (api/v1/admin/envios, R-U-10/11)', () => {
   it('debe listar las guias de despacho', async () => {
-    const envios = { listar: jest.fn().mockResolvedValue([{ ...envio, monto: '1150.00' }]) };
+    const envios = { listar: vi.fn().mockResolvedValue([{ ...envio, monto: '1150.00' }]) };
     const controller = new EnviosAdminController(envios as unknown as EnviosService);
     await expect(controller.listar()).resolves.toEqual([{ ...envio, monto: '1150.00' }]);
     expect(envios.listar).toHaveBeenCalledTimes(1);
