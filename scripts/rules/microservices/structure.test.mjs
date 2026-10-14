@@ -6,7 +6,7 @@ import { readJson, readText } from '../../engine/lib/fs.mjs';
 import { PACKAGES_DIR, SERVICES } from '../../config/project.mjs';
 
 /**
- * Reglas estructurales del monorepo multipaquete: cada servicio listado en
+ * Reglas estructurales de microservicios: cada servicio listado en
  * `SERVICES` es un paquete construible y una imagen propia (R-CD-3, R-CD-4).
  */
 
