@@ -72,3 +72,24 @@ test('R-CD-4: el puerto EXPOSE es único por servicio', () => {
     ports.set(port, svc);
   }
 });
+
+test('R-CD-7/R-CD-22: la imagen de runtime no lleva devDependencies', () => {
+  // El runtime debe podar el árbol tras compilar: el tooling de test (jest,
+  // ts-jest, babel…) no debe viajar en la imagen que se publica.
+  for (const svc of SERVICES) {
+    const df = readFileSync(join(serviceDir(svc), 'Dockerfile'), 'utf8');
+    assert.match(
+      df,
+      /npm prune --omit=dev/,
+      `${svc}/Dockerfile debe podar las devDependencies del runtime (npm prune --omit=dev)`,
+    );
+  }
+  for (const rel of ['Dockerfile', join('packages', 'Dockerfile.template')]) {
+    const content = readFileSync(join(repositoryRoot, rel), 'utf8');
+    assert.match(
+      content,
+      /npm prune --omit=dev/,
+      `${rel} debe podar las devDependencies del runtime (npm prune --omit=dev)`,
+    );
+  }
+});
