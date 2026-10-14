@@ -322,7 +322,7 @@ Este archivo registra decisiones técnicas deliberadas que se apartan del texto 
 - **Decisión**:
   1. **Podar el runtime**: las imágenes de servicio ejecutan `npm prune --omit=dev`
      tras compilar, de modo que el tooling de test **no viaja** en la imagen
-     publicada (R-CD-7/R-CD-22). Aplica al `Dockerfile` raíz, a la plantilla y a
+     publicada (R-CD-7/R-CD-14). Aplica al `Dockerfile` raíz, a la plantilla y a
      los `packages/<servicio>/Dockerfile`.
   2. **No forzar** un major de `jest`/`babel` solo por moderates **dev-only**; el
      gate R-QA-6 se mantiene en `--audit-level=high` (bloquea `high`/`critical`).
@@ -465,7 +465,7 @@ Este archivo registra decisiones técnicas deliberadas que se apartan del texto 
      **reportar cobertura de reglas**.
   3. **Manifiesto** en `config/manifest.mjs`: lista de suites exigidas
      (`{ id, archivo }`) que sucede a `REQUIRED_RULE_SUITES` preservando
-     **R-CI-9**; el mapa regla→suite se **deriva** de la metadata de cada suite
+     **R-CI-7**; el mapa regla→suite se **deriva** de la metadata de cada suite
      para el reporte de cobertura (qué reglas tienen check ejecutable y cuáles
      son sólo-auditoría).
   4. **`cli.mjs`** con subcomandos (`rules`, `smoke`, `swagger`); los
@@ -483,10 +483,10 @@ Este archivo registra decisiones técnicas deliberadas que se apartan del texto 
   detallado y el contrato viven en [`scripts/README.md`](../scripts/README.md).
 - **Implementado (2026-10-14):** las cuatro fases quedaron aplicadas; el motor
   ahora se lintea y tiene autotests (`npm run test:engine`). El nuevo reporte de
-  cobertura destapó un hallazgo de gobernanza: **`R-CI-9` y `R-CD-22` se citan en
-  los scripts pero no están definidos en `docs/rules`** (rangos reales `R-CI`
-  1–6 y `R-CD` 1–13). Se deja como deuda visible; definir o renumerar esos IDs
-  es un cambio normativo deliberado.
+  cobertura destapó un hallazgo de gobernanza: **`R-CI-9` y `R-CD-22` se citaban
+  en los scripts sin existir en `docs/rules`** (rangos reales `R-CI` 1–6 y
+  `R-CD` 1–13). Resuelto definiendo **R-CI-7** (manifiesto de suites) y
+  **R-CD-14** (higiene de imagen) y ajustando las referencias.
 
 ---
 

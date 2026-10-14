@@ -15,7 +15,7 @@ const serviceDir = (svc) => join(repoRoot, PACKAGES_DIR, svc);
 export default defineSuite({
   id: 'services-monorepo',
   area: 'cd',
-  rules: ['R-CD-3', 'R-CD-4', 'R-CD-7', 'R-CD-22'],
+  rules: ['R-CD-3', 'R-CD-4', 'R-CD-14'],
   mode: 'repo',
   run: ({ test, assert }) => {
     test('R-CD-3: cada servicio tiene package.json, src/main.ts y Dockerfile propio', () => {
@@ -53,7 +53,7 @@ export default defineSuite({
           new RegExp(`npm run build -w @core/${svc}\\b`),
           `${svc}/Dockerfile no compila @core/${svc}`,
         );
-        assert.match(df, /^USER node$/m, `${svc}/Dockerfile no corre como USER node (R-CD-22)`);
+        assert.match(df, /^USER node$/m, `${svc}/Dockerfile no corre como USER node (R-CD-14)`);
         assert.match(
           df,
           new RegExp(`CMD \\["node", "packages/${svc}/dist/main\\.js"\\]`),
@@ -77,7 +77,7 @@ export default defineSuite({
       }
     });
 
-    test('R-CD-7/R-CD-22: la imagen de runtime no lleva devDependencies', () => {
+    test('R-CD-14: la imagen de runtime no lleva devDependencies', () => {
       // El runtime debe podar el árbol tras compilar: el tooling de test (vitest,
       // swc, eslint…) no debe viajar en la imagen que se publica.
       for (const svc of SERVICES) {
