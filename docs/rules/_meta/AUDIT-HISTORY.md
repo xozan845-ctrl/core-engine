@@ -902,3 +902,33 @@ El PR #90 se completó utilizando convenciones atómicas (R-PR-1, R-GC-1..5) gar
 - **Local:** `npm test -- --coverage` exit 0 (360/56, 0 `threshold not met`) · lint 0/47 · build 0 TS · `swagger:export` idempotente · audit high/moderate 0.
 - **CI:** run `37505390920` sobre `main` = `f552627` → `completed success` (4/4 jobs, incluye el paso G-8).
 - **Snapshot:** estado consolidado reescrito en [`AUDIT.md`](./AUDIT.md).
+
+---
+
+# AUDIT (histórico) — 6ª auditoría de Core Engine (cierre de `field-service`)
+
+- **Fecha:** 2026-10-14
+- **Comandos:** `npm test`, `npm run lint`, `npm run build`,
+  `npm run rules:check`, `npm run test:engine`.
+- **Estado global:** 🟡 CUMPLE PARCIAL — los gates existentes permanecen
+  verdes; se elimina la última excepción de workspace de R-QA-1.
+
+## Intervención
+
+1. `field-service` incorpora Vitest, specs de controller y service, y gate de
+   cobertura 84 líneas / 70 ramas (medido: 85.24 / 71.27).
+2. `npm test` pasa de 10 a **11 workspaces**: 405/405 tests en 60 archivos.
+3. Controllers con spec pasa de 24/25 a **25/25**.
+4. Las regresiones descubiertas corrigieron el mapeo de `personalIds`, la
+   actualización de ubicación y el SQL de rangos temporales de tracking.
+5. El tipado de paradas elimina cuatro `any`: lint queda en 0 errores / 43
+   warnings.
+
+## Evidencia
+
+- **Local:** `npm test` exit 0 (405/60, 11 tablas, 0 `threshold not met`) ·
+  `npm run lint` exit 0 (0/43) · `npm run build` exit 0 · reglas y autotests del
+  motor exit 0.
+- **Snapshot:** estado consolidado reescrito en [`AUDIT.md`](./AUDIT.md). La
+  evidencia del PR y del run post-merge vive en GitHub para evitar el ciclo
+  commit → run → commit descrito por R-COV-3.

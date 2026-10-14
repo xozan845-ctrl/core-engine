@@ -26,6 +26,15 @@ import {
 } from './field.dtos';
 
 type Mapa = Record<string, string>;
+type FiltroSql = {
+  col: string;
+  val: unknown;
+  op?: '=' | '>=' | '<=';
+};
+type FilaParada = Record<string, unknown> & {
+  ruta_id: string;
+  orden?: number | string | null;
+};
 
 const MAP_PERSONAL: Mapa = {
   nombre: 'nombre',
@@ -87,12 +96,12 @@ const MAP_RUTAS: Mapa = {
   nombre: 'nombre',
   descripcion: 'descripcion',
   estado: 'estado',
-  personalAsignadoIds: 'personal_asignado_ids',
+  personalIds: 'personal_asignado_ids',
   vehiculoAsignadoId: 'vehiculo_asignado_id',
   fechaInicio: 'fecha_inicio',
   fechaFin: 'fecha_fin',
 };
-const DEF_RUTAS = { estado: 'pendiente', personalAsignadoIds: [] };
+const DEF_RUTAS = { estado: 'pendiente', personalIds: [] };
 
 const MAP_PARADAS: Mapa = {
   rutaId: 'ruta_id',
@@ -284,10 +293,14 @@ export class FieldService {
   private async listar<T>(
     tabla: string,
     tenant: string,
-    extras: { col: string; val: unknown }[] = [],
+    extras: FiltroSql[] = [],
     orderBy = 'created_at',
   ): Promise<T[]> {
-    const cond = ['tenant_id = $1', 'deleted_at IS NULL', ...extras.map((_, i) => `${extras[i].col} = $${i + 2}`)];
+    const cond = [
+      'tenant_id = $1',
+      'deleted_at IS NULL',
+      ...extras.map((filter, i) => `${filter.col} ${filter.op ?? '='} $${i + 2}`),
+    ];
     const sql = `SELECT * FROM field.${tabla} WHERE ${cond.join(' AND ')} ORDER BY ${orderBy} DESC LIMIT 2000`;
     return this.pg.query<T>(sql, [tenant, ...extras.map((e) => e.val)]);
   }
@@ -334,10 +347,10 @@ export class FieldService {
   async actualizarUbicacion(tenant: string, id: string, dto: UbicacionRequestDto) {
     await this.obtener('personal', tenant, id);
     return this.actualizar('personal', tenant, id, dto, {
-      ubicacionLat: 'ubicacion_lat',
-      ubicacionLng: 'ubicacion_lng',
-      ubicacionPrecision: 'ubicacion_precision',
-      ubicacionTs: 'ubicacion_ts',
+      lat: 'ubicacion_lat',
+      lng: 'ubicacion_lng',
+      precision: 'ubicacion_precision',
+      timestamp: 'ubicacion_ts',
     });
   }
 
@@ -386,9 +399,12 @@ export class FieldService {
     } else {
       rutas = await this.listar('rutas', tenant);
     }
-    const paradas = await this.pg.query<any>(`SELECT * FROM field.paradas WHERE tenant_id = $1 AND deleted_at IS NULL`, [tenant]);
-    const porRuta = new Map<string, any[]>();
-    for (const p of paradas as any[]) {
+    const paradas = await this.pg.query<FilaParada>(
+      `SELECT * FROM field.paradas WHERE tenant_id = $1 AND deleted_at IS NULL`,
+      [tenant],
+    );
+    const porRuta = new Map<string, FilaParada[]>();
+    for (const p of paradas) {
       const arr = porRuta.get(p.ruta_id) ?? [];
       arr.push(p);
       porRuta.set(p.ruta_id, arr);
@@ -402,7 +418,7 @@ export class FieldService {
   }
   async obtenerRuta(tenant: string, id: string) {
     const r = await this.obtener('rutas', tenant, id);
-    const paradas = await this.pg.query<any>(
+    const paradas = await this.pg.query<FilaParada>(
       `SELECT * FROM field.paradas WHERE tenant_id = $1 AND ruta_id = $2 AND deleted_at IS NULL`,
       [tenant, id],
     );
@@ -460,7 +476,7 @@ export class FieldService {
 
   // ── pedidos ────────────────────────────────────────────────────────────
   listarPedidos(tenant: string, filtro: { estado?: string; rutaId?: string; clienteId?: string }) {
-    const extras = [] as { col: string; val: unknown }[];
+    const extras: FiltroSql[] = [];
     if (filtro.estado) extras.push({ col: 'estado', val: filtro.estado });
     if (filtro.rutaId) extras.push({ col: 'ruta_id', val: filtro.rutaId });
     if (filtro.clienteId) extras.push({ col: 'cliente_id', val: filtro.clienteId });
@@ -484,7 +500,7 @@ export class FieldService {
 
   // ── asistencia ─────────────────────────────────────────────────────────
   listarAsistencia(tenant: string, filtro: { personalId?: string; fecha?: string }) {
-    const extras = [] as { col: string; val: unknown }[];
+    const extras: FiltroSql[] = [];
     if (filtro.personalId) extras.push({ col: 'personal_id', val: filtro.personalId });
     if (filtro.fecha) extras.push({ col: 'DATE(registrado_en)', val: filtro.fecha });
     return this.listar('asistencia', tenant, extras);
@@ -495,7 +511,7 @@ export class FieldService {
 
   // ── incidencias ───────────────────────────────────────────────────────
   listarIncidencias(tenant: string, filtro: { estado?: string; rutaId?: string }) {
-    const extras = [] as { col: string; val: unknown }[];
+    const extras: FiltroSql[] = [];
     if (filtro.estado) extras.push({ col: 'estado', val: filtro.estado });
     if (filtro.rutaId) extras.push({ col: 'ruta_id', val: filtro.rutaId });
     return this.listar('incidencias', tenant, extras);
@@ -515,10 +531,10 @@ export class FieldService {
 
   // ── tracking (GPS) ────────────────────────────────────────────────────
   listarTracking(tenant: string, filtro: { personalId?: string; desde?: string; hasta?: string }) {
-    const extras = [] as { col: string; val: unknown }[];
+    const extras: FiltroSql[] = [];
     if (filtro.personalId) extras.push({ col: 'personal_id', val: filtro.personalId });
-    if (filtro.desde) extras.push({ col: 'registrado_en >=', val: filtro.desde });
-    if (filtro.hasta) extras.push({ col: 'registrado_en <=', val: filtro.hasta });
+    if (filtro.desde) extras.push({ col: 'registrado_en', op: '>=', val: filtro.desde });
+    if (filtro.hasta) extras.push({ col: 'registrado_en', op: '<=', val: filtro.hasta });
     return this.listar('tracking', tenant, extras, 'registrado_en');
   }
   registrarTracking(tenant: string, registros: CrearTrackingRequestDto[]) {
@@ -529,7 +545,7 @@ export class FieldService {
 
   // ── visitas (telemetria) ──────────────────────────────────────────────
   listarVisitas(tenant: string, filtro: { personalId?: string; fecha?: string }) {
-    const extras = [] as { col: string; val: unknown }[];
+    const extras: FiltroSql[] = [];
     if (filtro.personalId) extras.push({ col: 'personal_id', val: filtro.personalId });
     if (filtro.fecha) extras.push({ col: 'DATE(created_at)', val: filtro.fecha });
     return this.listar('visitas', tenant, extras);

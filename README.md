@@ -70,7 +70,7 @@ Eventos del bus (topic `core-engine.events`): `order.created`, `stock.reservado`
 ```bash
 npm install                       # instala los workspaces (enlaza @core/shared, ...)
 npm run build                     # compila shared + gateway + los 9 microservicios
-npm test                          # los 10 workspaces, cada uno con --coverage (358 tests)
+npm test                          # los 11 workspaces, cada uno con --coverage (405 tests)
 cp .env.example .env              # variables de DESARROLLO (producción: .env.production.example)
 docker compose -f docker-compose.dev.yml up -d --build   # app: Postgres + RabbitMQ + gateway y 9 servicios (8080 host + datos/broker 5432/5672/15672)
 npm run demo                      # ejercicio end-to-end (TC-01..TC-08, RN-01..RN-08)
@@ -197,7 +197,7 @@ TC-07 seguridad del gateway (401/403), TC-08 comision 12 % y liquidacion al vend
 RN-05/RN-06/RN-07/RN-08, partida doble y regimen fiscal NIC.
 
 ```bash
-npm test        # 360 tests en los 10 workspaces (cobertura por workspace, ratchet R-COV-1)
+npm test        # 405 tests en los 11 workspaces (cobertura por workspace, ratchet R-COV-1)
 npm run demo    # flujo real sobre el stack levantado (scripts/tools/smoke.mjs)
 ```
 
