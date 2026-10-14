@@ -36,11 +36,14 @@ entornos y Dockploy.
 
 ## Pendientes y estado
 
-- **`release.yml` no existe**: no hay release por tag ni publicación de imágenes
-  a un registry; el VPS construye desde el `Dockerfile` raíz con cada push a
-  `main` (Dockploy). Los `R-CD-1..8` son el contrato exigible el día que exista
-  un workflow de release (R-CI-4); los `R-CD-9..13` describen el despliegue que
-  **sí** existe hoy.
+- **`release.yml` (2026-10-14)**: existe el release por tag `vX.Y.Z` con
+  procedencia (commit en `main` + `ci.yml` verde en el mismo SHA, `R-CD-2`),
+  publicación de **una imagen por servicio** en GHCR con etiquetas OCI/semver
+  (`R-CD-4`) y digest en el resumen. `promote.yml` las mueve a `stage`/`prod`
+  **por digest** (`R-CD-3`) y `deploy.yml` valida el arranque (`R-CD-12`). Los
+  composes `docker-compose.stage.yml` / `docker-compose.prod.yml` consumen GHCR.
+  Dockploy sigue siendo el destino del VPS (`R-CD-9..13`). Ver el runbook
+  [`../../runbook-entrega.md`](../../runbook-entrega.md).
 - **Dockploy se configura fuera de este repo**: un solo proyecto con los
   environments `staging`/`produccion` (R-CD-9) y la política de producción
   (R-CD-10/11) se documentan aquí; la configuración concreta del VPS queda
