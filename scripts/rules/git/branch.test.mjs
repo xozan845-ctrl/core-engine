@@ -4,6 +4,7 @@ import { validateCommitSubject } from '../../engine/lib/commits.mjs';
 import {
   ALLOWED_COMMIT_SCOPES,
   ALLOWED_COMMIT_TYPES,
+  INTEGRATION_BRANCH,
   MAIN_BRANCH,
 } from '../../config/project.mjs';
 
@@ -24,7 +25,10 @@ export default defineSuite({
   mode: 'repo',
   run: ({ test, assert }) => {
     test('R-GC-1..4: los commits introducidos por el PR cumplen el convenio del repo', () => {
-      const { currentBranch, baseBranch } = getBranchContext(MAIN_BRANCH);
+      const { currentBranch, baseBranch } = getBranchContext(
+        MAIN_BRANCH,
+        INTEGRATION_BRANCH,
+      );
       if (currentBranch === MAIN_BRANCH || currentBranch === `origin/${MAIN_BRANCH}`) {
         return; // en main no hay commits que evaluar
       }
