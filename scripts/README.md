@@ -7,7 +7,7 @@ que son verificables por máquina, y aloja las operaciones que no son gobernanza
 
 - **Reglas ejecutables:** job `rules-check` de CI (`.github/workflows/ci.yml`) y
   `npm run rules:check`.
-- **Ancla normativa:** **R-CI-9** (existen todas las suites del manifiesto) y el
+- **Ancla normativa:** **R-CI-7** (existen todas las suites del manifiesto) y el
   área [`ci/`](../docs/rules/ci/README.md).
 - **Decisión de arquitectura:** [ADR-23](../docs/decisiones.md).
 
@@ -100,7 +100,7 @@ export default defineSuite({
 
 ## Manifiesto (`config/manifest.mjs`)
 
-Sucede a `REQUIRED_RULE_SUITES` conservando **R-CI-9**: si falta una suite
+Sucede a `REQUIRED_RULE_SUITES` conservando **R-CI-7**: si falta una suite
 exigida, `rules:check` falla. Cada entrada liga el `id` de la suite con su
 archivo.
 
@@ -115,7 +115,7 @@ export const requiredSuites = [
 - El **runner** valida que toda suite del manifiesto haya sido descubierta (por
   `id`) y que no haya `id` duplicados.
 - La suite `docs-structure` comprueba además que el **archivo** de cada entrada
-  exista (test etiquetado R-CI-9).
+  exista (test etiquetado R-CI-7).
 
 ## Reporte de cobertura
 
@@ -124,14 +124,13 @@ Al terminar, el runner imprime cuántos IDs de regla tienen check ejecutable y
 `docs/rules`:
 
 ```
-Cobertura ejecutable: 9/233 IDs de regla tienen check.
-  ⚠ Hallazgo — IDs citados por suites sin definición en docs/rules: R-CD-22, R-CI-9
+Cobertura ejecutable: 11/235 IDs de regla tienen check.
 ```
 
-> Hallazgo vivo (2026-10-14): `R-CI-9` y `R-CD-22` se citan en los scripts pero
-> **no existen como reglas** en `docs/rules` (rangos reales: `R-CI` 1–6,
-> `R-CD` 1–13). Definirlos o renumerar las referencias es un cambio normativo
-> deliberado, no un ajuste silencioso.
+> El reporte nació exponiendo un hallazgo real: `R-CI-9` y `R-CD-22` se citaban
+> en los scripts sin existir como reglas. Se resolvió definiendo **R-CI-7**
+> (manifiesto de suites) y **R-CD-14** (higiene de imagen) y ajustando las
+> referencias; hoy no hay hallazgos pendientes.
 
 ## CLI
 

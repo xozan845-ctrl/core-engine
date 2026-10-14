@@ -8,7 +8,7 @@ import { RULES_DIR } from '../../config/project.mjs';
 import { requiredSuites } from '../../config/manifest.mjs';
 
 /**
- * Integridad del propio sistema de reglas: manifiesto de suites (R-CI-9),
+ * Integridad del propio sistema de reglas: manifiesto de suites (R-CI-7),
  * estructura de `docs/rules`, unicidad de IDs, referencias válidas y enlaces
  * internos. Todo el árbol normativo se inspecciona como dato.
  */
@@ -19,10 +19,10 @@ const RULE_ID_ROW = /^\|\s*(?:\*\*)?((?:R-[A-Z]+|G)-\d+)(?:\*\*)?\s*\|/gm;
 export default defineSuite({
   id: 'docs-structure',
   area: 'documentation',
-  rules: ['R-CI-9'],
+  rules: ['R-CI-7'],
   mode: 'repo',
   run: ({ test, assert }) => {
-    test('R-CI-9: existen todas las suites de reglas del manifiesto (no se borra una regla en silencio)', () => {
+    test('R-CI-7: existen todas las suites de reglas del manifiesto (no se borra una regla en silencio)', () => {
       const missing = requiredSuites
         .filter((suite) => !existsSync(resolveInRepo('scripts', suite.file)))
         .map((suite) => suite.file);
@@ -30,7 +30,7 @@ export default defineSuite({
       assert.deepEqual(
         missing,
         [],
-        `Faltan suites de reglas obligatorias del manifiesto (scripts/config/manifest.mjs) (R-CI-9): ${missing.join(', ')}`,
+        `Faltan suites de reglas obligatorias del manifiesto (scripts/config/manifest.mjs) (R-CI-7): ${missing.join(', ')}`,
       );
     });
 

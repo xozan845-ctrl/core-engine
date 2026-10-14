@@ -1,5 +1,5 @@
 /**
- * config/manifest.mjs — Manifiesto de suites de reglas (R-CI-9).
+ * config/manifest.mjs — Manifiesto de suites de reglas (R-CI-7).
  *
  * El runner descubre las suites por `readdir`, así que borrar una en silencio
  * reduciría la cobertura sin que nada avise. Este manifiesto hace que
