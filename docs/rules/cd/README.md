@@ -6,7 +6,7 @@ tocar producción y cómo se revierte un despliegue malo.
 
 **`R-CD-1..8`** vinieron de `ci/03-deploy.md` el 2026-10-01 al crearse esta área
 (mismas IDs, nunca se renumeran); **`R-CD-9..13`** son las reglas nuevas de
-entornos y Dockploy.
+entornos y Dockploy; **`R-CD-14`** es la higiene de la imagen de runtime.
 
 ## Archivos
 
@@ -14,6 +14,7 @@ entornos y Dockploy.
 |---|---|---|
 | `01-despliegue.md` | Release por tag, procedencia y CI verde, imágenes por digest, migraciones solo hacia adelante, aprobación de producción, secretos en la imagen, dry-run | `R-CD` (1–8) |
 | `02-entornos.md` | Etapas (desarrollo local + stage + producción), un proyecto Dockploy con environments, promoción y gate de producción, smoke post-despliegue, rollback | `R-CD` (9–13) |
+| `03-imagen.md` | Higiene de la imagen de runtime: usuario no-root y poda de devDependencies | `R-CD` (14) |
 
 > El modelo de ramas que estos despliegues consumen vive en
 > [`../git/00-entornos.md`](../git/00-entornos.md) (`R-GE-*`): aquí se despliega
@@ -25,6 +26,7 @@ entornos y Dockploy.
 |---|---|---|---|
 | `R-CD-*` | 1–8 | `01-despliegue.md` | Artefactos de release (tag, digest, OCI, migraciones, secretos) |
 | `R-CD-*` | 9–13 | `02-entornos.md` | Entornos Dockploy, promoción, gate, smoke y rollback |
+| `R-CD-*` | 14 | `03-imagen.md` | Higiene de la imagen de runtime (usuario no-root, poda de devDependencies) |
 
 ## Guía rápida del despliegue
 
