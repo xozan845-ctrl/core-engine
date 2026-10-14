@@ -1,7 +1,12 @@
 node_modules/
 dist/
 coverage/
+# Secretos de runtime por entorno: nunca versionar (R-CD-7).
+# Solo se versionan las plantillas `*.example`.
 .env
+.env.*
+!.env.example
+!.env*.example
 *.log
 .DS_Store
 Thumbs.db
