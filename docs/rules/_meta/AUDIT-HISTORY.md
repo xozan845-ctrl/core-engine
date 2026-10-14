@@ -932,3 +932,36 @@ El PR #90 se completó utilizando convenciones atómicas (R-PR-1, R-GC-1..5) gar
 - **Snapshot:** estado consolidado reescrito en [`AUDIT.md`](./AUDIT.md). La
   evidencia del PR y del run post-merge vive en GitHub para evitar el ciclo
   commit → run → commit descrito por R-COV-3.
+
+---
+
+# AUDIT (histórico) — 7ª auditoría de Core Engine (contrato de observabilidad)
+
+- **Fecha:** 2026-10-14
+- **Comandos:** `npm test`, `npm run lint`, `npm run build`,
+  `npm run rules:check`, `npm run test:engine`.
+- **Estado global:** 🟡 CUMPLE PARCIAL — los gates existentes permanecen
+  verdes y seis reglas de observabilidad pasan a tener checks ejecutables.
+
+## Intervención
+
+1. Nuevas suites `observability-tracing` y `observability-telemetry`: cobertura
+   ejecutable global de reglas **16/235 → 22/235**.
+2. Los 10 servicios exponen `/metrics` y Prometheus los scrapea según su
+   inventario/puerto; se cerraron las omisiones de `field-service` y
+   `market-intelligence-service`.
+3. `x-request-id` se conserva en payload de outbox y ahora también se publica
+   como header de RabbitMQ, con una regresión unitaria dedicada.
+4. Todas las alertas enlazan un runbook versionado y la alerta de DLQ exige
+   crecimiento sostenido durante una ventana, no la mera existencia de mensajes.
+5. La matriz queda en **407/407 tests, 61 archivos, 11 workspaces**; `shared`
+   sube a 44.69% líneas / 41.80% ramas sin bajar thresholds.
+
+## Evidencia
+
+- **Local:** `npm test` exit 0 (407/61, 11 tablas, 0 `threshold not met`) ·
+  `npm run lint` exit 0 (0/43) · `npm run build` exit 0 · `npm run rules:check`
+  (8 suites, 22/235 IDs) y `npm run test:engine` (3/3) exit 0.
+- **Snapshot:** estado consolidado reescrito en [`AUDIT.md`](./AUDIT.md). La
+  evidencia del PR y del run post-merge vive en GitHub para evitar el ciclo
+  commit → run → commit descrito por R-COV-3.
