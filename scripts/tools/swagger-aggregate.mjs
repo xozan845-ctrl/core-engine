@@ -5,10 +5,8 @@
 // imagen Docker (el runtime no copia docs/). Se ejecuta desde
 // `npm run swagger:export` y lo verifica el gate G-8 (R-C-7, R-DO-6).
 import { readdirSync, readFileSync, writeFileSync } from 'node:fs';
-import { dirname, resolve } from 'node:path';
-import { fileURLToPath } from 'node:url';
-
-const raiz = resolve(dirname(fileURLToPath(import.meta.url)), '..');
+import { resolve } from 'node:path';
+import { repoRoot as raiz } from '../engine/lib/paths.mjs';
 const dirSpecs = resolve(raiz, 'docs/openapi');
 const salida = resolve(raiz, 'packages/api-gateway/src/openapi.agregado.ts');
 
@@ -90,7 +88,7 @@ const documento = {
 };
 
 const cabecera = `/**
- * GENERADO por scripts/swagger-aggregate.mjs — NO editar a mano.
+ * GENERADO por scripts/tools/swagger-aggregate.mjs — NO editar a mano.
  * Fuente: docs/openapi/*.json (npm run swagger:export). Verifica: gate G-8.
  */
 import type { OpenAPIObject } from '@nestjs/swagger';

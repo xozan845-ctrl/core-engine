@@ -1,9 +1,10 @@
 /**
- * project.config.mjs — Core Engine
+ * config/project.mjs — Core Engine
  * ──────────────────────────────────────────────────────────────────────────────
- * Configuración específica de ESTE proyecto para el motor de reglas
- * (`scripts/check-rules.mjs`). Es el único archivo a editar al portar el motor
- * a otro repositorio del stack.
+ * Datos específicos de ESTE proyecto para el motor de reglas (`scripts/engine/`).
+ * Es la capa de configuración: solo datos, sin código ni dependencias del motor.
+ * Al portar el motor a otro repositorio del stack se edita este archivo (y
+ * `manifest.mjs`); `scripts/engine/` no se toca.
  *
  * Core Engine es un **monorepo npm workspaces**: varios servicios NestJS en
  * `packages/*` comparten `packages/shared`. Por eso la configuración es
@@ -25,6 +26,12 @@ export const INTEGRATION_BRANCH = 'develop';
 
 /** Directorio de los paquetes del workspace. */
 export const PACKAGES_DIR = 'packages';
+
+/** Árbol normativo de reglas (lo lee el motor para el reporte de cobertura). */
+export const RULES_DIR = 'docs/rules';
+
+/** Directorio de los workflows de GitHub Actions. */
+export const WORKFLOWS_DIR = '.github/workflows';
 
 /**
  * Servicios desplegables del monorepo (uno por carpeta `packages/<servicio>`
@@ -103,16 +110,4 @@ export const ALLOWED_COMMIT_SCOPES = [
   'release',
   'git',
   'test',
-];
-
-/**
- * Manifiesto de suites de reglas (R-CI-9): `check-rules.mjs` descubre las
- * suites por `readdir`, así que borrar una en silencio reduciría la cobertura.
- * Esta lista hace que `rules-check` falle si falta cualquiera.
- */
-export const REQUIRED_RULE_SUITES = [
-  'commits.test.mjs',
-  'delivery.test.mjs',
-  'meta.test.mjs',
-  'services.test.mjs',
 ];

@@ -12,10 +12,10 @@
     "build": "npm run build:shared && npm run build -w @core/api-gateway && npm run build -w @core/identity-service && npm run build -w @core/catalog-service && npm run build -w @core/stores-service && npm run build -w @core/orders-service && npm run build -w @core/logistics-service && npm run build -w @core/commissions-service && npm run build -w @core/finance-service && npm run build -w @core/field-service && npm run build -w @core/market-intelligence-service",
     "test": "npm run test -w @core/shared -- --coverage && npm run test -w @core/api-gateway -- --coverage && npm run test -w @core/orders-service -- --coverage && npm run test -w @core/commissions-service -- --coverage && npm run test -w @core/finance-service -- --coverage && npm run test -w @core/market-intelligence-service -- --coverage && npm run test -w @core/catalog-service -- --coverage && npm run test -w @core/identity-service -- --coverage && npm run test -w @core/stores-service -- --coverage && npm run test -w @core/logistics-service -- --coverage",
     "start:field": "npm run start -w @core/field-service",
-    "demo": "node scripts/smoke.mjs",
+    "demo": "node scripts/cli.mjs smoke",
     "lint": "eslint .",
-    "rules:check": "node scripts/check-rules.mjs",
-    "swagger:export": "npm run build && npm run swagger:export --workspaces --if-present && node scripts/swagger-aggregate.mjs && npm run build -w @core/api-gateway"
+    "rules:check": "node scripts/cli.mjs rules",
+    "swagger:export": "npm run build && npm run swagger:export --workspaces --if-present && node scripts/cli.mjs swagger && npm run build -w @core/api-gateway"
   },
   "engines": {
     "node": ">=20"
