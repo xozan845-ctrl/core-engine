@@ -306,6 +306,38 @@ Este archivo registra decisiones técnicas deliberadas que se apartan del texto 
 
 ---
 
+## ADR-19: Dependencias de desarrollo — poda en la imagen y riesgo aceptado del tooling de test
+
+- **Fecha**: 2026-10-14
+- **Estado**: Aceptado
+- **Contexto**: la puerta de seguridad de CI (`npm audit --audit-level=high`,
+  R-QA-6) reportó **1 critical** (Handlebars, vía `ts-jest`) y **20 moderate**,
+  todas en la cadena de **test** (`jest`/`ts-jest`/`babel`/`js-yaml`/`argparse`/
+  `sprintf-js`). El critical se cerró fijando `handlebars@^4.7.10` por `overrides`
+  (bump no rompiente en 4.x). Las 20 moderate **no tienen fix sin un cambio mayor**
+  (el `fixAvailable` que propone npm apunta incluso a *bajadas* de `jest`), y
+  `npm audit fix` **no reduce** el número pero reescribe miles de líneas del lock
+  sin beneficio. Además, el `Dockerfile` copiaba **todo** `node_modules` al runtime,
+  incluidas esas devDependencies.
+- **Decisión**:
+  1. **Podar el runtime**: las imágenes de servicio ejecutan `npm prune --omit=dev`
+     tras compilar, de modo que el tooling de test **no viaja** en la imagen
+     publicada (R-CD-7/R-CD-22). Aplica al `Dockerfile` raíz, a la plantilla y a
+     los `packages/<servicio>/Dockerfile`.
+  2. **No forzar** un major de `jest`/`babel` solo por moderates **dev-only**; el
+     gate R-QA-6 se mantiene en `--audit-level=high` (bloquea `high`/`critical`).
+  3. Registrar el riesgo residual como **aceptado** y acotado a dependencias que
+     **no se despliegan**.
+- **Consecuencias**: el `node_modules` del runtime baja de ~190 MB a ~85 MB, se
+  elimina superficie de ataque en la imagen (no hay `jest`/`babel` en producción) y
+  el gate sigue bloqueando lo que importa. Los 20 moderate quedan como deuda
+  **visible** ligada al runner de tests; si se adopta `Vitest` (como en el
+  microservicio de almacenamiento) o un major de `jest` que los resuelva, se
+  revisará. Verificado con `docker build` real de `orders-service` y
+  `finance-service`.
+
+---
+
 ## Resumen de cumplimiento post-corrección
 
 | Ítem del documento          | Estado  | Nota |
