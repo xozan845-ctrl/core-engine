@@ -91,8 +91,8 @@ npm run demo
 ## Pendientes (deuda abierta)
 
 - **Tooling JS fuera del alcance de ESLint**: `eslint.config.mjs` cubre
-  `packages/*/src/**/*.ts` (el alcance de G-7); `qa-harness/`, `scripts/` y
-  `validate-dashboards.cjs` aún no se lintean (~160 errores acumulados).
+  `packages/*/src/**/*.ts` (el alcance de G-7); `qa-harness/` y `scripts/`
+  aún no se lintean (~160 errores acumulados).
 - **G-4/G-5/G-6/G-8 sin paso en CI**: no existen suites de integración,
   contrato ni E2E ni paso de export OpenAPI en `ci.yml` (estado detallado en
   [`06-estandares-cobertura.md`](./06-estandares-cobertura.md)).

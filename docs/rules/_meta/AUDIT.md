@@ -100,7 +100,7 @@
 2. **Robustez no implementada**: property-based (R-PB-1..3, sin `fast-check`), mutation testing (R-MT-1..3, nunca ejecutada — R-MT-1 la acota a mensual/pre-release, **no debe añadirse gate de PR**) y fuzz de parsers (R-RB-1..4).
 3. **Cobertura por debajo del objetivo 80/70**: ya lo alcanzan 4/10 (`catalog`, `identity`, `stores`, `logistics`); los más bajos siguen siendo `api-gateway` 22.8, `market-intelligence` 30.3, `commissions` 32.7 y `shared` 43.1 de líneas — suben por el ratchet +5/release (R-COV-1).
 4. **Specs pendientes**: **`field-service` sin suite** (excepción **R-QA-1**; es el único de los 25 controllers sin spec) y **21 de 39 `*.service.ts`/`*.consumer.ts`** sin spec (R-U-18, R-COV-2) — preexistentes al PR que los introduce.
-5. **Tooling JS fuera del alcance de ESLint**: `qa-harness/`, `scripts/` y `validate-dashboards.cjs` (~160 errores acumulados) no se lintean (alcance actual `packages/*/src/**/*.ts`).
+5. **Tooling JS fuera del alcance de ESLint**: `qa-harness/` y `scripts/` (~160 errores acumulados) no se lintean (alcance actual `packages/*/src/**/*.ts`).
 6. **R-FL-3 sin cumplir**: ningún setup de Jest fija `TZ`; los specs actuales no usan hora local.
 7. **47 warnings `no-explicit-any`** en `packages/*/src` — auditables con cada auditoría (R-COV-3).
 

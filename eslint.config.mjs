@@ -1,6 +1,6 @@
 // Configuración ESLint (flat config) — única para todos los workspaces.
 // Alcance (G-7): TypeScript de los workspaces, `packages/*/src/**/*.ts`.
-// El tooling JS (`qa-harness/`, `scripts/`, `validate-dashboards.cjs`) queda
+// El tooling JS (`qa-harness/`, `scripts/`) queda
 // fuera de alcance por ahora — deuda anotada en docs/rules/test/README.md.
 // Uso: `npm run lint` (raíz). Los errores bloquean CI; las advertencias no.
 import js from '@eslint/js';
@@ -16,7 +16,6 @@ export default tseslint.config(
       '**/*.d.ts',
       'qa-harness/**',
       'scripts/**',
-      'validate-dashboards.cjs',
     ],
   },
   {
