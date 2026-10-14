@@ -24,7 +24,7 @@
   "devDependencies": {
     "@eslint/js": "^10.0.1",
     "@swc/core": "^1.16.18",
-    "@vitest/coverage-v8": "^4.1.11",
+    "@vitest/coverage-v8": "^5.0.3",
     "eslint": "^10.11.0",
     "typescript-eslint": "^8.71.0",
     "unplugin-swc": "^2.0.0",
