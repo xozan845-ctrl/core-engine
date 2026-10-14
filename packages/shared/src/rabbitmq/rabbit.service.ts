@@ -89,11 +89,12 @@ export class RabbitService implements OnModuleInit, OnModuleDestroy {
   /** Publica un evento con confirmacion (el outbox reaprecia si falla). */
   async publicar<T>(evento: EventoBus<T>): Promise<boolean> {
     const canal = this.canalListo();
+    const headers = evento.request_id ? { 'x-request-id': evento.request_id } : undefined;
     const ok = canal.publish(
       EXCHANGE_EVENTS,
       evento.tipo,
       Buffer.from(JSON.stringify(evento)),
-      { persistent: true, contentType: 'application/json' },
+      { persistent: true, contentType: 'application/json', headers },
     );
     await canal.waitForConfirms();
     return ok;

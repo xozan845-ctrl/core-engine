@@ -32,6 +32,13 @@ métricas Prometheus + dashboards/alertas de Grafana (`02-telemetria.md`).
 | `R-TM-5` | Alerta de DLQ por crecimiento, no por existencia → `R-AR-4` (`../architecture/01-arquitectura.md`) |
 | `R-TM-6` | Grafana provisionado desde `infra/grafana/` (ver `README.md` raíz del repo) |
 
-## Pendientes
+## Estado automatizado
 
-- Pendiente de auditar: entra en la próxima revisión (`R-COV-3`).
+- `scripts/rules/observability/tracing.test.mjs` verifica logging estructurado y
+  propagación de `x-request-id` por HTTP, outbox y headers de RabbitMQ
+  (`R-OB-1/2`).
+- `scripts/rules/observability/telemetry.test.mjs` verifica `/metrics` y scrape
+  universal, métricas de infraestructura/DLQ, dashboards como código y alertas
+  enlazadas al runbook (`R-TM-1/5/6/7`).
+- `R-OB-3/4/5` y `R-TM-2/3/4` permanecen pendientes de checks ejecutables; no
+  se declaran cubiertas hasta endurecer y probar el runtime de métricas/logs.

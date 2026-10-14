@@ -12,6 +12,7 @@ groups:
       annotations:
         summary: "Servicio caído ({{ $labels.instance }})"
         description: "El servicio {{ $labels.instance }} no responde /metrics"
+        runbook_url: "https://github.com/xozan845-ctrl/core-engine/blob/develop/docs/runbook-observabilidad.md#servicio-caido"
 
     # --- Event loop lag crítico ---
     - alert: EventLoopLagAlto
@@ -21,6 +22,7 @@ groups:
       annotations:
         summary: "Event loop lag > 100ms ({{ $labels.instance }})"
         description: "El servicio {{ $labels.instance }} tiene lag > 100ms"
+        runbook_url: "https://github.com/xozan845-ctrl/core-engine/blob/develop/docs/runbook-observabilidad.md#event-loop-y-memoria"
 
     # --- GC duration ---
     - alert: GCDurationAlto
@@ -30,6 +32,7 @@ groups:
       annotations:
         summary: "Major GC > 1s ({{ $labels.instance }})"
         description: "GC mayor duración promedio > 1 segundo"
+        runbook_url: "https://github.com/xozan845-ctrl/core-engine/blob/develop/docs/runbook-observabilidad.md#event-loop-y-memoria"
 
     # --- Heap usage (nota: high ratio es normal en V8; se alerta solo si heap_used > 500MB) ---
     - alert: HeapUsageCritico
@@ -39,6 +42,7 @@ groups:
       annotations:
         summary: "Heap usage > 500MB ({{ $labels.instance }})"
         description: "Servicio {{ $labels.instance }} usando >500MB de heap V8"
+        runbook_url: "https://github.com/xozan845-ctrl/core-engine/blob/develop/docs/runbook-observabilidad.md#event-loop-y-memoria"
 
     # --- Postgres ---
     - alert: PostgresConexionesAltas
@@ -48,6 +52,7 @@ groups:
       annotations:
         summary: "Muchas conexiones PG ({{ $value }} activas)"
         description: "PostgreSQL tiene {{ $value }} conexiones activas (>80)"
+        runbook_url: "https://github.com/xozan845-ctrl/core-engine/blob/develop/docs/runbook-observabilidad.md#postgresql"
 
     - alert: PostgresCacheHitBajo
       expr: (pg_stat_database_blks_hit / (pg_stat_database_blks_hit + pg_stat_database_blks_read)) * 100 < 95
@@ -56,6 +61,7 @@ groups:
       annotations:
         summary: "Cache hit ratio < 95% en PostgreSQL"
         description: "Cache hit ratio cayó a {{ $value }}%"
+        runbook_url: "https://github.com/xozan845-ctrl/core-engine/blob/develop/docs/runbook-observabilidad.md#postgresql"
 
     - alert: PostgresDeadTuplesAltos
       expr: sum(pg_stat_user_tables_n_dead_tup) > 100
@@ -64,6 +70,7 @@ groups:
       annotations:
         summary: "Dead tuples acumulados (>100)"
         description: "PostgreSQL tiene {{ $value }} dead tuples acumulados"
+        runbook_url: "https://github.com/xozan845-ctrl/core-engine/blob/develop/docs/runbook-observabilidad.md#postgresql"
 
     # --- RabbitMQ ---
     - alert: RabbitMQQueueBacklog
@@ -72,6 +79,19 @@ groups:
       labels: { severity: warning }
       annotations:
         summary: "Queue backlog ({{ $labels.queue }}): {{ $value }} mensajes"
+        description: "La cola {{ $labels.queue }} supera 1000 mensajes durante al menos un minuto"
+        runbook_url: "https://github.com/xozan845-ctrl/core-engine/blob/develop/docs/runbook-observabilidad.md#rabbitmq-y-dlq"
+
+    # La presencia de mensajes muertos es normal; se alerta solo si la DLQ
+    # mantiene crecimiento neto durante una ventana sostenida (R-TM-5).
+    - alert: RabbitMQDLQCrecimientoSostenido
+      expr: delta(rabbitmq_queue_messages{queue=~".*\\.dlq$"}[15m]) > 0
+      for: 15m
+      labels: { severity: critical }
+      annotations:
+        summary: "DLQ {{ $labels.queue }} crece de forma sostenida"
+        description: "La DLQ acumuló mensajes durante 15 minutos; inspeccionar errores y pausar la reinyección si el fallo persiste"
+        runbook_url: "https://github.com/xozan845-ctrl/core-engine/blob/develop/docs/runbook-observabilidad.md#rabbitmq-y-dlq"
 
     - alert: RabbitMQLowConsumers
       expr: sum(rabbitmq_queue_consumers) < 3
@@ -80,6 +100,7 @@ groups:
       annotations:
         summary: "Menos de 3 consumidores en RabbitMQ"
         description: "Solo {{ $value }} consumidores activos"
+        runbook_url: "https://github.com/xozan845-ctrl/core-engine/blob/develop/docs/runbook-observabilidad.md#rabbitmq-y-dlq"
 
     # --- HTTP ---
     - alert: HTTPErrorRateAlto
@@ -89,6 +110,7 @@ groups:
       annotations:
         summary: "Tasa de error 5xx > 5% ({{ $value }}%)"
         description: "Error rate HTTP 5xx elevada"
+        runbook_url: "https://github.com/xozan845-ctrl/core-engine/blob/develop/docs/runbook-observabilidad.md#errores-http"
 
     - alert: HTTPLatenciaAlta
       expr: histogram_quantile(0.99, sum by (servicio, le) (rate(http_peticion_latencia_ms_bucket[5m]))) > 800
@@ -97,6 +119,7 @@ groups:
       annotations:
         summary: "Latencia p99 > 800ms ({{ $labels.servicio }})"
         description: "Servicio {{ $labels.servicio }} con latencia p99 = {{ $value }}ms"
+        runbook_url: "https://github.com/xozan845-ctrl/core-engine/blob/develop/docs/runbook-observabilidad.md#latencia-http"
 
     # --- Sistema ---
     - alert: ContainerMemoriaAlta
@@ -106,6 +129,7 @@ groups:
       annotations:
         summary: "Memory uso > 90% ({{ $labels.name }})"
         description: "Contenedor {{ $labels.name }} usa {{ $value }}% de memoria límite"
+        runbook_url: "https://github.com/xozan845-ctrl/core-engine/blob/develop/docs/runbook-observabilidad.md#event-loop-y-memoria"
 
     - alert: DiskUsageCritico
       expr: (node_filesystem_size_bytes - node_filesystem_avail_bytes) / node_filesystem_size_bytes * 100 > 90
@@ -114,3 +138,4 @@ groups:
       annotations:
         summary: "Disco > 90% usado ({{ $labels.instance }})"
         description: "Filesystem en {{ $labels.instance }} está {{ $value }}% lleno"
+        runbook_url: "https://github.com/xozan845-ctrl/core-engine/blob/develop/docs/runbook-observabilidad.md#disco"
