@@ -32,10 +32,10 @@ function reqCon(headers: Record<string, string>): Request {
 function resMock(): Response {
   return {
     headersSent: false,
-    status: jest.fn().mockReturnThis(),
-    setHeader: jest.fn(),
-    send: jest.fn(),
-    json: jest.fn(),
+    status: vi.fn().mockReturnThis(),
+    setHeader: vi.fn(),
+    send: vi.fn(),
+    json: vi.fn(),
   } as unknown as Response;
 }
 
@@ -43,12 +43,12 @@ describe('ProxyService — scrub de cabeceras de contexto (R-GW-3 / R-DS-5)', ()
   const fetchOriginal = globalThis.fetch;
   afterEach(() => {
     globalThis.fetch = fetchOriginal;
-    jest.restoreAllMocks();
+    vi.restoreAllMocks();
   });
 
   it('debe eliminar x-tenant y x-user-personal inyectados por el cliente cuando el token no los trae', async () => {
     const auth = { aplicar: (_req: Request, _res: Response, next: () => void) => next() } as unknown as GatewayAuthMiddleware;
-    const fetchMock = jest.fn().mockResolvedValue(respuestaFetch(200, '{}'));
+    const fetchMock = vi.fn().mockResolvedValue(respuestaFetch(200, '{}'));
     globalThis.fetch = fetchMock as unknown as typeof fetch;
     const servicio = new ProxyService(auth, destinos, politicas);
 
@@ -71,7 +71,7 @@ describe('ProxyService — scrub de cabeceras de contexto (R-GW-3 / R-DS-5)', ()
         next();
       },
     } as unknown as GatewayAuthMiddleware;
-    const fetchMock = jest.fn().mockResolvedValue(respuestaFetch(200, '{}'));
+    const fetchMock = vi.fn().mockResolvedValue(respuestaFetch(200, '{}'));
     globalThis.fetch = fetchMock as unknown as typeof fetch;
     const servicio = new ProxyService(auth, destinos, politicas);
 

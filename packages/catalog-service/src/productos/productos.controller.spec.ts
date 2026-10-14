@@ -1,3 +1,4 @@
+import type { Mock } from 'vitest';
 import 'reflect-metadata';
 import { ProductosController } from './productos.controller';
 import type { ProductosService } from './productos.service';
@@ -16,12 +17,12 @@ const producto = {
 };
 
 describe('ProductosController (api/v1/catalog, R-U-10/11)', () => {
-  function fabricar(): { productos: Record<string, jest.Mock>; controller: ProductosController } {
+  function fabricar(): { productos: Record<string, Mock>; controller: ProductosController } {
     const productos = {
-      listar: jest.fn(),
-      encontrarPorId: jest.fn(),
-      crear: jest.fn(),
-      actualizar: jest.fn(),
+      listar: vi.fn(),
+      encontrarPorId: vi.fn(),
+      crear: vi.fn(),
+      actualizar: vi.fn(),
     };
     const controller = new ProductosController(productos as unknown as ProductosService);
     return { productos, controller };

@@ -1,3 +1,4 @@
+import type { Mock } from 'vitest';
 import { StockConsumer } from './stock.consumer';
 import { EVENTOS, COLAS, EventoBus, StockUpdatedData } from '@core/shared';
 
@@ -8,23 +9,23 @@ import { EVENTOS, COLAS, EventoBus, StockUpdatedData } from '@core/shared';
 describe('StockConsumer de stores (RN-02)', () => {
   const crear = async () => {
     const rabbit = {
-      declararColas: jest.fn().mockResolvedValue(undefined),
-      consumir: jest.fn().mockResolvedValue(undefined),
-      activarReintento: jest.fn(),
+      declararColas: vi.fn().mockResolvedValue(undefined),
+      consumir: vi.fn().mockResolvedValue(undefined),
+      activarReintento: vi.fn(),
     };
     const pg = {
-      query: jest.fn().mockResolvedValue(undefined),
-      queryOne: jest.fn().mockResolvedValue(null),
+      query: vi.fn().mockResolvedValue(undefined),
+      queryOne: vi.fn().mockResolvedValue(null),
     };
-    const ofertas = { sincronizarStockDeOferta: jest.fn().mockResolvedValue(undefined) };
+    const ofertas = { sincronizarStockDeOferta: vi.fn().mockResolvedValue(undefined) };
     const consumer = new StockConsumer(rabbit as never, pg as never, ofertas as never);
     await consumer.onModuleInit();
     return {
       rabbit,
       pg,
       ofertas,
-      cola: (rabbit.consumir as jest.Mock).mock.calls[0][0],
-      dispatch: (e: EventoBus) => (rabbit.consumir as jest.Mock).mock.calls[0][1](e),
+      cola: (rabbit.consumir as Mock).mock.calls[0][0],
+      dispatch: (e: EventoBus) => (rabbit.consumir as Mock).mock.calls[0][1](e),
     };
   };
 
@@ -65,7 +66,7 @@ describe('StockConsumer de stores (RN-02)', () => {
 
   it('debe ignorar el evento cuando el event_id ya fue procesado (doc 5.2)', async () => {
     const { dispatch, ofertas, pg } = await crear();
-    (pg.queryOne as jest.Mock).mockResolvedValue({ '?column?': 1 });
+    (pg.queryOne as Mock).mockResolvedValue({ '?column?': 1 });
     await dispatch(evento(EVENTOS.STOCK_UPDATED, { tipo: 'reservado', items: [] }));
     expect(ofertas.sincronizarStockDeOferta).not.toHaveBeenCalled();
     expect(pg.query).not.toHaveBeenCalled();

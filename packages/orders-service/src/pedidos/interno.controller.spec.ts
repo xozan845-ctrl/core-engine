@@ -1,3 +1,4 @@
+import type { Mock } from 'vitest';
 import 'reflect-metadata';
 import { InternoController } from './interno.controller';
 import type { CreateOrderCommandHandler } from './handlers/create-order-command.handler';
@@ -17,16 +18,16 @@ const evento = {
 };
 
 function fabricar(): {
-  handler: Record<string, jest.Mock>;
-  views: Record<string, jest.Mock>;
-  eventStore: Record<string, jest.Mock>;
-  pedidos: Record<string, jest.Mock>;
+  handler: Record<string, Mock>;
+  views: Record<string, Mock>;
+  eventStore: Record<string, Mock>;
+  pedidos: Record<string, Mock>;
   controller: InternoController;
 } {
-  const handler = { transicionar: jest.fn(), reproyectar: jest.fn(), ejecutar: jest.fn() };
-  const views = { listarTodo: jest.fn(), encontrar: jest.fn() };
-  const eventStore = { historiaDe: jest.fn() };
-  const pedidos = { detallePara: jest.fn() };
+  const handler = { transicionar: vi.fn(), reproyectar: vi.fn(), ejecutar: vi.fn() };
+  const views = { listarTodo: vi.fn(), encontrar: vi.fn() };
+  const eventStore = { historiaDe: vi.fn() };
+  const pedidos = { detallePara: vi.fn() };
   const controller = new InternoController(
     handler as unknown as CreateOrderCommandHandler,
     views as unknown as OrderViewRepository,

@@ -1,36 +1,23 @@
-# Core Engine · Núcleo de la aplicación (base)
-# Microservicios + Postgres (supabase-compatible) + RabbitMQ (AD-02).
+# Core Engine · PRODUCCIÓN (imágenes de GHCR)
+# Consume las imágenes publicadas por release.yml y promovidas por promote.yml
+# (`:prod`), SIN reconstruir (R-CD-3). Requiere `docker login ghcr.io`.
 #
-# Este archivo es la base común a TODOS los entornos (dev/stage/producción):
-# sólo exige POSTGRES_PASSWORD (y las variables de runtime del .env).
-# La observabilidad (Prometheus/Grafana/exporters) es una capa OPCIONAL y vive
-# en `docker-compose.observability.yml` (se activa con -f; ver README).
+# Variables: copiar `.env.production.example` → `.env.production` (sin commitear, R-CD-7).
+# Arranque:  docker compose up -d
 #
-#   app (dev/stage/prod): docker compose up -d --build
-#   app + dashboards:     docker compose -f docker-compose.yml -f docker-compose.observability.yml up -d --build
+# Solo se publica el gateway (8080); Postgres y RabbitMQ quedan internos a la red
+# `core-engine`. La observabilidad es opcional:
+#   docker compose -f docker-compose.yml -f docker-compose.observability.yml up -d
 #
-# Valores: dev en `.env.example`, producción en `.env.production.example`.
+# `commissions-service` y `market-intelligence-service` no entran en este
+# compose (producción); viven en `docker-compose.dev.yml` (desarrollo).
 #
-# Puertos: en este compose (base, válido para producción) SOLO se publica al
-# host el gateway (8080). Los puertos de datos/broker para desarrollo
-# (postgres 5432, rabbitmq 5672/15672) viven en `docker-compose.dev.yml`.
-#
-# Servicios fuera de producción (por ahora): `commissions-service` y
-# `market-intelligence-service` NO se definen en este compose (base/producción);
-# viven en `docker-compose.extra.yml` y se activan en entornos que los necesiten
-# con `-f docker-compose.extra.yml`. Al no estar definidos aquí, un
-# `up --remove-orphans` de producción ELIMINA sus contenedores si venían de un
-# despliegue anterior (con `profiles` no se eliminaban: seguían definidos).
-# Sin `container_name` fijo: Compose nombra cada contenedor con el proyecto
-# (`<proyecto>-<servicio>-1`), de modo que staging y produccion pueden coexistir
-# en el mismo VPS sin colisionar (R-CD-9).
+# Entornos (3): producción = este archivo · pre-producción = `docker-compose.stage.yml`
+# · desarrollo = `docker-compose.dev.yml` (construye local).
 
 x-servicio-base: &servicio-base
-  build:
-    context: .
-    dockerfile: Dockerfile
   env_file:
-    - .env
+    - .env.production
   depends_on:
     postgres:
       condition: service_healthy
@@ -64,8 +51,11 @@ services:
   # ── Broker de mensajeria (AD-02: RabbitMQ con DLQ) ─────────────────────
   rabbitmq:
     image: rabbitmq:3.13-management-alpine
-    # (barrido A07/A08): guest deshabilitado en loopback; credencial dedicada
-    # de `infra/rabbitmq/rabbitmq.conf` (default_user/default_pass).
+    # (barrido A07/A08): guest deshabilitado en loopback. La credencial viene del
+    # entorno (RABBITMQ_USER/RABBITMQ_PASSWORD), nunca de un fichero commiteado (R-CD-7).
+    environment:
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER:-core-engine}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD:?RABBITMQ_PASSWORD requerida}
     volumes:
       - rabbitmq_data:/var/lib/rabbitmq
       - ./infra/rabbitmq/rabbitmq.conf:/etc/rabbitmq/rabbitmq.conf:ro
@@ -80,11 +70,8 @@ services:
   # ── API Gateway (punto de entrada unico) ───────────────────────────────
   gateway:
     <<: *servicio-base
-    build:
-      context: .
-      dockerfile: Dockerfile
-      args:
-        SERVICIO: api-gateway
+    image: ghcr.io/xozan845-ctrl/core-engine-api-gateway:prod
+    pull_policy: always
     environment:
       SERVICIO: api-gateway
       PORT: 8080
@@ -97,11 +84,8 @@ services:
   # ── Microservicios por dominio (Tabla 7) ───────────────────────────────
   identity-service:
     <<: *servicio-base
-    build:
-      context: .
-      dockerfile: Dockerfile
-      args:
-        SERVICIO: identity-service
+    image: ghcr.io/xozan845-ctrl/core-engine-identity-service:prod
+    pull_policy: always
     environment:
       SERVICIO: identity-service
       PORT: 3001
@@ -109,11 +93,8 @@ services:
 
   catalog-service:
     <<: *servicio-base
-    build:
-      context: .
-      dockerfile: Dockerfile
-      args:
-        SERVICIO: catalog-service
+    image: ghcr.io/xozan845-ctrl/core-engine-catalog-service:prod
+    pull_policy: always
     environment:
       SERVICIO: catalog-service
       PORT: 3002
@@ -121,11 +102,8 @@ services:
 
   stores-service:
     <<: *servicio-base
-    build:
-      context: .
-      dockerfile: Dockerfile
-      args:
-        SERVICIO: stores-service
+    image: ghcr.io/xozan845-ctrl/core-engine-stores-service:prod
+    pull_policy: always
     environment:
       SERVICIO: stores-service
       PORT: 3003
@@ -133,11 +111,8 @@ services:
 
   orders-service:
     <<: *servicio-base
-    build:
-      context: .
-      dockerfile: Dockerfile
-      args:
-        SERVICIO: orders-service
+    image: ghcr.io/xozan845-ctrl/core-engine-orders-service:prod
+    pull_policy: always
     environment:
       SERVICIO: orders-service
       PORT: 3004
@@ -145,11 +120,8 @@ services:
 
   logistics-service:
     <<: *servicio-base
-    build:
-      context: .
-      dockerfile: Dockerfile
-      args:
-        SERVICIO: logistics-service
+    image: ghcr.io/xozan845-ctrl/core-engine-logistics-service:prod
+    pull_policy: always
     environment:
       SERVICIO: logistics-service
       PORT: 3005
@@ -157,11 +129,8 @@ services:
 
   finance-service:
     <<: *servicio-base
-    build:
-      context: .
-      dockerfile: Dockerfile
-      args:
-        SERVICIO: finance-service
+    image: ghcr.io/xozan845-ctrl/core-engine-finance-service:prod
+    pull_policy: always
     environment:
       SERVICIO: finance-service
       PORT: 3007
@@ -170,11 +139,8 @@ services:
 
   field-service:
     <<: *servicio-base
-    build:
-      context: .
-      dockerfile: Dockerfile
-      args:
-        SERVICIO: field-service
+    image: ghcr.io/xozan845-ctrl/core-engine-field-service:prod
+    pull_policy: always
     environment:
       SERVICIO: field-service
       PORT: 3008

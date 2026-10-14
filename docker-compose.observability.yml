@@ -3,7 +3,8 @@
 # activa explícitamente para no exigir credenciales de dashboard en el
 # despliegue de la aplicación.
 #
-#   docker compose -f docker-compose.yml -f docker-compose.observability.yml up -d --build
+#   Producción:  docker compose -f docker-compose.yml -f docker-compose.observability.yml up -d
+#   Desarrollo:  docker compose -f docker-compose.dev.yml -f docker-compose.observability.yml up -d --build
 #
 # Requiere en el .env: RABBITMQ_PASSWORD, POSTGRES_PASSWORD y
 # GRAFANA_ADMIN_PASSWORD (la contraseña del dashboard). Ver `.env.example`

@@ -3,8 +3,8 @@ import { LiquidacionesService } from '../liquidaciones/liquidaciones.service';
 describe('LiquidacionesService (RN-07: corte quincenal dias 1 y 15)', () => {
   const servicio = (() => {
     const fake = {
-      pg: { query: jest.fn(), queryOne: jest.fn() },
-      logger: { info: jest.fn(), error: jest.fn() },
+      pg: { query: vi.fn(), queryOne: vi.fn() },
+      logger: { info: vi.fn(), error: vi.fn() },
     };
     return new LiquidacionesService(fake.pg as never);
   })();

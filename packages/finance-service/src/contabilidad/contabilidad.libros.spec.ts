@@ -1,4 +1,6 @@
+import type { Mock } from 'vitest';
 import { ContabilidadService } from './contabilidad.service';
+import { FacturacionService } from '../facturacion/facturacion.service';
 import type { PoolClient } from 'pg';
 
 /**
@@ -12,19 +14,19 @@ describe('Contabilidad y facturacion (libros DGI e IVA)', () => {
       const filas = [
         { periodo: '2026-08', comprobantes: 2, base_gravada_cents: 90000, iva_cents: 13500, exento_cents: 0, total_cents: 103500 },
       ];
-      const pg = { query: jest.fn().mockResolvedValue(filas) };
-      const servicio = new ContabilidadService(pg as never, { insertarEnTransaccion: jest.fn() } as never);
+      const pg = { query: vi.fn().mockResolvedValue(filas) };
+      const servicio = new ContabilidadService(pg as never, { insertarEnTransaccion: vi.fn() } as never);
       const resultado = await servicio.libroVentas('2026-08-01', '2026-08-31');
       expect(resultado).toEqual(filas);
-      const sql = (pg.query as jest.Mock).mock.calls[0][0] as string;
+      const sql = (pg.query as Mock).mock.calls[0][0] as string;
       expect(sql).toContain("estado = 'EMITIDO'");
       expect(sql).toContain('GROUP BY TO_CHAR(emitido_en');
       expect(sql).toContain('SUM(iva_cents)');
     });
 
     it('libroCompras refleja el MVP sin compras: credito fiscal en cero', async () => {
-      const pg = { query: jest.fn().mockResolvedValue([{ periodo: '2026-08', comprobantes: 0, base_gravada_cents: 0, iva_cents: 0, exento_cents: 0, total_cents: 0 }]) };
-      const servicio = new ContabilidadService(pg as never, { insertarEnTransaccion: jest.fn() } as never);
+      const pg = { query: vi.fn().mockResolvedValue([{ periodo: '2026-08', comprobantes: 0, base_gravada_cents: 0, iva_cents: 0, exento_cents: 0, total_cents: 0 }]) };
+      const servicio = new ContabilidadService(pg as never, { insertarEnTransaccion: vi.fn() } as never);
       const resultado = await servicio.libroCompras();
       expect(resultado[0].iva_cents).toBe(0);
       expect(resultado[0].comprobantes).toBe(0);
@@ -35,15 +37,13 @@ describe('Contabilidad y facturacion (libros DGI e IVA)', () => {
     const crearFacturacion = (emitir: boolean, _contabilidad: ContabilidadService) => {
       const prev = process.env.EMITIR_COMPROBANTES_FISCALES;
       process.env.EMITIR_COMPROBANTES_FISCALES = String(emitir);
-      // eslint-disable-next-line @typescript-eslint/no-require-imports
-      const { FacturacionService } = require('../facturacion/facturacion.service') as typeof import('../facturacion/facturacion.service');
       const pg = {
-        query: jest.fn().mockResolvedValue([]),
-        queryOne: jest.fn(),
-        transaccion: jest.fn(async (fn: (c: PoolClient) => Promise<unknown>) => fn(clientActual)),
+        query: vi.fn().mockResolvedValue([]),
+        queryOne: vi.fn(),
+        transaccion: vi.fn(async (fn: (c: PoolClient) => Promise<unknown>) => fn(clientActual)),
       };
-      const outbox = { insertarEnTransaccion: jest.fn().mockResolvedValue(undefined) };
-      const cont = { registrarEnTransaccion: jest.fn().mockResolvedValue({ id: 'asiento-1' }) } as unknown as ContabilidadService;
+      const outbox = { insertarEnTransaccion: vi.fn().mockResolvedValue(undefined) };
+      const cont = { registrarEnTransaccion: vi.fn().mockResolvedValue({ id: 'asiento-1' }) } as unknown as ContabilidadService;
       const servicio = new FacturacionService(pg as never, outbox as never, cont);
       if (prev === undefined) delete process.env.EMITIR_COMPROBANTES_FISCALES;
       else process.env.EMITIR_COMPROBANTES_FISCALES = prev;
@@ -72,7 +72,7 @@ describe('Contabilidad y facturacion (libros DGI e IVA)', () => {
     };
 
     const mockFetch = () => {
-      jest.spyOn(globalThis, 'fetch').mockResolvedValue({
+      vi.spyOn(globalThis, 'fetch').mockResolvedValue({
         ok: true,
         json: async () => ({ total_cents: 45000 }),
       } as unknown as Response);
@@ -80,14 +80,14 @@ describe('Contabilidad y facturacion (libros DGI e IVA)', () => {
 
     it('EMITIDO: registra el pasivo 2.1.2 -> 2.1.3 por el IVA trasladado', async () => {
       clientActual = {
-        query: jest.fn()
+        query: vi.fn()
           .mockResolvedValueOnce({ rows: [comprobante] }) // INSERT comprobante
           .mockResolvedValueOnce({ rows: [] }), // UPDATE serie
       };
       const { servicio, cont } = crearFacturacion(true, null as never);
       mockFetch();
 
-      const pgSerie = (servicio as unknown as { pg: { queryOne: jest.Mock } }).pg;
+      const pgSerie = (servicio as unknown as { pg: { queryOne: Mock } }).pg;
       pgSerie.queryOne
         .mockResolvedValueOnce({ serie: 'F001', tipo: 'FACTURA', prefijo: 'F', secuencial_actual: 0, ruc_emisor: 'RUC', jurisdiccion: 'NI', activa: true })
         .mockResolvedValueOnce({ tasa_iva: 0.15 });
@@ -96,7 +96,7 @@ describe('Contabilidad y facturacion (libros DGI e IVA)', () => {
       expect(resultado.estado).toBe('EMITIDO');
       expect(resultado.iva_cents).toBe(6750);
       expect(cont.registrarEnTransaccion).toHaveBeenCalledTimes(1);
-      const params = (cont.registrarEnTransaccion as jest.Mock).mock.calls[0][1];
+      const params = (cont.registrarEnTransaccion as Mock).mock.calls[0][1];
       expect(params.detalles).toEqual(
         expect.arrayContaining([
           expect.objectContaining({ cuenta_codigo: '2.1.2', debe_cents: 6750 }),
@@ -110,14 +110,14 @@ describe('Contabilidad y facturacion (libros DGI e IVA)', () => {
 
     it('BORRADOR: no registra asiento mientras la facturacion fiscal este apagada', async () => {
       clientActual = {
-        query: jest.fn()
+        query: vi.fn()
           .mockResolvedValueOnce({ rows: [{ ...comprobante, estado: 'BORRADOR', emitido_en: null }] })
           .mockResolvedValueOnce({ rows: [] }),
       };
       const { servicio, cont } = crearFacturacion(false, null as never);
       mockFetch();
 
-      const pgSerie = (servicio as unknown as { pg: { queryOne: jest.Mock } }).pg;
+      const pgSerie = (servicio as unknown as { pg: { queryOne: Mock } }).pg;
       pgSerie.queryOne
         .mockResolvedValueOnce({ serie: 'F001', tipo: 'FACTURA', prefijo: 'F', secuencial_actual: 1, ruc_emisor: 'RUC', jurisdiccion: 'NI', activa: true })
         .mockResolvedValueOnce({ tasa_iva: 0.15 });

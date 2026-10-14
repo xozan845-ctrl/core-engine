@@ -1,3 +1,4 @@
+import type { Mock } from 'vitest';
 import 'reflect-metadata';
 import { ReportesController } from './reportes.controller';
 import type { ReportesService } from './reportes.service';
@@ -5,8 +6,8 @@ import { ROLES } from '@core/shared';
 
 const kpis = { ventas_totales: 10, monto_total_cents: 1150000, ticket_promedio_cents: 115000 };
 
-function fabricar(): { reportes: Record<string, jest.Mock>; controller: ReportesController } {
-  const reportes = { kpis: jest.fn() };
+function fabricar(): { reportes: Record<string, Mock>; controller: ReportesController } {
+  const reportes = { kpis: vi.fn() };
   const controller = new ReportesController(reportes as unknown as ReportesService);
   return { reportes, controller };
 }
