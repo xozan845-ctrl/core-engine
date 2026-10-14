@@ -1,10 +1,11 @@
+import type { Mock } from 'vitest';
 import 'reflect-metadata';
 import { InternalController } from './internal.controller';
 import type { OfertasService } from '../ofertas/ofertas.service';
 import { ClaveInternaGuard } from '@core/shared';
 
-function fabricar(): { ofertas: Record<string, jest.Mock>; controller: InternalController } {
-  const ofertas = { porIds: jest.fn() };
+function fabricar(): { ofertas: Record<string, Mock>; controller: InternalController } {
+  const ofertas = { porIds: vi.fn() };
   const controller = new InternalController(ofertas as unknown as OfertasService);
   return { ofertas, controller };
 }

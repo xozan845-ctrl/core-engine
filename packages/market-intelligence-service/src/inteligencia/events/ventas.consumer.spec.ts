@@ -7,32 +7,32 @@ import { DataQualityService } from '../services/data-quality.service';
 // ── Mocks ───────────────────────────────────────────────────────────────────
 
 const mockRabbit = {
-  declararColas: jest.fn().mockResolvedValue(undefined),
-  consumir: jest.fn().mockResolvedValue(undefined),
-  activarReintento: jest.fn(),
+  declararColas: vi.fn().mockResolvedValue(undefined),
+  consumir: vi.fn().mockResolvedValue(undefined),
+  activarReintento: vi.fn(),
 };
 
 const mockPg = {
-  queryOne: jest.fn(),
-  query: jest.fn().mockResolvedValue(undefined),
+  queryOne: vi.fn(),
+  query: vi.fn().mockResolvedValue(undefined),
 };
 
 const mockAgregador = {
-  procesarVentaGeolocalizada: jest.fn().mockResolvedValue(undefined),
-  procesarOrdenCompletada: jest.fn().mockResolvedValue(undefined),
-  procesarStockActualizado: jest.fn().mockResolvedValue(undefined),
+  procesarVentaGeolocalizada: vi.fn().mockResolvedValue(undefined),
+  procesarOrdenCompletada: vi.fn().mockResolvedValue(undefined),
+  procesarStockActualizado: vi.fn().mockResolvedValue(undefined),
 };
 
 const mockDataQuality = {
-  validarVentaGeolocalizada: jest.fn().mockReturnValue({ isValid: true }),
+  validarVentaGeolocalizada: vi.fn().mockReturnValue({ isValid: true }),
 };
 
 // Silenciar logs en tests
-jest.spyOn(Logger, 'create').mockReturnValue({
-  info: jest.fn(),
-  warn: jest.fn(),
-  error: jest.fn(),
-  debug: jest.fn(),
+vi.spyOn(Logger, 'create').mockReturnValue({
+  info: vi.fn(),
+  warn: vi.fn(),
+  error: vi.fn(),
+  debug: vi.fn(),
 } as any);
 
 // ── Suite ────────────────────────────────────────────────────────────────────
@@ -41,7 +41,7 @@ describe('VentasConsumer', () => {
   let consumer: VentasConsumer;
 
   beforeEach(async () => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [

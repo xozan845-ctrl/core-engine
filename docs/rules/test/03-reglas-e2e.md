@@ -3,7 +3,7 @@
 Aplica a: pruebas que recorren el stack completo con infraestructura real
 (`docker compose`: gateway + servicios + Postgres + RabbitMQ). Hoy el repo **no
 tiene frontend** (G-2 N/A): los flujos se ejercitan a nivel de API/CLI — el
-precedente es el smoke `npm run demo` (`scripts/smoke.mjs`). Si algún día existe
+precedente es el smoke `npm run demo` (`scripts/tools/smoke.mjs`). Si algún día existe
 UI, la capa pasa a navegador real (Playwright) conservando estos IDs.
 
 ## Flujos críticos (obligatorios antes de cada release)

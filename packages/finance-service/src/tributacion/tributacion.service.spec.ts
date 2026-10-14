@@ -3,10 +3,10 @@ import { TributacionService } from './tributacion.service';
 describe('TributacionService (Ley 822: declaraciones mensuales de IR e IVA)', () => {
   const crearServicio = () => {
     const fake = {
-      pg: { query: jest.fn(), queryOne: jest.fn(), transaccion: jest.fn() },
-      outbox: { insertarEnTransaccion: jest.fn(), insertar: jest.fn() },
-      contabilidad: { ingresosDelPeriodo: jest.fn(), gastosDelPeriodo: jest.fn() },
-      logger: { info: jest.fn(), warn: jest.fn(), error: jest.fn() },
+      pg: { query: vi.fn(), queryOne: vi.fn(), transaccion: vi.fn() },
+      outbox: { insertarEnTransaccion: vi.fn(), insertar: vi.fn() },
+      contabilidad: { ingresosDelPeriodo: vi.fn(), gastosDelPeriodo: vi.fn() },
+      logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn() },
     };
     return { servicio: new TributacionService(fake.pg as never, fake.outbox as never, fake.contabilidad as never), fake };
   };
@@ -52,7 +52,7 @@ describe('TributacionService (Ley 822: declaraciones mensuales de IR e IVA)', ()
 
     const declaracionCreada: Record<string, Record<string, unknown>> = {};
     const cliente = {
-      query: jest.fn(async (sql: string, params: unknown[]) => {
+      query: vi.fn(async (sql: string, params: unknown[]) => {
         if (sql.includes('INSERT INTO finance.declaraciones')) {
           const fila = {
             id: `dec-${params[1]}`,
@@ -110,7 +110,7 @@ describe('TributacionService (Ley 822: declaraciones mensuales de IR e IVA)', ()
     });
     const declaracionCreada: Record<string, Record<string, unknown>> = {};
     const cliente = {
-      query: jest.fn(async (sql: string, params: unknown[]) => {
+      query: vi.fn(async (sql: string, params: unknown[]) => {
         if (sql.includes('INSERT INTO finance.declaraciones')) {
           const fila = {
             id: `dec-${params[1]}`,

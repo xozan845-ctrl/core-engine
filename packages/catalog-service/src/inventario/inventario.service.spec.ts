@@ -4,7 +4,7 @@ import { InventarioService } from './inventario.service';
 describe('InventarioService (niveles de stock)', () => {
   it('debe exponer stock fisico, reservado y disponible con precio serializado cuando la vista devuelve filas', async () => {
     const pg = {
-      query: jest.fn().mockResolvedValue([
+      query: vi.fn().mockResolvedValue([
         {
           sku: 'SKU-01',
           nombre: 'Teclado',
@@ -31,7 +31,7 @@ describe('InventarioService (niveles de stock)', () => {
   });
 
   it('debe devolver una lista vacia cuando no hay existencias', async () => {
-    const pg = { query: jest.fn().mockResolvedValue([]) };
+    const pg = { query: vi.fn().mockResolvedValue([]) };
     const servicio = new InventarioService(pg as never);
     expect(await servicio.listar()).toEqual([]);
   });

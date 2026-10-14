@@ -75,7 +75,7 @@ describe('TrazabilidadInterceptor (x-request-id y metricas, doc 5.3)', () => {
       statusCode: 200,
     };
     const req = { method: 'GET', originalUrl: '/health', headers: {} };
-    const metrics = { registrarPeticion: jest.fn() };
+    const metrics = { registrarPeticion: vi.fn() };
     const interceptor = new TrazabilidadInterceptor(
       metrics as never,
       'test',

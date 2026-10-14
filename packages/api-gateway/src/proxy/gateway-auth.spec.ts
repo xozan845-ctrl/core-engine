@@ -30,7 +30,7 @@ function crearPeticion(config: {
         : {},
     },
     res,
-    next: jest.fn(),
+    next: vi.fn(),
   };
 }
 

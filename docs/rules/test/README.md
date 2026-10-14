@@ -80,19 +80,23 @@ npm run test -w @core/api-gateway
 npm run lint
 npm run build
 
+# Motor de gobernanza: reglas ejecutables (job `rules-check`) y sus autotests
+npm run rules:check
+npm run test:engine
+
 # Puerta de seguridad (R-QA-6 / ci.yml "Security Gate")
 npm audit --audit-level=high
 
 # E2E end-to-end sobre el stack levantado (TC-01..TC-08, RN-01..RN-08)
-docker compose up -d --build
+docker compose -f docker-compose.dev.yml up -d --build
 npm run demo
 ```
 
 ## Pendientes (deuda abierta)
 
-- **Tooling JS fuera del alcance de ESLint**: `eslint.config.mjs` cubre
-  `packages/*/src/**/*.ts` (el alcance de G-7); `qa-harness/`, `scripts/` y
-  `validate-dashboards.cjs` aún no se lintean (~160 errores acumulados).
+- **Tooling JS parcialmente fuera de ESLint**: `eslint.config.mjs` cubre
+  `packages/*/src/**/*.ts` (el alcance de G-7) y ahora también el motor de
+  gobernanza (`scripts/**/*.mjs`); `qa-harness/` sigue sin lintearse.
 - **G-4/G-5/G-6/G-8 sin paso en CI**: no existen suites de integración,
   contrato ni E2E ni paso de export OpenAPI en `ci.yml` (estado detallado en
   [`06-estandares-cobertura.md`](./06-estandares-cobertura.md)).
@@ -107,7 +111,7 @@ npm run demo
   `*.service.ts`/`*.consumer.ts` con spec — todos preexistentes a los PRs que
   tocan esa capa; la presión la ejerce el ratchet (recuento en
   [`../_meta/AUDIT.md`](../_meta/AUDIT.md)).
-- **R-FL-3 sin cumplir**: ningún setup de Jest fija `TZ`; los specs actuales
+- **R-FL-3 sin cumplir**: ningún setup de Vitest fija `TZ`; los specs actuales
   no usan hora local, pero un spec futuro podría depender de la timezone de la
   máquina sin que nada lo avise.
 

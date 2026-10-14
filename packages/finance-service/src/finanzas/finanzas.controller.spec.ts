@@ -1,3 +1,4 @@
+import type { Mock } from 'vitest';
 import 'reflect-metadata';
 import { FinanzasController } from './finanzas.controller';
 import type { ProyeccionesService } from './proyecciones.service';
@@ -14,25 +15,25 @@ const indicadores = {
 };
 
 function fabricar(): {
-  proyecciones: Record<string, jest.Mock>;
-  kpis: Record<string, jest.Mock>;
-  alertas: Record<string, jest.Mock>;
+  proyecciones: Record<string, Mock>;
+  kpis: Record<string, Mock>;
+  alertas: Record<string, Mock>;
   controller: FinanzasController;
 } {
   const proyecciones = {
-    crear: jest.fn(),
-    listar: jest.fn(),
-    obtener: jest.fn(),
-    calcular: jest.fn(),
-    indicadores: jest.fn(),
-    sensibilidadComisionGmv: jest.fn(),
-    sensibilidadVan: jest.fn(),
-    paybackPorEscenario: jest.fn(),
-    coberturaPorVendedor: jest.fn(),
-    planBienal: jest.fn(),
+    crear: vi.fn(),
+    listar: vi.fn(),
+    obtener: vi.fn(),
+    calcular: vi.fn(),
+    indicadores: vi.fn(),
+    sensibilidadComisionGmv: vi.fn(),
+    sensibilidadVan: vi.fn(),
+    paybackPorEscenario: vi.fn(),
+    coberturaPorVendedor: vi.fn(),
+    planBienal: vi.fn(),
   };
-  const kpis = { kpis: jest.fn() };
-  const alertas = { tablero: jest.fn() };
+  const kpis = { kpis: vi.fn() };
+  const alertas = { tablero: vi.fn() };
   const controller = new FinanzasController(
     proyecciones as unknown as ProyeccionesService,
     kpis as unknown as KpisService,
