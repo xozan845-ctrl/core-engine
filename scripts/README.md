@@ -45,9 +45,12 @@ scripts/
 │   ├── git/commits.test.mjs        # R-GC-1..4 (puro)
 │   ├── git/branch.test.mjs         # R-GC-1..4 (contextual, commits del PR)
 │   ├── delivery/compose.test.mjs   # R-CD-1/3/7/8
-│   └── microservices/
-│       ├── structure.test.mjs      # R-CD-3/4/14
-│       └── ci-contract.test.mjs    # R-MS-1, R-QA-1, R-COV-2/4, R-CI-5
+│   ├── microservices/
+│   │   ├── structure.test.mjs      # R-CD-3/4/14
+│   │   └── ci-contract.test.mjs    # R-MS-1, R-QA-1, R-COV-2/4, R-CI-5
+│   └── observability/
+│       ├── tracing.test.mjs        # R-OB-1/2
+│       └── telemetry.test.mjs      # R-TM-1/5/6/7
 │
 └── tools/                    # operaciones (NO gobernanza)
     ├── smoke.mjs
@@ -135,7 +138,7 @@ Al terminar, el runner imprime cuántos IDs de regla tienen check ejecutable y
 `docs/rules`:
 
 ```
-Cobertura ejecutable: 11/235 IDs de regla tienen check.
+Cobertura ejecutable: 22/235 IDs de regla tienen check.
 ```
 
 > El reporte nació exponiendo un hallazgo real: `R-CI-9` y `R-CD-22` se citaban
