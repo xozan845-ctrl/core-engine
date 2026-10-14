@@ -1,3 +1,4 @@
+import type { Mock } from 'vitest';
 import { AuthService } from './auth.service';
 import { UsuariosService, Usuario } from '../usuarios/usuarios.service';
 import { SesionesRepository } from './sesiones.repository';
@@ -21,13 +22,13 @@ describe('AuthService (sesiones JWT)', () => {
 
   const crear = () => {
     const usuarios = {
-      crear: jest.fn().mockResolvedValue(usuarioBase),
-      verificarCredenciales: jest.fn().mockResolvedValue(usuarioBase),
-      encontrarPorId: jest.fn().mockResolvedValue(usuarioBase),
+      crear: vi.fn().mockResolvedValue(usuarioBase),
+      verificarCredenciales: vi.fn().mockResolvedValue(usuarioBase),
+      encontrarPorId: vi.fn().mockResolvedValue(usuarioBase),
     } as unknown as UsuariosService;
     const sesiones = {
-      crear: jest.fn().mockResolvedValue(undefined),
-      activaPorJti: jest.fn().mockResolvedValue({
+      crear: vi.fn().mockResolvedValue(undefined),
+      activaPorJti: vi.fn().mockResolvedValue({
         id: 's-1',
         usuario_id: 'u1',
         jti: 'jti-1',
@@ -35,11 +36,11 @@ describe('AuthService (sesiones JWT)', () => {
         expira_en: '',
         revocada_en: null,
       }),
-      revocar: jest.fn().mockResolvedValue(1),
-      revocarTodas: jest.fn().mockResolvedValue(2),
+      revocar: vi.fn().mockResolvedValue(1),
+      revocarTodas: vi.fn().mockResolvedValue(2),
     } as unknown as SesionesRepository;
     const servicio = new AuthService(usuarios, sesiones);
-    return { servicio, usuarios, sesiones: sesiones as unknown as Record<string, jest.Mock> };
+    return { servicio, usuarios, sesiones: sesiones as unknown as Record<string, Mock> };
   };
 
   const contexto = { id: 'u1', email: 'ana@core.test', rol: 'vendedor' as const, nombre: 'Ana' };
@@ -96,7 +97,7 @@ describe('AuthService (sesiones JWT)', () => {
 
     it('debe propagar el UnauthorizedError cuando las credenciales son invalidas', async () => {
       const { servicio, usuarios } = crear();
-      (usuarios.verificarCredenciales as jest.Mock).mockRejectedValue(
+      (usuarios.verificarCredenciales as Mock).mockRejectedValue(
         new Error('Correo o contrasena incorrectos.'),
       );
       await expect(servicio.login('ana@core.test', 'mala')).rejects.toThrow(/incorrectos/);
@@ -144,7 +145,7 @@ describe('AuthService (sesiones JWT)', () => {
 
     it('debe rechazar el token cuando el usuario ya no existe', async () => {
       const { servicio, usuarios } = crear();
-      (usuarios.encontrarPorId as jest.Mock).mockResolvedValue(null);
+      (usuarios.encontrarPorId as Mock).mockResolvedValue(null);
       const refresh = crearRefreshToken(contexto, SECRETO, '7d', 'jti-1');
       await expect(servicio.refrescar(refresh)).rejects.toThrow(/ya no existe/);
     });

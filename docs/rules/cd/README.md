@@ -6,7 +6,7 @@ tocar producción y cómo se revierte un despliegue malo.
 
 **`R-CD-1..8`** vinieron de `ci/03-deploy.md` el 2026-10-01 al crearse esta área
 (mismas IDs, nunca se renumeran); **`R-CD-9..13`** son las reglas nuevas de
-entornos y Dockploy.
+entornos y Dockploy; **`R-CD-14`** es la higiene de la imagen de runtime.
 
 ## Archivos
 
@@ -14,6 +14,7 @@ entornos y Dockploy.
 |---|---|---|
 | `01-despliegue.md` | Release por tag, procedencia y CI verde, imágenes por digest, migraciones solo hacia adelante, aprobación de producción, secretos en la imagen, dry-run | `R-CD` (1–8) |
 | `02-entornos.md` | Etapas (desarrollo local + stage + producción), un proyecto Dockploy con environments, promoción y gate de producción, smoke post-despliegue, rollback | `R-CD` (9–13) |
+| `03-imagen.md` | Higiene de la imagen de runtime: usuario no-root y poda de devDependencies | `R-CD` (14) |
 
 > El modelo de ramas que estos despliegues consumen vive en
 > [`../git/00-entornos.md`](../git/00-entornos.md) (`R-GE-*`): aquí se despliega
@@ -25,22 +26,26 @@ entornos y Dockploy.
 |---|---|---|---|
 | `R-CD-*` | 1–8 | `01-despliegue.md` | Artefactos de release (tag, digest, OCI, migraciones, secretos) |
 | `R-CD-*` | 9–13 | `02-entornos.md` | Entornos Dockploy, promoción, gate, smoke y rollback |
+| `R-CD-*` | 14 | `03-imagen.md` | Higiene de la imagen de runtime (usuario no-root, poda de devDependencies) |
 
 ## Guía rápida del despliegue
 
 | Etapa | Rama (R-GE-1) | Dónde corre | Cómo llega |
 |---|---|---|---|
-| Desarrollo | `develop` | **local** (`docker compose up`) | PR de feature (R-GE-2); sin despliegue |
+| Desarrollo | `develop` | **local** (`docker compose -f docker-compose.dev.yml up`) | PR de feature (R-GE-2); sin despliegue |
 | Stage | `staging` | Dockploy, environment `staging` | PR `develop → staging` |
 | Producción | `main` | Dockploy, environment `produccion` | PR `staging → main` (R-GE-4) |
 
 ## Pendientes y estado
 
-- **`release.yml` no existe**: no hay release por tag ni publicación de imágenes
-  a un registry; el VPS construye desde el `Dockerfile` raíz con cada push a
-  `main` (Dockploy). Los `R-CD-1..8` son el contrato exigible el día que exista
-  un workflow de release (R-CI-4); los `R-CD-9..13` describen el despliegue que
-  **sí** existe hoy.
+- **`release.yml` (2026-10-14)**: existe el release por tag `vX.Y.Z` con
+  procedencia (commit en `main` + `ci.yml` verde en el mismo SHA, `R-CD-2`),
+  publicación de **una imagen por servicio** en GHCR con etiquetas OCI/semver
+  (`R-CD-4`) y digest en el resumen. `promote.yml` las mueve a `stage`/`prod`
+  **por digest** (`R-CD-3`) y `deploy.yml` valida el arranque (`R-CD-12`). Los
+  composes `docker-compose.yml` (prod) / `docker-compose.stage.yml` consumen GHCR.
+  Dockploy sigue siendo el destino del VPS (`R-CD-9..13`). Ver el runbook
+  [`../../runbook-entrega.md`](../../runbook-entrega.md).
 - **Dockploy se configura fuera de este repo**: un solo proyecto con los
   environments `staging`/`produccion` (R-CD-9) y la política de producción
   (R-CD-10/11) se documentan aquí; la configuración concreta del VPS queda

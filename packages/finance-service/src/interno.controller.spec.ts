@@ -1,10 +1,11 @@
+import type { Mock } from 'vitest';
 import 'reflect-metadata';
 import { InternoController } from './interno.controller';
 import type { TributacionService } from './tributacion/tributacion.service';
 import { ClaveInternaGuard } from '@core/shared';
 
-function fabricar(): { tributacion: Record<string, jest.Mock>; controller: InternoController } {
-  const tributacion = { sujetoFiscalDe: jest.fn(), declaraciones: jest.fn() };
+function fabricar(): { tributacion: Record<string, Mock>; controller: InternoController } {
+  const tributacion = { sujetoFiscalDe: vi.fn(), declaraciones: vi.fn() };
   const controller = new InternoController(tributacion as unknown as TributacionService);
   return { tributacion, controller };
 }

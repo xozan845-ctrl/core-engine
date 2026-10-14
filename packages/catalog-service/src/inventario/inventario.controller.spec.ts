@@ -18,7 +18,7 @@ const lineas = [
 
 describe('InventarioController (api/v1/admin/inventario, R-U-10/11)', () => {
   it('debe devolver las lineas de stock que entrega el servicio', async () => {
-    const inventario = { listar: jest.fn().mockResolvedValue(lineas) };
+    const inventario = { listar: vi.fn().mockResolvedValue(lineas) };
     const controller = new InventarioController(inventario as unknown as InventarioService);
     await expect(controller.listar()).resolves.toEqual(lineas);
     expect(inventario.listar).toHaveBeenCalledTimes(1);

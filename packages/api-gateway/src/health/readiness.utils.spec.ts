@@ -1,3 +1,4 @@
+import type { Mock } from 'vitest';
 import {
   evaluarReadiness,
   codigoReadiness,
@@ -15,7 +16,7 @@ describe('readiness.utils (readiness agregada del gateway)', () => {
   ];
 
   it('debe marcar ok cuando todos los servicios responden ok', async () => {
-    const fetchFn: FetchComo = jest.fn().mockResolvedValue({ ok: true, status: 200 });
+    const fetchFn: FetchComo = vi.fn().mockResolvedValue({ ok: true, status: 200 });
     const estado = await evaluarReadiness(servicios, fetchFn);
     expect(estado.status).toBe('ok');
     expect(estado.servicios).toEqual({ identity: 'ok', catalog: 'ok' });
@@ -23,7 +24,7 @@ describe('readiness.utils (readiness agregada del gateway)', () => {
   });
 
   it('debe marcar degraded cuando un servicio responde error', async () => {
-    const fetchFn: FetchComo = jest
+    const fetchFn: FetchComo = vi
       .fn()
       .mockResolvedValueOnce({ ok: true, status: 200 })
       .mockResolvedValueOnce({ ok: false, status: 500 });
@@ -34,7 +35,7 @@ describe('readiness.utils (readiness agregada del gateway)', () => {
   });
 
   it('debe marcar caido cuando un servicio no responde', async () => {
-    const fetchFn: FetchComo = jest
+    const fetchFn: FetchComo = vi
       .fn()
       .mockRejectedValueOnce(new Error('ECONNREFUSED'))
       .mockResolvedValueOnce({ ok: true, status: 200 });
@@ -44,9 +45,9 @@ describe('readiness.utils (readiness agregada del gateway)', () => {
   });
 
   it('debe consultar el /health interno por nombre-servicio y puerto', async () => {
-    const fetchFn: FetchComo = jest.fn().mockResolvedValue({ ok: true, status: 200 });
+    const fetchFn: FetchComo = vi.fn().mockResolvedValue({ ok: true, status: 200 });
     await evaluarReadiness(servicios, fetchFn);
-    const urls = (fetchFn as jest.Mock).mock.calls.map((c) => c[0]);
+    const urls = (fetchFn as Mock).mock.calls.map((c) => c[0]);
     expect(urls).toContain('http://identity-service:3001/health');
     expect(urls).toContain('http://catalog-service:3002/health');
   });

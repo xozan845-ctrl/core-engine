@@ -1,7 +1,7 @@
 // Configuración ESLint (flat config) — única para todos los workspaces.
 // Alcance (G-7): TypeScript de los workspaces, `packages/*/src/**/*.ts`.
-// El tooling JS (`qa-harness/`, `scripts/`, `validate-dashboards.cjs`) queda
-// fuera de alcance por ahora — deuda anotada en docs/rules/test/README.md.
+// El tooling JS (`qa-harness/`) queda fuera de alcance; el motor de gobernanza
+// (`scripts/**/*.mjs`) SÍ se lintea.
 // Uso: `npm run lint` (raíz). Los errores bloquean CI; las advertencias no.
 import js from '@eslint/js';
 import tseslint from 'typescript-eslint';
@@ -15,9 +15,27 @@ export default tseslint.config(
       '**/*.tsbuildinfo',
       '**/*.d.ts',
       'qa-harness/**',
-      'scripts/**',
-      'validate-dashboards.cjs',
     ],
+  },
+  {
+    // Motor de gobernanza y herramientas: JS plano (ESM) sobre Node.
+    files: ['scripts/**/*.mjs'],
+    extends: [js.configs.recommended],
+    languageOptions: {
+      ecmaVersion: 2023,
+      sourceType: 'module',
+      globals: {
+        process: 'readonly',
+        console: 'readonly',
+        URL: 'readonly',
+        fetch: 'readonly',
+        setTimeout: 'readonly',
+        clearTimeout: 'readonly',
+        Buffer: 'readonly',
+        AbortController: 'readonly',
+        performance: 'readonly',
+      },
+    },
   },
   {
     files: ['packages/*/src/**/*.ts'],
@@ -33,7 +51,7 @@ export default tseslint.config(
     },
   },
   {
-    // Globals de Jest solo en specs (describe/it/expect...).
+    // Globals de Vitest solo en specs (describe/it/expect/vi...).
     files: ['packages/*/src/**/*.spec.ts'],
     languageOptions: {
       globals: {
@@ -45,7 +63,7 @@ export default tseslint.config(
         afterEach: 'readonly',
         beforeAll: 'readonly',
         afterAll: 'readonly',
-        jest: 'readonly',
+        vi: 'readonly',
       },
     },
   },

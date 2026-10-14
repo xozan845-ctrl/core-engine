@@ -1,3 +1,4 @@
+import type { Mock } from 'vitest';
 import { SesionesRepository } from './sesiones.repository';
 import type { PgService } from '@core/shared';
 
@@ -8,11 +9,11 @@ import type { PgService } from '@core/shared';
 describe('SesionesRepository (identity.sesiones)', () => {
   function fabricar() {
     const pg = {
-      query: jest.fn().mockResolvedValue([]),
-      queryOne: jest.fn().mockResolvedValue(null),
+      query: vi.fn().mockResolvedValue([]),
+      queryOne: vi.fn().mockResolvedValue(null),
     } as unknown as PgService;
     const repo = new SesionesRepository(pg);
-    return { repo, pg: pg as unknown as { query: jest.Mock; queryOne: jest.Mock } };
+    return { repo, pg: pg as unknown as { query: Mock; queryOne: Mock } };
   }
 
   it('debe insertar la sesion con usuario, jti y expiracion', async () => {

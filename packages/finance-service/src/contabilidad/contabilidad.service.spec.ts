@@ -3,9 +3,9 @@ import { ContabilidadService } from './contabilidad.service';
 describe('ContabilidadService (partida doble, bitacora append-only)', () => {
   const crearServicio = () => {
     const fake = {
-      pg: { query: jest.fn(), queryOne: jest.fn(), transaccion: jest.fn() },
-      outbox: { insertarEnTransaccion: jest.fn() },
-      logger: { info: jest.fn(), warn: jest.fn(), error: jest.fn() },
+      pg: { query: vi.fn(), queryOne: vi.fn(), transaccion: vi.fn() },
+      outbox: { insertarEnTransaccion: vi.fn() },
+      logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn() },
     };
     return { servicio: new ContabilidadService(fake.pg as never, fake.outbox as never), fake };
   };
@@ -54,7 +54,7 @@ describe('ContabilidadService (partida doble, bitacora append-only)', () => {
       creado_en: '2026-08-09T00:00:00.000Z',
     };
     const cliente = {
-      query: jest.fn().mockResolvedValue({ rows: [filaAsiento] }),
+      query: vi.fn().mockResolvedValue({ rows: [filaAsiento] }),
     };
     fake.pg.transaccion.mockImplementation(async (fn: (c: unknown) => unknown) => fn(cliente));
 
