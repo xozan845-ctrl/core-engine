@@ -18,4 +18,12 @@ export const requiredSuites = [
     id: 'microservices-ci-contract',
     file: 'rules/microservices/ci-contract.test.mjs',
   },
+  {
+    id: 'observability-tracing',
+    file: 'rules/observability/tracing.test.mjs',
+  },
+  {
+    id: 'observability-telemetry',
+    file: 'rules/observability/telemetry.test.mjs',
+  },
 ];
