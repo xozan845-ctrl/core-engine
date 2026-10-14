@@ -14,6 +14,9 @@
 /** Rama principal del repositorio. */
 export const MAIN_BRANCH = 'main';
 
+/** Owner de GitHub Container Registry usado por los composes de stage/prod. */
+export const GHCR_OWNER = 'xozan845-ctrl';
+
 /**
  * Rama de integración (R-GE-1): el trabajo diario entra por PR a `develop`, y
  * sube a `staging` y `main` por promoción.
@@ -107,4 +110,9 @@ export const ALLOWED_COMMIT_SCOPES = [
  * suites por `readdir`, así que borrar una en silencio reduciría la cobertura.
  * Esta lista hace que `rules-check` falle si falta cualquiera.
  */
-export const REQUIRED_RULE_SUITES = ['commits.test.mjs', 'meta.test.mjs'];
+export const REQUIRED_RULE_SUITES = [
+  'commits.test.mjs',
+  'delivery.test.mjs',
+  'meta.test.mjs',
+  'services.test.mjs',
+];
