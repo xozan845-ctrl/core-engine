@@ -13,5 +13,9 @@ export const requiredSuites = [
   { id: 'git-commits', file: 'rules/git/commits.test.mjs' },
   { id: 'git-branch', file: 'rules/git/branch.test.mjs' },
   { id: 'delivery-compose', file: 'rules/delivery/compose.test.mjs' },
-  { id: 'services-monorepo', file: 'rules/services/monorepo.test.mjs' },
+  { id: 'services-monorepo', file: 'rules/microservices/structure.test.mjs' },
+  {
+    id: 'microservices-ci-contract',
+    file: 'rules/microservices/ci-contract.test.mjs',
+  },
 ];
