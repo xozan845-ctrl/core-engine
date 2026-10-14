@@ -1,7 +1,10 @@
 # 02 — Etapas y despliegue (Dockploy: un proyecto, dos entornos) (`R-CD-9..13`)
 
-Reglas del despliegue **que sí existe hoy**: el VPS con Dockploy construye desde
-el `Dockerfile` raíz y despliega por rama. Consumen el modelo de ramas de
+Reglas del despliegue **que sí existe hoy**: el VPS con Dockploy despliega por
+rama, **consumiendo las imágenes publicadas en GHCR** (una por servicio) que
+`release.yml` construye y `promote.yml` mueve a `:stage`/`:prod` (`R-CD-1..4`);
+el compose del entorno es `docker-compose.stage.yml` / `docker-compose.prod.yml`.
+Consumen el modelo de ramas de
 [`../git/00-entornos.md`](../git/00-entornos.md) (`R-GE-*`).
 
 > **Enmienda 2026-10-01 (revisión de coste, ADR-13):** antes se preveía "una app
