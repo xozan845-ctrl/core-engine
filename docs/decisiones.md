@@ -369,6 +369,29 @@ Este archivo registra decisiones técnicas deliberadas que se apartan del texto 
 
 ---
 
+## ADR-21: Credencial de RabbitMQ por entorno (sin secreto en el repo)
+
+- **Fecha**: 2026-10-14
+- **Estado**: Aceptado
+- **Contexto**: `infra/rabbitmq/rabbitmq.conf` (versionado) fijaba
+  `default_user`/`default_pass` con una credencial de **desarrollo**, y los tres
+  composes (dev, stage y prod) montaban ese mismo fichero → la credencial de
+  RabbitMQ era **idéntica en todos los entornos y estaba commiteada**. La deuda
+  estaba anotada en ADR-15 y en `dockploy-setup.md` §5.
+- **Decisión**: retirar `default_user`/`default_pass` del conf (que conserva solo
+  el hardening: `loopback_users.guest=false`, `default_vhost`) e inyectar la
+  credencial por entorno desde `RABBITMQ_USER`/`RABBITMQ_PASSWORD` vía
+  `RABBITMQ_DEFAULT_USER`/`RABBITMQ_DEFAULT_PASS` en el servicio `rabbitmq` de
+  `docker-compose.yml`, `docker-compose.stage.yml` y `docker-compose.prod.yml`.
+- **Consecuencias**: la credencial es **única por entorno** y ya **no hay un
+  secreto commiteado** (`R-CD-7`); dev no cambia (toma el valor de su `.env`).
+  En un volumen ya inicializado, `RABBITMQ_DEFAULT_*` **no** re-crea el usuario
+  (RabbitMQ solo crea el usuario por defecto en un volumen vacío): para aplicar
+  una credencial nueva en un entorno existente hay que rotarla por la gestión de
+  RabbitMQ o recrear el volumen. Cierra la deuda marcada en ADR-15.
+
+---
+
 ## Resumen de cumplimiento post-corrección
 
 | Ítem del documento          | Estado  | Nota |

@@ -64,8 +64,11 @@ services:
   # ── Broker de mensajeria (AD-02: RabbitMQ con DLQ) ─────────────────────
   rabbitmq:
     image: rabbitmq:3.13-management-alpine
-    # (barrido A07/A08): guest deshabilitado en loopback; credencial dedicada
-    # de `infra/rabbitmq/rabbitmq.conf` (default_user/default_pass).
+    # (barrido A07/A08): guest deshabilitado en loopback. La credencial viene del
+    # entorno (RABBITMQ_USER/RABBITMQ_PASSWORD), nunca de un fichero commiteado (R-CD-7).
+    environment:
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER:-core-engine}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD:?RABBITMQ_PASSWORD requerida}
     volumes:
       - rabbitmq_data:/var/lib/rabbitmq
       - ./infra/rabbitmq/rabbitmq.conf:/etc/rabbitmq/rabbitmq.conf:ro
