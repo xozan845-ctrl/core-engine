@@ -1,3 +1,4 @@
+import type { Mock } from 'vitest';
 import 'reflect-metadata';
 import { UsuariosController } from './usuarios.controller';
 import type { UsuariosService } from './usuarios.service';
@@ -10,8 +11,8 @@ const usuario = {
   rol: ROLES.VENDEDOR,
 };
 
-function fabricar(): { usuarios: Record<string, jest.Mock>; controller: UsuariosController } {
-  const usuarios = { listar: jest.fn(), encontrarPorId: jest.fn() };
+function fabricar(): { usuarios: Record<string, Mock>; controller: UsuariosController } {
+  const usuarios = { listar: vi.fn(), encontrarPorId: vi.fn() };
   const controller = new UsuariosController(usuarios as unknown as UsuariosService);
   return { usuarios, controller };
 }

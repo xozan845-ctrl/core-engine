@@ -1,0 +1,34 @@
+import { defineConfig } from 'vitest/config';
+import { resolve } from 'node:path';
+
+// Config de pruebas del servicio (Vitest). Reproduce la config de Jest que vivía
+// en package.json: `rootDir: src`, specs `*.spec.ts`, alias `@core/shared`,
+// entorno node y umbrales de cobertura (R-QA-3/R-QA-4).
+export default defineConfig({
+  resolve: {
+    alias: {
+      '@core/shared': resolve(__dirname, '../shared/src/index.ts'),
+    },
+  },
+  test: {
+    globals: true,
+    environment: 'node',
+    include: ['src/**/*.spec.ts'],
+    fileParallelism: false,
+    coverage: {
+      provider: 'v8',
+      include: ['src/**/*.ts'],
+      exclude: [
+        'src/main.ts',
+        'src/**/*.module.ts',
+        'src/swagger.ts',
+        'src/swagger-export.ts',
+        'src/**/*.spec.ts',
+      ],
+      reporter: ['text', 'lcov', 'json-summary'],
+      reportsDirectory: './coverage',
+      reportOnFailure: true,
+      thresholds: { lines: 32, branches: 23 },
+    },
+  },
+});

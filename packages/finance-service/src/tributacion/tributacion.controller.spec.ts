@@ -1,3 +1,4 @@
+import type { Mock } from 'vitest';
 import 'reflect-metadata';
 import { TributacionController } from './tributacion.controller';
 import type { TributacionService } from './tributacion.service';
@@ -6,19 +7,19 @@ import { NotFoundError, ROLES } from '@core/shared';
 const jurisdiccion = { codigo_pais: 'NI', nombre: 'Nicaragua', moneda: 'NIO' };
 const declaracion = { id: 'd-1', tipo: 'IVA', periodo_inicio: '2026-09-01', estado: 'pendiente' };
 
-function fabricar(): { tributacion: Record<string, jest.Mock>; controller: TributacionController } {
+function fabricar(): { tributacion: Record<string, Mock>; controller: TributacionController } {
   const tributacion = {
-    listarJurisdicciones: jest.fn(),
-    crearJurisdiccion: jest.fn(),
-    regimenesDe: jest.fn(),
-    crearRegimen: jest.fn(),
-    sujetos: jest.fn(),
-    registrarSujeto: jest.fn(),
-    darDeBaja: jest.fn(),
-    declaraciones: jest.fn(),
-    generarDeclaraciones: jest.fn(),
-    presentar: jest.fn(),
-    marcarPagada: jest.fn(),
+    listarJurisdicciones: vi.fn(),
+    crearJurisdiccion: vi.fn(),
+    regimenesDe: vi.fn(),
+    crearRegimen: vi.fn(),
+    sujetos: vi.fn(),
+    registrarSujeto: vi.fn(),
+    darDeBaja: vi.fn(),
+    declaraciones: vi.fn(),
+    generarDeclaraciones: vi.fn(),
+    presentar: vi.fn(),
+    marcarPagada: vi.fn(),
   };
   const controller = new TributacionController(tributacion as unknown as TributacionService);
   return { tributacion, controller };

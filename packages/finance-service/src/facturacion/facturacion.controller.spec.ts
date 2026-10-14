@@ -1,3 +1,4 @@
+import type { Mock } from 'vitest';
 import 'reflect-metadata';
 import { FacturacionController } from './facturacion.controller';
 import type { FacturacionService } from './facturacion.service';
@@ -5,8 +6,8 @@ import { NotFoundError, ROLES } from '@core/shared';
 
 const comprobante = { id: 'c-1', serie: 'A', numero: '1', tipo: 'FACTURA', total_cents: 1000 };
 
-function fabricar(): { facturacion: Record<string, jest.Mock>; controller: FacturacionController } {
-  const facturacion = { listar: jest.fn(), series: jest.fn(), emitir: jest.fn(), anular: jest.fn() };
+function fabricar(): { facturacion: Record<string, Mock>; controller: FacturacionController } {
+  const facturacion = { listar: vi.fn(), series: vi.fn(), emitir: vi.fn(), anular: vi.fn() };
   const controller = new FacturacionController(facturacion as unknown as FacturacionService);
   return { facturacion, controller };
 }

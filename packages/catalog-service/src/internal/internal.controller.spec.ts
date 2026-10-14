@@ -1,3 +1,4 @@
+import type { Mock } from 'vitest';
 import 'reflect-metadata';
 import { InternalController } from './internal.controller';
 import type { ProductosService } from '../productos/productos.service';
@@ -17,17 +18,17 @@ const producto = {
 };
 
 function fabricar(): {
-  productos: Record<string, jest.Mock>;
-  inventario: Record<string, jest.Mock>;
+  productos: Record<string, Mock>;
+  inventario: Record<string, Mock>;
   controller: InternalController;
 } {
   const productos = {
-    lotePorSkus: jest.fn(),
-    encontrarPorSku: jest.fn(),
-    encontrarPorId: jest.fn(),
-    resumenInventario: jest.fn(),
+    lotePorSkus: vi.fn(),
+    encontrarPorSku: vi.fn(),
+    encontrarPorId: vi.fn(),
+    resumenInventario: vi.fn(),
   };
-  const inventario = { listar: jest.fn() };
+  const inventario = { listar: vi.fn() };
   const controller = new InternalController(
     productos as unknown as ProductosService,
     inventario as unknown as InventarioService,

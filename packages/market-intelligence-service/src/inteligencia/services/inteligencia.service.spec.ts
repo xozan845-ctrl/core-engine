@@ -7,15 +7,15 @@ import { MetricsService } from '@core/shared';
 // ── Mocks ────────────────────────────────────────────────────────────────────
 
 const mockRepo = {
-  obtenerMapaCalor: jest.fn(),
+  obtenerMapaCalor: vi.fn(),
 };
 
 const mockAgregador = {
-  procesarVentaGeolocalizada: jest.fn(),
+  procesarVentaGeolocalizada: vi.fn(),
 };
 
 const mockMetrics = {
-  incrementarContador: jest.fn(),
+  incrementarContador: vi.fn(),
 };
 
 // ── Suite ────────────────────────────────────────────────────────────────────
@@ -24,7 +24,7 @@ describe('InteligenciaService', () => {
   let service: InteligenciaService;
 
   beforeEach(async () => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [

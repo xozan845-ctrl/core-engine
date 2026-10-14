@@ -33,7 +33,7 @@ export default tseslint.config(
     },
   },
   {
-    // Globals de Jest solo en specs (describe/it/expect...).
+    // Globals de Vitest solo en specs (describe/it/expect/vi...).
     files: ['packages/*/src/**/*.spec.ts'],
     languageOptions: {
       globals: {
@@ -45,7 +45,7 @@ export default tseslint.config(
         afterEach: 'readonly',
         beforeAll: 'readonly',
         afterAll: 'readonly',
-        jest: 'readonly',
+        vi: 'readonly',
       },
     },
   },

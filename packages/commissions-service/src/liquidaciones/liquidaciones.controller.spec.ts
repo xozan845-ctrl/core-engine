@@ -1,3 +1,4 @@
+import type { Mock } from 'vitest';
 import 'reflect-metadata';
 import { LiquidacionesController } from './liquidaciones.controller';
 import type { LiquidacionesService } from './liquidaciones.service';
@@ -6,12 +7,12 @@ import { NotFoundError, ROLES } from '@core/shared';
 const liquidacion = { id: 'liq-1', vendedor_id: 'u-v', monto_cents: 100000, estado: 'pendiente' };
 const vendedor = { user_id: 'u-v', email: 'v@core.local', rol: ROLES.VENDEDOR };
 
-function fabricar(): { liquidaciones: Record<string, jest.Mock>; controller: LiquidacionesController } {
+function fabricar(): { liquidaciones: Record<string, Mock>; controller: LiquidacionesController } {
   const liquidaciones = {
-    deVendedor: jest.fn(),
-    cerrarPeriodo: jest.fn(),
-    cerrarPeriodoAnterior: jest.fn(),
-    marcarPagada: jest.fn(),
+    deVendedor: vi.fn(),
+    cerrarPeriodo: vi.fn(),
+    cerrarPeriodoAnterior: vi.fn(),
+    marcarPagada: vi.fn(),
   };
   const controller = new LiquidacionesController(liquidaciones as unknown as LiquidacionesService);
   return { liquidaciones, controller };

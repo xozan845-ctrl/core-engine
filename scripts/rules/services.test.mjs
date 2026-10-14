@@ -74,8 +74,8 @@ test('R-CD-4: el puerto EXPOSE es único por servicio', () => {
 });
 
 test('R-CD-7/R-CD-22: la imagen de runtime no lleva devDependencies', () => {
-  // El runtime debe podar el árbol tras compilar: el tooling de test (jest,
-  // ts-jest, babel…) no debe viajar en la imagen que se publica.
+  // El runtime debe podar el árbol tras compilar: el tooling de test (vitest,
+  // swc, eslint…) no debe viajar en la imagen que se publica.
   for (const svc of SERVICES) {
     const df = readFileSync(join(serviceDir(svc), 'Dockerfile'), 'utf8');
     assert.match(
