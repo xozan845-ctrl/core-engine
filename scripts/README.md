@@ -45,7 +45,9 @@ scripts/
 │   ├── git/commits.test.mjs        # R-GC-1..4 (puro)
 │   ├── git/branch.test.mjs         # R-GC-1..4 (contextual, commits del PR)
 │   ├── delivery/compose.test.mjs   # R-CD-1/3/7/8
-│   └── services/monorepo.test.mjs  # R-CD-3/4/7/22
+│   └── microservices/
+│       ├── structure.test.mjs      # R-CD-3/4/14
+│       └── ci-contract.test.mjs    # R-MS-1, R-QA-1, R-COV-2/4, R-CI-5
 │
 └── tools/                    # operaciones (NO gobernanza)
     ├── smoke.mjs
@@ -120,6 +122,11 @@ export const requiredSuites = [
   que no existan suites fuera del manifiesto.
 - La suite `docs-structure` comprueba además que el **archivo** de cada entrada
   exista (test etiquetado R-CI-7).
+
+La suite `microservices-ci-contract` deriva la matriz esperada de `SERVICES` y
+`SERVICE_TEST_EXCEPTIONS` (`config/project.mjs`). Así, agregar un servicio sin
+incorporarlo al build/test raíz, omitir su configuración Vitest o mantener una
+excepción después de crear sus specs convierte la deriva en un fallo de CI.
 
 ## Reporte de cobertura
 
