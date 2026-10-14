@@ -51,11 +51,10 @@ export const SERVICES = [
 ];
 
 /**
- * Deuda explícita de R-QA-1: servicios todavía fuera de la matriz unitaria.
- * La suite `microservices-ci-contract` falla si la excepción deja de ser
- * honesta (aparecen specs/config) o si CI omite cualquier servicio no listado.
+ * Excepciones temporales de R-QA-1. Deben estar justificadas en la regla y la
+ * suite `microservices-ci-contract` impide que oculten una suite ya existente.
  */
-export const SERVICE_TEST_EXCEPTIONS = ['field-service'];
+export const SERVICE_TEST_EXCEPTIONS = [];
 
 /**
  * Tipos de Conventional Commits admitidos (R-GC-1).

@@ -69,7 +69,7 @@ validaban el comportamiento erróneo de la implementación en vez del requisito
 ## Cómo auditar (este repo)
 
 ```bash
-# Suite completa con cobertura (lo que corre CI: 10 workspaces con tests)
+# Suite completa con cobertura (lo que corre CI: 11 workspaces con tests)
 npm test -- --coverage
 
 # Un solo servicio
@@ -100,16 +100,14 @@ npm run demo
 - **G-4/G-5/G-6/G-8 sin paso en CI**: no existen suites de integración,
   contrato ni E2E ni paso de export OpenAPI en `ci.yml` (estado detallado en
   [`06-estandares-cobertura.md`](./06-estandares-cobertura.md)).
-- **Cobertura (ratchet R-COV-1)**: los 10 workspaces cumplen su
-  `coverageThreshold`, y **4 de 10 ya alcanzan el objetivo 80/70** (`catalog`
-  96, `identity` 90, `stores` 91, `logistics` 100 de líneas). Los más bajos
+- **Cobertura (ratchet R-COV-1)**: los 11 workspaces cumplen su
+  `coverageThreshold`, y **5 de 11 ya alcanzan el objetivo 80/70** (`catalog`,
+  `identity`, `stores`, `logistics`, `field`). Los más bajos
   siguen siendo `api-gateway` 22.8, `market-intelligence` 30.3, `commissions`
-  32.7 y `shared` 43.1 (suben +5 por release). `field-service` sigue sin suite
-  (excepción de R-QA-1).
-- **Specs pendientes (R-U-10/11, R-U-18)**: **24 de 25** `*.controller.ts` (el
-  único sin spec es `field-service`, exceptuado por R-QA-1) y **21 de 39**
-  `*.service.ts`/`*.consumer.ts` con spec — todos preexistentes a los PRs que
-  tocan esa capa; la presión la ejerce el ratchet (recuento en
+  32.7 y `shared` 40.3 (suben +5 por release).
+- **Specs pendientes (R-U-10/11, R-U-18)**: **25 de 25** `*.controller.ts` y
+  **19 de 39** `*.service.ts`/`*.consumer.ts` siguen sin spec; la presión la
+  ejerce el ratchet (recuento en
   [`../_meta/AUDIT.md`](../_meta/AUDIT.md)).
 - **R-FL-3 sin cumplir**: ningún setup de Vitest fija `TZ`; los specs actuales
   no usan hora local, pero un spec futuro podría depender de la timezone de la
