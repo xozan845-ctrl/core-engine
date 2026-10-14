@@ -171,7 +171,7 @@ Este archivo registra decisiones técnicas deliberadas que se apartan del texto 
 - **Decisión**: un **solo proyecto Dockploy `core-engine` con dos environments** —
   `staging` (rama `staging`) y `produccion` (rama `main`) — usando el
   multi-tenancy nativo de Dockploy (variables y red por environment). El
-  **desarrollo corre local** (`docker compose up` + `npm run demo`) y `develop`
+  **desarrollo corre local** (`docker compose -f docker-compose.dev.yml up` + `npm run demo`) y `develop`
   queda como rama de integración **sin despliegue**. Infraestructura compartida:
   un Postgres con una base por entorno y un RabbitMQ con un vhost por entorno;
   monitoreo solo en producción (+ opcional staging).
@@ -208,7 +208,7 @@ Este archivo registra decisiones técnicas deliberadas que se apartan del texto 
 ## ADR-15: Compose base + observabilidad opcional; valores dev/prod separados
 
 - **Fecha**: 2026-10-02
-- **Estado**: Aceptado
+- **Estado**: Aceptado (ampliado por ADR-22)
 - **Contexto**: Dockploy ejecuta `docker compose -f ./docker-compose.yml` con el
   `.env` del entorno. El compose único incluía la observabilidad (Prometheus,
   Grafana, exporters) y `grafana` exigía `GRAFANA_ADMIN_PASSWORD` con `:?`, así
@@ -237,7 +237,7 @@ Este archivo registra decisiones técnicas deliberadas que se apartan del texto 
 ## ADR-16: Producción publica solo el gateway; puertos de datos/broker interna
 
 - **Fecha**: 2026-10-05
-- **Estado**: Aceptado
+- **Estado**: Aceptado (revisado por ADR-22)
 - **Contexto**: el compose base publicaba al host `5432` (Postgres), `5672` y
   `15672` (RabbitMQ) además del `gateway` (8080). Esos puertos no los necesita
   ningún componente de producción (los servicios los alcanzan por la red interna
@@ -257,7 +257,7 @@ Este archivo registra decisiones técnicas deliberadas que se apartan del texto 
 ## ADR-17: `commissions-service` y `market-intelligence-service` fuera de producción (temporal)
 
 - **Fecha**: 2026-10-05
-- **Estado**: Aceptado (temporal)
+- **Estado**: Aceptado (temporal) — mecanismo de overlay sustituido por ADR-22
 - **Contexto**: por ahora no se quieren desplegar `commissions-service` ni
   `market-intelligence-service` en producción; el `docker-compose.yml` base los
   levantaba junto al resto.
@@ -382,13 +382,52 @@ Este archivo registra decisiones técnicas deliberadas que se apartan del texto 
   el hardening: `loopback_users.guest=false`, `default_vhost`) e inyectar la
   credencial por entorno desde `RABBITMQ_USER`/`RABBITMQ_PASSWORD` vía
   `RABBITMQ_DEFAULT_USER`/`RABBITMQ_DEFAULT_PASS` en el servicio `rabbitmq` de
-  `docker-compose.yml`, `docker-compose.stage.yml` y `docker-compose.prod.yml`.
+  `docker-compose.yml`, `docker-compose.dev.yml` y `docker-compose.stage.yml`
+  (ADR-22).
 - **Consecuencias**: la credencial es **única por entorno** y ya **no hay un
   secreto commiteado** (`R-CD-7`); dev no cambia (toma el valor de su `.env`).
   En un volumen ya inicializado, `RABBITMQ_DEFAULT_*` **no** re-crea el usuario
   (RabbitMQ solo crea el usuario por defecto en un volumen vacío): para aplicar
   una credencial nueva en un entorno existente hay que rotarla por la gestión de
   RabbitMQ o recrear el volumen. Cierra la deuda marcada en ADR-15.
+
+---
+
+## ADR-22: Un solo compose por entorno (dev/stage/prod); producción = `docker-compose.yml`
+
+- **Fecha**: 2026-10-14
+- **Estado**: Aceptado
+- **Contexto**: existían **cuatro** archivos de "entorno" y dos overlays. El
+  `docker-compose.yml` era una **base** que construía las imágenes en local (y que
+  dev usaba vía overlay de puertos), mientras que `docker-compose.prod.yml` y
+  `docker-compose.stage.yml` eran **idénticos entre sí** salvo el tag `:prod`/`:stage`
+  y el `env_file`, y a su vez **duplicaban la estructura completa** de la base
+  (mismo conjunto de servicios; sólo cambiaba `build:` por `image:`). Cualquier
+  cambio en un servicio había que replicarlo en 2–3 archivos, y `commissions-service`
+  / `market-intelligence-service` vivían aparte en `docker-compose.extra.yml`.
+- **Decisión**:
+  1. **`docker-compose.yml` = producción**: asume el contenido del antiguo
+     `docker-compose.prod.yml` (imágenes GHCR `:prod`, `env_file: .env.production`,
+     sin `build:`).
+  2. **`docker-compose.stage.yml` = pre-producción** (GHCR `:stage`, `.env.stage`),
+     sin cambios.
+  3. **`docker-compose.dev.yml` = desarrollo autocontenido**: construye local
+     (`build:`, `env_file: .env`), publica `8080` + `5432`/`5672`/`15672` e incluye
+     los **10 servicios** (absorbe el antiguo `docker-compose.extra.yml`).
+  4. Se **eliminan** `docker-compose.prod.yml` y `docker-compose.extra.yml`.
+  5. `docker-compose.observability.yml` sigue siendo una **capa opcional** que se
+     añade con `-f` a dev o a producción.
+  6. `deploy.yml` resuelve: dev → `-f docker-compose.dev.yml` (`--build`), stage →
+     `-f docker-compose.stage.yml`, prod → `-f docker-compose.yml` (sin `build`).
+     El test de reglas `R-CD-3` verifica que prod/stage no contengan `build:` y sí
+     las imágenes GHCR con `pull_policy: always`; dev debe tener `build:` y los 10 servicios.
+- **Consecuencias**: quedan **tres entornos = tres archivos** (dev, stage, prod),
+  sin la duplicación base/prod. `R-CD-3` se mantiene intacto (prod/stage consumen
+  GHCR sin reconstruir). Supersede parcialmente **ADR-15/16/17**: el "compose base"
+  pasa a ser el de producción, los puertos de datos/broker viven en el entorno dev
+  (ya no como overlay) y el overlay `extra` desaparece. **Trade-off asumido**: prod
+  y stage siguen compartiendo la lista de servicios entre sí; se aceptan como
+  entornos separados con imágenes y variables distintas.
 
 ---
 

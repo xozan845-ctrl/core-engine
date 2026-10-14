@@ -14,9 +14,9 @@ export interface ServicioSalud {
 }
 
 /**
- * Servicios que SI se despliegan en produccion (compose base). Fuera quedan
- * `commissions` (3006) y `market-intelligence` (3009): no estan en el compose
- * base (ADR-17), asi que no cuentan para readiness.
+ * Servicios que SI se despliegan en produccion (`docker-compose.yml`). Fuera quedan
+ * `commissions` (3006) y `market-intelligence` (3009): no estan en el compose de
+ * produccion (ADR-17/ADR-22), asi que no cuentan para readiness.
  */
 export const SERVICIOS_PRODUCCION: ServicioSalud[] = [
   { nombre: 'identity', puerto: 3001 },

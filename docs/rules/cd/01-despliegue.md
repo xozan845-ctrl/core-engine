@@ -8,8 +8,8 @@ trasladadas de `ci/03-deploy.md` a esta área el 2026-10-01 sin renumerar.
 > con procedencia verificada (commit en `main` + `ci.yml` verde en el mismo SHA),
 > etiquetas OCI/semver y digest en el resumen. `promote.yml` las promueve a
 > `stage`/`prod` **por digest**, sin reconstruir, y `deploy.yml` valida el arranque.
-> Los composes `docker-compose.stage.yml` / `docker-compose.prod.yml` consumen esas
-> imágenes. El despliegue de entornos se rige por
+> Los composes `docker-compose.yml` (producción) / `docker-compose.stage.yml`
+> consumen esas imágenes. El despliegue de entornos se rige por
 > [`02-entornos.md`](./02-entornos.md) (`R-CD-9..13`); Dockploy sigue siendo el
 > destino del VPS. Runbook: [`../../runbook-entrega.md`](../../runbook-entrega.md).
 

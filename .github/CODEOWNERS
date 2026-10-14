@@ -16,7 +16,6 @@
 /Dockerfile                  @xozan845-ctrl
 /docker-compose.yml          @xozan845-ctrl
 /docker-compose.stage.yml    @xozan845-ctrl
-/docker-compose.prod.yml     @xozan845-ctrl
 /docker-compose.dev.yml      @xozan845-ctrl
 /packages/*/Dockerfile       @xozan845-ctrl
 

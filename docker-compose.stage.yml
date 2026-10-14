@@ -9,7 +9,7 @@
 # `core-engine`. La observabilidad es opcional:
 #   docker compose -f docker-compose.stage.yml -f docker-compose.observability.yml up -d
 # `commissions-service` y `market-intelligence-service` no entran en este
-# compose: viven en `docker-compose.extra.yml`.
+# compose: viven en `docker-compose.dev.yml` (desarrollo).
 
 x-servicio-base: &servicio-base
   env_file:

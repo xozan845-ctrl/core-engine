@@ -12,14 +12,16 @@ import { repositoryRoot, workflowsDirectory } from './helpers/repo.mjs';
  */
 
 // Excluidos de los composes de producción por decisión del repo (viven en el
-// overlay `docker-compose.extra.yml`).
+// entorno de desarrollo `docker-compose.dev.yml`).
 const EXCLUDED_FROM_PROD = ['commissions-service', 'market-intelligence-service'];
 
 const read = (...segments) => readFileSync(join(repositoryRoot, ...segments), 'utf8');
 
 test('R-CD-3: los composes de stage/prod consumen GHCR, sin `build:`', () => {
-  for (const [env, tag] of [['stage', 'stage'], ['prod', 'prod']]) {
-    const rel = `docker-compose.${env}.yml`;
+  for (const [rel, tag] of [
+    ['docker-compose.stage.yml', 'stage'],
+    ['docker-compose.yml', 'prod'],
+  ]) {
     assert.ok(existsSync(join(repositoryRoot, rel)), `falta ${rel}`);
     const content = read(rel);
 
@@ -36,6 +38,23 @@ test('R-CD-3: los composes de stage/prod consumen GHCR, sin `build:`', () => {
         `${rel}: falta \`pull_policy: always\` para forzar la imagen promovida`,
       );
     }
+  }
+});
+
+test('dev construye local: `docker-compose.dev.yml` define los 10 servicios con `build:`', () => {
+  const rel = 'docker-compose.dev.yml';
+  assert.ok(existsSync(join(repositoryRoot, rel)), `falta ${rel}`);
+  const content = read(rel);
+
+  assert.ok(
+    /^\s*build:/m.test(content),
+    `${rel} debe construir local (\`build:\`), no consumir imágenes de GHCR`,
+  );
+  for (const svc of SERVICES) {
+    assert.ok(
+      content.includes(`SERVICIO: ${svc}`),
+      `${rel}: falta el servicio \`${svc}\` (dev es el único entorno con los 10)`,
+    );
   }
 });
 

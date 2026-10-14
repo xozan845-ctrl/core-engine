@@ -24,7 +24,7 @@ flowchart LR
     R -->|"promote.yml env=stage, source=vX.Y.Z"| S["GHCR :stage"]
     R -->|"promote.yml env=prod, source=vX.Y.Z"| P["GHCR :prod"]
     S --> DS[deploy.yml env=stage → docker-compose.stage.yml]
-    P --> DP[deploy.yml env=prod → docker-compose.prod.yml]
+    P --> DP[deploy.yml env=prod → docker-compose.yml]
 ```
 
 Cada servicio se publica y se promueve con su propia imagen:
@@ -110,10 +110,10 @@ curl -fsS http://localhost:8080/health
 (cd . && npm run demo)   # flujo real contra el entorno
 
 # Fijar una versión exacta por digest (trazabilidad)
-API_IMAGE_OVERRIDE=... docker compose -f docker-compose.prod.yml up -d   # ver nota
+API_IMAGE_OVERRIDE=... docker compose -f docker-compose.yml up -d   # ver nota
 ```
 
-> `docker-compose.stage.yml` y `docker-compose.prod.yml` referencian `:stage`/`:prod`.
+> `docker-compose.yml` y `docker-compose.stage.yml` referencian `:prod`/`:stage`.
 > Para fijar un digest concreto, edita la etiqueta del servicio o usa un override de compose.
 
 ---

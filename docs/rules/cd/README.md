@@ -30,7 +30,7 @@ entornos y Dockploy.
 
 | Etapa | Rama (R-GE-1) | Dónde corre | Cómo llega |
 |---|---|---|---|
-| Desarrollo | `develop` | **local** (`docker compose up`) | PR de feature (R-GE-2); sin despliegue |
+| Desarrollo | `develop` | **local** (`docker compose -f docker-compose.dev.yml up`) | PR de feature (R-GE-2); sin despliegue |
 | Stage | `staging` | Dockploy, environment `staging` | PR `develop → staging` |
 | Producción | `main` | Dockploy, environment `produccion` | PR `staging → main` (R-GE-4) |
 
@@ -41,7 +41,7 @@ entornos y Dockploy.
   publicación de **una imagen por servicio** en GHCR con etiquetas OCI/semver
   (`R-CD-4`) y digest en el resumen. `promote.yml` las mueve a `stage`/`prod`
   **por digest** (`R-CD-3`) y `deploy.yml` valida el arranque (`R-CD-12`). Los
-  composes `docker-compose.stage.yml` / `docker-compose.prod.yml` consumen GHCR.
+  composes `docker-compose.yml` (prod) / `docker-compose.stage.yml` consumen GHCR.
   Dockploy sigue siendo el destino del VPS (`R-CD-9..13`). Ver el runbook
   [`../../runbook-entrega.md`](../../runbook-entrega.md).
 - **Dockploy se configura fuera de este repo**: un solo proyecto con los

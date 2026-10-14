@@ -56,7 +56,7 @@ flowchart LR
    (`R-CD-8`) y `environment` como gate de producción (`R-CD-6`).
 4. **`deploy.yml`** (manual) arranca el compose del entorno y ejecuta el smoke
    `GET /health` del gateway (`R-CD-12`): en `dev` construye; en `stage`/`prod`
-   consume `docker-compose.stage.yml` / `docker-compose.prod.yml` de GHCR.
+   consume `docker-compose.stage.yml` (stage) / `docker-compose.yml` (prod) de GHCR.
 
 ## Recetas
 
@@ -78,9 +78,9 @@ gh workflow run deploy.yml  -f environment=prod
 
 | Entorno | Compose | Imagen | Variables |
 |---|---|---|---|
-| dev | `docker-compose.yml` + `docker-compose.dev.yml` | build local | `.env.example` → `.env` |
+| dev | `docker-compose.dev.yml` | build local | `.env.example` → `.env` |
 | stage | `docker-compose.stage.yml` | `:stage` (GHCR) | `.env.stage.example` → `.env.stage` |
-| prod | `docker-compose.prod.yml` | `:prod` (GHCR) | `.env.production.example` → `.env.production` |
+| prod | `docker-compose.yml` | `:prod` (GHCR) | `.env.production.example` → `.env.production` |
 
 > `.env`, `.env.stage` y `.env.production` están en `.gitignore`: nunca se versionan
 > (`R-CD-7`). Solo las plantillas `*.example`.

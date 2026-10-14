@@ -72,15 +72,11 @@ npm install                       # instala los workspaces (enlaza @core/shared,
 npm run build                     # compila shared + gateway + los 9 microservicios
 npm test                          # los 10 workspaces, cada uno con --coverage (358 tests)
 cp .env.example .env              # variables de DESARROLLO (producción: .env.production.example)
-docker compose up -d --build      # app: Postgres + RabbitMQ + gateway y 9 servicios (solo 8080 al host)
+docker compose -f docker-compose.dev.yml up -d --build   # app: Postgres + RabbitMQ + gateway y 9 servicios (8080 host + datos/broker 5432/5672/15672)
 npm run demo                      # ejercicio end-to-end (TC-01..TC-08, RN-01..RN-08)
 
-# Desarrollo: publica en el host los puertos de datos/broker (5432, 5672, 15672)
-docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d --build
-# Servicios fuera de producción (commissions, intelligence): activar con el overlay extra
-docker compose -f docker-compose.yml -f docker-compose.extra.yml up -d --build
-# Dashboards (opcional): añade Prometheus + Grafana + exporters al stack
-docker compose -f docker-compose.yml -f docker-compose.observability.yml up -d --build
+# Dashboards (opcional): añade Prometheus + Grafana + exporters al stack de desarrollo
+docker compose -f docker-compose.dev.yml -f docker-compose.observability.yml up -d --build
 ```
 
 Postgres siembra automáticamente `infra/db/init/01_esquemas.sql` (esquemas, tablas, checks,
@@ -114,8 +110,8 @@ seeds del plan contable NIC e indices). En **Supabase** (staging/prod) aplique a
 > (`http://<servicio>:<puerto>`) dentro de la red `core-engine`, detrás del gateway.
 >
 > **Fuera de producción (por ahora):** `commissions-service` y `market-intelligence-service` **no
-> viven en el compose base** (no se despliegan en producción); se activan con
-> `docker compose -f docker-compose.yml -f docker-compose.extra.yml up`. Sus rutas del gateway
+> viven en el compose de producción** (`docker-compose.yml`); se levantan solo en desarrollo con
+> `docker compose -f docker-compose.dev.yml up`. Sus rutas del gateway
 > responderán 502 mientras estén bajados.
 
 ## Entornos y entrega (desarrollo → stage → producción)
@@ -124,7 +120,7 @@ Tres entornos por rama protegida, desplegados por **Dockploy** en el VPS:
 
 | Etapa | Rama | Dónde corre |
 |---|---|---|
-| Desarrollo | `develop` | **local** (`docker compose up`) — nunca se despliega |
+| Desarrollo | `develop` | **local** (`docker compose -f docker-compose.dev.yml up`) — nunca se despliega |
 | Stage | `staging` | Dockploy (environment `staging`) |
 | Producción | `main` | Dockploy (environment `produccion`) |
 
@@ -180,7 +176,7 @@ npm run swagger:export   # regenera docs/openapi/*.json (sin BD/Rabbit; no arran
 
 Cobertura actual: **149/149 endpoints** en 9 servicios.
 
-## Variables de entorno (`docker-compose.yml` ← `.env`)
+## Variables de entorno (`.env` en dev · `.env.production` en producción)
 
 - **Desarrollo**: copia `.env.example` → `.env`.
 - **Producción**: usa `.env.production.example` (secretos reales y únicos por
@@ -208,7 +204,7 @@ npm run demo    # flujo real sobre el stack levantado (scripts/smoke.mjs)
 ## Observabilidad
 
 La observabilidad es una **capa opcional** (`docker-compose.observability.yml`):
-se activa con `docker compose -f docker-compose.yml -f docker-compose.observability.yml up`
+se activa con `docker compose -f docker-compose.dev.yml -f docker-compose.observability.yml up`
 y exige `GRAFANA_ADMIN_PASSWORD` en el `.env`. Prometheus scrapea `/metrics` de
 los servicios (`infra/prometheus/prometheus.yml`) y Grafana provisiona el
 dashboard `Core Engine · Core Engine` (latencia p99, peticiones/s, errores 5xx,
