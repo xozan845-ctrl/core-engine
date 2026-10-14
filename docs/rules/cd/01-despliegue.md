@@ -3,11 +3,15 @@
 Reglas del pipeline de **artefactos de release** (tags, imágenes, migraciones),
 trasladadas de `ci/03-deploy.md` a esta área el 2026-10-01 sin renumerar.
 
-> **Estado hoy:** no existe `release.yml` y no se publican imágenes a ningún
-> registry: la entrega es build desde fuente (`Dockerfile` raíz) que Dockploy
-> despliega; el despliegue de entornos se rige por [`02-entornos.md`](./02-entornos.md)
-> (`R-CD-9..13`). Estas reglas son el contrato exigible el día que exista un
-> workflow de release (R-CI-4), no la descripción de algo que ya corre.
+> **Estado hoy (2026-10-14):** `release.yml` **existe**: construye y publica una
+> imagen por servicio (`packages/<servicio>/Dockerfile`) en GHCR al empujar un tag,
+> con procedencia verificada (commit en `main` + `ci.yml` verde en el mismo SHA),
+> etiquetas OCI/semver y digest en el resumen. `promote.yml` las promueve a
+> `stage`/`prod` **por digest**, sin reconstruir, y `deploy.yml` valida el arranque.
+> Los composes `docker-compose.stage.yml` / `docker-compose.prod.yml` consumen esas
+> imágenes. El despliegue de entornos se rige por
+> [`02-entornos.md`](./02-entornos.md) (`R-CD-9..13`); Dockploy sigue siendo el
+> destino del VPS. Runbook: [`../../runbook-entrega.md`](../../runbook-entrega.md).
 
 | ID | Regla |
 |---|---|
