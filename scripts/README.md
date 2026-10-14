@@ -69,7 +69,10 @@ repo del stack sin arrastrar una sola regla.
 
 Cada suite se declara con `defineSuite` y registra sus `test()` de `node:test`.
 El runner la descubre **importándola con el registro desactivado**: lee la
-metadata sin ejecutar los tests, y luego los ejecuta en procesos aislados.
+metadata sin ejecutar los tests, y luego lanza `node --test` en un proceso
+nuevo. El aislamiento es obligatorio: reutilizar el proceso de descubrimiento
+haría que la caché ESM impidiera registrar las assertions y produciría un falso
+verde.
 
 ```js
 // scripts/rules/delivery/compose.test.mjs
@@ -112,8 +115,9 @@ export const requiredSuites = [
 ];
 ```
 
-- El **runner** valida que toda suite del manifiesto haya sido descubierta (por
-  `id`) y que no haya `id` duplicados.
+- El **runner** valida que toda suite del manifiesto haya sido descubierta, que
+  su `id` corresponda exactamente al `file` declarado, que no haya duplicados y
+  que no existan suites fuera del manifiesto.
 - La suite `docs-structure` comprueba además que el **archivo** de cada entrada
   exista (test etiquetado R-CI-7).
 
@@ -147,7 +151,7 @@ Los `npm scripts` de la raíz son **envoltorios** (sin ruptura para CI ni local)
 | `rules:check` | `node scripts/cli.mjs rules` |
 | `demo` | `node scripts/cli.mjs smoke` |
 | `swagger:export` | `node scripts/cli.mjs swagger` |
-| `test:engine` | `node --test "scripts/engine/**/*.test.mjs"` |
+| `test:engine` | autotests del motor, incluida una suite centinela que prueba el exit code ante assertions fallidas |
 
 ## Cómo añadir una regla ejecutable
 
