@@ -13,7 +13,7 @@
   "dependencies": {
     "@core/shared": "file:../shared",
     "@nestjs/common": "^11.0.0",
-    "@nestjs/core": "^11.0.0",
+    "@nestjs/core": "^12.1.2",
     "@nestjs/platform-express": "^11.0.0",
     "@nestjs/swagger": "^11.0.5",
     "class-transformer": "^0.5.1",
