@@ -1,0 +1,33 @@
+# CODEOWNERS — revisión de caminos sensibles (R-CI-10)
+#
+# Con required reviews (plan Pro) esto exige la aprobación de un owner antes de
+# mergear; sin él, deja constancia de quién responde por el "muro" y auto-solicita
+# revisión cuando el autor no es el owner.
+#
+# El perímetro de seguridad, entrega y gobernanza de Core Engine:
+
+# Muro de gobernanza y automatización
+/.github/                    @xozan845-ctrl
+/docs/rules/                 @xozan845-ctrl
+/docs/decisiones.md          @xozan845-ctrl
+/scripts/                    @xozan845-ctrl
+
+# Entrega y contenedores
+/Dockerfile                  @xozan845-ctrl
+/docker-compose.yml          @xozan845-ctrl
+/docker-compose.stage.yml    @xozan845-ctrl
+/docker-compose.prod.yml     @xozan845-ctrl
+/docker-compose.dev.yml      @xozan845-ctrl
+/packages/*/Dockerfile       @xozan845-ctrl
+
+# Dependencias y contrato raíz
+/package.json                @xozan845-ctrl
+/package-lock.json           @xozan845-ctrl
+/tsconfig.base.json          @xozan845-ctrl
+
+# Infraestructura y datos
+/infra/                      @xozan845-ctrl
+
+# Perímetro de seguridad por servicio (auth, identidad, gateway)
+/packages/api-gateway/       @xozan845-ctrl
+/packages/identity-service/  @xozan845-ctrl
