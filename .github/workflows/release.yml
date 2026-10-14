@@ -1,0 +1,182 @@
+name: Release
+
+# Release por tag de TODOS los servicios del workspace (R-CD-1..8).
+# Construye una imagen por servicio y la publica en GHCR con etiquetas semver,
+# OCI y `latest` (solo no-prerelease); publica el digest de cada imagen para que
+# `promote.yml` promueva por `@sha256:` (R-CD-3).
+#
+#   - push de un tag v<major>.<minor>.<patch>[-pre]  → construye y publica
+#   - workflow_dispatch (source_tag)                 → reproduce un tag existente
+#     con `dry_run: true` por defecto (R-CD-8): construye y NO publica.
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+  workflow_dispatch:
+    inputs:
+      source_tag:
+        description: 'Tag de release existente a reproducir (p. ej. v1.0.0)'
+        required: true
+      dry_run:
+        description: 'Construir y verificar SIN publicar (simulacro, R-CD-8)'
+        type: boolean
+        default: true
+
+# Permisos mínimos (R-CD-6/R-CI-6): `packages: write` solo en el job de imágenes.
+permissions:
+  contents: read
+  actions: read
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  # Gate de procedencia (R-CD-1, R-CD-2): tag válido, commit en `main` y un run
+  # de `ci.yml` en `success` en ESE mismo SHA. Sin esto no se construye.
+  gate:
+    name: gate (tag + procedencia)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    outputs:
+      tag: ${{ steps.tag.outputs.tag }}
+    steps:
+      - name: 📥 Checkout repository
+        uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+
+      - name: 🏷️ Resolve the release tag
+        id: tag
+        env:
+          INPUT_TAG: ${{ github.event.inputs.source_tag }}
+        run: |
+          REF="${{ github.ref_name }}"
+          if [[ "${GITHUB_EVENT_NAME}" == "workflow_dispatch" ]]; then
+            REF="${INPUT_TAG}"
+          fi
+          if [[ ! "$REF" =~ ^v[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?$ ]]; then
+            echo "ERROR: '$REF' no es un tag semver válido v<major>.<minor>.<patch>[-pre] (R-CD-1)."
+            exit 1
+          fi
+          # SHA del commit apuntado por el tag (no el del dispatch).
+          git fetch --quiet origin "refs/tags/${REF}:refs/tags/${REF}" || true
+          SHA=$(git rev-list -n1 "$REF")
+          echo "tag=$REF" >> "$GITHUB_OUTPUT"
+          echo "sha=$SHA" >> "$GITHUB_OUTPUT"
+          echo "OK: tag $REF → $SHA"
+
+      - name: 🔎 Verify the release commit is on main (R-CD-2)
+        run: |
+          git fetch --quiet origin main
+          SHA="${{ steps.tag.outputs.sha }}"
+          if ! git merge-base --is-ancestor "$SHA" origin/main; then
+            echo "ERROR: $SHA no está en main; no se publica una release fuera de main (R-CD-2)."
+            exit 1
+          fi
+          echo "OK: $SHA es ancestro de origin/main"
+
+      - name: ✅ Verify a successful ci.yml run on this SHA (R-CD-2)
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          SHA="${{ steps.tag.outputs.sha }}"
+          count=$(gh run list --workflow=ci.yml --commit "$SHA" \
+            --status success --limit 1 --json databaseId --jq 'length')
+          if [[ "$count" == "0" ]]; then
+            echo "ERROR: no hay un run de ci.yml en 'success' para $SHA (R-CD-2)."
+            echo "Runs disponibles para el SHA:"
+            gh run list --commit "$SHA" --limit 10 || true
+            exit 1
+          fi
+          echo "OK: ci.yml verde en $SHA"
+
+  # Matriz imagen-por-servicio (R-CD-4): cada servicio se construye una vez y se
+  # publica con etiquetas semver + sha + latest + OCI, y emite su digest.
+  images:
+    name: images (${{ matrix.service }})
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    needs: gate
+    permissions:
+      contents: read
+      packages: write
+    strategy:
+      fail-fast: false
+      matrix:
+        service:
+          - api-gateway
+          - identity-service
+          - catalog-service
+          - stores-service
+          - orders-service
+          - logistics-service
+          - commissions-service
+          - finance-service
+          - field-service
+          - market-intelligence-service
+    steps:
+      - name: 📥 Checkout repository
+        uses: actions/checkout@v5
+
+      - name: 🐳 Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: 🔑 Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: 🏷️ Compute image tags (R-CD-4)
+        id: tags
+        env:
+          REF: ${{ needs.gate.outputs.tag }}
+          SERVICE: ${{ matrix.service }}
+        run: |
+          IMAGE="ghcr.io/${{ github.repository_owner }}/core-engine-${SERVICE}"
+          echo "image=${IMAGE}" >> "$GITHUB_OUTPUT"
+          {
+            echo "tags<<EOF"
+            echo "${IMAGE}:${REF}"
+            # Variantes semver y `latest` SOLO para releases no-prerelease.
+            if [[ "$REF" =~ ^v([0-9]+)\.([0-9]+)\.([0-9]+)$ ]]; then
+              echo "${IMAGE}:${BASH_REMATCH[1]}.${BASH_REMATCH[2]}.${BASH_REMATCH[3]}"
+              echo "${IMAGE}:${BASH_REMATCH[1]}.${BASH_REMATCH[2]}"
+              echo "${IMAGE}:${BASH_REMATCH[1]}"
+              echo "${IMAGE}:latest"
+            fi
+            # Trazabilidad por SHA (R-CD-4).
+            echo "${IMAGE}:sha-${GITHUB_SHA:0:7}"
+            echo "EOF"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: 🏗️ Build and push the image (R-CD-3, R-CD-4)
+        id: build
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: packages/${{ matrix.service }}/Dockerfile
+          # En un tag siempre publica; en manual respeta `dry_run` (R-CD-8).
+          push: ${{ github.event_name != 'workflow_dispatch' || inputs.dry_run == false }}
+          tags: ${{ steps.tags.outputs.tags }}
+          provenance: true
+          labels: |
+            org.opencontainers.image.title=core-engine-${{ matrix.service }}
+            org.opencontainers.image.source=https://github.com/${{ github.repository }}
+            org.opencontainers.image.revision=${{ github.sha }}
+            org.opencontainers.image.version=${{ needs.gate.outputs.tag }}
+          cache-from: type=gha,scope=${{ matrix.service }}
+          cache-to: type=gha,mode=max,scope=${{ matrix.service }}
+
+      - name: 🧾 Publish digest in the run summary (R-CD-4)
+        run: |
+          {
+            echo "### ${{ matrix.service }}"
+            echo "- digest: \`${{ steps.build.outputs.digest }}\`"
+            echo "- tags:"
+            echo '```'
+            echo "${{ steps.tags.outputs.tags }}"
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"

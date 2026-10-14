@@ -1,3 +1,4 @@
+import type { Mock } from 'vitest';
 import 'reflect-metadata';
 import { OfertasController } from './ofertas.controller';
 import type { OfertasService } from './ofertas.service';
@@ -9,16 +10,16 @@ const tienda = { id: 't-1', vendedor_id: 'u-v', nombre: 'Mi tienda' };
 const vendedor = { user_id: 'u-v', email: 'v@core.local', rol: ROLES.VENDEDOR };
 
 function fabricar(): {
-  tiendas: Record<string, jest.Mock>;
-  ofertas: Record<string, jest.Mock>;
+  tiendas: Record<string, Mock>;
+  ofertas: Record<string, Mock>;
   controller: OfertasController;
 } {
-  const tiendas = { encontrarPorId: jest.fn() };
+  const tiendas = { encontrarPorId: vi.fn() };
   const ofertas = {
-    publicar: jest.fn(),
-    cambiarMargen: jest.fn(),
-    deVendedor: jest.fn(),
-    deTienda: jest.fn(),
+    publicar: vi.fn(),
+    cambiarMargen: vi.fn(),
+    deVendedor: vi.fn(),
+    deTienda: vi.fn(),
   };
   const controller = new OfertasController(
     tiendas as unknown as TiendasService,

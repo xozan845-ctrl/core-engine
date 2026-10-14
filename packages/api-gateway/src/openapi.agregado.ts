@@ -1,5 +1,5 @@
 /**
- * GENERADO por scripts/swagger-aggregate.mjs — NO editar a mano.
+ * GENERADO por scripts/tools/swagger-aggregate.mjs — NO editar a mano.
  * Fuente: docs/openapi/*.json (npm run swagger:export). Verifica: gate G-8.
  */
 import type { OpenAPIObject } from '@nestjs/swagger';

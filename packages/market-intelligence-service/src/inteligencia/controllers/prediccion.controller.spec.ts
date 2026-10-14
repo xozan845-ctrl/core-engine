@@ -1,13 +1,14 @@
+import type { Mock } from 'vitest';
 import 'reflect-metadata';
 import { PrediccionController } from './prediccion.controller';
 import type { InteligenciaRepository } from '../repositories/inteligencia.repository';
 
-function fabricar(): { repo: Record<string, jest.Mock>; controller: PrediccionController } {
+function fabricar(): { repo: Record<string, Mock>; controller: PrediccionController } {
   const repo = {
-    obtenerForecastDemanda: jest.fn(),
-    obtenerAnomalias: jest.fn(),
-    obtenerScoreVendedor: jest.fn(),
-    obtenerCalidadDatos: jest.fn(),
+    obtenerForecastDemanda: vi.fn(),
+    obtenerAnomalias: vi.fn(),
+    obtenerScoreVendedor: vi.fn(),
+    obtenerCalidadDatos: vi.fn(),
   };
   const controller = new PrediccionController(repo as unknown as InteligenciaRepository);
   return { repo, controller };

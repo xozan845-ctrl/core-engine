@@ -1,3 +1,4 @@
+import type { Mock } from 'vitest';
 import { EnviosService } from './envios.service';
 
 /**
@@ -7,8 +8,8 @@ import { EnviosService } from './envios.service';
 describe('EnviosService (guia de despacho y transiciones)', () => {
   const crear = () => {
     const pg = {
-      query: jest.fn().mockResolvedValue([]),
-      queryOne: jest.fn().mockResolvedValue(null),
+      query: vi.fn().mockResolvedValue([]),
+      queryOne: vi.fn().mockResolvedValue(null),
     };
     const servicio = new EnviosService(pg as never);
     return { servicio, pg };
@@ -22,27 +23,27 @@ describe('EnviosService (guia de despacho y transiciones)', () => {
     creado_en: '2026-09-01T00:00:00.000Z',
   };
 
-  afterEach(() => jest.restoreAllMocks());
+  afterEach(() => vi.restoreAllMocks());
 
   describe('prepararEnvio (payment.procesado)', () => {
     it('debe devolver el envio existente sin insertar nada (idempotencia del consumidor)', async () => {
       const { servicio, pg } = crear();
-      (pg.queryOne as jest.Mock).mockResolvedValue(envio);
+      (pg.queryOne as Mock).mockResolvedValue(envio);
       const resultado = await servicio.prepararEnvio('o1', 150000);
       expect(resultado).toEqual(envio);
       expect(pg.queryOne).toHaveBeenCalledTimes(1); // solo el SELECT de busqueda
-      const [sql] = (pg.queryOne as jest.Mock).mock.calls[0];
+      const [sql] = (pg.queryOne as Mock).mock.calls[0];
       expect(sql).toContain('SELECT');
     });
 
     it('debe crear el envio en preparacion con la guia cuando no existe', async () => {
       const { servicio, pg } = crear();
-      (pg.queryOne as jest.Mock)
+      (pg.queryOne as Mock)
         .mockResolvedValueOnce(null) // no existe
         .mockResolvedValueOnce(envio); // INSERT ... RETURNING
       const resultado = await servicio.prepararEnvio('o1', 150000);
       expect(resultado.guia).toMatch(/^BGH-/); // guia con prefijo del proyecto
-      const [sql, params] = (pg.queryOne as jest.Mock).mock.calls[1];
+      const [sql, params] = (pg.queryOne as Mock).mock.calls[1];
       expect(sql).toContain('INSERT INTO logistics.envios');
       expect(sql).toContain("'en_preparacion'");
       expect(params[2]).toBe('o1');
@@ -51,7 +52,7 @@ describe('EnviosService (guia de despacho y transiciones)', () => {
 
     it('debe lanzar DomainError cuando el INSERT no devuelve fila', async () => {
       const { servicio, pg } = crear();
-      (pg.queryOne as jest.Mock)
+      (pg.queryOne as Mock)
         .mockResolvedValueOnce(null)
         .mockResolvedValueOnce(null);
       await expect(servicio.prepararEnvio('o1', 1)).rejects.toThrow(/no se pudo preparar/i);
@@ -61,7 +62,7 @@ describe('EnviosService (guia de despacho y transiciones)', () => {
   describe('listar', () => {
     it('debe serializar el monto en centavos a texto', async () => {
       const { servicio, pg } = crear();
-      (pg.query as jest.Mock).mockResolvedValue([
+      (pg.query as Mock).mockResolvedValue([
         { ...envio, monto_cents: 12345 },
       ]);
       const [fila] = await servicio.listar();
@@ -81,7 +82,7 @@ describe('EnviosService (guia de despacho y transiciones)', () => {
     };
 
     it('debe reenviar el codigo y mensaje del orders cuando la transicion es rechazada', async () => {
-      jest.spyOn(globalThis, 'fetch').mockResolvedValue({
+      vi.spyOn(globalThis, 'fetch').mockResolvedValue({
         ok: false,
         json: async () => ({
           codigo: 'ESTADO_INVALIDO',
@@ -100,7 +101,7 @@ describe('EnviosService (guia de despacho y transiciones)', () => {
     });
 
     it('debe usar el error generico cuando el orders responde sin cuerpo util', async () => {
-      jest.spyOn(globalThis, 'fetch').mockResolvedValue({
+      vi.spyOn(globalThis, 'fetch').mockResolvedValue({
         ok: false,
         json: async () => {
           throw new Error('sin json');
@@ -114,7 +115,7 @@ describe('EnviosService (guia de despacho y transiciones)', () => {
     });
 
     it('debe llamar al endpoint interno por POST y devolver la orden cuando es aceptada', async () => {
-      const fetchSpy = jest
+      const fetchSpy = vi
         .spyOn(globalThis, 'fetch')
         .mockResolvedValue({ ok: true, json: async () => orden } as unknown as Response);
       const { servicio } = crear();
@@ -131,7 +132,7 @@ describe('EnviosService (guia de despacho y transiciones)', () => {
 
   describe('consultarOrden', () => {
     it('debe devolver null cuando el orders responde con error', async () => {
-      jest
+      vi
         .spyOn(globalThis, 'fetch')
         .mockResolvedValue({ ok: false, json: async () => ({}) } as unknown as Response);
       const { servicio } = crear();
@@ -139,7 +140,7 @@ describe('EnviosService (guia de despacho y transiciones)', () => {
     });
 
     it('debe devolver null cuando la red falla', async () => {
-      jest
+      vi
         .spyOn(globalThis, 'fetch')
         .mockRejectedValue(new Error('red caida'));
       const { servicio } = crear();
@@ -147,7 +148,7 @@ describe('EnviosService (guia de despacho y transiciones)', () => {
     });
 
     it('debe devolver la orden cuando el orders responde ok', async () => {
-      jest
+      vi
         .spyOn(globalThis, 'fetch')
         .mockResolvedValue({ ok: true, json: async () => ({ id: 'o1', estado: 'enviado' }) } as unknown as Response);
       const { servicio } = crear();
@@ -158,7 +159,7 @@ describe('EnviosService (guia de despacho y transiciones)', () => {
   describe('deOrden', () => {
     it('debe consultar el envio por order_id', async () => {
       const { servicio, pg } = crear();
-      (pg.queryOne as jest.Mock).mockResolvedValue(envio);
+      (pg.queryOne as Mock).mockResolvedValue(envio);
       expect(await servicio.deOrden('o1')).toEqual(envio);
       expect(pg.queryOne).toHaveBeenCalledWith(expect.stringContaining('logistics.envios'), ['o1']);
     });

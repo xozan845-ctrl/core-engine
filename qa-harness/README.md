@@ -123,7 +123,7 @@ QA_FORMAT=all
 ## Requisitos
 
 - Node.js >= 20 (usa v24 nativo: fetch, crypto, etc.)
-- Stack Core Engine corriendo (`docker compose up -d --build`)
+- Stack Core Engine corriendo (`docker compose -f docker-compose.dev.yml up -d --build`)
 - PostgreSQL y RabbitMQ accesibles
 
 ## Arquitectura

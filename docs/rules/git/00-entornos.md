@@ -8,7 +8,7 @@ directo, sin fuerza, solo PR con checks en verde — R-PR-6, R-CD-9):
 
 | Etapa | Rama | Dónde corre | Uso |
 |---|---|---|---|
-| Desarrollo | `develop` (integración) | **local** (`docker compose up`) | integración diaria de features y puerta de entrada del trabajo; sin despliegue (R-CD-9) |
+| Desarrollo | `develop` (integración) | **local** (`docker compose -f docker-compose.dev.yml up`) | integración diaria de features y puerta de entrada del trabajo; sin despliegue (R-CD-9) |
 | Stage | `staging` | Dockploy, environment `staging` | validación de aceptación antes de tocar producción (smoke, R-CD-12) |
 | Producción | `main` | Dockploy, environment `produccion` | lo que despliega Dockploy a los clientes; solo recibe promociones |
 

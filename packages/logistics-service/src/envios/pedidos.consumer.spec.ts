@@ -1,3 +1,4 @@
+import type { Mock } from 'vitest';
 import { PedidosConsumer } from './pedidos.consumer';
 import {
   EVENTOS,
@@ -15,24 +16,24 @@ import {
 describe('PedidosConsumer de logistics (Tabla 22)', () => {
   const crear = async () => {
     const rabbit = {
-      declararColas: jest.fn().mockResolvedValue(undefined),
-      consumir: jest.fn().mockResolvedValue(undefined),
-      activarReintento: jest.fn(),
+      declararColas: vi.fn().mockResolvedValue(undefined),
+      consumir: vi.fn().mockResolvedValue(undefined),
+      activarReintento: vi.fn(),
     };
-    const outbox = { insertar: jest.fn().mockResolvedValue(undefined) };
+    const outbox = { insertar: vi.fn().mockResolvedValue(undefined) };
     const pg = {
-      query: jest.fn().mockResolvedValue(undefined),
-      queryOne: jest.fn().mockResolvedValue(null),
+      query: vi.fn().mockResolvedValue(undefined),
+      queryOne: vi.fn().mockResolvedValue(null),
     };
     const envios = {
-      prepararEnvio: jest.fn().mockResolvedValue({
+      prepararEnvio: vi.fn().mockResolvedValue({
         id: 'e1',
         guia: 'BGH-ABC-123456',
         order_id: 'o1',
         estado: 'en_preparacion',
         creado_en: '2026-09-01T00:00:00.000Z',
       }),
-      consultarOrden: jest.fn().mockResolvedValue({
+      consultarOrden: vi.fn().mockResolvedValue({
         id: 'o1',
         items: [{ sku: 'SKU-01', cantidad: 2 }],
         estado: 'devuelta',
@@ -50,8 +51,8 @@ describe('PedidosConsumer de logistics (Tabla 22)', () => {
       outbox,
       pg,
       envios,
-      cola: (rabbit.consumir as jest.Mock).mock.calls[0][0],
-      dispatch: (e: EventoBus) => (rabbit.consumir as jest.Mock).mock.calls[0][1](e),
+      cola: (rabbit.consumir as Mock).mock.calls[0][0],
+      dispatch: (e: EventoBus) => (rabbit.consumir as Mock).mock.calls[0][1](e),
     };
   };
 
@@ -94,7 +95,7 @@ describe('PedidosConsumer de logistics (Tabla 22)', () => {
 
   it('debe ignorar el pago cuando el event_id ya fue procesado (doc 5.2)', async () => {
     const { dispatch, envios, outbox, pg } = await crear();
-    (pg.queryOne as jest.Mock).mockResolvedValue({ '?column?': 1 });
+    (pg.queryOne as Mock).mockResolvedValue({ '?column?': 1 });
     await dispatch(
       evento(EVENTOS.PAYMENT_PROCESADO, {
         order_id: 'o1',
@@ -117,7 +118,7 @@ describe('PedidosConsumer de logistics (Tabla 22)', () => {
 
     await dispatch(evento(EVENTOS.ORDER_STATUS_UPDATED, data));
 
-    const emitidos = (outbox.insertar as jest.Mock).mock.calls.map((c) => c[0]);
+    const emitidos = (outbox.insertar as Mock).mock.calls.map((c) => c[0]);
     expect(emitidos).toEqual([EVENTOS.ORDER_COMPLETADO]);
     expect(outbox.insertar).toHaveBeenCalledWith(
       EVENTOS.ORDER_COMPLETADO,
@@ -147,7 +148,7 @@ describe('PedidosConsumer de logistics (Tabla 22)', () => {
 
   it('debe emitir devolucion.solicitada sin items cuando la consulta a la orden falla', async () => {
     const { dispatch, outbox, envios } = await crear();
-    (envios.consultarOrden as jest.Mock).mockResolvedValue(null);
+    (envios.consultarOrden as Mock).mockResolvedValue(null);
     await dispatch(
       evento(EVENTOS.ORDER_STATUS_UPDATED, {
         order_id: 'o1',

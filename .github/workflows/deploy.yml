@@ -1,0 +1,90 @@
+name: Deploy
+
+# Despliegue manual por entorno (R-CD-9..13).
+#   dev   → build local (base + overlay dev)
+#   stage → consume las imágenes promovidas en GHCR (:stage)
+#   prod  → consume las imágenes promovidas en GHCR (:prod)
+# Tras el `up` se ejecuta el smoke del entorno: `GET /health` del gateway, que
+# comprueba readiness de TODOS los servicios (R-CD-12).
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Entorno a desplegar'
+        required: true
+        default: stage
+        type: choice
+        options:
+          - dev
+          - stage
+          - prod
+
+concurrency:
+  group: deploy-${{ github.event.inputs.environment }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    name: deploy-${{ github.event.inputs.environment }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    environment: ${{ github.event.inputs.environment }}
+    # `packages: read` para tirar de las imágenes privadas publicadas en GHCR (R-CD-3).
+    permissions:
+      contents: read
+      packages: read
+    steps:
+      - name: 📥 Checkout repository
+        uses: actions/checkout@v5
+
+      - name: 🐳 Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: 🔑 Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: 📄 Resolve compose files and gateway port
+        id: cfg
+        run: |
+          case "${{ github.event.inputs.environment }}" in
+            dev)   echo "files=-f docker-compose.dev.yml" >> "$GITHUB_OUTPUT"; echo "port=8080" >> "$GITHUB_OUTPUT"; echo "build=--build" >> "$GITHUB_OUTPUT" ;;
+            stage) echo "files=-f docker-compose.stage.yml" >> "$GITHUB_OUTPUT"; echo "port=8080" >> "$GITHUB_OUTPUT"; echo "build=" >> "$GITHUB_OUTPUT" ;;
+            prod)  echo "files=-f docker-compose.yml"  >> "$GITHUB_OUTPUT"; echo "port=8080" >> "$GITHUB_OUTPUT"; echo "build=" >> "$GITHUB_OUTPUT" ;;
+          esac
+
+      - name: 🚀 Bring the stack up
+        env:
+          FILES: ${{ steps.cfg.outputs.files }}
+          BUILD: ${{ steps.cfg.outputs.build }}
+        run: |
+          # En dev se construye; en stage/prod se consumen las imágenes de GHCR
+          # promovidas por `promote.yml` (R-CD-3), sin `build`.
+          docker compose $FILES up -d $BUILD
+
+      - name: ⏳ Wait for gateway readiness (R-CD-12)
+        run: |
+          for i in $(seq 1 60); do
+            if curl -fsS "http://localhost:${{ steps.cfg.outputs.port }}/health" >/dev/null; then
+              echo "healthy"
+              exit 0
+            fi
+            sleep 5
+          done
+          echo "unhealthy"
+          docker compose ${{ steps.cfg.outputs.files }} logs
+          exit 1
+
+      - name: 📊 Evidence
+        if: always()
+        run: docker compose ${{ steps.cfg.outputs.files }} ps
+
+      - name: 🧹 Teardown
+        if: always()
+        run: docker compose ${{ steps.cfg.outputs.files }} down -v --remove-orphans || true
