@@ -29,6 +29,7 @@
     "@nestjs/swagger": {
       "js-yaml": "^5.4.2"
     },
-    "proxy-addr": "^2.0.8"
+    "proxy-addr": "^2.0.8",
+    "handlebars": "^4.7.10"
   }
 }
