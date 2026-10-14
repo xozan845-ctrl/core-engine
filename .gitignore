@@ -1,6 +1,7 @@
 node_modules/
 dist/
 coverage/
+/reports/
 # Secretos de runtime por entorno: nunca versionar (R-CD-7).
 # Solo se versionan las plantillas `*.example`.
 .env
