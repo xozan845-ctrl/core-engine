@@ -107,7 +107,7 @@ npm run demo
   `*.service.ts`/`*.consumer.ts` con spec — todos preexistentes a los PRs que
   tocan esa capa; la presión la ejerce el ratchet (recuento en
   [`../_meta/AUDIT.md`](../_meta/AUDIT.md)).
-- **R-FL-3 sin cumplir**: ningún setup de Jest fija `TZ`; los specs actuales
+- **R-FL-3 sin cumplir**: ningún setup de Vitest fija `TZ`; los specs actuales
   no usan hora local, pero un spec futuro podría depender de la timezone de la
   máquina sin que nada lo avise.
 

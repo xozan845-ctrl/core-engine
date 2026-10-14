@@ -338,6 +338,37 @@ Este archivo registra decisiones técnicas deliberadas que se apartan del texto 
 
 ---
 
+## ADR-20: Migración del runner de pruebas de Jest a Vitest
+
+- **Fecha**: 2026-10-14
+- **Estado**: Aceptado
+- **Contexto**: las suites corrían con **Jest 30 + ts-jest** en los 10 workspaces.
+  Esa cadena arrastraba deuda de seguridad **dev-only** (20 moderate, ADR-19) y un
+  critical en `handlebars`; `npm audit fix` no los resolvía sin cambios mayores
+  (bajadas de `jest`), y el árbol de dependencias era enorme (~1200 paquetes).
+- **Decisión**: migrar a **Vitest 4** (compatible con Node 20 del CI):
+  - Config **por workspace** en `packages/*/vitest.config.ts` (antes `jest` en
+    `package.json`): specs `*.spec.ts`, entorno node, alias `@core/shared`,
+    cobertura **v8** con `thresholds` por servicio.
+  - API de test `jest.*` → `vi.*`; `jest.Mock` → `Mock` (`vitest`).
+  - **SWC** (`unplugin-swc`) para emitir metadatos de decoradores: esbuild (por
+    defecto en Vite/Vitest) no los emite y la **DI de NestJS** (`Test.createTestingModule`)
+    rompía. Afectaba a 2 specs de `market-intelligence-service`.
+  - `require()` dinámico → `import` estático (Vitest no resuelve `require` en ESM).
+  - Excluir `src/**/*.spec.ts` del `tsconfig` de build en los workspaces que no lo
+    hacían (evita que los specs viajen en `dist/`).
+  - El job `test` de CI pasa a `npm test` (el script raíz ya corre cada workspace
+    con `--coverage`; el `-- --coverage` extra duplicaba el flag y Vitest lo rechaza).
+- **Consecuencias**: `npm audit` baja a **0 vulnerabilidades** (desaparecen las 20
+  moderate y el critical de `handlebars`); el árbol de deps se reduce a ~377
+  paquetes; **385 tests** en verde. Los **umbrales de cobertura se recalibraron**
+  porque el proveedor y el alcance cambian (ahora instrumenta todos los ficheros
+  del alcance, como hacía `collectCoverageFrom`), según R-COV-4 y la tabla de
+  `test/06-estandares-cobertura.md`. Esta decisión **supersede** la parte de
+  devDependencies de ADR-19 (el riesgo aceptado de jest/babel deja de existir).
+
+---
+
 ## Resumen de cumplimiento post-corrección
 
 | Ítem del documento          | Estado  | Nota |
