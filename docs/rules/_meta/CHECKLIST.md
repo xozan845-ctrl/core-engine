@@ -100,7 +100,7 @@ Matriz completa en [`06-estandares-cobertura.md`](../test/06-estandares-cobertur
 - [ ] **R-GA-1/2/3** — Stage armado con rutas explícitas y revisado con `git diff --cached --stat`: solo archivos del cambio.
 - [ ] **R-GA-4/5** — Ni artefactos ni secretos en el stage; sin `git add -f` sobre archivos ignorados.
 - [ ] **R-GC-1/2** — Mensaje Conventional Commits en español e imperativo; sin `wip/fix/update`.
-- [ ] **R-GC-3/4** — Un commit = una unidad temática; cita el ID de regla si aplica (`(R-ES-6)`).
+- [ ] **R-GC-3/4** — Un commit = una unidad temática; cita el ID de regla si aplica (`(R-GC-4)`).
 - [ ] **R-GC-5** — Verificación del ámbito en verde antes del commit (G-7).
 - [ ] **R-GC-7** — Sin `--amend`/rebase de commits ya publicados en `origin`.
 - [ ] **R-GP-1/7** — `git log origin/develop..HEAD` (y `origin/main..HEAD`) leído: solo commits propios y los previstos.

@@ -89,4 +89,4 @@ El área `test/` es el ejemplo canónico al que apuntan las demás.
   se renumeran) y se añadieron `R-CD-9..13` (entornos Dockploy, gate, smoke,
   rollback) + `R-GE-*` en [`git/00-entornos.md`](./git/00-entornos.md); `R-CI-1`
   se enmendó para incluir `staging` en los gatillos (`ci.yml`). La decisión
-  queda registrada en [`../../decisiones.md`](../../decisiones.md) como ADR-12.
+  queda registrada en [`../decisiones.md`](../decisiones.md) como ADR-12.
