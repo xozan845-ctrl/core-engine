@@ -965,3 +965,37 @@ El PR #90 se completó utilizando convenciones atómicas (R-PR-1, R-GC-1..5) gar
 - **Snapshot:** estado consolidado reescrito en [`AUDIT.md`](./AUDIT.md). La
   evidencia del PR y del run post-merge vive en GitHub para evitar el ciclo
   commit → run → commit descrito por R-COV-3.
+
+---
+
+# AUDIT (histórico) — 8ª auditoría de Core Engine (métricas RED y cardinalidad)
+
+- **Fecha:** 2026-10-15
+- **Comandos:** `npm test`, `npm run lint`, `npm run build`,
+  `npm run rules:check`, `npm run test:engine`.
+- **Estado global:** 🟡 CUMPLE PARCIAL — R-TM-2/3/4 pasan a tener checks
+  ejecutables y medición directa del runtime.
+
+## Intervención
+
+1. Métricas HTTP migradas a `core_engine_*`, duración en segundos y labels
+   acotados `servicio/metodo/ruta/estado`; rutas Nest usan sus patrones
+   parametrizados.
+2. Señales RED separadas para peticiones, latencia, 5xx y 401/403/409. Los
+   contadores/gauges de negocio ahora validan namespace, sufijo y valores;
+   los productores de inteligencia se migraron a los nombres canónicos.
+3. Alertas y dashboards migrados; se retiraron las referencias a métricas
+   antiguas y se añadieron alertas específicas de credenciales y conflictos.
+4. `shared` incorpora 8 pruebas de métricas y actualiza la regresión de ruta
+   parametrizada: matriz **416/416 tests, 62 archivos, 11 workspaces**;
+   cobertura 53.48% líneas / 52.50% ramas, sin bajar thresholds.
+5. Reglas ejecutables globales: **25/235 IDs**.
+
+## Evidencia
+
+- **Local:** `npm test` exit 0 (416/62, 11 tablas, 0 `threshold not met`) ·
+  `npm run lint` exit 0 (0/43) · `npm run build` exit 0 · `npm run rules:check`
+  (8 suites, 25/235 IDs) y `npm run test:engine` (3/3) exit 0.
+- **Snapshot:** estado consolidado reescrito en [`AUDIT.md`](./AUDIT.md). La
+  evidencia del PR y del run post-merge vive en GitHub para evitar el ciclo
+  commit → run → commit descrito por R-COV-3.
