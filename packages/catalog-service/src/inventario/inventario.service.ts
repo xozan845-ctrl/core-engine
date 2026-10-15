@@ -5,7 +5,7 @@ export interface LineaInventario {
   sku: string;
   nombre: string;
   stock: number;           // stock_fisico
-  disponible: number;      // stock_fisico - reservado
+  disponible: number;      // catalog.productos.stock, ya neto de reservas
   reservado: number;       // reservas activas
   estado: string;
   precio_base: string;
