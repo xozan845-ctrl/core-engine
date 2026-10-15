@@ -4,8 +4,16 @@ import { spawn } from 'node:child_process';
 import { createServer } from 'node:http';
 import { once } from 'node:events';
 import { fileURLToPath } from 'node:url';
+import { corteLiquidacionesValido } from './smoke-contract.mjs';
 
 const cli = fileURLToPath(new URL('../cli.mjs', import.meta.url));
+
+test('el corte quincenal acepta 201 con lista, como declara OpenAPI', () => {
+  assert.equal(corteLiquidacionesValido({ status: 201, json: [{ monto_cents: 13800 }] }), true);
+  assert.equal(corteLiquidacionesValido({ status: 201, json: [] }), true);
+  assert.equal(corteLiquidacionesValido({ status: 200, json: [] }), false);
+  assert.equal(corteLiquidacionesValido({ status: 201, json: { monto_cents: 13800 } }), false);
+});
 
 function json(res, status, body) {
   res.writeHead(status, { 'content-type': 'application/json' });
