@@ -1,8 +1,12 @@
 version: 2
+# Las actualizaciones apuntan a la rama de integración (R-GE-2): el trabajo
+# nace en `develop` y a `main` solo llega por promoción (`staging → main`).
+# Sin `target-branch`, Dependabot usa la rama por defecto (`main`).
 updates:
   # Acciones de GitHub usadas por los workflows.
   - package-ecosystem: "github-actions"
     directory: "/"
+    target-branch: "develop"
     schedule:
       interval: "weekly"
     commit-message:
@@ -11,6 +15,7 @@ updates:
   # Dependencias del workspace npm (raíz = todos los workspaces).
   - package-ecosystem: "npm"
     directory: "/"
+    target-branch: "develop"
     schedule:
       interval: "weekly"
     open-pull-requests-limit: 10
