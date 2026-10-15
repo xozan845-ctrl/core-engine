@@ -50,7 +50,7 @@ scripts/
 │   │   └── ci-contract.test.mjs    # R-MS-1, R-QA-1, R-COV-2/4, R-CI-5
 │   └── observability/
 │       ├── tracing.test.mjs        # R-OB-1/2
-│       └── telemetry.test.mjs      # R-TM-1/5/6/7
+│       └── telemetry.test.mjs      # R-TM-1..7
 │
 └── tools/                    # operaciones (NO gobernanza)
     ├── smoke.mjs
@@ -138,7 +138,7 @@ Al terminar, el runner imprime cuántos IDs de regla tienen check ejecutable y
 `docs/rules`:
 
 ```
-Cobertura ejecutable: 22/235 IDs de regla tienen check.
+Cobertura ejecutable: 25/235 IDs de regla tienen check.
 ```
 
 > El reporte nació exponiendo un hallazgo real: `R-CI-9` y `R-CD-22` se citaban

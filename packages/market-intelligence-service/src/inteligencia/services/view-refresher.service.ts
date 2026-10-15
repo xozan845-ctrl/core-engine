@@ -2,7 +2,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import { Cron, CronExpression } from '@nestjs/schedule';
 import { PgService, MetricsService } from '@core/shared';
 
-const GAUGE_REFRESH_MS = 'intelligence_view_refresh_duration_ms';
+const GAUGE_REFRESH_SECONDS = 'core_engine_intelligence_view_refresh_duration_seconds';
 
 @Injectable()
 export class ViewRefresherService {
@@ -27,7 +27,7 @@ export class ViewRefresherService {
       await this.pg.query('REFRESH MATERIALIZED VIEW CONCURRENTLY intelligence.mv_tendencias');
 
       const ms = Date.now() - start;
-      this.metrics.registrarGauge(GAUGE_REFRESH_MS, ms);
+      this.metrics.registrarGauge(GAUGE_REFRESH_SECONDS, ms / 1000);
       this.logger.debug(`Refresco concurrente completado en ${ms}ms`);
     } catch (error: any) {
       this.logger.error(`Error refrescando vistas materializadas: ${error.message}`, error.stack);
