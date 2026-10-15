@@ -87,9 +87,11 @@ gh workflow run promote.yml -f environment=stage -f source=v1.0.0
 gh workflow run promote.yml -f environment=prod -f source=v1.0.0
 ```
 
-`promote.yml` resuelve el digest del tag de origen, hace `docker pull image@sha256:…`,
-reetiqueta a `:stage`/`:prod` y publica. El **digest se conserva** (`R-CD-3`).
-Promover **no** despliega.
+`promote.yml` resuelve el digest del índice publicado por `release.yml`
+(`docker buildx imagetools inspect`) y lo **copia** con `buildx imagetools create`
+a `:stage`/`:prod`, verificando que el digest destino es **idéntico** al de
+origen (si no, el run falla). Promover **no** reconstruye ni reempaqueta el
+artefacto, y **no** despliega.
 
 ---
 
