@@ -57,9 +57,13 @@ export class TrazabilidadInterceptor implements NestInterceptor {
           error: () => undefined,
           finalize: () => {
             res.on('finish', () => {
+              const patronRuta = req.route?.path;
+              const rutaMetrica = typeof patronRuta === 'string'
+                ? `${req.baseUrl ?? ''}${patronRuta}`
+                : '/_unmatched';
               this.metrics.registrarPeticion(
                 req.method ?? 'GET',
-                req.originalUrl ?? req.url ?? '/',
+                rutaMetrica,
                 res.statusCode ?? 500,
                 Date.now() - inicio,
               );

@@ -20,7 +20,7 @@
                        "datasource":  "Prometheus",
                        "targets":  [
                                        {
-                                           "expr":  "sum by (servicio) (rate(http_peticiones_total[5m]))",
+                                           "expr":  "sum by (servicio) (rate(core_engine_http_requests_total[5m]))",
                                            "legendFormat":  "{{servicio}}",
                                            "refId":  "A"
                                        }
@@ -36,7 +36,7 @@
                    },
                    {
                        "type":  "timeseries",
-                       "title":  "Latencia p99 por servicio (ms)",
+                       "title":  "Latencia p99 por servicio (s)",
                        "gridPos":  {
                                        "x":  12,
                                        "y":  0,
@@ -46,14 +46,14 @@
                        "datasource":  "Prometheus",
                        "targets":  [
                                        {
-                                           "expr":  "histogram_quantile(0.99, sum by (servicio, le) (rate(http_peticion_latencia_ms_bucket[5m])))",
+                                           "expr":  "histogram_quantile(0.99, sum by (servicio, le) (rate(core_engine_http_request_duration_seconds_bucket[5m])))",
                                            "legendFormat":  "{{servicio}}",
                                            "refId":  "A"
                                        }
                                    ],
                        "fieldConfig":  {
                                            "defaults":  {
-                                                            "unit":  "ms",
+                                                            "unit":  "s",
                                                             "custom":  {
                                                                            "lineWidth":  2
                                                                        },
@@ -65,11 +65,11 @@
                                                                                                  "color":  "green"
                                                                                              },
                                                                                              {
-                                                                                                 "value":  400,
+                                                                                                 "value":  0.4,
                                                                                                  "color":  "orange"
                                                                                              },
                                                                                              {
-                                                                                                 "value":  800,
+                                                                                                 "value":  0.8,
                                                                                                  "color":  "red"
                                                                                              }
                                                                                          ]
@@ -89,7 +89,7 @@
                        "datasource":  "Prometheus",
                        "targets":  [
                                        {
-                                           "expr":  "sum by (servicio) (rate(http_peticiones_total{status=~\"5..\"}[5m]))",
+                                           "expr":  "sum by (servicio) (rate(core_engine_http_server_errors_total[5m]))",
                                            "legendFormat":  "{{servicio}}",
                                            "refId":  "A"
                                        }
@@ -112,7 +112,7 @@
                        "datasource":  "Prometheus",
                        "targets":  [
                                        {
-                                           "expr":  "sum(rate(http_peticiones_total[5m]))",
+                                           "expr":  "sum(rate(core_engine_http_requests_total[5m]))",
                                            "refId":  "A"
                                        }
                                    ],
@@ -134,7 +134,7 @@
                        "datasource":  "Prometheus",
                        "targets":  [
                                        {
-                                           "expr":  "sum(rate(http_peticiones_total{status=~\"5..\"}[5m])) / sum(rate(http_peticiones_total[5m])) * 100",
+                                           "expr":  "sum(rate(core_engine_http_server_errors_total[5m])) / clamp_min(sum(rate(core_engine_http_requests_total[5m])), 1e-9) * 100",
                                            "refId":  "A"
                                        }
                                    ],
