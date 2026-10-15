@@ -79,8 +79,11 @@ gh workflow run deploy.yml  -f environment=prod
 | Entorno | Compose | Imagen | Variables |
 |---|---|---|---|
 | dev | `docker-compose.dev.yml` | build local | `.env.example` → `.env` |
-| stage | `docker-compose.stage.yml` | `:stage` (GHCR) | `.env.stage.example` → `.env.stage` |
-| prod | `docker-compose.yml` | `:prod` (GHCR) | `.env.production.example` → `.env.production` |
+| stage | `docker-compose.stage.yml` | `:stage` (GHCR) | plantilla `.env.stage.example` (en Dockploy: pestaña *Environment* → `.env`) |
+| prod | `docker-compose.yml` | `:prod` (GHCR) | plantilla `.env.production.example` (en Dockploy: pestaña *Environment* → `.env`) |
 
+> Los composes de stage/producción leen el archivo que indique `ENV_FILE` y, por
+> defecto, `.env` — el que escribe Dockploy desde la pestaña *Environment*. En
+> local se les pasa el suyo: `ENV_FILE=.env.stage` / `ENV_FILE=.env.production`.
 > `.env`, `.env.stage` y `.env.production` están en `.gitignore`: nunca se versionan
 > (`R-CD-7`). Solo las plantillas `*.example`.

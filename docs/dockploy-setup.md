@@ -14,8 +14,10 @@
 > (`R-CD-1..4`), `promote.yml` la mueve a `:stage`/`:prod` **por digest** (`R-CD-3`)
 > y el entorno arranca con **`docker-compose.stage.yml`** (stage) / **`docker-compose.yml`**
 > (producción), que consumen esas imágenes. Pasos nuevos: `docker login ghcr.io` en el host (o
-> una credencial de registry en Dockploy) y `.env.stage` / `.env.production`
-> (plantillas `.env.stage.example` / `.env.production.example`). Runbook:
+> una credencial de registry en Dockploy) y las variables del entorno en la
+> pestaña *Environment* (plantillas `.env.stage.example` /
+> `.env.production.example`): Dockploy las escribe a `.env`, el archivo que el
+> compose consume por defecto (R-CD-7). Runbook:
 > [`runbook-entrega.md`](./runbook-entrega.md).
 
 ## 0. Objetivo (modelo A: 2 entornos + local)
@@ -44,7 +46,8 @@ ramas es la barrera.
 - Tener a mano `.env.stage.example` / `.env.production.example` → variables por
   entorno (`DATABASE_URL`, `RABBITMQ_URL`, `JWT_SECRET`, `INTERNAL_API_KEY`,
   `ADMIN_EMAIL/ADMIN_PASSWORD`, `COMMISSION_RATE`, `OUTBOX_TABLA`, `*_SERVICE_URL`,
-  `CORS_ORIGINS`, `LOG_LEVEL`).
+  `CORS_ORIGINS`, `LOG_LEVEL`). En Dockploy van a la pestaña *Environment* del
+  environment; el compose las lee del `.env` que Dockploy escribe.
 
 ## 2. Un solo proyecto con dos environments (Dockploy multi-tenancy)
 
@@ -171,6 +174,11 @@ Con los dos environments operativos y la tabla §4 completa:
   `ADMIN_EMAIL`, `ADMIN_PASSWORD`, `CORS_ORIGINS`). Valor fuerte y **único por
   entorno** (R-CD-7). No hay default a propósito: mejor fallar al inicio que
   arrancar con una contraseña débil.
+- **`env file ./.env.stage not found`** — el compose exigía un archivo que
+  Dockploy **no** escribe: su pestaña *Environment* va a `.env`, y además
+  Dockploy **re-clona** el repo en cada deploy, así que un archivo creado a mano
+  en el VPS se pierde. Los composes de stage/producción leen `ENV_FILE`, con
+  `.env` por defecto (R-CD-7): en el VPS no dependas de `.env.stage`/`.env.production`.
 - **El proyecto/app no se llama `core-engine`** (p. ej.
   `kb-coleccion-backend-corporativo-pegot2`): renómbralo/recrea el proyecto
   (R-CD-9). Compose nombra los contenedores como `<proyecto>-<servicio>-1`, así
