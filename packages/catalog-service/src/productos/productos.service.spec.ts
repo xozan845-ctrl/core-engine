@@ -172,6 +172,7 @@ describe('ProductosService (catalogo maestro y stock)', () => {
       const sqls = (client.query as Mock).mock.calls.map((c: any[]) => c[0] as string);
       expect(sqls.filter((s: string) => s.includes('SET stock = stock +')).length).toBe(2);
       expect(sqls.some((s: string) => s.includes('INSERT INTO catalog.ajustes_stock'))).toBe(true);
+      expect(sqls.some((s: string) => s.includes('DELETE FROM catalog.reservas_ordenes'))).toBe(true);
     });
   });
 

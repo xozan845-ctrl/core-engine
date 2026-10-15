@@ -17,6 +17,7 @@
     "rules:check": "node scripts/cli.mjs rules",
     "test:engine": "node --test scripts/engine/lib/*.test.mjs scripts/engine/*.test.mjs",
     "test:smoke": "node --test scripts/tools/*.test.mjs",
+    "test:integration": "node --test scripts/integration/*.test.mjs",
     "swagger:export": "npm run build && npm run swagger:export --workspaces --if-present && node scripts/cli.mjs swagger && npm run build -w @core/api-gateway"
   },
   "engines": {
@@ -27,6 +28,7 @@
     "@swc/core": "^1.16.18",
     "@vitest/coverage-v8": "^4.1.11",
     "eslint": "^10.11.0",
+    "pg": "^8.13.1",
     "typescript-eslint": "^8.71.0",
     "unplugin-swc": "^2.0.0",
     "vitest": "^4.1.11"
