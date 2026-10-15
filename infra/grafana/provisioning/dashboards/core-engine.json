@@ -7,18 +7,18 @@
   "panels": [
     {
       "id": 1,
-      "title": "Latencia p99 por servicio (ms)",
+      "title": "Latencia p99 por servicio (s)",
       "type": "timeseries",
       "datasource": { "type": "prometheus", "uid": "prometheus" },
       "fieldConfig": {
         "defaults": {
-          "unit": "ms",
+          "unit": "s",
           "thresholds": {
             "mode": "absolute",
             "steps": [
               { "color": "green", "value": null },
-              { "color": "yellow", "value": 300 },
-              { "color": "red", "value": 400 }
+              { "color": "yellow", "value": 0.3 },
+              { "color": "red", "value": 0.4 }
             ]
           }
         }
@@ -26,7 +26,7 @@
       "gridPos": { "h": 8, "w": 12, "x": 0, "y": 0 },
       "targets": [
         {
-          "expr": "histogram_quantile(0.99, sum by (le, servicio) (rate(http_peticion_latencia_ms_bucket[5m])))",
+          "expr": "histogram_quantile(0.99, sum by (le, servicio) (rate(core_engine_http_request_duration_seconds_bucket[5m])))",
           "legendFormat": "{{servicio}}"
         }
       ]
@@ -39,7 +39,7 @@
       "gridPos": { "h": 8, "w": 12, "x": 12, "y": 0 },
       "targets": [
         {
-          "expr": "sum by (servicio) (rate(http_peticiones_total[5m]))",
+          "expr": "sum by (servicio) (rate(core_engine_http_requests_total[5m]))",
           "legendFormat": "{{servicio}}"
         }
       ]
@@ -65,7 +65,7 @@
       "gridPos": { "h": 8, "w": 12, "x": 0, "y": 8 },
       "targets": [
         {
-          "expr": "sum by (servicio) (rate(http_peticiones_total{status=~\"5..\"}[5m])) / clamp_min(sum by (servicio) (rate(http_peticiones_total[5m])), 1)",
+          "expr": "sum by (servicio) (rate(core_engine_http_server_errors_total[5m])) / clamp_min(sum by (servicio) (rate(core_engine_http_requests_total[5m])), 1e-9)",
           "legendFormat": "{{servicio}}"
         }
       ]
