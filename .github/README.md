@@ -15,7 +15,7 @@ despliegan Core Engine. El despliegue de los entornos sigue el contrato de
 │   ├── promote.yml   # Promueve imágenes publicadas a stage/prod POR DIGEST, sin reconstruir
 │   └── deploy.yml    # Despliegue manual por entorno + smoke del gateway
 ├── CODEOWNERS        # Revisión de caminos sensibles (R-CI-10)
-└── dependabot.yml    # Actualización semanal de actions y dependencias npm
+└── dependabot.yml    # Actualización semanal (actions y npm) agrupada por familia
 ```
 
 ## Imágenes: una por servicio (R-CD-3, R-CD-4)
