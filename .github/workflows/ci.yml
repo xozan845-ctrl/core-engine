@@ -28,6 +28,8 @@ jobs:
           node-version: "20"
       - name: Test governance engine against false greens
         run: npm run test:engine
+      - name: Test smoke runner against false greens and network stalls
+        run: npm run test:smoke
       - name: Validate project rules (R-CI-7, R-GC-1..4)
         run: node scripts/check-rules.mjs
 
