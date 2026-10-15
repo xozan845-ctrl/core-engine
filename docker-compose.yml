@@ -1,9 +1,12 @@
 # Core Engine · PRODUCCIÓN (imágenes de GHCR)
 # Consume las imágenes publicadas por release.yml y promovidas por promote.yml
-# (`:prod`), SIN reconstruir (R-CD-3). Requiere `docker login ghcr.io`.
+# (`:prod`), SIN reconstruir (R-CD-3).
 #
-# Variables: copiar `.env.production.example` → `.env.production` (sin commitear, R-CD-7).
-# Arranque:  docker compose up -d
+# Variables (R-CD-7): el compose lee el archivo que indique `ENV_FILE` y, por
+# defecto, `.env` — el mismo que escribe Dockploy desde la pestaña *Environment*,
+# de modo que el despliegue no depende de un archivo que el VPS no tiene.
+# En local: copiar `.env.production.example` → `.env.production` y
+#   ENV_FILE=.env.production docker compose -f docker-compose.yml up -d
 #
 # Solo se publica el gateway (8080); Postgres y RabbitMQ quedan internos a la red
 # `core-engine`. La observabilidad es opcional:
@@ -17,7 +20,7 @@
 
 x-servicio-base: &servicio-base
   env_file:
-    - .env.production
+    - ${ENV_FILE:-.env}
   depends_on:
     postgres:
       condition: service_healthy
