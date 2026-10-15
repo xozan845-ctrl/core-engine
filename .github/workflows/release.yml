@@ -154,7 +154,7 @@ jobs:
 
       - name: 🏗️ Build and push the image (R-CD-3, R-CD-4)
         id: build
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v7
         with:
           context: .
           file: packages/${{ matrix.service }}/Dockerfile
