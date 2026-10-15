@@ -184,9 +184,12 @@ export default defineSuite({
       assert.deepEqual(problems, [], problems.join('\n'));
     });
 
-    test('R-CI-5: el workflow delega test y build en los comandos raíz', () => {
+    test('R-CI-5: el workflow delega test, smoke y build en los comandos raíz', () => {
       const workflow = readText(join(repoRoot, WORKFLOWS_DIR, 'ci.yml'));
       assert.match(workflow, /^\s*run: npm test$/m, 'CI debe ejecutar npm test');
+      assert.equal(rootPackage.scripts?.['test:smoke'], 'node --test scripts/tools/*.test.mjs');
+      assert.ok(existsSync(join(repoRoot, 'scripts', 'tools', 'smoke.test.mjs')));
+      assert.match(workflow, /^\s*run: npm run test:smoke$/m, 'CI debe probar el smoke');
       assert.match(workflow, /^\s*run: npm run build$/m, 'CI debe ejecutar npm run build');
     });
   },
