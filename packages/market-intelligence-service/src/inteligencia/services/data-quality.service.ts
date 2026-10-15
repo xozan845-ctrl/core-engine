@@ -12,10 +12,10 @@ export interface ValidationResult {
 
 // Nombres de métricas Prometheus (centralizados para evitar typos)
 const METRIC = {
-  EVENTOS_INVALIDOS: 'intelligence_invalid_events_total',
-  COMPLETENESS_HIGH: 'intelligence_data_quality_high_total',
-  COMPLETENESS_MED: 'intelligence_data_quality_medium_total',
-  COMPLETENESS_LOW: 'intelligence_data_quality_low_total',
+  EVENTOS_INVALIDOS: 'core_engine_intelligence_invalid_events_total',
+  COMPLETENESS_HIGH: 'core_engine_intelligence_data_quality_high_total',
+  COMPLETENESS_MED: 'core_engine_intelligence_data_quality_medium_total',
+  COMPLETENESS_LOW: 'core_engine_intelligence_data_quality_low_total',
 } as const;
 
 @Injectable()
