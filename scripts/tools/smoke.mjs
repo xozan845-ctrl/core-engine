@@ -10,6 +10,17 @@
 const BASE = process.env.BASE_URL ?? 'http://localhost:8080';
 const ADMIN_EMAIL = process.env.ADMIN_EMAIL ?? 'admin@core-engine.test';
 const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD ?? 'AdminCore Engine2026!';
+const REQUEST_TIMEOUT_MS = Number(process.env.SMOKE_REQUEST_TIMEOUT_MS ?? 10_000);
+const WAIT_TIMEOUT_MS = Number(process.env.SMOKE_WAIT_TIMEOUT_MS ?? 30_000);
+
+for (const [nombre, valor] of [
+  ['SMOKE_REQUEST_TIMEOUT_MS', REQUEST_TIMEOUT_MS],
+  ['SMOKE_WAIT_TIMEOUT_MS', WAIT_TIMEOUT_MS],
+]) {
+  if (!Number.isInteger(valor) || valor < 1) {
+    throw new Error(`${nombre} debe ser un entero positivo`);
+  }
+}
 
 let pasos = 0;
 let fallidas = 0;
@@ -29,32 +40,47 @@ function fail(detalle = '') {
 }
 
 async function api(metodo, ruta, cuerpo, token) {
-  const res = await fetch(`${BASE}${ruta}`, {
-    method: metodo,
-    headers: {
-      'content-type': 'application/json',
-      ...(token ? { authorization: `Bearer ${token}` } : {}),
-    },
-    body: cuerpo ? JSON.stringify(cuerpo) : undefined,
-  });
-  const texto = await res.text();
-  let json;
-  try {
-    json = texto ? JSON.parse(texto) : null;
-  } catch {
-    json = texto;
+  const intentos = metodo === 'GET' ? 2 : 1;
+  for (let intento = 0; intento < intentos; intento += 1) {
+    try {
+      const res = await fetch(`${BASE}${ruta}`, {
+        method: metodo,
+        headers: {
+          'content-type': 'application/json',
+          ...(token ? { authorization: `Bearer ${token}` } : {}),
+        },
+        body: cuerpo ? JSON.stringify(cuerpo) : undefined,
+        signal: globalThis.AbortSignal.timeout(REQUEST_TIMEOUT_MS),
+      });
+      const texto = await res.text();
+      let json;
+      try {
+        json = texto ? JSON.parse(texto) : null;
+      } catch {
+        json = texto;
+      }
+      return { status: res.status, json };
+    } catch (error) {
+      if (intento === intentos - 1) {
+        throw new Error(`${metodo} ${ruta}: sin respuesta tras ${intentos} intento(s) de ${REQUEST_TIMEOUT_MS} ms`, { cause: error });
+      }
+    }
   }
-  return { status: res.status, json };
 }
 
 async function esperar(fn, descripcion, intentos = 20, intervaloMs = 800) {
   let ultimo = null;
+  const deadline = Date.now() + WAIT_TIMEOUT_MS;
   for (let i = 0; i < intentos; i += 1) {
+    if (Date.now() >= deadline) break;
     ultimo = await fn();
     if (ultimo) return ultimo;
-    await new Promise((r) => setTimeout(r, intervaloMs));
+    const restante = deadline - Date.now();
+    if (restante > 0) {
+      await new Promise((r) => setTimeout(r, Math.min(intervaloMs, restante)));
+    }
   }
-  throw new Error(`Expiró la espera: ${descripcion} (último: ${JSON.stringify(ultimo)})`);
+  throw new Error(`Expiró la espera de ${WAIT_TIMEOUT_MS} ms: ${descripcion} (último: ${JSON.stringify(ultimo)})`);
 }
 
 function sufijo() {
@@ -104,9 +130,15 @@ async function main() {
       rol: 'comprador',
     }),
   ]);
-  if (regV.status === 201 || regV.status === 200) ok();
-  if (regC.status === 201 || regC.status === 200) ok();
-  else fail(`registro comprador → ${regC.status}`);
+  if (![200, 201].includes(regV.status) || !regV.json?.access_token) {
+    fail(`registro vendedor → ${regV.status} ${JSON.stringify(regV.json)}`);
+    process.exit(1);
+  }
+  if (![200, 201].includes(regC.status) || !regC.json?.access_token) {
+    fail(`registro comprador → ${regC.status} ${JSON.stringify(regC.json)}`);
+    process.exit(1);
+  }
+  ok('ambos usuarios registrados');
   const tokenVendedor = regV.json.access_token;
   const tokenComprador = regC.json.access_token;
 
@@ -226,12 +258,20 @@ async function main() {
     { sku: `LEC-${suf.toUpperCase()}`, nombre: 'Leche 1L', precio_base: '50.00', stock: 1 },
     tokenAdmin,
   );
+  if (![200, 201].includes(prodUno.status) || !prodUno.json?.id) {
+    fail(`producto con stock 1 → ${prodUno.status} ${JSON.stringify(prodUno.json)}`);
+    process.exit(1);
+  }
   const ofertaUno = await api(
     'POST',
     '/api/v1/vendedores/productos',
     { producto_id: prodUno.json.id, margen: 10 },
     tokenVendedor,
   );
+  if (![200, 201].includes(ofertaUno.status) || !ofertaUno.json?.id) {
+    fail(`oferta con stock 1 → ${ofertaUno.status} ${JSON.stringify(ofertaUno.json)}`);
+    process.exit(1);
+  }
   const rechazo = await api(
     'POST',
     '/api/v1/orders',
@@ -275,6 +315,10 @@ async function main() {
     { items: [{ oferta_id: oferta.json.id, cantidad: 2 }] },
     tokenComprador,
   );
+  if (![200, 201].includes(orden2.status) || !orden2.json?.id) {
+    fail(`segunda orden → ${orden2.status} ${JSON.stringify(orden2.json)}`);
+    process.exit(1);
+  }
   const orderId2 = orden2.json.id;
   await esperar(
     async () => {
@@ -284,7 +328,11 @@ async function main() {
     'orden2 pagada',
   );
   for (const estado of ['en_preparacion', 'enviada', 'entregada']) {
-    await api('PATCH', `/api/v1/orders/${orderId2}/estado`, { estado }, tokenAdmin);
+    const avance = await api('PATCH', `/api/v1/orders/${orderId2}/estado`, { estado }, tokenAdmin);
+    if (avance.status !== 200 || avance.json?.estado !== estado) {
+      fail(`segunda orden, avance ${estado} → ${avance.status} ${JSON.stringify(avance.json)}`);
+      process.exit(1);
+    }
   }
   await esperar(
     async () => {

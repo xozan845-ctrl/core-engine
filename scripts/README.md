@@ -53,7 +53,8 @@ scripts/
 │       └── telemetry.test.mjs      # R-TM-1..7
 │
 └── tools/                    # operaciones (NO gobernanza)
-    ├── smoke.mjs
+    ├── smoke.mjs              # flujo API completo contra stack levantado
+    ├── smoke.test.mjs         # regresiones del runner con HTTP efímero
     └── swagger-aggregate.mjs
 ```
 
@@ -162,6 +163,14 @@ Los `npm scripts` de la raíz son **envoltorios** (sin ruptura para CI ni local)
 | `demo` | `node scripts/cli.mjs smoke` |
 | `swagger:export` | `node scripts/cli.mjs swagger` |
 | `test:engine` | autotests del motor, incluida una suite centinela que prueba el exit code ante assertions fallidas |
+| `test:smoke` | cinco regresiones del runner: registro, timeout de red, retry seguro y espera asíncrona; ejecutadas en CI |
+
+`npm run demo` sigue ejercitando el stack completo levantado. El runner usa
+`SMOKE_REQUEST_TIMEOUT_MS` (10 000 ms) por petición y `SMOKE_WAIT_TIMEOUT_MS`
+(30 000 ms) por espera asíncrona. Reintenta una sola vez las peticiones GET
+si falla la red; las mutaciones no se repiten sin clave de idempotencia.
+`test:smoke` prueba ese contrato con un servidor HTTP efímero y no sustituye
+el gate E2E pendiente (G-6).
 
 ## Cómo añadir una regla ejecutable
 
