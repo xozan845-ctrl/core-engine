@@ -43,7 +43,7 @@ function workspacesInScript(script, task) {
 export default defineSuite({
   id: 'microservices-ci-contract',
   area: 'test',
-  rules: ['R-MS-1', 'R-QA-1', 'R-COV-2', 'R-COV-4', 'R-CI-5'],
+  rules: ['R-MS-1', 'R-QA-1', 'R-COV-2', 'R-COV-4', 'R-CI-5', 'R-I-12'],
   mode: 'repo',
   run: ({ test, assert }) => {
     test('R-MS-1: el inventario declara exactamente los servicios desplegables', () => {
@@ -191,6 +191,17 @@ export default defineSuite({
       assert.ok(existsSync(join(repoRoot, 'scripts', 'tools', 'smoke.test.mjs')));
       assert.match(workflow, /^\s*run: npm run test:smoke$/m, 'CI debe probar el smoke');
       assert.match(workflow, /^\s*run: npm run build$/m, 'CI debe ejecutar npm run build');
+    });
+
+    test('R-I-12: la integración de catálogo usa PostgreSQL efímero en CI', () => {
+      const workflow = readText(join(repoRoot, WORKFLOWS_DIR, 'ci.yml'));
+      assert.equal(rootPackage.scripts?.['test:integration'], 'node --test scripts/integration/*.test.mjs');
+      assert.ok(existsSync(join(repoRoot, 'scripts', 'integration', 'catalog-stock.test.mjs')));
+      assert.match(workflow, /^  integration-catalog:$/m);
+      assert.match(workflow, /^        image: postgres:16-alpine$/m);
+      assert.match(workflow, /^      TEST_DATABASE_URL: postgres:\/\/core_engine_test:test_only@127\.0\.0\.1:5432\/core_engine_test$/m);
+      assert.match(workflow, /^        run: npm run test:integration$/m);
+      assert.match(workflow, /^    needs: \[test, lint, integration-catalog\]$/m);
     });
   },
 });
