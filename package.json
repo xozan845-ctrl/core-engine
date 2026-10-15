@@ -16,6 +16,7 @@
     "lint": "eslint .",
     "rules:check": "node scripts/cli.mjs rules",
     "test:engine": "node --test scripts/engine/lib/*.test.mjs scripts/engine/*.test.mjs",
+    "test:smoke": "node --test scripts/tools/*.test.mjs",
     "swagger:export": "npm run build && npm run swagger:export --workspaces --if-present && node scripts/cli.mjs swagger && npm run build -w @core/api-gateway"
   },
   "engines": {
