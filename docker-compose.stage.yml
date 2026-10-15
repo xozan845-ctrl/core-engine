@@ -1,9 +1,12 @@
 # Core Engine · STAGE (imágenes de GHCR)
 # Consume las imágenes publicadas por release.yml y promovidas por promote.yml
-# (`:stage`), SIN reconstruir (R-CD-3). Requiere `docker login ghcr.io`.
+# (`:stage`), SIN reconstruir (R-CD-3).
 #
-# Variables: copiar `.env.stage.example` → `.env.stage` (sin commitear, R-CD-7).
-# Arranque:  docker compose -f docker-compose.stage.yml up -d
+# Variables (R-CD-7): el compose lee el archivo que indique `ENV_FILE` y, por
+# defecto, `.env` — el mismo que escribe Dockploy desde la pestaña *Environment*,
+# de modo que el despliegue no depende de un archivo que el VPS no tiene.
+# En local: copiar `.env.stage.example` → `.env.stage` y
+#   ENV_FILE=.env.stage docker compose -f docker-compose.stage.yml up -d
 #
 # Solo se publica el gateway (8080); Postgres y RabbitMQ quedan internos a la red
 # `core-engine`. La observabilidad es opcional:
@@ -13,7 +16,7 @@
 
 x-servicio-base: &servicio-base
   env_file:
-    - .env.stage
+    - ${ENV_FILE:-.env}
   depends_on:
     postgres:
       condition: service_healthy
