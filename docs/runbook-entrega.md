@@ -138,7 +138,7 @@ gh workflow run promote.yml -f environment=prod -f source=v0.9.0
 |---|---|---|
 | `release.yml` falla en `gate` | tag inválido, commit fuera de `main`, o sin `ci.yml` verde en el SHA | job `gate` |
 | `promote.yml` no publica | `dry_run: true` (por defecto), falta `packages: write`, o el Environment exige revisores | job `promote` |
-| `deploy.yml` agota el *health* | compose sin `.env.<entorno>`, GHCR sin login, o la etiqueta `:<env>` no existe aún | logs + `docker compose ps` |
+| `deploy.yml` agota el *health* | compose sin `.env` (variables del environment sin definir), GHCR sin credencial, o la etiqueta `:<env>` no existe aún | logs + `docker compose ps` |
 | El gateway arranca pero `/health` no | algún servicio no llegó a `ready` (dependencia caída) | `docker compose logs <servicio>` |
 
 ---
