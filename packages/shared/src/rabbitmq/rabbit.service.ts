@@ -49,7 +49,13 @@ export class RabbitService implements OnModuleInit, OnModuleDestroy {
     if (!this.url) {
       throw new Error('RABBITMQ_URL no esta definida.');
     }
-    this.conexion = await amqp.connect(this.url, { heartbeat: 30 });
+    // amqplib 2 lee el heartbeat de la query de la URL (Options.Connect), no de
+    // las opciones de socket: se declara aca para conservar la negociacion de
+    // 30s sin pisar un valor explicito de RABBITMQ_URL.
+    const url = /[?&]heartbeat=/.test(this.url)
+      ? this.url
+      : `${this.url}${this.url.includes('?') ? '&' : '?'}heartbeat=30`;
+    this.conexion = await amqp.connect(url);
     this.conexion.on('close', () => {
       this.logger.warn({ msg: 'Conexion al broker cerrada; reintentando en 5s' });
       void this.conectar().catch((e) => this.logger.error({ msg: 'reconexion', err: e.message }));
