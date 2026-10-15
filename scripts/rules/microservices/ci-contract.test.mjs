@@ -197,11 +197,11 @@ export default defineSuite({
       const workflow = readText(join(repoRoot, WORKFLOWS_DIR, 'ci.yml'));
       assert.equal(rootPackage.scripts?.['test:integration'], 'node --test scripts/integration/*.test.mjs');
       assert.ok(existsSync(join(repoRoot, 'scripts', 'integration', 'catalog-stock.test.mjs')));
-      assert.match(workflow, /^  integration-catalog:$/m);
-      assert.match(workflow, /^        image: postgres:16-alpine$/m);
-      assert.match(workflow, /^      TEST_DATABASE_URL: postgres:\/\/core_engine_test:test_only@127\.0\.0\.1:5432\/core_engine_test$/m);
-      assert.match(workflow, /^        run: npm run test:integration$/m);
-      assert.match(workflow, /^    needs: \[test, lint, integration-catalog\]$/m);
+      assert.match(workflow, /^ {2}integration-catalog:$/m);
+      assert.match(workflow, /^ {8}image: postgres:16-alpine$/m);
+      assert.match(workflow, /^ {6}TEST_DATABASE_URL: postgres:\/\/core_engine_test:test_only@127\.0\.0\.1:5432\/core_engine_test$/m);
+      assert.match(workflow, /^ {8}run: npm run test:integration$/m);
+      assert.match(workflow, /^ {4}needs: \[test, lint, integration-catalog\]$/m);
     });
   },
 });
