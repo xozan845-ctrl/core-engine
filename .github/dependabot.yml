@@ -11,6 +11,12 @@ updates:
       interval: "weekly"
     commit-message:
       prefix: "ci(deps)"
+    # Todas las acciones en un solo PR: se verifican por la misma vía (CI) y
+    # llegan sueltas una por semana.
+    groups:
+      actions:
+        patterns:
+          - "*"
 
   # Dependencias del workspace npm (raíz = todos los workspaces).
   - package-ecosystem: "npm"
@@ -21,3 +27,28 @@ updates:
     open-pull-requests-limit: 10
     commit-message:
       prefix: "build(deps)"
+    # Agrupación por familia: estas dependencias DEBEN moverse en bloque. Por
+    # separado ni resuelven (`ERESOLVE`) ni compilan (tipos duplicados), que es
+    # el origen de los PR rojos que hubo que reagrupar a mano (vitest 5,
+    # amqplib 2, NestJS 12). Los grupos incluyen majors por defecto.
+    groups:
+      nestjs:
+        # `@nestjs/*` se mueve junto: un salto parcial deja dos copias de
+        # `@nestjs/common` (una en la raíz y otra en el workspace) y el
+        # typecheck falla con dos `INestApplication` incompatibles.
+        patterns:
+          - "@nestjs/*"
+      vitest:
+        # `@vitest/coverage-v8` fija la major de `vitest` como peer.
+        patterns:
+          - "vitest"
+          - "@vitest/*"
+      amqplib:
+        patterns:
+          - "amqplib"
+          - "@types/amqplib"
+      # Tipos en un solo PR (revisión trivial: solo typecheck). Si un major
+      # rompe el grupo, se puede sacar del grupo y subir a mano.
+      types:
+        patterns:
+          - "@types/*"
