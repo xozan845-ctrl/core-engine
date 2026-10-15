@@ -11,7 +11,7 @@
   "dependencies": {
     "@nestjs/common": "^11.0.0",
     "@nestjs/core": "^11.0.0",
-    "amqplib": "^0.10.5",
+    "amqplib": "^2.2.0",
     "class-validator": "^0.14.1",
     "jsonwebtoken": "^9.0.2",
     "pg": "^8.13.1",
