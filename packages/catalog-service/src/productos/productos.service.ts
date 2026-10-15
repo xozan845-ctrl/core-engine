@@ -332,6 +332,11 @@ export class ProductosService {
          WHERE p.sku = i.sku`,
         [orderId, JSON.stringify(items)],
       );
+      // La reserva de esta orden ya no está activa tras reintegrar el stock.
+      await client.query(
+        `DELETE FROM catalog.reservas_ordenes WHERE order_id = $1`,
+        [orderId],
+      );
     });
   }
 
