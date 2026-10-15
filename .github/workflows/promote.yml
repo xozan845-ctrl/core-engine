@@ -2,8 +2,13 @@ name: Promote
 
 # Promoción de las imágenes **ya publicadas** de un tag entre entornos, sin
 # reconstruir (R-CD-3, R-CD-6). Se promueve **por digest** (@sha256:): se
-# resuelve el digest del tag de origen y se reetiqueta a `:stage`/`:prod`,
-# conservándolo. `environment` habilita el gate/revisores por entorno (R-CD-6).
+# resuelve el digest del índice publicado por `release.yml` y se **copia** con
+# `buildx imagetools create`, que preserva el manifiesto (plataformas y
+# atestaciones incluidas). Un `docker pull`+`tag`+`push` NO sirve: el image
+# store clásico degrada el índice a un manifiesto de una sola plataforma y el
+# digest cambia. Tras cada copia se **verifica** que el digest destino es
+# idéntico al de origen; si no, el run falla. `environment` habilita el
+# gate/revisores por entorno (R-CD-6).
 on:
   workflow_dispatch:
     inputs:
@@ -47,7 +52,10 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: 🚚 Promote images by digest (pull + retag + push, R-CD-3)
+      - name: 🐳 Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: 🚚 Promote images by digest (copy, R-CD-3)
         env:
           INPUT_SOURCE: ${{ github.event.inputs.source }}
           INPUT_ENV: ${{ github.event.inputs.environment }}
@@ -66,18 +74,22 @@ jobs:
           } >> "$GITHUB_STEP_SUMMARY"
 
           for svc in $SERVICES; do
-            SRC="ghcr.io/${OWNER}/core-engine-${svc}:${INPUT_SOURCE}"
-            TARGET="ghcr.io/${OWNER}/core-engine-${svc}:${INPUT_ENV}"
-            echo "→ ${svc}: ${SRC} → ${TARGET}"
-            docker pull "$SRC"
-            DIGEST=$(docker inspect --format='{{index .RepoDigests 0}}' "$SRC")
-            # Promoción literal por digest: se reetiqueta el manifiesto inmutable.
-            docker pull "$DIGEST"
-            docker tag "$DIGEST" "$TARGET"
+            NAME="ghcr.io/${OWNER}/core-engine-${svc}"
+            SRC="${NAME}:${INPUT_SOURCE}"
+            TARGET="${NAME}:${INPUT_ENV}"
+            SRC_DIGEST=$(docker buildx imagetools inspect "$SRC" --format '{{.Manifest.Digest}}')
+            echo "→ ${svc}: ${SRC}@${SRC_DIGEST} → ${TARGET}"
             if [[ "${INPUT_DRY_RUN}" == "true" ]]; then
               echo "dry_run: no se publica ${TARGET}"
             else
-              docker push "$TARGET"
+              # Copia registro-a-registro por digest: no se reconstruye ni se
+              # reempaqueta, así que el artefacto no cambia (R-CD-3).
+              docker buildx imagetools create -t "$TARGET" "${NAME}@${SRC_DIGEST}"
+              DST_DIGEST=$(docker buildx imagetools inspect "$TARGET" --format '{{.Manifest.Digest}}')
+              if [[ "${SRC_DIGEST}" != "${DST_DIGEST}" ]]; then
+                echo "ERROR: ${svc} cambió de digest al promover (${SRC_DIGEST} != ${DST_DIGEST}); promover es copiar, no reconstruir (R-CD-3)."
+                exit 1
+              fi
             fi
-            echo "| ${svc} | \`${DIGEST}\` | \`:${INPUT_ENV}\` |" >> "$GITHUB_STEP_SUMMARY"
+            echo "| ${svc} | \`${SRC_DIGEST}\` | \`:${INPUT_ENV}\` |" >> "$GITHUB_STEP_SUMMARY"
           done
