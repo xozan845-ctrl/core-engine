@@ -7,15 +7,18 @@ FROM node:20-alpine AS build
 # Node 20 = misma version que CI (R-EN-1); engines del repo pide >=20.
 WORKDIR /app
 
-ARG SERVICIO
-ENV SERVICIO=$SERVICIO
-
 # declaraciones de todos los workspaces + escaneo ligero de codigo
 COPY package.json package-lock.json tsconfig.base.json ./
 COPY packages packages
 
-# instalacion reproducible desde el lock (R-EN-1): npm ci, no npm install
-RUN npm ci --prefer-offline --no-audit --no-fund
+# La instalación es idéntica para todos los servicios. Declarar SERVICIO
+# después permite compartir esta capa en el build paralelo de Compose.
+# El cache conserva tarballs entre builds sin entrar en la imagen final.
+RUN --mount=type=cache,target=/root/.npm,sharing=locked \
+    npm ci --prefer-offline --no-audit --no-fund
+
+ARG SERVICIO
+ENV SERVICIO=$SERVICIO
 # npm workspaces anida algunas dependencias por workspace (p. ej. node-cron en
 # commissions/finance); crear el directorio asegura que el COPY del runtime no falle.
 RUN mkdir -p packages/$SERVICIO/node_modules
