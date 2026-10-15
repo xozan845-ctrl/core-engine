@@ -7,6 +7,8 @@
  * Uso: npm run demo  (o `node scripts/cli.mjs smoke`)
  */
 
+import { corteLiquidacionesValido } from './smoke-contract.mjs';
+
 const BASE = process.env.BASE_URL ?? 'http://localhost:8080';
 const ADMIN_EMAIL = process.env.ADMIN_EMAIL ?? 'admin@core-engine.test';
 const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD ?? 'AdminCore Engine2026!';
@@ -345,7 +347,7 @@ async function main() {
 
   paso('Corte de liquidación quincenal (RN-07, días 1 y 15)');
   const corte = await api('POST', '/api/v1/admin/liquidaciones/corte', null, tokenAdmin);
-  if (corte.status === 200 && Array.isArray(corte.json)) {
+  if (corteLiquidacionesValido(corte)) {
     const conFondos = corte.json.find((l) => l.monto_cents > 0);
     if (conFondos) ok(`liquidación aprobada por C$${(conFondos.monto_cents / 100).toFixed(2)}`);
     else ok(`sin cortes con fondos (${corte.json.length} registros)`);
