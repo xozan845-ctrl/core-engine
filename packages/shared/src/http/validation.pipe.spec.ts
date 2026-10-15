@@ -61,6 +61,28 @@ describe('cuerpoDeError (shape de errores, doc 5.7)', () => {
 });
 
 describe('TrazabilidadInterceptor (x-request-id y metricas, doc 5.3)', () => {
+  it('agrupa rutas sin patrón para impedir cardinalidad por URLs arbitrarias', () => {
+    const req = {
+      method: 'GET',
+      originalUrl: '/api/v1/orders/identificador-impredecible',
+      headers: {},
+    };
+    const res = {
+      setHeader: vi.fn(),
+      on: vi.fn((_event: string, callback: () => void) => callback()),
+      statusCode: 404,
+    };
+    const metrics = { registrarPeticion: vi.fn() };
+    const interceptor = new TrazabilidadInterceptor(metrics as never);
+    interceptor.intercept(
+      { switchToHttp: () => ({ getRequest: () => req, getResponse: () => res }) } as never,
+      { handle: () => of(null) } as never,
+    ).subscribe();
+    expect(metrics.registrarPeticion).toHaveBeenCalledWith(
+      'GET', '/_unmatched', 404, expect.any(Number),
+    );
+  });
+
   it('debe fijar x-request-id y registrar la peticion al finalizar', () => {
     const headers: Record<string, string> = {};
     const res = {
@@ -74,7 +96,13 @@ describe('TrazabilidadInterceptor (x-request-id y metricas, doc 5.3)', () => {
       finish: undefined as (() => void) | undefined,
       statusCode: 200,
     };
-    const req = { method: 'GET', originalUrl: '/health', headers: {} };
+    const req = {
+      method: 'GET',
+      originalUrl: '/api/v1/orders/order-123?expand=true',
+      baseUrl: '/api/v1/orders',
+      route: { path: '/:id' },
+      headers: {},
+    };
     const metrics = { registrarPeticion: vi.fn() };
     const interceptor = new TrazabilidadInterceptor(
       metrics as never,
@@ -92,6 +120,11 @@ describe('TrazabilidadInterceptor (x-request-id y metricas, doc 5.3)', () => {
     // la fuente (of) completa de forma sincrona: el finalize ya registro on('finish')
     expect(res.finish).toBeDefined();
     res.finish?.();
-    expect(metrics.registrarPeticion).toHaveBeenCalledWith('GET', '/health', 200, expect.any(Number));
+    expect(metrics.registrarPeticion).toHaveBeenCalledWith(
+      'GET',
+      '/api/v1/orders/:id',
+      200,
+      expect.any(Number),
+    );
   });
 });

@@ -38,7 +38,7 @@ métricas Prometheus + dashboards/alertas de Grafana (`02-telemetria.md`).
   propagación de `x-request-id` por HTTP, outbox y headers de RabbitMQ
   (`R-OB-1/2`).
 - `scripts/rules/observability/telemetry.test.mjs` verifica `/metrics` y scrape
-  universal, métricas de infraestructura/DLQ, dashboards como código y alertas
-  enlazadas al runbook (`R-TM-1/5/6/7`).
-- `R-OB-3/4/5` y `R-TM-2/3/4` permanecen pendientes de checks ejecutables; no
-  se declaran cubiertas hasta endurecer y probar el runtime de métricas/logs.
+  universal, naming/labels, RED separado, métricas de infraestructura/DLQ,
+  dashboards como código y alertas enlazadas al runbook (`R-TM-1..7`).
+- `R-OB-3/4/5` permanecen pendientes de checks ejecutables; no se declaran
+  cubiertas hasta instrumentar métricas de negocio y endurecer el runtime de logs.
