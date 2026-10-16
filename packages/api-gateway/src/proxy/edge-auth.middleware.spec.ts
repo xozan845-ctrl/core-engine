@@ -107,6 +107,16 @@ describe('edgeAuth (endurecimiento del borde: gate de entornos y diagnostico)', 
       expect(next).toHaveBeenCalledTimes(1);
     });
 
+    it('debe dejar pasar un Bearer (el token lo evalua la capa JWT) sin exigir Basic', () => {
+      const next = vi.fn();
+      edgeAuth(opciones)(
+        crearReq('/api/v1/orders', { headers: { authorization: 'Bearer token-de-sesion' } }) as never,
+        crearRes() as never,
+        next,
+      );
+      expect(next).toHaveBeenCalledTimes(1);
+    });
+
     it('debe dejar /health abierto (liveness de contenedor)', () => {
       const next = vi.fn();
       edgeAuth(opciones)(crearReq('/health') as never, crearRes() as never, next);
