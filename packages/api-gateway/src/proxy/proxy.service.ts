@@ -22,6 +22,14 @@ export const DESTINOS: ServicioDestino[] = [
     ],
   },
   {
+    nombre: 'storage',
+    url: process.env.STORAGE_SERVICE_URL ?? 'http://storage-service:3010',
+    patrones: [
+      { patron: /^\/api\/v1\/storage(\/|$)/, metodos: ['*'] },
+      { patron: /^\/api\/v1\/admin\/storage(\/|$)/, metodos: ['*'] },
+    ],
+  },
+  {
     nombre: 'catalog',
     url: process.env.CATALOG_SERVICE_URL ?? 'http://catalog-service:3002',
     patrones: [

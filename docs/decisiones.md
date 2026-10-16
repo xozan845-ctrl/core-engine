@@ -490,6 +490,61 @@ Este archivo registra decisiones técnicas deliberadas que se apartan del texto 
 
 ---
 
+## ADR-24: Almacenamiento de objetos con MinIO y multi-tenancy por bucket
+
+- **Fecha**: 2026-10-16
+- **Estado**: Aceptado
+- **Contexto**: el MVP necesita guardar binarios (imágenes de producto, adjuntos) que hoy
+  no tienen sitio: los servicios solo persisten metadata en Postgres. La regla `R-SB-6`
+  pide que, si se adopta almacenamiento de objetos, el acceso se abstraiga tras una
+  interfaz en `packages/shared`. El proyecto es **multi-tenant** (`tenant_id` en el JWT que
+  emite `identity-service`) y se quiere aprovechar el aislamiento nativo de los buckets.
+- **Opciones**:
+  1. **Supabase Storage**: encaja con AD-08, pero ata el dominio a un proveedor y a un SDK,
+     y en local obliga a emularlo.
+  2. **MinIO (S3-compatible)**: corre en la misma red Docker, es el estándar S3 y soporta
+     URLs prefirmadas y políticas por bucket, con paridad local/stage/producción.
+  3. Prefijos por tenant en un bucket único: más barato de operar, pero sin políticas,
+     cuotas ni ciclos de vida por organizacion.
+- **Decisión**:
+  1. **MinIO** como almacén de objetos, con **un bucket por tenant** (`t-<tenantId>`)
+     creado de forma perezosa por un microservicio nuevo, `storage-service` (puerto 3010,
+     esquema `storage`), con la misma arquitectura que el resto (NestJS + outbox + métricas
+     + OpenAPI + tests + Dockerfile por servicio).
+  2. **URLs prefirmadas**: la subida es un `PUT` directo del cliente a MinIO (los bytes no
+     pasan por el servicio) y la descarga un `GET` firmado con TTL corto. El servicio solo
+     valida (tipo, tamano, cuota) y registra la metadata.
+  3. El host de firma se separa del de operación (`MINIO_PUBLIC_ENDPOINT`): el servicio
+     opera contra el nombre interno del compose y **firma con el host público** que resuelve
+     el cliente (por eso se publica el 9000 en stage/producción).
+  4. Cuotas y límites por tenant (`storage.buckets`: cuota, uso y estado) con whitelist de
+     content-types y tamano máximo por objeto; los objetos `pendiente` no consumen cuota
+     hasta confirmarse contra MinIO.
+  5. El acceso se abstrae tras el puerto `AlmacenObjetos` de `packages/shared` (R-SB-6),
+     implementado por `MinioAlmacen` dentro del servicio: cambiar de proveedor S3-compatible
+     solo toca esa clase y sus dobles de test.
+  6. El tenant viene del JWT de `identity-service` (cabecera `x-tenant` que inyecta el
+     gateway, R-GW-3); se añade `tenant_id` a los claims SQL (`request.jwt.claims`) para que
+     RLS pueda aislar por organizacion (R-DB-2/R-SB-3).
+- **Consecuencias**:
+  - `storage-service` entra en dev, staging y producción (a diferencia de ADR-17) y cuenta
+    para la readiness del gateway; se publica el 9000 de MinIO (API, nunca la consola)
+    porque es el host firmado en las URLs prefirmadas.
+  - Un usuario sin `tenant_id` (p. ej. un comprador recién registrado) no tiene
+    almacenamiento: responde `TENANT_REQUERIDO`. Asignarle tenant es trabajo de
+    `identity-service`.
+  - MinIO requiere credencial propia por entorno (`MINIO_ROOT_USER`/`MINIO_ROOT_PASSWORD`,
+    R-CD-7/ADR-21) y un volumen `minio_data`; sin la credencial el servicio no arranca.
+  - Los objetos `pendiente` que nunca se confirman no consumen cuota, pero dejan fila
+    huerfana: se deja como trabajo futuro una limpieza por ciclo de vida.
+  - Si algún día se adopta Supabase Storage, la interfaz de `shared` permite sustituir la
+    implementación sin tocar el dominio.
+  - La imagen de MinIO se fija por **digest** de un espejo del proyecto oficial
+    (`elestio/minio`, = `RELEASE.2025-09-07T16-13-09Z`), porque `minio/minio` no está
+    disponible en este entorno; sigue siendo un MinIO auténtico y S3-compatible.
+
+---
+
 ## Resumen de cumplimiento post-corrección
 
 | Ítem del documento          | Estado  | Nota |

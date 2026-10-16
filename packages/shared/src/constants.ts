@@ -57,6 +57,7 @@ export const PUERTOS = {
   FINANCE: 3007,
   FIELD: 3008,
   INTELLIGENCE: 3009,
+  STORAGE: 3010,
 } as const;
 
 export const NOMBRE_SERVICIOS = {
@@ -70,4 +71,25 @@ export const NOMBRE_SERVICIOS = {
   FINANCE: 'finance-service',
   FIELD: 'field-service',
   INTELLIGENCE: 'market-intelligence-service',
+  STORAGE: 'storage-service',
 } as const;
+
+/** Cabecera de contexto cuando el gateway valida el JWT. */
+export const STORAGE_BUCKET_PREFIX_DEFAULT = 't-';
+
+/** Limites por defecto del almacenamiento de objetos (STORAGE_*). */
+export const STORAGE_MAX_OBJETO_BYTES_DEFAULT = 25 * 1024 * 1024; // 25 MiB
+export const STORAGE_CUOTA_DEFAULT_BYTES = 5 * 1024 * 1024 * 1024; // 5 GiB
+export const STORAGE_URL_TTL_SEGUNDOS_DEFAULT = 900; // 15 min
+
+/** Content-types admitidos por defecto para subidas (whitelist, R-DS). */
+export const STORAGE_CONTENT_TYPES_DEFAULT = [
+  'image/png',
+  'image/jpeg',
+  'image/webp',
+  'application/pdf',
+  'text/csv',
+  'text/plain',
+  'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+  'application/json',
+] as const;

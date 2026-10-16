@@ -70,6 +70,13 @@ export const POLITICAS_RUTAS: PoliticaRuta[] = [
       metodos: ['GET', 'POST', 'PATCH', 'DELETE'],
       roles: [ROLES.COMPRADOR],
     },
+  // almacenamiento de objetos por tenant (ADR-24): cualquier usuario autenticado
+  // con tenant; el aislamiento real lo garantiza el bucket + el filtro por tenant.
+  {
+    patron: /^\/api\/v1\/storage\//,
+    metodos: ['*'],
+    roles: Object.values(ROLES),
+  },
 // admin
   {
     patron: /^\/api\/v1\/admin\/inventario/,
