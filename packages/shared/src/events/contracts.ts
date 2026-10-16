@@ -19,6 +19,10 @@ export const EVENTOS = {
   COMPROBANTE_EMITIDO: 'comprobante.emitido',
   /** Emitido cuando una venta incluye contexto geoespacial/demografico opcional. */
   VENTA_GEOLOCALIZADA: 'venta.geolocalizada',
+  /** Almacenamiento de objetos: el objeto quedo confirmado en el bucket del tenant. */
+  STORAGE_OBJETO_SUBIDO: 'storage.objeto.subido',
+  /** Almacenamiento de objetos: el objeto se elimino (baja logica + borrado real). */
+  STORAGE_OBJETO_ELIMINADO: 'storage.objeto.eliminado',
 } as const;
 
 export type NombreEvento = (typeof EVENTOS)[keyof typeof EVENTOS];
@@ -177,9 +181,31 @@ export interface VentaGeolocalizadaData {
   distancia_cliente_metros?: number;
 }
 
+/** Objeto del almacenamiento por tenant que quedo confirmado (bucket por tenant). */
+export interface ObjetoAlmacenadoData {
+  objeto_id: string;
+  tenant_id: string;
+  bucket: string;
+  objeto: string;
+  nombre: string;
+  content_type: string;
+  tamano_bytes: number;
+  /** Usuario que solicito la subida (identity-service), si se conocia. */
+  subido_por?: string;
+}
+
+/** Objeto eliminado del almacenamiento del tenant (baja logica + borrado real). */
+export interface ObjetoEliminadoData {
+  objeto_id: string;
+  tenant_id: string;
+  bucket: string;
+  objeto: string;
+  nombre: string;
+  tamano_bytes: number;
+}
+
 /** Mapa tipo -> contrato valido (validacion simple en CI, Pact en staging). */
-export const CONTRATOS: Record<NombreEvento, { editor: string; consumidores: string[] }> = {
-  [EVENTOS.ORDER_CREATED]: {
+export const CONTRATOS: Record<NombreEvento, { editor: string; consumidores: string[] }> = {  [EVENTOS.ORDER_CREATED]: {
     editor: 'Pedidos',
     consumidores: ['Inventario', 'Comisiones', 'Notificaciones'],
   },
@@ -238,5 +264,13 @@ export const CONTRATOS: Record<NombreEvento, { editor: string; consumidores: str
   [EVENTOS.VENTA_GEOLOCALIZADA]: {
     editor: 'Orders / Field (app-test)',
     consumidores: ['Inteligencia de Mercado'],
+  },
+  [EVENTOS.STORAGE_OBJETO_SUBIDO]: {
+    editor: 'Almacenamiento',
+    consumidores: ['Auditoria', 'Notificaciones'],
+  },
+  [EVENTOS.STORAGE_OBJETO_ELIMINADO]: {
+    editor: 'Almacenamiento',
+    consumidores: ['Auditoria'],
   },
 };

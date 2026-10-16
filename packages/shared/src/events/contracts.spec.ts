@@ -38,4 +38,11 @@ describe('contracts (eventos del bus, Tabla 22)', () => {
     expect(CONTRATOS[EVENTOS.STOCK_RESERVADO].consumidores).toContain('Pedidos (confirmacion)');
     expect(CONTRATOS[EVENTOS.STOCK_UPDATED].consumidores).toContain('Notificaciones');
   });
+
+  it('debe nombrar el contrato de almacenamiento de objetos (bucket por tenant)', () => {
+    expect(EVENTOS.STORAGE_OBJETO_SUBIDO).toBe('storage.objeto.subido');
+    expect(EVENTOS.STORAGE_OBJETO_ELIMINADO).toBe('storage.objeto.eliminado');
+    expect(CONTRATOS[EVENTOS.STORAGE_OBJETO_SUBIDO].editor).toBe('Almacenamiento');
+    expect(CONTRATOS[EVENTOS.STORAGE_OBJETO_ELIMINADO].consumidores).toContain('Auditoria');
+  });
 });

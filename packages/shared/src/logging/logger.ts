@@ -5,6 +5,8 @@ export interface ContextoCorrelacion {
   servicio: string;
   usuario_id?: string;
   rol?: string;
+  /** Tenant del usuario (x-tenant): se inyecta en los claims SQL para RLS. */
+  tenant_id?: string;
 }
 
 const almacen = new AsyncLocalStorage<ContextoCorrelacion>();
