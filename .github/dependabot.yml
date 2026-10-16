@@ -52,3 +52,17 @@ updates:
       types:
         patterns:
           - "@types/*"
+    # NestJS 12 está bloqueado por un peer de upstream (ver PRs #189/#190/#193/
+    # #195 y #207): `@nestjs/swagger@12` declara
+    # `peerOptional typescript@^5.5 || ^6` y el repo va en TypeScript 7, así que
+    # `npm install` da ERESOLVE; con swagger 11 + NestJS 12 npm anida un
+    # `@nestjs/common` duplicado y el typecheck falla. Sin este `ignore`, el
+    # grupo `nestjs` abriría un PR rojo cada semana. `update-types` no afecta a
+    # las actualizaciones de seguridad, así que esas siguen llegando.
+    # QUITAR esta entrada cuando `@nestjs/swagger` declare compatibilidad con
+    # TypeScript 7: entonces el grupo `nestjs` traerá los 4 paquetes + swagger
+    # en un único PR verde.
+    ignore:
+      - dependency-name: "@nestjs/*"
+        update-types:
+          - "version-update:semver-major"
