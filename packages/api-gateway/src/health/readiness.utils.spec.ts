@@ -52,11 +52,12 @@ describe('readiness.utils (readiness agregada del gateway)', () => {
     expect(urls).toContain('http://catalog-service:3002/health');
   });
 
-  it('debe cubrir los 7 servicios de produccion (incluye field, excluye commissions/intelligence)', () => {
+  it('debe cubrir los 8 servicios de produccion (incluye field y storage, excluye commissions/intelligence)', () => {
     const nombres = SERVICIOS_PRODUCCION.map((s) => s.nombre);
     expect(nombres).toContain('field');
+    expect(nombres).toContain('storage');
     expect(nombres).not.toContain('commissions');
     expect(nombres).not.toContain('market-intelligence');
-    expect(nombres).toHaveLength(7);
+    expect(nombres).toHaveLength(8);
   });
 });

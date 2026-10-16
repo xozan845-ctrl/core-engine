@@ -17,16 +17,17 @@ gateway (`http://localhost:8080/api/v1/...`). Los montos se manejan como **enter
                     │   :8080     │  Politicas por ruta/rol (Tabla 21) · UNICO puerto al host
                     └──────┬──────┘
                            │  red interna Docker `core-engine` (microservicios sin puerto al host)
-        ┌──────────┬───────┴───┬──────────┬───────────┬────────────┬───────────┬─────────┬─────────────┐
-   identity     catalog     stores     orders    logistics   commissions    finance    field   intelligence
-      :3001        :3002      :3003      :3004       :3005        :3006        :3007     :3008       :3009
-        └──────────┴───────────┴──────────┴───────────┴────────────┴───────────┴─────────┴─────────────┘
-               RabbitMQ · topic core-engine.events (+ DLQ, AD-04) + Postgres 16
+        ┌──────────┬───────────┬──────────┬─────────┬───────────┬────────────┬─────────┬─────────┬──────────────┬─────────┐
+   identity     catalog      stores     orders   logistics  commissions    finance    field   intelligence  storage
+      :3001        :3002       :3003      :3004      :3005       :3006       :3007     :3008      :3009       :3010
+        └──────────┴───────────┴──────────┴─────────┴───────────┴────────────┴─────────┴─────────┴──────────────┴─────────┘
+       RabbitMQ · topic core-engine.events (+ DLQ, AD-04) + Postgres 16 + MinIO (un bucket por tenant, ADR-24)
 ```
 
-**Punto de entrada unico:** solo el servicio `gateway` publica un puerto al host (`8080:8080`); los
-nueve microservicios escuchan en `3001`–`3009` **solo dentro de la red interna Docker `core-engine`**
-y no tienen mapeo de puertos al host. Toda llamada externa pasa por
+**Punto de entrada unico:** solo el servicio `gateway` publica un puerto de aplicación al host
+(`8080:8080`); los **diez microservicios** escuchan en `3001`–`3010` **solo dentro de la red interna
+Docker `core-engine`** y no tienen mapeo de puertos al host. La excepción es **MinIO** (`9000`), que sí
+se publica porque es el host **firmado** en las URLs prefirmadas (ADR-24). Toda llamada externa pasa por
 `http://localhost:8080/api/v1/...` (o el dominio del gateway en stage/produccion).
 
 - **CQRS + Event Sourcing** solo en `orders` (alta tasa de escritura, cap. 3.2); el resto usa
@@ -70,9 +71,9 @@ Eventos del bus (topic `core-engine.events`): `order.created`, `stock.reservado`
 ```bash
 npm install                       # instala los workspaces (enlaza @core/shared, ...)
 npm run build                     # compila shared + gateway + los 9 microservicios
-npm test                          # los 11 workspaces, cada uno con --coverage (405 tests)
+npm test                          # los 12 workspaces, cada uno con --coverage (490 tests)
 cp .env.example .env              # variables de DESARROLLO (producción: .env.production.example)
-docker compose -f docker-compose.dev.yml up -d --build   # app: Postgres + RabbitMQ + gateway y 9 servicios (8080 host + datos/broker 5432/5672/15672)
+docker compose -f docker-compose.dev.yml up -d --build   # app: Postgres + RabbitMQ + MinIO + gateway y 10 servicios (8080 host + datos/broker 5432/5672/15672 + minio 9000/9001)
 npm run demo                      # ejercicio end-to-end (TC-01..TC-08, RN-01..RN-08)
 
 # Dashboards (opcional): añade Prometheus + Grafana + exporters al stack de desarrollo
@@ -98,13 +99,17 @@ seeds del plan contable NIC e indices). En **Supabase** (staging/prod) aplique a
 | finance-service | 3007 | No | `finance` | `packages/finance-service` |
 | field-service | 3008 | No | `field` | `packages/field-service` |
 | market-intelligence-service | 3009 | No *(fuera de prod)* | `intelligence` | `packages/market-intelligence-service` |
+| storage-service | 3010 | No | `storage` | `packages/storage-service` |
 | postgres | 5432 | No *(dev: `docker-compose.dev.yml`)* | todos | `infra/db/init/` |
 | rabbitmq (+ management) | 5672 / 15672 | No *(dev: `docker-compose.dev.yml`)* | — | — |
+| minio (+ consola) | 9000 / 9001 | **Sí** (`9000`; consola solo en dev) *(ADR-24)* | — | `docker-compose*.yml` |
 | prometheus *(capa opcional)* | 9090 | No (solo red interna) | — | `infra/prometheus/` |
 | grafana *(capa opcional)* | 3000 | Sí (`3000:3000`) | — | `infra/grafana/` |
 
-> **Aislamiento de red:** en producción/staging **solo `gateway` (8080)** publica puerto al host
-> (`grafana` 3000 solo si se activa la capa de observabilidad). Postgres y RabbitMQ son **internos**;
+> **Aislamiento de red:** en producción/staging **solo `gateway` (8080) y `minio` (9000, API)** publican
+> puerto al host (`grafana` 3000 solo si se activa la capa de observabilidad). El 9000 de MinIO es el
+> host **firmado** en las URLs prefirmadas (ADR-24); su consola (9001) nunca se publica. Postgres y
+> RabbitMQ son **internos**;
 > sus puertos al host se abren únicamente en desarrollo con `docker-compose.dev.yml`. **Ningún
 > microservicio de dominio es accesible desde fuera**: se alcanzan por nombre de servicio
 > (`http://<servicio>:<puerto>`) dentro de la red `core-engine`, detrás del gateway.
@@ -174,7 +179,7 @@ fusiona `docs/openapi/*.json` en `packages/api-gateway/src/openapi.agregado.ts`
 npm run swagger:export   # regenera docs/openapi/*.json (sin BD/Rabbit; no arranca la app)
 ```
 
-Cobertura actual: **149/149 endpoints** en 9 servicios.
+Cobertura actual: **164/164 endpoints** en 10 servicios.
 
 ## Variables de entorno (`.env` en dev · `.env.production` en producción)
 
@@ -186,8 +191,10 @@ Cobertura actual: **149/149 endpoints** en 9 servicios.
 Claves: `DATABASE_URL`/`POSTGRES_*`, `RABBITMQ_URL` (+ `RABBITMQ_USER/PASSWORD`),
 `JWT_SECRET` (+ TTLs), `INTERNAL_API_KEY`, `ADMIN_EMAIL/ADMIN_PASSWORD`,
 `COMMISSION_RATE`, `OUTBOX_TABLA` (por servicio, ej. `orders.outbox`),
-`*_SERVICE_URL` (URLs internas), `CORS_ORIGINS`, `LOG_LEVEL` y, si se activa la
-observabilidad, `GRAFANA_ADMIN_PASSWORD`.
+`*_SERVICE_URL` (URLs internas), `CORS_ORIGINS`, `LOG_LEVEL`, las de almacenamiento
+(`MINIO_ROOT_USER/PASSWORD`, `MINIO_ENDPOINT/PORT`, **`MINIO_PUBLIC_ENDPOINT`**: el host
+firmado en las URLs prefirmadas, `STORAGE_*` de cuota/límites, ADR-24) y, si se activa
+la observabilidad, `GRAFANA_ADMIN_PASSWORD`.
 
 ## Pruebas
 
@@ -197,7 +204,7 @@ TC-07 seguridad del gateway (401/403), TC-08 comision 12 % y liquidacion al vend
 RN-05/RN-06/RN-07/RN-08, partida doble y regimen fiscal NIC.
 
 ```bash
-npm test        # 405 tests en los 11 workspaces (cobertura por workspace, ratchet R-COV-1)
+npm test        # 490 tests en los 12 workspaces (cobertura por workspace, ratchet R-COV-1)
 npm run demo    # flujo real sobre el stack levantado (scripts/tools/smoke.mjs)
 ```
 

@@ -115,6 +115,7 @@ jobs:
           - finance-service
           - field-service
           - market-intelligence-service
+          - storage-service
     steps:
       - name: 📥 Checkout repository
         uses: actions/checkout@v5

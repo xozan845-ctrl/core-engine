@@ -48,6 +48,7 @@ export const SERVICES = [
   'finance-service',
   'field-service',
   'market-intelligence-service',
+  'storage-service',
 ];
 
 /**
@@ -100,6 +101,8 @@ export const ALLOWED_COMMIT_SCOPES = [
   'field-service',
   'market-intelligence',
   'market-intelligence-service',
+  'storage',
+  'storage-service',
   // Infraestructura y transversal
   'infra',
   'compose',

@@ -11,6 +11,7 @@ import { Observable } from 'rxjs';
 import { tap } from 'rxjs/operators';
 import { MetricsService } from '../metrics/metrics.service';
 import { Logger, ejecutarConContexto, ContextoCorrelacion } from '../logging/logger';
+import { TENANT_HEADER } from '../constants';
 import { randomUUID } from 'crypto';
 import { plainToInstance } from 'class-transformer';
 import { validate } from 'class-validator';
@@ -40,6 +41,7 @@ export class TrazabilidadInterceptor implements NestInterceptor {
       servicio: this.servicio ?? process.env.SERVICIO ?? 'servicio',
       usuario_id: req.headers?.['x-user-personal'] ?? req.headers?.['x-user-id'] ?? undefined,
       rol: req.headers?.['x-user-rol'] ?? undefined,
+      tenant_id: req.headers?.[TENANT_HEADER] ?? undefined,
     };
 
     // el handler corre dentro del contexto de correlacion: todos los logs que

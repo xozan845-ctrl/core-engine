@@ -64,9 +64,15 @@ export class PgService implements OnModuleInit, OnModuleDestroy {
       await client.query('BEGIN');
       const ctx = contextoActual();
       if (ctx?.usuario_id) {
-        // Inyectar claims JWT en la sesion transaccional para RLS en Supabase (R-DB-2)
+        // Inyectar claims JWT en la sesion transaccional para RLS en Supabase
+        // (R-DB-2/R-SB-3): incluye el tenant para que las politicas puedan
+        // aislar por organizacion (auth.jwt() ->> 'tenant_id').
         await client.query(`SELECT set_config('request.jwt.claims', $1, true)`, [
-          JSON.stringify({ sub: ctx.usuario_id, rol: ctx.rol ?? 'anon' }),
+          JSON.stringify({
+            sub: ctx.usuario_id,
+            rol: ctx.rol ?? 'anon',
+            ...(ctx.tenant_id ? { tenant_id: ctx.tenant_id } : {}),
+          }),
         ]);
       }
       const resultado = await fn(client);

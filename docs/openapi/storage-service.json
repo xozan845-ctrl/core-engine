@@ -1,0 +1,528 @@
+{
+  "openapi": "3.0.0",
+  "paths": {
+    "/api/v1/admin/storage/tenants": {
+      "get": {
+        "operationId": "AdminStorageController_listar",
+        "parameters": [
+          {
+            "name": "pagina",
+            "required": false,
+            "in": "query",
+            "description": "Pagina (1-based)",
+            "schema": {
+              "minimum": 1,
+              "type": "number"
+            }
+          },
+          {
+            "name": "limite",
+            "required": false,
+            "in": "query",
+            "description": "Tamano de pagina (max 100)",
+            "schema": {
+              "minimum": 1,
+              "maximum": 100,
+              "type": "number"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "summary": "Listar tenants con almacenamiento (cuota y uso)",
+        "tags": [
+          "Almacenamiento (admin)"
+        ]
+      }
+    },
+    "/api/v1/admin/storage/tenants/{tenantId}": {
+      "get": {
+        "operationId": "AdminStorageController_estado",
+        "parameters": [
+          {
+            "name": "tenantId",
+            "required": true,
+            "in": "path",
+            "description": "Id del tenant (organizacion)",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "summary": "Estado de almacenamiento de un tenant",
+        "tags": [
+          "Almacenamiento (admin)"
+        ]
+      },
+      "patch": {
+        "operationId": "AdminStorageController_actualizar",
+        "parameters": [
+          {
+            "name": "tenantId",
+            "required": true,
+            "in": "path",
+            "description": "Id del tenant (organizacion)",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ActualizarTenantRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "summary": "Ajustar cuota y/o suspender el almacenamiento del tenant",
+        "tags": [
+          "Almacenamiento (admin)"
+        ]
+      }
+    },
+    "/api/v1/admin/storage/tenants/{tenantId}/recalcular": {
+      "post": {
+        "operationId": "AdminStorageController_recalcular",
+        "parameters": [
+          {
+            "name": "tenantId",
+            "required": true,
+            "in": "path",
+            "description": "Id del tenant (organizacion)",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "summary": "Recalcular el uso del tenant desde la metadata (idempotente)",
+        "tags": [
+          "Almacenamiento (admin)"
+        ]
+      }
+    },
+    "/internal/storage/tenants/{tenantId}": {
+      "get": {
+        "operationId": "InternalStorageController_estado",
+        "parameters": [
+          {
+            "name": "tenantId",
+            "required": true,
+            "in": "path",
+            "description": "Id del tenant",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "summary": "Estado de almacenamiento del tenant (servicio→servicio)",
+        "tags": [
+          "Almacenamiento (interno)"
+        ]
+      }
+    },
+    "/internal/storage/tenants/{tenantId}/recalcular": {
+      "post": {
+        "operationId": "InternalStorageController_recalcular",
+        "parameters": [
+          {
+            "name": "tenantId",
+            "required": true,
+            "in": "path",
+            "description": "Id del tenant",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "summary": "Recalcular el uso del tenant (servicio→servicio)",
+        "tags": [
+          "Almacenamiento (interno)"
+        ]
+      }
+    },
+    "/internal/storage/objetos/{id}": {
+      "get": {
+        "operationId": "InternalStorageController_objeto",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "description": "Id del objeto",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "tenant_id",
+            "required": true,
+            "in": "query",
+            "description": "Tenant dueno del objeto",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "summary": "Metadata de un objeto del tenant (servicio→servicio)",
+        "tags": [
+          "Almacenamiento (interno)"
+        ]
+      }
+    },
+    "/api/v1/storage/bucket": {
+      "get": {
+        "description": "Crea el bucket del tenant de forma perezosa la primera vez.",
+        "operationId": "BucketsController_estado",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "summary": "Estado del almacenamiento del tenant (bucket, cuota, uso)",
+        "tags": [
+          "Almacenamiento"
+        ]
+      },
+      "post": {
+        "operationId": "BucketsController_configurar",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ConfigurarBucketRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "400": {
+            "description": "Cuota invalida (CUOTA_INVALIDA/CUOTA_MENOR_AL_USO)"
+          }
+        },
+        "summary": "Asegurar el bucket del tenant y fijar su cuota (admin)",
+        "tags": [
+          "Almacenamiento"
+        ]
+      }
+    },
+    "/api/v1/storage/subidas": {
+      "post": {
+        "description": "Valida tipo, tamano y cuota del tenant; registra el objeto en estado pendiente y devuelve la URL prefirmada.",
+        "operationId": "ObjetosController_solicitarSubida",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SolicitarSubidaRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "400": {
+            "description": "Tipo o tamano invalido (VALIDACION)"
+          },
+          "409": {
+            "description": "Cuota excedida (CUOTA_EXCEDIDA)"
+          }
+        },
+        "summary": "Solicitar URL prefirmada de subida (PUT directo a MinIO)",
+        "tags": [
+          "Almacenamiento"
+        ]
+      }
+    },
+    "/api/v1/storage/objetos/{id}/confirmar": {
+      "post": {
+        "operationId": "ObjetosController_confirmar",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "description": "Id del objeto",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "summary": "Confirmar la subida y activar el objeto (contabiliza cuota)",
+        "tags": [
+          "Almacenamiento"
+        ]
+      }
+    },
+    "/api/v1/storage/objetos": {
+      "get": {
+        "operationId": "ObjetosController_listar",
+        "parameters": [
+          {
+            "name": "q",
+            "required": false,
+            "in": "query",
+            "description": "Busqueda por nombre",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "carpeta",
+            "required": false,
+            "in": "query",
+            "description": "Filtrar por carpeta",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "estado",
+            "required": false,
+            "in": "query",
+            "description": "Filtrar por estado",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "pendiente",
+                "activo",
+                "eliminado"
+              ]
+            }
+          },
+          {
+            "name": "pagina",
+            "required": false,
+            "in": "query",
+            "description": "Pagina (1-based)",
+            "schema": {
+              "minimum": 1,
+              "type": "number"
+            }
+          },
+          {
+            "name": "limite",
+            "required": false,
+            "in": "query",
+            "description": "Tamano de pagina (max 100)",
+            "schema": {
+              "minimum": 1,
+              "maximum": 100,
+              "type": "number"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "summary": "Listar objetos del tenant (paginado, sin eliminados por defecto)",
+        "tags": [
+          "Almacenamiento"
+        ]
+      }
+    },
+    "/api/v1/storage/objetos/{id}": {
+      "get": {
+        "operationId": "ObjetosController_detalle",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "description": "Id del objeto",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "summary": "Detalle (metadata) de un objeto del tenant",
+        "tags": [
+          "Almacenamiento"
+        ]
+      },
+      "delete": {
+        "operationId": "ObjetosController_eliminar",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "description": "Id del objeto",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": ""
+          }
+        },
+        "summary": "Eliminar un objeto (baja logica + borrado en MinIO)",
+        "tags": [
+          "Almacenamiento"
+        ]
+      }
+    },
+    "/api/v1/storage/objetos/{id}/descarga": {
+      "get": {
+        "operationId": "ObjetosController_descarga",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "description": "Id del objeto",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "summary": "URL prefirmada de descarga (GET) con validez limitada",
+        "tags": [
+          "Almacenamiento"
+        ]
+      }
+    }
+  },
+  "info": {
+    "title": "Core Engine · storage-service",
+    "description": "Almacenamiento de objetos por tenant (MinIO, buckets por organizacion)",
+    "version": "v1",
+    "contact": {}
+  },
+  "tags": [],
+  "servers": [],
+  "components": {
+    "securitySchemes": {
+      "bearer": {
+        "scheme": "bearer",
+        "bearerFormat": "JWT",
+        "type": "http"
+      }
+    },
+    "schemas": {
+      "ActualizarTenantRequestDto": {
+        "type": "object",
+        "properties": {
+          "cuota_bytes": {
+            "type": "number",
+            "description": "Nueva cuota en bytes"
+          },
+          "estado": {
+            "type": "string",
+            "description": "Estado del almacenamiento del tenant",
+            "enum": [
+              "activo",
+              "suspendido"
+            ]
+          }
+        }
+      },
+      "ConfigurarBucketRequestDto": {
+        "type": "object",
+        "properties": {
+          "cuota_bytes": {
+            "type": "number",
+            "description": "Cuota del tenant en bytes (por defecto la del entorno)",
+            "example": 5368709120
+          }
+        }
+      },
+      "SolicitarSubidaRequestDto": {
+        "type": "object",
+        "properties": {
+          "nombre": {
+            "type": "string",
+            "description": "Nombre del archivo (sin rutas)",
+            "example": "foto-producto.jpg"
+          },
+          "content_type": {
+            "type": "string",
+            "description": "Content-Type del archivo (whitelist)",
+            "example": "image/jpeg"
+          },
+          "tamano_bytes": {
+            "type": "number",
+            "description": "Tamano en bytes que el cliente subira",
+            "example": 204800
+          },
+          "carpeta": {
+            "type": "string",
+            "description": "Carpeta logica dentro del bucket",
+            "example": "productos"
+          },
+          "descripcion": {
+            "type": "string",
+            "description": "Descripcion libre"
+          },
+          "etiquetas": {
+            "type": "object",
+            "description": "Etiquetas clave-valor (max 20)"
+          }
+        },
+        "required": [
+          "nombre",
+          "content_type",
+          "tamano_bytes"
+        ]
+      }
+    }
+  }
+}
