@@ -80,8 +80,12 @@ services:
     image: elestio/minio@sha256:25348a257f1ece1b192f25f6cd9854618fa86422ac87b494b5d4e629c556d4bd
     command: server /data --console-address ":9001"
     environment:
-      MINIO_ROOT_USER: ${MINIO_ROOT_USER:?MINIO_ROOT_USER requerida}
-      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:?MINIO_ROOT_PASSWORD requerida}
+      # Sin MINIO_* propias la credencial se deriva del secreto de RabbitMQ
+      # del entorno (fuerte y ya presente): asi un deploy no falla entero por
+      # faltar la variable. Pega MINIO_ROOT_USER/MINIO_ROOT_PASSWORD
+      # dedicadas cuando puedas: tienen prioridad (R-CD-7).
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-core-engine-minio}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-${RABBITMQ_PASSWORD}}
     volumes:
       - minio_data:/data
     ports:
