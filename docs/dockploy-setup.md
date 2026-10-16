@@ -102,11 +102,16 @@ Pasos:
 |---|---|---|
 | Postgres | **1 instancia**, una **base de datos** por entorno | `core_engine_staging` · `core_engine_produccion` |
 | RabbitMQ | **1 broker**, un **vhost** por entorno | `/staging` · `/produccion` o por base |
+| MinIO (ADR-24) | Bucket **por tenant** (`t-<tenantId>`) dentro del MinIO del entorno; el puerto **9000** se publica porque es el host firmado en las URLs prefirmadas (`MINIO_PUBLIC_ENDPOINT`) | `staging` · `produccion` |
 | Prometheus/Grafana | **capa opcional** (`docker-compose.observability.yml`); si se activa, exige `GRAFANA_ADMIN_PASSWORD` | `produccion` (+ opcional staging) |
 
 El esquema se aplica **solo desde el DDL versionado**
 (`infra/db/init/01_esquemas.sql` + `99_rls.sql` en Supabase) — `R-DB-6/R-CD-5`.
 Migraciones solo hacia adelante.
+> **Entornos ya desplegados**: un DDL nuevo (p. ej. `09_storage.sql`, ADR-24) **no**
+> se aplica solo (el init corre únicamente en un volumen Postgres nuevo). Aplícalo
+> a mano antes de desplegar el servicio que lo usa:
+> `docker compose exec -T postgres psql -U $POSTGRES_USER -d $POSTGRES_DB < infra/db/init/09_storage.sql`.
 
 ## 4. Verificaciones por entorno (lista de comprobación)
 

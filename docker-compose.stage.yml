@@ -66,6 +66,25 @@ services:
     networks:
       - core-engine
 
+  # ── Almacenamiento de objetos (ADR-24: un bucket por tenant) ───────────
+  # El puerto 9000 se publica porque es el host FIRMADO en las URLs
+  # prefirmadas (MINIO_PUBLIC_ENDPOINT): el cliente sube/descarga directo sin
+  # pasar por el servicio. La consola (9001) NO se publica.
+  minio:
+    # Espejo del MinIO oficial: `minio/minio` no esta disponible en este entorno.
+    # Fijado por DIGEST (= RELEASE.2025-09-07T16-13-09Z) para que sea inmutable.
+    image: elestio/minio@sha256:25348a257f1ece1b192f25f6cd9854618fa86422ac87b494b5d4e629c556d4bd
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:?MINIO_ROOT_USER requerida}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:?MINIO_ROOT_PASSWORD requerida}
+    volumes:
+      - minio_data:/data
+    ports:
+      - "9000:9000"
+    networks:
+      - core-engine
+
   # ── API Gateway (punto de entrada unico) ───────────────────────────────
   gateway:
     <<: *servicio-base
@@ -145,9 +164,19 @@ services:
       PORT: 3008
       OUTBOX_TABLA: field.outbox
 
+  storage-service:
+    <<: *servicio-base
+    image: ghcr.io/xozan845-ctrl/core-engine-storage-service:stage
+    pull_policy: always
+    environment:
+      SERVICIO: storage-service
+      PORT: 3010
+      OUTBOX_TABLA: storage.outbox
+
 volumes:
   pg_data:
   rabbitmq_data:
+  minio_data:
 
 networks:
   core-engine:
