@@ -76,8 +76,11 @@ services:
     image: elestio/minio@sha256:25348a257f1ece1b192f25f6cd9854618fa86422ac87b494b5d4e629c556d4bd
     command: server /data --console-address ":9001"
     environment:
-      MINIO_ROOT_USER: ${MINIO_ROOT_USER:?MINIO_ROOT_USER requerida}
-      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:?MINIO_ROOT_PASSWORD requerida}
+      # Sin MINIO_* propias, la credencial de MinIO se deriva del secreto de
+      # RabbitMQ del entorno (fuerte y ya presente). Pega MINIO_ROOT_USER y
+      # MINIO_ROOT_PASSWORD dedicadas cuando puedas: tienen prioridad.
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-core-engine-minio}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-${RABBITMQ_PASSWORD}}
     volumes:
       - minio_data:/data
     ports:
@@ -172,6 +175,16 @@ services:
       SERVICIO: storage-service
       PORT: 3010
       OUTBOX_TABLA: storage.outbox
+      # Los mismos valores que el servicio `minio` (permite desplegar sin pegar
+      # MINIO_* aun: ver el comentario del bloque `minio`).
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-core-engine-minio}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-${RABBITMQ_PASSWORD}}
+      MINIO_ENDPOINT: ${MINIO_ENDPOINT:-minio}
+      MINIO_PORT: ${MINIO_PORT:-9000}
+      MINIO_USE_SSL: ${MINIO_USE_SSL:-false}
+      MINIO_PUBLIC_ENDPOINT: ${MINIO_PUBLIC_ENDPOINT:-${MINIO_ENDPOINT:-minio}}
+      MINIO_PUBLIC_PORT: ${MINIO_PUBLIC_PORT:-${MINIO_PORT:-9000}}
+      MINIO_PUBLIC_USE_SSL: ${MINIO_PUBLIC_USE_SSL:-${MINIO_USE_SSL:-false}}
 
 volumes:
   pg_data:
