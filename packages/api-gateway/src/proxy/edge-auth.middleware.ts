@@ -50,16 +50,24 @@ export function edgeAuth(opciones: OpcionesEdge = leerEdge()) {
     }
 
     if (opciones.basicAuth) {
-      const cabecera = req.headers.authorization ?? '';
-      const [esquema, credencial] = cabecera.split(' ');
-      const plano = credencial ? Buffer.from(credencial, 'base64').toString('utf-8') : '';
-      if (esquema !== 'Basic' || !credencial || !iguales(plano, opciones.basicAuth)) {
-        res.setHeader('WWW-Authenticate', 'Basic realm="Core Engine"');
-        res.status(401).json({
-          codigo: 'NO_AUTORIZADO',
-          mensaje: 'Se requiere autenticacion de borde para este entorno.',
-        });
-        return;
+      // Basic y Bearer comparten la cabecera `Authorization`: un cliente con
+      // sesion (token) la lleva con Bearer, y el gate no puede exigir Basic
+      // entonces. El token lo evalua la capa JWT del gateway (401 si es
+      // invalido), asi que presentar Bearer no salta el gate: solo lo cambia
+      // por la autenticacion de sesion, que tambien exige haber entrado.
+      const autorizacion = req.headers.authorization ?? '';
+      const traeBearer = /^Bearer\s+\S+/i.test(autorizacion);
+      if (!traeBearer) {
+        const [esquema, credencial] = autorizacion.split(' ');
+        const plano = credencial ? Buffer.from(credencial, 'base64').toString('utf-8') : '';
+        if (esquema !== 'Basic' || !credencial || !iguales(plano, opciones.basicAuth)) {
+          res.setHeader('WWW-Authenticate', 'Basic realm="Core Engine"');
+          res.status(401).json({
+            codigo: 'NO_AUTORIZADO',
+            mensaje: 'Se requiere autenticacion de borde para este entorno.',
+          });
+          return;
+        }
       }
     }
 
