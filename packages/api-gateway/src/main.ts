@@ -4,6 +4,7 @@ import type { Request, Response } from 'express';
 import { AppModule } from './app.module';
 import { OPENAPI_AGREGADO } from './openapi.agregado';
 import { evaluarReadiness, codigoReadiness } from './health/readiness.utils';
+import { edgeAuth, leerEdge } from './proxy/edge-auth.middleware';
 import {
   MetricsService,
   DomainErrorFilter,
@@ -18,10 +19,13 @@ async function bootstrap(): Promise<void> {
   const puerto = Number(process.env.PORT ?? PUERTOS.GATEWAY);
 
   // CORS controlado en el borde (doc 5.4): whitelist explicita del entorno;
-  // nunca reflejar origenes arbitrarios (barrido A05)
+  // nunca reflejar origenes arbitrarios (barrido A05). Con gate de borde activo
+  // (staging) se admiten credenciales: el navegador envia el Basic Auth.
+  const edge = leerEdge();
   const origenes = (process.env.CORS_ORIGINS ?? '').split(',').map((o) => o.trim()).filter(Boolean);
   app.enableCors({
     origin: origenes,
+    credentials: Boolean(edge.basicAuth),
     methods: ['GET', 'POST', 'PATCH', 'PUT', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization', 'x-request-id'],
     exposedHeaders: ['x-request-id'],
@@ -29,6 +33,8 @@ async function bootstrap(): Promise<void> {
   app.useGlobalFilters(new DomainErrorFilter());
 
   const expressApp = app.getHttpAdapter().getInstance();
+  // Gate del borde ANTES de cualquier ruta (incluidas /metrics y /docs).
+  expressApp.use(edgeAuth(edge));
   // Hardening de cabeceras y fingerprint (barrido A05): sin X-Powered-By y
   // cabeceras de seguridad base en el borde
   expressApp.disable('x-powered-by');
