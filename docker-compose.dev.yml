@@ -107,6 +107,9 @@ services:
       SERVICIO: api-gateway
       PORT: 8080
       OUTBOX_TABLA: identity.outbox
+      # En desarrollo el diagnostico (/docs, /metrics) va abierto; en stage/prod
+      # el borde lo cierra (DIAGNOSTICOS_PUBLICOS=false por defecto).
+      DIAGNOSTICOS_PUBLICOS: "true"
     ports:
       - "8080:8080"
     networks:
