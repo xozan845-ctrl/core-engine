@@ -4,6 +4,7 @@ export * from './errors';
 export * from './pagination';
 export * from './order-state';
 export * from './events/contracts';
+export * from './storage/almacen.contracts';
 export * from './db/pg.module';
 export * from './db/pg.service';
 export * from './rabbitmq/rabbit.constants';

@@ -19,6 +19,7 @@ scrape_configs:
           - 'finance-service:3007'
           - 'field-service:3008'
           - 'market-intelligence-service:3009'
+          - 'storage-service:3010'
         labels:
           plataforma: core-engine
 
