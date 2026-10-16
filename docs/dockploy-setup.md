@@ -124,6 +124,11 @@ Migraciones solo hacia adelante.
 | 5 | BD/vhost del entorno aislados (nada compartido) | ☐ | ☐ |
 | 6 | Secretos solo en variables de service/environment (`R-CD-7`) | ☐ | ☐ |
 | 7 | Rollback posible (redeploy de la versión/commit anterior) | ☐ | ☐ |
+| 8 | TLS en **todos** los dominios (API y MinIO) | ☐ | ☐ |
+| 9 | `/docs`, `/docs-json` y `/metrics` ocultos (`DIAGNOSTICOS_PUBLICOS=false`) | ☐ | ☐ |
+| 10 | MinIO sin puerto público (`9000` solo detrás de Traefik con TLS) | ☐ | ☐ |
+| 11 | Gate de staging (`EDGE_BASIC_AUTH`) — producción sin gate | ☐ | n/a |
+| 12 | `CORS_ORIGINS` con los orígenes reales del frontend | ☐ | ☐ |
 
 > Desarrollo local: `docker compose -f docker-compose.dev.yml up -d --build` + `npm run demo` es la
 > verificación equivalente antes de cualquier PR (R-GC-5).
