@@ -19,12 +19,12 @@ COPY packages packages
 RUN npm ci --prefer-offline --no-audit --no-fund
 # npm workspaces anida algunas dependencias por workspace (p. ej. node-cron en
 # commissions/finance); crear el directorio asegura que el COPY del runtime no falle.
-RUN mkdir -p packages/field-service/node_modules
+RUN mkdir -p packages/field-service/node_modules packages/shared/node_modules
 
 # Compilación: shared primero (dependencia), luego el servicio objetivo.
 RUN npm run build -w @core/shared && npm run build -w @core/field-service
 
-# El runtime NO lleva dependencias de desarrollo (R-CD-7/R-CD-22): tras compilar
+# El runtime NO lleva dependencias de desarrollo (R-CD-14): tras compilar
 # se poda el árbol para no enviar tooling de test (vitest, swc, eslint…).
 RUN npm prune --omit=dev
 
@@ -36,6 +36,9 @@ COPY --from=build /app/node_modules ./node_modules
 COPY --from=build /app/package.json ./package.json
 COPY --from=build /app/packages/shared/dist ./packages/shared/dist
 COPY --from=build /app/packages/shared/package.json ./packages/shared/package.json
+# dependencias que npm anida bajo `shared` (no hoisted en la raiz): sin esto el
+# servicio no arranca (MODULE_NOT_FOUND en rabbit.service; p. ej. amqplib 2).
+COPY --from=build /app/packages/shared/node_modules ./packages/shared/node_modules
 COPY --from=build /app/packages/field-service/dist ./packages/field-service/dist
 COPY --from=build /app/packages/field-service/package.json ./packages/field-service/package.json
 # dependencias que npm anida bajo el propio workspace (no hoisted en la raíz).
