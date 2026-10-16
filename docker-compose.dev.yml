@@ -1,6 +1,6 @@
 # Core Engine · DESARROLLO (construye las imágenes en local)
-# Entorno completo y autocontenido: Postgres + RabbitMQ + gateway + los 9
-# microservicios (incluye `commissions-service` y `market-intelligence-service`,
+# Entorno completo y autocontenido: Postgres + RabbitMQ + MinIO + gateway + los
+# 10 microservicios (incluye `commissions-service` y `market-intelligence-service`,
 # que NO se despliegan en producción). Publica al host los puertos de datos y
 # broker SOLO para desarrollo (conectar un cliente de BD o abrir la UI de
 # RabbitMQ en localhost).
@@ -71,6 +71,23 @@ services:
       interval: 10s
       timeout: 5s
       retries: 12
+    networks:
+      - core-engine
+
+  # ── Almacenamiento de objetos (ADR-24: un bucket por tenant) ───────────
+  minio:
+    # Espejo del MinIO oficial: `minio/minio` no esta disponible en este entorno.
+    # Fijado por DIGEST (= RELEASE.2025-09-07T16-13-09Z) para que sea inmutable.
+    image: elestio/minio@sha256:25348a257f1ece1b192f25f6cd9854618fa86422ac87b494b5d4e629c556d4bd
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:?MINIO_ROOT_USER requerida en .env}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:?MINIO_ROOT_PASSWORD requerida en .env}
+    volumes:
+      - minio_data:/data
+    ports:
+      - "9000:9000"
+      - "9001:9001"
     networks:
       - core-engine
 
@@ -201,9 +218,22 @@ services:
       PORT: 3009
       OUTBOX_TABLA: intelligence.outbox
 
+  storage-service:
+    <<: *servicio-base
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        SERVICIO: storage-service
+    environment:
+      SERVICIO: storage-service
+      PORT: 3010
+      OUTBOX_TABLA: storage.outbox
+
 volumes:
   pg_data:
   rabbitmq_data:
+  minio_data:
 
 networks:
   core-engine:

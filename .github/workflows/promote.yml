@@ -63,7 +63,7 @@ jobs:
           OWNER: ${{ github.repository_owner }}
         run: |
           set -euo pipefail
-          SERVICES="api-gateway identity-service catalog-service stores-service orders-service logistics-service commissions-service finance-service field-service market-intelligence-service"
+          SERVICES="api-gateway identity-service catalog-service stores-service orders-service logistics-service commissions-service finance-service field-service market-intelligence-service storage-service"
           {
             echo "### Promoción → ${INPUT_ENV}"
             echo "- origen: \`${INPUT_SOURCE}\`"

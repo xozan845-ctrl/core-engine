@@ -14,6 +14,11 @@ import {
   JWT_REFRESH_TTL_DEFAULT,
   PUERTOS,
   NOMBRE_SERVICIOS,
+  STORAGE_BUCKET_PREFIX_DEFAULT,
+  STORAGE_MAX_OBJETO_BYTES_DEFAULT,
+  STORAGE_CUOTA_DEFAULT_BYTES,
+  STORAGE_URL_TTL_SEGUNDOS_DEFAULT,
+  STORAGE_CONTENT_TYPES_DEFAULT,
 } from './constants';
 
 describe('constants (reglas de negocio y configuracion)', () => {
@@ -50,12 +55,22 @@ describe('constants (reglas de negocio y configuracion)', () => {
     expect(PUERTOS.IDENTITY).toBe(3001);
     expect(PUERTOS.CATALOG).toBe(3002);
     expect(PUERTOS.INTELLIGENCE).toBe(3009);
+    expect(PUERTOS.STORAGE).toBe(3010);
   });
 
   it('debe fijar el nombre de workspace de cada servicio', () => {
     expect(NOMBRE_SERVICIOS.CATALOG).toBe('catalog-service');
     expect(NOMBRE_SERVICIOS.COMMISSIONS).toBe('commissions-service');
     expect(NOMBRE_SERVICIOS.INTELLIGENCE).toBe('market-intelligence-service');
+    expect(NOMBRE_SERVICIOS.STORAGE).toBe('storage-service');
+  });
+
+  it('debe fijar los limites por defecto del almacenamiento de objetos', () => {
+    expect(STORAGE_BUCKET_PREFIX_DEFAULT).toBe('t-');
+    expect(STORAGE_MAX_OBJETO_BYTES_DEFAULT).toBe(25 * 1024 * 1024);
+    expect(STORAGE_CUOTA_DEFAULT_BYTES).toBe(5 * 1024 * 1024 * 1024);
+    expect(STORAGE_URL_TTL_SEGUNDOS_DEFAULT).toBe(900);
+    expect([...STORAGE_CONTENT_TYPES_DEFAULT]).toContain('image/png');
   });
 
   it('debe marcar solo enviada y entregada como estados visibles al publico', () => {
