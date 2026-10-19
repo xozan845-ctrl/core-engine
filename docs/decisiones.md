@@ -546,6 +546,56 @@ Este archivo registra decisiones técnicas deliberadas que se apartan del texto 
 
 ---
 
+## ADR-25: Empresas multi-tenant, participación de vendedores y modalidad logística
+
+- **Fecha**: 2026-10-19
+- **Estado**: Aceptado
+- **Contexto**: el modelo inicial usa `admin` como autoridad global y
+  `vendedor_id` simultáneamente como usuario, propietario de tienda, titular de
+  ofertas y beneficiario de liquidaciones. El negocio requiere separar al
+  operador global, al empresario propietario de productos y a sus vendedores.
+  Al crear un vendedor, el empresario debe asignarle un porcentaje de
+  participación sobre las ventas. Cada empresa también debe poder usar la
+  logística global de la plataforma, operar una flota propia o combinar ambas.
+- **Decisión**:
+  1. `super_admin` será el rol global de plataforma. Una `empresa` será el
+     tenant comercial y sus permisos se expresarán mediante membresías con
+     roles `empresario` y `vendedor`; un usuario no representará por sí mismo
+     la propiedad de una empresa o tienda.
+  2. La membresía del vendedor guardará una `participacion_porcentaje`
+     predeterminada, definida por el empresario al invitarlo o crearlo. Esta
+     participación es distinta del `margen` comercial de una oferta: el margen
+     determina el precio de venta y la participación determina cuánto recibe el
+     vendedor. Futuras excepciones por producto podrán sobrescribir el valor
+     predeterminado sin cambiar su significado.
+  3. La empresa elegirá `modalidad_logistica` entre `plataforma`, `propia` e
+     `hibrida`. En modo híbrido, la asignación se resolverá por envío y quedará
+     auditada; no se inferirá únicamente de la configuración vigente.
+  4. No se creará otro microservicio logístico. `logistics-service` conservará
+     la responsabilidad sobre guías, asignación y ciclo del envío;
+     `field-service` conservará personal, vehículos, rutas y tracking aislados
+     por tenant. La flota global será un proveedor/tenant de plataforma y las
+     flotas propias pertenecerán al tenant empresarial.
+  5. Las mutaciones entre identidad, pedidos y logística se propagarán mediante
+     eventos y outbox (R-AR-2/R-AR-3). Cada servicio mantendrá sus tablas en su
+     propio esquema (R-DB-1); los eventos transportarán los identificadores y
+     porcentajes necesarios para conservar el histórico de cada venta.
+  6. La liquidación se calculará por línea de orden, congelando en la venta el
+     `empresa_id`, `tienda_id`, `vendedor_id` y porcentaje aplicable. Cambiar la
+     participación de un vendedor no modificará ventas anteriores.
+- **Consecuencias**:
+  - La migración se hará incrementalmente: identidad empresarial; catálogo y
+    tiendas por empresa; pedidos multi-vendedor; liquidaciones; asignación
+    logística. Cada etapa será un PR revisable hacia `develop` (R-PR-1/2).
+  - JWT mantendrá `tenant_id` como empresa activa, pero la autorización sensible
+    comprobará una membresía activa y RLS; el frontend no será autoridad de
+    permisos (R-DS-3/R-DB-2).
+  - La modalidad logística podrá elegirse durante la creación de la empresa y
+    modificarse posteriormente, sin crear automáticamente vehículos o personal.
+    Elegir flota propia habilita su administración en `field-service`.
+
+---
+
 ## Resumen de cumplimiento post-corrección
 
 | Ítem del documento          | Estado  | Nota |
