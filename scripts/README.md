@@ -35,11 +35,13 @@ scripts/
 │       ├── git.mjs           #   wrappers seguros (execFileSync, sin interpolación)
 │       ├── commits.mjs       #   validateCommitSubject (pura, parametrizada)
 │       ├── semver.mjs        #   parse/compare de tags vX.Y.Z[-pre] (puro)
+│       ├── coverage.mjs      #   lee coverage-summary y compara contra baseline
 │       └── rules-docs.mjs    #   áreas, archivos NN-tema.md e IDs de docs/rules
 │
 ├── config/                   # datos y helpers puros del proyecto
 │   ├── project.mjs           #   rama, servicios, scopes, rutas, tipos de commit
 │   ├── coverage.mjs          #   umbrales de cobertura por workspace (R-COV-1/4)
+│   ├── coverage-baseline.json #  cobertura real de referencia (R-COV-1)
 │   └── manifest.mjs          #   suites exigidas (id + archivo)
 │
 ├── rules/                    # reglas ejecutables, agrupadas por dominio
@@ -61,6 +63,9 @@ scripts/
     ├── release-check.test.mjs # fixtures git: tag anotado, orden y versiones
     ├── version-bump.mjs       # alinea package.json + lockfile con un release
     ├── version-bump.test.mjs  # bump de root/workspaces/lock y dry-run
+    ├── coverage-compare.mjs   # gate de cobertura real vs baseline (R-COV-1)
+    ├── coverage-baseline.mjs  # actualiza el baseline desde coverage-summary
+    ├── coverage-compare.test.mjs # gate y writer con reportes sintéticos
     ├── smoke.mjs              # flujo API completo contra stack levantado
     ├── smoke.test.mjs         # regresiones del runner con HTTP efímero
     ├── swagger-aggregate.mjs  # agrega specs y separa superficie pública/interna
@@ -174,6 +179,8 @@ Los `npm scripts` de la raíz son **envoltorios** (sin ruptura para CI ni local)
 | `rules:check` | `node scripts/cli.mjs rules` |
 | `release:check` | `node scripts/tools/release-check.mjs` |
 | `version:bump` | `node scripts/tools/version-bump.mjs` |
+| `coverage:compare` | `node scripts/tools/coverage-compare.mjs` |
+| `coverage:baseline` | `node scripts/tools/coverage-baseline.mjs` |
 | `demo` | `node scripts/cli.mjs smoke` |
 | `swagger:export` | `node scripts/cli.mjs swagger` |
 | `test:engine` | autotests del motor, incluida una suite centinela que prueba el exit code ante assertions fallidas |

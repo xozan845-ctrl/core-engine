@@ -72,7 +72,7 @@ function workspacesInScript(script, task) {
 export default defineSuite({
   id: 'microservices-ci-contract',
   area: 'test',
-  rules: ['R-MS-1', 'R-QA-1', 'R-COV-2', 'R-COV-4', 'R-CI-5', 'R-I-12'],
+  rules: ['R-MS-1', 'R-QA-1', 'R-COV-1', 'R-COV-2', 'R-COV-4', 'R-CI-5', 'R-I-12'],
   mode: 'repo',
   run: ({ test, assert }) => {
     test('R-MS-1: el inventario declara exactamente los servicios desplegables', () => {
@@ -215,6 +215,39 @@ export default defineSuite({
         [],
         `Umbrales por debajo del baseline o desalineados (R-COV-1):\n${problems.join('\n')}`,
       );
+    });
+
+    test('R-COV-1: CI compara la cobertura real contra el baseline', () => {
+      const workflow = readText(join(repoRoot, WORKFLOWS_DIR, 'ci.yml'));
+      assert.match(
+        workflow,
+        /^\s*run: npm run coverage:compare$/m,
+        'CI debe ejecutar coverage:compare después de npm test (R-COV-1)',
+      );
+
+      const workspaces = [
+        'shared',
+        ...SERVICES.filter((service) => !SERVICE_TEST_EXCEPTIONS.includes(service)),
+      ];
+      const baseline = readJson(
+        join(repoRoot, 'scripts', 'config', 'coverage-baseline.json'),
+      );
+
+      assert.deepEqual(
+        sorted(Object.keys(baseline)),
+        sorted(workspaces),
+        'el baseline debe declarar exactamente los workspaces con suite',
+      );
+
+      const problems = [];
+      for (const [workspace, metrics] of Object.entries(baseline)) {
+        for (const metric of ['lines', 'branches', 'functions', 'statements']) {
+          if (typeof metrics[metric] !== 'number') {
+            problems.push(`${workspace}: baseline sin la métrica '${metric}'`);
+          }
+        }
+      }
+      assert.deepEqual(problems, [], problems.join('\n'));
     });
 
     test('R-COV-4: cada config Vitest aplica alcance y consume los thresholds centrales', () => {
