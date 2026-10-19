@@ -48,7 +48,7 @@ async function rulesCommand(args) {
 const COMMANDS = {
   rules: rulesCommand,
   smoke: () => import('./tools/smoke.mjs'),
-  swagger: () => import('./tools/swagger-aggregate.mjs'),
+  swagger: () => import('./tools/swagger-aggregate.mjs').then((modulo) => modulo.main()),
 };
 
 /**
