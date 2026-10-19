@@ -2866,7 +2866,14 @@ export const OPENAPI_AGREGADO = {
         },
         "responses": {
           "201": {
-            "description": "Sesión creada (JWT + refresh)"
+            "description": "Sesión creada (JWT + refresh)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SesionResponseDto"
+                }
+              }
+            }
           }
         },
         "summary": "Registrar vendedor o comprador",
@@ -2891,7 +2898,14 @@ export const OPENAPI_AGREGADO = {
         },
         "responses": {
           "200": {
-            "description": "Sesión iniciada"
+            "description": "Sesión iniciada",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SesionResponseDto"
+                }
+              }
+            }
           },
           "401": {
             "description": "Credenciales inválidas"
@@ -2927,7 +2941,14 @@ export const OPENAPI_AGREGADO = {
         },
         "responses": {
           "201": {
-            "description": ""
+            "description": "Sesión renovada",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SesionResponseDto"
+                }
+              }
+            }
           }
         },
         "summary": "Renovar la sesión con refresh token",
@@ -2951,8 +2972,15 @@ export const OPENAPI_AGREGADO = {
           }
         },
         "responses": {
-          "200": {
-            "description": "Sesión cerrada"
+          "201": {
+            "description": "Sesión cerrada",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OkResponseDto"
+                }
+              }
+            }
           }
         },
         "security": [
@@ -2982,7 +3010,14 @@ export const OPENAPI_AGREGADO = {
         },
         "responses": {
           "201": {
-            "description": "Usuario creado"
+            "description": "Usuario creado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UsuarioResponseDto"
+                }
+              }
+            }
           },
           "403": {
             "description": "Solo un administrador puede crear usuarios"
@@ -3015,7 +3050,14 @@ export const OPENAPI_AGREGADO = {
         },
         "responses": {
           "201": {
-            "description": ""
+            "description": "Contraseña cambiada",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OkResponseDto"
+                }
+              }
+            }
           }
         },
         "security": [
@@ -3045,7 +3087,14 @@ export const OPENAPI_AGREGADO = {
         },
         "responses": {
           "201": {
-            "description": ""
+            "description": "Solicitud aceptada",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OkResponseDto"
+                }
+              }
+            }
           }
         },
         "summary": "Solicitar restablecimiento de contraseña (público)",
@@ -3060,7 +3109,14 @@ export const OPENAPI_AGREGADO = {
         "parameters": [],
         "responses": {
           "200": {
-            "description": ""
+            "description": "Contexto del usuario autenticado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UsuarioContextoResponseDto"
+                }
+              }
+            }
           }
         },
         "security": [
@@ -3090,7 +3146,14 @@ export const OPENAPI_AGREGADO = {
         },
         "responses": {
           "201": {
-            "description": ""
+            "description": "Personal vinculado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OkResponseDto"
+                }
+              }
+            }
           }
         },
         "security": [
@@ -3110,7 +3173,17 @@ export const OPENAPI_AGREGADO = {
         "parameters": [],
         "responses": {
           "200": {
-            "description": ""
+            "description": "Usuarios registrados",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/UsuarioResponseDto"
+                  }
+                }
+              }
+            }
           }
         },
         "security": [
@@ -3139,6 +3212,16 @@ export const OPENAPI_AGREGADO = {
           }
         ],
         "responses": {
+          "200": {
+            "description": "Usuario encontrado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UsuarioResponseDto"
+                }
+              }
+            }
+          },
           "404": {
             "description": "Usuario inexistente o sin permiso"
           }
@@ -6638,6 +6721,74 @@ export const OPENAPI_AGREGADO = {
           "supuestos"
         ]
       },
+      "UsuarioResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Id del usuario",
+            "format": "uuid"
+          },
+          "nombre": {
+            "type": "string",
+            "description": "Nombre del usuario"
+          },
+          "correo": {
+            "type": "string",
+            "description": "Correo del usuario",
+            "format": "email"
+          },
+          "rol": {
+            "type": "string",
+            "description": "Rol del usuario",
+            "enum": [
+              "admin",
+              "vendedor",
+              "comprador",
+              "logistica",
+              "coordinador",
+              "supervisor",
+              "operativo"
+            ],
+            "example": "vendedor"
+          },
+          "tenant_id": {
+            "type": "string",
+            "description": "Tenant del usuario",
+            "format": "uuid"
+          },
+          "personal_id": {
+            "type": "string",
+            "description": "Ficha de personal vinculada",
+            "format": "uuid"
+          },
+          "creado_en": {
+            "type": "string",
+            "description": "Fecha de creación (ISO 8601 UTC)",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "nombre",
+          "correo",
+          "rol",
+          "creado_en"
+        ]
+      },
+      "ContarVendedoresResponseDto": {
+        "type": "object",
+        "properties": {
+          "vendedores": {
+            "type": "number",
+            "description": "Cantidad de usuarios con rol vendedor",
+            "example": 12
+          }
+        },
+        "required": [
+          "vendedores"
+        ]
+      },
       "RegistroRequestDto": {
         "type": "object",
         "properties": {
@@ -6675,6 +6826,89 @@ export const OPENAPI_AGREGADO = {
           "rol"
         ]
       },
+      "SesionUsuarioResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Id del usuario",
+            "format": "uuid"
+          },
+          "nombre": {
+            "type": "string",
+            "description": "Nombre del usuario"
+          },
+          "correo": {
+            "type": "string",
+            "description": "Correo del usuario",
+            "format": "email"
+          },
+          "rol": {
+            "type": "string",
+            "description": "Rol del usuario",
+            "enum": [
+              "admin",
+              "vendedor",
+              "comprador",
+              "logistica",
+              "coordinador",
+              "supervisor",
+              "operativo"
+            ],
+            "example": "comprador"
+          },
+          "tenant_id": {
+            "type": "string",
+            "description": "Tenant del usuario",
+            "format": "uuid"
+          },
+          "personal_id": {
+            "type": "string",
+            "description": "Ficha de personal vinculada",
+            "format": "uuid"
+          }
+        },
+        "required": [
+          "id",
+          "nombre",
+          "correo",
+          "rol"
+        ]
+      },
+      "SesionResponseDto": {
+        "type": "object",
+        "properties": {
+          "access_token": {
+            "type": "string",
+            "description": "Access token JWT (HS256)",
+            "example": "eyJhbGciOiJIUzI1NiIs..."
+          },
+          "refresh_token": {
+            "type": "string",
+            "description": "Refresh token JWT",
+            "example": "eyJhbGciOiJIUzI1NiIs..."
+          },
+          "expira_en": {
+            "type": "number",
+            "description": "Vigencia del access token en segundos",
+            "example": 900
+          },
+          "usuario": {
+            "description": "Datos del usuario autenticado",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/SesionUsuarioResponseDto"
+              }
+            ]
+          }
+        },
+        "required": [
+          "access_token",
+          "refresh_token",
+          "expira_en",
+          "usuario"
+        ]
+      },
       "LoginRequestDto": {
         "type": "object",
         "properties": {
@@ -6702,6 +6936,19 @@ export const OPENAPI_AGREGADO = {
             "description": "Refresh token de la sesión a cerrar; si se omite, cierra todas"
           }
         }
+      },
+      "OkResponseDto": {
+        "type": "object",
+        "properties": {
+          "ok": {
+            "type": "boolean",
+            "description": "Operación completada",
+            "example": true
+          }
+        },
+        "required": [
+          "ok"
+        ]
       },
       "CrearUsuarioRequestDto": {
         "type": "object",
@@ -6778,6 +7025,54 @@ export const OPENAPI_AGREGADO = {
         },
         "required": [
           "correo"
+        ]
+      },
+      "UsuarioContextoResponseDto": {
+        "type": "object",
+        "properties": {
+          "user_id": {
+            "type": "string",
+            "description": "Id del usuario autenticado",
+            "format": "uuid"
+          },
+          "email": {
+            "type": "string",
+            "description": "Correo del usuario",
+            "format": "email"
+          },
+          "rol": {
+            "type": "string",
+            "description": "Rol del usuario",
+            "enum": [
+              "admin",
+              "vendedor",
+              "comprador",
+              "logistica",
+              "coordinador",
+              "supervisor",
+              "operativo"
+            ],
+            "example": "admin"
+          },
+          "nombre": {
+            "type": "string",
+            "description": "Nombre del usuario"
+          },
+          "tenant_id": {
+            "type": "string",
+            "description": "Tenant del usuario",
+            "format": "uuid"
+          },
+          "personal_id": {
+            "type": "string",
+            "description": "Ficha de personal vinculada",
+            "format": "uuid"
+          }
+        },
+        "required": [
+          "user_id",
+          "email",
+          "rol"
         ]
       },
       "VincularPersonalRequestDto": {
