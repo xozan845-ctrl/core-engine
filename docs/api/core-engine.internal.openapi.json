@@ -778,6 +778,11 @@
       "ProductoResponseDto": {
         "type": "object",
         "properties": {
+          "empresa_id": {
+            "type": "string",
+            "description": "Empresa propietaria",
+            "format": "uuid"
+          },
           "id": {
             "type": "string",
             "description": "Id del producto",
@@ -826,6 +831,7 @@
           }
         },
         "required": [
+          "empresa_id",
           "id",
           "sku",
           "nombre",
@@ -4435,6 +4441,16 @@
             "description": "Id de la tienda",
             "format": "uuid"
           },
+          "empresa_id": {
+            "type": "string",
+            "description": "Empresa propietaria",
+            "format": "uuid"
+          },
+          "propietario_usuario_id": {
+            "type": "string",
+            "description": "Usuario propietario operativo",
+            "format": "uuid"
+          },
           "vendedor_id": {
             "type": "string",
             "description": "Id del vendedor dueño",
@@ -4457,6 +4473,8 @@
         },
         "required": [
           "id",
+          "empresa_id",
+          "propietario_usuario_id",
           "vendedor_id",
           "nombre",
           "descripcion",
@@ -4466,6 +4484,11 @@
       "PublicarProductoRequestDto": {
         "type": "object",
         "properties": {
+          "tienda_id": {
+            "type": "string",
+            "description": "Tienda donde se publicará",
+            "format": "uuid"
+          },
           "producto_id": {
             "type": "string",
             "description": "Id del producto a publicar",
@@ -4480,6 +4503,7 @@
           }
         },
         "required": [
+          "tienda_id",
           "producto_id",
           "margen"
         ]

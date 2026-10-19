@@ -24,6 +24,7 @@ describe('ProductosService (catalogo maestro y stock)', () => {
 
   const filaProducto = {
     id: '11111111-2222-3333-4444-555555555555',
+    empresa_id: 'aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee',
     sku: 'SKU-01',
     nombre: 'Teclado',
     descripcion: 'mecanico',
@@ -35,6 +36,7 @@ describe('ProductosService (catalogo maestro y stock)', () => {
   };
 
   const datosValidos = {
+    empresa_id: 'aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee',
     sku: 'sku-01',
     nombre: 'Teclado',
     precio_base: '1500.00',
@@ -79,8 +81,8 @@ describe('ProductosService (catalogo maestro y stock)', () => {
       expect(resultado.sku).toBe('SKU-01'); // trim + upper
       const [sqlInsert, params] = (client.query as Mock).mock.calls[0];
       expect(sqlInsert).toContain('INSERT INTO catalog.productos');
-      expect(params[1]).toBe('SKU-01'); // sku normalizado
-      expect(params[5]).toBe(150000); // precio en centavos (A02)
+      expect(params[2]).toBe('SKU-01'); // sku normalizado
+      expect(params[6]).toBe(150000); // precio en centavos (A02)
       const sqlHistorico = (client.query as Mock).mock.calls[1][0];
       expect(sqlHistorico).toContain('INSERT INTO catalog.historico_precios');
     });
@@ -199,6 +201,13 @@ describe('ProductosService (catalogo maestro y stock)', () => {
   });
 
   describe('actualizar (H-03 / RN-08)', () => {
+    it('oculta el producto cuando pertenece a otra empresa', async () => {
+      const { servicio, pg } = crear();
+      (pg.queryOne as Mock).mockResolvedValue(filaProducto);
+      await expect(servicio.actualizar(filaProducto.id, { nombre: 'Otro' }, 'otra-empresa'))
+        .rejects.toThrow(NotFoundError);
+    });
+
     it('debe lanzar NotFoundError cuando el producto no existe', async () => {
       const { servicio } = crear();
       await expect(servicio.actualizar('no-uuid', { nombre: 'x' })).rejects.toThrow(NotFoundError);

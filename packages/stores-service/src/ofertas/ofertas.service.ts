@@ -45,6 +45,7 @@ interface OfertaRow {
 
 interface ProductoExterno {
   id: string;
+  empresa_id: string;
   sku: string;
   nombre: string;
   precio_base: string;
@@ -132,6 +133,7 @@ export class OfertasService {
    */
   async publicar(
     vendedorId: string,
+    tiendaId: string,
     productoId: string,
     margen: number,
   ): Promise<Oferta> {
@@ -141,9 +143,9 @@ export class OfertasService {
         `El margen debe estar entre ${MARGEN_MINIMO} y ${MARGEN_MAXIMO} por ciento (RN-01).`,
       );
     }
-    const tienda = await this.pg.queryOne<{ id: string }>(
-      `SELECT id FROM stores.tiendas WHERE vendedor_id = $1`,
-      [vendedorId],
+    const tienda = await this.pg.queryOne<{ id: string; empresa_id: string }>(
+      `SELECT id, empresa_id FROM stores.tiendas WHERE id = $1 AND propietario_usuario_id = $2`,
+      [tiendaId, vendedorId],
     );
     if (!tienda) {
       throw new DomainError('TIENDA_REQUERIDA', 'Crea primero tu tienda de vendedor.');
@@ -152,6 +154,9 @@ export class OfertasService {
     const producto = await this.consultarCatalogo(productoId);
     if (!producto) {
       throw new NotFoundError('Producto', productoId);
+    }
+    if (producto.empresa_id !== tienda.empresa_id) {
+      throw new DomainError('PRODUCTO_OTRA_EMPRESA', 'La tienda solo puede publicar productos de su empresa.');
     }
     // RN-02
     if (producto.stock < 1 || producto.estado === 'agotado') {

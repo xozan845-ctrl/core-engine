@@ -1,6 +1,6 @@
 import { Body, Controller, Get, Param, Patch, Post, Query } from '@nestjs/common';
 import { ApiBearerAuth, ApiCreatedResponse, ApiOkResponse, ApiOperation, ApiProperty, ApiResponse, ApiTags } from '@nestjs/swagger';
-import { IsInt, IsString, Max, Min } from 'class-validator';
+import { IsInt, IsString, IsUUID, Max, Min } from 'class-validator';
 import { TiendasService } from '../tiendas/tiendas.service';
 import { OfertasService, Oferta } from './ofertas.service';
 import {
@@ -18,6 +18,10 @@ import {
 } from '@core/shared';
 
 export class PublicarProductoRequestDto {
+  @ApiProperty({ description: 'Tienda donde se publicará', format: 'uuid' })
+  @IsUUID()
+  tienda_id: string;
+
   @ApiProperty({ description: 'Id del producto a publicar', example: 'a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11' })
   @IsString()
   producto_id: string;
@@ -48,7 +52,7 @@ export class OfertasController {
 
   /** POST /api/v1/vendedores/productos — publica producto con margen (Tabla 21). */
   @Post('vendedores/productos')
-  @Roles(ROLES.VENDEDOR)
+  @Roles(ROLES.VENDEDOR, ROLES.EMPRESARIO)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Publicar un producto con margen (vendedor)' })
   @ApiCreatedResponse({ type: OfertaResponseDto, description: 'Oferta creada' })
@@ -56,12 +60,12 @@ export class OfertasController {
     @Body() dto: PublicarProductoRequestDto,
     @UsuarioActual() usuario: UsuarioContexto,
   ): Promise<Oferta> {
-    return this.ofertas.publicar(usuario.user_id, dto.producto_id, dto.margen);
+    return this.ofertas.publicar(usuario.user_id, dto.tienda_id, dto.producto_id, dto.margen);
   }
 
   /** PATCH /api/v1/vendedores/productos/:id — cambia el margen de la oferta. */
   @Patch('vendedores/productos/:id')
-  @Roles(ROLES.VENDEDOR)
+  @Roles(ROLES.VENDEDOR, ROLES.EMPRESARIO)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Cambiar el margen de una oferta (vendedor)' })
   @ApiOkResponse({ type: OfertaResponseDto, description: 'Oferta actualizada' })
@@ -75,7 +79,7 @@ export class OfertasController {
 
   /** GET /api/v1/vendedores/me/ofertas — ofertas del vendedor autenticado. */
   @Get('vendedores/me/ofertas')
-  @Roles(ROLES.VENDEDOR)
+  @Roles(ROLES.VENDEDOR, ROLES.EMPRESARIO)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Listar las ofertas del vendedor autenticado' })
   @ApiOkResponse({ type: PaginaOfertasResponseDto, description: 'Página de ofertas' })

@@ -24,6 +24,7 @@ describe('OfertasService (RN-01 / RN-02)', () => {
   };
 
   const productoExterno = {
+    empresa_id: 'e1',
     id: 'p1',
     sku: 'SKU-01',
     nombre: 'Teclado',
@@ -51,37 +52,37 @@ describe('OfertasService (RN-01 / RN-02)', () => {
   describe('publicar (H-01 / TC-02)', () => {
     it('debe rechazar el margen cuando esta fuera del rango 0-90 sin tocar la BD', async () => {
       const { servicio, pg } = crear();
-      await expect(servicio.publicar('v1', 'p1', -1)).rejects.toThrow(/margen/i);
-      await expect(servicio.publicar('v1', 'p1', 91)).rejects.toThrow(DomainError);
+      await expect(servicio.publicar('v1', 't1', 'p1', -1)).rejects.toThrow(/margen/i);
+      await expect(servicio.publicar('v1', 't1', 'p1', 91)).rejects.toThrow(DomainError);
       expect(pg.queryOne).not.toHaveBeenCalled();
     });
 
     it('debe rechazar el alta cuando el vendedor no tiene tienda sin consultar el catalogo', async () => {
       const { servicio } = crear();
       const fetchSpy = vi.spyOn(globalThis, 'fetch');
-      await expect(servicio.publicar('v1', 'p1', 25)).rejects.toThrow(/tienda/i);
+      await expect(servicio.publicar('v1', 't1', 'p1', 25)).rejects.toThrow(/tienda/i);
       expect(fetchSpy).not.toHaveBeenCalled();
     });
 
     it('debe lanzar NotFoundError cuando el producto no existe en el catalogo', async () => {
       const { servicio, pg } = crear();
-      (pg.queryOne as Mock).mockResolvedValueOnce({ id: 't1' }); // tienda
+      (pg.queryOne as Mock).mockResolvedValueOnce({ id: 't1', empresa_id: 'e1' }); // tienda
       fetchResponde(false, { statusCode: 404 });
-      await expect(servicio.publicar('v1', 'p1', 25)).rejects.toThrow(NotFoundError);
+      await expect(servicio.publicar('v1', 't1', 'p1', 25)).rejects.toThrow(NotFoundError);
     });
 
     it('debe lanzar NotFoundError cuando el catalogo no responde (caida de red)', async () => {
       const { servicio, pg } = crear();
-      (pg.queryOne as Mock).mockResolvedValueOnce({ id: 't1' });
+      (pg.queryOne as Mock).mockResolvedValueOnce({ id: 't1', empresa_id: 'e1' });
       vi.spyOn(globalThis, 'fetch').mockRejectedValue(new Error('red caida'));
-      await expect(servicio.publicar('v1', 'p1', 25)).rejects.toThrow(NotFoundError);
+      await expect(servicio.publicar('v1', 't1', 'p1', 25)).rejects.toThrow(NotFoundError);
     });
 
     it('debe prohibir publicar con stock 0 (RN-02)', async () => {
       const { servicio, pg } = crear();
-      (pg.queryOne as Mock).mockResolvedValueOnce({ id: 't1' });
+      (pg.queryOne as Mock).mockResolvedValueOnce({ id: 't1', empresa_id: 'e1' });
       fetchResponde(true, { ...productoExterno, stock: 0 });
-      await expect(servicio.publicar('v1', 'p1', 25)).rejects.toThrow(ConflictError);
+      await expect(servicio.publicar('v1', 't1', 'p1', 25)).rejects.toThrow(ConflictError);
       const sqls = (pg.queryOne as Mock).mock.calls.map((c) => c[0] as string);
       expect(sqls.some((s) => s.includes('INSERT INTO stores.ofertas'))).toBe(false);
     });
@@ -89,21 +90,21 @@ describe('OfertasService (RN-01 / RN-02)', () => {
     it('debe devolver ConflictError cuando el producto ya esta publicado en la tienda', async () => {
       const { servicio, pg } = crear();
       (pg.queryOne as Mock)
-        .mockResolvedValueOnce({ id: 't1' }) // tienda
+        .mockResolvedValueOnce({ id: 't1', empresa_id: 'e1' }) // tienda
         .mockResolvedValueOnce({ id: 'of-duplicada' }); // oferta existente
       fetchResponde(true, productoExterno);
-      await expect(servicio.publicar('v1', 'p1', 25)).rejects.toThrow(/publicado en tu tienda/);
+      await expect(servicio.publicar('v1', 't1', 'p1', 25)).rejects.toThrow(/publicado en tu tienda/);
     });
 
     it('debe calcular precio_venta = base x (1 + margen/100) y registrar historico (RN-01)', async () => {
       const { servicio, pg } = crear();
       (pg.queryOne as Mock)
-        .mockResolvedValueOnce({ id: 't1' }) // tienda
+        .mockResolvedValueOnce({ id: 't1', empresa_id: 'e1' }) // tienda
         .mockResolvedValueOnce(null) // sin oferta duplicada
         .mockResolvedValueOnce(filaOferta); // INSERT ... RETURNING
       fetchResponde(true, productoExterno);
 
-      const oferta = await servicio.publicar('v1', 'p1', 25);
+      const oferta = await servicio.publicar('v1', 't1', 'p1', 25);
 
       expect(oferta.precio_base).toBe('100.00');
       expect(oferta.precio_venta).toBe('125.00'); // 100 x 1.25
