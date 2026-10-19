@@ -119,15 +119,6 @@ export class FinanzasController {
     return this.proyecciones.listar();
   }
 
-  @Get('proyecciones/:id')
-  @ApiOperation({ summary: 'Detalle de una proyección' })
-  @ApiParam({ name: 'id', description: 'Id de la proyección' })
-  async detalle(@Param('id') id: string): Promise<Proyeccion> {
-    const proyeccion = await this.proyecciones.obtener(id);
-    if (!proyeccion) throw new NotFoundError('Proyeccion', id);
-    return proyeccion;
-  }
-
   /** Calculo puntual del punto de equilibrio (tablas 8.12 y 8.11 del informe). */
   @Get('punto-equilibrio')
   @ApiOperation({ summary: 'Punto de equilibrio (tablas 8.12/8.11)' })
@@ -227,6 +218,20 @@ export class FinanzasController {
       tasa_descuento_mensual: 0.015,
     };
     return this.proyecciones.planBienal(base);
+  }
+
+  /**
+   * Debe declararse DESPUÉS de las rutas estáticas de /proyecciones: en Nest
+   * las rutas se resuelven en orden de declaración y `proyecciones/:id` taparía
+   * `proyecciones/sensibilidad` y `proyecciones/plan-bienal` (R-DO-9).
+   */
+  @Get('proyecciones/:id')
+  @ApiOperation({ summary: 'Detalle de una proyección' })
+  @ApiParam({ name: 'id', description: 'Id de la proyección' })
+  async detalle(@Param('id') id: string): Promise<Proyeccion> {
+    const proyeccion = await this.proyecciones.obtener(id);
+    if (!proyeccion) throw new NotFoundError('Proyeccion', id);
+    return proyeccion;
   }
 
   /** Tablero financiero: KPIs + reglas de alerta por capa (tabla 8.10). */

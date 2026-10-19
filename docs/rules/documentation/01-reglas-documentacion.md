@@ -14,6 +14,7 @@ La documentación es el único activo que sobrevive a las migraciones y refactor
 | R-DO-6 | **Documentación de API:** La fuente de verdad del contrato de la API es la especificación OpenAPI (Swagger). Los cambios en request/response DTOs deben ir acompañados de los decoradores `@ApiProperty` correspondientes. |
 | R-DO-7 | **Evidencia en Meta:** Todo hallazgo de auditoría o checklist DEBE ir en `docs/rules/_meta/`. Prohibido incrustar snapshots transitorios o resultados de CI en los READMEs estructurales. |
 | R-DO-8 | **Taxonomía y superficies del contrato:** toda ruta pública expuesta por el gateway DEBE empezar por `/api/v1/`; toda ruta interna servicio→servicio DEBE empezar por `/internal/`; el contrato público (`docs/api/core-engine.openapi.json`) no puede contener rutas `/internal/` y el interno no puede contener rutas `/api/v1/`; todo controlador `internal*` DEBE usar `ClaveInternaGuard` (R-DS-5). La verificación ejecutable vive en `scripts/rules/contract/openapi.test.mjs`. |
+| R-DO-9 | **Rutas estáticas antes que paramétricas:** en un mismo controlador y método HTTP, ninguna ruta estática puede declararse después de una ruta con parámetro que la capture a la misma profundidad (ej. `proyecciones/sensibilidad` después de `proyecciones/:id`). La verificación ejecutable vive en `scripts/rules/contract/openapi.test.mjs`. |
 
 ## Verificación en PRs
 

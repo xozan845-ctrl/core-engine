@@ -68,6 +68,7 @@ Matriz completa en [`06-estandares-cobertura.md`](../test/06-estandares-cobertur
 - [ ] **R-C-8** — Errores con shape consistente (400/401/403/404/409/500).
 - [ ] **R-C-11** — Campo nuevo: DTO + test de contrato + actualización de quien lo consume, en el mismo PR.
 - [ ] **R-DO-8** — Rutas públicas bajo `/api/v1/`, internas bajo `/internal/`; el contrato público no mezcla superficies y todo controlador interno usa `ClaveInternaGuard`.
+- [ ] **R-DO-9** — Ninguna ruta estática queda tapada por una ruta `:param` previa en el mismo controlador y método.
 
 ## 6. E2E ([`03-reglas-e2e.md`](../test/03-reglas-e2e.md))
 
