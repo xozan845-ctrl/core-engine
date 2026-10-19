@@ -1,5 +1,5 @@
 import { Body, Controller, Get, Param, Post, Query } from '@nestjs/common';
-import { ApiBearerAuth, ApiOperation, ApiParam, ApiProperty, ApiQuery, ApiTags } from '@nestjs/swagger';
+import { ApiBearerAuth, ApiCreatedResponse, ApiOkResponse, ApiOperation, ApiParam, ApiProperty, ApiQuery, ApiTags } from '@nestjs/swagger';
 import {
   ArrayMinSize,
   IsInt,
@@ -16,6 +16,14 @@ import { Roles, ROLES, NotFoundError } from '@core/shared';
 import { ProyeccionesService, Proyeccion, SupuestosProyeccion } from './proyecciones.service';
 import { KpisService, KpisFinancieros } from './kpis.service';
 import { AlertasService } from './alertas.service';
+import {
+  KpisFinancierosResponseDto,
+  PlanBienalResponseDto,
+  ProyeccionResponseDto,
+  PuntoEquilibrioResponseDto,
+  SensibilidadEstudiosResponseDto,
+  TableroResponseDto,
+} from './finanzas.response.dto';
 
 export class SupuestosRequestDto {
   @ApiProperty({ description: 'Horizonte en meses (1-60)', minimum: 1, maximum: 60 })
@@ -109,12 +117,14 @@ export class FinanzasController {
 
   @Post('proyecciones')
   @ApiOperation({ summary: 'Crear una proyección financiera' })
+  @ApiCreatedResponse({ type: ProyeccionResponseDto, description: 'Proyección creada' })
   async crear(@Body() dto: CrearProyeccionRequestDto): Promise<Proyeccion> {
     return this.proyecciones.crear(dto.nombre, dto.supuestos as SupuestosProyeccion);
   }
 
   @Get('proyecciones')
   @ApiOperation({ summary: 'Listar proyecciones' })
+  @ApiOkResponse({ type: [ProyeccionResponseDto], description: 'Proyecciones' })
   async listar() {
     return this.proyecciones.listar();
   }
@@ -126,6 +136,7 @@ export class FinanzasController {
   @ApiQuery({ name: 'ticket_promedio_cents', required: false })
   @ApiQuery({ name: 'comision_tasa', required: false })
   @ApiQuery({ name: 'horizonte_meses', required: false })
+  @ApiOkResponse({ type: PuntoEquilibrioResponseDto, description: 'Punto de equilibrio' })
   async puntoEquilibrio(
     @Query('costos_fijos_cents') costosFijos?: string,
     @Query('ticket_promedio_cents') ticket?: string,
@@ -159,6 +170,7 @@ export class FinanzasController {
   @Get('kpis')
   @ApiOperation({ summary: 'KPIs financieros del periodo (tabla 8.8)' })
   @ApiQuery({ name: 'mes', required: false })
+  @ApiOkResponse({ type: KpisFinancierosResponseDto, description: 'KPIs financieros' })
   async kpisDelMes(@Query('mes') mes?: string): Promise<KpisFinancieros> {
     return this.kpis.kpis(mes);
   }
@@ -170,6 +182,7 @@ export class FinanzasController {
    */
   @Get('proyecciones/sensibilidad')
   @ApiOperation({ summary: 'Estudios de sensibilidad (8.7, 8.10, 8.11, 8.12)' })
+  @ApiOkResponse({ type: SensibilidadEstudiosResponseDto, description: 'Estudios de sensibilidad' })
   async sensibilidad(): Promise<{
     supuestos: SupuestosProyeccion;
     matriz_comision_gmv: ReturnType<ProyeccionesService['sensibilidadComisionGmv']>;
@@ -203,6 +216,7 @@ export class FinanzasController {
   /** Plan a 24 meses (8.6 + 8.9): cuenta de resultados por anio, ROI, mes 24. */
   @Get('proyecciones/plan-bienal')
   @ApiOperation({ summary: 'Plan a 24 meses (8.6 + 8.9)' })
+  @ApiOkResponse({ type: PlanBienalResponseDto, description: 'Plan a 24 meses' })
   async planBienal(): Promise<ReturnType<ProyeccionesService['planBienal']>> {
     const base: SupuestosProyeccion = {
       horizonte_meses: 12,
@@ -228,6 +242,7 @@ export class FinanzasController {
   @Get('proyecciones/:id')
   @ApiOperation({ summary: 'Detalle de una proyección' })
   @ApiParam({ name: 'id', description: 'Id de la proyección' })
+  @ApiOkResponse({ type: ProyeccionResponseDto, description: 'Proyección encontrada' })
   async detalle(@Param('id') id: string): Promise<Proyeccion> {
     const proyeccion = await this.proyecciones.obtener(id);
     if (!proyeccion) throw new NotFoundError('Proyeccion', id);
@@ -239,6 +254,7 @@ export class FinanzasController {
   @ApiOperation({ summary: 'Tablero financiero (KPIs + alertas, tabla 8.10)' })
   @ApiQuery({ name: 'mes', required: false })
   @ApiQuery({ name: 'costo_entrega_por_pedido_cents', required: false })
+  @ApiOkResponse({ type: TableroResponseDto, description: 'Tablero financiero' })
   async tablero(
     @Query('mes') mes?: string,
     @Query('costo_entrega_por_pedido_cents') costoEntrega?: string,

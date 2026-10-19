@@ -11,6 +11,7 @@ import { repoRoot } from '../engine/lib/paths.mjs';
  */
 const SERVICIOS_MIGRADOS = [
   'catalog-service',
+  'finance-service',
   'identity-service',
   'logistics-service',
   'market-intelligence-service',
