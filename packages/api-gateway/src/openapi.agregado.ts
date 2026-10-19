@@ -411,7 +411,17 @@ export const OPENAPI_AGREGADO = {
         "parameters": [],
         "responses": {
           "200": {
-            "description": ""
+            "description": "Personal del tenant",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/PersonalResponseDto"
+                  }
+                }
+              }
+            }
           }
         },
         "security": [
@@ -439,7 +449,14 @@ export const OPENAPI_AGREGADO = {
         },
         "responses": {
           "201": {
-            "description": ""
+            "description": "Personal creado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PersonalResponseDto"
+                }
+              }
+            }
           }
         },
         "security": [
@@ -468,7 +485,14 @@ export const OPENAPI_AGREGADO = {
         ],
         "responses": {
           "200": {
-            "description": ""
+            "description": "Personal encontrado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PersonalResponseDto"
+                }
+              }
+            }
           }
         },
         "security": [
@@ -505,7 +529,14 @@ export const OPENAPI_AGREGADO = {
         },
         "responses": {
           "200": {
-            "description": ""
+            "description": "Personal actualizado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PersonalResponseDto"
+                }
+              }
+            }
           }
         },
         "security": [
@@ -532,7 +563,7 @@ export const OPENAPI_AGREGADO = {
         ],
         "responses": {
           "200": {
-            "description": ""
+            "description": "Personal eliminado"
           }
         },
         "security": [
@@ -561,7 +592,14 @@ export const OPENAPI_AGREGADO = {
         ],
         "responses": {
           "200": {
-            "description": ""
+            "description": "Ubicación del personal",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UbicacionResponseDto"
+                }
+              }
+            }
           }
         },
         "security": [
@@ -598,7 +636,14 @@ export const OPENAPI_AGREGADO = {
         },
         "responses": {
           "200": {
-            "description": ""
+            "description": "Ubicación actualizada",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PersonalResponseDto"
+                }
+              }
+            }
           }
         },
         "security": [
@@ -618,7 +663,17 @@ export const OPENAPI_AGREGADO = {
         "parameters": [],
         "responses": {
           "200": {
-            "description": ""
+            "description": "Clientes de campo",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ClienteResponseDto"
+                  }
+                }
+              }
+            }
           }
         },
         "security": [
@@ -646,7 +701,14 @@ export const OPENAPI_AGREGADO = {
         },
         "responses": {
           "201": {
-            "description": ""
+            "description": "Cliente creado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ClienteResponseDto"
+                }
+              }
+            }
           }
         },
         "security": [
@@ -675,7 +737,14 @@ export const OPENAPI_AGREGADO = {
         ],
         "responses": {
           "200": {
-            "description": ""
+            "description": "Cliente encontrado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ClienteResponseDto"
+                }
+              }
+            }
           }
         },
         "security": [
@@ -712,7 +781,14 @@ export const OPENAPI_AGREGADO = {
         },
         "responses": {
           "200": {
-            "description": ""
+            "description": "Cliente actualizado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ClienteResponseDto"
+                }
+              }
+            }
           }
         },
         "security": [
@@ -739,7 +815,7 @@ export const OPENAPI_AGREGADO = {
         ],
         "responses": {
           "200": {
-            "description": ""
+            "description": "Cliente eliminado"
           }
         },
         "security": [
@@ -759,7 +835,17 @@ export const OPENAPI_AGREGADO = {
         "parameters": [],
         "responses": {
           "200": {
-            "description": ""
+            "description": "Vehículos del tenant",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/VehiculoResponseDto"
+                  }
+                }
+              }
+            }
           }
         },
         "security": [
@@ -787,7 +873,14 @@ export const OPENAPI_AGREGADO = {
         },
         "responses": {
           "201": {
-            "description": ""
+            "description": "Vehículo creado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VehiculoResponseDto"
+                }
+              }
+            }
           }
         },
         "security": [
@@ -816,7 +909,14 @@ export const OPENAPI_AGREGADO = {
         ],
         "responses": {
           "200": {
-            "description": ""
+            "description": "Vehículo encontrado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VehiculoResponseDto"
+                }
+              }
+            }
           }
         },
         "security": [
@@ -853,7 +953,14 @@ export const OPENAPI_AGREGADO = {
         },
         "responses": {
           "200": {
-            "description": ""
+            "description": "Vehículo actualizado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VehiculoResponseDto"
+                }
+              }
+            }
           }
         },
         "security": [
@@ -880,7 +987,7 @@ export const OPENAPI_AGREGADO = {
         ],
         "responses": {
           "200": {
-            "description": ""
+            "description": "Vehículo eliminado"
           }
         },
         "security": [
@@ -909,7 +1016,17 @@ export const OPENAPI_AGREGADO = {
         ],
         "responses": {
           "200": {
-            "description": ""
+            "description": "Rutas del tenant",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/RutaResponseDto"
+                  }
+                }
+              }
+            }
           }
         },
         "security": [
@@ -937,7 +1054,14 @@ export const OPENAPI_AGREGADO = {
         },
         "responses": {
           "201": {
-            "description": ""
+            "description": "Ruta creada",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RutaResponseDto"
+                }
+              }
+            }
           }
         },
         "security": [
@@ -966,7 +1090,14 @@ export const OPENAPI_AGREGADO = {
         ],
         "responses": {
           "200": {
-            "description": ""
+            "description": "Ruta encontrada",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RutaResponseDto"
+                }
+              }
+            }
           }
         },
         "security": [
@@ -1003,7 +1134,14 @@ export const OPENAPI_AGREGADO = {
         },
         "responses": {
           "200": {
-            "description": ""
+            "description": "Ruta actualizada",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RutaResponseDto"
+                }
+              }
+            }
           }
         },
         "security": [
@@ -1030,7 +1168,7 @@ export const OPENAPI_AGREGADO = {
         ],
         "responses": {
           "200": {
-            "description": ""
+            "description": "Ruta eliminada"
           }
         },
         "security": [
@@ -1069,7 +1207,14 @@ export const OPENAPI_AGREGADO = {
         },
         "responses": {
           "201": {
-            "description": ""
+            "description": "Parada creada",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ParadaResponseDto"
+                }
+              }
+            }
           }
         },
         "security": [
@@ -1116,7 +1261,14 @@ export const OPENAPI_AGREGADO = {
         },
         "responses": {
           "200": {
-            "description": ""
+            "description": "Parada actualizada",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ParadaResponseDto"
+                }
+              }
+            }
           }
         },
         "security": [
@@ -1155,7 +1307,14 @@ export const OPENAPI_AGREGADO = {
         },
         "responses": {
           "201": {
-            "description": ""
+            "description": "Ruta asignada",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RutaResponseDto"
+                }
+              }
+            }
           }
         },
         "security": [
@@ -1200,7 +1359,17 @@ export const OPENAPI_AGREGADO = {
         ],
         "responses": {
           "200": {
-            "description": ""
+            "description": "Pedidos de campo",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/PedidoResponseDto"
+                  }
+                }
+              }
+            }
           }
         },
         "security": [
@@ -1228,7 +1397,14 @@ export const OPENAPI_AGREGADO = {
         },
         "responses": {
           "201": {
-            "description": ""
+            "description": "Pedido creado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PedidoResponseDto"
+                }
+              }
+            }
           }
         },
         "security": [
@@ -1257,7 +1433,14 @@ export const OPENAPI_AGREGADO = {
         ],
         "responses": {
           "200": {
-            "description": ""
+            "description": "Pedido encontrado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PedidoResponseDto"
+                }
+              }
+            }
           }
         },
         "security": [
@@ -1294,7 +1477,14 @@ export const OPENAPI_AGREGADO = {
         },
         "responses": {
           "200": {
-            "description": ""
+            "description": "Pedido actualizado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PedidoResponseDto"
+                }
+              }
+            }
           }
         },
         "security": [
@@ -1321,7 +1511,7 @@ export const OPENAPI_AGREGADO = {
         ],
         "responses": {
           "200": {
-            "description": ""
+            "description": "Pedido eliminado"
           }
         },
         "security": [
@@ -1360,7 +1550,14 @@ export const OPENAPI_AGREGADO = {
         },
         "responses": {
           "200": {
-            "description": ""
+            "description": "Pedido actualizado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PedidoResponseDto"
+                }
+              }
+            }
           }
         },
         "security": [
@@ -1397,7 +1594,17 @@ export const OPENAPI_AGREGADO = {
         ],
         "responses": {
           "200": {
-            "description": ""
+            "description": "Registros de asistencia",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/AsistenciaResponseDto"
+                  }
+                }
+              }
+            }
           }
         },
         "security": [
@@ -1425,7 +1632,14 @@ export const OPENAPI_AGREGADO = {
         },
         "responses": {
           "201": {
-            "description": ""
+            "description": "Asistencia registrada",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AsistenciaResponseDto"
+                }
+              }
+            }
           }
         },
         "security": [
@@ -1462,7 +1676,17 @@ export const OPENAPI_AGREGADO = {
         ],
         "responses": {
           "200": {
-            "description": ""
+            "description": "Incidencias",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/IncidenciaResponseDto"
+                  }
+                }
+              }
+            }
           }
         },
         "security": [
@@ -1490,7 +1714,14 @@ export const OPENAPI_AGREGADO = {
         },
         "responses": {
           "201": {
-            "description": ""
+            "description": "Incidencia creada",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IncidenciaResponseDto"
+                }
+              }
+            }
           }
         },
         "security": [
@@ -1519,7 +1750,14 @@ export const OPENAPI_AGREGADO = {
         ],
         "responses": {
           "200": {
-            "description": ""
+            "description": "Incidencia encontrada",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IncidenciaResponseDto"
+                }
+              }
+            }
           }
         },
         "security": [
@@ -1556,7 +1794,14 @@ export const OPENAPI_AGREGADO = {
         },
         "responses": {
           "200": {
-            "description": ""
+            "description": "Incidencia actualizada",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IncidenciaResponseDto"
+                }
+              }
+            }
           }
         },
         "security": [
@@ -1583,7 +1828,7 @@ export const OPENAPI_AGREGADO = {
         ],
         "responses": {
           "200": {
-            "description": ""
+            "description": "Incidencia eliminada"
           }
         },
         "security": [
@@ -1628,7 +1873,17 @@ export const OPENAPI_AGREGADO = {
         ],
         "responses": {
           "200": {
-            "description": ""
+            "description": "Registros de tracking",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/TrackingResponseDto"
+                  }
+                }
+              }
+            }
           }
         },
         "security": [
@@ -1656,7 +1911,17 @@ export const OPENAPI_AGREGADO = {
         },
         "responses": {
           "201": {
-            "description": ""
+            "description": "Tracking registrado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/TrackingResponseDto"
+                  }
+                }
+              }
+            }
           }
         },
         "security": [
@@ -1693,7 +1958,17 @@ export const OPENAPI_AGREGADO = {
         ],
         "responses": {
           "200": {
-            "description": ""
+            "description": "Visitas registradas",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/VisitaResponseDto"
+                  }
+                }
+              }
+            }
           }
         },
         "security": [
@@ -1721,7 +1996,14 @@ export const OPENAPI_AGREGADO = {
         },
         "responses": {
           "201": {
-            "description": ""
+            "description": "Visita registrada",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VisitaResponseDto"
+                }
+              }
+            }
           }
         },
         "security": [
@@ -1758,7 +2040,14 @@ export const OPENAPI_AGREGADO = {
         ],
         "responses": {
           "200": {
-            "description": ""
+            "description": "Cumplimiento de la ruta",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CumplimientoResponseDto"
+                }
+              }
+            }
           }
         },
         "security": [
@@ -1788,7 +2077,14 @@ export const OPENAPI_AGREGADO = {
         },
         "responses": {
           "201": {
-            "description": ""
+            "description": "Cumplimiento guardado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CumplimientoResponseDto"
+                }
+              }
+            }
           }
         },
         "security": [
@@ -1818,7 +2114,17 @@ export const OPENAPI_AGREGADO = {
         },
         "responses": {
           "201": {
-            "description": ""
+            "description": "Resultado de la sincronización",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/SyncResultadoResponseDto"
+                  }
+                }
+              }
+            }
           }
         },
         "security": [
@@ -5958,6 +6264,103 @@ export const OPENAPI_AGREGADO = {
           "devoluciones_mes"
         ]
       },
+      "PersonalResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "tenant_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "nombre": {
+            "type": "string"
+          },
+          "apellido": {
+            "type": "string"
+          },
+          "cargo": {
+            "type": "string"
+          },
+          "estado": {
+            "type": "string"
+          },
+          "telefono": {
+            "type": "object",
+            "nullable": true
+          },
+          "email": {
+            "type": "object",
+            "nullable": true
+          },
+          "ruta_asignada_id": {
+            "type": "object",
+            "nullable": true,
+            "format": "uuid"
+          },
+          "vehiculo_asignado_id": {
+            "type": "object",
+            "nullable": true,
+            "format": "uuid"
+          },
+          "hora_check_in": {
+            "type": "object",
+            "nullable": true,
+            "format": "date-time"
+          },
+          "hora_check_out": {
+            "type": "object",
+            "nullable": true,
+            "format": "date-time"
+          },
+          "ubicacion_lat": {
+            "type": "object",
+            "nullable": true
+          },
+          "ubicacion_lng": {
+            "type": "object",
+            "nullable": true
+          },
+          "ubicacion_precision": {
+            "type": "object",
+            "nullable": true
+          },
+          "ubicacion_ts": {
+            "type": "object",
+            "nullable": true,
+            "format": "date-time"
+          },
+          "synced": {
+            "type": "boolean"
+          },
+          "deleted_at": {
+            "type": "object",
+            "nullable": true,
+            "format": "date-time"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "tenant_id",
+          "nombre",
+          "apellido",
+          "cargo",
+          "estado",
+          "synced",
+          "created_at",
+          "updated_at"
+        ]
+      },
       "CrearPersonalRequestDto": {
         "type": "object",
         "properties": {
@@ -6079,6 +6482,39 @@ export const OPENAPI_AGREGADO = {
           }
         }
       },
+      "UbicacionResponseDto": {
+        "type": "object",
+        "properties": {
+          "personalId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "latitud": {
+            "type": "object",
+            "nullable": true
+          },
+          "longitud": {
+            "type": "object",
+            "nullable": true
+          },
+          "precision": {
+            "type": "object",
+            "nullable": true
+          },
+          "timestamp": {
+            "type": "object",
+            "nullable": true,
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "personalId",
+          "latitud",
+          "longitud",
+          "precision",
+          "timestamp"
+        ]
+      },
       "UbicacionRequestDto": {
         "type": "object",
         "properties": {
@@ -6098,6 +6534,98 @@ export const OPENAPI_AGREGADO = {
         "required": [
           "lat",
           "lng"
+        ]
+      },
+      "ClienteResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "tenant_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "nombre_completo": {
+            "type": "string"
+          },
+          "tipo_documento": {
+            "type": "object",
+            "nullable": true
+          },
+          "numero_documento": {
+            "type": "object",
+            "nullable": true
+          },
+          "tipo_cliente": {
+            "type": "string"
+          },
+          "email": {
+            "type": "object",
+            "nullable": true
+          },
+          "telefono": {
+            "type": "object",
+            "nullable": true
+          },
+          "telefono_alternativo": {
+            "type": "object",
+            "nullable": true
+          },
+          "direccion_principal": {
+            "type": "object",
+            "nullable": true
+          },
+          "direccion_secundaria": {
+            "type": "object",
+            "nullable": true
+          },
+          "referencias_direccion": {
+            "type": "object",
+            "nullable": true
+          },
+          "lat": {
+            "type": "object",
+            "nullable": true
+          },
+          "lng": {
+            "type": "object",
+            "nullable": true
+          },
+          "notas_adicionales": {
+            "type": "object",
+            "nullable": true
+          },
+          "url_google_maps": {
+            "type": "object",
+            "nullable": true
+          },
+          "synced": {
+            "type": "boolean"
+          },
+          "deleted_at": {
+            "type": "object",
+            "nullable": true,
+            "format": "date-time"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "tenant_id",
+          "nombre_completo",
+          "tipo_cliente",
+          "synced",
+          "created_at",
+          "updated_at"
         ]
       },
       "CrearClienteRequestDto": {
@@ -6208,6 +6736,110 @@ export const OPENAPI_AGREGADO = {
             "type": "string"
           }
         }
+      },
+      "VehiculoResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "tenant_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "placa": {
+            "type": "string"
+          },
+          "tipo": {
+            "type": "string"
+          },
+          "marca": {
+            "type": "object",
+            "nullable": true
+          },
+          "modelo": {
+            "type": "object",
+            "nullable": true
+          },
+          "anio": {
+            "type": "object",
+            "nullable": true
+          },
+          "estado": {
+            "type": "string"
+          },
+          "color": {
+            "type": "object",
+            "nullable": true
+          },
+          "capacidad_carga_kg": {
+            "type": "object",
+            "nullable": true
+          },
+          "numero_chasis": {
+            "type": "object",
+            "nullable": true
+          },
+          "numero_motor": {
+            "type": "object",
+            "nullable": true
+          },
+          "tipo_combustible": {
+            "type": "object",
+            "nullable": true
+          },
+          "vencimiento_seguro": {
+            "type": "object",
+            "nullable": true,
+            "format": "date"
+          },
+          "vencimiento_circulacion": {
+            "type": "object",
+            "nullable": true,
+            "format": "date"
+          },
+          "notas_adicionales": {
+            "type": "object",
+            "nullable": true
+          },
+          "conductor_id": {
+            "type": "object",
+            "nullable": true,
+            "format": "uuid"
+          },
+          "ruta_activa_id": {
+            "type": "object",
+            "nullable": true,
+            "format": "uuid"
+          },
+          "synced": {
+            "type": "boolean"
+          },
+          "deleted_at": {
+            "type": "object",
+            "nullable": true,
+            "format": "date-time"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "tenant_id",
+          "placa",
+          "tipo",
+          "estado",
+          "synced",
+          "created_at",
+          "updated_at"
+        ]
       },
       "CrearVehiculoRequestDto": {
         "type": "object",
@@ -6345,6 +6977,181 @@ export const OPENAPI_AGREGADO = {
             "type": "string"
           }
         }
+      },
+      "ParadaResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "tenant_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "ruta_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "orden": {
+            "type": "number"
+          },
+          "nombre": {
+            "type": "string"
+          },
+          "direccion": {
+            "type": "object",
+            "nullable": true
+          },
+          "lat": {
+            "type": "object",
+            "nullable": true
+          },
+          "lng": {
+            "type": "object",
+            "nullable": true
+          },
+          "completada": {
+            "type": "boolean"
+          },
+          "pedido_id": {
+            "type": "object",
+            "nullable": true,
+            "format": "uuid"
+          },
+          "tipo": {
+            "type": "string"
+          },
+          "cliente_id": {
+            "type": "object",
+            "nullable": true,
+            "format": "uuid"
+          },
+          "telefono": {
+            "type": "object",
+            "nullable": true
+          },
+          "referencias": {
+            "type": "object",
+            "nullable": true
+          },
+          "horario_atencion": {
+            "type": "object",
+            "nullable": true
+          },
+          "notas": {
+            "type": "object",
+            "nullable": true
+          },
+          "tipo_combustible": {
+            "type": "object",
+            "nullable": true
+          },
+          "synced": {
+            "type": "boolean"
+          },
+          "deleted_at": {
+            "type": "object",
+            "nullable": true,
+            "format": "date-time"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "tenant_id",
+          "ruta_id",
+          "orden",
+          "nombre",
+          "completada",
+          "tipo",
+          "synced",
+          "created_at",
+          "updated_at"
+        ]
+      },
+      "RutaResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "tenant_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "nombre": {
+            "type": "string"
+          },
+          "descripcion": {
+            "type": "object",
+            "nullable": true
+          },
+          "estado": {
+            "type": "string"
+          },
+          "personal_asignado_ids": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "vehiculo_asignado_id": {
+            "type": "object",
+            "nullable": true,
+            "format": "uuid"
+          },
+          "fecha_inicio": {
+            "type": "object",
+            "nullable": true,
+            "format": "date-time"
+          },
+          "fecha_fin": {
+            "type": "object",
+            "nullable": true,
+            "format": "date-time"
+          },
+          "synced": {
+            "type": "boolean"
+          },
+          "deleted_at": {
+            "type": "object",
+            "nullable": true,
+            "format": "date-time"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "paradas": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ParadaResponseDto"
+            }
+          }
+        },
+        "required": [
+          "id",
+          "tenant_id",
+          "nombre",
+          "estado",
+          "personal_asignado_ids",
+          "synced",
+          "created_at",
+          "updated_at"
+        ]
       },
       "CrearRutaRequestDto": {
         "type": "object",
@@ -6491,6 +7298,76 @@ export const OPENAPI_AGREGADO = {
           }
         }
       },
+      "PedidoResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "tenant_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "cliente": {
+            "type": "string"
+          },
+          "cliente_id": {
+            "type": "object",
+            "nullable": true,
+            "format": "uuid"
+          },
+          "direccion_entrega": {
+            "type": "object",
+            "nullable": true
+          },
+          "lat": {
+            "type": "object",
+            "nullable": true
+          },
+          "lng": {
+            "type": "object",
+            "nullable": true
+          },
+          "estado": {
+            "type": "string"
+          },
+          "ruta_id": {
+            "type": "object",
+            "nullable": true,
+            "format": "uuid"
+          },
+          "notas": {
+            "type": "object",
+            "nullable": true
+          },
+          "synced": {
+            "type": "boolean"
+          },
+          "deleted_at": {
+            "type": "object",
+            "nullable": true,
+            "format": "date-time"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "tenant_id",
+          "cliente",
+          "estado",
+          "synced",
+          "created_at",
+          "updated_at"
+        ]
+      },
       "CrearPedidoRequestDto": {
         "type": "object",
         "properties": {
@@ -6587,6 +7464,99 @@ export const OPENAPI_AGREGADO = {
           "estado"
         ]
       },
+      "AsistenciaResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "tenant_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "personal_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "tipo": {
+            "type": "string"
+          },
+          "registrado_en": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "lat": {
+            "type": "object",
+            "nullable": true
+          },
+          "lng": {
+            "type": "object",
+            "nullable": true
+          },
+          "estado_puntualidad": {
+            "type": "string"
+          },
+          "en_sede": {
+            "type": "boolean"
+          },
+          "hora_real_llegada": {
+            "type": "object",
+            "nullable": true
+          },
+          "minutos_retraso_real": {
+            "type": "object",
+            "nullable": true
+          },
+          "monitoreo_activo": {
+            "type": "boolean"
+          },
+          "notas": {
+            "type": "object",
+            "nullable": true
+          },
+          "justificacion": {
+            "type": "object",
+            "nullable": true
+          },
+          "fotos_justificacion": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          },
+          "synced": {
+            "type": "boolean"
+          },
+          "deleted_at": {
+            "type": "object",
+            "nullable": true,
+            "format": "date-time"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "tenant_id",
+          "personal_id",
+          "tipo",
+          "registrado_en",
+          "estado_puntualidad",
+          "en_sede",
+          "monitoreo_activo",
+          "fotos_justificacion",
+          "synced",
+          "created_at",
+          "updated_at"
+        ]
+      },
       "CrearAsistenciaRequestDto": {
         "type": "object",
         "properties": {
@@ -6647,6 +7617,73 @@ export const OPENAPI_AGREGADO = {
           "personalId",
           "tipo",
           "estadoPuntualidad"
+        ]
+      },
+      "IncidenciaResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "tenant_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "tipo": {
+            "type": "string"
+          },
+          "estado": {
+            "type": "string"
+          },
+          "descripcion": {
+            "type": "string"
+          },
+          "personal_id": {
+            "type": "object",
+            "nullable": true,
+            "format": "uuid"
+          },
+          "vehiculo_id": {
+            "type": "object",
+            "nullable": true,
+            "format": "uuid"
+          },
+          "ruta_id": {
+            "type": "object",
+            "nullable": true,
+            "format": "uuid"
+          },
+          "resolucion": {
+            "type": "object",
+            "nullable": true
+          },
+          "synced": {
+            "type": "boolean"
+          },
+          "deleted_at": {
+            "type": "object",
+            "nullable": true,
+            "format": "date-time"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "tenant_id",
+          "tipo",
+          "estado",
+          "descripcion",
+          "synced",
+          "created_at",
+          "updated_at"
         ]
       },
       "CrearIncidenciaRequestDto": {
@@ -6729,6 +7766,72 @@ export const OPENAPI_AGREGADO = {
           }
         }
       },
+      "TrackingResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "tenant_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "personal_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "latitud": {
+            "type": "number"
+          },
+          "longitud": {
+            "type": "number"
+          },
+          "precision": {
+            "type": "object",
+            "nullable": true
+          },
+          "velocidad": {
+            "type": "object",
+            "nullable": true
+          },
+          "rumbo": {
+            "type": "object",
+            "nullable": true
+          },
+          "registrado_en": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "synced": {
+            "type": "boolean"
+          },
+          "deleted_at": {
+            "type": "object",
+            "nullable": true,
+            "format": "date-time"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "tenant_id",
+          "personal_id",
+          "latitud",
+          "longitud",
+          "registrado_en",
+          "synced",
+          "created_at",
+          "updated_at"
+        ]
+      },
       "CrearTrackingRequestDto": {
         "type": "object",
         "properties": {
@@ -6772,6 +7875,93 @@ export const OPENAPI_AGREGADO = {
         },
         "required": [
           "registros"
+        ]
+      },
+      "VisitaResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "tenant_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "personal_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "cliente_id": {
+            "type": "object",
+            "nullable": true,
+            "format": "uuid"
+          },
+          "ruta_id": {
+            "type": "object",
+            "nullable": true,
+            "format": "uuid"
+          },
+          "tipo_actividad": {
+            "type": "string"
+          },
+          "resultado": {
+            "type": "string"
+          },
+          "lat": {
+            "type": "object",
+            "nullable": true
+          },
+          "lng": {
+            "type": "object",
+            "nullable": true
+          },
+          "distancia_al_cliente": {
+            "type": "object",
+            "nullable": true
+          },
+          "hora_llegada": {
+            "type": "object",
+            "nullable": true
+          },
+          "hora_salida": {
+            "type": "object",
+            "nullable": true
+          },
+          "duracion_minutos": {
+            "type": "object",
+            "nullable": true
+          },
+          "notas": {
+            "type": "object",
+            "nullable": true
+          },
+          "synced": {
+            "type": "boolean"
+          },
+          "deleted_at": {
+            "type": "object",
+            "nullable": true,
+            "format": "date-time"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "tenant_id",
+          "personal_id",
+          "tipo_actividad",
+          "resultado",
+          "synced",
+          "created_at",
+          "updated_at"
         ]
       },
       "CrearVisitaRequestDto": {
@@ -6830,6 +8020,52 @@ export const OPENAPI_AGREGADO = {
           "tipoActividad"
         ]
       },
+      "CumplimientoResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "tenant_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "ruta_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "fecha": {
+            "type": "string",
+            "format": "date"
+          },
+          "metricas": {
+            "type": "object"
+          },
+          "deleted_at": {
+            "type": "object",
+            "nullable": true,
+            "format": "date-time"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "tenant_id",
+          "ruta_id",
+          "fecha",
+          "metricas",
+          "created_at",
+          "updated_at"
+        ]
+      },
       "GuardarCumplimientoRequestDto": {
         "type": "object",
         "properties": {
@@ -6876,6 +8112,28 @@ export const OPENAPI_AGREGADO = {
         },
         "required": [
           "operaciones"
+        ]
+      },
+      "SyncResultadoResponseDto": {
+        "type": "object",
+        "properties": {
+          "tipo": {
+            "type": "string"
+          },
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "ok": {
+            "type": "boolean"
+          },
+          "error": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "tipo",
+          "ok"
         ]
       },
       "SujetoTributarioResponseDto": {
