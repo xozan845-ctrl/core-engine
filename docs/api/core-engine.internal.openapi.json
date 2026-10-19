@@ -274,7 +274,14 @@
         ],
         "responses": {
           "200": {
-            "description": ""
+            "description": "Usuario encontrado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UsuarioResponseDto"
+                }
+              }
+            }
           }
         },
         "security": [
@@ -294,7 +301,17 @@
         "parameters": [],
         "responses": {
           "200": {
-            "description": ""
+            "description": "Vendedores registrados",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/UsuarioResponseDto"
+                  }
+                }
+              }
+            }
           }
         },
         "security": [
@@ -314,7 +331,14 @@
         "parameters": [],
         "responses": {
           "200": {
-            "description": ""
+            "description": "Conteo de vendedores",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ContarVendedoresResponseDto"
+                }
+              }
+            }
           }
         },
         "security": [
@@ -1350,6 +1374,74 @@
           "supuestos"
         ]
       },
+      "UsuarioResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Id del usuario",
+            "format": "uuid"
+          },
+          "nombre": {
+            "type": "string",
+            "description": "Nombre del usuario"
+          },
+          "correo": {
+            "type": "string",
+            "description": "Correo del usuario",
+            "format": "email"
+          },
+          "rol": {
+            "type": "string",
+            "description": "Rol del usuario",
+            "enum": [
+              "admin",
+              "vendedor",
+              "comprador",
+              "logistica",
+              "coordinador",
+              "supervisor",
+              "operativo"
+            ],
+            "example": "vendedor"
+          },
+          "tenant_id": {
+            "type": "string",
+            "description": "Tenant del usuario",
+            "format": "uuid"
+          },
+          "personal_id": {
+            "type": "string",
+            "description": "Ficha de personal vinculada",
+            "format": "uuid"
+          },
+          "creado_en": {
+            "type": "string",
+            "description": "Fecha de creación (ISO 8601 UTC)",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "nombre",
+          "correo",
+          "rol",
+          "creado_en"
+        ]
+      },
+      "ContarVendedoresResponseDto": {
+        "type": "object",
+        "properties": {
+          "vendedores": {
+            "type": "number",
+            "description": "Cantidad de usuarios con rol vendedor",
+            "example": 12
+          }
+        },
+        "required": [
+          "vendedores"
+        ]
+      },
       "RegistroRequestDto": {
         "type": "object",
         "properties": {
@@ -1387,6 +1479,89 @@
           "rol"
         ]
       },
+      "SesionUsuarioResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Id del usuario",
+            "format": "uuid"
+          },
+          "nombre": {
+            "type": "string",
+            "description": "Nombre del usuario"
+          },
+          "correo": {
+            "type": "string",
+            "description": "Correo del usuario",
+            "format": "email"
+          },
+          "rol": {
+            "type": "string",
+            "description": "Rol del usuario",
+            "enum": [
+              "admin",
+              "vendedor",
+              "comprador",
+              "logistica",
+              "coordinador",
+              "supervisor",
+              "operativo"
+            ],
+            "example": "comprador"
+          },
+          "tenant_id": {
+            "type": "string",
+            "description": "Tenant del usuario",
+            "format": "uuid"
+          },
+          "personal_id": {
+            "type": "string",
+            "description": "Ficha de personal vinculada",
+            "format": "uuid"
+          }
+        },
+        "required": [
+          "id",
+          "nombre",
+          "correo",
+          "rol"
+        ]
+      },
+      "SesionResponseDto": {
+        "type": "object",
+        "properties": {
+          "access_token": {
+            "type": "string",
+            "description": "Access token JWT (HS256)",
+            "example": "eyJhbGciOiJIUzI1NiIs..."
+          },
+          "refresh_token": {
+            "type": "string",
+            "description": "Refresh token JWT",
+            "example": "eyJhbGciOiJIUzI1NiIs..."
+          },
+          "expira_en": {
+            "type": "number",
+            "description": "Vigencia del access token en segundos",
+            "example": 900
+          },
+          "usuario": {
+            "description": "Datos del usuario autenticado",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/SesionUsuarioResponseDto"
+              }
+            ]
+          }
+        },
+        "required": [
+          "access_token",
+          "refresh_token",
+          "expira_en",
+          "usuario"
+        ]
+      },
       "LoginRequestDto": {
         "type": "object",
         "properties": {
@@ -1414,6 +1589,19 @@
             "description": "Refresh token de la sesión a cerrar; si se omite, cierra todas"
           }
         }
+      },
+      "OkResponseDto": {
+        "type": "object",
+        "properties": {
+          "ok": {
+            "type": "boolean",
+            "description": "Operación completada",
+            "example": true
+          }
+        },
+        "required": [
+          "ok"
+        ]
       },
       "CrearUsuarioRequestDto": {
         "type": "object",
@@ -1490,6 +1678,54 @@
         },
         "required": [
           "correo"
+        ]
+      },
+      "UsuarioContextoResponseDto": {
+        "type": "object",
+        "properties": {
+          "user_id": {
+            "type": "string",
+            "description": "Id del usuario autenticado",
+            "format": "uuid"
+          },
+          "email": {
+            "type": "string",
+            "description": "Correo del usuario",
+            "format": "email"
+          },
+          "rol": {
+            "type": "string",
+            "description": "Rol del usuario",
+            "enum": [
+              "admin",
+              "vendedor",
+              "comprador",
+              "logistica",
+              "coordinador",
+              "supervisor",
+              "operativo"
+            ],
+            "example": "admin"
+          },
+          "nombre": {
+            "type": "string",
+            "description": "Nombre del usuario"
+          },
+          "tenant_id": {
+            "type": "string",
+            "description": "Tenant del usuario",
+            "format": "uuid"
+          },
+          "personal_id": {
+            "type": "string",
+            "description": "Ficha de personal vinculada",
+            "format": "uuid"
+          }
+        },
+        "required": [
+          "user_id",
+          "email",
+          "rol"
         ]
       },
       "VincularPersonalRequestDto": {

@@ -1,5 +1,5 @@
 import { Body, Controller, Get, Headers, Post, HttpCode } from '@nestjs/common';
-import { ApiBearerAuth, ApiBody, ApiOperation, ApiProperty, ApiResponse, ApiTags } from '@nestjs/swagger';
+import { ApiBearerAuth, ApiBody, ApiCreatedResponse, ApiOkResponse, ApiOperation, ApiProperty, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { IsEmail, IsIn, IsOptional, IsString, Length, MinLength } from 'class-validator';
 import {
   AuthService,
@@ -9,6 +9,12 @@ import {
   UsuariosService,
   Usuario,
 } from '../usuarios/usuarios.service';
+import {
+  OkResponseDto,
+  SesionResponseDto,
+  UsuarioContextoResponseDto,
+} from './auth.response.dto';
+import { UsuarioResponseDto } from '../usuarios/usuarios.response.dto';
 import {
   ROLES,
   ROLES_REGISTRABLES,
@@ -141,7 +147,7 @@ export class AuthController {
   /** POST /api/v1/auth/registro — alta de vendedor o comprador (Tabla 21). */
   @Post('registro')
   @ApiOperation({ summary: 'Registrar vendedor o comprador' })
-  @ApiResponse({ status: 201, description: 'Sesión creada (JWT + refresh)' })
+  @ApiCreatedResponse({ type: SesionResponseDto, description: 'Sesión creada (JWT + refresh)' })
   async registrar(@Body() dto: RegistroRequestDto): Promise<Sesion> {
     return this.auth.registrar(dto);
   }
@@ -150,7 +156,7 @@ export class AuthController {
   @HttpCode(200)
   @Post('login')
   @ApiOperation({ summary: 'Iniciar sesión (JWT + refresh)' })
-  @ApiResponse({ status: 200, description: 'Sesión iniciada' })
+  @ApiOkResponse({ type: SesionResponseDto, description: 'Sesión iniciada' })
   @ApiResponse({ status: 401, description: 'Credenciales inválidas' })
   async login(@Body() dto: LoginRequestDto): Promise<Sesion> {
     return this.auth.login(dto.correo, dto.contrasena);
@@ -159,6 +165,7 @@ export class AuthController {
   /** POST /api/v1/auth/refresh — renueva sesion con token de refresco. */
   @Post('refresh')
   @ApiOperation({ summary: 'Renovar la sesión con refresh token' })
+  @ApiCreatedResponse({ type: SesionResponseDto, description: 'Sesión renovada' })
   @ApiBody({ schema: { type: 'object', required: ['refresh_token'], properties: { refresh_token: { type: 'string' } } } })
   async refresh(@Body() body: { refresh_token: string }): Promise<Sesion> {
     if (!body.refresh_token) {
@@ -174,7 +181,7 @@ export class AuthController {
   @Post('logout')
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Cerrar sesión (revoca el refresh token)' })
-  @ApiResponse({ status: 200, description: 'Sesión cerrada' })
+  @ApiCreatedResponse({ type: OkResponseDto, description: 'Sesión cerrada' })
   async logout(
     @Body() dto: LogoutRequestDto,
     @UsuarioActual() usuario: UsuarioContexto,
@@ -191,7 +198,7 @@ export class AuthController {
   @Post('crear-usuario')
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Crear usuario (solo admin)' })
-  @ApiResponse({ status: 201, description: 'Usuario creado' })
+  @ApiCreatedResponse({ type: UsuarioResponseDto, description: 'Usuario creado' })
   @ApiResponse({ status: 403, description: 'Solo un administrador puede crear usuarios' })
   async crearUsuario(
     @Body() dto: CrearUsuarioRequestDto,
@@ -220,6 +227,7 @@ export class AuthController {
   @Post('cambiar-contrasena')
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Cambiar la contraseña (autenticado)' })
+  @ApiCreatedResponse({ type: OkResponseDto, description: 'Contraseña cambiada' })
   async cambiarContrasena(
     @Body() dto: CambiarContrasenaRequestDto,
     @UsuarioActual() usuario: UsuarioContexto,
@@ -238,6 +246,7 @@ export class AuthController {
    */
   @Post('restablecer-contrasena')
   @ApiOperation({ summary: 'Solicitar restablecimiento de contraseña (público)' })
+  @ApiCreatedResponse({ type: OkResponseDto, description: 'Solicitud aceptada' })
   async restablecerContrasena(@Body() dto: RestablecerContrasenaRequestDto): Promise<{ ok: true }> {
     const existe = await this.usuarios.encontrarPorCorreo(dto.correo);
     if (!existe) {
@@ -251,6 +260,7 @@ export class AuthController {
   @Get('me')
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Perfil de la sesión actual' })
+  @ApiOkResponse({ type: UsuarioContextoResponseDto, description: 'Contexto del usuario autenticado' })
   async yo(@Headers() headers: Record<string, unknown>): Promise<UsuarioContexto> {
     const usuario = usuarioDesdeHeaders(headers as Record<string, string | string[] | undefined>);
     if (!usuario) {
@@ -267,6 +277,7 @@ export class AuthController {
   @Post('vincular-personal')
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Vincular la ficha de personal del usuario autenticado' })
+  @ApiCreatedResponse({ type: OkResponseDto, description: 'Personal vinculado' })
   async vincularPersonal(
     @Body() dto: VincularPersonalRequestDto,
     @UsuarioActual() usuario: UsuarioContexto,

@@ -1,7 +1,8 @@
 import { Controller, Get, Param } from '@nestjs/common';
-import { ApiBearerAuth, ApiOperation, ApiParam, ApiResponse, ApiTags } from '@nestjs/swagger';
+import { ApiBearerAuth, ApiOkResponse, ApiOperation, ApiParam, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { NotFoundError, UsuarioActual, UsuarioContexto } from '@core/shared';
 import { UsuariosService } from './usuarios.service';
+import { UsuarioResponseDto } from './usuarios.response.dto';
 
 /**
  * Gestion de usuarios (sustituye `gestion-usuarios.functions.adapter` de Firebase).
@@ -16,6 +17,7 @@ export class UsuariosController {
   /** GET /api/v1/usuarios — lista (admin). */
   @Get()
   @ApiOperation({ summary: 'Listar usuarios (admin)' })
+  @ApiOkResponse({ type: [UsuarioResponseDto], description: 'Usuarios registrados' })
   async listar(): Promise<ReturnType<UsuariosService['listar']>> {
     return this.usuarios.listar();
   }
@@ -24,6 +26,7 @@ export class UsuariosController {
   @Get(':id')
   @ApiOperation({ summary: 'Perfil de un usuario (admin o el propio)' })
   @ApiParam({ name: 'id', description: 'Id del usuario' })
+  @ApiOkResponse({ type: UsuarioResponseDto, description: 'Usuario encontrado' })
   @ApiResponse({ status: 404, description: 'Usuario inexistente o sin permiso' })
   async obtener(
     @Param('id') id: string,
