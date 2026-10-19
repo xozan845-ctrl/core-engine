@@ -1,8 +1,10 @@
 import { Controller, Get, Param, Post, Query, UseGuards } from '@nestjs/common';
-import { ApiOperation, ApiParam, ApiQuery, ApiSecurity, ApiTags } from '@nestjs/swagger';
+import { ApiCreatedResponse, ApiOkResponse, ApiOperation, ApiParam, ApiQuery, ApiSecurity, ApiTags } from '@nestjs/swagger';
 import { ClaveInternaGuard } from '@core/shared';
 import { BucketsService, EstadoBucket } from '../buckets/buckets.service';
 import { ObjetosService, ObjetoStorage } from '../objetos/objetos.service';
+import { EstadoBucketResponseDto } from '../buckets/buckets.response.dto';
+import { ObjetoStorageResponseDto } from '../objetos/objetos.response.dto';
 
 /**
  * Endpoints internos (servicio -> servicio) protegidos por clave interna:
@@ -21,6 +23,7 @@ export class InternalStorageController {
   @Get('tenants/:tenantId')
   @ApiOperation({ summary: 'Estado de almacenamiento del tenant (servicio→servicio)' })
   @ApiParam({ name: 'tenantId', description: 'Id del tenant' })
+  @ApiOkResponse({ type: EstadoBucketResponseDto, description: 'Estado del tenant' })
   async estado(@Param('tenantId') tenantId: string): Promise<EstadoBucket> {
     return this.buckets.estado(tenantId);
   }
@@ -28,6 +31,7 @@ export class InternalStorageController {
   @Post('tenants/:tenantId/recalcular')
   @ApiOperation({ summary: 'Recalcular el uso del tenant (servicio→servicio)' })
   @ApiParam({ name: 'tenantId', description: 'Id del tenant' })
+  @ApiCreatedResponse({ type: EstadoBucketResponseDto, description: 'Uso recalculado' })
   async recalcular(@Param('tenantId') tenantId: string): Promise<EstadoBucket> {
     return this.buckets.recalcularUso(tenantId);
   }
@@ -36,6 +40,7 @@ export class InternalStorageController {
   @ApiOperation({ summary: 'Metadata de un objeto del tenant (servicio→servicio)' })
   @ApiParam({ name: 'id', description: 'Id del objeto' })
   @ApiQuery({ name: 'tenant_id', required: true, description: 'Tenant dueno del objeto' })
+  @ApiOkResponse({ type: ObjetoStorageResponseDto, description: 'Metadata del objeto' })
   async objeto(
     @Param('id') id: string,
     @Query('tenant_id') tenantId: string,
