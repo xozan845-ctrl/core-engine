@@ -31,6 +31,11 @@
             "description": ""
           }
         },
+        "security": [
+          {
+            "internalKey": []
+          }
+        ],
         "summary": "Lote de productos por SKUs (servicio→servicio)",
         "tags": [
           "Catálogo (interno)"
@@ -56,6 +61,11 @@
             "description": ""
           }
         },
+        "security": [
+          {
+            "internalKey": []
+          }
+        ],
         "summary": "Producto por SKU (servicio→servicio)",
         "tags": [
           "Catálogo (interno)"
@@ -81,6 +91,11 @@
             "description": ""
           }
         },
+        "security": [
+          {
+            "internalKey": []
+          }
+        ],
         "summary": "Producto por id (servicio→servicio)",
         "tags": [
           "Catálogo (interno)"
@@ -96,6 +111,11 @@
             "description": ""
           }
         },
+        "security": [
+          {
+            "internalKey": []
+          }
+        ],
         "summary": "Resumen de inventario (servicio→servicio)",
         "tags": [
           "Catálogo (interno)"
@@ -111,6 +131,11 @@
             "description": ""
           }
         },
+        "security": [
+          {
+            "internalKey": []
+          }
+        ],
         "summary": "Líneas de inventario (servicio→servicio)",
         "tags": [
           "Catálogo (interno)"
@@ -136,6 +161,11 @@
             "description": ""
           }
         },
+        "security": [
+          {
+            "internalKey": []
+          }
+        ],
         "summary": "Situación fiscal de un usuario (para identity)",
         "tags": [
           "Finanzas (interno)"
@@ -176,6 +206,11 @@
             "description": ""
           }
         },
+        "security": [
+          {
+            "internalKey": []
+          }
+        ],
         "summary": "Declaraciones del periodo (reportes)",
         "tags": [
           "Finanzas (interno)"
@@ -201,6 +236,11 @@
             "description": ""
           }
         },
+        "security": [
+          {
+            "internalKey": []
+          }
+        ],
         "summary": "Usuario por id (servicio→servicio)",
         "tags": [
           "Usuarios (interno)"
@@ -216,6 +256,11 @@
             "description": ""
           }
         },
+        "security": [
+          {
+            "internalKey": []
+          }
+        ],
         "summary": "Listar vendedores (servicio→servicio)",
         "tags": [
           "Usuarios (interno)"
@@ -231,6 +276,11 @@
             "description": ""
           }
         },
+        "security": [
+          {
+            "internalKey": []
+          }
+        ],
         "summary": "Contar vendedores (servicio→servicio)",
         "tags": [
           "Usuarios (interno)"
@@ -273,6 +323,11 @@
             "description": ""
           }
         },
+        "security": [
+          {
+            "internalKey": []
+          }
+        ],
         "summary": "Avanzar el ciclo de vida de la orden (logística→orders)",
         "tags": [
           "Pedidos (interno)"
@@ -298,6 +353,11 @@
             "description": ""
           }
         },
+        "security": [
+          {
+            "internalKey": []
+          }
+        ],
         "summary": "Lectura completa de una orden (reportes/comisiones)",
         "tags": [
           "Pedidos (interno)"
@@ -322,6 +382,11 @@
             "description": ""
           }
         },
+        "security": [
+          {
+            "internalKey": []
+          }
+        ],
         "summary": "Listar órdenes (servicio→servicio)",
         "tags": [
           "Pedidos (interno)"
@@ -347,6 +412,11 @@
             "description": ""
           }
         },
+        "security": [
+          {
+            "internalKey": []
+          }
+        ],
         "summary": "Reproyectar una orden desde su historia (Event Sourcing)",
         "tags": [
           "Pedidos (interno)"
@@ -372,6 +442,11 @@
             "description": ""
           }
         },
+        "security": [
+          {
+            "internalKey": []
+          }
+        ],
         "summary": "Historia inmutable de eventos de una orden",
         "tags": [
           "Pedidos (interno)"
@@ -397,6 +472,11 @@
             "description": ""
           }
         },
+        "security": [
+          {
+            "internalKey": []
+          }
+        ],
         "summary": "Estado de almacenamiento del tenant (servicio→servicio)",
         "tags": [
           "Almacenamiento (interno)"
@@ -422,6 +502,11 @@
             "description": ""
           }
         },
+        "security": [
+          {
+            "internalKey": []
+          }
+        ],
         "summary": "Recalcular el uso del tenant (servicio→servicio)",
         "tags": [
           "Almacenamiento (interno)"
@@ -456,6 +541,11 @@
             "description": ""
           }
         },
+        "security": [
+          {
+            "internalKey": []
+          }
+        ],
         "summary": "Metadata de un objeto del tenant (servicio→servicio)",
         "tags": [
           "Almacenamiento (interno)"
@@ -481,6 +571,11 @@
             "description": ""
           }
         },
+        "security": [
+          {
+            "internalKey": []
+          }
+        ],
         "summary": "Lote de ofertas por ids (servicio→servicio)",
         "tags": [
           "Tiendas (interno)"

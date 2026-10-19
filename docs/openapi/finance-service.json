@@ -20,6 +20,11 @@
             "description": ""
           }
         },
+        "security": [
+          {
+            "internalKey": []
+          }
+        ],
         "summary": "Situación fiscal de un usuario (para identity)",
         "tags": [
           "Finanzas (interno)"
@@ -60,6 +65,11 @@
             "description": ""
           }
         },
+        "security": [
+          {
+            "internalKey": []
+          }
+        ],
         "summary": "Declaraciones del periodo (reportes)",
         "tags": [
           "Finanzas (interno)"
@@ -75,6 +85,11 @@
             "description": ""
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Plan de cuentas",
         "tags": [
           "Finanzas · Contabilidad"
@@ -98,6 +113,11 @@
             "description": ""
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Crear una cuenta contable",
         "tags": [
           "Finanzas · Contabilidad"
@@ -133,6 +153,11 @@
             "description": ""
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Cambiar el estado de una cuenta",
         "tags": [
           "Finanzas · Contabilidad"
@@ -173,6 +198,11 @@
             "description": ""
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Libro diario (asientos)",
         "tags": [
           "Finanzas · Contabilidad"
@@ -196,6 +226,11 @@
             "description": ""
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Registrar un asiento manual",
         "tags": [
           "Finanzas · Contabilidad"
@@ -221,6 +256,11 @@
             "description": ""
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Anular un asiento",
         "tags": [
           "Finanzas · Contabilidad"
@@ -262,6 +302,11 @@
             "description": ""
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Libro mayor por cuenta",
         "tags": [
           "Finanzas · Contabilidad"
@@ -294,6 +339,11 @@
             "description": ""
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Libro de ventas (DGI)",
         "tags": [
           "Finanzas · Contabilidad"
@@ -326,6 +376,11 @@
             "description": ""
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Libro de compras (DGI)",
         "tags": [
           "Finanzas · Contabilidad"
@@ -366,6 +421,11 @@
             "description": ""
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Listar comprobantes fiscales",
         "tags": [
           "Finanzas · Facturación"
@@ -389,6 +449,11 @@
             "description": ""
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Emitir un comprobante (factura o nota de crédito)",
         "tags": [
           "Finanzas · Facturación"
@@ -404,6 +469,11 @@
             "description": ""
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Series de comprobantes",
         "tags": [
           "Finanzas · Facturación"
@@ -429,6 +499,11 @@
             "description": ""
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Anular un comprobante",
         "tags": [
           "Finanzas · Facturación"
@@ -444,6 +519,11 @@
             "description": ""
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Listar jurisdicciones",
         "tags": [
           "Finanzas · Tributación"
@@ -467,6 +547,11 @@
             "description": ""
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Crear una jurisdicción",
         "tags": [
           "Finanzas · Tributación"
@@ -491,6 +576,11 @@
             "description": ""
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Listar regímenes fiscales",
         "tags": [
           "Finanzas · Tributación"
@@ -514,6 +604,11 @@
             "description": ""
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Crear un régimen fiscal",
         "tags": [
           "Finanzas · Tributación"
@@ -529,6 +624,11 @@
             "description": ""
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Listar sujetos tributarios",
         "tags": [
           "Finanzas · Tributación"
@@ -552,6 +652,11 @@
             "description": ""
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Registrar un sujeto tributario",
         "tags": [
           "Finanzas · Tributación"
@@ -577,6 +682,11 @@
             "description": ""
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Dar de baja un sujeto tributario",
         "tags": [
           "Finanzas · Tributación"
@@ -617,6 +727,11 @@
             "description": ""
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Listar declaraciones",
         "tags": [
           "Finanzas · Tributación"
@@ -642,6 +757,11 @@
             "description": ""
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Generar declaraciones del periodo",
         "tags": [
           "Finanzas · Tributación"
@@ -667,6 +787,11 @@
             "description": ""
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Presentar una declaración",
         "tags": [
           "Finanzas · Tributación"
@@ -692,6 +817,11 @@
             "description": ""
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Marcar una declaración como pagada",
         "tags": [
           "Finanzas · Tributación"
@@ -717,6 +847,11 @@
             "description": ""
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Crear una proyección financiera",
         "tags": [
           "Finanzas · Modelo"
@@ -730,6 +865,11 @@
             "description": ""
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Listar proyecciones",
         "tags": [
           "Finanzas · Modelo"
@@ -755,6 +895,11 @@
             "description": ""
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Detalle de una proyección",
         "tags": [
           "Finanzas · Modelo"
@@ -803,6 +948,11 @@
             "description": ""
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Punto de equilibrio (tablas 8.12/8.11)",
         "tags": [
           "Finanzas · Modelo"
@@ -827,6 +977,11 @@
             "description": ""
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "KPIs financieros del periodo (tabla 8.8)",
         "tags": [
           "Finanzas · Modelo"
@@ -842,6 +997,11 @@
             "description": ""
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Estudios de sensibilidad (8.7, 8.10, 8.11, 8.12)",
         "tags": [
           "Finanzas · Modelo"
@@ -857,6 +1017,11 @@
             "description": ""
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Plan a 24 meses (8.6 + 8.9)",
         "tags": [
           "Finanzas · Modelo"
@@ -889,6 +1054,11 @@
             "description": ""
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Tablero financiero (KPIs + alertas, tabla 8.10)",
         "tags": [
           "Finanzas · Modelo"
@@ -913,6 +1083,11 @@
             "description": ""
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Situación fiscal del vendedor (cap. 4.4)",
         "tags": [
           "Finanzas · Vendedor"
@@ -934,6 +1109,11 @@
         "scheme": "bearer",
         "bearerFormat": "JWT",
         "type": "http"
+      },
+      "internalKey": {
+        "type": "apiKey",
+        "in": "header",
+        "name": "x-internal-key"
       }
     },
     "schemas": {

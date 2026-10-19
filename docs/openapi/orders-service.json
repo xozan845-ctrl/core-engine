@@ -37,6 +37,11 @@
             "description": ""
           }
         },
+        "security": [
+          {
+            "internalKey": []
+          }
+        ],
         "summary": "Avanzar el ciclo de vida de la orden (logística→orders)",
         "tags": [
           "Pedidos (interno)"
@@ -62,6 +67,11 @@
             "description": ""
           }
         },
+        "security": [
+          {
+            "internalKey": []
+          }
+        ],
         "summary": "Lectura completa de una orden (reportes/comisiones)",
         "tags": [
           "Pedidos (interno)"
@@ -86,6 +96,11 @@
             "description": ""
           }
         },
+        "security": [
+          {
+            "internalKey": []
+          }
+        ],
         "summary": "Listar órdenes (servicio→servicio)",
         "tags": [
           "Pedidos (interno)"
@@ -111,6 +126,11 @@
             "description": ""
           }
         },
+        "security": [
+          {
+            "internalKey": []
+          }
+        ],
         "summary": "Reproyectar una orden desde su historia (Event Sourcing)",
         "tags": [
           "Pedidos (interno)"
@@ -136,6 +156,11 @@
             "description": ""
           }
         },
+        "security": [
+          {
+            "internalKey": []
+          }
+        ],
         "summary": "Historia inmutable de eventos de una orden",
         "tags": [
           "Pedidos (interno)"
@@ -161,6 +186,11 @@
             "description": ""
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Crear una orden desde el carrito (comprador)",
         "tags": [
           "Pedidos"
@@ -183,6 +213,11 @@
             "description": ""
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Historial de órdenes del comprador autenticado",
         "tags": [
           "Pedidos"
@@ -215,6 +250,11 @@
             "description": ""
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Listar todas las órdenes (admin)",
         "tags": [
           "Pedidos"
@@ -239,6 +279,11 @@
             "description": ""
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Órdenes del vendedor autenticado (mis ventas)",
         "tags": [
           "Pedidos"
@@ -272,6 +317,11 @@
             "description": ""
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Comisiones por periodo (vendedor/admin)",
         "tags": [
           "Pedidos"
@@ -305,6 +355,11 @@
             "description": ""
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Órdenes de una tienda (vendedor dueño o admin)",
         "tags": [
           "Pedidos"
@@ -330,6 +385,11 @@
             "description": ""
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Estado/detalle de una orden (dueño o admin)",
         "tags": [
           "Pedidos"
@@ -355,6 +415,11 @@
             "description": ""
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Timeline de eventos de la orden (Event Sourcing)",
         "tags": [
           "Pedidos"
@@ -370,6 +435,11 @@
             "description": ""
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Ver el carrito del comprador (RN-05)",
         "tags": [
           "Carrito"
@@ -383,6 +453,11 @@
             "description": ""
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Vaciar el carrito",
         "tags": [
           "Carrito"
@@ -408,6 +483,11 @@
             "description": ""
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Agregar un item al carrito",
         "tags": [
           "Carrito"
@@ -443,6 +523,11 @@
             "description": ""
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Actualizar la cantidad de un item (0 lo elimina)",
         "tags": [
           "Carrito"
@@ -466,6 +551,11 @@
             "description": ""
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Quitar un item del carrito",
         "tags": [
           "Carrito"
@@ -487,6 +577,11 @@
         "scheme": "bearer",
         "bearerFormat": "JWT",
         "type": "http"
+      },
+      "internalKey": {
+        "type": "apiKey",
+        "in": "header",
+        "name": "x-internal-key"
       }
     },
     "schemas": {

@@ -1,5 +1,5 @@
 import { Controller, Get, Param, UseGuards } from '@nestjs/common';
-import { ApiOperation, ApiParam, ApiTags } from '@nestjs/swagger';
+import { ApiOperation, ApiParam, ApiSecurity, ApiTags } from '@nestjs/swagger';
 import { ClaveInternaGuard, NotFoundError } from '@core/shared';
 import { UsuariosService } from '../usuarios/usuarios.service';
 
@@ -8,6 +8,7 @@ import { UsuariosService } from '../usuarios/usuarios.service';
  * El API Gateway nunca los expone al publico.
  */
 @ApiTags('Usuarios (interno)')
+@ApiSecurity('internalKey')
 @Controller('internal')
 @UseGuards(ClaveInternaGuard)
 export class InternalController {

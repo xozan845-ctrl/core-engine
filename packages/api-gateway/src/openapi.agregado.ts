@@ -94,6 +94,11 @@ export const OPENAPI_AGREGADO = {
             "description": ""
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Crear producto (admin, TC-01)",
         "tags": [
           "Catálogo"
@@ -152,6 +157,11 @@ export const OPENAPI_AGREGADO = {
             "description": ""
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Editar producto (admin; RN-08 histórico)",
         "tags": [
           "Catálogo"
@@ -167,6 +177,11 @@ export const OPENAPI_AGREGADO = {
             "description": ""
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Niveles de stock (admin; Tabla 21)",
         "tags": [
           "Catálogo"
@@ -182,6 +197,11 @@ export const OPENAPI_AGREGADO = {
             "description": ""
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Cortes/liquidaciones del vendedor autenticado",
         "tags": [
           "Comisiones · Liquidaciones"
@@ -214,6 +234,11 @@ export const OPENAPI_AGREGADO = {
             "description": ""
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Ejecutar un corte de liquidaciones (admin)",
         "tags": [
           "Comisiones · Liquidaciones"
@@ -247,6 +272,11 @@ export const OPENAPI_AGREGADO = {
             "description": ""
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Marcar una liquidación como pagada (RN-07)",
         "tags": [
           "Comisiones · Liquidaciones"
@@ -262,6 +292,11 @@ export const OPENAPI_AGREGADO = {
             "description": ""
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Estado de cuenta de ventas/comisiones del vendedor",
         "tags": [
           "Comisiones · Ventas"
@@ -277,6 +312,11 @@ export const OPENAPI_AGREGADO = {
             "description": ""
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "KPIs de ventas e inventario (admin)",
         "tags": [
           "Comisiones · Reportes"
@@ -292,6 +332,11 @@ export const OPENAPI_AGREGADO = {
             "description": ""
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Listar personal",
         "tags": [
           "Field (logística de campo)"
@@ -315,6 +360,11 @@ export const OPENAPI_AGREGADO = {
             "description": ""
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Crear personal",
         "tags": [
           "Field (logística de campo)"
@@ -339,6 +389,11 @@ export const OPENAPI_AGREGADO = {
             "description": ""
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Obtener personal por id",
         "tags": [
           "Field (logística de campo)"
@@ -371,6 +426,11 @@ export const OPENAPI_AGREGADO = {
             "description": ""
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Actualizar personal",
         "tags": [
           "Field (logística de campo)"
@@ -393,6 +453,11 @@ export const OPENAPI_AGREGADO = {
             "description": ""
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Eliminar personal",
         "tags": [
           "Field (logística de campo)"
@@ -417,6 +482,11 @@ export const OPENAPI_AGREGADO = {
             "description": ""
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Ubicación del personal",
         "tags": [
           "Field (logística de campo)"
@@ -449,6 +519,11 @@ export const OPENAPI_AGREGADO = {
             "description": ""
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Actualizar ubicación del personal",
         "tags": [
           "Field (logística de campo)"
@@ -464,6 +539,11 @@ export const OPENAPI_AGREGADO = {
             "description": ""
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Listar clientes de campo",
         "tags": [
           "Field (logística de campo)"
@@ -487,6 +567,11 @@ export const OPENAPI_AGREGADO = {
             "description": ""
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Crear cliente de campo",
         "tags": [
           "Field (logística de campo)"
@@ -511,6 +596,11 @@ export const OPENAPI_AGREGADO = {
             "description": ""
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Obtener cliente por id",
         "tags": [
           "Field (logística de campo)"
@@ -543,6 +633,11 @@ export const OPENAPI_AGREGADO = {
             "description": ""
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Actualizar cliente de campo",
         "tags": [
           "Field (logística de campo)"
@@ -565,6 +660,11 @@ export const OPENAPI_AGREGADO = {
             "description": ""
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Eliminar cliente de campo",
         "tags": [
           "Field (logística de campo)"
@@ -580,6 +680,11 @@ export const OPENAPI_AGREGADO = {
             "description": ""
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Listar vehículos",
         "tags": [
           "Field (logística de campo)"
@@ -603,6 +708,11 @@ export const OPENAPI_AGREGADO = {
             "description": ""
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Crear vehículo",
         "tags": [
           "Field (logística de campo)"
@@ -627,6 +737,11 @@ export const OPENAPI_AGREGADO = {
             "description": ""
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Obtener vehículo por id",
         "tags": [
           "Field (logística de campo)"
@@ -659,6 +774,11 @@ export const OPENAPI_AGREGADO = {
             "description": ""
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Actualizar vehículo",
         "tags": [
           "Field (logística de campo)"
@@ -681,6 +801,11 @@ export const OPENAPI_AGREGADO = {
             "description": ""
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Eliminar vehículo",
         "tags": [
           "Field (logística de campo)"
@@ -705,6 +830,11 @@ export const OPENAPI_AGREGADO = {
             "description": ""
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Listar rutas",
         "tags": [
           "Field (logística de campo)"
@@ -728,6 +858,11 @@ export const OPENAPI_AGREGADO = {
             "description": ""
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Crear ruta",
         "tags": [
           "Field (logística de campo)"
@@ -752,6 +887,11 @@ export const OPENAPI_AGREGADO = {
             "description": ""
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Obtener ruta por id",
         "tags": [
           "Field (logística de campo)"
@@ -784,6 +924,11 @@ export const OPENAPI_AGREGADO = {
             "description": ""
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Actualizar ruta",
         "tags": [
           "Field (logística de campo)"
@@ -806,6 +951,11 @@ export const OPENAPI_AGREGADO = {
             "description": ""
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Eliminar ruta",
         "tags": [
           "Field (logística de campo)"
@@ -840,6 +990,11 @@ export const OPENAPI_AGREGADO = {
             "description": ""
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Agregar parada a la ruta",
         "tags": [
           "Field (logística de campo)"
@@ -882,6 +1037,11 @@ export const OPENAPI_AGREGADO = {
             "description": ""
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Actualizar parada de la ruta",
         "tags": [
           "Field (logística de campo)"
@@ -916,6 +1076,11 @@ export const OPENAPI_AGREGADO = {
             "description": ""
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Asignar personal/vehículo a la ruta",
         "tags": [
           "Field (logística de campo)"
@@ -956,6 +1121,11 @@ export const OPENAPI_AGREGADO = {
             "description": ""
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Listar pedidos de campo",
         "tags": [
           "Field (logística de campo)"
@@ -979,6 +1149,11 @@ export const OPENAPI_AGREGADO = {
             "description": ""
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Crear pedido de campo",
         "tags": [
           "Field (logística de campo)"
@@ -1003,6 +1178,11 @@ export const OPENAPI_AGREGADO = {
             "description": ""
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Obtener pedido por id",
         "tags": [
           "Field (logística de campo)"
@@ -1035,6 +1215,11 @@ export const OPENAPI_AGREGADO = {
             "description": ""
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Actualizar pedido de campo",
         "tags": [
           "Field (logística de campo)"
@@ -1057,6 +1242,11 @@ export const OPENAPI_AGREGADO = {
             "description": ""
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Eliminar pedido de campo",
         "tags": [
           "Field (logística de campo)"
@@ -1091,6 +1281,11 @@ export const OPENAPI_AGREGADO = {
             "description": ""
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Cambiar estado del pedido",
         "tags": [
           "Field (logística de campo)"
@@ -1123,6 +1318,11 @@ export const OPENAPI_AGREGADO = {
             "description": ""
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Listar asistencia",
         "tags": [
           "Field (logística de campo)"
@@ -1146,6 +1346,11 @@ export const OPENAPI_AGREGADO = {
             "description": ""
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Registrar asistencia",
         "tags": [
           "Field (logística de campo)"
@@ -1178,6 +1383,11 @@ export const OPENAPI_AGREGADO = {
             "description": ""
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Listar incidencias",
         "tags": [
           "Field (logística de campo)"
@@ -1201,6 +1411,11 @@ export const OPENAPI_AGREGADO = {
             "description": ""
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Crear incidencia",
         "tags": [
           "Field (logística de campo)"
@@ -1225,6 +1440,11 @@ export const OPENAPI_AGREGADO = {
             "description": ""
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Obtener incidencia por id",
         "tags": [
           "Field (logística de campo)"
@@ -1257,6 +1477,11 @@ export const OPENAPI_AGREGADO = {
             "description": ""
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Actualizar incidencia",
         "tags": [
           "Field (logística de campo)"
@@ -1279,6 +1504,11 @@ export const OPENAPI_AGREGADO = {
             "description": ""
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Eliminar incidencia",
         "tags": [
           "Field (logística de campo)"
@@ -1319,6 +1549,11 @@ export const OPENAPI_AGREGADO = {
             "description": ""
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Listar tracking GPS",
         "tags": [
           "Field (logística de campo)"
@@ -1342,6 +1577,11 @@ export const OPENAPI_AGREGADO = {
             "description": ""
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Registrar tracking GPS (lote)",
         "tags": [
           "Field (logística de campo)"
@@ -1374,6 +1614,11 @@ export const OPENAPI_AGREGADO = {
             "description": ""
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Listar visitas (telemetría)",
         "tags": [
           "Field (logística de campo)"
@@ -1397,6 +1642,11 @@ export const OPENAPI_AGREGADO = {
             "description": ""
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Registrar visita (telemetría)",
         "tags": [
           "Field (logística de campo)"
@@ -1429,6 +1679,11 @@ export const OPENAPI_AGREGADO = {
             "description": ""
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Obtener cumplimiento de ruta/fecha",
         "tags": [
           "Field (logística de campo)"
@@ -1454,6 +1709,11 @@ export const OPENAPI_AGREGADO = {
             "description": ""
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Guardar cumplimiento de ruta",
         "tags": [
           "Field (logística de campo)"
@@ -1479,6 +1739,11 @@ export const OPENAPI_AGREGADO = {
             "description": ""
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Sincronizar operaciones offline",
         "tags": [
           "Field (logística de campo)"
@@ -1494,6 +1759,11 @@ export const OPENAPI_AGREGADO = {
             "description": ""
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Plan de cuentas",
         "tags": [
           "Finanzas · Contabilidad"
@@ -1517,6 +1787,11 @@ export const OPENAPI_AGREGADO = {
             "description": ""
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Crear una cuenta contable",
         "tags": [
           "Finanzas · Contabilidad"
@@ -1552,6 +1827,11 @@ export const OPENAPI_AGREGADO = {
             "description": ""
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Cambiar el estado de una cuenta",
         "tags": [
           "Finanzas · Contabilidad"
@@ -1592,6 +1872,11 @@ export const OPENAPI_AGREGADO = {
             "description": ""
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Libro diario (asientos)",
         "tags": [
           "Finanzas · Contabilidad"
@@ -1615,6 +1900,11 @@ export const OPENAPI_AGREGADO = {
             "description": ""
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Registrar un asiento manual",
         "tags": [
           "Finanzas · Contabilidad"
@@ -1640,6 +1930,11 @@ export const OPENAPI_AGREGADO = {
             "description": ""
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Anular un asiento",
         "tags": [
           "Finanzas · Contabilidad"
@@ -1681,6 +1976,11 @@ export const OPENAPI_AGREGADO = {
             "description": ""
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Libro mayor por cuenta",
         "tags": [
           "Finanzas · Contabilidad"
@@ -1713,6 +2013,11 @@ export const OPENAPI_AGREGADO = {
             "description": ""
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Libro de ventas (DGI)",
         "tags": [
           "Finanzas · Contabilidad"
@@ -1745,6 +2050,11 @@ export const OPENAPI_AGREGADO = {
             "description": ""
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Libro de compras (DGI)",
         "tags": [
           "Finanzas · Contabilidad"
@@ -1785,6 +2095,11 @@ export const OPENAPI_AGREGADO = {
             "description": ""
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Listar comprobantes fiscales",
         "tags": [
           "Finanzas · Facturación"
@@ -1808,6 +2123,11 @@ export const OPENAPI_AGREGADO = {
             "description": ""
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Emitir un comprobante (factura o nota de crédito)",
         "tags": [
           "Finanzas · Facturación"
@@ -1823,6 +2143,11 @@ export const OPENAPI_AGREGADO = {
             "description": ""
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Series de comprobantes",
         "tags": [
           "Finanzas · Facturación"
@@ -1848,6 +2173,11 @@ export const OPENAPI_AGREGADO = {
             "description": ""
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Anular un comprobante",
         "tags": [
           "Finanzas · Facturación"
@@ -1863,6 +2193,11 @@ export const OPENAPI_AGREGADO = {
             "description": ""
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Listar jurisdicciones",
         "tags": [
           "Finanzas · Tributación"
@@ -1886,6 +2221,11 @@ export const OPENAPI_AGREGADO = {
             "description": ""
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Crear una jurisdicción",
         "tags": [
           "Finanzas · Tributación"
@@ -1910,6 +2250,11 @@ export const OPENAPI_AGREGADO = {
             "description": ""
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Listar regímenes fiscales",
         "tags": [
           "Finanzas · Tributación"
@@ -1933,6 +2278,11 @@ export const OPENAPI_AGREGADO = {
             "description": ""
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Crear un régimen fiscal",
         "tags": [
           "Finanzas · Tributación"
@@ -1948,6 +2298,11 @@ export const OPENAPI_AGREGADO = {
             "description": ""
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Listar sujetos tributarios",
         "tags": [
           "Finanzas · Tributación"
@@ -1971,6 +2326,11 @@ export const OPENAPI_AGREGADO = {
             "description": ""
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Registrar un sujeto tributario",
         "tags": [
           "Finanzas · Tributación"
@@ -1996,6 +2356,11 @@ export const OPENAPI_AGREGADO = {
             "description": ""
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Dar de baja un sujeto tributario",
         "tags": [
           "Finanzas · Tributación"
@@ -2036,6 +2401,11 @@ export const OPENAPI_AGREGADO = {
             "description": ""
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Listar declaraciones",
         "tags": [
           "Finanzas · Tributación"
@@ -2061,6 +2431,11 @@ export const OPENAPI_AGREGADO = {
             "description": ""
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Generar declaraciones del periodo",
         "tags": [
           "Finanzas · Tributación"
@@ -2086,6 +2461,11 @@ export const OPENAPI_AGREGADO = {
             "description": ""
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Presentar una declaración",
         "tags": [
           "Finanzas · Tributación"
@@ -2111,6 +2491,11 @@ export const OPENAPI_AGREGADO = {
             "description": ""
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Marcar una declaración como pagada",
         "tags": [
           "Finanzas · Tributación"
@@ -2136,6 +2521,11 @@ export const OPENAPI_AGREGADO = {
             "description": ""
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Crear una proyección financiera",
         "tags": [
           "Finanzas · Modelo"
@@ -2149,6 +2539,11 @@ export const OPENAPI_AGREGADO = {
             "description": ""
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Listar proyecciones",
         "tags": [
           "Finanzas · Modelo"
@@ -2174,6 +2569,11 @@ export const OPENAPI_AGREGADO = {
             "description": ""
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Detalle de una proyección",
         "tags": [
           "Finanzas · Modelo"
@@ -2222,6 +2622,11 @@ export const OPENAPI_AGREGADO = {
             "description": ""
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Punto de equilibrio (tablas 8.12/8.11)",
         "tags": [
           "Finanzas · Modelo"
@@ -2246,6 +2651,11 @@ export const OPENAPI_AGREGADO = {
             "description": ""
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "KPIs financieros del periodo (tabla 8.8)",
         "tags": [
           "Finanzas · Modelo"
@@ -2261,6 +2671,11 @@ export const OPENAPI_AGREGADO = {
             "description": ""
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Estudios de sensibilidad (8.7, 8.10, 8.11, 8.12)",
         "tags": [
           "Finanzas · Modelo"
@@ -2276,6 +2691,11 @@ export const OPENAPI_AGREGADO = {
             "description": ""
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Plan a 24 meses (8.6 + 8.9)",
         "tags": [
           "Finanzas · Modelo"
@@ -2308,6 +2728,11 @@ export const OPENAPI_AGREGADO = {
             "description": ""
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Tablero financiero (KPIs + alertas, tabla 8.10)",
         "tags": [
           "Finanzas · Modelo"
@@ -2332,6 +2757,11 @@ export const OPENAPI_AGREGADO = {
             "description": ""
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Situación fiscal del vendedor (cap. 4.4)",
         "tags": [
           "Finanzas · Vendedor"
@@ -2443,6 +2873,11 @@ export const OPENAPI_AGREGADO = {
             "description": "Sesión cerrada"
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Cerrar sesión (revoca el refresh token)",
         "tags": [
           "Auth"
@@ -2471,6 +2906,11 @@ export const OPENAPI_AGREGADO = {
             "description": "Solo un administrador puede crear usuarios"
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Crear usuario (solo admin)",
         "tags": [
           "Auth"
@@ -2496,6 +2936,11 @@ export const OPENAPI_AGREGADO = {
             "description": ""
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Cambiar la contraseña (autenticado)",
         "tags": [
           "Auth"
@@ -2536,6 +2981,11 @@ export const OPENAPI_AGREGADO = {
             "description": ""
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Perfil de la sesión actual",
         "tags": [
           "Auth"
@@ -2561,6 +3011,11 @@ export const OPENAPI_AGREGADO = {
             "description": ""
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Vincular la ficha de personal del usuario autenticado",
         "tags": [
           "Auth"
@@ -2576,6 +3031,11 @@ export const OPENAPI_AGREGADO = {
             "description": ""
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Listar usuarios (admin)",
         "tags": [
           "Usuarios"
@@ -2601,6 +3061,11 @@ export const OPENAPI_AGREGADO = {
             "description": "Usuario inexistente o sin permiso"
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Perfil de un usuario (admin o el propio)",
         "tags": [
           "Usuarios"
@@ -2639,6 +3104,11 @@ export const OPENAPI_AGREGADO = {
             "description": "Estado objetivo inválido (ESTADO_INVALIDO)"
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Avanzar el estado de una orden (logística)",
         "tags": [
           "Logística"
@@ -2654,6 +3124,11 @@ export const OPENAPI_AGREGADO = {
             "description": "Guías de despacho con monto serializado"
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Listar guías de despacho (admin)",
         "tags": [
           "Logística"
@@ -2706,6 +3181,11 @@ export const OPENAPI_AGREGADO = {
             "description": ""
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Mapa de calor de ventas (admin)",
         "tags": [
           "Inteligencia — Métricas"
@@ -2766,6 +3246,11 @@ export const OPENAPI_AGREGADO = {
             "description": ""
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Mi mapa de calor (vendedor)",
         "tags": [
           "Inteligencia — Métricas"
@@ -2781,6 +3266,11 @@ export const OPENAPI_AGREGADO = {
             "description": ""
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Rendimiento de vendedores (admin)",
         "tags": [
           "Inteligencia — Métricas"
@@ -2805,6 +3295,11 @@ export const OPENAPI_AGREGADO = {
             "description": ""
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Mi rendimiento como vendedor",
         "tags": [
           "Inteligencia — Métricas"
@@ -2820,6 +3315,11 @@ export const OPENAPI_AGREGADO = {
             "description": ""
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Cobertura por zona (admin)",
         "tags": [
           "Inteligencia — Métricas"
@@ -2835,6 +3335,11 @@ export const OPENAPI_AGREGADO = {
             "description": ""
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Demanda de productos (admin)",
         "tags": [
           "Inteligencia — Métricas"
@@ -2850,6 +3355,11 @@ export const OPENAPI_AGREGADO = {
             "description": ""
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Tendencias (admin)",
         "tags": [
           "Inteligencia — Métricas"
@@ -2902,6 +3412,11 @@ export const OPENAPI_AGREGADO = {
             "description": ""
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Resumen de inteligencia de mercado (admin)",
         "tags": [
           "Inteligencia — Métricas"
@@ -2927,6 +3442,11 @@ export const OPENAPI_AGREGADO = {
             "description": ""
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Registrar una venta en inteligencia (ingesta manual)",
         "tags": [
           "Inteligencia — Métricas"
@@ -3121,6 +3641,11 @@ export const OPENAPI_AGREGADO = {
             "description": ""
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Crear una orden desde el carrito (comprador)",
         "tags": [
           "Pedidos"
@@ -3143,6 +3668,11 @@ export const OPENAPI_AGREGADO = {
             "description": ""
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Historial de órdenes del comprador autenticado",
         "tags": [
           "Pedidos"
@@ -3175,6 +3705,11 @@ export const OPENAPI_AGREGADO = {
             "description": ""
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Listar todas las órdenes (admin)",
         "tags": [
           "Pedidos"
@@ -3199,6 +3734,11 @@ export const OPENAPI_AGREGADO = {
             "description": ""
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Órdenes del vendedor autenticado (mis ventas)",
         "tags": [
           "Pedidos"
@@ -3232,6 +3772,11 @@ export const OPENAPI_AGREGADO = {
             "description": ""
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Comisiones por periodo (vendedor/admin)",
         "tags": [
           "Pedidos"
@@ -3265,6 +3810,11 @@ export const OPENAPI_AGREGADO = {
             "description": ""
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Órdenes de una tienda (vendedor dueño o admin)",
         "tags": [
           "Pedidos"
@@ -3290,6 +3840,11 @@ export const OPENAPI_AGREGADO = {
             "description": ""
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Estado/detalle de una orden (dueño o admin)",
         "tags": [
           "Pedidos"
@@ -3315,6 +3870,11 @@ export const OPENAPI_AGREGADO = {
             "description": ""
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Timeline de eventos de la orden (Event Sourcing)",
         "tags": [
           "Pedidos"
@@ -3330,6 +3890,11 @@ export const OPENAPI_AGREGADO = {
             "description": ""
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Ver el carrito del comprador (RN-05)",
         "tags": [
           "Carrito"
@@ -3343,6 +3908,11 @@ export const OPENAPI_AGREGADO = {
             "description": ""
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Vaciar el carrito",
         "tags": [
           "Carrito"
@@ -3368,6 +3938,11 @@ export const OPENAPI_AGREGADO = {
             "description": ""
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Agregar un item al carrito",
         "tags": [
           "Carrito"
@@ -3403,6 +3978,11 @@ export const OPENAPI_AGREGADO = {
             "description": ""
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Actualizar la cantidad de un item (0 lo elimina)",
         "tags": [
           "Carrito"
@@ -3426,6 +4006,11 @@ export const OPENAPI_AGREGADO = {
             "description": ""
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Quitar un item del carrito",
         "tags": [
           "Carrito"
@@ -3463,6 +4048,11 @@ export const OPENAPI_AGREGADO = {
             "description": ""
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Listar tenants con almacenamiento (cuota y uso)",
         "tags": [
           "Almacenamiento (admin)"
@@ -3488,6 +4078,11 @@ export const OPENAPI_AGREGADO = {
             "description": ""
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Estado de almacenamiento de un tenant",
         "tags": [
           "Almacenamiento (admin)"
@@ -3521,6 +4116,11 @@ export const OPENAPI_AGREGADO = {
             "description": ""
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Ajustar cuota y/o suspender el almacenamiento del tenant",
         "tags": [
           "Almacenamiento (admin)"
@@ -3546,6 +4146,11 @@ export const OPENAPI_AGREGADO = {
             "description": ""
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Recalcular el uso del tenant desde la metadata (idempotente)",
         "tags": [
           "Almacenamiento (admin)"
@@ -3562,6 +4167,11 @@ export const OPENAPI_AGREGADO = {
             "description": ""
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Estado del almacenamiento del tenant (bucket, cuota, uso)",
         "tags": [
           "Almacenamiento"
@@ -3585,6 +4195,11 @@ export const OPENAPI_AGREGADO = {
             "description": "Cuota invalida (CUOTA_INVALIDA/CUOTA_MENOR_AL_USO)"
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Asegurar el bucket del tenant y fijar su cuota (admin)",
         "tags": [
           "Almacenamiento"
@@ -3614,6 +4229,11 @@ export const OPENAPI_AGREGADO = {
             "description": "Cuota excedida (CUOTA_EXCEDIDA)"
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Solicitar URL prefirmada de subida (PUT directo a MinIO)",
         "tags": [
           "Almacenamiento"
@@ -3639,6 +4259,11 @@ export const OPENAPI_AGREGADO = {
             "description": ""
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Confirmar la subida y activar el objeto (contabiliza cuota)",
         "tags": [
           "Almacenamiento"
@@ -3708,6 +4333,11 @@ export const OPENAPI_AGREGADO = {
             "description": ""
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Listar objetos del tenant (paginado, sin eliminados por defecto)",
         "tags": [
           "Almacenamiento"
@@ -3733,6 +4363,11 @@ export const OPENAPI_AGREGADO = {
             "description": ""
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Detalle (metadata) de un objeto del tenant",
         "tags": [
           "Almacenamiento"
@@ -3756,6 +4391,11 @@ export const OPENAPI_AGREGADO = {
             "description": ""
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Eliminar un objeto (baja logica + borrado en MinIO)",
         "tags": [
           "Almacenamiento"
@@ -3781,6 +4421,11 @@ export const OPENAPI_AGREGADO = {
             "description": ""
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "URL prefirmada de descarga (GET) con validez limitada",
         "tags": [
           "Almacenamiento"
@@ -3806,6 +4451,11 @@ export const OPENAPI_AGREGADO = {
             "description": ""
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Crear la tienda del vendedor autenticado",
         "tags": [
           "Tiendas"
@@ -3821,6 +4471,11 @@ export const OPENAPI_AGREGADO = {
             "description": ""
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Tienda del vendedor autenticado",
         "tags": [
           "Tiendas"
@@ -3846,6 +4501,11 @@ export const OPENAPI_AGREGADO = {
             "description": "Oferta creada"
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Publicar un producto con margen (vendedor)",
         "tags": [
           "Tiendas"
@@ -3880,6 +4540,11 @@ export const OPENAPI_AGREGADO = {
             "description": ""
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Cambiar el margen de una oferta (vendedor)",
         "tags": [
           "Tiendas"
@@ -3895,6 +4560,11 @@ export const OPENAPI_AGREGADO = {
             "description": ""
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Listar las ofertas del vendedor autenticado",
         "tags": [
           "Tiendas"
@@ -3932,6 +4602,11 @@ export const OPENAPI_AGREGADO = {
         "scheme": "bearer",
         "bearerFormat": "JWT",
         "type": "http"
+      },
+      "internalKey": {
+        "type": "apiKey",
+        "in": "header",
+        "name": "x-internal-key"
       }
     },
     "schemas": {

@@ -1,5 +1,5 @@
 import { Body, Controller, Get, Param, Patch, Post, Query } from '@nestjs/common';
-import { ApiOperation, ApiParam, ApiProperty, ApiResponse, ApiTags } from '@nestjs/swagger';
+import { ApiBearerAuth, ApiOperation, ApiParam, ApiProperty, ApiResponse, ApiTags } from '@nestjs/swagger';
 import {
   IsInt,
   IsOptional,
@@ -137,6 +137,7 @@ export class ProductosController {
   /** POST /api/v1/catalog/productos — alta de producto (admin, TC-01). */
   @Post('productos')
   @Roles(ROLES.ADMIN)
+  @ApiBearerAuth()
   @ApiOperation({ summary: 'Crear producto (admin, TC-01)' })
   async crear(
     @Body() dto: CrearProductoRequestDto,
@@ -148,6 +149,7 @@ export class ProductosController {
   /** PATCH /api/v1/catalog/productos/:id — edicion (admin; RN-08 historico). */
   @Patch('productos/:id')
   @Roles(ROLES.ADMIN)
+  @ApiBearerAuth()
   @ApiOperation({ summary: 'Editar producto (admin; RN-08 histórico)' })
   @ApiParam({ name: 'id', description: 'Id del producto' })
   async actualizar(@Param('id') id: string, @Body() dto: ActualizarProductoRequestDto): Promise<Producto> {

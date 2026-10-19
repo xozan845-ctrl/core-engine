@@ -8,7 +8,7 @@ import {
   Post,
   Query,
 } from '@nestjs/common';
-import { ApiOperation, ApiParam, ApiProperty, ApiResponse, ApiTags } from '@nestjs/swagger';
+import { ApiBearerAuth, ApiOperation, ApiParam, ApiProperty, ApiResponse, ApiTags } from '@nestjs/swagger';
 import {
   IsInt,
   IsObject,
@@ -86,6 +86,7 @@ export class ListarObjetosRequestDto {
 }
 
 @ApiTags('Almacenamiento')
+@ApiBearerAuth()
 @Controller('api/v1/storage')
 export class ObjetosController {
   constructor(private readonly objetos: ObjetosService) {}

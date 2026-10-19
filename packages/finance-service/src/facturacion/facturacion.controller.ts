@@ -1,5 +1,5 @@
 import { Controller, Get, Post, Param, Body, Query } from '@nestjs/common';
-import { ApiOperation, ApiParam, ApiProperty, ApiQuery, ApiTags } from '@nestjs/swagger';
+import { ApiBearerAuth, ApiOperation, ApiParam, ApiProperty, ApiQuery, ApiTags } from '@nestjs/swagger';
 import { IsIn, IsOptional, IsString, IsUUID } from 'class-validator';
 import { Roles, ROLES, NotFoundError } from '@core/shared';
 import { FacturacionService, Comprobante } from './facturacion.service';
@@ -34,6 +34,7 @@ export class EmitirComprobanteRequestDto {
  * (Ley 822: IVA 15 %; Ley 842: emision en cordobas).
  */
 @ApiTags('Finanzas · Facturación')
+@ApiBearerAuth()
 @Controller('api/v1/finanzas/comprobantes')
 @Roles(ROLES.ADMIN)
 export class FacturacionController {

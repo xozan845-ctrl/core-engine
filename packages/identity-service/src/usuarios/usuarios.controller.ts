@@ -1,5 +1,5 @@
 import { Controller, Get, Param } from '@nestjs/common';
-import { ApiOperation, ApiParam, ApiResponse, ApiTags } from '@nestjs/swagger';
+import { ApiBearerAuth, ApiOperation, ApiParam, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { NotFoundError, UsuarioActual, UsuarioContexto } from '@core/shared';
 import { UsuariosService } from './usuarios.service';
 
@@ -8,6 +8,7 @@ import { UsuariosService } from './usuarios.service';
  * Las rutas estan protegidas por rol en el API Gateway (solo admin).
  */
 @ApiTags('Usuarios')
+@ApiBearerAuth()
 @Controller('api/v1/usuarios')
 export class UsuariosController {
   constructor(private readonly usuarios: UsuariosService) {}

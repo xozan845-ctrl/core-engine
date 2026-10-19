@@ -1,5 +1,5 @@
 import { Body, Controller, Get, Headers, Post, HttpCode } from '@nestjs/common';
-import { ApiBody, ApiOperation, ApiProperty, ApiResponse, ApiTags } from '@nestjs/swagger';
+import { ApiBearerAuth, ApiBody, ApiOperation, ApiProperty, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { IsEmail, IsIn, IsOptional, IsString, Length, MinLength } from 'class-validator';
 import {
   AuthService,
@@ -172,6 +172,7 @@ export class AuthController {
    * refresh presentado o, si no se envia, todas las del usuario autenticado.
    */
   @Post('logout')
+  @ApiBearerAuth()
   @ApiOperation({ summary: 'Cerrar sesión (revoca el refresh token)' })
   @ApiResponse({ status: 200, description: 'Sesión cerrada' })
   async logout(
@@ -188,6 +189,7 @@ export class AuthController {
    * Cloud Function `crearUsuario` de Firebase: crea el usuario y devuelve su id.
    */
   @Post('crear-usuario')
+  @ApiBearerAuth()
   @ApiOperation({ summary: 'Crear usuario (solo admin)' })
   @ApiResponse({ status: 201, description: 'Usuario creado' })
   @ApiResponse({ status: 403, description: 'Solo un administrador puede crear usuarios' })
@@ -216,6 +218,7 @@ export class AuthController {
 
   /** POST /api/v1/auth/cambiar-contrasena — cambio autenticado (app: cambiar-contrasena). */
   @Post('cambiar-contrasena')
+  @ApiBearerAuth()
   @ApiOperation({ summary: 'Cambiar la contraseña (autenticado)' })
   async cambiarContrasena(
     @Body() dto: CambiarContrasenaRequestDto,
@@ -246,6 +249,7 @@ export class AuthController {
 
   /** GET /api/v1/auth/me — perfil de la sesion actual. */
   @Get('me')
+  @ApiBearerAuth()
   @ApiOperation({ summary: 'Perfil de la sesión actual' })
   async yo(@Headers() headers: Record<string, unknown>): Promise<UsuarioContexto> {
     const usuario = usuarioDesdeHeaders(headers as Record<string, string | string[] | undefined>);
@@ -261,6 +265,7 @@ export class AuthController {
    * Sustituye el setDoc de Firestore `usuarios/{uid}` desde la app.
    */
   @Post('vincular-personal')
+  @ApiBearerAuth()
   @ApiOperation({ summary: 'Vincular la ficha de personal del usuario autenticado' })
   async vincularPersonal(
     @Body() dto: VincularPersonalRequestDto,

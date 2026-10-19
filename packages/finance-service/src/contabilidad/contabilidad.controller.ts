@@ -1,5 +1,5 @@
 import { Controller, Get, Post, Param, Body, Query } from '@nestjs/common';
-import { ApiOperation, ApiParam, ApiProperty, ApiTags } from '@nestjs/swagger';
+import { ApiBearerAuth, ApiOperation, ApiParam, ApiProperty, ApiTags } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
 import {
   ArrayMinSize,
@@ -109,6 +109,7 @@ export class EstadoCuentaRequestDto {
  * por partida doble: plan de cuentas, libro diario e historico por cuenta.
  */
 @ApiTags('Finanzas · Contabilidad')
+@ApiBearerAuth()
 @Controller('api/v1/finanzas')
 @Roles(ROLES.ADMIN)
 export class ContabilidadController {
