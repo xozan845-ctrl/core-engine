@@ -88,8 +88,10 @@ services:
       MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-${RABBITMQ_PASSWORD}}
     volumes:
       - minio_data:/data
+    # Solo loopback: Traefik (Dockploy) alcanza el servicio por la red de Docker;
+    # el acceso publico va por el dominio HTTPS.
     ports:
-      - "9000:9000"
+      - "127.0.0.1:9000:9000"
     networks:
       - core-engine
 

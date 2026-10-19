@@ -102,7 +102,7 @@ Pasos:
 |---|---|---|
 | Postgres | **1 instancia**, una **base de datos** por entorno | `core_engine_staging` · `core_engine_produccion` |
 | RabbitMQ | **1 broker**, un **vhost** por entorno | `/staging` · `/produccion` o por base |
-| MinIO (ADR-24) | Bucket **por tenant** (`t-<tenantId>`) dentro del MinIO del entorno; el puerto **9000** se publica porque es el host firmado en las URLs prefirmadas (`MINIO_PUBLIC_ENDPOINT`) | `staging` · `produccion` |
+| MinIO (ADR-24) | Bucket **por tenant** (`t-<tenantId>`) dentro del MinIO del entorno; el `9000` queda **solo en loopback** (lo alcanza Traefik) y el acceso público va por su dominio HTTPS (`MINIO_PUBLIC_ENDPOINT`) | `staging` · `produccion` |
 | Prometheus/Grafana | **capa opcional** (`docker-compose.observability.yml`); si se activa, exige `GRAFANA_ADMIN_PASSWORD` | `produccion` (+ opcional staging) |
 
 El esquema se aplica **solo desde el DDL versionado**
