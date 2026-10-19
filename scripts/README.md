@@ -42,6 +42,7 @@ scripts/
 │   ├── project.mjs           #   rama, servicios, scopes, rutas, tipos de commit
 │   ├── coverage.mjs          #   umbrales de cobertura por workspace (R-COV-1/4)
 │   ├── coverage-baseline.json #  cobertura real de referencia (R-COV-1)
+│   ├── spec-baseline.json    #   services/consumers sin spec (R-COV-2)
 │   └── manifest.mjs          #   suites exigidas (id + archivo)
 │
 ├── rules/                    # reglas ejecutables, agrupadas por dominio
