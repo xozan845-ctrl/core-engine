@@ -516,7 +516,8 @@ Este archivo registra decisiones técnicas deliberadas que se apartan del texto 
      valida (tipo, tamano, cuota) y registra la metadata.
   3. El host de firma se separa del de operación (`MINIO_PUBLIC_ENDPOINT`): el servicio
      opera contra el nombre interno del compose y **firma con el host público** que resuelve
-     el cliente (por eso se publica el 9000 en stage/producción).
+     el cliente. En stage/producción el `9000` de MinIO se publica **solo en loopback**
+     (lo alcanza Traefik) y el acceso público va por su **dominio HTTPS**.
   4. Cuotas y límites por tenant (`storage.buckets`: cuota, uso y estado) con whitelist de
      content-types y tamano máximo por objeto; los objetos `pendiente` no consumen cuota
      hasta confirmarse contra MinIO.

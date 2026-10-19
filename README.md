@@ -102,7 +102,7 @@ seeds del plan contable NIC e indices). En **Supabase** (staging/prod) aplique a
 | storage-service | 3010 | No | `storage` | `packages/storage-service` |
 | postgres | 5432 | No *(dev: `docker-compose.dev.yml`)* | todos | `infra/db/init/` |
 | rabbitmq (+ management) | 5672 / 15672 | No *(dev: `docker-compose.dev.yml`)* | — | — |
-| minio (+ consola) | 9000 / 9001 | **Sí** (`9000`; consola solo en dev) *(ADR-24)* | — | `docker-compose*.yml` |
+| minio (+ consola) | 9000 / 9001 | Solo loopback *(el público es su dominio HTTPS, ADR-24)* | — | `docker-compose*.yml` |
 | prometheus *(capa opcional)* | 9090 | No (solo red interna) | — | `infra/prometheus/` |
 | grafana *(capa opcional)* | 3000 | Sí (`3000:3000`) | — | `infra/grafana/` |
 
