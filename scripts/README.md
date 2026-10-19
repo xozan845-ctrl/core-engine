@@ -59,6 +59,8 @@ scripts/
 └── tools/                    # operaciones (NO gobernanza)
     ├── release-check.mjs      # valida tag, monotonicidad y versiones (R-CD-1/2)
     ├── release-check.test.mjs # fixtures git: tag anotado, orden y versiones
+    ├── version-bump.mjs       # alinea package.json + lockfile con un release
+    ├── version-bump.test.mjs  # bump de root/workspaces/lock y dry-run
     ├── smoke.mjs              # flujo API completo contra stack levantado
     ├── smoke.test.mjs         # regresiones del runner con HTTP efímero
     ├── swagger-aggregate.mjs  # agrega specs y separa superficie pública/interna
@@ -171,6 +173,7 @@ Los `npm scripts` de la raíz son **envoltorios** (sin ruptura para CI ni local)
 |---|---|
 | `rules:check` | `node scripts/cli.mjs rules` |
 | `release:check` | `node scripts/tools/release-check.mjs` |
+| `version:bump` | `node scripts/tools/version-bump.mjs` |
 | `demo` | `node scripts/cli.mjs smoke` |
 | `swagger:export` | `node scripts/cli.mjs swagger` |
 | `test:engine` | autotests del motor, incluida una suite centinela que prueba el exit code ante assertions fallidas |
