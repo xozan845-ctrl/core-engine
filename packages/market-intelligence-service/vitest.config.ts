@@ -1,6 +1,7 @@
 import { defineConfig } from 'vitest/config';
 import swc from 'unplugin-swc';
 import { resolve } from 'node:path';
+import { coverageThresholdsFor } from '../../scripts/config/coverage.mjs';
 
 // Config de pruebas del paquete (Vitest). Reproduce la config de Jest que vivía
 // en package.json: specs `*.spec.ts`, entorno node, alias `@core/shared` y
@@ -32,7 +33,7 @@ export default defineConfig({
       reporter: ['text', 'lcov', 'json-summary'],
       reportsDirectory: './coverage',
       reportOnFailure: true,
-      thresholds: { lines: 18, branches: 11 },
+      thresholds: coverageThresholdsFor('market-intelligence-service'),
     },
   },
 });
