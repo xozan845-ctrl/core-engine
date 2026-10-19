@@ -127,7 +127,7 @@ function checkVersionMatch(root, sha, tag) {
     );
   }
 
-  return files.length + 1;
+  return files.length;
 }
 
 function main() {
@@ -204,7 +204,7 @@ function main() {
   console.log(`   main:   ${mainRef}`);
   console.log(`   anterior: ${latest?.tag ?? '(ninguno)'}`);
   if (checkedFiles > 0) {
-    console.log(`   versiones: ${tag.slice(1)} en ${checkedFiles} archivos + lockfile`);
+    console.log(`   versiones: ${tag.slice(1)} en ${checkedFiles} package.json + lockfile`);
   } else {
     console.log(`   versiones: omitidas (${tag} < ${VERSION_MATCH_FROM})`);
   }
