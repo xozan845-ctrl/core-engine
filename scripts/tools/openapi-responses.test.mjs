@@ -9,7 +9,7 @@ import { repoRoot } from '../engine/lib/paths.mjs';
  * schema de éxito (200/201) de todas sus operaciones. Al migrar un servicio se
  * añade aquí; nunca se quita uno ya migrado.
  */
-const SERVICIOS_MIGRADOS = ['catalog-service'];
+const SERVICIOS_MIGRADOS = ['catalog-service', 'logistics-service'];
 
 test('debe documentar schema de éxito en los servicios migrados cuando se exporta OpenAPI', () => {
   for (const servicio of SERVICIOS_MIGRADOS) {

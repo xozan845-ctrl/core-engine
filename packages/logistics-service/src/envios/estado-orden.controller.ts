@@ -5,7 +5,7 @@ import {
   Param,
   Patch,
 } from '@nestjs/common';
-import { ApiBearerAuth, ApiOperation, ApiParam, ApiProperty, ApiResponse, ApiTags } from '@nestjs/swagger';
+import { ApiBearerAuth, ApiOkResponse, ApiOperation, ApiParam, ApiProperty, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { IsIn, IsOptional, IsString } from 'class-validator';
 import {
   Roles,
@@ -15,6 +15,7 @@ import {
   UsuarioContexto,
 } from '@core/shared';
 import { EnviosService, Envio, OrdenExterna } from './envios.service';
+import { EnvioConMontoResponseDto, OrdenExternaResponseDto } from './envios.response.dto';
 
 export class AvanzarEstadoRequestDto {
   @ApiProperty({
@@ -46,7 +47,7 @@ export class EstadoOrdenController {
   @Roles(ROLES.ADMIN, ROLES.LOGISTICA)
   @ApiOperation({ summary: 'Avanzar el estado de una orden (logística)' })
   @ApiParam({ name: 'id', description: 'Id de la orden' })
-  @ApiResponse({ status: 200, description: 'Orden con el nuevo estado' })
+  @ApiOkResponse({ type: OrdenExternaResponseDto, description: 'Orden con el nuevo estado' })
   @ApiResponse({ status: 400, description: 'Estado objetivo inválido (ESTADO_INVALIDO)' })
   async avanzar(
     @Param('id') id: string,
@@ -70,7 +71,7 @@ export class EnviosAdminController {
   @Get('envios')
   @Roles(ROLES.ADMIN)
   @ApiOperation({ summary: 'Listar guías de despacho (admin)' })
-  @ApiResponse({ status: 200, description: 'Guías de despacho con monto serializado' })
+  @ApiOkResponse({ type: [EnvioConMontoResponseDto], description: 'Guías de despacho con monto serializado' })
   async listar(): Promise<(Envio & { monto: string })[]> {
     return this.envios.listar();
   }
