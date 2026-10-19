@@ -21,7 +21,7 @@ const workflowsDirectory = join(repoRoot, WORKFLOWS_DIR);
 export default defineSuite({
   id: 'delivery-compose',
   area: 'cd',
-  rules: ['R-CD-1', 'R-CD-3', 'R-CD-7', 'R-CD-8'],
+  rules: ['R-CD-1', 'R-CD-2', 'R-CD-3', 'R-CD-7', 'R-CD-8'],
   mode: 'repo',
   run: ({ test, assert }) => {
     test('R-CD-3: los composes de stage/prod consumen GHCR, sin `build:`', () => {
@@ -78,6 +78,14 @@ export default defineSuite({
       assert.ok(
         /merge-base --is-ancestor/.test(release),
         'release.yml debe verificar procedencia en main (R-CD-2)',
+      );
+      assert.ok(
+        release.includes('scripts/tools/release-check.mjs'),
+        'release.yml debe validar tag, monotonicidad y versiones con release-check (R-CD-1/R-CD-2)',
+      );
+      assert.ok(
+        existsSync(join(repoRoot, 'scripts', 'tools', 'release-check.mjs')),
+        'falta scripts/tools/release-check.mjs',
       );
       assert.ok(
         /dry_run/.test(release),

@@ -34,6 +34,7 @@ scripts/
 │       ├── fs.mjs            #   walkFiles, walkMarkdown, readText, readJson
 │       ├── git.mjs           #   wrappers seguros (execFileSync, sin interpolación)
 │       ├── commits.mjs       #   validateCommitSubject (pura, parametrizada)
+│       ├── semver.mjs        #   parse/compare de tags vX.Y.Z[-pre] (puro)
 │       └── rules-docs.mjs    #   áreas, archivos NN-tema.md e IDs de docs/rules
 │
 ├── config/                   # datos y helpers puros del proyecto
@@ -56,6 +57,8 @@ scripts/
 │       └── telemetry.test.mjs      # R-TM-1..7
 │
 └── tools/                    # operaciones (NO gobernanza)
+    ├── release-check.mjs      # valida tag, monotonicidad y versiones (R-CD-1/2)
+    ├── release-check.test.mjs # fixtures git: tag anotado, orden y versiones
     ├── smoke.mjs              # flujo API completo contra stack levantado
     ├── smoke.test.mjs         # regresiones del runner con HTTP efímero
     ├── swagger-aggregate.mjs  # agrega specs y separa superficie pública/interna
@@ -167,6 +170,7 @@ Los `npm scripts` de la raíz son **envoltorios** (sin ruptura para CI ni local)
 | npm script | Envuelve |
 |---|---|
 | `rules:check` | `node scripts/cli.mjs rules` |
+| `release:check` | `node scripts/tools/release-check.mjs` |
 | `demo` | `node scripts/cli.mjs smoke` |
 | `swagger:export` | `node scripts/cli.mjs swagger` |
 | `test:engine` | autotests del motor, incluida una suite centinela que prueba el exit code ante assertions fallidas |
