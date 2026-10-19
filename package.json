@@ -15,6 +15,7 @@
     "demo": "node scripts/cli.mjs smoke",
     "lint": "eslint .",
     "rules:check": "node scripts/cli.mjs rules",
+    "release:check": "node scripts/tools/release-check.mjs",
     "test:engine": "node --test scripts/engine/lib/*.test.mjs scripts/engine/*.test.mjs",
     "test:smoke": "node --test scripts/tools/*.test.mjs",
     "test:integration": "node --test scripts/integration/*.test.mjs",
