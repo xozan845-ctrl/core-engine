@@ -1,5 +1,5 @@
 import { Body, Controller, Get, Param, Patch, Post, Query } from '@nestjs/common';
-import { ApiBearerAuth, ApiOperation, ApiParam, ApiProperty, ApiResponse, ApiTags } from '@nestjs/swagger';
+import { ApiBearerAuth, ApiCreatedResponse, ApiOkResponse, ApiOperation, ApiParam, ApiProperty, ApiResponse, ApiTags } from '@nestjs/swagger';
 import {
   IsInt,
   IsOptional,
@@ -11,6 +11,7 @@ import {
   Min,
 } from 'class-validator';
 import { ProductosService, Producto } from './productos.service';
+import { PaginaProductosResponseDto, ProductoResponseDto } from './productos.response.dto';
 import { Pagina, Roles, UsuarioContexto, UsuarioActual, ROLES, NotFoundError } from '@core/shared';
 
 export class CrearProductoRequestDto {
@@ -117,6 +118,7 @@ export class ProductosController {
   /** GET /api/v1/catalog/productos — listado publico con filtros y paginacion. */
   @Get('productos')
   @ApiOperation({ summary: 'Listar productos (público, filtros y paginación)' })
+  @ApiOkResponse({ type: PaginaProductosResponseDto, description: 'Página de productos' })
   async listar(@Query() query: ListarProductosRequestDto): Promise<Pagina<Producto>> {
     return this.productos.listar(query as unknown as Record<string, unknown>);
   }
@@ -125,6 +127,7 @@ export class ProductosController {
   @Get('productos/:id')
   @ApiOperation({ summary: 'Detalle de producto (público)' })
   @ApiParam({ name: 'id', description: 'Id del producto' })
+  @ApiOkResponse({ type: ProductoResponseDto, description: 'Producto encontrado' })
   @ApiResponse({ status: 404, description: 'Producto inexistente (NO_ENCONTRADO)' })
   async detalle(@Param('id') id: string): Promise<Producto> {
     const producto = await this.productos.encontrarPorId(id);
@@ -139,6 +142,7 @@ export class ProductosController {
   @Roles(ROLES.ADMIN)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Crear producto (admin, TC-01)' })
+  @ApiCreatedResponse({ type: ProductoResponseDto, description: 'Producto creado' })
   async crear(
     @Body() dto: CrearProductoRequestDto,
     @UsuarioActual() _usuario: UsuarioContexto,
@@ -152,6 +156,7 @@ export class ProductosController {
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Editar producto (admin; RN-08 histórico)' })
   @ApiParam({ name: 'id', description: 'Id del producto' })
+  @ApiOkResponse({ type: ProductoResponseDto, description: 'Producto actualizado' })
   async actualizar(@Param('id') id: string, @Body() dto: ActualizarProductoRequestDto): Promise<Producto> {
     return this.productos.actualizar(id, dto);
   }

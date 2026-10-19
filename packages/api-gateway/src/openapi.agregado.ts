@@ -68,7 +68,14 @@ export const OPENAPI_AGREGADO = {
         ],
         "responses": {
           "200": {
-            "description": ""
+            "description": "Página de productos",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginaProductosResponseDto"
+                }
+              }
+            }
           }
         },
         "summary": "Listar productos (público, filtros y paginación)",
@@ -91,7 +98,14 @@ export const OPENAPI_AGREGADO = {
         },
         "responses": {
           "201": {
-            "description": ""
+            "description": "Producto creado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProductoResponseDto"
+                }
+              }
+            }
           }
         },
         "security": [
@@ -120,6 +134,16 @@ export const OPENAPI_AGREGADO = {
           }
         ],
         "responses": {
+          "200": {
+            "description": "Producto encontrado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProductoResponseDto"
+                }
+              }
+            }
+          },
           "404": {
             "description": "Producto inexistente (NO_ENCONTRADO)"
           }
@@ -154,7 +178,14 @@ export const OPENAPI_AGREGADO = {
         },
         "responses": {
           "200": {
-            "description": ""
+            "description": "Producto actualizado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProductoResponseDto"
+                }
+              }
+            }
           }
         },
         "security": [
@@ -174,7 +205,17 @@ export const OPENAPI_AGREGADO = {
         "parameters": [],
         "responses": {
           "200": {
-            "description": ""
+            "description": "Líneas de inventario",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/LineaInventarioResponseDto"
+                  }
+                }
+              }
+            }
           }
         },
         "security": [
@@ -4610,6 +4651,233 @@ export const OPENAPI_AGREGADO = {
       }
     },
     "schemas": {
+      "LoteProductoResponseDto": {
+        "type": "object",
+        "properties": {
+          "sku": {
+            "type": "string",
+            "description": "SKU del producto",
+            "example": "SKU-001"
+          },
+          "stock": {
+            "type": "number",
+            "description": "Stock disponible",
+            "example": 10
+          },
+          "estado": {
+            "type": "string",
+            "description": "Estado del producto",
+            "enum": [
+              "disponible",
+              "agotado"
+            ],
+            "example": "disponible"
+          }
+        },
+        "required": [
+          "sku",
+          "stock",
+          "estado"
+        ]
+      },
+      "ProductoResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Id del producto",
+            "format": "uuid"
+          },
+          "sku": {
+            "type": "string",
+            "description": "SKU único del producto",
+            "example": "SKU-001"
+          },
+          "nombre": {
+            "type": "string",
+            "description": "Nombre del producto"
+          },
+          "descripcion": {
+            "type": "string",
+            "description": "Descripción del producto"
+          },
+          "categoria": {
+            "type": "string",
+            "description": "Categoría del producto"
+          },
+          "precio_base": {
+            "type": "string",
+            "description": "Precio base en córdobas con dos decimales",
+            "example": "1000.00"
+          },
+          "stock": {
+            "type": "number",
+            "description": "Stock disponible (neto de reservas)",
+            "example": 10
+          },
+          "estado": {
+            "type": "string",
+            "description": "Estado del producto",
+            "enum": [
+              "disponible",
+              "agotado"
+            ],
+            "example": "disponible"
+          },
+          "creado_en": {
+            "type": "string",
+            "description": "Fecha de creación (ISO 8601 UTC)",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "sku",
+          "nombre",
+          "descripcion",
+          "categoria",
+          "precio_base",
+          "stock",
+          "estado",
+          "creado_en"
+        ]
+      },
+      "ResumenInventarioResponseDto": {
+        "type": "object",
+        "properties": {
+          "productos": {
+            "type": "number",
+            "description": "Total de productos",
+            "example": 20
+          },
+          "agotados": {
+            "type": "number",
+            "description": "Productos agotados",
+            "example": 2
+          },
+          "stock_total": {
+            "type": "number",
+            "description": "Unidades en stock",
+            "example": 120
+          },
+          "valor_inventario_cents": {
+            "type": "number",
+            "description": "Valor del inventario en centavos",
+            "example": 12000000
+          }
+        },
+        "required": [
+          "productos",
+          "agotados",
+          "stock_total",
+          "valor_inventario_cents"
+        ]
+      },
+      "LineaInventarioResponseDto": {
+        "type": "object",
+        "properties": {
+          "sku": {
+            "type": "string",
+            "description": "SKU del producto",
+            "example": "SKU-001"
+          },
+          "nombre": {
+            "type": "string",
+            "description": "Nombre del producto"
+          },
+          "stock": {
+            "type": "number",
+            "description": "Stock físico en bodega",
+            "example": 12
+          },
+          "disponible": {
+            "type": "number",
+            "description": "Stock disponible (neto de reservas)",
+            "example": 10
+          },
+          "reservado": {
+            "type": "number",
+            "description": "Unidades reservadas por órdenes activas",
+            "example": 2
+          },
+          "estado": {
+            "type": "string",
+            "description": "Estado del producto",
+            "example": "disponible"
+          },
+          "precio_base": {
+            "type": "string",
+            "description": "Precio base en córdobas con dos decimales",
+            "example": "1000.00"
+          },
+          "reservas_activas": {
+            "type": "number",
+            "description": "Alias de reservado para consumidores internos",
+            "example": 2
+          },
+          "valor_disponible_cents": {
+            "type": "number",
+            "description": "Valor del stock disponible en centavos",
+            "example": 1000000
+          },
+          "valor_total_cents": {
+            "type": "number",
+            "description": "Valor del stock físico total en centavos",
+            "example": 1200000
+          }
+        },
+        "required": [
+          "sku",
+          "nombre",
+          "stock",
+          "disponible",
+          "reservado",
+          "estado",
+          "precio_base",
+          "reservas_activas",
+          "valor_disponible_cents",
+          "valor_total_cents"
+        ]
+      },
+      "PaginaProductosResponseDto": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "description": "Productos de la página",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ProductoResponseDto"
+            }
+          },
+          "total": {
+            "type": "number",
+            "description": "Total de productos que cumplen el filtro",
+            "example": 42
+          },
+          "pagina": {
+            "type": "number",
+            "description": "Página actual (1-based)",
+            "example": 1
+          },
+          "limite": {
+            "type": "number",
+            "description": "Tamaño de página",
+            "example": 20
+          },
+          "paginas": {
+            "type": "number",
+            "description": "Total de páginas",
+            "example": 3
+          }
+        },
+        "required": [
+          "items",
+          "total",
+          "pagina",
+          "limite",
+          "paginas"
+        ]
+      },
       "CrearProductoRequestDto": {
         "type": "object",
         "properties": {
