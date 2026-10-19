@@ -173,13 +173,20 @@ ejecuta `npm run swagger:export` y falla si `docs/openapi` cambia sin commitear
 El **API Gateway** sirve en su `/docs` el **documento agregado** de todos los
 servicios (vista única del contrato público): `scripts/tools/swagger-aggregate.mjs`
 fusiona `docs/openapi/*.json` en `packages/api-gateway/src/openapi.agregado.ts`
-(generado, versionado y verificado por el gate G-8).
+(generado, versionado y verificado por el gate G-8) y en una copia **JSON
+descargable** para repartir el contrato (frontend, Postman…):
+
+| Cómo obtenerlo | Dónde |
+|---|---|
+| Archivo versionado (recomendado para frontend) | `docs/api/core-engine.openapi.json` — raw en GitHub: `…/raw/<rama>/docs/api/core-engine.openapi.json` |
+| Gateway en ejecución (local) | `http://localhost:8080/docs` (Swagger UI) y `/docs-json` (JSON) |
+| Staging/producción | `/docs*` está **privado** (404): descárgalo con `x-internal-key: $INTERNAL_API_KEY` o usa el archivo del repo |
 
 ```bash
-npm run swagger:export   # regenera docs/openapi/*.json (sin BD/Rabbit; no arranca la app)
+npm run swagger:export   # regenera docs/openapi/*.json + docs/api/core-engine.openapi.json
 ```
 
-Cobertura actual: **164/164 endpoints** en 10 servicios.
+Cobertura actual: **165/165 endpoints** en 10 servicios (165 operaciones sobre 128 rutas).
 
 ## Variables de entorno (`.env` en dev · `.env.production` en producción)
 
