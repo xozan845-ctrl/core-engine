@@ -10,6 +10,11 @@
             "description": ""
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Cortes/liquidaciones del vendedor autenticado",
         "tags": [
           "Comisiones · Liquidaciones"
@@ -42,6 +47,11 @@
             "description": ""
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Ejecutar un corte de liquidaciones (admin)",
         "tags": [
           "Comisiones · Liquidaciones"
@@ -75,6 +85,11 @@
             "description": ""
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Marcar una liquidación como pagada (RN-07)",
         "tags": [
           "Comisiones · Liquidaciones"
@@ -90,6 +105,11 @@
             "description": ""
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Estado de cuenta de ventas/comisiones del vendedor",
         "tags": [
           "Comisiones · Ventas"
@@ -105,6 +125,11 @@
             "description": ""
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "KPIs de ventas e inventario (admin)",
         "tags": [
           "Comisiones · Reportes"

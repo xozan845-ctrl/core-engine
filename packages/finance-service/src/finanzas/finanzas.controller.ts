@@ -1,5 +1,5 @@
 import { Body, Controller, Get, Param, Post, Query } from '@nestjs/common';
-import { ApiOperation, ApiParam, ApiProperty, ApiQuery, ApiTags } from '@nestjs/swagger';
+import { ApiBearerAuth, ApiOperation, ApiParam, ApiProperty, ApiQuery, ApiTags } from '@nestjs/swagger';
 import {
   ArrayMinSize,
   IsInt,
@@ -97,6 +97,7 @@ export class CrearProyeccionRequestDto {
  * financiero del cap. 8: proyecciones auditables, KPIs y equilibrio.
  */
 @ApiTags('Finanzas · Modelo')
+@ApiBearerAuth()
 @Controller('api/v1/finanzas')
 @Roles(ROLES.ADMIN)
 export class FinanzasController {

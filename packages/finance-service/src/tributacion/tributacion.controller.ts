@@ -1,5 +1,5 @@
 import { Body, Controller, Get, Param, Post, Query } from '@nestjs/common';
-import { ApiOperation, ApiParam, ApiProperty, ApiQuery, ApiTags } from '@nestjs/swagger';
+import { ApiBearerAuth, ApiOperation, ApiParam, ApiProperty, ApiQuery, ApiTags } from '@nestjs/swagger';
 import { IsBoolean, IsIn, IsInt, IsOptional, IsString, IsUUID, Min, MinLength } from 'class-validator';
 import { Roles, ROLES, NotFoundError } from '@core/shared';
 import {
@@ -131,6 +131,7 @@ export class GenerarDeclaracionesRequestDto {
  * GET /api/v1/vendedores/me/fiscal — situacion del vendedor (cap. 4.4).
  */
 @ApiTags('Finanzas · Tributación')
+@ApiBearerAuth()
 @Controller('api/v1/finanzas')
 @Roles(ROLES.ADMIN)
 export class TributacionController {

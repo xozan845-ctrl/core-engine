@@ -1,5 +1,5 @@
 import { Controller, Get, Param, Query, UseGuards } from '@nestjs/common';
-import { ApiOperation, ApiParam, ApiQuery, ApiTags } from '@nestjs/swagger';
+import { ApiOperation, ApiParam, ApiQuery, ApiSecurity, ApiTags } from '@nestjs/swagger';
 import { ClaveInternaGuard, Logger } from '@core/shared';
 import { TributacionService } from './tributacion/tributacion.service';
 
@@ -9,6 +9,7 @@ import { TributacionService } from './tributacion/tributacion.service';
  * vendedor) y por reportes/paneles del resto del sistema.
  */
 @ApiTags('Finanzas (interno)')
+@ApiSecurity('internalKey')
 @Controller('internal/finance')
 @UseGuards(ClaveInternaGuard)
 export class InternoController {

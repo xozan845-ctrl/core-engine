@@ -1,5 +1,5 @@
 import { Controller, Get, Param, Post, Query, UseGuards } from '@nestjs/common';
-import { ApiOperation, ApiParam, ApiQuery, ApiTags } from '@nestjs/swagger';
+import { ApiOperation, ApiParam, ApiQuery, ApiSecurity, ApiTags } from '@nestjs/swagger';
 import {
   ClaveInternaGuard,
   NotFoundError,
@@ -14,6 +14,7 @@ import { PedidosService } from './pedidos.service';
  * transicion de estado (logistica), lectura para reportes y replay de eventos.
  */
 @ApiTags('Pedidos (interno)')
+@ApiSecurity('internalKey')
 @Controller('internal')
 @UseGuards(ClaveInternaGuard)
 export class InternoController {

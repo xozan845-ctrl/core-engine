@@ -1,5 +1,5 @@
 import { Controller, Get, Query } from '@nestjs/common';
-import { ApiOperation, ApiQuery, ApiTags } from '@nestjs/swagger';
+import { ApiBearerAuth, ApiOperation, ApiQuery, ApiTags } from '@nestjs/swagger';
 import { Roles, ROLES, UsuarioActual, UsuarioContexto } from '@core/shared';
 import { TributacionService } from '../tributacion/tributacion.service';
 import { KpisService } from './kpis.service';
@@ -11,6 +11,7 @@ import { KpisService } from './kpis.service';
  * declaracion"). Solo lectura para el vendedor (matriz RLS, tabla 8.15).
  */
 @ApiTags('Finanzas · Vendedor')
+@ApiBearerAuth()
 @Controller('api/v1/vendedores')
 @Roles(ROLES.VENDEDOR)
 export class VendedorFiscalController {

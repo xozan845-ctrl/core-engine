@@ -1,5 +1,5 @@
 import { Body, Controller, Delete, Get, Param, Patch, Post, Query } from '@nestjs/common';
-import { ApiOperation, ApiTags } from '@nestjs/swagger';
+import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import {
   UsuarioActual,
   UsuarioContexto,
@@ -34,6 +34,7 @@ import {
 } from './field.dtos';
 
 @ApiTags('Field (logística de campo)')
+@ApiBearerAuth()
 @Controller('api/v1/field')
 export class FieldController {
   constructor(private readonly field: FieldService) {}

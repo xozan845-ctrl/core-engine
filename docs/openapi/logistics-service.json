@@ -33,6 +33,11 @@
             "description": "Estado objetivo inválido (ESTADO_INVALIDO)"
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Avanzar el estado de una orden (logística)",
         "tags": [
           "Logística"
@@ -48,6 +53,11 @@
             "description": "Guías de despacho con monto serializado"
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Listar guías de despacho (admin)",
         "tags": [
           "Logística"

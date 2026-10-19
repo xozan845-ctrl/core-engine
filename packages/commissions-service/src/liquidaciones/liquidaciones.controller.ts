@@ -1,5 +1,5 @@
 import { Controller, Get, Param, Post, Query } from '@nestjs/common';
-import { ApiOperation, ApiParam, ApiProperty, ApiQuery, ApiTags } from '@nestjs/swagger';
+import { ApiBearerAuth, ApiOperation, ApiParam, ApiProperty, ApiQuery, ApiTags } from '@nestjs/swagger';
 import { IsIn } from 'class-validator';
 import {
   Roles,
@@ -17,6 +17,7 @@ export class EstadoLiquidacionRequestDto {
 }
 
 @ApiTags('Comisiones · Liquidaciones')
+@ApiBearerAuth()
 @Controller('api/v1')
 export class LiquidacionesController {
   constructor(private readonly liquidaciones: LiquidacionesService) {}

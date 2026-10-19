@@ -20,6 +20,11 @@
             "description": ""
           }
         },
+        "security": [
+          {
+            "internalKey": []
+          }
+        ],
         "summary": "Lote de ofertas por ids (servicio→servicio)",
         "tags": [
           "Tiendas (interno)"
@@ -45,6 +50,11 @@
             "description": ""
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Crear la tienda del vendedor autenticado",
         "tags": [
           "Tiendas"
@@ -60,6 +70,11 @@
             "description": ""
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Tienda del vendedor autenticado",
         "tags": [
           "Tiendas"
@@ -85,6 +100,11 @@
             "description": "Oferta creada"
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Publicar un producto con margen (vendedor)",
         "tags": [
           "Tiendas"
@@ -119,6 +139,11 @@
             "description": ""
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Cambiar el margen de una oferta (vendedor)",
         "tags": [
           "Tiendas"
@@ -134,6 +159,11 @@
             "description": ""
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Listar las ofertas del vendedor autenticado",
         "tags": [
           "Tiendas"
@@ -179,6 +209,11 @@
         "scheme": "bearer",
         "bearerFormat": "JWT",
         "type": "http"
+      },
+      "internalKey": {
+        "type": "apiKey",
+        "in": "header",
+        "name": "x-internal-key"
       }
     },
     "schemas": {
