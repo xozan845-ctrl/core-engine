@@ -1,8 +1,12 @@
 import { Body, Controller, Get, Param, Patch, Post, Query } from '@nestjs/common';
-import { ApiBearerAuth, ApiOperation, ApiParam, ApiProperty, ApiTags } from '@nestjs/swagger';
+import { ApiBearerAuth, ApiCreatedResponse, ApiOkResponse, ApiOperation, ApiParam, ApiProperty, ApiTags } from '@nestjs/swagger';
 import { IsIn, IsInt, IsOptional, IsPositive, Max } from 'class-validator';
 import { ROLES, Roles } from '@core/shared';
 import { BucketsService, EstadoAlmacen, EstadoBucket } from '../buckets/buckets.service';
+import {
+  EstadoBucketResponseDto,
+  PaginaBucketsResponseDto,
+} from '../buckets/buckets.response.dto';
 
 export class PaginacionRequestDto {
   @ApiProperty({ description: 'Pagina (1-based)', required: false, minimum: 1 })
@@ -44,6 +48,7 @@ export class AdminStorageController {
 
   @Get('tenants')
   @ApiOperation({ summary: 'Listar tenants con almacenamiento (cuota y uso)' })
+  @ApiOkResponse({ type: PaginaBucketsResponseDto, description: 'Página de tenants' })
   async listar(@Query() query: PaginacionRequestDto) {
     return this.buckets.listar(query.pagina, query.limite);
   }
@@ -51,6 +56,7 @@ export class AdminStorageController {
   @Get('tenants/:tenantId')
   @ApiOperation({ summary: 'Estado de almacenamiento de un tenant' })
   @ApiParam({ name: 'tenantId', description: 'Id del tenant (organizacion)' })
+  @ApiOkResponse({ type: EstadoBucketResponseDto, description: 'Estado del tenant' })
   async estado(@Param('tenantId') tenantId: string): Promise<EstadoBucket> {
     return this.buckets.estado(tenantId);
   }
@@ -58,6 +64,7 @@ export class AdminStorageController {
   @Patch('tenants/:tenantId')
   @ApiOperation({ summary: 'Ajustar cuota y/o suspender el almacenamiento del tenant' })
   @ApiParam({ name: 'tenantId', description: 'Id del tenant (organizacion)' })
+  @ApiOkResponse({ type: EstadoBucketResponseDto, description: 'Tenant actualizado' })
   async actualizar(
     @Param('tenantId') tenantId: string,
     @Body() dto: ActualizarTenantRequestDto,
@@ -74,6 +81,7 @@ export class AdminStorageController {
   @Post('tenants/:tenantId/recalcular')
   @ApiOperation({ summary: 'Recalcular el uso del tenant desde la metadata (idempotente)' })
   @ApiParam({ name: 'tenantId', description: 'Id del tenant (organizacion)' })
+  @ApiCreatedResponse({ type: EstadoBucketResponseDto, description: 'Uso recalculado' })
   async recalcular(@Param('tenantId') tenantId: string): Promise<EstadoBucket> {
     return this.buckets.recalcularUso(tenantId);
   }

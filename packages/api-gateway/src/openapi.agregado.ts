@@ -4227,7 +4227,14 @@ export const OPENAPI_AGREGADO = {
         ],
         "responses": {
           "200": {
-            "description": ""
+            "description": "Página de tenants",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginaBucketsResponseDto"
+                }
+              }
+            }
           }
         },
         "security": [
@@ -4257,7 +4264,14 @@ export const OPENAPI_AGREGADO = {
         ],
         "responses": {
           "200": {
-            "description": ""
+            "description": "Estado del tenant",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EstadoBucketResponseDto"
+                }
+              }
+            }
           }
         },
         "security": [
@@ -4295,7 +4309,14 @@ export const OPENAPI_AGREGADO = {
         },
         "responses": {
           "200": {
-            "description": ""
+            "description": "Tenant actualizado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EstadoBucketResponseDto"
+                }
+              }
+            }
           }
         },
         "security": [
@@ -4325,7 +4346,14 @@ export const OPENAPI_AGREGADO = {
         ],
         "responses": {
           "201": {
-            "description": ""
+            "description": "Uso recalculado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EstadoBucketResponseDto"
+                }
+              }
+            }
           }
         },
         "security": [
@@ -4346,7 +4374,14 @@ export const OPENAPI_AGREGADO = {
         "parameters": [],
         "responses": {
           "200": {
-            "description": ""
+            "description": "Estado del bucket del tenant",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EstadoBucketResponseDto"
+                }
+              }
+            }
           }
         },
         "security": [
@@ -4373,6 +4408,16 @@ export const OPENAPI_AGREGADO = {
           }
         },
         "responses": {
+          "201": {
+            "description": "Bucket asegurado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EstadoBucketResponseDto"
+                }
+              }
+            }
+          },
           "400": {
             "description": "Cuota invalida (CUOTA_INVALIDA/CUOTA_MENOR_AL_USO)"
           }
@@ -4404,6 +4449,16 @@ export const OPENAPI_AGREGADO = {
           }
         },
         "responses": {
+          "201": {
+            "description": "URL de subida creada",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SolicitudSubidaResponseDto"
+                }
+              }
+            }
+          },
           "400": {
             "description": "Tipo o tamano invalido (VALIDACION)"
           },
@@ -4438,7 +4493,14 @@ export const OPENAPI_AGREGADO = {
         ],
         "responses": {
           "200": {
-            "description": ""
+            "description": "Objeto activado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ObjetoStorageResponseDto"
+                }
+              }
+            }
           }
         },
         "security": [
@@ -4512,7 +4574,14 @@ export const OPENAPI_AGREGADO = {
         ],
         "responses": {
           "200": {
-            "description": ""
+            "description": "Página de objetos",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginaObjetosResponseDto"
+                }
+              }
+            }
           }
         },
         "security": [
@@ -4542,7 +4611,14 @@ export const OPENAPI_AGREGADO = {
         ],
         "responses": {
           "200": {
-            "description": ""
+            "description": "Metadata del objeto",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ObjetoStorageResponseDto"
+                }
+              }
+            }
           }
         },
         "security": [
@@ -4570,7 +4646,7 @@ export const OPENAPI_AGREGADO = {
         ],
         "responses": {
           "204": {
-            "description": ""
+            "description": "Objeto eliminado"
           }
         },
         "security": [
@@ -4600,7 +4676,14 @@ export const OPENAPI_AGREGADO = {
         ],
         "responses": {
           "200": {
-            "description": ""
+            "description": "URL de descarga",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UrlDescargaResponseDto"
+                }
+              }
+            }
           }
         },
         "security": [
@@ -7304,6 +7387,110 @@ export const OPENAPI_AGREGADO = {
           "cantidad"
         ]
       },
+      "EstadoBucketResponseDto": {
+        "type": "object",
+        "properties": {
+          "tenant_id": {
+            "type": "string",
+            "description": "Id del tenant",
+            "format": "uuid"
+          },
+          "bucket": {
+            "type": "string",
+            "description": "Nombre del bucket S3",
+            "example": "t-00000000-0000-0000-0000-000000000000"
+          },
+          "cuota_bytes": {
+            "type": "number",
+            "description": "Cuota asignada en bytes",
+            "example": 5368709120
+          },
+          "usado_bytes": {
+            "type": "number",
+            "description": "Bytes usados",
+            "example": 204800
+          },
+          "disponible_bytes": {
+            "type": "number",
+            "description": "Bytes disponibles",
+            "example": 5368504320
+          },
+          "objetos": {
+            "type": "number",
+            "description": "Objetos activos",
+            "example": 12
+          },
+          "estado": {
+            "type": "string",
+            "description": "Estado del almacenamiento",
+            "enum": [
+              "activo",
+              "suspendido"
+            ],
+            "example": "activo"
+          },
+          "creado_en": {
+            "type": "string",
+            "description": "Fecha de creación (ISO 8601 UTC)",
+            "format": "date-time"
+          },
+          "actualizado_en": {
+            "type": "string",
+            "description": "Última actualización (ISO 8601 UTC)",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "tenant_id",
+          "bucket",
+          "cuota_bytes",
+          "usado_bytes",
+          "disponible_bytes",
+          "objetos",
+          "estado",
+          "creado_en",
+          "actualizado_en"
+        ]
+      },
+      "PaginaBucketsResponseDto": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "description": "Buckets de la página",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/EstadoBucketResponseDto"
+            }
+          },
+          "total": {
+            "type": "number",
+            "description": "Total de tenants con almacenamiento",
+            "example": 8
+          },
+          "pagina": {
+            "type": "number",
+            "description": "Página actual (1-based)",
+            "example": 1
+          },
+          "limite": {
+            "type": "number",
+            "description": "Tamaño de página",
+            "example": 20
+          },
+          "paginas": {
+            "type": "number",
+            "description": "Total de páginas",
+            "example": 1
+          }
+        },
+        "required": [
+          "items",
+          "total",
+          "pagina",
+          "limite",
+          "paginas"
+        ]
+      },
       "ActualizarTenantRequestDto": {
         "type": "object",
         "properties": {
@@ -7320,6 +7507,113 @@ export const OPENAPI_AGREGADO = {
             ]
           }
         }
+      },
+      "ObjetoStorageResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Id del objeto",
+            "format": "uuid"
+          },
+          "tenant_id": {
+            "type": "string",
+            "description": "Id del tenant dueño",
+            "format": "uuid"
+          },
+          "bucket": {
+            "type": "string",
+            "description": "Bucket S3",
+            "example": "t-00000000-0000-0000-0000-000000000000"
+          },
+          "objeto": {
+            "type": "string",
+            "description": "Clave del objeto en el bucket",
+            "example": "productos/foto.jpg"
+          },
+          "nombre": {
+            "type": "string",
+            "description": "Nombre original del archivo",
+            "example": "foto-producto.jpg"
+          },
+          "content_type": {
+            "type": "string",
+            "description": "Content-Type",
+            "example": "image/jpeg"
+          },
+          "carpeta": {
+            "type": "string",
+            "description": "Carpeta lógica",
+            "example": "productos"
+          },
+          "descripcion": {
+            "type": "string",
+            "description": "Descripción libre"
+          },
+          "etiquetas": {
+            "type": "object",
+            "description": "Etiquetas clave-valor",
+            "additionalProperties": {
+              "type": "string"
+            }
+          },
+          "tamano_bytes": {
+            "type": "number",
+            "description": "Tamaño en bytes",
+            "example": 204800
+          },
+          "etag": {
+            "type": "object",
+            "description": "ETag devuelto por MinIO",
+            "nullable": true
+          },
+          "estado": {
+            "type": "string",
+            "description": "Estado del objeto",
+            "enum": [
+              "pendiente",
+              "activo",
+              "eliminado"
+            ],
+            "example": "activo"
+          },
+          "subido_por": {
+            "type": "object",
+            "description": "Usuario que subió el objeto",
+            "nullable": true
+          },
+          "creado_en": {
+            "type": "string",
+            "description": "Fecha de creación (ISO 8601 UTC)",
+            "format": "date-time"
+          },
+          "confirmado_en": {
+            "type": "object",
+            "description": "Fecha de confirmación (ISO 8601 UTC)",
+            "nullable": true,
+            "format": "date-time"
+          },
+          "eliminado_en": {
+            "type": "object",
+            "description": "Fecha de eliminación lógica (ISO 8601 UTC)",
+            "nullable": true,
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "tenant_id",
+          "bucket",
+          "objeto",
+          "nombre",
+          "content_type",
+          "carpeta",
+          "descripcion",
+          "etiquetas",
+          "tamano_bytes",
+          "estado",
+          "creado_en"
+        ]
       },
       "ConfigurarBucketRequestDto": {
         "type": "object",
@@ -7364,6 +7658,139 @@ export const OPENAPI_AGREGADO = {
           }
         },
         "required": [
+          "nombre",
+          "content_type",
+          "tamano_bytes"
+        ]
+      },
+      "SolicitudSubidaResponseDto": {
+        "type": "object",
+        "properties": {
+          "objeto_id": {
+            "type": "string",
+            "description": "Id del objeto pendiente",
+            "format": "uuid"
+          },
+          "bucket": {
+            "type": "string",
+            "description": "Bucket S3"
+          },
+          "objeto": {
+            "type": "string",
+            "description": "Clave del objeto en el bucket"
+          },
+          "url_subida": {
+            "type": "string",
+            "description": "URL prefirmada para el PUT directo",
+            "format": "uri"
+          },
+          "metodo": {
+            "type": "string",
+            "description": "Método HTTP de subida",
+            "enum": [
+              "PUT"
+            ],
+            "example": "PUT"
+          },
+          "headers": {
+            "type": "object",
+            "description": "Cabeceras que debe enviar el cliente",
+            "additionalProperties": {
+              "type": "string"
+            }
+          },
+          "expira_en": {
+            "type": "string",
+            "description": "Expiración de la URL (ISO 8601 UTC)",
+            "format": "date-time"
+          },
+          "max_bytes": {
+            "type": "number",
+            "description": "Tamaño máximo permitido en bytes",
+            "example": 204800
+          }
+        },
+        "required": [
+          "objeto_id",
+          "bucket",
+          "objeto",
+          "url_subida",
+          "metodo",
+          "headers",
+          "expira_en",
+          "max_bytes"
+        ]
+      },
+      "PaginaObjetosResponseDto": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "description": "Objetos de la página",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ObjetoStorageResponseDto"
+            }
+          },
+          "total": {
+            "type": "number",
+            "description": "Total de objetos",
+            "example": 12
+          },
+          "pagina": {
+            "type": "number",
+            "description": "Página actual (1-based)",
+            "example": 1
+          },
+          "limite": {
+            "type": "number",
+            "description": "Tamaño de página",
+            "example": 20
+          },
+          "paginas": {
+            "type": "number",
+            "description": "Total de páginas",
+            "example": 1
+          }
+        },
+        "required": [
+          "items",
+          "total",
+          "pagina",
+          "limite",
+          "paginas"
+        ]
+      },
+      "UrlDescargaResponseDto": {
+        "type": "object",
+        "properties": {
+          "url_descarga": {
+            "type": "string",
+            "description": "URL prefirmada de descarga",
+            "format": "uri"
+          },
+          "expira_en": {
+            "type": "string",
+            "description": "Expiración de la URL (ISO 8601 UTC)",
+            "format": "date-time"
+          },
+          "nombre": {
+            "type": "string",
+            "description": "Nombre original del archivo"
+          },
+          "content_type": {
+            "type": "string",
+            "description": "Content-Type",
+            "example": "image/jpeg"
+          },
+          "tamano_bytes": {
+            "type": "number",
+            "description": "Tamaño en bytes",
+            "example": 204800
+          }
+        },
+        "required": [
+          "url_descarga",
+          "expira_en",
           "nombre",
           "content_type",
           "tamano_bytes"
