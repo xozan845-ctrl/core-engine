@@ -4547,7 +4547,14 @@ export const OPENAPI_AGREGADO = {
         },
         "responses": {
           "201": {
-            "description": ""
+            "description": "Tienda creada",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TiendaResponseDto"
+                }
+              }
+            }
           }
         },
         "security": [
@@ -4567,7 +4574,14 @@ export const OPENAPI_AGREGADO = {
         "parameters": [],
         "responses": {
           "200": {
-            "description": ""
+            "description": "Tienda del vendedor",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TiendaResponseDto"
+                }
+              }
+            }
           }
         },
         "security": [
@@ -4597,7 +4611,14 @@ export const OPENAPI_AGREGADO = {
         },
         "responses": {
           "201": {
-            "description": "Oferta creada"
+            "description": "Oferta creada",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OfertaResponseDto"
+                }
+              }
+            }
           }
         },
         "security": [
@@ -4636,7 +4657,14 @@ export const OPENAPI_AGREGADO = {
         },
         "responses": {
           "200": {
-            "description": ""
+            "description": "Oferta actualizada",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OfertaResponseDto"
+                }
+              }
+            }
           }
         },
         "security": [
@@ -4656,7 +4684,14 @@ export const OPENAPI_AGREGADO = {
         "parameters": [],
         "responses": {
           "200": {
-            "description": ""
+            "description": "Página de ofertas",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginaOfertasResponseDto"
+                }
+              }
+            }
           }
         },
         "security": [
@@ -4684,6 +4719,16 @@ export const OPENAPI_AGREGADO = {
           }
         ],
         "responses": {
+          "200": {
+            "description": "Tienda con sus ofertas",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TiendaPublicaResponseDto"
+                }
+              }
+            }
+          },
           "404": {
             "description": "Tienda inexistente (NO_ENCONTRADO)"
           }
@@ -7029,6 +7074,84 @@ export const OPENAPI_AGREGADO = {
           "tamano_bytes"
         ]
       },
+      "OfertaResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Id de la oferta",
+            "format": "uuid"
+          },
+          "tienda_id": {
+            "type": "string",
+            "description": "Id de la tienda",
+            "format": "uuid"
+          },
+          "vendedor_id": {
+            "type": "string",
+            "description": "Id del vendedor",
+            "format": "uuid"
+          },
+          "producto_id": {
+            "type": "string",
+            "description": "Id del producto maestro",
+            "format": "uuid"
+          },
+          "sku": {
+            "type": "string",
+            "description": "SKU del producto",
+            "example": "SKU-001"
+          },
+          "producto_nombre": {
+            "type": "string",
+            "description": "Nombre del producto"
+          },
+          "margen": {
+            "type": "number",
+            "description": "Margen aplicado (0–90)",
+            "example": 15
+          },
+          "precio_base": {
+            "type": "string",
+            "description": "Precio base en córdobas con dos decimales",
+            "example": "1000.00"
+          },
+          "precio_venta": {
+            "type": "string",
+            "description": "Precio de venta en córdobas con dos decimales",
+            "example": "1150.00"
+          },
+          "stock": {
+            "type": "number",
+            "description": "Stock disponible",
+            "example": 10
+          },
+          "estado": {
+            "type": "string",
+            "description": "Estado de la oferta",
+            "example": "activa"
+          },
+          "creado_en": {
+            "type": "string",
+            "description": "Fecha de creación (ISO 8601 UTC)",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "tienda_id",
+          "vendedor_id",
+          "producto_id",
+          "sku",
+          "producto_nombre",
+          "margen",
+          "precio_base",
+          "precio_venta",
+          "stock",
+          "estado",
+          "creado_en"
+        ]
+      },
       "CrearTiendaRequestDto": {
         "type": "object",
         "properties": {
@@ -7047,6 +7170,42 @@ export const OPENAPI_AGREGADO = {
         },
         "required": [
           "nombre"
+        ]
+      },
+      "TiendaResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Id de la tienda",
+            "format": "uuid"
+          },
+          "vendedor_id": {
+            "type": "string",
+            "description": "Id del vendedor dueño",
+            "format": "uuid"
+          },
+          "nombre": {
+            "type": "string",
+            "description": "Nombre de la tienda",
+            "example": "Mi tienda"
+          },
+          "descripcion": {
+            "type": "string",
+            "description": "Descripción de la tienda"
+          },
+          "creado_en": {
+            "type": "string",
+            "description": "Fecha de creación (ISO 8601 UTC)",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "vendedor_id",
+          "nombre",
+          "descripcion",
+          "creado_en"
         ]
       },
       "PublicarProductoRequestDto": {
@@ -7083,6 +7242,69 @@ export const OPENAPI_AGREGADO = {
         },
         "required": [
           "margen"
+        ]
+      },
+      "PaginaOfertasResponseDto": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "description": "Ofertas de la página",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/OfertaResponseDto"
+            }
+          },
+          "total": {
+            "type": "number",
+            "description": "Total de ofertas",
+            "example": 42
+          },
+          "pagina": {
+            "type": "number",
+            "description": "Página actual (1-based)",
+            "example": 1
+          },
+          "limite": {
+            "type": "number",
+            "description": "Tamaño de página",
+            "example": 20
+          },
+          "paginas": {
+            "type": "number",
+            "description": "Total de páginas",
+            "example": 3
+          }
+        },
+        "required": [
+          "items",
+          "total",
+          "pagina",
+          "limite",
+          "paginas"
+        ]
+      },
+      "TiendaPublicaResponseDto": {
+        "type": "object",
+        "properties": {
+          "tienda": {
+            "description": "Datos de la tienda",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/TiendaResponseDto"
+              }
+            ]
+          },
+          "ofertas": {
+            "description": "Ofertas de la tienda",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/OfertaResponseDto"
+            }
+          }
+        },
+        "required": [
+          "tienda",
+          "ofertas"
         ]
       }
     }
