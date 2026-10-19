@@ -55,7 +55,8 @@ scripts/
 └── tools/                    # operaciones (NO gobernanza)
     ├── smoke.mjs              # flujo API completo contra stack levantado
     ├── smoke.test.mjs         # regresiones del runner con HTTP efímero
-    └── swagger-aggregate.mjs
+    ├── swagger-aggregate.mjs  # agrega specs y separa superficie pública/interna
+    └── swagger-aggregate.test.mjs # regresiones del agregador (filtro y colisiones)
 ```
 
 ### Regla de dependencia
@@ -163,7 +164,7 @@ Los `npm scripts` de la raíz son **envoltorios** (sin ruptura para CI ni local)
 | `demo` | `node scripts/cli.mjs smoke` |
 | `swagger:export` | `node scripts/cli.mjs swagger` |
 | `test:engine` | autotests del motor, incluida una suite centinela que prueba el exit code ante assertions fallidas |
-| `test:smoke` | cinco regresiones del runner: registro, timeout de red, retry seguro y espera asíncrona; ejecutadas en CI |
+| `test:smoke` | regresiones del runner de smoke y del agregador OpenAPI: filtro público/interno, colisiones y contrato de rutas; ejecutadas en CI |
 
 `npm run demo` sigue ejercitando el stack completo levantado. El runner usa
 `SMOKE_REQUEST_TIMEOUT_MS` (10 000 ms) por petición y `SMOKE_WAIT_TIMEOUT_MS`
