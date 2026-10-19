@@ -1,6 +1,12 @@
 import { Controller, Get, Param, Query, Headers } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
+import { ApiTags, ApiOperation, ApiBearerAuth, ApiOkResponse } from '@nestjs/swagger';
 import { InteligenciaRepository } from '../repositories/inteligencia.repository';
+import {
+  AnomaliasResponseDto,
+  CalidadDatosResponseDto,
+  ForecastDemandaResponseDto,
+  ScoreVendedorResponseDto,
+} from '../models/dto/inteligencia.response.dto';
 
 /**
  * Endpoints de Predictive Analytics.
@@ -24,6 +30,7 @@ export class PrediccionController {
    */
   @Get('forecast/demanda')
   @ApiOperation({ summary: 'Forecast de demanda por SKU (media móvil 7d)' })
+  @ApiOkResponse({ type: ForecastDemandaResponseDto, description: 'Pronóstico de demanda' })
   async forecastDemanda(
     @Query('sku') sku: string,
     @Query('dias') diasStr?: string,
@@ -39,6 +46,7 @@ export class PrediccionController {
    */
   @Get('anomalias')
   @ApiOperation({ summary: 'Detección de ventas anómalas por Z-score' })
+  @ApiOkResponse({ type: AnomaliasResponseDto, description: 'Anomalías detectadas' })
   async anomalias(
     @Query('sku') sku?: string,
     @Query('vendedor_id') vendedorId?: string,
@@ -60,6 +68,7 @@ export class PrediccionController {
    */
   @Get('vendedores/:id/score')
   @ApiOperation({ summary: 'Score predictivo de un vendedor (churn, efectividad)' })
+  @ApiOkResponse({ type: ScoreVendedorResponseDto, description: 'Score del vendedor' })
   async scoreVendedor(@Param('id') vendedorId: string) {
     const score = await this.repo.obtenerScoreVendedor(vendedorId);
     return score ?? {
@@ -76,6 +85,7 @@ export class PrediccionController {
    */
   @Get('me/score')
   @ApiOperation({ summary: 'Mi score predictivo como vendedor' })
+  @ApiOkResponse({ type: ScoreVendedorResponseDto, description: 'Score del vendedor autenticado' })
   async miScore(@Headers('x-user-id') userId: string) {
     if (!userId) {
       return { mensaje: 'x-user-id header requerido (inyectado por el gateway)' };
@@ -91,6 +101,7 @@ export class PrediccionController {
    */
   @Get('calidad')
   @ApiOperation({ summary: 'Dashboard de calidad de datos del pipeline (últimas N horas)' })
+  @ApiOkResponse({ type: CalidadDatosResponseDto, description: 'Calidad del pipeline' })
   async calidadDatos(@Query('horas') horasStr?: string) {
     const horas = Math.min(parseInt(horasStr ?? '24', 10) || 24, 720);
     return this.repo.obtenerCalidadDatos(horas);
