@@ -14,6 +14,7 @@ const SERVICIOS_MIGRADOS = [
   'identity-service',
   'logistics-service',
   'market-intelligence-service',
+  'orders-service',
   'commissions-service',
   'stores-service',
   'storage-service',
