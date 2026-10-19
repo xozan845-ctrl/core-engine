@@ -32,6 +32,11 @@
             "description": ""
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Listar tenants con almacenamiento (cuota y uso)",
         "tags": [
           "Almacenamiento (admin)"
@@ -57,6 +62,11 @@
             "description": ""
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Estado de almacenamiento de un tenant",
         "tags": [
           "Almacenamiento (admin)"
@@ -90,6 +100,11 @@
             "description": ""
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Ajustar cuota y/o suspender el almacenamiento del tenant",
         "tags": [
           "Almacenamiento (admin)"
@@ -115,6 +130,11 @@
             "description": ""
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Recalcular el uso del tenant desde la metadata (idempotente)",
         "tags": [
           "Almacenamiento (admin)"
@@ -140,6 +160,11 @@
             "description": ""
           }
         },
+        "security": [
+          {
+            "internalKey": []
+          }
+        ],
         "summary": "Estado de almacenamiento del tenant (servicio→servicio)",
         "tags": [
           "Almacenamiento (interno)"
@@ -165,6 +190,11 @@
             "description": ""
           }
         },
+        "security": [
+          {
+            "internalKey": []
+          }
+        ],
         "summary": "Recalcular el uso del tenant (servicio→servicio)",
         "tags": [
           "Almacenamiento (interno)"
@@ -199,6 +229,11 @@
             "description": ""
           }
         },
+        "security": [
+          {
+            "internalKey": []
+          }
+        ],
         "summary": "Metadata de un objeto del tenant (servicio→servicio)",
         "tags": [
           "Almacenamiento (interno)"
@@ -215,6 +250,11 @@
             "description": ""
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Estado del almacenamiento del tenant (bucket, cuota, uso)",
         "tags": [
           "Almacenamiento"
@@ -238,6 +278,11 @@
             "description": "Cuota invalida (CUOTA_INVALIDA/CUOTA_MENOR_AL_USO)"
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Asegurar el bucket del tenant y fijar su cuota (admin)",
         "tags": [
           "Almacenamiento"
@@ -267,6 +312,11 @@
             "description": "Cuota excedida (CUOTA_EXCEDIDA)"
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Solicitar URL prefirmada de subida (PUT directo a MinIO)",
         "tags": [
           "Almacenamiento"
@@ -292,6 +342,11 @@
             "description": ""
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Confirmar la subida y activar el objeto (contabiliza cuota)",
         "tags": [
           "Almacenamiento"
@@ -361,6 +416,11 @@
             "description": ""
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Listar objetos del tenant (paginado, sin eliminados por defecto)",
         "tags": [
           "Almacenamiento"
@@ -386,6 +446,11 @@
             "description": ""
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Detalle (metadata) de un objeto del tenant",
         "tags": [
           "Almacenamiento"
@@ -409,6 +474,11 @@
             "description": ""
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Eliminar un objeto (baja logica + borrado en MinIO)",
         "tags": [
           "Almacenamiento"
@@ -434,6 +504,11 @@
             "description": ""
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "URL prefirmada de descarga (GET) con validez limitada",
         "tags": [
           "Almacenamiento"
@@ -455,6 +530,11 @@
         "scheme": "bearer",
         "bearerFormat": "JWT",
         "type": "http"
+      },
+      "internalKey": {
+        "type": "apiKey",
+        "in": "header",
+        "name": "x-internal-key"
       }
     },
     "schemas": {

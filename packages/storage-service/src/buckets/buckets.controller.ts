@@ -1,5 +1,5 @@
 import { Body, Controller, Get, Post } from '@nestjs/common';
-import { ApiOperation, ApiProperty, ApiResponse, ApiTags } from '@nestjs/swagger';
+import { ApiBearerAuth, ApiOperation, ApiProperty, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { IsInt, IsOptional, IsPositive } from 'class-validator';
 import { ROLES, Roles, UsuarioActual, UsuarioContexto } from '@core/shared';
 import { requerirTenant } from '../tenant';
@@ -18,6 +18,7 @@ export class ConfigurarBucketRequestDto {
 }
 
 @ApiTags('Almacenamiento')
+@ApiBearerAuth()
 @Controller('api/v1/storage')
 export class BucketsController {
   constructor(private readonly buckets: BucketsService) {}

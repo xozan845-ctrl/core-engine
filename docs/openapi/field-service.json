@@ -10,6 +10,11 @@
             "description": ""
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Listar personal",
         "tags": [
           "Field (logística de campo)"
@@ -33,6 +38,11 @@
             "description": ""
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Crear personal",
         "tags": [
           "Field (logística de campo)"
@@ -57,6 +67,11 @@
             "description": ""
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Obtener personal por id",
         "tags": [
           "Field (logística de campo)"
@@ -89,6 +104,11 @@
             "description": ""
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Actualizar personal",
         "tags": [
           "Field (logística de campo)"
@@ -111,6 +131,11 @@
             "description": ""
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Eliminar personal",
         "tags": [
           "Field (logística de campo)"
@@ -135,6 +160,11 @@
             "description": ""
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Ubicación del personal",
         "tags": [
           "Field (logística de campo)"
@@ -167,6 +197,11 @@
             "description": ""
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Actualizar ubicación del personal",
         "tags": [
           "Field (logística de campo)"
@@ -182,6 +217,11 @@
             "description": ""
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Listar clientes de campo",
         "tags": [
           "Field (logística de campo)"
@@ -205,6 +245,11 @@
             "description": ""
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Crear cliente de campo",
         "tags": [
           "Field (logística de campo)"
@@ -229,6 +274,11 @@
             "description": ""
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Obtener cliente por id",
         "tags": [
           "Field (logística de campo)"
@@ -261,6 +311,11 @@
             "description": ""
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Actualizar cliente de campo",
         "tags": [
           "Field (logística de campo)"
@@ -283,6 +338,11 @@
             "description": ""
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Eliminar cliente de campo",
         "tags": [
           "Field (logística de campo)"
@@ -298,6 +358,11 @@
             "description": ""
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Listar vehículos",
         "tags": [
           "Field (logística de campo)"
@@ -321,6 +386,11 @@
             "description": ""
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Crear vehículo",
         "tags": [
           "Field (logística de campo)"
@@ -345,6 +415,11 @@
             "description": ""
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Obtener vehículo por id",
         "tags": [
           "Field (logística de campo)"
@@ -377,6 +452,11 @@
             "description": ""
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Actualizar vehículo",
         "tags": [
           "Field (logística de campo)"
@@ -399,6 +479,11 @@
             "description": ""
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Eliminar vehículo",
         "tags": [
           "Field (logística de campo)"
@@ -423,6 +508,11 @@
             "description": ""
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Listar rutas",
         "tags": [
           "Field (logística de campo)"
@@ -446,6 +536,11 @@
             "description": ""
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Crear ruta",
         "tags": [
           "Field (logística de campo)"
@@ -470,6 +565,11 @@
             "description": ""
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Obtener ruta por id",
         "tags": [
           "Field (logística de campo)"
@@ -502,6 +602,11 @@
             "description": ""
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Actualizar ruta",
         "tags": [
           "Field (logística de campo)"
@@ -524,6 +629,11 @@
             "description": ""
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Eliminar ruta",
         "tags": [
           "Field (logística de campo)"
@@ -558,6 +668,11 @@
             "description": ""
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Agregar parada a la ruta",
         "tags": [
           "Field (logística de campo)"
@@ -600,6 +715,11 @@
             "description": ""
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Actualizar parada de la ruta",
         "tags": [
           "Field (logística de campo)"
@@ -634,6 +754,11 @@
             "description": ""
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Asignar personal/vehículo a la ruta",
         "tags": [
           "Field (logística de campo)"
@@ -674,6 +799,11 @@
             "description": ""
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Listar pedidos de campo",
         "tags": [
           "Field (logística de campo)"
@@ -697,6 +827,11 @@
             "description": ""
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Crear pedido de campo",
         "tags": [
           "Field (logística de campo)"
@@ -721,6 +856,11 @@
             "description": ""
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Obtener pedido por id",
         "tags": [
           "Field (logística de campo)"
@@ -753,6 +893,11 @@
             "description": ""
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Actualizar pedido de campo",
         "tags": [
           "Field (logística de campo)"
@@ -775,6 +920,11 @@
             "description": ""
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Eliminar pedido de campo",
         "tags": [
           "Field (logística de campo)"
@@ -809,6 +959,11 @@
             "description": ""
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Cambiar estado del pedido",
         "tags": [
           "Field (logística de campo)"
@@ -841,6 +996,11 @@
             "description": ""
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Listar asistencia",
         "tags": [
           "Field (logística de campo)"
@@ -864,6 +1024,11 @@
             "description": ""
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Registrar asistencia",
         "tags": [
           "Field (logística de campo)"
@@ -896,6 +1061,11 @@
             "description": ""
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Listar incidencias",
         "tags": [
           "Field (logística de campo)"
@@ -919,6 +1089,11 @@
             "description": ""
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Crear incidencia",
         "tags": [
           "Field (logística de campo)"
@@ -943,6 +1118,11 @@
             "description": ""
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Obtener incidencia por id",
         "tags": [
           "Field (logística de campo)"
@@ -975,6 +1155,11 @@
             "description": ""
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Actualizar incidencia",
         "tags": [
           "Field (logística de campo)"
@@ -997,6 +1182,11 @@
             "description": ""
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Eliminar incidencia",
         "tags": [
           "Field (logística de campo)"
@@ -1037,6 +1227,11 @@
             "description": ""
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Listar tracking GPS",
         "tags": [
           "Field (logística de campo)"
@@ -1060,6 +1255,11 @@
             "description": ""
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Registrar tracking GPS (lote)",
         "tags": [
           "Field (logística de campo)"
@@ -1092,6 +1292,11 @@
             "description": ""
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Listar visitas (telemetría)",
         "tags": [
           "Field (logística de campo)"
@@ -1115,6 +1320,11 @@
             "description": ""
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Registrar visita (telemetría)",
         "tags": [
           "Field (logística de campo)"
@@ -1147,6 +1357,11 @@
             "description": ""
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Obtener cumplimiento de ruta/fecha",
         "tags": [
           "Field (logística de campo)"
@@ -1172,6 +1387,11 @@
             "description": ""
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Guardar cumplimiento de ruta",
         "tags": [
           "Field (logística de campo)"
@@ -1197,6 +1417,11 @@
             "description": ""
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Sincronizar operaciones offline",
         "tags": [
           "Field (logística de campo)"

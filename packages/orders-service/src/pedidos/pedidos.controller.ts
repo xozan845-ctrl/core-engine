@@ -1,5 +1,5 @@
 import { Body, Controller, Get, Param, Post, Query } from '@nestjs/common';
-import { ApiOperation, ApiParam, ApiQuery, ApiTags } from '@nestjs/swagger';
+import { ApiBearerAuth, ApiOperation, ApiParam, ApiQuery, ApiTags } from '@nestjs/swagger';
 import {
   Roles,
   ROLES,
@@ -12,6 +12,7 @@ import { OrderViewRepository, OrderView, ComisionVista } from './queries/order-v
 import { PedidosService } from './pedidos.service';
 
 @ApiTags('Pedidos')
+@ApiBearerAuth()
 @Controller('api/v1/orders')
 export class PedidosController {
   constructor(

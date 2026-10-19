@@ -5,7 +5,7 @@ import {
   Param,
   Patch,
 } from '@nestjs/common';
-import { ApiOperation, ApiParam, ApiProperty, ApiResponse, ApiTags } from '@nestjs/swagger';
+import { ApiBearerAuth, ApiOperation, ApiParam, ApiProperty, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { IsIn, IsOptional, IsString } from 'class-validator';
 import {
   Roles,
@@ -37,6 +37,7 @@ export class AvanzarEstadoRequestDto {
  * el orders-service (Event Sourcing) via endpoint interno.
  */
 @ApiTags('Logística')
+@ApiBearerAuth()
 @Controller('api/v1/orders')
 export class EstadoOrdenController {
   constructor(private readonly envios: EnviosService) {}
@@ -61,6 +62,7 @@ export class EstadoOrdenController {
 
 /** GET /api/v1/admin/envios — guias de despacho (JWT admin). */
 @ApiTags('Logística')
+@ApiBearerAuth()
 @Controller('api/v1/admin')
 export class EnviosAdminController {
   constructor(private readonly envios: EnviosService) {}

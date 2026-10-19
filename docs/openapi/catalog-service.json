@@ -20,6 +20,11 @@
             "description": ""
           }
         },
+        "security": [
+          {
+            "internalKey": []
+          }
+        ],
         "summary": "Lote de productos por SKUs (servicio→servicio)",
         "tags": [
           "Catálogo (interno)"
@@ -45,6 +50,11 @@
             "description": ""
           }
         },
+        "security": [
+          {
+            "internalKey": []
+          }
+        ],
         "summary": "Producto por SKU (servicio→servicio)",
         "tags": [
           "Catálogo (interno)"
@@ -70,6 +80,11 @@
             "description": ""
           }
         },
+        "security": [
+          {
+            "internalKey": []
+          }
+        ],
         "summary": "Producto por id (servicio→servicio)",
         "tags": [
           "Catálogo (interno)"
@@ -85,6 +100,11 @@
             "description": ""
           }
         },
+        "security": [
+          {
+            "internalKey": []
+          }
+        ],
         "summary": "Resumen de inventario (servicio→servicio)",
         "tags": [
           "Catálogo (interno)"
@@ -100,6 +120,11 @@
             "description": ""
           }
         },
+        "security": [
+          {
+            "internalKey": []
+          }
+        ],
         "summary": "Líneas de inventario (servicio→servicio)",
         "tags": [
           "Catálogo (interno)"
@@ -187,6 +212,11 @@
             "description": ""
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Crear producto (admin, TC-01)",
         "tags": [
           "Catálogo"
@@ -245,6 +275,11 @@
             "description": ""
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Editar producto (admin; RN-08 histórico)",
         "tags": [
           "Catálogo"
@@ -260,6 +295,11 @@
             "description": ""
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Niveles de stock (admin; Tabla 21)",
         "tags": [
           "Catálogo"
@@ -281,6 +321,11 @@
         "scheme": "bearer",
         "bearerFormat": "JWT",
         "type": "http"
+      },
+      "internalKey": {
+        "type": "apiKey",
+        "in": "header",
+        "name": "x-internal-key"
       }
     },
     "schemas": {

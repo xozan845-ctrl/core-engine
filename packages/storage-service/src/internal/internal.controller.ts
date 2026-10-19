@@ -1,5 +1,5 @@
 import { Controller, Get, Param, Post, Query, UseGuards } from '@nestjs/common';
-import { ApiOperation, ApiParam, ApiQuery, ApiTags } from '@nestjs/swagger';
+import { ApiOperation, ApiParam, ApiQuery, ApiSecurity, ApiTags } from '@nestjs/swagger';
 import { ClaveInternaGuard } from '@core/shared';
 import { BucketsService, EstadoBucket } from '../buckets/buckets.service';
 import { ObjetosService, ObjetoStorage } from '../objetos/objetos.service';
@@ -9,6 +9,7 @@ import { ObjetosService, ObjetoStorage } from '../objetos/objetos.service';
  * consultar el estado de almacenamiento de un tenant y recalcular su uso.
  */
 @ApiTags('Almacenamiento (interno)')
+@ApiSecurity('internalKey')
 @Controller('internal/storage')
 @UseGuards(ClaveInternaGuard)
 export class InternalStorageController {

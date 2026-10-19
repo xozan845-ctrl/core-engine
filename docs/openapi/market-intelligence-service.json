@@ -47,6 +47,11 @@
             "description": ""
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Mapa de calor de ventas (admin)",
         "tags": [
           "Inteligencia — Métricas"
@@ -107,6 +112,11 @@
             "description": ""
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Mi mapa de calor (vendedor)",
         "tags": [
           "Inteligencia — Métricas"
@@ -122,6 +132,11 @@
             "description": ""
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Rendimiento de vendedores (admin)",
         "tags": [
           "Inteligencia — Métricas"
@@ -146,6 +161,11 @@
             "description": ""
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Mi rendimiento como vendedor",
         "tags": [
           "Inteligencia — Métricas"
@@ -161,6 +181,11 @@
             "description": ""
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Cobertura por zona (admin)",
         "tags": [
           "Inteligencia — Métricas"
@@ -176,6 +201,11 @@
             "description": ""
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Demanda de productos (admin)",
         "tags": [
           "Inteligencia — Métricas"
@@ -191,6 +221,11 @@
             "description": ""
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Tendencias (admin)",
         "tags": [
           "Inteligencia — Métricas"
@@ -243,6 +278,11 @@
             "description": ""
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Resumen de inteligencia de mercado (admin)",
         "tags": [
           "Inteligencia — Métricas"
@@ -268,6 +308,11 @@
             "description": ""
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Registrar una venta en inteligencia (ingesta manual)",
         "tags": [
           "Inteligencia — Métricas"

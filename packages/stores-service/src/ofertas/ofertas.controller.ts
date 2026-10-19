@@ -1,5 +1,5 @@
 import { Body, Controller, Get, Param, Patch, Post, Query } from '@nestjs/common';
-import { ApiOperation, ApiProperty, ApiResponse, ApiTags } from '@nestjs/swagger';
+import { ApiBearerAuth, ApiOperation, ApiProperty, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { IsInt, IsString, Max, Min } from 'class-validator';
 import { TiendasService } from '../tiendas/tiendas.service';
 import { OfertasService, Oferta } from './ofertas.service';
@@ -44,6 +44,7 @@ export class OfertasController {
   /** POST /api/v1/vendedores/productos — publica producto con margen (Tabla 21). */
   @Post('vendedores/productos')
   @Roles(ROLES.VENDEDOR)
+  @ApiBearerAuth()
   @ApiOperation({ summary: 'Publicar un producto con margen (vendedor)' })
   @ApiResponse({ status: 201, description: 'Oferta creada' })
   async publicar(
@@ -56,6 +57,7 @@ export class OfertasController {
   /** PATCH /api/v1/vendedores/productos/:id — cambia el margen de la oferta. */
   @Patch('vendedores/productos/:id')
   @Roles(ROLES.VENDEDOR)
+  @ApiBearerAuth()
   @ApiOperation({ summary: 'Cambiar el margen de una oferta (vendedor)' })
   async cambiarMargen(
     @Param('id') id: string,
@@ -68,6 +70,7 @@ export class OfertasController {
   /** GET /api/v1/vendedores/me/ofertas — ofertas del vendedor autenticado. */
   @Get('vendedores/me/ofertas')
   @Roles(ROLES.VENDEDOR)
+  @ApiBearerAuth()
   @ApiOperation({ summary: 'Listar las ofertas del vendedor autenticado' })
   async misOfertas(
     @Query() query: { pagina?: string; limite?: string },

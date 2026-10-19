@@ -20,6 +20,11 @@
             "description": ""
           }
         },
+        "security": [
+          {
+            "internalKey": []
+          }
+        ],
         "summary": "Usuario por id (servicio→servicio)",
         "tags": [
           "Usuarios (interno)"
@@ -35,6 +40,11 @@
             "description": ""
           }
         },
+        "security": [
+          {
+            "internalKey": []
+          }
+        ],
         "summary": "Listar vendedores (servicio→servicio)",
         "tags": [
           "Usuarios (interno)"
@@ -50,6 +60,11 @@
             "description": ""
           }
         },
+        "security": [
+          {
+            "internalKey": []
+          }
+        ],
         "summary": "Contar vendedores (servicio→servicio)",
         "tags": [
           "Usuarios (interno)"
@@ -161,6 +176,11 @@
             "description": "Sesión cerrada"
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Cerrar sesión (revoca el refresh token)",
         "tags": [
           "Auth"
@@ -189,6 +209,11 @@
             "description": "Solo un administrador puede crear usuarios"
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Crear usuario (solo admin)",
         "tags": [
           "Auth"
@@ -214,6 +239,11 @@
             "description": ""
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Cambiar la contraseña (autenticado)",
         "tags": [
           "Auth"
@@ -254,6 +284,11 @@
             "description": ""
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Perfil de la sesión actual",
         "tags": [
           "Auth"
@@ -279,6 +314,11 @@
             "description": ""
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Vincular la ficha de personal del usuario autenticado",
         "tags": [
           "Auth"
@@ -294,6 +334,11 @@
             "description": ""
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Listar usuarios (admin)",
         "tags": [
           "Usuarios"
@@ -319,6 +364,11 @@
             "description": "Usuario inexistente o sin permiso"
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Perfil de un usuario (admin o el propio)",
         "tags": [
           "Usuarios"
@@ -340,6 +390,11 @@
         "scheme": "bearer",
         "bearerFormat": "JWT",
         "type": "http"
+      },
+      "internalKey": {
+        "type": "apiKey",
+        "in": "header",
+        "name": "x-internal-key"
       }
     },
     "schemas": {
