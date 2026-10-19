@@ -96,6 +96,10 @@ export interface ComisionAcreditadaData {
   monto_cents: number; // comision de la plataforma (RN-04)
   monto_vendedor_cents: number;
   vendedor_id: string;
+  empresa_id: string;
+  tienda_id: string;
+  monto_empresario_cents: number;
+  participacion_porcentaje: number;
 }
 
 export interface DevolucionSolicitadaData {

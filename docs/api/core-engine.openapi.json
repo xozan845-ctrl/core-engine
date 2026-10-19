@@ -253,6 +253,36 @@
         ]
       }
     },
+    "/api/v1/empresarios/me/liquidaciones": {
+      "get": {
+        "operationId": "LiquidacionesController_deMiEmpresa",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Liquidaciones del empresario",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/LiquidacionEmpresaResponseDto"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Liquidaciones de la empresa autenticada",
+        "tags": [
+          "Comisiones · Liquidaciones"
+        ]
+      }
+    },
     "/api/v1/admin/liquidaciones/corte": {
       "post": {
         "operationId": "LiquidacionesController_corteManual",
@@ -6171,6 +6201,58 @@
         "required": [
           "id",
           "vendedor_id",
+          "periodo_inicio",
+          "periodo_fin",
+          "monto_cents",
+          "estado",
+          "creado_en"
+        ]
+      },
+      "LiquidacionEmpresaResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Id de la liquidación",
+            "format": "uuid"
+          },
+          "empresa_id": {
+            "type": "string",
+            "description": "Id de la empresa beneficiaria",
+            "format": "uuid"
+          },
+          "periodo_inicio": {
+            "type": "string",
+            "description": "Inicio del periodo (ISO 8601)",
+            "format": "date"
+          },
+          "periodo_fin": {
+            "type": "string",
+            "description": "Fin del periodo (ISO 8601)",
+            "format": "date"
+          },
+          "monto_cents": {
+            "type": "number",
+            "description": "Monto liquidado en centavos",
+            "example": 4400
+          },
+          "estado": {
+            "type": "string",
+            "description": "Estado de la liquidación",
+            "enum": [
+              "aprobada",
+              "pagada"
+            ]
+          },
+          "creado_en": {
+            "type": "string",
+            "description": "Fecha de creación (ISO 8601 UTC)",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "empresa_id",
           "periodo_inicio",
           "periodo_fin",
           "monto_cents",
