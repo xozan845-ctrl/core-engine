@@ -74,6 +74,61 @@ describe('EnviosService (guia de despacho y transiciones)', () => {
       const [, params] = (pg.queryOne as Mock).mock.calls[1];
       expect(params.slice(4, 7)).toEqual(['hibrida', null, null]);
     });
+
+    it('debe asignar la flota global en modalidad plataforma', async () => {
+      const { servicio, pg } = crear();
+      (pg.queryOne as Mock).mockResolvedValueOnce(null).mockResolvedValueOnce(envio);
+      await servicio.prepararEnvio('o1', 'empresa-1', 1000, 'plataforma');
+      const [, params] = (pg.queryOne as Mock).mock.calls[1];
+      expect(params.slice(4, 7)).toEqual([
+        'plataforma', 'plataforma', '00000000-0000-0000-0000-000000000001',
+      ]);
+    });
+  });
+
+  describe('prepararEnviosDeOrden', () => {
+    it('agrupa lineas por empresa y congela la modalidad vigente', async () => {
+      const { servicio } = crear();
+      vi.spyOn(servicio, 'consultarOrden').mockResolvedValue({
+        id: 'o1', cliente_id: 'c1', total: '35.00', total_cents: 3500, estado: 'pagada',
+        items: [
+          { sku: 'A', cantidad: 2, producto_nombre: 'A', empresa_id: 'e1', precio_unitario_cents: 1000 },
+          { sku: 'B', cantidad: 1, producto_nombre: 'B', empresa_id: 'e1', precio_unitario_cents: 500 },
+          { sku: 'C', cantidad: 1, producto_nombre: 'C', empresa_id: 'e2', precio_unitario_cents: 1000 },
+        ],
+      });
+      vi.spyOn(globalThis, 'fetch').mockImplementation(async (url) => ({
+        ok: true,
+        json: async () => ({ id: String(url).includes('/e1') ? 'e1' : 'e2', modalidad_logistica: 'hibrida' }),
+      } as Response));
+      const preparar = vi.spyOn(servicio, 'prepararEnvio')
+        .mockResolvedValueOnce({ ...envio, empresa_id: 'e1' } as never)
+        .mockResolvedValueOnce({ ...envio, empresa_id: 'e2' } as never);
+
+      await expect(servicio.prepararEnviosDeOrden('o1')).resolves.toHaveLength(2);
+      expect(preparar).toHaveBeenNthCalledWith(1, 'o1', 'e1', 2500, 'hibrida');
+      expect(preparar).toHaveBeenNthCalledWith(2, 'o1', 'e2', 1000, 'hibrida');
+    });
+
+    it('rechaza una orden sin lineas o con linea sin empresa', async () => {
+      const { servicio } = crear();
+      vi.spyOn(servicio, 'consultarOrden').mockResolvedValueOnce(null).mockResolvedValueOnce({
+        id: 'o1', cliente_id: 'c1', total: '1.00', total_cents: 100, estado: 'pagada',
+        items: [{ sku: 'A', cantidad: 1, producto_nombre: 'A', empresa_id: '', precio_unitario_cents: 100 }],
+      });
+      await expect(servicio.prepararEnviosDeOrden('o1')).rejects.toThrow(/no tiene líneas/);
+      await expect(servicio.prepararEnviosDeOrden('o1')).rejects.toThrow(/no tiene empresa/);
+    });
+
+    it('falla de forma controlada si identidad no resuelve la empresa', async () => {
+      const { servicio } = crear();
+      vi.spyOn(servicio, 'consultarOrden').mockResolvedValue({
+        id: 'o1', cliente_id: 'c1', total: '1.00', total_cents: 100, estado: 'pagada',
+        items: [{ sku: 'A', cantidad: 1, producto_nombre: 'A', empresa_id: 'e1', precio_unitario_cents: 100 }],
+      });
+      vi.spyOn(globalThis, 'fetch').mockResolvedValue({ ok: false } as Response);
+      await expect(servicio.prepararEnviosDeOrden('o1')).rejects.toThrow(/modalidad logística/);
+    });
   });
 
   describe('asignacion hibrida', () => {
@@ -98,6 +153,17 @@ describe('EnviosService (guia de despacho y transiciones)', () => {
       (pg.queryOne as Mock).mockResolvedValueOnce(envio);
       await expect(servicio.asignarProveedor('e1', 'empresa-1', 'plataforma'))
         .rejects.toThrow(/Solo un envío híbrido/);
+    });
+
+    it('rechaza un envio ajeno o una actualizacion perdida', async () => {
+      const { servicio, pg } = crear();
+      await expect(servicio.asignarProveedor('e-x', 'empresa-1', 'empresa'))
+        .rejects.toThrow(/no pertenece/);
+      (pg.queryOne as Mock)
+        .mockResolvedValueOnce({ ...envio, modalidad_logistica: 'hibrida' })
+        .mockResolvedValueOnce(null);
+      await expect(servicio.asignarProveedor('e1', 'empresa-1', 'plataforma', 'u-e'))
+        .rejects.toThrow(/No se pudo asignar/);
     });
   });
 
@@ -125,6 +191,27 @@ describe('EnviosService (guia de despacho y transiciones)', () => {
       await servicio.avanzarEstadoEnvio('e1', 'empresa-1', 'entregada');
       expect(avanzarOrden).not.toHaveBeenCalled();
     });
+
+    it('rechaza un envio que no pertenece a la flota', async () => {
+      const { servicio } = crear();
+      await expect(servicio.avanzarEstadoEnvio('e-x', 'flota-1', 'enviada'))
+        .rejects.toThrow(/no pertenece/);
+    });
+
+    it('considera enviada o entregada como avance suficiente para despacho', async () => {
+      const { servicio, pg } = crear();
+      (pg.queryOne as Mock)
+        .mockResolvedValueOnce({ ...envio, estado: 'enviada' })
+        .mockResolvedValueOnce({ total: 1 });
+      await servicio.avanzarEstadoEnvio('e1', 'empresa-1', 'enviada');
+      expect((pg.queryOne as Mock).mock.calls[1][1]).toEqual(['o1', ['enviada', 'entregada']]);
+    });
+  });
+
+  it('debe listar envios de una empresa', async () => {
+    const { servicio, pg } = crear();
+    (pg.query as Mock).mockResolvedValue([envio]);
+    await expect(servicio.deEmpresa('empresa-1')).resolves.toEqual([envio]);
   });
 
   describe('listar', () => {

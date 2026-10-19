@@ -1,12 +1,18 @@
 import type { Mock } from 'vitest';
 import 'reflect-metadata';
-import { EstadoOrdenController, EnviosAdminController } from './estado-orden.controller';
+import {
+  EstadoOrdenController,
+  EnviosAdminController,
+  EnviosEmpresaController,
+  EnviosFlotaController,
+} from './estado-orden.controller';
 import type { EnviosService } from './envios.service';
 import { DomainError, ROLES } from '@core/shared';
 
 const orden = { id: 'o-1', estado: 'enviada' };
 const envio = { id: 'e-1', order_id: 'o-1', estado: 'en_preparacion' };
 const logistica = { user_id: 'u-l', email: 'l@core.local', rol: ROLES.LOGISTICA };
+const empresario = { user_id: 'u-e', email: 'e@core.local', rol: ROLES.EMPRESARIO, tenant_id: 'empresa-1' };
 
 function fabricar(): { envios: Record<string, Mock>; controller: EstadoOrdenController } {
   const envios = { avanzarEstadoOrden: vi.fn(), listar: vi.fn() };
@@ -51,5 +57,49 @@ describe('EnviosAdminController (api/v1/admin/envios, R-U-10/11)', () => {
 
   it('debe exigir rol admin', () => {
     expect(Reflect.getMetadata('roles_requeridos', EnviosAdminController.prototype.listar)).toEqual([ROLES.ADMIN]);
+  });
+});
+
+describe('EnviosEmpresaController', () => {
+  it('lista y asigna envios dentro de la empresa activa', async () => {
+    const envios = {
+      deEmpresa: vi.fn().mockResolvedValue([envio]),
+      asignarProveedor: vi.fn().mockResolvedValue(envio),
+    };
+    const controller = new EnviosEmpresaController(envios as never);
+    await expect(controller.listar(empresario as never)).resolves.toEqual([envio]);
+    await expect(controller.asignar(
+      'e-1', { proveedor_tipo: 'empresa' }, empresario as never,
+    )).resolves.toEqual(envio);
+    expect(envios.asignarProveedor).toHaveBeenCalledWith(
+      'e-1', 'empresa-1', 'empresa', 'u-e',
+    );
+  });
+
+  it('rechaza listar o asignar sin empresa activa', async () => {
+    const controller = new EnviosEmpresaController({} as never);
+    expect(() => controller.listar({} as never)).toThrow(DomainError);
+    expect(() => controller.asignar('e-1', { proveedor_tipo: 'plataforma' }, {} as never))
+      .toThrow(DomainError);
+  });
+});
+
+describe('EnviosFlotaController', () => {
+  it('avanza un envio dentro del tenant de la flota', async () => {
+    const envios = { avanzarEstadoEnvio: vi.fn().mockResolvedValue(envio) };
+    const controller = new EnviosFlotaController(envios as never);
+    await expect(controller.avanzar(
+      'e-1', { estado: 'entregada', motivo: 'recibido' },
+      { ...logistica, tenant_id: 'flota-1' } as never,
+    )).resolves.toEqual(envio);
+    expect(envios.avanzarEstadoEnvio).toHaveBeenCalledWith(
+      'e-1', 'flota-1', 'entregada', 'recibido',
+    );
+  });
+
+  it('rechaza avanzar sin tenant de flota', () => {
+    const controller = new EnviosFlotaController({} as never);
+    expect(() => controller.avanzar('e-1', { estado: 'enviada' }, logistica as never))
+      .toThrow(DomainError);
   });
 });
