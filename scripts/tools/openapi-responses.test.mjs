@@ -15,6 +15,7 @@ const SERVICIOS_MIGRADOS = [
   'logistics-service',
   'commissions-service',
   'stores-service',
+  'storage-service',
 ];
 
 test('debe documentar schema de éxito en los servicios migrados cuando se exporta OpenAPI', () => {
@@ -27,7 +28,8 @@ test('debe documentar schema de éxito en los servicios migrados cuando se expor
     for (const [ruta, operaciones] of Object.entries(documento.paths ?? {})) {
       for (const [metodo, operacion] of Object.entries(operaciones)) {
         const exito = operacion.responses?.['200'] ?? operacion.responses?.['201'];
-        if (!exito?.content) {
+        const sinContenido = operacion.responses?.['204'] !== undefined;
+        if (!exito?.content && !sinContenido) {
           faltantes.push(`${metodo.toUpperCase()} ${ruta}`);
         }
       }

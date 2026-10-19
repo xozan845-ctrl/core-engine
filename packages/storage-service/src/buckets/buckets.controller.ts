@@ -1,9 +1,10 @@
 import { Body, Controller, Get, Post } from '@nestjs/common';
-import { ApiBearerAuth, ApiOperation, ApiProperty, ApiResponse, ApiTags } from '@nestjs/swagger';
+import { ApiBearerAuth, ApiCreatedResponse, ApiOkResponse, ApiOperation, ApiProperty, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { IsInt, IsOptional, IsPositive } from 'class-validator';
 import { ROLES, Roles, UsuarioActual, UsuarioContexto } from '@core/shared';
 import { requerirTenant } from '../tenant';
 import { BucketsService, EstadoBucket } from './buckets.service';
+import { EstadoBucketResponseDto } from './buckets.response.dto';
 
 export class ConfigurarBucketRequestDto {
   @ApiProperty({
@@ -28,6 +29,7 @@ export class BucketsController {
     summary: 'Estado del almacenamiento del tenant (bucket, cuota, uso)',
     description: 'Crea el bucket del tenant de forma perezosa la primera vez.',
   })
+  @ApiOkResponse({ type: EstadoBucketResponseDto, description: 'Estado del bucket del tenant' })
   async estado(@UsuarioActual() usuario: UsuarioContexto): Promise<EstadoBucket> {
     return this.buckets.asegurar(requerirTenant(usuario));
   }
@@ -35,6 +37,7 @@ export class BucketsController {
   @Post('bucket')
   @Roles(ROLES.ADMIN)
   @ApiOperation({ summary: 'Asegurar el bucket del tenant y fijar su cuota (admin)' })
+  @ApiCreatedResponse({ type: EstadoBucketResponseDto, description: 'Bucket asegurado' })
   @ApiResponse({ status: 400, description: 'Cuota invalida (CUOTA_INVALIDA/CUOTA_MENOR_AL_USO)' })
   async configurar(
     @Body() dto: ConfigurarBucketRequestDto,
