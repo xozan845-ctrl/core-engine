@@ -41,4 +41,8 @@ export class EmpresasService {
     if (!empresa) throw new NotFoundError('Empresa', empresaId);
     return empresa;
   }
+
+  async obtener(empresaId: string): Promise<Empresa | null> {
+    return this.pg.queryOne<Empresa>(`SELECT * FROM identity.empresas WHERE id=$1`, [empresaId]);
+  }
 }

@@ -4032,6 +4032,130 @@
         ]
       }
     },
+    "/api/v1/empresarios/me/envios": {
+      "get": {
+        "operationId": "EnviosEmpresaController_listar",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/EnvioResponseDto"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Listar envíos de la empresa activa",
+        "tags": [
+          "Logística empresarial"
+        ]
+      }
+    },
+    "/api/v1/empresarios/me/envios/{id}/asignacion": {
+      "post": {
+        "operationId": "EnviosEmpresaController_asignar",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "description": "Id del envío",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AsignarProveedorRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EnvioResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Elegir flota para un envío de modalidad híbrida",
+        "tags": [
+          "Logística empresarial"
+        ]
+      }
+    },
+    "/api/v1/envios/{id}/estado": {
+      "patch": {
+        "operationId": "EnviosFlotaController_avanzar",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "description": "Id del envío",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AvanzarEnvioRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EnvioResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Avanzar un envío asignado a la flota activa",
+        "tags": [
+          "Logística"
+        ]
+      }
+    },
     "/api/v1/inteligencia/mapa-calor": {
       "get": {
         "operationId": "MetricasController_getMapaCalor",
@@ -10340,6 +10464,44 @@
           "vendedores"
         ]
       },
+      "EmpresaResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "nombre": {
+            "type": "string"
+          },
+          "modalidad_logistica": {
+            "type": "string",
+            "enum": [
+              "plataforma",
+              "propia",
+              "hibrida"
+            ]
+          },
+          "estado": {
+            "type": "string"
+          },
+          "creado_por": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "creado_en": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "nombre",
+          "modalidad_logistica",
+          "estado",
+          "creado_por",
+          "creado_en"
+        ]
+      },
       "RegistroRequestDto": {
         "type": "object",
         "properties": {
@@ -10667,44 +10829,6 @@
           "modalidad_logistica"
         ]
       },
-      "EmpresaResponseDto": {
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "string",
-            "format": "uuid"
-          },
-          "nombre": {
-            "type": "string"
-          },
-          "modalidad_logistica": {
-            "type": "string",
-            "enum": [
-              "plataforma",
-              "propia",
-              "hibrida"
-            ]
-          },
-          "estado": {
-            "type": "string"
-          },
-          "creado_por": {
-            "type": "string",
-            "format": "uuid"
-          },
-          "creado_en": {
-            "type": "string"
-          }
-        },
-        "required": [
-          "id",
-          "nombre",
-          "modalidad_logistica",
-          "estado",
-          "creado_por",
-          "creado_en"
-        ]
-      },
       "CrearVendedorRequestDto": {
         "type": "object",
         "properties": {
@@ -10876,6 +11000,32 @@
             "description": "Id de la orden asociada",
             "format": "uuid"
           },
+          "empresa_id": {
+            "type": "string",
+            "description": "Empresa propietaria de las líneas despachadas",
+            "format": "uuid"
+          },
+          "modalidad_logistica": {
+            "type": "string",
+            "enum": [
+              "plataforma",
+              "propia",
+              "hibrida"
+            ]
+          },
+          "proveedor_tipo": {
+            "type": "string",
+            "enum": [
+              "plataforma",
+              "empresa"
+            ],
+            "nullable": true
+          },
+          "proveedor_tenant_id": {
+            "type": "object",
+            "format": "uuid",
+            "nullable": true
+          },
           "estado": {
             "type": "string",
             "description": "Estado del envío",
@@ -10896,9 +11046,115 @@
           "id",
           "guia",
           "order_id",
+          "empresa_id",
+          "modalidad_logistica",
+          "proveedor_tipo",
+          "proveedor_tenant_id",
           "estado",
           "creado_en",
           "monto"
+        ]
+      },
+      "EnvioResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Id de la guía de despacho",
+            "format": "uuid"
+          },
+          "guia": {
+            "type": "string",
+            "description": "Número de guía",
+            "example": "BGH-ABC123-DEF456"
+          },
+          "order_id": {
+            "type": "string",
+            "description": "Id de la orden asociada",
+            "format": "uuid"
+          },
+          "empresa_id": {
+            "type": "string",
+            "description": "Empresa propietaria de las líneas despachadas",
+            "format": "uuid"
+          },
+          "modalidad_logistica": {
+            "type": "string",
+            "enum": [
+              "plataforma",
+              "propia",
+              "hibrida"
+            ]
+          },
+          "proveedor_tipo": {
+            "type": "string",
+            "enum": [
+              "plataforma",
+              "empresa"
+            ],
+            "nullable": true
+          },
+          "proveedor_tenant_id": {
+            "type": "object",
+            "format": "uuid",
+            "nullable": true
+          },
+          "estado": {
+            "type": "string",
+            "description": "Estado del envío",
+            "example": "en_preparacion"
+          },
+          "creado_en": {
+            "type": "string",
+            "description": "Fecha de creación (ISO 8601 UTC)",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "guia",
+          "order_id",
+          "empresa_id",
+          "modalidad_logistica",
+          "proveedor_tipo",
+          "proveedor_tenant_id",
+          "estado",
+          "creado_en"
+        ]
+      },
+      "AsignarProveedorRequestDto": {
+        "type": "object",
+        "properties": {
+          "proveedor_tipo": {
+            "type": "string",
+            "enum": [
+              "plataforma",
+              "empresa"
+            ],
+            "description": "Flota que atenderá el envío híbrido"
+          }
+        },
+        "required": [
+          "proveedor_tipo"
+        ]
+      },
+      "AvanzarEnvioRequestDto": {
+        "type": "object",
+        "properties": {
+          "estado": {
+            "type": "string",
+            "enum": [
+              "enviada",
+              "entregada",
+              "cancelada"
+            ]
+          },
+          "motivo": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "estado"
         ]
       },
       "PuntoCalorDto": {

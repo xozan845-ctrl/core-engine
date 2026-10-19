@@ -42,6 +42,18 @@ export class EnvioResponseDto {
   @ApiProperty({ description: 'Id de la orden asociada', format: 'uuid' })
   order_id: string;
 
+  @ApiProperty({ description: 'Empresa propietaria de las líneas despachadas', format: 'uuid' })
+  empresa_id: string;
+
+  @ApiProperty({ enum: ['plataforma', 'propia', 'hibrida'] })
+  modalidad_logistica: 'plataforma' | 'propia' | 'hibrida';
+
+  @ApiProperty({ enum: ['plataforma', 'empresa'], nullable: true })
+  proveedor_tipo: 'plataforma' | 'empresa' | null;
+
+  @ApiProperty({ format: 'uuid', nullable: true })
+  proveedor_tenant_id: string | null;
+
   @ApiProperty({ description: 'Estado del envío', example: 'en_preparacion' })
   estado: string;
 

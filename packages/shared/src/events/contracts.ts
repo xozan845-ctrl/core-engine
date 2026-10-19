@@ -86,6 +86,15 @@ export interface PaymentProcesadoData {
   metodo: 'simulado';
 }
 
+export interface ShipmentStartedData {
+  order_id: string;
+  empresa_id: string;
+  guia: string;
+  estado: 'en_preparacion';
+  proveedor_tipo: 'plataforma' | 'empresa' | null;
+  proveedor_tenant_id: string | null;
+}
+
 export interface OrderCompletadoData {
   order_id: string;
   entregado_en: string;

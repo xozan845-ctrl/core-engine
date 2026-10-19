@@ -196,12 +196,39 @@ CREATE INDEX IF NOT EXISTS idx_orders_carritos_inactivos ON orders.carritos (act
 CREATE TABLE IF NOT EXISTS logistics.envios (
   id         uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   guia       text NOT NULL UNIQUE,
-  order_id   uuid NOT NULL UNIQUE,
+  order_id   uuid NOT NULL,
+  empresa_id uuid NOT NULL,
+  modalidad_logistica text NOT NULL CHECK (modalidad_logistica IN ('plataforma', 'propia', 'hibrida')),
+  proveedor_tipo text CHECK (proveedor_tipo IN ('plataforma', 'empresa')),
+  proveedor_tenant_id uuid,
   monto_cents integer NOT NULL,
   estado     text NOT NULL DEFAULT 'en_preparacion' CHECK (estado IN (
                'en_preparacion', 'enviada', 'entregada', 'cancelada')),
-  creado_en  timestamptz NOT NULL DEFAULT NOW()
+  creado_en  timestamptz NOT NULL DEFAULT NOW(),
+  UNIQUE (order_id, empresa_id)
 );
+ALTER TABLE logistics.envios DROP CONSTRAINT IF EXISTS envios_order_id_key;
+ALTER TABLE logistics.envios ADD COLUMN IF NOT EXISTS empresa_id uuid;
+ALTER TABLE logistics.envios ADD COLUMN IF NOT EXISTS modalidad_logistica text;
+ALTER TABLE logistics.envios ADD COLUMN IF NOT EXISTS proveedor_tipo text;
+ALTER TABLE logistics.envios ADD COLUMN IF NOT EXISTS proveedor_tenant_id uuid;
+CREATE UNIQUE INDEX IF NOT EXISTS idx_envios_orden_empresa ON logistics.envios (order_id, empresa_id);
+CREATE INDEX IF NOT EXISTS idx_envios_empresa ON logistics.envios (empresa_id, creado_en);
+CREATE INDEX IF NOT EXISTS idx_envios_proveedor ON logistics.envios (proveedor_tenant_id, creado_en);
+
+CREATE TABLE IF NOT EXISTS logistics.asignaciones_envio (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  envio_id uuid NOT NULL REFERENCES logistics.envios(id),
+  proveedor_tipo_anterior text CHECK (proveedor_tipo_anterior IN ('plataforma', 'empresa')),
+  proveedor_tipo_nuevo text NOT NULL CHECK (proveedor_tipo_nuevo IN ('plataforma', 'empresa')),
+  proveedor_tenant_id uuid NOT NULL,
+  origen text NOT NULL CHECK (origen IN ('automatica', 'empresario')),
+  actor_usuario_id uuid,
+  creado_en timestamptz NOT NULL DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS idx_asignaciones_envio ON logistics.asignaciones_envio (envio_id, creado_en);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_asignacion_automatica_unica
+  ON logistics.asignaciones_envio (envio_id) WHERE origen = 'automatica';
 
 CREATE TABLE IF NOT EXISTS logistics.eventos_procesados (
   event_id     uuid PRIMARY KEY,
