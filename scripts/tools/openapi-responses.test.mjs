@@ -12,6 +12,7 @@ import { repoRoot } from '../engine/lib/paths.mjs';
 const SERVICIOS_MIGRADOS = [
   'catalog-service',
   'finance-service',
+  'field-service',
   'identity-service',
   'logistics-service',
   'market-intelligence-service',
@@ -32,7 +33,8 @@ test('debe documentar schema de éxito en los servicios migrados cuando se expor
       for (const [metodo, operacion] of Object.entries(operaciones)) {
         const exito = operacion.responses?.['200'] ?? operacion.responses?.['201'];
         const sinContenido = operacion.responses?.['204'] !== undefined;
-        if (!exito?.content && !sinContenido) {
+        const deleteSinCuerpo = metodo === 'delete' && exito !== undefined && !exito.content;
+        if (!exito?.content && !sinContenido && !deleteSinCuerpo) {
           faltantes.push(`${metodo.toUpperCase()} ${ruta}`);
         }
       }
