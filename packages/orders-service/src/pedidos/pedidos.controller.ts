@@ -1,5 +1,5 @@
 import { Body, Controller, Get, Param, Post, Query } from '@nestjs/common';
-import { ApiBearerAuth, ApiOperation, ApiParam, ApiQuery, ApiTags } from '@nestjs/swagger';
+import { ApiBearerAuth, ApiCreatedResponse, ApiOkResponse, ApiOperation, ApiParam, ApiQuery, ApiTags } from '@nestjs/swagger';
 import {
   Roles,
   ROLES,
@@ -10,6 +10,11 @@ import { CreateOrderCommand } from './commands/create-order.command';
 import { CreateOrderCommandHandler } from './handlers/create-order-command.handler';
 import { OrderViewRepository, OrderView, ComisionVista } from './queries/order-view.repository';
 import { PedidosService } from './pedidos.service';
+import {
+  ComisionVistaResponseDto,
+  OrderViewResponseDto,
+  TimelineEventoResponseDto,
+} from './orders.response.dto';
 
 @ApiTags('Pedidos')
 @ApiBearerAuth()
@@ -25,6 +30,7 @@ export class PedidosController {
   @Post()
   @Roles(ROLES.COMPRADOR)
   @ApiOperation({ summary: 'Crear una orden desde el carrito (comprador)' })
+  @ApiCreatedResponse({ type: OrderViewResponseDto, description: 'Orden creada' })
   async crear(
     @Body() comando: CreateOrderCommand,
     @UsuarioActual() usuario: UsuarioContexto,
@@ -38,6 +44,7 @@ export class PedidosController {
   @ApiOperation({ summary: 'Listar todas las órdenes (admin)' })
   @ApiQuery({ name: 'estado', required: false })
   @ApiQuery({ name: 'limite', required: false, type: Number })
+  @ApiOkResponse({ type: [OrderViewResponseDto], description: 'Órdenes registradas' })
   async todas(
     @Query('estado') estado?: string,
     @Query('limite') limite?: number,
@@ -50,6 +57,7 @@ export class PedidosController {
   @Roles(ROLES.VENDEDOR)
   @ApiOperation({ summary: 'Órdenes del vendedor autenticado (mis ventas)' })
   @ApiQuery({ name: 'estado', required: false })
+  @ApiOkResponse({ type: [OrderViewResponseDto], description: 'Ventas del vendedor' })
   async misVentas(
     @Query('estado') estado?: string,
     @UsuarioActual() usuario?: UsuarioContexto,
@@ -63,6 +71,7 @@ export class PedidosController {
   @ApiOperation({ summary: 'Comisiones por periodo (vendedor/admin)' })
   @ApiQuery({ name: 'periodo', required: false })
   @ApiQuery({ name: 'vendedorId', required: false, description: 'Solo admin' })
+  @ApiOkResponse({ type: [ComisionVistaResponseDto], description: 'Comisiones por periodo' })
   async comisiones(
     @Query('periodo') periodo?: string,
     @UsuarioActual() usuario?: UsuarioContexto,
@@ -78,6 +87,7 @@ export class PedidosController {
   @ApiOperation({ summary: 'Órdenes de una tienda (vendedor dueño o admin)' })
   @ApiParam({ name: 'tiendaId', description: 'Id de la tienda' })
   @ApiQuery({ name: 'estado', required: false })
+  @ApiOkResponse({ type: [OrderViewResponseDto], description: 'Órdenes de la tienda' })
   async porTienda(
     @Param('tiendaId') tiendaId: string,
     @Query('estado') estado?: string,
@@ -95,6 +105,7 @@ export class PedidosController {
   @Roles(ROLES.COMPRADOR)
   @ApiOperation({ summary: 'Historial de órdenes del comprador autenticado' })
   @ApiQuery({ name: 'estado', required: false })
+  @ApiOkResponse({ type: [OrderViewResponseDto], description: 'Órdenes del comprador' })
   async misOrdenes(
     @Query('estado') estado?: string,
     @UsuarioActual() usuario?: UsuarioContexto,
@@ -107,6 +118,7 @@ export class PedidosController {
   @Roles(ROLES.COMPRADOR, ROLES.VENDEDOR, ROLES.ADMIN)
   @ApiOperation({ summary: 'Estado/detalle de una orden (dueño o admin)' })
   @ApiParam({ name: 'id', description: 'Id de la orden' })
+  @ApiOkResponse({ type: OrderViewResponseDto, description: 'Detalle de la orden' })
   async detalle(
     @Param('id') id: string,
     @UsuarioActual() usuario: UsuarioContexto,
@@ -119,6 +131,7 @@ export class PedidosController {
   @Roles(ROLES.COMPRADOR, ROLES.VENDEDOR, ROLES.ADMIN)
   @ApiOperation({ summary: 'Timeline de eventos de la orden (Event Sourcing)' })
   @ApiParam({ name: 'id', description: 'Id de la orden' })
+  @ApiOkResponse({ type: [TimelineEventoResponseDto], description: 'Timeline de la orden' })
   async timeline(
     @Param('id') id: string,
     @UsuarioActual() usuario: UsuarioContexto,

@@ -3924,7 +3924,14 @@ export const OPENAPI_AGREGADO = {
         },
         "responses": {
           "201": {
-            "description": ""
+            "description": "Orden creada",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OrderViewResponseDto"
+                }
+              }
+            }
           }
         },
         "security": [
@@ -3951,7 +3958,17 @@ export const OPENAPI_AGREGADO = {
         ],
         "responses": {
           "200": {
-            "description": ""
+            "description": "Órdenes del comprador",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/OrderViewResponseDto"
+                  }
+                }
+              }
+            }
           }
         },
         "security": [
@@ -3988,7 +4005,17 @@ export const OPENAPI_AGREGADO = {
         ],
         "responses": {
           "200": {
-            "description": ""
+            "description": "Órdenes registradas",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/OrderViewResponseDto"
+                  }
+                }
+              }
+            }
           }
         },
         "security": [
@@ -4017,7 +4044,17 @@ export const OPENAPI_AGREGADO = {
         ],
         "responses": {
           "200": {
-            "description": ""
+            "description": "Ventas del vendedor",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/OrderViewResponseDto"
+                  }
+                }
+              }
+            }
           }
         },
         "security": [
@@ -4055,7 +4092,17 @@ export const OPENAPI_AGREGADO = {
         ],
         "responses": {
           "200": {
-            "description": ""
+            "description": "Comisiones por periodo",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ComisionVistaResponseDto"
+                  }
+                }
+              }
+            }
           }
         },
         "security": [
@@ -4093,7 +4140,17 @@ export const OPENAPI_AGREGADO = {
         ],
         "responses": {
           "200": {
-            "description": ""
+            "description": "Órdenes de la tienda",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/OrderViewResponseDto"
+                  }
+                }
+              }
+            }
           }
         },
         "security": [
@@ -4123,7 +4180,14 @@ export const OPENAPI_AGREGADO = {
         ],
         "responses": {
           "200": {
-            "description": ""
+            "description": "Detalle de la orden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OrderViewResponseDto"
+                }
+              }
+            }
           }
         },
         "security": [
@@ -4153,7 +4217,17 @@ export const OPENAPI_AGREGADO = {
         ],
         "responses": {
           "200": {
-            "description": ""
+            "description": "Timeline de la orden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/TimelineEventoResponseDto"
+                  }
+                }
+              }
+            }
           }
         },
         "security": [
@@ -4173,7 +4247,14 @@ export const OPENAPI_AGREGADO = {
         "parameters": [],
         "responses": {
           "200": {
-            "description": ""
+            "description": "Carrito del comprador",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CarritoResponseDto"
+                }
+              }
+            }
           }
         },
         "security": [
@@ -4191,7 +4272,14 @@ export const OPENAPI_AGREGADO = {
         "parameters": [],
         "responses": {
           "200": {
-            "description": ""
+            "description": "Carrito vacío",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CarritoResponseDto"
+                }
+              }
+            }
           }
         },
         "security": [
@@ -4221,7 +4309,14 @@ export const OPENAPI_AGREGADO = {
         },
         "responses": {
           "201": {
-            "description": ""
+            "description": "Item agregado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CarritoResponseDto"
+                }
+              }
+            }
           }
         },
         "security": [
@@ -4261,7 +4356,14 @@ export const OPENAPI_AGREGADO = {
         },
         "responses": {
           "200": {
-            "description": ""
+            "description": "Carrito actualizado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CarritoResponseDto"
+                }
+              }
+            }
           }
         },
         "security": [
@@ -4289,7 +4391,14 @@ export const OPENAPI_AGREGADO = {
         ],
         "responses": {
           "200": {
-            "description": ""
+            "description": "Carrito actualizado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CarritoResponseDto"
+                }
+              }
+            }
           }
         },
         "security": [
@@ -7985,6 +8094,206 @@ export const OPENAPI_AGREGADO = {
           "errores_frecuentes"
         ]
       },
+      "ItemOrdenResponseDto": {
+        "type": "object",
+        "properties": {
+          "oferta_id": {
+            "type": "string",
+            "description": "Id de la oferta",
+            "format": "uuid"
+          },
+          "sku": {
+            "type": "string",
+            "description": "SKU del producto",
+            "example": "SKU-001"
+          },
+          "producto_nombre": {
+            "type": "string",
+            "description": "Nombre del producto"
+          },
+          "cantidad": {
+            "type": "number",
+            "description": "Cantidad pedida",
+            "example": 2
+          },
+          "precio_unitario_cents": {
+            "type": "number",
+            "description": "Precio unitario de venta en centavos",
+            "example": 115000
+          },
+          "vendedor_id": {
+            "type": "string",
+            "description": "Id del vendedor",
+            "format": "uuid"
+          },
+          "tienda_id": {
+            "type": "string",
+            "description": "Id de la tienda",
+            "format": "uuid"
+          }
+        },
+        "required": [
+          "oferta_id",
+          "sku",
+          "producto_nombre",
+          "cantidad",
+          "precio_unitario_cents",
+          "vendedor_id",
+          "tienda_id"
+        ]
+      },
+      "OrderViewResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Id de la orden",
+            "format": "uuid"
+          },
+          "vendedor_id": {
+            "type": "string",
+            "description": "Id del vendedor",
+            "format": "uuid"
+          },
+          "comprador_id": {
+            "type": "string",
+            "description": "Id del comprador",
+            "format": "uuid"
+          },
+          "tienda_id": {
+            "type": "string",
+            "description": "Id de la tienda",
+            "format": "uuid"
+          },
+          "estado": {
+            "type": "string",
+            "description": "Estado de la orden",
+            "example": "pagada"
+          },
+          "total_cents": {
+            "type": "number",
+            "description": "Total en centavos",
+            "example": 230000
+          },
+          "comision_cents": {
+            "type": "number",
+            "description": "Comisión en centavos",
+            "example": 27600
+          },
+          "moneda": {
+            "type": "string",
+            "description": "Moneda",
+            "example": "C$"
+          },
+          "items": {
+            "description": "Líneas de la orden",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ItemOrdenResponseDto"
+            }
+          },
+          "direccion_envio": {
+            "type": "object",
+            "description": "Dirección de envío",
+            "nullable": true
+          },
+          "creado_en": {
+            "type": "string",
+            "description": "Fecha de creación (ISO 8601 UTC)",
+            "format": "date-time"
+          },
+          "actualizado_en": {
+            "type": "string",
+            "description": "Última actualización (ISO 8601 UTC)",
+            "format": "date-time"
+          },
+          "pagada_en": {
+            "type": "object",
+            "description": "Fecha de pago (ISO 8601 UTC)",
+            "nullable": true,
+            "format": "date-time"
+          },
+          "enviada_en": {
+            "type": "object",
+            "description": "Fecha de envío (ISO 8601 UTC)",
+            "nullable": true,
+            "format": "date-time"
+          },
+          "entregada_en": {
+            "type": "object",
+            "description": "Fecha de entrega (ISO 8601 UTC)",
+            "nullable": true,
+            "format": "date-time"
+          },
+          "cancelada_en": {
+            "type": "object",
+            "description": "Fecha de cancelación (ISO 8601 UTC)",
+            "nullable": true,
+            "format": "date-time"
+          },
+          "devuelta_en": {
+            "type": "object",
+            "description": "Fecha de devolución (ISO 8601 UTC)",
+            "nullable": true,
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "vendedor_id",
+          "comprador_id",
+          "tienda_id",
+          "estado",
+          "total_cents",
+          "comision_cents",
+          "moneda",
+          "items",
+          "creado_en",
+          "actualizado_en"
+        ]
+      },
+      "HistoriaEventoResponseDto": {
+        "type": "object",
+        "properties": {
+          "event_id": {
+            "type": "string",
+            "description": "Id del evento",
+            "format": "uuid"
+          },
+          "aggregate_id": {
+            "type": "string",
+            "description": "Id del agregado (orden)",
+            "format": "uuid"
+          },
+          "tipo": {
+            "type": "string",
+            "description": "Tipo de evento",
+            "example": "OrderCreatedEvent"
+          },
+          "payload": {
+            "type": "object",
+            "description": "Payload del evento"
+          },
+          "version": {
+            "type": "number",
+            "description": "Versión del agregado",
+            "example": 1
+          },
+          "creado_en": {
+            "type": "string",
+            "description": "Fecha del evento (ISO 8601 UTC)",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "event_id",
+          "aggregate_id",
+          "tipo",
+          "payload",
+          "version",
+          "creado_en"
+        ]
+      },
       "ItemOrdenRequestDto": {
         "type": "object",
         "properties": {
@@ -8021,6 +8330,178 @@ export const OPENAPI_AGREGADO = {
             "example": false
           }
         }
+      },
+      "ComisionVistaResponseDto": {
+        "type": "object",
+        "properties": {
+          "vendedor_id": {
+            "type": "string",
+            "description": "Id del vendedor",
+            "format": "uuid"
+          },
+          "periodo": {
+            "type": "string",
+            "description": "Periodo (YYYY-MM)",
+            "example": "2026-10"
+          },
+          "ordenes": {
+            "type": "number",
+            "description": "Órdenes del periodo",
+            "example": 12
+          },
+          "total_ventas_cents": {
+            "type": "number",
+            "description": "Ventas del periodo en centavos",
+            "example": 1380000
+          },
+          "total_comision_cents": {
+            "type": "number",
+            "description": "Comisiones del periodo en centavos",
+            "example": 165600
+          },
+          "actualizado_en": {
+            "type": "string",
+            "description": "Última actualización (ISO 8601 UTC)",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "vendedor_id",
+          "periodo",
+          "ordenes",
+          "total_ventas_cents",
+          "total_comision_cents",
+          "actualizado_en"
+        ]
+      },
+      "TimelineEventoResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "number",
+            "description": "Secuencia del evento",
+            "example": 3
+          },
+          "tipo": {
+            "type": "string",
+            "description": "Tipo de evento",
+            "example": "OrderStatusUpdatedEvent"
+          },
+          "payload": {
+            "type": "object",
+            "description": "Payload del evento"
+          },
+          "version": {
+            "type": "number",
+            "description": "Versión del agregado",
+            "example": 3
+          },
+          "creado_en": {
+            "type": "string",
+            "description": "Fecha del evento (ISO 8601 UTC)",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "tipo",
+          "payload",
+          "version",
+          "creado_en"
+        ]
+      },
+      "CarritoItemResponseDto": {
+        "type": "object",
+        "properties": {
+          "oferta_id": {
+            "type": "string",
+            "description": "Id de la oferta",
+            "format": "uuid"
+          },
+          "cantidad": {
+            "type": "number",
+            "description": "Cantidad",
+            "example": 2
+          },
+          "id": {
+            "type": "string",
+            "description": "Id de la oferta (alias enriquecido)",
+            "format": "uuid"
+          },
+          "tienda_id": {
+            "type": "string",
+            "description": "Id de la tienda",
+            "format": "uuid"
+          },
+          "vendedor_id": {
+            "type": "string",
+            "description": "Id del vendedor",
+            "format": "uuid"
+          },
+          "sku": {
+            "type": "string",
+            "description": "SKU del producto",
+            "example": "SKU-001"
+          },
+          "producto_nombre": {
+            "type": "string",
+            "description": "Nombre del producto"
+          },
+          "precio_venta": {
+            "type": "string",
+            "description": "Precio de venta en córdobas con dos decimales",
+            "example": "1150.00"
+          },
+          "stock": {
+            "type": "number",
+            "description": "Stock disponible",
+            "example": 10
+          },
+          "estado": {
+            "type": "string",
+            "description": "Estado de la oferta",
+            "example": "activa"
+          }
+        },
+        "required": [
+          "oferta_id",
+          "cantidad",
+          "id",
+          "tienda_id",
+          "vendedor_id",
+          "sku",
+          "producto_nombre",
+          "precio_venta",
+          "stock",
+          "estado"
+        ]
+      },
+      "CarritoResponseDto": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "description": "Items del carrito",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CarritoItemResponseDto"
+            }
+          },
+          "total": {
+            "type": "string",
+            "description": "Total del carrito en córdobas con dos decimales",
+            "example": "2300.00"
+          },
+          "expira_en": {
+            "type": "object",
+            "description": "Expiración del carrito (ISO 8601 UTC); null si está vacío",
+            "nullable": true,
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "items",
+          "total"
+        ]
       },
       "AgregarItemRequestDto": {
         "type": "object",
