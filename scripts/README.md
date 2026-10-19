@@ -135,6 +135,9 @@ La suite `microservices-ci-contract` deriva la matriz esperada de `SERVICES` y
 `SERVICE_TEST_EXCEPTIONS` (`config/project.mjs`). Así, agregar un servicio sin
 incorporarlo al build/test raíz, omitir su configuración Vitest o mantener una
 excepción después de crear sus specs convierte la deriva en un fallo de CI.
+También compara `config/coverage.mjs` con el baseline de
+`docs/rules/test/06-estandares-cobertura.md` para que ningún umbral baje
+(R-COV-1).
 
 ## Reporte de cobertura
 
