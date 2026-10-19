@@ -19,11 +19,33 @@ CREATE TABLE IF NOT EXISTS identity.usuarios (
   nombre          text NOT NULL,
   correo          text NOT NULL UNIQUE,
   contrasena_hash text NOT NULL,
-  rol             text NOT NULL CHECK (rol IN ('admin', 'vendedor', 'comprador', 'logistica', 'coordinador', 'supervisor', 'operativo')),
+  rol             text NOT NULL CHECK (rol IN ('super_admin', 'admin', 'empresario', 'vendedor', 'comprador', 'logistica', 'coordinador', 'supervisor', 'operativo')),
   tenant_id       uuid,
   personal_id     uuid,
   creado_en       timestamptz NOT NULL DEFAULT NOW()
 );
+
+CREATE TABLE IF NOT EXISTS identity.empresas (
+  id                  uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  nombre              text NOT NULL CHECK (char_length(trim(nombre)) BETWEEN 2 AND 160),
+  modalidad_logistica text NOT NULL CHECK (modalidad_logistica IN ('plataforma', 'propia', 'hibrida')),
+  estado              text NOT NULL DEFAULT 'activa' CHECK (estado IN ('activa', 'suspendida', 'inactiva')),
+  creado_por          uuid NOT NULL REFERENCES identity.usuarios(id),
+  creado_en           timestamptz NOT NULL DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS identity.empresa_miembros (
+  empresa_id                uuid NOT NULL REFERENCES identity.empresas(id),
+  usuario_id                uuid NOT NULL REFERENCES identity.usuarios(id),
+  rol                       text NOT NULL CHECK (rol IN ('empresario', 'vendedor')),
+  participacion_porcentaje  integer CHECK (participacion_porcentaje BETWEEN 0 AND 100),
+  estado                    text NOT NULL DEFAULT 'activo' CHECK (estado IN ('activo', 'suspendido', 'inactivo')),
+  creado_en                 timestamptz NOT NULL DEFAULT NOW(),
+  PRIMARY KEY (empresa_id, usuario_id),
+  CHECK ((rol = 'vendedor' AND participacion_porcentaje IS NOT NULL) OR
+         (rol = 'empresario' AND participacion_porcentaje IS NULL))
+);
+CREATE INDEX IF NOT EXISTS idx_empresa_miembros_usuario ON identity.empresa_miembros (usuario_id, estado);
 
 -- ── catalog --------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS catalog.productos (

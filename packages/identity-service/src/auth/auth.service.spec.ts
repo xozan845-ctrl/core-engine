@@ -85,7 +85,7 @@ describe('AuthService (sesiones JWT)', () => {
         nombre: 'Ana',
         correo: 'ana@core.test',
         contrasena: 'secreta123',
-        rol: ROLES.VENDEDOR,
+        rol: ROLES.EMPRESARIO,
       });
 
       expect(usuarios.crear).toHaveBeenCalledWith({
@@ -106,7 +106,7 @@ describe('AuthService (sesiones JWT)', () => {
         nombre: 'Ana',
         correo: 'ana@core.test',
         contrasena: 'secreta123',
-        rol: ROLES.VENDEDOR,
+        rol: ROLES.EMPRESARIO,
       });
       expect(sesiones.crear).toHaveBeenCalledTimes(1);
       const [usuarioId, jti, expira] = sesiones.crear.mock.calls[0];

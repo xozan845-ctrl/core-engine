@@ -37,7 +37,7 @@ describe('constants (reglas de negocio y configuracion)', () => {
   });
 
   it('debe exponer los roles registrables y los de logistica', () => {
-    expect(ROLES_REGISTRABLES).toEqual([ROLES.VENDEDOR, ROLES.COMPRADOR]);
+    expect(ROLES_REGISTRABLES).toEqual([ROLES.EMPRESARIO, ROLES.COMPRADOR]);
     expect(ROLES_LOGISTICA).toContain(ROLES.ADMIN);
     expect(ROLES_LOGISTICA).toContain(ROLES.LOGISTICA);
     expect(ROLES_LOGISTICA).toContain(ROLES.OPERATIVO);

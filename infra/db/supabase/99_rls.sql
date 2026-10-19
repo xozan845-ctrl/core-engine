@@ -15,6 +15,23 @@
 --   Liquidaciones: admin gestion y cierre | vendedor solo las suyas | comprador --
 
 -- ── catalog.productos ───────────────────────────────────────────────────
+ALTER TABLE identity.empresas ENABLE ROW LEVEL SECURITY;
+CREATE POLICY empresas_super_admin ON identity.empresas FOR ALL TO authenticated
+  USING (auth.rol() IN ('super_admin', 'admin')) WITH CHECK (auth.rol() IN ('super_admin', 'admin'));
+CREATE POLICY empresas_miembros ON identity.empresas FOR SELECT TO authenticated
+  USING (id::text = (auth.jwt() ->> 'tenant_id'));
+CREATE POLICY empresas_empresario_insert ON identity.empresas FOR INSERT TO authenticated
+  WITH CHECK (auth.rol() = 'empresario' AND creado_por = auth.uid());
+
+ALTER TABLE identity.empresa_miembros ENABLE ROW LEVEL SECURITY;
+CREATE POLICY miembros_super_admin ON identity.empresa_miembros FOR ALL TO authenticated
+  USING (auth.rol() IN ('super_admin', 'admin')) WITH CHECK (auth.rol() IN ('super_admin', 'admin'));
+CREATE POLICY miembros_empresa ON identity.empresa_miembros FOR SELECT TO authenticated
+  USING (empresa_id::text = (auth.jwt() ->> 'tenant_id'));
+CREATE POLICY miembros_empresario_insert ON identity.empresa_miembros FOR INSERT TO authenticated
+  WITH CHECK (auth.rol() = 'empresario' AND (usuario_id = auth.uid() OR
+    empresa_id::text = (auth.jwt() ->> 'tenant_id')));
+
 ALTER TABLE catalog.productos ENABLE ROW LEVEL SECURITY;
 CREATE POLICY productos_admin_all ON catalog.productos
   FOR ALL TO authenticated USING (auth.rol() = 'admin') WITH CHECK (auth.rol() = 'admin');

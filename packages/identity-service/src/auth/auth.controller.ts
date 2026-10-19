@@ -207,7 +207,7 @@ export class AuthController {
     if (!usuario) throw new UnauthorizedError('Token invalido o ausente.');
     // Solo un administrador puede dar de alta usuarios (sustituye la Cloud
     // Function protegida de Firebase). Evita la creación arbitraria de roles.
-    if (usuario.rol !== ROLES.ADMIN) {
+    if (![ROLES.SUPER_ADMIN, ROLES.ADMIN].includes(usuario.rol as typeof ROLES.SUPER_ADMIN | typeof ROLES.ADMIN)) {
       throw new ForbiddenError('Solo un administrador puede crear usuarios.');
     }
     if (ROLES_LOGISTICA.includes(dto.rol) && !dto.tenant_id) {

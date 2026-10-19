@@ -31,9 +31,11 @@ export const POLITICAS_RUTAS: PoliticaRuta[] = [
     { patron: /^\/api\/v1\/catalog\/productos\/[^/]+$/, metodos: ['GET'], roles: null },
     { patron: /^\/api\/v1\/tiendas\/[^/]+$/, metodos: ['GET'], roles: null },
     // usuarios: gestion administrativa (sustituye a Firebase gestion-usuarios)
-    { patron: /^\/api\/v1\/usuarios(\/|$)/, metodos: ['*'], roles: [ROLES.ADMIN] },
+    { patron: /^\/api\/v1\/usuarios(\/|$)/, metodos: ['*'], roles: [ROLES.SUPER_ADMIN, ROLES.ADMIN] },
     // creacion administrativa de usuarios (roles de tienda y logistica)
-    { patron: /^\/api\/v1\/auth\/crear-usuario$/, metodos: ['POST'], roles: [ROLES.ADMIN] },
+    { patron: /^\/api\/v1\/auth\/crear-usuario$/, metodos: ['POST'], roles: [ROLES.SUPER_ADMIN, ROLES.ADMIN] },
+    { patron: /^\/api\/v1\/empresas$/, metodos: ['POST'], roles: [ROLES.EMPRESARIO] },
+    { patron: /^\/api\/v1\/empresas\//, metodos: ['*'], roles: [ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.EMPRESARIO, ROLES.VENDEDOR] },
     // autenticado
     { patron: /^\/api\/v1\/auth\/me$/, metodos: ['GET'], roles: null }, // exige token (se valida abajo)
     // logout: exige un access token valido (cualquier rol); revoca el refresh (R-GW-4)
