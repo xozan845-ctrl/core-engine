@@ -6,4 +6,4 @@ Este directorio define las reglas para la documentación técnica y de negocio d
 
 | Archivo | Sufijo ID | Contenido |
 |---|---|---|
-| [`01-reglas-documentacion.md`](./01-reglas-documentacion.md) | `R-DO` | Estructura de `README.md`, comentarios, ADRs y variables de entorno. |
+| [`01-reglas-documentacion.md`](./01-reglas-documentacion.md) | `R-DO` | Estructura de `README.md`, comentarios, ADRs, variables de entorno y contrato OpenAPI (taxonomía de superficies). |

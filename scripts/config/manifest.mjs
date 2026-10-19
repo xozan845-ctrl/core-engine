@@ -19,6 +19,10 @@ export const requiredSuites = [
     file: 'rules/microservices/ci-contract.test.mjs',
   },
   {
+    id: 'openapi-contract',
+    file: 'rules/contract/openapi.test.mjs',
+  },
+  {
     id: 'observability-tracing',
     file: 'rules/observability/tracing.test.mjs',
   },

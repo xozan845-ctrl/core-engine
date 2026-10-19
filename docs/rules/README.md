@@ -52,7 +52,7 @@ rules/
 | `ci/` | ✅ **activa** (sin auditar) | [`ci/README.md`](./ci/README.md) | CI: gatillos push/PR (incluye `staging`), entorno, evidencia (IDs `R-CI/R-EN`) |
 | `cd/` | ✅ **activa** (2026-10-01) | [`cd/README.md`](./cd/README.md) | Deploy continuo en Dockploy: un proyecto con environments `staging`/`produccion` (desarrollo local, R-CD-9), artefactos de release, gate de producción, smoke y rollback (IDs `R-CD` 1–13, venidas de `ci/03`) |
 | `ai/` | ✅ **activa** (nueva) | [`ai/README.md`](./ai/README.md) | Reglas obligatorias para IAs: contexto, atomicidad, uso correcto de tools y estricto apego al workflow (IDs `R-IA`) |
-| `documentation/` | ✅ **activa** (nueva) | [`documentation/README.md`](./documentation/README.md) | Reglas sobre documentación como código: READMEs, ADRs, variables de entorno y comentarios (IDs `R-DO`) |
+| `documentation/` | ✅ **activa** (nueva) | [`documentation/README.md`](./documentation/README.md) | Reglas sobre documentación como código: READMEs, ADRs, variables de entorno, contrato OpenAPI y taxonomía de superficies (IDs `R-DO`) |
 | `_meta/` | ⚠️ **no normativo** | [`_meta/README.md`](./_meta/README.md) | Derivados: checklist, snapshots de auditoría, histórico |
 
 ## Convenciones globales (aplican a todas las áreas)
