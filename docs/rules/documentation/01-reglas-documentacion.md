@@ -13,6 +13,7 @@ La documentación es el único activo que sobrevive a las migraciones y refactor
 | R-DO-5 | **Decisiones Arquitectónicas (ADRs):** Cualquier cambio estructural, adición de nuevas herramientas (ej. Stryker, Playwright, RabbitMQ) o desvío de los patrones de Core Engine DEBE registrarse como un ADR en `decisiones.md` o en la carpeta equivalente, justificando el contexto, las opciones y la decisión. |
 | R-DO-6 | **Documentación de API:** La fuente de verdad del contrato de la API es la especificación OpenAPI (Swagger). Los cambios en request/response DTOs deben ir acompañados de los decoradores `@ApiProperty` correspondientes. |
 | R-DO-7 | **Evidencia en Meta:** Todo hallazgo de auditoría o checklist DEBE ir en `docs/rules/_meta/`. Prohibido incrustar snapshots transitorios o resultados de CI en los READMEs estructurales. |
+| R-DO-8 | **Taxonomía y superficies del contrato:** toda ruta pública expuesta por el gateway DEBE empezar por `/api/v1/`; toda ruta interna servicio→servicio DEBE empezar por `/internal/`; el contrato público (`docs/api/core-engine.openapi.json`) no puede contener rutas `/internal/` y el interno no puede contener rutas `/api/v1/`; todo controlador `internal*` DEBE usar `ClaveInternaGuard` (R-DS-5). La verificación ejecutable vive en `scripts/rules/contract/openapi.test.mjs`. |
 
 ## Verificación en PRs
 

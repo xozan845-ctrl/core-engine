@@ -48,6 +48,8 @@ scripts/
 │   ├── microservices/
 │   │   ├── structure.test.mjs      # R-CD-3/4/14
 │   │   └── ci-contract.test.mjs    # R-MS-1, R-QA-1, R-COV-2/4, R-CI-5
+│   ├── contract/
+│   │   └── openapi.test.mjs        # R-DO-8, R-DS-5: superficies y contrato OpenAPI
 │   └── observability/
 │       ├── tracing.test.mjs        # R-OB-1/2
 │       └── telemetry.test.mjs      # R-TM-1..7
