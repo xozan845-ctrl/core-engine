@@ -26,6 +26,7 @@ export const ROLES_LOGISTICA: Rol[] = [
 /** Cabeceras de contexto propagadas por el gateway a los servicios. */
 export const TENANT_HEADER = 'x-tenant';
 export const PERSONAL_HEADER = 'x-user-personal';
+export const PARTICIPACION_HEADER = 'x-user-participacion';
 
 /**
  * RN-01: el vendedor fija un margen entre 0 y 90 % (expresado en enteros, ej. 15 = 15 %).

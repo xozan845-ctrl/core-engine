@@ -20,6 +20,8 @@ export interface OfertaExterna {
   id: string;
   tienda_id: string;
   vendedor_id: string;
+  empresa_id: string;
+  participacion_porcentaje: number;
   producto_id: string;
   sku: string;
   producto_nombre: string;
@@ -85,6 +87,8 @@ export class CreateOrderCommandHandler {
         precio_unitario_cents: precioUnitario.centavos,
         vendedor_id: oferta.vendedor_id,
         tienda_id: oferta.tienda_id,
+        empresa_id: oferta.empresa_id,
+        participacion_porcentaje: oferta.participacion_porcentaje,
       });
     }
 

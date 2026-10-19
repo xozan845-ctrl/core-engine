@@ -21,9 +21,11 @@ CREATE TABLE IF NOT EXISTS identity.usuarios (
   contrasena_hash text NOT NULL,
   rol             text NOT NULL CHECK (rol IN ('super_admin', 'admin', 'empresario', 'vendedor', 'comprador', 'logistica', 'coordinador', 'supervisor', 'operativo')),
   tenant_id       uuid,
+  participacion_porcentaje integer CHECK (participacion_porcentaje BETWEEN 0 AND 100),
   personal_id     uuid,
   creado_en       timestamptz NOT NULL DEFAULT NOW()
 );
+ALTER TABLE identity.usuarios ADD COLUMN IF NOT EXISTS participacion_porcentaje integer CHECK (participacion_porcentaje BETWEEN 0 AND 100);
 
 CREATE TABLE IF NOT EXISTS identity.empresas (
   id                  uuid PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -109,6 +111,7 @@ CREATE TABLE IF NOT EXISTS stores.tiendas (
   id         uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   empresa_id uuid NOT NULL,
   propietario_usuario_id uuid NOT NULL,
+  participacion_porcentaje integer NOT NULL CHECK (participacion_porcentaje BETWEEN 0 AND 100),
   vendedor_id uuid NOT NULL,
   nombre     text NOT NULL,
   descripcion text NOT NULL DEFAULT '',
@@ -116,6 +119,7 @@ CREATE TABLE IF NOT EXISTS stores.tiendas (
 );
 ALTER TABLE stores.tiendas ADD COLUMN IF NOT EXISTS empresa_id uuid;
 ALTER TABLE stores.tiendas ADD COLUMN IF NOT EXISTS propietario_usuario_id uuid;
+ALTER TABLE stores.tiendas ADD COLUMN IF NOT EXISTS participacion_porcentaje integer;
 CREATE INDEX IF NOT EXISTS idx_tiendas_empresa ON stores.tiendas (empresa_id);
 CREATE INDEX IF NOT EXISTS idx_tiendas_propietario ON stores.tiendas (propietario_usuario_id);
 

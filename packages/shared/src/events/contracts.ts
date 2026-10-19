@@ -45,6 +45,8 @@ export interface ItemOrden {
   precio_unitario_cents: number; // precio de venta final (RN-01)
   vendedor_id: string;
   tienda_id: string;
+  empresa_id: string;
+  participacion_porcentaje: number;
 }
 
 export interface OrdenData {

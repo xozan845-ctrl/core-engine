@@ -126,6 +126,8 @@ describe('CreateOrderCommandHandler (CQRS + Event Sourcing)', () => {
     id: 'oferta-1',
     tienda_id: 'tienda-1',
     vendedor_id: 'vendedor-1',
+    empresa_id: 'empresa-1',
+    participacion_porcentaje: 25,
     producto_id: 'prod-1',
     sku: 'ACE-001',
     producto_nombre: 'Aceite 1L',
@@ -148,6 +150,12 @@ describe('CreateOrderCommandHandler (CQRS + Event Sourcing)', () => {
     const datos = appendCall[3] as { total_cents: number; items: { cantidad: number }[] };
     expect(datos.total_cents).toBe(115000); // 1 x C$ 1 150 (base 1000 x 1,15)
     expect(datos.items).toHaveLength(1);
+    expect(datos.items[0]).toMatchObject({
+      empresa_id: 'empresa-1',
+      tienda_id: 'tienda-1',
+      vendedor_id: 'vendedor-1',
+      participacion_porcentaje: 25,
+    });
   });
 
   it('total con cantidades multiples: 2 unidades = C$ 2 300', async () => {

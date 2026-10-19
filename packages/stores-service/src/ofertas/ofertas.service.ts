@@ -17,6 +17,8 @@ export interface Oferta {
   id: string;
   tienda_id: string;
   vendedor_id: string;
+  empresa_id: string;
+  participacion_porcentaje: number;
   producto_id: string;
   sku: string;
   producto_nombre: string;
@@ -32,6 +34,8 @@ interface OfertaRow {
   id: string;
   tienda_id: string;
   vendedor_id: string;
+  empresa_id: string;
+  participacion_porcentaje: number;
   producto_id: string;
   sku: string;
   producto_nombre: string;
@@ -67,7 +71,7 @@ export class OfertasService {
 
   async encontrarPorId(id: string): Promise<Oferta | null> {
     const fila = await this.pg.queryOne<OfertaRow>(
-      `SELECT o.id, o.tienda_id, t.vendedor_id, o.producto_id, o.sku, o.producto_nombre,
+      `SELECT o.id, o.tienda_id, t.vendedor_id, t.empresa_id, t.participacion_porcentaje, o.producto_id, o.sku, o.producto_nombre,
               o.margen, o.precio_base_cents, o.precio_venta_cents, o.stock, o.estado, o.creado_en
        FROM stores.ofertas o
        JOIN stores.tiendas t ON t.id = o.tienda_id
@@ -80,7 +84,7 @@ export class OfertasService {
   async porIds(ids: string[]): Promise<Oferta[]> {
     if (ids.length === 0) return [];
     const filas = await this.pg.query<OfertaRow>(
-      `SELECT o.id, o.tienda_id, t.vendedor_id, o.producto_id, o.sku, o.producto_nombre,
+      `SELECT o.id, o.tienda_id, t.vendedor_id, t.empresa_id, t.participacion_porcentaje, o.producto_id, o.sku, o.producto_nombre,
               o.margen, o.precio_base_cents, o.precio_venta_cents, o.stock, o.estado, o.creado_en
        FROM stores.ofertas o
        JOIN stores.tiendas t ON t.id = o.tienda_id
@@ -104,7 +108,7 @@ export class OfertasService {
       .then((r) => r?.n ?? 0);
     const offset = (pagina - 1) * limite;
     const filas = await this.pg.query<OfertaRow>(
-      `SELECT o.id, o.tienda_id, t.vendedor_id, o.producto_id, o.sku, o.producto_nombre,
+      `SELECT o.id, o.tienda_id, t.vendedor_id, t.empresa_id, t.participacion_porcentaje, o.producto_id, o.sku, o.producto_nombre,
               o.margen, o.precio_base_cents, o.precio_venta_cents, o.stock, o.estado, o.creado_en
        FROM stores.ofertas o
        JOIN stores.tiendas t ON t.id = o.tienda_id
@@ -117,7 +121,7 @@ export class OfertasService {
 
   async deTienda(tiendaId: string): Promise<Oferta[]> {
     const filas = await this.pg.query<OfertaRow>(
-      `SELECT o.id, o.tienda_id, t.vendedor_id, o.producto_id, o.sku, o.producto_nombre,
+      `SELECT o.id, o.tienda_id, t.vendedor_id, t.empresa_id, t.participacion_porcentaje, o.producto_id, o.sku, o.producto_nombre,
               o.margen, o.precio_base_cents, o.precio_venta_cents, o.stock, o.estado, o.creado_en
        FROM stores.ofertas o
        JOIN stores.tiendas t ON t.id = o.tienda_id
@@ -260,6 +264,8 @@ export class OfertasService {
       id: fila.id,
       tienda_id: fila.tienda_id,
       vendedor_id: fila.vendedor_id,
+      empresa_id: fila.empresa_id,
+      participacion_porcentaje: fila.participacion_porcentaje,
       producto_id: fila.producto_id,
       sku: fila.sku,
       producto_nombre: fila.producto_nombre,
