@@ -66,7 +66,7 @@ se reutiliza).
 | G-5 | Test de contrato en verde. | ⏸ sin suites de contrato (R-C-7). |
 | G-6 | E2E de flujos críticos en verde antes de release (puede ser etiqueta `release`, no cada PR). | ⏸ sin job E2E; lo más cercano hoy es el smoke local `docker compose -f docker-compose.dev.yml up -d --build` + `npm run demo`. |
 | G-7 | Lint **y** build sin errores: `npm run lint` (ESLint, alcance `packages/*/src/**/*.ts`, job `lint`) + `npm run build` (job `build`). | ✅ |
-| G-8 | Swagger spec sincronizado (R-C-7): `git diff --exit-code` tras el export. | ⏸ sin paso de export en CI. |
+| G-8 | Swagger spec sincronizado (R-C-7): `git diff --exit-code` tras el export. | ✅ `npm run swagger:export` + `git diff --exit-code docs/openapi docs/api packages/api-gateway/src/openapi.agregado.ts` en el job `build`. |
 
 > `security-gate` (job `npm audit --audit-level=high` que encadena los demás) no
 > es un `G-*`: es la regla R-QA-6.

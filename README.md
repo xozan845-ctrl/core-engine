@@ -192,9 +192,9 @@ separa las rutas `/api/v1/**` de las `/internal/**` y escribe dos artefactos:
 npm run swagger:export   # regenera docs/openapi/*.json + los dos agregados de docs/api/
 ```
 
-Cobertura actual: **165/165 endpoints** en 10 servicios, repartidos en
-**146 operaciones públicas sobre 109 rutas** y **19 operaciones internas sobre
-19 rutas**.
+Cobertura actual: **165/165 operaciones documentadas** en 10 servicios:
+**146 públicas** (139 con schema de respuesta + 7 sin contenido) y **19 internas**
+(todas con schema).
 
 ## Variables de entorno (`.env` en dev · `.env.production` en producción)
 
