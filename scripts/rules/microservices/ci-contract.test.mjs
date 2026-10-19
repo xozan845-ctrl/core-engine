@@ -1,5 +1,5 @@
 import { existsSync, readdirSync } from 'node:fs';
-import { join } from 'node:path';
+import { join, relative, sep } from 'node:path';
 import { defineSuite } from '../../engine/suite.mjs';
 import { readJson, readText, walkFiles } from '../../engine/lib/fs.mjs';
 import { repoRoot } from '../../engine/lib/paths.mjs';
@@ -214,6 +214,54 @@ export default defineSuite({
         problems,
         [],
         `Umbrales por debajo del baseline o desalineados (R-COV-1):\n${problems.join('\n')}`,
+      );
+    });
+
+    test('R-COV-2: los services/consumers sin spec coinciden con el baseline', () => {
+      const workspaces = [
+        'shared',
+        ...SERVICES.filter((service) => !SERVICE_TEST_EXCEPTIONS.includes(service)),
+      ];
+      const baseline = new Set(
+        readJson(join(repoRoot, 'scripts', 'config', 'spec-baseline.json')),
+      );
+      const problems = [];
+      const missing = new Set();
+
+      for (const workspace of workspaces) {
+        const sourceDir = join(packageDir(workspace), 'src');
+        if (!existsSync(sourceDir)) continue;
+
+        for (const file of walkFiles(
+          sourceDir,
+          (name) => /\.(service|consumer)\.ts$/.test(name) && !name.endsWith('.spec.ts'),
+        )) {
+          const path = relative(repoRoot, file).split(sep).join('/');
+          const spec = file.replace(/\.ts$/, '.spec.ts');
+
+          if (!existsSync(spec)) {
+            missing.add(path);
+            if (!baseline.has(path)) {
+              problems.push(`${path}: sin spec y no está en el baseline`);
+            }
+          } else if (baseline.has(path)) {
+            problems.push(`${path}: ya tiene spec; elimina la excepción del baseline`);
+          }
+        }
+      }
+
+      for (const path of baseline) {
+        if (!existsSync(join(repoRoot, path))) {
+          problems.push(`${path}: el baseline apunta a un archivo que no existe`);
+        } else if (!missing.has(path)) {
+          problems.push(`${path}: baseline obsoleto (ya no falta el spec)`);
+        }
+      }
+
+      assert.deepEqual(
+        problems,
+        [],
+        `Specs faltantes fuera del baseline (R-COV-2):\n${problems.join('\n')}`,
       );
     });
 
