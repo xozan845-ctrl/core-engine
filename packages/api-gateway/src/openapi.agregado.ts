@@ -2550,36 +2550,6 @@ export const OPENAPI_AGREGADO = {
         ]
       }
     },
-    "/api/v1/finanzas/proyecciones/{id}": {
-      "get": {
-        "operationId": "FinanzasController_detalle",
-        "parameters": [
-          {
-            "name": "id",
-            "required": true,
-            "in": "path",
-            "description": "Id de la proyección",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": ""
-          }
-        },
-        "security": [
-          {
-            "bearer": []
-          }
-        ],
-        "summary": "Detalle de una proyección",
-        "tags": [
-          "Finanzas · Modelo"
-        ]
-      }
-    },
     "/api/v1/finanzas/punto-equilibrio": {
       "get": {
         "operationId": "FinanzasController_puntoEquilibrio",
@@ -2697,6 +2667,36 @@ export const OPENAPI_AGREGADO = {
           }
         ],
         "summary": "Plan a 24 meses (8.6 + 8.9)",
+        "tags": [
+          "Finanzas · Modelo"
+        ]
+      }
+    },
+    "/api/v1/finanzas/proyecciones/{id}": {
+      "get": {
+        "operationId": "FinanzasController_detalle",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "description": "Id de la proyección",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Detalle de una proyección",
         "tags": [
           "Finanzas · Modelo"
         ]

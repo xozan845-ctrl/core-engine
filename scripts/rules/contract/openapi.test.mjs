@@ -17,6 +17,7 @@ import { readJson, readText, walkFiles } from '../../engine/lib/fs.mjs';
 
 const RE_SUPERFICIE = /^(?:api\/v1|internal)(?:\/|$)/;
 const RE_CONTROLLER = /@Controller\(\s*(['"`])([^'"`]+)\1\s*\)/g;
+const RE_RUTA = /@(Get|Post|Patch|Put|Delete)\(\s*(?:['"`]([^'"`]*)['"`])?\s*\)/g;
 
 const controladores = walkFiles(
   join(repoRoot, 'packages'),
@@ -27,10 +28,57 @@ function prefijosDe(texto) {
   return [...texto.matchAll(RE_CONTROLLER)].map((match) => match[2]);
 }
 
+/** Divide el archivo por controlador y devuelve sus rutas en orden de declaración. */
+function rutasPorControlador(texto) {
+  const cabeceras = [...texto.matchAll(RE_CONTROLLER)];
+  return cabeceras.map((cabecera, indice) => {
+    const inicio = cabecera.index + cabecera[0].length;
+    const fin = indice + 1 < cabeceras.length ? cabeceras[indice + 1].index : texto.length;
+    const cuerpo = texto.slice(inicio, fin);
+    const rutas = [...cuerpo.matchAll(RE_RUTA)].map((ruta) => ({
+      metodo: ruta[1].toUpperCase(),
+      ruta: ruta[2] ?? '',
+    }));
+    return { prefijo: cabecera[2], rutas };
+  });
+}
+
+const segmentos = (ruta) => ruta.split('/').filter(Boolean);
+
+/** Detecta una ruta estática posterior que cae bajo una ruta paramétrica previa. */
+function rutasTapadas(prefijo, rutas) {
+  const tapadas = [];
+  for (let i = 0; i < rutas.length; i += 1) {
+    const anterior = rutas[i];
+    const segmentosAnterior = segmentos(anterior.ruta);
+    if (!segmentosAnterior.some((segmento) => segmento.startsWith(':'))) continue;
+
+    for (let j = i + 1; j < rutas.length; j += 1) {
+      const posterior = rutas[j];
+      if (posterior.metodo !== anterior.metodo) continue;
+      const segmentosPosterior = segmentos(posterior.ruta);
+      if (segmentosAnterior.length !== segmentosPosterior.length) continue;
+
+      const coincide = segmentosAnterior.every(
+        (segmento, indice) =>
+          segmento.startsWith(':') || segmento === segmentosPosterior[indice],
+      );
+      const esEstatica = !segmentosPosterior.some((segmento) => segmento.startsWith(':'));
+      if (coincide && esEstatica) {
+        tapadas.push(
+          `${anterior.metodo} ${prefijo}/${anterior.ruta} tapa ` +
+            `${posterior.metodo} ${prefijo}/${posterior.ruta}`,
+        );
+      }
+    }
+  }
+  return tapadas;
+}
+
 export default defineSuite({
   id: 'openapi-contract',
   area: 'documentation',
-  rules: ['R-DO-8', 'R-DS-5'],
+  rules: ['R-DO-8', 'R-DO-9', 'R-DS-5'],
   mode: 'repo',
   run: ({ test, assert }) => {
     test('R-DO-8: cada controlador declara una superficie /api/v1 o /internal', () => {
@@ -89,6 +137,24 @@ export default defineSuite({
         publicas,
         [],
         `El contrato interno mezcla rutas públicas (R-DO-8):\n${publicas.join('\n')}`,
+      );
+    });
+
+    test('R-DO-9: ninguna ruta estática queda tapada por una ruta con parámetro', () => {
+      const tapadas = [];
+
+      for (const archivo of controladores) {
+        for (const { prefijo, rutas } of rutasPorControlador(readText(archivo))) {
+          for (const tapada of rutasTapadas(prefijo, rutas)) {
+            tapadas.push(`${relative(repoRoot, archivo)}: ${tapada}`);
+          }
+        }
+      }
+
+      assert.deepEqual(
+        tapadas,
+        [],
+        `Rutas estáticas tapadas por un :param previo (R-DO-9):\n${tapadas.join('\n')}`,
       );
     });
 
