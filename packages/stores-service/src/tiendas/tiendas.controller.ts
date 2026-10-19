@@ -30,7 +30,9 @@ export class TiendasController {
   @ApiCreatedResponse({ type: TiendaResponseDto, description: 'Tienda creada' })
   async crear(@Body() dto: CrearTiendaRequestDto, @UsuarioActual() usuario: UsuarioContexto): Promise<Tienda> {
     if (!usuario.tenant_id) throw new NotFoundError('Empresa', 'activa');
-    return this.tiendas.crear(usuario.tenant_id, usuario.user_id, dto.nombre, dto.descripcion);
+    const participacion = usuario.rol === ROLES.EMPRESARIO ? 100 : usuario.participacion_porcentaje;
+    if (participacion === undefined) throw new NotFoundError('Participacion', 'del vendedor');
+    return this.tiendas.crear(usuario.tenant_id, usuario.user_id, participacion, dto.nombre, dto.descripcion);
   }
 
   @Get('me/tienda')

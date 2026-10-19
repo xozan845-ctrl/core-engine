@@ -9,6 +9,7 @@ export interface Usuario {
   rol: Rol;
   tenant_id?: string;
   personal_id?: string;
+  participacion_porcentaje?: number;
   creado_en: string;
 }
 
@@ -26,7 +27,7 @@ export class UsuariosService {
 
   async encontrarPorId(id: string): Promise<Usuario | null> {
     const fila = await this.pg.queryOne<UsuarioRow>(
-      `SELECT id, nombre, correo, rol, tenant_id, personal_id, creado_en FROM identity.usuarios WHERE id = $1`,
+      `SELECT id, nombre, correo, rol, tenant_id, personal_id, participacion_porcentaje, creado_en FROM identity.usuarios WHERE id = $1`,
       [id],
     );
     return fila ? this.sanear(fila) : null;
@@ -34,7 +35,7 @@ export class UsuariosService {
 
   async encontrarPorCorreo(correo: string): Promise<UsuarioRow | null> {
     return this.pg.queryOne<UsuarioRow>(
-      `SELECT id, nombre, correo, rol, tenant_id, personal_id, contrasena_hash, creado_en
+      `SELECT id, nombre, correo, rol, tenant_id, personal_id, participacion_porcentaje, contrasena_hash, creado_en
        FROM identity.usuarios WHERE LOWER(correo) = LOWER($1)`,
       [correo.trim()],
     );
@@ -89,10 +90,10 @@ export class UsuariosService {
       const existente = await client.query(`SELECT 1 FROM identity.usuarios WHERE LOWER(correo)=LOWER($1)`, [correo]);
       if (existente.rowCount) throw new ConflictError('Ya existe una cuenta con ese correo.');
       const result = await client.query<UsuarioRow>(
-        `INSERT INTO identity.usuarios (nombre, correo, contrasena_hash, rol, tenant_id)
-         VALUES ($1,$2,$3,'vendedor',$4)
-         RETURNING id, nombre, correo, rol, tenant_id, personal_id, creado_en`,
-        [datos.nombre.trim(), correo, hash, datos.empresa_id],
+        `INSERT INTO identity.usuarios (nombre, correo, contrasena_hash, rol, tenant_id, participacion_porcentaje)
+         VALUES ($1,$2,$3,'vendedor',$4,$5)
+         RETURNING id, nombre, correo, rol, tenant_id, personal_id, participacion_porcentaje, creado_en`,
+        [datos.nombre.trim(), correo, hash, datos.empresa_id, datos.participacion_porcentaje],
       );
       const usuario = result.rows[0];
       await client.query(
@@ -201,6 +202,8 @@ export class UsuariosService {
       rol: fila.rol,
       ...(fila.tenant_id ? { tenant_id: fila.tenant_id } : {}),
       ...(fila.personal_id ? { personal_id: fila.personal_id } : {}),
+      ...(fila.participacion_porcentaje !== undefined && fila.participacion_porcentaje !== null
+        ? { participacion_porcentaje: fila.participacion_porcentaje } : {}),
       creado_en: fila.creado_en,
     };
   }

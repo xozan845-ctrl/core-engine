@@ -12264,6 +12264,17 @@ export const OPENAPI_AGREGADO = {
             "description": "Id del vendedor",
             "format": "uuid"
           },
+          "empresa_id": {
+            "type": "string",
+            "description": "Empresa propietaria",
+            "format": "uuid"
+          },
+          "participacion_porcentaje": {
+            "type": "number",
+            "description": "Participación congelable del vendedor",
+            "minimum": 0,
+            "maximum": 100
+          },
           "producto_id": {
             "type": "string",
             "description": "Id del producto maestro",
@@ -12313,6 +12324,8 @@ export const OPENAPI_AGREGADO = {
           "id",
           "tienda_id",
           "vendedor_id",
+          "empresa_id",
+          "participacion_porcentaje",
           "producto_id",
           "sku",
           "producto_nombre",
@@ -12362,6 +12375,11 @@ export const OPENAPI_AGREGADO = {
             "description": "Usuario propietario operativo",
             "format": "uuid"
           },
+          "participacion_porcentaje": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 100
+          },
           "vendedor_id": {
             "type": "string",
             "description": "Id del vendedor dueño",
@@ -12386,6 +12404,7 @@ export const OPENAPI_AGREGADO = {
           "id",
           "empresa_id",
           "propietario_usuario_id",
+          "participacion_porcentaje",
           "vendedor_id",
           "nombre",
           "descripcion",

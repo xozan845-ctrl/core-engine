@@ -23,32 +23,33 @@ describe('TiendasService (multiples tiendas por empresa)', () => {
   describe('crear', () => {
     it('debe rechazar el nombre cuando tiene menos de 2 caracteres', async () => {
       const { servicio, pg } = crear();
-      await expect(servicio.crear('e1', 'v1', 'X')).rejects.toThrow(/entre 2 y 100/);
+      await expect(servicio.crear('e1', 'v1', 25, 'X')).rejects.toThrow(/entre 2 y 100/);
       expect(pg.queryOne).not.toHaveBeenCalled();
     });
 
     it('debe rechazar el nombre cuando supera los 100 caracteres', async () => {
       const { servicio } = crear();
-      await expect(servicio.crear('e1', 'v1', 'x'.repeat(101))).rejects.toThrow(DomainError);
+      await expect(servicio.crear('e1', 'v1', 25, 'x'.repeat(101))).rejects.toThrow(DomainError);
     });
 
     it('debe recortar el nombre y crear la tienda cuando todo es valido', async () => {
       const { servicio, pg } = crear();
       (pg.queryOne as Mock).mockResolvedValueOnce(tienda);
-      const creada = await servicio.crear('e1', 'v1', '  Mi tienda  ', '  venta  ');
+      const creada = await servicio.crear('e1', 'v1', 25, '  Mi tienda  ', '  venta  ');
       expect(creada.id).toBe('t1');
       const [sql, params] = (pg.queryOne as Mock).mock.calls[0];
       expect(sql).toContain('INSERT INTO stores.tiendas');
       expect(params[1]).toBe('e1');
       expect(params[2]).toBe('v1');
-      expect(params[3]).toBe('Mi tienda');
-      expect(params[4]).toBe('venta');
+      expect(params[3]).toBe(25);
+      expect(params[4]).toBe('Mi tienda');
+      expect(params[5]).toBe('venta');
     });
 
     it('debe lanzar DomainError cuando el INSERT no devuelve fila', async () => {
       const { servicio, pg } = crear();
       (pg.queryOne as Mock).mockResolvedValueOnce(null);
-      await expect(servicio.crear('e1', 'v1', 'Mi tienda')).rejects.toThrow(/no se pudo crear/i);
+      await expect(servicio.crear('e1', 'v1', 25, 'Mi tienda')).rejects.toThrow(/no se pudo crear/i);
     });
   });
 

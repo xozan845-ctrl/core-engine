@@ -95,7 +95,9 @@ export class OrderViewRepository {
       `SELECT id, vendedor_id, comprador_id, tienda_id, estado, total_cents, comision_cents, moneda,
               items_json, direccion_envio, creado_en, actualizado_en,
               pagada_en, enviada_en, entregada_en, cancelada_en, devuelta_en
-       FROM orders.orden_vista WHERE vendedor_id = $1${extra}
+       FROM orders.orden_vista
+       WHERE EXISTS (SELECT 1 FROM jsonb_array_elements(items_json) item
+                     WHERE item->>'vendedor_id' = $1)${extra}
        ORDER BY creado_en DESC LIMIT 100`,
       params,
     );
@@ -107,14 +109,17 @@ export class OrderViewRepository {
     let extra = estado ? ` AND estado = $2` : '';
     if (estado) params.push(estado);
     if (vendedorId) {
-      extra += ` AND vendedor_id = $${params.length + 1}`;
+      extra += ` AND EXISTS (SELECT 1 FROM jsonb_array_elements(items_json) item
+                             WHERE item->>'vendedor_id' = $${params.length + 1})`;
       params.push(vendedorId);
     }
     const filas = await this.pg.query<OrderViewRow>(
       `SELECT id, vendedor_id, comprador_id, tienda_id, estado, total_cents, comision_cents, moneda,
               items_json, direccion_envio, creado_en, actualizado_en,
               pagada_en, enviada_en, entregada_en, cancelada_en, devuelta_en
-       FROM orders.orden_vista WHERE tienda_id = $1${extra}
+       FROM orders.orden_vista
+       WHERE EXISTS (SELECT 1 FROM jsonb_array_elements(items_json) item
+                     WHERE item->>'tienda_id' = $1)${extra}
        ORDER BY creado_en DESC LIMIT 100`,
       params,
     );

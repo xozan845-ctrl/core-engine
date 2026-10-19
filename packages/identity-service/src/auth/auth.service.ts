@@ -27,6 +27,7 @@ export interface Sesion {
     rol: string;
     tenant_id?: string;
     personal_id?: string;
+    participacion_porcentaje?: number;
   };
 }
 
@@ -135,6 +136,7 @@ export class AuthService {
       nombre: usuario.nombre,
       ...(usuario.tenant_id ? { tenant_id: usuario.tenant_id } : {}),
       ...(usuario.personal_id ? { personal_id: usuario.personal_id } : {}),
+      ...(usuario.participacion_porcentaje !== undefined ? { participacion_porcentaje: usuario.participacion_porcentaje } : {}),
     };
     const access = crearAccessToken(contexto, this.secreto, this.accessTtl);
     const refresh = crearRefreshToken(contexto, this.secreto, this.refreshTtl, jti);
@@ -149,6 +151,7 @@ export class AuthService {
         rol: usuario.rol,
         ...(usuario.tenant_id ? { tenant_id: usuario.tenant_id } : {}),
         ...(usuario.personal_id ? { personal_id: usuario.personal_id } : {}),
+        ...(usuario.participacion_porcentaje !== undefined ? { participacion_porcentaje: usuario.participacion_porcentaje } : {}),
       },
     };
   }

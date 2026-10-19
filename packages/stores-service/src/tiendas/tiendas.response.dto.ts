@@ -6,6 +6,7 @@ export class TiendaResponseDto {
 
   @ApiProperty({ description: 'Empresa propietaria', format: 'uuid' }) empresa_id: string;
   @ApiProperty({ description: 'Usuario propietario operativo', format: 'uuid' }) propietario_usuario_id: string;
+  @ApiProperty({ minimum: 0, maximum: 100 }) participacion_porcentaje: number;
 
   @ApiProperty({ description: 'Id del vendedor dueño', format: 'uuid' })
   vendedor_id: string;

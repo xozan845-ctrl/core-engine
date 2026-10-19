@@ -11,6 +11,9 @@ export class OfertaResponseDto {
   @ApiProperty({ description: 'Id del vendedor', format: 'uuid' })
   vendedor_id: string;
 
+  @ApiProperty({ description: 'Empresa propietaria', format: 'uuid' }) empresa_id: string;
+  @ApiProperty({ description: 'Participación congelable del vendedor', minimum: 0, maximum: 100 }) participacion_porcentaje: number;
+
   @ApiProperty({ description: 'Id del producto maestro', format: 'uuid' })
   producto_id: string;
 

@@ -8,6 +8,7 @@ import {
   Logger,
   TENANT_HEADER,
   PERSONAL_HEADER,
+  PARTICIPACION_HEADER,
 } from '@core/shared';
 
 export interface PoliticaRuta {
@@ -185,6 +186,7 @@ export class GatewayAuthMiddleware {
       if (payload.nombre) req.headers['x-user-nombre'] = payload.nombre;
       if (payload.tenant_id) req.headers[TENANT_HEADER] = payload.tenant_id;
       if (payload.personal_id) req.headers[PERSONAL_HEADER] = payload.personal_id;
+      if (payload.participacion_porcentaje !== undefined) req.headers[PARTICIPACION_HEADER] = String(payload.participacion_porcentaje);
 
       if (politica?.roles && !politica.roles.includes(payload.rol)) {
         this.logger.warn({ msg: 'acceso denegado por rol', ruta: req.originalUrl, rol: payload.rol });
