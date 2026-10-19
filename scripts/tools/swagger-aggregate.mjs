@@ -4,11 +4,13 @@
 // emite un modulo TypeScript generado dentro del gateway para que viaje en la
 // imagen Docker (el runtime no copia docs/). Se ejecuta desde
 // `npm run swagger:export` y lo verifica el gate G-8 (R-C-7, R-DO-6).
-import { readdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { mkdirSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { repoRoot as raiz } from '../engine/lib/paths.mjs';
 const dirSpecs = resolve(raiz, 'docs/openapi');
 const salida = resolve(raiz, 'packages/api-gateway/src/openapi.agregado.ts');
+// Copia JSON del agregado para repartir el contrato (frontend, Postman, etc.).
+const salidaJson = resolve(raiz, 'docs/api/core-engine.openapi.json');
 
 const ficheros = readdirSync(dirSpecs)
   .filter((f) => f.endsWith('.json'))
@@ -97,7 +99,10 @@ export const OPENAPI_AGREGADO = `;
 
 writeFileSync(salida, `${cabecera}${JSON.stringify(documento, null, 2)} as unknown as OpenAPIObject;\n`);
 
+mkdirSync(resolve(raiz, 'docs/api'), { recursive: true });
+writeFileSync(salidaJson, `${JSON.stringify(documento, null, 2)}\n`);
+
 const nPaths = Object.keys(paths).length;
 console.log(
-  `swagger-aggregate: ${ficheros.length} specs -> ${nPaths} rutas, ${Object.keys(schemas).length} schemas, ${tags.size} tags -> ${salida.replace(`${raiz}/`, '')}`,
+  `swagger-aggregate: ${ficheros.length} specs -> ${nPaths} rutas, ${Object.keys(schemas).length} schemas, ${tags.size} tags -> ${salida.replace(`${raiz}/`, '')} (+ ${salidaJson.replace(`${raiz}/`, '')})`,
 );
