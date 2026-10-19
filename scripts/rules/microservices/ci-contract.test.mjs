@@ -13,6 +13,34 @@ import {
 
 const packagesRoot = join(repoRoot, PACKAGES_DIR);
 const rootPackage = readJson(join(repoRoot, 'package.json'));
+const coverageDoc = join(
+  repoRoot,
+  'docs',
+  'rules',
+  'test',
+  '06-estandares-cobertura.md',
+);
+
+/**
+ * Extrae el baseline documentado de la tabla de umbrales por workspace. La
+ * tabla es la referencia normativa; `coverage.mjs` no puede quedar por debajo.
+ */
+function documentedCoverageThresholds() {
+  const thresholds = new Map();
+  for (const line of readText(coverageDoc).split('\n')) {
+    const match =
+      /^\s*\|\s*`([a-z0-9-]+)`\s*\|\s*(\d+)\s*\|\s*(\d+)\s*\|\s*(\d+)\s*\|\s*$/.exec(
+        line,
+      );
+    if (!match) continue;
+    thresholds.set(match[1], {
+      lines: Number(match[2]),
+      branches: Number(match[3]),
+      functions: Number(match[4]),
+    });
+  }
+  return thresholds;
+}
 
 const packageDir = (workspace) => join(packagesRoot, workspace);
 const packageJson = (workspace) =>
@@ -155,6 +183,38 @@ export default defineSuite({
         }
       }
       assert.deepEqual(problems, [], problems.join('\n'));
+    });
+
+    test('R-COV-1: la fuente central no queda por debajo del baseline documentado', () => {
+      const documented = documentedCoverageThresholds();
+      const problems = [];
+
+      for (const [workspace, floor] of documented) {
+        const current = COVERAGE_THRESHOLDS[workspace];
+        if (!current) {
+          problems.push(`${workspace}: documentado pero sin umbral central`);
+          continue;
+        }
+        for (const metric of ['lines', 'branches', 'functions']) {
+          if (current[metric] < floor[metric]) {
+            problems.push(
+              `${workspace}: ${metric} ${current[metric]} < baseline documentado ${floor[metric]}`,
+            );
+          }
+        }
+      }
+
+      for (const workspace of Object.keys(COVERAGE_THRESHOLDS)) {
+        if (!documented.has(workspace)) {
+          problems.push(`${workspace}: sin fila en la tabla de docs/rules/test/06`);
+        }
+      }
+
+      assert.deepEqual(
+        problems,
+        [],
+        `Umbrales por debajo del baseline o desalineados (R-COV-1):\n${problems.join('\n')}`,
+      );
     });
 
     test('R-COV-4: cada config Vitest aplica alcance y consume los thresholds centrales', () => {
