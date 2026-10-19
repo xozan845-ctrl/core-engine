@@ -1,8 +1,12 @@
 import { Controller, Get, Post, Param, Body, Query } from '@nestjs/common';
-import { ApiBearerAuth, ApiOperation, ApiParam, ApiProperty, ApiQuery, ApiTags } from '@nestjs/swagger';
+import { ApiBearerAuth, ApiCreatedResponse, ApiOkResponse, ApiOperation, ApiParam, ApiProperty, ApiQuery, ApiTags } from '@nestjs/swagger';
 import { IsIn, IsOptional, IsString, IsUUID } from 'class-validator';
 import { Roles, ROLES, NotFoundError } from '@core/shared';
 import { FacturacionService, Comprobante } from './facturacion.service';
+import {
+  ComprobanteResponseDto,
+  SerieComprobanteResponseDto,
+} from './facturacion.response.dto';
 
 export class EmitirComprobanteRequestDto {
   @ApiProperty({ description: 'Tipo de comprobante', enum: ['FACTURA', 'NOTA_CREDITO'] })
@@ -45,6 +49,7 @@ export class FacturacionController {
   @ApiQuery({ name: 'desde', required: false })
   @ApiQuery({ name: 'hasta', required: false })
   @ApiQuery({ name: 'estado', required: false })
+  @ApiOkResponse({ type: [ComprobanteResponseDto], description: 'Comprobantes fiscales' })
   async listar(
     @Query('desde') desde?: string,
     @Query('hasta') hasta?: string,
@@ -55,12 +60,14 @@ export class FacturacionController {
 
   @Get('series')
   @ApiOperation({ summary: 'Series de comprobantes' })
+  @ApiOkResponse({ type: [SerieComprobanteResponseDto], description: 'Series de comprobantes' })
   async series() {
     return this.facturacion.series();
   }
 
   @Post()
   @ApiOperation({ summary: 'Emitir un comprobante (factura o nota de crédito)' })
+  @ApiCreatedResponse({ type: ComprobanteResponseDto, description: 'Comprobante emitido' })
   async emitir(@Body() dto: EmitirComprobanteRequestDto): Promise<Comprobante> {
     return this.facturacion.emitir(dto.tipo, dto.orden_id, {
       cliente_id: dto.cliente_id,
@@ -72,6 +79,7 @@ export class FacturacionController {
   @Post(':id/anular')
   @ApiOperation({ summary: 'Anular un comprobante' })
   @ApiParam({ name: 'id', description: 'Id del comprobante' })
+  @ApiCreatedResponse({ type: ComprobanteResponseDto, description: 'Comprobante anulado' })
   async anular(@Param('id') id: string): Promise<Comprobante> {
     const comprobante = await this.facturacion.anular(id);
     if (!comprobante) throw new NotFoundError('Comprobante', id);

@@ -1838,7 +1838,17 @@ export const OPENAPI_AGREGADO = {
         "parameters": [],
         "responses": {
           "200": {
-            "description": ""
+            "description": "Plan de cuentas",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/CuentaResponseDto"
+                  }
+                }
+              }
+            }
           }
         },
         "security": [
@@ -1866,7 +1876,14 @@ export const OPENAPI_AGREGADO = {
         },
         "responses": {
           "201": {
-            "description": ""
+            "description": "Cuenta creada",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CuentaResponseDto"
+                }
+              }
+            }
           }
         },
         "security": [
@@ -1906,7 +1923,14 @@ export const OPENAPI_AGREGADO = {
         },
         "responses": {
           "201": {
-            "description": ""
+            "description": "Cuenta actualizada",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CuentaResponseDto"
+                }
+              }
+            }
           }
         },
         "security": [
@@ -1951,7 +1975,17 @@ export const OPENAPI_AGREGADO = {
         ],
         "responses": {
           "200": {
-            "description": ""
+            "description": "Asientos del periodo",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/AsientoResponseDto"
+                  }
+                }
+              }
+            }
           }
         },
         "security": [
@@ -1979,7 +2013,14 @@ export const OPENAPI_AGREGADO = {
         },
         "responses": {
           "201": {
-            "description": ""
+            "description": "Asiento registrado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AsientoResponseDto"
+                }
+              }
+            }
           }
         },
         "security": [
@@ -2009,7 +2050,14 @@ export const OPENAPI_AGREGADO = {
         ],
         "responses": {
           "201": {
-            "description": ""
+            "description": "Asiento anulado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AsientoResponseDto"
+                }
+              }
+            }
           }
         },
         "security": [
@@ -2055,7 +2103,14 @@ export const OPENAPI_AGREGADO = {
         ],
         "responses": {
           "200": {
-            "description": ""
+            "description": "Libro mayor de la cuenta",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LibroMayorResponseDto"
+                }
+              }
+            }
           }
         },
         "security": [
@@ -2092,7 +2147,17 @@ export const OPENAPI_AGREGADO = {
         ],
         "responses": {
           "200": {
-            "description": ""
+            "description": "Libro de ventas",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/LibroIvaResponseDto"
+                  }
+                }
+              }
+            }
           }
         },
         "security": [
@@ -2129,7 +2194,17 @@ export const OPENAPI_AGREGADO = {
         ],
         "responses": {
           "200": {
-            "description": ""
+            "description": "Libro de compras",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/LibroIvaResponseDto"
+                  }
+                }
+              }
+            }
           }
         },
         "security": [
@@ -2174,7 +2249,17 @@ export const OPENAPI_AGREGADO = {
         ],
         "responses": {
           "200": {
-            "description": ""
+            "description": "Comprobantes fiscales",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ComprobanteResponseDto"
+                  }
+                }
+              }
+            }
           }
         },
         "security": [
@@ -2202,7 +2287,14 @@ export const OPENAPI_AGREGADO = {
         },
         "responses": {
           "201": {
-            "description": ""
+            "description": "Comprobante emitido",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ComprobanteResponseDto"
+                }
+              }
+            }
           }
         },
         "security": [
@@ -2222,7 +2314,17 @@ export const OPENAPI_AGREGADO = {
         "parameters": [],
         "responses": {
           "200": {
-            "description": ""
+            "description": "Series de comprobantes",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/SerieComprobanteResponseDto"
+                  }
+                }
+              }
+            }
           }
         },
         "security": [
@@ -2252,7 +2354,14 @@ export const OPENAPI_AGREGADO = {
         ],
         "responses": {
           "201": {
-            "description": ""
+            "description": "Comprobante anulado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ComprobanteResponseDto"
+                }
+              }
+            }
           }
         },
         "security": [
@@ -2272,7 +2381,17 @@ export const OPENAPI_AGREGADO = {
         "parameters": [],
         "responses": {
           "200": {
-            "description": ""
+            "description": "Jurisdicciones",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/JurisdiccionResponseDto"
+                  }
+                }
+              }
+            }
           }
         },
         "security": [
@@ -2300,7 +2419,14 @@ export const OPENAPI_AGREGADO = {
         },
         "responses": {
           "201": {
-            "description": ""
+            "description": "Jurisdicción creada",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JurisdiccionResponseDto"
+                }
+              }
+            }
           }
         },
         "security": [
@@ -2329,7 +2455,17 @@ export const OPENAPI_AGREGADO = {
         ],
         "responses": {
           "200": {
-            "description": ""
+            "description": "Regímenes fiscales",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/RegimenFiscalResponseDto"
+                  }
+                }
+              }
+            }
           }
         },
         "security": [
@@ -2357,7 +2493,14 @@ export const OPENAPI_AGREGADO = {
         },
         "responses": {
           "201": {
-            "description": ""
+            "description": "Régimen creado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RegimenFiscalResponseDto"
+                }
+              }
+            }
           }
         },
         "security": [
@@ -2377,7 +2520,17 @@ export const OPENAPI_AGREGADO = {
         "parameters": [],
         "responses": {
           "200": {
-            "description": ""
+            "description": "Sujetos tributarios",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/SujetoTributarioResponseDto"
+                  }
+                }
+              }
+            }
           }
         },
         "security": [
@@ -2405,7 +2558,14 @@ export const OPENAPI_AGREGADO = {
         },
         "responses": {
           "201": {
-            "description": ""
+            "description": "Sujeto registrado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SujetoTributarioResponseDto"
+                }
+              }
+            }
           }
         },
         "security": [
@@ -2435,7 +2595,14 @@ export const OPENAPI_AGREGADO = {
         ],
         "responses": {
           "201": {
-            "description": ""
+            "description": "Sujeto dado de baja",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SujetoTributarioResponseDto"
+                }
+              }
+            }
           }
         },
         "security": [
@@ -2480,7 +2647,17 @@ export const OPENAPI_AGREGADO = {
         ],
         "responses": {
           "200": {
-            "description": ""
+            "description": "Declaraciones",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/DeclaracionResponseDto"
+                  }
+                }
+              }
+            }
           }
         },
         "security": [
@@ -2510,7 +2687,17 @@ export const OPENAPI_AGREGADO = {
         },
         "responses": {
           "201": {
-            "description": ""
+            "description": "Declaraciones generadas",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/DeclaracionResponseDto"
+                  }
+                }
+              }
+            }
           }
         },
         "security": [
@@ -2540,7 +2727,14 @@ export const OPENAPI_AGREGADO = {
         ],
         "responses": {
           "201": {
-            "description": ""
+            "description": "Declaración presentada",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DeclaracionResponseDto"
+                }
+              }
+            }
           }
         },
         "security": [
@@ -2570,7 +2764,14 @@ export const OPENAPI_AGREGADO = {
         ],
         "responses": {
           "201": {
-            "description": ""
+            "description": "Declaración pagada",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DeclaracionResponseDto"
+                }
+              }
+            }
           }
         },
         "security": [
@@ -2600,7 +2801,14 @@ export const OPENAPI_AGREGADO = {
         },
         "responses": {
           "201": {
-            "description": ""
+            "description": "Proyección creada",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProyeccionResponseDto"
+                }
+              }
+            }
           }
         },
         "security": [
@@ -2618,7 +2826,17 @@ export const OPENAPI_AGREGADO = {
         "parameters": [],
         "responses": {
           "200": {
-            "description": ""
+            "description": "Proyecciones",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ProyeccionResponseDto"
+                  }
+                }
+              }
+            }
           }
         },
         "security": [
@@ -2671,7 +2889,14 @@ export const OPENAPI_AGREGADO = {
         ],
         "responses": {
           "200": {
-            "description": ""
+            "description": "Punto de equilibrio",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PuntoEquilibrioResponseDto"
+                }
+              }
+            }
           }
         },
         "security": [
@@ -2700,7 +2925,14 @@ export const OPENAPI_AGREGADO = {
         ],
         "responses": {
           "200": {
-            "description": ""
+            "description": "KPIs financieros",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/KpisFinancierosResponseDto"
+                }
+              }
+            }
           }
         },
         "security": [
@@ -2720,7 +2952,14 @@ export const OPENAPI_AGREGADO = {
         "parameters": [],
         "responses": {
           "200": {
-            "description": ""
+            "description": "Estudios de sensibilidad",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SensibilidadEstudiosResponseDto"
+                }
+              }
+            }
           }
         },
         "security": [
@@ -2740,7 +2979,14 @@ export const OPENAPI_AGREGADO = {
         "parameters": [],
         "responses": {
           "200": {
-            "description": ""
+            "description": "Plan a 24 meses",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PlanBienalResponseDto"
+                }
+              }
+            }
           }
         },
         "security": [
@@ -2770,7 +3016,14 @@ export const OPENAPI_AGREGADO = {
         ],
         "responses": {
           "200": {
-            "description": ""
+            "description": "Proyección encontrada",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProyeccionResponseDto"
+                }
+              }
+            }
           }
         },
         "security": [
@@ -2807,7 +3060,14 @@ export const OPENAPI_AGREGADO = {
         ],
         "responses": {
           "200": {
-            "description": ""
+            "description": "Tablero financiero",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TableroResponseDto"
+                }
+              }
+            }
           }
         },
         "security": [
@@ -2836,7 +3096,14 @@ export const OPENAPI_AGREGADO = {
         ],
         "responses": {
           "200": {
-            "description": ""
+            "description": "Situación fiscal del vendedor",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VendedorFiscalResponseDto"
+                }
+              }
+            }
           }
         },
         "security": [
@@ -6611,6 +6878,248 @@ export const OPENAPI_AGREGADO = {
           "operaciones"
         ]
       },
+      "SujetoTributarioResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Id del sujeto",
+            "format": "uuid"
+          },
+          "jurisdiccion": {
+            "type": "string",
+            "description": "Jurisdicción",
+            "example": "NI"
+          },
+          "regimen_id": {
+            "type": "string",
+            "description": "Id del régimen",
+            "format": "uuid"
+          },
+          "regimen_nombre": {
+            "type": "string",
+            "description": "Nombre del régimen"
+          },
+          "razon_social": {
+            "type": "string",
+            "description": "Razón social"
+          },
+          "ruc": {
+            "type": "string",
+            "description": "RUC"
+          },
+          "es_plataforma": {
+            "type": "boolean",
+            "description": "¿Es la plataforma?",
+            "example": false
+          },
+          "estado": {
+            "type": "string",
+            "description": "Estado",
+            "enum": [
+              "ACTIVO",
+              "BAJA"
+            ],
+            "example": "ACTIVO"
+          },
+          "creado_en": {
+            "type": "string",
+            "description": "Fecha de creación (ISO 8601 UTC)",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "jurisdiccion",
+          "razon_social",
+          "es_plataforma",
+          "estado",
+          "creado_en"
+        ]
+      },
+      "DeclaracionResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Id de la declaración",
+            "format": "uuid"
+          },
+          "jurisdiccion": {
+            "type": "string",
+            "description": "Jurisdicción",
+            "example": "NI"
+          },
+          "tipo": {
+            "type": "string",
+            "description": "Tipo",
+            "enum": [
+              "IVA",
+              "IR",
+              "CUOTA_FIJA"
+            ],
+            "example": "IVA"
+          },
+          "periodo_inicio": {
+            "type": "string",
+            "description": "Inicio del periodo",
+            "format": "date"
+          },
+          "periodo_fin": {
+            "type": "string",
+            "description": "Fin del periodo",
+            "format": "date"
+          },
+          "base_gravada_cents": {
+            "type": "number",
+            "description": "Base gravada en centavos",
+            "example": 1150000
+          },
+          "iva_debitado_cents": {
+            "type": "number",
+            "description": "IVA debitado en centavos",
+            "example": 172500
+          },
+          "iva_credito_cents": {
+            "type": "number",
+            "description": "IVA crédito en centavos",
+            "example": 0
+          },
+          "iva_a_pagar_cents": {
+            "type": "number",
+            "description": "IVA a pagar en centavos",
+            "example": 172500
+          },
+          "renta_bruta_cents": {
+            "type": "number",
+            "description": "Renta bruta en centavos",
+            "example": 1150000
+          },
+          "renta_gravable_cents": {
+            "type": "number",
+            "description": "Renta gravable en centavos",
+            "example": 575000
+          },
+          "ir_a_pagar_cents": {
+            "type": "number",
+            "description": "IR a pagar en centavos",
+            "example": 172500
+          },
+          "cuota_cents": {
+            "type": "number",
+            "description": "Cuota fija en centavos",
+            "example": 5000
+          },
+          "estado": {
+            "type": "string",
+            "description": "Estado",
+            "enum": [
+              "PENDIENTE",
+              "GENERADA",
+              "PRESENTADA",
+              "PAGADA",
+              "CANCELADA"
+            ],
+            "example": "GENERADA"
+          },
+          "detalle": {
+            "type": "object",
+            "description": "Detalle de la declaración",
+            "nullable": true
+          },
+          "generada_en": {
+            "type": "string",
+            "description": "Fecha de generación",
+            "format": "date-time"
+          },
+          "presentada_en": {
+            "type": "string",
+            "description": "Fecha de presentación",
+            "format": "date-time"
+          },
+          "creado_en": {
+            "type": "string",
+            "description": "Fecha de creación (ISO 8601 UTC)",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "jurisdiccion",
+          "tipo",
+          "periodo_inicio",
+          "periodo_fin",
+          "base_gravada_cents",
+          "iva_debitado_cents",
+          "iva_credito_cents",
+          "iva_a_pagar_cents",
+          "renta_bruta_cents",
+          "renta_gravable_cents",
+          "ir_a_pagar_cents",
+          "cuota_cents",
+          "estado",
+          "creado_en"
+        ]
+      },
+      "CuentaResponseDto": {
+        "type": "object",
+        "properties": {
+          "codigo": {
+            "type": "string",
+            "description": "Código de la cuenta",
+            "example": "1101"
+          },
+          "nombre": {
+            "type": "string",
+            "description": "Nombre de la cuenta",
+            "example": "Caja"
+          },
+          "tipo": {
+            "type": "string",
+            "description": "Tipo de cuenta",
+            "enum": [
+              "ACTIVO",
+              "PASIVO",
+              "CAPITAL",
+              "INGRESO",
+              "COSTO",
+              "GASTO"
+            ],
+            "example": "ACTIVO"
+          },
+          "naturaleza": {
+            "type": "string",
+            "description": "Naturaleza",
+            "enum": [
+              "DEUDORA",
+              "ACREEDORA"
+            ],
+            "example": "DEUDORA"
+          },
+          "nivel": {
+            "type": "number",
+            "description": "Nivel jerárquico",
+            "example": 1
+          },
+          "estado": {
+            "type": "string",
+            "description": "Estado",
+            "enum": [
+              "activa",
+              "inactiva"
+            ],
+            "example": "activa"
+          }
+        },
+        "required": [
+          "codigo",
+          "nombre",
+          "tipo",
+          "naturaleza",
+          "nivel",
+          "estado"
+        ]
+      },
       "CrearCuentaRequestDto": {
         "type": "object",
         "properties": {
@@ -6669,6 +7178,118 @@ export const OPENAPI_AGREGADO = {
         },
         "required": [
           "estado"
+        ]
+      },
+      "DetalleAsientoResponseDto": {
+        "type": "object",
+        "properties": {
+          "cuenta_codigo": {
+            "type": "string",
+            "description": "Código de cuenta contable"
+          },
+          "debe_cents": {
+            "type": "number",
+            "description": "Débito en centavos",
+            "example": 115000
+          },
+          "haber_cents": {
+            "type": "number",
+            "description": "Crédito en centavos",
+            "example": 115000
+          },
+          "concepto": {
+            "type": "string",
+            "description": "Concepto del detalle"
+          },
+          "orden": {
+            "type": "number",
+            "description": "Orden del detalle"
+          }
+        },
+        "required": [
+          "cuenta_codigo",
+          "debe_cents",
+          "haber_cents"
+        ]
+      },
+      "AsientoResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Id del asiento",
+            "format": "uuid"
+          },
+          "fecha": {
+            "type": "string",
+            "description": "Fecha del asiento",
+            "format": "date-time"
+          },
+          "concepto": {
+            "type": "string",
+            "description": "Concepto del asiento"
+          },
+          "tipo": {
+            "type": "string",
+            "description": "Tipo de asiento",
+            "example": "MANUAL"
+          },
+          "referencia_tipo": {
+            "type": "string",
+            "description": "Tipo de referencia"
+          },
+          "referencia_id": {
+            "type": "string",
+            "description": "Id de referencia"
+          },
+          "moneda": {
+            "type": "string",
+            "description": "Moneda",
+            "example": "C$"
+          },
+          "estado": {
+            "type": "string",
+            "description": "Estado del asiento",
+            "example": "registrado"
+          },
+          "creado_por": {
+            "type": "string",
+            "description": "Usuario que creó el asiento"
+          },
+          "creado_en": {
+            "type": "string",
+            "description": "Fecha de creación (ISO 8601 UTC)",
+            "format": "date-time"
+          },
+          "debe_cents": {
+            "type": "number",
+            "description": "Total débito en centavos",
+            "example": 115000
+          },
+          "haber_cents": {
+            "type": "number",
+            "description": "Total crédito en centavos",
+            "example": 115000
+          },
+          "detalles": {
+            "description": "Detalles del asiento",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/DetalleAsientoResponseDto"
+            }
+          }
+        },
+        "required": [
+          "id",
+          "fecha",
+          "concepto",
+          "tipo",
+          "moneda",
+          "estado",
+          "creado_en",
+          "debe_cents",
+          "haber_cents",
+          "detalles"
         ]
       },
       "DetalleAsientoRequestDto": {
@@ -6748,6 +7369,241 @@ export const OPENAPI_AGREGADO = {
           "detalles"
         ]
       },
+      "LibroMayorResponseDto": {
+        "type": "object",
+        "properties": {
+          "cuenta": {
+            "description": "Cuenta contable",
+            "nullable": true,
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/CuentaResponseDto"
+              }
+            ]
+          },
+          "saldo_inicial_cents": {
+            "type": "number",
+            "description": "Saldo inicial en centavos",
+            "example": 100000
+          },
+          "saldo_final_cents": {
+            "type": "number",
+            "description": "Saldo final en centavos",
+            "example": 215000
+          },
+          "movimientos": {
+            "description": "Movimientos del periodo",
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          }
+        },
+        "required": [
+          "cuenta",
+          "saldo_inicial_cents",
+          "saldo_final_cents",
+          "movimientos"
+        ]
+      },
+      "LibroIvaResponseDto": {
+        "type": "object",
+        "properties": {
+          "periodo": {
+            "type": "string",
+            "description": "Periodo (YYYY-MM)",
+            "example": "2026-10"
+          },
+          "comprobantes": {
+            "type": "number",
+            "description": "Comprobantes del periodo",
+            "example": 12
+          },
+          "base_gravada_cents": {
+            "type": "number",
+            "description": "Base gravada en centavos",
+            "example": 1150000
+          },
+          "iva_cents": {
+            "type": "number",
+            "description": "IVA en centavos",
+            "example": 172500
+          },
+          "exento_cents": {
+            "type": "number",
+            "description": "Monto exento en centavos",
+            "example": 0
+          },
+          "total_cents": {
+            "type": "number",
+            "description": "Total en centavos",
+            "example": 1322500
+          }
+        },
+        "required": [
+          "periodo",
+          "comprobantes",
+          "base_gravada_cents",
+          "iva_cents",
+          "exento_cents",
+          "total_cents"
+        ]
+      },
+      "ComprobanteResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Id del comprobante",
+            "format": "uuid"
+          },
+          "serie": {
+            "type": "string",
+            "description": "Serie",
+            "example": "A"
+          },
+          "numero": {
+            "type": "string",
+            "description": "Número",
+            "example": "000001"
+          },
+          "tipo": {
+            "type": "string",
+            "description": "Tipo",
+            "enum": [
+              "FACTURA",
+              "NOTA_CREDITO"
+            ],
+            "example": "FACTURA"
+          },
+          "orden_id": {
+            "type": "string",
+            "description": "Id de la orden",
+            "format": "uuid"
+          },
+          "cliente_id": {
+            "type": "string",
+            "description": "Id del cliente"
+          },
+          "base_gravada_cents": {
+            "type": "number",
+            "description": "Base gravada en centavos",
+            "example": 1150000
+          },
+          "iva_cents": {
+            "type": "number",
+            "description": "IVA en centavos",
+            "example": 172500
+          },
+          "exento_cents": {
+            "type": "number",
+            "description": "Monto exento en centavos",
+            "example": 0
+          },
+          "total_cents": {
+            "type": "number",
+            "description": "Total en centavos",
+            "example": 1322500
+          },
+          "moneda": {
+            "type": "string",
+            "description": "Moneda",
+            "example": "C$"
+          },
+          "estado": {
+            "type": "string",
+            "description": "Estado",
+            "enum": [
+              "BORRADOR",
+              "EMITIDO",
+              "ANULADO"
+            ],
+            "example": "EMITIDO"
+          },
+          "datos_cliente": {
+            "type": "object",
+            "description": "Datos fiscales del cliente",
+            "nullable": true
+          },
+          "emitido_en": {
+            "type": "string",
+            "description": "Fecha de emisión",
+            "format": "date-time"
+          },
+          "creado_en": {
+            "type": "string",
+            "description": "Fecha de creación (ISO 8601 UTC)",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "serie",
+          "numero",
+          "tipo",
+          "base_gravada_cents",
+          "iva_cents",
+          "exento_cents",
+          "total_cents",
+          "moneda",
+          "estado",
+          "creado_en"
+        ]
+      },
+      "SerieComprobanteResponseDto": {
+        "type": "object",
+        "properties": {
+          "serie": {
+            "type": "string",
+            "description": "Serie",
+            "example": "A"
+          },
+          "tipo": {
+            "type": "string",
+            "description": "Tipo",
+            "enum": [
+              "FACTURA",
+              "NOTA_CREDITO"
+            ],
+            "example": "FACTURA"
+          },
+          "prefijo": {
+            "type": "string",
+            "description": "Prefijo",
+            "example": "FAC"
+          },
+          "secuencial_actual": {
+            "type": "number",
+            "description": "Secuencial actual",
+            "example": 12
+          },
+          "ruc_emisor": {
+            "type": "string",
+            "description": "RUC del emisor",
+            "example": "J0310000000000"
+          },
+          "jurisdiccion": {
+            "type": "string",
+            "description": "Jurisdicción",
+            "example": "NI"
+          },
+          "activa": {
+            "type": "boolean",
+            "description": "Serie activa",
+            "example": true
+          }
+        },
+        "required": [
+          "serie",
+          "tipo",
+          "prefijo",
+          "secuencial_actual",
+          "ruc_emisor",
+          "jurisdiccion",
+          "activa"
+        ]
+      },
       "EmitirComprobanteRequestDto": {
         "type": "object",
         "properties": {
@@ -6779,6 +7635,69 @@ export const OPENAPI_AGREGADO = {
         "required": [
           "tipo",
           "orden_id"
+        ]
+      },
+      "JurisdiccionResponseDto": {
+        "type": "object",
+        "properties": {
+          "codigo_pais": {
+            "type": "string",
+            "description": "Código ISO del país",
+            "example": "NI"
+          },
+          "nombre": {
+            "type": "string",
+            "description": "Nombre de la jurisdicción",
+            "example": "Nicaragua"
+          },
+          "moneda": {
+            "type": "string",
+            "description": "Moneda",
+            "example": "NIO"
+          },
+          "simbolo_moneda": {
+            "type": "string",
+            "description": "Símbolo de la moneda",
+            "example": "C$"
+          },
+          "tasa_iva": {
+            "type": "number",
+            "description": "Tasa de IVA (0–1)",
+            "example": 0.15
+          },
+          "tasa_ir": {
+            "type": "number",
+            "description": "Tasa de IR (0–1)",
+            "example": 0.3
+          },
+          "periodicidad_declaracion": {
+            "type": "string",
+            "description": "Periodicidad de declaración",
+            "example": "MENSUAL"
+          },
+          "leyes": {
+            "type": "object",
+            "description": "Leyes aplicables (clave→texto)",
+            "additionalProperties": {
+              "type": "string"
+            }
+          },
+          "activa": {
+            "type": "boolean",
+            "description": "Jurisdicción activa",
+            "example": true
+          }
+        },
+        "required": [
+          "codigo_pais",
+          "nombre",
+          "moneda",
+          "simbolo_moneda",
+          "tasa_iva",
+          "tasa_ir",
+          "periodicidad_declaracion",
+          "leyes",
+          "activa"
         ]
       },
       "CrearJurisdiccionRequestDto": {
@@ -6827,6 +7746,62 @@ export const OPENAPI_AGREGADO = {
           "simbolo_moneda",
           "tasa_iva_por_mil",
           "tasa_ir_por_mil"
+        ]
+      },
+      "RegimenFiscalResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Id del régimen",
+            "format": "uuid"
+          },
+          "jurisdiccion": {
+            "type": "string",
+            "description": "Jurisdicción",
+            "example": "NI"
+          },
+          "codigo": {
+            "type": "string",
+            "description": "Código del régimen",
+            "example": "CUOTA_FIJA"
+          },
+          "nombre": {
+            "type": "string",
+            "description": "Nombre del régimen",
+            "example": "Cuota Fija"
+          },
+          "descripcion": {
+            "type": "string",
+            "description": "Descripción"
+          },
+          "periodicidad": {
+            "type": "string",
+            "description": "Periodicidad",
+            "example": "MENSUAL"
+          },
+          "condicion_ingresos_anuales_cents": {
+            "type": "number",
+            "description": "Condición de ingresos anuales en centavos"
+          },
+          "estado": {
+            "type": "string",
+            "description": "Estado",
+            "enum": [
+              "activo",
+              "inactivo"
+            ],
+            "example": "activo"
+          }
+        },
+        "required": [
+          "id",
+          "jurisdiccion",
+          "codigo",
+          "nombre",
+          "descripcion",
+          "periodicidad",
+          "estado"
         ]
       },
       "CrearRegimenRequestDto": {
@@ -7015,6 +7990,828 @@ export const OPENAPI_AGREGADO = {
         "required": [
           "nombre",
           "supuestos"
+        ]
+      },
+      "SupuestosProyeccionResponseDto": {
+        "type": "object",
+        "properties": {
+          "horizonte_meses": {
+            "type": "number",
+            "example": 12
+          },
+          "vendedores_iniciales": {
+            "type": "number",
+            "example": 20
+          },
+          "entrada_vendedores_mes": {
+            "type": "number",
+            "example": 5
+          },
+          "churn_tasa": {
+            "type": "number",
+            "example": 0
+          },
+          "pedidos_por_vendedor": {
+            "example": [
+              25,
+              27,
+              29,
+              31,
+              33,
+              35,
+              37,
+              38,
+              39,
+              40,
+              41,
+              42
+            ],
+            "type": "array",
+            "items": {
+              "type": "number"
+            }
+          },
+          "ticket_promedio_cents": {
+            "type": "number",
+            "example": 45000
+          },
+          "comision_tasa": {
+            "type": "number",
+            "example": 0.12
+          },
+          "costos_fijos_cents": {
+            "type": "number",
+            "example": 200000
+          },
+          "costos_fijos_desde_mes7_cents": {
+            "type": "number",
+            "example": 300000
+          },
+          "inversion_inicial_cents": {
+            "type": "number",
+            "example": 5850000
+          },
+          "tasa_descuento_mensual": {
+            "type": "number",
+            "example": 0.015
+          }
+        },
+        "required": [
+          "horizonte_meses",
+          "vendedores_iniciales",
+          "entrada_vendedores_mes",
+          "churn_tasa",
+          "pedidos_por_vendedor",
+          "ticket_promedio_cents",
+          "comision_tasa",
+          "costos_fijos_cents",
+          "inversion_inicial_cents"
+        ]
+      },
+      "FilaProyeccionResponseDto": {
+        "type": "object",
+        "properties": {
+          "mes": {
+            "type": "number"
+          },
+          "vendedores": {
+            "type": "number"
+          },
+          "pedidos": {
+            "type": "number"
+          },
+          "gmv_cents": {
+            "type": "number"
+          },
+          "ingresos_cents": {
+            "type": "number"
+          },
+          "costos_cents": {
+            "type": "number"
+          },
+          "flujo_cents": {
+            "type": "number"
+          },
+          "flujo_acumulado_cents": {
+            "type": "number"
+          },
+          "costo_fijo_por_pedido_cents": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "mes",
+          "vendedores",
+          "pedidos",
+          "gmv_cents",
+          "ingresos_cents",
+          "costos_cents",
+          "flujo_cents",
+          "flujo_acumulado_cents",
+          "costo_fijo_por_pedido_cents"
+        ]
+      },
+      "TotalesProyeccionResponseDto": {
+        "type": "object",
+        "properties": {
+          "gmv_cents": {
+            "type": "number"
+          },
+          "ingresos_cents": {
+            "type": "number"
+          },
+          "costos_cents": {
+            "type": "number"
+          },
+          "flujo_cents": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "gmv_cents",
+          "ingresos_cents",
+          "costos_cents",
+          "flujo_cents"
+        ]
+      },
+      "EscenarioEquilibrioResponseDto": {
+        "type": "object",
+        "properties": {
+          "escenario": {
+            "type": "string",
+            "enum": [
+              "bajo",
+              "medio",
+              "alto"
+            ]
+          },
+          "costo_variable_por_pedido_cents": {
+            "type": "number"
+          },
+          "contribucion_por_pedido_cents": {
+            "type": "number"
+          },
+          "pedidos_equilibrio": {
+            "type": "number"
+          },
+          "gmv_equilibrio_cents": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "escenario",
+          "costo_variable_por_pedido_cents",
+          "contribucion_por_pedido_cents",
+          "pedidos_equilibrio",
+          "gmv_equilibrio_cents"
+        ]
+      },
+      "MargenSeguridadResponseDto": {
+        "type": "object",
+        "properties": {
+          "mes": {
+            "type": "number"
+          },
+          "gmv_cents": {
+            "type": "number"
+          },
+          "margen_seguridad": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "mes",
+          "gmv_cents",
+          "margen_seguridad"
+        ]
+      },
+      "CoberturaPorVendedorResponseDto": {
+        "type": "object",
+        "properties": {
+          "pedidos_por_vendedor_mes": {
+            "type": "number"
+          },
+          "comision_por_pedido_cents": {
+            "type": "number"
+          },
+          "comision_bruta_vendedor_cents": {
+            "type": "number"
+          },
+          "contribucion_media_cents": {
+            "type": "number"
+          },
+          "vendedores_para_cubrir_costos": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "pedidos_por_vendedor_mes",
+          "comision_por_pedido_cents",
+          "comision_bruta_vendedor_cents",
+          "contribucion_media_cents",
+          "vendedores_para_cubrir_costos"
+        ]
+      },
+      "EconomiaDeEscalaResponseDto": {
+        "type": "object",
+        "properties": {
+          "costo_fijo_por_pedido_inicio_cents": {
+            "type": "number"
+          },
+          "costo_fijo_por_pedido_mes6_cents": {
+            "type": "number"
+          },
+          "costo_fijo_por_pedido_fin_cents": {
+            "type": "number"
+          },
+          "multiplicador_escala": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "costo_fijo_por_pedido_inicio_cents",
+          "costo_fijo_por_pedido_mes6_cents",
+          "costo_fijo_por_pedido_fin_cents",
+          "multiplicador_escala"
+        ]
+      },
+      "IndicadoresProyeccionResponseDto": {
+        "type": "object",
+        "properties": {
+          "payback_mes": {
+            "type": "object",
+            "nullable": true
+          },
+          "van_cents": {
+            "type": "number"
+          },
+          "tir_mensual": {
+            "type": "object",
+            "nullable": true
+          },
+          "tir_anual": {
+            "type": "object",
+            "nullable": true
+          },
+          "tir_no_estable": {
+            "type": "boolean"
+          },
+          "roi": {
+            "type": "number"
+          },
+          "margen_neto": {
+            "type": "number"
+          },
+          "punto_equilibrio_caja_cents": {
+            "type": "number"
+          },
+          "pedidos_equilibrio_caja": {
+            "type": "number"
+          },
+          "escenarios_equilibrio": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/EscenarioEquilibrioResponseDto"
+            }
+          },
+          "margen_seguridad_por_mes": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/MargenSeguridadResponseDto"
+            }
+          },
+          "cobertura_por_vendedor": {
+            "$ref": "#/components/schemas/CoberturaPorVendedorResponseDto"
+          },
+          "economia_de_escala": {
+            "$ref": "#/components/schemas/EconomiaDeEscalaResponseDto"
+          }
+        },
+        "required": [
+          "payback_mes",
+          "van_cents",
+          "tir_mensual",
+          "tir_anual",
+          "tir_no_estable",
+          "roi",
+          "margen_neto",
+          "punto_equilibrio_caja_cents",
+          "pedidos_equilibrio_caja",
+          "escenarios_equilibrio",
+          "margen_seguridad_por_mes",
+          "cobertura_por_vendedor",
+          "economia_de_escala"
+        ]
+      },
+      "ProyeccionResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "nombre": {
+            "type": "string"
+          },
+          "horizonte_meses": {
+            "type": "number"
+          },
+          "supuestos": {
+            "$ref": "#/components/schemas/SupuestosProyeccionResponseDto"
+          },
+          "filas": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/FilaProyeccionResponseDto"
+            }
+          },
+          "totales": {
+            "$ref": "#/components/schemas/TotalesProyeccionResponseDto"
+          },
+          "inversion_inicial_cents": {
+            "type": "number"
+          },
+          "indicadores": {
+            "$ref": "#/components/schemas/IndicadoresProyeccionResponseDto"
+          },
+          "creado_en": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "nombre",
+          "horizonte_meses",
+          "supuestos",
+          "filas",
+          "totales",
+          "inversion_inicial_cents",
+          "indicadores",
+          "creado_en"
+        ]
+      },
+      "PuntoEquilibrioResponseDto": {
+        "type": "object",
+        "properties": {
+          "punto_equilibrio_caja_cents": {
+            "type": "number"
+          },
+          "pedidos_equilibrio_caja": {
+            "type": "number"
+          },
+          "escenarios_equilibrio": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/EscenarioEquilibrioResponseDto"
+            }
+          },
+          "margen_seguridad_por_mes": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/MargenSeguridadResponseDto"
+            }
+          }
+        },
+        "required": [
+          "punto_equilibrio_caja_cents",
+          "pedidos_equilibrio_caja",
+          "escenarios_equilibrio",
+          "margen_seguridad_por_mes"
+        ]
+      },
+      "KpisFinancierosResponseDto": {
+        "type": "object",
+        "properties": {
+          "periodo": {
+            "type": "string"
+          },
+          "gmv_cents": {
+            "type": "number"
+          },
+          "gmv": {
+            "type": "string"
+          },
+          "pedidos_pagados": {
+            "type": "number"
+          },
+          "pedidos_entregados": {
+            "type": "number"
+          },
+          "ingresos_comisiones_cents": {
+            "type": "number"
+          },
+          "ingresos_comisiones": {
+            "type": "string"
+          },
+          "devoluciones": {
+            "type": "number"
+          },
+          "vendedores_activos": {
+            "type": "number"
+          },
+          "pedidos_por_vendedor": {
+            "type": "number"
+          },
+          "activacion_primeros_15_dias": {
+            "type": "object",
+            "nullable": true
+          },
+          "tasa_devoluciones": {
+            "type": "number"
+          },
+          "churn_mensual": {
+            "type": "number"
+          },
+          "conversion_carrito_checkout": {
+            "type": "object",
+            "nullable": true
+          },
+          "liquidacion_a_tiempo": {
+            "type": "object",
+            "nullable": true
+          }
+        },
+        "required": [
+          "periodo",
+          "gmv_cents",
+          "gmv",
+          "pedidos_pagados",
+          "pedidos_entregados",
+          "ingresos_comisiones_cents",
+          "ingresos_comisiones",
+          "devoluciones",
+          "vendedores_activos",
+          "pedidos_por_vendedor",
+          "activacion_primeros_15_dias",
+          "tasa_devoluciones",
+          "churn_mensual",
+          "conversion_carrito_checkout",
+          "liquidacion_a_tiempo"
+        ]
+      },
+      "FlujoVariacionGmvResponseDto": {
+        "type": "object",
+        "properties": {
+          "variacion_gmv": {
+            "type": "number"
+          },
+          "flujo_cents": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "variacion_gmv",
+          "flujo_cents"
+        ]
+      },
+      "SensibilidadComisionGmvResponseDto": {
+        "type": "object",
+        "properties": {
+          "tasa_comision": {
+            "type": "number"
+          },
+          "flujo_mes12_cents": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/FlujoVariacionGmvResponseDto"
+            }
+          }
+        },
+        "required": [
+          "tasa_comision",
+          "flujo_mes12_cents"
+        ]
+      },
+      "SensibilidadVanResponseDto": {
+        "type": "object",
+        "properties": {
+          "tasa_anual": {
+            "type": "number"
+          },
+          "tasa_mensual": {
+            "type": "number"
+          },
+          "van_cents": {
+            "type": "number"
+          },
+          "relacion_van_inversion": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "tasa_anual",
+          "tasa_mensual",
+          "van_cents",
+          "relacion_van_inversion"
+        ]
+      },
+      "PaybackPorEscenarioResponseDto": {
+        "type": "object",
+        "properties": {
+          "escenario": {
+            "type": "string",
+            "enum": [
+              "base",
+              "pesimista",
+              "peor_combinado"
+            ]
+          },
+          "descripcion": {
+            "type": "string"
+          },
+          "flujo_acumulado_cents": {
+            "type": "number"
+          },
+          "payback_mes": {
+            "type": "object",
+            "nullable": true
+          }
+        },
+        "required": [
+          "escenario",
+          "descripcion",
+          "flujo_acumulado_cents",
+          "payback_mes"
+        ]
+      },
+      "SensibilidadEstudiosResponseDto": {
+        "type": "object",
+        "properties": {
+          "supuestos": {
+            "$ref": "#/components/schemas/SupuestosProyeccionResponseDto"
+          },
+          "matriz_comision_gmv": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SensibilidadComisionGmvResponseDto"
+            }
+          },
+          "van_por_tasa": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SensibilidadVanResponseDto"
+            }
+          },
+          "payback_por_escenario": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PaybackPorEscenarioResponseDto"
+            }
+          },
+          "cobertura_por_vendedor": {
+            "$ref": "#/components/schemas/CoberturaPorVendedorResponseDto"
+          }
+        },
+        "required": [
+          "supuestos",
+          "matriz_comision_gmv",
+          "van_por_tasa",
+          "payback_por_escenario",
+          "cobertura_por_vendedor"
+        ]
+      },
+      "ResumenAnualResponseDto": {
+        "type": "object",
+        "properties": {
+          "anio": {
+            "type": "number"
+          },
+          "gmv_cents": {
+            "type": "number"
+          },
+          "ingresos_cents": {
+            "type": "number"
+          },
+          "costos_cents": {
+            "type": "number"
+          },
+          "flujo_cents": {
+            "type": "number"
+          },
+          "margen_neto": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "anio",
+          "gmv_cents",
+          "ingresos_cents",
+          "costos_cents",
+          "flujo_cents",
+          "margen_neto"
+        ]
+      },
+      "Acumulado24MesesResponseDto": {
+        "type": "object",
+        "properties": {
+          "gmv_cents": {
+            "type": "number"
+          },
+          "ingresos_cents": {
+            "type": "number"
+          },
+          "costos_cents": {
+            "type": "number"
+          },
+          "flujo_cents": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "gmv_cents",
+          "ingresos_cents",
+          "costos_cents",
+          "flujo_cents"
+        ]
+      },
+      "Mes24ResponseDto": {
+        "type": "object",
+        "properties": {
+          "gmv_cents": {
+            "type": "number"
+          },
+          "incremento_vs_mes12": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "gmv_cents",
+          "incremento_vs_mes12"
+        ]
+      },
+      "PlanBienalResponseDto": {
+        "type": "object",
+        "properties": {
+          "inversion_inicial_cents": {
+            "type": "number"
+          },
+          "anios": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ResumenAnualResponseDto"
+            }
+          },
+          "filas": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/FilaProyeccionResponseDto"
+            }
+          },
+          "acumulado_24_meses": {
+            "$ref": "#/components/schemas/Acumulado24MesesResponseDto"
+          },
+          "roi": {
+            "type": "number"
+          },
+          "mes_24": {
+            "$ref": "#/components/schemas/Mes24ResponseDto"
+          },
+          "indicadores": {
+            "$ref": "#/components/schemas/IndicadoresProyeccionResponseDto"
+          }
+        },
+        "required": [
+          "inversion_inicial_cents",
+          "anios",
+          "filas",
+          "acumulado_24_meses",
+          "roi",
+          "mes_24",
+          "indicadores"
+        ]
+      },
+      "TableroAlertaResponseDto": {
+        "type": "object",
+        "properties": {
+          "capa": {
+            "type": "string"
+          },
+          "frecuencia": {
+            "type": "string"
+          },
+          "indicador": {
+            "type": "string"
+          },
+          "estado": {
+            "type": "string",
+            "enum": [
+              "OK",
+              "ALERTA",
+              "SIN_DATO"
+            ]
+          },
+          "umbral": {
+            "type": "string"
+          },
+          "valor": {
+            "type": "object",
+            "nullable": true
+          },
+          "accion": {
+            "type": "string"
+          },
+          "detalle": {
+            "type": "string"
+          },
+          "fecha_esperada": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "capa",
+          "frecuencia",
+          "indicador",
+          "estado",
+          "umbral",
+          "valor",
+          "accion",
+          "fecha_esperada"
+        ]
+      },
+      "TableroResponseDto": {
+        "type": "object",
+        "properties": {
+          "periodo": {
+            "type": "string"
+          },
+          "kpis": {
+            "$ref": "#/components/schemas/KpisFinancierosResponseDto"
+          },
+          "alertas": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/TableroAlertaResponseDto"
+            }
+          }
+        },
+        "required": [
+          "periodo",
+          "kpis",
+          "alertas"
+        ]
+      },
+      "ResumenVendedorResponseDto": {
+        "type": "object",
+        "properties": {
+          "vendedor_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "periodo": {
+            "type": "string"
+          },
+          "ventas": {
+            "type": "number"
+          },
+          "monto_cents": {
+            "type": "number"
+          },
+          "comision_cents": {
+            "type": "number"
+          },
+          "devoluciones": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "vendedor_id",
+          "periodo",
+          "ventas",
+          "monto_cents",
+          "comision_cents",
+          "devoluciones"
+        ]
+      },
+      "VendedorFiscalResponseDto": {
+        "type": "object",
+        "properties": {
+          "sujeto_fiscal": {
+            "nullable": true,
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/SujetoTributarioResponseDto"
+              }
+            ]
+          },
+          "resumen_comisiones": {
+            "nullable": true,
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/ResumenVendedorResponseDto"
+              }
+            ]
+          },
+          "nota": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "sujeto_fiscal",
+          "resumen_comisiones",
+          "nota"
         ]
       },
       "UsuarioResponseDto": {
