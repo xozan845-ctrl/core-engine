@@ -1,5 +1,5 @@
 import { Controller, Get, Param, Post, Query } from '@nestjs/common';
-import { ApiBearerAuth, ApiOperation, ApiParam, ApiProperty, ApiQuery, ApiTags } from '@nestjs/swagger';
+import { ApiBearerAuth, ApiCreatedResponse, ApiOkResponse, ApiOperation, ApiParam, ApiProperty, ApiQuery, ApiTags } from '@nestjs/swagger';
 import { IsIn } from 'class-validator';
 import {
   Roles,
@@ -9,6 +9,7 @@ import {
   NotFoundError,
 } from '@core/shared';
 import { LiquidacionesService, Liquidacion, Periodo } from './liquidaciones.service';
+import { LiquidacionResponseDto } from './liquidaciones.response.dto';
 
 export class EstadoLiquidacionRequestDto {
   @ApiProperty({ description: 'Estado de la liquidación', enum: ['pagada'] })
@@ -26,6 +27,7 @@ export class LiquidacionesController {
   @Get('vendedores/me/liquidaciones')
   @Roles(ROLES.VENDEDOR)
   @ApiOperation({ summary: 'Cortes/liquidaciones del vendedor autenticado' })
+  @ApiOkResponse({ type: [LiquidacionResponseDto], description: 'Liquidaciones del vendedor' })
   async mias(@UsuarioActual() usuario: UsuarioContexto): Promise<Liquidacion[]> {
     return this.liquidaciones.deVendedor(usuario.user_id);
   }
@@ -36,6 +38,7 @@ export class LiquidacionesController {
   @ApiOperation({ summary: 'Ejecutar un corte de liquidaciones (admin)' })
   @ApiQuery({ name: 'inicio', required: false })
   @ApiQuery({ name: 'fin', required: false })
+  @ApiCreatedResponse({ type: [LiquidacionResponseDto], description: 'Liquidaciones generadas' })
   async corteManual(
     @Query('inicio') inicio?: string,
     @Query('fin') fin?: string,
@@ -53,6 +56,7 @@ export class LiquidacionesController {
   @ApiOperation({ summary: 'Marcar una liquidación como pagada (RN-07)' })
   @ApiParam({ name: 'id', description: 'Id de la liquidación' })
   @ApiQuery({ name: 'estado', required: false })
+  @ApiCreatedResponse({ type: LiquidacionResponseDto, description: 'Liquidación pagada' })
   async pagar(
     @Param('id') id: string,
     @Query('estado') estado?: string,
