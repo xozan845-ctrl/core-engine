@@ -1,9 +1,12 @@
 import type { Mock } from 'vitest';
 import 'reflect-metadata';
+import { Module } from '@nestjs/common';
+import type { INestApplication } from '@nestjs/common';
+import { NestFactory } from '@nestjs/core';
 import { FinanzasController } from './finanzas.controller';
-import type { ProyeccionesService } from './proyecciones.service';
-import type { KpisService } from './kpis.service';
-import type { AlertasService } from './alertas.service';
+import { ProyeccionesService } from './proyecciones.service';
+import { KpisService } from './kpis.service';
+import { AlertasService } from './alertas.service';
 import { NotFoundError, ROLES } from '@core/shared';
 
 const proyeccion = { id: 'pr-1', nombre: 'Base', supuestos: {}, resultado: {} };
@@ -41,6 +44,62 @@ function fabricar(): {
   );
   return { proyecciones, kpis, alertas, controller };
 }
+
+const proyeccionesHttp = {
+  calcular: vi.fn().mockReturnValue({ filas: [] }),
+  sensibilidadComisionGmv: vi.fn().mockReturnValue([]),
+  sensibilidadVan: vi.fn().mockReturnValue([]),
+  paybackPorEscenario: vi.fn().mockReturnValue([]),
+  coberturaPorVendedor: vi.fn().mockReturnValue([]),
+  planBienal: vi.fn().mockReturnValue({ rois: [] }),
+  obtener: vi.fn().mockResolvedValue(null),
+};
+
+@Module({
+  controllers: [FinanzasController],
+  providers: [
+    { provide: ProyeccionesService, useValue: proyeccionesHttp },
+    { provide: KpisService, useValue: { kpis: vi.fn() } },
+    { provide: AlertasService, useValue: { tablero: vi.fn() } },
+  ],
+})
+class FinanzasHttpTestModule {}
+
+describe('FinanzasController — orden de rutas (R-DO-9)', () => {
+  let app: INestApplication;
+  let puerto: number;
+
+  beforeAll(async () => {
+    app = await NestFactory.create(FinanzasHttpTestModule, { logger: false });
+    await app.listen(0);
+    puerto = (app.getHttpServer().address() as { port: number }).port;
+  });
+
+  afterAll(async () => {
+    await app.close();
+  });
+
+  it('debe resolver proyecciones/sensibilidad cuando compite con proyecciones/:id', async () => {
+    const respuesta = await fetch(
+      `http://127.0.0.1:${puerto}/api/v1/finanzas/proyecciones/sensibilidad`,
+    );
+    expect(respuesta.status).toBe(200);
+    const cuerpo = (await respuesta.json()) as {
+      supuestos?: unknown;
+      matriz_comision_gmv?: unknown;
+    };
+    expect(cuerpo.supuestos).toBeDefined();
+    expect(cuerpo.matriz_comision_gmv).toBeDefined();
+  });
+
+  it('debe resolver proyecciones/plan-bienal cuando compite con proyecciones/:id', async () => {
+    const respuesta = await fetch(
+      `http://127.0.0.1:${puerto}/api/v1/finanzas/proyecciones/plan-bienal`,
+    );
+    expect(respuesta.status).toBe(200);
+    await expect(respuesta.json()).resolves.toEqual({ rois: [] });
+  });
+});
 
 describe('FinanzasController (api/v1/finanzas, cap. 8, R-U-10/11)', () => {
   it('debe crear una proyeccion con nombre y supuestos', async () => {
