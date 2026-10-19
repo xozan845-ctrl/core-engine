@@ -1,10 +1,11 @@
 import { Controller, Get, Query, Headers, Post, Body } from '@nestjs/common';
-import { ApiBody, ApiHeader, ApiOperation, ApiTags } from '@nestjs/swagger';
+import { ApiBearerAuth, ApiBody, ApiHeader, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { InteligenciaService } from '../services/inteligencia.service';
 import { FiltrosInteligenciaDto } from '../models/dto/filtros.request.dto';
 import { MapaCalorResponseDto } from '../models/dto/mapa-calor.response.dto';
 
 @ApiTags('Inteligencia — Métricas')
+@ApiBearerAuth()
 @Controller('api/v1/inteligencia')
 export class MetricasController {
   constructor(private readonly inteligencia: InteligenciaService) {}

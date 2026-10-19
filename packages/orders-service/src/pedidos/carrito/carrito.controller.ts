@@ -7,7 +7,7 @@ import {
   Patch,
   Post,
 } from '@nestjs/common';
-import { ApiOperation, ApiParam, ApiTags } from '@nestjs/swagger';
+import { ApiBearerAuth, ApiOperation, ApiParam, ApiTags } from '@nestjs/swagger';
 import { Roles, ROLES, UsuarioActual, UsuarioContexto } from '@core/shared';
 import { CarritoService, CarritoVista } from './carrito.service';
 import { AgregarItemRequestDto, ActualizarCantidadRequestDto } from './carrito.dtos';
@@ -17,6 +17,7 @@ import { AgregarItemRequestDto, ActualizarCantidadRequestDto } from './carrito.d
  * reserva stock (RN-03). El checkout crea la orden desde este carrito.
  */
 @ApiTags('Carrito')
+@ApiBearerAuth()
 @Controller('api/v1/carrito')
 export class CarritoController {
   constructor(private readonly carritos: CarritoService) {}

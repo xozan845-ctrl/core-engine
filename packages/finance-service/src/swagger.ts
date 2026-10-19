@@ -13,6 +13,7 @@ export function crearDocumentoOpenApi(app: INestApplication): OpenAPIObject {
     .setDescription('Finanzas y contabilidad: proyecciones (cap. 8), partida doble y régimen fiscal multijurisdicción (Tabla 21)')
     .setVersion('v1')
     .addBearerAuth()
+    .addApiKey({ type: 'apiKey', in: 'header', name: 'x-internal-key' }, 'internalKey')
     .build();
   return SwaggerModule.createDocument(app, config);
 }

@@ -13,6 +13,7 @@ export function crearDocumentoOpenApi(app: INestApplication): OpenAPIObject {
     .setDescription('Almacenamiento de objetos por tenant (MinIO, buckets por organizacion)')
     .setVersion('v1')
     .addBearerAuth()
+    .addApiKey({ type: 'apiKey', in: 'header', name: 'x-internal-key' }, 'internalKey')
     .build();
   return SwaggerModule.createDocument(app, config);
 }

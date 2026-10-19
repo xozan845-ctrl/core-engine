@@ -1,5 +1,5 @@
 import { Controller, Get } from '@nestjs/common';
-import { ApiOperation, ApiTags } from '@nestjs/swagger';
+import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import {
   Roles,
   ROLES,
@@ -10,6 +10,7 @@ import { VentasService, EstadoCuenta } from './ventas.service';
 
 /** GET /api/v1/vendedores/me/ventas — ordenes y comisiones del vendedor (Tabla 21). */
 @ApiTags('Comisiones · Ventas')
+@ApiBearerAuth()
 @Controller('api/v1/vendedores/me')
 export class VentasController {
   constructor(private readonly ventas: VentasService) {}

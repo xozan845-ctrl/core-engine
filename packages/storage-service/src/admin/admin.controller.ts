@@ -1,5 +1,5 @@
 import { Body, Controller, Get, Param, Patch, Post, Query } from '@nestjs/common';
-import { ApiOperation, ApiParam, ApiProperty, ApiTags } from '@nestjs/swagger';
+import { ApiBearerAuth, ApiOperation, ApiParam, ApiProperty, ApiTags } from '@nestjs/swagger';
 import { IsIn, IsInt, IsOptional, IsPositive, Max } from 'class-validator';
 import { ROLES, Roles } from '@core/shared';
 import { BucketsService, EstadoAlmacen, EstadoBucket } from '../buckets/buckets.service';
@@ -36,6 +36,7 @@ export class ActualizarTenantRequestDto {
  * restringe al rol admin (R-DS-3).
  */
 @ApiTags('Almacenamiento (admin)')
+@ApiBearerAuth()
 @Controller('api/v1/admin/storage')
 @Roles(ROLES.ADMIN)
 export class AdminStorageController {

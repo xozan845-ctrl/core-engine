@@ -1,5 +1,5 @@
 import { Controller, Get, Query, UseGuards } from '@nestjs/common';
-import { ApiOperation, ApiQuery, ApiTags } from '@nestjs/swagger';
+import { ApiOperation, ApiQuery, ApiSecurity, ApiTags } from '@nestjs/swagger';
 import { ClaveInternaGuard } from '@core/shared';
 import { OfertasService } from '../ofertas/ofertas.service';
 
@@ -7,6 +7,7 @@ import { OfertasService } from '../ofertas/ofertas.service';
  * Endpoints internos (servicio -> servicio) protegidos con clave interna.
  */
 @ApiTags('Tiendas (interno)')
+@ApiSecurity('internalKey')
 @Controller('internal')
 @UseGuards(ClaveInternaGuard)
 export class InternalController {
