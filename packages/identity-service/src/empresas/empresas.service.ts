@@ -32,6 +32,26 @@ export class EmpresasService {
     return { ...usuario, participacion_porcentaje: datos.participacion_porcentaje };
   }
 
+  async actualizarModalidad(
+    actorId: string,
+    empresaId: string,
+    modalidad: ModalidadLogistica,
+  ): Promise<Empresa> {
+    const miembro = await this.pg.queryOne(
+      `SELECT 1 FROM identity.empresa_miembros
+       WHERE empresa_id=$1 AND usuario_id=$2 AND rol='empresario' AND estado='activo'`,
+      [empresaId, actorId],
+    );
+    if (!miembro) throw new ForbiddenError('Solo un empresario activo puede cambiar la logística.');
+    const empresa = await this.pg.queryOne<Empresa>(
+      `UPDATE identity.empresas SET modalidad_logistica=$1
+       WHERE id=$2 AND estado='activa' RETURNING *`,
+      [modalidad, empresaId],
+    );
+    if (!empresa) throw new NotFoundError('Empresa', empresaId);
+    return empresa;
+  }
+
   async obtenerPara(usuarioId: string, empresaId: string, esGlobal: boolean): Promise<Empresa> {
     if (!esGlobal) {
       const miembro = await this.pg.queryOne(`SELECT 1 FROM identity.empresa_miembros WHERE empresa_id=$1 AND usuario_id=$2 AND estado='activo'`, [empresaId, usuarioId]);
