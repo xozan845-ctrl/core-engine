@@ -5856,6 +5856,11 @@ export const OPENAPI_AGREGADO = {
       "ProductoResponseDto": {
         "type": "object",
         "properties": {
+          "empresa_id": {
+            "type": "string",
+            "description": "Empresa propietaria",
+            "format": "uuid"
+          },
           "id": {
             "type": "string",
             "description": "Id del producto",
@@ -5904,6 +5909,7 @@ export const OPENAPI_AGREGADO = {
           }
         },
         "required": [
+          "empresa_id",
           "id",
           "sku",
           "nombre",
@@ -12346,6 +12352,16 @@ export const OPENAPI_AGREGADO = {
             "description": "Id de la tienda",
             "format": "uuid"
           },
+          "empresa_id": {
+            "type": "string",
+            "description": "Empresa propietaria",
+            "format": "uuid"
+          },
+          "propietario_usuario_id": {
+            "type": "string",
+            "description": "Usuario propietario operativo",
+            "format": "uuid"
+          },
           "vendedor_id": {
             "type": "string",
             "description": "Id del vendedor dueño",
@@ -12368,6 +12384,8 @@ export const OPENAPI_AGREGADO = {
         },
         "required": [
           "id",
+          "empresa_id",
+          "propietario_usuario_id",
           "vendedor_id",
           "nombre",
           "descripcion",
@@ -12377,6 +12395,11 @@ export const OPENAPI_AGREGADO = {
       "PublicarProductoRequestDto": {
         "type": "object",
         "properties": {
+          "tienda_id": {
+            "type": "string",
+            "description": "Tienda donde se publicará",
+            "format": "uuid"
+          },
           "producto_id": {
             "type": "string",
             "description": "Id del producto a publicar",
@@ -12391,6 +12414,7 @@ export const OPENAPI_AGREGADO = {
           }
         },
         "required": [
+          "tienda_id",
           "producto_id",
           "margen"
         ]

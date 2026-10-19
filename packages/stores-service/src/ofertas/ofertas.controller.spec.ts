@@ -32,8 +32,9 @@ describe('OfertasController (api/v1, RN-01, R-U-10/11)', () => {
   it('debe publicar la oferta con vendedor, producto y margen', async () => {
     const { ofertas, controller } = fabricar();
     ofertas.publicar.mockResolvedValue(oferta);
-    await expect(controller.publicar({ producto_id: 'p-1', margen: 15 } as never, vendedor as never)).resolves.toEqual(oferta);
-    expect(ofertas.publicar).toHaveBeenCalledWith('u-v', 'p-1', 15);
+    const dto = { tienda_id: '11111111-2222-3333-4444-555555555555', producto_id: 'p-1', margen: 15 };
+    await expect(controller.publicar(dto as never, vendedor as never)).resolves.toEqual(oferta);
+    expect(ofertas.publicar).toHaveBeenCalledWith('u-v', dto.tienda_id, 'p-1', 15);
   });
 
   it('debe cambiar el margen de una oferta del vendedor autenticado', async () => {
@@ -67,7 +68,7 @@ describe('OfertasController (api/v1, RN-01, R-U-10/11)', () => {
   });
 
   it('debe exigir rol vendedor en publicar y cambiar margen', () => {
-    expect(Reflect.getMetadata('roles_requeridos', OfertasController.prototype.publicar)).toEqual([ROLES.VENDEDOR]);
-    expect(Reflect.getMetadata('roles_requeridos', OfertasController.prototype.cambiarMargen)).toEqual([ROLES.VENDEDOR]);
+    expect(Reflect.getMetadata('roles_requeridos', OfertasController.prototype.publicar)).toEqual([ROLES.VENDEDOR, ROLES.EMPRESARIO]);
+    expect(Reflect.getMetadata('roles_requeridos', OfertasController.prototype.cambiarMargen)).toEqual([ROLES.VENDEDOR, ROLES.EMPRESARIO]);
   });
 });

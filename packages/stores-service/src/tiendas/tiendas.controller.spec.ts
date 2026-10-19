@@ -5,7 +5,7 @@ import type { TiendasService } from './tiendas.service';
 import { NotFoundError, ROLES } from '@core/shared';
 
 const tienda = { id: 't-1', vendedor_id: 'u-v', nombre: 'Mi tienda', descripcion: 'x' };
-const vendedor = { user_id: 'u-v', email: 'v@core.local', rol: ROLES.VENDEDOR };
+const vendedor = { user_id: 'u-v', email: 'v@core.local', rol: ROLES.VENDEDOR, tenant_id: 'e-1' };
 
 function fabricar(): { tiendas: Record<string, Mock>; controller: TiendasController } {
   const tiendas = { crear: vi.fn(), deVendedor: vi.fn() };
@@ -18,7 +18,7 @@ describe('TiendasController (api/v1/vendedores, R-U-10/11)', () => {
     const { tiendas, controller } = fabricar();
     tiendas.crear.mockResolvedValue(tienda);
     await expect(controller.crear({ nombre: 'Mi tienda', descripcion: 'x' } as never, vendedor as never)).resolves.toEqual(tienda);
-    expect(tiendas.crear).toHaveBeenCalledWith('u-v', 'Mi tienda', 'x');
+    expect(tiendas.crear).toHaveBeenCalledWith('e-1', 'u-v', 'Mi tienda', 'x');
   });
 
   it('debe devolver la tienda del vendedor autenticado', async () => {
@@ -35,7 +35,7 @@ describe('TiendasController (api/v1/vendedores, R-U-10/11)', () => {
   });
 
   it('debe exigir rol vendedor en crear y mi-tienda', () => {
-    expect(Reflect.getMetadata('roles_requeridos', TiendasController.prototype.crear)).toEqual([ROLES.VENDEDOR]);
+    expect(Reflect.getMetadata('roles_requeridos', TiendasController.prototype.crear)).toEqual([ROLES.VENDEDOR, ROLES.EMPRESARIO]);
     expect(Reflect.getMetadata('roles_requeridos', TiendasController.prototype.miTienda)).toEqual([ROLES.VENDEDOR]);
   });
 });

@@ -15,6 +15,7 @@ export class CrearTiendaRequestDto {
   @IsOptional()
   @IsString()
   descripcion?: string;
+
 }
 
 @ApiTags('Tiendas')
@@ -24,11 +25,12 @@ export class TiendasController {
   constructor(private readonly tiendas: TiendasService) {}
 
   @Post('tienda')
-  @Roles(ROLES.VENDEDOR)
+  @Roles(ROLES.VENDEDOR, ROLES.EMPRESARIO)
   @ApiOperation({ summary: 'Crear la tienda del vendedor autenticado' })
   @ApiCreatedResponse({ type: TiendaResponseDto, description: 'Tienda creada' })
   async crear(@Body() dto: CrearTiendaRequestDto, @UsuarioActual() usuario: UsuarioContexto): Promise<Tienda> {
-    return this.tiendas.crear(usuario.user_id, dto.nombre, dto.descripcion);
+    if (!usuario.tenant_id) throw new NotFoundError('Empresa', 'activa');
+    return this.tiendas.crear(usuario.tenant_id, usuario.user_id, dto.nombre, dto.descripcion);
   }
 
   @Get('me/tienda')

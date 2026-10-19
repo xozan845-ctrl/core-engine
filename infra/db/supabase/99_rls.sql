@@ -35,6 +35,10 @@ CREATE POLICY miembros_empresario_insert ON identity.empresa_miembros FOR INSERT
 ALTER TABLE catalog.productos ENABLE ROW LEVEL SECURITY;
 CREATE POLICY productos_admin_all ON catalog.productos
   FOR ALL TO authenticated USING (auth.rol() = 'admin') WITH CHECK (auth.rol() = 'admin');
+CREATE POLICY productos_empresa ON catalog.productos
+  FOR ALL TO authenticated
+  USING (auth.rol() = 'empresario' AND empresa_id::text = (auth.jwt() ->> 'tenant_id'))
+  WITH CHECK (auth.rol() = 'empresario' AND empresa_id::text = (auth.jwt() ->> 'tenant_id'));
 CREATE POLICY productos_lectura_publica ON catalog.productos
   FOR SELECT TO anon, authenticated USING (true);
 
@@ -52,8 +56,9 @@ CREATE POLICY tiendas_admin ON stores.tiendas
   FOR ALL TO authenticated USING (auth.rol() = 'admin') WITH CHECK (auth.rol() = 'admin');
 CREATE POLICY tiendas_vendedor_propias ON stores.tiendas
   FOR ALL TO authenticated
-  USING (auth.rol() = 'vendedor' AND vendedor_id = auth.uid())
-  WITH CHECK (auth.rol() = 'vendedor' AND vendedor_id = auth.uid());
+  USING (auth.rol() IN ('vendedor','empresario') AND empresa_id::text = (auth.jwt() ->> 'tenant_id')
+         AND (propietario_usuario_id = auth.uid() OR auth.rol() = 'empresario'))
+  WITH CHECK (auth.rol() IN ('vendedor','empresario') AND empresa_id::text = (auth.jwt() ->> 'tenant_id'));
 CREATE POLICY tiendas_lectura ON stores.tiendas
   FOR SELECT TO anon, authenticated USING (true);
 
@@ -64,9 +69,9 @@ CREATE POLICY ofertas_admin ON stores.ofertas
 CREATE POLICY ofertas_vendedor_propias ON stores.ofertas
   FOR ALL TO authenticated
   USING (auth.rol() = 'vendedor'
-         AND tienda_id IN (SELECT id FROM stores.tiendas WHERE vendedor_id = auth.uid()))
+         AND tienda_id IN (SELECT id FROM stores.tiendas WHERE propietario_usuario_id = auth.uid()))
   WITH CHECK (auth.rol() = 'vendedor'
-              AND tienda_id IN (SELECT id FROM stores.tiendas WHERE vendedor_id = auth.uid()));
+              AND tienda_id IN (SELECT id FROM stores.tiendas WHERE propietario_usuario_id = auth.uid()));
 CREATE POLICY ofertas_lectura ON stores.ofertas
   FOR SELECT TO anon, authenticated USING (true);
 

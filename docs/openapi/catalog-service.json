@@ -443,6 +443,11 @@
       "ProductoResponseDto": {
         "type": "object",
         "properties": {
+          "empresa_id": {
+            "type": "string",
+            "description": "Empresa propietaria",
+            "format": "uuid"
+          },
           "id": {
             "type": "string",
             "description": "Id del producto",
@@ -491,6 +496,7 @@
           }
         },
         "required": [
+          "empresa_id",
           "id",
           "sku",
           "nombre",

@@ -139,25 +139,32 @@ export class ProductosController {
 
   /** POST /api/v1/catalog/productos — alta de producto (admin, TC-01). */
   @Post('productos')
-  @Roles(ROLES.ADMIN)
+  @Roles(ROLES.EMPRESARIO)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Crear producto (admin, TC-01)' })
   @ApiCreatedResponse({ type: ProductoResponseDto, description: 'Producto creado' })
   async crear(
     @Body() dto: CrearProductoRequestDto,
-    @UsuarioActual() _usuario: UsuarioContexto,
+    @UsuarioActual() usuario: UsuarioContexto,
   ): Promise<Producto> {
-    return this.productos.crear({ ...dto, precio_base: dto.precio_base });
+    if (!usuario.tenant_id) throw new NotFoundError('Empresa', 'activa');
+    return this.productos.crear({ ...dto, empresa_id: usuario.tenant_id, precio_base: dto.precio_base });
   }
 
   /** PATCH /api/v1/catalog/productos/:id — edicion (admin; RN-08 historico). */
   @Patch('productos/:id')
-  @Roles(ROLES.ADMIN)
+  @Roles(ROLES.EMPRESARIO)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Editar producto (admin; RN-08 histórico)' })
   @ApiParam({ name: 'id', description: 'Id del producto' })
   @ApiOkResponse({ type: ProductoResponseDto, description: 'Producto actualizado' })
-  async actualizar(@Param('id') id: string, @Body() dto: ActualizarProductoRequestDto): Promise<Producto> {
-    return this.productos.actualizar(id, dto);
+  async actualizar(
+    @Param('id') id: string,
+    @Body() dto: ActualizarProductoRequestDto,
+    @UsuarioActual() usuario: UsuarioContexto,
+  ): Promise<Producto> {
+    const empresaId = usuario.rol === ROLES.EMPRESARIO ? usuario.tenant_id : undefined;
+    if (usuario.rol === ROLES.EMPRESARIO && !empresaId) throw new NotFoundError('Empresa', 'activa');
+    return this.productos.actualizar(id, dto, empresaId);
   }
 }

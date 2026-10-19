@@ -50,6 +50,7 @@ CREATE INDEX IF NOT EXISTS idx_empresa_miembros_usuario ON identity.empresa_miem
 -- ── catalog --------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS catalog.productos (
   id                uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  empresa_id        uuid NOT NULL,
   sku               text NOT NULL UNIQUE,
   nombre            text NOT NULL,
   descripcion       text NOT NULL DEFAULT '',
@@ -59,6 +60,9 @@ CREATE TABLE IF NOT EXISTS catalog.productos (
   estado            text NOT NULL DEFAULT 'disponible' CHECK (estado IN ('disponible', 'agotado')),
   creado_en         timestamptz NOT NULL DEFAULT NOW()
 );
+-- Migración aditiva para bases existentes; los registros legados quedan sin
+-- empresa hasta que el super admin los asigne explícitamente.
+ALTER TABLE catalog.productos ADD COLUMN IF NOT EXISTS empresa_id uuid;
 
 CREATE TABLE IF NOT EXISTS catalog.historico_precios (
   id                   uuid PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -103,11 +107,17 @@ CREATE INDEX IF NOT EXISTS idx_catalog_outbox_pendientes ON catalog.outbox (esta
 -- ── stores ---------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS stores.tiendas (
   id         uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  vendedor_id uuid NOT NULL UNIQUE,
+  empresa_id uuid NOT NULL,
+  propietario_usuario_id uuid NOT NULL,
+  vendedor_id uuid NOT NULL,
   nombre     text NOT NULL,
   descripcion text NOT NULL DEFAULT '',
   creado_en  timestamptz NOT NULL DEFAULT NOW()
 );
+ALTER TABLE stores.tiendas ADD COLUMN IF NOT EXISTS empresa_id uuid;
+ALTER TABLE stores.tiendas ADD COLUMN IF NOT EXISTS propietario_usuario_id uuid;
+CREATE INDEX IF NOT EXISTS idx_tiendas_empresa ON stores.tiendas (empresa_id);
+CREATE INDEX IF NOT EXISTS idx_tiendas_propietario ON stores.tiendas (propietario_usuario_id);
 
 CREATE TABLE IF NOT EXISTS stores.ofertas (
   id                 uuid PRIMARY KEY DEFAULT gen_random_uuid(),
