@@ -97,12 +97,13 @@ npm run demo
 - **Tooling JS parcialmente fuera de ESLint**: `eslint.config.mjs` cubre
   `packages/*/src/**/*.ts` (el alcance de G-7) y ahora también el motor de
   gobernanza (`scripts/**/*.mjs`); `qa-harness/` sigue sin lintearse.
-- **G-4/G-5/G-6/G-8 sin paso en CI**: no existen suites de integración,
-  contrato ni E2E ni paso de export OpenAPI en `ci.yml` (estado detallado en
-  [`06-estandares-cobertura.md`](./06-estandares-cobertura.md)).
-- **Cobertura (ratchet R-COV-1)**: los 11 workspaces cumplen su
-  `coverageThreshold`, y **5 de 11 ya alcanzan el objetivo 80/70** (`catalog`,
-  `identity`, `stores`, `logistics`, `field`). Los más bajos
+- **G-4/G-5/G-6 sin paso en CI**: no existen suites de integración,
+  contrato ni E2E (estado detallado en
+  [`06-estandares-cobertura.md`](./06-estandares-cobertura.md)). **G-8 sí está
+  activo** en el job `build` desde la Etapa 1 de OpenAPI.
+- **Cobertura (ratchet R-COV-1)**: los 12 workspaces cumplen su
+  `coverageThreshold`, y **6 de 12 ya alcanzan el objetivo 80/70** (`catalog`,
+  `identity`, `stores`, `logistics`, `field`, `storage`). Los más bajos
   siguen siendo `api-gateway` 22.8, `market-intelligence` 30.3, `commissions`
   32.7 y `shared` 40.3 (suben +5 por release).
 - **Specs pendientes (R-U-10/11, R-U-18)**: **25 de 25** `*.controller.ts` y
