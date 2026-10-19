@@ -43,7 +43,7 @@ rules/
 |---|---|---|---|
 | `architecture/` | ✅ **activa** (sin auditar) | [`architecture/README.md`](./architecture/README.md) | Arquitectura: CQRS/Event Sourcing por dominio, coreografía, outbox, DLQ, autonomía, caché TTL; naming de archivos/clases/tablas/commits (IDs `R-AR/R-NC`) |
 | `microservice/` | ✅ **activa** (sin auditar) | [`microservice/README.md`](./microservice/README.md) | Estructura de servicios (clean architecture, DI, DTOs, fail-fast, shutdown) y excepción OLAP de `market-intelligence` (IDs `R-MS/R-MI`) |
-| `gateway/` | ✅ **activa** (sin auditar) | [`gateway/README.md`](./gateway/README.md) | API Gateway: single entry point, edge offloading, JWT + scrub de headers, TTLs, RFC 7807, versionamiento (IDs `R-GW`) |
+| `gateway/` | ✅ **activa** (sin auditar) | [`gateway/README.md`](./gateway/README.md) | API Gateway: single entry point, edge offloading, JWT + scrub de headers, TTLs, errores normalizados (ADR-06), versionamiento (IDs `R-GW`) |
 | `data/` | ✅ **activa** (sin auditar) | [`data/README.md`](./data/README.md) | Integridad (centavos, stock atómico, estados, idempotencia, partida doble) y seguridad (secretos, PII, DTOs, rate limiting, `npm audit`) (IDs `R-DI/R-DS`) |
 | `db/` | ✅ **activa** (sin auditar) | [`db/README.md`](./db/README.md) | Postgres: schema-per-service, RLS, transacciones, índices, soft delete, migraciones; Supabase: paridad, Auth, secretos (IDs `R-DB/R-SB`) |
 | `observability/` | ✅ **activa** (sin auditar) | [`observability/README.md`](./observability/README.md) | Logs JSON + `x-request-id`; métricas Prometheus, labels RED, dashboards as code, alertas (IDs `R-OB/R-TM`) |
