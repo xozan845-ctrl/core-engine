@@ -8,8 +8,8 @@ import {
   UsuarioContexto,
   NotFoundError,
 } from '@core/shared';
-import { LiquidacionesService, Liquidacion, Periodo } from './liquidaciones.service';
-import { LiquidacionResponseDto } from './liquidaciones.response.dto';
+import { LiquidacionesService, Liquidacion, LiquidacionEmpresa, Periodo } from './liquidaciones.service';
+import { LiquidacionEmpresaResponseDto, LiquidacionResponseDto } from './liquidaciones.response.dto';
 
 export class EstadoLiquidacionRequestDto {
   @ApiProperty({ description: 'Estado de la liquidación', enum: ['pagada'] })
@@ -30,6 +30,15 @@ export class LiquidacionesController {
   @ApiOkResponse({ type: [LiquidacionResponseDto], description: 'Liquidaciones del vendedor' })
   async mias(@UsuarioActual() usuario: UsuarioContexto): Promise<Liquidacion[]> {
     return this.liquidaciones.deVendedor(usuario.user_id);
+  }
+
+  @Get('empresarios/me/liquidaciones')
+  @Roles(ROLES.EMPRESARIO)
+  @ApiOperation({ summary: 'Liquidaciones de la empresa autenticada' })
+  @ApiOkResponse({ type: [LiquidacionEmpresaResponseDto], description: 'Liquidaciones del empresario' })
+  async deMiEmpresa(@UsuarioActual() usuario: UsuarioContexto): Promise<LiquidacionEmpresa[]> {
+    if (!usuario.tenant_id) throw new NotFoundError('Empresa', 'activa');
+    return this.liquidaciones.deEmpresa(usuario.tenant_id);
   }
 
   /** POST /api/v1/admin/liquidaciones/corte — corte manual (admin, pruebas). */

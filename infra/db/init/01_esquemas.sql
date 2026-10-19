@@ -221,14 +221,27 @@ CREATE TABLE IF NOT EXISTS logistics.outbox (
 -- ── commissions ------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS commissions.comisiones (
   id                  uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  order_id            uuid NOT NULL UNIQUE,
+  order_id            uuid NOT NULL,
+  linea_clave         text NOT NULL,
+  empresa_id          uuid NOT NULL,
+  tienda_id           uuid NOT NULL,
   vendedor_id         uuid NOT NULL,
   venta_cents         integer NOT NULL,
   comision_cents      integer NOT NULL,      -- RN-04: 12 % del precio de venta
   monto_vendedor_cents integer NOT NULL,     -- venta - comision
+  monto_empresario_cents integer NOT NULL,
+  participacion_porcentaje integer NOT NULL CHECK (participacion_porcentaje BETWEEN 0 AND 100),
   estado              text NOT NULL DEFAULT 'acreditada' CHECK (estado IN ('acreditada', 'liquidada', 'compensada')),
-  creado_en           timestamptz NOT NULL DEFAULT NOW()
+  creado_en           timestamptz NOT NULL DEFAULT NOW(),
+  UNIQUE (order_id, linea_clave)
 );
+ALTER TABLE commissions.comisiones DROP CONSTRAINT IF EXISTS comisiones_order_id_key;
+ALTER TABLE commissions.comisiones ADD COLUMN IF NOT EXISTS linea_clave text;
+ALTER TABLE commissions.comisiones ADD COLUMN IF NOT EXISTS empresa_id uuid;
+ALTER TABLE commissions.comisiones ADD COLUMN IF NOT EXISTS tienda_id uuid;
+ALTER TABLE commissions.comisiones ADD COLUMN IF NOT EXISTS monto_empresario_cents integer;
+ALTER TABLE commissions.comisiones ADD COLUMN IF NOT EXISTS participacion_porcentaje integer;
+CREATE UNIQUE INDEX IF NOT EXISTS idx_comisiones_orden_linea ON commissions.comisiones (order_id, linea_clave);
 
 CREATE TABLE IF NOT EXISTS commissions.pagos (
   id         uuid PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -250,15 +263,30 @@ CREATE TABLE IF NOT EXISTS commissions.liquidaciones (
   UNIQUE (vendedor_id, periodo_inicio)
 );
 
+CREATE TABLE IF NOT EXISTS commissions.liquidaciones_empresas (
+  id             uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  empresa_id     uuid NOT NULL,
+  periodo_inicio date NOT NULL,
+  periodo_fin    date NOT NULL,
+  monto_cents    integer NOT NULL,
+  estado         text NOT NULL DEFAULT 'aprobada' CHECK (estado IN ('aprobada', 'pagada')),
+  creado_en      timestamptz NOT NULL DEFAULT NOW(),
+  UNIQUE (empresa_id, periodo_inicio)
+);
+
 CREATE TABLE IF NOT EXISTS commissions.compensaciones_devoluciones (
   id         uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   comision_id uuid REFERENCES commissions.comisiones(id),
   order_id   uuid NOT NULL,
   vendedor_id uuid NOT NULL,
-  monto_cents integer NOT NULL,  -- negativo: compensa la comision (RN-06)
+  empresa_id uuid,
+  monto_cents integer NOT NULL,
+  monto_empresario_cents integer,
   motivo     text NOT NULL,
   creado_en  timestamptz NOT NULL DEFAULT NOW()
 );
+ALTER TABLE commissions.compensaciones_devoluciones ADD COLUMN IF NOT EXISTS empresa_id uuid;
+ALTER TABLE commissions.compensaciones_devoluciones ADD COLUMN IF NOT EXISTS monto_empresario_cents integer;
 
 CREATE TABLE IF NOT EXISTS commissions.eventos_procesados (
   event_id     uuid PRIMARY KEY,

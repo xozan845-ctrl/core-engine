@@ -118,6 +118,15 @@ CREATE POLICY liquidaciones_vendedor_propias ON commissions.liquidaciones
   FOR SELECT TO authenticated
   USING (auth.rol() = 'vendedor' AND vendedor_id = auth.uid());
 
+ALTER TABLE commissions.liquidaciones_empresas ENABLE ROW LEVEL SECURITY;
+CREATE POLICY liquidaciones_empresas_admin ON commissions.liquidaciones_empresas
+  FOR ALL TO authenticated
+  USING (auth.rol() IN ('super_admin', 'admin'))
+  WITH CHECK (auth.rol() IN ('super_admin', 'admin'));
+CREATE POLICY liquidaciones_empresario_propias ON commissions.liquidaciones_empresas
+  FOR SELECT TO authenticated
+  USING (auth.rol() = 'empresario' AND empresa_id::text = (auth.jwt() ->> 'tenant_id'));
+
 ALTER TABLE commissions.pagos ENABLE ROW LEVEL SECURITY;
 CREATE POLICY pagos_admin ON commissions.pagos
   FOR ALL TO authenticated USING (auth.rol() = 'admin') WITH CHECK (auth.rol() = 'admin');

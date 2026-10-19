@@ -29,7 +29,9 @@ export class VentasService {
 
   async estadoCuenta(vendedorId: string): Promise<EstadoCuenta> {
     const comisiones = await this.pg.query<Comision>(
-      `SELECT id, order_id, vendedor_id, venta_cents, comision_cents, monto_vendedor_cents, estado, creado_en
+      `SELECT id, order_id, linea_clave, empresa_id, tienda_id, vendedor_id, venta_cents,
+              comision_cents, monto_vendedor_cents, monto_empresario_cents,
+              participacion_porcentaje, estado, creado_en
        FROM commissions.comisiones WHERE vendedor_id = $1 ORDER BY creado_en DESC LIMIT 200`,
       [vendedorId],
     );
@@ -40,7 +42,7 @@ export class VentasService {
     );
     const pendientes = comisiones
       .filter((c) => c.estado === 'acreditada')
-      .reduce((acc, c) => acc + c.comision_cents, 0);
+      .reduce((acc, c) => acc + c.monto_vendedor_cents, 0);
 
     return {
       vendedor_id: vendedorId,

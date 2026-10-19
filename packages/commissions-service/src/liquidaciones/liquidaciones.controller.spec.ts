@@ -6,10 +6,12 @@ import { NotFoundError, ROLES } from '@core/shared';
 
 const liquidacion = { id: 'liq-1', vendedor_id: 'u-v', monto_cents: 100000, estado: 'pendiente' };
 const vendedor = { user_id: 'u-v', email: 'v@core.local', rol: ROLES.VENDEDOR };
+const empresario = { user_id: 'u-e', email: 'e@core.local', rol: ROLES.EMPRESARIO, tenant_id: 'empresa-1' };
 
 function fabricar(): { liquidaciones: Record<string, Mock>; controller: LiquidacionesController } {
   const liquidaciones = {
     deVendedor: vi.fn(),
+    deEmpresa: vi.fn(),
     cerrarPeriodo: vi.fn(),
     cerrarPeriodoAnterior: vi.fn(),
     marcarPagada: vi.fn(),
@@ -31,6 +33,19 @@ describe('LiquidacionesController (api/v1, RN-07, R-U-10/11)', () => {
     liquidaciones.cerrarPeriodo.mockResolvedValue([liquidacion]);
     await controller.corteManual('2026-09-01', '2026-09-15');
     expect(liquidaciones.cerrarPeriodo).toHaveBeenCalledWith({ inicio: '2026-09-01', fin: '2026-09-15' });
+  });
+
+  it('debe devolver las liquidaciones de la empresa activa', async () => {
+    const { liquidaciones, controller } = fabricar();
+    liquidaciones.deEmpresa.mockResolvedValue([{ ...liquidacion, empresa_id: 'empresa-1' }]);
+    await controller.deMiEmpresa(empresario as never);
+    expect(liquidaciones.deEmpresa).toHaveBeenCalledWith('empresa-1');
+  });
+
+  it('debe rechazar al empresario sin empresa activa', async () => {
+    const { controller } = fabricar();
+    await expect(controller.deMiEmpresa({ ...empresario, tenant_id: undefined } as never))
+      .rejects.toBeInstanceOf(NotFoundError);
   });
 
   it('debe cerrar el periodo anterior cuando no llegan fechas', async () => {
@@ -55,6 +70,7 @@ describe('LiquidacionesController (api/v1, RN-07, R-U-10/11)', () => {
 
   it('debe exigir rol vendedor o admin segun la ruta', () => {
     expect(Reflect.getMetadata('roles_requeridos', LiquidacionesController.prototype.mias)).toEqual([ROLES.VENDEDOR]);
+    expect(Reflect.getMetadata('roles_requeridos', LiquidacionesController.prototype.deMiEmpresa)).toEqual([ROLES.EMPRESARIO]);
     expect(Reflect.getMetadata('roles_requeridos', LiquidacionesController.prototype.corteManual)).toEqual([ROLES.ADMIN]);
     expect(Reflect.getMetadata('roles_requeridos', LiquidacionesController.prototype.pagar)).toEqual([ROLES.ADMIN]);
   });
