@@ -8,7 +8,7 @@ import {
   Post,
   Query,
 } from '@nestjs/common';
-import { ApiBearerAuth, ApiOperation, ApiParam, ApiProperty, ApiResponse, ApiTags } from '@nestjs/swagger';
+import { ApiBearerAuth, ApiCreatedResponse, ApiNoContentResponse, ApiOkResponse, ApiOperation, ApiParam, ApiProperty, ApiResponse, ApiTags } from '@nestjs/swagger';
 import {
   IsInt,
   IsObject,
@@ -22,6 +22,12 @@ import {
 import { UsuarioActual, UsuarioContexto } from '@core/shared';
 import { requerirTenant } from '../tenant';
 import { ObjetoStorage, ObjetosService, SolicitudSubida, UrlDescarga } from './objetos.service';
+import {
+  ObjetoStorageResponseDto,
+  PaginaObjetosResponseDto,
+  SolicitudSubidaResponseDto,
+  UrlDescargaResponseDto,
+} from './objetos.response.dto';
 
 export class SolicitarSubidaRequestDto {
   @ApiProperty({ description: 'Nombre del archivo (sin rutas)', example: 'foto-producto.jpg' })
@@ -97,6 +103,7 @@ export class ObjetosController {
     description:
       'Valida tipo, tamano y cuota del tenant; registra el objeto en estado pendiente y devuelve la URL prefirmada.',
   })
+  @ApiCreatedResponse({ type: SolicitudSubidaResponseDto, description: 'URL de subida creada' })
   @ApiResponse({ status: 400, description: 'Tipo o tamano invalido (VALIDACION)' })
   @ApiResponse({ status: 409, description: 'Cuota excedida (CUOTA_EXCEDIDA)' })
   async solicitarSubida(
@@ -109,6 +116,7 @@ export class ObjetosController {
   @Post('objetos/:id/confirmar')
   @ApiOperation({ summary: 'Confirmar la subida y activar el objeto (contabiliza cuota)' })
   @ApiParam({ name: 'id', description: 'Id del objeto' })
+  @ApiOkResponse({ type: ObjetoStorageResponseDto, description: 'Objeto activado' })
   @HttpCode(200)
   async confirmar(
     @Param('id') id: string,
@@ -119,6 +127,7 @@ export class ObjetosController {
 
   @Get('objetos')
   @ApiOperation({ summary: 'Listar objetos del tenant (paginado, sin eliminados por defecto)' })
+  @ApiOkResponse({ type: PaginaObjetosResponseDto, description: 'Página de objetos' })
   async listar(
     @Query() query: ListarObjetosRequestDto,
     @UsuarioActual() usuario: UsuarioContexto,
@@ -129,6 +138,7 @@ export class ObjetosController {
   @Get('objetos/:id')
   @ApiOperation({ summary: 'Detalle (metadata) de un objeto del tenant' })
   @ApiParam({ name: 'id', description: 'Id del objeto' })
+  @ApiOkResponse({ type: ObjetoStorageResponseDto, description: 'Metadata del objeto' })
   async detalle(
     @Param('id') id: string,
     @UsuarioActual() usuario: UsuarioContexto,
@@ -139,6 +149,7 @@ export class ObjetosController {
   @Get('objetos/:id/descarga')
   @ApiOperation({ summary: 'URL prefirmada de descarga (GET) con validez limitada' })
   @ApiParam({ name: 'id', description: 'Id del objeto' })
+  @ApiOkResponse({ type: UrlDescargaResponseDto, description: 'URL de descarga' })
   async descarga(
     @Param('id') id: string,
     @UsuarioActual() usuario: UsuarioContexto,
@@ -149,6 +160,7 @@ export class ObjetosController {
   @Delete('objetos/:id')
   @ApiOperation({ summary: 'Eliminar un objeto (baja logica + borrado en MinIO)' })
   @ApiParam({ name: 'id', description: 'Id del objeto' })
+  @ApiNoContentResponse({ description: 'Objeto eliminado' })
   @HttpCode(204)
   async eliminar(
     @Param('id') id: string,
