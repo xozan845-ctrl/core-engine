@@ -134,7 +134,27 @@ CREATE POLICY pagos_admin ON commissions.pagos
 -- ── logistics.envios ────────────────────────────────────────────────────
 ALTER TABLE logistics.envios ENABLE ROW LEVEL SECURITY;
 CREATE POLICY envios_admin ON logistics.envios
-  FOR ALL TO authenticated USING (auth.rol() = 'admin') WITH CHECK (auth.rol() = 'admin');
+  FOR ALL TO authenticated
+  USING (auth.rol() IN ('super_admin', 'admin'))
+  WITH CHECK (auth.rol() IN ('super_admin', 'admin'));
 CREATE POLICY envios_logistica ON logistics.envios
   FOR ALL TO authenticated
-  USING (auth.rol() = 'logistica') WITH CHECK (auth.rol() = 'logistica');
+  USING (auth.rol() IN ('logistica', 'coordinador', 'supervisor', 'operativo')
+         AND proveedor_tenant_id::text = (auth.jwt() ->> 'tenant_id'))
+  WITH CHECK (auth.rol() IN ('logistica', 'coordinador', 'supervisor', 'operativo')
+              AND proveedor_tenant_id::text = (auth.jwt() ->> 'tenant_id'));
+CREATE POLICY envios_empresario ON logistics.envios
+  FOR SELECT TO authenticated
+  USING (auth.rol() = 'empresario' AND empresa_id::text = (auth.jwt() ->> 'tenant_id'));
+
+ALTER TABLE logistics.asignaciones_envio ENABLE ROW LEVEL SECURITY;
+CREATE POLICY asignaciones_envio_admin ON logistics.asignaciones_envio
+  FOR ALL TO authenticated
+  USING (auth.rol() IN ('super_admin', 'admin'))
+  WITH CHECK (auth.rol() IN ('super_admin', 'admin'));
+CREATE POLICY asignaciones_envio_empresa ON logistics.asignaciones_envio
+  FOR SELECT TO authenticated
+  USING (EXISTS (
+    SELECT 1 FROM logistics.envios e
+    WHERE e.id = envio_id AND e.empresa_id::text = (auth.jwt() ->> 'tenant_id')
+  ));

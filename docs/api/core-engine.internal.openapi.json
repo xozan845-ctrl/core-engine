@@ -369,6 +369,43 @@
         ]
       }
     },
+    "/internal/empresas/{id}": {
+      "get": {
+        "operationId": "InternalController_empresa",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "description": "Id de la empresa",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Empresa encontrada",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EmpresaResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "internalKey": []
+          }
+        ],
+        "summary": "Empresa por id (servicio→servicio)",
+        "tags": [
+          "Usuarios (interno)"
+        ]
+      }
+    },
     "/internal/orders/{id}/transicion": {
       "post": {
         "operationId": "InternoController_transicion",
@@ -3057,6 +3094,44 @@
           "vendedores"
         ]
       },
+      "EmpresaResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "nombre": {
+            "type": "string"
+          },
+          "modalidad_logistica": {
+            "type": "string",
+            "enum": [
+              "plataforma",
+              "propia",
+              "hibrida"
+            ]
+          },
+          "estado": {
+            "type": "string"
+          },
+          "creado_por": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "creado_en": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "nombre",
+          "modalidad_logistica",
+          "estado",
+          "creado_por",
+          "creado_en"
+        ]
+      },
       "RegistroRequestDto": {
         "type": "object",
         "properties": {
@@ -3382,44 +3457,6 @@
         "required": [
           "nombre",
           "modalidad_logistica"
-        ]
-      },
-      "EmpresaResponseDto": {
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "string",
-            "format": "uuid"
-          },
-          "nombre": {
-            "type": "string"
-          },
-          "modalidad_logistica": {
-            "type": "string",
-            "enum": [
-              "plataforma",
-              "propia",
-              "hibrida"
-            ]
-          },
-          "estado": {
-            "type": "string"
-          },
-          "creado_por": {
-            "type": "string",
-            "format": "uuid"
-          },
-          "creado_en": {
-            "type": "string"
-          }
-        },
-        "required": [
-          "id",
-          "nombre",
-          "modalidad_logistica",
-          "estado",
-          "creado_por",
-          "creado_en"
         ]
       },
       "CrearVendedorRequestDto": {

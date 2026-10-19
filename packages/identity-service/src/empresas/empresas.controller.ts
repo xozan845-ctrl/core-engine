@@ -14,7 +14,7 @@ class CrearVendedorRequestDto {
   @ApiProperty({ minLength: 8 }) @IsString() @MinLength(8) contrasena: string;
   @ApiProperty({ minimum: 0, maximum: 100 }) @IsInt() @Min(0) @Max(100) participacion_porcentaje: number;
 }
-class EmpresaResponseDto {
+export class EmpresaResponseDto {
   @ApiProperty({ format: 'uuid' }) id: string;
   @ApiProperty() nombre: string;
   @ApiProperty({ enum: ['plataforma', 'propia', 'hibrida'] }) modalidad_logistica: ModalidadLogistica;

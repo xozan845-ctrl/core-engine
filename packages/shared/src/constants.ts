@@ -16,6 +16,7 @@ export const ROLES_REGISTRABLES: Rol[] = [ROLES.EMPRESARIO, ROLES.COMPRADOR];
 
 /** Roles de la aplicacion de logistica de campo (app-test). */
 export const ROLES_LOGISTICA: Rol[] = [
+  ROLES.EMPRESARIO,
   ROLES.ADMIN,
   ROLES.LOGISTICA,
   ROLES.COORDINADOR,

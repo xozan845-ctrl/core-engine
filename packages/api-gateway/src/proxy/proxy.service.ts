@@ -19,6 +19,7 @@ export const DESTINOS: ServicioDestino[] = [
     patrones: [
       { patron: /^\/api\/v1\/auth\//, metodos: ['*'] },
       { patron: /^\/api\/v1\/usuarios(\/|$)/, metodos: ['*'] },
+      { patron: /^\/api\/v1\/empresas(\/|$)/, metodos: ['*'] },
     ],
   },
   {
@@ -53,6 +54,8 @@ export const DESTINOS: ServicioDestino[] = [
     patrones: [
       { patron: /^\/api\/v1\/orders\/[^/]+\/estado/, metodos: ['PATCH', 'POST'] },
       { patron: /^\/api\/v1\/admin\/envios/, metodos: ['*'] },
+      { patron: /^\/api\/v1\/empresarios\/me\/envios/, metodos: ['*'] },
+      { patron: /^\/api\/v1\/envios\/[^/]+\/estado$/, metodos: ['PATCH'] },
     ],
   },
   {

@@ -91,7 +91,7 @@ export class FieldController {
     return this.field.actualizarPersonal(this.tenant(u), id, dto);
   }
   @Delete('personal/:id')
-  @Roles(ROLES.ADMIN, ROLES.COORDINADOR)
+  @Roles(ROLES.EMPRESARIO, ROLES.ADMIN, ROLES.COORDINADOR)
   @ApiOperation({ summary: 'Eliminar personal' })
   @ApiOkResponse({ description: 'Personal eliminado' })
   eliminarPersonal(@UsuarioActual() u: UsuarioContexto, @Param('id') id: string) {
@@ -142,7 +142,7 @@ export class FieldController {
     return this.field.actualizarCliente(this.tenant(u), id, dto);
   }
   @Delete('clientes/:id')
-  @Roles(ROLES.ADMIN, ROLES.COORDINADOR)
+  @Roles(ROLES.EMPRESARIO, ROLES.ADMIN, ROLES.COORDINADOR)
   @ApiOperation({ summary: 'Eliminar cliente de campo' })
   @ApiOkResponse({ description: 'Cliente eliminado' })
   eliminarCliente(@UsuarioActual() u: UsuarioContexto, @Param('id') id: string) {
@@ -165,21 +165,21 @@ export class FieldController {
     return this.field.obtenerVehiculo(this.tenant(u), id);
   }
   @Post('vehiculos')
-  @Roles(ROLES.ADMIN, ROLES.COORDINADOR, ROLES.SUPERVISOR)
+  @Roles(ROLES.EMPRESARIO, ROLES.ADMIN, ROLES.COORDINADOR, ROLES.SUPERVISOR)
   @ApiOperation({ summary: 'Crear vehículo' })
   @ApiCreatedResponse({ type: VehiculoResponseDto, description: 'Vehículo creado' })
   crearVehiculo(@UsuarioActual() u: UsuarioContexto, @Body() dto: CrearVehiculoRequestDto) {
     return this.field.crearVehiculo(this.tenant(u), dto);
   }
   @Patch('vehiculos/:id')
-  @Roles(ROLES.ADMIN, ROLES.COORDINADOR, ROLES.SUPERVISOR)
+  @Roles(ROLES.EMPRESARIO, ROLES.ADMIN, ROLES.COORDINADOR, ROLES.SUPERVISOR)
   @ApiOperation({ summary: 'Actualizar vehículo' })
   @ApiOkResponse({ type: VehiculoResponseDto, description: 'Vehículo actualizado' })
   actualizarVehiculo(@UsuarioActual() u: UsuarioContexto, @Param('id') id: string, @Body() dto: ActualizarVehiculoRequestDto) {
     return this.field.actualizarVehiculo(this.tenant(u), id, dto);
   }
   @Delete('vehiculos/:id')
-  @Roles(ROLES.ADMIN, ROLES.COORDINADOR)
+  @Roles(ROLES.EMPRESARIO, ROLES.ADMIN, ROLES.COORDINADOR)
   @ApiOperation({ summary: 'Eliminar vehículo' })
   @ApiOkResponse({ description: 'Vehículo eliminado' })
   eliminarVehiculo(@UsuarioActual() u: UsuarioContexto, @Param('id') id: string) {
@@ -202,35 +202,35 @@ export class FieldController {
     return this.field.obtenerRuta(this.tenant(u), id);
   }
   @Post('rutas')
-  @Roles(ROLES.ADMIN, ROLES.COORDINADOR, ROLES.SUPERVISOR)
+  @Roles(ROLES.EMPRESARIO, ROLES.ADMIN, ROLES.COORDINADOR, ROLES.SUPERVISOR)
   @ApiOperation({ summary: 'Crear ruta' })
   @ApiCreatedResponse({ type: RutaResponseDto, description: 'Ruta creada' })
   crearRuta(@UsuarioActual() u: UsuarioContexto, @Body() dto: CrearRutaRequestDto) {
     return this.field.crearRuta(this.tenant(u), dto);
   }
   @Patch('rutas/:id')
-  @Roles(ROLES.ADMIN, ROLES.COORDINADOR, ROLES.SUPERVISOR)
+  @Roles(ROLES.EMPRESARIO, ROLES.ADMIN, ROLES.COORDINADOR, ROLES.SUPERVISOR)
   @ApiOperation({ summary: 'Actualizar ruta' })
   @ApiOkResponse({ type: RutaResponseDto, description: 'Ruta actualizada' })
   actualizarRuta(@UsuarioActual() u: UsuarioContexto, @Param('id') id: string, @Body() dto: ActualizarRutaRequestDto) {
     return this.field.actualizarRuta(this.tenant(u), id, dto);
   }
   @Delete('rutas/:id')
-  @Roles(ROLES.ADMIN, ROLES.COORDINADOR)
+  @Roles(ROLES.EMPRESARIO, ROLES.ADMIN, ROLES.COORDINADOR)
   @ApiOperation({ summary: 'Eliminar ruta' })
   @ApiOkResponse({ description: 'Ruta eliminada' })
   eliminarRuta(@UsuarioActual() u: UsuarioContexto, @Param('id') id: string) {
     return this.field.eliminarRuta(this.tenant(u), id);
   }
   @Post('rutas/:id/paradas')
-  @Roles(ROLES.ADMIN, ROLES.COORDINADOR, ROLES.SUPERVISOR)
+  @Roles(ROLES.EMPRESARIO, ROLES.ADMIN, ROLES.COORDINADOR, ROLES.SUPERVISOR)
   @ApiOperation({ summary: 'Agregar parada a la ruta' })
   @ApiCreatedResponse({ type: ParadaResponseDto, description: 'Parada creada' })
   agregarParada(@UsuarioActual() u: UsuarioContexto, @Param('id') id: string, @Body() dto: ParadaRequestDto) {
     return this.field.agregarParada(this.tenant(u), id, dto);
   }
   @Patch('rutas/:id/paradas/:paradaId')
-  @Roles(ROLES.ADMIN, ROLES.COORDINADOR, ROLES.SUPERVISOR)
+  @Roles(ROLES.EMPRESARIO, ROLES.ADMIN, ROLES.COORDINADOR, ROLES.SUPERVISOR)
   @ApiOperation({ summary: 'Actualizar parada de la ruta' })
   @ApiOkResponse({ type: ParadaResponseDto, description: 'Parada actualizada' })
   actualizarParada(
@@ -242,7 +242,7 @@ export class FieldController {
     return this.field.actualizarParada(this.tenant(u), id, paradaId, dto);
   }
   @Post('rutas/:id/asignar')
-  @Roles(ROLES.ADMIN, ROLES.COORDINADOR, ROLES.SUPERVISOR)
+  @Roles(ROLES.EMPRESARIO, ROLES.ADMIN, ROLES.COORDINADOR, ROLES.SUPERVISOR)
   @ApiOperation({ summary: 'Asignar personal/vehículo a la ruta' })
   @ApiCreatedResponse({ type: RutaResponseDto, description: 'Ruta asignada' })
   asignarRuta(@UsuarioActual() u: UsuarioContexto, @Param('id') id: string, @Body() dto: AsignarRutaRequestDto) {
@@ -270,28 +270,28 @@ export class FieldController {
     return this.field.obtenerPedido(this.tenant(u), id);
   }
   @Post('pedidos')
-  @Roles(ROLES.ADMIN, ROLES.COORDINADOR, ROLES.SUPERVISOR, ROLES.OPERATIVO)
+  @Roles(ROLES.EMPRESARIO, ROLES.ADMIN, ROLES.COORDINADOR, ROLES.SUPERVISOR, ROLES.OPERATIVO)
   @ApiOperation({ summary: 'Crear pedido de campo' })
   @ApiCreatedResponse({ type: PedidoResponseDto, description: 'Pedido creado' })
   crearPedido(@UsuarioActual() u: UsuarioContexto, @Body() dto: CrearPedidoRequestDto) {
     return this.field.crearPedido(this.tenant(u), dto);
   }
   @Patch('pedidos/:id')
-  @Roles(ROLES.ADMIN, ROLES.COORDINADOR, ROLES.SUPERVISOR, ROLES.OPERATIVO)
+  @Roles(ROLES.EMPRESARIO, ROLES.ADMIN, ROLES.COORDINADOR, ROLES.SUPERVISOR, ROLES.OPERATIVO)
   @ApiOperation({ summary: 'Actualizar pedido de campo' })
   @ApiOkResponse({ type: PedidoResponseDto, description: 'Pedido actualizado' })
   actualizarPedido(@UsuarioActual() u: UsuarioContexto, @Param('id') id: string, @Body() dto: ActualizarPedidoRequestDto) {
     return this.field.actualizarPedido(this.tenant(u), id, dto);
   }
   @Delete('pedidos/:id')
-  @Roles(ROLES.ADMIN, ROLES.COORDINADOR)
+  @Roles(ROLES.EMPRESARIO, ROLES.ADMIN, ROLES.COORDINADOR)
   @ApiOperation({ summary: 'Eliminar pedido de campo' })
   @ApiOkResponse({ description: 'Pedido eliminado' })
   eliminarPedido(@UsuarioActual() u: UsuarioContexto, @Param('id') id: string) {
     return this.field.eliminarPedido(this.tenant(u), id);
   }
   @Patch('pedidos/:id/estado')
-  @Roles(ROLES.ADMIN, ROLES.COORDINADOR, ROLES.SUPERVISOR, ROLES.OPERATIVO)
+  @Roles(ROLES.EMPRESARIO, ROLES.ADMIN, ROLES.COORDINADOR, ROLES.SUPERVISOR, ROLES.OPERATIVO)
   @ApiOperation({ summary: 'Cambiar estado del pedido' })
   @ApiOkResponse({ type: PedidoResponseDto, description: 'Pedido actualizado' })
   cambiarEstadoPedido(@UsuarioActual() u: UsuarioContexto, @Param('id') id: string, @Body() dto: CambiarEstadoPedidoRequestDto) {
@@ -352,7 +352,7 @@ export class FieldController {
     return this.field.actualizarIncidencia(this.tenant(u), id, dto);
   }
   @Delete('incidencias/:id')
-  @Roles(ROLES.ADMIN, ROLES.COORDINADOR)
+  @Roles(ROLES.EMPRESARIO, ROLES.ADMIN, ROLES.COORDINADOR)
   @ApiOperation({ summary: 'Eliminar incidencia' })
   @ApiOkResponse({ description: 'Incidencia eliminada' })
   eliminarIncidencia(@UsuarioActual() u: UsuarioContexto, @Param('id') id: string) {
@@ -409,7 +409,7 @@ export class FieldController {
     return this.field.obtenerCumplimiento(this.tenant(u), rutaId, fecha);
   }
   @Post('cumplimiento')
-  @Roles(ROLES.ADMIN, ROLES.COORDINADOR, ROLES.SUPERVISOR)
+  @Roles(ROLES.EMPRESARIO, ROLES.ADMIN, ROLES.COORDINADOR, ROLES.SUPERVISOR)
   @ApiOperation({ summary: 'Guardar cumplimiento de ruta' })
   @ApiCreatedResponse({ type: CumplimientoResponseDto, description: 'Cumplimiento guardado' })
   guardarCumplimiento(@UsuarioActual() u: UsuarioContexto, @Body() dto: GuardarCumplimientoRequestDto) {

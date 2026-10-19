@@ -2,6 +2,8 @@ import { Controller, Get, Param, UseGuards } from '@nestjs/common';
 import { ApiOkResponse, ApiOperation, ApiParam, ApiSecurity, ApiTags } from '@nestjs/swagger';
 import { ClaveInternaGuard, NotFoundError } from '@core/shared';
 import { UsuariosService } from '../usuarios/usuarios.service';
+import { EmpresasService } from '../empresas/empresas.service';
+import { EmpresaResponseDto } from '../empresas/empresas.controller';
 import {
   ContarVendedoresResponseDto,
   UsuarioResponseDto,
@@ -16,7 +18,10 @@ import {
 @Controller('internal')
 @UseGuards(ClaveInternaGuard)
 export class InternalController {
-  constructor(private readonly usuarios: UsuariosService) {}
+  constructor(
+    private readonly usuarios: UsuariosService,
+    private readonly empresas: EmpresasService,
+  ) {}
 
   @Get('usuarios/:id')
   @ApiOperation({ summary: 'Usuario por id (servicio→servicio)' })
@@ -40,5 +45,15 @@ export class InternalController {
   @ApiOkResponse({ type: ContarVendedoresResponseDto, description: 'Conteo de vendedores' })
   async contarVendedores() {
     return { vendedores: await this.usuarios.contarVendedores() };
+  }
+
+  @Get('empresas/:id')
+  @ApiOperation({ summary: 'Empresa por id (servicio→servicio)' })
+  @ApiParam({ name: 'id', description: 'Id de la empresa' })
+  @ApiOkResponse({ type: EmpresaResponseDto, description: 'Empresa encontrada' })
+  async empresa(@Param('id') id: string) {
+    const empresa = await this.empresas.obtener(id);
+    if (!empresa) throw new NotFoundError('Empresa', id);
+    return empresa;
   }
 }

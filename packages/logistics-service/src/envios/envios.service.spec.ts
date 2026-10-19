@@ -19,6 +19,10 @@ describe('EnviosService (guia de despacho y transiciones)', () => {
     id: 'e1',
     guia: 'BGH-ABC-123456',
     order_id: 'o1',
+    empresa_id: 'empresa-1',
+    modalidad_logistica: 'propia',
+    proveedor_tipo: 'empresa',
+    proveedor_tenant_id: 'empresa-1',
     estado: 'en_preparacion',
     creado_en: '2026-09-01T00:00:00.000Z',
   };
@@ -29,7 +33,7 @@ describe('EnviosService (guia de despacho y transiciones)', () => {
     it('debe devolver el envio existente sin insertar nada (idempotencia del consumidor)', async () => {
       const { servicio, pg } = crear();
       (pg.queryOne as Mock).mockResolvedValue(envio);
-      const resultado = await servicio.prepararEnvio('o1', 150000);
+      const resultado = await servicio.prepararEnvio('o1', 'empresa-1', 150000, 'propia');
       expect(resultado).toEqual(envio);
       expect(pg.queryOne).toHaveBeenCalledTimes(1); // solo el SELECT de busqueda
       const [sql] = (pg.queryOne as Mock).mock.calls[0];
@@ -41,13 +45,18 @@ describe('EnviosService (guia de despacho y transiciones)', () => {
       (pg.queryOne as Mock)
         .mockResolvedValueOnce(null) // no existe
         .mockResolvedValueOnce(envio); // INSERT ... RETURNING
-      const resultado = await servicio.prepararEnvio('o1', 150000);
+      const resultado = await servicio.prepararEnvio('o1', 'empresa-1', 150000, 'propia');
       expect(resultado.guia).toMatch(/^BGH-/); // guia con prefijo del proyecto
       const [sql, params] = (pg.queryOne as Mock).mock.calls[1];
       expect(sql).toContain('INSERT INTO logistics.envios');
       expect(sql).toContain("'en_preparacion'");
       expect(params[2]).toBe('o1');
-      expect(params[3]).toBe(150000); // monto en centavos (A02)
+      expect(params[3]).toBe('empresa-1');
+      expect(params[7]).toBe(150000); // monto en centavos (A02)
+      expect(pg.query).toHaveBeenCalledWith(
+        expect.stringContaining('logistics.asignaciones_envio'),
+        ['e1', null, 'empresa', 'empresa-1', 'automatica', null],
+      );
     });
 
     it('debe lanzar DomainError cuando el INSERT no devuelve fila', async () => {
@@ -55,7 +64,66 @@ describe('EnviosService (guia de despacho y transiciones)', () => {
       (pg.queryOne as Mock)
         .mockResolvedValueOnce(null)
         .mockResolvedValueOnce(null);
-      await expect(servicio.prepararEnvio('o1', 1)).rejects.toThrow(/no se pudo preparar/i);
+      await expect(servicio.prepararEnvio('o1', 'empresa-1', 1, 'propia')).rejects.toThrow(/no se pudo preparar/i);
+    });
+
+    it('debe dejar pendiente de proveedor un envio hibrido', async () => {
+      const { servicio, pg } = crear();
+      (pg.queryOne as Mock).mockResolvedValueOnce(null).mockResolvedValueOnce(envio);
+      await servicio.prepararEnvio('o1', 'empresa-1', 1000, 'hibrida');
+      const [, params] = (pg.queryOne as Mock).mock.calls[1];
+      expect(params.slice(4, 7)).toEqual(['hibrida', null, null]);
+    });
+  });
+
+  describe('asignacion hibrida', () => {
+    it('debe asignar la flota propia usando el tenant de la empresa', async () => {
+      const { servicio, pg } = crear();
+      (pg.queryOne as Mock)
+        .mockResolvedValueOnce({ ...envio, modalidad_logistica: 'hibrida', proveedor_tipo: null })
+        .mockResolvedValueOnce({ ...envio, modalidad_logistica: 'hibrida' });
+      await servicio.asignarProveedor('e1', 'empresa-1', 'empresa');
+      expect(pg.queryOne).toHaveBeenNthCalledWith(
+        2, expect.stringContaining('UPDATE logistics.envios'),
+        ['empresa', 'empresa-1', 'e1', 'empresa-1'],
+      );
+      expect(pg.query).toHaveBeenCalledWith(
+        expect.stringContaining('logistics.asignaciones_envio'),
+        ['e1', null, 'empresa', 'empresa-1', 'empresario', null],
+      );
+    });
+
+    it('debe impedir cambiar la asignacion fija de una modalidad propia', async () => {
+      const { servicio, pg } = crear();
+      (pg.queryOne as Mock).mockResolvedValueOnce(envio);
+      await expect(servicio.asignarProveedor('e1', 'empresa-1', 'plataforma'))
+        .rejects.toThrow(/Solo un envío híbrido/);
+    });
+  });
+
+  describe('avance aislado por flota', () => {
+    it('debe avanzar la orden solo cuando todos sus envios alcanzan el estado', async () => {
+      const { servicio, pg } = crear();
+      (pg.queryOne as Mock)
+        .mockResolvedValueOnce({ ...envio, estado: 'entregada' })
+        .mockResolvedValueOnce({ total: 0 });
+      const avanzarOrden = vi.spyOn(servicio, 'avanzarEstadoOrden').mockResolvedValue({ estado: 'entregada' } as never);
+
+      await servicio.avanzarEstadoEnvio('e1', 'empresa-1', 'entregada', 'recibido');
+
+      expect((pg.queryOne as Mock).mock.calls[0][1]).toEqual(['entregada', 'e1', 'empresa-1']);
+      expect(avanzarOrden).toHaveBeenCalledWith('o1', 'entregada', 'recibido');
+    });
+
+    it('no debe avanzar la orden mientras otra empresa tenga un envio pendiente', async () => {
+      const { servicio, pg } = crear();
+      (pg.queryOne as Mock)
+        .mockResolvedValueOnce({ ...envio, estado: 'entregada' })
+        .mockResolvedValueOnce({ total: 1 });
+      const avanzarOrden = vi.spyOn(servicio, 'avanzarEstadoOrden');
+
+      await servicio.avanzarEstadoEnvio('e1', 'empresa-1', 'entregada');
+      expect(avanzarOrden).not.toHaveBeenCalled();
     });
   });
 
