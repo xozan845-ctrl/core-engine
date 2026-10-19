@@ -1,5 +1,7 @@
 export const ROLES = {
+  SUPER_ADMIN: 'super_admin',
   ADMIN: 'admin',
+  EMPRESARIO: 'empresario',
   VENDEDOR: 'vendedor',
   COMPRADOR: 'comprador',
   LOGISTICA: 'logistica',
@@ -10,7 +12,7 @@ export const ROLES = {
 
 export type Rol = (typeof ROLES)[keyof typeof ROLES];
 
-export const ROLES_REGISTRABLES: Rol[] = [ROLES.VENDEDOR, ROLES.COMPRADOR];
+export const ROLES_REGISTRABLES: Rol[] = [ROLES.EMPRESARIO, ROLES.COMPRADOR];
 
 /** Roles de la aplicacion de logistica de campo (app-test). */
 export const ROLES_LOGISTICA: Rol[] = [

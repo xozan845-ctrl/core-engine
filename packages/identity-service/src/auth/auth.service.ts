@@ -59,14 +59,14 @@ export class AuthService {
   ) {}
 
   async registrar(datos: { nombre: string; correo: string; contrasena: string; rol: string }): Promise<Sesion> {
-    if (![ROLES.VENDEDOR, ROLES.COMPRADOR].includes(datos.rol as 'vendedor' | 'comprador')) {
-      throw new DomainError('ROL_NO_PERMITIDO', 'El registro publico solo admite vendedor o comprador.');
+    if (![ROLES.EMPRESARIO, ROLES.COMPRADOR].includes(datos.rol as 'empresario' | 'comprador')) {
+      throw new DomainError('ROL_NO_PERMITIDO', 'El registro publico solo admite empresario o comprador.');
     }
     const usuario = await this.usuarios.crear({
       nombre: datos.nombre,
       correo: datos.correo,
       contrasena: datos.contrasena,
-      rol: datos.rol as 'vendedor' | 'comprador',
+      rol: datos.rol as 'empresario' | 'comprador',
     });
     return this.sesionDe(usuario);
   }

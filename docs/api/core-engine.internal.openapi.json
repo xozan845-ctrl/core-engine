@@ -3075,7 +3075,7 @@
             "type": "string",
             "description": "Rol registrable",
             "enum": [
-              "vendedor",
+              "empresario",
               "comprador"
             ],
             "example": "comprador"
@@ -3234,7 +3234,7 @@
             "type": "string",
             "description": "Rol del usuario",
             "enum": [
-              "vendedor",
+              "empresario",
               "comprador",
               "admin",
               "logistica",
@@ -3354,6 +3354,125 @@
         },
         "required": [
           "personal_id"
+        ]
+      },
+      "CrearEmpresaRequestDto": {
+        "type": "object",
+        "properties": {
+          "nombre": {
+            "type": "string",
+            "minLength": 2,
+            "maxLength": 160
+          },
+          "modalidad_logistica": {
+            "type": "string",
+            "enum": [
+              "plataforma",
+              "propia",
+              "hibrida"
+            ]
+          }
+        },
+        "required": [
+          "nombre",
+          "modalidad_logistica"
+        ]
+      },
+      "EmpresaResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "nombre": {
+            "type": "string"
+          },
+          "modalidad_logistica": {
+            "type": "string",
+            "enum": [
+              "plataforma",
+              "propia",
+              "hibrida"
+            ]
+          },
+          "estado": {
+            "type": "string"
+          },
+          "creado_por": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "creado_en": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "nombre",
+          "modalidad_logistica",
+          "estado",
+          "creado_por",
+          "creado_en"
+        ]
+      },
+      "CrearVendedorRequestDto": {
+        "type": "object",
+        "properties": {
+          "nombre": {
+            "type": "string"
+          },
+          "correo": {
+            "type": "string"
+          },
+          "contrasena": {
+            "type": "string",
+            "minLength": 8
+          },
+          "participacion_porcentaje": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 100
+          }
+        },
+        "required": [
+          "nombre",
+          "correo",
+          "contrasena",
+          "participacion_porcentaje"
+        ]
+      },
+      "VendedorEmpresaResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "nombre": {
+            "type": "string"
+          },
+          "correo": {
+            "type": "string"
+          },
+          "rol": {
+            "type": "string",
+            "enum": [
+              "vendedor"
+            ]
+          },
+          "participacion_porcentaje": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 100
+          }
+        },
+        "required": [
+          "id",
+          "nombre",
+          "correo",
+          "rol",
+          "participacion_porcentaje"
         ]
       },
       "ItemOrdenResponseDto": {

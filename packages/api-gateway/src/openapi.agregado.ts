@@ -3810,6 +3810,124 @@ export const OPENAPI_AGREGADO = {
         ]
       }
     },
+    "/api/v1/empresas": {
+      "post": {
+        "operationId": "EmpresasController_crear",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CrearEmpresaRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Empresa creada con membresía del empresario",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EmpresaResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Crear empresa y elegir modalidad logística",
+        "tags": [
+          "Empresas"
+        ]
+      }
+    },
+    "/api/v1/empresas/{id}": {
+      "get": {
+        "operationId": "EmpresasController_obtener",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Empresa visible para el miembro o administrador global",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EmpresaResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "Empresas"
+        ]
+      }
+    },
+    "/api/v1/empresas/{id}/vendedores": {
+      "post": {
+        "operationId": "EmpresasController_vendedor",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CrearVendedorRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Vendedor creado y asociado a la empresa",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VendedorEmpresaResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Crear vendedor con participación predeterminada",
+        "tags": [
+          "Empresas"
+        ]
+      }
+    },
     "/api/v1/orders/{id}/estado": {
       "patch": {
         "operationId": "EstadoOrdenController_avanzar",
@@ -10164,7 +10282,7 @@ export const OPENAPI_AGREGADO = {
             "type": "string",
             "description": "Rol registrable",
             "enum": [
-              "vendedor",
+              "empresario",
               "comprador"
             ],
             "example": "comprador"
@@ -10323,7 +10441,7 @@ export const OPENAPI_AGREGADO = {
             "type": "string",
             "description": "Rol del usuario",
             "enum": [
-              "vendedor",
+              "empresario",
               "comprador",
               "admin",
               "logistica",
@@ -10443,6 +10561,125 @@ export const OPENAPI_AGREGADO = {
         },
         "required": [
           "personal_id"
+        ]
+      },
+      "CrearEmpresaRequestDto": {
+        "type": "object",
+        "properties": {
+          "nombre": {
+            "type": "string",
+            "minLength": 2,
+            "maxLength": 160
+          },
+          "modalidad_logistica": {
+            "type": "string",
+            "enum": [
+              "plataforma",
+              "propia",
+              "hibrida"
+            ]
+          }
+        },
+        "required": [
+          "nombre",
+          "modalidad_logistica"
+        ]
+      },
+      "EmpresaResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "nombre": {
+            "type": "string"
+          },
+          "modalidad_logistica": {
+            "type": "string",
+            "enum": [
+              "plataforma",
+              "propia",
+              "hibrida"
+            ]
+          },
+          "estado": {
+            "type": "string"
+          },
+          "creado_por": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "creado_en": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "nombre",
+          "modalidad_logistica",
+          "estado",
+          "creado_por",
+          "creado_en"
+        ]
+      },
+      "CrearVendedorRequestDto": {
+        "type": "object",
+        "properties": {
+          "nombre": {
+            "type": "string"
+          },
+          "correo": {
+            "type": "string"
+          },
+          "contrasena": {
+            "type": "string",
+            "minLength": 8
+          },
+          "participacion_porcentaje": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 100
+          }
+        },
+        "required": [
+          "nombre",
+          "correo",
+          "contrasena",
+          "participacion_porcentaje"
+        ]
+      },
+      "VendedorEmpresaResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "nombre": {
+            "type": "string"
+          },
+          "correo": {
+            "type": "string"
+          },
+          "rol": {
+            "type": "string",
+            "enum": [
+              "vendedor"
+            ]
+          },
+          "participacion_porcentaje": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 100
+          }
+        },
+        "required": [
+          "id",
+          "nombre",
+          "correo",
+          "rol",
+          "participacion_porcentaje"
         ]
       },
       "AvanzarEstadoRequestDto": {

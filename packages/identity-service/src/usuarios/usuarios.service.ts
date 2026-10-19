@@ -70,6 +70,41 @@ export class UsuariosService {
     return this.sanear(fila);
   }
 
+  async crearVendedorEnEmpresa(datos: {
+    nombre: string;
+    correo: string;
+    contrasena: string;
+    empresa_id: string;
+    participacion_porcentaje: number;
+  }): Promise<Usuario> {
+    const correo = datos.correo.trim().toLowerCase();
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(correo)) {
+      throw new DomainError('CORREO_INVALIDO', 'El correo no tiene un formato valido.');
+    }
+    if (datos.contrasena.length < 8) {
+      throw new DomainError('CONTRASENA_DEBIL', 'La contrasena debe tener al menos 8 caracteres.');
+    }
+    const hash = await bcrypt.hash(datos.contrasena, 10);
+    return this.pg.transaccion(async (client) => {
+      const existente = await client.query(`SELECT 1 FROM identity.usuarios WHERE LOWER(correo)=LOWER($1)`, [correo]);
+      if (existente.rowCount) throw new ConflictError('Ya existe una cuenta con ese correo.');
+      const result = await client.query<UsuarioRow>(
+        `INSERT INTO identity.usuarios (nombre, correo, contrasena_hash, rol, tenant_id)
+         VALUES ($1,$2,$3,'vendedor',$4)
+         RETURNING id, nombre, correo, rol, tenant_id, personal_id, creado_en`,
+        [datos.nombre.trim(), correo, hash, datos.empresa_id],
+      );
+      const usuario = result.rows[0];
+      await client.query(
+        `INSERT INTO identity.empresa_miembros
+         (empresa_id, usuario_id, rol, participacion_porcentaje)
+         VALUES ($1,$2,'vendedor',$3)`,
+        [datos.empresa_id, usuario.id, datos.participacion_porcentaje],
+      );
+      return this.sanear(usuario);
+    });
+  }
+
   async verificarCredenciales(correo: string, contrasena: string): Promise<Usuario> {
     const fila = await this.encontrarPorCorreo(correo);
     if (!fila) {
@@ -83,7 +118,7 @@ export class UsuariosService {
   }
 
   existeAdmin(): Promise<boolean> {
-    return this.pg.queryOne(`SELECT 1 FROM identity.usuarios WHERE rol = 'admin' LIMIT 1`).then((r) => !!r);
+    return this.pg.queryOne(`SELECT 1 FROM identity.usuarios WHERE rol IN ('super_admin','admin') LIMIT 1`).then((r) => !!r);
   }
 
   contarVendedores(): Promise<number> {

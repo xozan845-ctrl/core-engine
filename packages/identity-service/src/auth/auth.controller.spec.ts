@@ -38,7 +38,7 @@ describe('AuthController (api/v1/auth, R-U-10/11)', () => {
   it('debe registrar con el dto completo y devolver la sesion', async () => {
     const { auth, controller } = fabricar();
     auth.registrar.mockResolvedValue(sesion);
-    const dto = { nombre: 'Ana', correo: 'ana@core.local', contrasena: 'secreta123', rol: ROLES.VENDEDOR };
+    const dto = { nombre: 'Ana', correo: 'ana@core.local', contrasena: 'secreta123', rol: ROLES.EMPRESARIO };
     await expect(controller.registrar(dto as never)).resolves.toEqual(sesion);
     expect(auth.registrar).toHaveBeenCalledWith(dto);
   });

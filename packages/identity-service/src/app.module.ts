@@ -4,9 +4,10 @@ import { AuthModule } from './auth/auth.module';
 import { UsuariosModule } from './usuarios/usuarios.module';
 import { SeedService } from './seed/seed.service';
 import { InternalController } from './internal/internal.controller';
+import { EmpresasModule } from './empresas/empresas.module';
 
 @Module({
-  imports: [PgModule, RabbitModule, OutboxModule, MetricsModule, AuthModule, UsuariosModule],
+  imports: [PgModule, RabbitModule, OutboxModule, MetricsModule, AuthModule, UsuariosModule, EmpresasModule],
   providers: [SeedService],
   controllers: [InternalController],
 })
