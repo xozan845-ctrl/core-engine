@@ -22,6 +22,9 @@ CREATE POLICY empresas_miembros ON identity.empresas FOR SELECT TO authenticated
   USING (id::text = (auth.jwt() ->> 'tenant_id'));
 CREATE POLICY empresas_empresario_insert ON identity.empresas FOR INSERT TO authenticated
   WITH CHECK (auth.rol() = 'empresario' AND creado_por = auth.uid());
+CREATE POLICY empresas_empresario_update ON identity.empresas FOR UPDATE TO authenticated
+  USING (auth.rol() = 'empresario' AND id::text = (auth.jwt() ->> 'tenant_id'))
+  WITH CHECK (auth.rol() = 'empresario' AND id::text = (auth.jwt() ->> 'tenant_id'));
 
 ALTER TABLE identity.empresa_miembros ENABLE ROW LEVEL SECURITY;
 CREATE POLICY miembros_super_admin ON identity.empresa_miembros FOR ALL TO authenticated

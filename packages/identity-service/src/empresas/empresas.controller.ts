@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, Post } from '@nestjs/common';
+import { Body, Controller, Get, Param, Patch, Post } from '@nestjs/common';
 import { ApiBearerAuth, ApiCreatedResponse, ApiOkResponse, ApiOperation, ApiProperty, ApiTags } from '@nestjs/swagger';
 import { IsEmail, IsIn, IsInt, IsString, Length, Max, Min, MinLength } from 'class-validator';
 import { ROLES, Roles, UsuarioActual, UsuarioContexto } from '@core/shared';
@@ -13,6 +13,11 @@ class CrearVendedorRequestDto {
   @ApiProperty() @IsEmail({ require_tld: false }) correo: string;
   @ApiProperty({ minLength: 8 }) @IsString() @MinLength(8) contrasena: string;
   @ApiProperty({ minimum: 0, maximum: 100 }) @IsInt() @Min(0) @Max(100) participacion_porcentaje: number;
+}
+class ActualizarModalidadLogisticaRequestDto {
+  @ApiProperty({ enum: ['plataforma', 'propia', 'hibrida'] })
+  @IsIn(['plataforma', 'propia', 'hibrida'])
+  modalidad_logistica: ModalidadLogistica;
 }
 export class EmpresaResponseDto {
   @ApiProperty({ format: 'uuid' }) id: string;
@@ -40,6 +45,12 @@ export class EmpresasController {
   @Get(':id') @Roles(ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.EMPRESARIO, ROLES.VENDEDOR)
   @ApiOkResponse({ type: EmpresaResponseDto, description: 'Empresa visible para el miembro o administrador global' })
   obtener(@Param('id') id: string, @UsuarioActual() u: UsuarioContexto) { return this.empresas.obtenerPara(u.user_id, id, [ROLES.SUPER_ADMIN, ROLES.ADMIN].includes(u.rol as never)); }
+  @Patch(':id/logistica') @Roles(ROLES.EMPRESARIO)
+  @ApiOperation({ summary: 'Cambiar la modalidad logística para envíos futuros' })
+  @ApiOkResponse({ type: EmpresaResponseDto, description: 'Modalidad logística actualizada' })
+  actualizarLogistica(@Param('id') id: string, @Body() dto: ActualizarModalidadLogisticaRequestDto, @UsuarioActual() u: UsuarioContexto) {
+    return this.empresas.actualizarModalidad(u.user_id, id, dto.modalidad_logistica);
+  }
   @Post(':id/vendedores') @Roles(ROLES.EMPRESARIO)
   @ApiOperation({ summary: 'Crear vendedor con participación predeterminada' })
   @ApiCreatedResponse({ type: VendedorEmpresaResponseDto, description: 'Vendedor creado y asociado a la empresa' })

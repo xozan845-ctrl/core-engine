@@ -3459,6 +3459,22 @@
           "modalidad_logistica"
         ]
       },
+      "ActualizarModalidadLogisticaRequestDto": {
+        "type": "object",
+        "properties": {
+          "modalidad_logistica": {
+            "type": "string",
+            "enum": [
+              "plataforma",
+              "propia",
+              "hibrida"
+            ]
+          }
+        },
+        "required": [
+          "modalidad_logistica"
+        ]
+      },
       "CrearVendedorRequestDto": {
         "type": "object",
         "properties": {

@@ -3912,6 +3912,52 @@ export const OPENAPI_AGREGADO = {
         ]
       }
     },
+    "/api/v1/empresas/{id}/logistica": {
+      "patch": {
+        "operationId": "EmpresasController_actualizarLogistica",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ActualizarModalidadLogisticaRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Modalidad logística actualizada",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EmpresaResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Cambiar la modalidad logística para envíos futuros",
+        "tags": [
+          "Empresas"
+        ]
+      }
+    },
     "/api/v1/empresas/{id}/vendedores": {
       "post": {
         "operationId": "EmpresasController_vendedor",
@@ -10832,6 +10878,22 @@ export const OPENAPI_AGREGADO = {
         },
         "required": [
           "nombre",
+          "modalidad_logistica"
+        ]
+      },
+      "ActualizarModalidadLogisticaRequestDto": {
+        "type": "object",
+        "properties": {
+          "modalidad_logistica": {
+            "type": "string",
+            "enum": [
+              "plataforma",
+              "propia",
+              "hibrida"
+            ]
+          }
+        },
+        "required": [
           "modalidad_logistica"
         ]
       },
