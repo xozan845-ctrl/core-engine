@@ -36,8 +36,9 @@ scripts/
 │       ├── commits.mjs       #   validateCommitSubject (pura, parametrizada)
 │       └── rules-docs.mjs    #   áreas, archivos NN-tema.md e IDs de docs/rules
 │
-├── config/                   # datos del proyecto (no código)
+├── config/                   # datos y helpers puros del proyecto
 │   ├── project.mjs           #   rama, servicios, scopes, rutas, tipos de commit
+│   ├── coverage.mjs          #   umbrales de cobertura por workspace (R-COV-1/4)
 │   └── manifest.mjs          #   suites exigidas (id + archivo)
 │
 ├── rules/                    # reglas ejecutables, agrupadas por dominio

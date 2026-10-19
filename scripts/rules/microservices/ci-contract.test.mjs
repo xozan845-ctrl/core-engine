@@ -3,6 +3,7 @@ import { join } from 'node:path';
 import { defineSuite } from '../../engine/suite.mjs';
 import { readJson, readText, walkFiles } from '../../engine/lib/fs.mjs';
 import { repoRoot } from '../../engine/lib/paths.mjs';
+import { COVERAGE_THRESHOLDS } from '../../config/coverage.mjs';
 import {
   PACKAGES_DIR,
   SERVICES,
@@ -133,7 +134,20 @@ export default defineSuite({
       assert.deepEqual(problems, [], problems.join('\n'));
     });
 
-    test('R-COV-4: cada config Vitest aplica alcance y thresholds de cobertura', () => {
+    test('R-COV-4: la fuente central declara umbrales para cada workspace', () => {
+      const workspaces = [
+        'shared',
+        ...SERVICES.filter((service) => !SERVICE_TEST_EXCEPTIONS.includes(service)),
+      ];
+
+      assert.deepEqual(
+        sorted(Object.keys(COVERAGE_THRESHOLDS)),
+        sorted(workspaces),
+        'scripts/config/coverage.mjs debe declarar exactamente los workspaces con suite',
+      );
+    });
+
+    test('R-COV-4: cada config Vitest aplica alcance y consume los thresholds centrales', () => {
       const workspaces = [
         'shared',
         ...SERVICES.filter((service) => !SERVICE_TEST_EXCEPTIONS.includes(service)),
@@ -147,7 +161,14 @@ export default defineSuite({
         for (const [label, pattern] of [
           ['specs', /include:\s*\['src\/\*\*\/\*\.spec\.ts'\]/],
           ['lógica ejecutable', /include:\s*\['src\/\*\*\/\*\.ts'\]/],
-          ['thresholds', /thresholds:\s*\{[^}]*lines:\s*\d+[^}]*branches:\s*\d+/s],
+          [
+            'import de la fuente central',
+            /import \{ coverageThresholdsFor \} from '\.\.\/\.\.\/scripts\/config\/coverage\.mjs';/,
+          ],
+          [
+            'thresholds centrales',
+            new RegExp(`thresholds:\\s*coverageThresholdsFor\\(\\s*'${workspace}'\\s*\\)`),
+          ],
           ['reporte al fallar', /reportOnFailure:\s*true/],
         ]) {
           if (!pattern.test(config)) problems.push(`${workspace}: cobertura sin ${label}`);
