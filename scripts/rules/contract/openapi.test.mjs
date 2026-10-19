@@ -78,7 +78,7 @@ function rutasTapadas(prefijo, rutas) {
 export default defineSuite({
   id: 'openapi-contract',
   area: 'documentation',
-  rules: ['R-DO-8', 'R-DO-9', 'R-DS-5'],
+  rules: ['R-DO-8', 'R-DO-9', 'R-DO-10', 'R-DS-5'],
   mode: 'repo',
   run: ({ test, assert }) => {
     test('R-DO-8: cada controlador declara una superficie /api/v1 o /internal', () => {
@@ -155,6 +155,31 @@ export default defineSuite({
         tapadas,
         [],
         `Rutas estáticas tapadas por un :param previo (R-DO-9):\n${tapadas.join('\n')}`,
+      );
+    });
+
+    test('R-DO-10: toda operación documenta una respuesta de éxito', () => {
+      const faltantes = [];
+      const documentos = ['core-engine.openapi.json', 'core-engine.internal.openapi.json'];
+
+      for (const archivo of documentos) {
+        const documento = readJson(join(repoRoot, 'docs/api', archivo));
+        for (const [ruta, operaciones] of Object.entries(documento.paths ?? {})) {
+          for (const [metodo, operacion] of Object.entries(operaciones)) {
+            const exito = operacion.responses?.['200'] ?? operacion.responses?.['201'];
+            const sinContenido = operacion.responses?.['204'] !== undefined;
+            const deleteSinCuerpo = metodo === 'delete' && exito !== undefined && !exito.content;
+            if (!exito?.content && !sinContenido && !deleteSinCuerpo) {
+              faltantes.push(`${archivo}: ${metodo.toUpperCase()} ${ruta}`);
+            }
+          }
+        }
+      }
+
+      assert.deepEqual(
+        faltantes,
+        [],
+        `Operaciones sin respuesta de éxito documentada (R-DO-10):\n${faltantes.join('\n')}`,
       );
     });
 
