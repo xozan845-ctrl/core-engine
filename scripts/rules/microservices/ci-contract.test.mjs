@@ -145,6 +145,16 @@ export default defineSuite({
         sorted(workspaces),
         'scripts/config/coverage.mjs debe declarar exactamente los workspaces con suite',
       );
+
+      const problems = [];
+      for (const [workspace, thresholds] of Object.entries(COVERAGE_THRESHOLDS)) {
+        for (const metric of ['lines', 'branches', 'functions']) {
+          if (!Number.isInteger(thresholds[metric])) {
+            problems.push(`${workspace}: falta el umbral de ${metric}`);
+          }
+        }
+      }
+      assert.deepEqual(problems, [], problems.join('\n'));
     });
 
     test('R-COV-4: cada config Vitest aplica alcance y consume los thresholds centrales', () => {
