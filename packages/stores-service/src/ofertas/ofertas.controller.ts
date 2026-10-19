@@ -1,8 +1,13 @@
 import { Body, Controller, Get, Param, Patch, Post, Query } from '@nestjs/common';
-import { ApiBearerAuth, ApiOperation, ApiProperty, ApiResponse, ApiTags } from '@nestjs/swagger';
+import { ApiBearerAuth, ApiCreatedResponse, ApiOkResponse, ApiOperation, ApiProperty, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { IsInt, IsString, Max, Min } from 'class-validator';
 import { TiendasService } from '../tiendas/tiendas.service';
 import { OfertasService, Oferta } from './ofertas.service';
+import {
+  OfertaResponseDto,
+  PaginaOfertasResponseDto,
+  TiendaPublicaResponseDto,
+} from './ofertas.response.dto';
 import {
   Pagina,
   Roles,
@@ -46,7 +51,7 @@ export class OfertasController {
   @Roles(ROLES.VENDEDOR)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Publicar un producto con margen (vendedor)' })
-  @ApiResponse({ status: 201, description: 'Oferta creada' })
+  @ApiCreatedResponse({ type: OfertaResponseDto, description: 'Oferta creada' })
   async publicar(
     @Body() dto: PublicarProductoRequestDto,
     @UsuarioActual() usuario: UsuarioContexto,
@@ -59,6 +64,7 @@ export class OfertasController {
   @Roles(ROLES.VENDEDOR)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Cambiar el margen de una oferta (vendedor)' })
+  @ApiOkResponse({ type: OfertaResponseDto, description: 'Oferta actualizada' })
   async cambiarMargen(
     @Param('id') id: string,
     @Body() dto: CambiarMargenRequestDto,
@@ -72,6 +78,7 @@ export class OfertasController {
   @Roles(ROLES.VENDEDOR)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Listar las ofertas del vendedor autenticado' })
+  @ApiOkResponse({ type: PaginaOfertasResponseDto, description: 'Página de ofertas' })
   async misOfertas(
     @Query() query: { pagina?: string; limite?: string },
     @UsuarioActual() usuario: UsuarioContexto,
@@ -82,6 +89,7 @@ export class OfertasController {
   /** GET /api/v1/tiendas/:id — tienda publica con sus ofertas. */
   @Get('tiendas/:id')
   @ApiOperation({ summary: 'Tienda pública con sus ofertas (ruta pública)' })
+  @ApiOkResponse({ type: TiendaPublicaResponseDto, description: 'Tienda con sus ofertas' })
   @ApiResponse({ status: 404, description: 'Tienda inexistente (NO_ENCONTRADO)' })
   async tiendaPublica(@Param('id') tiendaId: string) {
     const tienda = await this.tiendas.encontrarPorId(tiendaId);

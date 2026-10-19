@@ -1,7 +1,8 @@
 import { Body, Controller, Get, Post } from '@nestjs/common';
-import { ApiBearerAuth, ApiOperation, ApiProperty, ApiTags } from '@nestjs/swagger';
+import { ApiBearerAuth, ApiCreatedResponse, ApiOkResponse, ApiOperation, ApiProperty, ApiTags } from '@nestjs/swagger';
 import { IsOptional, IsString, Length } from 'class-validator';
 import { TiendasService, Tienda } from './tiendas.service';
+import { TiendaResponseDto } from './tiendas.response.dto';
 import { Roles, ROLES, UsuarioActual, UsuarioContexto, NotFoundError } from '@core/shared';
 
 export class CrearTiendaRequestDto {
@@ -25,6 +26,7 @@ export class TiendasController {
   @Post('tienda')
   @Roles(ROLES.VENDEDOR)
   @ApiOperation({ summary: 'Crear la tienda del vendedor autenticado' })
+  @ApiCreatedResponse({ type: TiendaResponseDto, description: 'Tienda creada' })
   async crear(@Body() dto: CrearTiendaRequestDto, @UsuarioActual() usuario: UsuarioContexto): Promise<Tienda> {
     return this.tiendas.crear(usuario.user_id, dto.nombre, dto.descripcion);
   }
@@ -32,6 +34,7 @@ export class TiendasController {
   @Get('me/tienda')
   @Roles(ROLES.VENDEDOR)
   @ApiOperation({ summary: 'Tienda del vendedor autenticado' })
+  @ApiOkResponse({ type: TiendaResponseDto, description: 'Tienda del vendedor' })
   async miTienda(@UsuarioActual() usuario: UsuarioContexto): Promise<Tienda> {
     const tienda = await this.tiendas.deVendedor(usuario.user_id);
     if (!tienda) throw new NotFoundError('Tienda', 'del vendedor');
