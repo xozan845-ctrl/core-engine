@@ -47,7 +47,7 @@ Todo PR debe incluir las capas marcadas con ✅ para el tipo de cambio tocado.
 
   **Enmienda (migración Jest → Vitest, 2026-10-14)**: el runner pasó de Jest/ts-jest a **Vitest 4** (config por workspace en `vitest.config.ts`, ver ADR-20). La cobertura se recalibró al nuevo baseline porque el proveedor de cobertura cambió y ahora instrumenta **todos** los ficheros del alcance (como hacía `collectCoverageFrom` en Jest), no solo los importados; verificado con el provider `istanbul` (mismos números). El ratchet sigue **solo sube** (nunca baja). `field-service` se incorporó con baseline 84/70/72 y ya no quedan workspaces sin suite.
 - **Anti-inflado**: subir cobertura no puede lograrse agregando asserts triviales; el gate real es la mutación (R-MT-2).
-- **Ratchet (gate efectivo)**: la tabla es el objetivo final; el baseline se mide con el alcance de R-COV-4 redondeado a la baja (1 pt de margen de varianza) y sube **+5 puntos por release** hasta la tabla (tope: los mínimos de la tabla). Nunca baja (R-COV-1). Cada subida queda registrada en `AUDIT.md` (R-COV-3) y se vierte subiendo el umbral en `scripts/config/coverage.mjs`.
+- **Ratchet (gate efectivo)**: la tabla es el objetivo final; el baseline se mide con el alcance de R-COV-4 redondeado a la baja (1 pt de margen de varianza) y sube **+5 puntos por release** hasta la tabla (tope: los mínimos de la tabla). Nunca baja (R-COV-1). Cada subida queda registrada en `AUDIT.md` (R-COV-3) y se vierte subiendo el umbral en `scripts/config/coverage.mjs`. La suite `microservices-ci-contract` compara la fuente central con esta tabla y falla si un umbral queda por debajo del baseline documentado (R-COV-1).
 
 ## Umbrales de cobertura (frontend)
 
