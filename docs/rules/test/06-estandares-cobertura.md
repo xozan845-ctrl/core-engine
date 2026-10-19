@@ -28,6 +28,7 @@ Todo PR debe incluir las capas marcadas con ✅ para el tipo de cambio tocado.
 | Functions | ≥ 80% |
 
 - Cobertura medida con `npm test` (que corre cada workspace con `--coverage`; es lo que ejecuta el job `test` de CI); los números se registran en `AUDIT.md` en cada auditoría (R-COV-3).
+- Además de los thresholds por workspace, el job `test` ejecuta `npm run coverage:compare` contra el baseline versionado; cualquier métrica que baje falla el job (R-COV-1).
 - El gate mecánico es `scripts/config/coverage.mjs` (fuente única de los porcentajes), consumido por los `thresholds` de cada `packages/*/vitest.config.ts`: **12 workspaces con suite**, todos con baseline medido redondeado a la baja (método de la línea de abajo) y subida +5 por release hasta la tabla:
 
   | Workspace | Líneas | Ramas | Funciones |
@@ -81,7 +82,7 @@ se reutiliza).
 
 | ID | Regla |
 |---|---|
-| R-COV-1 | Ningún PR puede **bajar** la cobertura global respecto a `main` (comparar reportes, no solo absoluto). |
+| R-COV-1 | Ningún PR puede **bajar** la cobertura respecto al baseline versionado (`scripts/config/coverage-baseline.json`): `npm run coverage:compare` compara el reporte real de los 12 workspaces (lines/branches/functions/statements) y falla si cualquier métrica baja. Mejorar la cobertura exige actualizar el baseline con `npm run coverage:baseline` en el mismo PR; el gate nunca lo sube solo. |
 | R-COV-2 | Archivos de lógica de negocio sin spec → bloquea merge (R-U-17). Se puede verificar con un script que liste los `.ts` ejecutables (alcance de R-COV-4) sin `*.spec.ts` par. |
 | R-COV-3 | La auditoría `AUDIT.md` se actualiza en cada release con: cobertura actual, nº tests por capa, mutantes, deudas abiertas. Un gate solo se marca ✅ con evidencia de un **run verde de CI** (tener el paso configurado o pasar en local no basta). |
 | R-COV-4 | **Alcance del gate**: solo se mide lógica ejecutable. El alcance se define en `coverage.include`/`coverage.exclude` de cada `packages/*/vitest.config.ts`: hoy `src/**/*.ts` excluyendo `main.ts` (bootstrap), `*.module.ts` (wiring DI) y `swagger*.ts` (bootstrap de OpenAPI). Exclusiones adicionales admitidas (DTOs `/dto/`, mocks `/mocks/`, scripts CLI) se añaden ahí y se documentan en `AUDIT.md`. El baseline medido con ese alcance fija los thresholds del ratchet. |
