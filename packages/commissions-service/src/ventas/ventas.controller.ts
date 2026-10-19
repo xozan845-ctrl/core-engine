@@ -1,5 +1,5 @@
 import { Controller, Get } from '@nestjs/common';
-import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
+import { ApiBearerAuth, ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
 import {
   Roles,
   ROLES,
@@ -7,6 +7,7 @@ import {
   UsuarioContexto,
 } from '@core/shared';
 import { VentasService, EstadoCuenta } from './ventas.service';
+import { EstadoCuentaResponseDto } from './ventas.response.dto';
 
 /** GET /api/v1/vendedores/me/ventas — ordenes y comisiones del vendedor (Tabla 21). */
 @ApiTags('Comisiones · Ventas')
@@ -18,6 +19,7 @@ export class VentasController {
   @Get('ventas')
   @Roles(ROLES.VENDEDOR)
   @ApiOperation({ summary: 'Estado de cuenta de ventas/comisiones del vendedor' })
+  @ApiOkResponse({ type: EstadoCuentaResponseDto, description: 'Estado de cuenta del vendedor' })
   async estado(@UsuarioActual() usuario: UsuarioContexto): Promise<EstadoCuenta> {
     return this.ventas.estadoCuenta(usuario.user_id);
   }
