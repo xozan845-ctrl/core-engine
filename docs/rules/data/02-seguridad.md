@@ -7,7 +7,7 @@ interno, rate limiting y dependencias en todos los servicios.
 
 | ID | Regla |
 |---|---|
-| R-DS-1 | **Gestión de secretos**: ningún secreto (contraseñas, claves JWT, API keys, credenciales de DB/RabbitMQ) debe estar codificado (hardcoded) en el repositorio. Todo debe provenir de variables de entorno (`.env` localmente o gestores de secretos en producción). |
+| R-DS-1 | **Gestión de secretos**: ningún secreto (contraseñas, claves JWT, API keys, credenciales de DB/RabbitMQ) debe estar codificado (hardcoded) en el repositorio. Todo debe provenir de variables de entorno (`.env` localmente o gestores de secretos en producción). `npm run security:secrets` escanea los archivos versionados con patrones de alta confianza (AWS, GitHub, Slack, Google, Stripe y claves privadas) y CI lo ejecuta en `security-gate`. |
 | R-DS-2 | **Protección de datos personales (PII)**: las contraseñas en la base de datos deben estar cifradas o hasheadas estrictamente con bcrypt (salteado) o algoritmos superiores (Argon2). No se guarda información de tarjetas de crédito en texto plano (se usarán tokens de pasarelas PCI-DSS). |
 | R-DS-3 | **Roles y privilegios mínimos** (principio de mínimo privilegio): toda acción en el sistema debe verificar el rol del actor que la invoca usando guardias. No confiar en el frontend para ocultar información confidencial: siempre omitirla y validarla en el backend. |
 | R-DS-4 | **Validación de entradas estricta (OWASP)**: cada payload entrante en la API DEBE estar respaldado por un DTO (Data Transfer Object) válido. Utilizar `class-validator` y `class-transformer` de NestJS con configuración estricta (`whitelist: true`, `forbidNonWhitelisted: true`) para limpiar la entrada y prevenir inyección masiva (mass assignment). |
