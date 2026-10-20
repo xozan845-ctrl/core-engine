@@ -3,6 +3,7 @@ import { join } from 'node:path';
 import { defineSuite } from '../../engine/suite.mjs';
 import { repoRoot } from '../../engine/lib/paths.mjs';
 import { readText } from '../../engine/lib/fs.mjs';
+import { checkEnv } from '../../engine/lib/env.mjs';
 import { GHCR_OWNER, SERVICES, WORKFLOWS_DIR } from '../../config/project.mjs';
 
 /**
@@ -110,6 +111,15 @@ export default defineSuite({
       assert.ok(
         existsSync(join(repoRoot, 'scripts', 'tools', 'smoke-remote.mjs')),
         'falta scripts/tools/smoke-remote.mjs',
+      );
+    });
+
+    test('R-CD-7: compose y plantillas de entorno están alineados y sin secretos', () => {
+      const problems = checkEnv(repoRoot);
+      assert.deepEqual(
+        problems,
+        [],
+        `Entornos inconsistentes (R-CD-7):\n${problems.join('\n')}`,
       );
     });
 
