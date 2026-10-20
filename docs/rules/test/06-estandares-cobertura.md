@@ -71,7 +71,7 @@ se reutiliza).
 | G-3 | Cobertura ≥ `thresholds` vigentes en `packages/*/vitest.config.ts` (ratchet +5/release; alcance según R-COV-4): incumplirlo o bajar el umbral falla el job `test`. | ✅ |
 | G-4 | Suite de integración API+BD en verde. | ⏸ sin suites de integración (exigible cuando existan, R-I-12). |
 | G-5 | Test de contrato en verde. | ⏸ sin suites de contrato (R-C-7). |
-| G-6 | E2E de flujos críticos en verde antes de release (puede ser etiqueta `release`, no cada PR). | ⏸ sin job E2E; lo más cercano hoy es el smoke local `docker compose -f docker-compose.dev.yml up -d --build` + `npm run demo`. |
+| G-6 | E2E de flujos críticos en verde antes de release (puede ser etiqueta `release`, no cada PR). | ⏸ E2E completo pendiente; `deploy.yml` ya ejecuta `npm run demo` en dev y `npm run smoke:remote` (solo lectura) en stage/prod (R-CD-12). |
 | G-7 | Lint **y** build sin errores: `npm run lint` (ESLint, alcance `packages/*/src/**/*.ts`, job `lint`) + `npm run build` (job `build`). | ✅ |
 | G-8 | Swagger spec sincronizado (R-C-7): `git diff --exit-code` tras el export. | ✅ `npm run swagger:export` + `git diff --exit-code docs/openapi docs/api packages/api-gateway/src/openapi.agregado.ts` en el job `build`. |
 

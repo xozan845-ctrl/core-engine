@@ -13,6 +13,7 @@
     "test": "npm run test -w @core/shared -- --coverage && npm run test -w @core/api-gateway -- --coverage && npm run test -w @core/orders-service -- --coverage && npm run test -w @core/commissions-service -- --coverage && npm run test -w @core/finance-service -- --coverage && npm run test -w @core/market-intelligence-service -- --coverage && npm run test -w @core/catalog-service -- --coverage && npm run test -w @core/identity-service -- --coverage && npm run test -w @core/stores-service -- --coverage && npm run test -w @core/logistics-service -- --coverage && npm run test -w @core/field-service -- --coverage && npm run test -w @core/storage-service -- --coverage",
     "start:field": "npm run start -w @core/field-service",
     "demo": "node scripts/cli.mjs smoke",
+    "smoke:remote": "node scripts/tools/smoke-remote.mjs",
     "lint": "eslint .",
     "rules:check": "node scripts/cli.mjs rules",
     "release:check": "node scripts/tools/release-check.mjs",
