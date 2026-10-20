@@ -35,7 +35,7 @@ test('secrets-check: acepta archivos versionados sin patrones de alto riesgo', (
 
 test('secrets-check: detecta una clave AWS versionada', (t) => {
   const root = createRepo(t);
-  writeFileSync(join(root, 'config.env'), 'AWS_ACCESS_KEY_ID=AKIAABCDEFGHIJKLMNOP\n');
+  writeFileSync(join(root, 'config.env'), 'AWS_ACCESS_KEY_ID=AKIAABCDEFGHIJKLMNOP\n'); // secrets-check:allow
   git(root, ['add', '-A']);
   git(root, ['commit', '-q', '-m', 'add config']);
 
@@ -46,7 +46,7 @@ test('secrets-check: detecta una clave AWS versionada', (t) => {
 
 test('secrets-check: ignora archivos no versionados', (t) => {
   const root = createRepo(t);
-  writeFileSync(join(root, 'tmp.txt'), 'AKIAABCDEFGHIJKLMNOP\n');
+  writeFileSync(join(root, 'tmp.txt'), 'AKIAABCDEFGHIJKLMNOP\n'); // secrets-check:allow
 
   const result = run(root);
   assert.equal(result.status, 0, result.stderr);
