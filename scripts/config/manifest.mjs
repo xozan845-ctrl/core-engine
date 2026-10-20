@@ -12,6 +12,7 @@ export const requiredSuites = [
   { id: 'docs-structure', file: 'rules/docs/structure.test.mjs' },
   { id: 'git-commits', file: 'rules/git/commits.test.mjs' },
   { id: 'git-branch', file: 'rules/git/branch.test.mjs' },
+  { id: 'database-migrations', file: 'rules/db/migrations.test.mjs' },
   { id: 'delivery-compose', file: 'rules/delivery/compose.test.mjs' },
   { id: 'services-monorepo', file: 'rules/microservices/structure.test.mjs' },
   {
