@@ -37,6 +37,7 @@ scripts/
 │       ├── semver.mjs        #   parse/compare de tags vX.Y.Z[-pre] (puro)
 │       ├── coverage.mjs      #   lee coverage-summary y compara contra baseline
 │       ├── db.mjs            #   manifiesto SHA-256 de migraciones (R-DB-6)
+│       ├── env.mjs           #   compose ↔ plantillas de entorno (R-CD-7)
 │       └── rules-docs.mjs    #   áreas, archivos NN-tema.md e IDs de docs/rules
 │
 ├── config/                   # datos y helpers puros del proyecto
@@ -76,6 +77,8 @@ scripts/
     ├── db-migrations.test.mjs # hash, migración nueva y edición detectadas
     ├── db-rls.mjs             # cobertura RLS real vs baseline (R-SB-2)
     ├── db-rls.test.mjs        # tabla nueva y baseline obsoleto detectados
+    ├── env-check.mjs          # compose ↔ plantillas de entorno (R-CD-7)
+    ├── env-check.test.mjs     # variable faltante y secreto hardcodeado
     ├── smoke.mjs              # flujo API completo contra stack levantado (dev)
     ├── smoke.test.mjs         # regresiones del runner con HTTP efímero
     ├── smoke-remote.mjs       # smoke read-only para stage/prod (R-CD-12)
@@ -195,6 +198,7 @@ Los `npm scripts` de la raíz son **envoltorios** (sin ruptura para CI ni local)
 | `coverage:baseline` | `node scripts/tools/coverage-baseline.mjs` |
 | `db:migrations` | `node scripts/tools/db-migrations.mjs` |
 | `db:rls` | `node scripts/tools/db-rls.mjs` |
+| `env:check` | `node scripts/tools/env-check.mjs` |
 | `demo` | `node scripts/cli.mjs smoke` |
 | `smoke:remote` | `node scripts/tools/smoke-remote.mjs` |
 | `swagger:export` | `node scripts/cli.mjs swagger` |
