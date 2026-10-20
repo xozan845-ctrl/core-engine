@@ -45,6 +45,7 @@ scripts/
 │   ├── coverage-baseline.json #  cobertura real de referencia (R-COV-1)
 │   ├── spec-baseline.json    #   services/consumers sin spec (R-COV-2)
 │   ├── db-migrations.json    #   SHA-256 de migraciones init (R-DB-6)
+│   ├── rls-baseline.json     #   tablas sin RLS/policy (deuda R-SB-2)
 │   └── manifest.mjs          #   suites exigidas (id + archivo)
 │
 ├── rules/                    # reglas ejecutables, agrupadas por dominio
@@ -52,6 +53,7 @@ scripts/
 │   ├── git/commits.test.mjs        # R-GC-1..4 (puro)
 │   ├── git/branch.test.mjs         # R-GC-1..4 (contextual, commits del PR)
 │   ├── db/migrations.test.mjs      # R-DB-6 (manifiesto de migraciones)
+│   ├── db/rls.test.mjs             # R-SB-2 (cobertura RLS vs baseline)
 │   ├── delivery/compose.test.mjs   # R-CD-1/3/7/8
 │   ├── microservices/
 │   │   ├── structure.test.mjs      # R-CD-3/4/14
@@ -72,6 +74,8 @@ scripts/
     ├── coverage-compare.test.mjs # gate y writer con reportes sintéticos
     ├── db-migrations.mjs      # verifica/actualiza el manifiesto de migraciones
     ├── db-migrations.test.mjs # hash, migración nueva y edición detectadas
+    ├── db-rls.mjs             # cobertura RLS real vs baseline (R-SB-2)
+    ├── db-rls.test.mjs        # tabla nueva y baseline obsoleto detectados
     ├── smoke.mjs              # flujo API completo contra stack levantado
     ├── smoke.test.mjs         # regresiones del runner con HTTP efímero
     ├── swagger-aggregate.mjs  # agrega specs y separa superficie pública/interna
@@ -188,6 +192,7 @@ Los `npm scripts` de la raíz son **envoltorios** (sin ruptura para CI ni local)
 | `coverage:compare` | `node scripts/tools/coverage-compare.mjs` |
 | `coverage:baseline` | `node scripts/tools/coverage-baseline.mjs` |
 | `db:migrations` | `node scripts/tools/db-migrations.mjs` |
+| `db:rls` | `node scripts/tools/db-rls.mjs` |
 | `demo` | `node scripts/cli.mjs smoke` |
 | `swagger:export` | `node scripts/cli.mjs swagger` |
 | `test:engine` | autotests del motor, incluida una suite centinela que prueba el exit code ante assertions fallidas |
