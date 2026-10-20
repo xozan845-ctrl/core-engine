@@ -79,6 +79,8 @@ scripts/
     ├── db-rls.test.mjs        # tabla nueva y baseline obsoleto detectados
     ├── env-check.mjs          # compose ↔ plantillas de entorno (R-CD-7)
     ├── env-check.test.mjs     # variable faltante y secreto hardcodeado
+    ├── promotion-check.mjs    # promoción por delta: destino ancestro y árbol (R-GE-7)
+    ├── promotion-check.test.mjs # delta correcto, contenido faltante y base incorrecta
     ├── smoke.mjs              # flujo API completo contra stack levantado (dev)
     ├── smoke.test.mjs         # regresiones del runner con HTTP efímero
     ├── smoke-remote.mjs       # smoke read-only para stage/prod (R-CD-12)
@@ -199,6 +201,7 @@ Los `npm scripts` de la raíz son **envoltorios** (sin ruptura para CI ni local)
 | `db:migrations` | `node scripts/tools/db-migrations.mjs` |
 | `db:rls` | `node scripts/tools/db-rls.mjs` |
 | `env:check` | `node scripts/tools/env-check.mjs` |
+| `promotion:check` | `node scripts/tools/promotion-check.mjs` |
 | `demo` | `node scripts/cli.mjs smoke` |
 | `smoke:remote` | `node scripts/tools/smoke-remote.mjs` |
 | `swagger:export` | `node scripts/cli.mjs swagger` |
