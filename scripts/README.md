@@ -48,6 +48,7 @@ scripts/
 │   ├── spec-baseline.json    #   services/consumers sin spec (R-COV-2)
 │   ├── db-migrations.json    #   SHA-256 de migraciones init (R-DB-6)
 │   ├── rls-baseline.json     #   tablas sin RLS/policy (deuda R-SB-2)
+│   ├── stryker.base.mjs      #   configuración base de mutación (R-MT-1/2)
 │   └── manifest.mjs          #   suites exigidas (id + archivo)
 │
 ├── rules/                    # reglas ejecutables, agrupadas por dominio
@@ -208,6 +209,8 @@ Los `npm scripts` de la raíz son **envoltorios** (sin ruptura para CI ni local)
 | `promotion:check` | `node scripts/tools/promotion-check.mjs` |
 | `security:secrets` | `node scripts/tools/secrets-check.mjs` |
 | `contract:breaking` | `node scripts/tools/contract-breaking.mjs` |
+| `mutation:shared` | `npm run mutation -w @core/shared` |
+| `mutation:critical` | Stryker secuencial en identity/orders/commissions/finance |
 | `demo` | `node scripts/cli.mjs smoke` |
 | `smoke:remote` | `node scripts/tools/smoke-remote.mjs` |
 | `swagger:export` | `node scripts/cli.mjs swagger` |

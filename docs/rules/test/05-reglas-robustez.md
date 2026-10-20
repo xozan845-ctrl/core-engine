@@ -22,8 +22,8 @@ Reglas transversales que suben la calidad más allá del happy-path.
 
 | ID | Regla |
 |---|---|
-| R-MT-1 | Módulos críticos (`identity`/auth, `orders` (CQRS + event sourcing), `commissions`/`finance` (dinero)) se someten a mutation testing (Stryker) en periodicidad mensual o pre-release. |
-| R-MT-2 | **Rangos de mutantes eliminados: ≥ 90% para módulos críticos** (`identity`, `orders`, `commissions`/`finance` — gate `break` de Stryker), ≥ 80% para cualquier otro módulo sometido a mutación, y por debajo de **70% el release queda bloqueado** (piso absoluto). Mutantes sobrevivientes → tests débiles a corregir antes del release. |
+| R-MT-1 | Módulos críticos (`identity`/auth, `orders` (CQRS + event sourcing), `commissions`/`finance` (dinero)) se someten a mutation testing (Stryker) en periodicidad mensual o pre-release. Implementado en `.github/workflows/mutation.yml` (cron mensual + `workflow_dispatch`) para `shared`, `identity-service`, `orders-service`, `commissions-service` y `finance-service`; no es gate de PR. |
+| R-MT-2 | **Rangos de mutantes eliminados: ≥ 90% para módulos críticos** (`identity`, `orders`, `commissions`/`finance` — gate `break` de Stryker), ≥ 80% para cualquier otro módulo sometido a mutación, y por debajo de **70% el release queda bloqueado** (piso absoluto). Mutantes sobrevivientes → tests débiles a corregir antes del release. **Baseline inicial 2026-10-20:** `shared` 10.95% (money 0%, order-state 57.69%); la primera ronda corre en modo reporte (`break: null`) y el JSON se publica como artefacto. Al estabilizar el baseline se activa `break: 90` y el workflow mensual pasa a bloquear el release. |
 | R-MT-3 | Un test que no mata ningún mutante (equivalentes descartados) se mejora o elimina. |
 
 ## Robustez de entradas y concurrencia

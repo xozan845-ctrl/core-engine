@@ -9,7 +9,8 @@
     "start": "node dist/main.js",
     "start:dev": "ts-node src/main.ts",
     "swagger:export": "node dist/swagger-export.js",
-    "test": "vitest run"
+    "test": "vitest run",
+    "mutation": "stryker run"
   },
   "dependencies": {
     "@core/shared": "file:../shared",
