@@ -14,9 +14,9 @@ Reglas transversales que suben la calidad más allá del happy-path.
 
 | ID | Regla |
 |---|---|
-| R-PB-1 | Funciones puras de transformación (parsers de fecha, conversores, cálculos de dinero/comisiones, exportadores CSV) deben tener **property tests**: invariantes generadas con cientos de inputs aleatorios. |
+| R-PB-1 | Funciones puras de transformación (parsers de fecha, conversores, cálculos de dinero/comisiones, exportadores CSV) deben tener **property tests**: invariantes generadas con cientos de inputs aleatorios. Implementado con `fast-check` en `packages/shared/src/*.property.spec.ts` para dinero y ciclo de la orden. |
 | R-PB-2 | Propiedades mínimas para fechas: `parse(format(x))` conserva el día local; inicio de rango ≤ fin de rango; `dateFrom=dateTo=D` solo devuelve registros del día local D (monotonicidad y partición: suma de días = total del rango). |
-| R-PB-3 | Propiedades de dinero y ciclo de la orden: invariantes de consistencia (centavos siempre enteros y ≥ 0, comisión = rate × base exacta, transiciones de estado solo por la máquina permitida — `validarTransicion` —, idempotencia de reejecución sobre los mismos eventos). |
+| R-PB-3 | Propiedades de dinero y ciclo de la orden: invariantes de consistencia (centavos siempre enteros y ≥ 0, comisión = rate × base exacta, transiciones de estado solo por la máquina permitida — `validarTransicion` —, idempotencia de reejecución sobre los mismos eventos). `Money` rechaza centavos negativos y normaliza `-0`; los property tests cubren round-trip, suma/resta, márgenes, comisión, formato y todas las transiciones. |
 
 ## Mutation testing
 
