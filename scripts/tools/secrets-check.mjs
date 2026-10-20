@@ -67,6 +67,7 @@ function main() {
 
     const lines = buffer.toString('utf8').split('\n');
     for (let i = 0; i < lines.length; i += 1) {
+      if (lines[i].includes('secrets-check:allow')) continue;
       for (const [label, pattern] of PATTERNS) {
         if (pattern.test(lines[i])) {
           findings.push(`${file}:${i + 1}: ${label}`);
