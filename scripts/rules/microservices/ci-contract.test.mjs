@@ -72,7 +72,7 @@ function workspacesInScript(script, task) {
 export default defineSuite({
   id: 'microservices-ci-contract',
   area: 'test',
-  rules: ['R-MS-1', 'R-QA-1', 'R-COV-1', 'R-COV-2', 'R-COV-4', 'R-CI-5', 'R-I-12'],
+  rules: ['R-MS-1', 'R-QA-1', 'R-COV-1', 'R-COV-2', 'R-COV-4', 'R-CI-5', 'R-I-12', 'R-DS-1'],
   mode: 'repo',
   run: ({ test, assert }) => {
     test('R-MS-1: el inventario declara exactamente los servicios desplegables', () => {
@@ -262,6 +262,19 @@ export default defineSuite({
         problems,
         [],
         `Specs faltantes fuera del baseline (R-COV-2):\n${problems.join('\n')}`,
+      );
+    });
+
+    test('R-DS-1: CI escanea secretos de alta confianza en archivos versionados', () => {
+      const workflow = readText(join(repoRoot, WORKFLOWS_DIR, 'ci.yml'));
+      assert.match(
+        workflow,
+        /^\s*run: npm run security:secrets$/m,
+        'CI debe ejecutar security:secrets (R-DS-1)',
+      );
+      assert.ok(
+        existsSync(join(repoRoot, 'scripts', 'tools', 'secrets-check.mjs')),
+        'falta scripts/tools/secrets-check.mjs',
       );
     });
 
