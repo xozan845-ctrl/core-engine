@@ -26,6 +26,7 @@
     "env:check": "node scripts/tools/env-check.mjs",
     "promotion:check": "node scripts/tools/promotion-check.mjs",
     "security:secrets": "node scripts/tools/secrets-check.mjs",
+    "contract:breaking": "node scripts/tools/contract-breaking.mjs",
     "coverage:compare": "node scripts/tools/coverage-compare.mjs",
     "coverage:baseline": "node scripts/tools/coverage-baseline.mjs",
     "swagger:export": "npm run build && npm run swagger:export --workspaces --if-present && node scripts/cli.mjs swagger && npm run build -w @core/api-gateway"

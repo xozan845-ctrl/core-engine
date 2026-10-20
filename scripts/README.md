@@ -38,6 +38,7 @@ scripts/
 │       ├── coverage.mjs      #   lee coverage-summary y compara contra baseline
 │       ├── db.mjs            #   manifiesto SHA-256 de migraciones (R-DB-6)
 │       ├── env.mjs           #   compose ↔ plantillas de entorno (R-CD-7)
+│       ├── openapi-diff.mjs  #   diff de contrato: paths, tipos, required (R-C-7)
 │       └── rules-docs.mjs    #   áreas, archivos NN-tema.md e IDs de docs/rules
 │
 ├── config/                   # datos y helpers puros del proyecto
@@ -83,6 +84,7 @@ scripts/
     ├── promotion-check.test.mjs # delta correcto, contenido faltante y base incorrecta
     ├── secrets-check.mjs      # secretos de alta confianza en archivos versionados (R-DS-1)
     ├── secrets-check.test.mjs # clave AWS detectada y archivo no versionado ignorado
+    ├── contract-breaking.mjs  # diff OpenAPI contra la ref base (R-C-7)
     ├── smoke.mjs              # flujo API completo contra stack levantado (dev)
     ├── smoke.test.mjs         # regresiones del runner con HTTP efímero
     ├── smoke-remote.mjs       # smoke read-only para stage/prod (R-CD-12)
@@ -205,6 +207,7 @@ Los `npm scripts` de la raíz son **envoltorios** (sin ruptura para CI ni local)
 | `env:check` | `node scripts/tools/env-check.mjs` |
 | `promotion:check` | `node scripts/tools/promotion-check.mjs` |
 | `security:secrets` | `node scripts/tools/secrets-check.mjs` |
+| `contract:breaking` | `node scripts/tools/contract-breaking.mjs` |
 | `demo` | `node scripts/cli.mjs smoke` |
 | `smoke:remote` | `node scripts/tools/smoke-remote.mjs` |
 | `swagger:export` | `node scripts/cli.mjs swagger` |
