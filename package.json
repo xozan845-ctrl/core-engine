@@ -27,6 +27,8 @@
     "promotion:check": "node scripts/tools/promotion-check.mjs",
     "security:secrets": "node scripts/tools/secrets-check.mjs",
     "contract:breaking": "node scripts/tools/contract-breaking.mjs",
+    "mutation:shared": "npm run mutation -w @core/shared",
+    "mutation:critical": "npm run mutation -w @core/identity-service && npm run mutation -w @core/orders-service && npm run mutation -w @core/commissions-service && npm run mutation -w @core/finance-service",
     "coverage:compare": "node scripts/tools/coverage-compare.mjs",
     "coverage:baseline": "node scripts/tools/coverage-baseline.mjs",
     "swagger:export": "npm run build && npm run swagger:export --workspaces --if-present && node scripts/cli.mjs swagger && npm run build -w @core/api-gateway"
@@ -36,6 +38,8 @@
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
+    "@stryker-mutator/core": "^10.0.0",
+    "@stryker-mutator/vitest-runner": "^10.0.0",
     "@swc/core": "^1.16.18",
     "@vitest/coverage-v8": "^5.0.4",
     "eslint": "^10.11.0",
