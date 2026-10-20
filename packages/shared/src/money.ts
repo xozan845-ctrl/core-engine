@@ -77,11 +77,9 @@ export class Money {
 
   /** Serializacion "1150.00" (doc: montos en C$ con dos decimales). */
   string(): string {
-    const signo = this.centavos < 0 ? '-' : '';
-    const abs = Math.abs(this.centavos);
-    const enteros = String(Math.floor(abs / 100));
-    const decimales = String(abs % 100).padStart(2, '0');
-    return `${signo}${enteros}.${decimales}`;
+    const enteros = String(Math.floor(this.centavos / 100));
+    const decimales = String(this.centavos % 100).padStart(2, '0');
+    return `${enteros}.${decimales}`;
   }
 
   toString(): string {
