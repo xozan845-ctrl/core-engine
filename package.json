@@ -24,6 +24,7 @@
     "db:migrations": "node scripts/tools/db-migrations.mjs",
     "db:rls": "node scripts/tools/db-rls.mjs",
     "env:check": "node scripts/tools/env-check.mjs",
+    "promotion:check": "node scripts/tools/promotion-check.mjs",
     "coverage:compare": "node scripts/tools/coverage-compare.mjs",
     "coverage:baseline": "node scripts/tools/coverage-baseline.mjs",
     "swagger:export": "npm run build && npm run swagger:export --workspaces --if-present && node scripts/cli.mjs swagger && npm run build -w @core/api-gateway"
