@@ -129,6 +129,8 @@ jobs:
     needs: [test, lint, integration-catalog]
     steps:
       - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
       - uses: actions/setup-node@v5
         with:
           node-version: "20"
@@ -139,3 +141,5 @@ jobs:
         run: npm run build
       - name: Gate G-8 — spec OpenAPI sincronizado (R-DO-6, R-C-7)
         run: npm run swagger:export && git diff --exit-code docs/openapi docs/api packages/api-gateway/src/openapi.agregado.ts
+      - name: Gate R-C-7 — cambios incompatibles de contrato
+        run: npm run contract:breaking -- --base-ref origin/main

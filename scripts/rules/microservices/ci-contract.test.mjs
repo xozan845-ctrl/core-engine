@@ -72,7 +72,7 @@ function workspacesInScript(script, task) {
 export default defineSuite({
   id: 'microservices-ci-contract',
   area: 'test',
-  rules: ['R-MS-1', 'R-QA-1', 'R-COV-1', 'R-COV-2', 'R-COV-4', 'R-CI-5', 'R-I-12', 'R-DS-1'],
+  rules: ['R-MS-1', 'R-QA-1', 'R-COV-1', 'R-COV-2', 'R-COV-4', 'R-CI-5', 'R-I-12', 'R-DS-1', 'R-C-7'],
   mode: 'repo',
   run: ({ test, assert }) => {
     test('R-MS-1: el inventario declara exactamente los servicios desplegables', () => {
@@ -275,6 +275,19 @@ export default defineSuite({
       assert.ok(
         existsSync(join(repoRoot, 'scripts', 'tools', 'secrets-check.mjs')),
         'falta scripts/tools/secrets-check.mjs',
+      );
+    });
+
+    test('R-C-7: CI bloquea cambios incompatibles en OpenAPI', () => {
+      const workflow = readText(join(repoRoot, WORKFLOWS_DIR, 'ci.yml'));
+      assert.match(
+        workflow,
+        /^\s*run: npm run contract:breaking -- --base-ref origin\/main$/m,
+        'CI debe ejecutar contract:breaking contra origin/main (R-C-7)',
+      );
+      assert.ok(
+        existsSync(join(repoRoot, 'scripts', 'tools', 'contract-breaking.mjs')),
+        'falta scripts/tools/contract-breaking.mjs',
       );
     });
 

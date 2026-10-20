@@ -25,7 +25,7 @@ los tests unitarios de nadie.
 | ID | Regla |
 |---|---|
 | R-C-6 | Cambios incompatibles (renombrar/eliminar campo, cambiar tipo) solo en nueva versión `/api/v2`; test de contrato detecta la pérdida de campos. |
-| R-C-7 | Swagger se genera de los DTOs (no anotado a mano); el spec se exporta a un JSON versionado en el repo y CI lo bloquea con `git diff --exit-code` cuando está desfasado. El gate **G-8** está activo en el job `build` (`npm run swagger:export`) para `docs/openapi`, `docs/api` y el agregado del gateway. |
+| R-C-7 | Swagger se genera de los DTOs (no anotado a mano); el spec se exporta a un JSON versionado en el repo y CI lo bloquea con `git diff --exit-code` cuando está desfasado. El gate **G-8** está activo en el job `build` (`npm run swagger:export`) para `docs/openapi`, `docs/api` y el agregado del gateway. Además, `npm run contract:breaking -- --base-ref origin/main` compara el contrato agregado (público+interno) y falla ante paths/métodos/status/propiedades eliminadas, cambios de tipo o request obligatorio nuevo; `docs/api/breaking-baseline.json` explicita las excepciones decididas. |
 
 ## Errores
 
