@@ -8,10 +8,14 @@ export class Money {
   readonly centavos: number;
 
   private constructor(centavos: number) {
-    if (!Number.isSafeInteger(centavos)) {
-      throw new DomainError('MONTO_INVALIDO', 'El monto debe ser un entero en centavos.');
+    if (!Number.isSafeInteger(centavos) || centavos < 0) {
+      throw new DomainError(
+        'MONTO_INVALIDO',
+        'El monto debe ser un entero no negativo en centavos.',
+      );
     }
-    this.centavos = centavos;
+    // Normaliza -0 (Math.round puede producirlo) para que el valor sea estable.
+    this.centavos = centavos === 0 ? 0 : centavos;
   }
 
   static desdeCentavos(centavos: number): Money {

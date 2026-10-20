@@ -21,6 +21,11 @@ describe('Money (RN-01 y RN-04, ejemplo Tabla 5)', () => {
     expect(Money.parsear(1150).string()).toBe('1150.00');
   });
 
+  it('rechaza montos negativos (R-PB-3: centavos enteros y >= 0)', () => {
+    expect(() => Money.parsear('-0.01')).toThrow(DomainError);
+    expect(() => Money.desdeCentavos(-1)).toThrow(DomainError);
+  });
+
   it('rechaza montos con mas de 2 decimales', () => {
     expect(() => Money.parsear('1.999')).toThrow(DomainError);
   });
