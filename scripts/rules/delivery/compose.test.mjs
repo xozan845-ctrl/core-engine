@@ -22,7 +22,7 @@ const workflowsDirectory = join(repoRoot, WORKFLOWS_DIR);
 export default defineSuite({
   id: 'delivery-compose',
   area: 'cd',
-  rules: ['R-CD-1', 'R-CD-2', 'R-CD-3', 'R-CD-7', 'R-CD-8', 'R-CD-12'],
+  rules: ['R-CD-1', 'R-CD-2', 'R-CD-3', 'R-CD-7', 'R-CD-8', 'R-CD-12', 'G-6'],
   mode: 'repo',
   run: ({ test, assert }) => {
     test('R-CD-3: los composes de stage/prod consumen GHCR, sin `build:`', () => {
@@ -67,7 +67,7 @@ export default defineSuite({
     });
 
     test('R-CD-1/R-CD-3/R-CD-8: existen los workflows de entrega con su contrato', () => {
-      const files = ['ci.yml', 'release.yml', 'promote.yml', 'deploy.yml'];
+      const files = ['ci.yml', 'release.yml', 'promote.yml', 'deploy.yml', 'e2e.yml'];
       const missing = files.filter((f) => !existsSync(join(workflowsDirectory, f)));
       assert.deepEqual(missing, [], `Faltan workflows (R-CD-1): ${missing.join(', ')}`);
 
@@ -111,6 +111,16 @@ export default defineSuite({
       assert.ok(
         existsSync(join(repoRoot, 'scripts', 'tools', 'smoke-remote.mjs')),
         'falta scripts/tools/smoke-remote.mjs',
+      );
+
+      const e2e = read('.github', 'workflows', 'e2e.yml');
+      assert.ok(
+        e2e.includes('docker-compose.dev.yml'),
+        'e2e.yml debe levantar el stack dev (G-6)',
+      );
+      assert.ok(
+        e2e.includes('npm run demo'),
+        'e2e.yml debe ejecutar el flujo E2E completo (G-6)',
       );
     });
 
