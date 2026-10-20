@@ -36,6 +36,7 @@ scripts/
 │       ├── commits.mjs       #   validateCommitSubject (pura, parametrizada)
 │       ├── semver.mjs        #   parse/compare de tags vX.Y.Z[-pre] (puro)
 │       ├── coverage.mjs      #   lee coverage-summary y compara contra baseline
+│       ├── db.mjs            #   manifiesto SHA-256 de migraciones (R-DB-6)
 │       └── rules-docs.mjs    #   áreas, archivos NN-tema.md e IDs de docs/rules
 │
 ├── config/                   # datos y helpers puros del proyecto
@@ -43,12 +44,14 @@ scripts/
 │   ├── coverage.mjs          #   umbrales de cobertura por workspace (R-COV-1/4)
 │   ├── coverage-baseline.json #  cobertura real de referencia (R-COV-1)
 │   ├── spec-baseline.json    #   services/consumers sin spec (R-COV-2)
+│   ├── db-migrations.json    #   SHA-256 de migraciones init (R-DB-6)
 │   └── manifest.mjs          #   suites exigidas (id + archivo)
 │
 ├── rules/                    # reglas ejecutables, agrupadas por dominio
 │   ├── docs/structure.test.mjs     # integridad de docs/rules + manifiesto
 │   ├── git/commits.test.mjs        # R-GC-1..4 (puro)
 │   ├── git/branch.test.mjs         # R-GC-1..4 (contextual, commits del PR)
+│   ├── db/migrations.test.mjs      # R-DB-6 (manifiesto de migraciones)
 │   ├── delivery/compose.test.mjs   # R-CD-1/3/7/8
 │   ├── microservices/
 │   │   ├── structure.test.mjs      # R-CD-3/4/14
@@ -67,6 +70,8 @@ scripts/
     ├── coverage-compare.mjs   # gate de cobertura real vs baseline (R-COV-1)
     ├── coverage-baseline.mjs  # actualiza el baseline desde coverage-summary
     ├── coverage-compare.test.mjs # gate y writer con reportes sintéticos
+    ├── db-migrations.mjs      # verifica/actualiza el manifiesto de migraciones
+    ├── db-migrations.test.mjs # hash, migración nueva y edición detectadas
     ├── smoke.mjs              # flujo API completo contra stack levantado
     ├── smoke.test.mjs         # regresiones del runner con HTTP efímero
     ├── swagger-aggregate.mjs  # agrega specs y separa superficie pública/interna
@@ -182,6 +187,7 @@ Los `npm scripts` de la raíz son **envoltorios** (sin ruptura para CI ni local)
 | `version:bump` | `node scripts/tools/version-bump.mjs` |
 | `coverage:compare` | `node scripts/tools/coverage-compare.mjs` |
 | `coverage:baseline` | `node scripts/tools/coverage-baseline.mjs` |
+| `db:migrations` | `node scripts/tools/db-migrations.mjs` |
 | `demo` | `node scripts/cli.mjs smoke` |
 | `swagger:export` | `node scripts/cli.mjs swagger` |
 | `test:engine` | autotests del motor, incluida una suite centinela que prueba el exit code ante assertions fallidas |
