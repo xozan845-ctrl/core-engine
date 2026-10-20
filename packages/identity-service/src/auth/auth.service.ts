@@ -31,7 +31,7 @@ export interface Sesion {
 }
 
 /** Convierte un TTL tipo `900s`/`7d` a milisegundos (para la expiracion de la sesion). */
-function ttlAMs(ttl: string): number {
+export function ttlAMs(ttl: string): number {
   const match = /^(\d+)([smhd])$/.exec(ttl.trim());
   if (!match) return 7 * 24 * 60 * 60 * 1000;
   const valor = Number(match[1]);
