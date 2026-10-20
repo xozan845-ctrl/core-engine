@@ -21,7 +21,7 @@ const workflowsDirectory = join(repoRoot, WORKFLOWS_DIR);
 export default defineSuite({
   id: 'delivery-compose',
   area: 'cd',
-  rules: ['R-CD-1', 'R-CD-2', 'R-CD-3', 'R-CD-7', 'R-CD-8'],
+  rules: ['R-CD-1', 'R-CD-2', 'R-CD-3', 'R-CD-7', 'R-CD-8', 'R-CD-12'],
   mode: 'repo',
   run: ({ test, assert }) => {
     test('R-CD-3: los composes de stage/prod consumen GHCR, sin `build:`', () => {
@@ -96,6 +96,20 @@ export default defineSuite({
       assert.ok(
         /RepoDigests|@sha256/.test(promote),
         'promote.yml debe promover por digest (R-CD-3)',
+      );
+
+      const deploy = read('.github', 'workflows', 'deploy.yml');
+      assert.ok(
+        deploy.includes('npm run demo'),
+        'deploy.yml debe ejecutar el smoke E2E de dev (R-CD-12)',
+      );
+      assert.ok(
+        deploy.includes('npm run smoke:remote'),
+        'deploy.yml debe ejecutar el smoke remoto en stage/prod (R-CD-12)',
+      );
+      assert.ok(
+        existsSync(join(repoRoot, 'scripts', 'tools', 'smoke-remote.mjs')),
+        'falta scripts/tools/smoke-remote.mjs',
       );
     });
 
