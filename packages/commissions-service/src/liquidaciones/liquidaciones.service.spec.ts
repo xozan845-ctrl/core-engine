@@ -15,6 +15,12 @@ describe('LiquidacionesService (RN-07: corte quincenal dias 1 y 15)', () => {
     expect(periodo.fin).toBe('2026-08-15');
   });
 
+  it('el dia 15 sigue perteneciendo a la primera quincena', () => {
+    const periodo = servicio.periodoDe(new Date(2026, 7, 15));
+    expect(periodo.inicio).toBe('2026-08-01');
+    expect(periodo.fin).toBe('2026-08-15');
+  });
+
   it('el dia 16 pertenece a la segunda quincena (16-fin de mes)', () => {
     const periodo = servicio.periodoDe(new Date(2026, 7, 20)); // 20 agosto 2026
     expect(periodo.inicio).toBe('2026-08-16');
