@@ -4,7 +4,9 @@ on:
   push:
     branches: [main, develop, staging]
   pull_request:
-    branches: [main, develop, staging]
+    # Enmienda R-CI-1 (2026-10-22): los PRs apilados con base feat/** también
+    # ejecutan CI, para que cada PR tenga checks verdes en su cabeza (R-PR-6).
+    branches: [main, develop, staging, 'feat/**']
 
 # R-CI-2: un push nuevo cancela el run anterior de la misma rama/PR;
 # prohibido apilar runs obsoletos.
