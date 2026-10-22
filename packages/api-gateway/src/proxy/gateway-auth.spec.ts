@@ -246,6 +246,30 @@ describe('Gateway auth — politicas de pedidos (R-GW-1, R-GW-3)', () => {
     expect(next).not.toHaveBeenCalled();
   });
 
+  it('debe denegar al empresario el estado de cuenta del vendedor cuando intenta GET /vendedores/me/ventas', () => {
+    const { res, next } = evaluar('/api/v1/vendedores/me/ventas', 'GET', ROLES.EMPRESARIO);
+    expect(res.statusCode).toBe(403);
+    expect(next).not.toHaveBeenCalled();
+  });
+
+  it('debe permitir al empresario el estado de cuenta de su empresa cuando intenta GET /empresarios/me/ventas', () => {
+    const { res, next } = evaluar('/api/v1/empresarios/me/ventas', 'GET', ROLES.EMPRESARIO);
+    expect(res.statusCode).toBe(200);
+    expect(next).toHaveBeenCalled();
+  });
+
+  it('debe denegar al vendedor el estado de cuenta de la empresa cuando intenta GET /empresarios/me/ventas', () => {
+    const { res, next } = evaluar('/api/v1/empresarios/me/ventas', 'GET', ROLES.VENDEDOR);
+    expect(res.statusCode).toBe(403);
+    expect(next).not.toHaveBeenCalled();
+  });
+
+  it('debe permitir al vendedor su estado de cuenta cuando intenta GET /vendedores/me/ventas', () => {
+    const { res, next } = evaluar('/api/v1/vendedores/me/ventas', 'GET', ROLES.VENDEDOR);
+    expect(res.statusCode).toBe(200);
+    expect(next).toHaveBeenCalled();
+  });
+
   it('debe propagar los claims opcionales cuando el token trae nombre, tenant, personal y participacion', () => {
     const secreto = 'test_secret_jwt';
     const auth = new GatewayAuthMiddleware(secreto);

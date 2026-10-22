@@ -1,7 +1,6 @@
 [
   "packages/commissions-service/src/comisiones/pedidos.consumer.ts",
   "packages/commissions-service/src/ventas/reportes.service.ts",
-  "packages/commissions-service/src/ventas/ventas.service.ts",
   "packages/finance-service/src/eventos/metricas.service.ts",
   "packages/finance-service/src/facturacion/facturacion.service.ts",
   "packages/finance-service/src/finanzas/kpis.service.ts",
