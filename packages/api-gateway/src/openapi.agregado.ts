@@ -4988,6 +4988,7 @@ export const OPENAPI_AGREGADO = {
     },
     "/api/v1/orders/vendedor/comisiones": {
       "get": {
+        "deprecated": true,
         "operationId": "PedidosController_comisiones",
         "parameters": [
           {
@@ -5028,7 +5029,7 @@ export const OPENAPI_AGREGADO = {
             "bearer": []
           }
         ],
-        "summary": "Comisiones por periodo (vendedor/admin)",
+        "summary": "Comisiones por periodo (vendedor/admin) — obsoleto: usar /vendedores/me/ventas",
         "tags": [
           "Pedidos"
         ]

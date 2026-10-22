@@ -4982,6 +4982,7 @@
     },
     "/api/v1/orders/vendedor/comisiones": {
       "get": {
+        "deprecated": true,
         "operationId": "PedidosController_comisiones",
         "parameters": [
           {
@@ -5022,7 +5023,7 @@
             "bearer": []
           }
         ],
-        "summary": "Comisiones por periodo (vendedor/admin)",
+        "summary": "Comisiones por periodo (vendedor/admin) — obsoleto: usar /vendedores/me/ventas",
         "tags": [
           "Pedidos"
         ]

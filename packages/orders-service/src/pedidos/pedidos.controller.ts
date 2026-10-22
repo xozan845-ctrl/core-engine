@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, Post, Query } from '@nestjs/common';
+import { Body, Controller, Get, Header, Param, Post, Query } from '@nestjs/common';
 import { ApiBearerAuth, ApiCreatedResponse, ApiOkResponse, ApiOperation, ApiParam, ApiQuery, ApiTags } from '@nestjs/swagger';
 import {
   DomainError,
@@ -66,10 +66,20 @@ export class PedidosController {
     return this.views.listarDeVendedor(usuario?.user_id ?? '', estado);
   }
 
-  /** GET /api/v1/orders/vendedor/comisiones — comisiones por periodo (vendedor/admin). */
+  /**
+   * GET /api/v1/orders/vendedor/comisiones — comisiones por periodo (vendedor/admin).
+   * Obsoleto: el estado de cuenta vigente vive en commissions-service
+   * (`GET /api/v1/vendedores/me/ventas`), que calcula por línea y conserva la
+   * participación de la empresa y del vendedor (ADR-25).
+   */
   @Get('vendedor/comisiones')
   @Roles(ROLES.SUPER_ADMIN, ROLES.VENDEDOR, ROLES.ADMIN)
-  @ApiOperation({ summary: 'Comisiones por periodo (vendedor/admin)' })
+  @Header('Deprecation', 'true')
+  @Header('Link', '</api/v1/vendedores/me/ventas>; rel="successor-version"')
+  @ApiOperation({
+    summary: 'Comisiones por periodo (vendedor/admin) — obsoleto: usar /vendedores/me/ventas',
+    deprecated: true,
+  })
   @ApiQuery({ name: 'periodo', required: false })
   @ApiQuery({ name: 'vendedorId', required: false, description: 'Solo admin' })
   @ApiOkResponse({ type: [ComisionVistaResponseDto], description: 'Comisiones por periodo' })
