@@ -43,6 +43,7 @@ export const DESTINOS: ServicioDestino[] = [
     url: process.env.STORES_SERVICE_URL ?? 'http://stores-service:3003',
     patrones: [
       { patron: /^\/api\/v1\/vendedores\/(productos|tienda|me\/(ofertas|tienda))/, metodos: ['*'] },
+      { patron: /^\/api\/v1\/empresarios\/me\/tiendas$/, metodos: ['GET'] },
       { patron: /^\/api\/v1\/tiendas\//, metodos: ['*'] },
     ],
   },

@@ -28,6 +28,15 @@ export class TiendasService {
     );
   }
 
+  async deEmpresa(empresaId: string): Promise<Tienda[]> {
+    return this.pg.query<Tienda>(
+      `SELECT id, empresa_id, propietario_usuario_id, participacion_porcentaje, vendedor_id, nombre, descripcion, creado_en
+       FROM stores.tiendas WHERE empresa_id = $1
+       ORDER BY creado_en DESC LIMIT 200`,
+      [empresaId],
+    );
+  }
+
   async encontrarPorId(id: string): Promise<Tienda | null> {
     return this.pg.queryOne<Tienda>(
       `SELECT id, empresa_id, propietario_usuario_id, participacion_porcentaje, vendedor_id, nombre, descripcion, creado_en
