@@ -35,3 +35,33 @@ describe('OrderViewRepository.listarDeTienda (R-DS-3, ADR-25)', () => {
     expect(params).toEqual(['t-1']);
   });
 });
+
+describe('OrderViewRepository.listarDeEmpresa (R-DS-3, ADR-25)', () => {
+  it('debe filtrar por empresa, tienda, estado y limite', async () => {
+    const { pg, repositorio } = fabricar();
+
+    await repositorio.listarDeEmpresa('e-1', {
+      estado: 'pagada',
+      tiendaId: 't-1',
+      limite: 25,
+    });
+
+    const [sql, params] = pg.query.mock.calls[0] as [string, unknown[]];
+    expect(sql).toContain("item->>'empresa_id' = $1");
+    expect(sql).toContain("item->>'tienda_id' = $2");
+    expect(sql).toContain('estado = $3');
+    expect(sql).toContain('LIMIT $4');
+    expect(params).toEqual(['e-1', 't-1', 'pagada', 25]);
+  });
+
+  it('debe usar el limite por defecto cuando no se indica', async () => {
+    const { pg, repositorio } = fabricar();
+
+    await repositorio.listarDeEmpresa('e-1');
+
+    const [sql, params] = pg.query.mock.calls[0] as [string, unknown[]];
+    expect(sql).toContain("item->>'empresa_id' = $1");
+    expect(sql).toContain('LIMIT $2');
+    expect(params).toEqual(['e-1', 100]);
+  });
+});

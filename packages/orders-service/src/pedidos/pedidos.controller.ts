@@ -63,7 +63,8 @@ export class PedidosController {
     @Query('estado') estado?: string,
     @UsuarioActual() usuario?: UsuarioContexto,
   ): Promise<OrderView[]> {
-    return this.views.listarDeVendedor(usuario?.user_id ?? '', estado);
+    const ordenes = await this.views.listarDeVendedor(usuario?.user_id ?? '', estado);
+    return ordenes.map((orden) => this.pedidos.paraVendedor(orden, usuario?.user_id ?? ''));
   }
 
   /**
@@ -110,12 +111,51 @@ export class PedidosController {
     if (usuario?.rol === 'empresario' && !empresaId) {
       throw new DomainError('TENANT_REQUERIDO', 'Se requiere una empresa activa.');
     }
-    return this.views.listarDeTienda(
+    const ordenes = await this.views.listarDeTienda(
       tiendaId,
       estado,
       usuario?.rol === 'vendedor' ? usuario.user_id : undefined,
       empresaId,
     );
+    return this.proyectar(ordenes, usuario, empresaId);
+  }
+
+  /** GET /api/v1/orders/empresa — ordenes de la empresa activa (empresario/admin). */
+  @Get('empresa')
+  @Roles(ROLES.SUPER_ADMIN, ROLES.EMPRESARIO, ROLES.ADMIN)
+  @ApiOperation({ summary: 'Órdenes de una empresa (empresario de la empresa o admin)' })
+  @ApiQuery({
+    name: 'empresaId',
+    required: false,
+    description: 'Solo admin/super_admin; el empresario usa su empresa activa',
+  })
+  @ApiQuery({ name: 'tiendaId', required: false })
+  @ApiQuery({ name: 'estado', required: false })
+  @ApiQuery({ name: 'limite', required: false, type: Number })
+  @ApiOkResponse({ type: [OrderViewResponseDto], description: 'Órdenes de la empresa' })
+  async porEmpresa(
+    @Query('empresaId') empresaId?: string,
+    @Query('tiendaId') tiendaId?: string,
+    @Query('estado') estado?: string,
+    @Query('limite') limite?: number,
+    @UsuarioActual() usuario?: UsuarioContexto,
+  ): Promise<OrderView[]> {
+    let objetivo = empresaId;
+    if (usuario?.rol === 'empresario') {
+      if (!usuario.tenant_id) {
+        throw new DomainError('TENANT_REQUERIDO', 'Se requiere una empresa activa.');
+      }
+      objetivo = usuario.tenant_id;
+    }
+    if (!objetivo) {
+      throw new DomainError('EMPRESA_REQUERIDA', 'Indique la empresa a consultar.');
+    }
+    const ordenes = await this.views.listarDeEmpresa(objetivo, {
+      estado,
+      tiendaId,
+      limite,
+    });
+    return this.proyectar(ordenes, usuario, objetivo);
   }
 
   /** GET /api/v1/orders — historial del comprador autenticado. */
@@ -155,6 +195,21 @@ export class PedidosController {
     @UsuarioActual() usuario: UsuarioContexto,
   ) {
     const orden = await this.pedidos.detallePara(id, usuario);
-    return this.views.obtenerTimeline(orden.id);
+    const eventos = await this.views.obtenerTimeline(orden.id);
+    return this.pedidos.timelineVisible(eventos, orden.items);
+  }
+
+  private proyectar(
+    ordenes: OrderView[],
+    usuario?: UsuarioContexto,
+    empresaId?: string,
+  ): OrderView[] {
+    if (usuario?.rol === 'empresario' && empresaId) {
+      return ordenes.map((orden) => this.pedidos.paraEmpresa(orden, empresaId));
+    }
+    if (usuario?.rol === 'vendedor' && usuario.user_id) {
+      return ordenes.map((orden) => this.pedidos.paraVendedor(orden, usuario.user_id));
+    }
+    return ordenes;
   }
 }
