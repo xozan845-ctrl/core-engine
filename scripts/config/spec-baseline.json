@@ -1,12 +1,10 @@
 [
-  "packages/commissions-service/src/comisiones/comisiones.service.ts",
   "packages/commissions-service/src/comisiones/pedidos.consumer.ts",
   "packages/commissions-service/src/ventas/reportes.service.ts",
   "packages/commissions-service/src/ventas/ventas.service.ts",
   "packages/finance-service/src/eventos/metricas.service.ts",
   "packages/finance-service/src/facturacion/facturacion.service.ts",
   "packages/finance-service/src/finanzas/kpis.service.ts",
-  "packages/identity-service/src/seed/seed.service.ts",
   "packages/market-intelligence-service/src/inteligencia/services/agregador.service.ts",
   "packages/market-intelligence-service/src/inteligencia/services/data-quality.service.ts",
   "packages/market-intelligence-service/src/inteligencia/services/feature-computer.service.ts",
