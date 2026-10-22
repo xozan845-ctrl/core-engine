@@ -14,7 +14,7 @@ import {
 
 /**
  * Registro, login y refresh (doc 4.3): JWT de corta duracion + refresh.
- * El registro publico solo admite vendedor/comprador (RF-01).
+ * El registro publico solo admite empresario/comprador (RF-01, ADR-25).
  * R-GW-4 / ADR-18: el refresh solo renueva mientras la sesion siga activa.
  */
 describe('ttlAMs', () => {
@@ -79,8 +79,9 @@ describe('AuthService (sesiones JWT)', () => {
       expect(usuarios.crear).not.toHaveBeenCalled();
     });
 
-    it('debe crear la sesion con access y refresh cuando el rol es vendedor', async () => {
+    it('debe crear la sesion con access y refresh cuando el rol es empresario', async () => {
       const { servicio, usuarios } = crear();
+      (usuarios.crear as Mock).mockResolvedValue({ ...usuarioBase, rol: ROLES.EMPRESARIO });
       const sesion = await servicio.registrar({
         nombre: 'Ana',
         correo: 'ana@core.test',
@@ -92,11 +93,11 @@ describe('AuthService (sesiones JWT)', () => {
         nombre: 'Ana',
         correo: 'ana@core.test',
         contrasena: 'secreta123',
-        rol: ROLES.VENDEDOR,
+        rol: ROLES.EMPRESARIO,
       });
       expect(sesion.access_token.split('.')).toHaveLength(3); // JWT HS256
       expect(sesion.refresh_token.split('.')).toHaveLength(3);
-      expect(sesion.usuario).toEqual({ id: 'u1', nombre: 'Ana', correo: 'ana@core.test', rol: 'vendedor' });
+      expect(sesion.usuario).toEqual({ id: 'u1', nombre: 'Ana', correo: 'ana@core.test', rol: 'empresario' });
       expect(sesion.expira_en).toBe(900);
     });
 
@@ -219,7 +220,7 @@ describe('AuthService (sesiones JWT)', () => {
           nombre: 'Ana',
           correo: 'ana@core.test',
           contrasena: 'secreta123',
-          rol: ROLES.VENDEDOR,
+          rol: ROLES.EMPRESARIO,
         });
 
         const expira = sesiones.crear.mock.calls[0][2] as Date;
@@ -236,7 +237,7 @@ describe('AuthService (sesiones JWT)', () => {
         nombre: 'Ana',
         correo: 'ana@core.test',
         contrasena: 'secreta123',
-        rol: ROLES.VENDEDOR,
+        rol: ROLES.EMPRESARIO,
       });
 
       expect(sesion.usuario).toMatchObject({ tenant_id: 't1', personal_id: 'p1' });
@@ -265,7 +266,7 @@ describe('AuthService (sesiones JWT)', () => {
         servicio.registrar({ nombre: 'A', correo: 'a@t.co', contrasena: 'x', rol: ROLES.ADMIN }),
       ).rejects.toMatchObject({
         codigo: 'ROL_NO_PERMITIDO',
-        message: 'El registro publico solo admite vendedor o comprador.',
+        message: 'El registro publico solo admite empresario o comprador.',
       });
       await expect(servicio.refrescar('basura')).rejects.toMatchObject({
         codigo: 'TOKEN_INVALIDO',
