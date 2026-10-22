@@ -137,6 +137,14 @@ export const POLITICAS_RUTAS: PoliticaRuta[] = [
     metodos: ['POST'],
     roles: [ROLES.VENDEDOR, ROLES.COMPRADOR, ...ROLES_LOGISTICA],
   },
+  // Deny-by-default: una ruta /api/v1 no declarada no queda abierta a cualquier
+  // token valido. Las rutas publicas deben declarar roles: null antes de esta
+  // regla; las protegidas, su lista de roles (R-GW-1, R-GW-3).
+  {
+    patron: /^\/api\/v1\//,
+    metodos: ['*'],
+    roles: [],
+  },
 ];
 
 /**
