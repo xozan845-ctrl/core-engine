@@ -15,7 +15,7 @@ test('reserva, reconstruccion y devolucion conservan stock disponible exacto', a
   const client = new pg.Client({ connectionString });
   await client.connect();
   try {
-    for (const name of ['01_esquemas.sql', '01c_cqrs_catalog.sql']) {
+    for (const name of ['01_esquemas.sql', '01c_cqrs_catalog.sql', '01e_adr25_empresas.sql']) {
       const sql = await readFile(new URL(`../../infra/db/init/${name}`, import.meta.url), 'utf8');
       await client.query(sql);
     }
