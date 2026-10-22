@@ -23,10 +23,11 @@ test('reserva, reconstruccion y devolucion conservan stock disponible exacto', a
     try {
       const sku = `REG-${randomUUID()}`;
       const orderId = randomUUID();
+      const empresaId = randomUUID();
       await client.query(
-        `INSERT INTO catalog.productos (sku, nombre, precio_base_cents, stock)
-         VALUES ($1, 'Producto de regresion', 1000, 10)`,
-        [sku],
+        `INSERT INTO catalog.productos (empresa_id, sku, nombre, precio_base_cents, stock)
+         VALUES ($1, $2, 'Producto de regresion', 1000, 10)`,
+        [empresaId, sku],
       );
       await assertStock(client, sku, { maestro: 10, fisico: 10, reservado: 0, disponible: 10 });
 
