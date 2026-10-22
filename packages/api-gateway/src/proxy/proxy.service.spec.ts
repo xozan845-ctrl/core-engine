@@ -1,7 +1,7 @@
 import 'reflect-metadata';
 import { ProxyService, ServicioDestino } from './proxy.service';
 import { GatewayAuthMiddleware, PoliticaRuta } from './gateway-auth.middleware';
-import { TENANT_HEADER, PERSONAL_HEADER } from '@core/shared';
+import { TENANT_HEADER, PERSONAL_HEADER, PARTICIPACION_HEADER } from '@core/shared';
 import type { Request, Response } from 'express';
 
 const destinos: ServicioDestino[] = [
@@ -80,5 +80,34 @@ describe('ProxyService — scrub de cabeceras de contexto (R-GW-3 / R-DS-5)', ()
     const [, init] = fetchMock.mock.calls[0];
     expect(init.headers[TENANT_HEADER]).toBe('tenant-del-token');
     expect(init.headers[PERSONAL_HEADER]).toBe('personal-del-token');
+  });
+
+  it('debe eliminar x-user-participacion inyectada por el cliente cuando el token no la trae', async () => {
+    const auth = { aplicar: (_req: Request, _res: Response, next: () => void) => next() } as unknown as GatewayAuthMiddleware;
+    const fetchMock = vi.fn().mockResolvedValue(respuestaFetch(200, '{}'));
+    globalThis.fetch = fetchMock as unknown as typeof fetch;
+    const servicio = new ProxyService(auth, destinos, politicas);
+
+    await servicio.reenviar(reqCon({ [PARTICIPACION_HEADER]: '100' }), resMock());
+
+    const [, init] = fetchMock.mock.calls[0];
+    expect(init.headers[PARTICIPACION_HEADER]).toBeUndefined();
+  });
+
+  it('debe reenviar x-user-participacion cuando el gateway la resuelve del token', async () => {
+    const auth = {
+      aplicar: (req: Request, _res: Response, next: () => void) => {
+        req.headers[PARTICIPACION_HEADER] = '20';
+        next();
+      },
+    } as unknown as GatewayAuthMiddleware;
+    const fetchMock = vi.fn().mockResolvedValue(respuestaFetch(200, '{}'));
+    globalThis.fetch = fetchMock as unknown as typeof fetch;
+    const servicio = new ProxyService(auth, destinos, politicas);
+
+    await servicio.reenviar(reqCon({}), resMock());
+
+    const [, init] = fetchMock.mock.calls[0];
+    expect(init.headers[PARTICIPACION_HEADER]).toBe('20');
   });
 });
