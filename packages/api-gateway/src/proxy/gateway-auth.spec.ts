@@ -162,6 +162,12 @@ describe('Gateway auth — politicas de pedidos (R-GW-1, R-GW-3)', () => {
     expect(next).toHaveBeenCalled();
   });
 
+  it('debe permitir al admin el listado de ordenes de una empresa cuando intenta GET /orders/empresa', () => {
+    const { res, next } = evaluar('/api/v1/orders/empresa', 'GET', ROLES.ADMIN);
+    expect(res.statusCode).toBe(200);
+    expect(next).toHaveBeenCalled();
+  });
+
   it('debe permitir al super_admin el detalle de una orden cuando intenta GET /orders/:id', () => {
     const { res, next } = evaluar('/api/v1/orders/orden-1', 'GET', ROLES.SUPER_ADMIN);
     expect(res.statusCode).toBe(200);
@@ -172,6 +178,18 @@ describe('Gateway auth — politicas de pedidos (R-GW-1, R-GW-3)', () => {
     const { res, next } = evaluar('/api/v1/orders/orden-1/timeline', 'GET', ROLES.SUPER_ADMIN);
     expect(res.statusCode).toBe(200);
     expect(next).toHaveBeenCalled();
+  });
+
+  it('debe permitir al empresario el listado de ordenes de su empresa cuando intenta GET /orders/empresa', () => {
+    const { res, next } = evaluar('/api/v1/orders/empresa', 'GET', ROLES.EMPRESARIO);
+    expect(res.statusCode).toBe(200);
+    expect(next).toHaveBeenCalled();
+  });
+
+  it('debe denegar al vendedor el listado de ordenes de la empresa cuando intenta GET /orders/empresa', () => {
+    const { res, next } = evaluar('/api/v1/orders/empresa', 'GET', ROLES.VENDEDOR);
+    expect(res.statusCode).toBe(403);
+    expect(next).not.toHaveBeenCalled();
   });
 
   it('debe denegar al comprador las ordenes de una tienda cuando intenta GET /orders/tienda/:id', () => {

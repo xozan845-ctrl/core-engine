@@ -13,7 +13,19 @@ const orden = {
   total_cents: 1000,
   comision_cents: 120,
   moneda: 'NIO',
-  items: [{ vendedor_id: 'u-v', empresa_id: 'e-1' }],
+  items: [
+    {
+      oferta_id: 'of-1',
+      sku: 'SKU-1',
+      producto_nombre: 'Producto 1',
+      cantidad: 1,
+      precio_unitario_cents: 1000,
+      vendedor_id: 'u-v',
+      tienda_id: 't-1',
+      empresa_id: 'e-1',
+      participacion_porcentaje: 20,
+    },
+  ],
   direccion_envio: null,
   creado_en: '2026-01-01T00:00:00.000Z',
   actualizado_en: '2026-01-01T00:00:00.000Z',
@@ -80,6 +92,113 @@ describe('PedidosService.detallePara (Tabla 15, ADR-25)', () => {
         tenant_id: 'e-1',
       }),
     ).resolves.toEqual(orden);
+  });
+
+  it('debe recortar las líneas de otras empresas al empresario', async () => {
+    const { views, servicio } = fabricar();
+    const compartida = {
+      ...orden,
+      total_cents: 3000,
+      comision_cents: 360,
+      items: [
+        ...orden.items,
+        {
+          ...orden.items[0],
+          oferta_id: 'of-2',
+          sku: 'SKU-2',
+          precio_unitario_cents: 2000,
+          vendedor_id: 'u-v2',
+          tienda_id: 't-2',
+          empresa_id: 'e-2',
+        },
+      ],
+    } as OrderView;
+    views.encontrar.mockResolvedValue(compartida);
+
+    const resultado = await servicio.detallePara('o-1', {
+      user_id: 'u-e',
+      email: 'e@test',
+      rol: ROLES.EMPRESARIO,
+      tenant_id: 'e-1',
+    });
+
+    expect(resultado.items.map((i) => i.oferta_id)).toEqual(['of-1']);
+    expect(resultado.total_cents).toBe(1000);
+    expect(resultado.comision_cents).toBe(120);
+    expect(resultado.vendedor_id).toBe('u-v');
+  });
+
+  it('debe recortar las líneas de otros vendedores al vendedor', async () => {
+    const { views, servicio } = fabricar();
+    const compartida = {
+      ...orden,
+      total_cents: 3000,
+      comision_cents: 360,
+      items: [
+        ...orden.items,
+        {
+          ...orden.items[0],
+          oferta_id: 'of-2',
+          vendedor_id: 'u-v2',
+          empresa_id: 'e-2',
+        },
+      ],
+    } as OrderView;
+    views.encontrar.mockResolvedValue(compartida);
+
+    const resultado = await servicio.detallePara('o-1', {
+      user_id: 'u-v',
+      email: 'v@test',
+      rol: ROLES.VENDEDOR,
+    });
+
+    expect(resultado.items.map((i) => i.oferta_id)).toEqual(['of-1']);
+    expect(resultado.total_cents).toBe(1000);
+  });
+
+  it('debe recortar una orden a la empresa indicada', () => {
+    const { servicio } = fabricar();
+    const compartida = {
+      ...orden,
+      total_cents: 3000,
+      items: [
+        ...orden.items,
+        {
+          ...orden.items[0],
+          oferta_id: 'of-2',
+          empresa_id: 'e-2',
+        },
+      ],
+    } as OrderView;
+
+    const resultado = servicio.paraEmpresa(compartida, 'e-1');
+
+    expect(resultado.items.map((i) => i.oferta_id)).toEqual(['of-1']);
+  });
+
+  it('debe ocultar del timeline las líneas no visibles', () => {
+    const { servicio } = fabricar();
+    const eventos = [
+      {
+        id: 1,
+        tipo: 'OrderCreatedEvent',
+        version: 1,
+        creado_en: '2026-01-01T00:00:00.000Z',
+        payload: {
+          order_id: 'o-1',
+          items: [
+            ...orden.items,
+            { ...orden.items[0], oferta_id: 'of-2', precio_unitario_cents: 2000 },
+          ],
+          total_cents: 3000,
+        },
+      },
+    ];
+
+    const resultado = servicio.timelineVisible(eventos, orden.items);
+
+    expect((resultado[0].payload as { items: { oferta_id: string }[] }).items).toHaveLength(1);
+    expect((resultado[0].payload as { total_cents: number }).total_cents).toBe(1000);
   });
 
   it('debe denegar al empresario una orden de otra empresa o sin empresa activa', async () => {
