@@ -124,3 +124,65 @@ describe('Gateway auth (TC-07: seguridad en el borde)', () => {
     expect((req.headers as Record<string, string>)['x-user-id']).toBe('u-vend');
   });
 });
+
+describe('Gateway auth — politicas de pedidos (R-GW-1, R-GW-3)', () => {
+  const secreto = 'test_secret_jwt';
+  const auth = new GatewayAuthMiddleware(secreto);
+  const tokenDe = (rol: (typeof ROLES)[keyof typeof ROLES]) =>
+    firmarToken({ sub: `u-${rol}`, email: `${rol}@test`, rol, tipo: 'access' }, secreto, '900s');
+
+  function evaluar(ruta: string, metodo: string, rol: (typeof ROLES)[keyof typeof ROLES]) {
+    const { req, res, next } = crearPeticion({ ruta, metodo, token: tokenDe(rol) });
+    auth.aplicar(req as never, res as never, next, politicaDe(ruta, metodo));
+    return { res: res as unknown as { statusCode: number; cuerpo?: { codigo: string } }, next };
+  }
+
+  it('debe denegar al comprador el listado global de ordenes cuando intenta GET /orders/admin/todas', () => {
+    const { res, next } = evaluar('/api/v1/orders/admin/todas', 'GET', ROLES.COMPRADOR);
+    expect(res.statusCode).toBe(403);
+    expect(res.cuerpo?.codigo).toBe('ACCESO_DENEGADO');
+    expect(next).not.toHaveBeenCalled();
+  });
+
+  it('debe denegar al vendedor el listado global de ordenes cuando intenta GET /orders/admin/todas', () => {
+    const { res, next } = evaluar('/api/v1/orders/admin/todas', 'GET', ROLES.VENDEDOR);
+    expect(res.statusCode).toBe(403);
+    expect(next).not.toHaveBeenCalled();
+  });
+
+  it('debe permitir al admin el listado global de ordenes cuando intenta GET /orders/admin/todas', () => {
+    const { res, next } = evaluar('/api/v1/orders/admin/todas', 'GET', ROLES.ADMIN);
+    expect(res.statusCode).toBe(200);
+    expect(next).toHaveBeenCalled();
+  });
+
+  it('debe denegar al comprador las ordenes de una tienda cuando intenta GET /orders/tienda/:id', () => {
+    const { res, next } = evaluar('/api/v1/orders/tienda/tienda-1', 'GET', ROLES.COMPRADOR);
+    expect(res.statusCode).toBe(403);
+    expect(next).not.toHaveBeenCalled();
+  });
+
+  it('debe permitir al vendedor las ordenes de una tienda cuando intenta GET /orders/tienda/:id', () => {
+    const { res, next } = evaluar('/api/v1/orders/tienda/tienda-1', 'GET', ROLES.VENDEDOR);
+    expect(res.statusCode).toBe(200);
+    expect(next).toHaveBeenCalled();
+  });
+
+  it('debe denegar al comprador las ventas del vendedor cuando intenta GET /orders/vendedor/mis-ventas', () => {
+    const { res, next } = evaluar('/api/v1/orders/vendedor/mis-ventas', 'GET', ROLES.COMPRADOR);
+    expect(res.statusCode).toBe(403);
+    expect(next).not.toHaveBeenCalled();
+  });
+
+  it('debe denegar al comprador las comisiones del vendedor cuando intenta GET /orders/vendedor/comisiones', () => {
+    const { res, next } = evaluar('/api/v1/orders/vendedor/comisiones', 'GET', ROLES.COMPRADOR);
+    expect(res.statusCode).toBe(403);
+    expect(next).not.toHaveBeenCalled();
+  });
+
+  it('debe permitir al comprador el detalle de una orden cuando intenta GET /orders/:id', () => {
+    const { res, next } = evaluar('/api/v1/orders/orden-1', 'GET', ROLES.COMPRADOR);
+    expect(res.statusCode).toBe(200);
+    expect(next).toHaveBeenCalled();
+  });
+});
