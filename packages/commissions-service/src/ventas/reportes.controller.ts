@@ -12,7 +12,7 @@ export class ReportesController {
   constructor(private readonly reportes: ReportesService) {}
 
   @Get()
-  @Roles(ROLES.ADMIN)
+  @Roles(ROLES.SUPER_ADMIN, ROLES.ADMIN)
   @ApiOperation({ summary: 'KPIs de ventas e inventario (admin)' })
   @ApiOkResponse({ type: ReporteKpiResponseDto, description: 'KPIs de ventas e inventario' })
   async kpis(): Promise<ReporteKPI> {

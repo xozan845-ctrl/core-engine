@@ -71,7 +71,7 @@ describe('LiquidacionesController (api/v1, RN-07, R-U-10/11)', () => {
   it('debe exigir rol vendedor o admin segun la ruta', () => {
     expect(Reflect.getMetadata('roles_requeridos', LiquidacionesController.prototype.mias)).toEqual([ROLES.VENDEDOR]);
     expect(Reflect.getMetadata('roles_requeridos', LiquidacionesController.prototype.deMiEmpresa)).toEqual([ROLES.EMPRESARIO]);
-    expect(Reflect.getMetadata('roles_requeridos', LiquidacionesController.prototype.corteManual)).toEqual([ROLES.ADMIN]);
-    expect(Reflect.getMetadata('roles_requeridos', LiquidacionesController.prototype.pagar)).toEqual([ROLES.ADMIN]);
+    expect(Reflect.getMetadata('roles_requeridos', LiquidacionesController.prototype.corteManual)).toEqual([ROLES.SUPER_ADMIN, ROLES.ADMIN]);
+    expect(Reflect.getMetadata('roles_requeridos', LiquidacionesController.prototype.pagar)).toEqual([ROLES.SUPER_ADMIN, ROLES.ADMIN]);
   });
 });

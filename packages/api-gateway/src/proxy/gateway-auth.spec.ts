@@ -156,6 +156,24 @@ describe('Gateway auth — politicas de pedidos (R-GW-1, R-GW-3)', () => {
     expect(next).toHaveBeenCalled();
   });
 
+  it('debe permitir al super_admin el listado global de ordenes cuando intenta GET /orders/admin/todas', () => {
+    const { res, next } = evaluar('/api/v1/orders/admin/todas', 'GET', ROLES.SUPER_ADMIN);
+    expect(res.statusCode).toBe(200);
+    expect(next).toHaveBeenCalled();
+  });
+
+  it('debe permitir al super_admin el detalle de una orden cuando intenta GET /orders/:id', () => {
+    const { res, next } = evaluar('/api/v1/orders/orden-1', 'GET', ROLES.SUPER_ADMIN);
+    expect(res.statusCode).toBe(200);
+    expect(next).toHaveBeenCalled();
+  });
+
+  it('debe permitir al super_admin el timeline de una orden cuando intenta GET /orders/:id/timeline', () => {
+    const { res, next } = evaluar('/api/v1/orders/orden-1/timeline', 'GET', ROLES.SUPER_ADMIN);
+    expect(res.statusCode).toBe(200);
+    expect(next).toHaveBeenCalled();
+  });
+
   it('debe denegar al comprador las ordenes de una tienda cuando intenta GET /orders/tienda/:id', () => {
     const { res, next } = evaluar('/api/v1/orders/tienda/tienda-1', 'GET', ROLES.COMPRADOR);
     expect(res.statusCode).toBe(403);
@@ -182,6 +200,18 @@ describe('Gateway auth — politicas de pedidos (R-GW-1, R-GW-3)', () => {
 
   it('debe permitir al comprador el detalle de una orden cuando intenta GET /orders/:id', () => {
     const { res, next } = evaluar('/api/v1/orders/orden-1', 'GET', ROLES.COMPRADOR);
+    expect(res.statusCode).toBe(200);
+    expect(next).toHaveBeenCalled();
+  });
+
+  it('debe permitir al super_admin las rutas administrativas cuando intenta GET /admin/reportes', () => {
+    const { res, next } = evaluar('/api/v1/admin/reportes', 'GET', ROLES.SUPER_ADMIN);
+    expect(res.statusCode).toBe(200);
+    expect(next).toHaveBeenCalled();
+  });
+
+  it('debe permitir al super_admin escribir en el catalogo cuando intenta POST /catalog/productos', () => {
+    const { res, next } = evaluar('/api/v1/catalog/productos', 'POST', ROLES.SUPER_ADMIN);
     expect(res.statusCode).toBe(200);
     expect(next).toHaveBeenCalled();
   });

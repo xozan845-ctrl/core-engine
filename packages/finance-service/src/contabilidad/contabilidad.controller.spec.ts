@@ -98,6 +98,6 @@ describe('ContabilidadController (api/v1/finanzas, partida doble, R-U-10/11)', (
   });
 
   it('debe exigir rol admin a nivel de controlador', () => {
-    expect(Reflect.getMetadata('roles_requeridos', ContabilidadController)).toEqual([ROLES.ADMIN]);
+    expect(Reflect.getMetadata('roles_requeridos', ContabilidadController)).toEqual([ROLES.SUPER_ADMIN, ROLES.ADMIN]);
   });
 });

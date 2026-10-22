@@ -39,8 +39,9 @@ describe('EstadoOrdenController (api/v1/orders/:id/estado, Tabla 21, R-U-10/11)'
     expect(error?.codigo).toBe('ESTADO_INVALIDO');
   });
 
-  it('debe exigir rol admin o logistica', () => {
+  it('debe exigir rol super_admin, admin o logistica', () => {
     expect(Reflect.getMetadata('roles_requeridos', EstadoOrdenController.prototype.avanzar)).toEqual([
+      ROLES.SUPER_ADMIN,
       ROLES.ADMIN,
       ROLES.LOGISTICA,
     ]);
@@ -55,8 +56,11 @@ describe('EnviosAdminController (api/v1/admin/envios, R-U-10/11)', () => {
     expect(envios.listar).toHaveBeenCalledTimes(1);
   });
 
-  it('debe exigir rol admin', () => {
-    expect(Reflect.getMetadata('roles_requeridos', EnviosAdminController.prototype.listar)).toEqual([ROLES.ADMIN]);
+  it('debe exigir rol super_admin o admin', () => {
+    expect(Reflect.getMetadata('roles_requeridos', EnviosAdminController.prototype.listar)).toEqual([
+      ROLES.SUPER_ADMIN,
+      ROLES.ADMIN,
+    ]);
   });
 });
 

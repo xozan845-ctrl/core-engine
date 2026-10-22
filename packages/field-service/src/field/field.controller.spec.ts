@@ -38,6 +38,7 @@ describe('FieldController', () => {
       'roles_requeridos', FieldController.prototype.crearVehiculo,
     );
     expect(rolesCrearVehiculo).toContain(ROLES.EMPRESARIO);
+    expect(rolesCrearVehiculo).toContain(ROLES.SUPER_ADMIN);
     const rolesListarPersonal = Reflect.getMetadata(
       'roles_requeridos', FieldController.prototype.listarPersonal,
     );

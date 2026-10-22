@@ -117,7 +117,7 @@ export class EstadoCuentaRequestDto {
 @ApiTags('Finanzas · Contabilidad')
 @ApiBearerAuth()
 @Controller('api/v1/finanzas')
-@Roles(ROLES.ADMIN)
+@Roles(ROLES.SUPER_ADMIN, ROLES.ADMIN)
 export class ContabilidadController {
   constructor(private readonly contabilidad: ContabilidadService) {}
 
