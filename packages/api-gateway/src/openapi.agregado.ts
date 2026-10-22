@@ -12816,7 +12816,7 @@ export const OPENAPI_AGREGADO = {
         "properties": {
           "tienda_id": {
             "type": "string",
-            "description": "Tienda donde se publicará",
+            "description": "Tienda donde se publicará. Si se omite, se usa la tienda del vendedor autenticado.",
             "format": "uuid"
           },
           "producto_id": {
@@ -12833,7 +12833,6 @@ export const OPENAPI_AGREGADO = {
           }
         },
         "required": [
-          "tienda_id",
           "producto_id",
           "margen"
         ]

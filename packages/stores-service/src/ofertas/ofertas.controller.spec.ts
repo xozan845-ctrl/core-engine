@@ -14,7 +14,7 @@ function fabricar(): {
   ofertas: Record<string, Mock>;
   controller: OfertasController;
 } {
-  const tiendas = { encontrarPorId: vi.fn() };
+  const tiendas = { encontrarPorId: vi.fn(), deVendedor: vi.fn() };
   const ofertas = {
     publicar: vi.fn(),
     cambiarMargen: vi.fn(),
@@ -35,6 +35,25 @@ describe('OfertasController (api/v1, RN-01, R-U-10/11)', () => {
     const dto = { tienda_id: '11111111-2222-3333-4444-555555555555', producto_id: 'p-1', margen: 15 };
     await expect(controller.publicar(dto as never, vendedor as never)).resolves.toEqual(oferta);
     expect(ofertas.publicar).toHaveBeenCalledWith('u-v', dto.tienda_id, 'p-1', 15);
+  });
+
+  it('debe usar la tienda del vendedor cuando no se informa tienda_id', async () => {
+    const { tiendas, ofertas, controller } = fabricar();
+    tiendas.deVendedor.mockResolvedValue(tienda);
+    ofertas.publicar.mockResolvedValue(oferta);
+    const dto = { producto_id: 'p-1', margen: 15 };
+    await expect(controller.publicar(dto as never, vendedor as never)).resolves.toEqual(oferta);
+    expect(tiendas.deVendedor).toHaveBeenCalledWith('u-v');
+    expect(ofertas.publicar).toHaveBeenCalledWith('u-v', 't-1', 'p-1', 15);
+  });
+
+  it('debe lanzar NotFoundError si no hay tienda y no se informa tienda_id', async () => {
+    const { tiendas, ofertas, controller } = fabricar();
+    tiendas.deVendedor.mockResolvedValue(null);
+    await expect(
+      controller.publicar({ producto_id: 'p-1', margen: 15 } as never, vendedor as never),
+    ).rejects.toBeInstanceOf(NotFoundError);
+    expect(ofertas.publicar).not.toHaveBeenCalled();
   });
 
   it('debe cambiar el margen de una oferta del vendedor autenticado', async () => {
