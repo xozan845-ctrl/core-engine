@@ -19,40 +19,15 @@ CREATE TABLE IF NOT EXISTS identity.usuarios (
   nombre          text NOT NULL,
   correo          text NOT NULL UNIQUE,
   contrasena_hash text NOT NULL,
-  rol             text NOT NULL CHECK (rol IN ('super_admin', 'admin', 'empresario', 'vendedor', 'comprador', 'logistica', 'coordinador', 'supervisor', 'operativo')),
+  rol             text NOT NULL CHECK (rol IN ('admin', 'vendedor', 'comprador', 'logistica', 'coordinador', 'supervisor', 'operativo')),
   tenant_id       uuid,
-  participacion_porcentaje integer CHECK (participacion_porcentaje BETWEEN 0 AND 100),
   personal_id     uuid,
   creado_en       timestamptz NOT NULL DEFAULT NOW()
 );
-ALTER TABLE identity.usuarios ADD COLUMN IF NOT EXISTS participacion_porcentaje integer CHECK (participacion_porcentaje BETWEEN 0 AND 100);
-
-CREATE TABLE IF NOT EXISTS identity.empresas (
-  id                  uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  nombre              text NOT NULL CHECK (char_length(trim(nombre)) BETWEEN 2 AND 160),
-  modalidad_logistica text NOT NULL CHECK (modalidad_logistica IN ('plataforma', 'propia', 'hibrida')),
-  estado              text NOT NULL DEFAULT 'activa' CHECK (estado IN ('activa', 'suspendida', 'inactiva')),
-  creado_por          uuid NOT NULL REFERENCES identity.usuarios(id),
-  creado_en           timestamptz NOT NULL DEFAULT NOW()
-);
-
-CREATE TABLE IF NOT EXISTS identity.empresa_miembros (
-  empresa_id                uuid NOT NULL REFERENCES identity.empresas(id),
-  usuario_id                uuid NOT NULL REFERENCES identity.usuarios(id),
-  rol                       text NOT NULL CHECK (rol IN ('empresario', 'vendedor')),
-  participacion_porcentaje  integer CHECK (participacion_porcentaje BETWEEN 0 AND 100),
-  estado                    text NOT NULL DEFAULT 'activo' CHECK (estado IN ('activo', 'suspendido', 'inactivo')),
-  creado_en                 timestamptz NOT NULL DEFAULT NOW(),
-  PRIMARY KEY (empresa_id, usuario_id),
-  CHECK ((rol = 'vendedor' AND participacion_porcentaje IS NOT NULL) OR
-         (rol = 'empresario' AND participacion_porcentaje IS NULL))
-);
-CREATE INDEX IF NOT EXISTS idx_empresa_miembros_usuario ON identity.empresa_miembros (usuario_id, estado);
 
 -- ── catalog --------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS catalog.productos (
   id                uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  empresa_id        uuid NOT NULL,
   sku               text NOT NULL UNIQUE,
   nombre            text NOT NULL,
   descripcion       text NOT NULL DEFAULT '',
@@ -62,9 +37,6 @@ CREATE TABLE IF NOT EXISTS catalog.productos (
   estado            text NOT NULL DEFAULT 'disponible' CHECK (estado IN ('disponible', 'agotado')),
   creado_en         timestamptz NOT NULL DEFAULT NOW()
 );
--- Migración aditiva para bases existentes; los registros legados quedan sin
--- empresa hasta que el super admin los asigne explícitamente.
-ALTER TABLE catalog.productos ADD COLUMN IF NOT EXISTS empresa_id uuid;
 
 CREATE TABLE IF NOT EXISTS catalog.historico_precios (
   id                   uuid PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -109,19 +81,11 @@ CREATE INDEX IF NOT EXISTS idx_catalog_outbox_pendientes ON catalog.outbox (esta
 -- ── stores ---------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS stores.tiendas (
   id         uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  empresa_id uuid NOT NULL,
-  propietario_usuario_id uuid NOT NULL,
-  participacion_porcentaje integer NOT NULL CHECK (participacion_porcentaje BETWEEN 0 AND 100),
-  vendedor_id uuid NOT NULL,
+  vendedor_id uuid NOT NULL UNIQUE,
   nombre     text NOT NULL,
   descripcion text NOT NULL DEFAULT '',
   creado_en  timestamptz NOT NULL DEFAULT NOW()
 );
-ALTER TABLE stores.tiendas ADD COLUMN IF NOT EXISTS empresa_id uuid;
-ALTER TABLE stores.tiendas ADD COLUMN IF NOT EXISTS propietario_usuario_id uuid;
-ALTER TABLE stores.tiendas ADD COLUMN IF NOT EXISTS participacion_porcentaje integer;
-CREATE INDEX IF NOT EXISTS idx_tiendas_empresa ON stores.tiendas (empresa_id);
-CREATE INDEX IF NOT EXISTS idx_tiendas_propietario ON stores.tiendas (propietario_usuario_id);
 
 CREATE TABLE IF NOT EXISTS stores.ofertas (
   id                 uuid PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -196,39 +160,12 @@ CREATE INDEX IF NOT EXISTS idx_orders_carritos_inactivos ON orders.carritos (act
 CREATE TABLE IF NOT EXISTS logistics.envios (
   id         uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   guia       text NOT NULL UNIQUE,
-  order_id   uuid NOT NULL,
-  empresa_id uuid NOT NULL,
-  modalidad_logistica text NOT NULL CHECK (modalidad_logistica IN ('plataforma', 'propia', 'hibrida')),
-  proveedor_tipo text CHECK (proveedor_tipo IN ('plataforma', 'empresa')),
-  proveedor_tenant_id uuid,
+  order_id   uuid NOT NULL UNIQUE,
   monto_cents integer NOT NULL,
   estado     text NOT NULL DEFAULT 'en_preparacion' CHECK (estado IN (
                'en_preparacion', 'enviada', 'entregada', 'cancelada')),
-  creado_en  timestamptz NOT NULL DEFAULT NOW(),
-  UNIQUE (order_id, empresa_id)
+  creado_en  timestamptz NOT NULL DEFAULT NOW()
 );
-ALTER TABLE logistics.envios DROP CONSTRAINT IF EXISTS envios_order_id_key;
-ALTER TABLE logistics.envios ADD COLUMN IF NOT EXISTS empresa_id uuid;
-ALTER TABLE logistics.envios ADD COLUMN IF NOT EXISTS modalidad_logistica text;
-ALTER TABLE logistics.envios ADD COLUMN IF NOT EXISTS proveedor_tipo text;
-ALTER TABLE logistics.envios ADD COLUMN IF NOT EXISTS proveedor_tenant_id uuid;
-CREATE UNIQUE INDEX IF NOT EXISTS idx_envios_orden_empresa ON logistics.envios (order_id, empresa_id);
-CREATE INDEX IF NOT EXISTS idx_envios_empresa ON logistics.envios (empresa_id, creado_en);
-CREATE INDEX IF NOT EXISTS idx_envios_proveedor ON logistics.envios (proveedor_tenant_id, creado_en);
-
-CREATE TABLE IF NOT EXISTS logistics.asignaciones_envio (
-  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  envio_id uuid NOT NULL REFERENCES logistics.envios(id),
-  proveedor_tipo_anterior text CHECK (proveedor_tipo_anterior IN ('plataforma', 'empresa')),
-  proveedor_tipo_nuevo text NOT NULL CHECK (proveedor_tipo_nuevo IN ('plataforma', 'empresa')),
-  proveedor_tenant_id uuid NOT NULL,
-  origen text NOT NULL CHECK (origen IN ('automatica', 'empresario')),
-  actor_usuario_id uuid,
-  creado_en timestamptz NOT NULL DEFAULT NOW()
-);
-CREATE INDEX IF NOT EXISTS idx_asignaciones_envio ON logistics.asignaciones_envio (envio_id, creado_en);
-CREATE UNIQUE INDEX IF NOT EXISTS idx_asignacion_automatica_unica
-  ON logistics.asignaciones_envio (envio_id) WHERE origen = 'automatica';
 
 CREATE TABLE IF NOT EXISTS logistics.eventos_procesados (
   event_id     uuid PRIMARY KEY,
@@ -248,27 +185,14 @@ CREATE TABLE IF NOT EXISTS logistics.outbox (
 -- ── commissions ------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS commissions.comisiones (
   id                  uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  order_id            uuid NOT NULL,
-  linea_clave         text NOT NULL,
-  empresa_id          uuid NOT NULL,
-  tienda_id           uuid NOT NULL,
+  order_id            uuid NOT NULL UNIQUE,
   vendedor_id         uuid NOT NULL,
   venta_cents         integer NOT NULL,
   comision_cents      integer NOT NULL,      -- RN-04: 12 % del precio de venta
   monto_vendedor_cents integer NOT NULL,     -- venta - comision
-  monto_empresario_cents integer NOT NULL,
-  participacion_porcentaje integer NOT NULL CHECK (participacion_porcentaje BETWEEN 0 AND 100),
   estado              text NOT NULL DEFAULT 'acreditada' CHECK (estado IN ('acreditada', 'liquidada', 'compensada')),
-  creado_en           timestamptz NOT NULL DEFAULT NOW(),
-  UNIQUE (order_id, linea_clave)
+  creado_en           timestamptz NOT NULL DEFAULT NOW()
 );
-ALTER TABLE commissions.comisiones DROP CONSTRAINT IF EXISTS comisiones_order_id_key;
-ALTER TABLE commissions.comisiones ADD COLUMN IF NOT EXISTS linea_clave text;
-ALTER TABLE commissions.comisiones ADD COLUMN IF NOT EXISTS empresa_id uuid;
-ALTER TABLE commissions.comisiones ADD COLUMN IF NOT EXISTS tienda_id uuid;
-ALTER TABLE commissions.comisiones ADD COLUMN IF NOT EXISTS monto_empresario_cents integer;
-ALTER TABLE commissions.comisiones ADD COLUMN IF NOT EXISTS participacion_porcentaje integer;
-CREATE UNIQUE INDEX IF NOT EXISTS idx_comisiones_orden_linea ON commissions.comisiones (order_id, linea_clave);
 
 CREATE TABLE IF NOT EXISTS commissions.pagos (
   id         uuid PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -290,30 +214,15 @@ CREATE TABLE IF NOT EXISTS commissions.liquidaciones (
   UNIQUE (vendedor_id, periodo_inicio)
 );
 
-CREATE TABLE IF NOT EXISTS commissions.liquidaciones_empresas (
-  id             uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  empresa_id     uuid NOT NULL,
-  periodo_inicio date NOT NULL,
-  periodo_fin    date NOT NULL,
-  monto_cents    integer NOT NULL,
-  estado         text NOT NULL DEFAULT 'aprobada' CHECK (estado IN ('aprobada', 'pagada')),
-  creado_en      timestamptz NOT NULL DEFAULT NOW(),
-  UNIQUE (empresa_id, periodo_inicio)
-);
-
 CREATE TABLE IF NOT EXISTS commissions.compensaciones_devoluciones (
   id         uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   comision_id uuid REFERENCES commissions.comisiones(id),
   order_id   uuid NOT NULL,
   vendedor_id uuid NOT NULL,
-  empresa_id uuid,
-  monto_cents integer NOT NULL,
-  monto_empresario_cents integer,
+  monto_cents integer NOT NULL,  -- negativo: compensa la comision (RN-06)
   motivo     text NOT NULL,
   creado_en  timestamptz NOT NULL DEFAULT NOW()
 );
-ALTER TABLE commissions.compensaciones_devoluciones ADD COLUMN IF NOT EXISTS empresa_id uuid;
-ALTER TABLE commissions.compensaciones_devoluciones ADD COLUMN IF NOT EXISTS monto_empresario_cents integer;
 
 CREATE TABLE IF NOT EXISTS commissions.eventos_procesados (
   event_id     uuid PRIMARY KEY,
