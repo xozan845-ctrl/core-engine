@@ -1,6 +1,6 @@
 import { Injectable, Optional } from '@nestjs/common';
 import { Request, Response } from 'express';
-import { Logger, TENANT_HEADER, PERSONAL_HEADER } from '@core/shared';
+import { Logger, TENANT_HEADER, PERSONAL_HEADER, PARTICIPACION_HEADER } from '@core/shared';
 import { GatewayAuthMiddleware, PoliticaRuta, POLITICAS_RUTAS } from './gateway-auth.middleware';
 
 export interface ServicioDestino {
@@ -131,7 +131,7 @@ export class ProxyService {
     // que son las que leen los servicios; borrar nombres inexistentes no
     // protegia contra el spoofing de tenant.
     for (const h of ['x-user-id', 'x-user-email', 'x-user-rol', 'x-user-nombre',
-      TENANT_HEADER, PERSONAL_HEADER, 'x-internal-key']) {
+      TENANT_HEADER, PERSONAL_HEADER, PARTICIPACION_HEADER, 'x-internal-key']) {
       delete req.headers[h];
     }
 
@@ -158,7 +158,7 @@ export class ProxyService {
         'content-type': 'application/json',
         accept: 'application/json',
       };
-      for (const k of ['x-user-id', 'x-user-email', 'x-user-rol', TENANT_HEADER, PERSONAL_HEADER] as const) {
+      for (const k of ['x-user-id', 'x-user-email', 'x-user-rol', TENANT_HEADER, PERSONAL_HEADER, PARTICIPACION_HEADER] as const) {
         const v = req.headers[k];
         if (v !== undefined) headers[k] = Array.isArray(v) ? v.join(', ') : String(v);
       }
