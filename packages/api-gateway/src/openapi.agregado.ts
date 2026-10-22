@@ -5892,6 +5892,36 @@ export const OPENAPI_AGREGADO = {
         ]
       }
     },
+    "/api/v1/empresarios/me/tiendas": {
+      "get": {
+        "operationId": "TiendasEmpresaController_listar",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Tiendas de la empresa",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/TiendaResponseDto"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Tiendas de la empresa autenticada",
+        "tags": [
+          "Tiendas"
+        ]
+      }
+    },
     "/api/v1/vendedores/productos": {
       "post": {
         "operationId": "OfertasController_publicar",

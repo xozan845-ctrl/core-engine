@@ -45,3 +45,20 @@ export class TiendasController {
     return tienda;
   }
 }
+
+/** GET /api/v1/empresarios/me/tiendas — tiendas de la empresa (ADR-25). */
+@ApiTags('Tiendas')
+@ApiBearerAuth()
+@Controller('api/v1/empresarios/me')
+export class TiendasEmpresaController {
+  constructor(private readonly tiendas: TiendasService) {}
+
+  @Get('tiendas')
+  @Roles(ROLES.EMPRESARIO)
+  @ApiOperation({ summary: 'Tiendas de la empresa autenticada' })
+  @ApiOkResponse({ type: [TiendaResponseDto], description: 'Tiendas de la empresa' })
+  async listar(@UsuarioActual() usuario: UsuarioContexto): Promise<Tienda[]> {
+    if (!usuario.tenant_id) throw new NotFoundError('Empresa', 'activa');
+    return this.tiendas.deEmpresa(usuario.tenant_id);
+  }
+}

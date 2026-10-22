@@ -270,6 +270,18 @@ describe('Gateway auth — politicas de pedidos (R-GW-1, R-GW-3)', () => {
     expect(next).toHaveBeenCalled();
   });
 
+  it('debe permitir al empresario listar sus tiendas cuando intenta GET /empresarios/me/tiendas', () => {
+    const { res, next } = evaluar('/api/v1/empresarios/me/tiendas', 'GET', ROLES.EMPRESARIO);
+    expect(res.statusCode).toBe(200);
+    expect(next).toHaveBeenCalled();
+  });
+
+  it('debe denegar al vendedor las tiendas de la empresa cuando intenta GET /empresarios/me/tiendas', () => {
+    const { res, next } = evaluar('/api/v1/empresarios/me/tiendas', 'GET', ROLES.VENDEDOR);
+    expect(res.statusCode).toBe(403);
+    expect(next).not.toHaveBeenCalled();
+  });
+
   it('debe propagar los claims opcionales cuando el token trae nombre, tenant, personal y participacion', () => {
     const secreto = 'test_secret_jwt';
     const auth = new GatewayAuthMiddleware(secreto);
