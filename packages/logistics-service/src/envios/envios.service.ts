@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { randomUUID } from 'crypto';
-import { PgService, DomainError, Logger, Money } from '@core/shared';
+import { PgService, DomainError, ForbiddenError, Logger, Money, NotFoundError } from '@core/shared';
 
 export interface Envio {
   id: string;
@@ -211,7 +211,15 @@ export class EnviosService {
     orderId: string,
     estadoNuevo: string,
     motivo?: string,
+    empresaId?: string,
   ): Promise<OrdenExterna> {
+    if (empresaId) {
+      const orden = await this.consultarOrden(orderId);
+      if (!orden) throw new NotFoundError('Orden', orderId);
+      if (!orden.items.some((item) => item.empresa_id === empresaId)) {
+        throw new ForbiddenError('La orden no pertenece a la empresa activa.');
+      }
+    }
     const url = `${this.ordersUrl}/internal/orders/${encodeURIComponent(orderId)}/transicion?estado=${encodeURIComponent(estadoNuevo)}${motivo ? `&motivo=${encodeURIComponent(motivo)}` : ''}`;
     const res = await fetch(url, {
       method: 'POST',

@@ -216,6 +216,36 @@ describe('Gateway auth — politicas de pedidos (R-GW-1, R-GW-3)', () => {
     expect(next).toHaveBeenCalled();
   });
 
+  it('debe permitir al empresario el detalle de una orden de su empresa cuando intenta GET /orders/:id', () => {
+    const { res, next } = evaluar('/api/v1/orders/orden-1', 'GET', ROLES.EMPRESARIO);
+    expect(res.statusCode).toBe(200);
+    expect(next).toHaveBeenCalled();
+  });
+
+  it('debe permitir al empresario el timeline cuando intenta GET /orders/:id/timeline', () => {
+    const { res, next } = evaluar('/api/v1/orders/orden-1/timeline', 'GET', ROLES.EMPRESARIO);
+    expect(res.statusCode).toBe(200);
+    expect(next).toHaveBeenCalled();
+  });
+
+  it('debe permitir al empresario las ordenes de una tienda cuando intenta GET /orders/tienda/:id', () => {
+    const { res, next } = evaluar('/api/v1/orders/tienda/tienda-1', 'GET', ROLES.EMPRESARIO);
+    expect(res.statusCode).toBe(200);
+    expect(next).toHaveBeenCalled();
+  });
+
+  it('debe permitir al empresario avanzar el estado cuando intenta PATCH /orders/:id/estado', () => {
+    const { res, next } = evaluar('/api/v1/orders/orden-1/estado', 'PATCH', ROLES.EMPRESARIO);
+    expect(res.statusCode).toBe(200);
+    expect(next).toHaveBeenCalled();
+  });
+
+  it('debe denegar al empresario el listado global de ordenes cuando intenta GET /orders/admin/todas', () => {
+    const { res, next } = evaluar('/api/v1/orders/admin/todas', 'GET', ROLES.EMPRESARIO);
+    expect(res.statusCode).toBe(403);
+    expect(next).not.toHaveBeenCalled();
+  });
+
   it('debe propagar los claims opcionales cuando el token trae nombre, tenant, personal y participacion', () => {
     const secreto = 'test_secret_jwt';
     const auth = new GatewayAuthMiddleware(secreto);

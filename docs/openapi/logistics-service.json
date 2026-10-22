@@ -45,7 +45,7 @@
             "bearer": []
           }
         ],
-        "summary": "Avanzar el estado de una orden (logística)",
+        "summary": "Avanzar el estado de una orden (logística o empresario de la empresa)",
         "tags": [
           "Logística"
         ]

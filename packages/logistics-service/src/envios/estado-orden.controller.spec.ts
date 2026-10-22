@@ -28,6 +28,27 @@ describe('EstadoOrdenController (api/v1/orders/:id/estado, Tabla 21, R-U-10/11)'
     expect(envios.avanzarEstadoOrden).toHaveBeenCalledWith('o-1', 'enviada', 'despacho');
   });
 
+  it('debe pasar la empresa activa cuando el empresario avanza una orden', async () => {
+    const { envios, controller } = fabricar();
+    envios.avanzarEstadoOrden.mockResolvedValue(orden);
+    await expect(
+      controller.avanzar('o-1', { estado: 'enviada' } as never, empresario as never),
+    ).resolves.toEqual(orden);
+    expect(envios.avanzarEstadoOrden).toHaveBeenCalledWith('o-1', 'enviada', undefined, 'empresa-1');
+  });
+
+  it('debe exigir empresa activa cuando el empresario avanza una orden', async () => {
+    const { envios, controller } = fabricar();
+    await expect(
+      controller.avanzar('o-1', { estado: 'enviada' } as never, {
+        user_id: 'u-e',
+        email: 'e@core.local',
+        rol: ROLES.EMPRESARIO,
+      } as never),
+    ).rejects.toHaveProperty('codigo', 'TENANT_REQUERIDO');
+    expect(envios.avanzarEstadoOrden).not.toHaveBeenCalled();
+  });
+
   it('debe lanzar DomainError ESTADO_INVALIDO cuando el estado no esta permitido', async () => {
     const { controller } = fabricar();
     let error: DomainError | undefined;
@@ -39,9 +60,10 @@ describe('EstadoOrdenController (api/v1/orders/:id/estado, Tabla 21, R-U-10/11)'
     expect(error?.codigo).toBe('ESTADO_INVALIDO');
   });
 
-  it('debe exigir rol super_admin, admin o logistica', () => {
+  it('debe exigir rol super_admin, empresario, admin o logistica', () => {
     expect(Reflect.getMetadata('roles_requeridos', EstadoOrdenController.prototype.avanzar)).toEqual([
       ROLES.SUPER_ADMIN,
+      ROLES.EMPRESARIO,
       ROLES.ADMIN,
       ROLES.LOGISTICA,
     ]);
