@@ -186,3 +186,31 @@ describe('Gateway auth — politicas de pedidos (R-GW-1, R-GW-3)', () => {
     expect(next).toHaveBeenCalled();
   });
 });
+
+describe('Gateway auth — deny by default (R-GW-1, R-GW-3)', () => {
+  const secreto = 'test_secret_jwt';
+  const auth = new GatewayAuthMiddleware(secreto);
+  const token = firmarToken(
+    { sub: 'u-comprador', email: 'comprador@test', rol: ROLES.COMPRADOR, tipo: 'access' },
+    secreto,
+    '900s',
+  );
+
+  it('debe denegar una ruta /api/v1 no declarada cuando el token es valido', () => {
+    const ruta = '/api/v1/ruta-no-declarada';
+    const { req, res, next } = crearPeticion({ ruta, metodo: 'GET', token });
+    auth.aplicar(req as never, res as never, next, politicaDe(ruta, 'GET'));
+    expect((res as unknown as { statusCode: number }).statusCode).toBe(403);
+    expect((res as unknown as { cuerpo: { codigo: string } }).cuerpo.codigo).toBe('ACCESO_DENEGADO');
+    expect(next).not.toHaveBeenCalled();
+  });
+
+  it('debe exigir token en una ruta /api/v1 no declarada cuando no hay token', () => {
+    const ruta = '/api/v1/ruta-no-declarada';
+    const { req, res, next } = crearPeticion({ ruta, metodo: 'GET' });
+    auth.aplicar(req as never, res as never, next, politicaDe(ruta, 'GET'));
+    expect((res as unknown as { statusCode: number }).statusCode).toBe(401);
+    expect((res as unknown as { cuerpo: { codigo: string } }).cuerpo.codigo).toBe('NO_AUTORIZADO');
+    expect(next).not.toHaveBeenCalled();
+  });
+});
