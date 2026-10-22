@@ -158,6 +158,7 @@ export class EnviosService {
     proveedorTenantId: string,
     estado: 'enviada' | 'entregada' | 'cancelada',
     motivo?: string,
+    actorUsuarioId?: string,
   ): Promise<Envio> {
     const envio = await this.pg.queryOne<Envio>(
       `UPDATE logistics.envios SET estado = $1
@@ -174,7 +175,7 @@ export class EnviosService {
       [envio.order_id, estadosAceptados],
     );
     if ((pendientes?.total ?? 1) === 0) {
-      await this.avanzarEstadoOrden(envio.order_id, estado, motivo);
+      await this.avanzarEstadoOrden(envio.order_id, estado, motivo, undefined, actorUsuarioId);
     }
     return envio;
   }
@@ -212,6 +213,7 @@ export class EnviosService {
     estadoNuevo: string,
     motivo?: string,
     empresaId?: string,
+    actorUsuarioId?: string,
   ): Promise<OrdenExterna> {
     if (empresaId) {
       const orden = await this.consultarOrden(orderId);
@@ -220,7 +222,10 @@ export class EnviosService {
         throw new ForbiddenError('La orden no pertenece a la empresa activa.');
       }
     }
-    const url = `${this.ordersUrl}/internal/orders/${encodeURIComponent(orderId)}/transicion?estado=${encodeURIComponent(estadoNuevo)}${motivo ? `&motivo=${encodeURIComponent(motivo)}` : ''}`;
+    const query = [`estado=${encodeURIComponent(estadoNuevo)}`];
+    if (motivo) query.push(`motivo=${encodeURIComponent(motivo)}`);
+    if (actorUsuarioId) query.push(`actor=${encodeURIComponent(actorUsuarioId)}`);
+    const url = `${this.ordersUrl}/internal/orders/${encodeURIComponent(orderId)}/transicion?${query.join('&')}`;
     const res = await fetch(url, {
       method: 'POST',
       headers: { 'x-internal-key': this.claveInterna },

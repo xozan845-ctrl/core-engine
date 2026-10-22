@@ -187,7 +187,31 @@ describe('EnviosService (guia de despacho y transiciones)', () => {
       await servicio.avanzarEstadoEnvio('e1', 'empresa-1', 'entregada', 'recibido');
 
       expect((pg.queryOne as Mock).mock.calls[0][1]).toEqual(['entregada', 'e1', 'empresa-1']);
-      expect(avanzarOrden).toHaveBeenCalledWith('o1', 'entregada', 'recibido');
+      expect(avanzarOrden).toHaveBeenCalledWith(
+        'o1',
+        'entregada',
+        'recibido',
+        undefined,
+        undefined,
+      );
+    });
+
+    it('debe propagar el actor de la flota al avanzar la orden', async () => {
+      const { servicio, pg } = crear();
+      (pg.queryOne as Mock)
+        .mockResolvedValueOnce({ ...envio, estado: 'entregada' })
+        .mockResolvedValueOnce({ total: 0 });
+      const avanzarOrden = vi.spyOn(servicio, 'avanzarEstadoOrden').mockResolvedValue({ estado: 'entregada' } as never);
+
+      await servicio.avanzarEstadoEnvio('e1', 'empresa-1', 'entregada', 'recibido', 'u-l');
+
+      expect(avanzarOrden).toHaveBeenCalledWith(
+        'o1',
+        'entregada',
+        'recibido',
+        undefined,
+        'u-l',
+      );
     });
 
     it('no debe avanzar la orden cuando el conteo de pendientes no responde', async () => {
@@ -300,6 +324,26 @@ describe('EnviosService (guia de despacho y transiciones)', () => {
       expect(resultado.estado).toBe('enviado');
       expect(fetchSpy).toHaveBeenCalledWith(
         expect.stringContaining('/internal/orders/o1/transicion?estado=enviado&motivo=salio%20de%20bodega'),
+        expect.objectContaining({ method: 'POST' }),
+      );
+    });
+
+    it('debe propagar el actor al endpoint interno de transicion', async () => {
+      const fetchSpy = vi
+        .spyOn(globalThis, 'fetch')
+        .mockResolvedValue({ ok: true, json: async () => orden } as unknown as Response);
+      const { servicio } = crear();
+
+      await servicio.avanzarEstadoOrden(
+        'o1',
+        'enviado',
+        'salio de bodega',
+        undefined,
+        'u-logistica',
+      );
+
+      expect(fetchSpy).toHaveBeenCalledWith(
+        expect.stringContaining('&actor=u-logistica'),
         expect.objectContaining({ method: 'POST' }),
       );
     });

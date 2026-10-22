@@ -503,6 +503,8 @@ describe('CreateOrderCommandHandler (CQRS + Event Sourcing)', () => {
       expect.stringContaining('INSERT INTO orders.outbox'),
       [expect.any(String), expect.any(String), expect.stringContaining('"pagada"')],
     );
+    const outbox = (pg.query as Mock).mock.calls[0][1] as [string, string, string];
+    expect(outbox[2]).toContain('"actor":"logistica"');
     expect(resultado).toBe(vista);
   });
 
