@@ -11,6 +11,7 @@ const comprador = { user_id: 'u-c', email: 'c@core.local', rol: ROLES.COMPRADOR 
 const vendedor = { user_id: 'u-v', email: 'v@core.local', rol: ROLES.VENDEDOR };
 const admin = { user_id: 'u-a', email: 'a@core.local', rol: ROLES.ADMIN };
 const superAdmin = { user_id: 'u-sa', email: 'sa@core.local', rol: ROLES.SUPER_ADMIN };
+const empresario = { user_id: 'u-e', email: 'e@core.local', rol: ROLES.EMPRESARIO, tenant_id: 'e-1' };
 
 function fabricar(): {
   handler: Record<string, Mock>;
@@ -80,13 +81,27 @@ describe('PedidosController (api/v1/orders, R-U-10/11)', () => {
     expect(views.obtenerComisiones).toHaveBeenCalledWith('u-v2', '2026-09');
   });
 
-  it('debe listar las ordenes de la tienda pasando el vendedor solo cuando es vendedor', async () => {
+  it('debe listar las ordenes de la tienda pasando vendedor o empresa segun el contexto', async () => {
     const { views, controller } = fabricar();
     views.listarDeTienda.mockResolvedValue([orden]);
     await controller.porTienda('tienda-1', 'creada', vendedor as never);
-    expect(views.listarDeTienda).toHaveBeenCalledWith('tienda-1', 'creada', 'u-v');
+    expect(views.listarDeTienda).toHaveBeenCalledWith('tienda-1', 'creada', 'u-v', undefined);
     await controller.porTienda('tienda-1', undefined, admin as never);
-    expect(views.listarDeTienda).toHaveBeenCalledWith('tienda-1', undefined, undefined);
+    expect(views.listarDeTienda).toHaveBeenCalledWith('tienda-1', undefined, undefined, undefined);
+    await controller.porTienda('tienda-1', undefined, empresario as never);
+    expect(views.listarDeTienda).toHaveBeenCalledWith('tienda-1', undefined, undefined, 'e-1');
+  });
+
+  it('debe rechazar al empresario sin empresa activa al listar ordenes de una tienda', async () => {
+    const { views, controller } = fabricar();
+    await expect(
+      controller.porTienda('tienda-1', undefined, {
+        user_id: 'u-e',
+        email: 'e@core.local',
+        rol: ROLES.EMPRESARIO,
+      } as never),
+    ).rejects.toHaveProperty('codigo', 'TENANT_REQUERIDO');
+    expect(views.listarDeTienda).not.toHaveBeenCalled();
   });
 
   it('debe listar el historial del comprador autenticado', async () => {
@@ -111,10 +126,17 @@ describe('PedidosController (api/v1/orders, R-U-10/11)', () => {
     expect(views.obtenerTimeline).toHaveBeenCalledWith('o-1');
   });
 
-  it('debe exigir rol comprador en crear y vendedor, admin o super_admin en comisiones', () => {
+  it('debe exigir rol comprador en crear y vendedor, empresario, admin o super_admin en comisiones', () => {
     expect(Reflect.getMetadata('roles_requeridos', PedidosController.prototype.crear)).toEqual([ROLES.COMPRADOR]);
     expect(Reflect.getMetadata('roles_requeridos', PedidosController.prototype.comisiones)).toEqual([
       ROLES.SUPER_ADMIN,
+      ROLES.VENDEDOR,
+      ROLES.ADMIN,
+    ]);
+    expect(Reflect.getMetadata('roles_requeridos', PedidosController.prototype.detalle)).toEqual([
+      ROLES.SUPER_ADMIN,
+      ROLES.EMPRESARIO,
+      ROLES.COMPRADOR,
       ROLES.VENDEDOR,
       ROLES.ADMIN,
     ]);

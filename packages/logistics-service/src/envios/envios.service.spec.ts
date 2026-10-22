@@ -303,6 +303,48 @@ describe('EnviosService (guia de despacho y transiciones)', () => {
         expect.objectContaining({ method: 'POST' }),
       );
     });
+
+    it('debe permitir al empresario avanzar una orden que contiene su empresa', async () => {
+      const fetchSpy = vi
+        .spyOn(globalThis, 'fetch')
+        .mockResolvedValue({ ok: true, json: async () => orden } as unknown as Response);
+      const { servicio } = crear();
+      const consultar = vi.spyOn(servicio, 'consultarOrden').mockResolvedValue({
+        ...orden,
+        items: [{ empresa_id: 'empresa-1' }],
+      } as never);
+
+      await expect(servicio.avanzarEstadoOrden('o1', 'enviado', undefined, 'empresa-1')).resolves.toEqual(
+        orden,
+      );
+      expect(consultar).toHaveBeenCalledWith('o1');
+      expect(fetchSpy).toHaveBeenCalledTimes(1);
+    });
+
+    it('debe rechazar al empresario cuando la orden es de otra empresa', async () => {
+      const fetchSpy = vi.spyOn(globalThis, 'fetch');
+      const { servicio } = crear();
+      vi.spyOn(servicio, 'consultarOrden').mockResolvedValue({
+        ...orden,
+        items: [{ empresa_id: 'empresa-2' }],
+      } as never);
+
+      await expect(
+        servicio.avanzarEstadoOrden('o1', 'enviado', undefined, 'empresa-1'),
+      ).rejects.toHaveProperty('codigo', 'ACCESO_DENEGADO');
+      expect(fetchSpy).not.toHaveBeenCalled();
+    });
+
+    it('debe lanzar NotFound cuando el empresario intenta avanzar una orden inexistente', async () => {
+      const fetchSpy = vi.spyOn(globalThis, 'fetch');
+      const { servicio } = crear();
+      vi.spyOn(servicio, 'consultarOrden').mockResolvedValue(null);
+
+      await expect(
+        servicio.avanzarEstadoOrden('o1', 'enviado', undefined, 'empresa-1'),
+      ).rejects.toHaveProperty('codigo', 'NO_ENCONTRADO');
+      expect(fetchSpy).not.toHaveBeenCalled();
+    });
   });
 
   describe('consultarOrden', () => {

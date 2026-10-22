@@ -4048,7 +4048,7 @@ export const OPENAPI_AGREGADO = {
             "bearer": []
           }
         ],
-        "summary": "Avanzar el estado de una orden (logística)",
+        "summary": "Avanzar el estado de una orden (logística o empresario de la empresa)",
         "tags": [
           "Logística"
         ]
@@ -5049,7 +5049,7 @@ export const OPENAPI_AGREGADO = {
             "bearer": []
           }
         ],
-        "summary": "Órdenes de una tienda (vendedor dueño o admin)",
+        "summary": "Órdenes de una tienda (vendedor dueño, empresario de la empresa o admin)",
         "tags": [
           "Pedidos"
         ]

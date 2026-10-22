@@ -26,6 +26,9 @@ export class PedidosService {
     ) {
       return orden;
     }
+    if (usuario.rol === 'empresario' && usuario.tenant_id) {
+      if (orden.items.some((i) => i.empresa_id === usuario.tenant_id)) return orden;
+    }
     throw new ForbiddenError('No tiene acceso a esta orden.');
   }
 }

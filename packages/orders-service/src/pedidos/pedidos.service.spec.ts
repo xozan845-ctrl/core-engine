@@ -69,6 +69,35 @@ describe('PedidosService.detallePara (Tabla 15, ADR-25)', () => {
     ).rejects.toBeInstanceOf(ForbiddenError);
   });
 
+  it('debe permitir al empresario ver una orden de su empresa', async () => {
+    const { views, servicio } = fabricar();
+    views.encontrar.mockResolvedValue(orden);
+    await expect(
+      servicio.detallePara('o-1', {
+        user_id: 'u-e',
+        email: 'e@test',
+        rol: ROLES.EMPRESARIO,
+        tenant_id: 'e-1',
+      }),
+    ).resolves.toEqual(orden);
+  });
+
+  it('debe denegar al empresario una orden de otra empresa o sin empresa activa', async () => {
+    const { views, servicio } = fabricar();
+    views.encontrar.mockResolvedValue(orden);
+    await expect(
+      servicio.detallePara('o-1', {
+        user_id: 'u-e',
+        email: 'e@test',
+        rol: ROLES.EMPRESARIO,
+        tenant_id: 'e-2',
+      }),
+    ).rejects.toBeInstanceOf(ForbiddenError);
+    await expect(
+      servicio.detallePara('o-1', { user_id: 'u-e', email: 'e@test', rol: ROLES.EMPRESARIO }),
+    ).rejects.toBeInstanceOf(ForbiddenError);
+  });
+
   it('debe lanzar NotFoundError cuando la orden no existe', async () => {
     const { views, servicio } = fabricar();
     views.encontrar.mockResolvedValue(null);

@@ -1,6 +1,7 @@
 import { Body, Controller, Get, Param, Post, Query } from '@nestjs/common';
 import { ApiBearerAuth, ApiCreatedResponse, ApiOkResponse, ApiOperation, ApiParam, ApiQuery, ApiTags } from '@nestjs/swagger';
 import {
+  DomainError,
   Roles,
   ROLES,
   UsuarioActual,
@@ -85,8 +86,8 @@ export class PedidosController {
 
   /** GET /api/v1/orders/tienda/:tiendaId — ordenes de una tienda (vendedor dueño o admin). */
   @Get('tienda/:tiendaId')
-  @Roles(ROLES.SUPER_ADMIN, ROLES.VENDEDOR, ROLES.ADMIN)
-  @ApiOperation({ summary: 'Órdenes de una tienda (vendedor dueño o admin)' })
+  @Roles(ROLES.SUPER_ADMIN, ROLES.EMPRESARIO, ROLES.VENDEDOR, ROLES.ADMIN)
+  @ApiOperation({ summary: 'Órdenes de una tienda (vendedor dueño, empresario de la empresa o admin)' })
   @ApiParam({ name: 'tiendaId', description: 'Id de la tienda' })
   @ApiQuery({ name: 'estado', required: false })
   @ApiOkResponse({ type: [OrderViewResponseDto], description: 'Órdenes de la tienda' })
@@ -95,10 +96,15 @@ export class PedidosController {
     @Query('estado') estado?: string,
     @UsuarioActual() usuario?: UsuarioContexto,
   ): Promise<OrderView[]> {
+    const empresaId = usuario?.rol === 'empresario' ? usuario.tenant_id : undefined;
+    if (usuario?.rol === 'empresario' && !empresaId) {
+      throw new DomainError('TENANT_REQUERIDO', 'Se requiere una empresa activa.');
+    }
     return this.views.listarDeTienda(
       tiendaId,
       estado,
       usuario?.rol === 'vendedor' ? usuario.user_id : undefined,
+      empresaId,
     );
   }
 
@@ -117,7 +123,7 @@ export class PedidosController {
 
   /** GET /api/v1/orders/:id — estado de la orden (JWT; solo el dueno o admin). */
   @Get(':id')
-  @Roles(ROLES.SUPER_ADMIN, ROLES.COMPRADOR, ROLES.VENDEDOR, ROLES.ADMIN)
+  @Roles(ROLES.SUPER_ADMIN, ROLES.EMPRESARIO, ROLES.COMPRADOR, ROLES.VENDEDOR, ROLES.ADMIN)
   @ApiOperation({ summary: 'Estado/detalle de una orden (dueño o admin)' })
   @ApiParam({ name: 'id', description: 'Id de la orden' })
   @ApiOkResponse({ type: OrderViewResponseDto, description: 'Detalle de la orden' })
@@ -130,7 +136,7 @@ export class PedidosController {
 
   /** GET /api/v1/orders/:id/timeline — historial de eventos de la orden. */
   @Get(':id/timeline')
-  @Roles(ROLES.SUPER_ADMIN, ROLES.COMPRADOR, ROLES.VENDEDOR, ROLES.ADMIN)
+  @Roles(ROLES.SUPER_ADMIN, ROLES.EMPRESARIO, ROLES.COMPRADOR, ROLES.VENDEDOR, ROLES.ADMIN)
   @ApiOperation({ summary: 'Timeline de eventos de la orden (Event Sourcing)' })
   @ApiParam({ name: 'id', description: 'Id de la orden' })
   @ApiOkResponse({ type: [TimelineEventoResponseDto], description: 'Timeline de la orden' })

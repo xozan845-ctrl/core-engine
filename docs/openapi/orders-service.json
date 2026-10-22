@@ -458,7 +458,7 @@
             "bearer": []
           }
         ],
-        "summary": "Órdenes de una tienda (vendedor dueño o admin)",
+        "summary": "Órdenes de una tienda (vendedor dueño, empresario de la empresa o admin)",
         "tags": [
           "Pedidos"
         ]
