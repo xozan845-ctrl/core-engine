@@ -1,5 +1,5 @@
 import { GatewayAuthMiddleware, POLITICAS_RUTAS } from './gateway-auth.middleware';
-import { firmarToken, ROLES } from '@core/shared';
+import { firmarToken, ROLES, TENANT_HEADER, PERSONAL_HEADER, PARTICIPACION_HEADER } from '@core/shared';
 
 function crearPeticion(config: {
   ruta: string;
@@ -184,6 +184,33 @@ describe('Gateway auth — politicas de pedidos (R-GW-1, R-GW-3)', () => {
     const { res, next } = evaluar('/api/v1/orders/orden-1', 'GET', ROLES.COMPRADOR);
     expect(res.statusCode).toBe(200);
     expect(next).toHaveBeenCalled();
+  });
+
+  it('debe propagar los claims opcionales cuando el token trae nombre, tenant, personal y participacion', () => {
+    const secreto = 'test_secret_jwt';
+    const auth = new GatewayAuthMiddleware(secreto);
+    const token = firmarToken(
+      {
+        sub: 'u-v',
+        email: 'v@test',
+        rol: ROLES.VENDEDOR,
+        tipo: 'access',
+        nombre: 'Ana',
+        tenant_id: 'tenant-1',
+        personal_id: 'p-1',
+        participacion_porcentaje: 20,
+      },
+      secreto,
+      '900s',
+    );
+    const { req, res, next } = crearPeticion({ ruta: '/api/v1/orders/orden-1', metodo: 'GET', token });
+    auth.aplicar(req as never, res as never, next, politicaDe('/api/v1/orders/orden-1', 'GET'));
+    expect(next).toHaveBeenCalled();
+    const headers = req.headers as Record<string, string>;
+    expect(headers['x-user-nombre']).toBe('Ana');
+    expect(headers[TENANT_HEADER]).toBe('tenant-1');
+    expect(headers[PERSONAL_HEADER]).toBe('p-1');
+    expect(headers[PARTICIPACION_HEADER]).toBe('20');
   });
 });
 
