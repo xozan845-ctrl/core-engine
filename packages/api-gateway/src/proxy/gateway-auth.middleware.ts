@@ -59,8 +59,29 @@ export const POLITICAS_RUTAS: PoliticaRuta[] = [
       metodos: ['PATCH', 'POST'],
       roles: [ROLES.ADMIN, ROLES.LOGISTICA],
     },
+    // Pedidos: reglas específicas antes de cualquier catch-all. El gateway
+    // resuelve por primera coincidencia (find), así que una regla genérica
+    // como /orders/ expondría las rutas admin y de tienda a otros roles
+    // (R-GW-1, R-GW-3).
+    { patron: /^\/api\/v1\/orders\/admin\/todas$/, metodos: ['GET'], roles: [ROLES.ADMIN] },
+    { patron: /^\/api\/v1\/orders\/vendedor\/mis-ventas$/, metodos: ['GET'], roles: [ROLES.VENDEDOR] },
     {
-      patron: /^\/api\/v1\/orders\//,
+      patron: /^\/api\/v1\/orders\/vendedor\/comisiones$/,
+      metodos: ['GET'],
+      roles: [ROLES.VENDEDOR, ROLES.ADMIN],
+    },
+    {
+      patron: /^\/api\/v1\/orders\/tienda\/[^/]+$/,
+      metodos: ['GET'],
+      roles: [ROLES.VENDEDOR, ROLES.ADMIN],
+    },
+    {
+      patron: /^\/api\/v1\/orders\/[^/]+\/timeline$/,
+      metodos: ['GET'],
+      roles: [ROLES.COMPRADOR, ROLES.VENDEDOR, ROLES.ADMIN],
+    },
+    {
+      patron: /^\/api\/v1\/orders\/[^/]+$/,
       metodos: ['GET'],
       roles: [ROLES.COMPRADOR, ROLES.VENDEDOR, ROLES.ADMIN],
     },
