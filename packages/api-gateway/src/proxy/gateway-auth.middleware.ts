@@ -41,8 +41,9 @@ export const POLITICAS_RUTAS: PoliticaRuta[] = [
     { patron: /^\/api\/v1\/auth\/me$/, metodos: ['GET'], roles: null }, // exige token (se valida abajo)
     // logout: exige un access token valido (cualquier rol); revoca el refresh (R-GW-4)
     { patron: /^\/api\/v1\/auth\/logout$/, metodos: ['POST'], roles: Object.values(ROLES) },
-    // catálogo: escritura admin
-    { patron: /^\/api\/v1\/catalog\/productos/, metodos: ['POST', 'PATCH', 'PUT', 'DELETE'], roles: [ROLES.EMPRESARIO] },
+    // catálogo: escritura admin (el super_admin opera globalmente; para crear
+    // debe indicar la empresa en el cuerpo)
+    { patron: /^\/api\/v1\/catalog\/productos/, metodos: ['POST', 'PATCH', 'PUT', 'DELETE'], roles: [ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.EMPRESARIO] },
     // vendedores
     {
       patron: /^\/api\/v1\/vendedores\/(me\/ventas|me\/liquidaciones)$/,
@@ -63,33 +64,33 @@ export const POLITICAS_RUTAS: PoliticaRuta[] = [
     {
       patron: /^\/api\/v1\/orders\/[^/]+\/estado$/,
       metodos: ['PATCH', 'POST'],
-      roles: [ROLES.ADMIN, ROLES.LOGISTICA],
+      roles: [ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.LOGISTICA],
     },
     // Pedidos: reglas específicas antes de cualquier catch-all. El gateway
     // resuelve por primera coincidencia (find), así que una regla genérica
     // como /orders/ expondría las rutas admin y de tienda a otros roles
     // (R-GW-1, R-GW-3).
-    { patron: /^\/api\/v1\/orders\/admin\/todas$/, metodos: ['GET'], roles: [ROLES.ADMIN] },
+    { patron: /^\/api\/v1\/orders\/admin\/todas$/, metodos: ['GET'], roles: [ROLES.SUPER_ADMIN, ROLES.ADMIN] },
     { patron: /^\/api\/v1\/orders\/vendedor\/mis-ventas$/, metodos: ['GET'], roles: [ROLES.VENDEDOR] },
     {
       patron: /^\/api\/v1\/orders\/vendedor\/comisiones$/,
       metodos: ['GET'],
-      roles: [ROLES.VENDEDOR, ROLES.ADMIN],
+      roles: [ROLES.SUPER_ADMIN, ROLES.VENDEDOR, ROLES.ADMIN],
     },
     {
       patron: /^\/api\/v1\/orders\/tienda\/[^/]+$/,
       metodos: ['GET'],
-      roles: [ROLES.VENDEDOR, ROLES.ADMIN],
+      roles: [ROLES.SUPER_ADMIN, ROLES.VENDEDOR, ROLES.ADMIN],
     },
     {
       patron: /^\/api\/v1\/orders\/[^/]+\/timeline$/,
       metodos: ['GET'],
-      roles: [ROLES.COMPRADOR, ROLES.VENDEDOR, ROLES.ADMIN],
+      roles: [ROLES.SUPER_ADMIN, ROLES.COMPRADOR, ROLES.VENDEDOR, ROLES.ADMIN],
     },
     {
       patron: /^\/api\/v1\/orders\/[^/]+$/,
       metodos: ['GET'],
-      roles: [ROLES.COMPRADOR, ROLES.VENDEDOR, ROLES.ADMIN],
+      roles: [ROLES.SUPER_ADMIN, ROLES.COMPRADOR, ROLES.VENDEDOR, ROLES.ADMIN],
     },
     // carrito (RN-05): solo el comprador autenticado
     {
@@ -108,24 +109,24 @@ export const POLITICAS_RUTAS: PoliticaRuta[] = [
   {
     patron: /^\/api\/v1\/admin\/inventario/,
     metodos: ['GET', 'POST', 'PATCH'],
-    roles: [ROLES.ADMIN],
+    roles: [ROLES.SUPER_ADMIN, ROLES.ADMIN],
   },
   {
     patron: /^\/api\/v1\/admin\//,
     metodos: ['*'],
-    roles: [ROLES.ADMIN],
+    roles: [ROLES.SUPER_ADMIN, ROLES.ADMIN],
   },
   // finanzas y regimen fiscal (contabilidad, comprobantes, proyecciones)
   {
     patron: /^\/api\/v1\/finanzas\//,
     metodos: ['*'],
-    roles: [ROLES.ADMIN],
+    roles: [ROLES.SUPER_ADMIN, ROLES.ADMIN],
   },
   // field-service: logistica de campo (app-test) — roles de logistica
   {
     patron: /^\/api\/v1\/field\//,
     metodos: ['*'],
-    roles: [...ROLES_LOGISTICA],
+    roles: [ROLES.SUPER_ADMIN, ...ROLES_LOGISTICA],
   },
   // market-intelligence: admin ve todo, vendedor ve lo suyo, endpoints internos protegidos
   {
@@ -136,7 +137,7 @@ export const POLITICAS_RUTAS: PoliticaRuta[] = [
   {
     patron: /^\/api\/v1\/inteligencia\//,
     metodos: ['GET'],
-    roles: [ROLES.ADMIN],
+    roles: [ROLES.SUPER_ADMIN, ROLES.ADMIN],
   },
   {
     patron: /^\/api\/v1\/inteligencia\/ventas\/registrar$/,
