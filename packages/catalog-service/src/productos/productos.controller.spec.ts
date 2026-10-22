@@ -73,6 +73,42 @@ describe('ProductosController (api/v1/catalog, R-U-10/11)', () => {
     expect(productos.actualizar).toHaveBeenCalledWith(producto.id, dto, 'e-1');
   });
 
+  it('debe lanzar NotFoundError cuando el empresario no tiene empresa activa al crear', async () => {
+    const { productos, controller } = fabricar();
+    await expect(
+      controller.crear({ sku: 'SKU-01', nombre: 'Teclado', precio_base: '1500.00', stock: 10 } as never, {
+        user_id: 'u-1',
+        email: 'e@core.local',
+        rol: 'empresario',
+      } as never),
+    ).rejects.toBeInstanceOf(NotFoundError);
+    expect(productos.crear).not.toHaveBeenCalled();
+  });
+
+  it('debe actualizar sin filtro de empresa cuando el rol no es empresario', async () => {
+    const { productos, controller } = fabricar();
+    productos.actualizar.mockResolvedValue(producto);
+    const dto = { stock: 5 };
+    await controller.actualizar(producto.id, dto as never, {
+      user_id: 'u-admin',
+      email: 'admin@core.local',
+      rol: 'admin',
+    } as never);
+    expect(productos.actualizar).toHaveBeenCalledWith(producto.id, dto, undefined);
+  });
+
+  it('debe lanzar NotFoundError cuando el empresario no tiene empresa activa al actualizar', async () => {
+    const { productos, controller } = fabricar();
+    await expect(
+      controller.actualizar(producto.id, { stock: 5 } as never, {
+        user_id: 'u-1',
+        email: 'e@core.local',
+        rol: 'empresario',
+      } as never),
+    ).rejects.toBeInstanceOf(NotFoundError);
+    expect(productos.actualizar).not.toHaveBeenCalled();
+  });
+
   it('debe reservar la escritura al empresario', () => {
     expect(Reflect.getMetadata('roles_requeridos', ProductosController.prototype.crear)).toEqual(['empresario']);
     expect(Reflect.getMetadata('roles_requeridos', ProductosController.prototype.actualizar)).toEqual(['empresario']);
