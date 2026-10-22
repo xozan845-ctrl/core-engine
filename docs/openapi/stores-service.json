@@ -442,7 +442,7 @@
         "properties": {
           "tienda_id": {
             "type": "string",
-            "description": "Tienda donde se publicará",
+            "description": "Tienda donde se publicará. Si se omite, se usa la tienda del vendedor autenticado.",
             "format": "uuid"
           },
           "producto_id": {
@@ -459,7 +459,6 @@
           }
         },
         "required": [
-          "tienda_id",
           "producto_id",
           "margen"
         ]

@@ -5,7 +5,6 @@ CREATE SCHEMA IF NOT EXISTS catalog;
 -- 1) Vista de catálogo público (read-optimized para listados/búsqueda)
 CREATE TABLE IF NOT EXISTS catalog.producto_catalogo_vista (
   id              uuid PRIMARY KEY,
-  empresa_id      uuid NOT NULL,
   sku             text NOT NULL UNIQUE,
   nombre          text NOT NULL,
   descripcion     text,
@@ -16,7 +15,6 @@ CREATE TABLE IF NOT EXISTS catalog.producto_catalogo_vista (
   creado_en       timestamptz NOT NULL,
   actualizado_en  timestamptz NOT NULL DEFAULT NOW()
 );
-ALTER TABLE catalog.producto_catalogo_vista ADD COLUMN IF NOT EXISTS empresa_id uuid;
 CREATE INDEX IF NOT EXISTS idx_catalogo_categoria ON catalog.producto_catalogo_vista (categoria);
 CREATE INDEX IF NOT EXISTS idx_catalogo_estado ON catalog.producto_catalogo_vista (estado);
 -- pg_trgm no está garantizado; usar ILIKE o crear extensión si se necesita búsqueda full-text
@@ -71,8 +69,8 @@ DECLARE
 BEGIN
   -- 1) producto_catalogo_vista
   DELETE FROM catalog.producto_catalogo_vista;
-  INSERT INTO catalog.producto_catalogo_vista (id, empresa_id, sku, nombre, descripcion, categoria, precio_base_cents, disponible, estado, creado_en, actualizado_en)
-  SELECT p.id, p.empresa_id, p.sku, p.nombre, p.descripcion, p.categoria, p.precio_base_cents,
+  INSERT INTO catalog.producto_catalogo_vista (id, sku, nombre, descripcion, categoria, precio_base_cents, disponible, estado, creado_en, actualizado_en)
+  SELECT p.id, p.sku, p.nombre, p.descripcion, p.categoria, p.precio_base_cents,
          p.stock,
          p.estado, p.creado_en, NOW()
   FROM catalog.productos p;
@@ -118,12 +116,12 @@ BEGIN
 
     -- producto_catalogo_vista
     IF TG_OP = 'INSERT' THEN
-      INSERT INTO catalog.producto_catalogo_vista (id, empresa_id, sku, nombre, descripcion, categoria, precio_base_cents, disponible, estado, creado_en, actualizado_en)
-      VALUES (NEW.id, NEW.empresa_id, NEW.sku, NEW.nombre, NEW.descripcion, NEW.categoria, NEW.precio_base_cents,
+      INSERT INTO catalog.producto_catalogo_vista (id, sku, nombre, descripcion, categoria, precio_base_cents, disponible, estado, creado_en, actualizado_en)
+      VALUES (NEW.id, NEW.sku, NEW.nombre, NEW.descripcion, NEW.categoria, NEW.precio_base_cents,
               NEW.stock, NEW.estado, NEW.creado_en, NOW());
     ELSE
       UPDATE catalog.producto_catalogo_vista
-      SET empresa_id = NEW.empresa_id, nombre = NEW.nombre, descripcion = NEW.descripcion, categoria = NEW.categoria,
+      SET nombre = NEW.nombre, descripcion = NEW.descripcion, categoria = NEW.categoria,
           precio_base_cents = NEW.precio_base_cents,
           disponible = NEW.stock,
           estado = NEW.estado, actualizado_en = NOW()

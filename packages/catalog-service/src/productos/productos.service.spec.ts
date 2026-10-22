@@ -103,6 +103,13 @@ describe('ProductosService (catalogo maestro y stock)', () => {
       expect((producto as Producto).precio_base).toBe('1500.00');
       expect((producto as Producto).estado).toBe('disponible');
     });
+
+    it('debe serializar como agotado cuando la fila no esta disponible', async () => {
+      const { servicio, pg } = crear();
+      (pg.queryOne as Mock).mockResolvedValue({ ...filaProducto, estado: 'agotado' });
+      const producto = await servicio.encontrarPorId(filaProducto.id);
+      expect((producto as Producto).estado).toBe('agotado');
+    });
   });
 
   describe('consultas por lote', () => {
@@ -116,6 +123,28 @@ describe('ProductosService (catalogo maestro y stock)', () => {
       const { servicio, pg } = crear();
       expect(await servicio.stockActualDe([])).toEqual([]);
       expect(pg.query).not.toHaveBeenCalled();
+    });
+
+    it('debe consultar por lote cuando hay SKUs (lotePorSkus)', async () => {
+      const { servicio, pg } = crear();
+      (pg.query as Mock).mockResolvedValue([{ sku: 'sku-01', stock: 9, estado: 'disponible' }]);
+      await expect(servicio.lotePorSkus(['SKU-01', 'sku-01'])).resolves.toEqual([
+        { sku: 'sku-01', stock: 9, estado: 'disponible' },
+      ]);
+      const [sql, params] = (pg.query as Mock).mock.calls[0];
+      expect(sql).toContain('LOWER(sku) IN');
+      expect(params).toEqual(['sku-01']); // deduplicado y en minusculas
+    });
+
+    it('debe consultar el stock actual cuando hay SKUs (stockActualDe)', async () => {
+      const { servicio, pg } = crear();
+      (pg.query as Mock).mockResolvedValue([{ sku: 'sku-01', stock_restante: 9 }]);
+      await expect(servicio.stockActualDe(['SKU-01'])).resolves.toEqual([
+        { sku: 'sku-01', stock_restante: 9 },
+      ]);
+      const [sql, params] = (pg.query as Mock).mock.calls[0];
+      expect(sql).toContain('stock_restante');
+      expect(params).toEqual(['sku-01']);
     });
   });
 
@@ -244,6 +273,45 @@ describe('ProductosService (catalogo maestro y stock)', () => {
       expect(sqls.some((s: string) => s.includes('INSERT INTO catalog.ajustes_stock'))).toBe(true);
       expect(sqls.some((s: string) => s.includes('UPDATE catalog.productos'))).toBe(true);
     });
+
+    it('debe registrar el historico cuando cambia el precio base (RN-08)', async () => {
+      const { servicio, pg, client } = crear();
+      (pg.queryOne as Mock)
+        .mockResolvedValueOnce(filaProducto)
+        .mockResolvedValueOnce({ ...filaProducto, precio_base_cents: 200000 });
+      (client.query as Mock).mockResolvedValue({ rows: [], rowCount: 1 });
+
+      const resultado = await servicio.actualizar(filaProducto.id, { precio_base: '2000.00' });
+
+      expect(resultado.precio_base).toBe('2000.00');
+      const [sqlHistorico, paramsHistorico] = (client.query as Mock).mock.calls.find(
+        (c: any[]) => String(c[0]).includes('historico_precios'),
+      ) as [string, unknown[]];
+      expect(sqlHistorico).toContain('historico_precios');
+      expect(paramsHistorico).toEqual(['SKU-01', 150000, 200000]);
+    });
+
+    it('debe actualizar nombre, descripcion y categoria cuando llegan esos campos', async () => {
+      const { servicio, pg, client } = crear();
+      (pg.queryOne as Mock)
+        .mockResolvedValueOnce(filaProducto)
+        .mockResolvedValueOnce({ ...filaProducto, nombre: 'Nuevo', descripcion: 'D', categoria: 'C' });
+      (client.query as Mock).mockResolvedValue({ rows: [], rowCount: 1 });
+
+      await servicio.actualizar(filaProducto.id, {
+        nombre: 'Nuevo',
+        descripcion: 'D',
+        categoria: 'C',
+      });
+
+      const [sqlUpdate, params] = (client.query as Mock).mock.calls.find(
+        (c: any[]) => String(c[0]).includes('UPDATE catalog.productos'),
+      ) as [string, unknown[]];
+      expect(sqlUpdate).toContain('nombre = $1');
+      expect(sqlUpdate).toContain('descripcion = $2');
+      expect(sqlUpdate).toContain('categoria = $3');
+      expect(params).toEqual(['Nuevo', 'D', 'C', filaProducto.id]);
+    });
   });
 
   describe('resumenInventario', () => {
@@ -256,6 +324,13 @@ describe('ProductosService (catalogo maestro y stock)', () => {
         stock_total: 0,
         valor_inventario_cents: 0,
       });
+    });
+
+    it('debe devolver el resumen cuando la vista devuelve agregados', async () => {
+      const { servicio, pg } = crear();
+      const resumen = { productos: 2, agotados: 1, stock_total: 7, valor_inventario_cents: 7000 };
+      (pg.queryOne as Mock).mockResolvedValue(resumen);
+      await expect(servicio.resumenInventario()).resolves.toEqual(resumen);
     });
   });
 

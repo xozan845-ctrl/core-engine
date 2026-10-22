@@ -181,6 +181,20 @@ describe('PedidosConsumer de logistics (Tabla 22)', () => {
     expect(pg.query).toHaveBeenCalledTimes(1); // solo marcarProcesado
   });
 
+  it('debe ignorar el estado actualizado cuando el event_id ya fue procesado (doc 5.2)', async () => {
+    const { dispatch, outbox, pg } = await crear();
+    (pg.queryOne as Mock).mockResolvedValue({ '?column?': 1 });
+    await dispatch(
+      evento(EVENTOS.ORDER_STATUS_UPDATED, {
+        order_id: 'o1',
+        estado: 'entregada',
+        previo_estado: 'enviada',
+      } as OrderStatusUpdatedData),
+    );
+    expect(outbox.insertar).not.toHaveBeenCalled();
+    expect(pg.query).not.toHaveBeenCalled();
+  });
+
   it('debe ignorar los eventos que no son de pagos ni de estados', async () => {
     const { dispatch, outbox, pg } = await crear();
     await dispatch(evento(EVENTOS.ORDER_CREATED, { order_id: 'o1' }));

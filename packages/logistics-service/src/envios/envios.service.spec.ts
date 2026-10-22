@@ -59,6 +59,15 @@ describe('EnviosService (guia de despacho y transiciones)', () => {
       );
     });
 
+    it('debe devolver el envio existente sin re-registrar asignacion cuando sigue sin proveedor', async () => {
+      const { servicio, pg } = crear();
+      (pg.queryOne as Mock).mockResolvedValue({ ...envio, proveedor_tipo: null, proveedor_tenant_id: null });
+      const resultado = await servicio.prepararEnvio('o1', 'empresa-1', 150000, 'hibrida');
+      expect(resultado.proveedor_tipo).toBeNull();
+      expect(pg.query).not.toHaveBeenCalled(); // no inserta asignacion ni envio
+      expect(pg.queryOne).toHaveBeenCalledTimes(1);
+    });
+
     it('debe lanzar DomainError cuando el INSERT no devuelve fila', async () => {
       const { servicio, pg } = crear();
       (pg.queryOne as Mock)
@@ -179,6 +188,17 @@ describe('EnviosService (guia de despacho y transiciones)', () => {
 
       expect((pg.queryOne as Mock).mock.calls[0][1]).toEqual(['entregada', 'e1', 'empresa-1']);
       expect(avanzarOrden).toHaveBeenCalledWith('o1', 'entregada', 'recibido');
+    });
+
+    it('no debe avanzar la orden cuando el conteo de pendientes no responde', async () => {
+      const { servicio, pg } = crear();
+      (pg.queryOne as Mock)
+        .mockResolvedValueOnce({ ...envio, estado: 'entregada' })
+        .mockResolvedValueOnce(null);
+      const avanzarOrden = vi.spyOn(servicio, 'avanzarEstadoOrden');
+
+      await servicio.avanzarEstadoEnvio('e1', 'empresa-1', 'entregada');
+      expect(avanzarOrden).not.toHaveBeenCalled();
     });
 
     it('no debe avanzar la orden mientras otra empresa tenga un envio pendiente', async () => {
