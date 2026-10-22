@@ -61,4 +61,13 @@ describe('TiendasService (multiples tiendas por empresa)', () => {
       expect(pg.queryOne).toHaveBeenCalledWith(expect.stringContaining('stores.tiendas'), ['v1']);
     });
   });
+
+  describe('encontrarPorId', () => {
+    it('debe consultar la tienda por id', async () => {
+      const { servicio, pg } = crear();
+      (pg.queryOne as Mock).mockResolvedValue(tienda);
+      expect(await servicio.encontrarPorId('t1')).toEqual(tienda);
+      expect(pg.queryOne).toHaveBeenCalledWith(expect.stringContaining('WHERE id = $1'), ['t1']);
+    });
+  });
 });
