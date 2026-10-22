@@ -20,6 +20,7 @@ import {
   ROLES_REGISTRABLES,
   ROLES_LOGISTICA,
   Rol,
+  Roles,
   UsuarioContexto,
   UsuarioActual,
   usuarioDesdeHeaders,
@@ -196,6 +197,7 @@ export class AuthController {
    * Cloud Function `crearUsuario` de Firebase: crea el usuario y devuelve su id.
    */
   @Post('crear-usuario')
+  @Roles(ROLES.SUPER_ADMIN, ROLES.ADMIN)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Crear usuario (solo admin)' })
   @ApiCreatedResponse({ type: UsuarioResponseDto, description: 'Usuario creado' })

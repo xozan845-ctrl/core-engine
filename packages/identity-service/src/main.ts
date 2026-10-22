@@ -12,6 +12,7 @@ import {
   NOMBRE_SERVICIOS,
   PUERTOS,
   Logger,
+  RolesGuard,
 } from '@core/shared';
 
 async function bootstrap(): Promise<void> {
@@ -22,6 +23,7 @@ async function bootstrap(): Promise<void> {
     new TrazabilidadInterceptor(app.get(MetricsService), NOMBRE_SERVICIOS.IDENTITY),
   );
   app.useGlobalFilters(new DomainErrorFilter());
+  app.useGlobalGuards(new RolesGuard());
   const puerto = Number(process.env.PORT ?? PUERTOS.IDENTITY);
   const expressApp = app.getHttpAdapter().getInstance();
 

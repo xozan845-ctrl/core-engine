@@ -282,6 +282,42 @@ describe('Gateway auth — politicas de pedidos (R-GW-1, R-GW-3)', () => {
     expect(next).not.toHaveBeenCalled();
   });
 
+  it('debe permitir al super_admin avanzar un envio de flota cuando intenta PATCH /envios/:id/estado', () => {
+    const { res, next } = evaluar('/api/v1/envios/envio-1/estado', 'PATCH', ROLES.SUPER_ADMIN);
+    expect(res.statusCode).toBe(200);
+    expect(next).toHaveBeenCalled();
+  });
+
+  it('debe denegar al vendedor configurar el bucket cuando intenta POST /storage/bucket', () => {
+    const { res, next } = evaluar('/api/v1/storage/bucket', 'POST', ROLES.VENDEDOR);
+    expect(res.statusCode).toBe(403);
+    expect(next).not.toHaveBeenCalled();
+  });
+
+  it('debe permitir al admin configurar el bucket cuando intenta POST /storage/bucket', () => {
+    const { res, next } = evaluar('/api/v1/storage/bucket', 'POST', ROLES.ADMIN);
+    expect(res.statusCode).toBe(200);
+    expect(next).toHaveBeenCalled();
+  });
+
+  it('debe denegar al vendedor crear vendedores de una empresa cuando intenta POST /empresas/:id/vendedores', () => {
+    const { res, next } = evaluar('/api/v1/empresas/empresa-1/vendedores', 'POST', ROLES.VENDEDOR);
+    expect(res.statusCode).toBe(403);
+    expect(next).not.toHaveBeenCalled();
+  });
+
+  it('debe permitir al empresario crear vendedores de su empresa cuando intenta POST /empresas/:id/vendedores', () => {
+    const { res, next } = evaluar('/api/v1/empresas/empresa-1/vendedores', 'POST', ROLES.EMPRESARIO);
+    expect(res.statusCode).toBe(200);
+    expect(next).toHaveBeenCalled();
+  });
+
+  it('debe denegar al admin cambiar la logistica de una empresa cuando intenta PATCH /empresas/:id/logistica', () => {
+    const { res, next } = evaluar('/api/v1/empresas/empresa-1/logistica', 'PATCH', ROLES.ADMIN);
+    expect(res.statusCode).toBe(403);
+    expect(next).not.toHaveBeenCalled();
+  });
+
   it('debe propagar los claims opcionales cuando el token trae nombre, tenant, personal y participacion', () => {
     const secreto = 'test_secret_jwt';
     const auth = new GatewayAuthMiddleware(secreto);
