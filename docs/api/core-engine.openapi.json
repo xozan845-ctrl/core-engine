@@ -4042,7 +4042,7 @@
             "bearer": []
           }
         ],
-        "summary": "Avanzar el estado de una orden (logística)",
+        "summary": "Avanzar el estado de una orden (logística o empresario de la empresa)",
         "tags": [
           "Logística"
         ]
@@ -5043,7 +5043,7 @@
             "bearer": []
           }
         ],
-        "summary": "Órdenes de una tienda (vendedor dueño o admin)",
+        "summary": "Órdenes de una tienda (vendedor dueño, empresario de la empresa o admin)",
         "tags": [
           "Pedidos"
         ]

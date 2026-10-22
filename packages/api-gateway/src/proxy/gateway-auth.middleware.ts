@@ -64,7 +64,7 @@ export const POLITICAS_RUTAS: PoliticaRuta[] = [
     {
       patron: /^\/api\/v1\/orders\/[^/]+\/estado$/,
       metodos: ['PATCH', 'POST'],
-      roles: [ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.LOGISTICA],
+      roles: [ROLES.SUPER_ADMIN, ROLES.EMPRESARIO, ROLES.ADMIN, ROLES.LOGISTICA],
     },
     // Pedidos: reglas específicas antes de cualquier catch-all. El gateway
     // resuelve por primera coincidencia (find), así que una regla genérica
@@ -80,17 +80,17 @@ export const POLITICAS_RUTAS: PoliticaRuta[] = [
     {
       patron: /^\/api\/v1\/orders\/tienda\/[^/]+$/,
       metodos: ['GET'],
-      roles: [ROLES.SUPER_ADMIN, ROLES.VENDEDOR, ROLES.ADMIN],
+      roles: [ROLES.SUPER_ADMIN, ROLES.EMPRESARIO, ROLES.VENDEDOR, ROLES.ADMIN],
     },
     {
       patron: /^\/api\/v1\/orders\/[^/]+\/timeline$/,
       metodos: ['GET'],
-      roles: [ROLES.SUPER_ADMIN, ROLES.COMPRADOR, ROLES.VENDEDOR, ROLES.ADMIN],
+      roles: [ROLES.SUPER_ADMIN, ROLES.EMPRESARIO, ROLES.COMPRADOR, ROLES.VENDEDOR, ROLES.ADMIN],
     },
     {
       patron: /^\/api\/v1\/orders\/[^/]+$/,
       metodos: ['GET'],
-      roles: [ROLES.SUPER_ADMIN, ROLES.COMPRADOR, ROLES.VENDEDOR, ROLES.ADMIN],
+      roles: [ROLES.SUPER_ADMIN, ROLES.EMPRESARIO, ROLES.COMPRADOR, ROLES.VENDEDOR, ROLES.ADMIN],
     },
     // carrito (RN-05): solo el comprador autenticado
     {

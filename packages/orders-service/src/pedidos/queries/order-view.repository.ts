@@ -104,14 +104,26 @@ export class OrderViewRepository {
     return filas.map((f) => this.serializar(f));
   }
 
-  async listarDeTienda(tiendaId: string, estado?: string, vendedorId?: string): Promise<OrderView[]> {
+  async listarDeTienda(
+    tiendaId: string,
+    estado?: string,
+    vendedorId?: string,
+    empresaId?: string,
+  ): Promise<OrderView[]> {
     const params: unknown[] = [tiendaId];
-    let extra = estado ? ` AND estado = $2` : '';
-    if (estado) params.push(estado);
+    const condicionesItem = [`item->>'tienda_id' = $1`];
+    if (empresaId) {
+      params.push(empresaId);
+      condicionesItem.push(`item->>'empresa_id' = $${params.length}`);
+    }
     if (vendedorId) {
-      extra += ` AND EXISTS (SELECT 1 FROM jsonb_array_elements(items_json) item
-                             WHERE item->>'vendedor_id' = $${params.length + 1})`;
       params.push(vendedorId);
+      condicionesItem.push(`item->>'vendedor_id' = $${params.length}`);
+    }
+    let extra = '';
+    if (estado) {
+      params.push(estado);
+      extra = ` AND estado = $${params.length}`;
     }
     const filas = await this.pg.query<OrderViewRow>(
       `SELECT id, vendedor_id, comprador_id, tienda_id, estado, total_cents, comision_cents, moneda,
@@ -119,7 +131,7 @@ export class OrderViewRepository {
               pagada_en, enviada_en, entregada_en, cancelada_en, devuelta_en
        FROM orders.orden_vista
        WHERE EXISTS (SELECT 1 FROM jsonb_array_elements(items_json) item
-                     WHERE item->>'tienda_id' = $1)${extra}
+                     WHERE ${condicionesItem.join(' AND ')})${extra}
        ORDER BY creado_en DESC LIMIT 100`,
       params,
     );

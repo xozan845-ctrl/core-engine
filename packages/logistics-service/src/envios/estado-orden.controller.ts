@@ -45,18 +45,24 @@ export class EstadoOrdenController {
   constructor(private readonly envios: EnviosService) {}
 
   @Patch(':id/estado')
-  @Roles(ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.LOGISTICA)
-  @ApiOperation({ summary: 'Avanzar el estado de una orden (logística)' })
+  @Roles(ROLES.SUPER_ADMIN, ROLES.EMPRESARIO, ROLES.ADMIN, ROLES.LOGISTICA)
+  @ApiOperation({ summary: 'Avanzar el estado de una orden (logística o empresario de la empresa)' })
   @ApiParam({ name: 'id', description: 'Id de la orden' })
   @ApiOkResponse({ type: OrdenExternaResponseDto, description: 'Orden con el nuevo estado' })
   @ApiResponse({ status: 400, description: 'Estado objetivo inválido (ESTADO_INVALIDO)' })
   async avanzar(
     @Param('id') id: string,
     @Body() dto: AvanzarEstadoRequestDto,
-    @UsuarioActual() _usuario: UsuarioContexto,
+    @UsuarioActual() usuario: UsuarioContexto,
   ): Promise<OrdenExterna> {
     if (!['en_preparacion', 'enviada', 'entregada', 'cancelada', 'devuelta'].includes(dto.estado)) {
       throw new DomainError('ESTADO_INVALIDO', 'Estado objetivo invalido para logistica.');
+    }
+    if (usuario.rol === ROLES.EMPRESARIO) {
+      if (!usuario.tenant_id) {
+        throw new DomainError('TENANT_REQUERIDO', 'Se requiere una empresa activa.');
+      }
+      return this.envios.avanzarEstadoOrden(id, dto.estado, dto.motivo, usuario.tenant_id);
     }
     return this.envios.avanzarEstadoOrden(id, dto.estado, dto.motivo);
   }
