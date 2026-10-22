@@ -25,7 +25,13 @@ describe('EstadoOrdenController (api/v1/orders/:id/estado, Tabla 21, R-U-10/11)'
     const { envios, controller } = fabricar();
     envios.avanzarEstadoOrden.mockResolvedValue(orden);
     await expect(controller.avanzar('o-1', { estado: 'enviada', motivo: 'despacho' } as never, logistica as never)).resolves.toEqual(orden);
-    expect(envios.avanzarEstadoOrden).toHaveBeenCalledWith('o-1', 'enviada', 'despacho');
+    expect(envios.avanzarEstadoOrden).toHaveBeenCalledWith(
+      'o-1',
+      'enviada',
+      'despacho',
+      undefined,
+      'u-l',
+    );
   });
 
   it('debe pasar la empresa activa cuando el empresario avanza una orden', async () => {
@@ -34,7 +40,13 @@ describe('EstadoOrdenController (api/v1/orders/:id/estado, Tabla 21, R-U-10/11)'
     await expect(
       controller.avanzar('o-1', { estado: 'enviada' } as never, empresario as never),
     ).resolves.toEqual(orden);
-    expect(envios.avanzarEstadoOrden).toHaveBeenCalledWith('o-1', 'enviada', undefined, 'empresa-1');
+    expect(envios.avanzarEstadoOrden).toHaveBeenCalledWith(
+      'o-1',
+      'enviada',
+      undefined,
+      'empresa-1',
+      'u-e',
+    );
   });
 
   it('debe exigir empresa activa cuando el empresario avanza una orden', async () => {
@@ -119,7 +131,7 @@ describe('EnviosFlotaController', () => {
       { ...logistica, tenant_id: 'flota-1' } as never,
     )).resolves.toEqual(envio);
     expect(envios.avanzarEstadoEnvio).toHaveBeenCalledWith(
-      'e-1', 'flota-1', 'entregada', 'recibido',
+      'e-1', 'flota-1', 'entregada', 'recibido', 'u-l',
     );
   });
 

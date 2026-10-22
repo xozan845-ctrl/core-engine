@@ -63,9 +63,15 @@ export class EstadoOrdenController {
       if (!usuario.tenant_id) {
         throw new DomainError('TENANT_REQUERIDO', 'Se requiere una empresa activa.');
       }
-      return this.envios.avanzarEstadoOrden(id, dto.estado, dto.motivo, usuario.tenant_id);
+      return this.envios.avanzarEstadoOrden(
+        id,
+        dto.estado,
+        dto.motivo,
+        usuario.tenant_id,
+        usuario.user_id,
+      );
     }
-    return this.envios.avanzarEstadoOrden(id, dto.estado, dto.motivo);
+    return this.envios.avanzarEstadoOrden(id, dto.estado, dto.motivo, undefined, usuario.user_id);
   }
 }
 
@@ -149,6 +155,12 @@ export class EnviosFlotaController {
     @UsuarioActual() usuario: UsuarioContexto,
   ): Promise<Envio> {
     if (!usuario.tenant_id) throw new DomainError('TENANT_REQUERIDO', 'Se requiere el tenant de la flota.');
-    return this.envios.avanzarEstadoEnvio(id, usuario.tenant_id, dto.estado, dto.motivo);
+    return this.envios.avanzarEstadoEnvio(
+      id,
+      usuario.tenant_id,
+      dto.estado,
+      dto.motivo,
+      usuario.user_id,
+    );
   }
 }

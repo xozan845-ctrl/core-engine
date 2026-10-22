@@ -122,6 +122,8 @@ export interface OrderStatusUpdatedData {
   estado: string;
   previo_estado: string;
   motivo?: string;
+  /** Usuario o subsistema que ejecutó la transición (auditoría). */
+  actor?: string;
 }
 
 /** Devolución: monto devuelto (compra) y comisión revertida (RN-06). */
