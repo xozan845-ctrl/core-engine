@@ -126,6 +126,24 @@ describe('PedidosController (api/v1/orders, R-U-10/11)', () => {
     expect(views.obtenerTimeline).toHaveBeenCalledWith('o-1');
   });
 
+  it('debe marcar las comisiones legadas como obsoletas y señalar su reemplazo', () => {
+    const operacion = Reflect.getMetadata(
+      'swagger/apiOperation',
+      PedidosController.prototype.comisiones,
+    ) as { deprecated?: boolean };
+    expect(operacion.deprecated).toBe(true);
+    const cabeceras = Reflect.getMetadata(
+      '__headers__',
+      PedidosController.prototype.comisiones,
+    ) as { name: string; value: string }[];
+    expect(cabeceras).toEqual(
+      expect.arrayContaining([
+        { name: 'Deprecation', value: 'true' },
+        { name: 'Link', value: '</api/v1/vendedores/me/ventas>; rel="successor-version"' },
+      ]),
+    );
+  });
+
   it('debe exigir rol comprador en crear y vendedor, empresario, admin o super_admin en comisiones', () => {
     expect(Reflect.getMetadata('roles_requeridos', PedidosController.prototype.crear)).toEqual([ROLES.COMPRADOR]);
     expect(Reflect.getMetadata('roles_requeridos', PedidosController.prototype.comisiones)).toEqual([
