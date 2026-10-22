@@ -139,7 +139,7 @@ export class GenerarDeclaracionesRequestDto {
 @ApiTags('Finanzas · Tributación')
 @ApiBearerAuth()
 @Controller('api/v1/finanzas')
-@Roles(ROLES.ADMIN)
+@Roles(ROLES.SUPER_ADMIN, ROLES.ADMIN)
 export class TributacionController {
   constructor(private readonly tributacion: TributacionService) {}
 

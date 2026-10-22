@@ -45,7 +45,7 @@ export class EstadoOrdenController {
   constructor(private readonly envios: EnviosService) {}
 
   @Patch(':id/estado')
-  @Roles(ROLES.ADMIN, ROLES.LOGISTICA)
+  @Roles(ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.LOGISTICA)
   @ApiOperation({ summary: 'Avanzar el estado de una orden (logística)' })
   @ApiParam({ name: 'id', description: 'Id de la orden' })
   @ApiOkResponse({ type: OrdenExternaResponseDto, description: 'Orden con el nuevo estado' })
@@ -70,7 +70,7 @@ export class EnviosAdminController {
   constructor(private readonly envios: EnviosService) {}
 
   @Get('envios')
-  @Roles(ROLES.ADMIN)
+  @Roles(ROLES.SUPER_ADMIN, ROLES.ADMIN)
   @ApiOperation({ summary: 'Listar guías de despacho (admin)' })
   @ApiOkResponse({ type: [EnvioConMontoResponseDto], description: 'Guías de despacho con monto serializado' })
   async listar(): Promise<(Envio & { monto: string })[]> {

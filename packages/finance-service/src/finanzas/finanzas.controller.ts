@@ -107,7 +107,7 @@ export class CrearProyeccionRequestDto {
 @ApiTags('Finanzas · Modelo')
 @ApiBearerAuth()
 @Controller('api/v1/finanzas')
-@Roles(ROLES.ADMIN)
+@Roles(ROLES.SUPER_ADMIN, ROLES.ADMIN)
 export class FinanzasController {
   constructor(
     private readonly proyecciones: ProyeccionesService,

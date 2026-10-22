@@ -47,6 +47,6 @@ describe('FacturacionController (api/v1/finanzas/comprobantes, Ley 822, R-U-10/1
   });
 
   it('debe exigir rol admin a nivel de controlador', () => {
-    expect(Reflect.getMetadata('roles_requeridos', FacturacionController)).toEqual([ROLES.ADMIN]);
+    expect(Reflect.getMetadata('roles_requeridos', FacturacionController)).toEqual([ROLES.SUPER_ADMIN, ROLES.ADMIN]);
   });
 });
