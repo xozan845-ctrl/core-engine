@@ -11,6 +11,7 @@ import { IsIn, IsOptional, IsString } from 'class-validator';
 import {
   Roles,
   ROLES,
+  ROLES_LOGISTICA,
   DomainError,
   UsuarioActual,
   UsuarioContexto,
@@ -138,7 +139,7 @@ export class EnviosFlotaController {
   constructor(private readonly envios: EnviosService) {}
 
   @Patch(':id/estado')
-  @Roles(ROLES.LOGISTICA, ROLES.COORDINADOR, ROLES.SUPERVISOR, ROLES.OPERATIVO)
+  @Roles(ROLES.SUPER_ADMIN, ...ROLES_LOGISTICA)
   @ApiOperation({ summary: 'Avanzar un envío asignado a la flota activa' })
   @ApiParam({ name: 'id', description: 'Id del envío' })
   @ApiOkResponse({ type: EnvioResponseDto })

@@ -36,6 +36,8 @@ export const POLITICAS_RUTAS: PoliticaRuta[] = [
     // creacion administrativa de usuarios (roles de tienda y logistica)
     { patron: /^\/api\/v1\/auth\/crear-usuario$/, metodos: ['POST'], roles: [ROLES.SUPER_ADMIN, ROLES.ADMIN] },
     { patron: /^\/api\/v1\/empresas$/, metodos: ['POST'], roles: [ROLES.EMPRESARIO] },
+    { patron: /^\/api\/v1\/empresas\/[^/]+\/logistica$/, metodos: ['PATCH'], roles: [ROLES.EMPRESARIO] },
+    { patron: /^\/api\/v1\/empresas\/[^/]+\/vendedores$/, metodos: ['POST'], roles: [ROLES.EMPRESARIO] },
     { patron: /^\/api\/v1\/empresas\//, metodos: ['*'], roles: [ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.EMPRESARIO, ROLES.VENDEDOR] },
     // autenticado
     { patron: /^\/api\/v1\/auth\/me$/, metodos: ['GET'], roles: null }, // exige token (se valida abajo)
@@ -54,7 +56,7 @@ export const POLITICAS_RUTAS: PoliticaRuta[] = [
     { patron: /^\/api\/v1\/empresarios\/me\/ventas$/, metodos: ['GET'], roles: [ROLES.EMPRESARIO] },
     { patron: /^\/api\/v1\/empresarios\/me\/tiendas$/, metodos: ['GET'], roles: [ROLES.EMPRESARIO] },
     { patron: /^\/api\/v1\/empresarios\/me\/envios(\/|$)/, metodos: ['GET', 'POST'], roles: [ROLES.EMPRESARIO] },
-    { patron: /^\/api\/v1\/envios\/[^/]+\/estado$/, metodos: ['PATCH'], roles: [...ROLES_LOGISTICA] },
+    { patron: /^\/api\/v1\/envios\/[^/]+\/estado$/, metodos: ['PATCH'], roles: [ROLES.SUPER_ADMIN, ...ROLES_LOGISTICA] },
     {
       patron: /^\/api\/v1\/vendedores\//,
       metodos: ['GET', 'POST', 'PATCH', 'PUT', 'DELETE'],
@@ -100,6 +102,12 @@ export const POLITICAS_RUTAS: PoliticaRuta[] = [
       metodos: ['GET', 'POST', 'PATCH', 'DELETE'],
       roles: [ROLES.COMPRADOR],
     },
+  // la configuracion de cuota del bucket es administrativa (Tabla 21)
+  {
+    patron: /^\/api\/v1\/storage\/bucket$/,
+    metodos: ['POST'],
+    roles: [ROLES.SUPER_ADMIN, ROLES.ADMIN],
+  },
   // almacenamiento de objetos por tenant (ADR-24): cualquier usuario autenticado
   // con tenant; el aislamiento real lo garantiza el bucket + el filtro por tenant.
   {

@@ -43,6 +43,7 @@ describe('FieldController', () => {
       'roles_requeridos', FieldController.prototype.listarPersonal,
     );
     expect(rolesListarPersonal).toContain(ROLES.EMPRESARIO);
+    expect(rolesListarPersonal).toContain(ROLES.SUPER_ADMIN);
   });
 
   it('propaga tenant y payload en personal, clientes y vehículos', () => {
