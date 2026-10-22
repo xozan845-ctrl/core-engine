@@ -11,7 +11,6 @@
   "packages/market-intelligence-service/src/inteligencia/services/view-refresher.service.ts",
   "packages/orders-service/src/pedidos/carrito/carrito.service.ts",
   "packages/orders-service/src/pedidos/pedidos.consumer.ts",
-  "packages/orders-service/src/pedidos/pedidos.service.ts",
   "packages/shared/src/db/pg.service.ts",
   "packages/shared/src/outbox/outbox.service.ts"
 ]
