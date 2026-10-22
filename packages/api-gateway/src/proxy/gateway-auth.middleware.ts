@@ -87,6 +87,11 @@ export const POLITICAS_RUTAS: PoliticaRuta[] = [
       roles: [ROLES.SUPER_ADMIN, ROLES.EMPRESARIO, ROLES.VENDEDOR, ROLES.ADMIN],
     },
     {
+      patron: /^\/api\/v1\/orders\/empresa$/,
+      metodos: ['GET'],
+      roles: [ROLES.SUPER_ADMIN, ROLES.EMPRESARIO, ROLES.ADMIN],
+    },
+    {
       patron: /^\/api\/v1\/orders\/[^/]+\/timeline$/,
       metodos: ['GET'],
       roles: [ROLES.SUPER_ADMIN, ROLES.EMPRESARIO, ROLES.COMPRADOR, ROLES.VENDEDOR, ROLES.ADMIN],

@@ -25,10 +25,16 @@ function fabricar(): {
     listarDeVendedor: vi.fn(),
     obtenerComisiones: vi.fn(),
     listarDeTienda: vi.fn(),
+    listarDeEmpresa: vi.fn(),
     listarDeCliente: vi.fn(),
     obtenerTimeline: vi.fn(),
   };
-  const pedidos = { detallePara: vi.fn() };
+  const pedidos = {
+    detallePara: vi.fn(),
+    paraEmpresa: vi.fn((orden: unknown) => orden),
+    paraVendedor: vi.fn((orden: unknown) => orden),
+    timelineVisible: vi.fn((eventos: unknown) => eventos),
+  };
   const controller = new PedidosController(
     handler as unknown as CreateOrderCommandHandler,
     views as unknown as OrderViewRepository,
@@ -92,6 +98,45 @@ describe('PedidosController (api/v1/orders, R-U-10/11)', () => {
     expect(views.listarDeTienda).toHaveBeenCalledWith('tienda-1', undefined, undefined, 'e-1');
   });
 
+  it('debe listar las ordenes de la empresa activa del empresario y recortarlas', async () => {
+    const { views, pedidos, controller } = fabricar();
+    views.listarDeEmpresa.mockResolvedValue([orden]);
+    await controller.porEmpresa('e-otra', 'tienda-1', 'pagada', 20, empresario as never);
+    expect(views.listarDeEmpresa).toHaveBeenCalledWith('e-1', {
+      estado: 'pagada',
+      tiendaId: 'tienda-1',
+      limite: 20,
+    });
+    expect(pedidos.paraEmpresa).toHaveBeenCalledWith(orden, 'e-1');
+  });
+
+  it('debe exigir empresa al admin y respetar el filtro solicitado', async () => {
+    const { views, pedidos, controller } = fabricar();
+    views.listarDeEmpresa.mockResolvedValue([orden]);
+    await controller.porEmpresa('e-2', undefined, undefined, undefined, admin as never);
+    expect(views.listarDeEmpresa).toHaveBeenCalledWith('e-2', {
+      estado: undefined,
+      tiendaId: undefined,
+      limite: undefined,
+    });
+    expect(pedidos.paraEmpresa).not.toHaveBeenCalled();
+    await expect(
+      controller.porEmpresa(undefined, undefined, undefined, undefined, admin as never),
+    ).rejects.toHaveProperty('codigo', 'EMPRESA_REQUERIDA');
+  });
+
+  it('debe rechazar al empresario sin empresa activa al listar ordenes de una empresa', async () => {
+    const { views, controller } = fabricar();
+    await expect(
+      controller.porEmpresa(undefined, undefined, undefined, undefined, {
+        user_id: 'u-e',
+        email: 'e@core.local',
+        rol: ROLES.EMPRESARIO,
+      } as never),
+    ).rejects.toHaveProperty('codigo', 'TENANT_REQUERIDO');
+    expect(views.listarDeEmpresa).not.toHaveBeenCalled();
+  });
+
   it('debe rechazar al empresario sin empresa activa al listar ordenes de una tienda', async () => {
     const { views, controller } = fabricar();
     await expect(
@@ -118,12 +163,14 @@ describe('PedidosController (api/v1/orders, R-U-10/11)', () => {
     expect(pedidos.detallePara).toHaveBeenCalledWith('o-1', comprador);
   });
 
-  it('debe devolver el timeline tras resolver la orden', async () => {
+  it('debe devolver el timeline visible tras resolver la orden', async () => {
     const { pedidos, views, controller } = fabricar();
+    const eventos = [{ tipo: 'order.created', version: 1 }];
     pedidos.detallePara.mockResolvedValue(orden);
-    views.obtenerTimeline.mockResolvedValue([{ tipo: 'order.created', version: 1 }]);
-    await controller.timeline('o-1', comprador as never);
+    views.obtenerTimeline.mockResolvedValue(eventos);
+    await expect(controller.timeline('o-1', comprador as never)).resolves.toBe(eventos);
     expect(views.obtenerTimeline).toHaveBeenCalledWith('o-1');
+    expect(pedidos.timelineVisible).toHaveBeenCalledWith(eventos, orden.items);
   });
 
   it('debe marcar las comisiones legadas como obsoletas y señalar su reemplazo', () => {
@@ -156,6 +203,11 @@ describe('PedidosController (api/v1/orders, R-U-10/11)', () => {
       ROLES.EMPRESARIO,
       ROLES.COMPRADOR,
       ROLES.VENDEDOR,
+      ROLES.ADMIN,
+    ]);
+    expect(Reflect.getMetadata('roles_requeridos', PedidosController.prototype.porEmpresa)).toEqual([
+      ROLES.SUPER_ADMIN,
+      ROLES.EMPRESARIO,
       ROLES.ADMIN,
     ]);
   });
