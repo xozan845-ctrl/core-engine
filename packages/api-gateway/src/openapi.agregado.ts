@@ -6266,6 +6266,11 @@ export const OPENAPI_AGREGADO = {
             "pattern": "^[A-Za-z0-9-]{2,32}$",
             "example": "SKU-001"
           },
+          "empresa_id": {
+            "type": "string",
+            "description": "Empresa destino. Obligatoria para super_admin/admin; el empresario usa su empresa activa.",
+            "format": "uuid"
+          },
           "nombre": {
             "type": "string",
             "description": "Nombre del producto",

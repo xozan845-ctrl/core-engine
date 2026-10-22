@@ -88,6 +88,6 @@ describe('TributacionController (api/v1/finanzas, Ley 822, R-U-10/11)', () => {
   });
 
   it('debe exigir rol admin a nivel de controlador', () => {
-    expect(Reflect.getMetadata('roles_requeridos', TributacionController)).toEqual([ROLES.ADMIN]);
+    expect(Reflect.getMetadata('roles_requeridos', TributacionController)).toEqual([ROLES.SUPER_ADMIN, ROLES.ADMIN]);
   });
 });

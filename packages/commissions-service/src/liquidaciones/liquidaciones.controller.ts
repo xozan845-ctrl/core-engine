@@ -43,7 +43,7 @@ export class LiquidacionesController {
 
   /** POST /api/v1/admin/liquidaciones/corte — corte manual (admin, pruebas). */
   @Post('admin/liquidaciones/corte')
-  @Roles(ROLES.ADMIN)
+  @Roles(ROLES.SUPER_ADMIN, ROLES.ADMIN)
   @ApiOperation({ summary: 'Ejecutar un corte de liquidaciones (admin)' })
   @ApiQuery({ name: 'inicio', required: false })
   @ApiQuery({ name: 'fin', required: false })
@@ -61,7 +61,7 @@ export class LiquidacionesController {
 
   /** PATCH /api/v1/admin/liquidaciones/:id/pagar — cierre de pago (RN-07). */
   @Post('admin/liquidaciones/:id/pagar')
-  @Roles(ROLES.ADMIN)
+  @Roles(ROLES.SUPER_ADMIN, ROLES.ADMIN)
   @ApiOperation({ summary: 'Marcar una liquidación como pagada (RN-07)' })
   @ApiParam({ name: 'id', description: 'Id de la liquidación' })
   @ApiQuery({ name: 'estado', required: false })

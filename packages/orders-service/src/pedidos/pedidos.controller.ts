@@ -40,7 +40,7 @@ export class PedidosController {
 
   /** GET /api/v1/orders/admin/todas — todas las ordenes (admin). */
   @Get('admin/todas')
-  @Roles(ROLES.ADMIN)
+  @Roles(ROLES.SUPER_ADMIN, ROLES.ADMIN)
   @ApiOperation({ summary: 'Listar todas las órdenes (admin)' })
   @ApiQuery({ name: 'estado', required: false })
   @ApiQuery({ name: 'limite', required: false, type: Number })
@@ -67,7 +67,7 @@ export class PedidosController {
 
   /** GET /api/v1/orders/vendedor/comisiones — comisiones por periodo (vendedor/admin). */
   @Get('vendedor/comisiones')
-  @Roles(ROLES.VENDEDOR, ROLES.ADMIN)
+  @Roles(ROLES.SUPER_ADMIN, ROLES.VENDEDOR, ROLES.ADMIN)
   @ApiOperation({ summary: 'Comisiones por periodo (vendedor/admin)' })
   @ApiQuery({ name: 'periodo', required: false })
   @ApiQuery({ name: 'vendedorId', required: false, description: 'Solo admin' })
@@ -77,13 +77,15 @@ export class PedidosController {
     @UsuarioActual() usuario?: UsuarioContexto,
     @Query('vendedorId') vendedorId?: string,
   ): Promise<ComisionVista[]> {
-    const targetVendedor = usuario?.rol === 'admin' ? (vendedorId ?? usuario?.user_id) : usuario?.user_id;
+    const targetVendedor = ['admin', 'super_admin'].includes(usuario?.rol ?? '')
+      ? (vendedorId ?? usuario?.user_id)
+      : usuario?.user_id;
     return this.views.obtenerComisiones(targetVendedor ?? '', periodo);
   }
 
   /** GET /api/v1/orders/tienda/:tiendaId — ordenes de una tienda (vendedor dueño o admin). */
   @Get('tienda/:tiendaId')
-  @Roles(ROLES.VENDEDOR, ROLES.ADMIN)
+  @Roles(ROLES.SUPER_ADMIN, ROLES.VENDEDOR, ROLES.ADMIN)
   @ApiOperation({ summary: 'Órdenes de una tienda (vendedor dueño o admin)' })
   @ApiParam({ name: 'tiendaId', description: 'Id de la tienda' })
   @ApiQuery({ name: 'estado', required: false })
@@ -115,7 +117,7 @@ export class PedidosController {
 
   /** GET /api/v1/orders/:id — estado de la orden (JWT; solo el dueno o admin). */
   @Get(':id')
-  @Roles(ROLES.COMPRADOR, ROLES.VENDEDOR, ROLES.ADMIN)
+  @Roles(ROLES.SUPER_ADMIN, ROLES.COMPRADOR, ROLES.VENDEDOR, ROLES.ADMIN)
   @ApiOperation({ summary: 'Estado/detalle de una orden (dueño o admin)' })
   @ApiParam({ name: 'id', description: 'Id de la orden' })
   @ApiOkResponse({ type: OrderViewResponseDto, description: 'Detalle de la orden' })
@@ -128,7 +130,7 @@ export class PedidosController {
 
   /** GET /api/v1/orders/:id/timeline — historial de eventos de la orden. */
   @Get(':id/timeline')
-  @Roles(ROLES.COMPRADOR, ROLES.VENDEDOR, ROLES.ADMIN)
+  @Roles(ROLES.SUPER_ADMIN, ROLES.COMPRADOR, ROLES.VENDEDOR, ROLES.ADMIN)
   @ApiOperation({ summary: 'Timeline de eventos de la orden (Event Sourcing)' })
   @ApiParam({ name: 'id', description: 'Id de la orden' })
   @ApiOkResponse({ type: [TimelineEventoResponseDto], description: 'Timeline de la orden' })

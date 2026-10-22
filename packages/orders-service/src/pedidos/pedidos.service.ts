@@ -18,7 +18,7 @@ export class PedidosService {
   async detallePara(id: string, usuario: UsuarioContexto): Promise<OrderView> {
     const orden = await this.views.encontrar(id);
     if (!orden) throw new NotFoundError('Orden', id);
-    if (usuario.rol === 'admin') return orden;
+    if (usuario.rol === 'admin' || usuario.rol === 'super_admin') return orden;
     if (usuario.rol === 'comprador' && orden.comprador_id === usuario.user_id) return orden;
     if (
       usuario.rol === 'vendedor' &&

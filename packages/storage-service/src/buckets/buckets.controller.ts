@@ -35,7 +35,7 @@ export class BucketsController {
   }
 
   @Post('bucket')
-  @Roles(ROLES.ADMIN)
+  @Roles(ROLES.SUPER_ADMIN, ROLES.ADMIN)
   @ApiOperation({ summary: 'Asegurar el bucket del tenant y fijar su cuota (admin)' })
   @ApiCreatedResponse({ type: EstadoBucketResponseDto, description: 'Bucket asegurado' })
   @ApiResponse({ status: 400, description: 'Cuota invalida (CUOTA_INVALIDA/CUOTA_MENOR_AL_USO)' })

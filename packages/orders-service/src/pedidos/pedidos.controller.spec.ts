@@ -10,6 +10,7 @@ const orden = { id: 'o-1', cliente_id: 'u-c', estado: 'creada', total_cents: 100
 const comprador = { user_id: 'u-c', email: 'c@core.local', rol: ROLES.COMPRADOR };
 const vendedor = { user_id: 'u-v', email: 'v@core.local', rol: ROLES.VENDEDOR };
 const admin = { user_id: 'u-a', email: 'a@core.local', rol: ROLES.ADMIN };
+const superAdmin = { user_id: 'u-sa', email: 'sa@core.local', rol: ROLES.SUPER_ADMIN };
 
 function fabricar(): {
   handler: Record<string, Mock>;
@@ -72,6 +73,13 @@ describe('PedidosController (api/v1/orders, R-U-10/11)', () => {
     expect(views.obtenerComisiones).toHaveBeenCalledWith('u-v2', '2026-09');
   });
 
+  it('debe pedir las comisiones de otro vendedor cuando el contexto es super_admin', async () => {
+    const { views, controller } = fabricar();
+    views.obtenerComisiones.mockResolvedValue([]);
+    await controller.comisiones('2026-09', superAdmin as never, 'u-v2');
+    expect(views.obtenerComisiones).toHaveBeenCalledWith('u-v2', '2026-09');
+  });
+
   it('debe listar las ordenes de la tienda pasando el vendedor solo cuando es vendedor', async () => {
     const { views, controller } = fabricar();
     views.listarDeTienda.mockResolvedValue([orden]);
@@ -103,8 +111,12 @@ describe('PedidosController (api/v1/orders, R-U-10/11)', () => {
     expect(views.obtenerTimeline).toHaveBeenCalledWith('o-1');
   });
 
-  it('debe exigir rol comprador en crear y vendedor o admin en comisiones', () => {
+  it('debe exigir rol comprador en crear y vendedor, admin o super_admin en comisiones', () => {
     expect(Reflect.getMetadata('roles_requeridos', PedidosController.prototype.crear)).toEqual([ROLES.COMPRADOR]);
-    expect(Reflect.getMetadata('roles_requeridos', PedidosController.prototype.comisiones)).toEqual([ROLES.VENDEDOR, ROLES.ADMIN]);
+    expect(Reflect.getMetadata('roles_requeridos', PedidosController.prototype.comisiones)).toEqual([
+      ROLES.SUPER_ADMIN,
+      ROLES.VENDEDOR,
+      ROLES.ADMIN,
+    ]);
   });
 });

@@ -25,6 +25,6 @@ describe('InventarioController (api/v1/admin/inventario, R-U-10/11)', () => {
   });
 
   it('debe exigir el rol admin en el endpoint', () => {
-    expect(Reflect.getMetadata('roles_requeridos', InventarioController.prototype.listar)).toEqual(['admin']);
+    expect(Reflect.getMetadata('roles_requeridos', InventarioController.prototype.listar)).toEqual(['super_admin', 'admin']);
   });
 });
