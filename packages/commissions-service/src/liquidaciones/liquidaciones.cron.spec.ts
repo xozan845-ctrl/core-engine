@@ -57,8 +57,15 @@ describe('LiquidacionesService (planificador)', () => {
     const servicio = new LiquidacionesService(pg as never);
     pg.query
       .mockResolvedValueOnce([
-        { id: 'c1', vendedor_id: 'v1', comision_cents: 100 },
+        {
+          id: 'c1',
+          vendedor_id: 'v1',
+          empresa_id: 'e1',
+          monto_vendedor_cents: 100,
+          monto_empresario_cents: 20,
+        },
       ])
+      .mockResolvedValueOnce([])
       .mockResolvedValueOnce([]);
     pg.queryOne.mockResolvedValue({ id: 'l1' });
 

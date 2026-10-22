@@ -30,14 +30,18 @@ describe('LiquidacionesService (mutantes dirigidos)', () => {
     const { servicio, pg } = crear();
     pg.query
       .mockResolvedValueOnce([
-        { id: 'c1', vendedor_id: 'v1', comision_cents: 100 },
-        { id: 'c2', vendedor_id: 'v1', comision_cents: 50 },
-        { id: 'c3', vendedor_id: 'v2', comision_cents: 200 },
-        { id: 'c4', vendedor_id: 'v3', comision_cents: 10 },
+        { vendedor_id: 'v1', empresa_id: 'e1', monto_vendedor_cents: 100, monto_empresario_cents: 20 },
+        { vendedor_id: 'v1', empresa_id: 'e1', monto_vendedor_cents: 50, monto_empresario_cents: 10 },
+        { vendedor_id: 'v2', empresa_id: 'e2', monto_vendedor_cents: 200, monto_empresario_cents: 40 },
+        { vendedor_id: 'v3', empresa_id: 'e3', monto_vendedor_cents: 10, monto_empresario_cents: 2 },
       ])
       .mockResolvedValueOnce([
         { vendedor_id: 'v1', total: 20 },
         { vendedor_id: 'v2', total: -200 },
+      ])
+      .mockResolvedValueOnce([
+        { empresa_id: 'e1', total: 5 },
+        { empresa_id: 'e2', total: -40 },
       ]);
     pg.queryOne
       .mockResolvedValueOnce({
@@ -46,6 +50,16 @@ describe('LiquidacionesService (mutantes dirigidos)', () => {
         periodo_inicio: '2026-08-01',
         periodo_fin: '2026-08-15',
         monto_cents: 170,
+        estado: 'aprobada',
+        creado_en: '2026-08-15T00:00:00.000Z',
+      })
+      .mockResolvedValueOnce(null)
+      .mockResolvedValueOnce({
+        id: 'le1',
+        empresa_id: 'e1',
+        periodo_inicio: '2026-08-01',
+        periodo_fin: '2026-08-15',
+        monto_cents: 35,
         estado: 'aprobada',
         creado_en: '2026-08-15T00:00:00.000Z',
       })
@@ -58,7 +72,7 @@ describe('LiquidacionesService (mutantes dirigidos)', () => {
 
     expect(resultado).toHaveLength(1);
     expect(resultado[0].vendedor_id).toBe('v1');
-    expect(pg.queryOne).toHaveBeenCalledTimes(2);
+    expect(pg.queryOne).toHaveBeenCalledTimes(4);
     expect(pg.queryOne).toHaveBeenNthCalledWith(
       1,
       expect.stringContaining('INSERT INTO commissions.liquidaciones'),
@@ -69,9 +83,24 @@ describe('LiquidacionesService (mutantes dirigidos)', () => {
       expect.stringContaining('INSERT INTO commissions.liquidaciones'),
       ['v3', '2026-08-01', '2026-08-15', 10],
     );
+    expect(pg.queryOne).toHaveBeenNthCalledWith(
+      3,
+      expect.stringContaining('INSERT INTO commissions.liquidaciones_empresas'),
+      ['e1', '2026-08-01', '2026-08-15', 35],
+    );
+    expect(pg.queryOne).toHaveBeenNthCalledWith(
+      4,
+      expect.stringContaining('INSERT INTO commissions.liquidaciones_empresas'),
+      ['e3', '2026-08-01', '2026-08-15', 2],
+    );
     expect(pg.query).toHaveBeenNthCalledWith(
       2,
       expect.stringContaining('FROM commissions.compensaciones_devoluciones'),
+      ['2026-08-01', '2026-08-15'],
+    );
+    expect(pg.query).toHaveBeenNthCalledWith(
+      3,
+      expect.stringContaining('GROUP BY empresa_id'),
       ['2026-08-01', '2026-08-15'],
     );
   });
