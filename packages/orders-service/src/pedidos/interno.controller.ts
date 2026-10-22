@@ -32,14 +32,16 @@ export class InternoController {
   @ApiParam({ name: 'id', description: 'Id de la orden' })
   @ApiQuery({ name: 'estado', description: 'Estado objetivo' })
   @ApiQuery({ name: 'motivo', required: false })
+  @ApiQuery({ name: 'actor', required: false, description: 'Usuario que ejecuta la transición' })
   @ApiCreatedResponse({ type: OrderViewResponseDto, description: 'Orden con el nuevo estado' })
   async transicion(
     @Param('id') id: string,
     @Query('estado') estado: string,
     @Query('motivo') motivo?: string,
+    @Query('actor') actor?: string,
   ): Promise<OrderView> {
     if (!estado) throw new NotFoundError('Estado', 'requerido');
-    return this.handler.transicionar(id, estado, motivo, 'logistica');
+    return this.handler.transicionar(id, estado, motivo, actor ?? 'logistica');
   }
 
   /** Lectura completa para reportes (admin) y comisiones. */

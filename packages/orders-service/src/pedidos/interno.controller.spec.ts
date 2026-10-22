@@ -45,6 +45,20 @@ describe('InternoController (internal, R-U-10/11)', () => {
     expect(handler.transicionar).toHaveBeenCalledWith('o-1', 'pagada', 'pago ok', 'logistica');
   });
 
+  it('debe propagar el actor real de la transicion', async () => {
+    const { handler, controller } = fabricar();
+    handler.transicionar.mockResolvedValue(orden);
+    await expect(
+      controller.transicion('o-1', 'enviada', 'despacho', 'u-logistica'),
+    ).resolves.toEqual(orden);
+    expect(handler.transicionar).toHaveBeenCalledWith(
+      'o-1',
+      'enviada',
+      'despacho',
+      'u-logistica',
+    );
+  });
+
   it('debe lanzar NotFoundError Estado requerido cuando falta el estado', async () => {
     const { controller } = fabricar();
     await expect(controller.transicion('o-1', '', undefined)).rejects.toBeInstanceOf(NotFoundError);

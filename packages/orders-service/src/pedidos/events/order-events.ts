@@ -21,5 +21,7 @@ export interface OrderStatusUpdatedEvent {
   estado: string;
   previo_estado: string;
   motivo?: string;
+  /** Usuario (o subsistema) que ejecutó la transición; queda en la historia. */
+  actor?: string;
   ocurrido_en: string;
 }

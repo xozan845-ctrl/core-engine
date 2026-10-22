@@ -435,6 +435,15 @@
             "schema": {
               "type": "string"
             }
+          },
+          {
+            "name": "actor",
+            "required": false,
+            "in": "query",
+            "description": "Usuario que ejecuta la transición",
+            "schema": {
+              "type": "string"
+            }
           }
         ],
         "responses": {
