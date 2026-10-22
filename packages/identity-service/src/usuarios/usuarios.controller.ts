@@ -1,6 +1,6 @@
 import { Controller, Get, Param } from '@nestjs/common';
 import { ApiBearerAuth, ApiOkResponse, ApiOperation, ApiParam, ApiResponse, ApiTags } from '@nestjs/swagger';
-import { NotFoundError, UsuarioActual, UsuarioContexto } from '@core/shared';
+import { NotFoundError, ROLES, Roles, UsuarioActual, UsuarioContexto } from '@core/shared';
 import { UsuariosService } from './usuarios.service';
 import { UsuarioResponseDto } from './usuarios.response.dto';
 
@@ -16,6 +16,7 @@ export class UsuariosController {
 
   /** GET /api/v1/usuarios — lista (admin). */
   @Get()
+  @Roles(ROLES.SUPER_ADMIN, ROLES.ADMIN)
   @ApiOperation({ summary: 'Listar usuarios (admin)' })
   @ApiOkResponse({ type: [UsuarioResponseDto], description: 'Usuarios registrados' })
   async listar(): Promise<ReturnType<UsuariosService['listar']>> {
@@ -32,7 +33,8 @@ export class UsuariosController {
     @Param('id') id: string,
     @UsuarioActual() usuario: UsuarioContexto,
   ): Promise<Awaited<ReturnType<UsuariosService['encontrarPorId']>>> {
-    if (usuario?.rol !== 'admin' && usuario?.user_id !== id) {
+    const esGlobal = usuario?.rol === ROLES.SUPER_ADMIN || usuario?.rol === ROLES.ADMIN;
+    if (!esGlobal && usuario?.user_id !== id) {
       throw new NotFoundError('Usuario', id);
     }
     const encontrado = await this.usuarios.encontrarPorId(id);

@@ -84,6 +84,13 @@ describe('AuthController (api/v1/auth, R-U-10/11)', () => {
     });
   });
 
+  it('debe exigir rol global en crear-usuario', () => {
+    expect(Reflect.getMetadata('roles_requeridos', AuthController.prototype.crearUsuario)).toEqual([
+      ROLES.SUPER_ADMIN,
+      ROLES.ADMIN,
+    ]);
+  });
+
   it('debe rechazar crear-usuario cuando falta contexto o no es admin', async () => {
     const { controller } = fabricar();
     const dto = { nombre: 'L', correo: 'l@core.local', contrasena: 'secreta123', rol: ROLES.VENDEDOR };

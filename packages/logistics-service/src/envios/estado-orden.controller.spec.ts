@@ -128,4 +128,11 @@ describe('EnviosFlotaController', () => {
     expect(() => controller.avanzar('e-1', { estado: 'enviada' }, logistica as never))
       .toThrow(DomainError);
   });
+
+  it('debe admitir al operador global y a la empresa en la flota', () => {
+    const roles = Reflect.getMetadata('roles_requeridos', EnviosFlotaController.prototype.avanzar);
+    expect(roles).toContain(ROLES.SUPER_ADMIN);
+    expect(roles).toContain(ROLES.EMPRESARIO);
+    expect(roles).toContain(ROLES.ADMIN);
+  });
 });
