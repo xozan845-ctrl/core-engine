@@ -48,3 +48,8 @@ export class LiquidacionConMontoResponseDto extends LiquidacionResponseDto {
   @ApiProperty({ description: 'Monto liquidado en córdobas con dos decimales', example: '138.00' })
   monto: string;
 }
+
+export class LiquidacionEmpresaConMontoResponseDto extends LiquidacionEmpresaResponseDto {
+  @ApiProperty({ description: 'Monto liquidado en córdobas con dos decimales', example: '4400.00' })
+  monto: string;
+}

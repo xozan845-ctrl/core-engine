@@ -71,7 +71,7 @@ export const DESTINOS: ServicioDestino[] = [
     url: process.env.COMMISSIONS_SERVICE_URL ?? 'http://commissions-service:3006',
     patrones: [
       { patron: /^\/api\/v1\/vendedores\/me\/(ventas|liquidaciones)/, metodos: ['*'] },
-      { patron: /^\/api\/v1\/empresarios\/me\/liquidaciones/, metodos: ['*'] },
+      { patron: /^\/api\/v1\/empresarios\/me\/(liquidaciones|ventas)/, metodos: ['*'] },
       { patron: /^\/api\/v1\/admin\/reportes/, metodos: ['*'] },
       { patron: /^\/api\/v1\/admin\/liquidaciones/, metodos: ['*'] },
     ],
