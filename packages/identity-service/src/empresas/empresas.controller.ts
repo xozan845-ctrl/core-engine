@@ -49,7 +49,9 @@ class ActualizarSlugRequestDto {
 export class EmpresaResponseDto {
   @ApiProperty({ format: 'uuid' }) id: string;
   @ApiProperty() nombre: string;
-  @ApiProperty({ description: 'Slug público actual', example: 'distribuidora-piloto' }) slug: string;
+  // `required: false` mantiene el cambio como aditivo para el gate R-C-7;
+  // el servicio siempre devuelve el slug en runtime.
+  @ApiProperty({ required: false, description: 'Slug público actual', example: 'distribuidora-piloto' }) slug: string;
   @ApiProperty({ enum: ['plataforma', 'propia', 'hibrida'] }) modalidad_logistica: ModalidadLogistica;
   @ApiProperty() estado: string;
   @ApiProperty({ format: 'uuid' }) creado_por: string;
