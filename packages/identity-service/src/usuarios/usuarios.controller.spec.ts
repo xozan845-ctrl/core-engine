@@ -38,6 +38,21 @@ describe('UsuariosController (api/v1/usuarios, R-U-10/11)', () => {
     await expect(controller.obtener(usuario.id, { user_id: usuario.id, email: 'ana@core.local', rol: ROLES.VENDEDOR } as never)).resolves.toEqual(usuario);
   });
 
+  it('debe devolver cualquier perfil al super_admin global', async () => {
+    const { usuarios, controller } = fabricar();
+    usuarios.encontrarPorId.mockResolvedValue(usuario);
+    await expect(
+      controller.obtener(usuario.id, { user_id: 'u-sa', email: 'sa@core.local', rol: ROLES.SUPER_ADMIN } as never),
+    ).resolves.toEqual(usuario);
+  });
+
+  it('debe exigir rol global en el listado', () => {
+    expect(Reflect.getMetadata('roles_requeridos', UsuariosController.prototype.listar)).toEqual([
+      ROLES.SUPER_ADMIN,
+      ROLES.ADMIN,
+    ]);
+  });
+
   it('debe ocultar con NotFoundError el perfil ajeno o inexistente', async () => {
     const { usuarios, controller } = fabricar();
     usuarios.encontrarPorId.mockResolvedValue(null);

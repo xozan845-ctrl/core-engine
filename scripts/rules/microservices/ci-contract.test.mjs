@@ -1,8 +1,9 @@
 import { existsSync, readdirSync } from 'node:fs';
-import { join } from 'node:path';
+import { join, relative, sep } from 'node:path';
 import { defineSuite } from '../../engine/suite.mjs';
 import { readJson, readText, walkFiles } from '../../engine/lib/fs.mjs';
 import { repoRoot } from '../../engine/lib/paths.mjs';
+import { COVERAGE_THRESHOLDS } from '../../config/coverage.mjs';
 import {
   PACKAGES_DIR,
   SERVICES,
@@ -12,6 +13,34 @@ import {
 
 const packagesRoot = join(repoRoot, PACKAGES_DIR);
 const rootPackage = readJson(join(repoRoot, 'package.json'));
+const coverageDoc = join(
+  repoRoot,
+  'docs',
+  'rules',
+  'test',
+  '06-estandares-cobertura.md',
+);
+
+/**
+ * Extrae el baseline documentado de la tabla de umbrales por workspace. La
+ * tabla es la referencia normativa; `coverage.mjs` no puede quedar por debajo.
+ */
+function documentedCoverageThresholds() {
+  const thresholds = new Map();
+  for (const line of readText(coverageDoc).split('\n')) {
+    const match =
+      /^\s*\|\s*`([a-z0-9-]+)`\s*\|\s*(\d+)\s*\|\s*(\d+)\s*\|\s*(\d+)\s*\|\s*$/.exec(
+        line,
+      );
+    if (!match) continue;
+    thresholds.set(match[1], {
+      lines: Number(match[2]),
+      branches: Number(match[3]),
+      functions: Number(match[4]),
+    });
+  }
+  return thresholds;
+}
 
 const packageDir = (workspace) => join(packagesRoot, workspace);
 const packageJson = (workspace) =>
@@ -43,7 +72,7 @@ function workspacesInScript(script, task) {
 export default defineSuite({
   id: 'microservices-ci-contract',
   area: 'test',
-  rules: ['R-MS-1', 'R-QA-1', 'R-COV-2', 'R-COV-4', 'R-CI-5', 'R-I-12'],
+  rules: ['R-MS-1', 'R-QA-1', 'R-COV-1', 'R-COV-2', 'R-COV-4', 'R-CI-5', 'R-I-12', 'R-DS-1', 'R-C-7'],
   mode: 'repo',
   run: ({ test, assert }) => {
     test('R-MS-1: el inventario declara exactamente los servicios desplegables', () => {
@@ -133,7 +162,169 @@ export default defineSuite({
       assert.deepEqual(problems, [], problems.join('\n'));
     });
 
-    test('R-COV-4: cada config Vitest aplica alcance y thresholds de cobertura', () => {
+    test('R-COV-4: la fuente central declara umbrales para cada workspace', () => {
+      const workspaces = [
+        'shared',
+        ...SERVICES.filter((service) => !SERVICE_TEST_EXCEPTIONS.includes(service)),
+      ];
+
+      assert.deepEqual(
+        sorted(Object.keys(COVERAGE_THRESHOLDS)),
+        sorted(workspaces),
+        'scripts/config/coverage.mjs debe declarar exactamente los workspaces con suite',
+      );
+
+      const problems = [];
+      for (const [workspace, thresholds] of Object.entries(COVERAGE_THRESHOLDS)) {
+        for (const metric of ['lines', 'branches', 'functions']) {
+          if (!Number.isInteger(thresholds[metric])) {
+            problems.push(`${workspace}: falta el umbral de ${metric}`);
+          }
+        }
+      }
+      assert.deepEqual(problems, [], problems.join('\n'));
+    });
+
+    test('R-COV-1: la fuente central no queda por debajo del baseline documentado', () => {
+      const documented = documentedCoverageThresholds();
+      const problems = [];
+
+      for (const [workspace, floor] of documented) {
+        const current = COVERAGE_THRESHOLDS[workspace];
+        if (!current) {
+          problems.push(`${workspace}: documentado pero sin umbral central`);
+          continue;
+        }
+        for (const metric of ['lines', 'branches', 'functions']) {
+          if (current[metric] < floor[metric]) {
+            problems.push(
+              `${workspace}: ${metric} ${current[metric]} < baseline documentado ${floor[metric]}`,
+            );
+          }
+        }
+      }
+
+      for (const workspace of Object.keys(COVERAGE_THRESHOLDS)) {
+        if (!documented.has(workspace)) {
+          problems.push(`${workspace}: sin fila en la tabla de docs/rules/test/06`);
+        }
+      }
+
+      assert.deepEqual(
+        problems,
+        [],
+        `Umbrales por debajo del baseline o desalineados (R-COV-1):\n${problems.join('\n')}`,
+      );
+    });
+
+    test('R-COV-2: los services/consumers sin spec coinciden con el baseline', () => {
+      const workspaces = [
+        'shared',
+        ...SERVICES.filter((service) => !SERVICE_TEST_EXCEPTIONS.includes(service)),
+      ];
+      const baseline = new Set(
+        readJson(join(repoRoot, 'scripts', 'config', 'spec-baseline.json')),
+      );
+      const problems = [];
+      const missing = new Set();
+
+      for (const workspace of workspaces) {
+        const sourceDir = join(packageDir(workspace), 'src');
+        if (!existsSync(sourceDir)) continue;
+
+        for (const file of walkFiles(
+          sourceDir,
+          (name) => /\.(service|consumer)\.ts$/.test(name) && !name.endsWith('.spec.ts'),
+        )) {
+          const path = relative(repoRoot, file).split(sep).join('/');
+          const spec = file.replace(/\.ts$/, '.spec.ts');
+
+          if (!existsSync(spec)) {
+            missing.add(path);
+            if (!baseline.has(path)) {
+              problems.push(`${path}: sin spec y no está en el baseline`);
+            }
+          } else if (baseline.has(path)) {
+            problems.push(`${path}: ya tiene spec; elimina la excepción del baseline`);
+          }
+        }
+      }
+
+      for (const path of baseline) {
+        if (!existsSync(join(repoRoot, path))) {
+          problems.push(`${path}: el baseline apunta a un archivo que no existe`);
+        } else if (!missing.has(path)) {
+          problems.push(`${path}: baseline obsoleto (ya no falta el spec)`);
+        }
+      }
+
+      assert.deepEqual(
+        problems,
+        [],
+        `Specs faltantes fuera del baseline (R-COV-2):\n${problems.join('\n')}`,
+      );
+    });
+
+    test('R-DS-1: CI escanea secretos de alta confianza en archivos versionados', () => {
+      const workflow = readText(join(repoRoot, WORKFLOWS_DIR, 'ci.yml'));
+      assert.match(
+        workflow,
+        /^\s*run: npm run security:secrets$/m,
+        'CI debe ejecutar security:secrets (R-DS-1)',
+      );
+      assert.ok(
+        existsSync(join(repoRoot, 'scripts', 'tools', 'secrets-check.mjs')),
+        'falta scripts/tools/secrets-check.mjs',
+      );
+    });
+
+    test('R-C-7: CI bloquea cambios incompatibles en OpenAPI', () => {
+      const workflow = readText(join(repoRoot, WORKFLOWS_DIR, 'ci.yml'));
+      assert.match(
+        workflow,
+        /^\s*run: npm run contract:breaking -- --base-ref origin\/main$/m,
+        'CI debe ejecutar contract:breaking contra origin/main (R-C-7)',
+      );
+      assert.ok(
+        existsSync(join(repoRoot, 'scripts', 'tools', 'contract-breaking.mjs')),
+        'falta scripts/tools/contract-breaking.mjs',
+      );
+    });
+
+    test('R-COV-1: CI compara la cobertura real contra el baseline', () => {
+      const workflow = readText(join(repoRoot, WORKFLOWS_DIR, 'ci.yml'));
+      assert.match(
+        workflow,
+        /^\s*run: npm run coverage:compare$/m,
+        'CI debe ejecutar coverage:compare después de npm test (R-COV-1)',
+      );
+
+      const workspaces = [
+        'shared',
+        ...SERVICES.filter((service) => !SERVICE_TEST_EXCEPTIONS.includes(service)),
+      ];
+      const baseline = readJson(
+        join(repoRoot, 'scripts', 'config', 'coverage-baseline.json'),
+      );
+
+      assert.deepEqual(
+        sorted(Object.keys(baseline)),
+        sorted(workspaces),
+        'el baseline debe declarar exactamente los workspaces con suite',
+      );
+
+      const problems = [];
+      for (const [workspace, metrics] of Object.entries(baseline)) {
+        for (const metric of ['lines', 'branches', 'functions', 'statements']) {
+          if (typeof metrics[metric] !== 'number') {
+            problems.push(`${workspace}: baseline sin la métrica '${metric}'`);
+          }
+        }
+      }
+      assert.deepEqual(problems, [], problems.join('\n'));
+    });
+
+    test('R-COV-4: cada config Vitest aplica alcance y consume los thresholds centrales', () => {
       const workspaces = [
         'shared',
         ...SERVICES.filter((service) => !SERVICE_TEST_EXCEPTIONS.includes(service)),
@@ -147,7 +338,14 @@ export default defineSuite({
         for (const [label, pattern] of [
           ['specs', /include:\s*\['src\/\*\*\/\*\.spec\.ts'\]/],
           ['lógica ejecutable', /include:\s*\['src\/\*\*\/\*\.ts'\]/],
-          ['thresholds', /thresholds:\s*\{[^}]*lines:\s*\d+[^}]*branches:\s*\d+/s],
+          [
+            'import de la fuente central',
+            /import \{ coverageThresholdsFor \} from '\.\.\/\.\.\/scripts\/config\/coverage\.mjs';/,
+          ],
+          [
+            'thresholds centrales',
+            new RegExp(`thresholds:\\s*coverageThresholdsFor\\(\\s*'${workspace}'\\s*\\)`),
+          ],
           ['reporte al fallar', /reportOnFailure:\s*true/],
         ]) {
           if (!pattern.test(config)) problems.push(`${workspace}: cobertura sin ${label}`);

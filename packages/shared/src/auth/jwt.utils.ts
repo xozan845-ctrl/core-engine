@@ -10,6 +10,7 @@ export interface UsuarioContexto {
   tenant_id?: string;
   /** Id de la ficha de personal (logistica de campo), si aplica. */
   personal_id?: string;
+  participacion_porcentaje?: number;
 }
 
 export interface TokenPayload {
@@ -20,6 +21,7 @@ export interface TokenPayload {
   nombre?: string;
   tenant_id?: string;
   personal_id?: string;
+  participacion_porcentaje?: number;
   /** Identificador de sesion (solo refresh): permite revocarla al cerrar sesion (R-GW-4). */
   jti?: string;
 }
@@ -48,7 +50,7 @@ export function verificarToken<T>(token: string, secreto: string): T {
 }
 
 export function crearAccessToken(
-  usuario: { id: string; email: string; rol: Rol; nombre?: string; tenant_id?: string; personal_id?: string },
+  usuario: { id: string; email: string; rol: Rol; nombre?: string; tenant_id?: string; personal_id?: string; participacion_porcentaje?: number },
   secreto: string,
   ttl: string,
 ): string {
@@ -61,6 +63,7 @@ export function crearAccessToken(
       nombre: usuario.nombre,
       tenant_id: usuario.tenant_id,
       personal_id: usuario.personal_id,
+      participacion_porcentaje: usuario.participacion_porcentaje,
     },
     secreto,
     ttl,
@@ -68,7 +71,7 @@ export function crearAccessToken(
 }
 
 export function crearRefreshToken(
-  usuario: { id: string; email: string; rol: Rol; nombre?: string; tenant_id?: string; personal_id?: string },
+  usuario: { id: string; email: string; rol: Rol; nombre?: string; tenant_id?: string; personal_id?: string; participacion_porcentaje?: number },
   secreto: string,
   ttl: string,
   jti?: string,
@@ -82,6 +85,7 @@ export function crearRefreshToken(
       nombre: usuario.nombre,
       tenant_id: usuario.tenant_id,
       personal_id: usuario.personal_id,
+      participacion_porcentaje: usuario.participacion_porcentaje,
       ...(jti ? { jti } : {}),
     },
     secreto,
@@ -109,6 +113,7 @@ export function usuarioDesdeHeaders(headers: Record<string, string | string[] | 
   const tenant_id = get('x-tenant');
   const personal_id = get('x-user-personal');
   const nombre = get('x-user-nombre');
+  const participacion = get('x-user-participacion');
   return {
     user_id,
     email: email ?? '',
@@ -116,6 +121,7 @@ export function usuarioDesdeHeaders(headers: Record<string, string | string[] | 
     ...(nombre ? { nombre } : {}),
     ...(tenant_id ? { tenant_id } : {}),
     ...(personal_id ? { personal_id } : {}),
+    ...(participacion !== undefined ? { participacion_porcentaje: Number(participacion) } : {}),
   };
 }
 

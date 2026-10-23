@@ -1,6 +1,7 @@
 import { defineConfig } from 'vitest/config';
 import swc from 'unplugin-swc';
 import { resolve } from 'node:path';
+import { coverageThresholdsFor } from '../../scripts/config/coverage.mjs';
 
 export default defineConfig({
   plugins: [swc.vite()],
@@ -27,7 +28,7 @@ export default defineConfig({
       reporter: ['text', 'lcov', 'json-summary'],
       reportsDirectory: './coverage',
       reportOnFailure: true,
-      thresholds: { lines: 84, branches: 70 },
+      thresholds: coverageThresholdsFor('field-service'),
     },
   },
 });

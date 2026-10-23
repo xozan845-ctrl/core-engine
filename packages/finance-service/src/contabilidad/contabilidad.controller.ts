@@ -1,5 +1,5 @@
 import { Controller, Get, Post, Param, Body, Query } from '@nestjs/common';
-import { ApiOperation, ApiParam, ApiProperty, ApiTags } from '@nestjs/swagger';
+import { ApiBearerAuth, ApiCreatedResponse, ApiOkResponse, ApiOperation, ApiParam, ApiProperty, ApiTags } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
 import {
   ArrayMinSize,
@@ -14,6 +14,12 @@ import {
 } from 'class-validator';
 import { Roles, ROLES, UsuarioActual, UsuarioContexto, NotFoundError } from '@core/shared';
 import { ContabilidadService, Asiento, Cuenta, ParametrosAsiento } from './contabilidad.service';
+import {
+  AsientoResponseDto,
+  CuentaResponseDto,
+  LibroIvaResponseDto,
+  LibroMayorResponseDto,
+} from './contabilidad.response.dto';
 
 export class DetalleAsientoRequestDto {
   @ApiProperty({ description: 'Código de cuenta contable' })
@@ -109,19 +115,22 @@ export class EstadoCuentaRequestDto {
  * por partida doble: plan de cuentas, libro diario e historico por cuenta.
  */
 @ApiTags('Finanzas · Contabilidad')
+@ApiBearerAuth()
 @Controller('api/v1/finanzas')
-@Roles(ROLES.ADMIN)
+@Roles(ROLES.SUPER_ADMIN, ROLES.ADMIN)
 export class ContabilidadController {
   constructor(private readonly contabilidad: ContabilidadService) {}
 
   @Get('cuentas')
   @ApiOperation({ summary: 'Plan de cuentas' })
+  @ApiOkResponse({ type: [CuentaResponseDto], description: 'Plan de cuentas' })
   async cuentas(): Promise<Cuenta[]> {
     return this.contabilidad.planDeCuentas();
   }
 
   @Post('cuentas')
   @ApiOperation({ summary: 'Crear una cuenta contable' })
+  @ApiCreatedResponse({ type: CuentaResponseDto, description: 'Cuenta creada' })
   async crearCuenta(@Body() dto: CrearCuentaRequestDto): Promise<Cuenta> {
     return this.contabilidad.crearCuenta(dto);
   }
@@ -129,6 +138,7 @@ export class ContabilidadController {
   @Post('cuentas/:codigo/estado')
   @ApiOperation({ summary: 'Cambiar el estado de una cuenta' })
   @ApiParam({ name: 'codigo', description: 'Código de la cuenta' })
+  @ApiCreatedResponse({ type: CuentaResponseDto, description: 'Cuenta actualizada' })
   async estadoCuenta(@Param('codigo') codigo: string, @Body() dto: EstadoCuentaRequestDto): Promise<Cuenta> {
     const cuenta = await this.contabilidad.estadoCuenta(codigo, dto.estado as 'activa' | 'inactiva');
     if (!cuenta) throw new NotFoundError('Cuenta', codigo);
@@ -138,6 +148,7 @@ export class ContabilidadController {
   /** Libro diario: GET /api/v1/finanzas/asientos?desde=&hasta= */
   @Get('asientos')
   @ApiOperation({ summary: 'Libro diario (asientos)' })
+  @ApiOkResponse({ type: [AsientoResponseDto], description: 'Asientos del periodo' })
   async libroDiario(
     @Query('desde') desde?: string,
     @Query('hasta') hasta?: string,
@@ -149,6 +160,7 @@ export class ContabilidadController {
   /** Asiento manual del administrador (bitacora append-only). */
   @Post('asientos')
   @ApiOperation({ summary: 'Registrar un asiento manual' })
+  @ApiCreatedResponse({ type: AsientoResponseDto, description: 'Asiento registrado' })
   async registrar(
     @Body() dto: CrearAsientoRequestDto,
     @UsuarioActual() usuario: UsuarioContexto,
@@ -167,6 +179,7 @@ export class ContabilidadController {
   @Post('asientos/:id/anular')
   @ApiOperation({ summary: 'Anular un asiento' })
   @ApiParam({ name: 'id', description: 'Id del asiento' })
+  @ApiCreatedResponse({ type: AsientoResponseDto, description: 'Asiento anulado' })
   async anular(@Param('id') id: string): Promise<Asiento> {
     const asiento = await this.contabilidad.anular(id);
     if (!asiento) throw new NotFoundError('Asiento', id);
@@ -177,6 +190,7 @@ export class ContabilidadController {
   @Get('libro-mayor/:cuenta')
   @ApiOperation({ summary: 'Libro mayor por cuenta' })
   @ApiParam({ name: 'cuenta', description: 'Código de la cuenta' })
+  @ApiOkResponse({ type: LibroMayorResponseDto, description: 'Libro mayor de la cuenta' })
   async libroMayor(
     @Param('cuenta') cuenta: string,
     @Query('desde') desde?: string,
@@ -188,6 +202,7 @@ export class ContabilidadController {
   /** Libro de ventas (DGI): GET /api/v1/finanzas/libro-ventas?desde=&hasta= */
   @Get('libro-ventas')
   @ApiOperation({ summary: 'Libro de ventas (DGI)' })
+  @ApiOkResponse({ type: [LibroIvaResponseDto], description: 'Libro de ventas' })
   async libroVentas(@Query('desde') desde?: string, @Query('hasta') hasta?: string) {
     return this.contabilidad.libroVentas(desde, hasta);
   }
@@ -195,6 +210,7 @@ export class ContabilidadController {
   /** Libro de compras (DGI): GET /api/v1/finanzas/libro-compras?desde=&hasta= */
   @Get('libro-compras')
   @ApiOperation({ summary: 'Libro de compras (DGI)' })
+  @ApiOkResponse({ type: [LibroIvaResponseDto], description: 'Libro de compras' })
   async libroCompras(@Query('desde') desde?: string, @Query('hasta') hasta?: string) {
     return this.contabilidad.libroCompras(desde, hasta);
   }

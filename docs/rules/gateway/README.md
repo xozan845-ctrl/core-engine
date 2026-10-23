@@ -2,7 +2,7 @@
 
 Reglas doradas del **API Gateway** (`packages/api-gateway`, :8080): único
 punto de entrada, descarga perimetral (CORS/throttling/TTL), validación JWT
-con prevención de spoofing, TTLs de token, errores RFC 7807 y versionamiento
+con prevención de spoofing, TTLs de token, errores normalizados (ADR-06) y versionamiento
 de rutas (`/api/v1/`).
 
 ## Archivos

@@ -1,8 +1,13 @@
 import { Body, Controller, Get, Param, Patch, Post, Query } from '@nestjs/common';
-import { ApiOperation, ApiProperty, ApiResponse, ApiTags } from '@nestjs/swagger';
-import { IsInt, IsString, Max, Min } from 'class-validator';
+import { ApiBearerAuth, ApiCreatedResponse, ApiOkResponse, ApiOperation, ApiProperty, ApiResponse, ApiTags } from '@nestjs/swagger';
+import { IsInt, IsOptional, IsString, IsUUID, Max, Min } from 'class-validator';
 import { TiendasService } from '../tiendas/tiendas.service';
 import { OfertasService, Oferta } from './ofertas.service';
+import {
+  OfertaResponseDto,
+  PaginaOfertasResponseDto,
+  TiendaPublicaResponseDto,
+} from './ofertas.response.dto';
 import {
   Pagina,
   Roles,
@@ -13,6 +18,15 @@ import {
 } from '@core/shared';
 
 export class PublicarProductoRequestDto {
+  @ApiProperty({
+    description: 'Tienda donde se publicará. Si se omite, se usa la tienda del vendedor autenticado.',
+    format: 'uuid',
+    required: false,
+  })
+  @IsOptional()
+  @IsUUID()
+  tienda_id?: string;
+
   @ApiProperty({ description: 'Id del producto a publicar', example: 'a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11' })
   @IsString()
   producto_id: string;
@@ -43,20 +57,25 @@ export class OfertasController {
 
   /** POST /api/v1/vendedores/productos — publica producto con margen (Tabla 21). */
   @Post('vendedores/productos')
-  @Roles(ROLES.VENDEDOR)
+  @Roles(ROLES.VENDEDOR, ROLES.EMPRESARIO)
+  @ApiBearerAuth()
   @ApiOperation({ summary: 'Publicar un producto con margen (vendedor)' })
-  @ApiResponse({ status: 201, description: 'Oferta creada' })
+  @ApiCreatedResponse({ type: OfertaResponseDto, description: 'Oferta creada' })
   async publicar(
     @Body() dto: PublicarProductoRequestDto,
     @UsuarioActual() usuario: UsuarioContexto,
   ): Promise<Oferta> {
-    return this.ofertas.publicar(usuario.user_id, dto.producto_id, dto.margen);
+    const tiendaId = dto.tienda_id ?? (await this.tiendas.deVendedor(usuario.user_id))?.id;
+    if (!tiendaId) throw new NotFoundError('Tienda del vendedor', usuario.user_id);
+    return this.ofertas.publicar(usuario.user_id, tiendaId, dto.producto_id, dto.margen);
   }
 
   /** PATCH /api/v1/vendedores/productos/:id — cambia el margen de la oferta. */
   @Patch('vendedores/productos/:id')
-  @Roles(ROLES.VENDEDOR)
+  @Roles(ROLES.VENDEDOR, ROLES.EMPRESARIO)
+  @ApiBearerAuth()
   @ApiOperation({ summary: 'Cambiar el margen de una oferta (vendedor)' })
+  @ApiOkResponse({ type: OfertaResponseDto, description: 'Oferta actualizada' })
   async cambiarMargen(
     @Param('id') id: string,
     @Body() dto: CambiarMargenRequestDto,
@@ -67,8 +86,10 @@ export class OfertasController {
 
   /** GET /api/v1/vendedores/me/ofertas — ofertas del vendedor autenticado. */
   @Get('vendedores/me/ofertas')
-  @Roles(ROLES.VENDEDOR)
+  @Roles(ROLES.VENDEDOR, ROLES.EMPRESARIO)
+  @ApiBearerAuth()
   @ApiOperation({ summary: 'Listar las ofertas del vendedor autenticado' })
+  @ApiOkResponse({ type: PaginaOfertasResponseDto, description: 'Página de ofertas' })
   async misOfertas(
     @Query() query: { pagina?: string; limite?: string },
     @UsuarioActual() usuario: UsuarioContexto,
@@ -79,6 +100,7 @@ export class OfertasController {
   /** GET /api/v1/tiendas/:id — tienda publica con sus ofertas. */
   @Get('tiendas/:id')
   @ApiOperation({ summary: 'Tienda pública con sus ofertas (ruta pública)' })
+  @ApiOkResponse({ type: TiendaPublicaResponseDto, description: 'Tienda con sus ofertas' })
   @ApiResponse({ status: 404, description: 'Tienda inexistente (NO_ENCONTRADO)' })
   async tiendaPublica(@Param('id') tiendaId: string) {
     const tienda = await this.tiendas.encontrarPorId(tiendaId);

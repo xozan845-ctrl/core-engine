@@ -11,6 +11,8 @@ export default tseslint.config(
     ignores: [
       '**/dist/**',
       '**/coverage/**',
+      '**/.stryker-tmp/**',
+      '**/reports/**',
       '**/node_modules/**',
       '**/*.tsbuildinfo',
       '**/*.d.ts',

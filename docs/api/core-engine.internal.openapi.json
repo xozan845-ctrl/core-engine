@@ -1,0 +1,4676 @@
+{
+  "openapi": "3.0.0",
+  "info": {
+    "title": "Core Engine · API interna (servicio→servicio)",
+    "description": "Contrato de la superficie interna (/internal/**). No se expone a través del API Gateway y requiere la cabecera x-internal-key.",
+    "version": "internal"
+  },
+  "security": [
+    {
+      "internalKey": []
+    }
+  ],
+  "tags": [],
+  "paths": {
+    "/internal/productos/lote": {
+      "get": {
+        "operationId": "InternalController_lote",
+        "parameters": [
+          {
+            "name": "skus",
+            "required": false,
+            "in": "query",
+            "description": "SKUs separados por coma",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Productos encontrados",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/LoteProductoResponseDto"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "internalKey": []
+          }
+        ],
+        "summary": "Lote de productos por SKUs (servicio→servicio)",
+        "tags": [
+          "Catálogo (interno)"
+        ]
+      }
+    },
+    "/internal/productos/sku/{sku}": {
+      "get": {
+        "operationId": "InternalController_porSku",
+        "parameters": [
+          {
+            "name": "sku",
+            "required": true,
+            "in": "path",
+            "description": "SKU del producto",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Producto encontrado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProductoResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "internalKey": []
+          }
+        ],
+        "summary": "Producto por SKU (servicio→servicio)",
+        "tags": [
+          "Catálogo (interno)"
+        ]
+      }
+    },
+    "/internal/productos/{id}": {
+      "get": {
+        "operationId": "InternalController_porId",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "description": "Id del producto",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Producto encontrado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProductoResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "internalKey": []
+          }
+        ],
+        "summary": "Producto por id (servicio→servicio)",
+        "tags": [
+          "Catálogo (interno)"
+        ]
+      }
+    },
+    "/internal/inventario/resumen": {
+      "get": {
+        "operationId": "InternalController_resumen",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Resumen de inventario",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResumenInventarioResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "internalKey": []
+          }
+        ],
+        "summary": "Resumen de inventario (servicio→servicio)",
+        "tags": [
+          "Catálogo (interno)"
+        ]
+      }
+    },
+    "/internal/inventario/lineas": {
+      "get": {
+        "operationId": "InternalController_lineas",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Líneas de inventario",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/LineaInventarioResponseDto"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "internalKey": []
+          }
+        ],
+        "summary": "Líneas de inventario (servicio→servicio)",
+        "tags": [
+          "Catálogo (interno)"
+        ]
+      }
+    },
+    "/internal/finance/sujetos/{usuarioId}": {
+      "get": {
+        "operationId": "InternoController_sujeto",
+        "parameters": [
+          {
+            "name": "usuarioId",
+            "required": true,
+            "in": "path",
+            "description": "Id del usuario",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Sujeto fiscal del usuario",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SujetoTributarioResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "internalKey": []
+          }
+        ],
+        "summary": "Situación fiscal de un usuario (para identity)",
+        "tags": [
+          "Finanzas (interno)"
+        ]
+      }
+    },
+    "/internal/finance/declaraciones": {
+      "get": {
+        "operationId": "InternoController_declaraciones",
+        "parameters": [
+          {
+            "name": "tipo",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "periodo_inicio",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "estado",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Declaraciones del periodo",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/DeclaracionResponseDto"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "internalKey": []
+          }
+        ],
+        "summary": "Declaraciones del periodo (reportes)",
+        "tags": [
+          "Finanzas (interno)"
+        ]
+      }
+    },
+    "/internal/usuarios/{id}": {
+      "get": {
+        "operationId": "InternalController_usuario",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "description": "Id del usuario",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Usuario encontrado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UsuarioResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "internalKey": []
+          }
+        ],
+        "summary": "Usuario por id (servicio→servicio)",
+        "tags": [
+          "Usuarios (interno)"
+        ]
+      }
+    },
+    "/internal/vendedores": {
+      "get": {
+        "operationId": "InternalController_vendedores",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Vendedores registrados",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/UsuarioResponseDto"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "internalKey": []
+          }
+        ],
+        "summary": "Listar vendedores (servicio→servicio)",
+        "tags": [
+          "Usuarios (interno)"
+        ]
+      }
+    },
+    "/internal/contar-vendedores": {
+      "get": {
+        "operationId": "InternalController_contarVendedores",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Conteo de vendedores",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ContarVendedoresResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "internalKey": []
+          }
+        ],
+        "summary": "Contar vendedores (servicio→servicio)",
+        "tags": [
+          "Usuarios (interno)"
+        ]
+      }
+    },
+    "/internal/empresas/{id}": {
+      "get": {
+        "operationId": "InternalController_empresa",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "description": "Id de la empresa",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Empresa encontrada",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EmpresaResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "internalKey": []
+          }
+        ],
+        "summary": "Empresa por id (servicio→servicio)",
+        "tags": [
+          "Usuarios (interno)"
+        ]
+      }
+    },
+    "/internal/orders/{id}/transicion": {
+      "post": {
+        "operationId": "InternoController_transicion",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "description": "Id de la orden",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "estado",
+            "required": true,
+            "in": "query",
+            "description": "Estado objetivo",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "motivo",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "actor",
+            "required": false,
+            "in": "query",
+            "description": "Usuario que ejecuta la transición",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Orden con el nuevo estado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OrderViewResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "internalKey": []
+          }
+        ],
+        "summary": "Avanzar el ciclo de vida de la orden (logística→orders)",
+        "tags": [
+          "Pedidos (interno)"
+        ]
+      }
+    },
+    "/internal/orders/{id}": {
+      "get": {
+        "operationId": "InternoController_orden",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "description": "Id de la orden",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Orden encontrada",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OrderViewResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "internalKey": []
+          }
+        ],
+        "summary": "Lectura completa de una orden (reportes/comisiones)",
+        "tags": [
+          "Pedidos (interno)"
+        ]
+      }
+    },
+    "/internal/orders": {
+      "get": {
+        "operationId": "InternoController_listar",
+        "parameters": [
+          {
+            "name": "estado",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Órdenes registradas",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/OrderViewResponseDto"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "internalKey": []
+          }
+        ],
+        "summary": "Listar órdenes (servicio→servicio)",
+        "tags": [
+          "Pedidos (interno)"
+        ]
+      }
+    },
+    "/internal/orders/{id}/reproyectar": {
+      "post": {
+        "operationId": "InternoController_reproyectar",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "description": "Id de la orden",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Orden reproyectada",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OrderViewResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "internalKey": []
+          }
+        ],
+        "summary": "Reproyectar una orden desde su historia (Event Sourcing)",
+        "tags": [
+          "Pedidos (interno)"
+        ]
+      }
+    },
+    "/internal/orders/{id}/historia": {
+      "get": {
+        "operationId": "InternoController_historia",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "description": "Id de la orden",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Historia de eventos",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/HistoriaEventoResponseDto"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "internalKey": []
+          }
+        ],
+        "summary": "Historia inmutable de eventos de una orden",
+        "tags": [
+          "Pedidos (interno)"
+        ]
+      }
+    },
+    "/internal/storage/tenants/{tenantId}": {
+      "get": {
+        "operationId": "InternalStorageController_estado",
+        "parameters": [
+          {
+            "name": "tenantId",
+            "required": true,
+            "in": "path",
+            "description": "Id del tenant",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Estado del tenant",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EstadoBucketResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "internalKey": []
+          }
+        ],
+        "summary": "Estado de almacenamiento del tenant (servicio→servicio)",
+        "tags": [
+          "Almacenamiento (interno)"
+        ]
+      }
+    },
+    "/internal/storage/tenants/{tenantId}/recalcular": {
+      "post": {
+        "operationId": "InternalStorageController_recalcular",
+        "parameters": [
+          {
+            "name": "tenantId",
+            "required": true,
+            "in": "path",
+            "description": "Id del tenant",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Uso recalculado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EstadoBucketResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "internalKey": []
+          }
+        ],
+        "summary": "Recalcular el uso del tenant (servicio→servicio)",
+        "tags": [
+          "Almacenamiento (interno)"
+        ]
+      }
+    },
+    "/internal/storage/objetos/{id}": {
+      "get": {
+        "operationId": "InternalStorageController_objeto",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "description": "Id del objeto",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "tenant_id",
+            "required": true,
+            "in": "query",
+            "description": "Tenant dueno del objeto",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Metadata del objeto",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ObjetoStorageResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "internalKey": []
+          }
+        ],
+        "summary": "Metadata de un objeto del tenant (servicio→servicio)",
+        "tags": [
+          "Almacenamiento (interno)"
+        ]
+      }
+    },
+    "/internal/ofertas": {
+      "get": {
+        "operationId": "InternalController_porIds",
+        "parameters": [
+          {
+            "name": "ids",
+            "required": false,
+            "in": "query",
+            "description": "Ids de oferta separados por coma",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Ofertas encontradas",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/OfertaResponseDto"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "internalKey": []
+          }
+        ],
+        "summary": "Lote de ofertas por ids (servicio→servicio)",
+        "tags": [
+          "Tiendas (interno)"
+        ]
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "internalKey": {
+        "type": "apiKey",
+        "in": "header",
+        "name": "x-internal-key"
+      }
+    },
+    "schemas": {
+      "LoteProductoResponseDto": {
+        "type": "object",
+        "properties": {
+          "sku": {
+            "type": "string",
+            "description": "SKU del producto",
+            "example": "SKU-001"
+          },
+          "stock": {
+            "type": "number",
+            "description": "Stock disponible",
+            "example": 10
+          },
+          "estado": {
+            "type": "string",
+            "description": "Estado del producto",
+            "enum": [
+              "disponible",
+              "agotado"
+            ],
+            "example": "disponible"
+          }
+        },
+        "required": [
+          "sku",
+          "stock",
+          "estado"
+        ]
+      },
+      "ProductoResponseDto": {
+        "type": "object",
+        "properties": {
+          "empresa_id": {
+            "type": "string",
+            "description": "Empresa propietaria",
+            "format": "uuid"
+          },
+          "id": {
+            "type": "string",
+            "description": "Id del producto",
+            "format": "uuid"
+          },
+          "sku": {
+            "type": "string",
+            "description": "SKU único del producto",
+            "example": "SKU-001"
+          },
+          "nombre": {
+            "type": "string",
+            "description": "Nombre del producto"
+          },
+          "descripcion": {
+            "type": "string",
+            "description": "Descripción del producto"
+          },
+          "categoria": {
+            "type": "string",
+            "description": "Categoría del producto"
+          },
+          "precio_base": {
+            "type": "string",
+            "description": "Precio base en córdobas con dos decimales",
+            "example": "1000.00"
+          },
+          "stock": {
+            "type": "number",
+            "description": "Stock disponible (neto de reservas)",
+            "example": 10
+          },
+          "estado": {
+            "type": "string",
+            "description": "Estado del producto",
+            "enum": [
+              "disponible",
+              "agotado"
+            ],
+            "example": "disponible"
+          },
+          "creado_en": {
+            "type": "string",
+            "description": "Fecha de creación (ISO 8601 UTC)",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "empresa_id",
+          "id",
+          "sku",
+          "nombre",
+          "descripcion",
+          "categoria",
+          "precio_base",
+          "stock",
+          "estado",
+          "creado_en"
+        ]
+      },
+      "ResumenInventarioResponseDto": {
+        "type": "object",
+        "properties": {
+          "productos": {
+            "type": "number",
+            "description": "Total de productos",
+            "example": 20
+          },
+          "agotados": {
+            "type": "number",
+            "description": "Productos agotados",
+            "example": 2
+          },
+          "stock_total": {
+            "type": "number",
+            "description": "Unidades en stock",
+            "example": 120
+          },
+          "valor_inventario_cents": {
+            "type": "number",
+            "description": "Valor del inventario en centavos",
+            "example": 12000000
+          }
+        },
+        "required": [
+          "productos",
+          "agotados",
+          "stock_total",
+          "valor_inventario_cents"
+        ]
+      },
+      "LineaInventarioResponseDto": {
+        "type": "object",
+        "properties": {
+          "sku": {
+            "type": "string",
+            "description": "SKU del producto",
+            "example": "SKU-001"
+          },
+          "nombre": {
+            "type": "string",
+            "description": "Nombre del producto"
+          },
+          "stock": {
+            "type": "number",
+            "description": "Stock físico en bodega",
+            "example": 12
+          },
+          "disponible": {
+            "type": "number",
+            "description": "Stock disponible (neto de reservas)",
+            "example": 10
+          },
+          "reservado": {
+            "type": "number",
+            "description": "Unidades reservadas por órdenes activas",
+            "example": 2
+          },
+          "estado": {
+            "type": "string",
+            "description": "Estado del producto",
+            "example": "disponible"
+          },
+          "precio_base": {
+            "type": "string",
+            "description": "Precio base en córdobas con dos decimales",
+            "example": "1000.00"
+          },
+          "reservas_activas": {
+            "type": "number",
+            "description": "Alias de reservado para consumidores internos",
+            "example": 2
+          },
+          "valor_disponible_cents": {
+            "type": "number",
+            "description": "Valor del stock disponible en centavos",
+            "example": 1000000
+          },
+          "valor_total_cents": {
+            "type": "number",
+            "description": "Valor del stock físico total en centavos",
+            "example": 1200000
+          }
+        },
+        "required": [
+          "sku",
+          "nombre",
+          "stock",
+          "disponible",
+          "reservado",
+          "estado",
+          "precio_base",
+          "reservas_activas",
+          "valor_disponible_cents",
+          "valor_total_cents"
+        ]
+      },
+      "PaginaProductosResponseDto": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "description": "Productos de la página",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ProductoResponseDto"
+            }
+          },
+          "total": {
+            "type": "number",
+            "description": "Total de productos que cumplen el filtro",
+            "example": 42
+          },
+          "pagina": {
+            "type": "number",
+            "description": "Página actual (1-based)",
+            "example": 1
+          },
+          "limite": {
+            "type": "number",
+            "description": "Tamaño de página",
+            "example": 20
+          },
+          "paginas": {
+            "type": "number",
+            "description": "Total de páginas",
+            "example": 3
+          }
+        },
+        "required": [
+          "items",
+          "total",
+          "pagina",
+          "limite",
+          "paginas"
+        ]
+      },
+      "CrearProductoRequestDto": {
+        "type": "object",
+        "properties": {
+          "sku": {
+            "type": "string",
+            "description": "SKU del producto",
+            "pattern": "^[A-Za-z0-9-]{2,32}$",
+            "example": "SKU-001"
+          },
+          "empresa_id": {
+            "type": "string",
+            "description": "Empresa destino. Obligatoria para super_admin/admin; el empresario usa su empresa activa.",
+            "format": "uuid"
+          },
+          "nombre": {
+            "type": "string",
+            "description": "Nombre del producto",
+            "minLength": 2,
+            "maxLength": 200
+          },
+          "descripcion": {
+            "type": "string",
+            "description": "Descripción"
+          },
+          "categoria": {
+            "type": "string",
+            "description": "Categoría"
+          },
+          "precio_base": {
+            "type": "string",
+            "description": "Precio base decimal (ej: 1000.00) en córdobas; se guarda en centavos",
+            "example": "1000.00"
+          },
+          "stock": {
+            "type": "number",
+            "description": "Stock inicial",
+            "minimum": 0,
+            "example": 10
+          }
+        },
+        "required": [
+          "sku",
+          "nombre",
+          "precio_base",
+          "stock"
+        ]
+      },
+      "ActualizarProductoRequestDto": {
+        "type": "object",
+        "properties": {
+          "nombre": {
+            "type": "string",
+            "description": "Nombre del producto",
+            "minLength": 2,
+            "maxLength": 200
+          },
+          "descripcion": {
+            "type": "string",
+            "description": "Descripción"
+          },
+          "categoria": {
+            "type": "string",
+            "description": "Categoría"
+          },
+          "precio_base": {
+            "type": "string",
+            "description": "Precio base decimal (ej: 1000.00)"
+          },
+          "stock": {
+            "type": "number",
+            "description": "Stock",
+            "minimum": 0
+          },
+          "motivo": {
+            "type": "string",
+            "description": "Motivo del cambio (RN-08 histórico)"
+          }
+        }
+      },
+      "SujetoTributarioResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Id del sujeto",
+            "format": "uuid"
+          },
+          "jurisdiccion": {
+            "type": "string",
+            "description": "Jurisdicción",
+            "example": "NI"
+          },
+          "regimen_id": {
+            "type": "string",
+            "description": "Id del régimen",
+            "format": "uuid"
+          },
+          "regimen_nombre": {
+            "type": "string",
+            "description": "Nombre del régimen"
+          },
+          "razon_social": {
+            "type": "string",
+            "description": "Razón social"
+          },
+          "ruc": {
+            "type": "string",
+            "description": "RUC"
+          },
+          "es_plataforma": {
+            "type": "boolean",
+            "description": "¿Es la plataforma?",
+            "example": false
+          },
+          "estado": {
+            "type": "string",
+            "description": "Estado",
+            "enum": [
+              "ACTIVO",
+              "BAJA"
+            ],
+            "example": "ACTIVO"
+          },
+          "creado_en": {
+            "type": "string",
+            "description": "Fecha de creación (ISO 8601 UTC)",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "jurisdiccion",
+          "razon_social",
+          "es_plataforma",
+          "estado",
+          "creado_en"
+        ]
+      },
+      "DeclaracionResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Id de la declaración",
+            "format": "uuid"
+          },
+          "jurisdiccion": {
+            "type": "string",
+            "description": "Jurisdicción",
+            "example": "NI"
+          },
+          "tipo": {
+            "type": "string",
+            "description": "Tipo",
+            "enum": [
+              "IVA",
+              "IR",
+              "CUOTA_FIJA"
+            ],
+            "example": "IVA"
+          },
+          "periodo_inicio": {
+            "type": "string",
+            "description": "Inicio del periodo",
+            "format": "date"
+          },
+          "periodo_fin": {
+            "type": "string",
+            "description": "Fin del periodo",
+            "format": "date"
+          },
+          "base_gravada_cents": {
+            "type": "number",
+            "description": "Base gravada en centavos",
+            "example": 1150000
+          },
+          "iva_debitado_cents": {
+            "type": "number",
+            "description": "IVA debitado en centavos",
+            "example": 172500
+          },
+          "iva_credito_cents": {
+            "type": "number",
+            "description": "IVA crédito en centavos",
+            "example": 0
+          },
+          "iva_a_pagar_cents": {
+            "type": "number",
+            "description": "IVA a pagar en centavos",
+            "example": 172500
+          },
+          "renta_bruta_cents": {
+            "type": "number",
+            "description": "Renta bruta en centavos",
+            "example": 1150000
+          },
+          "renta_gravable_cents": {
+            "type": "number",
+            "description": "Renta gravable en centavos",
+            "example": 575000
+          },
+          "ir_a_pagar_cents": {
+            "type": "number",
+            "description": "IR a pagar en centavos",
+            "example": 172500
+          },
+          "cuota_cents": {
+            "type": "number",
+            "description": "Cuota fija en centavos",
+            "example": 5000
+          },
+          "estado": {
+            "type": "string",
+            "description": "Estado",
+            "enum": [
+              "PENDIENTE",
+              "GENERADA",
+              "PRESENTADA",
+              "PAGADA",
+              "CANCELADA"
+            ],
+            "example": "GENERADA"
+          },
+          "detalle": {
+            "type": "object",
+            "description": "Detalle de la declaración",
+            "nullable": true
+          },
+          "generada_en": {
+            "type": "string",
+            "description": "Fecha de generación",
+            "format": "date-time"
+          },
+          "presentada_en": {
+            "type": "string",
+            "description": "Fecha de presentación",
+            "format": "date-time"
+          },
+          "creado_en": {
+            "type": "string",
+            "description": "Fecha de creación (ISO 8601 UTC)",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "jurisdiccion",
+          "tipo",
+          "periodo_inicio",
+          "periodo_fin",
+          "base_gravada_cents",
+          "iva_debitado_cents",
+          "iva_credito_cents",
+          "iva_a_pagar_cents",
+          "renta_bruta_cents",
+          "renta_gravable_cents",
+          "ir_a_pagar_cents",
+          "cuota_cents",
+          "estado",
+          "creado_en"
+        ]
+      },
+      "CuentaResponseDto": {
+        "type": "object",
+        "properties": {
+          "codigo": {
+            "type": "string",
+            "description": "Código de la cuenta",
+            "example": "1101"
+          },
+          "nombre": {
+            "type": "string",
+            "description": "Nombre de la cuenta",
+            "example": "Caja"
+          },
+          "tipo": {
+            "type": "string",
+            "description": "Tipo de cuenta",
+            "enum": [
+              "ACTIVO",
+              "PASIVO",
+              "CAPITAL",
+              "INGRESO",
+              "COSTO",
+              "GASTO"
+            ],
+            "example": "ACTIVO"
+          },
+          "naturaleza": {
+            "type": "string",
+            "description": "Naturaleza",
+            "enum": [
+              "DEUDORA",
+              "ACREEDORA"
+            ],
+            "example": "DEUDORA"
+          },
+          "nivel": {
+            "type": "number",
+            "description": "Nivel jerárquico",
+            "example": 1
+          },
+          "estado": {
+            "type": "string",
+            "description": "Estado",
+            "enum": [
+              "activa",
+              "inactiva"
+            ],
+            "example": "activa"
+          }
+        },
+        "required": [
+          "codigo",
+          "nombre",
+          "tipo",
+          "naturaleza",
+          "nivel",
+          "estado"
+        ]
+      },
+      "CrearCuentaRequestDto": {
+        "type": "object",
+        "properties": {
+          "codigo": {
+            "type": "string",
+            "description": "Código de la cuenta"
+          },
+          "nombre": {
+            "type": "string",
+            "description": "Nombre de la cuenta",
+            "minLength": 3
+          },
+          "tipo": {
+            "type": "string",
+            "description": "Tipo de cuenta",
+            "enum": [
+              "ACTIVO",
+              "PASIVO",
+              "CAPITAL",
+              "INGRESO",
+              "COSTO",
+              "GASTO"
+            ]
+          },
+          "naturaleza": {
+            "type": "string",
+            "description": "Naturaleza de la cuenta",
+            "enum": [
+              "DEUDORA",
+              "ACREEDORA"
+            ]
+          },
+          "nivel": {
+            "type": "number",
+            "description": "Nivel jerárquico"
+          }
+        },
+        "required": [
+          "codigo",
+          "nombre",
+          "tipo",
+          "naturaleza"
+        ]
+      },
+      "EstadoCuentaRequestDto": {
+        "type": "object",
+        "properties": {
+          "estado": {
+            "type": "string",
+            "description": "Estado de la cuenta",
+            "enum": [
+              "activa",
+              "inactiva"
+            ]
+          }
+        },
+        "required": [
+          "estado"
+        ]
+      },
+      "DetalleAsientoResponseDto": {
+        "type": "object",
+        "properties": {
+          "cuenta_codigo": {
+            "type": "string",
+            "description": "Código de cuenta contable"
+          },
+          "debe_cents": {
+            "type": "number",
+            "description": "Débito en centavos",
+            "example": 115000
+          },
+          "haber_cents": {
+            "type": "number",
+            "description": "Crédito en centavos",
+            "example": 115000
+          },
+          "concepto": {
+            "type": "string",
+            "description": "Concepto del detalle"
+          },
+          "orden": {
+            "type": "number",
+            "description": "Orden del detalle"
+          }
+        },
+        "required": [
+          "cuenta_codigo",
+          "debe_cents",
+          "haber_cents"
+        ]
+      },
+      "AsientoResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Id del asiento",
+            "format": "uuid"
+          },
+          "fecha": {
+            "type": "string",
+            "description": "Fecha del asiento",
+            "format": "date-time"
+          },
+          "concepto": {
+            "type": "string",
+            "description": "Concepto del asiento"
+          },
+          "tipo": {
+            "type": "string",
+            "description": "Tipo de asiento",
+            "example": "MANUAL"
+          },
+          "referencia_tipo": {
+            "type": "string",
+            "description": "Tipo de referencia"
+          },
+          "referencia_id": {
+            "type": "string",
+            "description": "Id de referencia"
+          },
+          "moneda": {
+            "type": "string",
+            "description": "Moneda",
+            "example": "C$"
+          },
+          "estado": {
+            "type": "string",
+            "description": "Estado del asiento",
+            "example": "registrado"
+          },
+          "creado_por": {
+            "type": "string",
+            "description": "Usuario que creó el asiento"
+          },
+          "creado_en": {
+            "type": "string",
+            "description": "Fecha de creación (ISO 8601 UTC)",
+            "format": "date-time"
+          },
+          "debe_cents": {
+            "type": "number",
+            "description": "Total débito en centavos",
+            "example": 115000
+          },
+          "haber_cents": {
+            "type": "number",
+            "description": "Total crédito en centavos",
+            "example": 115000
+          },
+          "detalles": {
+            "description": "Detalles del asiento",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/DetalleAsientoResponseDto"
+            }
+          }
+        },
+        "required": [
+          "id",
+          "fecha",
+          "concepto",
+          "tipo",
+          "moneda",
+          "estado",
+          "creado_en",
+          "debe_cents",
+          "haber_cents",
+          "detalles"
+        ]
+      },
+      "DetalleAsientoRequestDto": {
+        "type": "object",
+        "properties": {
+          "cuenta_codigo": {
+            "type": "string",
+            "description": "Código de cuenta contable"
+          },
+          "debe_cents": {
+            "type": "number",
+            "description": "Débito en centavos",
+            "minimum": 0
+          },
+          "haber_cents": {
+            "type": "number",
+            "description": "Crédito en centavos",
+            "minimum": 0
+          },
+          "concepto": {
+            "type": "string",
+            "description": "Concepto del detalle"
+          },
+          "orden": {
+            "type": "number",
+            "description": "Orden del detalle"
+          }
+        },
+        "required": [
+          "cuenta_codigo",
+          "debe_cents",
+          "haber_cents"
+        ]
+      },
+      "CrearAsientoRequestDto": {
+        "type": "object",
+        "properties": {
+          "concepto": {
+            "type": "string",
+            "description": "Concepto del asiento",
+            "minLength": 3
+          },
+          "fecha": {
+            "type": "string",
+            "description": "Fecha (ISO 8601)"
+          },
+          "tipo": {
+            "type": "string",
+            "description": "Tipo de asiento",
+            "enum": [
+              "INGRESO",
+              "EGRESO",
+              "AJUSTE",
+              "CIERRE",
+              "APERTURA",
+              "MANUAL"
+            ]
+          },
+          "referencia_tipo": {
+            "type": "string",
+            "description": "Tipo de referencia"
+          },
+          "referencia_id": {
+            "type": "string",
+            "description": "Id de referencia"
+          },
+          "detalles": {
+            "description": "Detalles del asiento (mínimo 2)",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/DetalleAsientoRequestDto"
+            }
+          }
+        },
+        "required": [
+          "concepto",
+          "detalles"
+        ]
+      },
+      "LibroMayorResponseDto": {
+        "type": "object",
+        "properties": {
+          "cuenta": {
+            "description": "Cuenta contable",
+            "nullable": true,
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/CuentaResponseDto"
+              }
+            ]
+          },
+          "saldo_inicial_cents": {
+            "type": "number",
+            "description": "Saldo inicial en centavos",
+            "example": 100000
+          },
+          "saldo_final_cents": {
+            "type": "number",
+            "description": "Saldo final en centavos",
+            "example": 215000
+          },
+          "movimientos": {
+            "description": "Movimientos del periodo",
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          }
+        },
+        "required": [
+          "cuenta",
+          "saldo_inicial_cents",
+          "saldo_final_cents",
+          "movimientos"
+        ]
+      },
+      "LibroIvaResponseDto": {
+        "type": "object",
+        "properties": {
+          "periodo": {
+            "type": "string",
+            "description": "Periodo (YYYY-MM)",
+            "example": "2026-10"
+          },
+          "comprobantes": {
+            "type": "number",
+            "description": "Comprobantes del periodo",
+            "example": 12
+          },
+          "base_gravada_cents": {
+            "type": "number",
+            "description": "Base gravada en centavos",
+            "example": 1150000
+          },
+          "iva_cents": {
+            "type": "number",
+            "description": "IVA en centavos",
+            "example": 172500
+          },
+          "exento_cents": {
+            "type": "number",
+            "description": "Monto exento en centavos",
+            "example": 0
+          },
+          "total_cents": {
+            "type": "number",
+            "description": "Total en centavos",
+            "example": 1322500
+          }
+        },
+        "required": [
+          "periodo",
+          "comprobantes",
+          "base_gravada_cents",
+          "iva_cents",
+          "exento_cents",
+          "total_cents"
+        ]
+      },
+      "ComprobanteResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Id del comprobante",
+            "format": "uuid"
+          },
+          "serie": {
+            "type": "string",
+            "description": "Serie",
+            "example": "A"
+          },
+          "numero": {
+            "type": "string",
+            "description": "Número",
+            "example": "000001"
+          },
+          "tipo": {
+            "type": "string",
+            "description": "Tipo",
+            "enum": [
+              "FACTURA",
+              "NOTA_CREDITO"
+            ],
+            "example": "FACTURA"
+          },
+          "orden_id": {
+            "type": "string",
+            "description": "Id de la orden",
+            "format": "uuid"
+          },
+          "cliente_id": {
+            "type": "string",
+            "description": "Id del cliente"
+          },
+          "base_gravada_cents": {
+            "type": "number",
+            "description": "Base gravada en centavos",
+            "example": 1150000
+          },
+          "iva_cents": {
+            "type": "number",
+            "description": "IVA en centavos",
+            "example": 172500
+          },
+          "exento_cents": {
+            "type": "number",
+            "description": "Monto exento en centavos",
+            "example": 0
+          },
+          "total_cents": {
+            "type": "number",
+            "description": "Total en centavos",
+            "example": 1322500
+          },
+          "moneda": {
+            "type": "string",
+            "description": "Moneda",
+            "example": "C$"
+          },
+          "estado": {
+            "type": "string",
+            "description": "Estado",
+            "enum": [
+              "BORRADOR",
+              "EMITIDO",
+              "ANULADO"
+            ],
+            "example": "EMITIDO"
+          },
+          "datos_cliente": {
+            "type": "object",
+            "description": "Datos fiscales del cliente",
+            "nullable": true
+          },
+          "emitido_en": {
+            "type": "string",
+            "description": "Fecha de emisión",
+            "format": "date-time"
+          },
+          "creado_en": {
+            "type": "string",
+            "description": "Fecha de creación (ISO 8601 UTC)",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "serie",
+          "numero",
+          "tipo",
+          "base_gravada_cents",
+          "iva_cents",
+          "exento_cents",
+          "total_cents",
+          "moneda",
+          "estado",
+          "creado_en"
+        ]
+      },
+      "SerieComprobanteResponseDto": {
+        "type": "object",
+        "properties": {
+          "serie": {
+            "type": "string",
+            "description": "Serie",
+            "example": "A"
+          },
+          "tipo": {
+            "type": "string",
+            "description": "Tipo",
+            "enum": [
+              "FACTURA",
+              "NOTA_CREDITO"
+            ],
+            "example": "FACTURA"
+          },
+          "prefijo": {
+            "type": "string",
+            "description": "Prefijo",
+            "example": "FAC"
+          },
+          "secuencial_actual": {
+            "type": "number",
+            "description": "Secuencial actual",
+            "example": 12
+          },
+          "ruc_emisor": {
+            "type": "string",
+            "description": "RUC del emisor",
+            "example": "J0310000000000"
+          },
+          "jurisdiccion": {
+            "type": "string",
+            "description": "Jurisdicción",
+            "example": "NI"
+          },
+          "activa": {
+            "type": "boolean",
+            "description": "Serie activa",
+            "example": true
+          }
+        },
+        "required": [
+          "serie",
+          "tipo",
+          "prefijo",
+          "secuencial_actual",
+          "ruc_emisor",
+          "jurisdiccion",
+          "activa"
+        ]
+      },
+      "EmitirComprobanteRequestDto": {
+        "type": "object",
+        "properties": {
+          "tipo": {
+            "type": "string",
+            "description": "Tipo de comprobante",
+            "enum": [
+              "FACTURA",
+              "NOTA_CREDITO"
+            ]
+          },
+          "orden_id": {
+            "type": "string",
+            "description": "Id de la orden (UUID)"
+          },
+          "cliente_id": {
+            "type": "string",
+            "description": "Id del cliente"
+          },
+          "razon_social": {
+            "type": "string",
+            "description": "Razón social"
+          },
+          "ruc": {
+            "type": "string",
+            "description": "RUC"
+          }
+        },
+        "required": [
+          "tipo",
+          "orden_id"
+        ]
+      },
+      "JurisdiccionResponseDto": {
+        "type": "object",
+        "properties": {
+          "codigo_pais": {
+            "type": "string",
+            "description": "Código ISO del país",
+            "example": "NI"
+          },
+          "nombre": {
+            "type": "string",
+            "description": "Nombre de la jurisdicción",
+            "example": "Nicaragua"
+          },
+          "moneda": {
+            "type": "string",
+            "description": "Moneda",
+            "example": "NIO"
+          },
+          "simbolo_moneda": {
+            "type": "string",
+            "description": "Símbolo de la moneda",
+            "example": "C$"
+          },
+          "tasa_iva": {
+            "type": "number",
+            "description": "Tasa de IVA (0–1)",
+            "example": 0.15
+          },
+          "tasa_ir": {
+            "type": "number",
+            "description": "Tasa de IR (0–1)",
+            "example": 0.3
+          },
+          "periodicidad_declaracion": {
+            "type": "string",
+            "description": "Periodicidad de declaración",
+            "example": "MENSUAL"
+          },
+          "leyes": {
+            "type": "object",
+            "description": "Leyes aplicables (clave→texto)",
+            "additionalProperties": {
+              "type": "string"
+            }
+          },
+          "activa": {
+            "type": "boolean",
+            "description": "Jurisdicción activa",
+            "example": true
+          }
+        },
+        "required": [
+          "codigo_pais",
+          "nombre",
+          "moneda",
+          "simbolo_moneda",
+          "tasa_iva",
+          "tasa_ir",
+          "periodicidad_declaracion",
+          "leyes",
+          "activa"
+        ]
+      },
+      "CrearJurisdiccionRequestDto": {
+        "type": "object",
+        "properties": {
+          "codigo_pais": {
+            "type": "string",
+            "description": "Código de país (ISO)",
+            "minLength": 2
+          },
+          "nombre": {
+            "type": "string",
+            "description": "Nombre de la jurisdicción"
+          },
+          "moneda": {
+            "type": "string",
+            "description": "Moneda"
+          },
+          "simbolo_moneda": {
+            "type": "string",
+            "description": "Símbolo de la moneda"
+          },
+          "tasa_iva_por_mil": {
+            "type": "number",
+            "description": "Tasa de IVA por mil",
+            "minimum": 0
+          },
+          "tasa_ir_por_mil": {
+            "type": "number",
+            "description": "Tasa de IR por mil",
+            "minimum": 0
+          },
+          "periodicidad_declaracion": {
+            "type": "string",
+            "description": "Periodicidad de declaración"
+          },
+          "leyes": {
+            "type": "object",
+            "description": "Leyes aplicables (clave→texto)"
+          }
+        },
+        "required": [
+          "codigo_pais",
+          "nombre",
+          "moneda",
+          "simbolo_moneda",
+          "tasa_iva_por_mil",
+          "tasa_ir_por_mil"
+        ]
+      },
+      "RegimenFiscalResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Id del régimen",
+            "format": "uuid"
+          },
+          "jurisdiccion": {
+            "type": "string",
+            "description": "Jurisdicción",
+            "example": "NI"
+          },
+          "codigo": {
+            "type": "string",
+            "description": "Código del régimen",
+            "example": "CUOTA_FIJA"
+          },
+          "nombre": {
+            "type": "string",
+            "description": "Nombre del régimen",
+            "example": "Cuota Fija"
+          },
+          "descripcion": {
+            "type": "string",
+            "description": "Descripción"
+          },
+          "periodicidad": {
+            "type": "string",
+            "description": "Periodicidad",
+            "example": "MENSUAL"
+          },
+          "condicion_ingresos_anuales_cents": {
+            "type": "number",
+            "description": "Condición de ingresos anuales en centavos"
+          },
+          "estado": {
+            "type": "string",
+            "description": "Estado",
+            "enum": [
+              "activo",
+              "inactivo"
+            ],
+            "example": "activo"
+          }
+        },
+        "required": [
+          "id",
+          "jurisdiccion",
+          "codigo",
+          "nombre",
+          "descripcion",
+          "periodicidad",
+          "estado"
+        ]
+      },
+      "CrearRegimenRequestDto": {
+        "type": "object",
+        "properties": {
+          "jurisdiccion": {
+            "type": "string",
+            "description": "Jurisdicción",
+            "minLength": 2
+          },
+          "codigo": {
+            "type": "string",
+            "description": "Código del régimen"
+          },
+          "nombre": {
+            "type": "string",
+            "description": "Nombre del régimen"
+          },
+          "descripcion": {
+            "type": "string",
+            "description": "Descripción"
+          },
+          "periodicidad": {
+            "type": "string",
+            "description": "Periodicidad"
+          },
+          "condicion_ingresos_anuales_cents": {
+            "type": "number",
+            "description": "Condición de ingresos anuales (centavos)"
+          }
+        },
+        "required": [
+          "jurisdiccion",
+          "codigo",
+          "nombre"
+        ]
+      },
+      "RegistrarSujetoRequestDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Id del sujeto (UUID)"
+          },
+          "jurisdiccion": {
+            "type": "string",
+            "description": "Jurisdicción"
+          },
+          "regimen_id": {
+            "type": "string",
+            "description": "Id del régimen (UUID)"
+          },
+          "razon_social": {
+            "type": "string",
+            "description": "Razón social"
+          },
+          "ruc": {
+            "type": "string",
+            "description": "RUC"
+          },
+          "es_plataforma": {
+            "type": "boolean",
+            "description": "¿Es la plataforma?"
+          }
+        },
+        "required": [
+          "id",
+          "razon_social"
+        ]
+      },
+      "GenerarDeclaracionesRequestDto": {
+        "type": "object",
+        "properties": {
+          "tipo": {
+            "type": "string",
+            "description": "Tipo de declaración",
+            "enum": [
+              "IVA",
+              "IR",
+              "CUOTA_FIJA"
+            ]
+          },
+          "inicio": {
+            "type": "string",
+            "description": "Inicio del periodo"
+          },
+          "fin": {
+            "type": "string",
+            "description": "Fin del periodo"
+          }
+        }
+      },
+      "SupuestosRequestDto": {
+        "type": "object",
+        "properties": {
+          "horizonte_meses": {
+            "type": "number",
+            "description": "Horizonte en meses (1-60)",
+            "minimum": 1,
+            "maximum": 60
+          },
+          "vendedores_iniciales": {
+            "type": "number",
+            "description": "Vendedores iniciales",
+            "minimum": 1
+          },
+          "entrada_vendedores_mes": {
+            "type": "number",
+            "description": "Entrada de vendedores por mes",
+            "minimum": 0
+          },
+          "churn_tasa": {
+            "type": "number",
+            "description": "Tasa de churn (0-1)",
+            "minimum": 0,
+            "maximum": 1
+          },
+          "pedidos_por_vendedor": {
+            "description": "Pedidos por vendedor por mes",
+            "type": "array",
+            "items": {
+              "type": "number"
+            }
+          },
+          "ticket_promedio_cents": {
+            "type": "number",
+            "description": "Ticket promedio en centavos",
+            "minimum": 1
+          },
+          "comision_tasa": {
+            "type": "number",
+            "description": "Tasa de comisión (0-1)",
+            "minimum": 0,
+            "maximum": 1
+          },
+          "costos_fijos_cents": {
+            "type": "number",
+            "description": "Costos fijos en centavos",
+            "minimum": 0
+          },
+          "costos_fijos_desde_mes7_cents": {
+            "type": "number",
+            "description": "Costos fijos desde el mes 7 en centavos",
+            "minimum": 0
+          },
+          "inversion_inicial_cents": {
+            "type": "number",
+            "description": "Inversión inicial en centavos",
+            "minimum": 0
+          },
+          "tasa_descuento_mensual": {
+            "type": "number",
+            "description": "Tasa de descuento mensual",
+            "minimum": 0
+          }
+        },
+        "required": [
+          "horizonte_meses",
+          "vendedores_iniciales",
+          "entrada_vendedores_mes",
+          "churn_tasa",
+          "pedidos_por_vendedor",
+          "ticket_promedio_cents",
+          "comision_tasa",
+          "costos_fijos_cents",
+          "inversion_inicial_cents"
+        ]
+      },
+      "CrearProyeccionRequestDto": {
+        "type": "object",
+        "properties": {
+          "nombre": {
+            "type": "string",
+            "description": "Nombre de la proyección",
+            "minLength": 3
+          },
+          "supuestos": {
+            "description": "Supuestos del modelo",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/SupuestosRequestDto"
+              }
+            ]
+          }
+        },
+        "required": [
+          "nombre",
+          "supuestos"
+        ]
+      },
+      "SupuestosProyeccionResponseDto": {
+        "type": "object",
+        "properties": {
+          "horizonte_meses": {
+            "type": "number",
+            "example": 12
+          },
+          "vendedores_iniciales": {
+            "type": "number",
+            "example": 20
+          },
+          "entrada_vendedores_mes": {
+            "type": "number",
+            "example": 5
+          },
+          "churn_tasa": {
+            "type": "number",
+            "example": 0
+          },
+          "pedidos_por_vendedor": {
+            "example": [
+              25,
+              27,
+              29,
+              31,
+              33,
+              35,
+              37,
+              38,
+              39,
+              40,
+              41,
+              42
+            ],
+            "type": "array",
+            "items": {
+              "type": "number"
+            }
+          },
+          "ticket_promedio_cents": {
+            "type": "number",
+            "example": 45000
+          },
+          "comision_tasa": {
+            "type": "number",
+            "example": 0.12
+          },
+          "costos_fijos_cents": {
+            "type": "number",
+            "example": 200000
+          },
+          "costos_fijos_desde_mes7_cents": {
+            "type": "number",
+            "example": 300000
+          },
+          "inversion_inicial_cents": {
+            "type": "number",
+            "example": 5850000
+          },
+          "tasa_descuento_mensual": {
+            "type": "number",
+            "example": 0.015
+          }
+        },
+        "required": [
+          "horizonte_meses",
+          "vendedores_iniciales",
+          "entrada_vendedores_mes",
+          "churn_tasa",
+          "pedidos_por_vendedor",
+          "ticket_promedio_cents",
+          "comision_tasa",
+          "costos_fijos_cents",
+          "inversion_inicial_cents"
+        ]
+      },
+      "FilaProyeccionResponseDto": {
+        "type": "object",
+        "properties": {
+          "mes": {
+            "type": "number"
+          },
+          "vendedores": {
+            "type": "number"
+          },
+          "pedidos": {
+            "type": "number"
+          },
+          "gmv_cents": {
+            "type": "number"
+          },
+          "ingresos_cents": {
+            "type": "number"
+          },
+          "costos_cents": {
+            "type": "number"
+          },
+          "flujo_cents": {
+            "type": "number"
+          },
+          "flujo_acumulado_cents": {
+            "type": "number"
+          },
+          "costo_fijo_por_pedido_cents": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "mes",
+          "vendedores",
+          "pedidos",
+          "gmv_cents",
+          "ingresos_cents",
+          "costos_cents",
+          "flujo_cents",
+          "flujo_acumulado_cents",
+          "costo_fijo_por_pedido_cents"
+        ]
+      },
+      "TotalesProyeccionResponseDto": {
+        "type": "object",
+        "properties": {
+          "gmv_cents": {
+            "type": "number"
+          },
+          "ingresos_cents": {
+            "type": "number"
+          },
+          "costos_cents": {
+            "type": "number"
+          },
+          "flujo_cents": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "gmv_cents",
+          "ingresos_cents",
+          "costos_cents",
+          "flujo_cents"
+        ]
+      },
+      "EscenarioEquilibrioResponseDto": {
+        "type": "object",
+        "properties": {
+          "escenario": {
+            "type": "string",
+            "enum": [
+              "bajo",
+              "medio",
+              "alto"
+            ]
+          },
+          "costo_variable_por_pedido_cents": {
+            "type": "number"
+          },
+          "contribucion_por_pedido_cents": {
+            "type": "number"
+          },
+          "pedidos_equilibrio": {
+            "type": "number"
+          },
+          "gmv_equilibrio_cents": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "escenario",
+          "costo_variable_por_pedido_cents",
+          "contribucion_por_pedido_cents",
+          "pedidos_equilibrio",
+          "gmv_equilibrio_cents"
+        ]
+      },
+      "MargenSeguridadResponseDto": {
+        "type": "object",
+        "properties": {
+          "mes": {
+            "type": "number"
+          },
+          "gmv_cents": {
+            "type": "number"
+          },
+          "margen_seguridad": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "mes",
+          "gmv_cents",
+          "margen_seguridad"
+        ]
+      },
+      "CoberturaPorVendedorResponseDto": {
+        "type": "object",
+        "properties": {
+          "pedidos_por_vendedor_mes": {
+            "type": "number"
+          },
+          "comision_por_pedido_cents": {
+            "type": "number"
+          },
+          "comision_bruta_vendedor_cents": {
+            "type": "number"
+          },
+          "contribucion_media_cents": {
+            "type": "number"
+          },
+          "vendedores_para_cubrir_costos": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "pedidos_por_vendedor_mes",
+          "comision_por_pedido_cents",
+          "comision_bruta_vendedor_cents",
+          "contribucion_media_cents",
+          "vendedores_para_cubrir_costos"
+        ]
+      },
+      "EconomiaDeEscalaResponseDto": {
+        "type": "object",
+        "properties": {
+          "costo_fijo_por_pedido_inicio_cents": {
+            "type": "number"
+          },
+          "costo_fijo_por_pedido_mes6_cents": {
+            "type": "number"
+          },
+          "costo_fijo_por_pedido_fin_cents": {
+            "type": "number"
+          },
+          "multiplicador_escala": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "costo_fijo_por_pedido_inicio_cents",
+          "costo_fijo_por_pedido_mes6_cents",
+          "costo_fijo_por_pedido_fin_cents",
+          "multiplicador_escala"
+        ]
+      },
+      "IndicadoresProyeccionResponseDto": {
+        "type": "object",
+        "properties": {
+          "payback_mes": {
+            "type": "object",
+            "nullable": true
+          },
+          "van_cents": {
+            "type": "number"
+          },
+          "tir_mensual": {
+            "type": "object",
+            "nullable": true
+          },
+          "tir_anual": {
+            "type": "object",
+            "nullable": true
+          },
+          "tir_no_estable": {
+            "type": "boolean"
+          },
+          "roi": {
+            "type": "number"
+          },
+          "margen_neto": {
+            "type": "number"
+          },
+          "punto_equilibrio_caja_cents": {
+            "type": "number"
+          },
+          "pedidos_equilibrio_caja": {
+            "type": "number"
+          },
+          "escenarios_equilibrio": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/EscenarioEquilibrioResponseDto"
+            }
+          },
+          "margen_seguridad_por_mes": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/MargenSeguridadResponseDto"
+            }
+          },
+          "cobertura_por_vendedor": {
+            "$ref": "#/components/schemas/CoberturaPorVendedorResponseDto"
+          },
+          "economia_de_escala": {
+            "$ref": "#/components/schemas/EconomiaDeEscalaResponseDto"
+          }
+        },
+        "required": [
+          "payback_mes",
+          "van_cents",
+          "tir_mensual",
+          "tir_anual",
+          "tir_no_estable",
+          "roi",
+          "margen_neto",
+          "punto_equilibrio_caja_cents",
+          "pedidos_equilibrio_caja",
+          "escenarios_equilibrio",
+          "margen_seguridad_por_mes",
+          "cobertura_por_vendedor",
+          "economia_de_escala"
+        ]
+      },
+      "ProyeccionResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "nombre": {
+            "type": "string"
+          },
+          "horizonte_meses": {
+            "type": "number"
+          },
+          "supuestos": {
+            "$ref": "#/components/schemas/SupuestosProyeccionResponseDto"
+          },
+          "filas": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/FilaProyeccionResponseDto"
+            }
+          },
+          "totales": {
+            "$ref": "#/components/schemas/TotalesProyeccionResponseDto"
+          },
+          "inversion_inicial_cents": {
+            "type": "number"
+          },
+          "indicadores": {
+            "$ref": "#/components/schemas/IndicadoresProyeccionResponseDto"
+          },
+          "creado_en": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "nombre",
+          "horizonte_meses",
+          "supuestos",
+          "filas",
+          "totales",
+          "inversion_inicial_cents",
+          "indicadores",
+          "creado_en"
+        ]
+      },
+      "PuntoEquilibrioResponseDto": {
+        "type": "object",
+        "properties": {
+          "punto_equilibrio_caja_cents": {
+            "type": "number"
+          },
+          "pedidos_equilibrio_caja": {
+            "type": "number"
+          },
+          "escenarios_equilibrio": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/EscenarioEquilibrioResponseDto"
+            }
+          },
+          "margen_seguridad_por_mes": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/MargenSeguridadResponseDto"
+            }
+          }
+        },
+        "required": [
+          "punto_equilibrio_caja_cents",
+          "pedidos_equilibrio_caja",
+          "escenarios_equilibrio",
+          "margen_seguridad_por_mes"
+        ]
+      },
+      "KpisFinancierosResponseDto": {
+        "type": "object",
+        "properties": {
+          "periodo": {
+            "type": "string"
+          },
+          "gmv_cents": {
+            "type": "number"
+          },
+          "gmv": {
+            "type": "string"
+          },
+          "pedidos_pagados": {
+            "type": "number"
+          },
+          "pedidos_entregados": {
+            "type": "number"
+          },
+          "ingresos_comisiones_cents": {
+            "type": "number"
+          },
+          "ingresos_comisiones": {
+            "type": "string"
+          },
+          "devoluciones": {
+            "type": "number"
+          },
+          "vendedores_activos": {
+            "type": "number"
+          },
+          "pedidos_por_vendedor": {
+            "type": "number"
+          },
+          "activacion_primeros_15_dias": {
+            "type": "object",
+            "nullable": true
+          },
+          "tasa_devoluciones": {
+            "type": "number"
+          },
+          "churn_mensual": {
+            "type": "number"
+          },
+          "conversion_carrito_checkout": {
+            "type": "object",
+            "nullable": true
+          },
+          "liquidacion_a_tiempo": {
+            "type": "object",
+            "nullable": true
+          }
+        },
+        "required": [
+          "periodo",
+          "gmv_cents",
+          "gmv",
+          "pedidos_pagados",
+          "pedidos_entregados",
+          "ingresos_comisiones_cents",
+          "ingresos_comisiones",
+          "devoluciones",
+          "vendedores_activos",
+          "pedidos_por_vendedor",
+          "activacion_primeros_15_dias",
+          "tasa_devoluciones",
+          "churn_mensual",
+          "conversion_carrito_checkout",
+          "liquidacion_a_tiempo"
+        ]
+      },
+      "FlujoVariacionGmvResponseDto": {
+        "type": "object",
+        "properties": {
+          "variacion_gmv": {
+            "type": "number"
+          },
+          "flujo_cents": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "variacion_gmv",
+          "flujo_cents"
+        ]
+      },
+      "SensibilidadComisionGmvResponseDto": {
+        "type": "object",
+        "properties": {
+          "tasa_comision": {
+            "type": "number"
+          },
+          "flujo_mes12_cents": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/FlujoVariacionGmvResponseDto"
+            }
+          }
+        },
+        "required": [
+          "tasa_comision",
+          "flujo_mes12_cents"
+        ]
+      },
+      "SensibilidadVanResponseDto": {
+        "type": "object",
+        "properties": {
+          "tasa_anual": {
+            "type": "number"
+          },
+          "tasa_mensual": {
+            "type": "number"
+          },
+          "van_cents": {
+            "type": "number"
+          },
+          "relacion_van_inversion": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "tasa_anual",
+          "tasa_mensual",
+          "van_cents",
+          "relacion_van_inversion"
+        ]
+      },
+      "PaybackPorEscenarioResponseDto": {
+        "type": "object",
+        "properties": {
+          "escenario": {
+            "type": "string",
+            "enum": [
+              "base",
+              "pesimista",
+              "peor_combinado"
+            ]
+          },
+          "descripcion": {
+            "type": "string"
+          },
+          "flujo_acumulado_cents": {
+            "type": "number"
+          },
+          "payback_mes": {
+            "type": "object",
+            "nullable": true
+          }
+        },
+        "required": [
+          "escenario",
+          "descripcion",
+          "flujo_acumulado_cents",
+          "payback_mes"
+        ]
+      },
+      "SensibilidadEstudiosResponseDto": {
+        "type": "object",
+        "properties": {
+          "supuestos": {
+            "$ref": "#/components/schemas/SupuestosProyeccionResponseDto"
+          },
+          "matriz_comision_gmv": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SensibilidadComisionGmvResponseDto"
+            }
+          },
+          "van_por_tasa": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SensibilidadVanResponseDto"
+            }
+          },
+          "payback_por_escenario": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PaybackPorEscenarioResponseDto"
+            }
+          },
+          "cobertura_por_vendedor": {
+            "$ref": "#/components/schemas/CoberturaPorVendedorResponseDto"
+          }
+        },
+        "required": [
+          "supuestos",
+          "matriz_comision_gmv",
+          "van_por_tasa",
+          "payback_por_escenario",
+          "cobertura_por_vendedor"
+        ]
+      },
+      "ResumenAnualResponseDto": {
+        "type": "object",
+        "properties": {
+          "anio": {
+            "type": "number"
+          },
+          "gmv_cents": {
+            "type": "number"
+          },
+          "ingresos_cents": {
+            "type": "number"
+          },
+          "costos_cents": {
+            "type": "number"
+          },
+          "flujo_cents": {
+            "type": "number"
+          },
+          "margen_neto": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "anio",
+          "gmv_cents",
+          "ingresos_cents",
+          "costos_cents",
+          "flujo_cents",
+          "margen_neto"
+        ]
+      },
+      "Acumulado24MesesResponseDto": {
+        "type": "object",
+        "properties": {
+          "gmv_cents": {
+            "type": "number"
+          },
+          "ingresos_cents": {
+            "type": "number"
+          },
+          "costos_cents": {
+            "type": "number"
+          },
+          "flujo_cents": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "gmv_cents",
+          "ingresos_cents",
+          "costos_cents",
+          "flujo_cents"
+        ]
+      },
+      "Mes24ResponseDto": {
+        "type": "object",
+        "properties": {
+          "gmv_cents": {
+            "type": "number"
+          },
+          "incremento_vs_mes12": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "gmv_cents",
+          "incremento_vs_mes12"
+        ]
+      },
+      "PlanBienalResponseDto": {
+        "type": "object",
+        "properties": {
+          "inversion_inicial_cents": {
+            "type": "number"
+          },
+          "anios": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ResumenAnualResponseDto"
+            }
+          },
+          "filas": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/FilaProyeccionResponseDto"
+            }
+          },
+          "acumulado_24_meses": {
+            "$ref": "#/components/schemas/Acumulado24MesesResponseDto"
+          },
+          "roi": {
+            "type": "number"
+          },
+          "mes_24": {
+            "$ref": "#/components/schemas/Mes24ResponseDto"
+          },
+          "indicadores": {
+            "$ref": "#/components/schemas/IndicadoresProyeccionResponseDto"
+          }
+        },
+        "required": [
+          "inversion_inicial_cents",
+          "anios",
+          "filas",
+          "acumulado_24_meses",
+          "roi",
+          "mes_24",
+          "indicadores"
+        ]
+      },
+      "TableroAlertaResponseDto": {
+        "type": "object",
+        "properties": {
+          "capa": {
+            "type": "string"
+          },
+          "frecuencia": {
+            "type": "string"
+          },
+          "indicador": {
+            "type": "string"
+          },
+          "estado": {
+            "type": "string",
+            "enum": [
+              "OK",
+              "ALERTA",
+              "SIN_DATO"
+            ]
+          },
+          "umbral": {
+            "type": "string"
+          },
+          "valor": {
+            "type": "object",
+            "nullable": true
+          },
+          "accion": {
+            "type": "string"
+          },
+          "detalle": {
+            "type": "string"
+          },
+          "fecha_esperada": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "capa",
+          "frecuencia",
+          "indicador",
+          "estado",
+          "umbral",
+          "valor",
+          "accion",
+          "fecha_esperada"
+        ]
+      },
+      "TableroResponseDto": {
+        "type": "object",
+        "properties": {
+          "periodo": {
+            "type": "string"
+          },
+          "kpis": {
+            "$ref": "#/components/schemas/KpisFinancierosResponseDto"
+          },
+          "alertas": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/TableroAlertaResponseDto"
+            }
+          }
+        },
+        "required": [
+          "periodo",
+          "kpis",
+          "alertas"
+        ]
+      },
+      "ResumenVendedorResponseDto": {
+        "type": "object",
+        "properties": {
+          "vendedor_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "periodo": {
+            "type": "string"
+          },
+          "ventas": {
+            "type": "number"
+          },
+          "monto_cents": {
+            "type": "number"
+          },
+          "comision_cents": {
+            "type": "number"
+          },
+          "devoluciones": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "vendedor_id",
+          "periodo",
+          "ventas",
+          "monto_cents",
+          "comision_cents",
+          "devoluciones"
+        ]
+      },
+      "VendedorFiscalResponseDto": {
+        "type": "object",
+        "properties": {
+          "sujeto_fiscal": {
+            "nullable": true,
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/SujetoTributarioResponseDto"
+              }
+            ]
+          },
+          "resumen_comisiones": {
+            "nullable": true,
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/ResumenVendedorResponseDto"
+              }
+            ]
+          },
+          "nota": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "sujeto_fiscal",
+          "resumen_comisiones",
+          "nota"
+        ]
+      },
+      "UsuarioResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Id del usuario",
+            "format": "uuid"
+          },
+          "nombre": {
+            "type": "string",
+            "description": "Nombre del usuario"
+          },
+          "correo": {
+            "type": "string",
+            "description": "Correo del usuario",
+            "format": "email"
+          },
+          "rol": {
+            "type": "string",
+            "description": "Rol del usuario",
+            "enum": [
+              "admin",
+              "vendedor",
+              "comprador",
+              "logistica",
+              "coordinador",
+              "supervisor",
+              "operativo"
+            ],
+            "example": "vendedor"
+          },
+          "tenant_id": {
+            "type": "string",
+            "description": "Tenant del usuario",
+            "format": "uuid"
+          },
+          "personal_id": {
+            "type": "string",
+            "description": "Ficha de personal vinculada",
+            "format": "uuid"
+          },
+          "creado_en": {
+            "type": "string",
+            "description": "Fecha de creación (ISO 8601 UTC)",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "nombre",
+          "correo",
+          "rol",
+          "creado_en"
+        ]
+      },
+      "ContarVendedoresResponseDto": {
+        "type": "object",
+        "properties": {
+          "vendedores": {
+            "type": "number",
+            "description": "Cantidad de usuarios con rol vendedor",
+            "example": 12
+          }
+        },
+        "required": [
+          "vendedores"
+        ]
+      },
+      "EmpresaResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "nombre": {
+            "type": "string"
+          },
+          "modalidad_logistica": {
+            "type": "string",
+            "enum": [
+              "plataforma",
+              "propia",
+              "hibrida"
+            ]
+          },
+          "estado": {
+            "type": "string"
+          },
+          "creado_por": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "creado_en": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "nombre",
+          "modalidad_logistica",
+          "estado",
+          "creado_por",
+          "creado_en"
+        ]
+      },
+      "RegistroRequestDto": {
+        "type": "object",
+        "properties": {
+          "nombre": {
+            "type": "string",
+            "description": "Nombre completo",
+            "minLength": 2,
+            "maxLength": 120,
+            "example": "Ana Pérez"
+          },
+          "correo": {
+            "type": "string",
+            "description": "Correo electrónico",
+            "example": "ana@tienda.test"
+          },
+          "contrasena": {
+            "type": "string",
+            "description": "Contraseña (mínimo 8 caracteres)",
+            "minLength": 8
+          },
+          "rol": {
+            "type": "string",
+            "description": "Rol registrable",
+            "enum": [
+              "empresario",
+              "comprador"
+            ],
+            "example": "comprador"
+          }
+        },
+        "required": [
+          "nombre",
+          "correo",
+          "contrasena",
+          "rol"
+        ]
+      },
+      "SesionUsuarioResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Id del usuario",
+            "format": "uuid"
+          },
+          "nombre": {
+            "type": "string",
+            "description": "Nombre del usuario"
+          },
+          "correo": {
+            "type": "string",
+            "description": "Correo del usuario",
+            "format": "email"
+          },
+          "rol": {
+            "type": "string",
+            "description": "Rol del usuario",
+            "enum": [
+              "admin",
+              "vendedor",
+              "comprador",
+              "logistica",
+              "coordinador",
+              "supervisor",
+              "operativo"
+            ],
+            "example": "comprador"
+          },
+          "tenant_id": {
+            "type": "string",
+            "description": "Tenant del usuario",
+            "format": "uuid"
+          },
+          "personal_id": {
+            "type": "string",
+            "description": "Ficha de personal vinculada",
+            "format": "uuid"
+          }
+        },
+        "required": [
+          "id",
+          "nombre",
+          "correo",
+          "rol"
+        ]
+      },
+      "SesionResponseDto": {
+        "type": "object",
+        "properties": {
+          "access_token": {
+            "type": "string",
+            "description": "Access token JWT (HS256)",
+            "example": "eyJhbGciOiJIUzI1NiIs..."
+          },
+          "refresh_token": {
+            "type": "string",
+            "description": "Refresh token JWT",
+            "example": "eyJhbGciOiJIUzI1NiIs..."
+          },
+          "expira_en": {
+            "type": "number",
+            "description": "Vigencia del access token en segundos",
+            "example": 900
+          },
+          "usuario": {
+            "description": "Datos del usuario autenticado",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/SesionUsuarioResponseDto"
+              }
+            ]
+          }
+        },
+        "required": [
+          "access_token",
+          "refresh_token",
+          "expira_en",
+          "usuario"
+        ]
+      },
+      "LoginRequestDto": {
+        "type": "object",
+        "properties": {
+          "correo": {
+            "type": "string",
+            "description": "Correo electrónico",
+            "example": "ana@tienda.test"
+          },
+          "contrasena": {
+            "type": "string",
+            "description": "Contraseña",
+            "example": "secreto123"
+          }
+        },
+        "required": [
+          "correo",
+          "contrasena"
+        ]
+      },
+      "LogoutRequestDto": {
+        "type": "object",
+        "properties": {
+          "refresh_token": {
+            "type": "string",
+            "description": "Refresh token de la sesión a cerrar; si se omite, cierra todas"
+          }
+        }
+      },
+      "OkResponseDto": {
+        "type": "object",
+        "properties": {
+          "ok": {
+            "type": "boolean",
+            "description": "Operación completada",
+            "example": true
+          }
+        },
+        "required": [
+          "ok"
+        ]
+      },
+      "CrearUsuarioRequestDto": {
+        "type": "object",
+        "properties": {
+          "nombre": {
+            "type": "string",
+            "description": "Nombre completo",
+            "minLength": 2,
+            "maxLength": 120
+          },
+          "correo": {
+            "type": "string",
+            "description": "Correo electrónico"
+          },
+          "contrasena": {
+            "type": "string",
+            "description": "Contraseña (mínimo 8 caracteres)",
+            "minLength": 8
+          },
+          "rol": {
+            "type": "string",
+            "description": "Rol del usuario",
+            "enum": [
+              "empresario",
+              "comprador",
+              "admin",
+              "logistica",
+              "coordinador",
+              "supervisor",
+              "operativo"
+            ]
+          },
+          "tenant_id": {
+            "type": "string",
+            "description": "Tenant (organización); obligatorio para roles de logística"
+          },
+          "personal_id": {
+            "type": "string",
+            "description": "Id de la ficha de personal en field-service"
+          }
+        },
+        "required": [
+          "nombre",
+          "correo",
+          "contrasena",
+          "rol"
+        ]
+      },
+      "CambiarContrasenaRequestDto": {
+        "type": "object",
+        "properties": {
+          "actual": {
+            "type": "string",
+            "description": "Contraseña actual"
+          },
+          "nueva": {
+            "type": "string",
+            "description": "Contraseña nueva (mínimo 8 caracteres)",
+            "minLength": 8
+          }
+        },
+        "required": [
+          "actual",
+          "nueva"
+        ]
+      },
+      "RestablecerContrasenaRequestDto": {
+        "type": "object",
+        "properties": {
+          "correo": {
+            "type": "string",
+            "description": "Correo electrónico de la cuenta"
+          }
+        },
+        "required": [
+          "correo"
+        ]
+      },
+      "UsuarioContextoResponseDto": {
+        "type": "object",
+        "properties": {
+          "user_id": {
+            "type": "string",
+            "description": "Id del usuario autenticado",
+            "format": "uuid"
+          },
+          "email": {
+            "type": "string",
+            "description": "Correo del usuario",
+            "format": "email"
+          },
+          "rol": {
+            "type": "string",
+            "description": "Rol del usuario",
+            "enum": [
+              "admin",
+              "vendedor",
+              "comprador",
+              "logistica",
+              "coordinador",
+              "supervisor",
+              "operativo"
+            ],
+            "example": "admin"
+          },
+          "nombre": {
+            "type": "string",
+            "description": "Nombre del usuario"
+          },
+          "tenant_id": {
+            "type": "string",
+            "description": "Tenant del usuario",
+            "format": "uuid"
+          },
+          "personal_id": {
+            "type": "string",
+            "description": "Ficha de personal vinculada",
+            "format": "uuid"
+          }
+        },
+        "required": [
+          "user_id",
+          "email",
+          "rol"
+        ]
+      },
+      "VincularPersonalRequestDto": {
+        "type": "object",
+        "properties": {
+          "personal_id": {
+            "type": "string",
+            "description": "Id de la ficha de personal en field-service",
+            "minLength": 1,
+            "maxLength": 100
+          },
+          "nombre": {
+            "type": "string",
+            "description": "Nombre a reflejar en el perfil",
+            "maxLength": 120
+          }
+        },
+        "required": [
+          "personal_id"
+        ]
+      },
+      "CrearEmpresaRequestDto": {
+        "type": "object",
+        "properties": {
+          "nombre": {
+            "type": "string",
+            "minLength": 2,
+            "maxLength": 160
+          },
+          "modalidad_logistica": {
+            "type": "string",
+            "enum": [
+              "plataforma",
+              "propia",
+              "hibrida"
+            ]
+          }
+        },
+        "required": [
+          "nombre",
+          "modalidad_logistica"
+        ]
+      },
+      "ActualizarModalidadLogisticaRequestDto": {
+        "type": "object",
+        "properties": {
+          "modalidad_logistica": {
+            "type": "string",
+            "enum": [
+              "plataforma",
+              "propia",
+              "hibrida"
+            ]
+          }
+        },
+        "required": [
+          "modalidad_logistica"
+        ]
+      },
+      "CrearVendedorRequestDto": {
+        "type": "object",
+        "properties": {
+          "nombre": {
+            "type": "string"
+          },
+          "correo": {
+            "type": "string"
+          },
+          "contrasena": {
+            "type": "string",
+            "minLength": 8
+          },
+          "participacion_porcentaje": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 100
+          }
+        },
+        "required": [
+          "nombre",
+          "correo",
+          "contrasena",
+          "participacion_porcentaje"
+        ]
+      },
+      "VendedorEmpresaResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "nombre": {
+            "type": "string"
+          },
+          "correo": {
+            "type": "string"
+          },
+          "rol": {
+            "type": "string",
+            "enum": [
+              "vendedor"
+            ]
+          },
+          "participacion_porcentaje": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 100
+          }
+        },
+        "required": [
+          "id",
+          "nombre",
+          "correo",
+          "rol",
+          "participacion_porcentaje"
+        ]
+      },
+      "ItemOrdenResponseDto": {
+        "type": "object",
+        "properties": {
+          "oferta_id": {
+            "type": "string",
+            "description": "Id de la oferta",
+            "format": "uuid"
+          },
+          "sku": {
+            "type": "string",
+            "description": "SKU del producto",
+            "example": "SKU-001"
+          },
+          "producto_nombre": {
+            "type": "string",
+            "description": "Nombre del producto"
+          },
+          "cantidad": {
+            "type": "number",
+            "description": "Cantidad pedida",
+            "example": 2
+          },
+          "precio_unitario_cents": {
+            "type": "number",
+            "description": "Precio unitario de venta en centavos",
+            "example": 115000
+          },
+          "vendedor_id": {
+            "type": "string",
+            "description": "Id del vendedor",
+            "format": "uuid"
+          },
+          "tienda_id": {
+            "type": "string",
+            "description": "Id de la tienda",
+            "format": "uuid"
+          }
+        },
+        "required": [
+          "oferta_id",
+          "sku",
+          "producto_nombre",
+          "cantidad",
+          "precio_unitario_cents",
+          "vendedor_id",
+          "tienda_id"
+        ]
+      },
+      "OrderViewResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Id de la orden",
+            "format": "uuid"
+          },
+          "vendedor_id": {
+            "type": "string",
+            "description": "Id del vendedor",
+            "format": "uuid"
+          },
+          "comprador_id": {
+            "type": "string",
+            "description": "Id del comprador",
+            "format": "uuid"
+          },
+          "tienda_id": {
+            "type": "string",
+            "description": "Id de la tienda",
+            "format": "uuid"
+          },
+          "estado": {
+            "type": "string",
+            "description": "Estado de la orden",
+            "example": "pagada"
+          },
+          "total_cents": {
+            "type": "number",
+            "description": "Total en centavos",
+            "example": 230000
+          },
+          "comision_cents": {
+            "type": "number",
+            "description": "Comisión en centavos",
+            "example": 27600
+          },
+          "moneda": {
+            "type": "string",
+            "description": "Moneda",
+            "example": "C$"
+          },
+          "items": {
+            "description": "Líneas de la orden",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ItemOrdenResponseDto"
+            }
+          },
+          "direccion_envio": {
+            "type": "object",
+            "description": "Dirección de envío",
+            "nullable": true
+          },
+          "creado_en": {
+            "type": "string",
+            "description": "Fecha de creación (ISO 8601 UTC)",
+            "format": "date-time"
+          },
+          "actualizado_en": {
+            "type": "string",
+            "description": "Última actualización (ISO 8601 UTC)",
+            "format": "date-time"
+          },
+          "pagada_en": {
+            "type": "object",
+            "description": "Fecha de pago (ISO 8601 UTC)",
+            "nullable": true,
+            "format": "date-time"
+          },
+          "enviada_en": {
+            "type": "object",
+            "description": "Fecha de envío (ISO 8601 UTC)",
+            "nullable": true,
+            "format": "date-time"
+          },
+          "entregada_en": {
+            "type": "object",
+            "description": "Fecha de entrega (ISO 8601 UTC)",
+            "nullable": true,
+            "format": "date-time"
+          },
+          "cancelada_en": {
+            "type": "object",
+            "description": "Fecha de cancelación (ISO 8601 UTC)",
+            "nullable": true,
+            "format": "date-time"
+          },
+          "devuelta_en": {
+            "type": "object",
+            "description": "Fecha de devolución (ISO 8601 UTC)",
+            "nullable": true,
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "vendedor_id",
+          "comprador_id",
+          "tienda_id",
+          "estado",
+          "total_cents",
+          "comision_cents",
+          "moneda",
+          "items",
+          "creado_en",
+          "actualizado_en"
+        ]
+      },
+      "HistoriaEventoResponseDto": {
+        "type": "object",
+        "properties": {
+          "event_id": {
+            "type": "string",
+            "description": "Id del evento",
+            "format": "uuid"
+          },
+          "aggregate_id": {
+            "type": "string",
+            "description": "Id del agregado (orden)",
+            "format": "uuid"
+          },
+          "tipo": {
+            "type": "string",
+            "description": "Tipo de evento",
+            "example": "OrderCreatedEvent"
+          },
+          "payload": {
+            "type": "object",
+            "description": "Payload del evento"
+          },
+          "version": {
+            "type": "number",
+            "description": "Versión del agregado",
+            "example": 1
+          },
+          "creado_en": {
+            "type": "string",
+            "description": "Fecha del evento (ISO 8601 UTC)",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "event_id",
+          "aggregate_id",
+          "tipo",
+          "payload",
+          "version",
+          "creado_en"
+        ]
+      },
+      "ItemOrdenRequestDto": {
+        "type": "object",
+        "properties": {
+          "oferta_id": {
+            "type": "string",
+            "description": "Id de la oferta (vendedor-producto)"
+          },
+          "cantidad": {
+            "type": "number",
+            "description": "Cantidad (1-99)",
+            "minimum": 1,
+            "maximum": 99,
+            "example": 1
+          }
+        },
+        "required": [
+          "oferta_id",
+          "cantidad"
+        ]
+      },
+      "CreateOrderCommand": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "description": "Artículos de la orden",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ItemOrdenRequestDto"
+            }
+          },
+          "usar_carrito": {
+            "type": "boolean",
+            "description": "Crear la orden desde el carrito (RN-05)",
+            "example": false
+          }
+        }
+      },
+      "ComisionVistaResponseDto": {
+        "type": "object",
+        "properties": {
+          "vendedor_id": {
+            "type": "string",
+            "description": "Id del vendedor",
+            "format": "uuid"
+          },
+          "periodo": {
+            "type": "string",
+            "description": "Periodo (YYYY-MM)",
+            "example": "2026-10"
+          },
+          "ordenes": {
+            "type": "number",
+            "description": "Órdenes del periodo",
+            "example": 12
+          },
+          "total_ventas_cents": {
+            "type": "number",
+            "description": "Ventas del periodo en centavos",
+            "example": 1380000
+          },
+          "total_comision_cents": {
+            "type": "number",
+            "description": "Comisiones del periodo en centavos",
+            "example": 165600
+          },
+          "actualizado_en": {
+            "type": "string",
+            "description": "Última actualización (ISO 8601 UTC)",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "vendedor_id",
+          "periodo",
+          "ordenes",
+          "total_ventas_cents",
+          "total_comision_cents",
+          "actualizado_en"
+        ]
+      },
+      "TimelineEventoResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "number",
+            "description": "Secuencia del evento",
+            "example": 3
+          },
+          "tipo": {
+            "type": "string",
+            "description": "Tipo de evento",
+            "example": "OrderStatusUpdatedEvent"
+          },
+          "payload": {
+            "type": "object",
+            "description": "Payload del evento"
+          },
+          "version": {
+            "type": "number",
+            "description": "Versión del agregado",
+            "example": 3
+          },
+          "creado_en": {
+            "type": "string",
+            "description": "Fecha del evento (ISO 8601 UTC)",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "tipo",
+          "payload",
+          "version",
+          "creado_en"
+        ]
+      },
+      "CarritoItemResponseDto": {
+        "type": "object",
+        "properties": {
+          "oferta_id": {
+            "type": "string",
+            "description": "Id de la oferta",
+            "format": "uuid"
+          },
+          "cantidad": {
+            "type": "number",
+            "description": "Cantidad",
+            "example": 2
+          },
+          "id": {
+            "type": "string",
+            "description": "Id de la oferta (alias enriquecido)",
+            "format": "uuid"
+          },
+          "tienda_id": {
+            "type": "string",
+            "description": "Id de la tienda",
+            "format": "uuid"
+          },
+          "vendedor_id": {
+            "type": "string",
+            "description": "Id del vendedor",
+            "format": "uuid"
+          },
+          "sku": {
+            "type": "string",
+            "description": "SKU del producto",
+            "example": "SKU-001"
+          },
+          "producto_nombre": {
+            "type": "string",
+            "description": "Nombre del producto"
+          },
+          "precio_venta": {
+            "type": "string",
+            "description": "Precio de venta en córdobas con dos decimales",
+            "example": "1150.00"
+          },
+          "stock": {
+            "type": "number",
+            "description": "Stock disponible",
+            "example": 10
+          },
+          "estado": {
+            "type": "string",
+            "description": "Estado de la oferta",
+            "example": "activa"
+          }
+        },
+        "required": [
+          "oferta_id",
+          "cantidad",
+          "id",
+          "tienda_id",
+          "vendedor_id",
+          "sku",
+          "producto_nombre",
+          "precio_venta",
+          "stock",
+          "estado"
+        ]
+      },
+      "CarritoResponseDto": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "description": "Items del carrito",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CarritoItemResponseDto"
+            }
+          },
+          "total": {
+            "type": "string",
+            "description": "Total del carrito en córdobas con dos decimales",
+            "example": "2300.00"
+          },
+          "expira_en": {
+            "type": "object",
+            "description": "Expiración del carrito (ISO 8601 UTC); null si está vacío",
+            "nullable": true,
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "items",
+          "total"
+        ]
+      },
+      "AgregarItemRequestDto": {
+        "type": "object",
+        "properties": {
+          "oferta_id": {
+            "type": "string",
+            "description": "Id de la oferta (vendedor-producto)",
+            "example": "a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11"
+          },
+          "cantidad": {
+            "type": "number",
+            "description": "Cantidad (1-99)",
+            "minimum": 1,
+            "maximum": 99,
+            "example": 2
+          }
+        },
+        "required": [
+          "oferta_id",
+          "cantidad"
+        ]
+      },
+      "ActualizarCantidadRequestDto": {
+        "type": "object",
+        "properties": {
+          "cantidad": {
+            "type": "number",
+            "description": "Cantidad (0 elimina el item; 1-99)",
+            "minimum": 0,
+            "maximum": 99,
+            "example": 3
+          }
+        },
+        "required": [
+          "cantidad"
+        ]
+      },
+      "EstadoBucketResponseDto": {
+        "type": "object",
+        "properties": {
+          "tenant_id": {
+            "type": "string",
+            "description": "Id del tenant",
+            "format": "uuid"
+          },
+          "bucket": {
+            "type": "string",
+            "description": "Nombre del bucket S3",
+            "example": "t-00000000-0000-0000-0000-000000000000"
+          },
+          "cuota_bytes": {
+            "type": "number",
+            "description": "Cuota asignada en bytes",
+            "example": 5368709120
+          },
+          "usado_bytes": {
+            "type": "number",
+            "description": "Bytes usados",
+            "example": 204800
+          },
+          "disponible_bytes": {
+            "type": "number",
+            "description": "Bytes disponibles",
+            "example": 5368504320
+          },
+          "objetos": {
+            "type": "number",
+            "description": "Objetos activos",
+            "example": 12
+          },
+          "estado": {
+            "type": "string",
+            "description": "Estado del almacenamiento",
+            "enum": [
+              "activo",
+              "suspendido"
+            ],
+            "example": "activo"
+          },
+          "creado_en": {
+            "type": "string",
+            "description": "Fecha de creación (ISO 8601 UTC)",
+            "format": "date-time"
+          },
+          "actualizado_en": {
+            "type": "string",
+            "description": "Última actualización (ISO 8601 UTC)",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "tenant_id",
+          "bucket",
+          "cuota_bytes",
+          "usado_bytes",
+          "disponible_bytes",
+          "objetos",
+          "estado",
+          "creado_en",
+          "actualizado_en"
+        ]
+      },
+      "PaginaBucketsResponseDto": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "description": "Buckets de la página",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/EstadoBucketResponseDto"
+            }
+          },
+          "total": {
+            "type": "number",
+            "description": "Total de tenants con almacenamiento",
+            "example": 8
+          },
+          "pagina": {
+            "type": "number",
+            "description": "Página actual (1-based)",
+            "example": 1
+          },
+          "limite": {
+            "type": "number",
+            "description": "Tamaño de página",
+            "example": 20
+          },
+          "paginas": {
+            "type": "number",
+            "description": "Total de páginas",
+            "example": 1
+          }
+        },
+        "required": [
+          "items",
+          "total",
+          "pagina",
+          "limite",
+          "paginas"
+        ]
+      },
+      "ActualizarTenantRequestDto": {
+        "type": "object",
+        "properties": {
+          "cuota_bytes": {
+            "type": "number",
+            "description": "Nueva cuota en bytes"
+          },
+          "estado": {
+            "type": "string",
+            "description": "Estado del almacenamiento del tenant",
+            "enum": [
+              "activo",
+              "suspendido"
+            ]
+          }
+        }
+      },
+      "ObjetoStorageResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Id del objeto",
+            "format": "uuid"
+          },
+          "tenant_id": {
+            "type": "string",
+            "description": "Id del tenant dueño",
+            "format": "uuid"
+          },
+          "bucket": {
+            "type": "string",
+            "description": "Bucket S3",
+            "example": "t-00000000-0000-0000-0000-000000000000"
+          },
+          "objeto": {
+            "type": "string",
+            "description": "Clave del objeto en el bucket",
+            "example": "productos/foto.jpg"
+          },
+          "nombre": {
+            "type": "string",
+            "description": "Nombre original del archivo",
+            "example": "foto-producto.jpg"
+          },
+          "content_type": {
+            "type": "string",
+            "description": "Content-Type",
+            "example": "image/jpeg"
+          },
+          "carpeta": {
+            "type": "string",
+            "description": "Carpeta lógica",
+            "example": "productos"
+          },
+          "descripcion": {
+            "type": "string",
+            "description": "Descripción libre"
+          },
+          "etiquetas": {
+            "type": "object",
+            "description": "Etiquetas clave-valor",
+            "additionalProperties": {
+              "type": "string"
+            }
+          },
+          "tamano_bytes": {
+            "type": "number",
+            "description": "Tamaño en bytes",
+            "example": 204800
+          },
+          "etag": {
+            "type": "object",
+            "description": "ETag devuelto por MinIO",
+            "nullable": true
+          },
+          "estado": {
+            "type": "string",
+            "description": "Estado del objeto",
+            "enum": [
+              "pendiente",
+              "activo",
+              "eliminado"
+            ],
+            "example": "activo"
+          },
+          "subido_por": {
+            "type": "object",
+            "description": "Usuario que subió el objeto",
+            "nullable": true
+          },
+          "creado_en": {
+            "type": "string",
+            "description": "Fecha de creación (ISO 8601 UTC)",
+            "format": "date-time"
+          },
+          "confirmado_en": {
+            "type": "object",
+            "description": "Fecha de confirmación (ISO 8601 UTC)",
+            "nullable": true,
+            "format": "date-time"
+          },
+          "eliminado_en": {
+            "type": "object",
+            "description": "Fecha de eliminación lógica (ISO 8601 UTC)",
+            "nullable": true,
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "tenant_id",
+          "bucket",
+          "objeto",
+          "nombre",
+          "content_type",
+          "carpeta",
+          "descripcion",
+          "etiquetas",
+          "tamano_bytes",
+          "estado",
+          "creado_en"
+        ]
+      },
+      "ConfigurarBucketRequestDto": {
+        "type": "object",
+        "properties": {
+          "cuota_bytes": {
+            "type": "number",
+            "description": "Cuota del tenant en bytes (por defecto la del entorno)",
+            "example": 5368709120
+          }
+        }
+      },
+      "SolicitarSubidaRequestDto": {
+        "type": "object",
+        "properties": {
+          "nombre": {
+            "type": "string",
+            "description": "Nombre del archivo (sin rutas)",
+            "example": "foto-producto.jpg"
+          },
+          "content_type": {
+            "type": "string",
+            "description": "Content-Type del archivo (whitelist)",
+            "example": "image/jpeg"
+          },
+          "tamano_bytes": {
+            "type": "number",
+            "description": "Tamano en bytes que el cliente subira",
+            "example": 204800
+          },
+          "carpeta": {
+            "type": "string",
+            "description": "Carpeta logica dentro del bucket",
+            "example": "productos"
+          },
+          "descripcion": {
+            "type": "string",
+            "description": "Descripcion libre"
+          },
+          "etiquetas": {
+            "type": "object",
+            "description": "Etiquetas clave-valor (max 20)"
+          }
+        },
+        "required": [
+          "nombre",
+          "content_type",
+          "tamano_bytes"
+        ]
+      },
+      "SolicitudSubidaResponseDto": {
+        "type": "object",
+        "properties": {
+          "objeto_id": {
+            "type": "string",
+            "description": "Id del objeto pendiente",
+            "format": "uuid"
+          },
+          "bucket": {
+            "type": "string",
+            "description": "Bucket S3"
+          },
+          "objeto": {
+            "type": "string",
+            "description": "Clave del objeto en el bucket"
+          },
+          "url_subida": {
+            "type": "string",
+            "description": "URL prefirmada para el PUT directo",
+            "format": "uri"
+          },
+          "metodo": {
+            "type": "string",
+            "description": "Método HTTP de subida",
+            "enum": [
+              "PUT"
+            ],
+            "example": "PUT"
+          },
+          "headers": {
+            "type": "object",
+            "description": "Cabeceras que debe enviar el cliente",
+            "additionalProperties": {
+              "type": "string"
+            }
+          },
+          "expira_en": {
+            "type": "string",
+            "description": "Expiración de la URL (ISO 8601 UTC)",
+            "format": "date-time"
+          },
+          "max_bytes": {
+            "type": "number",
+            "description": "Tamaño máximo permitido en bytes",
+            "example": 204800
+          }
+        },
+        "required": [
+          "objeto_id",
+          "bucket",
+          "objeto",
+          "url_subida",
+          "metodo",
+          "headers",
+          "expira_en",
+          "max_bytes"
+        ]
+      },
+      "PaginaObjetosResponseDto": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "description": "Objetos de la página",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ObjetoStorageResponseDto"
+            }
+          },
+          "total": {
+            "type": "number",
+            "description": "Total de objetos",
+            "example": 12
+          },
+          "pagina": {
+            "type": "number",
+            "description": "Página actual (1-based)",
+            "example": 1
+          },
+          "limite": {
+            "type": "number",
+            "description": "Tamaño de página",
+            "example": 20
+          },
+          "paginas": {
+            "type": "number",
+            "description": "Total de páginas",
+            "example": 1
+          }
+        },
+        "required": [
+          "items",
+          "total",
+          "pagina",
+          "limite",
+          "paginas"
+        ]
+      },
+      "UrlDescargaResponseDto": {
+        "type": "object",
+        "properties": {
+          "url_descarga": {
+            "type": "string",
+            "description": "URL prefirmada de descarga",
+            "format": "uri"
+          },
+          "expira_en": {
+            "type": "string",
+            "description": "Expiración de la URL (ISO 8601 UTC)",
+            "format": "date-time"
+          },
+          "nombre": {
+            "type": "string",
+            "description": "Nombre original del archivo"
+          },
+          "content_type": {
+            "type": "string",
+            "description": "Content-Type",
+            "example": "image/jpeg"
+          },
+          "tamano_bytes": {
+            "type": "number",
+            "description": "Tamaño en bytes",
+            "example": 204800
+          }
+        },
+        "required": [
+          "url_descarga",
+          "expira_en",
+          "nombre",
+          "content_type",
+          "tamano_bytes"
+        ]
+      },
+      "OfertaResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Id de la oferta",
+            "format": "uuid"
+          },
+          "tienda_id": {
+            "type": "string",
+            "description": "Id de la tienda",
+            "format": "uuid"
+          },
+          "vendedor_id": {
+            "type": "string",
+            "description": "Id del vendedor",
+            "format": "uuid"
+          },
+          "empresa_id": {
+            "type": "string",
+            "description": "Empresa propietaria",
+            "format": "uuid"
+          },
+          "participacion_porcentaje": {
+            "type": "number",
+            "description": "Participación congelable del vendedor",
+            "minimum": 0,
+            "maximum": 100
+          },
+          "producto_id": {
+            "type": "string",
+            "description": "Id del producto maestro",
+            "format": "uuid"
+          },
+          "sku": {
+            "type": "string",
+            "description": "SKU del producto",
+            "example": "SKU-001"
+          },
+          "producto_nombre": {
+            "type": "string",
+            "description": "Nombre del producto"
+          },
+          "margen": {
+            "type": "number",
+            "description": "Margen aplicado (0–90)",
+            "example": 15
+          },
+          "precio_base": {
+            "type": "string",
+            "description": "Precio base en córdobas con dos decimales",
+            "example": "1000.00"
+          },
+          "precio_venta": {
+            "type": "string",
+            "description": "Precio de venta en córdobas con dos decimales",
+            "example": "1150.00"
+          },
+          "stock": {
+            "type": "number",
+            "description": "Stock disponible",
+            "example": 10
+          },
+          "estado": {
+            "type": "string",
+            "description": "Estado de la oferta",
+            "example": "activa"
+          },
+          "creado_en": {
+            "type": "string",
+            "description": "Fecha de creación (ISO 8601 UTC)",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "tienda_id",
+          "vendedor_id",
+          "empresa_id",
+          "participacion_porcentaje",
+          "producto_id",
+          "sku",
+          "producto_nombre",
+          "margen",
+          "precio_base",
+          "precio_venta",
+          "stock",
+          "estado",
+          "creado_en"
+        ]
+      },
+      "CrearTiendaRequestDto": {
+        "type": "object",
+        "properties": {
+          "nombre": {
+            "type": "string",
+            "description": "Nombre de la tienda",
+            "minLength": 2,
+            "maxLength": 100,
+            "example": "Mi tienda"
+          },
+          "descripcion": {
+            "type": "string",
+            "description": "Descripción de la tienda",
+            "example": "Ropa y accesorios"
+          }
+        },
+        "required": [
+          "nombre"
+        ]
+      },
+      "TiendaResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Id de la tienda",
+            "format": "uuid"
+          },
+          "empresa_id": {
+            "type": "string",
+            "description": "Empresa propietaria",
+            "format": "uuid"
+          },
+          "propietario_usuario_id": {
+            "type": "string",
+            "description": "Usuario propietario operativo",
+            "format": "uuid"
+          },
+          "participacion_porcentaje": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 100
+          },
+          "vendedor_id": {
+            "type": "string",
+            "description": "Id del vendedor dueño",
+            "format": "uuid"
+          },
+          "nombre": {
+            "type": "string",
+            "description": "Nombre de la tienda",
+            "example": "Mi tienda"
+          },
+          "descripcion": {
+            "type": "string",
+            "description": "Descripción de la tienda"
+          },
+          "creado_en": {
+            "type": "string",
+            "description": "Fecha de creación (ISO 8601 UTC)",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "empresa_id",
+          "propietario_usuario_id",
+          "participacion_porcentaje",
+          "vendedor_id",
+          "nombre",
+          "descripcion",
+          "creado_en"
+        ]
+      },
+      "PublicarProductoRequestDto": {
+        "type": "object",
+        "properties": {
+          "tienda_id": {
+            "type": "string",
+            "description": "Tienda donde se publicará. Si se omite, se usa la tienda del vendedor autenticado.",
+            "format": "uuid"
+          },
+          "producto_id": {
+            "type": "string",
+            "description": "Id del producto a publicar",
+            "example": "a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11"
+          },
+          "margen": {
+            "type": "number",
+            "description": "Margen en enteros (15 = 15 %). RN-01: 0 a 90",
+            "minimum": 0,
+            "maximum": 90,
+            "example": 15
+          }
+        },
+        "required": [
+          "producto_id",
+          "margen"
+        ]
+      },
+      "CambiarMargenRequestDto": {
+        "type": "object",
+        "properties": {
+          "margen": {
+            "type": "number",
+            "description": "Nuevo margen en enteros (0 a 90)",
+            "minimum": 0,
+            "maximum": 90,
+            "example": 20
+          }
+        },
+        "required": [
+          "margen"
+        ]
+      },
+      "PaginaOfertasResponseDto": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "description": "Ofertas de la página",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/OfertaResponseDto"
+            }
+          },
+          "total": {
+            "type": "number",
+            "description": "Total de ofertas",
+            "example": 42
+          },
+          "pagina": {
+            "type": "number",
+            "description": "Página actual (1-based)",
+            "example": 1
+          },
+          "limite": {
+            "type": "number",
+            "description": "Tamaño de página",
+            "example": 20
+          },
+          "paginas": {
+            "type": "number",
+            "description": "Total de páginas",
+            "example": 3
+          }
+        },
+        "required": [
+          "items",
+          "total",
+          "pagina",
+          "limite",
+          "paginas"
+        ]
+      },
+      "TiendaPublicaResponseDto": {
+        "type": "object",
+        "properties": {
+          "tienda": {
+            "description": "Datos de la tienda",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/TiendaResponseDto"
+              }
+            ]
+          },
+          "ofertas": {
+            "description": "Ofertas de la tienda",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/OfertaResponseDto"
+            }
+          }
+        },
+        "required": [
+          "tienda",
+          "ofertas"
+        ]
+      }
+    }
+  }
+}

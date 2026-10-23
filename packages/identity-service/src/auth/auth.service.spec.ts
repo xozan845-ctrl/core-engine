@@ -1,14 +1,39 @@
 import type { Mock } from 'vitest';
-import { AuthService } from './auth.service';
+import { AuthService, ttlAMs } from './auth.service';
 import { UsuariosService, Usuario } from '../usuarios/usuarios.service';
 import { SesionesRepository } from './sesiones.repository';
-import { DomainError, ROLES, crearRefreshToken, crearAccessToken, verificarToken, TokenPayload } from '@core/shared';
+import {
+  DomainError,
+  ROLES,
+  crearRefreshToken,
+  crearAccessToken,
+  firmarToken,
+  verificarToken,
+  TokenPayload,
+} from '@core/shared';
 
 /**
  * Registro, login y refresh (doc 4.3): JWT de corta duracion + refresh.
- * El registro publico solo admite vendedor/comprador (RF-01).
+ * El registro publico solo admite empresario/comprador (RF-01, ADR-25).
  * R-GW-4 / ADR-18: el refresh solo renueva mientras la sesion siga activa.
  */
+describe('ttlAMs', () => {
+  it('convierte segundos, minutos, horas y días, recortando espacios', () => {
+    expect(ttlAMs('1s')).toBe(1_000);
+    expect(ttlAMs('15s')).toBe(15_000);
+    expect(ttlAMs('2m')).toBe(120_000);
+    expect(ttlAMs('3h')).toBe(10_800_000);
+    expect(ttlAMs(' 4d ')).toBe(345_600_000);
+  });
+
+  it('usa 7 días para formatos inválidos', () => {
+    const sieteDias = 7 * 24 * 60 * 60 * 1000;
+    for (const invalido of ['', 'd', '10x', '-1d', '1.5h', '1sx', 'x1s']) {
+      expect(ttlAMs(invalido)).toBe(sieteDias);
+    }
+  });
+});
+
 describe('AuthService (sesiones JWT)', () => {
   const SECRETO = process.env.JWT_SECRET ?? 'dev_secret';
 
@@ -54,18 +79,25 @@ describe('AuthService (sesiones JWT)', () => {
       expect(usuarios.crear).not.toHaveBeenCalled();
     });
 
-    it('debe crear la sesion con access y refresh cuando el rol es vendedor', async () => {
-      const { servicio } = crear();
+    it('debe crear la sesion con access y refresh cuando el rol es empresario', async () => {
+      const { servicio, usuarios } = crear();
+      (usuarios.crear as Mock).mockResolvedValue({ ...usuarioBase, rol: ROLES.EMPRESARIO });
       const sesion = await servicio.registrar({
         nombre: 'Ana',
         correo: 'ana@core.test',
         contrasena: 'secreta123',
-        rol: ROLES.VENDEDOR,
+        rol: ROLES.EMPRESARIO,
       });
 
+      expect(usuarios.crear).toHaveBeenCalledWith({
+        nombre: 'Ana',
+        correo: 'ana@core.test',
+        contrasena: 'secreta123',
+        rol: ROLES.EMPRESARIO,
+      });
       expect(sesion.access_token.split('.')).toHaveLength(3); // JWT HS256
       expect(sesion.refresh_token.split('.')).toHaveLength(3);
-      expect(sesion.usuario).toEqual({ id: 'u1', nombre: 'Ana', correo: 'ana@core.test', rol: 'vendedor' });
+      expect(sesion.usuario).toEqual({ id: 'u1', nombre: 'Ana', correo: 'ana@core.test', rol: 'empresario' });
       expect(sesion.expira_en).toBe(900);
     });
 
@@ -75,7 +107,7 @@ describe('AuthService (sesiones JWT)', () => {
         nombre: 'Ana',
         correo: 'ana@core.test',
         contrasena: 'secreta123',
-        rol: ROLES.VENDEDOR,
+        rol: ROLES.EMPRESARIO,
       });
       expect(sesiones.crear).toHaveBeenCalledTimes(1);
       const [usuarioId, jti, expira] = sesiones.crear.mock.calls[0];
@@ -162,6 +194,120 @@ describe('AuthService (sesiones JWT)', () => {
     });
   });
 
+  describe('ttl y payload de la sesión', () => {
+    const ttlOriginal = process.env.JWT_REFRESH_TTL;
+
+    afterEach(() => {
+      if (ttlOriginal === undefined) delete process.env.JWT_REFRESH_TTL;
+      else process.env.JWT_REFRESH_TTL = ttlOriginal;
+      vi.useRealTimers();
+    });
+
+    it('calcula la expiración para s, m, h y d', async () => {
+      const base = Date.parse('2026-01-01T00:00:00.000Z');
+      for (const [ttl, ms] of [
+        ['1s', 1_000],
+        ['2m', 120_000],
+        ['3h', 10_800_000],
+        ['4d', 345_600_000],
+      ] as const) {
+        vi.useFakeTimers();
+        vi.setSystemTime(new Date(base));
+        process.env.JWT_REFRESH_TTL = ttl;
+        const { servicio, sesiones } = crear();
+
+        await servicio.registrar({
+          nombre: 'Ana',
+          correo: 'ana@core.test',
+          contrasena: 'secreta123',
+          rol: ROLES.EMPRESARIO,
+        });
+
+        const expira = sesiones.crear.mock.calls[0][2] as Date;
+        expect(expira.getTime()).toBe(base + ms);
+      }
+    });
+
+    it('incluye tenant_id y personal_id en la sesión y en el token', async () => {
+      const { servicio, usuarios } = crear();
+      const conTenant = { ...usuarioBase, tenant_id: 't1', personal_id: 'p1' };
+      (usuarios.crear as Mock).mockResolvedValue(conTenant);
+
+      const sesion = await servicio.registrar({
+        nombre: 'Ana',
+        correo: 'ana@core.test',
+        contrasena: 'secreta123',
+        rol: ROLES.EMPRESARIO,
+      });
+
+      expect(sesion.usuario).toMatchObject({ tenant_id: 't1', personal_id: 'p1' });
+      const payload = verificarToken<TokenPayload>(sesion.refresh_token, SECRETO);
+      expect(payload).toMatchObject({ tenant_id: 't1', personal_id: 'p1' });
+    });
+
+    it('cerrarSesion ignora un access token', async () => {
+      const { servicio, sesiones } = crear();
+      const access = crearAccessToken(contexto, SECRETO, '15m');
+      await expect(servicio.cerrarSesion('u1', access)).resolves.toBe(0);
+      expect(sesiones.revocar).not.toHaveBeenCalled();
+    });
+
+    it('cerrarSesion ignora un refresh sin jti', async () => {
+      const { servicio, sesiones } = crear();
+      const refresh = crearRefreshToken(contexto, SECRETO, '7d');
+      await expect(servicio.cerrarSesion('u1', refresh)).resolves.toBe(0);
+      expect(sesiones.revocar).not.toHaveBeenCalled();
+    });
+
+    it('expone códigos y mensajes de error estables', async () => {
+      const { servicio, usuarios, sesiones } = crear();
+
+      await expect(
+        servicio.registrar({ nombre: 'A', correo: 'a@t.co', contrasena: 'x', rol: ROLES.ADMIN }),
+      ).rejects.toMatchObject({
+        codigo: 'ROL_NO_PERMITIDO',
+        message: 'El registro publico solo admite empresario o comprador.',
+      });
+      await expect(servicio.refrescar('basura')).rejects.toMatchObject({
+        codigo: 'TOKEN_INVALIDO',
+        message: 'El refresh_token es invalido o expiro.',
+      });
+
+      const access = crearAccessToken(contexto, SECRETO, '15m');
+      await expect(servicio.refrescar(access)).rejects.toMatchObject({
+        codigo: 'TOKEN_INVALIDO',
+        message: 'El token no es de refresco.',
+      });
+
+      const sinJti = crearRefreshToken(contexto, SECRETO, '7d');
+      await expect(servicio.refrescar(sinJti)).rejects.toMatchObject({
+        codigo: 'TOKEN_INVALIDO',
+        message: 'El token no tiene una sesion asociada.',
+      });
+
+      sesiones.activaPorJti.mockResolvedValue(null);
+      const conJti = crearRefreshToken(contexto, SECRETO, '7d', 'jti-1');
+      await expect(servicio.refrescar(conJti)).rejects.toMatchObject({
+        codigo: 'SESION_REVOCADA',
+        message: 'La sesion fue cerrada; inicia sesion de nuevo.',
+      });
+
+      sesiones.activaPorJti.mockResolvedValue({
+        id: 's-1',
+        usuario_id: 'u1',
+        jti: 'jti-1',
+        creada_en: '',
+        expira_en: '',
+        revocada_en: null,
+      });
+      (usuarios.encontrarPorId as Mock).mockResolvedValue(null);
+      await expect(servicio.refrescar(conJti)).rejects.toMatchObject({
+        codigo: 'TOKEN_INVALIDO',
+        message: 'El usuario del token ya no existe.',
+      });
+    });
+  });
+
   describe('cerrarSesion (R-GW-4)', () => {
     it('debe revocar todas las sesiones cuando no se presenta refresh_token', async () => {
       const { servicio, sesiones } = crear();
@@ -187,6 +333,17 @@ describe('AuthService (sesiones JWT)', () => {
       const { servicio, sesiones } = crear();
       const refresh = crearRefreshToken({ ...contexto, id: 'otro' }, SECRETO, '7d', 'jti-1');
       await expect(servicio.cerrarSesion('u1', refresh)).resolves.toBe(0);
+      expect(sesiones.revocar).not.toHaveBeenCalled();
+    });
+
+    it('no debe revocar un access token aunque tenga jti', async () => {
+      const { servicio, sesiones } = crear();
+      const access = firmarToken(
+        { sub: 'u1', tipo: 'access', jti: 'jti-1' } as TokenPayload,
+        SECRETO,
+        '15m',
+      );
+      await expect(servicio.cerrarSesion('u1', access)).resolves.toBe(0);
       expect(sesiones.revocar).not.toHaveBeenCalled();
     });
   });

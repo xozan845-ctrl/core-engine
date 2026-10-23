@@ -45,6 +45,8 @@ export interface ItemOrden {
   precio_unitario_cents: number; // precio de venta final (RN-01)
   vendedor_id: string;
   tienda_id: string;
+  empresa_id: string;
+  participacion_porcentaje: number;
 }
 
 export interface OrdenData {
@@ -84,6 +86,15 @@ export interface PaymentProcesadoData {
   metodo: 'simulado';
 }
 
+export interface ShipmentStartedData {
+  order_id: string;
+  empresa_id: string;
+  guia: string;
+  estado: 'en_preparacion';
+  proveedor_tipo: 'plataforma' | 'empresa' | null;
+  proveedor_tenant_id: string | null;
+}
+
 export interface OrderCompletadoData {
   order_id: string;
   entregado_en: string;
@@ -94,6 +105,10 @@ export interface ComisionAcreditadaData {
   monto_cents: number; // comision de la plataforma (RN-04)
   monto_vendedor_cents: number;
   vendedor_id: string;
+  empresa_id: string;
+  tienda_id: string;
+  monto_empresario_cents: number;
+  participacion_porcentaje: number;
 }
 
 export interface DevolucionSolicitadaData {
@@ -107,6 +122,8 @@ export interface OrderStatusUpdatedData {
   estado: string;
   previo_estado: string;
   motivo?: string;
+  /** Usuario o subsistema que ejecutó la transición (auditoría). */
+  actor?: string;
 }
 
 /** Devolución: monto devuelto (compra) y comisión revertida (RN-06). */

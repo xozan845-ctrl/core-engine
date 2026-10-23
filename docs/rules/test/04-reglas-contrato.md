@@ -25,13 +25,13 @@ los tests unitarios de nadie.
 | ID | Regla |
 |---|---|
 | R-C-6 | Cambios incompatibles (renombrar/eliminar campo, cambiar tipo) solo en nueva versión `/api/v2`; test de contrato detecta la pérdida de campos. |
-| R-C-7 | Swagger se genera de los DTOs (no anotado a mano); el spec se exporta a un JSON versionado en el repo y CI lo bloquea con `git diff --exit-code` cuando está desfasado. **Hoy sin script de export en `api-gateway` (deuda G-8)**: `@nestjs/swagger` está presente, el paso de export y el gate no existen. |
+| R-C-7 | Swagger se genera de los DTOs (no anotado a mano); el spec se exporta a un JSON versionado en el repo y CI lo bloquea con `git diff --exit-code` cuando está desfasado. El gate **G-8** está activo en el job `build` (`npm run swagger:export`) para `docs/openapi`, `docs/api` y el agregado del gateway. Además, `npm run contract:breaking -- --base-ref origin/main` compara el contrato agregado (público+interno) y falla ante paths/métodos/status/propiedades eliminadas, cambios de tipo o request obligatorio nuevo; `docs/api/breaking-baseline.json` explicita las excepciones decididas. |
 
 ## Errores
 
 | ID | Regla |
 |---|---|
-| R-C-8 | Todo error responde con shape consistente (`statusCode`, `message`); test de contrato cubre 400/401/403/404/409/500. |
+| R-C-8 | Todo error responde con el shape normalizado `{ codigo, mensaje, detalles }` (ADR-06, alineado con R-GW-6); el test de contrato cubre 400/401/403/404/409/500. |
 | R-C-9 | Nada de detalles internos en errores 500 (stack traces, SQL) en `NODE_ENV=production`. |
 
 ## Automatización

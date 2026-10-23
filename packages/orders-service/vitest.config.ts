@@ -1,5 +1,6 @@
 import { defineConfig } from 'vitest/config';
 import { resolve } from 'node:path';
+import { coverageThresholdsFor } from '../../scripts/config/coverage.mjs';
 
 // Config de pruebas del servicio (Vitest). Reproduce la config de Jest que vivía
 // en package.json: `rootDir: src`, specs `*.spec.ts`, alias `@core/shared`,
@@ -28,7 +29,7 @@ export default defineConfig({
       reporter: ['text', 'lcov', 'json-summary'],
       reportsDirectory: './coverage',
       reportOnFailure: true,
-      thresholds: { lines: 32, branches: 23 },
+      thresholds: coverageThresholdsFor('orders-service'),
     },
   },
 });

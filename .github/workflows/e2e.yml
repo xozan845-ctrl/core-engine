@@ -1,0 +1,54 @@
+name: E2E
+
+# Flujo E2E completo (G-6): levanta el stack dev y ejecuta `npm run demo`.
+# Se ejecuta en tags de release y manualmente; no en cada PR por coste.
+on:
+  workflow_dispatch:
+  push:
+    tags:
+      - 'v*.*.*'
+
+concurrency:
+  group: e2e-${{ github.ref }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  e2e:
+    name: E2E (stack dev)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: "20"
+          cache: "npm"
+      - name: Install dependencies
+        run: npm ci --prefer-offline
+      - name: Bring the dev stack up
+        run: docker compose -f docker-compose.dev.yml up -d --build
+      - name: Wait for gateway readiness
+        run: |
+          for i in $(seq 1 60); do
+            if curl -fsS http://localhost:8080/health >/dev/null; then
+              echo "healthy"
+              exit 0
+            fi
+            sleep 5
+          done
+          echo "unhealthy"
+          docker compose -f docker-compose.dev.yml logs
+          exit 1
+      - name: Run full E2E flow (G-6)
+        env:
+          BASE_URL: http://localhost:8080
+        run: npm run demo
+      - name: Evidence on failure
+        if: failure()
+        run: docker compose -f docker-compose.dev.yml logs --no-color
+      - name: Teardown
+        if: always()
+        run: docker compose -f docker-compose.dev.yml down -v --remove-orphans || true

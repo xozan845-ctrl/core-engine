@@ -43,7 +43,7 @@ rules/
 |---|---|---|---|
 | `architecture/` | ✅ **activa** (sin auditar) | [`architecture/README.md`](./architecture/README.md) | Arquitectura: CQRS/Event Sourcing por dominio, coreografía, outbox, DLQ, autonomía, caché TTL; naming de archivos/clases/tablas/commits (IDs `R-AR/R-NC`) |
 | `microservice/` | ✅ **activa** (sin auditar) | [`microservice/README.md`](./microservice/README.md) | Estructura de servicios (clean architecture, DI, DTOs, fail-fast, shutdown) y excepción OLAP de `market-intelligence` (IDs `R-MS/R-MI`) |
-| `gateway/` | ✅ **activa** (sin auditar) | [`gateway/README.md`](./gateway/README.md) | API Gateway: single entry point, edge offloading, JWT + scrub de headers, TTLs, RFC 7807, versionamiento (IDs `R-GW`) |
+| `gateway/` | ✅ **activa** (sin auditar) | [`gateway/README.md`](./gateway/README.md) | API Gateway: single entry point, edge offloading, JWT + scrub de headers, TTLs, errores normalizados (ADR-06), versionamiento (IDs `R-GW`) |
 | `data/` | ✅ **activa** (sin auditar) | [`data/README.md`](./data/README.md) | Integridad (centavos, stock atómico, estados, idempotencia, partida doble) y seguridad (secretos, PII, DTOs, rate limiting, `npm audit`) (IDs `R-DI/R-DS`) |
 | `db/` | ✅ **activa** (sin auditar) | [`db/README.md`](./db/README.md) | Postgres: schema-per-service, RLS, transacciones, índices, soft delete, migraciones; Supabase: paridad, Auth, secretos (IDs `R-DB/R-SB`) |
 | `observability/` | ✅ **activa** (sin auditar) | [`observability/README.md`](./observability/README.md) | Logs JSON + `x-request-id`; métricas Prometheus, labels RED, dashboards as code, alertas (IDs `R-OB/R-TM`) |
@@ -52,7 +52,7 @@ rules/
 | `ci/` | ✅ **activa** (sin auditar) | [`ci/README.md`](./ci/README.md) | CI: gatillos push/PR (incluye `staging`), entorno, evidencia (IDs `R-CI/R-EN`) |
 | `cd/` | ✅ **activa** (2026-10-01) | [`cd/README.md`](./cd/README.md) | Deploy continuo en Dockploy: un proyecto con environments `staging`/`produccion` (desarrollo local, R-CD-9), artefactos de release, gate de producción, smoke y rollback (IDs `R-CD` 1–13, venidas de `ci/03`) |
 | `ai/` | ✅ **activa** (nueva) | [`ai/README.md`](./ai/README.md) | Reglas obligatorias para IAs: contexto, atomicidad, uso correcto de tools y estricto apego al workflow (IDs `R-IA`) |
-| `documentation/` | ✅ **activa** (nueva) | [`documentation/README.md`](./documentation/README.md) | Reglas sobre documentación como código: READMEs, ADRs, variables de entorno y comentarios (IDs `R-DO`) |
+| `documentation/` | ✅ **activa** (nueva) | [`documentation/README.md`](./documentation/README.md) | Reglas sobre documentación como código: READMEs, ADRs, variables de entorno, contrato OpenAPI y taxonomía de superficies (IDs `R-DO`) |
 | `_meta/` | ⚠️ **no normativo** | [`_meta/README.md`](./_meta/README.md) | Derivados: checklist, snapshots de auditoría, histórico |
 
 ## Convenciones globales (aplican a todas las áreas)

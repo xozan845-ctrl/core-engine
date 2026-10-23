@@ -8,10 +8,14 @@ export class Money {
   readonly centavos: number;
 
   private constructor(centavos: number) {
-    if (!Number.isSafeInteger(centavos)) {
-      throw new DomainError('MONTO_INVALIDO', 'El monto debe ser un entero en centavos.');
+    if (!Number.isSafeInteger(centavos) || centavos < 0) {
+      throw new DomainError(
+        'MONTO_INVALIDO',
+        'El monto debe ser un entero no negativo en centavos.',
+      );
     }
-    this.centavos = centavos;
+    // Normaliza -0 (Math.round puede producirlo) para que el valor sea estable.
+    this.centavos = centavos === 0 ? 0 : centavos;
   }
 
   static desdeCentavos(centavos: number): Money {
@@ -73,11 +77,9 @@ export class Money {
 
   /** Serializacion "1150.00" (doc: montos en C$ con dos decimales). */
   string(): string {
-    const signo = this.centavos < 0 ? '-' : '';
-    const abs = Math.abs(this.centavos);
-    const enteros = String(Math.floor(abs / 100));
-    const decimales = String(abs % 100).padStart(2, '0');
-    return `${signo}${enteros}.${decimales}`;
+    const enteros = String(Math.floor(this.centavos / 100));
+    const decimales = String(this.centavos % 100).padStart(2, '0');
+    return `${enteros}.${decimales}`;
   }
 
   toString(): string {

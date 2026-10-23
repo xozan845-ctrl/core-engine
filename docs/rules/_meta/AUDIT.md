@@ -6,7 +6,7 @@
 > anteriores a 2026-10-01 pertenecen al proyecto origen y se conservan como
 > procedencia.
 
-- **Última auditoría:** 2026-10-15 — **8ª de Core Engine** (R-COV-3). Endureció métricas HTTP: nombres canónicos, duración en segundos, rutas parametrizadas y señales RED separadas, con reglas ejecutables y cobertura unitaria.
+- **Última auditoría:** 2026-10-19 — **9ª de Core Engine** (R-COV-3). Cierre de la Etapa 1 de OpenAPI: contrato público/interno separado, seguridad declarada, respuestas documentadas y reglas ejecutables `R-DO-8/9/10`.
 - **Estado global:** 🟡 **CUMPLE PARCIAL** — gates **G-1, G-3, G-7 y G-8 efectivos
   y verdes en CI**, G-2 N/A y G-4/G-5/G-6 pendientes; audit de dependencias a
   **0 (high y moderate)**; deudas abiertas: capas de test enteras sin suites
@@ -18,12 +18,12 @@
 
 | Capa | Estado | Evidencia |
 |---|---|---|
-| Unit backend | 🟢 | **416 tests / 62 suites** en verde en **11 workspaces**; cobertura gateada por workspace (tabla abajo); medición local 2026-10-15 |
+| Unit backend | 🟢 | **503 tests / 72 archivos** en verde en **12 workspaces**; cobertura gateada por workspace (tabla abajo); medición local 2026-10-19 |
 | Unit frontend | N/A | No hay frontend en el repo (G-2 y R-COV-5 **reservados, nunca reutilizados**) |
 | Integración (API+BD) | 🔴 | **0 tests** — capa entera sin cubrir; deuda G-4 (R-I-* exigibles cuando la historia toque la capa) |
 | Contrato (API) | 🔴 | **0 tests**; deuda G-5 (R-C-7) |
 | E2E | 🔴 | **0 automatizados**; solo smoke local `docker compose -f docker-compose.dev.yml up -d --build` + `npm run demo` (`scripts/tools/smoke.mjs`); deuda G-6 |
-| OpenAPI (spec) | 🟢 | Export por servicio (`swagger:export`) + spec versionado en `docs/openapi/` (**9 servicios, 149/149 endpoints**); **documento agregado** (115 rutas / 50 schemas) servido por el gateway en `/docs`; **gate G-8** en CI (`git diff --exit-code`) |
+| OpenAPI (spec) | 🟢 | Export por servicio (`swagger:export`) + specs versionados en `docs/openapi/` (**10 servicios, 165/165 operaciones**); contrato público (`docs/api/core-engine.openapi.json`, 146/146 documentadas: 139 con schema + 7 sin contenido) e interno (`core-engine.internal.openapi.json`, 19/19 con schema, `x-internal-key`); **gate G-8** en CI (`git diff --exit-code`) |
 | Property-based | 🔴 | Sin `fast-check` en ningún paquete (R-PB-1..3: dinero y ciclo de la orden) |
 | Mutation testing | 🔴 | Sin Stryker; la mutación **nunca se ha ejecutado** (R-MT-1..3; módulos críticos `identity`/`orders`/`commissions`/`finance`) |
 | Fuzz / robustez de entradas | 🔴 | Sin fuzz de parsers (R-RB-1..4: outbox/saga/broker) |
@@ -31,36 +31,37 @@
 | Security gate (R-QA-6) | 🟢 | `npm audit --audit-level=high` → exit 0 **y** `--audit-level=moderate` → exit 0 (jest 30 cerró los 29 `high` de devDeps) |
 | Flujo de PR | 🟢 | **118 PRs** mergeados por `--rebase`; **0 merge commits** en **76 commits** de `main`; checks verdes en la cabeza y run de la rama de entorno verificado tras cada merge (R-PR-1..9, R-GE-*) |
 
-## Cobertura por workspace (ratchet R-COV-1, medido 2026-10-14)
+## Cobertura por workspace (ratchet R-COV-1, medición de tests 2026-10-19)
 
 | Workspace | Suites | Tests | Líneas | Ramas | Threshold (L/B) | Gate |
 |---|---|---|---|---|---|---|
-| `shared` | 11 | 70 | 53.48 | 52.50 | 39 / 39 | ✅ |
-| `api-gateway` | 3 | 15 | 51.82 | 52.38 | 50 / 51 | ✅ |
+| `shared` | 11 | 72 | 53.48 | 52.50 | 39 / 39 | ✅ |
+| `api-gateway` | 4 | 26 | 51.82 | 52.38 | 50 / 51 | ✅ |
 | `orders-service` | 4 | 31 | 33.00 | 24.32 | 32 / 23 | ✅ |
 | `commissions-service` | 4 | 15 | 21.38 | 15.85 | 20 / 14 | ✅ |
-| `finance-service` | 13 | 77 | 71.89 | 53.04 | 70 / 52 | ✅ |
+| `finance-service` | 13 | 79 | 71.89 | 53.04 | 70 / 52 | ✅ |
 | `market-intelligence-service` | 4 | 19 | 19.93 | 12.64 | 18 / 11 | ✅ |
 | `catalog-service` | 6 | 46 | 94.70 | 83.50 | 93 / 82 | ✅ |
 | `identity-service` | 6 | 62 | 90.69 | 79.50 | 89 / 78 | ✅ |
 | `stores-service` | 6 | 37 | 87.00 | 85.48 | 86 / 84 | ✅ |
 | `logistics-service` | 3 | 24 | 100.00 | 97.14 | 99 / 96 | ✅ |
 | `field-service` | 2 | 20 | 85.24 | 71.27 | 84 / 70 | ✅ |
-| **Total** | **62** | **416** | — | — | 11 workspaces | **11/11 ✅** |
+| `storage-service` | 9 | 72 | 100.00 | 87.50 | 99 / 86 | ✅ |
+| **Total** | **72** | **503** | — | — | 12 workspaces | **12/12 ✅** |
 
-- **Evolución:** de 175 tests / 23 suites a **416 / 62**; métricas HTTP y correlación asíncrona tienen regresiones directas. **Ningún threshold bajó** (R-COV-1: el ratchet solo sube).
-- **Objetivo final (80 líneas / 70 ramas): 5 de 11 workspaces lo alcanzan** (`catalog`, `identity`, `stores`, `logistics`, `field`); el resto sube por ratchet (+5/release).
+- **Evolución:** de 175 tests / 23 suites a **503 / 72**; métricas HTTP y correlación asíncrona tienen regresiones directas. **Ningún threshold bajó** (R-COV-1: el ratchet solo sube).
+- **Objetivo final (80 líneas / 70 ramas): 6 de 12 workspaces lo alcanzan** (`catalog`, `identity`, `stores`, `logistics`, `field`, `storage`); el resto sube por ratchet (+5/release).
 - Método: baseline medido redondeado a la baja; los 6 thresholds legacy se recalibraron una única vez en la Etapa 2b (enmienda en [`test/06`](../test/06-estandares-cobertura.md)).
 
 ## Métricas actuales vs mínimos
 
 | Métrica | Valor actual | Mínimo (regla) | Cumple |
 |---|---|---|---|
-| Unit tests (11 workspaces) | 416/416 en verde | 100% (G-1) | ✅ |
-| Cobertura ≥ `coverageThreshold` | 11/11 workspaces | floor medido (R-COV-1) | ✅ gate · ⚠️ objetivo |
+| Unit tests (12 workspaces) | 503/503 en verde | 100% (G-1) | ✅ |
+| Cobertura ≥ `coverageThreshold` | 12/12 workspaces | floor medido (R-COV-1) | ✅ gate · ⚠️ objetivo |
 | Cobertura objetivo final | 5/11 ≥ 80/70 | 80/70 | ⚠️ ratchet +5/release |
 | Controllers con spec | **25 de 25** | R-U-10/11 (al tocar endpoints) | ✅ cerrado |
-| Endpoints documentados (OpenAPI) | **149/149** en 9 servicios (+ agregado) | 100% (R-DO-6, G-8) | ✅ |
+| Endpoints documentados (OpenAPI) | **165/165** en 10 servicios (146 públicas + 19 internas; todas con respuesta documentada) | 100% (R-DO-6, R-DO-10, G-8) | ✅ |
 | `*.service.ts` / `*.consumer.ts` sin spec | **17 de 39** | 0 (R-U-18, R-COV-2) | ❌ deuda |
 | Código puro de `shared` con spec (R-U-17) | **7 de 7** | 0 sin spec | ✅ cerrado |
 | Guards/pipes con spec (R-U-15) | `service-auth`, `validation.pipe` | 0 sin spec | ✅ cerrado |
@@ -78,14 +79,14 @@
 
 | Gate | Estado | Evidencia |
 |---|---|---|
-| G-1 Unit backend | ✅ | job `test` → `npm test`: los 11 workspaces ejecutan cobertura; 416/416 verdes en la medición local |
+| G-1 Unit backend | ✅ | job `test` → `npm test`: los 12 workspaces ejecutan cobertura; 503/503 verdes en la medición local |
 | G-2 Unit frontend | N/A | No hay frontend (ID **reservado**, nunca se reutiliza) |
 | G-3 Cobertura ≥ ratchet | ✅ | 11 `coverageThreshold` aplicados; el job `test` genera **11 tablas de cobertura** y 0 `threshold not met` |
 | G-4 Integración | ⏸ | Sin suites de integración (exigible cuando existan, R-I-12) |
 | G-5 Contrato | ⏸ | Sin suites de contrato (R-C-7) |
 | G-6 E2E de flujos | ⏸ | Sin job E2E; lo más cercano hoy es el smoke local `docker compose -f docker-compose.dev.yml up -d --build` + `npm run demo` |
 | G-7 Lint **y** build | ✅ | job `lint` → 0 errores; job `build` → 0 errores TS |
-| G-8 Swagger sync | ✅ | job `build` → `npm run swagger:export` + `git diff --exit-code docs/openapi packages/api-gateway/src/openapi.agregado.ts` (149/149 endpoints, agregado); run de `main` `37505390920` (`f552627`) = success |
+| G-8 Swagger sync | ✅ | job `build` → `npm run swagger:export` + `git diff --exit-code docs/openapi docs/api packages/api-gateway/src/openapi.agregado.ts` (165/165 operaciones; público 146/146 e interno 19/19); run de `develop` verificado tras el cierre de la Etapa 1 |
 
 **Total: 4 ✅ · 1 N/A · 3 ⏸ (deudas).**
 
@@ -134,7 +135,7 @@
 ### Cerradas en el ciclo anterior (Auditoría 5ª)
 
 - **5ª auditoría (2026-10-06):**
-  - **G-8 (OpenAPI):** export por servicio (`swagger.ts` + `swagger-export.ts` + script `swagger:export`), specs versionados en `docs/openapi/` (**149/149 endpoints** en 9 servicios), **gate G-8** en el job `build` (`git diff --exit-code`) y **documento agregado** fusionado por `scripts/tools/swagger-aggregate.mjs` y servido por el **gateway en `/docs`** (115 rutas / 50 schemas). El agregador **aborta ante colisiones** de path/schema. Cumple **R-DO-6**.
+  - **G-8 (OpenAPI):** export por servicio (`swagger.ts` + `swagger-export.ts` + script `swagger:export`), specs versionados en `docs/openapi/` (**165/165 operaciones** en 10 servicios), **gate G-8** en el job `build` (`git diff --exit-code`) y **dos contratos agregados**: público (`docs/api/core-engine.openapi.json`, 146/146 documentadas) e interno (`core-engine.internal.openapi.json`, 19/19 con schema). El agregador separa superficies y **aborta ante colisiones** de path/schema. Cumple **R-DO-6/R-DO-10**.
   - **Reglas R-DO:** oficializado `docs/rules/documentation/` (R-DO-1..7).
   - **Deps (R-QA-6):** advisory `critical` nuevo en `proxy-addr` (rango `1.1.0–2.0.7`, vía `express`) → `overrides.proxy-addr = ^2.0.8`; `npm audit --audit-level=high` de nuevo **0**.
 
@@ -173,7 +174,7 @@
 
 ## Evidencia
 
-- **Local (2026-10-15, comandos de abajo):** `npm test` exit 0 → **416 tests / 62 suites** con **11 tablas de cobertura** y 0 `threshold not met` · `npm run lint` exit 0 (0 errores / 43 warnings) · `npm run build` exit 0 (0 errores TS) · `npm run rules:check` y `npm run test:engine` exit 0.
+- **Local (2026-10-19, comandos de abajo):** `npm test` exit 0 → **503 tests / 72 archivos** con **12 tablas de cobertura** y 0 `threshold not met` · `npm run lint` exit 0 (0 errores / 43 warnings) · `npm run build` exit 0 (0 errores TS) · `npm run rules:check` y `npm run test:engine` exit 0.
 - **Conteos de specs (R-U-10/11/15/17/18):** 25 de 25 controllers, 22 de 39 services/consumers con spec, `shared` puro 7/7, guards/pipes con spec.
 - **CI (R-COV-3: un gate no se marca ✅ sin run verde):** run `37505390920` sobre `main` (`f552627`) = 4/4 jobs success; ramas de entorno verdes en cada salto del modelo CD (R-GE-*). No se citan runs de la entrega de la propia auditoría para no crear el ciclo commit → run → commit.
 - **Flujo de PR:** `gh pr list --state merged` → **118 PRs**, todos `--rebase` con run de rama de entorno verificado (R-PR-7/8, R-GE-*); `git rev-list --merges --count origin/main` → **0** merge commits de 76.
@@ -181,7 +182,7 @@
 ## Cómo re-auditar
 
 ```bash
-npm test                                  # G-1/G-3: los 11 workspaces con cobertura
+npm test                                  # G-1/G-3: los 12 workspaces con cobertura
 npm run test -w @core/<pkg> -- --coverage  # cobertura de un workspace (ratchet R-COV-1)
 npm run lint                               # G-7 (ESLint, alcance packages/*/src)
 npm run build                              # G-7 (tsc)

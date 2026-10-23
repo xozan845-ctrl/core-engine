@@ -13,6 +13,7 @@ export function crearDocumentoOpenApi(app: INestApplication): OpenAPIObject {
     .setDescription('Órdenes y transacciones: pedidos, carrito y comisiones (CQRS + Event Sourcing, Tabla 21)')
     .setVersion('v1')
     .addBearerAuth()
+    .addApiKey({ type: 'apiKey', in: 'header', name: 'x-internal-key' }, 'internalKey')
     .build();
   return SwaggerModule.createDocument(app, config);
 }

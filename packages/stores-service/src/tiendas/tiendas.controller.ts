@@ -1,7 +1,8 @@
 import { Body, Controller, Get, Post } from '@nestjs/common';
-import { ApiOperation, ApiProperty, ApiTags } from '@nestjs/swagger';
+import { ApiBearerAuth, ApiCreatedResponse, ApiOkResponse, ApiOperation, ApiProperty, ApiTags } from '@nestjs/swagger';
 import { IsOptional, IsString, Length } from 'class-validator';
 import { TiendasService, Tienda } from './tiendas.service';
+import { TiendaResponseDto } from './tiendas.response.dto';
 import { Roles, ROLES, UsuarioActual, UsuarioContexto, NotFoundError } from '@core/shared';
 
 export class CrearTiendaRequestDto {
@@ -14,26 +15,50 @@ export class CrearTiendaRequestDto {
   @IsOptional()
   @IsString()
   descripcion?: string;
+
 }
 
 @ApiTags('Tiendas')
+@ApiBearerAuth()
 @Controller('api/v1/vendedores')
 export class TiendasController {
   constructor(private readonly tiendas: TiendasService) {}
 
   @Post('tienda')
-  @Roles(ROLES.VENDEDOR)
+  @Roles(ROLES.VENDEDOR, ROLES.EMPRESARIO)
   @ApiOperation({ summary: 'Crear la tienda del vendedor autenticado' })
+  @ApiCreatedResponse({ type: TiendaResponseDto, description: 'Tienda creada' })
   async crear(@Body() dto: CrearTiendaRequestDto, @UsuarioActual() usuario: UsuarioContexto): Promise<Tienda> {
-    return this.tiendas.crear(usuario.user_id, dto.nombre, dto.descripcion);
+    if (!usuario.tenant_id) throw new NotFoundError('Empresa', 'activa');
+    const participacion = usuario.rol === ROLES.EMPRESARIO ? 100 : usuario.participacion_porcentaje;
+    if (participacion === undefined) throw new NotFoundError('Participacion', 'del vendedor');
+    return this.tiendas.crear(usuario.tenant_id, usuario.user_id, participacion, dto.nombre, dto.descripcion);
   }
 
   @Get('me/tienda')
   @Roles(ROLES.VENDEDOR)
   @ApiOperation({ summary: 'Tienda del vendedor autenticado' })
+  @ApiOkResponse({ type: TiendaResponseDto, description: 'Tienda del vendedor' })
   async miTienda(@UsuarioActual() usuario: UsuarioContexto): Promise<Tienda> {
     const tienda = await this.tiendas.deVendedor(usuario.user_id);
     if (!tienda) throw new NotFoundError('Tienda', 'del vendedor');
     return tienda;
+  }
+}
+
+/** GET /api/v1/empresarios/me/tiendas — tiendas de la empresa (ADR-25). */
+@ApiTags('Tiendas')
+@ApiBearerAuth()
+@Controller('api/v1/empresarios/me')
+export class TiendasEmpresaController {
+  constructor(private readonly tiendas: TiendasService) {}
+
+  @Get('tiendas')
+  @Roles(ROLES.EMPRESARIO)
+  @ApiOperation({ summary: 'Tiendas de la empresa autenticada' })
+  @ApiOkResponse({ type: [TiendaResponseDto], description: 'Tiendas de la empresa' })
+  async listar(@UsuarioActual() usuario: UsuarioContexto): Promise<Tienda[]> {
+    if (!usuario.tenant_id) throw new NotFoundError('Empresa', 'activa');
+    return this.tiendas.deEmpresa(usuario.tenant_id);
   }
 }

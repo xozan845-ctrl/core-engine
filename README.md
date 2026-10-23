@@ -167,26 +167,34 @@ La **fuente de verdad** del contrato es la especificación OpenAPI de cada servi
 - versiona su spec en **`docs/openapi/<servicio>.json`**.
 
 El spec se regenera y se verifica en CI con el **gate G-8** (`R-C-7`): el job *Build*
-ejecuta `npm run swagger:export` y falla si `docs/openapi` cambia sin commitear
-(`git diff --exit-code`). Al tocar un DTO hay que anotarlo con `@ApiProperty`.
+ejecuta `npm run swagger:export` y falla si `docs/openapi`, `docs/api` o el
+agregado del gateway cambian sin commitear (`git diff --exit-code`). Al tocar un
+DTO hay que anotarlo con `@ApiProperty`.
 
-El **API Gateway** sirve en su `/docs` el **documento agregado** de todos los
-servicios (vista única del contrato público): `scripts/tools/swagger-aggregate.mjs`
-fusiona `docs/openapi/*.json` en `packages/api-gateway/src/openapi.agregado.ts`
-(generado, versionado y verificado por el gate G-8) y en una copia **JSON
-descargable** para repartir el contrato (frontend, Postman…):
+El **API Gateway** sirve en su `/docs` el **documento agregado de la superficie
+pública**: `scripts/tools/swagger-aggregate.mjs` fusiona `docs/openapi/*.json`,
+separa las rutas `/api/v1/**` de las `/internal/**` y escribe dos artefactos:
+
+- `docs/api/core-engine.openapi.json` — contrato público (solo `/api/v1/**`), que
+  también se publica en `packages/api-gateway/src/openapi.agregado.ts` (generado,
+  versionado y verificado por el gate G-8);
+- `docs/api/core-engine.internal.openapi.json` — contrato interno (solo
+  `/internal/**`, con `x-internal-key`), que **nunca** se expone por el gateway.
 
 | Cómo obtenerlo | Dónde |
 |---|---|
-| Archivo versionado (recomendado para frontend) | `docs/api/core-engine.openapi.json` — raw en GitHub: `…/raw/<rama>/docs/api/core-engine.openapi.json` |
-| Gateway en ejecución (local) | `http://localhost:8080/docs` (Swagger UI) y `/docs-json` (JSON) |
+| Contrato público versionado (recomendado para frontend) | `docs/api/core-engine.openapi.json` — raw en GitHub: `…/raw/<rama>/docs/api/core-engine.openapi.json` |
+| Contrato interno versionado (servicio→servicio) | `docs/api/core-engine.internal.openapi.json` |
+| Gateway en ejecución (local) | `http://localhost:8080/docs` (Swagger UI) y `/docs-json` (JSON público) |
 | Staging/producción | `/docs*` está **privado** (404): descárgalo con `x-internal-key: $INTERNAL_API_KEY` o usa el archivo del repo |
 
 ```bash
-npm run swagger:export   # regenera docs/openapi/*.json + docs/api/core-engine.openapi.json
+npm run swagger:export   # regenera docs/openapi/*.json + los dos agregados de docs/api/
 ```
 
-Cobertura actual: **165/165 endpoints** en 10 servicios (165 operaciones sobre 128 rutas).
+Cobertura actual: **165/165 operaciones documentadas** en 10 servicios:
+**146 públicas** (139 con schema de respuesta + 7 sin contenido) y **19 internas**
+(todas con schema).
 
 ## Variables de entorno (`.env` en dev · `.env.production` en producción)
 

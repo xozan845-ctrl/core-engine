@@ -1,5 +1,6 @@
 import { defineConfig } from 'vitest/config';
 import swc from 'unplugin-swc';
+import { coverageThresholdsFor } from '../../scripts/config/coverage.mjs';
 
 // Config de pruebas del paquete (Vitest). Reproduce la config de Jest que vivía
 // en package.json: specs `*.spec.ts`, entorno node y
@@ -24,7 +25,7 @@ export default defineConfig({
       reporter: ['text', 'lcov', 'json-summary'],
       reportsDirectory: './coverage',
       reportOnFailure: true,
-      thresholds: { lines: 39, branches: 39 },
+      thresholds: coverageThresholdsFor('shared'),
     },
   },
 });

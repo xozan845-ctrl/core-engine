@@ -19,6 +19,9 @@ export interface Periodo {
   inicio: string;
   fin: string;
 }
+export interface LiquidacionEmpresa extends Omit<Liquidacion, 'vendedor_id'> {
+  empresa_id: string;
+}
 
 /**
  * RN-07: las comisiones se liquidan quincenalmente (dias 1 y 15) tomando
@@ -99,18 +102,20 @@ export class LiquidacionesService implements OnModuleInit {
     const { inicio, fin } = periodo;
 
     // 1. marcar como liquidadas las comisiones acreditadas del periodo
-    const filas = await this.pg.query<{ id: string; vendedor_id: string; comision_cents: number }>(
+    const filas = await this.pg.query<{ id: string; vendedor_id: string; empresa_id: string; monto_vendedor_cents: number; monto_empresario_cents: number }>(
       `UPDATE commissions.comisiones SET estado = 'liquidada'
        WHERE estado = 'acreditada' AND creado_en >= $1::date AND creado_en <= $2::date + INTERVAL '1 day' - INTERVAL '1 second'
-       RETURNING id, vendedor_id, comision_cents`,
+       RETURNING id, vendedor_id, empresa_id, monto_vendedor_cents, monto_empresario_cents`,
       [inicio, fin],
     );
     if (filas.length === 0) return [];
 
     // 2. consolidar por vendedor
     const porVendedor = new Map<string, number>();
+    const porEmpresa = new Map<string, number>();
     for (const f of filas) {
-      porVendedor.set(f.vendedor_id, (porVendedor.get(f.vendedor_id) ?? 0) + f.comision_cents);
+      porVendedor.set(f.vendedor_id, (porVendedor.get(f.vendedor_id) ?? 0) + f.monto_vendedor_cents);
+      porEmpresa.set(f.empresa_id, (porEmpresa.get(f.empresa_id) ?? 0) + f.monto_empresario_cents);
     }
 
     // 3. compensaciones del periodo (RN-06: devoluciones)
@@ -123,6 +128,16 @@ export class LiquidacionesService implements OnModuleInit {
     );
     for (const c of compensaciones) {
       porVendedor.set(c.vendedor_id, (porVendedor.get(c.vendedor_id) ?? 0) + c.total);
+    }
+    const compensacionesEmpresas = await this.pg.query<{ empresa_id: string; total: number }>(
+      `SELECT empresa_id, COALESCE(SUM(monto_empresario_cents), 0)::int AS total
+       FROM commissions.compensaciones_devoluciones
+       WHERE creado_en >= $1::date AND creado_en <= $2::date + INTERVAL '1 day' - INTERVAL '1 second'
+       GROUP BY empresa_id`,
+      [inicio, fin],
+    );
+    for (const c of compensacionesEmpresas) {
+      porEmpresa.set(c.empresa_id, (porEmpresa.get(c.empresa_id) ?? 0) + c.total);
     }
 
     // 4. crear liquidaciones aprobadas
@@ -138,6 +153,16 @@ export class LiquidacionesService implements OnModuleInit {
         [vendedorId, inicio, fin, monto],
       );
       if (fila) liquidaciones.push(fila);
+    }
+    for (const [empresaId, monto] of porEmpresa) {
+      if (monto === 0) continue;
+      await this.pg.queryOne(
+        `INSERT INTO commissions.liquidaciones_empresas
+          (id, empresa_id, periodo_inicio, periodo_fin, monto_cents, estado)
+         VALUES (gen_random_uuid(), $1,$2,$3,$4,'aprobada')
+         ON CONFLICT (empresa_id, periodo_inicio) DO NOTHING`,
+        [empresaId, inicio, fin, monto],
+      );
     }
 
     this.logger.info({
@@ -158,6 +183,15 @@ export class LiquidacionesService implements OnModuleInit {
        FROM commissions.liquidaciones WHERE vendedor_id = $1
        ORDER BY periodo_inicio DESC LIMIT 100`,
       [vendedorId],
+    );
+  }
+
+  async deEmpresa(empresaId: string): Promise<LiquidacionEmpresa[]> {
+    return this.pg.query<LiquidacionEmpresa>(
+      `SELECT id, empresa_id, periodo_inicio, periodo_fin, monto_cents, estado, creado_en
+       FROM commissions.liquidaciones_empresas WHERE empresa_id = $1
+       ORDER BY periodo_inicio DESC LIMIT 100`,
+      [empresaId],
     );
   }
 

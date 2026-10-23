@@ -1,5 +1,5 @@
 import { Body, Controller, Get, Param, Post, Query } from '@nestjs/common';
-import { ApiOperation, ApiParam, ApiProperty, ApiQuery, ApiTags } from '@nestjs/swagger';
+import { ApiBearerAuth, ApiCreatedResponse, ApiOkResponse, ApiOperation, ApiParam, ApiProperty, ApiQuery, ApiTags } from '@nestjs/swagger';
 import { IsBoolean, IsIn, IsInt, IsOptional, IsString, IsUUID, Min, MinLength } from 'class-validator';
 import { Roles, ROLES, NotFoundError } from '@core/shared';
 import {
@@ -9,6 +9,12 @@ import {
   SujetoTributario,
   Declaracion,
 } from './tributacion.service';
+import {
+  DeclaracionResponseDto,
+  JurisdiccionResponseDto,
+  RegimenFiscalResponseDto,
+  SujetoTributarioResponseDto,
+} from './tributacion.response.dto';
 
 export class CrearJurisdiccionRequestDto {
   @ApiProperty({ description: 'Código de país (ISO)', minLength: 2 })
@@ -131,19 +137,22 @@ export class GenerarDeclaracionesRequestDto {
  * GET /api/v1/vendedores/me/fiscal — situacion del vendedor (cap. 4.4).
  */
 @ApiTags('Finanzas · Tributación')
+@ApiBearerAuth()
 @Controller('api/v1/finanzas')
-@Roles(ROLES.ADMIN)
+@Roles(ROLES.SUPER_ADMIN, ROLES.ADMIN)
 export class TributacionController {
   constructor(private readonly tributacion: TributacionService) {}
 
   @Get('jurisdicciones')
   @ApiOperation({ summary: 'Listar jurisdicciones' })
+  @ApiOkResponse({ type: [JurisdiccionResponseDto], description: 'Jurisdicciones' })
   async jurisdicciones(): Promise<Jurisdiccion[]> {
     return this.tributacion.listarJurisdicciones();
   }
 
   @Post('jurisdicciones')
   @ApiOperation({ summary: 'Crear una jurisdicción' })
+  @ApiCreatedResponse({ type: JurisdiccionResponseDto, description: 'Jurisdicción creada' })
   async crearJurisdiccion(@Body() dto: CrearJurisdiccionRequestDto): Promise<Jurisdiccion> {
     return this.tributacion.crearJurisdiccion({
       codigo_pais: dto.codigo_pais,
@@ -160,12 +169,14 @@ export class TributacionController {
   @Get('regimenes')
   @ApiOperation({ summary: 'Listar regímenes fiscales' })
   @ApiQuery({ name: 'jurisdiccion', required: false })
+  @ApiOkResponse({ type: [RegimenFiscalResponseDto], description: 'Regímenes fiscales' })
   async regimenes(@Query('jurisdiccion') jurisdiccion?: string): Promise<RegimenFiscal[]> {
     return this.tributacion.regimenesDe(jurisdiccion);
   }
 
   @Post('regimenes')
   @ApiOperation({ summary: 'Crear un régimen fiscal' })
+  @ApiCreatedResponse({ type: RegimenFiscalResponseDto, description: 'Régimen creado' })
   async crearRegimen(@Body() dto: CrearRegimenRequestDto): Promise<RegimenFiscal> {
     const regimen = await this.tributacion.crearRegimen(dto);
     if (!regimen) throw new NotFoundError('Regimen', dto.codigo);
@@ -174,12 +185,14 @@ export class TributacionController {
 
   @Get('sujetos')
   @ApiOperation({ summary: 'Listar sujetos tributarios' })
+  @ApiOkResponse({ type: [SujetoTributarioResponseDto], description: 'Sujetos tributarios' })
   async sujetos(): Promise<SujetoTributario[]> {
     return this.tributacion.sujetos();
   }
 
   @Post('sujetos')
   @ApiOperation({ summary: 'Registrar un sujeto tributario' })
+  @ApiCreatedResponse({ type: SujetoTributarioResponseDto, description: 'Sujeto registrado' })
   async registrarSujeto(@Body() dto: RegistrarSujetoRequestDto): Promise<SujetoTributario> {
     const sujeto = await this.tributacion.registrarSujeto(dto);
     if (!sujeto) throw new NotFoundError('Sujeto', dto.id);
@@ -189,6 +202,7 @@ export class TributacionController {
   @Post('sujetos/:id/baja')
   @ApiOperation({ summary: 'Dar de baja un sujeto tributario' })
   @ApiParam({ name: 'id', description: 'Id del sujeto' })
+  @ApiCreatedResponse({ type: SujetoTributarioResponseDto, description: 'Sujeto dado de baja' })
   async darDeBaja(@Param('id') id: string): Promise<SujetoTributario> {
     const sujeto = await this.tributacion.darDeBaja(id);
     if (!sujeto) throw new NotFoundError('Sujeto', id);
@@ -200,6 +214,7 @@ export class TributacionController {
   @ApiQuery({ name: 'tipo', required: false })
   @ApiQuery({ name: 'periodo_inicio', required: false })
   @ApiQuery({ name: 'estado', required: false })
+  @ApiOkResponse({ type: [DeclaracionResponseDto], description: 'Declaraciones' })
   async declaraciones(
     @Query('tipo') tipo?: string,
     @Query('periodo_inicio') periodoInicio?: string,
@@ -211,6 +226,7 @@ export class TributacionController {
   /** Genera las declaraciones del periodo (por defecto el mes anterior). */
   @Post('declaraciones/generar')
   @ApiOperation({ summary: 'Generar declaraciones del periodo' })
+  @ApiCreatedResponse({ type: [DeclaracionResponseDto], description: 'Declaraciones generadas' })
   async generar(@Body() dto: GenerarDeclaracionesRequestDto): Promise<Declaracion[]> {
     const periodo = dto.inicio && dto.fin ? { inicio: dto.inicio, fin: dto.fin } : undefined;
     return this.tributacion.generarDeclaraciones(periodo);
@@ -219,6 +235,7 @@ export class TributacionController {
   @Post('declaraciones/:id/presentar')
   @ApiOperation({ summary: 'Presentar una declaración' })
   @ApiParam({ name: 'id', description: 'Id de la declaración' })
+  @ApiCreatedResponse({ type: DeclaracionResponseDto, description: 'Declaración presentada' })
   async presentar(@Param('id') id: string): Promise<Declaracion> {
     const declaracion = await this.tributacion.presentar(id);
     if (!declaracion) throw new NotFoundError('Declaracion', id);
@@ -228,6 +245,7 @@ export class TributacionController {
   @Post('declaraciones/:id/pagar')
   @ApiOperation({ summary: 'Marcar una declaración como pagada' })
   @ApiParam({ name: 'id', description: 'Id de la declaración' })
+  @ApiCreatedResponse({ type: DeclaracionResponseDto, description: 'Declaración pagada' })
   async pagar(@Param('id') id: string): Promise<Declaracion> {
     const declaracion = await this.tributacion.marcarPagada(id);
     if (!declaracion) throw new NotFoundError('Declaracion', id);

@@ -1,8 +1,9 @@
 import { Controller, Get, Query } from '@nestjs/common';
-import { ApiOperation, ApiQuery, ApiTags } from '@nestjs/swagger';
+import { ApiBearerAuth, ApiOkResponse, ApiOperation, ApiQuery, ApiTags } from '@nestjs/swagger';
 import { Roles, ROLES, UsuarioActual, UsuarioContexto } from '@core/shared';
 import { TributacionService } from '../tributacion/tributacion.service';
 import { KpisService } from './kpis.service';
+import { VendedorFiscalResponseDto } from './finanzas.response.dto';
 
 /**
  * GET /api/v1/vendedores/me/fiscal — situacion tributaria del vendedor:
@@ -11,6 +12,7 @@ import { KpisService } from './kpis.service';
  * declaracion"). Solo lectura para el vendedor (matriz RLS, tabla 8.15).
  */
 @ApiTags('Finanzas · Vendedor')
+@ApiBearerAuth()
 @Controller('api/v1/vendedores')
 @Roles(ROLES.VENDEDOR)
 export class VendedorFiscalController {
@@ -22,6 +24,7 @@ export class VendedorFiscalController {
   @Get('me/fiscal')
   @ApiOperation({ summary: 'Situación fiscal del vendedor (cap. 4.4)' })
   @ApiQuery({ name: 'mes', required: false })
+  @ApiOkResponse({ type: VendedorFiscalResponseDto, description: 'Situación fiscal del vendedor' })
   async situacion(
     @UsuarioActual() usuario: UsuarioContexto,
     @Query('mes') mes?: string,
