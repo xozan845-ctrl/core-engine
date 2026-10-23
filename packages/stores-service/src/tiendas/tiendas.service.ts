@@ -17,8 +17,8 @@ export interface Tienda {
   id: string;
   empresa_id: string;
   propietario_usuario_id: string;
-  participacion_porcentaje: number;
-  vendedor_id: string;
+  participacion_porcentaje: number | null;
+  vendedor_id: string | null;
   nombre: string;
   slug: string;
   descripcion: string;
@@ -81,10 +81,11 @@ export class TiendasService {
   async crear(
     empresaId: string,
     propietarioId: string,
-    participacion: number,
+    participacion: number | null,
     nombre: string,
     descripcion?: string,
     slugSolicitado?: string,
+    vendedorId: string | null = propietarioId,
   ): Promise<Tienda> {
     const nombreFinal = nombre.trim();
     if (nombreFinal.length < 2 || nombreFinal.length > 100) {
@@ -101,9 +102,9 @@ export class TiendasService {
         const fila = await this.pg.queryOne<Tienda>(
           `INSERT INTO stores.tiendas
              (id, empresa_id, propietario_usuario_id, vendedor_id, participacion_porcentaje, nombre, descripcion, slug)
-           VALUES ($1, $2, $3, $3, $4, $5, $6, $7)
+           VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
            RETURNING ${CAMPOS_TIENDA}`,
-          [randomUUID(), empresaId, propietarioId, participacion, nombreFinal, descripcionFinal, slug],
+          [randomUUID(), empresaId, propietarioId, vendedorId, participacion, nombreFinal, descripcionFinal, slug],
         );
         if (!fila) throw new DomainError('TIENDA_FALLIDA', 'No se pudo crear la tienda.');
         return fila;

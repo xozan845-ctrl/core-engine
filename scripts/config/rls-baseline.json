@@ -37,6 +37,7 @@
   "finance.regimenes_fiscales",
   "finance.series_comprobantes",
   "finance.sujetos_fiscales",
+  "identity.invitaciones_vendedor",
   "identity.outbox",
   "identity.sesiones",
   "identity.usuarios",
