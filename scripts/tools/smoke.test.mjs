@@ -20,6 +20,17 @@ function json(res, status, body) {
   res.end(JSON.stringify(body));
 }
 
+function redirigir(res, location) {
+  res.writeHead(301, { location });
+  res.end();
+}
+
+async function leerCuerpo(req) {
+  let cuerpo = '';
+  for await (const chunk of req) cuerpo += chunk;
+  return cuerpo ? JSON.parse(cuerpo) : {};
+}
+
 async function ejecutarSmoke(handler, timeoutMs = 1_000, waitTimeoutMs = 30_000) {
   const requests = [];
   const server = createServer(async (req, res) => {
@@ -109,28 +120,67 @@ test('smoke no repite un POST si la respuesta se pierde', async () => {
 });
 
 test('smoke limita la espera de la saga asíncrona por paso', async () => {
+  let slugEmpresa = 'empresa-piloto';
+  let slugEmpresaAnterior;
+  let slugTienda = 'tienda-piloto';
+  let slugTiendaAnterior;
+
   const result = await ejecutarSmoke(async (req, res) => {
     const ruta = req.url;
     if (ruta === '/ready') return json(res, 200, { status: 'ok', servicios: {} });
     if (ruta === '/api/v1/auth/login') return json(res, 200, { access_token: 'admin' });
-    if (ruta === '/api/v1/auth/registro') return json(res, 201, { access_token: 'usuario' });
+    if (ruta === '/api/v1/auth/registro') {
+      const cuerpo = await leerCuerpo(req);
+      return json(res, 201, {
+        access_token: cuerpo.rol === 'empresario' ? 'empresario' : 'comprador',
+      });
+    }
     if (ruta === '/api/v1/empresas' && req.method === 'POST') {
-      return json(res, 201, { id: 'empresa-1' });
+      return json(res, 201, { id: 'empresa-1', slug: slugEmpresa });
     }
     if (ruta === '/api/v1/empresas/empresa-1/vendedores' && req.method === 'POST') {
       return json(res, 201, { id: 'vendedor-1' });
+    }
+    if (ruta === '/api/v1/empresas/empresa-1/slug' && req.method === 'PATCH') {
+      const cuerpo = await leerCuerpo(req);
+      slugEmpresaAnterior = slugEmpresa;
+      slugEmpresa = cuerpo.slug;
+      return json(res, 200, { id: 'empresa-1', slug: slugEmpresa });
+    }
+    if (ruta === `/api/v1/empresas/${slugEmpresaAnterior}` && req.method === 'GET') {
+      return redirigir(res, `/api/v1/empresas/${slugEmpresa}`);
+    }
+    if (ruta.startsWith('/api/v1/empresas/') && req.method === 'GET') {
+      const autorizacion = req.headers.authorization;
+      if (!autorizacion) return json(res, 401, { codigo: 'NO_AUTORIZADO' });
+      if (autorizacion === 'Bearer comprador') {
+        return json(res, 403, { codigo: 'ACCESO_DENEGADO' });
+      }
+      return json(res, 200, { id: 'empresa-1', slug: slugEmpresa });
     }
     if (ruta === '/api/v1/catalog/productos' && req.method === 'POST') {
       return json(res, 201, { id: 'producto-1', sku: 'SKU-1' });
     }
     if (ruta === '/api/v1/admin/reportes') return json(res, 401, { codigo: 'NO_AUTORIZADO' });
     if (ruta === '/api/v1/vendedores/tienda' && req.method === 'POST') {
-      return json(res, 201, { id: 'tienda-1' });
+      return json(res, 201, { id: 'tienda-1', slug: slugTienda });
+    }
+    if (ruta === '/api/v1/tiendas/tienda-1/slug' && req.method === 'PATCH') {
+      const cuerpo = await leerCuerpo(req);
+      slugTiendaAnterior = slugTienda;
+      slugTienda = cuerpo.slug;
+      return json(res, 200, { id: 'tienda-1', slug: slugTienda });
+    }
+    if (ruta === `/api/v1/tiendas/${slugTiendaAnterior}` && req.method === 'GET') {
+      return redirigir(res, `/api/v1/tiendas/${slugTienda}`);
+    }
+    if (ruta.startsWith('/api/v1/tiendas/') && req.method === 'GET') {
+      const ofertas = ruta === '/api/v1/tiendas/tienda-1' ? [{}] : [];
+      return json(res, 200, { tienda: { id: 'tienda-1', slug: slugTienda }, ofertas });
     }
     if (ruta === '/api/v1/vendedores/productos') {
       return json(res, 201, { id: 'oferta-1', precio_venta: '1150.00' });
     }
-    if (ruta === '/api/v1/tiendas/tienda-1') return json(res, 200, { ofertas: [{}] });
     if (ruta === '/api/v1/orders' && req.method === 'POST') {
       return json(res, 201, { id: 'orden-1' });
     }

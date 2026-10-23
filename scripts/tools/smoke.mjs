@@ -42,7 +42,7 @@ function fail(detalle = '') {
   console.log(`FAIL ${detalle}`);
 }
 
-async function api(metodo, ruta, cuerpo, token) {
+async function api(metodo, ruta, cuerpo, token, opciones = {}) {
   const intentos = metodo === 'GET' ? 2 : 1;
   for (let intento = 0; intento < intentos; intento += 1) {
     try {
@@ -53,6 +53,7 @@ async function api(metodo, ruta, cuerpo, token) {
           ...(token ? { authorization: `Bearer ${token}` } : {}),
         },
         body: cuerpo ? JSON.stringify(cuerpo) : undefined,
+        redirect: opciones.redirect ?? 'follow',
         signal: globalThis.AbortSignal.timeout(REQUEST_TIMEOUT_MS),
       });
       const texto = await res.text();
@@ -62,7 +63,7 @@ async function api(metodo, ruta, cuerpo, token) {
       } catch {
         json = texto;
       }
-      return { status: res.status, json };
+      return { status: res.status, json, location: res.headers.get('location') ?? undefined };
     } catch (error) {
       if (intento === intentos - 1) {
         throw new Error(`${metodo} ${ruta}: sin respuesta tras ${intentos} intento(s) de ${REQUEST_TIMEOUT_MS} ms`, { cause: error });
@@ -192,6 +193,72 @@ async function main() {
   }
   const tokenVendedor = loginVendedor.json.access_token;
 
+  // ── 1c. Slugs de empresa (ADR-26) ────────────────────────────────────
+  paso('La empresa se resuelve por UUID y por slug (ADR-26)');
+  const empresaPorId = await api('GET', `/api/v1/empresas/${empresa.json.id}`, null, tokenEmpresario);
+  const empresaPorSlug = await api('GET', `/api/v1/empresas/${empresa.json.slug}`, null, tokenEmpresario);
+  if (
+    empresa.json.slug &&
+    empresaPorId.status === 200 &&
+    empresaPorSlug.status === 200 &&
+    empresaPorSlug.json?.id === empresa.json.id
+  ) {
+    ok(`slug=${empresa.json.slug}`);
+  } else {
+    fail(`resolución por UUID/slug → ${empresaPorId.status}/${empresaPorSlug.status}`);
+  }
+
+  paso('El slug de empresa no es público: exige sesión y rol autorizado (ADR-26)');
+  const empresaSinSesion = await api('GET', `/api/v1/empresas/${empresa.json.slug}`);
+  const empresaConComprador = await api(
+    'GET',
+    `/api/v1/empresas/${empresa.json.slug}`,
+    null,
+    tokenComprador,
+  );
+  if (empresaSinSesion.status === 401 && empresaConComprador.status === 403) {
+    ok('401 sin token, 403 para comprador');
+  } else {
+    fail(`esperaba 401/403, obtuve ${empresaSinSesion.status}/${empresaConComprador.status}`);
+  }
+
+  paso('El slug anterior de la empresa redirige 301 al actual (ADR-26)');
+  const slugEmpresaNuevo = `${empresa.json.slug}-nueva`;
+  const cambioSlugEmpresa = await api(
+    'PATCH',
+    `/api/v1/empresas/${empresa.json.id}/slug`,
+    { slug: slugEmpresaNuevo },
+    tokenEmpresario,
+  );
+  const empresaSlugAnterior = await api(
+    'GET',
+    `/api/v1/empresas/${empresa.json.slug}`,
+    null,
+    tokenEmpresario,
+    { redirect: 'manual' },
+  );
+  const empresaSlugNuevo = await api(
+    'GET',
+    `/api/v1/empresas/${slugEmpresaNuevo}`,
+    null,
+    tokenEmpresario,
+  );
+  if (
+    cambioSlugEmpresa.status === 200 &&
+    cambioSlugEmpresa.json?.slug === slugEmpresaNuevo &&
+    empresaSlugAnterior.status === 301 &&
+    empresaSlugAnterior.location === `/api/v1/empresas/${slugEmpresaNuevo}` &&
+    empresaSlugNuevo.status === 200 &&
+    empresaSlugNuevo.json?.id === empresa.json.id
+  ) {
+    ok(`301 ${empresa.json.slug} → ${slugEmpresaNuevo}`);
+  } else {
+    fail(
+      `cambio=${cambioSlugEmpresa.status} anterior=${empresaSlugAnterior.status} ` +
+        `location=${empresaSlugAnterior.location} nuevo=${empresaSlugNuevo.status}`,
+    );
+  }
+
   // ── 2. Catálogo (TC-01) ───────────────────────────────────────────────
   paso('Admin da de alta el producto (TC-01: stock 10, precio base C$ 1 000)');
   const crear = await api(
@@ -219,6 +286,50 @@ async function main() {
   else {
     fail(`tienda → ${tienda.status} ${JSON.stringify(tienda.json)}`);
     process.exit(1);
+  }
+
+  paso('La tienda se resuelve por slug en abierto (ADR-26)');
+  const tiendaPorSlug = await api('GET', `/api/v1/tiendas/${tienda.json.slug}`);
+  if (
+    tienda.json.slug &&
+    tiendaPorSlug.status === 200 &&
+    tiendaPorSlug.json?.tienda?.id === tienda.json.id
+  ) {
+    ok(`slug=${tienda.json.slug}`);
+  } else {
+    fail(`tienda por slug → ${tiendaPorSlug.status} ${JSON.stringify(tiendaPorSlug.json)}`);
+  }
+
+  paso('El slug anterior de la tienda redirige 301 al actual (ADR-26)');
+  const slugTiendaNuevo = `${tienda.json.slug}-nueva`;
+  const cambioSlugTienda = await api(
+    'PATCH',
+    `/api/v1/tiendas/${tienda.json.id}/slug`,
+    { slug: slugTiendaNuevo },
+    tokenVendedor,
+  );
+  const tiendaSlugAnterior = await api(
+    'GET',
+    `/api/v1/tiendas/${tienda.json.slug}`,
+    null,
+    null,
+    { redirect: 'manual' },
+  );
+  const tiendaSlugNuevo = await api('GET', `/api/v1/tiendas/${slugTiendaNuevo}`);
+  if (
+    cambioSlugTienda.status === 200 &&
+    cambioSlugTienda.json?.slug === slugTiendaNuevo &&
+    tiendaSlugAnterior.status === 301 &&
+    tiendaSlugAnterior.location === `/api/v1/tiendas/${slugTiendaNuevo}` &&
+    tiendaSlugNuevo.status === 200 &&
+    tiendaSlugNuevo.json?.tienda?.id === tienda.json.id
+  ) {
+    ok(`301 ${tienda.json.slug} → ${slugTiendaNuevo}`);
+  } else {
+    fail(
+      `cambio=${cambioSlugTienda.status} anterior=${tiendaSlugAnterior.status} ` +
+        `location=${tiendaSlugAnterior.location} nuevo=${tiendaSlugNuevo.status}`,
+    );
   }
 
   paso('Publica oferta con margen 15 % (TC-02: precio final = C$ 1 150,00)');
