@@ -42,10 +42,20 @@ export class ComisionesService {
 
   /** Calcula la comision de una venta (inmutable; los numeros son enteros). */
   calcular(ventaCents: number, participacion = 100, tasa = this.tasa): { comision_cents: number; monto_vendedor_cents: number; monto_empresario_cents: number } {
+    if (!Number.isFinite(participacion) || participacion < 0 || participacion > 100) {
+      throw new DomainError('PARTICIPACION_INVALIDA', 'La participacion debe estar entre 0 y 100 %.');
+    }
     const venta = Money.desdeCentavos(ventaCents);
     const comision = venta.comision(tasa);
     const neto = venta.restar(comision);
-    const vendedor = neto.comision(participacion / 100);
+    // Money.comision exige una tasa estrictamente menor que 1; los extremos
+    // (0 % y 100 %) se resuelven directamente para no rechazar participaciones
+    // validas de ADR-25.
+    const vendedor = participacion === 100
+      ? neto
+      : participacion === 0
+        ? Money.desdeCentavos(0)
+        : neto.comision(participacion / 100);
     return {
       comision_cents: comision.centavos,
       monto_vendedor_cents: vendedor.centavos,
