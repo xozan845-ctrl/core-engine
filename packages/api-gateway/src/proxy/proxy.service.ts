@@ -123,7 +123,12 @@ export class ProxyService {
 
   async reenviar(req: Request, res: Response): Promise<void> {
     const ruta = req.originalUrl;
-    const politica = this.encontrarPolitica(ruta, req.method);
+    // El enrutado y las politicas se declaran sobre el path; la query solo se
+    // conserva para el reenvio. Sin esto, una regex anclada (`...$`) deja de
+    // coincidir cuando el cliente agrega filtros y la peticion cae en el
+    // deny-by-default (R-GW-1 / R-GW-3).
+    const rutaBase = this.rutaSinQuery(ruta);
+    const politica = this.encontrarPolitica(rutaBase, req.method);
 
     // Scrub defensivo: eliminar cualquier cabecera de identidad o interna
     // que el cliente externo pudiera haber inyectado (R-GW-3 / R-DS-5).
@@ -142,9 +147,9 @@ export class ProxyService {
     if (res.headersSent) return;
 
     // 2. destino
-    const destino = this.encontrarDestino(ruta, req.method);
+    const destino = this.encontrarDestino(rutaBase, req.method);
     if (!destino) {
-      res.status(404).json({ codigo: 'NO_ENCONTRADO', mensaje: `No existe ruta ${req.method} ${ruta}.` });
+      res.status(404).json({ codigo: 'NO_ENCONTRADO', mensaje: `No existe ruta ${req.method} ${rutaBase}.` });
       return;
     }
 
@@ -197,6 +202,12 @@ export class ProxyService {
         detalles: { servicio: destino.nombre },
       });
     }
+  }
+
+  /** Path de la peticion sin query ni fragmento, para enrutado y politicas. */
+  private rutaSinQuery(originalUrl: string): string {
+    const corte = originalUrl.search(/[?#]/);
+    return corte === -1 ? originalUrl : originalUrl.slice(0, corte);
   }
 
   private encontrarPolitica(ruta: string, metodo: string): PoliticaRuta | null {
