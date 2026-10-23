@@ -339,7 +339,10 @@ export class InvitacionesService {
 
     const invitaciones = await this.pg.query<InvitacionResumen>(
       `SELECT i.id, i.correo, i.tienda_id, t.nombre AS tienda_nombre,
-              i.participacion_porcentaje, i.estado, i.expira_en
+              i.participacion_porcentaje,
+              CASE WHEN i.estado='pendiente' AND i.expira_en <= NOW()
+                   THEN 'expirada' ELSE i.estado END AS estado,
+              i.expira_en
        FROM identity.invitaciones_vendedor i
        JOIN stores.tiendas t ON t.id = i.tienda_id
        WHERE i.empresa_id=$1
@@ -369,8 +372,11 @@ export class InvitacionesService {
 
   private async assertEmpresario(actorId: string, empresaId: string): Promise<void> {
     const miembro = await this.pg.queryOne(
-      `SELECT 1 FROM identity.empresa_miembros
-       WHERE empresa_id=$1 AND usuario_id=$2 AND rol='empresario' AND estado='activo'`,
+      `SELECT 1
+       FROM identity.empresa_miembros m
+       JOIN identity.empresas e ON e.id = m.empresa_id
+       WHERE m.empresa_id=$1 AND m.usuario_id=$2 AND m.rol='empresario'
+         AND m.estado='activo' AND e.estado='activa'`,
       [empresaId, actorId],
     );
     if (!miembro) {
@@ -380,7 +386,7 @@ export class InvitacionesService {
 
   private async buscarVigenteEnPg(token: string): Promise<InvitacionVigente> {
     const fila = await this.pg.queryOne<InvitacionVigente>(
-      `${SELECT_INVITACION} WHERE i.token_hash=$1`,
+      `${SELECT_INVITACION} WHERE i.token_hash=$1 AND e.estado='activa'`,
       [hashToken(token)],
     );
     this.validarVigente(fila);
@@ -392,7 +398,7 @@ export class InvitacionesService {
     token: string,
   ): Promise<InvitacionVigente> {
     const fila = await client.query<InvitacionVigente>(
-      `${SELECT_INVITACION} WHERE i.token_hash=$1 FOR UPDATE OF i, t`,
+      `${SELECT_INVITACION} WHERE i.token_hash=$1 AND e.estado='activa' FOR UPDATE OF i, t`,
       [hashToken(token)],
     );
     const invitacion = fila.rows[0];
