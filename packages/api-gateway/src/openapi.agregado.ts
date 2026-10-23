@@ -13206,12 +13206,14 @@ export const OPENAPI_AGREGADO = {
           },
           "participacion_porcentaje": {
             "type": "number",
+            "nullable": true,
             "minimum": 0,
             "maximum": 100
           },
           "vendedor_id": {
             "type": "string",
-            "description": "Id del vendedor dueño",
+            "nullable": true,
+            "description": "Id del vendedor asignado; null si la tienda está disponible",
             "format": "uuid"
           },
           "nombre": {
@@ -13238,8 +13240,6 @@ export const OPENAPI_AGREGADO = {
           "id",
           "empresa_id",
           "propietario_usuario_id",
-          "participacion_porcentaje",
-          "vendedor_id",
           "nombre",
           "descripcion",
           "creado_en"
