@@ -878,7 +878,6 @@
         "required": [
           "id",
           "nombre",
-          "slug",
           "modalidad_logistica",
           "estado",
           "creado_por",

@@ -10949,7 +10949,6 @@ export const OPENAPI_AGREGADO = {
         "required": [
           "id",
           "nombre",
-          "slug",
           "modalidad_logistica",
           "estado",
           "creado_por",
@@ -13242,7 +13241,6 @@ export const OPENAPI_AGREGADO = {
           "participacion_porcentaje",
           "vendedor_id",
           "nombre",
-          "slug",
           "descripcion",
           "creado_en"
         ]

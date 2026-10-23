@@ -541,7 +541,6 @@
           "participacion_porcentaje",
           "vendedor_id",
           "nombre",
-          "slug",
           "descripcion",
           "creado_en"
         ]
