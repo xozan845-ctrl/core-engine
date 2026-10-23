@@ -30,6 +30,9 @@ export const POLITICAS_RUTAS: PoliticaRuta[] = [
     { patron: /^\/api\/v1\/auth\/restablecer-contrasena$/, metodos: ['POST'], roles: null },
     { patron: /^\/api\/v1\/catalog\/productos$/, metodos: ['GET'], roles: null },
     { patron: /^\/api\/v1\/catalog\/productos\/[^/]+$/, metodos: ['GET'], roles: null },
+    // El slug de tienda forma parte de la URL publica del storefront (ADR-26);
+    // el cambio de slug exige ser vendedor/empresario y se valida en el servicio.
+    { patron: /^\/api\/v1\/tiendas\/[^/]+\/slug$/, metodos: ['PATCH'], roles: [ROLES.VENDEDOR, ROLES.EMPRESARIO] },
     { patron: /^\/api\/v1\/tiendas\/[^/]+$/, metodos: ['GET'], roles: null },
     // usuarios: gestion administrativa (sustituye a Firebase gestion-usuarios)
     { patron: /^\/api\/v1\/usuarios(\/|$)/, metodos: ['*'], roles: [ROLES.SUPER_ADMIN, ROLES.ADMIN] },
@@ -38,6 +41,10 @@ export const POLITICAS_RUTAS: PoliticaRuta[] = [
     { patron: /^\/api\/v1\/empresas$/, metodos: ['POST'], roles: [ROLES.EMPRESARIO] },
     { patron: /^\/api\/v1\/empresas\/[^/]+\/logistica$/, metodos: ['PATCH'], roles: [ROLES.EMPRESARIO] },
     { patron: /^\/api\/v1\/empresas\/[^/]+\/vendedores$/, metodos: ['POST'], roles: [ROLES.EMPRESARIO] },
+    // Cambio de slug: solo el empresario; el servicio exige membresia activa.
+    { patron: /^\/api\/v1\/empresas\/[^/]+\/slug$/, metodos: ['PATCH'], roles: [ROLES.EMPRESARIO] },
+    // GET /empresas/:id acepta UUID o slug, pero sigue siendo privado: solo
+    // miembros o administradores. No debe existir una politica publica aqui.
     { patron: /^\/api\/v1\/empresas\//, metodos: ['*'], roles: [ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.EMPRESARIO, ROLES.VENDEDOR] },
     // autenticado
     { patron: /^\/api\/v1\/auth\/me$/, metodos: ['GET'], roles: null }, // exige token (se valida abajo)

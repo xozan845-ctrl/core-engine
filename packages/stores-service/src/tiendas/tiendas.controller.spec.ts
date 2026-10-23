@@ -1,10 +1,14 @@
 import type { Mock } from 'vitest';
 import 'reflect-metadata';
-import { TiendasController, TiendasEmpresaController } from './tiendas.controller';
+import {
+  TiendasController,
+  TiendasEmpresaController,
+  TiendasSlugController,
+} from './tiendas.controller';
 import type { TiendasService } from './tiendas.service';
 import { NotFoundError, ROLES } from '@core/shared';
 
-const tienda = { id: 't-1', vendedor_id: 'u-v', nombre: 'Mi tienda', descripcion: 'x' };
+const tienda = { id: 't-1', vendedor_id: 'u-v', nombre: 'Mi tienda', slug: 'mi-tienda', descripcion: 'x' };
 const vendedor = { user_id: 'u-v', email: 'v@core.local', rol: ROLES.VENDEDOR, tenant_id: 'e-1', participacion_porcentaje: 25 };
 const empresario = { user_id: 'u-e', email: 'e@core.local', rol: ROLES.EMPRESARIO, tenant_id: 'e-1' };
 
@@ -18,15 +22,15 @@ describe('TiendasController (api/v1/vendedores, R-U-10/11)', () => {
   it('debe crear la tienda con el vendedor y los datos del dto', async () => {
     const { tiendas, controller } = fabricar();
     tiendas.crear.mockResolvedValue(tienda);
-    await expect(controller.crear({ nombre: 'Mi tienda', descripcion: 'x' } as never, vendedor as never)).resolves.toEqual(tienda);
-    expect(tiendas.crear).toHaveBeenCalledWith('e-1', 'u-v', 25, 'Mi tienda', 'x');
+    await expect(controller.crear({ nombre: 'Mi tienda', descripcion: 'x', slug: 'mi-tienda' } as never, vendedor as never)).resolves.toEqual(tienda);
+    expect(tiendas.crear).toHaveBeenCalledWith('e-1', 'u-v', 25, 'Mi tienda', 'x', 'mi-tienda');
   });
 
   it('debe asignar participacion completa a la tienda del empresario', async () => {
     const { tiendas, controller } = fabricar();
     const empresario = { ...vendedor, rol: ROLES.EMPRESARIO, user_id: 'u-e' };
     await controller.crear({ nombre: 'Tienda empresa' } as never, empresario as never);
-    expect(tiendas.crear).toHaveBeenCalledWith('e-1', 'u-e', 100, 'Tienda empresa', undefined);
+    expect(tiendas.crear).toHaveBeenCalledWith('e-1', 'u-e', 100, 'Tienda empresa', undefined, undefined);
   });
 
   it('debe rechazar la creacion sin empresa activa', async () => {
@@ -90,5 +94,29 @@ describe('TiendasEmpresaController (api/v1/empresarios/me/tiendas, ADR-25)', () 
     expect(Reflect.getMetadata('roles_requeridos', TiendasEmpresaController.prototype.listar)).toEqual([
       ROLES.EMPRESARIO,
     ]);
+  });
+});
+
+describe('TiendasSlugController (api/v1/tiendas/:id/slug, ADR-26)', () => {
+  function fabricarSlug(): { tiendas: Record<string, Mock>; controller: TiendasSlugController } {
+    const tiendas = { actualizarSlug: vi.fn() };
+    const controller = new TiendasSlugController(tiendas as unknown as TiendasService);
+    return { tiendas, controller };
+  }
+
+  it('debe cambiar el slug con el usuario autenticado', async () => {
+    const { tiendas, controller } = fabricarSlug();
+    tiendas.actualizarSlug.mockResolvedValue({ ...tienda, slug: 'mi-tienda-nueva' });
+
+    await expect(
+      controller.actualizarSlug('t-1', { slug: 'mi-tienda-nueva' }, vendedor as never),
+    ).resolves.toEqual({ ...tienda, slug: 'mi-tienda-nueva' });
+    expect(tiendas.actualizarSlug).toHaveBeenCalledWith('u-v', 't-1', 'mi-tienda-nueva');
+  });
+
+  it('debe exigir rol vendedor o empresario', () => {
+    expect(
+      Reflect.getMetadata('roles_requeridos', TiendasSlugController.prototype.actualizarSlug),
+    ).toEqual([ROLES.VENDEDOR, ROLES.EMPRESARIO]);
   });
 });

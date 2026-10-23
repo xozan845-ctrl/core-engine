@@ -1,5 +1,14 @@
-import { Body, Controller, Get, Post } from '@nestjs/common';
-import { ApiBearerAuth, ApiCreatedResponse, ApiOkResponse, ApiOperation, ApiProperty, ApiTags } from '@nestjs/swagger';
+import { Body, Controller, Get, Param, Patch, Post } from '@nestjs/common';
+import {
+  ApiBearerAuth,
+  ApiCreatedResponse,
+  ApiOkResponse,
+  ApiOperation,
+  ApiParam,
+  ApiProperty,
+  ApiResponse,
+  ApiTags,
+} from '@nestjs/swagger';
 import { IsOptional, IsString, Length } from 'class-validator';
 import { TiendasService, Tienda } from './tiendas.service';
 import { TiendaResponseDto } from './tiendas.response.dto';
@@ -16,6 +25,24 @@ export class CrearTiendaRequestDto {
   @IsString()
   descripcion?: string;
 
+  @ApiProperty({
+    description: 'Slug público. Si se omite se deriva del nombre y se resuelven colisiones con sufijos.',
+    required: false,
+    minLength: 2,
+    maxLength: 80,
+    example: 'tienda-de-la-vendedora-piloto',
+  })
+  @IsOptional()
+  @IsString()
+  @Length(2, 80)
+  slug?: string;
+}
+
+export class ActualizarSlugTiendaRequestDto {
+  @ApiProperty({ minLength: 2, maxLength: 80, example: 'tienda-de-la-vendedora' })
+  @IsString()
+  @Length(2, 80)
+  slug: string;
 }
 
 @ApiTags('Tiendas')
@@ -32,7 +59,7 @@ export class TiendasController {
     if (!usuario.tenant_id) throw new NotFoundError('Empresa', 'activa');
     const participacion = usuario.rol === ROLES.EMPRESARIO ? 100 : usuario.participacion_porcentaje;
     if (participacion === undefined) throw new NotFoundError('Participacion', 'del vendedor');
-    return this.tiendas.crear(usuario.tenant_id, usuario.user_id, participacion, dto.nombre, dto.descripcion);
+    return this.tiendas.crear(usuario.tenant_id, usuario.user_id, participacion, dto.nombre, dto.descripcion, dto.slug);
   }
 
   @Get('me/tienda')
@@ -60,5 +87,28 @@ export class TiendasEmpresaController {
   async listar(@UsuarioActual() usuario: UsuarioContexto): Promise<Tienda[]> {
     if (!usuario.tenant_id) throw new NotFoundError('Empresa', 'activa');
     return this.tiendas.deEmpresa(usuario.tenant_id);
+  }
+}
+
+/** PATCH /api/v1/tiendas/:id/slug — cambia el slug público (ADR-26). */
+@ApiTags('Tiendas')
+@ApiBearerAuth()
+@Controller('api/v1/tiendas')
+export class TiendasSlugController {
+  constructor(private readonly tiendas: TiendasService) {}
+
+  @Patch(':id/slug')
+  @Roles(ROLES.VENDEDOR, ROLES.EMPRESARIO)
+  @ApiOperation({ summary: 'Cambiar el slug público; los anteriores redirigen 301' })
+  @ApiParam({ name: 'id', description: 'UUID de la tienda o su slug actual/anterior' })
+  @ApiOkResponse({ type: TiendaResponseDto, description: 'Slug actualizado' })
+  @ApiResponse({ status: 403, description: 'El usuario no es propietario de la tienda' })
+  @ApiResponse({ status: 409, description: 'El slug ya está en uso (incluye slugs históricos)' })
+  actualizarSlug(
+    @Param('id') id: string,
+    @Body() dto: ActualizarSlugTiendaRequestDto,
+    @UsuarioActual() usuario: UsuarioContexto,
+  ): Promise<Tienda> {
+    return this.tiendas.actualizarSlug(usuario.user_id, id, dto.slug);
   }
 }

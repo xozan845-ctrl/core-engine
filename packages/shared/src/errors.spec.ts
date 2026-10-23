@@ -6,6 +6,7 @@ import {
   ForbiddenError,
   ValidationError,
   httpStatusDe,
+  esViolacionUnicidad,
 } from './errors';
 
 describe('errors (errores estructurados de la API, doc 5.7)', () => {
@@ -39,5 +40,13 @@ describe('errors (errores estructurados de la API, doc 5.7)', () => {
     expect(new ConflictError('c').codigo).toBe('CONFLICTO');
     expect(new ValidationError().codigo).toBe('VALIDACION');
     expect(new ValidationError('detalle').detalles).toBe('detalle');
+  });
+
+  it('detecta solo las violaciones UNIQUE de PostgreSQL (SQLSTATE 23505)', () => {
+    expect(esViolacionUnicidad({ code: '23505' })).toBe(true);
+    expect(esViolacionUnicidad({ code: '23503' })).toBe(false);
+    expect(esViolacionUnicidad(new Error('sin code'))).toBe(false);
+    expect(esViolacionUnicidad(null)).toBe(false);
+    expect(esViolacionUnicidad('23505')).toBe(false);
   });
 });

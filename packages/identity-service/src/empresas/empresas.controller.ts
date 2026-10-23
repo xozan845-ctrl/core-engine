@@ -1,11 +1,32 @@
-import { Body, Controller, Get, Param, Patch, Post } from '@nestjs/common';
-import { ApiBearerAuth, ApiCreatedResponse, ApiOkResponse, ApiOperation, ApiProperty, ApiTags } from '@nestjs/swagger';
-import { IsEmail, IsIn, IsInt, IsString, Length, Max, Min, MinLength } from 'class-validator';
+import { Body, Controller, Get, Param, Patch, Post, Res } from '@nestjs/common';
+import {
+  ApiBearerAuth,
+  ApiCreatedResponse,
+  ApiOkResponse,
+  ApiOperation,
+  ApiParam,
+  ApiProperty,
+  ApiResponse,
+  ApiTags,
+} from '@nestjs/swagger';
+import type { Response } from 'express';
+import { IsEmail, IsIn, IsInt, IsOptional, IsString, Length, Max, Min, MinLength } from 'class-validator';
 import { ROLES, Roles, UsuarioActual, UsuarioContexto } from '@core/shared';
 import { EmpresasService, ModalidadLogistica } from './empresas.service';
 
 class CrearEmpresaRequestDto {
   @ApiProperty({ minLength: 2, maxLength: 160 }) @IsString() @Length(2, 160) nombre: string;
+  @ApiProperty({
+    required: false,
+    minLength: 2,
+    maxLength: 80,
+    description: 'Slug público. Si se omite se deriva del nombre y se resuelven colisiones con sufijos.',
+    example: 'distribuidora-piloto',
+  })
+  @IsOptional()
+  @IsString()
+  @Length(2, 80)
+  slug?: string;
   @ApiProperty({ enum: ['plataforma', 'propia', 'hibrida'] }) @IsIn(['plataforma', 'propia', 'hibrida']) modalidad_logistica: ModalidadLogistica;
 }
 class CrearVendedorRequestDto {
@@ -19,9 +40,18 @@ class ActualizarModalidadLogisticaRequestDto {
   @IsIn(['plataforma', 'propia', 'hibrida'])
   modalidad_logistica: ModalidadLogistica;
 }
+class ActualizarSlugRequestDto {
+  @ApiProperty({ minLength: 2, maxLength: 80, example: 'distribuidora-piloto' })
+  @IsString()
+  @Length(2, 80)
+  slug: string;
+}
 export class EmpresaResponseDto {
   @ApiProperty({ format: 'uuid' }) id: string;
   @ApiProperty() nombre: string;
+  // `required: false` mantiene el cambio como aditivo para el gate R-C-7;
+  // el servicio siempre devuelve el slug en runtime.
+  @ApiProperty({ required: false, description: 'Slug público actual', example: 'distribuidora-piloto' }) slug: string;
   @ApiProperty({ enum: ['plataforma', 'propia', 'hibrida'] }) modalidad_logistica: ModalidadLogistica;
   @ApiProperty() estado: string;
   @ApiProperty({ format: 'uuid' }) creado_por: string;
@@ -41,10 +71,46 @@ export class EmpresasController {
   @Post() @Roles(ROLES.EMPRESARIO)
   @ApiOperation({ summary: 'Crear empresa y elegir modalidad logística' })
   @ApiCreatedResponse({ type: EmpresaResponseDto, description: 'Empresa creada con membresía del empresario' })
-  crear(@Body() dto: CrearEmpresaRequestDto, @UsuarioActual() u: UsuarioContexto) { return this.empresas.crear(u.user_id, dto.nombre, dto.modalidad_logistica); }
+  crear(@Body() dto: CrearEmpresaRequestDto, @UsuarioActual() u: UsuarioContexto) { return this.empresas.crear(u.user_id, dto.nombre, dto.modalidad_logistica, dto.slug); }
   @Get(':id') @Roles(ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.EMPRESARIO, ROLES.VENDEDOR)
+  @ApiOperation({ summary: 'Obtener una empresa por UUID o slug (solo miembros o administradores)' })
+  @ApiParam({
+    name: 'id',
+    description: 'UUID de la empresa o su slug público actual/anterior. Un slug anterior responde 301.',
+    example: 'distribuidora-piloto',
+  })
   @ApiOkResponse({ type: EmpresaResponseDto, description: 'Empresa visible para el miembro o administrador global' })
-  obtener(@Param('id') id: string, @UsuarioActual() u: UsuarioContexto) { return this.empresas.obtenerPara(u.user_id, id, [ROLES.SUPER_ADMIN, ROLES.ADMIN].includes(u.rol as never)); }
+  @ApiResponse({
+    status: 301,
+    description: 'El slug consultado es anterior; Location apunta al slug actual',
+    headers: { Location: { description: 'Ruta con el slug actual', schema: { type: 'string' } } },
+  })
+  @ApiResponse({ status: 404, description: 'Empresa inexistente o no visible para el usuario' })
+  async obtener(
+    @Param('id') id: string,
+    @UsuarioActual() u: UsuarioContexto,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    const { empresa, redirigirA } = await this.empresas.resolverPara(
+      u.user_id,
+      id,
+      [ROLES.SUPER_ADMIN, ROLES.ADMIN].includes(u.rol as never),
+    );
+    if (redirigirA) res.status(301).setHeader('Location', redirigirA);
+    return empresa;
+  }
+  @Patch(':id/slug') @Roles(ROLES.EMPRESARIO)
+  @ApiOperation({ summary: 'Cambiar el slug público; los anteriores redirigen 301' })
+  @ApiParam({ name: 'id', description: 'UUID de la empresa o su slug actual/anterior' })
+  @ApiOkResponse({ type: EmpresaResponseDto, description: 'Slug actualizado' })
+  @ApiResponse({ status: 409, description: 'El slug ya está en uso (incluye slugs históricos)' })
+  actualizarSlug(
+    @Param('id') id: string,
+    @Body() dto: ActualizarSlugRequestDto,
+    @UsuarioActual() u: UsuarioContexto,
+  ) {
+    return this.empresas.actualizarSlug(u.user_id, id, dto.slug);
+  }
   @Patch(':id/logistica') @Roles(ROLES.EMPRESARIO)
   @ApiOperation({ summary: 'Cambiar la modalidad logística para envíos futuros' })
   @ApiOkResponse({ type: EmpresaResponseDto, description: 'Modalidad logística actualizada' })
