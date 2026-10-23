@@ -1,5 +1,7 @@
 export const ROLES = {
+  SUPER_ADMIN: 'super_admin',
   ADMIN: 'admin',
+  EMPRESARIO: 'empresario',
   VENDEDOR: 'vendedor',
   COMPRADOR: 'comprador',
   LOGISTICA: 'logistica',
@@ -10,10 +12,11 @@ export const ROLES = {
 
 export type Rol = (typeof ROLES)[keyof typeof ROLES];
 
-export const ROLES_REGISTRABLES: Rol[] = [ROLES.VENDEDOR, ROLES.COMPRADOR];
+export const ROLES_REGISTRABLES: Rol[] = [ROLES.EMPRESARIO, ROLES.COMPRADOR];
 
 /** Roles de la aplicacion de logistica de campo (app-test). */
 export const ROLES_LOGISTICA: Rol[] = [
+  ROLES.EMPRESARIO,
   ROLES.ADMIN,
   ROLES.LOGISTICA,
   ROLES.COORDINADOR,
@@ -24,6 +27,7 @@ export const ROLES_LOGISTICA: Rol[] = [
 /** Cabeceras de contexto propagadas por el gateway a los servicios. */
 export const TENANT_HEADER = 'x-tenant';
 export const PERSONAL_HEADER = 'x-user-personal';
+export const PARTICIPACION_HEADER = 'x-user-participacion';
 
 /**
  * RN-01: el vendedor fija un margen entre 0 y 90 % (expresado en enteros, ej. 15 = 15 %).

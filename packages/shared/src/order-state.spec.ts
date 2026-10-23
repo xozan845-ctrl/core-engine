@@ -14,6 +14,7 @@ describe('order-state (ciclo de vida de la orden, Tabla 13)', () => {
     for (const estado of ['creada', 'pagada', 'en_preparacion']) {
       expect(puedeTransicionar(estado as EstadoOrden, 'cancelada')).toBe(true);
     }
+    expect(puedeTransicionar('pagada', 'devuelta')).toBe(true);
     expect(puedeTransicionar('enviada', 'devuelta')).toBe(true);
     expect(puedeTransicionar('entregada', 'devuelta')).toBe(true);
   });
@@ -33,6 +34,7 @@ describe('order-state (ciclo de vida de la orden, Tabla 13)', () => {
       error = e as DomainError;
     }
     expect(error?.codigo).toBe('TRANSICION_INVALIDA');
+    expect(error?.message).toContain('Transicion invalida');
     expect(error?.toResponse().mensaje).toContain('creada');
     expect(error?.toResponse().mensaje).toContain('entregada');
   });

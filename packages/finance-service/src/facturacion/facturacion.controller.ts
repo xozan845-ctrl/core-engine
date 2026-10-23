@@ -40,7 +40,7 @@ export class EmitirComprobanteRequestDto {
 @ApiTags('Finanzas · Facturación')
 @ApiBearerAuth()
 @Controller('api/v1/finanzas/comprobantes')
-@Roles(ROLES.ADMIN)
+@Roles(ROLES.SUPER_ADMIN, ROLES.ADMIN)
 export class FacturacionController {
   constructor(private readonly facturacion: FacturacionService) {}
 

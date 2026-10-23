@@ -1,12 +1,13 @@
 {
   "name": "@core/shared",
-  "version": "1.0.0",
+  "version": "1.0.7",
   "private": true,
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "scripts": {
     "build": "tsc -p tsconfig.json",
-    "test": "vitest run"
+    "test": "vitest run",
+    "mutation": "stryker run"
   },
   "dependencies": {
     "@nestjs/common": "^11.0.0",

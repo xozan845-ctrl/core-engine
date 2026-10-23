@@ -20,6 +20,8 @@ export interface OfertaExterna {
   id: string;
   tienda_id: string;
   vendedor_id: string;
+  empresa_id: string;
+  participacion_porcentaje: number;
   producto_id: string;
   sku: string;
   producto_nombre: string;
@@ -85,6 +87,8 @@ export class CreateOrderCommandHandler {
         precio_unitario_cents: precioUnitario.centavos,
         vendedor_id: oferta.vendedor_id,
         tienda_id: oferta.tienda_id,
+        empresa_id: oferta.empresa_id,
+        participacion_porcentaje: oferta.participacion_porcentaje,
       });
     }
 
@@ -162,6 +166,7 @@ export class CreateOrderCommandHandler {
     if (!estado) throw new NotFoundError('Orden', orderId);
 
     validarTransicion(estado.estado as never, estadoNuevo as never);
+    const actorFinal = actor ?? 'sistema';
 
     await this.pg.transaccion(async (client) => {
       await this.eventStore.appendEnTransaccion(client, orderId, 'OrderStatusUpdatedEvent', {
@@ -169,14 +174,20 @@ export class CreateOrderCommandHandler {
         estado: estadoNuevo,
         previo_estado: estado.estado,
         motivo,
-        actor: actor ?? 'sistema',
+        actor: actorFinal,
         ocurrido_en: new Date().toISOString(),
       });
       const evento = {
         event_id: randomUUID(),
         tipo: EVENTOS.ORDER_STATUS_UPDATED,
         ocurrido_en: new Date().toISOString(),
-        data: { order_id: orderId, estado: estadoNuevo, previo_estado: estado.estado, motivo },
+        data: {
+          order_id: orderId,
+          estado: estadoNuevo,
+          previo_estado: estado.estado,
+          motivo,
+          actor: actorFinal,
+        },
       };
       await client.query(
         `INSERT INTO orders.outbox (event_id, tipo, payload, estado, creado_en)

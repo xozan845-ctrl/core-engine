@@ -119,4 +119,5 @@ export const ALLOWED_COMMIT_SCOPES = [
   'release',
   'git',
   'test',
+  'integration',
 ];

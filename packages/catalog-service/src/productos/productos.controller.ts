@@ -9,6 +9,7 @@ import {
   Matches,
   Max,
   Min,
+  IsUUID,
 } from 'class-validator';
 import { ProductosService, Producto } from './productos.service';
 import { PaginaProductosResponseDto, ProductoResponseDto } from './productos.response.dto';
@@ -19,6 +20,15 @@ export class CrearProductoRequestDto {
   @IsString()
   @Matches(/^[A-Za-z0-9-]{2,32}$/, { message: 'SKU invalido (letras, numeros y guiones, 2-32)' })
   sku: string;
+
+  @ApiProperty({
+    description: 'Empresa destino. Obligatoria para super_admin/admin; el empresario usa su empresa activa.',
+    format: 'uuid',
+    required: false,
+  })
+  @IsOptional()
+  @IsUUID()
+  empresa_id?: string;
 
   @ApiProperty({ description: 'Nombre del producto', minLength: 2, maxLength: 200 })
   @IsString()
@@ -139,25 +149,34 @@ export class ProductosController {
 
   /** POST /api/v1/catalog/productos — alta de producto (admin, TC-01). */
   @Post('productos')
-  @Roles(ROLES.ADMIN)
+  @Roles(ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.EMPRESARIO)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Crear producto (admin, TC-01)' })
   @ApiCreatedResponse({ type: ProductoResponseDto, description: 'Producto creado' })
   async crear(
     @Body() dto: CrearProductoRequestDto,
-    @UsuarioActual() _usuario: UsuarioContexto,
+    @UsuarioActual() usuario: UsuarioContexto,
   ): Promise<Producto> {
-    return this.productos.crear({ ...dto, precio_base: dto.precio_base });
+    const esGlobal = usuario.rol === ROLES.SUPER_ADMIN || usuario.rol === ROLES.ADMIN;
+    const empresaId = esGlobal ? dto.empresa_id : usuario.tenant_id;
+    if (!empresaId) throw new NotFoundError('Empresa', 'activa');
+    return this.productos.crear({ ...dto, empresa_id: empresaId, precio_base: dto.precio_base });
   }
 
   /** PATCH /api/v1/catalog/productos/:id — edicion (admin; RN-08 historico). */
   @Patch('productos/:id')
-  @Roles(ROLES.ADMIN)
+  @Roles(ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.EMPRESARIO)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Editar producto (admin; RN-08 histórico)' })
   @ApiParam({ name: 'id', description: 'Id del producto' })
   @ApiOkResponse({ type: ProductoResponseDto, description: 'Producto actualizado' })
-  async actualizar(@Param('id') id: string, @Body() dto: ActualizarProductoRequestDto): Promise<Producto> {
-    return this.productos.actualizar(id, dto);
+  async actualizar(
+    @Param('id') id: string,
+    @Body() dto: ActualizarProductoRequestDto,
+    @UsuarioActual() usuario: UsuarioContexto,
+  ): Promise<Producto> {
+    const empresaId = usuario.rol === ROLES.EMPRESARIO ? usuario.tenant_id : undefined;
+    if (usuario.rol === ROLES.EMPRESARIO && !empresaId) throw new NotFoundError('Empresa', 'activa');
+    return this.productos.actualizar(id, dto, empresaId);
   }
 }

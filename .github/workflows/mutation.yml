@@ -1,0 +1,48 @@
+name: Mutation
+
+# Mutación mensual/pre-release (R-MT-1): NO es un gate de PR.
+# Ejecuta Stryker sobre los módulos críticos y publica el reporte JSON.
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '0 4 1 * *'
+
+concurrency:
+  group: mutation-${{ github.ref }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  mutation:
+    name: mutation (${{ matrix.package }})
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    strategy:
+      fail-fast: false
+      matrix:
+        package:
+          - shared
+          - identity-service
+          - orders-service
+          - commissions-service
+          - finance-service
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: "20"
+          cache: "npm"
+      - name: Install dependencies
+        run: npm ci --prefer-offline
+      - name: Run Stryker (R-MT-1/R-MT-2)
+        run: npm run mutation -w @core/${{ matrix.package }}
+      - name: Upload mutation report
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: mutation-${{ matrix.package }}
+          path: packages/${{ matrix.package }}/reports/mutation/mutation.json
+          if-no-files-found: ignore
+          retention-days: 30

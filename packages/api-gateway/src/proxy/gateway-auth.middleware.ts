@@ -8,6 +8,7 @@ import {
   Logger,
   TENANT_HEADER,
   PERSONAL_HEADER,
+  PARTICIPACION_HEADER,
 } from '@core/shared';
 
 export interface PoliticaRuta {
@@ -31,25 +32,35 @@ export const POLITICAS_RUTAS: PoliticaRuta[] = [
     { patron: /^\/api\/v1\/catalog\/productos\/[^/]+$/, metodos: ['GET'], roles: null },
     { patron: /^\/api\/v1\/tiendas\/[^/]+$/, metodos: ['GET'], roles: null },
     // usuarios: gestion administrativa (sustituye a Firebase gestion-usuarios)
-    { patron: /^\/api\/v1\/usuarios(\/|$)/, metodos: ['*'], roles: [ROLES.ADMIN] },
+    { patron: /^\/api\/v1\/usuarios(\/|$)/, metodos: ['*'], roles: [ROLES.SUPER_ADMIN, ROLES.ADMIN] },
     // creacion administrativa de usuarios (roles de tienda y logistica)
-    { patron: /^\/api\/v1\/auth\/crear-usuario$/, metodos: ['POST'], roles: [ROLES.ADMIN] },
+    { patron: /^\/api\/v1\/auth\/crear-usuario$/, metodos: ['POST'], roles: [ROLES.SUPER_ADMIN, ROLES.ADMIN] },
+    { patron: /^\/api\/v1\/empresas$/, metodos: ['POST'], roles: [ROLES.EMPRESARIO] },
+    { patron: /^\/api\/v1\/empresas\/[^/]+\/logistica$/, metodos: ['PATCH'], roles: [ROLES.EMPRESARIO] },
+    { patron: /^\/api\/v1\/empresas\/[^/]+\/vendedores$/, metodos: ['POST'], roles: [ROLES.EMPRESARIO] },
+    { patron: /^\/api\/v1\/empresas\//, metodos: ['*'], roles: [ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.EMPRESARIO, ROLES.VENDEDOR] },
     // autenticado
     { patron: /^\/api\/v1\/auth\/me$/, metodos: ['GET'], roles: null }, // exige token (se valida abajo)
     // logout: exige un access token valido (cualquier rol); revoca el refresh (R-GW-4)
     { patron: /^\/api\/v1\/auth\/logout$/, metodos: ['POST'], roles: Object.values(ROLES) },
-    // catálogo: escritura admin
-    { patron: /^\/api\/v1\/catalog\/productos/, metodos: ['POST', 'PATCH', 'PUT', 'DELETE'], roles: [ROLES.ADMIN] },
+    // catálogo: escritura admin (el super_admin opera globalmente; para crear
+    // debe indicar la empresa en el cuerpo)
+    { patron: /^\/api\/v1\/catalog\/productos/, metodos: ['POST', 'PATCH', 'PUT', 'DELETE'], roles: [ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.EMPRESARIO] },
     // vendedores
     {
       patron: /^\/api\/v1\/vendedores\/(me\/ventas|me\/liquidaciones)$/,
       metodos: ['GET'],
       roles: [ROLES.VENDEDOR],
     },
+    { patron: /^\/api\/v1\/empresarios\/me\/liquidaciones$/, metodos: ['GET'], roles: [ROLES.EMPRESARIO] },
+    { patron: /^\/api\/v1\/empresarios\/me\/ventas$/, metodos: ['GET'], roles: [ROLES.EMPRESARIO] },
+    { patron: /^\/api\/v1\/empresarios\/me\/tiendas$/, metodos: ['GET'], roles: [ROLES.EMPRESARIO] },
+    { patron: /^\/api\/v1\/empresarios\/me\/envios(\/|$)/, metodos: ['GET', 'POST'], roles: [ROLES.EMPRESARIO] },
+    { patron: /^\/api\/v1\/envios\/[^/]+\/estado$/, metodos: ['PATCH'], roles: [ROLES.SUPER_ADMIN, ...ROLES_LOGISTICA] },
     {
       patron: /^\/api\/v1\/vendedores\//,
       metodos: ['GET', 'POST', 'PATCH', 'PUT', 'DELETE'],
-      roles: [ROLES.VENDEDOR],
+      roles: [ROLES.VENDEDOR, ROLES.EMPRESARIO],
     },
     // pedidos
     { patron: /^\/api\/v1\/orders$/, metodos: ['POST'], roles: [ROLES.COMPRADOR] },
@@ -57,12 +68,38 @@ export const POLITICAS_RUTAS: PoliticaRuta[] = [
     {
       patron: /^\/api\/v1\/orders\/[^/]+\/estado$/,
       metodos: ['PATCH', 'POST'],
-      roles: [ROLES.ADMIN, ROLES.LOGISTICA],
+      roles: [ROLES.SUPER_ADMIN, ROLES.EMPRESARIO, ROLES.ADMIN, ROLES.LOGISTICA],
+    },
+    // Pedidos: reglas específicas antes de cualquier catch-all. El gateway
+    // resuelve por primera coincidencia (find), así que una regla genérica
+    // como /orders/ expondría las rutas admin y de tienda a otros roles
+    // (R-GW-1, R-GW-3).
+    { patron: /^\/api\/v1\/orders\/admin\/todas$/, metodos: ['GET'], roles: [ROLES.SUPER_ADMIN, ROLES.ADMIN] },
+    { patron: /^\/api\/v1\/orders\/vendedor\/mis-ventas$/, metodos: ['GET'], roles: [ROLES.VENDEDOR] },
+    {
+      patron: /^\/api\/v1\/orders\/vendedor\/comisiones$/,
+      metodos: ['GET'],
+      roles: [ROLES.SUPER_ADMIN, ROLES.VENDEDOR, ROLES.ADMIN],
     },
     {
-      patron: /^\/api\/v1\/orders\//,
+      patron: /^\/api\/v1\/orders\/tienda\/[^/]+$/,
       metodos: ['GET'],
-      roles: [ROLES.COMPRADOR, ROLES.VENDEDOR, ROLES.ADMIN],
+      roles: [ROLES.SUPER_ADMIN, ROLES.EMPRESARIO, ROLES.VENDEDOR, ROLES.ADMIN],
+    },
+    {
+      patron: /^\/api\/v1\/orders\/empresa$/,
+      metodos: ['GET'],
+      roles: [ROLES.SUPER_ADMIN, ROLES.EMPRESARIO, ROLES.ADMIN],
+    },
+    {
+      patron: /^\/api\/v1\/orders\/[^/]+\/timeline$/,
+      metodos: ['GET'],
+      roles: [ROLES.SUPER_ADMIN, ROLES.EMPRESARIO, ROLES.COMPRADOR, ROLES.VENDEDOR, ROLES.ADMIN],
+    },
+    {
+      patron: /^\/api\/v1\/orders\/[^/]+$/,
+      metodos: ['GET'],
+      roles: [ROLES.SUPER_ADMIN, ROLES.EMPRESARIO, ROLES.COMPRADOR, ROLES.VENDEDOR, ROLES.ADMIN],
     },
     // carrito (RN-05): solo el comprador autenticado
     {
@@ -70,6 +107,12 @@ export const POLITICAS_RUTAS: PoliticaRuta[] = [
       metodos: ['GET', 'POST', 'PATCH', 'DELETE'],
       roles: [ROLES.COMPRADOR],
     },
+  // la configuracion de cuota del bucket es administrativa (Tabla 21)
+  {
+    patron: /^\/api\/v1\/storage\/bucket$/,
+    metodos: ['POST'],
+    roles: [ROLES.SUPER_ADMIN, ROLES.ADMIN],
+  },
   // almacenamiento de objetos por tenant (ADR-24): cualquier usuario autenticado
   // con tenant; el aislamiento real lo garantiza el bucket + el filtro por tenant.
   {
@@ -81,24 +124,24 @@ export const POLITICAS_RUTAS: PoliticaRuta[] = [
   {
     patron: /^\/api\/v1\/admin\/inventario/,
     metodos: ['GET', 'POST', 'PATCH'],
-    roles: [ROLES.ADMIN],
+    roles: [ROLES.SUPER_ADMIN, ROLES.ADMIN],
   },
   {
     patron: /^\/api\/v1\/admin\//,
     metodos: ['*'],
-    roles: [ROLES.ADMIN],
+    roles: [ROLES.SUPER_ADMIN, ROLES.ADMIN],
   },
   // finanzas y regimen fiscal (contabilidad, comprobantes, proyecciones)
   {
     patron: /^\/api\/v1\/finanzas\//,
     metodos: ['*'],
-    roles: [ROLES.ADMIN],
+    roles: [ROLES.SUPER_ADMIN, ROLES.ADMIN],
   },
   // field-service: logistica de campo (app-test) — roles de logistica
   {
     patron: /^\/api\/v1\/field\//,
     metodos: ['*'],
-    roles: [...ROLES_LOGISTICA],
+    roles: [ROLES.SUPER_ADMIN, ...ROLES_LOGISTICA],
   },
   // market-intelligence: admin ve todo, vendedor ve lo suyo, endpoints internos protegidos
   {
@@ -109,12 +152,20 @@ export const POLITICAS_RUTAS: PoliticaRuta[] = [
   {
     patron: /^\/api\/v1\/inteligencia\//,
     metodos: ['GET'],
-    roles: [ROLES.ADMIN],
+    roles: [ROLES.SUPER_ADMIN, ROLES.ADMIN],
   },
   {
     patron: /^\/api\/v1\/inteligencia\/ventas\/registrar$/,
     metodos: ['POST'],
     roles: [ROLES.VENDEDOR, ROLES.COMPRADOR, ...ROLES_LOGISTICA],
+  },
+  // Deny-by-default: una ruta /api/v1 no declarada no queda abierta a cualquier
+  // token valido. Las rutas publicas deben declarar roles: null antes de esta
+  // regla; las protegidas, su lista de roles (R-GW-1, R-GW-3).
+  {
+    patron: /^\/api\/v1\//,
+    metodos: ['*'],
+    roles: [],
   },
 ];
 
@@ -154,6 +205,7 @@ export class GatewayAuthMiddleware {
       if (payload.nombre) req.headers['x-user-nombre'] = payload.nombre;
       if (payload.tenant_id) req.headers[TENANT_HEADER] = payload.tenant_id;
       if (payload.personal_id) req.headers[PERSONAL_HEADER] = payload.personal_id;
+      if (payload.participacion_porcentaje !== undefined) req.headers[PARTICIPACION_HEADER] = String(payload.participacion_porcentaje);
 
       if (politica?.roles && !politica.roles.includes(payload.rol)) {
         this.logger.warn({ msg: 'acceso denegado por rol', ruta: req.originalUrl, rol: payload.rol });

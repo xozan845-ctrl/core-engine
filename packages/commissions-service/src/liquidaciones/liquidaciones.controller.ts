@@ -8,8 +8,8 @@ import {
   UsuarioContexto,
   NotFoundError,
 } from '@core/shared';
-import { LiquidacionesService, Liquidacion, Periodo } from './liquidaciones.service';
-import { LiquidacionResponseDto } from './liquidaciones.response.dto';
+import { LiquidacionesService, Liquidacion, LiquidacionEmpresa, Periodo } from './liquidaciones.service';
+import { LiquidacionEmpresaResponseDto, LiquidacionResponseDto } from './liquidaciones.response.dto';
 
 export class EstadoLiquidacionRequestDto {
   @ApiProperty({ description: 'Estado de la liquidación', enum: ['pagada'] })
@@ -32,9 +32,18 @@ export class LiquidacionesController {
     return this.liquidaciones.deVendedor(usuario.user_id);
   }
 
+  @Get('empresarios/me/liquidaciones')
+  @Roles(ROLES.EMPRESARIO)
+  @ApiOperation({ summary: 'Liquidaciones de la empresa autenticada' })
+  @ApiOkResponse({ type: [LiquidacionEmpresaResponseDto], description: 'Liquidaciones del empresario' })
+  async deMiEmpresa(@UsuarioActual() usuario: UsuarioContexto): Promise<LiquidacionEmpresa[]> {
+    if (!usuario.tenant_id) throw new NotFoundError('Empresa', 'activa');
+    return this.liquidaciones.deEmpresa(usuario.tenant_id);
+  }
+
   /** POST /api/v1/admin/liquidaciones/corte — corte manual (admin, pruebas). */
   @Post('admin/liquidaciones/corte')
-  @Roles(ROLES.ADMIN)
+  @Roles(ROLES.SUPER_ADMIN, ROLES.ADMIN)
   @ApiOperation({ summary: 'Ejecutar un corte de liquidaciones (admin)' })
   @ApiQuery({ name: 'inicio', required: false })
   @ApiQuery({ name: 'fin', required: false })
@@ -52,7 +61,7 @@ export class LiquidacionesController {
 
   /** PATCH /api/v1/admin/liquidaciones/:id/pagar — cierre de pago (RN-07). */
   @Post('admin/liquidaciones/:id/pagar')
-  @Roles(ROLES.ADMIN)
+  @Roles(ROLES.SUPER_ADMIN, ROLES.ADMIN)
   @ApiOperation({ summary: 'Marcar una liquidación como pagada (RN-07)' })
   @ApiParam({ name: 'id', description: 'Id de la liquidación' })
   @ApiQuery({ name: 'estado', required: false })

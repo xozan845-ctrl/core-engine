@@ -1,0 +1,15 @@
+{
+  "01_esquemas.sql": "f78ed48132bb581566521c42d776ca4317df473687a18b7445b77c0a8ca2696d",
+  "01b_cqrs_finance.sql": "d96599739314f2c4b4107924f3f2f2c355e01add93adbf23e9a005b1587ea837",
+  "01c_cqrs_catalog.sql": "85943b7300e68f28897ce6f888869104b4b79d0898ef313da81a45fb56e8fece",
+  "01d_es_orders.sql": "8bd15bec5dd05dea506d05ce7853d3b81f1fed2370e180e233ae6538b41317d7",
+  "01e_adr25_empresas.sql": "cdb652b29b9a0f25a6736d5c15951e6d30d8d180657937ca4d13b8d3ec1de94a",
+  "02_field.sql": "9d89457f4158e38789aa916e4c5670458e4f054106738c31a8e3a847d5c60557",
+  "03_intelligence.sql": "6ab5a1f411d734ac0f5be8519328270cc828c4d89a10b5d0eade44067b18250e",
+  "04_intelligence_postgis.sql": "8a64db915d028f7f44ddd479df7c79a80a0ecf197a1ea17b79bb394935b91c0b",
+  "05_materialized_views.sql": "3c425d8b694653af083e19ab77a3d6f2b4ed5bdff724285ea48e7dd3c899817e",
+  "06_feature_store.sql": "d1be96023af7af475ea72b70665be8928e528314f8af992535ba3a6fe8adf175",
+  "07_data_quality.sql": "a3a6dfebfca1335e08fd0e94306c8be4fbe003217b23139a40652bdcf3c7c3b8",
+  "08_auth_sesiones.sql": "dd3fc1e76b0a339beb25c29bc045db01831e9548336db3f36de06cdef56f7c1a",
+  "09_storage.sql": "e61ae512a6536375a44de0c751fbb1a772e5d1de16798990cd2c55c5dd36fcc1"
+}

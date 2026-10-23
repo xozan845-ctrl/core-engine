@@ -105,6 +105,36 @@
         ]
       }
     },
+    "/api/v1/empresarios/me/tiendas": {
+      "get": {
+        "operationId": "TiendasEmpresaController_listar",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Tiendas de la empresa",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/TiendaResponseDto"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Tiendas de la empresa autenticada",
+        "tags": [
+          "Tiendas"
+        ]
+      }
+    },
     "/api/v1/vendedores/productos": {
       "post": {
         "operationId": "OfertasController_publicar",
@@ -290,6 +320,17 @@
             "description": "Id del vendedor",
             "format": "uuid"
           },
+          "empresa_id": {
+            "type": "string",
+            "description": "Empresa propietaria",
+            "format": "uuid"
+          },
+          "participacion_porcentaje": {
+            "type": "number",
+            "description": "Participación congelable del vendedor",
+            "minimum": 0,
+            "maximum": 100
+          },
           "producto_id": {
             "type": "string",
             "description": "Id del producto maestro",
@@ -339,6 +380,8 @@
           "id",
           "tienda_id",
           "vendedor_id",
+          "empresa_id",
+          "participacion_porcentaje",
           "producto_id",
           "sku",
           "producto_nombre",
@@ -378,6 +421,21 @@
             "description": "Id de la tienda",
             "format": "uuid"
           },
+          "empresa_id": {
+            "type": "string",
+            "description": "Empresa propietaria",
+            "format": "uuid"
+          },
+          "propietario_usuario_id": {
+            "type": "string",
+            "description": "Usuario propietario operativo",
+            "format": "uuid"
+          },
+          "participacion_porcentaje": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 100
+          },
           "vendedor_id": {
             "type": "string",
             "description": "Id del vendedor dueño",
@@ -400,6 +458,9 @@
         },
         "required": [
           "id",
+          "empresa_id",
+          "propietario_usuario_id",
+          "participacion_porcentaje",
           "vendedor_id",
           "nombre",
           "descripcion",
@@ -409,6 +470,11 @@
       "PublicarProductoRequestDto": {
         "type": "object",
         "properties": {
+          "tienda_id": {
+            "type": "string",
+            "description": "Tienda donde se publicará. Si se omite, se usa la tienda del vendedor autenticado.",
+            "format": "uuid"
+          },
           "producto_id": {
             "type": "string",
             "description": "Id del producto a publicar",

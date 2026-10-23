@@ -13,6 +13,7 @@ import {
 
 export interface Producto {
   id: string;
+  empresa_id: string;
   sku: string;
   nombre: string;
   descripcion: string;
@@ -25,6 +26,7 @@ export interface Producto {
 
 interface ProductoRow {
   id: string;
+  empresa_id: string;
   sku: string;
   nombre: string;
   descripcion: string;
@@ -72,7 +74,7 @@ export class ProductosService {
       .then((r) => r?.n ?? 0);
     const offset = (pagina - 1) * limite;
     const filas = await this.pg.query<ProductoRow>(
-      `SELECT id, sku, nombre, descripcion, categoria, precio_base_cents, disponible AS stock, estado, creado_en
+      `SELECT id, empresa_id, sku, nombre, descripcion, categoria, precio_base_cents, disponible AS stock, estado, creado_en
        FROM catalog.producto_catalogo_vista ${where} ORDER BY creado_en DESC LIMIT $${params.length + 1} OFFSET $${params.length + 2}`,
       [...params, limite, offset],
     );
@@ -84,7 +86,7 @@ export class ProductosService {
       return null;
     }
     const fila = await this.pg.queryOne<ProductoRow>(
-      `SELECT id, sku, nombre, descripcion, categoria, precio_base_cents, disponible AS stock, estado, creado_en
+      `SELECT id, empresa_id, sku, nombre, descripcion, categoria, precio_base_cents, disponible AS stock, estado, creado_en
        FROM catalog.producto_catalogo_vista WHERE id = $1`,
       [id],
     );
@@ -93,7 +95,7 @@ export class ProductosService {
 
   async encontrarPorSku(sku: string): Promise<Producto | null> {
     const fila = await this.pg.queryOne<ProductoRow>(
-      `SELECT id, sku, nombre, descripcion, categoria, precio_base_cents, disponible AS stock, estado, creado_en
+      `SELECT id, empresa_id, sku, nombre, descripcion, categoria, precio_base_cents, disponible AS stock, estado, creado_en
        FROM catalog.producto_catalogo_vista WHERE LOWER(sku) = LOWER($1)`,
       [sku],
     );
@@ -130,6 +132,7 @@ export class ProductosService {
   }
 
   async crear(datos: {
+    empresa_id: string;
     sku: string;
     nombre: string;
     descripcion?: string;
@@ -154,12 +157,13 @@ export class ProductosService {
     }
     const fila = await this.pg.transaccion(async (client) => {
       const r = await client.query<ProductoRow>(
-        `INSERT INTO catalog.productos (id, sku, nombre, descripcion, categoria, precio_base_cents, stock, estado)
-         VALUES ($1, $2, $3, $4, $5, $6, $7,
-                 CASE WHEN $7 > 0 THEN 'disponible' ELSE 'agotado' END)
-         RETURNING id, sku, nombre, descripcion, categoria, precio_base_cents, stock, estado, creado_en`,
+        `INSERT INTO catalog.productos (id, empresa_id, sku, nombre, descripcion, categoria, precio_base_cents, stock, estado)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8,
+                 CASE WHEN $8 > 0 THEN 'disponible' ELSE 'agotado' END)
+         RETURNING id, empresa_id, sku, nombre, descripcion, categoria, precio_base_cents, stock, estado, creado_en`,
         [
           randomUUID(),
+          datos.empresa_id,
           sku,
           datos.nombre.trim(),
           (datos.descripcion ?? '').trim(),
@@ -192,9 +196,11 @@ export class ProductosService {
       stock?: number;
       motivo?: string;
     },
+    empresaId?: string,
   ): Promise<Producto> {
     const previo = await this.encontrarPorId(id);
     if (!previo) throw new NotFoundError('Producto', id);
+    if (empresaId && previo.empresa_id !== empresaId) throw new NotFoundError('Producto', id);
 
     await this.pg.transaccion(async (client) => {
       const sets: string[] = [];
@@ -384,6 +390,7 @@ export class ProductosService {
   private serializar(fila: ProductoRow): Producto {
     return {
       id: fila.id,
+      empresa_id: fila.empresa_id,
       sku: fila.sku,
       nombre: fila.nombre,
       descripcion: fila.descripcion,

@@ -30,6 +30,15 @@
             "schema": {
               "type": "string"
             }
+          },
+          {
+            "name": "actor",
+            "required": false,
+            "in": "query",
+            "description": "Usuario que ejecuta la transición",
+            "schema": {
+              "type": "string"
+            }
           }
         ],
         "responses": {
@@ -370,6 +379,7 @@
     },
     "/api/v1/orders/vendedor/comisiones": {
       "get": {
+        "deprecated": true,
         "operationId": "PedidosController_comisiones",
         "parameters": [
           {
@@ -410,7 +420,7 @@
             "bearer": []
           }
         ],
-        "summary": "Comisiones por periodo (vendedor/admin)",
+        "summary": "Comisiones por periodo (vendedor/admin) — obsoleto: usar /vendedores/me/ventas",
         "tags": [
           "Pedidos"
         ]
@@ -458,7 +468,71 @@
             "bearer": []
           }
         ],
-        "summary": "Órdenes de una tienda (vendedor dueño o admin)",
+        "summary": "Órdenes de una tienda (vendedor dueño, empresario de la empresa o admin)",
+        "tags": [
+          "Pedidos"
+        ]
+      }
+    },
+    "/api/v1/orders/empresa": {
+      "get": {
+        "operationId": "PedidosController_porEmpresa",
+        "parameters": [
+          {
+            "name": "empresaId",
+            "required": false,
+            "in": "query",
+            "description": "Solo admin/super_admin; el empresario usa su empresa activa",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "tiendaId",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "estado",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "limite",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "number"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Órdenes de la empresa",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/OrderViewResponseDto"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Órdenes de una empresa (empresario de la empresa o admin)",
         "tags": [
           "Pedidos"
         ]

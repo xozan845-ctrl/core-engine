@@ -59,6 +59,6 @@ describe('AdminStorageController (api/v1/admin/storage, multi-tenant)', () => {
   });
 
   it('debe restringir el controlador al rol admin', () => {
-    expect(Reflect.getMetadata('roles_requeridos', AdminStorageController)).toEqual([ROLES.ADMIN]);
+    expect(Reflect.getMetadata('roles_requeridos', AdminStorageController)).toEqual([ROLES.SUPER_ADMIN, ROLES.ADMIN]);
   });
 });

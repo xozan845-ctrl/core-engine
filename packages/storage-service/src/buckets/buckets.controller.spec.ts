@@ -46,8 +46,9 @@ describe('BucketsController (api/v1/storage/bucket)', () => {
     expect(estado).toEqual({ bucket: 't-1', cuota_bytes: 2000 });
   });
 
-  it('debe restringir la configuracion del bucket al rol admin', () => {
+  it('debe restringir la configuracion del bucket a los roles globales', () => {
     expect(Reflect.getMetadata('roles_requeridos', BucketsController.prototype.configurar)).toEqual([
+      ROLES.SUPER_ADMIN,
       ROLES.ADMIN,
     ]);
   });

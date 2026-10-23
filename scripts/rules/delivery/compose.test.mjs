@@ -3,6 +3,7 @@ import { join } from 'node:path';
 import { defineSuite } from '../../engine/suite.mjs';
 import { repoRoot } from '../../engine/lib/paths.mjs';
 import { readText } from '../../engine/lib/fs.mjs';
+import { checkEnv } from '../../engine/lib/env.mjs';
 import { GHCR_OWNER, SERVICES, WORKFLOWS_DIR } from '../../config/project.mjs';
 
 /**
@@ -21,7 +22,7 @@ const workflowsDirectory = join(repoRoot, WORKFLOWS_DIR);
 export default defineSuite({
   id: 'delivery-compose',
   area: 'cd',
-  rules: ['R-CD-1', 'R-CD-3', 'R-CD-7', 'R-CD-8'],
+  rules: ['R-CD-1', 'R-CD-2', 'R-CD-3', 'R-CD-7', 'R-CD-8', 'R-CD-12', 'G-6'],
   mode: 'repo',
   run: ({ test, assert }) => {
     test('R-CD-3: los composes de stage/prod consumen GHCR, sin `build:`', () => {
@@ -66,7 +67,7 @@ export default defineSuite({
     });
 
     test('R-CD-1/R-CD-3/R-CD-8: existen los workflows de entrega con su contrato', () => {
-      const files = ['ci.yml', 'release.yml', 'promote.yml', 'deploy.yml'];
+      const files = ['ci.yml', 'release.yml', 'promote.yml', 'deploy.yml', 'e2e.yml'];
       const missing = files.filter((f) => !existsSync(join(workflowsDirectory, f)));
       assert.deepEqual(missing, [], `Faltan workflows (R-CD-1): ${missing.join(', ')}`);
 
@@ -80,6 +81,14 @@ export default defineSuite({
         'release.yml debe verificar procedencia en main (R-CD-2)',
       );
       assert.ok(
+        release.includes('scripts/tools/release-check.mjs'),
+        'release.yml debe validar tag, monotonicidad y versiones con release-check (R-CD-1/R-CD-2)',
+      );
+      assert.ok(
+        existsSync(join(repoRoot, 'scripts', 'tools', 'release-check.mjs')),
+        'falta scripts/tools/release-check.mjs',
+      );
+      assert.ok(
         /dry_run/.test(release),
         'release.yml debe ofrecer dry_run (R-CD-8)',
       );
@@ -88,6 +97,39 @@ export default defineSuite({
       assert.ok(
         /RepoDigests|@sha256/.test(promote),
         'promote.yml debe promover por digest (R-CD-3)',
+      );
+
+      const deploy = read('.github', 'workflows', 'deploy.yml');
+      assert.ok(
+        deploy.includes('npm run demo'),
+        'deploy.yml debe ejecutar el smoke E2E de dev (R-CD-12)',
+      );
+      assert.ok(
+        deploy.includes('npm run smoke:remote'),
+        'deploy.yml debe ejecutar el smoke remoto en stage/prod (R-CD-12)',
+      );
+      assert.ok(
+        existsSync(join(repoRoot, 'scripts', 'tools', 'smoke-remote.mjs')),
+        'falta scripts/tools/smoke-remote.mjs',
+      );
+
+      const e2e = read('.github', 'workflows', 'e2e.yml');
+      assert.ok(
+        e2e.includes('docker-compose.dev.yml'),
+        'e2e.yml debe levantar el stack dev (G-6)',
+      );
+      assert.ok(
+        e2e.includes('npm run demo'),
+        'e2e.yml debe ejecutar el flujo E2E completo (G-6)',
+      );
+    });
+
+    test('R-CD-7: compose y plantillas de entorno están alineados y sin secretos', () => {
+      const problems = checkEnv(repoRoot);
+      assert.deepEqual(
+        problems,
+        [],
+        `Entornos inconsistentes (R-CD-7):\n${problems.join('\n')}`,
       );
     });
 

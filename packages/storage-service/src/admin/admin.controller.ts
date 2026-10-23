@@ -42,7 +42,7 @@ export class ActualizarTenantRequestDto {
 @ApiTags('Almacenamiento (admin)')
 @ApiBearerAuth()
 @Controller('api/v1/admin/storage')
-@Roles(ROLES.ADMIN)
+@Roles(ROLES.SUPER_ADMIN, ROLES.ADMIN)
 export class AdminStorageController {
   constructor(private readonly buckets: BucketsService) {}
 

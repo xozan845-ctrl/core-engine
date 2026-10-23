@@ -253,6 +253,36 @@
         ]
       }
     },
+    "/api/v1/empresarios/me/liquidaciones": {
+      "get": {
+        "operationId": "LiquidacionesController_deMiEmpresa",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Liquidaciones del empresario",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/LiquidacionEmpresaResponseDto"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Liquidaciones de la empresa autenticada",
+        "tags": [
+          "Comisiones · Liquidaciones"
+        ]
+      }
+    },
     "/api/v1/admin/liquidaciones/corte": {
       "post": {
         "operationId": "LiquidacionesController_corteManual",
@@ -367,6 +397,33 @@
           }
         ],
         "summary": "Estado de cuenta de ventas/comisiones del vendedor",
+        "tags": [
+          "Comisiones · Ventas"
+        ]
+      }
+    },
+    "/api/v1/empresarios/me/ventas": {
+      "get": {
+        "operationId": "VentasEmpresaController_estado",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Estado de cuenta de la empresa",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EstadoCuentaEmpresaResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Estado de cuenta de ventas/comisiones de la empresa",
         "tags": [
           "Comisiones · Ventas"
         ]
@@ -3804,6 +3861,170 @@
         ]
       }
     },
+    "/api/v1/empresas": {
+      "post": {
+        "operationId": "EmpresasController_crear",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CrearEmpresaRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Empresa creada con membresía del empresario",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EmpresaResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Crear empresa y elegir modalidad logística",
+        "tags": [
+          "Empresas"
+        ]
+      }
+    },
+    "/api/v1/empresas/{id}": {
+      "get": {
+        "operationId": "EmpresasController_obtener",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Empresa visible para el miembro o administrador global",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EmpresaResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "Empresas"
+        ]
+      }
+    },
+    "/api/v1/empresas/{id}/logistica": {
+      "patch": {
+        "operationId": "EmpresasController_actualizarLogistica",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ActualizarModalidadLogisticaRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Modalidad logística actualizada",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EmpresaResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Cambiar la modalidad logística para envíos futuros",
+        "tags": [
+          "Empresas"
+        ]
+      }
+    },
+    "/api/v1/empresas/{id}/vendedores": {
+      "post": {
+        "operationId": "EmpresasController_vendedor",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CrearVendedorRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Vendedor creado y asociado a la empresa",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VendedorEmpresaResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Crear vendedor con participación predeterminada",
+        "tags": [
+          "Empresas"
+        ]
+      }
+    },
     "/api/v1/orders/{id}/estado": {
       "patch": {
         "operationId": "EstadoOrdenController_avanzar",
@@ -3848,7 +4069,7 @@
             "bearer": []
           }
         ],
-        "summary": "Avanzar el estado de una orden (logística)",
+        "summary": "Avanzar el estado de una orden (logística o empresario de la empresa)",
         "tags": [
           "Logística"
         ]
@@ -3879,6 +4100,130 @@
           }
         ],
         "summary": "Listar guías de despacho (admin)",
+        "tags": [
+          "Logística"
+        ]
+      }
+    },
+    "/api/v1/empresarios/me/envios": {
+      "get": {
+        "operationId": "EnviosEmpresaController_listar",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/EnvioResponseDto"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Listar envíos de la empresa activa",
+        "tags": [
+          "Logística empresarial"
+        ]
+      }
+    },
+    "/api/v1/empresarios/me/envios/{id}/asignacion": {
+      "post": {
+        "operationId": "EnviosEmpresaController_asignar",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "description": "Id del envío",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AsignarProveedorRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EnvioResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Elegir flota para un envío de modalidad híbrida",
+        "tags": [
+          "Logística empresarial"
+        ]
+      }
+    },
+    "/api/v1/envios/{id}/estado": {
+      "patch": {
+        "operationId": "EnviosFlotaController_avanzar",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "description": "Id del envío",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AvanzarEnvioRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EnvioResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Avanzar un envío asignado a la flota activa",
         "tags": [
           "Logística"
         ]
@@ -4637,6 +4982,7 @@
     },
     "/api/v1/orders/vendedor/comisiones": {
       "get": {
+        "deprecated": true,
         "operationId": "PedidosController_comisiones",
         "parameters": [
           {
@@ -4677,7 +5023,7 @@
             "bearer": []
           }
         ],
-        "summary": "Comisiones por periodo (vendedor/admin)",
+        "summary": "Comisiones por periodo (vendedor/admin) — obsoleto: usar /vendedores/me/ventas",
         "tags": [
           "Pedidos"
         ]
@@ -4725,7 +5071,71 @@
             "bearer": []
           }
         ],
-        "summary": "Órdenes de una tienda (vendedor dueño o admin)",
+        "summary": "Órdenes de una tienda (vendedor dueño, empresario de la empresa o admin)",
+        "tags": [
+          "Pedidos"
+        ]
+      }
+    },
+    "/api/v1/orders/empresa": {
+      "get": {
+        "operationId": "PedidosController_porEmpresa",
+        "parameters": [
+          {
+            "name": "empresaId",
+            "required": false,
+            "in": "query",
+            "description": "Solo admin/super_admin; el empresario usa su empresa activa",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "tiendaId",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "estado",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "limite",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "number"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Órdenes de la empresa",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/OrderViewResponseDto"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Órdenes de una empresa (empresario de la empresa o admin)",
         "tags": [
           "Pedidos"
         ]
@@ -5541,6 +5951,36 @@
         ]
       }
     },
+    "/api/v1/empresarios/me/tiendas": {
+      "get": {
+        "operationId": "TiendasEmpresaController_listar",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Tiendas de la empresa",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/TiendaResponseDto"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Tiendas de la empresa autenticada",
+        "tags": [
+          "Tiendas"
+        ]
+      }
+    },
     "/api/v1/vendedores/productos": {
       "post": {
         "operationId": "OfertasController_publicar",
@@ -5732,6 +6172,11 @@
       "ProductoResponseDto": {
         "type": "object",
         "properties": {
+          "empresa_id": {
+            "type": "string",
+            "description": "Empresa propietaria",
+            "format": "uuid"
+          },
           "id": {
             "type": "string",
             "description": "Id del producto",
@@ -5780,6 +6225,7 @@
           }
         },
         "required": [
+          "empresa_id",
           "id",
           "sku",
           "nombre",
@@ -5936,6 +6382,11 @@
             "pattern": "^[A-Za-z0-9-]{2,32}$",
             "example": "SKU-001"
           },
+          "empresa_id": {
+            "type": "string",
+            "description": "Empresa destino. Obligatoria para super_admin/admin; el empresario usa su empresa activa.",
+            "format": "uuid"
+          },
           "nombre": {
             "type": "string",
             "description": "Nombre del producto",
@@ -6047,6 +6498,58 @@
         "required": [
           "id",
           "vendedor_id",
+          "periodo_inicio",
+          "periodo_fin",
+          "monto_cents",
+          "estado",
+          "creado_en"
+        ]
+      },
+      "LiquidacionEmpresaResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Id de la liquidación",
+            "format": "uuid"
+          },
+          "empresa_id": {
+            "type": "string",
+            "description": "Id de la empresa beneficiaria",
+            "format": "uuid"
+          },
+          "periodo_inicio": {
+            "type": "string",
+            "description": "Inicio del periodo (ISO 8601)",
+            "format": "date"
+          },
+          "periodo_fin": {
+            "type": "string",
+            "description": "Fin del periodo (ISO 8601)",
+            "format": "date"
+          },
+          "monto_cents": {
+            "type": "number",
+            "description": "Monto liquidado en centavos",
+            "example": 4400
+          },
+          "estado": {
+            "type": "string",
+            "description": "Estado de la liquidación",
+            "enum": [
+              "aprobada",
+              "pagada"
+            ]
+          },
+          "creado_en": {
+            "type": "string",
+            "description": "Fecha de creación (ISO 8601 UTC)",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "empresa_id",
           "periodo_inicio",
           "periodo_fin",
           "monto_cents",
@@ -6186,6 +6689,142 @@
         },
         "required": [
           "vendedor_id",
+          "ventas",
+          "comisiones_pendientes",
+          "liquidaciones"
+        ]
+      },
+      "VentaEmpresaResponseDto": {
+        "type": "object",
+        "properties": {
+          "order_id": {
+            "type": "string",
+            "description": "Id de la orden",
+            "format": "uuid"
+          },
+          "venta": {
+            "type": "string",
+            "description": "Monto de la venta en córdobas con dos decimales",
+            "example": "1150.00"
+          },
+          "comision": {
+            "type": "string",
+            "description": "Comisión total en córdobas con dos decimales",
+            "example": "138.00"
+          },
+          "monto_empresario": {
+            "type": "string",
+            "description": "Monto neto para la empresa",
+            "example": "126.00"
+          },
+          "estado": {
+            "type": "string",
+            "description": "Estado de la comisión",
+            "example": "acreditada"
+          },
+          "fecha": {
+            "type": "string",
+            "description": "Fecha de la venta (ISO 8601 UTC)",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "order_id",
+          "venta",
+          "comision",
+          "monto_empresario",
+          "estado",
+          "fecha"
+        ]
+      },
+      "LiquidacionEmpresaConMontoResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Id de la liquidación",
+            "format": "uuid"
+          },
+          "empresa_id": {
+            "type": "string",
+            "description": "Id de la empresa beneficiaria",
+            "format": "uuid"
+          },
+          "periodo_inicio": {
+            "type": "string",
+            "description": "Inicio del periodo (ISO 8601)",
+            "format": "date"
+          },
+          "periodo_fin": {
+            "type": "string",
+            "description": "Fin del periodo (ISO 8601)",
+            "format": "date"
+          },
+          "monto_cents": {
+            "type": "number",
+            "description": "Monto liquidado en centavos",
+            "example": 4400
+          },
+          "estado": {
+            "type": "string",
+            "description": "Estado de la liquidación",
+            "enum": [
+              "aprobada",
+              "pagada"
+            ]
+          },
+          "creado_en": {
+            "type": "string",
+            "description": "Fecha de creación (ISO 8601 UTC)",
+            "format": "date-time"
+          },
+          "monto": {
+            "type": "string",
+            "description": "Monto liquidado en córdobas con dos decimales",
+            "example": "4400.00"
+          }
+        },
+        "required": [
+          "id",
+          "empresa_id",
+          "periodo_inicio",
+          "periodo_fin",
+          "monto_cents",
+          "estado",
+          "creado_en",
+          "monto"
+        ]
+      },
+      "EstadoCuentaEmpresaResponseDto": {
+        "type": "object",
+        "properties": {
+          "empresa_id": {
+            "type": "string",
+            "description": "Id de la empresa",
+            "format": "uuid"
+          },
+          "ventas": {
+            "description": "Ventas de la empresa",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/VentaEmpresaResponseDto"
+            }
+          },
+          "comisiones_pendientes": {
+            "type": "string",
+            "description": "Comisiones pendientes en córdobas",
+            "example": "126.00"
+          },
+          "liquidaciones": {
+            "description": "Liquidaciones de la empresa",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/LiquidacionEmpresaConMontoResponseDto"
+            }
+          }
+        },
+        "required": [
+          "empresa_id",
           "ventas",
           "comisiones_pendientes",
           "liquidaciones"
@@ -10134,6 +10773,44 @@
           "vendedores"
         ]
       },
+      "EmpresaResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "nombre": {
+            "type": "string"
+          },
+          "modalidad_logistica": {
+            "type": "string",
+            "enum": [
+              "plataforma",
+              "propia",
+              "hibrida"
+            ]
+          },
+          "estado": {
+            "type": "string"
+          },
+          "creado_por": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "creado_en": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "nombre",
+          "modalidad_logistica",
+          "estado",
+          "creado_por",
+          "creado_en"
+        ]
+      },
       "RegistroRequestDto": {
         "type": "object",
         "properties": {
@@ -10158,7 +10835,7 @@
             "type": "string",
             "description": "Rol registrable",
             "enum": [
-              "vendedor",
+              "empresario",
               "comprador"
             ],
             "example": "comprador"
@@ -10317,7 +10994,7 @@
             "type": "string",
             "description": "Rol del usuario",
             "enum": [
-              "vendedor",
+              "empresario",
               "comprador",
               "admin",
               "logistica",
@@ -10439,6 +11116,103 @@
           "personal_id"
         ]
       },
+      "CrearEmpresaRequestDto": {
+        "type": "object",
+        "properties": {
+          "nombre": {
+            "type": "string",
+            "minLength": 2,
+            "maxLength": 160
+          },
+          "modalidad_logistica": {
+            "type": "string",
+            "enum": [
+              "plataforma",
+              "propia",
+              "hibrida"
+            ]
+          }
+        },
+        "required": [
+          "nombre",
+          "modalidad_logistica"
+        ]
+      },
+      "ActualizarModalidadLogisticaRequestDto": {
+        "type": "object",
+        "properties": {
+          "modalidad_logistica": {
+            "type": "string",
+            "enum": [
+              "plataforma",
+              "propia",
+              "hibrida"
+            ]
+          }
+        },
+        "required": [
+          "modalidad_logistica"
+        ]
+      },
+      "CrearVendedorRequestDto": {
+        "type": "object",
+        "properties": {
+          "nombre": {
+            "type": "string"
+          },
+          "correo": {
+            "type": "string"
+          },
+          "contrasena": {
+            "type": "string",
+            "minLength": 8
+          },
+          "participacion_porcentaje": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 100
+          }
+        },
+        "required": [
+          "nombre",
+          "correo",
+          "contrasena",
+          "participacion_porcentaje"
+        ]
+      },
+      "VendedorEmpresaResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "nombre": {
+            "type": "string"
+          },
+          "correo": {
+            "type": "string"
+          },
+          "rol": {
+            "type": "string",
+            "enum": [
+              "vendedor"
+            ]
+          },
+          "participacion_porcentaje": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 100
+          }
+        },
+        "required": [
+          "id",
+          "nombre",
+          "correo",
+          "rol",
+          "participacion_porcentaje"
+        ]
+      },
       "AvanzarEstadoRequestDto": {
         "type": "object",
         "properties": {
@@ -10551,6 +11325,32 @@
             "description": "Id de la orden asociada",
             "format": "uuid"
           },
+          "empresa_id": {
+            "type": "string",
+            "description": "Empresa propietaria de las líneas despachadas",
+            "format": "uuid"
+          },
+          "modalidad_logistica": {
+            "type": "string",
+            "enum": [
+              "plataforma",
+              "propia",
+              "hibrida"
+            ]
+          },
+          "proveedor_tipo": {
+            "type": "string",
+            "enum": [
+              "plataforma",
+              "empresa"
+            ],
+            "nullable": true
+          },
+          "proveedor_tenant_id": {
+            "type": "object",
+            "format": "uuid",
+            "nullable": true
+          },
           "estado": {
             "type": "string",
             "description": "Estado del envío",
@@ -10571,9 +11371,115 @@
           "id",
           "guia",
           "order_id",
+          "empresa_id",
+          "modalidad_logistica",
+          "proveedor_tipo",
+          "proveedor_tenant_id",
           "estado",
           "creado_en",
           "monto"
+        ]
+      },
+      "EnvioResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Id de la guía de despacho",
+            "format": "uuid"
+          },
+          "guia": {
+            "type": "string",
+            "description": "Número de guía",
+            "example": "BGH-ABC123-DEF456"
+          },
+          "order_id": {
+            "type": "string",
+            "description": "Id de la orden asociada",
+            "format": "uuid"
+          },
+          "empresa_id": {
+            "type": "string",
+            "description": "Empresa propietaria de las líneas despachadas",
+            "format": "uuid"
+          },
+          "modalidad_logistica": {
+            "type": "string",
+            "enum": [
+              "plataforma",
+              "propia",
+              "hibrida"
+            ]
+          },
+          "proveedor_tipo": {
+            "type": "string",
+            "enum": [
+              "plataforma",
+              "empresa"
+            ],
+            "nullable": true
+          },
+          "proveedor_tenant_id": {
+            "type": "object",
+            "format": "uuid",
+            "nullable": true
+          },
+          "estado": {
+            "type": "string",
+            "description": "Estado del envío",
+            "example": "en_preparacion"
+          },
+          "creado_en": {
+            "type": "string",
+            "description": "Fecha de creación (ISO 8601 UTC)",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "guia",
+          "order_id",
+          "empresa_id",
+          "modalidad_logistica",
+          "proveedor_tipo",
+          "proveedor_tenant_id",
+          "estado",
+          "creado_en"
+        ]
+      },
+      "AsignarProveedorRequestDto": {
+        "type": "object",
+        "properties": {
+          "proveedor_tipo": {
+            "type": "string",
+            "enum": [
+              "plataforma",
+              "empresa"
+            ],
+            "description": "Flota que atenderá el envío híbrido"
+          }
+        },
+        "required": [
+          "proveedor_tipo"
+        ]
+      },
+      "AvanzarEnvioRequestDto": {
+        "type": "object",
+        "properties": {
+          "estado": {
+            "type": "string",
+            "enum": [
+              "enviada",
+              "entregada",
+              "cancelada"
+            ]
+          },
+          "motivo": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "estado"
         ]
       },
       "PuntoCalorDto": {
@@ -12015,6 +12921,17 @@
             "description": "Id del vendedor",
             "format": "uuid"
           },
+          "empresa_id": {
+            "type": "string",
+            "description": "Empresa propietaria",
+            "format": "uuid"
+          },
+          "participacion_porcentaje": {
+            "type": "number",
+            "description": "Participación congelable del vendedor",
+            "minimum": 0,
+            "maximum": 100
+          },
           "producto_id": {
             "type": "string",
             "description": "Id del producto maestro",
@@ -12064,6 +12981,8 @@
           "id",
           "tienda_id",
           "vendedor_id",
+          "empresa_id",
+          "participacion_porcentaje",
           "producto_id",
           "sku",
           "producto_nombre",
@@ -12103,6 +13022,21 @@
             "description": "Id de la tienda",
             "format": "uuid"
           },
+          "empresa_id": {
+            "type": "string",
+            "description": "Empresa propietaria",
+            "format": "uuid"
+          },
+          "propietario_usuario_id": {
+            "type": "string",
+            "description": "Usuario propietario operativo",
+            "format": "uuid"
+          },
+          "participacion_porcentaje": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 100
+          },
           "vendedor_id": {
             "type": "string",
             "description": "Id del vendedor dueño",
@@ -12125,6 +13059,9 @@
         },
         "required": [
           "id",
+          "empresa_id",
+          "propietario_usuario_id",
+          "participacion_porcentaje",
           "vendedor_id",
           "nombre",
           "descripcion",
@@ -12134,6 +13071,11 @@
       "PublicarProductoRequestDto": {
         "type": "object",
         "properties": {
+          "tienda_id": {
+            "type": "string",
+            "description": "Tienda donde se publicará. Si se omite, se usa la tienda del vendedor autenticado.",
+            "format": "uuid"
+          },
           "producto_id": {
             "type": "string",
             "description": "Id del producto a publicar",

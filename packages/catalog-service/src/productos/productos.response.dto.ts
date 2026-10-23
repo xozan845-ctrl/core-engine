@@ -5,6 +5,8 @@ import { ApiProperty } from '@nestjs/swagger';
  * `ProductosService` (precio en string decimal, stock neto y estado derivado).
  */
 export class ProductoResponseDto {
+  @ApiProperty({ description: 'Empresa propietaria', format: 'uuid' })
+  empresa_id: string;
   @ApiProperty({ description: 'Id del producto', format: 'uuid' })
   id: string;
 

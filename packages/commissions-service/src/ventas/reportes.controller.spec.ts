@@ -21,6 +21,6 @@ describe('ReportesController (api/v1/admin/reportes, R-U-10/11)', () => {
   });
 
   it('debe exigir rol admin', () => {
-    expect(Reflect.getMetadata('roles_requeridos', ReportesController.prototype.kpis)).toEqual([ROLES.ADMIN]);
+    expect(Reflect.getMetadata('roles_requeridos', ReportesController.prototype.kpis)).toEqual([ROLES.SUPER_ADMIN, ROLES.ADMIN]);
   });
 });

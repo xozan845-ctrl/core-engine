@@ -1,6 +1,6 @@
 import { Injectable, Optional } from '@nestjs/common';
 import { Request, Response } from 'express';
-import { Logger, TENANT_HEADER, PERSONAL_HEADER } from '@core/shared';
+import { Logger, TENANT_HEADER, PERSONAL_HEADER, PARTICIPACION_HEADER } from '@core/shared';
 import { GatewayAuthMiddleware, PoliticaRuta, POLITICAS_RUTAS } from './gateway-auth.middleware';
 
 export interface ServicioDestino {
@@ -19,6 +19,7 @@ export const DESTINOS: ServicioDestino[] = [
     patrones: [
       { patron: /^\/api\/v1\/auth\//, metodos: ['*'] },
       { patron: /^\/api\/v1\/usuarios(\/|$)/, metodos: ['*'] },
+      { patron: /^\/api\/v1\/empresas(\/|$)/, metodos: ['*'] },
     ],
   },
   {
@@ -42,6 +43,7 @@ export const DESTINOS: ServicioDestino[] = [
     url: process.env.STORES_SERVICE_URL ?? 'http://stores-service:3003',
     patrones: [
       { patron: /^\/api\/v1\/vendedores\/(productos|tienda|me\/(ofertas|tienda))/, metodos: ['*'] },
+      { patron: /^\/api\/v1\/empresarios\/me\/tiendas$/, metodos: ['GET'] },
       { patron: /^\/api\/v1\/tiendas\//, metodos: ['*'] },
     ],
   },
@@ -53,6 +55,8 @@ export const DESTINOS: ServicioDestino[] = [
     patrones: [
       { patron: /^\/api\/v1\/orders\/[^/]+\/estado/, metodos: ['PATCH', 'POST'] },
       { patron: /^\/api\/v1\/admin\/envios/, metodos: ['*'] },
+      { patron: /^\/api\/v1\/empresarios\/me\/envios/, metodos: ['*'] },
+      { patron: /^\/api\/v1\/envios\/[^/]+\/estado$/, metodos: ['PATCH'] },
     ],
   },
   {
@@ -68,6 +72,7 @@ export const DESTINOS: ServicioDestino[] = [
     url: process.env.COMMISSIONS_SERVICE_URL ?? 'http://commissions-service:3006',
     patrones: [
       { patron: /^\/api\/v1\/vendedores\/me\/(ventas|liquidaciones)/, metodos: ['*'] },
+      { patron: /^\/api\/v1\/empresarios\/me\/(liquidaciones|ventas)/, metodos: ['*'] },
       { patron: /^\/api\/v1\/admin\/reportes/, metodos: ['*'] },
       { patron: /^\/api\/v1\/admin\/liquidaciones/, metodos: ['*'] },
     ],
@@ -118,7 +123,12 @@ export class ProxyService {
 
   async reenviar(req: Request, res: Response): Promise<void> {
     const ruta = req.originalUrl;
-    const politica = this.encontrarPolitica(ruta, req.method);
+    // El enrutado y las politicas se declaran sobre el path; la query solo se
+    // conserva para el reenvio. Sin esto, una regex anclada (`...$`) deja de
+    // coincidir cuando el cliente agrega filtros y la peticion cae en el
+    // deny-by-default (R-GW-1 / R-GW-3).
+    const rutaBase = this.rutaSinQuery(ruta);
+    const politica = this.encontrarPolitica(rutaBase, req.method);
 
     // Scrub defensivo: eliminar cualquier cabecera de identidad o interna
     // que el cliente externo pudiera haber inyectado (R-GW-3 / R-DS-5).
@@ -127,7 +137,7 @@ export class ProxyService {
     // que son las que leen los servicios; borrar nombres inexistentes no
     // protegia contra el spoofing de tenant.
     for (const h of ['x-user-id', 'x-user-email', 'x-user-rol', 'x-user-nombre',
-      TENANT_HEADER, PERSONAL_HEADER, 'x-internal-key']) {
+      TENANT_HEADER, PERSONAL_HEADER, PARTICIPACION_HEADER, 'x-internal-key']) {
       delete req.headers[h];
     }
 
@@ -137,9 +147,9 @@ export class ProxyService {
     if (res.headersSent) return;
 
     // 2. destino
-    const destino = this.encontrarDestino(ruta, req.method);
+    const destino = this.encontrarDestino(rutaBase, req.method);
     if (!destino) {
-      res.status(404).json({ codigo: 'NO_ENCONTRADO', mensaje: `No existe ruta ${req.method} ${ruta}.` });
+      res.status(404).json({ codigo: 'NO_ENCONTRADO', mensaje: `No existe ruta ${req.method} ${rutaBase}.` });
       return;
     }
 
@@ -154,7 +164,7 @@ export class ProxyService {
         'content-type': 'application/json',
         accept: 'application/json',
       };
-      for (const k of ['x-user-id', 'x-user-email', 'x-user-rol', TENANT_HEADER, PERSONAL_HEADER] as const) {
+      for (const k of ['x-user-id', 'x-user-email', 'x-user-rol', TENANT_HEADER, PERSONAL_HEADER, PARTICIPACION_HEADER] as const) {
         const v = req.headers[k];
         if (v !== undefined) headers[k] = Array.isArray(v) ? v.join(', ') : String(v);
       }
@@ -192,6 +202,12 @@ export class ProxyService {
         detalles: { servicio: destino.nombre },
       });
     }
+  }
+
+  /** Path de la peticion sin query ni fragmento, para enrutado y politicas. */
+  private rutaSinQuery(originalUrl: string): string {
+    const corte = originalUrl.search(/[?#]/);
+    return corte === -1 ? originalUrl : originalUrl.slice(0, corte);
   }
 
   private encontrarPolitica(ruta: string, metodo: string): PoliticaRuta | null {
