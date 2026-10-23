@@ -173,17 +173,29 @@ export class ProxyService {
         method: req.method,
         headers,
         body: cuerpo ? JSON.stringify(cuerpo) : undefined,
+        // Los 301 de slug (ADR-26) deben llegar al cliente con su Location;
+        // si fetch los sigue, el cliente recibe 200 y pierde la redireccion.
+        redirect: 'manual',
       });
 
       const texto = await respuesta.text();
       res.status(respuesta.status);
-      for (const [k, v] of Object.entries(respuesta.headers)) {
+      // `fetch` devuelve un objeto `Headers` (iterable), no un objeto plano:
+      // Object.entries() no ve ninguna cabecera y se perderia, entre otras,
+      // la Location de los 301 por slug (ADR-26). Las cabeceras hop-by-hop y
+      // content-length las gestiona Express al enviar el cuerpo.
+      const noReenviables = new Set([
+        'connection', 'keep-alive', 'transfer-encoding', 'upgrade',
+        'proxy-authenticate', 'proxy-authorization', 'te', 'trailer', 'content-length',
+      ]);
+      respuesta.headers.forEach((valor, clave) => {
+        if (noReenviables.has(clave.toLowerCase())) return;
         try {
-          res.setHeader(k, v as string);
+          res.setHeader(clave, valor);
         } catch {
           /* headers no reenvariables */
         }
-      }
+      });
       res.send(texto || undefined);
     } catch (err) {
       this.logger.error({
