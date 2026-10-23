@@ -4092,6 +4092,213 @@
         ]
       }
     },
+    "/api/v1/empresas/{empresaId}/invitaciones/vendedores": {
+      "post": {
+        "operationId": "InvitacionesEmpresaController_crear",
+        "parameters": [
+          {
+            "name": "empresaId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CrearInvitacionRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Invitación generada",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InvitacionCreadaResponseDto"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Tienda asignada, invitación duplicada o correo ya miembro"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Generar una invitación para un futuro vendedor",
+        "tags": [
+          "Invitaciones"
+        ]
+      }
+    },
+    "/api/v1/empresas/{empresaId}/vendedores": {
+      "get": {
+        "operationId": "InvitacionesEmpresaController_listar",
+        "parameters": [
+          {
+            "name": "empresaId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Vendedores e invitaciones de la empresa",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ListarVendedoresResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Listar vendedores activos e invitaciones de la empresa",
+        "tags": [
+          "Invitaciones"
+        ]
+      }
+    },
+    "/api/v1/empresas/{empresaId}/invitaciones/vendedores/{invitacionId}": {
+      "delete": {
+        "operationId": "InvitacionesEmpresaController_revocar",
+        "parameters": [
+          {
+            "name": "empresaId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "name": "invitacionId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Invitación revocada"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Revocar una invitación pendiente",
+        "tags": [
+          "Invitaciones"
+        ]
+      }
+    },
+    "/api/v1/invitaciones/vendedores/{token}": {
+      "get": {
+        "operationId": "InvitacionesPublicasController_consultar",
+        "parameters": [
+          {
+            "name": "token",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Invitación válida",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InvitacionPublicaResponseDto"
+                }
+              }
+            }
+          },
+          "410": {
+            "description": "Invitación inexistente, expirada o utilizada"
+          }
+        },
+        "summary": "Consultar una invitación por token (público)",
+        "tags": [
+          "Invitaciones"
+        ]
+      }
+    },
+    "/api/v1/invitaciones/vendedores/{token}/aceptar": {
+      "post": {
+        "operationId": "InvitacionesPublicasController_aceptar",
+        "parameters": [
+          {
+            "name": "token",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AceptarInvitacionRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Vendedor creado y sesión iniciada",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AceptarInvitacionResponseDto"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "El correo ya tiene una cuenta o la tienda ya fue asignada"
+          },
+          "410": {
+            "description": "Invitación inexistente, expirada o utilizada"
+          }
+        },
+        "summary": "Aceptar una invitación y crear la cuenta del vendedor (público)",
+        "tags": [
+          "Invitaciones"
+        ]
+      }
+    },
     "/api/v1/orders/{id}/estado": {
       "patch": {
         "operationId": "EstadoOrdenController_avanzar",
@@ -11370,6 +11577,224 @@
           "correo",
           "rol",
           "participacion_porcentaje"
+        ]
+      },
+      "CrearInvitacionRequestDto": {
+        "type": "object",
+        "properties": {
+          "correo": {
+            "type": "string",
+            "format": "email",
+            "example": "vendedor@correo.com"
+          },
+          "nombre": {
+            "type": "string",
+            "minLength": 2,
+            "maxLength": 120
+          },
+          "tienda_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "participacion_porcentaje": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 100,
+            "example": 25
+          }
+        },
+        "required": [
+          "correo",
+          "tienda_id",
+          "participacion_porcentaje"
+        ]
+      },
+      "InvitacionCreadaResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "empresa_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "tienda_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "tienda_nombre": {
+            "type": "string"
+          },
+          "correo": {
+            "type": "string"
+          },
+          "participacion_porcentaje": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 100
+          },
+          "estado": {
+            "type": "string"
+          },
+          "expira_en": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "url_invitacion": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "empresa_id",
+          "tienda_id",
+          "tienda_nombre",
+          "correo",
+          "participacion_porcentaje",
+          "estado",
+          "expira_en",
+          "url_invitacion"
+        ]
+      },
+      "InvitacionResumenResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "correo": {
+            "type": "string"
+          },
+          "tienda_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "tienda_nombre": {
+            "type": "string"
+          },
+          "participacion_porcentaje": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 100
+          },
+          "estado": {
+            "type": "string"
+          },
+          "expira_en": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "correo",
+          "tienda_id",
+          "tienda_nombre",
+          "participacion_porcentaje",
+          "estado",
+          "expira_en"
+        ]
+      },
+      "ListarVendedoresResponseDto": {
+        "type": "object",
+        "properties": {
+          "vendedores": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/VendedorEmpresaResponseDto"
+            }
+          },
+          "invitaciones": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/InvitacionResumenResponseDto"
+            }
+          }
+        },
+        "required": [
+          "vendedores",
+          "invitaciones"
+        ]
+      },
+      "InvitacionPublicaResponseDto": {
+        "type": "object",
+        "properties": {
+          "valida": {
+            "type": "boolean"
+          },
+          "correo": {
+            "type": "string"
+          },
+          "empresa_nombre": {
+            "type": "string"
+          },
+          "tienda_nombre": {
+            "type": "string"
+          },
+          "participacion_porcentaje": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 100
+          },
+          "expira_en": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "valida",
+          "correo",
+          "empresa_nombre",
+          "tienda_nombre",
+          "participacion_porcentaje",
+          "expira_en"
+        ]
+      },
+      "AceptarInvitacionRequestDto": {
+        "type": "object",
+        "properties": {
+          "nombre": {
+            "type": "string",
+            "minLength": 2,
+            "maxLength": 120,
+            "example": "Ana Pérez"
+          },
+          "contrasena": {
+            "type": "string",
+            "minLength": 8,
+            "example": "UnaClaveSegura123"
+          }
+        },
+        "required": [
+          "nombre",
+          "contrasena"
+        ]
+      },
+      "AceptarInvitacionResponseDto": {
+        "type": "object",
+        "properties": {
+          "access_token": {
+            "type": "string"
+          },
+          "refresh_token": {
+            "type": "string"
+          },
+          "expira_en": {
+            "type": "number"
+          },
+          "usuario": {
+            "type": "object",
+            "description": "Usuario vendedor con tienda y participación asignadas"
+          }
+        },
+        "required": [
+          "access_token",
+          "refresh_token",
+          "expira_en",
+          "usuario"
         ]
       },
       "AvanzarEstadoRequestDto": {

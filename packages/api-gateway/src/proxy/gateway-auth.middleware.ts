@@ -28,6 +28,9 @@ export const POLITICAS_RUTAS: PoliticaRuta[] = [
     { patron: /^\/api\/v1\/auth\/login$/, metodos: ['POST'], roles: null },
     { patron: /^\/api\/v1\/auth\/refresh$/, metodos: ['POST'], roles: null },
     { patron: /^\/api\/v1\/auth\/restablecer-contrasena$/, metodos: ['POST'], roles: null },
+    // Invitaciones de vendedor: el token es la autorización temporal.
+    { patron: /^\/api\/v1\/invitaciones\/vendedores\/[^/]+$/, metodos: ['GET'], roles: null },
+    { patron: /^\/api\/v1\/invitaciones\/vendedores\/[^/]+\/aceptar$/, metodos: ['POST'], roles: null },
     { patron: /^\/api\/v1\/catalog\/productos$/, metodos: ['GET'], roles: null },
     { patron: /^\/api\/v1\/catalog\/productos\/[^/]+$/, metodos: ['GET'], roles: null },
     // El slug de tienda forma parte de la URL publica del storefront (ADR-26);
@@ -40,7 +43,12 @@ export const POLITICAS_RUTAS: PoliticaRuta[] = [
     { patron: /^\/api\/v1\/auth\/crear-usuario$/, metodos: ['POST'], roles: [ROLES.SUPER_ADMIN, ROLES.ADMIN] },
     { patron: /^\/api\/v1\/empresas$/, metodos: ['POST'], roles: [ROLES.EMPRESARIO] },
     { patron: /^\/api\/v1\/empresas\/[^/]+\/logistica$/, metodos: ['PATCH'], roles: [ROLES.EMPRESARIO] },
-    { patron: /^\/api\/v1\/empresas\/[^/]+\/vendedores$/, metodos: ['POST'], roles: [ROLES.EMPRESARIO] },
+    { patron: /^\/api\/v1\/empresas\/[^/]+\/vendedores$/, metodos: ['POST', 'GET'], roles: [ROLES.EMPRESARIO] },
+    {
+      patron: /^\/api\/v1\/empresas\/[^/]+\/invitaciones\/vendedores(\/|$)/,
+      metodos: ['POST', 'DELETE'],
+      roles: [ROLES.EMPRESARIO],
+    },
     // Cambio de slug: solo el empresario; el servicio exige membresia activa.
     { patron: /^\/api\/v1\/empresas\/[^/]+\/slug$/, metodos: ['PATCH'], roles: [ROLES.EMPRESARIO] },
     // GET /empresas/:id acepta UUID o slug, pero sigue siendo privado: solo
