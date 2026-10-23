@@ -7,117 +7,12 @@ import type { OpenAPIObject } from '@nestjs/swagger';
 export const OPENAPI_AGREGADO = {
   "openapi": "3.0.0",
   "info": {
-    "title": "Core Engine · API (agregada)",
-    "description": "Documento agregado de todos los microservicios, servido por el API Gateway. Cada operacion se enruta a traves del gateway (prefijo /api/v1).",
+    "title": "Core Engine · API pública (agregada)",
+    "description": "Contrato de la superficie pública (/api/v1/**) expuesta por el API Gateway. No incluye las rutas /internal/**, que son exclusivas del tráfico servicio→servicio.",
     "version": "v1"
   },
   "tags": [],
   "paths": {
-    "/internal/productos/lote": {
-      "get": {
-        "operationId": "InternalController_lote",
-        "parameters": [
-          {
-            "name": "skus",
-            "required": false,
-            "in": "query",
-            "description": "SKUs separados por coma",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": ""
-          }
-        },
-        "summary": "Lote de productos por SKUs (servicio→servicio)",
-        "tags": [
-          "Catálogo (interno)"
-        ]
-      }
-    },
-    "/internal/productos/sku/{sku}": {
-      "get": {
-        "operationId": "InternalController_porSku",
-        "parameters": [
-          {
-            "name": "sku",
-            "required": true,
-            "in": "path",
-            "description": "SKU del producto",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": ""
-          }
-        },
-        "summary": "Producto por SKU (servicio→servicio)",
-        "tags": [
-          "Catálogo (interno)"
-        ]
-      }
-    },
-    "/internal/productos/{id}": {
-      "get": {
-        "operationId": "InternalController_porId",
-        "parameters": [
-          {
-            "name": "id",
-            "required": true,
-            "in": "path",
-            "description": "Id del producto",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": ""
-          }
-        },
-        "summary": "Producto por id (servicio→servicio)",
-        "tags": [
-          "Catálogo (interno)"
-        ]
-      }
-    },
-    "/internal/inventario/resumen": {
-      "get": {
-        "operationId": "InternalController_resumen",
-        "parameters": [],
-        "responses": {
-          "200": {
-            "description": ""
-          }
-        },
-        "summary": "Resumen de inventario (servicio→servicio)",
-        "tags": [
-          "Catálogo (interno)"
-        ]
-      }
-    },
-    "/internal/inventario/lineas": {
-      "get": {
-        "operationId": "InternalController_lineas",
-        "parameters": [],
-        "responses": {
-          "200": {
-            "description": ""
-          }
-        },
-        "summary": "Líneas de inventario (servicio→servicio)",
-        "tags": [
-          "Catálogo (interno)"
-        ]
-      }
-    },
     "/api/v1/catalog/productos": {
       "get": {
         "operationId": "ProductosController_listar",
@@ -173,7 +68,14 @@ export const OPENAPI_AGREGADO = {
         ],
         "responses": {
           "200": {
-            "description": ""
+            "description": "Página de productos",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginaProductosResponseDto"
+                }
+              }
+            }
           }
         },
         "summary": "Listar productos (público, filtros y paginación)",
@@ -196,9 +98,21 @@ export const OPENAPI_AGREGADO = {
         },
         "responses": {
           "201": {
-            "description": ""
+            "description": "Producto creado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProductoResponseDto"
+                }
+              }
+            }
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Crear producto (admin, TC-01)",
         "tags": [
           "Catálogo"
@@ -220,6 +134,16 @@ export const OPENAPI_AGREGADO = {
           }
         ],
         "responses": {
+          "200": {
+            "description": "Producto encontrado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProductoResponseDto"
+                }
+              }
+            }
+          },
           "404": {
             "description": "Producto inexistente (NO_ENCONTRADO)"
           }
@@ -254,9 +178,21 @@ export const OPENAPI_AGREGADO = {
         },
         "responses": {
           "200": {
-            "description": ""
+            "description": "Producto actualizado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProductoResponseDto"
+                }
+              }
+            }
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Editar producto (admin; RN-08 histórico)",
         "tags": [
           "Catálogo"
@@ -269,9 +205,24 @@ export const OPENAPI_AGREGADO = {
         "parameters": [],
         "responses": {
           "200": {
-            "description": ""
+            "description": "Líneas de inventario",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/LineaInventarioResponseDto"
+                  }
+                }
+              }
+            }
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Niveles de stock (admin; Tabla 21)",
         "tags": [
           "Catálogo"
@@ -284,10 +235,55 @@ export const OPENAPI_AGREGADO = {
         "parameters": [],
         "responses": {
           "200": {
-            "description": ""
+            "description": "Liquidaciones del vendedor",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/LiquidacionResponseDto"
+                  }
+                }
+              }
+            }
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Cortes/liquidaciones del vendedor autenticado",
+        "tags": [
+          "Comisiones · Liquidaciones"
+        ]
+      }
+    },
+    "/api/v1/empresarios/me/liquidaciones": {
+      "get": {
+        "operationId": "LiquidacionesController_deMiEmpresa",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Liquidaciones del empresario",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/LiquidacionEmpresaResponseDto"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Liquidaciones de la empresa autenticada",
         "tags": [
           "Comisiones · Liquidaciones"
         ]
@@ -316,9 +312,24 @@ export const OPENAPI_AGREGADO = {
         ],
         "responses": {
           "201": {
-            "description": ""
+            "description": "Liquidaciones generadas",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/LiquidacionResponseDto"
+                  }
+                }
+              }
+            }
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Ejecutar un corte de liquidaciones (admin)",
         "tags": [
           "Comisiones · Liquidaciones"
@@ -349,9 +360,21 @@ export const OPENAPI_AGREGADO = {
         ],
         "responses": {
           "201": {
-            "description": ""
+            "description": "Liquidación pagada",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LiquidacionResponseDto"
+                }
+              }
+            }
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Marcar una liquidación como pagada (RN-07)",
         "tags": [
           "Comisiones · Liquidaciones"
@@ -364,10 +387,49 @@ export const OPENAPI_AGREGADO = {
         "parameters": [],
         "responses": {
           "200": {
-            "description": ""
+            "description": "Estado de cuenta del vendedor",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EstadoCuentaResponseDto"
+                }
+              }
+            }
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Estado de cuenta de ventas/comisiones del vendedor",
+        "tags": [
+          "Comisiones · Ventas"
+        ]
+      }
+    },
+    "/api/v1/empresarios/me/ventas": {
+      "get": {
+        "operationId": "VentasEmpresaController_estado",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Estado de cuenta de la empresa",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EstadoCuentaEmpresaResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Estado de cuenta de ventas/comisiones de la empresa",
         "tags": [
           "Comisiones · Ventas"
         ]
@@ -379,9 +441,21 @@ export const OPENAPI_AGREGADO = {
         "parameters": [],
         "responses": {
           "200": {
-            "description": ""
+            "description": "KPIs de ventas e inventario",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReporteKpiResponseDto"
+                }
+              }
+            }
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "KPIs de ventas e inventario (admin)",
         "tags": [
           "Comisiones · Reportes"
@@ -394,9 +468,24 @@ export const OPENAPI_AGREGADO = {
         "parameters": [],
         "responses": {
           "200": {
-            "description": ""
+            "description": "Personal del tenant",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/PersonalResponseDto"
+                  }
+                }
+              }
+            }
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Listar personal",
         "tags": [
           "Field (logística de campo)"
@@ -417,9 +506,21 @@ export const OPENAPI_AGREGADO = {
         },
         "responses": {
           "201": {
-            "description": ""
+            "description": "Personal creado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PersonalResponseDto"
+                }
+              }
+            }
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Crear personal",
         "tags": [
           "Field (logística de campo)"
@@ -441,9 +542,21 @@ export const OPENAPI_AGREGADO = {
         ],
         "responses": {
           "200": {
-            "description": ""
+            "description": "Personal encontrado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PersonalResponseDto"
+                }
+              }
+            }
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Obtener personal por id",
         "tags": [
           "Field (logística de campo)"
@@ -473,9 +586,21 @@ export const OPENAPI_AGREGADO = {
         },
         "responses": {
           "200": {
-            "description": ""
+            "description": "Personal actualizado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PersonalResponseDto"
+                }
+              }
+            }
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Actualizar personal",
         "tags": [
           "Field (logística de campo)"
@@ -495,9 +620,14 @@ export const OPENAPI_AGREGADO = {
         ],
         "responses": {
           "200": {
-            "description": ""
+            "description": "Personal eliminado"
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Eliminar personal",
         "tags": [
           "Field (logística de campo)"
@@ -519,9 +649,21 @@ export const OPENAPI_AGREGADO = {
         ],
         "responses": {
           "200": {
-            "description": ""
+            "description": "Ubicación del personal",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UbicacionResponseDto"
+                }
+              }
+            }
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Ubicación del personal",
         "tags": [
           "Field (logística de campo)"
@@ -551,9 +693,21 @@ export const OPENAPI_AGREGADO = {
         },
         "responses": {
           "200": {
-            "description": ""
+            "description": "Ubicación actualizada",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PersonalResponseDto"
+                }
+              }
+            }
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Actualizar ubicación del personal",
         "tags": [
           "Field (logística de campo)"
@@ -566,9 +720,24 @@ export const OPENAPI_AGREGADO = {
         "parameters": [],
         "responses": {
           "200": {
-            "description": ""
+            "description": "Clientes de campo",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ClienteResponseDto"
+                  }
+                }
+              }
+            }
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Listar clientes de campo",
         "tags": [
           "Field (logística de campo)"
@@ -589,9 +758,21 @@ export const OPENAPI_AGREGADO = {
         },
         "responses": {
           "201": {
-            "description": ""
+            "description": "Cliente creado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ClienteResponseDto"
+                }
+              }
+            }
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Crear cliente de campo",
         "tags": [
           "Field (logística de campo)"
@@ -613,9 +794,21 @@ export const OPENAPI_AGREGADO = {
         ],
         "responses": {
           "200": {
-            "description": ""
+            "description": "Cliente encontrado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ClienteResponseDto"
+                }
+              }
+            }
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Obtener cliente por id",
         "tags": [
           "Field (logística de campo)"
@@ -645,9 +838,21 @@ export const OPENAPI_AGREGADO = {
         },
         "responses": {
           "200": {
-            "description": ""
+            "description": "Cliente actualizado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ClienteResponseDto"
+                }
+              }
+            }
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Actualizar cliente de campo",
         "tags": [
           "Field (logística de campo)"
@@ -667,9 +872,14 @@ export const OPENAPI_AGREGADO = {
         ],
         "responses": {
           "200": {
-            "description": ""
+            "description": "Cliente eliminado"
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Eliminar cliente de campo",
         "tags": [
           "Field (logística de campo)"
@@ -682,9 +892,24 @@ export const OPENAPI_AGREGADO = {
         "parameters": [],
         "responses": {
           "200": {
-            "description": ""
+            "description": "Vehículos del tenant",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/VehiculoResponseDto"
+                  }
+                }
+              }
+            }
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Listar vehículos",
         "tags": [
           "Field (logística de campo)"
@@ -705,9 +930,21 @@ export const OPENAPI_AGREGADO = {
         },
         "responses": {
           "201": {
-            "description": ""
+            "description": "Vehículo creado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VehiculoResponseDto"
+                }
+              }
+            }
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Crear vehículo",
         "tags": [
           "Field (logística de campo)"
@@ -729,9 +966,21 @@ export const OPENAPI_AGREGADO = {
         ],
         "responses": {
           "200": {
-            "description": ""
+            "description": "Vehículo encontrado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VehiculoResponseDto"
+                }
+              }
+            }
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Obtener vehículo por id",
         "tags": [
           "Field (logística de campo)"
@@ -761,9 +1010,21 @@ export const OPENAPI_AGREGADO = {
         },
         "responses": {
           "200": {
-            "description": ""
+            "description": "Vehículo actualizado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VehiculoResponseDto"
+                }
+              }
+            }
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Actualizar vehículo",
         "tags": [
           "Field (logística de campo)"
@@ -783,9 +1044,14 @@ export const OPENAPI_AGREGADO = {
         ],
         "responses": {
           "200": {
-            "description": ""
+            "description": "Vehículo eliminado"
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Eliminar vehículo",
         "tags": [
           "Field (logística de campo)"
@@ -807,9 +1073,24 @@ export const OPENAPI_AGREGADO = {
         ],
         "responses": {
           "200": {
-            "description": ""
+            "description": "Rutas del tenant",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/RutaResponseDto"
+                  }
+                }
+              }
+            }
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Listar rutas",
         "tags": [
           "Field (logística de campo)"
@@ -830,9 +1111,21 @@ export const OPENAPI_AGREGADO = {
         },
         "responses": {
           "201": {
-            "description": ""
+            "description": "Ruta creada",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RutaResponseDto"
+                }
+              }
+            }
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Crear ruta",
         "tags": [
           "Field (logística de campo)"
@@ -854,9 +1147,21 @@ export const OPENAPI_AGREGADO = {
         ],
         "responses": {
           "200": {
-            "description": ""
+            "description": "Ruta encontrada",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RutaResponseDto"
+                }
+              }
+            }
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Obtener ruta por id",
         "tags": [
           "Field (logística de campo)"
@@ -886,9 +1191,21 @@ export const OPENAPI_AGREGADO = {
         },
         "responses": {
           "200": {
-            "description": ""
+            "description": "Ruta actualizada",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RutaResponseDto"
+                }
+              }
+            }
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Actualizar ruta",
         "tags": [
           "Field (logística de campo)"
@@ -908,9 +1225,14 @@ export const OPENAPI_AGREGADO = {
         ],
         "responses": {
           "200": {
-            "description": ""
+            "description": "Ruta eliminada"
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Eliminar ruta",
         "tags": [
           "Field (logística de campo)"
@@ -942,9 +1264,21 @@ export const OPENAPI_AGREGADO = {
         },
         "responses": {
           "201": {
-            "description": ""
+            "description": "Parada creada",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ParadaResponseDto"
+                }
+              }
+            }
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Agregar parada a la ruta",
         "tags": [
           "Field (logística de campo)"
@@ -984,9 +1318,21 @@ export const OPENAPI_AGREGADO = {
         },
         "responses": {
           "200": {
-            "description": ""
+            "description": "Parada actualizada",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ParadaResponseDto"
+                }
+              }
+            }
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Actualizar parada de la ruta",
         "tags": [
           "Field (logística de campo)"
@@ -1018,9 +1364,21 @@ export const OPENAPI_AGREGADO = {
         },
         "responses": {
           "201": {
-            "description": ""
+            "description": "Ruta asignada",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RutaResponseDto"
+                }
+              }
+            }
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Asignar personal/vehículo a la ruta",
         "tags": [
           "Field (logística de campo)"
@@ -1058,9 +1416,24 @@ export const OPENAPI_AGREGADO = {
         ],
         "responses": {
           "200": {
-            "description": ""
+            "description": "Pedidos de campo",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/PedidoResponseDto"
+                  }
+                }
+              }
+            }
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Listar pedidos de campo",
         "tags": [
           "Field (logística de campo)"
@@ -1081,9 +1454,21 @@ export const OPENAPI_AGREGADO = {
         },
         "responses": {
           "201": {
-            "description": ""
+            "description": "Pedido creado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PedidoResponseDto"
+                }
+              }
+            }
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Crear pedido de campo",
         "tags": [
           "Field (logística de campo)"
@@ -1105,9 +1490,21 @@ export const OPENAPI_AGREGADO = {
         ],
         "responses": {
           "200": {
-            "description": ""
+            "description": "Pedido encontrado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PedidoResponseDto"
+                }
+              }
+            }
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Obtener pedido por id",
         "tags": [
           "Field (logística de campo)"
@@ -1137,9 +1534,21 @@ export const OPENAPI_AGREGADO = {
         },
         "responses": {
           "200": {
-            "description": ""
+            "description": "Pedido actualizado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PedidoResponseDto"
+                }
+              }
+            }
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Actualizar pedido de campo",
         "tags": [
           "Field (logística de campo)"
@@ -1159,9 +1568,14 @@ export const OPENAPI_AGREGADO = {
         ],
         "responses": {
           "200": {
-            "description": ""
+            "description": "Pedido eliminado"
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Eliminar pedido de campo",
         "tags": [
           "Field (logística de campo)"
@@ -1193,9 +1607,21 @@ export const OPENAPI_AGREGADO = {
         },
         "responses": {
           "200": {
-            "description": ""
+            "description": "Pedido actualizado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PedidoResponseDto"
+                }
+              }
+            }
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Cambiar estado del pedido",
         "tags": [
           "Field (logística de campo)"
@@ -1225,9 +1651,24 @@ export const OPENAPI_AGREGADO = {
         ],
         "responses": {
           "200": {
-            "description": ""
+            "description": "Registros de asistencia",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/AsistenciaResponseDto"
+                  }
+                }
+              }
+            }
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Listar asistencia",
         "tags": [
           "Field (logística de campo)"
@@ -1248,9 +1689,21 @@ export const OPENAPI_AGREGADO = {
         },
         "responses": {
           "201": {
-            "description": ""
+            "description": "Asistencia registrada",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AsistenciaResponseDto"
+                }
+              }
+            }
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Registrar asistencia",
         "tags": [
           "Field (logística de campo)"
@@ -1280,9 +1733,24 @@ export const OPENAPI_AGREGADO = {
         ],
         "responses": {
           "200": {
-            "description": ""
+            "description": "Incidencias",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/IncidenciaResponseDto"
+                  }
+                }
+              }
+            }
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Listar incidencias",
         "tags": [
           "Field (logística de campo)"
@@ -1303,9 +1771,21 @@ export const OPENAPI_AGREGADO = {
         },
         "responses": {
           "201": {
-            "description": ""
+            "description": "Incidencia creada",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IncidenciaResponseDto"
+                }
+              }
+            }
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Crear incidencia",
         "tags": [
           "Field (logística de campo)"
@@ -1327,9 +1807,21 @@ export const OPENAPI_AGREGADO = {
         ],
         "responses": {
           "200": {
-            "description": ""
+            "description": "Incidencia encontrada",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IncidenciaResponseDto"
+                }
+              }
+            }
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Obtener incidencia por id",
         "tags": [
           "Field (logística de campo)"
@@ -1359,9 +1851,21 @@ export const OPENAPI_AGREGADO = {
         },
         "responses": {
           "200": {
-            "description": ""
+            "description": "Incidencia actualizada",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IncidenciaResponseDto"
+                }
+              }
+            }
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Actualizar incidencia",
         "tags": [
           "Field (logística de campo)"
@@ -1381,9 +1885,14 @@ export const OPENAPI_AGREGADO = {
         ],
         "responses": {
           "200": {
-            "description": ""
+            "description": "Incidencia eliminada"
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Eliminar incidencia",
         "tags": [
           "Field (logística de campo)"
@@ -1421,9 +1930,24 @@ export const OPENAPI_AGREGADO = {
         ],
         "responses": {
           "200": {
-            "description": ""
+            "description": "Registros de tracking",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/TrackingResponseDto"
+                  }
+                }
+              }
+            }
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Listar tracking GPS",
         "tags": [
           "Field (logística de campo)"
@@ -1444,9 +1968,24 @@ export const OPENAPI_AGREGADO = {
         },
         "responses": {
           "201": {
-            "description": ""
+            "description": "Tracking registrado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/TrackingResponseDto"
+                  }
+                }
+              }
+            }
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Registrar tracking GPS (lote)",
         "tags": [
           "Field (logística de campo)"
@@ -1476,9 +2015,24 @@ export const OPENAPI_AGREGADO = {
         ],
         "responses": {
           "200": {
-            "description": ""
+            "description": "Visitas registradas",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/VisitaResponseDto"
+                  }
+                }
+              }
+            }
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Listar visitas (telemetría)",
         "tags": [
           "Field (logística de campo)"
@@ -1499,9 +2053,21 @@ export const OPENAPI_AGREGADO = {
         },
         "responses": {
           "201": {
-            "description": ""
+            "description": "Visita registrada",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VisitaResponseDto"
+                }
+              }
+            }
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Registrar visita (telemetría)",
         "tags": [
           "Field (logística de campo)"
@@ -1531,9 +2097,21 @@ export const OPENAPI_AGREGADO = {
         ],
         "responses": {
           "200": {
-            "description": ""
+            "description": "Cumplimiento de la ruta",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CumplimientoResponseDto"
+                }
+              }
+            }
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Obtener cumplimiento de ruta/fecha",
         "tags": [
           "Field (logística de campo)"
@@ -1556,9 +2134,21 @@ export const OPENAPI_AGREGADO = {
         },
         "responses": {
           "201": {
-            "description": ""
+            "description": "Cumplimiento guardado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CumplimientoResponseDto"
+                }
+              }
+            }
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Guardar cumplimiento de ruta",
         "tags": [
           "Field (logística de campo)"
@@ -1581,77 +2171,27 @@ export const OPENAPI_AGREGADO = {
         },
         "responses": {
           "201": {
-            "description": ""
+            "description": "Resultado de la sincronización",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/SyncResultadoResponseDto"
+                  }
+                }
+              }
+            }
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Sincronizar operaciones offline",
         "tags": [
           "Field (logística de campo)"
-        ]
-      }
-    },
-    "/internal/finance/sujetos/{usuarioId}": {
-      "get": {
-        "operationId": "InternoController_sujeto",
-        "parameters": [
-          {
-            "name": "usuarioId",
-            "required": true,
-            "in": "path",
-            "description": "Id del usuario",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": ""
-          }
-        },
-        "summary": "Situación fiscal de un usuario (para identity)",
-        "tags": [
-          "Finanzas (interno)"
-        ]
-      }
-    },
-    "/internal/finance/declaraciones": {
-      "get": {
-        "operationId": "InternoController_declaraciones",
-        "parameters": [
-          {
-            "name": "tipo",
-            "required": false,
-            "in": "query",
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "periodo_inicio",
-            "required": false,
-            "in": "query",
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "estado",
-            "required": false,
-            "in": "query",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": ""
-          }
-        },
-        "summary": "Declaraciones del periodo (reportes)",
-        "tags": [
-          "Finanzas (interno)"
         ]
       }
     },
@@ -1661,9 +2201,24 @@ export const OPENAPI_AGREGADO = {
         "parameters": [],
         "responses": {
           "200": {
-            "description": ""
+            "description": "Plan de cuentas",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/CuentaResponseDto"
+                  }
+                }
+              }
+            }
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Plan de cuentas",
         "tags": [
           "Finanzas · Contabilidad"
@@ -1684,9 +2239,21 @@ export const OPENAPI_AGREGADO = {
         },
         "responses": {
           "201": {
-            "description": ""
+            "description": "Cuenta creada",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CuentaResponseDto"
+                }
+              }
+            }
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Crear una cuenta contable",
         "tags": [
           "Finanzas · Contabilidad"
@@ -1719,9 +2286,21 @@ export const OPENAPI_AGREGADO = {
         },
         "responses": {
           "201": {
-            "description": ""
+            "description": "Cuenta actualizada",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CuentaResponseDto"
+                }
+              }
+            }
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Cambiar el estado de una cuenta",
         "tags": [
           "Finanzas · Contabilidad"
@@ -1759,9 +2338,24 @@ export const OPENAPI_AGREGADO = {
         ],
         "responses": {
           "200": {
-            "description": ""
+            "description": "Asientos del periodo",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/AsientoResponseDto"
+                  }
+                }
+              }
+            }
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Libro diario (asientos)",
         "tags": [
           "Finanzas · Contabilidad"
@@ -1782,9 +2376,21 @@ export const OPENAPI_AGREGADO = {
         },
         "responses": {
           "201": {
-            "description": ""
+            "description": "Asiento registrado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AsientoResponseDto"
+                }
+              }
+            }
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Registrar un asiento manual",
         "tags": [
           "Finanzas · Contabilidad"
@@ -1807,9 +2413,21 @@ export const OPENAPI_AGREGADO = {
         ],
         "responses": {
           "201": {
-            "description": ""
+            "description": "Asiento anulado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AsientoResponseDto"
+                }
+              }
+            }
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Anular un asiento",
         "tags": [
           "Finanzas · Contabilidad"
@@ -1848,9 +2466,21 @@ export const OPENAPI_AGREGADO = {
         ],
         "responses": {
           "200": {
-            "description": ""
+            "description": "Libro mayor de la cuenta",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LibroMayorResponseDto"
+                }
+              }
+            }
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Libro mayor por cuenta",
         "tags": [
           "Finanzas · Contabilidad"
@@ -1880,9 +2510,24 @@ export const OPENAPI_AGREGADO = {
         ],
         "responses": {
           "200": {
-            "description": ""
+            "description": "Libro de ventas",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/LibroIvaResponseDto"
+                  }
+                }
+              }
+            }
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Libro de ventas (DGI)",
         "tags": [
           "Finanzas · Contabilidad"
@@ -1912,9 +2557,24 @@ export const OPENAPI_AGREGADO = {
         ],
         "responses": {
           "200": {
-            "description": ""
+            "description": "Libro de compras",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/LibroIvaResponseDto"
+                  }
+                }
+              }
+            }
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Libro de compras (DGI)",
         "tags": [
           "Finanzas · Contabilidad"
@@ -1952,9 +2612,24 @@ export const OPENAPI_AGREGADO = {
         ],
         "responses": {
           "200": {
-            "description": ""
+            "description": "Comprobantes fiscales",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ComprobanteResponseDto"
+                  }
+                }
+              }
+            }
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Listar comprobantes fiscales",
         "tags": [
           "Finanzas · Facturación"
@@ -1975,9 +2650,21 @@ export const OPENAPI_AGREGADO = {
         },
         "responses": {
           "201": {
-            "description": ""
+            "description": "Comprobante emitido",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ComprobanteResponseDto"
+                }
+              }
+            }
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Emitir un comprobante (factura o nota de crédito)",
         "tags": [
           "Finanzas · Facturación"
@@ -1990,9 +2677,24 @@ export const OPENAPI_AGREGADO = {
         "parameters": [],
         "responses": {
           "200": {
-            "description": ""
+            "description": "Series de comprobantes",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/SerieComprobanteResponseDto"
+                  }
+                }
+              }
+            }
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Series de comprobantes",
         "tags": [
           "Finanzas · Facturación"
@@ -2015,9 +2717,21 @@ export const OPENAPI_AGREGADO = {
         ],
         "responses": {
           "201": {
-            "description": ""
+            "description": "Comprobante anulado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ComprobanteResponseDto"
+                }
+              }
+            }
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Anular un comprobante",
         "tags": [
           "Finanzas · Facturación"
@@ -2030,9 +2744,24 @@ export const OPENAPI_AGREGADO = {
         "parameters": [],
         "responses": {
           "200": {
-            "description": ""
+            "description": "Jurisdicciones",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/JurisdiccionResponseDto"
+                  }
+                }
+              }
+            }
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Listar jurisdicciones",
         "tags": [
           "Finanzas · Tributación"
@@ -2053,9 +2782,21 @@ export const OPENAPI_AGREGADO = {
         },
         "responses": {
           "201": {
-            "description": ""
+            "description": "Jurisdicción creada",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JurisdiccionResponseDto"
+                }
+              }
+            }
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Crear una jurisdicción",
         "tags": [
           "Finanzas · Tributación"
@@ -2077,9 +2818,24 @@ export const OPENAPI_AGREGADO = {
         ],
         "responses": {
           "200": {
-            "description": ""
+            "description": "Regímenes fiscales",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/RegimenFiscalResponseDto"
+                  }
+                }
+              }
+            }
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Listar regímenes fiscales",
         "tags": [
           "Finanzas · Tributación"
@@ -2100,9 +2856,21 @@ export const OPENAPI_AGREGADO = {
         },
         "responses": {
           "201": {
-            "description": ""
+            "description": "Régimen creado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RegimenFiscalResponseDto"
+                }
+              }
+            }
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Crear un régimen fiscal",
         "tags": [
           "Finanzas · Tributación"
@@ -2115,9 +2883,24 @@ export const OPENAPI_AGREGADO = {
         "parameters": [],
         "responses": {
           "200": {
-            "description": ""
+            "description": "Sujetos tributarios",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/SujetoTributarioResponseDto"
+                  }
+                }
+              }
+            }
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Listar sujetos tributarios",
         "tags": [
           "Finanzas · Tributación"
@@ -2138,9 +2921,21 @@ export const OPENAPI_AGREGADO = {
         },
         "responses": {
           "201": {
-            "description": ""
+            "description": "Sujeto registrado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SujetoTributarioResponseDto"
+                }
+              }
+            }
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Registrar un sujeto tributario",
         "tags": [
           "Finanzas · Tributación"
@@ -2163,9 +2958,21 @@ export const OPENAPI_AGREGADO = {
         ],
         "responses": {
           "201": {
-            "description": ""
+            "description": "Sujeto dado de baja",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SujetoTributarioResponseDto"
+                }
+              }
+            }
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Dar de baja un sujeto tributario",
         "tags": [
           "Finanzas · Tributación"
@@ -2203,9 +3010,24 @@ export const OPENAPI_AGREGADO = {
         ],
         "responses": {
           "200": {
-            "description": ""
+            "description": "Declaraciones",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/DeclaracionResponseDto"
+                  }
+                }
+              }
+            }
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Listar declaraciones",
         "tags": [
           "Finanzas · Tributación"
@@ -2228,9 +3050,24 @@ export const OPENAPI_AGREGADO = {
         },
         "responses": {
           "201": {
-            "description": ""
+            "description": "Declaraciones generadas",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/DeclaracionResponseDto"
+                  }
+                }
+              }
+            }
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Generar declaraciones del periodo",
         "tags": [
           "Finanzas · Tributación"
@@ -2253,9 +3090,21 @@ export const OPENAPI_AGREGADO = {
         ],
         "responses": {
           "201": {
-            "description": ""
+            "description": "Declaración presentada",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DeclaracionResponseDto"
+                }
+              }
+            }
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Presentar una declaración",
         "tags": [
           "Finanzas · Tributación"
@@ -2278,9 +3127,21 @@ export const OPENAPI_AGREGADO = {
         ],
         "responses": {
           "201": {
-            "description": ""
+            "description": "Declaración pagada",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DeclaracionResponseDto"
+                }
+              }
+            }
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Marcar una declaración como pagada",
         "tags": [
           "Finanzas · Tributación"
@@ -2303,9 +3164,21 @@ export const OPENAPI_AGREGADO = {
         },
         "responses": {
           "201": {
-            "description": ""
+            "description": "Proyección creada",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProyeccionResponseDto"
+                }
+              }
+            }
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Crear una proyección financiera",
         "tags": [
           "Finanzas · Modelo"
@@ -2316,35 +3189,25 @@ export const OPENAPI_AGREGADO = {
         "parameters": [],
         "responses": {
           "200": {
-            "description": ""
-          }
-        },
-        "summary": "Listar proyecciones",
-        "tags": [
-          "Finanzas · Modelo"
-        ]
-      }
-    },
-    "/api/v1/finanzas/proyecciones/{id}": {
-      "get": {
-        "operationId": "FinanzasController_detalle",
-        "parameters": [
-          {
-            "name": "id",
-            "required": true,
-            "in": "path",
-            "description": "Id de la proyección",
-            "schema": {
-              "type": "string"
+            "description": "Proyecciones",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ProyeccionResponseDto"
+                  }
+                }
+              }
             }
           }
-        ],
-        "responses": {
-          "200": {
-            "description": ""
-          }
         },
-        "summary": "Detalle de una proyección",
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Listar proyecciones",
         "tags": [
           "Finanzas · Modelo"
         ]
@@ -2389,9 +3252,21 @@ export const OPENAPI_AGREGADO = {
         ],
         "responses": {
           "200": {
-            "description": ""
+            "description": "Punto de equilibrio",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PuntoEquilibrioResponseDto"
+                }
+              }
+            }
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Punto de equilibrio (tablas 8.12/8.11)",
         "tags": [
           "Finanzas · Modelo"
@@ -2413,9 +3288,21 @@ export const OPENAPI_AGREGADO = {
         ],
         "responses": {
           "200": {
-            "description": ""
+            "description": "KPIs financieros",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/KpisFinancierosResponseDto"
+                }
+              }
+            }
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "KPIs financieros del periodo (tabla 8.8)",
         "tags": [
           "Finanzas · Modelo"
@@ -2428,9 +3315,21 @@ export const OPENAPI_AGREGADO = {
         "parameters": [],
         "responses": {
           "200": {
-            "description": ""
+            "description": "Estudios de sensibilidad",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SensibilidadEstudiosResponseDto"
+                }
+              }
+            }
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Estudios de sensibilidad (8.7, 8.10, 8.11, 8.12)",
         "tags": [
           "Finanzas · Modelo"
@@ -2443,10 +3342,59 @@ export const OPENAPI_AGREGADO = {
         "parameters": [],
         "responses": {
           "200": {
-            "description": ""
+            "description": "Plan a 24 meses",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PlanBienalResponseDto"
+                }
+              }
+            }
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Plan a 24 meses (8.6 + 8.9)",
+        "tags": [
+          "Finanzas · Modelo"
+        ]
+      }
+    },
+    "/api/v1/finanzas/proyecciones/{id}": {
+      "get": {
+        "operationId": "FinanzasController_detalle",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "description": "Id de la proyección",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Proyección encontrada",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProyeccionResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Detalle de una proyección",
         "tags": [
           "Finanzas · Modelo"
         ]
@@ -2475,9 +3423,21 @@ export const OPENAPI_AGREGADO = {
         ],
         "responses": {
           "200": {
-            "description": ""
+            "description": "Tablero financiero",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TableroResponseDto"
+                }
+              }
+            }
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Tablero financiero (KPIs + alertas, tabla 8.10)",
         "tags": [
           "Finanzas · Modelo"
@@ -2499,67 +3459,24 @@ export const OPENAPI_AGREGADO = {
         ],
         "responses": {
           "200": {
-            "description": ""
+            "description": "Situación fiscal del vendedor",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VendedorFiscalResponseDto"
+                }
+              }
+            }
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Situación fiscal del vendedor (cap. 4.4)",
         "tags": [
           "Finanzas · Vendedor"
-        ]
-      }
-    },
-    "/internal/usuarios/{id}": {
-      "get": {
-        "operationId": "InternalController_usuario",
-        "parameters": [
-          {
-            "name": "id",
-            "required": true,
-            "in": "path",
-            "description": "Id del usuario",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": ""
-          }
-        },
-        "summary": "Usuario por id (servicio→servicio)",
-        "tags": [
-          "Usuarios (interno)"
-        ]
-      }
-    },
-    "/internal/vendedores": {
-      "get": {
-        "operationId": "InternalController_vendedores",
-        "parameters": [],
-        "responses": {
-          "200": {
-            "description": ""
-          }
-        },
-        "summary": "Listar vendedores (servicio→servicio)",
-        "tags": [
-          "Usuarios (interno)"
-        ]
-      }
-    },
-    "/internal/contar-vendedores": {
-      "get": {
-        "operationId": "InternalController_contarVendedores",
-        "parameters": [],
-        "responses": {
-          "200": {
-            "description": ""
-          }
-        },
-        "summary": "Contar vendedores (servicio→servicio)",
-        "tags": [
-          "Usuarios (interno)"
         ]
       }
     },
@@ -2579,7 +3496,14 @@ export const OPENAPI_AGREGADO = {
         },
         "responses": {
           "201": {
-            "description": "Sesión creada (JWT + refresh)"
+            "description": "Sesión creada (JWT + refresh)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SesionResponseDto"
+                }
+              }
+            }
           }
         },
         "summary": "Registrar vendedor o comprador",
@@ -2604,7 +3528,14 @@ export const OPENAPI_AGREGADO = {
         },
         "responses": {
           "200": {
-            "description": "Sesión iniciada"
+            "description": "Sesión iniciada",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SesionResponseDto"
+                }
+              }
+            }
           },
           "401": {
             "description": "Credenciales inválidas"
@@ -2640,7 +3571,14 @@ export const OPENAPI_AGREGADO = {
         },
         "responses": {
           "201": {
-            "description": ""
+            "description": "Sesión renovada",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SesionResponseDto"
+                }
+              }
+            }
           }
         },
         "summary": "Renovar la sesión con refresh token",
@@ -2664,10 +3602,22 @@ export const OPENAPI_AGREGADO = {
           }
         },
         "responses": {
-          "200": {
-            "description": "Sesión cerrada"
+          "201": {
+            "description": "Sesión cerrada",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OkResponseDto"
+                }
+              }
+            }
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Cerrar sesión (revoca el refresh token)",
         "tags": [
           "Auth"
@@ -2690,12 +3640,24 @@ export const OPENAPI_AGREGADO = {
         },
         "responses": {
           "201": {
-            "description": "Usuario creado"
+            "description": "Usuario creado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UsuarioResponseDto"
+                }
+              }
+            }
           },
           "403": {
             "description": "Solo un administrador puede crear usuarios"
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Crear usuario (solo admin)",
         "tags": [
           "Auth"
@@ -2718,9 +3680,21 @@ export const OPENAPI_AGREGADO = {
         },
         "responses": {
           "201": {
-            "description": ""
+            "description": "Contraseña cambiada",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OkResponseDto"
+                }
+              }
+            }
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Cambiar la contraseña (autenticado)",
         "tags": [
           "Auth"
@@ -2743,7 +3717,14 @@ export const OPENAPI_AGREGADO = {
         },
         "responses": {
           "201": {
-            "description": ""
+            "description": "Solicitud aceptada",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OkResponseDto"
+                }
+              }
+            }
           }
         },
         "summary": "Solicitar restablecimiento de contraseña (público)",
@@ -2758,9 +3739,21 @@ export const OPENAPI_AGREGADO = {
         "parameters": [],
         "responses": {
           "200": {
-            "description": ""
+            "description": "Contexto del usuario autenticado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UsuarioContextoResponseDto"
+                }
+              }
+            }
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Perfil de la sesión actual",
         "tags": [
           "Auth"
@@ -2783,9 +3776,21 @@ export const OPENAPI_AGREGADO = {
         },
         "responses": {
           "201": {
-            "description": ""
+            "description": "Personal vinculado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OkResponseDto"
+                }
+              }
+            }
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Vincular la ficha de personal del usuario autenticado",
         "tags": [
           "Auth"
@@ -2798,9 +3803,24 @@ export const OPENAPI_AGREGADO = {
         "parameters": [],
         "responses": {
           "200": {
-            "description": ""
+            "description": "Usuarios registrados",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/UsuarioResponseDto"
+                  }
+                }
+              }
+            }
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Listar usuarios (admin)",
         "tags": [
           "Usuarios"
@@ -2822,13 +3842,192 @@ export const OPENAPI_AGREGADO = {
           }
         ],
         "responses": {
+          "200": {
+            "description": "Usuario encontrado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UsuarioResponseDto"
+                }
+              }
+            }
+          },
           "404": {
             "description": "Usuario inexistente o sin permiso"
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Perfil de un usuario (admin o el propio)",
         "tags": [
           "Usuarios"
+        ]
+      }
+    },
+    "/api/v1/empresas": {
+      "post": {
+        "operationId": "EmpresasController_crear",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CrearEmpresaRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Empresa creada con membresía del empresario",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EmpresaResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Crear empresa y elegir modalidad logística",
+        "tags": [
+          "Empresas"
+        ]
+      }
+    },
+    "/api/v1/empresas/{id}": {
+      "get": {
+        "operationId": "EmpresasController_obtener",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Empresa visible para el miembro o administrador global",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EmpresaResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "Empresas"
+        ]
+      }
+    },
+    "/api/v1/empresas/{id}/logistica": {
+      "patch": {
+        "operationId": "EmpresasController_actualizarLogistica",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ActualizarModalidadLogisticaRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Modalidad logística actualizada",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EmpresaResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Cambiar la modalidad logística para envíos futuros",
+        "tags": [
+          "Empresas"
+        ]
+      }
+    },
+    "/api/v1/empresas/{id}/vendedores": {
+      "post": {
+        "operationId": "EmpresasController_vendedor",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CrearVendedorRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Vendedor creado y asociado a la empresa",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VendedorEmpresaResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Crear vendedor con participación predeterminada",
+        "tags": [
+          "Empresas"
         ]
       }
     },
@@ -2858,13 +4057,25 @@ export const OPENAPI_AGREGADO = {
         },
         "responses": {
           "200": {
-            "description": "Orden con el nuevo estado"
+            "description": "Orden con el nuevo estado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OrdenExternaResponseDto"
+                }
+              }
+            }
           },
           "400": {
             "description": "Estado objetivo inválido (ESTADO_INVALIDO)"
           }
         },
-        "summary": "Avanzar el estado de una orden (logística)",
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Avanzar el estado de una orden (logística o empresario de la empresa)",
         "tags": [
           "Logística"
         ]
@@ -2876,10 +4087,149 @@ export const OPENAPI_AGREGADO = {
         "parameters": [],
         "responses": {
           "200": {
-            "description": "Guías de despacho con monto serializado"
+            "description": "Guías de despacho con monto serializado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/EnvioConMontoResponseDto"
+                  }
+                }
+              }
+            }
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Listar guías de despacho (admin)",
+        "tags": [
+          "Logística"
+        ]
+      }
+    },
+    "/api/v1/empresarios/me/envios": {
+      "get": {
+        "operationId": "EnviosEmpresaController_listar",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/EnvioResponseDto"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Listar envíos de la empresa activa",
+        "tags": [
+          "Logística empresarial"
+        ]
+      }
+    },
+    "/api/v1/empresarios/me/envios/{id}/asignacion": {
+      "post": {
+        "operationId": "EnviosEmpresaController_asignar",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "description": "Id del envío",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AsignarProveedorRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EnvioResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Elegir flota para un envío de modalidad híbrida",
+        "tags": [
+          "Logística empresarial"
+        ]
+      }
+    },
+    "/api/v1/envios/{id}/estado": {
+      "patch": {
+        "operationId": "EnviosFlotaController_avanzar",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "description": "Id del envío",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AvanzarEnvioRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EnvioResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Avanzar un envío asignado a la flota activa",
         "tags": [
           "Logística"
         ]
@@ -2928,9 +4278,21 @@ export const OPENAPI_AGREGADO = {
         ],
         "responses": {
           "200": {
-            "description": ""
+            "description": "Puntos del mapa de calor",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MapaCalorResponseDto"
+                }
+              }
+            }
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Mapa de calor de ventas (admin)",
         "tags": [
           "Inteligencia — Métricas"
@@ -2988,9 +4350,21 @@ export const OPENAPI_AGREGADO = {
         ],
         "responses": {
           "200": {
-            "description": ""
+            "description": "Puntos del mapa de calor del vendedor",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MapaCalorResponseDto"
+                }
+              }
+            }
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Mi mapa de calor (vendedor)",
         "tags": [
           "Inteligencia — Métricas"
@@ -3003,9 +4377,21 @@ export const OPENAPI_AGREGADO = {
         "parameters": [],
         "responses": {
           "200": {
-            "description": ""
+            "description": "Rendimiento por vendedor",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginaRendimientoResponseDto"
+                }
+              }
+            }
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Rendimiento de vendedores (admin)",
         "tags": [
           "Inteligencia — Métricas"
@@ -3027,9 +4413,21 @@ export const OPENAPI_AGREGADO = {
         ],
         "responses": {
           "200": {
-            "description": ""
+            "description": "Rendimiento del vendedor",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginaRendimientoResponseDto"
+                }
+              }
+            }
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Mi rendimiento como vendedor",
         "tags": [
           "Inteligencia — Métricas"
@@ -3042,9 +4440,24 @@ export const OPENAPI_AGREGADO = {
         "parameters": [],
         "responses": {
           "200": {
-            "description": ""
+            "description": "Cobertura por celda",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/CoberturaZonaResponseDto"
+                  }
+                }
+              }
+            }
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Cobertura por zona (admin)",
         "tags": [
           "Inteligencia — Métricas"
@@ -3057,9 +4470,21 @@ export const OPENAPI_AGREGADO = {
         "parameters": [],
         "responses": {
           "200": {
-            "description": ""
+            "description": "Demanda por producto",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginaDemandaResponseDto"
+                }
+              }
+            }
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Demanda de productos (admin)",
         "tags": [
           "Inteligencia — Métricas"
@@ -3072,9 +4497,24 @@ export const OPENAPI_AGREGADO = {
         "parameters": [],
         "responses": {
           "200": {
-            "description": ""
+            "description": "Tendencias temporales",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/TendenciaResponseDto"
+                  }
+                }
+              }
+            }
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Tendencias (admin)",
         "tags": [
           "Inteligencia — Métricas"
@@ -3124,9 +4564,21 @@ export const OPENAPI_AGREGADO = {
         ],
         "responses": {
           "200": {
-            "description": ""
+            "description": "Resumen ejecutivo",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResumenInteligenciaResponseDto"
+                }
+              }
+            }
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Resumen de inteligencia de mercado (admin)",
         "tags": [
           "Inteligencia — Métricas"
@@ -3149,9 +4601,21 @@ export const OPENAPI_AGREGADO = {
         },
         "responses": {
           "201": {
-            "description": ""
+            "description": "Venta registrada",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RegistrarVentaResponseDto"
+                }
+              }
+            }
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Registrar una venta en inteligencia (ingesta manual)",
         "tags": [
           "Inteligencia — Métricas"
@@ -3181,7 +4645,14 @@ export const OPENAPI_AGREGADO = {
         ],
         "responses": {
           "200": {
-            "description": ""
+            "description": "Pronóstico de demanda",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ForecastDemandaResponseDto"
+                }
+              }
+            }
           }
         },
         "security": [
@@ -3226,7 +4697,14 @@ export const OPENAPI_AGREGADO = {
         ],
         "responses": {
           "200": {
-            "description": ""
+            "description": "Anomalías detectadas",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AnomaliasResponseDto"
+                }
+              }
+            }
           }
         },
         "security": [
@@ -3255,7 +4733,14 @@ export const OPENAPI_AGREGADO = {
         ],
         "responses": {
           "200": {
-            "description": ""
+            "description": "Score del vendedor",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ScoreVendedorResponseDto"
+                }
+              }
+            }
           }
         },
         "security": [
@@ -3284,7 +4769,14 @@ export const OPENAPI_AGREGADO = {
         ],
         "responses": {
           "200": {
-            "description": ""
+            "description": "Score del vendedor autenticado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ScoreVendedorResponseDto"
+                }
+              }
+            }
           }
         },
         "security": [
@@ -3313,7 +4805,14 @@ export const OPENAPI_AGREGADO = {
         ],
         "responses": {
           "200": {
-            "description": ""
+            "description": "Calidad del pipeline",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CalidadDatosResponseDto"
+                }
+              }
+            }
           }
         },
         "security": [
@@ -3324,147 +4823,6 @@ export const OPENAPI_AGREGADO = {
         "summary": "Dashboard de calidad de datos del pipeline (últimas N horas)",
         "tags": [
           "Inteligencia — Predicción"
-        ]
-      }
-    },
-    "/internal/orders/{id}/transicion": {
-      "post": {
-        "operationId": "InternoController_transicion",
-        "parameters": [
-          {
-            "name": "id",
-            "required": true,
-            "in": "path",
-            "description": "Id de la orden",
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "estado",
-            "required": true,
-            "in": "query",
-            "description": "Estado objetivo",
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "motivo",
-            "required": false,
-            "in": "query",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "201": {
-            "description": ""
-          }
-        },
-        "summary": "Avanzar el ciclo de vida de la orden (logística→orders)",
-        "tags": [
-          "Pedidos (interno)"
-        ]
-      }
-    },
-    "/internal/orders/{id}": {
-      "get": {
-        "operationId": "InternoController_orden",
-        "parameters": [
-          {
-            "name": "id",
-            "required": true,
-            "in": "path",
-            "description": "Id de la orden",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": ""
-          }
-        },
-        "summary": "Lectura completa de una orden (reportes/comisiones)",
-        "tags": [
-          "Pedidos (interno)"
-        ]
-      }
-    },
-    "/internal/orders": {
-      "get": {
-        "operationId": "InternoController_listar",
-        "parameters": [
-          {
-            "name": "estado",
-            "required": false,
-            "in": "query",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": ""
-          }
-        },
-        "summary": "Listar órdenes (servicio→servicio)",
-        "tags": [
-          "Pedidos (interno)"
-        ]
-      }
-    },
-    "/internal/orders/{id}/reproyectar": {
-      "post": {
-        "operationId": "InternoController_reproyectar",
-        "parameters": [
-          {
-            "name": "id",
-            "required": true,
-            "in": "path",
-            "description": "Id de la orden",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "201": {
-            "description": ""
-          }
-        },
-        "summary": "Reproyectar una orden desde su historia (Event Sourcing)",
-        "tags": [
-          "Pedidos (interno)"
-        ]
-      }
-    },
-    "/internal/orders/{id}/historia": {
-      "get": {
-        "operationId": "InternoController_historia",
-        "parameters": [
-          {
-            "name": "id",
-            "required": true,
-            "in": "path",
-            "description": "Id de la orden",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": ""
-          }
-        },
-        "summary": "Historia inmutable de eventos de una orden",
-        "tags": [
-          "Pedidos (interno)"
         ]
       }
     },
@@ -3484,9 +4842,21 @@ export const OPENAPI_AGREGADO = {
         },
         "responses": {
           "201": {
-            "description": ""
+            "description": "Orden creada",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OrderViewResponseDto"
+                }
+              }
+            }
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Crear una orden desde el carrito (comprador)",
         "tags": [
           "Pedidos"
@@ -3506,9 +4876,24 @@ export const OPENAPI_AGREGADO = {
         ],
         "responses": {
           "200": {
-            "description": ""
+            "description": "Órdenes del comprador",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/OrderViewResponseDto"
+                  }
+                }
+              }
+            }
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Historial de órdenes del comprador autenticado",
         "tags": [
           "Pedidos"
@@ -3538,9 +4923,24 @@ export const OPENAPI_AGREGADO = {
         ],
         "responses": {
           "200": {
-            "description": ""
+            "description": "Órdenes registradas",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/OrderViewResponseDto"
+                  }
+                }
+              }
+            }
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Listar todas las órdenes (admin)",
         "tags": [
           "Pedidos"
@@ -3562,9 +4962,24 @@ export const OPENAPI_AGREGADO = {
         ],
         "responses": {
           "200": {
-            "description": ""
+            "description": "Ventas del vendedor",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/OrderViewResponseDto"
+                  }
+                }
+              }
+            }
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Órdenes del vendedor autenticado (mis ventas)",
         "tags": [
           "Pedidos"
@@ -3573,6 +4988,7 @@ export const OPENAPI_AGREGADO = {
     },
     "/api/v1/orders/vendedor/comisiones": {
       "get": {
+        "deprecated": true,
         "operationId": "PedidosController_comisiones",
         "parameters": [
           {
@@ -3595,10 +5011,25 @@ export const OPENAPI_AGREGADO = {
         ],
         "responses": {
           "200": {
-            "description": ""
+            "description": "Comisiones por periodo",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ComisionVistaResponseDto"
+                  }
+                }
+              }
+            }
           }
         },
-        "summary": "Comisiones por periodo (vendedor/admin)",
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Comisiones por periodo (vendedor/admin) — obsoleto: usar /vendedores/me/ventas",
         "tags": [
           "Pedidos"
         ]
@@ -3628,10 +5059,89 @@ export const OPENAPI_AGREGADO = {
         ],
         "responses": {
           "200": {
-            "description": ""
+            "description": "Órdenes de la tienda",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/OrderViewResponseDto"
+                  }
+                }
+              }
+            }
           }
         },
-        "summary": "Órdenes de una tienda (vendedor dueño o admin)",
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Órdenes de una tienda (vendedor dueño, empresario de la empresa o admin)",
+        "tags": [
+          "Pedidos"
+        ]
+      }
+    },
+    "/api/v1/orders/empresa": {
+      "get": {
+        "operationId": "PedidosController_porEmpresa",
+        "parameters": [
+          {
+            "name": "empresaId",
+            "required": false,
+            "in": "query",
+            "description": "Solo admin/super_admin; el empresario usa su empresa activa",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "tiendaId",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "estado",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "limite",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "number"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Órdenes de la empresa",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/OrderViewResponseDto"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Órdenes de una empresa (empresario de la empresa o admin)",
         "tags": [
           "Pedidos"
         ]
@@ -3653,9 +5163,21 @@ export const OPENAPI_AGREGADO = {
         ],
         "responses": {
           "200": {
-            "description": ""
+            "description": "Detalle de la orden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OrderViewResponseDto"
+                }
+              }
+            }
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Estado/detalle de una orden (dueño o admin)",
         "tags": [
           "Pedidos"
@@ -3678,9 +5200,24 @@ export const OPENAPI_AGREGADO = {
         ],
         "responses": {
           "200": {
-            "description": ""
+            "description": "Timeline de la orden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/TimelineEventoResponseDto"
+                  }
+                }
+              }
+            }
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Timeline de eventos de la orden (Event Sourcing)",
         "tags": [
           "Pedidos"
@@ -3693,9 +5230,21 @@ export const OPENAPI_AGREGADO = {
         "parameters": [],
         "responses": {
           "200": {
-            "description": ""
+            "description": "Carrito del comprador",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CarritoResponseDto"
+                }
+              }
+            }
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Ver el carrito del comprador (RN-05)",
         "tags": [
           "Carrito"
@@ -3706,9 +5255,21 @@ export const OPENAPI_AGREGADO = {
         "parameters": [],
         "responses": {
           "200": {
-            "description": ""
+            "description": "Carrito vacío",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CarritoResponseDto"
+                }
+              }
+            }
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Vaciar el carrito",
         "tags": [
           "Carrito"
@@ -3731,9 +5292,21 @@ export const OPENAPI_AGREGADO = {
         },
         "responses": {
           "201": {
-            "description": ""
+            "description": "Item agregado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CarritoResponseDto"
+                }
+              }
+            }
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Agregar un item al carrito",
         "tags": [
           "Carrito"
@@ -3766,9 +5339,21 @@ export const OPENAPI_AGREGADO = {
         },
         "responses": {
           "200": {
-            "description": ""
+            "description": "Carrito actualizado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CarritoResponseDto"
+                }
+              }
+            }
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Actualizar la cantidad de un item (0 lo elimina)",
         "tags": [
           "Carrito"
@@ -3789,9 +5374,21 @@ export const OPENAPI_AGREGADO = {
         ],
         "responses": {
           "200": {
-            "description": ""
+            "description": "Carrito actualizado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CarritoResponseDto"
+                }
+              }
+            }
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Quitar un item del carrito",
         "tags": [
           "Carrito"
@@ -3826,9 +5423,21 @@ export const OPENAPI_AGREGADO = {
         ],
         "responses": {
           "200": {
-            "description": ""
+            "description": "Página de tenants",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginaBucketsResponseDto"
+                }
+              }
+            }
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Listar tenants con almacenamiento (cuota y uso)",
         "tags": [
           "Almacenamiento (admin)"
@@ -3851,9 +5460,21 @@ export const OPENAPI_AGREGADO = {
         ],
         "responses": {
           "200": {
-            "description": ""
+            "description": "Estado del tenant",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EstadoBucketResponseDto"
+                }
+              }
+            }
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Estado de almacenamiento de un tenant",
         "tags": [
           "Almacenamiento (admin)"
@@ -3884,9 +5505,21 @@ export const OPENAPI_AGREGADO = {
         },
         "responses": {
           "200": {
-            "description": ""
+            "description": "Tenant actualizado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EstadoBucketResponseDto"
+                }
+              }
+            }
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Ajustar cuota y/o suspender el almacenamiento del tenant",
         "tags": [
           "Almacenamiento (admin)"
@@ -3909,96 +5542,24 @@ export const OPENAPI_AGREGADO = {
         ],
         "responses": {
           "201": {
-            "description": ""
+            "description": "Uso recalculado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EstadoBucketResponseDto"
+                }
+              }
+            }
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Recalcular el uso del tenant desde la metadata (idempotente)",
         "tags": [
           "Almacenamiento (admin)"
-        ]
-      }
-    },
-    "/internal/storage/tenants/{tenantId}": {
-      "get": {
-        "operationId": "InternalStorageController_estado",
-        "parameters": [
-          {
-            "name": "tenantId",
-            "required": true,
-            "in": "path",
-            "description": "Id del tenant",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": ""
-          }
-        },
-        "summary": "Estado de almacenamiento del tenant (servicio→servicio)",
-        "tags": [
-          "Almacenamiento (interno)"
-        ]
-      }
-    },
-    "/internal/storage/tenants/{tenantId}/recalcular": {
-      "post": {
-        "operationId": "InternalStorageController_recalcular",
-        "parameters": [
-          {
-            "name": "tenantId",
-            "required": true,
-            "in": "path",
-            "description": "Id del tenant",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "201": {
-            "description": ""
-          }
-        },
-        "summary": "Recalcular el uso del tenant (servicio→servicio)",
-        "tags": [
-          "Almacenamiento (interno)"
-        ]
-      }
-    },
-    "/internal/storage/objetos/{id}": {
-      "get": {
-        "operationId": "InternalStorageController_objeto",
-        "parameters": [
-          {
-            "name": "id",
-            "required": true,
-            "in": "path",
-            "description": "Id del objeto",
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "tenant_id",
-            "required": true,
-            "in": "query",
-            "description": "Tenant dueno del objeto",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": ""
-          }
-        },
-        "summary": "Metadata de un objeto del tenant (servicio→servicio)",
-        "tags": [
-          "Almacenamiento (interno)"
         ]
       }
     },
@@ -4009,9 +5570,21 @@ export const OPENAPI_AGREGADO = {
         "parameters": [],
         "responses": {
           "200": {
-            "description": ""
+            "description": "Estado del bucket del tenant",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EstadoBucketResponseDto"
+                }
+              }
+            }
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Estado del almacenamiento del tenant (bucket, cuota, uso)",
         "tags": [
           "Almacenamiento"
@@ -4031,10 +5604,25 @@ export const OPENAPI_AGREGADO = {
           }
         },
         "responses": {
+          "201": {
+            "description": "Bucket asegurado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EstadoBucketResponseDto"
+                }
+              }
+            }
+          },
           "400": {
             "description": "Cuota invalida (CUOTA_INVALIDA/CUOTA_MENOR_AL_USO)"
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Asegurar el bucket del tenant y fijar su cuota (admin)",
         "tags": [
           "Almacenamiento"
@@ -4057,6 +5645,16 @@ export const OPENAPI_AGREGADO = {
           }
         },
         "responses": {
+          "201": {
+            "description": "URL de subida creada",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SolicitudSubidaResponseDto"
+                }
+              }
+            }
+          },
           "400": {
             "description": "Tipo o tamano invalido (VALIDACION)"
           },
@@ -4064,6 +5662,11 @@ export const OPENAPI_AGREGADO = {
             "description": "Cuota excedida (CUOTA_EXCEDIDA)"
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Solicitar URL prefirmada de subida (PUT directo a MinIO)",
         "tags": [
           "Almacenamiento"
@@ -4086,9 +5689,21 @@ export const OPENAPI_AGREGADO = {
         ],
         "responses": {
           "200": {
-            "description": ""
+            "description": "Objeto activado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ObjetoStorageResponseDto"
+                }
+              }
+            }
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Confirmar la subida y activar el objeto (contabiliza cuota)",
         "tags": [
           "Almacenamiento"
@@ -4155,9 +5770,21 @@ export const OPENAPI_AGREGADO = {
         ],
         "responses": {
           "200": {
-            "description": ""
+            "description": "Página de objetos",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginaObjetosResponseDto"
+                }
+              }
+            }
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Listar objetos del tenant (paginado, sin eliminados por defecto)",
         "tags": [
           "Almacenamiento"
@@ -4180,9 +5807,21 @@ export const OPENAPI_AGREGADO = {
         ],
         "responses": {
           "200": {
-            "description": ""
+            "description": "Metadata del objeto",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ObjetoStorageResponseDto"
+                }
+              }
+            }
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Detalle (metadata) de un objeto del tenant",
         "tags": [
           "Almacenamiento"
@@ -4203,9 +5842,14 @@ export const OPENAPI_AGREGADO = {
         ],
         "responses": {
           "204": {
-            "description": ""
+            "description": "Objeto eliminado"
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Eliminar un objeto (baja logica + borrado en MinIO)",
         "tags": [
           "Almacenamiento"
@@ -4228,37 +5872,24 @@ export const OPENAPI_AGREGADO = {
         ],
         "responses": {
           "200": {
-            "description": ""
+            "description": "URL de descarga",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UrlDescargaResponseDto"
+                }
+              }
+            }
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "URL prefirmada de descarga (GET) con validez limitada",
         "tags": [
           "Almacenamiento"
-        ]
-      }
-    },
-    "/internal/ofertas": {
-      "get": {
-        "operationId": "InternalController_porIds",
-        "parameters": [
-          {
-            "name": "ids",
-            "required": false,
-            "in": "query",
-            "description": "Ids de oferta separados por coma",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": ""
-          }
-        },
-        "summary": "Lote de ofertas por ids (servicio→servicio)",
-        "tags": [
-          "Tiendas (interno)"
         ]
       }
     },
@@ -4278,9 +5909,21 @@ export const OPENAPI_AGREGADO = {
         },
         "responses": {
           "201": {
-            "description": ""
+            "description": "Tienda creada",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TiendaResponseDto"
+                }
+              }
+            }
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Crear la tienda del vendedor autenticado",
         "tags": [
           "Tiendas"
@@ -4293,10 +5936,52 @@ export const OPENAPI_AGREGADO = {
         "parameters": [],
         "responses": {
           "200": {
-            "description": ""
+            "description": "Tienda del vendedor",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TiendaResponseDto"
+                }
+              }
+            }
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Tienda del vendedor autenticado",
+        "tags": [
+          "Tiendas"
+        ]
+      }
+    },
+    "/api/v1/empresarios/me/tiendas": {
+      "get": {
+        "operationId": "TiendasEmpresaController_listar",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Tiendas de la empresa",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/TiendaResponseDto"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Tiendas de la empresa autenticada",
         "tags": [
           "Tiendas"
         ]
@@ -4318,9 +6003,21 @@ export const OPENAPI_AGREGADO = {
         },
         "responses": {
           "201": {
-            "description": "Oferta creada"
+            "description": "Oferta creada",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OfertaResponseDto"
+                }
+              }
+            }
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Publicar un producto con margen (vendedor)",
         "tags": [
           "Tiendas"
@@ -4352,9 +6049,21 @@ export const OPENAPI_AGREGADO = {
         },
         "responses": {
           "200": {
-            "description": ""
+            "description": "Oferta actualizada",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OfertaResponseDto"
+                }
+              }
+            }
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Cambiar el margen de una oferta (vendedor)",
         "tags": [
           "Tiendas"
@@ -4367,9 +6076,21 @@ export const OPENAPI_AGREGADO = {
         "parameters": [],
         "responses": {
           "200": {
-            "description": ""
+            "description": "Página de ofertas",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginaOfertasResponseDto"
+                }
+              }
+            }
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Listar las ofertas del vendedor autenticado",
         "tags": [
           "Tiendas"
@@ -4390,6 +6111,16 @@ export const OPENAPI_AGREGADO = {
           }
         ],
         "responses": {
+          "200": {
+            "description": "Tienda con sus ofertas",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TiendaPublicaResponseDto"
+                }
+              }
+            }
+          },
           "404": {
             "description": "Tienda inexistente (NO_ENCONTRADO)"
           }
@@ -4407,9 +6138,247 @@ export const OPENAPI_AGREGADO = {
         "scheme": "bearer",
         "bearerFormat": "JWT",
         "type": "http"
+      },
+      "internalKey": {
+        "type": "apiKey",
+        "in": "header",
+        "name": "x-internal-key"
       }
     },
     "schemas": {
+      "LoteProductoResponseDto": {
+        "type": "object",
+        "properties": {
+          "sku": {
+            "type": "string",
+            "description": "SKU del producto",
+            "example": "SKU-001"
+          },
+          "stock": {
+            "type": "number",
+            "description": "Stock disponible",
+            "example": 10
+          },
+          "estado": {
+            "type": "string",
+            "description": "Estado del producto",
+            "enum": [
+              "disponible",
+              "agotado"
+            ],
+            "example": "disponible"
+          }
+        },
+        "required": [
+          "sku",
+          "stock",
+          "estado"
+        ]
+      },
+      "ProductoResponseDto": {
+        "type": "object",
+        "properties": {
+          "empresa_id": {
+            "type": "string",
+            "description": "Empresa propietaria",
+            "format": "uuid"
+          },
+          "id": {
+            "type": "string",
+            "description": "Id del producto",
+            "format": "uuid"
+          },
+          "sku": {
+            "type": "string",
+            "description": "SKU único del producto",
+            "example": "SKU-001"
+          },
+          "nombre": {
+            "type": "string",
+            "description": "Nombre del producto"
+          },
+          "descripcion": {
+            "type": "string",
+            "description": "Descripción del producto"
+          },
+          "categoria": {
+            "type": "string",
+            "description": "Categoría del producto"
+          },
+          "precio_base": {
+            "type": "string",
+            "description": "Precio base en córdobas con dos decimales",
+            "example": "1000.00"
+          },
+          "stock": {
+            "type": "number",
+            "description": "Stock disponible (neto de reservas)",
+            "example": 10
+          },
+          "estado": {
+            "type": "string",
+            "description": "Estado del producto",
+            "enum": [
+              "disponible",
+              "agotado"
+            ],
+            "example": "disponible"
+          },
+          "creado_en": {
+            "type": "string",
+            "description": "Fecha de creación (ISO 8601 UTC)",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "empresa_id",
+          "id",
+          "sku",
+          "nombre",
+          "descripcion",
+          "categoria",
+          "precio_base",
+          "stock",
+          "estado",
+          "creado_en"
+        ]
+      },
+      "ResumenInventarioResponseDto": {
+        "type": "object",
+        "properties": {
+          "productos": {
+            "type": "number",
+            "description": "Total de productos",
+            "example": 20
+          },
+          "agotados": {
+            "type": "number",
+            "description": "Productos agotados",
+            "example": 2
+          },
+          "stock_total": {
+            "type": "number",
+            "description": "Unidades en stock",
+            "example": 120
+          },
+          "valor_inventario_cents": {
+            "type": "number",
+            "description": "Valor del inventario en centavos",
+            "example": 12000000
+          }
+        },
+        "required": [
+          "productos",
+          "agotados",
+          "stock_total",
+          "valor_inventario_cents"
+        ]
+      },
+      "LineaInventarioResponseDto": {
+        "type": "object",
+        "properties": {
+          "sku": {
+            "type": "string",
+            "description": "SKU del producto",
+            "example": "SKU-001"
+          },
+          "nombre": {
+            "type": "string",
+            "description": "Nombre del producto"
+          },
+          "stock": {
+            "type": "number",
+            "description": "Stock físico en bodega",
+            "example": 12
+          },
+          "disponible": {
+            "type": "number",
+            "description": "Stock disponible (neto de reservas)",
+            "example": 10
+          },
+          "reservado": {
+            "type": "number",
+            "description": "Unidades reservadas por órdenes activas",
+            "example": 2
+          },
+          "estado": {
+            "type": "string",
+            "description": "Estado del producto",
+            "example": "disponible"
+          },
+          "precio_base": {
+            "type": "string",
+            "description": "Precio base en córdobas con dos decimales",
+            "example": "1000.00"
+          },
+          "reservas_activas": {
+            "type": "number",
+            "description": "Alias de reservado para consumidores internos",
+            "example": 2
+          },
+          "valor_disponible_cents": {
+            "type": "number",
+            "description": "Valor del stock disponible en centavos",
+            "example": 1000000
+          },
+          "valor_total_cents": {
+            "type": "number",
+            "description": "Valor del stock físico total en centavos",
+            "example": 1200000
+          }
+        },
+        "required": [
+          "sku",
+          "nombre",
+          "stock",
+          "disponible",
+          "reservado",
+          "estado",
+          "precio_base",
+          "reservas_activas",
+          "valor_disponible_cents",
+          "valor_total_cents"
+        ]
+      },
+      "PaginaProductosResponseDto": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "description": "Productos de la página",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ProductoResponseDto"
+            }
+          },
+          "total": {
+            "type": "number",
+            "description": "Total de productos que cumplen el filtro",
+            "example": 42
+          },
+          "pagina": {
+            "type": "number",
+            "description": "Página actual (1-based)",
+            "example": 1
+          },
+          "limite": {
+            "type": "number",
+            "description": "Tamaño de página",
+            "example": 20
+          },
+          "paginas": {
+            "type": "number",
+            "description": "Total de páginas",
+            "example": 3
+          }
+        },
+        "required": [
+          "items",
+          "total",
+          "pagina",
+          "limite",
+          "paginas"
+        ]
+      },
       "CrearProductoRequestDto": {
         "type": "object",
         "properties": {
@@ -4418,6 +6387,11 @@ export const OPENAPI_AGREGADO = {
             "description": "SKU del producto",
             "pattern": "^[A-Za-z0-9-]{2,32}$",
             "example": "SKU-001"
+          },
+          "empresa_id": {
+            "type": "string",
+            "description": "Empresa destino. Obligatoria para super_admin/admin; el empresario usa su empresa activa.",
+            "format": "uuid"
           },
           "nombre": {
             "type": "string",
@@ -4483,6 +6457,548 @@ export const OPENAPI_AGREGADO = {
             "description": "Motivo del cambio (RN-08 histórico)"
           }
         }
+      },
+      "LiquidacionResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Id de la liquidación",
+            "format": "uuid"
+          },
+          "vendedor_id": {
+            "type": "string",
+            "description": "Id del vendedor",
+            "format": "uuid"
+          },
+          "periodo_inicio": {
+            "type": "string",
+            "description": "Inicio del periodo (ISO 8601)",
+            "format": "date"
+          },
+          "periodo_fin": {
+            "type": "string",
+            "description": "Fin del periodo (ISO 8601)",
+            "format": "date"
+          },
+          "monto_cents": {
+            "type": "number",
+            "description": "Monto liquidado en centavos",
+            "example": 13800
+          },
+          "estado": {
+            "type": "string",
+            "description": "Estado de la liquidación",
+            "enum": [
+              "aprobada",
+              "pagada"
+            ],
+            "example": "aprobada"
+          },
+          "creado_en": {
+            "type": "string",
+            "description": "Fecha de creación (ISO 8601 UTC)",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "vendedor_id",
+          "periodo_inicio",
+          "periodo_fin",
+          "monto_cents",
+          "estado",
+          "creado_en"
+        ]
+      },
+      "LiquidacionEmpresaResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Id de la liquidación",
+            "format": "uuid"
+          },
+          "empresa_id": {
+            "type": "string",
+            "description": "Id de la empresa beneficiaria",
+            "format": "uuid"
+          },
+          "periodo_inicio": {
+            "type": "string",
+            "description": "Inicio del periodo (ISO 8601)",
+            "format": "date"
+          },
+          "periodo_fin": {
+            "type": "string",
+            "description": "Fin del periodo (ISO 8601)",
+            "format": "date"
+          },
+          "monto_cents": {
+            "type": "number",
+            "description": "Monto liquidado en centavos",
+            "example": 4400
+          },
+          "estado": {
+            "type": "string",
+            "description": "Estado de la liquidación",
+            "enum": [
+              "aprobada",
+              "pagada"
+            ]
+          },
+          "creado_en": {
+            "type": "string",
+            "description": "Fecha de creación (ISO 8601 UTC)",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "empresa_id",
+          "periodo_inicio",
+          "periodo_fin",
+          "monto_cents",
+          "estado",
+          "creado_en"
+        ]
+      },
+      "VentaVendedorResponseDto": {
+        "type": "object",
+        "properties": {
+          "order_id": {
+            "type": "string",
+            "description": "Id de la orden",
+            "format": "uuid"
+          },
+          "venta": {
+            "type": "string",
+            "description": "Monto de la venta en córdobas con dos decimales",
+            "example": "1150.00"
+          },
+          "comision": {
+            "type": "string",
+            "description": "Comisión en córdobas con dos decimales",
+            "example": "138.00"
+          },
+          "monto_vendedor": {
+            "type": "string",
+            "description": "Monto neto para el vendedor",
+            "example": "1012.00"
+          },
+          "estado": {
+            "type": "string",
+            "description": "Estado de la comisión",
+            "example": "acreditada"
+          },
+          "fecha": {
+            "type": "string",
+            "description": "Fecha de la venta (ISO 8601 UTC)",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "order_id",
+          "venta",
+          "comision",
+          "monto_vendedor",
+          "estado",
+          "fecha"
+        ]
+      },
+      "LiquidacionConMontoResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Id de la liquidación",
+            "format": "uuid"
+          },
+          "vendedor_id": {
+            "type": "string",
+            "description": "Id del vendedor",
+            "format": "uuid"
+          },
+          "periodo_inicio": {
+            "type": "string",
+            "description": "Inicio del periodo (ISO 8601)",
+            "format": "date"
+          },
+          "periodo_fin": {
+            "type": "string",
+            "description": "Fin del periodo (ISO 8601)",
+            "format": "date"
+          },
+          "monto_cents": {
+            "type": "number",
+            "description": "Monto liquidado en centavos",
+            "example": 13800
+          },
+          "estado": {
+            "type": "string",
+            "description": "Estado de la liquidación",
+            "enum": [
+              "aprobada",
+              "pagada"
+            ],
+            "example": "aprobada"
+          },
+          "creado_en": {
+            "type": "string",
+            "description": "Fecha de creación (ISO 8601 UTC)",
+            "format": "date-time"
+          },
+          "monto": {
+            "type": "string",
+            "description": "Monto liquidado en córdobas con dos decimales",
+            "example": "138.00"
+          }
+        },
+        "required": [
+          "id",
+          "vendedor_id",
+          "periodo_inicio",
+          "periodo_fin",
+          "monto_cents",
+          "estado",
+          "creado_en",
+          "monto"
+        ]
+      },
+      "EstadoCuentaResponseDto": {
+        "type": "object",
+        "properties": {
+          "vendedor_id": {
+            "type": "string",
+            "description": "Id del vendedor",
+            "format": "uuid"
+          },
+          "ventas": {
+            "description": "Ventas del vendedor",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/VentaVendedorResponseDto"
+            }
+          },
+          "comisiones_pendientes": {
+            "type": "string",
+            "description": "Comisiones pendientes en córdobas",
+            "example": "138.00"
+          },
+          "liquidaciones": {
+            "description": "Liquidaciones del vendedor",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/LiquidacionConMontoResponseDto"
+            }
+          }
+        },
+        "required": [
+          "vendedor_id",
+          "ventas",
+          "comisiones_pendientes",
+          "liquidaciones"
+        ]
+      },
+      "VentaEmpresaResponseDto": {
+        "type": "object",
+        "properties": {
+          "order_id": {
+            "type": "string",
+            "description": "Id de la orden",
+            "format": "uuid"
+          },
+          "venta": {
+            "type": "string",
+            "description": "Monto de la venta en córdobas con dos decimales",
+            "example": "1150.00"
+          },
+          "comision": {
+            "type": "string",
+            "description": "Comisión total en córdobas con dos decimales",
+            "example": "138.00"
+          },
+          "monto_empresario": {
+            "type": "string",
+            "description": "Monto neto para la empresa",
+            "example": "126.00"
+          },
+          "estado": {
+            "type": "string",
+            "description": "Estado de la comisión",
+            "example": "acreditada"
+          },
+          "fecha": {
+            "type": "string",
+            "description": "Fecha de la venta (ISO 8601 UTC)",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "order_id",
+          "venta",
+          "comision",
+          "monto_empresario",
+          "estado",
+          "fecha"
+        ]
+      },
+      "LiquidacionEmpresaConMontoResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Id de la liquidación",
+            "format": "uuid"
+          },
+          "empresa_id": {
+            "type": "string",
+            "description": "Id de la empresa beneficiaria",
+            "format": "uuid"
+          },
+          "periodo_inicio": {
+            "type": "string",
+            "description": "Inicio del periodo (ISO 8601)",
+            "format": "date"
+          },
+          "periodo_fin": {
+            "type": "string",
+            "description": "Fin del periodo (ISO 8601)",
+            "format": "date"
+          },
+          "monto_cents": {
+            "type": "number",
+            "description": "Monto liquidado en centavos",
+            "example": 4400
+          },
+          "estado": {
+            "type": "string",
+            "description": "Estado de la liquidación",
+            "enum": [
+              "aprobada",
+              "pagada"
+            ]
+          },
+          "creado_en": {
+            "type": "string",
+            "description": "Fecha de creación (ISO 8601 UTC)",
+            "format": "date-time"
+          },
+          "monto": {
+            "type": "string",
+            "description": "Monto liquidado en córdobas con dos decimales",
+            "example": "4400.00"
+          }
+        },
+        "required": [
+          "id",
+          "empresa_id",
+          "periodo_inicio",
+          "periodo_fin",
+          "monto_cents",
+          "estado",
+          "creado_en",
+          "monto"
+        ]
+      },
+      "EstadoCuentaEmpresaResponseDto": {
+        "type": "object",
+        "properties": {
+          "empresa_id": {
+            "type": "string",
+            "description": "Id de la empresa",
+            "format": "uuid"
+          },
+          "ventas": {
+            "description": "Ventas de la empresa",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/VentaEmpresaResponseDto"
+            }
+          },
+          "comisiones_pendientes": {
+            "type": "string",
+            "description": "Comisiones pendientes en córdobas",
+            "example": "126.00"
+          },
+          "liquidaciones": {
+            "description": "Liquidaciones de la empresa",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/LiquidacionEmpresaConMontoResponseDto"
+            }
+          }
+        },
+        "required": [
+          "empresa_id",
+          "ventas",
+          "comisiones_pendientes",
+          "liquidaciones"
+        ]
+      },
+      "ReporteKpiResponseDto": {
+        "type": "object",
+        "properties": {
+          "gmv_mes_cents": {
+            "type": "number",
+            "description": "GMV del mes en centavos",
+            "example": 1150000
+          },
+          "gmv_mes": {
+            "type": "string",
+            "description": "GMV del mes en córdobas con dos decimales",
+            "example": "11500.00"
+          },
+          "pedidos_mes": {
+            "type": "number",
+            "description": "Pedidos del mes",
+            "example": 42
+          },
+          "comisiones_mes_cents": {
+            "type": "number",
+            "description": "Comisiones del mes en centavos",
+            "example": 138000
+          },
+          "comisiones_mes": {
+            "type": "string",
+            "description": "Comisiones del mes en córdobas con dos decimales",
+            "example": "1380.00"
+          },
+          "vendedores_activos": {
+            "type": "number",
+            "description": "Vendedores activos",
+            "example": 12
+          },
+          "productos": {
+            "type": "number",
+            "description": "Productos en catálogo",
+            "example": 20
+          },
+          "stock_total": {
+            "type": "number",
+            "description": "Unidades en stock",
+            "example": 120
+          },
+          "agotados": {
+            "type": "number",
+            "description": "Productos agotados",
+            "example": 2
+          },
+          "devoluciones_mes": {
+            "type": "number",
+            "description": "Devoluciones del mes",
+            "example": 1
+          }
+        },
+        "required": [
+          "gmv_mes_cents",
+          "gmv_mes",
+          "pedidos_mes",
+          "comisiones_mes_cents",
+          "comisiones_mes",
+          "vendedores_activos",
+          "productos",
+          "stock_total",
+          "agotados",
+          "devoluciones_mes"
+        ]
+      },
+      "PersonalResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "tenant_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "nombre": {
+            "type": "string"
+          },
+          "apellido": {
+            "type": "string"
+          },
+          "cargo": {
+            "type": "string"
+          },
+          "estado": {
+            "type": "string"
+          },
+          "telefono": {
+            "type": "object",
+            "nullable": true
+          },
+          "email": {
+            "type": "object",
+            "nullable": true
+          },
+          "ruta_asignada_id": {
+            "type": "object",
+            "nullable": true,
+            "format": "uuid"
+          },
+          "vehiculo_asignado_id": {
+            "type": "object",
+            "nullable": true,
+            "format": "uuid"
+          },
+          "hora_check_in": {
+            "type": "object",
+            "nullable": true,
+            "format": "date-time"
+          },
+          "hora_check_out": {
+            "type": "object",
+            "nullable": true,
+            "format": "date-time"
+          },
+          "ubicacion_lat": {
+            "type": "object",
+            "nullable": true
+          },
+          "ubicacion_lng": {
+            "type": "object",
+            "nullable": true
+          },
+          "ubicacion_precision": {
+            "type": "object",
+            "nullable": true
+          },
+          "ubicacion_ts": {
+            "type": "object",
+            "nullable": true,
+            "format": "date-time"
+          },
+          "synced": {
+            "type": "boolean"
+          },
+          "deleted_at": {
+            "type": "object",
+            "nullable": true,
+            "format": "date-time"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "tenant_id",
+          "nombre",
+          "apellido",
+          "cargo",
+          "estado",
+          "synced",
+          "created_at",
+          "updated_at"
+        ]
       },
       "CrearPersonalRequestDto": {
         "type": "object",
@@ -4605,6 +7121,39 @@ export const OPENAPI_AGREGADO = {
           }
         }
       },
+      "UbicacionResponseDto": {
+        "type": "object",
+        "properties": {
+          "personalId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "latitud": {
+            "type": "object",
+            "nullable": true
+          },
+          "longitud": {
+            "type": "object",
+            "nullable": true
+          },
+          "precision": {
+            "type": "object",
+            "nullable": true
+          },
+          "timestamp": {
+            "type": "object",
+            "nullable": true,
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "personalId",
+          "latitud",
+          "longitud",
+          "precision",
+          "timestamp"
+        ]
+      },
       "UbicacionRequestDto": {
         "type": "object",
         "properties": {
@@ -4624,6 +7173,98 @@ export const OPENAPI_AGREGADO = {
         "required": [
           "lat",
           "lng"
+        ]
+      },
+      "ClienteResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "tenant_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "nombre_completo": {
+            "type": "string"
+          },
+          "tipo_documento": {
+            "type": "object",
+            "nullable": true
+          },
+          "numero_documento": {
+            "type": "object",
+            "nullable": true
+          },
+          "tipo_cliente": {
+            "type": "string"
+          },
+          "email": {
+            "type": "object",
+            "nullable": true
+          },
+          "telefono": {
+            "type": "object",
+            "nullable": true
+          },
+          "telefono_alternativo": {
+            "type": "object",
+            "nullable": true
+          },
+          "direccion_principal": {
+            "type": "object",
+            "nullable": true
+          },
+          "direccion_secundaria": {
+            "type": "object",
+            "nullable": true
+          },
+          "referencias_direccion": {
+            "type": "object",
+            "nullable": true
+          },
+          "lat": {
+            "type": "object",
+            "nullable": true
+          },
+          "lng": {
+            "type": "object",
+            "nullable": true
+          },
+          "notas_adicionales": {
+            "type": "object",
+            "nullable": true
+          },
+          "url_google_maps": {
+            "type": "object",
+            "nullable": true
+          },
+          "synced": {
+            "type": "boolean"
+          },
+          "deleted_at": {
+            "type": "object",
+            "nullable": true,
+            "format": "date-time"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "tenant_id",
+          "nombre_completo",
+          "tipo_cliente",
+          "synced",
+          "created_at",
+          "updated_at"
         ]
       },
       "CrearClienteRequestDto": {
@@ -4734,6 +7375,110 @@ export const OPENAPI_AGREGADO = {
             "type": "string"
           }
         }
+      },
+      "VehiculoResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "tenant_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "placa": {
+            "type": "string"
+          },
+          "tipo": {
+            "type": "string"
+          },
+          "marca": {
+            "type": "object",
+            "nullable": true
+          },
+          "modelo": {
+            "type": "object",
+            "nullable": true
+          },
+          "anio": {
+            "type": "object",
+            "nullable": true
+          },
+          "estado": {
+            "type": "string"
+          },
+          "color": {
+            "type": "object",
+            "nullable": true
+          },
+          "capacidad_carga_kg": {
+            "type": "object",
+            "nullable": true
+          },
+          "numero_chasis": {
+            "type": "object",
+            "nullable": true
+          },
+          "numero_motor": {
+            "type": "object",
+            "nullable": true
+          },
+          "tipo_combustible": {
+            "type": "object",
+            "nullable": true
+          },
+          "vencimiento_seguro": {
+            "type": "object",
+            "nullable": true,
+            "format": "date"
+          },
+          "vencimiento_circulacion": {
+            "type": "object",
+            "nullable": true,
+            "format": "date"
+          },
+          "notas_adicionales": {
+            "type": "object",
+            "nullable": true
+          },
+          "conductor_id": {
+            "type": "object",
+            "nullable": true,
+            "format": "uuid"
+          },
+          "ruta_activa_id": {
+            "type": "object",
+            "nullable": true,
+            "format": "uuid"
+          },
+          "synced": {
+            "type": "boolean"
+          },
+          "deleted_at": {
+            "type": "object",
+            "nullable": true,
+            "format": "date-time"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "tenant_id",
+          "placa",
+          "tipo",
+          "estado",
+          "synced",
+          "created_at",
+          "updated_at"
+        ]
       },
       "CrearVehiculoRequestDto": {
         "type": "object",
@@ -4871,6 +7616,181 @@ export const OPENAPI_AGREGADO = {
             "type": "string"
           }
         }
+      },
+      "ParadaResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "tenant_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "ruta_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "orden": {
+            "type": "number"
+          },
+          "nombre": {
+            "type": "string"
+          },
+          "direccion": {
+            "type": "object",
+            "nullable": true
+          },
+          "lat": {
+            "type": "object",
+            "nullable": true
+          },
+          "lng": {
+            "type": "object",
+            "nullable": true
+          },
+          "completada": {
+            "type": "boolean"
+          },
+          "pedido_id": {
+            "type": "object",
+            "nullable": true,
+            "format": "uuid"
+          },
+          "tipo": {
+            "type": "string"
+          },
+          "cliente_id": {
+            "type": "object",
+            "nullable": true,
+            "format": "uuid"
+          },
+          "telefono": {
+            "type": "object",
+            "nullable": true
+          },
+          "referencias": {
+            "type": "object",
+            "nullable": true
+          },
+          "horario_atencion": {
+            "type": "object",
+            "nullable": true
+          },
+          "notas": {
+            "type": "object",
+            "nullable": true
+          },
+          "tipo_combustible": {
+            "type": "object",
+            "nullable": true
+          },
+          "synced": {
+            "type": "boolean"
+          },
+          "deleted_at": {
+            "type": "object",
+            "nullable": true,
+            "format": "date-time"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "tenant_id",
+          "ruta_id",
+          "orden",
+          "nombre",
+          "completada",
+          "tipo",
+          "synced",
+          "created_at",
+          "updated_at"
+        ]
+      },
+      "RutaResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "tenant_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "nombre": {
+            "type": "string"
+          },
+          "descripcion": {
+            "type": "object",
+            "nullable": true
+          },
+          "estado": {
+            "type": "string"
+          },
+          "personal_asignado_ids": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "vehiculo_asignado_id": {
+            "type": "object",
+            "nullable": true,
+            "format": "uuid"
+          },
+          "fecha_inicio": {
+            "type": "object",
+            "nullable": true,
+            "format": "date-time"
+          },
+          "fecha_fin": {
+            "type": "object",
+            "nullable": true,
+            "format": "date-time"
+          },
+          "synced": {
+            "type": "boolean"
+          },
+          "deleted_at": {
+            "type": "object",
+            "nullable": true,
+            "format": "date-time"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "paradas": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ParadaResponseDto"
+            }
+          }
+        },
+        "required": [
+          "id",
+          "tenant_id",
+          "nombre",
+          "estado",
+          "personal_asignado_ids",
+          "synced",
+          "created_at",
+          "updated_at"
+        ]
       },
       "CrearRutaRequestDto": {
         "type": "object",
@@ -5017,6 +7937,76 @@ export const OPENAPI_AGREGADO = {
           }
         }
       },
+      "PedidoResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "tenant_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "cliente": {
+            "type": "string"
+          },
+          "cliente_id": {
+            "type": "object",
+            "nullable": true,
+            "format": "uuid"
+          },
+          "direccion_entrega": {
+            "type": "object",
+            "nullable": true
+          },
+          "lat": {
+            "type": "object",
+            "nullable": true
+          },
+          "lng": {
+            "type": "object",
+            "nullable": true
+          },
+          "estado": {
+            "type": "string"
+          },
+          "ruta_id": {
+            "type": "object",
+            "nullable": true,
+            "format": "uuid"
+          },
+          "notas": {
+            "type": "object",
+            "nullable": true
+          },
+          "synced": {
+            "type": "boolean"
+          },
+          "deleted_at": {
+            "type": "object",
+            "nullable": true,
+            "format": "date-time"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "tenant_id",
+          "cliente",
+          "estado",
+          "synced",
+          "created_at",
+          "updated_at"
+        ]
+      },
       "CrearPedidoRequestDto": {
         "type": "object",
         "properties": {
@@ -5113,6 +8103,99 @@ export const OPENAPI_AGREGADO = {
           "estado"
         ]
       },
+      "AsistenciaResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "tenant_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "personal_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "tipo": {
+            "type": "string"
+          },
+          "registrado_en": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "lat": {
+            "type": "object",
+            "nullable": true
+          },
+          "lng": {
+            "type": "object",
+            "nullable": true
+          },
+          "estado_puntualidad": {
+            "type": "string"
+          },
+          "en_sede": {
+            "type": "boolean"
+          },
+          "hora_real_llegada": {
+            "type": "object",
+            "nullable": true
+          },
+          "minutos_retraso_real": {
+            "type": "object",
+            "nullable": true
+          },
+          "monitoreo_activo": {
+            "type": "boolean"
+          },
+          "notas": {
+            "type": "object",
+            "nullable": true
+          },
+          "justificacion": {
+            "type": "object",
+            "nullable": true
+          },
+          "fotos_justificacion": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          },
+          "synced": {
+            "type": "boolean"
+          },
+          "deleted_at": {
+            "type": "object",
+            "nullable": true,
+            "format": "date-time"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "tenant_id",
+          "personal_id",
+          "tipo",
+          "registrado_en",
+          "estado_puntualidad",
+          "en_sede",
+          "monitoreo_activo",
+          "fotos_justificacion",
+          "synced",
+          "created_at",
+          "updated_at"
+        ]
+      },
       "CrearAsistenciaRequestDto": {
         "type": "object",
         "properties": {
@@ -5173,6 +8256,73 @@ export const OPENAPI_AGREGADO = {
           "personalId",
           "tipo",
           "estadoPuntualidad"
+        ]
+      },
+      "IncidenciaResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "tenant_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "tipo": {
+            "type": "string"
+          },
+          "estado": {
+            "type": "string"
+          },
+          "descripcion": {
+            "type": "string"
+          },
+          "personal_id": {
+            "type": "object",
+            "nullable": true,
+            "format": "uuid"
+          },
+          "vehiculo_id": {
+            "type": "object",
+            "nullable": true,
+            "format": "uuid"
+          },
+          "ruta_id": {
+            "type": "object",
+            "nullable": true,
+            "format": "uuid"
+          },
+          "resolucion": {
+            "type": "object",
+            "nullable": true
+          },
+          "synced": {
+            "type": "boolean"
+          },
+          "deleted_at": {
+            "type": "object",
+            "nullable": true,
+            "format": "date-time"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "tenant_id",
+          "tipo",
+          "estado",
+          "descripcion",
+          "synced",
+          "created_at",
+          "updated_at"
         ]
       },
       "CrearIncidenciaRequestDto": {
@@ -5255,6 +8405,72 @@ export const OPENAPI_AGREGADO = {
           }
         }
       },
+      "TrackingResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "tenant_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "personal_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "latitud": {
+            "type": "number"
+          },
+          "longitud": {
+            "type": "number"
+          },
+          "precision": {
+            "type": "object",
+            "nullable": true
+          },
+          "velocidad": {
+            "type": "object",
+            "nullable": true
+          },
+          "rumbo": {
+            "type": "object",
+            "nullable": true
+          },
+          "registrado_en": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "synced": {
+            "type": "boolean"
+          },
+          "deleted_at": {
+            "type": "object",
+            "nullable": true,
+            "format": "date-time"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "tenant_id",
+          "personal_id",
+          "latitud",
+          "longitud",
+          "registrado_en",
+          "synced",
+          "created_at",
+          "updated_at"
+        ]
+      },
       "CrearTrackingRequestDto": {
         "type": "object",
         "properties": {
@@ -5298,6 +8514,93 @@ export const OPENAPI_AGREGADO = {
         },
         "required": [
           "registros"
+        ]
+      },
+      "VisitaResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "tenant_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "personal_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "cliente_id": {
+            "type": "object",
+            "nullable": true,
+            "format": "uuid"
+          },
+          "ruta_id": {
+            "type": "object",
+            "nullable": true,
+            "format": "uuid"
+          },
+          "tipo_actividad": {
+            "type": "string"
+          },
+          "resultado": {
+            "type": "string"
+          },
+          "lat": {
+            "type": "object",
+            "nullable": true
+          },
+          "lng": {
+            "type": "object",
+            "nullable": true
+          },
+          "distancia_al_cliente": {
+            "type": "object",
+            "nullable": true
+          },
+          "hora_llegada": {
+            "type": "object",
+            "nullable": true
+          },
+          "hora_salida": {
+            "type": "object",
+            "nullable": true
+          },
+          "duracion_minutos": {
+            "type": "object",
+            "nullable": true
+          },
+          "notas": {
+            "type": "object",
+            "nullable": true
+          },
+          "synced": {
+            "type": "boolean"
+          },
+          "deleted_at": {
+            "type": "object",
+            "nullable": true,
+            "format": "date-time"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "tenant_id",
+          "personal_id",
+          "tipo_actividad",
+          "resultado",
+          "synced",
+          "created_at",
+          "updated_at"
         ]
       },
       "CrearVisitaRequestDto": {
@@ -5356,6 +8659,52 @@ export const OPENAPI_AGREGADO = {
           "tipoActividad"
         ]
       },
+      "CumplimientoResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "tenant_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "ruta_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "fecha": {
+            "type": "string",
+            "format": "date"
+          },
+          "metricas": {
+            "type": "object"
+          },
+          "deleted_at": {
+            "type": "object",
+            "nullable": true,
+            "format": "date-time"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "tenant_id",
+          "ruta_id",
+          "fecha",
+          "metricas",
+          "created_at",
+          "updated_at"
+        ]
+      },
       "GuardarCumplimientoRequestDto": {
         "type": "object",
         "properties": {
@@ -5402,6 +8751,270 @@ export const OPENAPI_AGREGADO = {
         },
         "required": [
           "operaciones"
+        ]
+      },
+      "SyncResultadoResponseDto": {
+        "type": "object",
+        "properties": {
+          "tipo": {
+            "type": "string"
+          },
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "ok": {
+            "type": "boolean"
+          },
+          "error": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "tipo",
+          "ok"
+        ]
+      },
+      "SujetoTributarioResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Id del sujeto",
+            "format": "uuid"
+          },
+          "jurisdiccion": {
+            "type": "string",
+            "description": "Jurisdicción",
+            "example": "NI"
+          },
+          "regimen_id": {
+            "type": "string",
+            "description": "Id del régimen",
+            "format": "uuid"
+          },
+          "regimen_nombre": {
+            "type": "string",
+            "description": "Nombre del régimen"
+          },
+          "razon_social": {
+            "type": "string",
+            "description": "Razón social"
+          },
+          "ruc": {
+            "type": "string",
+            "description": "RUC"
+          },
+          "es_plataforma": {
+            "type": "boolean",
+            "description": "¿Es la plataforma?",
+            "example": false
+          },
+          "estado": {
+            "type": "string",
+            "description": "Estado",
+            "enum": [
+              "ACTIVO",
+              "BAJA"
+            ],
+            "example": "ACTIVO"
+          },
+          "creado_en": {
+            "type": "string",
+            "description": "Fecha de creación (ISO 8601 UTC)",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "jurisdiccion",
+          "razon_social",
+          "es_plataforma",
+          "estado",
+          "creado_en"
+        ]
+      },
+      "DeclaracionResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Id de la declaración",
+            "format": "uuid"
+          },
+          "jurisdiccion": {
+            "type": "string",
+            "description": "Jurisdicción",
+            "example": "NI"
+          },
+          "tipo": {
+            "type": "string",
+            "description": "Tipo",
+            "enum": [
+              "IVA",
+              "IR",
+              "CUOTA_FIJA"
+            ],
+            "example": "IVA"
+          },
+          "periodo_inicio": {
+            "type": "string",
+            "description": "Inicio del periodo",
+            "format": "date"
+          },
+          "periodo_fin": {
+            "type": "string",
+            "description": "Fin del periodo",
+            "format": "date"
+          },
+          "base_gravada_cents": {
+            "type": "number",
+            "description": "Base gravada en centavos",
+            "example": 1150000
+          },
+          "iva_debitado_cents": {
+            "type": "number",
+            "description": "IVA debitado en centavos",
+            "example": 172500
+          },
+          "iva_credito_cents": {
+            "type": "number",
+            "description": "IVA crédito en centavos",
+            "example": 0
+          },
+          "iva_a_pagar_cents": {
+            "type": "number",
+            "description": "IVA a pagar en centavos",
+            "example": 172500
+          },
+          "renta_bruta_cents": {
+            "type": "number",
+            "description": "Renta bruta en centavos",
+            "example": 1150000
+          },
+          "renta_gravable_cents": {
+            "type": "number",
+            "description": "Renta gravable en centavos",
+            "example": 575000
+          },
+          "ir_a_pagar_cents": {
+            "type": "number",
+            "description": "IR a pagar en centavos",
+            "example": 172500
+          },
+          "cuota_cents": {
+            "type": "number",
+            "description": "Cuota fija en centavos",
+            "example": 5000
+          },
+          "estado": {
+            "type": "string",
+            "description": "Estado",
+            "enum": [
+              "PENDIENTE",
+              "GENERADA",
+              "PRESENTADA",
+              "PAGADA",
+              "CANCELADA"
+            ],
+            "example": "GENERADA"
+          },
+          "detalle": {
+            "type": "object",
+            "description": "Detalle de la declaración",
+            "nullable": true
+          },
+          "generada_en": {
+            "type": "string",
+            "description": "Fecha de generación",
+            "format": "date-time"
+          },
+          "presentada_en": {
+            "type": "string",
+            "description": "Fecha de presentación",
+            "format": "date-time"
+          },
+          "creado_en": {
+            "type": "string",
+            "description": "Fecha de creación (ISO 8601 UTC)",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "jurisdiccion",
+          "tipo",
+          "periodo_inicio",
+          "periodo_fin",
+          "base_gravada_cents",
+          "iva_debitado_cents",
+          "iva_credito_cents",
+          "iva_a_pagar_cents",
+          "renta_bruta_cents",
+          "renta_gravable_cents",
+          "ir_a_pagar_cents",
+          "cuota_cents",
+          "estado",
+          "creado_en"
+        ]
+      },
+      "CuentaResponseDto": {
+        "type": "object",
+        "properties": {
+          "codigo": {
+            "type": "string",
+            "description": "Código de la cuenta",
+            "example": "1101"
+          },
+          "nombre": {
+            "type": "string",
+            "description": "Nombre de la cuenta",
+            "example": "Caja"
+          },
+          "tipo": {
+            "type": "string",
+            "description": "Tipo de cuenta",
+            "enum": [
+              "ACTIVO",
+              "PASIVO",
+              "CAPITAL",
+              "INGRESO",
+              "COSTO",
+              "GASTO"
+            ],
+            "example": "ACTIVO"
+          },
+          "naturaleza": {
+            "type": "string",
+            "description": "Naturaleza",
+            "enum": [
+              "DEUDORA",
+              "ACREEDORA"
+            ],
+            "example": "DEUDORA"
+          },
+          "nivel": {
+            "type": "number",
+            "description": "Nivel jerárquico",
+            "example": 1
+          },
+          "estado": {
+            "type": "string",
+            "description": "Estado",
+            "enum": [
+              "activa",
+              "inactiva"
+            ],
+            "example": "activa"
+          }
+        },
+        "required": [
+          "codigo",
+          "nombre",
+          "tipo",
+          "naturaleza",
+          "nivel",
+          "estado"
         ]
       },
       "CrearCuentaRequestDto": {
@@ -5462,6 +9075,118 @@ export const OPENAPI_AGREGADO = {
         },
         "required": [
           "estado"
+        ]
+      },
+      "DetalleAsientoResponseDto": {
+        "type": "object",
+        "properties": {
+          "cuenta_codigo": {
+            "type": "string",
+            "description": "Código de cuenta contable"
+          },
+          "debe_cents": {
+            "type": "number",
+            "description": "Débito en centavos",
+            "example": 115000
+          },
+          "haber_cents": {
+            "type": "number",
+            "description": "Crédito en centavos",
+            "example": 115000
+          },
+          "concepto": {
+            "type": "string",
+            "description": "Concepto del detalle"
+          },
+          "orden": {
+            "type": "number",
+            "description": "Orden del detalle"
+          }
+        },
+        "required": [
+          "cuenta_codigo",
+          "debe_cents",
+          "haber_cents"
+        ]
+      },
+      "AsientoResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Id del asiento",
+            "format": "uuid"
+          },
+          "fecha": {
+            "type": "string",
+            "description": "Fecha del asiento",
+            "format": "date-time"
+          },
+          "concepto": {
+            "type": "string",
+            "description": "Concepto del asiento"
+          },
+          "tipo": {
+            "type": "string",
+            "description": "Tipo de asiento",
+            "example": "MANUAL"
+          },
+          "referencia_tipo": {
+            "type": "string",
+            "description": "Tipo de referencia"
+          },
+          "referencia_id": {
+            "type": "string",
+            "description": "Id de referencia"
+          },
+          "moneda": {
+            "type": "string",
+            "description": "Moneda",
+            "example": "C$"
+          },
+          "estado": {
+            "type": "string",
+            "description": "Estado del asiento",
+            "example": "registrado"
+          },
+          "creado_por": {
+            "type": "string",
+            "description": "Usuario que creó el asiento"
+          },
+          "creado_en": {
+            "type": "string",
+            "description": "Fecha de creación (ISO 8601 UTC)",
+            "format": "date-time"
+          },
+          "debe_cents": {
+            "type": "number",
+            "description": "Total débito en centavos",
+            "example": 115000
+          },
+          "haber_cents": {
+            "type": "number",
+            "description": "Total crédito en centavos",
+            "example": 115000
+          },
+          "detalles": {
+            "description": "Detalles del asiento",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/DetalleAsientoResponseDto"
+            }
+          }
+        },
+        "required": [
+          "id",
+          "fecha",
+          "concepto",
+          "tipo",
+          "moneda",
+          "estado",
+          "creado_en",
+          "debe_cents",
+          "haber_cents",
+          "detalles"
         ]
       },
       "DetalleAsientoRequestDto": {
@@ -5541,6 +9266,241 @@ export const OPENAPI_AGREGADO = {
           "detalles"
         ]
       },
+      "LibroMayorResponseDto": {
+        "type": "object",
+        "properties": {
+          "cuenta": {
+            "description": "Cuenta contable",
+            "nullable": true,
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/CuentaResponseDto"
+              }
+            ]
+          },
+          "saldo_inicial_cents": {
+            "type": "number",
+            "description": "Saldo inicial en centavos",
+            "example": 100000
+          },
+          "saldo_final_cents": {
+            "type": "number",
+            "description": "Saldo final en centavos",
+            "example": 215000
+          },
+          "movimientos": {
+            "description": "Movimientos del periodo",
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          }
+        },
+        "required": [
+          "cuenta",
+          "saldo_inicial_cents",
+          "saldo_final_cents",
+          "movimientos"
+        ]
+      },
+      "LibroIvaResponseDto": {
+        "type": "object",
+        "properties": {
+          "periodo": {
+            "type": "string",
+            "description": "Periodo (YYYY-MM)",
+            "example": "2026-10"
+          },
+          "comprobantes": {
+            "type": "number",
+            "description": "Comprobantes del periodo",
+            "example": 12
+          },
+          "base_gravada_cents": {
+            "type": "number",
+            "description": "Base gravada en centavos",
+            "example": 1150000
+          },
+          "iva_cents": {
+            "type": "number",
+            "description": "IVA en centavos",
+            "example": 172500
+          },
+          "exento_cents": {
+            "type": "number",
+            "description": "Monto exento en centavos",
+            "example": 0
+          },
+          "total_cents": {
+            "type": "number",
+            "description": "Total en centavos",
+            "example": 1322500
+          }
+        },
+        "required": [
+          "periodo",
+          "comprobantes",
+          "base_gravada_cents",
+          "iva_cents",
+          "exento_cents",
+          "total_cents"
+        ]
+      },
+      "ComprobanteResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Id del comprobante",
+            "format": "uuid"
+          },
+          "serie": {
+            "type": "string",
+            "description": "Serie",
+            "example": "A"
+          },
+          "numero": {
+            "type": "string",
+            "description": "Número",
+            "example": "000001"
+          },
+          "tipo": {
+            "type": "string",
+            "description": "Tipo",
+            "enum": [
+              "FACTURA",
+              "NOTA_CREDITO"
+            ],
+            "example": "FACTURA"
+          },
+          "orden_id": {
+            "type": "string",
+            "description": "Id de la orden",
+            "format": "uuid"
+          },
+          "cliente_id": {
+            "type": "string",
+            "description": "Id del cliente"
+          },
+          "base_gravada_cents": {
+            "type": "number",
+            "description": "Base gravada en centavos",
+            "example": 1150000
+          },
+          "iva_cents": {
+            "type": "number",
+            "description": "IVA en centavos",
+            "example": 172500
+          },
+          "exento_cents": {
+            "type": "number",
+            "description": "Monto exento en centavos",
+            "example": 0
+          },
+          "total_cents": {
+            "type": "number",
+            "description": "Total en centavos",
+            "example": 1322500
+          },
+          "moneda": {
+            "type": "string",
+            "description": "Moneda",
+            "example": "C$"
+          },
+          "estado": {
+            "type": "string",
+            "description": "Estado",
+            "enum": [
+              "BORRADOR",
+              "EMITIDO",
+              "ANULADO"
+            ],
+            "example": "EMITIDO"
+          },
+          "datos_cliente": {
+            "type": "object",
+            "description": "Datos fiscales del cliente",
+            "nullable": true
+          },
+          "emitido_en": {
+            "type": "string",
+            "description": "Fecha de emisión",
+            "format": "date-time"
+          },
+          "creado_en": {
+            "type": "string",
+            "description": "Fecha de creación (ISO 8601 UTC)",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "serie",
+          "numero",
+          "tipo",
+          "base_gravada_cents",
+          "iva_cents",
+          "exento_cents",
+          "total_cents",
+          "moneda",
+          "estado",
+          "creado_en"
+        ]
+      },
+      "SerieComprobanteResponseDto": {
+        "type": "object",
+        "properties": {
+          "serie": {
+            "type": "string",
+            "description": "Serie",
+            "example": "A"
+          },
+          "tipo": {
+            "type": "string",
+            "description": "Tipo",
+            "enum": [
+              "FACTURA",
+              "NOTA_CREDITO"
+            ],
+            "example": "FACTURA"
+          },
+          "prefijo": {
+            "type": "string",
+            "description": "Prefijo",
+            "example": "FAC"
+          },
+          "secuencial_actual": {
+            "type": "number",
+            "description": "Secuencial actual",
+            "example": 12
+          },
+          "ruc_emisor": {
+            "type": "string",
+            "description": "RUC del emisor",
+            "example": "J0310000000000"
+          },
+          "jurisdiccion": {
+            "type": "string",
+            "description": "Jurisdicción",
+            "example": "NI"
+          },
+          "activa": {
+            "type": "boolean",
+            "description": "Serie activa",
+            "example": true
+          }
+        },
+        "required": [
+          "serie",
+          "tipo",
+          "prefijo",
+          "secuencial_actual",
+          "ruc_emisor",
+          "jurisdiccion",
+          "activa"
+        ]
+      },
       "EmitirComprobanteRequestDto": {
         "type": "object",
         "properties": {
@@ -5572,6 +9532,69 @@ export const OPENAPI_AGREGADO = {
         "required": [
           "tipo",
           "orden_id"
+        ]
+      },
+      "JurisdiccionResponseDto": {
+        "type": "object",
+        "properties": {
+          "codigo_pais": {
+            "type": "string",
+            "description": "Código ISO del país",
+            "example": "NI"
+          },
+          "nombre": {
+            "type": "string",
+            "description": "Nombre de la jurisdicción",
+            "example": "Nicaragua"
+          },
+          "moneda": {
+            "type": "string",
+            "description": "Moneda",
+            "example": "NIO"
+          },
+          "simbolo_moneda": {
+            "type": "string",
+            "description": "Símbolo de la moneda",
+            "example": "C$"
+          },
+          "tasa_iva": {
+            "type": "number",
+            "description": "Tasa de IVA (0–1)",
+            "example": 0.15
+          },
+          "tasa_ir": {
+            "type": "number",
+            "description": "Tasa de IR (0–1)",
+            "example": 0.3
+          },
+          "periodicidad_declaracion": {
+            "type": "string",
+            "description": "Periodicidad de declaración",
+            "example": "MENSUAL"
+          },
+          "leyes": {
+            "type": "object",
+            "description": "Leyes aplicables (clave→texto)",
+            "additionalProperties": {
+              "type": "string"
+            }
+          },
+          "activa": {
+            "type": "boolean",
+            "description": "Jurisdicción activa",
+            "example": true
+          }
+        },
+        "required": [
+          "codigo_pais",
+          "nombre",
+          "moneda",
+          "simbolo_moneda",
+          "tasa_iva",
+          "tasa_ir",
+          "periodicidad_declaracion",
+          "leyes",
+          "activa"
         ]
       },
       "CrearJurisdiccionRequestDto": {
@@ -5620,6 +9643,62 @@ export const OPENAPI_AGREGADO = {
           "simbolo_moneda",
           "tasa_iva_por_mil",
           "tasa_ir_por_mil"
+        ]
+      },
+      "RegimenFiscalResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Id del régimen",
+            "format": "uuid"
+          },
+          "jurisdiccion": {
+            "type": "string",
+            "description": "Jurisdicción",
+            "example": "NI"
+          },
+          "codigo": {
+            "type": "string",
+            "description": "Código del régimen",
+            "example": "CUOTA_FIJA"
+          },
+          "nombre": {
+            "type": "string",
+            "description": "Nombre del régimen",
+            "example": "Cuota Fija"
+          },
+          "descripcion": {
+            "type": "string",
+            "description": "Descripción"
+          },
+          "periodicidad": {
+            "type": "string",
+            "description": "Periodicidad",
+            "example": "MENSUAL"
+          },
+          "condicion_ingresos_anuales_cents": {
+            "type": "number",
+            "description": "Condición de ingresos anuales en centavos"
+          },
+          "estado": {
+            "type": "string",
+            "description": "Estado",
+            "enum": [
+              "activo",
+              "inactivo"
+            ],
+            "example": "activo"
+          }
+        },
+        "required": [
+          "id",
+          "jurisdiccion",
+          "codigo",
+          "nombre",
+          "descripcion",
+          "periodicidad",
+          "estado"
         ]
       },
       "CrearRegimenRequestDto": {
@@ -5810,6 +9889,934 @@ export const OPENAPI_AGREGADO = {
           "supuestos"
         ]
       },
+      "SupuestosProyeccionResponseDto": {
+        "type": "object",
+        "properties": {
+          "horizonte_meses": {
+            "type": "number",
+            "example": 12
+          },
+          "vendedores_iniciales": {
+            "type": "number",
+            "example": 20
+          },
+          "entrada_vendedores_mes": {
+            "type": "number",
+            "example": 5
+          },
+          "churn_tasa": {
+            "type": "number",
+            "example": 0
+          },
+          "pedidos_por_vendedor": {
+            "example": [
+              25,
+              27,
+              29,
+              31,
+              33,
+              35,
+              37,
+              38,
+              39,
+              40,
+              41,
+              42
+            ],
+            "type": "array",
+            "items": {
+              "type": "number"
+            }
+          },
+          "ticket_promedio_cents": {
+            "type": "number",
+            "example": 45000
+          },
+          "comision_tasa": {
+            "type": "number",
+            "example": 0.12
+          },
+          "costos_fijos_cents": {
+            "type": "number",
+            "example": 200000
+          },
+          "costos_fijos_desde_mes7_cents": {
+            "type": "number",
+            "example": 300000
+          },
+          "inversion_inicial_cents": {
+            "type": "number",
+            "example": 5850000
+          },
+          "tasa_descuento_mensual": {
+            "type": "number",
+            "example": 0.015
+          }
+        },
+        "required": [
+          "horizonte_meses",
+          "vendedores_iniciales",
+          "entrada_vendedores_mes",
+          "churn_tasa",
+          "pedidos_por_vendedor",
+          "ticket_promedio_cents",
+          "comision_tasa",
+          "costos_fijos_cents",
+          "inversion_inicial_cents"
+        ]
+      },
+      "FilaProyeccionResponseDto": {
+        "type": "object",
+        "properties": {
+          "mes": {
+            "type": "number"
+          },
+          "vendedores": {
+            "type": "number"
+          },
+          "pedidos": {
+            "type": "number"
+          },
+          "gmv_cents": {
+            "type": "number"
+          },
+          "ingresos_cents": {
+            "type": "number"
+          },
+          "costos_cents": {
+            "type": "number"
+          },
+          "flujo_cents": {
+            "type": "number"
+          },
+          "flujo_acumulado_cents": {
+            "type": "number"
+          },
+          "costo_fijo_por_pedido_cents": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "mes",
+          "vendedores",
+          "pedidos",
+          "gmv_cents",
+          "ingresos_cents",
+          "costos_cents",
+          "flujo_cents",
+          "flujo_acumulado_cents",
+          "costo_fijo_por_pedido_cents"
+        ]
+      },
+      "TotalesProyeccionResponseDto": {
+        "type": "object",
+        "properties": {
+          "gmv_cents": {
+            "type": "number"
+          },
+          "ingresos_cents": {
+            "type": "number"
+          },
+          "costos_cents": {
+            "type": "number"
+          },
+          "flujo_cents": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "gmv_cents",
+          "ingresos_cents",
+          "costos_cents",
+          "flujo_cents"
+        ]
+      },
+      "EscenarioEquilibrioResponseDto": {
+        "type": "object",
+        "properties": {
+          "escenario": {
+            "type": "string",
+            "enum": [
+              "bajo",
+              "medio",
+              "alto"
+            ]
+          },
+          "costo_variable_por_pedido_cents": {
+            "type": "number"
+          },
+          "contribucion_por_pedido_cents": {
+            "type": "number"
+          },
+          "pedidos_equilibrio": {
+            "type": "number"
+          },
+          "gmv_equilibrio_cents": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "escenario",
+          "costo_variable_por_pedido_cents",
+          "contribucion_por_pedido_cents",
+          "pedidos_equilibrio",
+          "gmv_equilibrio_cents"
+        ]
+      },
+      "MargenSeguridadResponseDto": {
+        "type": "object",
+        "properties": {
+          "mes": {
+            "type": "number"
+          },
+          "gmv_cents": {
+            "type": "number"
+          },
+          "margen_seguridad": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "mes",
+          "gmv_cents",
+          "margen_seguridad"
+        ]
+      },
+      "CoberturaPorVendedorResponseDto": {
+        "type": "object",
+        "properties": {
+          "pedidos_por_vendedor_mes": {
+            "type": "number"
+          },
+          "comision_por_pedido_cents": {
+            "type": "number"
+          },
+          "comision_bruta_vendedor_cents": {
+            "type": "number"
+          },
+          "contribucion_media_cents": {
+            "type": "number"
+          },
+          "vendedores_para_cubrir_costos": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "pedidos_por_vendedor_mes",
+          "comision_por_pedido_cents",
+          "comision_bruta_vendedor_cents",
+          "contribucion_media_cents",
+          "vendedores_para_cubrir_costos"
+        ]
+      },
+      "EconomiaDeEscalaResponseDto": {
+        "type": "object",
+        "properties": {
+          "costo_fijo_por_pedido_inicio_cents": {
+            "type": "number"
+          },
+          "costo_fijo_por_pedido_mes6_cents": {
+            "type": "number"
+          },
+          "costo_fijo_por_pedido_fin_cents": {
+            "type": "number"
+          },
+          "multiplicador_escala": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "costo_fijo_por_pedido_inicio_cents",
+          "costo_fijo_por_pedido_mes6_cents",
+          "costo_fijo_por_pedido_fin_cents",
+          "multiplicador_escala"
+        ]
+      },
+      "IndicadoresProyeccionResponseDto": {
+        "type": "object",
+        "properties": {
+          "payback_mes": {
+            "type": "object",
+            "nullable": true
+          },
+          "van_cents": {
+            "type": "number"
+          },
+          "tir_mensual": {
+            "type": "object",
+            "nullable": true
+          },
+          "tir_anual": {
+            "type": "object",
+            "nullable": true
+          },
+          "tir_no_estable": {
+            "type": "boolean"
+          },
+          "roi": {
+            "type": "number"
+          },
+          "margen_neto": {
+            "type": "number"
+          },
+          "punto_equilibrio_caja_cents": {
+            "type": "number"
+          },
+          "pedidos_equilibrio_caja": {
+            "type": "number"
+          },
+          "escenarios_equilibrio": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/EscenarioEquilibrioResponseDto"
+            }
+          },
+          "margen_seguridad_por_mes": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/MargenSeguridadResponseDto"
+            }
+          },
+          "cobertura_por_vendedor": {
+            "$ref": "#/components/schemas/CoberturaPorVendedorResponseDto"
+          },
+          "economia_de_escala": {
+            "$ref": "#/components/schemas/EconomiaDeEscalaResponseDto"
+          }
+        },
+        "required": [
+          "payback_mes",
+          "van_cents",
+          "tir_mensual",
+          "tir_anual",
+          "tir_no_estable",
+          "roi",
+          "margen_neto",
+          "punto_equilibrio_caja_cents",
+          "pedidos_equilibrio_caja",
+          "escenarios_equilibrio",
+          "margen_seguridad_por_mes",
+          "cobertura_por_vendedor",
+          "economia_de_escala"
+        ]
+      },
+      "ProyeccionResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "nombre": {
+            "type": "string"
+          },
+          "horizonte_meses": {
+            "type": "number"
+          },
+          "supuestos": {
+            "$ref": "#/components/schemas/SupuestosProyeccionResponseDto"
+          },
+          "filas": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/FilaProyeccionResponseDto"
+            }
+          },
+          "totales": {
+            "$ref": "#/components/schemas/TotalesProyeccionResponseDto"
+          },
+          "inversion_inicial_cents": {
+            "type": "number"
+          },
+          "indicadores": {
+            "$ref": "#/components/schemas/IndicadoresProyeccionResponseDto"
+          },
+          "creado_en": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "nombre",
+          "horizonte_meses",
+          "supuestos",
+          "filas",
+          "totales",
+          "inversion_inicial_cents",
+          "indicadores",
+          "creado_en"
+        ]
+      },
+      "PuntoEquilibrioResponseDto": {
+        "type": "object",
+        "properties": {
+          "punto_equilibrio_caja_cents": {
+            "type": "number"
+          },
+          "pedidos_equilibrio_caja": {
+            "type": "number"
+          },
+          "escenarios_equilibrio": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/EscenarioEquilibrioResponseDto"
+            }
+          },
+          "margen_seguridad_por_mes": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/MargenSeguridadResponseDto"
+            }
+          }
+        },
+        "required": [
+          "punto_equilibrio_caja_cents",
+          "pedidos_equilibrio_caja",
+          "escenarios_equilibrio",
+          "margen_seguridad_por_mes"
+        ]
+      },
+      "KpisFinancierosResponseDto": {
+        "type": "object",
+        "properties": {
+          "periodo": {
+            "type": "string"
+          },
+          "gmv_cents": {
+            "type": "number"
+          },
+          "gmv": {
+            "type": "string"
+          },
+          "pedidos_pagados": {
+            "type": "number"
+          },
+          "pedidos_entregados": {
+            "type": "number"
+          },
+          "ingresos_comisiones_cents": {
+            "type": "number"
+          },
+          "ingresos_comisiones": {
+            "type": "string"
+          },
+          "devoluciones": {
+            "type": "number"
+          },
+          "vendedores_activos": {
+            "type": "number"
+          },
+          "pedidos_por_vendedor": {
+            "type": "number"
+          },
+          "activacion_primeros_15_dias": {
+            "type": "object",
+            "nullable": true
+          },
+          "tasa_devoluciones": {
+            "type": "number"
+          },
+          "churn_mensual": {
+            "type": "number"
+          },
+          "conversion_carrito_checkout": {
+            "type": "object",
+            "nullable": true
+          },
+          "liquidacion_a_tiempo": {
+            "type": "object",
+            "nullable": true
+          }
+        },
+        "required": [
+          "periodo",
+          "gmv_cents",
+          "gmv",
+          "pedidos_pagados",
+          "pedidos_entregados",
+          "ingresos_comisiones_cents",
+          "ingresos_comisiones",
+          "devoluciones",
+          "vendedores_activos",
+          "pedidos_por_vendedor",
+          "activacion_primeros_15_dias",
+          "tasa_devoluciones",
+          "churn_mensual",
+          "conversion_carrito_checkout",
+          "liquidacion_a_tiempo"
+        ]
+      },
+      "FlujoVariacionGmvResponseDto": {
+        "type": "object",
+        "properties": {
+          "variacion_gmv": {
+            "type": "number"
+          },
+          "flujo_cents": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "variacion_gmv",
+          "flujo_cents"
+        ]
+      },
+      "SensibilidadComisionGmvResponseDto": {
+        "type": "object",
+        "properties": {
+          "tasa_comision": {
+            "type": "number"
+          },
+          "flujo_mes12_cents": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/FlujoVariacionGmvResponseDto"
+            }
+          }
+        },
+        "required": [
+          "tasa_comision",
+          "flujo_mes12_cents"
+        ]
+      },
+      "SensibilidadVanResponseDto": {
+        "type": "object",
+        "properties": {
+          "tasa_anual": {
+            "type": "number"
+          },
+          "tasa_mensual": {
+            "type": "number"
+          },
+          "van_cents": {
+            "type": "number"
+          },
+          "relacion_van_inversion": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "tasa_anual",
+          "tasa_mensual",
+          "van_cents",
+          "relacion_van_inversion"
+        ]
+      },
+      "PaybackPorEscenarioResponseDto": {
+        "type": "object",
+        "properties": {
+          "escenario": {
+            "type": "string",
+            "enum": [
+              "base",
+              "pesimista",
+              "peor_combinado"
+            ]
+          },
+          "descripcion": {
+            "type": "string"
+          },
+          "flujo_acumulado_cents": {
+            "type": "number"
+          },
+          "payback_mes": {
+            "type": "object",
+            "nullable": true
+          }
+        },
+        "required": [
+          "escenario",
+          "descripcion",
+          "flujo_acumulado_cents",
+          "payback_mes"
+        ]
+      },
+      "SensibilidadEstudiosResponseDto": {
+        "type": "object",
+        "properties": {
+          "supuestos": {
+            "$ref": "#/components/schemas/SupuestosProyeccionResponseDto"
+          },
+          "matriz_comision_gmv": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SensibilidadComisionGmvResponseDto"
+            }
+          },
+          "van_por_tasa": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SensibilidadVanResponseDto"
+            }
+          },
+          "payback_por_escenario": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PaybackPorEscenarioResponseDto"
+            }
+          },
+          "cobertura_por_vendedor": {
+            "$ref": "#/components/schemas/CoberturaPorVendedorResponseDto"
+          }
+        },
+        "required": [
+          "supuestos",
+          "matriz_comision_gmv",
+          "van_por_tasa",
+          "payback_por_escenario",
+          "cobertura_por_vendedor"
+        ]
+      },
+      "ResumenAnualResponseDto": {
+        "type": "object",
+        "properties": {
+          "anio": {
+            "type": "number"
+          },
+          "gmv_cents": {
+            "type": "number"
+          },
+          "ingresos_cents": {
+            "type": "number"
+          },
+          "costos_cents": {
+            "type": "number"
+          },
+          "flujo_cents": {
+            "type": "number"
+          },
+          "margen_neto": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "anio",
+          "gmv_cents",
+          "ingresos_cents",
+          "costos_cents",
+          "flujo_cents",
+          "margen_neto"
+        ]
+      },
+      "Acumulado24MesesResponseDto": {
+        "type": "object",
+        "properties": {
+          "gmv_cents": {
+            "type": "number"
+          },
+          "ingresos_cents": {
+            "type": "number"
+          },
+          "costos_cents": {
+            "type": "number"
+          },
+          "flujo_cents": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "gmv_cents",
+          "ingresos_cents",
+          "costos_cents",
+          "flujo_cents"
+        ]
+      },
+      "Mes24ResponseDto": {
+        "type": "object",
+        "properties": {
+          "gmv_cents": {
+            "type": "number"
+          },
+          "incremento_vs_mes12": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "gmv_cents",
+          "incremento_vs_mes12"
+        ]
+      },
+      "PlanBienalResponseDto": {
+        "type": "object",
+        "properties": {
+          "inversion_inicial_cents": {
+            "type": "number"
+          },
+          "anios": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ResumenAnualResponseDto"
+            }
+          },
+          "filas": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/FilaProyeccionResponseDto"
+            }
+          },
+          "acumulado_24_meses": {
+            "$ref": "#/components/schemas/Acumulado24MesesResponseDto"
+          },
+          "roi": {
+            "type": "number"
+          },
+          "mes_24": {
+            "$ref": "#/components/schemas/Mes24ResponseDto"
+          },
+          "indicadores": {
+            "$ref": "#/components/schemas/IndicadoresProyeccionResponseDto"
+          }
+        },
+        "required": [
+          "inversion_inicial_cents",
+          "anios",
+          "filas",
+          "acumulado_24_meses",
+          "roi",
+          "mes_24",
+          "indicadores"
+        ]
+      },
+      "TableroAlertaResponseDto": {
+        "type": "object",
+        "properties": {
+          "capa": {
+            "type": "string"
+          },
+          "frecuencia": {
+            "type": "string"
+          },
+          "indicador": {
+            "type": "string"
+          },
+          "estado": {
+            "type": "string",
+            "enum": [
+              "OK",
+              "ALERTA",
+              "SIN_DATO"
+            ]
+          },
+          "umbral": {
+            "type": "string"
+          },
+          "valor": {
+            "type": "object",
+            "nullable": true
+          },
+          "accion": {
+            "type": "string"
+          },
+          "detalle": {
+            "type": "string"
+          },
+          "fecha_esperada": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "capa",
+          "frecuencia",
+          "indicador",
+          "estado",
+          "umbral",
+          "valor",
+          "accion",
+          "fecha_esperada"
+        ]
+      },
+      "TableroResponseDto": {
+        "type": "object",
+        "properties": {
+          "periodo": {
+            "type": "string"
+          },
+          "kpis": {
+            "$ref": "#/components/schemas/KpisFinancierosResponseDto"
+          },
+          "alertas": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/TableroAlertaResponseDto"
+            }
+          }
+        },
+        "required": [
+          "periodo",
+          "kpis",
+          "alertas"
+        ]
+      },
+      "ResumenVendedorResponseDto": {
+        "type": "object",
+        "properties": {
+          "vendedor_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "periodo": {
+            "type": "string"
+          },
+          "ventas": {
+            "type": "number"
+          },
+          "monto_cents": {
+            "type": "number"
+          },
+          "comision_cents": {
+            "type": "number"
+          },
+          "devoluciones": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "vendedor_id",
+          "periodo",
+          "ventas",
+          "monto_cents",
+          "comision_cents",
+          "devoluciones"
+        ]
+      },
+      "VendedorFiscalResponseDto": {
+        "type": "object",
+        "properties": {
+          "sujeto_fiscal": {
+            "nullable": true,
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/SujetoTributarioResponseDto"
+              }
+            ]
+          },
+          "resumen_comisiones": {
+            "nullable": true,
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/ResumenVendedorResponseDto"
+              }
+            ]
+          },
+          "nota": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "sujeto_fiscal",
+          "resumen_comisiones",
+          "nota"
+        ]
+      },
+      "UsuarioResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Id del usuario",
+            "format": "uuid"
+          },
+          "nombre": {
+            "type": "string",
+            "description": "Nombre del usuario"
+          },
+          "correo": {
+            "type": "string",
+            "description": "Correo del usuario",
+            "format": "email"
+          },
+          "rol": {
+            "type": "string",
+            "description": "Rol del usuario",
+            "enum": [
+              "admin",
+              "vendedor",
+              "comprador",
+              "logistica",
+              "coordinador",
+              "supervisor",
+              "operativo"
+            ],
+            "example": "vendedor"
+          },
+          "tenant_id": {
+            "type": "string",
+            "description": "Tenant del usuario",
+            "format": "uuid"
+          },
+          "personal_id": {
+            "type": "string",
+            "description": "Ficha de personal vinculada",
+            "format": "uuid"
+          },
+          "creado_en": {
+            "type": "string",
+            "description": "Fecha de creación (ISO 8601 UTC)",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "nombre",
+          "correo",
+          "rol",
+          "creado_en"
+        ]
+      },
+      "ContarVendedoresResponseDto": {
+        "type": "object",
+        "properties": {
+          "vendedores": {
+            "type": "number",
+            "description": "Cantidad de usuarios con rol vendedor",
+            "example": 12
+          }
+        },
+        "required": [
+          "vendedores"
+        ]
+      },
+      "EmpresaResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "nombre": {
+            "type": "string"
+          },
+          "modalidad_logistica": {
+            "type": "string",
+            "enum": [
+              "plataforma",
+              "propia",
+              "hibrida"
+            ]
+          },
+          "estado": {
+            "type": "string"
+          },
+          "creado_por": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "creado_en": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "nombre",
+          "modalidad_logistica",
+          "estado",
+          "creado_por",
+          "creado_en"
+        ]
+      },
       "RegistroRequestDto": {
         "type": "object",
         "properties": {
@@ -5834,7 +10841,7 @@ export const OPENAPI_AGREGADO = {
             "type": "string",
             "description": "Rol registrable",
             "enum": [
-              "vendedor",
+              "empresario",
               "comprador"
             ],
             "example": "comprador"
@@ -5845,6 +10852,89 @@ export const OPENAPI_AGREGADO = {
           "correo",
           "contrasena",
           "rol"
+        ]
+      },
+      "SesionUsuarioResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Id del usuario",
+            "format": "uuid"
+          },
+          "nombre": {
+            "type": "string",
+            "description": "Nombre del usuario"
+          },
+          "correo": {
+            "type": "string",
+            "description": "Correo del usuario",
+            "format": "email"
+          },
+          "rol": {
+            "type": "string",
+            "description": "Rol del usuario",
+            "enum": [
+              "admin",
+              "vendedor",
+              "comprador",
+              "logistica",
+              "coordinador",
+              "supervisor",
+              "operativo"
+            ],
+            "example": "comprador"
+          },
+          "tenant_id": {
+            "type": "string",
+            "description": "Tenant del usuario",
+            "format": "uuid"
+          },
+          "personal_id": {
+            "type": "string",
+            "description": "Ficha de personal vinculada",
+            "format": "uuid"
+          }
+        },
+        "required": [
+          "id",
+          "nombre",
+          "correo",
+          "rol"
+        ]
+      },
+      "SesionResponseDto": {
+        "type": "object",
+        "properties": {
+          "access_token": {
+            "type": "string",
+            "description": "Access token JWT (HS256)",
+            "example": "eyJhbGciOiJIUzI1NiIs..."
+          },
+          "refresh_token": {
+            "type": "string",
+            "description": "Refresh token JWT",
+            "example": "eyJhbGciOiJIUzI1NiIs..."
+          },
+          "expira_en": {
+            "type": "number",
+            "description": "Vigencia del access token en segundos",
+            "example": 900
+          },
+          "usuario": {
+            "description": "Datos del usuario autenticado",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/SesionUsuarioResponseDto"
+              }
+            ]
+          }
+        },
+        "required": [
+          "access_token",
+          "refresh_token",
+          "expira_en",
+          "usuario"
         ]
       },
       "LoginRequestDto": {
@@ -5875,6 +10965,19 @@ export const OPENAPI_AGREGADO = {
           }
         }
       },
+      "OkResponseDto": {
+        "type": "object",
+        "properties": {
+          "ok": {
+            "type": "boolean",
+            "description": "Operación completada",
+            "example": true
+          }
+        },
+        "required": [
+          "ok"
+        ]
+      },
       "CrearUsuarioRequestDto": {
         "type": "object",
         "properties": {
@@ -5897,7 +11000,7 @@ export const OPENAPI_AGREGADO = {
             "type": "string",
             "description": "Rol del usuario",
             "enum": [
-              "vendedor",
+              "empresario",
               "comprador",
               "admin",
               "logistica",
@@ -5952,6 +11055,54 @@ export const OPENAPI_AGREGADO = {
           "correo"
         ]
       },
+      "UsuarioContextoResponseDto": {
+        "type": "object",
+        "properties": {
+          "user_id": {
+            "type": "string",
+            "description": "Id del usuario autenticado",
+            "format": "uuid"
+          },
+          "email": {
+            "type": "string",
+            "description": "Correo del usuario",
+            "format": "email"
+          },
+          "rol": {
+            "type": "string",
+            "description": "Rol del usuario",
+            "enum": [
+              "admin",
+              "vendedor",
+              "comprador",
+              "logistica",
+              "coordinador",
+              "supervisor",
+              "operativo"
+            ],
+            "example": "admin"
+          },
+          "nombre": {
+            "type": "string",
+            "description": "Nombre del usuario"
+          },
+          "tenant_id": {
+            "type": "string",
+            "description": "Tenant del usuario",
+            "format": "uuid"
+          },
+          "personal_id": {
+            "type": "string",
+            "description": "Ficha de personal vinculada",
+            "format": "uuid"
+          }
+        },
+        "required": [
+          "user_id",
+          "email",
+          "rol"
+        ]
+      },
       "VincularPersonalRequestDto": {
         "type": "object",
         "properties": {
@@ -5969,6 +11120,103 @@ export const OPENAPI_AGREGADO = {
         },
         "required": [
           "personal_id"
+        ]
+      },
+      "CrearEmpresaRequestDto": {
+        "type": "object",
+        "properties": {
+          "nombre": {
+            "type": "string",
+            "minLength": 2,
+            "maxLength": 160
+          },
+          "modalidad_logistica": {
+            "type": "string",
+            "enum": [
+              "plataforma",
+              "propia",
+              "hibrida"
+            ]
+          }
+        },
+        "required": [
+          "nombre",
+          "modalidad_logistica"
+        ]
+      },
+      "ActualizarModalidadLogisticaRequestDto": {
+        "type": "object",
+        "properties": {
+          "modalidad_logistica": {
+            "type": "string",
+            "enum": [
+              "plataforma",
+              "propia",
+              "hibrida"
+            ]
+          }
+        },
+        "required": [
+          "modalidad_logistica"
+        ]
+      },
+      "CrearVendedorRequestDto": {
+        "type": "object",
+        "properties": {
+          "nombre": {
+            "type": "string"
+          },
+          "correo": {
+            "type": "string"
+          },
+          "contrasena": {
+            "type": "string",
+            "minLength": 8
+          },
+          "participacion_porcentaje": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 100
+          }
+        },
+        "required": [
+          "nombre",
+          "correo",
+          "contrasena",
+          "participacion_porcentaje"
+        ]
+      },
+      "VendedorEmpresaResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "nombre": {
+            "type": "string"
+          },
+          "correo": {
+            "type": "string"
+          },
+          "rol": {
+            "type": "string",
+            "enum": [
+              "vendedor"
+            ]
+          },
+          "participacion_porcentaje": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 100
+          }
+        },
+        "required": [
+          "id",
+          "nombre",
+          "correo",
+          "rol",
+          "participacion_porcentaje"
         ]
       },
       "AvanzarEstadoRequestDto": {
@@ -5994,6 +11242,1017 @@ export const OPENAPI_AGREGADO = {
         },
         "required": [
           "estado"
+        ]
+      },
+      "ItemOrdenExternaResponseDto": {
+        "type": "object",
+        "properties": {
+          "sku": {
+            "type": "string",
+            "description": "SKU del producto",
+            "example": "SKU-001"
+          },
+          "cantidad": {
+            "type": "number",
+            "description": "Cantidad pedida",
+            "example": 2
+          },
+          "producto_nombre": {
+            "type": "string",
+            "description": "Nombre del producto"
+          }
+        },
+        "required": [
+          "sku",
+          "cantidad",
+          "producto_nombre"
+        ]
+      },
+      "OrdenExternaResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Id de la orden",
+            "format": "uuid"
+          },
+          "cliente_id": {
+            "type": "string",
+            "description": "Id del comprador",
+            "format": "uuid"
+          },
+          "items": {
+            "description": "Líneas de la orden",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ItemOrdenExternaResponseDto"
+            }
+          },
+          "total": {
+            "type": "string",
+            "description": "Total en córdobas con dos decimales",
+            "example": "1150.00"
+          },
+          "total_cents": {
+            "type": "number",
+            "description": "Total en centavos",
+            "example": 115000
+          },
+          "estado": {
+            "type": "string",
+            "description": "Estado actual de la orden",
+            "example": "enviada"
+          }
+        },
+        "required": [
+          "id",
+          "cliente_id",
+          "items",
+          "total",
+          "total_cents",
+          "estado"
+        ]
+      },
+      "EnvioConMontoResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Id de la guía de despacho",
+            "format": "uuid"
+          },
+          "guia": {
+            "type": "string",
+            "description": "Número de guía",
+            "example": "BGH-ABC123-DEF456"
+          },
+          "order_id": {
+            "type": "string",
+            "description": "Id de la orden asociada",
+            "format": "uuid"
+          },
+          "empresa_id": {
+            "type": "string",
+            "description": "Empresa propietaria de las líneas despachadas",
+            "format": "uuid"
+          },
+          "modalidad_logistica": {
+            "type": "string",
+            "enum": [
+              "plataforma",
+              "propia",
+              "hibrida"
+            ]
+          },
+          "proveedor_tipo": {
+            "type": "string",
+            "enum": [
+              "plataforma",
+              "empresa"
+            ],
+            "nullable": true
+          },
+          "proveedor_tenant_id": {
+            "type": "object",
+            "format": "uuid",
+            "nullable": true
+          },
+          "estado": {
+            "type": "string",
+            "description": "Estado del envío",
+            "example": "en_preparacion"
+          },
+          "creado_en": {
+            "type": "string",
+            "description": "Fecha de creación (ISO 8601 UTC)",
+            "format": "date-time"
+          },
+          "monto": {
+            "type": "string",
+            "description": "Monto del envío en córdobas con dos decimales",
+            "example": "1150.00"
+          }
+        },
+        "required": [
+          "id",
+          "guia",
+          "order_id",
+          "empresa_id",
+          "modalidad_logistica",
+          "proveedor_tipo",
+          "proveedor_tenant_id",
+          "estado",
+          "creado_en",
+          "monto"
+        ]
+      },
+      "EnvioResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Id de la guía de despacho",
+            "format": "uuid"
+          },
+          "guia": {
+            "type": "string",
+            "description": "Número de guía",
+            "example": "BGH-ABC123-DEF456"
+          },
+          "order_id": {
+            "type": "string",
+            "description": "Id de la orden asociada",
+            "format": "uuid"
+          },
+          "empresa_id": {
+            "type": "string",
+            "description": "Empresa propietaria de las líneas despachadas",
+            "format": "uuid"
+          },
+          "modalidad_logistica": {
+            "type": "string",
+            "enum": [
+              "plataforma",
+              "propia",
+              "hibrida"
+            ]
+          },
+          "proveedor_tipo": {
+            "type": "string",
+            "enum": [
+              "plataforma",
+              "empresa"
+            ],
+            "nullable": true
+          },
+          "proveedor_tenant_id": {
+            "type": "object",
+            "format": "uuid",
+            "nullable": true
+          },
+          "estado": {
+            "type": "string",
+            "description": "Estado del envío",
+            "example": "en_preparacion"
+          },
+          "creado_en": {
+            "type": "string",
+            "description": "Fecha de creación (ISO 8601 UTC)",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "guia",
+          "order_id",
+          "empresa_id",
+          "modalidad_logistica",
+          "proveedor_tipo",
+          "proveedor_tenant_id",
+          "estado",
+          "creado_en"
+        ]
+      },
+      "AsignarProveedorRequestDto": {
+        "type": "object",
+        "properties": {
+          "proveedor_tipo": {
+            "type": "string",
+            "enum": [
+              "plataforma",
+              "empresa"
+            ],
+            "description": "Flota que atenderá el envío híbrido"
+          }
+        },
+        "required": [
+          "proveedor_tipo"
+        ]
+      },
+      "AvanzarEnvioRequestDto": {
+        "type": "object",
+        "properties": {
+          "estado": {
+            "type": "string",
+            "enum": [
+              "enviada",
+              "entregada",
+              "cancelada"
+            ]
+          },
+          "motivo": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "estado"
+        ]
+      },
+      "PuntoCalorDto": {
+        "type": "object",
+        "properties": {
+          "lat": {
+            "type": "number"
+          },
+          "lng": {
+            "type": "number"
+          },
+          "peso": {
+            "type": "number"
+          },
+          "tipo": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "lat",
+          "lng",
+          "peso",
+          "tipo"
+        ]
+      },
+      "MapaCalorResponseDto": {
+        "type": "object",
+        "properties": {
+          "puntos": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PuntoCalorDto"
+            }
+          },
+          "total_puntos": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "puntos",
+          "total_puntos"
+        ]
+      },
+      "RendimientoVendedorResponseDto": {
+        "type": "object",
+        "properties": {
+          "vendedor_id": {
+            "type": "string",
+            "description": "Id del vendedor",
+            "format": "uuid"
+          },
+          "total_ventas": {
+            "type": "number",
+            "description": "Total de ventas",
+            "example": 42
+          },
+          "total_monto_cents": {
+            "type": "number",
+            "description": "Monto total vendido en centavos",
+            "example": 4830000
+          },
+          "ticket_promedio_cents": {
+            "type": "number",
+            "description": "Ticket promedio en centavos",
+            "example": 115000
+          },
+          "pedidos_entregados": {
+            "type": "number",
+            "description": "Pedidos entregados",
+            "example": 40
+          },
+          "tasa_efectividad": {
+            "type": "number",
+            "description": "Tasa de efectividad (0–1)",
+            "example": 0.95
+          },
+          "actualizado_en": {
+            "type": "string",
+            "description": "Última actualización (ISO 8601 UTC)",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "vendedor_id",
+          "total_ventas",
+          "total_monto_cents",
+          "ticket_promedio_cents",
+          "pedidos_entregados",
+          "tasa_efectividad",
+          "actualizado_en"
+        ]
+      },
+      "PaginaRendimientoResponseDto": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "description": "Rendimiento por vendedor",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/RendimientoVendedorResponseDto"
+            }
+          },
+          "next_cursor": {
+            "type": "object",
+            "description": "Cursor de la siguiente página",
+            "nullable": true
+          }
+        },
+        "required": [
+          "data"
+        ]
+      },
+      "CoberturaZonaResponseDto": {
+        "type": "object",
+        "properties": {
+          "lat_cell": {
+            "type": "number",
+            "description": "Latitud de la celda",
+            "example": 12.1364
+          },
+          "lng_cell": {
+            "type": "number",
+            "description": "Longitud de la celda",
+            "example": -86.2514
+          },
+          "total_ventas": {
+            "type": "number",
+            "description": "Ventas en la celda",
+            "example": 18
+          },
+          "total_monto_cents": {
+            "type": "number",
+            "description": "Monto vendido en centavos",
+            "example": 2070000
+          },
+          "total_vendedores": {
+            "type": "number",
+            "description": "Vendedores activos en la celda",
+            "example": 5
+          },
+          "actualizado_en": {
+            "type": "string",
+            "description": "Última actualización (ISO 8601 UTC)",
+            "format": "date-time"
+          },
+          "geojson": {
+            "type": "string",
+            "description": "Bounding box en GeoJSON",
+            "example": "{\"type\":\"Polygon\",\"coordinates\":[]}"
+          }
+        },
+        "required": [
+          "lat_cell",
+          "lng_cell",
+          "total_ventas",
+          "total_monto_cents",
+          "total_vendedores",
+          "actualizado_en",
+          "geojson"
+        ]
+      },
+      "DemandaProductoResponseDto": {
+        "type": "object",
+        "properties": {
+          "sku": {
+            "type": "string",
+            "description": "SKU del producto",
+            "example": "SKU-001"
+          },
+          "nombre": {
+            "type": "string",
+            "description": "Nombre del producto"
+          },
+          "total_vendido": {
+            "type": "number",
+            "description": "Unidades vendidas",
+            "example": 120
+          },
+          "total_monto_cents": {
+            "type": "number",
+            "description": "Monto vendido en centavos",
+            "example": 13800000
+          },
+          "stock_actual": {
+            "type": "number",
+            "description": "Stock actual",
+            "example": 10
+          },
+          "ultima_venta_en": {
+            "type": "object",
+            "description": "Última venta (ISO 8601 UTC)",
+            "format": "date-time",
+            "nullable": true
+          },
+          "actualizado_en": {
+            "type": "string",
+            "description": "Última actualización (ISO 8601 UTC)",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "sku",
+          "nombre",
+          "total_vendido",
+          "total_monto_cents",
+          "stock_actual",
+          "actualizado_en"
+        ]
+      },
+      "PaginaDemandaResponseDto": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "description": "Demanda por producto",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/DemandaProductoResponseDto"
+            }
+          },
+          "next_cursor": {
+            "type": "object",
+            "description": "Cursor de la siguiente página",
+            "nullable": true
+          }
+        },
+        "required": [
+          "data"
+        ]
+      },
+      "TendenciaResponseDto": {
+        "type": "object",
+        "properties": {
+          "fecha": {
+            "type": "string",
+            "description": "Fecha de la tendencia",
+            "format": "date"
+          },
+          "sku": {
+            "type": "string",
+            "description": "SKU del producto",
+            "example": "SKU-001"
+          },
+          "vendedor_id": {
+            "type": "string",
+            "description": "Id del vendedor",
+            "format": "uuid"
+          },
+          "total_ventas": {
+            "type": "number",
+            "description": "Unidades vendidas",
+            "example": 12
+          },
+          "total_monto_cents": {
+            "type": "number",
+            "description": "Monto vendido en centavos",
+            "example": 1380000
+          },
+          "dia_semana": {
+            "type": "number",
+            "description": "Día de la semana",
+            "example": 3
+          }
+        },
+        "required": [
+          "fecha",
+          "sku",
+          "vendedor_id",
+          "total_ventas",
+          "total_monto_cents",
+          "dia_semana"
+        ]
+      },
+      "ResumenInteligenciaResponseDto": {
+        "type": "object",
+        "properties": {
+          "total_pedidos": {
+            "type": "number",
+            "description": "Total de pedidos",
+            "example": 320
+          },
+          "ingresos_totales_cents": {
+            "type": "number",
+            "description": "Ingresos totales en centavos",
+            "example": 36800000
+          },
+          "vendedores_activos": {
+            "type": "number",
+            "description": "Vendedores activos",
+            "example": 20
+          },
+          "calculado_en": {
+            "type": "string",
+            "description": "Fecha de cálculo (ISO 8601 UTC)",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "total_pedidos",
+          "ingresos_totales_cents",
+          "vendedores_activos",
+          "calculado_en"
+        ]
+      },
+      "RegistrarVentaResponseDto": {
+        "type": "object",
+        "properties": {
+          "codigo": {
+            "type": "string",
+            "description": "Código de resultado",
+            "example": "OK"
+          },
+          "mensaje": {
+            "type": "string",
+            "description": "Mensaje de resultado",
+            "example": "Venta registrada en inteligencia"
+          }
+        },
+        "required": [
+          "codigo",
+          "mensaje"
+        ]
+      },
+      "ForecastDemandaResponseDto": {
+        "type": "object",
+        "properties": {
+          "sku": {
+            "type": "string",
+            "description": "SKU analizado",
+            "example": "SKU-001"
+          },
+          "dias_proyectados": {
+            "type": "number",
+            "description": "Días proyectados",
+            "example": 7
+          },
+          "ventas_proyectadas": {
+            "type": "number",
+            "description": "Ventas proyectadas",
+            "example": 84
+          },
+          "intervalo_inferior": {
+            "type": "number",
+            "description": "Límite inferior del intervalo",
+            "example": 60
+          },
+          "intervalo_superior": {
+            "type": "number",
+            "description": "Límite superior del intervalo",
+            "example": 108
+          },
+          "avg_diario_base": {
+            "type": "number",
+            "description": "Media diaria base",
+            "example": 12
+          },
+          "std_diario_base": {
+            "type": "number",
+            "description": "Desviación estándar diaria base",
+            "example": 3.2
+          },
+          "features_computadas_en": {
+            "type": "object",
+            "description": "Fecha de cómputo de features",
+            "nullable": true,
+            "format": "date-time"
+          },
+          "metodologia": {
+            "type": "string",
+            "description": "Metodología aplicada",
+            "example": "media_movil_ponderada_7d"
+          }
+        },
+        "required": [
+          "sku",
+          "dias_proyectados",
+          "ventas_proyectadas",
+          "intervalo_inferior",
+          "intervalo_superior",
+          "avg_diario_base",
+          "std_diario_base",
+          "metodologia"
+        ]
+      },
+      "AnomaliaResponseDto": {
+        "type": "object",
+        "properties": {
+          "order_id": {
+            "type": "string",
+            "description": "Id de la orden",
+            "format": "uuid"
+          },
+          "sku": {
+            "type": "string",
+            "description": "SKU del producto"
+          },
+          "vendedor_id": {
+            "type": "string",
+            "description": "Id del vendedor",
+            "format": "uuid"
+          },
+          "monto_cents": {
+            "type": "number",
+            "description": "Monto de la venta en centavos",
+            "example": 115000
+          },
+          "lat": {
+            "type": "object",
+            "description": "Latitud",
+            "nullable": true
+          },
+          "lng": {
+            "type": "object",
+            "description": "Longitud",
+            "nullable": true
+          },
+          "ocurrido_en": {
+            "type": "string",
+            "description": "Fecha de la venta (ISO 8601 UTC)",
+            "format": "date-time"
+          },
+          "media_monto": {
+            "type": "number",
+            "description": "Media histórica del monto",
+            "example": 115000
+          },
+          "std_monto": {
+            "type": "number",
+            "description": "Desviación estándar histórica",
+            "example": 15000
+          },
+          "z_score": {
+            "type": "number",
+            "description": "Z-score de la anomalía",
+            "example": 3.4
+          }
+        },
+        "required": [
+          "order_id",
+          "sku",
+          "vendedor_id",
+          "monto_cents",
+          "ocurrido_en",
+          "media_monto",
+          "std_monto",
+          "z_score"
+        ]
+      },
+      "AnomaliasResponseDto": {
+        "type": "object",
+        "properties": {
+          "total": {
+            "type": "number",
+            "description": "Total de anomalías",
+            "example": 3
+          },
+          "anomalias": {
+            "description": "Anomalías detectadas",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AnomaliaResponseDto"
+            }
+          }
+        },
+        "required": [
+          "total",
+          "anomalias"
+        ]
+      },
+      "ScoreVendedorResponseDto": {
+        "type": "object",
+        "properties": {
+          "vendedor_id": {
+            "type": "string",
+            "description": "Id del vendedor",
+            "format": "uuid"
+          },
+          "tasa_efectividad": {
+            "type": "object",
+            "description": "Tasa de efectividad",
+            "nullable": true
+          },
+          "churn_risk_score": {
+            "type": "number",
+            "description": "Score de riesgo de churn"
+          },
+          "churn_risk_nivel": {
+            "type": "string",
+            "description": "Nivel de riesgo",
+            "enum": [
+              "ALTO",
+              "MEDIO",
+              "BAJO"
+            ]
+          },
+          "features_computadas_en": {
+            "type": "string",
+            "description": "Fecha de cómputo de features",
+            "format": "date-time"
+          },
+          "mensaje": {
+            "type": "string",
+            "description": "Mensaje cuando no hay datos computados"
+          }
+        }
+      },
+      "ErrorFrecuenteResponseDto": {
+        "type": "object",
+        "properties": {
+          "event_tipo": {
+            "type": "string",
+            "description": "Tipo de evento",
+            "example": "order.created"
+          },
+          "error": {
+            "type": "string",
+            "description": "Error detectado",
+            "example": "campo requerido"
+          },
+          "total": {
+            "type": "number",
+            "description": "Cantidad de ocurrencias",
+            "example": 4
+          }
+        },
+        "required": [
+          "event_tipo",
+          "error",
+          "total"
+        ]
+      },
+      "CalidadDatosResponseDto": {
+        "type": "object",
+        "properties": {
+          "ventana_horas": {
+            "type": "number",
+            "description": "Ventana analizada en horas",
+            "example": 24
+          },
+          "eventos_procesados": {
+            "type": "number",
+            "description": "Eventos procesados",
+            "example": 1200
+          },
+          "eventos_invalidos": {
+            "type": "number",
+            "description": "Eventos inválidos",
+            "example": 12
+          },
+          "tasa_rechazo_pct": {
+            "type": "number",
+            "description": "Tasa de rechazo (%)",
+            "example": 0.99
+          },
+          "errores_frecuentes": {
+            "description": "Errores más frecuentes",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ErrorFrecuenteResponseDto"
+            }
+          }
+        },
+        "required": [
+          "ventana_horas",
+          "eventos_procesados",
+          "eventos_invalidos",
+          "tasa_rechazo_pct",
+          "errores_frecuentes"
+        ]
+      },
+      "ItemOrdenResponseDto": {
+        "type": "object",
+        "properties": {
+          "oferta_id": {
+            "type": "string",
+            "description": "Id de la oferta",
+            "format": "uuid"
+          },
+          "sku": {
+            "type": "string",
+            "description": "SKU del producto",
+            "example": "SKU-001"
+          },
+          "producto_nombre": {
+            "type": "string",
+            "description": "Nombre del producto"
+          },
+          "cantidad": {
+            "type": "number",
+            "description": "Cantidad pedida",
+            "example": 2
+          },
+          "precio_unitario_cents": {
+            "type": "number",
+            "description": "Precio unitario de venta en centavos",
+            "example": 115000
+          },
+          "vendedor_id": {
+            "type": "string",
+            "description": "Id del vendedor",
+            "format": "uuid"
+          },
+          "tienda_id": {
+            "type": "string",
+            "description": "Id de la tienda",
+            "format": "uuid"
+          }
+        },
+        "required": [
+          "oferta_id",
+          "sku",
+          "producto_nombre",
+          "cantidad",
+          "precio_unitario_cents",
+          "vendedor_id",
+          "tienda_id"
+        ]
+      },
+      "OrderViewResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Id de la orden",
+            "format": "uuid"
+          },
+          "vendedor_id": {
+            "type": "string",
+            "description": "Id del vendedor",
+            "format": "uuid"
+          },
+          "comprador_id": {
+            "type": "string",
+            "description": "Id del comprador",
+            "format": "uuid"
+          },
+          "tienda_id": {
+            "type": "string",
+            "description": "Id de la tienda",
+            "format": "uuid"
+          },
+          "estado": {
+            "type": "string",
+            "description": "Estado de la orden",
+            "example": "pagada"
+          },
+          "total_cents": {
+            "type": "number",
+            "description": "Total en centavos",
+            "example": 230000
+          },
+          "comision_cents": {
+            "type": "number",
+            "description": "Comisión en centavos",
+            "example": 27600
+          },
+          "moneda": {
+            "type": "string",
+            "description": "Moneda",
+            "example": "C$"
+          },
+          "items": {
+            "description": "Líneas de la orden",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ItemOrdenResponseDto"
+            }
+          },
+          "direccion_envio": {
+            "type": "object",
+            "description": "Dirección de envío",
+            "nullable": true
+          },
+          "creado_en": {
+            "type": "string",
+            "description": "Fecha de creación (ISO 8601 UTC)",
+            "format": "date-time"
+          },
+          "actualizado_en": {
+            "type": "string",
+            "description": "Última actualización (ISO 8601 UTC)",
+            "format": "date-time"
+          },
+          "pagada_en": {
+            "type": "object",
+            "description": "Fecha de pago (ISO 8601 UTC)",
+            "nullable": true,
+            "format": "date-time"
+          },
+          "enviada_en": {
+            "type": "object",
+            "description": "Fecha de envío (ISO 8601 UTC)",
+            "nullable": true,
+            "format": "date-time"
+          },
+          "entregada_en": {
+            "type": "object",
+            "description": "Fecha de entrega (ISO 8601 UTC)",
+            "nullable": true,
+            "format": "date-time"
+          },
+          "cancelada_en": {
+            "type": "object",
+            "description": "Fecha de cancelación (ISO 8601 UTC)",
+            "nullable": true,
+            "format": "date-time"
+          },
+          "devuelta_en": {
+            "type": "object",
+            "description": "Fecha de devolución (ISO 8601 UTC)",
+            "nullable": true,
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "vendedor_id",
+          "comprador_id",
+          "tienda_id",
+          "estado",
+          "total_cents",
+          "comision_cents",
+          "moneda",
+          "items",
+          "creado_en",
+          "actualizado_en"
+        ]
+      },
+      "HistoriaEventoResponseDto": {
+        "type": "object",
+        "properties": {
+          "event_id": {
+            "type": "string",
+            "description": "Id del evento",
+            "format": "uuid"
+          },
+          "aggregate_id": {
+            "type": "string",
+            "description": "Id del agregado (orden)",
+            "format": "uuid"
+          },
+          "tipo": {
+            "type": "string",
+            "description": "Tipo de evento",
+            "example": "OrderCreatedEvent"
+          },
+          "payload": {
+            "type": "object",
+            "description": "Payload del evento"
+          },
+          "version": {
+            "type": "number",
+            "description": "Versión del agregado",
+            "example": 1
+          },
+          "creado_en": {
+            "type": "string",
+            "description": "Fecha del evento (ISO 8601 UTC)",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "event_id",
+          "aggregate_id",
+          "tipo",
+          "payload",
+          "version",
+          "creado_en"
         ]
       },
       "ItemOrdenRequestDto": {
@@ -6033,6 +12292,178 @@ export const OPENAPI_AGREGADO = {
           }
         }
       },
+      "ComisionVistaResponseDto": {
+        "type": "object",
+        "properties": {
+          "vendedor_id": {
+            "type": "string",
+            "description": "Id del vendedor",
+            "format": "uuid"
+          },
+          "periodo": {
+            "type": "string",
+            "description": "Periodo (YYYY-MM)",
+            "example": "2026-10"
+          },
+          "ordenes": {
+            "type": "number",
+            "description": "Órdenes del periodo",
+            "example": 12
+          },
+          "total_ventas_cents": {
+            "type": "number",
+            "description": "Ventas del periodo en centavos",
+            "example": 1380000
+          },
+          "total_comision_cents": {
+            "type": "number",
+            "description": "Comisiones del periodo en centavos",
+            "example": 165600
+          },
+          "actualizado_en": {
+            "type": "string",
+            "description": "Última actualización (ISO 8601 UTC)",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "vendedor_id",
+          "periodo",
+          "ordenes",
+          "total_ventas_cents",
+          "total_comision_cents",
+          "actualizado_en"
+        ]
+      },
+      "TimelineEventoResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "number",
+            "description": "Secuencia del evento",
+            "example": 3
+          },
+          "tipo": {
+            "type": "string",
+            "description": "Tipo de evento",
+            "example": "OrderStatusUpdatedEvent"
+          },
+          "payload": {
+            "type": "object",
+            "description": "Payload del evento"
+          },
+          "version": {
+            "type": "number",
+            "description": "Versión del agregado",
+            "example": 3
+          },
+          "creado_en": {
+            "type": "string",
+            "description": "Fecha del evento (ISO 8601 UTC)",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "tipo",
+          "payload",
+          "version",
+          "creado_en"
+        ]
+      },
+      "CarritoItemResponseDto": {
+        "type": "object",
+        "properties": {
+          "oferta_id": {
+            "type": "string",
+            "description": "Id de la oferta",
+            "format": "uuid"
+          },
+          "cantidad": {
+            "type": "number",
+            "description": "Cantidad",
+            "example": 2
+          },
+          "id": {
+            "type": "string",
+            "description": "Id de la oferta (alias enriquecido)",
+            "format": "uuid"
+          },
+          "tienda_id": {
+            "type": "string",
+            "description": "Id de la tienda",
+            "format": "uuid"
+          },
+          "vendedor_id": {
+            "type": "string",
+            "description": "Id del vendedor",
+            "format": "uuid"
+          },
+          "sku": {
+            "type": "string",
+            "description": "SKU del producto",
+            "example": "SKU-001"
+          },
+          "producto_nombre": {
+            "type": "string",
+            "description": "Nombre del producto"
+          },
+          "precio_venta": {
+            "type": "string",
+            "description": "Precio de venta en córdobas con dos decimales",
+            "example": "1150.00"
+          },
+          "stock": {
+            "type": "number",
+            "description": "Stock disponible",
+            "example": 10
+          },
+          "estado": {
+            "type": "string",
+            "description": "Estado de la oferta",
+            "example": "activa"
+          }
+        },
+        "required": [
+          "oferta_id",
+          "cantidad",
+          "id",
+          "tienda_id",
+          "vendedor_id",
+          "sku",
+          "producto_nombre",
+          "precio_venta",
+          "stock",
+          "estado"
+        ]
+      },
+      "CarritoResponseDto": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "description": "Items del carrito",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CarritoItemResponseDto"
+            }
+          },
+          "total": {
+            "type": "string",
+            "description": "Total del carrito en córdobas con dos decimales",
+            "example": "2300.00"
+          },
+          "expira_en": {
+            "type": "object",
+            "description": "Expiración del carrito (ISO 8601 UTC); null si está vacío",
+            "nullable": true,
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "items",
+          "total"
+        ]
+      },
       "AgregarItemRequestDto": {
         "type": "object",
         "properties": {
@@ -6069,6 +12500,110 @@ export const OPENAPI_AGREGADO = {
           "cantidad"
         ]
       },
+      "EstadoBucketResponseDto": {
+        "type": "object",
+        "properties": {
+          "tenant_id": {
+            "type": "string",
+            "description": "Id del tenant",
+            "format": "uuid"
+          },
+          "bucket": {
+            "type": "string",
+            "description": "Nombre del bucket S3",
+            "example": "t-00000000-0000-0000-0000-000000000000"
+          },
+          "cuota_bytes": {
+            "type": "number",
+            "description": "Cuota asignada en bytes",
+            "example": 5368709120
+          },
+          "usado_bytes": {
+            "type": "number",
+            "description": "Bytes usados",
+            "example": 204800
+          },
+          "disponible_bytes": {
+            "type": "number",
+            "description": "Bytes disponibles",
+            "example": 5368504320
+          },
+          "objetos": {
+            "type": "number",
+            "description": "Objetos activos",
+            "example": 12
+          },
+          "estado": {
+            "type": "string",
+            "description": "Estado del almacenamiento",
+            "enum": [
+              "activo",
+              "suspendido"
+            ],
+            "example": "activo"
+          },
+          "creado_en": {
+            "type": "string",
+            "description": "Fecha de creación (ISO 8601 UTC)",
+            "format": "date-time"
+          },
+          "actualizado_en": {
+            "type": "string",
+            "description": "Última actualización (ISO 8601 UTC)",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "tenant_id",
+          "bucket",
+          "cuota_bytes",
+          "usado_bytes",
+          "disponible_bytes",
+          "objetos",
+          "estado",
+          "creado_en",
+          "actualizado_en"
+        ]
+      },
+      "PaginaBucketsResponseDto": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "description": "Buckets de la página",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/EstadoBucketResponseDto"
+            }
+          },
+          "total": {
+            "type": "number",
+            "description": "Total de tenants con almacenamiento",
+            "example": 8
+          },
+          "pagina": {
+            "type": "number",
+            "description": "Página actual (1-based)",
+            "example": 1
+          },
+          "limite": {
+            "type": "number",
+            "description": "Tamaño de página",
+            "example": 20
+          },
+          "paginas": {
+            "type": "number",
+            "description": "Total de páginas",
+            "example": 1
+          }
+        },
+        "required": [
+          "items",
+          "total",
+          "pagina",
+          "limite",
+          "paginas"
+        ]
+      },
       "ActualizarTenantRequestDto": {
         "type": "object",
         "properties": {
@@ -6085,6 +12620,113 @@ export const OPENAPI_AGREGADO = {
             ]
           }
         }
+      },
+      "ObjetoStorageResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Id del objeto",
+            "format": "uuid"
+          },
+          "tenant_id": {
+            "type": "string",
+            "description": "Id del tenant dueño",
+            "format": "uuid"
+          },
+          "bucket": {
+            "type": "string",
+            "description": "Bucket S3",
+            "example": "t-00000000-0000-0000-0000-000000000000"
+          },
+          "objeto": {
+            "type": "string",
+            "description": "Clave del objeto en el bucket",
+            "example": "productos/foto.jpg"
+          },
+          "nombre": {
+            "type": "string",
+            "description": "Nombre original del archivo",
+            "example": "foto-producto.jpg"
+          },
+          "content_type": {
+            "type": "string",
+            "description": "Content-Type",
+            "example": "image/jpeg"
+          },
+          "carpeta": {
+            "type": "string",
+            "description": "Carpeta lógica",
+            "example": "productos"
+          },
+          "descripcion": {
+            "type": "string",
+            "description": "Descripción libre"
+          },
+          "etiquetas": {
+            "type": "object",
+            "description": "Etiquetas clave-valor",
+            "additionalProperties": {
+              "type": "string"
+            }
+          },
+          "tamano_bytes": {
+            "type": "number",
+            "description": "Tamaño en bytes",
+            "example": 204800
+          },
+          "etag": {
+            "type": "object",
+            "description": "ETag devuelto por MinIO",
+            "nullable": true
+          },
+          "estado": {
+            "type": "string",
+            "description": "Estado del objeto",
+            "enum": [
+              "pendiente",
+              "activo",
+              "eliminado"
+            ],
+            "example": "activo"
+          },
+          "subido_por": {
+            "type": "object",
+            "description": "Usuario que subió el objeto",
+            "nullable": true
+          },
+          "creado_en": {
+            "type": "string",
+            "description": "Fecha de creación (ISO 8601 UTC)",
+            "format": "date-time"
+          },
+          "confirmado_en": {
+            "type": "object",
+            "description": "Fecha de confirmación (ISO 8601 UTC)",
+            "nullable": true,
+            "format": "date-time"
+          },
+          "eliminado_en": {
+            "type": "object",
+            "description": "Fecha de eliminación lógica (ISO 8601 UTC)",
+            "nullable": true,
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "tenant_id",
+          "bucket",
+          "objeto",
+          "nombre",
+          "content_type",
+          "carpeta",
+          "descripcion",
+          "etiquetas",
+          "tamano_bytes",
+          "estado",
+          "creado_en"
+        ]
       },
       "ConfigurarBucketRequestDto": {
         "type": "object",
@@ -6134,6 +12776,230 @@ export const OPENAPI_AGREGADO = {
           "tamano_bytes"
         ]
       },
+      "SolicitudSubidaResponseDto": {
+        "type": "object",
+        "properties": {
+          "objeto_id": {
+            "type": "string",
+            "description": "Id del objeto pendiente",
+            "format": "uuid"
+          },
+          "bucket": {
+            "type": "string",
+            "description": "Bucket S3"
+          },
+          "objeto": {
+            "type": "string",
+            "description": "Clave del objeto en el bucket"
+          },
+          "url_subida": {
+            "type": "string",
+            "description": "URL prefirmada para el PUT directo",
+            "format": "uri"
+          },
+          "metodo": {
+            "type": "string",
+            "description": "Método HTTP de subida",
+            "enum": [
+              "PUT"
+            ],
+            "example": "PUT"
+          },
+          "headers": {
+            "type": "object",
+            "description": "Cabeceras que debe enviar el cliente",
+            "additionalProperties": {
+              "type": "string"
+            }
+          },
+          "expira_en": {
+            "type": "string",
+            "description": "Expiración de la URL (ISO 8601 UTC)",
+            "format": "date-time"
+          },
+          "max_bytes": {
+            "type": "number",
+            "description": "Tamaño máximo permitido en bytes",
+            "example": 204800
+          }
+        },
+        "required": [
+          "objeto_id",
+          "bucket",
+          "objeto",
+          "url_subida",
+          "metodo",
+          "headers",
+          "expira_en",
+          "max_bytes"
+        ]
+      },
+      "PaginaObjetosResponseDto": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "description": "Objetos de la página",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ObjetoStorageResponseDto"
+            }
+          },
+          "total": {
+            "type": "number",
+            "description": "Total de objetos",
+            "example": 12
+          },
+          "pagina": {
+            "type": "number",
+            "description": "Página actual (1-based)",
+            "example": 1
+          },
+          "limite": {
+            "type": "number",
+            "description": "Tamaño de página",
+            "example": 20
+          },
+          "paginas": {
+            "type": "number",
+            "description": "Total de páginas",
+            "example": 1
+          }
+        },
+        "required": [
+          "items",
+          "total",
+          "pagina",
+          "limite",
+          "paginas"
+        ]
+      },
+      "UrlDescargaResponseDto": {
+        "type": "object",
+        "properties": {
+          "url_descarga": {
+            "type": "string",
+            "description": "URL prefirmada de descarga",
+            "format": "uri"
+          },
+          "expira_en": {
+            "type": "string",
+            "description": "Expiración de la URL (ISO 8601 UTC)",
+            "format": "date-time"
+          },
+          "nombre": {
+            "type": "string",
+            "description": "Nombre original del archivo"
+          },
+          "content_type": {
+            "type": "string",
+            "description": "Content-Type",
+            "example": "image/jpeg"
+          },
+          "tamano_bytes": {
+            "type": "number",
+            "description": "Tamaño en bytes",
+            "example": 204800
+          }
+        },
+        "required": [
+          "url_descarga",
+          "expira_en",
+          "nombre",
+          "content_type",
+          "tamano_bytes"
+        ]
+      },
+      "OfertaResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Id de la oferta",
+            "format": "uuid"
+          },
+          "tienda_id": {
+            "type": "string",
+            "description": "Id de la tienda",
+            "format": "uuid"
+          },
+          "vendedor_id": {
+            "type": "string",
+            "description": "Id del vendedor",
+            "format": "uuid"
+          },
+          "empresa_id": {
+            "type": "string",
+            "description": "Empresa propietaria",
+            "format": "uuid"
+          },
+          "participacion_porcentaje": {
+            "type": "number",
+            "description": "Participación congelable del vendedor",
+            "minimum": 0,
+            "maximum": 100
+          },
+          "producto_id": {
+            "type": "string",
+            "description": "Id del producto maestro",
+            "format": "uuid"
+          },
+          "sku": {
+            "type": "string",
+            "description": "SKU del producto",
+            "example": "SKU-001"
+          },
+          "producto_nombre": {
+            "type": "string",
+            "description": "Nombre del producto"
+          },
+          "margen": {
+            "type": "number",
+            "description": "Margen aplicado (0–90)",
+            "example": 15
+          },
+          "precio_base": {
+            "type": "string",
+            "description": "Precio base en córdobas con dos decimales",
+            "example": "1000.00"
+          },
+          "precio_venta": {
+            "type": "string",
+            "description": "Precio de venta en córdobas con dos decimales",
+            "example": "1150.00"
+          },
+          "stock": {
+            "type": "number",
+            "description": "Stock disponible",
+            "example": 10
+          },
+          "estado": {
+            "type": "string",
+            "description": "Estado de la oferta",
+            "example": "activa"
+          },
+          "creado_en": {
+            "type": "string",
+            "description": "Fecha de creación (ISO 8601 UTC)",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "tienda_id",
+          "vendedor_id",
+          "empresa_id",
+          "participacion_porcentaje",
+          "producto_id",
+          "sku",
+          "producto_nombre",
+          "margen",
+          "precio_base",
+          "precio_venta",
+          "stock",
+          "estado",
+          "creado_en"
+        ]
+      },
       "CrearTiendaRequestDto": {
         "type": "object",
         "properties": {
@@ -6154,9 +13020,68 @@ export const OPENAPI_AGREGADO = {
           "nombre"
         ]
       },
+      "TiendaResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Id de la tienda",
+            "format": "uuid"
+          },
+          "empresa_id": {
+            "type": "string",
+            "description": "Empresa propietaria",
+            "format": "uuid"
+          },
+          "propietario_usuario_id": {
+            "type": "string",
+            "description": "Usuario propietario operativo",
+            "format": "uuid"
+          },
+          "participacion_porcentaje": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 100
+          },
+          "vendedor_id": {
+            "type": "string",
+            "description": "Id del vendedor dueño",
+            "format": "uuid"
+          },
+          "nombre": {
+            "type": "string",
+            "description": "Nombre de la tienda",
+            "example": "Mi tienda"
+          },
+          "descripcion": {
+            "type": "string",
+            "description": "Descripción de la tienda"
+          },
+          "creado_en": {
+            "type": "string",
+            "description": "Fecha de creación (ISO 8601 UTC)",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "empresa_id",
+          "propietario_usuario_id",
+          "participacion_porcentaje",
+          "vendedor_id",
+          "nombre",
+          "descripcion",
+          "creado_en"
+        ]
+      },
       "PublicarProductoRequestDto": {
         "type": "object",
         "properties": {
+          "tienda_id": {
+            "type": "string",
+            "description": "Tienda donde se publicará. Si se omite, se usa la tienda del vendedor autenticado.",
+            "format": "uuid"
+          },
           "producto_id": {
             "type": "string",
             "description": "Id del producto a publicar",
@@ -6188,6 +13113,69 @@ export const OPENAPI_AGREGADO = {
         },
         "required": [
           "margen"
+        ]
+      },
+      "PaginaOfertasResponseDto": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "description": "Ofertas de la página",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/OfertaResponseDto"
+            }
+          },
+          "total": {
+            "type": "number",
+            "description": "Total de ofertas",
+            "example": 42
+          },
+          "pagina": {
+            "type": "number",
+            "description": "Página actual (1-based)",
+            "example": 1
+          },
+          "limite": {
+            "type": "number",
+            "description": "Tamaño de página",
+            "example": 20
+          },
+          "paginas": {
+            "type": "number",
+            "description": "Total de páginas",
+            "example": 3
+          }
+        },
+        "required": [
+          "items",
+          "total",
+          "pagina",
+          "limite",
+          "paginas"
+        ]
+      },
+      "TiendaPublicaResponseDto": {
+        "type": "object",
+        "properties": {
+          "tienda": {
+            "description": "Datos de la tienda",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/TiendaResponseDto"
+              }
+            ]
+          },
+          "ofertas": {
+            "description": "Ofertas de la tienda",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/OfertaResponseDto"
+            }
+          }
+        },
+        "required": [
+          "tienda",
+          "ofertas"
         ]
       }
     }

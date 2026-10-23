@@ -68,7 +68,9 @@ export class ContabilidadService {
     }
     const debe = detalles.reduce((s, d) => s + d.debe_cents, 0);
     const haber = detalles.reduce((s, d) => s + d.haber_cents, 0);
-    if (debe <= 0 || haber <= 0 || debe !== haber) {
+    // Si un lado es <= 0 y el otro no, la desigualdad ya lo rechaza; el
+    // segundo término cubre el caso 0 == 0.
+    if (debe <= 0 || debe !== haber) {
       throw new DomainError(
         'PARTIDA_DOBLE_DESCUADRADA',
         `El asiento no cuadra: debe ${debe} no es igual a haber ${haber}.`,

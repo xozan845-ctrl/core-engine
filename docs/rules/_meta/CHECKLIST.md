@@ -67,6 +67,9 @@ Matriz completa en [`06-estandares-cobertura.md`](../test/06-estandares-cobertur
 - [ ] **R-C-5** — Semántica de `dateFrom`/`dateTo` = día local documentada.
 - [ ] **R-C-8** — Errores con shape consistente (400/401/403/404/409/500).
 - [ ] **R-C-11** — Campo nuevo: DTO + test de contrato + actualización de quien lo consume, en el mismo PR.
+- [ ] **R-DO-8** — Rutas públicas bajo `/api/v1/`, internas bajo `/internal/`; el contrato público no mezcla superficies y todo controlador interno usa `ClaveInternaGuard`.
+- [ ] **R-DO-9** — Ninguna ruta estática queda tapada por una ruta `:param` previa en el mismo controlador y método.
+- [ ] **R-DO-10** — Toda operación documenta respuesta de éxito (schema 200/201 o 204/DELETE sin contenido).
 
 ## 6. E2E ([`03-reglas-e2e.md`](../test/03-reglas-e2e.md))
 
@@ -93,7 +96,7 @@ Matriz completa en [`06-estandares-cobertura.md`](../test/06-estandares-cobertur
 - [ ] **G-5** contrato — ⏸ sin suites (R-C-7)
 - [ ] **G-7** lint + build (jobs `lint` y `build`) ✅
 - [ ] **G-6** E2E de flujos — ⏸ sin job; smoke local `docker compose -f docker-compose.dev.yml up -d --build` + `npm run demo`
-- [ ] **G-8** spec OpenAPI — ⏸ sin script de export ni paso `git diff --exit-code` en CI (R-C-7)
+- [x] **G-8** spec OpenAPI — ✅ `npm run swagger:export` + `git diff --exit-code` en CI (R-C-7)
 
 ## 9. Git — antes de subir ([`rules/git/`](../git/README.md))
 

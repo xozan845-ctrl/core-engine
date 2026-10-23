@@ -71,22 +71,30 @@ export class PedidosConsumer implements OnModuleInit {
     const orden = await this.consultarOrden(evento.data.order_id);
     if (!orden) throw new Error('Orden no disponible para acreditar comision.');
 
-    // la comision se asigna al vendedor del primer item (todas las lineas
-    // pertenecen a una misma tienda en el checkout agrupado)
-    const vendedorId = orden.items?.[0]?.vendedor_id;
-    if (!vendedorId) throw new Error('La orden no tiene vendedor asignado.');
-
-    const comision = await this.comisiones.acreditar(
-      evento.data.order_id,
-      vendedorId,
-      orden.total_cents,
-    );
-    if (comision) {
+    if (!orden.items?.length) throw new Error('La orden no tiene lineas asignadas.');
+    for (const item of orden.items) {
+      if (!item.vendedor_id || !item.empresa_id || !item.tienda_id || item.participacion_porcentaje === undefined) {
+        throw new Error('La linea no tiene contexto empresarial completo.');
+      }
+      const comision = await this.comisiones.acreditarLinea({
+        orderId: evento.data.order_id,
+        lineaClave: item.oferta_id,
+        empresaId: item.empresa_id,
+        tiendaId: item.tienda_id,
+        vendedorId: item.vendedor_id,
+        ventaCents: item.precio_unitario_cents * item.cantidad,
+        participacion: item.participacion_porcentaje,
+      });
+      if (!comision) continue;
       await this.outbox.insertar(EVENTOS.COMISION_ACREDITADA, {
         order_id: evento.data.order_id,
         monto_cents: comision.comision_cents,
         monto_vendedor_cents: comision.monto_vendedor_cents,
-        vendedor_id: vendedorId,
+        monto_empresario_cents: comision.monto_empresario_cents,
+        vendedor_id: item.vendedor_id,
+        empresa_id: item.empresa_id,
+        tienda_id: item.tienda_id,
+        participacion_porcentaje: item.participacion_porcentaje,
       });
       this.logger.info({
         msg: 'Comision acreditada',
@@ -105,14 +113,14 @@ export class PedidosConsumer implements OnModuleInit {
   }
 
   private async consultarOrden(orderId: string): Promise<
-    { total_cents: number; items?: { vendedor_id?: string }[] } | null
+    { total_cents: number; items?: { oferta_id: string; vendedor_id?: string; empresa_id?: string; tienda_id?: string; participacion_porcentaje?: number; precio_unitario_cents: number; cantidad: number }[] } | null
   > {
     try {
       const res = await fetch(`${this.ordersUrl}/internal/orders/${encodeURIComponent(orderId)}`, {
         headers: { 'x-internal-key': this.claveInterna },
       });
       if (!res.ok) return null;
-      return (await res.json()) as { total_cents: number; items?: { vendedor_id?: string }[] };
+      return (await res.json()) as { total_cents: number; items?: { oferta_id: string; vendedor_id?: string; empresa_id?: string; tienda_id?: string; participacion_porcentaje?: number; precio_unitario_cents: number; cantidad: number }[] };
     } catch {
       return null;
     }

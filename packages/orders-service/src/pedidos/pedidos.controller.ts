@@ -1,6 +1,7 @@
-import { Body, Controller, Get, Param, Post, Query } from '@nestjs/common';
-import { ApiOperation, ApiParam, ApiQuery, ApiTags } from '@nestjs/swagger';
+import { Body, Controller, Get, Header, Param, Post, Query } from '@nestjs/common';
+import { ApiBearerAuth, ApiCreatedResponse, ApiOkResponse, ApiOperation, ApiParam, ApiQuery, ApiTags } from '@nestjs/swagger';
 import {
+  DomainError,
   Roles,
   ROLES,
   UsuarioActual,
@@ -10,8 +11,14 @@ import { CreateOrderCommand } from './commands/create-order.command';
 import { CreateOrderCommandHandler } from './handlers/create-order-command.handler';
 import { OrderViewRepository, OrderView, ComisionVista } from './queries/order-view.repository';
 import { PedidosService } from './pedidos.service';
+import {
+  ComisionVistaResponseDto,
+  OrderViewResponseDto,
+  TimelineEventoResponseDto,
+} from './orders.response.dto';
 
 @ApiTags('Pedidos')
+@ApiBearerAuth()
 @Controller('api/v1/orders')
 export class PedidosController {
   constructor(
@@ -24,6 +31,7 @@ export class PedidosController {
   @Post()
   @Roles(ROLES.COMPRADOR)
   @ApiOperation({ summary: 'Crear una orden desde el carrito (comprador)' })
+  @ApiCreatedResponse({ type: OrderViewResponseDto, description: 'Orden creada' })
   async crear(
     @Body() comando: CreateOrderCommand,
     @UsuarioActual() usuario: UsuarioContexto,
@@ -33,10 +41,11 @@ export class PedidosController {
 
   /** GET /api/v1/orders/admin/todas — todas las ordenes (admin). */
   @Get('admin/todas')
-  @Roles(ROLES.ADMIN)
+  @Roles(ROLES.SUPER_ADMIN, ROLES.ADMIN)
   @ApiOperation({ summary: 'Listar todas las órdenes (admin)' })
   @ApiQuery({ name: 'estado', required: false })
   @ApiQuery({ name: 'limite', required: false, type: Number })
+  @ApiOkResponse({ type: [OrderViewResponseDto], description: 'Órdenes registradas' })
   async todas(
     @Query('estado') estado?: string,
     @Query('limite') limite?: number,
@@ -49,44 +58,104 @@ export class PedidosController {
   @Roles(ROLES.VENDEDOR)
   @ApiOperation({ summary: 'Órdenes del vendedor autenticado (mis ventas)' })
   @ApiQuery({ name: 'estado', required: false })
+  @ApiOkResponse({ type: [OrderViewResponseDto], description: 'Ventas del vendedor' })
   async misVentas(
     @Query('estado') estado?: string,
     @UsuarioActual() usuario?: UsuarioContexto,
   ): Promise<OrderView[]> {
-    return this.views.listarDeVendedor(usuario?.user_id ?? '', estado);
+    const ordenes = await this.views.listarDeVendedor(usuario?.user_id ?? '', estado);
+    return ordenes.map((orden) => this.pedidos.paraVendedor(orden, usuario?.user_id ?? ''));
   }
 
-  /** GET /api/v1/orders/vendedor/comisiones — comisiones por periodo (vendedor/admin). */
+  /**
+   * GET /api/v1/orders/vendedor/comisiones — comisiones por periodo (vendedor/admin).
+   * Obsoleto: el estado de cuenta vigente vive en commissions-service
+   * (`GET /api/v1/vendedores/me/ventas`), que calcula por línea y conserva la
+   * participación de la empresa y del vendedor (ADR-25).
+   */
   @Get('vendedor/comisiones')
-  @Roles(ROLES.VENDEDOR, ROLES.ADMIN)
-  @ApiOperation({ summary: 'Comisiones por periodo (vendedor/admin)' })
+  @Roles(ROLES.SUPER_ADMIN, ROLES.VENDEDOR, ROLES.ADMIN)
+  @Header('Deprecation', 'true')
+  @Header('Link', '</api/v1/vendedores/me/ventas>; rel="successor-version"')
+  @ApiOperation({
+    summary: 'Comisiones por periodo (vendedor/admin) — obsoleto: usar /vendedores/me/ventas',
+    deprecated: true,
+  })
   @ApiQuery({ name: 'periodo', required: false })
   @ApiQuery({ name: 'vendedorId', required: false, description: 'Solo admin' })
+  @ApiOkResponse({ type: [ComisionVistaResponseDto], description: 'Comisiones por periodo' })
   async comisiones(
     @Query('periodo') periodo?: string,
     @UsuarioActual() usuario?: UsuarioContexto,
     @Query('vendedorId') vendedorId?: string,
   ): Promise<ComisionVista[]> {
-    const targetVendedor = usuario?.rol === 'admin' ? (vendedorId ?? usuario?.user_id) : usuario?.user_id;
+    const targetVendedor = ['admin', 'super_admin'].includes(usuario?.rol ?? '')
+      ? (vendedorId ?? usuario?.user_id)
+      : usuario?.user_id;
     return this.views.obtenerComisiones(targetVendedor ?? '', periodo);
   }
 
   /** GET /api/v1/orders/tienda/:tiendaId — ordenes de una tienda (vendedor dueño o admin). */
   @Get('tienda/:tiendaId')
-  @Roles(ROLES.VENDEDOR, ROLES.ADMIN)
-  @ApiOperation({ summary: 'Órdenes de una tienda (vendedor dueño o admin)' })
+  @Roles(ROLES.SUPER_ADMIN, ROLES.EMPRESARIO, ROLES.VENDEDOR, ROLES.ADMIN)
+  @ApiOperation({ summary: 'Órdenes de una tienda (vendedor dueño, empresario de la empresa o admin)' })
   @ApiParam({ name: 'tiendaId', description: 'Id de la tienda' })
   @ApiQuery({ name: 'estado', required: false })
+  @ApiOkResponse({ type: [OrderViewResponseDto], description: 'Órdenes de la tienda' })
   async porTienda(
     @Param('tiendaId') tiendaId: string,
     @Query('estado') estado?: string,
     @UsuarioActual() usuario?: UsuarioContexto,
   ): Promise<OrderView[]> {
-    return this.views.listarDeTienda(
+    const empresaId = usuario?.rol === 'empresario' ? usuario.tenant_id : undefined;
+    if (usuario?.rol === 'empresario' && !empresaId) {
+      throw new DomainError('TENANT_REQUERIDO', 'Se requiere una empresa activa.');
+    }
+    const ordenes = await this.views.listarDeTienda(
       tiendaId,
       estado,
       usuario?.rol === 'vendedor' ? usuario.user_id : undefined,
+      empresaId,
     );
+    return this.proyectar(ordenes, usuario, empresaId);
+  }
+
+  /** GET /api/v1/orders/empresa — ordenes de la empresa activa (empresario/admin). */
+  @Get('empresa')
+  @Roles(ROLES.SUPER_ADMIN, ROLES.EMPRESARIO, ROLES.ADMIN)
+  @ApiOperation({ summary: 'Órdenes de una empresa (empresario de la empresa o admin)' })
+  @ApiQuery({
+    name: 'empresaId',
+    required: false,
+    description: 'Solo admin/super_admin; el empresario usa su empresa activa',
+  })
+  @ApiQuery({ name: 'tiendaId', required: false })
+  @ApiQuery({ name: 'estado', required: false })
+  @ApiQuery({ name: 'limite', required: false, type: Number })
+  @ApiOkResponse({ type: [OrderViewResponseDto], description: 'Órdenes de la empresa' })
+  async porEmpresa(
+    @Query('empresaId') empresaId?: string,
+    @Query('tiendaId') tiendaId?: string,
+    @Query('estado') estado?: string,
+    @Query('limite') limite?: number,
+    @UsuarioActual() usuario?: UsuarioContexto,
+  ): Promise<OrderView[]> {
+    let objetivo = empresaId;
+    if (usuario?.rol === 'empresario') {
+      if (!usuario.tenant_id) {
+        throw new DomainError('TENANT_REQUERIDO', 'Se requiere una empresa activa.');
+      }
+      objetivo = usuario.tenant_id;
+    }
+    if (!objetivo) {
+      throw new DomainError('EMPRESA_REQUERIDA', 'Indique la empresa a consultar.');
+    }
+    const ordenes = await this.views.listarDeEmpresa(objetivo, {
+      estado,
+      tiendaId,
+      limite,
+    });
+    return this.proyectar(ordenes, usuario, objetivo);
   }
 
   /** GET /api/v1/orders — historial del comprador autenticado. */
@@ -94,6 +163,7 @@ export class PedidosController {
   @Roles(ROLES.COMPRADOR)
   @ApiOperation({ summary: 'Historial de órdenes del comprador autenticado' })
   @ApiQuery({ name: 'estado', required: false })
+  @ApiOkResponse({ type: [OrderViewResponseDto], description: 'Órdenes del comprador' })
   async misOrdenes(
     @Query('estado') estado?: string,
     @UsuarioActual() usuario?: UsuarioContexto,
@@ -103,9 +173,10 @@ export class PedidosController {
 
   /** GET /api/v1/orders/:id — estado de la orden (JWT; solo el dueno o admin). */
   @Get(':id')
-  @Roles(ROLES.COMPRADOR, ROLES.VENDEDOR, ROLES.ADMIN)
+  @Roles(ROLES.SUPER_ADMIN, ROLES.EMPRESARIO, ROLES.COMPRADOR, ROLES.VENDEDOR, ROLES.ADMIN)
   @ApiOperation({ summary: 'Estado/detalle de una orden (dueño o admin)' })
   @ApiParam({ name: 'id', description: 'Id de la orden' })
+  @ApiOkResponse({ type: OrderViewResponseDto, description: 'Detalle de la orden' })
   async detalle(
     @Param('id') id: string,
     @UsuarioActual() usuario: UsuarioContexto,
@@ -115,14 +186,30 @@ export class PedidosController {
 
   /** GET /api/v1/orders/:id/timeline — historial de eventos de la orden. */
   @Get(':id/timeline')
-  @Roles(ROLES.COMPRADOR, ROLES.VENDEDOR, ROLES.ADMIN)
+  @Roles(ROLES.SUPER_ADMIN, ROLES.EMPRESARIO, ROLES.COMPRADOR, ROLES.VENDEDOR, ROLES.ADMIN)
   @ApiOperation({ summary: 'Timeline de eventos de la orden (Event Sourcing)' })
   @ApiParam({ name: 'id', description: 'Id de la orden' })
+  @ApiOkResponse({ type: [TimelineEventoResponseDto], description: 'Timeline de la orden' })
   async timeline(
     @Param('id') id: string,
     @UsuarioActual() usuario: UsuarioContexto,
   ) {
     const orden = await this.pedidos.detallePara(id, usuario);
-    return this.views.obtenerTimeline(orden.id);
+    const eventos = await this.views.obtenerTimeline(orden.id);
+    return this.pedidos.timelineVisible(eventos, orden.items);
+  }
+
+  private proyectar(
+    ordenes: OrderView[],
+    usuario?: UsuarioContexto,
+    empresaId?: string,
+  ): OrderView[] {
+    if (usuario?.rol === 'empresario' && empresaId) {
+      return ordenes.map((orden) => this.pedidos.paraEmpresa(orden, empresaId));
+    }
+    if (usuario?.rol === 'vendedor' && usuario.user_id) {
+      return ordenes.map((orden) => this.pedidos.paraVendedor(orden, usuario.user_id));
+    }
+    return ordenes;
   }
 }

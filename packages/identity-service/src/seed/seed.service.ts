@@ -22,7 +22,7 @@ export class SeedService implements OnApplicationBootstrap {
         nombre: 'Administrador Core Engine',
         correo: email,
         contrasena: password,
-        rol: ROLES.ADMIN,
+        rol: ROLES.SUPER_ADMIN,
       });
       this.logger.info({
         msg: 'Administrador inicial creado',

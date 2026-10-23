@@ -1,7 +1,11 @@
 import { Controller, Get, Param, Query, UseGuards } from '@nestjs/common';
-import { ApiOperation, ApiParam, ApiQuery, ApiTags } from '@nestjs/swagger';
+import { ApiOkResponse, ApiOperation, ApiParam, ApiQuery, ApiSecurity, ApiTags } from '@nestjs/swagger';
 import { ClaveInternaGuard, Logger } from '@core/shared';
 import { TributacionService } from './tributacion/tributacion.service';
+import {
+  DeclaracionResponseDto,
+  SujetoTributarioResponseDto,
+} from './tributacion/tributacion.response.dto';
 
 /**
  * Endpoints internos (servicio -> servicio) protegidos por clave interna.
@@ -9,6 +13,7 @@ import { TributacionService } from './tributacion/tributacion.service';
  * vendedor) y por reportes/paneles del resto del sistema.
  */
 @ApiTags('Finanzas (interno)')
+@ApiSecurity('internalKey')
 @Controller('internal/finance')
 @UseGuards(ClaveInternaGuard)
 export class InternoController {
@@ -20,6 +25,7 @@ export class InternoController {
   @Get('sujetos/:usuarioId')
   @ApiOperation({ summary: 'Situación fiscal de un usuario (para identity)' })
   @ApiParam({ name: 'usuarioId', description: 'Id del usuario' })
+  @ApiOkResponse({ type: SujetoTributarioResponseDto, description: 'Sujeto fiscal del usuario' })
   async sujeto(@Param('usuarioId') usuarioId: string) {
     return this.tributacion.sujetoFiscalDe(usuarioId);
   }
@@ -30,6 +36,7 @@ export class InternoController {
   @ApiQuery({ name: 'tipo', required: false })
   @ApiQuery({ name: 'periodo_inicio', required: false })
   @ApiQuery({ name: 'estado', required: false })
+  @ApiOkResponse({ type: [DeclaracionResponseDto], description: 'Declaraciones del periodo' })
   async declaraciones(
     @Query('tipo') tipo?: string,
     @Query('periodo_inicio') periodoInicio?: string,

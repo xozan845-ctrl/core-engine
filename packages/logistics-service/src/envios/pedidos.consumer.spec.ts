@@ -26,13 +26,16 @@ describe('PedidosConsumer de logistics (Tabla 22)', () => {
       queryOne: vi.fn().mockResolvedValue(null),
     };
     const envios = {
-      prepararEnvio: vi.fn().mockResolvedValue({
+      prepararEnviosDeOrden: vi.fn().mockResolvedValue([{
         id: 'e1',
         guia: 'BGH-ABC-123456',
         order_id: 'o1',
+        empresa_id: 'empresa-1',
+        proveedor_tipo: 'empresa',
+        proveedor_tenant_id: 'empresa-1',
         estado: 'en_preparacion',
         creado_en: '2026-09-01T00:00:00.000Z',
-      }),
+      }]),
       consultarOrden: vi.fn().mockResolvedValue({
         id: 'o1',
         items: [{ sku: 'SKU-01', cantidad: 2 }],
@@ -81,11 +84,14 @@ describe('PedidosConsumer de logistics (Tabla 22)', () => {
 
     await dispatch(evento(EVENTOS.PAYMENT_PROCESADO, data));
 
-    expect(envios.prepararEnvio).toHaveBeenCalledWith('o1', 150000);
+    expect(envios.prepararEnviosDeOrden).toHaveBeenCalledWith('o1');
     expect(outbox.insertar).toHaveBeenCalledWith(EVENTOS.SHIPMENT_STARTED, {
       order_id: 'o1',
+      empresa_id: 'empresa-1',
       guia: 'BGH-ABC-123456',
       estado: 'en_preparacion',
+      proveedor_tipo: 'empresa',
+      proveedor_tenant_id: 'empresa-1',
     });
     expect(pg.query).toHaveBeenCalledWith(
       expect.stringContaining('ON CONFLICT (event_id) DO NOTHING'),
@@ -104,7 +110,7 @@ describe('PedidosConsumer de logistics (Tabla 22)', () => {
         metodo: 'x',
       }),
     );
-    expect(envios.prepararEnvio).not.toHaveBeenCalled();
+    expect(envios.prepararEnviosDeOrden).not.toHaveBeenCalled();
     expect(outbox.insertar).not.toHaveBeenCalled();
   });
 
@@ -173,6 +179,20 @@ describe('PedidosConsumer de logistics (Tabla 22)', () => {
     );
     expect(outbox.insertar).not.toHaveBeenCalled();
     expect(pg.query).toHaveBeenCalledTimes(1); // solo marcarProcesado
+  });
+
+  it('debe ignorar el estado actualizado cuando el event_id ya fue procesado (doc 5.2)', async () => {
+    const { dispatch, outbox, pg } = await crear();
+    (pg.queryOne as Mock).mockResolvedValue({ '?column?': 1 });
+    await dispatch(
+      evento(EVENTOS.ORDER_STATUS_UPDATED, {
+        order_id: 'o1',
+        estado: 'entregada',
+        previo_estado: 'enviada',
+      } as OrderStatusUpdatedData),
+    );
+    expect(outbox.insertar).not.toHaveBeenCalled();
+    expect(pg.query).not.toHaveBeenCalled();
   });
 
   it('debe ignorar los eventos que no son de pagos ni de estados', async () => {

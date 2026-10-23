@@ -1,4 +1,4 @@
-import { DomainError } from '@core/shared';
+import { DomainError, ROLES } from '@core/shared';
 import { FieldController } from './field.controller';
 
 describe('FieldController', () => {
@@ -31,6 +31,19 @@ describe('FieldController', () => {
   it('rechaza peticiones sin tenant antes de llegar al servicio', () => {
     expect(() => controller.listarPersonal({} as never)).toThrowError(DomainError);
     expect(mocks.listarPersonal).not.toHaveBeenCalled();
+  });
+
+  it('permite al empresario administrar la flota de su tenant', () => {
+    const rolesCrearVehiculo = Reflect.getMetadata(
+      'roles_requeridos', FieldController.prototype.crearVehiculo,
+    );
+    expect(rolesCrearVehiculo).toContain(ROLES.EMPRESARIO);
+    expect(rolesCrearVehiculo).toContain(ROLES.SUPER_ADMIN);
+    const rolesListarPersonal = Reflect.getMetadata(
+      'roles_requeridos', FieldController.prototype.listarPersonal,
+    );
+    expect(rolesListarPersonal).toContain(ROLES.EMPRESARIO);
+    expect(rolesListarPersonal).toContain(ROLES.SUPER_ADMIN);
   });
 
   it('propaga tenant y payload en personal, clientes y vehículos', () => {

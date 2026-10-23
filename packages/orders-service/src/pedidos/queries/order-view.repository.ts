@@ -54,6 +54,14 @@ export interface ComisionVista {
   actualizado_en: string;
 }
 
+export interface TimelineEvento {
+  id: number;
+  tipo: string;
+  payload: unknown;
+  version: number;
+  creado_en: string;
+}
+
 @Injectable()
 export class OrderViewRepository {
   constructor(private readonly pg: PgService) {}
@@ -95,27 +103,73 @@ export class OrderViewRepository {
       `SELECT id, vendedor_id, comprador_id, tienda_id, estado, total_cents, comision_cents, moneda,
               items_json, direccion_envio, creado_en, actualizado_en,
               pagada_en, enviada_en, entregada_en, cancelada_en, devuelta_en
-       FROM orders.orden_vista WHERE vendedor_id = $1${extra}
+       FROM orders.orden_vista
+       WHERE EXISTS (SELECT 1 FROM jsonb_array_elements(items_json) item
+                     WHERE item->>'vendedor_id' = $1)${extra}
        ORDER BY creado_en DESC LIMIT 100`,
       params,
     );
     return filas.map((f) => this.serializar(f));
   }
 
-  async listarDeTienda(tiendaId: string, estado?: string, vendedorId?: string): Promise<OrderView[]> {
+  async listarDeTienda(
+    tiendaId: string,
+    estado?: string,
+    vendedorId?: string,
+    empresaId?: string,
+  ): Promise<OrderView[]> {
     const params: unknown[] = [tiendaId];
-    let extra = estado ? ` AND estado = $2` : '';
-    if (estado) params.push(estado);
+    const condicionesItem = [`item->>'tienda_id' = $1`];
+    if (empresaId) {
+      params.push(empresaId);
+      condicionesItem.push(`item->>'empresa_id' = $${params.length}`);
+    }
     if (vendedorId) {
-      extra += ` AND vendedor_id = $${params.length + 1}`;
       params.push(vendedorId);
+      condicionesItem.push(`item->>'vendedor_id' = $${params.length}`);
+    }
+    let extra = '';
+    if (estado) {
+      params.push(estado);
+      extra = ` AND estado = $${params.length}`;
     }
     const filas = await this.pg.query<OrderViewRow>(
       `SELECT id, vendedor_id, comprador_id, tienda_id, estado, total_cents, comision_cents, moneda,
               items_json, direccion_envio, creado_en, actualizado_en,
               pagada_en, enviada_en, entregada_en, cancelada_en, devuelta_en
-       FROM orders.orden_vista WHERE tienda_id = $1${extra}
+       FROM orders.orden_vista
+       WHERE EXISTS (SELECT 1 FROM jsonb_array_elements(items_json) item
+                     WHERE ${condicionesItem.join(' AND ')})${extra}
        ORDER BY creado_en DESC LIMIT 100`,
+      params,
+    );
+    return filas.map((f) => this.serializar(f));
+  }
+
+  async listarDeEmpresa(
+    empresaId: string,
+    filtros: { estado?: string; tiendaId?: string; limite?: number } = {},
+  ): Promise<OrderView[]> {
+    const params: unknown[] = [empresaId];
+    const condicionesItem = [`item->>'empresa_id' = $1`];
+    if (filtros.tiendaId) {
+      params.push(filtros.tiendaId);
+      condicionesItem.push(`item->>'tienda_id' = $${params.length}`);
+    }
+    let extra = '';
+    if (filtros.estado) {
+      params.push(filtros.estado);
+      extra = ` AND estado = $${params.length}`;
+    }
+    params.push(filtros.limite ?? 100);
+    const filas = await this.pg.query<OrderViewRow>(
+      `SELECT id, vendedor_id, comprador_id, tienda_id, estado, total_cents, comision_cents, moneda,
+              items_json, direccion_envio, creado_en, actualizado_en,
+              pagada_en, enviada_en, entregada_en, cancelada_en, devuelta_en
+       FROM orders.orden_vista
+       WHERE EXISTS (SELECT 1 FROM jsonb_array_elements(items_json) item
+                     WHERE ${condicionesItem.join(' AND ')})${extra}
+       ORDER BY creado_en DESC LIMIT $${params.length}`,
       params,
     );
     return filas.map((f) => this.serializar(f));
@@ -169,13 +223,7 @@ export class OrderViewRepository {
     }));
   }
 
-  async obtenerTimeline(orderId: string): Promise<{
-    id: number;
-    tipo: string;
-    payload: unknown;
-    version: number;
-    creado_en: string;
-  }[]> {
+  async obtenerTimeline(orderId: string): Promise<TimelineEvento[]> {
     const filas = await this.pg.query<{
       id: number;
       tipo: string;

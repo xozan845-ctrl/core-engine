@@ -11,10 +11,11 @@ const usuario = {
   rol: ROLES.VENDEDOR,
 };
 
-function fabricar(): { usuarios: Record<string, Mock>; controller: InternalController } {
+function fabricar(): { usuarios: Record<string, Mock>; empresas: Record<string, Mock>; controller: InternalController } {
   const usuarios = { encontrarPorId: vi.fn(), listarVendedores: vi.fn(), contarVendedores: vi.fn() };
-  const controller = new InternalController(usuarios as unknown as UsuariosService);
-  return { usuarios, controller };
+  const empresas = { obtener: vi.fn() };
+  const controller = new InternalController(usuarios as unknown as UsuariosService, empresas as never);
+  return { usuarios, empresas, controller };
 }
 
 describe('InternalController (internal, R-U-10/11)', () => {
@@ -37,6 +38,12 @@ describe('InternalController (internal, R-U-10/11)', () => {
     const { usuarios, controller } = fabricar();
     usuarios.contarVendedores.mockResolvedValue(3);
     await expect(controller.contarVendedores()).resolves.toEqual({ vendedores: 3 });
+  });
+
+  it('debe devolver la empresa para consultas internas', async () => {
+    const { empresas, controller } = fabricar();
+    empresas.obtener.mockResolvedValue({ id: 'empresa-1', modalidad_logistica: 'hibrida' });
+    await expect(controller.empresa('empresa-1')).resolves.toMatchObject({ modalidad_logistica: 'hibrida' });
   });
 
   it('debe proteger todas las rutas con la clave interna', () => {

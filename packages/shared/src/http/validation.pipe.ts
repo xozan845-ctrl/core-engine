@@ -96,7 +96,12 @@ export function cuerpoDeError(
 export class DtoValidationPipe implements PipeTransform {
   async transform(value: unknown, metadata: ArgumentMetadata): Promise<unknown> {
     if (!metadata.metatype || !this.puedeValidar(metadata.metatype)) return value;
-    const objeto = plainToInstance(metadata.metatype as new () => object, value);
+    // Express entrega los query params como strings; sin conversion implicita
+    // los DTOs con @IsInt/@IsPositive rechazan `?limite=1`. La conversion se
+    // limita a `query` para no relajar la validacion de los cuerpos JSON.
+    const objeto = plainToInstance(metadata.metatype as new () => object, value, {
+      enableImplicitConversion: metadata.type === 'query',
+    });
     const errores = await validate(objeto as object, {
       whitelist: true,
       forbidNonWhitelisted: false,

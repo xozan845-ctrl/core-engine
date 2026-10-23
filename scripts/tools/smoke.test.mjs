@@ -54,7 +54,7 @@ async function ejecutarSmoke(handler, timeoutMs = 1_000, waitTimeoutMs = 30_000)
   }
 }
 
-test('smoke falla de inmediato si el vendedor no se registra aunque el comprador sí', async () => {
+test('smoke falla de inmediato si el empresario no puede crear al vendedor', async () => {
   const result = await ejecutarSmoke(async (req, res) => {
     if (req.url === '/ready') return json(res, 200, { status: 'ok', servicios: {} });
     if (req.url === '/api/v1/auth/login') return json(res, 200, { access_token: 'admin' });
@@ -62,15 +62,21 @@ test('smoke falla de inmediato si el vendedor no se registra aunque el comprador
       let body = '';
       for await (const chunk of req) body += chunk;
       const rol = JSON.parse(body).rol;
-      return rol === 'vendedor'
-        ? json(res, 500, { codigo: 'FALLO' })
+      return rol === 'empresario'
+        ? json(res, 201, { access_token: 'empresario' })
         : json(res, 201, { access_token: 'comprador' });
+    }
+    if (req.url === '/api/v1/empresas' && req.method === 'POST') {
+      return json(res, 201, { id: 'empresa-1' });
+    }
+    if (req.url === '/api/v1/empresas/empresa-1/vendedores' && req.method === 'POST') {
+      return json(res, 500, { codigo: 'FALLO' });
     }
     return json(res, 500, { codigo: 'RUTA_INESPERADA' });
   });
 
   assert.equal(result.code, 1);
-  assert.match(result.output, /registro vendedor → 500/);
+  assert.match(result.output, /crear vendedor → 500/);
   assert.equal(result.requests.some((ruta) => ruta.startsWith('/api/v1/catalog')), false);
 });
 
@@ -108,6 +114,12 @@ test('smoke limita la espera de la saga asíncrona por paso', async () => {
     if (ruta === '/ready') return json(res, 200, { status: 'ok', servicios: {} });
     if (ruta === '/api/v1/auth/login') return json(res, 200, { access_token: 'admin' });
     if (ruta === '/api/v1/auth/registro') return json(res, 201, { access_token: 'usuario' });
+    if (ruta === '/api/v1/empresas' && req.method === 'POST') {
+      return json(res, 201, { id: 'empresa-1' });
+    }
+    if (ruta === '/api/v1/empresas/empresa-1/vendedores' && req.method === 'POST') {
+      return json(res, 201, { id: 'vendedor-1' });
+    }
     if (ruta === '/api/v1/catalog/productos' && req.method === 'POST') {
       return json(res, 201, { id: 'producto-1', sku: 'SKU-1' });
     }

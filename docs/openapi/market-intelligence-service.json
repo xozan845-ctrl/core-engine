@@ -44,9 +44,21 @@
         ],
         "responses": {
           "200": {
-            "description": ""
+            "description": "Puntos del mapa de calor",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MapaCalorResponseDto"
+                }
+              }
+            }
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Mapa de calor de ventas (admin)",
         "tags": [
           "Inteligencia — Métricas"
@@ -104,9 +116,21 @@
         ],
         "responses": {
           "200": {
-            "description": ""
+            "description": "Puntos del mapa de calor del vendedor",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MapaCalorResponseDto"
+                }
+              }
+            }
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Mi mapa de calor (vendedor)",
         "tags": [
           "Inteligencia — Métricas"
@@ -119,9 +143,21 @@
         "parameters": [],
         "responses": {
           "200": {
-            "description": ""
+            "description": "Rendimiento por vendedor",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginaRendimientoResponseDto"
+                }
+              }
+            }
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Rendimiento de vendedores (admin)",
         "tags": [
           "Inteligencia — Métricas"
@@ -143,9 +179,21 @@
         ],
         "responses": {
           "200": {
-            "description": ""
+            "description": "Rendimiento del vendedor",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginaRendimientoResponseDto"
+                }
+              }
+            }
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Mi rendimiento como vendedor",
         "tags": [
           "Inteligencia — Métricas"
@@ -158,9 +206,24 @@
         "parameters": [],
         "responses": {
           "200": {
-            "description": ""
+            "description": "Cobertura por celda",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/CoberturaZonaResponseDto"
+                  }
+                }
+              }
+            }
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Cobertura por zona (admin)",
         "tags": [
           "Inteligencia — Métricas"
@@ -173,9 +236,21 @@
         "parameters": [],
         "responses": {
           "200": {
-            "description": ""
+            "description": "Demanda por producto",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginaDemandaResponseDto"
+                }
+              }
+            }
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Demanda de productos (admin)",
         "tags": [
           "Inteligencia — Métricas"
@@ -188,9 +263,24 @@
         "parameters": [],
         "responses": {
           "200": {
-            "description": ""
+            "description": "Tendencias temporales",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/TendenciaResponseDto"
+                  }
+                }
+              }
+            }
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Tendencias (admin)",
         "tags": [
           "Inteligencia — Métricas"
@@ -240,9 +330,21 @@
         ],
         "responses": {
           "200": {
-            "description": ""
+            "description": "Resumen ejecutivo",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResumenInteligenciaResponseDto"
+                }
+              }
+            }
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Resumen de inteligencia de mercado (admin)",
         "tags": [
           "Inteligencia — Métricas"
@@ -265,9 +367,21 @@
         },
         "responses": {
           "201": {
-            "description": ""
+            "description": "Venta registrada",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RegistrarVentaResponseDto"
+                }
+              }
+            }
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Registrar una venta en inteligencia (ingesta manual)",
         "tags": [
           "Inteligencia — Métricas"
@@ -297,7 +411,14 @@
         ],
         "responses": {
           "200": {
-            "description": ""
+            "description": "Pronóstico de demanda",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ForecastDemandaResponseDto"
+                }
+              }
+            }
           }
         },
         "security": [
@@ -342,7 +463,14 @@
         ],
         "responses": {
           "200": {
-            "description": ""
+            "description": "Anomalías detectadas",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AnomaliasResponseDto"
+                }
+              }
+            }
           }
         },
         "security": [
@@ -371,7 +499,14 @@
         ],
         "responses": {
           "200": {
-            "description": ""
+            "description": "Score del vendedor",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ScoreVendedorResponseDto"
+                }
+              }
+            }
           }
         },
         "security": [
@@ -400,7 +535,14 @@
         ],
         "responses": {
           "200": {
-            "description": ""
+            "description": "Score del vendedor autenticado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ScoreVendedorResponseDto"
+                }
+              }
+            }
           }
         },
         "security": [
@@ -429,7 +571,14 @@
         ],
         "responses": {
           "200": {
-            "description": ""
+            "description": "Calidad del pipeline",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CalidadDatosResponseDto"
+                }
+              }
+            }
           }
         },
         "security": [
@@ -460,6 +609,574 @@
         "type": "http"
       }
     },
-    "schemas": {}
+    "schemas": {
+      "PuntoCalorDto": {
+        "type": "object",
+        "properties": {
+          "lat": {
+            "type": "number"
+          },
+          "lng": {
+            "type": "number"
+          },
+          "peso": {
+            "type": "number"
+          },
+          "tipo": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "lat",
+          "lng",
+          "peso",
+          "tipo"
+        ]
+      },
+      "MapaCalorResponseDto": {
+        "type": "object",
+        "properties": {
+          "puntos": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PuntoCalorDto"
+            }
+          },
+          "total_puntos": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "puntos",
+          "total_puntos"
+        ]
+      },
+      "RendimientoVendedorResponseDto": {
+        "type": "object",
+        "properties": {
+          "vendedor_id": {
+            "type": "string",
+            "description": "Id del vendedor",
+            "format": "uuid"
+          },
+          "total_ventas": {
+            "type": "number",
+            "description": "Total de ventas",
+            "example": 42
+          },
+          "total_monto_cents": {
+            "type": "number",
+            "description": "Monto total vendido en centavos",
+            "example": 4830000
+          },
+          "ticket_promedio_cents": {
+            "type": "number",
+            "description": "Ticket promedio en centavos",
+            "example": 115000
+          },
+          "pedidos_entregados": {
+            "type": "number",
+            "description": "Pedidos entregados",
+            "example": 40
+          },
+          "tasa_efectividad": {
+            "type": "number",
+            "description": "Tasa de efectividad (0–1)",
+            "example": 0.95
+          },
+          "actualizado_en": {
+            "type": "string",
+            "description": "Última actualización (ISO 8601 UTC)",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "vendedor_id",
+          "total_ventas",
+          "total_monto_cents",
+          "ticket_promedio_cents",
+          "pedidos_entregados",
+          "tasa_efectividad",
+          "actualizado_en"
+        ]
+      },
+      "PaginaRendimientoResponseDto": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "description": "Rendimiento por vendedor",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/RendimientoVendedorResponseDto"
+            }
+          },
+          "next_cursor": {
+            "type": "object",
+            "description": "Cursor de la siguiente página",
+            "nullable": true
+          }
+        },
+        "required": [
+          "data"
+        ]
+      },
+      "CoberturaZonaResponseDto": {
+        "type": "object",
+        "properties": {
+          "lat_cell": {
+            "type": "number",
+            "description": "Latitud de la celda",
+            "example": 12.1364
+          },
+          "lng_cell": {
+            "type": "number",
+            "description": "Longitud de la celda",
+            "example": -86.2514
+          },
+          "total_ventas": {
+            "type": "number",
+            "description": "Ventas en la celda",
+            "example": 18
+          },
+          "total_monto_cents": {
+            "type": "number",
+            "description": "Monto vendido en centavos",
+            "example": 2070000
+          },
+          "total_vendedores": {
+            "type": "number",
+            "description": "Vendedores activos en la celda",
+            "example": 5
+          },
+          "actualizado_en": {
+            "type": "string",
+            "description": "Última actualización (ISO 8601 UTC)",
+            "format": "date-time"
+          },
+          "geojson": {
+            "type": "string",
+            "description": "Bounding box en GeoJSON",
+            "example": "{\"type\":\"Polygon\",\"coordinates\":[]}"
+          }
+        },
+        "required": [
+          "lat_cell",
+          "lng_cell",
+          "total_ventas",
+          "total_monto_cents",
+          "total_vendedores",
+          "actualizado_en",
+          "geojson"
+        ]
+      },
+      "DemandaProductoResponseDto": {
+        "type": "object",
+        "properties": {
+          "sku": {
+            "type": "string",
+            "description": "SKU del producto",
+            "example": "SKU-001"
+          },
+          "nombre": {
+            "type": "string",
+            "description": "Nombre del producto"
+          },
+          "total_vendido": {
+            "type": "number",
+            "description": "Unidades vendidas",
+            "example": 120
+          },
+          "total_monto_cents": {
+            "type": "number",
+            "description": "Monto vendido en centavos",
+            "example": 13800000
+          },
+          "stock_actual": {
+            "type": "number",
+            "description": "Stock actual",
+            "example": 10
+          },
+          "ultima_venta_en": {
+            "type": "object",
+            "description": "Última venta (ISO 8601 UTC)",
+            "format": "date-time",
+            "nullable": true
+          },
+          "actualizado_en": {
+            "type": "string",
+            "description": "Última actualización (ISO 8601 UTC)",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "sku",
+          "nombre",
+          "total_vendido",
+          "total_monto_cents",
+          "stock_actual",
+          "actualizado_en"
+        ]
+      },
+      "PaginaDemandaResponseDto": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "description": "Demanda por producto",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/DemandaProductoResponseDto"
+            }
+          },
+          "next_cursor": {
+            "type": "object",
+            "description": "Cursor de la siguiente página",
+            "nullable": true
+          }
+        },
+        "required": [
+          "data"
+        ]
+      },
+      "TendenciaResponseDto": {
+        "type": "object",
+        "properties": {
+          "fecha": {
+            "type": "string",
+            "description": "Fecha de la tendencia",
+            "format": "date"
+          },
+          "sku": {
+            "type": "string",
+            "description": "SKU del producto",
+            "example": "SKU-001"
+          },
+          "vendedor_id": {
+            "type": "string",
+            "description": "Id del vendedor",
+            "format": "uuid"
+          },
+          "total_ventas": {
+            "type": "number",
+            "description": "Unidades vendidas",
+            "example": 12
+          },
+          "total_monto_cents": {
+            "type": "number",
+            "description": "Monto vendido en centavos",
+            "example": 1380000
+          },
+          "dia_semana": {
+            "type": "number",
+            "description": "Día de la semana",
+            "example": 3
+          }
+        },
+        "required": [
+          "fecha",
+          "sku",
+          "vendedor_id",
+          "total_ventas",
+          "total_monto_cents",
+          "dia_semana"
+        ]
+      },
+      "ResumenInteligenciaResponseDto": {
+        "type": "object",
+        "properties": {
+          "total_pedidos": {
+            "type": "number",
+            "description": "Total de pedidos",
+            "example": 320
+          },
+          "ingresos_totales_cents": {
+            "type": "number",
+            "description": "Ingresos totales en centavos",
+            "example": 36800000
+          },
+          "vendedores_activos": {
+            "type": "number",
+            "description": "Vendedores activos",
+            "example": 20
+          },
+          "calculado_en": {
+            "type": "string",
+            "description": "Fecha de cálculo (ISO 8601 UTC)",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "total_pedidos",
+          "ingresos_totales_cents",
+          "vendedores_activos",
+          "calculado_en"
+        ]
+      },
+      "RegistrarVentaResponseDto": {
+        "type": "object",
+        "properties": {
+          "codigo": {
+            "type": "string",
+            "description": "Código de resultado",
+            "example": "OK"
+          },
+          "mensaje": {
+            "type": "string",
+            "description": "Mensaje de resultado",
+            "example": "Venta registrada en inteligencia"
+          }
+        },
+        "required": [
+          "codigo",
+          "mensaje"
+        ]
+      },
+      "ForecastDemandaResponseDto": {
+        "type": "object",
+        "properties": {
+          "sku": {
+            "type": "string",
+            "description": "SKU analizado",
+            "example": "SKU-001"
+          },
+          "dias_proyectados": {
+            "type": "number",
+            "description": "Días proyectados",
+            "example": 7
+          },
+          "ventas_proyectadas": {
+            "type": "number",
+            "description": "Ventas proyectadas",
+            "example": 84
+          },
+          "intervalo_inferior": {
+            "type": "number",
+            "description": "Límite inferior del intervalo",
+            "example": 60
+          },
+          "intervalo_superior": {
+            "type": "number",
+            "description": "Límite superior del intervalo",
+            "example": 108
+          },
+          "avg_diario_base": {
+            "type": "number",
+            "description": "Media diaria base",
+            "example": 12
+          },
+          "std_diario_base": {
+            "type": "number",
+            "description": "Desviación estándar diaria base",
+            "example": 3.2
+          },
+          "features_computadas_en": {
+            "type": "object",
+            "description": "Fecha de cómputo de features",
+            "nullable": true,
+            "format": "date-time"
+          },
+          "metodologia": {
+            "type": "string",
+            "description": "Metodología aplicada",
+            "example": "media_movil_ponderada_7d"
+          }
+        },
+        "required": [
+          "sku",
+          "dias_proyectados",
+          "ventas_proyectadas",
+          "intervalo_inferior",
+          "intervalo_superior",
+          "avg_diario_base",
+          "std_diario_base",
+          "metodologia"
+        ]
+      },
+      "AnomaliaResponseDto": {
+        "type": "object",
+        "properties": {
+          "order_id": {
+            "type": "string",
+            "description": "Id de la orden",
+            "format": "uuid"
+          },
+          "sku": {
+            "type": "string",
+            "description": "SKU del producto"
+          },
+          "vendedor_id": {
+            "type": "string",
+            "description": "Id del vendedor",
+            "format": "uuid"
+          },
+          "monto_cents": {
+            "type": "number",
+            "description": "Monto de la venta en centavos",
+            "example": 115000
+          },
+          "lat": {
+            "type": "object",
+            "description": "Latitud",
+            "nullable": true
+          },
+          "lng": {
+            "type": "object",
+            "description": "Longitud",
+            "nullable": true
+          },
+          "ocurrido_en": {
+            "type": "string",
+            "description": "Fecha de la venta (ISO 8601 UTC)",
+            "format": "date-time"
+          },
+          "media_monto": {
+            "type": "number",
+            "description": "Media histórica del monto",
+            "example": 115000
+          },
+          "std_monto": {
+            "type": "number",
+            "description": "Desviación estándar histórica",
+            "example": 15000
+          },
+          "z_score": {
+            "type": "number",
+            "description": "Z-score de la anomalía",
+            "example": 3.4
+          }
+        },
+        "required": [
+          "order_id",
+          "sku",
+          "vendedor_id",
+          "monto_cents",
+          "ocurrido_en",
+          "media_monto",
+          "std_monto",
+          "z_score"
+        ]
+      },
+      "AnomaliasResponseDto": {
+        "type": "object",
+        "properties": {
+          "total": {
+            "type": "number",
+            "description": "Total de anomalías",
+            "example": 3
+          },
+          "anomalias": {
+            "description": "Anomalías detectadas",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AnomaliaResponseDto"
+            }
+          }
+        },
+        "required": [
+          "total",
+          "anomalias"
+        ]
+      },
+      "ScoreVendedorResponseDto": {
+        "type": "object",
+        "properties": {
+          "vendedor_id": {
+            "type": "string",
+            "description": "Id del vendedor",
+            "format": "uuid"
+          },
+          "tasa_efectividad": {
+            "type": "object",
+            "description": "Tasa de efectividad",
+            "nullable": true
+          },
+          "churn_risk_score": {
+            "type": "number",
+            "description": "Score de riesgo de churn"
+          },
+          "churn_risk_nivel": {
+            "type": "string",
+            "description": "Nivel de riesgo",
+            "enum": [
+              "ALTO",
+              "MEDIO",
+              "BAJO"
+            ]
+          },
+          "features_computadas_en": {
+            "type": "string",
+            "description": "Fecha de cómputo de features",
+            "format": "date-time"
+          },
+          "mensaje": {
+            "type": "string",
+            "description": "Mensaje cuando no hay datos computados"
+          }
+        }
+      },
+      "ErrorFrecuenteResponseDto": {
+        "type": "object",
+        "properties": {
+          "event_tipo": {
+            "type": "string",
+            "description": "Tipo de evento",
+            "example": "order.created"
+          },
+          "error": {
+            "type": "string",
+            "description": "Error detectado",
+            "example": "campo requerido"
+          },
+          "total": {
+            "type": "number",
+            "description": "Cantidad de ocurrencias",
+            "example": 4
+          }
+        },
+        "required": [
+          "event_tipo",
+          "error",
+          "total"
+        ]
+      },
+      "CalidadDatosResponseDto": {
+        "type": "object",
+        "properties": {
+          "ventana_horas": {
+            "type": "number",
+            "description": "Ventana analizada en horas",
+            "example": 24
+          },
+          "eventos_procesados": {
+            "type": "number",
+            "description": "Eventos procesados",
+            "example": 1200
+          },
+          "eventos_invalidos": {
+            "type": "number",
+            "description": "Eventos inválidos",
+            "example": 12
+          },
+          "tasa_rechazo_pct": {
+            "type": "number",
+            "description": "Tasa de rechazo (%)",
+            "example": 0.99
+          },
+          "errores_frecuentes": {
+            "description": "Errores más frecuentes",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ErrorFrecuenteResponseDto"
+            }
+          }
+        },
+        "required": [
+          "ventana_horas",
+          "eventos_procesados",
+          "eventos_invalidos",
+          "tasa_rechazo_pct",
+          "errores_frecuentes"
+        ]
+      }
+    }
   }
 }

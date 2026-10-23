@@ -1,6 +1,6 @@
 {
   "name": "@core/commissions-service",
-  "version": "1.0.0",
+  "version": "1.0.7",
   "private": true,
   "description": "Comisiones y pagos: calcula comisiones y mantiene el libro de pagos de vendedores",
   "main": "dist/main.js",
@@ -8,7 +8,8 @@
     "build": "tsc -p tsconfig.json",
     "start": "node dist/main.js",
     "swagger:export": "node dist/swagger-export.js",
-    "test": "vitest run"
+    "test": "vitest run",
+    "mutation": "stryker run"
   },
   "dependencies": {
     "@core/shared": "file:../shared",

@@ -76,6 +76,13 @@ jobs:
           fi
           echo "OK: $SHA es ancestro de origin/main"
 
+      - name: 🧾 Validate tag, monotonicity and package versions (R-CD-1)
+        run: |
+          node scripts/tools/release-check.mjs \
+            --tag "${{ steps.tag.outputs.tag }}" \
+            --main-ref origin/main \
+            --check-remote
+
       - name: ✅ Verify a successful ci.yml run on this SHA (R-CD-2)
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

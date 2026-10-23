@@ -1,5 +1,5 @@
 import { Controller, Get, Param, Post, Query, UseGuards } from '@nestjs/common';
-import { ApiOperation, ApiParam, ApiQuery, ApiTags } from '@nestjs/swagger';
+import { ApiCreatedResponse, ApiOkResponse, ApiOperation, ApiParam, ApiQuery, ApiSecurity, ApiTags } from '@nestjs/swagger';
 import {
   ClaveInternaGuard,
   NotFoundError,
@@ -8,12 +8,14 @@ import { OrderViewRepository, OrderView } from './queries/order-view.repository'
 import { CreateOrderCommandHandler } from './handlers/create-order-command.handler';
 import { OrderEventStore } from './repositories/order-event-store';
 import { PedidosService } from './pedidos.service';
+import { HistoriaEventoResponseDto, OrderViewResponseDto } from './orders.response.dto';
 
 /**
  * Endpoints internos (servicio -> servicio) protegidos por clave interna:
  * transicion de estado (logistica), lectura para reportes y replay de eventos.
  */
 @ApiTags('Pedidos (interno)')
+@ApiSecurity('internalKey')
 @Controller('internal')
 @UseGuards(ClaveInternaGuard)
 export class InternoController {
@@ -30,19 +32,23 @@ export class InternoController {
   @ApiParam({ name: 'id', description: 'Id de la orden' })
   @ApiQuery({ name: 'estado', description: 'Estado objetivo' })
   @ApiQuery({ name: 'motivo', required: false })
+  @ApiQuery({ name: 'actor', required: false, description: 'Usuario que ejecuta la transición' })
+  @ApiCreatedResponse({ type: OrderViewResponseDto, description: 'Orden con el nuevo estado' })
   async transicion(
     @Param('id') id: string,
     @Query('estado') estado: string,
     @Query('motivo') motivo?: string,
+    @Query('actor') actor?: string,
   ): Promise<OrderView> {
     if (!estado) throw new NotFoundError('Estado', 'requerido');
-    return this.handler.transicionar(id, estado, motivo, 'logistica');
+    return this.handler.transicionar(id, estado, motivo, actor ?? 'logistica');
   }
 
   /** Lectura completa para reportes (admin) y comisiones. */
   @Get('orders/:id')
   @ApiOperation({ summary: 'Lectura completa de una orden (reportes/comisiones)' })
   @ApiParam({ name: 'id', description: 'Id de la orden' })
+  @ApiOkResponse({ type: OrderViewResponseDto, description: 'Orden encontrada' })
   async orden(@Param('id') id: string): Promise<OrderView> {
     const orden = await this.views.encontrar(id);
     if (!orden) throw new NotFoundError('Orden', id);
@@ -52,6 +58,7 @@ export class InternoController {
   @Get('orders')
   @ApiOperation({ summary: 'Listar órdenes (servicio→servicio)' })
   @ApiQuery({ name: 'estado', required: false })
+  @ApiOkResponse({ type: [OrderViewResponseDto], description: 'Órdenes registradas' })
   async listar(@Query('estado') estado?: string): Promise<OrderView[]> {
     return this.views.listarTodo(estado ? { estado } : {});
   }
@@ -60,6 +67,7 @@ export class InternoController {
   @Post('orders/:id/reproyectar')
   @ApiOperation({ summary: 'Reproyectar una orden desde su historia (Event Sourcing)' })
   @ApiParam({ name: 'id', description: 'Id de la orden' })
+  @ApiCreatedResponse({ type: OrderViewResponseDto, description: 'Orden reproyectada' })
   async reproyectar(@Param('id') id: string): Promise<OrderView | null> {
     return this.handler.reproyectar(id);
   }
@@ -68,6 +76,7 @@ export class InternoController {
   @Get('orders/:id/historia')
   @ApiOperation({ summary: 'Historia inmutable de eventos de una orden' })
   @ApiParam({ name: 'id', description: 'Id de la orden' })
+  @ApiOkResponse({ type: [HistoriaEventoResponseDto], description: 'Historia de eventos' })
   async historia(@Param('id') id: string) {
     const historia = await this.eventStore.historiaDe(id);
     if (historia.length === 0) throw new NotFoundError('Orden', id);
