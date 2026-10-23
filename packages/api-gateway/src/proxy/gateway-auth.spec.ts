@@ -364,6 +364,72 @@ describe('Gateway auth — politicas de pedidos (R-GW-1, R-GW-3)', () => {
   });
 });
 
+describe('Gateway auth — slugs de empresa y tienda (ADR-26)', () => {
+  const secreto = 'test_secret_jwt';
+  const auth = new GatewayAuthMiddleware(secreto);
+  const tokenDe = (rol: (typeof ROLES)[keyof typeof ROLES]) =>
+    firmarToken({ sub: `u-${rol}`, email: `${rol}@test`, rol, tipo: 'access' }, secreto, '900s');
+
+  function evaluar(ruta: string, metodo: string, rol?: (typeof ROLES)[keyof typeof ROLES]) {
+    const { req, res, next } = crearPeticion({
+      ruta,
+      metodo,
+      token: rol ? tokenDe(rol) : null,
+    });
+    auth.aplicar(req as never, res as never, next, politicaDe(ruta, metodo));
+    return { res: res as unknown as { statusCode: number; cuerpo?: { codigo: string } }, next };
+  }
+
+  it('debe exigir token para resolver una empresa por slug', () => {
+    const { res, next } = evaluar('/api/v1/empresas/acme', 'GET');
+    expect(res.statusCode).toBe(401);
+    expect(res.cuerpo?.codigo).toBe('NO_AUTORIZADO');
+    expect(next).not.toHaveBeenCalled();
+  });
+
+  it('debe denegar al comprador el slug de una empresa', () => {
+    const { res, next } = evaluar('/api/v1/empresas/acme', 'GET', ROLES.COMPRADOR);
+    expect(res.statusCode).toBe(403);
+    expect(next).not.toHaveBeenCalled();
+  });
+
+  it('debe permitir al empresario resolver su empresa por slug', () => {
+    const { res, next } = evaluar('/api/v1/empresas/acme', 'GET', ROLES.EMPRESARIO);
+    expect(res.statusCode).toBe(200);
+    expect(next).toHaveBeenCalled();
+  });
+
+  it('debe permitir al empresario cambiar el slug de la empresa', () => {
+    const { res, next } = evaluar('/api/v1/empresas/acme/slug', 'PATCH', ROLES.EMPRESARIO);
+    expect(res.statusCode).toBe(200);
+    expect(next).toHaveBeenCalled();
+  });
+
+  it('debe denegar al vendedor cambiar el slug de la empresa', () => {
+    const { res, next } = evaluar('/api/v1/empresas/acme/slug', 'PATCH', ROLES.VENDEDOR);
+    expect(res.statusCode).toBe(403);
+    expect(next).not.toHaveBeenCalled();
+  });
+
+  it('debe permitir la tienda pública por slug sin token', () => {
+    const { res, next } = evaluar('/api/v1/tiendas/mi-tienda', 'GET');
+    expect(res.statusCode).toBe(200);
+    expect(next).toHaveBeenCalled();
+  });
+
+  it('debe permitir al vendedor cambiar el slug de su tienda', () => {
+    const { res, next } = evaluar('/api/v1/tiendas/mi-tienda/slug', 'PATCH', ROLES.VENDEDOR);
+    expect(res.statusCode).toBe(200);
+    expect(next).toHaveBeenCalled();
+  });
+
+  it('debe denegar al comprador cambiar el slug de una tienda', () => {
+    const { res, next } = evaluar('/api/v1/tiendas/mi-tienda/slug', 'PATCH', ROLES.COMPRADOR);
+    expect(res.statusCode).toBe(403);
+    expect(next).not.toHaveBeenCalled();
+  });
+});
+
 describe('Gateway auth — deny by default (R-GW-1, R-GW-3)', () => {
   const secreto = 'test_secret_jwt';
   const auth = new GatewayAuthMiddleware(secreto);

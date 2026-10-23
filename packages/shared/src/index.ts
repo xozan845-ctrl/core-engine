@@ -3,6 +3,7 @@ export * from './money';
 export * from './errors';
 export * from './pagination';
 export * from './order-state';
+export * from './slug';
 export * from './events/contracts';
 export * from './storage/almacen.contracts';
 export * from './db/pg.module';

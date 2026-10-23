@@ -35,6 +35,15 @@ CREATE POLICY miembros_empresario_insert ON identity.empresa_miembros FOR INSERT
   WITH CHECK (auth.rol() = 'empresario' AND (usuario_id = auth.uid() OR
     empresa_id::text = (auth.jwt() ->> 'tenant_id')));
 
+-- ADR-26: historial de slugs de empresa. El trigger que lo mantiene es
+-- SECURITY DEFINER; las policies cubren la lectura de miembros y admin.
+ALTER TABLE identity.empresa_slugs ENABLE ROW LEVEL SECURITY;
+CREATE POLICY empresa_slugs_super_admin ON identity.empresa_slugs FOR ALL TO authenticated
+  USING (auth.rol() IN ('super_admin', 'admin')) WITH CHECK (auth.rol() IN ('super_admin', 'admin'));
+CREATE POLICY empresa_slugs_miembros ON identity.empresa_slugs FOR SELECT TO authenticated
+  USING (empresa_id::text = (auth.jwt() ->> 'tenant_id')
+         OR empresa_id IN (SELECT id FROM identity.empresas WHERE creado_por = auth.uid()));
+
 ALTER TABLE catalog.productos ENABLE ROW LEVEL SECURITY;
 CREATE POLICY productos_admin_all ON catalog.productos
   FOR ALL TO authenticated USING (auth.rol() = 'admin') WITH CHECK (auth.rol() = 'admin');
@@ -63,6 +72,21 @@ CREATE POLICY tiendas_vendedor_propias ON stores.tiendas
          AND (propietario_usuario_id = auth.uid() OR auth.rol() = 'empresario'))
   WITH CHECK (auth.rol() IN ('vendedor','empresario') AND empresa_id::text = (auth.jwt() ->> 'tenant_id'));
 CREATE POLICY tiendas_lectura ON stores.tiendas
+  FOR SELECT TO anon, authenticated USING (true);
+
+-- ADR-26: historial de slugs de tienda. El slug es publico para el storefront,
+-- pero solo el propietario (o admin) puede cambiarlo.
+ALTER TABLE stores.tienda_slugs ENABLE ROW LEVEL SECURITY;
+CREATE POLICY tienda_slugs_admin ON stores.tienda_slugs FOR ALL TO authenticated
+  USING (auth.rol() IN ('super_admin', 'admin')) WITH CHECK (auth.rol() IN ('super_admin', 'admin'));
+CREATE POLICY tienda_slugs_vendedor ON stores.tienda_slugs FOR ALL TO authenticated
+  USING (auth.rol() IN ('vendedor','empresario')
+         AND tienda_id IN (SELECT id FROM stores.tiendas
+                           WHERE empresa_id::text = (auth.jwt() ->> 'tenant_id')))
+  WITH CHECK (auth.rol() IN ('vendedor','empresario')
+              AND tienda_id IN (SELECT id FROM stores.tiendas
+                                WHERE empresa_id::text = (auth.jwt() ->> 'tenant_id')));
+CREATE POLICY tienda_slugs_lectura ON stores.tienda_slugs
   FOR SELECT TO anon, authenticated USING (true);
 
 -- ── stores.ofertas ──────────────────────────────────────────────────────
