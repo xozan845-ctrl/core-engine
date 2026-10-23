@@ -14,6 +14,16 @@ class CrearOfertaDto {
   stock!: number;
 }
 
+class ListarQueryDto {
+  @IsInt()
+  @Min(1)
+  limite!: number;
+
+  @IsInt()
+  @Min(1)
+  pagina!: number;
+}
+
 describe('DtoValidationPipe (validacion de DTOs con class-validator)', () => {
   const pipe = new DtoValidationPipe();
 
@@ -43,6 +53,28 @@ describe('DtoValidationPipe (validacion de DTOs con class-validator)', () => {
   it('debe devolver el valor tal cual cuando no hay metatype o es primitivo', async () => {
     expect(await pipe.transform('texto', { metatype: String, type: 'param' })).toBe('texto');
     expect(await pipe.transform({ a: 1 }, { metatype: undefined, type: 'body' })).toEqual({ a: 1 });
+  });
+
+  it('debe convertir los numeros de la query string antes de validar', async () => {
+    const resultado = await pipe.transform(
+      { limite: '10', pagina: '2' },
+      { metatype: ListarQueryDto, type: 'query' },
+    );
+    expect(resultado).toBeInstanceOf(ListarQueryDto);
+    expect(resultado as ListarQueryDto).toMatchObject({ limite: 10, pagina: 2 });
+  });
+
+  it('debe seguir rechazando un numero invalido en la query', async () => {
+    let error: ValidationError | undefined;
+    try {
+      await pipe.transform(
+        { limite: 'abc', pagina: '0' },
+        { metatype: ListarQueryDto, type: 'query' },
+      );
+    } catch (e) {
+      error = e as ValidationError;
+    }
+    expect(error?.codigo).toBe('VALIDACION');
   });
 });
 
