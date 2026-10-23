@@ -55,13 +55,18 @@ export class PedidosConsumer implements OnModuleInit {
 
   private async pagoProcesado(evento: EventoBus<PaymentProcesadoData>): Promise<void> {
     if (await this.yaProcesado(evento)) return;
-    const { order_id, monto_cents } = evento.data;
-    const envio = await this.envios.prepararEnvio(order_id, monto_cents);
-    await this.outbox.insertar(EVENTOS.SHIPMENT_STARTED, {
-      order_id,
-      guia: envio.guia,
-      estado: 'en_preparacion',
-    });
+    const { order_id } = evento.data;
+    const envios = await this.envios.prepararEnviosDeOrden(order_id);
+    for (const envio of envios) {
+      await this.outbox.insertar(EVENTOS.SHIPMENT_STARTED, {
+        order_id,
+        empresa_id: envio.empresa_id,
+        guia: envio.guia,
+        estado: 'en_preparacion',
+        proveedor_tipo: envio.proveedor_tipo,
+        proveedor_tenant_id: envio.proveedor_tenant_id,
+      });
+    }
     this.notificar('email', order_id, 'La bodega alista tu pedido', {
       comprador: true,
       vendedor: true,

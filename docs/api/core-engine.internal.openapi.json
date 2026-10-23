@@ -369,6 +369,43 @@
         ]
       }
     },
+    "/internal/empresas/{id}": {
+      "get": {
+        "operationId": "InternalController_empresa",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "description": "Id de la empresa",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Empresa encontrada",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EmpresaResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "internalKey": []
+          }
+        ],
+        "summary": "Empresa por id (servicio→servicio)",
+        "tags": [
+          "Usuarios (interno)"
+        ]
+      }
+    },
     "/internal/orders/{id}/transicion": {
       "post": {
         "operationId": "InternoController_transicion",
@@ -395,6 +432,15 @@
             "name": "motivo",
             "required": false,
             "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "actor",
+            "required": false,
+            "in": "query",
+            "description": "Usuario que ejecuta la transición",
             "schema": {
               "type": "string"
             }
@@ -778,6 +824,11 @@
       "ProductoResponseDto": {
         "type": "object",
         "properties": {
+          "empresa_id": {
+            "type": "string",
+            "description": "Empresa propietaria",
+            "format": "uuid"
+          },
           "id": {
             "type": "string",
             "description": "Id del producto",
@@ -826,6 +877,7 @@
           }
         },
         "required": [
+          "empresa_id",
           "id",
           "sku",
           "nombre",
@@ -981,6 +1033,11 @@
             "description": "SKU del producto",
             "pattern": "^[A-Za-z0-9-]{2,32}$",
             "example": "SKU-001"
+          },
+          "empresa_id": {
+            "type": "string",
+            "description": "Empresa destino. Obligatoria para super_admin/admin; el empresario usa su empresa activa.",
+            "format": "uuid"
           },
           "nombre": {
             "type": "string",
@@ -3051,6 +3108,44 @@
           "vendedores"
         ]
       },
+      "EmpresaResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "nombre": {
+            "type": "string"
+          },
+          "modalidad_logistica": {
+            "type": "string",
+            "enum": [
+              "plataforma",
+              "propia",
+              "hibrida"
+            ]
+          },
+          "estado": {
+            "type": "string"
+          },
+          "creado_por": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "creado_en": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "nombre",
+          "modalidad_logistica",
+          "estado",
+          "creado_por",
+          "creado_en"
+        ]
+      },
       "RegistroRequestDto": {
         "type": "object",
         "properties": {
@@ -3075,7 +3170,7 @@
             "type": "string",
             "description": "Rol registrable",
             "enum": [
-              "vendedor",
+              "empresario",
               "comprador"
             ],
             "example": "comprador"
@@ -3234,7 +3329,7 @@
             "type": "string",
             "description": "Rol del usuario",
             "enum": [
-              "vendedor",
+              "empresario",
               "comprador",
               "admin",
               "logistica",
@@ -3354,6 +3449,103 @@
         },
         "required": [
           "personal_id"
+        ]
+      },
+      "CrearEmpresaRequestDto": {
+        "type": "object",
+        "properties": {
+          "nombre": {
+            "type": "string",
+            "minLength": 2,
+            "maxLength": 160
+          },
+          "modalidad_logistica": {
+            "type": "string",
+            "enum": [
+              "plataforma",
+              "propia",
+              "hibrida"
+            ]
+          }
+        },
+        "required": [
+          "nombre",
+          "modalidad_logistica"
+        ]
+      },
+      "ActualizarModalidadLogisticaRequestDto": {
+        "type": "object",
+        "properties": {
+          "modalidad_logistica": {
+            "type": "string",
+            "enum": [
+              "plataforma",
+              "propia",
+              "hibrida"
+            ]
+          }
+        },
+        "required": [
+          "modalidad_logistica"
+        ]
+      },
+      "CrearVendedorRequestDto": {
+        "type": "object",
+        "properties": {
+          "nombre": {
+            "type": "string"
+          },
+          "correo": {
+            "type": "string"
+          },
+          "contrasena": {
+            "type": "string",
+            "minLength": 8
+          },
+          "participacion_porcentaje": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 100
+          }
+        },
+        "required": [
+          "nombre",
+          "correo",
+          "contrasena",
+          "participacion_porcentaje"
+        ]
+      },
+      "VendedorEmpresaResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "nombre": {
+            "type": "string"
+          },
+          "correo": {
+            "type": "string"
+          },
+          "rol": {
+            "type": "string",
+            "enum": [
+              "vendedor"
+            ]
+          },
+          "participacion_porcentaje": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 100
+          }
+        },
+        "required": [
+          "id",
+          "nombre",
+          "correo",
+          "rol",
+          "participacion_porcentaje"
         ]
       },
       "ItemOrdenResponseDto": {
@@ -4228,6 +4420,17 @@
             "description": "Id del vendedor",
             "format": "uuid"
           },
+          "empresa_id": {
+            "type": "string",
+            "description": "Empresa propietaria",
+            "format": "uuid"
+          },
+          "participacion_porcentaje": {
+            "type": "number",
+            "description": "Participación congelable del vendedor",
+            "minimum": 0,
+            "maximum": 100
+          },
           "producto_id": {
             "type": "string",
             "description": "Id del producto maestro",
@@ -4277,6 +4480,8 @@
           "id",
           "tienda_id",
           "vendedor_id",
+          "empresa_id",
+          "participacion_porcentaje",
           "producto_id",
           "sku",
           "producto_nombre",
@@ -4316,6 +4521,21 @@
             "description": "Id de la tienda",
             "format": "uuid"
           },
+          "empresa_id": {
+            "type": "string",
+            "description": "Empresa propietaria",
+            "format": "uuid"
+          },
+          "propietario_usuario_id": {
+            "type": "string",
+            "description": "Usuario propietario operativo",
+            "format": "uuid"
+          },
+          "participacion_porcentaje": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 100
+          },
           "vendedor_id": {
             "type": "string",
             "description": "Id del vendedor dueño",
@@ -4338,6 +4558,9 @@
         },
         "required": [
           "id",
+          "empresa_id",
+          "propietario_usuario_id",
+          "participacion_porcentaje",
           "vendedor_id",
           "nombre",
           "descripcion",
@@ -4347,6 +4570,11 @@
       "PublicarProductoRequestDto": {
         "type": "object",
         "properties": {
+          "tienda_id": {
+            "type": "string",
+            "description": "Tienda donde se publicará. Si se omite, se usa la tienda del vendedor autenticado.",
+            "format": "uuid"
+          },
           "producto_id": {
             "type": "string",
             "description": "Id del producto a publicar",

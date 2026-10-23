@@ -4,10 +4,12 @@ import { EnviosModule } from './envios/envios.module';
 import {
   EstadoOrdenController,
   EnviosAdminController,
+  EnviosEmpresaController,
+  EnviosFlotaController,
 } from './envios/estado-orden.controller';
 
 @Module({
   imports: [PgModule, RabbitModule, OutboxModule, MetricsModule, EnviosModule],
-  controllers: [EstadoOrdenController, EnviosAdminController],
+  controllers: [EstadoOrdenController, EnviosAdminController, EnviosEmpresaController, EnviosFlotaController],
 })
 export class AppModule {}

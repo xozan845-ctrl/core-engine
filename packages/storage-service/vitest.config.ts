@@ -1,6 +1,7 @@
 import { defineConfig } from 'vitest/config';
 import swc from 'unplugin-swc';
 import { resolve } from 'node:path';
+import { coverageThresholdsFor } from '../../scripts/config/coverage.mjs';
 
 // Config de pruebas del paquete (Vitest): specs `*.spec.ts`, entorno node, alias
 // `@core/shared` y umbrales de cobertura (R-QA-3/R-QA-4) con baseline medido
@@ -31,7 +32,7 @@ export default defineConfig({
       reporter: ['text', 'lcov', 'json-summary'],
       reportsDirectory: './coverage',
       reportOnFailure: true,
-      thresholds: { lines: 99, branches: 86 },
+      thresholds: coverageThresholdsFor('storage-service'),
     },
   },
 });

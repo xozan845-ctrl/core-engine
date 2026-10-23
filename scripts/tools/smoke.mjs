@@ -1,7 +1,8 @@
 /**
  * Core Engine · Core Engine
- * Demo del flujo real (entregable cap. 7.1): alta de producto, oferta del
- * vendedor, compra, descuento de stock, orden, comision y liquidacion.
+ * Demo del flujo real (entregable cap. 7.1): alta de empresa y vendedor
+ * (ADR-25), producto, oferta, compra, descuento de stock, orden, comisión y
+ * liquidación.
  *
  * Requiere el ecosistema levantado: docker compose -f docker-compose.dev.yml up -d --build
  * Uso: npm run demo  (o `node scripts/cli.mjs smoke`)
@@ -101,8 +102,10 @@ async function main() {
 
   // ── 1. Identidad ──────────────────────────────────────────────────────
   const suf = sufijo();
+  const correoEmpresario = `empresario.${suf}@core-engine.test`;
   const correoVendedor = `vendedor.${suf}@core-engine.test`;
   const correoComprador = `comprador.${suf}@core-engine.test`;
+  const contrasena = 'Contrasena123!';
 
   paso('Administrador: login (RF-01, seed del arranque)');
   const loginAdmin = await api('POST', '/api/v1/auth/login', {
@@ -117,39 +120,84 @@ async function main() {
   }
   const tokenAdmin = loginAdmin.json.access_token;
 
-  paso('Registro de vendedor y comprador (RF-01)');
-  const [regV, regC] = await Promise.all([
+  paso('Registro de empresario y comprador (RF-01)');
+  const [regE, regC] = await Promise.all([
     api('POST', '/api/v1/auth/registro', {
-      nombre: 'Vendedora Piloto',
-      correo: correoVendedor,
-      contrasena: 'Contrasena123!',
-      rol: 'vendedor',
+      nombre: 'Empresaria Piloto',
+      correo: correoEmpresario,
+      contrasena,
+      rol: 'empresario',
     }),
     api('POST', '/api/v1/auth/registro', {
       nombre: 'Comprador Piloto',
       correo: correoComprador,
-      contrasena: 'Contrasena123!',
+      contrasena,
       rol: 'comprador',
     }),
   ]);
-  if (![200, 201].includes(regV.status) || !regV.json?.access_token) {
-    fail(`registro vendedor → ${regV.status} ${JSON.stringify(regV.json)}`);
+  if (![200, 201].includes(regE.status) || !regE.json?.access_token) {
+    fail(`registro empresario → ${regE.status} ${JSON.stringify(regE.json)}`);
     process.exit(1);
   }
   if (![200, 201].includes(regC.status) || !regC.json?.access_token) {
     fail(`registro comprador → ${regC.status} ${JSON.stringify(regC.json)}`);
     process.exit(1);
   }
-  ok('ambos usuarios registrados');
-  const tokenVendedor = regV.json.access_token;
+  ok('empresario y comprador registrados');
+  const tokenEmpresario = regE.json.access_token;
   const tokenComprador = regC.json.access_token;
+
+  // ── 1b. Empresa y vendedor (ADR-25) ──────────────────────────────────
+  paso('El empresario crea su empresa (ADR-25)');
+  const empresa = await api(
+    'POST',
+    '/api/v1/empresas',
+    { nombre: 'Distribuidora Piloto', modalidad_logistica: 'plataforma' },
+    tokenEmpresario,
+  );
+  if (![200, 201].includes(empresa.status) || !empresa.json?.id) {
+    fail(`crear empresa → ${empresa.status} ${JSON.stringify(empresa.json)}`);
+    process.exit(1);
+  }
+  ok(`empresa=${empresa.json.id.slice(0, 8)}`);
+
+  paso('El empresario crea al vendedor con participación 100 % (ADR-25)');
+  const vendedor = await api(
+    'POST',
+    `/api/v1/empresas/${empresa.json.id}/vendedores`,
+    {
+      nombre: 'Vendedora Piloto',
+      correo: correoVendedor,
+      contrasena,
+      participacion_porcentaje: 100,
+    },
+    tokenEmpresario,
+  );
+  if (![200, 201].includes(vendedor.status) || !vendedor.json?.id) {
+    fail(`crear vendedor → ${vendedor.status} ${JSON.stringify(vendedor.json)}`);
+    process.exit(1);
+  }
+  ok(`vendedor=${vendedor.json.id.slice(0, 8)}`);
+
+  paso('Vendedor: login con la cuenta creada por su empresa');
+  const loginVendedor = await api('POST', '/api/v1/auth/login', {
+    correo: correoVendedor,
+    contrasena,
+  });
+  if (loginVendedor.status === 200 && loginVendedor.json?.access_token) {
+    ok();
+  } else {
+    fail(`login vendedor → ${loginVendedor.status} ${JSON.stringify(loginVendedor.json)}`);
+    process.exit(1);
+  }
+  const tokenVendedor = loginVendedor.json.access_token;
 
   // ── 2. Catálogo (TC-01) ───────────────────────────────────────────────
   paso('Admin da de alta el producto (TC-01: stock 10, precio base C$ 1 000)');
   const crear = await api(
     'POST',
     '/api/v1/catalog/productos',
-    { sku: `ACE-${suf.toUpperCase()}`, nombre: 'Aceite de cocina 1L', descripcion: 'Aceite vegetal', categoria: 'abarrotes', precio_base: '1000.00', stock: 10 },
+    { sku: `ACE-${suf.toUpperCase()}`, empresa_id: empresa.json.id, nombre: 'Aceite de cocina 1L', descripcion: 'Aceite vegetal', categoria: 'abarrotes', precio_base: '1000.00', stock: 10 },
     tokenAdmin,
   );
   if (crear.status === 201 || crear.status === 200) ok(`sku=${crear.json.sku}`);
@@ -257,7 +305,7 @@ async function main() {
   const prodUno = await api(
     'POST',
     '/api/v1/catalog/productos',
-    { sku: `LEC-${suf.toUpperCase()}`, nombre: 'Leche 1L', precio_base: '50.00', stock: 1 },
+    { sku: `LEC-${suf.toUpperCase()}`, empresa_id: empresa.json.id, nombre: 'Leche 1L', precio_base: '50.00', stock: 1 },
     tokenAdmin,
   );
   if (![200, 201].includes(prodUno.status) || !prodUno.json?.id) {
@@ -339,11 +387,11 @@ async function main() {
   await esperar(
     async () => {
       const r = await api('GET', '/api/v1/vendedores/me/ventas', null, tokenVendedor);
-      return r.json?.comisiones_pendientes === '276.00' ? r.json : null;
+      return r.json?.comisiones_pendientes === '2024.00' ? r.json : null;
     },
-    'comisión 2x1150=276.00',
+    'neto pendiente 2x1150 - 12% = 2024.00',
   );
-  ok('comisión pendiente de 276.00');
+  ok('comisión pendiente de 2024.00');
 
   paso('Corte de liquidación quincenal (RN-07, días 1 y 15)');
   const corte = await api('POST', '/api/v1/admin/liquidaciones/corte', null, tokenAdmin);

@@ -172,6 +172,6 @@ describe('FinanzasController (api/v1/finanzas, cap. 8, R-U-10/11)', () => {
   });
 
   it('debe exigir rol admin a nivel de controlador', () => {
-    expect(Reflect.getMetadata('roles_requeridos', FinanzasController)).toEqual([ROLES.ADMIN]);
+    expect(Reflect.getMetadata('roles_requeridos', FinanzasController)).toEqual([ROLES.SUPER_ADMIN, ROLES.ADMIN]);
   });
 });

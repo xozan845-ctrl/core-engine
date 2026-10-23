@@ -1,6 +1,6 @@
 {
   "name": "@core/finance-service",
-  "version": "1.0.0",
+  "version": "1.0.7",
   "private": true,
   "description": "Finanzas y contabilidad: proyecciones financieras (cap. 8), contabilidad por partida doble y regimen fiscal multijurisdiccion (Nicaragua inicial, cap. 4.4)",
   "main": "dist/main.js",
@@ -8,7 +8,8 @@
     "build": "tsc -p tsconfig.json",
     "start": "node dist/main.js",
     "swagger:export": "node dist/swagger-export.js",
-    "test": "vitest run"
+    "test": "vitest run",
+    "mutation": "stryker run"
   },
   "dependencies": {
     "@core/shared": "file:../shared",

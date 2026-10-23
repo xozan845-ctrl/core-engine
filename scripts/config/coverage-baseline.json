@@ -1,0 +1,74 @@
+{
+  "api-gateway": {
+    "lines": 59.75,
+    "branches": 62.73,
+    "functions": 58.06,
+    "statements": 58.1
+  },
+  "catalog-service": {
+    "lines": 94.73,
+    "branches": 83.5,
+    "functions": 91.07,
+    "statements": 90.15
+  },
+  "commissions-service": {
+    "lines": 21.38,
+    "branches": 15.85,
+    "functions": 23.52,
+    "statements": 19.66
+  },
+  "field-service": {
+    "lines": 85.24,
+    "branches": 71.27,
+    "functions": 73.58,
+    "statements": 85.4
+  },
+  "finance-service": {
+    "lines": 71.89,
+    "branches": 53.04,
+    "functions": 73.74,
+    "statements": 70.18
+  },
+  "identity-service": {
+    "lines": 90.69,
+    "branches": 79.5,
+    "functions": 86,
+    "statements": 88.23
+  },
+  "logistics-service": {
+    "lines": 100,
+    "branches": 97.14,
+    "functions": 100,
+    "statements": 98.75
+  },
+  "market-intelligence-service": {
+    "lines": 19.93,
+    "branches": 12.64,
+    "functions": 36.36,
+    "statements": 19.87
+  },
+  "orders-service": {
+    "lines": 43.05,
+    "branches": 24.86,
+    "functions": 34.02,
+    "statements": 40.34
+  },
+  "shared": {
+    "lines": 53.8,
+    "branches": 51.73,
+    "functions": 56.07,
+    "statements": 52.65
+  },
+  "storage-service": {
+    "lines": 100,
+    "branches": 87.5,
+    "functions": 100,
+    "statements": 98.32
+  },
+  "stores-service": {
+    "lines": 87,
+    "branches": 85.48,
+    "functions": 77.14,
+    "statements": 84.34
+  }
+}

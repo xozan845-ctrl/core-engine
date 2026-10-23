@@ -4,7 +4,9 @@ on:
   push:
     branches: [main, develop, staging]
   pull_request:
-    branches: [main, develop, staging]
+    # Enmienda R-CI-1 (2026-10-22): los PRs apilados con base feat/** también
+    # ejecutan CI, para que cada PR tenga checks verdes en su cabeza (R-PR-6).
+    branches: [main, develop, staging, 'feat/**']
 
 # R-CI-2: un push nuevo cancela el run anterior de la misma rama/PR;
 # prohibido apilar runs obsoletos.
@@ -44,6 +46,8 @@ jobs:
           cache: "npm"
       - name: Install dependencies
         run: npm ci --prefer-offline
+      - name: Secret scan (R-DS-1 — docs/rules/data/02-seguridad.md)
+        run: npm run security:secrets
       - name: Security audit (Regla R-QA-6 — docs/rules/test/07-qa-gates.md)
         run: npm audit --audit-level=high
 
@@ -78,8 +82,10 @@ jobs:
         run: npm run build -w @core/shared
       - name: Run tests with coverage
         # El script raíz `test` ya corre cada workspace con `--coverage`
-        # (los umbrales viven en cada `vitest.config.ts`).
+        # (los umbrales viven en `scripts/config/coverage.mjs`).
         run: npm test
+      - name: Compare coverage against baseline (R-COV-1)
+        run: npm run coverage:compare
       - name: Upload coverage report
         uses: actions/upload-artifact@v7
         if: always()
@@ -125,6 +131,8 @@ jobs:
     needs: [test, lint, integration-catalog]
     steps:
       - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
       - uses: actions/setup-node@v5
         with:
           node-version: "20"
@@ -135,3 +143,5 @@ jobs:
         run: npm run build
       - name: Gate G-8 — spec OpenAPI sincronizado (R-DO-6, R-C-7)
         run: npm run swagger:export && git diff --exit-code docs/openapi docs/api packages/api-gateway/src/openapi.agregado.ts
+      - name: Gate R-C-7 — cambios incompatibles de contrato
+        run: npm run contract:breaking -- --base-ref origin/main

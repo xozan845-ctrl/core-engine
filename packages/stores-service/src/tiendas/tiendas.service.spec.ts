@@ -1,9 +1,8 @@
 import type { Mock } from 'vitest';
 import { TiendasService } from './tiendas.service';
-import { DomainError, ConflictError } from '@core/shared';
+import { DomainError } from '@core/shared';
 
-/** Tiendas: una por vendedor (Tabla 11) con nombre de 2 a 100 caracteres. */
-describe('TiendasService (una tienda por vendedor)', () => {
+describe('TiendasService (multiples tiendas por empresa)', () => {
   const crear = () => {
     const pg = {
       queryOne: vi.fn().mockResolvedValue(null),
@@ -24,43 +23,33 @@ describe('TiendasService (una tienda por vendedor)', () => {
   describe('crear', () => {
     it('debe rechazar el nombre cuando tiene menos de 2 caracteres', async () => {
       const { servicio, pg } = crear();
-      await expect(servicio.crear('v1', 'X')).rejects.toThrow(/entre 2 y 100/);
+      await expect(servicio.crear('e1', 'v1', 25, 'X')).rejects.toThrow(/entre 2 y 100/);
       expect(pg.queryOne).not.toHaveBeenCalled();
     });
 
     it('debe rechazar el nombre cuando supera los 100 caracteres', async () => {
       const { servicio } = crear();
-      await expect(servicio.crear('v1', 'x'.repeat(101))).rejects.toThrow(DomainError);
-    });
-
-    it('debe devolver ConflictError cuando el vendedor ya tiene tienda', async () => {
-      const { servicio, pg } = crear();
-      (pg.queryOne as Mock).mockResolvedValueOnce(tienda); // deVendedor -> existe
-      await expect(servicio.crear('v1', 'Otra tienda')).rejects.toThrow(ConflictError);
-      const sqls = (pg.queryOne as Mock).mock.calls.map((c) => c[0] as string);
-      expect(sqls.some((s) => s.includes('INSERT INTO stores.tiendas'))).toBe(false);
+      await expect(servicio.crear('e1', 'v1', 25, 'x'.repeat(101))).rejects.toThrow(DomainError);
     });
 
     it('debe recortar el nombre y crear la tienda cuando todo es valido', async () => {
       const { servicio, pg } = crear();
-      (pg.queryOne as Mock)
-        .mockResolvedValueOnce(null) // sin tienda previa
-        .mockResolvedValueOnce(tienda); // INSERT ... RETURNING
-      const creada = await servicio.crear('v1', '  Mi tienda  ', '  venta  ');
+      (pg.queryOne as Mock).mockResolvedValueOnce(tienda);
+      const creada = await servicio.crear('e1', 'v1', 25, '  Mi tienda  ', '  venta  ');
       expect(creada.id).toBe('t1');
-      const [sql, params] = (pg.queryOne as Mock).mock.calls[1];
+      const [sql, params] = (pg.queryOne as Mock).mock.calls[0];
       expect(sql).toContain('INSERT INTO stores.tiendas');
-      expect(params[1]).toBe('v1');
-      expect(params[2]).toBe('Mi tienda'); // trim aplicado
-      expect(params[3]).toBe('venta');
+      expect(params[1]).toBe('e1');
+      expect(params[2]).toBe('v1');
+      expect(params[3]).toBe(25);
+      expect(params[4]).toBe('Mi tienda');
+      expect(params[5]).toBe('venta');
     });
 
     it('debe lanzar DomainError cuando el INSERT no devuelve fila', async () => {
       const { servicio, pg } = crear();
-      (pg.queryOne as Mock)
-        .mockResolvedValueOnce(null)
-        .mockResolvedValueOnce(null);
-      await expect(servicio.crear('v1', 'Mi tienda')).rejects.toThrow(/no se pudo crear/i);
+      (pg.queryOne as Mock).mockResolvedValueOnce(null);
+      await expect(servicio.crear('e1', 'v1', 25, 'Mi tienda')).rejects.toThrow(/no se pudo crear/i);
     });
   });
 
@@ -70,6 +59,27 @@ describe('TiendasService (una tienda por vendedor)', () => {
       (pg.queryOne as Mock).mockResolvedValue(tienda);
       expect(await servicio.deVendedor('v1')).toEqual(tienda);
       expect(pg.queryOne).toHaveBeenCalledWith(expect.stringContaining('stores.tiendas'), ['v1']);
+    });
+  });
+
+  describe('deEmpresa', () => {
+    it('debe listar las tiendas de la empresa', async () => {
+      const { servicio, pg } = crear();
+      (pg.query as Mock).mockResolvedValue([tienda]);
+      expect(await servicio.deEmpresa('e1')).toEqual([tienda]);
+      expect(pg.query).toHaveBeenCalledWith(
+        expect.stringContaining('WHERE empresa_id = $1'),
+        ['e1'],
+      );
+    });
+  });
+
+  describe('encontrarPorId', () => {
+    it('debe consultar la tienda por id', async () => {
+      const { servicio, pg } = crear();
+      (pg.queryOne as Mock).mockResolvedValue(tienda);
+      expect(await servicio.encontrarPorId('t1')).toEqual(tienda);
+      expect(pg.queryOne).toHaveBeenCalledWith(expect.stringContaining('WHERE id = $1'), ['t1']);
     });
   });
 });

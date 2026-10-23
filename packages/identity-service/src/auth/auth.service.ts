@@ -27,11 +27,12 @@ export interface Sesion {
     rol: string;
     tenant_id?: string;
     personal_id?: string;
+    participacion_porcentaje?: number;
   };
 }
 
 /** Convierte un TTL tipo `900s`/`7d` a milisegundos (para la expiracion de la sesion). */
-function ttlAMs(ttl: string): number {
+export function ttlAMs(ttl: string): number {
   const match = /^(\d+)([smhd])$/.exec(ttl.trim());
   if (!match) return 7 * 24 * 60 * 60 * 1000;
   const valor = Number(match[1]);
@@ -59,14 +60,14 @@ export class AuthService {
   ) {}
 
   async registrar(datos: { nombre: string; correo: string; contrasena: string; rol: string }): Promise<Sesion> {
-    if (![ROLES.VENDEDOR, ROLES.COMPRADOR].includes(datos.rol as 'vendedor' | 'comprador')) {
-      throw new DomainError('ROL_NO_PERMITIDO', 'El registro publico solo admite vendedor o comprador.');
+    if (![ROLES.EMPRESARIO, ROLES.COMPRADOR].includes(datos.rol as 'empresario' | 'comprador')) {
+      throw new DomainError('ROL_NO_PERMITIDO', 'El registro publico solo admite empresario o comprador.');
     }
     const usuario = await this.usuarios.crear({
       nombre: datos.nombre,
       correo: datos.correo,
       contrasena: datos.contrasena,
-      rol: datos.rol as 'vendedor' | 'comprador',
+      rol: datos.rol as 'empresario' | 'comprador',
     });
     return this.sesionDe(usuario);
   }
@@ -135,6 +136,7 @@ export class AuthService {
       nombre: usuario.nombre,
       ...(usuario.tenant_id ? { tenant_id: usuario.tenant_id } : {}),
       ...(usuario.personal_id ? { personal_id: usuario.personal_id } : {}),
+      ...(usuario.participacion_porcentaje !== undefined ? { participacion_porcentaje: usuario.participacion_porcentaje } : {}),
     };
     const access = crearAccessToken(contexto, this.secreto, this.accessTtl);
     const refresh = crearRefreshToken(contexto, this.secreto, this.refreshTtl, jti);
@@ -149,6 +151,7 @@ export class AuthService {
         rol: usuario.rol,
         ...(usuario.tenant_id ? { tenant_id: usuario.tenant_id } : {}),
         ...(usuario.personal_id ? { personal_id: usuario.personal_id } : {}),
+        ...(usuario.participacion_porcentaje !== undefined ? { participacion_porcentaje: usuario.participacion_porcentaje } : {}),
       },
     };
   }
