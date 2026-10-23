@@ -3145,7 +3145,6 @@
         "required": [
           "id",
           "nombre",
-          "slug",
           "modalidad_logistica",
           "estado",
           "creado_por",
@@ -4602,7 +4601,6 @@
           "participacion_porcentaje",
           "vendedor_id",
           "nombre",
-          "slug",
           "descripcion",
           "creado_en"
         ]
