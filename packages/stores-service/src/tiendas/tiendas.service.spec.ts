@@ -53,10 +53,27 @@ describe('TiendasService (multiples tiendas por empresa)', () => {
       expect(sql).toContain('INSERT INTO stores.tiendas');
       expect(params[1]).toBe('e1');
       expect(params[2]).toBe('v1');
-      expect(params[3]).toBe(25);
-      expect(params[4]).toBe('Mi tienda');
-      expect(params[5]).toBe('venta');
-      expect(params[6]).toBe('mi-tienda');
+      expect(params[3]).toBe('v1');
+      expect(params[4]).toBe(25);
+      expect(params[5]).toBe('Mi tienda');
+      expect(params[6]).toBe('venta');
+      expect(params[7]).toBe('mi-tienda');
+    });
+
+    it('debe crear una tienda disponible sin vendedor ni participación', async () => {
+      const { servicio, pg } = crearServicio();
+      pg.queryOne.mockResolvedValueOnce(null).mockResolvedValueOnce({
+        ...tienda,
+        vendedor_id: null,
+        participacion_porcentaje: null,
+      });
+
+      await servicio.crear('e1', 'emp1', null, 'Tienda disponible', undefined, undefined, null);
+
+      const [, params] = pg.queryOne.mock.calls[1];
+      expect(params[2]).toBe('emp1');
+      expect(params[3]).toBeNull();
+      expect(params[4]).toBeNull();
     });
 
     it('debe resolver una colisión de slug con sufijo -2', async () => {
@@ -82,7 +99,7 @@ describe('TiendasService (multiples tiendas por empresa)', () => {
       await servicio.crear('e1', 'v1', 25, 'Mi tienda', undefined, '  Tienda Piloto  ');
 
       expect(pg.queryOne).toHaveBeenNthCalledWith(1, expect.any(String), ['tienda-piloto']);
-      expect(pg.queryOne.mock.calls[1][1][6]).toBe('tienda-piloto');
+      expect(pg.queryOne.mock.calls[1][1][7]).toBe('tienda-piloto');
     });
 
     it('debe rechazar un slug explícito ya usado', async () => {
