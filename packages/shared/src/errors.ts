@@ -47,6 +47,19 @@ export class ValidationError extends DomainError {
   }
 }
 
+/**
+ * `true` si PostgreSQL rechazo una escritura por una restriccion UNIQUE
+ * (SQLSTATE 23505). Los servicios lo traducen a un error de dominio 409.
+ */
+export function esViolacionUnicidad(error: unknown): boolean {
+  return (
+    typeof error === 'object' &&
+    error !== null &&
+    'code' in error &&
+    (error as { code?: unknown }).code === '23505'
+  );
+}
+
 /** Status HTTP de cada error de dominio, segun la especificacion de la API. */
 export function httpStatusDe(error: unknown): number {
   if (error instanceof NotFoundError) return 404;

@@ -3912,7 +3912,9 @@ export const OPENAPI_AGREGADO = {
             "name": "id",
             "required": true,
             "in": "path",
+            "description": "UUID de la empresa o su slug público actual/anterior. Un slug anterior responde 301.",
             "schema": {
+              "example": "distribuidora-piloto",
               "type": "string"
             }
           }
@@ -3927,6 +3929,20 @@ export const OPENAPI_AGREGADO = {
                 }
               }
             }
+          },
+          "301": {
+            "description": "El slug consultado es anterior; Location apunta al slug actual",
+            "headers": {
+              "Location": {
+                "description": "Ruta con el slug actual",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Empresa inexistente o no visible para el usuario"
           }
         },
         "security": [
@@ -3934,6 +3950,57 @@ export const OPENAPI_AGREGADO = {
             "bearer": []
           }
         ],
+        "summary": "Obtener una empresa por UUID o slug (solo miembros o administradores)",
+        "tags": [
+          "Empresas"
+        ]
+      }
+    },
+    "/api/v1/empresas/{id}/slug": {
+      "patch": {
+        "operationId": "EmpresasController_actualizarSlug",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "description": "UUID de la empresa o su slug actual/anterior",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ActualizarSlugRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Slug actualizado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EmpresaResponseDto"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "El slug ya está en uso (incluye slugs históricos)"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Cambiar el slug público; los anteriores redirigen 301",
         "tags": [
           "Empresas"
         ]
@@ -5987,6 +6054,59 @@ export const OPENAPI_AGREGADO = {
         ]
       }
     },
+    "/api/v1/tiendas/{id}/slug": {
+      "patch": {
+        "operationId": "TiendasSlugController_actualizarSlug",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "description": "UUID de la tienda o su slug actual/anterior",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ActualizarSlugTiendaRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Slug actualizado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TiendaResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "El usuario no es propietario de la tienda"
+          },
+          "409": {
+            "description": "El slug ya está en uso (incluye slugs históricos)"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Cambiar el slug público; los anteriores redirigen 301",
+        "tags": [
+          "Tiendas"
+        ]
+      }
+    },
     "/api/v1/vendedores/productos": {
       "post": {
         "operationId": "OfertasController_publicar",
@@ -6105,7 +6225,9 @@ export const OPENAPI_AGREGADO = {
             "name": "id",
             "required": true,
             "in": "path",
+            "description": "UUID de la tienda o su slug público actual/anterior. Un slug anterior responde 301.",
             "schema": {
+              "example": "mi-tienda",
               "type": "string"
             }
           }
@@ -6121,11 +6243,22 @@ export const OPENAPI_AGREGADO = {
               }
             }
           },
+          "301": {
+            "description": "Slug anterior; Location apunta al slug actual",
+            "headers": {
+              "Location": {
+                "description": "Ruta con el slug actual",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
           "404": {
             "description": "Tienda inexistente (NO_ENCONTRADO)"
           }
         },
-        "summary": "Tienda pública con sus ofertas (ruta pública)",
+        "summary": "Tienda pública con sus ofertas (UUID o slug; ruta pública)",
         "tags": [
           "Tiendas"
         ]
@@ -10789,6 +10922,11 @@ export const OPENAPI_AGREGADO = {
           "nombre": {
             "type": "string"
           },
+          "slug": {
+            "type": "string",
+            "description": "Slug público actual",
+            "example": "distribuidora-piloto"
+          },
           "modalidad_logistica": {
             "type": "string",
             "enum": [
@@ -11130,6 +11268,13 @@ export const OPENAPI_AGREGADO = {
             "minLength": 2,
             "maxLength": 160
           },
+          "slug": {
+            "type": "string",
+            "minLength": 2,
+            "maxLength": 80,
+            "description": "Slug público. Si se omite se deriva del nombre y se resuelven colisiones con sufijos.",
+            "example": "distribuidora-piloto"
+          },
           "modalidad_logistica": {
             "type": "string",
             "enum": [
@@ -11142,6 +11287,20 @@ export const OPENAPI_AGREGADO = {
         "required": [
           "nombre",
           "modalidad_logistica"
+        ]
+      },
+      "ActualizarSlugRequestDto": {
+        "type": "object",
+        "properties": {
+          "slug": {
+            "type": "string",
+            "minLength": 2,
+            "maxLength": 80,
+            "example": "distribuidora-piloto"
+          }
+        },
+        "required": [
+          "slug"
         ]
       },
       "ActualizarModalidadLogisticaRequestDto": {
@@ -13014,6 +13173,13 @@ export const OPENAPI_AGREGADO = {
             "type": "string",
             "description": "Descripción de la tienda",
             "example": "Ropa y accesorios"
+          },
+          "slug": {
+            "type": "string",
+            "description": "Slug público. Si se omite se deriva del nombre y se resuelven colisiones con sufijos.",
+            "minLength": 2,
+            "maxLength": 80,
+            "example": "tienda-de-la-vendedora-piloto"
           }
         },
         "required": [
@@ -13053,6 +13219,11 @@ export const OPENAPI_AGREGADO = {
             "description": "Nombre de la tienda",
             "example": "Mi tienda"
           },
+          "slug": {
+            "type": "string",
+            "description": "Slug público actual",
+            "example": "mi-tienda"
+          },
           "descripcion": {
             "type": "string",
             "description": "Descripción de la tienda"
@@ -13074,13 +13245,27 @@ export const OPENAPI_AGREGADO = {
           "creado_en"
         ]
       },
+      "ActualizarSlugTiendaRequestDto": {
+        "type": "object",
+        "properties": {
+          "slug": {
+            "type": "string",
+            "minLength": 2,
+            "maxLength": 80,
+            "example": "tienda-de-la-vendedora"
+          }
+        },
+        "required": [
+          "slug"
+        ]
+      },
       "PublicarProductoRequestDto": {
         "type": "object",
         "properties": {
           "tienda_id": {
             "type": "string",
-            "description": "Tienda donde se publicará. Si se omite, se usa la tienda del vendedor autenticado.",
-            "format": "uuid"
+            "description": "Tienda donde se publicará (UUID o slug). Si se omite, se usa la tienda del vendedor autenticado.",
+            "example": "mi-tienda"
           },
           "producto_id": {
             "type": "string",

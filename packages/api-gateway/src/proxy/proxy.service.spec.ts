@@ -16,8 +16,16 @@ const politicas: PoliticaRuta[] = [
   { patron: /^\/api\/v1\/catalog\//, metodos: ['*'], roles: null },
 ];
 
-function respuestaFetch(status: number, body: string): globalThis.Response {
-  return { status, headers: {}, text: async () => body } as unknown as globalThis.Response;
+function respuestaFetch(
+  status: number,
+  body: string,
+  headers: Record<string, string> = {},
+): globalThis.Response {
+  return {
+    status,
+    headers: new Headers(headers),
+    text: async () => body,
+  } as unknown as globalThis.Response;
 }
 
 function reqCon(headers: Record<string, string>): Request {
@@ -184,5 +192,58 @@ describe('ProxyService — query string en enrutado y politicas (R-GW-1 / R-GW-3
       'http://orders-service:3004/api/v1/orders/admin/todas?estado=pagada',
       expect.objectContaining({ method: 'GET' }),
     );
+  });
+});
+
+describe('ProxyService — propagación de 301 por slug (ADR-26)', () => {
+  const fetchOriginal = globalThis.fetch;
+  afterEach(() => {
+    globalThis.fetch = fetchOriginal;
+    vi.restoreAllMocks();
+  });
+
+  it('debe pedir la redirección manual y reenviar el status y Location al cliente', async () => {
+    const destinosStores: ServicioDestino[] = [
+      {
+        nombre: 'stores',
+        url: 'http://stores-service:3003',
+        patrones: [{ patron: /^\/api\/v1\/tiendas\//, metodos: ['*'] }],
+      },
+    ];
+    const politicasStores: PoliticaRuta[] = [
+      { patron: /^\/api\/v1\/tiendas\/[^/]+$/, metodos: ['GET'], roles: null },
+    ];
+    const auth = {
+      aplicar: (_req: Request, _res: Response, next: () => void) => next(),
+    } as unknown as GatewayAuthMiddleware;
+    const fetchMock = vi.fn().mockResolvedValue(
+      respuestaFetch(301, '', {
+        location: '/api/v1/tiendas/mi-tienda-nueva',
+        connection: 'keep-alive',
+        'content-length': '0',
+      }),
+    );
+    globalThis.fetch = fetchMock as unknown as typeof fetch;
+    const servicio = new ProxyService(auth, destinosStores, politicasStores);
+    const res = resMock();
+
+    await servicio.reenviar(
+      {
+        originalUrl: '/api/v1/tiendas/mi-tienda-vieja',
+        method: 'GET',
+        headers: {},
+        body: undefined,
+      } as unknown as Request,
+      res,
+    );
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      'http://stores-service:3003/api/v1/tiendas/mi-tienda-vieja',
+      expect.objectContaining({ redirect: 'manual' }),
+    );
+    expect(res.status).toHaveBeenCalledWith(301);
+    expect(res.setHeader).toHaveBeenCalledWith('location', '/api/v1/tiendas/mi-tienda-nueva');
+    expect(res.setHeader).not.toHaveBeenCalledWith('connection', 'keep-alive');
+    expect(res.setHeader).not.toHaveBeenCalledWith('content-length', '0');
   });
 });
