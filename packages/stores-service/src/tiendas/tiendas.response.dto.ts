@@ -14,6 +14,9 @@ export class TiendaResponseDto {
   @ApiProperty({ description: 'Nombre de la tienda', example: 'Mi tienda' })
   nombre: string;
 
+  @ApiProperty({ description: 'Slug público actual', example: 'mi-tienda' })
+  slug: string;
+
   @ApiProperty({ description: 'Descripción de la tienda' })
   descripcion: string;
 
