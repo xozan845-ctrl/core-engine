@@ -3118,6 +3118,11 @@
           "nombre": {
             "type": "string"
           },
+          "slug": {
+            "type": "string",
+            "description": "Slug público actual",
+            "example": "distribuidora-piloto"
+          },
           "modalidad_logistica": {
             "type": "string",
             "enum": [
@@ -3140,6 +3145,7 @@
         "required": [
           "id",
           "nombre",
+          "slug",
           "modalidad_logistica",
           "estado",
           "creado_por",
@@ -3459,6 +3465,13 @@
             "minLength": 2,
             "maxLength": 160
           },
+          "slug": {
+            "type": "string",
+            "minLength": 2,
+            "maxLength": 80,
+            "description": "Slug público. Si se omite se deriva del nombre y se resuelven colisiones con sufijos.",
+            "example": "distribuidora-piloto"
+          },
           "modalidad_logistica": {
             "type": "string",
             "enum": [
@@ -3471,6 +3484,20 @@
         "required": [
           "nombre",
           "modalidad_logistica"
+        ]
+      },
+      "ActualizarSlugRequestDto": {
+        "type": "object",
+        "properties": {
+          "slug": {
+            "type": "string",
+            "minLength": 2,
+            "maxLength": 80,
+            "example": "distribuidora-piloto"
+          }
+        },
+        "required": [
+          "slug"
         ]
       },
       "ActualizarModalidadLogisticaRequestDto": {
@@ -4507,6 +4534,13 @@
             "type": "string",
             "description": "Descripción de la tienda",
             "example": "Ropa y accesorios"
+          },
+          "slug": {
+            "type": "string",
+            "description": "Slug público. Si se omite se deriva del nombre y se resuelven colisiones con sufijos.",
+            "minLength": 2,
+            "maxLength": 80,
+            "example": "tienda-de-la-vendedora-piloto"
           }
         },
         "required": [
@@ -4546,6 +4580,11 @@
             "description": "Nombre de la tienda",
             "example": "Mi tienda"
           },
+          "slug": {
+            "type": "string",
+            "description": "Slug público actual",
+            "example": "mi-tienda"
+          },
           "descripcion": {
             "type": "string",
             "description": "Descripción de la tienda"
@@ -4563,8 +4602,23 @@
           "participacion_porcentaje",
           "vendedor_id",
           "nombre",
+          "slug",
           "descripcion",
           "creado_en"
+        ]
+      },
+      "ActualizarSlugTiendaRequestDto": {
+        "type": "object",
+        "properties": {
+          "slug": {
+            "type": "string",
+            "minLength": 2,
+            "maxLength": 80,
+            "example": "tienda-de-la-vendedora"
+          }
+        },
+        "required": [
+          "slug"
         ]
       },
       "PublicarProductoRequestDto": {
@@ -4572,8 +4626,8 @@
         "properties": {
           "tienda_id": {
             "type": "string",
-            "description": "Tienda donde se publicará. Si se omite, se usa la tienda del vendedor autenticado.",
-            "format": "uuid"
+            "description": "Tienda donde se publicará (UUID o slug). Si se omite, se usa la tienda del vendedor autenticado.",
+            "example": "mi-tienda"
           },
           "producto_id": {
             "type": "string",

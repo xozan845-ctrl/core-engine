@@ -564,7 +564,9 @@
             "name": "id",
             "required": true,
             "in": "path",
+            "description": "UUID de la empresa o su slug público actual/anterior. Un slug anterior responde 301.",
             "schema": {
+              "example": "distribuidora-piloto",
               "type": "string"
             }
           }
@@ -579,6 +581,20 @@
                 }
               }
             }
+          },
+          "301": {
+            "description": "El slug consultado es anterior; Location apunta al slug actual",
+            "headers": {
+              "Location": {
+                "description": "Ruta con el slug actual",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Empresa inexistente o no visible para el usuario"
           }
         },
         "security": [
@@ -586,6 +602,57 @@
             "bearer": []
           }
         ],
+        "summary": "Obtener una empresa por UUID o slug (solo miembros o administradores)",
+        "tags": [
+          "Empresas"
+        ]
+      }
+    },
+    "/api/v1/empresas/{id}/slug": {
+      "patch": {
+        "operationId": "EmpresasController_actualizarSlug",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "description": "UUID de la empresa o su slug actual/anterior",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ActualizarSlugRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Slug actualizado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EmpresaResponseDto"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "El slug ya está en uso (incluye slugs históricos)"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Cambiar el slug público; los anteriores redirigen 301",
         "tags": [
           "Empresas"
         ]
@@ -784,6 +851,11 @@
           "nombre": {
             "type": "string"
           },
+          "slug": {
+            "type": "string",
+            "description": "Slug público actual",
+            "example": "distribuidora-piloto"
+          },
           "modalidad_logistica": {
             "type": "string",
             "enum": [
@@ -806,6 +878,7 @@
         "required": [
           "id",
           "nombre",
+          "slug",
           "modalidad_logistica",
           "estado",
           "creado_por",
@@ -1125,6 +1198,13 @@
             "minLength": 2,
             "maxLength": 160
           },
+          "slug": {
+            "type": "string",
+            "minLength": 2,
+            "maxLength": 80,
+            "description": "Slug público. Si se omite se deriva del nombre y se resuelven colisiones con sufijos.",
+            "example": "distribuidora-piloto"
+          },
           "modalidad_logistica": {
             "type": "string",
             "enum": [
@@ -1137,6 +1217,20 @@
         "required": [
           "nombre",
           "modalidad_logistica"
+        ]
+      },
+      "ActualizarSlugRequestDto": {
+        "type": "object",
+        "properties": {
+          "slug": {
+            "type": "string",
+            "minLength": 2,
+            "maxLength": 80,
+            "example": "distribuidora-piloto"
+          }
+        },
+        "required": [
+          "slug"
         ]
       },
       "ActualizarModalidadLogisticaRequestDto": {
