@@ -596,6 +596,62 @@ Este archivo registra decisiones técnicas deliberadas que se apartan del texto 
 
 ---
 
+## ADR-26: Slugs públicos de empresas y tiendas
+
+- **Fecha**: 2026-10-23
+- **Estado**: Aceptado
+- **Contexto**: las rutas de empresa y tienda usan UUID, que son claves
+  internas correctas pero no legibles ni estables para compartir. El negocio
+  necesita URLs públicas con el nombre del recurso, sin romper los enlaces
+  existentes ni las rutas UUID que ya consumen otros servicios. Además, un
+  cambio de nombre no debe dejar enlaces muertos.
+- **Decisión**:
+  1. El soporte de slugs es **aditivo**: cada empresa y tienda conserva su UUID
+     como clave interna y las rutas existentes (`/api/v1/empresas/{id}` y
+     `/api/v1/tiendas/{id}`) aceptan **UUID o slug**. En OpenAPI se mantiene el
+     nombre de path `{id}` y se documenta que admite ambas formas, para no
+     romper el contrato.
+  2. La **unicidad es global por tipo**: un slug de empresa es único entre
+     todas las empresas y uno de tienda entre todas las tiendas. No se usan
+     prefijos ni el ámbito de la empresa.
+  3. El slug se deriva del nombre con una normalización determinista
+     (`packages/shared/src/slug.ts`): sin diacríticos, minúsculas, solo
+     `[a-z0-9-]`, entre 2 y 80 caracteres. Se puede enviar un slug explícito al
+     crear; si se omite, las colisiones se resuelven con sufijos `-2`, `-3`, …
+     Un slug explícito ocupado responde `409`.
+  4. Los slugs **no se reutilizan nunca**. Las tablas
+     `identity.empresa_slugs` y `stores.tienda_slugs` conservan el historial
+     completo y su clave primaria es el propio slug; el slug vigente es la fila
+     con `reemplazado_en IS NULL`. Así un slug antiguo siempre tiene un destino
+     inequívoco.
+  5. Al cambiar un slug (`PATCH /api/v1/empresas/{id}/slug` o
+     `PATCH /api/v1/tiendas/{id}/slug`), el anterior queda en el historial y las
+     consultas que lo usen responden **301** con `Location` apuntando al slug
+     actual. El gateway usa `redirect: 'manual'` para no convertir ese 301 en un
+     200 y propagar la redirección al cliente.
+  6. `GET /api/v1/empresas/{id}` **nunca es público**: exige JWT y membresía
+     activa (o rol global `super_admin`/`admin`). La autorización se comprueba
+     antes de emitir el 301 para no revelar la existencia de empresas ajenas.
+     `GET /api/v1/tiendas/{id}` sigue siendo público para el storefront; el
+     frontend puede montar la URL legible `/tienda/{slug}/shop` sobre ese
+     contrato.
+  7. El historial se mantiene por trigger `SECURITY DEFINER` para que cualquier
+     vía de escritura registre el slug, y las tablas nuevas tienen RLS
+     (`identity.empresa_slugs`, `stores.tienda_slugs`).
+- **Consecuencias**:
+  - La migración `01f_slugs.sql` hace backfill de empresas y tiendas existentes
+    con sufijos deterministas y registra el slug inicial en el historial. Es
+    idempotente y solo hacia adelante (R-CD-5/R-DB-6).
+  - Renombrar una empresa o tienda no rompe enlaces compartidos, pero un slug
+    liberado no puede reasignarse a otra entidad: el alias anterior es
+    permanente para evitar redirecciones ambiguas.
+  - El UUID sigue siendo la referencia para eventos, pedidos y llamadas
+    servicio→servicio; el slug es solo una clave de presentación y resolución.
+  - Los slugs reservados (`admin`, `api`, `empresa`, `tienda`, etc.) se rechazan
+    para no colisionar con rutas del gateway ni roles de la plataforma.
+
+---
+
 ## Resumen de cumplimiento post-corrección
 
 | Ítem del documento          | Estado  | Nota |
