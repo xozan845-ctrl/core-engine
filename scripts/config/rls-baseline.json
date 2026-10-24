@@ -1,10 +1,6 @@
 [
   "catalog.eventos_procesados",
-  "catalog.inventario_mensual_mv",
   "catalog.outbox",
-  "catalog.producto_catalogo_vista",
-  "catalog.reservas_ordenes",
-  "catalog.stock_vista",
   "commissions.compensaciones_devoluciones",
   "commissions.eventos_procesados",
   "commissions.outbox",
