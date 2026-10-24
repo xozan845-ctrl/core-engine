@@ -772,6 +772,11 @@
       "DemandaProductoResponseDto": {
         "type": "object",
         "properties": {
+          "empresa_id": {
+            "type": "string",
+            "description": "Empresa dueña del producto; bucket de mercado si la venta no la identifica",
+            "format": "uuid"
+          },
           "sku": {
             "type": "string",
             "description": "SKU del producto",

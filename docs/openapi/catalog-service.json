@@ -53,6 +53,15 @@
             "schema": {
               "type": "string"
             }
+          },
+          {
+            "name": "empresa_id",
+            "required": false,
+            "in": "query",
+            "description": "Empresa dueña del producto (ADR-27)",
+            "schema": {
+              "type": "string"
+            }
           }
         ],
         "responses": {
@@ -118,7 +127,17 @@
     "/internal/inventario/resumen": {
       "get": {
         "operationId": "InternalController_resumen",
-        "parameters": [],
+        "parameters": [
+          {
+            "name": "empresa_id",
+            "required": false,
+            "in": "query",
+            "description": "Filtra el resumen por empresa (ADR-27)",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
         "responses": {
           "200": {
             "description": "Resumen de inventario",
@@ -145,7 +164,17 @@
     "/internal/inventario/lineas": {
       "get": {
         "operationId": "InternalController_lineas",
-        "parameters": [],
+        "parameters": [
+          {
+            "name": "empresa_id",
+            "required": false,
+            "in": "query",
+            "description": "Filtra las líneas por empresa (ADR-27)",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
         "responses": {
           "200": {
             "description": "Líneas de inventario",
@@ -176,6 +205,16 @@
       "get": {
         "operationId": "ProductosController_listar",
         "parameters": [
+          {
+            "name": "empresa_id",
+            "required": false,
+            "in": "query",
+            "description": "Empresa cuyo catálogo se consulta (ADR-27). Obligatoria para lecturas anónimas; con sesión se usa la empresa del token.",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
           {
             "name": "q",
             "required": false,
@@ -237,7 +276,7 @@
             }
           }
         },
-        "summary": "Listar productos (público, filtros y paginación)",
+        "summary": "Listar productos de una empresa (público, filtros y paginación)",
         "tags": [
           "Catálogo"
         ]
@@ -290,6 +329,16 @@
             "schema": {
               "type": "string"
             }
+          },
+          {
+            "name": "empresa_id",
+            "required": false,
+            "in": "query",
+            "description": "Empresa a la que debe pertenecer el producto (ADR-27). Obligatoria para lecturas anónimas.",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
           }
         ],
         "responses": {
@@ -304,10 +353,10 @@
             }
           },
           "404": {
-            "description": "Producto inexistente (NO_ENCONTRADO)"
+            "description": "Producto inexistente o de otra empresa (NO_ENCONTRADO)"
           }
         },
-        "summary": "Detalle de producto (público)",
+        "summary": "Detalle de producto de una empresa (público)",
         "tags": [
           "Catálogo"
         ]
@@ -361,7 +410,17 @@
     "/api/v1/admin/inventario": {
       "get": {
         "operationId": "InventarioController_listar",
-        "parameters": [],
+        "parameters": [
+          {
+            "name": "empresa_id",
+            "required": false,
+            "in": "query",
+            "description": "Filtra el inventario de una empresa (ADR-27)",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
         "responses": {
           "200": {
             "description": "Líneas de inventario",
@@ -414,9 +473,14 @@
       "LoteProductoResponseDto": {
         "type": "object",
         "properties": {
+          "empresa_id": {
+            "type": "string",
+            "description": "Empresa dueña del producto",
+            "format": "uuid"
+          },
           "sku": {
             "type": "string",
-            "description": "SKU del producto",
+            "description": "SKU del producto (único por empresa)",
             "example": "SKU-001"
           },
           "stock": {
@@ -455,7 +519,7 @@
           },
           "sku": {
             "type": "string",
-            "description": "SKU único del producto",
+            "description": "SKU del producto (único por empresa)",
             "example": "SKU-001"
           },
           "nombre": {
@@ -542,6 +606,11 @@
       "LineaInventarioResponseDto": {
         "type": "object",
         "properties": {
+          "empresa_id": {
+            "type": "string",
+            "description": "Empresa dueña del producto (ADR-27)",
+            "format": "uuid"
+          },
           "sku": {
             "type": "string",
             "description": "SKU del producto",
