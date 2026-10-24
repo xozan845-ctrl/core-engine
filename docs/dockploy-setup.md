@@ -84,11 +84,15 @@ Pasos:
    `POSTGRES_PASSWORD`** (+ las claves de runtime: `DATABASE_URL`, `RABBITMQ_URL`,
    `JWT_SECRET`, `INTERNAL_API_KEY`, …). `GRAFANA_ADMIN_PASSWORD` y
    `RABBITMQ_PASSWORD` solo hacen falta si se activa la capa de observabilidad.
-6. **Puertos/red**: gateway expuesto en `8080` por environment (Docker asigna
-   puerto/host distinto); red aislada por environment (lo gestiona Dockploy).
+6. **Puertos/red**: el gateway se publica **solo en loopback**
+   (`127.0.0.1:8080:8080`); el proxy de borde (Traefik/Dockploy) enruta el 443
+   hacia él. Nunca publicar `8080:8080` en todas las interfaces: saltaría TLS y
+   el propio proxy. Red aislada por environment (lo gestiona Dockploy).
 7. **Healthcheck/Readiness**: `GET /health` (liveness del gateway; lo usa el
-   healthcheck de Dockploy) y `GET /ready` (readiness agregada: responde **503**
-   si algún microservicio de producción no está `ok`; lo usa el smoke, R-CD-12).
+   healthcheck de Dockploy, siempre abierto) y `GET /ready` (readiness agregada:
+   responde **503** si algún microservicio de producción no está `ok`; lo usa el
+   smoke, R-CD-12). `/ready` exige `x-internal-key` salvo `READY_PUBLIC=true`
+   (solo desarrollo) y está limitado a 10 req/min por IP con caché de 5 s.
 
 > Dockploy corre el compose del entorno: **`docker-compose.yml`** (producción) o
 > **`docker-compose.stage.yml`** (imágenes de GHCR + Postgres + RabbitMQ). La
@@ -119,7 +123,7 @@ Migraciones solo hacia adelante.
 |---|---|---|---|
 | 1 | Environment apunta a su rama (`staging` / `main`) | ☐ | ☐ |
 | 2 | Auto-deploy solo por push de esa rama | ☐ | ☐ |
-| 3 | `GET /ready` → 200 (todos los servicios `ok`) con la pila levantada | ☐ | ☐ |
+| 3 | `GET /ready` con `x-internal-key: $INTERNAL_API_KEY` → 200 (todos los servicios `ok`) | ☐ | ☐ |
 | 4 | Un flujo de lectura real devuelve datos (smoke, `R-CD-12`) | ☐ | ☐ |
 | 5 | BD/vhost del entorno aislados (nada compartido) | ☐ | ☐ |
 | 6 | Secretos solo en variables de service/environment (`R-CD-7`) | ☐ | ☐ |
@@ -127,9 +131,15 @@ Migraciones solo hacia adelante.
 | 8 | TLS en **todos** los dominios (API y MinIO) | ☐ | ☐ |
 | 9 | `/docs`, `/docs-json` y `/metrics` ocultos (`DIAGNOSTICOS_PUBLICOS=false`) | ☐ | ☐ |
 | 10 | MinIO sin puerto público (`9000` solo detrás de Traefik con TLS) | ☐ | ☐ |
-| 11 | Gate de staging (`EDGE_BASIC_AUTH`) — producción sin gate | ☐ | n/a |
+| 11 | Gate de staging (`EDGE_BASIC_AUTH`) — obligatorio (`REQUIRE_EDGE_AUTH=true`; el arranque falla sin él); producción sin gate | ☐ | n/a |
 | 12 | `CORS_ORIGINS` con los orígenes reales del frontend | ☐ | ☐ |
+| 13 | `TRUST_PROXY=1` y rate limit por IP real (probar dos IPs o revisar `x-ratelimit-remaining`) | ☐ | ☐ |
+| 14 | `8080` solo en loopback y cerrado en el firewall del VPS | ☐ | ☐ |
 
+> `EDGE_BASIC_AUTH` debe existir también como secreto del GitHub Environment
+> (`EDGE_BASIC_AUTH`) para que el smoke remoto se autentique en staging. Sin
+> él, el paso `npm run smoke:remote` recibe 401 en el login.
+>
 > Desarrollo local: `docker compose -f docker-compose.dev.yml up -d --build` + `npm run demo` es la
 > verificación equivalente antes de cualquier PR (R-GC-5).
 
