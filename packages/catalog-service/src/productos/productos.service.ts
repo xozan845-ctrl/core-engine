@@ -9,6 +9,7 @@ import {
   crearPagina,
   parsearPaginacion,
   Pagina,
+  EMPRESA_LEGACY_ID,
 } from '@core/shared';
 
 export interface Producto {
@@ -24,6 +25,12 @@ export interface Producto {
   creado_en: string;
 }
 
+/** Clave compuesta de un producto en el catálogo por empresa (ADR-27). */
+export interface ClaveProducto {
+  empresa_id: string;
+  sku: string;
+}
+
 interface ProductoRow {
   id: string;
   empresa_id: string;
@@ -37,25 +44,35 @@ interface ProductoRow {
   creado_en: string;
 }
 
+interface EmpresaCatalogo {
+  estado: string;
+  tipo_empresa?: string;
+}
+
 /**
- * Catalogo maestro y control de stock con esquema logico propio (Tabla 7).
- * La escritura es CRUD convencional (baja tasa de escritura, sin sobre-ingenieria
- * segun el capitulo 3.2).
+ * Catálogo maestro **por empresa** (ADR-27) con control de stock y esquema
+ * lógico propio (Tabla 7). La escritura es CRUD convencional (baja tasa de
+ * escritura, sin sobre-ingeniería según el capítulo 3.2).
  */
 @Injectable()
 export class ProductosService {
+  private readonly identidadUrl = process.env.IDENTITY_SERVICE_URL ?? 'http://identity-service:3001';
+  private readonly claveInterna = process.env.INTERNAL_API_KEY ?? '';
+
   constructor(private readonly pg: PgService) {}
 
   async listar(filtros: {
+    empresa_id?: unknown;
     pagina?: unknown;
     limite?: unknown;
     q?: unknown;
     estado?: unknown;
     categoria?: unknown;
   }): Promise<Pagina<Producto>> {
+    const empresaId = this.exigirEmpresa(filtros.empresa_id);
     const { pagina, limite } = parsearPaginacion(filtros as Record<string, unknown>);
-    const condiciones: string[] = [];
-    const params: unknown[] = [];
+    const params: unknown[] = [empresaId];
+    const condiciones: string[] = ['empresa_id = $1'];
     if (filtros.q) {
       params.push(`%${String(filtros.q).toLowerCase()}%`);
       condiciones.push(`(LOWER(nombre) LIKE $${params.length} OR LOWER(sku) LIKE $${params.length})`);
@@ -68,7 +85,7 @@ export class ProductosService {
       params.push(String(filtros.categoria));
       condiciones.push(`LOWER(categoria) = LOWER($${params.length})`);
     }
-    const where = condiciones.length ? `WHERE ${condiciones.join(' AND ')}` : '';
+    const where = `WHERE ${condiciones.join(' AND ')}`;
     const total = await this.pg
       .queryOne<{ n: number }>(`SELECT COUNT(*)::int AS n FROM catalog.producto_catalogo_vista ${where}`, params)
       .then((r) => r?.n ?? 0);
@@ -81,35 +98,50 @@ export class ProductosService {
     return crearPagina(filas.map((f) => this.serializar(f)), total, { pagina, limite });
   }
 
-  async encontrarPorId(id: string): Promise<Producto | null> {
+  async encontrarPorId(id: string, empresaId?: string): Promise<Producto | null> {
     if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id)) {
       return null;
     }
+    const params: unknown[] = [id];
+    let where = 'id = $1';
+    if (empresaId) {
+      params.push(empresaId);
+      where += ` AND empresa_id = $${params.length}`;
+    }
     const fila = await this.pg.queryOne<ProductoRow>(
       `SELECT id, empresa_id, sku, nombre, descripcion, categoria, precio_base_cents, disponible AS stock, estado, creado_en
-       FROM catalog.producto_catalogo_vista WHERE id = $1`,
-      [id],
+       FROM catalog.producto_catalogo_vista WHERE ${where}`,
+      params,
     );
     return fila ? this.serializar(fila) : null;
   }
 
-  async encontrarPorSku(sku: string): Promise<Producto | null> {
+  async encontrarPorSku(sku: string, empresaId?: string): Promise<Producto | null> {
+    const params: unknown[] = [sku];
+    let where = 'LOWER(sku) = LOWER($1)';
+    if (empresaId) {
+      params.push(empresaId);
+      where += ` AND empresa_id = $${params.length}`;
+    }
     const fila = await this.pg.queryOne<ProductoRow>(
       `SELECT id, empresa_id, sku, nombre, descripcion, categoria, precio_base_cents, disponible AS stock, estado, creado_en
-       FROM catalog.producto_catalogo_vista WHERE LOWER(sku) = LOWER($1)`,
-      [sku],
+       FROM catalog.producto_catalogo_vista WHERE ${where}`,
+      params,
     );
     return fila ? this.serializar(fila) : null;
   }
 
-  /** H-03 / TC-01: alta de producto con stock y precio base. */
-  /** Consulta por lote de skus (posible SKU duplicado en items: se devuelve una fila por sku). */
-  async lotePorSkus(skus: string[]): Promise<{ sku: string; stock: number; estado: string }[]> {
+  /**
+   * Consulta por lote de SKUs. Un SKU puede repetirse en empresas distintas,
+   * por eso la fila incluye `empresa_id`: el consumidor debe emparejar la
+   * clave compuesta (ADR-27).
+   */
+  async lotePorSkus(skus: string[]): Promise<{ empresa_id: string; sku: string; stock: number; estado: string }[]> {
     if (!skus.length) return [];
     const params: string[] = [...new Set(skus.map((s) => String(s).toLowerCase()))];
     const marcadores = params.map((_, i) => `$${i + 1}`).join(', ');
-    const rows = await this.pg.query<{ sku: string; stock: number; estado: string }>(
-      `SELECT sku, disponible AS stock, estado
+    const rows = await this.pg.query<{ empresa_id: string; sku: string; stock: number; estado: string }>(
+      `SELECT empresa_id, LOWER(sku) AS sku, disponible AS stock, estado
        FROM catalog.producto_catalogo_vista
        WHERE LOWER(sku) IN (${marcadores})
        ORDER BY creado_en DESC`,
@@ -118,17 +150,32 @@ export class ProductosService {
     return rows;
   }
 
-  /** Stock restante por SKU (alimenta stock.updated para RN-02). */
-  async stockActualDe(skus: string[]): Promise<{ sku: string; stock_restante: number }[]> {
-    if (!skus.length) return [];
-    const params: string[] = [...new Set(skus.map((s) => String(s).toLowerCase()))];
-    const marcadores = params.map((_, i) => `$${i + 1}`).join(', ');
-    return this.pg.query<{ sku: string; stock_restante: number }>(
-      `SELECT LOWER(sku) AS sku, disponible AS stock_restante
-       FROM catalog.producto_catalogo_vista
-       WHERE LOWER(sku) IN (${marcadores})`,
-      params,
+  /** Stock restante por producto (alimenta stock.updated para RN-02). */
+  async stockActualDe(items: ClaveProducto[]): Promise<{ empresa_id: string; sku: string; stock_restante: number }[]> {
+    if (!items.length) return [];
+    const claves = [...new Map(items.map((i) => [`${i.empresa_id}:${i.sku.toLowerCase()}`, {
+      empresa_id: i.empresa_id,
+      sku: String(i.sku).toLowerCase(),
+    }])).values()];
+    return this.pg.query<{ empresa_id: string; sku: string; stock_restante: number }>(
+      `SELECT p.empresa_id, LOWER(p.sku) AS sku, p.stock AS stock_restante
+       FROM catalog.productos p
+       JOIN jsonb_to_recordset($1::jsonb) AS i(empresa_id uuid, sku text)
+         ON p.empresa_id = i.empresa_id AND LOWER(p.sku) = LOWER(i.sku)`,
+      [JSON.stringify(claves)],
     );
+  }
+
+  /** ADR-27: el catálogo siempre se consulta en el ámbito de una empresa. */
+  private exigirEmpresa(valor: unknown): string {
+    const empresaId = typeof valor === 'string' ? valor.trim() : '';
+    if (!empresaId) {
+      throw new DomainError('EMPRESA_REQUERIDA', 'El catálogo se consulta por empresa (empresa_id).');
+    }
+    if (empresaId === EMPRESA_LEGACY_ID) {
+      throw new DomainError('EMPRESA_NO_PUBLICA', 'La empresa comodín del catálogo legado no publica productos.');
+    }
+    return empresaId;
   }
 
   async crear(datos: {
@@ -151,10 +198,11 @@ export class ProductosService {
     if (!precio.esPositivo()) {
       throw new DomainError('PRECIO_INVALIDO', 'El precio base debe ser mayor a 0.');
     }
-    const existente = await this.encontrarPorSku(sku);
+    const existente = await this.encontrarPorSku(sku, datos.empresa_id);
     if (existente) {
-      throw new ConflictError(`Ya existe un producto con el SKU ${sku}.`);
+      throw new ConflictError(`Ya existe un producto con el SKU ${sku} en esta empresa.`);
     }
+    await this.validarEmpresaCatalogo(datos.empresa_id);
     const fila = await this.pg.transaccion(async (client) => {
       const r = await client.query<ProductoRow>(
         `INSERT INTO catalog.productos (id, empresa_id, sku, nombre, descripcion, categoria, precio_base_cents, stock, estado)
@@ -173,9 +221,9 @@ export class ProductosService {
         ],
       );
       await client.query(
-        `INSERT INTO catalog.historico_precios (id, producto_sku, precio_anterior_cents, precio_nuevo_cents, vigente_desde)
-         VALUES (gen_random_uuid(), $1, NULL, $2, NOW())`,
-        [sku, precio.centavos],
+        `INSERT INTO catalog.historico_precios (id, empresa_id, producto_sku, precio_anterior_cents, precio_nuevo_cents, vigente_desde)
+         VALUES (gen_random_uuid(), $1, $2, NULL, $3, NOW())`,
+        [datos.empresa_id, sku, precio.centavos],
       );
       return r.rows[0];
     });
@@ -198,9 +246,8 @@ export class ProductosService {
     },
     empresaId?: string,
   ): Promise<Producto> {
-    const previo = await this.encontrarPorId(id);
+    const previo = await this.encontrarPorId(id, empresaId);
     if (!previo) throw new NotFoundError('Producto', id);
-    if (empresaId && previo.empresa_id !== empresaId) throw new NotFoundError('Producto', id);
 
     await this.pg.transaccion(async (client) => {
       const sets: string[] = [];
@@ -221,9 +268,9 @@ export class ProductosService {
         push('precio_base_cents = $', nuevo.centavos);
         // RN-08: trazabilidad de cambios del precio base
         await client.query(
-          `INSERT INTO catalog.historico_precios (producto_sku, precio_anterior_cents, precio_nuevo_cents, vigente_desde)
-           VALUES ($1, $2, $3, NOW())`,
-          [previo.sku, Money.parsear(previo.precio_base).centavos, nuevo.centavos],
+          `INSERT INTO catalog.historico_precios (empresa_id, producto_sku, precio_anterior_cents, precio_nuevo_cents, vigente_desde)
+           VALUES ($1, $2, $3, $4, NOW())`,
+          [previo.empresa_id, previo.sku, Money.parsear(previo.precio_base).centavos, nuevo.centavos],
         );
       }
 
@@ -235,9 +282,9 @@ export class ProductosService {
         push('estado = $', cambios.stock > 0 ? 'disponible' : 'agotado');
         // auditoria de movimientos manuales (mermas, correcciones)
         await client.query(
-          `INSERT INTO catalog.ajustes_stock (id, producto_sku, cantidad_anterior, cantidad_nueva, motivo, realizado_en)
-           VALUES (gen_random_uuid(), $1, $2, $3, $4, NOW())`,
-          [previo.sku, previo.stock, cambios.stock, cambios.motivo ?? 'ajuste manual'],
+          `INSERT INTO catalog.ajustes_stock (id, empresa_id, producto_sku, cantidad_anterior, cantidad_nueva, motivo, realizado_en)
+           VALUES (gen_random_uuid(), $1, $2, $3, $4, $5, NOW())`,
+          [previo.empresa_id, previo.sku, previo.stock, cambios.stock, cambios.motivo ?? 'ajuste manual'],
         );
       }
 
@@ -249,48 +296,85 @@ export class ProductosService {
         );
       }
     });
-    const actualizado = await this.encontrarPorId(id);
+    const actualizado = await this.encontrarPorId(id, empresaId);
     if (!actualizado) throw new NotFoundError('Producto', id);
     return actualizado;
+  }
+
+  /**
+   * ADR-27: solo una empresa activa de tipo comercial tiene catálogo. Se
+   * consulta a identity por API interna (R-DB-1) y se falla cerrado si no se
+   * puede verificar.
+   */
+  private async validarEmpresaCatalogo(empresaId: string): Promise<void> {
+    if (!empresaId || empresaId === EMPRESA_LEGACY_ID) {
+      throw new DomainError('EMPRESA_NO_PUBLICA', 'La empresa comodín del catálogo legado no publica productos.');
+    }
+    let res: Response;
+    try {
+      res = await fetch(
+        `${this.identidadUrl}/internal/empresas/${encodeURIComponent(empresaId)}`,
+        { headers: { 'x-internal-key': this.claveInterna } },
+      );
+    } catch {
+      throw new DomainError('EMPRESA_NO_VERIFICABLE', 'No se pudo verificar la empresa del catálogo.');
+    }
+    if (res.status === 404) throw new NotFoundError('Empresa', empresaId);
+    if (!res.ok) {
+      throw new DomainError('EMPRESA_NO_VERIFICABLE', 'No se pudo verificar la empresa del catálogo.');
+    }
+    const empresa = (await res.json()) as EmpresaCatalogo;
+    if (empresa.estado !== 'activa') {
+      throw new DomainError('EMPRESA_INACTIVA', 'La empresa debe estar activa para operar su catálogo.');
+    }
+    if (empresa.tipo_empresa && empresa.tipo_empresa !== 'comercial') {
+      throw new DomainError('EMPRESA_SIN_CATALOGO', 'Solo las empresas comerciales tienen catálogo propio.');
+    }
   }
 
   /**
    * RN-03: descuento atomico de stock dentro de una transaccion.
    * Si alguna linea no alcanza stock, se rechaza la reserva completa (la
    * transaccion revierte las lineas ya descontadas).
-   * Devuelve el stock restante por SKU (alimenta stock.updated para RN-02).
+   * La clave es (empresa, SKU): cada empresa tiene su propio stock (ADR-27).
    */
   async reservarStock(
     orderId: string,
-    items: { sku: string; cantidad: number }[],
+    items: { empresa_id: string; sku: string; cantidad: number }[],
   ): Promise<{
     ok: boolean;
-    fallidos: { sku: string; cantidad: number; motivo: string }[];
-    stock_restante?: { sku: string; stock_restante: number }[];
+    fallidos: { empresa_id: string; sku: string; cantidad: number; motivo: string }[];
+    stock_restante?: { empresa_id: string; sku: string; stock_restante: number }[];
   }> {
-    const fallidos: { sku: string; cantidad: number; motivo: string }[] = [];
+    const fallidos: { empresa_id: string; sku: string; cantidad: number; motivo: string }[] = [];
     let reservado = false;
     try {
       await this.pg.transaccion(async (client) => {
         for (const item of items) {
           // Bloqueo pesimista requerido por regla dorada (Data Integrity)
           const lock = await client.query(
-            `SELECT stock FROM catalog.productos WHERE LOWER(sku) = LOWER($1) FOR UPDATE`,
-            [item.sku]
+            `SELECT stock FROM catalog.productos
+             WHERE empresa_id = $1 AND LOWER(sku) = LOWER($2) FOR UPDATE`,
+            [item.empresa_id, item.sku]
           );
-          
+
           if (lock.rowCount === 0 || lock.rows[0].stock < item.cantidad) {
-            fallidos.push({ sku: item.sku, cantidad: item.cantidad, motivo: 'stock_insuficiente' });
+            fallidos.push({
+              empresa_id: item.empresa_id,
+              sku: item.sku,
+              cantidad: item.cantidad,
+              motivo: 'stock_insuficiente',
+            });
             continue;
           }
 
           await client.query(
             `UPDATE catalog.productos
-             SET stock = stock - $2,
-                 estado = CASE WHEN stock - $2 > 0 THEN 'disponible' ELSE 'agotado' END
-             WHERE LOWER(sku) = LOWER($1)
+             SET stock = stock - $3,
+                 estado = CASE WHEN stock - $3 > 0 THEN 'disponible' ELSE 'agotado' END
+             WHERE empresa_id = $1 AND LOWER(sku) = LOWER($2)
              RETURNING sku`,
-            [item.sku, item.cantidad],
+            [item.empresa_id, item.sku, item.cantidad],
           );
         }
         if (fallidos.length > 0) {
@@ -307,35 +391,40 @@ export class ProductosService {
       if (!(err instanceof Error) || err.message !== 'STOCK_INSUFICIENTE') throw err;
     }
     if (!reservado) return { ok: false, fallidos };
-    const stock = await this.pg.query<{ sku: string; stock_restante: number }>(
-      `SELECT LOWER(sku) AS sku, stock AS stock_restante
-       FROM catalog.productos
-       WHERE LOWER(sku) = ANY($1)`,
-      [[...new Set(items.map((i) => String(i.sku).toLowerCase()))]],
+    const stock = await this.pg.query<{ empresa_id: string; sku: string; stock_restante: number }>(
+      `SELECT p.empresa_id, LOWER(p.sku) AS sku, p.stock AS stock_restante
+       FROM catalog.productos p
+       JOIN jsonb_to_recordset($1::jsonb) AS i(empresa_id uuid, sku text)
+         ON p.empresa_id = i.empresa_id AND LOWER(p.sku) = LOWER(i.sku)`,
+      [JSON.stringify([...new Map(items.map((i) => [`${i.empresa_id}:${i.sku.toLowerCase()}`, {
+        empresa_id: i.empresa_id,
+        sku: String(i.sku).toLowerCase(),
+      }])).values()])],
     );
     return { ok: true, fallidos, stock_restante: stock };
   }
 
-  /** RN-06: devolucion aprobada revierte stock. */
+  /** RN-06: devolucion aprobada revierte stock por (empresa, SKU). */
   async reintegrarStock(
     orderId: string,
-    items: { sku: string; cantidad: number }[],
+    items: { empresa_id: string; sku: string; cantidad: number }[],
   ): Promise<void> {
     await this.pg.transaccion(async (client) => {
       for (const item of items) {
         await client.query(
           `UPDATE catalog.productos
-           SET stock = stock + $2,
+           SET stock = stock + $3,
                estado = 'disponible'
-           WHERE LOWER(sku) = LOWER($1)`,
-          [item.sku, item.cantidad],
+           WHERE empresa_id = $1 AND LOWER(sku) = LOWER($2)`,
+          [item.empresa_id, item.sku, item.cantidad],
         );
       }
       await client.query(
-        `INSERT INTO catalog.ajustes_stock (producto_sku, cantidad_anterior, cantidad_nueva, motivo, realizado_en)
-         SELECT p.sku, p.stock - i.cantidad, p.stock, 'devolucion orden ' || $1, NOW()
-         FROM catalog.productos p, jsonb_to_recordset($2::jsonb) AS i(sku text, cantidad int)
-         WHERE p.sku = i.sku`,
+        `INSERT INTO catalog.ajustes_stock (empresa_id, producto_sku, cantidad_anterior, cantidad_nueva, motivo, realizado_en)
+         SELECT p.empresa_id, p.sku, p.stock - i.cantidad, p.stock, 'devolucion orden ' || $1, NOW()
+         FROM catalog.productos p
+         JOIN jsonb_to_recordset($2::jsonb) AS i(empresa_id uuid, sku text, cantidad int)
+           ON p.empresa_id = i.empresa_id AND LOWER(p.sku) = LOWER(i.sku)`,
         [orderId, JSON.stringify(items)],
       );
       // La reserva de esta orden ya no está activa tras reintegrar el stock.
@@ -363,12 +452,14 @@ export class ProductosService {
     );
   }
 
-  resumenInventario(): Promise<{
+  resumenInventario(empresaId?: string): Promise<{
     productos: number;
     agotados: number;
     stock_total: number;
     valor_inventario_cents: number;
   }> {
+    const filtro = empresaId ? 'WHERE empresa_id = $1' : '';
+    const params = empresaId ? [empresaId] : [];
     return this.pg
       .queryOne<{
         productos: number;
@@ -380,7 +471,8 @@ export class ProductosService {
                 COUNT(*) FILTER (WHERE estado = 'agotado')::int AS agotados,
                 COALESCE(SUM(stock), 0)::int AS stock_total,
                 COALESCE(SUM(stock * precio_base_cents), 0)::int AS valor_inventario_cents
-         FROM catalog.productos`,
+         FROM catalog.productos ${filtro}`,
+        params,
       )
       .then((r) =>
         r ?? { productos: 0, agotados: 0, stock_total: 0, valor_inventario_cents: 0 },

@@ -10,7 +10,7 @@ export class ProductoResponseDto {
   @ApiProperty({ description: 'Id del producto', format: 'uuid' })
   id: string;
 
-  @ApiProperty({ description: 'SKU único del producto', example: 'SKU-001' })
+  @ApiProperty({ description: 'SKU del producto (único por empresa)', example: 'SKU-001' })
   sku: string;
 
   @ApiProperty({ description: 'Nombre del producto' })
@@ -63,7 +63,10 @@ export class PaginaProductosResponseDto {
 }
 
 export class LoteProductoResponseDto {
-  @ApiProperty({ description: 'SKU del producto', example: 'SKU-001' })
+  @ApiProperty({ description: 'Empresa dueña del producto', format: 'uuid', required: false })
+  empresa_id: string;
+
+  @ApiProperty({ description: 'SKU del producto (único por empresa)', example: 'SKU-001' })
   sku: string;
 
   @ApiProperty({ description: 'Stock disponible', example: 10 })

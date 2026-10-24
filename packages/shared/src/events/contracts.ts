@@ -75,8 +75,8 @@ export interface StockReintegradoData {
 export interface StockUpdatedData {
   order_id: string;
   tipo: 'reservado' | 'reintegrado' | 'ajuste';
-  /** Stock restante por SKU tras la operacion (RN-02: oferta -> agotada en stock 0). */
-  items: { sku: string; stock_restante: number }[];
+  /** Stock restante por producto tras la operacion (RN-02: oferta -> agotada en stock 0). */
+  items: { empresa_id: string; sku: string; stock_restante: number }[];
 }
 
 export interface PaymentProcesadoData {
@@ -114,7 +114,7 @@ export interface ComisionAcreditadaData {
 export interface DevolucionSolicitadaData {
   order_id: string;
   motivo: string;
-  items: { sku: string; cantidad: number }[];
+  items: { empresa_id: string; sku: string; cantidad: number }[];
 }
 
 export interface OrderStatusUpdatedData {

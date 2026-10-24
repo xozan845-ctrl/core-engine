@@ -92,7 +92,11 @@ export class PedidosConsumer implements OnModuleInit {
       this.logger.info({ msg: 'Orden completada: comision listo para devengar', order_id });
     } else if (estado === 'devuelta') {
       const orden = await this.envios.consultarOrden(order_id);
-      const items = (orden?.items ?? []).map((i) => ({ sku: i.sku, cantidad: i.cantidad }));
+      const items = (orden?.items ?? []).map((i) => ({
+        empresa_id: i.empresa_id,
+        sku: i.sku,
+        cantidad: i.cantidad,
+      }));
       // RN-06: Pedidos retornan stock; Pagos reembolsan comision
       await this.outbox.insertar(EVENTOS.DEVOLUCION_SOLICITADA, {
         order_id,
