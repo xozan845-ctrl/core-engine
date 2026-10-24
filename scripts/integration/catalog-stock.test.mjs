@@ -15,7 +15,12 @@ test('reserva, reconstruccion y devolucion conservan stock disponible exacto', a
   const client = new pg.Client({ connectionString });
   await client.connect();
   try {
-    for (const name of ['01_esquemas.sql', '01c_cqrs_catalog.sql', '01e_adr25_empresas.sql']) {
+    for (const name of [
+      '01_esquemas.sql',
+      '01c_cqrs_catalog.sql',
+      '01e_adr25_empresas.sql',
+      '01h_catalogo_por_empresa.sql',
+    ]) {
       const sql = await readFile(new URL(`../../infra/db/init/${name}`, import.meta.url), 'utf8');
       await client.query(sql);
     }
@@ -24,37 +29,47 @@ test('reserva, reconstruccion y devolucion conservan stock disponible exacto', a
       const sku = `REG-${randomUUID()}`;
       const orderId = randomUUID();
       const empresaId = randomUUID();
+      const empresaOtra = randomUUID();
       await client.query(
         `INSERT INTO catalog.productos (empresa_id, sku, nombre, precio_base_cents, stock)
-         VALUES ($1, $2, 'Producto de regresion', 1000, 10)`,
+         VALUES ($1, $2, 'Producto de regresion', 1000, 10), ($3, $2, 'Mismo SKU en otra empresa', 2000, 4)`,
+        [empresaId, sku, empresaOtra],
+      );
+      await assertStock(client, empresaId, sku, { maestro: 10, fisico: 10, reservado: 0, disponible: 10 });
+      await assertStock(client, empresaOtra, sku, { maestro: 4, fisico: 4, reservado: 0, disponible: 4 });
+
+      await client.query(
+        'UPDATE catalog.productos SET stock = stock - 1 WHERE empresa_id = $1 AND sku = $2',
         [empresaId, sku],
       );
-      await assertStock(client, sku, { maestro: 10, fisico: 10, reservado: 0, disponible: 10 });
-
-      await client.query('UPDATE catalog.productos SET stock = stock - 1 WHERE sku = $1', [sku]);
       await client.query(
         'INSERT INTO catalog.reservas_ordenes (order_id, items_json) VALUES ($1, $2)',
-        [orderId, JSON.stringify([{ sku, cantidad: 1 }])],
+        [orderId, JSON.stringify([{ empresa_id: empresaId, sku, cantidad: 1 }])],
       );
-      await assertStock(client, sku, { maestro: 9, fisico: 10, reservado: 1, disponible: 9 });
+      await assertStock(client, empresaId, sku, { maestro: 9, fisico: 10, reservado: 1, disponible: 9 });
+      // El stock de la otra empresa no se contamina (ADR-27).
+      await assertStock(client, empresaOtra, sku, { maestro: 4, fisico: 4, reservado: 0, disponible: 4 });
 
       await client.query(
         'UPDATE catalog.reservas_ordenes SET items_json = $2 WHERE order_id = $1',
-        [orderId, JSON.stringify([{ sku, cantidad: 2 }])],
+        [orderId, JSON.stringify([{ empresa_id: empresaId, sku, cantidad: 2 }])],
       );
-      await assertStock(client, sku, { maestro: 9, fisico: 11, reservado: 2, disponible: 9 });
+      await assertStock(client, empresaId, sku, { maestro: 9, fisico: 11, reservado: 2, disponible: 9 });
       await client.query(
         'UPDATE catalog.reservas_ordenes SET items_json = $2 WHERE order_id = $1',
-        [orderId, JSON.stringify([{ sku, cantidad: 1 }])],
+        [orderId, JSON.stringify([{ empresa_id: empresaId, sku, cantidad: 1 }])],
       );
-      await assertStock(client, sku, { maestro: 9, fisico: 10, reservado: 1, disponible: 9 });
+      await assertStock(client, empresaId, sku, { maestro: 9, fisico: 10, reservado: 1, disponible: 9 });
 
       await client.query('SELECT catalog.fn_bootstrap_proyecciones()');
-      await assertStock(client, sku, { maestro: 9, fisico: 10, reservado: 1, disponible: 9 });
+      await assertStock(client, empresaId, sku, { maestro: 9, fisico: 10, reservado: 1, disponible: 9 });
 
-      await client.query('UPDATE catalog.productos SET stock = stock + 1 WHERE sku = $1', [sku]);
+      await client.query(
+        'UPDATE catalog.productos SET stock = stock + 1 WHERE empresa_id = $1 AND sku = $2',
+        [empresaId, sku],
+      );
       await client.query('DELETE FROM catalog.reservas_ordenes WHERE order_id = $1', [orderId]);
-      await assertStock(client, sku, { maestro: 10, fisico: 10, reservado: 0, disponible: 10 });
+      await assertStock(client, empresaId, sku, { maestro: 10, fisico: 10, reservado: 0, disponible: 10 });
       await client.query('ROLLBACK');
     } catch (error) {
       await client.query('ROLLBACK');
@@ -65,15 +80,15 @@ test('reserva, reconstruccion y devolucion conservan stock disponible exacto', a
   }
 });
 
-async function assertStock(client, sku, esperado) {
+async function assertStock(client, empresaId, sku, esperado) {
   const { rows: [row] } = await client.query(
     `SELECT p.stock AS maestro, s.stock_fisico AS fisico, s.reservado,
             s.disponible, c.disponible AS catalogo
      FROM catalog.productos p
-     JOIN catalog.stock_vista s ON s.sku = p.sku
-     JOIN catalog.producto_catalogo_vista c ON c.sku = p.sku
-     WHERE p.sku = $1`,
-    [sku],
+     JOIN catalog.stock_vista s ON s.empresa_id = p.empresa_id AND s.sku = p.sku
+     JOIN catalog.producto_catalogo_vista c ON c.empresa_id = p.empresa_id AND c.sku = p.sku
+     WHERE p.empresa_id = $1 AND p.sku = $2`,
+    [empresaId, sku],
   );
   assert.deepEqual(row, { ...esperado, catalogo: esperado.disponible });
 }
