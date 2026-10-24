@@ -121,6 +121,11 @@ export class AuthService {
     return 0;
   }
 
+  /** Crea una sesión para un usuario ya autenticado (p. ej. aceptar invitación). */
+  async crearSesion(usuario: Usuario): Promise<Sesion> {
+    return this.sesionDe(usuario);
+  }
+
   private async sesionDe(usuario: Usuario): Promise<Sesion> {
     const jti = randomUUID();
     const expiraEn = new Date(Date.now() + ttlAMs(this.refreshTtl));

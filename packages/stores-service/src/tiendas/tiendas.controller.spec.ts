@@ -23,14 +23,22 @@ describe('TiendasController (api/v1/vendedores, R-U-10/11)', () => {
     const { tiendas, controller } = fabricar();
     tiendas.crear.mockResolvedValue(tienda);
     await expect(controller.crear({ nombre: 'Mi tienda', descripcion: 'x', slug: 'mi-tienda' } as never, vendedor as never)).resolves.toEqual(tienda);
-    expect(tiendas.crear).toHaveBeenCalledWith('e-1', 'u-v', 25, 'Mi tienda', 'x', 'mi-tienda');
+    expect(tiendas.crear).toHaveBeenCalledWith('e-1', 'u-v', 25, 'Mi tienda', 'x', 'mi-tienda', 'u-v');
   });
 
-  it('debe asignar participacion completa a la tienda del empresario', async () => {
+  it('debe crear una tienda disponible (sin vendedor) para el empresario', async () => {
     const { tiendas, controller } = fabricar();
     const empresario = { ...vendedor, rol: ROLES.EMPRESARIO, user_id: 'u-e' };
     await controller.crear({ nombre: 'Tienda empresa' } as never, empresario as never);
-    expect(tiendas.crear).toHaveBeenCalledWith('e-1', 'u-e', 100, 'Tienda empresa', undefined, undefined);
+    expect(tiendas.crear).toHaveBeenCalledWith(
+      'e-1',
+      'u-e',
+      null,
+      'Tienda empresa',
+      undefined,
+      undefined,
+      null,
+    );
   });
 
   it('debe rechazar la creacion sin empresa activa', async () => {
