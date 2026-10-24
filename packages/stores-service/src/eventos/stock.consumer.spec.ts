@@ -48,16 +48,16 @@ describe('StockConsumer de stores (RN-02)', () => {
     const data = {
       tipo: 'reservado',
       items: [
-        { sku: 'SKU-01', stock_restante: 5 },
-        { sku: 'SKU-02', stock_restante: 0 },
+        { empresa_id: 'e-1', sku: 'SKU-01', stock_restante: 5 },
+        { empresa_id: 'e-2', sku: 'SKU-02', stock_restante: 0 },
       ],
     } as unknown as StockUpdatedData;
 
     await dispatch(evento(EVENTOS.STOCK_UPDATED, data));
 
     expect(ofertas.sincronizarStockDeOferta).toHaveBeenCalledTimes(2);
-    expect(ofertas.sincronizarStockDeOferta).toHaveBeenNthCalledWith(1, 'SKU-01', 5);
-    expect(ofertas.sincronizarStockDeOferta).toHaveBeenNthCalledWith(2, 'SKU-02', 0);
+    expect(ofertas.sincronizarStockDeOferta).toHaveBeenNthCalledWith(1, 'e-1', 'SKU-01', 5);
+    expect(ofertas.sincronizarStockDeOferta).toHaveBeenNthCalledWith(2, 'e-2', 'SKU-02', 0);
     expect(pg.query).toHaveBeenCalledWith(
       expect.stringContaining('ON CONFLICT (event_id) DO NOTHING'),
       ['evt-1', EVENTOS.STOCK_UPDATED],
