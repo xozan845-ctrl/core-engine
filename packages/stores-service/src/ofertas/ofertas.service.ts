@@ -236,13 +236,16 @@ export class OfertasService {
     return this.serializar(actualizado);
   }
 
-  /** Sincroniza el stock visible de las ofertas con el catalogo (post-reserva). */
-  async sincronizarStockDeOferta(sku: string, stockNuevo: number): Promise<void> {
+  /** Sincroniza el stock visible de las ofertas de UNA empresa (ADR-27). */
+  async sincronizarStockDeOferta(empresaId: string, sku: string, stockNuevo: number): Promise<void> {
     await this.pg.query(
-      `UPDATE stores.ofertas
-       SET stock = $2, estado = CASE WHEN $2 > 0 THEN 'activa' ELSE 'agotada' END
-       WHERE LOWER(sku) = LOWER($1)`,
-      [sku, Math.max(0, stockNuevo)],
+      `UPDATE stores.ofertas o
+       SET stock = $3, estado = CASE WHEN $3 > 0 THEN 'activa' ELSE 'agotada' END
+       FROM stores.tiendas t
+       WHERE t.id = o.tienda_id
+         AND t.empresa_id = $1
+         AND LOWER(o.sku) = LOWER($2)`,
+      [empresaId, sku, Math.max(0, stockNuevo)],
     );
   }
 
