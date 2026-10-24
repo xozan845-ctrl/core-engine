@@ -184,7 +184,9 @@ function main() {
   }
 
   if (checkRemote) {
-    const remote = git(root, ['ls-remote', '--tags', 'origin', tagRef], {
+    // El wildcard incluye la línea `^{}` con el commit pelado del tag anotado;
+    // con la ref exacta, ls-remote solo devuelve el objeto tag.
+    const remote = git(root, ['ls-remote', '--tags', 'origin', `${tagRef}*`], {
       allowFailure: true,
     });
     if (remote) {
