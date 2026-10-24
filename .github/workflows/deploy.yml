@@ -98,6 +98,7 @@ jobs:
           BASE_URL: http://localhost:${{ steps.cfg.outputs.port }}
           ADMIN_EMAIL: ${{ secrets.SMOKE_ADMIN_EMAIL }}
           ADMIN_PASSWORD: ${{ secrets.SMOKE_ADMIN_PASSWORD }}
+          EDGE_BASIC_AUTH: ${{ secrets.EDGE_BASIC_AUTH }}
         run: npm run smoke:remote
 
       - name: 📊 Evidence

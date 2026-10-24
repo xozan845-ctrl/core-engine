@@ -1,5 +1,6 @@
 import type { Request, Response, NextFunction } from 'express';
 import { timingSafeEqual } from 'crypto';
+import { verificarToken, type TokenPayload } from '@core/shared';
 
 /**
  * Endurecimiento del borde (R-DS-3, R-GW-1): gate opcional de Basic Auth para
@@ -8,16 +9,21 @@ import { timingSafeEqual } from 'crypto';
  * internas).
  *
  * `/health` queda SIEMPRE abierto: es el liveness que consultan Docker/Dockploy
- * y no revela nada del contrato. `/ready` y el resto de rutas pasan por el gate
- * cuando se configura.
+ * y no revela nada del contrato. `/ready` exige `x-internal-key` salvo que
+ * `READY_PUBLIC=true` (solo desarrollo); asi el smoke/healthcheck no necesita
+ * exponer la topologia al publico.
  */
 export interface OpcionesEdge {
   /** `usuario:clave` para exigir Basic Auth en el borde. Vacio = sin gate. */
   basicAuth?: string;
   /** `true` sirve `/docs` y `/metrics` sin restriccion (desarrollo local). */
   diagnosticosPublicos: boolean;
-  /** Clave interna que permite diagnosticos aunque no sean publicos. */
+  /** Clave interna que permite diagnostico y `/ready` aunque no sean publicos. */
   claveInterna?: string;
+  /** `true` deja `/ready` accesible sin clave interna (solo desarrollo). */
+  readyPublico?: boolean;
+  /** Secreto HS256 para validar el Bearer que sustituye al gate de Basic. */
+  jwtSecret?: string;
 }
 
 // `/docs` (UI) y `/docs-json` / `/docs-yaml` (el contrato completo) + `/metrics`.
@@ -31,12 +37,18 @@ function iguales(a: string, b: string): boolean {
   return timingSafeEqual(bufferA, bufferB);
 }
 
+function valorCabecera(valor: string | string[] | undefined): string | undefined {
+  return Array.isArray(valor) ? valor[0] : valor;
+}
+
 /** Lee la configuracion del borde desde el entorno (R-CD-7). */
 export function leerEdge(env: NodeJS.ProcessEnv = process.env): OpcionesEdge {
   return {
     basicAuth: env.EDGE_BASIC_AUTH?.trim() || undefined,
     diagnosticosPublicos: (env.DIAGNOSTICOS_PUBLICOS ?? 'false').toLowerCase() === 'true',
     claveInterna: env.INTERNAL_API_KEY || undefined,
+    readyPublico: (env.READY_PUBLIC ?? 'false').toLowerCase() === 'true',
+    jwtSecret: env.JWT_SECRET || undefined,
   };
 }
 
@@ -49,15 +61,44 @@ export function edgeAuth(opciones: OpcionesEdge = leerEdge()) {
       return;
     }
 
+    // `/ready` es operativo: la clave interna lo abre sin exigir Basic (asi el
+    // smoke de despliegue no necesita credenciales de usuario). Sin clave, solo
+    // es publico si READY_PUBLIC=true; en caso contrario se oculta con 404.
+    if (req.path === '/ready') {
+      const clave = valorCabecera(req.headers['x-internal-key']);
+      if (clave && opciones.claveInterna && iguales(clave, opciones.claveInterna)) {
+        next();
+        return;
+      }
+      if (!opciones.readyPublico) {
+        res.status(404).json({
+          codigo: 'NO_ENCONTRADO',
+          mensaje: `No existe ruta ${req.method} ${req.path}.`,
+        });
+        return;
+      }
+    }
+
     if (opciones.basicAuth) {
-      // Basic y Bearer comparten la cabecera `Authorization`: un cliente con
-      // sesion (token) la lleva con Bearer, y el gate no puede exigir Basic
-      // entonces. El token lo evalua la capa JWT del gateway (401 si es
-      // invalido), asi que presentar Bearer no salta el gate: solo lo cambia
-      // por la autenticacion de sesion, que tambien exige haber entrado.
+      // Basic y Bearer comparten la cabecera `Authorization`. Un Bearer solo
+      // sustituye al gate si el JWT es valido: de lo contrario cualquiera
+      // podria saltarse el Basic de staging con "Authorization: Bearer x".
       const autorizacion = req.headers.authorization ?? '';
       const traeBearer = /^Bearer\s+\S+/i.test(autorizacion);
-      if (!traeBearer) {
+      if (traeBearer) {
+        const token = autorizacion.replace(/^Bearer\s+/i, '').trim();
+        try {
+          const payload = verificarToken<TokenPayload>(token, opciones.jwtSecret ?? '');
+          if (payload.tipo !== 'access') throw new Error('tipo de token invalido');
+        } catch {
+          res.setHeader('WWW-Authenticate', 'Bearer');
+          res.status(401).json({
+            codigo: 'NO_AUTORIZADO',
+            mensaje: 'Token invalido o expirado.',
+          });
+          return;
+        }
+      } else {
         const [esquema, credencial] = autorizacion.split(' ');
         const plano = credencial ? Buffer.from(credencial, 'base64').toString('utf-8') : '';
         if (esquema !== 'Basic' || !credencial || !iguales(plano, opciones.basicAuth)) {
@@ -73,8 +114,8 @@ export function edgeAuth(opciones: OpcionesEdge = leerEdge()) {
 
     const esDiagnostico = RUTAS_DIAGNOSTICO.some((patron) => patron.test(req.path));
     if (esDiagnostico && !opciones.diagnosticosPublicos) {
-      const clave = req.headers['x-internal-key'];
-      if (!opciones.claveInterna || clave !== opciones.claveInterna) {
+      const clave = valorCabecera(req.headers['x-internal-key']);
+      if (!opciones.claveInterna || !clave || !iguales(clave, opciones.claveInterna)) {
         // 404 (no 401/403): no se anuncia que la ruta existe (menos fingerprinting).
         res.status(404).json({
           codigo: 'NO_ENCONTRADO',
