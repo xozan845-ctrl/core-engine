@@ -5,7 +5,10 @@
  * Uso:
  *   BASE_URL=https://stage.example \
  *   ADMIN_EMAIL=... ADMIN_PASSWORD=... \
+ *   EDGE_BASIC_AUTH=usuario:clave \
  *   npm run smoke:remote
+ *
+ * `EDGE_BASIC_AUTH` solo es necesario en entornos con gate de borde (staging).
  *
  * No crea usuarios, productos, órdenes ni pagos: solo comprueba salud del
  * gateway, login y un listado real del catálogo. El flujo E2E completo sigue
@@ -14,6 +17,7 @@
 const BASE_URL = process.env.BASE_URL ?? 'http://localhost:8080';
 const ADMIN_EMAIL = process.env.ADMIN_EMAIL;
 const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD;
+const EDGE_BASIC_AUTH = process.env.EDGE_BASIC_AUTH;
 const REQUEST_TIMEOUT_MS = Number(process.env.SMOKE_REQUEST_TIMEOUT_MS ?? 10_000);
 
 if (!Number.isInteger(REQUEST_TIMEOUT_MS) || REQUEST_TIMEOUT_MS < 1) {
@@ -40,7 +44,13 @@ async function request(method, path, { token, body } = {}) {
         method,
         headers: {
           'content-type': 'application/json',
-          ...(token ? { authorization: `Bearer ${token}` } : {}),
+          // Con sesion se usa Bearer (el borde valida el JWT); antes del login
+          // se usa el Basic del gate de staging, si esta configurado.
+          ...(token
+            ? { authorization: `Bearer ${token}` }
+            : EDGE_BASIC_AUTH
+              ? { authorization: `Basic ${Buffer.from(EDGE_BASIC_AUTH).toString('base64')}` }
+              : {}),
         },
         body: body ? JSON.stringify(body) : undefined,
         signal: globalThis.AbortSignal.timeout(REQUEST_TIMEOUT_MS),
