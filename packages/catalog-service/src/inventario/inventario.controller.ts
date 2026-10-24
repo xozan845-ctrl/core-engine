@@ -1,5 +1,5 @@
-import { Controller, Get } from '@nestjs/common';
-import { ApiBearerAuth, ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
+import { Controller, Get, Query } from '@nestjs/common';
+import { ApiBearerAuth, ApiOkResponse, ApiOperation, ApiQuery, ApiTags } from '@nestjs/swagger';
 import { InventarioService, LineaInventario } from './inventario.service';
 import { LineaInventarioResponseDto } from './inventario.response.dto';
 import { Roles, ROLES } from '@core/shared';
@@ -14,8 +14,9 @@ export class InventarioController {
   @Get()
   @Roles(ROLES.SUPER_ADMIN, ROLES.ADMIN)
   @ApiOperation({ summary: 'Niveles de stock (admin; Tabla 21)' })
+  @ApiQuery({ name: 'empresa_id', required: false, description: 'Filtra el inventario de una empresa (ADR-27)' })
   @ApiOkResponse({ type: [LineaInventarioResponseDto], description: 'Líneas de inventario' })
-  async listar(): Promise<LineaInventario[]> {
-    return this.inventario.listar();
+  async listar(@Query('empresa_id') empresaId?: string): Promise<LineaInventario[]> {
+    return this.inventario.listar(empresaId);
   }
 }
