@@ -29,32 +29,48 @@ describe('ProductosController (api/v1/catalog, R-U-10/11)', () => {
     return { productos, controller };
   }
 
-  it('debe listar reenviando los filtros de la query al servicio cuando llega una query', async () => {
+  it('debe listar reenviando los filtros y la empresa solicitada al servicio', async () => {
     const { productos, controller } = fabricar();
     productos.listar.mockResolvedValue({ items: [producto], total: 1, pagina: 1, limite: 20, paginas: 1 });
-    const query = { q: 'teclado', estado: 'disponible', pagina: '2', limite: '10' };
-    const pagina = await controller.listar(query as never);
+    const query = { empresa_id: 'e-1', q: 'teclado', estado: 'disponible', pagina: '2', limite: '10' };
+    const pagina = await controller.listar(query as never, null);
     expect(productos.listar).toHaveBeenCalledWith(query);
     expect(pagina.items).toEqual([producto]);
   });
 
-  it('debe lanzar la pagina del servicio cuando no llegan filtros', async () => {
+  it('debe usar la empresa del token cuando la query no trae empresa_id', async () => {
     const { productos, controller } = fabricar();
     productos.listar.mockResolvedValue({ items: [], total: 0, pagina: 1, limite: 20, paginas: 1 });
-    await expect(controller.listar({} as never)).resolves.toMatchObject({ total: 0, paginas: 1 });
+    await controller.listar({ q: 'teclado' } as never, {
+      user_id: 'u-1',
+      email: 'e@core.local',
+      rol: 'empresario',
+      tenant_id: 'e-tenant',
+    } as never);
+    expect(productos.listar).toHaveBeenCalledWith({ q: 'teclado', empresa_id: 'e-tenant' });
   });
 
-  it('debe devolver el detalle cuando el producto existe', async () => {
+  it('debe exigir empresa cuando la lectura es anónima (ADR-27)', async () => {
+    const { productos, controller } = fabricar();
+    await expect(controller.listar({} as never, null)).rejects.toThrow(/empresa_id|EMPRESA_REQUERIDA/);
+    expect(productos.listar).not.toHaveBeenCalled();
+  });
+
+  it('debe devolver el detalle acotado a la empresa cuando el producto existe', async () => {
     const { productos, controller } = fabricar();
     productos.encontrarPorId.mockResolvedValue(producto);
-    await expect(controller.detalle(producto.id)).resolves.toEqual(producto);
-    expect(productos.encontrarPorId).toHaveBeenCalledWith(producto.id);
+    await expect(
+      controller.detalle(producto.id, { empresa_id: 'e-1' } as never, null),
+    ).resolves.toEqual(producto);
+    expect(productos.encontrarPorId).toHaveBeenCalledWith(producto.id, 'e-1');
   });
 
-  it('debe lanzar NotFoundError cuando el detalle no existe', async () => {
+  it('debe lanzar NotFoundError cuando el detalle no existe en la empresa', async () => {
     const { productos, controller } = fabricar();
     productos.encontrarPorId.mockResolvedValue(null);
-    await expect(controller.detalle(producto.id)).rejects.toBeInstanceOf(NotFoundError);
+    await expect(
+      controller.detalle(producto.id, { empresa_id: 'e-1' } as never, null),
+    ).rejects.toBeInstanceOf(NotFoundError);
   });
 
   it('debe crear el producto pasando el dto completo al servicio', async () => {
