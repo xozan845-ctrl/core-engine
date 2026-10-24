@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { InteligenciaRepository } from '../repositories/inteligencia.repository';
-import { PgService, VentaGeolocalizadaData, Logger } from '@core/shared';
+import { PgService, VentaGeolocalizadaData, Logger, EMPRESA_MERCADO_ID } from '@core/shared';
 
 /**
  * AgregadorService: actualiza de forma atomica las vistas materializadas del
@@ -84,18 +84,19 @@ export class AgregadorService {
       );
     }
 
-    // 5. Metricas por producto (upsert atomico por SKU)
+    // 5. Metricas por producto (upsert atomico por empresa + SKU; ADR-27).
+    // La venta geolocalizada no identifica empresa: se agrega al bucket de mercado.
     for (const sku of skus) {
       await this.pg.query(
         `INSERT INTO intelligence.metricas_producto
-           (sku, total_vendido, total_monto_cents, ultima_venta_en, actualizado_en)
-         VALUES ($1, 1, $2, NOW(), NOW())
-         ON CONFLICT (sku) DO UPDATE SET
+           (empresa_id, sku, total_vendido, total_monto_cents, ultima_venta_en, actualizado_en)
+         VALUES ($1, $2, 1, $3, NOW(), NOW())
+         ON CONFLICT (empresa_id, sku) DO UPDATE SET
            total_vendido     = metricas_producto.total_vendido + 1,
            total_monto_cents = metricas_producto.total_monto_cents + EXCLUDED.total_monto_cents,
            ultima_venta_en   = NOW(),
            actualizado_en    = NOW()`,
-        [sku, montoPorSku],
+        [EMPRESA_MERCADO_ID, sku, montoPorSku],
       );
     }
 
@@ -149,18 +150,19 @@ export class AgregadorService {
   // ── Procesamiento de actualizacion de stock ───────────────────────────────
 
   async procesarStockActualizado(data: {
+    empresa_id: string;
     sku: string;
     stock_restante: number;
     nombre?: string;
   }): Promise<void> {
     await this.pg.query(
-      `INSERT INTO intelligence.metricas_producto (sku, nombre, stock_actual, actualizado_en)
-       VALUES ($1, $2, $3, NOW())
-       ON CONFLICT (sku) DO UPDATE SET
+      `INSERT INTO intelligence.metricas_producto (empresa_id, sku, nombre, stock_actual, actualizado_en)
+       VALUES ($1, $2, $3, $4, NOW())
+       ON CONFLICT (empresa_id, sku) DO UPDATE SET
          stock_actual   = EXCLUDED.stock_actual,
          nombre         = COALESCE(EXCLUDED.nombre, metricas_producto.nombre),
          actualizado_en = NOW()`,
-      [data.sku, data.nombre ?? '', data.stock_restante],
+      [data.empresa_id, data.sku, data.nombre ?? '', data.stock_restante],
     );
   }
 }
