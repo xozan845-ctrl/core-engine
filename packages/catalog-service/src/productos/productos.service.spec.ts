@@ -1,12 +1,12 @@
 import type { Mock } from 'vitest';
 import { ProductosService, Producto } from './productos.service';
-import { DomainError, ConflictError, NotFoundError } from '@core/shared';
+import { DomainError, ConflictError, NotFoundError, EMPRESA_LEGACY_ID } from '@core/shared';
 import type { PoolClient } from 'pg';
 
 /**
- * Catalogo maestro: validacion de SKU/stock/precio (H-03), reserva atomica
- * de stock con bloqueo pesimista (RN-03), devoluciones (RN-06) e
- * idempotencia de eventos (doc 5.2). PgService siempre mockeado (R-QA-2).
+ * Catalogo maestro por empresa (ADR-27): validacion de SKU/stock/precio (H-03),
+ * reserva atomica de stock con bloqueo pesimista (RN-03), devoluciones (RN-06)
+ * e idempotencia de eventos (doc 5.2). PgService siempre mockeado (R-QA-2).
  */
 describe('ProductosService (catalogo maestro y stock)', () => {
   const crear = () => {
@@ -21,6 +21,21 @@ describe('ProductosService (catalogo maestro y stock)', () => {
     const servicio = new ProductosService(pg as never);
     return { servicio, pg, client };
   };
+
+  beforeEach(() => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => ({
+        ok: true,
+        status: 200,
+        json: async () => ({ estado: 'activa', tipo_empresa: 'comercial' }),
+      })),
+    );
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
 
   const filaProducto = {
     id: '11111111-2222-3333-4444-555555555555',
@@ -67,6 +82,29 @@ describe('ProductosService (catalogo maestro y stock)', () => {
       await expect(servicio.crear(datosValidos)).rejects.toThrow(ConflictError);
       // el alta no llega a la transaccion
       expect(pg.transaccion).not.toHaveBeenCalled();
+    });
+
+    it('debe rechazar la empresa comodin del catalogo legado (ADR-27)', async () => {
+      const { servicio, pg } = crear();
+      (pg.queryOne as Mock).mockResolvedValue(null);
+      await expect(
+        servicio.crear({ ...datosValidos, empresa_id: EMPRESA_LEGACY_ID }),
+      ).rejects.toThrow(/legado|EMPRESA_NO_PUBLICA/);
+      expect(globalThis.fetch).not.toHaveBeenCalled();
+    });
+
+    it('debe rechazar una empresa que no es comercial (logistica o plataforma)', async () => {
+      const { servicio, pg } = crear();
+      (pg.queryOne as Mock).mockResolvedValue(null);
+      vi.stubGlobal(
+        'fetch',
+        vi.fn(async () => ({
+          ok: true,
+          status: 200,
+          json: async () => ({ estado: 'activa', tipo_empresa: 'logistica' }),
+        })),
+      );
+      await expect(servicio.crear(datosValidos)).rejects.toThrow(/comerciales|EMPRESA_SIN_CATALOGO/);
     });
 
     it('debe normalizar el SKU a mayusculas y registrar historico de precio cuando el alta es valida', async () => {
@@ -136,15 +174,17 @@ describe('ProductosService (catalogo maestro y stock)', () => {
       expect(params).toEqual(['sku-01']); // deduplicado y en minusculas
     });
 
-    it('debe consultar el stock actual cuando hay SKUs (stockActualDe)', async () => {
+    it('debe consultar el stock actual cuando hay productos (stockActualDe)', async () => {
       const { servicio, pg } = crear();
-      (pg.query as Mock).mockResolvedValue([{ sku: 'sku-01', stock_restante: 9 }]);
-      await expect(servicio.stockActualDe(['SKU-01'])).resolves.toEqual([
-        { sku: 'sku-01', stock_restante: 9 },
-      ]);
+      (pg.query as Mock).mockResolvedValue([{ empresa_id: datosValidos.empresa_id, sku: 'sku-01', stock_restante: 9 }]);
+      await expect(
+        servicio.stockActualDe([{ empresa_id: datosValidos.empresa_id, sku: 'SKU-01' }]),
+      ).resolves.toEqual([{ empresa_id: datosValidos.empresa_id, sku: 'sku-01', stock_restante: 9 }]);
       const [sql, params] = (pg.query as Mock).mock.calls[0];
       expect(sql).toContain('stock_restante');
-      expect(params).toEqual(['sku-01']);
+      expect(JSON.parse(params[0] as string)).toEqual([
+        { empresa_id: datosValidos.empresa_id, sku: 'sku-01' },
+      ]);
     });
   });
 
@@ -154,8 +194,10 @@ describe('ProductosService (catalogo maestro y stock)', () => {
         .mockResolvedValueOnce({ rowCount: 1, rows: [{ stock: 10 }] }) // SELECT FOR UPDATE
         .mockResolvedValueOnce({ rows: [], rowCount: 1 }) // UPDATE stock
         .mockResolvedValueOnce({ rows: [], rowCount: 1 }); // INSERT reserva
-      (pg.query as Mock).mockResolvedValue([{ sku: 'sku-01', stock_restante: 9 }]);
-      return servicio.reservarStock('o1', [{ sku: 'sku-01', cantidad: 1 }]);
+      (pg.query as Mock).mockResolvedValue([{ empresa_id: datosValidos.empresa_id, sku: 'sku-01', stock_restante: 9 }]);
+      return servicio.reservarStock('o1', [
+        { empresa_id: datosValidos.empresa_id, sku: 'sku-01', cantidad: 1 },
+      ]);
     };
 
     it('debe descontar stock y registrar la reserva cuando todo alcanza', async () => {
@@ -164,9 +206,12 @@ describe('ProductosService (catalogo maestro y stock)', () => {
 
       expect(resultado.ok).toBe(true);
       expect(resultado.fallidos).toEqual([]);
-      expect(resultado.stock_restante).toEqual([{ sku: 'sku-01', stock_restante: 9 }]);
+      expect(resultado.stock_restante).toEqual([
+        { empresa_id: datosValidos.empresa_id, sku: 'sku-01', stock_restante: 9 },
+      ]);
       const sqlLock = (client.query as Mock).mock.calls[0][0];
       expect(sqlLock).toContain('FOR UPDATE'); // bloqueo pesimista exigido por regla
+      expect(sqlLock).toContain('empresa_id = $1');
       const sqlReserva = (client.query as Mock).mock.calls[2][0];
       expect(sqlReserva).toContain('INSERT INTO catalog.reservas_ordenes');
     });
@@ -175,11 +220,18 @@ describe('ProductosService (catalogo maestro y stock)', () => {
       const { servicio, client } = crear();
       (client.query as Mock).mockResolvedValueOnce({ rowCount: 0, rows: [] }); // sin stock
 
-      const resultado = await servicio.reservarStock('o2', [{ sku: 'agotado', cantidad: 3 }]);
+      const resultado = await servicio.reservarStock('o2', [
+        { empresa_id: datosValidos.empresa_id, sku: 'agotado', cantidad: 3 },
+      ]);
 
       expect(resultado.ok).toBe(false);
       expect(resultado.fallidos).toEqual([
-        { sku: 'agotado', cantidad: 3, motivo: 'stock_insuficiente' },
+        {
+          empresa_id: datosValidos.empresa_id,
+          sku: 'agotado',
+          cantidad: 3,
+          motivo: 'stock_insuficiente',
+        },
       ]);
       // jamas inserta la reserva cuando algo fallo
       const sqls = (client.query as Mock).mock.calls.map((c: any[]) => c[0] as string);
@@ -197,8 +249,8 @@ describe('ProductosService (catalogo maestro y stock)', () => {
     it('debe sumar stock por cada item y dejar rastro de ajuste cuando se aprueba la devolucion', async () => {
       const { servicio, client } = crear();
       await servicio.reintegrarStock('o1', [
-        { sku: 'a', cantidad: 2 },
-        { sku: 'b', cantidad: 1 },
+        { empresa_id: datosValidos.empresa_id, sku: 'a', cantidad: 2 },
+        { empresa_id: datosValidos.empresa_id, sku: 'b', cantidad: 1 },
       ]);
       const sqls = (client.query as Mock).mock.calls.map((c: any[]) => c[0] as string);
       expect(sqls.filter((s: string) => s.includes('SET stock = stock +')).length).toBe(2);
@@ -232,9 +284,12 @@ describe('ProductosService (catalogo maestro y stock)', () => {
   describe('actualizar (H-03 / RN-08)', () => {
     it('oculta el producto cuando pertenece a otra empresa', async () => {
       const { servicio, pg } = crear();
-      (pg.queryOne as Mock).mockResolvedValue(filaProducto);
+      (pg.queryOne as Mock).mockResolvedValue(null);
       await expect(servicio.actualizar(filaProducto.id, { nombre: 'Otro' }, 'otra-empresa'))
         .rejects.toThrow(NotFoundError);
+      const [sql, params] = (pg.queryOne as Mock).mock.calls[0];
+      expect(sql).toContain('empresa_id');
+      expect(params).toEqual([filaProducto.id, 'otra-empresa']);
     });
 
     it('debe lanzar NotFoundError cuando el producto no existe', async () => {
@@ -288,7 +343,12 @@ describe('ProductosService (catalogo maestro y stock)', () => {
         (c: any[]) => String(c[0]).includes('historico_precios'),
       ) as [string, unknown[]];
       expect(sqlHistorico).toContain('historico_precios');
-      expect(paramsHistorico).toEqual(['SKU-01', 150000, 200000]);
+      expect(paramsHistorico).toEqual([
+        filaProducto.empresa_id,
+        'SKU-01',
+        150000,
+        200000,
+      ]);
     });
 
     it('debe actualizar nombre, descripcion y categoria cuando llegan esos campos', async () => {
@@ -338,22 +398,42 @@ describe('ProductosService (catalogo maestro y stock)', () => {
     it('debe filtrar por texto, estado y categoria cuando llegan los filtros', async () => {
       const { servicio, pg } = crear();
       (pg.queryOne as Mock).mockResolvedValue({ n: 0 });
-      await servicio.listar({ q: 'Tecl', estado: 'disponible', categoria: 'Perifericos' });
+      await servicio.listar({
+        empresa_id: datosValidos.empresa_id,
+        q: 'Tecl',
+        estado: 'disponible',
+        categoria: 'Perifericos',
+      });
 
       const [sqlCount, params] = (pg.queryOne as Mock).mock.calls[0];
       expect(sqlCount).toContain('WHERE');
+      expect(sqlCount).toContain('empresa_id = $1');
       expect(sqlCount).toContain('LOWER(nombre) LIKE');
-      expect(params).toEqual(['%tecl%', 'disponible', 'Perifericos']);
+      expect(params).toEqual([datosValidos.empresa_id, '%tecl%', 'disponible', 'Perifericos']);
     });
 
     it('debe calcular offset con la pagina y el limite cuando pagina dos veces', async () => {
       const { servicio, pg } = crear();
       (pg.queryOne as Mock).mockResolvedValue({ n: 0 });
-      await servicio.listar({ pagina: 3, limite: 5 });
+      await servicio.listar({
+        empresa_id: datosValidos.empresa_id,
+        pagina: 3,
+        limite: 5,
+      });
 
       const [sqlRows, params] = (pg.query as Mock).mock.calls[0];
-      expect(sqlRows).not.toContain('WHERE');
+      expect(sqlRows).toContain('empresa_id = $1');
       expect(params.slice(-2)).toEqual([5, 10]); // limite 5, offset (3-1)*5
+    });
+
+    it('debe exigir empresa y nunca listar el catalogo legado (ADR-27)', async () => {
+      const { servicio, pg } = crear();
+      await expect(servicio.listar({})).rejects.toThrow(/empresa_id|EMPRESA_REQUERIDA/);
+      await expect(servicio.listar({ empresa_id: EMPRESA_LEGACY_ID })).rejects.toThrow(
+        /legado|EMPRESA_NO_PUBLICA/,
+      );
+      expect(pg.query).not.toHaveBeenCalled();
+      expect(pg.queryOne).not.toHaveBeenCalled();
     });
   });
 });
