@@ -93,16 +93,20 @@ describe('PedidosConsumer de catalog (RN-03 / RN-06)', () => {
     const data = {
       order_id: 'o1',
       motivo: 'tamano incorrecto',
-      items: [{ sku: 'SKU-01', cantidad: 1 }],
+      items: [{ empresa_id: 'e-1', sku: 'SKU-01', cantidad: 1 }],
     } as unknown as DevolucionSolicitadaData;
 
     await dispatch(evento(EVENTOS.DEVOLUCION_SOLICITADA, data));
 
-    expect(productos.reintegrarStock).toHaveBeenCalledWith('o1', [{ sku: 'SKU-01', cantidad: 1 }]);
+    expect(productos.reintegrarStock).toHaveBeenCalledWith('o1', [
+      { empresa_id: 'e-1', sku: 'SKU-01', cantidad: 1 },
+    ]);
     const emitidos = (outbox.insertar as Mock).mock.calls.map((c) => c[0]);
     expect(emitidos).toContain(EVENTOS.STOCK_REINTEGRADO);
     expect(emitidos).toContain(EVENTOS.STOCK_UPDATED);
-    expect(productos.stockActualDe).toHaveBeenCalledWith(['SKU-01']);
+    expect(productos.stockActualDe).toHaveBeenCalledWith([
+      { empresa_id: 'e-1', sku: 'SKU-01' },
+    ]);
     expect(productos.registrarProcesado).toHaveBeenCalled();
   });
 

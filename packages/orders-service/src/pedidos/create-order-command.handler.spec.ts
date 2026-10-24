@@ -108,6 +108,7 @@ function crearHandler(
           ok: true,
           json: async () =>
             skus.map((sku) => ({
+              empresa_id: 'empresa-1',
               sku,
               stock,
               estado: stock > 0 ? 'disponible' : 'agotado',

@@ -12,7 +12,7 @@ import {
 import type { Response } from 'express';
 import { IsEmail, IsIn, IsInt, IsOptional, IsString, Length, Max, Min, MinLength } from 'class-validator';
 import { ROLES, Roles, UsuarioActual, UsuarioContexto } from '@core/shared';
-import { EmpresasService, ModalidadLogistica } from './empresas.service';
+import { EmpresasService, ModalidadLogistica, TipoEmpresa } from './empresas.service';
 
 class CrearEmpresaRequestDto {
   @ApiProperty({ minLength: 2, maxLength: 160 }) @IsString() @Length(2, 160) nombre: string;
@@ -46,6 +46,11 @@ class ActualizarSlugRequestDto {
   @Length(2, 80)
   slug: string;
 }
+class ActualizarTipoEmpresaRequestDto {
+  @ApiProperty({ enum: ['comercial', 'logistica', 'plataforma'] })
+  @IsIn(['comercial', 'logistica', 'plataforma'])
+  tipo_empresa: TipoEmpresa;
+}
 export class EmpresaResponseDto {
   @ApiProperty({ format: 'uuid' }) id: string;
   @ApiProperty() nombre: string;
@@ -53,6 +58,12 @@ export class EmpresaResponseDto {
   // el servicio siempre devuelve el slug en runtime.
   @ApiProperty({ required: false, description: 'Slug público actual', example: 'distribuidora-piloto' }) slug: string;
   @ApiProperty({ enum: ['plataforma', 'propia', 'hibrida'] }) modalidad_logistica: ModalidadLogistica;
+  @ApiProperty({
+    enum: ['comercial', 'logistica', 'plataforma'],
+    required: false,
+    description: 'Tipo de empresa; solo las comerciales tienen catálogo propio (ADR-27)',
+  })
+  tipo_empresa: TipoEmpresa;
   @ApiProperty() estado: string;
   @ApiProperty({ format: 'uuid' }) creado_por: string;
   @ApiProperty() creado_en: string;
@@ -116,6 +127,13 @@ export class EmpresasController {
   @ApiOkResponse({ type: EmpresaResponseDto, description: 'Modalidad logística actualizada' })
   actualizarLogistica(@Param('id') id: string, @Body() dto: ActualizarModalidadLogisticaRequestDto, @UsuarioActual() u: UsuarioContexto) {
     return this.empresas.actualizarModalidad(u.user_id, id, dto.modalidad_logistica);
+  }
+  @Patch(':id/tipo') @Roles(ROLES.SUPER_ADMIN, ROLES.ADMIN)
+  @ApiOperation({ summary: 'Clasificar la empresa (comercial, logística o plataforma)' })
+  @ApiParam({ name: 'id', description: 'UUID de la empresa' })
+  @ApiOkResponse({ type: EmpresaResponseDto, description: 'Tipo de empresa actualizado' })
+  actualizarTipo(@Param('id') id: string, @Body() dto: ActualizarTipoEmpresaRequestDto) {
+    return this.empresas.actualizarTipo(id, dto.tipo_empresa);
   }
   @Post(':id/vendedores') @Roles(ROLES.EMPRESARIO)
   @ApiOperation({ summary: 'Crear vendedor con participación predeterminada' })

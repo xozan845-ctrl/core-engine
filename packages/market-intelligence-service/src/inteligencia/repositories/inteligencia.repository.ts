@@ -116,11 +116,17 @@ export class InteligenciaRepository {
   // ── Demanda de productos ──────────────────────────────────────────────────
 
   async obtenerDemandaProductos(
-    filtros: { sku?: string; cursor?: string; limite?: number }
+    filtros: { empresa_id?: string; sku?: string; cursor?: string; limite?: number }
   ) {
-    let query = `SELECT sku, nombre, total_vendido, total_monto_cents, stock_actual, ultima_venta_en, actualizado_en FROM intelligence.metricas_producto WHERE 1=1`;
+    let query = `SELECT empresa_id, sku, nombre, total_vendido, total_monto_cents, stock_actual, ultima_venta_en, actualizado_en FROM intelligence.metricas_producto WHERE 1=1`;
     const params: any[] = [];
     let paramCount = 1;
+
+    if (filtros.empresa_id) {
+      query += ` AND empresa_id = $${paramCount}`;
+      params.push(filtros.empresa_id);
+      paramCount++;
+    }
 
     if (filtros.sku) {
       query += ` AND sku = $${paramCount}`;

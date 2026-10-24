@@ -64,6 +64,15 @@
             "schema": {
               "type": "string"
             }
+          },
+          {
+            "name": "empresa_id",
+            "required": false,
+            "in": "query",
+            "description": "Empresa dueña del producto (ADR-27)",
+            "schema": {
+              "type": "string"
+            }
           }
         ],
         "responses": {
@@ -129,7 +138,17 @@
     "/internal/inventario/resumen": {
       "get": {
         "operationId": "InternalController_resumen",
-        "parameters": [],
+        "parameters": [
+          {
+            "name": "empresa_id",
+            "required": false,
+            "in": "query",
+            "description": "Filtra el resumen por empresa (ADR-27)",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
         "responses": {
           "200": {
             "description": "Resumen de inventario",
@@ -156,7 +175,17 @@
     "/internal/inventario/lineas": {
       "get": {
         "operationId": "InternalController_lineas",
-        "parameters": [],
+        "parameters": [
+          {
+            "name": "empresa_id",
+            "required": false,
+            "in": "query",
+            "description": "Filtra las líneas por empresa (ADR-27)",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
         "responses": {
           "200": {
             "description": "Líneas de inventario",
@@ -795,9 +824,14 @@
       "LoteProductoResponseDto": {
         "type": "object",
         "properties": {
+          "empresa_id": {
+            "type": "string",
+            "description": "Empresa dueña del producto",
+            "format": "uuid"
+          },
           "sku": {
             "type": "string",
-            "description": "SKU del producto",
+            "description": "SKU del producto (único por empresa)",
             "example": "SKU-001"
           },
           "stock": {
@@ -836,7 +870,7 @@
           },
           "sku": {
             "type": "string",
-            "description": "SKU único del producto",
+            "description": "SKU del producto (único por empresa)",
             "example": "SKU-001"
           },
           "nombre": {
@@ -923,6 +957,11 @@
       "LineaInventarioResponseDto": {
         "type": "object",
         "properties": {
+          "empresa_id": {
+            "type": "string",
+            "description": "Empresa dueña del producto (ADR-27)",
+            "format": "uuid"
+          },
           "sku": {
             "type": "string",
             "description": "SKU del producto",
@@ -3131,6 +3170,15 @@
               "hibrida"
             ]
           },
+          "tipo_empresa": {
+            "type": "string",
+            "enum": [
+              "comercial",
+              "logistica",
+              "plataforma"
+            ],
+            "description": "Tipo de empresa; solo las comerciales tienen catálogo propio (ADR-27)"
+          },
           "estado": {
             "type": "string"
           },
@@ -3513,6 +3561,22 @@
         },
         "required": [
           "modalidad_logistica"
+        ]
+      },
+      "ActualizarTipoEmpresaRequestDto": {
+        "type": "object",
+        "properties": {
+          "tipo_empresa": {
+            "type": "string",
+            "enum": [
+              "comercial",
+              "logistica",
+              "plataforma"
+            ]
+          }
+        },
+        "required": [
+          "tipo_empresa"
         ]
       },
       "CrearVendedorRequestDto": {

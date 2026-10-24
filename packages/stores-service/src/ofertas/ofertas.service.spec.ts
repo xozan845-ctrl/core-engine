@@ -182,8 +182,9 @@ describe('OfertasService (RN-01 / RN-02)', () => {
   describe('sincronizarStockDeOferta (RN-02)', () => {
     it('debe recortar el stock negativo a cero y marcar la oferta agotada', async () => {
       const { servicio, pg } = crear();
-      await servicio.sincronizarStockDeOferta('SKU-01', -3);
-      expect(pg.query).toHaveBeenCalledWith(expect.stringContaining("CASE WHEN $2 > 0"), [
+      await servicio.sincronizarStockDeOferta('e-1', 'SKU-01', -3);
+      expect(pg.query).toHaveBeenCalledWith(expect.stringContaining("CASE WHEN $3 > 0"), [
+        'e-1',
         'SKU-01',
         0,
       ]);
