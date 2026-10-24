@@ -13,11 +13,17 @@ import {
 import { UsuariosService } from '../usuarios/usuarios.service';
 
 export type ModalidadLogistica = 'plataforma' | 'propia' | 'hibrida';
+/**
+ * Tipo de empresa (ADR-27). Solo las comerciales tienen catálogo propio:
+ * la logística transporta y la plataforma agrupa empresas técnicas/comodín.
+ */
+export type TipoEmpresa = 'comercial' | 'logistica' | 'plataforma';
 export interface Empresa {
   id: string;
   nombre: string;
   slug: string;
   modalidad_logistica: ModalidadLogistica;
+  tipo_empresa: TipoEmpresa;
   estado: string;
   creado_por: string;
   creado_en: string;
@@ -107,6 +113,20 @@ export class EmpresasService {
       `UPDATE identity.empresas SET modalidad_logistica=$1
        WHERE id=$2 AND estado='activa' RETURNING *`,
       [modalidad, empresaId],
+    );
+    if (!empresa) throw new NotFoundError('Empresa', empresaId);
+    return empresa;
+  }
+
+  /**
+   * ADR-27: solo un administrador global clasifica una empresa. Cambiar a
+   * 'logistica' la excluye de los catálogos; los productos existentes dejan de
+   * ser publicables sin borrar datos.
+   */
+  async actualizarTipo(empresaId: string, tipo: TipoEmpresa): Promise<Empresa> {
+    const empresa = await this.pg.queryOne<Empresa>(
+      `UPDATE identity.empresas SET tipo_empresa=$1 WHERE id=$2 RETURNING *`,
+      [tipo, empresaId],
     );
     if (!empresa) throw new NotFoundError('Empresa', empresaId);
     return empresa;
