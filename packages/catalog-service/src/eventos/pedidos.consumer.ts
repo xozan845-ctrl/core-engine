@@ -59,7 +59,11 @@ export class PedidosConsumer implements OnModuleInit {
   private async ordenCreada(evento: EventoBus<OrdenData>): Promise<void> {
     if (await this.yaProcesado(evento)) return;
     const { order_id, items } = evento.data;
-    const lineas = items.map((i) => ({ sku: i.sku, cantidad: i.cantidad }));
+    const lineas = items.map((i) => ({
+      empresa_id: i.empresa_id,
+      sku: i.sku,
+      cantidad: i.cantidad,
+    }));
     const resultado = await this.productos.reservarStock(order_id, lineas);
 
     if (resultado.ok) {
@@ -91,13 +95,18 @@ export class PedidosConsumer implements OnModuleInit {
   private async devolucion(evento: EventoBus<DevolucionSolicitadaData>): Promise<void> {
     if (await this.yaProcesado(evento)) return;
     const items = evento.data.items;
-    await this.productos.reintegrarStock(evento.data.order_id, items);
+    await this.productos.reintegrarStock(
+      evento.data.order_id,
+      items.map((i) => ({ empresa_id: i.empresa_id, sku: i.sku, cantidad: i.cantidad })),
+    );
     await this.outbox.insertar(EVENTOS.STOCK_REINTEGRADO, {
       order_id: evento.data.order_id,
       items: items.map((i) => ({ sku: i.sku, cantidad: i.cantidad })),
     });
     // stock.updated tras la devolucion (RN-06 revierte stock; RN-02 actualiza ofertas)
-    const stock = await this.productos.stockActualDe(items.map((i) => i.sku));
+    const stock = await this.productos.stockActualDe(
+      items.map((i) => ({ empresa_id: i.empresa_id, sku: i.sku })),
+    );
     await this.outbox.insertar(EVENTOS.STOCK_UPDATED, {
       order_id: evento.data.order_id,
       tipo: 'reintegrado',

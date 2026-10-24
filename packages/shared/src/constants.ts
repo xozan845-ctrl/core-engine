@@ -24,6 +24,19 @@ export const ROLES_LOGISTICA: Rol[] = [
   ROLES.OPERATIVO,
 ];
 
+/**
+ * Empresa comodín para productos legados que no tenían empresa al separar los
+ * catálogos (ADR-27). No es una empresa real: sus productos quedan fuera de
+ * los listados y no se pueden publicar en tiendas.
+ */
+export const EMPRESA_LEGACY_ID = '00000000-0000-0000-0000-000000000000';
+
+/**
+ * Bucket de agregación de mercado para hechos que no identifican empresa
+ * (p. ej. ventas geolocalizadas del app de campo). No es una empresa real.
+ */
+export const EMPRESA_MERCADO_ID = '00000000-0000-0000-0000-000000000001';
+
 /** Cabeceras de contexto propagadas por el gateway a los servicios. */
 export const TENANT_HEADER = 'x-tenant';
 export const PERSONAL_HEADER = 'x-user-personal';

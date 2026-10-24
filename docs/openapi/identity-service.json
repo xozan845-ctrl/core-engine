@@ -704,6 +704,53 @@
         ]
       }
     },
+    "/api/v1/empresas/{id}/tipo": {
+      "patch": {
+        "operationId": "EmpresasController_actualizarTipo",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "description": "UUID de la empresa",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ActualizarTipoEmpresaRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Tipo de empresa actualizado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EmpresaResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Clasificar la empresa (comercial, logística o plataforma)",
+        "tags": [
+          "Empresas"
+        ]
+      }
+    },
     "/api/v1/empresas/{id}/vendedores": {
       "post": {
         "operationId": "EmpresasController_vendedor",
@@ -1070,6 +1117,15 @@
               "propia",
               "hibrida"
             ]
+          },
+          "tipo_empresa": {
+            "type": "string",
+            "enum": [
+              "comercial",
+              "logistica",
+              "plataforma"
+            ],
+            "description": "Tipo de empresa; solo las comerciales tienen catálogo propio (ADR-27)"
           },
           "estado": {
             "type": "string"
@@ -1453,6 +1509,22 @@
         },
         "required": [
           "modalidad_logistica"
+        ]
+      },
+      "ActualizarTipoEmpresaRequestDto": {
+        "type": "object",
+        "properties": {
+          "tipo_empresa": {
+            "type": "string",
+            "enum": [
+              "comercial",
+              "logistica",
+              "plataforma"
+            ]
+          }
+        },
+        "required": [
+          "tipo_empresa"
         ]
       },
       "CrearVendedorRequestDto": {

@@ -61,6 +61,9 @@ export class CoberturaZonaResponseDto {
 // ── Demanda de productos ──────────────────────────────────────────────────
 
 export class DemandaProductoResponseDto {
+  @ApiProperty({ description: 'Empresa dueña del producto; bucket de mercado si la venta no la identifica', format: 'uuid', required: false })
+  empresa_id: string;
+
   @ApiProperty({ description: 'SKU del producto', example: 'SKU-001' })
   sku: string;
 

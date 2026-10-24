@@ -18,6 +18,16 @@ export const OPENAPI_AGREGADO = {
         "operationId": "ProductosController_listar",
         "parameters": [
           {
+            "name": "empresa_id",
+            "required": false,
+            "in": "query",
+            "description": "Empresa cuyo catálogo se consulta (ADR-27). Obligatoria para lecturas anónimas; con sesión se usa la empresa del token.",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
             "name": "q",
             "required": false,
             "in": "query",
@@ -78,7 +88,7 @@ export const OPENAPI_AGREGADO = {
             }
           }
         },
-        "summary": "Listar productos (público, filtros y paginación)",
+        "summary": "Listar productos de una empresa (público, filtros y paginación)",
         "tags": [
           "Catálogo"
         ]
@@ -131,6 +141,16 @@ export const OPENAPI_AGREGADO = {
             "schema": {
               "type": "string"
             }
+          },
+          {
+            "name": "empresa_id",
+            "required": false,
+            "in": "query",
+            "description": "Empresa a la que debe pertenecer el producto (ADR-27). Obligatoria para lecturas anónimas.",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
           }
         ],
         "responses": {
@@ -145,10 +165,10 @@ export const OPENAPI_AGREGADO = {
             }
           },
           "404": {
-            "description": "Producto inexistente (NO_ENCONTRADO)"
+            "description": "Producto inexistente o de otra empresa (NO_ENCONTRADO)"
           }
         },
-        "summary": "Detalle de producto (público)",
+        "summary": "Detalle de producto de una empresa (público)",
         "tags": [
           "Catálogo"
         ]
@@ -202,7 +222,17 @@ export const OPENAPI_AGREGADO = {
     "/api/v1/admin/inventario": {
       "get": {
         "operationId": "InventarioController_listar",
-        "parameters": [],
+        "parameters": [
+          {
+            "name": "empresa_id",
+            "required": false,
+            "in": "query",
+            "description": "Filtra el inventario de una empresa (ADR-27)",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
         "responses": {
           "200": {
             "description": "Líneas de inventario",
@@ -4052,6 +4082,53 @@ export const OPENAPI_AGREGADO = {
         ]
       }
     },
+    "/api/v1/empresas/{id}/tipo": {
+      "patch": {
+        "operationId": "EmpresasController_actualizarTipo",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "description": "UUID de la empresa",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ActualizarTipoEmpresaRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Tipo de empresa actualizado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EmpresaResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Clasificar la empresa (comercial, logística o plataforma)",
+        "tags": [
+          "Empresas"
+        ]
+      }
+    },
     "/api/v1/empresas/{id}/vendedores": {
       "post": {
         "operationId": "EmpresasController_vendedor",
@@ -6489,9 +6566,14 @@ export const OPENAPI_AGREGADO = {
       "LoteProductoResponseDto": {
         "type": "object",
         "properties": {
+          "empresa_id": {
+            "type": "string",
+            "description": "Empresa dueña del producto",
+            "format": "uuid"
+          },
           "sku": {
             "type": "string",
-            "description": "SKU del producto",
+            "description": "SKU del producto (único por empresa)",
             "example": "SKU-001"
           },
           "stock": {
@@ -6530,7 +6612,7 @@ export const OPENAPI_AGREGADO = {
           },
           "sku": {
             "type": "string",
-            "description": "SKU único del producto",
+            "description": "SKU del producto (único por empresa)",
             "example": "SKU-001"
           },
           "nombre": {
@@ -6617,6 +6699,11 @@ export const OPENAPI_AGREGADO = {
       "LineaInventarioResponseDto": {
         "type": "object",
         "properties": {
+          "empresa_id": {
+            "type": "string",
+            "description": "Empresa dueña del producto (ADR-27)",
+            "format": "uuid"
+          },
           "sku": {
             "type": "string",
             "description": "SKU del producto",
@@ -11142,6 +11229,15 @@ export const OPENAPI_AGREGADO = {
               "hibrida"
             ]
           },
+          "tipo_empresa": {
+            "type": "string",
+            "enum": [
+              "comercial",
+              "logistica",
+              "plataforma"
+            ],
+            "description": "Tipo de empresa; solo las comerciales tienen catálogo propio (ADR-27)"
+          },
           "estado": {
             "type": "string"
           },
@@ -11524,6 +11620,22 @@ export const OPENAPI_AGREGADO = {
         },
         "required": [
           "modalidad_logistica"
+        ]
+      },
+      "ActualizarTipoEmpresaRequestDto": {
+        "type": "object",
+        "properties": {
+          "tipo_empresa": {
+            "type": "string",
+            "enum": [
+              "comercial",
+              "logistica",
+              "plataforma"
+            ]
+          }
+        },
+        "required": [
+          "tipo_empresa"
         ]
       },
       "CrearVendedorRequestDto": {
@@ -12234,6 +12346,11 @@ export const OPENAPI_AGREGADO = {
       "DemandaProductoResponseDto": {
         "type": "object",
         "properties": {
+          "empresa_id": {
+            "type": "string",
+            "description": "Empresa dueña del producto; bucket de mercado si la venta no la identifica",
+            "format": "uuid"
+          },
           "sku": {
             "type": "string",
             "description": "SKU del producto",

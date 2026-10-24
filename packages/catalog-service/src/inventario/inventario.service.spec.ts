@@ -6,6 +6,7 @@ describe('InventarioService (niveles de stock)', () => {
     const pg = {
       query: vi.fn().mockResolvedValue([
         {
+          empresa_id: 'e-1',
           sku: 'SKU-01',
           nombre: 'Teclado',
           stock_fisico: 10,
@@ -27,7 +28,8 @@ describe('InventarioService (niveles de stock)', () => {
     expect(linea.disponible).toBe(7);
     expect(linea.reservado).toBe(3);
     expect(linea.precio_base).toBe('1500.00');
-    expect(pg.query).toHaveBeenCalledWith(expect.stringContaining('FROM catalog.stock_vista'));
+    expect(linea.empresa_id).toBe('e-1');
+    expect(pg.query).toHaveBeenCalledWith(expect.stringContaining('FROM catalog.stock_vista'), []);
   });
 
   it('debe devolver una lista vacia cuando no hay existencias', async () => {

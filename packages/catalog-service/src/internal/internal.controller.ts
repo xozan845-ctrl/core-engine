@@ -37,9 +37,10 @@ export class InternalController {
   @Get('productos/sku/:sku')
   @ApiOperation({ summary: 'Producto por SKU (servicio→servicio)' })
   @ApiParam({ name: 'sku', description: 'SKU del producto' })
+  @ApiQuery({ name: 'empresa_id', required: false, description: 'Empresa dueña del producto (ADR-27)' })
   @ApiOkResponse({ type: ProductoResponseDto, description: 'Producto encontrado' })
-  async porSku(@Param('sku') sku: string) {
-    const producto = await this.productos.encontrarPorSku(sku);
+  async porSku(@Param('sku') sku: string, @Query('empresa_id') empresaId?: string) {
+    const producto = await this.productos.encontrarPorSku(sku, empresaId);
     if (!producto) throw new NotFoundError('Producto', sku);
     return producto;
   }
@@ -56,15 +57,17 @@ export class InternalController {
 
   @Get('inventario/resumen')
   @ApiOperation({ summary: 'Resumen de inventario (servicio→servicio)' })
+  @ApiQuery({ name: 'empresa_id', required: false, description: 'Filtra el resumen por empresa (ADR-27)' })
   @ApiOkResponse({ type: ResumenInventarioResponseDto, description: 'Resumen de inventario' })
-  async resumen() {
-    return this.productos.resumenInventario();
+  async resumen(@Query('empresa_id') empresaId?: string) {
+    return this.productos.resumenInventario(empresaId);
   }
 
   @Get('inventario/lineas')
   @ApiOperation({ summary: 'Líneas de inventario (servicio→servicio)' })
+  @ApiQuery({ name: 'empresa_id', required: false, description: 'Filtra las líneas por empresa (ADR-27)' })
   @ApiOkResponse({ type: [LineaInventarioResponseDto], description: 'Líneas de inventario' })
-  async lineas() {
-    return this.inventario.listar();
+  async lineas(@Query('empresa_id') empresaId?: string) {
+    return this.inventario.listar(empresaId);
   }
 }
