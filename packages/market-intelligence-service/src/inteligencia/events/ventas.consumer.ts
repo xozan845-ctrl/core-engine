@@ -114,9 +114,10 @@ export class VentasConsumer implements OnModuleInit {
     if (await this.yaProcesado(evento.event_id)) return;
 
     const data = (evento as EventoBus<StockUpdatedData>).data;
-    // StockUpdatedData.items es un array de { sku, stock_restante }
+    // StockUpdatedData.items: { empresa_id, sku, stock_restante } (ADR-27)
     for (const item of data.items) {
       await this.agregador.procesarStockActualizado({
+        empresa_id: item.empresa_id,
         sku: item.sku,
         stock_restante: item.stock_restante,
       });
