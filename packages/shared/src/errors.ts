@@ -24,8 +24,15 @@ export class NotFoundError extends DomainError {
 }
 
 export class ConflictError extends DomainError {
-  constructor(mensaje: string, detalles?: unknown) {
-    super('CONFLICTO', mensaje, detalles);
+  constructor(mensaje: string, detalles?: unknown, codigo = 'CONFLICTO') {
+    super(codigo, mensaje, detalles);
+  }
+}
+
+/** Recurso que existió pero ya no es válido (token expirado, usado o revocado). */
+export class GoneError extends DomainError {
+  constructor(codigo: string, mensaje: string, detalles?: unknown) {
+    super(codigo, mensaje, detalles);
   }
 }
 
@@ -66,6 +73,7 @@ export function httpStatusDe(error: unknown): number {
   if (error instanceof UnauthorizedError) return 401;
   if (error instanceof ForbiddenError) return 403;
   if (error instanceof ConflictError) return 409;
+  if (error instanceof GoneError) return 410;
   if (error instanceof ValidationError) return 400;
   if (error instanceof DomainError) return 400;
   return 500;

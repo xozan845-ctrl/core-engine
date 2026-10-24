@@ -4,6 +4,7 @@ import {
   ConflictError,
   UnauthorizedError,
   ForbiddenError,
+  GoneError,
   ValidationError,
   httpStatusDe,
   esViolacionUnicidad,
@@ -28,6 +29,7 @@ describe('errors (errores estructurados de la API, doc 5.7)', () => {
     expect(httpStatusDe(new UnauthorizedError())).toBe(401);
     expect(httpStatusDe(new ForbiddenError())).toBe(403);
     expect(httpStatusDe(new ConflictError('conflicto'))).toBe(409);
+    expect(httpStatusDe(new GoneError('INVITACION_NO_VALIDA', 'expirada'))).toBe(410);
     expect(httpStatusDe(new ValidationError())).toBe(400);
     expect(httpStatusDe(new DomainError('X', 'm'))).toBe(400);
     expect(httpStatusDe(new Error('inesperado'))).toBe(500);
