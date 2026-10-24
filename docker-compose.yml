@@ -104,8 +104,10 @@ services:
       SERVICIO: api-gateway
       PORT: 8080
       OUTBOX_TABLA: identity.outbox
+    # Solo loopback: el gateway no se publica en HTTP plano. El proxy de borde
+    # (Traefik/Dockploy) enruta el trafico TLS hacia este puerto.
     ports:
-      - "8080:8080"
+      - "127.0.0.1:8080:8080"
     networks:
       - core-engine
 

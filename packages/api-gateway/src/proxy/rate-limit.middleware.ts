@@ -6,11 +6,23 @@ interface VentanaLimite {
   conteo: number;
 }
 
+export interface OpcionesLimite {
+  /** Maximo de peticiones por ventana. */
+  limite: number;
+  /** Duracion de la ventana en milisegundos. */
+  ttlMs: number;
+  /** Nombre del cubo; permite separar login/ready del limite global. */
+  clave?: string;
+}
+
 /**
  * Limitacion de tasa en el borde (doc 5.4: gateway como limite).
  * Ventana fija por IP en memoria: global 300 peticiones/min por IP y una
  * ventana estricta para /auth/login (10/min, anti fuerza bruta).
  * Respuesta 429 estructurada (doc 5.7): {codigo, mensaje, detalles}.
+ *
+ * `consumir` se expone para rutas registradas fuera del middleware de Nest
+ * (`/ready`), que de otro modo quedarian sin limite.
  */
 @Injectable()
 export class RateLimitMiddleware implements NestMiddleware {
@@ -30,33 +42,56 @@ export class RateLimitMiddleware implements NestMiddleware {
     limpieza.unref?.();
   }
 
-  use(req: Request, res: Response, next: NextFunction): void {
+  /**
+   * Consume una peticion del cubo indicado. Devuelve `false` y responde 429 si
+   * se excede el limite. Las cabeceras `x-ratelimit-*` se emiten siempre.
+   */
+  consumir(req: Request, res: Response, opciones: OpcionesLimite): boolean {
     const ip = req.ip ?? req.socket.remoteAddress ?? 'desconocida';
-    const esLogin = req.method === 'POST' && /\/api\/v1\/auth\/login$/.test(req.path);
-    const config = esLogin ? this.login : this.globales;
-    const clave = `${esLogin ? 'login' : 'global'}:${ip}`;
+    const clave = `${opciones.clave ?? 'global'}:${ip}`;
 
     const ahora = Date.now();
     const anterior = this.ventanas.get(clave);
-    if (!anterior || ahora - anterior.inicio >= config.ttl_ms) {
-      this.ventanas.set(clave, { inicio: ahora, conteo: 1 });
+    let conteo: number;
+    if (!anterior || ahora - anterior.inicio >= opciones.ttlMs) {
+      conteo = 1;
+      this.ventanas.set(clave, { inicio: ahora, conteo });
     } else {
       anterior.conteo += 1;
-      if (anterior.conteo > config.limite) {
-        const restante = Math.max(0, Math.ceil((anterior.inicio + config.ttl_ms - ahora) / 1000));
-        res.setHeader('Retry-After', String(restante));
-        res.setHeader('x-ratelimit-limit', String(config.limite));
-        res.setHeader('x-ratelimit-remaining', '0');
-        res.status(429).json({
-          codigo: 'DEMASIADAS_PETICIONES',
-          mensaje: 'Se excedio el limite de peticiones; intente de nuevo en unos segundos.',
-          detalles: { limite: config.limite, ventana_seg: Math.floor(config.ttl_ms / 1000), reintente_en_seg: restante },
-        });
-        return;
-      }
+      conteo = anterior.conteo;
     }
-    res.setHeader('x-ratelimit-limit', String(config.limite));
-    res.setHeader('x-ratelimit-remaining', String(Math.max(0, config.limite - (this.ventanas.get(clave)?.conteo ?? 0))));
-    next();
+
+    res.setHeader('x-ratelimit-limit', String(opciones.limite));
+    if (conteo > opciones.limite) {
+      const ventana = this.ventanas.get(clave);
+      const restante = Math.max(
+        0,
+        Math.ceil(((ventana?.inicio ?? ahora) + opciones.ttlMs - ahora) / 1000),
+      );
+      res.setHeader('Retry-After', String(restante));
+      res.setHeader('x-ratelimit-remaining', '0');
+      res.status(429).json({
+        codigo: 'DEMASIADAS_PETICIONES',
+        mensaje: 'Se excedio el limite de peticiones; intente de nuevo en unos segundos.',
+        detalles: {
+          limite: opciones.limite,
+          ventana_seg: Math.floor(opciones.ttlMs / 1000),
+          reintente_en_seg: restante,
+        },
+      });
+      return false;
+    }
+
+    res.setHeader('x-ratelimit-remaining', String(Math.max(0, opciones.limite - conteo)));
+    return true;
+  }
+
+  use(req: Request, res: Response, next: NextFunction): void {
+    const esLogin = req.method === 'POST' && /\/api\/v1\/auth\/login$/.test(req.path);
+    const opciones: OpcionesLimite = esLogin
+      ? { limite: this.login.limite, ttlMs: this.login.ttl_ms, clave: 'login' }
+      : { limite: this.globales.limite, ttlMs: this.globales.ttl_ms };
+
+    if (this.consumir(req, res, opciones)) next();
   }
 }
