@@ -39,7 +39,7 @@ export class StockConsumer implements OnModuleInit {
     if (await this.yaProcesado(evento)) return;
     const datos = (evento as EventoBus<StockUpdatedData>).data;
     for (const item of datos.items ?? []) {
-      await this.ofertas.sincronizarStockDeOferta(item.sku, item.stock_restante);
+      await this.ofertas.sincronizarStockDeOferta(item.empresa_id, item.sku, item.stock_restante);
     }
     await this.marcarProcesado(evento);
   }
