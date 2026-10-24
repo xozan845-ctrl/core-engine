@@ -19,6 +19,7 @@ test('reserva, reconstruccion y devolucion conservan stock disponible exacto', a
       '01_esquemas.sql',
       '01c_cqrs_catalog.sql',
       '01e_adr25_empresas.sql',
+      '01f_slugs.sql',
       '01h_catalogo_por_empresa.sql',
     ]) {
       const sql = await readFile(new URL(`../../infra/db/init/${name}`, import.meta.url), 'utf8');
