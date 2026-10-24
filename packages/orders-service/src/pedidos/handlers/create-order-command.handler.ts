@@ -234,10 +234,15 @@ export class CreateOrderCommandHandler {
         { headers: { 'x-internal-key': this.claveInterna } },
       );
       if (!res.ok) return;
-      const productos = (await res.json()) as { sku: string; stock: number; estado: string }[];
-      const porSku = new Map(productos.map((p) => [p.sku, p]));
+      const productos = (await res.json()) as { empresa_id: string; sku: string; stock: number; estado: string }[];
+      // ADR-27: el SKU se repite entre empresas; la clave es (empresa, SKU).
+      const porClave = new Map(
+        productos.map((p) => [`${p.empresa_id}:${p.sku.toLowerCase()}`, p]),
+      );
       for (const item of items) {
-        const producto = porSku.get(item.sku);
+        const producto = porClave.get(
+          `${item.empresa_id}:${item.sku.toLowerCase()}`,
+        );
         if (!producto || producto.stock < item.cantidad) {
           throw new ConflictError(
             'Stock insuficiente (RN-03): se rechaza la orden.',
