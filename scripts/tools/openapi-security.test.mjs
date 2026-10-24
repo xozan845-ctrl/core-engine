@@ -17,6 +17,8 @@ const RUTAS_PUBLICAS = new Set([
   'POST /api/v1/auth/refresh',
   'POST /api/v1/auth/registro',
   'POST /api/v1/auth/restablecer-contrasena',
+  'GET /api/v1/invitaciones/vendedores/{token}',
+  'POST /api/v1/invitaciones/vendedores/{token}/aceptar',
 ]);
 
 function leerDocumento(nombre) {
