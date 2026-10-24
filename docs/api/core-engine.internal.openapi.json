@@ -3574,6 +3574,224 @@
           "participacion_porcentaje"
         ]
       },
+      "CrearInvitacionRequestDto": {
+        "type": "object",
+        "properties": {
+          "correo": {
+            "type": "string",
+            "format": "email",
+            "example": "vendedor@correo.com"
+          },
+          "nombre": {
+            "type": "string",
+            "minLength": 2,
+            "maxLength": 120
+          },
+          "tienda_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "participacion_porcentaje": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 100,
+            "example": 25
+          }
+        },
+        "required": [
+          "correo",
+          "tienda_id",
+          "participacion_porcentaje"
+        ]
+      },
+      "InvitacionCreadaResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "empresa_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "tienda_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "tienda_nombre": {
+            "type": "string"
+          },
+          "correo": {
+            "type": "string"
+          },
+          "participacion_porcentaje": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 100
+          },
+          "estado": {
+            "type": "string"
+          },
+          "expira_en": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "url_invitacion": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "empresa_id",
+          "tienda_id",
+          "tienda_nombre",
+          "correo",
+          "participacion_porcentaje",
+          "estado",
+          "expira_en",
+          "url_invitacion"
+        ]
+      },
+      "InvitacionResumenResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "correo": {
+            "type": "string"
+          },
+          "tienda_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "tienda_nombre": {
+            "type": "string"
+          },
+          "participacion_porcentaje": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 100
+          },
+          "estado": {
+            "type": "string"
+          },
+          "expira_en": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "correo",
+          "tienda_id",
+          "tienda_nombre",
+          "participacion_porcentaje",
+          "estado",
+          "expira_en"
+        ]
+      },
+      "ListarVendedoresResponseDto": {
+        "type": "object",
+        "properties": {
+          "vendedores": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/VendedorEmpresaResponseDto"
+            }
+          },
+          "invitaciones": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/InvitacionResumenResponseDto"
+            }
+          }
+        },
+        "required": [
+          "vendedores",
+          "invitaciones"
+        ]
+      },
+      "InvitacionPublicaResponseDto": {
+        "type": "object",
+        "properties": {
+          "valida": {
+            "type": "boolean"
+          },
+          "correo": {
+            "type": "string"
+          },
+          "empresa_nombre": {
+            "type": "string"
+          },
+          "tienda_nombre": {
+            "type": "string"
+          },
+          "participacion_porcentaje": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 100
+          },
+          "expira_en": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "valida",
+          "correo",
+          "empresa_nombre",
+          "tienda_nombre",
+          "participacion_porcentaje",
+          "expira_en"
+        ]
+      },
+      "AceptarInvitacionRequestDto": {
+        "type": "object",
+        "properties": {
+          "nombre": {
+            "type": "string",
+            "minLength": 2,
+            "maxLength": 120,
+            "example": "Ana Pérez"
+          },
+          "contrasena": {
+            "type": "string",
+            "minLength": 8,
+            "example": "UnaClaveSegura123"
+          }
+        },
+        "required": [
+          "nombre",
+          "contrasena"
+        ]
+      },
+      "AceptarInvitacionResponseDto": {
+        "type": "object",
+        "properties": {
+          "access_token": {
+            "type": "string"
+          },
+          "refresh_token": {
+            "type": "string"
+          },
+          "expira_en": {
+            "type": "number"
+          },
+          "usuario": {
+            "type": "object",
+            "description": "Usuario vendedor con tienda y participación asignadas"
+          }
+        },
+        "required": [
+          "access_token",
+          "refresh_token",
+          "expira_en",
+          "usuario"
+        ]
+      },
       "ItemOrdenResponseDto": {
         "type": "object",
         "properties": {
@@ -4566,12 +4784,14 @@
           },
           "participacion_porcentaje": {
             "type": "number",
+            "nullable": true,
             "minimum": 0,
             "maximum": 100
           },
           "vendedor_id": {
             "type": "string",
-            "description": "Id del vendedor dueño",
+            "nullable": true,
+            "description": "Id del vendedor asignado; null si la tienda está disponible",
             "format": "uuid"
           },
           "nombre": {
@@ -4598,8 +4818,6 @@
           "id",
           "empresa_id",
           "propietario_usuario_id",
-          "participacion_porcentaje",
-          "vendedor_id",
           "nombre",
           "descripcion",
           "creado_en"
