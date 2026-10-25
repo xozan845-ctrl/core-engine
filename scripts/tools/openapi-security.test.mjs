@@ -13,6 +13,7 @@ const RUTAS_PUBLICAS = new Set([
   'GET /api/v1/catalog/productos',
   'GET /api/v1/catalog/productos/{id}',
   'GET /api/v1/tiendas/{id}',
+  'GET /api/v1/storage/public/objetos/{id}',
   'POST /api/v1/auth/login',
   'POST /api/v1/auth/refresh',
   'POST /api/v1/auth/registro',

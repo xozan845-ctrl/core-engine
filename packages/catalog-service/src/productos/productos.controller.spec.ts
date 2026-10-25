@@ -2,7 +2,7 @@ import type { Mock } from 'vitest';
 import 'reflect-metadata';
 import { ProductosController } from './productos.controller';
 import type { ProductosService } from './productos.service';
-import { NotFoundError } from '@core/shared';
+import { EMPRESA_LEGACY_ID, NotFoundError } from '@core/shared';
 
 const producto = {
   empresa_id: 'e-1',
@@ -24,6 +24,11 @@ describe('ProductosController (api/v1/catalog, R-U-10/11)', () => {
       encontrarPorId: vi.fn(),
       crear: vi.fn(),
       actualizar: vi.fn(),
+      crearVariante: vi.fn(),
+      actualizarVariante: vi.fn(),
+      eliminarVariante: vi.fn(),
+      agregarImagen: vi.fn(),
+      eliminarImagen: vi.fn(),
     };
     const controller = new ProductosController(productos as unknown as ProductosService);
     return { productos, controller };
@@ -53,6 +58,14 @@ describe('ProductosController (api/v1/catalog, R-U-10/11)', () => {
   it('debe exigir empresa cuando la lectura es anónima (ADR-27)', async () => {
     const { productos, controller } = fabricar();
     await expect(controller.listar({} as never, null)).rejects.toThrow(/empresa_id|EMPRESA_REQUERIDA/);
+    expect(productos.listar).not.toHaveBeenCalled();
+  });
+
+  it('debe rechazar el catálogo legado en la consulta pública', async () => {
+    const { productos, controller } = fabricar();
+    await expect(
+      controller.listar({ empresa_id: EMPRESA_LEGACY_ID } as never, null),
+    ).rejects.toThrow(/legado|EMPRESA_NO_PUBLICA/);
     expect(productos.listar).not.toHaveBeenCalled();
   });
 
@@ -161,5 +174,59 @@ describe('ProductosController (api/v1/catalog, R-U-10/11)', () => {
     const esperado = ['super_admin', 'admin', 'empresario'];
     expect(Reflect.getMetadata('roles_requeridos', ProductosController.prototype.crear)).toEqual(esperado);
     expect(Reflect.getMetadata('roles_requeridos', ProductosController.prototype.actualizar)).toEqual(esperado);
+  });
+
+  describe('variantes e imágenes (ADR-28)', () => {
+    const empresario = {
+      user_id: 'u-1',
+      email: 'e@core.local',
+      rol: 'empresario',
+      tenant_id: 'e-1',
+    };
+    const admin = { user_id: 'u-a', email: 'a@core.local', rol: 'admin' };
+
+    it('debe crear una variante con la empresa del empresario', async () => {
+      const { productos, controller } = fabricar();
+      productos.crearVariante.mockResolvedValue(producto);
+      const dto = { sku: 'SKU-02', precio_base: '100.00', stock: 2 };
+      await expect(controller.crearVariante(producto.id, dto as never, empresario as never)).resolves.toEqual(producto);
+      expect(productos.crearVariante).toHaveBeenCalledWith(producto.id, dto, 'e-1');
+    });
+
+    it('debe resolver la empresa del padre cuando un admin crea la variante', async () => {
+      const { productos, controller } = fabricar();
+      productos.encontrarPorId.mockResolvedValue(producto);
+      productos.crearVariante.mockResolvedValue(producto);
+      const dto = { sku: 'SKU-02', precio_base: '100.00', stock: 2 };
+      await controller.crearVariante(producto.id, dto as never, admin as never);
+      expect(productos.encontrarPorId).toHaveBeenCalledWith(producto.id);
+      expect(productos.crearVariante).toHaveBeenCalledWith(producto.id, dto, 'e-1');
+    });
+
+    it('debe delegar actualizar/eliminar variante y agregar/eliminar imagen', async () => {
+      const { productos, controller } = fabricar();
+      productos.actualizarVariante.mockResolvedValue(producto);
+      productos.agregarImagen.mockResolvedValue(producto);
+      productos.eliminarVariante.mockResolvedValue(undefined);
+      productos.eliminarImagen.mockResolvedValue(undefined);
+
+      await controller.actualizarVariante(producto.id, 'v-1', { stock: 1 } as never, empresario as never);
+      await controller.eliminarVariante(producto.id, 'v-1', empresario as never);
+      await controller.agregarImagen(producto.id, { objeto_id: 'o-1' } as never, empresario as never);
+      await controller.eliminarImagen(producto.id, 'i-1', empresario as never);
+
+      expect(productos.actualizarVariante).toHaveBeenCalledWith(producto.id, 'v-1', { stock: 1 }, 'e-1');
+      expect(productos.eliminarVariante).toHaveBeenCalledWith(producto.id, 'v-1', 'e-1');
+      expect(productos.agregarImagen).toHaveBeenCalledWith(producto.id, { objeto_id: 'o-1' }, 'e-1');
+      expect(productos.eliminarImagen).toHaveBeenCalledWith(producto.id, 'i-1', 'e-1');
+    });
+
+    it('debe lanzar NotFoundError si un admin opera sobre un producto inexistente', async () => {
+      const { productos, controller } = fabricar();
+      productos.encontrarPorId.mockResolvedValue(null);
+      await expect(
+        controller.agregarImagen('no-existe', { objeto_id: 'o-1' } as never, admin as never),
+      ).rejects.toBeInstanceOf(NotFoundError);
+    });
   });
 });

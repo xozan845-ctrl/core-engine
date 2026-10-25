@@ -4,6 +4,7 @@ import {
   AlmacenObjetos,
   Logger,
   ObjetoEnAlmacen,
+  ObjetoLeido,
   OpcionesUrlSubida,
 } from '@core/shared';
 import { STORAGE_CONFIG, StorageConfig } from '../config/storage.config';
@@ -87,6 +88,24 @@ export class MinioAlmacen implements AlmacenObjetos, OnModuleInit {
       return {
         bucket,
         objeto,
+        tamano_bytes: info.size,
+        ...(typeof contentType === 'string' ? { content_type: contentType } : {}),
+        ...(info.etag ? { etag: info.etag } : {}),
+      };
+    } catch (err) {
+      if (this.esNoEncontrado(err)) return null;
+      throw err;
+    }
+  }
+
+  async leer(bucket: string, objeto: string): Promise<ObjetoLeido | null> {
+    try {
+      const info = await this.cliente.statObject(bucket, objeto);
+      const stream = await this.cliente.getObject(bucket, objeto);
+      const meta = (info.metaData ?? {}) as Record<string, unknown>;
+      const contentType = meta['content-type'];
+      return {
+        stream,
         tamano_bytes: info.size,
         ...(typeof contentType === 'string' ? { content_type: contentType } : {}),
         ...(info.etag ? { etag: info.etag } : {}),

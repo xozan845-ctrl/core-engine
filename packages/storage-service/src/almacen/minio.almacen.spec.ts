@@ -7,6 +7,7 @@ const { cliente } = vi.hoisted(() => ({
     presignedPutObject: vi.fn(),
     presignedGetObject: vi.fn(),
     statObject: vi.fn(),
+    getObject: vi.fn(),
     removeObject: vi.fn(),
   },
 }));
@@ -125,6 +126,49 @@ describe('MinioAlmacen (implementacion del puerto AlmacenObjetos, R-SB-6)', () =
       'http://minio/t-1/a.png?firma',
     );
     expect(cliente.presignedGetObject).toHaveBeenCalledWith('t-1', 'a.png', 60);
+  });
+
+  it('debe abrir el objeto para servirlo por streaming (ADR-28)', async () => {
+    const stream = { pipe: vi.fn() };
+    cliente.statObject.mockResolvedValue({
+      size: 10,
+      etag: 'etag-stream',
+      metaData: { 'content-type': 'image/png' },
+    });
+    cliente.getObject.mockResolvedValue(stream);
+    const almacen = new MinioAlmacen(config);
+
+    await expect(almacen.leer('t-1', 'a.png')).resolves.toEqual({
+      stream,
+      tamano_bytes: 10,
+      content_type: 'image/png',
+      etag: 'etag-stream',
+    });
+    expect(cliente.getObject).toHaveBeenCalledWith('t-1', 'a.png');
+  });
+
+  it('debe leer un objeto sin metadata ni etag (ramas opcionales)', async () => {
+    const stream = { pipe: vi.fn() };
+    cliente.statObject.mockResolvedValue({ size: 1, metaData: null });
+    cliente.getObject.mockResolvedValue(stream);
+    const almacen = new MinioAlmacen(config);
+
+    await expect(almacen.leer('t-1', 'a.bin')).resolves.toEqual({
+      stream,
+      tamano_bytes: 1,
+    });
+  });
+
+  it('debe devolver null al leer un objeto inexistente', async () => {
+    cliente.statObject.mockRejectedValue(errorConCodigo('NoSuchKey'));
+    const almacen = new MinioAlmacen(config);
+    await expect(almacen.leer('t-1', 'no-existe.png')).resolves.toBeNull();
+  });
+
+  it('debe propagar errores no relacionados con ausencia al leer', async () => {
+    cliente.statObject.mockRejectedValue(new Error('sin conexion'));
+    const almacen = new MinioAlmacen(config);
+    await expect(almacen.leer('t-1', 'a.png')).rejects.toThrow('sin conexion');
   });
 
   it('debe devolver las estadisticas del objeto subido', async () => {

@@ -22,8 +22,15 @@ export class InventarioService {
   constructor(private readonly pg: PgService) {}
 
   async listar(empresaId?: string): Promise<LineaInventario[]> {
-    const filtro = empresaId ? 'WHERE empresa_id = $1' : '';
-    const params = empresaId ? [empresaId] : [];
+    const condiciones = [
+      'NOT EXISTS (SELECT 1 FROM catalog.productos v WHERE v.producto_padre_id = p.id)',
+    ];
+    const params: string[] = [];
+    if (empresaId) {
+      params.push(empresaId);
+      condiciones.unshift('s.empresa_id = $1');
+    }
+    const filtro = `WHERE ${condiciones.join(' AND ')}`;
     const filas = await this.pg.query<{
       empresa_id: string;
       sku: string;
@@ -36,11 +43,14 @@ export class InventarioService {
       valor_disponible_cents: number;
       valor_total_cents: number;
     }>(
-      `SELECT empresa_id, sku, nombre, stock_fisico, reservado, disponible, estado,
-              precio_base_cents, valor_disponible_cents, valor_total_cents
-       FROM catalog.stock_vista
+      `SELECT s.empresa_id, s.sku, s.nombre, s.stock_fisico, s.reservado,
+              s.disponible, s.estado, s.precio_base_cents,
+              s.valor_disponible_cents, s.valor_total_cents
+       FROM catalog.stock_vista s
+       JOIN catalog.productos p
+         ON p.empresa_id = s.empresa_id AND LOWER(p.sku) = LOWER(s.sku)
        ${filtro}
-       ORDER BY estado DESC, nombre ASC`,
+       ORDER BY s.estado DESC, s.nombre ASC`,
       params,
     );
     return filas.map((f) => ({
