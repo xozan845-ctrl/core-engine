@@ -908,7 +908,6 @@
           "etiquetas",
           "tamano_bytes",
           "estado",
-          "publico",
           "creado_en"
         ]
       },

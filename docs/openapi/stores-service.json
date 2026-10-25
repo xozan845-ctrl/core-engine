@@ -473,7 +473,6 @@
           "producto_id",
           "sku",
           "producto_nombre",
-          "atributos",
           "margen",
           "precio_base",
           "precio_venta",

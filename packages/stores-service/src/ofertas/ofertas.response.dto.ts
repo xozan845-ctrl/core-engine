@@ -30,6 +30,7 @@ export class OfertaResponseDto {
     description: 'Atributos de la variante (color, talla, etc.)',
     type: 'object',
     additionalProperties: true,
+    selfRequired: false,
   })
   atributos: Record<string, unknown>;
 

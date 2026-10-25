@@ -7071,12 +7071,7 @@ export const OPENAPI_AGREGADO = {
           "precio_base",
           "stock",
           "estado",
-          "creado_en",
-          "atributos",
-          "tiene_variantes",
-          "imagenes",
-          "precio_desde",
-          "stock_total"
+          "creado_en"
         ]
       },
       "ResumenInventarioResponseDto": {
@@ -13933,7 +13928,6 @@ export const OPENAPI_AGREGADO = {
           "etiquetas",
           "tamano_bytes",
           "estado",
-          "publico",
           "creado_en"
         ]
       },
@@ -14228,7 +14222,6 @@ export const OPENAPI_AGREGADO = {
           "producto_id",
           "sku",
           "producto_nombre",
-          "atributos",
           "margen",
           "precio_base",
           "precio_venta",

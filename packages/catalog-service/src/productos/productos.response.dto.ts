@@ -100,13 +100,18 @@ export class ProductoResponseDto {
     description: 'Atributos de la variante (color, talla, etc.)',
     type: 'object',
     additionalProperties: true,
+    selfRequired: false,
   })
   atributos: Record<string, unknown>;
 
-  @ApiProperty({ description: 'El producto tiene variantes vendibles' })
+  @ApiProperty({ description: 'El producto tiene variantes vendibles', required: false })
   tiene_variantes: boolean;
 
-  @ApiProperty({ description: 'Imágenes del producto (máx. 3)', type: () => [ImagenProductoResponseDto] })
+  @ApiProperty({
+    description: 'Imágenes del producto (máx. 3)',
+    type: () => [ImagenProductoResponseDto],
+    required: false,
+  })
   imagenes: ImagenProductoResponseDto[];
 
   @ApiProperty({
@@ -116,10 +121,10 @@ export class ProductoResponseDto {
   })
   variantes?: VarianteProductoResponseDto[];
 
-  @ApiProperty({ description: 'Precio mínimo mostrable ("desde")', example: '1000.00' })
+  @ApiProperty({ description: 'Precio mínimo mostrable ("desde")', required: false, example: '1000.00' })
   precio_desde: string;
 
-  @ApiProperty({ description: 'Stock agregado de las variantes o el propio', example: 25 })
+  @ApiProperty({ description: 'Stock agregado de las variantes o el propio', required: false, example: 25 })
   stock_total: number;
 }
 

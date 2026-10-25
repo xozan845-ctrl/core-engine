@@ -942,12 +942,7 @@
           "precio_base",
           "stock",
           "estado",
-          "creado_en",
-          "atributos",
-          "tiene_variantes",
-          "imagenes",
-          "precio_desde",
-          "stock_total"
+          "creado_en"
         ]
       },
       "ResumenInventarioResponseDto": {

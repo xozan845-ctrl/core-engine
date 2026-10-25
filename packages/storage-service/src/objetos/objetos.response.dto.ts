@@ -48,6 +48,7 @@ export class ObjetoStorageResponseDto {
   @ApiProperty({
     description: 'Servido por el endpoint estático público (ADR-28)',
     example: true,
+    required: false,
   })
   publico: boolean;
 
