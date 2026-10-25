@@ -2,7 +2,7 @@ import type { Mock } from 'vitest';
 import 'reflect-metadata';
 import { ProductosController } from './productos.controller';
 import type { ProductosService } from './productos.service';
-import { NotFoundError } from '@core/shared';
+import { EMPRESA_LEGACY_ID, NotFoundError } from '@core/shared';
 
 const producto = {
   empresa_id: 'e-1',
@@ -58,6 +58,14 @@ describe('ProductosController (api/v1/catalog, R-U-10/11)', () => {
   it('debe exigir empresa cuando la lectura es anónima (ADR-27)', async () => {
     const { productos, controller } = fabricar();
     await expect(controller.listar({} as never, null)).rejects.toThrow(/empresa_id|EMPRESA_REQUERIDA/);
+    expect(productos.listar).not.toHaveBeenCalled();
+  });
+
+  it('debe rechazar el catálogo legado en la consulta pública', async () => {
+    const { productos, controller } = fabricar();
+    await expect(
+      controller.listar({ empresa_id: EMPRESA_LEGACY_ID } as never, null),
+    ).rejects.toThrow(/legado|EMPRESA_NO_PUBLICA/);
     expect(productos.listar).not.toHaveBeenCalled();
   });
 
