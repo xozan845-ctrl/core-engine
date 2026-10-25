@@ -1,6 +1,6 @@
 import { NestFactory } from '@nestjs/core';
 import { SwaggerModule } from '@nestjs/swagger';
-import type { Request, Response } from 'express';
+import type { NextFunction, Request, Response } from 'express';
 import { AppModule } from './app.module';
 import { OPENAPI_AGREGADO } from './openapi.agregado';
 import {
@@ -9,6 +9,7 @@ import {
   type EstadoReadiness,
 } from './health/readiness.utils';
 import { edgeAuth, leerEdge } from './proxy/edge-auth.middleware';
+import { crearProxyPublico } from './proxy/public-proxy.middleware';
 import { RateLimitMiddleware } from './proxy/rate-limit.middleware';
 import { securityHeaders } from './proxy/security-headers.middleware';
 import {
@@ -59,6 +60,16 @@ async function bootstrap(): Promise<void> {
   // antes del gate para que tambien las respuestas 401/404 las lleven.
   expressApp.disable('x-powered-by');
   expressApp.use(securityHeaders());
+  // Proxy server-side para el frontend público (ADR-29). Va ANTES del gate:
+  // el handler añade el Basic internamente y nunca lo expone al navegador.
+  const proxyPublico = crearProxyPublico({
+    basicAuth: edge.basicAuth,
+    origenes,
+    puerto,
+  });
+  expressApp.use('/api-proxy', (req: Request, res: Response, next: NextFunction) => {
+    proxyPublico(req, res).catch(next);
+  });
   // Gate del borde ANTES de cualquier ruta (incluidas /metrics y /docs).
   expressApp.use(edgeAuth(edge));
   const metrics = app.get(MetricsService);
