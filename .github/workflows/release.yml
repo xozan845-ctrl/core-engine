@@ -60,7 +60,11 @@ jobs:
             exit 1
           fi
           # SHA del commit apuntado por el tag (no el del dispatch).
-          git fetch --quiet origin "refs/tags/${REF}:refs/tags/${REF}" || true
+          # En un push de tag, actions/checkout deja un tag local lightweight;
+          # hay que reemplazarlo por el objeto anotado que vive en origin
+          # (R-CD-1). Sin `git tag -d`, el fetch no puede sobrescribirlo.
+          git tag -d "$REF" >/dev/null 2>&1 || true
+          git fetch --quiet --force origin "refs/tags/${REF}:refs/tags/${REF}" || true
           SHA=$(git rev-list -n1 "$REF")
           echo "tag=$REF" >> "$GITHUB_OUTPUT"
           echo "sha=$SHA" >> "$GITHUB_OUTPUT"
