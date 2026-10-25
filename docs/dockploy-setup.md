@@ -132,20 +132,14 @@ Migraciones solo hacia adelante.
 | 9 | `/docs`, `/docs-json` y `/metrics` ocultos (`DIAGNOSTICOS_PUBLICOS=false`) | ☐ | ☐ |
 | 10 | MinIO sin puerto público (`9000` solo detrás de Traefik con TLS) | ☐ | ☐ |
 | 11 | Gate de staging (`EDGE_BASIC_AUTH`) — obligatorio (`REQUIRE_EDGE_AUTH=true`; el arranque falla sin él); producción sin gate | ☐ | n/a |
-| 12 | `EDGE_BASIC_BYPASS_ORIGINS` solo con el origen público de Firebase (demo); el resto de orígenes sigue con Basic | ☐ | n/a |
-| 13 | `CORS_ORIGINS` con los orígenes reales del frontend | ☐ | ☐ |
-| 14 | `TRUST_PROXY=1` y rate limit por IP real (probar dos IPs o revisar `x-ratelimit-remaining`) | ☐ | ☐ |
-| 15 | `8080` solo en loopback y cerrado en el firewall del VPS | ☐ | ☐ |
+| 12 | `CORS_ORIGINS` con los orígenes reales del frontend | ☐ | ☐ |
+| 13 | `TRUST_PROXY=1` y rate limit por IP real (probar dos IPs o revisar `x-ratelimit-remaining`) | ☐ | ☐ |
+| 14 | `8080` solo en loopback y cerrado en el firewall del VPS | ☐ | ☐ |
+| 15 | Frontend público usa `/api-proxy/api/v1` y su origen está en `CORS_ORIGINS` (ADR-29) | ☐ | ☐ |
 
 > `EDGE_BASIC_AUTH` debe existir también como secreto del GitHub Environment
 > (`EDGE_BASIC_AUTH`) para que el smoke remoto se autentique en staging. Sin
 > él, el paso `npm run smoke:remote` recibe 401 en el login.
->
-> `EDGE_BASIC_BYPASS_ORIGINS` es una excepción de **demo público**, no una
-> autenticación: `Origin` puede falsificarse fuera del navegador. Solo debe
-> contener el origen exacto de Firebase
-> (`https://kb-coleccion-internacional-ni.web.app`) y nunca usarse en
-> producción. El resto de orígenes sigue exigiendo Basic.
 >
 > Desarrollo local: `docker compose -f docker-compose.dev.yml up -d --build` + `npm run demo` es la
 > verificación equivalente antes de cualquier PR (R-GC-5).

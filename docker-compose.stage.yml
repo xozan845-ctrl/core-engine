@@ -100,9 +100,8 @@ services:
       SERVICIO: api-gateway
       PORT: 8080
       OUTBOX_TABLA: identity.outbox
-      # Staging mantiene el gate: el arranque falla si EDGE_BASIC_AUTH no llega.
-      # Los origenes listados en EDGE_BASIC_BYPASS_ORIGINS (demo publico) se
-      # eximen; el resto sigue exigiendo Basic.
+      # Staging NO es publico: el arranque falla si EDGE_BASIC_AUTH no llega
+      # por el env_file (asi no se despliega sin autenticacion por descuido).
       REQUIRE_EDGE_AUTH: "true"
     # Solo loopback: el proxy de borde (Traefik/Dockploy) alcanza el gateway por
     # el puerto publicado, pero el puerto NO queda expuesto a Internet en HTTP
