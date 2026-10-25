@@ -45,6 +45,12 @@ export class ObjetoStorageResponseDto {
   })
   estado: 'pendiente' | 'activo' | 'eliminado';
 
+  @ApiProperty({
+    description: 'Servido por el endpoint estático público (ADR-28)',
+    example: true,
+  })
+  publico: boolean;
+
   @ApiProperty({ description: 'Usuario que subió el objeto', required: false, nullable: true })
   subido_por: string | null;
 

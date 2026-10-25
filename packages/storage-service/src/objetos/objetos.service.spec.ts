@@ -29,6 +29,7 @@ const filaObjeto = (extra: Record<string, unknown> = {}) => ({
   tamano_bytes: '2048',
   etag: null,
   estado: 'pendiente',
+  publico: false,
   subido_por: 'usuario-1',
   creado_en: '2026-10-16T00:00:00.000Z',
   confirmado_en: null,
@@ -77,6 +78,12 @@ const crear = () => {
     estadisticas: vi.fn().mockResolvedValue({
       bucket: BUCKET,
       objeto: 'productos/22222222-2222-4222-8222-222222222222/foto.png',
+      tamano_bytes: 2048,
+      content_type: 'image/png',
+      etag: 'etag-1',
+    }),
+    leer: vi.fn().mockResolvedValue({
+      stream: { pipe: vi.fn() },
       tamano_bytes: 2048,
       content_type: 'image/png',
       etag: 'etag-1',
@@ -449,6 +456,90 @@ describe('ObjetosService (URLs prefirmadas y cuotas por tenant)', () => {
 
       expect(buckets.restarUsoEnTransaccion).not.toHaveBeenCalled();
       expect((pg.query as Mock).mock.calls.length).toBe(0);
+    });
+  });
+
+  describe('serializacion de objetos', () => {
+    it('debe normalizar etiquetas nulas, estado eliminado y publico ausente', async () => {
+      const { servicio, pg } = crear();
+      (pg.queryOne as Mock).mockResolvedValue(
+        filaObjeto({ etiquetas: null, estado: 'eliminado', publico: undefined }),
+      );
+
+      const objeto = await servicio.obtener(TENANT, OBJETO_ID);
+
+      expect(objeto.etiquetas).toEqual({});
+      expect(objeto.estado).toBe('eliminado');
+      expect(objeto.publico).toBe(false);
+    });
+
+    it('debe descartar etiquetas con clave vacia', async () => {
+      const { servicio, pg } = crear();
+      (pg.queryOne as Mock).mockResolvedValue(filaObjeto());
+      const resultado = await servicio.solicitarSubida(TENANT, undefined, {
+        ...dto(),
+        etiquetas: { '   ': 'descartada', valida: 'ok' },
+      });
+      expect(resultado.objeto_id).toBeDefined();
+    });
+  });
+
+  describe('leerPublico (ADR-28)', () => {
+    it('debe servir un objeto activo, público y de imagen', async () => {
+      const { servicio, pg, almacen } = crear();
+      (pg.queryOne as Mock).mockResolvedValue(filaObjeto({ estado: 'activo', publico: true }));
+
+      const objeto = await servicio.leerPublico(OBJETO_ID);
+
+      expect(objeto.content_type).toBe('image/png');
+      expect(objeto.tamano_bytes).toBe(2048);
+      expect(almacen.leer).toHaveBeenCalledWith(
+        BUCKET,
+        'productos/22222222-2222-4222-8222-222222222222/foto.png',
+      );
+      const [sql, params] = (pg.queryOne as Mock).mock.calls[0];
+      expect(sql).toContain('publico = true');
+      expect(params).toEqual([OBJETO_ID]);
+    });
+
+    it('debe ocultar un objeto privado o inexistente', async () => {
+      const { servicio, pg } = crear();
+      (pg.queryOne as Mock).mockResolvedValue(null);
+      await expect(servicio.leerPublico(OBJETO_ID)).rejects.toThrow(NotFoundError);
+    });
+
+    it('debe ocultar el objeto si MinIO ya no lo tiene', async () => {
+      const { servicio, pg, almacen } = crear();
+      (pg.queryOne as Mock).mockResolvedValue(filaObjeto({ estado: 'activo', publico: true }));
+      (almacen.leer as Mock).mockResolvedValue(null);
+      await expect(servicio.leerPublico(OBJETO_ID)).rejects.toThrow(NotFoundError);
+    });
+
+    it('debe usar el ETag de la fila si MinIO no lo devuelve', async () => {
+      const { servicio, pg, almacen } = crear();
+      (pg.queryOne as Mock).mockResolvedValue(
+        filaObjeto({ estado: 'activo', publico: true, etag: 'etag-fila' }),
+      );
+      (almacen.leer as Mock).mockResolvedValue({
+        stream: { pipe: vi.fn() },
+        tamano_bytes: 2048,
+      });
+      const objeto = await servicio.leerPublico(OBJETO_ID);
+      expect(objeto.etag).toBe('etag-fila');
+    });
+
+    it('debe ocultar un objeto que no es imagen', async () => {
+      const { servicio, pg } = crear();
+      (pg.queryOne as Mock).mockResolvedValue(
+        filaObjeto({ estado: 'activo', publico: true, content_type: 'application/pdf' }),
+      );
+      await expect(servicio.leerPublico(OBJETO_ID)).rejects.toThrow(NotFoundError);
+    });
+
+    it('debe rechazar un id que no es UUID sin consultar', async () => {
+      const { servicio, pg } = crear();
+      await expect(servicio.leerPublico('no-es-uuid')).rejects.toThrow(NotFoundError);
+      expect(pg.queryOne).not.toHaveBeenCalled();
     });
   });
 });

@@ -1,5 +1,6 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { randomUUID } from 'crypto';
+import type { Readable } from 'stream';
 import {
   ALMACEN_OBJETOS,
   AlmacenObjetos,
@@ -37,6 +38,8 @@ export interface ObjetoStorage {
   tamano_bytes: number;
   etag: string | null;
   estado: EstadoObjeto;
+  /** Si es true, se sirve por el endpoint estático público (ADR-28). */
+  publico: boolean;
   subido_por: string | null;
   creado_en: string;
   confirmado_en: string | null;
@@ -69,6 +72,16 @@ export interface DatosSubida {
   carpeta?: unknown;
   descripcion?: unknown;
   etiquetas?: unknown;
+  publico?: unknown;
+}
+
+/** Objeto público listo para streaming por el endpoint estático. */
+export interface ObjetoPublico {
+  stream: Readable;
+  content_type: string;
+  tamano_bytes: number;
+  etag?: string;
+  nombre: string;
 }
 
 interface ObjetoRow {
@@ -84,6 +97,7 @@ interface ObjetoRow {
   tamano_bytes: string | number;
   etag: string | null;
   estado: string;
+  publico: boolean;
   subido_por: string | null;
   creado_en: string;
   confirmado_en: string | null;
@@ -91,7 +105,7 @@ interface ObjetoRow {
 }
 
 const COLUMNAS = `id, tenant_id, bucket, objeto, nombre_original, content_type, carpeta,
-  descripcion, etiquetas, tamano_bytes, etag, estado, subido_por, creado_en,
+  descripcion, etiquetas, tamano_bytes, etag, estado, publico, subido_por, creado_en,
   confirmado_en, eliminado_en`;
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -150,11 +164,12 @@ export class ObjetosService {
     // El gateway inyecta el id real del usuario (uuid); si llega otra cosa se
     // guarda sin autor en vez de romper la insercion.
     const autor = usuarioId && UUID.test(usuarioId) ? usuarioId : null;
+    const publico = datos.publico === true;
     const fila = await this.pg.queryOne<ObjetoRow>(
       `INSERT INTO storage.objetos
          (id, tenant_id, bucket, objeto, nombre_original, content_type, carpeta,
-          descripcion, etiquetas, tamano_bytes, estado, subido_por, creado_en)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9::jsonb, $10, 'pendiente', $11, NOW())
+          descripcion, etiquetas, tamano_bytes, estado, subido_por, publico, creado_en)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9::jsonb, $10, 'pendiente', $11, $12, NOW())
        RETURNING ${COLUMNAS}`,
       [
         id,
@@ -168,6 +183,7 @@ export class ObjetosService {
         JSON.stringify(etiquetas),
         tamano_bytes,
         autor,
+        publico,
       ],
     );
     if (!fila) throw new ConflictError('No se pudo registrar la solicitud de subida.');
@@ -304,6 +320,33 @@ export class ObjetosService {
     };
   }
 
+  /**
+   * Sirve una imagen pública por streaming (ADR-28). El UUID es la capacidad:
+   * no se consulta tenant ni se acepta cualquier objeto; solo `activo`,
+   * marcado `publico` y con content-type de imagen.
+   */
+  async leerPublico(id: string): Promise<ObjetoPublico> {
+    if (!UUID.test(id)) throw new NotFoundError('Objeto', id);
+    const fila = await this.pg.queryOne<ObjetoRow>(
+      `SELECT ${COLUMNAS} FROM storage.objetos
+        WHERE id = $1 AND estado = 'activo' AND publico = true`,
+      [id],
+    );
+    if (!fila || !fila.content_type.startsWith('image/')) {
+      throw new NotFoundError('Objeto', id);
+    }
+    const leido = await this.almacen.leer(fila.bucket, fila.objeto);
+    if (!leido) throw new NotFoundError('Objeto', id);
+    const etag = leido.etag ?? fila.etag ?? undefined;
+    return {
+      stream: leido.stream,
+      content_type: fila.content_type,
+      tamano_bytes: leido.tamano_bytes,
+      ...(etag ? { etag } : {}),
+      nombre: fila.nombre_original,
+    };
+  }
+
   /** Baja logica + borrado en MinIO + liberacion de cuota (idempotente). */
   async eliminar(tenantId: string, id: string, usuario?: UsuarioContexto | null): Promise<void> {
     const fila = await this.obtenerFila(tenantId, id);
@@ -418,6 +461,7 @@ export class ObjetosService {
       etag: fila.etag ?? null,
       estado:
         fila.estado === 'activo' ? 'activo' : fila.estado === 'eliminado' ? 'eliminado' : 'pendiente',
+      publico: fila.publico === true,
       subido_por: fila.subido_por ?? null,
       creado_en: fila.creado_en,
       confirmado_en: fila.confirmado_en ?? null,
