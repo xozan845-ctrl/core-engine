@@ -1,9 +1,61 @@
 import { ApiProperty } from '@nestjs/swagger';
 
-/**
- * Contrato de respuesta del catálogo. Refleja el shape que serializa
- * `ProductosService` (precio en string decimal, stock neto y estado derivado).
- */
+export class ImagenProductoResponseDto {
+  @ApiProperty({ description: 'Id de la relación producto-imagen', format: 'uuid' })
+  id: string;
+
+  @ApiProperty({ description: 'Id del objeto en storage-service', format: 'uuid' })
+  objeto_id: string;
+
+  @ApiProperty({
+    description: 'Ruta pública relativa servida por storage-service',
+    example: '/api/v1/storage/public/objetos/8f0c...',
+  })
+  url: string;
+
+  @ApiProperty({ description: 'Orden de la imagen (0-2)', minimum: 0, maximum: 2 })
+  orden: number;
+
+  @ApiProperty({ description: 'Imagen principal del producto/variante' })
+  es_principal: boolean;
+}
+
+export class VarianteProductoResponseDto {
+  @ApiProperty({ description: 'Id de la variante', format: 'uuid' })
+  id: string;
+
+  @ApiProperty({ description: 'Id del producto padre', format: 'uuid' })
+  producto_padre_id: string;
+
+  @ApiProperty({ description: 'SKU de la variante', example: 'SKU-001-ROJO-M' })
+  sku: string;
+
+  @ApiProperty({ description: 'Nombre visible de la variante' })
+  nombre: string;
+
+  @ApiProperty({
+    description: 'Atributos de la variante (color, talla, etc.)',
+    type: 'object',
+    additionalProperties: true,
+  })
+  atributos: Record<string, unknown>;
+
+  @ApiProperty({ description: 'Precio base en córdobas con dos decimales', example: '1500.00' })
+  precio_base: string;
+
+  @ApiProperty({ description: 'Stock disponible', example: 10 })
+  stock: number;
+
+  @ApiProperty({ description: 'Estado de la variante', enum: ['disponible', 'agotado'] })
+  estado: 'disponible' | 'agotado';
+
+  @ApiProperty({ description: 'Imágenes de la variante (máx. 3)', type: () => [ImagenProductoResponseDto] })
+  imagenes: ImagenProductoResponseDto[];
+
+  @ApiProperty({ description: 'Fecha de creación (ISO 8601 UTC)', format: 'date-time' })
+  creado_en: string;
+}
+
 export class ProductoResponseDto {
   @ApiProperty({ description: 'Empresa propietaria', format: 'uuid' })
   empresa_id: string;
@@ -38,11 +90,37 @@ export class ProductoResponseDto {
   })
   estado: 'disponible' | 'agotado';
 
-  @ApiProperty({
-    description: 'Fecha de creación (ISO 8601 UTC)',
-    format: 'date-time',
-  })
+  @ApiProperty({ description: 'Fecha de creación (ISO 8601 UTC)', format: 'date-time' })
   creado_en: string;
+
+  @ApiProperty({ description: 'Producto padre si esta fila es una variante', required: false, nullable: true, format: 'uuid' })
+  producto_padre_id: string | null;
+
+  @ApiProperty({
+    description: 'Atributos de la variante (color, talla, etc.)',
+    type: 'object',
+    additionalProperties: true,
+  })
+  atributos: Record<string, unknown>;
+
+  @ApiProperty({ description: 'El producto tiene variantes vendibles' })
+  tiene_variantes: boolean;
+
+  @ApiProperty({ description: 'Imágenes del producto (máx. 3)', type: () => [ImagenProductoResponseDto] })
+  imagenes: ImagenProductoResponseDto[];
+
+  @ApiProperty({
+    description: 'Variantes (solo en el detalle del padre)',
+    type: () => [VarianteProductoResponseDto],
+    required: false,
+  })
+  variantes?: VarianteProductoResponseDto[];
+
+  @ApiProperty({ description: 'Precio mínimo mostrable ("desde")', example: '1000.00' })
+  precio_desde: string;
+
+  @ApiProperty({ description: 'Stock agregado de las variantes o el propio', example: 25 })
+  stock_total: number;
 }
 
 export class PaginaProductosResponseDto {
