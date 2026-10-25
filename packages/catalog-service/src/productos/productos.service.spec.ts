@@ -1,6 +1,6 @@
 import type { Mock } from 'vitest';
 import { ProductosService, Producto } from './productos.service';
-import { DomainError, ConflictError, NotFoundError, EMPRESA_LEGACY_ID } from '@core/shared';
+import { DomainError, ConflictError, NotFoundError, EMPRESA_LEGACY_ID, EVENTOS } from '@core/shared';
 import type { PoolClient } from 'pg';
 
 /**
@@ -798,6 +798,7 @@ describe('ProductosService (catalogo maestro y stock)', () => {
       ['tenant distinto', { tenant_id: 'otro', estado: 'activo', content_type: 'image/png', publico: true }, /otra empresa/],
       ['inactiva', { tenant_id: datosValidos.empresa_id, estado: 'pendiente', content_type: 'image/png', publico: true }, /activa/],
       ['no imagen', { tenant_id: datosValidos.empresa_id, estado: 'activo', content_type: 'application/pdf', publico: true }, /no es una imagen/],
+      ['svg', { tenant_id: datosValidos.empresa_id, estado: 'activo', content_type: 'image/svg+xml', publico: true }, /raster|no es una imagen/],
     ])('debe rechazar la imagen %s', async (_nombre, cuerpo, esperado) => {
       const { servicio, pg } = crear();
       fetchCatalogo({ ok: true, status: 200, json: async () => cuerpo });
@@ -942,6 +943,134 @@ describe('ProductosService (catalogo maestro y stock)', () => {
       vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new Error('red caida')));
 
       await expect(servicio.crear(datosValidos)).rejects.toThrow(/verificar la empresa/);
+    });
+
+    it('debe impedir crear una variante si el padre tiene ofertas activas', async () => {
+      const { servicio, pg } = crear();
+      (pg.queryOne as Mock).mockResolvedValue({ ...filaProducto, tiene_variantes: true });
+      (pg.query as Mock).mockResolvedValue([]);
+      vi.stubGlobal(
+        'fetch',
+        vi.fn(async (url: string | URL | Request) => {
+          if (String(url).includes('/internal/ofertas/')) {
+            return { ok: true, status: 200, json: async () => ({ total: 1 }) } as Response;
+          }
+          return {
+            ok: true,
+            status: 200,
+            json: async () => ({ estado: 'activa', tipo_empresa: 'comercial' }),
+          } as Response;
+        }),
+      );
+
+      await expect(
+        servicio.crearVariante(
+          filaProducto.id,
+          { sku: 'SKU-02', precio_base: '10.00', stock: 1 },
+          datosValidos.empresa_id,
+        ),
+      ).rejects.toThrow(/ofertas activas|OFERTAS_ACTIVAS/);
+    });
+
+    it('debe impedir eliminar una variante con ofertas activas', async () => {
+      const { servicio, pg } = crear();
+      (pg.queryOne as Mock).mockResolvedValue({ ...filaProducto, tiene_variantes: true });
+      (pg.query as Mock)
+        .mockResolvedValueOnce([
+          {
+            ...filaProducto,
+            id: '99999999-8888-4777-8666-555555555555',
+            producto_padre_id: filaProducto.id,
+            tiene_variantes: false,
+          },
+        ])
+        .mockResolvedValue([]);
+      vi.stubGlobal(
+        'fetch',
+        vi.fn(async (url: string | URL | Request) => {
+          if (String(url).includes('/internal/ofertas/')) {
+            return { ok: true, status: 200, json: async () => ({ total: 2 }) } as Response;
+          }
+          return {
+            ok: true,
+            status: 200,
+            json: async () => ({ estado: 'activa', tipo_empresa: 'comercial' }),
+          } as Response;
+        }),
+      );
+
+      await expect(
+        servicio.eliminarVariante(
+          filaProducto.id,
+          '99999999-8888-4777-8666-555555555555',
+          datosValidos.empresa_id,
+        ),
+      ).rejects.toThrow(/ofertas activas|OFERTAS_ACTIVAS/);
+    });
+
+    it('debe impedir borrar la imagen principal si hay ofertas activas', async () => {
+      const { servicio, pg } = crear();
+      (pg.queryOne as Mock).mockResolvedValue({
+        ...filaProducto,
+        tiene_variantes: false,
+      });
+      (pg.query as Mock)
+        .mockResolvedValueOnce([])
+        .mockResolvedValue([
+          {
+            id: '33333333-4444-4555-8666-777777777777',
+            producto_id: filaProducto.id,
+            objeto_id: 'o-1',
+            orden: 0,
+            es_principal: true,
+          },
+        ]);
+      vi.stubGlobal(
+        'fetch',
+        vi.fn(async (url: string | URL | Request) => {
+          if (String(url).includes('/internal/ofertas/')) {
+            return { ok: true, status: 200, json: async () => ({ total: 1 }) } as Response;
+          }
+          return {
+            ok: true,
+            status: 200,
+            json: async () => ({ estado: 'activa', tipo_empresa: 'comercial' }),
+          } as Response;
+        }),
+      );
+
+      await expect(
+        servicio.eliminarImagen(
+          filaProducto.id,
+          '33333333-4444-4555-8666-777777777777',
+          datosValidos.empresa_id,
+        ),
+      ).rejects.toThrow(/ofertas activas|OFERTAS_ACTIVAS/);
+    });
+
+    it('debe publicar stock.updated al ajustar stock manualmente', async () => {
+      const outbox = { insertarEnTransaccion: vi.fn().mockResolvedValue('evt-1') };
+      const { pg, client } = crear();
+      const servicio = new ProductosService(pg as never, outbox as never);
+      (pg.queryOne as Mock).mockResolvedValue(filaProducto);
+      (pg.query as Mock).mockResolvedValue([]);
+      (client.query as Mock).mockResolvedValue({ rows: [], rowCount: 1 });
+
+      await servicio.actualizar(filaProducto.id, { stock: 7 }, datosValidos.empresa_id);
+
+      expect(outbox.insertarEnTransaccion).toHaveBeenCalledWith(
+        expect.anything(),
+        EVENTOS.STOCK_UPDATED,
+        expect.objectContaining({
+          items: [
+            {
+              empresa_id: filaProducto.empresa_id,
+              sku: filaProducto.sku,
+              stock_restante: 7,
+            },
+          ],
+        }),
+      );
     });
   });
 });

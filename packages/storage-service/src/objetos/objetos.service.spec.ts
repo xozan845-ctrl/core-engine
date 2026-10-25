@@ -536,6 +536,14 @@ describe('ObjetosService (URLs prefirmadas y cuotas por tenant)', () => {
       await expect(servicio.leerPublico(OBJETO_ID)).rejects.toThrow(NotFoundError);
     });
 
+    it('debe ocultar SVG (riesgo de scripts al navegar)', async () => {
+      const { servicio, pg } = crear();
+      (pg.queryOne as Mock).mockResolvedValue(
+        filaObjeto({ estado: 'activo', publico: true, content_type: 'image/svg+xml' }),
+      );
+      await expect(servicio.leerPublico(OBJETO_ID)).rejects.toThrow(NotFoundError);
+    });
+
     it('debe rechazar un id que no es UUID sin consultar', async () => {
       const { servicio, pg } = crear();
       await expect(servicio.leerPublico('no-es-uuid')).rejects.toThrow(NotFoundError);

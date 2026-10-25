@@ -192,6 +192,13 @@ describe('OfertasService (RN-01 / RN-02)', () => {
   });
 
   describe('sincronizarStockDeOferta (RN-02)', () => {
+    it('debe contar las ofertas activas de un producto', async () => {
+      const { servicio, pg } = crear();
+      (pg.queryOne as Mock).mockResolvedValue({ n: 2 });
+      await expect(servicio.contarActivasPorProducto('p1')).resolves.toBe(2);
+      expect(pg.queryOne).toHaveBeenCalledWith(expect.stringContaining('COUNT(*)'), ['p1']);
+    });
+
     it('debe recortar el stock negativo a cero y marcar la oferta agotada', async () => {
       const { servicio, pg } = crear();
       await servicio.sincronizarStockDeOferta('e-1', 'SKU-01', -3);

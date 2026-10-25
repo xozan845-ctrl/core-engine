@@ -1,12 +1,14 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Optional } from '@nestjs/common';
 import { randomUUID } from 'crypto';
 import type { PoolClient } from 'pg';
 import {
   PgService,
+  OutboxService,
   DomainError,
   ConflictError,
   NotFoundError,
   Money,
+  EVENTOS,
   crearPagina,
   parsearPaginacion,
   Pagina,
@@ -110,9 +112,13 @@ interface EmpresaCatalogo {
 export class ProductosService {
   private readonly identidadUrl = process.env.IDENTITY_SERVICE_URL ?? 'http://identity-service:3001';
   private readonly storageUrl = process.env.STORAGE_SERVICE_URL ?? 'http://storage-service:3010';
+  private readonly storesUrl = process.env.STORES_SERVICE_URL ?? 'http://stores-service:3003';
   private readonly claveInterna = process.env.INTERNAL_API_KEY ?? '';
 
-  constructor(private readonly pg: PgService) {}
+  constructor(
+    private readonly pg: PgService,
+    @Optional() private readonly outbox?: OutboxService,
+  ) {}
 
   async listar(filtros: {
     empresa_id?: unknown;
@@ -398,6 +404,7 @@ export class ProductosService {
         `Un producto admite como máximo ${MAX_VARIANTES} variantes.`,
       );
     }
+    await this.validarSinOfertasActivas(padreId);
     const sku = this.normalizarSku(datos.sku);
     this.validarStock(datos.stock);
     const precio = this.validarPrecio(datos.precio_base);
@@ -508,6 +515,20 @@ export class ProductosService {
             cambios.motivo ?? 'ajuste manual',
           ],
         );
+        // RN-02: las ofertas vivas deben reflejar el stock ajustado a mano.
+        if (this.outbox) {
+          await this.outbox.insertarEnTransaccion(client, EVENTOS.STOCK_UPDATED, {
+            order_id: `ajuste-${id}`,
+            tipo: 'ajuste',
+            items: [
+              {
+                empresa_id: previo.empresa_id,
+                sku: previo.sku,
+                stock_restante: cambios.stock,
+              },
+            ],
+          });
+        }
       }
 
       params.push(id);
@@ -559,6 +580,7 @@ export class ProductosService {
     if (!padre.variantes?.some((v) => v.id === varianteId)) {
       throw new NotFoundError('Variante', varianteId);
     }
+    await this.validarSinOfertasActivas(varianteId);
     await this.pg.transaccion(async (client) => {
       await client.query(
         `DELETE FROM catalog.productos
@@ -637,8 +659,14 @@ export class ProductosService {
   ): Promise<void> {
     const producto = await this.encontrarPorId(productoId, empresaId);
     if (!producto) throw new NotFoundError('Producto', productoId);
-    if (!producto.imagenes.some((i) => i.id === imagenId)) {
+    const imagen = producto.imagenes.find((i) => i.id === imagenId);
+    if (!imagen) {
       throw new NotFoundError('Imagen', imagenId);
+    }
+    // La oferta congela el objeto de la imagen principal: si está viva, borrarla
+    // dejaría una URL rota en la tienda pública.
+    if (imagen.es_principal) {
+      await this.validarSinOfertasActivas(productoId);
     }
     await this.pg.transaccion(async (client) => {
       const eliminada = await client.query<{ es_principal: boolean }>(
@@ -952,6 +980,42 @@ export class ProductosService {
   }
 
   /**
+   * ADR-28: no se puede crear/eliminar una variante ni borrar la imagen
+   * principal mientras exista una oferta activa que la referencie. La consulta
+   * es a stores por API interna y falla cerrada si no se puede verificar.
+   */
+  private async validarSinOfertasActivas(productoId: string): Promise<void> {
+    let res: Response;
+    try {
+      res = await fetch(
+        `${this.storesUrl}/internal/ofertas/producto/${encodeURIComponent(productoId)}/activas`,
+        {
+          headers: { 'x-internal-key': this.claveInterna },
+          signal: AbortSignal.timeout(4000),
+        },
+      );
+    } catch {
+      throw new DomainError(
+        'OFERTAS_NO_VERIFICABLES',
+        'No se pudo verificar si el producto tiene ofertas activas.',
+      );
+    }
+    if (!res.ok) {
+      throw new DomainError(
+        'OFERTAS_NO_VERIFICABLES',
+        'No se pudo verificar si el producto tiene ofertas activas.',
+      );
+    }
+    const data = (await res.json()) as { total?: number };
+    if ((data.total ?? 0) > 0) {
+      throw new DomainError(
+        'OFERTAS_ACTIVAS',
+        'El producto tiene ofertas activas; desactívalas antes de cambiar sus variantes o imágenes.',
+      );
+    }
+  }
+
+  /**
    * ADR-27: solo una empresa activa de tipo comercial tiene catálogo. Se
    * consulta a identity por API interna (R-DB-1) y se falla cerrado si no se
    * puede verificar.
@@ -1049,8 +1113,11 @@ export class ProductosService {
     if (objeto.estado !== 'activo') {
       throw new DomainError('IMAGEN_NO_ACTIVA', 'La imagen debe estar confirmada y activa.');
     }
-    if (!objeto.content_type?.startsWith('image/')) {
-      throw new DomainError('IMAGEN_TIPO_INVALIDO', 'El objeto no es una imagen.');
+    if (
+      !objeto.content_type?.startsWith('image/') ||
+      objeto.content_type === 'image/svg+xml'
+    ) {
+      throw new DomainError('IMAGEN_TIPO_INVALIDO', 'El objeto no es una imagen raster permitida.');
     }
     if (objeto.publico !== true) {
       throw new DomainError(

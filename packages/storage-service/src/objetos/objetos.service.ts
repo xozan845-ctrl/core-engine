@@ -332,7 +332,13 @@ export class ObjetosService {
         WHERE id = $1 AND estado = 'activo' AND publico = true`,
       [id],
     );
-    if (!fila || !fila.content_type.startsWith('image/')) {
+    if (
+      !fila ||
+      !fila.content_type.startsWith('image/') ||
+      fila.content_type === 'image/svg+xml'
+    ) {
+      // SVG puede ejecutar scripts si se navega directamente; las imágenes de
+      // producto son raster.
       throw new NotFoundError('Objeto', id);
     }
     const leido = await this.almacen.leer(fila.bucket, fila.objeto);
