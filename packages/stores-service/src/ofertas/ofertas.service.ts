@@ -264,6 +264,19 @@ export class OfertasService {
   }
 
   /** Sincroniza el stock visible de las ofertas de UNA empresa (ADR-27). */
+  /**
+   * Ofertas activas de un producto/variante. Lo usa catalog para impedir que
+   * una variante se cree o elimine mientras una oferta sigue viva (ADR-28).
+   */
+  async contarActivasPorProducto(productoId: string): Promise<number> {
+    const fila = await this.pg.queryOne<{ n: number }>(
+      `SELECT COUNT(*)::int AS n FROM stores.ofertas
+        WHERE producto_id = $1 AND estado = 'activa'`,
+      [productoId],
+    );
+    return fila?.n ?? 0;
+  }
+
   async sincronizarStockDeOferta(empresaId: string, sku: string, stockNuevo: number): Promise<void> {
     await this.pg.query(
       `UPDATE stores.ofertas o

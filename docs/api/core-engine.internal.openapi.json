@@ -810,6 +810,48 @@
           "Tiendas (interno)"
         ]
       }
+    },
+    "/internal/ofertas/producto/{productoId}/activas": {
+      "get": {
+        "operationId": "InternalController_activas",
+        "parameters": [
+          {
+            "name": "productoId",
+            "required": true,
+            "in": "path",
+            "description": "Id del producto o variante",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Total de ofertas activas",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "total": {
+                      "type": "number"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "internalKey": []
+          }
+        ],
+        "summary": "Contar ofertas activas de un producto (servicio→servicio)",
+        "tags": [
+          "Tiendas (interno)"
+        ]
+      }
     }
   },
   "components": {
