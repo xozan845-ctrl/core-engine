@@ -15,8 +15,11 @@ describe('OfertasService (RN-01 / RN-02)', () => {
     empresa_id: 'e1',
     participacion_porcentaje: 25,
     producto_id: 'p1',
+    producto_padre_id: 'padre-1',
     sku: 'SKU-01',
     producto_nombre: 'Teclado',
+    atributos: { color: 'rojo' },
+    imagen_objeto_id: 'img-1',
     margen: 25,
     precio_base_cents: 10000,
     precio_venta_cents: 12500,
@@ -33,6 +36,10 @@ describe('OfertasService (RN-01 / RN-02)', () => {
     precio_base: '100.00',
     stock: 5,
     estado: 'disponible',
+    producto_padre_id: 'padre-1',
+    atributos: { color: 'rojo' },
+    tiene_variantes: false,
+    imagenes: [{ objeto_id: 'img-1', url: '/api/v1/storage/public/objetos/img-1', orden: 0, es_principal: true }],
   };
 
   const crear = () => {
@@ -120,7 +127,8 @@ describe('OfertasService (RN-01 / RN-02)', () => {
       (pg.queryOne as Mock)
         .mockResolvedValueOnce({ id: 't1', empresa_id: 'e1' }) // tienda
         .mockResolvedValueOnce(null) // sin oferta duplicada
-        .mockResolvedValueOnce(filaOferta); // INSERT ... RETURNING
+        .mockResolvedValueOnce({ id: 'of1' }) // INSERT ... RETURNING id
+        .mockResolvedValueOnce(filaOferta); // SELECT de la oferta creada
       fetchResponde(true, productoExterno);
 
       const oferta = await servicio.publicar('v1', 't1', 'p1', 25);
@@ -129,10 +137,14 @@ describe('OfertasService (RN-01 / RN-02)', () => {
       expect(oferta.precio_venta).toBe('125.00'); // 100 x 1.25
       expect(oferta.margen).toBe(25);
       expect(oferta.estado).toBe('activa');
+      expect(oferta.producto_padre_id).toBe('padre-1');
+      expect(oferta.imagen_url).toBe('/api/v1/storage/public/objetos/img-1');
       const [sqlInsert, params] = (pg.queryOne as Mock).mock.calls[2];
       expect(sqlInsert).toContain('INSERT INTO stores.ofertas');
-      expect(params[6]).toBe(10000); // precio_base_cents
-      expect(params[7]).toBe(12500); // precio_venta_cents (enteros, A02)
+      expect(params[9]).toBe(10000); // precio_base_cents
+      expect(params[10]).toBe(12500); // precio_venta_cents (enteros, A02)
+      expect(params[3]).toBe('padre-1');
+      expect(params[7]).toBe('img-1');
       expect(pg.query).toHaveBeenCalledWith(
         expect.stringContaining('INSERT INTO stores.historico_precios'),
         ['of1', 12500],

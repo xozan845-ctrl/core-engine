@@ -399,17 +399,39 @@
           },
           "producto_id": {
             "type": "string",
-            "description": "Id del producto maestro",
+            "description": "Id del producto o variante vendible",
+            "format": "uuid"
+          },
+          "producto_padre_id": {
+            "type": "object",
+            "description": "Id del producto padre (si es variante)",
+            "nullable": true,
             "format": "uuid"
           },
           "sku": {
             "type": "string",
-            "description": "SKU del producto",
+            "description": "SKU de la variante o producto",
             "example": "SKU-001"
           },
           "producto_nombre": {
             "type": "string",
-            "description": "Nombre del producto"
+            "description": "Nombre del producto/variante"
+          },
+          "atributos": {
+            "type": "object",
+            "description": "Atributos de la variante (color, talla, etc.)",
+            "additionalProperties": true
+          },
+          "imagen_objeto_id": {
+            "type": "object",
+            "description": "Id del objeto de la imagen principal",
+            "nullable": true,
+            "format": "uuid"
+          },
+          "imagen_url": {
+            "type": "object",
+            "description": "URL pública de la imagen principal",
+            "nullable": true
           },
           "margen": {
             "type": "number",

@@ -109,7 +109,9 @@ describe('ProductosService (catalogo maestro y stock)', () => {
 
     it('debe normalizar el SKU a mayusculas y registrar historico de precio cuando el alta es valida', async () => {
       const { servicio, pg, client } = crear();
-      (pg.queryOne as Mock).mockResolvedValueOnce(null); // encontrarPorSku: no existe
+      (pg.queryOne as Mock)
+        .mockResolvedValueOnce(null) // skuExiste: no existe
+        .mockResolvedValue(filaProducto); // detalle posterior al alta
       (client.query as Mock)
         .mockResolvedValueOnce({ rows: [filaProducto], rowCount: 1 }) // INSERT producto
         .mockResolvedValueOnce({ rows: [], rowCount: 1 }); // INSERT historico
@@ -408,7 +410,7 @@ describe('ProductosService (catalogo maestro y stock)', () => {
       const [sqlCount, params] = (pg.queryOne as Mock).mock.calls[0];
       expect(sqlCount).toContain('WHERE');
       expect(sqlCount).toContain('empresa_id = $1');
-      expect(sqlCount).toContain('LOWER(nombre) LIKE');
+      expect(sqlCount).toContain('LOWER(v.nombre) LIKE');
       expect(params).toEqual([datosValidos.empresa_id, '%tecl%', 'disponible', 'Perifericos']);
     });
 
@@ -434,6 +436,512 @@ describe('ProductosService (catalogo maestro y stock)', () => {
       );
       expect(pg.query).not.toHaveBeenCalled();
       expect(pg.queryOne).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('variantes e imágenes (ADR-28)', () => {
+    const VARIANTE_ID = '99999999-8888-4777-8666-555555555555';
+    const IMAGEN_ID = '33333333-4444-4555-8666-777777777777';
+    const OBJETO_ID = '22222222-3333-4444-8555-666666666666';
+    const filaVariante = {
+      ...filaProducto,
+      id: VARIANTE_ID,
+      sku: 'SKU-01-ROJO',
+      producto_padre_id: filaProducto.id,
+      atributos: { color: 'rojo' },
+      tiene_variantes: false,
+    };
+    const filaImagen = {
+      id: IMAGEN_ID,
+      producto_id: filaProducto.id,
+      objeto_id: OBJETO_ID,
+      orden: 0,
+      es_principal: true,
+    };
+
+    const fetchCatalogos = (publico = true) =>
+      vi.stubGlobal(
+        'fetch',
+        vi.fn(async (url: string | URL | Request) => {
+          if (String(url).includes('/internal/empresas/')) {
+            return {
+              ok: true,
+              status: 200,
+              json: async () => ({ estado: 'activa', tipo_empresa: 'comercial' }),
+            } as Response;
+          }
+          return {
+            ok: true,
+            status: 200,
+            json: async () => ({
+              tenant_id: datosValidos.empresa_id,
+              estado: 'activo',
+              content_type: 'image/png',
+              publico,
+            }),
+          } as Response;
+        }),
+      );
+
+    it('debe crear el padre con variantes e imágenes y devolver el detalle', async () => {
+      const { servicio, pg, client } = crear();
+      fetchCatalogos();
+      (pg.queryOne as Mock)
+        .mockResolvedValueOnce(null) // sku padre libre
+        .mockResolvedValueOnce(null) // sku variante libre
+        .mockResolvedValue({ ...filaProducto, tiene_variantes: true }); // detalle
+      (pg.query as Mock)
+        .mockResolvedValueOnce([filaVariante]) // hijos
+        .mockResolvedValueOnce([filaImagen]); // imágenes
+      (client.query as Mock).mockResolvedValue({ rows: [], rowCount: 1 });
+
+      const producto = await servicio.crear({
+        ...datosValidos,
+        variantes: [
+          {
+            sku: 'SKU-01-ROJO',
+            nombre: 'Teclado rojo',
+            atributos: { color: 'rojo' },
+            precio_base: '1600.00',
+            stock: 3,
+          },
+        ],
+        imagenes: [{ objeto_id: OBJETO_ID, es_principal: true }],
+      });
+
+      expect(producto.tiene_variantes).toBe(true);
+      expect(producto.variantes).toHaveLength(1);
+      expect(producto.variantes?.[0].sku).toBe('SKU-01-ROJO');
+      expect(producto.imagenes[0].url).toBe(`/api/v1/storage/public/objetos/${OBJETO_ID}`);
+      const sqls = (client.query as Mock).mock.calls.map((c) => String(c[0]));
+      expect(sqls.some((s) => s.includes('producto_padre_id'))).toBe(true);
+      expect(sqls.some((s) => s.includes('fn_recalcular_padre'))).toBe(true);
+    });
+
+    it('debe rechazar una imagen que no está marcada como pública', async () => {
+      const { servicio, pg } = crear();
+      fetchCatalogos(false);
+      (pg.queryOne as Mock).mockResolvedValueOnce(null);
+      await expect(
+        servicio.crear({
+          ...datosValidos,
+          imagenes: [{ objeto_id: OBJETO_ID }],
+        }),
+      ).rejects.toThrow(/publico|IMAGEN_NO_PUBLICA/);
+      expect(pg.transaccion).not.toHaveBeenCalled();
+    });
+
+    it('debe rechazar más de tres imágenes', async () => {
+      const { servicio } = crear();
+      await expect(
+        servicio.crear({
+          ...datosValidos,
+          imagenes: [0, 1, 2, 3].map((i) => ({ objeto_id: `${i}${OBJETO_ID.slice(1)}` })),
+        }),
+      ).rejects.toThrow(/3 imágenes|LIMITE_IMAGENES/);
+    });
+
+    it('debe listar solo padres y adjuntar sus imágenes', async () => {
+      const { servicio, pg } = crear();
+      (pg.queryOne as Mock).mockResolvedValue({ n: 1 });
+      (pg.query as Mock)
+        .mockResolvedValueOnce([filaProducto])
+        .mockResolvedValueOnce([filaImagen]);
+
+      const pagina = await servicio.listar({ empresa_id: datosValidos.empresa_id });
+
+      expect(pagina.items[0].imagenes).toHaveLength(1);
+      expect(pagina.items[0].imagenes[0].es_principal).toBe(true);
+      const [sqlRows] = (pg.query as Mock).mock.calls[0];
+      expect(sqlRows).toContain('producto_padre_id IS NULL');
+    });
+
+    it('debe impedir reservar stock del padre si tiene variantes', async () => {
+      const { servicio, client } = crear();
+      (client.query as Mock).mockResolvedValueOnce({
+        rowCount: 1,
+        rows: [{ stock: 10, tiene_variantes: true }],
+      });
+
+      const resultado = await servicio.reservarStock('o1', [
+        { empresa_id: datosValidos.empresa_id, sku: 'SKU-01', cantidad: 1 },
+      ]);
+
+      expect(resultado.ok).toBe(false);
+      expect(resultado.fallidos[0].motivo).toBe('variante_requerida');
+    });
+
+    it('debe impedir editar precio/stock del padre con variantes', async () => {
+      const { servicio, pg } = crear();
+      (pg.queryOne as Mock).mockResolvedValue({ ...filaProducto, tiene_variantes: true });
+      (pg.query as Mock).mockResolvedValue([]);
+
+      await expect(
+        servicio.actualizar(filaProducto.id, { stock: 5 }, datosValidos.empresa_id),
+      ).rejects.toThrow(/variantes/i);
+    });
+  });
+
+  describe('gestión de variantes e imágenes', () => {
+    const VARIANTE_ID = '99999999-8888-4777-8666-555555555555';
+    const IMAGEN_ID = '33333333-4444-4555-8666-777777777777';
+    const OBJETO_ID = '22222222-3333-4444-8555-666666666666';
+    const padre = { ...filaProducto, tiene_variantes: true, producto_padre_id: null };
+    const variante = {
+      ...filaProducto,
+      id: VARIANTE_ID,
+      sku: 'SKU-01-ROJO',
+      producto_padre_id: filaProducto.id,
+      tiene_variantes: false,
+      atributos: { color: 'rojo' },
+    };
+    const imagen = {
+      id: IMAGEN_ID,
+      producto_id: filaProducto.id,
+      objeto_id: OBJETO_ID,
+      orden: 0,
+      es_principal: true,
+    };
+
+    const fetchCatalogo = (respuesta: Record<string, unknown> | Error) =>
+      vi.stubGlobal(
+        'fetch',
+        vi.fn(async (url: string | URL | Request) => {
+          if (String(url).includes('/internal/empresas/')) {
+            return {
+              ok: true,
+              status: 200,
+              json: async () => ({ estado: 'activa', tipo_empresa: 'comercial' }),
+            } as Response;
+          }
+          if (respuesta instanceof Error) throw respuesta;
+          return respuesta as Response;
+        }),
+      );
+
+    it('debe crear una variante y recalcular el padre', async () => {
+      const { servicio, pg, client } = crear();
+      (pg.queryOne as Mock)
+        .mockResolvedValueOnce(padre)
+        .mockResolvedValueOnce(null)
+        .mockResolvedValue(variante);
+      (pg.query as Mock).mockResolvedValue([]);
+      (client.query as Mock).mockResolvedValue({ rows: [], rowCount: 1 });
+
+      const creada = await servicio.crearVariante(
+        filaProducto.id,
+        { sku: 'sku-01-rojo', precio_base: '1600.00', stock: 3, atributos: { color: 'rojo' } },
+        datosValidos.empresa_id,
+      );
+
+      expect(creada.sku).toBe('SKU-01-ROJO');
+      const sqls = (client.query as Mock).mock.calls.map((c) => String(c[0]));
+      expect(sqls.some((s) => s.includes('INSERT INTO catalog.productos'))).toBe(true);
+      expect(sqls.some((s) => s.includes('fn_recalcular_padre'))).toBe(true);
+    });
+
+    it('debe rechazar una variante de una variante', async () => {
+      const { servicio, pg } = crear();
+      (pg.queryOne as Mock).mockResolvedValue(variante);
+      (pg.query as Mock).mockResolvedValue([]);
+
+      await expect(
+        servicio.crearVariante(
+          VARIANTE_ID,
+          { sku: 'SKU-03', precio_base: '10.00', stock: 1 },
+          datosValidos.empresa_id,
+        ),
+      ).rejects.toThrow(/padre|NO_ES_PADRE/);
+    });
+
+    it('debe rechazar una variante con SKU duplicado', async () => {
+      const { servicio, pg } = crear();
+      (pg.queryOne as Mock)
+        .mockResolvedValueOnce({ ...padre, tiene_variantes: false })
+        .mockResolvedValueOnce({ id: 'existente' });
+      (pg.query as Mock).mockResolvedValue([]);
+
+      await expect(
+        servicio.crearVariante(
+          filaProducto.id,
+          { sku: 'SKU-01', precio_base: '10.00', stock: 1 },
+          datosValidos.empresa_id,
+        ),
+      ).rejects.toThrow(ConflictError);
+    });
+
+    it('debe actualizar y eliminar una variante existente', async () => {
+      const { servicio, pg, client } = crear();
+      (pg.queryOne as Mock)
+        .mockResolvedValueOnce({ ...padre, tiene_variantes: true })
+        .mockResolvedValueOnce(variante) // detalle de la variante al actualizar
+        .mockResolvedValue(variante);
+      (pg.query as Mock).mockResolvedValueOnce([variante]).mockResolvedValue([]);
+      (client.query as Mock).mockResolvedValue({ rows: [], rowCount: 1 });
+
+      await expect(
+        servicio.actualizarVariante(
+          filaProducto.id,
+          VARIANTE_ID,
+          { stock: 4 },
+          datosValidos.empresa_id,
+        ),
+      ).resolves.toBeTruthy();
+
+      (pg.queryOne as Mock).mockResolvedValueOnce({ ...padre, tiene_variantes: true });
+      (pg.query as Mock).mockResolvedValueOnce([variante]).mockResolvedValue([]);
+      await expect(
+        servicio.eliminarVariante(filaProducto.id, VARIANTE_ID, datosValidos.empresa_id),
+      ).resolves.toBeUndefined();
+      expect((client.query as Mock).mock.calls.some((c) => String(c[0]).includes('DELETE FROM catalog.productos'))).toBe(true);
+    });
+
+    it('debe rechazar eliminar una variante que no pertenece al padre', async () => {
+      const { servicio, pg } = crear();
+      (pg.queryOne as Mock).mockResolvedValue({ ...padre, tiene_variantes: true });
+      (pg.query as Mock).mockResolvedValueOnce([]).mockResolvedValue([]);
+
+      await expect(
+        servicio.eliminarVariante(filaProducto.id, VARIANTE_ID, datosValidos.empresa_id),
+      ).rejects.toThrow(NotFoundError);
+    });
+
+    it('debe agregar una imagen y promoverla a principal si es la primera', async () => {
+      const { servicio, pg, client } = crear();
+      fetchCatalogo({
+        ok: true,
+        status: 200,
+        json: async () => ({
+          tenant_id: datosValidos.empresa_id,
+          estado: 'activo',
+          content_type: 'image/png',
+          publico: true,
+        }),
+      });
+      (pg.queryOne as Mock)
+        .mockResolvedValueOnce({ ...filaProducto, tiene_variantes: false })
+        .mockResolvedValue({ ...filaProducto, tiene_variantes: false });
+      (pg.query as Mock).mockResolvedValueOnce([]).mockResolvedValueOnce([]).mockResolvedValue([]);
+      (client.query as Mock)
+        .mockResolvedValueOnce({ rows: [], rowCount: 0 })
+        .mockResolvedValue({ rows: [], rowCount: 1 });
+
+      const resultado = await servicio.agregarImagen(
+        filaProducto.id,
+        { objeto_id: OBJETO_ID },
+        datosValidos.empresa_id,
+      );
+
+      expect(resultado.id).toBe(filaProducto.id);
+      const sqls = (client.query as Mock).mock.calls.map((c) => String(c[0]));
+      expect(sqls.some((s) => s.includes('INSERT INTO catalog.producto_imagenes'))).toBe(true);
+      expect(sqls.some((s) => s.includes('SET es_principal = true'))).toBe(true);
+    });
+
+    it('debe rechazar una cuarta imagen', async () => {
+      const { servicio, pg, client } = crear();
+      fetchCatalogo({
+        ok: true,
+        status: 200,
+        json: async () => ({
+          tenant_id: datosValidos.empresa_id,
+          estado: 'activo',
+          content_type: 'image/png',
+          publico: true,
+        }),
+      });
+      (pg.queryOne as Mock).mockResolvedValueOnce({
+        ...filaProducto,
+        tiene_variantes: false,
+        imagenes: [imagen, { ...imagen, id: 'i-2', orden: 1 }, { ...imagen, id: 'i-3', orden: 2 }],
+      });
+      (pg.query as Mock).mockResolvedValueOnce([]).mockResolvedValue([imagen]);
+      (client.query as Mock).mockResolvedValueOnce({
+        rows: [imagen, { ...imagen, id: 'i-2', orden: 1 }, { ...imagen, id: 'i-3', orden: 2 }],
+        rowCount: 3,
+      });
+
+      await expect(
+        servicio.agregarImagen(filaProducto.id, { objeto_id: OBJETO_ID }, datosValidos.empresa_id),
+      ).rejects.toThrow(/3 imágenes|LIMITE_IMAGENES/);
+    });
+
+    it('debe eliminar una imagen principal y promover la siguiente', async () => {
+      const { servicio, pg, client } = crear();
+      (pg.queryOne as Mock).mockResolvedValue({
+        ...filaProducto,
+        tiene_variantes: false,
+        imagenes: [imagen],
+      });
+      (pg.query as Mock).mockResolvedValueOnce([]).mockResolvedValueOnce([imagen]).mockResolvedValue([]);
+      (client.query as Mock)
+        .mockResolvedValueOnce({ rows: [{ es_principal: true }], rowCount: 1 })
+        .mockResolvedValue({ rows: [], rowCount: 1 });
+
+      await servicio.eliminarImagen(filaProducto.id, IMAGEN_ID, datosValidos.empresa_id);
+      const sqls = (client.query as Mock).mock.calls.map((c) => String(c[0]));
+      expect(sqls.some((s) => s.includes('DELETE FROM catalog.producto_imagenes'))).toBe(true);
+      expect(sqls.some((s) => s.includes('SET es_principal = true'))).toBe(true);
+    });
+
+    it('debe rechazar eliminar una imagen que no pertenece al producto', async () => {
+      const { servicio, pg } = crear();
+      (pg.queryOne as Mock).mockResolvedValue({ ...filaProducto, tiene_variantes: false });
+      (pg.query as Mock).mockResolvedValueOnce([]).mockResolvedValue([]);
+
+      await expect(
+        servicio.eliminarImagen(filaProducto.id, IMAGEN_ID, datosValidos.empresa_id),
+      ).rejects.toThrow(NotFoundError);
+    });
+
+    it.each([
+      ['tenant distinto', { tenant_id: 'otro', estado: 'activo', content_type: 'image/png', publico: true }, /otra empresa/],
+      ['inactiva', { tenant_id: datosValidos.empresa_id, estado: 'pendiente', content_type: 'image/png', publico: true }, /activa/],
+      ['no imagen', { tenant_id: datosValidos.empresa_id, estado: 'activo', content_type: 'application/pdf', publico: true }, /no es una imagen/],
+    ])('debe rechazar la imagen %s', async (_nombre, cuerpo, esperado) => {
+      const { servicio, pg } = crear();
+      fetchCatalogo({ ok: true, status: 200, json: async () => cuerpo });
+      (pg.queryOne as Mock).mockResolvedValueOnce(null);
+
+      await expect(
+        servicio.crear({ ...datosValidos, imagenes: [{ objeto_id: OBJETO_ID }] }),
+      ).rejects.toThrow(esperado);
+      expect(pg.transaccion).not.toHaveBeenCalled();
+    });
+
+    it('debe fallar cerrado si storage no responde', async () => {
+      const { servicio, pg } = crear();
+      fetchCatalogo(new Error('red caida'));
+      (pg.queryOne as Mock).mockResolvedValueOnce(null);
+
+      await expect(
+        servicio.crear({ ...datosValidos, imagenes: [{ objeto_id: OBJETO_ID }] }),
+      ).rejects.toThrow(/verificar la imagen/);
+    });
+  });
+
+  describe('ramas de validación ADR-28', () => {
+    const OBJETO_ID = '22222222-3333-4444-8555-666666666666';
+
+    it('debe encontrar un producto por SKU y devolver su detalle', async () => {
+      const { servicio, pg } = crear();
+      (pg.queryOne as Mock).mockResolvedValue(filaProducto);
+      (pg.query as Mock).mockResolvedValue([]);
+
+      const producto = await servicio.encontrarPorSku('SKU-01', datosValidos.empresa_id);
+
+      expect(producto?.sku).toBe('SKU-01');
+      expect(producto?.tiene_variantes).toBe(false);
+    });
+
+    it('debe rechazar más de 50 variantes en el alta', async () => {
+      const { servicio } = crear();
+      const variantes = Array.from({ length: 51 }, (_, i) => ({
+        sku: `SKU-${i}`,
+        precio_base: '10.00',
+        stock: 1,
+      }));
+      await expect(servicio.crear({ ...datosValidos, variantes })).rejects.toThrow(
+        /DEMASIADAS_VARIANTES|máximo 50/,
+      );
+    });
+
+    it('debe rechazar dos variantes con el mismo SKU en la solicitud', async () => {
+      const { servicio } = crear();
+      await expect(
+        servicio.crear({
+          ...datosValidos,
+          variantes: [
+            { sku: 'SKU-02', precio_base: '10.00', stock: 1 },
+            { sku: 'SKU-02', precio_base: '11.00', stock: 1 },
+          ],
+        }),
+      ).rejects.toThrow(ConflictError);
+    });
+
+    it('debe actualizar atributos sin tocar precio/stock', async () => {
+      const { servicio, pg, client } = crear();
+      (pg.queryOne as Mock).mockResolvedValue(filaProducto);
+      (pg.query as Mock).mockResolvedValue([]);
+      (client.query as Mock).mockResolvedValue({ rows: [], rowCount: 1 });
+
+      const producto = await servicio.actualizar(
+        filaProducto.id,
+        { atributos: { color: 'rojo' } },
+        datosValidos.empresa_id,
+      );
+
+      expect(producto.id).toBe(filaProducto.id);
+      const sqls = (client.query as Mock).mock.calls.map((c) => String(c[0]));
+      expect(sqls.some((s) => s.includes('atributos ='))).toBe(true);
+    });
+
+    it('debe rechazar una variante que no pertenece al padre', async () => {
+      const { servicio, pg } = crear();
+      (pg.queryOne as Mock).mockResolvedValue({ ...filaProducto, tiene_variantes: true });
+      (pg.query as Mock).mockResolvedValue([]);
+
+      await expect(
+        servicio.actualizarVariante(
+          filaProducto.id,
+          '99999999-8888-4777-8666-555555555555',
+          { stock: 2 },
+          datosValidos.empresa_id,
+        ),
+      ).rejects.toThrow(NotFoundError);
+    });
+
+    it('debe rechazar un orden de imagen ya usado al agregar', async () => {
+      const { servicio, pg, client } = crear();
+      vi.stubGlobal(
+        'fetch',
+        vi.fn(async (url: string | URL | Request) => {
+          if (String(url).includes('/internal/empresas/')) {
+            return { ok: true, status: 200, json: async () => ({ estado: 'activa', tipo_empresa: 'comercial' }) } as Response;
+          }
+          return {
+            ok: true,
+            status: 200,
+            json: async () => ({
+              tenant_id: datosValidos.empresa_id,
+              estado: 'activo',
+              content_type: 'image/png',
+              publico: true,
+            }),
+          } as Response;
+        }),
+      );
+      (pg.queryOne as Mock).mockResolvedValue({ ...filaProducto, tiene_variantes: false });
+      (pg.query as Mock).mockResolvedValue([]);
+      (client.query as Mock).mockResolvedValueOnce({
+        rows: [{ id: 'img-1', producto_id: filaProducto.id, objeto_id: OBJETO_ID, orden: 0, es_principal: true }],
+        rowCount: 1,
+      });
+
+      await expect(
+        servicio.agregarImagen(
+          filaProducto.id,
+          { objeto_id: OBJETO_ID, orden: 0 },
+          datosValidos.empresa_id,
+        ),
+      ).rejects.toThrow(/orden/i);
+    });
+
+    it('debe rechazar un objeto de imagen que no es UUID', async () => {
+      const { servicio, pg } = crear();
+      (pg.queryOne as Mock).mockResolvedValueOnce(null);
+
+      await expect(
+        servicio.crear({ ...datosValidos, imagenes: [{ objeto_id: 'no-uuid' }] }),
+      ).rejects.toThrow(/UUID/);
+    });
+
+    it('debe fallar si identity no responde al validar la empresa', async () => {
+      const { servicio, pg } = crear();
+      (pg.queryOne as Mock).mockResolvedValue(null);
+      vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new Error('red caida')));
+
+      await expect(servicio.crear(datosValidos)).rejects.toThrow(/verificar la empresa/);
     });
   });
 });

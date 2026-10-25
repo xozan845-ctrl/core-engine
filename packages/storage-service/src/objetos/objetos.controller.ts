@@ -10,6 +10,7 @@ import {
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiCreatedResponse, ApiNoContentResponse, ApiOkResponse, ApiOperation, ApiParam, ApiProperty, ApiResponse, ApiTags } from '@nestjs/swagger';
 import {
+  IsBoolean,
   IsInt,
   IsObject,
   IsOptional,
@@ -61,6 +62,15 @@ export class SolicitarSubidaRequestDto {
   @IsOptional()
   @IsObject()
   etiquetas?: Record<string, string>;
+
+  @ApiProperty({
+    description: 'Servir el objeto como imagen estática pública (ADR-28)',
+    required: false,
+    default: false,
+  })
+  @IsOptional()
+  @IsBoolean()
+  publico?: boolean;
 }
 
 export class ListarObjetosRequestDto {

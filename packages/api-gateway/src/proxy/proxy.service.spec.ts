@@ -1,4 +1,5 @@
 import 'reflect-metadata';
+import { PassThrough, Readable } from 'stream';
 import { ProxyService, ServicioDestino } from './proxy.service';
 import { GatewayAuthMiddleware, PoliticaRuta } from './gateway-auth.middleware';
 import { TENANT_HEADER, PERSONAL_HEADER, PARTICIPACION_HEADER, ROLES } from '@core/shared';
@@ -117,6 +118,57 @@ describe('ProxyService — scrub de cabeceras de contexto (R-GW-3 / R-DS-5)', ()
 
     const [, init] = fetchMock.mock.calls[0];
     expect(init.headers[PARTICIPACION_HEADER]).toBe('20');
+  });
+
+  it('debe transmitir imágenes públicas como binario (ADR-28)', async () => {
+    const auth = { aplicar: (_req: Request, _res: Response, next: () => void) => next() } as unknown as GatewayAuthMiddleware;
+    const destinosImagen: ServicioDestino[] = [
+      {
+        nombre: 'storage',
+        url: 'http://storage-service:3010',
+        patrones: [{ patron: /^\/api\/v1\/storage\/public\//, metodos: ['*'] }],
+      },
+    ];
+    const politicasImagen: PoliticaRuta[] = [
+      { patron: /^\/api\/v1\/storage\/public\//, metodos: ['*'], roles: null },
+    ];
+    const body = Readable.toWeb(Readable.from([Buffer.from('PNG-BYTES')]));
+    const fetchMock = vi.fn().mockResolvedValue({
+      status: 200,
+      headers: new Headers({ 'content-type': 'image/png', etag: '"abc"' }),
+      body,
+      text: vi.fn(),
+    } as unknown as globalThis.Response);
+    globalThis.fetch = fetchMock as unknown as typeof fetch;
+    const servicio = new ProxyService(auth, destinosImagen, politicasImagen);
+
+    const res = new PassThrough() as unknown as Response & PassThrough;
+    Object.assign(res, {
+      headersSent: false,
+      status: vi.fn().mockReturnValue(res),
+      setHeader: vi.fn(),
+      send: vi.fn(),
+      json: vi.fn(),
+    });
+    const chunks: Buffer[] = [];
+    res.on('data', (chunk: Buffer) => chunks.push(Buffer.from(chunk)));
+    const fin = new Promise<void>((resolve) => res.on('end', () => resolve()));
+
+    await servicio.reenviar(
+      {
+        originalUrl: '/api/v1/storage/public/objetos/22222222-2222-4222-8222-222222222222',
+        method: 'GET',
+        headers: {},
+      } as unknown as Request,
+      res,
+    );
+    await fin;
+
+    expect(Buffer.concat(chunks).toString()).toBe('PNG-BYTES');
+    expect(res.setHeader).toHaveBeenCalledWith('content-type', 'image/png');
+    const [, init] = fetchMock.mock.calls[0];
+    expect(init.headers['content-type']).toBe('application/octet-stream');
+    expect(init.headers.accept).toBe('image/*');
   });
 });
 

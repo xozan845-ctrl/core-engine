@@ -698,6 +698,54 @@ Este archivo registra decisiones técnicas deliberadas que se apartan del texto 
 
 ---
 
+## ADR-28: Productos con variantes e imágenes públicas
+
+- **Fecha**: 2026-10-25
+- **Estado**: Aceptado
+- **Contexto**: el onboarding de empresa crea productos y los publica en una
+  tienda, pero el contrato de `catalog` no modela variantes ni imágenes. ADR-24
+  ya construyó `storage-service` con buckets por tenant y citó las imágenes de
+  producto como motivación, pero nunca se creó la relación producto↔objeto. El
+  resultado es un flujo a medias: se pueden crear y publicar productos, pero no
+  adjuntarles imágenes.
+- **Decisión**:
+  1. **Variante = fila hija de `catalog.productos`** (`producto_padre_id`), con
+     SKU, precio y stock propios y `atributos` JSON (color, talla, etc.). El
+     padre es una ficha de presentación: agrega stock y precio mínimo de sus
+     hijas y **no se vende directamente** si tiene variantes; las ofertas y
+     pedidos usan el SKU de la variante. Un producto sin variantes sigue siendo
+     vendible como hasta ahora.
+  2. **Imágenes**: `catalog.producto_imagenes` asocia un `producto_id` (padre o
+     variante) con un `objeto_id` de `storage.objetos`, con `orden` 0–2
+     (`CHECK`) y una sola principal por producto. El máximo de 3 se garantiza
+     por la clave `(producto_id, orden)`; el servicio valida el tenant, el
+     estado `activo`, el `content_type` de imagen y que el objeto sea público.
+  3. **Servido estático**: `storage.objetos` añade `publico` (default `false`).
+     `GET /api/v1/storage/public/objetos/:id` sirve el binario desde MinIO sin
+     autenticación, con `Cache-Control` inmutable. El UUID del objeto es la
+     capacidad: no se expone el bucket ni la clave interna. Las rutas públicas
+     se excluyen del gate Basic de staging y del rate limit global para no
+     romper las páginas de catálogo.
+  4. **Ofertas**: `stores.ofertas` congela `producto_padre_id`, `atributos` e
+     `imagen_objeto_id` al publicar. La tienda pública agrupa por
+     `producto_padre_id` y muestra la imagen principal de la variante.
+  5. **Contrato**: `CrearProductoRequestDto` acepta `variantes[]` e `imagenes[]`;
+     el detalle devuelve `variantes[]` e `imagenes[]` (máx. 3 por nivel). Las
+     operaciones de variantes e imágenes tienen endpoints propios para edición
+     posterior.
+- **Consecuencias**:
+  - Migraciones aditivas: `01i_variantes_imagenes.sql` (catálogo),
+    `09a_storage_publico.sql` (storage) y `09b_ofertas_variantes.sql` (stores).
+  - Los listados públicos muestran solo productos padre; el detalle incluye sus
+    variantes. El inventario agregado excluye la fila contenedora para no contar
+    el stock dos veces.
+  - `storage-service` pasa a servir bytes (no solo firmar URLs); se añade
+    `leer` al puerto `AlmacenObjetos` y el endpoint público correspondiente.
+  - El frontend debe subir cada imagen con `publico=true`, confirmar el objeto y
+    enviar los `objeto_id` al crear el producto o la variante.
+
+---
+
 ## Resumen de cumplimiento post-corrección
 
 | Ítem del documento          | Estado  | Nota |
