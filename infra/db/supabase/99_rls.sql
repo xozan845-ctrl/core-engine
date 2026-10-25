@@ -54,6 +54,18 @@ CREATE POLICY productos_empresa ON catalog.productos
 -- ADR-27: el catálogo público se sirve por el API Gateway con el alcance de la
 -- empresa solicitada; no hay lectura anónima directa de la tabla.
 
+-- ADR-28: imágenes de producto/variante. El objeto binario vive en storage;
+-- esta tabla solo relaciona y se aísla por empresa.
+ALTER TABLE catalog.producto_imagenes ENABLE ROW LEVEL SECURITY;
+CREATE POLICY producto_imagenes_admin ON catalog.producto_imagenes
+  FOR ALL TO authenticated
+  USING (auth.rol() IN ('super_admin', 'admin'))
+  WITH CHECK (auth.rol() IN ('super_admin', 'admin'));
+CREATE POLICY producto_imagenes_empresa ON catalog.producto_imagenes
+  FOR ALL TO authenticated
+  USING (auth.rol() = 'empresario' AND empresa_id::text = (auth.jwt() ->> 'tenant_id'))
+  WITH CHECK (auth.rol() = 'empresario' AND empresa_id::text = (auth.jwt() ->> 'tenant_id'));
+
 ALTER TABLE catalog.historico_precios ENABLE ROW LEVEL SECURITY;
 CREATE POLICY historico_admin ON catalog.historico_precios
   FOR ALL TO authenticated USING (auth.rol() = 'admin') WITH CHECK (auth.rol() = 'admin');

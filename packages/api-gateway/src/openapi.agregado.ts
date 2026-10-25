@@ -123,7 +123,7 @@ export const OPENAPI_AGREGADO = {
             "bearer": []
           }
         ],
-        "summary": "Crear producto (admin, TC-01)",
+        "summary": "Crear producto con variantes e imágenes (admin, TC-01)",
         "tags": [
           "Catálogo"
         ]
@@ -168,7 +168,7 @@ export const OPENAPI_AGREGADO = {
             "description": "Producto inexistente o de otra empresa (NO_ENCONTRADO)"
           }
         },
-        "summary": "Detalle de producto de una empresa (público)",
+        "summary": "Detalle de producto de una empresa (público, incluye variantes)",
         "tags": [
           "Catálogo"
         ]
@@ -214,6 +214,232 @@ export const OPENAPI_AGREGADO = {
           }
         ],
         "summary": "Editar producto (admin; RN-08 histórico)",
+        "tags": [
+          "Catálogo"
+        ]
+      }
+    },
+    "/api/v1/catalog/productos/{id}/variantes": {
+      "post": {
+        "operationId": "ProductosController_crearVariante",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "description": "Id del producto padre",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/VarianteProductoRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Variante creada",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProductoResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Agregar una variante al producto (ADR-28)",
+        "tags": [
+          "Catálogo"
+        ]
+      }
+    },
+    "/api/v1/catalog/productos/{id}/variantes/{varianteId}": {
+      "patch": {
+        "operationId": "ProductosController_actualizarVariante",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "description": "Id del producto padre",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "varianteId",
+            "required": true,
+            "in": "path",
+            "description": "Id de la variante",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ActualizarProductoRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Variante actualizada",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProductoResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Editar una variante (precio/stock/atributos)",
+        "tags": [
+          "Catálogo"
+        ]
+      },
+      "delete": {
+        "operationId": "ProductosController_eliminarVariante",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "description": "Id del producto padre",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "varianteId",
+            "required": true,
+            "in": "path",
+            "description": "Id de la variante",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Variante eliminada"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Eliminar una variante",
+        "tags": [
+          "Catálogo"
+        ]
+      }
+    },
+    "/api/v1/catalog/productos/{id}/imagenes": {
+      "post": {
+        "operationId": "ProductosController_agregarImagen",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "description": "Id del producto o variante",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ImagenProductoRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Imagen agregada",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProductoResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Agregar una imagen a un producto o variante (máx. 3)",
+        "tags": [
+          "Catálogo"
+        ]
+      }
+    },
+    "/api/v1/catalog/productos/{id}/imagenes/{imagenId}": {
+      "delete": {
+        "operationId": "ProductosController_eliminarImagen",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "description": "Id del producto o variante",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "imagenId",
+            "required": true,
+            "in": "path",
+            "description": "Id de la relación producto-imagen",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Imagen eliminada"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Eliminar una imagen de un producto o variante",
         "tags": [
           "Catálogo"
         ]
@@ -6244,6 +6470,42 @@ export const OPENAPI_AGREGADO = {
         ]
       }
     },
+    "/api/v1/storage/public/objetos/{id}": {
+      "get": {
+        "operationId": "PublicStorageController_servir",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "description": "Id del objeto",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Imagen (binario)",
+            "content": {
+              "image/*": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Objeto inexistente, privado, eliminado o no imagen"
+          }
+        },
+        "summary": "Servir una imagen pública (cacheable, sin auth)",
+        "tags": [
+          "Almacenamiento público"
+        ]
+      }
+    },
     "/api/v1/vendedores/tienda": {
       "post": {
         "operationId": "TiendasController_crear",
@@ -6597,6 +6859,114 @@ export const OPENAPI_AGREGADO = {
           "estado"
         ]
       },
+      "ImagenProductoResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Id de la relación producto-imagen",
+            "format": "uuid"
+          },
+          "objeto_id": {
+            "type": "string",
+            "description": "Id del objeto en storage-service",
+            "format": "uuid"
+          },
+          "url": {
+            "type": "string",
+            "description": "Ruta pública relativa servida por storage-service",
+            "example": "/api/v1/storage/public/objetos/8f0c..."
+          },
+          "orden": {
+            "type": "number",
+            "description": "Orden de la imagen (0-2)",
+            "minimum": 0,
+            "maximum": 2
+          },
+          "es_principal": {
+            "type": "boolean",
+            "description": "Imagen principal del producto/variante"
+          }
+        },
+        "required": [
+          "id",
+          "objeto_id",
+          "url",
+          "orden",
+          "es_principal"
+        ]
+      },
+      "VarianteProductoResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Id de la variante",
+            "format": "uuid"
+          },
+          "producto_padre_id": {
+            "type": "string",
+            "description": "Id del producto padre",
+            "format": "uuid"
+          },
+          "sku": {
+            "type": "string",
+            "description": "SKU de la variante",
+            "example": "SKU-001-ROJO-M"
+          },
+          "nombre": {
+            "type": "string",
+            "description": "Nombre visible de la variante"
+          },
+          "atributos": {
+            "type": "object",
+            "description": "Atributos de la variante (color, talla, etc.)",
+            "additionalProperties": true
+          },
+          "precio_base": {
+            "type": "string",
+            "description": "Precio base en córdobas con dos decimales",
+            "example": "1500.00"
+          },
+          "stock": {
+            "type": "number",
+            "description": "Stock disponible",
+            "example": 10
+          },
+          "estado": {
+            "type": "string",
+            "description": "Estado de la variante",
+            "enum": [
+              "disponible",
+              "agotado"
+            ]
+          },
+          "imagenes": {
+            "description": "Imágenes de la variante (máx. 3)",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ImagenProductoResponseDto"
+            }
+          },
+          "creado_en": {
+            "type": "string",
+            "description": "Fecha de creación (ISO 8601 UTC)",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "producto_padre_id",
+          "sku",
+          "nombre",
+          "atributos",
+          "precio_base",
+          "stock",
+          "estado",
+          "imagenes",
+          "creado_en"
+        ]
+      },
       "ProductoResponseDto": {
         "type": "object",
         "properties": {
@@ -6650,6 +7020,45 @@ export const OPENAPI_AGREGADO = {
             "type": "string",
             "description": "Fecha de creación (ISO 8601 UTC)",
             "format": "date-time"
+          },
+          "producto_padre_id": {
+            "type": "object",
+            "description": "Producto padre si esta fila es una variante",
+            "nullable": true,
+            "format": "uuid"
+          },
+          "atributos": {
+            "type": "object",
+            "description": "Atributos de la variante (color, talla, etc.)",
+            "additionalProperties": true
+          },
+          "tiene_variantes": {
+            "type": "boolean",
+            "description": "El producto tiene variantes vendibles"
+          },
+          "imagenes": {
+            "description": "Imágenes del producto (máx. 3)",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ImagenProductoResponseDto"
+            }
+          },
+          "variantes": {
+            "description": "Variantes (solo en el detalle del padre)",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/VarianteProductoResponseDto"
+            }
+          },
+          "precio_desde": {
+            "type": "string",
+            "description": "Precio mínimo mostrable (\"desde\")",
+            "example": "1000.00"
+          },
+          "stock_total": {
+            "type": "number",
+            "description": "Stock agregado de las variantes o el propio",
+            "example": 25
           }
         },
         "required": [
@@ -6806,6 +7215,72 @@ export const OPENAPI_AGREGADO = {
           "paginas"
         ]
       },
+      "ImagenProductoRequestDto": {
+        "type": "object",
+        "properties": {
+          "objeto_id": {
+            "type": "string",
+            "description": "Id del objeto confirmado en storage-service",
+            "format": "uuid"
+          },
+          "orden": {
+            "type": "number",
+            "description": "Orden de la imagen (0-2); si se omite se asigna el siguiente",
+            "minimum": 0,
+            "maximum": 2
+          },
+          "es_principal": {
+            "type": "boolean",
+            "description": "Marcar como imagen principal",
+            "default": false
+          }
+        },
+        "required": [
+          "objeto_id"
+        ]
+      },
+      "VarianteProductoRequestDto": {
+        "type": "object",
+        "properties": {
+          "sku": {
+            "type": "string",
+            "description": "SKU de la variante",
+            "pattern": "^[A-Za-z0-9-]{2,32}$",
+            "example": "SKU-001-ROJO-M"
+          },
+          "nombre": {
+            "type": "string",
+            "description": "Nombre visible de la variante"
+          },
+          "atributos": {
+            "type": "object",
+            "description": "Atributos de la variante (color, talla, etc.)"
+          },
+          "precio_base": {
+            "type": "string",
+            "description": "Precio base decimal (ej: 1000.00)",
+            "example": "1500.00"
+          },
+          "stock": {
+            "type": "number",
+            "description": "Stock inicial de la variante",
+            "minimum": 0,
+            "example": 5
+          },
+          "imagenes": {
+            "description": "Imágenes de la variante (máx. 3)",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ImagenProductoRequestDto"
+            }
+          }
+        },
+        "required": [
+          "sku",
+          "precio_base",
+          "stock"
+        ]
+      },
       "CrearProductoRequestDto": {
         "type": "object",
         "properties": {
@@ -6844,6 +7319,24 @@ export const OPENAPI_AGREGADO = {
             "description": "Stock inicial",
             "minimum": 0,
             "example": 10
+          },
+          "atributos": {
+            "type": "object",
+            "description": "Atributos del producto (si aplica)"
+          },
+          "imagenes": {
+            "description": "Imágenes del producto (máx. 3)",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ImagenProductoRequestDto"
+            }
+          },
+          "variantes": {
+            "description": "Variantes vendibles del producto (máx. 50)",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/VarianteProductoRequestDto"
+            }
           }
         },
         "required": [
@@ -6878,6 +7371,10 @@ export const OPENAPI_AGREGADO = {
             "type": "number",
             "description": "Stock",
             "minimum": 0
+          },
+          "atributos": {
+            "type": "object",
+            "description": "Atributos de la variante"
           },
           "motivo": {
             "type": "string",
@@ -13391,6 +13888,11 @@ export const OPENAPI_AGREGADO = {
             ],
             "example": "activo"
           },
+          "publico": {
+            "type": "boolean",
+            "description": "Servido por el endpoint estático público (ADR-28)",
+            "example": true
+          },
           "subido_por": {
             "type": "object",
             "description": "Usuario que subió el objeto",
@@ -13469,6 +13971,11 @@ export const OPENAPI_AGREGADO = {
           "etiquetas": {
             "type": "object",
             "description": "Etiquetas clave-valor (max 20)"
+          },
+          "publico": {
+            "type": "boolean",
+            "description": "Servir el objeto como imagen estática pública (ADR-28)",
+            "default": false
           }
         },
         "required": [
@@ -13641,17 +14148,39 @@ export const OPENAPI_AGREGADO = {
           },
           "producto_id": {
             "type": "string",
-            "description": "Id del producto maestro",
+            "description": "Id del producto o variante vendible",
+            "format": "uuid"
+          },
+          "producto_padre_id": {
+            "type": "object",
+            "description": "Id del producto padre (si es variante)",
+            "nullable": true,
             "format": "uuid"
           },
           "sku": {
             "type": "string",
-            "description": "SKU del producto",
+            "description": "SKU de la variante o producto",
             "example": "SKU-001"
           },
           "producto_nombre": {
             "type": "string",
-            "description": "Nombre del producto"
+            "description": "Nombre del producto/variante"
+          },
+          "atributos": {
+            "type": "object",
+            "description": "Atributos de la variante (color, talla, etc.)",
+            "additionalProperties": true
+          },
+          "imagen_objeto_id": {
+            "type": "object",
+            "description": "Id del objeto de la imagen principal",
+            "nullable": true,
+            "format": "uuid"
+          },
+          "imagen_url": {
+            "type": "object",
+            "description": "URL pública de la imagen principal",
+            "nullable": true
           },
           "margen": {
             "type": "number",

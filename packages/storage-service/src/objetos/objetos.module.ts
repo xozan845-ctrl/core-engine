@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { ObjetosService } from './objetos.service';
 import { ObjetosController } from './objetos.controller';
+import { PublicStorageController } from './public.controller';
 import { BucketsModule } from '../buckets/buckets.module';
 import { AlmacenModule } from '../almacen/almacen.module';
 
@@ -8,6 +9,6 @@ import { AlmacenModule } from '../almacen/almacen.module';
   imports: [AlmacenModule, BucketsModule],
   providers: [ObjetosService],
   exports: [ObjetosService],
-  controllers: [ObjetosController],
+  controllers: [ObjetosController, PublicStorageController],
 })
 export class ObjetosModule {}

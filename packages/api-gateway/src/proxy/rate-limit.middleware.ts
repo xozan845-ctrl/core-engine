@@ -87,6 +87,12 @@ export class RateLimitMiddleware implements NestMiddleware {
   }
 
   use(req: Request, res: Response, next: NextFunction): void {
+    // Las imágenes públicas son estáticas y cacheables: no deben consumir el
+    // cubo de la API (una página de catálogo puede cargar decenas).
+    if (req.method === 'GET' && /^\/api\/v1\/storage\/public\/objetos\/[^/]+$/.test(req.path)) {
+      next();
+      return;
+    }
     const esLogin = req.method === 'POST' && /\/api\/v1\/auth\/login$/.test(req.path);
     const opciones: OpcionesLimite = esLogin
       ? { limite: this.login.limite, ttlMs: this.login.ttl_ms, clave: 'login' }
