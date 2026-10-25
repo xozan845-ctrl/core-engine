@@ -1,6 +1,6 @@
 {
   "name": "@core/finance-service",
-  "version": "1.0.8",
+  "version": "1.0.9",
   "private": true,
   "description": "Finanzas y contabilidad: proyecciones financieras (cap. 8), contabilidad por partida doble y regimen fiscal multijurisdiccion (Nicaragua inicial, cap. 4.4)",
   "main": "dist/main.js",
