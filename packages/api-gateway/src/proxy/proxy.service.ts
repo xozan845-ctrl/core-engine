@@ -1,5 +1,6 @@
 import { Injectable, Optional } from '@nestjs/common';
 import { Request, Response } from 'express';
+import { Readable } from 'stream';
 import { Logger, TENANT_HEADER, PERSONAL_HEADER, PARTICIPACION_HEADER } from '@core/shared';
 import { GatewayAuthMiddleware, PoliticaRuta, POLITICAS_RUTAS } from './gateway-auth.middleware';
 
@@ -160,10 +161,13 @@ export class ProxyService {
       // Whitelist: solo contexto de usuario y correlacion; el resto (host,
       // content-length, transfer-encoding, cookie, etc.) lo calcula fetch
       // y evita cabeceras invalidas hacia el destino.
+      // Las imágenes públicas son binarias: no se debe pedir JSON ni decodificar
+      // el cuerpo como texto (ADR-28).
+      const esImagenPublica = /^\/api\/v1\/storage\/public\/objetos\/[^/]+$/.test(rutaBase);
       const headers: Record<string, string> = {
         'x-request-id': (req.headers['x-request-id'] as string) ?? `gw-${Date.now()}`,
-        'content-type': 'application/json',
-        accept: 'application/json',
+        'content-type': esImagenPublica ? 'application/octet-stream' : 'application/json',
+        accept: esImagenPublica ? 'image/*' : 'application/json',
       };
       for (const k of ['x-user-id', 'x-user-email', 'x-user-rol', TENANT_HEADER, PERSONAL_HEADER, PARTICIPACION_HEADER] as const) {
         const v = req.headers[k];
@@ -179,7 +183,6 @@ export class ProxyService {
         redirect: 'manual',
       });
 
-      const texto = await respuesta.text();
       res.status(respuesta.status);
       // `fetch` devuelve un objeto `Headers` (iterable), no un objeto plano:
       // Object.entries() no ve ninguna cabecera y se perderia, entre otras,
@@ -197,6 +200,26 @@ export class ProxyService {
           /* headers no reenvariables */
         }
       });
+      // Streaming binario: `text()` corrompería una imagen. El body de fetch es
+      // un ReadableStream web; se puentea al response de Express.
+      const contentType = respuesta.headers.get('content-type') ?? '';
+      if (contentType.startsWith('image/') || contentType.startsWith('application/octet-stream')) {
+        if (respuesta.body) {
+          const stream = Readable.fromWeb(
+            respuesta.body as unknown as import('stream/web').ReadableStream,
+          );
+          stream.on('error', () => {
+            if (!res.headersSent) res.status(502);
+            res.end();
+          });
+          stream.pipe(res as unknown as NodeJS.WritableStream);
+        } else {
+          res.end();
+        }
+        return;
+      }
+
+      const texto = await respuesta.text();
       res.send(texto || undefined);
     } catch (err) {
       this.logger.error({
