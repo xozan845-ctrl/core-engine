@@ -16,12 +16,6 @@ import { verificarToken, type TokenPayload } from '@core/shared';
 export interface OpcionesEdge {
   /** `usuario:clave` para exigir Basic Auth en el borde. Vacio = sin gate. */
   basicAuth?: string;
-  /**
-   * Orígenes exentos del Basic (staging/demo público). El navegador envia el
-   * `Origin`; NO es autenticación (un cliente no-navegador puede falsificarlo),
-   * así que solo debe usarse para un frontend público conocido.
-   */
-  bypassOrigins?: string[];
   /** `true` sirve `/docs` y `/metrics` sin restriccion (desarrollo local). */
   diagnosticosPublicos: boolean;
   /** Clave interna que permite diagnostico y `/ready` aunque no sean publicos. */
@@ -50,23 +44,10 @@ function valorCabecera(valor: string | string[] | undefined): string | undefined
   return Array.isArray(valor) ? valor[0] : valor;
 }
 
-/** Normaliza un origen para compararlo sin mayúsculas ni slash final. */
-function normalizarOrigen(valor: string | undefined): string {
-  return (valor ?? '').trim().toLowerCase().replace(/\/$/, '');
-}
-
-function leerOrigenes(valor: string | undefined): string[] {
-  return (valor ?? '')
-    .split(',')
-    .map(normalizarOrigen)
-    .filter(Boolean);
-}
-
 /** Lee la configuracion del borde desde el entorno (R-CD-7). */
 export function leerEdge(env: NodeJS.ProcessEnv = process.env): OpcionesEdge {
   return {
     basicAuth: env.EDGE_BASIC_AUTH?.trim() || undefined,
-    bypassOrigins: leerOrigenes(env.EDGE_BASIC_BYPASS_ORIGINS),
     diagnosticosPublicos: (env.DIAGNOSTICOS_PUBLICOS ?? 'false').toLowerCase() === 'true',
     claveInterna: env.INTERNAL_API_KEY || undefined,
     readyPublico: (env.READY_PUBLIC ?? 'false').toLowerCase() === 'true',
@@ -106,12 +87,7 @@ export function edgeAuth(opciones: OpcionesEdge = leerEdge()) {
       }
     }
 
-    const origen = normalizarOrigen(valorCabecera(req.headers.origin));
-    const origenExento = Boolean(
-      origen && opciones.bypassOrigins?.some((permitido) => permitido === origen),
-    );
-
-    if (opciones.basicAuth && !origenExento) {
+    if (opciones.basicAuth) {
       // Basic y Bearer comparten la cabecera `Authorization`. Un Bearer solo
       // sustituye al gate si el JWT es valido: de lo contrario cualquiera
       // podria saltarse el Basic de staging con "Authorization: Bearer x".

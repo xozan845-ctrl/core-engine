@@ -754,6 +754,41 @@ Este archivo registra decisiones técnicas deliberadas que se apartan del texto 
 
 ---
 
+## ADR-29: Proxy público del API para el frontend de Firebase
+
+- **Fecha**: 2026-10-25
+- **Estado**: Aceptado
+- **Contexto**: el frontend público de Firebase no puede enviar el Basic Auth del
+  gate de staging sin exponer la credencial en el bundle. Firebase Functions
+  requeriría plan Blaze/Secret Manager; el bypass por `Origin` es falsificable y
+  no es autenticación.
+- **Decisión**:
+  1. El gateway expone un prefijo **público** `/api-proxy/api/v1/**` que actúa
+     como proxy server-side. El handler añade el `Authorization: Basic` con
+     `EDGE_BASIC_AUTH` (variable del gateway) y reenvía al gateway interno
+     (`127.0.0.1:$PORT`) con `x-forwarded-for` del cliente.
+  2. Si la petición trae un **Bearer**, se reenvía tal cual y el gateway valida
+     el JWT; el Basic solo se usa en `login`, `registro`, `refresh`,
+     `restablecer-contrasena` o cuando no hay Bearer.
+  3. CORS se limita a `CORS_ORIGINS`; el preflight se responde en el proxy. El
+     cuerpo se limita a 1 MB y la respuesta se transmite en streaming (imágenes
+     incluidas). Timeout de 60 s.
+  4. La ruta pública no es una frontera de seguridad: cualquiera que la conozca
+     puede usarla, igual que el frontend público. La autorización real de datos
+     sigue siendo el JWT y RLS. El secreto Basic no se expone.
+  5. Producción no configura `EDGE_BASIC_AUTH`; el proxy funciona igual sin
+     añadir Basic. El frontend apunta a
+     `https://api.kbcoleccion.com/api-proxy/api/v1`.
+- **Consecuencias**:
+  - No hace falta Firebase Functions/Blaze ni una credencial Basic en el
+    navegador.
+  - El forward interno añade un salto; el 504 de identity sigue siendo un
+    problema del backend, no del proxy.
+  - El bypass por `Origin` se retira en el mismo cambio.
+  - La API directa sigue exigiendo Basic para clientes que no usan el proxy.
+
+---
+
 ## Resumen de cumplimiento post-corrección
 
 | Ítem del documento          | Estado  | Nota |
