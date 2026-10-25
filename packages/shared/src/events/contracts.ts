@@ -260,7 +260,7 @@ export const CONTRATOS: Record<NombreEvento, { editor: string; consumidores: str
   },
   [EVENTOS.STOCK_UPDATED]: {
     editor: 'Inventario',
-    consumidores: ['Notificaciones'],
+    consumidores: ['Tiendas (RN-02)', 'Notificaciones'],
   },
   [EVENTOS.ORDER_STATUS_UPDATED]: {
     editor: 'Pedidos',

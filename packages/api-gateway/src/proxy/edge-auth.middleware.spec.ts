@@ -222,6 +222,16 @@ describe('edgeAuth (endurecimiento del borde: gate de entornos y diagnostico)', 
       edgeAuth(opciones)(crearReq('/health') as never, crearRes() as never, next);
       expect(next).toHaveBeenCalledTimes(1);
     });
+
+    it('debe dejar las imágenes públicas sin Basic (ADR-28)', () => {
+      const next = vi.fn();
+      edgeAuth(opciones)(
+        crearReq('/api/v1/storage/public/objetos/22222222-2222-4222-8222-222222222222') as never,
+        crearRes() as never,
+        next,
+      );
+      expect(next).toHaveBeenCalledTimes(1);
+    });
   });
 
   describe('leerEdge', () => {

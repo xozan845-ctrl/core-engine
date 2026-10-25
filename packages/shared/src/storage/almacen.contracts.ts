@@ -25,6 +25,19 @@ export interface ObjetoEnAlmacen {
   etag?: string;
 }
 
+import type { Readable } from 'stream';
+
+/**
+ * Objeto listo para servir por streaming (imágenes públicas). El stream es el
+ * cuerpo del objeto; el servicio que lo consume decide los headers HTTP.
+ */
+export interface ObjetoLeido {
+  stream: Readable;
+  content_type?: string;
+  tamano_bytes: number;
+  etag?: string;
+}
+
 export interface AlmacenObjetos {
   /** Crea el bucket si no existe (idempotente). */
   asegurarBucket(bucket: string): Promise<void>;
@@ -36,6 +49,8 @@ export interface AlmacenObjetos {
   urlDescarga(bucket: string, objeto: string, expira_segundos: number): Promise<string>;
   /** Metadatos del objeto en el proveedor; `null` si no existe. */
   estadisticas(bucket: string, objeto: string): Promise<ObjetoEnAlmacen | null>;
+  /** Abre el objeto para servirlo por streaming; `null` si no existe. */
+  leer(bucket: string, objeto: string): Promise<ObjetoLeido | null>;
   /** Elimina el objeto del bucket (no falla si ya no existe). */
   eliminar(bucket: string, objeto: string): Promise<void>;
 }

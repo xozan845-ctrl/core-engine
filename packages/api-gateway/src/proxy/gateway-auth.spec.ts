@@ -380,6 +380,15 @@ describe('Gateway auth — slugs de empresa y tienda (ADR-26)', () => {
     return { res: res as unknown as { statusCode: number; cuerpo?: { codigo: string } }, next };
   }
 
+  it('debe permitir servir una imagen pública sin token (ADR-28)', () => {
+    const { res, next } = evaluar(
+      '/api/v1/storage/public/objetos/22222222-2222-4222-8222-222222222222',
+      'GET',
+    );
+    expect(res.statusCode).toBe(200);
+    expect(next).toHaveBeenCalled();
+  });
+
   it('debe exigir token para resolver una empresa por slug', () => {
     const { res, next } = evaluar('/api/v1/empresas/acme', 'GET');
     expect(res.statusCode).toBe(401);

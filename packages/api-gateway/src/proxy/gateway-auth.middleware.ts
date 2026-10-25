@@ -122,6 +122,12 @@ export const POLITICAS_RUTAS: PoliticaRuta[] = [
       metodos: ['GET', 'POST', 'PATCH', 'DELETE'],
       roles: [ROLES.COMPRADOR],
     },
+  // Imágenes públicas estáticas (ADR-28): sin token; el UUID es la capacidad.
+  {
+    patron: /^\/api\/v1\/storage\/public\/objetos\/[^/]+$/,
+    metodos: ['GET'],
+    roles: null,
+  },
   // la configuracion de cuota del bucket es administrativa (Tabla 21)
   {
     patron: /^\/api\/v1\/storage\/bucket$/,

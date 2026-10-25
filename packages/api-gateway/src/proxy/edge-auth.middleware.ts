@@ -29,6 +29,9 @@ export interface OpcionesEdge {
 // `/docs` (UI) y `/docs-json` / `/docs-yaml` (el contrato completo) + `/metrics`.
 const RUTAS_DIAGNOSTICO = [/^\/docs(-|\/|$)/, /^\/metrics$/];
 
+// Imágenes de producto: públicas por diseño (ADR-28), incluso en staging.
+const RUTAS_ESTATICAS = [/^\/api\/v1\/storage\/public\/objetos\/[^/]+$/];
+
 /** Comparacion en tiempo constante para no filtrar la credencial por prefijo. */
 function iguales(a: string, b: string): boolean {
   const bufferA = Buffer.from(a);
@@ -57,6 +60,11 @@ export function edgeAuth(opciones: OpcionesEdge = leerEdge()) {
   return (req: Request, res: Response, next: NextFunction): void => {
     // Liveness: nunca detras del gate (healthcheck de contenedor/Dockploy).
     if (req.path === '/health') {
+      next();
+      return;
+    }
+
+    if (RUTAS_ESTATICAS.some((patron) => patron.test(req.path))) {
       next();
       return;
     }
