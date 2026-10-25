@@ -1,6 +1,6 @@
 {
   "name": "@core/storage-service",
-  "version": "1.0.8",
+  "version": "1.0.9",
   "private": true,
   "description": "Almacenamiento de objetos por tenant (MinIO, buckets por organizacion) con URLs prefirmadas",
   "main": "dist/main.js",
