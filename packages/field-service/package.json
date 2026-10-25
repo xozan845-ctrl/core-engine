@@ -1,6 +1,6 @@
 {
   "name": "@core/field-service",
-  "version": "1.0.9",
+  "version": "1.1.1",
   "private": true,
   "description": "Logistica de campo (app-test): personal, clientes, vehiculos, rutas, pedidos, asistencia, incidencias, tracking, telemetria y sync offline",
   "main": "dist/main.js",
