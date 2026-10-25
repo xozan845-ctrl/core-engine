@@ -1,6 +1,6 @@
 {
   "name": "@core/commissions-service",
-  "version": "1.1.0",
+  "version": "1.0.9",
   "private": true,
   "description": "Comisiones y pagos: calcula comisiones y mantiene el libro de pagos de vendedores",
   "main": "dist/main.js",

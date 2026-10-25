@@ -1,6 +1,6 @@
 {
   "name": "@core/orders-service",
-  "version": "1.1.0",
+  "version": "1.0.9",
   "private": true,
   "description": "Ordenes y transacciones: procesa pedidos, valida stock y publica eventos (CQRS + Event Sourcing)",
   "main": "dist/main.js",
