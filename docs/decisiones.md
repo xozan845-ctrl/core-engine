@@ -652,6 +652,52 @@ Este archivo registra decisiones técnicas deliberadas que se apartan del texto 
 
 ---
 
+## ADR-27: Catálogo de productos por empresa
+
+- **Fecha**: 2026-10-24
+- **Estado**: Aceptado
+- **Contexto**: `catalog.productos` nació como catálogo maestro único de la
+  plataforma. ADR-25 le añadió `empresa_id` como etiqueta opcional, pero el SKU
+  siguió siendo `UNIQUE` global, el stock se proyectó por SKU y la sincronización
+  de ofertas actualizaba todas las tiendas con ese SKU. El resultado es un
+  catálogo compartido: dos empresas no pueden usar el mismo código y el stock de
+  una contamina a la otra.
+- **Decisión**:
+  1. El catálogo es **por empresa**. `catalog.productos.empresa_id` es
+     obligatorio y la unicidad pasa de `sku` a `(empresa_id, sku)`. El SKU sigue
+     siendo el identificador legible dentro de cada empresa, no entre empresas.
+  2. Las proyecciones y agregados heredan la clave compuesta:
+     `producto_catalogo_vista` y `stock_vista` usan `(empresa_id, sku)`;
+     `inventario_mensual_mv` usa `(empresa_id, sku, periodo)`; históricos y
+     ajustes guardan `empresa_id` y dejan de referenciar el SKU global.
+  3. El stock se reserva, reintegra y sincroniza por `(empresa_id, sku)`.
+     `stock.updated` incluye `empresa_id` por ítem, de modo que stores solo
+     actualiza las ofertas de la empresa dueña y market-intelligence no mezcla
+     demanda de productos homónimos.
+  4. Solo las empresas de tipo `comercial` tienen catálogo.
+     `identity.empresas.tipo_empresa` (`comercial | logistica | plataforma`) se
+     asigna por defecto a `comercial`; la logística y la plataforma quedan
+     excluidas. El alta de producto valida la empresa por API interna de identity
+     y falla cerrado si no puede verificarla.
+  5. La lectura pública del catálogo exige `empresa_id` (o la empresa del token):
+     `GET /api/v1/catalog/productos` y su detalle ya no exponen el catálogo de
+     todas las empresas. Se retira la política RLS de lectura anónima directa.
+  6. Los productos legados sin empresa se asignan a una empresa comodín
+     (`00000000-0000-0000-0000-000000000000`, tipo `plataforma`, estado
+     `inactiva`). No se listan, no se pueden publicar y no admiten altas nuevas;
+     un administrador debe reasignarlos para reactivarlos.
+- **Consecuencias**:
+  - La migración `01h_catalogo_por_empresa.sql` es aditiva e idempotente sobre
+    bases existentes (R-DB-6) y reconstruye las proyecciones con la nueva clave.
+  - Los clientes que listaban el catálogo global deben enviar `empresa_id`; es un
+    cambio de contrato de lectura documentado en OpenAPI.
+  - `stock.updated` y `devolucion.solicitada` cambian su payload (campo
+    `empresa_id` por ítem); productores y consumidores se actualizan en el mismo
+    cambio.
+  - El catálogo legado no se borra (R-DB-5): queda inactivo y auditable.
+
+---
+
 ## Resumen de cumplimiento post-corrección
 
 | Ítem del documento          | Estado  | Nota |

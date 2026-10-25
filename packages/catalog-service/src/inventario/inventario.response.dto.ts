@@ -6,6 +6,9 @@ import { ApiProperty } from '@nestjs/swagger';
  * importe reservado por órdenes activas.
  */
 export class LineaInventarioResponseDto {
+  @ApiProperty({ description: 'Empresa dueña del producto (ADR-27)', format: 'uuid', required: false })
+  empresa_id: string;
+
   @ApiProperty({ description: 'SKU del producto', example: 'SKU-001' })
   sku: string;
 
