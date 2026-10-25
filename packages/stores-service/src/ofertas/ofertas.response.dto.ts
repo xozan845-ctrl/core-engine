@@ -14,14 +14,30 @@ export class OfertaResponseDto {
   @ApiProperty({ description: 'Empresa propietaria', format: 'uuid' }) empresa_id: string;
   @ApiProperty({ description: 'Participación congelable del vendedor', minimum: 0, maximum: 100 }) participacion_porcentaje: number;
 
-  @ApiProperty({ description: 'Id del producto maestro', format: 'uuid' })
+  @ApiProperty({ description: 'Id del producto o variante vendible', format: 'uuid' })
   producto_id: string;
 
-  @ApiProperty({ description: 'SKU del producto', example: 'SKU-001' })
+  @ApiProperty({ description: 'Id del producto padre (si es variante)', required: false, nullable: true, format: 'uuid' })
+  producto_padre_id: string | null;
+
+  @ApiProperty({ description: 'SKU de la variante o producto', example: 'SKU-001' })
   sku: string;
 
-  @ApiProperty({ description: 'Nombre del producto' })
+  @ApiProperty({ description: 'Nombre del producto/variante' })
   producto_nombre: string;
+
+  @ApiProperty({
+    description: 'Atributos de la variante (color, talla, etc.)',
+    type: 'object',
+    additionalProperties: true,
+  })
+  atributos: Record<string, unknown>;
+
+  @ApiProperty({ description: 'Id del objeto de la imagen principal', required: false, nullable: true, format: 'uuid' })
+  imagen_objeto_id: string | null;
+
+  @ApiProperty({ description: 'URL pública de la imagen principal', required: false, nullable: true })
+  imagen_url: string | null;
 
   @ApiProperty({ description: 'Margen aplicado (0–90)', example: 15 })
   margen: number;

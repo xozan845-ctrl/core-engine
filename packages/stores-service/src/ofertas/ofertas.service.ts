@@ -20,8 +20,12 @@ export interface Oferta {
   empresa_id: string;
   participacion_porcentaje: number;
   producto_id: string;
+  producto_padre_id: string | null;
   sku: string;
   producto_nombre: string;
+  atributos: Record<string, unknown>;
+  imagen_objeto_id: string | null;
+  imagen_url: string | null;
   margen: number;
   precio_base: string;
   precio_venta: string;
@@ -37,8 +41,11 @@ interface OfertaRow {
   empresa_id: string;
   participacion_porcentaje: number;
   producto_id: string;
+  producto_padre_id: string | null;
   sku: string;
   producto_nombre: string;
+  atributos: Record<string, unknown> | null;
+  imagen_objeto_id: string | null;
   margen: number;
   precio_base_cents: number;
   precio_venta_cents: number;
@@ -55,7 +62,18 @@ interface ProductoExterno {
   precio_base: string;
   stock: number;
   estado: string;
+  producto_padre_id: string | null;
+  atributos: Record<string, unknown>;
+  tiene_variantes: boolean;
+  imagenes: { objeto_id: string; url: string; orden: number; es_principal: boolean }[];
 }
+
+const COLUMNAS_OFERTA = `o.id, o.tienda_id, t.vendedor_id, t.empresa_id,
+  t.participacion_porcentaje, o.producto_id, o.producto_padre_id, o.sku,
+  o.producto_nombre, o.atributos, o.imagen_objeto_id, o.margen,
+  o.precio_base_cents, o.precio_venta_cents, o.stock, o.estado, o.creado_en`;
+
+const URL_IMAGEN_PUBLICA = '/api/v1/storage/public/objetos';
 
 /**
  * Ofertas: relacion vendedor-producto con precio final (Tabla 11).
@@ -71,8 +89,7 @@ export class OfertasService {
 
   async encontrarPorId(id: string): Promise<Oferta | null> {
     const fila = await this.pg.queryOne<OfertaRow>(
-      `SELECT o.id, o.tienda_id, t.vendedor_id, t.empresa_id, t.participacion_porcentaje, o.producto_id, o.sku, o.producto_nombre,
-              o.margen, o.precio_base_cents, o.precio_venta_cents, o.stock, o.estado, o.creado_en
+      `SELECT ${COLUMNAS_OFERTA}
        FROM stores.ofertas o
        JOIN stores.tiendas t ON t.id = o.tienda_id
        WHERE o.id = $1`,
@@ -84,8 +101,7 @@ export class OfertasService {
   async porIds(ids: string[]): Promise<Oferta[]> {
     if (ids.length === 0) return [];
     const filas = await this.pg.query<OfertaRow>(
-      `SELECT o.id, o.tienda_id, t.vendedor_id, t.empresa_id, t.participacion_porcentaje, o.producto_id, o.sku, o.producto_nombre,
-              o.margen, o.precio_base_cents, o.precio_venta_cents, o.stock, o.estado, o.creado_en
+      `SELECT ${COLUMNAS_OFERTA}
        FROM stores.ofertas o
        JOIN stores.tiendas t ON t.id = o.tienda_id
        WHERE o.id = ANY($1)`,
@@ -108,8 +124,7 @@ export class OfertasService {
       .then((r) => r?.n ?? 0);
     const offset = (pagina - 1) * limite;
     const filas = await this.pg.query<OfertaRow>(
-      `SELECT o.id, o.tienda_id, t.vendedor_id, t.empresa_id, t.participacion_porcentaje, o.producto_id, o.sku, o.producto_nombre,
-              o.margen, o.precio_base_cents, o.precio_venta_cents, o.stock, o.estado, o.creado_en
+      `SELECT ${COLUMNAS_OFERTA}
        FROM stores.ofertas o
        JOIN stores.tiendas t ON t.id = o.tienda_id
        WHERE t.vendedor_id = $1
@@ -121,8 +136,7 @@ export class OfertasService {
 
   async deTienda(tiendaId: string): Promise<Oferta[]> {
     const filas = await this.pg.query<OfertaRow>(
-      `SELECT o.id, o.tienda_id, t.vendedor_id, t.empresa_id, t.participacion_porcentaje, o.producto_id, o.sku, o.producto_nombre,
-              o.margen, o.precio_base_cents, o.precio_venta_cents, o.stock, o.estado, o.creado_en
+      `SELECT ${COLUMNAS_OFERTA}
        FROM stores.ofertas o
        JOIN stores.tiendas t ON t.id = o.tienda_id
        WHERE o.tienda_id = $1 AND o.estado = 'activa'`,
@@ -162,6 +176,12 @@ export class OfertasService {
     if (producto.empresa_id !== tienda.empresa_id) {
       throw new DomainError('PRODUCTO_OTRA_EMPRESA', 'La tienda solo puede publicar productos de su empresa.');
     }
+    if (producto.tiene_variantes) {
+      throw new DomainError(
+        'VARIANTE_REQUERIDA',
+        'Este producto tiene variantes: publica una variante concreta (producto_id de la variante).',
+      );
+    }
     // RN-02
     if (producto.stock < 1 || producto.estado === 'agotado') {
       throw new ConflictError('No se puede publicar un producto con stock menor a 1 (RN-02).');
@@ -177,19 +197,24 @@ export class OfertasService {
 
     const precioBase = Money.parsear(producto.precio_base);
     const precioVenta = precioBase.aplicarMargen(margen); // RN-01
-    const fila = await this.pg.queryOne<OfertaRow>(
+    const principal =
+      producto.imagenes?.find((i) => i.es_principal) ?? producto.imagenes?.[0];
+    const fila = await this.pg.queryOne<{ id: string }>(
       `INSERT INTO stores.ofertas
-        (id, tienda_id, producto_id, sku, producto_nombre, margen,
-         precio_base_cents, precio_venta_cents, stock, estado)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, 'activa')
-       RETURNING id, tienda_id, producto_id, sku, producto_nombre, margen,
-                 precio_base_cents, precio_venta_cents, stock, estado, creado_en`,
+        (id, tienda_id, producto_id, producto_padre_id, sku, producto_nombre,
+         atributos, imagen_objeto_id, margen, precio_base_cents, precio_venta_cents,
+         stock, estado)
+       VALUES ($1, $2, $3, $4, $5, $6, $7::jsonb, $8, $9, $10, $11, $12, 'activa')
+       RETURNING id`,
       [
         randomUUID(),
         tienda.id,
         productoId,
+        producto.producto_padre_id ?? null,
         producto.sku,
         producto.nombre,
+        JSON.stringify(producto.atributos ?? {}),
+        principal?.objeto_id ?? null,
         margen,
         precioBase.centavos,
         precioVenta.centavos,
@@ -202,7 +227,9 @@ export class OfertasService {
        VALUES ($1, NULL, $2, NOW())`,
       [fila.id, precioVenta.centavos],
     );
-    return this.serializar(fila);
+    const creada = await this.encontrarPorId(fila.id);
+    if (!creada) throw new DomainError('OFERTA_FALLIDA', 'No se pudo leer la oferta creada.');
+    return creada;
   }
 
   /** Cambio de margen del vendedor: afecta solo a compras nuevas. */
@@ -270,8 +297,14 @@ export class OfertasService {
       empresa_id: fila.empresa_id,
       participacion_porcentaje: fila.participacion_porcentaje,
       producto_id: fila.producto_id,
+      producto_padre_id: fila.producto_padre_id ?? null,
       sku: fila.sku,
       producto_nombre: fila.producto_nombre,
+      atributos: fila.atributos ?? {},
+      imagen_objeto_id: fila.imagen_objeto_id ?? null,
+      imagen_url: fila.imagen_objeto_id
+        ? `${URL_IMAGEN_PUBLICA}/${fila.imagen_objeto_id}`
+        : null,
       margen: fila.margen,
       precio_base: Money.desdeCentavos(fila.precio_base_cents).string(),
       precio_venta: Money.desdeCentavos(fila.precio_venta_cents).string(),
