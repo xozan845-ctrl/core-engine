@@ -139,6 +139,7 @@ describe('edgeAuth (endurecimiento del borde: gate de entornos y diagnostico)', 
       basicAuth: 'stage:secreto-e2e',
       diagnosticosPublicos: false,
       jwtSecret: SECRETO,
+      bypassOrigins: ['https://kb-coleccion-internacional-ni.web.app'],
     };
 
     it('debe exigir credencial y anunciarla con WWW-Authenticate', () => {
@@ -217,6 +218,42 @@ describe('edgeAuth (endurecimiento del borde: gate de entornos y diagnostico)', 
       expect(res.statusCode).toBe(401);
     });
 
+    it('debe eximir del Basic al origen de Firebase configurado', () => {
+      const next = vi.fn();
+      edgeAuth(opciones)(
+        crearReq('/api/v1/orders', {
+          headers: { origin: 'https://kb-coleccion-internacional-ni.web.app' },
+        }) as never,
+        crearRes() as never,
+        next,
+      );
+      expect(next).toHaveBeenCalledTimes(1);
+    });
+
+    it('debe normalizar mayúsculas y slash final del origen exento', () => {
+      const next = vi.fn();
+      edgeAuth(opciones)(
+        crearReq('/api/v1/orders', {
+          headers: { origin: 'https://KB-Coleccion-Internacional-NI.web.app/' },
+        }) as never,
+        crearRes() as never,
+        next,
+      );
+      expect(next).toHaveBeenCalledTimes(1);
+    });
+
+    it('debe seguir exigiendo Basic a un origen no exento', () => {
+      const next = vi.fn();
+      const res = crearRes();
+      edgeAuth(opciones)(
+        crearReq('/api/v1/orders', { headers: { origin: 'https://otro.example' } }) as never,
+        res as never,
+        next,
+      );
+      expect(next).not.toHaveBeenCalled();
+      expect(res.statusCode).toBe(401);
+    });
+
     it('debe dejar /health abierto (liveness de contenedor)', () => {
       const next = vi.fn();
       edgeAuth(opciones)(crearReq('/health') as never, crearRes() as never, next);
@@ -238,6 +275,7 @@ describe('edgeAuth (endurecimiento del borde: gate de entornos y diagnostico)', 
     it('debe aplicar valores por defecto seguros (diagnosticos privados, /ready privado, sin gate)', () => {
       const edge = leerEdge({} as NodeJS.ProcessEnv);
       expect(edge.basicAuth).toBeUndefined();
+      expect(edge.bypassOrigins).toEqual([]);
       expect(edge.diagnosticosPublicos).toBe(false);
       expect(edge.readyPublico).toBe(false);
       expect(edge.jwtSecret).toBeUndefined();
@@ -246,12 +284,18 @@ describe('edgeAuth (endurecimiento del borde: gate de entornos y diagnostico)', 
     it('debe leer el gate, la exposicion de diagnosticos y /ready del entorno', () => {
       const edge = leerEdge({
         EDGE_BASIC_AUTH: 'stage:clave',
+        EDGE_BASIC_BYPASS_ORIGINS:
+          'https://kb-coleccion-internacional-ni.web.app/, https://otro.example',
         DIAGNOSTICOS_PUBLICOS: 'true',
         READY_PUBLIC: 'true',
         INTERNAL_API_KEY: 'interna',
         JWT_SECRET: 'secreto-jwt',
       } as unknown as NodeJS.ProcessEnv);
       expect(edge.basicAuth).toBe('stage:clave');
+      expect(edge.bypassOrigins).toEqual([
+        'https://kb-coleccion-internacional-ni.web.app',
+        'https://otro.example',
+      ]);
       expect(edge.diagnosticosPublicos).toBe(true);
       expect(edge.readyPublico).toBe(true);
       expect(edge.claveInterna).toBe('interna');
