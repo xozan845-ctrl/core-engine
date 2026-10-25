@@ -1,5 +1,5 @@
-import { Controller, Get, Query, UseGuards } from '@nestjs/common';
-import { ApiOkResponse, ApiOperation, ApiQuery, ApiSecurity, ApiTags } from '@nestjs/swagger';
+import { Controller, Get, Param, Query, UseGuards } from '@nestjs/common';
+import { ApiOkResponse, ApiOperation, ApiParam, ApiQuery, ApiSecurity, ApiTags } from '@nestjs/swagger';
 import { ClaveInternaGuard } from '@core/shared';
 import { OfertasService } from '../ofertas/ofertas.service';
 import { OfertaResponseDto } from '../ofertas/ofertas.response.dto';
@@ -22,5 +22,17 @@ export class InternalController {
   async porIds(@Query('ids') idsRaw?: string) {
     const ids = (idsRaw ?? '').split(',').map((s) => s.trim()).filter(Boolean);
     return this.ofertas.porIds(ids);
+  }
+
+  /** Guard de integridad: catálogo no puede mutar variantes con ofertas vivas. */
+  @Get('ofertas/producto/:productoId/activas')
+  @ApiOperation({ summary: 'Contar ofertas activas de un producto (servicio→servicio)' })
+  @ApiParam({ name: 'productoId', description: 'Id del producto o variante' })
+  @ApiOkResponse({
+    description: 'Total de ofertas activas',
+    schema: { type: 'object', properties: { total: { type: 'number' } } },
+  })
+  async activas(@Param('productoId') productoId: string): Promise<{ total: number }> {
+    return { total: await this.ofertas.contarActivasPorProducto(productoId) };
   }
 }

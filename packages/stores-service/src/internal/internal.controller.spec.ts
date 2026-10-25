@@ -5,7 +5,7 @@ import type { OfertasService } from '../ofertas/ofertas.service';
 import { ClaveInternaGuard } from '@core/shared';
 
 function fabricar(): { ofertas: Record<string, Mock>; controller: InternalController } {
-  const ofertas = { porIds: vi.fn() };
+  const ofertas = { porIds: vi.fn(), contarActivasPorProducto: vi.fn() };
   const controller = new InternalController(ofertas as unknown as OfertasService);
   return { ofertas, controller };
 }
@@ -23,6 +23,13 @@ describe('InternalController (internal, R-U-10/11)', () => {
     ofertas.porIds.mockResolvedValue([]);
     await controller.porIds(undefined);
     expect(ofertas.porIds).toHaveBeenCalledWith([]);
+  });
+
+  it('debe contar las ofertas activas de un producto para el guard de catálogo', async () => {
+    const { ofertas, controller } = fabricar();
+    ofertas.contarActivasPorProducto.mockResolvedValue(2);
+    await expect(controller.activas('prod-1')).resolves.toEqual({ total: 2 });
+    expect(ofertas.contarActivasPorProducto).toHaveBeenCalledWith('prod-1');
   });
 
   it('debe proteger las rutas con la clave interna', () => {

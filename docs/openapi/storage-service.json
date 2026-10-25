@@ -618,6 +618,42 @@
           "Almacenamiento"
         ]
       }
+    },
+    "/api/v1/storage/public/objetos/{id}": {
+      "get": {
+        "operationId": "PublicStorageController_servir",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "description": "Id del objeto",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Imagen (binario)",
+            "content": {
+              "image/*": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Objeto inexistente, privado, eliminado o no imagen"
+          }
+        },
+        "summary": "Servir una imagen pública (cacheable, sin auth)",
+        "tags": [
+          "Almacenamiento público"
+        ]
+      }
     }
   },
   "info": {
@@ -832,6 +868,11 @@
             ],
             "example": "activo"
           },
+          "publico": {
+            "type": "boolean",
+            "description": "Servido por el endpoint estático público (ADR-28)",
+            "example": true
+          },
           "subido_por": {
             "type": "object",
             "description": "Usuario que subió el objeto",
@@ -910,6 +951,11 @@
           "etiquetas": {
             "type": "object",
             "description": "Etiquetas clave-valor (max 20)"
+          },
+          "publico": {
+            "type": "boolean",
+            "description": "Servir el objeto como imagen estática pública (ADR-28)",
+            "default": false
           }
         },
         "required": [

@@ -7,6 +7,7 @@
   "01f_slugs.sql": "c3bf40b4b7f3203d0b917cdfbeb456fb52c0500d41939878e9d014d97eec324d",
   "01g_invitaciones_vendedor.sql": "fb23b2ca1527875b9d6f1e9debd5478ac9fb8c19cc053f84baad1911312893d7",
   "01h_catalogo_por_empresa.sql": "5c40ff6aae413d2b53320dafa942f0c5ae92cf77c911b60aa4fe94f03fe28589",
+  "01i_variantes_imagenes.sql": "eb215409d8893afcd049423f7255bc91c01e81b8e7b17f99fdd53a637c2eba11",
   "02_field.sql": "9d89457f4158e38789aa916e4c5670458e4f054106738c31a8e3a847d5c60557",
   "03_intelligence.sql": "6ab5a1f411d734ac0f5be8519328270cc828c4d89a10b5d0eade44067b18250e",
   "03a_metricas_producto_empresa.sql": "8be54a6bf780317f600964cb705ba64200d8a37a92c34b8fd318408eec32e95a",
@@ -15,5 +16,7 @@
   "06_feature_store.sql": "d1be96023af7af475ea72b70665be8928e528314f8af992535ba3a6fe8adf175",
   "07_data_quality.sql": "a3a6dfebfca1335e08fd0e94306c8be4fbe003217b23139a40652bdcf3c7c3b8",
   "08_auth_sesiones.sql": "dd3fc1e76b0a339beb25c29bc045db01831e9548336db3f36de06cdef56f7c1a",
-  "09_storage.sql": "e61ae512a6536375a44de0c751fbb1a772e5d1de16798990cd2c55c5dd36fcc1"
+  "09_storage.sql": "e61ae512a6536375a44de0c751fbb1a772e5d1de16798990cd2c55c5dd36fcc1",
+  "09a_storage_publico.sql": "a6d276843208d50bbe3fb415d0a1e33ee52f7924b380b39f507fe399fc33b38e",
+  "09b_ofertas_variantes.sql": "c9bc7de20e3df6ccc1ee7e0a415a6ce98326c47ea0db64460ae8425e95eacc4a"
 }

@@ -1,3 +1,4 @@
+import type { Mock } from 'vitest';
 import { InventarioService } from './inventario.service';
 
 /** H-06: niveles de stock de la bodega desde la proyeccion CQRS. */
@@ -36,5 +37,17 @@ describe('InventarioService (niveles de stock)', () => {
     const pg = { query: vi.fn().mockResolvedValue([]) };
     const servicio = new InventarioService(pg as never);
     expect(await servicio.listar()).toEqual([]);
+  });
+
+  it('debe filtrar por empresa y excluir los productos contenedores de variantes', async () => {
+    const pg = { query: vi.fn().mockResolvedValue([]) };
+    const servicio = new InventarioService(pg as never);
+
+    await servicio.listar('e-1');
+
+    const [sql, params] = (pg.query as Mock).mock.calls[0];
+    expect(sql).toContain('s.empresa_id = $1');
+    expect(sql).toContain('producto_padre_id');
+    expect(params).toEqual(['e-1']);
   });
 });
