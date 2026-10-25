@@ -743,6 +743,14 @@ Este archivo registra decisiones técnicas deliberadas que se apartan del texto 
     `leer` al puerto `AlmacenObjetos` y el endpoint público correspondiente.
   - El frontend debe subir cada imagen con `publico=true`, confirmar el objeto y
     enviar los `objeto_id` al crear el producto o la variante.
+  - `catalog` consulta a `stores` (`/internal/ofertas/producto/:id/activas`)
+    antes de crear/eliminar una variante o borrar la imagen principal. Si hay
+    ofertas activas, la operación falla cerrada (`OFERTAS_ACTIVAS`): primero se
+    desactivan las ofertas. Los ajustes manuales de stock publican
+    `stock.updated` para que las ofertas vivas reflejen el stock real.
+  - Deuda residual: borrar un objeto directamente en `storage` no consulta las
+    referencias de `catalog`; la URL pública quedaría rota. La baja de imágenes
+    debe hacerse por el endpoint de catálogo.
 
 ---
 
