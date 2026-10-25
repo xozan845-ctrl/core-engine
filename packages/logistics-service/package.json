@@ -1,6 +1,6 @@
 {
   "name": "@core/logistics-service",
-  "version": "1.0.7",
+  "version": "1.0.8",
   "private": true,
   "description": "Logistica y notificaciones: consume eventos de ordenes, prepara envios y notifica",
   "main": "dist/main.js",

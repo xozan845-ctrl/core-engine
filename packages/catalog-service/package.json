@@ -1,6 +1,6 @@
 {
   "name": "@core/catalog-service",
-  "version": "1.0.7",
+  "version": "1.0.8",
   "private": true,
   "description": "Catalogo y productos: catalogo maestro y control de stock (supabase-compatible)",
   "main": "dist/main.js",

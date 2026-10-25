@@ -1,6 +1,6 @@
 {
   "name": "core-engine",
-  "version": "1.0.7",
+  "version": "1.0.8",
   "private": true,
   "description": "Core Engine - Core Engine: plataforma de comercio electronico distribuido (microservicios NestJS + Supabase + Docker)",
   "workspaces": [
