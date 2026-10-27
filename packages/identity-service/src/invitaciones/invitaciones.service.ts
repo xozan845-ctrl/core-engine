@@ -215,7 +215,7 @@ export class InvitacionesService {
         participacion_porcentaje: datos.participacion_porcentaje,
         estado: fila.estado,
         expira_en: fila.expira_en,
-        url_invitacion: `${this.frontendUrl}/registro/vendedor?token=${encodeURIComponent(token)}`,
+        url_invitacion: `${this.frontendUrl}/i/${encodeURIComponent(token)}`,
       };
     });
   }
