@@ -61,9 +61,8 @@ describe('InvitacionesService', () => {
     });
 
     expect(creada.correo).toBe('ana@core.test');
-    expect(creada.url_invitacion).toMatch(
-      /^http:\/\/localhost:5173\/registro\/vendedor\?token=/,
-    );
+    expect(creada.url_invitacion).toMatch(/^http:\/\/localhost:5173\/i\/[A-Za-z0-9_-]+$/);
+    expect(creada.url_invitacion).not.toContain('?token=');
     expect(client.query).toHaveBeenCalledWith(
       expect.stringContaining('INSERT INTO identity.invitaciones_vendedor'),
       expect.arrayContaining(['e1', 't1', 'ana@core.test', null, 25]),
