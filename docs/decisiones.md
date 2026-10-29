@@ -789,6 +789,39 @@ Este archivo registra decisiones técnicas deliberadas que se apartan del texto 
 
 ---
 
+## ADR-30: Backend de operación de comercio para los módulos de workspace
+
+- **Fecha**: 2026-10-29
+- **Estado**: Aceptado
+- **Contexto**: los módulos `banks`, `barcodes`, `clients`, `credits`, `expenses`,
+  `finance`, `payables` y `purchases` del frontend persistían en `localStorage`
+  porque el contrato público no exponía sus operaciones. `catalog`, `sales` y
+  `reports` ya estaban cubiertos por `/catalog/productos` y `/orders`.
+- **Decisión**:
+  1. Exponer una superficie `/api/v1/comercio/**` atendida por
+     `finance-service` con los recursos que faltaban: bancos, créditos, gastos,
+     cuentas por pagar, proveedores, compras, órdenes de compra, caja
+     (movimientos, métodos, cierres, caja chica y transferencias), clientes y
+     códigos de barras.
+  2. Persistir en `finance.workspace_registros` con columnas de control
+     (`tenant_id`, `propietario_id`, soft delete) y un payload JSONB por
+     recurso. El empresario se aísla por tenant; el vendedor por
+     `propietario_id = auth.uid()` (RLS incluida).
+  3. Mantener montos en centavos enteros (`*_cents`) según R-DI-1 y reutilizar
+     `Money` para totales de compras y saldos de transferencias.
+  4. El gateway enruta `/api/v1/comercio/**` a `finance-service` y autoriza a
+     `super_admin`, `admin`, `empresario` y `vendedor`; los recursos de caja y
+     compras quedan restringidos a empresa en el servicio.
+- **Consecuencias**:
+  - El frontend puede migrar de `localStorage` a la API sin cambiar sus modelos
+    de dominio, y el contrato OpenAPI documenta cada operación.
+  - El libro JSONB prioriza la paridad con los cálculos locales; si un recurso
+    necesita consultas relacionales intensivas se promoverá a tabla propia.
+  - Los cierres y transferencias se calculan en servidor para evitar
+    duplicados y sobregiros por concurrencia.
+
+---
+
 ## Resumen de cumplimiento post-corrección
 
 | Ítem del documento          | Estado  | Nota |
