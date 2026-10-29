@@ -228,3 +228,22 @@ CREATE POLICY asignaciones_envio_empresa ON logistics.asignaciones_envio
     SELECT 1 FROM logistics.envios e
     WHERE e.id = envio_id AND e.empresa_id::text = (auth.jwt() ->> 'tenant_id')
   ));
+
+-- ── finance.workspace_registros (operación de comercio) ─────────────────
+-- Cada fila pertenece a una empresa (tenant_id) o a un vendedor
+-- (propietario_id). El frontend de empresa y el de vendedor comparten el mismo
+-- recurso, así que la política separa ambos ámbitos sin mezclar carteras.
+ALTER TABLE finance.workspace_registros ENABLE ROW LEVEL SECURITY;
+CREATE POLICY workspace_registros_admin ON finance.workspace_registros
+  FOR ALL TO authenticated
+  USING (auth.rol() IN ('super_admin', 'admin'))
+  WITH CHECK (auth.rol() IN ('super_admin', 'admin'));
+CREATE POLICY workspace_registros_empresa ON finance.workspace_registros
+  FOR ALL TO authenticated
+  USING (auth.rol() = 'empresario' AND tenant_id::text = (auth.jwt() ->> 'tenant_id'))
+  WITH CHECK (auth.rol() = 'empresario' AND tenant_id::text = (auth.jwt() ->> 'tenant_id'));
+CREATE POLICY workspace_registros_vendedor ON finance.workspace_registros
+  FOR ALL TO authenticated
+  USING (auth.rol() = 'vendedor' AND propietario_id::text = auth.uid())
+  WITH CHECK (auth.rol() = 'vendedor' AND propietario_id::text = auth.uid());
+
