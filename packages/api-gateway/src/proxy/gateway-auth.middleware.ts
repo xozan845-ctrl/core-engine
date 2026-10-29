@@ -152,6 +152,13 @@ export const POLITICAS_RUTAS: PoliticaRuta[] = [
     metodos: ['*'],
     roles: [ROLES.SUPER_ADMIN, ROLES.ADMIN],
   },
+  // Operación de comercio del workspace: empresa y vendedor comparten recursos
+  // (bancos, créditos, clientes, códigos) y la empresa administra caja/compras.
+  {
+    patron: /^\/api\/v1\/comercio\//,
+    metodos: ['*'],
+    roles: [ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.EMPRESARIO, ROLES.VENDEDOR],
+  },
   // finanzas y regimen fiscal (contabilidad, comprobantes, proyecciones)
   {
     patron: /^\/api\/v1\/finanzas\//,
