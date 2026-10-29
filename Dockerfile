@@ -10,6 +10,8 @@ WORKDIR /app
 # declaraciones de todos los workspaces + escaneo ligero de codigo
 COPY package.json package-lock.json tsconfig.base.json ./
 COPY packages packages
+# override local de query-string (build CJS con decodificación segura)
+COPY vendor vendor
 
 # La instalación es idéntica para todos los servicios. Declarar SERVICIO
 # después permite compartir esta capa en el build paralelo de Compose.
