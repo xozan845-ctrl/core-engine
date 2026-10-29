@@ -18,5 +18,6 @@
   "08_auth_sesiones.sql": "dd3fc1e76b0a339beb25c29bc045db01831e9548336db3f36de06cdef56f7c1a",
   "09_storage.sql": "e61ae512a6536375a44de0c751fbb1a772e5d1de16798990cd2c55c5dd36fcc1",
   "09a_storage_publico.sql": "a6d276843208d50bbe3fb415d0a1e33ee52f7924b380b39f507fe399fc33b38e",
-  "09b_ofertas_variantes.sql": "c9bc7de20e3df6ccc1ee7e0a415a6ce98326c47ea0db64460ae8425e95eacc4a"
+  "09b_ofertas_variantes.sql": "c9bc7de20e3df6ccc1ee7e0a415a6ce98326c47ea0db64460ae8425e95eacc4a",
+  "10_comercio.sql": "e75b34bfbe756c208434ea64e50f7bced86288bacb7bff89a1faeb028ae61641"
 }
