@@ -53,7 +53,9 @@
     "@nestjs/swagger": {
       "js-yaml": "^5.4.2"
     },
-    "proxy-addr": "^2.0.8"
+    "proxy-addr": "^2.0.8",
+    "query-string": "file:./vendor/query-string-9.5.1.tgz",
+    "multer": "^2.5.0"
   },
   "dependencies": {
     "body-parser": "^2.4.0",
