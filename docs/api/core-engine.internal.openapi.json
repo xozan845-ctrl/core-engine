@@ -3356,6 +3356,2096 @@
           "nota"
         ]
       },
+      "CuentaBancoResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "bank": {
+            "type": "string"
+          },
+          "alias": {
+            "type": "string"
+          },
+          "accountNumber": {
+            "type": "string"
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "ahorro",
+              "corriente",
+              "wallet"
+            ]
+          },
+          "balanceCents": {
+            "type": "number",
+            "description": "Saldo en centavos"
+          }
+        },
+        "required": [
+          "id",
+          "createdAt",
+          "updatedAt",
+          "bank",
+          "alias",
+          "accountNumber",
+          "type",
+          "balanceCents"
+        ]
+      },
+      "CrearCuentaBancoRequestDto": {
+        "type": "object",
+        "properties": {
+          "bank": {
+            "type": "string",
+            "description": "Banco",
+            "example": "BAC"
+          },
+          "alias": {
+            "type": "string",
+            "description": "Alias visible de la cuenta",
+            "example": "Operativa"
+          },
+          "accountNumber": {
+            "type": "string",
+            "description": "Número de cuenta"
+          },
+          "type": {
+            "type": "string",
+            "description": "Tipo de cuenta",
+            "enum": [
+              "ahorro",
+              "corriente",
+              "wallet"
+            ]
+          },
+          "balanceCents": {
+            "type": "number",
+            "description": "Saldo inicial en centavos",
+            "minimum": 0
+          }
+        },
+        "required": [
+          "bank",
+          "alias",
+          "accountNumber",
+          "type",
+          "balanceCents"
+        ]
+      },
+      "ActualizarCuentaBancoRequestDto": {
+        "type": "object",
+        "properties": {
+          "bank": {
+            "type": "string",
+            "description": "Banco",
+            "example": "BAC"
+          },
+          "alias": {
+            "type": "string",
+            "description": "Alias visible de la cuenta",
+            "example": "Operativa"
+          },
+          "accountNumber": {
+            "type": "string",
+            "description": "Número de cuenta"
+          },
+          "type": {
+            "type": "string",
+            "description": "Tipo de cuenta",
+            "enum": [
+              "ahorro",
+              "corriente",
+              "wallet"
+            ]
+          },
+          "balanceCents": {
+            "type": "number",
+            "description": "Saldo inicial en centavos",
+            "minimum": 0
+          }
+        }
+      },
+      "CreditoResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "customer": {
+            "type": "string"
+          },
+          "concept": {
+            "type": "string"
+          },
+          "date": {
+            "type": "string",
+            "format": "date"
+          },
+          "dueDate": {
+            "type": "string",
+            "format": "date"
+          },
+          "amountCents": {
+            "type": "number",
+            "description": "Importe original en centavos"
+          },
+          "balanceCents": {
+            "type": "number",
+            "description": "Saldo pendiente en centavos"
+          }
+        },
+        "required": [
+          "id",
+          "createdAt",
+          "updatedAt",
+          "customer",
+          "concept",
+          "date",
+          "dueDate",
+          "amountCents",
+          "balanceCents"
+        ]
+      },
+      "CrearCreditoRequestDto": {
+        "type": "object",
+        "properties": {
+          "customer": {
+            "type": "string",
+            "description": "Cliente que recibe el crédito"
+          },
+          "concept": {
+            "type": "string",
+            "description": "Concepto del crédito"
+          },
+          "date": {
+            "type": "string",
+            "description": "Fecha de emisión (yyyy-mm-dd)"
+          },
+          "dueDate": {
+            "type": "string",
+            "description": "Fecha de vencimiento (yyyy-mm-dd)"
+          },
+          "amountCents": {
+            "type": "number",
+            "description": "Importe en centavos",
+            "minimum": 1
+          }
+        },
+        "required": [
+          "customer",
+          "concept",
+          "dueDate",
+          "amountCents"
+        ]
+      },
+      "GastoResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "date": {
+            "type": "string",
+            "format": "date"
+          },
+          "concept": {
+            "type": "string"
+          },
+          "category": {
+            "type": "string"
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "inmediato",
+              "programado",
+              "recurrente"
+            ]
+          },
+          "amountCents": {
+            "type": "number",
+            "description": "Importe en centavos"
+          },
+          "paymentMethod": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "pendiente",
+              "pagado",
+              "cancelado"
+            ]
+          },
+          "includesVat": {
+            "type": "boolean"
+          },
+          "irRetentionCents": {
+            "type": "number",
+            "description": "Retención de IR en centavos"
+          },
+          "beneficiary": {
+            "type": "string"
+          },
+          "notes": {
+            "type": "string"
+          },
+          "scheduledFor": {
+            "type": "string",
+            "format": "date"
+          },
+          "recurrence": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "createdAt",
+          "updatedAt",
+          "date",
+          "concept",
+          "category",
+          "type",
+          "amountCents",
+          "paymentMethod",
+          "status",
+          "includesVat",
+          "irRetentionCents",
+          "beneficiary",
+          "notes",
+          "scheduledFor",
+          "recurrence"
+        ]
+      },
+      "CrearGastoRequestDto": {
+        "type": "object",
+        "properties": {
+          "date": {
+            "type": "string",
+            "description": "Fecha del gasto (yyyy-mm-dd)"
+          },
+          "concept": {
+            "type": "string",
+            "description": "Concepto del gasto"
+          },
+          "category": {
+            "type": "string",
+            "description": "Categoría visible (puede ser personalizada)"
+          },
+          "type": {
+            "type": "string",
+            "description": "Tipo de gasto",
+            "enum": [
+              "inmediato",
+              "programado",
+              "recurrente"
+            ]
+          },
+          "amountCents": {
+            "type": "number",
+            "description": "Importe en centavos",
+            "minimum": 1
+          },
+          "paymentMethod": {
+            "type": "string",
+            "description": "Método de pago",
+            "enum": [
+              "efectivo",
+              "tarjeta",
+              "transferencia",
+              "credito",
+              "otro"
+            ]
+          },
+          "includesVat": {
+            "type": "boolean",
+            "description": "Incluye IVA",
+            "default": false
+          },
+          "irRetentionCents": {
+            "type": "number",
+            "description": "Retención de IR en centavos",
+            "minimum": 0,
+            "default": 0
+          },
+          "beneficiary": {
+            "type": "string",
+            "description": "Proveedor, empleado o beneficiario"
+          },
+          "notes": {
+            "type": "string",
+            "description": "Notas"
+          },
+          "scheduledFor": {
+            "type": "string",
+            "description": "Fecha programada (yyyy-mm-dd)"
+          },
+          "recurrence": {
+            "type": "string",
+            "description": "Etiqueta de recurrencia"
+          }
+        },
+        "required": [
+          "date",
+          "concept",
+          "category",
+          "type",
+          "amountCents",
+          "paymentMethod"
+        ]
+      },
+      "ActualizarGastoRequestDto": {
+        "type": "object",
+        "properties": {
+          "date": {
+            "type": "string",
+            "description": "Fecha del gasto (yyyy-mm-dd)"
+          },
+          "concept": {
+            "type": "string",
+            "description": "Concepto del gasto"
+          },
+          "category": {
+            "type": "string",
+            "description": "Categoría visible (puede ser personalizada)"
+          },
+          "type": {
+            "type": "string",
+            "description": "Tipo de gasto",
+            "enum": [
+              "inmediato",
+              "programado",
+              "recurrente"
+            ]
+          },
+          "amountCents": {
+            "type": "number",
+            "description": "Importe en centavos",
+            "minimum": 1
+          },
+          "paymentMethod": {
+            "type": "string",
+            "description": "Método de pago",
+            "enum": [
+              "efectivo",
+              "tarjeta",
+              "transferencia",
+              "credito",
+              "otro"
+            ]
+          },
+          "includesVat": {
+            "type": "boolean",
+            "description": "Incluye IVA",
+            "default": false
+          },
+          "irRetentionCents": {
+            "type": "number",
+            "description": "Retención de IR en centavos",
+            "minimum": 0,
+            "default": 0
+          },
+          "beneficiary": {
+            "type": "string",
+            "description": "Proveedor, empleado o beneficiario"
+          },
+          "notes": {
+            "type": "string",
+            "description": "Notas"
+          },
+          "scheduledFor": {
+            "type": "string",
+            "description": "Fecha programada (yyyy-mm-dd)"
+          },
+          "recurrence": {
+            "type": "string",
+            "description": "Etiqueta de recurrencia"
+          }
+        }
+      },
+      "CuentaPorPagarResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "supplier": {
+            "type": "string"
+          },
+          "concept": {
+            "type": "string"
+          },
+          "dueDate": {
+            "type": "string",
+            "format": "date"
+          },
+          "amountCents": {
+            "type": "number",
+            "description": "Importe en centavos"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "pendiente",
+              "pagada"
+            ]
+          },
+          "paidAt": {
+            "type": "string",
+            "format": "date"
+          }
+        },
+        "required": [
+          "id",
+          "createdAt",
+          "updatedAt",
+          "supplier",
+          "concept",
+          "dueDate",
+          "amountCents",
+          "status",
+          "paidAt"
+        ]
+      },
+      "CrearCuentaPorPagarRequestDto": {
+        "type": "object",
+        "properties": {
+          "supplier": {
+            "type": "string",
+            "description": "Proveedor"
+          },
+          "concept": {
+            "type": "string",
+            "description": "Concepto de la obligación"
+          },
+          "dueDate": {
+            "type": "string",
+            "description": "Fecha de vencimiento (yyyy-mm-dd)"
+          },
+          "amountCents": {
+            "type": "number",
+            "description": "Importe en centavos",
+            "minimum": 1
+          }
+        },
+        "required": [
+          "supplier",
+          "concept",
+          "dueDate",
+          "amountCents"
+        ]
+      },
+      "ProveedorResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "name": {
+            "type": "string"
+          },
+          "ruc": {
+            "type": "string"
+          },
+          "phone": {
+            "type": "string"
+          },
+          "email": {
+            "type": "string"
+          },
+          "address": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "createdAt",
+          "updatedAt",
+          "name",
+          "ruc",
+          "phone",
+          "email",
+          "address"
+        ]
+      },
+      "CrearProveedorRequestDto": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "Nombre del proveedor"
+          },
+          "ruc": {
+            "type": "string",
+            "description": "RUC"
+          },
+          "phone": {
+            "type": "string",
+            "description": "Teléfono"
+          },
+          "email": {
+            "type": "string",
+            "description": "Correo"
+          },
+          "address": {
+            "type": "string",
+            "description": "Dirección"
+          }
+        },
+        "required": [
+          "name"
+        ]
+      },
+      "LineaCompraResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "productId": {
+            "type": "object",
+            "nullable": true
+          },
+          "name": {
+            "type": "string"
+          },
+          "sku": {
+            "type": "string"
+          },
+          "quantity": {
+            "type": "number"
+          },
+          "unitCostCents": {
+            "type": "number",
+            "description": "Costo unitario en centavos"
+          },
+          "salePriceCents": {
+            "type": "object",
+            "description": "Precio de venta en centavos",
+            "nullable": true
+          }
+        },
+        "required": [
+          "id",
+          "productId",
+          "name",
+          "sku",
+          "quantity",
+          "unitCostCents",
+          "salePriceCents"
+        ]
+      },
+      "CompraResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "number": {
+            "type": "string"
+          },
+          "date": {
+            "type": "string",
+            "format": "date"
+          },
+          "supplierId": {
+            "type": "object",
+            "nullable": true
+          },
+          "supplierName": {
+            "type": "string"
+          },
+          "paymentMethod": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "recibida",
+              "pendiente",
+              "anulada"
+            ]
+          },
+          "origin": {
+            "type": "string",
+            "enum": [
+              "productos",
+              "directa"
+            ]
+          },
+          "costType": {
+            "type": "string"
+          },
+          "lines": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/LineaCompraResponseDto"
+            }
+          },
+          "subtotalCents": {
+            "type": "number",
+            "description": "Subtotal en centavos"
+          },
+          "retentionCents": {
+            "type": "number",
+            "description": "Retención en centavos"
+          },
+          "totalCents": {
+            "type": "number",
+            "description": "Total en centavos"
+          },
+          "notes": {
+            "type": "string"
+          },
+          "userName": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "createdAt",
+          "updatedAt",
+          "number",
+          "date",
+          "supplierId",
+          "supplierName",
+          "paymentMethod",
+          "status",
+          "origin",
+          "costType",
+          "lines",
+          "subtotalCents",
+          "retentionCents",
+          "totalCents",
+          "notes",
+          "userName"
+        ]
+      },
+      "LineaCompraRequestDto": {
+        "type": "object",
+        "properties": {
+          "productId": {
+            "type": "object",
+            "description": "Id del producto del catálogo",
+            "nullable": true
+          },
+          "name": {
+            "type": "string",
+            "description": "Nombre visible de la línea"
+          },
+          "sku": {
+            "type": "string",
+            "description": "SKU del producto"
+          },
+          "quantity": {
+            "type": "number",
+            "description": "Cantidad comprada",
+            "minimum": 1
+          },
+          "unitCostCents": {
+            "type": "number",
+            "description": "Costo unitario en centavos",
+            "minimum": 0
+          },
+          "salePriceCents": {
+            "type": "object",
+            "description": "Precio de venta en centavos",
+            "nullable": true,
+            "minimum": 0
+          }
+        },
+        "required": [
+          "name",
+          "quantity",
+          "unitCostCents"
+        ]
+      },
+      "CrearCompraRequestDto": {
+        "type": "object",
+        "properties": {
+          "number": {
+            "type": "string",
+            "description": "Número del documento; si se omite se genera"
+          },
+          "date": {
+            "type": "string",
+            "description": "Fecha de la compra (yyyy-mm-dd)"
+          },
+          "supplierId": {
+            "type": "object",
+            "description": "Id del proveedor",
+            "nullable": true
+          },
+          "supplierName": {
+            "type": "string",
+            "description": "Nombre del proveedor"
+          },
+          "paymentMethod": {
+            "type": "string",
+            "description": "Método de pago",
+            "enum": [
+              "efectivo",
+              "tarjeta",
+              "transferencia",
+              "credito",
+              "otro"
+            ]
+          },
+          "status": {
+            "type": "string",
+            "description": "Estado del documento",
+            "enum": [
+              "recibida",
+              "pendiente",
+              "anulada"
+            ]
+          },
+          "origin": {
+            "type": "string",
+            "description": "Origen de la compra",
+            "enum": [
+              "productos",
+              "directa"
+            ]
+          },
+          "costType": {
+            "type": "string",
+            "description": "Tipo de costo",
+            "enum": [
+              "inventario",
+              "servicio",
+              "gasto",
+              "otro"
+            ]
+          },
+          "lines": {
+            "description": "Líneas de la compra",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/LineaCompraRequestDto"
+            }
+          },
+          "notes": {
+            "type": "string",
+            "description": "Notas"
+          },
+          "retentionCents": {
+            "type": "number",
+            "description": "Retención informativa en centavos",
+            "minimum": 0
+          },
+          "userName": {
+            "type": "string",
+            "description": "Usuario que registra la compra"
+          }
+        },
+        "required": [
+          "date",
+          "paymentMethod",
+          "status",
+          "origin",
+          "costType",
+          "lines"
+        ]
+      },
+      "CrearCompraDirectaRequestDto": {
+        "type": "object",
+        "properties": {
+          "number": {
+            "type": "string",
+            "description": "Número del documento; si se omite se genera"
+          },
+          "date": {
+            "type": "string",
+            "description": "Fecha de la compra (yyyy-mm-dd)"
+          },
+          "supplierId": {
+            "type": "object",
+            "description": "Id del proveedor",
+            "nullable": true
+          },
+          "supplierName": {
+            "type": "string",
+            "description": "Nombre del proveedor"
+          },
+          "concept": {
+            "type": "string",
+            "description": "Concepto del gasto directo"
+          },
+          "costType": {
+            "type": "string",
+            "description": "Tipo de costo",
+            "enum": [
+              "inventario",
+              "servicio",
+              "gasto",
+              "otro"
+            ]
+          },
+          "amountCents": {
+            "type": "number",
+            "description": "Importe en centavos",
+            "minimum": 1
+          },
+          "paymentMethod": {
+            "type": "string",
+            "description": "Método de pago",
+            "enum": [
+              "efectivo",
+              "tarjeta",
+              "transferencia",
+              "credito",
+              "otro"
+            ]
+          },
+          "notes": {
+            "type": "string",
+            "description": "Notas"
+          },
+          "retentionCents": {
+            "type": "number",
+            "description": "Retención informativa en centavos",
+            "minimum": 0
+          }
+        },
+        "required": [
+          "date",
+          "concept",
+          "costType",
+          "amountCents",
+          "paymentMethod"
+        ]
+      },
+      "CrearCompraProductoNuevoRequestDto": {
+        "type": "object",
+        "properties": {
+          "number": {
+            "type": "string",
+            "description": "Número del documento; si se omite se genera"
+          },
+          "date": {
+            "type": "string",
+            "description": "Fecha de la compra (yyyy-mm-dd)"
+          },
+          "supplierId": {
+            "type": "object",
+            "description": "Id del proveedor",
+            "nullable": true
+          },
+          "supplierName": {
+            "type": "string",
+            "description": "Nombre del proveedor"
+          },
+          "productName": {
+            "type": "string",
+            "description": "Nombre del producto nuevo"
+          },
+          "category": {
+            "type": "string",
+            "description": "Categoría"
+          },
+          "sku": {
+            "type": "string",
+            "description": "SKU"
+          },
+          "paymentMethod": {
+            "type": "string",
+            "description": "Método de pago",
+            "enum": [
+              "efectivo",
+              "tarjeta",
+              "transferencia",
+              "credito",
+              "otro"
+            ]
+          },
+          "unitCostCents": {
+            "type": "number",
+            "description": "Costo unitario en centavos",
+            "minimum": 0
+          },
+          "salePriceCents": {
+            "type": "number",
+            "description": "Precio de venta en centavos",
+            "minimum": 0
+          },
+          "quantity": {
+            "type": "number",
+            "description": "Cantidad",
+            "minimum": 1
+          },
+          "notes": {
+            "type": "string",
+            "description": "Notas"
+          }
+        },
+        "required": [
+          "date",
+          "productName",
+          "paymentMethod",
+          "unitCostCents",
+          "salePriceCents",
+          "quantity"
+        ]
+      },
+      "OrdenCompraResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "number": {
+            "type": "string"
+          },
+          "date": {
+            "type": "string",
+            "format": "date"
+          },
+          "supplierId": {
+            "type": "object",
+            "nullable": true
+          },
+          "supplierName": {
+            "type": "string"
+          },
+          "lines": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/LineaCompraResponseDto"
+            }
+          },
+          "totalCents": {
+            "type": "number",
+            "description": "Total en centavos"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "pendiente",
+              "convertida",
+              "anulada"
+            ]
+          },
+          "notes": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "createdAt",
+          "updatedAt",
+          "number",
+          "date",
+          "supplierId",
+          "supplierName",
+          "lines",
+          "totalCents",
+          "status",
+          "notes"
+        ]
+      },
+      "CrearOrdenCompraRequestDto": {
+        "type": "object",
+        "properties": {
+          "number": {
+            "type": "string",
+            "description": "Número de la orden; si se omite se genera"
+          },
+          "date": {
+            "type": "string",
+            "description": "Fecha de la orden (yyyy-mm-dd)"
+          },
+          "supplierId": {
+            "type": "object",
+            "description": "Id del proveedor",
+            "nullable": true
+          },
+          "supplierName": {
+            "type": "string",
+            "description": "Nombre del proveedor"
+          },
+          "lines": {
+            "description": "Líneas de la orden",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/LineaCompraRequestDto"
+            }
+          },
+          "notes": {
+            "type": "string",
+            "description": "Notas"
+          }
+        },
+        "required": [
+          "date",
+          "lines"
+        ]
+      },
+      "ConfiguracionDocumentosResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "logoSize": {
+            "type": "string",
+            "enum": [
+              "pequeno",
+              "mediano",
+              "grande"
+            ]
+          },
+          "headerColor": {
+            "type": "string"
+          },
+          "matchTableColor": {
+            "type": "boolean"
+          },
+          "footerMessage": {
+            "type": "string"
+          },
+          "showRuc": {
+            "type": "boolean"
+          },
+          "showAddress": {
+            "type": "boolean"
+          },
+          "showPhone": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "id",
+          "createdAt",
+          "updatedAt",
+          "logoSize",
+          "headerColor",
+          "matchTableColor",
+          "footerMessage",
+          "showRuc",
+          "showAddress",
+          "showPhone"
+        ]
+      },
+      "ActualizarConfiguracionDocumentosRequestDto": {
+        "type": "object",
+        "properties": {
+          "logoSize": {
+            "type": "string",
+            "description": "Tamaño del logo",
+            "enum": [
+              "pequeno",
+              "mediano",
+              "grande"
+            ]
+          },
+          "headerColor": {
+            "type": "string",
+            "description": "Color de cabecera",
+            "example": "#0f172a"
+          },
+          "matchTableColor": {
+            "type": "boolean",
+            "description": "Igualar color de tabla al de cabecera"
+          },
+          "footerMessage": {
+            "type": "string",
+            "description": "Mensaje del pie de página"
+          },
+          "showRuc": {
+            "type": "boolean",
+            "description": "Mostrar RUC"
+          },
+          "showAddress": {
+            "type": "boolean",
+            "description": "Mostrar dirección"
+          },
+          "showPhone": {
+            "type": "boolean",
+            "description": "Mostrar teléfono"
+          }
+        },
+        "required": [
+          "logoSize",
+          "headerColor",
+          "matchTableColor",
+          "footerMessage",
+          "showRuc",
+          "showAddress",
+          "showPhone"
+        ]
+      },
+      "MetodoPagoResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "name": {
+            "type": "string"
+          },
+          "kind": {
+            "type": "string"
+          },
+          "icon": {
+            "type": "string"
+          },
+          "active": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "id",
+          "createdAt",
+          "updatedAt",
+          "name",
+          "kind",
+          "icon",
+          "active"
+        ]
+      },
+      "CrearMetodoPagoRequestDto": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "Nombre visible del método"
+          },
+          "kind": {
+            "type": "string",
+            "description": "Tipo funcional (efectivo, tarjeta, transferencia…)"
+          },
+          "icon": {
+            "type": "string",
+            "description": "Icono"
+          },
+          "active": {
+            "type": "boolean",
+            "description": "Activo",
+            "default": true
+          }
+        },
+        "required": [
+          "name",
+          "kind"
+        ]
+      },
+      "ActualizarMetodoPagoRequestDto": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "Nombre visible del método"
+          },
+          "kind": {
+            "type": "string",
+            "description": "Tipo funcional (efectivo, tarjeta, transferencia…)"
+          },
+          "icon": {
+            "type": "string",
+            "description": "Icono"
+          },
+          "active": {
+            "type": "boolean",
+            "description": "Activo",
+            "default": true
+          }
+        }
+      },
+      "MovimientoCajaResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "date": {
+            "type": "string",
+            "format": "date"
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "ingreso",
+              "egreso"
+            ]
+          },
+          "concept": {
+            "type": "string"
+          },
+          "amountCents": {
+            "type": "number",
+            "description": "Importe en centavos"
+          },
+          "currency": {
+            "type": "string",
+            "enum": [
+              "NIO",
+              "USD"
+            ]
+          },
+          "originalAmountCents": {
+            "type": "number",
+            "description": "Importe original en centavos"
+          },
+          "exchangeRate": {
+            "type": "number"
+          },
+          "paymentMethod": {
+            "type": "string"
+          },
+          "category": {
+            "type": "string"
+          },
+          "source": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "completado",
+              "anulado"
+            ]
+          },
+          "reference": {
+            "type": "string"
+          },
+          "observations": {
+            "type": "string"
+          },
+          "transferId": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "createdAt",
+          "updatedAt",
+          "date",
+          "type",
+          "concept",
+          "amountCents",
+          "currency",
+          "originalAmountCents",
+          "exchangeRate",
+          "paymentMethod",
+          "category",
+          "source",
+          "status",
+          "reference",
+          "observations"
+        ]
+      },
+      "CrearMovimientoCajaRequestDto": {
+        "type": "object",
+        "properties": {
+          "date": {
+            "type": "string",
+            "description": "Fecha local (yyyy-mm-dd)"
+          },
+          "type": {
+            "type": "string",
+            "description": "Dirección del movimiento",
+            "enum": [
+              "ingreso",
+              "egreso"
+            ]
+          },
+          "concept": {
+            "type": "string",
+            "description": "Concepto"
+          },
+          "amountCents": {
+            "type": "number",
+            "description": "Importe en centavos",
+            "minimum": 1
+          },
+          "paymentMethod": {
+            "type": "string",
+            "description": "Método de pago (id o etiqueta)"
+          },
+          "category": {
+            "type": "string",
+            "description": "Categoría funcional"
+          },
+          "currency": {
+            "type": "string",
+            "description": "Moneda",
+            "enum": [
+              "NIO",
+              "USD"
+            ]
+          },
+          "originalAmountCents": {
+            "type": "number",
+            "description": "Importe original capturado en centavos",
+            "minimum": 0
+          },
+          "exchangeRate": {
+            "type": "number",
+            "description": "Tipo de cambio aplicado",
+            "minimum": 0
+          },
+          "reference": {
+            "type": "string",
+            "description": "Referencia visible del documento"
+          },
+          "observations": {
+            "type": "string",
+            "description": "Observaciones"
+          },
+          "source": {
+            "type": "string",
+            "description": "Origen del movimiento"
+          }
+        },
+        "required": [
+          "date",
+          "type",
+          "concept",
+          "amountCents",
+          "paymentMethod"
+        ]
+      },
+      "CierreCajaResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "date": {
+            "type": "string",
+            "format": "date"
+          },
+          "openingBalanceCents": {
+            "type": "number",
+            "description": "Saldo inicial en centavos"
+          },
+          "incomeCents": {
+            "type": "number",
+            "description": "Ingresos del día en centavos"
+          },
+          "expenseCents": {
+            "type": "number",
+            "description": "Egresos del día en centavos"
+          },
+          "expectedBalanceCents": {
+            "type": "number",
+            "description": "Saldo esperado en centavos"
+          },
+          "countedBalanceCents": {
+            "type": "number",
+            "description": "Saldo contado en centavos"
+          },
+          "differenceCents": {
+            "type": "number",
+            "description": "Diferencia en centavos"
+          },
+          "movementsCount": {
+            "type": "number"
+          },
+          "notes": {
+            "type": "string"
+          },
+          "closedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "createdAt",
+          "updatedAt",
+          "date",
+          "openingBalanceCents",
+          "incomeCents",
+          "expenseCents",
+          "expectedBalanceCents",
+          "countedBalanceCents",
+          "differenceCents",
+          "movementsCount",
+          "notes",
+          "closedAt"
+        ]
+      },
+      "CierreCajaPreviewResponseDto": {
+        "type": "object",
+        "properties": {
+          "date": {
+            "type": "string",
+            "format": "date"
+          },
+          "openingBalanceCents": {
+            "type": "number",
+            "description": "Saldo inicial en centavos"
+          },
+          "incomeCents": {
+            "type": "number",
+            "description": "Ingresos del día en centavos"
+          },
+          "expenseCents": {
+            "type": "number",
+            "description": "Egresos del día en centavos"
+          },
+          "expectedBalanceCents": {
+            "type": "number",
+            "description": "Saldo esperado en centavos"
+          },
+          "movementsCount": {
+            "type": "number"
+          },
+          "existing": {
+            "nullable": true,
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/CierreCajaResponseDto"
+              }
+            ]
+          }
+        },
+        "required": [
+          "date",
+          "openingBalanceCents",
+          "incomeCents",
+          "expenseCents",
+          "expectedBalanceCents",
+          "movementsCount",
+          "existing"
+        ]
+      },
+      "CrearCierreCajaRequestDto": {
+        "type": "object",
+        "properties": {
+          "date": {
+            "type": "string",
+            "description": "Fecha del corte (yyyy-mm-dd)"
+          },
+          "countedBalanceCents": {
+            "type": "number",
+            "description": "Saldo contado en centavos",
+            "minimum": 0
+          },
+          "notes": {
+            "type": "string",
+            "description": "Notas del cierre"
+          }
+        },
+        "required": [
+          "date",
+          "countedBalanceCents"
+        ]
+      },
+      "FondoCajaChicaResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "amountCents": {
+            "type": "number",
+            "description": "Monto del fondo en centavos"
+          },
+          "responsible": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "createdAt",
+          "updatedAt",
+          "amountCents",
+          "responsible"
+        ]
+      },
+      "CrearFondoCajaChicaRequestDto": {
+        "type": "object",
+        "properties": {
+          "amountCents": {
+            "type": "number",
+            "description": "Monto del fondo en centavos",
+            "minimum": 0
+          },
+          "responsible": {
+            "type": "string",
+            "description": "Responsable del fondo"
+          }
+        },
+        "required": [
+          "amountCents",
+          "responsible"
+        ]
+      },
+      "MovimientoCajaChicaResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "date": {
+            "type": "string",
+            "format": "date"
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "reposicion",
+              "gasto"
+            ]
+          },
+          "concept": {
+            "type": "string"
+          },
+          "amountCents": {
+            "type": "number",
+            "description": "Importe en centavos"
+          }
+        },
+        "required": [
+          "id",
+          "createdAt",
+          "updatedAt",
+          "date",
+          "type",
+          "concept",
+          "amountCents"
+        ]
+      },
+      "CrearMovimientoCajaChicaRequestDto": {
+        "type": "object",
+        "properties": {
+          "date": {
+            "type": "string",
+            "description": "Fecha local (yyyy-mm-dd)"
+          },
+          "type": {
+            "type": "string",
+            "description": "Tipo de movimiento",
+            "enum": [
+              "reposicion",
+              "gasto"
+            ]
+          },
+          "concept": {
+            "type": "string",
+            "description": "Concepto"
+          },
+          "amountCents": {
+            "type": "number",
+            "description": "Importe en centavos",
+            "minimum": 1
+          }
+        },
+        "required": [
+          "date",
+          "type",
+          "concept",
+          "amountCents"
+        ]
+      },
+      "TransferenciaCajaResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "date": {
+            "type": "string",
+            "format": "date"
+          },
+          "fromId": {
+            "type": "string"
+          },
+          "fromLabel": {
+            "type": "string"
+          },
+          "fromKind": {
+            "type": "string",
+            "enum": [
+              "cash",
+              "bank"
+            ]
+          },
+          "toId": {
+            "type": "string"
+          },
+          "toLabel": {
+            "type": "string"
+          },
+          "toKind": {
+            "type": "string",
+            "enum": [
+              "cash",
+              "bank"
+            ]
+          },
+          "amountCents": {
+            "type": "number",
+            "description": "Importe en centavos"
+          },
+          "concept": {
+            "type": "string"
+          },
+          "notes": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "completado",
+              "anulado"
+            ]
+          }
+        },
+        "required": [
+          "id",
+          "createdAt",
+          "updatedAt",
+          "date",
+          "fromId",
+          "fromLabel",
+          "fromKind",
+          "toId",
+          "toLabel",
+          "toKind",
+          "amountCents",
+          "concept",
+          "notes",
+          "status"
+        ]
+      },
+      "CrearTransferenciaCajaRequestDto": {
+        "type": "object",
+        "properties": {
+          "date": {
+            "type": "string",
+            "description": "Fecha local (yyyy-mm-dd)"
+          },
+          "fromId": {
+            "type": "string",
+            "description": "Id de la cuenta origen"
+          },
+          "fromLabel": {
+            "type": "string",
+            "description": "Etiqueta de la cuenta origen"
+          },
+          "fromKind": {
+            "type": "string",
+            "description": "Tipo de cuenta origen",
+            "enum": [
+              "cash",
+              "bank"
+            ]
+          },
+          "toId": {
+            "type": "string",
+            "description": "Id de la cuenta destino"
+          },
+          "toLabel": {
+            "type": "string",
+            "description": "Etiqueta de la cuenta destino"
+          },
+          "toKind": {
+            "type": "string",
+            "description": "Tipo de cuenta destino",
+            "enum": [
+              "cash",
+              "bank"
+            ]
+          },
+          "amountCents": {
+            "type": "number",
+            "description": "Importe en centavos",
+            "minimum": 1
+          },
+          "concept": {
+            "type": "string",
+            "description": "Concepto de la transferencia"
+          },
+          "notes": {
+            "type": "string",
+            "description": "Notas"
+          }
+        },
+        "required": [
+          "date",
+          "fromId",
+          "fromLabel",
+          "fromKind",
+          "toId",
+          "toLabel",
+          "toKind",
+          "amountCents",
+          "concept"
+        ]
+      },
+      "ClienteComercioResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "name": {
+            "type": "string"
+          },
+          "phone": {
+            "type": "string"
+          },
+          "email": {
+            "type": "string"
+          },
+          "company": {
+            "type": "string"
+          },
+          "buyerId": {
+            "type": "string"
+          },
+          "source": {
+            "type": "string",
+            "enum": [
+              "order",
+              "manual",
+              "import"
+            ]
+          }
+        },
+        "required": [
+          "id",
+          "createdAt",
+          "updatedAt",
+          "name",
+          "phone",
+          "email",
+          "company",
+          "source"
+        ]
+      },
+      "CrearClienteComercioRequestDto": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "Nombre del cliente"
+          },
+          "phone": {
+            "type": "string",
+            "description": "Teléfono"
+          },
+          "email": {
+            "type": "string",
+            "description": "Correo"
+          },
+          "company": {
+            "type": "string",
+            "description": "Empresa del cliente"
+          },
+          "buyerId": {
+            "type": "string",
+            "description": "Id del comprador en Core Engine"
+          },
+          "source": {
+            "type": "string",
+            "description": "Origen",
+            "enum": [
+              "manual",
+              "import"
+            ]
+          }
+        },
+        "required": [
+          "name"
+        ]
+      },
+      "ImportarClientesRequestDto": {
+        "type": "object",
+        "properties": {
+          "clientes": {
+            "description": "Filas a importar (máximo 500)",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CrearClienteComercioRequestDto"
+            }
+          }
+        },
+        "required": [
+          "clientes"
+        ]
+      },
+      "ImportarClientesResponseDto": {
+        "type": "object",
+        "properties": {
+          "imported": {
+            "type": "number"
+          },
+          "skipped": {
+            "type": "number"
+          },
+          "errors": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": [
+          "imported",
+          "skipped",
+          "errors"
+        ]
+      },
+      "ActualizarClienteComercioRequestDto": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "Nombre del cliente"
+          },
+          "phone": {
+            "type": "string",
+            "description": "Teléfono"
+          },
+          "email": {
+            "type": "string",
+            "description": "Correo"
+          },
+          "company": {
+            "type": "string",
+            "description": "Empresa del cliente"
+          },
+          "buyerId": {
+            "type": "string",
+            "description": "Id del comprador en Core Engine"
+          },
+          "source": {
+            "type": "string",
+            "description": "Origen",
+            "enum": [
+              "manual",
+              "import"
+            ]
+          }
+        }
+      },
+      "CodigoBarrasResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "productName": {
+            "type": "string"
+          },
+          "sku": {
+            "type": "string"
+          },
+          "code": {
+            "type": "string"
+          },
+          "symbology": {
+            "type": "string",
+            "enum": [
+              "EAN13",
+              "CODE128"
+            ]
+          },
+          "copies": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "id",
+          "createdAt",
+          "updatedAt",
+          "productName",
+          "sku",
+          "code",
+          "symbology",
+          "copies"
+        ]
+      },
+      "CrearCodigoBarrasRequestDto": {
+        "type": "object",
+        "properties": {
+          "productName": {
+            "type": "string",
+            "description": "Producto al que pertenece la etiqueta"
+          },
+          "sku": {
+            "type": "string",
+            "description": "SKU del producto"
+          },
+          "code": {
+            "type": "string",
+            "description": "Código; vacío = se genera según la simbología"
+          },
+          "symbology": {
+            "type": "string",
+            "description": "Simbología",
+            "enum": [
+              "EAN13",
+              "CODE128"
+            ]
+          },
+          "copies": {
+            "type": "number",
+            "description": "Copias a imprimir (1-100)",
+            "minimum": 1,
+            "maximum": 100
+          }
+        },
+        "required": [
+          "productName",
+          "sku",
+          "symbology",
+          "copies"
+        ]
+      },
       "UsuarioResponseDto": {
         "type": "object",
         "properties": {
