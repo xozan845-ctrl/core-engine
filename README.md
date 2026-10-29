@@ -151,6 +151,10 @@ en `docs/rules/cd/` (R-CD).
 - `GET /api/v1/admin/inventario`, `GET /api/v1/admin/envios`
 - `GET /api/v1/finanzas/asientos|proyecciones|kpis|punto-equilibrio` (admin),
   `POST /api/v1/finanzas/asientos`, `GET /api/v1/vendedores/me/fiscal`
+- `GET|POST|PATCH|DELETE /api/v1/comercio/**` (empresa/vendedor): bancos,
+  créditos, gastos, cuentas por pagar, proveedores, compras, órdenes de compra,
+  caja (movimientos, métodos, cierres, caja chica y transferencias), clientes y
+  códigos de barras — reemplaza la persistencia local de esos módulos.
 - Infra: `GET /health` (liveness) y `GET /ready` (readiness agregada de los 7 servicios), `GET /metrics`, Swagger en `/docs` de cada servicio
 
 Endpoints internos (servicio→servicio) protegidos con `x-internal-key`: `internal/usuarios/:id`,
@@ -192,8 +196,8 @@ separa las rutas `/api/v1/**` de las `/internal/**` y escribe dos artefactos:
 npm run swagger:export   # regenera docs/openapi/*.json + los dos agregados de docs/api/
 ```
 
-Cobertura actual: **165/165 operaciones documentadas** en 10 servicios:
-**146 públicas** (139 con schema de respuesta + 7 sin contenido) y **19 internas**
+Cobertura actual: **251/251 operaciones documentadas** en 10 servicios:
+**230 públicas** (210 con schema de respuesta + 20 sin contenido) y **21 internas**
 (todas con schema).
 
 ## Variables de entorno (`.env` en dev · `.env.production` en producción)

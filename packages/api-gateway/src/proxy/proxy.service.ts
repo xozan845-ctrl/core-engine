@@ -84,6 +84,7 @@ export const DESTINOS: ServicioDestino[] = [
     url: process.env.FINANCE_SERVICE_URL ?? 'http://finance-service:3007',
     patrones: [
       { patron: /^\/api\/v1\/finanzas(\/|$)/, metodos: ['*'] },
+      { patron: /^\/api\/v1\/comercio(\/|$)/, metodos: ['*'] },
       { patron: /^\/api\/v1\/vendedores\/me\/fiscal/, metodos: ['*'] },
     ],
   },
