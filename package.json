@@ -55,7 +55,9 @@
     },
     "proxy-addr": "^2.0.8",
     "query-string": "file:./vendor/query-string-9.5.1.tgz",
-    "multer": "^2.5.0"
+    "multer": "^2.5.0",
+    "qs": "^6.17.1",
+    "stream-json": "file:./vendor/stream-json-3.8.0.tgz"
   },
   "dependencies": {
     "body-parser": "^2.4.0",
