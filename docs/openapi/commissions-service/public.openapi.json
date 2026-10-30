@@ -1,5 +1,14 @@
 {
   "openapi": "3.0.0",
+  "info": {
+    "title": "Core Engine · commissions-service · API pública",
+    "description": "Contrato público (/api/v1/**) de commissions-service. No contiene rutas /internal/**.",
+    "version": "v1",
+    "contact": {}
+  },
+  "x-servicio": "commissions-service",
+  "x-superficie": "publica",
+  "tags": [],
   "paths": {
     "/api/v1/vendedores/me/liquidaciones": {
       "get": {
@@ -235,14 +244,6 @@
       }
     }
   },
-  "info": {
-    "title": "Core Engine · commissions-service",
-    "description": "Comisiones y liquidaciones de vendedores (fuera de producción)",
-    "version": "v1",
-    "contact": {}
-  },
-  "tags": [],
-  "servers": [],
   "components": {
     "securitySchemes": {
       "bearer": {
@@ -252,152 +253,74 @@
       }
     },
     "schemas": {
-      "LiquidacionResponseDto": {
+      "EstadoCuentaEmpresaResponseDto": {
         "type": "object",
         "properties": {
-          "id": {
+          "empresa_id": {
             "type": "string",
-            "description": "Id de la liquidación",
+            "description": "Id de la empresa",
             "format": "uuid"
           },
+          "ventas": {
+            "description": "Ventas de la empresa",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/VentaEmpresaResponseDto"
+            }
+          },
+          "comisiones_pendientes": {
+            "type": "string",
+            "description": "Comisiones pendientes en córdobas",
+            "example": "126.00"
+          },
+          "liquidaciones": {
+            "description": "Liquidaciones de la empresa",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/LiquidacionEmpresaConMontoResponseDto"
+            }
+          }
+        },
+        "required": [
+          "empresa_id",
+          "ventas",
+          "comisiones_pendientes",
+          "liquidaciones"
+        ]
+      },
+      "EstadoCuentaResponseDto": {
+        "type": "object",
+        "properties": {
           "vendedor_id": {
             "type": "string",
             "description": "Id del vendedor",
             "format": "uuid"
           },
-          "periodo_inicio": {
-            "type": "string",
-            "description": "Inicio del periodo (ISO 8601)",
-            "format": "date"
+          "ventas": {
+            "description": "Ventas del vendedor",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/VentaVendedorResponseDto"
+            }
           },
-          "periodo_fin": {
+          "comisiones_pendientes": {
             "type": "string",
-            "description": "Fin del periodo (ISO 8601)",
-            "format": "date"
-          },
-          "monto_cents": {
-            "type": "number",
-            "description": "Monto liquidado en centavos",
-            "example": 13800
-          },
-          "estado": {
-            "type": "string",
-            "description": "Estado de la liquidación",
-            "enum": [
-              "aprobada",
-              "pagada"
-            ],
-            "example": "aprobada"
-          },
-          "creado_en": {
-            "type": "string",
-            "description": "Fecha de creación (ISO 8601 UTC)",
-            "format": "date-time"
-          }
-        },
-        "required": [
-          "id",
-          "vendedor_id",
-          "periodo_inicio",
-          "periodo_fin",
-          "monto_cents",
-          "estado",
-          "creado_en"
-        ]
-      },
-      "LiquidacionEmpresaResponseDto": {
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "string",
-            "description": "Id de la liquidación",
-            "format": "uuid"
-          },
-          "empresa_id": {
-            "type": "string",
-            "description": "Id de la empresa beneficiaria",
-            "format": "uuid"
-          },
-          "periodo_inicio": {
-            "type": "string",
-            "description": "Inicio del periodo (ISO 8601)",
-            "format": "date"
-          },
-          "periodo_fin": {
-            "type": "string",
-            "description": "Fin del periodo (ISO 8601)",
-            "format": "date"
-          },
-          "monto_cents": {
-            "type": "number",
-            "description": "Monto liquidado en centavos",
-            "example": 4400
-          },
-          "estado": {
-            "type": "string",
-            "description": "Estado de la liquidación",
-            "enum": [
-              "aprobada",
-              "pagada"
-            ]
-          },
-          "creado_en": {
-            "type": "string",
-            "description": "Fecha de creación (ISO 8601 UTC)",
-            "format": "date-time"
-          }
-        },
-        "required": [
-          "id",
-          "empresa_id",
-          "periodo_inicio",
-          "periodo_fin",
-          "monto_cents",
-          "estado",
-          "creado_en"
-        ]
-      },
-      "VentaVendedorResponseDto": {
-        "type": "object",
-        "properties": {
-          "order_id": {
-            "type": "string",
-            "description": "Id de la orden",
-            "format": "uuid"
-          },
-          "venta": {
-            "type": "string",
-            "description": "Monto de la venta en córdobas con dos decimales",
-            "example": "1150.00"
-          },
-          "comision": {
-            "type": "string",
-            "description": "Comisión en córdobas con dos decimales",
+            "description": "Comisiones pendientes en córdobas",
             "example": "138.00"
           },
-          "monto_vendedor": {
-            "type": "string",
-            "description": "Monto neto para el vendedor",
-            "example": "1012.00"
-          },
-          "estado": {
-            "type": "string",
-            "description": "Estado de la comisión",
-            "example": "acreditada"
-          },
-          "fecha": {
-            "type": "string",
-            "description": "Fecha de la venta (ISO 8601 UTC)",
-            "format": "date-time"
+          "liquidaciones": {
+            "description": "Liquidaciones del vendedor",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/LiquidacionConMontoResponseDto"
+            }
           }
         },
         "required": [
-          "order_id",
-          "venta",
-          "comision",
-          "monto_vendedor",
-          "estado",
-          "fecha"
+          "vendedor_id",
+          "ventas",
+          "comisiones_pendientes",
+          "liquidaciones"
         ]
       },
       "LiquidacionConMontoResponseDto": {
@@ -459,84 +382,6 @@
           "monto"
         ]
       },
-      "EstadoCuentaResponseDto": {
-        "type": "object",
-        "properties": {
-          "vendedor_id": {
-            "type": "string",
-            "description": "Id del vendedor",
-            "format": "uuid"
-          },
-          "ventas": {
-            "description": "Ventas del vendedor",
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/VentaVendedorResponseDto"
-            }
-          },
-          "comisiones_pendientes": {
-            "type": "string",
-            "description": "Comisiones pendientes en córdobas",
-            "example": "138.00"
-          },
-          "liquidaciones": {
-            "description": "Liquidaciones del vendedor",
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/LiquidacionConMontoResponseDto"
-            }
-          }
-        },
-        "required": [
-          "vendedor_id",
-          "ventas",
-          "comisiones_pendientes",
-          "liquidaciones"
-        ]
-      },
-      "VentaEmpresaResponseDto": {
-        "type": "object",
-        "properties": {
-          "order_id": {
-            "type": "string",
-            "description": "Id de la orden",
-            "format": "uuid"
-          },
-          "venta": {
-            "type": "string",
-            "description": "Monto de la venta en córdobas con dos decimales",
-            "example": "1150.00"
-          },
-          "comision": {
-            "type": "string",
-            "description": "Comisión total en córdobas con dos decimales",
-            "example": "138.00"
-          },
-          "monto_empresario": {
-            "type": "string",
-            "description": "Monto neto para la empresa",
-            "example": "126.00"
-          },
-          "estado": {
-            "type": "string",
-            "description": "Estado de la comisión",
-            "example": "acreditada"
-          },
-          "fecha": {
-            "type": "string",
-            "description": "Fecha de la venta (ISO 8601 UTC)",
-            "format": "date-time"
-          }
-        },
-        "required": [
-          "order_id",
-          "venta",
-          "comision",
-          "monto_empresario",
-          "estado",
-          "fecha"
-        ]
-      },
       "LiquidacionEmpresaConMontoResponseDto": {
         "type": "object",
         "properties": {
@@ -595,39 +440,109 @@
           "monto"
         ]
       },
-      "EstadoCuentaEmpresaResponseDto": {
+      "LiquidacionEmpresaResponseDto": {
         "type": "object",
         "properties": {
-          "empresa_id": {
+          "id": {
             "type": "string",
-            "description": "Id de la empresa",
+            "description": "Id de la liquidación",
             "format": "uuid"
           },
-          "ventas": {
-            "description": "Ventas de la empresa",
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/VentaEmpresaResponseDto"
-            }
-          },
-          "comisiones_pendientes": {
+          "empresa_id": {
             "type": "string",
-            "description": "Comisiones pendientes en córdobas",
-            "example": "126.00"
+            "description": "Id de la empresa beneficiaria",
+            "format": "uuid"
           },
-          "liquidaciones": {
-            "description": "Liquidaciones de la empresa",
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/LiquidacionEmpresaConMontoResponseDto"
-            }
+          "periodo_inicio": {
+            "type": "string",
+            "description": "Inicio del periodo (ISO 8601)",
+            "format": "date"
+          },
+          "periodo_fin": {
+            "type": "string",
+            "description": "Fin del periodo (ISO 8601)",
+            "format": "date"
+          },
+          "monto_cents": {
+            "type": "number",
+            "description": "Monto liquidado en centavos",
+            "example": 4400
+          },
+          "estado": {
+            "type": "string",
+            "description": "Estado de la liquidación",
+            "enum": [
+              "aprobada",
+              "pagada"
+            ]
+          },
+          "creado_en": {
+            "type": "string",
+            "description": "Fecha de creación (ISO 8601 UTC)",
+            "format": "date-time"
           }
         },
         "required": [
+          "id",
           "empresa_id",
-          "ventas",
-          "comisiones_pendientes",
-          "liquidaciones"
+          "periodo_inicio",
+          "periodo_fin",
+          "monto_cents",
+          "estado",
+          "creado_en"
+        ]
+      },
+      "LiquidacionResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Id de la liquidación",
+            "format": "uuid"
+          },
+          "vendedor_id": {
+            "type": "string",
+            "description": "Id del vendedor",
+            "format": "uuid"
+          },
+          "periodo_inicio": {
+            "type": "string",
+            "description": "Inicio del periodo (ISO 8601)",
+            "format": "date"
+          },
+          "periodo_fin": {
+            "type": "string",
+            "description": "Fin del periodo (ISO 8601)",
+            "format": "date"
+          },
+          "monto_cents": {
+            "type": "number",
+            "description": "Monto liquidado en centavos",
+            "example": 13800
+          },
+          "estado": {
+            "type": "string",
+            "description": "Estado de la liquidación",
+            "enum": [
+              "aprobada",
+              "pagada"
+            ],
+            "example": "aprobada"
+          },
+          "creado_en": {
+            "type": "string",
+            "description": "Fecha de creación (ISO 8601 UTC)",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "vendedor_id",
+          "periodo_inicio",
+          "periodo_fin",
+          "monto_cents",
+          "estado",
+          "creado_en"
         ]
       },
       "ReporteKpiResponseDto": {
@@ -695,6 +610,92 @@
           "stock_total",
           "agotados",
           "devoluciones_mes"
+        ]
+      },
+      "VentaEmpresaResponseDto": {
+        "type": "object",
+        "properties": {
+          "order_id": {
+            "type": "string",
+            "description": "Id de la orden",
+            "format": "uuid"
+          },
+          "venta": {
+            "type": "string",
+            "description": "Monto de la venta en córdobas con dos decimales",
+            "example": "1150.00"
+          },
+          "comision": {
+            "type": "string",
+            "description": "Comisión total en córdobas con dos decimales",
+            "example": "138.00"
+          },
+          "monto_empresario": {
+            "type": "string",
+            "description": "Monto neto para la empresa",
+            "example": "126.00"
+          },
+          "estado": {
+            "type": "string",
+            "description": "Estado de la comisión",
+            "example": "acreditada"
+          },
+          "fecha": {
+            "type": "string",
+            "description": "Fecha de la venta (ISO 8601 UTC)",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "order_id",
+          "venta",
+          "comision",
+          "monto_empresario",
+          "estado",
+          "fecha"
+        ]
+      },
+      "VentaVendedorResponseDto": {
+        "type": "object",
+        "properties": {
+          "order_id": {
+            "type": "string",
+            "description": "Id de la orden",
+            "format": "uuid"
+          },
+          "venta": {
+            "type": "string",
+            "description": "Monto de la venta en córdobas con dos decimales",
+            "example": "1150.00"
+          },
+          "comision": {
+            "type": "string",
+            "description": "Comisión en córdobas con dos decimales",
+            "example": "138.00"
+          },
+          "monto_vendedor": {
+            "type": "string",
+            "description": "Monto neto para el vendedor",
+            "example": "1012.00"
+          },
+          "estado": {
+            "type": "string",
+            "description": "Estado de la comisión",
+            "example": "acreditada"
+          },
+          "fecha": {
+            "type": "string",
+            "description": "Fecha de la venta (ISO 8601 UTC)",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "order_id",
+          "venta",
+          "comision",
+          "monto_vendedor",
+          "estado",
+          "fecha"
         ]
       }
     }

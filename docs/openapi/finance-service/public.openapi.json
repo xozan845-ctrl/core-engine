@@ -1,98 +1,15 @@
 {
   "openapi": "3.0.0",
+  "info": {
+    "title": "Core Engine · finance-service · API pública",
+    "description": "Contrato público (/api/v1/**) de finance-service. No contiene rutas /internal/**.",
+    "version": "v1",
+    "contact": {}
+  },
+  "x-servicio": "finance-service",
+  "x-superficie": "publica",
+  "tags": [],
   "paths": {
-    "/internal/finance/sujetos/{usuarioId}": {
-      "get": {
-        "operationId": "InternoController_sujeto",
-        "parameters": [
-          {
-            "name": "usuarioId",
-            "required": true,
-            "in": "path",
-            "description": "Id del usuario",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Sujeto fiscal del usuario",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/SujetoTributarioResponseDto"
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "internalKey": []
-          }
-        ],
-        "summary": "Situación fiscal de un usuario (para identity)",
-        "tags": [
-          "Finanzas (interno)"
-        ]
-      }
-    },
-    "/internal/finance/declaraciones": {
-      "get": {
-        "operationId": "InternoController_declaraciones",
-        "parameters": [
-          {
-            "name": "tipo",
-            "required": false,
-            "in": "query",
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "periodo_inicio",
-            "required": false,
-            "in": "query",
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "estado",
-            "required": false,
-            "in": "query",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Declaraciones del periodo",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/components/schemas/DeclaracionResponseDto"
-                  }
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "internalKey": []
-          }
-        ],
-        "summary": "Declaraciones del periodo (reportes)",
-        "tags": [
-          "Finanzas (interno)"
-        ]
-      }
-    },
     "/api/v1/finanzas/cuentas": {
       "get": {
         "operationId": "ContabilidadController_cuentas",
@@ -3374,14 +3291,6 @@
       }
     }
   },
-  "info": {
-    "title": "Core Engine · finance-service",
-    "description": "Finanzas y contabilidad: proyecciones (cap. 8), partida doble y régimen fiscal multijurisdicción (Tabla 21)",
-    "version": "v1",
-    "contact": {}
-  },
-  "tags": [],
-  "servers": [],
   "components": {
     "securitySchemes": {
       "bearer": {
@@ -3396,338 +3305,232 @@
       }
     },
     "schemas": {
-      "SujetoTributarioResponseDto": {
+      "ActualizarClienteComercioRequestDto": {
         "type": "object",
         "properties": {
-          "id": {
+          "name": {
             "type": "string",
-            "description": "Id del sujeto",
-            "format": "uuid"
+            "description": "Nombre del cliente"
           },
-          "jurisdiccion": {
+          "phone": {
             "type": "string",
-            "description": "Jurisdicción",
-            "example": "NI"
+            "description": "Teléfono"
           },
-          "regimen_id": {
+          "email": {
             "type": "string",
-            "description": "Id del régimen",
-            "format": "uuid"
+            "description": "Correo"
           },
-          "regimen_nombre": {
+          "company": {
             "type": "string",
-            "description": "Nombre del régimen"
+            "description": "Empresa del cliente"
           },
-          "razon_social": {
+          "buyerId": {
             "type": "string",
-            "description": "Razón social"
+            "description": "Id del comprador en Core Engine"
           },
-          "ruc": {
+          "source": {
             "type": "string",
-            "description": "RUC"
+            "description": "Origen",
+            "enum": [
+              "manual",
+              "import"
+            ]
+          }
+        }
+      },
+      "ActualizarConfiguracionDocumentosRequestDto": {
+        "type": "object",
+        "properties": {
+          "logoSize": {
+            "type": "string",
+            "description": "Tamaño del logo",
+            "enum": [
+              "pequeno",
+              "mediano",
+              "grande"
+            ]
           },
-          "es_plataforma": {
+          "headerColor": {
+            "type": "string",
+            "description": "Color de cabecera",
+            "example": "#0f172a"
+          },
+          "matchTableColor": {
             "type": "boolean",
-            "description": "¿Es la plataforma?",
-            "example": false
+            "description": "Igualar color de tabla al de cabecera"
           },
-          "estado": {
+          "footerMessage": {
             "type": "string",
-            "description": "Estado",
-            "enum": [
-              "ACTIVO",
-              "BAJA"
-            ],
-            "example": "ACTIVO"
+            "description": "Mensaje del pie de página"
           },
-          "creado_en": {
-            "type": "string",
-            "description": "Fecha de creación (ISO 8601 UTC)",
-            "format": "date-time"
+          "showRuc": {
+            "type": "boolean",
+            "description": "Mostrar RUC"
+          },
+          "showAddress": {
+            "type": "boolean",
+            "description": "Mostrar dirección"
+          },
+          "showPhone": {
+            "type": "boolean",
+            "description": "Mostrar teléfono"
           }
         },
         "required": [
-          "id",
-          "jurisdiccion",
-          "razon_social",
-          "es_plataforma",
-          "estado",
-          "creado_en"
+          "logoSize",
+          "headerColor",
+          "matchTableColor",
+          "footerMessage",
+          "showRuc",
+          "showAddress",
+          "showPhone"
         ]
       },
-      "DeclaracionResponseDto": {
+      "ActualizarCuentaBancoRequestDto": {
         "type": "object",
         "properties": {
-          "id": {
+          "bank": {
             "type": "string",
-            "description": "Id de la declaración",
-            "format": "uuid"
+            "description": "Banco",
+            "example": "BAC"
           },
-          "jurisdiccion": {
+          "alias": {
             "type": "string",
-            "description": "Jurisdicción",
-            "example": "NI"
+            "description": "Alias visible de la cuenta",
+            "example": "Operativa"
           },
-          "tipo": {
+          "accountNumber": {
             "type": "string",
-            "description": "Tipo",
-            "enum": [
-              "IVA",
-              "IR",
-              "CUOTA_FIJA"
-            ],
-            "example": "IVA"
+            "description": "Número de cuenta"
           },
-          "periodo_inicio": {
-            "type": "string",
-            "description": "Inicio del periodo",
-            "format": "date"
-          },
-          "periodo_fin": {
-            "type": "string",
-            "description": "Fin del periodo",
-            "format": "date"
-          },
-          "base_gravada_cents": {
-            "type": "number",
-            "description": "Base gravada en centavos",
-            "example": 1150000
-          },
-          "iva_debitado_cents": {
-            "type": "number",
-            "description": "IVA debitado en centavos",
-            "example": 172500
-          },
-          "iva_credito_cents": {
-            "type": "number",
-            "description": "IVA crédito en centavos",
-            "example": 0
-          },
-          "iva_a_pagar_cents": {
-            "type": "number",
-            "description": "IVA a pagar en centavos",
-            "example": 172500
-          },
-          "renta_bruta_cents": {
-            "type": "number",
-            "description": "Renta bruta en centavos",
-            "example": 1150000
-          },
-          "renta_gravable_cents": {
-            "type": "number",
-            "description": "Renta gravable en centavos",
-            "example": 575000
-          },
-          "ir_a_pagar_cents": {
-            "type": "number",
-            "description": "IR a pagar en centavos",
-            "example": 172500
-          },
-          "cuota_cents": {
-            "type": "number",
-            "description": "Cuota fija en centavos",
-            "example": 5000
-          },
-          "estado": {
-            "type": "string",
-            "description": "Estado",
-            "enum": [
-              "PENDIENTE",
-              "GENERADA",
-              "PRESENTADA",
-              "PAGADA",
-              "CANCELADA"
-            ],
-            "example": "GENERADA"
-          },
-          "detalle": {
-            "type": "object",
-            "description": "Detalle de la declaración",
-            "nullable": true
-          },
-          "generada_en": {
-            "type": "string",
-            "description": "Fecha de generación",
-            "format": "date-time"
-          },
-          "presentada_en": {
-            "type": "string",
-            "description": "Fecha de presentación",
-            "format": "date-time"
-          },
-          "creado_en": {
-            "type": "string",
-            "description": "Fecha de creación (ISO 8601 UTC)",
-            "format": "date-time"
-          }
-        },
-        "required": [
-          "id",
-          "jurisdiccion",
-          "tipo",
-          "periodo_inicio",
-          "periodo_fin",
-          "base_gravada_cents",
-          "iva_debitado_cents",
-          "iva_credito_cents",
-          "iva_a_pagar_cents",
-          "renta_bruta_cents",
-          "renta_gravable_cents",
-          "ir_a_pagar_cents",
-          "cuota_cents",
-          "estado",
-          "creado_en"
-        ]
-      },
-      "CuentaResponseDto": {
-        "type": "object",
-        "properties": {
-          "codigo": {
-            "type": "string",
-            "description": "Código de la cuenta",
-            "example": "1101"
-          },
-          "nombre": {
-            "type": "string",
-            "description": "Nombre de la cuenta",
-            "example": "Caja"
-          },
-          "tipo": {
+          "type": {
             "type": "string",
             "description": "Tipo de cuenta",
             "enum": [
-              "ACTIVO",
-              "PASIVO",
-              "CAPITAL",
-              "INGRESO",
-              "COSTO",
-              "GASTO"
-            ],
-            "example": "ACTIVO"
-          },
-          "naturaleza": {
-            "type": "string",
-            "description": "Naturaleza",
-            "enum": [
-              "DEUDORA",
-              "ACREEDORA"
-            ],
-            "example": "DEUDORA"
-          },
-          "nivel": {
-            "type": "number",
-            "description": "Nivel jerárquico",
-            "example": 1
-          },
-          "estado": {
-            "type": "string",
-            "description": "Estado",
-            "enum": [
-              "activa",
-              "inactiva"
-            ],
-            "example": "activa"
-          }
-        },
-        "required": [
-          "codigo",
-          "nombre",
-          "tipo",
-          "naturaleza",
-          "nivel",
-          "estado"
-        ]
-      },
-      "CrearCuentaRequestDto": {
-        "type": "object",
-        "properties": {
-          "codigo": {
-            "type": "string",
-            "description": "Código de la cuenta"
-          },
-          "nombre": {
-            "type": "string",
-            "description": "Nombre de la cuenta",
-            "minLength": 3
-          },
-          "tipo": {
-            "type": "string",
-            "description": "Tipo de cuenta",
-            "enum": [
-              "ACTIVO",
-              "PASIVO",
-              "CAPITAL",
-              "INGRESO",
-              "COSTO",
-              "GASTO"
+              "ahorro",
+              "corriente",
+              "wallet"
             ]
           },
-          "naturaleza": {
-            "type": "string",
-            "description": "Naturaleza de la cuenta",
-            "enum": [
-              "DEUDORA",
-              "ACREEDORA"
-            ]
-          },
-          "nivel": {
+          "balanceCents": {
             "type": "number",
-            "description": "Nivel jerárquico"
+            "description": "Saldo inicial en centavos",
+            "minimum": 0
           }
-        },
-        "required": [
-          "codigo",
-          "nombre",
-          "tipo",
-          "naturaleza"
-        ]
+        }
       },
-      "EstadoCuentaRequestDto": {
+      "ActualizarGastoRequestDto": {
         "type": "object",
         "properties": {
-          "estado": {
+          "date": {
             "type": "string",
-            "description": "Estado de la cuenta",
+            "description": "Fecha del gasto (yyyy-mm-dd)"
+          },
+          "concept": {
+            "type": "string",
+            "description": "Concepto del gasto"
+          },
+          "category": {
+            "type": "string",
+            "description": "Categoría visible (puede ser personalizada)"
+          },
+          "type": {
+            "type": "string",
+            "description": "Tipo de gasto",
             "enum": [
-              "activa",
-              "inactiva"
+              "inmediato",
+              "programado",
+              "recurrente"
             ]
+          },
+          "amountCents": {
+            "type": "number",
+            "description": "Importe en centavos",
+            "minimum": 1
+          },
+          "paymentMethod": {
+            "type": "string",
+            "description": "Método de pago",
+            "enum": [
+              "efectivo",
+              "tarjeta",
+              "transferencia",
+              "credito",
+              "otro"
+            ]
+          },
+          "includesVat": {
+            "type": "boolean",
+            "description": "Incluye IVA",
+            "default": false
+          },
+          "irRetentionCents": {
+            "type": "number",
+            "description": "Retención de IR en centavos",
+            "minimum": 0,
+            "default": 0
+          },
+          "beneficiary": {
+            "type": "string",
+            "description": "Proveedor, empleado o beneficiario"
+          },
+          "notes": {
+            "type": "string",
+            "description": "Notas"
+          },
+          "scheduledFor": {
+            "type": "string",
+            "description": "Fecha programada (yyyy-mm-dd)"
+          },
+          "recurrence": {
+            "type": "string",
+            "description": "Etiqueta de recurrencia"
           }
-        },
-        "required": [
-          "estado"
-        ]
+        }
       },
-      "DetalleAsientoResponseDto": {
+      "ActualizarMetodoPagoRequestDto": {
         "type": "object",
         "properties": {
-          "cuenta_codigo": {
+          "name": {
             "type": "string",
-            "description": "Código de cuenta contable"
+            "description": "Nombre visible del método"
           },
-          "debe_cents": {
-            "type": "number",
-            "description": "Débito en centavos",
-            "example": 115000
-          },
-          "haber_cents": {
-            "type": "number",
-            "description": "Crédito en centavos",
-            "example": 115000
-          },
-          "concepto": {
+          "kind": {
             "type": "string",
-            "description": "Concepto del detalle"
+            "description": "Tipo funcional (efectivo, tarjeta, transferencia…)"
           },
-          "orden": {
-            "type": "number",
-            "description": "Orden del detalle"
+          "icon": {
+            "type": "string",
+            "description": "Icono"
+          },
+          "active": {
+            "type": "boolean",
+            "description": "Activo",
+            "default": true
+          }
+        }
+      },
+      "Acumulado24MesesResponseDto": {
+        "type": "object",
+        "properties": {
+          "gmv_cents": {
+            "type": "number"
+          },
+          "ingresos_cents": {
+            "type": "number"
+          },
+          "costos_cents": {
+            "type": "number"
+          },
+          "flujo_cents": {
+            "type": "number"
           }
         },
         "required": [
-          "cuenta_codigo",
-          "debe_cents",
-          "haber_cents"
+          "gmv_cents",
+          "ingresos_cents",
+          "costos_cents",
+          "flujo_cents"
         ]
       },
       "AsientoResponseDto": {
@@ -3810,162 +3613,338 @@
           "detalles"
         ]
       },
-      "DetalleAsientoRequestDto": {
+      "CierreCajaPreviewResponseDto": {
         "type": "object",
         "properties": {
-          "cuenta_codigo": {
+          "date": {
             "type": "string",
-            "description": "Código de cuenta contable"
+            "format": "date"
           },
-          "debe_cents": {
+          "openingBalanceCents": {
             "type": "number",
-            "description": "Débito en centavos",
-            "minimum": 0
+            "description": "Saldo inicial en centavos"
           },
-          "haber_cents": {
+          "incomeCents": {
             "type": "number",
-            "description": "Crédito en centavos",
-            "minimum": 0
+            "description": "Ingresos del día en centavos"
           },
-          "concepto": {
-            "type": "string",
-            "description": "Concepto del detalle"
-          },
-          "orden": {
+          "expenseCents": {
             "type": "number",
-            "description": "Orden del detalle"
-          }
-        },
-        "required": [
-          "cuenta_codigo",
-          "debe_cents",
-          "haber_cents"
-        ]
-      },
-      "CrearAsientoRequestDto": {
-        "type": "object",
-        "properties": {
-          "concepto": {
-            "type": "string",
-            "description": "Concepto del asiento",
-            "minLength": 3
+            "description": "Egresos del día en centavos"
           },
-          "fecha": {
-            "type": "string",
-            "description": "Fecha (ISO 8601)"
+          "expectedBalanceCents": {
+            "type": "number",
+            "description": "Saldo esperado en centavos"
           },
-          "tipo": {
-            "type": "string",
-            "description": "Tipo de asiento",
-            "enum": [
-              "INGRESO",
-              "EGRESO",
-              "AJUSTE",
-              "CIERRE",
-              "APERTURA",
-              "MANUAL"
-            ]
+          "movementsCount": {
+            "type": "number"
           },
-          "referencia_tipo": {
-            "type": "string",
-            "description": "Tipo de referencia"
-          },
-          "referencia_id": {
-            "type": "string",
-            "description": "Id de referencia"
-          },
-          "detalles": {
-            "description": "Detalles del asiento (mínimo 2)",
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/DetalleAsientoRequestDto"
-            }
-          }
-        },
-        "required": [
-          "concepto",
-          "detalles"
-        ]
-      },
-      "LibroMayorResponseDto": {
-        "type": "object",
-        "properties": {
-          "cuenta": {
-            "description": "Cuenta contable",
+          "existing": {
             "nullable": true,
             "type": "object",
             "allOf": [
               {
-                "$ref": "#/components/schemas/CuentaResponseDto"
+                "$ref": "#/components/schemas/CierreCajaResponseDto"
               }
             ]
-          },
-          "saldo_inicial_cents": {
-            "type": "number",
-            "description": "Saldo inicial en centavos",
-            "example": 100000
-          },
-          "saldo_final_cents": {
-            "type": "number",
-            "description": "Saldo final en centavos",
-            "example": 215000
-          },
-          "movimientos": {
-            "description": "Movimientos del periodo",
-            "type": "array",
-            "items": {
-              "type": "object"
-            }
           }
         },
         "required": [
-          "cuenta",
-          "saldo_inicial_cents",
-          "saldo_final_cents",
-          "movimientos"
+          "date",
+          "openingBalanceCents",
+          "incomeCents",
+          "expenseCents",
+          "expectedBalanceCents",
+          "movementsCount",
+          "existing"
         ]
       },
-      "LibroIvaResponseDto": {
+      "CierreCajaResponseDto": {
         "type": "object",
         "properties": {
-          "periodo": {
+          "id": {
             "type": "string",
-            "description": "Periodo (YYYY-MM)",
-            "example": "2026-10"
+            "format": "uuid"
           },
-          "comprobantes": {
-            "type": "number",
-            "description": "Comprobantes del periodo",
-            "example": 12
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
           },
-          "base_gravada_cents": {
-            "type": "number",
-            "description": "Base gravada en centavos",
-            "example": 1150000
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
           },
-          "iva_cents": {
-            "type": "number",
-            "description": "IVA en centavos",
-            "example": 172500
+          "date": {
+            "type": "string",
+            "format": "date"
           },
-          "exento_cents": {
+          "openingBalanceCents": {
             "type": "number",
-            "description": "Monto exento en centavos",
-            "example": 0
+            "description": "Saldo inicial en centavos"
           },
-          "total_cents": {
+          "incomeCents": {
             "type": "number",
-            "description": "Total en centavos",
-            "example": 1322500
+            "description": "Ingresos del día en centavos"
+          },
+          "expenseCents": {
+            "type": "number",
+            "description": "Egresos del día en centavos"
+          },
+          "expectedBalanceCents": {
+            "type": "number",
+            "description": "Saldo esperado en centavos"
+          },
+          "countedBalanceCents": {
+            "type": "number",
+            "description": "Saldo contado en centavos"
+          },
+          "differenceCents": {
+            "type": "number",
+            "description": "Diferencia en centavos"
+          },
+          "movementsCount": {
+            "type": "number"
+          },
+          "notes": {
+            "type": "string"
+          },
+          "closedAt": {
+            "type": "string",
+            "format": "date-time"
           }
         },
         "required": [
-          "periodo",
-          "comprobantes",
-          "base_gravada_cents",
-          "iva_cents",
-          "exento_cents",
-          "total_cents"
+          "id",
+          "createdAt",
+          "updatedAt",
+          "date",
+          "openingBalanceCents",
+          "incomeCents",
+          "expenseCents",
+          "expectedBalanceCents",
+          "countedBalanceCents",
+          "differenceCents",
+          "movementsCount",
+          "notes",
+          "closedAt"
+        ]
+      },
+      "ClienteComercioResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "name": {
+            "type": "string"
+          },
+          "phone": {
+            "type": "string"
+          },
+          "email": {
+            "type": "string"
+          },
+          "company": {
+            "type": "string"
+          },
+          "buyerId": {
+            "type": "string"
+          },
+          "source": {
+            "type": "string",
+            "enum": [
+              "order",
+              "manual",
+              "import"
+            ]
+          }
+        },
+        "required": [
+          "id",
+          "createdAt",
+          "updatedAt",
+          "name",
+          "phone",
+          "email",
+          "company",
+          "source"
+        ]
+      },
+      "CoberturaPorVendedorResponseDto": {
+        "type": "object",
+        "properties": {
+          "pedidos_por_vendedor_mes": {
+            "type": "number"
+          },
+          "comision_por_pedido_cents": {
+            "type": "number"
+          },
+          "comision_bruta_vendedor_cents": {
+            "type": "number"
+          },
+          "contribucion_media_cents": {
+            "type": "number"
+          },
+          "vendedores_para_cubrir_costos": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "pedidos_por_vendedor_mes",
+          "comision_por_pedido_cents",
+          "comision_bruta_vendedor_cents",
+          "contribucion_media_cents",
+          "vendedores_para_cubrir_costos"
+        ]
+      },
+      "CodigoBarrasResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "productName": {
+            "type": "string"
+          },
+          "sku": {
+            "type": "string"
+          },
+          "code": {
+            "type": "string"
+          },
+          "symbology": {
+            "type": "string",
+            "enum": [
+              "EAN13",
+              "CODE128"
+            ]
+          },
+          "copies": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "id",
+          "createdAt",
+          "updatedAt",
+          "productName",
+          "sku",
+          "code",
+          "symbology",
+          "copies"
+        ]
+      },
+      "CompraResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "number": {
+            "type": "string"
+          },
+          "date": {
+            "type": "string",
+            "format": "date"
+          },
+          "supplierId": {
+            "type": "object",
+            "nullable": true
+          },
+          "supplierName": {
+            "type": "string"
+          },
+          "paymentMethod": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "recibida",
+              "pendiente",
+              "anulada"
+            ]
+          },
+          "origin": {
+            "type": "string",
+            "enum": [
+              "productos",
+              "directa"
+            ]
+          },
+          "costType": {
+            "type": "string"
+          },
+          "lines": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/LineaCompraResponseDto"
+            }
+          },
+          "subtotalCents": {
+            "type": "number",
+            "description": "Subtotal en centavos"
+          },
+          "retentionCents": {
+            "type": "number",
+            "description": "Retención en centavos"
+          },
+          "totalCents": {
+            "type": "number",
+            "description": "Total en centavos"
+          },
+          "notes": {
+            "type": "string"
+          },
+          "userName": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "createdAt",
+          "updatedAt",
+          "number",
+          "date",
+          "supplierId",
+          "supplierName",
+          "paymentMethod",
+          "status",
+          "origin",
+          "costType",
+          "lines",
+          "subtotalCents",
+          "retentionCents",
+          "totalCents",
+          "notes",
+          "userName"
         ]
       },
       "ComprobanteResponseDto": {
@@ -4069,1839 +4048,134 @@
           "creado_en"
         ]
       },
-      "SerieComprobanteResponseDto": {
-        "type": "object",
-        "properties": {
-          "serie": {
-            "type": "string",
-            "description": "Serie",
-            "example": "A"
-          },
-          "tipo": {
-            "type": "string",
-            "description": "Tipo",
-            "enum": [
-              "FACTURA",
-              "NOTA_CREDITO"
-            ],
-            "example": "FACTURA"
-          },
-          "prefijo": {
-            "type": "string",
-            "description": "Prefijo",
-            "example": "FAC"
-          },
-          "secuencial_actual": {
-            "type": "number",
-            "description": "Secuencial actual",
-            "example": 12
-          },
-          "ruc_emisor": {
-            "type": "string",
-            "description": "RUC del emisor",
-            "example": "J0310000000000"
-          },
-          "jurisdiccion": {
-            "type": "string",
-            "description": "Jurisdicción",
-            "example": "NI"
-          },
-          "activa": {
-            "type": "boolean",
-            "description": "Serie activa",
-            "example": true
-          }
-        },
-        "required": [
-          "serie",
-          "tipo",
-          "prefijo",
-          "secuencial_actual",
-          "ruc_emisor",
-          "jurisdiccion",
-          "activa"
-        ]
-      },
-      "EmitirComprobanteRequestDto": {
-        "type": "object",
-        "properties": {
-          "tipo": {
-            "type": "string",
-            "description": "Tipo de comprobante",
-            "enum": [
-              "FACTURA",
-              "NOTA_CREDITO"
-            ]
-          },
-          "orden_id": {
-            "type": "string",
-            "description": "Id de la orden (UUID)"
-          },
-          "cliente_id": {
-            "type": "string",
-            "description": "Id del cliente"
-          },
-          "razon_social": {
-            "type": "string",
-            "description": "Razón social"
-          },
-          "ruc": {
-            "type": "string",
-            "description": "RUC"
-          }
-        },
-        "required": [
-          "tipo",
-          "orden_id"
-        ]
-      },
-      "JurisdiccionResponseDto": {
-        "type": "object",
-        "properties": {
-          "codigo_pais": {
-            "type": "string",
-            "description": "Código ISO del país",
-            "example": "NI"
-          },
-          "nombre": {
-            "type": "string",
-            "description": "Nombre de la jurisdicción",
-            "example": "Nicaragua"
-          },
-          "moneda": {
-            "type": "string",
-            "description": "Moneda",
-            "example": "NIO"
-          },
-          "simbolo_moneda": {
-            "type": "string",
-            "description": "Símbolo de la moneda",
-            "example": "C$"
-          },
-          "tasa_iva": {
-            "type": "number",
-            "description": "Tasa de IVA (0–1)",
-            "example": 0.15
-          },
-          "tasa_ir": {
-            "type": "number",
-            "description": "Tasa de IR (0–1)",
-            "example": 0.3
-          },
-          "periodicidad_declaracion": {
-            "type": "string",
-            "description": "Periodicidad de declaración",
-            "example": "MENSUAL"
-          },
-          "leyes": {
-            "type": "object",
-            "description": "Leyes aplicables (clave→texto)",
-            "additionalProperties": {
-              "type": "string"
-            }
-          },
-          "activa": {
-            "type": "boolean",
-            "description": "Jurisdicción activa",
-            "example": true
-          }
-        },
-        "required": [
-          "codigo_pais",
-          "nombre",
-          "moneda",
-          "simbolo_moneda",
-          "tasa_iva",
-          "tasa_ir",
-          "periodicidad_declaracion",
-          "leyes",
-          "activa"
-        ]
-      },
-      "CrearJurisdiccionRequestDto": {
-        "type": "object",
-        "properties": {
-          "codigo_pais": {
-            "type": "string",
-            "description": "Código de país (ISO)",
-            "minLength": 2
-          },
-          "nombre": {
-            "type": "string",
-            "description": "Nombre de la jurisdicción"
-          },
-          "moneda": {
-            "type": "string",
-            "description": "Moneda"
-          },
-          "simbolo_moneda": {
-            "type": "string",
-            "description": "Símbolo de la moneda"
-          },
-          "tasa_iva_por_mil": {
-            "type": "number",
-            "description": "Tasa de IVA por mil",
-            "minimum": 0
-          },
-          "tasa_ir_por_mil": {
-            "type": "number",
-            "description": "Tasa de IR por mil",
-            "minimum": 0
-          },
-          "periodicidad_declaracion": {
-            "type": "string",
-            "description": "Periodicidad de declaración"
-          },
-          "leyes": {
-            "type": "object",
-            "description": "Leyes aplicables (clave→texto)"
-          }
-        },
-        "required": [
-          "codigo_pais",
-          "nombre",
-          "moneda",
-          "simbolo_moneda",
-          "tasa_iva_por_mil",
-          "tasa_ir_por_mil"
-        ]
-      },
-      "RegimenFiscalResponseDto": {
+      "ConfiguracionDocumentosResponseDto": {
         "type": "object",
         "properties": {
           "id": {
             "type": "string",
-            "description": "Id del régimen",
             "format": "uuid"
           },
-          "jurisdiccion": {
+          "createdAt": {
             "type": "string",
-            "description": "Jurisdicción",
-            "example": "NI"
+            "format": "date-time"
           },
-          "codigo": {
+          "updatedAt": {
             "type": "string",
-            "description": "Código del régimen",
-            "example": "CUOTA_FIJA"
+            "format": "date-time"
           },
-          "nombre": {
+          "logoSize": {
             "type": "string",
-            "description": "Nombre del régimen",
-            "example": "Cuota Fija"
-          },
-          "descripcion": {
-            "type": "string",
-            "description": "Descripción"
-          },
-          "periodicidad": {
-            "type": "string",
-            "description": "Periodicidad",
-            "example": "MENSUAL"
-          },
-          "condicion_ingresos_anuales_cents": {
-            "type": "number",
-            "description": "Condición de ingresos anuales en centavos"
-          },
-          "estado": {
-            "type": "string",
-            "description": "Estado",
             "enum": [
-              "activo",
-              "inactivo"
-            ],
-            "example": "activo"
-          }
-        },
-        "required": [
-          "id",
-          "jurisdiccion",
-          "codigo",
-          "nombre",
-          "descripcion",
-          "periodicidad",
-          "estado"
-        ]
-      },
-      "CrearRegimenRequestDto": {
-        "type": "object",
-        "properties": {
-          "jurisdiccion": {
-            "type": "string",
-            "description": "Jurisdicción",
-            "minLength": 2
-          },
-          "codigo": {
-            "type": "string",
-            "description": "Código del régimen"
-          },
-          "nombre": {
-            "type": "string",
-            "description": "Nombre del régimen"
-          },
-          "descripcion": {
-            "type": "string",
-            "description": "Descripción"
-          },
-          "periodicidad": {
-            "type": "string",
-            "description": "Periodicidad"
-          },
-          "condicion_ingresos_anuales_cents": {
-            "type": "number",
-            "description": "Condición de ingresos anuales (centavos)"
-          }
-        },
-        "required": [
-          "jurisdiccion",
-          "codigo",
-          "nombre"
-        ]
-      },
-      "RegistrarSujetoRequestDto": {
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "string",
-            "description": "Id del sujeto (UUID)"
-          },
-          "jurisdiccion": {
-            "type": "string",
-            "description": "Jurisdicción"
-          },
-          "regimen_id": {
-            "type": "string",
-            "description": "Id del régimen (UUID)"
-          },
-          "razon_social": {
-            "type": "string",
-            "description": "Razón social"
-          },
-          "ruc": {
-            "type": "string",
-            "description": "RUC"
-          },
-          "es_plataforma": {
-            "type": "boolean",
-            "description": "¿Es la plataforma?"
-          }
-        },
-        "required": [
-          "id",
-          "razon_social"
-        ]
-      },
-      "GenerarDeclaracionesRequestDto": {
-        "type": "object",
-        "properties": {
-          "tipo": {
-            "type": "string",
-            "description": "Tipo de declaración",
-            "enum": [
-              "IVA",
-              "IR",
-              "CUOTA_FIJA"
+              "pequeno",
+              "mediano",
+              "grande"
             ]
           },
-          "inicio": {
-            "type": "string",
-            "description": "Inicio del periodo"
+          "headerColor": {
+            "type": "string"
           },
-          "fin": {
-            "type": "string",
-            "description": "Fin del periodo"
-          }
-        }
-      },
-      "SupuestosRequestDto": {
-        "type": "object",
-        "properties": {
-          "horizonte_meses": {
-            "type": "number",
-            "description": "Horizonte en meses (1-60)",
-            "minimum": 1,
-            "maximum": 60
+          "matchTableColor": {
+            "type": "boolean"
           },
-          "vendedores_iniciales": {
-            "type": "number",
-            "description": "Vendedores iniciales",
-            "minimum": 1
+          "footerMessage": {
+            "type": "string"
           },
-          "entrada_vendedores_mes": {
-            "type": "number",
-            "description": "Entrada de vendedores por mes",
-            "minimum": 0
+          "showRuc": {
+            "type": "boolean"
           },
-          "churn_tasa": {
-            "type": "number",
-            "description": "Tasa de churn (0-1)",
-            "minimum": 0,
-            "maximum": 1
+          "showAddress": {
+            "type": "boolean"
           },
-          "pedidos_por_vendedor": {
-            "description": "Pedidos por vendedor por mes",
-            "type": "array",
-            "items": {
-              "type": "number"
-            }
-          },
-          "ticket_promedio_cents": {
-            "type": "number",
-            "description": "Ticket promedio en centavos",
-            "minimum": 1
-          },
-          "comision_tasa": {
-            "type": "number",
-            "description": "Tasa de comisión (0-1)",
-            "minimum": 0,
-            "maximum": 1
-          },
-          "costos_fijos_cents": {
-            "type": "number",
-            "description": "Costos fijos en centavos",
-            "minimum": 0
-          },
-          "costos_fijos_desde_mes7_cents": {
-            "type": "number",
-            "description": "Costos fijos desde el mes 7 en centavos",
-            "minimum": 0
-          },
-          "inversion_inicial_cents": {
-            "type": "number",
-            "description": "Inversión inicial en centavos",
-            "minimum": 0
-          },
-          "tasa_descuento_mensual": {
-            "type": "number",
-            "description": "Tasa de descuento mensual",
-            "minimum": 0
+          "showPhone": {
+            "type": "boolean"
           }
         },
         "required": [
-          "horizonte_meses",
-          "vendedores_iniciales",
-          "entrada_vendedores_mes",
-          "churn_tasa",
-          "pedidos_por_vendedor",
-          "ticket_promedio_cents",
-          "comision_tasa",
-          "costos_fijos_cents",
-          "inversion_inicial_cents"
+          "id",
+          "createdAt",
+          "updatedAt",
+          "logoSize",
+          "headerColor",
+          "matchTableColor",
+          "footerMessage",
+          "showRuc",
+          "showAddress",
+          "showPhone"
         ]
       },
-      "CrearProyeccionRequestDto": {
+      "CrearAsientoRequestDto": {
         "type": "object",
         "properties": {
-          "nombre": {
+          "concepto": {
             "type": "string",
-            "description": "Nombre de la proyección",
+            "description": "Concepto del asiento",
             "minLength": 3
           },
-          "supuestos": {
-            "description": "Supuestos del modelo",
-            "allOf": [
-              {
-                "$ref": "#/components/schemas/SupuestosRequestDto"
-              }
-            ]
-          }
-        },
-        "required": [
-          "nombre",
-          "supuestos"
-        ]
-      },
-      "SupuestosProyeccionResponseDto": {
-        "type": "object",
-        "properties": {
-          "horizonte_meses": {
-            "type": "number",
-            "example": 12
-          },
-          "vendedores_iniciales": {
-            "type": "number",
-            "example": 20
-          },
-          "entrada_vendedores_mes": {
-            "type": "number",
-            "example": 5
-          },
-          "churn_tasa": {
-            "type": "number",
-            "example": 0
-          },
-          "pedidos_por_vendedor": {
-            "example": [
-              25,
-              27,
-              29,
-              31,
-              33,
-              35,
-              37,
-              38,
-              39,
-              40,
-              41,
-              42
-            ],
-            "type": "array",
-            "items": {
-              "type": "number"
-            }
-          },
-          "ticket_promedio_cents": {
-            "type": "number",
-            "example": 45000
-          },
-          "comision_tasa": {
-            "type": "number",
-            "example": 0.12
-          },
-          "costos_fijos_cents": {
-            "type": "number",
-            "example": 200000
-          },
-          "costos_fijos_desde_mes7_cents": {
-            "type": "number",
-            "example": 300000
-          },
-          "inversion_inicial_cents": {
-            "type": "number",
-            "example": 5850000
-          },
-          "tasa_descuento_mensual": {
-            "type": "number",
-            "example": 0.015
-          }
-        },
-        "required": [
-          "horizonte_meses",
-          "vendedores_iniciales",
-          "entrada_vendedores_mes",
-          "churn_tasa",
-          "pedidos_por_vendedor",
-          "ticket_promedio_cents",
-          "comision_tasa",
-          "costos_fijos_cents",
-          "inversion_inicial_cents"
-        ]
-      },
-      "FilaProyeccionResponseDto": {
-        "type": "object",
-        "properties": {
-          "mes": {
-            "type": "number"
-          },
-          "vendedores": {
-            "type": "number"
-          },
-          "pedidos": {
-            "type": "number"
-          },
-          "gmv_cents": {
-            "type": "number"
-          },
-          "ingresos_cents": {
-            "type": "number"
-          },
-          "costos_cents": {
-            "type": "number"
-          },
-          "flujo_cents": {
-            "type": "number"
-          },
-          "flujo_acumulado_cents": {
-            "type": "number"
-          },
-          "costo_fijo_por_pedido_cents": {
-            "type": "number"
-          }
-        },
-        "required": [
-          "mes",
-          "vendedores",
-          "pedidos",
-          "gmv_cents",
-          "ingresos_cents",
-          "costos_cents",
-          "flujo_cents",
-          "flujo_acumulado_cents",
-          "costo_fijo_por_pedido_cents"
-        ]
-      },
-      "TotalesProyeccionResponseDto": {
-        "type": "object",
-        "properties": {
-          "gmv_cents": {
-            "type": "number"
-          },
-          "ingresos_cents": {
-            "type": "number"
-          },
-          "costos_cents": {
-            "type": "number"
-          },
-          "flujo_cents": {
-            "type": "number"
-          }
-        },
-        "required": [
-          "gmv_cents",
-          "ingresos_cents",
-          "costos_cents",
-          "flujo_cents"
-        ]
-      },
-      "EscenarioEquilibrioResponseDto": {
-        "type": "object",
-        "properties": {
-          "escenario": {
+          "fecha": {
             "type": "string",
+            "description": "Fecha (ISO 8601)"
+          },
+          "tipo": {
+            "type": "string",
+            "description": "Tipo de asiento",
             "enum": [
-              "bajo",
-              "medio",
-              "alto"
+              "INGRESO",
+              "EGRESO",
+              "AJUSTE",
+              "CIERRE",
+              "APERTURA",
+              "MANUAL"
             ]
           },
-          "costo_variable_por_pedido_cents": {
-            "type": "number"
-          },
-          "contribucion_por_pedido_cents": {
-            "type": "number"
-          },
-          "pedidos_equilibrio": {
-            "type": "number"
-          },
-          "gmv_equilibrio_cents": {
-            "type": "number"
-          }
-        },
-        "required": [
-          "escenario",
-          "costo_variable_por_pedido_cents",
-          "contribucion_por_pedido_cents",
-          "pedidos_equilibrio",
-          "gmv_equilibrio_cents"
-        ]
-      },
-      "MargenSeguridadResponseDto": {
-        "type": "object",
-        "properties": {
-          "mes": {
-            "type": "number"
-          },
-          "gmv_cents": {
-            "type": "number"
-          },
-          "margen_seguridad": {
-            "type": "number"
-          }
-        },
-        "required": [
-          "mes",
-          "gmv_cents",
-          "margen_seguridad"
-        ]
-      },
-      "CoberturaPorVendedorResponseDto": {
-        "type": "object",
-        "properties": {
-          "pedidos_por_vendedor_mes": {
-            "type": "number"
-          },
-          "comision_por_pedido_cents": {
-            "type": "number"
-          },
-          "comision_bruta_vendedor_cents": {
-            "type": "number"
-          },
-          "contribucion_media_cents": {
-            "type": "number"
-          },
-          "vendedores_para_cubrir_costos": {
-            "type": "number"
-          }
-        },
-        "required": [
-          "pedidos_por_vendedor_mes",
-          "comision_por_pedido_cents",
-          "comision_bruta_vendedor_cents",
-          "contribucion_media_cents",
-          "vendedores_para_cubrir_costos"
-        ]
-      },
-      "EconomiaDeEscalaResponseDto": {
-        "type": "object",
-        "properties": {
-          "costo_fijo_por_pedido_inicio_cents": {
-            "type": "number"
-          },
-          "costo_fijo_por_pedido_mes6_cents": {
-            "type": "number"
-          },
-          "costo_fijo_por_pedido_fin_cents": {
-            "type": "number"
-          },
-          "multiplicador_escala": {
-            "type": "number"
-          }
-        },
-        "required": [
-          "costo_fijo_por_pedido_inicio_cents",
-          "costo_fijo_por_pedido_mes6_cents",
-          "costo_fijo_por_pedido_fin_cents",
-          "multiplicador_escala"
-        ]
-      },
-      "IndicadoresProyeccionResponseDto": {
-        "type": "object",
-        "properties": {
-          "payback_mes": {
-            "type": "object",
-            "nullable": true
-          },
-          "van_cents": {
-            "type": "number"
-          },
-          "tir_mensual": {
-            "type": "object",
-            "nullable": true
-          },
-          "tir_anual": {
-            "type": "object",
-            "nullable": true
-          },
-          "tir_no_estable": {
-            "type": "boolean"
-          },
-          "roi": {
-            "type": "number"
-          },
-          "margen_neto": {
-            "type": "number"
-          },
-          "punto_equilibrio_caja_cents": {
-            "type": "number"
-          },
-          "pedidos_equilibrio_caja": {
-            "type": "number"
-          },
-          "escenarios_equilibrio": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/EscenarioEquilibrioResponseDto"
-            }
-          },
-          "margen_seguridad_por_mes": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/MargenSeguridadResponseDto"
-            }
-          },
-          "cobertura_por_vendedor": {
-            "$ref": "#/components/schemas/CoberturaPorVendedorResponseDto"
-          },
-          "economia_de_escala": {
-            "$ref": "#/components/schemas/EconomiaDeEscalaResponseDto"
-          }
-        },
-        "required": [
-          "payback_mes",
-          "van_cents",
-          "tir_mensual",
-          "tir_anual",
-          "tir_no_estable",
-          "roi",
-          "margen_neto",
-          "punto_equilibrio_caja_cents",
-          "pedidos_equilibrio_caja",
-          "escenarios_equilibrio",
-          "margen_seguridad_por_mes",
-          "cobertura_por_vendedor",
-          "economia_de_escala"
-        ]
-      },
-      "ProyeccionResponseDto": {
-        "type": "object",
-        "properties": {
-          "id": {
+          "referencia_tipo": {
             "type": "string",
-            "format": "uuid"
+            "description": "Tipo de referencia"
           },
-          "nombre": {
-            "type": "string"
-          },
-          "horizonte_meses": {
-            "type": "number"
-          },
-          "supuestos": {
-            "$ref": "#/components/schemas/SupuestosProyeccionResponseDto"
-          },
-          "filas": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/FilaProyeccionResponseDto"
-            }
-          },
-          "totales": {
-            "$ref": "#/components/schemas/TotalesProyeccionResponseDto"
-          },
-          "inversion_inicial_cents": {
-            "type": "number"
-          },
-          "indicadores": {
-            "$ref": "#/components/schemas/IndicadoresProyeccionResponseDto"
-          },
-          "creado_en": {
+          "referencia_id": {
             "type": "string",
-            "format": "date-time"
-          }
-        },
-        "required": [
-          "id",
-          "nombre",
-          "horizonte_meses",
-          "supuestos",
-          "filas",
-          "totales",
-          "inversion_inicial_cents",
-          "indicadores",
-          "creado_en"
-        ]
-      },
-      "PuntoEquilibrioResponseDto": {
-        "type": "object",
-        "properties": {
-          "punto_equilibrio_caja_cents": {
-            "type": "number"
+            "description": "Id de referencia"
           },
-          "pedidos_equilibrio_caja": {
-            "type": "number"
-          },
-          "escenarios_equilibrio": {
+          "detalles": {
+            "description": "Detalles del asiento (mínimo 2)",
             "type": "array",
             "items": {
-              "$ref": "#/components/schemas/EscenarioEquilibrioResponseDto"
-            }
-          },
-          "margen_seguridad_por_mes": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/MargenSeguridadResponseDto"
+              "$ref": "#/components/schemas/DetalleAsientoRequestDto"
             }
           }
         },
         "required": [
-          "punto_equilibrio_caja_cents",
-          "pedidos_equilibrio_caja",
-          "escenarios_equilibrio",
-          "margen_seguridad_por_mes"
+          "concepto",
+          "detalles"
         ]
       },
-      "KpisFinancierosResponseDto": {
+      "CrearCierreCajaRequestDto": {
         "type": "object",
         "properties": {
-          "periodo": {
-            "type": "string"
-          },
-          "gmv_cents": {
-            "type": "number"
-          },
-          "gmv": {
-            "type": "string"
-          },
-          "pedidos_pagados": {
-            "type": "number"
-          },
-          "pedidos_entregados": {
-            "type": "number"
-          },
-          "ingresos_comisiones_cents": {
-            "type": "number"
-          },
-          "ingresos_comisiones": {
-            "type": "string"
-          },
-          "devoluciones": {
-            "type": "number"
-          },
-          "vendedores_activos": {
-            "type": "number"
-          },
-          "pedidos_por_vendedor": {
-            "type": "number"
-          },
-          "activacion_primeros_15_dias": {
-            "type": "object",
-            "nullable": true
-          },
-          "tasa_devoluciones": {
-            "type": "number"
-          },
-          "churn_mensual": {
-            "type": "number"
-          },
-          "conversion_carrito_checkout": {
-            "type": "object",
-            "nullable": true
-          },
-          "liquidacion_a_tiempo": {
-            "type": "object",
-            "nullable": true
-          }
-        },
-        "required": [
-          "periodo",
-          "gmv_cents",
-          "gmv",
-          "pedidos_pagados",
-          "pedidos_entregados",
-          "ingresos_comisiones_cents",
-          "ingresos_comisiones",
-          "devoluciones",
-          "vendedores_activos",
-          "pedidos_por_vendedor",
-          "activacion_primeros_15_dias",
-          "tasa_devoluciones",
-          "churn_mensual",
-          "conversion_carrito_checkout",
-          "liquidacion_a_tiempo"
-        ]
-      },
-      "FlujoVariacionGmvResponseDto": {
-        "type": "object",
-        "properties": {
-          "variacion_gmv": {
-            "type": "number"
-          },
-          "flujo_cents": {
-            "type": "number"
-          }
-        },
-        "required": [
-          "variacion_gmv",
-          "flujo_cents"
-        ]
-      },
-      "SensibilidadComisionGmvResponseDto": {
-        "type": "object",
-        "properties": {
-          "tasa_comision": {
-            "type": "number"
-          },
-          "flujo_mes12_cents": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/FlujoVariacionGmvResponseDto"
-            }
-          }
-        },
-        "required": [
-          "tasa_comision",
-          "flujo_mes12_cents"
-        ]
-      },
-      "SensibilidadVanResponseDto": {
-        "type": "object",
-        "properties": {
-          "tasa_anual": {
-            "type": "number"
-          },
-          "tasa_mensual": {
-            "type": "number"
-          },
-          "van_cents": {
-            "type": "number"
-          },
-          "relacion_van_inversion": {
-            "type": "number"
-          }
-        },
-        "required": [
-          "tasa_anual",
-          "tasa_mensual",
-          "van_cents",
-          "relacion_van_inversion"
-        ]
-      },
-      "PaybackPorEscenarioResponseDto": {
-        "type": "object",
-        "properties": {
-          "escenario": {
+          "date": {
             "type": "string",
-            "enum": [
-              "base",
-              "pesimista",
-              "peor_combinado"
-            ]
+            "description": "Fecha del corte (yyyy-mm-dd)"
           },
-          "descripcion": {
-            "type": "string"
-          },
-          "flujo_acumulado_cents": {
-            "type": "number"
-          },
-          "payback_mes": {
-            "type": "object",
-            "nullable": true
-          }
-        },
-        "required": [
-          "escenario",
-          "descripcion",
-          "flujo_acumulado_cents",
-          "payback_mes"
-        ]
-      },
-      "SensibilidadEstudiosResponseDto": {
-        "type": "object",
-        "properties": {
-          "supuestos": {
-            "$ref": "#/components/schemas/SupuestosProyeccionResponseDto"
-          },
-          "matriz_comision_gmv": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/SensibilidadComisionGmvResponseDto"
-            }
-          },
-          "van_por_tasa": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/SensibilidadVanResponseDto"
-            }
-          },
-          "payback_por_escenario": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/PaybackPorEscenarioResponseDto"
-            }
-          },
-          "cobertura_por_vendedor": {
-            "$ref": "#/components/schemas/CoberturaPorVendedorResponseDto"
-          }
-        },
-        "required": [
-          "supuestos",
-          "matriz_comision_gmv",
-          "van_por_tasa",
-          "payback_por_escenario",
-          "cobertura_por_vendedor"
-        ]
-      },
-      "ResumenAnualResponseDto": {
-        "type": "object",
-        "properties": {
-          "anio": {
-            "type": "number"
-          },
-          "gmv_cents": {
-            "type": "number"
-          },
-          "ingresos_cents": {
-            "type": "number"
-          },
-          "costos_cents": {
-            "type": "number"
-          },
-          "flujo_cents": {
-            "type": "number"
-          },
-          "margen_neto": {
-            "type": "number"
-          }
-        },
-        "required": [
-          "anio",
-          "gmv_cents",
-          "ingresos_cents",
-          "costos_cents",
-          "flujo_cents",
-          "margen_neto"
-        ]
-      },
-      "Acumulado24MesesResponseDto": {
-        "type": "object",
-        "properties": {
-          "gmv_cents": {
-            "type": "number"
-          },
-          "ingresos_cents": {
-            "type": "number"
-          },
-          "costos_cents": {
-            "type": "number"
-          },
-          "flujo_cents": {
-            "type": "number"
-          }
-        },
-        "required": [
-          "gmv_cents",
-          "ingresos_cents",
-          "costos_cents",
-          "flujo_cents"
-        ]
-      },
-      "Mes24ResponseDto": {
-        "type": "object",
-        "properties": {
-          "gmv_cents": {
-            "type": "number"
-          },
-          "incremento_vs_mes12": {
-            "type": "number"
-          }
-        },
-        "required": [
-          "gmv_cents",
-          "incremento_vs_mes12"
-        ]
-      },
-      "PlanBienalResponseDto": {
-        "type": "object",
-        "properties": {
-          "inversion_inicial_cents": {
-            "type": "number"
-          },
-          "anios": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/ResumenAnualResponseDto"
-            }
-          },
-          "filas": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/FilaProyeccionResponseDto"
-            }
-          },
-          "acumulado_24_meses": {
-            "$ref": "#/components/schemas/Acumulado24MesesResponseDto"
-          },
-          "roi": {
-            "type": "number"
-          },
-          "mes_24": {
-            "$ref": "#/components/schemas/Mes24ResponseDto"
-          },
-          "indicadores": {
-            "$ref": "#/components/schemas/IndicadoresProyeccionResponseDto"
-          }
-        },
-        "required": [
-          "inversion_inicial_cents",
-          "anios",
-          "filas",
-          "acumulado_24_meses",
-          "roi",
-          "mes_24",
-          "indicadores"
-        ]
-      },
-      "TableroAlertaResponseDto": {
-        "type": "object",
-        "properties": {
-          "capa": {
-            "type": "string"
-          },
-          "frecuencia": {
-            "type": "string"
-          },
-          "indicador": {
-            "type": "string"
-          },
-          "estado": {
-            "type": "string",
-            "enum": [
-              "OK",
-              "ALERTA",
-              "SIN_DATO"
-            ]
-          },
-          "umbral": {
-            "type": "string"
-          },
-          "valor": {
-            "type": "object",
-            "nullable": true
-          },
-          "accion": {
-            "type": "string"
-          },
-          "detalle": {
-            "type": "string"
-          },
-          "fecha_esperada": {
-            "type": "string"
-          }
-        },
-        "required": [
-          "capa",
-          "frecuencia",
-          "indicador",
-          "estado",
-          "umbral",
-          "valor",
-          "accion",
-          "fecha_esperada"
-        ]
-      },
-      "TableroResponseDto": {
-        "type": "object",
-        "properties": {
-          "periodo": {
-            "type": "string"
-          },
-          "kpis": {
-            "$ref": "#/components/schemas/KpisFinancierosResponseDto"
-          },
-          "alertas": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/TableroAlertaResponseDto"
-            }
-          }
-        },
-        "required": [
-          "periodo",
-          "kpis",
-          "alertas"
-        ]
-      },
-      "ResumenVendedorResponseDto": {
-        "type": "object",
-        "properties": {
-          "vendedor_id": {
-            "type": "string",
-            "format": "uuid"
-          },
-          "periodo": {
-            "type": "string"
-          },
-          "ventas": {
-            "type": "number"
-          },
-          "monto_cents": {
-            "type": "number"
-          },
-          "comision_cents": {
-            "type": "number"
-          },
-          "devoluciones": {
-            "type": "number"
-          }
-        },
-        "required": [
-          "vendedor_id",
-          "periodo",
-          "ventas",
-          "monto_cents",
-          "comision_cents",
-          "devoluciones"
-        ]
-      },
-      "VendedorFiscalResponseDto": {
-        "type": "object",
-        "properties": {
-          "sujeto_fiscal": {
-            "nullable": true,
-            "type": "object",
-            "allOf": [
-              {
-                "$ref": "#/components/schemas/SujetoTributarioResponseDto"
-              }
-            ]
-          },
-          "resumen_comisiones": {
-            "nullable": true,
-            "type": "object",
-            "allOf": [
-              {
-                "$ref": "#/components/schemas/ResumenVendedorResponseDto"
-              }
-            ]
-          },
-          "nota": {
-            "type": "string"
-          }
-        },
-        "required": [
-          "sujeto_fiscal",
-          "resumen_comisiones",
-          "nota"
-        ]
-      },
-      "CuentaBancoResponseDto": {
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "string",
-            "format": "uuid"
-          },
-          "createdAt": {
-            "type": "string",
-            "format": "date-time"
-          },
-          "updatedAt": {
-            "type": "string",
-            "format": "date-time"
-          },
-          "bank": {
-            "type": "string"
-          },
-          "alias": {
-            "type": "string"
-          },
-          "accountNumber": {
-            "type": "string"
-          },
-          "type": {
-            "type": "string",
-            "enum": [
-              "ahorro",
-              "corriente",
-              "wallet"
-            ]
-          },
-          "balanceCents": {
+          "countedBalanceCents": {
             "type": "number",
-            "description": "Saldo en centavos"
-          }
-        },
-        "required": [
-          "id",
-          "createdAt",
-          "updatedAt",
-          "bank",
-          "alias",
-          "accountNumber",
-          "type",
-          "balanceCents"
-        ]
-      },
-      "CrearCuentaBancoRequestDto": {
-        "type": "object",
-        "properties": {
-          "bank": {
-            "type": "string",
-            "description": "Banco",
-            "example": "BAC"
-          },
-          "alias": {
-            "type": "string",
-            "description": "Alias visible de la cuenta",
-            "example": "Operativa"
-          },
-          "accountNumber": {
-            "type": "string",
-            "description": "Número de cuenta"
-          },
-          "type": {
-            "type": "string",
-            "description": "Tipo de cuenta",
-            "enum": [
-              "ahorro",
-              "corriente",
-              "wallet"
-            ]
-          },
-          "balanceCents": {
-            "type": "number",
-            "description": "Saldo inicial en centavos",
+            "description": "Saldo contado en centavos",
             "minimum": 0
-          }
-        },
-        "required": [
-          "bank",
-          "alias",
-          "accountNumber",
-          "type",
-          "balanceCents"
-        ]
-      },
-      "ActualizarCuentaBancoRequestDto": {
-        "type": "object",
-        "properties": {
-          "bank": {
-            "type": "string",
-            "description": "Banco",
-            "example": "BAC"
-          },
-          "alias": {
-            "type": "string",
-            "description": "Alias visible de la cuenta",
-            "example": "Operativa"
-          },
-          "accountNumber": {
-            "type": "string",
-            "description": "Número de cuenta"
-          },
-          "type": {
-            "type": "string",
-            "description": "Tipo de cuenta",
-            "enum": [
-              "ahorro",
-              "corriente",
-              "wallet"
-            ]
-          },
-          "balanceCents": {
-            "type": "number",
-            "description": "Saldo inicial en centavos",
-            "minimum": 0
-          }
-        }
-      },
-      "CreditoResponseDto": {
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "string",
-            "format": "uuid"
-          },
-          "createdAt": {
-            "type": "string",
-            "format": "date-time"
-          },
-          "updatedAt": {
-            "type": "string",
-            "format": "date-time"
-          },
-          "customer": {
-            "type": "string"
-          },
-          "concept": {
-            "type": "string"
-          },
-          "date": {
-            "type": "string",
-            "format": "date"
-          },
-          "dueDate": {
-            "type": "string",
-            "format": "date"
-          },
-          "amountCents": {
-            "type": "number",
-            "description": "Importe original en centavos"
-          },
-          "balanceCents": {
-            "type": "number",
-            "description": "Saldo pendiente en centavos"
-          }
-        },
-        "required": [
-          "id",
-          "createdAt",
-          "updatedAt",
-          "customer",
-          "concept",
-          "date",
-          "dueDate",
-          "amountCents",
-          "balanceCents"
-        ]
-      },
-      "CrearCreditoRequestDto": {
-        "type": "object",
-        "properties": {
-          "customer": {
-            "type": "string",
-            "description": "Cliente que recibe el crédito"
-          },
-          "concept": {
-            "type": "string",
-            "description": "Concepto del crédito"
-          },
-          "date": {
-            "type": "string",
-            "description": "Fecha de emisión (yyyy-mm-dd)"
-          },
-          "dueDate": {
-            "type": "string",
-            "description": "Fecha de vencimiento (yyyy-mm-dd)"
-          },
-          "amountCents": {
-            "type": "number",
-            "description": "Importe en centavos",
-            "minimum": 1
-          }
-        },
-        "required": [
-          "customer",
-          "concept",
-          "dueDate",
-          "amountCents"
-        ]
-      },
-      "GastoResponseDto": {
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "string",
-            "format": "uuid"
-          },
-          "createdAt": {
-            "type": "string",
-            "format": "date-time"
-          },
-          "updatedAt": {
-            "type": "string",
-            "format": "date-time"
-          },
-          "date": {
-            "type": "string",
-            "format": "date"
-          },
-          "concept": {
-            "type": "string"
-          },
-          "category": {
-            "type": "string"
-          },
-          "type": {
-            "type": "string",
-            "enum": [
-              "inmediato",
-              "programado",
-              "recurrente"
-            ]
-          },
-          "amountCents": {
-            "type": "number",
-            "description": "Importe en centavos"
-          },
-          "paymentMethod": {
-            "type": "string"
-          },
-          "status": {
-            "type": "string",
-            "enum": [
-              "pendiente",
-              "pagado",
-              "cancelado"
-            ]
-          },
-          "includesVat": {
-            "type": "boolean"
-          },
-          "irRetentionCents": {
-            "type": "number",
-            "description": "Retención de IR en centavos"
-          },
-          "beneficiary": {
-            "type": "string"
-          },
-          "notes": {
-            "type": "string"
-          },
-          "scheduledFor": {
-            "type": "string",
-            "format": "date"
-          },
-          "recurrence": {
-            "type": "string"
-          }
-        },
-        "required": [
-          "id",
-          "createdAt",
-          "updatedAt",
-          "date",
-          "concept",
-          "category",
-          "type",
-          "amountCents",
-          "paymentMethod",
-          "status",
-          "includesVat",
-          "irRetentionCents",
-          "beneficiary",
-          "notes",
-          "scheduledFor",
-          "recurrence"
-        ]
-      },
-      "CrearGastoRequestDto": {
-        "type": "object",
-        "properties": {
-          "date": {
-            "type": "string",
-            "description": "Fecha del gasto (yyyy-mm-dd)"
-          },
-          "concept": {
-            "type": "string",
-            "description": "Concepto del gasto"
-          },
-          "category": {
-            "type": "string",
-            "description": "Categoría visible (puede ser personalizada)"
-          },
-          "type": {
-            "type": "string",
-            "description": "Tipo de gasto",
-            "enum": [
-              "inmediato",
-              "programado",
-              "recurrente"
-            ]
-          },
-          "amountCents": {
-            "type": "number",
-            "description": "Importe en centavos",
-            "minimum": 1
-          },
-          "paymentMethod": {
-            "type": "string",
-            "description": "Método de pago",
-            "enum": [
-              "efectivo",
-              "tarjeta",
-              "transferencia",
-              "credito",
-              "otro"
-            ]
-          },
-          "includesVat": {
-            "type": "boolean",
-            "description": "Incluye IVA",
-            "default": false
-          },
-          "irRetentionCents": {
-            "type": "number",
-            "description": "Retención de IR en centavos",
-            "minimum": 0,
-            "default": 0
-          },
-          "beneficiary": {
-            "type": "string",
-            "description": "Proveedor, empleado o beneficiario"
           },
           "notes": {
             "type": "string",
-            "description": "Notas"
-          },
-          "scheduledFor": {
-            "type": "string",
-            "description": "Fecha programada (yyyy-mm-dd)"
-          },
-          "recurrence": {
-            "type": "string",
-            "description": "Etiqueta de recurrencia"
+            "description": "Notas del cierre"
           }
         },
         "required": [
           "date",
-          "concept",
-          "category",
-          "type",
-          "amountCents",
-          "paymentMethod"
+          "countedBalanceCents"
         ]
       },
-      "ActualizarGastoRequestDto": {
-        "type": "object",
-        "properties": {
-          "date": {
-            "type": "string",
-            "description": "Fecha del gasto (yyyy-mm-dd)"
-          },
-          "concept": {
-            "type": "string",
-            "description": "Concepto del gasto"
-          },
-          "category": {
-            "type": "string",
-            "description": "Categoría visible (puede ser personalizada)"
-          },
-          "type": {
-            "type": "string",
-            "description": "Tipo de gasto",
-            "enum": [
-              "inmediato",
-              "programado",
-              "recurrente"
-            ]
-          },
-          "amountCents": {
-            "type": "number",
-            "description": "Importe en centavos",
-            "minimum": 1
-          },
-          "paymentMethod": {
-            "type": "string",
-            "description": "Método de pago",
-            "enum": [
-              "efectivo",
-              "tarjeta",
-              "transferencia",
-              "credito",
-              "otro"
-            ]
-          },
-          "includesVat": {
-            "type": "boolean",
-            "description": "Incluye IVA",
-            "default": false
-          },
-          "irRetentionCents": {
-            "type": "number",
-            "description": "Retención de IR en centavos",
-            "minimum": 0,
-            "default": 0
-          },
-          "beneficiary": {
-            "type": "string",
-            "description": "Proveedor, empleado o beneficiario"
-          },
-          "notes": {
-            "type": "string",
-            "description": "Notas"
-          },
-          "scheduledFor": {
-            "type": "string",
-            "description": "Fecha programada (yyyy-mm-dd)"
-          },
-          "recurrence": {
-            "type": "string",
-            "description": "Etiqueta de recurrencia"
-          }
-        }
-      },
-      "CuentaPorPagarResponseDto": {
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "string",
-            "format": "uuid"
-          },
-          "createdAt": {
-            "type": "string",
-            "format": "date-time"
-          },
-          "updatedAt": {
-            "type": "string",
-            "format": "date-time"
-          },
-          "supplier": {
-            "type": "string"
-          },
-          "concept": {
-            "type": "string"
-          },
-          "dueDate": {
-            "type": "string",
-            "format": "date"
-          },
-          "amountCents": {
-            "type": "number",
-            "description": "Importe en centavos"
-          },
-          "status": {
-            "type": "string",
-            "enum": [
-              "pendiente",
-              "pagada"
-            ]
-          },
-          "paidAt": {
-            "type": "string",
-            "format": "date"
-          }
-        },
-        "required": [
-          "id",
-          "createdAt",
-          "updatedAt",
-          "supplier",
-          "concept",
-          "dueDate",
-          "amountCents",
-          "status",
-          "paidAt"
-        ]
-      },
-      "CrearCuentaPorPagarRequestDto": {
-        "type": "object",
-        "properties": {
-          "supplier": {
-            "type": "string",
-            "description": "Proveedor"
-          },
-          "concept": {
-            "type": "string",
-            "description": "Concepto de la obligación"
-          },
-          "dueDate": {
-            "type": "string",
-            "description": "Fecha de vencimiento (yyyy-mm-dd)"
-          },
-          "amountCents": {
-            "type": "number",
-            "description": "Importe en centavos",
-            "minimum": 1
-          }
-        },
-        "required": [
-          "supplier",
-          "concept",
-          "dueDate",
-          "amountCents"
-        ]
-      },
-      "ProveedorResponseDto": {
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "string",
-            "format": "uuid"
-          },
-          "createdAt": {
-            "type": "string",
-            "format": "date-time"
-          },
-          "updatedAt": {
-            "type": "string",
-            "format": "date-time"
-          },
-          "name": {
-            "type": "string"
-          },
-          "ruc": {
-            "type": "string"
-          },
-          "phone": {
-            "type": "string"
-          },
-          "email": {
-            "type": "string"
-          },
-          "address": {
-            "type": "string"
-          }
-        },
-        "required": [
-          "id",
-          "createdAt",
-          "updatedAt",
-          "name",
-          "ruc",
-          "phone",
-          "email",
-          "address"
-        ]
-      },
-      "CrearProveedorRequestDto": {
+      "CrearClienteComercioRequestDto": {
         "type": "object",
         "properties": {
           "name": {
             "type": "string",
-            "description": "Nombre del proveedor"
-          },
-          "ruc": {
-            "type": "string",
-            "description": "RUC"
+            "description": "Nombre del cliente"
           },
           "phone": {
             "type": "string",
@@ -5911,274 +4185,62 @@
             "type": "string",
             "description": "Correo"
           },
-          "address": {
+          "company": {
             "type": "string",
-            "description": "Dirección"
+            "description": "Empresa del cliente"
+          },
+          "buyerId": {
+            "type": "string",
+            "description": "Id del comprador en Core Engine"
+          },
+          "source": {
+            "type": "string",
+            "description": "Origen",
+            "enum": [
+              "manual",
+              "import"
+            ]
           }
         },
         "required": [
           "name"
         ]
       },
-      "LineaCompraResponseDto": {
+      "CrearCodigoBarrasRequestDto": {
         "type": "object",
         "properties": {
-          "id": {
-            "type": "string"
-          },
-          "productId": {
-            "type": "object",
-            "nullable": true
-          },
-          "name": {
-            "type": "string"
-          },
-          "sku": {
-            "type": "string"
-          },
-          "quantity": {
-            "type": "number"
-          },
-          "unitCostCents": {
-            "type": "number",
-            "description": "Costo unitario en centavos"
-          },
-          "salePriceCents": {
-            "type": "object",
-            "description": "Precio de venta en centavos",
-            "nullable": true
-          }
-        },
-        "required": [
-          "id",
-          "productId",
-          "name",
-          "sku",
-          "quantity",
-          "unitCostCents",
-          "salePriceCents"
-        ]
-      },
-      "CompraResponseDto": {
-        "type": "object",
-        "properties": {
-          "id": {
+          "productName": {
             "type": "string",
-            "format": "uuid"
-          },
-          "createdAt": {
-            "type": "string",
-            "format": "date-time"
-          },
-          "updatedAt": {
-            "type": "string",
-            "format": "date-time"
-          },
-          "number": {
-            "type": "string"
-          },
-          "date": {
-            "type": "string",
-            "format": "date"
-          },
-          "supplierId": {
-            "type": "object",
-            "nullable": true
-          },
-          "supplierName": {
-            "type": "string"
-          },
-          "paymentMethod": {
-            "type": "string"
-          },
-          "status": {
-            "type": "string",
-            "enum": [
-              "recibida",
-              "pendiente",
-              "anulada"
-            ]
-          },
-          "origin": {
-            "type": "string",
-            "enum": [
-              "productos",
-              "directa"
-            ]
-          },
-          "costType": {
-            "type": "string"
-          },
-          "lines": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/LineaCompraResponseDto"
-            }
-          },
-          "subtotalCents": {
-            "type": "number",
-            "description": "Subtotal en centavos"
-          },
-          "retentionCents": {
-            "type": "number",
-            "description": "Retención en centavos"
-          },
-          "totalCents": {
-            "type": "number",
-            "description": "Total en centavos"
-          },
-          "notes": {
-            "type": "string"
-          },
-          "userName": {
-            "type": "string"
-          }
-        },
-        "required": [
-          "id",
-          "createdAt",
-          "updatedAt",
-          "number",
-          "date",
-          "supplierId",
-          "supplierName",
-          "paymentMethod",
-          "status",
-          "origin",
-          "costType",
-          "lines",
-          "subtotalCents",
-          "retentionCents",
-          "totalCents",
-          "notes",
-          "userName"
-        ]
-      },
-      "LineaCompraRequestDto": {
-        "type": "object",
-        "properties": {
-          "productId": {
-            "type": "object",
-            "description": "Id del producto del catálogo",
-            "nullable": true
-          },
-          "name": {
-            "type": "string",
-            "description": "Nombre visible de la línea"
+            "description": "Producto al que pertenece la etiqueta"
           },
           "sku": {
             "type": "string",
             "description": "SKU del producto"
           },
-          "quantity": {
-            "type": "number",
-            "description": "Cantidad comprada",
-            "minimum": 1
+          "code": {
+            "type": "string",
+            "description": "Código; vacío = se genera según la simbología"
           },
-          "unitCostCents": {
-            "type": "number",
-            "description": "Costo unitario en centavos",
-            "minimum": 0
+          "symbology": {
+            "type": "string",
+            "description": "Simbología",
+            "enum": [
+              "EAN13",
+              "CODE128"
+            ]
           },
-          "salePriceCents": {
-            "type": "object",
-            "description": "Precio de venta en centavos",
-            "nullable": true,
-            "minimum": 0
+          "copies": {
+            "type": "number",
+            "description": "Copias a imprimir (1-100)",
+            "minimum": 1,
+            "maximum": 100
           }
         },
         "required": [
-          "name",
-          "quantity",
-          "unitCostCents"
-        ]
-      },
-      "CrearCompraRequestDto": {
-        "type": "object",
-        "properties": {
-          "number": {
-            "type": "string",
-            "description": "Número del documento; si se omite se genera"
-          },
-          "date": {
-            "type": "string",
-            "description": "Fecha de la compra (yyyy-mm-dd)"
-          },
-          "supplierId": {
-            "type": "object",
-            "description": "Id del proveedor",
-            "nullable": true
-          },
-          "supplierName": {
-            "type": "string",
-            "description": "Nombre del proveedor"
-          },
-          "paymentMethod": {
-            "type": "string",
-            "description": "Método de pago",
-            "enum": [
-              "efectivo",
-              "tarjeta",
-              "transferencia",
-              "credito",
-              "otro"
-            ]
-          },
-          "status": {
-            "type": "string",
-            "description": "Estado del documento",
-            "enum": [
-              "recibida",
-              "pendiente",
-              "anulada"
-            ]
-          },
-          "origin": {
-            "type": "string",
-            "description": "Origen de la compra",
-            "enum": [
-              "productos",
-              "directa"
-            ]
-          },
-          "costType": {
-            "type": "string",
-            "description": "Tipo de costo",
-            "enum": [
-              "inventario",
-              "servicio",
-              "gasto",
-              "otro"
-            ]
-          },
-          "lines": {
-            "description": "Líneas de la compra",
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/LineaCompraRequestDto"
-            }
-          },
-          "notes": {
-            "type": "string",
-            "description": "Notas"
-          },
-          "retentionCents": {
-            "type": "number",
-            "description": "Retención informativa en centavos",
-            "minimum": 0
-          },
-          "userName": {
-            "type": "string",
-            "description": "Usuario que registra la compra"
-          }
-        },
-        "required": [
-          "date",
-          "paymentMethod",
-          "status",
-          "origin",
-          "costType",
-          "lines"
+          "productName",
+          "sku",
+          "symbology",
+          "copies"
         ]
       },
       "CrearCompraDirectaRequestDto": {
@@ -6321,69 +4383,508 @@
           "quantity"
         ]
       },
-      "OrdenCompraResponseDto": {
+      "CrearCompraRequestDto": {
         "type": "object",
         "properties": {
-          "id": {
-            "type": "string",
-            "format": "uuid"
-          },
-          "createdAt": {
-            "type": "string",
-            "format": "date-time"
-          },
-          "updatedAt": {
-            "type": "string",
-            "format": "date-time"
-          },
           "number": {
-            "type": "string"
+            "type": "string",
+            "description": "Número del documento; si se omite se genera"
           },
           "date": {
             "type": "string",
-            "format": "date"
+            "description": "Fecha de la compra (yyyy-mm-dd)"
           },
           "supplierId": {
             "type": "object",
+            "description": "Id del proveedor",
             "nullable": true
           },
           "supplierName": {
-            "type": "string"
+            "type": "string",
+            "description": "Nombre del proveedor"
           },
-          "lines": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/LineaCompraResponseDto"
-            }
-          },
-          "totalCents": {
-            "type": "number",
-            "description": "Total en centavos"
+          "paymentMethod": {
+            "type": "string",
+            "description": "Método de pago",
+            "enum": [
+              "efectivo",
+              "tarjeta",
+              "transferencia",
+              "credito",
+              "otro"
+            ]
           },
           "status": {
             "type": "string",
+            "description": "Estado del documento",
             "enum": [
+              "recibida",
               "pendiente",
-              "convertida",
               "anulada"
             ]
           },
+          "origin": {
+            "type": "string",
+            "description": "Origen de la compra",
+            "enum": [
+              "productos",
+              "directa"
+            ]
+          },
+          "costType": {
+            "type": "string",
+            "description": "Tipo de costo",
+            "enum": [
+              "inventario",
+              "servicio",
+              "gasto",
+              "otro"
+            ]
+          },
+          "lines": {
+            "description": "Líneas de la compra",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/LineaCompraRequestDto"
+            }
+          },
           "notes": {
-            "type": "string"
+            "type": "string",
+            "description": "Notas"
+          },
+          "retentionCents": {
+            "type": "number",
+            "description": "Retención informativa en centavos",
+            "minimum": 0
+          },
+          "userName": {
+            "type": "string",
+            "description": "Usuario que registra la compra"
           }
         },
         "required": [
-          "id",
-          "createdAt",
-          "updatedAt",
-          "number",
           "date",
-          "supplierId",
-          "supplierName",
-          "lines",
-          "totalCents",
+          "paymentMethod",
           "status",
-          "notes"
+          "origin",
+          "costType",
+          "lines"
+        ]
+      },
+      "CrearCreditoRequestDto": {
+        "type": "object",
+        "properties": {
+          "customer": {
+            "type": "string",
+            "description": "Cliente que recibe el crédito"
+          },
+          "concept": {
+            "type": "string",
+            "description": "Concepto del crédito"
+          },
+          "date": {
+            "type": "string",
+            "description": "Fecha de emisión (yyyy-mm-dd)"
+          },
+          "dueDate": {
+            "type": "string",
+            "description": "Fecha de vencimiento (yyyy-mm-dd)"
+          },
+          "amountCents": {
+            "type": "number",
+            "description": "Importe en centavos",
+            "minimum": 1
+          }
+        },
+        "required": [
+          "customer",
+          "concept",
+          "dueDate",
+          "amountCents"
+        ]
+      },
+      "CrearCuentaBancoRequestDto": {
+        "type": "object",
+        "properties": {
+          "bank": {
+            "type": "string",
+            "description": "Banco",
+            "example": "BAC"
+          },
+          "alias": {
+            "type": "string",
+            "description": "Alias visible de la cuenta",
+            "example": "Operativa"
+          },
+          "accountNumber": {
+            "type": "string",
+            "description": "Número de cuenta"
+          },
+          "type": {
+            "type": "string",
+            "description": "Tipo de cuenta",
+            "enum": [
+              "ahorro",
+              "corriente",
+              "wallet"
+            ]
+          },
+          "balanceCents": {
+            "type": "number",
+            "description": "Saldo inicial en centavos",
+            "minimum": 0
+          }
+        },
+        "required": [
+          "bank",
+          "alias",
+          "accountNumber",
+          "type",
+          "balanceCents"
+        ]
+      },
+      "CrearCuentaPorPagarRequestDto": {
+        "type": "object",
+        "properties": {
+          "supplier": {
+            "type": "string",
+            "description": "Proveedor"
+          },
+          "concept": {
+            "type": "string",
+            "description": "Concepto de la obligación"
+          },
+          "dueDate": {
+            "type": "string",
+            "description": "Fecha de vencimiento (yyyy-mm-dd)"
+          },
+          "amountCents": {
+            "type": "number",
+            "description": "Importe en centavos",
+            "minimum": 1
+          }
+        },
+        "required": [
+          "supplier",
+          "concept",
+          "dueDate",
+          "amountCents"
+        ]
+      },
+      "CrearCuentaRequestDto": {
+        "type": "object",
+        "properties": {
+          "codigo": {
+            "type": "string",
+            "description": "Código de la cuenta"
+          },
+          "nombre": {
+            "type": "string",
+            "description": "Nombre de la cuenta",
+            "minLength": 3
+          },
+          "tipo": {
+            "type": "string",
+            "description": "Tipo de cuenta",
+            "enum": [
+              "ACTIVO",
+              "PASIVO",
+              "CAPITAL",
+              "INGRESO",
+              "COSTO",
+              "GASTO"
+            ]
+          },
+          "naturaleza": {
+            "type": "string",
+            "description": "Naturaleza de la cuenta",
+            "enum": [
+              "DEUDORA",
+              "ACREEDORA"
+            ]
+          },
+          "nivel": {
+            "type": "number",
+            "description": "Nivel jerárquico"
+          }
+        },
+        "required": [
+          "codigo",
+          "nombre",
+          "tipo",
+          "naturaleza"
+        ]
+      },
+      "CrearFondoCajaChicaRequestDto": {
+        "type": "object",
+        "properties": {
+          "amountCents": {
+            "type": "number",
+            "description": "Monto del fondo en centavos",
+            "minimum": 0
+          },
+          "responsible": {
+            "type": "string",
+            "description": "Responsable del fondo"
+          }
+        },
+        "required": [
+          "amountCents",
+          "responsible"
+        ]
+      },
+      "CrearGastoRequestDto": {
+        "type": "object",
+        "properties": {
+          "date": {
+            "type": "string",
+            "description": "Fecha del gasto (yyyy-mm-dd)"
+          },
+          "concept": {
+            "type": "string",
+            "description": "Concepto del gasto"
+          },
+          "category": {
+            "type": "string",
+            "description": "Categoría visible (puede ser personalizada)"
+          },
+          "type": {
+            "type": "string",
+            "description": "Tipo de gasto",
+            "enum": [
+              "inmediato",
+              "programado",
+              "recurrente"
+            ]
+          },
+          "amountCents": {
+            "type": "number",
+            "description": "Importe en centavos",
+            "minimum": 1
+          },
+          "paymentMethod": {
+            "type": "string",
+            "description": "Método de pago",
+            "enum": [
+              "efectivo",
+              "tarjeta",
+              "transferencia",
+              "credito",
+              "otro"
+            ]
+          },
+          "includesVat": {
+            "type": "boolean",
+            "description": "Incluye IVA",
+            "default": false
+          },
+          "irRetentionCents": {
+            "type": "number",
+            "description": "Retención de IR en centavos",
+            "minimum": 0,
+            "default": 0
+          },
+          "beneficiary": {
+            "type": "string",
+            "description": "Proveedor, empleado o beneficiario"
+          },
+          "notes": {
+            "type": "string",
+            "description": "Notas"
+          },
+          "scheduledFor": {
+            "type": "string",
+            "description": "Fecha programada (yyyy-mm-dd)"
+          },
+          "recurrence": {
+            "type": "string",
+            "description": "Etiqueta de recurrencia"
+          }
+        },
+        "required": [
+          "date",
+          "concept",
+          "category",
+          "type",
+          "amountCents",
+          "paymentMethod"
+        ]
+      },
+      "CrearJurisdiccionRequestDto": {
+        "type": "object",
+        "properties": {
+          "codigo_pais": {
+            "type": "string",
+            "description": "Código de país (ISO)",
+            "minLength": 2
+          },
+          "nombre": {
+            "type": "string",
+            "description": "Nombre de la jurisdicción"
+          },
+          "moneda": {
+            "type": "string",
+            "description": "Moneda"
+          },
+          "simbolo_moneda": {
+            "type": "string",
+            "description": "Símbolo de la moneda"
+          },
+          "tasa_iva_por_mil": {
+            "type": "number",
+            "description": "Tasa de IVA por mil",
+            "minimum": 0
+          },
+          "tasa_ir_por_mil": {
+            "type": "number",
+            "description": "Tasa de IR por mil",
+            "minimum": 0
+          },
+          "periodicidad_declaracion": {
+            "type": "string",
+            "description": "Periodicidad de declaración"
+          },
+          "leyes": {
+            "type": "object",
+            "description": "Leyes aplicables (clave→texto)"
+          }
+        },
+        "required": [
+          "codigo_pais",
+          "nombre",
+          "moneda",
+          "simbolo_moneda",
+          "tasa_iva_por_mil",
+          "tasa_ir_por_mil"
+        ]
+      },
+      "CrearMetodoPagoRequestDto": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "Nombre visible del método"
+          },
+          "kind": {
+            "type": "string",
+            "description": "Tipo funcional (efectivo, tarjeta, transferencia…)"
+          },
+          "icon": {
+            "type": "string",
+            "description": "Icono"
+          },
+          "active": {
+            "type": "boolean",
+            "description": "Activo",
+            "default": true
+          }
+        },
+        "required": [
+          "name",
+          "kind"
+        ]
+      },
+      "CrearMovimientoCajaChicaRequestDto": {
+        "type": "object",
+        "properties": {
+          "date": {
+            "type": "string",
+            "description": "Fecha local (yyyy-mm-dd)"
+          },
+          "type": {
+            "type": "string",
+            "description": "Tipo de movimiento",
+            "enum": [
+              "reposicion",
+              "gasto"
+            ]
+          },
+          "concept": {
+            "type": "string",
+            "description": "Concepto"
+          },
+          "amountCents": {
+            "type": "number",
+            "description": "Importe en centavos",
+            "minimum": 1
+          }
+        },
+        "required": [
+          "date",
+          "type",
+          "concept",
+          "amountCents"
+        ]
+      },
+      "CrearMovimientoCajaRequestDto": {
+        "type": "object",
+        "properties": {
+          "date": {
+            "type": "string",
+            "description": "Fecha local (yyyy-mm-dd)"
+          },
+          "type": {
+            "type": "string",
+            "description": "Dirección del movimiento",
+            "enum": [
+              "ingreso",
+              "egreso"
+            ]
+          },
+          "concept": {
+            "type": "string",
+            "description": "Concepto"
+          },
+          "amountCents": {
+            "type": "number",
+            "description": "Importe en centavos",
+            "minimum": 1
+          },
+          "paymentMethod": {
+            "type": "string",
+            "description": "Método de pago (id o etiqueta)"
+          },
+          "category": {
+            "type": "string",
+            "description": "Categoría funcional"
+          },
+          "currency": {
+            "type": "string",
+            "description": "Moneda",
+            "enum": [
+              "NIO",
+              "USD"
+            ]
+          },
+          "originalAmountCents": {
+            "type": "number",
+            "description": "Importe original capturado en centavos",
+            "minimum": 0
+          },
+          "exchangeRate": {
+            "type": "number",
+            "description": "Tipo de cambio aplicado",
+            "minimum": 0
+          },
+          "reference": {
+            "type": "string",
+            "description": "Referencia visible del documento"
+          },
+          "observations": {
+            "type": "string",
+            "description": "Observaciones"
+          },
+          "source": {
+            "type": "string",
+            "description": "Origen del movimiento"
+          }
+        },
+        "required": [
+          "date",
+          "type",
+          "concept",
+          "amountCents",
+          "paymentMethod"
         ]
       },
       "CrearOrdenCompraRequestDto": {
@@ -6423,7 +4924,157 @@
           "lines"
         ]
       },
-      "ConfiguracionDocumentosResponseDto": {
+      "CrearProveedorRequestDto": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "Nombre del proveedor"
+          },
+          "ruc": {
+            "type": "string",
+            "description": "RUC"
+          },
+          "phone": {
+            "type": "string",
+            "description": "Teléfono"
+          },
+          "email": {
+            "type": "string",
+            "description": "Correo"
+          },
+          "address": {
+            "type": "string",
+            "description": "Dirección"
+          }
+        },
+        "required": [
+          "name"
+        ]
+      },
+      "CrearProyeccionRequestDto": {
+        "type": "object",
+        "properties": {
+          "nombre": {
+            "type": "string",
+            "description": "Nombre de la proyección",
+            "minLength": 3
+          },
+          "supuestos": {
+            "description": "Supuestos del modelo",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/SupuestosRequestDto"
+              }
+            ]
+          }
+        },
+        "required": [
+          "nombre",
+          "supuestos"
+        ]
+      },
+      "CrearRegimenRequestDto": {
+        "type": "object",
+        "properties": {
+          "jurisdiccion": {
+            "type": "string",
+            "description": "Jurisdicción",
+            "minLength": 2
+          },
+          "codigo": {
+            "type": "string",
+            "description": "Código del régimen"
+          },
+          "nombre": {
+            "type": "string",
+            "description": "Nombre del régimen"
+          },
+          "descripcion": {
+            "type": "string",
+            "description": "Descripción"
+          },
+          "periodicidad": {
+            "type": "string",
+            "description": "Periodicidad"
+          },
+          "condicion_ingresos_anuales_cents": {
+            "type": "number",
+            "description": "Condición de ingresos anuales (centavos)"
+          }
+        },
+        "required": [
+          "jurisdiccion",
+          "codigo",
+          "nombre"
+        ]
+      },
+      "CrearTransferenciaCajaRequestDto": {
+        "type": "object",
+        "properties": {
+          "date": {
+            "type": "string",
+            "description": "Fecha local (yyyy-mm-dd)"
+          },
+          "fromId": {
+            "type": "string",
+            "description": "Id de la cuenta origen"
+          },
+          "fromLabel": {
+            "type": "string",
+            "description": "Etiqueta de la cuenta origen"
+          },
+          "fromKind": {
+            "type": "string",
+            "description": "Tipo de cuenta origen",
+            "enum": [
+              "cash",
+              "bank"
+            ]
+          },
+          "toId": {
+            "type": "string",
+            "description": "Id de la cuenta destino"
+          },
+          "toLabel": {
+            "type": "string",
+            "description": "Etiqueta de la cuenta destino"
+          },
+          "toKind": {
+            "type": "string",
+            "description": "Tipo de cuenta destino",
+            "enum": [
+              "cash",
+              "bank"
+            ]
+          },
+          "amountCents": {
+            "type": "number",
+            "description": "Importe en centavos",
+            "minimum": 1
+          },
+          "concept": {
+            "type": "string",
+            "description": "Concepto de la transferencia"
+          },
+          "notes": {
+            "type": "string",
+            "description": "Notas"
+          }
+        },
+        "required": [
+          "date",
+          "fromId",
+          "fromLabel",
+          "fromKind",
+          "toId",
+          "toLabel",
+          "toKind",
+          "amountCents",
+          "concept"
+        ]
+      },
+      "CreditoResponseDto": {
         "type": "object",
         "properties": {
           "id": {
@@ -6438,92 +5089,1121 @@
             "type": "string",
             "format": "date-time"
           },
-          "logoSize": {
+          "customer": {
+            "type": "string"
+          },
+          "concept": {
+            "type": "string"
+          },
+          "date": {
             "type": "string",
-            "enum": [
-              "pequeno",
-              "mediano",
-              "grande"
-            ]
+            "format": "date"
           },
-          "headerColor": {
-            "type": "string"
+          "dueDate": {
+            "type": "string",
+            "format": "date"
           },
-          "matchTableColor": {
-            "type": "boolean"
+          "amountCents": {
+            "type": "number",
+            "description": "Importe original en centavos"
           },
-          "footerMessage": {
-            "type": "string"
-          },
-          "showRuc": {
-            "type": "boolean"
-          },
-          "showAddress": {
-            "type": "boolean"
-          },
-          "showPhone": {
-            "type": "boolean"
+          "balanceCents": {
+            "type": "number",
+            "description": "Saldo pendiente en centavos"
           }
         },
         "required": [
           "id",
           "createdAt",
           "updatedAt",
-          "logoSize",
-          "headerColor",
-          "matchTableColor",
-          "footerMessage",
-          "showRuc",
-          "showAddress",
-          "showPhone"
+          "customer",
+          "concept",
+          "date",
+          "dueDate",
+          "amountCents",
+          "balanceCents"
         ]
       },
-      "ActualizarConfiguracionDocumentosRequestDto": {
+      "CuentaBancoResponseDto": {
         "type": "object",
         "properties": {
-          "logoSize": {
+          "id": {
             "type": "string",
-            "description": "Tamaño del logo",
+            "format": "uuid"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "bank": {
+            "type": "string"
+          },
+          "alias": {
+            "type": "string"
+          },
+          "accountNumber": {
+            "type": "string"
+          },
+          "type": {
+            "type": "string",
             "enum": [
-              "pequeno",
-              "mediano",
-              "grande"
+              "ahorro",
+              "corriente",
+              "wallet"
             ]
           },
-          "headerColor": {
-            "type": "string",
-            "description": "Color de cabecera",
-            "example": "#0f172a"
-          },
-          "matchTableColor": {
-            "type": "boolean",
-            "description": "Igualar color de tabla al de cabecera"
-          },
-          "footerMessage": {
-            "type": "string",
-            "description": "Mensaje del pie de página"
-          },
-          "showRuc": {
-            "type": "boolean",
-            "description": "Mostrar RUC"
-          },
-          "showAddress": {
-            "type": "boolean",
-            "description": "Mostrar dirección"
-          },
-          "showPhone": {
-            "type": "boolean",
-            "description": "Mostrar teléfono"
+          "balanceCents": {
+            "type": "number",
+            "description": "Saldo en centavos"
           }
         },
         "required": [
-          "logoSize",
-          "headerColor",
-          "matchTableColor",
-          "footerMessage",
-          "showRuc",
-          "showAddress",
-          "showPhone"
+          "id",
+          "createdAt",
+          "updatedAt",
+          "bank",
+          "alias",
+          "accountNumber",
+          "type",
+          "balanceCents"
+        ]
+      },
+      "CuentaPorPagarResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "supplier": {
+            "type": "string"
+          },
+          "concept": {
+            "type": "string"
+          },
+          "dueDate": {
+            "type": "string",
+            "format": "date"
+          },
+          "amountCents": {
+            "type": "number",
+            "description": "Importe en centavos"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "pendiente",
+              "pagada"
+            ]
+          },
+          "paidAt": {
+            "type": "string",
+            "format": "date"
+          }
+        },
+        "required": [
+          "id",
+          "createdAt",
+          "updatedAt",
+          "supplier",
+          "concept",
+          "dueDate",
+          "amountCents",
+          "status",
+          "paidAt"
+        ]
+      },
+      "CuentaResponseDto": {
+        "type": "object",
+        "properties": {
+          "codigo": {
+            "type": "string",
+            "description": "Código de la cuenta",
+            "example": "1101"
+          },
+          "nombre": {
+            "type": "string",
+            "description": "Nombre de la cuenta",
+            "example": "Caja"
+          },
+          "tipo": {
+            "type": "string",
+            "description": "Tipo de cuenta",
+            "enum": [
+              "ACTIVO",
+              "PASIVO",
+              "CAPITAL",
+              "INGRESO",
+              "COSTO",
+              "GASTO"
+            ],
+            "example": "ACTIVO"
+          },
+          "naturaleza": {
+            "type": "string",
+            "description": "Naturaleza",
+            "enum": [
+              "DEUDORA",
+              "ACREEDORA"
+            ],
+            "example": "DEUDORA"
+          },
+          "nivel": {
+            "type": "number",
+            "description": "Nivel jerárquico",
+            "example": 1
+          },
+          "estado": {
+            "type": "string",
+            "description": "Estado",
+            "enum": [
+              "activa",
+              "inactiva"
+            ],
+            "example": "activa"
+          }
+        },
+        "required": [
+          "codigo",
+          "nombre",
+          "tipo",
+          "naturaleza",
+          "nivel",
+          "estado"
+        ]
+      },
+      "DeclaracionResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Id de la declaración",
+            "format": "uuid"
+          },
+          "jurisdiccion": {
+            "type": "string",
+            "description": "Jurisdicción",
+            "example": "NI"
+          },
+          "tipo": {
+            "type": "string",
+            "description": "Tipo",
+            "enum": [
+              "IVA",
+              "IR",
+              "CUOTA_FIJA"
+            ],
+            "example": "IVA"
+          },
+          "periodo_inicio": {
+            "type": "string",
+            "description": "Inicio del periodo",
+            "format": "date"
+          },
+          "periodo_fin": {
+            "type": "string",
+            "description": "Fin del periodo",
+            "format": "date"
+          },
+          "base_gravada_cents": {
+            "type": "number",
+            "description": "Base gravada en centavos",
+            "example": 1150000
+          },
+          "iva_debitado_cents": {
+            "type": "number",
+            "description": "IVA debitado en centavos",
+            "example": 172500
+          },
+          "iva_credito_cents": {
+            "type": "number",
+            "description": "IVA crédito en centavos",
+            "example": 0
+          },
+          "iva_a_pagar_cents": {
+            "type": "number",
+            "description": "IVA a pagar en centavos",
+            "example": 172500
+          },
+          "renta_bruta_cents": {
+            "type": "number",
+            "description": "Renta bruta en centavos",
+            "example": 1150000
+          },
+          "renta_gravable_cents": {
+            "type": "number",
+            "description": "Renta gravable en centavos",
+            "example": 575000
+          },
+          "ir_a_pagar_cents": {
+            "type": "number",
+            "description": "IR a pagar en centavos",
+            "example": 172500
+          },
+          "cuota_cents": {
+            "type": "number",
+            "description": "Cuota fija en centavos",
+            "example": 5000
+          },
+          "estado": {
+            "type": "string",
+            "description": "Estado",
+            "enum": [
+              "PENDIENTE",
+              "GENERADA",
+              "PRESENTADA",
+              "PAGADA",
+              "CANCELADA"
+            ],
+            "example": "GENERADA"
+          },
+          "detalle": {
+            "type": "object",
+            "description": "Detalle de la declaración",
+            "nullable": true
+          },
+          "generada_en": {
+            "type": "string",
+            "description": "Fecha de generación",
+            "format": "date-time"
+          },
+          "presentada_en": {
+            "type": "string",
+            "description": "Fecha de presentación",
+            "format": "date-time"
+          },
+          "creado_en": {
+            "type": "string",
+            "description": "Fecha de creación (ISO 8601 UTC)",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "jurisdiccion",
+          "tipo",
+          "periodo_inicio",
+          "periodo_fin",
+          "base_gravada_cents",
+          "iva_debitado_cents",
+          "iva_credito_cents",
+          "iva_a_pagar_cents",
+          "renta_bruta_cents",
+          "renta_gravable_cents",
+          "ir_a_pagar_cents",
+          "cuota_cents",
+          "estado",
+          "creado_en"
+        ]
+      },
+      "DetalleAsientoRequestDto": {
+        "type": "object",
+        "properties": {
+          "cuenta_codigo": {
+            "type": "string",
+            "description": "Código de cuenta contable"
+          },
+          "debe_cents": {
+            "type": "number",
+            "description": "Débito en centavos",
+            "minimum": 0
+          },
+          "haber_cents": {
+            "type": "number",
+            "description": "Crédito en centavos",
+            "minimum": 0
+          },
+          "concepto": {
+            "type": "string",
+            "description": "Concepto del detalle"
+          },
+          "orden": {
+            "type": "number",
+            "description": "Orden del detalle"
+          }
+        },
+        "required": [
+          "cuenta_codigo",
+          "debe_cents",
+          "haber_cents"
+        ]
+      },
+      "DetalleAsientoResponseDto": {
+        "type": "object",
+        "properties": {
+          "cuenta_codigo": {
+            "type": "string",
+            "description": "Código de cuenta contable"
+          },
+          "debe_cents": {
+            "type": "number",
+            "description": "Débito en centavos",
+            "example": 115000
+          },
+          "haber_cents": {
+            "type": "number",
+            "description": "Crédito en centavos",
+            "example": 115000
+          },
+          "concepto": {
+            "type": "string",
+            "description": "Concepto del detalle"
+          },
+          "orden": {
+            "type": "number",
+            "description": "Orden del detalle"
+          }
+        },
+        "required": [
+          "cuenta_codigo",
+          "debe_cents",
+          "haber_cents"
+        ]
+      },
+      "EconomiaDeEscalaResponseDto": {
+        "type": "object",
+        "properties": {
+          "costo_fijo_por_pedido_inicio_cents": {
+            "type": "number"
+          },
+          "costo_fijo_por_pedido_mes6_cents": {
+            "type": "number"
+          },
+          "costo_fijo_por_pedido_fin_cents": {
+            "type": "number"
+          },
+          "multiplicador_escala": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "costo_fijo_por_pedido_inicio_cents",
+          "costo_fijo_por_pedido_mes6_cents",
+          "costo_fijo_por_pedido_fin_cents",
+          "multiplicador_escala"
+        ]
+      },
+      "EmitirComprobanteRequestDto": {
+        "type": "object",
+        "properties": {
+          "tipo": {
+            "type": "string",
+            "description": "Tipo de comprobante",
+            "enum": [
+              "FACTURA",
+              "NOTA_CREDITO"
+            ]
+          },
+          "orden_id": {
+            "type": "string",
+            "description": "Id de la orden (UUID)"
+          },
+          "cliente_id": {
+            "type": "string",
+            "description": "Id del cliente"
+          },
+          "razon_social": {
+            "type": "string",
+            "description": "Razón social"
+          },
+          "ruc": {
+            "type": "string",
+            "description": "RUC"
+          }
+        },
+        "required": [
+          "tipo",
+          "orden_id"
+        ]
+      },
+      "EscenarioEquilibrioResponseDto": {
+        "type": "object",
+        "properties": {
+          "escenario": {
+            "type": "string",
+            "enum": [
+              "bajo",
+              "medio",
+              "alto"
+            ]
+          },
+          "costo_variable_por_pedido_cents": {
+            "type": "number"
+          },
+          "contribucion_por_pedido_cents": {
+            "type": "number"
+          },
+          "pedidos_equilibrio": {
+            "type": "number"
+          },
+          "gmv_equilibrio_cents": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "escenario",
+          "costo_variable_por_pedido_cents",
+          "contribucion_por_pedido_cents",
+          "pedidos_equilibrio",
+          "gmv_equilibrio_cents"
+        ]
+      },
+      "EstadoCuentaRequestDto": {
+        "type": "object",
+        "properties": {
+          "estado": {
+            "type": "string",
+            "description": "Estado de la cuenta",
+            "enum": [
+              "activa",
+              "inactiva"
+            ]
+          }
+        },
+        "required": [
+          "estado"
+        ]
+      },
+      "FilaProyeccionResponseDto": {
+        "type": "object",
+        "properties": {
+          "mes": {
+            "type": "number"
+          },
+          "vendedores": {
+            "type": "number"
+          },
+          "pedidos": {
+            "type": "number"
+          },
+          "gmv_cents": {
+            "type": "number"
+          },
+          "ingresos_cents": {
+            "type": "number"
+          },
+          "costos_cents": {
+            "type": "number"
+          },
+          "flujo_cents": {
+            "type": "number"
+          },
+          "flujo_acumulado_cents": {
+            "type": "number"
+          },
+          "costo_fijo_por_pedido_cents": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "mes",
+          "vendedores",
+          "pedidos",
+          "gmv_cents",
+          "ingresos_cents",
+          "costos_cents",
+          "flujo_cents",
+          "flujo_acumulado_cents",
+          "costo_fijo_por_pedido_cents"
+        ]
+      },
+      "FlujoVariacionGmvResponseDto": {
+        "type": "object",
+        "properties": {
+          "variacion_gmv": {
+            "type": "number"
+          },
+          "flujo_cents": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "variacion_gmv",
+          "flujo_cents"
+        ]
+      },
+      "FondoCajaChicaResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "amountCents": {
+            "type": "number",
+            "description": "Monto del fondo en centavos"
+          },
+          "responsible": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "createdAt",
+          "updatedAt",
+          "amountCents",
+          "responsible"
+        ]
+      },
+      "GastoResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "date": {
+            "type": "string",
+            "format": "date"
+          },
+          "concept": {
+            "type": "string"
+          },
+          "category": {
+            "type": "string"
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "inmediato",
+              "programado",
+              "recurrente"
+            ]
+          },
+          "amountCents": {
+            "type": "number",
+            "description": "Importe en centavos"
+          },
+          "paymentMethod": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "pendiente",
+              "pagado",
+              "cancelado"
+            ]
+          },
+          "includesVat": {
+            "type": "boolean"
+          },
+          "irRetentionCents": {
+            "type": "number",
+            "description": "Retención de IR en centavos"
+          },
+          "beneficiary": {
+            "type": "string"
+          },
+          "notes": {
+            "type": "string"
+          },
+          "scheduledFor": {
+            "type": "string",
+            "format": "date"
+          },
+          "recurrence": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "createdAt",
+          "updatedAt",
+          "date",
+          "concept",
+          "category",
+          "type",
+          "amountCents",
+          "paymentMethod",
+          "status",
+          "includesVat",
+          "irRetentionCents",
+          "beneficiary",
+          "notes",
+          "scheduledFor",
+          "recurrence"
+        ]
+      },
+      "GenerarDeclaracionesRequestDto": {
+        "type": "object",
+        "properties": {
+          "tipo": {
+            "type": "string",
+            "description": "Tipo de declaración",
+            "enum": [
+              "IVA",
+              "IR",
+              "CUOTA_FIJA"
+            ]
+          },
+          "inicio": {
+            "type": "string",
+            "description": "Inicio del periodo"
+          },
+          "fin": {
+            "type": "string",
+            "description": "Fin del periodo"
+          }
+        }
+      },
+      "ImportarClientesRequestDto": {
+        "type": "object",
+        "properties": {
+          "clientes": {
+            "description": "Filas a importar (máximo 500)",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CrearClienteComercioRequestDto"
+            }
+          }
+        },
+        "required": [
+          "clientes"
+        ]
+      },
+      "ImportarClientesResponseDto": {
+        "type": "object",
+        "properties": {
+          "imported": {
+            "type": "number"
+          },
+          "skipped": {
+            "type": "number"
+          },
+          "errors": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": [
+          "imported",
+          "skipped",
+          "errors"
+        ]
+      },
+      "IndicadoresProyeccionResponseDto": {
+        "type": "object",
+        "properties": {
+          "payback_mes": {
+            "type": "object",
+            "nullable": true
+          },
+          "van_cents": {
+            "type": "number"
+          },
+          "tir_mensual": {
+            "type": "object",
+            "nullable": true
+          },
+          "tir_anual": {
+            "type": "object",
+            "nullable": true
+          },
+          "tir_no_estable": {
+            "type": "boolean"
+          },
+          "roi": {
+            "type": "number"
+          },
+          "margen_neto": {
+            "type": "number"
+          },
+          "punto_equilibrio_caja_cents": {
+            "type": "number"
+          },
+          "pedidos_equilibrio_caja": {
+            "type": "number"
+          },
+          "escenarios_equilibrio": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/EscenarioEquilibrioResponseDto"
+            }
+          },
+          "margen_seguridad_por_mes": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/MargenSeguridadResponseDto"
+            }
+          },
+          "cobertura_por_vendedor": {
+            "$ref": "#/components/schemas/CoberturaPorVendedorResponseDto"
+          },
+          "economia_de_escala": {
+            "$ref": "#/components/schemas/EconomiaDeEscalaResponseDto"
+          }
+        },
+        "required": [
+          "payback_mes",
+          "van_cents",
+          "tir_mensual",
+          "tir_anual",
+          "tir_no_estable",
+          "roi",
+          "margen_neto",
+          "punto_equilibrio_caja_cents",
+          "pedidos_equilibrio_caja",
+          "escenarios_equilibrio",
+          "margen_seguridad_por_mes",
+          "cobertura_por_vendedor",
+          "economia_de_escala"
+        ]
+      },
+      "JurisdiccionResponseDto": {
+        "type": "object",
+        "properties": {
+          "codigo_pais": {
+            "type": "string",
+            "description": "Código ISO del país",
+            "example": "NI"
+          },
+          "nombre": {
+            "type": "string",
+            "description": "Nombre de la jurisdicción",
+            "example": "Nicaragua"
+          },
+          "moneda": {
+            "type": "string",
+            "description": "Moneda",
+            "example": "NIO"
+          },
+          "simbolo_moneda": {
+            "type": "string",
+            "description": "Símbolo de la moneda",
+            "example": "C$"
+          },
+          "tasa_iva": {
+            "type": "number",
+            "description": "Tasa de IVA (0–1)",
+            "example": 0.15
+          },
+          "tasa_ir": {
+            "type": "number",
+            "description": "Tasa de IR (0–1)",
+            "example": 0.3
+          },
+          "periodicidad_declaracion": {
+            "type": "string",
+            "description": "Periodicidad de declaración",
+            "example": "MENSUAL"
+          },
+          "leyes": {
+            "type": "object",
+            "description": "Leyes aplicables (clave→texto)",
+            "additionalProperties": {
+              "type": "string"
+            }
+          },
+          "activa": {
+            "type": "boolean",
+            "description": "Jurisdicción activa",
+            "example": true
+          }
+        },
+        "required": [
+          "codigo_pais",
+          "nombre",
+          "moneda",
+          "simbolo_moneda",
+          "tasa_iva",
+          "tasa_ir",
+          "periodicidad_declaracion",
+          "leyes",
+          "activa"
+        ]
+      },
+      "KpisFinancierosResponseDto": {
+        "type": "object",
+        "properties": {
+          "periodo": {
+            "type": "string"
+          },
+          "gmv_cents": {
+            "type": "number"
+          },
+          "gmv": {
+            "type": "string"
+          },
+          "pedidos_pagados": {
+            "type": "number"
+          },
+          "pedidos_entregados": {
+            "type": "number"
+          },
+          "ingresos_comisiones_cents": {
+            "type": "number"
+          },
+          "ingresos_comisiones": {
+            "type": "string"
+          },
+          "devoluciones": {
+            "type": "number"
+          },
+          "vendedores_activos": {
+            "type": "number"
+          },
+          "pedidos_por_vendedor": {
+            "type": "number"
+          },
+          "activacion_primeros_15_dias": {
+            "type": "object",
+            "nullable": true
+          },
+          "tasa_devoluciones": {
+            "type": "number"
+          },
+          "churn_mensual": {
+            "type": "number"
+          },
+          "conversion_carrito_checkout": {
+            "type": "object",
+            "nullable": true
+          },
+          "liquidacion_a_tiempo": {
+            "type": "object",
+            "nullable": true
+          }
+        },
+        "required": [
+          "periodo",
+          "gmv_cents",
+          "gmv",
+          "pedidos_pagados",
+          "pedidos_entregados",
+          "ingresos_comisiones_cents",
+          "ingresos_comisiones",
+          "devoluciones",
+          "vendedores_activos",
+          "pedidos_por_vendedor",
+          "activacion_primeros_15_dias",
+          "tasa_devoluciones",
+          "churn_mensual",
+          "conversion_carrito_checkout",
+          "liquidacion_a_tiempo"
+        ]
+      },
+      "LibroIvaResponseDto": {
+        "type": "object",
+        "properties": {
+          "periodo": {
+            "type": "string",
+            "description": "Periodo (YYYY-MM)",
+            "example": "2026-10"
+          },
+          "comprobantes": {
+            "type": "number",
+            "description": "Comprobantes del periodo",
+            "example": 12
+          },
+          "base_gravada_cents": {
+            "type": "number",
+            "description": "Base gravada en centavos",
+            "example": 1150000
+          },
+          "iva_cents": {
+            "type": "number",
+            "description": "IVA en centavos",
+            "example": 172500
+          },
+          "exento_cents": {
+            "type": "number",
+            "description": "Monto exento en centavos",
+            "example": 0
+          },
+          "total_cents": {
+            "type": "number",
+            "description": "Total en centavos",
+            "example": 1322500
+          }
+        },
+        "required": [
+          "periodo",
+          "comprobantes",
+          "base_gravada_cents",
+          "iva_cents",
+          "exento_cents",
+          "total_cents"
+        ]
+      },
+      "LibroMayorResponseDto": {
+        "type": "object",
+        "properties": {
+          "cuenta": {
+            "description": "Cuenta contable",
+            "nullable": true,
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/CuentaResponseDto"
+              }
+            ]
+          },
+          "saldo_inicial_cents": {
+            "type": "number",
+            "description": "Saldo inicial en centavos",
+            "example": 100000
+          },
+          "saldo_final_cents": {
+            "type": "number",
+            "description": "Saldo final en centavos",
+            "example": 215000
+          },
+          "movimientos": {
+            "description": "Movimientos del periodo",
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          }
+        },
+        "required": [
+          "cuenta",
+          "saldo_inicial_cents",
+          "saldo_final_cents",
+          "movimientos"
+        ]
+      },
+      "LineaCompraRequestDto": {
+        "type": "object",
+        "properties": {
+          "productId": {
+            "type": "object",
+            "description": "Id del producto del catálogo",
+            "nullable": true
+          },
+          "name": {
+            "type": "string",
+            "description": "Nombre visible de la línea"
+          },
+          "sku": {
+            "type": "string",
+            "description": "SKU del producto"
+          },
+          "quantity": {
+            "type": "number",
+            "description": "Cantidad comprada",
+            "minimum": 1
+          },
+          "unitCostCents": {
+            "type": "number",
+            "description": "Costo unitario en centavos",
+            "minimum": 0
+          },
+          "salePriceCents": {
+            "type": "object",
+            "description": "Precio de venta en centavos",
+            "nullable": true,
+            "minimum": 0
+          }
+        },
+        "required": [
+          "name",
+          "quantity",
+          "unitCostCents"
+        ]
+      },
+      "LineaCompraResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "productId": {
+            "type": "object",
+            "nullable": true
+          },
+          "name": {
+            "type": "string"
+          },
+          "sku": {
+            "type": "string"
+          },
+          "quantity": {
+            "type": "number"
+          },
+          "unitCostCents": {
+            "type": "number",
+            "description": "Costo unitario en centavos"
+          },
+          "salePriceCents": {
+            "type": "object",
+            "description": "Precio de venta en centavos",
+            "nullable": true
+          }
+        },
+        "required": [
+          "id",
+          "productId",
+          "name",
+          "sku",
+          "quantity",
+          "unitCostCents",
+          "salePriceCents"
+        ]
+      },
+      "MargenSeguridadResponseDto": {
+        "type": "object",
+        "properties": {
+          "mes": {
+            "type": "number"
+          },
+          "gmv_cents": {
+            "type": "number"
+          },
+          "margen_seguridad": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "mes",
+          "gmv_cents",
+          "margen_seguridad"
+        ]
+      },
+      "Mes24ResponseDto": {
+        "type": "object",
+        "properties": {
+          "gmv_cents": {
+            "type": "number"
+          },
+          "incremento_vs_mes12": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "gmv_cents",
+          "incremento_vs_mes12"
         ]
       },
       "MetodoPagoResponseDto": {
@@ -6564,53 +6244,49 @@
           "active"
         ]
       },
-      "CrearMetodoPagoRequestDto": {
+      "MovimientoCajaChicaResponseDto": {
         "type": "object",
         "properties": {
-          "name": {
+          "id": {
             "type": "string",
-            "description": "Nombre visible del método"
+            "format": "uuid"
           },
-          "kind": {
+          "createdAt": {
             "type": "string",
-            "description": "Tipo funcional (efectivo, tarjeta, transferencia…)"
+            "format": "date-time"
           },
-          "icon": {
+          "updatedAt": {
             "type": "string",
-            "description": "Icono"
+            "format": "date-time"
           },
-          "active": {
-            "type": "boolean",
-            "description": "Activo",
-            "default": true
+          "date": {
+            "type": "string",
+            "format": "date"
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "reposicion",
+              "gasto"
+            ]
+          },
+          "concept": {
+            "type": "string"
+          },
+          "amountCents": {
+            "type": "number",
+            "description": "Importe en centavos"
           }
         },
         "required": [
-          "name",
-          "kind"
+          "id",
+          "createdAt",
+          "updatedAt",
+          "date",
+          "type",
+          "concept",
+          "amountCents"
         ]
-      },
-      "ActualizarMetodoPagoRequestDto": {
-        "type": "object",
-        "properties": {
-          "name": {
-            "type": "string",
-            "description": "Nombre visible del método"
-          },
-          "kind": {
-            "type": "string",
-            "description": "Tipo funcional (efectivo, tarjeta, transferencia…)"
-          },
-          "icon": {
-            "type": "string",
-            "description": "Icono"
-          },
-          "active": {
-            "type": "boolean",
-            "description": "Activo",
-            "default": true
-          }
-        }
       },
       "MovimientoCajaResponseDto": {
         "type": "object",
@@ -6704,78 +6380,7 @@
           "observations"
         ]
       },
-      "CrearMovimientoCajaRequestDto": {
-        "type": "object",
-        "properties": {
-          "date": {
-            "type": "string",
-            "description": "Fecha local (yyyy-mm-dd)"
-          },
-          "type": {
-            "type": "string",
-            "description": "Dirección del movimiento",
-            "enum": [
-              "ingreso",
-              "egreso"
-            ]
-          },
-          "concept": {
-            "type": "string",
-            "description": "Concepto"
-          },
-          "amountCents": {
-            "type": "number",
-            "description": "Importe en centavos",
-            "minimum": 1
-          },
-          "paymentMethod": {
-            "type": "string",
-            "description": "Método de pago (id o etiqueta)"
-          },
-          "category": {
-            "type": "string",
-            "description": "Categoría funcional"
-          },
-          "currency": {
-            "type": "string",
-            "description": "Moneda",
-            "enum": [
-              "NIO",
-              "USD"
-            ]
-          },
-          "originalAmountCents": {
-            "type": "number",
-            "description": "Importe original capturado en centavos",
-            "minimum": 0
-          },
-          "exchangeRate": {
-            "type": "number",
-            "description": "Tipo de cambio aplicado",
-            "minimum": 0
-          },
-          "reference": {
-            "type": "string",
-            "description": "Referencia visible del documento"
-          },
-          "observations": {
-            "type": "string",
-            "description": "Observaciones"
-          },
-          "source": {
-            "type": "string",
-            "description": "Origen del movimiento"
-          }
-        },
-        "required": [
-          "date",
-          "type",
-          "concept",
-          "amountCents",
-          "paymentMethod"
-        ]
-      },
-      "CierreCajaResponseDto": {
+      "OrdenCompraResponseDto": {
         "type": "object",
         "properties": {
           "id": {
@@ -6790,130 +6395,127 @@
             "type": "string",
             "format": "date-time"
           },
-          "date": {
-            "type": "string",
-            "format": "date"
-          },
-          "openingBalanceCents": {
-            "type": "number",
-            "description": "Saldo inicial en centavos"
-          },
-          "incomeCents": {
-            "type": "number",
-            "description": "Ingresos del día en centavos"
-          },
-          "expenseCents": {
-            "type": "number",
-            "description": "Egresos del día en centavos"
-          },
-          "expectedBalanceCents": {
-            "type": "number",
-            "description": "Saldo esperado en centavos"
-          },
-          "countedBalanceCents": {
-            "type": "number",
-            "description": "Saldo contado en centavos"
-          },
-          "differenceCents": {
-            "type": "number",
-            "description": "Diferencia en centavos"
-          },
-          "movementsCount": {
-            "type": "number"
-          },
-          "notes": {
+          "number": {
             "type": "string"
           },
-          "closedAt": {
-            "type": "string",
-            "format": "date-time"
-          }
-        },
-        "required": [
-          "id",
-          "createdAt",
-          "updatedAt",
-          "date",
-          "openingBalanceCents",
-          "incomeCents",
-          "expenseCents",
-          "expectedBalanceCents",
-          "countedBalanceCents",
-          "differenceCents",
-          "movementsCount",
-          "notes",
-          "closedAt"
-        ]
-      },
-      "CierreCajaPreviewResponseDto": {
-        "type": "object",
-        "properties": {
           "date": {
             "type": "string",
             "format": "date"
           },
-          "openingBalanceCents": {
-            "type": "number",
-            "description": "Saldo inicial en centavos"
-          },
-          "incomeCents": {
-            "type": "number",
-            "description": "Ingresos del día en centavos"
-          },
-          "expenseCents": {
-            "type": "number",
-            "description": "Egresos del día en centavos"
-          },
-          "expectedBalanceCents": {
-            "type": "number",
-            "description": "Saldo esperado en centavos"
-          },
-          "movementsCount": {
-            "type": "number"
-          },
-          "existing": {
-            "nullable": true,
+          "supplierId": {
             "type": "object",
-            "allOf": [
-              {
-                "$ref": "#/components/schemas/CierreCajaResponseDto"
-              }
-            ]
-          }
-        },
-        "required": [
-          "date",
-          "openingBalanceCents",
-          "incomeCents",
-          "expenseCents",
-          "expectedBalanceCents",
-          "movementsCount",
-          "existing"
-        ]
-      },
-      "CrearCierreCajaRequestDto": {
-        "type": "object",
-        "properties": {
-          "date": {
-            "type": "string",
-            "description": "Fecha del corte (yyyy-mm-dd)"
+            "nullable": true
           },
-          "countedBalanceCents": {
+          "supplierName": {
+            "type": "string"
+          },
+          "lines": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/LineaCompraResponseDto"
+            }
+          },
+          "totalCents": {
             "type": "number",
-            "description": "Saldo contado en centavos",
-            "minimum": 0
+            "description": "Total en centavos"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "pendiente",
+              "convertida",
+              "anulada"
+            ]
           },
           "notes": {
-            "type": "string",
-            "description": "Notas del cierre"
+            "type": "string"
           }
         },
         "required": [
+          "id",
+          "createdAt",
+          "updatedAt",
+          "number",
           "date",
-          "countedBalanceCents"
+          "supplierId",
+          "supplierName",
+          "lines",
+          "totalCents",
+          "status",
+          "notes"
         ]
       },
-      "FondoCajaChicaResponseDto": {
+      "PaybackPorEscenarioResponseDto": {
+        "type": "object",
+        "properties": {
+          "escenario": {
+            "type": "string",
+            "enum": [
+              "base",
+              "pesimista",
+              "peor_combinado"
+            ]
+          },
+          "descripcion": {
+            "type": "string"
+          },
+          "flujo_acumulado_cents": {
+            "type": "number"
+          },
+          "payback_mes": {
+            "type": "object",
+            "nullable": true
+          }
+        },
+        "required": [
+          "escenario",
+          "descripcion",
+          "flujo_acumulado_cents",
+          "payback_mes"
+        ]
+      },
+      "PlanBienalResponseDto": {
+        "type": "object",
+        "properties": {
+          "inversion_inicial_cents": {
+            "type": "number"
+          },
+          "anios": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ResumenAnualResponseDto"
+            }
+          },
+          "filas": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/FilaProyeccionResponseDto"
+            }
+          },
+          "acumulado_24_meses": {
+            "$ref": "#/components/schemas/Acumulado24MesesResponseDto"
+          },
+          "roi": {
+            "type": "number"
+          },
+          "mes_24": {
+            "$ref": "#/components/schemas/Mes24ResponseDto"
+          },
+          "indicadores": {
+            "$ref": "#/components/schemas/IndicadoresProyeccionResponseDto"
+          }
+        },
+        "required": [
+          "inversion_inicial_cents",
+          "anios",
+          "filas",
+          "acumulado_24_meses",
+          "roi",
+          "mes_24",
+          "indicadores"
+        ]
+      },
+      "ProveedorResponseDto": {
         "type": "object",
         "properties": {
           "id": {
@@ -6928,11 +6530,19 @@
             "type": "string",
             "format": "date-time"
           },
-          "amountCents": {
-            "type": "number",
-            "description": "Monto del fondo en centavos"
+          "name": {
+            "type": "string"
           },
-          "responsible": {
+          "ruc": {
+            "type": "string"
+          },
+          "phone": {
+            "type": "string"
+          },
+          "email": {
+            "type": "string"
+          },
+          "address": {
             "type": "string"
           }
         },
@@ -6940,102 +6550,674 @@
           "id",
           "createdAt",
           "updatedAt",
-          "amountCents",
-          "responsible"
+          "name",
+          "ruc",
+          "phone",
+          "email",
+          "address"
         ]
       },
-      "CrearFondoCajaChicaRequestDto": {
+      "ProyeccionResponseDto": {
         "type": "object",
         "properties": {
-          "amountCents": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "nombre": {
+            "type": "string"
+          },
+          "horizonte_meses": {
+            "type": "number"
+          },
+          "supuestos": {
+            "$ref": "#/components/schemas/SupuestosProyeccionResponseDto"
+          },
+          "filas": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/FilaProyeccionResponseDto"
+            }
+          },
+          "totales": {
+            "$ref": "#/components/schemas/TotalesProyeccionResponseDto"
+          },
+          "inversion_inicial_cents": {
+            "type": "number"
+          },
+          "indicadores": {
+            "$ref": "#/components/schemas/IndicadoresProyeccionResponseDto"
+          },
+          "creado_en": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "nombre",
+          "horizonte_meses",
+          "supuestos",
+          "filas",
+          "totales",
+          "inversion_inicial_cents",
+          "indicadores",
+          "creado_en"
+        ]
+      },
+      "PuntoEquilibrioResponseDto": {
+        "type": "object",
+        "properties": {
+          "punto_equilibrio_caja_cents": {
+            "type": "number"
+          },
+          "pedidos_equilibrio_caja": {
+            "type": "number"
+          },
+          "escenarios_equilibrio": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/EscenarioEquilibrioResponseDto"
+            }
+          },
+          "margen_seguridad_por_mes": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/MargenSeguridadResponseDto"
+            }
+          }
+        },
+        "required": [
+          "punto_equilibrio_caja_cents",
+          "pedidos_equilibrio_caja",
+          "escenarios_equilibrio",
+          "margen_seguridad_por_mes"
+        ]
+      },
+      "RegimenFiscalResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Id del régimen",
+            "format": "uuid"
+          },
+          "jurisdiccion": {
+            "type": "string",
+            "description": "Jurisdicción",
+            "example": "NI"
+          },
+          "codigo": {
+            "type": "string",
+            "description": "Código del régimen",
+            "example": "CUOTA_FIJA"
+          },
+          "nombre": {
+            "type": "string",
+            "description": "Nombre del régimen",
+            "example": "Cuota Fija"
+          },
+          "descripcion": {
+            "type": "string",
+            "description": "Descripción"
+          },
+          "periodicidad": {
+            "type": "string",
+            "description": "Periodicidad",
+            "example": "MENSUAL"
+          },
+          "condicion_ingresos_anuales_cents": {
             "type": "number",
-            "description": "Monto del fondo en centavos",
+            "description": "Condición de ingresos anuales en centavos"
+          },
+          "estado": {
+            "type": "string",
+            "description": "Estado",
+            "enum": [
+              "activo",
+              "inactivo"
+            ],
+            "example": "activo"
+          }
+        },
+        "required": [
+          "id",
+          "jurisdiccion",
+          "codigo",
+          "nombre",
+          "descripcion",
+          "periodicidad",
+          "estado"
+        ]
+      },
+      "RegistrarSujetoRequestDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Id del sujeto (UUID)"
+          },
+          "jurisdiccion": {
+            "type": "string",
+            "description": "Jurisdicción"
+          },
+          "regimen_id": {
+            "type": "string",
+            "description": "Id del régimen (UUID)"
+          },
+          "razon_social": {
+            "type": "string",
+            "description": "Razón social"
+          },
+          "ruc": {
+            "type": "string",
+            "description": "RUC"
+          },
+          "es_plataforma": {
+            "type": "boolean",
+            "description": "¿Es la plataforma?"
+          }
+        },
+        "required": [
+          "id",
+          "razon_social"
+        ]
+      },
+      "ResumenAnualResponseDto": {
+        "type": "object",
+        "properties": {
+          "anio": {
+            "type": "number"
+          },
+          "gmv_cents": {
+            "type": "number"
+          },
+          "ingresos_cents": {
+            "type": "number"
+          },
+          "costos_cents": {
+            "type": "number"
+          },
+          "flujo_cents": {
+            "type": "number"
+          },
+          "margen_neto": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "anio",
+          "gmv_cents",
+          "ingresos_cents",
+          "costos_cents",
+          "flujo_cents",
+          "margen_neto"
+        ]
+      },
+      "ResumenVendedorResponseDto": {
+        "type": "object",
+        "properties": {
+          "vendedor_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "periodo": {
+            "type": "string"
+          },
+          "ventas": {
+            "type": "number"
+          },
+          "monto_cents": {
+            "type": "number"
+          },
+          "comision_cents": {
+            "type": "number"
+          },
+          "devoluciones": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "vendedor_id",
+          "periodo",
+          "ventas",
+          "monto_cents",
+          "comision_cents",
+          "devoluciones"
+        ]
+      },
+      "SensibilidadComisionGmvResponseDto": {
+        "type": "object",
+        "properties": {
+          "tasa_comision": {
+            "type": "number"
+          },
+          "flujo_mes12_cents": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/FlujoVariacionGmvResponseDto"
+            }
+          }
+        },
+        "required": [
+          "tasa_comision",
+          "flujo_mes12_cents"
+        ]
+      },
+      "SensibilidadEstudiosResponseDto": {
+        "type": "object",
+        "properties": {
+          "supuestos": {
+            "$ref": "#/components/schemas/SupuestosProyeccionResponseDto"
+          },
+          "matriz_comision_gmv": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SensibilidadComisionGmvResponseDto"
+            }
+          },
+          "van_por_tasa": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SensibilidadVanResponseDto"
+            }
+          },
+          "payback_por_escenario": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PaybackPorEscenarioResponseDto"
+            }
+          },
+          "cobertura_por_vendedor": {
+            "$ref": "#/components/schemas/CoberturaPorVendedorResponseDto"
+          }
+        },
+        "required": [
+          "supuestos",
+          "matriz_comision_gmv",
+          "van_por_tasa",
+          "payback_por_escenario",
+          "cobertura_por_vendedor"
+        ]
+      },
+      "SensibilidadVanResponseDto": {
+        "type": "object",
+        "properties": {
+          "tasa_anual": {
+            "type": "number"
+          },
+          "tasa_mensual": {
+            "type": "number"
+          },
+          "van_cents": {
+            "type": "number"
+          },
+          "relacion_van_inversion": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "tasa_anual",
+          "tasa_mensual",
+          "van_cents",
+          "relacion_van_inversion"
+        ]
+      },
+      "SerieComprobanteResponseDto": {
+        "type": "object",
+        "properties": {
+          "serie": {
+            "type": "string",
+            "description": "Serie",
+            "example": "A"
+          },
+          "tipo": {
+            "type": "string",
+            "description": "Tipo",
+            "enum": [
+              "FACTURA",
+              "NOTA_CREDITO"
+            ],
+            "example": "FACTURA"
+          },
+          "prefijo": {
+            "type": "string",
+            "description": "Prefijo",
+            "example": "FAC"
+          },
+          "secuencial_actual": {
+            "type": "number",
+            "description": "Secuencial actual",
+            "example": 12
+          },
+          "ruc_emisor": {
+            "type": "string",
+            "description": "RUC del emisor",
+            "example": "J0310000000000"
+          },
+          "jurisdiccion": {
+            "type": "string",
+            "description": "Jurisdicción",
+            "example": "NI"
+          },
+          "activa": {
+            "type": "boolean",
+            "description": "Serie activa",
+            "example": true
+          }
+        },
+        "required": [
+          "serie",
+          "tipo",
+          "prefijo",
+          "secuencial_actual",
+          "ruc_emisor",
+          "jurisdiccion",
+          "activa"
+        ]
+      },
+      "SujetoTributarioResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Id del sujeto",
+            "format": "uuid"
+          },
+          "jurisdiccion": {
+            "type": "string",
+            "description": "Jurisdicción",
+            "example": "NI"
+          },
+          "regimen_id": {
+            "type": "string",
+            "description": "Id del régimen",
+            "format": "uuid"
+          },
+          "regimen_nombre": {
+            "type": "string",
+            "description": "Nombre del régimen"
+          },
+          "razon_social": {
+            "type": "string",
+            "description": "Razón social"
+          },
+          "ruc": {
+            "type": "string",
+            "description": "RUC"
+          },
+          "es_plataforma": {
+            "type": "boolean",
+            "description": "¿Es la plataforma?",
+            "example": false
+          },
+          "estado": {
+            "type": "string",
+            "description": "Estado",
+            "enum": [
+              "ACTIVO",
+              "BAJA"
+            ],
+            "example": "ACTIVO"
+          },
+          "creado_en": {
+            "type": "string",
+            "description": "Fecha de creación (ISO 8601 UTC)",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "jurisdiccion",
+          "razon_social",
+          "es_plataforma",
+          "estado",
+          "creado_en"
+        ]
+      },
+      "SupuestosProyeccionResponseDto": {
+        "type": "object",
+        "properties": {
+          "horizonte_meses": {
+            "type": "number",
+            "example": 12
+          },
+          "vendedores_iniciales": {
+            "type": "number",
+            "example": 20
+          },
+          "entrada_vendedores_mes": {
+            "type": "number",
+            "example": 5
+          },
+          "churn_tasa": {
+            "type": "number",
+            "example": 0
+          },
+          "pedidos_por_vendedor": {
+            "example": [
+              25,
+              27,
+              29,
+              31,
+              33,
+              35,
+              37,
+              38,
+              39,
+              40,
+              41,
+              42
+            ],
+            "type": "array",
+            "items": {
+              "type": "number"
+            }
+          },
+          "ticket_promedio_cents": {
+            "type": "number",
+            "example": 45000
+          },
+          "comision_tasa": {
+            "type": "number",
+            "example": 0.12
+          },
+          "costos_fijos_cents": {
+            "type": "number",
+            "example": 200000
+          },
+          "costos_fijos_desde_mes7_cents": {
+            "type": "number",
+            "example": 300000
+          },
+          "inversion_inicial_cents": {
+            "type": "number",
+            "example": 5850000
+          },
+          "tasa_descuento_mensual": {
+            "type": "number",
+            "example": 0.015
+          }
+        },
+        "required": [
+          "horizonte_meses",
+          "vendedores_iniciales",
+          "entrada_vendedores_mes",
+          "churn_tasa",
+          "pedidos_por_vendedor",
+          "ticket_promedio_cents",
+          "comision_tasa",
+          "costos_fijos_cents",
+          "inversion_inicial_cents"
+        ]
+      },
+      "SupuestosRequestDto": {
+        "type": "object",
+        "properties": {
+          "horizonte_meses": {
+            "type": "number",
+            "description": "Horizonte en meses (1-60)",
+            "minimum": 1,
+            "maximum": 60
+          },
+          "vendedores_iniciales": {
+            "type": "number",
+            "description": "Vendedores iniciales",
+            "minimum": 1
+          },
+          "entrada_vendedores_mes": {
+            "type": "number",
+            "description": "Entrada de vendedores por mes",
             "minimum": 0
           },
-          "responsible": {
-            "type": "string",
-            "description": "Responsable del fondo"
+          "churn_tasa": {
+            "type": "number",
+            "description": "Tasa de churn (0-1)",
+            "minimum": 0,
+            "maximum": 1
+          },
+          "pedidos_por_vendedor": {
+            "description": "Pedidos por vendedor por mes",
+            "type": "array",
+            "items": {
+              "type": "number"
+            }
+          },
+          "ticket_promedio_cents": {
+            "type": "number",
+            "description": "Ticket promedio en centavos",
+            "minimum": 1
+          },
+          "comision_tasa": {
+            "type": "number",
+            "description": "Tasa de comisión (0-1)",
+            "minimum": 0,
+            "maximum": 1
+          },
+          "costos_fijos_cents": {
+            "type": "number",
+            "description": "Costos fijos en centavos",
+            "minimum": 0
+          },
+          "costos_fijos_desde_mes7_cents": {
+            "type": "number",
+            "description": "Costos fijos desde el mes 7 en centavos",
+            "minimum": 0
+          },
+          "inversion_inicial_cents": {
+            "type": "number",
+            "description": "Inversión inicial en centavos",
+            "minimum": 0
+          },
+          "tasa_descuento_mensual": {
+            "type": "number",
+            "description": "Tasa de descuento mensual",
+            "minimum": 0
           }
         },
         "required": [
-          "amountCents",
-          "responsible"
+          "horizonte_meses",
+          "vendedores_iniciales",
+          "entrada_vendedores_mes",
+          "churn_tasa",
+          "pedidos_por_vendedor",
+          "ticket_promedio_cents",
+          "comision_tasa",
+          "costos_fijos_cents",
+          "inversion_inicial_cents"
         ]
       },
-      "MovimientoCajaChicaResponseDto": {
+      "TableroAlertaResponseDto": {
         "type": "object",
         "properties": {
-          "id": {
-            "type": "string",
-            "format": "uuid"
-          },
-          "createdAt": {
-            "type": "string",
-            "format": "date-time"
-          },
-          "updatedAt": {
-            "type": "string",
-            "format": "date-time"
-          },
-          "date": {
-            "type": "string",
-            "format": "date"
-          },
-          "type": {
-            "type": "string",
-            "enum": [
-              "reposicion",
-              "gasto"
-            ]
-          },
-          "concept": {
+          "capa": {
             "type": "string"
           },
-          "amountCents": {
-            "type": "number",
-            "description": "Importe en centavos"
-          }
-        },
-        "required": [
-          "id",
-          "createdAt",
-          "updatedAt",
-          "date",
-          "type",
-          "concept",
-          "amountCents"
-        ]
-      },
-      "CrearMovimientoCajaChicaRequestDto": {
-        "type": "object",
-        "properties": {
-          "date": {
-            "type": "string",
-            "description": "Fecha local (yyyy-mm-dd)"
+          "frecuencia": {
+            "type": "string"
           },
-          "type": {
+          "indicador": {
+            "type": "string"
+          },
+          "estado": {
             "type": "string",
-            "description": "Tipo de movimiento",
             "enum": [
-              "reposicion",
-              "gasto"
+              "OK",
+              "ALERTA",
+              "SIN_DATO"
             ]
           },
-          "concept": {
-            "type": "string",
-            "description": "Concepto"
+          "umbral": {
+            "type": "string"
           },
-          "amountCents": {
-            "type": "number",
-            "description": "Importe en centavos",
-            "minimum": 1
+          "valor": {
+            "type": "object",
+            "nullable": true
+          },
+          "accion": {
+            "type": "string"
+          },
+          "detalle": {
+            "type": "string"
+          },
+          "fecha_esperada": {
+            "type": "string"
           }
         },
         "required": [
-          "date",
-          "type",
-          "concept",
-          "amountCents"
+          "capa",
+          "frecuencia",
+          "indicador",
+          "estado",
+          "umbral",
+          "valor",
+          "accion",
+          "fecha_esperada"
+        ]
+      },
+      "TableroResponseDto": {
+        "type": "object",
+        "properties": {
+          "periodo": {
+            "type": "string"
+          },
+          "kpis": {
+            "$ref": "#/components/schemas/KpisFinancierosResponseDto"
+          },
+          "alertas": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/TableroAlertaResponseDto"
+            }
+          }
+        },
+        "required": [
+          "periodo",
+          "kpis",
+          "alertas"
+        ]
+      },
+      "TotalesProyeccionResponseDto": {
+        "type": "object",
+        "properties": {
+          "gmv_cents": {
+            "type": "number"
+          },
+          "ingresos_cents": {
+            "type": "number"
+          },
+          "costos_cents": {
+            "type": "number"
+          },
+          "flujo_cents": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "gmv_cents",
+          "ingresos_cents",
+          "costos_cents",
+          "flujo_cents"
         ]
       },
       "TransferenciaCajaResponseDto": {
@@ -7118,308 +7300,35 @@
           "status"
         ]
       },
-      "CrearTransferenciaCajaRequestDto": {
+      "VendedorFiscalResponseDto": {
         "type": "object",
         "properties": {
-          "date": {
-            "type": "string",
-            "description": "Fecha local (yyyy-mm-dd)"
-          },
-          "fromId": {
-            "type": "string",
-            "description": "Id de la cuenta origen"
-          },
-          "fromLabel": {
-            "type": "string",
-            "description": "Etiqueta de la cuenta origen"
-          },
-          "fromKind": {
-            "type": "string",
-            "description": "Tipo de cuenta origen",
-            "enum": [
-              "cash",
-              "bank"
+          "sujeto_fiscal": {
+            "nullable": true,
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/SujetoTributarioResponseDto"
+              }
             ]
           },
-          "toId": {
-            "type": "string",
-            "description": "Id de la cuenta destino"
-          },
-          "toLabel": {
-            "type": "string",
-            "description": "Etiqueta de la cuenta destino"
-          },
-          "toKind": {
-            "type": "string",
-            "description": "Tipo de cuenta destino",
-            "enum": [
-              "cash",
-              "bank"
+          "resumen_comisiones": {
+            "nullable": true,
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/ResumenVendedorResponseDto"
+              }
             ]
           },
-          "amountCents": {
-            "type": "number",
-            "description": "Importe en centavos",
-            "minimum": 1
-          },
-          "concept": {
-            "type": "string",
-            "description": "Concepto de la transferencia"
-          },
-          "notes": {
-            "type": "string",
-            "description": "Notas"
+          "nota": {
+            "type": "string"
           }
         },
         "required": [
-          "date",
-          "fromId",
-          "fromLabel",
-          "fromKind",
-          "toId",
-          "toLabel",
-          "toKind",
-          "amountCents",
-          "concept"
-        ]
-      },
-      "ClienteComercioResponseDto": {
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "string",
-            "format": "uuid"
-          },
-          "createdAt": {
-            "type": "string",
-            "format": "date-time"
-          },
-          "updatedAt": {
-            "type": "string",
-            "format": "date-time"
-          },
-          "name": {
-            "type": "string"
-          },
-          "phone": {
-            "type": "string"
-          },
-          "email": {
-            "type": "string"
-          },
-          "company": {
-            "type": "string"
-          },
-          "buyerId": {
-            "type": "string"
-          },
-          "source": {
-            "type": "string",
-            "enum": [
-              "order",
-              "manual",
-              "import"
-            ]
-          }
-        },
-        "required": [
-          "id",
-          "createdAt",
-          "updatedAt",
-          "name",
-          "phone",
-          "email",
-          "company",
-          "source"
-        ]
-      },
-      "CrearClienteComercioRequestDto": {
-        "type": "object",
-        "properties": {
-          "name": {
-            "type": "string",
-            "description": "Nombre del cliente"
-          },
-          "phone": {
-            "type": "string",
-            "description": "Teléfono"
-          },
-          "email": {
-            "type": "string",
-            "description": "Correo"
-          },
-          "company": {
-            "type": "string",
-            "description": "Empresa del cliente"
-          },
-          "buyerId": {
-            "type": "string",
-            "description": "Id del comprador en Core Engine"
-          },
-          "source": {
-            "type": "string",
-            "description": "Origen",
-            "enum": [
-              "manual",
-              "import"
-            ]
-          }
-        },
-        "required": [
-          "name"
-        ]
-      },
-      "ImportarClientesRequestDto": {
-        "type": "object",
-        "properties": {
-          "clientes": {
-            "description": "Filas a importar (máximo 500)",
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/CrearClienteComercioRequestDto"
-            }
-          }
-        },
-        "required": [
-          "clientes"
-        ]
-      },
-      "ImportarClientesResponseDto": {
-        "type": "object",
-        "properties": {
-          "imported": {
-            "type": "number"
-          },
-          "skipped": {
-            "type": "number"
-          },
-          "errors": {
-            "type": "array",
-            "items": {
-              "type": "string"
-            }
-          }
-        },
-        "required": [
-          "imported",
-          "skipped",
-          "errors"
-        ]
-      },
-      "ActualizarClienteComercioRequestDto": {
-        "type": "object",
-        "properties": {
-          "name": {
-            "type": "string",
-            "description": "Nombre del cliente"
-          },
-          "phone": {
-            "type": "string",
-            "description": "Teléfono"
-          },
-          "email": {
-            "type": "string",
-            "description": "Correo"
-          },
-          "company": {
-            "type": "string",
-            "description": "Empresa del cliente"
-          },
-          "buyerId": {
-            "type": "string",
-            "description": "Id del comprador en Core Engine"
-          },
-          "source": {
-            "type": "string",
-            "description": "Origen",
-            "enum": [
-              "manual",
-              "import"
-            ]
-          }
-        }
-      },
-      "CodigoBarrasResponseDto": {
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "string",
-            "format": "uuid"
-          },
-          "createdAt": {
-            "type": "string",
-            "format": "date-time"
-          },
-          "updatedAt": {
-            "type": "string",
-            "format": "date-time"
-          },
-          "productName": {
-            "type": "string"
-          },
-          "sku": {
-            "type": "string"
-          },
-          "code": {
-            "type": "string"
-          },
-          "symbology": {
-            "type": "string",
-            "enum": [
-              "EAN13",
-              "CODE128"
-            ]
-          },
-          "copies": {
-            "type": "number"
-          }
-        },
-        "required": [
-          "id",
-          "createdAt",
-          "updatedAt",
-          "productName",
-          "sku",
-          "code",
-          "symbology",
-          "copies"
-        ]
-      },
-      "CrearCodigoBarrasRequestDto": {
-        "type": "object",
-        "properties": {
-          "productName": {
-            "type": "string",
-            "description": "Producto al que pertenece la etiqueta"
-          },
-          "sku": {
-            "type": "string",
-            "description": "SKU del producto"
-          },
-          "code": {
-            "type": "string",
-            "description": "Código; vacío = se genera según la simbología"
-          },
-          "symbology": {
-            "type": "string",
-            "description": "Simbología",
-            "enum": [
-              "EAN13",
-              "CODE128"
-            ]
-          },
-          "copies": {
-            "type": "number",
-            "description": "Copias a imprimir (1-100)",
-            "minimum": 1,
-            "maximum": 100
-          }
-        },
-        "required": [
-          "productName",
-          "sku",
-          "symbology",
-          "copies"
+          "sujeto_fiscal",
+          "resumen_comisiones",
+          "nota"
         ]
       }
     }

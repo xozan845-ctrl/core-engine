@@ -176,7 +176,7 @@ La **fuente de verdad** del contrato es la especificación OpenAPI de cada servi
 (R-DO-6). Cada microservicio:
 
 - monta Swagger UI en **`/docs`** (su `main.ts` usa `crearDocumentoOpenApi`);
-- versiona su spec en **`docs/openapi/<servicio>.json`**.
+- versiona sus dos superficies en **`docs/openapi/<servicio>/public.openapi.json`** e **`internal.openapi.json`**.
 
 El spec se regenera y se verifica en CI con el **gate G-8** (`R-C-7`): el job *Build*
 ejecuta `npm run swagger:export` y falla si `docs/openapi`, `docs/api` o el
@@ -184,8 +184,8 @@ agregado del gateway cambian sin commitear (`git diff --exit-code`). Al tocar un
 DTO hay que anotarlo con `@ApiProperty`.
 
 El **API Gateway** sirve en su `/docs` el **documento agregado de la superficie
-pública**: `scripts/tools/swagger-aggregate.mjs` fusiona `docs/openapi/*.json`,
-separa las rutas `/api/v1/**` de las `/internal/**` y escribe dos artefactos:
+pública**: `scripts/tools/swagger-aggregate.mjs` fusiona
+`docs/openapi/<servicio>/{public,internal}.openapi.json` y escribe dos artefactos:
 
 - `docs/api/core-engine.openapi.json` — contrato público (solo `/api/v1/**`), que
   también se publica en `packages/api-gateway/src/openapi.agregado.ts` (generado,
@@ -201,7 +201,7 @@ separa las rutas `/api/v1/**` de las `/internal/**` y escribe dos artefactos:
 | Staging/producción | `/docs*` está **privado** (404): descárgalo con `x-internal-key: $INTERNAL_API_KEY` o usa el archivo del repo |
 
 ```bash
-npm run swagger:export   # regenera docs/openapi/*.json + los dos agregados de docs/api/
+npm run swagger:export   # regenera docs/openapi/<servicio>/{public,internal} + los dos agregados de docs/api/
 ```
 
 Cobertura actual: **272/272 operaciones documentadas** en 10 servicios:

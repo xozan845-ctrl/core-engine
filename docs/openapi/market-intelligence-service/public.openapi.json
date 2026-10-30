@@ -1,5 +1,14 @@
 {
   "openapi": "3.0.0",
+  "info": {
+    "title": "Core Engine · market-intelligence-service · API pública",
+    "description": "Contrato público (/api/v1/**) de market-intelligence-service. No contiene rutas /internal/**.",
+    "version": "v1",
+    "contact": {}
+  },
+  "x-servicio": "market-intelligence-service",
+  "x-superficie": "publica",
+  "tags": [],
   "paths": {
     "/api/v1/inteligencia/mapa-calor": {
       "get": {
@@ -593,14 +602,6 @@
       }
     }
   },
-  "info": {
-    "title": "Core Engine · market-intelligence-service",
-    "description": "Inteligencia de mercado: métricas, mapa de calor y predicción (fuera de producción)",
-    "version": "v1",
-    "contact": {}
-  },
-  "tags": [],
-  "servers": [],
   "components": {
     "securitySchemes": {
       "bearer": {
@@ -610,114 +611,128 @@
       }
     },
     "schemas": {
-      "PuntoCalorDto": {
+      "AnomaliaResponseDto": {
         "type": "object",
         "properties": {
-          "lat": {
-            "type": "number"
+          "order_id": {
+            "type": "string",
+            "description": "Id de la orden",
+            "format": "uuid"
           },
-          "lng": {
-            "type": "number"
+          "sku": {
+            "type": "string",
+            "description": "SKU del producto"
           },
-          "peso": {
-            "type": "number"
-          },
-          "tipo": {
-            "type": "string"
-          }
-        },
-        "required": [
-          "lat",
-          "lng",
-          "peso",
-          "tipo"
-        ]
-      },
-      "MapaCalorResponseDto": {
-        "type": "object",
-        "properties": {
-          "puntos": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/PuntoCalorDto"
-            }
-          },
-          "total_puntos": {
-            "type": "number"
-          }
-        },
-        "required": [
-          "puntos",
-          "total_puntos"
-        ]
-      },
-      "RendimientoVendedorResponseDto": {
-        "type": "object",
-        "properties": {
           "vendedor_id": {
             "type": "string",
             "description": "Id del vendedor",
             "format": "uuid"
           },
-          "total_ventas": {
+          "monto_cents": {
             "type": "number",
-            "description": "Total de ventas",
-            "example": 42
-          },
-          "total_monto_cents": {
-            "type": "number",
-            "description": "Monto total vendido en centavos",
-            "example": 4830000
-          },
-          "ticket_promedio_cents": {
-            "type": "number",
-            "description": "Ticket promedio en centavos",
+            "description": "Monto de la venta en centavos",
             "example": 115000
           },
-          "pedidos_entregados": {
-            "type": "number",
-            "description": "Pedidos entregados",
-            "example": 40
+          "lat": {
+            "type": "object",
+            "description": "Latitud",
+            "nullable": true
           },
-          "tasa_efectividad": {
-            "type": "number",
-            "description": "Tasa de efectividad (0–1)",
-            "example": 0.95
+          "lng": {
+            "type": "object",
+            "description": "Longitud",
+            "nullable": true
           },
-          "actualizado_en": {
+          "ocurrido_en": {
             "type": "string",
-            "description": "Última actualización (ISO 8601 UTC)",
+            "description": "Fecha de la venta (ISO 8601 UTC)",
             "format": "date-time"
+          },
+          "media_monto": {
+            "type": "number",
+            "description": "Media histórica del monto",
+            "example": 115000
+          },
+          "std_monto": {
+            "type": "number",
+            "description": "Desviación estándar histórica",
+            "example": 15000
+          },
+          "z_score": {
+            "type": "number",
+            "description": "Z-score de la anomalía",
+            "example": 3.4
           }
         },
         "required": [
+          "order_id",
+          "sku",
           "vendedor_id",
-          "total_ventas",
-          "total_monto_cents",
-          "ticket_promedio_cents",
-          "pedidos_entregados",
-          "tasa_efectividad",
-          "actualizado_en"
+          "monto_cents",
+          "ocurrido_en",
+          "media_monto",
+          "std_monto",
+          "z_score"
         ]
       },
-      "PaginaRendimientoResponseDto": {
+      "AnomaliasResponseDto": {
         "type": "object",
         "properties": {
-          "data": {
-            "description": "Rendimiento por vendedor",
+          "total": {
+            "type": "number",
+            "description": "Total de anomalías",
+            "example": 3
+          },
+          "anomalias": {
+            "description": "Anomalías detectadas",
             "type": "array",
             "items": {
-              "$ref": "#/components/schemas/RendimientoVendedorResponseDto"
+              "$ref": "#/components/schemas/AnomaliaResponseDto"
             }
-          },
-          "next_cursor": {
-            "type": "object",
-            "description": "Cursor de la siguiente página",
-            "nullable": true
           }
         },
         "required": [
-          "data"
+          "total",
+          "anomalias"
+        ]
+      },
+      "CalidadDatosResponseDto": {
+        "type": "object",
+        "properties": {
+          "ventana_horas": {
+            "type": "number",
+            "description": "Ventana analizada en horas",
+            "example": 24
+          },
+          "eventos_procesados": {
+            "type": "number",
+            "description": "Eventos procesados",
+            "example": 1200
+          },
+          "eventos_invalidos": {
+            "type": "number",
+            "description": "Eventos inválidos",
+            "example": 12
+          },
+          "tasa_rechazo_pct": {
+            "type": "number",
+            "description": "Tasa de rechazo (%)",
+            "example": 0.99
+          },
+          "errores_frecuentes": {
+            "description": "Errores más frecuentes",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ErrorFrecuenteResponseDto"
+            }
+          }
+        },
+        "required": [
+          "ventana_horas",
+          "eventos_procesados",
+          "eventos_invalidos",
+          "tasa_rechazo_pct",
+          "errores_frecuentes"
         ]
       },
       "CoberturaZonaResponseDto": {
@@ -822,117 +837,29 @@
           "actualizado_en"
         ]
       },
-      "PaginaDemandaResponseDto": {
+      "ErrorFrecuenteResponseDto": {
         "type": "object",
         "properties": {
-          "data": {
-            "description": "Demanda por producto",
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/DemandaProductoResponseDto"
-            }
+          "event_tipo": {
+            "type": "string",
+            "description": "Tipo de evento",
+            "example": "order.created"
           },
-          "next_cursor": {
-            "type": "object",
-            "description": "Cursor de la siguiente página",
-            "nullable": true
+          "error": {
+            "type": "string",
+            "description": "Error detectado",
+            "example": "campo requerido"
+          },
+          "total": {
+            "type": "number",
+            "description": "Cantidad de ocurrencias",
+            "example": 4
           }
         },
         "required": [
-          "data"
-        ]
-      },
-      "TendenciaResponseDto": {
-        "type": "object",
-        "properties": {
-          "fecha": {
-            "type": "string",
-            "description": "Fecha de la tendencia",
-            "format": "date"
-          },
-          "sku": {
-            "type": "string",
-            "description": "SKU del producto",
-            "example": "SKU-001"
-          },
-          "vendedor_id": {
-            "type": "string",
-            "description": "Id del vendedor",
-            "format": "uuid"
-          },
-          "total_ventas": {
-            "type": "number",
-            "description": "Unidades vendidas",
-            "example": 12
-          },
-          "total_monto_cents": {
-            "type": "number",
-            "description": "Monto vendido en centavos",
-            "example": 1380000
-          },
-          "dia_semana": {
-            "type": "number",
-            "description": "Día de la semana",
-            "example": 3
-          }
-        },
-        "required": [
-          "fecha",
-          "sku",
-          "vendedor_id",
-          "total_ventas",
-          "total_monto_cents",
-          "dia_semana"
-        ]
-      },
-      "ResumenInteligenciaResponseDto": {
-        "type": "object",
-        "properties": {
-          "total_pedidos": {
-            "type": "number",
-            "description": "Total de pedidos",
-            "example": 320
-          },
-          "ingresos_totales_cents": {
-            "type": "number",
-            "description": "Ingresos totales en centavos",
-            "example": 36800000
-          },
-          "vendedores_activos": {
-            "type": "number",
-            "description": "Vendedores activos",
-            "example": 20
-          },
-          "calculado_en": {
-            "type": "string",
-            "description": "Fecha de cálculo (ISO 8601 UTC)",
-            "format": "date-time"
-          }
-        },
-        "required": [
-          "total_pedidos",
-          "ingresos_totales_cents",
-          "vendedores_activos",
-          "calculado_en"
-        ]
-      },
-      "RegistrarVentaResponseDto": {
-        "type": "object",
-        "properties": {
-          "codigo": {
-            "type": "string",
-            "description": "Código de resultado",
-            "example": "OK"
-          },
-          "mensaje": {
-            "type": "string",
-            "description": "Mensaje de resultado",
-            "example": "Venta registrada en inteligencia"
-          }
-        },
-        "required": [
-          "codigo",
-          "mensaje"
+          "event_tipo",
+          "error",
+          "total"
         ]
       },
       "ForecastDemandaResponseDto": {
@@ -996,89 +923,184 @@
           "metodologia"
         ]
       },
-      "AnomaliaResponseDto": {
+      "MapaCalorResponseDto": {
         "type": "object",
         "properties": {
-          "order_id": {
-            "type": "string",
-            "description": "Id de la orden",
-            "format": "uuid"
+          "puntos": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PuntoCalorDto"
+            }
           },
-          "sku": {
-            "type": "string",
-            "description": "SKU del producto"
+          "total_puntos": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "puntos",
+          "total_puntos"
+        ]
+      },
+      "PaginaDemandaResponseDto": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "description": "Demanda por producto",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/DemandaProductoResponseDto"
+            }
           },
+          "next_cursor": {
+            "type": "object",
+            "description": "Cursor de la siguiente página",
+            "nullable": true
+          }
+        },
+        "required": [
+          "data"
+        ]
+      },
+      "PaginaRendimientoResponseDto": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "description": "Rendimiento por vendedor",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/RendimientoVendedorResponseDto"
+            }
+          },
+          "next_cursor": {
+            "type": "object",
+            "description": "Cursor de la siguiente página",
+            "nullable": true
+          }
+        },
+        "required": [
+          "data"
+        ]
+      },
+      "PuntoCalorDto": {
+        "type": "object",
+        "properties": {
+          "lat": {
+            "type": "number"
+          },
+          "lng": {
+            "type": "number"
+          },
+          "peso": {
+            "type": "number"
+          },
+          "tipo": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "lat",
+          "lng",
+          "peso",
+          "tipo"
+        ]
+      },
+      "RegistrarVentaResponseDto": {
+        "type": "object",
+        "properties": {
+          "codigo": {
+            "type": "string",
+            "description": "Código de resultado",
+            "example": "OK"
+          },
+          "mensaje": {
+            "type": "string",
+            "description": "Mensaje de resultado",
+            "example": "Venta registrada en inteligencia"
+          }
+        },
+        "required": [
+          "codigo",
+          "mensaje"
+        ]
+      },
+      "RendimientoVendedorResponseDto": {
+        "type": "object",
+        "properties": {
           "vendedor_id": {
             "type": "string",
             "description": "Id del vendedor",
             "format": "uuid"
           },
-          "monto_cents": {
+          "total_ventas": {
             "type": "number",
-            "description": "Monto de la venta en centavos",
+            "description": "Total de ventas",
+            "example": 42
+          },
+          "total_monto_cents": {
+            "type": "number",
+            "description": "Monto total vendido en centavos",
+            "example": 4830000
+          },
+          "ticket_promedio_cents": {
+            "type": "number",
+            "description": "Ticket promedio en centavos",
             "example": 115000
           },
-          "lat": {
-            "type": "object",
-            "description": "Latitud",
-            "nullable": true
+          "pedidos_entregados": {
+            "type": "number",
+            "description": "Pedidos entregados",
+            "example": 40
           },
-          "lng": {
-            "type": "object",
-            "description": "Longitud",
-            "nullable": true
+          "tasa_efectividad": {
+            "type": "number",
+            "description": "Tasa de efectividad (0–1)",
+            "example": 0.95
           },
-          "ocurrido_en": {
+          "actualizado_en": {
             "type": "string",
-            "description": "Fecha de la venta (ISO 8601 UTC)",
+            "description": "Última actualización (ISO 8601 UTC)",
             "format": "date-time"
-          },
-          "media_monto": {
-            "type": "number",
-            "description": "Media histórica del monto",
-            "example": 115000
-          },
-          "std_monto": {
-            "type": "number",
-            "description": "Desviación estándar histórica",
-            "example": 15000
-          },
-          "z_score": {
-            "type": "number",
-            "description": "Z-score de la anomalía",
-            "example": 3.4
           }
         },
         "required": [
-          "order_id",
-          "sku",
           "vendedor_id",
-          "monto_cents",
-          "ocurrido_en",
-          "media_monto",
-          "std_monto",
-          "z_score"
+          "total_ventas",
+          "total_monto_cents",
+          "ticket_promedio_cents",
+          "pedidos_entregados",
+          "tasa_efectividad",
+          "actualizado_en"
         ]
       },
-      "AnomaliasResponseDto": {
+      "ResumenInteligenciaResponseDto": {
         "type": "object",
         "properties": {
-          "total": {
+          "total_pedidos": {
             "type": "number",
-            "description": "Total de anomalías",
-            "example": 3
+            "description": "Total de pedidos",
+            "example": 320
           },
-          "anomalias": {
-            "description": "Anomalías detectadas",
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/AnomaliaResponseDto"
-            }
+          "ingresos_totales_cents": {
+            "type": "number",
+            "description": "Ingresos totales en centavos",
+            "example": 36800000
+          },
+          "vendedores_activos": {
+            "type": "number",
+            "description": "Vendedores activos",
+            "example": 20
+          },
+          "calculado_en": {
+            "type": "string",
+            "description": "Fecha de cálculo (ISO 8601 UTC)",
+            "format": "date-time"
           }
         },
         "required": [
-          "total",
-          "anomalias"
+          "total_pedidos",
+          "ingresos_totales_cents",
+          "vendedores_activos",
+          "calculado_en"
         ]
       },
       "ScoreVendedorResponseDto": {
@@ -1118,68 +1140,47 @@
           }
         }
       },
-      "ErrorFrecuenteResponseDto": {
+      "TendenciaResponseDto": {
         "type": "object",
         "properties": {
-          "event_tipo": {
+          "fecha": {
             "type": "string",
-            "description": "Tipo de evento",
-            "example": "order.created"
+            "description": "Fecha de la tendencia",
+            "format": "date"
           },
-          "error": {
+          "sku": {
             "type": "string",
-            "description": "Error detectado",
-            "example": "campo requerido"
+            "description": "SKU del producto",
+            "example": "SKU-001"
           },
-          "total": {
-            "type": "number",
-            "description": "Cantidad de ocurrencias",
-            "example": 4
-          }
-        },
-        "required": [
-          "event_tipo",
-          "error",
-          "total"
-        ]
-      },
-      "CalidadDatosResponseDto": {
-        "type": "object",
-        "properties": {
-          "ventana_horas": {
-            "type": "number",
-            "description": "Ventana analizada en horas",
-            "example": 24
+          "vendedor_id": {
+            "type": "string",
+            "description": "Id del vendedor",
+            "format": "uuid"
           },
-          "eventos_procesados": {
+          "total_ventas": {
             "type": "number",
-            "description": "Eventos procesados",
-            "example": 1200
-          },
-          "eventos_invalidos": {
-            "type": "number",
-            "description": "Eventos inválidos",
+            "description": "Unidades vendidas",
             "example": 12
           },
-          "tasa_rechazo_pct": {
+          "total_monto_cents": {
             "type": "number",
-            "description": "Tasa de rechazo (%)",
-            "example": 0.99
+            "description": "Monto vendido en centavos",
+            "example": 1380000
           },
-          "errores_frecuentes": {
-            "description": "Errores más frecuentes",
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/ErrorFrecuenteResponseDto"
-            }
+          "dia_semana": {
+            "type": "number",
+            "description": "Día de la semana",
+            "example": 3
           }
         },
         "required": [
-          "ventana_horas",
-          "eventos_procesados",
-          "eventos_invalidos",
-          "tasa_rechazo_pct",
-          "errores_frecuentes"
+          "fecha",
+          "sku",
+          "vendedor_id",
+          "total_ventas",
+          "total_monto_cents",
+          "dia_semana"
         ]
       }
     }
