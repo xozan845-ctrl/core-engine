@@ -38,7 +38,13 @@ describe('EmpresasController', () => {
   it('crea una empresa con la modalidad y el slug elegidos', async () => {
     empresas.crear.mockResolvedValue({ id: 'e-1' });
     await controller.crear({ nombre: 'Acme', modalidad_logistica: 'hibrida', slug: 'acme' }, empresario);
-    expect(empresas.crear).toHaveBeenCalledWith('u-1', 'Acme', 'hibrida', 'acme');
+    expect(empresas.crear).toHaveBeenCalledWith(
+      'u-1',
+      'Acme',
+      'hibrida',
+      'acme',
+      expect.objectContaining({ nombre: 'Acme', modalidad_logistica: 'hibrida', slug: 'acme' }),
+    );
   });
 
   it('crea un vendedor con su participacion', async () => {
