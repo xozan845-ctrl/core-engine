@@ -1,5 +1,14 @@
 {
   "openapi": "3.0.0",
+  "info": {
+    "title": "Core Engine · logistics-service · API pública",
+    "description": "Contrato público (/api/v1/**) de logistics-service. No contiene rutas /internal/**.",
+    "version": "v1",
+    "contact": {}
+  },
+  "x-servicio": "logistics-service",
+  "x-superficie": "publica",
+  "tags": [],
   "paths": {
     "/api/v1/orders/{id}/estado": {
       "patch": {
@@ -206,14 +215,6 @@
       }
     }
   },
-  "info": {
-    "title": "Core Engine · logistics-service",
-    "description": "Logística y envíos — ciclo de vida de la orden y guías de despacho (Tabla 21)",
-    "version": "v1",
-    "contact": {}
-  },
-  "tags": [],
-  "servers": [],
   "components": {
     "securitySchemes": {
       "bearer": {
@@ -223,6 +224,41 @@
       }
     },
     "schemas": {
+      "AsignarProveedorRequestDto": {
+        "type": "object",
+        "properties": {
+          "proveedor_tipo": {
+            "type": "string",
+            "enum": [
+              "plataforma",
+              "empresa"
+            ],
+            "description": "Flota que atenderá el envío híbrido"
+          }
+        },
+        "required": [
+          "proveedor_tipo"
+        ]
+      },
+      "AvanzarEnvioRequestDto": {
+        "type": "object",
+        "properties": {
+          "estado": {
+            "type": "string",
+            "enum": [
+              "enviada",
+              "entregada",
+              "cancelada"
+            ]
+          },
+          "motivo": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "estado"
+        ]
+      },
       "AvanzarEstadoRequestDto": {
         "type": "object",
         "properties": {
@@ -245,75 +281,6 @@
           }
         },
         "required": [
-          "estado"
-        ]
-      },
-      "ItemOrdenExternaResponseDto": {
-        "type": "object",
-        "properties": {
-          "sku": {
-            "type": "string",
-            "description": "SKU del producto",
-            "example": "SKU-001"
-          },
-          "cantidad": {
-            "type": "number",
-            "description": "Cantidad pedida",
-            "example": 2
-          },
-          "producto_nombre": {
-            "type": "string",
-            "description": "Nombre del producto"
-          }
-        },
-        "required": [
-          "sku",
-          "cantidad",
-          "producto_nombre"
-        ]
-      },
-      "OrdenExternaResponseDto": {
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "string",
-            "description": "Id de la orden",
-            "format": "uuid"
-          },
-          "cliente_id": {
-            "type": "string",
-            "description": "Id del comprador",
-            "format": "uuid"
-          },
-          "items": {
-            "description": "Líneas de la orden",
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/ItemOrdenExternaResponseDto"
-            }
-          },
-          "total": {
-            "type": "string",
-            "description": "Total en córdobas con dos decimales",
-            "example": "1150.00"
-          },
-          "total_cents": {
-            "type": "number",
-            "description": "Total en centavos",
-            "example": 115000
-          },
-          "estado": {
-            "type": "string",
-            "description": "Estado actual de la orden",
-            "example": "enviada"
-          }
-        },
-        "required": [
-          "id",
-          "cliente_id",
-          "items",
-          "total",
-          "total_cents",
           "estado"
         ]
       },
@@ -457,38 +424,72 @@
           "creado_en"
         ]
       },
-      "AsignarProveedorRequestDto": {
+      "ItemOrdenExternaResponseDto": {
         "type": "object",
         "properties": {
-          "proveedor_tipo": {
+          "sku": {
             "type": "string",
-            "enum": [
-              "plataforma",
-              "empresa"
-            ],
-            "description": "Flota que atenderá el envío híbrido"
+            "description": "SKU del producto",
+            "example": "SKU-001"
+          },
+          "cantidad": {
+            "type": "number",
+            "description": "Cantidad pedida",
+            "example": 2
+          },
+          "producto_nombre": {
+            "type": "string",
+            "description": "Nombre del producto"
           }
         },
         "required": [
-          "proveedor_tipo"
+          "sku",
+          "cantidad",
+          "producto_nombre"
         ]
       },
-      "AvanzarEnvioRequestDto": {
+      "OrdenExternaResponseDto": {
         "type": "object",
         "properties": {
+          "id": {
+            "type": "string",
+            "description": "Id de la orden",
+            "format": "uuid"
+          },
+          "cliente_id": {
+            "type": "string",
+            "description": "Id del comprador",
+            "format": "uuid"
+          },
+          "items": {
+            "description": "Líneas de la orden",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ItemOrdenExternaResponseDto"
+            }
+          },
+          "total": {
+            "type": "string",
+            "description": "Total en córdobas con dos decimales",
+            "example": "1150.00"
+          },
+          "total_cents": {
+            "type": "number",
+            "description": "Total en centavos",
+            "example": 115000
+          },
           "estado": {
             "type": "string",
-            "enum": [
-              "enviada",
-              "entregada",
-              "cancelada"
-            ]
-          },
-          "motivo": {
-            "type": "string"
+            "description": "Estado actual de la orden",
+            "example": "enviada"
           }
         },
         "required": [
+          "id",
+          "cliente_id",
+          "items",
+          "total",
+          "total_cents",
           "estado"
         ]
       }

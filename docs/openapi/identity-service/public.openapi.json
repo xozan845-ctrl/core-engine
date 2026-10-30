@@ -1,137 +1,15 @@
 {
   "openapi": "3.0.0",
+  "info": {
+    "title": "Core Engine · identity-service · API pública",
+    "description": "Contrato público (/api/v1/**) de identity-service. No contiene rutas /internal/**.",
+    "version": "v1",
+    "contact": {}
+  },
+  "x-servicio": "identity-service",
+  "x-superficie": "publica",
+  "tags": [],
   "paths": {
-    "/internal/usuarios/{id}": {
-      "get": {
-        "operationId": "InternalController_usuario",
-        "parameters": [
-          {
-            "name": "id",
-            "required": true,
-            "in": "path",
-            "description": "Id del usuario",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Usuario encontrado",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/UsuarioResponseDto"
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "internalKey": []
-          }
-        ],
-        "summary": "Usuario por id (servicio→servicio)",
-        "tags": [
-          "Usuarios (interno)"
-        ]
-      }
-    },
-    "/internal/vendedores": {
-      "get": {
-        "operationId": "InternalController_vendedores",
-        "parameters": [],
-        "responses": {
-          "200": {
-            "description": "Vendedores registrados",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/components/schemas/UsuarioResponseDto"
-                  }
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "internalKey": []
-          }
-        ],
-        "summary": "Listar vendedores (servicio→servicio)",
-        "tags": [
-          "Usuarios (interno)"
-        ]
-      }
-    },
-    "/internal/contar-vendedores": {
-      "get": {
-        "operationId": "InternalController_contarVendedores",
-        "parameters": [],
-        "responses": {
-          "200": {
-            "description": "Conteo de vendedores",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ContarVendedoresResponseDto"
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "internalKey": []
-          }
-        ],
-        "summary": "Contar vendedores (servicio→servicio)",
-        "tags": [
-          "Usuarios (interno)"
-        ]
-      }
-    },
-    "/internal/empresas/{id}": {
-      "get": {
-        "operationId": "InternalController_empresa",
-        "parameters": [
-          {
-            "name": "id",
-            "required": true,
-            "in": "path",
-            "description": "Id de la empresa",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Empresa encontrada",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/EmpresaResponseDto"
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "internalKey": []
-          }
-        ],
-        "summary": "Empresa por id (servicio→servicio)",
-        "tags": [
-          "Usuarios (interno)"
-        ]
-      }
-    },
     "/api/v1/auth/registro": {
       "post": {
         "operationId": "AuthController_registrar",
@@ -1005,14 +883,6 @@
       }
     }
   },
-  "info": {
-    "title": "Core Engine · identity-service",
-    "description": "Autenticación, sesiones y usuarios (Tabla 21)",
-    "version": "v1",
-    "contact": {}
-  },
-  "tags": [],
-  "servers": [],
   "components": {
     "securitySchemes": {
       "bearer": {
@@ -1027,72 +897,244 @@
       }
     },
     "schemas": {
-      "UsuarioResponseDto": {
+      "AceptarInvitacionRequestDto": {
         "type": "object",
         "properties": {
-          "id": {
+          "nombre": {
             "type": "string",
-            "description": "Id del usuario",
-            "format": "uuid"
+            "minLength": 2,
+            "maxLength": 120,
+            "example": "Ana Pérez"
+          },
+          "contrasena": {
+            "type": "string",
+            "minLength": 8,
+            "example": "UnaClaveSegura123"
+          }
+        },
+        "required": [
+          "nombre",
+          "contrasena"
+        ]
+      },
+      "AceptarInvitacionResponseDto": {
+        "type": "object",
+        "properties": {
+          "access_token": {
+            "type": "string"
+          },
+          "refresh_token": {
+            "type": "string"
+          },
+          "expira_en": {
+            "type": "number"
+          },
+          "usuario": {
+            "type": "object",
+            "description": "Usuario vendedor con tienda y participación asignadas"
+          }
+        },
+        "required": [
+          "access_token",
+          "refresh_token",
+          "expira_en",
+          "usuario"
+        ]
+      },
+      "ActualizarModalidadLogisticaRequestDto": {
+        "type": "object",
+        "properties": {
+          "modalidad_logistica": {
+            "type": "string",
+            "enum": [
+              "plataforma",
+              "propia",
+              "hibrida"
+            ]
+          }
+        },
+        "required": [
+          "modalidad_logistica"
+        ]
+      },
+      "ActualizarSlugRequestDto": {
+        "type": "object",
+        "properties": {
+          "slug": {
+            "type": "string",
+            "minLength": 2,
+            "maxLength": 80,
+            "example": "distribuidora-piloto"
+          }
+        },
+        "required": [
+          "slug"
+        ]
+      },
+      "ActualizarTipoEmpresaRequestDto": {
+        "type": "object",
+        "properties": {
+          "tipo_empresa": {
+            "type": "string",
+            "enum": [
+              "comercial",
+              "logistica",
+              "plataforma"
+            ]
+          }
+        },
+        "required": [
+          "tipo_empresa"
+        ]
+      },
+      "CambiarContrasenaRequestDto": {
+        "type": "object",
+        "properties": {
+          "actual": {
+            "type": "string",
+            "description": "Contraseña actual"
+          },
+          "nueva": {
+            "type": "string",
+            "description": "Contraseña nueva (mínimo 8 caracteres)",
+            "minLength": 8
+          }
+        },
+        "required": [
+          "actual",
+          "nueva"
+        ]
+      },
+      "CrearEmpresaRequestDto": {
+        "type": "object",
+        "properties": {
+          "nombre": {
+            "type": "string",
+            "minLength": 2,
+            "maxLength": 160
+          },
+          "slug": {
+            "type": "string",
+            "minLength": 2,
+            "maxLength": 80,
+            "description": "Slug público. Si se omite se deriva del nombre y se resuelven colisiones con sufijos.",
+            "example": "distribuidora-piloto"
+          },
+          "modalidad_logistica": {
+            "type": "string",
+            "enum": [
+              "plataforma",
+              "propia",
+              "hibrida"
+            ]
+          }
+        },
+        "required": [
+          "nombre",
+          "modalidad_logistica"
+        ]
+      },
+      "CrearInvitacionRequestDto": {
+        "type": "object",
+        "properties": {
+          "correo": {
+            "type": "string",
+            "format": "email",
+            "example": "vendedor@correo.com"
           },
           "nombre": {
             "type": "string",
-            "description": "Nombre del usuario"
+            "minLength": 2,
+            "maxLength": 120
+          },
+          "tienda_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "participacion_porcentaje": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 100,
+            "example": 25
+          }
+        },
+        "required": [
+          "correo",
+          "tienda_id",
+          "participacion_porcentaje"
+        ]
+      },
+      "CrearUsuarioRequestDto": {
+        "type": "object",
+        "properties": {
+          "nombre": {
+            "type": "string",
+            "description": "Nombre completo",
+            "minLength": 2,
+            "maxLength": 120
           },
           "correo": {
             "type": "string",
-            "description": "Correo del usuario",
-            "format": "email"
+            "description": "Correo electrónico"
+          },
+          "contrasena": {
+            "type": "string",
+            "description": "Contraseña (mínimo 8 caracteres)",
+            "minLength": 8
           },
           "rol": {
             "type": "string",
             "description": "Rol del usuario",
             "enum": [
-              "admin",
-              "vendedor",
+              "empresario",
               "comprador",
+              "admin",
               "logistica",
               "coordinador",
               "supervisor",
               "operativo"
-            ],
-            "example": "vendedor"
+            ]
           },
           "tenant_id": {
             "type": "string",
-            "description": "Tenant del usuario",
-            "format": "uuid"
+            "description": "Tenant (organización); obligatorio para roles de logística"
           },
           "personal_id": {
             "type": "string",
-            "description": "Ficha de personal vinculada",
-            "format": "uuid"
-          },
-          "creado_en": {
-            "type": "string",
-            "description": "Fecha de creación (ISO 8601 UTC)",
-            "format": "date-time"
+            "description": "Id de la ficha de personal en field-service"
           }
         },
         "required": [
-          "id",
           "nombre",
           "correo",
-          "rol",
-          "creado_en"
+          "contrasena",
+          "rol"
         ]
       },
-      "ContarVendedoresResponseDto": {
+      "CrearVendedorRequestDto": {
         "type": "object",
         "properties": {
-          "vendedores": {
+          "nombre": {
+            "type": "string"
+          },
+          "correo": {
+            "type": "string"
+          },
+          "contrasena": {
+            "type": "string",
+            "minLength": 8
+          },
+          "participacion_porcentaje": {
             "type": "number",
-            "description": "Cantidad de usuarios con rol vendedor",
-            "example": 12
+            "minimum": 0,
+            "maximum": 100
           }
         },
         "required": [
-          "vendedores"
+          "nombre",
+          "correo",
+          "contrasena",
+          "participacion_porcentaje"
         ]
       },
       "EmpresaResponseDto": {
@@ -1147,475 +1189,6 @@
           "creado_en"
         ]
       },
-      "RegistroRequestDto": {
-        "type": "object",
-        "properties": {
-          "nombre": {
-            "type": "string",
-            "description": "Nombre completo",
-            "minLength": 2,
-            "maxLength": 120,
-            "example": "Ana Pérez"
-          },
-          "correo": {
-            "type": "string",
-            "description": "Correo electrónico",
-            "example": "ana@tienda.test"
-          },
-          "contrasena": {
-            "type": "string",
-            "description": "Contraseña (mínimo 8 caracteres)",
-            "minLength": 8
-          },
-          "rol": {
-            "type": "string",
-            "description": "Rol registrable",
-            "enum": [
-              "empresario",
-              "comprador"
-            ],
-            "example": "comprador"
-          }
-        },
-        "required": [
-          "nombre",
-          "correo",
-          "contrasena",
-          "rol"
-        ]
-      },
-      "SesionUsuarioResponseDto": {
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "string",
-            "description": "Id del usuario",
-            "format": "uuid"
-          },
-          "nombre": {
-            "type": "string",
-            "description": "Nombre del usuario"
-          },
-          "correo": {
-            "type": "string",
-            "description": "Correo del usuario",
-            "format": "email"
-          },
-          "rol": {
-            "type": "string",
-            "description": "Rol del usuario",
-            "enum": [
-              "admin",
-              "vendedor",
-              "comprador",
-              "logistica",
-              "coordinador",
-              "supervisor",
-              "operativo"
-            ],
-            "example": "comprador"
-          },
-          "tenant_id": {
-            "type": "string",
-            "description": "Tenant del usuario",
-            "format": "uuid"
-          },
-          "personal_id": {
-            "type": "string",
-            "description": "Ficha de personal vinculada",
-            "format": "uuid"
-          }
-        },
-        "required": [
-          "id",
-          "nombre",
-          "correo",
-          "rol"
-        ]
-      },
-      "SesionResponseDto": {
-        "type": "object",
-        "properties": {
-          "access_token": {
-            "type": "string",
-            "description": "Access token JWT (HS256)",
-            "example": "eyJhbGciOiJIUzI1NiIs..."
-          },
-          "refresh_token": {
-            "type": "string",
-            "description": "Refresh token JWT",
-            "example": "eyJhbGciOiJIUzI1NiIs..."
-          },
-          "expira_en": {
-            "type": "number",
-            "description": "Vigencia del access token en segundos",
-            "example": 900
-          },
-          "usuario": {
-            "description": "Datos del usuario autenticado",
-            "allOf": [
-              {
-                "$ref": "#/components/schemas/SesionUsuarioResponseDto"
-              }
-            ]
-          }
-        },
-        "required": [
-          "access_token",
-          "refresh_token",
-          "expira_en",
-          "usuario"
-        ]
-      },
-      "LoginRequestDto": {
-        "type": "object",
-        "properties": {
-          "correo": {
-            "type": "string",
-            "description": "Correo electrónico",
-            "example": "ana@tienda.test"
-          },
-          "contrasena": {
-            "type": "string",
-            "description": "Contraseña",
-            "example": "secreto123"
-          }
-        },
-        "required": [
-          "correo",
-          "contrasena"
-        ]
-      },
-      "LogoutRequestDto": {
-        "type": "object",
-        "properties": {
-          "refresh_token": {
-            "type": "string",
-            "description": "Refresh token de la sesión a cerrar; si se omite, cierra todas"
-          }
-        }
-      },
-      "OkResponseDto": {
-        "type": "object",
-        "properties": {
-          "ok": {
-            "type": "boolean",
-            "description": "Operación completada",
-            "example": true
-          }
-        },
-        "required": [
-          "ok"
-        ]
-      },
-      "CrearUsuarioRequestDto": {
-        "type": "object",
-        "properties": {
-          "nombre": {
-            "type": "string",
-            "description": "Nombre completo",
-            "minLength": 2,
-            "maxLength": 120
-          },
-          "correo": {
-            "type": "string",
-            "description": "Correo electrónico"
-          },
-          "contrasena": {
-            "type": "string",
-            "description": "Contraseña (mínimo 8 caracteres)",
-            "minLength": 8
-          },
-          "rol": {
-            "type": "string",
-            "description": "Rol del usuario",
-            "enum": [
-              "empresario",
-              "comprador",
-              "admin",
-              "logistica",
-              "coordinador",
-              "supervisor",
-              "operativo"
-            ]
-          },
-          "tenant_id": {
-            "type": "string",
-            "description": "Tenant (organización); obligatorio para roles de logística"
-          },
-          "personal_id": {
-            "type": "string",
-            "description": "Id de la ficha de personal en field-service"
-          }
-        },
-        "required": [
-          "nombre",
-          "correo",
-          "contrasena",
-          "rol"
-        ]
-      },
-      "CambiarContrasenaRequestDto": {
-        "type": "object",
-        "properties": {
-          "actual": {
-            "type": "string",
-            "description": "Contraseña actual"
-          },
-          "nueva": {
-            "type": "string",
-            "description": "Contraseña nueva (mínimo 8 caracteres)",
-            "minLength": 8
-          }
-        },
-        "required": [
-          "actual",
-          "nueva"
-        ]
-      },
-      "RestablecerContrasenaRequestDto": {
-        "type": "object",
-        "properties": {
-          "correo": {
-            "type": "string",
-            "description": "Correo electrónico de la cuenta"
-          }
-        },
-        "required": [
-          "correo"
-        ]
-      },
-      "UsuarioContextoResponseDto": {
-        "type": "object",
-        "properties": {
-          "user_id": {
-            "type": "string",
-            "description": "Id del usuario autenticado",
-            "format": "uuid"
-          },
-          "email": {
-            "type": "string",
-            "description": "Correo del usuario",
-            "format": "email"
-          },
-          "rol": {
-            "type": "string",
-            "description": "Rol del usuario",
-            "enum": [
-              "admin",
-              "vendedor",
-              "comprador",
-              "logistica",
-              "coordinador",
-              "supervisor",
-              "operativo"
-            ],
-            "example": "admin"
-          },
-          "nombre": {
-            "type": "string",
-            "description": "Nombre del usuario"
-          },
-          "tenant_id": {
-            "type": "string",
-            "description": "Tenant del usuario",
-            "format": "uuid"
-          },
-          "personal_id": {
-            "type": "string",
-            "description": "Ficha de personal vinculada",
-            "format": "uuid"
-          }
-        },
-        "required": [
-          "user_id",
-          "email",
-          "rol"
-        ]
-      },
-      "VincularPersonalRequestDto": {
-        "type": "object",
-        "properties": {
-          "personal_id": {
-            "type": "string",
-            "description": "Id de la ficha de personal en field-service",
-            "minLength": 1,
-            "maxLength": 100
-          },
-          "nombre": {
-            "type": "string",
-            "description": "Nombre a reflejar en el perfil",
-            "maxLength": 120
-          }
-        },
-        "required": [
-          "personal_id"
-        ]
-      },
-      "CrearEmpresaRequestDto": {
-        "type": "object",
-        "properties": {
-          "nombre": {
-            "type": "string",
-            "minLength": 2,
-            "maxLength": 160
-          },
-          "slug": {
-            "type": "string",
-            "minLength": 2,
-            "maxLength": 80,
-            "description": "Slug público. Si se omite se deriva del nombre y se resuelven colisiones con sufijos.",
-            "example": "distribuidora-piloto"
-          },
-          "modalidad_logistica": {
-            "type": "string",
-            "enum": [
-              "plataforma",
-              "propia",
-              "hibrida"
-            ]
-          }
-        },
-        "required": [
-          "nombre",
-          "modalidad_logistica"
-        ]
-      },
-      "ActualizarSlugRequestDto": {
-        "type": "object",
-        "properties": {
-          "slug": {
-            "type": "string",
-            "minLength": 2,
-            "maxLength": 80,
-            "example": "distribuidora-piloto"
-          }
-        },
-        "required": [
-          "slug"
-        ]
-      },
-      "ActualizarModalidadLogisticaRequestDto": {
-        "type": "object",
-        "properties": {
-          "modalidad_logistica": {
-            "type": "string",
-            "enum": [
-              "plataforma",
-              "propia",
-              "hibrida"
-            ]
-          }
-        },
-        "required": [
-          "modalidad_logistica"
-        ]
-      },
-      "ActualizarTipoEmpresaRequestDto": {
-        "type": "object",
-        "properties": {
-          "tipo_empresa": {
-            "type": "string",
-            "enum": [
-              "comercial",
-              "logistica",
-              "plataforma"
-            ]
-          }
-        },
-        "required": [
-          "tipo_empresa"
-        ]
-      },
-      "CrearVendedorRequestDto": {
-        "type": "object",
-        "properties": {
-          "nombre": {
-            "type": "string"
-          },
-          "correo": {
-            "type": "string"
-          },
-          "contrasena": {
-            "type": "string",
-            "minLength": 8
-          },
-          "participacion_porcentaje": {
-            "type": "number",
-            "minimum": 0,
-            "maximum": 100
-          }
-        },
-        "required": [
-          "nombre",
-          "correo",
-          "contrasena",
-          "participacion_porcentaje"
-        ]
-      },
-      "VendedorEmpresaResponseDto": {
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "string",
-            "format": "uuid"
-          },
-          "nombre": {
-            "type": "string"
-          },
-          "correo": {
-            "type": "string"
-          },
-          "rol": {
-            "type": "string",
-            "enum": [
-              "vendedor"
-            ]
-          },
-          "participacion_porcentaje": {
-            "type": "number",
-            "minimum": 0,
-            "maximum": 100
-          }
-        },
-        "required": [
-          "id",
-          "nombre",
-          "correo",
-          "rol",
-          "participacion_porcentaje"
-        ]
-      },
-      "CrearInvitacionRequestDto": {
-        "type": "object",
-        "properties": {
-          "correo": {
-            "type": "string",
-            "format": "email",
-            "example": "vendedor@correo.com"
-          },
-          "nombre": {
-            "type": "string",
-            "minLength": 2,
-            "maxLength": 120
-          },
-          "tienda_id": {
-            "type": "string",
-            "format": "uuid"
-          },
-          "participacion_porcentaje": {
-            "type": "number",
-            "minimum": 0,
-            "maximum": 100,
-            "example": 25
-          }
-        },
-        "required": [
-          "correo",
-          "tienda_id",
-          "participacion_porcentaje"
-        ]
-      },
       "InvitacionCreadaResponseDto": {
         "type": "object",
         "properties": {
@@ -1663,6 +1236,40 @@
           "estado",
           "expira_en",
           "url_invitacion"
+        ]
+      },
+      "InvitacionPublicaResponseDto": {
+        "type": "object",
+        "properties": {
+          "valida": {
+            "type": "boolean"
+          },
+          "correo": {
+            "type": "string"
+          },
+          "empresa_nombre": {
+            "type": "string"
+          },
+          "tienda_nombre": {
+            "type": "string"
+          },
+          "participacion_porcentaje": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 100
+          },
+          "expira_en": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "valida",
+          "correo",
+          "empresa_nombre",
+          "tienda_nombre",
+          "participacion_porcentaje",
+          "expira_en"
         ]
       },
       "InvitacionResumenResponseDto": {
@@ -1726,75 +1333,121 @@
           "invitaciones"
         ]
       },
-      "InvitacionPublicaResponseDto": {
+      "LoginRequestDto": {
         "type": "object",
         "properties": {
-          "valida": {
-            "type": "boolean"
-          },
           "correo": {
-            "type": "string"
-          },
-          "empresa_nombre": {
-            "type": "string"
-          },
-          "tienda_nombre": {
-            "type": "string"
-          },
-          "participacion_porcentaje": {
-            "type": "number",
-            "minimum": 0,
-            "maximum": 100
-          },
-          "expira_en": {
             "type": "string",
-            "format": "date-time"
+            "description": "Correo electrónico",
+            "example": "ana@tienda.test"
+          },
+          "contrasena": {
+            "type": "string",
+            "description": "Contraseña",
+            "example": "secreto123"
           }
         },
         "required": [
-          "valida",
           "correo",
-          "empresa_nombre",
-          "tienda_nombre",
-          "participacion_porcentaje",
-          "expira_en"
+          "contrasena"
         ]
       },
-      "AceptarInvitacionRequestDto": {
+      "LogoutRequestDto": {
+        "type": "object",
+        "properties": {
+          "refresh_token": {
+            "type": "string",
+            "description": "Refresh token de la sesión a cerrar; si se omite, cierra todas"
+          }
+        }
+      },
+      "OkResponseDto": {
+        "type": "object",
+        "properties": {
+          "ok": {
+            "type": "boolean",
+            "description": "Operación completada",
+            "example": true
+          }
+        },
+        "required": [
+          "ok"
+        ]
+      },
+      "RegistroRequestDto": {
         "type": "object",
         "properties": {
           "nombre": {
             "type": "string",
+            "description": "Nombre completo",
             "minLength": 2,
             "maxLength": 120,
             "example": "Ana Pérez"
           },
+          "correo": {
+            "type": "string",
+            "description": "Correo electrónico",
+            "example": "ana@tienda.test"
+          },
           "contrasena": {
             "type": "string",
-            "minLength": 8,
-            "example": "UnaClaveSegura123"
+            "description": "Contraseña (mínimo 8 caracteres)",
+            "minLength": 8
+          },
+          "rol": {
+            "type": "string",
+            "description": "Rol registrable",
+            "enum": [
+              "empresario",
+              "comprador"
+            ],
+            "example": "comprador"
           }
         },
         "required": [
           "nombre",
-          "contrasena"
+          "correo",
+          "contrasena",
+          "rol"
         ]
       },
-      "AceptarInvitacionResponseDto": {
+      "RestablecerContrasenaRequestDto": {
+        "type": "object",
+        "properties": {
+          "correo": {
+            "type": "string",
+            "description": "Correo electrónico de la cuenta"
+          }
+        },
+        "required": [
+          "correo"
+        ]
+      },
+      "SesionResponseDto": {
         "type": "object",
         "properties": {
           "access_token": {
-            "type": "string"
+            "type": "string",
+            "description": "Access token JWT (HS256)",
+            "example": "eyJhbGciOiJIUzI1NiIs..."
           },
           "refresh_token": {
-            "type": "string"
+            "type": "string",
+            "description": "Refresh token JWT",
+            "example": "eyJhbGciOiJIUzI1NiIs..."
           },
           "expira_en": {
-            "type": "number"
+            "type": "number",
+            "description": "Vigencia del access token en segundos",
+            "example": 900
           },
           "usuario": {
-            "type": "object",
-            "description": "Usuario vendedor con tienda y participación asignadas"
+            "description": "Datos del usuario autenticado",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/SesionUsuarioResponseDto"
+              }
+            ]
           }
         },
         "required": [
@@ -1802,6 +1455,210 @@
           "refresh_token",
           "expira_en",
           "usuario"
+        ]
+      },
+      "SesionUsuarioResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Id del usuario",
+            "format": "uuid"
+          },
+          "nombre": {
+            "type": "string",
+            "description": "Nombre del usuario"
+          },
+          "correo": {
+            "type": "string",
+            "description": "Correo del usuario",
+            "format": "email"
+          },
+          "rol": {
+            "type": "string",
+            "description": "Rol del usuario",
+            "enum": [
+              "admin",
+              "vendedor",
+              "comprador",
+              "logistica",
+              "coordinador",
+              "supervisor",
+              "operativo"
+            ],
+            "example": "comprador"
+          },
+          "tenant_id": {
+            "type": "string",
+            "description": "Tenant del usuario",
+            "format": "uuid"
+          },
+          "personal_id": {
+            "type": "string",
+            "description": "Ficha de personal vinculada",
+            "format": "uuid"
+          }
+        },
+        "required": [
+          "id",
+          "nombre",
+          "correo",
+          "rol"
+        ]
+      },
+      "UsuarioContextoResponseDto": {
+        "type": "object",
+        "properties": {
+          "user_id": {
+            "type": "string",
+            "description": "Id del usuario autenticado",
+            "format": "uuid"
+          },
+          "email": {
+            "type": "string",
+            "description": "Correo del usuario",
+            "format": "email"
+          },
+          "rol": {
+            "type": "string",
+            "description": "Rol del usuario",
+            "enum": [
+              "admin",
+              "vendedor",
+              "comprador",
+              "logistica",
+              "coordinador",
+              "supervisor",
+              "operativo"
+            ],
+            "example": "admin"
+          },
+          "nombre": {
+            "type": "string",
+            "description": "Nombre del usuario"
+          },
+          "tenant_id": {
+            "type": "string",
+            "description": "Tenant del usuario",
+            "format": "uuid"
+          },
+          "personal_id": {
+            "type": "string",
+            "description": "Ficha de personal vinculada",
+            "format": "uuid"
+          }
+        },
+        "required": [
+          "user_id",
+          "email",
+          "rol"
+        ]
+      },
+      "UsuarioResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Id del usuario",
+            "format": "uuid"
+          },
+          "nombre": {
+            "type": "string",
+            "description": "Nombre del usuario"
+          },
+          "correo": {
+            "type": "string",
+            "description": "Correo del usuario",
+            "format": "email"
+          },
+          "rol": {
+            "type": "string",
+            "description": "Rol del usuario",
+            "enum": [
+              "admin",
+              "vendedor",
+              "comprador",
+              "logistica",
+              "coordinador",
+              "supervisor",
+              "operativo"
+            ],
+            "example": "vendedor"
+          },
+          "tenant_id": {
+            "type": "string",
+            "description": "Tenant del usuario",
+            "format": "uuid"
+          },
+          "personal_id": {
+            "type": "string",
+            "description": "Ficha de personal vinculada",
+            "format": "uuid"
+          },
+          "creado_en": {
+            "type": "string",
+            "description": "Fecha de creación (ISO 8601 UTC)",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "nombre",
+          "correo",
+          "rol",
+          "creado_en"
+        ]
+      },
+      "VendedorEmpresaResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "nombre": {
+            "type": "string"
+          },
+          "correo": {
+            "type": "string"
+          },
+          "rol": {
+            "type": "string",
+            "enum": [
+              "vendedor"
+            ]
+          },
+          "participacion_porcentaje": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 100
+          }
+        },
+        "required": [
+          "id",
+          "nombre",
+          "correo",
+          "rol",
+          "participacion_porcentaje"
+        ]
+      },
+      "VincularPersonalRequestDto": {
+        "type": "object",
+        "properties": {
+          "personal_id": {
+            "type": "string",
+            "description": "Id de la ficha de personal en field-service",
+            "minLength": 1,
+            "maxLength": 100
+          },
+          "nombre": {
+            "type": "string",
+            "description": "Nombre a reflejar en el perfil",
+            "maxLength": 120
+          }
+        },
+        "required": [
+          "personal_id"
         ]
       }
     }
