@@ -933,6 +933,9 @@ Este archivo registra decisiones técnicas deliberadas que se apartan del texto 
      el objeto sea imagen, esté activo y pertenezca al tenant.
   4. La respuesta incluye `logo_url` derivada; no se persiste una URL firmada.
   5. `ruc` es opcional pero único por empresa cuando está informado.
+  6. `tipo_empresa` se puede enviar opcionalmente en `POST /empresas` y el
+     empresario dueño puede cambiarlo con `PATCH /empresas/{id}/tipo`; admin y
+     super_admin conservan el cambio global.
 - **Consecuencias**:
   - El frontend puede completar el perfil gradualmente sin bloquear el alta.
   - No hay FK cruzada entre identidad y storage (R-DB-1).
