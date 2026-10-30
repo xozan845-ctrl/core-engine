@@ -39,7 +39,7 @@ describe('ProductosController (api/v1/catalog, R-U-10/11)', () => {
     productos.listar.mockResolvedValue({ items: [producto], total: 1, pagina: 1, limite: 20, paginas: 1 });
     const query = { empresa_id: 'e-1', q: 'teclado', estado: 'disponible', pagina: '2', limite: '10' };
     const pagina = await controller.listar(query as never, null);
-    expect(productos.listar).toHaveBeenCalledWith(query);
+    expect(productos.listar).toHaveBeenCalledWith({ ...query, incluir_inactivos: false });
     expect(pagina.items).toEqual([producto]);
   });
 
@@ -52,7 +52,11 @@ describe('ProductosController (api/v1/catalog, R-U-10/11)', () => {
       rol: 'empresario',
       tenant_id: 'e-tenant',
     } as never);
-    expect(productos.listar).toHaveBeenCalledWith({ q: 'teclado', empresa_id: 'e-tenant' });
+    expect(productos.listar).toHaveBeenCalledWith({
+      q: 'teclado',
+      empresa_id: 'e-tenant',
+      incluir_inactivos: true,
+    });
   });
 
   it('debe exigir empresa cuando la lectura es anónima (ADR-27)', async () => {
@@ -75,7 +79,7 @@ describe('ProductosController (api/v1/catalog, R-U-10/11)', () => {
     await expect(
       controller.detalle(producto.id, { empresa_id: 'e-1' } as never, null),
     ).resolves.toEqual(producto);
-    expect(productos.encontrarPorId).toHaveBeenCalledWith(producto.id, 'e-1');
+    expect(productos.encontrarPorId).toHaveBeenCalledWith(producto.id, 'e-1', false);
   });
 
   it('debe lanzar NotFoundError cuando el detalle no existe en la empresa', async () => {

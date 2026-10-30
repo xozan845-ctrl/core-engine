@@ -672,6 +672,259 @@
           "Catálogo"
         ]
       }
+    },
+    "/api/v1/catalog/servicios": {
+      "get": {
+        "operationId": "ServiciosController_listar",
+        "parameters": [
+          {
+            "name": "empresa_id",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "name": "q",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "estado",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "activo",
+                "inactivo"
+              ]
+            }
+          },
+          {
+            "name": "categoria",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "pagina",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "type": "number"
+            }
+          },
+          {
+            "name": "limite",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 100,
+              "type": "number"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Página de servicios",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginaServiciosResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Listar servicios de una empresa",
+        "tags": [
+          "Catálogo · Servicios"
+        ]
+      },
+      "post": {
+        "operationId": "ServiciosController_crear",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CrearServicioRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Servicio creado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ServicioResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Crear un servicio",
+        "tags": [
+          "Catálogo · Servicios"
+        ]
+      }
+    },
+    "/api/v1/catalog/servicios/{id}": {
+      "get": {
+        "operationId": "ServiciosController_detalle",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "description": "Id del servicio",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "empresa_id",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Servicio encontrado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ServicioResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Detalle de un servicio",
+        "tags": [
+          "Catálogo · Servicios"
+        ]
+      },
+      "patch": {
+        "operationId": "ServiciosController_actualizar",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "description": "Id del servicio",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "empresa_id",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ActualizarServicioRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Servicio actualizado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ServicioResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Actualizar un servicio",
+        "tags": [
+          "Catálogo · Servicios"
+        ]
+      },
+      "delete": {
+        "operationId": "ServiciosController_eliminar",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "description": "Id del servicio",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "empresa_id",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Servicio dado de baja"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Dar de baja un servicio (baja lógica)",
+        "tags": [
+          "Catálogo · Servicios"
+        ]
+      }
     }
   },
   "info": {
@@ -887,6 +1140,91 @@
             ],
             "example": "disponible"
           },
+          "estado_operativo": {
+            "type": "string",
+            "description": "Estado comercial del producto",
+            "enum": [
+              "activo",
+              "inactivo"
+            ]
+          },
+          "costo": {
+            "type": "string",
+            "description": "Costo en córdobas con dos decimales",
+            "example": "150.00"
+          },
+          "marca": {
+            "type": "string",
+            "description": "Marca"
+          },
+          "codigo_barras": {
+            "type": "string",
+            "description": "Código de barras único por empresa"
+          },
+          "unidad": {
+            "type": "string",
+            "description": "Unidad de venta",
+            "example": "Unidad (u)"
+          },
+          "permite_fracciones": {
+            "type": "boolean",
+            "description": "Permite fracciones"
+          },
+          "unidad_compra": {
+            "type": "string",
+            "description": "Unidad de compra"
+          },
+          "contenido_cantidad": {
+            "type": "number",
+            "description": "Contenido por unidad"
+          },
+          "contenido_unidad": {
+            "type": "string",
+            "description": "Unidad del contenido"
+          },
+          "tipo_precio": {
+            "type": "string",
+            "description": "Tipo de precio",
+            "enum": [
+              "fijo",
+              "escala"
+            ]
+          },
+          "tipo_costo": {
+            "type": "string",
+            "description": "Tipo de costo",
+            "enum": [
+              "fijo",
+              "escala"
+            ]
+          },
+          "stock_minimo": {
+            "type": "number",
+            "description": "Stock mínimo para alertas"
+          },
+          "stock_maximo": {
+            "type": "object",
+            "description": "Stock máximo",
+            "nullable": true
+          },
+          "garantia_meses": {
+            "type": "object",
+            "description": "Garantía en meses",
+            "nullable": true
+          },
+          "es_materia_prima": {
+            "type": "boolean",
+            "description": "Es materia prima"
+          },
+          "ubicacion": {
+            "type": "string",
+            "description": "Ubicación física"
+          },
+          "actualizado_en": {
+            "type": "string",
+            "description": "Última actualización (ISO 8601 UTC)",
+            "format": "date-time"
+          },
           "creado_en": {
             "type": "string",
             "description": "Fecha de creación (ISO 8601 UTC)",
@@ -942,6 +1280,23 @@
           "precio_base",
           "stock",
           "estado",
+          "estado_operativo",
+          "costo",
+          "marca",
+          "codigo_barras",
+          "unidad",
+          "permite_fracciones",
+          "unidad_compra",
+          "contenido_cantidad",
+          "contenido_unidad",
+          "tipo_precio",
+          "tipo_costo",
+          "stock_minimo",
+          "stock_maximo",
+          "garantia_meses",
+          "es_materia_prima",
+          "ubicacion",
+          "actualizado_en",
           "creado_en"
         ]
       },
@@ -1191,6 +1546,97 @@
             "minimum": 0,
             "example": 10
           },
+          "costo": {
+            "type": "string",
+            "description": "Costo decimal en córdobas (ej: 150.00)",
+            "example": "150.00"
+          },
+          "marca": {
+            "type": "string",
+            "description": "Marca"
+          },
+          "codigo_barras": {
+            "type": "string",
+            "description": "Código de barras único por empresa"
+          },
+          "unidad": {
+            "type": "string",
+            "description": "Unidad de venta",
+            "example": "Unidad (u)"
+          },
+          "permite_fracciones": {
+            "type": "boolean",
+            "description": "Permite cantidades fraccionarias",
+            "default": false
+          },
+          "unidad_compra": {
+            "type": "string",
+            "description": "Unidad de compra",
+            "example": "Igual que la de venta"
+          },
+          "contenido_cantidad": {
+            "type": "number",
+            "description": "Contenido por unidad",
+            "minimum": 0,
+            "default": 0
+          },
+          "contenido_unidad": {
+            "type": "string",
+            "description": "Unidad del contenido",
+            "example": "Sin contenido"
+          },
+          "tipo_precio": {
+            "type": "string",
+            "description": "Tipo de precio",
+            "enum": [
+              "fijo",
+              "escala"
+            ]
+          },
+          "tipo_costo": {
+            "type": "string",
+            "description": "Tipo de costo",
+            "enum": [
+              "fijo",
+              "escala"
+            ]
+          },
+          "stock_minimo": {
+            "type": "number",
+            "description": "Stock mínimo para alertas",
+            "minimum": 0,
+            "default": 0
+          },
+          "stock_maximo": {
+            "type": "object",
+            "description": "Stock máximo",
+            "nullable": true,
+            "minimum": 0
+          },
+          "garantia_meses": {
+            "type": "object",
+            "description": "Garantía en meses",
+            "nullable": true,
+            "minimum": 0
+          },
+          "es_materia_prima": {
+            "type": "boolean",
+            "description": "Es materia prima",
+            "default": false
+          },
+          "ubicacion": {
+            "type": "string",
+            "description": "Ubicación física"
+          },
+          "estado_operativo": {
+            "type": "string",
+            "description": "Estado comercial",
+            "enum": [
+              "activo",
+              "inactivo"
+            ],
+            "default": "activo"
+          },
           "atributos": {
             "type": "object",
             "description": "Atributos del producto (si aplica)"
@@ -1243,6 +1689,95 @@
             "description": "Stock",
             "minimum": 0
           },
+          "costo": {
+            "type": "string",
+            "description": "Costo decimal en córdobas (ej: 150.00)",
+            "example": "150.00"
+          },
+          "marca": {
+            "type": "string",
+            "description": "Marca"
+          },
+          "codigo_barras": {
+            "type": "string",
+            "description": "Código de barras único por empresa"
+          },
+          "unidad": {
+            "type": "string",
+            "description": "Unidad de venta",
+            "example": "Unidad (u)"
+          },
+          "permite_fracciones": {
+            "type": "boolean",
+            "description": "Permite cantidades fraccionarias"
+          },
+          "unidad_compra": {
+            "type": "string",
+            "description": "Unidad de compra",
+            "example": "Igual que la de venta"
+          },
+          "contenido_cantidad": {
+            "type": "number",
+            "description": "Contenido por unidad",
+            "minimum": 0,
+            "default": 0
+          },
+          "contenido_unidad": {
+            "type": "string",
+            "description": "Unidad del contenido",
+            "example": "Sin contenido"
+          },
+          "tipo_precio": {
+            "type": "string",
+            "description": "Tipo de precio",
+            "enum": [
+              "fijo",
+              "escala"
+            ]
+          },
+          "tipo_costo": {
+            "type": "string",
+            "description": "Tipo de costo",
+            "enum": [
+              "fijo",
+              "escala"
+            ]
+          },
+          "stock_minimo": {
+            "type": "number",
+            "description": "Stock mínimo para alertas",
+            "minimum": 0,
+            "default": 0
+          },
+          "stock_maximo": {
+            "type": "object",
+            "description": "Stock máximo",
+            "nullable": true,
+            "minimum": 0
+          },
+          "garantia_meses": {
+            "type": "object",
+            "description": "Garantía en meses",
+            "nullable": true,
+            "minimum": 0
+          },
+          "es_materia_prima": {
+            "type": "boolean",
+            "description": "Es materia prima"
+          },
+          "ubicacion": {
+            "type": "string",
+            "description": "Ubicación física"
+          },
+          "estado_operativo": {
+            "type": "string",
+            "description": "Estado comercial",
+            "enum": [
+              "activo",
+              "inactivo"
+            ],
+            "default": "activo"
+          },
           "atributos": {
             "type": "object",
             "description": "Atributos de la variante"
@@ -1250,6 +1785,224 @@
           "motivo": {
             "type": "string",
             "description": "Motivo del cambio (RN-08 histórico)"
+          }
+        }
+      },
+      "ServicioResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "empresa_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "codigo": {
+            "type": "string",
+            "example": "SERV-001"
+          },
+          "nombre": {
+            "type": "string"
+          },
+          "descripcion": {
+            "type": "string"
+          },
+          "categoria": {
+            "type": "string"
+          },
+          "marca": {
+            "type": "string"
+          },
+          "codigo_barras": {
+            "type": "string"
+          },
+          "precio": {
+            "type": "string",
+            "example": "1500.00"
+          },
+          "costo": {
+            "type": "string",
+            "example": "500.00"
+          },
+          "unidad": {
+            "type": "string",
+            "example": "Hora (h)"
+          },
+          "duracion_minutos": {
+            "type": "number",
+            "example": 60
+          },
+          "estado": {
+            "type": "string",
+            "enum": [
+              "activo",
+              "inactivo"
+            ]
+          },
+          "creado_en": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "actualizado_en": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "empresa_id",
+          "codigo",
+          "nombre",
+          "descripcion",
+          "categoria",
+          "marca",
+          "codigo_barras",
+          "precio",
+          "costo",
+          "unidad",
+          "duracion_minutos",
+          "estado",
+          "creado_en",
+          "actualizado_en"
+        ]
+      },
+      "PaginaServiciosResponseDto": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ServicioResponseDto"
+            }
+          },
+          "total": {
+            "type": "number"
+          },
+          "pagina": {
+            "type": "number"
+          },
+          "limite": {
+            "type": "number"
+          },
+          "paginas": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "items",
+          "total",
+          "pagina",
+          "limite",
+          "paginas"
+        ]
+      },
+      "CrearServicioRequestDto": {
+        "type": "object",
+        "properties": {
+          "codigo": {
+            "type": "string",
+            "description": "Código interno del servicio",
+            "example": "SERV-001"
+          },
+          "empresa_id": {
+            "type": "string",
+            "description": "Empresa destino (solo admin/super_admin)",
+            "format": "uuid"
+          },
+          "nombre": {
+            "type": "string",
+            "description": "Nombre del servicio",
+            "minLength": 2,
+            "maxLength": 200
+          },
+          "descripcion": {
+            "type": "string"
+          },
+          "categoria": {
+            "type": "string"
+          },
+          "marca": {
+            "type": "string"
+          },
+          "codigo_barras": {
+            "type": "string"
+          },
+          "precio": {
+            "type": "string",
+            "description": "Precio decimal",
+            "example": "1500.00"
+          },
+          "costo": {
+            "type": "string",
+            "description": "Costo decimal",
+            "example": "500.00"
+          },
+          "unidad": {
+            "type": "string",
+            "example": "Hora (h)"
+          },
+          "duracion_minutos": {
+            "type": "number",
+            "description": "Duración en minutos (1-1440)",
+            "minimum": 1,
+            "maximum": 1440
+          },
+          "estado": {
+            "type": "string",
+            "enum": [
+              "activo",
+              "inactivo"
+            ]
+          }
+        },
+        "required": [
+          "codigo",
+          "nombre",
+          "precio",
+          "duracion_minutos"
+        ]
+      },
+      "ActualizarServicioRequestDto": {
+        "type": "object",
+        "properties": {
+          "nombre": {
+            "type": "string",
+            "minLength": 2
+          },
+          "descripcion": {
+            "type": "string"
+          },
+          "categoria": {
+            "type": "string"
+          },
+          "marca": {
+            "type": "string"
+          },
+          "codigo_barras": {
+            "type": "string"
+          },
+          "precio": {
+            "type": "string"
+          },
+          "costo": {
+            "type": "string"
+          },
+          "unidad": {
+            "type": "string"
+          },
+          "duracion_minutos": {
+            "type": "number",
+            "minimum": 1,
+            "maximum": 1440
+          },
+          "estado": {
+            "type": "string",
+            "enum": [
+              "activo",
+              "inactivo"
+            ]
           }
         }
       }
