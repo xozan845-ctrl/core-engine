@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import {
   PgService,
   ForbiddenError,
+  DomainError,
   NotFoundError,
   ConflictError,
   esUuid,
@@ -27,6 +28,48 @@ export interface Empresa {
   estado: string;
   creado_por: string;
   creado_en: string;
+  /** Perfil comercial y fiscal (R-PS-01). */
+  ruc: string;
+  razon_social: string;
+  nombre_comercial: string;
+  descripcion: string;
+  telefono: string;
+  correo_contacto: string;
+  sitio_web: string;
+  direccion: string;
+  ciudad: string;
+  departamento: string;
+  pais: string;
+  moneda: string;
+  zona_horaria: string;
+  sector: string;
+  representante_legal: string;
+  horario_atencion: string;
+  logo_objeto_id: string | null;
+  /** URL pública derivada del objeto de storage; no se persiste. */
+  logo_url?: string | null;
+  actualizado_en: string;
+}
+
+/** Campos editables del perfil de empresa; todos opcionales. */
+export interface PerfilEmpresaInput {
+  ruc?: string;
+  razon_social?: string;
+  nombre_comercial?: string;
+  descripcion?: string;
+  telefono?: string;
+  correo_contacto?: string;
+  sitio_web?: string;
+  direccion?: string;
+  ciudad?: string;
+  departamento?: string;
+  pais?: string;
+  moneda?: string;
+  zona_horaria?: string;
+  sector?: string;
+  representante_legal?: string;
+  horario_atencion?: string;
+  logo_objeto_id?: string | null;
 }
 
 interface EmpresaConEstadoSlug extends Empresa {
@@ -43,10 +86,25 @@ interface ClienteSlug {
   query(texto: string, valores?: unknown[]): Promise<{ rowCount: number | null }>;
 }
 
+type PerfilNormalizado = Required<Omit<PerfilEmpresaInput, 'logo_objeto_id'>> & {
+  logo_objeto_id: string | null;
+};
+
+interface ObjetoStorage {
+  id: string;
+  tenant_id: string;
+  estado: string;
+  publico: boolean;
+  content_type: string;
+}
+
 const MAX_INTENTOS_SLUG = 50;
 
 @Injectable()
 export class EmpresasService {
+  private readonly storageUrl = process.env.STORAGE_SERVICE_URL ?? 'http://storage-service:3010';
+  private readonly claveInterna = process.env.INTERNAL_API_KEY ?? '';
+
   constructor(private readonly pg: PgService, private readonly usuarios: UsuariosService) {}
 
   async crear(
@@ -54,8 +112,12 @@ export class EmpresasService {
     nombre: string,
     modalidad: ModalidadLogistica,
     slugSolicitado?: string,
+    perfil?: PerfilEmpresaInput,
   ): Promise<Empresa> {
     const nombreFinal = nombre.trim();
+    const meta = this.normalizarPerfil({ ...(perfil ?? {}), logo_objeto_id: null });
+    this.validarPerfil(meta);
+    await this.validarRucUnico(meta.ruc);
     const slugExplicito =
       slugSolicitado === undefined ? undefined : validarSlugSolicitado(slugSolicitado);
     // Un slug explicito no se renombra en silencio: si esta ocupado es 409.
@@ -68,9 +130,35 @@ export class EmpresasService {
         return await this.pg.transaccion(async (client) => {
           const slug = await this.elegirSlug(client, nombreFinal, slugExplicito);
           const result = await client.query<Empresa>(
-            `INSERT INTO identity.empresas (nombre, slug, modalidad_logistica, creado_por)
-             VALUES ($1,$2,$3,$4) RETURNING *`,
-            [nombreFinal, slug, modalidad, usuarioId],
+            `INSERT INTO identity.empresas
+               (nombre, slug, modalidad_logistica, creado_por, ruc, razon_social,
+                nombre_comercial, descripcion, telefono, correo_contacto, sitio_web,
+                direccion, ciudad, departamento, pais, moneda, zona_horaria, sector,
+                representante_legal, horario_atencion, logo_objeto_id)
+             VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,NULL)
+             RETURNING *`,
+            [
+              nombreFinal,
+              slug,
+              modalidad,
+              usuarioId,
+              meta.ruc,
+              meta.razon_social,
+              meta.nombre_comercial,
+              meta.descripcion,
+              meta.telefono,
+              meta.correo_contacto,
+              meta.sitio_web,
+              meta.direccion,
+              meta.ciudad,
+              meta.departamento,
+              meta.pais,
+              meta.moneda,
+              meta.zona_horaria,
+              meta.sector,
+              meta.representante_legal,
+              meta.horario_atencion,
+            ],
           );
           const empresa = result.rows[0];
           await client.query(
@@ -78,7 +166,7 @@ export class EmpresasService {
             [empresa.id, usuarioId],
           );
           await client.query(`UPDATE identity.usuarios SET tenant_id=$1, rol='empresario' WHERE id=$2`, [empresa.id, usuarioId]);
-          return empresa;
+          return this.conLogoUrl(empresa);
         });
       } catch (error) {
         if (!esViolacionUnicidad(error)) throw error;
@@ -115,7 +203,7 @@ export class EmpresasService {
       [modalidad, empresaId],
     );
     if (!empresa) throw new NotFoundError('Empresa', empresaId);
-    return empresa;
+    return this.conLogoUrl(empresa);
   }
 
   /**
@@ -129,7 +217,7 @@ export class EmpresasService {
       [tipo, empresaId],
     );
     if (!empresa) throw new NotFoundError('Empresa', empresaId);
-    return empresa;
+    return this.conLogoUrl(empresa);
   }
 
   /**
@@ -163,7 +251,7 @@ export class EmpresasService {
 
     const { es_actual, ...empresa } = fila;
     return {
-      empresa,
+      empresa: this.conLogoUrl(empresa),
       redirigirA: es_actual ? undefined : `/api/v1/empresas/${empresa.slug}`,
     };
   }
@@ -182,7 +270,7 @@ export class EmpresasService {
     // membresia activa en ESA empresa sea de empresario (no basta el rol JWT).
     const { empresa } = await this.resolverPara(usuarioId, identificador, false, 'empresario');
     const slug = validarSlugSolicitado(slugSolicitado);
-    if (slug === empresa.slug) return empresa;
+    if (slug === empresa.slug) return this.conLogoUrl(empresa);
 
     const ocupado = await this.pg.queryOne(
       `SELECT 1 FROM identity.empresa_slugs WHERE slug=$1`,
@@ -196,7 +284,7 @@ export class EmpresasService {
         [slug, empresa.id],
       );
       if (!actualizada) throw new NotFoundError('Empresa', empresa.id);
-      return actualizada;
+      return this.conLogoUrl(actualizada);
     } catch (error) {
       if (esViolacionUnicidad(error)) {
         throw new ConflictError(`El slug "${slug}" ya está en uso.`);
@@ -206,7 +294,190 @@ export class EmpresasService {
   }
 
   async obtener(empresaId: string): Promise<Empresa | null> {
-    return this.pg.queryOne<Empresa>(`SELECT * FROM identity.empresas WHERE id=$1`, [empresaId]);
+    const empresa = await this.pg.queryOne<Empresa>(
+      `SELECT * FROM identity.empresas WHERE id=$1`,
+      [empresaId],
+    );
+    return empresa ? this.conLogoUrl(empresa) : null;
+  }
+
+  /**
+   * Actualiza el perfil comercial/fiscal de forma parcial. El empresario solo
+   * puede editar su empresa; admin/super_admin pueden editar cualquiera.
+   */
+  async actualizarPerfil(
+    usuarioId: string,
+    identificador: string,
+    cambios: PerfilEmpresaInput,
+    esGlobal = false,
+  ): Promise<Empresa> {
+    const { empresa } = await this.resolverPara(
+      usuarioId,
+      identificador,
+      esGlobal,
+      esGlobal ? undefined : 'empresario',
+    );
+    const meta = this.normalizarPerfil(cambios, empresa);
+    this.validarPerfil(meta);
+    if (meta.ruc !== empresa.ruc) await this.validarRucUnico(meta.ruc, empresa.id);
+    if (meta.logo_objeto_id && meta.logo_objeto_id !== empresa.logo_objeto_id) {
+      await this.validarLogo(empresa.id, meta.logo_objeto_id);
+    }
+    try {
+      const actualizada = await this.pg.queryOne<Empresa>(
+        `UPDATE identity.empresas SET
+           ruc=$2, razon_social=$3, nombre_comercial=$4, descripcion=$5,
+           telefono=$6, correo_contacto=$7, sitio_web=$8, direccion=$9,
+           ciudad=$10, departamento=$11, pais=$12, moneda=$13, zona_horaria=$14,
+           sector=$15, representante_legal=$16, horario_atencion=$17,
+           logo_objeto_id=$18, actualizado_en=NOW()
+         WHERE id=$1 RETURNING *`,
+        [
+          empresa.id,
+          meta.ruc,
+          meta.razon_social,
+          meta.nombre_comercial,
+          meta.descripcion,
+          meta.telefono,
+          meta.correo_contacto,
+          meta.sitio_web,
+          meta.direccion,
+          meta.ciudad,
+          meta.departamento,
+          meta.pais,
+          meta.moneda,
+          meta.zona_horaria,
+          meta.sector,
+          meta.representante_legal,
+          meta.horario_atencion,
+          meta.logo_objeto_id,
+        ],
+      );
+      if (!actualizada) throw new NotFoundError('Empresa', empresa.id);
+      return this.conLogoUrl(actualizada);
+    } catch (error) {
+      if (esViolacionUnicidad(error)) {
+        throw new ConflictError('El RUC ya está registrado en otra empresa.');
+      }
+      throw error;
+    }
+  }
+
+  private normalizarPerfil(
+    datos: PerfilEmpresaInput,
+    actual?: Empresa,
+  ): PerfilNormalizado {
+    const texto = (valor: unknown, respaldo = ''): string =>
+      typeof valor === 'string' ? valor.trim() : respaldo;
+    return {
+      ruc: texto(datos.ruc, actual?.ruc ?? ''),
+      razon_social: texto(datos.razon_social, actual?.razon_social ?? ''),
+      nombre_comercial: texto(datos.nombre_comercial, actual?.nombre_comercial ?? ''),
+      descripcion: texto(datos.descripcion, actual?.descripcion ?? ''),
+      telefono: texto(datos.telefono, actual?.telefono ?? ''),
+      correo_contacto: texto(datos.correo_contacto, actual?.correo_contacto ?? ''),
+      sitio_web: texto(datos.sitio_web, actual?.sitio_web ?? ''),
+      direccion: texto(datos.direccion, actual?.direccion ?? ''),
+      ciudad: texto(datos.ciudad, actual?.ciudad ?? ''),
+      departamento: texto(datos.departamento, actual?.departamento ?? ''),
+      pais: texto(datos.pais, actual?.pais ?? 'Nicaragua') || 'Nicaragua',
+      moneda: (texto(datos.moneda, actual?.moneda ?? 'NIO') || 'NIO').toUpperCase(),
+      zona_horaria: texto(datos.zona_horaria, actual?.zona_horaria ?? 'America/Managua') ||
+        'America/Managua',
+      sector: texto(datos.sector, actual?.sector ?? ''),
+      representante_legal: texto(datos.representante_legal, actual?.representante_legal ?? ''),
+      horario_atencion: texto(datos.horario_atencion, actual?.horario_atencion ?? ''),
+      logo_objeto_id:
+        datos.logo_objeto_id !== undefined
+          ? datos.logo_objeto_id
+          : (actual?.logo_objeto_id ?? null),
+    };
+  }
+
+  private validarPerfil(meta: PerfilNormalizado): void {
+    const limites: [string, number, string][] = [
+      ['ruc', 30, meta.ruc],
+      ['razon_social', 160, meta.razon_social],
+      ['nombre_comercial', 160, meta.nombre_comercial],
+      ['descripcion', 1000, meta.descripcion],
+      ['telefono', 40, meta.telefono],
+      ['sitio_web', 200, meta.sitio_web],
+      ['direccion', 300, meta.direccion],
+      ['ciudad', 80, meta.ciudad],
+      ['departamento', 80, meta.departamento],
+      ['pais', 80, meta.pais],
+      ['zona_horaria', 64, meta.zona_horaria],
+      ['sector', 80, meta.sector],
+      ['representante_legal', 160, meta.representante_legal],
+      ['horario_atencion', 120, meta.horario_atencion],
+    ];
+    for (const [campo, maximo, valor] of limites) {
+      if (valor.length > maximo) {
+        throw new DomainError('PERFIL_INVALIDO', `${campo} supera ${maximo} caracteres.`);
+      }
+    }
+    if (!/^[A-Z]{3}$/.test(meta.moneda)) {
+      throw new DomainError('PERFIL_INVALIDO', 'La moneda debe ser un código ISO de 3 letras.');
+    }
+    if (meta.correo_contacto && !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(meta.correo_contacto)) {
+      throw new DomainError('PERFIL_INVALIDO', 'El correo de contacto no es válido.');
+    }
+    if (meta.logo_objeto_id !== null && !esUuid(meta.logo_objeto_id)) {
+      throw new DomainError('PERFIL_INVALIDO', 'El logo debe ser un objeto de storage válido.');
+    }
+  }
+
+  private async validarRucUnico(ruc: string, excluirId?: string): Promise<void> {
+    if (!ruc) return;
+    const params: unknown[] = [ruc];
+    let where = 'upper(ruc) = upper($1)';
+    if (excluirId) {
+      params.push(excluirId);
+      where += ' AND id <> $2';
+    }
+    const fila = await this.pg.queryOne(
+      `SELECT 1 FROM identity.empresas WHERE ${where} LIMIT 1`,
+      params,
+    );
+    if (fila) throw new ConflictError('El RUC ya está registrado en otra empresa.');
+  }
+
+  /** El logo debe ser una imagen pública y activa del mismo tenant. */
+  private async validarLogo(empresaId: string, objetoId: string): Promise<void> {
+    let respuesta: Response;
+    try {
+      respuesta = await fetch(
+        `${this.storageUrl}/internal/storage/objetos/${encodeURIComponent(objetoId)}` +
+          `?tenant_id=${encodeURIComponent(empresaId)}`,
+        { headers: { 'x-internal-key': this.claveInterna } },
+      );
+    } catch {
+      throw new DomainError('LOGO_NO_VERIFICABLE', 'No se pudo verificar el logo.');
+    }
+    if (respuesta.status === 404) throw new NotFoundError('Logo', objetoId);
+    if (!respuesta.ok) {
+      throw new DomainError('LOGO_NO_VERIFICABLE', 'No se pudo verificar el logo.');
+    }
+    const objeto = (await respuesta.json()) as ObjetoStorage;
+    if (
+      objeto.tenant_id !== empresaId ||
+      objeto.estado !== 'activo' ||
+      objeto.publico !== true ||
+      !String(objeto.content_type).startsWith('image/')
+    ) {
+      throw new DomainError(
+        'LOGO_INVALIDO',
+        'El logo debe ser una imagen pública y activa de la empresa.',
+      );
+    }
+  }
+
+  private conLogoUrl(empresa: Empresa): Empresa {
+    if (!empresa.logo_objeto_id) return empresa;
+    return {
+      ...empresa,
+      logo_url: `/api/v1/storage/public/objetos/${empresa.logo_objeto_id}`,
+    };
   }
 
   private async buscarPorIdentificador(
