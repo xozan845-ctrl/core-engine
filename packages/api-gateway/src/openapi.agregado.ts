@@ -18132,6 +18132,15 @@ export const OPENAPI_AGREGADO = {
               "propia",
               "hibrida"
             ]
+          },
+          "tipo_empresa": {
+            "type": "string",
+            "enum": [
+              "comercial",
+              "logistica",
+              "plataforma"
+            ],
+            "default": "comercial"
           }
         },
         "required": [

@@ -60,6 +60,11 @@ export const POLITICAS_RUTAS: PoliticaRuta[] = [
       metodos: ['PATCH'],
       roles: [ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.EMPRESARIO],
     },
+    {
+      patron: /^\/api\/v1\/empresas\/[^/]+\/tipo$/,
+      metodos: ['PATCH'],
+      roles: [ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.EMPRESARIO],
+    },
     { patron: /^\/api\/v1\/empresas\/[^/]+\/vendedores$/, metodos: ['POST', 'GET'], roles: [ROLES.EMPRESARIO] },
     {
       patron: /^\/api\/v1\/empresas\/[^/]+\/invitaciones\/vendedores(\/|$)/,
