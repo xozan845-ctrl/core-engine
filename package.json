@@ -38,14 +38,14 @@
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
-    "@stryker-mutator/core": "^10.0.0",
-    "@stryker-mutator/vitest-runner": "^10.0.0",
-    "@swc/core": "^1.16.18",
+    "@stryker-mutator/core": "^10.1.1",
+    "@stryker-mutator/vitest-runner": "^10.1.1",
+    "@swc/core": "^1.16.20",
     "@vitest/coverage-v8": "^5.0.4",
     "eslint": "^10.13.0",
     "fast-check": "^4.10.2",
     "pg": "^8.13.1",
-    "typescript-eslint": "^8.71.0",
+    "typescript-eslint": "^8.72.1",
     "unplugin-swc": "^2.0.0",
     "vitest": "^5.0.4"
   },
