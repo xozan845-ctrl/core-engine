@@ -1,5 +1,14 @@
 {
   "openapi": "3.0.0",
+  "info": {
+    "title": "Core Engine · storage-service · API pública",
+    "description": "Contrato público (/api/v1/**) de storage-service. No contiene rutas /internal/**.",
+    "version": "v1",
+    "contact": {}
+  },
+  "x-servicio": "storage-service",
+  "x-superficie": "publica",
+  "tags": [],
   "paths": {
     "/api/v1/admin/storage/tenants": {
       "get": {
@@ -166,126 +175,6 @@
         "summary": "Recalcular el uso del tenant desde la metadata (idempotente)",
         "tags": [
           "Almacenamiento (admin)"
-        ]
-      }
-    },
-    "/internal/storage/tenants/{tenantId}": {
-      "get": {
-        "operationId": "InternalStorageController_estado",
-        "parameters": [
-          {
-            "name": "tenantId",
-            "required": true,
-            "in": "path",
-            "description": "Id del tenant",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Estado del tenant",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/EstadoBucketResponseDto"
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "internalKey": []
-          }
-        ],
-        "summary": "Estado de almacenamiento del tenant (servicio→servicio)",
-        "tags": [
-          "Almacenamiento (interno)"
-        ]
-      }
-    },
-    "/internal/storage/tenants/{tenantId}/recalcular": {
-      "post": {
-        "operationId": "InternalStorageController_recalcular",
-        "parameters": [
-          {
-            "name": "tenantId",
-            "required": true,
-            "in": "path",
-            "description": "Id del tenant",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "201": {
-            "description": "Uso recalculado",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/EstadoBucketResponseDto"
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "internalKey": []
-          }
-        ],
-        "summary": "Recalcular el uso del tenant (servicio→servicio)",
-        "tags": [
-          "Almacenamiento (interno)"
-        ]
-      }
-    },
-    "/internal/storage/objetos/{id}": {
-      "get": {
-        "operationId": "InternalStorageController_objeto",
-        "parameters": [
-          {
-            "name": "id",
-            "required": true,
-            "in": "path",
-            "description": "Id del objeto",
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "tenant_id",
-            "required": true,
-            "in": "query",
-            "description": "Tenant dueno del objeto",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Metadata del objeto",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ObjetoStorageResponseDto"
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "internalKey": []
-          }
-        ],
-        "summary": "Metadata de un objeto del tenant (servicio→servicio)",
-        "tags": [
-          "Almacenamiento (interno)"
         ]
       }
     },
@@ -656,14 +545,6 @@
       }
     }
   },
-  "info": {
-    "title": "Core Engine · storage-service",
-    "description": "Almacenamiento de objetos por tenant (MinIO, buckets por organizacion)",
-    "version": "v1",
-    "contact": {}
-  },
-  "tags": [],
-  "servers": [],
   "components": {
     "securitySchemes": {
       "bearer": {
@@ -678,6 +559,33 @@
       }
     },
     "schemas": {
+      "ActualizarTenantRequestDto": {
+        "type": "object",
+        "properties": {
+          "cuota_bytes": {
+            "type": "number",
+            "description": "Nueva cuota en bytes"
+          },
+          "estado": {
+            "type": "string",
+            "description": "Estado del almacenamiento del tenant",
+            "enum": [
+              "activo",
+              "suspendido"
+            ]
+          }
+        }
+      },
+      "ConfigurarBucketRequestDto": {
+        "type": "object",
+        "properties": {
+          "cuota_bytes": {
+            "type": "number",
+            "description": "Cuota del tenant en bytes (por defecto la del entorno)",
+            "example": 5368709120
+          }
+        }
+      },
       "EstadoBucketResponseDto": {
         "type": "object",
         "properties": {
@@ -742,62 +650,6 @@
           "creado_en",
           "actualizado_en"
         ]
-      },
-      "PaginaBucketsResponseDto": {
-        "type": "object",
-        "properties": {
-          "items": {
-            "description": "Buckets de la página",
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/EstadoBucketResponseDto"
-            }
-          },
-          "total": {
-            "type": "number",
-            "description": "Total de tenants con almacenamiento",
-            "example": 8
-          },
-          "pagina": {
-            "type": "number",
-            "description": "Página actual (1-based)",
-            "example": 1
-          },
-          "limite": {
-            "type": "number",
-            "description": "Tamaño de página",
-            "example": 20
-          },
-          "paginas": {
-            "type": "number",
-            "description": "Total de páginas",
-            "example": 1
-          }
-        },
-        "required": [
-          "items",
-          "total",
-          "pagina",
-          "limite",
-          "paginas"
-        ]
-      },
-      "ActualizarTenantRequestDto": {
-        "type": "object",
-        "properties": {
-          "cuota_bytes": {
-            "type": "number",
-            "description": "Nueva cuota en bytes"
-          },
-          "estado": {
-            "type": "string",
-            "description": "Estado del almacenamiento del tenant",
-            "enum": [
-              "activo",
-              "suspendido"
-            ]
-          }
-        }
       },
       "ObjetoStorageResponseDto": {
         "type": "object",
@@ -911,15 +763,83 @@
           "creado_en"
         ]
       },
-      "ConfigurarBucketRequestDto": {
+      "PaginaBucketsResponseDto": {
         "type": "object",
         "properties": {
-          "cuota_bytes": {
+          "items": {
+            "description": "Buckets de la página",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/EstadoBucketResponseDto"
+            }
+          },
+          "total": {
             "type": "number",
-            "description": "Cuota del tenant en bytes (por defecto la del entorno)",
-            "example": 5368709120
+            "description": "Total de tenants con almacenamiento",
+            "example": 8
+          },
+          "pagina": {
+            "type": "number",
+            "description": "Página actual (1-based)",
+            "example": 1
+          },
+          "limite": {
+            "type": "number",
+            "description": "Tamaño de página",
+            "example": 20
+          },
+          "paginas": {
+            "type": "number",
+            "description": "Total de páginas",
+            "example": 1
           }
-        }
+        },
+        "required": [
+          "items",
+          "total",
+          "pagina",
+          "limite",
+          "paginas"
+        ]
+      },
+      "PaginaObjetosResponseDto": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "description": "Objetos de la página",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ObjetoStorageResponseDto"
+            }
+          },
+          "total": {
+            "type": "number",
+            "description": "Total de objetos",
+            "example": 12
+          },
+          "pagina": {
+            "type": "number",
+            "description": "Página actual (1-based)",
+            "example": 1
+          },
+          "limite": {
+            "type": "number",
+            "description": "Tamaño de página",
+            "example": 20
+          },
+          "paginas": {
+            "type": "number",
+            "description": "Total de páginas",
+            "example": 1
+          }
+        },
+        "required": [
+          "items",
+          "total",
+          "pagina",
+          "limite",
+          "paginas"
+        ]
       },
       "SolicitarSubidaRequestDto": {
         "type": "object",
@@ -1020,45 +940,6 @@
           "headers",
           "expira_en",
           "max_bytes"
-        ]
-      },
-      "PaginaObjetosResponseDto": {
-        "type": "object",
-        "properties": {
-          "items": {
-            "description": "Objetos de la página",
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/ObjetoStorageResponseDto"
-            }
-          },
-          "total": {
-            "type": "number",
-            "description": "Total de objetos",
-            "example": 12
-          },
-          "pagina": {
-            "type": "number",
-            "description": "Página actual (1-based)",
-            "example": 1
-          },
-          "limite": {
-            "type": "number",
-            "description": "Tamaño de página",
-            "example": 20
-          },
-          "paginas": {
-            "type": "number",
-            "description": "Total de páginas",
-            "example": 1
-          }
-        },
-        "required": [
-          "items",
-          "total",
-          "pagina",
-          "limite",
-          "paginas"
         ]
       },
       "UrlDescargaResponseDto": {

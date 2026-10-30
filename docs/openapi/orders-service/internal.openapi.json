@@ -1,0 +1,451 @@
+{
+  "openapi": "3.0.0",
+  "info": {
+    "title": "Core Engine · orders-service · API interna",
+    "description": "Contrato interno (/internal/**) de orders-service; requiere x-internal-key.",
+    "version": "internal",
+    "contact": {}
+  },
+  "x-servicio": "orders-service",
+  "x-superficie": "interna",
+  "security": [
+    {
+      "internalKey": []
+    }
+  ],
+  "tags": [],
+  "paths": {
+    "/internal/orders/{id}/transicion": {
+      "post": {
+        "operationId": "InternoController_transicion",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "description": "Id de la orden",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "estado",
+            "required": true,
+            "in": "query",
+            "description": "Estado objetivo",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "motivo",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "actor",
+            "required": false,
+            "in": "query",
+            "description": "Usuario que ejecuta la transición",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Orden con el nuevo estado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OrderViewResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "internalKey": []
+          }
+        ],
+        "summary": "Avanzar el ciclo de vida de la orden (logística→orders)",
+        "tags": [
+          "Pedidos (interno)"
+        ]
+      }
+    },
+    "/internal/orders/{id}": {
+      "get": {
+        "operationId": "InternoController_orden",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "description": "Id de la orden",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Orden encontrada",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OrderViewResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "internalKey": []
+          }
+        ],
+        "summary": "Lectura completa de una orden (reportes/comisiones)",
+        "tags": [
+          "Pedidos (interno)"
+        ]
+      }
+    },
+    "/internal/orders": {
+      "get": {
+        "operationId": "InternoController_listar",
+        "parameters": [
+          {
+            "name": "estado",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Órdenes registradas",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/OrderViewResponseDto"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "internalKey": []
+          }
+        ],
+        "summary": "Listar órdenes (servicio→servicio)",
+        "tags": [
+          "Pedidos (interno)"
+        ]
+      }
+    },
+    "/internal/orders/{id}/reproyectar": {
+      "post": {
+        "operationId": "InternoController_reproyectar",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "description": "Id de la orden",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Orden reproyectada",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OrderViewResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "internalKey": []
+          }
+        ],
+        "summary": "Reproyectar una orden desde su historia (Event Sourcing)",
+        "tags": [
+          "Pedidos (interno)"
+        ]
+      }
+    },
+    "/internal/orders/{id}/historia": {
+      "get": {
+        "operationId": "InternoController_historia",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "description": "Id de la orden",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Historia de eventos",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/HistoriaEventoResponseDto"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "internalKey": []
+          }
+        ],
+        "summary": "Historia inmutable de eventos de una orden",
+        "tags": [
+          "Pedidos (interno)"
+        ]
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "bearer": {
+        "scheme": "bearer",
+        "bearerFormat": "JWT",
+        "type": "http"
+      },
+      "internalKey": {
+        "type": "apiKey",
+        "in": "header",
+        "name": "x-internal-key"
+      }
+    },
+    "schemas": {
+      "HistoriaEventoResponseDto": {
+        "type": "object",
+        "properties": {
+          "event_id": {
+            "type": "string",
+            "description": "Id del evento",
+            "format": "uuid"
+          },
+          "aggregate_id": {
+            "type": "string",
+            "description": "Id del agregado (orden)",
+            "format": "uuid"
+          },
+          "tipo": {
+            "type": "string",
+            "description": "Tipo de evento",
+            "example": "OrderCreatedEvent"
+          },
+          "payload": {
+            "type": "object",
+            "description": "Payload del evento"
+          },
+          "version": {
+            "type": "number",
+            "description": "Versión del agregado",
+            "example": 1
+          },
+          "creado_en": {
+            "type": "string",
+            "description": "Fecha del evento (ISO 8601 UTC)",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "event_id",
+          "aggregate_id",
+          "tipo",
+          "payload",
+          "version",
+          "creado_en"
+        ]
+      },
+      "ItemOrdenResponseDto": {
+        "type": "object",
+        "properties": {
+          "oferta_id": {
+            "type": "string",
+            "description": "Id de la oferta",
+            "format": "uuid"
+          },
+          "sku": {
+            "type": "string",
+            "description": "SKU del producto",
+            "example": "SKU-001"
+          },
+          "producto_nombre": {
+            "type": "string",
+            "description": "Nombre del producto"
+          },
+          "cantidad": {
+            "type": "number",
+            "description": "Cantidad pedida",
+            "example": 2
+          },
+          "precio_unitario_cents": {
+            "type": "number",
+            "description": "Precio unitario de venta en centavos",
+            "example": 115000
+          },
+          "vendedor_id": {
+            "type": "string",
+            "description": "Id del vendedor",
+            "format": "uuid"
+          },
+          "tienda_id": {
+            "type": "string",
+            "description": "Id de la tienda",
+            "format": "uuid"
+          }
+        },
+        "required": [
+          "oferta_id",
+          "sku",
+          "producto_nombre",
+          "cantidad",
+          "precio_unitario_cents",
+          "vendedor_id",
+          "tienda_id"
+        ]
+      },
+      "OrderViewResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Id de la orden",
+            "format": "uuid"
+          },
+          "vendedor_id": {
+            "type": "string",
+            "description": "Id del vendedor",
+            "format": "uuid"
+          },
+          "comprador_id": {
+            "type": "string",
+            "description": "Id del comprador",
+            "format": "uuid"
+          },
+          "tienda_id": {
+            "type": "string",
+            "description": "Id de la tienda",
+            "format": "uuid"
+          },
+          "estado": {
+            "type": "string",
+            "description": "Estado de la orden",
+            "example": "pagada"
+          },
+          "total_cents": {
+            "type": "number",
+            "description": "Total en centavos",
+            "example": 230000
+          },
+          "comision_cents": {
+            "type": "number",
+            "description": "Comisión en centavos",
+            "example": 27600
+          },
+          "moneda": {
+            "type": "string",
+            "description": "Moneda",
+            "example": "C$"
+          },
+          "items": {
+            "description": "Líneas de la orden",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ItemOrdenResponseDto"
+            }
+          },
+          "direccion_envio": {
+            "type": "object",
+            "description": "Dirección de envío",
+            "nullable": true
+          },
+          "creado_en": {
+            "type": "string",
+            "description": "Fecha de creación (ISO 8601 UTC)",
+            "format": "date-time"
+          },
+          "actualizado_en": {
+            "type": "string",
+            "description": "Última actualización (ISO 8601 UTC)",
+            "format": "date-time"
+          },
+          "pagada_en": {
+            "type": "object",
+            "description": "Fecha de pago (ISO 8601 UTC)",
+            "nullable": true,
+            "format": "date-time"
+          },
+          "enviada_en": {
+            "type": "object",
+            "description": "Fecha de envío (ISO 8601 UTC)",
+            "nullable": true,
+            "format": "date-time"
+          },
+          "entregada_en": {
+            "type": "object",
+            "description": "Fecha de entrega (ISO 8601 UTC)",
+            "nullable": true,
+            "format": "date-time"
+          },
+          "cancelada_en": {
+            "type": "object",
+            "description": "Fecha de cancelación (ISO 8601 UTC)",
+            "nullable": true,
+            "format": "date-time"
+          },
+          "devuelta_en": {
+            "type": "object",
+            "description": "Fecha de devolución (ISO 8601 UTC)",
+            "nullable": true,
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "vendedor_id",
+          "comprador_id",
+          "tienda_id",
+          "estado",
+          "total_cents",
+          "comision_cents",
+          "moneda",
+          "items",
+          "creado_en",
+          "actualizado_en"
+        ]
+      }
+    }
+  }
+}

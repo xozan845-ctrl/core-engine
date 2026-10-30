@@ -883,6 +883,35 @@ Este archivo registra decisiones técnicas deliberadas que se apartan del texto 
 
 ---
 
+## ADR-33: Contrato OpenAPI por servicio y por superficie
+
+- **Fecha**: 2026-10-30
+- **Estado**: Aceptado
+- **Contexto**: cada servicio exportaba un único JSON con rutas públicas e
+  internas mezcladas. El agregador separaba por prefijo, pero el contrato
+  interno arrastraba todos los schemas, incluso los de uso exclusivamente
+  público, y no había una validación por archivo de la superficie.
+- **Decisión**:
+  1. Cada servicio exporta `docs/openapi/<servicio>/public.openapi.json` e
+     `internal.openapi.json` desde **el mismo documento Nest**. No se editan a
+     mano.
+  2. El exportador compartido calcula la clausura transitiva de `$ref`, de modo
+     que cada archivo solo incluye los schemas que realmente usa.
+  3. El agregador lee las carpetas, valida que el archivo público solo tenga
+     `/api/v1/**` y el interno solo `/internal/**`, y rechaza specs planos
+     obsoletos.
+  4. Se añaden validaciones de layout: ambos archivos existen por servicio, los
+     `$ref` resuelven y no quedan JSON planos.
+- **Consecuencias**:
+  - El contrato interno ya no incluye DTOs públicos (baja de ~155 a ~17 schemas
+    en la superficie interna agregada).
+  - El gate G-8 sigue igual (`git diff --exit-code docs/openapi ...`), pero ahora
+    cubre 20 archivos generados.
+  - Cinco servicios sin rutas internas mantienen un `internal.openapi.json`
+    vacío para que la verificación sea uniforme.
+
+---
+
 ## Resumen de cumplimiento post-corrección
 
 | Ítem del documento          | Estado  | Nota |

@@ -1,5 +1,14 @@
 {
   "openapi": "3.0.0",
+  "info": {
+    "title": "Core Engine · field-service · API pública",
+    "description": "Contrato público (/api/v1/**) de field-service. No contiene rutas /internal/**.",
+    "version": "v1",
+    "contact": {}
+  },
+  "x-servicio": "field-service",
+  "x-superficie": "publica",
+  "tags": [],
   "paths": {
     "/api/v1/field/personal": {
       "get": {
@@ -1735,14 +1744,6 @@
       }
     }
   },
-  "info": {
-    "title": "Core Engine · field-service",
-    "description": "Logística de campo: personal, clientes, vehículos, rutas, pedidos, asistencia, incidencias, tracking, telemetría y sync offline",
-    "version": "v1",
-    "contact": {}
-  },
-  "tags": [],
-  "servers": [],
   "components": {
     "securitySchemes": {
       "bearer": {
@@ -1752,164 +1753,133 @@
       }
     },
     "schemas": {
-      "PersonalResponseDto": {
+      "ActualizarClienteRequestDto": {
         "type": "object",
         "properties": {
-          "id": {
+          "nombreCompleto": {
+            "type": "string"
+          },
+          "tipoDocumento": {
+            "type": "string"
+          },
+          "numeroDocumento": {
+            "type": "string"
+          },
+          "tipoCliente": {
             "type": "string",
-            "format": "uuid"
+            "enum": [
+              "particular",
+              "minorista",
+              "mayorista",
+              "corporativo"
+            ]
           },
-          "tenant_id": {
-            "type": "string",
-            "format": "uuid"
-          },
-          "nombre": {
-            "type": "string"
-          },
-          "apellido": {
-            "type": "string"
-          },
-          "cargo": {
-            "type": "string"
-          },
-          "estado": {
+          "email": {
             "type": "string"
           },
           "telefono": {
-            "type": "object",
-            "nullable": true
+            "type": "string"
           },
-          "email": {
-            "type": "object",
-            "nullable": true
+          "telefonoAlternativo": {
+            "type": "string"
           },
-          "ruta_asignada_id": {
-            "type": "object",
-            "nullable": true,
-            "format": "uuid"
+          "direccionPrincipal": {
+            "type": "string"
           },
-          "vehiculo_asignado_id": {
-            "type": "object",
-            "nullable": true,
-            "format": "uuid"
+          "direccionSecundaria": {
+            "type": "string"
           },
-          "hora_check_in": {
-            "type": "object",
-            "nullable": true,
-            "format": "date-time"
+          "referenciasDireccion": {
+            "type": "string"
           },
-          "hora_check_out": {
-            "type": "object",
-            "nullable": true,
-            "format": "date-time"
+          "lat": {
+            "type": "number"
           },
-          "ubicacion_lat": {
-            "type": "object",
-            "nullable": true
+          "lng": {
+            "type": "number"
           },
-          "ubicacion_lng": {
-            "type": "object",
-            "nullable": true
+          "notasAdicionales": {
+            "type": "string"
           },
-          "ubicacion_precision": {
-            "type": "object",
-            "nullable": true
-          },
-          "ubicacion_ts": {
-            "type": "object",
-            "nullable": true,
-            "format": "date-time"
-          },
-          "synced": {
-            "type": "boolean"
-          },
-          "deleted_at": {
-            "type": "object",
-            "nullable": true,
-            "format": "date-time"
-          },
-          "created_at": {
-            "type": "string",
-            "format": "date-time"
-          },
-          "updated_at": {
-            "type": "string",
-            "format": "date-time"
+          "urlGoogleMaps": {
+            "type": "string"
           }
-        },
-        "required": [
-          "id",
-          "tenant_id",
-          "nombre",
-          "apellido",
-          "cargo",
-          "estado",
-          "synced",
-          "created_at",
-          "updated_at"
-        ]
+        }
       },
-      "CrearPersonalRequestDto": {
+      "ActualizarIncidenciaRequestDto": {
         "type": "object",
         "properties": {
-          "nombre": {
-            "type": "string"
-          },
-          "apellido": {
-            "type": "string"
-          },
-          "cargo": {
+          "tipo": {
             "type": "string",
             "enum": [
-              "conductor",
-              "auxiliar",
-              "supervisor",
-              "coordinador"
+              "mecanica",
+              "accidente",
+              "salud",
+              "clima",
+              "otro"
             ]
           },
           "estado": {
             "type": "string",
             "enum": [
-              "activo",
-              "en_ruta",
-              "descansando",
-              "inactivo"
+              "abierta",
+              "en_progreso",
+              "resuelta"
             ]
           },
-          "telefono": {
+          "descripcion": {
             "type": "string"
           },
-          "email": {
+          "personalId": {
             "type": "string"
           },
-          "rutaAsignadaId": {
+          "vehiculoId": {
             "type": "string"
           },
-          "vehiculoAsignadoId": {
+          "rutaId": {
             "type": "string"
           },
-          "horaCheckIn": {
-            "type": "string"
-          },
-          "horaCheckOut": {
-            "type": "string"
-          },
-          "ubicacionLat": {
-            "type": "number"
-          },
-          "ubicacionLng": {
-            "type": "number"
-          },
-          "ubicacionPrecision": {
-            "type": "number"
-          },
-          "ubicacionTs": {
+          "resolucion": {
             "type": "string"
           }
-        },
-        "required": [
-          "nombre"
-        ]
+        }
+      },
+      "ActualizarPedidoRequestDto": {
+        "type": "object",
+        "properties": {
+          "cliente": {
+            "type": "string"
+          },
+          "clienteId": {
+            "type": "string"
+          },
+          "direccionEntrega": {
+            "type": "string"
+          },
+          "lat": {
+            "type": "number"
+          },
+          "lng": {
+            "type": "number"
+          },
+          "estado": {
+            "type": "string",
+            "enum": [
+              "pendiente",
+              "asignado",
+              "en_camino",
+              "entregado",
+              "fallido",
+              "cancelado"
+            ]
+          },
+          "rutaId": {
+            "type": "string"
+          },
+          "notas": {
+            "type": "string"
+          }
+        }
       },
       "ActualizarPersonalRequestDto": {
         "type": "object",
@@ -1970,434 +1940,40 @@
           }
         }
       },
-      "UbicacionResponseDto": {
+      "ActualizarRutaRequestDto": {
         "type": "object",
         "properties": {
-          "personalId": {
-            "type": "string",
-            "format": "uuid"
-          },
-          "latitud": {
-            "type": "object",
-            "nullable": true
-          },
-          "longitud": {
-            "type": "object",
-            "nullable": true
-          },
-          "precision": {
-            "type": "object",
-            "nullable": true
-          },
-          "timestamp": {
-            "type": "object",
-            "nullable": true,
-            "format": "date-time"
-          }
-        },
-        "required": [
-          "personalId",
-          "latitud",
-          "longitud",
-          "precision",
-          "timestamp"
-        ]
-      },
-      "UbicacionRequestDto": {
-        "type": "object",
-        "properties": {
-          "lat": {
-            "type": "number"
-          },
-          "lng": {
-            "type": "number"
-          },
-          "precision": {
-            "type": "number"
-          },
-          "timestamp": {
-            "type": "string"
-          }
-        },
-        "required": [
-          "lat",
-          "lng"
-        ]
-      },
-      "ClienteResponseDto": {
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "string",
-            "format": "uuid"
-          },
-          "tenant_id": {
-            "type": "string",
-            "format": "uuid"
-          },
-          "nombre_completo": {
+          "nombre": {
             "type": "string"
           },
-          "tipo_documento": {
-            "type": "object",
-            "nullable": true
-          },
-          "numero_documento": {
-            "type": "object",
-            "nullable": true
-          },
-          "tipo_cliente": {
+          "descripcion": {
             "type": "string"
           },
-          "email": {
-            "type": "object",
-            "nullable": true
-          },
-          "telefono": {
-            "type": "object",
-            "nullable": true
-          },
-          "telefono_alternativo": {
-            "type": "object",
-            "nullable": true
-          },
-          "direccion_principal": {
-            "type": "object",
-            "nullable": true
-          },
-          "direccion_secundaria": {
-            "type": "object",
-            "nullable": true
-          },
-          "referencias_direccion": {
-            "type": "object",
-            "nullable": true
-          },
-          "lat": {
-            "type": "object",
-            "nullable": true
-          },
-          "lng": {
-            "type": "object",
-            "nullable": true
-          },
-          "notas_adicionales": {
-            "type": "object",
-            "nullable": true
-          },
-          "url_google_maps": {
-            "type": "object",
-            "nullable": true
-          },
-          "synced": {
-            "type": "boolean"
-          },
-          "deleted_at": {
-            "type": "object",
-            "nullable": true,
-            "format": "date-time"
-          },
-          "created_at": {
-            "type": "string",
-            "format": "date-time"
-          },
-          "updated_at": {
-            "type": "string",
-            "format": "date-time"
-          }
-        },
-        "required": [
-          "id",
-          "tenant_id",
-          "nombre_completo",
-          "tipo_cliente",
-          "synced",
-          "created_at",
-          "updated_at"
-        ]
-      },
-      "CrearClienteRequestDto": {
-        "type": "object",
-        "properties": {
-          "nombreCompleto": {
-            "type": "string"
-          },
-          "tipoDocumento": {
-            "type": "string"
-          },
-          "numeroDocumento": {
-            "type": "string"
-          },
-          "tipoCliente": {
+          "estado": {
             "type": "string",
             "enum": [
-              "particular",
-              "minorista",
-              "mayorista",
-              "corporativo"
+              "pendiente",
+              "en_curso",
+              "completada",
+              "cancelada"
             ]
           },
-          "email": {
+          "personalIds": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "vehiculoAsignadoId": {
             "type": "string"
           },
-          "telefono": {
+          "fechaInicio": {
             "type": "string"
           },
-          "telefonoAlternativo": {
-            "type": "string"
-          },
-          "direccionPrincipal": {
-            "type": "string"
-          },
-          "direccionSecundaria": {
-            "type": "string"
-          },
-          "referenciasDireccion": {
-            "type": "string"
-          },
-          "lat": {
-            "type": "number"
-          },
-          "lng": {
-            "type": "number"
-          },
-          "notasAdicionales": {
-            "type": "string"
-          },
-          "urlGoogleMaps": {
-            "type": "string"
-          }
-        },
-        "required": [
-          "nombreCompleto"
-        ]
-      },
-      "ActualizarClienteRequestDto": {
-        "type": "object",
-        "properties": {
-          "nombreCompleto": {
-            "type": "string"
-          },
-          "tipoDocumento": {
-            "type": "string"
-          },
-          "numeroDocumento": {
-            "type": "string"
-          },
-          "tipoCliente": {
-            "type": "string",
-            "enum": [
-              "particular",
-              "minorista",
-              "mayorista",
-              "corporativo"
-            ]
-          },
-          "email": {
-            "type": "string"
-          },
-          "telefono": {
-            "type": "string"
-          },
-          "telefonoAlternativo": {
-            "type": "string"
-          },
-          "direccionPrincipal": {
-            "type": "string"
-          },
-          "direccionSecundaria": {
-            "type": "string"
-          },
-          "referenciasDireccion": {
-            "type": "string"
-          },
-          "lat": {
-            "type": "number"
-          },
-          "lng": {
-            "type": "number"
-          },
-          "notasAdicionales": {
-            "type": "string"
-          },
-          "urlGoogleMaps": {
+          "fechaFin": {
             "type": "string"
           }
         }
-      },
-      "VehiculoResponseDto": {
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "string",
-            "format": "uuid"
-          },
-          "tenant_id": {
-            "type": "string",
-            "format": "uuid"
-          },
-          "placa": {
-            "type": "string"
-          },
-          "tipo": {
-            "type": "string"
-          },
-          "marca": {
-            "type": "object",
-            "nullable": true
-          },
-          "modelo": {
-            "type": "object",
-            "nullable": true
-          },
-          "anio": {
-            "type": "object",
-            "nullable": true
-          },
-          "estado": {
-            "type": "string"
-          },
-          "color": {
-            "type": "object",
-            "nullable": true
-          },
-          "capacidad_carga_kg": {
-            "type": "object",
-            "nullable": true
-          },
-          "numero_chasis": {
-            "type": "object",
-            "nullable": true
-          },
-          "numero_motor": {
-            "type": "object",
-            "nullable": true
-          },
-          "tipo_combustible": {
-            "type": "object",
-            "nullable": true
-          },
-          "vencimiento_seguro": {
-            "type": "object",
-            "nullable": true,
-            "format": "date"
-          },
-          "vencimiento_circulacion": {
-            "type": "object",
-            "nullable": true,
-            "format": "date"
-          },
-          "notas_adicionales": {
-            "type": "object",
-            "nullable": true
-          },
-          "conductor_id": {
-            "type": "object",
-            "nullable": true,
-            "format": "uuid"
-          },
-          "ruta_activa_id": {
-            "type": "object",
-            "nullable": true,
-            "format": "uuid"
-          },
-          "synced": {
-            "type": "boolean"
-          },
-          "deleted_at": {
-            "type": "object",
-            "nullable": true,
-            "format": "date-time"
-          },
-          "created_at": {
-            "type": "string",
-            "format": "date-time"
-          },
-          "updated_at": {
-            "type": "string",
-            "format": "date-time"
-          }
-        },
-        "required": [
-          "id",
-          "tenant_id",
-          "placa",
-          "tipo",
-          "estado",
-          "synced",
-          "created_at",
-          "updated_at"
-        ]
-      },
-      "CrearVehiculoRequestDto": {
-        "type": "object",
-        "properties": {
-          "placa": {
-            "type": "string"
-          },
-          "tipo": {
-            "type": "string",
-            "enum": [
-              "camioneta",
-              "furgon",
-              "camion",
-              "moto",
-              "otro"
-            ]
-          },
-          "marca": {
-            "type": "string"
-          },
-          "modelo": {
-            "type": "string"
-          },
-          "anio": {
-            "type": "number",
-            "minimum": 1900
-          },
-          "estado": {
-            "type": "string",
-            "enum": [
-              "disponible",
-              "en_ruta",
-              "mantenimiento",
-              "fuera_de_servicio"
-            ]
-          },
-          "color": {
-            "type": "string"
-          },
-          "capacidadCargaKg": {
-            "type": "number"
-          },
-          "numeroChasis": {
-            "type": "string"
-          },
-          "numeroMotor": {
-            "type": "string"
-          },
-          "tipoCombustible": {
-            "type": "string"
-          },
-          "vencimientoSeguro": {
-            "type": "string"
-          },
-          "vencimientoCirculacion": {
-            "type": "string"
-          },
-          "notasAdicionales": {
-            "type": "string"
-          },
-          "conductorId": {
-            "type": "string"
-          },
-          "rutaActivaId": {
-            "type": "string"
-          }
-        },
-        "required": [
-          "placa"
-        ]
       },
       "ActualizarVehiculoRequestDto": {
         "type": "object",
@@ -2466,312 +2042,6 @@
           }
         }
       },
-      "ParadaResponseDto": {
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "string",
-            "format": "uuid"
-          },
-          "tenant_id": {
-            "type": "string",
-            "format": "uuid"
-          },
-          "ruta_id": {
-            "type": "string",
-            "format": "uuid"
-          },
-          "orden": {
-            "type": "number"
-          },
-          "nombre": {
-            "type": "string"
-          },
-          "direccion": {
-            "type": "object",
-            "nullable": true
-          },
-          "lat": {
-            "type": "object",
-            "nullable": true
-          },
-          "lng": {
-            "type": "object",
-            "nullable": true
-          },
-          "completada": {
-            "type": "boolean"
-          },
-          "pedido_id": {
-            "type": "object",
-            "nullable": true,
-            "format": "uuid"
-          },
-          "tipo": {
-            "type": "string"
-          },
-          "cliente_id": {
-            "type": "object",
-            "nullable": true,
-            "format": "uuid"
-          },
-          "telefono": {
-            "type": "object",
-            "nullable": true
-          },
-          "referencias": {
-            "type": "object",
-            "nullable": true
-          },
-          "horario_atencion": {
-            "type": "object",
-            "nullable": true
-          },
-          "notas": {
-            "type": "object",
-            "nullable": true
-          },
-          "tipo_combustible": {
-            "type": "object",
-            "nullable": true
-          },
-          "synced": {
-            "type": "boolean"
-          },
-          "deleted_at": {
-            "type": "object",
-            "nullable": true,
-            "format": "date-time"
-          },
-          "created_at": {
-            "type": "string",
-            "format": "date-time"
-          },
-          "updated_at": {
-            "type": "string",
-            "format": "date-time"
-          }
-        },
-        "required": [
-          "id",
-          "tenant_id",
-          "ruta_id",
-          "orden",
-          "nombre",
-          "completada",
-          "tipo",
-          "synced",
-          "created_at",
-          "updated_at"
-        ]
-      },
-      "RutaResponseDto": {
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "string",
-            "format": "uuid"
-          },
-          "tenant_id": {
-            "type": "string",
-            "format": "uuid"
-          },
-          "nombre": {
-            "type": "string"
-          },
-          "descripcion": {
-            "type": "object",
-            "nullable": true
-          },
-          "estado": {
-            "type": "string"
-          },
-          "personal_asignado_ids": {
-            "type": "array",
-            "items": {
-              "type": "string"
-            }
-          },
-          "vehiculo_asignado_id": {
-            "type": "object",
-            "nullable": true,
-            "format": "uuid"
-          },
-          "fecha_inicio": {
-            "type": "object",
-            "nullable": true,
-            "format": "date-time"
-          },
-          "fecha_fin": {
-            "type": "object",
-            "nullable": true,
-            "format": "date-time"
-          },
-          "synced": {
-            "type": "boolean"
-          },
-          "deleted_at": {
-            "type": "object",
-            "nullable": true,
-            "format": "date-time"
-          },
-          "created_at": {
-            "type": "string",
-            "format": "date-time"
-          },
-          "updated_at": {
-            "type": "string",
-            "format": "date-time"
-          },
-          "paradas": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/ParadaResponseDto"
-            }
-          }
-        },
-        "required": [
-          "id",
-          "tenant_id",
-          "nombre",
-          "estado",
-          "personal_asignado_ids",
-          "synced",
-          "created_at",
-          "updated_at"
-        ]
-      },
-      "CrearRutaRequestDto": {
-        "type": "object",
-        "properties": {
-          "nombre": {
-            "type": "string"
-          },
-          "descripcion": {
-            "type": "string"
-          },
-          "estado": {
-            "type": "string",
-            "enum": [
-              "pendiente",
-              "en_curso",
-              "completada",
-              "cancelada"
-            ]
-          },
-          "personalIds": {
-            "type": "array",
-            "items": {
-              "type": "string"
-            }
-          },
-          "vehiculoAsignadoId": {
-            "type": "string"
-          },
-          "fechaInicio": {
-            "type": "string"
-          },
-          "fechaFin": {
-            "type": "string"
-          }
-        },
-        "required": [
-          "nombre"
-        ]
-      },
-      "ActualizarRutaRequestDto": {
-        "type": "object",
-        "properties": {
-          "nombre": {
-            "type": "string"
-          },
-          "descripcion": {
-            "type": "string"
-          },
-          "estado": {
-            "type": "string",
-            "enum": [
-              "pendiente",
-              "en_curso",
-              "completada",
-              "cancelada"
-            ]
-          },
-          "personalIds": {
-            "type": "array",
-            "items": {
-              "type": "string"
-            }
-          },
-          "vehiculoAsignadoId": {
-            "type": "string"
-          },
-          "fechaInicio": {
-            "type": "string"
-          },
-          "fechaFin": {
-            "type": "string"
-          }
-        }
-      },
-      "ParadaRequestDto": {
-        "type": "object",
-        "properties": {
-          "rutaId": {
-            "type": "string"
-          },
-          "orden": {
-            "type": "number",
-            "minimum": 0
-          },
-          "nombre": {
-            "type": "string"
-          },
-          "direccion": {
-            "type": "string"
-          },
-          "lat": {
-            "type": "number"
-          },
-          "lng": {
-            "type": "number"
-          },
-          "completada": {
-            "type": "boolean"
-          },
-          "pedidoId": {
-            "type": "string"
-          },
-          "tipo": {
-            "type": "string",
-            "enum": [
-              "cliente",
-              "logistica"
-            ]
-          },
-          "clienteId": {
-            "type": "string"
-          },
-          "telefono": {
-            "type": "string"
-          },
-          "referencias": {
-            "type": "string"
-          },
-          "horarioAtencion": {
-            "type": "string"
-          },
-          "notas": {
-            "type": "string"
-          },
-          "tipoCombustible": {
-            "type": "string"
-          }
-        },
-        "required": [
-          "nombre"
-        ]
-      },
       "AsignarRutaRequestDto": {
         "type": "object",
         "properties": {
@@ -2785,172 +2055,6 @@
             "type": "string"
           }
         }
-      },
-      "PedidoResponseDto": {
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "string",
-            "format": "uuid"
-          },
-          "tenant_id": {
-            "type": "string",
-            "format": "uuid"
-          },
-          "cliente": {
-            "type": "string"
-          },
-          "cliente_id": {
-            "type": "object",
-            "nullable": true,
-            "format": "uuid"
-          },
-          "direccion_entrega": {
-            "type": "object",
-            "nullable": true
-          },
-          "lat": {
-            "type": "object",
-            "nullable": true
-          },
-          "lng": {
-            "type": "object",
-            "nullable": true
-          },
-          "estado": {
-            "type": "string"
-          },
-          "ruta_id": {
-            "type": "object",
-            "nullable": true,
-            "format": "uuid"
-          },
-          "notas": {
-            "type": "object",
-            "nullable": true
-          },
-          "synced": {
-            "type": "boolean"
-          },
-          "deleted_at": {
-            "type": "object",
-            "nullable": true,
-            "format": "date-time"
-          },
-          "created_at": {
-            "type": "string",
-            "format": "date-time"
-          },
-          "updated_at": {
-            "type": "string",
-            "format": "date-time"
-          }
-        },
-        "required": [
-          "id",
-          "tenant_id",
-          "cliente",
-          "estado",
-          "synced",
-          "created_at",
-          "updated_at"
-        ]
-      },
-      "CrearPedidoRequestDto": {
-        "type": "object",
-        "properties": {
-          "cliente": {
-            "type": "string"
-          },
-          "clienteId": {
-            "type": "string"
-          },
-          "direccionEntrega": {
-            "type": "string"
-          },
-          "lat": {
-            "type": "number"
-          },
-          "lng": {
-            "type": "number"
-          },
-          "estado": {
-            "type": "string",
-            "enum": [
-              "pendiente",
-              "asignado",
-              "en_camino",
-              "entregado",
-              "fallido",
-              "cancelado"
-            ]
-          },
-          "rutaId": {
-            "type": "string"
-          },
-          "notas": {
-            "type": "string"
-          }
-        }
-      },
-      "ActualizarPedidoRequestDto": {
-        "type": "object",
-        "properties": {
-          "cliente": {
-            "type": "string"
-          },
-          "clienteId": {
-            "type": "string"
-          },
-          "direccionEntrega": {
-            "type": "string"
-          },
-          "lat": {
-            "type": "number"
-          },
-          "lng": {
-            "type": "number"
-          },
-          "estado": {
-            "type": "string",
-            "enum": [
-              "pendiente",
-              "asignado",
-              "en_camino",
-              "entregado",
-              "fallido",
-              "cancelado"
-            ]
-          },
-          "rutaId": {
-            "type": "string"
-          },
-          "notas": {
-            "type": "string"
-          }
-        }
-      },
-      "CambiarEstadoPedidoRequestDto": {
-        "type": "object",
-        "properties": {
-          "estado": {
-            "type": "string",
-            "enum": [
-              "pendiente",
-              "asignado",
-              "en_camino",
-              "entregado",
-              "fallido",
-              "cancelado"
-            ]
-          },
-          "motivo": {
-            "type": "string"
-          }
-        },
-        "required": [
-          "estado"
-        ]
       },
       "AsistenciaResponseDto": {
         "type": "object",
@@ -3045,6 +2149,120 @@
           "updated_at"
         ]
       },
+      "CambiarEstadoPedidoRequestDto": {
+        "type": "object",
+        "properties": {
+          "estado": {
+            "type": "string",
+            "enum": [
+              "pendiente",
+              "asignado",
+              "en_camino",
+              "entregado",
+              "fallido",
+              "cancelado"
+            ]
+          },
+          "motivo": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "estado"
+        ]
+      },
+      "ClienteResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "tenant_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "nombre_completo": {
+            "type": "string"
+          },
+          "tipo_documento": {
+            "type": "object",
+            "nullable": true
+          },
+          "numero_documento": {
+            "type": "object",
+            "nullable": true
+          },
+          "tipo_cliente": {
+            "type": "string"
+          },
+          "email": {
+            "type": "object",
+            "nullable": true
+          },
+          "telefono": {
+            "type": "object",
+            "nullable": true
+          },
+          "telefono_alternativo": {
+            "type": "object",
+            "nullable": true
+          },
+          "direccion_principal": {
+            "type": "object",
+            "nullable": true
+          },
+          "direccion_secundaria": {
+            "type": "object",
+            "nullable": true
+          },
+          "referencias_direccion": {
+            "type": "object",
+            "nullable": true
+          },
+          "lat": {
+            "type": "object",
+            "nullable": true
+          },
+          "lng": {
+            "type": "object",
+            "nullable": true
+          },
+          "notas_adicionales": {
+            "type": "object",
+            "nullable": true
+          },
+          "url_google_maps": {
+            "type": "object",
+            "nullable": true
+          },
+          "synced": {
+            "type": "boolean"
+          },
+          "deleted_at": {
+            "type": "object",
+            "nullable": true,
+            "format": "date-time"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "tenant_id",
+          "nombre_completo",
+          "tipo_cliente",
+          "synced",
+          "created_at",
+          "updated_at"
+        ]
+      },
       "CrearAsistenciaRequestDto": {
         "type": "object",
         "properties": {
@@ -3107,71 +2325,60 @@
           "estadoPuntualidad"
         ]
       },
-      "IncidenciaResponseDto": {
+      "CrearClienteRequestDto": {
         "type": "object",
         "properties": {
-          "id": {
-            "type": "string",
-            "format": "uuid"
-          },
-          "tenant_id": {
-            "type": "string",
-            "format": "uuid"
-          },
-          "tipo": {
+          "nombreCompleto": {
             "type": "string"
           },
-          "estado": {
+          "tipoDocumento": {
             "type": "string"
           },
-          "descripcion": {
+          "numeroDocumento": {
             "type": "string"
           },
-          "personal_id": {
-            "type": "object",
-            "nullable": true,
-            "format": "uuid"
-          },
-          "vehiculo_id": {
-            "type": "object",
-            "nullable": true,
-            "format": "uuid"
-          },
-          "ruta_id": {
-            "type": "object",
-            "nullable": true,
-            "format": "uuid"
-          },
-          "resolucion": {
-            "type": "object",
-            "nullable": true
-          },
-          "synced": {
-            "type": "boolean"
-          },
-          "deleted_at": {
-            "type": "object",
-            "nullable": true,
-            "format": "date-time"
-          },
-          "created_at": {
+          "tipoCliente": {
             "type": "string",
-            "format": "date-time"
+            "enum": [
+              "particular",
+              "minorista",
+              "mayorista",
+              "corporativo"
+            ]
           },
-          "updated_at": {
-            "type": "string",
-            "format": "date-time"
+          "email": {
+            "type": "string"
+          },
+          "telefono": {
+            "type": "string"
+          },
+          "telefonoAlternativo": {
+            "type": "string"
+          },
+          "direccionPrincipal": {
+            "type": "string"
+          },
+          "direccionSecundaria": {
+            "type": "string"
+          },
+          "referenciasDireccion": {
+            "type": "string"
+          },
+          "lat": {
+            "type": "number"
+          },
+          "lng": {
+            "type": "number"
+          },
+          "notasAdicionales": {
+            "type": "string"
+          },
+          "urlGoogleMaps": {
+            "type": "string"
           }
         },
         "required": [
-          "id",
-          "tenant_id",
-          "tipo",
-          "estado",
-          "descripcion",
-          "synced",
-          "created_at",
-          "updated_at"
+          "nombreCompleto"
         ]
       },
       "CrearIncidenciaRequestDto": {
@@ -3216,108 +2423,141 @@
           "descripcion"
         ]
       },
-      "ActualizarIncidenciaRequestDto": {
+      "CrearPedidoRequestDto": {
         "type": "object",
         "properties": {
-          "tipo": {
+          "cliente": {
+            "type": "string"
+          },
+          "clienteId": {
+            "type": "string"
+          },
+          "direccionEntrega": {
+            "type": "string"
+          },
+          "lat": {
+            "type": "number"
+          },
+          "lng": {
+            "type": "number"
+          },
+          "estado": {
             "type": "string",
             "enum": [
-              "mecanica",
-              "accidente",
-              "salud",
-              "clima",
-              "otro"
+              "pendiente",
+              "asignado",
+              "en_camino",
+              "entregado",
+              "fallido",
+              "cancelado"
+            ]
+          },
+          "rutaId": {
+            "type": "string"
+          },
+          "notas": {
+            "type": "string"
+          }
+        }
+      },
+      "CrearPersonalRequestDto": {
+        "type": "object",
+        "properties": {
+          "nombre": {
+            "type": "string"
+          },
+          "apellido": {
+            "type": "string"
+          },
+          "cargo": {
+            "type": "string",
+            "enum": [
+              "conductor",
+              "auxiliar",
+              "supervisor",
+              "coordinador"
             ]
           },
           "estado": {
             "type": "string",
             "enum": [
-              "abierta",
-              "en_progreso",
-              "resuelta"
+              "activo",
+              "en_ruta",
+              "descansando",
+              "inactivo"
             ]
+          },
+          "telefono": {
+            "type": "string"
+          },
+          "email": {
+            "type": "string"
+          },
+          "rutaAsignadaId": {
+            "type": "string"
+          },
+          "vehiculoAsignadoId": {
+            "type": "string"
+          },
+          "horaCheckIn": {
+            "type": "string"
+          },
+          "horaCheckOut": {
+            "type": "string"
+          },
+          "ubicacionLat": {
+            "type": "number"
+          },
+          "ubicacionLng": {
+            "type": "number"
+          },
+          "ubicacionPrecision": {
+            "type": "number"
+          },
+          "ubicacionTs": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "nombre"
+        ]
+      },
+      "CrearRutaRequestDto": {
+        "type": "object",
+        "properties": {
+          "nombre": {
+            "type": "string"
           },
           "descripcion": {
             "type": "string"
           },
-          "personalId": {
+          "estado": {
+            "type": "string",
+            "enum": [
+              "pendiente",
+              "en_curso",
+              "completada",
+              "cancelada"
+            ]
+          },
+          "personalIds": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "vehiculoAsignadoId": {
             "type": "string"
           },
-          "vehiculoId": {
+          "fechaInicio": {
             "type": "string"
           },
-          "rutaId": {
+          "fechaFin": {
             "type": "string"
-          },
-          "resolucion": {
-            "type": "string"
-          }
-        }
-      },
-      "TrackingResponseDto": {
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "string",
-            "format": "uuid"
-          },
-          "tenant_id": {
-            "type": "string",
-            "format": "uuid"
-          },
-          "personal_id": {
-            "type": "string",
-            "format": "uuid"
-          },
-          "latitud": {
-            "type": "number"
-          },
-          "longitud": {
-            "type": "number"
-          },
-          "precision": {
-            "type": "object",
-            "nullable": true
-          },
-          "velocidad": {
-            "type": "object",
-            "nullable": true
-          },
-          "rumbo": {
-            "type": "object",
-            "nullable": true
-          },
-          "registrado_en": {
-            "type": "string",
-            "format": "date-time"
-          },
-          "synced": {
-            "type": "boolean"
-          },
-          "deleted_at": {
-            "type": "object",
-            "nullable": true,
-            "format": "date-time"
-          },
-          "created_at": {
-            "type": "string",
-            "format": "date-time"
-          },
-          "updated_at": {
-            "type": "string",
-            "format": "date-time"
           }
         },
         "required": [
-          "id",
-          "tenant_id",
-          "personal_id",
-          "latitud",
-          "longitud",
-          "registrado_en",
-          "synced",
-          "created_at",
-          "updated_at"
+          "nombre"
         ]
       },
       "CrearTrackingRequestDto": {
@@ -3351,105 +2591,74 @@
           "longitud"
         ]
       },
-      "TrackingBulkRequestDto": {
+      "CrearVehiculoRequestDto": {
         "type": "object",
         "properties": {
-          "registros": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/CrearTrackingRequestDto"
-            }
+          "placa": {
+            "type": "string"
+          },
+          "tipo": {
+            "type": "string",
+            "enum": [
+              "camioneta",
+              "furgon",
+              "camion",
+              "moto",
+              "otro"
+            ]
+          },
+          "marca": {
+            "type": "string"
+          },
+          "modelo": {
+            "type": "string"
+          },
+          "anio": {
+            "type": "number",
+            "minimum": 1900
+          },
+          "estado": {
+            "type": "string",
+            "enum": [
+              "disponible",
+              "en_ruta",
+              "mantenimiento",
+              "fuera_de_servicio"
+            ]
+          },
+          "color": {
+            "type": "string"
+          },
+          "capacidadCargaKg": {
+            "type": "number"
+          },
+          "numeroChasis": {
+            "type": "string"
+          },
+          "numeroMotor": {
+            "type": "string"
+          },
+          "tipoCombustible": {
+            "type": "string"
+          },
+          "vencimientoSeguro": {
+            "type": "string"
+          },
+          "vencimientoCirculacion": {
+            "type": "string"
+          },
+          "notasAdicionales": {
+            "type": "string"
+          },
+          "conductorId": {
+            "type": "string"
+          },
+          "rutaActivaId": {
+            "type": "string"
           }
         },
         "required": [
-          "registros"
-        ]
-      },
-      "VisitaResponseDto": {
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "string",
-            "format": "uuid"
-          },
-          "tenant_id": {
-            "type": "string",
-            "format": "uuid"
-          },
-          "personal_id": {
-            "type": "string",
-            "format": "uuid"
-          },
-          "cliente_id": {
-            "type": "object",
-            "nullable": true,
-            "format": "uuid"
-          },
-          "ruta_id": {
-            "type": "object",
-            "nullable": true,
-            "format": "uuid"
-          },
-          "tipo_actividad": {
-            "type": "string"
-          },
-          "resultado": {
-            "type": "string"
-          },
-          "lat": {
-            "type": "object",
-            "nullable": true
-          },
-          "lng": {
-            "type": "object",
-            "nullable": true
-          },
-          "distancia_al_cliente": {
-            "type": "object",
-            "nullable": true
-          },
-          "hora_llegada": {
-            "type": "object",
-            "nullable": true
-          },
-          "hora_salida": {
-            "type": "object",
-            "nullable": true
-          },
-          "duracion_minutos": {
-            "type": "object",
-            "nullable": true
-          },
-          "notas": {
-            "type": "object",
-            "nullable": true
-          },
-          "synced": {
-            "type": "boolean"
-          },
-          "deleted_at": {
-            "type": "object",
-            "nullable": true,
-            "format": "date-time"
-          },
-          "created_at": {
-            "type": "string",
-            "format": "date-time"
-          },
-          "updated_at": {
-            "type": "string",
-            "format": "date-time"
-          }
-        },
-        "required": [
-          "id",
-          "tenant_id",
-          "personal_id",
-          "tipo_actividad",
-          "resultado",
-          "synced",
-          "created_at",
-          "updated_at"
+          "placa"
         ]
       },
       "CrearVisitaRequestDto": {
@@ -3573,6 +2782,473 @@
           "metricas"
         ]
       },
+      "IncidenciaResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "tenant_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "tipo": {
+            "type": "string"
+          },
+          "estado": {
+            "type": "string"
+          },
+          "descripcion": {
+            "type": "string"
+          },
+          "personal_id": {
+            "type": "object",
+            "nullable": true,
+            "format": "uuid"
+          },
+          "vehiculo_id": {
+            "type": "object",
+            "nullable": true,
+            "format": "uuid"
+          },
+          "ruta_id": {
+            "type": "object",
+            "nullable": true,
+            "format": "uuid"
+          },
+          "resolucion": {
+            "type": "object",
+            "nullable": true
+          },
+          "synced": {
+            "type": "boolean"
+          },
+          "deleted_at": {
+            "type": "object",
+            "nullable": true,
+            "format": "date-time"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "tenant_id",
+          "tipo",
+          "estado",
+          "descripcion",
+          "synced",
+          "created_at",
+          "updated_at"
+        ]
+      },
+      "ParadaRequestDto": {
+        "type": "object",
+        "properties": {
+          "rutaId": {
+            "type": "string"
+          },
+          "orden": {
+            "type": "number",
+            "minimum": 0
+          },
+          "nombre": {
+            "type": "string"
+          },
+          "direccion": {
+            "type": "string"
+          },
+          "lat": {
+            "type": "number"
+          },
+          "lng": {
+            "type": "number"
+          },
+          "completada": {
+            "type": "boolean"
+          },
+          "pedidoId": {
+            "type": "string"
+          },
+          "tipo": {
+            "type": "string",
+            "enum": [
+              "cliente",
+              "logistica"
+            ]
+          },
+          "clienteId": {
+            "type": "string"
+          },
+          "telefono": {
+            "type": "string"
+          },
+          "referencias": {
+            "type": "string"
+          },
+          "horarioAtencion": {
+            "type": "string"
+          },
+          "notas": {
+            "type": "string"
+          },
+          "tipoCombustible": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "nombre"
+        ]
+      },
+      "ParadaResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "tenant_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "ruta_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "orden": {
+            "type": "number"
+          },
+          "nombre": {
+            "type": "string"
+          },
+          "direccion": {
+            "type": "object",
+            "nullable": true
+          },
+          "lat": {
+            "type": "object",
+            "nullable": true
+          },
+          "lng": {
+            "type": "object",
+            "nullable": true
+          },
+          "completada": {
+            "type": "boolean"
+          },
+          "pedido_id": {
+            "type": "object",
+            "nullable": true,
+            "format": "uuid"
+          },
+          "tipo": {
+            "type": "string"
+          },
+          "cliente_id": {
+            "type": "object",
+            "nullable": true,
+            "format": "uuid"
+          },
+          "telefono": {
+            "type": "object",
+            "nullable": true
+          },
+          "referencias": {
+            "type": "object",
+            "nullable": true
+          },
+          "horario_atencion": {
+            "type": "object",
+            "nullable": true
+          },
+          "notas": {
+            "type": "object",
+            "nullable": true
+          },
+          "tipo_combustible": {
+            "type": "object",
+            "nullable": true
+          },
+          "synced": {
+            "type": "boolean"
+          },
+          "deleted_at": {
+            "type": "object",
+            "nullable": true,
+            "format": "date-time"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "tenant_id",
+          "ruta_id",
+          "orden",
+          "nombre",
+          "completada",
+          "tipo",
+          "synced",
+          "created_at",
+          "updated_at"
+        ]
+      },
+      "PedidoResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "tenant_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "cliente": {
+            "type": "string"
+          },
+          "cliente_id": {
+            "type": "object",
+            "nullable": true,
+            "format": "uuid"
+          },
+          "direccion_entrega": {
+            "type": "object",
+            "nullable": true
+          },
+          "lat": {
+            "type": "object",
+            "nullable": true
+          },
+          "lng": {
+            "type": "object",
+            "nullable": true
+          },
+          "estado": {
+            "type": "string"
+          },
+          "ruta_id": {
+            "type": "object",
+            "nullable": true,
+            "format": "uuid"
+          },
+          "notas": {
+            "type": "object",
+            "nullable": true
+          },
+          "synced": {
+            "type": "boolean"
+          },
+          "deleted_at": {
+            "type": "object",
+            "nullable": true,
+            "format": "date-time"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "tenant_id",
+          "cliente",
+          "estado",
+          "synced",
+          "created_at",
+          "updated_at"
+        ]
+      },
+      "PersonalResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "tenant_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "nombre": {
+            "type": "string"
+          },
+          "apellido": {
+            "type": "string"
+          },
+          "cargo": {
+            "type": "string"
+          },
+          "estado": {
+            "type": "string"
+          },
+          "telefono": {
+            "type": "object",
+            "nullable": true
+          },
+          "email": {
+            "type": "object",
+            "nullable": true
+          },
+          "ruta_asignada_id": {
+            "type": "object",
+            "nullable": true,
+            "format": "uuid"
+          },
+          "vehiculo_asignado_id": {
+            "type": "object",
+            "nullable": true,
+            "format": "uuid"
+          },
+          "hora_check_in": {
+            "type": "object",
+            "nullable": true,
+            "format": "date-time"
+          },
+          "hora_check_out": {
+            "type": "object",
+            "nullable": true,
+            "format": "date-time"
+          },
+          "ubicacion_lat": {
+            "type": "object",
+            "nullable": true
+          },
+          "ubicacion_lng": {
+            "type": "object",
+            "nullable": true
+          },
+          "ubicacion_precision": {
+            "type": "object",
+            "nullable": true
+          },
+          "ubicacion_ts": {
+            "type": "object",
+            "nullable": true,
+            "format": "date-time"
+          },
+          "synced": {
+            "type": "boolean"
+          },
+          "deleted_at": {
+            "type": "object",
+            "nullable": true,
+            "format": "date-time"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "tenant_id",
+          "nombre",
+          "apellido",
+          "cargo",
+          "estado",
+          "synced",
+          "created_at",
+          "updated_at"
+        ]
+      },
+      "RutaResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "tenant_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "nombre": {
+            "type": "string"
+          },
+          "descripcion": {
+            "type": "object",
+            "nullable": true
+          },
+          "estado": {
+            "type": "string"
+          },
+          "personal_asignado_ids": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "vehiculo_asignado_id": {
+            "type": "object",
+            "nullable": true,
+            "format": "uuid"
+          },
+          "fecha_inicio": {
+            "type": "object",
+            "nullable": true,
+            "format": "date-time"
+          },
+          "fecha_fin": {
+            "type": "object",
+            "nullable": true,
+            "format": "date-time"
+          },
+          "synced": {
+            "type": "boolean"
+          },
+          "deleted_at": {
+            "type": "object",
+            "nullable": true,
+            "format": "date-time"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "paradas": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ParadaResponseDto"
+            }
+          }
+        },
+        "required": [
+          "id",
+          "tenant_id",
+          "nombre",
+          "estado",
+          "personal_asignado_ids",
+          "synced",
+          "created_at",
+          "updated_at"
+        ]
+      },
       "SyncOperacionRequestDto": {
         "type": "object",
         "properties": {
@@ -3622,6 +3298,331 @@
         "required": [
           "tipo",
           "ok"
+        ]
+      },
+      "TrackingBulkRequestDto": {
+        "type": "object",
+        "properties": {
+          "registros": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CrearTrackingRequestDto"
+            }
+          }
+        },
+        "required": [
+          "registros"
+        ]
+      },
+      "TrackingResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "tenant_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "personal_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "latitud": {
+            "type": "number"
+          },
+          "longitud": {
+            "type": "number"
+          },
+          "precision": {
+            "type": "object",
+            "nullable": true
+          },
+          "velocidad": {
+            "type": "object",
+            "nullable": true
+          },
+          "rumbo": {
+            "type": "object",
+            "nullable": true
+          },
+          "registrado_en": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "synced": {
+            "type": "boolean"
+          },
+          "deleted_at": {
+            "type": "object",
+            "nullable": true,
+            "format": "date-time"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "tenant_id",
+          "personal_id",
+          "latitud",
+          "longitud",
+          "registrado_en",
+          "synced",
+          "created_at",
+          "updated_at"
+        ]
+      },
+      "UbicacionRequestDto": {
+        "type": "object",
+        "properties": {
+          "lat": {
+            "type": "number"
+          },
+          "lng": {
+            "type": "number"
+          },
+          "precision": {
+            "type": "number"
+          },
+          "timestamp": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "lat",
+          "lng"
+        ]
+      },
+      "UbicacionResponseDto": {
+        "type": "object",
+        "properties": {
+          "personalId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "latitud": {
+            "type": "object",
+            "nullable": true
+          },
+          "longitud": {
+            "type": "object",
+            "nullable": true
+          },
+          "precision": {
+            "type": "object",
+            "nullable": true
+          },
+          "timestamp": {
+            "type": "object",
+            "nullable": true,
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "personalId",
+          "latitud",
+          "longitud",
+          "precision",
+          "timestamp"
+        ]
+      },
+      "VehiculoResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "tenant_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "placa": {
+            "type": "string"
+          },
+          "tipo": {
+            "type": "string"
+          },
+          "marca": {
+            "type": "object",
+            "nullable": true
+          },
+          "modelo": {
+            "type": "object",
+            "nullable": true
+          },
+          "anio": {
+            "type": "object",
+            "nullable": true
+          },
+          "estado": {
+            "type": "string"
+          },
+          "color": {
+            "type": "object",
+            "nullable": true
+          },
+          "capacidad_carga_kg": {
+            "type": "object",
+            "nullable": true
+          },
+          "numero_chasis": {
+            "type": "object",
+            "nullable": true
+          },
+          "numero_motor": {
+            "type": "object",
+            "nullable": true
+          },
+          "tipo_combustible": {
+            "type": "object",
+            "nullable": true
+          },
+          "vencimiento_seguro": {
+            "type": "object",
+            "nullable": true,
+            "format": "date"
+          },
+          "vencimiento_circulacion": {
+            "type": "object",
+            "nullable": true,
+            "format": "date"
+          },
+          "notas_adicionales": {
+            "type": "object",
+            "nullable": true
+          },
+          "conductor_id": {
+            "type": "object",
+            "nullable": true,
+            "format": "uuid"
+          },
+          "ruta_activa_id": {
+            "type": "object",
+            "nullable": true,
+            "format": "uuid"
+          },
+          "synced": {
+            "type": "boolean"
+          },
+          "deleted_at": {
+            "type": "object",
+            "nullable": true,
+            "format": "date-time"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "tenant_id",
+          "placa",
+          "tipo",
+          "estado",
+          "synced",
+          "created_at",
+          "updated_at"
+        ]
+      },
+      "VisitaResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "tenant_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "personal_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "cliente_id": {
+            "type": "object",
+            "nullable": true,
+            "format": "uuid"
+          },
+          "ruta_id": {
+            "type": "object",
+            "nullable": true,
+            "format": "uuid"
+          },
+          "tipo_actividad": {
+            "type": "string"
+          },
+          "resultado": {
+            "type": "string"
+          },
+          "lat": {
+            "type": "object",
+            "nullable": true
+          },
+          "lng": {
+            "type": "object",
+            "nullable": true
+          },
+          "distancia_al_cliente": {
+            "type": "object",
+            "nullable": true
+          },
+          "hora_llegada": {
+            "type": "object",
+            "nullable": true
+          },
+          "hora_salida": {
+            "type": "object",
+            "nullable": true
+          },
+          "duracion_minutos": {
+            "type": "object",
+            "nullable": true
+          },
+          "notas": {
+            "type": "object",
+            "nullable": true
+          },
+          "synced": {
+            "type": "boolean"
+          },
+          "deleted_at": {
+            "type": "object",
+            "nullable": true,
+            "format": "date-time"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "tenant_id",
+          "personal_id",
+          "tipo_actividad",
+          "resultado",
+          "synced",
+          "created_at",
+          "updated_at"
         ]
       }
     }
