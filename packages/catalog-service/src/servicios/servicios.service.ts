@@ -145,6 +145,23 @@ export class ServiciosService {
     return fila ? this.serializar(fila) : null;
   }
 
+  /** Escaneo: código de barras o código interno, solo servicios activos. */
+  async encontrarPorCodigo(codigo: string, empresaId: string): Promise<Servicio | null> {
+    const valor = codigo.trim();
+    if (!valor) return null;
+    const fila = await this.pg.queryOne<ServicioRow>(
+      `SELECT id, empresa_id, codigo, nombre, descripcion, categoria, marca,
+              codigo_barras, precio_cents, costo_cents, unidad, duracion_minutos,
+              estado, creado_en, actualizado_en
+         FROM catalog.servicios
+        WHERE empresa_id = $1 AND eliminado_en IS NULL AND estado = 'activo'
+          AND (codigo_barras = $2 OR upper(codigo) = upper($2))
+        LIMIT 1`,
+      [empresaId, valor],
+    );
+    return fila ? this.serializar(fila) : null;
+  }
+
   async crear(datos: CrearServicioInput, empresaId: string): Promise<Servicio> {
     await this.productos.validarEmpresaCatalogo(empresaId);
     const codigo = this.normalizarCodigo(datos.codigo);

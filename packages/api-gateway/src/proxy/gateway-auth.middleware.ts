@@ -39,6 +39,12 @@ export const POLITICAS_RUTAS: PoliticaRuta[] = [
       metodos: ['*'],
       roles: [ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.EMPRESARIO],
     },
+    // Operaciones avanzadas del catálogo (R-PS-04).
+    {
+      patron: /^\/api\/v1\/catalog\/(configuracion-inventario|escanear|combos|promociones|inventario)(\/|$)/,
+      metodos: ['*'],
+      roles: [ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.EMPRESARIO],
+    },
     // El slug de tienda forma parte de la URL publica del storefront (ADR-26);
     // el cambio de slug exige ser vendedor/empresario y se valida en el servicio.
     { patron: /^\/api\/v1\/tiendas\/[^/]+\/slug$/, metodos: ['PATCH'], roles: [ROLES.VENDEDOR, ROLES.EMPRESARIO] },

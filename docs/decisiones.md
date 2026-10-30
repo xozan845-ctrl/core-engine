@@ -850,6 +850,41 @@ Este archivo registra decisiones técnicas deliberadas que se apartan del texto 
 
 ---
 
+## ADR-32: Contrato backend de operaciones avanzadas de catálogo
+
+- **Fecha**: 2026-10-30
+- **Estado**: Aceptado
+- **Contexto**: el QA dejó como “próxima fase” importación, configuración de
+  inventario, combos, promociones, movimientos/traslados y escaneo. El backend
+  es la fuente de verdad, así que esas funciones necesitan contrato y semántica
+  propias antes de habilitarlas en la UI.
+- **Decisión**:
+  1. `GET/PUT /catalog/configuracion-inventario`: método de costeo
+     (`promedio`/`fifo`/`ueps`), permitir stock negativo, alerta de stock bajo,
+     actualización de costo en compra y unidad por defecto.
+  2. `POST /catalog/productos/importar`: recibe filas ya parseadas (máx. 200),
+     reutiliza la validación de alta y devuelve `importados`, `omitidos` y
+     `errores` por fila.
+  3. `GET /catalog/escanear?codigo=`: busca primero producto por código de barras
+     y luego servicio por código/barras, respetando el tenant.
+  4. `catalog.combos`: SKU/precio/estado + componentes; el costo total se calcula
+     con el costo actual de los productos.
+  5. `catalog.promociones`: tipos `2x1`, `descuento_cantidad`,
+     `descuento_porcentaje` y `regalo`, con vigencia, producto y estado.
+  6. `POST /catalog/inventario/movimientos`: `entrada`, `salida`, `ajuste` y
+     `traslado`. Entrada/salida/ajuste modifican el stock y dejan auditoría en
+     `catalog.ajustes_stock`; el traslado conserva el stock total y registra
+     origen/destino. `salida` respeta `permitir_stock_negativo`.
+- **Consecuencias**:
+  - La UI ya tiene endpoints y reglas para dejar de mostrar “próximamente”.
+  - Los combos no crean stock paralelo: su venta deberá descontar componentes.
+  - Los traslados son un libro de movimientos; el stock por ubicación queda como
+    evolución futura si se necesita inventario multiubicación.
+
+---
+
+## Resumen de cumplimiento post-corrección
+
 | Ítem del documento          | Estado  | Nota |
 |----------------------------|---------|------|
 | RN-01 (margen 0-90)        | ✅      | helper y servicios alineados |
