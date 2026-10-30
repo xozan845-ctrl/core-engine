@@ -20,6 +20,14 @@ const MAX_IMAGENES = 3;
 const MAX_VARIANTES = 50;
 const URL_IMAGEN_PUBLICA = '/api/v1/storage/public/objetos';
 
+/** Columnas de lectura compartidas por listado, detalle y variantes. */
+const COLUMNAS_PRODUCTO = `v.id, v.empresa_id, v.sku, v.nombre, v.descripcion, v.categoria,
+  v.precio_base_cents, v.costo_cents, v.marca, v.codigo_barras, v.unidad,
+  v.permite_fracciones, v.unidad_compra, v.contenido_cantidad, v.contenido_unidad,
+  v.tipo_precio, v.tipo_costo, v.stock_minimo, v.stock_maximo, v.garantia_meses,
+  v.es_materia_prima, v.ubicacion, v.estado_operativo, v.actualizado_en,
+  v.disponible AS stock, v.estado, v.creado_en, v.producto_padre_id, v.atributos`;
+
 export interface ImagenProducto {
   id: string;
   objeto_id: string;
@@ -39,6 +47,24 @@ export interface Producto {
   precio_base: string;
   stock: number;
   estado: 'disponible' | 'agotado';
+  /** Alta/baja comercial independiente del stock (R-PS-03). */
+  estado_operativo: 'activo' | 'inactivo';
+  costo: string;
+  marca: string;
+  codigo_barras: string;
+  unidad: string;
+  permite_fracciones: boolean;
+  unidad_compra: string;
+  contenido_cantidad: number;
+  contenido_unidad: string;
+  tipo_precio: 'fijo' | 'escala';
+  tipo_costo: 'fijo' | 'escala';
+  stock_minimo: number;
+  stock_maximo: number | null;
+  garantia_meses: number | null;
+  es_materia_prima: boolean;
+  ubicacion: string;
+  actualizado_en: string;
   creado_en: string;
   producto_padre_id: string | null;
   atributos: Record<string, unknown>;
@@ -67,6 +93,26 @@ export interface VarianteProductoInput {
   imagenes?: ImagenProductoInput[];
 }
 
+/** Metadatos operativos del producto (R-PS-01). */
+export interface MetadatosProductoInput {
+  costo?: string | number;
+  marca?: string;
+  codigo_barras?: string;
+  unidad?: string;
+  permite_fracciones?: boolean;
+  unidad_compra?: string;
+  contenido_cantidad?: number;
+  contenido_unidad?: string;
+  tipo_precio?: 'fijo' | 'escala';
+  tipo_costo?: 'fijo' | 'escala';
+  stock_minimo?: number;
+  stock_maximo?: number | null;
+  garantia_meses?: number | null;
+  es_materia_prima?: boolean;
+  ubicacion?: string;
+  estado_operativo?: 'activo' | 'inactivo';
+}
+
 /** Clave compuesta de un producto en el catálogo por empresa (ADR-27). */
 export interface ClaveProducto {
   empresa_id: string;
@@ -84,6 +130,23 @@ interface ProductoRow {
   stock: number;
   estado: string;
   creado_en: string;
+  actualizado_en?: string;
+  costo_cents?: number;
+  marca?: string;
+  codigo_barras?: string;
+  unidad?: string;
+  permite_fracciones?: boolean;
+  unidad_compra?: string;
+  contenido_cantidad?: number;
+  contenido_unidad?: string;
+  tipo_precio?: string;
+  tipo_costo?: string;
+  stock_minimo?: number;
+  stock_maximo?: number | null;
+  garantia_meses?: number | null;
+  es_materia_prima?: boolean;
+  ubicacion?: string;
+  estado_operativo?: string;
   producto_padre_id?: string | null;
   atributos?: Record<string, unknown> | null;
   tiene_variantes?: boolean;
@@ -100,6 +163,25 @@ interface ImagenRow {
 interface EmpresaCatalogo {
   estado: string;
   tipo_empresa?: string;
+}
+
+interface MetadatosNormalizados {
+  costo_cents: number;
+  marca: string;
+  codigo_barras: string;
+  unidad: string;
+  permite_fracciones: boolean;
+  unidad_compra: string;
+  contenido_cantidad: number;
+  contenido_unidad: string;
+  tipo_precio: 'fijo' | 'escala';
+  tipo_costo: 'fijo' | 'escala';
+  stock_minimo: number;
+  stock_maximo: number | null;
+  garantia_meses: number | null;
+  es_materia_prima: boolean;
+  ubicacion: string;
+  estado_operativo: 'activo' | 'inactivo';
 }
 
 /**
@@ -127,11 +209,15 @@ export class ProductosService {
     q?: unknown;
     estado?: unknown;
     categoria?: unknown;
+    incluir_inactivos?: unknown;
   }): Promise<Pagina<Producto>> {
     const empresaId = this.exigirEmpresa(filtros.empresa_id);
     const { pagina, limite } = parsearPaginacion(filtros as Record<string, unknown>);
     const params: unknown[] = [empresaId];
     const condiciones: string[] = ['v.empresa_id = $1', 'v.producto_padre_id IS NULL'];
+    if (filtros.incluir_inactivos !== true) {
+      condiciones.push(`v.estado_operativo = 'activo'`);
+    }
     if (filtros.q) {
       params.push(`%${String(filtros.q).toLowerCase()}%`);
       condiciones.push(
@@ -155,9 +241,7 @@ export class ProductosService {
       .then((r) => r?.n ?? 0);
     const offset = (pagina - 1) * limite;
     const filas = await this.pg.query<ProductoRow>(
-      `SELECT v.id, v.empresa_id, v.sku, v.nombre, v.descripcion, v.categoria,
-              v.precio_base_cents, v.disponible AS stock, v.estado, v.creado_en,
-              v.producto_padre_id, v.atributos,
+      `SELECT ${COLUMNAS_PRODUCTO},
               EXISTS (SELECT 1 FROM catalog.productos c WHERE c.producto_padre_id = v.id) AS tiene_variantes
        FROM catalog.producto_catalogo_vista v ${where}
        ORDER BY v.creado_en DESC LIMIT $${params.length + 1} OFFSET $${params.length + 2}`,
@@ -171,7 +255,11 @@ export class ProductosService {
     );
   }
 
-  async encontrarPorId(id: string, empresaId?: string): Promise<Producto | null> {
+  async encontrarPorId(
+    id: string,
+    empresaId?: string,
+    incluirInactivos = false,
+  ): Promise<Producto | null> {
     if (!UUID.test(id)) return null;
     const params: unknown[] = [id];
     let where = 'v.id = $1';
@@ -179,10 +267,9 @@ export class ProductosService {
       params.push(empresaId);
       where += ` AND v.empresa_id = $${params.length}`;
     }
+    if (!incluirInactivos) where += ` AND v.estado_operativo = 'activo'`;
     const fila = await this.pg.queryOne<ProductoRow>(
-      `SELECT v.id, v.empresa_id, v.sku, v.nombre, v.descripcion, v.categoria,
-              v.precio_base_cents, v.disponible AS stock, v.estado, v.creado_en,
-              v.producto_padre_id, v.atributos,
+      `SELECT ${COLUMNAS_PRODUCTO},
               EXISTS (SELECT 1 FROM catalog.productos c WHERE c.producto_padre_id = v.id) AS tiene_variantes
        FROM catalog.producto_catalogo_vista v WHERE ${where}`,
       params,
@@ -190,17 +277,20 @@ export class ProductosService {
     return fila ? this.detallar(fila) : null;
   }
 
-  async encontrarPorSku(sku: string, empresaId?: string): Promise<Producto | null> {
+  async encontrarPorSku(
+    sku: string,
+    empresaId?: string,
+    incluirInactivos = false,
+  ): Promise<Producto | null> {
     const params: unknown[] = [sku];
     let where = 'LOWER(v.sku) = LOWER($1)';
     if (empresaId) {
       params.push(empresaId);
       where += ` AND v.empresa_id = $${params.length}`;
     }
+    if (!incluirInactivos) where += ` AND v.estado_operativo = 'activo'`;
     const fila = await this.pg.queryOne<ProductoRow>(
-      `SELECT v.id, v.empresa_id, v.sku, v.nombre, v.descripcion, v.categoria,
-              v.precio_base_cents, v.disponible AS stock, v.estado, v.creado_en,
-              v.producto_padre_id, v.atributos,
+      `SELECT ${COLUMNAS_PRODUCTO},
               EXISTS (SELECT 1 FROM catalog.productos c WHERE c.producto_padre_id = v.id) AS tiene_variantes
        FROM catalog.producto_catalogo_vista v WHERE ${where}`,
       params,
@@ -223,6 +313,7 @@ export class ProductosService {
       `SELECT empresa_id, LOWER(sku) AS sku, disponible AS stock, estado
        FROM catalog.producto_catalogo_vista
        WHERE LOWER(sku) IN (${marcadores})
+         AND estado_operativo = 'activo'
        ORDER BY creado_en DESC`,
       params,
     );
@@ -279,10 +370,12 @@ export class ProductosService {
     atributos?: Record<string, unknown>;
     variantes?: VarianteProductoInput[];
     imagenes?: ImagenProductoInput[];
-  }): Promise<Producto> {
+  } & MetadatosProductoInput): Promise<Producto> {
     const sku = this.normalizarSku(datos.sku);
     this.validarStock(datos.stock);
     const precio = this.validarPrecio(datos.precio_base);
+    const metadatos = this.normalizarMetadatos(datos);
+    this.validarMetadatos(metadatos);
     const variantes = datos.variantes ?? [];
     if (variantes.length > MAX_VARIANTES) {
       throw new DomainError(
@@ -311,6 +404,7 @@ export class ProductosService {
       }
     }
     await this.validarEmpresaCatalogo(datos.empresa_id);
+    await this.validarCodigoBarras(datos.empresa_id, metadatos.codigo_barras);
     await this.validarImagenes(datos.empresa_id, datos.imagenes ?? []);
     for (const variante of variantes) {
       await this.validarImagenes(datos.empresa_id, variante.imagenes ?? []);
@@ -321,9 +415,14 @@ export class ProductosService {
       await client.query(
         `INSERT INTO catalog.productos
            (id, empresa_id, sku, nombre, descripcion, categoria, precio_base_cents,
+            costo_cents, marca, codigo_barras, unidad, permite_fracciones,
+            unidad_compra, contenido_cantidad, contenido_unidad, tipo_precio,
+            tipo_costo, stock_minimo, stock_maximo, garantia_meses,
+            es_materia_prima, ubicacion, estado_operativo, actualizado_en,
             stock, estado, producto_padre_id, atributos)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8,
-                 CASE WHEN $8 > 0 THEN 'disponible' ELSE 'agotado' END, NULL, $9::jsonb)`,
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14,
+                 $15, $16, $17, $18, $19, $20, $21, $22, $23, NOW(), $24,
+                 CASE WHEN $24 > 0 THEN 'disponible' ELSE 'agotado' END, NULL, $25::jsonb)`,
         [
           padreId,
           datos.empresa_id,
@@ -332,6 +431,22 @@ export class ProductosService {
           (datos.descripcion ?? '').trim(),
           (datos.categoria ?? 'general').trim(),
           precio.centavos,
+          metadatos.costo_cents,
+          metadatos.marca,
+          metadatos.codigo_barras,
+          metadatos.unidad,
+          metadatos.permite_fracciones,
+          metadatos.unidad_compra,
+          metadatos.contenido_cantidad,
+          metadatos.contenido_unidad,
+          metadatos.tipo_precio,
+          metadatos.tipo_costo,
+          metadatos.stock_minimo,
+          metadatos.stock_maximo,
+          metadatos.garantia_meses,
+          metadatos.es_materia_prima,
+          metadatos.ubicacion,
+          metadatos.estado_operativo,
           datos.stock,
           JSON.stringify(datos.atributos ?? {}),
         ],
@@ -382,7 +497,7 @@ export class ProductosService {
       }
     });
 
-    const creado = await this.encontrarPorId(padreId, datos.empresa_id);
+    const creado = await this.encontrarPorId(padreId, datos.empresa_id, true);
     if (!creado) throw new NotFoundError('Producto', padreId);
     return creado;
   }
@@ -393,7 +508,7 @@ export class ProductosService {
     datos: VarianteProductoInput,
     empresaId: string,
   ): Promise<Producto> {
-    const padre = await this.encontrarPorId(padreId, empresaId);
+    const padre = await this.encontrarPorId(padreId, empresaId, true);
     if (!padre) throw new NotFoundError('Producto', padreId);
     if (padre.producto_padre_id) {
       throw new DomainError('NO_ES_PADRE', 'Solo un producto padre puede recibir variantes.');
@@ -439,7 +554,7 @@ export class ProductosService {
       await client.query('SELECT catalog.fn_recalcular_padre($1)', [padreId]);
     });
 
-    const creada = await this.encontrarPorId(varianteId, empresaId);
+    const creada = await this.encontrarPorId(varianteId, empresaId, true);
     if (!creada) throw new NotFoundError('Variante', varianteId);
     return creada;
   }
@@ -459,10 +574,10 @@ export class ProductosService {
       stock?: number;
       atributos?: Record<string, unknown>;
       motivo?: string;
-    },
+    } & MetadatosProductoInput,
     empresaId?: string,
   ): Promise<Producto> {
-    const previo = await this.encontrarPorId(id, empresaId);
+    const previo = await this.encontrarPorId(id, empresaId, true);
     if (!previo) throw new NotFoundError('Producto', id);
     if (previo.tiene_variantes && (cambios.precio_base !== undefined || cambios.stock !== undefined)) {
       throw new DomainError(
@@ -470,6 +585,9 @@ export class ProductosService {
         'El precio y el stock de un producto con variantes se editan en cada variante.',
       );
     }
+    const metadatos = this.combinarMetadatos(previo, cambios);
+    this.validarMetadatos(metadatos);
+    await this.validarCodigoBarras(previo.empresa_id, metadatos.codigo_barras, id);
 
     await this.pg.transaccion(async (client) => {
       const sets: string[] = [];
@@ -481,6 +599,24 @@ export class ProductosService {
       if (cambios.nombre !== undefined) push('nombre = $', cambios.nombre.trim());
       if (cambios.descripcion !== undefined) push('descripcion = $', cambios.descripcion.trim());
       if (cambios.categoria !== undefined) push('categoria = $', cambios.categoria.trim());
+
+      push('costo_cents = $', metadatos.costo_cents);
+      push('marca = $', metadatos.marca);
+      push('codigo_barras = $', metadatos.codigo_barras);
+      push('unidad = $', metadatos.unidad);
+      push('permite_fracciones = $', metadatos.permite_fracciones);
+      push('unidad_compra = $', metadatos.unidad_compra);
+      push('contenido_cantidad = $', metadatos.contenido_cantidad);
+      push('contenido_unidad = $', metadatos.contenido_unidad);
+      push('tipo_precio = $', metadatos.tipo_precio);
+      push('tipo_costo = $', metadatos.tipo_costo);
+      push('stock_minimo = $', metadatos.stock_minimo);
+      push('stock_maximo = $', metadatos.stock_maximo);
+      push('garantia_meses = $', metadatos.garantia_meses);
+      push('es_materia_prima = $', metadatos.es_materia_prima);
+      push('ubicacion = $', metadatos.ubicacion);
+      push('estado_operativo = $', metadatos.estado_operativo);
+      sets.push('actualizado_en = NOW()');
 
       if (cambios.atributos !== undefined) {
         params.push(JSON.stringify(cambios.atributos));
@@ -543,7 +679,7 @@ export class ProductosService {
     if (previo.producto_padre_id) {
       await this.recalcularPadre(previo.producto_padre_id);
     }
-    const actualizado = await this.encontrarPorId(id, empresaId);
+    const actualizado = await this.encontrarPorId(id, empresaId, true);
     if (!actualizado) throw new NotFoundError('Producto', id);
     return actualizado;
   }
@@ -562,7 +698,7 @@ export class ProductosService {
     },
     empresaId: string,
   ): Promise<Producto> {
-    const padre = await this.encontrarPorId(padreId, empresaId);
+    const padre = await this.encontrarPorId(padreId, empresaId, true);
     if (!padre) throw new NotFoundError('Producto', padreId);
     if (!padre.variantes?.some((v) => v.id === varianteId)) {
       throw new NotFoundError('Variante', varianteId);
@@ -575,7 +711,7 @@ export class ProductosService {
     varianteId: string,
     empresaId: string,
   ): Promise<void> {
-    const padre = await this.encontrarPorId(padreId, empresaId);
+    const padre = await this.encontrarPorId(padreId, empresaId, true);
     if (!padre) throw new NotFoundError('Producto', padreId);
     if (!padre.variantes?.some((v) => v.id === varianteId)) {
       throw new NotFoundError('Variante', varianteId);
@@ -597,7 +733,7 @@ export class ProductosService {
     imagen: ImagenProductoInput,
     empresaId: string,
   ): Promise<Producto> {
-    const producto = await this.encontrarPorId(productoId, empresaId);
+    const producto = await this.encontrarPorId(productoId, empresaId, true);
     if (!producto) throw new NotFoundError('Producto', productoId);
     await this.validarImagenes(empresaId, [imagen]);
 
@@ -647,7 +783,7 @@ export class ProductosService {
       }
     });
 
-    const actualizado = await this.encontrarPorId(productoId, empresaId);
+    const actualizado = await this.encontrarPorId(productoId, empresaId, true);
     if (!actualizado) throw new NotFoundError('Producto', productoId);
     return actualizado;
   }
@@ -657,7 +793,7 @@ export class ProductosService {
     imagenId: string,
     empresaId: string,
   ): Promise<void> {
-    const producto = await this.encontrarPorId(productoId, empresaId);
+    const producto = await this.encontrarPorId(productoId, empresaId, true);
     if (!producto) throw new NotFoundError('Producto', productoId);
     const imagen = producto.imagenes.find((i) => i.id === imagenId);
     if (!imagen) {
@@ -713,7 +849,8 @@ export class ProductosService {
             `SELECT p.stock,
                     EXISTS (SELECT 1 FROM catalog.productos v WHERE v.producto_padre_id = p.id) AS tiene_variantes
                FROM catalog.productos p
-              WHERE p.empresa_id = $1 AND LOWER(p.sku) = LOWER($2) FOR UPDATE`,
+              WHERE p.empresa_id = $1 AND LOWER(p.sku) = LOWER($2)
+                AND p.estado_operativo = 'activo' FOR UPDATE`,
             [item.empresa_id, item.sku],
           );
 
@@ -861,9 +998,7 @@ export class ProductosService {
     const hijos =
       fila.producto_padre_id === null || fila.producto_padre_id === undefined
         ? await this.pg.query<ProductoRow>(
-            `SELECT v.id, v.empresa_id, v.sku, v.nombre, v.descripcion, v.categoria,
-                    v.precio_base_cents, v.disponible AS stock, v.estado, v.creado_en,
-                    v.producto_padre_id, v.atributos, false AS tiene_variantes
+            `SELECT ${COLUMNAS_PRODUCTO}, false AS tiene_variantes
                FROM catalog.producto_catalogo_vista v
               WHERE v.producto_padre_id = $1
               ORDER BY v.creado_en ASC`,
@@ -899,6 +1034,7 @@ export class ProductosService {
     variantes: Producto[] = [],
   ): Producto {
     const precio = Money.desdeCentavos(fila.precio_base_cents).string();
+    const costo = Money.desdeCentavos(fila.costo_cents ?? 0).string();
     return {
       id: fila.id,
       empresa_id: fila.empresa_id,
@@ -909,6 +1045,23 @@ export class ProductosService {
       precio_base: precio,
       stock: fila.stock,
       estado: fila.estado === 'disponible' ? 'disponible' : 'agotado',
+      estado_operativo: fila.estado_operativo === 'inactivo' ? 'inactivo' : 'activo',
+      costo,
+      marca: fila.marca ?? '',
+      codigo_barras: fila.codigo_barras ?? '',
+      unidad: fila.unidad ?? 'Unidad (u)',
+      permite_fracciones: fila.permite_fracciones === true,
+      unidad_compra: fila.unidad_compra ?? 'Igual que la de venta',
+      contenido_cantidad: fila.contenido_cantidad ?? 0,
+      contenido_unidad: fila.contenido_unidad ?? 'Sin contenido',
+      tipo_precio: fila.tipo_precio === 'escala' ? 'escala' : 'fijo',
+      tipo_costo: fila.tipo_costo === 'escala' ? 'escala' : 'fijo',
+      stock_minimo: fila.stock_minimo ?? 0,
+      stock_maximo: fila.stock_maximo ?? null,
+      garantia_meses: fila.garantia_meses ?? null,
+      es_materia_prima: fila.es_materia_prima === true,
+      ubicacion: fila.ubicacion ?? '',
+      actualizado_en: fila.actualizado_en ?? fila.creado_en,
       creado_en: fila.creado_en,
       producto_padre_id: fila.producto_padre_id ?? null,
       atributos: fila.atributos ?? {},
@@ -941,6 +1094,108 @@ export class ProductosService {
   private validarStock(stock: number): void {
     if (stock < 0 || !Number.isInteger(stock)) {
       throw new DomainError('STOCK_INVALIDO', 'El stock debe ser un entero mayor o igual a 0.');
+    }
+  }
+
+  /** Normaliza los metadatos operativos con defaults estables (R-PS-01). */
+  private normalizarMetadatos(datos: MetadatosProductoInput): MetadatosNormalizados {
+    const costo = Money.parsear(datos.costo ?? '0');
+    return {
+      costo_cents: costo.centavos,
+      marca: (datos.marca ?? '').trim(),
+      codigo_barras: (datos.codigo_barras ?? '').trim(),
+      unidad: (datos.unidad ?? 'Unidad (u)').trim() || 'Unidad (u)',
+      permite_fracciones: datos.permite_fracciones === true,
+      unidad_compra: (datos.unidad_compra ?? 'Igual que la de venta').trim() ||
+        'Igual que la de venta',
+      contenido_cantidad: datos.contenido_cantidad ?? 0,
+      contenido_unidad: (datos.contenido_unidad ?? 'Sin contenido').trim() || 'Sin contenido',
+      tipo_precio: datos.tipo_precio === 'escala' ? 'escala' : 'fijo',
+      tipo_costo: datos.tipo_costo === 'escala' ? 'escala' : 'fijo',
+      stock_minimo: datos.stock_minimo ?? 0,
+      stock_maximo: datos.stock_maximo ?? null,
+      garantia_meses: datos.garantia_meses ?? null,
+      es_materia_prima: datos.es_materia_prima === true,
+      ubicacion: (datos.ubicacion ?? '').trim(),
+      estado_operativo: datos.estado_operativo === 'inactivo' ? 'inactivo' : 'activo',
+    };
+  }
+
+  /** Combina los metadatos actuales con los campos enviados en el PATCH. */
+  private combinarMetadatos(
+    previo: Producto,
+    cambios: MetadatosProductoInput,
+  ): MetadatosNormalizados {
+    return this.normalizarMetadatos({
+      costo: cambios.costo ?? previo.costo,
+      marca: cambios.marca ?? previo.marca,
+      codigo_barras: cambios.codigo_barras ?? previo.codigo_barras,
+      unidad: cambios.unidad ?? previo.unidad,
+      permite_fracciones: cambios.permite_fracciones ?? previo.permite_fracciones,
+      unidad_compra: cambios.unidad_compra ?? previo.unidad_compra,
+      contenido_cantidad: cambios.contenido_cantidad ?? previo.contenido_cantidad,
+      contenido_unidad: cambios.contenido_unidad ?? previo.contenido_unidad,
+      tipo_precio: cambios.tipo_precio ?? previo.tipo_precio,
+      tipo_costo: cambios.tipo_costo ?? previo.tipo_costo,
+      stock_minimo: cambios.stock_minimo ?? previo.stock_minimo,
+      stock_maximo: cambios.stock_maximo !== undefined ? cambios.stock_maximo : previo.stock_maximo,
+      garantia_meses:
+        cambios.garantia_meses !== undefined ? cambios.garantia_meses : previo.garantia_meses,
+      es_materia_prima: cambios.es_materia_prima ?? previo.es_materia_prima,
+      ubicacion: cambios.ubicacion ?? previo.ubicacion,
+      estado_operativo: cambios.estado_operativo ?? previo.estado_operativo,
+    });
+  }
+
+  private validarMetadatos(meta: MetadatosNormalizados): void {
+    const enteros: [string, number][] = [
+      ['contenido_cantidad', meta.contenido_cantidad],
+      ['stock_minimo', meta.stock_minimo],
+    ];
+    for (const [campo, valor] of enteros) {
+      if (!Number.isInteger(valor) || valor < 0) {
+        throw new DomainError('METADATO_INVALIDO', `${campo} debe ser un entero mayor o igual a 0.`);
+      }
+    }
+    if (meta.stock_maximo !== null && (!Number.isInteger(meta.stock_maximo) || meta.stock_maximo < 0)) {
+      throw new DomainError(
+        'METADATO_INVALIDO',
+        'stock_maximo debe ser un entero mayor o igual a 0 o null.',
+      );
+    }
+    if (meta.garantia_meses !== null && (!Number.isInteger(meta.garantia_meses) || meta.garantia_meses < 0)) {
+      throw new DomainError(
+        'METADATO_INVALIDO',
+        'garantia_meses debe ser un entero mayor o igual a 0 o null.',
+      );
+    }
+    if (meta.stock_maximo !== null && meta.stock_maximo < meta.stock_minimo) {
+      throw new DomainError(
+        'METADATO_INVALIDO',
+        'stock_maximo no puede ser menor que stock_minimo.',
+      );
+    }
+  }
+
+  /** El código de barras es único por empresa cuando está informado. */
+  private async validarCodigoBarras(
+    empresaId: string,
+    codigoBarras: string,
+    excluirId?: string,
+  ): Promise<void> {
+    if (!codigoBarras) return;
+    const params: unknown[] = [empresaId, codigoBarras];
+    let where = 'empresa_id = $1 AND codigo_barras = $2';
+    if (excluirId) {
+      params.push(excluirId);
+      where += ` AND id <> $${params.length}`;
+    }
+    const fila = await this.pg.queryOne(
+      `SELECT 1 FROM catalog.productos WHERE ${where} LIMIT 1`,
+      params,
+    );
+    if (fila) {
+      throw new ConflictError(`El código de barras ${codigoBarras} ya está registrado.`);
     }
   }
 
@@ -1020,7 +1275,7 @@ export class ProductosService {
    * consulta a identity por API interna (R-DB-1) y se falla cerrado si no se
    * puede verificar.
    */
-  private async validarEmpresaCatalogo(empresaId: string): Promise<void> {
+  async validarEmpresaCatalogo(empresaId: string): Promise<void> {
     if (!empresaId || empresaId === EMPRESA_LEGACY_ID) {
       throw new DomainError(
         'EMPRESA_NO_PUBLICA',

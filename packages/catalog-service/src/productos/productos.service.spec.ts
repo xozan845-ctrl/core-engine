@@ -372,7 +372,8 @@ describe('ProductosService (catalogo maestro y stock)', () => {
       expect(sqlUpdate).toContain('nombre = $1');
       expect(sqlUpdate).toContain('descripcion = $2');
       expect(sqlUpdate).toContain('categoria = $3');
-      expect(params).toEqual(['Nuevo', 'D', 'C', filaProducto.id]);
+      expect(params.slice(0, 3)).toEqual(['Nuevo', 'D', 'C']);
+      expect(params.at(-1)).toBe(filaProducto.id);
     });
   });
 

@@ -83,12 +83,59 @@ export class ProductoResponseDto {
   @ApiProperty({ description: 'Stock disponible (neto de reservas)', example: 10 })
   stock: number;
 
-  @ApiProperty({
-    description: 'Estado del producto',
-    enum: ['disponible', 'agotado'],
-    example: 'disponible',
-  })
+  @ApiProperty({ description: 'Estado del producto', enum: ['disponible', 'agotado'], example: 'disponible' })
   estado: 'disponible' | 'agotado';
+
+  @ApiProperty({ description: 'Estado comercial del producto', enum: ['activo', 'inactivo'] })
+  estado_operativo: 'activo' | 'inactivo';
+
+  @ApiProperty({ description: 'Costo en córdobas con dos decimales', example: '150.00' })
+  costo: string;
+
+  @ApiProperty({ description: 'Marca' })
+  marca: string;
+
+  @ApiProperty({ description: 'Código de barras único por empresa' })
+  codigo_barras: string;
+
+  @ApiProperty({ description: 'Unidad de venta', example: 'Unidad (u)' })
+  unidad: string;
+
+  @ApiProperty({ description: 'Permite fracciones' })
+  permite_fracciones: boolean;
+
+  @ApiProperty({ description: 'Unidad de compra' })
+  unidad_compra: string;
+
+  @ApiProperty({ description: 'Contenido por unidad' })
+  contenido_cantidad: number;
+
+  @ApiProperty({ description: 'Unidad del contenido' })
+  contenido_unidad: string;
+
+  @ApiProperty({ description: 'Tipo de precio', enum: ['fijo', 'escala'] })
+  tipo_precio: 'fijo' | 'escala';
+
+  @ApiProperty({ description: 'Tipo de costo', enum: ['fijo', 'escala'] })
+  tipo_costo: 'fijo' | 'escala';
+
+  @ApiProperty({ description: 'Stock mínimo para alertas' })
+  stock_minimo: number;
+
+  @ApiProperty({ description: 'Stock máximo', nullable: true })
+  stock_maximo: number | null;
+
+  @ApiProperty({ description: 'Garantía en meses', nullable: true })
+  garantia_meses: number | null;
+
+  @ApiProperty({ description: 'Es materia prima' })
+  es_materia_prima: boolean;
+
+  @ApiProperty({ description: 'Ubicación física' })
+  ubicacion: string;
+
+  @ApiProperty({ description: 'Última actualización (ISO 8601 UTC)', format: 'date-time' })
+  actualizado_en: string;
 
   @ApiProperty({ description: 'Fecha de creación (ISO 8601 UTC)', format: 'date-time' })
   creado_en: string;
