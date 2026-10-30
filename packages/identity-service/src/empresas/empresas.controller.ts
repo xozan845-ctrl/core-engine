@@ -50,6 +50,8 @@ class CrearEmpresaRequestDto extends PerfilEmpresaRequestDto {
   @Length(2, 80)
   slug?: string;
   @ApiProperty({ enum: ['plataforma', 'propia', 'hibrida'] }) @IsIn(['plataforma', 'propia', 'hibrida']) modalidad_logistica: ModalidadLogistica;
+  @ApiProperty({ required: false, enum: ['comercial', 'logistica', 'plataforma'], default: 'comercial' })
+  @IsOptional() @IsIn(['comercial', 'logistica', 'plataforma']) tipo_empresa?: TipoEmpresa;
 }
 class CrearVendedorRequestDto {
   @ApiProperty() @IsString() @Length(2, 120) nombre: string;
@@ -123,7 +125,7 @@ export class EmpresasController {
   @Post() @Roles(ROLES.EMPRESARIO)
   @ApiOperation({ summary: 'Crear empresa y elegir modalidad logística' })
   @ApiCreatedResponse({ type: EmpresaResponseDto, description: 'Empresa creada con membresía del empresario' })
-  crear(@Body() dto: CrearEmpresaRequestDto, @UsuarioActual() u: UsuarioContexto) { return this.empresas.crear(u.user_id, dto.nombre, dto.modalidad_logistica, dto.slug, dto); }
+  crear(@Body() dto: CrearEmpresaRequestDto, @UsuarioActual() u: UsuarioContexto) { return this.empresas.crear(u.user_id, dto.nombre, dto.modalidad_logistica, dto.slug, dto, dto.tipo_empresa); }
   @Get(':id') @Roles(ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.EMPRESARIO, ROLES.VENDEDOR)
   @ApiOperation({ summary: 'Obtener una empresa por UUID o slug (solo miembros o administradores)' })
   @ApiParam({
@@ -181,12 +183,17 @@ export class EmpresasController {
   actualizarLogistica(@Param('id') id: string, @Body() dto: ActualizarModalidadLogisticaRequestDto, @UsuarioActual() u: UsuarioContexto) {
     return this.empresas.actualizarModalidad(u.user_id, id, dto.modalidad_logistica);
   }
-  @Patch(':id/tipo') @Roles(ROLES.SUPER_ADMIN, ROLES.ADMIN)
+  @Patch(':id/tipo') @Roles(ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.EMPRESARIO)
   @ApiOperation({ summary: 'Clasificar la empresa (comercial, logística o plataforma)' })
   @ApiParam({ name: 'id', description: 'UUID de la empresa' })
   @ApiOkResponse({ type: EmpresaResponseDto, description: 'Tipo de empresa actualizado' })
-  actualizarTipo(@Param('id') id: string, @Body() dto: ActualizarTipoEmpresaRequestDto) {
-    return this.empresas.actualizarTipo(id, dto.tipo_empresa);
+  actualizarTipo(
+    @Param('id') id: string,
+    @Body() dto: ActualizarTipoEmpresaRequestDto,
+    @UsuarioActual() u: UsuarioContexto,
+  ) {
+    const esGlobal = [ROLES.SUPER_ADMIN, ROLES.ADMIN].includes(u.rol as never);
+    return this.empresas.actualizarTipo(id, dto.tipo_empresa, u.user_id, esGlobal);
   }
   @Post(':id/vendedores') @Roles(ROLES.EMPRESARIO)
   @ApiOperation({ summary: 'Crear vendedor con participación predeterminada' })

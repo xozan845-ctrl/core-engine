@@ -44,6 +44,7 @@ describe('EmpresasController', () => {
       'hibrida',
       'acme',
       expect.objectContaining({ nombre: 'Acme', modalidad_logistica: 'hibrida', slug: 'acme' }),
+      undefined,
     );
   });
 
