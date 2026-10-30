@@ -1,88 +1,15 @@
 {
   "openapi": "3.0.0",
+  "info": {
+    "title": "Core Engine · stores-service · API pública",
+    "description": "Contrato público (/api/v1/**) de stores-service. No contiene rutas /internal/**.",
+    "version": "v1",
+    "contact": {}
+  },
+  "x-servicio": "stores-service",
+  "x-superficie": "publica",
+  "tags": [],
   "paths": {
-    "/internal/ofertas": {
-      "get": {
-        "operationId": "InternalController_porIds",
-        "parameters": [
-          {
-            "name": "ids",
-            "required": false,
-            "in": "query",
-            "description": "Ids de oferta separados por coma",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Ofertas encontradas",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/components/schemas/OfertaResponseDto"
-                  }
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "internalKey": []
-          }
-        ],
-        "summary": "Lote de ofertas por ids (servicio→servicio)",
-        "tags": [
-          "Tiendas (interno)"
-        ]
-      }
-    },
-    "/internal/ofertas/producto/{productoId}/activas": {
-      "get": {
-        "operationId": "InternalController_activas",
-        "parameters": [
-          {
-            "name": "productoId",
-            "required": true,
-            "in": "path",
-            "description": "Id del producto o variante",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Total de ofertas activas",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "total": {
-                      "type": "number"
-                    }
-                  }
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "internalKey": []
-          }
-        ],
-        "summary": "Contar ofertas activas de un producto (servicio→servicio)",
-        "tags": [
-          "Tiendas (interno)"
-        ]
-      }
-    },
     "/api/v1/vendedores/tienda": {
       "post": {
         "operationId": "TiendasController_crear",
@@ -388,14 +315,6 @@
       }
     }
   },
-  "info": {
-    "title": "Core Engine · stores-service",
-    "description": "Tiendas de vendedores: ofertas, precio final y estado (Tabla 21)",
-    "version": "v1",
-    "contact": {}
-  },
-  "tags": [],
-  "servers": [],
   "components": {
     "securitySchemes": {
       "bearer": {
@@ -410,6 +329,62 @@
       }
     },
     "schemas": {
+      "ActualizarSlugTiendaRequestDto": {
+        "type": "object",
+        "properties": {
+          "slug": {
+            "type": "string",
+            "minLength": 2,
+            "maxLength": 80,
+            "example": "tienda-de-la-vendedora"
+          }
+        },
+        "required": [
+          "slug"
+        ]
+      },
+      "CambiarMargenRequestDto": {
+        "type": "object",
+        "properties": {
+          "margen": {
+            "type": "number",
+            "description": "Nuevo margen en enteros (0 a 90)",
+            "minimum": 0,
+            "maximum": 90,
+            "example": 20
+          }
+        },
+        "required": [
+          "margen"
+        ]
+      },
+      "CrearTiendaRequestDto": {
+        "type": "object",
+        "properties": {
+          "nombre": {
+            "type": "string",
+            "description": "Nombre de la tienda",
+            "minLength": 2,
+            "maxLength": 100,
+            "example": "Mi tienda"
+          },
+          "descripcion": {
+            "type": "string",
+            "description": "Descripción de la tienda",
+            "example": "Ropa y accesorios"
+          },
+          "slug": {
+            "type": "string",
+            "description": "Slug público. Si se omite se deriva del nombre y se resuelven colisiones con sufijos.",
+            "minLength": 2,
+            "maxLength": 80,
+            "example": "tienda-de-la-vendedora-piloto"
+          }
+        },
+        "required": [
+          "nombre"
+        ]
+      },
       "OfertaResponseDto": {
         "type": "object",
         "properties": {
@@ -523,31 +498,93 @@
           "creado_en"
         ]
       },
-      "CrearTiendaRequestDto": {
+      "PaginaOfertasResponseDto": {
         "type": "object",
         "properties": {
-          "nombre": {
-            "type": "string",
-            "description": "Nombre de la tienda",
-            "minLength": 2,
-            "maxLength": 100,
-            "example": "Mi tienda"
+          "items": {
+            "description": "Ofertas de la página",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/OfertaResponseDto"
+            }
           },
-          "descripcion": {
-            "type": "string",
-            "description": "Descripción de la tienda",
-            "example": "Ropa y accesorios"
+          "total": {
+            "type": "number",
+            "description": "Total de ofertas",
+            "example": 42
           },
-          "slug": {
-            "type": "string",
-            "description": "Slug público. Si se omite se deriva del nombre y se resuelven colisiones con sufijos.",
-            "minLength": 2,
-            "maxLength": 80,
-            "example": "tienda-de-la-vendedora-piloto"
+          "pagina": {
+            "type": "number",
+            "description": "Página actual (1-based)",
+            "example": 1
+          },
+          "limite": {
+            "type": "number",
+            "description": "Tamaño de página",
+            "example": 20
+          },
+          "paginas": {
+            "type": "number",
+            "description": "Total de páginas",
+            "example": 3
           }
         },
         "required": [
-          "nombre"
+          "items",
+          "total",
+          "pagina",
+          "limite",
+          "paginas"
+        ]
+      },
+      "PublicarProductoRequestDto": {
+        "type": "object",
+        "properties": {
+          "tienda_id": {
+            "type": "string",
+            "description": "Tienda donde se publicará (UUID o slug). Si se omite, se usa la tienda del vendedor autenticado.",
+            "example": "mi-tienda"
+          },
+          "producto_id": {
+            "type": "string",
+            "description": "Id del producto a publicar",
+            "example": "a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11"
+          },
+          "margen": {
+            "type": "number",
+            "description": "Margen en enteros (15 = 15 %). RN-01: 0 a 90",
+            "minimum": 0,
+            "maximum": 90,
+            "example": 15
+          }
+        },
+        "required": [
+          "producto_id",
+          "margen"
+        ]
+      },
+      "TiendaPublicaResponseDto": {
+        "type": "object",
+        "properties": {
+          "tienda": {
+            "description": "Datos de la tienda",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/TiendaResponseDto"
+              }
+            ]
+          },
+          "ofertas": {
+            "description": "Ofertas de la tienda",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/OfertaResponseDto"
+            }
+          }
+        },
+        "required": [
+          "tienda",
+          "ofertas"
         ]
       },
       "TiendaResponseDto": {
@@ -607,124 +644,6 @@
           "nombre",
           "descripcion",
           "creado_en"
-        ]
-      },
-      "ActualizarSlugTiendaRequestDto": {
-        "type": "object",
-        "properties": {
-          "slug": {
-            "type": "string",
-            "minLength": 2,
-            "maxLength": 80,
-            "example": "tienda-de-la-vendedora"
-          }
-        },
-        "required": [
-          "slug"
-        ]
-      },
-      "PublicarProductoRequestDto": {
-        "type": "object",
-        "properties": {
-          "tienda_id": {
-            "type": "string",
-            "description": "Tienda donde se publicará (UUID o slug). Si se omite, se usa la tienda del vendedor autenticado.",
-            "example": "mi-tienda"
-          },
-          "producto_id": {
-            "type": "string",
-            "description": "Id del producto a publicar",
-            "example": "a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11"
-          },
-          "margen": {
-            "type": "number",
-            "description": "Margen en enteros (15 = 15 %). RN-01: 0 a 90",
-            "minimum": 0,
-            "maximum": 90,
-            "example": 15
-          }
-        },
-        "required": [
-          "producto_id",
-          "margen"
-        ]
-      },
-      "CambiarMargenRequestDto": {
-        "type": "object",
-        "properties": {
-          "margen": {
-            "type": "number",
-            "description": "Nuevo margen en enteros (0 a 90)",
-            "minimum": 0,
-            "maximum": 90,
-            "example": 20
-          }
-        },
-        "required": [
-          "margen"
-        ]
-      },
-      "PaginaOfertasResponseDto": {
-        "type": "object",
-        "properties": {
-          "items": {
-            "description": "Ofertas de la página",
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/OfertaResponseDto"
-            }
-          },
-          "total": {
-            "type": "number",
-            "description": "Total de ofertas",
-            "example": 42
-          },
-          "pagina": {
-            "type": "number",
-            "description": "Página actual (1-based)",
-            "example": 1
-          },
-          "limite": {
-            "type": "number",
-            "description": "Tamaño de página",
-            "example": 20
-          },
-          "paginas": {
-            "type": "number",
-            "description": "Total de páginas",
-            "example": 3
-          }
-        },
-        "required": [
-          "items",
-          "total",
-          "pagina",
-          "limite",
-          "paginas"
-        ]
-      },
-      "TiendaPublicaResponseDto": {
-        "type": "object",
-        "properties": {
-          "tienda": {
-            "description": "Datos de la tienda",
-            "allOf": [
-              {
-                "$ref": "#/components/schemas/TiendaResponseDto"
-              }
-            ]
-          },
-          "ofertas": {
-            "description": "Ofertas de la tienda",
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/OfertaResponseDto"
-            }
-          }
-        },
-        "required": [
-          "tienda",
-          "ofertas"
         ]
       }
     }

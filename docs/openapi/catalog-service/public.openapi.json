@@ -1,206 +1,15 @@
 {
   "openapi": "3.0.0",
+  "info": {
+    "title": "Core Engine · catalog-service · API pública",
+    "description": "Contrato público (/api/v1/**) de catalog-service. No contiene rutas /internal/**.",
+    "version": "v1",
+    "contact": {}
+  },
+  "x-servicio": "catalog-service",
+  "x-superficie": "publica",
+  "tags": [],
   "paths": {
-    "/internal/productos/lote": {
-      "get": {
-        "operationId": "InternalController_lote",
-        "parameters": [
-          {
-            "name": "skus",
-            "required": false,
-            "in": "query",
-            "description": "SKUs separados por coma",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Productos encontrados",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/components/schemas/LoteProductoResponseDto"
-                  }
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "internalKey": []
-          }
-        ],
-        "summary": "Lote de productos por SKUs (servicio→servicio)",
-        "tags": [
-          "Catálogo (interno)"
-        ]
-      }
-    },
-    "/internal/productos/sku/{sku}": {
-      "get": {
-        "operationId": "InternalController_porSku",
-        "parameters": [
-          {
-            "name": "sku",
-            "required": true,
-            "in": "path",
-            "description": "SKU del producto",
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "empresa_id",
-            "required": false,
-            "in": "query",
-            "description": "Empresa dueña del producto (ADR-27)",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Producto encontrado",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProductoResponseDto"
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "internalKey": []
-          }
-        ],
-        "summary": "Producto por SKU (servicio→servicio)",
-        "tags": [
-          "Catálogo (interno)"
-        ]
-      }
-    },
-    "/internal/productos/{id}": {
-      "get": {
-        "operationId": "InternalController_porId",
-        "parameters": [
-          {
-            "name": "id",
-            "required": true,
-            "in": "path",
-            "description": "Id del producto",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Producto encontrado",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProductoResponseDto"
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "internalKey": []
-          }
-        ],
-        "summary": "Producto por id (servicio→servicio)",
-        "tags": [
-          "Catálogo (interno)"
-        ]
-      }
-    },
-    "/internal/inventario/resumen": {
-      "get": {
-        "operationId": "InternalController_resumen",
-        "parameters": [
-          {
-            "name": "empresa_id",
-            "required": false,
-            "in": "query",
-            "description": "Filtra el resumen por empresa (ADR-27)",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Resumen de inventario",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ResumenInventarioResponseDto"
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "internalKey": []
-          }
-        ],
-        "summary": "Resumen de inventario (servicio→servicio)",
-        "tags": [
-          "Catálogo (interno)"
-        ]
-      }
-    },
-    "/internal/inventario/lineas": {
-      "get": {
-        "operationId": "InternalController_lineas",
-        "parameters": [
-          {
-            "name": "empresa_id",
-            "required": false,
-            "in": "query",
-            "description": "Filtra las líneas por empresa (ADR-27)",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Líneas de inventario",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/components/schemas/LineaInventarioResponseDto"
-                  }
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "internalKey": []
-          }
-        ],
-        "summary": "Líneas de inventario (servicio→servicio)",
-        "tags": [
-          "Catálogo (interno)"
-        ]
-      }
-    },
     "/api/v1/catalog/productos": {
       "get": {
         "operationId": "ProductosController_listar",
@@ -1630,14 +1439,6 @@
       }
     }
   },
-  "info": {
-    "title": "Core Engine · catalog-service",
-    "description": "Catálogo maestro y control de stock (Tabla 21)",
-    "version": "v1",
-    "contact": {}
-  },
-  "tags": [],
-  "servers": [],
   "components": {
     "securitySchemes": {
       "bearer": {
@@ -1652,38 +1453,856 @@
       }
     },
     "schemas": {
-      "LoteProductoResponseDto": {
+      "ActualizarComboRequestDto": {
         "type": "object",
         "properties": {
-          "empresa_id": {
+          "nombre": {
+            "type": "string"
+          },
+          "descripcion": {
+            "type": "string"
+          },
+          "codigo_barras": {
+            "type": "string"
+          },
+          "precio": {
+            "type": "string"
+          },
+          "estado": {
             "type": "string",
-            "description": "Empresa dueña del producto",
+            "enum": [
+              "activo",
+              "inactivo"
+            ]
+          },
+          "componentes": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ComboComponenteRequestDto"
+            }
+          }
+        }
+      },
+      "ActualizarConfiguracionInventarioRequestDto": {
+        "type": "object",
+        "properties": {
+          "metodo_costeo": {
+            "type": "string",
+            "enum": [
+              "promedio",
+              "fifo",
+              "ueps"
+            ]
+          },
+          "permitir_stock_negativo": {
+            "type": "boolean"
+          },
+          "alerta_stock_bajo": {
+            "type": "boolean"
+          },
+          "actualizar_costo_en_compra": {
+            "type": "boolean"
+          },
+          "unidad_defecto": {
+            "type": "string"
+          }
+        }
+      },
+      "ActualizarProductoRequestDto": {
+        "type": "object",
+        "properties": {
+          "nombre": {
+            "type": "string",
+            "description": "Nombre del producto",
+            "minLength": 2,
+            "maxLength": 200
+          },
+          "descripcion": {
+            "type": "string",
+            "description": "Descripción"
+          },
+          "categoria": {
+            "type": "string",
+            "description": "Categoría"
+          },
+          "precio_base": {
+            "type": "string",
+            "description": "Precio base decimal (ej: 1000.00)"
+          },
+          "stock": {
+            "type": "number",
+            "description": "Stock",
+            "minimum": 0
+          },
+          "costo": {
+            "type": "string",
+            "description": "Costo decimal en córdobas (ej: 150.00)",
+            "example": "150.00"
+          },
+          "marca": {
+            "type": "string",
+            "description": "Marca"
+          },
+          "codigo_barras": {
+            "type": "string",
+            "description": "Código de barras único por empresa"
+          },
+          "unidad": {
+            "type": "string",
+            "description": "Unidad de venta",
+            "example": "Unidad (u)"
+          },
+          "permite_fracciones": {
+            "type": "boolean",
+            "description": "Permite cantidades fraccionarias"
+          },
+          "unidad_compra": {
+            "type": "string",
+            "description": "Unidad de compra",
+            "example": "Igual que la de venta"
+          },
+          "contenido_cantidad": {
+            "type": "number",
+            "description": "Contenido por unidad",
+            "minimum": 0,
+            "default": 0
+          },
+          "contenido_unidad": {
+            "type": "string",
+            "description": "Unidad del contenido",
+            "example": "Sin contenido"
+          },
+          "tipo_precio": {
+            "type": "string",
+            "description": "Tipo de precio",
+            "enum": [
+              "fijo",
+              "escala"
+            ]
+          },
+          "tipo_costo": {
+            "type": "string",
+            "description": "Tipo de costo",
+            "enum": [
+              "fijo",
+              "escala"
+            ]
+          },
+          "stock_minimo": {
+            "type": "number",
+            "description": "Stock mínimo para alertas",
+            "minimum": 0,
+            "default": 0
+          },
+          "stock_maximo": {
+            "type": "object",
+            "description": "Stock máximo",
+            "nullable": true,
+            "minimum": 0
+          },
+          "garantia_meses": {
+            "type": "object",
+            "description": "Garantía en meses",
+            "nullable": true,
+            "minimum": 0
+          },
+          "es_materia_prima": {
+            "type": "boolean",
+            "description": "Es materia prima"
+          },
+          "ubicacion": {
+            "type": "string",
+            "description": "Ubicación física"
+          },
+          "estado_operativo": {
+            "type": "string",
+            "description": "Estado comercial",
+            "enum": [
+              "activo",
+              "inactivo"
+            ],
+            "default": "activo"
+          },
+          "atributos": {
+            "type": "object",
+            "description": "Atributos de la variante"
+          },
+          "motivo": {
+            "type": "string",
+            "description": "Motivo del cambio (RN-08 histórico)"
+          }
+        }
+      },
+      "ActualizarPromocionRequestDto": {
+        "type": "object",
+        "properties": {
+          "nombre": {
+            "type": "string"
+          },
+          "tipo": {
+            "type": "string",
+            "enum": [
+              "2x1",
+              "descuento_cantidad",
+              "descuento_porcentaje",
+              "regalo"
+            ]
+          },
+          "producto_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "sku": {
+            "type": "string"
+          },
+          "cantidad_requerida": {
+            "type": "object",
+            "minimum": 1
+          },
+          "cantidad_gratis": {
+            "type": "object",
+            "minimum": 1
+          },
+          "descuento_porcentaje": {
+            "type": "object",
+            "minimum": 1,
+            "maximum": 100
+          },
+          "fecha_desde": {
+            "type": "string",
+            "format": "date"
+          },
+          "fecha_hasta": {
+            "type": "string",
+            "format": "date"
+          },
+          "estado": {
+            "type": "string",
+            "enum": [
+              "activo",
+              "inactivo"
+            ]
+          }
+        }
+      },
+      "ActualizarServicioRequestDto": {
+        "type": "object",
+        "properties": {
+          "nombre": {
+            "type": "string",
+            "minLength": 2
+          },
+          "descripcion": {
+            "type": "string"
+          },
+          "categoria": {
+            "type": "string"
+          },
+          "marca": {
+            "type": "string"
+          },
+          "codigo_barras": {
+            "type": "string"
+          },
+          "precio": {
+            "type": "string"
+          },
+          "costo": {
+            "type": "string"
+          },
+          "unidad": {
+            "type": "string"
+          },
+          "duracion_minutos": {
+            "type": "number",
+            "minimum": 1,
+            "maximum": 1440
+          },
+          "estado": {
+            "type": "string",
+            "enum": [
+              "activo",
+              "inactivo"
+            ]
+          }
+        }
+      },
+      "ComboComponenteRequestDto": {
+        "type": "object",
+        "properties": {
+          "producto_id": {
+            "type": "string",
             "format": "uuid"
           },
           "sku": {
             "type": "string",
-            "description": "SKU del producto (único por empresa)",
-            "example": "SKU-001"
+            "description": "SKU del producto componente"
           },
-          "stock": {
+          "cantidad": {
             "type": "number",
-            "description": "Stock disponible",
-            "example": 10
-          },
-          "estado": {
-            "type": "string",
-            "description": "Estado del producto",
-            "enum": [
-              "disponible",
-              "agotado"
-            ],
-            "example": "disponible"
+            "minimum": 1
           }
         },
         "required": [
           "sku",
-          "stock",
-          "estado"
+          "cantidad"
+        ]
+      },
+      "ComboComponenteResponseDto": {
+        "type": "object",
+        "properties": {
+          "producto_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "sku": {
+            "type": "string"
+          },
+          "nombre": {
+            "type": "string"
+          },
+          "cantidad": {
+            "type": "number"
+          },
+          "costo_unitario": {
+            "type": "string"
+          },
+          "subtotal": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "producto_id",
+          "sku",
+          "nombre",
+          "cantidad",
+          "costo_unitario",
+          "subtotal"
+        ]
+      },
+      "ComboResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "empresa_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "sku": {
+            "type": "string"
+          },
+          "nombre": {
+            "type": "string"
+          },
+          "descripcion": {
+            "type": "string"
+          },
+          "codigo_barras": {
+            "type": "string"
+          },
+          "precio": {
+            "type": "string"
+          },
+          "costo_total": {
+            "type": "string"
+          },
+          "margen": {
+            "type": "number"
+          },
+          "estado": {
+            "type": "string",
+            "enum": [
+              "activo",
+              "inactivo"
+            ]
+          },
+          "componentes": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ComboComponenteResponseDto"
+            }
+          },
+          "creado_en": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "actualizado_en": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "empresa_id",
+          "sku",
+          "nombre",
+          "descripcion",
+          "codigo_barras",
+          "precio",
+          "costo_total",
+          "margen",
+          "estado",
+          "componentes",
+          "creado_en",
+          "actualizado_en"
+        ]
+      },
+      "ConfiguracionInventarioResponseDto": {
+        "type": "object",
+        "properties": {
+          "empresa_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "metodo_costeo": {
+            "type": "string",
+            "enum": [
+              "promedio",
+              "fifo",
+              "ueps"
+            ]
+          },
+          "permitir_stock_negativo": {
+            "type": "boolean"
+          },
+          "alerta_stock_bajo": {
+            "type": "boolean"
+          },
+          "actualizar_costo_en_compra": {
+            "type": "boolean"
+          },
+          "unidad_defecto": {
+            "type": "string"
+          },
+          "actualizado_en": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "empresa_id",
+          "metodo_costeo",
+          "permitir_stock_negativo",
+          "alerta_stock_bajo",
+          "actualizar_costo_en_compra",
+          "unidad_defecto",
+          "actualizado_en"
+        ]
+      },
+      "CrearComboRequestDto": {
+        "type": "object",
+        "properties": {
+          "sku": {
+            "type": "string"
+          },
+          "nombre": {
+            "type": "string"
+          },
+          "descripcion": {
+            "type": "string"
+          },
+          "codigo_barras": {
+            "type": "string"
+          },
+          "precio": {
+            "type": "string",
+            "example": "2500.00"
+          },
+          "estado": {
+            "type": "string",
+            "enum": [
+              "activo",
+              "inactivo"
+            ]
+          },
+          "componentes": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ComboComponenteRequestDto"
+            }
+          }
+        },
+        "required": [
+          "sku",
+          "nombre",
+          "precio",
+          "componentes"
+        ]
+      },
+      "CrearMovimientoInventarioRequestDto": {
+        "type": "object",
+        "properties": {
+          "tipo": {
+            "type": "string",
+            "enum": [
+              "entrada",
+              "salida",
+              "ajuste",
+              "traslado"
+            ]
+          },
+          "motivo": {
+            "type": "string"
+          },
+          "referencia": {
+            "type": "string"
+          },
+          "ubicacion_origen": {
+            "type": "string"
+          },
+          "ubicacion_destino": {
+            "type": "string"
+          },
+          "lineas": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/MovimientoLineaRequestDto"
+            }
+          }
+        },
+        "required": [
+          "tipo",
+          "lineas"
+        ]
+      },
+      "CrearProductoRequestDto": {
+        "type": "object",
+        "properties": {
+          "sku": {
+            "type": "string",
+            "description": "SKU del producto",
+            "pattern": "^[A-Za-z0-9-]{2,32}$",
+            "example": "SKU-001"
+          },
+          "empresa_id": {
+            "type": "string",
+            "description": "Empresa destino. Obligatoria para super_admin/admin; el empresario usa su empresa activa.",
+            "format": "uuid"
+          },
+          "nombre": {
+            "type": "string",
+            "description": "Nombre del producto",
+            "minLength": 2,
+            "maxLength": 200
+          },
+          "descripcion": {
+            "type": "string",
+            "description": "Descripción"
+          },
+          "categoria": {
+            "type": "string",
+            "description": "Categoría"
+          },
+          "precio_base": {
+            "type": "string",
+            "description": "Precio base decimal (ej: 1000.00) en córdobas; se guarda en centavos",
+            "example": "1000.00"
+          },
+          "stock": {
+            "type": "number",
+            "description": "Stock inicial",
+            "minimum": 0,
+            "example": 10
+          },
+          "costo": {
+            "type": "string",
+            "description": "Costo decimal en córdobas (ej: 150.00)",
+            "example": "150.00"
+          },
+          "marca": {
+            "type": "string",
+            "description": "Marca"
+          },
+          "codigo_barras": {
+            "type": "string",
+            "description": "Código de barras único por empresa"
+          },
+          "unidad": {
+            "type": "string",
+            "description": "Unidad de venta",
+            "example": "Unidad (u)"
+          },
+          "permite_fracciones": {
+            "type": "boolean",
+            "description": "Permite cantidades fraccionarias",
+            "default": false
+          },
+          "unidad_compra": {
+            "type": "string",
+            "description": "Unidad de compra",
+            "example": "Igual que la de venta"
+          },
+          "contenido_cantidad": {
+            "type": "number",
+            "description": "Contenido por unidad",
+            "minimum": 0,
+            "default": 0
+          },
+          "contenido_unidad": {
+            "type": "string",
+            "description": "Unidad del contenido",
+            "example": "Sin contenido"
+          },
+          "tipo_precio": {
+            "type": "string",
+            "description": "Tipo de precio",
+            "enum": [
+              "fijo",
+              "escala"
+            ]
+          },
+          "tipo_costo": {
+            "type": "string",
+            "description": "Tipo de costo",
+            "enum": [
+              "fijo",
+              "escala"
+            ]
+          },
+          "stock_minimo": {
+            "type": "number",
+            "description": "Stock mínimo para alertas",
+            "minimum": 0,
+            "default": 0
+          },
+          "stock_maximo": {
+            "type": "object",
+            "description": "Stock máximo",
+            "nullable": true,
+            "minimum": 0
+          },
+          "garantia_meses": {
+            "type": "object",
+            "description": "Garantía en meses",
+            "nullable": true,
+            "minimum": 0
+          },
+          "es_materia_prima": {
+            "type": "boolean",
+            "description": "Es materia prima",
+            "default": false
+          },
+          "ubicacion": {
+            "type": "string",
+            "description": "Ubicación física"
+          },
+          "estado_operativo": {
+            "type": "string",
+            "description": "Estado comercial",
+            "enum": [
+              "activo",
+              "inactivo"
+            ],
+            "default": "activo"
+          },
+          "atributos": {
+            "type": "object",
+            "description": "Atributos del producto (si aplica)"
+          },
+          "imagenes": {
+            "description": "Imágenes del producto (máx. 3)",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ImagenProductoRequestDto"
+            }
+          },
+          "variantes": {
+            "description": "Variantes vendibles del producto (máx. 50)",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/VarianteProductoRequestDto"
+            }
+          }
+        },
+        "required": [
+          "sku",
+          "nombre",
+          "precio_base",
+          "stock"
+        ]
+      },
+      "CrearPromocionRequestDto": {
+        "type": "object",
+        "properties": {
+          "nombre": {
+            "type": "string"
+          },
+          "tipo": {
+            "type": "string",
+            "enum": [
+              "2x1",
+              "descuento_cantidad",
+              "descuento_porcentaje",
+              "regalo"
+            ]
+          },
+          "producto_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "sku": {
+            "type": "string"
+          },
+          "cantidad_requerida": {
+            "type": "object",
+            "minimum": 1
+          },
+          "cantidad_gratis": {
+            "type": "object",
+            "minimum": 1
+          },
+          "descuento_porcentaje": {
+            "type": "object",
+            "minimum": 1,
+            "maximum": 100
+          },
+          "fecha_desde": {
+            "type": "string",
+            "format": "date"
+          },
+          "fecha_hasta": {
+            "type": "string",
+            "format": "date"
+          },
+          "estado": {
+            "type": "string",
+            "enum": [
+              "activo",
+              "inactivo"
+            ]
+          }
+        },
+        "required": [
+          "nombre",
+          "tipo",
+          "fecha_desde",
+          "fecha_hasta"
+        ]
+      },
+      "CrearServicioRequestDto": {
+        "type": "object",
+        "properties": {
+          "codigo": {
+            "type": "string",
+            "description": "Código interno del servicio",
+            "example": "SERV-001"
+          },
+          "empresa_id": {
+            "type": "string",
+            "description": "Empresa destino (solo admin/super_admin)",
+            "format": "uuid"
+          },
+          "nombre": {
+            "type": "string",
+            "description": "Nombre del servicio",
+            "minLength": 2,
+            "maxLength": 200
+          },
+          "descripcion": {
+            "type": "string"
+          },
+          "categoria": {
+            "type": "string"
+          },
+          "marca": {
+            "type": "string"
+          },
+          "codigo_barras": {
+            "type": "string"
+          },
+          "precio": {
+            "type": "string",
+            "description": "Precio decimal",
+            "example": "1500.00"
+          },
+          "costo": {
+            "type": "string",
+            "description": "Costo decimal",
+            "example": "500.00"
+          },
+          "unidad": {
+            "type": "string",
+            "example": "Hora (h)"
+          },
+          "duracion_minutos": {
+            "type": "number",
+            "description": "Duración en minutos (1-1440)",
+            "minimum": 1,
+            "maximum": 1440
+          },
+          "estado": {
+            "type": "string",
+            "enum": [
+              "activo",
+              "inactivo"
+            ]
+          }
+        },
+        "required": [
+          "codigo",
+          "nombre",
+          "precio",
+          "duracion_minutos"
+        ]
+      },
+      "EscaneoResponseDto": {
+        "type": "object",
+        "properties": {
+          "tipo": {
+            "type": "string",
+            "enum": [
+              "producto",
+              "servicio"
+            ]
+          },
+          "producto": {
+            "nullable": true,
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/ProductoResponseDto"
+              }
+            ]
+          },
+          "servicio": {
+            "nullable": true,
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/ServicioResponseDto"
+              }
+            ]
+          }
+        },
+        "required": [
+          "tipo"
+        ]
+      },
+      "ImagenProductoRequestDto": {
+        "type": "object",
+        "properties": {
+          "objeto_id": {
+            "type": "string",
+            "description": "Id del objeto confirmado en storage-service",
+            "format": "uuid"
+          },
+          "orden": {
+            "type": "number",
+            "description": "Orden de la imagen (0-2); si se omite se asigna el siguiente",
+            "minimum": 0,
+            "maximum": 2
+          },
+          "es_principal": {
+            "type": "boolean",
+            "description": "Marcar como imagen principal",
+            "default": false
+          }
+        },
+        "required": [
+          "objeto_id"
         ]
       },
       "ImagenProductoResponseDto": {
@@ -1723,75 +2342,409 @@
           "es_principal"
         ]
       },
-      "VarianteProductoResponseDto": {
+      "ImportarProductoFilaDto": {
         "type": "object",
         "properties": {
-          "id": {
-            "type": "string",
-            "description": "Id de la variante",
-            "format": "uuid"
+          "sku": {
+            "type": "string"
           },
-          "producto_padre_id": {
+          "nombre": {
+            "type": "string"
+          },
+          "descripcion": {
+            "type": "string"
+          },
+          "categoria": {
+            "type": "string"
+          },
+          "precio_base": {
             "type": "string",
-            "description": "Id del producto padre",
+            "example": "1000.00"
+          },
+          "stock": {
+            "type": "number",
+            "minimum": 0
+          },
+          "costo": {
+            "type": "string"
+          },
+          "marca": {
+            "type": "string"
+          },
+          "codigo_barras": {
+            "type": "string"
+          },
+          "unidad": {
+            "type": "string"
+          },
+          "stock_minimo": {
+            "type": "number",
+            "minimum": 0
+          },
+          "stock_maximo": {
+            "type": "object",
+            "nullable": true,
+            "minimum": 0
+          },
+          "es_materia_prima": {
+            "type": "boolean"
+          },
+          "ubicacion": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "sku",
+          "nombre",
+          "precio_base",
+          "stock"
+        ]
+      },
+      "ImportarProductosRequestDto": {
+        "type": "object",
+        "properties": {
+          "filas": {
+            "description": "Máximo 200 filas",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ImportarProductoFilaDto"
+            }
+          }
+        },
+        "required": [
+          "filas"
+        ]
+      },
+      "ImportarProductosResponseDto": {
+        "type": "object",
+        "properties": {
+          "importados": {
+            "type": "number"
+          },
+          "omitidos": {
+            "type": "number"
+          },
+          "errores": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": [
+          "importados",
+          "omitidos",
+          "errores"
+        ]
+      },
+      "LineaInventarioResponseDto": {
+        "type": "object",
+        "properties": {
+          "empresa_id": {
+            "type": "string",
+            "description": "Empresa dueña del producto (ADR-27)",
             "format": "uuid"
           },
           "sku": {
             "type": "string",
-            "description": "SKU de la variante",
-            "example": "SKU-001-ROJO-M"
+            "description": "SKU del producto",
+            "example": "SKU-001"
           },
           "nombre": {
             "type": "string",
-            "description": "Nombre visible de la variante"
+            "description": "Nombre del producto"
           },
-          "atributos": {
-            "type": "object",
-            "description": "Atributos de la variante (color, talla, etc.)",
-            "additionalProperties": true
+          "stock": {
+            "type": "number",
+            "description": "Stock físico en bodega",
+            "example": 12
+          },
+          "disponible": {
+            "type": "number",
+            "description": "Stock disponible (neto de reservas)",
+            "example": 10
+          },
+          "reservado": {
+            "type": "number",
+            "description": "Unidades reservadas por órdenes activas",
+            "example": 2
+          },
+          "estado": {
+            "type": "string",
+            "description": "Estado del producto",
+            "example": "disponible"
           },
           "precio_base": {
             "type": "string",
             "description": "Precio base en córdobas con dos decimales",
-            "example": "1500.00"
+            "example": "1000.00"
           },
-          "stock": {
+          "reservas_activas": {
             "type": "number",
-            "description": "Stock disponible",
-            "example": 10
+            "description": "Alias de reservado para consumidores internos",
+            "example": 2
           },
-          "estado": {
+          "valor_disponible_cents": {
+            "type": "number",
+            "description": "Valor del stock disponible en centavos",
+            "example": 1000000
+          },
+          "valor_total_cents": {
+            "type": "number",
+            "description": "Valor del stock físico total en centavos",
+            "example": 1200000
+          }
+        },
+        "required": [
+          "sku",
+          "nombre",
+          "stock",
+          "disponible",
+          "reservado",
+          "estado",
+          "precio_base",
+          "reservas_activas",
+          "valor_disponible_cents",
+          "valor_total_cents"
+        ]
+      },
+      "MovimientoInventarioResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
             "type": "string",
-            "description": "Estado de la variante",
+            "format": "uuid"
+          },
+          "empresa_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "tipo": {
+            "type": "string",
             "enum": [
-              "disponible",
-              "agotado"
+              "entrada",
+              "salida",
+              "ajuste",
+              "traslado"
             ]
           },
-          "imagenes": {
-            "description": "Imágenes de la variante (máx. 3)",
+          "motivo": {
+            "type": "string"
+          },
+          "referencia": {
+            "type": "string"
+          },
+          "ubicacion_origen": {
+            "type": "string"
+          },
+          "ubicacion_destino": {
+            "type": "string"
+          },
+          "lineas": {
             "type": "array",
             "items": {
-              "$ref": "#/components/schemas/ImagenProductoResponseDto"
+              "type": "object"
             }
+          },
+          "creado_por": {
+            "type": "object",
+            "nullable": true
           },
           "creado_en": {
             "type": "string",
-            "description": "Fecha de creación (ISO 8601 UTC)",
             "format": "date-time"
           }
         },
         "required": [
           "id",
-          "producto_padre_id",
-          "sku",
-          "nombre",
-          "atributos",
-          "precio_base",
-          "stock",
-          "estado",
-          "imagenes",
+          "empresa_id",
+          "tipo",
+          "motivo",
+          "referencia",
+          "ubicacion_origen",
+          "ubicacion_destino",
+          "lineas",
+          "creado_por",
           "creado_en"
+        ]
+      },
+      "MovimientoLineaRequestDto": {
+        "type": "object",
+        "properties": {
+          "producto_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "sku": {
+            "type": "string"
+          },
+          "cantidad": {
+            "type": "number",
+            "minimum": 0
+          }
+        },
+        "required": [
+          "sku",
+          "cantidad"
+        ]
+      },
+      "PaginaCombosResponseDto": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ComboResponseDto"
+            }
+          },
+          "total": {
+            "type": "number"
+          },
+          "pagina": {
+            "type": "number"
+          },
+          "limite": {
+            "type": "number"
+          },
+          "paginas": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "items",
+          "total",
+          "pagina",
+          "limite",
+          "paginas"
+        ]
+      },
+      "PaginaMovimientosResponseDto": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/MovimientoInventarioResponseDto"
+            }
+          },
+          "total": {
+            "type": "number"
+          },
+          "pagina": {
+            "type": "number"
+          },
+          "limite": {
+            "type": "number"
+          },
+          "paginas": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "items",
+          "total",
+          "pagina",
+          "limite",
+          "paginas"
+        ]
+      },
+      "PaginaProductosResponseDto": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "description": "Productos de la página",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ProductoResponseDto"
+            }
+          },
+          "total": {
+            "type": "number",
+            "description": "Total de productos que cumplen el filtro",
+            "example": 42
+          },
+          "pagina": {
+            "type": "number",
+            "description": "Página actual (1-based)",
+            "example": 1
+          },
+          "limite": {
+            "type": "number",
+            "description": "Tamaño de página",
+            "example": 20
+          },
+          "paginas": {
+            "type": "number",
+            "description": "Total de páginas",
+            "example": 3
+          }
+        },
+        "required": [
+          "items",
+          "total",
+          "pagina",
+          "limite",
+          "paginas"
+        ]
+      },
+      "PaginaPromocionesResponseDto": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PromocionResponseDto"
+            }
+          },
+          "total": {
+            "type": "number"
+          },
+          "pagina": {
+            "type": "number"
+          },
+          "limite": {
+            "type": "number"
+          },
+          "paginas": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "items",
+          "total",
+          "pagina",
+          "limite",
+          "paginas"
+        ]
+      },
+      "PaginaServiciosResponseDto": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ServicioResponseDto"
+            }
+          },
+          "total": {
+            "type": "number"
+          },
+          "pagina": {
+            "type": "number"
+          },
+          "limite": {
+            "type": "number"
+          },
+          "paginas": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "items",
+          "total",
+          "pagina",
+          "limite",
+          "paginas"
         ]
       },
       "ProductoResponseDto": {
@@ -1986,1130 +2939,6 @@
           "creado_en"
         ]
       },
-      "ResumenInventarioResponseDto": {
-        "type": "object",
-        "properties": {
-          "productos": {
-            "type": "number",
-            "description": "Total de productos",
-            "example": 20
-          },
-          "agotados": {
-            "type": "number",
-            "description": "Productos agotados",
-            "example": 2
-          },
-          "stock_total": {
-            "type": "number",
-            "description": "Unidades en stock",
-            "example": 120
-          },
-          "valor_inventario_cents": {
-            "type": "number",
-            "description": "Valor del inventario en centavos",
-            "example": 12000000
-          }
-        },
-        "required": [
-          "productos",
-          "agotados",
-          "stock_total",
-          "valor_inventario_cents"
-        ]
-      },
-      "LineaInventarioResponseDto": {
-        "type": "object",
-        "properties": {
-          "empresa_id": {
-            "type": "string",
-            "description": "Empresa dueña del producto (ADR-27)",
-            "format": "uuid"
-          },
-          "sku": {
-            "type": "string",
-            "description": "SKU del producto",
-            "example": "SKU-001"
-          },
-          "nombre": {
-            "type": "string",
-            "description": "Nombre del producto"
-          },
-          "stock": {
-            "type": "number",
-            "description": "Stock físico en bodega",
-            "example": 12
-          },
-          "disponible": {
-            "type": "number",
-            "description": "Stock disponible (neto de reservas)",
-            "example": 10
-          },
-          "reservado": {
-            "type": "number",
-            "description": "Unidades reservadas por órdenes activas",
-            "example": 2
-          },
-          "estado": {
-            "type": "string",
-            "description": "Estado del producto",
-            "example": "disponible"
-          },
-          "precio_base": {
-            "type": "string",
-            "description": "Precio base en córdobas con dos decimales",
-            "example": "1000.00"
-          },
-          "reservas_activas": {
-            "type": "number",
-            "description": "Alias de reservado para consumidores internos",
-            "example": 2
-          },
-          "valor_disponible_cents": {
-            "type": "number",
-            "description": "Valor del stock disponible en centavos",
-            "example": 1000000
-          },
-          "valor_total_cents": {
-            "type": "number",
-            "description": "Valor del stock físico total en centavos",
-            "example": 1200000
-          }
-        },
-        "required": [
-          "sku",
-          "nombre",
-          "stock",
-          "disponible",
-          "reservado",
-          "estado",
-          "precio_base",
-          "reservas_activas",
-          "valor_disponible_cents",
-          "valor_total_cents"
-        ]
-      },
-      "PaginaProductosResponseDto": {
-        "type": "object",
-        "properties": {
-          "items": {
-            "description": "Productos de la página",
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/ProductoResponseDto"
-            }
-          },
-          "total": {
-            "type": "number",
-            "description": "Total de productos que cumplen el filtro",
-            "example": 42
-          },
-          "pagina": {
-            "type": "number",
-            "description": "Página actual (1-based)",
-            "example": 1
-          },
-          "limite": {
-            "type": "number",
-            "description": "Tamaño de página",
-            "example": 20
-          },
-          "paginas": {
-            "type": "number",
-            "description": "Total de páginas",
-            "example": 3
-          }
-        },
-        "required": [
-          "items",
-          "total",
-          "pagina",
-          "limite",
-          "paginas"
-        ]
-      },
-      "ImagenProductoRequestDto": {
-        "type": "object",
-        "properties": {
-          "objeto_id": {
-            "type": "string",
-            "description": "Id del objeto confirmado en storage-service",
-            "format": "uuid"
-          },
-          "orden": {
-            "type": "number",
-            "description": "Orden de la imagen (0-2); si se omite se asigna el siguiente",
-            "minimum": 0,
-            "maximum": 2
-          },
-          "es_principal": {
-            "type": "boolean",
-            "description": "Marcar como imagen principal",
-            "default": false
-          }
-        },
-        "required": [
-          "objeto_id"
-        ]
-      },
-      "VarianteProductoRequestDto": {
-        "type": "object",
-        "properties": {
-          "sku": {
-            "type": "string",
-            "description": "SKU de la variante",
-            "pattern": "^[A-Za-z0-9-]{2,32}$",
-            "example": "SKU-001-ROJO-M"
-          },
-          "nombre": {
-            "type": "string",
-            "description": "Nombre visible de la variante"
-          },
-          "atributos": {
-            "type": "object",
-            "description": "Atributos de la variante (color, talla, etc.)"
-          },
-          "precio_base": {
-            "type": "string",
-            "description": "Precio base decimal (ej: 1000.00)",
-            "example": "1500.00"
-          },
-          "stock": {
-            "type": "number",
-            "description": "Stock inicial de la variante",
-            "minimum": 0,
-            "example": 5
-          },
-          "imagenes": {
-            "description": "Imágenes de la variante (máx. 3)",
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/ImagenProductoRequestDto"
-            }
-          }
-        },
-        "required": [
-          "sku",
-          "precio_base",
-          "stock"
-        ]
-      },
-      "CrearProductoRequestDto": {
-        "type": "object",
-        "properties": {
-          "sku": {
-            "type": "string",
-            "description": "SKU del producto",
-            "pattern": "^[A-Za-z0-9-]{2,32}$",
-            "example": "SKU-001"
-          },
-          "empresa_id": {
-            "type": "string",
-            "description": "Empresa destino. Obligatoria para super_admin/admin; el empresario usa su empresa activa.",
-            "format": "uuid"
-          },
-          "nombre": {
-            "type": "string",
-            "description": "Nombre del producto",
-            "minLength": 2,
-            "maxLength": 200
-          },
-          "descripcion": {
-            "type": "string",
-            "description": "Descripción"
-          },
-          "categoria": {
-            "type": "string",
-            "description": "Categoría"
-          },
-          "precio_base": {
-            "type": "string",
-            "description": "Precio base decimal (ej: 1000.00) en córdobas; se guarda en centavos",
-            "example": "1000.00"
-          },
-          "stock": {
-            "type": "number",
-            "description": "Stock inicial",
-            "minimum": 0,
-            "example": 10
-          },
-          "costo": {
-            "type": "string",
-            "description": "Costo decimal en córdobas (ej: 150.00)",
-            "example": "150.00"
-          },
-          "marca": {
-            "type": "string",
-            "description": "Marca"
-          },
-          "codigo_barras": {
-            "type": "string",
-            "description": "Código de barras único por empresa"
-          },
-          "unidad": {
-            "type": "string",
-            "description": "Unidad de venta",
-            "example": "Unidad (u)"
-          },
-          "permite_fracciones": {
-            "type": "boolean",
-            "description": "Permite cantidades fraccionarias",
-            "default": false
-          },
-          "unidad_compra": {
-            "type": "string",
-            "description": "Unidad de compra",
-            "example": "Igual que la de venta"
-          },
-          "contenido_cantidad": {
-            "type": "number",
-            "description": "Contenido por unidad",
-            "minimum": 0,
-            "default": 0
-          },
-          "contenido_unidad": {
-            "type": "string",
-            "description": "Unidad del contenido",
-            "example": "Sin contenido"
-          },
-          "tipo_precio": {
-            "type": "string",
-            "description": "Tipo de precio",
-            "enum": [
-              "fijo",
-              "escala"
-            ]
-          },
-          "tipo_costo": {
-            "type": "string",
-            "description": "Tipo de costo",
-            "enum": [
-              "fijo",
-              "escala"
-            ]
-          },
-          "stock_minimo": {
-            "type": "number",
-            "description": "Stock mínimo para alertas",
-            "minimum": 0,
-            "default": 0
-          },
-          "stock_maximo": {
-            "type": "object",
-            "description": "Stock máximo",
-            "nullable": true,
-            "minimum": 0
-          },
-          "garantia_meses": {
-            "type": "object",
-            "description": "Garantía en meses",
-            "nullable": true,
-            "minimum": 0
-          },
-          "es_materia_prima": {
-            "type": "boolean",
-            "description": "Es materia prima",
-            "default": false
-          },
-          "ubicacion": {
-            "type": "string",
-            "description": "Ubicación física"
-          },
-          "estado_operativo": {
-            "type": "string",
-            "description": "Estado comercial",
-            "enum": [
-              "activo",
-              "inactivo"
-            ],
-            "default": "activo"
-          },
-          "atributos": {
-            "type": "object",
-            "description": "Atributos del producto (si aplica)"
-          },
-          "imagenes": {
-            "description": "Imágenes del producto (máx. 3)",
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/ImagenProductoRequestDto"
-            }
-          },
-          "variantes": {
-            "description": "Variantes vendibles del producto (máx. 50)",
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/VarianteProductoRequestDto"
-            }
-          }
-        },
-        "required": [
-          "sku",
-          "nombre",
-          "precio_base",
-          "stock"
-        ]
-      },
-      "ActualizarProductoRequestDto": {
-        "type": "object",
-        "properties": {
-          "nombre": {
-            "type": "string",
-            "description": "Nombre del producto",
-            "minLength": 2,
-            "maxLength": 200
-          },
-          "descripcion": {
-            "type": "string",
-            "description": "Descripción"
-          },
-          "categoria": {
-            "type": "string",
-            "description": "Categoría"
-          },
-          "precio_base": {
-            "type": "string",
-            "description": "Precio base decimal (ej: 1000.00)"
-          },
-          "stock": {
-            "type": "number",
-            "description": "Stock",
-            "minimum": 0
-          },
-          "costo": {
-            "type": "string",
-            "description": "Costo decimal en córdobas (ej: 150.00)",
-            "example": "150.00"
-          },
-          "marca": {
-            "type": "string",
-            "description": "Marca"
-          },
-          "codigo_barras": {
-            "type": "string",
-            "description": "Código de barras único por empresa"
-          },
-          "unidad": {
-            "type": "string",
-            "description": "Unidad de venta",
-            "example": "Unidad (u)"
-          },
-          "permite_fracciones": {
-            "type": "boolean",
-            "description": "Permite cantidades fraccionarias"
-          },
-          "unidad_compra": {
-            "type": "string",
-            "description": "Unidad de compra",
-            "example": "Igual que la de venta"
-          },
-          "contenido_cantidad": {
-            "type": "number",
-            "description": "Contenido por unidad",
-            "minimum": 0,
-            "default": 0
-          },
-          "contenido_unidad": {
-            "type": "string",
-            "description": "Unidad del contenido",
-            "example": "Sin contenido"
-          },
-          "tipo_precio": {
-            "type": "string",
-            "description": "Tipo de precio",
-            "enum": [
-              "fijo",
-              "escala"
-            ]
-          },
-          "tipo_costo": {
-            "type": "string",
-            "description": "Tipo de costo",
-            "enum": [
-              "fijo",
-              "escala"
-            ]
-          },
-          "stock_minimo": {
-            "type": "number",
-            "description": "Stock mínimo para alertas",
-            "minimum": 0,
-            "default": 0
-          },
-          "stock_maximo": {
-            "type": "object",
-            "description": "Stock máximo",
-            "nullable": true,
-            "minimum": 0
-          },
-          "garantia_meses": {
-            "type": "object",
-            "description": "Garantía en meses",
-            "nullable": true,
-            "minimum": 0
-          },
-          "es_materia_prima": {
-            "type": "boolean",
-            "description": "Es materia prima"
-          },
-          "ubicacion": {
-            "type": "string",
-            "description": "Ubicación física"
-          },
-          "estado_operativo": {
-            "type": "string",
-            "description": "Estado comercial",
-            "enum": [
-              "activo",
-              "inactivo"
-            ],
-            "default": "activo"
-          },
-          "atributos": {
-            "type": "object",
-            "description": "Atributos de la variante"
-          },
-          "motivo": {
-            "type": "string",
-            "description": "Motivo del cambio (RN-08 histórico)"
-          }
-        }
-      },
-      "ServicioResponseDto": {
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "string",
-            "format": "uuid"
-          },
-          "empresa_id": {
-            "type": "string",
-            "format": "uuid"
-          },
-          "codigo": {
-            "type": "string",
-            "example": "SERV-001"
-          },
-          "nombre": {
-            "type": "string"
-          },
-          "descripcion": {
-            "type": "string"
-          },
-          "categoria": {
-            "type": "string"
-          },
-          "marca": {
-            "type": "string"
-          },
-          "codigo_barras": {
-            "type": "string"
-          },
-          "precio": {
-            "type": "string",
-            "example": "1500.00"
-          },
-          "costo": {
-            "type": "string",
-            "example": "500.00"
-          },
-          "unidad": {
-            "type": "string",
-            "example": "Hora (h)"
-          },
-          "duracion_minutos": {
-            "type": "number",
-            "example": 60
-          },
-          "estado": {
-            "type": "string",
-            "enum": [
-              "activo",
-              "inactivo"
-            ]
-          },
-          "creado_en": {
-            "type": "string",
-            "format": "date-time"
-          },
-          "actualizado_en": {
-            "type": "string",
-            "format": "date-time"
-          }
-        },
-        "required": [
-          "id",
-          "empresa_id",
-          "codigo",
-          "nombre",
-          "descripcion",
-          "categoria",
-          "marca",
-          "codigo_barras",
-          "precio",
-          "costo",
-          "unidad",
-          "duracion_minutos",
-          "estado",
-          "creado_en",
-          "actualizado_en"
-        ]
-      },
-      "PaginaServiciosResponseDto": {
-        "type": "object",
-        "properties": {
-          "items": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/ServicioResponseDto"
-            }
-          },
-          "total": {
-            "type": "number"
-          },
-          "pagina": {
-            "type": "number"
-          },
-          "limite": {
-            "type": "number"
-          },
-          "paginas": {
-            "type": "number"
-          }
-        },
-        "required": [
-          "items",
-          "total",
-          "pagina",
-          "limite",
-          "paginas"
-        ]
-      },
-      "CrearServicioRequestDto": {
-        "type": "object",
-        "properties": {
-          "codigo": {
-            "type": "string",
-            "description": "Código interno del servicio",
-            "example": "SERV-001"
-          },
-          "empresa_id": {
-            "type": "string",
-            "description": "Empresa destino (solo admin/super_admin)",
-            "format": "uuid"
-          },
-          "nombre": {
-            "type": "string",
-            "description": "Nombre del servicio",
-            "minLength": 2,
-            "maxLength": 200
-          },
-          "descripcion": {
-            "type": "string"
-          },
-          "categoria": {
-            "type": "string"
-          },
-          "marca": {
-            "type": "string"
-          },
-          "codigo_barras": {
-            "type": "string"
-          },
-          "precio": {
-            "type": "string",
-            "description": "Precio decimal",
-            "example": "1500.00"
-          },
-          "costo": {
-            "type": "string",
-            "description": "Costo decimal",
-            "example": "500.00"
-          },
-          "unidad": {
-            "type": "string",
-            "example": "Hora (h)"
-          },
-          "duracion_minutos": {
-            "type": "number",
-            "description": "Duración en minutos (1-1440)",
-            "minimum": 1,
-            "maximum": 1440
-          },
-          "estado": {
-            "type": "string",
-            "enum": [
-              "activo",
-              "inactivo"
-            ]
-          }
-        },
-        "required": [
-          "codigo",
-          "nombre",
-          "precio",
-          "duracion_minutos"
-        ]
-      },
-      "ActualizarServicioRequestDto": {
-        "type": "object",
-        "properties": {
-          "nombre": {
-            "type": "string",
-            "minLength": 2
-          },
-          "descripcion": {
-            "type": "string"
-          },
-          "categoria": {
-            "type": "string"
-          },
-          "marca": {
-            "type": "string"
-          },
-          "codigo_barras": {
-            "type": "string"
-          },
-          "precio": {
-            "type": "string"
-          },
-          "costo": {
-            "type": "string"
-          },
-          "unidad": {
-            "type": "string"
-          },
-          "duracion_minutos": {
-            "type": "number",
-            "minimum": 1,
-            "maximum": 1440
-          },
-          "estado": {
-            "type": "string",
-            "enum": [
-              "activo",
-              "inactivo"
-            ]
-          }
-        }
-      },
-      "ConfiguracionInventarioResponseDto": {
-        "type": "object",
-        "properties": {
-          "empresa_id": {
-            "type": "string",
-            "format": "uuid"
-          },
-          "metodo_costeo": {
-            "type": "string",
-            "enum": [
-              "promedio",
-              "fifo",
-              "ueps"
-            ]
-          },
-          "permitir_stock_negativo": {
-            "type": "boolean"
-          },
-          "alerta_stock_bajo": {
-            "type": "boolean"
-          },
-          "actualizar_costo_en_compra": {
-            "type": "boolean"
-          },
-          "unidad_defecto": {
-            "type": "string"
-          },
-          "actualizado_en": {
-            "type": "string",
-            "format": "date-time"
-          }
-        },
-        "required": [
-          "empresa_id",
-          "metodo_costeo",
-          "permitir_stock_negativo",
-          "alerta_stock_bajo",
-          "actualizar_costo_en_compra",
-          "unidad_defecto",
-          "actualizado_en"
-        ]
-      },
-      "ActualizarConfiguracionInventarioRequestDto": {
-        "type": "object",
-        "properties": {
-          "metodo_costeo": {
-            "type": "string",
-            "enum": [
-              "promedio",
-              "fifo",
-              "ueps"
-            ]
-          },
-          "permitir_stock_negativo": {
-            "type": "boolean"
-          },
-          "alerta_stock_bajo": {
-            "type": "boolean"
-          },
-          "actualizar_costo_en_compra": {
-            "type": "boolean"
-          },
-          "unidad_defecto": {
-            "type": "string"
-          }
-        }
-      },
-      "ImportarProductoFilaDto": {
-        "type": "object",
-        "properties": {
-          "sku": {
-            "type": "string"
-          },
-          "nombre": {
-            "type": "string"
-          },
-          "descripcion": {
-            "type": "string"
-          },
-          "categoria": {
-            "type": "string"
-          },
-          "precio_base": {
-            "type": "string",
-            "example": "1000.00"
-          },
-          "stock": {
-            "type": "number",
-            "minimum": 0
-          },
-          "costo": {
-            "type": "string"
-          },
-          "marca": {
-            "type": "string"
-          },
-          "codigo_barras": {
-            "type": "string"
-          },
-          "unidad": {
-            "type": "string"
-          },
-          "stock_minimo": {
-            "type": "number",
-            "minimum": 0
-          },
-          "stock_maximo": {
-            "type": "object",
-            "nullable": true,
-            "minimum": 0
-          },
-          "es_materia_prima": {
-            "type": "boolean"
-          },
-          "ubicacion": {
-            "type": "string"
-          }
-        },
-        "required": [
-          "sku",
-          "nombre",
-          "precio_base",
-          "stock"
-        ]
-      },
-      "ImportarProductosRequestDto": {
-        "type": "object",
-        "properties": {
-          "filas": {
-            "description": "Máximo 200 filas",
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/ImportarProductoFilaDto"
-            }
-          }
-        },
-        "required": [
-          "filas"
-        ]
-      },
-      "ImportarProductosResponseDto": {
-        "type": "object",
-        "properties": {
-          "importados": {
-            "type": "number"
-          },
-          "omitidos": {
-            "type": "number"
-          },
-          "errores": {
-            "type": "array",
-            "items": {
-              "type": "string"
-            }
-          }
-        },
-        "required": [
-          "importados",
-          "omitidos",
-          "errores"
-        ]
-      },
-      "EscaneoResponseDto": {
-        "type": "object",
-        "properties": {
-          "tipo": {
-            "type": "string",
-            "enum": [
-              "producto",
-              "servicio"
-            ]
-          },
-          "producto": {
-            "nullable": true,
-            "type": "object",
-            "allOf": [
-              {
-                "$ref": "#/components/schemas/ProductoResponseDto"
-              }
-            ]
-          },
-          "servicio": {
-            "nullable": true,
-            "type": "object",
-            "allOf": [
-              {
-                "$ref": "#/components/schemas/ServicioResponseDto"
-              }
-            ]
-          }
-        },
-        "required": [
-          "tipo"
-        ]
-      },
-      "ComboComponenteResponseDto": {
-        "type": "object",
-        "properties": {
-          "producto_id": {
-            "type": "string",
-            "format": "uuid"
-          },
-          "sku": {
-            "type": "string"
-          },
-          "nombre": {
-            "type": "string"
-          },
-          "cantidad": {
-            "type": "number"
-          },
-          "costo_unitario": {
-            "type": "string"
-          },
-          "subtotal": {
-            "type": "string"
-          }
-        },
-        "required": [
-          "producto_id",
-          "sku",
-          "nombre",
-          "cantidad",
-          "costo_unitario",
-          "subtotal"
-        ]
-      },
-      "ComboResponseDto": {
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "string",
-            "format": "uuid"
-          },
-          "empresa_id": {
-            "type": "string",
-            "format": "uuid"
-          },
-          "sku": {
-            "type": "string"
-          },
-          "nombre": {
-            "type": "string"
-          },
-          "descripcion": {
-            "type": "string"
-          },
-          "codigo_barras": {
-            "type": "string"
-          },
-          "precio": {
-            "type": "string"
-          },
-          "costo_total": {
-            "type": "string"
-          },
-          "margen": {
-            "type": "number"
-          },
-          "estado": {
-            "type": "string",
-            "enum": [
-              "activo",
-              "inactivo"
-            ]
-          },
-          "componentes": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/ComboComponenteResponseDto"
-            }
-          },
-          "creado_en": {
-            "type": "string",
-            "format": "date-time"
-          },
-          "actualizado_en": {
-            "type": "string",
-            "format": "date-time"
-          }
-        },
-        "required": [
-          "id",
-          "empresa_id",
-          "sku",
-          "nombre",
-          "descripcion",
-          "codigo_barras",
-          "precio",
-          "costo_total",
-          "margen",
-          "estado",
-          "componentes",
-          "creado_en",
-          "actualizado_en"
-        ]
-      },
-      "PaginaCombosResponseDto": {
-        "type": "object",
-        "properties": {
-          "items": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/ComboResponseDto"
-            }
-          },
-          "total": {
-            "type": "number"
-          },
-          "pagina": {
-            "type": "number"
-          },
-          "limite": {
-            "type": "number"
-          },
-          "paginas": {
-            "type": "number"
-          }
-        },
-        "required": [
-          "items",
-          "total",
-          "pagina",
-          "limite",
-          "paginas"
-        ]
-      },
-      "ComboComponenteRequestDto": {
-        "type": "object",
-        "properties": {
-          "producto_id": {
-            "type": "string",
-            "format": "uuid"
-          },
-          "sku": {
-            "type": "string",
-            "description": "SKU del producto componente"
-          },
-          "cantidad": {
-            "type": "number",
-            "minimum": 1
-          }
-        },
-        "required": [
-          "sku",
-          "cantidad"
-        ]
-      },
-      "CrearComboRequestDto": {
-        "type": "object",
-        "properties": {
-          "sku": {
-            "type": "string"
-          },
-          "nombre": {
-            "type": "string"
-          },
-          "descripcion": {
-            "type": "string"
-          },
-          "codigo_barras": {
-            "type": "string"
-          },
-          "precio": {
-            "type": "string",
-            "example": "2500.00"
-          },
-          "estado": {
-            "type": "string",
-            "enum": [
-              "activo",
-              "inactivo"
-            ]
-          },
-          "componentes": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/ComboComponenteRequestDto"
-            }
-          }
-        },
-        "required": [
-          "sku",
-          "nombre",
-          "precio",
-          "componentes"
-        ]
-      },
-      "ActualizarComboRequestDto": {
-        "type": "object",
-        "properties": {
-          "nombre": {
-            "type": "string"
-          },
-          "descripcion": {
-            "type": "string"
-          },
-          "codigo_barras": {
-            "type": "string"
-          },
-          "precio": {
-            "type": "string"
-          },
-          "estado": {
-            "type": "string",
-            "enum": [
-              "activo",
-              "inactivo"
-            ]
-          },
-          "componentes": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/ComboComponenteRequestDto"
-            }
-          }
-        }
-      },
       "PromocionResponseDto": {
         "type": "object",
         "properties": {
@@ -3193,147 +3022,7 @@
           "actualizado_en"
         ]
       },
-      "PaginaPromocionesResponseDto": {
-        "type": "object",
-        "properties": {
-          "items": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/PromocionResponseDto"
-            }
-          },
-          "total": {
-            "type": "number"
-          },
-          "pagina": {
-            "type": "number"
-          },
-          "limite": {
-            "type": "number"
-          },
-          "paginas": {
-            "type": "number"
-          }
-        },
-        "required": [
-          "items",
-          "total",
-          "pagina",
-          "limite",
-          "paginas"
-        ]
-      },
-      "CrearPromocionRequestDto": {
-        "type": "object",
-        "properties": {
-          "nombre": {
-            "type": "string"
-          },
-          "tipo": {
-            "type": "string",
-            "enum": [
-              "2x1",
-              "descuento_cantidad",
-              "descuento_porcentaje",
-              "regalo"
-            ]
-          },
-          "producto_id": {
-            "type": "string",
-            "format": "uuid"
-          },
-          "sku": {
-            "type": "string"
-          },
-          "cantidad_requerida": {
-            "type": "object",
-            "minimum": 1
-          },
-          "cantidad_gratis": {
-            "type": "object",
-            "minimum": 1
-          },
-          "descuento_porcentaje": {
-            "type": "object",
-            "minimum": 1,
-            "maximum": 100
-          },
-          "fecha_desde": {
-            "type": "string",
-            "format": "date"
-          },
-          "fecha_hasta": {
-            "type": "string",
-            "format": "date"
-          },
-          "estado": {
-            "type": "string",
-            "enum": [
-              "activo",
-              "inactivo"
-            ]
-          }
-        },
-        "required": [
-          "nombre",
-          "tipo",
-          "fecha_desde",
-          "fecha_hasta"
-        ]
-      },
-      "ActualizarPromocionRequestDto": {
-        "type": "object",
-        "properties": {
-          "nombre": {
-            "type": "string"
-          },
-          "tipo": {
-            "type": "string",
-            "enum": [
-              "2x1",
-              "descuento_cantidad",
-              "descuento_porcentaje",
-              "regalo"
-            ]
-          },
-          "producto_id": {
-            "type": "string",
-            "format": "uuid"
-          },
-          "sku": {
-            "type": "string"
-          },
-          "cantidad_requerida": {
-            "type": "object",
-            "minimum": 1
-          },
-          "cantidad_gratis": {
-            "type": "object",
-            "minimum": 1
-          },
-          "descuento_porcentaje": {
-            "type": "object",
-            "minimum": 1,
-            "maximum": 100
-          },
-          "fecha_desde": {
-            "type": "string",
-            "format": "date"
-          },
-          "fecha_hasta": {
-            "type": "string",
-            "format": "date"
-          },
-          "estado": {
-            "type": "string",
-            "enum": [
-              "activo",
-              "inactivo"
-            ]
-          }
-        }
-      },
-      "MovimientoInventarioResponseDto": {
+      "ServicioResponseDto": {
         "type": "object",
         "properties": {
           "id": {
@@ -3344,38 +3033,53 @@
             "type": "string",
             "format": "uuid"
           },
-          "tipo": {
+          "codigo": {
+            "type": "string",
+            "example": "SERV-001"
+          },
+          "nombre": {
+            "type": "string"
+          },
+          "descripcion": {
+            "type": "string"
+          },
+          "categoria": {
+            "type": "string"
+          },
+          "marca": {
+            "type": "string"
+          },
+          "codigo_barras": {
+            "type": "string"
+          },
+          "precio": {
+            "type": "string",
+            "example": "1500.00"
+          },
+          "costo": {
+            "type": "string",
+            "example": "500.00"
+          },
+          "unidad": {
+            "type": "string",
+            "example": "Hora (h)"
+          },
+          "duracion_minutos": {
+            "type": "number",
+            "example": 60
+          },
+          "estado": {
             "type": "string",
             "enum": [
-              "entrada",
-              "salida",
-              "ajuste",
-              "traslado"
+              "activo",
+              "inactivo"
             ]
           },
-          "motivo": {
-            "type": "string"
-          },
-          "referencia": {
-            "type": "string"
-          },
-          "ubicacion_origen": {
-            "type": "string"
-          },
-          "ubicacion_destino": {
-            "type": "string"
-          },
-          "lineas": {
-            "type": "array",
-            "items": {
-              "type": "object"
-            }
-          },
-          "creado_por": {
-            "type": "object",
-            "nullable": true
-          },
           "creado_en": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "actualizado_en": {
             "type": "string",
             "format": "date-time"
           }
@@ -3383,100 +3087,132 @@
         "required": [
           "id",
           "empresa_id",
-          "tipo",
-          "motivo",
-          "referencia",
-          "ubicacion_origen",
-          "ubicacion_destino",
-          "lineas",
-          "creado_por",
-          "creado_en"
+          "codigo",
+          "nombre",
+          "descripcion",
+          "categoria",
+          "marca",
+          "codigo_barras",
+          "precio",
+          "costo",
+          "unidad",
+          "duracion_minutos",
+          "estado",
+          "creado_en",
+          "actualizado_en"
         ]
       },
-      "PaginaMovimientosResponseDto": {
+      "VarianteProductoRequestDto": {
         "type": "object",
         "properties": {
-          "items": {
+          "sku": {
+            "type": "string",
+            "description": "SKU de la variante",
+            "pattern": "^[A-Za-z0-9-]{2,32}$",
+            "example": "SKU-001-ROJO-M"
+          },
+          "nombre": {
+            "type": "string",
+            "description": "Nombre visible de la variante"
+          },
+          "atributos": {
+            "type": "object",
+            "description": "Atributos de la variante (color, talla, etc.)"
+          },
+          "precio_base": {
+            "type": "string",
+            "description": "Precio base decimal (ej: 1000.00)",
+            "example": "1500.00"
+          },
+          "stock": {
+            "type": "number",
+            "description": "Stock inicial de la variante",
+            "minimum": 0,
+            "example": 5
+          },
+          "imagenes": {
+            "description": "Imágenes de la variante (máx. 3)",
             "type": "array",
             "items": {
-              "$ref": "#/components/schemas/MovimientoInventarioResponseDto"
+              "$ref": "#/components/schemas/ImagenProductoRequestDto"
             }
-          },
-          "total": {
-            "type": "number"
-          },
-          "pagina": {
-            "type": "number"
-          },
-          "limite": {
-            "type": "number"
-          },
-          "paginas": {
-            "type": "number"
-          }
-        },
-        "required": [
-          "items",
-          "total",
-          "pagina",
-          "limite",
-          "paginas"
-        ]
-      },
-      "MovimientoLineaRequestDto": {
-        "type": "object",
-        "properties": {
-          "producto_id": {
-            "type": "string",
-            "format": "uuid"
-          },
-          "sku": {
-            "type": "string"
-          },
-          "cantidad": {
-            "type": "number",
-            "minimum": 0
           }
         },
         "required": [
           "sku",
-          "cantidad"
+          "precio_base",
+          "stock"
         ]
       },
-      "CrearMovimientoInventarioRequestDto": {
+      "VarianteProductoResponseDto": {
         "type": "object",
         "properties": {
-          "tipo": {
+          "id": {
             "type": "string",
+            "description": "Id de la variante",
+            "format": "uuid"
+          },
+          "producto_padre_id": {
+            "type": "string",
+            "description": "Id del producto padre",
+            "format": "uuid"
+          },
+          "sku": {
+            "type": "string",
+            "description": "SKU de la variante",
+            "example": "SKU-001-ROJO-M"
+          },
+          "nombre": {
+            "type": "string",
+            "description": "Nombre visible de la variante"
+          },
+          "atributos": {
+            "type": "object",
+            "description": "Atributos de la variante (color, talla, etc.)",
+            "additionalProperties": true
+          },
+          "precio_base": {
+            "type": "string",
+            "description": "Precio base en córdobas con dos decimales",
+            "example": "1500.00"
+          },
+          "stock": {
+            "type": "number",
+            "description": "Stock disponible",
+            "example": 10
+          },
+          "estado": {
+            "type": "string",
+            "description": "Estado de la variante",
             "enum": [
-              "entrada",
-              "salida",
-              "ajuste",
-              "traslado"
+              "disponible",
+              "agotado"
             ]
           },
-          "motivo": {
-            "type": "string"
-          },
-          "referencia": {
-            "type": "string"
-          },
-          "ubicacion_origen": {
-            "type": "string"
-          },
-          "ubicacion_destino": {
-            "type": "string"
-          },
-          "lineas": {
+          "imagenes": {
+            "description": "Imágenes de la variante (máx. 3)",
             "type": "array",
             "items": {
-              "$ref": "#/components/schemas/MovimientoLineaRequestDto"
+              "$ref": "#/components/schemas/ImagenProductoResponseDto"
             }
+          },
+          "creado_en": {
+            "type": "string",
+            "description": "Fecha de creación (ISO 8601 UTC)",
+            "format": "date-time"
           }
         },
         "required": [
-          "tipo",
-          "lineas"
+          "id",
+          "producto_padre_id",
+          "sku",
+          "nombre",
+          "atributos",
+          "precio_base",
+          "stock",
+          "estado",
+          "imagenes",
+          "creado_en"
         ]
       }
     }
