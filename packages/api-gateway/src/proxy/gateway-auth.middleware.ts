@@ -33,6 +33,12 @@ export const POLITICAS_RUTAS: PoliticaRuta[] = [
     { patron: /^\/api\/v1\/invitaciones\/vendedores\/[^/]+\/aceptar$/, metodos: ['POST'], roles: null },
     { patron: /^\/api\/v1\/catalog\/productos$/, metodos: ['GET'], roles: null },
     { patron: /^\/api\/v1\/catalog\/productos\/[^/]+$/, metodos: ['GET'], roles: null },
+    // Servicios de empresa: recurso administrativo del catálogo (R-PS-02).
+    {
+      patron: /^\/api\/v1\/catalog\/servicios(\/|$)/,
+      metodos: ['*'],
+      roles: [ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.EMPRESARIO],
+    },
     // El slug de tienda forma parte de la URL publica del storefront (ADR-26);
     // el cambio de slug exige ser vendedor/empresario y se valida en el servicio.
     { patron: /^\/api\/v1\/tiendas\/[^/]+\/slug$/, metodos: ['PATCH'], roles: [ROLES.VENDEDOR, ROLES.EMPRESARIO] },

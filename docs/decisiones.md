@@ -822,7 +822,33 @@ Este archivo registra decisiones técnicas deliberadas que se apartan del texto 
 
 ---
 
-## Resumen de cumplimiento post-corrección
+## ADR-31: Catálogo operativo con metadatos y servicios
+
+- **Fecha**: 2026-10-30
+- **Estado**: Aceptado
+- **Contexto**: el QA del módulo Productos/Servicios detectó que costo y
+  metadatos operativos vivían en `localStorage`, que los servicios no tenían
+  recurso backend y que el estado comercial (`activo/inactivo`) se confundía con
+  la disponibilidad de stock (`disponible/agotado`).
+- **Decisión**:
+  1. Incorporar al contrato de producto `costo`, `marca`, `codigo_barras`,
+     `unidad`, `permite_fracciones`, `unidad_compra`, contenido, tipo de
+     precio/costo, stock mínimo/máximo, garantía, materia prima, ubicación y
+     `estado_operativo`.
+  2. Mantener `estado` como disponibilidad de stock y `estado_operativo` como
+     alta/baja comercial. El listado público solo devuelve activos; el dueño y
+     los admin ven también los inactivos.
+  3. Publicar `catalog.servicios` con CRUD por empresa, código único por empresa,
+     baja lógica y validación de precio, costo y duración (1-1440 min).
+  4. Reforzar el aislamiento: el empresario siempre consulta su tenant y no puede
+     pedir el catálogo de otra empresa.
+- **Consecuencias**:
+  - El frontend puede hidratar el modal y la tabla desde la respuesta del API y
+    dejar de usar `localStorage` como fuente de verdad.
+  - Los códigos de barras son únicos por empresa cuando están informados.
+  - Los servicios quedan separados del inventario: no afectan stock ni reservas.
+
+---
 
 | Ítem del documento          | Estado  | Nota |
 |----------------------------|---------|------|

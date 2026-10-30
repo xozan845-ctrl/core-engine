@@ -2,11 +2,12 @@ import { Module } from '@nestjs/common';
 import { PgModule, RabbitModule, OutboxModule, MetricsModule } from '@core/shared';
 import { ProductosModule } from './productos/productos.module';
 import { InventarioModule } from './inventario/inventario.module';
+import { ServiciosModule } from './servicios/servicios.module';
 import { PedidosConsumer } from './eventos/pedidos.consumer';
 import { InternalController } from './internal/internal.controller';
 
 @Module({
-  imports: [PgModule, RabbitModule, OutboxModule, MetricsModule, ProductosModule, InventarioModule],
+  imports: [PgModule, RabbitModule, OutboxModule, MetricsModule, ProductosModule, InventarioModule, ServiciosModule],
   providers: [PedidosConsumer],
   controllers: [InternalController],
 })

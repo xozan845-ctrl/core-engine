@@ -23,6 +23,7 @@ import {
 import {
   IsArray,
   IsBoolean,
+  IsIn,
   IsInt,
   IsObject,
   IsOptional,
@@ -146,6 +147,92 @@ export class CrearProductoRequestDto {
   @Min(0)
   stock: number;
 
+
+  @ApiProperty({ description: 'Costo decimal en córdobas (ej: 150.00)', required: false, example: '150.00' })
+  @IsOptional()
+  @IsString()
+  @Matches(/^\d+(\.\d{1,2})?$/, { message: 'Costo invalido (ej: 150.00)' })
+  costo?: string;
+
+  @ApiProperty({ description: 'Marca', required: false })
+  @IsOptional()
+  @IsString()
+  marca?: string;
+
+  @ApiProperty({ description: 'Código de barras único por empresa', required: false })
+  @IsOptional()
+  @IsString()
+  codigo_barras?: string;
+
+  @ApiProperty({ description: 'Unidad de venta', required: false, example: 'Unidad (u)' })
+  @IsOptional()
+  @IsString()
+  unidad?: string;
+
+  @ApiProperty({ description: 'Permite cantidades fraccionarias', required: false, default: false })
+  @IsOptional()
+  @IsBoolean()
+  permite_fracciones?: boolean;
+
+  @ApiProperty({ description: 'Unidad de compra', required: false, example: 'Igual que la de venta' })
+  @IsOptional()
+  @IsString()
+  unidad_compra?: string;
+
+  @ApiProperty({ description: 'Contenido por unidad', required: false, minimum: 0, default: 0 })
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  contenido_cantidad?: number;
+
+  @ApiProperty({ description: 'Unidad del contenido', required: false, example: 'Sin contenido' })
+  @IsOptional()
+  @IsString()
+  contenido_unidad?: string;
+
+  @ApiProperty({ description: 'Tipo de precio', required: false, enum: ['fijo', 'escala'] })
+  @IsOptional()
+  @IsIn(['fijo', 'escala'])
+  tipo_precio?: 'fijo' | 'escala';
+
+  @ApiProperty({ description: 'Tipo de costo', required: false, enum: ['fijo', 'escala'] })
+  @IsOptional()
+  @IsIn(['fijo', 'escala'])
+  tipo_costo?: 'fijo' | 'escala';
+
+  @ApiProperty({ description: 'Stock mínimo para alertas', required: false, minimum: 0, default: 0 })
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  stock_minimo?: number;
+
+  @ApiProperty({ description: 'Stock máximo', required: false, nullable: true, minimum: 0 })
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  stock_maximo?: number | null;
+
+  @ApiProperty({ description: 'Garantía en meses', required: false, nullable: true, minimum: 0 })
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  garantia_meses?: number | null;
+
+  @ApiProperty({ description: 'Es materia prima', required: false, default: false })
+  @IsOptional()
+  @IsBoolean()
+  es_materia_prima?: boolean;
+
+  @ApiProperty({ description: 'Ubicación física', required: false })
+  @IsOptional()
+  @IsString()
+  ubicacion?: string;
+
+  @ApiProperty({ description: 'Estado comercial', required: false, enum: ['activo', 'inactivo'], default: 'activo' })
+  @IsOptional()
+  @IsIn(['activo', 'inactivo'])
+  estado_operativo?: 'activo' | 'inactivo';
+
   @ApiProperty({ description: 'Atributos del producto (si aplica)', required: false })
   @IsOptional()
   @IsObject()
@@ -194,6 +281,92 @@ export class ActualizarProductoRequestDto {
   @IsInt()
   @Min(0)
   stock?: number;
+
+
+  @ApiProperty({ description: 'Costo decimal en córdobas (ej: 150.00)', required: false, example: '150.00' })
+  @IsOptional()
+  @IsString()
+  @Matches(/^\d+(\.\d{1,2})?$/, { message: 'Costo invalido (ej: 150.00)' })
+  costo?: string;
+
+  @ApiProperty({ description: 'Marca', required: false })
+  @IsOptional()
+  @IsString()
+  marca?: string;
+
+  @ApiProperty({ description: 'Código de barras único por empresa', required: false })
+  @IsOptional()
+  @IsString()
+  codigo_barras?: string;
+
+  @ApiProperty({ description: 'Unidad de venta', required: false, example: 'Unidad (u)' })
+  @IsOptional()
+  @IsString()
+  unidad?: string;
+
+  @ApiProperty({ description: 'Permite cantidades fraccionarias', required: false })
+  @IsOptional()
+  @IsBoolean()
+  permite_fracciones?: boolean;
+
+  @ApiProperty({ description: 'Unidad de compra', required: false, example: 'Igual que la de venta' })
+  @IsOptional()
+  @IsString()
+  unidad_compra?: string;
+
+  @ApiProperty({ description: 'Contenido por unidad', required: false, minimum: 0, default: 0 })
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  contenido_cantidad?: number;
+
+  @ApiProperty({ description: 'Unidad del contenido', required: false, example: 'Sin contenido' })
+  @IsOptional()
+  @IsString()
+  contenido_unidad?: string;
+
+  @ApiProperty({ description: 'Tipo de precio', required: false, enum: ['fijo', 'escala'] })
+  @IsOptional()
+  @IsIn(['fijo', 'escala'])
+  tipo_precio?: 'fijo' | 'escala';
+
+  @ApiProperty({ description: 'Tipo de costo', required: false, enum: ['fijo', 'escala'] })
+  @IsOptional()
+  @IsIn(['fijo', 'escala'])
+  tipo_costo?: 'fijo' | 'escala';
+
+  @ApiProperty({ description: 'Stock mínimo para alertas', required: false, minimum: 0, default: 0 })
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  stock_minimo?: number;
+
+  @ApiProperty({ description: 'Stock máximo', required: false, nullable: true, minimum: 0 })
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  stock_maximo?: number | null;
+
+  @ApiProperty({ description: 'Garantía en meses', required: false, nullable: true, minimum: 0 })
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  garantia_meses?: number | null;
+
+  @ApiProperty({ description: 'Es materia prima', required: false })
+  @IsOptional()
+  @IsBoolean()
+  es_materia_prima?: boolean;
+
+  @ApiProperty({ description: 'Ubicación física', required: false })
+  @IsOptional()
+  @IsString()
+  ubicacion?: string;
+
+  @ApiProperty({ description: 'Estado comercial', required: false, enum: ['activo', 'inactivo'], default: 'activo' })
+  @IsOptional()
+  @IsIn(['activo', 'inactivo'])
+  estado_operativo?: 'activo' | 'inactivo';
 
   @ApiProperty({ description: 'Atributos de la variante', required: false })
   @IsOptional()
@@ -268,7 +441,11 @@ export class ProductosController {
     @UsuarioActual() usuario: UsuarioContexto | null,
   ): Promise<Pagina<Producto>> {
     const empresaId = this.empresaDeConsulta(usuario, query.empresa_id);
-    return this.productos.listar({ ...query, empresa_id: empresaId });
+    return this.productos.listar({
+      ...query,
+      empresa_id: empresaId,
+      incluir_inactivos: this.puedeVerInactivos(usuario, empresaId),
+    });
   }
 
   /** GET /api/v1/catalog/productos/:id — detalle publico acotado a la empresa. */
@@ -283,7 +460,11 @@ export class ProductosController {
     @UsuarioActual() usuario: UsuarioContexto | null,
   ): Promise<Producto> {
     const empresaId = this.empresaDeConsulta(usuario, query.empresa_id);
-    const producto = await this.productos.encontrarPorId(id, empresaId);
+    const producto = await this.productos.encontrarPorId(
+      id,
+      empresaId,
+      this.puedeVerInactivos(usuario, empresaId),
+    );
     if (!producto) {
       throw new NotFoundError('Producto', id);
     }
@@ -411,6 +592,16 @@ export class ProductosController {
 
   /** ADR-27: el catálogo público exige empresa; la sesión aporta el tenant. */
   private empresaDeConsulta(usuario: UsuarioContexto | null, solicitada?: string): string {
+    if (usuario?.rol === ROLES.EMPRESARIO) {
+      if (!usuario.tenant_id) throw new NotFoundError('Empresa', 'activa');
+      if (solicitada && solicitada !== usuario.tenant_id) {
+        throw new DomainError(
+          'EMPRESA_NO_AUTORIZADA',
+          'El empresario solo puede consultar el catálogo de su empresa.',
+        );
+      }
+      return usuario.tenant_id;
+    }
     const empresaId = solicitada ?? usuario?.tenant_id;
     if (!empresaId) {
       throw new DomainError('EMPRESA_REQUERIDA', 'Indica empresa_id o autentícate con una empresa.');
@@ -419,6 +610,13 @@ export class ProductosController {
       throw new DomainError('EMPRESA_NO_PUBLICA', 'La empresa comodín del catálogo legado no publica productos.');
     }
     return empresaId;
+  }
+
+  /** Solo el dueño del catálogo o un admin pueden ver productos inactivos. */
+  private puedeVerInactivos(usuario: UsuarioContexto | null, empresaId: string): boolean {
+    if (!usuario) return false;
+    if (usuario.rol === ROLES.SUPER_ADMIN || usuario.rol === ROLES.ADMIN) return true;
+    return usuario.rol === ROLES.EMPRESARIO && usuario.tenant_id === empresaId;
   }
 
   /** Empresario: su tenant. Admin: la empresa del producto. */

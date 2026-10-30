@@ -247,3 +247,16 @@ CREATE POLICY workspace_registros_vendedor ON finance.workspace_registros
   USING (auth.rol() = 'vendedor' AND propietario_id::text = auth.uid())
   WITH CHECK (auth.rol() = 'vendedor' AND propietario_id::text = auth.uid());
 
+
+-- ── catalog.servicios (R-PS-02) ─────────────────────────────────────────
+-- Los servicios son administrados por la empresa dueña; el catálogo público
+-- de servicios no se expone todavía, así que no hay política anónima.
+ALTER TABLE catalog.servicios ENABLE ROW LEVEL SECURITY;
+CREATE POLICY servicios_admin ON catalog.servicios
+  FOR ALL TO authenticated
+  USING (auth.rol() IN ('super_admin', 'admin'))
+  WITH CHECK (auth.rol() IN ('super_admin', 'admin'));
+CREATE POLICY servicios_empresa ON catalog.servicios
+  FOR ALL TO authenticated
+  USING (auth.rol() = 'empresario' AND empresa_id::text = (auth.jwt() ->> 'tenant_id'))
+  WITH CHECK (auth.rol() = 'empresario' AND empresa_id::text = (auth.jwt() ->> 'tenant_id'));
