@@ -298,6 +298,25 @@ export class ProductosService {
     return fila ? this.detallar(fila) : null;
   }
 
+  async encontrarPorCodigoBarras(
+    codigo: string,
+    empresaId: string,
+    incluirInactivos = false,
+  ): Promise<Producto | null> {
+    const codigoBarras = codigo.trim();
+    if (!codigoBarras) return null;
+    const fila = await this.pg.queryOne<ProductoRow>(
+      `SELECT ${COLUMNAS_PRODUCTO},
+              EXISTS (SELECT 1 FROM catalog.productos c WHERE c.producto_padre_id = v.id) AS tiene_variantes
+       FROM catalog.producto_catalogo_vista v
+       WHERE v.empresa_id = $1 AND v.codigo_barras = $2
+         ${incluirInactivos ? '' : "AND v.estado_operativo = 'activo'"}
+       LIMIT 1`,
+      [empresaId, codigoBarras],
+    );
+    return fila ? this.detallar(fila) : null;
+  }
+
   /**
    * Consulta por lote de SKUs. Un SKU puede repetirse en empresas distintas,
    * por eso la fila incluye `empresa_id`: el consumidor debe emparejar la
@@ -370,7 +389,7 @@ export class ProductosService {
     atributos?: Record<string, unknown>;
     variantes?: VarianteProductoInput[];
     imagenes?: ImagenProductoInput[];
-  } & MetadatosProductoInput): Promise<Producto> {
+  } & MetadatosProductoInput, opciones?: { empresaValidada?: boolean }): Promise<Producto> {
     const sku = this.normalizarSku(datos.sku);
     this.validarStock(datos.stock);
     const precio = this.validarPrecio(datos.precio_base);
@@ -403,7 +422,7 @@ export class ProductosService {
         );
       }
     }
-    await this.validarEmpresaCatalogo(datos.empresa_id);
+    if (!opciones?.empresaValidada) await this.validarEmpresaCatalogo(datos.empresa_id);
     await this.validarCodigoBarras(datos.empresa_id, metadatos.codigo_barras);
     await this.validarImagenes(datos.empresa_id, datos.imagenes ?? []);
     for (const variante of variantes) {
