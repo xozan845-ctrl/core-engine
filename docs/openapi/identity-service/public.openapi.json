@@ -1148,6 +1148,15 @@
               "propia",
               "hibrida"
             ]
+          },
+          "tipo_empresa": {
+            "type": "string",
+            "enum": [
+              "comercial",
+              "logistica",
+              "plataforma"
+            ],
+            "default": "comercial"
           }
         },
         "required": [

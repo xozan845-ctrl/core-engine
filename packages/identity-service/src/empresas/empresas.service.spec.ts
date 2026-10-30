@@ -502,3 +502,45 @@ describe('EmpresasService · perfil y logo', () => {
     ).rejects.toMatchObject({ codigo: 'LOGO_NO_VERIFICABLE' });
   });
 });
+
+describe('EmpresasService · tipo de empresa', () => {
+  it('permite al empresario miembro cambiar el tipo', async () => {
+    const pg = {
+      queryOne: vi.fn()
+        .mockResolvedValueOnce({ ok: 1 })
+        .mockResolvedValueOnce({ ...empresa, tipo_empresa: 'logistica' }),
+    };
+    const servicio = new EmpresasService(pg as never, {} as never);
+    await expect(
+      servicio.actualizarTipo('e-1', 'logistica', 'u-1'),
+    ).resolves.toMatchObject({ tipo_empresa: 'logistica' });
+    expect(pg.queryOne).toHaveBeenNthCalledWith(
+      1,
+      expect.stringContaining('empresa_miembros'),
+      ['e-1', 'u-1'],
+    );
+  });
+
+  it('rechaza a un empresario que no pertenece a la empresa', async () => {
+    const pg = { queryOne: vi.fn().mockResolvedValueOnce(null) };
+    const servicio = new EmpresasService(pg as never, {} as never);
+    await expect(
+      servicio.actualizarTipo('e-1', 'logistica', 'u-2'),
+    ).rejects.toBeInstanceOf(ForbiddenError);
+  });
+
+  it('permite al admin global cambiar cualquier tipo y valida el enum', async () => {
+    const pg = {
+      queryOne: vi.fn().mockResolvedValueOnce({ ...empresa, tipo_empresa: 'plataforma' }),
+    };
+    const servicio = new EmpresasService(pg as never, {} as never);
+    await expect(
+      servicio.actualizarTipo('e-1', 'plataforma', 'admin-1', true),
+    ).resolves.toMatchObject({ tipo_empresa: 'plataforma' });
+    expect(pg.queryOne).toHaveBeenCalledTimes(1);
+
+    await expect(
+      servicio.actualizarTipo('e-1', 'otro' as never, 'admin-1', true),
+    ).rejects.toMatchObject({ codigo: 'TIPO_EMPRESA_INVALIDO' });
+  });
+});
