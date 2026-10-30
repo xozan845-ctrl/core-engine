@@ -86,55 +86,55 @@ export class ProductoResponseDto {
   @ApiProperty({ description: 'Estado del producto', enum: ['disponible', 'agotado'], example: 'disponible' })
   estado: 'disponible' | 'agotado';
 
-  @ApiProperty({ description: 'Estado comercial del producto', enum: ['activo', 'inactivo'] })
+  @ApiProperty({ description: 'Estado comercial del producto', enum: ['activo', 'inactivo'], required: false })
   estado_operativo: 'activo' | 'inactivo';
 
-  @ApiProperty({ description: 'Costo en córdobas con dos decimales', example: '150.00' })
+  @ApiProperty({ description: 'Costo en córdobas con dos decimales', example: '150.00', required: false })
   costo: string;
 
-  @ApiProperty({ description: 'Marca' })
+  @ApiProperty({ description: 'Marca', required: false })
   marca: string;
 
-  @ApiProperty({ description: 'Código de barras único por empresa' })
+  @ApiProperty({ description: 'Código de barras único por empresa', required: false })
   codigo_barras: string;
 
-  @ApiProperty({ description: 'Unidad de venta', example: 'Unidad (u)' })
+  @ApiProperty({ description: 'Unidad de venta', example: 'Unidad (u)', required: false })
   unidad: string;
 
-  @ApiProperty({ description: 'Permite fracciones' })
+  @ApiProperty({ description: 'Permite fracciones', required: false })
   permite_fracciones: boolean;
 
-  @ApiProperty({ description: 'Unidad de compra' })
+  @ApiProperty({ description: 'Unidad de compra', required: false })
   unidad_compra: string;
 
-  @ApiProperty({ description: 'Contenido por unidad' })
+  @ApiProperty({ description: 'Contenido por unidad', required: false })
   contenido_cantidad: number;
 
-  @ApiProperty({ description: 'Unidad del contenido' })
+  @ApiProperty({ description: 'Unidad del contenido', required: false })
   contenido_unidad: string;
 
-  @ApiProperty({ description: 'Tipo de precio', enum: ['fijo', 'escala'] })
+  @ApiProperty({ description: 'Tipo de precio', enum: ['fijo', 'escala'], required: false })
   tipo_precio: 'fijo' | 'escala';
 
-  @ApiProperty({ description: 'Tipo de costo', enum: ['fijo', 'escala'] })
+  @ApiProperty({ description: 'Tipo de costo', enum: ['fijo', 'escala'], required: false })
   tipo_costo: 'fijo' | 'escala';
 
-  @ApiProperty({ description: 'Stock mínimo para alertas' })
+  @ApiProperty({ description: 'Stock mínimo para alertas', required: false })
   stock_minimo: number;
 
-  @ApiProperty({ description: 'Stock máximo', nullable: true })
+  @ApiProperty({ description: 'Stock máximo', nullable: true, required: false })
   stock_maximo: number | null;
 
-  @ApiProperty({ description: 'Garantía en meses', nullable: true })
+  @ApiProperty({ description: 'Garantía en meses', nullable: true, required: false })
   garantia_meses: number | null;
 
-  @ApiProperty({ description: 'Es materia prima' })
+  @ApiProperty({ description: 'Es materia prima', required: false })
   es_materia_prima: boolean;
 
-  @ApiProperty({ description: 'Ubicación física' })
+  @ApiProperty({ description: 'Ubicación física', required: false })
   ubicacion: string;
 
-  @ApiProperty({ description: 'Última actualización (ISO 8601 UTC)', format: 'date-time' })
+  @ApiProperty({ description: 'Última actualización (ISO 8601 UTC)', format: 'date-time', required: false })
   actualizado_en: string;
 
   @ApiProperty({ description: 'Fecha de creación (ISO 8601 UTC)', format: 'date-time' })
