@@ -1,0 +1,230 @@
+{
+  "openapi": "3.0.0",
+  "info": {
+    "title": "Core Engine · stores-service · API interna",
+    "description": "Contrato interno (/internal/**) de stores-service; requiere x-internal-key.",
+    "version": "internal",
+    "contact": {}
+  },
+  "x-servicio": "stores-service",
+  "x-superficie": "interna",
+  "security": [
+    {
+      "internalKey": []
+    }
+  ],
+  "tags": [],
+  "paths": {
+    "/internal/ofertas": {
+      "get": {
+        "operationId": "InternalController_porIds",
+        "parameters": [
+          {
+            "name": "ids",
+            "required": false,
+            "in": "query",
+            "description": "Ids de oferta separados por coma",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Ofertas encontradas",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/OfertaResponseDto"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "internalKey": []
+          }
+        ],
+        "summary": "Lote de ofertas por ids (servicio→servicio)",
+        "tags": [
+          "Tiendas (interno)"
+        ]
+      }
+    },
+    "/internal/ofertas/producto/{productoId}/activas": {
+      "get": {
+        "operationId": "InternalController_activas",
+        "parameters": [
+          {
+            "name": "productoId",
+            "required": true,
+            "in": "path",
+            "description": "Id del producto o variante",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Total de ofertas activas",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "total": {
+                      "type": "number"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "internalKey": []
+          }
+        ],
+        "summary": "Contar ofertas activas de un producto (servicio→servicio)",
+        "tags": [
+          "Tiendas (interno)"
+        ]
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "bearer": {
+        "scheme": "bearer",
+        "bearerFormat": "JWT",
+        "type": "http"
+      },
+      "internalKey": {
+        "type": "apiKey",
+        "in": "header",
+        "name": "x-internal-key"
+      }
+    },
+    "schemas": {
+      "OfertaResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Id de la oferta",
+            "format": "uuid"
+          },
+          "tienda_id": {
+            "type": "string",
+            "description": "Id de la tienda",
+            "format": "uuid"
+          },
+          "vendedor_id": {
+            "type": "string",
+            "description": "Id del vendedor",
+            "format": "uuid"
+          },
+          "empresa_id": {
+            "type": "string",
+            "description": "Empresa propietaria",
+            "format": "uuid"
+          },
+          "participacion_porcentaje": {
+            "type": "number",
+            "description": "Participación congelable del vendedor",
+            "minimum": 0,
+            "maximum": 100
+          },
+          "producto_id": {
+            "type": "string",
+            "description": "Id del producto o variante vendible",
+            "format": "uuid"
+          },
+          "producto_padre_id": {
+            "type": "object",
+            "description": "Id del producto padre (si es variante)",
+            "nullable": true,
+            "format": "uuid"
+          },
+          "sku": {
+            "type": "string",
+            "description": "SKU de la variante o producto",
+            "example": "SKU-001"
+          },
+          "producto_nombre": {
+            "type": "string",
+            "description": "Nombre del producto/variante"
+          },
+          "atributos": {
+            "type": "object",
+            "description": "Atributos de la variante (color, talla, etc.)",
+            "additionalProperties": true
+          },
+          "imagen_objeto_id": {
+            "type": "object",
+            "description": "Id del objeto de la imagen principal",
+            "nullable": true,
+            "format": "uuid"
+          },
+          "imagen_url": {
+            "type": "object",
+            "description": "URL pública de la imagen principal",
+            "nullable": true
+          },
+          "margen": {
+            "type": "number",
+            "description": "Margen aplicado (0–90)",
+            "example": 15
+          },
+          "precio_base": {
+            "type": "string",
+            "description": "Precio base en córdobas con dos decimales",
+            "example": "1000.00"
+          },
+          "precio_venta": {
+            "type": "string",
+            "description": "Precio de venta en córdobas con dos decimales",
+            "example": "1150.00"
+          },
+          "stock": {
+            "type": "number",
+            "description": "Stock disponible",
+            "example": 10
+          },
+          "estado": {
+            "type": "string",
+            "description": "Estado de la oferta",
+            "example": "activa"
+          },
+          "creado_en": {
+            "type": "string",
+            "description": "Fecha de creación (ISO 8601 UTC)",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "tienda_id",
+          "vendedor_id",
+          "empresa_id",
+          "participacion_porcentaje",
+          "producto_id",
+          "sku",
+          "producto_nombre",
+          "margen",
+          "precio_base",
+          "precio_venta",
+          "stock",
+          "estado",
+          "creado_en"
+        ]
+      }
+    }
+  }
+}

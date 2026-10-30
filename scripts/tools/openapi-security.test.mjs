@@ -64,14 +64,17 @@ test('debe declarar internalKey en cada operación /internal de los specs por se
   const directorio = resolve(repoRoot, 'docs/openapi');
   const faltantes = [];
 
-  for (const fichero of readdirSync(directorio).filter((f) => f.endsWith('.json'))) {
-    const documento = JSON.parse(readFileSync(resolve(directorio, fichero), 'utf8'));
+  for (const servicio of readdirSync(directorio, { withFileTypes: true })
+    .filter((e) => e.isDirectory())
+    .map((e) => e.name)
+    .sort()) {
+    const fichero = resolve(directorio, servicio, 'internal.openapi.json');
+    const documento = JSON.parse(readFileSync(fichero, 'utf8'));
     for (const [ruta, operaciones] of Object.entries(documento.paths ?? {})) {
-      if (!ruta.startsWith('/internal')) continue;
       for (const [metodo, operacion] of Object.entries(operaciones)) {
         const seguridad = operacion.security ?? documento.security ?? [];
         if (!seguridad.some((requisito) => 'internalKey' in requisito)) {
-          faltantes.push(`${fichero}: ${metodo.toUpperCase()} ${ruta}`);
+          faltantes.push(`${servicio}/internal.openapi.json: ${metodo.toUpperCase()} ${ruta}`);
         }
       }
     }

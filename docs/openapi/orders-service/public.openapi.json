@@ -1,222 +1,15 @@
 {
   "openapi": "3.0.0",
+  "info": {
+    "title": "Core Engine · orders-service · API pública",
+    "description": "Contrato público (/api/v1/**) de orders-service. No contiene rutas /internal/**.",
+    "version": "v1",
+    "contact": {}
+  },
+  "x-servicio": "orders-service",
+  "x-superficie": "publica",
+  "tags": [],
   "paths": {
-    "/internal/orders/{id}/transicion": {
-      "post": {
-        "operationId": "InternoController_transicion",
-        "parameters": [
-          {
-            "name": "id",
-            "required": true,
-            "in": "path",
-            "description": "Id de la orden",
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "estado",
-            "required": true,
-            "in": "query",
-            "description": "Estado objetivo",
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "motivo",
-            "required": false,
-            "in": "query",
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "actor",
-            "required": false,
-            "in": "query",
-            "description": "Usuario que ejecuta la transición",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "201": {
-            "description": "Orden con el nuevo estado",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/OrderViewResponseDto"
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "internalKey": []
-          }
-        ],
-        "summary": "Avanzar el ciclo de vida de la orden (logística→orders)",
-        "tags": [
-          "Pedidos (interno)"
-        ]
-      }
-    },
-    "/internal/orders/{id}": {
-      "get": {
-        "operationId": "InternoController_orden",
-        "parameters": [
-          {
-            "name": "id",
-            "required": true,
-            "in": "path",
-            "description": "Id de la orden",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Orden encontrada",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/OrderViewResponseDto"
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "internalKey": []
-          }
-        ],
-        "summary": "Lectura completa de una orden (reportes/comisiones)",
-        "tags": [
-          "Pedidos (interno)"
-        ]
-      }
-    },
-    "/internal/orders": {
-      "get": {
-        "operationId": "InternoController_listar",
-        "parameters": [
-          {
-            "name": "estado",
-            "required": false,
-            "in": "query",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Órdenes registradas",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/components/schemas/OrderViewResponseDto"
-                  }
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "internalKey": []
-          }
-        ],
-        "summary": "Listar órdenes (servicio→servicio)",
-        "tags": [
-          "Pedidos (interno)"
-        ]
-      }
-    },
-    "/internal/orders/{id}/reproyectar": {
-      "post": {
-        "operationId": "InternoController_reproyectar",
-        "parameters": [
-          {
-            "name": "id",
-            "required": true,
-            "in": "path",
-            "description": "Id de la orden",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "201": {
-            "description": "Orden reproyectada",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/OrderViewResponseDto"
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "internalKey": []
-          }
-        ],
-        "summary": "Reproyectar una orden desde su historia (Event Sourcing)",
-        "tags": [
-          "Pedidos (interno)"
-        ]
-      }
-    },
-    "/internal/orders/{id}/historia": {
-      "get": {
-        "operationId": "InternoController_historia",
-        "parameters": [
-          {
-            "name": "id",
-            "required": true,
-            "in": "path",
-            "description": "Id de la orden",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Historia de eventos",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/components/schemas/HistoriaEventoResponseDto"
-                  }
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "internalKey": []
-          }
-        ],
-        "summary": "Historia inmutable de eventos de una orden",
-        "tags": [
-          "Pedidos (interno)"
-        ]
-      }
-    },
     "/api/v1/orders": {
       "post": {
         "operationId": "PedidosController_crear",
@@ -787,14 +580,6 @@
       }
     }
   },
-  "info": {
-    "title": "Core Engine · orders-service",
-    "description": "Órdenes y transacciones: pedidos, carrito y comisiones (CQRS + Event Sourcing, Tabla 21)",
-    "version": "v1",
-    "contact": {}
-  },
-  "tags": [],
-  "servers": [],
   "components": {
     "securitySchemes": {
       "bearer": {
@@ -809,6 +594,215 @@
       }
     },
     "schemas": {
+      "ActualizarCantidadRequestDto": {
+        "type": "object",
+        "properties": {
+          "cantidad": {
+            "type": "number",
+            "description": "Cantidad (0 elimina el item; 1-99)",
+            "minimum": 0,
+            "maximum": 99,
+            "example": 3
+          }
+        },
+        "required": [
+          "cantidad"
+        ]
+      },
+      "AgregarItemRequestDto": {
+        "type": "object",
+        "properties": {
+          "oferta_id": {
+            "type": "string",
+            "description": "Id de la oferta (vendedor-producto)",
+            "example": "a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11"
+          },
+          "cantidad": {
+            "type": "number",
+            "description": "Cantidad (1-99)",
+            "minimum": 1,
+            "maximum": 99,
+            "example": 2
+          }
+        },
+        "required": [
+          "oferta_id",
+          "cantidad"
+        ]
+      },
+      "CarritoItemResponseDto": {
+        "type": "object",
+        "properties": {
+          "oferta_id": {
+            "type": "string",
+            "description": "Id de la oferta",
+            "format": "uuid"
+          },
+          "cantidad": {
+            "type": "number",
+            "description": "Cantidad",
+            "example": 2
+          },
+          "id": {
+            "type": "string",
+            "description": "Id de la oferta (alias enriquecido)",
+            "format": "uuid"
+          },
+          "tienda_id": {
+            "type": "string",
+            "description": "Id de la tienda",
+            "format": "uuid"
+          },
+          "vendedor_id": {
+            "type": "string",
+            "description": "Id del vendedor",
+            "format": "uuid"
+          },
+          "sku": {
+            "type": "string",
+            "description": "SKU del producto",
+            "example": "SKU-001"
+          },
+          "producto_nombre": {
+            "type": "string",
+            "description": "Nombre del producto"
+          },
+          "precio_venta": {
+            "type": "string",
+            "description": "Precio de venta en córdobas con dos decimales",
+            "example": "1150.00"
+          },
+          "stock": {
+            "type": "number",
+            "description": "Stock disponible",
+            "example": 10
+          },
+          "estado": {
+            "type": "string",
+            "description": "Estado de la oferta",
+            "example": "activa"
+          }
+        },
+        "required": [
+          "oferta_id",
+          "cantidad",
+          "id",
+          "tienda_id",
+          "vendedor_id",
+          "sku",
+          "producto_nombre",
+          "precio_venta",
+          "stock",
+          "estado"
+        ]
+      },
+      "CarritoResponseDto": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "description": "Items del carrito",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CarritoItemResponseDto"
+            }
+          },
+          "total": {
+            "type": "string",
+            "description": "Total del carrito en córdobas con dos decimales",
+            "example": "2300.00"
+          },
+          "expira_en": {
+            "type": "object",
+            "description": "Expiración del carrito (ISO 8601 UTC); null si está vacío",
+            "nullable": true,
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "items",
+          "total"
+        ]
+      },
+      "ComisionVistaResponseDto": {
+        "type": "object",
+        "properties": {
+          "vendedor_id": {
+            "type": "string",
+            "description": "Id del vendedor",
+            "format": "uuid"
+          },
+          "periodo": {
+            "type": "string",
+            "description": "Periodo (YYYY-MM)",
+            "example": "2026-10"
+          },
+          "ordenes": {
+            "type": "number",
+            "description": "Órdenes del periodo",
+            "example": 12
+          },
+          "total_ventas_cents": {
+            "type": "number",
+            "description": "Ventas del periodo en centavos",
+            "example": 1380000
+          },
+          "total_comision_cents": {
+            "type": "number",
+            "description": "Comisiones del periodo en centavos",
+            "example": 165600
+          },
+          "actualizado_en": {
+            "type": "string",
+            "description": "Última actualización (ISO 8601 UTC)",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "vendedor_id",
+          "periodo",
+          "ordenes",
+          "total_ventas_cents",
+          "total_comision_cents",
+          "actualizado_en"
+        ]
+      },
+      "CreateOrderCommand": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "description": "Artículos de la orden",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ItemOrdenRequestDto"
+            }
+          },
+          "usar_carrito": {
+            "type": "boolean",
+            "description": "Crear la orden desde el carrito (RN-05)",
+            "example": false
+          }
+        }
+      },
+      "ItemOrdenRequestDto": {
+        "type": "object",
+        "properties": {
+          "oferta_id": {
+            "type": "string",
+            "description": "Id de la oferta (vendedor-producto)"
+          },
+          "cantidad": {
+            "type": "number",
+            "description": "Cantidad (1-99)",
+            "minimum": 1,
+            "maximum": 99,
+            "example": 1
+          }
+        },
+        "required": [
+          "oferta_id",
+          "cantidad"
+        ]
+      },
       "ItemOrdenResponseDto": {
         "type": "object",
         "properties": {
@@ -967,128 +961,6 @@
           "actualizado_en"
         ]
       },
-      "HistoriaEventoResponseDto": {
-        "type": "object",
-        "properties": {
-          "event_id": {
-            "type": "string",
-            "description": "Id del evento",
-            "format": "uuid"
-          },
-          "aggregate_id": {
-            "type": "string",
-            "description": "Id del agregado (orden)",
-            "format": "uuid"
-          },
-          "tipo": {
-            "type": "string",
-            "description": "Tipo de evento",
-            "example": "OrderCreatedEvent"
-          },
-          "payload": {
-            "type": "object",
-            "description": "Payload del evento"
-          },
-          "version": {
-            "type": "number",
-            "description": "Versión del agregado",
-            "example": 1
-          },
-          "creado_en": {
-            "type": "string",
-            "description": "Fecha del evento (ISO 8601 UTC)",
-            "format": "date-time"
-          }
-        },
-        "required": [
-          "event_id",
-          "aggregate_id",
-          "tipo",
-          "payload",
-          "version",
-          "creado_en"
-        ]
-      },
-      "ItemOrdenRequestDto": {
-        "type": "object",
-        "properties": {
-          "oferta_id": {
-            "type": "string",
-            "description": "Id de la oferta (vendedor-producto)"
-          },
-          "cantidad": {
-            "type": "number",
-            "description": "Cantidad (1-99)",
-            "minimum": 1,
-            "maximum": 99,
-            "example": 1
-          }
-        },
-        "required": [
-          "oferta_id",
-          "cantidad"
-        ]
-      },
-      "CreateOrderCommand": {
-        "type": "object",
-        "properties": {
-          "items": {
-            "description": "Artículos de la orden",
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/ItemOrdenRequestDto"
-            }
-          },
-          "usar_carrito": {
-            "type": "boolean",
-            "description": "Crear la orden desde el carrito (RN-05)",
-            "example": false
-          }
-        }
-      },
-      "ComisionVistaResponseDto": {
-        "type": "object",
-        "properties": {
-          "vendedor_id": {
-            "type": "string",
-            "description": "Id del vendedor",
-            "format": "uuid"
-          },
-          "periodo": {
-            "type": "string",
-            "description": "Periodo (YYYY-MM)",
-            "example": "2026-10"
-          },
-          "ordenes": {
-            "type": "number",
-            "description": "Órdenes del periodo",
-            "example": 12
-          },
-          "total_ventas_cents": {
-            "type": "number",
-            "description": "Ventas del periodo en centavos",
-            "example": 1380000
-          },
-          "total_comision_cents": {
-            "type": "number",
-            "description": "Comisiones del periodo en centavos",
-            "example": 165600
-          },
-          "actualizado_en": {
-            "type": "string",
-            "description": "Última actualización (ISO 8601 UTC)",
-            "format": "date-time"
-          }
-        },
-        "required": [
-          "vendedor_id",
-          "periodo",
-          "ordenes",
-          "total_ventas_cents",
-          "total_comision_cents",
-          "actualizado_en"
-        ]
-      },
       "TimelineEventoResponseDto": {
         "type": "object",
         "properties": {
@@ -1123,135 +995,6 @@
           "payload",
           "version",
           "creado_en"
-        ]
-      },
-      "CarritoItemResponseDto": {
-        "type": "object",
-        "properties": {
-          "oferta_id": {
-            "type": "string",
-            "description": "Id de la oferta",
-            "format": "uuid"
-          },
-          "cantidad": {
-            "type": "number",
-            "description": "Cantidad",
-            "example": 2
-          },
-          "id": {
-            "type": "string",
-            "description": "Id de la oferta (alias enriquecido)",
-            "format": "uuid"
-          },
-          "tienda_id": {
-            "type": "string",
-            "description": "Id de la tienda",
-            "format": "uuid"
-          },
-          "vendedor_id": {
-            "type": "string",
-            "description": "Id del vendedor",
-            "format": "uuid"
-          },
-          "sku": {
-            "type": "string",
-            "description": "SKU del producto",
-            "example": "SKU-001"
-          },
-          "producto_nombre": {
-            "type": "string",
-            "description": "Nombre del producto"
-          },
-          "precio_venta": {
-            "type": "string",
-            "description": "Precio de venta en córdobas con dos decimales",
-            "example": "1150.00"
-          },
-          "stock": {
-            "type": "number",
-            "description": "Stock disponible",
-            "example": 10
-          },
-          "estado": {
-            "type": "string",
-            "description": "Estado de la oferta",
-            "example": "activa"
-          }
-        },
-        "required": [
-          "oferta_id",
-          "cantidad",
-          "id",
-          "tienda_id",
-          "vendedor_id",
-          "sku",
-          "producto_nombre",
-          "precio_venta",
-          "stock",
-          "estado"
-        ]
-      },
-      "CarritoResponseDto": {
-        "type": "object",
-        "properties": {
-          "items": {
-            "description": "Items del carrito",
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/CarritoItemResponseDto"
-            }
-          },
-          "total": {
-            "type": "string",
-            "description": "Total del carrito en córdobas con dos decimales",
-            "example": "2300.00"
-          },
-          "expira_en": {
-            "type": "object",
-            "description": "Expiración del carrito (ISO 8601 UTC); null si está vacío",
-            "nullable": true,
-            "format": "date-time"
-          }
-        },
-        "required": [
-          "items",
-          "total"
-        ]
-      },
-      "AgregarItemRequestDto": {
-        "type": "object",
-        "properties": {
-          "oferta_id": {
-            "type": "string",
-            "description": "Id de la oferta (vendedor-producto)",
-            "example": "a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11"
-          },
-          "cantidad": {
-            "type": "number",
-            "description": "Cantidad (1-99)",
-            "minimum": 1,
-            "maximum": 99,
-            "example": 2
-          }
-        },
-        "required": [
-          "oferta_id",
-          "cantidad"
-        ]
-      },
-      "ActualizarCantidadRequestDto": {
-        "type": "object",
-        "properties": {
-          "cantidad": {
-            "type": "number",
-            "description": "Cantidad (0 elimina el item; 1-99)",
-            "minimum": 0,
-            "maximum": 99,
-            "example": 3
-          }
-        },
-        "required": [
-          "cantidad"
         ]
       }
     }

@@ -1,0 +1,671 @@
+{
+  "openapi": "3.0.0",
+  "info": {
+    "title": "Core Engine · catalog-service · API interna",
+    "description": "Contrato interno (/internal/**) de catalog-service; requiere x-internal-key.",
+    "version": "internal",
+    "contact": {}
+  },
+  "x-servicio": "catalog-service",
+  "x-superficie": "interna",
+  "security": [
+    {
+      "internalKey": []
+    }
+  ],
+  "tags": [],
+  "paths": {
+    "/internal/productos/lote": {
+      "get": {
+        "operationId": "InternalController_lote",
+        "parameters": [
+          {
+            "name": "skus",
+            "required": false,
+            "in": "query",
+            "description": "SKUs separados por coma",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Productos encontrados",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/LoteProductoResponseDto"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "internalKey": []
+          }
+        ],
+        "summary": "Lote de productos por SKUs (servicio→servicio)",
+        "tags": [
+          "Catálogo (interno)"
+        ]
+      }
+    },
+    "/internal/productos/sku/{sku}": {
+      "get": {
+        "operationId": "InternalController_porSku",
+        "parameters": [
+          {
+            "name": "sku",
+            "required": true,
+            "in": "path",
+            "description": "SKU del producto",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "empresa_id",
+            "required": false,
+            "in": "query",
+            "description": "Empresa dueña del producto (ADR-27)",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Producto encontrado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProductoResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "internalKey": []
+          }
+        ],
+        "summary": "Producto por SKU (servicio→servicio)",
+        "tags": [
+          "Catálogo (interno)"
+        ]
+      }
+    },
+    "/internal/productos/{id}": {
+      "get": {
+        "operationId": "InternalController_porId",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "description": "Id del producto",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Producto encontrado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProductoResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "internalKey": []
+          }
+        ],
+        "summary": "Producto por id (servicio→servicio)",
+        "tags": [
+          "Catálogo (interno)"
+        ]
+      }
+    },
+    "/internal/inventario/resumen": {
+      "get": {
+        "operationId": "InternalController_resumen",
+        "parameters": [
+          {
+            "name": "empresa_id",
+            "required": false,
+            "in": "query",
+            "description": "Filtra el resumen por empresa (ADR-27)",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Resumen de inventario",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResumenInventarioResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "internalKey": []
+          }
+        ],
+        "summary": "Resumen de inventario (servicio→servicio)",
+        "tags": [
+          "Catálogo (interno)"
+        ]
+      }
+    },
+    "/internal/inventario/lineas": {
+      "get": {
+        "operationId": "InternalController_lineas",
+        "parameters": [
+          {
+            "name": "empresa_id",
+            "required": false,
+            "in": "query",
+            "description": "Filtra las líneas por empresa (ADR-27)",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Líneas de inventario",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/LineaInventarioResponseDto"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "internalKey": []
+          }
+        ],
+        "summary": "Líneas de inventario (servicio→servicio)",
+        "tags": [
+          "Catálogo (interno)"
+        ]
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "bearer": {
+        "scheme": "bearer",
+        "bearerFormat": "JWT",
+        "type": "http"
+      },
+      "internalKey": {
+        "type": "apiKey",
+        "in": "header",
+        "name": "x-internal-key"
+      }
+    },
+    "schemas": {
+      "ImagenProductoResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Id de la relación producto-imagen",
+            "format": "uuid"
+          },
+          "objeto_id": {
+            "type": "string",
+            "description": "Id del objeto en storage-service",
+            "format": "uuid"
+          },
+          "url": {
+            "type": "string",
+            "description": "Ruta pública relativa servida por storage-service",
+            "example": "/api/v1/storage/public/objetos/8f0c..."
+          },
+          "orden": {
+            "type": "number",
+            "description": "Orden de la imagen (0-2)",
+            "minimum": 0,
+            "maximum": 2
+          },
+          "es_principal": {
+            "type": "boolean",
+            "description": "Imagen principal del producto/variante"
+          }
+        },
+        "required": [
+          "id",
+          "objeto_id",
+          "url",
+          "orden",
+          "es_principal"
+        ]
+      },
+      "LineaInventarioResponseDto": {
+        "type": "object",
+        "properties": {
+          "empresa_id": {
+            "type": "string",
+            "description": "Empresa dueña del producto (ADR-27)",
+            "format": "uuid"
+          },
+          "sku": {
+            "type": "string",
+            "description": "SKU del producto",
+            "example": "SKU-001"
+          },
+          "nombre": {
+            "type": "string",
+            "description": "Nombre del producto"
+          },
+          "stock": {
+            "type": "number",
+            "description": "Stock físico en bodega",
+            "example": 12
+          },
+          "disponible": {
+            "type": "number",
+            "description": "Stock disponible (neto de reservas)",
+            "example": 10
+          },
+          "reservado": {
+            "type": "number",
+            "description": "Unidades reservadas por órdenes activas",
+            "example": 2
+          },
+          "estado": {
+            "type": "string",
+            "description": "Estado del producto",
+            "example": "disponible"
+          },
+          "precio_base": {
+            "type": "string",
+            "description": "Precio base en córdobas con dos decimales",
+            "example": "1000.00"
+          },
+          "reservas_activas": {
+            "type": "number",
+            "description": "Alias de reservado para consumidores internos",
+            "example": 2
+          },
+          "valor_disponible_cents": {
+            "type": "number",
+            "description": "Valor del stock disponible en centavos",
+            "example": 1000000
+          },
+          "valor_total_cents": {
+            "type": "number",
+            "description": "Valor del stock físico total en centavos",
+            "example": 1200000
+          }
+        },
+        "required": [
+          "sku",
+          "nombre",
+          "stock",
+          "disponible",
+          "reservado",
+          "estado",
+          "precio_base",
+          "reservas_activas",
+          "valor_disponible_cents",
+          "valor_total_cents"
+        ]
+      },
+      "LoteProductoResponseDto": {
+        "type": "object",
+        "properties": {
+          "empresa_id": {
+            "type": "string",
+            "description": "Empresa dueña del producto",
+            "format": "uuid"
+          },
+          "sku": {
+            "type": "string",
+            "description": "SKU del producto (único por empresa)",
+            "example": "SKU-001"
+          },
+          "stock": {
+            "type": "number",
+            "description": "Stock disponible",
+            "example": 10
+          },
+          "estado": {
+            "type": "string",
+            "description": "Estado del producto",
+            "enum": [
+              "disponible",
+              "agotado"
+            ],
+            "example": "disponible"
+          }
+        },
+        "required": [
+          "sku",
+          "stock",
+          "estado"
+        ]
+      },
+      "ProductoResponseDto": {
+        "type": "object",
+        "properties": {
+          "empresa_id": {
+            "type": "string",
+            "description": "Empresa propietaria",
+            "format": "uuid"
+          },
+          "id": {
+            "type": "string",
+            "description": "Id del producto",
+            "format": "uuid"
+          },
+          "sku": {
+            "type": "string",
+            "description": "SKU del producto (único por empresa)",
+            "example": "SKU-001"
+          },
+          "nombre": {
+            "type": "string",
+            "description": "Nombre del producto"
+          },
+          "descripcion": {
+            "type": "string",
+            "description": "Descripción del producto"
+          },
+          "categoria": {
+            "type": "string",
+            "description": "Categoría del producto"
+          },
+          "precio_base": {
+            "type": "string",
+            "description": "Precio base en córdobas con dos decimales",
+            "example": "1000.00"
+          },
+          "stock": {
+            "type": "number",
+            "description": "Stock disponible (neto de reservas)",
+            "example": 10
+          },
+          "estado": {
+            "type": "string",
+            "description": "Estado del producto",
+            "enum": [
+              "disponible",
+              "agotado"
+            ],
+            "example": "disponible"
+          },
+          "estado_operativo": {
+            "type": "string",
+            "description": "Estado comercial del producto",
+            "enum": [
+              "activo",
+              "inactivo"
+            ]
+          },
+          "costo": {
+            "type": "string",
+            "description": "Costo en córdobas con dos decimales",
+            "example": "150.00"
+          },
+          "marca": {
+            "type": "string",
+            "description": "Marca"
+          },
+          "codigo_barras": {
+            "type": "string",
+            "description": "Código de barras único por empresa"
+          },
+          "unidad": {
+            "type": "string",
+            "description": "Unidad de venta",
+            "example": "Unidad (u)"
+          },
+          "permite_fracciones": {
+            "type": "boolean",
+            "description": "Permite fracciones"
+          },
+          "unidad_compra": {
+            "type": "string",
+            "description": "Unidad de compra"
+          },
+          "contenido_cantidad": {
+            "type": "number",
+            "description": "Contenido por unidad"
+          },
+          "contenido_unidad": {
+            "type": "string",
+            "description": "Unidad del contenido"
+          },
+          "tipo_precio": {
+            "type": "string",
+            "description": "Tipo de precio",
+            "enum": [
+              "fijo",
+              "escala"
+            ]
+          },
+          "tipo_costo": {
+            "type": "string",
+            "description": "Tipo de costo",
+            "enum": [
+              "fijo",
+              "escala"
+            ]
+          },
+          "stock_minimo": {
+            "type": "number",
+            "description": "Stock mínimo para alertas"
+          },
+          "stock_maximo": {
+            "type": "object",
+            "description": "Stock máximo",
+            "nullable": true
+          },
+          "garantia_meses": {
+            "type": "object",
+            "description": "Garantía en meses",
+            "nullable": true
+          },
+          "es_materia_prima": {
+            "type": "boolean",
+            "description": "Es materia prima"
+          },
+          "ubicacion": {
+            "type": "string",
+            "description": "Ubicación física"
+          },
+          "actualizado_en": {
+            "type": "string",
+            "description": "Última actualización (ISO 8601 UTC)",
+            "format": "date-time"
+          },
+          "creado_en": {
+            "type": "string",
+            "description": "Fecha de creación (ISO 8601 UTC)",
+            "format": "date-time"
+          },
+          "producto_padre_id": {
+            "type": "object",
+            "description": "Producto padre si esta fila es una variante",
+            "nullable": true,
+            "format": "uuid"
+          },
+          "atributos": {
+            "type": "object",
+            "description": "Atributos de la variante (color, talla, etc.)",
+            "additionalProperties": true
+          },
+          "tiene_variantes": {
+            "type": "boolean",
+            "description": "El producto tiene variantes vendibles"
+          },
+          "imagenes": {
+            "description": "Imágenes del producto (máx. 3)",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ImagenProductoResponseDto"
+            }
+          },
+          "variantes": {
+            "description": "Variantes (solo en el detalle del padre)",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/VarianteProductoResponseDto"
+            }
+          },
+          "precio_desde": {
+            "type": "string",
+            "description": "Precio mínimo mostrable (\"desde\")",
+            "example": "1000.00"
+          },
+          "stock_total": {
+            "type": "number",
+            "description": "Stock agregado de las variantes o el propio",
+            "example": 25
+          }
+        },
+        "required": [
+          "empresa_id",
+          "id",
+          "sku",
+          "nombre",
+          "descripcion",
+          "categoria",
+          "precio_base",
+          "stock",
+          "estado",
+          "creado_en"
+        ]
+      },
+      "ResumenInventarioResponseDto": {
+        "type": "object",
+        "properties": {
+          "productos": {
+            "type": "number",
+            "description": "Total de productos",
+            "example": 20
+          },
+          "agotados": {
+            "type": "number",
+            "description": "Productos agotados",
+            "example": 2
+          },
+          "stock_total": {
+            "type": "number",
+            "description": "Unidades en stock",
+            "example": 120
+          },
+          "valor_inventario_cents": {
+            "type": "number",
+            "description": "Valor del inventario en centavos",
+            "example": 12000000
+          }
+        },
+        "required": [
+          "productos",
+          "agotados",
+          "stock_total",
+          "valor_inventario_cents"
+        ]
+      },
+      "VarianteProductoResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Id de la variante",
+            "format": "uuid"
+          },
+          "producto_padre_id": {
+            "type": "string",
+            "description": "Id del producto padre",
+            "format": "uuid"
+          },
+          "sku": {
+            "type": "string",
+            "description": "SKU de la variante",
+            "example": "SKU-001-ROJO-M"
+          },
+          "nombre": {
+            "type": "string",
+            "description": "Nombre visible de la variante"
+          },
+          "atributos": {
+            "type": "object",
+            "description": "Atributos de la variante (color, talla, etc.)",
+            "additionalProperties": true
+          },
+          "precio_base": {
+            "type": "string",
+            "description": "Precio base en córdobas con dos decimales",
+            "example": "1500.00"
+          },
+          "stock": {
+            "type": "number",
+            "description": "Stock disponible",
+            "example": 10
+          },
+          "estado": {
+            "type": "string",
+            "description": "Estado de la variante",
+            "enum": [
+              "disponible",
+              "agotado"
+            ]
+          },
+          "imagenes": {
+            "description": "Imágenes de la variante (máx. 3)",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ImagenProductoResponseDto"
+            }
+          },
+          "creado_en": {
+            "type": "string",
+            "description": "Fecha de creación (ISO 8601 UTC)",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "producto_padre_id",
+          "sku",
+          "nombre",
+          "atributos",
+          "precio_base",
+          "stock",
+          "estado",
+          "imagenes",
+          "creado_en"
+        ]
+      }
+    }
+  }
+}
