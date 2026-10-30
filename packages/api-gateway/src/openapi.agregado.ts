@@ -738,6 +738,709 @@ export const OPENAPI_AGREGADO = {
         ]
       }
     },
+    "/api/v1/catalog/configuracion-inventario": {
+      "get": {
+        "operationId": "OperacionesController_configuracion",
+        "parameters": [
+          {
+            "name": "empresa_id",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConfiguracionInventarioResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Obtener la configuración de inventario de la empresa",
+        "tags": [
+          "Catálogo · Operaciones"
+        ]
+      },
+      "put": {
+        "operationId": "OperacionesController_guardarConfiguracion",
+        "parameters": [
+          {
+            "name": "empresa_id",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ActualizarConfiguracionInventarioRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConfiguracionInventarioResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Guardar la configuración de inventario",
+        "tags": [
+          "Catálogo · Operaciones"
+        ]
+      }
+    },
+    "/api/v1/catalog/productos/importar": {
+      "post": {
+        "operationId": "OperacionesController_importar",
+        "parameters": [
+          {
+            "name": "empresa_id",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ImportarProductosRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ImportarProductosResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Importar productos desde filas validadas (máx. 200)",
+        "tags": [
+          "Catálogo · Operaciones"
+        ]
+      }
+    },
+    "/api/v1/catalog/escanear": {
+      "get": {
+        "operationId": "OperacionesController_escanear",
+        "parameters": [
+          {
+            "name": "codigo",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "empresa_id",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EscaneoResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Buscar un producto o servicio por código/barras",
+        "tags": [
+          "Catálogo · Operaciones"
+        ]
+      }
+    },
+    "/api/v1/catalog/combos": {
+      "get": {
+        "operationId": "OperacionesController_listarCombos",
+        "parameters": [
+          {
+            "name": "empresa_id",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "name": "q",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "estado",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "activo",
+                "inactivo"
+              ]
+            }
+          },
+          {
+            "name": "pagina",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "type": "number"
+            }
+          },
+          {
+            "name": "limite",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 100,
+              "type": "number"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginaCombosResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Listar combos de la empresa",
+        "tags": [
+          "Catálogo · Operaciones"
+        ]
+      },
+      "post": {
+        "operationId": "OperacionesController_crearCombo",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CrearComboRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ComboResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Crear un combo",
+        "tags": [
+          "Catálogo · Operaciones"
+        ]
+      }
+    },
+    "/api/v1/catalog/combos/{id}": {
+      "get": {
+        "operationId": "OperacionesController_detalleCombo",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ComboResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Detalle de un combo",
+        "tags": [
+          "Catálogo · Operaciones"
+        ]
+      },
+      "patch": {
+        "operationId": "OperacionesController_actualizarCombo",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ActualizarComboRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ComboResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Actualizar un combo",
+        "tags": [
+          "Catálogo · Operaciones"
+        ]
+      },
+      "delete": {
+        "operationId": "OperacionesController_eliminarCombo",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Combo dado de baja"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Dar de baja un combo",
+        "tags": [
+          "Catálogo · Operaciones"
+        ]
+      }
+    },
+    "/api/v1/catalog/promociones": {
+      "get": {
+        "operationId": "OperacionesController_listarPromociones",
+        "parameters": [
+          {
+            "name": "empresa_id",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "name": "estado",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "activo",
+                "inactivo"
+              ]
+            }
+          },
+          {
+            "name": "pagina",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "type": "number"
+            }
+          },
+          {
+            "name": "limite",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 100,
+              "type": "number"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginaPromocionesResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Listar promociones de la empresa",
+        "tags": [
+          "Catálogo · Operaciones"
+        ]
+      },
+      "post": {
+        "operationId": "OperacionesController_crearPromocion",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CrearPromocionRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PromocionResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Crear una promoción",
+        "tags": [
+          "Catálogo · Operaciones"
+        ]
+      }
+    },
+    "/api/v1/catalog/promociones/{id}": {
+      "get": {
+        "operationId": "OperacionesController_detallePromocion",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PromocionResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Detalle de una promoción",
+        "tags": [
+          "Catálogo · Operaciones"
+        ]
+      },
+      "patch": {
+        "operationId": "OperacionesController_actualizarPromocion",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ActualizarPromocionRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PromocionResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Actualizar una promoción",
+        "tags": [
+          "Catálogo · Operaciones"
+        ]
+      },
+      "delete": {
+        "operationId": "OperacionesController_eliminarPromocion",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Promoción dada de baja"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Dar de baja una promoción",
+        "tags": [
+          "Catálogo · Operaciones"
+        ]
+      }
+    },
+    "/api/v1/catalog/inventario/movimientos": {
+      "get": {
+        "operationId": "OperacionesController_listarMovimientos",
+        "parameters": [
+          {
+            "name": "empresa_id",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "name": "tipo",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "entrada",
+                "salida",
+                "ajuste",
+                "traslado"
+              ]
+            }
+          },
+          {
+            "name": "pagina",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "type": "number"
+            }
+          },
+          {
+            "name": "limite",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 100,
+              "type": "number"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginaMovimientosResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Listar movimientos y traslados de inventario",
+        "tags": [
+          "Catálogo · Operaciones"
+        ]
+      },
+      "post": {
+        "operationId": "OperacionesController_registrarMovimiento",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CrearMovimientoInventarioRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MovimientoInventarioResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Registrar entrada, salida, ajuste o traslado",
+        "tags": [
+          "Catálogo · Operaciones"
+        ]
+      }
+    },
     "/api/v1/vendedores/me/liquidaciones": {
       "get": {
         "operationId": "LiquidacionesController_mias",
@@ -10112,6 +10815,793 @@ export const OPENAPI_AGREGADO = {
             ]
           }
         }
+      },
+      "ConfiguracionInventarioResponseDto": {
+        "type": "object",
+        "properties": {
+          "empresa_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "metodo_costeo": {
+            "type": "string",
+            "enum": [
+              "promedio",
+              "fifo",
+              "ueps"
+            ]
+          },
+          "permitir_stock_negativo": {
+            "type": "boolean"
+          },
+          "alerta_stock_bajo": {
+            "type": "boolean"
+          },
+          "actualizar_costo_en_compra": {
+            "type": "boolean"
+          },
+          "unidad_defecto": {
+            "type": "string"
+          },
+          "actualizado_en": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "empresa_id",
+          "metodo_costeo",
+          "permitir_stock_negativo",
+          "alerta_stock_bajo",
+          "actualizar_costo_en_compra",
+          "unidad_defecto",
+          "actualizado_en"
+        ]
+      },
+      "ActualizarConfiguracionInventarioRequestDto": {
+        "type": "object",
+        "properties": {
+          "metodo_costeo": {
+            "type": "string",
+            "enum": [
+              "promedio",
+              "fifo",
+              "ueps"
+            ]
+          },
+          "permitir_stock_negativo": {
+            "type": "boolean"
+          },
+          "alerta_stock_bajo": {
+            "type": "boolean"
+          },
+          "actualizar_costo_en_compra": {
+            "type": "boolean"
+          },
+          "unidad_defecto": {
+            "type": "string"
+          }
+        }
+      },
+      "ImportarProductoFilaDto": {
+        "type": "object",
+        "properties": {
+          "sku": {
+            "type": "string"
+          },
+          "nombre": {
+            "type": "string"
+          },
+          "descripcion": {
+            "type": "string"
+          },
+          "categoria": {
+            "type": "string"
+          },
+          "precio_base": {
+            "type": "string",
+            "example": "1000.00"
+          },
+          "stock": {
+            "type": "number",
+            "minimum": 0
+          },
+          "costo": {
+            "type": "string"
+          },
+          "marca": {
+            "type": "string"
+          },
+          "codigo_barras": {
+            "type": "string"
+          },
+          "unidad": {
+            "type": "string"
+          },
+          "stock_minimo": {
+            "type": "number",
+            "minimum": 0
+          },
+          "stock_maximo": {
+            "type": "object",
+            "nullable": true,
+            "minimum": 0
+          },
+          "es_materia_prima": {
+            "type": "boolean"
+          },
+          "ubicacion": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "sku",
+          "nombre",
+          "precio_base",
+          "stock"
+        ]
+      },
+      "ImportarProductosRequestDto": {
+        "type": "object",
+        "properties": {
+          "filas": {
+            "description": "Máximo 200 filas",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ImportarProductoFilaDto"
+            }
+          }
+        },
+        "required": [
+          "filas"
+        ]
+      },
+      "ImportarProductosResponseDto": {
+        "type": "object",
+        "properties": {
+          "importados": {
+            "type": "number"
+          },
+          "omitidos": {
+            "type": "number"
+          },
+          "errores": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": [
+          "importados",
+          "omitidos",
+          "errores"
+        ]
+      },
+      "EscaneoResponseDto": {
+        "type": "object",
+        "properties": {
+          "tipo": {
+            "type": "string",
+            "enum": [
+              "producto",
+              "servicio"
+            ]
+          },
+          "producto": {
+            "nullable": true,
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/ProductoResponseDto"
+              }
+            ]
+          },
+          "servicio": {
+            "nullable": true,
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/ServicioResponseDto"
+              }
+            ]
+          }
+        },
+        "required": [
+          "tipo"
+        ]
+      },
+      "ComboComponenteResponseDto": {
+        "type": "object",
+        "properties": {
+          "producto_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "sku": {
+            "type": "string"
+          },
+          "nombre": {
+            "type": "string"
+          },
+          "cantidad": {
+            "type": "number"
+          },
+          "costo_unitario": {
+            "type": "string"
+          },
+          "subtotal": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "producto_id",
+          "sku",
+          "nombre",
+          "cantidad",
+          "costo_unitario",
+          "subtotal"
+        ]
+      },
+      "ComboResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "empresa_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "sku": {
+            "type": "string"
+          },
+          "nombre": {
+            "type": "string"
+          },
+          "descripcion": {
+            "type": "string"
+          },
+          "codigo_barras": {
+            "type": "string"
+          },
+          "precio": {
+            "type": "string"
+          },
+          "costo_total": {
+            "type": "string"
+          },
+          "margen": {
+            "type": "number"
+          },
+          "estado": {
+            "type": "string",
+            "enum": [
+              "activo",
+              "inactivo"
+            ]
+          },
+          "componentes": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ComboComponenteResponseDto"
+            }
+          },
+          "creado_en": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "actualizado_en": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "empresa_id",
+          "sku",
+          "nombre",
+          "descripcion",
+          "codigo_barras",
+          "precio",
+          "costo_total",
+          "margen",
+          "estado",
+          "componentes",
+          "creado_en",
+          "actualizado_en"
+        ]
+      },
+      "PaginaCombosResponseDto": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ComboResponseDto"
+            }
+          },
+          "total": {
+            "type": "number"
+          },
+          "pagina": {
+            "type": "number"
+          },
+          "limite": {
+            "type": "number"
+          },
+          "paginas": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "items",
+          "total",
+          "pagina",
+          "limite",
+          "paginas"
+        ]
+      },
+      "ComboComponenteRequestDto": {
+        "type": "object",
+        "properties": {
+          "producto_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "sku": {
+            "type": "string",
+            "description": "SKU del producto componente"
+          },
+          "cantidad": {
+            "type": "number",
+            "minimum": 1
+          }
+        },
+        "required": [
+          "sku",
+          "cantidad"
+        ]
+      },
+      "CrearComboRequestDto": {
+        "type": "object",
+        "properties": {
+          "sku": {
+            "type": "string"
+          },
+          "nombre": {
+            "type": "string"
+          },
+          "descripcion": {
+            "type": "string"
+          },
+          "codigo_barras": {
+            "type": "string"
+          },
+          "precio": {
+            "type": "string",
+            "example": "2500.00"
+          },
+          "estado": {
+            "type": "string",
+            "enum": [
+              "activo",
+              "inactivo"
+            ]
+          },
+          "componentes": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ComboComponenteRequestDto"
+            }
+          }
+        },
+        "required": [
+          "sku",
+          "nombre",
+          "precio",
+          "componentes"
+        ]
+      },
+      "ActualizarComboRequestDto": {
+        "type": "object",
+        "properties": {
+          "nombre": {
+            "type": "string"
+          },
+          "descripcion": {
+            "type": "string"
+          },
+          "codigo_barras": {
+            "type": "string"
+          },
+          "precio": {
+            "type": "string"
+          },
+          "estado": {
+            "type": "string",
+            "enum": [
+              "activo",
+              "inactivo"
+            ]
+          },
+          "componentes": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ComboComponenteRequestDto"
+            }
+          }
+        }
+      },
+      "PromocionResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "empresa_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "nombre": {
+            "type": "string"
+          },
+          "tipo": {
+            "type": "string",
+            "enum": [
+              "2x1",
+              "descuento_cantidad",
+              "descuento_porcentaje",
+              "regalo"
+            ]
+          },
+          "producto_id": {
+            "type": "object",
+            "nullable": true
+          },
+          "sku": {
+            "type": "string"
+          },
+          "cantidad_requerida": {
+            "type": "object",
+            "nullable": true
+          },
+          "cantidad_gratis": {
+            "type": "object",
+            "nullable": true
+          },
+          "descuento_porcentaje": {
+            "type": "object",
+            "nullable": true
+          },
+          "fecha_desde": {
+            "type": "string",
+            "format": "date"
+          },
+          "fecha_hasta": {
+            "type": "string",
+            "format": "date"
+          },
+          "estado": {
+            "type": "string",
+            "enum": [
+              "activo",
+              "inactivo"
+            ]
+          },
+          "creado_en": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "actualizado_en": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "empresa_id",
+          "nombre",
+          "tipo",
+          "producto_id",
+          "sku",
+          "cantidad_requerida",
+          "cantidad_gratis",
+          "descuento_porcentaje",
+          "fecha_desde",
+          "fecha_hasta",
+          "estado",
+          "creado_en",
+          "actualizado_en"
+        ]
+      },
+      "PaginaPromocionesResponseDto": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PromocionResponseDto"
+            }
+          },
+          "total": {
+            "type": "number"
+          },
+          "pagina": {
+            "type": "number"
+          },
+          "limite": {
+            "type": "number"
+          },
+          "paginas": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "items",
+          "total",
+          "pagina",
+          "limite",
+          "paginas"
+        ]
+      },
+      "CrearPromocionRequestDto": {
+        "type": "object",
+        "properties": {
+          "nombre": {
+            "type": "string"
+          },
+          "tipo": {
+            "type": "string",
+            "enum": [
+              "2x1",
+              "descuento_cantidad",
+              "descuento_porcentaje",
+              "regalo"
+            ]
+          },
+          "producto_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "sku": {
+            "type": "string"
+          },
+          "cantidad_requerida": {
+            "type": "object",
+            "minimum": 1
+          },
+          "cantidad_gratis": {
+            "type": "object",
+            "minimum": 1
+          },
+          "descuento_porcentaje": {
+            "type": "object",
+            "minimum": 1,
+            "maximum": 100
+          },
+          "fecha_desde": {
+            "type": "string",
+            "format": "date"
+          },
+          "fecha_hasta": {
+            "type": "string",
+            "format": "date"
+          },
+          "estado": {
+            "type": "string",
+            "enum": [
+              "activo",
+              "inactivo"
+            ]
+          }
+        },
+        "required": [
+          "nombre",
+          "tipo",
+          "fecha_desde",
+          "fecha_hasta"
+        ]
+      },
+      "ActualizarPromocionRequestDto": {
+        "type": "object",
+        "properties": {
+          "nombre": {
+            "type": "string"
+          },
+          "tipo": {
+            "type": "string",
+            "enum": [
+              "2x1",
+              "descuento_cantidad",
+              "descuento_porcentaje",
+              "regalo"
+            ]
+          },
+          "producto_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "sku": {
+            "type": "string"
+          },
+          "cantidad_requerida": {
+            "type": "object",
+            "minimum": 1
+          },
+          "cantidad_gratis": {
+            "type": "object",
+            "minimum": 1
+          },
+          "descuento_porcentaje": {
+            "type": "object",
+            "minimum": 1,
+            "maximum": 100
+          },
+          "fecha_desde": {
+            "type": "string",
+            "format": "date"
+          },
+          "fecha_hasta": {
+            "type": "string",
+            "format": "date"
+          },
+          "estado": {
+            "type": "string",
+            "enum": [
+              "activo",
+              "inactivo"
+            ]
+          }
+        }
+      },
+      "MovimientoInventarioResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "empresa_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "tipo": {
+            "type": "string",
+            "enum": [
+              "entrada",
+              "salida",
+              "ajuste",
+              "traslado"
+            ]
+          },
+          "motivo": {
+            "type": "string"
+          },
+          "referencia": {
+            "type": "string"
+          },
+          "ubicacion_origen": {
+            "type": "string"
+          },
+          "ubicacion_destino": {
+            "type": "string"
+          },
+          "lineas": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          },
+          "creado_por": {
+            "type": "object",
+            "nullable": true
+          },
+          "creado_en": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "empresa_id",
+          "tipo",
+          "motivo",
+          "referencia",
+          "ubicacion_origen",
+          "ubicacion_destino",
+          "lineas",
+          "creado_por",
+          "creado_en"
+        ]
+      },
+      "PaginaMovimientosResponseDto": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/MovimientoInventarioResponseDto"
+            }
+          },
+          "total": {
+            "type": "number"
+          },
+          "pagina": {
+            "type": "number"
+          },
+          "limite": {
+            "type": "number"
+          },
+          "paginas": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "items",
+          "total",
+          "pagina",
+          "limite",
+          "paginas"
+        ]
+      },
+      "MovimientoLineaRequestDto": {
+        "type": "object",
+        "properties": {
+          "producto_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "sku": {
+            "type": "string"
+          },
+          "cantidad": {
+            "type": "number",
+            "minimum": 0
+          }
+        },
+        "required": [
+          "sku",
+          "cantidad"
+        ]
+      },
+      "CrearMovimientoInventarioRequestDto": {
+        "type": "object",
+        "properties": {
+          "tipo": {
+            "type": "string",
+            "enum": [
+              "entrada",
+              "salida",
+              "ajuste",
+              "traslado"
+            ]
+          },
+          "motivo": {
+            "type": "string"
+          },
+          "referencia": {
+            "type": "string"
+          },
+          "ubicacion_origen": {
+            "type": "string"
+          },
+          "ubicacion_destino": {
+            "type": "string"
+          },
+          "lineas": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/MovimientoLineaRequestDto"
+            }
+          }
+        },
+        "required": [
+          "tipo",
+          "lineas"
+        ]
       },
       "LiquidacionResponseDto": {
         "type": "object",

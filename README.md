@@ -144,6 +144,9 @@ en `docs/rules/cd/` (R-CD).
 - `POST /api/v1/catalog/productos`, `GET /api/v1/catalog/productos(/:id)` (admin)
 - `GET|POST|PATCH|DELETE /api/v1/catalog/servicios` (empresa/admin) — recurso
   propio de servicios con baja lógica, duración y unicidad por empresa.
+- `/api/v1/catalog/configuracion-inventario`, `/productos/importar`, `/escanear`,
+  `/combos`, `/promociones` e `/inventario/movimientos` (empresa/admin):
+  configuración, importación, escaneo, combos, promociones y movimientos/traslados.
 - Los productos exponen costo, marca, código de barras, unidad, stock mínimo/máximo,
   garantía, materia prima, ubicación y `estado_operativo` (activo/inactivo)
   además de la disponibilidad de stock (`estado`).
@@ -201,8 +204,8 @@ separa las rutas `/api/v1/**` de las `/internal/**` y escribe dos artefactos:
 npm run swagger:export   # regenera docs/openapi/*.json + los dos agregados de docs/api/
 ```
 
-Cobertura actual: **256/256 operaciones documentadas** en 10 servicios:
-**235 públicas** (214 con schema de respuesta + 21 sin contenido) y **21 internas**
+Cobertura actual: **272/272 operaciones documentadas** en 10 servicios:
+**251 públicas** (228 con schema de respuesta + 23 sin contenido) y **21 internas**
 (todas con schema).
 
 ## Variables de entorno (`.env` en dev · `.env.production` en producción)
