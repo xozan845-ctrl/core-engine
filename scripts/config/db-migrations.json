@@ -21,5 +21,6 @@
   "09b_ofertas_variantes.sql": "c9bc7de20e3df6ccc1ee7e0a415a6ce98326c47ea0db64460ae8425e95eacc4a",
   "10_comercio.sql": "e75b34bfbe756c208434ea64e50f7bced86288bacb7bff89a1faeb028ae61641",
   "11_catalogo_productos_servicios.sql": "53bec2147281a10a9999480ae0103ece29064682cb6a5b01efd836ade28a4c21",
-  "12_catalogo_operaciones_avanzadas.sql": "d6227011a338c5ee95f3b3132476e53d996f26f81b04896c1f197e11304340f2"
+  "12_catalogo_operaciones_avanzadas.sql": "d6227011a338c5ee95f3b3132476e53d996f26f81b04896c1f197e11304340f2",
+  "13_empresa_metadatos.sql": "a8493464539b764c6b36d9b7c73cdee48b250ee42fa1c8ea08a2dbd59d312a67"
 }

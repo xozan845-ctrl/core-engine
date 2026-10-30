@@ -1536,6 +1536,69 @@
           },
           "creado_en": {
             "type": "string"
+          },
+          "ruc": {
+            "type": "object",
+            "nullable": true
+          },
+          "razon_social": {
+            "type": "string"
+          },
+          "nombre_comercial": {
+            "type": "string"
+          },
+          "descripcion": {
+            "type": "string"
+          },
+          "telefono": {
+            "type": "string"
+          },
+          "correo_contacto": {
+            "type": "string"
+          },
+          "sitio_web": {
+            "type": "string"
+          },
+          "direccion": {
+            "type": "string"
+          },
+          "ciudad": {
+            "type": "string"
+          },
+          "departamento": {
+            "type": "string"
+          },
+          "pais": {
+            "type": "string"
+          },
+          "moneda": {
+            "type": "string"
+          },
+          "zona_horaria": {
+            "type": "string"
+          },
+          "sector": {
+            "type": "string"
+          },
+          "representante_legal": {
+            "type": "string"
+          },
+          "horario_atencion": {
+            "type": "string"
+          },
+          "logo_objeto_id": {
+            "type": "object",
+            "nullable": true,
+            "format": "uuid"
+          },
+          "logo_url": {
+            "type": "object",
+            "nullable": true,
+            "description": "URL pública derivada del logo"
+          },
+          "actualizado_en": {
+            "type": "string",
+            "format": "date-time"
           }
         },
         "required": [

@@ -10,11 +10,33 @@ import {
   ApiTags,
 } from '@nestjs/swagger';
 import type { Response } from 'express';
-import { IsEmail, IsIn, IsInt, IsOptional, IsString, Length, Max, Min, MinLength } from 'class-validator';
+import { IsEmail, IsIn, IsInt, IsOptional, IsString, IsUUID, Length, Max, Min, MinLength } from 'class-validator';
 import { ROLES, Roles, UsuarioActual, UsuarioContexto } from '@core/shared';
 import { EmpresasService, ModalidadLogistica, TipoEmpresa } from './empresas.service';
 
-class CrearEmpresaRequestDto {
+class PerfilEmpresaRequestDto {
+  @ApiProperty({ required: false, maxLength: 30, description: 'RUC opcional' })
+  @IsOptional() @IsString() @Length(0, 30) ruc?: string;
+  @ApiProperty({ required: false, maxLength: 160 }) @IsOptional() @IsString() @Length(0, 160) razon_social?: string;
+  @ApiProperty({ required: false, maxLength: 160 }) @IsOptional() @IsString() @Length(0, 160) nombre_comercial?: string;
+  @ApiProperty({ required: false, maxLength: 1000 }) @IsOptional() @IsString() @Length(0, 1000) descripcion?: string;
+  @ApiProperty({ required: false, maxLength: 40 }) @IsOptional() @IsString() @Length(0, 40) telefono?: string;
+  @ApiProperty({ required: false }) @IsOptional() @IsEmail({ require_tld: false }) correo_contacto?: string;
+  @ApiProperty({ required: false, maxLength: 200 }) @IsOptional() @IsString() @Length(0, 200) sitio_web?: string;
+  @ApiProperty({ required: false, maxLength: 300 }) @IsOptional() @IsString() @Length(0, 300) direccion?: string;
+  @ApiProperty({ required: false, maxLength: 80 }) @IsOptional() @IsString() @Length(0, 80) ciudad?: string;
+  @ApiProperty({ required: false, maxLength: 80 }) @IsOptional() @IsString() @Length(0, 80) departamento?: string;
+  @ApiProperty({ required: false, maxLength: 80, default: 'Nicaragua' }) @IsOptional() @IsString() @Length(0, 80) pais?: string;
+  @ApiProperty({ required: false, minLength: 3, maxLength: 3, default: 'NIO' }) @IsOptional() @IsString() @Length(3, 3) moneda?: string;
+  @ApiProperty({ required: false, maxLength: 64, default: 'America/Managua' }) @IsOptional() @IsString() @Length(0, 64) zona_horaria?: string;
+  @ApiProperty({ required: false, maxLength: 80 }) @IsOptional() @IsString() @Length(0, 80) sector?: string;
+  @ApiProperty({ required: false, maxLength: 160 }) @IsOptional() @IsString() @Length(0, 160) representante_legal?: string;
+  @ApiProperty({ required: false, maxLength: 120 }) @IsOptional() @IsString() @Length(0, 120) horario_atencion?: string;
+  @ApiProperty({ required: false, nullable: true, format: 'uuid', description: 'Objeto de storage confirmado como imagen pública' })
+  @IsOptional() @IsUUID() logo_objeto_id?: string | null;
+}
+
+class CrearEmpresaRequestDto extends PerfilEmpresaRequestDto {
   @ApiProperty({ minLength: 2, maxLength: 160 }) @IsString() @Length(2, 160) nombre: string;
   @ApiProperty({
     required: false,
@@ -67,6 +89,25 @@ export class EmpresaResponseDto {
   @ApiProperty() estado: string;
   @ApiProperty({ format: 'uuid' }) creado_por: string;
   @ApiProperty() creado_en: string;
+  @ApiProperty({ required: false, nullable: true }) ruc?: string | null;
+  @ApiProperty({ required: false }) razon_social?: string;
+  @ApiProperty({ required: false }) nombre_comercial?: string;
+  @ApiProperty({ required: false }) descripcion?: string;
+  @ApiProperty({ required: false }) telefono?: string;
+  @ApiProperty({ required: false }) correo_contacto?: string;
+  @ApiProperty({ required: false }) sitio_web?: string;
+  @ApiProperty({ required: false }) direccion?: string;
+  @ApiProperty({ required: false }) ciudad?: string;
+  @ApiProperty({ required: false }) departamento?: string;
+  @ApiProperty({ required: false }) pais?: string;
+  @ApiProperty({ required: false }) moneda?: string;
+  @ApiProperty({ required: false }) zona_horaria?: string;
+  @ApiProperty({ required: false }) sector?: string;
+  @ApiProperty({ required: false }) representante_legal?: string;
+  @ApiProperty({ required: false }) horario_atencion?: string;
+  @ApiProperty({ required: false, nullable: true, format: 'uuid' }) logo_objeto_id?: string | null;
+  @ApiProperty({ required: false, nullable: true, description: 'URL pública derivada del logo' }) logo_url?: string | null;
+  @ApiProperty({ required: false, format: 'date-time' }) actualizado_en?: string;
 }
 class VendedorEmpresaResponseDto {
   @ApiProperty({ format: 'uuid' }) id: string;
@@ -82,7 +123,7 @@ export class EmpresasController {
   @Post() @Roles(ROLES.EMPRESARIO)
   @ApiOperation({ summary: 'Crear empresa y elegir modalidad logística' })
   @ApiCreatedResponse({ type: EmpresaResponseDto, description: 'Empresa creada con membresía del empresario' })
-  crear(@Body() dto: CrearEmpresaRequestDto, @UsuarioActual() u: UsuarioContexto) { return this.empresas.crear(u.user_id, dto.nombre, dto.modalidad_logistica, dto.slug); }
+  crear(@Body() dto: CrearEmpresaRequestDto, @UsuarioActual() u: UsuarioContexto) { return this.empresas.crear(u.user_id, dto.nombre, dto.modalidad_logistica, dto.slug, dto); }
   @Get(':id') @Roles(ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.EMPRESARIO, ROLES.VENDEDOR)
   @ApiOperation({ summary: 'Obtener una empresa por UUID o slug (solo miembros o administradores)' })
   @ApiParam({
@@ -109,6 +150,18 @@ export class EmpresasController {
     );
     if (redirigirA) res.status(301).setHeader('Location', redirigirA);
     return empresa;
+  }
+  @Patch(':id/perfil') @Roles(ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.EMPRESARIO)
+  @ApiOperation({ summary: 'Actualizar el perfil comercial/fiscal y el logo' })
+  @ApiParam({ name: 'id', description: 'UUID de la empresa o su slug actual' })
+  @ApiOkResponse({ type: EmpresaResponseDto, description: 'Perfil actualizado' })
+  actualizarPerfil(
+    @Param('id') id: string,
+    @Body() dto: PerfilEmpresaRequestDto,
+    @UsuarioActual() u: UsuarioContexto,
+  ) {
+    const esGlobal = [ROLES.SUPER_ADMIN, ROLES.ADMIN].includes(u.rol as never);
+    return this.empresas.actualizarPerfil(u.user_id, id, dto, esGlobal);
   }
   @Patch(':id/slug') @Roles(ROLES.EMPRESARIO)
   @ApiOperation({ summary: 'Cambiar el slug público; los anteriores redirigen 301' })

@@ -912,6 +912,34 @@ Este archivo registra decisiones técnicas deliberadas que se apartan del texto 
 
 ---
 
+---
+
+## ADR-34: Perfil comercial y logo de empresa
+
+- **Fecha**: 2026-10-30
+- **Estado**: Aceptado
+- **Contexto**: la empresa solo exponía nombre, slug, modalidad logística y tipo.
+  El frontend necesitaba RUC opcional, datos de contacto/fiscales y logo para
+  usarlo en documentos y storefront, pero no existía contrato.
+- **Decisión**:
+  1. Añadir a `identity.empresas` metadatos editables: `ruc`, razón social,
+     nombre comercial, descripción, teléfono, correo, sitio web, dirección,
+     ciudad, departamento, país, moneda, zona horaria, sector, representante
+     legal y horario.
+  2. Exponer `PATCH /api/v1/empresas/{id}/perfil` para edición parcial; el
+     empresario solo edita su empresa y admin/super_admin cualquiera.
+  3. El logo se sube con el flujo existente de `storage-service` (objeto público)
+     y la empresa guarda `logo_objeto_id`. Identidad valida por API interna que
+     el objeto sea imagen, esté activo y pertenezca al tenant.
+  4. La respuesta incluye `logo_url` derivada; no se persiste una URL firmada.
+  5. `ruc` es opcional pero único por empresa cuando está informado.
+- **Consecuencias**:
+  - El frontend puede completar el perfil gradualmente sin bloquear el alta.
+  - No hay FK cruzada entre identidad y storage (R-DB-1).
+  - El RUC vacío no participa en la unicidad; los RUC repetidos devuelven 409.
+
+---
+
 ## Resumen de cumplimiento post-corrección
 
 | Ítem del documento          | Estado  | Nota |
