@@ -39,7 +39,7 @@ describe('EmpresasService', () => {
       expect(client.query).toHaveBeenNthCalledWith(
         2,
         expect.stringContaining('INSERT INTO identity.empresas'),
-        ['Acme', 'acme', 'hibrida', 'u-1'],
+        expect.arrayContaining(['Acme', 'acme', 'hibrida', 'u-1']),
       );
       expect(client.query).toHaveBeenCalledTimes(4);
     });
@@ -62,7 +62,7 @@ describe('EmpresasService', () => {
       expect(client.query).toHaveBeenNthCalledWith(
         3,
         expect.stringContaining('INSERT INTO identity.empresas'),
-        ['Acme', 'acme-2', 'hibrida', 'u-1'],
+        expect.arrayContaining(['Acme', 'acme-2', 'hibrida', 'u-1']),
       );
     });
 
@@ -83,7 +83,7 @@ describe('EmpresasService', () => {
       expect(client.query).toHaveBeenNthCalledWith(
         2,
         expect.stringContaining('INSERT INTO identity.empresas'),
-        ['Acme', 'mi-empresa', 'hibrida', 'u-1'],
+        expect.arrayContaining(['Acme', 'mi-empresa', 'hibrida', 'u-1']),
       );
     });
 
@@ -351,5 +351,154 @@ describe('EmpresasService', () => {
     const pg = { queryOne: vi.fn().mockResolvedValue(empresa) };
     const servicio = new EmpresasService(pg as never, {} as never);
     await expect(servicio.obtener('e-1')).resolves.toEqual(empresa);
+  });
+});
+
+describe('EmpresasService · perfil y logo', () => {
+  afterEach(() => vi.unstubAllGlobals());
+
+  const logoId = '11111111-2222-3333-4444-555555555555';
+
+  it('actualiza metadatos parciales del perfil', async () => {
+    const actualizada = { ...empresa, ruc: 'RUC-001', telefono: '8888', moneda: 'NIO' };
+    const pg = {
+      queryOne: vi.fn()
+        .mockResolvedValueOnce(empresa) // resolver por id
+        .mockResolvedValueOnce({ ok: 1 }) // membresía empresario
+        .mockResolvedValueOnce(null) // RUC libre
+        .mockResolvedValueOnce(actualizada), // UPDATE
+    };
+    const servicio = new EmpresasService(pg as never, {} as never);
+
+    const resultado = await servicio.actualizarPerfil('u-1', 'e-1', {
+      ruc: 'RUC-001',
+      telefono: '8888',
+    });
+
+    expect(resultado).toMatchObject({ ruc: 'RUC-001', telefono: '8888' });
+    expect(pg.queryOne).toHaveBeenCalledWith(
+      expect.stringContaining('UPDATE identity.empresas'),
+      expect.arrayContaining(['e-1', 'RUC-001', '8888']),
+    );
+  });
+
+  it('permite que un admin actualice cualquier empresa', async () => {
+    const pg = {
+      queryOne: vi.fn()
+        .mockResolvedValueOnce(empresa)
+        .mockResolvedValueOnce({ ...empresa, sector: 'tecnologia' }),
+    };
+    const servicio = new EmpresasService(pg as never, {} as never);
+    await expect(
+      servicio.actualizarPerfil('admin-1', 'e-1', { sector: 'tecnologia' }, true),
+    ).resolves.toMatchObject({ sector: 'tecnologia' });
+  });
+
+  it('valida el logo contra storage y expone logo_url', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => ({
+        ok: true,
+        status: 200,
+        json: async () => ({
+          id: logoId,
+          tenant_id: 'e-1',
+          estado: 'activo',
+          publico: true,
+          content_type: 'image/png',
+        }),
+      })),
+    );
+    const pg = {
+      queryOne: vi.fn()
+        .mockResolvedValueOnce(empresa)
+        .mockResolvedValueOnce({ ok: 1 })
+        .mockResolvedValueOnce({ ...empresa, logo_objeto_id: logoId }),
+    };
+    const servicio = new EmpresasService(pg as never, {} as never);
+
+    const resultado = await servicio.actualizarPerfil('u-1', 'e-1', {
+      logo_objeto_id: logoId,
+    });
+
+    expect(resultado.logo_url).toBe(`/api/v1/storage/public/objetos/${logoId}`);
+  });
+
+  it('rechaza RUC duplicado', async () => {
+    const pg = {
+      queryOne: vi.fn()
+        .mockResolvedValueOnce(empresa)
+        .mockResolvedValueOnce({ ok: 1 })
+        .mockResolvedValueOnce({ id: 'otra' }),
+    };
+    const servicio = new EmpresasService(pg as never, {} as never);
+    await expect(
+      servicio.actualizarPerfil('u-1', 'e-1', { ruc: 'RUC-001' }),
+    ).rejects.toBeInstanceOf(ConflictError);
+  });
+
+  it('rechaza moneda, correo y logo inválidos', async () => {
+    const crearServicio = () =>
+      new EmpresasService(
+        {
+          queryOne: vi.fn()
+            .mockResolvedValueOnce(empresa)
+            .mockResolvedValueOnce({ ok: 1 }),
+        } as never,
+        {} as never,
+      );
+
+    await expect(
+      crearServicio().actualizarPerfil('u-1', 'e-1', { moneda: 'NI' }),
+    ).rejects.toMatchObject({ codigo: 'PERFIL_INVALIDO' });
+    await expect(
+      crearServicio().actualizarPerfil('u-1', 'e-1', { correo_contacto: 'no-es-correo' }),
+    ).rejects.toMatchObject({ codigo: 'PERFIL_INVALIDO' });
+    await expect(
+      crearServicio().actualizarPerfil('u-1', 'e-1', { logo_objeto_id: 'no-uuid' }),
+    ).rejects.toMatchObject({ codigo: 'PERFIL_INVALIDO' });
+  });
+
+  it('rechaza logos inexistentes, no verificables o no públicos', async () => {
+    const crearServicio = () =>
+      new EmpresasService(
+        {
+          queryOne: vi.fn()
+            .mockResolvedValueOnce(empresa)
+            .mockResolvedValueOnce({ ok: 1 }),
+        } as never,
+        {} as never,
+      );
+
+    vi.stubGlobal('fetch', vi.fn(async () => ({ ok: false, status: 404 })));
+    await expect(
+      crearServicio().actualizarPerfil('u-1', 'e-1', { logo_objeto_id: logoId }),
+    ).rejects.toBeInstanceOf(NotFoundError);
+
+    vi.stubGlobal('fetch', vi.fn(async () => ({ ok: false, status: 500 })));
+    await expect(
+      crearServicio().actualizarPerfil('u-1', 'e-1', { logo_objeto_id: logoId }),
+    ).rejects.toMatchObject({ codigo: 'LOGO_NO_VERIFICABLE' });
+
+    vi.stubGlobal('fetch', vi.fn(async () => ({
+      ok: true,
+      status: 200,
+      json: async () => ({
+        tenant_id: 'e-1',
+        estado: 'activo',
+        publico: false,
+        content_type: 'image/png',
+      }),
+    })));
+    await expect(
+      crearServicio().actualizarPerfil('u-1', 'e-1', { logo_objeto_id: logoId }),
+    ).rejects.toMatchObject({ codigo: 'LOGO_INVALIDO' });
+
+    vi.stubGlobal('fetch', vi.fn(async () => {
+      throw new Error('caído');
+    }));
+    await expect(
+      crearServicio().actualizarPerfil('u-1', 'e-1', { logo_objeto_id: logoId }),
+    ).rejects.toMatchObject({ codigo: 'LOGO_NO_VERIFICABLE' });
   });
 });

@@ -141,6 +141,9 @@ en `docs/rules/cd/` (R-CD).
 ## API (resumen de Tabla 21, todas por el gateway)
 
 - `POST /api/v1/auth/registro|login|refresh`, `GET /api/v1/auth/me`
+- `POST /api/v1/empresas`, `GET /api/v1/empresas/:id`,
+  `PATCH /api/v1/empresas/:id/perfil` — RUC opcional, perfil comercial/fiscal
+  y logo (objeto público de storage validado por tenant).
 - `POST /api/v1/catalog/productos`, `GET /api/v1/catalog/productos(/:id)` (admin)
 - `GET|POST|PATCH|DELETE /api/v1/catalog/servicios` (empresa/admin) — recurso
   propio de servicios con baja lógica, duración y unicidad por empresa.
@@ -204,8 +207,8 @@ pública**: `scripts/tools/swagger-aggregate.mjs` fusiona
 npm run swagger:export   # regenera docs/openapi/<servicio>/{public,internal} + los dos agregados de docs/api/
 ```
 
-Cobertura actual: **272/272 operaciones documentadas** en 10 servicios:
-**251 públicas** (228 con schema de respuesta + 23 sin contenido) y **21 internas**
+Cobertura actual: **273/273 operaciones documentadas** en 10 servicios:
+**252 públicas** (229 con schema de respuesta + 23 sin contenido) y **21 internas**
 (todas con schema).
 
 ## Variables de entorno (`.env` en dev · `.env.production` en producción)
