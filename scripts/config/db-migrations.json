@@ -23,5 +23,6 @@
   "11_catalogo_productos_servicios.sql": "53bec2147281a10a9999480ae0103ece29064682cb6a5b01efd836ade28a4c21",
   "12_catalogo_operaciones_avanzadas.sql": "d6227011a338c5ee95f3b3132476e53d996f26f81b04896c1f197e11304340f2",
   "13_empresa_metadatos.sql": "a8493464539b764c6b36d9b7c73cdee48b250ee42fa1c8ea08a2dbd59d312a67",
-  "14_usuario_avatar.sql": "f86ad91f26a9978fbfaecad94a8b4bfc21d01074d461c377e5dabf829143a643"
+  "14_usuario_avatar.sql": "f86ad91f26a9978fbfaecad94a8b4bfc21d01074d461c377e5dabf829143a643",
+  "15_tienda_logo.sql": "5568e26b5b93f03178eea089ffeb71bc778f88e283bc939d5f9b25404a570986"
 }

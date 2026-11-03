@@ -22,7 +22,10 @@ export interface Tienda {
   nombre: string;
   slug: string;
   descripcion: string;
+  logo_objeto_id: string | null;
+  logo_url?: string | null;
   creado_en: string;
+  actualizado_en: string;
 }
 
 export interface TiendaResuelta {
@@ -36,7 +39,7 @@ interface TiendaConEstadoSlug extends Tienda {
 }
 
 const CAMPOS_TIENDA =
-  'id, empresa_id, propietario_usuario_id, participacion_porcentaje, vendedor_id, nombre, descripcion, slug, creado_en';
+  'id, empresa_id, propietario_usuario_id, participacion_porcentaje, vendedor_id, nombre, descripcion, slug, logo_objeto_id, creado_en, actualizado_en';
 const MAX_INTENTOS_SLUG = 50;
 
 /**
@@ -44,23 +47,28 @@ const MAX_INTENTOS_SLUG = 50;
  */
 @Injectable()
 export class TiendasService {
+  private readonly storageUrl = process.env.STORAGE_SERVICE_URL ?? 'http://storage-service:3010';
+  private readonly claveInterna = process.env.INTERNAL_API_KEY ?? '';
+
   constructor(private readonly pg: PgService) {}
 
   async deVendedor(vendedorId: string): Promise<Tienda | null> {
-    return this.pg.queryOne<Tienda>(
+    const tienda = await this.pg.queryOne<Tienda>(
       `SELECT ${CAMPOS_TIENDA}
        FROM stores.tiendas WHERE vendedor_id = $1`,
       [vendedorId],
     );
+    return tienda ? this.conLogoUrl(tienda) : null;
   }
 
   async deEmpresa(empresaId: string): Promise<Tienda[]> {
-    return this.pg.query<Tienda>(
+    const tiendas = await this.pg.query<Tienda>(
       `SELECT ${CAMPOS_TIENDA}
        FROM stores.tiendas WHERE empresa_id = $1
        ORDER BY creado_en DESC LIMIT 200`,
       [empresaId],
     );
+    return tiendas.map((tienda) => this.conLogoUrl(tienda));
   }
 
   /** Resuelve por UUID o slug; conserva el slug anterior como redirección. */
@@ -69,7 +77,7 @@ export class TiendasService {
     if (!fila) return null;
     const { es_actual, ...tienda } = fila;
     return {
-      tienda,
+      tienda: this.conLogoUrl(tienda),
       redirigirA: es_actual ? undefined : `/api/v1/tiendas/${tienda.slug}`,
     };
   }
@@ -107,7 +115,7 @@ export class TiendasService {
           [randomUUID(), empresaId, propietarioId, vendedorId, participacion, nombreFinal, descripcionFinal, slug],
         );
         if (!fila) throw new DomainError('TIENDA_FALLIDA', 'No se pudo crear la tienda.');
-        return fila;
+        return this.conLogoUrl(fila);
       } catch (error) {
         if (!esViolacionUnicidad(error)) throw error;
         if (slugExplicito || intento === maxIntentos) {
@@ -133,7 +141,7 @@ export class TiendasService {
     }
 
     const slug = validarSlugSolicitado(slugSolicitado);
-    if (slug === tienda.slug) return tienda;
+    if (slug === tienda.slug) return this.conLogoUrl(tienda);
     if (!(await this.slugLibre(slug))) {
       throw new ConflictError(`El slug "${slug}" ya está en uso.`);
     }
@@ -144,13 +152,92 @@ export class TiendasService {
         [slug, tienda.id],
       );
       if (!fila) throw new NotFoundError('Tienda', tienda.id);
-      return fila;
+      return this.conLogoUrl(fila);
     } catch (error) {
       if (esViolacionUnicidad(error)) {
         throw new ConflictError(`El slug "${slug}" ya está en uso.`);
       }
       throw error;
     }
+  }
+
+  /**
+   * Asocia o quita el logo de la tienda. El vendedor dueño, el empresario de la
+   * empresa y admin/super_admin pueden hacerlo; el objeto debe ser una imagen
+   * pública del tenant de la empresa.
+   */
+  async actualizarLogo(
+    actor: { user_id: string; rol: string; tenant_id?: string },
+    identificador: string,
+    logoObjetoId: string | null,
+  ): Promise<Tienda> {
+    const resuelta = await this.resolver(identificador);
+    if (!resuelta) throw new NotFoundError('Tienda', identificador);
+    const tienda = resuelta.tienda;
+    const esGlobal = actor.rol === 'super_admin' || actor.rol === 'admin';
+    const esEmpresario =
+      actor.rol === 'empresario' && !!actor.tenant_id && actor.tenant_id === tienda.empresa_id;
+    const esVendedor =
+      actor.rol === 'vendedor' &&
+      (tienda.propietario_usuario_id === actor.user_id || tienda.vendedor_id === actor.user_id);
+    if (!esGlobal && !esEmpresario && !esVendedor) {
+      throw new ForbiddenError('Solo el dueño de la tienda puede cambiar su logo.');
+    }
+    if (logoObjetoId !== null) {
+      if (!esUuid(logoObjetoId)) {
+        throw new DomainError('LOGO_INVALIDO', 'El logo debe ser un objeto de storage válido.');
+      }
+      await this.validarLogo(tienda.empresa_id, logoObjetoId);
+    }
+    const fila = await this.pg.queryOne<Tienda>(
+      `UPDATE stores.tiendas SET logo_objeto_id=$1, actualizado_en=NOW()
+        WHERE id=$2 RETURNING ${CAMPOS_TIENDA}`,
+      [logoObjetoId, tienda.id],
+    );
+    if (!fila) throw new NotFoundError('Tienda', tienda.id);
+    return this.conLogoUrl(fila);
+  }
+
+  private async validarLogo(empresaId: string, objetoId: string): Promise<void> {
+    let respuesta: Response;
+    try {
+      respuesta = await fetch(
+        `${this.storageUrl}/internal/storage/objetos/${encodeURIComponent(objetoId)}` +
+          `?tenant_id=${encodeURIComponent(empresaId)}`,
+        { headers: { 'x-internal-key': this.claveInterna } },
+      );
+    } catch {
+      throw new DomainError('LOGO_NO_VERIFICABLE', 'No se pudo verificar el logo.');
+    }
+    if (respuesta.status === 404) throw new NotFoundError('Logo', objetoId);
+    if (!respuesta.ok) {
+      throw new DomainError('LOGO_NO_VERIFICABLE', 'No se pudo verificar el logo.');
+    }
+    const objeto = (await respuesta.json()) as {
+      tenant_id?: string;
+      estado?: string;
+      publico?: boolean;
+      content_type?: string;
+    };
+    if (
+      objeto.tenant_id !== empresaId ||
+      objeto.estado !== 'activo' ||
+      objeto.publico !== true ||
+      !String(objeto.content_type ?? '').startsWith('image/')
+    ) {
+      throw new DomainError(
+        'LOGO_INVALIDO',
+        'El logo debe ser una imagen pública y activa de la empresa.',
+      );
+    }
+  }
+
+  private conLogoUrl(tienda: Tienda): Tienda {
+    if (!tienda.logo_objeto_id) return tienda;
+    return {
+      ...tienda,
+      logo_url: `/api/v1/storage/public/objetos/${tienda.logo_objeto_id}`,
+    };
   }
 
   private async buscarPorIdentificador(

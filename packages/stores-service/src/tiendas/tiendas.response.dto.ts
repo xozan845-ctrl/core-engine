@@ -29,6 +29,15 @@ export class TiendaResponseDto {
   @ApiProperty({ description: 'Descripción de la tienda' })
   descripcion: string;
 
+  @ApiProperty({ description: 'Objeto de storage del logo', required: false, nullable: true, format: 'uuid' })
+  logo_objeto_id?: string | null;
+
+  @ApiProperty({ description: 'URL pública del logo', required: false, nullable: true })
+  logo_url?: string | null;
+
   @ApiProperty({ description: 'Fecha de creación (ISO 8601 UTC)', format: 'date-time' })
   creado_en: string;
+
+  @ApiProperty({ description: 'Última actualización (ISO 8601 UTC)', required: false, format: 'date-time' })
+  actualizado_en?: string;
 }
