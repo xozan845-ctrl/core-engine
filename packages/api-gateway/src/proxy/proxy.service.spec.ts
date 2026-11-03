@@ -299,3 +299,60 @@ describe('ProxyService — propagación de 301 por slug (ADR-26)', () => {
     expect(res.setHeader).not.toHaveBeenCalledWith('content-length', '0');
   });
 });
+
+describe('ProxyService — timeout al microservicio (R-RB-4)', () => {
+  const fetchOriginal = globalThis.fetch;
+  afterEach(() => {
+    globalThis.fetch = fetchOriginal;
+    vi.restoreAllMocks();
+  });
+
+  const auth = {
+    aplicar: (_req: Request, _res: Response, next: () => void) => next(),
+  } as unknown as GatewayAuthMiddleware;
+
+  function reqCatalogo(): Request {
+    return {
+      originalUrl: '/api/v1/catalog/productos',
+      method: 'GET',
+      headers: {},
+      body: undefined,
+    } as unknown as Request;
+  }
+
+  it('debe responder 504 DESTINO_TIMEOUT cuando el servicio no contesta a tiempo', async () => {
+    globalThis.fetch = vi.fn(
+      (_url: string, init: RequestInit) =>
+        new Promise<globalThis.Response>((_resolve, reject) => {
+          init.signal?.addEventListener('abort', () =>
+            reject(Object.assign(new Error('abortado'), { name: 'AbortError' })),
+          );
+        }),
+    ) as unknown as typeof fetch;
+    const servicio = new ProxyService(auth, destinos, politicas, 5);
+    const res = resMock();
+
+    await servicio.reenviar(reqCatalogo(), res);
+
+    expect(res.status).toHaveBeenCalledWith(504);
+    expect(res.json).toHaveBeenCalledWith(
+      expect.objectContaining({
+        codigo: 'DESTINO_TIMEOUT',
+        detalles: expect.objectContaining({ servicio: 'catalog', timeout_ms: 5 }),
+      }),
+    );
+  });
+
+  it('debe mantener 502 DESTINO_NO_DISPONIBLE cuando el fallo no es un timeout', async () => {
+    globalThis.fetch = vi.fn().mockRejectedValue(new Error('ECONNREFUSED')) as unknown as typeof fetch;
+    const servicio = new ProxyService(auth, destinos, politicas, 5);
+    const res = resMock();
+
+    await servicio.reenviar(reqCatalogo(), res);
+
+    expect(res.status).toHaveBeenCalledWith(502);
+    expect(res.json).toHaveBeenCalledWith(
+      expect.objectContaining({ codigo: 'DESTINO_NO_DISPONIBLE' }),
+    );
+  });
+});
