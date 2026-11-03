@@ -206,7 +206,7 @@ describe('UsuariosService · avatar', () => {
   const objetivo = { ...filaBase, tenant_id: 't1' };
 
   it('permite al propio vendedor cambiar su avatar validando storage', async () => {
-    vi.stubGlobal('fetch', vi.fn(async () => ({
+    const fetchMock = vi.fn(async () => ({
       ok: true,
       status: 200,
       json: async () => ({
@@ -215,7 +215,8 @@ describe('UsuariosService · avatar', () => {
         publico: true,
         content_type: 'image/png',
       }),
-    })));
+    }));
+    vi.stubGlobal('fetch', fetchMock);
     const pg = {
       queryOne: vi.fn()
         .mockResolvedValueOnce(objetivo)
@@ -228,6 +229,27 @@ describe('UsuariosService · avatar', () => {
       tenant_id: 't1',
     });
     expect(resultado.avatar_url).toBe(`/api/v1/storage/public/objetos/${avatarId}`);
+    // R-RB-4: la validación interna lleva timeout explícito.
+    expect(fetchMock).toHaveBeenCalledWith(
+      expect.stringContaining(`/internal/storage/objetos/${avatarId}`),
+      expect.objectContaining({ signal: expect.any(AbortSignal) }),
+    );
+  });
+
+  it('falla cerrado si la validación del avatar se aborta por timeout', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => {
+        throw Object.assign(new Error('The operation was aborted'), { name: 'AbortError' });
+      }),
+    );
+    const servicio = new UsuariosService({
+      queryOne: vi.fn().mockResolvedValueOnce(objetivo),
+    } as never);
+
+    await expect(
+      servicio.actualizarAvatar('u1', avatarId, { user_id: 'u1', rol: 'vendedor' }),
+    ).rejects.toMatchObject({ codigo: 'AVATAR_NO_VERIFICABLE' });
   });
 
   it('permite al empresario del mismo tenant y rechaza a otro vendedor', async () => {

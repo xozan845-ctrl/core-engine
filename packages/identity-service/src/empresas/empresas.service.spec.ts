@@ -395,20 +395,18 @@ describe('EmpresasService · perfil y logo', () => {
   });
 
   it('valida el logo contra storage y expone logo_url', async () => {
-    vi.stubGlobal(
-      'fetch',
-      vi.fn(async () => ({
-        ok: true,
-        status: 200,
-        json: async () => ({
-          id: logoId,
-          tenant_id: 'e-1',
-          estado: 'activo',
-          publico: true,
-          content_type: 'image/png',
-        }),
-      })),
-    );
+    const fetchMock = vi.fn(async () => ({
+      ok: true,
+      status: 200,
+      json: async () => ({
+        id: logoId,
+        tenant_id: 'e-1',
+        estado: 'activo',
+        publico: true,
+        content_type: 'image/png',
+      }),
+    }));
+    vi.stubGlobal('fetch', fetchMock);
     const pg = {
       queryOne: vi.fn()
         .mockResolvedValueOnce(empresa)
@@ -422,6 +420,28 @@ describe('EmpresasService · perfil y logo', () => {
     });
 
     expect(resultado.logo_url).toBe(`/api/v1/storage/public/objetos/${logoId}`);
+    // R-RB-4: la validación interna lleva timeout explícito.
+    expect(fetchMock).toHaveBeenCalledWith(
+      expect.stringContaining(`/internal/storage/objetos/${logoId}`),
+      expect.objectContaining({ signal: expect.any(AbortSignal) }),
+    );
+  });
+
+  it('falla cerrado si la validación del logo se aborta por timeout', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => {
+        throw Object.assign(new Error('The operation was aborted'), { name: 'AbortError' });
+      }),
+    );
+    const pg = {
+      queryOne: vi.fn().mockResolvedValueOnce(empresa).mockResolvedValueOnce({ ok: 1 }),
+    };
+    const servicio = new EmpresasService(pg as never, {} as never);
+
+    await expect(
+      servicio.actualizarPerfil('u-1', 'e-1', { logo_objeto_id: logoId }),
+    ).rejects.toMatchObject({ codigo: 'LOGO_NO_VERIFICABLE' });
   });
 
   it('rechaza RUC duplicado', async () => {
