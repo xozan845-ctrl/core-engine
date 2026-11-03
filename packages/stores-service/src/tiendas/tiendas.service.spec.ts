@@ -286,7 +286,8 @@ describe('TiendasService · logo de tienda', () => {
   });
 
   it('permite al vendedor dueño y al empresario del tenant', async () => {
-    vi.stubGlobal('fetch', vi.fn(async () => imagen()));
+    const fetchMock = vi.fn(async () => imagen());
+    vi.stubGlobal('fetch', fetchMock);
     const pg = {
       queryOne: vi.fn()
         .mockResolvedValueOnce({ ...base, es_actual: true })
@@ -300,6 +301,11 @@ describe('TiendasService · logo de tienda', () => {
       logoId,
     );
     expect(resultado.logo_url).toBe(`/api/v1/storage/public/objetos/${logoId}`);
+    // R-RB-4: la validación interna lleva timeout explícito.
+    expect(fetchMock).toHaveBeenCalledWith(
+      expect.stringContaining(`/internal/storage/objetos/${logoId}`),
+      expect.objectContaining({ signal: expect.any(AbortSignal) }),
+    );
 
     const pgEmpresa = {
       queryOne: vi.fn()
@@ -378,6 +384,23 @@ describe('TiendasService · logo de tienda', () => {
     await expect(
       crear().actualizarLogo({ user_id: 'v1', rol: 'vendedor' }, 't1', logoId),
     ).rejects.toMatchObject({ codigo: 'LOGO_INVALIDO' });
+  });
+
+  it('falla cerrado si la validación del logo se aborta por timeout', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => {
+        throw Object.assign(new Error('The operation was aborted'), { name: 'AbortError' });
+      }),
+    );
+    const servicio = new TiendasService({
+      queryOne: vi.fn().mockResolvedValueOnce({ ...base, es_actual: true }),
+      query: vi.fn(),
+    } as never);
+
+    await expect(
+      servicio.actualizarLogo({ user_id: 'v1', rol: 'vendedor' }, 't1', logoId),
+    ).rejects.toMatchObject({ codigo: 'LOGO_NO_VERIFICABLE' });
   });
 
   it('deriva logo_url al consultar tiendas', async () => {
