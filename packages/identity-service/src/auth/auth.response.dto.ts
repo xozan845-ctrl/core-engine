@@ -22,6 +22,12 @@ export class SesionUsuarioResponseDto {
 
   @ApiProperty({ description: 'Ficha de personal vinculada', required: false, format: 'uuid' })
   personal_id?: string;
+
+  @ApiProperty({ description: 'Objeto de storage del avatar', required: false, nullable: true, format: 'uuid' })
+  avatar_objeto_id?: string | null;
+
+  @ApiProperty({ description: 'URL pública del avatar', required: false, nullable: true })
+  avatar_url?: string | null;
 }
 
 export class SesionResponseDto {

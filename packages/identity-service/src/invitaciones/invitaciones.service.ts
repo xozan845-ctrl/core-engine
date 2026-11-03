@@ -57,6 +57,8 @@ export interface VendedorEmpresa {
   tienda_nombre: string | null;
   participacion_porcentaje: number | null;
   estado: string;
+  avatar_objeto_id?: string | null;
+  avatar_url?: string | null;
 }
 
 export interface InvitacionResumen {
@@ -326,7 +328,7 @@ export class InvitacionesService {
     await this.assertEmpresario(actorId, empresaId);
 
     const vendedores = await this.pg.query<VendedorEmpresa>(
-      `SELECT u.id, u.nombre, u.correo, u.rol,
+      `SELECT u.id, u.nombre, u.correo, u.rol, u.avatar_objeto_id,
               t.id AS tienda_id, t.nombre AS tienda_nombre,
               m.participacion_porcentaje, m.estado
        FROM identity.empresa_miembros m
@@ -335,6 +337,13 @@ export class InvitacionesService {
        WHERE m.empresa_id=$1 AND m.rol='vendedor'
        ORDER BY u.nombre`,
       [empresaId],
+    ).then((filas) =>
+      filas.map((vendedor) => ({
+        ...vendedor,
+        avatar_url: vendedor.avatar_objeto_id
+          ? `/api/v1/storage/public/objetos/${vendedor.avatar_objeto_id}`
+          : null,
+      })),
     );
 
     const invitaciones = await this.pg.query<InvitacionResumen>(
