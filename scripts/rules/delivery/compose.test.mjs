@@ -12,9 +12,16 @@ import { GHCR_OWNER, SERVICES, WORKFLOWS_DIR } from '../../config/project.mjs';
  * cumplen su contrato (R-CD-1, R-CD-2, R-CD-8).
  */
 
-// Excluidos de los composes de producción por decisión del repo (viven en el
-// entorno de desarrollo `docker-compose.dev.yml`).
+// Exclusiones por entorno: stage valida commissions (ADR-37), pero produccion
+// lo mantiene fuera (ADR-17/ADR-22). market-intelligence queda fuera de ambos
+// y solo vive en desarrollo (`docker-compose.dev.yml`).
+const EXCLUDED_FROM_STAGE = ['market-intelligence-service'];
 const EXCLUDED_FROM_PROD = ['commissions-service', 'market-intelligence-service'];
+
+const COMPOSES = [
+  { rel: 'docker-compose.stage.yml', tag: 'stage', excluded: EXCLUDED_FROM_STAGE },
+  { rel: 'docker-compose.yml', tag: 'prod', excluded: EXCLUDED_FROM_PROD },
+];
 
 const read = (...segments) => readText(join(repoRoot, ...segments));
 const workflowsDirectory = join(repoRoot, WORKFLOWS_DIR);
@@ -26,10 +33,7 @@ export default defineSuite({
   mode: 'repo',
   run: ({ test, assert }) => {
     test('R-CD-3: los composes de stage/prod consumen GHCR, sin `build:`', () => {
-      for (const [rel, tag] of [
-        ['docker-compose.stage.yml', 'stage'],
-        ['docker-compose.yml', 'prod'],
-      ]) {
+      for (const { rel, tag, excluded } of COMPOSES) {
         assert.ok(existsSync(join(repoRoot, rel)), `falta ${rel}`);
         const content = read(rel);
 
@@ -38,7 +42,7 @@ export default defineSuite({
           `${rel} no debe contener \`build:\` (R-CD-3: se consume la imagen publicada)`,
         );
 
-        for (const svc of SERVICES.filter((s) => !EXCLUDED_FROM_PROD.includes(s))) {
+        for (const svc of SERVICES.filter((s) => !excluded.includes(s))) {
           const image = `image: ghcr.io/${GHCR_OWNER}/core-engine-${svc}:${tag}`;
           assert.ok(content.includes(image), `${rel}: falta \`${image}\``);
           assert.ok(
@@ -47,6 +51,29 @@ export default defineSuite({
           );
         }
       }
+    });
+
+    test('ADR-37: stage despliega commissions y activa su readiness; prod lo excluye', () => {
+      const stage = read('docker-compose.stage.yml');
+      assert.match(stage, /^ {2}commissions-service:$/m, 'stage debe definir commissions-service');
+      assert.ok(
+        stage.includes(
+          `image: ghcr.io/${GHCR_OWNER}/core-engine-commissions-service:stage`,
+        ),
+        'stage debe consumir la imagen :stage de commissions-service',
+      );
+      assert.match(
+        stage,
+        /^ {6}ENTORNO: stage$/m,
+        'el gateway de stage debe declarar ENTORNO=stage para incluirlo en /ready',
+      );
+
+      const prod = read('docker-compose.yml');
+      assert.doesNotMatch(
+        prod,
+        /^ {2}commissions-service:$/m,
+        'produccion no debe definir commissions-service (ADR-17/ADR-22)',
+      );
     });
 
     test('dev construye local: `docker-compose.dev.yml` define los 10 servicios con `build:`', () => {
