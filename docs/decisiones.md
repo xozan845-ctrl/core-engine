@@ -943,6 +943,31 @@ Este archivo registra decisiones técnicas deliberadas que se apartan del texto 
 
 ---
 
+---
+
+## ADR-35: Avatar de vendedor y usuario
+
+- **Fecha**: 2026-11-03
+- **Estado**: Aceptado
+- **Contexto**: el empresario podía ver nombre, correo y participación de sus
+  vendedores, pero no una imagen. La empresa ya tenía logo; faltaba el avatar
+  individual.
+- **Decisión**:
+  1. Añadir `avatar_objeto_id` a `identity.usuarios` y validar el objeto contra
+     `storage-service` (imagen pública, activa y del mismo tenant).
+  2. Exponer `PATCH /api/v1/usuarios/{id}/avatar` para el propio vendedor, el
+     empresario de su tenant y admin/super_admin. `null` elimina el avatar.
+  3. Devolver `avatar_url` derivada en el usuario, la sesión y el listado de
+     vendedores de la empresa (`GET /empresas/{id}/vendedores`).
+  4. Mantener el binario en storage y la referencia en identidad, sin FK
+     cruzada (R-DB-1).
+- **Consecuencias**:
+  - El empresario puede mostrar el avatar de cada vendedor en su panel.
+  - El vendedor puede cambiar su propio avatar sin depender del empresario.
+  - El frontend reutiliza el flujo de subida de storage y solo envía el UUID.
+
+---
+
 ## Resumen de cumplimiento post-corrección
 
 | Ítem del documento          | Estado  | Nota |

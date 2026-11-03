@@ -330,6 +330,17 @@
             "description": "Ficha de personal vinculada",
             "format": "uuid"
           },
+          "avatar_objeto_id": {
+            "type": "object",
+            "description": "Objeto de storage del avatar",
+            "nullable": true,
+            "format": "uuid"
+          },
+          "avatar_url": {
+            "type": "object",
+            "description": "URL pública del avatar",
+            "nullable": true
+          },
           "creado_en": {
             "type": "string",
             "description": "Fecha de creación (ISO 8601 UTC)",
