@@ -99,6 +99,10 @@ class VendedorEmpresaResponseDto {
   @ApiProperty({ required: false, nullable: true, minimum: 0, maximum: 100 })
   participacion_porcentaje: number | null;
   @ApiProperty() estado: string;
+  @ApiProperty({ required: false, nullable: true, format: 'uuid' })
+  avatar_objeto_id?: string | null;
+  @ApiProperty({ required: false, nullable: true })
+  avatar_url?: string | null;
 }
 
 class InvitacionResumenResponseDto {
