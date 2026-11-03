@@ -257,7 +257,7 @@ Este archivo registra decisiones técnicas deliberadas que se apartan del texto 
 ## ADR-17: `commissions-service` y `market-intelligence-service` fuera de producción (temporal)
 
 - **Fecha**: 2026-10-05
-- **Estado**: Aceptado (temporal) — mecanismo de overlay sustituido por ADR-22
+- **Estado**: Aceptado (temporal) — mecanismo de overlay sustituido por ADR-22; la exclusión de stage de `commissions-service` queda sustituida por ADR-37 (producción sigue fuera)
 - **Contexto**: por ahora no se quieren desplegar `commissions-service` ni
   `market-intelligence-service` en producción; el `docker-compose.yml` base los
   levantaba junto al resto.
@@ -274,6 +274,9 @@ Este archivo registra decisiones técnicas deliberadas que se apartan del texto 
   estén bajados (no se tocan las políticas de ruta; se registra como punto a
   revisar si se alarga). Reversible: volver a mover las definiciones al compose
   base.
+- **Actualización (2026-11-03)**: ADR-37 despliega `commissions-service` en
+  **stage** para validar el portal de empresa. La exclusión de **producción**
+  se mantiene: sigue fuera de `docker-compose.yml`.
 
 ---
 
@@ -427,7 +430,9 @@ Este archivo registra decisiones técnicas deliberadas que se apartan del texto 
   pasa a ser el de producción, los puertos de datos/broker viven en el entorno dev
   (ya no como overlay) y el overlay `extra` desaparece. **Trade-off asumido**: prod
   y stage siguen compartiendo la lista de servicios entre sí; se aceptan como
-  entornos separados con imágenes y variables distintas.
+  entornos separados con imágenes y variables distintas. **Actualización
+  (2026-11-03)**: ADR-37 separa la lista: stage incluye `commissions-service`
+  y producción no.
 ---
 
 ## ADR-23: Arquitectura modular del motor de gobernanza (`scripts/`)
@@ -989,6 +994,44 @@ Este archivo registra decisiones técnicas deliberadas que se apartan del texto 
   - El logo de tienda y el avatar del vendedor son independientes.
   - El binario sigue en storage; stores solo guarda la referencia (R-DB-1).
   - El frontend reutiliza el flujo de subida y solo envía el UUID.
+
+---
+
+## ADR-37: `commissions-service` en stage, fuera de producción
+
+- **Fecha**: 2026-11-03
+- **Estado**: Aceptado
+- **Contexto**: el portal de empresa consume
+  `GET /api/v1/empresarios/me/ventas` y recibe 502 porque
+  `commissions-service` no está en el compose de stage (ADR-17/ADR-22). El
+  frontend ya está desplegado y la ruta está autorizada en el gateway para el
+  rol `empresario`; el gap es de despliegue, no de código. Se necesita validar
+  el flujo en stage antes de decidir producción.
+- **Decisión**:
+  1. Incluir `commissions-service` en `docker-compose.stage.yml` con la imagen
+     `ghcr.io/xozan845-ctrl/core-engine-commissions-service:stage`, puerto 3006
+     y `OUTBOX_TABLA: commissions.outbox` (ADR-25).
+  2. Mantenerlo fuera de `docker-compose.yml` (producción) y mantener
+     `market-intelligence-service` fuera de stage y producción; ambos siguen en
+     `docker-compose.dev.yml`.
+  3. Hacer la readiness dependiente del entorno: el gateway de stage declara
+     `ENTORNO: stage` y `/ready` incluye `commissions`; producción usa la lista
+     sin `commissions` (ADR-17/ADR-22).
+  4. Separar las exclusiones del test de composes: stage excluye solo
+     `market-intelligence-service`; producción excluye además
+     `commissions-service`.
+  5. Verificar la migración `01e_adr25_empresas.sql` en la BD de stage antes de
+     desplegar (las migraciones de `infra/db/init` solo corren en volúmenes
+     nuevos; en una BD existente se aplican a mano, R-DB-6/R-CD-5).
+- **Consecuencias**:
+  - Stage valida el portal de empresa y el smoke puede cubrir
+    `GET /api/v1/empresarios/me/ventas` con credenciales de empresario (R-CD-12).
+  - Producción sigue devolviendo 502 en esa ruta mientras `commissions` esté
+    fuera; es el comportamiento esperado, no un incidente.
+  - El compose de stage y el de producción dejan de compartir exactamente la
+    misma lista de servicios; el test de entrega lo hace explícito.
+  - Supersede parcialmente ADR-17/ADR-22 solo para stage; la exclusión de
+    producción se mantiene.
 
 ---
 

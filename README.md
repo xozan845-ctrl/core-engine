@@ -95,10 +95,10 @@ seeds del plan contable NIC e indices). En **Supabase** (staging/prod) aplique a
 | stores-service | 3003 | No | `stores` | `packages/stores-service` |
 | orders-service | 3004 | No | `orders` | `packages/orders-service` |
 | logistics-service | 3005 | No | `logistics` | `packages/logistics-service` |
-| commissions-service | 3006 | No *(fuera de prod)* | `commissions` | `packages/commissions-service` |
+| commissions-service | 3006 | No *(solo stage; fuera de prod)* | `commissions` | `packages/commissions-service` |
 | finance-service | 3007 | No | `finance` | `packages/finance-service` |
 | field-service | 3008 | No | `field` | `packages/field-service` |
-| market-intelligence-service | 3009 | No *(fuera de prod)* | `intelligence` | `packages/market-intelligence-service` |
+| market-intelligence-service | 3009 | No *(fuera de stage/prod)* | `intelligence` | `packages/market-intelligence-service` |
 | storage-service | 3010 | No | `storage` | `packages/storage-service` |
 | postgres | 5432 | No *(dev: `docker-compose.dev.yml`)* | todos | `infra/db/init/` |
 | rabbitmq (+ management) | 5672 / 15672 | No *(dev: `docker-compose.dev.yml`)* | — | — |
@@ -114,10 +114,10 @@ seeds del plan contable NIC e indices). En **Supabase** (staging/prod) aplique a
 > microservicio de dominio es accesible desde fuera**: se alcanzan por nombre de servicio
 > (`http://<servicio>:<puerto>`) dentro de la red `core-engine`, detrás del gateway.
 >
-> **Fuera de producción (por ahora):** `commissions-service` y `market-intelligence-service` **no
-> viven en el compose de producción** (`docker-compose.yml`); se levantan solo en desarrollo con
-> `docker compose -f docker-compose.dev.yml up`. Sus rutas del gateway
-> responderán 502 mientras estén bajados.
+> **Alcance por entorno:** `commissions-service` se despliega en **stage** para validar el
+> portal de empresa (`docker-compose.stage.yml`, ADR-37), pero **sigue fuera de producción**
+> (`docker-compose.yml`). `market-intelligence-service` solo se levanta en desarrollo. En
+> producción, sus rutas del gateway responderán 502 mientras estén bajados.
 
 ## Entornos y entrega (desarrollo → stage → producción)
 
@@ -170,7 +170,7 @@ en `docs/rules/cd/` (R-CD).
   créditos, gastos, cuentas por pagar, proveedores, compras, órdenes de compra,
   caja (movimientos, métodos, cierres, caja chica y transferencias), clientes y
   códigos de barras — reemplaza la persistencia local de esos módulos.
-- Infra: `GET /health` (liveness) y `GET /ready` (readiness agregada de los 7 servicios), `GET /metrics`, Swagger en `/docs` de cada servicio
+- Infra: `GET /health` (liveness) y `GET /ready` (readiness agregada de los servicios del entorno: 8 en producción, 9 en stage), `GET /metrics`, Swagger en `/docs` de cada servicio
 
 Endpoints internos (servicio→servicio) protegidos con `x-internal-key`: `internal/usuarios/:id`,
 `internal/vendedores`, `internal/productos/lote`, `internal/productos/sku/:sku`,
