@@ -113,15 +113,23 @@ export class ProxyService {
   private readonly auth: GatewayAuthMiddleware;
   private readonly destinos: ServicioDestino[];
   private readonly politicas: PoliticaRuta[];
+  private readonly timeoutMs: number;
 
   constructor(
     @Optional() auth?: GatewayAuthMiddleware,
     @Optional() destinos?: ServicioDestino[],
     @Optional() politicas?: PoliticaRuta[],
+    @Optional() timeoutMs?: number,
   ) {
     this.auth = auth ?? new GatewayAuthMiddleware();
     this.destinos = destinos ?? DESTINOS;
     this.politicas = politicas ?? POLITICAS_RUTAS;
+    // R-RB-4: el gateway no puede esperar indefinidamente a un microservicio.
+    // 30 s queda por debajo de los 60 s del proxy publico para que el cliente
+    // reciba el servicio culpable en vez de un 504 generico.
+    const configurado = timeoutMs ?? Number(process.env.PROXY_UPSTREAM_TIMEOUT_MS ?? 30_000);
+    this.timeoutMs =
+      Number.isFinite(configurado) && configurado > 0 ? Math.trunc(configurado) : 30_000;
   }
 
   async reenviar(req: Request, res: Response): Promise<void> {
@@ -157,6 +165,10 @@ export class ProxyService {
     }
 
     // 3. reenvío con las cabeceras de contexto del gateway
+    // Solo se limita la espera de la respuesta (cabeceras). El cuerpo en
+    // streaming (imágenes públicas) sigue su curso sin abortarse por lentitud
+    // del cliente: el temporizador se limpia al recibir la respuesta.
+    let agoto = false;
     try {
       const cuerpo = ['GET', 'HEAD', 'OPTIONS'].includes(req.method.toUpperCase()) ? undefined : await this.leerCuerpo(req);
       // Whitelist: solo contexto de usuario y correlacion; el resto (host,
@@ -175,14 +187,25 @@ export class ProxyService {
         if (v !== undefined) headers[k] = Array.isArray(v) ? v.join(', ') : String(v);
       }
 
-      const respuesta = await fetch(`${destino.url}${ruta}`, {
-        method: req.method,
-        headers,
-        body: cuerpo ? JSON.stringify(cuerpo) : undefined,
-        // Los 301 de slug (ADR-26) deben llegar al cliente con su Location;
-        // si fetch los sigue, el cliente recibe 200 y pierde la redireccion.
-        redirect: 'manual',
-      });
+      const controlador = new AbortController();
+      const temporizador = setTimeout(() => {
+        agoto = true;
+        controlador.abort();
+      }, this.timeoutMs);
+      let respuesta: globalThis.Response;
+      try {
+        respuesta = await fetch(`${destino.url}${ruta}`, {
+          method: req.method,
+          headers,
+          body: cuerpo ? JSON.stringify(cuerpo) : undefined,
+          // Los 301 de slug (ADR-26) deben llegar al cliente con su Location;
+          // si fetch los sigue, el cliente recibe 200 y pierde la redireccion.
+          redirect: 'manual',
+          signal: controlador.signal,
+        });
+      } finally {
+        clearTimeout(temporizador);
+      }
 
       res.status(respuesta.status);
       // `fetch` devuelve un objeto `Headers` (iterable), no un objeto plano:
@@ -224,13 +247,22 @@ export class ProxyService {
       res.send(texto || undefined);
     } catch (err) {
       this.logger.error({
-        msg: 'Fallo el reenvio al servicio',
+        msg: agoto ? 'Timeout esperando al servicio' : 'Fallo el reenvio al servicio',
         ruta,
         destino: destino.nombre,
+        ...(agoto ? { timeout_ms: this.timeoutMs } : {}),
         err: err instanceof Error ? err.message : String(err),
       });
       if (res.headersSent) {
         res.end();
+        return;
+      }
+      if (agoto) {
+        res.status(504).json({
+          codigo: 'DESTINO_TIMEOUT',
+          mensaje: `El servicio de destino no respondio en ${this.timeoutMs} ms.`,
+          detalles: { servicio: destino.nombre, timeout_ms: this.timeoutMs },
+        });
         return;
       }
       res.status(502).json({
