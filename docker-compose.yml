@@ -13,7 +13,8 @@
 #   docker compose -f docker-compose.yml -f docker-compose.observability.yml up -d
 #
 # `commissions-service` y `market-intelligence-service` no entran en este
-# compose (producción); viven en `docker-compose.dev.yml` (desarrollo).
+# compose (producción): commissions se despliega en stage (ADR-37) y ambos
+# viven en `docker-compose.dev.yml` (desarrollo).
 #
 # Entornos (3): producción = este archivo · pre-producción = `docker-compose.stage.yml`
 # · desarrollo = `docker-compose.dev.yml` (construye local).
