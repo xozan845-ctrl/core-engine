@@ -82,7 +82,9 @@ async function bootstrap(): Promise<void> {
     res.json({ api_gateway: 'ok', ...metrics.salud() }),
   );
 
-  // Readiness (R-CD-12): 503 si algun microservicio de produccion no responde.
+  // Readiness (R-CD-12): 503 si algun microservicio del entorno no responde.
+  // La lista depende de ENTORNO: stage incluye commissions-service (ADR-37);
+  // produccion mantiene la lista sin commissions ni market-intelligence.
   // Esta ruta se registra directamente en Express y no pasa por el middleware
   // de Nest: se limita aqui y se cachea para que una rafaga no amplifique a 8
   // peticiones internas por cada peticion externa (H-02).
