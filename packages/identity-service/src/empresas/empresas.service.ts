@@ -473,7 +473,12 @@ export class EmpresasService {
       respuesta = await fetch(
         `${this.storageUrl}/internal/storage/objetos/${encodeURIComponent(objetoId)}` +
           `?tenant_id=${encodeURIComponent(empresaId)}`,
-        { headers: { 'x-internal-key': this.claveInterna } },
+        {
+          headers: { 'x-internal-key': this.claveInterna },
+          // R-RB-4: una validacion colgada no debe consumir los 60 s del proxy
+          // publico; se falla cerrado y rapido con LOGO_NO_VERIFICABLE.
+          signal: AbortSignal.timeout(4000),
+        },
       );
     } catch {
       throw new DomainError('LOGO_NO_VERIFICABLE', 'No se pudo verificar el logo.');
