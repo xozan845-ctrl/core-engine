@@ -25,7 +25,13 @@ Navegador (web.app)
 - CORS: solo los orígenes de `CORS_ORIGINS`; el preflight se responde en el proxy.
 - Body máximo: 1 MB (los archivos van directos a MinIO con URL prefirmada).
 - Respuesta en streaming; imágenes públicas incluidas.
-- Timeout: 60 s. Un 504 de identity/DB sigue siendo del backend.
+- Timeout: 60 s en el proxy público. El gateway corta la espera a cada
+  microservicio a los 30 s (`PROXY_UPSTREAM_TIMEOUT_MS`) y responde
+  `504 DESTINO_TIMEOUT` con `detalles.servicio` y `detalles.timeout_ms`; si el
+  cuerpo es `PROXY_TIMEOUT`, el que no respondió fue el propio gateway.
+- Las validaciones internas contra storage (logo de empresa, avatar de vendedor
+  y logo de tienda) tienen timeout de 4 s y fallan cerrado con
+  `LOGO_NO_VERIFICABLE` / `AVATAR_NO_VERIFICABLE` (R-RB-4).
 
 ## Variables
 
@@ -57,6 +63,18 @@ curl -i 'https://api.kbcoleccion.com/api-proxy/api/v1/catalog/productos?empresa_
 curl -i https://api.kbcoleccion.com/api/v1/catalog/productos
 # 401 Basic
 ```
+
+## Diagnóstico de un 504
+
+| Cuerpo de la respuesta | Qué significa |
+|---|---|
+| `PROXY_TIMEOUT` | El proxy público agotó los 60 s esperando al gateway. |
+| `DESTINO_TIMEOUT` con `detalles.servicio` | El gateway agotó los 30 s esperando a ese microservicio. |
+| `LOGO_NO_VERIFICABLE` / `AVATAR_NO_VERIFICABLE` | Storage no confirmó la imagen en 4 s. |
+| `DESTINO_NO_DISPONIBLE` | El microservicio rechazó la conexión o cerró la respuesta. |
+
+La pestaña **Network** del navegador debe mostrar la URL exacta y el cuerpo; sin
+esos dos datos un 504 no identifica al culpable.
 
 ## Rollback
 
