@@ -28,6 +28,8 @@ export interface Sesion {
     tenant_id?: string;
     personal_id?: string;
     participacion_porcentaje?: number;
+    avatar_objeto_id?: string;
+    avatar_url?: string;
   };
 }
 
@@ -157,6 +159,8 @@ export class AuthService {
         ...(usuario.tenant_id ? { tenant_id: usuario.tenant_id } : {}),
         ...(usuario.personal_id ? { personal_id: usuario.personal_id } : {}),
         ...(usuario.participacion_porcentaje !== undefined ? { participacion_porcentaje: usuario.participacion_porcentaje } : {}),
+        ...(usuario.avatar_objeto_id ? { avatar_objeto_id: usuario.avatar_objeto_id } : {}),
+        ...(usuario.avatar_url ? { avatar_url: usuario.avatar_url } : {}),
       },
     };
   }

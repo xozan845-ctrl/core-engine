@@ -7034,6 +7034,53 @@ export const OPENAPI_AGREGADO = {
         ]
       }
     },
+    "/api/v1/usuarios/{id}/avatar": {
+      "patch": {
+        "operationId": "UsuariosController_actualizarAvatar",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "description": "Id del usuario",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AvatarUsuarioRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Avatar actualizado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UsuarioResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Asociar o quitar el avatar de un usuario/vendedor",
+        "tags": [
+          "Usuarios"
+        ]
+      }
+    },
     "/api/v1/usuarios/{id}": {
       "get": {
         "operationId": "UsuariosController_obtener",
@@ -18018,6 +18065,17 @@ export const OPENAPI_AGREGADO = {
           "tipo_empresa"
         ]
       },
+      "AvatarUsuarioRequestDto": {
+        "type": "object",
+        "properties": {
+          "avatar_objeto_id": {
+            "type": "object",
+            "description": "Objeto de storage público confirmado como imagen; null para quitar el avatar",
+            "nullable": true,
+            "format": "uuid"
+          }
+        }
+      },
       "CambiarContrasenaRequestDto": {
         "type": "object",
         "properties": {
@@ -18753,6 +18811,17 @@ export const OPENAPI_AGREGADO = {
             "type": "string",
             "description": "Ficha de personal vinculada",
             "format": "uuid"
+          },
+          "avatar_objeto_id": {
+            "type": "object",
+            "description": "Objeto de storage del avatar",
+            "nullable": true,
+            "format": "uuid"
+          },
+          "avatar_url": {
+            "type": "object",
+            "description": "URL pública del avatar",
+            "nullable": true
           }
         },
         "required": [
@@ -18850,6 +18919,17 @@ export const OPENAPI_AGREGADO = {
             "type": "string",
             "description": "Ficha de personal vinculada",
             "format": "uuid"
+          },
+          "avatar_objeto_id": {
+            "type": "object",
+            "description": "Objeto de storage del avatar",
+            "nullable": true,
+            "format": "uuid"
+          },
+          "avatar_url": {
+            "type": "object",
+            "description": "URL pública del avatar",
+            "nullable": true
           },
           "creado_en": {
             "type": "string",

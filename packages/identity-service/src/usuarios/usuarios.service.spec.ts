@@ -191,3 +191,100 @@ describe('UsuariosService (registro y perfiles)', () => {
     });
   });
 });
+
+describe('UsuariosService · avatar', () => {
+  afterEach(() => vi.unstubAllGlobals());
+  const avatarId = '11111111-2222-3333-4444-555555555555';
+  const filaBase = {
+    id: 'u1',
+    nombre: 'Ana',
+    correo: 'ana@core.test',
+    rol: 'vendedor' as const,
+    creado_en: '2026-09-01T00:00:00.000Z',
+    contrasena_hash: 'hash',
+  };
+  const objetivo = { ...filaBase, tenant_id: 't1' };
+
+  it('permite al propio vendedor cambiar su avatar validando storage', async () => {
+    vi.stubGlobal('fetch', vi.fn(async () => ({
+      ok: true,
+      status: 200,
+      json: async () => ({
+        tenant_id: 't1',
+        estado: 'activo',
+        publico: true,
+        content_type: 'image/png',
+      }),
+    })));
+    const pg = {
+      queryOne: vi.fn()
+        .mockResolvedValueOnce(objetivo)
+        .mockResolvedValueOnce({ ...objetivo, avatar_objeto_id: avatarId }),
+    };
+    const servicio = new UsuariosService(pg as never);
+    const resultado = await servicio.actualizarAvatar('u1', avatarId, {
+      user_id: 'u1',
+      rol: 'vendedor',
+      tenant_id: 't1',
+    });
+    expect(resultado.avatar_url).toBe(`/api/v1/storage/public/objetos/${avatarId}`);
+  });
+
+  it('permite al empresario del mismo tenant y rechaza a otro vendedor', async () => {
+    vi.stubGlobal('fetch', vi.fn(async () => ({
+      ok: true,
+      status: 200,
+      json: async () => ({ tenant_id: 't1', estado: 'activo', publico: true, content_type: 'image/jpeg' }),
+    })));
+    const pg = {
+      queryOne: vi.fn()
+        .mockResolvedValueOnce(objetivo)
+        .mockResolvedValueOnce({ ...objetivo, avatar_objeto_id: avatarId }),
+    };
+    const servicio = new UsuariosService(pg as never);
+    await expect(
+      servicio.actualizarAvatar('u1', avatarId, { user_id: 'e1', rol: 'empresario', tenant_id: 't1' }),
+    ).resolves.toBeDefined();
+
+    const ajeno = new UsuariosService({
+      queryOne: vi.fn().mockResolvedValueOnce(objetivo),
+    } as never);
+    await expect(
+      ajeno.actualizarAvatar('u1', avatarId, { user_id: 'v2', rol: 'vendedor', tenant_id: 't1' }),
+    ).rejects.toMatchObject({ codigo: 'ACCESO_DENEGADO' });
+  });
+
+  it('permite al admin global y quitar el avatar', async () => {
+    const pg = {
+      queryOne: vi.fn()
+        .mockResolvedValueOnce(objetivo)
+        .mockResolvedValueOnce({ ...objetivo, avatar_objeto_id: null }),
+    };
+    const servicio = new UsuariosService(pg as never);
+    await expect(
+      servicio.actualizarAvatar('u1', null, { user_id: 'admin', rol: 'admin' }),
+    ).resolves.toBeDefined();
+  });
+
+  it('rechaza avatares inválidos o no verificables', async () => {
+    const crearServicio = () =>
+      new UsuariosService({ queryOne: vi.fn().mockResolvedValueOnce(objetivo) } as never);
+    await expect(
+      crearServicio().actualizarAvatar('u1', 'no-uuid', { user_id: 'u1', rol: 'vendedor' }),
+    ).rejects.toMatchObject({ codigo: 'AVATAR_INVALIDO' });
+
+    vi.stubGlobal('fetch', vi.fn(async () => ({ ok: false, status: 404 })));
+    await expect(
+      crearServicio().actualizarAvatar('u1', avatarId, { user_id: 'u1', rol: 'vendedor' }),
+    ).rejects.toBeInstanceOf(NotFoundError);
+
+    vi.stubGlobal('fetch', vi.fn(async () => ({
+      ok: true,
+      status: 200,
+      json: async () => ({ tenant_id: 't1', estado: 'activo', publico: false, content_type: 'image/png' }),
+    })));
+    await expect(
+      crearServicio().actualizarAvatar('u1', avatarId, { user_id: 'u1', rol: 'vendedor' }),
+    ).rejects.toMatchObject({ codigo: 'AVATAR_INVALIDO' });
+  });
+});
