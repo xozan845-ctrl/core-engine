@@ -267,3 +267,130 @@ describe('TiendasService (multiples tiendas por empresa)', () => {
     });
   });
 });
+
+describe('TiendasService · logo de tienda', () => {
+  const logoId = '11111111-2222-3333-4444-555555555555';
+  const base = { ...tienda, logo_objeto_id: null, actualizado_en: tienda.creado_en };
+
+  afterEach(() => vi.unstubAllGlobals());
+
+  const imagen = (publico = true) => ({
+    ok: true,
+    status: 200,
+    json: async () => ({
+      tenant_id: 'e1',
+      estado: 'activo',
+      publico,
+      content_type: 'image/png',
+    }),
+  });
+
+  it('permite al vendedor dueño y al empresario del tenant', async () => {
+    vi.stubGlobal('fetch', vi.fn(async () => imagen()));
+    const pg = {
+      queryOne: vi.fn()
+        .mockResolvedValueOnce({ ...base, es_actual: true })
+        .mockResolvedValueOnce({ ...base, logo_objeto_id: logoId }),
+      query: vi.fn(),
+    };
+    const servicio = new TiendasService(pg as never);
+    const resultado = await servicio.actualizarLogo(
+      { user_id: 'v1', rol: 'vendedor', tenant_id: 'e1' },
+      't1',
+      logoId,
+    );
+    expect(resultado.logo_url).toBe(`/api/v1/storage/public/objetos/${logoId}`);
+
+    const pgEmpresa = {
+      queryOne: vi.fn()
+        .mockResolvedValueOnce({ ...base, es_actual: true })
+        .mockResolvedValueOnce({ ...base, logo_objeto_id: logoId }),
+      query: vi.fn(),
+    };
+    const servicioEmpresa = new TiendasService(pgEmpresa as never);
+    await expect(
+      servicioEmpresa.actualizarLogo(
+        { user_id: 'e1', rol: 'empresario', tenant_id: 'e1' },
+        't1',
+        logoId,
+      ),
+    ).resolves.toBeDefined();
+  });
+
+  it('rechaza a otro vendedor y permite admin global', async () => {
+    vi.stubGlobal('fetch', vi.fn(async () => imagen()));
+    const pg = {
+      queryOne: vi.fn().mockResolvedValueOnce({ ...base, es_actual: true }),
+      query: vi.fn(),
+    };
+    const servicio = new TiendasService(pg as never);
+    await expect(
+      servicio.actualizarLogo({ user_id: 'v2', rol: 'vendedor', tenant_id: 'e1' }, 't1', logoId),
+    ).rejects.toBeInstanceOf(ForbiddenError);
+
+    const pgAdmin = {
+      queryOne: vi.fn()
+        .mockResolvedValueOnce({ ...base, es_actual: true })
+        .mockResolvedValueOnce({ ...base, logo_objeto_id: logoId }),
+      query: vi.fn(),
+    };
+    const servicioAdmin = new TiendasService(pgAdmin as never);
+    await expect(
+      servicioAdmin.actualizarLogo({ user_id: 'admin', rol: 'admin' }, 't1', logoId),
+    ).resolves.toBeDefined();
+  });
+
+  it('permite quitar el logo sin consultar storage', async () => {
+    const pg = {
+      queryOne: vi.fn()
+        .mockResolvedValueOnce({ ...base, es_actual: true })
+        .mockResolvedValueOnce({ ...base, logo_objeto_id: null }),
+      query: vi.fn(),
+    };
+    const servicio = new TiendasService(pg as never);
+    await expect(
+      servicio.actualizarLogo({ user_id: 'v1', rol: 'vendedor', tenant_id: 'e1' }, 't1', null),
+    ).resolves.toBeDefined();
+  });
+
+  it('rechaza logos inválidos, no verificables o no públicos', async () => {
+    const crear = () =>
+      new TiendasService({
+        queryOne: vi.fn().mockResolvedValueOnce({ ...base, es_actual: true }),
+        query: vi.fn(),
+      } as never);
+
+    await expect(
+      crear().actualizarLogo({ user_id: 'v1', rol: 'vendedor' }, 't1', 'no-uuid'),
+    ).rejects.toMatchObject({ codigo: 'LOGO_INVALIDO' });
+
+    vi.stubGlobal('fetch', vi.fn(async () => ({ ok: false, status: 404 })));
+    await expect(
+      crear().actualizarLogo({ user_id: 'v1', rol: 'vendedor' }, 't1', logoId),
+    ).rejects.toBeInstanceOf(NotFoundError);
+
+    vi.stubGlobal('fetch', vi.fn(async () => ({ ok: false, status: 500 })));
+    await expect(
+      crear().actualizarLogo({ user_id: 'v1', rol: 'vendedor' }, 't1', logoId),
+    ).rejects.toMatchObject({ codigo: 'LOGO_NO_VERIFICABLE' });
+
+    vi.stubGlobal('fetch', vi.fn(async () => imagen(false)));
+    await expect(
+      crear().actualizarLogo({ user_id: 'v1', rol: 'vendedor' }, 't1', logoId),
+    ).rejects.toMatchObject({ codigo: 'LOGO_INVALIDO' });
+  });
+
+  it('deriva logo_url al consultar tiendas', async () => {
+    const pg = {
+      queryOne: vi.fn().mockResolvedValue({ ...base, logo_objeto_id: logoId }),
+      query: vi.fn().mockResolvedValue([{ ...base, logo_objeto_id: logoId }]),
+    };
+    const servicio = new TiendasService(pg as never);
+    await expect(servicio.deVendedor('v1')).resolves.toMatchObject({
+      logo_url: `/api/v1/storage/public/objetos/${logoId}`,
+    });
+    await expect(servicio.deEmpresa('e1')).resolves.toEqual([
+      expect.objectContaining({ logo_url: `/api/v1/storage/public/objetos/${logoId}` }),
+    ]);
+  });
+});

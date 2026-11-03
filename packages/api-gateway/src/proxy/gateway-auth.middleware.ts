@@ -48,6 +48,11 @@ export const POLITICAS_RUTAS: PoliticaRuta[] = [
     // El slug de tienda forma parte de la URL publica del storefront (ADR-26);
     // el cambio de slug exige ser vendedor/empresario y se valida en el servicio.
     { patron: /^\/api\/v1\/tiendas\/[^/]+\/slug$/, metodos: ['PATCH'], roles: [ROLES.VENDEDOR, ROLES.EMPRESARIO] },
+    {
+      patron: /^\/api\/v1\/tiendas\/[^/]+\/logo$/,
+      metodos: ['PATCH'],
+      roles: [ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.VENDEDOR, ROLES.EMPRESARIO],
+    },
     { patron: /^\/api\/v1\/tiendas\/[^/]+$/, metodos: ['GET'], roles: null },
     // usuarios: gestion administrativa (sustituye a Firebase gestion-usuarios)
     {

@@ -9639,6 +9639,53 @@
         ]
       }
     },
+    "/api/v1/tiendas/{id}/logo": {
+      "patch": {
+        "operationId": "TiendasSlugController_actualizarLogo",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "description": "UUID de la tienda o su slug actual",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ActualizarLogoTiendaRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Logo actualizado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TiendaResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Asociar o quitar el logo público de la tienda",
+        "tags": [
+          "Tiendas"
+        ]
+      }
+    },
     "/api/v1/tiendas/{id}/slug": {
       "patch": {
         "operationId": "TiendasSlugController_actualizarSlug",
@@ -20654,6 +20701,17 @@
           "tamano_bytes"
         ]
       },
+      "ActualizarLogoTiendaRequestDto": {
+        "type": "object",
+        "properties": {
+          "logo_objeto_id": {
+            "type": "object",
+            "description": "Objeto de storage público confirmado como imagen; null para quitar el logo",
+            "nullable": true,
+            "format": "uuid"
+          }
+        }
+      },
       "ActualizarSlugTiendaRequestDto": {
         "type": "object",
         "properties": {
@@ -20956,9 +21014,25 @@
             "type": "string",
             "description": "Descripción de la tienda"
           },
+          "logo_objeto_id": {
+            "type": "object",
+            "description": "Objeto de storage del logo",
+            "nullable": true,
+            "format": "uuid"
+          },
+          "logo_url": {
+            "type": "object",
+            "description": "URL pública del logo",
+            "nullable": true
+          },
           "creado_en": {
             "type": "string",
             "description": "Fecha de creación (ISO 8601 UTC)",
+            "format": "date-time"
+          },
+          "actualizado_en": {
+            "type": "string",
+            "description": "Última actualización (ISO 8601 UTC)",
             "format": "date-time"
           }
         },

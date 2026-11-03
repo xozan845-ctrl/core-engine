@@ -968,6 +968,30 @@ Este archivo registra decisiones técnicas deliberadas que se apartan del texto 
 
 ---
 
+---
+
+## ADR-36: Logo de tienda
+
+- **Fecha**: 2026-11-03
+- **Estado**: Aceptado
+- **Contexto**: el frontend del vendedor y del storefront ya esperaba
+  `logo_objeto_id`/`logo_url` en la tienda, pero `stores.tiendas` solo guardaba
+  nombre, descripción y slug.
+- **Decisión**:
+  1. Añadir `logo_objeto_id` y `actualizado_en` a `stores.tiendas`.
+  2. Exponer `PATCH /api/v1/tiendas/{id}/logo` para vendedor dueño, empresario
+     de la empresa y admin/super_admin. `null` elimina el logo.
+  3. Validar el objeto contra storage: imagen pública, activa y del tenant de la
+     empresa dueña de la tienda.
+  4. Devolver `logo_url` derivada en `GET /vendedores/me/tienda`,
+     `GET /empresarios/me/tiendas` y `GET /tiendas/{id}`.
+- **Consecuencias**:
+  - El logo de tienda y el avatar del vendedor son independientes.
+  - El binario sigue en storage; stores solo guarda la referencia (R-DB-1).
+  - El frontend reutiliza el flujo de subida y solo envía el UUID.
+
+---
+
 ## Resumen de cumplimiento post-corrección
 
 | Ítem del documento          | Estado  | Nota |
