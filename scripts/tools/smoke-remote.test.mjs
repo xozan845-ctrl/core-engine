@@ -28,6 +28,8 @@ async function run(handler, env = {}) {
       BASE_URL: `http://127.0.0.1:${port}`,
       ADMIN_EMAIL: 'admin@test.local',
       ADMIN_PASSWORD: 'test-only',
+      EMPRESARIO_EMAIL: '',
+      EMPRESARIO_PASSWORD: '',
       SMOKE_REQUEST_TIMEOUT_MS: '1000',
       ...env,
     },
@@ -109,4 +111,68 @@ test('smoke-remote: exige credenciales del environment', async () => {
 
   assert.equal(result.code, 1);
   assert.match(result.output, /Faltan ADMIN_EMAIL/);
+});
+
+test('smoke-remote: verifica ventas de empresa cuando hay credenciales de empresario', async () => {
+  const result = await run(
+    (req, res) => {
+      if (req.url === '/api/v1/empresarios/me/ventas') {
+        return json(res, 200, { empresa_id: 'empresa-1', ventas: [{}], liquidaciones: [] });
+      }
+      return happyPath(req, res);
+    },
+    {
+      EMPRESARIO_EMAIL: 'empresario@test.local',
+      EMPRESARIO_PASSWORD: 'test-only',
+    },
+  );
+
+  assert.equal(result.code, 0, result.output);
+  assert.match(result.output, /GET \/api\/v1\/empresarios\/me\/ventas/);
+  assert.deepEqual(result.requests, [
+    'GET /health',
+    'POST /api/v1/auth/login',
+    'GET /api/v1/catalog/productos?limite=1',
+    'POST /api/v1/auth/login',
+    'GET /api/v1/empresarios/me/ventas',
+  ]);
+});
+
+test('smoke-remote: falla si commissions no responde en stage', async () => {
+  const result = await run(
+    (req, res) => {
+      if (req.url === '/api/v1/empresarios/me/ventas') {
+        return json(res, 502, { codigo: 'DESTINO_NO_DISPONIBLE' });
+      }
+      return happyPath(req, res);
+    },
+    {
+      EMPRESARIO_EMAIL: 'empresario@test.local',
+      EMPRESARIO_PASSWORD: 'test-only',
+    },
+  );
+
+  assert.equal(result.code, 1);
+  assert.match(result.output, /ventas de empresa → 502/);
+});
+
+test('smoke-remote: exige ambas credenciales de empresario o ninguna', async () => {
+  const result = await run(happyPath, {
+    EMPRESARIO_EMAIL: 'empresario@test.local',
+    EMPRESARIO_PASSWORD: '',
+  });
+
+  assert.equal(result.code, 1);
+  assert.match(result.output, /EMPRESARIO_EMAIL y EMPRESARIO_PASSWORD/);
+});
+
+test('smoke-remote: omite ventas de empresa sin credenciales de empresario', async () => {
+  const result = await run(happyPath);
+
+  assert.equal(result.code, 0, result.output);
+  assert.match(result.output, /OMITIDO/);
+  assert.equal(
+    result.requests.some((ruta) => ruta.includes('/empresarios/me/ventas')),
+    false,
+  );
 });

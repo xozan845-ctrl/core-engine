@@ -7,6 +7,8 @@ name: Deploy
 # Tras el `up` se ejecuta el smoke del entorno (R-CD-12): `GET /health`, login y
 # una lectura real del catálogo en stage/prod; en dev, el flujo E2E completo
 # (`npm run demo`). Stage/prod requieren SMOKE_ADMIN_EMAIL/SMOKE_ADMIN_PASSWORD.
+# Si existen SMOKE_EMPRESARIO_EMAIL/SMOKE_EMPRESARIO_PASSWORD, el smoke valida
+# además `/api/v1/empresarios/me/ventas` (commissions-service en stage, ADR-37).
 on:
   workflow_dispatch:
     inputs:
@@ -98,6 +100,8 @@ jobs:
           BASE_URL: http://localhost:${{ steps.cfg.outputs.port }}
           ADMIN_EMAIL: ${{ secrets.SMOKE_ADMIN_EMAIL }}
           ADMIN_PASSWORD: ${{ secrets.SMOKE_ADMIN_PASSWORD }}
+          EMPRESARIO_EMAIL: ${{ secrets.SMOKE_EMPRESARIO_EMAIL }}
+          EMPRESARIO_PASSWORD: ${{ secrets.SMOKE_EMPRESARIO_PASSWORD }}
           EDGE_BASIC_AUTH: ${{ secrets.EDGE_BASIC_AUTH }}
         run: npm run smoke:remote
 
