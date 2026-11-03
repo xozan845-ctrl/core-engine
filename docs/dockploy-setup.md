@@ -90,9 +90,11 @@ Pasos:
    el propio proxy. Red aislada por environment (lo gestiona Dockploy).
 7. **Healthcheck/Readiness**: `GET /health` (liveness del gateway; lo usa el
    healthcheck de Dockploy, siempre abierto) y `GET /ready` (readiness agregada:
-   responde **503** si algún microservicio de producción no está `ok`; lo usa el
-   smoke, R-CD-12). `/ready` exige `x-internal-key` salvo `READY_PUBLIC=true`
-   (solo desarrollo) y está limitado a 10 req/min por IP con caché de 5 s.
+   responde **503** si algún microservicio del entorno desplegado no está `ok`;
+   son 8 en producción y 9 en stage porque incluye `commissions-service`, ADR-37;
+   lo usa el smoke, R-CD-12). `/ready` exige `x-internal-key` salvo
+   `READY_PUBLIC=true` (solo desarrollo) y está limitado a 10 req/min por IP con
+   caché de 5 s.
 
 > Dockploy corre el compose del entorno: **`docker-compose.yml`** (producción) o
 > **`docker-compose.stage.yml`** (imágenes de GHCR + Postgres + RabbitMQ). La
@@ -116,6 +118,25 @@ Migraciones solo hacia adelante.
 > se aplica solo (el init corre únicamente en un volumen Postgres nuevo). Aplícalo
 > a mano antes de desplegar el servicio que lo usa:
 > `docker compose exec -T postgres psql -U $POSTGRES_USER -d $POSTGRES_DB < infra/db/init/09_storage.sql`.
+>
+> Para `commissions-service` en stage, la migración necesaria es
+> `01e_adr25_empresas.sql` (ADR-25/ADR-37). Aplícala si la BD de stage es anterior
+> a ADR-25 y verifica que el esquema quedó completo:
+>
+> ```bash
+> docker compose -f docker-compose.stage.yml exec -T postgres \
+>   psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" < infra/db/init/01e_adr25_empresas.sql
+> docker compose -f docker-compose.stage.yml exec -T postgres \
+>   psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -c "
+>     SELECT column_name FROM information_schema.columns
+>     WHERE table_schema = 'commissions' AND table_name = 'comisiones'
+>       AND column_name IN ('linea_clave','empresa_id','tienda_id',
+>                           'monto_empresario_cents','participacion_porcentaje')
+>     ORDER BY column_name;"
+> ```
+>
+> La consulta debe devolver **5 filas**. Si falta alguna, no despliegues
+> `commissions-service`: `/empresarios/me/ventas` fallaría al consultar la tabla.
 
 ## 4. Verificaciones por entorno (lista de comprobación)
 
@@ -141,6 +162,11 @@ Migraciones solo hacia adelante.
 > (`EDGE_BASIC_AUTH`) para que el smoke remoto se autentique en staging. Sin
 > él, el paso `npm run smoke:remote` recibe 401 en el login.
 >
+> Para cubrir `commissions-service` (ADR-37), añade además los secretos
+> `SMOKE_EMPRESARIO_EMAIL`/`SMOKE_EMPRESARIO_PASSWORD` con un usuario de rol
+> `empresario` y empresa activa. Sin ellos el smoke omite la comprobación de
+> `/api/v1/empresarios/me/ventas`; con ellos falla si el servicio no responde.
+>
 > Desarrollo local: `docker compose -f docker-compose.dev.yml up -d --build` + `npm run demo` es la
 > verificación equivalente antes de cualquier PR (R-GC-5).
 
@@ -153,7 +179,7 @@ Migraciones solo hacia adelante.
 - **Nombre del proyecto/app**: debe ser `core-engine` con environments `staging`/`produccion` (R-CD-9). Si la app arrastra el nombre de otro proyecto (p. ej. `kb-coleccion-...`), renómbrala o recrea el proyecto para no mezclar entornos ajenos.
 - **Coexistencia de entornos**: `docker-compose.yml` **no** fija `container_name`, así que `staging` y `produccion` pueden correr a la vez en el mismo VPS sin colisionar.
 - **Puertos**: en producción/staging **solo se publica el `gateway` (8080)**; Postgres y RabbitMQ son **internos**. **No** uses `docker-compose.dev.yml` en producción (ese entorno abre `5432`/`5672`/`15672` y construye local).
-- **Servicios fuera de producción**: `commissions-service` y `market-intelligence-service` **no se despliegan por ahora** (no están en `docker-compose.yml`; viven en `docker-compose.dev.yml`). El `up --remove-orphans` de producción **elimina** sus contenedores si venían de un despliegue anterior.
+- **Servicios por entorno**: `commissions-service` **sí se despliega en stage** (`docker-compose.stage.yml`, ADR-37) y **no en producción**; `market-intelligence-service` no se despliega en stage ni producción y vive solo en `docker-compose.dev.yml`. El `up --remove-orphans` de producción **elimina** `commissions`/`market-intelligence` si venían de un despliegue anterior **en ese mismo proyecto**; no toca el environment de stage (red y proyecto separados).
 
 ## 6. Rollback en producción (si algo sale mal)
 
@@ -208,8 +234,11 @@ Con los dos environments operativos y la tabla §4 completa:
   está autenticado contra GHCR. Configura una credencial de registry
   (`read:packages`) y `docker login ghcr.io`; además, la etiqueta `:staging`/`:prod`
   debe existir (alguien debe haber corrido `promote.yml` con un `source` publicado).
-- **`commissions-service`/`market-intelligence-service` siguen corriendo** tras
-  un deploy: no están en `docker-compose.yml` (producción); el `up --remove-orphans` los elimina.
-  Si persistieran:
-  `docker rm -f <proyecto>-commissions-service-1 <proyecto>-market-intelligence-service-1`
-  (ADR-17).
+- **`market-intelligence-service` sigue corriendo** tras un deploy de stage o
+  producción: no está en esos composes y el `up --remove-orphans` lo elimina. Si
+  persistiera, `docker rm -f <proyecto>-market-intelligence-service-1` (ADR-17).
+- **`commissions-service` no arranca en stage**: comprueba que la imagen
+  `ghcr.io/<owner>/core-engine-commissions-service:stage` esté promovida
+  (`promote.yml`) y que `01e_adr25_empresas.sql` esté aplicada en la BD de stage
+  (ver §3). En producción es esperado que no exista: `commissions` sigue fuera
+  de `docker-compose.yml` (ADR-17/ADR-37).
