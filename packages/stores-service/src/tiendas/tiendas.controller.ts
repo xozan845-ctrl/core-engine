@@ -9,7 +9,7 @@ import {
   ApiResponse,
   ApiTags,
 } from '@nestjs/swagger';
-import { IsOptional, IsString, Length } from 'class-validator';
+import { IsOptional, IsString, IsUUID, Length } from 'class-validator';
 import { TiendasService, Tienda } from './tiendas.service';
 import { TiendaResponseDto } from './tiendas.response.dto';
 import { Roles, ROLES, UsuarioActual, UsuarioContexto, NotFoundError } from '@core/shared';
@@ -36,6 +36,18 @@ export class CrearTiendaRequestDto {
   @IsString()
   @Length(2, 80)
   slug?: string;
+}
+
+export class ActualizarLogoTiendaRequestDto {
+  @ApiProperty({
+    description: 'Objeto de storage público confirmado como imagen; null para quitar el logo',
+    required: false,
+    nullable: true,
+    format: 'uuid',
+  })
+  @IsOptional()
+  @IsUUID()
+  logo_objeto_id?: string | null;
 }
 
 export class ActualizarSlugTiendaRequestDto {
@@ -110,6 +122,19 @@ export class TiendasEmpresaController {
 @Controller('api/v1/tiendas')
 export class TiendasSlugController {
   constructor(private readonly tiendas: TiendasService) {}
+
+  @Patch(':id/logo')
+  @Roles(ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.VENDEDOR, ROLES.EMPRESARIO)
+  @ApiOperation({ summary: 'Asociar o quitar el logo público de la tienda' })
+  @ApiParam({ name: 'id', description: 'UUID de la tienda o su slug actual' })
+  @ApiOkResponse({ type: TiendaResponseDto, description: 'Logo actualizado' })
+  actualizarLogo(
+    @Param('id') id: string,
+    @Body() dto: ActualizarLogoTiendaRequestDto,
+    @UsuarioActual() usuario: UsuarioContexto,
+  ): Promise<Tienda> {
+    return this.tiendas.actualizarLogo(usuario, id, dto.logo_objeto_id ?? null);
+  }
 
   @Patch(':id/slug')
   @Roles(ROLES.VENDEDOR, ROLES.EMPRESARIO)
