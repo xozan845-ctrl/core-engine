@@ -204,7 +204,11 @@ export class TiendasService {
       respuesta = await fetch(
         `${this.storageUrl}/internal/storage/objetos/${encodeURIComponent(objetoId)}` +
           `?tenant_id=${encodeURIComponent(empresaId)}`,
-        { headers: { 'x-internal-key': this.claveInterna } },
+        {
+          headers: { 'x-internal-key': this.claveInterna },
+          // R-RB-4: fallar rapido en vez de esperar el timeout del proxy.
+          signal: AbortSignal.timeout(4000),
+        },
       );
     } catch {
       throw new DomainError('LOGO_NO_VERIFICABLE', 'No se pudo verificar el logo.');
