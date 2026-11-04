@@ -88,6 +88,12 @@ const crear = () => {
       content_type: 'image/png',
       etag: 'etag-1',
     }),
+    leerRango: vi.fn().mockResolvedValue({
+      stream: { pipe: vi.fn() },
+      tamano_bytes: 2048,
+      content_type: 'video/mp4',
+      etag: 'etag-1',
+    }),
     eliminar: vi.fn().mockResolvedValue(undefined),
   };
   const config = {
@@ -98,9 +104,10 @@ const crear = () => {
     secretKey: 'p',
     prefijoBucket: 't-',
     maxObjetoBytes: 10 * 1024 * 1024,
+    maxVideoBytes: 100 * 1024 * 1024,
     cuotaDefaultBytes: 100000,
     urlTtlSegundos: 900,
-    contentTypesPermitidos: ['image/png', 'application/pdf'],
+    contentTypesPermitidos: ['image/png', 'application/pdf', 'video/mp4', 'video/webm'],
   } as StorageConfig;
   return {
     servicio: new ObjetosService(
@@ -153,6 +160,32 @@ describe('ObjetosService (URLs prefirmadas y cuotas por tenant)', () => {
       await expect(
         servicio.solicitarSubida(TENANT, 'usuario-1', dto({ tamano_bytes: 20 * 1024 * 1024 })),
       ).rejects.toThrow(/OBJETO_DEMASIADO_GRANDE|excede el maximo/);
+    });
+
+    it('debe aceptar un video dentro del limite especifico de 100 MiB', async () => {
+      const { servicio, pg } = crear();
+      (pg.queryOne as Mock).mockResolvedValue(filaObjeto({ content_type: 'video/mp4' }));
+
+      const solicitud = await servicio.solicitarSubida(
+        TENANT,
+        'usuario-1',
+        dto({ nombre: 'fondo.mp4', content_type: 'video/mp4', tamano_bytes: 100 * 1024 * 1024 }),
+      );
+
+      expect(solicitud.max_bytes).toBe(100 * 1024 * 1024);
+      expect(solicitud.headers['Content-Type']).toBe('video/mp4');
+    });
+
+    it('debe rechazar un video que excede el limite especifico', async () => {
+      const { servicio, pg } = crear();
+      await expect(
+        servicio.solicitarSubida(
+          TENANT,
+          'usuario-1',
+          dto({ content_type: 'video/mp4', tamano_bytes: 100 * 1024 * 1024 + 1 }),
+        ),
+      ).rejects.toThrow(/OBJETO_DEMASIADO_GRANDE|excede el maximo/);
+      expect(pg.queryOne).not.toHaveBeenCalled();
     });
 
     it('debe propagar el rechazo de cuota del tenant', async () => {
@@ -528,7 +561,57 @@ describe('ObjetosService (URLs prefirmadas y cuotas por tenant)', () => {
       expect(objeto.etag).toBe('etag-fila');
     });
 
-    it('debe ocultar un objeto que no es imagen', async () => {
+    it('debe servir un video público activo', async () => {
+      const { servicio, pg, almacen } = crear();
+      (pg.queryOne as Mock).mockResolvedValue(
+        filaObjeto({ estado: 'activo', publico: true, content_type: 'video/mp4' }),
+      );
+      (almacen.leer as Mock).mockResolvedValue({
+        stream: { pipe: vi.fn() },
+        tamano_bytes: 2048,
+        content_type: 'video/mp4',
+      });
+
+      const objeto = await servicio.leerPublico(OBJETO_ID);
+
+      expect(objeto.content_type).toBe('video/mp4');
+      expect(almacen.leer).toHaveBeenCalled();
+    });
+
+    it('debe abrir solo el rango público solicitado', async () => {
+      const { servicio, pg, almacen } = crear();
+      (pg.queryOne as Mock).mockResolvedValue(
+        filaObjeto({ estado: 'activo', publico: true, content_type: 'video/webm' }),
+      );
+
+      await servicio.leerPublico(OBJETO_ID, { inicio: 10, fin: 19 });
+
+      expect(almacen.leerRango).toHaveBeenCalledWith(
+        BUCKET,
+        'productos/22222222-2222-4222-8222-222222222222/foto.png',
+        10,
+        19,
+      );
+      expect(almacen.leer).not.toHaveBeenCalled();
+    });
+
+    it('debe devolver metadatos públicos sin abrir stream (HEAD)', async () => {
+      const { servicio, pg, almacen } = crear();
+      (pg.queryOne as Mock).mockResolvedValue(
+        filaObjeto({ estado: 'activo', publico: true, content_type: 'video/mp4', etag: 'etag-1' }),
+      );
+
+      await expect(servicio.obtenerPublicoMeta(OBJETO_ID)).resolves.toEqual({
+        content_type: 'video/mp4',
+        tamano_bytes: 2048,
+        etag: 'etag-1',
+        nombre: 'foto.png',
+      });
+      expect(almacen.leer).not.toHaveBeenCalled();
+      expect(almacen.leerRango).not.toHaveBeenCalled();
+    });
+
+    it('debe ocultar un objeto que no es imagen ni video', async () => {
       const { servicio, pg } = crear();
       (pg.queryOne as Mock).mockResolvedValue(
         filaObjeto({ estado: 'activo', publico: true, content_type: 'application/pdf' }),

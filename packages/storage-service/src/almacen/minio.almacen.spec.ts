@@ -8,6 +8,7 @@ const { cliente } = vi.hoisted(() => ({
     presignedGetObject: vi.fn(),
     statObject: vi.fn(),
     getObject: vi.fn(),
+    getPartialObject: vi.fn(),
     removeObject: vi.fn(),
   },
 }));
@@ -36,6 +37,7 @@ const config: StorageConfig = {
   region: 'us-east-1',
   prefijoBucket: 't-',
   maxObjetoBytes: 1048576,
+  maxVideoBytes: 104857600,
   cuotaDefaultBytes: 2097152,
   urlTtlSegundos: 900,
   contentTypesPermitidos: ['image/png'],
@@ -157,6 +159,31 @@ describe('MinioAlmacen (implementacion del puerto AlmacenObjetos, R-SB-6)', () =
       stream,
       tamano_bytes: 1,
     });
+  });
+
+  it('debe abrir solo el tramo solicitado con getPartialObject (Range)', async () => {
+    const stream = { pipe: vi.fn() };
+    cliente.statObject.mockResolvedValue({
+      size: 1000,
+      etag: 'etag-rango',
+      metaData: { 'content-type': 'video/mp4' },
+    });
+    cliente.getPartialObject.mockResolvedValue(stream);
+    const almacen = new MinioAlmacen(config);
+
+    await expect(almacen.leerRango('t-1', 'fondo.mp4', 10, 19)).resolves.toEqual({
+      stream,
+      tamano_bytes: 1000,
+      content_type: 'video/mp4',
+      etag: 'etag-rango',
+    });
+    expect(cliente.getPartialObject).toHaveBeenCalledWith('t-1', 'fondo.mp4', 10, 10);
+  });
+
+  it('debe devolver null al leer un rango de un objeto inexistente', async () => {
+    cliente.statObject.mockRejectedValue(errorConCodigo('NoSuchKey'));
+    const almacen = new MinioAlmacen(config);
+    await expect(almacen.leerRango('t-1', 'no-existe.mp4', 0, 9)).resolves.toBeNull();
   });
 
   it('debe devolver null al leer un objeto inexistente', async () => {

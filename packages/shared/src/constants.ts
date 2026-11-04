@@ -96,6 +96,8 @@ export const STORAGE_BUCKET_PREFIX_DEFAULT = 't-';
 
 /** Limites por defecto del almacenamiento de objetos (STORAGE_*). */
 export const STORAGE_MAX_OBJETO_BYTES_DEFAULT = 25 * 1024 * 1024; // 25 MiB
+/** Los fondos de video requieren mas espacio que un documento o una imagen. */
+export const STORAGE_MAX_VIDEO_BYTES_DEFAULT = 100 * 1024 * 1024; // 100 MiB
 export const STORAGE_CUOTA_DEFAULT_BYTES = 5 * 1024 * 1024 * 1024; // 5 GiB
 export const STORAGE_URL_TTL_SEGUNDOS_DEFAULT = 900; // 15 min
 
@@ -104,6 +106,8 @@ export const STORAGE_CONTENT_TYPES_DEFAULT = [
   'image/png',
   'image/jpeg',
   'image/webp',
+  'video/mp4',
+  'video/webm',
   'application/pdf',
   'text/csv',
   'text/plain',

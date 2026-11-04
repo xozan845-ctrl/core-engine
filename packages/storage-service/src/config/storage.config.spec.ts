@@ -24,6 +24,7 @@ describe('storage.config (limites y secretos por entorno, R-CD-7)', () => {
     expect(config.publicUsarSsl).toBe(false);
     expect(config.prefijoBucket).toBe('t-');
     expect(config.maxObjetoBytes).toBe(25 * 1024 * 1024);
+    expect(config.maxVideoBytes).toBe(100 * 1024 * 1024);
     expect(config.cuotaDefaultBytes).toBe(5 * 1024 * 1024 * 1024);
     expect(config.urlTtlSegundos).toBe(900);
     expect(config.contentTypesPermitidos).toContain('image/png');
@@ -38,6 +39,7 @@ describe('storage.config (limites y secretos por entorno, R-CD-7)', () => {
       MINIO_USE_SSL: 'true',
       STORAGE_BUCKET_PREFIX: 'org-',
       STORAGE_MAX_OBJETO_BYTES: '1048576',
+      STORAGE_MAX_VIDEO_BYTES: '104857600',
       STORAGE_CUOTA_DEFAULT_BYTES: '2097152',
       STORAGE_URL_TTL_SEGUNDOS: '120',
       STORAGE_CONTENT_TYPES_PERMITIDOS: 'image/png, application/pdf',
@@ -53,6 +55,7 @@ describe('storage.config (limites y secretos por entorno, R-CD-7)', () => {
     expect(config.publicUsarSsl).toBe(true);
     expect(config.prefijoBucket).toBe('org-');
     expect(config.maxObjetoBytes).toBe(1048576);
+    expect(config.maxVideoBytes).toBe(104857600);
     expect(config.cuotaDefaultBytes).toBe(2097152);
     expect(config.urlTtlSegundos).toBe(120);
     expect(config.contentTypesPermitidos).toEqual(['image/png', 'application/pdf']);
@@ -63,11 +66,13 @@ describe('storage.config (limites y secretos por entorno, R-CD-7)', () => {
       ...base,
       MINIO_PORT: 'no-es-un-puerto',
       STORAGE_MAX_OBJETO_BYTES: '0',
+      STORAGE_MAX_VIDEO_BYTES: 'no-es-numero',
       STORAGE_URL_TTL_SEGUNDOS: '-5',
       STORAGE_CONTENT_TYPES_PERMITIDOS: '   ,  ',
     } as unknown as NodeJS.ProcessEnv);
     expect(config.puerto).toBe(9000);
     expect(config.maxObjetoBytes).toBe(25 * 1024 * 1024);
+    expect(config.maxVideoBytes).toBe(100 * 1024 * 1024);
     expect(config.urlTtlSegundos).toBe(900);
     expect(config.contentTypesPermitidos).toContain('application/pdf');
   });

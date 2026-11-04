@@ -9531,9 +9531,15 @@ export const OPENAPI_AGREGADO = {
         ],
         "responses": {
           "200": {
-            "description": "Imagen (binario)",
+            "description": "Media (binario); con Range responde 206",
             "content": {
               "image/*": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              },
+              "video/*": {
                 "schema": {
                   "type": "string",
                   "format": "binary"
@@ -9541,11 +9547,71 @@ export const OPENAPI_AGREGADO = {
               }
             }
           },
+          "206": {
+            "description": "Tramo parcial solicitado con Range",
+            "headers": {
+              "Content-Range": {
+                "description": "Tramo servido y tamaño total",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Accept-Ranges": {
+                "description": "Unidad de rangos soportada",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
           "404": {
-            "description": "Objeto inexistente, privado, eliminado o no imagen"
+            "description": "Objeto inexistente, privado, eliminado o no servible"
+          },
+          "416": {
+            "description": "Rango inválido o fuera del objeto",
+            "headers": {
+              "Content-Range": {
+                "description": "Tamaño total del objeto",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
           }
         },
-        "summary": "Servir una imagen pública (cacheable, sin auth)",
+        "summary": "Servir una imagen o video público (cacheable, sin auth, Range)",
+        "tags": [
+          "Almacenamiento público"
+        ]
+      },
+      "head": {
+        "operationId": "PublicStorageController_cabeceras",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "description": "Id del objeto",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Cabeceras de la media"
+          },
+          "206": {
+            "description": "Cabeceras del tramo solicitado con Range"
+          },
+          "404": {
+            "description": "Objeto inexistente, privado, eliminado o no servible"
+          },
+          "416": {
+            "description": "Rango inválido o fuera del objeto"
+          }
+        },
+        "summary": "Cabeceras de una imagen o video público (sin cuerpo)",
         "tags": [
           "Almacenamiento público"
         ]
