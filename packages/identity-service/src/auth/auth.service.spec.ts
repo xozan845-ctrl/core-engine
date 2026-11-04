@@ -245,6 +245,39 @@ describe('AuthService (sesiones JWT)', () => {
       expect(payload).toMatchObject({ tenant_id: 't1', personal_id: 'p1' });
     });
 
+    it('crearSesion persiste una sesion y conserva participacion y avatar', async () => {
+      const { servicio, sesiones } = crear();
+      const usuario = {
+        ...usuarioBase,
+        tenant_id: 't1',
+        personal_id: 'p1',
+        participacion_porcentaje: 25,
+        avatar_objeto_id: 'obj-1',
+        avatar_url: '/api/v1/storage/public/objetos/obj-1',
+      };
+
+      const sesion = await servicio.crearSesion(usuario);
+
+      expect(sesiones.crear).toHaveBeenCalledTimes(1);
+      expect(sesion.usuario).toMatchObject({
+        tenant_id: 't1',
+        personal_id: 'p1',
+        participacion_porcentaje: 25,
+        avatar_objeto_id: 'obj-1',
+        avatar_url: '/api/v1/storage/public/objetos/obj-1',
+      });
+      expect(verificarToken<TokenPayload>(sesion.access_token, SECRETO)).toMatchObject({
+        tenant_id: 't1',
+        personal_id: 'p1',
+        participacion_porcentaje: 25,
+      });
+      expect(verificarToken<TokenPayload>(sesion.refresh_token, SECRETO)).toMatchObject({
+        tenant_id: 't1',
+        personal_id: 'p1',
+        participacion_porcentaje: 25,
+      });
+    });
+
     it('cerrarSesion ignora un access token', async () => {
       const { servicio, sesiones } = crear();
       const access = crearAccessToken(contexto, SECRETO, '15m');
@@ -269,26 +302,26 @@ describe('AuthService (sesiones JWT)', () => {
         message: 'El registro publico solo admite empresario o comprador.',
       });
       await expect(servicio.refrescar('basura')).rejects.toMatchObject({
-        codigo: 'TOKEN_INVALIDO',
+        codigo: 'NO_AUTORIZADO',
         message: 'El refresh_token es invalido o expiro.',
       });
 
       const access = crearAccessToken(contexto, SECRETO, '15m');
       await expect(servicio.refrescar(access)).rejects.toMatchObject({
-        codigo: 'TOKEN_INVALIDO',
+        codigo: 'NO_AUTORIZADO',
         message: 'El token no es de refresco.',
       });
 
       const sinJti = crearRefreshToken(contexto, SECRETO, '7d');
       await expect(servicio.refrescar(sinJti)).rejects.toMatchObject({
-        codigo: 'TOKEN_INVALIDO',
+        codigo: 'NO_AUTORIZADO',
         message: 'El token no tiene una sesion asociada.',
       });
 
       sesiones.activaPorJti.mockResolvedValue(null);
       const conJti = crearRefreshToken(contexto, SECRETO, '7d', 'jti-1');
       await expect(servicio.refrescar(conJti)).rejects.toMatchObject({
-        codigo: 'SESION_REVOCADA',
+        codigo: 'NO_AUTORIZADO',
         message: 'La sesion fue cerrada; inicia sesion de nuevo.',
       });
 
@@ -302,7 +335,7 @@ describe('AuthService (sesiones JWT)', () => {
       });
       (usuarios.encontrarPorId as Mock).mockResolvedValue(null);
       await expect(servicio.refrescar(conJti)).rejects.toMatchObject({
-        codigo: 'TOKEN_INVALIDO',
+        codigo: 'NO_AUTORIZADO',
         message: 'El usuario del token ya no existe.',
       });
     });

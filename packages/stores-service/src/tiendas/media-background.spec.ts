@@ -1,11 +1,16 @@
 import { DomainError, NotFoundError } from '@core/shared';
 import {
+  BACKGROUND_MOVIL_POR_DEFECTO,
   BACKGROUND_POR_DEFECTO,
   ValidadorMediaBackground,
   backgroundDe,
+  backgroundMovilDe,
+  conBackgroundMovilUrls,
   conBackgroundUrls,
   normalizarBackground,
+  normalizarBackgroundMovil,
   validarBackground,
+  validarBackgroundMovil,
 } from './media-background';
 
 const OBJETO = '11111111-2222-4333-8444-555555555555';
@@ -219,6 +224,16 @@ describe('media background (ADR-38)', () => {
       });
     });
 
+    it('acepta solo imagenes para la imagen SEO de tienda', async () => {
+      vi.stubGlobal('fetch', vi.fn(async () => respuesta({ content_type: 'image/webp' })));
+      await expect(validador.validar(TENANT, POSTER, 'imagen')).resolves.toBe('imagen');
+
+      vi.stubGlobal('fetch', vi.fn(async () => respuesta({ content_type: 'video/mp4' })));
+      await expect(validador.validar(TENANT, POSTER, 'imagen')).rejects.toMatchObject({
+        codigo: 'BACKGROUND_INVALIDO',
+      });
+    });
+
     it('rechaza objetos de otro tenant, inactivos, privados o con MIME no permitido', async () => {
       for (const objeto of [
         { tenant_id: 'otro' },
@@ -252,6 +267,95 @@ describe('media background (ADR-38)', () => {
       );
       await expect(validador.validar(TENANT, OBJETO)).rejects.toMatchObject({
         codigo: 'BACKGROUND_NO_VERIFICABLE',
+      });
+    });
+  });
+
+  describe('fondo móvil (ADR-41)', () => {
+    it('devuelve los valores por defecto sin fila', () => {
+      expect(backgroundMovilDe(null)).toEqual(BACKGROUND_MOVIL_POR_DEFECTO);
+      expect(normalizarBackgroundMovil({})).toEqual(BACKGROUND_MOVIL_POR_DEFECTO);
+    });
+
+    it('mezcla solo los campos enviados y conserva el tipo si el objeto no cambia', () => {
+      const actual = {
+        ...BACKGROUND_MOVIL_POR_DEFECTO,
+        background_movil_objeto_id: OBJETO,
+        background_movil_media_type: 'video' as const,
+        background_movil_alt: 'anterior',
+        background_movil_activo: true,
+      };
+
+      expect(
+        normalizarBackgroundMovil({ background_movil_alt: '  nuevo  ' }, actual),
+      ).toMatchObject({
+        background_movil_objeto_id: OBJETO,
+        background_movil_media_type: 'video',
+        background_movil_alt: 'nuevo',
+        background_movil_activo: true,
+      });
+    });
+
+    it('limpia el bloque móvil con null', () => {
+      const actual = {
+        ...BACKGROUND_MOVIL_POR_DEFECTO,
+        background_movil_objeto_id: OBJETO,
+        background_movil_media_type: 'imagen' as const,
+        background_movil_activo: true,
+      };
+      expect(
+        normalizarBackgroundMovil({ background_movil_objeto_id: null }, actual),
+      ).toEqual(BACKGROUND_MOVIL_POR_DEFECTO);
+    });
+
+    it('rechaza activar o poner poster sin objeto móvil', () => {
+      expect(() =>
+        validarBackgroundMovil(
+          { background_movil_activo: true },
+          { ...BACKGROUND_MOVIL_POR_DEFECTO },
+        ),
+      ).toThrow(/fondo móvil/i);
+      expect(() =>
+        validarBackgroundMovil(
+          { background_movil_poster_objeto_id: POSTER },
+          { ...BACKGROUND_MOVIL_POR_DEFECTO },
+        ),
+      ).toThrow(/poster móvil/i);
+    });
+
+    it('valida UUIDs y el texto alternativo', () => {
+      expect(() =>
+        validarBackgroundMovil(
+          { background_movil_objeto_id: OBJETO },
+          { ...BACKGROUND_MOVIL_POR_DEFECTO, background_movil_objeto_id: 'x' },
+        ),
+      ).toThrow(/objeto de storage/i);
+      expect(() =>
+        validarBackgroundMovil(
+          {},
+          {
+            ...BACKGROUND_MOVIL_POR_DEFECTO,
+            background_movil_objeto_id: OBJETO,
+            background_movil_alt: 'x'.repeat(161),
+          },
+        ),
+      ).toThrow(/160/);
+    });
+
+    it('deriva las URLs públicas móviles', () => {
+      expect(
+        conBackgroundMovilUrls({
+          ...BACKGROUND_MOVIL_POR_DEFECTO,
+          background_movil_objeto_id: OBJETO,
+          background_movil_poster_objeto_id: POSTER,
+        }),
+      ).toMatchObject({
+        background_movil_url: `/api/v1/storage/public/objetos/${OBJETO}`,
+        background_movil_poster_url: `/api/v1/storage/public/objetos/${POSTER}`,
+      });
+      expect(conBackgroundMovilUrls(BACKGROUND_MOVIL_POR_DEFECTO)).toMatchObject({
+        background_movil_url: null,
+        background_movil_poster_url: null,
       });
     });
   });

@@ -6,6 +6,7 @@ import {
   ConflictError,
   ForbiddenError,
   NotFoundError,
+  OrigenPersonalizacion,
   esUuid,
   esViolacionUnicidad,
   slugConSufijo,
@@ -15,15 +16,39 @@ import {
 import {
   BackgroundInput,
   BackgroundMediaType,
+  BackgroundMovilCampos,
+  BackgroundMovilInput,
   BackgroundPosition,
   ValidadorMediaBackground,
   backgroundDe,
+  backgroundMovilDe,
+  conBackgroundMovilUrls,
   conBackgroundUrls,
   normalizarBackground,
+  normalizarBackgroundMovil,
   validarBackground,
+  validarBackgroundMovil,
 } from './media-background';
+import {
+  OverridesPersonalizacion,
+  PersonalizacionCampos,
+  PersonalizacionInput,
+  Plantilla,
+  conSeoImagenUrl,
+  normalizarOverrides,
+  overridesDe,
+  validarOverrides,
+} from './personalizacion-tienda';
+import {
+  ContenidoCampos,
+  ContenidoInput,
+  contenidoDe,
+  normalizarContenido,
+  validarContenido,
+} from './contenido-tienda';
+import { TemaHerenciaService, resolverPersonalizacion } from './herencia-tema';
 
-export interface Tienda {
+export interface Tienda extends PersonalizacionCampos, ContenidoCampos, BackgroundMovilCampos {
   id: string;
   empresa_id: string;
   propietario_usuario_id: string;
@@ -43,22 +68,46 @@ export interface Tienda {
   background_activo: boolean;
   background_url?: string | null;
   background_poster_url?: string | null;
+  seo_imagen_url?: string | null;
+  origen_personalizacion: {
+    plantilla: OrigenPersonalizacion;
+    tema: OrigenPersonalizacion;
+  };
   creado_en: string;
   actualizado_en: string;
 }
 
 export interface TiendaResuelta {
   tienda: Tienda;
+  /** Overrides crudos para una actualización parcial (ADR-42). */
+  overrides: OverridesPersonalizacion;
   /** Ruta a la que redirigir cuando se consultó un slug anterior. */
   redirigirA?: string;
 }
 
-interface TiendaConEstadoSlug extends Tienda {
+interface TiendaFila
+  extends Omit<
+    Tienda,
+    | 'plantilla'
+    | 'tema'
+    | 'origen_personalizacion'
+    | 'seo_imagen_url'
+    | 'logo_url'
+    | 'background_url'
+    | 'background_poster_url'
+    | 'background_movil_url'
+    | 'background_movil_poster_url'
+  > {
+  plantilla_override: Plantilla | null;
+  tema_override: unknown;
+}
+
+interface TiendaConEstadoSlug extends TiendaFila {
   es_actual: boolean;
 }
 
 const CAMPOS_TIENDA =
-  'id, empresa_id, propietario_usuario_id, participacion_porcentaje, vendedor_id, nombre, descripcion, slug, logo_objeto_id, background_objeto_id, background_media_type, background_poster_objeto_id, background_alt, background_overlay, background_position, background_activo, creado_en, actualizado_en';
+  'id, empresa_id, propietario_usuario_id, participacion_porcentaje, vendedor_id, nombre, descripcion, slug, logo_objeto_id, background_objeto_id, background_media_type, background_poster_objeto_id, background_alt, background_overlay, background_position, background_activo, background_movil_objeto_id, background_movil_media_type, background_movil_poster_objeto_id, background_movil_alt, background_movil_activo, plantilla_override, tema_override, hero_titulo, hero_subtitulo, hero_cta_texto, hero_cta_url, seo_titulo, seo_descripcion, seo_imagen_objeto_id, personalizacion_actualizada_en, secciones, sobre_nosotros, politicas, redes, anuncio_texto, anuncio_enlace, anuncio_activo, contenido_actualizado_en, creado_en, actualizado_en';
 const MAX_INTENTOS_SLUG = 50;
 
 /**
@@ -73,10 +122,13 @@ export class TiendasService {
     this.claveInterna,
   );
 
-  constructor(private readonly pg: PgService) {}
+  constructor(
+    private readonly pg: PgService,
+    private readonly herencia: TemaHerenciaService = new TemaHerenciaService(),
+  ) {}
 
   async deVendedor(vendedorId: string): Promise<Tienda | null> {
-    const tienda = await this.pg.queryOne<Tienda>(
+    const tienda = await this.pg.queryOne<TiendaFila>(
       `SELECT ${CAMPOS_TIENDA}
        FROM stores.tiendas WHERE vendedor_id = $1`,
       [vendedorId],
@@ -85,13 +137,13 @@ export class TiendasService {
   }
 
   async deEmpresa(empresaId: string): Promise<Tienda[]> {
-    const tiendas = await this.pg.query<Tienda>(
+    const tiendas = await this.pg.query<TiendaFila>(
       `SELECT ${CAMPOS_TIENDA}
        FROM stores.tiendas WHERE empresa_id = $1
        ORDER BY creado_en DESC LIMIT 200`,
       [empresaId],
     );
-    return tiendas.map((tienda) => this.conUrls(tienda));
+    return Promise.all(tiendas.map((tienda) => this.conUrls(tienda)));
   }
 
   /** Resuelve por UUID o slug; conserva el slug anterior como redirección. */
@@ -100,7 +152,8 @@ export class TiendasService {
     if (!fila) return null;
     const { es_actual, ...tienda } = fila;
     return {
-      tienda: this.conUrls(tienda),
+      tienda: await this.conUrls(tienda),
+      overrides: overridesDe(tienda),
       redirigirA: es_actual ? undefined : `/api/v1/tiendas/${tienda.slug}`,
     };
   }
@@ -130,7 +183,7 @@ export class TiendasService {
     for (let intento = 1; intento <= maxIntentos; intento += 1) {
       const slug = await this.elegirSlug(nombreFinal, slugExplicito);
       try {
-        const fila = await this.pg.queryOne<Tienda>(
+        const fila = await this.pg.queryOne<TiendaFila>(
           `INSERT INTO stores.tiendas
              (id, empresa_id, propietario_usuario_id, vendedor_id, participacion_porcentaje, nombre, descripcion, slug)
            VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
@@ -138,7 +191,7 @@ export class TiendasService {
           [randomUUID(), empresaId, propietarioId, vendedorId, participacion, nombreFinal, descripcionFinal, slug],
         );
         if (!fila) throw new DomainError('TIENDA_FALLIDA', 'No se pudo crear la tienda.');
-        return this.conUrls(fila);
+        return await this.conUrls(fila);
       } catch (error) {
         if (!esViolacionUnicidad(error)) throw error;
         if (slugExplicito || intento === maxIntentos) {
@@ -164,18 +217,18 @@ export class TiendasService {
     }
 
     const slug = validarSlugSolicitado(slugSolicitado);
-    if (slug === tienda.slug) return this.conUrls(tienda);
+    if (slug === tienda.slug) return tienda;
     if (!(await this.slugLibre(slug))) {
       throw new ConflictError(`El slug "${slug}" ya está en uso.`);
     }
 
     try {
-      const fila = await this.pg.queryOne<Tienda>(
+      const fila = await this.pg.queryOne<TiendaFila>(
         `UPDATE stores.tiendas SET slug=$1 WHERE id=$2 RETURNING ${CAMPOS_TIENDA}`,
         [slug, tienda.id],
       );
       if (!fila) throw new NotFoundError('Tienda', tienda.id);
-      return this.conUrls(fila);
+      return await this.conUrls(fila);
     } catch (error) {
       if (esViolacionUnicidad(error)) {
         throw new ConflictError(`El slug "${slug}" ya está en uso.`);
@@ -204,13 +257,13 @@ export class TiendasService {
       }
       await this.validarLogo(tienda.empresa_id, logoObjetoId);
     }
-    const fila = await this.pg.queryOne<Tienda>(
+    const fila = await this.pg.queryOne<TiendaFila>(
       `UPDATE stores.tiendas SET logo_objeto_id=$1, actualizado_en=NOW()
         WHERE id=$2 RETURNING ${CAMPOS_TIENDA}`,
       [logoObjetoId, tienda.id],
     );
     if (!fila) throw new NotFoundError('Tienda', tienda.id);
-    return this.conUrls(fila);
+    return await this.conUrls(fila);
   }
 
   /**
@@ -220,7 +273,7 @@ export class TiendasService {
   async actualizarBackground(
     actor: { user_id: string; rol: string; tenant_id?: string },
     identificador: string,
-    datos: BackgroundInput,
+    datos: BackgroundInput & BackgroundMovilInput,
   ): Promise<Tienda> {
     const resuelta = await this.resolver(identificador);
     if (!resuelta) throw new NotFoundError('Tienda', identificador);
@@ -229,6 +282,8 @@ export class TiendasService {
 
     const meta = normalizarBackground(datos, backgroundDe(tienda));
     validarBackground(datos, meta);
+    const metaMovil = normalizarBackgroundMovil(datos, backgroundMovilDe(tienda));
+    validarBackgroundMovil(datos, metaMovil);
 
     if (
       meta.background_objeto_id &&
@@ -249,14 +304,36 @@ export class TiendasService {
         'poster',
       );
     }
+    if (
+      metaMovil.background_movil_objeto_id &&
+      metaMovil.background_movil_objeto_id !== tienda.background_movil_objeto_id
+    ) {
+      metaMovil.background_movil_media_type = await this.validadorMedia.validar(
+        tienda.empresa_id,
+        metaMovil.background_movil_objeto_id,
+      );
+    }
+    if (
+      metaMovil.background_movil_poster_objeto_id &&
+      metaMovil.background_movil_poster_objeto_id !==
+        tienda.background_movil_poster_objeto_id
+    ) {
+      await this.validadorMedia.validar(
+        tienda.empresa_id,
+        metaMovil.background_movil_poster_objeto_id,
+        'poster',
+      );
+    }
 
-    const fila = await this.pg.queryOne<Tienda>(
+    const fila = await this.pg.queryOne<TiendaFila>(
       `UPDATE stores.tiendas SET
          background_objeto_id=$1, background_media_type=$2,
          background_poster_objeto_id=$3, background_alt=$4,
          background_overlay=$5, background_position=$6, background_activo=$7,
-         actualizado_en=NOW()
-       WHERE id=$8 RETURNING ${CAMPOS_TIENDA}`,
+         background_movil_objeto_id=$8, background_movil_media_type=$9,
+         background_movil_poster_objeto_id=$10, background_movil_alt=$11,
+         background_movil_activo=$12, actualizado_en=NOW()
+       WHERE id=$13 RETURNING ${CAMPOS_TIENDA}`,
       [
         meta.background_objeto_id,
         meta.background_media_type,
@@ -265,11 +342,111 @@ export class TiendasService {
         meta.background_overlay,
         meta.background_position,
         meta.background_activo,
+        metaMovil.background_movil_objeto_id,
+        metaMovil.background_movil_media_type,
+        metaMovil.background_movil_poster_objeto_id,
+        metaMovil.background_movil_alt,
+        metaMovil.background_movil_activo,
         tienda.id,
       ],
     );
     if (!fila) throw new NotFoundError('Tienda', tienda.id);
-    return this.conUrls(fila);
+    return await this.conUrls(fila);
+  }
+
+  /**
+   * Actualiza la identidad visual de la tienda (ADR-39): plantilla, tema,
+   * hero y SEO. Misma autorización que el logo/fondo; la imagen SEO se valida
+   * contra storage con el tenant de la empresa dueña.
+   */
+  async actualizarPersonalizacion(
+    actor: { user_id: string; rol: string; tenant_id?: string },
+    identificador: string,
+    datos: PersonalizacionInput,
+  ): Promise<Tienda> {
+    const resuelta = await this.resolver(identificador);
+    if (!resuelta) throw new NotFoundError('Tienda', identificador);
+    const tienda = resuelta.tienda;
+    this.verificarAcceso(actor, tienda, 'Solo el dueño de la tienda puede personalizarla.');
+
+    const meta = normalizarOverrides(datos, resuelta.overrides);
+    validarOverrides(meta);
+
+    if (
+      meta.seo_imagen_objeto_id &&
+      meta.seo_imagen_objeto_id !== resuelta.overrides.seo_imagen_objeto_id
+    ) {
+      await this.validadorMedia.validar(
+        tienda.empresa_id,
+        meta.seo_imagen_objeto_id,
+        'imagen',
+      );
+    }
+
+    const fila = await this.pg.queryOne<TiendaFila>(
+      `UPDATE stores.tiendas SET
+         plantilla_override=$1, tema_override=$2::jsonb, hero_titulo=$3,
+         hero_subtitulo=$4, hero_cta_texto=$5, hero_cta_url=$6, seo_titulo=$7,
+         seo_descripcion=$8, seo_imagen_objeto_id=$9,
+         personalizacion_actualizada_en=NOW(), actualizado_en=NOW()
+       WHERE id=$10 RETURNING ${CAMPOS_TIENDA}`,
+      [
+        meta.plantilla,
+        JSON.stringify(meta.tema),
+        meta.hero_titulo,
+        meta.hero_subtitulo,
+        meta.hero_cta_texto,
+        meta.hero_cta_url,
+        meta.seo_titulo,
+        meta.seo_descripcion,
+        meta.seo_imagen_objeto_id,
+        tienda.id,
+      ],
+    );
+    if (!fila) throw new NotFoundError('Tienda', tienda.id);
+    return await this.conUrls(fila);
+  }
+
+  /**
+   * Actualiza el contenido del storefront (ADR-40): secciones, sobre nosotros,
+   * políticas, redes y anuncio. Misma autorización que el logo/fondo.
+   */
+  async actualizarContenido(
+    actor: { user_id: string; rol: string; tenant_id?: string },
+    identificador: string,
+    datos: ContenidoInput,
+  ): Promise<Tienda> {
+    const resuelta = await this.resolver(identificador);
+    if (!resuelta) throw new NotFoundError('Tienda', identificador);
+    const tienda = resuelta.tienda;
+    this.verificarAcceso(
+      actor,
+      tienda,
+      'Solo el dueño de la tienda puede cambiar su contenido.',
+    );
+
+    const meta = normalizarContenido(datos, contenidoDe(tienda));
+    validarContenido(meta);
+
+    const fila = await this.pg.queryOne<TiendaFila>(
+      `UPDATE stores.tiendas SET
+         secciones=$1::jsonb, sobre_nosotros=$2, politicas=$3::jsonb, redes=$4::jsonb,
+         anuncio_texto=$5, anuncio_enlace=$6, anuncio_activo=$7,
+         contenido_actualizado_en=NOW(), actualizado_en=NOW()
+       WHERE id=$8 RETURNING ${CAMPOS_TIENDA}`,
+      [
+        JSON.stringify(meta.secciones),
+        meta.sobre_nosotros,
+        JSON.stringify(meta.politicas),
+        JSON.stringify(meta.redes),
+        meta.anuncio_texto,
+        meta.anuncio_enlace,
+        meta.anuncio_activo,
+        tienda.id,
+      ],
+    );
+    if (!fila) throw new NotFoundError('Tienda', tienda.id);
+    return await this.conUrls(fila);
   }
 
   private verificarAcceso(
@@ -324,14 +501,31 @@ export class TiendasService {
     }
   }
 
-  private conUrls(tienda: Tienda): Tienda {
-    const logo = tienda.logo_objeto_id
-      ? { logo_url: `/api/v1/storage/public/objetos/${tienda.logo_objeto_id}` }
+  private async conUrls(fila: TiendaFila): Promise<Tienda> {
+    const { plantilla_override: _plantilla, tema_override: _tema, ...resto } = fila;
+    const overrides = overridesDe(fila);
+    const [empresa, plataforma] = await Promise.all([
+      this.herencia.obtenerEmpresa(fila.empresa_id),
+      this.herencia.obtenerPlataforma(),
+    ]);
+    const resuelta = resolverPersonalizacion(overrides, empresa, plataforma);
+    const personalizacion: PersonalizacionCampos = {
+      ...overrides,
+      plantilla: resuelta.plantilla,
+      tema: resuelta.tema,
+    };
+    const logo = fila.logo_objeto_id
+      ? { logo_url: `/api/v1/storage/public/objetos/${fila.logo_objeto_id}` }
       : {};
     return {
-      ...tienda,
+      ...resto,
       ...logo,
-      ...conBackgroundUrls(backgroundDe(tienda)),
+      ...conBackgroundUrls(backgroundDe(fila)),
+      ...conBackgroundMovilUrls(backgroundMovilDe(fila)),
+      ...personalizacion,
+      ...conSeoImagenUrl(personalizacion),
+      ...contenidoDe(fila),
+      origen_personalizacion: resuelta.origen,
     };
   }
 

@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 import { TiendasService } from './tiendas.service';
+import { TemaHerenciaService } from './herencia-tema';
 import {
   TiendasController,
   TiendasEmpresaController,
@@ -7,7 +8,7 @@ import {
 } from './tiendas.controller';
 
 @Module({
-  providers: [TiendasService],
+  providers: [TiendasService, TemaHerenciaService],
   exports: [TiendasService],
   controllers: [TiendasController, TiendasEmpresaController, TiendasSlugController],
 })

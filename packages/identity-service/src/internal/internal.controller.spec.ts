@@ -11,11 +11,21 @@ const usuario = {
   rol: ROLES.VENDEDOR,
 };
 
-function fabricar(): { usuarios: Record<string, Mock>; empresas: Record<string, Mock>; controller: InternalController } {
+function fabricar(): {
+  usuarios: Record<string, Mock>;
+  empresas: Record<string, Mock>;
+  configuracion: Record<string, Mock>;
+  controller: InternalController;
+} {
   const usuarios = { encontrarPorId: vi.fn(), listarVendedores: vi.fn(), contarVendedores: vi.fn() };
-  const empresas = { obtener: vi.fn() };
-  const controller = new InternalController(usuarios as unknown as UsuariosService, empresas as never);
-  return { usuarios, empresas, controller };
+  const empresas = { obtener: vi.fn(), obtenerTemaOverrides: vi.fn() };
+  const configuracion = { obtenerTemaOverrides: vi.fn() };
+  const controller = new InternalController(
+    usuarios as unknown as UsuariosService,
+    empresas as never,
+    configuracion as never,
+  );
+  return { usuarios, empresas, configuracion, controller };
 }
 
 describe('InternalController (internal, R-U-10/11)', () => {
@@ -44,6 +54,33 @@ describe('InternalController (internal, R-U-10/11)', () => {
     const { empresas, controller } = fabricar();
     empresas.obtener.mockResolvedValue({ id: 'empresa-1', modalidad_logistica: 'hibrida' });
     await expect(controller.empresa('empresa-1')).resolves.toMatchObject({ modalidad_logistica: 'hibrida' });
+  });
+
+  it('debe devolver los overrides de tema de la empresa', async () => {
+    const { empresas, controller } = fabricar();
+    empresas.obtenerTemaOverrides.mockResolvedValue({
+      plantilla_override: 'boutique',
+      tema_override: { color_primario: '#112233' },
+    });
+
+    await expect(controller.empresaTema('empresa-1')).resolves.toMatchObject({
+      plantilla_override: 'boutique',
+      tema_override: { color_primario: '#112233' },
+    });
+    expect(empresas.obtenerTemaOverrides).toHaveBeenCalledWith('empresa-1');
+  });
+
+  it('debe devolver los overrides de tema de la plataforma', async () => {
+    const { configuracion, controller } = fabricar();
+    configuracion.obtenerTemaOverrides.mockResolvedValue({
+      plantilla_override: null,
+      tema_override: { fuente: 'inter' },
+    });
+
+    await expect(controller.plataformaTema()).resolves.toMatchObject({
+      plantilla_override: null,
+      tema_override: { fuente: 'inter' },
+    });
   });
 
   it('debe proteger todas las rutas con la clave interna', () => {

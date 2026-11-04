@@ -8,12 +8,29 @@ import {
   ApiTags,
 } from '@nestjs/swagger';
 import type { Response } from 'express';
-import { IsBoolean, IsIn, IsInt, IsOptional, IsString, IsUUID, Length, Max, Min } from 'class-validator';
-import { ROLES, Roles, UsuarioActual, UsuarioContexto } from '@core/shared';
+import { Type } from 'class-transformer';
+import {
+  IsBoolean,
+  IsIn,
+  IsInt,
+  IsOptional,
+  IsString,
+  IsUUID,
+  Length,
+  Max,
+  Min,
+  ValidateNested,
+} from 'class-validator';
+import { PLANTILLAS, Plantilla, ROLES, Roles, UsuarioActual, UsuarioContexto } from '@core/shared';
 import {
   BACKGROUND_POSICIONES,
   BackgroundPosition,
 } from '../media-background/media-background';
+import {
+  OrigenPersonalizacionResponseDto,
+  TemaRequestDto,
+  TemaResponseDto,
+} from '../personalizacion/tema.dto';
 import {
   ActualizarConfiguracionSitioInput,
   ConfiguracionSitioService,
@@ -62,6 +79,25 @@ export class ActualizarConfiguracionSitioRequestDto implements ActualizarConfigu
   @IsOptional()
   @IsBoolean()
   background_activo?: boolean;
+
+  @ApiPropertyOptional({
+    enum: PLANTILLAS,
+    nullable: true,
+    description: 'Plantilla de la plataforma; null usa el default',
+  })
+  @IsOptional()
+  @IsIn(PLANTILLAS)
+  plantilla?: Plantilla | null;
+
+  @ApiPropertyOptional({
+    type: TemaRequestDto,
+    nullable: true,
+    description: 'Overrides de tema de la plataforma; null los limpia',
+  })
+  @IsOptional()
+  @ValidateNested()
+  @Type(() => TemaRequestDto)
+  tema?: TemaRequestDto | null;
 }
 
 export class ConfiguracionSitioResponseDto {
@@ -80,6 +116,10 @@ export class ConfiguracionSitioResponseDto {
   @ApiProperty({ minimum: 0, maximum: 100 }) background_overlay: number;
   @ApiProperty({ enum: BACKGROUND_POSICIONES }) background_position: BackgroundPosition;
   @ApiProperty() background_activo: boolean;
+  @ApiProperty({ enum: PLANTILLAS }) plantilla: Plantilla;
+  @ApiProperty({ type: TemaResponseDto }) tema: TemaResponseDto;
+  @ApiProperty({ type: OrigenPersonalizacionResponseDto })
+  origen_personalizacion: OrigenPersonalizacionResponseDto;
   @ApiProperty({ type: String, format: 'date-time', nullable: true })
   actualizado_en: string | null;
 }

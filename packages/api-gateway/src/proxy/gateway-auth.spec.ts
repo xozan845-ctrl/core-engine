@@ -454,6 +454,12 @@ describe('Gateway auth — slugs de empresa y tienda (ADR-26)', () => {
     expect(next).toHaveBeenCalled();
   });
 
+  it('debe permitir el CSS del tema de la tienda sin token', () => {
+    const { res, next } = evaluar('/api/v1/tiendas/mi-tienda/tema.css', 'GET');
+    expect(res.statusCode).toBe(200);
+    expect(next).toHaveBeenCalled();
+  });
+
   it('debe permitir al vendedor cambiar el slug de su tienda', () => {
     const { res, next } = evaluar('/api/v1/tiendas/mi-tienda/slug', 'PATCH', ROLES.VENDEDOR);
     expect(res.statusCode).toBe(200);
@@ -475,6 +481,46 @@ describe('Gateway auth — slugs de empresa y tienda (ADR-26)', () => {
   it('debe denegar al comprador cambiar el fondo de una tienda', () => {
     const { res, next } = evaluar(
       '/api/v1/tiendas/mi-tienda/background',
+      'PATCH',
+      ROLES.COMPRADOR,
+    );
+    expect(res.statusCode).toBe(403);
+    expect(next).not.toHaveBeenCalled();
+  });
+
+  it('debe permitir al vendedor personalizar su tienda', () => {
+    const { res, next } = evaluar(
+      '/api/v1/tiendas/mi-tienda/personalizacion',
+      'PATCH',
+      ROLES.VENDEDOR,
+    );
+    expect(res.statusCode).toBe(200);
+    expect(next).toHaveBeenCalled();
+  });
+
+  it('debe denegar al comprador personalizar una tienda', () => {
+    const { res, next } = evaluar(
+      '/api/v1/tiendas/mi-tienda/personalizacion',
+      'PATCH',
+      ROLES.COMPRADOR,
+    );
+    expect(res.statusCode).toBe(403);
+    expect(next).not.toHaveBeenCalled();
+  });
+
+  it('debe permitir al vendedor actualizar el contenido de su tienda', () => {
+    const { res, next } = evaluar(
+      '/api/v1/tiendas/mi-tienda/contenido',
+      'PATCH',
+      ROLES.VENDEDOR,
+    );
+    expect(res.statusCode).toBe(200);
+    expect(next).toHaveBeenCalled();
+  });
+
+  it('debe denegar al comprador actualizar el contenido de una tienda', () => {
+    const { res, next } = evaluar(
+      '/api/v1/tiendas/mi-tienda/contenido',
       'PATCH',
       ROLES.COMPRADOR,
     );
