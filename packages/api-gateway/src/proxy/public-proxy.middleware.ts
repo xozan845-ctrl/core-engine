@@ -26,10 +26,10 @@ export interface OpcionesProxyPublico {
 const PREFIJO = '/api-proxy';
 const MAX_BODY_BYTES = 1024 * 1024;
 const TIMEOUT_MS = 60_000;
-const METODOS = new Set(['GET', 'POST', 'PATCH', 'PUT', 'DELETE', 'OPTIONS']);
+const METODOS = new Set(['GET', 'HEAD', 'POST', 'PATCH', 'PUT', 'DELETE', 'OPTIONS']);
 const RUTA_AUTH = /^\/api\/v1\/auth\/(login|registro|refresh|restablecer-contrasena)$/;
-const CABECERAS_PERMITIDAS = 'Content-Type,Authorization,x-request-id';
-const METODOS_CORS = 'GET,POST,PATCH,PUT,DELETE,OPTIONS';
+const CABECERAS_PERMITIDAS = 'Content-Type,Authorization,x-request-id,Range';
+const METODOS_CORS = 'GET,HEAD,POST,PATCH,PUT,DELETE,OPTIONS';
 const CABECERAS_NO_REENVIABLES = new Set([
   'connection',
   'keep-alive',
@@ -81,7 +81,10 @@ export function crearProxyPublico(opciones: OpcionesProxyPublico) {
     if (permitido) {
       res.setHeader('Access-Control-Allow-Origin', permitido);
       res.setHeader('Vary', 'Origin');
-      res.setHeader('Access-Control-Expose-Headers', 'x-request-id');
+      res.setHeader(
+        'Access-Control-Expose-Headers',
+        'x-request-id,Content-Length,Content-Range,Accept-Ranges,ETag',
+      );
       if (permitido !== '*') {
         res.setHeader('Access-Control-Allow-Credentials', 'true');
       }
@@ -131,6 +134,10 @@ export function crearProxyPublico(opciones: OpcionesProxyPublico) {
     };
     if (autorizacion) headers.authorization = autorizacion;
     if (req.ip) headers['x-forwarded-for'] = req.ip;
+    // El navegador pide tramos de video con `Range`; reenviarlo es lo que
+    // permite que storage-service responda 206/416 a través del proxy.
+    const rango = valor(req, 'range');
+    if (rango) headers.range = rango;
 
     let upstream: globalThis.Response;
     try {

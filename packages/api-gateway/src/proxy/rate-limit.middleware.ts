@@ -89,7 +89,10 @@ export class RateLimitMiddleware implements NestMiddleware {
   use(req: Request, res: Response, next: NextFunction): void {
     // Las imágenes públicas son estáticas y cacheables: no deben consumir el
     // cubo de la API (una página de catálogo puede cargar decenas).
-    if (req.method === 'GET' && /^\/api\/v1\/storage\/public\/objetos\/[^/]+$/.test(req.path)) {
+    if (
+      (req.method === 'GET' || req.method === 'HEAD') &&
+      /^\/api\/v1\/storage\/public\/objetos\/[^/]+$/.test(req.path)
+    ) {
       next();
       return;
     }

@@ -74,6 +74,21 @@ describe('RateLimitMiddleware (ventana fija por IP)', () => {
     expect(res.statusCode).toBe(200);
   });
 
+  it('no debe consumir el cubo con HEAD de media pública (Range)', () => {
+    const limite = new RateLimitMiddleware();
+    const res = crearRes();
+    const req = crearReq(
+      '203.0.113.51',
+      '/api/v1/storage/public/objetos/22222222-2222-4222-8222-222222222222',
+    );
+    req.method = 'HEAD';
+    for (let i = 0; i < 400; i += 1) {
+      limite.use(req, res as never, vi.fn());
+    }
+    expect(res.headers['x-ratelimit-limit']).toBeUndefined();
+    expect(res.statusCode).toBe(200);
+  });
+
   it('debe aplicar el limite estricto de login solo al POST /api/v1/auth/login', () => {
     const limite = new RateLimitMiddleware();
     const res = crearRes();

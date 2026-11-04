@@ -7653,6 +7653,63 @@ export const OPENAPI_AGREGADO = {
         ]
       }
     },
+    "/api/v1/configuracion/sitio": {
+      "get": {
+        "operationId": "ConfiguracionSitioController_obtener",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Fondo de plataforma y metadatos de presentación",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConfiguracionSitioResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Configuración visible del sitio (fondo de plataforma)",
+        "tags": [
+          "Configuración del sitio"
+        ]
+      },
+      "patch": {
+        "operationId": "ConfiguracionSitioController_actualizar",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ActualizarConfiguracionSitioRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Configuración del sitio actualizada",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConfiguracionSitioResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Actualizar el fondo y los metadatos del sitio (admin)",
+        "tags": [
+          "Configuración del sitio"
+        ]
+      }
+    },
     "/api/v1/orders/{id}/estado": {
       "patch": {
         "operationId": "EstadoOrdenController_avanzar",
@@ -9531,9 +9588,15 @@ export const OPENAPI_AGREGADO = {
         ],
         "responses": {
           "200": {
-            "description": "Imagen (binario)",
+            "description": "Media (binario); con Range responde 206",
             "content": {
               "image/*": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              },
+              "video/*": {
                 "schema": {
                   "type": "string",
                   "format": "binary"
@@ -9541,11 +9604,85 @@ export const OPENAPI_AGREGADO = {
               }
             }
           },
+          "206": {
+            "description": "Tramo parcial solicitado con Range",
+            "headers": {
+              "Content-Range": {
+                "description": "Tramo servido y tamaño total",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Accept-Ranges": {
+                "description": "Unidad de rangos soportada",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
           "404": {
-            "description": "Objeto inexistente, privado, eliminado o no imagen"
+            "description": "Objeto inexistente, privado, eliminado o no servible"
+          },
+          "416": {
+            "description": "Rango inválido o fuera del objeto",
+            "headers": {
+              "Content-Range": {
+                "description": "Tamaño total del objeto",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
           }
         },
-        "summary": "Servir una imagen pública (cacheable, sin auth)",
+        "summary": "Servir una imagen o video público (cacheable, sin auth, Range)",
+        "tags": [
+          "Almacenamiento público"
+        ]
+      },
+      "head": {
+        "operationId": "PublicStorageController_cabeceras",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "description": "Id del objeto",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Cabeceras de la media (sin cuerpo); con Range responde 206",
+            "content": {
+              "image/*": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              },
+              "video/*": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              }
+            }
+          },
+          "206": {
+            "description": "Cabeceras del tramo solicitado con Range"
+          },
+          "404": {
+            "description": "Objeto inexistente, privado, eliminado o no servible"
+          },
+          "416": {
+            "description": "Rango inválido o fuera del objeto"
+          }
+        },
+        "summary": "Cabeceras de una imagen o video público (sin cuerpo)",
         "tags": [
           "Almacenamiento público"
         ]
@@ -9687,6 +9824,53 @@ export const OPENAPI_AGREGADO = {
           }
         ],
         "summary": "Asociar o quitar el logo público de la tienda",
+        "tags": [
+          "Tiendas"
+        ]
+      }
+    },
+    "/api/v1/tiendas/{id}/background": {
+      "patch": {
+        "operationId": "TiendasSlugController_actualizarBackground",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "description": "UUID de la tienda o su slug actual",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ActualizarBackgroundTiendaRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Fondo actualizado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TiendaResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Asociar, cambiar o quitar el fondo público de la tienda",
         "tags": [
           "Tiendas"
         ]
@@ -18066,6 +18250,49 @@ export const OPENAPI_AGREGADO = {
           "usuario"
         ]
       },
+      "ActualizarConfiguracionSitioRequestDto": {
+        "type": "object",
+        "properties": {
+          "background_objeto_id": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true,
+            "description": "Objeto de storage del fondo; null limpia todo el bloque"
+          },
+          "background_poster_objeto_id": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true,
+            "description": "Imagen de portada para un fondo de video"
+          },
+          "background_alt": {
+            "type": "string",
+            "maxLength": 160,
+            "default": ""
+          },
+          "background_overlay": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 100,
+            "default": 35
+          },
+          "background_position": {
+            "type": "string",
+            "enum": [
+              "center",
+              "top",
+              "bottom",
+              "left",
+              "right"
+            ],
+            "default": "center"
+          },
+          "background_activo": {
+            "type": "boolean",
+            "default": false
+          }
+        }
+      },
       "ActualizarModalidadLogisticaRequestDto": {
         "type": "object",
         "properties": {
@@ -18139,6 +18366,77 @@ export const OPENAPI_AGREGADO = {
         "required": [
           "actual",
           "nueva"
+        ]
+      },
+      "ConfiguracionSitioResponseDto": {
+        "type": "object",
+        "properties": {
+          "background_objeto_id": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true
+          },
+          "background_media_type": {
+            "type": "string",
+            "enum": [
+              "imagen",
+              "video"
+            ],
+            "nullable": true
+          },
+          "background_url": {
+            "type": "string",
+            "nullable": true,
+            "description": "URL pública derivada del fondo"
+          },
+          "background_poster_objeto_id": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true
+          },
+          "background_poster_url": {
+            "type": "string",
+            "nullable": true,
+            "description": "URL pública derivada del poster"
+          },
+          "background_alt": {
+            "type": "string"
+          },
+          "background_overlay": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 100
+          },
+          "background_position": {
+            "type": "string",
+            "enum": [
+              "center",
+              "top",
+              "bottom",
+              "left",
+              "right"
+            ]
+          },
+          "background_activo": {
+            "type": "boolean"
+          },
+          "actualizado_en": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          }
+        },
+        "required": [
+          "background_objeto_id",
+          "background_media_type",
+          "background_url",
+          "background_poster_objeto_id",
+          "background_poster_url",
+          "background_alt",
+          "background_overlay",
+          "background_position",
+          "background_activo",
+          "actualizado_en"
         ]
       },
       "CrearEmpresaRequestDto": {
@@ -18457,6 +18755,55 @@ export const OPENAPI_AGREGADO = {
             "nullable": true,
             "description": "URL pública derivada del logo"
           },
+          "background_objeto_id": {
+            "type": "string",
+            "nullable": true,
+            "format": "uuid"
+          },
+          "background_media_type": {
+            "type": "string",
+            "nullable": true,
+            "enum": [
+              "imagen",
+              "video"
+            ]
+          },
+          "background_url": {
+            "type": "string",
+            "nullable": true,
+            "description": "URL pública derivada del fondo"
+          },
+          "background_poster_objeto_id": {
+            "type": "string",
+            "nullable": true,
+            "format": "uuid"
+          },
+          "background_poster_url": {
+            "type": "string",
+            "nullable": true,
+            "description": "URL pública derivada del poster"
+          },
+          "background_alt": {
+            "type": "string"
+          },
+          "background_overlay": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 100
+          },
+          "background_position": {
+            "type": "string",
+            "enum": [
+              "center",
+              "top",
+              "bottom",
+              "left",
+              "right"
+            ]
+          },
+          "background_activo": {
+            "type": "boolean"
+          },
           "actualizado_en": {
             "type": "string",
             "format": "date-time"
@@ -18732,6 +19079,43 @@ export const OPENAPI_AGREGADO = {
             "nullable": true,
             "format": "uuid",
             "description": "Objeto de storage confirmado como imagen pública"
+          },
+          "background_objeto_id": {
+            "type": "string",
+            "nullable": true,
+            "format": "uuid",
+            "description": "Objeto de storage del fondo; null limpia el bloque completo"
+          },
+          "background_poster_objeto_id": {
+            "type": "string",
+            "nullable": true,
+            "format": "uuid",
+            "description": "Imagen de portada para un fondo de video"
+          },
+          "background_alt": {
+            "type": "string",
+            "maxLength": 160
+          },
+          "background_overlay": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 100,
+            "default": 35
+          },
+          "background_position": {
+            "type": "string",
+            "enum": [
+              "center",
+              "top",
+              "bottom",
+              "left",
+              "right"
+            ],
+            "default": "center"
+          },
+          "background_activo": {
+            "type": "boolean",
+            "default": false
           }
         }
       },
@@ -20707,6 +21091,48 @@ export const OPENAPI_AGREGADO = {
           "tamano_bytes"
         ]
       },
+      "ActualizarBackgroundTiendaRequestDto": {
+        "type": "object",
+        "properties": {
+          "background_objeto_id": {
+            "type": "string",
+            "description": "Objeto de storage del fondo; null limpia el bloque completo",
+            "nullable": true,
+            "format": "uuid"
+          },
+          "background_poster_objeto_id": {
+            "type": "string",
+            "description": "Imagen de portada para un fondo de video",
+            "nullable": true,
+            "format": "uuid"
+          },
+          "background_alt": {
+            "type": "string",
+            "maxLength": 160
+          },
+          "background_overlay": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 100,
+            "default": 35
+          },
+          "background_position": {
+            "type": "string",
+            "enum": [
+              "center",
+              "top",
+              "bottom",
+              "left",
+              "right"
+            ],
+            "default": "center"
+          },
+          "background_activo": {
+            "type": "boolean",
+            "default": false
+          }
+        }
+      },
       "ActualizarLogoTiendaRequestDto": {
         "type": "object",
         "properties": {
@@ -21030,6 +21456,62 @@ export const OPENAPI_AGREGADO = {
             "type": "object",
             "description": "URL pública del logo",
             "nullable": true
+          },
+          "background_objeto_id": {
+            "type": "string",
+            "description": "Objeto de storage del fondo",
+            "nullable": true,
+            "format": "uuid"
+          },
+          "background_media_type": {
+            "type": "string",
+            "description": "Tipo derivado del fondo",
+            "nullable": true,
+            "enum": [
+              "imagen",
+              "video"
+            ]
+          },
+          "background_url": {
+            "type": "string",
+            "description": "URL pública derivada del fondo",
+            "nullable": true
+          },
+          "background_poster_objeto_id": {
+            "type": "string",
+            "description": "Objeto de storage del poster",
+            "nullable": true,
+            "format": "uuid"
+          },
+          "background_poster_url": {
+            "type": "string",
+            "description": "URL pública derivada del poster",
+            "nullable": true
+          },
+          "background_alt": {
+            "type": "string",
+            "description": "Texto alternativo del fondo"
+          },
+          "background_overlay": {
+            "type": "number",
+            "description": "Opacidad del overlay (0-100)",
+            "minimum": 0,
+            "maximum": 100
+          },
+          "background_position": {
+            "type": "string",
+            "description": "Posición del fondo",
+            "enum": [
+              "center",
+              "top",
+              "bottom",
+              "left",
+              "right"
+            ]
+          },
+          "background_activo": {
+            "type": "boolean",
+            "description": "Si el fondo está activo"
           },
           "creado_en": {
             "type": "string",

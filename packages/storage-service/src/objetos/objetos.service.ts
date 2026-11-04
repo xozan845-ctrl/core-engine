@@ -84,6 +84,14 @@ export interface ObjetoPublico {
   nombre: string;
 }
 
+/** Metadatos de un objeto público, sin abrir el stream (soporta HEAD/Range). */
+export interface ObjetoPublicoMeta {
+  content_type: string;
+  tamano_bytes: number;
+  etag?: string;
+  nombre: string;
+}
+
 interface ObjetoRow {
   id: string;
   tenant_id: string;
@@ -146,11 +154,12 @@ export class ObjetosService {
     if (!Number.isInteger(tamano_bytes) || tamano_bytes <= 0) {
       throw new DomainError('TAMANO_INVALIDO', 'El tamano debe ser un entero positivo en bytes.');
     }
-    if (tamano_bytes > this.config.maxObjetoBytes) {
+    const maxBytes = this.maximoPara(content_type);
+    if (tamano_bytes > maxBytes) {
       throw new DomainError(
         'OBJETO_DEMASIADO_GRANDE',
-        `El archivo excede el maximo de ${this.config.maxObjetoBytes} bytes.`,
-        { max_bytes: this.config.maxObjetoBytes },
+        `El archivo excede el maximo de ${maxBytes} bytes.`,
+        { max_bytes: maxBytes },
       );
     }
 
@@ -202,7 +211,7 @@ export class ObjetosService {
       metodo: 'PUT',
       headers: { 'Content-Type': content_type },
       expira_en: this.expiracion(),
-      max_bytes: this.config.maxObjetoBytes,
+      max_bytes: maxBytes,
     };
   }
 
@@ -222,14 +231,6 @@ export class ObjetosService {
       await this.almacen.eliminar(fila.bucket, fila.objeto);
       throw new DomainError('OBJETO_VACIO', 'El objeto subido esta vacio.');
     }
-    if (info.tamano_bytes > this.config.maxObjetoBytes) {
-      await this.almacen.eliminar(fila.bucket, fila.objeto);
-      throw new DomainError(
-        'OBJETO_DEMASIADO_GRANDE',
-        `El archivo excede el maximo de ${this.config.maxObjetoBytes} bytes.`,
-        { max_bytes: this.config.maxObjetoBytes },
-      );
-    }
     const content_type = (info.content_type ?? fila.content_type).trim().toLowerCase();
     if (!this.config.contentTypesPermitidos.includes(content_type)) {
       await this.almacen.eliminar(fila.bucket, fila.objeto);
@@ -237,6 +238,15 @@ export class ObjetosService {
         'CONTENT_TYPE_NO_PERMITIDO',
         `El objeto subido tiene un tipo no permitido ("${content_type}").`,
         { permitidos: this.config.contentTypesPermitidos },
+      );
+    }
+    const maxBytes = this.maximoPara(content_type);
+    if (info.tamano_bytes > maxBytes) {
+      await this.almacen.eliminar(fila.bucket, fila.objeto);
+      throw new DomainError(
+        'OBJETO_DEMASIADO_GRANDE',
+        `El archivo excede el maximo de ${maxBytes} bytes.`,
+        { max_bytes: maxBytes },
       );
     }
 
@@ -321,27 +331,20 @@ export class ObjetosService {
   }
 
   /**
-   * Sirve una imagen pública por streaming (ADR-28). El UUID es la capacidad:
-   * no se consulta tenant ni se acepta cualquier objeto; solo `activo`,
-   * marcado `publico` y con content-type de imagen.
+   * Sirve una imagen o un video público por streaming (ADR-28). El UUID es la
+   * capacidad: no se consulta tenant ni se acepta cualquier objeto; solo
+   * `activo`, marcado `publico` y con content-type raster o de video.
+   *
+   * `rango` permite abrir solo el tramo pedido por la cabecera `Range`.
    */
-  async leerPublico(id: string): Promise<ObjetoPublico> {
-    if (!UUID.test(id)) throw new NotFoundError('Objeto', id);
-    const fila = await this.pg.queryOne<ObjetoRow>(
-      `SELECT ${COLUMNAS} FROM storage.objetos
-        WHERE id = $1 AND estado = 'activo' AND publico = true`,
-      [id],
-    );
-    if (
-      !fila ||
-      !fila.content_type.startsWith('image/') ||
-      fila.content_type === 'image/svg+xml'
-    ) {
-      // SVG puede ejecutar scripts si se navega directamente; las imágenes de
-      // producto son raster.
-      throw new NotFoundError('Objeto', id);
-    }
-    const leido = await this.almacen.leer(fila.bucket, fila.objeto);
+  async leerPublico(
+    id: string,
+    rango?: { inicio: number; fin: number },
+  ): Promise<ObjetoPublico> {
+    const fila = await this.filaPublica(id);
+    const leido = rango
+      ? await this.almacen.leerRango(fila.bucket, fila.objeto, rango.inicio, rango.fin)
+      : await this.almacen.leer(fila.bucket, fila.objeto);
     if (!leido) throw new NotFoundError('Objeto', id);
     const etag = leido.etag ?? fila.etag ?? undefined;
     return {
@@ -349,6 +352,17 @@ export class ObjetosService {
       content_type: fila.content_type,
       tamano_bytes: leido.tamano_bytes,
       ...(etag ? { etag } : {}),
+      nombre: fila.nombre_original,
+    };
+  }
+
+  /** Metadatos de un objeto público, sin abrir el stream (HEAD/Range). */
+  async obtenerPublicoMeta(id: string): Promise<ObjetoPublicoMeta> {
+    const fila = await this.filaPublica(id);
+    return {
+      content_type: fila.content_type,
+      tamano_bytes: Number(fila.tamano_bytes),
+      ...(fila.etag ? { etag: fila.etag } : {}),
       nombre: fila.nombre_original,
     };
   }
@@ -377,6 +391,33 @@ export class ObjetosService {
       }
       await this.emitirEliminado(client, r.rows[0]);
     });
+  }
+
+  private async filaPublica(id: string): Promise<ObjetoRow> {
+    if (!UUID.test(id)) throw new NotFoundError('Objeto', id);
+    const fila = await this.pg.queryOne<ObjetoRow>(
+      `SELECT ${COLUMNAS} FROM storage.objetos
+        WHERE id = $1 AND estado = 'activo' AND publico = true`,
+      [id],
+    );
+    if (!fila || !this.esContentTypePublico(fila.content_type)) {
+      // SVG puede ejecutar scripts si se navega directamente; el resto de
+      // tipos (PDF, hojas de calculo) no son media de fondo.
+      throw new NotFoundError('Objeto', id);
+    }
+    return fila;
+  }
+
+  private esContentTypePublico(contentType: string): boolean {
+    const tipo = contentType.trim().toLowerCase();
+    if (tipo === 'image/svg+xml') return false;
+    return tipo.startsWith('image/') || tipo === 'video/mp4' || tipo === 'video/webm';
+  }
+
+  private maximoPara(contentType: string): number {
+    return contentType.trim().toLowerCase().startsWith('video/')
+      ? this.config.maxVideoBytes
+      : this.config.maxObjetoBytes;
   }
 
   private async obtenerFila(tenantId: string, id: string): Promise<ObjetoRow> {

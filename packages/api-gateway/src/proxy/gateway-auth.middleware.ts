@@ -33,6 +33,13 @@ export const POLITICAS_RUTAS: PoliticaRuta[] = [
     { patron: /^\/api\/v1\/invitaciones\/vendedores\/[^/]+\/aceptar$/, metodos: ['POST'], roles: null },
     { patron: /^\/api\/v1\/catalog\/productos$/, metodos: ['GET'], roles: null },
     { patron: /^\/api\/v1\/catalog\/productos\/[^/]+$/, metodos: ['GET'], roles: null },
+    // Branding publico del sitio (fondo de plataforma, ADR-38).
+    { patron: /^\/api\/v1\/configuracion\/sitio$/, metodos: ['GET'], roles: null },
+    {
+      patron: /^\/api\/v1\/configuracion\/sitio$/,
+      metodos: ['PATCH'],
+      roles: [ROLES.SUPER_ADMIN, ROLES.ADMIN],
+    },
     // Servicios de empresa: recurso administrativo del catálogo (R-PS-02).
     {
       patron: /^\/api\/v1\/catalog\/servicios(\/|$)/,
@@ -50,6 +57,11 @@ export const POLITICAS_RUTAS: PoliticaRuta[] = [
     { patron: /^\/api\/v1\/tiendas\/[^/]+\/slug$/, metodos: ['PATCH'], roles: [ROLES.VENDEDOR, ROLES.EMPRESARIO] },
     {
       patron: /^\/api\/v1\/tiendas\/[^/]+\/logo$/,
+      metodos: ['PATCH'],
+      roles: [ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.VENDEDOR, ROLES.EMPRESARIO],
+    },
+    {
+      patron: /^\/api\/v1\/tiendas\/[^/]+\/background$/,
       metodos: ['PATCH'],
       roles: [ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.VENDEDOR, ROLES.EMPRESARIO],
     },
@@ -162,7 +174,7 @@ export const POLITICAS_RUTAS: PoliticaRuta[] = [
   // Imágenes públicas estáticas (ADR-28): sin token; el UUID es la capacidad.
   {
     patron: /^\/api\/v1\/storage\/public\/objetos\/[^/]+$/,
-    metodos: ['GET'],
+    metodos: ['GET', 'HEAD'],
     roles: null,
   },
   // la configuracion de cuota del bucket es administrativa (Tabla 21)
