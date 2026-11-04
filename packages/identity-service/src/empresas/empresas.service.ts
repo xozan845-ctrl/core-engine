@@ -12,6 +12,17 @@ import {
   validarSlugSolicitado,
 } from '@core/shared';
 import { UsuariosService } from '../usuarios/usuarios.service';
+import {
+  BackgroundCampos,
+  BackgroundInput,
+  BackgroundMediaType,
+  BackgroundPosition,
+  ValidadorMediaBackground,
+  backgroundDe,
+  conBackgroundUrls,
+  normalizarBackground,
+  validarBackground,
+} from '../media-background/media-background';
 
 export type ModalidadLogistica = 'plataforma' | 'propia' | 'hibrida';
 /**
@@ -48,11 +59,22 @@ export interface Empresa {
   logo_objeto_id: string | null;
   /** URL pública derivada del objeto de storage; no se persiste. */
   logo_url?: string | null;
+  /** Fondo de imagen o video (ADR-38). */
+  background_objeto_id: string | null;
+  background_media_type: BackgroundMediaType | null;
+  background_poster_objeto_id: string | null;
+  background_alt: string;
+  background_overlay: number;
+  background_position: BackgroundPosition;
+  background_activo: boolean;
+  /** URLs públicas derivadas; no se persisten. */
+  background_url?: string | null;
+  background_poster_url?: string | null;
   actualizado_en: string;
 }
 
 /** Campos editables del perfil de empresa; todos opcionales. */
-export interface PerfilEmpresaInput {
+export interface PerfilEmpresaInput extends BackgroundInput {
   ruc?: string;
   razon_social?: string;
   nombre_comercial?: string;
@@ -86,9 +108,10 @@ interface ClienteSlug {
   query(texto: string, valores?: unknown[]): Promise<{ rowCount: number | null }>;
 }
 
-type PerfilNormalizado = Required<Omit<PerfilEmpresaInput, 'logo_objeto_id'>> & {
-  logo_objeto_id: string | null;
-};
+type PerfilNormalizado = Required<Omit<PerfilEmpresaInput, 'logo_objeto_id'>> &
+  BackgroundCampos & {
+    logo_objeto_id: string | null;
+  };
 
 interface ObjetoStorage {
   id: string;
@@ -104,6 +127,10 @@ const MAX_INTENTOS_SLUG = 50;
 export class EmpresasService {
   private readonly storageUrl = process.env.STORAGE_SERVICE_URL ?? 'http://storage-service:3010';
   private readonly claveInterna = process.env.INTERNAL_API_KEY ?? '';
+  private readonly validadorMedia = new ValidadorMediaBackground(
+    this.storageUrl,
+    this.claveInterna,
+  );
 
   constructor(private readonly pg: PgService, private readonly usuarios: UsuariosService) {}
 
@@ -119,7 +146,11 @@ export class EmpresasService {
       throw new DomainError('TIPO_EMPRESA_INVALIDO', 'El tipo de empresa no es válido.');
     }
     const nombreFinal = nombre.trim();
-    const meta = this.normalizarPerfil({ ...(perfil ?? {}), logo_objeto_id: null });
+    const meta = this.normalizarPerfil({
+      ...(perfil ?? {}),
+      logo_objeto_id: null,
+      background_objeto_id: null,
+    });
     this.validarPerfil(meta);
     await this.validarRucUnico(meta.ruc);
     const slugExplicito =
@@ -171,7 +202,7 @@ export class EmpresasService {
             [empresa.id, usuarioId],
           );
           await client.query(`UPDATE identity.usuarios SET tenant_id=$1, rol='empresario' WHERE id=$2`, [empresa.id, usuarioId]);
-          return this.conLogoUrl(empresa);
+          return this.conUrls(empresa);
         });
       } catch (error) {
         if (!esViolacionUnicidad(error)) throw error;
@@ -208,7 +239,7 @@ export class EmpresasService {
       [modalidad, empresaId],
     );
     if (!empresa) throw new NotFoundError('Empresa', empresaId);
-    return this.conLogoUrl(empresa);
+    return this.conUrls(empresa);
   }
 
   /**
@@ -241,7 +272,7 @@ export class EmpresasService {
       [tipo, empresaId],
     );
     if (!empresa) throw new NotFoundError('Empresa', empresaId);
-    return this.conLogoUrl(empresa);
+    return this.conUrls(empresa);
   }
 
   /**
@@ -275,7 +306,7 @@ export class EmpresasService {
 
     const { es_actual, ...empresa } = fila;
     return {
-      empresa: this.conLogoUrl(empresa),
+      empresa: this.conUrls(empresa),
       redirigirA: es_actual ? undefined : `/api/v1/empresas/${empresa.slug}`,
     };
   }
@@ -294,7 +325,7 @@ export class EmpresasService {
     // membresia activa en ESA empresa sea de empresario (no basta el rol JWT).
     const { empresa } = await this.resolverPara(usuarioId, identificador, false, 'empresario');
     const slug = validarSlugSolicitado(slugSolicitado);
-    if (slug === empresa.slug) return this.conLogoUrl(empresa);
+    if (slug === empresa.slug) return this.conUrls(empresa);
 
     const ocupado = await this.pg.queryOne(
       `SELECT 1 FROM identity.empresa_slugs WHERE slug=$1`,
@@ -308,7 +339,7 @@ export class EmpresasService {
         [slug, empresa.id],
       );
       if (!actualizada) throw new NotFoundError('Empresa', empresa.id);
-      return this.conLogoUrl(actualizada);
+      return this.conUrls(actualizada);
     } catch (error) {
       if (esViolacionUnicidad(error)) {
         throw new ConflictError(`El slug "${slug}" ya está en uso.`);
@@ -322,7 +353,7 @@ export class EmpresasService {
       `SELECT * FROM identity.empresas WHERE id=$1`,
       [empresaId],
     );
-    return empresa ? this.conLogoUrl(empresa) : null;
+    return empresa ? this.conUrls(empresa) : null;
   }
 
   /**
@@ -343,9 +374,25 @@ export class EmpresasService {
     );
     const meta = this.normalizarPerfil(cambios, empresa);
     this.validarPerfil(meta);
+    validarBackground(cambios, meta);
     if (meta.ruc !== empresa.ruc) await this.validarRucUnico(meta.ruc, empresa.id);
     if (meta.logo_objeto_id && meta.logo_objeto_id !== empresa.logo_objeto_id) {
       await this.validarLogo(empresa.id, meta.logo_objeto_id);
+    }
+    if (
+      meta.background_objeto_id &&
+      meta.background_objeto_id !== empresa.background_objeto_id
+    ) {
+      meta.background_media_type = await this.validadorMedia.validar(
+        empresa.id,
+        meta.background_objeto_id,
+      );
+    }
+    if (
+      meta.background_poster_objeto_id &&
+      meta.background_poster_objeto_id !== empresa.background_poster_objeto_id
+    ) {
+      await this.validadorMedia.validar(empresa.id, meta.background_poster_objeto_id, 'poster');
     }
     try {
       const actualizada = await this.pg.queryOne<Empresa>(
@@ -354,7 +401,10 @@ export class EmpresasService {
            telefono=$6, correo_contacto=$7, sitio_web=$8, direccion=$9,
            ciudad=$10, departamento=$11, pais=$12, moneda=$13, zona_horaria=$14,
            sector=$15, representante_legal=$16, horario_atencion=$17,
-           logo_objeto_id=$18, actualizado_en=NOW()
+           logo_objeto_id=$18, background_objeto_id=$19,
+           background_media_type=$20, background_poster_objeto_id=$21,
+           background_alt=$22, background_overlay=$23, background_position=$24,
+           background_activo=$25, actualizado_en=NOW()
          WHERE id=$1 RETURNING *`,
         [
           empresa.id,
@@ -375,10 +425,17 @@ export class EmpresasService {
           meta.representante_legal,
           meta.horario_atencion,
           meta.logo_objeto_id,
+          meta.background_objeto_id,
+          meta.background_media_type,
+          meta.background_poster_objeto_id,
+          meta.background_alt,
+          meta.background_overlay,
+          meta.background_position,
+          meta.background_activo,
         ],
       );
       if (!actualizada) throw new NotFoundError('Empresa', empresa.id);
-      return this.conLogoUrl(actualizada);
+      return this.conUrls(actualizada);
     } catch (error) {
       if (esViolacionUnicidad(error)) {
         throw new ConflictError('El RUC ya está registrado en otra empresa.');
@@ -415,6 +472,7 @@ export class EmpresasService {
         datos.logo_objeto_id !== undefined
           ? datos.logo_objeto_id
           : (actual?.logo_objeto_id ?? null),
+      ...normalizarBackground(datos, backgroundDe(actual)),
     };
   }
 
@@ -501,11 +559,14 @@ export class EmpresasService {
     }
   }
 
-  private conLogoUrl(empresa: Empresa): Empresa {
-    if (!empresa.logo_objeto_id) return empresa;
+  private conUrls(empresa: Empresa): Empresa {
+    const logo = empresa.logo_objeto_id
+      ? { logo_url: `/api/v1/storage/public/objetos/${empresa.logo_objeto_id}` }
+      : {};
     return {
       ...empresa,
-      logo_url: `/api/v1/storage/public/objetos/${empresa.logo_objeto_id}`,
+      ...logo,
+      ...conBackgroundUrls(backgroundDe(empresa)),
     };
   }
 
