@@ -46,6 +46,24 @@ export const BACKGROUND_POR_DEFECTO: Readonly<BackgroundCampos> = Object.freeze(
   background_activo: false,
 });
 
+/**
+ * Completa los campos de fondo de una fila parcial. Las filas creadas antes de
+ * la migracion (o los dobles de prueba) pueden no traerlos; el contrato de
+ * respuesta siempre los expone.
+ */
+export function backgroundDe(fila?: Partial<BackgroundCampos> | null): BackgroundCampos {
+  if (!fila) return { ...BACKGROUND_POR_DEFECTO };
+  return {
+    background_objeto_id: fila.background_objeto_id ?? null,
+    background_media_type: fila.background_media_type ?? null,
+    background_poster_objeto_id: fila.background_poster_objeto_id ?? null,
+    background_alt: fila.background_alt ?? '',
+    background_overlay: fila.background_overlay ?? 35,
+    background_position: fila.background_position ?? 'center',
+    background_activo: fila.background_activo ?? false,
+  };
+}
+
 interface ObjetoStorage {
   id: string;
   tenant_id: string;

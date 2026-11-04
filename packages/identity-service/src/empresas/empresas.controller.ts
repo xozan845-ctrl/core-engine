@@ -10,8 +10,9 @@ import {
   ApiTags,
 } from '@nestjs/swagger';
 import type { Response } from 'express';
-import { IsEmail, IsIn, IsInt, IsOptional, IsString, IsUUID, Length, Max, Min, MinLength } from 'class-validator';
+import { IsBoolean, IsEmail, IsIn, IsInt, IsOptional, IsString, IsUUID, Length, Max, Min, MinLength } from 'class-validator';
 import { ROLES, Roles, UsuarioActual, UsuarioContexto } from '@core/shared';
+import { BACKGROUND_POSICIONES, BackgroundPosition } from '../media-background/media-background';
 import { EmpresasService, ModalidadLogistica, TipoEmpresa } from './empresas.service';
 
 class PerfilEmpresaRequestDto {
@@ -34,6 +35,14 @@ class PerfilEmpresaRequestDto {
   @ApiProperty({ required: false, maxLength: 120 }) @IsOptional() @IsString() @Length(0, 120) horario_atencion?: string;
   @ApiProperty({ required: false, nullable: true, format: 'uuid', description: 'Objeto de storage confirmado como imagen pública' })
   @IsOptional() @IsUUID() logo_objeto_id?: string | null;
+  @ApiProperty({ required: false, nullable: true, format: 'uuid', description: 'Objeto de storage del fondo; null limpia el bloque completo' })
+  @IsOptional() @IsUUID() background_objeto_id?: string | null;
+  @ApiProperty({ required: false, nullable: true, format: 'uuid', description: 'Imagen de portada para un fondo de video' })
+  @IsOptional() @IsUUID() background_poster_objeto_id?: string | null;
+  @ApiProperty({ required: false, maxLength: 160 }) @IsOptional() @IsString() @Length(0, 160) background_alt?: string;
+  @ApiProperty({ required: false, minimum: 0, maximum: 100, default: 35 }) @IsOptional() @IsInt() @Min(0) @Max(100) background_overlay?: number;
+  @ApiProperty({ required: false, enum: BACKGROUND_POSICIONES, default: 'center' }) @IsOptional() @IsIn(BACKGROUND_POSICIONES) background_position?: BackgroundPosition;
+  @ApiProperty({ required: false, default: false }) @IsOptional() @IsBoolean() background_activo?: boolean;
 }
 
 class CrearEmpresaRequestDto extends PerfilEmpresaRequestDto {
@@ -109,6 +118,15 @@ export class EmpresaResponseDto {
   @ApiProperty({ required: false }) horario_atencion?: string;
   @ApiProperty({ required: false, nullable: true, format: 'uuid' }) logo_objeto_id?: string | null;
   @ApiProperty({ required: false, nullable: true, description: 'URL pública derivada del logo' }) logo_url?: string | null;
+  @ApiProperty({ required: false, nullable: true, format: 'uuid' }) background_objeto_id?: string | null;
+  @ApiProperty({ required: false, nullable: true, enum: ['imagen', 'video'] }) background_media_type?: 'imagen' | 'video' | null;
+  @ApiProperty({ required: false, nullable: true, description: 'URL pública derivada del fondo' }) background_url?: string | null;
+  @ApiProperty({ required: false, nullable: true, format: 'uuid' }) background_poster_objeto_id?: string | null;
+  @ApiProperty({ required: false, nullable: true, description: 'URL pública derivada del poster' }) background_poster_url?: string | null;
+  @ApiProperty({ required: false }) background_alt?: string;
+  @ApiProperty({ required: false, minimum: 0, maximum: 100 }) background_overlay?: number;
+  @ApiProperty({ required: false, enum: BACKGROUND_POSICIONES }) background_position?: BackgroundPosition;
+  @ApiProperty({ required: false }) background_activo?: boolean;
   @ApiProperty({ required: false, format: 'date-time' }) actualizado_en?: string;
 }
 class VendedorEmpresaResponseDto {
