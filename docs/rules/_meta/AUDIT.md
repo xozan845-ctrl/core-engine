@@ -19,7 +19,7 @@
 
 | Capa | Estado | Evidencia |
 |---|---|---|
-| Unit backend | 🟢 | **1,087 tests / 106 archivos** en verde en **12 workspaces**; cobertura gateada por workspace (tabla abajo); medición local 2026-11-04 |
+| Unit backend | 🟢 | **1,092 tests / 108 archivos** en verde en **12 workspaces**; cobertura gateada por workspace (tabla abajo); CI post-merge 2026-11-04 |
 | Unit frontend | N/A | No hay frontend en el repo (G-2 y R-COV-5 **reservados, nunca reutilizados**) |
 | Integración (API+BD) | 🟡 | PostgreSQL efímero cubre stock y el flujo real de configuración de sitio GET/PATCH (G-4); faltan otros flujos críticos |
 | Contrato (API) | 🟡 | 6 pruebas runtime cubren 400/401/403/404/409/500 y OpenAPI está versionado; el envelope R-C-1 sigue pendiente por incompatibilidad de `/api/v1` (G-5) |
@@ -39,8 +39,8 @@
 | `shared` | 17 | 125 | 62.63 | 61.93 | 39 / 39 | ✅ |
 | `api-gateway` | 7 | 109 | 85.66 | 78.93 | 50 / 51 | ✅ |
 | `orders-service` | 6 | 71 | 60.66 | 55.27 | 32 / 23 | ✅ |
-| `commissions-service` | 8 | 39 | 49.19 | 44.33 | 20 / 14 | ✅ |
-| `finance-service` | 16 | 130 | 83.65 | 67.91 | 70 / 52 | ✅ |
+| `commissions-service` | 9 | 41 | 62.56 | 56.60 | 20 / 14 | ✅ |
+| `finance-service` | 17 | 133 | 83.65 | 67.91 | 70 / 52 | ✅ |
 | `market-intelligence-service` | 5 | 21 | 26.88 | 17.61 | 18 / 11 | ✅ |
 | `catalog-service` | 11 | 150 | 96.19 | 83.50 | 93 / 82 | ✅ |
 | `identity-service` | 14 | 171 | 92.98 | 89.54 | 89 / 78 | ✅ |
@@ -48,9 +48,9 @@
 | `logistics-service` | 3 | 52 | 100.00 | 100.00 | 99 / 96 | ✅ |
 | `field-service` | 2 | 21 | 85.30 | 71.27 | 84 / 70 | ✅ |
 | `storage-service` | 11 | 116 | 100.00 | 98.85 | 99 / 86 | ✅ |
-| **Total** | **106** | **1,087** | — | — | 12 workspaces | **12/12 ✅** |
+| **Total** | **108** | **1,092** | — | — | 12 workspaces | **12/12 ✅** |
 
-- **Evolución:** de 175 tests / 23 suites a **1,087 / 106**; métricas HTTP y correlación asíncrona tienen regresiones directas. **Ningún threshold bajó** (R-COV-1: el ratchet solo sube).
+- **Evolución:** de 175 tests / 23 suites a **1,092 / 108**; métricas HTTP y correlación asíncrona tienen regresiones directas. **Ningún threshold bajó** (R-COV-1: el ratchet solo sube).
 - **Objetivo final (80 líneas / 70 ramas): 7 de 12 workspaces lo alcanzan** (`api-gateway`, `catalog`, `identity`, `stores`, `logistics`, `field`, `storage`); el resto sube por ratchet (+5/release).
 - Método: baseline medido redondeado a la baja; los 6 thresholds legacy se recalibraron una única vez en la Etapa 2b (enmienda en [`test/06`](../test/06-estandares-cobertura.md)).
 
@@ -58,12 +58,12 @@
 
 | Métrica | Valor actual | Mínimo (regla) | Cumple |
 |---|---|---|---|
-| Unit tests (12 workspaces) | 1,087/1,087 en verde | 100% (G-1) | ✅ |
+| Unit tests (12 workspaces) | 1,092/1,092 en verde | 100% (G-1) | ✅ |
 | Cobertura ≥ `coverageThreshold` | 12/12 workspaces | floor medido (R-COV-1) | ✅ gate · ⚠️ objetivo |
 | Cobertura objetivo final | 7/12 ≥ 80/70 | 80/70 | ⚠️ ratchet +5/release |
 | Controllers con spec | **25 de 25** | R-U-10/11 (al tocar endpoints) | ✅ cerrado |
 | Endpoints documentados (OpenAPI) | **278/278** en 11 servicios (257 públicas + 21 internas; todas con respuesta documentada) | 100% (R-DO-6, R-DO-10, G-8) | ✅ |
-| `*.service.ts` / `*.consumer.ts` sin spec | **17 de 39** | 0 (R-U-18, R-COV-2) | ❌ deuda |
+| `*.service.ts` / `*.consumer.ts` sin spec | **15 de 39** | 0 (R-U-18, R-COV-2) | ❌ deuda |
 | Código puro de `shared` con spec (R-U-17) | **7 de 7** | 0 sin spec | ✅ cerrado |
 | Guards/pipes con spec (R-U-15) | `service-auth`, `validation.pipe` | 0 sin spec | ✅ cerrado |
 | Tests integración | 7 tests (BD + API/BD + errores) | ≥1 por flujo crítico API+BD (R-I-1) | ⚠️ parcial G-4 |
@@ -80,7 +80,7 @@
 
 | Gate | Estado | Evidencia |
 |---|---|---|
-| G-1 Unit backend | ✅ | job `test` → `npm test`: los 12 workspaces ejecutan cobertura; 1,087/1,087 verdes en la medición local |
+| G-1 Unit backend | ✅ | job `test` → `npm test`: los 12 workspaces ejecutan cobertura; 1,092/1,092 verdes en el CI post-merge |
 | G-2 Unit frontend | N/A | No hay frontend (ID **reservado**, nunca se reutiliza) |
 | G-3 Cobertura ≥ ratchet | ✅ | 12 `coverageThreshold` aplicados; el job `test` genera **12 tablas de cobertura** y 0 `threshold not met` |
 | G-4 Integración | ⏸ parcial | `integration-catalog` usa PostgreSQL efímero y cubre catálogo + configuración de sitio API/BD; faltan otros flujos críticos (R-I-12) |
@@ -101,8 +101,8 @@
 
 1. **G-4/G-5/G-6 — capas incompletas**: ya existe prueba API+BD para configuración de sitio, además de catálogo; faltan otros flujos críticos y la migración versionada del envelope. El E2E de release/manual cubre los siete flujos R-E-1..7 y verifica logs R-E-8. G-6 no es gate de PR. (G-8 quedó cerrado en la 5ª auditoría.)
 2. **Robustez parcial**: property-based y fuzz ya cubren dinero, ciclo de orden y parsers básicos; faltan propiedades de fechas, límites, concurrencia y fallos de broker/servicios. La evidencia mutation de los cinco módulos críticos ya está completa; R-MT-1 sigue siendo mensual/pre-release y **no debe añadirse como gate de PR**.
-3. **Cobertura por debajo del objetivo 80/70**: ya lo alcanzan 7/12 (`api-gateway`, `catalog`, `identity`, `stores`, `logistics`, `field`, `storage`); los más bajos siguen siendo `market-intelligence` 26.88, `commissions` 49.19, `orders` 60.66 y `shared` 62.63 de líneas — suben por el ratchet (+5/release) (R-COV-1).
-4. **Specs pendientes**: **17 de 39 `*.service.ts`/`*.consumer.ts`** sin spec (R-U-18, R-COV-2) — preexistentes al PR que los introduce. Controllers queda cerrado en 25/25.
+3. **Cobertura por debajo del objetivo 80/70**: ya lo alcanzan 7/12 (`api-gateway`, `catalog`, `identity`, `stores`, `logistics`, `field`, `storage`); los más bajos siguen siendo `market-intelligence` 26.88, `orders` 60.66, `commissions` 62.56 y `shared` 62.63 de líneas — suben por el ratchet (+5/release) (R-COV-1).
+4. **Specs pendientes**: **15 de 39 `*.service.ts`/`*.consumer.ts`** sin spec (R-U-18, R-COV-2). Controllers queda cerrado en 25/25; `MetricasService` y `ReportesService` ya están cubiertos.
 5. **Tooling JS parcialmente fuera del alcance de ESLint**: `qa-harness/` sigue sin lintearse; el motor de gobernanza (`scripts/**/*.mjs`) ya se lintea (ADR-23).
 6. **R-FL-3 cerrado**: el setup central de Vitest/mutation y los workflows fijan `TZ=America/Managua`; la deuda de property tests de fechas R-PB-2 queda separada del E2E R-E-4, ya automatizado.
 7. **45 warnings `no-explicit-any`** en `packages/*/src` — auditables con cada auditoría (R-COV-3).
@@ -175,9 +175,9 @@
 
 ## Evidencia
 
-- **Local (2026-11-04):** `npm test` exit 0 → **1,087 tests / 106 archivos** con **12 tablas de cobertura** y 0 `threshold not met` · `npm run lint` exit 0 (0 errores / 45 warnings) · `npm run build` exit 0 (0 errores TS) · `npm run rules:check` y `npm run test:engine` exit 0.
-- **Conteos de specs (R-U-10/11/15/17/18):** 25 de 25 controllers, 22 de 39 services/consumers con spec, `shared` puro 7/7, guards/pipes con spec.
-- **CI (R-COV-3: un gate no se marca ✅ sin run verde):** run `37505390920` sobre `main` (`f552627`) = 4/4 jobs success; ramas de entorno verdes en cada salto del modelo CD (R-GE-*). No se citan runs de la entrega de la propia auditoría para no crear el ciclo commit → run → commit.
+- **CI post-merge (2026-11-04):** run `41894837171` sobre `develop` (`4c2e735`) = todos los jobs success; **1,092/1,092 tests**, Rules, ESLint, Build y Catalog stock en verde.
+- **Conteos de specs (R-U-10/11/15/17/18):** 25 de 25 controllers, 24 de 39 services/consumers con spec, `shared` puro 7/7, guards/pipes con spec.
+- **Evidencia local focal:** `commissions-service` 41/41 tests y `finance-service` 133 tests descubiertos; el test de ruta HTTP de finance requiere escuchar `0.0.0.0` y queda cubierto por CI en este entorno restringido.
 - **Flujo de PR:** `gh pr list --state merged` → **118 PRs**, todos `--rebase` con run de rama de entorno verificado (R-PR-7/8, R-GE-*); `git rev-list --merges --count origin/main` → **0** merge commits de 76.
 
 ## Cómo re-auditar

@@ -999,3 +999,30 @@ El PR #90 se completó utilizando convenciones atómicas (R-PR-1, R-GC-1..5) gar
 - **Snapshot:** estado consolidado reescrito en [`AUDIT.md`](./AUDIT.md). La
   evidencia del PR y del run post-merge vive en GitHub para evitar el ciclo
   commit → run → commit descrito por R-COV-3.
+
+---
+
+# AUDIT (histórico) — 9ª auditoría de Core Engine (gobernanza, integración y cobertura)
+
+- **Fecha:** 2026-11-04
+- **Estado global:** 🟡 CUMPLE PARCIAL — los gates G-1, G-3, G-7 y G-8 permanecen
+  verdes; G-4 y G-6 siguen parciales y G-5 pendiente.
+
+## Intervención
+
+1. Se cerraron dos unidades de R-U-18/R-COV-2 con specs para
+   `MetricasService` y `ReportesService`, retirando ambas excepciones del
+   baseline de servicios sin spec.
+2. La matriz queda en **1,092 tests y 108 archivos** en 12 workspaces; los
+   servicios/consumers con spec pasan de 22/39 a **24/39**, dejando 15/39
+   pendientes.
+3. `commissions-service` queda en 9 suites/41 tests y `finance-service` en
+   17 suites/133 tests; ningún threshold de cobertura fue reducido.
+
+## Evidencia
+
+- **CI post-merge:** run `41894837171` sobre `develop` (`4c2e735`) completado
+  con éxito en Security, Catalog stock, Rules, ESLint, Unit Tests + Coverage y
+  Build all services.
+- **Snapshot:** estado consolidado reescrito en [`AUDIT.md`](./AUDIT.md),
+  conforme a R-COV-3.
