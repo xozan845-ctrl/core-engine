@@ -1081,3 +1081,30 @@ El PR #90 se completó utilizando convenciones atómicas (R-PR-1, R-GC-1..5) gar
   Build all services.
 - **Snapshot:** estado consolidado reescrito en [`AUDIT.md`](./AUDIT.md),
   conforme a R-COV-3.
+
+---
+
+# AUDIT (histórico) — 12ª auditoría de Core Engine (gobernanza, integración y cobertura)
+
+- **Fecha:** 2026-11-04
+- **Estado global:** 🟡 CUMPLE PARCIAL — los gates G-1, G-3, G-7 y G-8 permanecen
+  verdes; G-4 y G-6 siguen parciales y G-5 pendiente.
+
+## Intervención
+
+1. Se cerró una unidad adicional de R-U-18/R-COV-2 con spec para
+   `FeatureComputerService` de market-intelligence, retirando su excepción del
+   baseline.
+2. La matriz queda en **1,126 tests y 113 archivos** en 12 workspaces; los
+   servicios/consumers con spec pasan de 28/39 a **29/39**, dejando 10/39
+   pendientes.
+3. `market-intelligence-service` queda en 7 suites/34 tests, con 41.31% de
+   líneas y 35.22% de ramas; ningún threshold de cobertura fue reducido.
+
+## Evidencia
+
+- **CI post-merge:** run `41912725303` sobre `develop` (`aad58e9`) completado
+  con éxito en Security, Catalog stock, Rules, ESLint, Unit Tests + Coverage y
+  Build all services.
+- **Snapshot:** estado consolidado reescrito en [`AUDIT.md`](./AUDIT.md),
+  conforme a R-COV-3.
