@@ -1205,6 +1205,51 @@ Este archivo registra decisiones técnicas deliberadas que se apartan del texto 
 
 ---
 
+## ADR-42: Herencia de tema tienda → empresa → plataforma
+
+- **Fecha**: 2026-11-04
+- **Estado**: Aceptado
+- **Contexto**: el ADR-39 guardaba en la tienda un tema completo, así que una
+  tienda sin personalización no podía heredar el tema de su empresa o de la
+  plataforma: cualquier valor por defecto pisaba la capa superior. Se necesita
+  distinguir “override explícito” de “heredar” y resolver la cadena sin
+  duplicar reglas entre identity y stores.
+- **Decisión**:
+  1. Mover el contrato del tema (tipos, allowlists, defaults, normalización,
+     validación, `resolverPersonalizacion` y `generarTemaCss`) a
+     `@core/shared` (`packages/shared/src/tienda/tema.ts`).
+  2. Guardar **overrides parciales** en `plantilla_override` y `tema_override`
+     (JSONB) en `identity.configuracion_plataforma`, `identity.empresas` y
+     `stores.tiendas`. Un valor `null`/`{}` significa heredar.
+  3. Resolver en orden `tienda → empresa → plataforma → defaults`, token a
+     token. La respuesta expone `plantilla`, `tema` y
+     `origen_personalizacion` (`tienda|empresa|plataforma|defecto`).
+  4. La tienda resuelve la cadena al leer: `GET /api/v1/tiendas/{id}` incluye
+     el tema efectivo. Para ello stores consulta los overrides de identity en
+     `GET /internal/empresas/{id}/tema` y
+     `GET /internal/configuracion-sitio/tema` (protegidos con
+     `x-internal-key`).
+  5. Cachear la herencia en stores con TTL de 60 s (R-AR-7) y degradar a
+     “sin herencia” si identity no responde (R-RB-4): la tienda conserva sus
+     overrides y los defaults.
+  6. `PATCH /api/v1/tiendas/{id}/personalizacion`,
+     `PATCH /api/v1/empresas/{id}/perfil` y
+     `PATCH /api/v1/configuracion/sitio` aceptan `plantilla` y `tema` como
+     overrides; `null` los limpia y devuelve el control a la capa superior.
+  7. Migración `22_herencia_tema.sql`. Conserva la personalización explícita de
+     la Fase 1 copiándola a los overrides de la tienda.
+- **Consecuencias**:
+  - Una tienda sin overrides hereda el tema de su empresa y, si esta tampoco
+    define, el de la plataforma; el diseño por defecto sigue disponible.
+  - La respuesta de empresa resuelve su propia capa (empresa ← defaults); la
+    cadena completa se materializa en la respuesta de tienda.
+  - Identity caído no rompe el storefront: se sirve el tema de la tienda con
+    los defaults hasta que vuelva la caché.
+  - Sigue prohibido aceptar CSS/HTML/JS libres: la herencia solo mezcla tokens
+    validados.
+
+---
+
 ## Resumen de cumplimiento post-corrección
 
 | Ítem del documento          | Estado  | Nota |

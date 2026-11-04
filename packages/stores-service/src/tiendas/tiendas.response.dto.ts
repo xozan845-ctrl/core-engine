@@ -1,4 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
+import { OrigenPersonalizacion } from '@core/shared';
 import {
   FUENTES,
   MODOS,
@@ -70,6 +71,20 @@ export class TemaResponseDto implements Tema {
 
   @ApiProperty({ description: 'Modo de color', enum: MODOS, example: 'claro' })
   modo: Tema['modo'];
+}
+
+export class OrigenPersonalizacionResponseDto {
+  @ApiProperty({
+    description: 'Nivel que aportó la plantilla efectiva',
+    enum: ['tienda', 'empresa', 'plataforma', 'defecto'],
+  })
+  plantilla: OrigenPersonalizacion;
+
+  @ApiProperty({
+    description: 'Nivel más específico que aportó overrides de tema',
+    enum: ['tienda', 'empresa', 'plataforma', 'defecto'],
+  })
+  tema: OrigenPersonalizacion;
 }
 
 export class TiendaResponseDto {
@@ -226,6 +241,13 @@ export class TiendaResponseDto {
     type: TemaResponseDto,
   })
   tema?: TemaResponseDto;
+
+  @ApiProperty({
+    description: 'Origen de la plantilla y el tema efectivos (ADR-42)',
+    required: false,
+    type: OrigenPersonalizacionResponseDto,
+  })
+  origen_personalizacion?: OrigenPersonalizacionResponseDto;
 
   @ApiProperty({ description: 'Título del hero', required: false })
   hero_titulo?: string;

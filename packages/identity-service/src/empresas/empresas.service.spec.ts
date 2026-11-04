@@ -19,6 +19,18 @@ const empresa = {
   background_activo: false,
   background_url: null,
   background_poster_url: null,
+  plantilla: 'clasica',
+  tema: {
+    color_primario: '#1F2937',
+    color_secundario: '#F59E0B',
+    color_acento: '#10B981',
+    color_fondo: '#FFFFFF',
+    color_texto: '#111827',
+    fuente: 'system',
+    radio_bordes: 12,
+    modo: 'claro',
+  },
+  origen_personalizacion: { plantilla: 'defecto', tema: 'defecto' },
 };
 
 function clienteInsertable(): { query: Mock } {
@@ -208,7 +220,7 @@ describe('EmpresasService', () => {
       const pg = { queryOne: vi.fn().mockResolvedValue({ ...empresa, es_actual: true }) };
       const servicio = new EmpresasService(pg as never, {} as never);
 
-      await expect(servicio.resolverPara('sa-1', 'e-1', true)).resolves.toEqual({ empresa });
+      await expect(servicio.resolverPara('sa-1', 'e-1', true)).resolves.toMatchObject({ empresa });
       expect(pg.queryOne).toHaveBeenCalledTimes(1);
     });
 
@@ -220,7 +232,7 @@ describe('EmpresasService', () => {
       };
       const servicio = new EmpresasService(pg as never, {} as never);
 
-      await expect(servicio.resolverPara('u-1', 'acme', false)).resolves.toEqual({ empresa });
+      await expect(servicio.resolverPara('u-1', 'acme', false)).resolves.toMatchObject({ empresa });
       expect(pg.queryOne).toHaveBeenNthCalledWith(1, expect.stringContaining('identity.empresa_slugs'), ['acme']);
     });
 
@@ -232,7 +244,7 @@ describe('EmpresasService', () => {
       };
       const servicio = new EmpresasService(pg as never, {} as never);
 
-      await expect(servicio.resolverPara('u-1', 'acme-vieja', false)).resolves.toEqual({
+      await expect(servicio.resolverPara('u-1', 'acme-vieja', false)).resolves.toMatchObject({
         empresa: { ...empresa, slug: 'acme-nueva' },
         redirigirA: '/api/v1/empresas/acme-nueva',
       });
@@ -743,5 +755,53 @@ describe('EmpresasService · tipo de empresa', () => {
     await expect(
       servicio.actualizarTipo('e-1', 'otro' as never, 'admin-1', true),
     ).rejects.toMatchObject({ codigo: 'TIPO_EMPRESA_INVALIDO' });
+  });
+});
+
+describe('EmpresasService · herencia de tema (ADR-42)', () => {
+  it('guarda overrides de tema y resuelve la herencia de la empresa', async () => {
+    const conOverrides = {
+      ...empresa,
+      plantilla_override: 'boutique',
+      tema_override: { color_primario: '#111111' },
+    };
+    const pg = {
+      queryOne: vi.fn()
+        .mockResolvedValueOnce({ ...conOverrides, es_actual: true })
+        .mockResolvedValueOnce({ ok: 1 })
+        .mockResolvedValueOnce({
+          ...conOverrides,
+          tema_override: { color_primario: '#AABBCC' },
+        }),
+    };
+    const servicio = new EmpresasService(pg as never, {} as never);
+
+    const resultado = await servicio.actualizarPerfil('u-1', 'e-1', {
+      tema: { color_primario: '#aabbcc' },
+    });
+
+    expect(resultado).toMatchObject({
+      plantilla: 'boutique',
+      tema: { color_primario: '#AABBCC' },
+      origen_personalizacion: { plantilla: 'empresa', tema: 'empresa' },
+    });
+    const [, params] = pg.queryOne.mock.calls[2];
+    expect(params).toContain('boutique');
+    expect(params).toContain('{"color_primario":"#AABBCC"}');
+  });
+
+  it('expone los overrides crudos para stores', async () => {
+    const pg = {
+      queryOne: vi.fn().mockResolvedValue({
+        plantilla_override: 'minimal',
+        tema_override: { fuente: 'inter' },
+      }),
+    };
+    const servicio = new EmpresasService(pg as never, {} as never);
+
+    await expect(servicio.obtenerTemaOverrides('e-1')).resolves.toEqual({
+      plantilla_override: 'minimal',
+      tema_override: { fuente: 'inter' },
+    });
   });
 });

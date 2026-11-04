@@ -1,4 +1,5 @@
 import type { Mock } from 'vitest';
+import { TEMA_POR_DEFECTO } from '@core/shared';
 import { BACKGROUND_POR_DEFECTO } from '../media-background/media-background';
 import { ConfiguracionSitioService } from './configuracion-sitio.service';
 
@@ -42,6 +43,9 @@ describe('ConfiguracionSitioService (media background de plataforma, ADR-38)', (
       ...BACKGROUND_POR_DEFECTO,
       background_url: null,
       background_poster_url: null,
+      plantilla: 'clasica',
+      tema: TEMA_POR_DEFECTO,
+      origen_personalizacion: { plantilla: 'defecto', tema: 'defecto' },
       actualizado_en: null,
     });
     expect(queryOne).toHaveBeenCalledWith(
@@ -120,7 +124,7 @@ describe('ConfiguracionSitioService (media background de plataforma, ADR-38)', (
     );
     expect(queryOne).toHaveBeenLastCalledWith(
       expect.stringContaining('ON CONFLICT (id) DO UPDATE SET'),
-      [OBJETO, 'imagen', null, 'Colección', 40, 'center', true, 'admin-1'],
+      [OBJETO, 'imagen', null, 'Colección', 40, 'center', true, null, '{}', 'admin-1'],
     );
     expect(resultado).toMatchObject({
       background_objeto_id: OBJETO,
@@ -199,6 +203,8 @@ describe('ConfiguracionSitioService (media background de plataforma, ADR-38)', (
       35,
       'center',
       true,
+      null,
+      '{}',
       'admin-1',
     ]);
   });
@@ -234,6 +240,8 @@ describe('ConfiguracionSitioService (media background de plataforma, ADR-38)', (
       35,
       'center',
       false,
+      null,
+      '{}',
       'admin-1',
     ]);
     expect(resultado).toMatchObject({
@@ -268,6 +276,54 @@ describe('ConfiguracionSitioService (media background de plataforma, ADR-38)', (
 
     await expect(servicio.actualizar({ background_alt: 'x' }, 'admin-1')).rejects.toMatchObject({
       codigo: 'CONFIGURACION_NO_ACTUALIZADA',
+    });
+  });
+
+  it('guarda overrides de tema y los resuelve', async () => {
+    const queryOne = vi
+      .fn()
+      .mockResolvedValueOnce(
+        fila({
+          plantilla_override: 'boutique',
+          tema_override: { color_primario: '#111111' },
+        }),
+      )
+      .mockResolvedValueOnce(
+        fila({
+          plantilla_override: 'boutique',
+          tema_override: { color_primario: '#AABBCC' },
+        }),
+      );
+    const servicio = crear(queryOne);
+
+    const resultado = await servicio.actualizar(
+      { tema: { color_primario: '#aabbcc' } },
+      'admin-1',
+    );
+
+    expect(resultado).toMatchObject({
+      plantilla: 'boutique',
+      tema: { color_primario: '#AABBCC' },
+      origen_personalizacion: { plantilla: 'plataforma', tema: 'plataforma' },
+    });
+    expect(queryOne).toHaveBeenLastCalledWith(
+      expect.stringContaining('plantilla_override'),
+      expect.arrayContaining(['boutique', '{"color_primario":"#AABBCC"}']),
+    );
+  });
+
+  it('expone los overrides crudos para stores', async () => {
+    const queryOne = vi.fn().mockResolvedValue(
+      fila({
+        plantilla_override: 'minimal',
+        tema_override: { fuente: 'inter' },
+      }),
+    );
+    const servicio = crear(queryOne);
+
+    await expect(servicio.obtenerTemaOverrides()).resolves.toEqual({
+      plantilla_override: 'minimal',
+      tema_override: { fuente: 'inter' },
     });
   });
 });
