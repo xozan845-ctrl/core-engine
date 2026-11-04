@@ -435,6 +435,70 @@
         ]
       }
     },
+    "/internal/empresas/{id}/tema": {
+      "get": {
+        "operationId": "InternalController_empresaTema",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "description": "Id de la empresa",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Overrides de plantilla y tema de la empresa",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TemaOverridesResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "internalKey": []
+          }
+        ],
+        "summary": "Overrides de tema de una empresa (servicio→servicio)",
+        "tags": [
+          "Usuarios (interno)"
+        ]
+      }
+    },
+    "/internal/configuracion-sitio/tema": {
+      "get": {
+        "operationId": "InternalController_plataformaTema",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Overrides de plantilla y tema de la plataforma",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TemaOverridesResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "internalKey": []
+          }
+        ],
+        "summary": "Overrides de tema de la plataforma (servicio→servicio)",
+        "tags": [
+          "Usuarios (interno)"
+        ]
+      }
+    },
     "/internal/orders/{id}/transicion": {
       "post": {
         "operationId": "InternoController_transicion",
@@ -1645,6 +1709,21 @@
           "background_activo": {
             "type": "boolean"
           },
+          "plantilla": {
+            "type": "string",
+            "enum": [
+              "clasica",
+              "minimal",
+              "boutique",
+              "mercado"
+            ]
+          },
+          "tema": {
+            "$ref": "#/components/schemas/TemaResponseDto"
+          },
+          "origen_personalizacion": {
+            "$ref": "#/components/schemas/OrigenPersonalizacionResponseDto"
+          },
           "actualizado_en": {
             "type": "string",
             "format": "date-time"
@@ -1657,6 +1736,129 @@
           "estado",
           "creado_por",
           "creado_en"
+        ]
+      },
+      "OrigenPersonalizacionResponseDto": {
+        "type": "object",
+        "properties": {
+          "plantilla": {
+            "type": "string",
+            "description": "Nivel que aportó la plantilla efectiva",
+            "enum": [
+              "tienda",
+              "empresa",
+              "plataforma",
+              "defecto"
+            ]
+          },
+          "tema": {
+            "type": "string",
+            "description": "Nivel más específico que aportó overrides de tema",
+            "enum": [
+              "tienda",
+              "empresa",
+              "plataforma",
+              "defecto"
+            ]
+          }
+        },
+        "required": [
+          "plantilla",
+          "tema"
+        ]
+      },
+      "TemaOverridesResponseDto": {
+        "type": "object",
+        "properties": {
+          "plantilla_override": {
+            "type": "string",
+            "description": "Plantilla override o null si hereda",
+            "enum": [
+              "clasica",
+              "minimal",
+              "boutique",
+              "mercado"
+            ],
+            "nullable": true
+          },
+          "tema_override": {
+            "type": "object",
+            "description": "Overrides parciales de tema",
+            "additionalProperties": true
+          }
+        },
+        "required": [
+          "plantilla_override",
+          "tema_override"
+        ]
+      },
+      "TemaResponseDto": {
+        "type": "object",
+        "properties": {
+          "color_primario": {
+            "type": "string",
+            "description": "Color primario (hex)",
+            "example": "#1F2937"
+          },
+          "color_secundario": {
+            "type": "string",
+            "description": "Color secundario (hex)",
+            "example": "#F59E0B"
+          },
+          "color_acento": {
+            "type": "string",
+            "description": "Color de acento (hex)",
+            "example": "#10B981"
+          },
+          "color_fondo": {
+            "type": "string",
+            "description": "Color de fondo (hex)",
+            "example": "#FFFFFF"
+          },
+          "color_texto": {
+            "type": "string",
+            "description": "Color de texto (hex)",
+            "example": "#111827"
+          },
+          "fuente": {
+            "type": "string",
+            "description": "Fuente del tema",
+            "enum": [
+              "system",
+              "inter",
+              "poppins",
+              "montserrat",
+              "playfair"
+            ],
+            "example": "system"
+          },
+          "radio_bordes": {
+            "type": "number",
+            "description": "Radio de bordes en píxeles",
+            "minimum": 0,
+            "maximum": 32,
+            "example": 12
+          },
+          "modo": {
+            "type": "string",
+            "description": "Modo de color",
+            "enum": [
+              "claro",
+              "oscuro",
+              "auto"
+            ],
+            "example": "claro"
+          }
+        },
+        "required": [
+          "color_primario",
+          "color_secundario",
+          "color_acento",
+          "color_fondo",
+          "color_texto",
+          "fuente",
+          "radio_bordes",
+          "modo"
         ]
       },
       "UsuarioResponseDto": {

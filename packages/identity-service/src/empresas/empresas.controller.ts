@@ -11,9 +11,28 @@ import {
   OmitType,
 } from '@nestjs/swagger';
 import type { Response } from 'express';
-import { IsBoolean, IsEmail, IsIn, IsInt, IsOptional, IsString, IsUUID, Length, Max, Min, MinLength } from 'class-validator';
-import { ROLES, Roles, UsuarioActual, UsuarioContexto } from '@core/shared';
+import { Type } from 'class-transformer';
+import {
+  IsBoolean,
+  IsEmail,
+  IsIn,
+  IsInt,
+  IsOptional,
+  IsString,
+  IsUUID,
+  Length,
+  Max,
+  Min,
+  MinLength,
+  ValidateNested,
+} from 'class-validator';
+import { PLANTILLAS, Plantilla, ROLES, Roles, UsuarioActual, UsuarioContexto } from '@core/shared';
 import { BACKGROUND_POSICIONES, BackgroundPosition } from '../media-background/media-background';
+import {
+  OrigenPersonalizacionResponseDto,
+  TemaRequestDto,
+  TemaResponseDto,
+} from '../personalizacion/tema.dto';
 import { EmpresasService, ModalidadLogistica, TipoEmpresa } from './empresas.service';
 
 class PerfilEmpresaRequestDto {
@@ -44,6 +63,10 @@ class PerfilEmpresaRequestDto {
   @ApiProperty({ required: false, minimum: 0, maximum: 100, default: 35 }) @IsOptional() @IsInt() @Min(0) @Max(100) background_overlay?: number;
   @ApiProperty({ required: false, enum: BACKGROUND_POSICIONES, default: 'center' }) @IsOptional() @IsIn(BACKGROUND_POSICIONES) background_position?: BackgroundPosition;
   @ApiProperty({ required: false, default: false }) @IsOptional() @IsBoolean() background_activo?: boolean;
+  @ApiProperty({ required: false, nullable: true, enum: PLANTILLAS, description: 'Plantilla; null hereda de la plataforma' })
+  @IsOptional() @IsIn(PLANTILLAS) plantilla?: Plantilla | null;
+  @ApiProperty({ required: false, nullable: true, type: TemaRequestDto, description: 'Overrides de tema; null hereda de la plataforma' })
+  @IsOptional() @ValidateNested() @Type(() => TemaRequestDto) tema?: TemaRequestDto | null;
 }
 
 class CrearEmpresaRequestDto extends OmitType(PerfilEmpresaRequestDto, [
@@ -135,6 +158,10 @@ export class EmpresaResponseDto {
   @ApiProperty({ required: false, minimum: 0, maximum: 100 }) background_overlay?: number;
   @ApiProperty({ required: false, enum: BACKGROUND_POSICIONES }) background_position?: BackgroundPosition;
   @ApiProperty({ required: false }) background_activo?: boolean;
+  @ApiProperty({ required: false, enum: PLANTILLAS }) plantilla?: Plantilla;
+  @ApiProperty({ required: false, type: TemaResponseDto }) tema?: TemaResponseDto;
+  @ApiProperty({ required: false, type: OrigenPersonalizacionResponseDto })
+  origen_personalizacion?: OrigenPersonalizacionResponseDto;
   @ApiProperty({ required: false, format: 'date-time' }) actualizado_en?: string;
 }
 class VendedorEmpresaResponseDto {

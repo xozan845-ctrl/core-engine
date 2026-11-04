@@ -5,5 +5,6 @@ import { ConfiguracionSitioService } from './configuracion-sitio.service';
 @Module({
   controllers: [ConfiguracionSitioController],
   providers: [ConfiguracionSitioService],
+  exports: [ConfiguracionSitioService],
 })
 export class ConfiguracionSitioModule {}

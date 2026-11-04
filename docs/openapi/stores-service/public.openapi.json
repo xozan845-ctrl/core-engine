@@ -685,17 +685,19 @@
         "properties": {
           "plantilla": {
             "type": "string",
-            "description": "Plantilla visual base",
+            "description": "Plantilla visual base; null vuelve a heredar de empresa/plataforma",
             "enum": [
               "clasica",
               "minimal",
               "boutique",
               "mercado"
             ],
-            "default": "clasica"
+            "nullable": true
           },
           "tema": {
-            "description": "Tokens de tema; los campos ausentes conservan su valor",
+            "description": "Tokens de tema; null limpia los overrides y vuelve a heredar",
+            "nullable": true,
+            "type": "object",
             "allOf": [
               {
                 "$ref": "#/components/schemas/TemaRequestDto"
@@ -902,6 +904,35 @@
           "stock",
           "estado",
           "creado_en"
+        ]
+      },
+      "OrigenPersonalizacionResponseDto": {
+        "type": "object",
+        "properties": {
+          "plantilla": {
+            "type": "string",
+            "description": "Nivel que aportó la plantilla efectiva",
+            "enum": [
+              "tienda",
+              "empresa",
+              "plataforma",
+              "defecto"
+            ]
+          },
+          "tema": {
+            "type": "string",
+            "description": "Nivel más específico que aportó overrides de tema",
+            "enum": [
+              "tienda",
+              "empresa",
+              "plataforma",
+              "defecto"
+            ]
+          }
+        },
+        "required": [
+          "plantilla",
+          "tema"
         ]
       },
       "PaginaOfertasResponseDto": {
@@ -1449,6 +1480,14 @@
             "allOf": [
               {
                 "$ref": "#/components/schemas/TemaResponseDto"
+              }
+            ]
+          },
+          "origen_personalizacion": {
+            "description": "Origen de la plantilla y el tema efectivos (ADR-42)",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/OrigenPersonalizacionResponseDto"
               }
             ]
           },

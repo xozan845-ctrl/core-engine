@@ -18425,6 +18425,27 @@ export const OPENAPI_AGREGADO = {
           "background_activo": {
             "type": "boolean",
             "default": false
+          },
+          "plantilla": {
+            "type": "string",
+            "enum": [
+              "clasica",
+              "minimal",
+              "boutique",
+              "mercado"
+            ],
+            "nullable": true,
+            "description": "Plantilla de la plataforma; null usa el default"
+          },
+          "tema": {
+            "nullable": true,
+            "description": "Overrides de tema de la plataforma; null los limpia",
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/TemaRequestDto"
+              }
+            ]
           }
         }
       },
@@ -18555,6 +18576,21 @@ export const OPENAPI_AGREGADO = {
           "background_activo": {
             "type": "boolean"
           },
+          "plantilla": {
+            "type": "string",
+            "enum": [
+              "clasica",
+              "minimal",
+              "boutique",
+              "mercado"
+            ]
+          },
+          "tema": {
+            "$ref": "#/components/schemas/TemaResponseDto"
+          },
+          "origen_personalizacion": {
+            "$ref": "#/components/schemas/OrigenPersonalizacionResponseDto"
+          },
           "actualizado_en": {
             "type": "string",
             "format": "date-time",
@@ -18571,6 +18607,9 @@ export const OPENAPI_AGREGADO = {
           "background_overlay",
           "background_position",
           "background_activo",
+          "plantilla",
+          "tema",
+          "origen_personalizacion",
           "actualizado_en"
         ]
       },
@@ -18650,6 +18689,27 @@ export const OPENAPI_AGREGADO = {
             "nullable": true,
             "format": "uuid",
             "description": "Objeto de storage confirmado como imagen pública"
+          },
+          "plantilla": {
+            "type": "string",
+            "nullable": true,
+            "enum": [
+              "clasica",
+              "minimal",
+              "boutique",
+              "mercado"
+            ],
+            "description": "Plantilla; null hereda de la plataforma"
+          },
+          "tema": {
+            "nullable": true,
+            "description": "Overrides de tema; null hereda de la plataforma",
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/TemaRequestDto"
+              }
+            ]
           },
           "nombre": {
             "type": "string",
@@ -18939,6 +18999,21 @@ export const OPENAPI_AGREGADO = {
           "background_activo": {
             "type": "boolean"
           },
+          "plantilla": {
+            "type": "string",
+            "enum": [
+              "clasica",
+              "minimal",
+              "boutique",
+              "mercado"
+            ]
+          },
+          "tema": {
+            "$ref": "#/components/schemas/TemaResponseDto"
+          },
+          "origen_personalizacion": {
+            "$ref": "#/components/schemas/OrigenPersonalizacionResponseDto"
+          },
           "actualizado_en": {
             "type": "string",
             "format": "date-time"
@@ -19138,6 +19213,35 @@ export const OPENAPI_AGREGADO = {
           "ok"
         ]
       },
+      "OrigenPersonalizacionResponseDto": {
+        "type": "object",
+        "properties": {
+          "plantilla": {
+            "type": "string",
+            "description": "Nivel que aportó la plantilla efectiva",
+            "enum": [
+              "tienda",
+              "empresa",
+              "plataforma",
+              "defecto"
+            ]
+          },
+          "tema": {
+            "type": "string",
+            "description": "Nivel más específico que aportó overrides de tema",
+            "enum": [
+              "tienda",
+              "empresa",
+              "plataforma",
+              "defecto"
+            ]
+          }
+        },
+        "required": [
+          "plantilla",
+          "tema"
+        ]
+      },
       "PerfilEmpresaRequestDto": {
         "type": "object",
         "properties": {
@@ -19251,6 +19355,27 @@ export const OPENAPI_AGREGADO = {
           "background_activo": {
             "type": "boolean",
             "default": false
+          },
+          "plantilla": {
+            "type": "string",
+            "nullable": true,
+            "enum": [
+              "clasica",
+              "minimal",
+              "boutique",
+              "mercado"
+            ],
+            "description": "Plantilla; null hereda de la plataforma"
+          },
+          "tema": {
+            "nullable": true,
+            "description": "Overrides de tema; null hereda de la plataforma",
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/TemaRequestDto"
+              }
+            ]
           }
         }
       },
@@ -19395,6 +19520,134 @@ export const OPENAPI_AGREGADO = {
           "nombre",
           "correo",
           "rol"
+        ]
+      },
+      "TemaRequestDto": {
+        "type": "object",
+        "properties": {
+          "color_primario": {
+            "type": "string",
+            "description": "Color primario (hex)",
+            "example": "#1F2937"
+          },
+          "color_secundario": {
+            "type": "string",
+            "description": "Color secundario (hex)",
+            "example": "#F59E0B"
+          },
+          "color_acento": {
+            "type": "string",
+            "description": "Color de acento (hex)",
+            "example": "#10B981"
+          },
+          "color_fondo": {
+            "type": "string",
+            "description": "Color de fondo (hex)",
+            "example": "#FFFFFF"
+          },
+          "color_texto": {
+            "type": "string",
+            "description": "Color de texto (hex)",
+            "example": "#111827"
+          },
+          "fuente": {
+            "type": "string",
+            "description": "Fuente del tema",
+            "enum": [
+              "system",
+              "inter",
+              "poppins",
+              "montserrat",
+              "playfair"
+            ],
+            "default": "system"
+          },
+          "radio_bordes": {
+            "type": "number",
+            "description": "Radio de bordes en píxeles",
+            "minimum": 0,
+            "maximum": 32,
+            "default": 12
+          },
+          "modo": {
+            "type": "string",
+            "description": "Modo de color",
+            "enum": [
+              "claro",
+              "oscuro",
+              "auto"
+            ],
+            "default": "claro"
+          }
+        }
+      },
+      "TemaResponseDto": {
+        "type": "object",
+        "properties": {
+          "color_primario": {
+            "type": "string",
+            "description": "Color primario (hex)",
+            "example": "#1F2937"
+          },
+          "color_secundario": {
+            "type": "string",
+            "description": "Color secundario (hex)",
+            "example": "#F59E0B"
+          },
+          "color_acento": {
+            "type": "string",
+            "description": "Color de acento (hex)",
+            "example": "#10B981"
+          },
+          "color_fondo": {
+            "type": "string",
+            "description": "Color de fondo (hex)",
+            "example": "#FFFFFF"
+          },
+          "color_texto": {
+            "type": "string",
+            "description": "Color de texto (hex)",
+            "example": "#111827"
+          },
+          "fuente": {
+            "type": "string",
+            "description": "Fuente del tema",
+            "enum": [
+              "system",
+              "inter",
+              "poppins",
+              "montserrat",
+              "playfair"
+            ],
+            "example": "system"
+          },
+          "radio_bordes": {
+            "type": "number",
+            "description": "Radio de bordes en píxeles",
+            "minimum": 0,
+            "maximum": 32,
+            "example": 12
+          },
+          "modo": {
+            "type": "string",
+            "description": "Modo de color",
+            "enum": [
+              "claro",
+              "oscuro",
+              "auto"
+            ],
+            "example": "claro"
+          }
+        },
+        "required": [
+          "color_primario",
+          "color_secundario",
+          "color_acento",
+          "color_fondo",
+          "color_texto",
+          "fuente",
+          "radio_bordes",
+          "modo"
         ]
       },
       "UsuarioContextoResponseDto": {
@@ -21353,17 +21606,19 @@ export const OPENAPI_AGREGADO = {
         "properties": {
           "plantilla": {
             "type": "string",
-            "description": "Plantilla visual base",
+            "description": "Plantilla visual base; null vuelve a heredar de empresa/plataforma",
             "enum": [
               "clasica",
               "minimal",
               "boutique",
               "mercado"
             ],
-            "default": "clasica"
+            "nullable": true
           },
           "tema": {
-            "description": "Tokens de tema; los campos ausentes conservan su valor",
+            "description": "Tokens de tema; null limpia los overrides y vuelve a heredar",
+            "nullable": true,
+            "type": "object",
             "allOf": [
               {
                 "$ref": "#/components/schemas/TemaRequestDto"
@@ -21800,134 +22055,6 @@ export const OPENAPI_AGREGADO = {
           "orden"
         ]
       },
-      "TemaRequestDto": {
-        "type": "object",
-        "properties": {
-          "color_primario": {
-            "type": "string",
-            "description": "Color primario (hex)",
-            "example": "#1F2937"
-          },
-          "color_secundario": {
-            "type": "string",
-            "description": "Color secundario (hex)",
-            "example": "#F59E0B"
-          },
-          "color_acento": {
-            "type": "string",
-            "description": "Color de acento (hex)",
-            "example": "#10B981"
-          },
-          "color_fondo": {
-            "type": "string",
-            "description": "Color de fondo (hex)",
-            "example": "#FFFFFF"
-          },
-          "color_texto": {
-            "type": "string",
-            "description": "Color de texto (hex)",
-            "example": "#111827"
-          },
-          "fuente": {
-            "type": "string",
-            "description": "Fuente del tema",
-            "enum": [
-              "system",
-              "inter",
-              "poppins",
-              "montserrat",
-              "playfair"
-            ],
-            "default": "system"
-          },
-          "radio_bordes": {
-            "type": "number",
-            "description": "Radio de bordes en píxeles",
-            "minimum": 0,
-            "maximum": 32,
-            "default": 12
-          },
-          "modo": {
-            "type": "string",
-            "description": "Modo de color",
-            "enum": [
-              "claro",
-              "oscuro",
-              "auto"
-            ],
-            "default": "claro"
-          }
-        }
-      },
-      "TemaResponseDto": {
-        "type": "object",
-        "properties": {
-          "color_primario": {
-            "type": "string",
-            "description": "Color primario (hex)",
-            "example": "#1F2937"
-          },
-          "color_secundario": {
-            "type": "string",
-            "description": "Color secundario (hex)",
-            "example": "#F59E0B"
-          },
-          "color_acento": {
-            "type": "string",
-            "description": "Color de acento (hex)",
-            "example": "#10B981"
-          },
-          "color_fondo": {
-            "type": "string",
-            "description": "Color de fondo (hex)",
-            "example": "#FFFFFF"
-          },
-          "color_texto": {
-            "type": "string",
-            "description": "Color de texto (hex)",
-            "example": "#111827"
-          },
-          "fuente": {
-            "type": "string",
-            "description": "Fuente del tema",
-            "enum": [
-              "system",
-              "inter",
-              "poppins",
-              "montserrat",
-              "playfair"
-            ],
-            "example": "system"
-          },
-          "radio_bordes": {
-            "type": "number",
-            "description": "Radio de bordes en píxeles",
-            "minimum": 0,
-            "maximum": 32,
-            "example": 12
-          },
-          "modo": {
-            "type": "string",
-            "description": "Modo de color",
-            "enum": [
-              "claro",
-              "oscuro",
-              "auto"
-            ],
-            "example": "claro"
-          }
-        },
-        "required": [
-          "color_primario",
-          "color_secundario",
-          "color_acento",
-          "color_fondo",
-          "color_texto",
-          "fuente",
-          "radio_bordes",
-          "modo"
-        ]
-      },
       "TiendaPublicaResponseDto": {
         "type": "object",
         "properties": {
@@ -22117,6 +22244,14 @@ export const OPENAPI_AGREGADO = {
             "allOf": [
               {
                 "$ref": "#/components/schemas/TemaResponseDto"
+              }
+            ]
+          },
+          "origen_personalizacion": {
+            "description": "Origen de la plantilla y el tema efectivos (ADR-42)",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/OrigenPersonalizacionResponseDto"
               }
             ]
           },

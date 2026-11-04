@@ -229,16 +229,24 @@ export class TemaRequestDto implements TemaInput {
 }
 
 export class ActualizarPersonalizacionTiendaRequestDto implements PersonalizacionInput {
-  @ApiPropertyOptional({ description: 'Plantilla visual base', enum: PLANTILLAS, default: 'clasica' })
+  @ApiPropertyOptional({
+    description: 'Plantilla visual base; null vuelve a heredar de empresa/plataforma',
+    enum: PLANTILLAS,
+    nullable: true,
+  })
   @IsOptional()
   @IsIn(PLANTILLAS)
-  plantilla?: Plantilla;
+  plantilla?: Plantilla | null;
 
-  @ApiPropertyOptional({ description: 'Tokens de tema; los campos ausentes conservan su valor', type: TemaRequestDto })
+  @ApiPropertyOptional({
+    description: 'Tokens de tema; null limpia los overrides y vuelve a heredar',
+    type: TemaRequestDto,
+    nullable: true,
+  })
   @IsOptional()
   @ValidateNested()
   @Type(() => TemaRequestDto)
-  tema?: TemaRequestDto;
+  tema?: TemaRequestDto | null;
 
   @ApiPropertyOptional({ maxLength: LIMITES_PERSONALIZACION.hero_titulo })
   @IsOptional()
