@@ -1,16 +1,18 @@
-import { Body, Controller, Get, Param, Patch, Post } from '@nestjs/common';
+import { Body, Controller, Get, Param, Patch, Post, Res } from '@nestjs/common';
 import {
   ApiBearerAuth,
   ApiCreatedResponse,
   ApiOkResponse,
   ApiOperation,
   ApiParam,
+  ApiProduces,
   ApiProperty,
   ApiPropertyOptional,
   ApiResponse,
   ApiTags,
 } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
+import type { Response } from 'express';
 import {
   ArrayMaxSize,
   IsArray,
@@ -28,7 +30,12 @@ import {
 } from 'class-validator';
 import { TiendasService, Tienda } from './tiendas.service';
 import { TiendaResponseDto } from './tiendas.response.dto';
-import { BACKGROUND_POSICIONES, BackgroundInput, BackgroundPosition } from './media-background';
+import {
+  BACKGROUND_POSICIONES,
+  BackgroundInput,
+  BackgroundMovilInput,
+  BackgroundPosition,
+} from './media-background';
 import {
   FUENTES,
   Fuente,
@@ -39,6 +46,7 @@ import {
   PersonalizacionInput,
   Plantilla,
   TemaInput,
+  generarTemaCss,
 } from './personalizacion-tienda';
 import {
   ContenidoInput,
@@ -91,7 +99,9 @@ export class ActualizarLogoTiendaRequestDto {
   logo_objeto_id?: string | null;
 }
 
-export class ActualizarBackgroundTiendaRequestDto implements BackgroundInput {
+export class ActualizarBackgroundTiendaRequestDto
+  implements BackgroundInput, BackgroundMovilInput
+{
   @ApiProperty({
     description: 'Objeto de storage del fondo; null limpia el bloque completo',
     required: false,
@@ -136,6 +146,37 @@ export class ActualizarBackgroundTiendaRequestDto implements BackgroundInput {
   @IsOptional()
   @IsBoolean()
   background_activo?: boolean;
+
+  @ApiPropertyOptional({
+    description: 'Objeto de storage del fondo móvil; null limpia el bloque móvil',
+    nullable: true,
+    type: String,
+    format: 'uuid',
+  })
+  @IsOptional()
+  @IsUUID()
+  background_movil_objeto_id?: string | null;
+
+  @ApiPropertyOptional({
+    description: 'Imagen de portada para un fondo móvil de video',
+    nullable: true,
+    type: String,
+    format: 'uuid',
+  })
+  @IsOptional()
+  @IsUUID()
+  background_movil_poster_objeto_id?: string | null;
+
+  @ApiPropertyOptional({ maxLength: 160 })
+  @IsOptional()
+  @IsString()
+  @Length(0, 160)
+  background_movil_alt?: string;
+
+  @ApiPropertyOptional({ default: false })
+  @IsOptional()
+  @IsBoolean()
+  background_movil_activo?: boolean;
 }
 
 export class TemaRequestDto implements TemaInput {
@@ -435,6 +476,26 @@ export class TiendasEmpresaController {
 @Controller('api/v1/tiendas')
 export class TiendasSlugController {
   constructor(private readonly tiendas: TiendasService) {}
+
+  @Get(':id/tema.css')
+  @ApiOperation({ summary: 'Variables CSS del tema de la tienda (público)' })
+  @ApiParam({ name: 'id', description: 'UUID de la tienda o su slug actual' })
+  @ApiProduces('text/css')
+  @ApiOkResponse({
+    description: 'Variables CSS del tema resuelto',
+    schema: { type: 'string', example: ':root { --tienda-color-primario: #1F2937; }' },
+  })
+  @ApiResponse({ status: 404, description: 'Tienda inexistente (NO_ENCONTRADO)' })
+  async temaCss(
+    @Param('id') id: string,
+    @Res({ passthrough: true }) res: Response,
+  ): Promise<string> {
+    const tienda = await this.tiendas.encontrarPorId(id);
+    if (!tienda) throw new NotFoundError('Tienda', id);
+    res.setHeader('Content-Type', 'text/css; charset=utf-8');
+    res.setHeader('Cache-Control', 'public, max-age=60');
+    return generarTemaCss(tienda.tema);
+  }
 
   @Patch(':id/logo')
   @Roles(ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.VENDEDOR, ROLES.EMPRESARIO)

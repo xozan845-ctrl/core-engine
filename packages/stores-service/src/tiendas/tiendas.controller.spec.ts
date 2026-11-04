@@ -7,6 +7,7 @@ import {
 } from './tiendas.controller';
 import type { TiendasService } from './tiendas.service';
 import { NotFoundError, ROLES } from '@core/shared';
+import { TEMA_POR_DEFECTO } from './personalizacion-tienda';
 
 const tienda = { id: 't-1', vendedor_id: 'u-v', nombre: 'Mi tienda', slug: 'mi-tienda', descripcion: 'x' };
 const vendedor = { user_id: 'u-v', email: 'v@core.local', rol: ROLES.VENDEDOR, tenant_id: 'e-1', participacion_porcentaje: 25 };
@@ -112,10 +113,33 @@ describe('TiendasSlugController (api/v1/tiendas/:id/slug, ADR-26)', () => {
       actualizarBackground: vi.fn(),
       actualizarPersonalizacion: vi.fn(),
       actualizarContenido: vi.fn(),
+      encontrarPorId: vi.fn(),
     };
     const controller = new TiendasSlugController(tiendas as unknown as TiendasService);
     return { tiendas, controller };
   }
+
+  it('debe servir el tema como CSS público', async () => {
+    const { tiendas, controller } = fabricarSlug();
+    tiendas.encontrarPorId.mockResolvedValue({ ...tienda, tema: TEMA_POR_DEFECTO });
+    const res = { setHeader: vi.fn() };
+
+    const css = await controller.temaCss('t-1', res as never);
+
+    expect(css).toContain('--tienda-color-primario: #1F2937;');
+    expect(css).toContain('--tienda-radio-bordes: 12px;');
+    expect(res.setHeader).toHaveBeenCalledWith('Content-Type', 'text/css; charset=utf-8');
+    expect(res.setHeader).toHaveBeenCalledWith('Cache-Control', 'public, max-age=60');
+  });
+
+  it('debe lanzar NotFound si la tienda del tema no existe', async () => {
+    const { tiendas, controller } = fabricarSlug();
+    tiendas.encontrarPorId.mockResolvedValue(null);
+
+    await expect(
+      controller.temaCss('no-existe', { setHeader: vi.fn() } as never),
+    ).rejects.toBeInstanceOf(NotFoundError);
+  });
 
   it('debe actualizar el contenido con el usuario autenticado', async () => {
     const { tiendas, controller } = fabricarSlug();

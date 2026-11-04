@@ -1171,6 +1171,40 @@ Este archivo registra decisiones técnicas deliberadas que se apartan del texto 
 
 ---
 
+## ADR-41: Variante móvil del fondo y CSS del tema
+
+- **Fecha**: 2026-11-04
+- **Estado**: Aceptado
+- **Contexto**: el ADR-38 definió un fondo único por tienda y el ADR-39 los
+  tokens del tema. El storefront necesita un fondo específico para móvil (un
+  video horizontal no encuadra en vertical) y una forma barata de aplicar los
+  tokens sin duplicarlos en el cliente.
+- **Decisión**:
+  1. Añadir a `stores.tiendas` la variante móvil del fondo:
+     `background_movil_objeto_id`, `background_movil_media_type`,
+     `background_movil_poster_objeto_id`, `background_movil_alt` y
+     `background_movil_activo`. Reutiliza la validación del ADR-38 (mismo
+     tenant, objeto público y activo, imagen o video; poster solo imagen).
+  2. `PATCH /api/v1/tiendas/{id}/background` acepta los campos
+     `background_movil_*` en la misma actualización parcial. `null` en
+     `background_movil_objeto_id` limpia el bloque móvil; si no hay objeto, no
+     se puede activar ni poner poster.
+  3. `GET /api/v1/tiendas/{id}/tema.css` (público) devuelve
+     `text/css` con las variables `--tienda-*` del tema resuelto y
+     `color-scheme` (`light`, `dark` o `light dark`). Es una comodidad
+     cacheable (`max-age=60`); el frontend puede seguir usando el JSON.
+  4. Migración `21_variantes_moviles_tienda.sql`. Sin cambios de RLS: las
+     columnas viven en `stores.tiendas`.
+- **Consecuencias**:
+  - El frontend puede elegir el fondo móvil sin descargar el de escritorio y
+    aplicar el tema con un `<link rel="stylesheet">` o inline.
+  - La herencia tienda→empresa→plataforma, el borrador/publicado y la
+    previsualización quedan como trabajo posterior: requieren un contrato
+    entre stores e identity y un modelo de overrides parciales que no se
+    resuelve en este PR.
+
+---
+
 ## Resumen de cumplimiento post-corrección
 
 | Ítem del documento          | Estado  | Nota |
