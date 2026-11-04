@@ -170,7 +170,7 @@ export class ValidadorMediaBackground {
   async validar(
     tenantId: string,
     objetoId: string,
-    uso: 'fondo' | 'poster' = 'fondo',
+    uso: 'fondo' | 'poster' | 'imagen' = 'fondo',
   ): Promise<BackgroundMediaType> {
     let respuesta: Response;
     try {
@@ -187,7 +187,8 @@ export class ValidadorMediaBackground {
       throw new DomainError(ERROR_NO_VERIFICABLE, 'No se pudo verificar la media del fondo.');
     }
     if (respuesta.status === 404) {
-      throw new NotFoundError(uso === 'poster' ? 'Poster' : 'Fondo', objetoId);
+      const recurso = uso === 'poster' ? 'Poster' : uso === 'imagen' ? 'Imagen' : 'Fondo';
+      throw new NotFoundError(recurso, objetoId);
     }
     if (!respuesta.ok) {
       throw new DomainError(ERROR_NO_VERIFICABLE, 'No se pudo verificar la media del fondo.');
@@ -195,19 +196,20 @@ export class ValidadorMediaBackground {
 
     const objeto = (await respuesta.json()) as ObjetoStorage;
     const permitidos: readonly string[] =
-      uso === 'poster' ? BACKGROUND_IMAGENES : [...BACKGROUND_IMAGENES, ...BACKGROUND_VIDEOS];
+      uso === 'fondo' ? [...BACKGROUND_IMAGENES, ...BACKGROUND_VIDEOS] : BACKGROUND_IMAGENES;
     if (
       objeto.tenant_id !== tenantId ||
       objeto.estado !== 'activo' ||
       objeto.publico !== true ||
       !permitidos.includes(String(objeto.content_type).toLowerCase())
     ) {
-      throw new DomainError(
-        ERROR_INVALIDO,
+      const mensaje =
         uso === 'poster'
           ? 'El poster debe ser una imagen pública y activa del mismo tenant.'
-          : 'El fondo debe ser una imagen o video público y activo del mismo tenant.',
-      );
+          : uso === 'imagen'
+            ? 'La imagen debe ser una imagen pública y activa del mismo tenant.'
+            : 'El fondo debe ser una imagen o video público y activo del mismo tenant.';
+      throw new DomainError(ERROR_INVALIDO, mensaje);
     }
     return String(objeto.content_type).toLowerCase().startsWith('video/') ? 'video' : 'imagen';
   }

@@ -219,6 +219,16 @@ describe('media background (ADR-38)', () => {
       });
     });
 
+    it('acepta solo imagenes para la imagen SEO de tienda', async () => {
+      vi.stubGlobal('fetch', vi.fn(async () => respuesta({ content_type: 'image/webp' })));
+      await expect(validador.validar(TENANT, POSTER, 'imagen')).resolves.toBe('imagen');
+
+      vi.stubGlobal('fetch', vi.fn(async () => respuesta({ content_type: 'video/mp4' })));
+      await expect(validador.validar(TENANT, POSTER, 'imagen')).rejects.toMatchObject({
+        codigo: 'BACKGROUND_INVALIDO',
+      });
+    });
+
     it('rechaza objetos de otro tenant, inactivos, privados o con MIME no permitido', async () => {
       for (const objeto of [
         { tenant_id: 'otro' },

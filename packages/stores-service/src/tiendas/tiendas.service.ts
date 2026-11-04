@@ -22,8 +22,16 @@ import {
   normalizarBackground,
   validarBackground,
 } from './media-background';
+import {
+  PersonalizacionCampos,
+  PersonalizacionInput,
+  conSeoImagenUrl,
+  normalizarPersonalizacion,
+  personalizacionDe,
+  validarPersonalizacion,
+} from './personalizacion-tienda';
 
-export interface Tienda {
+export interface Tienda extends PersonalizacionCampos {
   id: string;
   empresa_id: string;
   propietario_usuario_id: string;
@@ -43,6 +51,7 @@ export interface Tienda {
   background_activo: boolean;
   background_url?: string | null;
   background_poster_url?: string | null;
+  seo_imagen_url?: string | null;
   creado_en: string;
   actualizado_en: string;
 }
@@ -58,7 +67,7 @@ interface TiendaConEstadoSlug extends Tienda {
 }
 
 const CAMPOS_TIENDA =
-  'id, empresa_id, propietario_usuario_id, participacion_porcentaje, vendedor_id, nombre, descripcion, slug, logo_objeto_id, background_objeto_id, background_media_type, background_poster_objeto_id, background_alt, background_overlay, background_position, background_activo, creado_en, actualizado_en';
+  'id, empresa_id, propietario_usuario_id, participacion_porcentaje, vendedor_id, nombre, descripcion, slug, logo_objeto_id, background_objeto_id, background_media_type, background_poster_objeto_id, background_alt, background_overlay, background_position, background_activo, plantilla, tema, hero_titulo, hero_subtitulo, hero_cta_texto, hero_cta_url, seo_titulo, seo_descripcion, seo_imagen_objeto_id, personalizacion_actualizada_en, creado_en, actualizado_en';
 const MAX_INTENTOS_SLUG = 50;
 
 /**
@@ -272,6 +281,59 @@ export class TiendasService {
     return this.conUrls(fila);
   }
 
+  /**
+   * Actualiza la identidad visual de la tienda (ADR-39): plantilla, tema,
+   * hero y SEO. Misma autorización que el logo/fondo; la imagen SEO se valida
+   * contra storage con el tenant de la empresa dueña.
+   */
+  async actualizarPersonalizacion(
+    actor: { user_id: string; rol: string; tenant_id?: string },
+    identificador: string,
+    datos: PersonalizacionInput,
+  ): Promise<Tienda> {
+    const resuelta = await this.resolver(identificador);
+    if (!resuelta) throw new NotFoundError('Tienda', identificador);
+    const tienda = resuelta.tienda;
+    this.verificarAcceso(actor, tienda, 'Solo el dueño de la tienda puede personalizarla.');
+
+    const meta = normalizarPersonalizacion(datos, personalizacionDe(tienda));
+    validarPersonalizacion(meta);
+
+    if (
+      meta.seo_imagen_objeto_id &&
+      meta.seo_imagen_objeto_id !== tienda.seo_imagen_objeto_id
+    ) {
+      await this.validadorMedia.validar(
+        tienda.empresa_id,
+        meta.seo_imagen_objeto_id,
+        'imagen',
+      );
+    }
+
+    const fila = await this.pg.queryOne<Tienda>(
+      `UPDATE stores.tiendas SET
+         plantilla=$1, tema=$2::jsonb, hero_titulo=$3, hero_subtitulo=$4,
+         hero_cta_texto=$5, hero_cta_url=$6, seo_titulo=$7, seo_descripcion=$8,
+         seo_imagen_objeto_id=$9, personalizacion_actualizada_en=NOW(),
+         actualizado_en=NOW()
+       WHERE id=$10 RETURNING ${CAMPOS_TIENDA}`,
+      [
+        meta.plantilla,
+        JSON.stringify(meta.tema),
+        meta.hero_titulo,
+        meta.hero_subtitulo,
+        meta.hero_cta_texto,
+        meta.hero_cta_url,
+        meta.seo_titulo,
+        meta.seo_descripcion,
+        meta.seo_imagen_objeto_id,
+        tienda.id,
+      ],
+    );
+    if (!fila) throw new NotFoundError('Tienda', tienda.id);
+    return this.conUrls(fila);
+  }
+
   private verificarAcceso(
     actor: { user_id: string; rol: string; tenant_id?: string },
     tienda: Tienda,
@@ -328,10 +390,13 @@ export class TiendasService {
     const logo = tienda.logo_objeto_id
       ? { logo_url: `/api/v1/storage/public/objetos/${tienda.logo_objeto_id}` }
       : {};
+    const personalizacion = personalizacionDe(tienda);
     return {
       ...tienda,
       ...logo,
       ...conBackgroundUrls(backgroundDe(tienda)),
+      ...personalizacion,
+      ...conSeoImagenUrl(personalizacion),
     };
   }
 

@@ -1,4 +1,37 @@
 import { ApiProperty } from '@nestjs/swagger';
+import {
+  FUENTES,
+  MODOS,
+  PLANTILLAS,
+  Plantilla,
+  Tema,
+} from './personalizacion-tienda';
+
+export class TemaResponseDto implements Tema {
+  @ApiProperty({ description: 'Color primario (hex)', example: '#1F2937' })
+  color_primario: string;
+
+  @ApiProperty({ description: 'Color secundario (hex)', example: '#F59E0B' })
+  color_secundario: string;
+
+  @ApiProperty({ description: 'Color de acento (hex)', example: '#10B981' })
+  color_acento: string;
+
+  @ApiProperty({ description: 'Color de fondo (hex)', example: '#FFFFFF' })
+  color_fondo: string;
+
+  @ApiProperty({ description: 'Color de texto (hex)', example: '#111827' })
+  color_texto: string;
+
+  @ApiProperty({ description: 'Fuente del tema', enum: FUENTES, example: 'system' })
+  fuente: Tema['fuente'];
+
+  @ApiProperty({ description: 'Radio de bordes en píxeles', minimum: 0, maximum: 32, example: 12 })
+  radio_bordes: number;
+
+  @ApiProperty({ description: 'Modo de color', enum: MODOS, example: 'claro' })
+  modo: Tema['modo'];
+}
 
 export class TiendaResponseDto {
   @ApiProperty({ description: 'Id de la tienda', format: 'uuid' })
@@ -92,6 +125,61 @@ export class TiendaResponseDto {
 
   @ApiProperty({ description: 'Si el fondo está activo', required: false })
   background_activo?: boolean;
+
+  @ApiProperty({
+    description: 'Plantilla visual base (ADR-39)',
+    required: false,
+    enum: PLANTILLAS,
+  })
+  plantilla?: Plantilla;
+
+  @ApiProperty({
+    description: 'Tokens de tema resueltos; siempre incluye todos los campos',
+    required: false,
+    type: TemaResponseDto,
+  })
+  tema?: TemaResponseDto;
+
+  @ApiProperty({ description: 'Título del hero', required: false })
+  hero_titulo?: string;
+
+  @ApiProperty({ description: 'Subtítulo del hero', required: false })
+  hero_subtitulo?: string;
+
+  @ApiProperty({ description: 'Texto del CTA del hero', required: false })
+  hero_cta_texto?: string;
+
+  @ApiProperty({ description: 'Ruta o URL HTTPS del CTA del hero', required: false })
+  hero_cta_url?: string;
+
+  @ApiProperty({ description: 'Título SEO de la tienda', required: false })
+  seo_titulo?: string;
+
+  @ApiProperty({ description: 'Descripción SEO de la tienda', required: false })
+  seo_descripcion?: string;
+
+  @ApiProperty({
+    description: 'Objeto de storage de la imagen SEO',
+    required: false,
+    nullable: true,
+    format: 'uuid',
+  })
+  seo_imagen_objeto_id?: string | null;
+
+  @ApiProperty({
+    description: 'URL pública derivada de la imagen SEO',
+    required: false,
+    nullable: true,
+  })
+  seo_imagen_url?: string | null;
+
+  @ApiProperty({
+    description: 'Última actualización de la personalización',
+    required: false,
+    nullable: true,
+    format: 'date-time',
+  })
+  personalizacion_actualizada_en?: string | null;
 
   @ApiProperty({ description: 'Fecha de creación (ISO 8601 UTC)', format: 'date-time' })
   creado_en: string;

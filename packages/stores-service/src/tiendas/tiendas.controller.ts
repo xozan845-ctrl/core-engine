@@ -6,14 +6,41 @@ import {
   ApiOperation,
   ApiParam,
   ApiProperty,
+  ApiPropertyOptional,
   ApiResponse,
   ApiTags,
 } from '@nestjs/swagger';
-import { IsBoolean, IsIn, IsInt, IsOptional, IsString, IsUUID, Length, Max, Min } from 'class-validator';
+import { Type } from 'class-transformer';
+import {
+  IsBoolean,
+  IsIn,
+  IsInt,
+  IsOptional,
+  IsString,
+  IsUUID,
+  Length,
+  Matches,
+  Max,
+  Min,
+  ValidateNested,
+} from 'class-validator';
 import { TiendasService, Tienda } from './tiendas.service';
 import { TiendaResponseDto } from './tiendas.response.dto';
 import { BACKGROUND_POSICIONES, BackgroundInput, BackgroundPosition } from './media-background';
+import {
+  FUENTES,
+  Fuente,
+  LIMITES_PERSONALIZACION,
+  MODOS,
+  Modo,
+  PLANTILLAS,
+  PersonalizacionInput,
+  Plantilla,
+  TemaInput,
+} from './personalizacion-tienda';
 import { Roles, ROLES, UsuarioActual, UsuarioContexto, NotFoundError } from '@core/shared';
+
+const COLOR_HEX = /^#(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})$/;
 
 export class CrearTiendaRequestDto {
   @ApiProperty({ description: 'Nombre de la tienda', minLength: 2, maxLength: 100, example: 'Mi tienda' })
@@ -96,6 +123,116 @@ export class ActualizarBackgroundTiendaRequestDto implements BackgroundInput {
   @IsOptional()
   @IsBoolean()
   background_activo?: boolean;
+}
+
+export class TemaRequestDto implements TemaInput {
+  @ApiPropertyOptional({ description: 'Color primario (hex)', example: '#1F2937' })
+  @IsOptional()
+  @IsString()
+  @Matches(COLOR_HEX)
+  color_primario?: string;
+
+  @ApiPropertyOptional({ description: 'Color secundario (hex)', example: '#F59E0B' })
+  @IsOptional()
+  @IsString()
+  @Matches(COLOR_HEX)
+  color_secundario?: string;
+
+  @ApiPropertyOptional({ description: 'Color de acento (hex)', example: '#10B981' })
+  @IsOptional()
+  @IsString()
+  @Matches(COLOR_HEX)
+  color_acento?: string;
+
+  @ApiPropertyOptional({ description: 'Color de fondo (hex)', example: '#FFFFFF' })
+  @IsOptional()
+  @IsString()
+  @Matches(COLOR_HEX)
+  color_fondo?: string;
+
+  @ApiPropertyOptional({ description: 'Color de texto (hex)', example: '#111827' })
+  @IsOptional()
+  @IsString()
+  @Matches(COLOR_HEX)
+  color_texto?: string;
+
+  @ApiPropertyOptional({ description: 'Fuente del tema', enum: FUENTES, default: 'system' })
+  @IsOptional()
+  @IsIn(FUENTES)
+  fuente?: Fuente;
+
+  @ApiPropertyOptional({ description: 'Radio de bordes en píxeles', minimum: 0, maximum: 32, default: 12 })
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  @Max(32)
+  radio_bordes?: number;
+
+  @ApiPropertyOptional({ description: 'Modo de color', enum: MODOS, default: 'claro' })
+  @IsOptional()
+  @IsIn(MODOS)
+  modo?: Modo;
+}
+
+export class ActualizarPersonalizacionTiendaRequestDto implements PersonalizacionInput {
+  @ApiPropertyOptional({ description: 'Plantilla visual base', enum: PLANTILLAS, default: 'clasica' })
+  @IsOptional()
+  @IsIn(PLANTILLAS)
+  plantilla?: Plantilla;
+
+  @ApiPropertyOptional({ description: 'Tokens de tema; los campos ausentes conservan su valor', type: TemaRequestDto })
+  @IsOptional()
+  @ValidateNested()
+  @Type(() => TemaRequestDto)
+  tema?: TemaRequestDto;
+
+  @ApiPropertyOptional({ maxLength: LIMITES_PERSONALIZACION.hero_titulo })
+  @IsOptional()
+  @IsString()
+  @Length(0, LIMITES_PERSONALIZACION.hero_titulo)
+  hero_titulo?: string;
+
+  @ApiPropertyOptional({ maxLength: LIMITES_PERSONALIZACION.hero_subtitulo })
+  @IsOptional()
+  @IsString()
+  @Length(0, LIMITES_PERSONALIZACION.hero_subtitulo)
+  hero_subtitulo?: string;
+
+  @ApiPropertyOptional({ maxLength: LIMITES_PERSONALIZACION.hero_cta_texto })
+  @IsOptional()
+  @IsString()
+  @Length(0, LIMITES_PERSONALIZACION.hero_cta_texto)
+  hero_cta_texto?: string;
+
+  @ApiPropertyOptional({
+    description: 'Ruta relativa o URL HTTPS del CTA',
+    maxLength: LIMITES_PERSONALIZACION.hero_cta_url,
+  })
+  @IsOptional()
+  @IsString()
+  @Length(0, LIMITES_PERSONALIZACION.hero_cta_url)
+  hero_cta_url?: string;
+
+  @ApiPropertyOptional({ maxLength: LIMITES_PERSONALIZACION.seo_titulo })
+  @IsOptional()
+  @IsString()
+  @Length(0, LIMITES_PERSONALIZACION.seo_titulo)
+  seo_titulo?: string;
+
+  @ApiPropertyOptional({ maxLength: LIMITES_PERSONALIZACION.seo_descripcion })
+  @IsOptional()
+  @IsString()
+  @Length(0, LIMITES_PERSONALIZACION.seo_descripcion)
+  seo_descripcion?: string;
+
+  @ApiPropertyOptional({
+    description: 'Objeto de storage público confirmado como imagen; null para quitarla',
+    format: 'uuid',
+    nullable: true,
+  })
+  @IsOptional()
+  @IsUUID()
+  seo_imagen_objeto_id?: string | null;
 }
 
 export class ActualizarSlugTiendaRequestDto {
@@ -195,6 +332,21 @@ export class TiendasSlugController {
     @UsuarioActual() usuario: UsuarioContexto,
   ): Promise<Tienda> {
     return this.tiendas.actualizarBackground(usuario, id, dto);
+  }
+
+  @Patch(':id/personalizacion')
+  @Roles(ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.VENDEDOR, ROLES.EMPRESARIO)
+  @ApiOperation({
+    summary: 'Actualizar la identidad visual de la tienda (plantilla, tema, hero y SEO)',
+  })
+  @ApiParam({ name: 'id', description: 'UUID de la tienda o su slug actual' })
+  @ApiOkResponse({ type: TiendaResponseDto, description: 'Personalización actualizada' })
+  actualizarPersonalizacion(
+    @Param('id') id: string,
+    @Body() dto: ActualizarPersonalizacionTiendaRequestDto,
+    @UsuarioActual() usuario: UsuarioContexto,
+  ): Promise<Tienda> {
+    return this.tiendas.actualizarPersonalizacion(usuario, id, dto);
   }
 
   @Patch(':id/slug')
