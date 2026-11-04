@@ -1,5 +1,4 @@
 [
-  "packages/orders-service/src/pedidos/pedidos.consumer.ts",
   "packages/shared/src/db/pg.service.ts",
   "packages/shared/src/outbox/outbox.service.ts"
 ]
