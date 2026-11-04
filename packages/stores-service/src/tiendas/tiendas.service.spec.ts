@@ -11,6 +11,16 @@ const tienda = {
   nombre: 'Mi tienda',
   slug: 'mi-tienda',
   descripcion: 'venta de perifericos',
+  logo_objeto_id: null,
+  background_objeto_id: null,
+  background_media_type: null,
+  background_poster_objeto_id: null,
+  background_alt: '',
+  background_overlay: 35,
+  background_position: 'center' as const,
+  background_activo: false,
+  background_url: null,
+  background_poster_url: null,
   creado_en: '2026-09-01T00:00:00.000Z',
 };
 
@@ -414,6 +424,232 @@ describe('TiendasService · logo de tienda', () => {
     });
     await expect(servicio.deEmpresa('e1')).resolves.toEqual([
       expect.objectContaining({ logo_url: `/api/v1/storage/public/objetos/${logoId}` }),
+    ]);
+  });
+});
+
+describe('TiendasService · fondo de tienda (ADR-38)', () => {
+  const fondoId = '22222222-3333-4444-8555-666666666666';
+  const posterId = '33333333-4444-4555-8666-777777777777';
+  const base = { ...tienda, actualizado_en: tienda.creado_en };
+
+  afterEach(() => vi.unstubAllGlobals());
+
+  const media = (contentType: string, extra: Record<string, unknown> = {}) => ({
+    ok: true,
+    status: 200,
+    json: async () => ({
+      tenant_id: 'e1',
+      estado: 'activo',
+      publico: true,
+      content_type: contentType,
+      ...extra,
+    }),
+  });
+
+  it('valida video y poster, deriva el tipo y expone las URLs', async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(media('video/mp4'))
+      .mockResolvedValueOnce(media('image/webp'));
+    vi.stubGlobal('fetch', fetchMock);
+    const actualizada = {
+      ...base,
+      background_objeto_id: fondoId,
+      background_media_type: 'video',
+      background_poster_objeto_id: posterId,
+      background_activo: true,
+    };
+    const pg = {
+      queryOne: vi.fn()
+        .mockResolvedValueOnce({ ...base, es_actual: true })
+        .mockResolvedValueOnce(actualizada),
+      query: vi.fn(),
+    };
+    const servicio = new TiendasService(pg as never);
+
+    const resultado = await servicio.actualizarBackground(
+      { user_id: 'v1', rol: 'vendedor', tenant_id: 'e1' },
+      't1',
+      {
+        background_objeto_id: fondoId,
+        background_poster_objeto_id: posterId,
+        background_activo: true,
+      },
+    );
+
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(fetchMock.mock.calls[0][0]).toContain(`/internal/storage/objetos/${fondoId}`);
+    expect(fetchMock.mock.calls[1][0]).toContain(`/internal/storage/objetos/${posterId}`);
+    expect(resultado).toMatchObject({
+      background_media_type: 'video',
+      background_url: `/api/v1/storage/public/objetos/${fondoId}`,
+      background_poster_url: `/api/v1/storage/public/objetos/${posterId}`,
+      background_activo: true,
+    });
+    expect(pg.queryOne).toHaveBeenLastCalledWith(
+      expect.stringContaining('background_objeto_id=$1'),
+      [fondoId, 'video', posterId, '', 35, 'center', true, 't1'],
+    );
+  });
+
+  it('no revalida los objetos cuando los ids no cambian', async () => {
+    const conFondo = {
+      ...base,
+      background_objeto_id: fondoId,
+      background_media_type: 'video' as const,
+      background_poster_objeto_id: posterId,
+      background_alt: 'anterior',
+      background_activo: true,
+    };
+    const fetchMock = vi.fn();
+    vi.stubGlobal('fetch', fetchMock);
+    const pg = {
+      queryOne: vi.fn()
+        .mockResolvedValueOnce({ ...conFondo, es_actual: true })
+        .mockResolvedValueOnce({ ...conFondo, background_alt: 'nuevo' }),
+      query: vi.fn(),
+    };
+    const servicio = new TiendasService(pg as never);
+
+    const resultado = await servicio.actualizarBackground(
+      { user_id: 'v1', rol: 'vendedor', tenant_id: 'e1' },
+      't1',
+      { background_alt: '  nuevo  ' },
+    );
+
+    expect(fetchMock).not.toHaveBeenCalled();
+    expect(resultado).toMatchObject({
+      background_objeto_id: fondoId,
+      background_media_type: 'video',
+      background_alt: 'nuevo',
+      background_activo: true,
+    });
+  });
+
+  it('limpia el bloque con background_objeto_id: null sin consultar storage', async () => {
+    const conFondo = {
+      ...base,
+      background_objeto_id: fondoId,
+      background_media_type: 'imagen' as const,
+      background_poster_objeto_id: posterId,
+      background_alt: 'texto',
+      background_overlay: 80,
+      background_position: 'bottom' as const,
+      background_activo: true,
+    };
+    const fetchMock = vi.fn();
+    vi.stubGlobal('fetch', fetchMock);
+    const pg = {
+      queryOne: vi.fn()
+        .mockResolvedValueOnce({ ...conFondo, es_actual: true })
+        .mockResolvedValueOnce(base),
+      query: vi.fn(),
+    };
+    const servicio = new TiendasService(pg as never);
+
+    const resultado = await servicio.actualizarBackground(
+      { user_id: 'v1', rol: 'vendedor', tenant_id: 'e1' },
+      't1',
+      { background_objeto_id: null },
+    );
+
+    expect(fetchMock).not.toHaveBeenCalled();
+    expect(resultado).toMatchObject({
+      background_objeto_id: null,
+      background_media_type: null,
+      background_poster_objeto_id: null,
+      background_url: null,
+      background_poster_url: null,
+      background_alt: '',
+      background_overlay: 35,
+      background_position: 'center',
+      background_activo: false,
+    });
+  });
+
+  it('aplica la misma autorización que el logo', async () => {
+    const crear = () =>
+      new TiendasService({
+        queryOne: vi.fn().mockResolvedValueOnce({ ...base, es_actual: true }),
+        query: vi.fn(),
+      } as never);
+
+    await expect(
+      crear().actualizarBackground(
+        { user_id: 'v2', rol: 'vendedor', tenant_id: 'e1' },
+        't1',
+        { background_alt: 'x' },
+      ),
+    ).rejects.toBeInstanceOf(ForbiddenError);
+
+    vi.stubGlobal('fetch', vi.fn(async () => media('image/png')));
+    const pgAdmin = {
+      queryOne: vi.fn()
+        .mockResolvedValueOnce({ ...base, es_actual: true })
+        .mockResolvedValueOnce({ ...base, background_objeto_id: fondoId }),
+      query: vi.fn(),
+    };
+    await expect(
+      new TiendasService(pgAdmin as never).actualizarBackground(
+        { user_id: 'admin', rol: 'admin' },
+        't1',
+        { background_objeto_id: fondoId },
+      ),
+    ).resolves.toBeDefined();
+  });
+
+  it('rechaza activar sin fondo y un poster de video', async () => {
+    const crear = (actual = base) =>
+      new TiendasService({
+        queryOne: vi.fn().mockResolvedValueOnce({ ...actual, es_actual: true }),
+        query: vi.fn(),
+      } as never);
+
+    await expect(
+      crear().actualizarBackground(
+        { user_id: 'v1', rol: 'vendedor', tenant_id: 'e1' },
+        't1',
+        { background_activo: true },
+      ),
+    ).rejects.toMatchObject({ codigo: 'BACKGROUND_INVALIDO' });
+
+    const conFondo = {
+      ...base,
+      background_objeto_id: fondoId,
+      background_media_type: 'imagen' as const,
+    };
+    vi.stubGlobal('fetch', vi.fn(async () => media('video/mp4')));
+    await expect(
+      crear(conFondo).actualizarBackground(
+        { user_id: 'v1', rol: 'vendedor', tenant_id: 'e1' },
+        't1',
+        { background_poster_objeto_id: posterId },
+      ),
+    ).rejects.toMatchObject({ codigo: 'BACKGROUND_INVALIDO' });
+  });
+
+  it('expone las URLs del fondo al consultar tiendas', async () => {
+    const conFondo = {
+      ...base,
+      background_objeto_id: fondoId,
+      background_media_type: 'imagen' as const,
+      background_poster_objeto_id: posterId,
+    };
+    const pg = {
+      queryOne: vi.fn().mockResolvedValue({ ...conFondo, es_actual: true }),
+      query: vi.fn().mockResolvedValue([conFondo]),
+    };
+    const servicio = new TiendasService(pg as never);
+
+    await expect(servicio.deVendedor('v1')).resolves.toMatchObject({
+      background_url: `/api/v1/storage/public/objetos/${fondoId}`,
+      background_poster_url: `/api/v1/storage/public/objetos/${posterId}`,
+    });
+    await expect(servicio.deEmpresa('e1')).resolves.toEqual([
+      expect.objectContaining({
+        background_url: `/api/v1/storage/public/objetos/${fondoId}`,
+      }),
     ]);
   });
 });

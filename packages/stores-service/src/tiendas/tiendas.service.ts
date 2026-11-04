@@ -12,6 +12,16 @@ import {
   slugDesdeNombre,
   validarSlugSolicitado,
 } from '@core/shared';
+import {
+  BackgroundInput,
+  BackgroundMediaType,
+  BackgroundPosition,
+  ValidadorMediaBackground,
+  backgroundDe,
+  conBackgroundUrls,
+  normalizarBackground,
+  validarBackground,
+} from './media-background';
 
 export interface Tienda {
   id: string;
@@ -24,6 +34,15 @@ export interface Tienda {
   descripcion: string;
   logo_objeto_id: string | null;
   logo_url?: string | null;
+  background_objeto_id: string | null;
+  background_media_type: BackgroundMediaType | null;
+  background_poster_objeto_id: string | null;
+  background_alt: string;
+  background_overlay: number;
+  background_position: BackgroundPosition;
+  background_activo: boolean;
+  background_url?: string | null;
+  background_poster_url?: string | null;
   creado_en: string;
   actualizado_en: string;
 }
@@ -39,7 +58,7 @@ interface TiendaConEstadoSlug extends Tienda {
 }
 
 const CAMPOS_TIENDA =
-  'id, empresa_id, propietario_usuario_id, participacion_porcentaje, vendedor_id, nombre, descripcion, slug, logo_objeto_id, creado_en, actualizado_en';
+  'id, empresa_id, propietario_usuario_id, participacion_porcentaje, vendedor_id, nombre, descripcion, slug, logo_objeto_id, background_objeto_id, background_media_type, background_poster_objeto_id, background_alt, background_overlay, background_position, background_activo, creado_en, actualizado_en';
 const MAX_INTENTOS_SLUG = 50;
 
 /**
@@ -49,6 +68,10 @@ const MAX_INTENTOS_SLUG = 50;
 export class TiendasService {
   private readonly storageUrl = process.env.STORAGE_SERVICE_URL ?? 'http://storage-service:3010';
   private readonly claveInterna = process.env.INTERNAL_API_KEY ?? '';
+  private readonly validadorMedia = new ValidadorMediaBackground(
+    this.storageUrl,
+    this.claveInterna,
+  );
 
   constructor(private readonly pg: PgService) {}
 
@@ -58,7 +81,7 @@ export class TiendasService {
        FROM stores.tiendas WHERE vendedor_id = $1`,
       [vendedorId],
     );
-    return tienda ? this.conLogoUrl(tienda) : null;
+    return tienda ? this.conUrls(tienda) : null;
   }
 
   async deEmpresa(empresaId: string): Promise<Tienda[]> {
@@ -68,7 +91,7 @@ export class TiendasService {
        ORDER BY creado_en DESC LIMIT 200`,
       [empresaId],
     );
-    return tiendas.map((tienda) => this.conLogoUrl(tienda));
+    return tiendas.map((tienda) => this.conUrls(tienda));
   }
 
   /** Resuelve por UUID o slug; conserva el slug anterior como redirección. */
@@ -77,7 +100,7 @@ export class TiendasService {
     if (!fila) return null;
     const { es_actual, ...tienda } = fila;
     return {
-      tienda: this.conLogoUrl(tienda),
+      tienda: this.conUrls(tienda),
       redirigirA: es_actual ? undefined : `/api/v1/tiendas/${tienda.slug}`,
     };
   }
@@ -115,7 +138,7 @@ export class TiendasService {
           [randomUUID(), empresaId, propietarioId, vendedorId, participacion, nombreFinal, descripcionFinal, slug],
         );
         if (!fila) throw new DomainError('TIENDA_FALLIDA', 'No se pudo crear la tienda.');
-        return this.conLogoUrl(fila);
+        return this.conUrls(fila);
       } catch (error) {
         if (!esViolacionUnicidad(error)) throw error;
         if (slugExplicito || intento === maxIntentos) {
@@ -141,7 +164,7 @@ export class TiendasService {
     }
 
     const slug = validarSlugSolicitado(slugSolicitado);
-    if (slug === tienda.slug) return this.conLogoUrl(tienda);
+    if (slug === tienda.slug) return this.conUrls(tienda);
     if (!(await this.slugLibre(slug))) {
       throw new ConflictError(`El slug "${slug}" ya está en uso.`);
     }
@@ -152,7 +175,7 @@ export class TiendasService {
         [slug, tienda.id],
       );
       if (!fila) throw new NotFoundError('Tienda', tienda.id);
-      return this.conLogoUrl(fila);
+      return this.conUrls(fila);
     } catch (error) {
       if (esViolacionUnicidad(error)) {
         throw new ConflictError(`El slug "${slug}" ya está en uso.`);
@@ -174,15 +197,7 @@ export class TiendasService {
     const resuelta = await this.resolver(identificador);
     if (!resuelta) throw new NotFoundError('Tienda', identificador);
     const tienda = resuelta.tienda;
-    const esGlobal = actor.rol === 'super_admin' || actor.rol === 'admin';
-    const esEmpresario =
-      actor.rol === 'empresario' && !!actor.tenant_id && actor.tenant_id === tienda.empresa_id;
-    const esVendedor =
-      actor.rol === 'vendedor' &&
-      (tienda.propietario_usuario_id === actor.user_id || tienda.vendedor_id === actor.user_id);
-    if (!esGlobal && !esEmpresario && !esVendedor) {
-      throw new ForbiddenError('Solo el dueño de la tienda puede cambiar su logo.');
-    }
+    this.verificarAcceso(actor, tienda, 'Solo el dueño de la tienda puede cambiar su logo.');
     if (logoObjetoId !== null) {
       if (!esUuid(logoObjetoId)) {
         throw new DomainError('LOGO_INVALIDO', 'El logo debe ser un objeto de storage válido.');
@@ -195,7 +210,80 @@ export class TiendasService {
       [logoObjetoId, tienda.id],
     );
     if (!fila) throw new NotFoundError('Tienda', tienda.id);
-    return this.conLogoUrl(fila);
+    return this.conUrls(fila);
+  }
+
+  /**
+   * Asocia, cambia o limpia el fondo de la tienda (ADR-38). Misma autorizacion
+   * que el logo; el objeto se valida contra el tenant de la empresa dueña.
+   */
+  async actualizarBackground(
+    actor: { user_id: string; rol: string; tenant_id?: string },
+    identificador: string,
+    datos: BackgroundInput,
+  ): Promise<Tienda> {
+    const resuelta = await this.resolver(identificador);
+    if (!resuelta) throw new NotFoundError('Tienda', identificador);
+    const tienda = resuelta.tienda;
+    this.verificarAcceso(actor, tienda, 'Solo el dueño de la tienda puede cambiar su fondo.');
+
+    const meta = normalizarBackground(datos, backgroundDe(tienda));
+    validarBackground(datos, meta);
+
+    if (
+      meta.background_objeto_id &&
+      meta.background_objeto_id !== tienda.background_objeto_id
+    ) {
+      meta.background_media_type = await this.validadorMedia.validar(
+        tienda.empresa_id,
+        meta.background_objeto_id,
+      );
+    }
+    if (
+      meta.background_poster_objeto_id &&
+      meta.background_poster_objeto_id !== tienda.background_poster_objeto_id
+    ) {
+      await this.validadorMedia.validar(
+        tienda.empresa_id,
+        meta.background_poster_objeto_id,
+        'poster',
+      );
+    }
+
+    const fila = await this.pg.queryOne<Tienda>(
+      `UPDATE stores.tiendas SET
+         background_objeto_id=$1, background_media_type=$2,
+         background_poster_objeto_id=$3, background_alt=$4,
+         background_overlay=$5, background_position=$6, background_activo=$7,
+         actualizado_en=NOW()
+       WHERE id=$8 RETURNING ${CAMPOS_TIENDA}`,
+      [
+        meta.background_objeto_id,
+        meta.background_media_type,
+        meta.background_poster_objeto_id,
+        meta.background_alt,
+        meta.background_overlay,
+        meta.background_position,
+        meta.background_activo,
+        tienda.id,
+      ],
+    );
+    if (!fila) throw new NotFoundError('Tienda', tienda.id);
+    return this.conUrls(fila);
+  }
+
+  private verificarAcceso(
+    actor: { user_id: string; rol: string; tenant_id?: string },
+    tienda: Tienda,
+    mensaje: string,
+  ): void {
+    const esGlobal = actor.rol === 'super_admin' || actor.rol === 'admin';
+    const esEmpresario =
+      actor.rol === 'empresario' && !!actor.tenant_id && actor.tenant_id === tienda.empresa_id;
+    const esVendedor =
+      actor.rol === 'vendedor' &&
+      (tienda.propietario_usuario_id === actor.user_id || tienda.vendedor_id === actor.user_id);
+    if (!esGlobal && !esEmpresario && !esVendedor) throw new ForbiddenError(mensaje);
   }
 
   private async validarLogo(empresaId: string, objetoId: string): Promise<void> {
@@ -236,11 +324,14 @@ export class TiendasService {
     }
   }
 
-  private conLogoUrl(tienda: Tienda): Tienda {
-    if (!tienda.logo_objeto_id) return tienda;
+  private conUrls(tienda: Tienda): Tienda {
+    const logo = tienda.logo_objeto_id
+      ? { logo_url: `/api/v1/storage/public/objetos/${tienda.logo_objeto_id}` }
+      : {};
     return {
       ...tienda,
-      logo_url: `/api/v1/storage/public/objetos/${tienda.logo_objeto_id}`,
+      ...logo,
+      ...conBackgroundUrls(backgroundDe(tienda)),
     };
   }
 
