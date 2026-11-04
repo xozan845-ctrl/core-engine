@@ -10,6 +10,15 @@ const empresa = {
   estado: 'activa',
   creado_por: 'u-1',
   creado_en: '2026-10-23T00:00:00.000Z',
+  background_objeto_id: null,
+  background_media_type: null,
+  background_poster_objeto_id: null,
+  background_alt: '',
+  background_overlay: 35,
+  background_position: 'center' as const,
+  background_activo: false,
+  background_url: null,
+  background_poster_url: null,
 };
 
 function clienteInsertable(): { query: Mock } {
@@ -477,6 +486,178 @@ describe('EmpresasService · perfil y logo', () => {
     await expect(
       crearServicio().actualizarPerfil('u-1', 'e-1', { logo_objeto_id: 'no-uuid' }),
     ).rejects.toMatchObject({ codigo: 'PERFIL_INVALIDO' });
+  });
+
+  it('valida fondo de video y poster, deriva el tipo y expone las URLs', async () => {
+    const fondoId = '22222222-3333-4444-8555-666666666666';
+    const posterId = '33333333-4444-4555-8666-777777777777';
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        json: async () => ({
+          tenant_id: 'e-1',
+          estado: 'activo',
+          publico: true,
+          content_type: 'video/mp4',
+        }),
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        json: async () => ({
+          tenant_id: 'e-1',
+          estado: 'activo',
+          publico: true,
+          content_type: 'image/webp',
+        }),
+      });
+    vi.stubGlobal('fetch', fetchMock);
+    const actualizada = {
+      ...empresa,
+      background_objeto_id: fondoId,
+      background_media_type: 'video',
+      background_poster_objeto_id: posterId,
+      background_activo: true,
+    };
+    const pg = {
+      queryOne: vi.fn()
+        .mockResolvedValueOnce(empresa)
+        .mockResolvedValueOnce({ ok: 1 })
+        .mockResolvedValueOnce(actualizada),
+    };
+    const servicio = new EmpresasService(pg as never, {} as never);
+
+    const resultado = await servicio.actualizarPerfil('u-1', 'e-1', {
+      background_objeto_id: fondoId,
+      background_poster_objeto_id: posterId,
+      background_activo: true,
+    });
+
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(fetchMock.mock.calls[0][0]).toContain(`/internal/storage/objetos/${fondoId}`);
+    expect(fetchMock.mock.calls[1][0]).toContain(`/internal/storage/objetos/${posterId}`);
+    expect(resultado).toMatchObject({
+      background_media_type: 'video',
+      background_url: `/api/v1/storage/public/objetos/${fondoId}`,
+      background_poster_url: `/api/v1/storage/public/objetos/${posterId}`,
+      background_activo: true,
+    });
+    expect(pg.queryOne).toHaveBeenLastCalledWith(
+      expect.stringContaining('background_objeto_id=$19'),
+      expect.arrayContaining(['e-1', fondoId, 'video', posterId, '', 35, 'center', true]),
+    );
+  });
+
+  it('no revalida fondo ni poster cuando los ids no cambian', async () => {
+    const fondoId = '22222222-3333-4444-8555-666666666666';
+    const posterId = '33333333-4444-4555-8666-777777777777';
+    const conFondo = {
+      ...empresa,
+      background_objeto_id: fondoId,
+      background_media_type: 'video',
+      background_poster_objeto_id: posterId,
+      background_alt: 'anterior',
+      background_activo: true,
+    };
+    const fetchMock = vi.fn();
+    vi.stubGlobal('fetch', fetchMock);
+    const pg = {
+      queryOne: vi.fn()
+        .mockResolvedValueOnce(conFondo)
+        .mockResolvedValueOnce({ ok: 1 })
+        .mockResolvedValueOnce({ ...conFondo, background_alt: 'nuevo' }),
+    };
+    const servicio = new EmpresasService(pg as never, {} as never);
+
+    const resultado = await servicio.actualizarPerfil('u-1', 'e-1', {
+      background_alt: '  nuevo  ',
+    });
+
+    expect(fetchMock).not.toHaveBeenCalled();
+    expect(resultado).toMatchObject({
+      background_objeto_id: fondoId,
+      background_media_type: 'video',
+      background_alt: 'nuevo',
+      background_activo: true,
+    });
+  });
+
+  it('limpia todo el bloque con background_objeto_id: null sin validar storage', async () => {
+    const fondoId = '22222222-3333-4444-8555-666666666666';
+    const conFondo = {
+      ...empresa,
+      background_objeto_id: fondoId,
+      background_media_type: 'imagen',
+      background_poster_objeto_id: '33333333-4444-4555-8666-777777777777',
+      background_alt: 'texto',
+      background_overlay: 80,
+      background_position: 'bottom' as const,
+      background_activo: true,
+    };
+    const fetchMock = vi.fn();
+    vi.stubGlobal('fetch', fetchMock);
+    const pg = {
+      queryOne: vi.fn()
+        .mockResolvedValueOnce(conFondo)
+        .mockResolvedValueOnce({ ok: 1 })
+        .mockResolvedValueOnce(empresa),
+    };
+    const servicio = new EmpresasService(pg as never, {} as never);
+
+    const resultado = await servicio.actualizarPerfil('u-1', 'e-1', {
+      background_objeto_id: null,
+    });
+
+    expect(fetchMock).not.toHaveBeenCalled();
+    expect(resultado).toMatchObject({
+      background_objeto_id: null,
+      background_media_type: null,
+      background_poster_objeto_id: null,
+      background_url: null,
+      background_poster_url: null,
+      background_alt: '',
+      background_overlay: 35,
+      background_position: 'center',
+      background_activo: false,
+    });
+  });
+
+  it('rechaza activar sin fondo y un poster de video', async () => {
+    const posterId = '33333333-4444-4555-8666-777777777777';
+    const crearServicio = (actual = empresa) =>
+      new EmpresasService(
+        {
+          queryOne: vi.fn().mockResolvedValueOnce(actual).mockResolvedValueOnce({ ok: 1 }),
+        } as never,
+        {} as never,
+      );
+
+    await expect(
+      crearServicio().actualizarPerfil('u-1', 'e-1', { background_activo: true }),
+    ).rejects.toMatchObject({ codigo: 'BACKGROUND_INVALIDO' });
+
+    const conFondo = {
+      ...empresa,
+      background_objeto_id: '22222222-3333-4444-8555-666666666666',
+      background_media_type: 'imagen' as const,
+    };
+    vi.stubGlobal('fetch', vi.fn(async () => ({
+      ok: true,
+      status: 200,
+      json: async () => ({
+        tenant_id: 'e-1',
+        estado: 'activo',
+        publico: true,
+        content_type: 'video/mp4',
+      }),
+    })));
+    await expect(
+      crearServicio(conFondo).actualizarPerfil('u-1', 'e-1', {
+        background_poster_objeto_id: posterId,
+      }),
+    ).rejects.toMatchObject({ codigo: 'BACKGROUND_INVALIDO' });
   });
 
   it('rechaza logos inexistentes, no verificables o no públicos', async () => {

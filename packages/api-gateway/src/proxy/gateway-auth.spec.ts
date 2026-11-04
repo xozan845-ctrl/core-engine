@@ -389,6 +389,34 @@ describe('Gateway auth — slugs de empresa y tienda (ADR-26)', () => {
     expect(next).toHaveBeenCalled();
   });
 
+  it('debe permitir leer la configuración del sitio sin token (ADR-38)', () => {
+    const { res, next } = evaluar('/api/v1/configuracion/sitio', 'GET');
+    expect(res.statusCode).toBe(200);
+    expect(next).toHaveBeenCalled();
+  });
+
+  it('debe exigir admin para actualizar la configuración del sitio', () => {
+    const sinToken = evaluar('/api/v1/configuracion/sitio', 'PATCH');
+    expect(sinToken.res.statusCode).toBe(401);
+    expect(sinToken.next).not.toHaveBeenCalled();
+
+    const vendedor = evaluar('/api/v1/configuracion/sitio', 'PATCH', ROLES.VENDEDOR);
+    expect(vendedor.res.statusCode).toBe(403);
+
+    const admin = evaluar('/api/v1/configuracion/sitio', 'PATCH', ROLES.ADMIN);
+    expect(admin.res.statusCode).toBe(200);
+    expect(admin.next).toHaveBeenCalled();
+  });
+
+  it('debe permitir HEAD de una media pública sin token (Range)', () => {
+    const { res, next } = evaluar(
+      '/api/v1/storage/public/objetos/22222222-2222-4222-8222-222222222222',
+      'HEAD',
+    );
+    expect(res.statusCode).toBe(200);
+    expect(next).toHaveBeenCalled();
+  });
+
   it('debe exigir token para resolver una empresa por slug', () => {
     const { res, next } = evaluar('/api/v1/empresas/acme', 'GET');
     expect(res.statusCode).toBe(401);
@@ -434,6 +462,22 @@ describe('Gateway auth — slugs de empresa y tienda (ADR-26)', () => {
 
   it('debe denegar al comprador cambiar el slug de una tienda', () => {
     const { res, next } = evaluar('/api/v1/tiendas/mi-tienda/slug', 'PATCH', ROLES.COMPRADOR);
+    expect(res.statusCode).toBe(403);
+    expect(next).not.toHaveBeenCalled();
+  });
+
+  it('debe permitir al vendedor cambiar el fondo de su tienda', () => {
+    const { res, next } = evaluar('/api/v1/tiendas/mi-tienda/background', 'PATCH', ROLES.VENDEDOR);
+    expect(res.statusCode).toBe(200);
+    expect(next).toHaveBeenCalled();
+  });
+
+  it('debe denegar al comprador cambiar el fondo de una tienda', () => {
+    const { res, next } = evaluar(
+      '/api/v1/tiendas/mi-tienda/background',
+      'PATCH',
+      ROLES.COMPRADOR,
+    );
     expect(res.statusCode).toBe(403);
     expect(next).not.toHaveBeenCalled();
   });

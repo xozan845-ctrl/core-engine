@@ -1,6 +1,6 @@
 import 'reflect-metadata';
 import { PassThrough, Readable } from 'stream';
-import { ProxyService, ServicioDestino } from './proxy.service';
+import { DESTINOS, ProxyService, ServicioDestino } from './proxy.service';
 import { GatewayAuthMiddleware, PoliticaRuta } from './gateway-auth.middleware';
 import { TENANT_HEADER, PERSONAL_HEADER, PARTICIPACION_HEADER, ROLES } from '@core/shared';
 import type { Request, Response } from 'express';
@@ -53,6 +53,29 @@ describe('ProxyService — scrub de cabeceras de contexto (R-GW-3 / R-DS-5)', ()
   afterEach(() => {
     globalThis.fetch = fetchOriginal;
     vi.restoreAllMocks();
+  });
+
+  it('debe enrutar la configuración del sitio al identity-service (ADR-38)', async () => {
+    const auth = { aplicar: (_req: Request, _res: Response, next: () => void) => next() } as unknown as GatewayAuthMiddleware;
+    const fetchMock = vi.fn().mockResolvedValue(respuestaFetch(200, '{}'));
+    globalThis.fetch = fetchMock as unknown as typeof fetch;
+    const destinosIdentity = DESTINOS.filter((destino) => destino.nombre === 'identity');
+    const servicio = new ProxyService(auth, destinosIdentity, [
+      { patron: /^\/api\/v1\/configuracion\//, metodos: ['*'], roles: null },
+    ]);
+
+    await servicio.reenviar(
+      {
+        originalUrl: '/api/v1/configuracion/sitio',
+        method: 'GET',
+        headers: {},
+      } as unknown as Request,
+      resMock(),
+    );
+
+    expect(fetchMock.mock.calls[0][0]).toBe(
+      'http://identity-service:3001/api/v1/configuracion/sitio',
+    );
   });
 
   it('debe eliminar x-tenant y x-user-personal inyectados por el cliente cuando el token no los trae', async () => {
@@ -168,7 +191,62 @@ describe('ProxyService — scrub de cabeceras de contexto (R-GW-3 / R-DS-5)', ()
     expect(res.setHeader).toHaveBeenCalledWith('content-type', 'image/png');
     const [, init] = fetchMock.mock.calls[0];
     expect(init.headers['content-type']).toBe('application/octet-stream');
-    expect(init.headers.accept).toBe('image/*');
+    expect(init.headers.accept).toBe('image/*,video/*,*/*');
+  });
+
+  it('debe reenviar Range y propagar 206 con el tramo de video', async () => {
+    const auth = { aplicar: (_req: Request, _res: Response, next: () => void) => next() } as unknown as GatewayAuthMiddleware;
+    const destinosMedia: ServicioDestino[] = [
+      {
+        nombre: 'storage',
+        url: 'http://storage-service:3010',
+        patrones: [{ patron: /^\/api\/v1\/storage\/public\//, metodos: ['*'] }],
+      },
+    ];
+    const politicasMedia: PoliticaRuta[] = [
+      { patron: /^\/api\/v1\/storage\/public\//, metodos: ['*'], roles: null },
+    ];
+    const body = Readable.toWeb(Readable.from([Buffer.from('MP4')]));
+    const fetchMock = vi.fn().mockResolvedValue({
+      status: 206,
+      headers: new Headers({
+        'content-type': 'video/mp4',
+        'content-range': 'bytes 10-12/1000',
+        'accept-ranges': 'bytes',
+        'content-length': '3',
+      }),
+      body,
+    } as unknown as globalThis.Response);
+    globalThis.fetch = fetchMock as unknown as typeof fetch;
+    const servicio = new ProxyService(auth, destinosMedia, politicasMedia);
+
+    const res = new PassThrough() as unknown as Response & PassThrough;
+    Object.assign(res, {
+      headersSent: false,
+      status: vi.fn().mockReturnValue(res),
+      setHeader: vi.fn(),
+      send: vi.fn(),
+      json: vi.fn(),
+    });
+    res.on('data', () => undefined);
+    const fin = new Promise<void>((resolve) => res.on('end', () => resolve()));
+
+    await servicio.reenviar(
+      {
+        originalUrl: '/api/v1/storage/public/objetos/22222222-2222-4222-8222-222222222222',
+        method: 'GET',
+        headers: { range: 'bytes=10-12' },
+      } as unknown as Request,
+      res,
+    );
+    await fin;
+
+    expect(res.status).toHaveBeenCalledWith(206);
+    expect(res.setHeader).toHaveBeenCalledWith('content-range', 'bytes 10-12/1000');
+    expect(res.setHeader).toHaveBeenCalledWith('accept-ranges', 'bytes');
+    expect(res.setHeader).toHaveBeenCalledWith('Content-Length', '3');
+    const [, init] = fetchMock.mock.calls[0];
+    expect(init.headers.range).toBe('bytes=10-12');
   });
 });
 

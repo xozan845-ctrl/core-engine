@@ -1596,6 +1596,55 @@
             "nullable": true,
             "description": "URL pública derivada del logo"
           },
+          "background_objeto_id": {
+            "type": "string",
+            "nullable": true,
+            "format": "uuid"
+          },
+          "background_media_type": {
+            "type": "string",
+            "nullable": true,
+            "enum": [
+              "imagen",
+              "video"
+            ]
+          },
+          "background_url": {
+            "type": "string",
+            "nullable": true,
+            "description": "URL pública derivada del fondo"
+          },
+          "background_poster_objeto_id": {
+            "type": "string",
+            "nullable": true,
+            "format": "uuid"
+          },
+          "background_poster_url": {
+            "type": "string",
+            "nullable": true,
+            "description": "URL pública derivada del poster"
+          },
+          "background_alt": {
+            "type": "string"
+          },
+          "background_overlay": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 100
+          },
+          "background_position": {
+            "type": "string",
+            "enum": [
+              "center",
+              "top",
+              "bottom",
+              "left",
+              "right"
+            ]
+          },
+          "background_activo": {
+            "type": "boolean"
+          },
           "actualizado_en": {
             "type": "string",
             "format": "date-time"

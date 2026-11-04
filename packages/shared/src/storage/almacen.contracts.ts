@@ -51,6 +51,16 @@ export interface AlmacenObjetos {
   estadisticas(bucket: string, objeto: string): Promise<ObjetoEnAlmacen | null>;
   /** Abre el objeto para servirlo por streaming; `null` si no existe. */
   leer(bucket: string, objeto: string): Promise<ObjetoLeido | null>;
+  /**
+   * Abre solo el tramo `[inicio, fin]` (inclusive) del objeto. `tamano_bytes`
+   * del resultado es el tamano total del objeto, no el del tramo.
+   */
+  leerRango(
+    bucket: string,
+    objeto: string,
+    inicio: number,
+    fin: number,
+  ): Promise<ObjetoLeido | null>;
   /** Elimina el objeto del bucket (no falla si ya no existe). */
   eliminar(bucket: string, objeto: string): Promise<void>;
 }

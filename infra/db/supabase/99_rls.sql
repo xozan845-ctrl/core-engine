@@ -14,6 +14,17 @@
 --   Ordenes:      admin lectura global | vendedor solo sus ventas | comprador solo sus compras
 --   Liquidaciones: admin gestion y cierre | vendedor solo las suyas | comprador --
 
+-- ── identity.configuracion_plataforma (ADR-38) ─────────────────────────
+-- El singleton es de plataforma, no de tenant: cualquier usuario autenticado
+-- puede leer el estado público; solo los roles globales pueden modificarlo.
+ALTER TABLE identity.configuracion_plataforma ENABLE ROW LEVEL SECURITY;
+CREATE POLICY configuracion_plataforma_admin ON identity.configuracion_plataforma
+  FOR ALL TO authenticated
+  USING (auth.rol() IN ('super_admin', 'admin'))
+  WITH CHECK (auth.rol() IN ('super_admin', 'admin'));
+CREATE POLICY configuracion_plataforma_lectura ON identity.configuracion_plataforma
+  FOR SELECT TO authenticated USING (true);
+
 -- ── catalog.productos ───────────────────────────────────────────────────
 ALTER TABLE identity.empresas ENABLE ROW LEVEL SECURITY;
 CREATE POLICY empresas_super_admin ON identity.empresas FOR ALL TO authenticated
