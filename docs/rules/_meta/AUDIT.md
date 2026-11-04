@@ -6,7 +6,7 @@
 > anteriores a 2026-10-01 pertenecen al proyecto origen y se conservan como
 > procedencia.
 
-- **Última auditoría de testing:** 2026-11-04 — **9ª de Core Engine** (R-COV-3). Gobernanza Fase 1 y ampliación API+BD de la Fase 2 actualizadas; la re-auditoría completa de métricas históricas queda para una fase posterior.
+- **Última auditoría de testing:** 2026-11-04 — **11ª de Core Engine** (R-COV-3). Snapshot actualizado tras cubrir dos unidades adicionales de R-U-18/R-COV-2.
 - **Estado global:** 🟡 **CUMPLE PARCIAL** — gates **G-1, G-3, G-7 y G-8
   configurados**, G-2 N/A, G-4 y G-6 parciales y G-5 pendiente; audit de dependencias a
   **0 (high y moderate)**; deudas abiertas: integración aún no cubre todos los
@@ -19,7 +19,7 @@
 
 | Capa | Estado | Evidencia |
 |---|---|---|
-| Unit backend | 🟢 | **1,105 tests / 110 archivos** en verde en **12 workspaces**; cobertura gateada por workspace (tabla abajo); CI post-merge 2026-11-04 |
+| Unit backend | 🟢 | **1,121 tests / 112 archivos** en verde en **12 workspaces**; cobertura gateada por workspace (tabla abajo); CI post-merge 2026-11-04 |
 | Unit frontend | N/A | No hay frontend en el repo (G-2 y R-COV-5 **reservados, nunca reutilizados**) |
 | Integración (API+BD) | 🟡 | PostgreSQL efímero cubre stock y el flujo real de configuración de sitio GET/PATCH (G-4); faltan otros flujos críticos |
 | Contrato (API) | 🟡 | 6 pruebas runtime cubren 400/401/403/404/409/500 y OpenAPI está versionado; el envelope R-C-1 sigue pendiente por incompatibilidad de `/api/v1` (G-5) |
@@ -30,7 +30,7 @@
 | Fuzz / robustez de entradas | 🟡 | `fast-check` cubre parsers de paginación, páginas y rutas; faltan límites, outbox/saga, broker y timeouts (R-RB-1..4) |
 | Lint (G-7) | 🟢 | ESLint flat, alcance `packages/*/src/**/*.ts`: **0 errores**, 45 warnings `no-explicit-any` |
 | Security gate (R-QA-6) | 🟢 | `npm audit --audit-level=high` → exit 0 **y** `--audit-level=moderate` → exit 0 (jest 30 cerró los 29 `high` de devDeps) |
-| Flujo de PR | 🟢 | **334 PRs** mergeados por `--rebase`; **0 merge commits** en **76 commits** de `main`; checks verdes en la cabeza y run de la rama de entorno verificado tras cada merge (R-PR-1..9, R-GE-*) |
+| Flujo de PR | 🟢 | **336 PRs** mergeados por `--rebase`; **0 merge commits** en **76 commits** de `main`; checks verdes en la cabeza y run de la rama de entorno verificado tras cada merge (R-PR-1..9, R-GE-*) |
 
 ## Cobertura por workspace (ratchet R-COV-1, medición de tests 2026-11-04)
 
@@ -40,17 +40,17 @@
 | `api-gateway` | 7 | 109 | 85.66 | 78.93 | 50 / 51 | ✅ |
 | `orders-service` | 6 | 71 | 60.66 | 55.27 | 32 / 23 | ✅ |
 | `commissions-service` | 10 | 47 | 85.56 | 78.30 | 20 / 14 | ✅ |
-| `finance-service` | 18 | 140 | 84.38 | 70.42 | 70 / 52 | ✅ |
-| `market-intelligence-service` | 5 | 21 | 26.88 | 17.61 | 18 / 11 | ✅ |
+| `finance-service` | 19 | 148 | 92.61 | 79.49 | 70 / 52 | ✅ |
+| `market-intelligence-service` | 6 | 29 | 37.04 | 35.22 | 18 / 11 | ✅ |
 | `catalog-service` | 11 | 150 | 96.19 | 83.50 | 93 / 82 | ✅ |
 | `identity-service` | 14 | 171 | 92.98 | 89.54 | 89 / 78 | ✅ |
 | `stores-service` | 6 | 82 | 95.21 | 85.93 | 86 / 84 | ✅ |
 | `logistics-service` | 3 | 52 | 100.00 | 100.00 | 99 / 96 | ✅ |
 | `field-service` | 2 | 21 | 85.30 | 71.27 | 84 / 70 | ✅ |
 | `storage-service` | 11 | 116 | 100.00 | 98.85 | 99 / 86 | ✅ |
-| **Total** | **110** | **1,105** | — | — | 12 workspaces | **12/12 ✅** |
+| **Total** | **112** | **1,121** | — | — | 12 workspaces | **12/12 ✅** |
 
-- **Evolución:** de 175 tests / 23 suites a **1,105 / 110**; métricas HTTP y correlación asíncrona tienen regresiones directas. **Ningún threshold bajó** (R-COV-1: el ratchet solo sube).
+- **Evolución:** de 175 tests / 23 suites a **1,121 / 112**; métricas HTTP y correlación asíncrona tienen regresiones directas. **Ningún threshold bajó** (R-COV-1: el ratchet solo sube).
 - **Objetivo final (80 líneas / 70 ramas): 9 de 12 workspaces lo alcanzan** (`api-gateway`, `catalog`, `identity`, `stores`, `logistics`, `field`, `storage`, `commissions`, `finance`); el resto sube por ratchet (+5/release).
 - Método: baseline medido redondeado a la baja; los 6 thresholds legacy se recalibraron una única vez en la Etapa 2b (enmienda en [`test/06`](../test/06-estandares-cobertura.md)).
 
@@ -58,12 +58,12 @@
 
 | Métrica | Valor actual | Mínimo (regla) | Cumple |
 |---|---|---|---|
-| Unit tests (12 workspaces) | 1,105/1,105 en verde | 100% (G-1) | ✅ |
+| Unit tests (12 workspaces) | 1,121/1,121 en verde | 100% (G-1) | ✅ |
 | Cobertura ≥ `coverageThreshold` | 12/12 workspaces | floor medido (R-COV-1) | ✅ gate · ⚠️ objetivo |
 | Cobertura objetivo final | 9/12 ≥ 80/70 | 80/70 | ⚠️ ratchet +5/release |
 | Controllers con spec | **25 de 25** | R-U-10/11 (al tocar endpoints) | ✅ cerrado |
 | Endpoints documentados (OpenAPI) | **278/278** en 11 servicios (257 públicas + 21 internas; todas con respuesta documentada) | 100% (R-DO-6, R-DO-10, G-8) | ✅ |
-| `*.service.ts` / `*.consumer.ts` sin spec | **13 de 39** | 0 (R-U-18, R-COV-2) | ❌ deuda |
+| `*.service.ts` / `*.consumer.ts` sin spec | **11 de 39** | 0 (R-U-18, R-COV-2) | ❌ deuda |
 | Código puro de `shared` con spec (R-U-17) | **7 de 7** | 0 sin spec | ✅ cerrado |
 | Guards/pipes con spec (R-U-15) | `service-auth`, `validation.pipe` | 0 sin spec | ✅ cerrado |
 | Tests integración | 7 tests (BD + API/BD + errores) | ≥1 por flujo crítico API+BD (R-I-1) | ⚠️ parcial G-4 |
@@ -72,15 +72,15 @@
 | Property-based | 3 suites en `shared` (`money`, `order-state`, fuzz de parsers) | R-PB-1..3 | ⚠️ parcial |
 | Mutación | `shared` 96.95% (127/131), `identity` 97.94% (95/97), `orders` 92.37% (121/131), `commissions` 95.45% (84/88), `finance` 95.86% (139/145); Node 22 | ≥ 90% (R-MT-2) | ✅ 5/5 |
 | Fuzz de parsers | 3 parsers cubiertos en `shared` | R-RB-1..4 | ⚠️ parcial |
-| Lint | 0 errores / 43 warns | 0 errores (G-7) | ✅ |
+| Lint | 0 errores / 45 warns | 0 errores (G-7) | ✅ |
 | Audit `high` **y `moderate`** | exit 0 ×2 | 0 (R-QA-6) | ✅ |
-| Historial lineal | 0 merge commits en `main` (334 PRs `--rebase`, 76 commits) | 0 (R-PR-7) | ✅ |
+| Historial lineal | 0 merge commits en `main` (336 PRs `--rebase`, 76 commits) | 0 (R-PR-7) | ✅ |
 
 ## Gates de CI (verificados contra `.github/workflows/ci.yml`)
 
 | Gate | Estado | Evidencia |
 |---|---|---|
-| G-1 Unit backend | ✅ | job `test` → `npm test`: los 12 workspaces ejecutan cobertura; 1,105/1,105 verdes en el CI post-merge |
+| G-1 Unit backend | ✅ | job `test` → `npm test`: los 12 workspaces ejecutan cobertura; 1,121/1,121 verdes en el CI post-merge |
 | G-2 Unit frontend | N/A | No hay frontend (ID **reservado**, nunca se reutiliza) |
 | G-3 Cobertura ≥ ratchet | ✅ | 12 `coverageThreshold` aplicados; el job `test` genera **12 tablas de cobertura** y 0 `threshold not met` |
 | G-4 Integración | ⏸ parcial | `integration-catalog` usa PostgreSQL efímero y cubre catálogo + configuración de sitio API/BD; faltan otros flujos críticos (R-I-12) |
@@ -102,7 +102,7 @@
 1. **G-4/G-5/G-6 — capas incompletas**: ya existe prueba API+BD para configuración de sitio, además de catálogo; faltan otros flujos críticos y la migración versionada del envelope. El E2E de release/manual cubre los siete flujos R-E-1..7 y verifica logs R-E-8. G-6 no es gate de PR. (G-8 quedó cerrado en la 5ª auditoría.)
 2. **Robustez parcial**: property-based y fuzz ya cubren dinero, ciclo de orden y parsers básicos; faltan propiedades de fechas, límites, concurrencia y fallos de broker/servicios. La evidencia mutation de los cinco módulos críticos ya está completa; R-MT-1 sigue siendo mensual/pre-release y **no debe añadirse como gate de PR**.
 3. **Cobertura por debajo del objetivo 80/70**: ya lo alcanzan 9/12 (`api-gateway`, `catalog`, `identity`, `stores`, `logistics`, `field`, `storage`, `commissions`, `finance`); los más bajos siguen siendo `market-intelligence` 26.88, `orders` 60.66 y `shared` 62.63 de líneas — suben por el ratchet (+5/release) (R-COV-1).
-4. **Specs pendientes**: **13 de 39 `*.service.ts`/`*.consumer.ts`** sin spec (R-U-18, R-COV-2). Controllers queda cerrado en 25/25; `MetricasService`, `ReportesService`, `PedidosConsumer` de commissions y `FacturacionService` ya están cubiertos.
+4. **Specs pendientes**: **11 de 39 `*.service.ts`/`*.consumer.ts`** sin spec (R-U-18, R-COV-2). Controllers queda cerrado en 25/25; `MetricasService`, `ReportesService`, `KpisService`, `FacturacionService`, `DataQualityService` y `PedidosConsumer` de commissions ya están cubiertos.
 5. **Tooling JS parcialmente fuera del alcance de ESLint**: `qa-harness/` sigue sin lintearse; el motor de gobernanza (`scripts/**/*.mjs`) ya se lintea (ADR-23).
 6. **R-FL-3 cerrado**: el setup central de Vitest/mutation y los workflows fijan `TZ=America/Managua`; la deuda de property tests de fechas R-PB-2 queda separada del E2E R-E-4, ya automatizado.
 7. **45 warnings `no-explicit-any`** en `packages/*/src` — auditables con cada auditoría (R-COV-3).
@@ -175,10 +175,10 @@
 
 ## Evidencia
 
-- **CI post-merge (2026-11-04):** run `41901904723` sobre `develop` (`2dea998`) = todos los jobs success; **1,105/1,105 tests**, Rules, ESLint, Build y Catalog stock en verde.
-- **Conteos de specs (R-U-10/11/15/17/18):** 25 de 25 controllers, 26 de 39 services/consumers con spec, `shared` puro 7/7, guards/pipes con spec.
-- **Evidencia local focal:** `commissions-service` 47/47 tests y `finance-service` 140 tests descubiertos (2 skipped); el test de ruta HTTP de finance requiere escuchar `0.0.0.0` y queda cubierto por CI en este entorno restringido.
-- **Flujo de PR:** `gh pr list --state merged` → **334 PRs**, todos `--rebase` con run de rama de entorno verificado (R-PR-7/8, R-GE-*); `git rev-list --merges --count origin/main` → **0** merge commits de 76.
+- **CI post-merge (2026-11-04):** run `41908569101` sobre `develop` (`22cac9b`) = todos los jobs success; **1,121/1,121 tests**, Rules, ESLint, Build y Catalog stock en verde.
+- **Conteos de specs (R-U-10/11/15/17/18):** 25 de 25 controllers, 28 de 39 services/consumers con spec, `shared` puro 7/7, guards/pipes con spec.
+- **Evidencia local focal:** `finance-service` 148 tests descubiertos (2 skipped), `market-intelligence-service` 29/29; el test de ruta HTTP de finance requiere escuchar `0.0.0.0` y queda cubierto por CI en este entorno restringido.
+- **Flujo de PR:** `gh pr list --state merged` → **336 PRs**, todos `--rebase` con run de rama de entorno verificado (R-PR-7/8, R-GE-*); `git rev-list --merges --count origin/main` → **0** merge commits de 76.
 
 ## Cómo re-auditar
 
