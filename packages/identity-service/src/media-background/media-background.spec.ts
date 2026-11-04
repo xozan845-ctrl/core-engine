@@ -2,6 +2,7 @@ import { DomainError, NotFoundError } from '@core/shared';
 import {
   BACKGROUND_POR_DEFECTO,
   ValidadorMediaBackground,
+  backgroundDe,
   conBackgroundUrls,
   normalizarBackground,
   validarBackground,
@@ -74,6 +75,28 @@ describe('media background (ADR-38)', () => {
       expect(normalizarBackground({ background_objeto_id: null }, actual)).toEqual(
         BACKGROUND_POR_DEFECTO,
       );
+    });
+  });
+
+  describe('backgroundDe', () => {
+    it('devuelve los valores por defecto para una fila ausente', () => {
+      expect(backgroundDe(null)).toEqual(BACKGROUND_POR_DEFECTO);
+      expect(backgroundDe(undefined)).toEqual(BACKGROUND_POR_DEFECTO);
+    });
+
+    it('completa solo los campos presentes en una fila parcial', () => {
+      expect(
+        backgroundDe({
+          background_objeto_id: OBJETO,
+          background_media_type: 'video',
+          background_activo: true,
+        }),
+      ).toEqual({
+        ...BACKGROUND_POR_DEFECTO,
+        background_objeto_id: OBJETO,
+        background_media_type: 'video',
+        background_activo: true,
+      });
     });
   });
 
