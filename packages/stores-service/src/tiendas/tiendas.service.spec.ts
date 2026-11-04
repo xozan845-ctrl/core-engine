@@ -21,6 +21,26 @@ const tienda = {
   background_activo: false,
   background_url: null,
   background_poster_url: null,
+  plantilla: 'clasica',
+  tema: {
+    color_primario: '#1F2937',
+    color_secundario: '#F59E0B',
+    color_acento: '#10B981',
+    color_fondo: '#FFFFFF',
+    color_texto: '#111827',
+    fuente: 'system',
+    radio_bordes: 12,
+    modo: 'claro',
+  },
+  hero_titulo: '',
+  hero_subtitulo: '',
+  hero_cta_texto: '',
+  hero_cta_url: '',
+  seo_titulo: '',
+  seo_descripcion: '',
+  seo_imagen_objeto_id: null,
+  seo_imagen_url: null,
+  personalizacion_actualizada_en: null,
   creado_en: '2026-09-01T00:00:00.000Z',
 };
 
@@ -653,3 +673,198 @@ describe('TiendasService · fondo de tienda (ADR-38)', () => {
     ]);
   });
 });
+
+describe('TiendasService · personalización visual (ADR-39)', () => {
+  const seoId = '44444444-5555-4666-8777-888888888888';
+  const base = { ...tienda, actualizado_en: tienda.creado_en };
+
+  afterEach(() => vi.unstubAllGlobals());
+
+  const imagen = (contentType = 'image/png') => ({
+    ok: true,
+    status: 200,
+    json: async () => ({
+      tenant_id: 'e1',
+      estado: 'activo',
+      publico: true,
+      content_type: contentType,
+    }),
+  });
+
+  it('actualiza tema, hero y SEO y devuelve el tema completo', async () => {
+    const actualizada = {
+      ...base,
+      plantilla: 'boutique' as const,
+      tema: { color_primario: '#AABBCC', fuente: 'poppins' },
+      hero_titulo: 'Colección',
+      seo_imagen_objeto_id: seoId,
+      personalizacion_actualizada_en: '2026-11-04T00:00:00.000Z',
+    };
+    const pg = {
+      queryOne: vi.fn()
+        .mockResolvedValueOnce({ ...base, es_actual: true })
+        .mockResolvedValueOnce(actualizada),
+      query: vi.fn(),
+    };
+    const servicio = new TiendasService(pg as never);
+
+    const resultado = await servicio.actualizarPersonalizacion(
+      { user_id: 'v1', rol: 'vendedor', tenant_id: 'e1' },
+      't1',
+      {
+        plantilla: 'boutique',
+        tema: { color_primario: '#aabbcc', fuente: 'poppins' },
+        hero_titulo: '  Colección  ',
+      },
+    );
+
+    expect(resultado).toMatchObject({
+      plantilla: 'boutique',
+      tema: {
+        color_primario: '#AABBCC',
+        fuente: 'poppins',
+        color_secundario: '#F59E0B',
+        radio_bordes: 12,
+      },
+      hero_titulo: 'Colección',
+      seo_imagen_url: `/api/v1/storage/public/objetos/${seoId}`,
+    });
+    const [sql, params] = pg.queryOne.mock.calls[1];
+    expect(sql).toContain('UPDATE stores.tiendas');
+    expect(params[0]).toBe('boutique');
+    expect(JSON.parse(params[1] as string)).toMatchObject({
+      color_primario: '#AABBCC',
+      fuente: 'poppins',
+      color_secundario: '#F59E0B',
+    });
+    expect(params[2]).toBe('Colección');
+    expect(params[9]).toBe('t1');
+  });
+
+  it('valida la imagen SEO contra storage y rechaza video', async () => {
+    const fetchMock = vi.fn(async () => imagen('image/webp'));
+    vi.stubGlobal('fetch', fetchMock);
+    const pg = {
+      queryOne: vi.fn()
+        .mockResolvedValueOnce({ ...base, es_actual: true })
+        .mockResolvedValueOnce({ ...base, seo_imagen_objeto_id: seoId }),
+      query: vi.fn(),
+    };
+    const servicio = new TiendasService(pg as never);
+
+    await expect(
+      servicio.actualizarPersonalizacion(
+        { user_id: 'v1', rol: 'vendedor', tenant_id: 'e1' },
+        't1',
+        { seo_imagen_objeto_id: seoId },
+      ),
+    ).resolves.toMatchObject({
+      seo_imagen_url: `/api/v1/storage/public/objetos/${seoId}`,
+    });
+    expect(fetchMock).toHaveBeenCalledWith(
+      expect.stringContaining(`/internal/storage/objetos/${seoId}`),
+      expect.objectContaining({ signal: expect.any(AbortSignal) }),
+    );
+
+    vi.stubGlobal('fetch', vi.fn(async () => imagen('video/mp4')));
+    await expect(
+      new TiendasService({
+        queryOne: vi.fn().mockResolvedValueOnce({ ...base, es_actual: true }),
+        query: vi.fn(),
+      } as never).actualizarPersonalizacion(
+        { user_id: 'v1', rol: 'vendedor', tenant_id: 'e1' },
+        't1',
+        { seo_imagen_objeto_id: seoId },
+      ),
+    ).rejects.toMatchObject({ codigo: 'BACKGROUND_INVALIDO' });
+  });
+
+  it('no revalida la imagen SEO cuando el id no cambia', async () => {
+    const fetchMock = vi.fn();
+    vi.stubGlobal('fetch', fetchMock);
+    const conImagen = { ...base, seo_imagen_objeto_id: seoId };
+    const pg = {
+      queryOne: vi.fn()
+        .mockResolvedValueOnce({ ...conImagen, es_actual: true })
+        .mockResolvedValueOnce({ ...conImagen, hero_titulo: 'Nuevo' }),
+      query: vi.fn(),
+    };
+    const servicio = new TiendasService(pg as never);
+
+    await servicio.actualizarPersonalizacion(
+      { user_id: 'v1', rol: 'vendedor', tenant_id: 'e1' },
+      't1',
+      { hero_titulo: 'Nuevo' },
+    );
+
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it('quita la imagen SEO con null sin consultar storage', async () => {
+    const fetchMock = vi.fn();
+    vi.stubGlobal('fetch', fetchMock);
+    const conImagen = { ...base, seo_imagen_objeto_id: seoId };
+    const pg = {
+      queryOne: vi.fn()
+        .mockResolvedValueOnce({ ...conImagen, es_actual: true })
+        .mockResolvedValueOnce({ ...base, seo_imagen_objeto_id: null }),
+      query: vi.fn(),
+    };
+    const servicio = new TiendasService(pg as never);
+
+    const resultado = await servicio.actualizarPersonalizacion(
+      { user_id: 'v1', rol: 'vendedor', tenant_id: 'e1' },
+      't1',
+      { seo_imagen_objeto_id: null },
+    );
+
+    expect(fetchMock).not.toHaveBeenCalled();
+    expect(resultado.seo_imagen_url).toBeNull();
+  });
+
+  it('aplica la misma autorización que el logo y rechaza datos inválidos', async () => {
+    const crear = () =>
+      new TiendasService({
+        queryOne: vi.fn().mockResolvedValueOnce({ ...base, es_actual: true }),
+        query: vi.fn(),
+      } as never);
+
+    await expect(
+      crear().actualizarPersonalizacion(
+        { user_id: 'v2', rol: 'vendedor', tenant_id: 'e1' },
+        't1',
+        { hero_titulo: 'x' },
+      ),
+    ).rejects.toBeInstanceOf(ForbiddenError);
+
+    await expect(
+      crear().actualizarPersonalizacion(
+        { user_id: 'v1', rol: 'vendedor', tenant_id: 'e1' },
+        't1',
+        { tema: { color_primario: 'rojo' } },
+      ),
+    ).rejects.toMatchObject({ codigo: 'PERSONALIZACION_INVALIDA' });
+  });
+
+  it('expone la personalización por defecto al consultar tiendas', async () => {
+    const pg = {
+      queryOne: vi.fn().mockResolvedValue({ ...base, es_actual: true }),
+      query: vi.fn().mockResolvedValue([base]),
+    };
+    const servicio = new TiendasService(pg as never);
+
+    await expect(servicio.deVendedor('v1')).resolves.toMatchObject({
+      plantilla: 'clasica',
+      tema: { color_primario: '#1F2937', fuente: 'system' },
+      hero_titulo: '',
+      seo_imagen_url: null,
+    });
+    await expect(servicio.deEmpresa('e1')).resolves.toEqual([
+      expect.objectContaining({
+        plantilla: 'clasica',
+        seo_imagen_url: null,
+      }),
+    ]);
+  });
+});
+

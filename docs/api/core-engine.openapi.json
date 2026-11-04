@@ -9870,6 +9870,53 @@
         ]
       }
     },
+    "/api/v1/tiendas/{id}/personalizacion": {
+      "patch": {
+        "operationId": "TiendasSlugController_actualizarPersonalizacion",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "description": "UUID de la tienda o su slug actual",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ActualizarPersonalizacionTiendaRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Personalización actualizada",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TiendaResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Actualizar la identidad visual de la tienda (plantilla, tema, hero y SEO)",
+        "tags": [
+          "Tiendas"
+        ]
+      }
+    },
     "/api/v1/tiendas/{id}/slug": {
       "patch": {
         "operationId": "TiendasSlugController_actualizarSlug",
@@ -21138,6 +21185,61 @@
           }
         }
       },
+      "ActualizarPersonalizacionTiendaRequestDto": {
+        "type": "object",
+        "properties": {
+          "plantilla": {
+            "type": "string",
+            "description": "Plantilla visual base",
+            "enum": [
+              "clasica",
+              "minimal",
+              "boutique",
+              "mercado"
+            ],
+            "default": "clasica"
+          },
+          "tema": {
+            "description": "Tokens de tema; los campos ausentes conservan su valor",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/TemaRequestDto"
+              }
+            ]
+          },
+          "hero_titulo": {
+            "type": "string",
+            "maxLength": 80
+          },
+          "hero_subtitulo": {
+            "type": "string",
+            "maxLength": 160
+          },
+          "hero_cta_texto": {
+            "type": "string",
+            "maxLength": 40
+          },
+          "hero_cta_url": {
+            "type": "string",
+            "description": "Ruta relativa o URL HTTPS del CTA",
+            "maxLength": 300
+          },
+          "seo_titulo": {
+            "type": "string",
+            "maxLength": 70
+          },
+          "seo_descripcion": {
+            "type": "string",
+            "maxLength": 300
+          },
+          "seo_imagen_objeto_id": {
+            "type": "object",
+            "description": "Objeto de storage público confirmado como imagen; null para quitarla",
+            "format": "uuid",
+            "nullable": true
+          }
+        }
+      },
       "ActualizarSlugTiendaRequestDto": {
         "type": "object",
         "properties": {
@@ -21372,6 +21474,134 @@
           "margen"
         ]
       },
+      "TemaRequestDto": {
+        "type": "object",
+        "properties": {
+          "color_primario": {
+            "type": "string",
+            "description": "Color primario (hex)",
+            "example": "#1F2937"
+          },
+          "color_secundario": {
+            "type": "string",
+            "description": "Color secundario (hex)",
+            "example": "#F59E0B"
+          },
+          "color_acento": {
+            "type": "string",
+            "description": "Color de acento (hex)",
+            "example": "#10B981"
+          },
+          "color_fondo": {
+            "type": "string",
+            "description": "Color de fondo (hex)",
+            "example": "#FFFFFF"
+          },
+          "color_texto": {
+            "type": "string",
+            "description": "Color de texto (hex)",
+            "example": "#111827"
+          },
+          "fuente": {
+            "type": "string",
+            "description": "Fuente del tema",
+            "enum": [
+              "system",
+              "inter",
+              "poppins",
+              "montserrat",
+              "playfair"
+            ],
+            "default": "system"
+          },
+          "radio_bordes": {
+            "type": "number",
+            "description": "Radio de bordes en píxeles",
+            "minimum": 0,
+            "maximum": 32,
+            "default": 12
+          },
+          "modo": {
+            "type": "string",
+            "description": "Modo de color",
+            "enum": [
+              "claro",
+              "oscuro",
+              "auto"
+            ],
+            "default": "claro"
+          }
+        }
+      },
+      "TemaResponseDto": {
+        "type": "object",
+        "properties": {
+          "color_primario": {
+            "type": "string",
+            "description": "Color primario (hex)",
+            "example": "#1F2937"
+          },
+          "color_secundario": {
+            "type": "string",
+            "description": "Color secundario (hex)",
+            "example": "#F59E0B"
+          },
+          "color_acento": {
+            "type": "string",
+            "description": "Color de acento (hex)",
+            "example": "#10B981"
+          },
+          "color_fondo": {
+            "type": "string",
+            "description": "Color de fondo (hex)",
+            "example": "#FFFFFF"
+          },
+          "color_texto": {
+            "type": "string",
+            "description": "Color de texto (hex)",
+            "example": "#111827"
+          },
+          "fuente": {
+            "type": "string",
+            "description": "Fuente del tema",
+            "enum": [
+              "system",
+              "inter",
+              "poppins",
+              "montserrat",
+              "playfair"
+            ],
+            "example": "system"
+          },
+          "radio_bordes": {
+            "type": "number",
+            "description": "Radio de bordes en píxeles",
+            "minimum": 0,
+            "maximum": 32,
+            "example": 12
+          },
+          "modo": {
+            "type": "string",
+            "description": "Modo de color",
+            "enum": [
+              "claro",
+              "oscuro",
+              "auto"
+            ],
+            "example": "claro"
+          }
+        },
+        "required": [
+          "color_primario",
+          "color_secundario",
+          "color_acento",
+          "color_fondo",
+          "color_texto",
+          "fuente",
+          "radio_bordes",
+          "modo"
+        ]
+      },
       "TiendaPublicaResponseDto": {
         "type": "object",
         "properties": {
@@ -21506,6 +21736,65 @@
           "background_activo": {
             "type": "boolean",
             "description": "Si el fondo está activo"
+          },
+          "plantilla": {
+            "type": "string",
+            "description": "Plantilla visual base (ADR-39)",
+            "enum": [
+              "clasica",
+              "minimal",
+              "boutique",
+              "mercado"
+            ]
+          },
+          "tema": {
+            "description": "Tokens de tema resueltos; siempre incluye todos los campos",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/TemaResponseDto"
+              }
+            ]
+          },
+          "hero_titulo": {
+            "type": "string",
+            "description": "Título del hero"
+          },
+          "hero_subtitulo": {
+            "type": "string",
+            "description": "Subtítulo del hero"
+          },
+          "hero_cta_texto": {
+            "type": "string",
+            "description": "Texto del CTA del hero"
+          },
+          "hero_cta_url": {
+            "type": "string",
+            "description": "Ruta o URL HTTPS del CTA del hero"
+          },
+          "seo_titulo": {
+            "type": "string",
+            "description": "Título SEO de la tienda"
+          },
+          "seo_descripcion": {
+            "type": "string",
+            "description": "Descripción SEO de la tienda"
+          },
+          "seo_imagen_objeto_id": {
+            "type": "object",
+            "description": "Objeto de storage de la imagen SEO",
+            "nullable": true,
+            "format": "uuid"
+          },
+          "seo_imagen_url": {
+            "type": "object",
+            "description": "URL pública derivada de la imagen SEO",
+            "nullable": true
+          },
+          "personalizacion_actualizada_en": {
+            "type": "object",
+            "description": "Última actualización de la personalización",
+            "nullable": true,
+            "format": "date-time"
           },
           "creado_en": {
             "type": "string",

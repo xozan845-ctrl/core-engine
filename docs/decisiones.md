@@ -1085,6 +1085,55 @@ Este archivo registra decisiones técnicas deliberadas que se apartan del texto 
 
 ---
 
+## ADR-39: Personalización visual de tienda
+
+- **Fecha**: 2026-11-04
+- **Estado**: Aceptado
+- **Contexto**: cada tienda es la identidad pública de su vendedor y el
+  storefront se resuelve por URL (`/tienda/:storeId`, ADR-15). Hasta ahora la
+  tienda solo tenía nombre, descripción, slug, logo y fondo (ADR-38); no podía
+  definir una plantilla, una paleta, tipografía, hero ni metadatos SEO. El
+  frontend necesita un diseño por defecto y overrides por tienda sin aceptar
+  CSS/HTML/JS libres.
+- **Decisión**:
+  1. El backend guarda **tokens validados**, no estilos: `plantilla`, `tema`
+     (colores, fuente, radio y modo), textos del hero y SEO. El frontend
+     traduce los tokens a su sistema de diseño.
+  2. Persistencia en `stores.tiendas` (`plantilla`, `tema jsonb`, `hero_*`,
+     `seo_*` y `personalizacion_actualizada_en`). El fondo sigue en las
+     columnas del ADR-38.
+  3. Allowlists cerradas: plantilla (`clasica|minimal|boutique|mercado`),
+     fuente (`system|inter|poppins|montserrat|playfair`), modo
+     (`claro|oscuro|auto`), colores hexadecimales `#RGB|#RRGGBB|#RRGGBBAA` y
+     radio de bordes entero `0..32`.
+  4. Actualización parcial: un campo ausente conserva su valor; `tema` se
+     mezcla token a token. La respuesta siempre devuelve el tema completo
+     resuelto con los valores por defecto.
+  5. `PATCH /api/v1/tiendas/{id}/personalizacion` con la misma autorización
+     que el logo y el fondo (vendedor dueño, empresario de la empresa o
+     admin/super_admin).
+  6. `GET /api/v1/tiendas/{id}` (público) devuelve la personalización resuelta
+     junto con la tienda y sus ofertas, para que el storefront pinte la
+     identidad en una sola llamada.
+  7. La imagen SEO se valida contra storage (imagen pública, activa y del
+     mismo tenant que la empresa) y su URL se deriva; nunca se acepta del
+     cliente. `hero_cta_url` solo admite rutas relativas seguras o HTTPS.
+  8. Migración `19_personalizacion_tienda.sql`. Sin cambios de RLS: las
+     columnas viven en `stores.tiendas`, que ya tiene lectura pública y
+     escritura restringida.
+- **Consecuencias**:
+  - Una tienda sin configuración devuelve `plantilla: "clasica"` y el tema por
+    defecto; el vendedor puede sobrescribir solo lo que quiera.
+  - El backend no puede ser vector de inyección de CSS/HTML/JS; el frontend
+    mantiene el control del renderizado y la accesibilidad.
+  - Quedan fuera de esta fase las secciones ordenables, el contenido
+    (sobre nosotros, políticas, redes, anuncio), la herencia
+    tienda→empresa→plataforma, las variantes móviles y el borrador/publicado.
+  - El contrato es aditivo para el frontend actual (`R-C-7`): los campos
+    nuevos son opcionales en el DTO y siempre vienen resueltos en runtime.
+
+---
+
 ## Resumen de cumplimiento post-corrección
 
 | Ítem del documento          | Estado  | Nota |

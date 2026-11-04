@@ -27,5 +27,6 @@
   "15_tienda_logo.sql": "5568e26b5b93f03178eea089ffeb71bc778f88e283bc939d5f9b25404a570986",
   "16_media_background_plataforma.sql": "9a20ffd8a883936d6fcd0fd7ff7db114d2dfc14b763ec28777e481032febdc2d",
   "17_media_background_empresa.sql": "873b219e234dd4643e73cbd2f8cd47451b59e85537da9da854dcabb04b27d17e",
-  "18_media_background_tienda.sql": "6d971f7e694f862a60260686b6e64fa456ff1c7fa7ca129855a51949e153846f"
+  "18_media_background_tienda.sql": "6d971f7e694f862a60260686b6e64fa456ff1c7fa7ca129855a51949e153846f",
+  "19_personalizacion_tienda.sql": "3960a9ab10a53eb403be0af27689fd3237f4316faa14579938e992ac4f95152f"
 }
