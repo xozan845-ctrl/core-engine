@@ -1085,6 +1085,171 @@ Este archivo registra decisiones técnicas deliberadas que se apartan del texto 
 
 ---
 
+## ADR-39: Personalización visual de tienda
+
+- **Fecha**: 2026-11-04
+- **Estado**: Aceptado
+- **Contexto**: cada tienda es la identidad pública de su vendedor y el
+  storefront se resuelve por URL (`/tienda/:storeId`, ADR-15). Hasta ahora la
+  tienda solo tenía nombre, descripción, slug, logo y fondo (ADR-38); no podía
+  definir una plantilla, una paleta, tipografía, hero ni metadatos SEO. El
+  frontend necesita un diseño por defecto y overrides por tienda sin aceptar
+  CSS/HTML/JS libres.
+- **Decisión**:
+  1. El backend guarda **tokens validados**, no estilos: `plantilla`, `tema`
+     (colores, fuente, radio y modo), textos del hero y SEO. El frontend
+     traduce los tokens a su sistema de diseño.
+  2. Persistencia en `stores.tiendas` (`plantilla`, `tema jsonb`, `hero_*`,
+     `seo_*` y `personalizacion_actualizada_en`). El fondo sigue en las
+     columnas del ADR-38.
+  3. Allowlists cerradas: plantilla (`clasica|minimal|boutique|mercado`),
+     fuente (`system|inter|poppins|montserrat|playfair`), modo
+     (`claro|oscuro|auto`), colores hexadecimales `#RGB|#RRGGBB|#RRGGBBAA` y
+     radio de bordes entero `0..32`.
+  4. Actualización parcial: un campo ausente conserva su valor; `tema` se
+     mezcla token a token. La respuesta siempre devuelve el tema completo
+     resuelto con los valores por defecto.
+  5. `PATCH /api/v1/tiendas/{id}/personalizacion` con la misma autorización
+     que el logo y el fondo (vendedor dueño, empresario de la empresa o
+     admin/super_admin).
+  6. `GET /api/v1/tiendas/{id}` (público) devuelve la personalización resuelta
+     junto con la tienda y sus ofertas, para que el storefront pinte la
+     identidad en una sola llamada.
+  7. La imagen SEO se valida contra storage (imagen pública, activa y del
+     mismo tenant que la empresa) y su URL se deriva; nunca se acepta del
+     cliente. `hero_cta_url` solo admite rutas relativas seguras o HTTPS.
+  8. Migración `19_personalizacion_tienda.sql`. Sin cambios de RLS: las
+     columnas viven en `stores.tiendas`, que ya tiene lectura pública y
+     escritura restringida.
+- **Consecuencias**:
+  - Una tienda sin configuración devuelve `plantilla: "clasica"` y el tema por
+    defecto; el vendedor puede sobrescribir solo lo que quiera.
+  - El backend no puede ser vector de inyección de CSS/HTML/JS; el frontend
+    mantiene el control del renderizado y la accesibilidad.
+  - Quedan fuera de esta fase las secciones ordenables, el contenido
+    (sobre nosotros, políticas, redes, anuncio), la herencia
+    tienda→empresa→plataforma, las variantes móviles y el borrador/publicado.
+  - El contrato es aditivo para el frontend actual (`R-C-7`): los campos
+    nuevos son opcionales en el DTO y siempre vienen resueltos en runtime.
+
+---
+
+## ADR-40: Contenido del storefront de tienda
+
+- **Fecha**: 2026-11-04
+- **Estado**: Aceptado
+- **Contexto**: el ADR-39 resolvió la identidad visual (plantilla, tema, hero y
+  SEO), pero la tienda seguía sin estructura de contenido: no se podían
+  ordenar secciones ni publicar “sobre nosotros”, políticas, redes o un
+  anuncio. El storefront necesita un contrato estable para renderizar sin
+  aceptar HTML libre.
+- **Decisión**:
+  1. `secciones` JSONB con una lista ordenada de tipos permitidos (`hero`,
+     `destacados`, `categorias`, `ofertas`, `sobre_nosotros`, `politicas`,
+     `contacto`, `redes`). Máximo 12, sin tipos ni órdenes repetidos; una
+     lista vacía delega el orden por defecto a la plantilla del frontend.
+  2. `sobre_nosotros` (máx. 2000), `politicas` JSONB (`envio`, `devolucion`,
+     `privacidad`, máx. 1000 cada una), `redes` JSONB (máx. 6, URL HTTPS) y
+     `anuncio_texto` / `anuncio_enlace` / `anuncio_activo` (máx. 120/300).
+  3. Actualización parcial: un campo ausente conserva su valor; `secciones` y
+     `redes` se reemplazan completas y `null`/`[]` las limpia.
+  4. `PATCH /api/v1/tiendas/{id}/contenido` con la misma autorización que el
+     logo, el fondo y el tema (vendedor dueño, empresario o admin/super_admin).
+  5. `GET /api/v1/tiendas/{id}` devuelve el contenido junto con la tienda y sus
+     ofertas; el contrato es aditivo para el frontend actual (R-C-7).
+  6. El enlace del anuncio solo admite ruta relativa segura o HTTPS; las redes
+     exigen HTTPS. No se aceptan `javascript:`, `data:` ni `//host`.
+  7. Migración `20_contenido_tienda.sql`. Sin cambios de RLS: las columnas
+     viven en `stores.tiendas`, que ya tiene lectura pública y escritura
+     restringida.
+- **Consecuencias**:
+  - Una tienda sin configuración devuelve listas vacías y textos vacíos; el
+    frontend aplica el orden de secciones de su plantilla.
+  - El backend no renderiza ni acepta HTML: solo estructura y texto validados.
+  - Quedan para una fase posterior la herencia tienda→empresa→plataforma, las
+    variantes móviles, el borrador/publicado y el endpoint `tema.css`.
+
+---
+
+## ADR-41: Variante móvil del fondo y CSS del tema
+
+- **Fecha**: 2026-11-04
+- **Estado**: Aceptado
+- **Contexto**: el ADR-38 definió un fondo único por tienda y el ADR-39 los
+  tokens del tema. El storefront necesita un fondo específico para móvil (un
+  video horizontal no encuadra en vertical) y una forma barata de aplicar los
+  tokens sin duplicarlos en el cliente.
+- **Decisión**:
+  1. Añadir a `stores.tiendas` la variante móvil del fondo:
+     `background_movil_objeto_id`, `background_movil_media_type`,
+     `background_movil_poster_objeto_id`, `background_movil_alt` y
+     `background_movil_activo`. Reutiliza la validación del ADR-38 (mismo
+     tenant, objeto público y activo, imagen o video; poster solo imagen).
+  2. `PATCH /api/v1/tiendas/{id}/background` acepta los campos
+     `background_movil_*` en la misma actualización parcial. `null` en
+     `background_movil_objeto_id` limpia el bloque móvil; si no hay objeto, no
+     se puede activar ni poner poster.
+  3. `GET /api/v1/tiendas/{id}/tema.css` (público) devuelve
+     `text/css` con las variables `--tienda-*` del tema resuelto y
+     `color-scheme` (`light`, `dark` o `light dark`). Es una comodidad
+     cacheable (`max-age=60`); el frontend puede seguir usando el JSON.
+  4. Migración `21_variantes_moviles_tienda.sql`. Sin cambios de RLS: las
+     columnas viven en `stores.tiendas`.
+- **Consecuencias**:
+  - El frontend puede elegir el fondo móvil sin descargar el de escritorio y
+    aplicar el tema con un `<link rel="stylesheet">` o inline.
+  - La herencia tienda→empresa→plataforma, el borrador/publicado y la
+    previsualización quedan como trabajo posterior: requieren un contrato
+    entre stores e identity y un modelo de overrides parciales que no se
+    resuelve en este PR.
+
+---
+
+## ADR-42: Herencia de tema tienda → empresa → plataforma
+
+- **Fecha**: 2026-11-04
+- **Estado**: Aceptado
+- **Contexto**: el ADR-39 guardaba en la tienda un tema completo, así que una
+  tienda sin personalización no podía heredar el tema de su empresa o de la
+  plataforma: cualquier valor por defecto pisaba la capa superior. Se necesita
+  distinguir “override explícito” de “heredar” y resolver la cadena sin
+  duplicar reglas entre identity y stores.
+- **Decisión**:
+  1. Mover el contrato del tema (tipos, allowlists, defaults, normalización,
+     validación, `resolverPersonalizacion` y `generarTemaCss`) a
+     `@core/shared` (`packages/shared/src/tienda/tema.ts`).
+  2. Guardar **overrides parciales** en `plantilla_override` y `tema_override`
+     (JSONB) en `identity.configuracion_plataforma`, `identity.empresas` y
+     `stores.tiendas`. Un valor `null`/`{}` significa heredar.
+  3. Resolver en orden `tienda → empresa → plataforma → defaults`, token a
+     token. La respuesta expone `plantilla`, `tema` y
+     `origen_personalizacion` (`tienda|empresa|plataforma|defecto`).
+  4. La tienda resuelve la cadena al leer: `GET /api/v1/tiendas/{id}` incluye
+     el tema efectivo. Para ello stores consulta los overrides de identity en
+     `GET /internal/empresas/{id}/tema` y
+     `GET /internal/configuracion-sitio/tema` (protegidos con
+     `x-internal-key`).
+  5. Cachear la herencia en stores con TTL de 60 s (R-AR-7) y degradar a
+     “sin herencia” si identity no responde (R-RB-4): la tienda conserva sus
+     overrides y los defaults.
+  6. `PATCH /api/v1/tiendas/{id}/personalizacion`,
+     `PATCH /api/v1/empresas/{id}/perfil` y
+     `PATCH /api/v1/configuracion/sitio` aceptan `plantilla` y `tema` como
+     overrides; `null` los limpia y devuelve el control a la capa superior.
+  7. Migración `22_herencia_tema.sql`. Conserva la personalización explícita de
+     la Fase 1 copiándola a los overrides de la tienda.
+- **Consecuencias**:
+  - Una tienda sin overrides hereda el tema de su empresa y, si esta tampoco
+    define, el de la plataforma; el diseño por defecto sigue disponible.
+  - La respuesta de empresa resuelve su propia capa (empresa ← defaults); la
+    cadena completa se materializa en la respuesta de tienda.
+  - Identity caído no rompe el storefront: se sirve el tema de la tienda con
+    los defaults hasta que vuelva la caché.
+  - Sigue prohibido aceptar CSS/HTML/JS libres: la herencia solo mezcla tokens
+    validados.
+
+---
+
 ## Resumen de cumplimiento post-corrección
 
 | Ítem del documento          | Estado  | Nota |

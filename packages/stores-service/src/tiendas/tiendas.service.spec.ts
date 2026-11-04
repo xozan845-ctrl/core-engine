@@ -21,15 +21,61 @@ const tienda = {
   background_activo: false,
   background_url: null,
   background_poster_url: null,
+  background_movil_objeto_id: null,
+  background_movil_media_type: null,
+  background_movil_poster_objeto_id: null,
+  background_movil_alt: '',
+  background_movil_activo: false,
+  background_movil_url: null,
+  background_movil_poster_url: null,
+  plantilla: 'clasica',
+  tema: {
+    color_primario: '#1F2937',
+    color_secundario: '#F59E0B',
+    color_acento: '#10B981',
+    color_fondo: '#FFFFFF',
+    color_texto: '#111827',
+    fuente: 'system',
+    radio_bordes: 12,
+    modo: 'claro',
+  },
+  origen_personalizacion: { plantilla: 'defecto', tema: 'defecto' },
+  hero_titulo: '',
+  hero_subtitulo: '',
+  hero_cta_texto: '',
+  hero_cta_url: '',
+  seo_titulo: '',
+  seo_descripcion: '',
+  seo_imagen_objeto_id: null,
+  seo_imagen_url: null,
+  personalizacion_actualizada_en: null,
+  secciones: [],
+  sobre_nosotros: '',
+  politicas: { envio: '', devolucion: '', privacidad: '' },
+  redes: [],
+  anuncio_texto: '',
+  anuncio_enlace: '',
+  anuncio_activo: false,
+  contenido_actualizado_en: null,
   creado_en: '2026-09-01T00:00:00.000Z',
 };
+
+function herenciaVacia(): {
+  obtenerEmpresa: Mock;
+  obtenerPlataforma: Mock;
+} {
+  return {
+    obtenerEmpresa: vi.fn().mockResolvedValue({ plantilla: null, tema: {} }),
+    obtenerPlataforma: vi.fn().mockResolvedValue({ plantilla: null, tema: {} }),
+  };
+}
 
 function crearServicio(): { servicio: TiendasService; pg: { queryOne: Mock; query: Mock } } {
   const pg = {
     queryOne: vi.fn().mockResolvedValue(null),
     query: vi.fn().mockResolvedValue([]),
   };
-  return { servicio: new TiendasService(pg as never), pg };
+  return { servicio: new TiendasService(pg as never, herenciaVacia() as never), pg };
 }
 
 describe('TiendasService (multiples tiendas por empresa)', () => {
@@ -180,14 +226,14 @@ describe('TiendasService (multiples tiendas por empresa)', () => {
       const { servicio, pg } = crearServicio();
       pg.queryOne.mockResolvedValue({ ...tienda, es_actual: true });
 
-      await expect(servicio.resolver(tienda.id)).resolves.toEqual({ tienda });
+      await expect(servicio.resolver(tienda.id)).resolves.toMatchObject({ tienda });
     });
 
     it('debe resolver el slug actual sin redirigir', async () => {
       const { servicio, pg } = crearServicio();
       pg.queryOne.mockResolvedValue({ ...tienda, es_actual: true });
 
-      await expect(servicio.resolver('mi-tienda')).resolves.toEqual({ tienda });
+      await expect(servicio.resolver('mi-tienda')).resolves.toMatchObject({ tienda });
       expect(pg.queryOne).toHaveBeenCalledWith(
         expect.stringContaining('FROM stores.tienda_slugs'),
         ['mi-tienda'],
@@ -198,7 +244,7 @@ describe('TiendasService (multiples tiendas por empresa)', () => {
       const { servicio, pg } = crearServicio();
       pg.queryOne.mockResolvedValue({ ...tienda, slug: 'mi-tienda-nueva', es_actual: false });
 
-      await expect(servicio.resolver('mi-tienda-vieja')).resolves.toEqual({
+      await expect(servicio.resolver('mi-tienda-vieja')).resolves.toMatchObject({
         tienda: { ...tienda, slug: 'mi-tienda-nueva' },
         redirigirA: '/api/v1/tiendas/mi-tienda-nueva',
       });
@@ -304,7 +350,7 @@ describe('TiendasService · logo de tienda', () => {
         .mockResolvedValueOnce({ ...base, logo_objeto_id: logoId }),
       query: vi.fn(),
     };
-    const servicio = new TiendasService(pg as never);
+    const servicio = new TiendasService(pg as never, herenciaVacia() as never);
     const resultado = await servicio.actualizarLogo(
       { user_id: 'v1', rol: 'vendedor', tenant_id: 'e1' },
       't1',
@@ -323,7 +369,7 @@ describe('TiendasService · logo de tienda', () => {
         .mockResolvedValueOnce({ ...base, logo_objeto_id: logoId }),
       query: vi.fn(),
     };
-    const servicioEmpresa = new TiendasService(pgEmpresa as never);
+    const servicioEmpresa = new TiendasService(pgEmpresa as never, herenciaVacia() as never);
     await expect(
       servicioEmpresa.actualizarLogo(
         { user_id: 'e1', rol: 'empresario', tenant_id: 'e1' },
@@ -339,7 +385,7 @@ describe('TiendasService · logo de tienda', () => {
       queryOne: vi.fn().mockResolvedValueOnce({ ...base, es_actual: true }),
       query: vi.fn(),
     };
-    const servicio = new TiendasService(pg as never);
+    const servicio = new TiendasService(pg as never, herenciaVacia() as never);
     await expect(
       servicio.actualizarLogo({ user_id: 'v2', rol: 'vendedor', tenant_id: 'e1' }, 't1', logoId),
     ).rejects.toBeInstanceOf(ForbiddenError);
@@ -350,7 +396,7 @@ describe('TiendasService · logo de tienda', () => {
         .mockResolvedValueOnce({ ...base, logo_objeto_id: logoId }),
       query: vi.fn(),
     };
-    const servicioAdmin = new TiendasService(pgAdmin as never);
+    const servicioAdmin = new TiendasService(pgAdmin as never, herenciaVacia() as never);
     await expect(
       servicioAdmin.actualizarLogo({ user_id: 'admin', rol: 'admin' }, 't1', logoId),
     ).resolves.toBeDefined();
@@ -363,7 +409,7 @@ describe('TiendasService · logo de tienda', () => {
         .mockResolvedValueOnce({ ...base, logo_objeto_id: null }),
       query: vi.fn(),
     };
-    const servicio = new TiendasService(pg as never);
+    const servicio = new TiendasService(pg as never, herenciaVacia() as never);
     await expect(
       servicio.actualizarLogo({ user_id: 'v1', rol: 'vendedor', tenant_id: 'e1' }, 't1', null),
     ).resolves.toBeDefined();
@@ -374,7 +420,7 @@ describe('TiendasService · logo de tienda', () => {
       new TiendasService({
         queryOne: vi.fn().mockResolvedValueOnce({ ...base, es_actual: true }),
         query: vi.fn(),
-      } as never);
+      } as never, herenciaVacia() as never);
 
     await expect(
       crear().actualizarLogo({ user_id: 'v1', rol: 'vendedor' }, 't1', 'no-uuid'),
@@ -406,7 +452,7 @@ describe('TiendasService · logo de tienda', () => {
     const servicio = new TiendasService({
       queryOne: vi.fn().mockResolvedValueOnce({ ...base, es_actual: true }),
       query: vi.fn(),
-    } as never);
+    } as never, herenciaVacia() as never);
 
     await expect(
       servicio.actualizarLogo({ user_id: 'v1', rol: 'vendedor' }, 't1', logoId),
@@ -418,7 +464,7 @@ describe('TiendasService · logo de tienda', () => {
       queryOne: vi.fn().mockResolvedValue({ ...base, logo_objeto_id: logoId }),
       query: vi.fn().mockResolvedValue([{ ...base, logo_objeto_id: logoId }]),
     };
-    const servicio = new TiendasService(pg as never);
+    const servicio = new TiendasService(pg as never, herenciaVacia() as never);
     await expect(servicio.deVendedor('v1')).resolves.toMatchObject({
       logo_url: `/api/v1/storage/public/objetos/${logoId}`,
     });
@@ -466,7 +512,7 @@ describe('TiendasService · fondo de tienda (ADR-38)', () => {
         .mockResolvedValueOnce(actualizada),
       query: vi.fn(),
     };
-    const servicio = new TiendasService(pg as never);
+    const servicio = new TiendasService(pg as never, herenciaVacia() as never);
 
     const resultado = await servicio.actualizarBackground(
       { user_id: 'v1', rol: 'vendedor', tenant_id: 'e1' },
@@ -489,7 +535,7 @@ describe('TiendasService · fondo de tienda (ADR-38)', () => {
     });
     expect(pg.queryOne).toHaveBeenLastCalledWith(
       expect.stringContaining('background_objeto_id=$1'),
-      [fondoId, 'video', posterId, '', 35, 'center', true, 't1'],
+      [fondoId, 'video', posterId, '', 35, 'center', true, null, null, null, '', false, 't1'],
     );
   });
 
@@ -510,7 +556,7 @@ describe('TiendasService · fondo de tienda (ADR-38)', () => {
         .mockResolvedValueOnce({ ...conFondo, background_alt: 'nuevo' }),
       query: vi.fn(),
     };
-    const servicio = new TiendasService(pg as never);
+    const servicio = new TiendasService(pg as never, herenciaVacia() as never);
 
     const resultado = await servicio.actualizarBackground(
       { user_id: 'v1', rol: 'vendedor', tenant_id: 'e1' },
@@ -546,7 +592,7 @@ describe('TiendasService · fondo de tienda (ADR-38)', () => {
         .mockResolvedValueOnce(base),
       query: vi.fn(),
     };
-    const servicio = new TiendasService(pg as never);
+    const servicio = new TiendasService(pg as never, herenciaVacia() as never);
 
     const resultado = await servicio.actualizarBackground(
       { user_id: 'v1', rol: 'vendedor', tenant_id: 'e1' },
@@ -573,7 +619,7 @@ describe('TiendasService · fondo de tienda (ADR-38)', () => {
       new TiendasService({
         queryOne: vi.fn().mockResolvedValueOnce({ ...base, es_actual: true }),
         query: vi.fn(),
-      } as never);
+      } as never, herenciaVacia() as never);
 
     await expect(
       crear().actualizarBackground(
@@ -591,7 +637,7 @@ describe('TiendasService · fondo de tienda (ADR-38)', () => {
       query: vi.fn(),
     };
     await expect(
-      new TiendasService(pgAdmin as never).actualizarBackground(
+      new TiendasService(pgAdmin as never, herenciaVacia() as never).actualizarBackground(
         { user_id: 'admin', rol: 'admin' },
         't1',
         { background_objeto_id: fondoId },
@@ -604,7 +650,7 @@ describe('TiendasService · fondo de tienda (ADR-38)', () => {
       new TiendasService({
         queryOne: vi.fn().mockResolvedValueOnce({ ...actual, es_actual: true }),
         query: vi.fn(),
-      } as never);
+      } as never, herenciaVacia() as never);
 
     await expect(
       crear().actualizarBackground(
@@ -640,7 +686,7 @@ describe('TiendasService · fondo de tienda (ADR-38)', () => {
       queryOne: vi.fn().mockResolvedValue({ ...conFondo, es_actual: true }),
       query: vi.fn().mockResolvedValue([conFondo]),
     };
-    const servicio = new TiendasService(pg as never);
+    const servicio = new TiendasService(pg as never, herenciaVacia() as never);
 
     await expect(servicio.deVendedor('v1')).resolves.toMatchObject({
       background_url: `/api/v1/storage/public/objetos/${fondoId}`,
@@ -653,3 +699,525 @@ describe('TiendasService · fondo de tienda (ADR-38)', () => {
     ]);
   });
 });
+
+describe('TiendasService · fondo móvil (ADR-41)', () => {
+  const movilId = '55555555-6666-4777-8888-999999999999';
+  const posterId = '66666666-7777-4888-8999-aaaaaaaaaaaa';
+  const base = { ...tienda, actualizado_en: tienda.creado_en };
+
+  afterEach(() => vi.unstubAllGlobals());
+
+  const media = (contentType: string) => ({
+    ok: true,
+    status: 200,
+    json: async () => ({
+      tenant_id: 'e1',
+      estado: 'activo',
+      publico: true,
+      content_type: contentType,
+    }),
+  });
+
+  it('valida video y poster móvil y deriva sus URLs', async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(media('video/webm'))
+      .mockResolvedValueOnce(media('image/png'));
+    vi.stubGlobal('fetch', fetchMock);
+    const actualizada = {
+      ...base,
+      background_movil_objeto_id: movilId,
+      background_movil_media_type: 'video' as const,
+      background_movil_poster_objeto_id: posterId,
+      background_movil_activo: true,
+    };
+    const pg = {
+      queryOne: vi.fn()
+        .mockResolvedValueOnce({ ...base, es_actual: true })
+        .mockResolvedValueOnce(actualizada),
+      query: vi.fn(),
+    };
+    const servicio = new TiendasService(pg as never, herenciaVacia() as never);
+
+    const resultado = await servicio.actualizarBackground(
+      { user_id: 'v1', rol: 'vendedor', tenant_id: 'e1' },
+      't1',
+      {
+        background_movil_objeto_id: movilId,
+        background_movil_poster_objeto_id: posterId,
+        background_movil_activo: true,
+      },
+    );
+
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(resultado).toMatchObject({
+      background_movil_media_type: 'video',
+      background_movil_url: `/api/v1/storage/public/objetos/${movilId}`,
+      background_movil_poster_url: `/api/v1/storage/public/objetos/${posterId}`,
+      background_movil_activo: true,
+    });
+  });
+
+  it('limpia el bloque móvil con null sin consultar storage', async () => {
+    const conMovil = {
+      ...base,
+      background_movil_objeto_id: movilId,
+      background_movil_media_type: 'imagen' as const,
+      background_movil_poster_objeto_id: posterId,
+      background_movil_alt: 'texto',
+      background_movil_activo: true,
+    };
+    const fetchMock = vi.fn();
+    vi.stubGlobal('fetch', fetchMock);
+    const pg = {
+      queryOne: vi.fn()
+        .mockResolvedValueOnce({ ...conMovil, es_actual: true })
+        .mockResolvedValueOnce(base),
+      query: vi.fn(),
+    };
+    const servicio = new TiendasService(pg as never, herenciaVacia() as never);
+
+    const resultado = await servicio.actualizarBackground(
+      { user_id: 'v1', rol: 'vendedor', tenant_id: 'e1' },
+      't1',
+      { background_movil_objeto_id: null },
+    );
+
+    expect(fetchMock).not.toHaveBeenCalled();
+    expect(resultado).toMatchObject({
+      background_movil_objeto_id: null,
+      background_movil_media_type: null,
+      background_movil_poster_objeto_id: null,
+      background_movil_url: null,
+      background_movil_poster_url: null,
+      background_movil_alt: '',
+      background_movil_activo: false,
+    });
+  });
+
+  it('rechaza activar el fondo móvil sin objeto', async () => {
+    const servicio = new TiendasService({
+      queryOne: vi.fn().mockResolvedValueOnce({ ...base, es_actual: true }),
+      query: vi.fn(),
+    } as never, herenciaVacia() as never);
+
+    await expect(
+      servicio.actualizarBackground(
+        { user_id: 'v1', rol: 'vendedor', tenant_id: 'e1' },
+        't1',
+        { background_movil_activo: true },
+      ),
+    ).rejects.toMatchObject({ codigo: 'BACKGROUND_INVALIDO' });
+  });
+
+  it('expone las URLs móviles al consultar tiendas', async () => {
+    const conMovil = {
+      ...base,
+      background_movil_objeto_id: movilId,
+      background_movil_media_type: 'imagen' as const,
+      background_movil_poster_objeto_id: posterId,
+    };
+    const pg = {
+      queryOne: vi.fn().mockResolvedValue({ ...conMovil, es_actual: true }),
+      query: vi.fn().mockResolvedValue([conMovil]),
+    };
+    const servicio = new TiendasService(pg as never, herenciaVacia() as never);
+
+    await expect(servicio.deVendedor('v1')).resolves.toMatchObject({
+      background_movil_url: `/api/v1/storage/public/objetos/${movilId}`,
+      background_movil_poster_url: `/api/v1/storage/public/objetos/${posterId}`,
+    });
+  });
+});
+
+describe('TiendasService · personalización visual (ADR-39)', () => {
+  const seoId = '44444444-5555-4666-8777-888888888888';
+  const base = { ...tienda, actualizado_en: tienda.creado_en };
+
+  afterEach(() => vi.unstubAllGlobals());
+
+  const imagen = (contentType = 'image/png') => ({
+    ok: true,
+    status: 200,
+    json: async () => ({
+      tenant_id: 'e1',
+      estado: 'activo',
+      publico: true,
+      content_type: contentType,
+    }),
+  });
+
+  it('actualiza tema, hero y SEO y devuelve el tema completo', async () => {
+    const actualizada = {
+      ...base,
+      plantilla_override: 'boutique' as const,
+      tema_override: { color_primario: '#AABBCC', fuente: 'poppins' },
+      hero_titulo: 'Colección',
+      seo_imagen_objeto_id: seoId,
+      personalizacion_actualizada_en: '2026-11-04T00:00:00.000Z',
+    };
+    const pg = {
+      queryOne: vi.fn()
+        .mockResolvedValueOnce({ ...base, es_actual: true })
+        .mockResolvedValueOnce(actualizada),
+      query: vi.fn(),
+    };
+    const servicio = new TiendasService(pg as never, herenciaVacia() as never);
+
+    const resultado = await servicio.actualizarPersonalizacion(
+      { user_id: 'v1', rol: 'vendedor', tenant_id: 'e1' },
+      't1',
+      {
+        plantilla: 'boutique',
+        tema: { color_primario: '#aabbcc', fuente: 'poppins' },
+        hero_titulo: '  Colección  ',
+      },
+    );
+
+    expect(resultado).toMatchObject({
+      plantilla: 'boutique',
+      tema: {
+        color_primario: '#AABBCC',
+        fuente: 'poppins',
+        color_secundario: '#F59E0B',
+        radio_bordes: 12,
+      },
+      hero_titulo: 'Colección',
+      seo_imagen_url: `/api/v1/storage/public/objetos/${seoId}`,
+    });
+    const [sql, params] = pg.queryOne.mock.calls[1];
+    expect(sql).toContain('UPDATE stores.tiendas');
+    expect(params[0]).toBe('boutique');
+    expect(JSON.parse(params[1] as string)).toEqual({
+      color_primario: '#AABBCC',
+      fuente: 'poppins',
+    });
+    expect(params[2]).toBe('Colección');
+    expect(params[9]).toBe('t1');
+  });
+
+  it('valida la imagen SEO contra storage y rechaza video', async () => {
+    const fetchMock = vi.fn(async () => imagen('image/webp'));
+    vi.stubGlobal('fetch', fetchMock);
+    const pg = {
+      queryOne: vi.fn()
+        .mockResolvedValueOnce({ ...base, es_actual: true })
+        .mockResolvedValueOnce({ ...base, seo_imagen_objeto_id: seoId }),
+      query: vi.fn(),
+    };
+    const servicio = new TiendasService(pg as never, herenciaVacia() as never);
+
+    await expect(
+      servicio.actualizarPersonalizacion(
+        { user_id: 'v1', rol: 'vendedor', tenant_id: 'e1' },
+        't1',
+        { seo_imagen_objeto_id: seoId },
+      ),
+    ).resolves.toMatchObject({
+      seo_imagen_url: `/api/v1/storage/public/objetos/${seoId}`,
+    });
+    expect(fetchMock).toHaveBeenCalledWith(
+      expect.stringContaining(`/internal/storage/objetos/${seoId}`),
+      expect.objectContaining({ signal: expect.any(AbortSignal) }),
+    );
+
+    vi.stubGlobal('fetch', vi.fn(async () => imagen('video/mp4')));
+    await expect(
+      new TiendasService({
+        queryOne: vi.fn().mockResolvedValueOnce({ ...base, es_actual: true }),
+        query: vi.fn(),
+      } as never, herenciaVacia() as never).actualizarPersonalizacion(
+        { user_id: 'v1', rol: 'vendedor', tenant_id: 'e1' },
+        't1',
+        { seo_imagen_objeto_id: seoId },
+      ),
+    ).rejects.toMatchObject({ codigo: 'BACKGROUND_INVALIDO' });
+  });
+
+  it('no revalida la imagen SEO cuando el id no cambia', async () => {
+    const fetchMock = vi.fn();
+    vi.stubGlobal('fetch', fetchMock);
+    const conImagen = { ...base, seo_imagen_objeto_id: seoId };
+    const pg = {
+      queryOne: vi.fn()
+        .mockResolvedValueOnce({ ...conImagen, es_actual: true })
+        .mockResolvedValueOnce({ ...conImagen, hero_titulo: 'Nuevo' }),
+      query: vi.fn(),
+    };
+    const servicio = new TiendasService(pg as never, herenciaVacia() as never);
+
+    await servicio.actualizarPersonalizacion(
+      { user_id: 'v1', rol: 'vendedor', tenant_id: 'e1' },
+      't1',
+      { hero_titulo: 'Nuevo' },
+    );
+
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it('quita la imagen SEO con null sin consultar storage', async () => {
+    const fetchMock = vi.fn();
+    vi.stubGlobal('fetch', fetchMock);
+    const conImagen = { ...base, seo_imagen_objeto_id: seoId };
+    const pg = {
+      queryOne: vi.fn()
+        .mockResolvedValueOnce({ ...conImagen, es_actual: true })
+        .mockResolvedValueOnce({ ...base, seo_imagen_objeto_id: null }),
+      query: vi.fn(),
+    };
+    const servicio = new TiendasService(pg as never, herenciaVacia() as never);
+
+    const resultado = await servicio.actualizarPersonalizacion(
+      { user_id: 'v1', rol: 'vendedor', tenant_id: 'e1' },
+      't1',
+      { seo_imagen_objeto_id: null },
+    );
+
+    expect(fetchMock).not.toHaveBeenCalled();
+    expect(resultado.seo_imagen_url).toBeNull();
+  });
+
+  it('aplica la misma autorización que el logo y rechaza datos inválidos', async () => {
+    const crear = () =>
+      new TiendasService({
+        queryOne: vi.fn().mockResolvedValueOnce({ ...base, es_actual: true }),
+        query: vi.fn(),
+      } as never, herenciaVacia() as never);
+
+    await expect(
+      crear().actualizarPersonalizacion(
+        { user_id: 'v2', rol: 'vendedor', tenant_id: 'e1' },
+        't1',
+        { hero_titulo: 'x' },
+      ),
+    ).rejects.toBeInstanceOf(ForbiddenError);
+
+    await expect(
+      crear().actualizarPersonalizacion(
+        { user_id: 'v1', rol: 'vendedor', tenant_id: 'e1' },
+        't1',
+        { tema: { color_primario: 'rojo' } },
+      ),
+    ).rejects.toMatchObject({ codigo: 'PERSONALIZACION_INVALIDA' });
+  });
+
+  it('expone la personalización por defecto al consultar tiendas', async () => {
+    const pg = {
+      queryOne: vi.fn().mockResolvedValue({ ...base, es_actual: true }),
+      query: vi.fn().mockResolvedValue([base]),
+    };
+    const servicio = new TiendasService(pg as never, herenciaVacia() as never);
+
+    await expect(servicio.deVendedor('v1')).resolves.toMatchObject({
+      plantilla: 'clasica',
+      tema: { color_primario: '#1F2937', fuente: 'system' },
+      hero_titulo: '',
+      seo_imagen_url: null,
+    });
+    await expect(servicio.deEmpresa('e1')).resolves.toEqual([
+      expect.objectContaining({
+        plantilla: 'clasica',
+        seo_imagen_url: null,
+      }),
+    ]);
+  });
+});
+
+describe('TiendasService · contenido del storefront (ADR-40)', () => {
+  const base = { ...tienda, actualizado_en: tienda.creado_en };
+
+  it('actualiza secciones, políticas, redes y anuncio', async () => {
+    const actualizada = {
+      ...base,
+      secciones: [
+        { tipo: 'hero' as const, visible: true, orden: 0 },
+        { tipo: 'ofertas' as const, visible: true, orden: 2 },
+      ],
+      sobre_nosotros: 'Somos una tienda familiar',
+      politicas: { envio: '24 horas', devolucion: '', privacidad: '' },
+      redes: [{ red: 'instagram' as const, url: 'https://instagram.com/mitienda' }],
+      anuncio_texto: 'Envío gratis',
+      anuncio_enlace: '/productos',
+      anuncio_activo: true,
+      contenido_actualizado_en: '2026-11-04T00:00:00.000Z',
+    };
+    const pg = {
+      queryOne: vi.fn()
+        .mockResolvedValueOnce({ ...base, es_actual: true })
+        .mockResolvedValueOnce(actualizada),
+      query: vi.fn(),
+    };
+    const servicio = new TiendasService(pg as never, herenciaVacia() as never);
+
+    const resultado = await servicio.actualizarContenido(
+      { user_id: 'v1', rol: 'vendedor', tenant_id: 'e1' },
+      't1',
+      {
+        secciones: [
+          { tipo: 'ofertas', visible: true, orden: 2 },
+          { tipo: 'hero', visible: true, orden: 0 },
+        ],
+        sobre_nosotros: '  Somos una tienda familiar  ',
+        politicas: { envio: '  24 horas  ' },
+        redes: [{ red: 'instagram', url: '  https://instagram.com/mitienda  ' }],
+        anuncio_texto: 'Envío gratis',
+        anuncio_enlace: '/productos',
+        anuncio_activo: true,
+      },
+    );
+
+    expect(resultado).toMatchObject({
+      secciones: [
+        { tipo: 'hero', visible: true, orden: 0 },
+        { tipo: 'ofertas', visible: true, orden: 2 },
+      ],
+      sobre_nosotros: 'Somos una tienda familiar',
+      politicas: { envio: '24 horas' },
+      redes: [{ red: 'instagram', url: 'https://instagram.com/mitienda' }],
+      anuncio_activo: true,
+    });
+    const [sql, params] = pg.queryOne.mock.calls[1];
+    expect(sql).toContain('secciones=$1::jsonb');
+    expect(JSON.parse(params[0] as string)).toHaveLength(2);
+    expect(params[1]).toBe('Somos una tienda familiar');
+    expect(JSON.parse(params[2] as string)).toMatchObject({ envio: '24 horas' });
+    expect(JSON.parse(params[3] as string)).toHaveLength(1);
+    expect(params[6]).toBe(true);
+    expect(params[7]).toBe('t1');
+  });
+
+  it('rechaza secciones o redes inválidas antes de actualizar', async () => {
+    const crear = () =>
+      new TiendasService({
+        queryOne: vi.fn().mockResolvedValueOnce({ ...base, es_actual: true }),
+        query: vi.fn(),
+      } as never, herenciaVacia() as never);
+
+    await expect(
+      crear().actualizarContenido(
+        { user_id: 'v1', rol: 'vendedor', tenant_id: 'e1' },
+        't1',
+        {
+          secciones: [
+            { tipo: 'hero', visible: true, orden: 0 },
+            { tipo: 'hero', visible: true, orden: 1 },
+          ],
+        },
+      ),
+    ).rejects.toMatchObject({ codigo: 'CONTENIDO_INVALIDO' });
+
+    await expect(
+      crear().actualizarContenido(
+        { user_id: 'v1', rol: 'vendedor', tenant_id: 'e1' },
+        't1',
+        {
+          secciones: [
+            { tipo: 'hero', visible: true, orden: 0 },
+            { tipo: 'ofertas', visible: true, orden: 0 },
+          ],
+        },
+      ),
+    ).rejects.toMatchObject({ codigo: 'CONTENIDO_INVALIDO' });
+
+    await expect(
+      crear().actualizarContenido(
+        { user_id: 'v1', rol: 'vendedor', tenant_id: 'e1' },
+        't1',
+        { redes: [{ red: 'instagram', url: 'http://instagram.com/mitienda' }] },
+      ),
+    ).rejects.toMatchObject({ codigo: 'CONTENIDO_INVALIDO' });
+  });
+
+  it('aplica la misma autorización que el logo', async () => {
+    const servicio = new TiendasService({
+      queryOne: vi.fn().mockResolvedValueOnce({ ...base, es_actual: true }),
+      query: vi.fn(),
+    } as never, herenciaVacia() as never);
+
+    await expect(
+      servicio.actualizarContenido(
+        { user_id: 'v2', rol: 'vendedor', tenant_id: 'e1' },
+        't1',
+        { sobre_nosotros: 'x' },
+      ),
+    ).rejects.toBeInstanceOf(ForbiddenError);
+  });
+
+  it('expone el contenido por defecto al consultar tiendas', async () => {
+    const pg = {
+      queryOne: vi.fn().mockResolvedValue({ ...base, es_actual: true }),
+      query: vi.fn().mockResolvedValue([base]),
+    };
+    const servicio = new TiendasService(pg as never, herenciaVacia() as never);
+
+    await expect(servicio.deVendedor('v1')).resolves.toMatchObject({
+      secciones: [],
+      sobre_nosotros: '',
+      politicas: { envio: '', devolucion: '', privacidad: '' },
+      redes: [],
+      anuncio_activo: false,
+      contenido_actualizado_en: null,
+    });
+  });
+});
+
+describe('TiendasService · herencia de tema (ADR-42)', () => {
+  const base = { ...tienda, actualizado_en: tienda.creado_en };
+  const herencia = (empresa: unknown, plataforma: unknown) => ({
+    obtenerEmpresa: vi.fn().mockResolvedValue(empresa),
+    obtenerPlataforma: vi.fn().mockResolvedValue(plataforma),
+  });
+
+  it('hereda plantilla y tema de empresa y plataforma', async () => {
+    const pg = {
+      queryOne: vi.fn().mockResolvedValue({ ...base, es_actual: true }),
+      query: vi.fn(),
+    };
+    const servicio = new TiendasService(
+      pg as never,
+      herencia(
+        { plantilla: 'boutique', tema: { color_secundario: '#222222' } },
+        { plantilla: 'minimal', tema: { color_primario: '#111111' } },
+      ) as never,
+    );
+
+    await expect(servicio.deVendedor('v1')).resolves.toMatchObject({
+      plantilla: 'boutique',
+      tema: {
+        color_primario: '#111111',
+        color_secundario: '#222222',
+      },
+      origen_personalizacion: { plantilla: 'empresa', tema: 'empresa' },
+    });
+  });
+
+  it('los overrides de la tienda mandan sobre empresa y plataforma', async () => {
+    const pg = {
+      queryOne: vi.fn().mockResolvedValue({
+        ...base,
+        plantilla_override: 'mercado',
+        tema_override: { color_acento: '#333333' },
+        es_actual: true,
+      }),
+      query: vi.fn(),
+    };
+    const servicio = new TiendasService(
+      pg as never,
+      herencia(
+        { plantilla: 'boutique', tema: { color_secundario: '#222222' } },
+        { plantilla: 'minimal', tema: { color_primario: '#111111' } },
+      ) as never,
+    );
+
+    await expect(servicio.deVendedor('v1')).resolves.toMatchObject({
+      plantilla: 'mercado',
+      tema: {
+        color_primario: '#111111',
+        color_secundario: '#222222',
+        color_acento: '#333333',
+      },
+      origen_personalizacion: { plantilla: 'tienda', tema: 'tienda' },
+    });
+  });
+});
+

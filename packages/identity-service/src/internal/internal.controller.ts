@@ -4,6 +4,8 @@ import { ClaveInternaGuard, NotFoundError } from '@core/shared';
 import { UsuariosService } from '../usuarios/usuarios.service';
 import { EmpresasService } from '../empresas/empresas.service';
 import { EmpresaResponseDto } from '../empresas/empresas.controller';
+import { ConfiguracionSitioService } from '../configuracion-sitio/configuracion-sitio.service';
+import { TemaOverridesResponseDto } from '../personalizacion/tema.dto';
 import {
   ContarVendedoresResponseDto,
   UsuarioResponseDto,
@@ -21,6 +23,7 @@ export class InternalController {
   constructor(
     private readonly usuarios: UsuariosService,
     private readonly empresas: EmpresasService,
+    private readonly configuracion: ConfiguracionSitioService,
   ) {}
 
   @Get('usuarios/:id')
@@ -55,5 +58,26 @@ export class InternalController {
     const empresa = await this.empresas.obtener(id);
     if (!empresa) throw new NotFoundError('Empresa', id);
     return empresa;
+  }
+
+  @Get('empresas/:id/tema')
+  @ApiOperation({ summary: 'Overrides de tema de una empresa (servicio→servicio)' })
+  @ApiParam({ name: 'id', description: 'Id de la empresa' })
+  @ApiOkResponse({
+    type: TemaOverridesResponseDto,
+    description: 'Overrides de plantilla y tema de la empresa',
+  })
+  async empresaTema(@Param('id') id: string) {
+    return this.empresas.obtenerTemaOverrides(id);
+  }
+
+  @Get('configuracion-sitio/tema')
+  @ApiOperation({ summary: 'Overrides de tema de la plataforma (servicio→servicio)' })
+  @ApiOkResponse({
+    type: TemaOverridesResponseDto,
+    description: 'Overrides de plantilla y tema de la plataforma',
+  })
+  async plataformaTema() {
+    return this.configuracion.obtenerTemaOverrides();
   }
 }

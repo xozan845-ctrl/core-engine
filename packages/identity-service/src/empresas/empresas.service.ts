@@ -5,11 +5,22 @@ import {
   DomainError,
   NotFoundError,
   ConflictError,
+  OrigenPersonalizacion,
+  PLANTILLAS,
+  Plantilla,
+  Tema,
+  TemaInput,
   esUuid,
   esViolacionUnicidad,
+  mezclarTema,
+  normalizarTemaParcial,
+  plantillaDe,
+  resolverPersonalizacion,
   slugConSufijo,
   slugDesdeNombre,
+  temaParcialDe,
   validarSlugSolicitado,
+  validarTema,
 } from '@core/shared';
 import { UsuariosService } from '../usuarios/usuarios.service';
 import {
@@ -70,6 +81,13 @@ export interface Empresa {
   /** URLs públicas derivadas; no se persisten. */
   background_url?: string | null;
   background_poster_url?: string | null;
+  /** Tema efectivo (plataforma ← empresa) y su origen (ADR-42). */
+  plantilla: Plantilla;
+  tema: Tema;
+  origen_personalizacion: {
+    plantilla: OrigenPersonalizacion;
+    tema: OrigenPersonalizacion;
+  };
   actualizado_en: string;
 }
 
@@ -92,14 +110,32 @@ export interface PerfilEmpresaInput extends BackgroundInput {
   representante_legal?: string;
   horario_atencion?: string;
   logo_objeto_id?: string | null;
+  /** Overrides de tema; null vuelve a heredar de la plataforma. */
+  plantilla?: Plantilla | null;
+  tema?: TemaInput | null;
 }
 
-interface EmpresaConEstadoSlug extends Empresa {
+interface EmpresaFila
+  extends Omit<
+    Empresa,
+    | 'plantilla'
+    | 'tema'
+    | 'origen_personalizacion'
+    | 'logo_url'
+    | 'background_url'
+    | 'background_poster_url'
+  > {
+  plantilla_override: string | null;
+  tema_override: unknown;
+}
+
+interface EmpresaConEstadoSlug extends EmpresaFila {
   es_actual: boolean;
 }
 
 export interface EmpresaResuelta {
   empresa: Empresa;
+  overrides: { plantilla: Plantilla | null; tema: TemaInput };
   /** Ruta a la que redirigir cuando se consultó un slug anterior. */
   redirigirA?: string;
 }
@@ -108,9 +144,13 @@ interface ClienteSlug {
   query(texto: string, valores?: unknown[]): Promise<{ rowCount: number | null }>;
 }
 
-type PerfilNormalizado = Required<Omit<PerfilEmpresaInput, 'logo_objeto_id'>> &
+type PerfilNormalizado = Required<
+  Omit<PerfilEmpresaInput, 'logo_objeto_id' | 'plantilla' | 'tema'>
+> &
   BackgroundCampos & {
     logo_objeto_id: string | null;
+    plantilla: Plantilla | null;
+    tema: TemaInput;
   };
 
 interface ObjetoStorage {
@@ -164,7 +204,7 @@ export class EmpresasService {
       try {
         return await this.pg.transaccion(async (client) => {
           const slug = await this.elegirSlug(client, nombreFinal, slugExplicito);
-          const result = await client.query<Empresa>(
+          const result = await client.query<EmpresaFila>(
             `INSERT INTO identity.empresas
                (nombre, slug, modalidad_logistica, creado_por, ruc, razon_social,
                 nombre_comercial, descripcion, telefono, correo_contacto, sitio_web,
@@ -202,7 +242,7 @@ export class EmpresasService {
             [empresa.id, usuarioId],
           );
           await client.query(`UPDATE identity.usuarios SET tenant_id=$1, rol='empresario' WHERE id=$2`, [empresa.id, usuarioId]);
-          return this.conUrls(empresa);
+          return await this.conUrls(empresa);
         });
       } catch (error) {
         if (!esViolacionUnicidad(error)) throw error;
@@ -233,13 +273,13 @@ export class EmpresasService {
       [empresaId, actorId],
     );
     if (!miembro) throw new ForbiddenError('Solo un empresario activo puede cambiar la logística.');
-    const empresa = await this.pg.queryOne<Empresa>(
+    const empresa = await this.pg.queryOne<EmpresaFila>(
       `UPDATE identity.empresas SET modalidad_logistica=$1
        WHERE id=$2 AND estado='activa' RETURNING *`,
       [modalidad, empresaId],
     );
     if (!empresa) throw new NotFoundError('Empresa', empresaId);
-    return this.conUrls(empresa);
+    return await this.conUrls(empresa);
   }
 
   /**
@@ -267,12 +307,12 @@ export class EmpresasService {
         throw new ForbiddenError('Solo un empresario activo puede cambiar el tipo de empresa.');
       }
     }
-    const empresa = await this.pg.queryOne<Empresa>(
+    const empresa = await this.pg.queryOne<EmpresaFila>(
       `UPDATE identity.empresas SET tipo_empresa=$1 WHERE id=$2 RETURNING *`,
       [tipo, empresaId],
     );
     if (!empresa) throw new NotFoundError('Empresa', empresaId);
-    return this.conUrls(empresa);
+    return await this.conUrls(empresa);
   }
 
   /**
@@ -305,8 +345,13 @@ export class EmpresasService {
     }
 
     const { es_actual, ...empresa } = fila;
+    const overrides = {
+      plantilla: plantillaDe(empresa.plantilla_override),
+      tema: temaParcialDe(empresa.tema_override),
+    };
     return {
-      empresa: this.conUrls(empresa),
+      empresa: await this.conUrls(empresa),
+      overrides,
       redirigirA: es_actual ? undefined : `/api/v1/empresas/${empresa.slug}`,
     };
   }
@@ -325,7 +370,7 @@ export class EmpresasService {
     // membresia activa en ESA empresa sea de empresario (no basta el rol JWT).
     const { empresa } = await this.resolverPara(usuarioId, identificador, false, 'empresario');
     const slug = validarSlugSolicitado(slugSolicitado);
-    if (slug === empresa.slug) return this.conUrls(empresa);
+    if (slug === empresa.slug) return empresa;
 
     const ocupado = await this.pg.queryOne(
       `SELECT 1 FROM identity.empresa_slugs WHERE slug=$1`,
@@ -334,12 +379,12 @@ export class EmpresasService {
     if (ocupado) throw new ConflictError(`El slug "${slug}" ya está en uso.`);
 
     try {
-      const actualizada = await this.pg.queryOne<Empresa>(
+      const actualizada = await this.pg.queryOne<EmpresaFila>(
         `UPDATE identity.empresas SET slug=$1 WHERE id=$2 RETURNING *`,
         [slug, empresa.id],
       );
       if (!actualizada) throw new NotFoundError('Empresa', empresa.id);
-      return this.conUrls(actualizada);
+      return await this.conUrls(actualizada);
     } catch (error) {
       if (esViolacionUnicidad(error)) {
         throw new ConflictError(`El slug "${slug}" ya está en uso.`);
@@ -349,11 +394,11 @@ export class EmpresasService {
   }
 
   async obtener(empresaId: string): Promise<Empresa | null> {
-    const empresa = await this.pg.queryOne<Empresa>(
+    const empresa = await this.pg.queryOne<EmpresaFila>(
       `SELECT * FROM identity.empresas WHERE id=$1`,
       [empresaId],
     );
-    return empresa ? this.conUrls(empresa) : null;
+    return empresa ? await this.conUrls(empresa) : null;
   }
 
   /**
@@ -366,13 +411,13 @@ export class EmpresasService {
     cambios: PerfilEmpresaInput,
     esGlobal = false,
   ): Promise<Empresa> {
-    const { empresa } = await this.resolverPara(
+    const { empresa, overrides } = await this.resolverPara(
       usuarioId,
       identificador,
       esGlobal,
       esGlobal ? undefined : 'empresario',
     );
-    const meta = this.normalizarPerfil(cambios, empresa);
+    const meta = this.normalizarPerfil(cambios, empresa, overrides);
     this.validarPerfil(meta);
     validarBackground(cambios, meta);
     if (meta.ruc !== empresa.ruc) await this.validarRucUnico(meta.ruc, empresa.id);
@@ -395,7 +440,7 @@ export class EmpresasService {
       await this.validadorMedia.validar(empresa.id, meta.background_poster_objeto_id, 'poster');
     }
     try {
-      const actualizada = await this.pg.queryOne<Empresa>(
+      const actualizada = await this.pg.queryOne<EmpresaFila>(
         `UPDATE identity.empresas SET
            ruc=$2, razon_social=$3, nombre_comercial=$4, descripcion=$5,
            telefono=$6, correo_contacto=$7, sitio_web=$8, direccion=$9,
@@ -404,7 +449,8 @@ export class EmpresasService {
            logo_objeto_id=$18, background_objeto_id=$19,
            background_media_type=$20, background_poster_objeto_id=$21,
            background_alt=$22, background_overlay=$23, background_position=$24,
-           background_activo=$25, actualizado_en=NOW()
+           background_activo=$25, plantilla_override=$26, tema_override=$27::jsonb,
+           actualizado_en=NOW()
          WHERE id=$1 RETURNING *`,
         [
           empresa.id,
@@ -432,10 +478,12 @@ export class EmpresasService {
           meta.background_overlay,
           meta.background_position,
           meta.background_activo,
+          meta.plantilla,
+          JSON.stringify(meta.tema),
         ],
       );
       if (!actualizada) throw new NotFoundError('Empresa', empresa.id);
-      return this.conUrls(actualizada);
+      return await this.conUrls(actualizada);
     } catch (error) {
       if (esViolacionUnicidad(error)) {
         throw new ConflictError('El RUC ya está registrado en otra empresa.');
@@ -447,6 +495,7 @@ export class EmpresasService {
   private normalizarPerfil(
     datos: PerfilEmpresaInput,
     actual?: Empresa,
+    overridesActuales?: { plantilla: Plantilla | null; tema: TemaInput },
   ): PerfilNormalizado {
     const texto = (valor: unknown, respaldo = ''): string =>
       typeof valor === 'string' ? valor.trim() : respaldo;
@@ -472,6 +521,16 @@ export class EmpresasService {
         datos.logo_objeto_id !== undefined
           ? datos.logo_objeto_id
           : (actual?.logo_objeto_id ?? null),
+      plantilla:
+        datos.plantilla !== undefined
+          ? datos.plantilla
+          : (overridesActuales?.plantilla ?? null),
+      tema:
+        datos.tema !== undefined
+          ? datos.tema === null
+            ? {}
+            : { ...overridesActuales?.tema, ...normalizarTemaParcial(datos.tema) }
+          : (overridesActuales?.tema ?? {}),
       ...normalizarBackground(datos, backgroundDe(actual)),
     };
   }
@@ -507,6 +566,10 @@ export class EmpresasService {
     if (meta.logo_objeto_id !== null && !esUuid(meta.logo_objeto_id)) {
       throw new DomainError('PERFIL_INVALIDO', 'El logo debe ser un objeto de storage válido.');
     }
+    if (meta.plantilla !== null && !PLANTILLAS.includes(meta.plantilla)) {
+      throw new DomainError('PERFIL_INVALIDO', 'La plantilla no es válida.');
+    }
+    validarTema(mezclarTema(meta.tema));
   }
 
   private async validarRucUnico(ruc: string, excluirId?: string): Promise<void> {
@@ -559,14 +622,45 @@ export class EmpresasService {
     }
   }
 
-  private conUrls(empresa: Empresa): Empresa {
+  private async conUrls(empresa: EmpresaFila): Promise<Empresa> {
+    const { plantilla_override: _plantilla, tema_override: _tema, ...resto } = empresa;
+    const overrides = {
+      plantilla: plantillaDe(empresa.plantilla_override),
+      tema: temaParcialDe(empresa.tema_override),
+    };
+    const resuelta = resolverPersonalizacion(
+      overrides,
+      { plantilla: null, tema: {} },
+      { plantilla: null, tema: {} },
+      'empresa',
+    );
     const logo = empresa.logo_objeto_id
       ? { logo_url: `/api/v1/storage/public/objetos/${empresa.logo_objeto_id}` }
       : {};
     return {
-      ...empresa,
+      ...resto,
       ...logo,
       ...conBackgroundUrls(backgroundDe(empresa)),
+      plantilla: resuelta.plantilla,
+      tema: resuelta.tema,
+      origen_personalizacion: resuelta.origen,
+    };
+  }
+
+  /** Overrides crudos para que stores resuelva la herencia (ADR-42). */
+  async obtenerTemaOverrides(
+    empresaId: string,
+  ): Promise<{ plantilla_override: Plantilla | null; tema_override: TemaInput }> {
+    const fila = await this.pg.queryOne<{
+      plantilla_override: string | null;
+      tema_override: unknown;
+    }>(
+      `SELECT plantilla_override, tema_override FROM identity.empresas WHERE id = $1`,
+      [empresaId],
+    );
+    return {
+      plantilla_override: plantillaDe(fila?.plantilla_override),
+      tema_override: temaParcialDe(fila?.tema_override),
     };
   }
 

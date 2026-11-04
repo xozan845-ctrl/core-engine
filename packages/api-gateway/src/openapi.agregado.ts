@@ -9782,6 +9782,47 @@ export const OPENAPI_AGREGADO = {
         ]
       }
     },
+    "/api/v1/tiendas/{id}/tema.css": {
+      "get": {
+        "operationId": "TiendasSlugController_temaCss",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "description": "UUID de la tienda o su slug actual",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Variables CSS del tema resuelto",
+            "content": {
+              "text/css": {
+                "schema": {
+                  "type": "string",
+                  "example": ":root { --tienda-color-primario: #1F2937; }"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Tienda inexistente (NO_ENCONTRADO)"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Variables CSS del tema de la tienda (público)",
+        "tags": [
+          "Tiendas"
+        ]
+      }
+    },
     "/api/v1/tiendas/{id}/logo": {
       "patch": {
         "operationId": "TiendasSlugController_actualizarLogo",
@@ -9871,6 +9912,100 @@ export const OPENAPI_AGREGADO = {
           }
         ],
         "summary": "Asociar, cambiar o quitar el fondo público de la tienda",
+        "tags": [
+          "Tiendas"
+        ]
+      }
+    },
+    "/api/v1/tiendas/{id}/personalizacion": {
+      "patch": {
+        "operationId": "TiendasSlugController_actualizarPersonalizacion",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "description": "UUID de la tienda o su slug actual",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ActualizarPersonalizacionTiendaRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Personalización actualizada",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TiendaResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Actualizar la identidad visual de la tienda (plantilla, tema, hero y SEO)",
+        "tags": [
+          "Tiendas"
+        ]
+      }
+    },
+    "/api/v1/tiendas/{id}/contenido": {
+      "patch": {
+        "operationId": "TiendasSlugController_actualizarContenido",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "description": "UUID de la tienda o su slug actual",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ActualizarContenidoTiendaRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Contenido actualizado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TiendaResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Actualizar el contenido del storefront (secciones, políticas, redes y anuncio)",
         "tags": [
           "Tiendas"
         ]
@@ -18290,6 +18425,27 @@ export const OPENAPI_AGREGADO = {
           "background_activo": {
             "type": "boolean",
             "default": false
+          },
+          "plantilla": {
+            "type": "string",
+            "enum": [
+              "clasica",
+              "minimal",
+              "boutique",
+              "mercado"
+            ],
+            "nullable": true,
+            "description": "Plantilla de la plataforma; null usa el default"
+          },
+          "tema": {
+            "nullable": true,
+            "description": "Overrides de tema de la plataforma; null los limpia",
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/TemaRequestDto"
+              }
+            ]
           }
         }
       },
@@ -18420,6 +18576,21 @@ export const OPENAPI_AGREGADO = {
           "background_activo": {
             "type": "boolean"
           },
+          "plantilla": {
+            "type": "string",
+            "enum": [
+              "clasica",
+              "minimal",
+              "boutique",
+              "mercado"
+            ]
+          },
+          "tema": {
+            "$ref": "#/components/schemas/TemaResponseDto"
+          },
+          "origen_personalizacion": {
+            "$ref": "#/components/schemas/OrigenPersonalizacionResponseDto"
+          },
           "actualizado_en": {
             "type": "string",
             "format": "date-time",
@@ -18436,6 +18607,9 @@ export const OPENAPI_AGREGADO = {
           "background_overlay",
           "background_position",
           "background_activo",
+          "plantilla",
+          "tema",
+          "origen_personalizacion",
           "actualizado_en"
         ]
       },
@@ -18515,6 +18689,27 @@ export const OPENAPI_AGREGADO = {
             "nullable": true,
             "format": "uuid",
             "description": "Objeto de storage confirmado como imagen pública"
+          },
+          "plantilla": {
+            "type": "string",
+            "nullable": true,
+            "enum": [
+              "clasica",
+              "minimal",
+              "boutique",
+              "mercado"
+            ],
+            "description": "Plantilla; null hereda de la plataforma"
+          },
+          "tema": {
+            "nullable": true,
+            "description": "Overrides de tema; null hereda de la plataforma",
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/TemaRequestDto"
+              }
+            ]
           },
           "nombre": {
             "type": "string",
@@ -18804,6 +18999,21 @@ export const OPENAPI_AGREGADO = {
           "background_activo": {
             "type": "boolean"
           },
+          "plantilla": {
+            "type": "string",
+            "enum": [
+              "clasica",
+              "minimal",
+              "boutique",
+              "mercado"
+            ]
+          },
+          "tema": {
+            "$ref": "#/components/schemas/TemaResponseDto"
+          },
+          "origen_personalizacion": {
+            "$ref": "#/components/schemas/OrigenPersonalizacionResponseDto"
+          },
           "actualizado_en": {
             "type": "string",
             "format": "date-time"
@@ -19003,6 +19213,35 @@ export const OPENAPI_AGREGADO = {
           "ok"
         ]
       },
+      "OrigenPersonalizacionResponseDto": {
+        "type": "object",
+        "properties": {
+          "plantilla": {
+            "type": "string",
+            "description": "Nivel que aportó la plantilla efectiva",
+            "enum": [
+              "tienda",
+              "empresa",
+              "plataforma",
+              "defecto"
+            ]
+          },
+          "tema": {
+            "type": "string",
+            "description": "Nivel más específico que aportó overrides de tema",
+            "enum": [
+              "tienda",
+              "empresa",
+              "plataforma",
+              "defecto"
+            ]
+          }
+        },
+        "required": [
+          "plantilla",
+          "tema"
+        ]
+      },
       "PerfilEmpresaRequestDto": {
         "type": "object",
         "properties": {
@@ -19116,6 +19355,27 @@ export const OPENAPI_AGREGADO = {
           "background_activo": {
             "type": "boolean",
             "default": false
+          },
+          "plantilla": {
+            "type": "string",
+            "nullable": true,
+            "enum": [
+              "clasica",
+              "minimal",
+              "boutique",
+              "mercado"
+            ],
+            "description": "Plantilla; null hereda de la plataforma"
+          },
+          "tema": {
+            "nullable": true,
+            "description": "Overrides de tema; null hereda de la plataforma",
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/TemaRequestDto"
+              }
+            ]
           }
         }
       },
@@ -19260,6 +19520,134 @@ export const OPENAPI_AGREGADO = {
           "nombre",
           "correo",
           "rol"
+        ]
+      },
+      "TemaRequestDto": {
+        "type": "object",
+        "properties": {
+          "color_primario": {
+            "type": "string",
+            "description": "Color primario (hex)",
+            "example": "#1F2937"
+          },
+          "color_secundario": {
+            "type": "string",
+            "description": "Color secundario (hex)",
+            "example": "#F59E0B"
+          },
+          "color_acento": {
+            "type": "string",
+            "description": "Color de acento (hex)",
+            "example": "#10B981"
+          },
+          "color_fondo": {
+            "type": "string",
+            "description": "Color de fondo (hex)",
+            "example": "#FFFFFF"
+          },
+          "color_texto": {
+            "type": "string",
+            "description": "Color de texto (hex)",
+            "example": "#111827"
+          },
+          "fuente": {
+            "type": "string",
+            "description": "Fuente del tema",
+            "enum": [
+              "system",
+              "inter",
+              "poppins",
+              "montserrat",
+              "playfair"
+            ],
+            "default": "system"
+          },
+          "radio_bordes": {
+            "type": "number",
+            "description": "Radio de bordes en píxeles",
+            "minimum": 0,
+            "maximum": 32,
+            "default": 12
+          },
+          "modo": {
+            "type": "string",
+            "description": "Modo de color",
+            "enum": [
+              "claro",
+              "oscuro",
+              "auto"
+            ],
+            "default": "claro"
+          }
+        }
+      },
+      "TemaResponseDto": {
+        "type": "object",
+        "properties": {
+          "color_primario": {
+            "type": "string",
+            "description": "Color primario (hex)",
+            "example": "#1F2937"
+          },
+          "color_secundario": {
+            "type": "string",
+            "description": "Color secundario (hex)",
+            "example": "#F59E0B"
+          },
+          "color_acento": {
+            "type": "string",
+            "description": "Color de acento (hex)",
+            "example": "#10B981"
+          },
+          "color_fondo": {
+            "type": "string",
+            "description": "Color de fondo (hex)",
+            "example": "#FFFFFF"
+          },
+          "color_texto": {
+            "type": "string",
+            "description": "Color de texto (hex)",
+            "example": "#111827"
+          },
+          "fuente": {
+            "type": "string",
+            "description": "Fuente del tema",
+            "enum": [
+              "system",
+              "inter",
+              "poppins",
+              "montserrat",
+              "playfair"
+            ],
+            "example": "system"
+          },
+          "radio_bordes": {
+            "type": "number",
+            "description": "Radio de bordes en píxeles",
+            "minimum": 0,
+            "maximum": 32,
+            "example": 12
+          },
+          "modo": {
+            "type": "string",
+            "description": "Modo de color",
+            "enum": [
+              "claro",
+              "oscuro",
+              "auto"
+            ],
+            "example": "claro"
+          }
+        },
+        "required": [
+          "color_primario",
+          "color_secundario",
+          "color_acento",
+          "color_fondo",
+          "color_texto",
+          "fuente",
+          "radio_bordes",
+          "modo"
         ]
       },
       "UsuarioContextoResponseDto": {
@@ -21130,6 +21518,75 @@ export const OPENAPI_AGREGADO = {
           "background_activo": {
             "type": "boolean",
             "default": false
+          },
+          "background_movil_objeto_id": {
+            "type": "string",
+            "description": "Objeto de storage del fondo móvil; null limpia el bloque móvil",
+            "nullable": true,
+            "format": "uuid"
+          },
+          "background_movil_poster_objeto_id": {
+            "type": "string",
+            "description": "Imagen de portada para un fondo móvil de video",
+            "nullable": true,
+            "format": "uuid"
+          },
+          "background_movil_alt": {
+            "type": "string",
+            "maxLength": 160
+          },
+          "background_movil_activo": {
+            "type": "boolean",
+            "default": false
+          }
+        }
+      },
+      "ActualizarContenidoTiendaRequestDto": {
+        "type": "object",
+        "properties": {
+          "secciones": {
+            "description": "Orden y visibilidad de las secciones; null o [] las limpia",
+            "maxItems": 12,
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SeccionRequestDto"
+            }
+          },
+          "sobre_nosotros": {
+            "type": "string",
+            "description": "Texto \"sobre nosotros\"",
+            "maxLength": 2000
+          },
+          "politicas": {
+            "description": "Políticas de la tienda",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/PoliticasRequestDto"
+              }
+            ]
+          },
+          "redes": {
+            "description": "Redes sociales; null o [] las limpia",
+            "maxItems": 6,
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/RedSocialRequestDto"
+            }
+          },
+          "anuncio_texto": {
+            "type": "string",
+            "description": "Texto del anuncio superior",
+            "maxLength": 120
+          },
+          "anuncio_enlace": {
+            "type": "string",
+            "description": "Ruta relativa o URL HTTPS del anuncio",
+            "maxLength": 300
+          },
+          "anuncio_activo": {
+            "type": "boolean",
+            "description": "Si el anuncio está activo",
+            "default": false
           }
         }
       },
@@ -21141,6 +21598,63 @@ export const OPENAPI_AGREGADO = {
             "description": "Objeto de storage público confirmado como imagen; null para quitar el logo",
             "nullable": true,
             "format": "uuid"
+          }
+        }
+      },
+      "ActualizarPersonalizacionTiendaRequestDto": {
+        "type": "object",
+        "properties": {
+          "plantilla": {
+            "type": "string",
+            "description": "Plantilla visual base; null vuelve a heredar de empresa/plataforma",
+            "enum": [
+              "clasica",
+              "minimal",
+              "boutique",
+              "mercado"
+            ],
+            "nullable": true
+          },
+          "tema": {
+            "description": "Tokens de tema; null limpia los overrides y vuelve a heredar",
+            "nullable": true,
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/TemaRequestDto"
+              }
+            ]
+          },
+          "hero_titulo": {
+            "type": "string",
+            "maxLength": 80
+          },
+          "hero_subtitulo": {
+            "type": "string",
+            "maxLength": 160
+          },
+          "hero_cta_texto": {
+            "type": "string",
+            "maxLength": 40
+          },
+          "hero_cta_url": {
+            "type": "string",
+            "description": "Ruta relativa o URL HTTPS del CTA",
+            "maxLength": 300
+          },
+          "seo_titulo": {
+            "type": "string",
+            "maxLength": 70
+          },
+          "seo_descripcion": {
+            "type": "string",
+            "maxLength": 300
+          },
+          "seo_imagen_objeto_id": {
+            "type": "object",
+            "description": "Objeto de storage público confirmado como imagen; null para quitarla",
+            "format": "uuid",
+            "nullable": true
           }
         }
       },
@@ -21352,6 +21866,48 @@ export const OPENAPI_AGREGADO = {
           "paginas"
         ]
       },
+      "PoliticasRequestDto": {
+        "type": "object",
+        "properties": {
+          "envio": {
+            "type": "string",
+            "description": "Política de envío",
+            "maxLength": 1000
+          },
+          "devolucion": {
+            "type": "string",
+            "description": "Política de devolución",
+            "maxLength": 1000
+          },
+          "privacidad": {
+            "type": "string",
+            "description": "Política de privacidad",
+            "maxLength": 1000
+          }
+        }
+      },
+      "PoliticasResponseDto": {
+        "type": "object",
+        "properties": {
+          "envio": {
+            "type": "string",
+            "description": "Política de envío"
+          },
+          "devolucion": {
+            "type": "string",
+            "description": "Política de devolución"
+          },
+          "privacidad": {
+            "type": "string",
+            "description": "Política de privacidad"
+          }
+        },
+        "required": [
+          "envio",
+          "devolucion",
+          "privacidad"
+        ]
+      },
       "PublicarProductoRequestDto": {
         "type": "object",
         "properties": {
@@ -21376,6 +21932,127 @@ export const OPENAPI_AGREGADO = {
         "required": [
           "producto_id",
           "margen"
+        ]
+      },
+      "RedSocialRequestDto": {
+        "type": "object",
+        "properties": {
+          "red": {
+            "type": "string",
+            "description": "Red social",
+            "enum": [
+              "instagram",
+              "facebook",
+              "tiktok",
+              "x",
+              "whatsapp",
+              "youtube",
+              "otra"
+            ]
+          },
+          "url": {
+            "type": "string",
+            "description": "URL HTTPS del perfil",
+            "example": "https://instagram.com/mitienda"
+          }
+        },
+        "required": [
+          "red",
+          "url"
+        ]
+      },
+      "RedSocialResponseDto": {
+        "type": "object",
+        "properties": {
+          "red": {
+            "type": "string",
+            "description": "Red social",
+            "enum": [
+              "instagram",
+              "facebook",
+              "tiktok",
+              "x",
+              "whatsapp",
+              "youtube",
+              "otra"
+            ]
+          },
+          "url": {
+            "type": "string",
+            "description": "URL HTTPS del perfil"
+          }
+        },
+        "required": [
+          "red",
+          "url"
+        ]
+      },
+      "SeccionRequestDto": {
+        "type": "object",
+        "properties": {
+          "tipo": {
+            "type": "string",
+            "description": "Tipo de sección",
+            "enum": [
+              "hero",
+              "destacados",
+              "categorias",
+              "ofertas",
+              "sobre_nosotros",
+              "politicas",
+              "contacto",
+              "redes"
+            ]
+          },
+          "visible": {
+            "type": "boolean",
+            "description": "Si la sección se muestra",
+            "default": true
+          },
+          "orden": {
+            "type": "number",
+            "description": "Orden de la sección",
+            "minimum": 0,
+            "maximum": 11
+          }
+        },
+        "required": [
+          "tipo",
+          "visible",
+          "orden"
+        ]
+      },
+      "SeccionResponseDto": {
+        "type": "object",
+        "properties": {
+          "tipo": {
+            "type": "string",
+            "description": "Tipo de sección",
+            "enum": [
+              "hero",
+              "destacados",
+              "categorias",
+              "ofertas",
+              "sobre_nosotros",
+              "politicas",
+              "contacto",
+              "redes"
+            ]
+          },
+          "visible": {
+            "type": "boolean",
+            "description": "Si la sección se muestra"
+          },
+          "orden": {
+            "type": "number",
+            "description": "Orden de la sección",
+            "minimum": 0
+          }
+        },
+        "required": [
+          "tipo",
+          "visible",
+          "orden"
         ]
       },
       "TiendaPublicaResponseDto": {
@@ -21512,6 +22189,156 @@ export const OPENAPI_AGREGADO = {
           "background_activo": {
             "type": "boolean",
             "description": "Si el fondo está activo"
+          },
+          "background_movil_objeto_id": {
+            "type": "string",
+            "description": "Objeto de storage del fondo móvil",
+            "nullable": true,
+            "format": "uuid"
+          },
+          "background_movil_media_type": {
+            "type": "string",
+            "description": "Tipo derivado del fondo móvil",
+            "nullable": true,
+            "enum": [
+              "imagen",
+              "video"
+            ]
+          },
+          "background_movil_url": {
+            "type": "string",
+            "description": "URL pública derivada del fondo móvil",
+            "nullable": true
+          },
+          "background_movil_poster_objeto_id": {
+            "type": "string",
+            "description": "Objeto de storage del poster móvil",
+            "nullable": true,
+            "format": "uuid"
+          },
+          "background_movil_poster_url": {
+            "type": "string",
+            "description": "URL pública derivada del poster móvil",
+            "nullable": true
+          },
+          "background_movil_alt": {
+            "type": "string",
+            "description": "Texto alternativo del fondo móvil"
+          },
+          "background_movil_activo": {
+            "type": "boolean",
+            "description": "Si el fondo móvil está activo"
+          },
+          "plantilla": {
+            "type": "string",
+            "description": "Plantilla visual base (ADR-39)",
+            "enum": [
+              "clasica",
+              "minimal",
+              "boutique",
+              "mercado"
+            ]
+          },
+          "tema": {
+            "description": "Tokens de tema resueltos; siempre incluye todos los campos",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/TemaResponseDto"
+              }
+            ]
+          },
+          "origen_personalizacion": {
+            "description": "Origen de la plantilla y el tema efectivos (ADR-42)",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/OrigenPersonalizacionResponseDto"
+              }
+            ]
+          },
+          "hero_titulo": {
+            "type": "string",
+            "description": "Título del hero"
+          },
+          "hero_subtitulo": {
+            "type": "string",
+            "description": "Subtítulo del hero"
+          },
+          "hero_cta_texto": {
+            "type": "string",
+            "description": "Texto del CTA del hero"
+          },
+          "hero_cta_url": {
+            "type": "string",
+            "description": "Ruta o URL HTTPS del CTA del hero"
+          },
+          "seo_titulo": {
+            "type": "string",
+            "description": "Título SEO de la tienda"
+          },
+          "seo_descripcion": {
+            "type": "string",
+            "description": "Descripción SEO de la tienda"
+          },
+          "seo_imagen_objeto_id": {
+            "type": "object",
+            "description": "Objeto de storage de la imagen SEO",
+            "nullable": true,
+            "format": "uuid"
+          },
+          "seo_imagen_url": {
+            "type": "object",
+            "description": "URL pública derivada de la imagen SEO",
+            "nullable": true
+          },
+          "personalizacion_actualizada_en": {
+            "type": "object",
+            "description": "Última actualización de la personalización",
+            "nullable": true,
+            "format": "date-time"
+          },
+          "secciones": {
+            "description": "Orden y visibilidad de las secciones del storefront (ADR-40)",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SeccionResponseDto"
+            }
+          },
+          "sobre_nosotros": {
+            "type": "string",
+            "description": "Texto \"sobre nosotros\""
+          },
+          "politicas": {
+            "description": "Políticas de la tienda",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/PoliticasResponseDto"
+              }
+            ]
+          },
+          "redes": {
+            "description": "Redes sociales de la tienda",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/RedSocialResponseDto"
+            }
+          },
+          "anuncio_texto": {
+            "type": "string",
+            "description": "Texto del anuncio superior"
+          },
+          "anuncio_enlace": {
+            "type": "string",
+            "description": "Ruta o URL HTTPS del anuncio"
+          },
+          "anuncio_activo": {
+            "type": "boolean",
+            "description": "Si el anuncio está activo"
+          },
+          "contenido_actualizado_en": {
+            "type": "object",
+            "description": "Última actualización del contenido",
+            "nullable": true,
+            "format": "date-time"
           },
           "creado_en": {
             "type": "string",
