@@ -1026,3 +1026,30 @@ El PR #90 se completó utilizando convenciones atómicas (R-PR-1, R-GC-1..5) gar
   Build all services.
 - **Snapshot:** estado consolidado reescrito en [`AUDIT.md`](./AUDIT.md),
   conforme a R-COV-3.
+
+---
+
+# AUDIT (histórico) — 10ª auditoría de Core Engine (gobernanza, integración y cobertura)
+
+- **Fecha:** 2026-11-04
+- **Estado global:** 🟡 CUMPLE PARCIAL — los gates G-1, G-3, G-7 y G-8 permanecen
+  verdes; G-4 y G-6 siguen parciales y G-5 pendiente.
+
+## Intervención
+
+1. Se cerraron dos unidades adicionales de R-U-18/R-COV-2 con specs para
+   `PedidosConsumer` de commissions y `FacturacionService` de finance,
+   retirando ambas excepciones del baseline.
+2. La matriz queda en **1,105 tests y 110 archivos** en 12 workspaces; los
+   servicios/consumers con spec pasan de 24/39 a **26/39**, dejando 13/39
+   pendientes.
+3. `commissions-service` queda en 10 suites/47 tests y `finance-service` en
+   18 suites/140 tests; ambos alcanzan el objetivo 80/70 sin reducir thresholds.
+
+## Evidencia
+
+- **CI post-merge:** run `41901904723` sobre `develop` (`2dea998`) completado
+  con éxito en Security, Catalog stock, Rules, ESLint, Unit Tests + Coverage y
+  Build all services.
+- **Snapshot:** estado consolidado reescrito en [`AUDIT.md`](./AUDIT.md),
+  conforme a R-COV-3.
