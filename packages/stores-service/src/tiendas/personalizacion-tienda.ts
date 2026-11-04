@@ -305,3 +305,35 @@ export function conSeoImagenUrl(
       : null,
   };
 }
+
+const FUENTE_CSS: Record<Fuente, string> = {
+  system: 'system-ui, -apple-system, "Segoe UI", Roboto, sans-serif',
+  inter: 'Inter, system-ui, sans-serif',
+  poppins: 'Poppins, system-ui, sans-serif',
+  montserrat: 'Montserrat, system-ui, sans-serif',
+  playfair: '"Playfair Display", Georgia, serif',
+};
+
+/**
+ * Genera variables CSS a partir del tema resuelto. Es una comodidad para el
+ * storefront: el frontend puede aplicarlas directamente sin duplicar tokens.
+ */
+export function generarTemaCss(tema: Tema): string {
+  const modo =
+    tema.modo === 'auto' ? 'light dark' : tema.modo === 'oscuro' ? 'dark' : 'light';
+  const variables: [string, string][] = [
+    ['--tienda-color-primario', tema.color_primario],
+    ['--tienda-color-secundario', tema.color_secundario],
+    ['--tienda-color-acento', tema.color_acento],
+    ['--tienda-color-fondo', tema.color_fondo],
+    ['--tienda-color-texto', tema.color_texto],
+    ['--tienda-fuente', FUENTE_CSS[tema.fuente] ?? FUENTE_CSS.system],
+    ['--tienda-radio-bordes', `${tema.radio_bordes}px`],
+    ['--tienda-modo', tema.modo],
+    ['color-scheme', modo],
+  ];
+  const cuerpo = variables
+    .map(([nombre, valor]) => `  ${nombre}: ${valor};`)
+    .join('\n');
+  return `:root {\n${cuerpo}\n}\n`;
+}

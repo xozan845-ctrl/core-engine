@@ -166,6 +166,54 @@ export class TiendaResponseDto {
   background_activo?: boolean;
 
   @ApiProperty({
+    description: 'Objeto de storage del fondo móvil',
+    required: false,
+    nullable: true,
+    type: String,
+    format: 'uuid',
+  })
+  background_movil_objeto_id?: string | null;
+
+  @ApiProperty({
+    description: 'Tipo derivado del fondo móvil',
+    required: false,
+    nullable: true,
+    enum: ['imagen', 'video'],
+  })
+  background_movil_media_type?: 'imagen' | 'video' | null;
+
+  @ApiProperty({
+    description: 'URL pública derivada del fondo móvil',
+    required: false,
+    nullable: true,
+    type: String,
+  })
+  background_movil_url?: string | null;
+
+  @ApiProperty({
+    description: 'Objeto de storage del poster móvil',
+    required: false,
+    nullable: true,
+    type: String,
+    format: 'uuid',
+  })
+  background_movil_poster_objeto_id?: string | null;
+
+  @ApiProperty({
+    description: 'URL pública derivada del poster móvil',
+    required: false,
+    nullable: true,
+    type: String,
+  })
+  background_movil_poster_url?: string | null;
+
+  @ApiProperty({ description: 'Texto alternativo del fondo móvil', required: false })
+  background_movil_alt?: string;
+
+  @ApiProperty({ description: 'Si el fondo móvil está activo', required: false })
+  background_movil_activo?: boolean;
+
+  @ApiProperty({
     description: 'Plantilla visual base (ADR-39)',
     required: false,
     enum: PLANTILLAS,

@@ -3,6 +3,7 @@ import {
   PERSONALIZACION_POR_DEFECTO,
   TEMA_POR_DEFECTO,
   conSeoImagenUrl,
+  generarTemaCss,
   normalizarPersonalizacion,
   normalizarTema,
   personalizacionDe,
@@ -186,6 +187,30 @@ describe('personalización de tienda (ADR-39)', () => {
           .seo_imagen_url,
       ).toBe(`/api/v1/storage/public/objetos/${IMAGEN}`);
       expect(conSeoImagenUrl(personalizacionDe(null)).seo_imagen_url).toBeNull();
+    });
+  });
+
+  describe('generarTemaCss', () => {
+    it('genera variables CSS desde el tema resuelto', () => {
+      const css = generarTemaCss({
+        ...TEMA_POR_DEFECTO,
+        color_primario: '#112233',
+        fuente: 'poppins',
+        radio_bordes: 8,
+        modo: 'oscuro',
+      });
+
+      expect(css).toContain('--tienda-color-primario: #112233;');
+      expect(css).toContain('--tienda-fuente: Poppins, system-ui, sans-serif;');
+      expect(css).toContain('--tienda-radio-bordes: 8px;');
+      expect(css).toContain('--tienda-modo: oscuro;');
+      expect(css).toContain('color-scheme: dark;');
+    });
+
+    it('usa light dark cuando el modo es auto', () => {
+      expect(generarTemaCss({ ...TEMA_POR_DEFECTO, modo: 'auto' })).toContain(
+        'color-scheme: light dark;',
+      );
     });
   });
 });

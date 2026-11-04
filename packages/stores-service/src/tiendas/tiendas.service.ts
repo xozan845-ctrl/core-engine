@@ -15,12 +15,18 @@ import {
 import {
   BackgroundInput,
   BackgroundMediaType,
+  BackgroundMovilCampos,
+  BackgroundMovilInput,
   BackgroundPosition,
   ValidadorMediaBackground,
   backgroundDe,
+  backgroundMovilDe,
+  conBackgroundMovilUrls,
   conBackgroundUrls,
   normalizarBackground,
+  normalizarBackgroundMovil,
   validarBackground,
+  validarBackgroundMovil,
 } from './media-background';
 import {
   PersonalizacionCampos,
@@ -38,7 +44,7 @@ import {
   validarContenido,
 } from './contenido-tienda';
 
-export interface Tienda extends PersonalizacionCampos, ContenidoCampos {
+export interface Tienda extends PersonalizacionCampos, ContenidoCampos, BackgroundMovilCampos {
   id: string;
   empresa_id: string;
   propietario_usuario_id: string;
@@ -74,7 +80,7 @@ interface TiendaConEstadoSlug extends Tienda {
 }
 
 const CAMPOS_TIENDA =
-  'id, empresa_id, propietario_usuario_id, participacion_porcentaje, vendedor_id, nombre, descripcion, slug, logo_objeto_id, background_objeto_id, background_media_type, background_poster_objeto_id, background_alt, background_overlay, background_position, background_activo, plantilla, tema, hero_titulo, hero_subtitulo, hero_cta_texto, hero_cta_url, seo_titulo, seo_descripcion, seo_imagen_objeto_id, personalizacion_actualizada_en, secciones, sobre_nosotros, politicas, redes, anuncio_texto, anuncio_enlace, anuncio_activo, contenido_actualizado_en, creado_en, actualizado_en';
+  'id, empresa_id, propietario_usuario_id, participacion_porcentaje, vendedor_id, nombre, descripcion, slug, logo_objeto_id, background_objeto_id, background_media_type, background_poster_objeto_id, background_alt, background_overlay, background_position, background_activo, background_movil_objeto_id, background_movil_media_type, background_movil_poster_objeto_id, background_movil_alt, background_movil_activo, plantilla, tema, hero_titulo, hero_subtitulo, hero_cta_texto, hero_cta_url, seo_titulo, seo_descripcion, seo_imagen_objeto_id, personalizacion_actualizada_en, secciones, sobre_nosotros, politicas, redes, anuncio_texto, anuncio_enlace, anuncio_activo, contenido_actualizado_en, creado_en, actualizado_en';
 const MAX_INTENTOS_SLUG = 50;
 
 /**
@@ -236,7 +242,7 @@ export class TiendasService {
   async actualizarBackground(
     actor: { user_id: string; rol: string; tenant_id?: string },
     identificador: string,
-    datos: BackgroundInput,
+    datos: BackgroundInput & BackgroundMovilInput,
   ): Promise<Tienda> {
     const resuelta = await this.resolver(identificador);
     if (!resuelta) throw new NotFoundError('Tienda', identificador);
@@ -245,6 +251,8 @@ export class TiendasService {
 
     const meta = normalizarBackground(datos, backgroundDe(tienda));
     validarBackground(datos, meta);
+    const metaMovil = normalizarBackgroundMovil(datos, backgroundMovilDe(tienda));
+    validarBackgroundMovil(datos, metaMovil);
 
     if (
       meta.background_objeto_id &&
@@ -265,14 +273,36 @@ export class TiendasService {
         'poster',
       );
     }
+    if (
+      metaMovil.background_movil_objeto_id &&
+      metaMovil.background_movil_objeto_id !== tienda.background_movil_objeto_id
+    ) {
+      metaMovil.background_movil_media_type = await this.validadorMedia.validar(
+        tienda.empresa_id,
+        metaMovil.background_movil_objeto_id,
+      );
+    }
+    if (
+      metaMovil.background_movil_poster_objeto_id &&
+      metaMovil.background_movil_poster_objeto_id !==
+        tienda.background_movil_poster_objeto_id
+    ) {
+      await this.validadorMedia.validar(
+        tienda.empresa_id,
+        metaMovil.background_movil_poster_objeto_id,
+        'poster',
+      );
+    }
 
     const fila = await this.pg.queryOne<Tienda>(
       `UPDATE stores.tiendas SET
          background_objeto_id=$1, background_media_type=$2,
          background_poster_objeto_id=$3, background_alt=$4,
          background_overlay=$5, background_position=$6, background_activo=$7,
-         actualizado_en=NOW()
-       WHERE id=$8 RETURNING ${CAMPOS_TIENDA}`,
+         background_movil_objeto_id=$8, background_movil_media_type=$9,
+         background_movil_poster_objeto_id=$10, background_movil_alt=$11,
+         background_movil_activo=$12, actualizado_en=NOW()
+       WHERE id=$13 RETURNING ${CAMPOS_TIENDA}`,
       [
         meta.background_objeto_id,
         meta.background_media_type,
@@ -281,6 +311,11 @@ export class TiendasService {
         meta.background_overlay,
         meta.background_position,
         meta.background_activo,
+        metaMovil.background_movil_objeto_id,
+        metaMovil.background_movil_media_type,
+        metaMovil.background_movil_poster_objeto_id,
+        metaMovil.background_movil_alt,
+        metaMovil.background_movil_activo,
         tienda.id,
       ],
     );
@@ -444,6 +479,7 @@ export class TiendasService {
       ...tienda,
       ...logo,
       ...conBackgroundUrls(backgroundDe(tienda)),
+      ...conBackgroundMovilUrls(backgroundMovilDe(tienda)),
       ...personalizacion,
       ...conSeoImagenUrl(personalizacion),
       ...contenidoDe(tienda),

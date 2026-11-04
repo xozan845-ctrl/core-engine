@@ -454,6 +454,12 @@ describe('Gateway auth — slugs de empresa y tienda (ADR-26)', () => {
     expect(next).toHaveBeenCalled();
   });
 
+  it('debe permitir el CSS del tema de la tienda sin token', () => {
+    const { res, next } = evaluar('/api/v1/tiendas/mi-tienda/tema.css', 'GET');
+    expect(res.statusCode).toBe(200);
+    expect(next).toHaveBeenCalled();
+  });
+
   it('debe permitir al vendedor cambiar el slug de su tienda', () => {
     const { res, next } = evaluar('/api/v1/tiendas/mi-tienda/slug', 'PATCH', ROLES.VENDEDOR);
     expect(res.statusCode).toBe(200);

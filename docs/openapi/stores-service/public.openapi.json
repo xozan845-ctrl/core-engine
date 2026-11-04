@@ -104,6 +104,47 @@
         ]
       }
     },
+    "/api/v1/tiendas/{id}/tema.css": {
+      "get": {
+        "operationId": "TiendasSlugController_temaCss",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "description": "UUID de la tienda o su slug actual",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Variables CSS del tema resuelto",
+            "content": {
+              "text/css": {
+                "schema": {
+                  "type": "string",
+                  "example": ":root { --tienda-color-primario: #1F2937; }"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Tienda inexistente (NO_ENCONTRADO)"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Variables CSS del tema de la tienda (público)",
+        "tags": [
+          "Tiendas"
+        ]
+      }
+    },
     "/api/v1/tiendas/{id}/logo": {
       "patch": {
         "operationId": "TiendasSlugController_actualizarLogo",
@@ -554,6 +595,26 @@
             "default": "center"
           },
           "background_activo": {
+            "type": "boolean",
+            "default": false
+          },
+          "background_movil_objeto_id": {
+            "type": "string",
+            "description": "Objeto de storage del fondo móvil; null limpia el bloque móvil",
+            "nullable": true,
+            "format": "uuid"
+          },
+          "background_movil_poster_objeto_id": {
+            "type": "string",
+            "description": "Imagen de portada para un fondo móvil de video",
+            "nullable": true,
+            "format": "uuid"
+          },
+          "background_movil_alt": {
+            "type": "string",
+            "maxLength": 160
+          },
+          "background_movil_activo": {
             "type": "boolean",
             "default": false
           }
@@ -1333,6 +1394,45 @@
           "background_activo": {
             "type": "boolean",
             "description": "Si el fondo está activo"
+          },
+          "background_movil_objeto_id": {
+            "type": "string",
+            "description": "Objeto de storage del fondo móvil",
+            "nullable": true,
+            "format": "uuid"
+          },
+          "background_movil_media_type": {
+            "type": "string",
+            "description": "Tipo derivado del fondo móvil",
+            "nullable": true,
+            "enum": [
+              "imagen",
+              "video"
+            ]
+          },
+          "background_movil_url": {
+            "type": "string",
+            "description": "URL pública derivada del fondo móvil",
+            "nullable": true
+          },
+          "background_movil_poster_objeto_id": {
+            "type": "string",
+            "description": "Objeto de storage del poster móvil",
+            "nullable": true,
+            "format": "uuid"
+          },
+          "background_movil_poster_url": {
+            "type": "string",
+            "description": "URL pública derivada del poster móvil",
+            "nullable": true
+          },
+          "background_movil_alt": {
+            "type": "string",
+            "description": "Texto alternativo del fondo móvil"
+          },
+          "background_movil_activo": {
+            "type": "boolean",
+            "description": "Si el fondo móvil está activo"
           },
           "plantilla": {
             "type": "string",

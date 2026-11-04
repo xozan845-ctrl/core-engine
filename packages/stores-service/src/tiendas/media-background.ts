@@ -157,6 +157,136 @@ export function conBackgroundUrls(campos: BackgroundCampos): BackgroundConUrls {
   };
 }
 
+/** Variante móvil del fondo (ADR-41): solo objeto, poster, alt y activo. */
+export interface BackgroundMovilInput {
+  background_movil_objeto_id?: string | null;
+  background_movil_poster_objeto_id?: string | null;
+  background_movil_alt?: string;
+  background_movil_activo?: boolean;
+}
+
+export interface BackgroundMovilCampos {
+  background_movil_objeto_id: string | null;
+  background_movil_media_type: BackgroundMediaType | null;
+  background_movil_poster_objeto_id: string | null;
+  background_movil_alt: string;
+  background_movil_activo: boolean;
+}
+
+export interface BackgroundMovilConUrls extends BackgroundMovilCampos {
+  background_movil_url: string | null;
+  background_movil_poster_url: string | null;
+}
+
+export const BACKGROUND_MOVIL_POR_DEFECTO: Readonly<BackgroundMovilCampos> = Object.freeze({
+  background_movil_objeto_id: null,
+  background_movil_media_type: null,
+  background_movil_poster_objeto_id: null,
+  background_movil_alt: '',
+  background_movil_activo: false,
+});
+
+export function backgroundMovilDe(
+  fila?: Partial<BackgroundMovilCampos> | null,
+): BackgroundMovilCampos {
+  if (!fila) return { ...BACKGROUND_MOVIL_POR_DEFECTO };
+  return {
+    background_movil_objeto_id: fila.background_movil_objeto_id ?? null,
+    background_movil_media_type: fila.background_movil_media_type ?? null,
+    background_movil_poster_objeto_id: fila.background_movil_poster_objeto_id ?? null,
+    background_movil_alt: fila.background_movil_alt ?? '',
+    background_movil_activo: fila.background_movil_activo ?? false,
+  };
+}
+
+export function normalizarBackgroundMovil(
+  datos: BackgroundMovilInput,
+  actual?: BackgroundMovilCampos | null,
+): BackgroundMovilCampos {
+  const base = actual ?? BACKGROUND_MOVIL_POR_DEFECTO;
+  if (datos.background_movil_objeto_id === null) return { ...BACKGROUND_MOVIL_POR_DEFECTO };
+
+  const objetoId =
+    datos.background_movil_objeto_id !== undefined
+      ? datos.background_movil_objeto_id
+      : base.background_movil_objeto_id;
+  const mismoObjeto = objetoId === base.background_movil_objeto_id;
+  return {
+    background_movil_objeto_id: objetoId,
+    background_movil_media_type: mismoObjeto ? base.background_movil_media_type : null,
+    background_movil_poster_objeto_id:
+      datos.background_movil_poster_objeto_id !== undefined
+        ? datos.background_movil_poster_objeto_id
+        : base.background_movil_poster_objeto_id,
+    background_movil_alt:
+      datos.background_movil_alt !== undefined
+        ? datos.background_movil_alt.trim()
+        : base.background_movil_alt,
+    background_movil_activo:
+      datos.background_movil_activo !== undefined
+        ? datos.background_movil_activo
+        : base.background_movil_activo,
+  };
+}
+
+export function validarBackgroundMovil(
+  datos: BackgroundMovilInput,
+  meta: BackgroundMovilCampos,
+): void {
+  if (!meta.background_movil_objeto_id) {
+    if (datos.background_movil_activo === true) {
+      throw new DomainError(
+        ERROR_INVALIDO,
+        'No se puede activar un fondo móvil sin objeto.',
+      );
+    }
+    if (datos.background_movil_poster_objeto_id) {
+      throw new DomainError(
+        ERROR_INVALIDO,
+        'El poster móvil requiere un objeto de fondo móvil.',
+      );
+    }
+  }
+  if (meta.background_movil_objeto_id !== null && !esUuid(meta.background_movil_objeto_id)) {
+    throw new DomainError(
+      ERROR_INVALIDO,
+      'El fondo móvil debe ser un objeto de storage válido.',
+    );
+  }
+  if (
+    meta.background_movil_poster_objeto_id !== null &&
+    !esUuid(meta.background_movil_poster_objeto_id)
+  ) {
+    throw new DomainError(
+      ERROR_INVALIDO,
+      'El poster móvil debe ser un objeto de storage válido.',
+    );
+  }
+  if (meta.background_movil_alt.length > 160) {
+    throw new DomainError(
+      ERROR_INVALIDO,
+      'El texto alternativo móvil supera 160 caracteres.',
+    );
+  }
+  if (typeof meta.background_movil_activo !== 'boolean') {
+    throw new DomainError(ERROR_INVALIDO, 'El estado activo móvil debe ser booleano.');
+  }
+}
+
+export function conBackgroundMovilUrls(
+  campos: BackgroundMovilCampos,
+): BackgroundMovilConUrls {
+  return {
+    ...campos,
+    background_movil_url: campos.background_movil_objeto_id
+      ? `/api/v1/storage/public/objetos/${campos.background_movil_objeto_id}`
+      : null,
+    background_movil_poster_url: campos.background_movil_poster_objeto_id
+      ? `/api/v1/storage/public/objetos/${campos.background_movil_poster_objeto_id}`
+      : null,
+  };
+}
+
 /**
  * Valida un objeto contra storage-service (metadata interna) y devuelve el
  * tipo derivado. El poster solo admite imagenes.

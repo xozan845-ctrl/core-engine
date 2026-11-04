@@ -75,6 +75,7 @@ export const POLITICAS_RUTAS: PoliticaRuta[] = [
       metodos: ['PATCH'],
       roles: [ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.VENDEDOR, ROLES.EMPRESARIO],
     },
+    { patron: /^\/api\/v1\/tiendas\/[^/]+\/tema\.css$/, metodos: ['GET'], roles: null },
     { patron: /^\/api\/v1\/tiendas\/[^/]+$/, metodos: ['GET'], roles: null },
     // usuarios: gestion administrativa (sustituye a Firebase gestion-usuarios)
     {

@@ -21,6 +21,13 @@ const tienda = {
   background_activo: false,
   background_url: null,
   background_poster_url: null,
+  background_movil_objeto_id: null,
+  background_movil_media_type: null,
+  background_movil_poster_objeto_id: null,
+  background_movil_alt: '',
+  background_movil_activo: false,
+  background_movil_url: null,
+  background_movil_poster_url: null,
   plantilla: 'clasica',
   tema: {
     color_primario: '#1F2937',
@@ -517,7 +524,7 @@ describe('TiendasService · fondo de tienda (ADR-38)', () => {
     });
     expect(pg.queryOne).toHaveBeenLastCalledWith(
       expect.stringContaining('background_objeto_id=$1'),
-      [fondoId, 'video', posterId, '', 35, 'center', true, 't1'],
+      [fondoId, 'video', posterId, '', 35, 'center', true, null, null, null, '', false, 't1'],
     );
   });
 
@@ -679,6 +686,136 @@ describe('TiendasService · fondo de tienda (ADR-38)', () => {
         background_url: `/api/v1/storage/public/objetos/${fondoId}`,
       }),
     ]);
+  });
+});
+
+describe('TiendasService · fondo móvil (ADR-41)', () => {
+  const movilId = '55555555-6666-4777-8888-999999999999';
+  const posterId = '66666666-7777-4888-8999-aaaaaaaaaaaa';
+  const base = { ...tienda, actualizado_en: tienda.creado_en };
+
+  afterEach(() => vi.unstubAllGlobals());
+
+  const media = (contentType: string) => ({
+    ok: true,
+    status: 200,
+    json: async () => ({
+      tenant_id: 'e1',
+      estado: 'activo',
+      publico: true,
+      content_type: contentType,
+    }),
+  });
+
+  it('valida video y poster móvil y deriva sus URLs', async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(media('video/webm'))
+      .mockResolvedValueOnce(media('image/png'));
+    vi.stubGlobal('fetch', fetchMock);
+    const actualizada = {
+      ...base,
+      background_movil_objeto_id: movilId,
+      background_movil_media_type: 'video' as const,
+      background_movil_poster_objeto_id: posterId,
+      background_movil_activo: true,
+    };
+    const pg = {
+      queryOne: vi.fn()
+        .mockResolvedValueOnce({ ...base, es_actual: true })
+        .mockResolvedValueOnce(actualizada),
+      query: vi.fn(),
+    };
+    const servicio = new TiendasService(pg as never);
+
+    const resultado = await servicio.actualizarBackground(
+      { user_id: 'v1', rol: 'vendedor', tenant_id: 'e1' },
+      't1',
+      {
+        background_movil_objeto_id: movilId,
+        background_movil_poster_objeto_id: posterId,
+        background_movil_activo: true,
+      },
+    );
+
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(resultado).toMatchObject({
+      background_movil_media_type: 'video',
+      background_movil_url: `/api/v1/storage/public/objetos/${movilId}`,
+      background_movil_poster_url: `/api/v1/storage/public/objetos/${posterId}`,
+      background_movil_activo: true,
+    });
+  });
+
+  it('limpia el bloque móvil con null sin consultar storage', async () => {
+    const conMovil = {
+      ...base,
+      background_movil_objeto_id: movilId,
+      background_movil_media_type: 'imagen' as const,
+      background_movil_poster_objeto_id: posterId,
+      background_movil_alt: 'texto',
+      background_movil_activo: true,
+    };
+    const fetchMock = vi.fn();
+    vi.stubGlobal('fetch', fetchMock);
+    const pg = {
+      queryOne: vi.fn()
+        .mockResolvedValueOnce({ ...conMovil, es_actual: true })
+        .mockResolvedValueOnce(base),
+      query: vi.fn(),
+    };
+    const servicio = new TiendasService(pg as never);
+
+    const resultado = await servicio.actualizarBackground(
+      { user_id: 'v1', rol: 'vendedor', tenant_id: 'e1' },
+      't1',
+      { background_movil_objeto_id: null },
+    );
+
+    expect(fetchMock).not.toHaveBeenCalled();
+    expect(resultado).toMatchObject({
+      background_movil_objeto_id: null,
+      background_movil_media_type: null,
+      background_movil_poster_objeto_id: null,
+      background_movil_url: null,
+      background_movil_poster_url: null,
+      background_movil_alt: '',
+      background_movil_activo: false,
+    });
+  });
+
+  it('rechaza activar el fondo móvil sin objeto', async () => {
+    const servicio = new TiendasService({
+      queryOne: vi.fn().mockResolvedValueOnce({ ...base, es_actual: true }),
+      query: vi.fn(),
+    } as never);
+
+    await expect(
+      servicio.actualizarBackground(
+        { user_id: 'v1', rol: 'vendedor', tenant_id: 'e1' },
+        't1',
+        { background_movil_activo: true },
+      ),
+    ).rejects.toMatchObject({ codigo: 'BACKGROUND_INVALIDO' });
+  });
+
+  it('expone las URLs móviles al consultar tiendas', async () => {
+    const conMovil = {
+      ...base,
+      background_movil_objeto_id: movilId,
+      background_movil_media_type: 'imagen' as const,
+      background_movil_poster_objeto_id: posterId,
+    };
+    const pg = {
+      queryOne: vi.fn().mockResolvedValue({ ...conMovil, es_actual: true }),
+      query: vi.fn().mockResolvedValue([conMovil]),
+    };
+    const servicio = new TiendasService(pg as never);
+
+    await expect(servicio.deVendedor('v1')).resolves.toMatchObject({
+      background_movil_url: `/api/v1/storage/public/objetos/${movilId}`,
+      background_movil_poster_url: `/api/v1/storage/public/objetos/${posterId}`,
+    });
   });
 });
 

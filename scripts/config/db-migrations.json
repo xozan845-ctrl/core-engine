@@ -29,5 +29,6 @@
   "17_media_background_empresa.sql": "873b219e234dd4643e73cbd2f8cd47451b59e85537da9da854dcabb04b27d17e",
   "18_media_background_tienda.sql": "6d971f7e694f862a60260686b6e64fa456ff1c7fa7ca129855a51949e153846f",
   "19_personalizacion_tienda.sql": "3960a9ab10a53eb403be0af27689fd3237f4316faa14579938e992ac4f95152f",
-  "20_contenido_tienda.sql": "6028cdbfc3e9ae13875e0ab17ab0a206b0919c493b77de8aa4c0f5a9e882ed62"
+  "20_contenido_tienda.sql": "6028cdbfc3e9ae13875e0ab17ab0a206b0919c493b77de8aa4c0f5a9e882ed62",
+  "21_variantes_moviles_tienda.sql": "d264b6a232fc19ed57bfc23627cd5e726337badd86cfb4d3e663d676804daeb9"
 }
