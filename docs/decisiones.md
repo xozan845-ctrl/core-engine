@@ -1085,6 +1085,52 @@ Este archivo registra decisiones técnicas deliberadas que se apartan del texto 
 
 ---
 
+## ADR-39: Giros comerciales y canal de venta del pedido
+
+- **Fecha**: 2026-11-04
+- **Estado**: Aceptado
+- **Contexto**: la plataforma modela `tipo_empresa` como una clasificación
+  operativa (`comercial`, `logistica`, `plataforma`), no como el giro del
+  negocio. Eso permite operar ferreterías y pulperías como empresas
+  `comercial`, pero deja a restaurantes y bares atrapados en un flujo de
+  e-commerce: todo pedido pagado genera un envío, aunque sea para recoger o
+  consumir en el local. Además, la red de repartidores ya existente puede
+  transportar pedidos de restaurante/bar si el canal se modela correctamente.
+- **Decisión**:
+  1. Reutilizar `identity.empresas.sector` como **etiqueta de giro**
+     (`tienda`, `restaurante`, `bar`, `ferreteria`, `pulperia`, `otro`), sin
+     añadir una columna nueva ni cambiar `tipo_empresa`. Todos los giros siguen
+     siendo `comercial` y conservan su catálogo. `sector` sigue siendo texto
+     libre para no romper empresas existentes con otros rubros.
+  2. Añadir `orders.orden_vista.tipo_entrega` con los valores `delivery`,
+     `pickup` y `consumo_local`; por defecto `delivery` para no romper pedidos
+     ni eventos históricos.
+  3. Propagar el canal en `OrderCreatedEvent` y en `payment.procesado`. La
+     proyección lo toma del evento mediante un trigger `BEFORE INSERT`, de modo
+     que el event store sigue siendo la fuente de verdad.
+  4. `logistics-service` sólo prepara envíos cuando el canal es `delivery`.
+     `pickup` y `consumo_local` no crean guía ni emiten `shipment.started`; el
+     negocio cierra la orden con la transición de estado existente.
+  5. Permitir `notas` libres por línea (`ItemOrdenRequestDto.notas`), sin
+     impacto en el precio, para “sin cebolla”, “término medio”, etc.
+  6. Extender el ciclo de la orden con `servida` (mesa/barra). Se permite
+     `pagada → servida` y `en_preparacion → servida`; las comisiones devengan
+     igual que al entregar y una devolución posterior las revierte.
+- **Consecuencias**:
+  - Los repartidores reciben también los pedidos `delivery` de restaurantes y
+    bares por el mismo circuito (`shipment.started`, `logistics.envios`).
+  - Un restaurante puede vender para recoger o consumir en el local sin que se
+    genere un envío fantasma.
+  - Las migraciones son aditivas e idempotentes: `20_canal_venta.sql` y
+    `22_estado_servida.sql`.
+  - El giro se expone con el vocabulario de `GIROS_EMPRESA` en OpenAPI, pero
+    `sector` no se valida de forma estricta para mantener compatibilidad.
+  - Mesas, reservas, KDS, modificadores con precio, recetas/BOM y venta de
+    mostrador quedan como evolución posterior; este ADR habilita el canal y la
+    etiqueta sin comprometer el modelo actual.
+
+---
+
 ## Resumen de cumplimiento post-corrección
 
 | Ítem del documento          | Estado  | Nota |

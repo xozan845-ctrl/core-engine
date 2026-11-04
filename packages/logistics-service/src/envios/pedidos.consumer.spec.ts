@@ -99,6 +99,30 @@ describe('PedidosConsumer de logistics (Tabla 22)', () => {
     );
   });
 
+  it.each(['pickup', 'consumo_local'])(
+    'no prepara envio cuando el canal es %s (ADR-39)',
+    async (tipoEntrega) => {
+      const { dispatch, envios, outbox, pg } = await crear();
+      const data = {
+        order_id: 'o1',
+        monto_cents: 150000,
+        estado: 'procesado',
+        metodo: 'simulado',
+        tipo_entrega: tipoEntrega,
+      } as PaymentProcesadoData;
+
+      await dispatch(evento(EVENTOS.PAYMENT_PROCESADO, data));
+
+      expect(envios.prepararEnviosDeOrden).not.toHaveBeenCalled();
+      expect(outbox.insertar).not.toHaveBeenCalled();
+      // El evento se marca procesado para mantener la idempotencia.
+      expect(pg.query).toHaveBeenCalledWith(
+        expect.stringContaining('ON CONFLICT (event_id) DO NOTHING'),
+        ['evt-1', EVENTOS.PAYMENT_PROCESADO],
+      );
+    },
+  );
+
   it('debe ignorar el pago cuando el event_id ya fue procesado (doc 5.2)', async () => {
     const { dispatch, envios, outbox, pg } = await crear();
     (pg.queryOne as Mock).mockResolvedValue({ '?column?': 1 });
@@ -131,6 +155,22 @@ describe('PedidosConsumer de logistics (Tabla 22)', () => {
       expect.objectContaining({ order_id: 'o1' }),
     );
     expect(envios.consultarOrden).not.toHaveBeenCalled();
+  });
+
+  it('debe emitir order.completado cuando la orden queda servida (ADR-39)', async () => {
+    const { dispatch, outbox } = await crear();
+    const data = {
+      order_id: 'o2',
+      estado: 'servida',
+      previo_estado: 'en_preparacion',
+    } as OrderStatusUpdatedData;
+
+    await dispatch(evento(EVENTOS.ORDER_STATUS_UPDATED, data, 'evt-servida'));
+
+    expect(outbox.insertar).toHaveBeenCalledWith(
+      EVENTOS.ORDER_COMPLETADO,
+      expect.objectContaining({ order_id: 'o2' }),
+    );
   });
 
   it('debe emitir devolucion.solicitada con los items de la orden cuando se devuelve', async () => {

@@ -78,7 +78,7 @@ describe('constants (reglas de negocio y configuracion)', () => {
     expect([...STORAGE_CONTENT_TYPES_DEFAULT]).toContain('video/webm');
   });
 
-  it('debe marcar solo enviada y entregada como estados visibles al publico', () => {
-    expect([...ESTADOS_VISIBLES_PUBLICO]).toEqual(['enviada', 'entregada']);
+  it('debe marcar enviada, entregada y servida como estados visibles al publico', () => {
+    expect([...ESTADOS_VISIBLES_PUBLICO]).toEqual(['enviada', 'entregada', 'servida']);
   });
 });

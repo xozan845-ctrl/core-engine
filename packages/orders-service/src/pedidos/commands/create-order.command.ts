@@ -3,13 +3,16 @@ import { Type } from 'class-transformer';
 import {
   IsArray,
   IsBoolean,
+  IsIn,
   IsInt,
   IsOptional,
   IsString,
   Max,
+  MaxLength,
   Min,
   ValidateNested,
 } from 'class-validator';
+import { TIPOS_ENTREGA, TipoEntrega } from '@core/shared';
 
 export class ItemOrdenRequestDto {
   @ApiProperty({ description: 'Id de la oferta (vendedor-producto)' })
@@ -21,6 +24,16 @@ export class ItemOrdenRequestDto {
   @Min(1)
   @Max(99)
   cantidad: number;
+
+  @ApiProperty({
+    description: 'Nota libre por línea (ej. "sin cebolla", "término medio")',
+    required: false,
+    maxLength: 280,
+  })
+  @IsOptional()
+  @IsString()
+  @MaxLength(280)
+  notas?: string;
 }
 
 /**
@@ -42,4 +55,14 @@ export class CreateOrderCommand {
   @IsOptional()
   @IsBoolean()
   usar_carrito?: boolean;
+
+  @ApiProperty({
+    description: 'Canal de venta (ADR-39). delivery usa repartidores; pickup y consumo_local no generan envío.',
+    required: false,
+    enum: TIPOS_ENTREGA,
+    default: 'delivery',
+  })
+  @IsOptional()
+  @IsIn([...TIPOS_ENTREGA])
+  tipo_entrega?: TipoEntrega;
 }

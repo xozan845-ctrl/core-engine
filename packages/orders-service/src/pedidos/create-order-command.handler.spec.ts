@@ -180,6 +180,52 @@ describe('CreateOrderCommandHandler (CQRS + Event Sourcing)', () => {
     expect(vista.total_cents).toBe(345000); // 3 x 1150.00
   });
 
+  it('por defecto el canal de venta es delivery y se persiste en evento y vista', async () => {
+    const { handler, store } = crearHandler([ofertaActiva], 'ok');
+    const vista = await handler.ejecutar(
+      { items: [{ oferta_id: 'oferta-1', cantidad: 1 }] },
+      'comprador-1',
+    );
+    expect(vista.tipo_entrega).toBe('delivery');
+    const datos = store.appendEnTransaccion.mock.calls[0][3] as { tipo_entrega?: string };
+    expect(datos.tipo_entrega).toBe('delivery');
+  });
+
+  it('respeta pickup/consumo_local en el evento y la vista (ADR-39)', async () => {
+    const { handler, store } = crearHandler([ofertaActiva], 'ok');
+    const vista = await handler.ejecutar(
+      { items: [{ oferta_id: 'oferta-1', cantidad: 1 }], tipo_entrega: 'pickup' },
+      'comprador-1',
+    );
+    expect(vista.tipo_entrega).toBe('pickup');
+    const datos = store.appendEnTransaccion.mock.calls[0][3] as { tipo_entrega?: string };
+    expect(datos.tipo_entrega).toBe('pickup');
+  });
+
+  it('conserva notas por linea y no fusiona lineas con notas distintas', async () => {
+    const { handler } = crearHandler([ofertaActiva], 'ok');
+    const vista = await handler.ejecutar(
+      {
+        items: [
+          { oferta_id: 'oferta-1', cantidad: 1, notas: 'sin cebolla' },
+          { oferta_id: 'oferta-1', cantidad: 1, notas: 'sin cebolla' },
+          { oferta_id: 'oferta-1', cantidad: 1, notas: 'extra queso' },
+          { oferta_id: 'oferta-1', cantidad: 2 },
+        ],
+      },
+      'comprador-1',
+    );
+    expect(vista.items).toHaveLength(3);
+    expect(vista.items).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ cantidad: 2, notas: 'sin cebolla' }),
+        expect.objectContaining({ cantidad: 1, notas: 'extra queso' }),
+        expect.objectContaining({ cantidad: 2 }),
+      ]),
+    );
+    expect(vista.total_cents).toBe(5 * 115000);
+  });
+
   it('carrito vacio se rechaza (RN-05)', async () => {
     const { handler } = crearHandler([ofertaActiva], 'ok');
     await expect(handler.ejecutar({ items: [] }, 'comprador-1')).rejects.toMatchObject({

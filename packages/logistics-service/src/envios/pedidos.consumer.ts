@@ -56,6 +56,17 @@ export class PedidosConsumer implements OnModuleInit {
   private async pagoProcesado(evento: EventoBus<PaymentProcesadoData>): Promise<void> {
     if (await this.yaProcesado(evento)) return;
     const { order_id } = evento.data;
+    // ADR-39: pickup y consumo_local no generan envío; solo delivery entra a la
+    // red de repartidores y dispara shipment.started.
+    if (evento.data.tipo_entrega && evento.data.tipo_entrega !== 'delivery') {
+      this.logger.info({
+        msg: 'Orden sin envío: canal no delivery',
+        order_id,
+        tipo_entrega: evento.data.tipo_entrega,
+      });
+      await this.marcarProcesado(evento);
+      return;
+    }
     const envios = await this.envios.prepararEnviosDeOrden(order_id);
     for (const envio of envios) {
       await this.outbox.insertar(EVENTOS.SHIPMENT_STARTED, {
@@ -83,13 +94,17 @@ export class PedidosConsumer implements OnModuleInit {
       vendedor: true,
     });
 
-    if (estado === 'entregada') {
-      // las comisiones devengan comision por orden completada
+    if (estado === 'entregada' || estado === 'servida') {
+      // las comisiones devengan comision por orden completada (entrega o mesa)
       await this.outbox.insertar(EVENTOS.ORDER_COMPLETADO, {
         order_id,
         entregado_en: new Date().toISOString(),
       });
-      this.logger.info({ msg: 'Orden completada: comision listo para devengar', order_id });
+      this.logger.info({
+        msg: 'Orden completada: comision listo para devengar',
+        order_id,
+        estado,
+      });
     } else if (estado === 'devuelta') {
       const orden = await this.envios.consultarOrden(order_id);
       const items = (orden?.items ?? []).map((i) => ({

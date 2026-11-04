@@ -65,6 +65,7 @@ export class CreateOrderCommandHandler {
     if (!lineas?.length) {
       throw new DomainError('CARRITO_VACIO', 'El carrito no puede estar vacio (RN-05).');
     }
+    const tipoEntrega = comando.tipo_entrega ?? 'delivery';
     const agrupados = this.agrupar(lineas);
 
     // 1. enriquecer con precios finales del stores-service (RN-01)
@@ -89,6 +90,7 @@ export class CreateOrderCommandHandler {
         tienda_id: oferta.tienda_id,
         empresa_id: oferta.empresa_id,
         participacion_porcentaje: oferta.participacion_porcentaje,
+        ...(linea.notas ? { notas: linea.notas } : {}),
       });
     }
 
@@ -106,6 +108,7 @@ export class CreateOrderCommandHandler {
         total_cents: total.centavos,
         estado: 'creada',
         creado_en: creadoEn,
+        tipo_entrega: tipoEntrega,
       });
       const evento = {
         event_id: randomUUID(),
@@ -117,6 +120,7 @@ export class CreateOrderCommandHandler {
           items,
           total_cents: total.centavos,
           estado: 'creada',
+          tipo_entrega: tipoEntrega,
         },
       };
       await client.query(
@@ -142,11 +146,13 @@ export class CreateOrderCommandHandler {
       moneda: 'C$',
       items,
       direccion_envio: null,
+      tipo_entrega: tipoEntrega,
       creado_en: creadoEn,
       actualizado_en: creadoEn,
       pagada_en: null,
       enviada_en: null,
       entregada_en: null,
+      servida_en: null,
       cancelada_en: null,
       devuelta_en: null,
     };
@@ -204,12 +210,19 @@ export class CreateOrderCommandHandler {
     return this.views.encontrar(orderId);
   }
 
-  private agrupar(items: { oferta_id: string; cantidad: number }[]): { oferta_id: string; cantidad: number }[] {
-    const mapa = new Map<string, number>();
+  private agrupar(
+    items: { oferta_id: string; cantidad: number; notas?: string }[],
+  ): { oferta_id: string; cantidad: number; notas?: string }[] {
+    // Se agrupa por oferta + nota: dos líneas del mismo plato con notas
+    // distintas ("sin cebolla" / "extra queso") son líneas separadas.
+    const mapa = new Map<string, { oferta_id: string; cantidad: number; notas?: string }>();
     for (const i of items) {
-      mapa.set(i.oferta_id, (mapa.get(i.oferta_id) ?? 0) + i.cantidad);
+      const clave = `${i.oferta_id}::${i.notas ?? ''}`;
+      const actual = mapa.get(clave);
+      if (actual) actual.cantidad += i.cantidad;
+      else mapa.set(clave, { oferta_id: i.oferta_id, cantidad: i.cantidad, notas: i.notas });
     }
-    return [...mapa.entries()].map(([oferta_id, cantidad]) => ({ oferta_id, cantidad }));
+    return [...mapa.values()];
   }
 
   private async consultarOfertas(ids: string[]): Promise<OfertaExterna[]> {

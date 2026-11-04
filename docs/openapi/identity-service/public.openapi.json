@@ -1342,7 +1342,16 @@
           },
           "sector": {
             "type": "string",
-            "maxLength": 80
+            "maxLength": 80,
+            "enum": [
+              "tienda",
+              "restaurante",
+              "bar",
+              "ferreteria",
+              "pulperia",
+              "otro"
+            ],
+            "description": "Giro comercial (tienda, restaurante, bar, ferreteria, pulperia, otro)."
           },
           "representante_legal": {
             "type": "string",
@@ -1357,6 +1366,43 @@
             "nullable": true,
             "format": "uuid",
             "description": "Objeto de storage confirmado como imagen pública"
+          },
+          "background_objeto_id": {
+            "type": "object",
+            "nullable": true,
+            "format": "uuid",
+            "description": "Objeto de storage del fondo; null limpia el bloque completo"
+          },
+          "background_poster_objeto_id": {
+            "type": "object",
+            "nullable": true,
+            "format": "uuid",
+            "description": "Imagen de portada para un fondo de video"
+          },
+          "background_alt": {
+            "type": "string",
+            "maxLength": 160
+          },
+          "background_overlay": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 100,
+            "default": 35
+          },
+          "background_position": {
+            "type": "string",
+            "enum": [
+              "center",
+              "top",
+              "bottom",
+              "left",
+              "right"
+            ],
+            "default": "center"
+          },
+          "background_activo": {
+            "type": "boolean",
+            "default": false
           },
           "nombre": {
             "type": "string",
@@ -1579,7 +1625,16 @@
             "type": "string"
           },
           "sector": {
-            "type": "string"
+            "type": "string",
+            "enum": [
+              "tienda",
+              "restaurante",
+              "bar",
+              "ferreteria",
+              "pulperia",
+              "otro"
+            ],
+            "description": "Giro comercial"
           },
           "representante_legal": {
             "type": "string"
@@ -1596,6 +1651,55 @@
             "type": "object",
             "nullable": true,
             "description": "URL pública derivada del logo"
+          },
+          "background_objeto_id": {
+            "type": "object",
+            "nullable": true,
+            "format": "uuid"
+          },
+          "background_media_type": {
+            "type": "string",
+            "nullable": true,
+            "enum": [
+              "imagen",
+              "video"
+            ]
+          },
+          "background_url": {
+            "type": "object",
+            "nullable": true,
+            "description": "URL pública derivada del fondo"
+          },
+          "background_poster_objeto_id": {
+            "type": "object",
+            "nullable": true,
+            "format": "uuid"
+          },
+          "background_poster_url": {
+            "type": "object",
+            "nullable": true,
+            "description": "URL pública derivada del poster"
+          },
+          "background_alt": {
+            "type": "string"
+          },
+          "background_overlay": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 100
+          },
+          "background_position": {
+            "type": "string",
+            "enum": [
+              "center",
+              "top",
+              "bottom",
+              "left",
+              "right"
+            ]
+          },
+          "background_activo": {
+            "type": "boolean"
           },
           "actualizado_en": {
             "type": "string",
@@ -1857,7 +1961,16 @@
           },
           "sector": {
             "type": "string",
-            "maxLength": 80
+            "maxLength": 80,
+            "enum": [
+              "tienda",
+              "restaurante",
+              "bar",
+              "ferreteria",
+              "pulperia",
+              "otro"
+            ],
+            "description": "Giro comercial (tienda, restaurante, bar, ferreteria, pulperia, otro)."
           },
           "representante_legal": {
             "type": "string",
@@ -1872,6 +1985,43 @@
             "nullable": true,
             "format": "uuid",
             "description": "Objeto de storage confirmado como imagen pública"
+          },
+          "background_objeto_id": {
+            "type": "object",
+            "nullable": true,
+            "format": "uuid",
+            "description": "Objeto de storage del fondo; null limpia el bloque completo"
+          },
+          "background_poster_objeto_id": {
+            "type": "object",
+            "nullable": true,
+            "format": "uuid",
+            "description": "Imagen de portada para un fondo de video"
+          },
+          "background_alt": {
+            "type": "string",
+            "maxLength": 160
+          },
+          "background_overlay": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 100,
+            "default": 35
+          },
+          "background_position": {
+            "type": "string",
+            "enum": [
+              "center",
+              "top",
+              "bottom",
+              "left",
+              "right"
+            ],
+            "default": "center"
+          },
+          "background_activo": {
+            "type": "boolean",
+            "default": false
           }
         }
       },

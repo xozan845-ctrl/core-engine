@@ -1,4 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
+import { ESTADOS_ORDEN, TIPOS_ENTREGA } from '@core/shared';
 
 export class ItemOrdenResponseDto {
   @ApiProperty({ description: 'Id de la oferta', format: 'uuid' })
@@ -21,6 +22,9 @@ export class ItemOrdenResponseDto {
 
   @ApiProperty({ description: 'Id de la tienda', format: 'uuid' })
   tienda_id: string;
+
+  @ApiProperty({ description: 'Nota libre por línea', required: false, maxLength: 280 })
+  notas?: string;
 }
 
 export class OrderViewResponseDto {
@@ -36,7 +40,7 @@ export class OrderViewResponseDto {
   @ApiProperty({ description: 'Id de la tienda', format: 'uuid' })
   tienda_id: string;
 
-  @ApiProperty({ description: 'Estado de la orden', example: 'pagada' })
+  @ApiProperty({ description: 'Estado de la orden', enum: ESTADOS_ORDEN, example: 'pagada' })
   estado: string;
 
   @ApiProperty({ description: 'Total en centavos', example: 230000 })
@@ -54,6 +58,14 @@ export class OrderViewResponseDto {
   @ApiProperty({ description: 'Dirección de envío', required: false, nullable: true, type: Object })
   direccion_envio: Record<string, unknown> | null;
 
+  @ApiProperty({
+    description: 'Canal de venta (ADR-39)',
+    enum: TIPOS_ENTREGA,
+    default: 'delivery',
+    required: false,
+  })
+  tipo_entrega: string;
+
   @ApiProperty({ description: 'Fecha de creación (ISO 8601 UTC)', format: 'date-time' })
   creado_en: string;
 
@@ -68,6 +80,9 @@ export class OrderViewResponseDto {
 
   @ApiProperty({ description: 'Fecha de entrega (ISO 8601 UTC)', required: false, nullable: true, format: 'date-time' })
   entregada_en: string | null;
+
+  @ApiProperty({ description: 'Fecha de servicio en mesa/barra (ISO 8601 UTC)', required: false, nullable: true, format: 'date-time' })
+  servida_en: string | null;
 
   @ApiProperty({ description: 'Fecha de cancelación (ISO 8601 UTC)', required: false, nullable: true, format: 'date-time' })
   cancelada_en: string | null;

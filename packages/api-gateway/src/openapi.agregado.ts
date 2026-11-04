@@ -18453,7 +18453,16 @@ export const OPENAPI_AGREGADO = {
           },
           "sector": {
             "type": "string",
-            "maxLength": 80
+            "maxLength": 80,
+            "enum": [
+              "tienda",
+              "restaurante",
+              "bar",
+              "ferreteria",
+              "pulperia",
+              "otro"
+            ],
+            "description": "Giro comercial (tienda, restaurante, bar, ferreteria, pulperia, otro)."
           },
           "representante_legal": {
             "type": "string",
@@ -18468,6 +18477,43 @@ export const OPENAPI_AGREGADO = {
             "nullable": true,
             "format": "uuid",
             "description": "Objeto de storage confirmado como imagen pública"
+          },
+          "background_objeto_id": {
+            "type": "object",
+            "nullable": true,
+            "format": "uuid",
+            "description": "Objeto de storage del fondo; null limpia el bloque completo"
+          },
+          "background_poster_objeto_id": {
+            "type": "object",
+            "nullable": true,
+            "format": "uuid",
+            "description": "Imagen de portada para un fondo de video"
+          },
+          "background_alt": {
+            "type": "string",
+            "maxLength": 160
+          },
+          "background_overlay": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 100,
+            "default": 35
+          },
+          "background_position": {
+            "type": "string",
+            "enum": [
+              "center",
+              "top",
+              "bottom",
+              "left",
+              "right"
+            ],
+            "default": "center"
+          },
+          "background_activo": {
+            "type": "boolean",
+            "default": false
           },
           "nombre": {
             "type": "string",
@@ -18690,7 +18736,16 @@ export const OPENAPI_AGREGADO = {
             "type": "string"
           },
           "sector": {
-            "type": "string"
+            "type": "string",
+            "enum": [
+              "tienda",
+              "restaurante",
+              "bar",
+              "ferreteria",
+              "pulperia",
+              "otro"
+            ],
+            "description": "Giro comercial"
           },
           "representante_legal": {
             "type": "string"
@@ -18707,6 +18762,55 @@ export const OPENAPI_AGREGADO = {
             "type": "object",
             "nullable": true,
             "description": "URL pública derivada del logo"
+          },
+          "background_objeto_id": {
+            "type": "object",
+            "nullable": true,
+            "format": "uuid"
+          },
+          "background_media_type": {
+            "type": "string",
+            "nullable": true,
+            "enum": [
+              "imagen",
+              "video"
+            ]
+          },
+          "background_url": {
+            "type": "object",
+            "nullable": true,
+            "description": "URL pública derivada del fondo"
+          },
+          "background_poster_objeto_id": {
+            "type": "object",
+            "nullable": true,
+            "format": "uuid"
+          },
+          "background_poster_url": {
+            "type": "object",
+            "nullable": true,
+            "description": "URL pública derivada del poster"
+          },
+          "background_alt": {
+            "type": "string"
+          },
+          "background_overlay": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 100
+          },
+          "background_position": {
+            "type": "string",
+            "enum": [
+              "center",
+              "top",
+              "bottom",
+              "left",
+              "right"
+            ]
+          },
+          "background_activo": {
+            "type": "boolean"
           },
           "actualizado_en": {
             "type": "string",
@@ -18968,7 +19072,16 @@ export const OPENAPI_AGREGADO = {
           },
           "sector": {
             "type": "string",
-            "maxLength": 80
+            "maxLength": 80,
+            "enum": [
+              "tienda",
+              "restaurante",
+              "bar",
+              "ferreteria",
+              "pulperia",
+              "otro"
+            ],
+            "description": "Giro comercial (tienda, restaurante, bar, ferreteria, pulperia, otro)."
           },
           "representante_legal": {
             "type": "string",
@@ -18983,6 +19096,43 @@ export const OPENAPI_AGREGADO = {
             "nullable": true,
             "format": "uuid",
             "description": "Objeto de storage confirmado como imagen pública"
+          },
+          "background_objeto_id": {
+            "type": "object",
+            "nullable": true,
+            "format": "uuid",
+            "description": "Objeto de storage del fondo; null limpia el bloque completo"
+          },
+          "background_poster_objeto_id": {
+            "type": "object",
+            "nullable": true,
+            "format": "uuid",
+            "description": "Imagen de portada para un fondo de video"
+          },
+          "background_alt": {
+            "type": "string",
+            "maxLength": 160
+          },
+          "background_overlay": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 100,
+            "default": 35
+          },
+          "background_position": {
+            "type": "string",
+            "enum": [
+              "center",
+              "top",
+              "bottom",
+              "left",
+              "right"
+            ],
+            "default": "center"
+          },
+          "background_activo": {
+            "type": "boolean",
+            "default": false
           }
         }
       },
@@ -20322,6 +20472,16 @@ export const OPENAPI_AGREGADO = {
             "type": "boolean",
             "description": "Crear la orden desde el carrito (RN-05)",
             "example": false
+          },
+          "tipo_entrega": {
+            "type": "string",
+            "description": "Canal de venta (ADR-39). delivery usa repartidores; pickup y consumo_local no generan envío.",
+            "enum": [
+              "delivery",
+              "pickup",
+              "consumo_local"
+            ],
+            "default": "delivery"
           }
         }
       },
@@ -20338,6 +20498,11 @@ export const OPENAPI_AGREGADO = {
             "minimum": 1,
             "maximum": 99,
             "example": 1
+          },
+          "notas": {
+            "type": "string",
+            "description": "Nota libre por línea (ej. \"sin cebolla\", \"término medio\")",
+            "maxLength": 280
           }
         },
         "required": [
@@ -20381,6 +20546,11 @@ export const OPENAPI_AGREGADO = {
             "type": "string",
             "description": "Id de la tienda",
             "format": "uuid"
+          },
+          "notas": {
+            "type": "string",
+            "description": "Nota libre por línea",
+            "maxLength": 280
           }
         },
         "required": [
@@ -20419,6 +20589,16 @@ export const OPENAPI_AGREGADO = {
           "estado": {
             "type": "string",
             "description": "Estado de la orden",
+            "enum": [
+              "creada",
+              "pagada",
+              "en_preparacion",
+              "enviada",
+              "entregada",
+              "servida",
+              "cancelada",
+              "devuelta"
+            ],
             "example": "pagada"
           },
           "total_cents": {
@@ -20448,6 +20628,16 @@ export const OPENAPI_AGREGADO = {
             "description": "Dirección de envío",
             "nullable": true
           },
+          "tipo_entrega": {
+            "type": "string",
+            "description": "Canal de venta (ADR-39)",
+            "enum": [
+              "delivery",
+              "pickup",
+              "consumo_local"
+            ],
+            "default": "delivery"
+          },
           "creado_en": {
             "type": "string",
             "description": "Fecha de creación (ISO 8601 UTC)",
@@ -20473,6 +20663,12 @@ export const OPENAPI_AGREGADO = {
           "entregada_en": {
             "type": "object",
             "description": "Fecha de entrega (ISO 8601 UTC)",
+            "nullable": true,
+            "format": "date-time"
+          },
+          "servida_en": {
+            "type": "object",
+            "description": "Fecha de servicio en mesa/barra (ISO 8601 UTC)",
             "nullable": true,
             "format": "date-time"
           },

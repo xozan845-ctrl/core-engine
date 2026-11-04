@@ -10,13 +10,20 @@ describe('order-state (ciclo de vida de la orden, Tabla 13)', () => {
     expect(puedeTransicionar('enviada', 'entregada')).toBe(true);
   });
 
-  it('debe permitir cancelar desde estados activos y devolver desde enviada o entregada', () => {
+  it('debe permitir servir una orden para consumo local (ADR-39)', () => {
+    expect(puedeTransicionar('pagada', 'servida')).toBe(true);
+    expect(puedeTransicionar('en_preparacion', 'servida')).toBe(true);
+    expect(puedeTransicionar('servida', 'devuelta')).toBe(true);
+  });
+
+  it('debe permitir cancelar desde estados activos y devolver desde enviada, entregada o servida', () => {
     for (const estado of ['creada', 'pagada', 'en_preparacion']) {
       expect(puedeTransicionar(estado as EstadoOrden, 'cancelada')).toBe(true);
     }
     expect(puedeTransicionar('pagada', 'devuelta')).toBe(true);
     expect(puedeTransicionar('enviada', 'devuelta')).toBe(true);
     expect(puedeTransicionar('entregada', 'devuelta')).toBe(true);
+    expect(puedeTransicionar('servida', 'devuelta')).toBe(true);
   });
 
   it('debe prohibir los estados terminales y los saltos de nivel', () => {
@@ -39,13 +46,14 @@ describe('order-state (ciclo de vida de la orden, Tabla 13)', () => {
     expect(error?.toResponse().mensaje).toContain('entregada');
   });
 
-  it('debe listar los siete estados del contrato en orden', () => {
+  it('debe listar los ocho estados del contrato en orden', () => {
     expect(ESTADOS_ORDEN).toEqual([
       'creada',
       'pagada',
       'en_preparacion',
       'enviada',
       'entregada',
+      'servida',
       'cancelada',
       'devuelta',
     ]);

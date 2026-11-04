@@ -324,6 +324,11 @@
             "type": "string",
             "description": "Id de la tienda",
             "format": "uuid"
+          },
+          "notas": {
+            "type": "string",
+            "description": "Nota libre por línea",
+            "maxLength": 280
           }
         },
         "required": [
@@ -362,6 +367,16 @@
           "estado": {
             "type": "string",
             "description": "Estado de la orden",
+            "enum": [
+              "creada",
+              "pagada",
+              "en_preparacion",
+              "enviada",
+              "entregada",
+              "servida",
+              "cancelada",
+              "devuelta"
+            ],
             "example": "pagada"
           },
           "total_cents": {
@@ -391,6 +406,16 @@
             "description": "Dirección de envío",
             "nullable": true
           },
+          "tipo_entrega": {
+            "type": "string",
+            "description": "Canal de venta (ADR-39)",
+            "enum": [
+              "delivery",
+              "pickup",
+              "consumo_local"
+            ],
+            "default": "delivery"
+          },
           "creado_en": {
             "type": "string",
             "description": "Fecha de creación (ISO 8601 UTC)",
@@ -416,6 +441,12 @@
           "entregada_en": {
             "type": "object",
             "description": "Fecha de entrega (ISO 8601 UTC)",
+            "nullable": true,
+            "format": "date-time"
+          },
+          "servida_en": {
+            "type": "object",
+            "description": "Fecha de servicio en mesa/barra (ISO 8601 UTC)",
             "nullable": true,
             "format": "date-time"
           },

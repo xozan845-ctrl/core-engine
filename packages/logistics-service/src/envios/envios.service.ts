@@ -21,6 +21,8 @@ export interface OrdenExterna {
   total: string;
   total_cents: number;
   estado: string;
+  /** ADR-39: delivery | pickup | consumo_local; ausente = delivery. */
+  tipo_entrega?: string;
 }
 
 export type ModalidadLogistica = 'plataforma' | 'propia' | 'hibrida';
@@ -82,6 +84,7 @@ export class EnviosService {
   async prepararEnviosDeOrden(orderId: string): Promise<Envio[]> {
     const orden = await this.consultarOrden(orderId);
     if (!orden?.items.length) throw new DomainError('ORDEN_SIN_LINEAS', 'La orden no tiene líneas para despachar.');
+    if (orden.tipo_entrega && orden.tipo_entrega !== 'delivery') return [];
     const montos = new Map<string, number>();
     for (const item of orden.items) {
       if (!item.empresa_id) throw new DomainError('EMPRESA_REQUERIDA', 'Una línea no tiene empresa asignada.');

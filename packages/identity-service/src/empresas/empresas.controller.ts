@@ -11,7 +11,7 @@ import {
 } from '@nestjs/swagger';
 import type { Response } from 'express';
 import { IsBoolean, IsEmail, IsIn, IsInt, IsOptional, IsString, IsUUID, Length, Max, Min, MinLength } from 'class-validator';
-import { ROLES, Roles, UsuarioActual, UsuarioContexto } from '@core/shared';
+import { GIROS_EMPRESA, ROLES, Roles, UsuarioActual, UsuarioContexto } from '@core/shared';
 import { BACKGROUND_POSICIONES, BackgroundPosition } from '../media-background/media-background';
 import { EmpresasService, ModalidadLogistica, TipoEmpresa } from './empresas.service';
 
@@ -30,7 +30,13 @@ class PerfilEmpresaRequestDto {
   @ApiProperty({ required: false, maxLength: 80, default: 'Nicaragua' }) @IsOptional() @IsString() @Length(0, 80) pais?: string;
   @ApiProperty({ required: false, minLength: 3, maxLength: 3, default: 'NIO' }) @IsOptional() @IsString() @Length(3, 3) moneda?: string;
   @ApiProperty({ required: false, maxLength: 64, default: 'America/Managua' }) @IsOptional() @IsString() @Length(0, 64) zona_horaria?: string;
-  @ApiProperty({ required: false, maxLength: 80 }) @IsOptional() @IsString() @Length(0, 80) sector?: string;
+  @ApiProperty({
+    required: false,
+    maxLength: 80,
+    enum: GIROS_EMPRESA,
+    description: 'Giro comercial (tienda, restaurante, bar, ferreteria, pulperia, otro).',
+  })
+  @IsOptional() @IsString() @Length(0, 80) sector?: string;
   @ApiProperty({ required: false, maxLength: 160 }) @IsOptional() @IsString() @Length(0, 160) representante_legal?: string;
   @ApiProperty({ required: false, maxLength: 120 }) @IsOptional() @IsString() @Length(0, 120) horario_atencion?: string;
   @ApiProperty({ required: false, nullable: true, format: 'uuid', description: 'Objeto de storage confirmado como imagen pública' })
@@ -113,7 +119,7 @@ export class EmpresaResponseDto {
   @ApiProperty({ required: false }) pais?: string;
   @ApiProperty({ required: false }) moneda?: string;
   @ApiProperty({ required: false }) zona_horaria?: string;
-  @ApiProperty({ required: false }) sector?: string;
+  @ApiProperty({ required: false, enum: GIROS_EMPRESA, description: 'Giro comercial' }) sector?: string;
   @ApiProperty({ required: false }) representante_legal?: string;
   @ApiProperty({ required: false }) horario_atencion?: string;
   @ApiProperty({ required: false, nullable: true, format: 'uuid' }) logo_objeto_id?: string | null;

@@ -68,6 +68,7 @@ export class PedidosConsumer implements OnModuleInit {
         monto_cents: vista.total_cents,
         estado: 'procesado',
         metodo: 'simulado',
+        tipo_entrega: vista.tipo_entrega ?? 'delivery',
       });
       this.logger.info({ msg: 'Pago simulado procesado', order_id: orderId });
     }

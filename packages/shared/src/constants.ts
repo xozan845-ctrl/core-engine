@@ -14,6 +14,31 @@ export type Rol = (typeof ROLES)[keyof typeof ROLES];
 
 export const ROLES_REGISTRABLES: Rol[] = [ROLES.EMPRESARIO, ROLES.COMPRADOR];
 
+/**
+ * Canal de venta de una orden (ADR-39).
+ * - delivery: se despacha por logistics-service (repartidores).
+ * - pickup: el cliente recoge; no genera envío.
+ * - consumo_local: mesa/barra; no genera envío.
+ */
+export const TIPOS_ENTREGA = ['delivery', 'pickup', 'consumo_local'] as const;
+export type TipoEntrega = (typeof TIPOS_ENTREGA)[number];
+export const TIPO_ENTREGA_DEFAULT: TipoEntrega = 'delivery';
+
+/**
+ * Vocabulario sugerido para `identity.empresas.sector` cuando la empresa es
+ * `comercial` (ADR-39). Es documental: `sector` sigue siendo texto libre para
+ * no romper empresas existentes con otros rubros.
+ */
+export const GIROS_EMPRESA = [
+  'tienda',
+  'restaurante',
+  'bar',
+  'ferreteria',
+  'pulperia',
+  'otro',
+] as const;
+export type GiroEmpresa = (typeof GIROS_EMPRESA)[number];
+
 /** Roles de la aplicacion de logistica de campo (app-test). */
 export const ROLES_LOGISTICA: Rol[] = [
   ROLES.EMPRESARIO,
@@ -58,7 +83,7 @@ export const CARRITO_EXPIRACION_MS = 30 * 60 * 1000;
 /** RN-07: liquidacion quincenal (dias 1 y 15). */
 export const LIQUIDACION_DIAS = [1, 15];
 
-export const ESTADOS_VISIBLES_PUBLICO = ['enviada', 'entregada'] as const;
+export const ESTADOS_VISIBLES_PUBLICO = ['enviada', 'entregada', 'servida'] as const;
 
 export const JWT_ACCESS_TTL_DEFAULT = '900s';
 export const JWT_REFRESH_TTL_DEFAULT = '7d';

@@ -2,6 +2,8 @@
  * Contratos de eventos del MVP (Tabla 22 del informe).
  * Validadas con JSON Schema en CI (seccion 6.3 / TC-10).
  */
+import type { TipoEntrega } from '../constants';
+
 export const EVENTOS = {
   ORDER_CREATED: 'order.created',
   STOCK_RESERVADO: 'stock.reservado',
@@ -47,6 +49,8 @@ export interface ItemOrden {
   tienda_id: string;
   empresa_id: string;
   participacion_porcentaje: number;
+  /** Nota libre por línea (ej. "sin cebolla"). No afecta el precio. */
+  notas?: string;
 }
 
 export interface OrdenData {
@@ -55,6 +59,8 @@ export interface OrdenData {
   items: ItemOrden[];
   total_cents: number;
   estado: 'creada';
+  /** Canal de venta (ADR-39); ausente en eventos históricos = delivery. */
+  tipo_entrega?: TipoEntrega;
 }
 
 export interface StockReservadoData {
@@ -84,6 +90,8 @@ export interface PaymentProcesadoData {
   monto_cents: number;
   estado: 'procesado';
   metodo: 'simulado';
+  /** Canal de venta (ADR-39); ausente = delivery. */
+  tipo_entrega?: TipoEntrega;
 }
 
 export interface ShipmentStartedData {

@@ -16,11 +16,13 @@ export interface OrderView {
   moneda: string;
   items: ItemOrden[];
   direccion_envio: unknown | null;
+  tipo_entrega: string;
   creado_en: string;
   actualizado_en: string;
   pagada_en: string | null;
   enviada_en: string | null;
   entregada_en: string | null;
+  servida_en?: string | null;
   cancelada_en: string | null;
   devuelta_en: string | null;
 }
@@ -36,11 +38,13 @@ interface OrderViewRow {
   moneda: string;
   items_json: unknown;
   direccion_envio: unknown | null;
+  tipo_entrega: string;
   creado_en: string;
   actualizado_en: string;
   pagada_en: string | null;
   enviada_en: string | null;
   entregada_en: string | null;
+  servida_en: string | null;
   cancelada_en: string | null;
   devuelta_en: string | null;
 }
@@ -72,8 +76,8 @@ export class OrderViewRepository {
     }
     const fila = await this.pg.queryOne<OrderViewRow>(
       `SELECT id, vendedor_id, comprador_id, tienda_id, estado, total_cents, comision_cents, moneda,
-              items_json, direccion_envio, creado_en, actualizado_en,
-              pagada_en, enviada_en, entregada_en, cancelada_en, devuelta_en
+              tipo_entrega, items_json, direccion_envio, creado_en, actualizado_en,
+              pagada_en, enviada_en, entregada_en, servida_en, cancelada_en, devuelta_en
        FROM orders.orden_vista WHERE id = $1`,
       [id],
     );
@@ -86,8 +90,8 @@ export class OrderViewRepository {
     if (estado) params.push(estado);
     const filas = await this.pg.query<OrderViewRow>(
       `SELECT id, vendedor_id, comprador_id, tienda_id, estado, total_cents, comision_cents, moneda,
-              items_json, direccion_envio, creado_en, actualizado_en,
-              pagada_en, enviada_en, entregada_en, cancelada_en, devuelta_en
+              tipo_entrega, items_json, direccion_envio, creado_en, actualizado_en,
+              pagada_en, enviada_en, entregada_en, servida_en, cancelada_en, devuelta_en
        FROM orders.orden_vista WHERE comprador_id = $1${extra}
        ORDER BY creado_en DESC LIMIT 100`,
       params,
@@ -101,8 +105,8 @@ export class OrderViewRepository {
     if (estado) params.push(estado);
     const filas = await this.pg.query<OrderViewRow>(
       `SELECT id, vendedor_id, comprador_id, tienda_id, estado, total_cents, comision_cents, moneda,
-              items_json, direccion_envio, creado_en, actualizado_en,
-              pagada_en, enviada_en, entregada_en, cancelada_en, devuelta_en
+              tipo_entrega, items_json, direccion_envio, creado_en, actualizado_en,
+              pagada_en, enviada_en, entregada_en, servida_en, cancelada_en, devuelta_en
        FROM orders.orden_vista
        WHERE EXISTS (SELECT 1 FROM jsonb_array_elements(items_json) item
                      WHERE item->>'vendedor_id' = $1)${extra}
@@ -135,8 +139,8 @@ export class OrderViewRepository {
     }
     const filas = await this.pg.query<OrderViewRow>(
       `SELECT id, vendedor_id, comprador_id, tienda_id, estado, total_cents, comision_cents, moneda,
-              items_json, direccion_envio, creado_en, actualizado_en,
-              pagada_en, enviada_en, entregada_en, cancelada_en, devuelta_en
+              tipo_entrega, items_json, direccion_envio, creado_en, actualizado_en,
+              pagada_en, enviada_en, entregada_en, servida_en, cancelada_en, devuelta_en
        FROM orders.orden_vista
        WHERE EXISTS (SELECT 1 FROM jsonb_array_elements(items_json) item
                      WHERE ${condicionesItem.join(' AND ')})${extra}
@@ -164,8 +168,8 @@ export class OrderViewRepository {
     params.push(filtros.limite ?? 100);
     const filas = await this.pg.query<OrderViewRow>(
       `SELECT id, vendedor_id, comprador_id, tienda_id, estado, total_cents, comision_cents, moneda,
-              items_json, direccion_envio, creado_en, actualizado_en,
-              pagada_en, enviada_en, entregada_en, cancelada_en, devuelta_en
+              tipo_entrega, items_json, direccion_envio, creado_en, actualizado_en,
+              pagada_en, enviada_en, entregada_en, servida_en, cancelada_en, devuelta_en
        FROM orders.orden_vista
        WHERE EXISTS (SELECT 1 FROM jsonb_array_elements(items_json) item
                      WHERE ${condicionesItem.join(' AND ')})${extra}
@@ -185,8 +189,8 @@ export class OrderViewRepository {
     params.push(filtros.limite ?? 200);
     const filas = await this.pg.query<OrderViewRow>(
       `SELECT id, vendedor_id, comprador_id, tienda_id, estado, total_cents, comision_cents, moneda,
-              items_json, direccion_envio, creado_en, actualizado_en,
-              pagada_en, enviada_en, entregada_en, cancelada_en, devuelta_en
+              tipo_entrega, items_json, direccion_envio, creado_en, actualizado_en,
+              pagada_en, enviada_en, entregada_en, servida_en, cancelada_en, devuelta_en
        FROM orders.orden_vista${where} ORDER BY creado_en DESC LIMIT $${params.length}`,
       params,
     );
@@ -250,11 +254,13 @@ export class OrderViewRepository {
       moneda: fila.moneda,
       items: fila.items_json as ItemOrden[],
       direccion_envio: fila.direccion_envio,
+      tipo_entrega: fila.tipo_entrega ?? 'delivery',
       creado_en: fila.creado_en,
       actualizado_en: fila.actualizado_en,
       pagada_en: fila.pagada_en,
       enviada_en: fila.enviada_en,
       entregada_en: fila.entregada_en,
+      servida_en: fila.servida_en,
       cancelada_en: fila.cancelada_en,
       devuelta_en: fila.devuelta_en,
     };
