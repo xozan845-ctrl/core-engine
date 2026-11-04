@@ -186,6 +186,13 @@ describe('MinioAlmacen (implementacion del puerto AlmacenObjetos, R-SB-6)', () =
     await expect(almacen.leerRango('t-1', 'no-existe.mp4', 0, 9)).resolves.toBeNull();
   });
 
+  it('debe propagar errores no relacionados con ausencia al leer un rango', async () => {
+    cliente.statObject.mockRejectedValue(new Error('sin conexion'));
+    const almacen = new MinioAlmacen(config);
+    await expect(almacen.leerRango('t-1', 'fondo.mp4', 0, 9)).rejects.toThrow('sin conexion');
+    expect(cliente.getPartialObject).not.toHaveBeenCalled();
+  });
+
   it('debe devolver null al leer un objeto inexistente', async () => {
     cliente.statObject.mockRejectedValue(errorConCodigo('NoSuchKey'));
     const almacen = new MinioAlmacen(config);
@@ -212,6 +219,17 @@ describe('MinioAlmacen (implementacion del puerto AlmacenObjetos, R-SB-6)', () =
       tamano_bytes: 2048,
       content_type: 'image/png',
       etag: 'abc123',
+    });
+  });
+
+  it('debe devolver estadisticas sin content-type ni etag', async () => {
+    cliente.statObject.mockResolvedValue({ size: 10, metaData: null });
+    const almacen = new MinioAlmacen(config);
+
+    await expect(almacen.estadisticas('t-1', 'a.bin')).resolves.toEqual({
+      bucket: 't-1',
+      objeto: 'a.bin',
+      tamano_bytes: 10,
     });
   });
 

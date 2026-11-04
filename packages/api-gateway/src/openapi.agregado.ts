@@ -9599,7 +9599,21 @@ export const OPENAPI_AGREGADO = {
         ],
         "responses": {
           "200": {
-            "description": "Cabeceras de la media"
+            "description": "Cabeceras de la media (sin cuerpo); con Range responde 206",
+            "content": {
+              "image/*": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              },
+              "video/*": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              }
+            }
           },
           "206": {
             "description": "Cabeceras del tramo solicitado con Range"

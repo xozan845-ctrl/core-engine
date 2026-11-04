@@ -38,6 +38,7 @@ describe('interpretarRango (RFC 7233, un solo tramo)', () => {
       'bytes=99-98',
       'bytes=-0',
       'bytes=',
+      'bytes=-',
       'bytes=0-1,5-9',
       'items=0-1',
       'bytes=abc-def',

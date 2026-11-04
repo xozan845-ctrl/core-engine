@@ -61,7 +61,13 @@ export class PublicStorageController {
   @Head('objetos/:id')
   @ApiOperation({ summary: 'Cabeceras de una imagen o video público (sin cuerpo)' })
   @ApiParam({ name: 'id', description: 'Id del objeto' })
-  @ApiResponse({ status: 200, description: 'Cabeceras de la media' })
+  @ApiOkResponse({
+    description: 'Cabeceras de la media (sin cuerpo); con Range responde 206',
+    content: {
+      'image/*': { schema: { type: 'string', format: 'binary' } },
+      'video/*': { schema: { type: 'string', format: 'binary' } },
+    },
+  })
   @ApiResponse({ status: 206, description: 'Cabeceras del tramo solicitado con Range' })
   @ApiResponse({ status: 416, description: 'Rango inválido o fuera del objeto' })
   @ApiNotFoundResponse({ description: 'Objeto inexistente, privado, eliminado o no servible' })
