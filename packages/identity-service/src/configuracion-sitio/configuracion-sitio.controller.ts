@@ -21,6 +21,7 @@ import {
 
 export class ActualizarConfiguracionSitioRequestDto implements ActualizarConfiguracionSitioInput {
   @ApiPropertyOptional({
+    type: String,
     format: 'uuid',
     nullable: true,
     description: 'Objeto de storage del fondo; null limpia todo el bloque',
@@ -30,6 +31,7 @@ export class ActualizarConfiguracionSitioRequestDto implements ActualizarConfigu
   background_objeto_id?: string | null;
 
   @ApiPropertyOptional({
+    type: String,
     format: 'uuid',
     nullable: true,
     description: 'Imagen de portada para un fondo de video',
@@ -63,22 +65,23 @@ export class ActualizarConfiguracionSitioRequestDto implements ActualizarConfigu
 }
 
 export class ConfiguracionSitioResponseDto {
-  @ApiProperty({ format: 'uuid', nullable: true }) background_objeto_id: string | null;
+  @ApiProperty({ type: String, format: 'uuid', nullable: true }) background_objeto_id: string | null;
   @ApiProperty({ enum: ['imagen', 'video'], nullable: true }) background_media_type:
     | 'imagen'
     | 'video'
     | null;
-  @ApiProperty({ nullable: true, description: 'URL pública derivada del fondo' }) background_url:
-    | string
-    | null;
-  @ApiProperty({ format: 'uuid', nullable: true }) background_poster_objeto_id: string | null;
-  @ApiProperty({ nullable: true, description: 'URL pública derivada del poster' })
+  @ApiProperty({ type: String, nullable: true, description: 'URL pública derivada del fondo' })
+  background_url: string | null;
+  @ApiProperty({ type: String, format: 'uuid', nullable: true })
+  background_poster_objeto_id: string | null;
+  @ApiProperty({ type: String, nullable: true, description: 'URL pública derivada del poster' })
   background_poster_url: string | null;
   @ApiProperty() background_alt: string;
   @ApiProperty({ minimum: 0, maximum: 100 }) background_overlay: number;
   @ApiProperty({ enum: BACKGROUND_POSICIONES }) background_position: BackgroundPosition;
   @ApiProperty() background_activo: boolean;
-  @ApiProperty({ format: 'date-time', nullable: true }) actualizado_en: string | null;
+  @ApiProperty({ type: String, format: 'date-time', nullable: true })
+  actualizado_en: string | null;
 }
 
 @ApiTags('Configuración del sitio')

@@ -18254,13 +18254,13 @@ export const OPENAPI_AGREGADO = {
         "type": "object",
         "properties": {
           "background_objeto_id": {
-            "type": "object",
+            "type": "string",
             "format": "uuid",
             "nullable": true,
             "description": "Objeto de storage del fondo; null limpia todo el bloque"
           },
           "background_poster_objeto_id": {
-            "type": "object",
+            "type": "string",
             "format": "uuid",
             "nullable": true,
             "description": "Imagen de portada para un fondo de video"
@@ -18372,7 +18372,7 @@ export const OPENAPI_AGREGADO = {
         "type": "object",
         "properties": {
           "background_objeto_id": {
-            "type": "object",
+            "type": "string",
             "format": "uuid",
             "nullable": true
           },
@@ -18385,17 +18385,17 @@ export const OPENAPI_AGREGADO = {
             "nullable": true
           },
           "background_url": {
-            "type": "object",
+            "type": "string",
             "nullable": true,
             "description": "URL pública derivada del fondo"
           },
           "background_poster_objeto_id": {
-            "type": "object",
+            "type": "string",
             "format": "uuid",
             "nullable": true
           },
           "background_poster_url": {
-            "type": "object",
+            "type": "string",
             "nullable": true,
             "description": "URL pública derivada del poster"
           },
@@ -18421,7 +18421,7 @@ export const OPENAPI_AGREGADO = {
             "type": "boolean"
           },
           "actualizado_en": {
-            "type": "object",
+            "type": "string",
             "format": "date-time",
             "nullable": true
           }
