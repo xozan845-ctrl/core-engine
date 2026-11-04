@@ -3,6 +3,7 @@ import {
   STORAGE_CONTENT_TYPES_DEFAULT,
   STORAGE_CUOTA_DEFAULT_BYTES,
   STORAGE_MAX_OBJETO_BYTES_DEFAULT,
+  STORAGE_MAX_VIDEO_BYTES_DEFAULT,
   STORAGE_URL_TTL_SEGUNDOS_DEFAULT,
 } from '@core/shared';
 
@@ -31,8 +32,10 @@ export interface StorageConfig {
   region: string;
   /** Prefijo de los buckets por tenant (por defecto `t-`). */
   prefijoBucket: string;
-  /** Tamano maximo de un objeto (bytes). */
+  /** Tamano maximo de un objeto generico (bytes). */
   maxObjetoBytes: number;
+  /** Tamano maximo de un video de fondo (bytes). */
+  maxVideoBytes: number;
   /** Cuota por defecto de un tenant nuevo (bytes). */
   cuotaDefaultBytes: number;
   /** Validez de las URLs prefirmadas (segundos). */
@@ -81,6 +84,7 @@ export function leerConfig(env: NodeJS.ProcessEnv = process.env): StorageConfig 
     region: env.MINIO_REGION ?? 'us-east-1',
     prefijoBucket: env.STORAGE_BUCKET_PREFIX ?? STORAGE_BUCKET_PREFIX_DEFAULT,
     maxObjetoBytes: enteroPositivo(env.STORAGE_MAX_OBJETO_BYTES, STORAGE_MAX_OBJETO_BYTES_DEFAULT),
+    maxVideoBytes: enteroPositivo(env.STORAGE_MAX_VIDEO_BYTES, STORAGE_MAX_VIDEO_BYTES_DEFAULT),
     cuotaDefaultBytes: enteroPositivo(
       env.STORAGE_CUOTA_DEFAULT_BYTES ?? env.STORAGE_CUOTA_DEFAULT,
       STORAGE_CUOTA_DEFAULT_BYTES,

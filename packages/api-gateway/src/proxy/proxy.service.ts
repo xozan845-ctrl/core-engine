@@ -174,17 +174,22 @@ export class ProxyService {
       // Whitelist: solo contexto de usuario y correlacion; el resto (host,
       // content-length, transfer-encoding, cookie, etc.) lo calcula fetch
       // y evita cabeceras invalidas hacia el destino.
-      // Las imágenes públicas son binarias: no se debe pedir JSON ni decodificar
-      // el cuerpo como texto (ADR-28).
-      const esImagenPublica = /^\/api\/v1\/storage\/public\/objetos\/[^/]+$/.test(rutaBase);
+      // Las imágenes y videos públicos son binarios: no se debe pedir JSON ni
+      // decodificar el cuerpo como texto (ADR-28). `Range` viaja tal cual para
+      // que storage-service pueda responder 206/416.
+      const esMediaPublica = /^\/api\/v1\/storage\/public\/objetos\/[^/]+$/.test(rutaBase);
       const headers: Record<string, string> = {
         'x-request-id': (req.headers['x-request-id'] as string) ?? `gw-${Date.now()}`,
-        'content-type': esImagenPublica ? 'application/octet-stream' : 'application/json',
-        accept: esImagenPublica ? 'image/*' : 'application/json',
+        'content-type': esMediaPublica ? 'application/octet-stream' : 'application/json',
+        accept: esMediaPublica ? 'image/*,video/*,*/*' : 'application/json',
       };
       for (const k of ['x-user-id', 'x-user-email', 'x-user-rol', TENANT_HEADER, PERSONAL_HEADER, PARTICIPACION_HEADER] as const) {
         const v = req.headers[k];
         if (v !== undefined) headers[k] = Array.isArray(v) ? v.join(', ') : String(v);
+      }
+      const rango = req.headers.range;
+      if (esMediaPublica && rango !== undefined) {
+        headers.range = Array.isArray(rango) ? rango.join(', ') : String(rango);
       }
 
       const controlador = new AbortController();
@@ -224,10 +229,18 @@ export class ProxyService {
           /* headers no reenvariables */
         }
       });
-      // Streaming binario: `text()` corrompería una imagen. El body de fetch es
-      // un ReadableStream web; se puentea al response de Express.
+      // Streaming binario: `text()` corrompería una imagen o un video. El body
+      // de fetch es un ReadableStream web; se puentea al response de Express.
       const contentType = respuesta.headers.get('content-type') ?? '';
-      if (contentType.startsWith('image/') || contentType.startsWith('application/octet-stream')) {
+      const esBinario =
+        contentType.startsWith('image/') ||
+        contentType.startsWith('video/') ||
+        contentType.startsWith('application/octet-stream');
+      // `content-length` se excluye del reenvío genérico porque Express lo
+      // gestiona; para media binaria sí importa (206 y reproducción de video).
+      const longitud = respuesta.headers.get('content-length');
+      if (esBinario && longitud) res.setHeader('Content-Length', longitud);
+      if (esBinario) {
         if (respuesta.body) {
           const stream = Readable.fromWeb(
             respuesta.body as unknown as import('stream/web').ReadableStream,

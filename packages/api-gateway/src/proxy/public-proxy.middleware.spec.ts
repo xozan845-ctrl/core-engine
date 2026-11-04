@@ -145,7 +145,39 @@ describe('crearProxyPublico (ADR-29)', () => {
 
     expect(res.statusCode).toBe(204);
     expect(res.headers['Access-Control-Allow-Methods']).toContain('POST');
+    expect(res.headers['Access-Control-Allow-Methods']).toContain('HEAD');
+    expect(res.headers['Access-Control-Allow-Headers']).toContain('Range');
     expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it('debe reenviar Range y propagar 206/HEAD de media pública', async () => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      status: 206,
+      headers: new Headers({
+        'content-type': 'video/mp4',
+        'content-range': 'bytes 0-9/100',
+        'accept-ranges': 'bytes',
+      }),
+      body: null,
+    } as unknown as globalThis.Response);
+    vi.stubGlobal('fetch', fetchMock);
+    const res = crearRes();
+
+    await ejecutar(
+      crearReq({
+        method: 'HEAD',
+        url: '/api/v1/storage/public/objetos/22222222-2222-4222-8222-222222222222',
+        headers: { origin: ORIGEN, range: 'bytes=0-9' },
+      }),
+      res,
+    );
+
+    expect(res.statusCode).toBe(206);
+    expect(res.headers['content-range']).toBe('bytes 0-9/100');
+    expect(res.headers['accept-ranges']).toBe('bytes');
+    expect(res.headers['Access-Control-Expose-Headers']).toContain('Content-Range');
+    const [, init] = fetchMock.mock.calls[0];
+    expect(init.headers.range).toBe('bytes=0-9');
   });
 
   it('no debe devolver ACAO para un origen no permitido', async () => {
