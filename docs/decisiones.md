@@ -1035,6 +1035,56 @@ Este archivo registra decisiones técnicas deliberadas que se apartan del texto 
 
 ---
 
+## ADR-38: Media background de plataforma, empresa y tienda
+
+- **Fecha**: 2026-11-04
+- **Estado**: Aceptado
+- **Contexto**: el frontend necesita fondos de imagen o video para la
+  plataforma, la empresa y la tienda, con metadatos de presentación (poster,
+  texto alternativo, overlay y posición). Solo existían logos; storage no
+  servía video ni rangos HTTP, y no había configuración global del sitio. El
+  contrato funcional está en
+  `frontend-ecomerce/frontend-app/docs/backend-media-background.md`.
+- **Decisión**:
+  1. Compartir un contrato único de campos: `background_objeto_id`,
+     `background_media_type`, `background_url`, `background_poster_objeto_id`,
+     `background_poster_url`, `background_alt`, `background_overlay`
+     (0-100), `background_position` (`center|top|bottom|left|right`) y
+     `background_activo`.
+  2. El cliente solo envía ids y metadatos. `background_media_type` se deriva
+     del `content_type` real del objeto y las URLs se derivan en cada
+     respuesta; ninguna URL firmada se persiste ni se devuelve.
+  3. Validar cada objeto contra la API interna de storage: mismo tenant,
+     `estado = activo`, `publico = true` y MIME
+     `image/jpeg|png|webp` o `video/mp4|webm` (el poster solo admite imagen).
+     `background_objeto_id: null` limpia el bloque completo; un campo ausente
+     no cambia.
+  4. Plataforma: tabla singleton `identity.configuracion_plataforma`,
+     `GET /api/v1/configuracion/sitio` público y `PATCH` para
+     admin/super_admin. Los assets se validan contra `PLATFORM_TENANT_ID`.
+  5. Empresa: columnas de fondo en `identity.empresas`, expuestas en
+     `EmpresaResponseDto` y actualizables con `PATCH /api/v1/empresas/{id}/perfil`.
+  6. Tienda: columnas de fondo en `stores.tiendas`, expuestas en
+     `TiendaResponseDto` y actualizables con `PATCH /api/v1/tiendas/{id}/background`.
+  7. Storage sirve imagen y video públicos con `Accept-Ranges`, `HEAD`, `206`
+     y `416`; el video tiene un límite propio de 100 MiB y SVG sigue
+     rechazado.
+  8. Migraciones separadas por ámbito: `16_media_background_plataforma.sql`,
+     `17_media_background_empresa.sql` y `18_media_background_tienda.sql`.
+- **Consecuencias**:
+  - Los tres ámbitos comparten normalización, validación y derivación de URLs
+    (helper de identity y equivalente en stores), sin duplicar reglas.
+  - El gateway autoriza la lectura pública de la configuración y reserva la
+    escritura a roles globales; empresa y tienda conservan sus reglas de
+    propiedad.
+  - El binario permanece en storage y los dominios solo guardan referencias
+    (R-DB-1); una caída de storage bloquea la actualización del fondo, no la
+    lectura del resto del recurso.
+  - El frontend puede precargar el poster y reproducir video por streaming sin
+    exponer credenciales de storage.
+
+---
+
 ## Resumen de cumplimiento post-corrección
 
 | Ítem del documento          | Estado  | Nota |
