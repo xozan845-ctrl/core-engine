@@ -111,10 +111,35 @@ describe('TiendasSlugController (api/v1/tiendas/:id/slug, ADR-26)', () => {
       actualizarSlug: vi.fn(),
       actualizarBackground: vi.fn(),
       actualizarPersonalizacion: vi.fn(),
+      actualizarContenido: vi.fn(),
     };
     const controller = new TiendasSlugController(tiendas as unknown as TiendasService);
     return { tiendas, controller };
   }
+
+  it('debe actualizar el contenido con el usuario autenticado', async () => {
+    const { tiendas, controller } = fabricarSlug();
+    const dto = {
+      secciones: [{ tipo: 'hero', visible: true, orden: 0 }],
+      sobre_nosotros: 'Mi historia',
+      anuncio_texto: 'Envío gratis',
+    };
+    tiendas.actualizarContenido.mockResolvedValue(tienda);
+
+    await expect(
+      controller.actualizarContenido('t-1', dto as never, vendedor as never),
+    ).resolves.toEqual(tienda);
+    expect(tiendas.actualizarContenido).toHaveBeenCalledWith(vendedor, 't-1', dto);
+  });
+
+  it('debe exigir dueño, empresario o rol global para el contenido', () => {
+    expect(
+      Reflect.getMetadata(
+        'roles_requeridos',
+        TiendasSlugController.prototype.actualizarContenido,
+      ),
+    ).toEqual([ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.VENDEDOR, ROLES.EMPRESARIO]);
+  });
 
   it('debe actualizar la personalización con el usuario autenticado', async () => {
     const { tiendas, controller } = fabricarSlug();

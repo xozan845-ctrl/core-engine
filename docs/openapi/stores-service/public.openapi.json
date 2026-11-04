@@ -245,6 +245,53 @@
         ]
       }
     },
+    "/api/v1/tiendas/{id}/contenido": {
+      "patch": {
+        "operationId": "TiendasSlugController_actualizarContenido",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "description": "UUID de la tienda o su slug actual",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ActualizarContenidoTiendaRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Contenido actualizado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TiendaResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Actualizar el contenido del storefront (secciones, políticas, redes y anuncio)",
+        "tags": [
+          "Tiendas"
+        ]
+      }
+    },
     "/api/v1/tiendas/{id}/slug": {
       "patch": {
         "operationId": "TiendasSlugController_actualizarSlug",
@@ -508,6 +555,55 @@
           },
           "background_activo": {
             "type": "boolean",
+            "default": false
+          }
+        }
+      },
+      "ActualizarContenidoTiendaRequestDto": {
+        "type": "object",
+        "properties": {
+          "secciones": {
+            "description": "Orden y visibilidad de las secciones; null o [] las limpia",
+            "maxItems": 12,
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SeccionRequestDto"
+            }
+          },
+          "sobre_nosotros": {
+            "type": "string",
+            "description": "Texto \"sobre nosotros\"",
+            "maxLength": 2000
+          },
+          "politicas": {
+            "description": "Políticas de la tienda",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/PoliticasRequestDto"
+              }
+            ]
+          },
+          "redes": {
+            "description": "Redes sociales; null o [] las limpia",
+            "maxItems": 6,
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/RedSocialRequestDto"
+            }
+          },
+          "anuncio_texto": {
+            "type": "string",
+            "description": "Texto del anuncio superior",
+            "maxLength": 120
+          },
+          "anuncio_enlace": {
+            "type": "string",
+            "description": "Ruta relativa o URL HTTPS del anuncio",
+            "maxLength": 300
+          },
+          "anuncio_activo": {
+            "type": "boolean",
+            "description": "Si el anuncio está activo",
             "default": false
           }
         }
@@ -786,6 +882,48 @@
           "paginas"
         ]
       },
+      "PoliticasRequestDto": {
+        "type": "object",
+        "properties": {
+          "envio": {
+            "type": "string",
+            "description": "Política de envío",
+            "maxLength": 1000
+          },
+          "devolucion": {
+            "type": "string",
+            "description": "Política de devolución",
+            "maxLength": 1000
+          },
+          "privacidad": {
+            "type": "string",
+            "description": "Política de privacidad",
+            "maxLength": 1000
+          }
+        }
+      },
+      "PoliticasResponseDto": {
+        "type": "object",
+        "properties": {
+          "envio": {
+            "type": "string",
+            "description": "Política de envío"
+          },
+          "devolucion": {
+            "type": "string",
+            "description": "Política de devolución"
+          },
+          "privacidad": {
+            "type": "string",
+            "description": "Política de privacidad"
+          }
+        },
+        "required": [
+          "envio",
+          "devolucion",
+          "privacidad"
+        ]
+      },
       "PublicarProductoRequestDto": {
         "type": "object",
         "properties": {
@@ -810,6 +948,127 @@
         "required": [
           "producto_id",
           "margen"
+        ]
+      },
+      "RedSocialRequestDto": {
+        "type": "object",
+        "properties": {
+          "red": {
+            "type": "string",
+            "description": "Red social",
+            "enum": [
+              "instagram",
+              "facebook",
+              "tiktok",
+              "x",
+              "whatsapp",
+              "youtube",
+              "otra"
+            ]
+          },
+          "url": {
+            "type": "string",
+            "description": "URL HTTPS del perfil",
+            "example": "https://instagram.com/mitienda"
+          }
+        },
+        "required": [
+          "red",
+          "url"
+        ]
+      },
+      "RedSocialResponseDto": {
+        "type": "object",
+        "properties": {
+          "red": {
+            "type": "string",
+            "description": "Red social",
+            "enum": [
+              "instagram",
+              "facebook",
+              "tiktok",
+              "x",
+              "whatsapp",
+              "youtube",
+              "otra"
+            ]
+          },
+          "url": {
+            "type": "string",
+            "description": "URL HTTPS del perfil"
+          }
+        },
+        "required": [
+          "red",
+          "url"
+        ]
+      },
+      "SeccionRequestDto": {
+        "type": "object",
+        "properties": {
+          "tipo": {
+            "type": "string",
+            "description": "Tipo de sección",
+            "enum": [
+              "hero",
+              "destacados",
+              "categorias",
+              "ofertas",
+              "sobre_nosotros",
+              "politicas",
+              "contacto",
+              "redes"
+            ]
+          },
+          "visible": {
+            "type": "boolean",
+            "description": "Si la sección se muestra",
+            "default": true
+          },
+          "orden": {
+            "type": "number",
+            "description": "Orden de la sección",
+            "minimum": 0,
+            "maximum": 11
+          }
+        },
+        "required": [
+          "tipo",
+          "visible",
+          "orden"
+        ]
+      },
+      "SeccionResponseDto": {
+        "type": "object",
+        "properties": {
+          "tipo": {
+            "type": "string",
+            "description": "Tipo de sección",
+            "enum": [
+              "hero",
+              "destacados",
+              "categorias",
+              "ofertas",
+              "sobre_nosotros",
+              "politicas",
+              "contacto",
+              "redes"
+            ]
+          },
+          "visible": {
+            "type": "boolean",
+            "description": "Si la sección se muestra"
+          },
+          "orden": {
+            "type": "number",
+            "description": "Orden de la sección",
+            "minimum": 0
+          }
+        },
+        "required": [
+          "tipo",
+          "visible",
+          "orden"
         ]
       },
       "TemaRequestDto": {
@@ -1131,6 +1390,50 @@
           "personalizacion_actualizada_en": {
             "type": "object",
             "description": "Última actualización de la personalización",
+            "nullable": true,
+            "format": "date-time"
+          },
+          "secciones": {
+            "description": "Orden y visibilidad de las secciones del storefront (ADR-40)",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SeccionResponseDto"
+            }
+          },
+          "sobre_nosotros": {
+            "type": "string",
+            "description": "Texto \"sobre nosotros\""
+          },
+          "politicas": {
+            "description": "Políticas de la tienda",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/PoliticasResponseDto"
+              }
+            ]
+          },
+          "redes": {
+            "description": "Redes sociales de la tienda",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/RedSocialResponseDto"
+            }
+          },
+          "anuncio_texto": {
+            "type": "string",
+            "description": "Texto del anuncio superior"
+          },
+          "anuncio_enlace": {
+            "type": "string",
+            "description": "Ruta o URL HTTPS del anuncio"
+          },
+          "anuncio_activo": {
+            "type": "boolean",
+            "description": "Si el anuncio está activo"
+          },
+          "contenido_actualizado_en": {
+            "type": "object",
+            "description": "Última actualización del contenido",
             "nullable": true,
             "format": "date-time"
           },

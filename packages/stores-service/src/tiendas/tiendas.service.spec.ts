@@ -41,6 +41,14 @@ const tienda = {
   seo_imagen_objeto_id: null,
   seo_imagen_url: null,
   personalizacion_actualizada_en: null,
+  secciones: [],
+  sobre_nosotros: '',
+  politicas: { envio: '', devolucion: '', privacidad: '' },
+  redes: [],
+  anuncio_texto: '',
+  anuncio_enlace: '',
+  anuncio_activo: false,
+  contenido_actualizado_en: null,
   creado_en: '2026-09-01T00:00:00.000Z',
 };
 
@@ -865,6 +873,144 @@ describe('TiendasService · personalización visual (ADR-39)', () => {
         seo_imagen_url: null,
       }),
     ]);
+  });
+});
+
+describe('TiendasService · contenido del storefront (ADR-40)', () => {
+  const base = { ...tienda, actualizado_en: tienda.creado_en };
+
+  it('actualiza secciones, políticas, redes y anuncio', async () => {
+    const actualizada = {
+      ...base,
+      secciones: [
+        { tipo: 'hero' as const, visible: true, orden: 0 },
+        { tipo: 'ofertas' as const, visible: true, orden: 2 },
+      ],
+      sobre_nosotros: 'Somos una tienda familiar',
+      politicas: { envio: '24 horas', devolucion: '', privacidad: '' },
+      redes: [{ red: 'instagram' as const, url: 'https://instagram.com/mitienda' }],
+      anuncio_texto: 'Envío gratis',
+      anuncio_enlace: '/productos',
+      anuncio_activo: true,
+      contenido_actualizado_en: '2026-11-04T00:00:00.000Z',
+    };
+    const pg = {
+      queryOne: vi.fn()
+        .mockResolvedValueOnce({ ...base, es_actual: true })
+        .mockResolvedValueOnce(actualizada),
+      query: vi.fn(),
+    };
+    const servicio = new TiendasService(pg as never);
+
+    const resultado = await servicio.actualizarContenido(
+      { user_id: 'v1', rol: 'vendedor', tenant_id: 'e1' },
+      't1',
+      {
+        secciones: [
+          { tipo: 'ofertas', visible: true, orden: 2 },
+          { tipo: 'hero', visible: true, orden: 0 },
+        ],
+        sobre_nosotros: '  Somos una tienda familiar  ',
+        politicas: { envio: '  24 horas  ' },
+        redes: [{ red: 'instagram', url: '  https://instagram.com/mitienda  ' }],
+        anuncio_texto: 'Envío gratis',
+        anuncio_enlace: '/productos',
+        anuncio_activo: true,
+      },
+    );
+
+    expect(resultado).toMatchObject({
+      secciones: [
+        { tipo: 'hero', visible: true, orden: 0 },
+        { tipo: 'ofertas', visible: true, orden: 2 },
+      ],
+      sobre_nosotros: 'Somos una tienda familiar',
+      politicas: { envio: '24 horas' },
+      redes: [{ red: 'instagram', url: 'https://instagram.com/mitienda' }],
+      anuncio_activo: true,
+    });
+    const [sql, params] = pg.queryOne.mock.calls[1];
+    expect(sql).toContain('secciones=$1::jsonb');
+    expect(JSON.parse(params[0] as string)).toHaveLength(2);
+    expect(params[1]).toBe('Somos una tienda familiar');
+    expect(JSON.parse(params[2] as string)).toMatchObject({ envio: '24 horas' });
+    expect(JSON.parse(params[3] as string)).toHaveLength(1);
+    expect(params[6]).toBe(true);
+    expect(params[7]).toBe('t1');
+  });
+
+  it('rechaza secciones o redes inválidas antes de actualizar', async () => {
+    const crear = () =>
+      new TiendasService({
+        queryOne: vi.fn().mockResolvedValueOnce({ ...base, es_actual: true }),
+        query: vi.fn(),
+      } as never);
+
+    await expect(
+      crear().actualizarContenido(
+        { user_id: 'v1', rol: 'vendedor', tenant_id: 'e1' },
+        't1',
+        {
+          secciones: [
+            { tipo: 'hero', visible: true, orden: 0 },
+            { tipo: 'hero', visible: true, orden: 1 },
+          ],
+        },
+      ),
+    ).rejects.toMatchObject({ codigo: 'CONTENIDO_INVALIDO' });
+
+    await expect(
+      crear().actualizarContenido(
+        { user_id: 'v1', rol: 'vendedor', tenant_id: 'e1' },
+        't1',
+        {
+          secciones: [
+            { tipo: 'hero', visible: true, orden: 0 },
+            { tipo: 'ofertas', visible: true, orden: 0 },
+          ],
+        },
+      ),
+    ).rejects.toMatchObject({ codigo: 'CONTENIDO_INVALIDO' });
+
+    await expect(
+      crear().actualizarContenido(
+        { user_id: 'v1', rol: 'vendedor', tenant_id: 'e1' },
+        't1',
+        { redes: [{ red: 'instagram', url: 'http://instagram.com/mitienda' }] },
+      ),
+    ).rejects.toMatchObject({ codigo: 'CONTENIDO_INVALIDO' });
+  });
+
+  it('aplica la misma autorización que el logo', async () => {
+    const servicio = new TiendasService({
+      queryOne: vi.fn().mockResolvedValueOnce({ ...base, es_actual: true }),
+      query: vi.fn(),
+    } as never);
+
+    await expect(
+      servicio.actualizarContenido(
+        { user_id: 'v2', rol: 'vendedor', tenant_id: 'e1' },
+        't1',
+        { sobre_nosotros: 'x' },
+      ),
+    ).rejects.toBeInstanceOf(ForbiddenError);
+  });
+
+  it('expone el contenido por defecto al consultar tiendas', async () => {
+    const pg = {
+      queryOne: vi.fn().mockResolvedValue({ ...base, es_actual: true }),
+      query: vi.fn().mockResolvedValue([base]),
+    };
+    const servicio = new TiendasService(pg as never);
+
+    await expect(servicio.deVendedor('v1')).resolves.toMatchObject({
+      secciones: [],
+      sobre_nosotros: '',
+      politicas: { envio: '', devolucion: '', privacidad: '' },
+      redes: [],
+      anuncio_activo: false,
+      contenido_actualizado_en: null,
+    });
   });
 });
 

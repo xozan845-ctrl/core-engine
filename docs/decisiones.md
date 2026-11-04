@@ -1134,6 +1134,43 @@ Este archivo registra decisiones técnicas deliberadas que se apartan del texto 
 
 ---
 
+## ADR-40: Contenido del storefront de tienda
+
+- **Fecha**: 2026-11-04
+- **Estado**: Aceptado
+- **Contexto**: el ADR-39 resolvió la identidad visual (plantilla, tema, hero y
+  SEO), pero la tienda seguía sin estructura de contenido: no se podían
+  ordenar secciones ni publicar “sobre nosotros”, políticas, redes o un
+  anuncio. El storefront necesita un contrato estable para renderizar sin
+  aceptar HTML libre.
+- **Decisión**:
+  1. `secciones` JSONB con una lista ordenada de tipos permitidos (`hero`,
+     `destacados`, `categorias`, `ofertas`, `sobre_nosotros`, `politicas`,
+     `contacto`, `redes`). Máximo 12, sin tipos ni órdenes repetidos; una
+     lista vacía delega el orden por defecto a la plantilla del frontend.
+  2. `sobre_nosotros` (máx. 2000), `politicas` JSONB (`envio`, `devolucion`,
+     `privacidad`, máx. 1000 cada una), `redes` JSONB (máx. 6, URL HTTPS) y
+     `anuncio_texto` / `anuncio_enlace` / `anuncio_activo` (máx. 120/300).
+  3. Actualización parcial: un campo ausente conserva su valor; `secciones` y
+     `redes` se reemplazan completas y `null`/`[]` las limpia.
+  4. `PATCH /api/v1/tiendas/{id}/contenido` con la misma autorización que el
+     logo, el fondo y el tema (vendedor dueño, empresario o admin/super_admin).
+  5. `GET /api/v1/tiendas/{id}` devuelve el contenido junto con la tienda y sus
+     ofertas; el contrato es aditivo para el frontend actual (R-C-7).
+  6. El enlace del anuncio solo admite ruta relativa segura o HTTPS; las redes
+     exigen HTTPS. No se aceptan `javascript:`, `data:` ni `//host`.
+  7. Migración `20_contenido_tienda.sql`. Sin cambios de RLS: las columnas
+     viven en `stores.tiendas`, que ya tiene lectura pública y escritura
+     restringida.
+- **Consecuencias**:
+  - Una tienda sin configuración devuelve listas vacías y textos vacíos; el
+    frontend aplica el orden de secciones de su plantilla.
+  - El backend no renderiza ni acepta HTML: solo estructura y texto validados.
+  - Quedan para una fase posterior la herencia tienda→empresa→plataforma, las
+    variantes móviles, el borrador/publicado y el endpoint `tema.css`.
+
+---
+
 ## Resumen de cumplimiento post-corrección
 
 | Ítem del documento          | Estado  | Nota |
