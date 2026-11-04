@@ -31,8 +31,10 @@ export function interpretarRango(cabecera: string | undefined, totalBytes: numbe
   const coincidencia = RANGO.exec(cabecera.trim());
   if (!coincidencia || total === 0) return { tipo: 'invalido' };
 
-  const inicioTexto = coincidencia[1] ?? '';
-  const finTexto = coincidencia[2] ?? '';
+  // Con `bytes=` exige el guion, ambos grupos existen; `\d*` captura cadena
+  // vacia (no `undefined`) cuando el tramo es abierto.
+  const inicioTexto = coincidencia[1];
+  const finTexto = coincidencia[2];
   if (!inicioTexto && !finTexto) return { tipo: 'invalido' };
 
   // `bytes=-N`: los ultimos N bytes.

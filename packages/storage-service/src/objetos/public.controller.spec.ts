@@ -89,6 +89,20 @@ describe('PublicStorageController (ADR-28, media + Range)', () => {
     expect(objetos.leerPublico).toHaveBeenCalledWith(ID, { inicio: 10, fin: 19 });
   });
 
+  it('debe conservar un ETag ya entrecomillado sin duplicar comillas', async () => {
+    const { controller, objetos, res } = crear();
+    objetos.obtenerPublicoMeta.mockResolvedValue({
+      content_type: 'image/png',
+      tamano_bytes: 3,
+      etag: '"etag-entrecomillado"',
+      nombre: 'foto.png',
+    });
+
+    await controller.servir(ID, undefined, res as never);
+
+    expect(res.setHeader).toHaveBeenCalledWith('ETag', '"etag-entrecomillado"');
+  });
+
   it('debe responder 416 y no abrir stream cuando el rango es inválido', async () => {
     const { controller, objetos, res } = crear();
     objetos.obtenerPublicoMeta.mockResolvedValue({
@@ -119,6 +133,23 @@ describe('PublicStorageController (ADR-28, media + Range)', () => {
 
     expect(res.status).toHaveBeenCalledWith(206);
     expect(res.setHeader).toHaveBeenCalledWith('Content-Range', 'bytes 0-99/1000');
+    expect(objetos.leerPublico).not.toHaveBeenCalled();
+  });
+
+  it('debe responder HEAD completo con Content-Length y sin abrir el stream', async () => {
+    const { controller, objetos, res } = crear();
+    objetos.obtenerPublicoMeta.mockResolvedValue({
+      content_type: 'video/mp4',
+      tamano_bytes: 1000,
+      etag: 'etag-video',
+      nombre: 'fondo.mp4',
+    });
+
+    await controller.cabeceras(ID, undefined, res as never);
+
+    expect(res.status).not.toHaveBeenCalled();
+    expect(res.setHeader).toHaveBeenCalledWith('Content-Length', '1000');
+    expect(res.setHeader).toHaveBeenCalledWith('Accept-Ranges', 'bytes');
     expect(objetos.leerPublico).not.toHaveBeenCalled();
   });
 
