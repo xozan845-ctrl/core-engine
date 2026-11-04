@@ -1,5 +1,4 @@
 [
-  "packages/market-intelligence-service/src/inteligencia/services/feature-computer.service.ts",
   "packages/market-intelligence-service/src/inteligencia/services/view-refresher.service.ts",
   "packages/orders-service/src/pedidos/carrito/carrito.service.ts",
   "packages/orders-service/src/pedidos/pedidos.consumer.ts",
