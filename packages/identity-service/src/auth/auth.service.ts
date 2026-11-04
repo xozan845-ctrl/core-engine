@@ -11,6 +11,7 @@ import {
   verificarToken,
   TokenPayload,
   DomainError,
+  UnauthorizedError,
   ROLES,
   JWT_ACCESS_TTL_DEFAULT,
   JWT_REFRESH_TTL_DEFAULT,
@@ -84,21 +85,21 @@ export class AuthService {
     try {
       payload = verificarToken<TokenPayload>(refreshToken, this.secreto);
     } catch {
-      throw new DomainError('TOKEN_INVALIDO', 'El refresh_token es invalido o expiro.');
+      throw new UnauthorizedError('El refresh_token es invalido o expiro.');
     }
     if (payload.tipo !== 'refresh') {
-      throw new DomainError('TOKEN_INVALIDO', 'El token no es de refresco.');
+      throw new UnauthorizedError('El token no es de refresco.');
     }
     if (!payload.jti) {
-      throw new DomainError('TOKEN_INVALIDO', 'El token no tiene una sesion asociada.');
+      throw new UnauthorizedError('El token no tiene una sesion asociada.');
     }
     const sesion = await this.sesiones.activaPorJti(payload.jti);
     if (!sesion || sesion.usuario_id !== payload.sub) {
-      throw new DomainError('SESION_REVOCADA', 'La sesion fue cerrada; inicia sesion de nuevo.');
+      throw new UnauthorizedError('La sesion fue cerrada; inicia sesion de nuevo.');
     }
     const usuario = await this.usuarios.encontrarPorId(payload.sub);
     if (!usuario) {
-      throw new DomainError('TOKEN_INVALIDO', 'El usuario del token ya no existe.');
+      throw new UnauthorizedError('El usuario del token ya no existe.');
     }
     return this.emitir(usuario, payload.jti);
   }
