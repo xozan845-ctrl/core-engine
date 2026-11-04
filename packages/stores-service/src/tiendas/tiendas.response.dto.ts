@@ -6,6 +6,45 @@ import {
   Plantilla,
   Tema,
 } from './personalizacion-tienda';
+import {
+  Politicas,
+  REDES_SOCIALES,
+  RedSocial,
+  RedSocialTipo,
+  Seccion,
+  TIPOS_SECCION,
+  TipoSeccion,
+} from './contenido-tienda';
+
+export class SeccionResponseDto implements Seccion {
+  @ApiProperty({ description: 'Tipo de sección', enum: TIPOS_SECCION })
+  tipo: TipoSeccion;
+
+  @ApiProperty({ description: 'Si la sección se muestra' })
+  visible: boolean;
+
+  @ApiProperty({ description: 'Orden de la sección', minimum: 0 })
+  orden: number;
+}
+
+export class RedSocialResponseDto implements RedSocial {
+  @ApiProperty({ description: 'Red social', enum: REDES_SOCIALES })
+  red: RedSocialTipo;
+
+  @ApiProperty({ description: 'URL HTTPS del perfil' })
+  url: string;
+}
+
+export class PoliticasResponseDto implements Politicas {
+  @ApiProperty({ description: 'Política de envío' })
+  envio: string;
+
+  @ApiProperty({ description: 'Política de devolución' })
+  devolucion: string;
+
+  @ApiProperty({ description: 'Política de privacidad' })
+  privacidad: string;
+}
 
 export class TemaResponseDto implements Tema {
   @ApiProperty({ description: 'Color primario (hex)', example: '#1F2937' })
@@ -180,6 +219,39 @@ export class TiendaResponseDto {
     format: 'date-time',
   })
   personalizacion_actualizada_en?: string | null;
+
+  @ApiProperty({
+    description: 'Orden y visibilidad de las secciones del storefront (ADR-40)',
+    required: false,
+    type: [SeccionResponseDto],
+  })
+  secciones?: SeccionResponseDto[];
+
+  @ApiProperty({ description: 'Texto "sobre nosotros"', required: false })
+  sobre_nosotros?: string;
+
+  @ApiProperty({ description: 'Políticas de la tienda', required: false, type: PoliticasResponseDto })
+  politicas?: PoliticasResponseDto;
+
+  @ApiProperty({ description: 'Redes sociales de la tienda', required: false, type: [RedSocialResponseDto] })
+  redes?: RedSocialResponseDto[];
+
+  @ApiProperty({ description: 'Texto del anuncio superior', required: false })
+  anuncio_texto?: string;
+
+  @ApiProperty({ description: 'Ruta o URL HTTPS del anuncio', required: false })
+  anuncio_enlace?: string;
+
+  @ApiProperty({ description: 'Si el anuncio está activo', required: false })
+  anuncio_activo?: boolean;
+
+  @ApiProperty({
+    description: 'Última actualización del contenido',
+    required: false,
+    nullable: true,
+    format: 'date-time',
+  })
+  contenido_actualizado_en?: string | null;
 
   @ApiProperty({ description: 'Fecha de creación (ISO 8601 UTC)', format: 'date-time' })
   creado_en: string;

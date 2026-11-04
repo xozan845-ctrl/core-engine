@@ -30,8 +30,15 @@ import {
   personalizacionDe,
   validarPersonalizacion,
 } from './personalizacion-tienda';
+import {
+  ContenidoCampos,
+  ContenidoInput,
+  contenidoDe,
+  normalizarContenido,
+  validarContenido,
+} from './contenido-tienda';
 
-export interface Tienda extends PersonalizacionCampos {
+export interface Tienda extends PersonalizacionCampos, ContenidoCampos {
   id: string;
   empresa_id: string;
   propietario_usuario_id: string;
@@ -67,7 +74,7 @@ interface TiendaConEstadoSlug extends Tienda {
 }
 
 const CAMPOS_TIENDA =
-  'id, empresa_id, propietario_usuario_id, participacion_porcentaje, vendedor_id, nombre, descripcion, slug, logo_objeto_id, background_objeto_id, background_media_type, background_poster_objeto_id, background_alt, background_overlay, background_position, background_activo, plantilla, tema, hero_titulo, hero_subtitulo, hero_cta_texto, hero_cta_url, seo_titulo, seo_descripcion, seo_imagen_objeto_id, personalizacion_actualizada_en, creado_en, actualizado_en';
+  'id, empresa_id, propietario_usuario_id, participacion_porcentaje, vendedor_id, nombre, descripcion, slug, logo_objeto_id, background_objeto_id, background_media_type, background_poster_objeto_id, background_alt, background_overlay, background_position, background_activo, plantilla, tema, hero_titulo, hero_subtitulo, hero_cta_texto, hero_cta_url, seo_titulo, seo_descripcion, seo_imagen_objeto_id, personalizacion_actualizada_en, secciones, sobre_nosotros, politicas, redes, anuncio_texto, anuncio_enlace, anuncio_activo, contenido_actualizado_en, creado_en, actualizado_en';
 const MAX_INTENTOS_SLUG = 50;
 
 /**
@@ -334,6 +341,48 @@ export class TiendasService {
     return this.conUrls(fila);
   }
 
+  /**
+   * Actualiza el contenido del storefront (ADR-40): secciones, sobre nosotros,
+   * políticas, redes y anuncio. Misma autorización que el logo/fondo.
+   */
+  async actualizarContenido(
+    actor: { user_id: string; rol: string; tenant_id?: string },
+    identificador: string,
+    datos: ContenidoInput,
+  ): Promise<Tienda> {
+    const resuelta = await this.resolver(identificador);
+    if (!resuelta) throw new NotFoundError('Tienda', identificador);
+    const tienda = resuelta.tienda;
+    this.verificarAcceso(
+      actor,
+      tienda,
+      'Solo el dueño de la tienda puede cambiar su contenido.',
+    );
+
+    const meta = normalizarContenido(datos, contenidoDe(tienda));
+    validarContenido(meta);
+
+    const fila = await this.pg.queryOne<Tienda>(
+      `UPDATE stores.tiendas SET
+         secciones=$1::jsonb, sobre_nosotros=$2, politicas=$3::jsonb, redes=$4::jsonb,
+         anuncio_texto=$5, anuncio_enlace=$6, anuncio_activo=$7,
+         contenido_actualizado_en=NOW(), actualizado_en=NOW()
+       WHERE id=$8 RETURNING ${CAMPOS_TIENDA}`,
+      [
+        JSON.stringify(meta.secciones),
+        meta.sobre_nosotros,
+        JSON.stringify(meta.politicas),
+        JSON.stringify(meta.redes),
+        meta.anuncio_texto,
+        meta.anuncio_enlace,
+        meta.anuncio_activo,
+        tienda.id,
+      ],
+    );
+    if (!fila) throw new NotFoundError('Tienda', tienda.id);
+    return this.conUrls(fila);
+  }
+
   private verificarAcceso(
     actor: { user_id: string; rol: string; tenant_id?: string },
     tienda: Tienda,
@@ -397,6 +446,7 @@ export class TiendasService {
       ...conBackgroundUrls(backgroundDe(tienda)),
       ...personalizacion,
       ...conSeoImagenUrl(personalizacion),
+      ...contenidoDe(tienda),
     };
   }
 
