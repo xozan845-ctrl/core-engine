@@ -389,6 +389,25 @@ describe('Gateway auth — slugs de empresa y tienda (ADR-26)', () => {
     expect(next).toHaveBeenCalled();
   });
 
+  it('debe permitir leer la configuración del sitio sin token (ADR-38)', () => {
+    const { res, next } = evaluar('/api/v1/configuracion/sitio', 'GET');
+    expect(res.statusCode).toBe(200);
+    expect(next).toHaveBeenCalled();
+  });
+
+  it('debe exigir admin para actualizar la configuración del sitio', () => {
+    const sinToken = evaluar('/api/v1/configuracion/sitio', 'PATCH');
+    expect(sinToken.res.statusCode).toBe(401);
+    expect(sinToken.next).not.toHaveBeenCalled();
+
+    const vendedor = evaluar('/api/v1/configuracion/sitio', 'PATCH', ROLES.VENDEDOR);
+    expect(vendedor.res.statusCode).toBe(403);
+
+    const admin = evaluar('/api/v1/configuracion/sitio', 'PATCH', ROLES.ADMIN);
+    expect(admin.res.statusCode).toBe(200);
+    expect(admin.next).toHaveBeenCalled();
+  });
+
   it('debe permitir HEAD de una media pública sin token (Range)', () => {
     const { res, next } = evaluar(
       '/api/v1/storage/public/objetos/22222222-2222-4222-8222-222222222222',

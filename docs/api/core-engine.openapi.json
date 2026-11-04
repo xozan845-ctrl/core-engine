@@ -7647,6 +7647,63 @@
         ]
       }
     },
+    "/api/v1/configuracion/sitio": {
+      "get": {
+        "operationId": "ConfiguracionSitioController_obtener",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Fondo de plataforma y metadatos de presentación",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConfiguracionSitioResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Configuración visible del sitio (fondo de plataforma)",
+        "tags": [
+          "Configuración del sitio"
+        ]
+      },
+      "patch": {
+        "operationId": "ConfiguracionSitioController_actualizar",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ActualizarConfiguracionSitioRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Configuración del sitio actualizada",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConfiguracionSitioResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Actualizar el fondo y los metadatos del sitio (admin)",
+        "tags": [
+          "Configuración del sitio"
+        ]
+      }
+    },
     "/api/v1/orders/{id}/estado": {
       "patch": {
         "operationId": "EstadoOrdenController_avanzar",
@@ -18140,6 +18197,49 @@
           "usuario"
         ]
       },
+      "ActualizarConfiguracionSitioRequestDto": {
+        "type": "object",
+        "properties": {
+          "background_objeto_id": {
+            "type": "object",
+            "format": "uuid",
+            "nullable": true,
+            "description": "Objeto de storage del fondo; null limpia todo el bloque"
+          },
+          "background_poster_objeto_id": {
+            "type": "object",
+            "format": "uuid",
+            "nullable": true,
+            "description": "Imagen de portada para un fondo de video"
+          },
+          "background_alt": {
+            "type": "string",
+            "maxLength": 160,
+            "default": ""
+          },
+          "background_overlay": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 100,
+            "default": 35
+          },
+          "background_position": {
+            "type": "string",
+            "enum": [
+              "center",
+              "top",
+              "bottom",
+              "left",
+              "right"
+            ],
+            "default": "center"
+          },
+          "background_activo": {
+            "type": "boolean",
+            "default": false
+          }
+        }
+      },
       "ActualizarModalidadLogisticaRequestDto": {
         "type": "object",
         "properties": {
@@ -18213,6 +18313,77 @@
         "required": [
           "actual",
           "nueva"
+        ]
+      },
+      "ConfiguracionSitioResponseDto": {
+        "type": "object",
+        "properties": {
+          "background_objeto_id": {
+            "type": "object",
+            "format": "uuid",
+            "nullable": true
+          },
+          "background_media_type": {
+            "type": "string",
+            "enum": [
+              "imagen",
+              "video"
+            ],
+            "nullable": true
+          },
+          "background_url": {
+            "type": "object",
+            "nullable": true,
+            "description": "URL pública derivada del fondo"
+          },
+          "background_poster_objeto_id": {
+            "type": "object",
+            "format": "uuid",
+            "nullable": true
+          },
+          "background_poster_url": {
+            "type": "object",
+            "nullable": true,
+            "description": "URL pública derivada del poster"
+          },
+          "background_alt": {
+            "type": "string"
+          },
+          "background_overlay": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 100
+          },
+          "background_position": {
+            "type": "string",
+            "enum": [
+              "center",
+              "top",
+              "bottom",
+              "left",
+              "right"
+            ]
+          },
+          "background_activo": {
+            "type": "boolean"
+          },
+          "actualizado_en": {
+            "type": "object",
+            "format": "date-time",
+            "nullable": true
+          }
+        },
+        "required": [
+          "background_objeto_id",
+          "background_media_type",
+          "background_url",
+          "background_poster_objeto_id",
+          "background_poster_url",
+          "background_alt",
+          "background_overlay",
+          "background_position",
+          "background_activo",
+          "actualizado_en"
         ]
       },
       "CrearEmpresaRequestDto": {

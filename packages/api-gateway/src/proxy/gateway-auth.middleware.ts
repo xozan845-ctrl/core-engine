@@ -33,6 +33,13 @@ export const POLITICAS_RUTAS: PoliticaRuta[] = [
     { patron: /^\/api\/v1\/invitaciones\/vendedores\/[^/]+\/aceptar$/, metodos: ['POST'], roles: null },
     { patron: /^\/api\/v1\/catalog\/productos$/, metodos: ['GET'], roles: null },
     { patron: /^\/api\/v1\/catalog\/productos\/[^/]+$/, metodos: ['GET'], roles: null },
+    // Branding publico del sitio (fondo de plataforma, ADR-38).
+    { patron: /^\/api\/v1\/configuracion\/sitio$/, metodos: ['GET'], roles: null },
+    {
+      patron: /^\/api\/v1\/configuracion\/sitio$/,
+      metodos: ['PATCH'],
+      roles: [ROLES.SUPER_ADMIN, ROLES.ADMIN],
+    },
     // Servicios de empresa: recurso administrativo del catálogo (R-PS-02).
     {
       patron: /^\/api\/v1\/catalog\/servicios(\/|$)/,
