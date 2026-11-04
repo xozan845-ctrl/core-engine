@@ -465,6 +465,22 @@ describe('Gateway auth — slugs de empresa y tienda (ADR-26)', () => {
     expect(res.statusCode).toBe(403);
     expect(next).not.toHaveBeenCalled();
   });
+
+  it('debe permitir al vendedor cambiar el fondo de su tienda', () => {
+    const { res, next } = evaluar('/api/v1/tiendas/mi-tienda/background', 'PATCH', ROLES.VENDEDOR);
+    expect(res.statusCode).toBe(200);
+    expect(next).toHaveBeenCalled();
+  });
+
+  it('debe denegar al comprador cambiar el fondo de una tienda', () => {
+    const { res, next } = evaluar(
+      '/api/v1/tiendas/mi-tienda/background',
+      'PATCH',
+      ROLES.COMPRADOR,
+    );
+    expect(res.statusCode).toBe(403);
+    expect(next).not.toHaveBeenCalled();
+  });
 });
 
 describe('Gateway auth — deny by default (R-GW-1, R-GW-3)', () => {

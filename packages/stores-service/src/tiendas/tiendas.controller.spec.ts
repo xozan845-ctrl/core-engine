@@ -107,10 +107,30 @@ describe('TiendasEmpresaController (api/v1/empresarios/me/tiendas, ADR-25)', () 
 
 describe('TiendasSlugController (api/v1/tiendas/:id/slug, ADR-26)', () => {
   function fabricarSlug(): { tiendas: Record<string, Mock>; controller: TiendasSlugController } {
-    const tiendas = { actualizarSlug: vi.fn() };
+    const tiendas = { actualizarSlug: vi.fn(), actualizarBackground: vi.fn() };
     const controller = new TiendasSlugController(tiendas as unknown as TiendasService);
     return { tiendas, controller };
   }
+
+  it('debe actualizar el fondo con el usuario autenticado', async () => {
+    const { tiendas, controller } = fabricarSlug();
+    const dto = {
+      background_objeto_id: '22222222-3333-4444-8555-666666666666',
+      background_activo: true,
+    };
+    tiendas.actualizarBackground.mockResolvedValue(tienda);
+
+    await expect(
+      controller.actualizarBackground('t-1', dto, vendedor as never),
+    ).resolves.toEqual(tienda);
+    expect(tiendas.actualizarBackground).toHaveBeenCalledWith(vendedor, 't-1', dto);
+  });
+
+  it('debe exigir dueño, empresario o rol global para el fondo', () => {
+    expect(
+      Reflect.getMetadata('roles_requeridos', TiendasSlugController.prototype.actualizarBackground),
+    ).toEqual([ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.VENDEDOR, ROLES.EMPRESARIO]);
+  });
 
   it('debe cambiar el slug con el usuario autenticado', async () => {
     const { tiendas, controller } = fabricarSlug();

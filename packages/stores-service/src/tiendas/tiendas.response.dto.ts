@@ -35,6 +35,64 @@ export class TiendaResponseDto {
   @ApiProperty({ description: 'URL pública del logo', required: false, nullable: true })
   logo_url?: string | null;
 
+  @ApiProperty({
+    description: 'Objeto de storage del fondo',
+    required: false,
+    nullable: true,
+    type: String,
+    format: 'uuid',
+  })
+  background_objeto_id?: string | null;
+
+  @ApiProperty({
+    description: 'Tipo derivado del fondo',
+    required: false,
+    nullable: true,
+    enum: ['imagen', 'video'],
+  })
+  background_media_type?: 'imagen' | 'video' | null;
+
+  @ApiProperty({
+    description: 'URL pública derivada del fondo',
+    required: false,
+    nullable: true,
+    type: String,
+  })
+  background_url?: string | null;
+
+  @ApiProperty({
+    description: 'Objeto de storage del poster',
+    required: false,
+    nullable: true,
+    type: String,
+    format: 'uuid',
+  })
+  background_poster_objeto_id?: string | null;
+
+  @ApiProperty({
+    description: 'URL pública derivada del poster',
+    required: false,
+    nullable: true,
+    type: String,
+  })
+  background_poster_url?: string | null;
+
+  @ApiProperty({ description: 'Texto alternativo del fondo', required: false })
+  background_alt?: string;
+
+  @ApiProperty({ description: 'Opacidad del overlay (0-100)', required: false, minimum: 0, maximum: 100 })
+  background_overlay?: number;
+
+  @ApiProperty({
+    description: 'Posición del fondo',
+    required: false,
+    enum: ['center', 'top', 'bottom', 'left', 'right'],
+  })
+  background_position?: 'center' | 'top' | 'bottom' | 'left' | 'right';
+
+  @ApiProperty({ description: 'Si el fondo está activo', required: false })
+  background_activo?: boolean;
+
   @ApiProperty({ description: 'Fecha de creación (ISO 8601 UTC)', format: 'date-time' })
   creado_en: string;
 

@@ -9,9 +9,10 @@ import {
   ApiResponse,
   ApiTags,
 } from '@nestjs/swagger';
-import { IsOptional, IsString, IsUUID, Length } from 'class-validator';
+import { IsBoolean, IsIn, IsInt, IsOptional, IsString, IsUUID, Length, Max, Min } from 'class-validator';
 import { TiendasService, Tienda } from './tiendas.service';
 import { TiendaResponseDto } from './tiendas.response.dto';
+import { BACKGROUND_POSICIONES, BackgroundInput, BackgroundPosition } from './media-background';
 import { Roles, ROLES, UsuarioActual, UsuarioContexto, NotFoundError } from '@core/shared';
 
 export class CrearTiendaRequestDto {
@@ -48,6 +49,53 @@ export class ActualizarLogoTiendaRequestDto {
   @IsOptional()
   @IsUUID()
   logo_objeto_id?: string | null;
+}
+
+export class ActualizarBackgroundTiendaRequestDto implements BackgroundInput {
+  @ApiProperty({
+    description: 'Objeto de storage del fondo; null limpia el bloque completo',
+    required: false,
+    nullable: true,
+    type: String,
+    format: 'uuid',
+  })
+  @IsOptional()
+  @IsUUID()
+  background_objeto_id?: string | null;
+
+  @ApiProperty({
+    description: 'Imagen de portada para un fondo de video',
+    required: false,
+    nullable: true,
+    type: String,
+    format: 'uuid',
+  })
+  @IsOptional()
+  @IsUUID()
+  background_poster_objeto_id?: string | null;
+
+  @ApiProperty({ required: false, maxLength: 160 })
+  @IsOptional()
+  @IsString()
+  @Length(0, 160)
+  background_alt?: string;
+
+  @ApiProperty({ required: false, minimum: 0, maximum: 100, default: 35 })
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  @Max(100)
+  background_overlay?: number;
+
+  @ApiProperty({ required: false, enum: BACKGROUND_POSICIONES, default: 'center' })
+  @IsOptional()
+  @IsIn(BACKGROUND_POSICIONES)
+  background_position?: BackgroundPosition;
+
+  @ApiProperty({ required: false, default: false })
+  @IsOptional()
+  @IsBoolean()
+  background_activo?: boolean;
 }
 
 export class ActualizarSlugTiendaRequestDto {
@@ -134,6 +182,19 @@ export class TiendasSlugController {
     @UsuarioActual() usuario: UsuarioContexto,
   ): Promise<Tienda> {
     return this.tiendas.actualizarLogo(usuario, id, dto.logo_objeto_id ?? null);
+  }
+
+  @Patch(':id/background')
+  @Roles(ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.VENDEDOR, ROLES.EMPRESARIO)
+  @ApiOperation({ summary: 'Asociar, cambiar o quitar el fondo público de la tienda' })
+  @ApiParam({ name: 'id', description: 'UUID de la tienda o su slug actual' })
+  @ApiOkResponse({ type: TiendaResponseDto, description: 'Fondo actualizado' })
+  actualizarBackground(
+    @Param('id') id: string,
+    @Body() dto: ActualizarBackgroundTiendaRequestDto,
+    @UsuarioActual() usuario: UsuarioContexto,
+  ): Promise<Tienda> {
+    return this.tiendas.actualizarBackground(usuario, id, dto);
   }
 
   @Patch(':id/slug')
