@@ -102,7 +102,14 @@ export class AuthService {
     if (!usuario) {
       throw new UnauthorizedError('El usuario del token ya no existe.');
     }
-    return this.emitir(usuario, payload.jti);
+    // Rotacion del refresh (R-GW-4): el token usado se revoca y se emite uno
+    // nuevo con otro jti. Un segundo uso del mismo refresh falla, lo que
+    // convierte el reuso en una senal de robo en vez de una sesion paralela.
+    const revocadas = await this.sesiones.revocar(payload.jti, payload.sub);
+    if (revocadas === 0) {
+      throw new UnauthorizedError('La sesion fue cerrada; inicia sesion de nuevo.');
+    }
+    return this.sesionDe(usuario);
   }
 
   /**

@@ -1,5 +1,5 @@
 import type { Mock } from 'vitest';
-import { UsuariosService } from './usuarios.service';
+import { UsuariosService, HASH_DUMMY } from './usuarios.service';
 import { DomainError, ConflictError, NotFoundError, UnauthorizedError } from '@core/shared';
 import * as bcrypt from 'bcryptjs';
 
@@ -69,6 +69,10 @@ describe('UsuariosService (registro y perfiles)', () => {
       const { servicio, pg } = crear();
       (pg.queryOne as Mock).mockResolvedValue(null);
       await expect(servicio.verificarCredenciales('nadia@core.test', 'x')).rejects.toThrow(UnauthorizedError);
+      // El señuelo es un hash bcrypt válido: la comparación se ejecuta igual y
+      // el tiempo no delata si la cuenta existe (anti-enumeración).
+      expect(HASH_DUMMY).toMatch(/^\$2[aby]\$\d{2}\$.{53}$/);
+      expect(await bcrypt.compare('x', HASH_DUMMY)).toBe(false);
     });
 
     it('debe lanzar UnauthorizedError cuando la contrasena no coincide', async () => {

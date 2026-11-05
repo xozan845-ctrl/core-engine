@@ -185,14 +185,24 @@ describe('AuthService (sesiones JWT)', () => {
       await expect(servicio.refrescar(refresh)).rejects.toThrow(/ya no existe/);
     });
 
-    it('debe emitir una sesion nueva reusando el jti cuando la sesion esta activa', async () => {
+    it('debe rotar el jti y revocar el refresh usado cuando la sesion esta activa', async () => {
       const { servicio, sesiones } = crear();
       const refresh = crearRefreshToken(contexto, SECRETO, '7d', 'jti-1');
       const sesion = await servicio.refrescar(refresh);
       expect(sesion.usuario.id).toBe('u1');
       expect(sesion.access_token).not.toBe(refresh);
-      expect(verificarToken<TokenPayload>(sesion.refresh_token, SECRETO).jti).toBe('jti-1');
-      // no se crea una sesion nueva (se reutiliza la existente)
+      const nuevoJti = verificarToken<TokenPayload>(sesion.refresh_token, SECRETO).jti;
+      expect(nuevoJti).toBeDefined();
+      expect(nuevoJti).not.toBe('jti-1');
+      expect(sesiones.revocar).toHaveBeenCalledWith('jti-1', 'u1');
+      expect(sesiones.crear).toHaveBeenCalled();
+    });
+
+    it('debe rechazar el reuso cuando otro proceso ya revoco el refresh', async () => {
+      const { servicio, sesiones } = crear();
+      (sesiones.revocar as Mock).mockResolvedValue(0);
+      const refresh = crearRefreshToken(contexto, SECRETO, '7d', 'jti-1');
+      await expect(servicio.refrescar(refresh)).rejects.toThrow(/sesion fue cerrada/i);
       expect(sesiones.crear).not.toHaveBeenCalled();
     });
   });

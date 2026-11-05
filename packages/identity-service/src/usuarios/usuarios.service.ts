@@ -2,6 +2,12 @@ import { Injectable } from '@nestjs/common';
 import * as bcrypt from 'bcryptjs';
 import { PgService, DomainError, ConflictError, ForbiddenError, NotFoundError, UnauthorizedError, Rol, esUuid } from '@core/shared';
 
+/**
+ * Hash bcrypt valido que no corresponde a ninguna contrasena util. Se usa para
+ * que el login tarde lo mismo cuando el correo no existe (anti-enumeracion).
+ */
+export const HASH_DUMMY = '$2b$10$Zuut.NowjEKNBr01fvSyL.TByllBR0bPvb2XIiWiW5g8WjTwClWxO';
+
 export interface Usuario {
   id: string;
   nombre: string;
@@ -113,11 +119,12 @@ export class UsuariosService {
 
   async verificarCredenciales(correo: string, contrasena: string): Promise<Usuario> {
     const fila = await this.encontrarPorCorreo(correo);
-    if (!fila) {
-      throw new UnauthorizedError('Correo o contrasena incorrectos.');
-    }
-    const ok = await bcrypt.compare(contrasena, fila.contrasena_hash);
-    if (!ok) {
+    // Comparar siempre contra un hash, exista o no el correo: sin esto el
+    // tiempo de respuesta distingue cuentas reales (~70 ms) de inexistentes
+    // (~5 ms) y permite enumerar usuarios (R-DS-2).
+    const hash = fila?.contrasena_hash ?? HASH_DUMMY;
+    const ok = await bcrypt.compare(contrasena, hash);
+    if (!fila || !ok) {
       throw new UnauthorizedError('Correo o contrasena incorrectos.');
     }
     return this.sanear(fila);
