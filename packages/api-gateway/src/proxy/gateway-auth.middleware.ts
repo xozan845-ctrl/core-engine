@@ -115,10 +115,17 @@ export const POLITICAS_RUTAS: PoliticaRuta[] = [
     // GET /empresas/:id acepta UUID o slug, pero sigue siendo privado: solo
     // miembros o administradores. No debe existir una politica publica aqui.
     { patron: /^\/api\/v1\/empresas\//, metodos: ['*'], roles: [ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.EMPRESARIO, ROLES.VENDEDOR] },
-    // autenticado
-    { patron: /^\/api\/v1\/auth\/me$/, metodos: ['GET'], roles: null }, // exige token (se valida abajo)
+    // autenticado: exige token en el borde (no depender solo del servicio)
+    { patron: /^\/api\/v1\/auth\/me$/, metodos: ['GET'], roles: Object.values(ROLES) },
     // logout: exige un access token valido (cualquier rol); revoca el refresh (R-GW-4)
     { patron: /^\/api\/v1\/auth\/logout$/, metodos: ['POST'], roles: Object.values(ROLES) },
+    // Operaciones de la propia cuenta: cualquier sesion valida (el servicio
+    // valida la contrasena actual y el usuario del token).
+    {
+      patron: /^\/api\/v1\/auth\/(cambiar-contrasena|vincular-personal)$/,
+      metodos: ['POST'],
+      roles: Object.values(ROLES),
+    },
     // catálogo: escritura admin (el super_admin opera globalmente; para crear
     // debe indicar la empresa en el cuerpo)
     { patron: /^\/api\/v1\/catalog\/productos/, metodos: ['POST', 'PATCH', 'PUT', 'DELETE'], roles: [ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.EMPRESARIO] },
