@@ -8,8 +8,19 @@ const POSTER = '99999999-8888-4777-8666-555555555555';
 const TENANT = 'aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee';
 const ACTUALIZADO = '2026-11-04T12:00:00.000Z';
 
+const PANEL_DEFECTO = {
+  panel_ai_background_objeto_id: null,
+  panel_ai_background_media_type: null,
+  panel_ai_background_poster_objeto_id: null,
+  panel_ai_background_alt: '',
+  panel_ai_background_overlay: 35,
+  panel_ai_background_position: 'center',
+  panel_ai_background_activo: false,
+};
+
 const fila = (extra: Record<string, unknown> = {}) => ({
   ...BACKGROUND_POR_DEFECTO,
+  ...PANEL_DEFECTO,
   actualizado_en: ACTUALIZADO,
   ...extra,
 });
@@ -41,8 +52,11 @@ describe('ConfiguracionSitioService (media background de plataforma, ADR-38)', (
 
     await expect(servicio.obtener()).resolves.toEqual({
       ...BACKGROUND_POR_DEFECTO,
+      ...PANEL_DEFECTO,
       background_url: null,
       background_poster_url: null,
+      panel_ai_background_url: null,
+      panel_ai_background_poster_url: null,
       plantilla: 'clasica',
       tema: TEMA_POR_DEFECTO,
       origen_personalizacion: { plantilla: 'defecto', tema: 'defecto' },
@@ -124,7 +138,9 @@ describe('ConfiguracionSitioService (media background de plataforma, ADR-38)', (
     );
     expect(queryOne).toHaveBeenLastCalledWith(
       expect.stringContaining('ON CONFLICT (id) DO UPDATE SET'),
-      [OBJETO, 'imagen', null, 'Colección', 40, 'center', true, null, '{}', 'admin-1'],
+      [OBJETO, 'imagen', null, 'Colección', 40, 'center', true,
+       null, null, null, '', 35, 'center', false,
+       null, '{}', 'admin-1'],
     );
     expect(resultado).toMatchObject({
       background_objeto_id: OBJETO,
@@ -204,6 +220,13 @@ describe('ConfiguracionSitioService (media background de plataforma, ADR-38)', (
       'center',
       true,
       null,
+      null,
+      null,
+      '',
+      35,
+      'center',
+      false,
+      null,
       '{}',
       'admin-1',
     ]);
@@ -233,6 +256,13 @@ describe('ConfiguracionSitioService (media background de plataforma, ADR-38)', (
 
     expect(fetchMock).not.toHaveBeenCalled();
     expect(queryOne).toHaveBeenLastCalledWith(expect.any(String), [
+      null,
+      null,
+      null,
+      '',
+      35,
+      'center',
+      false,
       null,
       null,
       null,
@@ -325,5 +355,158 @@ describe('ConfiguracionSitioService (media background de plataforma, ADR-38)', (
       plantilla_override: 'minimal',
       tema_override: { fuente: 'inter' },
     });
+  });
+
+  it('deriva las URLs del fondo y poster del panel de IA al leer', async () => {
+    const queryOne = vi.fn().mockResolvedValue(
+      fila({
+        panel_ai_background_objeto_id: OBJETO,
+        panel_ai_background_media_type: 'video',
+        panel_ai_background_poster_objeto_id: POSTER,
+        panel_ai_background_alt: 'Asistente',
+        panel_ai_background_overlay: 60,
+        panel_ai_background_position: 'bottom',
+        panel_ai_background_activo: true,
+      }),
+    );
+    const servicio = crear(queryOne);
+
+    await expect(servicio.obtener()).resolves.toMatchObject({
+      panel_ai_background_media_type: 'video',
+      panel_ai_background_url: `/api/v1/storage/public/objetos/${OBJETO}`,
+      panel_ai_background_poster_url: `/api/v1/storage/public/objetos/${POSTER}`,
+      panel_ai_background_alt: 'Asistente',
+      panel_ai_background_overlay: 60,
+      panel_ai_background_position: 'bottom',
+      panel_ai_background_activo: true,
+    });
+  });
+
+  it('valida un video del panel de IA y su poster', async () => {
+    vi.stubEnv('PLATFORM_TENANT_ID', TENANT);
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(objeto('video/webm'))
+      .mockResolvedValueOnce(objeto('image/png'));
+    vi.stubGlobal('fetch', fetchMock);
+    const queryOne = vi
+      .fn()
+      .mockResolvedValueOnce(null)
+      .mockResolvedValueOnce(
+        fila({
+          panel_ai_background_objeto_id: OBJETO,
+          panel_ai_background_media_type: 'video',
+          panel_ai_background_poster_objeto_id: POSTER,
+          panel_ai_background_activo: true,
+        }),
+      );
+    const servicio = crear(queryOne);
+
+    const resultado = await servicio.actualizar(
+      {
+        panel_ai_background_objeto_id: OBJETO,
+        panel_ai_background_poster_objeto_id: POSTER,
+        panel_ai_background_activo: true,
+      },
+      'admin-1',
+    );
+
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(resultado).toMatchObject({
+      panel_ai_background_media_type: 'video',
+      panel_ai_background_url: `/api/v1/storage/public/objetos/${OBJETO}`,
+      panel_ai_background_poster_url: `/api/v1/storage/public/objetos/${POSTER}`,
+    });
+    expect(queryOne).toHaveBeenLastCalledWith(expect.any(String), [
+      null,
+      null,
+      null,
+      '',
+      35,
+      'center',
+      false,
+      OBJETO,
+      'video',
+      POSTER,
+      '',
+      35,
+      'center',
+      true,
+      null,
+      '{}',
+      'admin-1',
+    ]);
+  });
+
+  it('limpia solo el panel de IA sin tocar el fondo del sitio', async () => {
+    vi.stubEnv('PLATFORM_TENANT_ID', TENANT);
+    const fetchMock = vi.fn();
+    vi.stubGlobal('fetch', fetchMock);
+    const queryOne = vi
+      .fn()
+      .mockResolvedValueOnce(
+        fila({
+          background_objeto_id: OBJETO,
+          background_media_type: 'imagen',
+          background_activo: true,
+          panel_ai_background_objeto_id: POSTER,
+          panel_ai_background_media_type: 'video',
+          panel_ai_background_activo: true,
+        }),
+      )
+      .mockResolvedValueOnce(
+        fila({
+          background_objeto_id: OBJETO,
+          background_media_type: 'imagen',
+          background_activo: true,
+        }),
+      );
+    const servicio = crear(queryOne);
+
+    const resultado = await servicio.actualizar(
+      { panel_ai_background_objeto_id: null },
+      'admin-1',
+    );
+
+    expect(fetchMock).not.toHaveBeenCalled();
+    expect(resultado).toMatchObject({
+      background_objeto_id: OBJETO,
+      panel_ai_background_objeto_id: null,
+      panel_ai_background_media_type: null,
+      panel_ai_background_url: null,
+      panel_ai_background_poster_url: null,
+      panel_ai_background_activo: false,
+    });
+    expect(queryOne).toHaveBeenLastCalledWith(expect.any(String), [
+      OBJETO,
+      'imagen',
+      null,
+      '',
+      35,
+      'center',
+      true,
+      null,
+      null,
+      null,
+      '',
+      35,
+      'center',
+      false,
+      null,
+      '{}',
+      'admin-1',
+    ]);
+  });
+
+  it('rechaza metadatos inválidos del panel de IA', async () => {
+    const queryOne = vi.fn().mockResolvedValue(null);
+    const servicio = crear(queryOne);
+
+    await expect(
+      servicio.actualizar({ panel_ai_background_overlay: 101 }, 'admin-1'),
+    ).rejects.toMatchObject({ codigo: 'BACKGROUND_INVALIDO' });
+    await expect(
+      servicio.actualizar({ panel_ai_background_activo: true }, 'admin-1'),
+    ).rejects.toMatchObject({ codigo: 'BACKGROUND_INVALIDO' });
   });
 });
