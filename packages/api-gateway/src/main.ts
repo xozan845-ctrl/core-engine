@@ -48,9 +48,10 @@ async function bootstrap(): Promise<void> {
 
   // Traefik/Caddy es el unico proxy delante del gateway. Sin `trust proxy`,
   // `req.ip` seria la IP del proxy y TODOS los clientes compartirian el cubo de
-  // rate limit (300/min y 10/min de login). `TRUST_PROXY=false` desactiva la
-  // confianza cuando se accede directamente (desarrollo).
-  const trustProxy = process.env.TRUST_PROXY ?? '1';
+  // rate limit (300/min y 10/min de login). El valor por defecto `loopback`
+  // solo confia en el proxy local (/api-proxy) y NO en un X-Forwarded-For
+  // enviado por un cliente remoto; en produccion se declara el proxy real.
+  const trustProxy = process.env.TRUST_PROXY ?? 'loopback';
   if (trustProxy !== 'false' && trustProxy !== '0') {
     expressApp.set('trust proxy', /^\d+$/.test(trustProxy) ? Number(trustProxy) : trustProxy);
   }

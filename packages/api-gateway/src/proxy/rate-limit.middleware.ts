@@ -13,6 +13,12 @@ export interface OpcionesLimite {
   ttlMs: number;
   /** Nombre del cubo; permite separar login/ready del limite global. */
   clave?: string;
+  /**
+   * Si es false, el cubo no se particiona por IP. Se usa para limites por
+   * cuenta (p. ej. login) que deben resistir la rotacion de IP/XFF.
+   * @default true
+   */
+  incluirIp?: boolean;
 }
 
 /**
@@ -48,7 +54,8 @@ export class RateLimitMiddleware implements NestMiddleware {
    */
   consumir(req: Request, res: Response, opciones: OpcionesLimite): boolean {
     const ip = req.ip ?? req.socket.remoteAddress ?? 'desconocida';
-    const clave = `${opciones.clave ?? 'global'}:${ip}`;
+    const base = opciones.clave ?? 'global';
+    const clave = opciones.incluirIp === false ? base : `${base}:${ip}`;
 
     const ahora = Date.now();
     const anterior = this.ventanas.get(clave);
@@ -86,6 +93,13 @@ export class RateLimitMiddleware implements NestMiddleware {
     return true;
   }
 
+  /** Correo normalizado solo para el cubo de login (nunca se registra). */
+  private correoLogin(req: Request): string {
+    const body = req.body as Record<string, unknown> | undefined;
+    const correo = typeof body?.correo === 'string' ? body.correo.trim().toLowerCase() : '';
+    return correo.slice(0, 200);
+  }
+
   use(req: Request, res: Response, next: NextFunction): void {
     // Las imágenes públicas son estáticas y cacheables: no deben consumir el
     // cubo de la API (una página de catálogo puede cargar decenas).
@@ -97,9 +111,30 @@ export class RateLimitMiddleware implements NestMiddleware {
       return;
     }
     const esLogin = req.method === 'POST' && /\/api\/v1\/auth\/login$/.test(req.path);
-    const opciones: OpcionesLimite = esLogin
-      ? { limite: this.login.limite, ttlMs: this.login.ttl_ms, clave: 'login' }
-      : { limite: this.globales.limite, ttlMs: this.globales.ttl_ms };
+    if (esLogin) {
+      // Doble cubo: IP (mitiga fuerza bruta distribuida por origen) y cuenta
+      // (mitiga ataques que rotan IP/X-Forwarded-For contra un mismo correo).
+      const correo = this.correoLogin(req);
+      if (
+        correo &&
+        !this.consumir(req, res, {
+          limite: this.login.limite,
+          ttlMs: this.login.ttl_ms,
+          clave: `login-cuenta:${correo}`,
+          incluirIp: false,
+        })
+      ) {
+        return;
+      }
+      if (this.consumir(req, res, { limite: this.login.limite, ttlMs: this.login.ttl_ms, clave: 'login' })) {
+        next();
+      }
+      return;
+    }
+    const opciones: OpcionesLimite = {
+      limite: this.globales.limite,
+      ttlMs: this.globales.ttl_ms,
+    };
 
     if (this.consumir(req, res, opciones)) next();
   }

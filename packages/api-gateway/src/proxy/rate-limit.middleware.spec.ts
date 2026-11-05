@@ -1,11 +1,17 @@
 import { RateLimitMiddleware } from './rate-limit.middleware';
 
-const crearReq = (ip = '203.0.113.10', path = '/api/v1/orders', method = 'GET') =>
+const crearReq = (
+  ip = '203.0.113.10',
+  path = '/api/v1/orders',
+  method = 'GET',
+  body?: unknown,
+) =>
   ({
     ip,
     socket: { remoteAddress: ip },
     path,
     method,
+    body,
   }) as never;
 
 const crearRes = () => {
@@ -103,5 +109,19 @@ describe('RateLimitMiddleware (ventana fija por IP)', () => {
     const resExcedido = crearRes();
     limite.use(crearReq('203.0.113.9', '/api/v1/auth/login', 'POST'), resExcedido as never, vi.fn());
     expect(resExcedido.statusCode).toBe(429);
+  });
+
+  it('debe limitar por cuenta aunque el atacante rote la IP/X-Forwarded-For', () => {
+    const limite = new RateLimitMiddleware();
+    const req = (ip: string) =>
+      crearReq(ip, '/api/v1/auth/login', 'POST', { correo: 'Ana@Core.Test' });
+
+    for (let i = 0; i < 10; i += 1) {
+      expect(limite.use(req(`203.0.113.${i}`), crearRes() as never, vi.fn())).toBeUndefined();
+    }
+
+    const res = crearRes();
+    limite.use(req('203.0.113.200'), res as never, vi.fn());
+    expect(res.statusCode).toBe(429);
   });
 });
