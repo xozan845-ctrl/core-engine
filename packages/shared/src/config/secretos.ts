@@ -8,7 +8,7 @@
  */
 
 /** Valores que sabemos que están versionados o que son de ejemplo. */
-const PLACEHOLDER = /(cambiar_en_produccion|^<CAMBIAR|^changeme|^change_me|^dev_secret$|^dev_internal_key$)/i;
+const PLACEHOLDER = /(cambiar_en_produccion|generar_con_npm|^<CAMBIAR|^changeme|^change_me|^dev_secret$|^dev_internal_key$)/i;
 
 export function esProduccion(env: NodeJS.ProcessEnv = process.env): boolean {
   return (env.NODE_ENV ?? '').toLowerCase() === 'production';

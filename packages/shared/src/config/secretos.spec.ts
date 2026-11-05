@@ -10,6 +10,7 @@ describe('secretos de arranque', () => {
     expect(esSecretoInseguro('corto')).toBe(true);
     expect(esSecretoInseguro('dev_secret_cambiar_en_produccion')).toBe(true);
     expect(esSecretoInseguro('<CAMBIAR_ESTO>')).toBe(true);
+    expect(esSecretoInseguro('<GENERAR_CON_NPM_RUN_ENV_DEV>')).toBe(true);
     expect(esSecretoInseguro(FUERTE)).toBe(false);
   });
 

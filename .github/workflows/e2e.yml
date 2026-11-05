@@ -31,7 +31,7 @@ jobs:
       - name: Install dependencies
         run: npm ci --prefer-offline
       - name: Prepare development environment
-        run: cp .env.example .env
+        run: node scripts/tools/dev-env.mjs
       - name: Bring the dev stack up
         run: docker compose -f docker-compose.dev.yml up -d --build
       - name: Wait for gateway readiness

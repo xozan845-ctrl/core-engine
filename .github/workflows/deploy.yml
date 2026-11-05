@@ -70,7 +70,7 @@ jobs:
 
       - name: 🧰 Prepare development environment
         if: github.event.inputs.environment == 'dev'
-        run: cp .env.example .env
+        run: node scripts/tools/dev-env.mjs
 
       - name: 🚀 Bring the stack up
         env:
