@@ -288,8 +288,8 @@ describe('FieldService', () => {
       expect.stringContaining('SET deleted_at = NOW()'),
       ['tenant-a', 'vehiculo-1'],
     ]);
-    expect(pg.query.mock.calls[1][0]).toContain('DATE(registrado_en) = $3');
+    expect(pg.query.mock.calls[1][0]).toContain("DATE(registrado_en AT TIME ZONE 'America/Managua') = $3");
     expect(pg.query.mock.calls[2][0]).toContain('ruta_id = $3');
-    expect(pg.query.mock.calls[3][0]).toContain('DATE(created_at) = $3');
+    expect(pg.query.mock.calls[3][0]).toContain("DATE(created_at AT TIME ZONE 'America/Managua') = $3");
   });
 });
