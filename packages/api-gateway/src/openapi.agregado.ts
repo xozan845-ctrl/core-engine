@@ -18426,6 +18426,44 @@ export const OPENAPI_AGREGADO = {
             "type": "boolean",
             "default": false
           },
+          "panel_ai_background_objeto_id": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true,
+            "description": "Objeto de storage del fondo del panel de IA; null limpia el bloque"
+          },
+          "panel_ai_background_poster_objeto_id": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true,
+            "description": "Imagen de portada para un fondo de video del panel de IA"
+          },
+          "panel_ai_background_alt": {
+            "type": "string",
+            "maxLength": 160,
+            "default": ""
+          },
+          "panel_ai_background_overlay": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 100,
+            "default": 35
+          },
+          "panel_ai_background_position": {
+            "type": "string",
+            "enum": [
+              "center",
+              "top",
+              "bottom",
+              "left",
+              "right"
+            ],
+            "default": "center"
+          },
+          "panel_ai_background_activo": {
+            "type": "boolean",
+            "default": false
+          },
           "plantilla": {
             "type": "string",
             "enum": [
@@ -18576,6 +18614,55 @@ export const OPENAPI_AGREGADO = {
           "background_activo": {
             "type": "boolean"
           },
+          "panel_ai_background_objeto_id": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true
+          },
+          "panel_ai_background_media_type": {
+            "type": "string",
+            "enum": [
+              "imagen",
+              "video"
+            ],
+            "nullable": true
+          },
+          "panel_ai_background_url": {
+            "type": "string",
+            "nullable": true,
+            "description": "URL pública derivada del panel de IA"
+          },
+          "panel_ai_background_poster_objeto_id": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true
+          },
+          "panel_ai_background_poster_url": {
+            "type": "string",
+            "nullable": true,
+            "description": "URL pública del poster del panel de IA"
+          },
+          "panel_ai_background_alt": {
+            "type": "string"
+          },
+          "panel_ai_background_overlay": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 100
+          },
+          "panel_ai_background_position": {
+            "type": "string",
+            "enum": [
+              "center",
+              "top",
+              "bottom",
+              "left",
+              "right"
+            ]
+          },
+          "panel_ai_background_activo": {
+            "type": "boolean"
+          },
           "plantilla": {
             "type": "string",
             "enum": [
@@ -18607,6 +18694,15 @@ export const OPENAPI_AGREGADO = {
           "background_overlay",
           "background_position",
           "background_activo",
+          "panel_ai_background_objeto_id",
+          "panel_ai_background_media_type",
+          "panel_ai_background_url",
+          "panel_ai_background_poster_objeto_id",
+          "panel_ai_background_poster_url",
+          "panel_ai_background_alt",
+          "panel_ai_background_overlay",
+          "panel_ai_background_position",
+          "panel_ai_background_activo",
           "plantilla",
           "tema",
           "origen_personalizacion",
