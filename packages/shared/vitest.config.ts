@@ -1,5 +1,6 @@
 import { defineConfig } from 'vitest/config';
 import swc from 'unplugin-swc';
+import { resolve } from 'node:path';
 import { coverageThresholdsFor } from '../../scripts/config/coverage.mjs';
 
 // Config de pruebas del paquete (Vitest). Reproduce la config de Jest que vivía
@@ -12,6 +13,7 @@ export default defineConfig({
   test: {
     globals: true,
     environment: 'node',
+    setupFiles: [resolve(__dirname, '../../scripts/config/test-timezone.mjs')],
     include: ['src/**/*.spec.ts'],
     fileParallelism: false,
     coverage: {

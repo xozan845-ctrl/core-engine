@@ -18,6 +18,7 @@ export default defineConfig({
   test: {
     globals: true,
     environment: 'node',
+    setupFiles: [resolve(__dirname, '../../scripts/config/test-timezone.mjs')],
     include: ['src/**/*.spec.ts'],
     fileParallelism: false,
     coverage: {

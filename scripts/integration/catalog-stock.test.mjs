@@ -27,9 +27,18 @@ let client;
 before(async () => {
   client = new pg.Client({ connectionString });
   await client.connect();
-  for (const name of MIGRACIONES) {
-    const sql = await readFile(new URL(`../../infra/db/init/${name}`, import.meta.url), 'utf8');
-    await client.query(sql);
+  await client.query('SELECT pg_advisory_lock(38194201)');
+  try {
+    const { rows: [{ existe }] } = await client.query(
+      `SELECT to_regnamespace('identity') IS NOT NULL AS existe`,
+    );
+    const migraciones = existe ? MIGRACIONES.filter((name) => name !== '01_esquemas.sql') : MIGRACIONES;
+    for (const name of migraciones) {
+      const sql = await readFile(new URL(`../../infra/db/init/${name}`, import.meta.url), 'utf8');
+      await client.query(sql);
+    }
+  } finally {
+    await client.query('SELECT pg_advisory_unlock(38194201)');
   }
 });
 

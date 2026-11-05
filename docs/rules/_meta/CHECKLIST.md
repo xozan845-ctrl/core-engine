@@ -29,7 +29,7 @@ Matriz completa en [`06-estandares-cobertura.md`](../test/06-estandares-cobertur
 
 - [ ] **R0** — Los tests asientan el requisito, no la implementación (nada de "actualizar el expected para que pase").
 - [ ] **R-U-2/R-U-3** — Nombres `debe <comportamiento> cuando <condición>`; un escenario por `it`.
-- [ ] **R-FL-3** — Nada depende de la timezone de la máquina (`TZ` fijada en setup).
+- [x] **R-FL-3** — `TZ=America/Managua` fijada en el setup central de las 12 suites Vitest, los 5 runners de mutation, CI y los workflows E2E/deploy.
 - [ ] **R-COV-1** — La cobertura no baja respecto a `main`.
 - [ ] **R-COV-2** — Todo archivo de lógica tocado (`*.service.ts`, `*.consumer.ts`, código puro de `shared`) tiene spec (o excepción documentada).
 - [ ] **R-COV-5** — N/A en este repo (sin frontend; ID **reservado**, nunca se reutiliza). Si algún día hay UI, su ratchet sigue el método de R-COV-1.
@@ -46,9 +46,8 @@ Matriz completa en [`06-estandares-cobertura.md`](../test/06-estandares-cobertur
 
 ## 4. Integración API+BD ([`02-reglas-integracion.md`](../test/02-reglas-integracion.md))
 
-> Hoy no hay suites de integración en el repo (deuda **G-4**): la capa es
-> exigible cuando exista (R-I-12); estos ítems marcan lo que debe cumplir el
-> primer PR que la añada.
+> Existe una suite API+BD en PostgreSQL efímero para catálogo y configuración de
+> sitio; estos ítems siguen siendo el checklist para ampliar la cobertura G-4.
 
 - [ ] **R-I-1** — Todo endpoint tocado tiene ≥1 test happy-path con BD real.
 - [ ] **R-I-2** — Filtros/paginación: asertar conjunto **exacto** (conteo + IDs) y que la paginación conserva filtros.
@@ -59,13 +58,15 @@ Matriz completa en [`06-estandares-cobertura.md`](../test/06-estandares-cobertur
 
 ## 5. Contrato ([`04-reglas-contrato.md`](../test/04-reglas-contrato.md))
 
-> Hoy no hay suites de contrato (deuda **G-5**, R-C-7): exigibles cuando existan.
+> La suite API+BD verifica errores normalizados en configuración de sitio. El
+> envelope de éxito requiere una migración versionada `/api/v2` antes de marcar
+> G-5 como completo.
 
-- [ ] **R-C-1** — Éxito: envelope `{ data, meta: { timestamp, path, method, statusCode } }`; en listas, paginación anidada en `data` (`{ data[], total, page, limit, totalPages }`); validado por schema. Errores sin `meta` (R-C-8).
+- [ ] **R-C-1** — Éxito: envelope `{ data, meta: { timestamp, path, method, statusCode } }`; pendiente de migración versionada `/api/v2` para no romper `/api/v1`. Errores sin `meta` (R-C-8).
 - [ ] **R-C-3** — Respuestas vía DTO; nunca entidades/rows de persistencia crudos ni campos sensibles.
 - [ ] **R-C-4** — Fechas ISO 8601 UTC con `Z`.
 - [ ] **R-C-5** — Semántica de `dateFrom`/`dateTo` = día local documentada.
-- [ ] **R-C-8** — Errores con shape consistente (400/401/403/404/409/500).
+- [x] **R-C-8** — Errores 400/401 en configuración y 403/404/409/500 en prueba runtime del filtro global; todos validan `{codigo,mensaje,detalles?}` sin `stack` ni detalles internos.
 - [ ] **R-C-11** — Campo nuevo: DTO + test de contrato + actualización de quien lo consume, en el mismo PR.
 - [ ] **R-DO-8** — Rutas públicas bajo `/api/v1/`, internas bajo `/internal/`; el contrato público no mezcla superficies y todo controlador interno usa `ClaveInternaGuard`.
 - [ ] **R-DO-9** — Ninguna ruta estática queda tapada por una ruta `:param` previa en el mismo controlador y método.
@@ -73,11 +74,12 @@ Matriz completa en [`06-estandares-cobertura.md`](../test/06-estandares-cobertur
 
 ## 6. E2E ([`03-reglas-e2e.md`](../test/03-reglas-e2e.md))
 
-> Hoy no hay E2E automatizado (deuda **G-6**): el smoke más cercano es
-> `docker compose -f docker-compose.dev.yml up -d --build` + `npm run demo`.
+> `e2e.yml` ejecuta `docker compose -f docker-compose.dev.yml up -d --build` +
+> `npm run demo` en tags de release y manualmente; la cobertura sigue siendo
+> parcial porque falta R-E-4; R-E-8 ya inspecciona los logs del stack.
 
-- [ ] **R-E-4** — Si toca fechas: todos los registros listados pertenecen al día local seleccionado; el día vecino NO aparece.
-- [ ] **R-E-8** — Cero errores de consola durante el flujo.
+- [x] **R-E-4** — `npm run demo` crea dos registros de asistencia en días vecinos, incluido 23:30 local, y verifica que cada filtro solo devuelve su día local.
+- [x] **R-E-8** — `e2e.yml` inspecciona logs del stack y falla ante `nivel:error`, `UnhandledPromiseRejection` o `uncaughtException`.
 - [ ] **R-E-9/10** — Verificación por datos (texto/conteos/URL), selectores estables (`data-testid`).
 - [ ] **R-E-11** — Suite hermética: fixtures idempotentes creados por el test o por un seed versionado en el repo; pasa contra BD recreada de cero.
 
@@ -92,10 +94,10 @@ Matriz completa en [`06-estandares-cobertura.md`](../test/06-estandares-cobertur
 - [ ] **G-1** unit backend (job `test`, `npm test -- --coverage`) ✅
 - [ ] **G-2** unit frontend — **N/A** (sin frontend; ID reservado)
 - [ ] **G-3** cobertura ≥ `coverageThreshold` vigente por workspace (ratchet R-COV-1) ✅
-- [ ] **G-4** integración — ⏸ sin suites (exigible cuando existan, R-I-12)
-- [ ] **G-5** contrato — ⏸ sin suites (R-C-7)
+- [ ] **G-4** integración — ⏸ parcial: catálogo y configuración de sitio API+BD; faltan otros flujos críticos (R-I-12)
+- [ ] **G-5** contrato — ⏸ pendiente: todos los shapes de error 400/401/403/404/409/500 están cubiertos; el envelope de éxito requiere `/api/v2` (R-C-7)
 - [ ] **G-7** lint + build (jobs `lint` y `build`) ✅
-- [ ] **G-6** E2E de flujos — ⏸ sin job; smoke local `docker compose -f docker-compose.dev.yml up -d --build` + `npm run demo`
+- [ ] **G-6** E2E de flujos — ⏸ parcial: `e2e.yml` manual/tag ejecuta `npm run demo`; cubre 7/7 flujos R-E-1..7 y R-E-8, pero no es gate de cada PR.
 - [x] **G-8** spec OpenAPI — ✅ `npm run swagger:export` + `git diff --exit-code` en CI (R-C-7)
 
 ## 9. Git — antes de subir ([`rules/git/`](../git/README.md))
@@ -114,9 +116,9 @@ Matriz completa en [`06-estandares-cobertura.md`](../test/06-estandares-cobertur
 
 - [ ] **R-CI-1/2/3** — ¿Cambiaron gatillos, concurrencia o filtrado de eventos? Enmienda explícita de la regla, no edición silenciosa del YAML.
 - [ ] **R-CI-4/5** — Pipeline único justificado; `.github/**` revisado como código (stage con rutas, sin secretos, comandos verificables en local).
-- [ ] **R-EN-1/2** — Node `"20"` fijo con cache de npm y `npm ci --prefer-offline` intactos; BD de job efímera exigible cuando exista suite con BD (hoy ningún job toca BD).
+- [ ] **R-EN-1/2** — Node `"20"` fijo con cache de npm y `npm ci --prefer-offline` intactos; `integration-catalog` usa BD efímera PostgreSQL con `TEST_DATABASE_URL` aislada.
 - [ ] **R-EN-3/4** — Artifact de evidencia en **todos** los runs (`if: always()`); secretos únicamente en GitHub Secrets y nunca en logs.
-- [ ] **R-CD-2** — Contrato de release por tag ([`rules/cd/01`](../cd/01-despliegue.md)): hoy no existe `release.yml` (R-CD-1..8 futuros); cuando exista: commit en `main` **y** run de `ci.yml` en verde en ese mismo SHA antes de publicar.
+- [ ] **R-CD-2** — Contrato de release por tag ([`rules/cd/01`](../cd/01-despliegue.md)): `release.yml` exige commit en `main` **y** run de `ci.yml` en verde en ese mismo SHA antes de publicar.
 - [ ] **R-CD-7** — Ningún secreto como `ARG`/`ENV` de build ni en una capa de imagen; los secretos van en runtime.
 - [ ] **R-CD-9/10/11** — Dockploy: un proyecto con los environments `staging`/`produccion` y desarrollo local (R-CD-9); producción solo por promoción `staging → main` (R-CD-10); gate de producción: `ci.yml` verde en el SHA promovido (R-CD-11).
 
