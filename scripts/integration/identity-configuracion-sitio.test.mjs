@@ -20,6 +20,19 @@ process.env.RABBITMQ_URL = '';
 process.env.STORAGE_SERVICE_URL = 'http://127.0.0.1:9';
 
 const repoRoot = resolve(new URL('../..', import.meta.url).pathname);
+
+/**
+ * Migraciones que necesita la configuración de sitio: esquemas base, fondo de
+ * plataforma, personalización heredada (22 depende de 19) y panel de IA.
+ */
+const MIGRACIONES = [
+  '01_esquemas.sql',
+  '16_media_background_plataforma.sql',
+  '19_personalizacion_tienda.sql',
+  '22_herencia_tema.sql',
+  '23_configuracion_panel_ai.sql',
+];
+
 let client;
 let app;
 let http;
@@ -32,21 +45,27 @@ before(async () => {
     const { rows: [{ existe }] } = await client.query(
       `SELECT to_regnamespace('identity') IS NOT NULL AS existe`,
     );
-    if (!existe) {
-      const base = await readFile(resolve(repoRoot, 'infra/db/init/01_esquemas.sql'), 'utf8');
-      await client.query(base);
+    const migraciones = existe
+      ? MIGRACIONES.filter((name) => name !== '01_esquemas.sql')
+      : MIGRACIONES;
+    for (const name of migraciones) {
+      const sql = await readFile(resolve(repoRoot, `infra/db/init/${name}`), 'utf8');
+      await client.query(sql);
     }
-    const sql = await readFile(
-      resolve(repoRoot, 'infra/db/init/16_media_background_plataforma.sql'),
-      'utf8',
-    );
-    await client.query(sql);
     await client.query(
       `UPDATE identity.configuracion_plataforma
        SET background_objeto_id = NULL, background_media_type = NULL,
            background_poster_objeto_id = NULL, background_alt = '',
            background_overlay = 35, background_position = 'center',
-           background_activo = false, actualizado_por = NULL`,
+           background_activo = false,
+           panel_ai_background_objeto_id = NULL,
+           panel_ai_background_media_type = NULL,
+           panel_ai_background_poster_objeto_id = NULL,
+           panel_ai_background_alt = '',
+           panel_ai_background_overlay = 35,
+           panel_ai_background_position = 'center',
+           panel_ai_background_activo = false,
+           actualizado_por = NULL`,
     );
   } finally {
     await client.query('SELECT pg_advisory_unlock(38194201)');
@@ -82,18 +101,48 @@ after(async () => {
 
 test('API+BD: GET de configuración devuelve valores persistidos', async () => {
   const respuesta = await http.get('/api/v1/configuracion/sitio').expect(200);
-  assert.deepEqual(respuesta.body, {
-    background_objeto_id: null,
-    background_media_type: null,
-    background_poster_objeto_id: null,
-    background_alt: '',
-    background_overlay: 35,
-    background_position: 'center',
-    background_activo: false,
-    background_url: null,
-    background_poster_url: null,
-    actualizado_en: respuesta.body.actualizado_en,
-  });
+  assert.deepEqual(
+    {
+      background_objeto_id: respuesta.body.background_objeto_id,
+      background_media_type: respuesta.body.background_media_type,
+      background_poster_objeto_id: respuesta.body.background_poster_objeto_id,
+      background_alt: respuesta.body.background_alt,
+      background_overlay: respuesta.body.background_overlay,
+      background_position: respuesta.body.background_position,
+      background_activo: respuesta.body.background_activo,
+      background_url: respuesta.body.background_url,
+      background_poster_url: respuesta.body.background_poster_url,
+      panel_ai_background_objeto_id: respuesta.body.panel_ai_background_objeto_id,
+      panel_ai_background_media_type: respuesta.body.panel_ai_background_media_type,
+      panel_ai_background_poster_objeto_id: respuesta.body.panel_ai_background_poster_objeto_id,
+      panel_ai_background_alt: respuesta.body.panel_ai_background_alt,
+      panel_ai_background_overlay: respuesta.body.panel_ai_background_overlay,
+      panel_ai_background_position: respuesta.body.panel_ai_background_position,
+      panel_ai_background_activo: respuesta.body.panel_ai_background_activo,
+      panel_ai_background_url: respuesta.body.panel_ai_background_url,
+      panel_ai_background_poster_url: respuesta.body.panel_ai_background_poster_url,
+    },
+    {
+      background_objeto_id: null,
+      background_media_type: null,
+      background_poster_objeto_id: null,
+      background_alt: '',
+      background_overlay: 35,
+      background_position: 'center',
+      background_activo: false,
+      background_url: null,
+      background_poster_url: null,
+      panel_ai_background_objeto_id: null,
+      panel_ai_background_media_type: null,
+      panel_ai_background_poster_objeto_id: null,
+      panel_ai_background_alt: '',
+      panel_ai_background_overlay: 35,
+      panel_ai_background_position: 'center',
+      panel_ai_background_activo: false,
+      panel_ai_background_url: null,
+      panel_ai_background_poster_url: null,
+    },
+  );
 });
 
 test('Contrato G-5: PATCH no autenticado devuelve error normalizado', async () => {
