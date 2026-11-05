@@ -13,6 +13,7 @@ import { corteLiquidacionesValido } from './smoke-contract.mjs';
 const BASE = process.env.BASE_URL ?? 'http://localhost:8080';
 const ADMIN_EMAIL = process.env.ADMIN_EMAIL ?? 'admin@core-engine.test';
 const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD ?? 'AdminCore Engine2026!';
+const FIELD_TENANT_ID = process.env.PLATFORM_LOGISTICS_TENANT_ID ?? '00000000-0000-0000-0000-000000000001';
 const REQUEST_TIMEOUT_MS = Number(process.env.SMOKE_REQUEST_TIMEOUT_MS ?? 10_000);
 const WAIT_TIMEOUT_MS = Number(process.env.SMOKE_WAIT_TIMEOUT_MS ?? 30_000);
 
@@ -120,6 +121,119 @@ async function main() {
     process.exit(1);
   }
   const tokenAdmin = loginAdmin.json.access_token;
+
+  paso('R-E-1: el token autentica el perfil real en /auth/me');
+  const perfilAdmin = await api('GET', '/api/v1/auth/me', null, tokenAdmin);
+  if (perfilAdmin.status === 200 && perfilAdmin.json?.email === ADMIN_EMAIL) {
+    ok(`usuario=${perfilAdmin.json.user_id ?? perfilAdmin.json.id ?? 'admin'}`);
+  } else {
+    fail(`perfil admin → ${perfilAdmin.status} ${JSON.stringify(perfilAdmin.json)}`);
+  }
+
+  paso('R-E-2: credenciales inválidas → 401 sin token');
+  const loginInvalido = await api('POST', '/api/v1/auth/login', {
+    correo: ADMIN_EMAIL,
+    contrasena: `${ADMIN_PASSWORD}-invalida`,
+  });
+  if (loginInvalido.status === 401 && !loginInvalido.json?.access_token) ok();
+  else fail(`login inválido → ${loginInvalido.status} ${JSON.stringify(loginInvalido.json)}`);
+
+  paso('R-E-4: filtro de asistencia respeta el día local y sus límites');
+  const fechaDia = '2026-11-03';
+  const fechaVecina = '2026-11-04';
+  const correoLogistica = `logistica.${suf}@core-engine.test`;
+  const crearLogistica = await api(
+    'POST',
+    '/api/v1/auth/crear-usuario',
+    {
+      nombre: 'Operadora E2E',
+      correo: correoLogistica,
+      contrasena,
+      rol: 'logistica',
+      tenant_id: FIELD_TENANT_ID,
+    },
+    tokenAdmin,
+  );
+  if (![200, 201].includes(crearLogistica.status)) {
+    fail(`crear usuario de logística → ${crearLogistica.status} ${JSON.stringify(crearLogistica.json)}`);
+  } else {
+    const loginLogistica = await api('POST', '/api/v1/auth/login', {
+      correo: correoLogistica,
+      contrasena,
+    });
+    const tokenLogistica = loginLogistica.json?.access_token;
+    const personal = tokenLogistica
+      ? await api(
+          'POST',
+          '/api/v1/field/personal',
+          { nombre: 'Personal Boundary E2E', cargo: 'conductor' },
+          tokenLogistica,
+        )
+      : { status: 0, json: { error: 'login sin token' } };
+    const personalId = personal.json?.id;
+    const entradaDia = personalId
+      ? await api(
+          'POST',
+          '/api/v1/field/asistencia',
+          {
+            personalId,
+            tipo: 'entrada',
+            timestamp: `${fechaDia}T23:30:00-06:00`,
+            estadoPuntualidad: 'puntual',
+          },
+          tokenLogistica,
+        )
+      : { status: 0, json: { error: 'personal sin id' } };
+    const entradaVecina = personalId
+      ? await api(
+          'POST',
+          '/api/v1/field/asistencia',
+          {
+            personalId,
+            tipo: 'entrada',
+            timestamp: `${fechaVecina}T00:30:00-06:00`,
+            estadoPuntualidad: 'puntual',
+          },
+          tokenLogistica,
+        )
+      : { status: 0, json: { error: 'personal sin id' } };
+    const filtradoDia = personalId
+      ? await api('GET', `/api/v1/field/asistencia?personalId=${encodeURIComponent(personalId)}&fecha=${fechaDia}`, null, tokenLogistica)
+      : { status: 0, json: [] };
+    const filtradoVecino = personalId
+      ? await api('GET', `/api/v1/field/asistencia?personalId=${encodeURIComponent(personalId)}&fecha=${fechaVecina}`, null, tokenLogistica)
+      : { status: 0, json: [] };
+    const esFechaLocal = (valor, fecha) => {
+      const partes = new Intl.DateTimeFormat('en-CA', {
+        timeZone: 'America/Managua',
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+      }).formatToParts(new Date(valor));
+      const salida = Object.fromEntries(partes.map(({ type, value }) => [type, value]));
+      return `${salida.year}-${salida.month}-${salida.day}` === fecha;
+    };
+    const registrosDia = Array.isArray(filtradoDia.json) ? filtradoDia.json : [];
+    const registrosVecino = Array.isArray(filtradoVecino.json) ? filtradoVecino.json : [];
+    if (
+      loginLogistica.status === 200 &&
+      personal.status === 201 &&
+      entradaDia.status === 201 &&
+      entradaVecina.status === 201 &&
+      filtradoDia.status === 200 &&
+      filtradoVecino.status === 200 &&
+      registrosDia.length === 1 &&
+      registrosVecino.length === 1 &&
+      registrosDia[0].id === entradaDia.json?.id &&
+      registrosVecino[0].id === entradaVecina.json?.id &&
+      registrosDia.every((registro) => esFechaLocal(registro.registrado_en, fechaDia)) &&
+      registrosVecino.every((registro) => esFechaLocal(registro.registrado_en, fechaVecina))
+    ) {
+      ok(`día=${fechaDia}, vecino=${fechaVecina}`);
+    } else {
+      fail(`boundary de fechas → ${JSON.stringify({ login: loginLogistica.status, personal: personal.status, entradaDia: entradaDia.status, entradaVecina: entradaVecina.status, filtradoDia: filtradoDia.status, filtradoVecino: filtradoVecino.status, dia: registrosDia, vecino: registrosVecino })}`);
+    }
+  }
 
   paso('Registro de empresario y comprador (RF-01)');
   const [regE, regC] = await Promise.all([
@@ -274,6 +388,19 @@ async function main() {
   }
   const producto = crear.json;
 
+  paso('R-E-3: editar producto antes de publicarlo en el catálogo');
+  const edicionProducto = await api(
+    'PATCH',
+    `/api/v1/catalog/productos/${producto.id}`,
+    { descripcion: 'Aceite vegetal actualizado por E2E' },
+    tokenAdmin,
+  );
+  if (edicionProducto.status === 200 && edicionProducto.json?.descripcion === 'Aceite vegetal actualizado por E2E') {
+    ok();
+  } else {
+    fail(`editar producto → ${edicionProducto.status} ${JSON.stringify(edicionProducto.json)}`);
+  }
+
   paso('Tc-07a: /admin/reportes sin token → 401');
   const sinToken = await api('GET', '/api/v1/admin/reportes');
   if (sinToken.status === 401) ok();
@@ -353,6 +480,23 @@ async function main() {
   if (tiendaPublica.status === 200 && tiendaPublica.json.ofertas.length === 1) ok();
   else fail(`tienda pública → ${tiendaPublica.status}`);
 
+  paso('R-E-5: paginación conserva empresa y búsqueda');
+  const paginaCatalogo = await api(
+    'GET',
+    `/api/v1/catalog/productos?empresa_id=${encodeURIComponent(empresa.json.id)}&q=${encodeURIComponent(producto.sku)}&pagina=1&limite=1`,
+  );
+  if (
+    paginaCatalogo.status === 200 &&
+    paginaCatalogo.json?.pagina === 1 &&
+    paginaCatalogo.json?.limite === 1 &&
+    paginaCatalogo.json?.total >= 1 &&
+    paginaCatalogo.json?.items?.some((item) => item.id === producto.id)
+  ) {
+    ok(`total=${paginaCatalogo.json.total}`);
+  } else {
+    fail(`paginación → ${paginaCatalogo.status} ${JSON.stringify(paginaCatalogo.json)}`);
+  }
+
   // ── 4. Orden y saga de stock (TC-03, RN-03) ───────────────────────────
   paso('Comprador crea la orden (TC-03: checkout)');
   const orden = await api(
@@ -379,7 +523,12 @@ async function main() {
   ok(`estado=${estadoPagada.estado} total=${estadoPagada.total}`);
 
   paso('TC-03: el stock del catálogo decreció');
-  const catalogo = await api('GET', `/api/v1/catalog/productos/${producto.id}`);
+  const catalogo = await api(
+    'GET',
+    `/api/v1/catalog/productos/${producto.id}?empresa_id=${encodeURIComponent(empresa.json.id)}`,
+    null,
+    tokenAdmin,
+  );
   if (catalogo.json?.stock === 9) ok(`stock=9`);
   else fail(`stock=${catalogo.json?.stock}`);
 
@@ -451,7 +600,12 @@ async function main() {
   paso('Stock reintegrado tras la devolución (RN-06)');
   const stockReintegrado = await esperar(
     async () => {
-      const r = await api('GET', `/api/v1/catalog/productos/${producto.id}`);
+      const r = await api(
+        'GET',
+        `/api/v1/catalog/productos/${producto.id}?empresa_id=${encodeURIComponent(empresa.json.id)}`,
+        null,
+        tokenAdmin,
+      );
       return r.json?.stock === 10 ? r.json : null;
     },
     'stock 10',
@@ -527,6 +681,48 @@ async function main() {
   const inventario = await api('GET', '/api/v1/admin/inventario', null, tokenAdmin);
   if (inventario.status === 200 && inventario.json.length >= 2) ok(`líneas=${inventario.json.length}`);
   else fail(`inventario → ${inventario.status}`);
+
+  paso('R-E-3: despublicar producto lo oculta del catálogo público');
+  const despublicar = await api(
+    'PATCH',
+    `/api/v1/catalog/productos/${producto.id}`,
+    { estado_operativo: 'inactivo', motivo: 'verificación E2E' },
+    tokenAdmin,
+  );
+  const productoOculto = await api(
+    'GET',
+    `/api/v1/catalog/productos?empresa_id=${encodeURIComponent(empresa.json.id)}&q=${encodeURIComponent(producto.sku)}`,
+  );
+  if (despublicar.status === 200 && productoOculto.status === 200 && productoOculto.json?.total === 0) {
+    ok();
+  } else {
+    fail(`despublicar=${despublicar.status} catálogo=${productoOculto.status} ${JSON.stringify(productoOculto.json)}`);
+  }
+
+  paso('R-E-7: refresh funciona y logout revoca el refresh token');
+  const renovada = await api('POST', '/api/v1/auth/refresh', { refresh_token: loginAdmin.json.refresh_token });
+  const logout = await api(
+    'POST',
+    '/api/v1/auth/logout',
+    { refresh_token: loginAdmin.json.refresh_token },
+    tokenAdmin,
+  );
+  const refreshRevocado = await api('POST', '/api/v1/auth/refresh', {
+    refresh_token: loginAdmin.json.refresh_token,
+  });
+  if (
+    renovada.status === 201 &&
+    renovada.json?.access_token &&
+    logout.status === 201 &&
+    refreshRevocado.status === 401
+  ) {
+    ok();
+  } else {
+    fail(
+      `refresh=${renovada.status} logout=${logout.status} ` +
+        `refresh_revocado=${refreshRevocado.status}`,
+    );
+  }
 
   console.log('\n');
   console.log('═══════════════════════════════════════════════════');

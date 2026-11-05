@@ -11,7 +11,7 @@ despliegan Core Engine. El despliegue de los entornos sigue el contrato de
 .github/
 ├── workflows/
 │   ├── ci.yml        # Integración continua (PR/push a main, develop, staging)
-│   ├── release.yml   # Release por tag: construye y publica las 10 imágenes en GHCR
+│   ├── release.yml   # Release por tag: construye y publica las 11 imágenes en GHCR
 │   ├── promote.yml   # Promueve imágenes publicadas a stage/prod POR DIGEST, sin reconstruir
 │   └── deploy.yml    # Despliegue manual por entorno + smoke del gateway
 ├── CODEOWNERS        # Revisión de caminos sensibles (R-CI-10)
@@ -38,7 +38,7 @@ ghcr.io/xozan845-ctrl/core-engine-<servicio>:sha-<corto>
 flowchart LR
     A[rama develop] -->|PR| B[staging]
     B -->|CI verde| C[main]
-    C -->|git tag vX.Y.Z| R["release.yml\nbuild 10 imágenes + digests"]
+    C -->|git tag vX.Y.Z| R["release.yml\nbuild 11 imágenes + digests"]
     R -->|"promote.yml env=stage"| S["GHCR :stage"]
     R -->|"promote.yml env=prod"| P["GHCR :prod"]
     S --> DX["deploy.yml env=stage"]
