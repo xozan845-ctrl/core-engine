@@ -18,6 +18,8 @@
 x-servicio-base: &servicio-base
   env_file:
     - ${ENV_FILE:-.env}
+  environment:
+    TZ: America/Managua
   depends_on:
     postgres:
       condition: service_healthy

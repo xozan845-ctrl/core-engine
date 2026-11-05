@@ -72,7 +72,7 @@ function workspacesInScript(script, task) {
 export default defineSuite({
   id: 'microservices-ci-contract',
   area: 'test',
-  rules: ['R-MS-1', 'R-QA-1', 'R-COV-1', 'R-COV-2', 'R-COV-4', 'R-CI-5', 'R-I-12', 'R-DS-1', 'R-C-7'],
+  rules: ['R-MS-1', 'R-QA-1', 'R-COV-1', 'R-COV-2', 'R-COV-4', 'R-CI-5', 'R-I-12', 'R-DS-1', 'R-C-7', 'R-MT-1', 'R-MT-2', 'R-FL-3'],
   mode: 'repo',
   run: ({ test, assert }) => {
     test('R-MS-1: el inventario declara exactamente los servicios desplegables', () => {
@@ -291,6 +291,25 @@ export default defineSuite({
       );
     });
 
+    test('R-C-8: los servicios registran el filtro de errores normalizados', () => {
+      const faltantes = [];
+      for (const service of SERVICES) {
+        const main = readText(join(packageDir(service), 'src', 'main.ts'));
+        if (!main.includes('DomainErrorFilter')) {
+          faltantes.push(`${service}: main.ts no registra DomainErrorFilter`);
+        }
+      }
+      assert.ok(
+        existsSync(join(repoRoot, 'scripts', 'integration', 'identity-configuracion-sitio.test.mjs')),
+        'falta la prueba API+BD de configuración y errores normalizados',
+      );
+      assert.ok(
+        existsSync(join(repoRoot, 'scripts', 'integration', 'error-contract.test.mjs')),
+        'falta la prueba runtime de los shapes 403/404/409/500',
+      );
+      assert.deepEqual(faltantes, [], faltantes.join('\n'));
+    });
+
     test('R-COV-1: CI compara la cobertura real contra el baseline', () => {
       const workflow = readText(join(repoRoot, WORKFLOWS_DIR, 'ci.yml'));
       assert.match(
@@ -322,6 +341,19 @@ export default defineSuite({
         }
       }
       assert.deepEqual(problems, [], problems.join('\n'));
+    });
+
+    test('R-COV-1/R-DB-6/R-SB-2/R-C-7: CI impide relajar baselines o excepciones', () => {
+      const workflow = readText(join(repoRoot, WORKFLOWS_DIR, 'ci.yml'));
+      assert.match(
+        workflow,
+        /run: npm run baseline:guard -- --base-ref /,
+        'CI debe comparar baselines contra la base del cambio',
+      );
+      assert.ok(
+        existsSync(join(repoRoot, 'scripts', 'tools', 'baseline-guard.mjs')),
+        'falta scripts/tools/baseline-guard.mjs',
+      );
     });
 
     test('R-COV-4: cada config Vitest aplica alcance y consume los thresholds centrales', () => {
@@ -399,7 +431,78 @@ export default defineSuite({
       assert.match(workflow, /^ {8}image: postgres:16-alpine$/m);
       assert.match(workflow, /^ {6}TEST_DATABASE_URL: postgres:\/\/core_engine_test:test_only@127\.0\.0\.1:5432\/core_engine_test$/m);
       assert.match(workflow, /^ {8}run: npm run test:integration$/m);
-      assert.match(workflow, /^ {4}needs: \[test, lint, integration-catalog\]$/m);
+      assert.match(workflow, /^ {4}needs: \[rules-check, test, lint, integration-catalog\]$/m);
+    });
+
+    test('R-MT-1/R-MT-2: mutation testing tiene runtime y módulos protegidos', () => {
+      const workflow = readText(join(repoRoot, WORKFLOWS_DIR, 'mutation.yml'));
+      assert.match(
+        workflow,
+        /node-version:\s*["']22["']/,
+        'mutation.yml debe usar Node 22 porque StrykerJS 10 lo requiere',
+      );
+
+      const expected = [
+        'shared',
+        'identity-service',
+        'orders-service',
+        'commissions-service',
+        'finance-service',
+      ];
+      const missing = expected.filter(
+        (workspace) =>
+          !workflow.includes(`- ${workspace}`) ||
+          !existsSync(join(packageDir(workspace), 'stryker.config.mjs')) ||
+          packageJson(workspace).scripts?.mutation !== 'stryker run',
+      );
+      assert.deepEqual(
+        missing,
+        [],
+        `mutation testing incompleto para: ${missing.join(', ')}`,
+      );
+
+      for (const workspace of expected) {
+        const config = readText(join(packageDir(workspace), 'stryker.config.mjs'));
+        assert.match(
+          config,
+          /break:\s*90/,
+          `${workspace}: Stryker debe bloquear por debajo de 90 (R-MT-2)`,
+        );
+      }
+    });
+
+    test('R-FL-3: unit, mutation y E2E fijan la timezone del entorno', () => {
+      const setup = join(repoRoot, 'scripts', 'config', 'test-timezone.mjs');
+      assert.ok(existsSync(setup), 'falta el setup central de timezone');
+
+      const workspaces = [
+        'shared',
+        ...SERVICES.filter((service) => !SERVICE_TEST_EXCEPTIONS.includes(service)),
+      ];
+      const missingUnit = workspaces.filter((workspace) => {
+        const config = readText(join(packageDir(workspace), 'vitest.config.ts'));
+        return !config.includes("import { resolve } from 'node:path';") ||
+          !config.includes("setupFiles: [resolve(__dirname, '../../scripts/config/test-timezone.mjs')]");
+      });
+      assert.deepEqual(missingUnit, [], `Vitest sin timezone fija: ${missingUnit.join(', ')}`);
+
+      const mutationWorkspaces = [
+        'shared',
+        'identity-service',
+        'orders-service',
+        'commissions-service',
+        'finance-service',
+      ];
+      const missingMutation = mutationWorkspaces.filter((workspace) => {
+        const config = readText(join(packageDir(workspace), 'vitest.mutation.config.ts'));
+        return !config.includes("setupFiles: [resolve(repoRoot, 'scripts/config/test-timezone.mjs')]");
+      });
+      assert.deepEqual(missingMutation, [], `Mutation sin timezone fija: ${missingMutation.join(', ')}`);
+
+      for (const workflow of ['ci.yml', 'e2e.yml', 'deploy.yml']) {
+        const content = readText(join(repoRoot, WORKFLOWS_DIR, workflow));
+        assert.match(content, /TZ:\s*America\/Managua/, `${workflow}: falta TZ fija`);
+      }
     });
   },
 });

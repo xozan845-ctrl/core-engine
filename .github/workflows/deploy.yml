@@ -35,6 +35,8 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 45
     environment: ${{ github.event.inputs.environment }}
+    env:
+      TZ: America/Managua
     # `packages: read` para tirar de las imágenes privadas publicadas en GHCR (R-CD-3).
     permissions:
       contents: read
@@ -66,6 +68,10 @@ jobs:
             prod)  echo "files=-f docker-compose.yml"  >> "$GITHUB_OUTPUT"; echo "port=8080" >> "$GITHUB_OUTPUT"; echo "build=" >> "$GITHUB_OUTPUT" ;;
           esac
 
+      - name: 🧰 Prepare development environment
+        if: github.event.inputs.environment == 'dev'
+        run: cp .env.example .env
+
       - name: 🚀 Bring the stack up
         env:
           FILES: ${{ steps.cfg.outputs.files }}
@@ -93,6 +99,15 @@ jobs:
         env:
           BASE_URL: http://localhost:${{ steps.cfg.outputs.port }}
         run: npm run demo
+
+      - name: 🧾 Verificar logs sin errores inesperados (R-E-8)
+        if: github.event.inputs.environment == 'dev' && success()
+        run: |
+          logs="$(docker compose ${{ steps.cfg.outputs.files }} logs --no-color)"
+          if printf '%s\n' "$logs" | grep -E '"nivel":"error"|UnhandledPromiseRejection|uncaughtException'; then
+            echo "Unexpected service error detected during dev smoke."
+            exit 1
+          fi
 
       - name: 🧪 Smoke remoto de solo lectura (R-CD-12)
         if: github.event.inputs.environment != 'dev'

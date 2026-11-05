@@ -15,8 +15,9 @@ Todo PR debe incluir las capas marcadas con ✅ para el tipo de cambio tocado.
 | Cambio de zona horaria/fecha | ✅ boundary local vs UTC | ✅ día local completo | ✅ doc de semántica | ✅ R-E-4 |
 
 > Las columnas Integración/Contrato/E2E son exigibles cuando la historia toque
-> esas capas; hoy el repo aún no tiene suites de esas capas (gates G-4, G-5 y
-> G-6 figuran como pendientes abajo). La fila "Flujo de usuario nuevo" aplica
+> esas capas; G-4 ya tiene una primera suite API+BD para configuración de sitio,
+> mientras G-5 sigue pendiente: el envelope exige una migración versionada
+> `/api/v2`; G-6 permanece condicionado a release/manual. La fila "Flujo de usuario nuevo" aplica
 > cuando exista UI en el repo (hoy no la hay).
 
 ## Umbrales de cobertura (workspaces con suite — Vitest)
@@ -69,9 +70,9 @@ se reutiliza).
 | G-1 | Suite unit de todos los workspaces con tests en verde (100 %): job `test` (`npm test -- --coverage`), encadenado tras `security-gate`. | ✅ |
 | G-2 | Suite unit frontend en verde. | N/A — no hay frontend. |
 | G-3 | Cobertura ≥ `thresholds` vigentes en `packages/*/vitest.config.ts` (ratchet +5/release; alcance según R-COV-4): incumplirlo o bajar el umbral falla el job `test`. | ✅ |
-| G-4 | Suite de integración API+BD en verde. | ⏸ sin suites de integración (exigible cuando existan, R-I-12). |
-| G-5 | Test de contrato en verde. | ⏸ sin suites de contrato (R-C-7). |
-| G-6 | E2E de flujos críticos en verde antes de release (puede ser etiqueta `release`, no cada PR). | ✅ workflow `e2e.yml` en tags `v*.*.*` y manual: levanta `docker-compose.dev.yml` y ejecuta `npm run demo`; `deploy.yml` además ejecuta el smoke de dev y el remoto de stage/prod (R-CD-12). |
+| G-4 | Suite de integración API+BD en verde. | ⏸ **parcial**: PostgreSQL efímero cubre stock y configuración de sitio GET/PATCH; faltan otros flujos críticos (R-I-12). |
+| G-5 | Test de contrato en verde. | ⏸: errores 400/401 verificados; el envelope requiere migración `/api/v2` y faltan otros shapes críticos (R-C-7). |
+| G-6 | E2E de flujos críticos en verde antes de release (puede ser etiqueta `release`, no cada PR). | ⏸ **parcial**: `e2e.yml` en tags `v*.*.*` y manual levanta `docker-compose.dev.yml`, ejecuta `npm run demo` y verifica logs R-E-8; el smoke cubre R-E-1…R-E-7, incluido R-E-4 (boundary de fecha). `deploy.yml` además ejecuta el smoke remoto de stage/prod (R-CD-12). |
 | G-7 | Lint **y** build sin errores: `npm run lint` (ESLint, alcance `packages/*/src/**/*.ts`, job `lint`) + `npm run build` (job `build`). | ✅ |
 | G-8 | Swagger spec sincronizado (R-C-7): `git diff --exit-code` tras el export. | ✅ `npm run swagger:export` + `git diff --exit-code docs/openapi docs/api packages/api-gateway/src/openapi.agregado.ts` en el job `build`. |
 

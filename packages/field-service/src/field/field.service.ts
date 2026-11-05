@@ -500,10 +500,23 @@ export class FieldService {
 
   // ── asistencia ─────────────────────────────────────────────────────────
   listarAsistencia(tenant: string, filtro: { personalId?: string; fecha?: string }) {
-    const extras: FiltroSql[] = [];
-    if (filtro.personalId) extras.push({ col: 'personal_id', val: filtro.personalId });
-    if (filtro.fecha) extras.push({ col: 'DATE(registrado_en)', val: filtro.fecha });
-    return this.listar('asistencia', tenant, extras);
+    const params: unknown[] = [tenant];
+    const condiciones = ['tenant_id = $1', 'deleted_at IS NULL'];
+    if (filtro.personalId) {
+      params.push(filtro.personalId);
+      condiciones.push(`personal_id = $${params.length}`);
+    }
+    if (filtro.fecha) {
+      params.push(filtro.fecha);
+      // `timestamptz::date` usa la timezone de la sesión de PostgreSQL (UTC en
+      // el contenedor). La regla de negocio es día local nicaragüense, por lo
+      // que la conversión debe quedar explícita en la consulta.
+      condiciones.push(`DATE(registrado_en AT TIME ZONE 'America/Managua') = $${params.length}`);
+    }
+    return this.pg.query(
+      `SELECT * FROM field.asistencia WHERE ${condiciones.join(' AND ')} ORDER BY created_at DESC LIMIT 2000`,
+      params,
+    );
   }
   registrarAsistencia(tenant: string, dto: CrearAsistenciaRequestDto) {
     return this.insertar('asistencia', tenant, undefined, dto, MAP_ASISTENCIA, {}, false);
@@ -547,7 +560,7 @@ export class FieldService {
   listarVisitas(tenant: string, filtro: { personalId?: string; fecha?: string }) {
     const extras: FiltroSql[] = [];
     if (filtro.personalId) extras.push({ col: 'personal_id', val: filtro.personalId });
-    if (filtro.fecha) extras.push({ col: 'DATE(created_at)', val: filtro.fecha });
+    if (filtro.fecha) extras.push({ col: "DATE(created_at AT TIME ZONE 'America/Managua')", val: filtro.fecha });
     return this.listar('visitas', tenant, extras);
   }
   registrarVisita(tenant: string, dto: CrearVisitaRequestDto) {

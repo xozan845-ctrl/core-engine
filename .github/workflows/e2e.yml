@@ -20,6 +20,8 @@ jobs:
     name: E2E (stack dev)
     runs-on: ubuntu-24.04
     timeout-minutes: 60
+    env:
+      TZ: America/Managua
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-node@v7
@@ -28,6 +30,8 @@ jobs:
           cache: "npm"
       - name: Install dependencies
         run: npm ci --prefer-offline
+      - name: Prepare development environment
+        run: cp .env.example .env
       - name: Bring the dev stack up
         run: docker compose -f docker-compose.dev.yml up -d --build
       - name: Wait for gateway readiness
@@ -46,6 +50,13 @@ jobs:
         env:
           BASE_URL: http://localhost:8080
         run: npm run demo
+      - name: Assert no unexpected service errors (R-E-8)
+        run: |
+          logs="$(docker compose -f docker-compose.dev.yml logs --no-color)"
+          if printf '%s\n' "$logs" | grep -E '"nivel":"error"|UnhandledPromiseRejection|uncaughtException'; then
+            echo "Unexpected service error detected during E2E."
+            exit 1
+          fi
       - name: Evidence on failure
         if: failure()
         run: docker compose -f docker-compose.dev.yml logs --no-color
