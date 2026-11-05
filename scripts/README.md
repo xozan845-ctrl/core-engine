@@ -75,6 +75,8 @@ scripts/
     ├── coverage-compare.mjs   # gate de cobertura real vs baseline (R-COV-1)
     ├── coverage-baseline.mjs  # actualiza el baseline desde coverage-summary
     ├── coverage-compare.test.mjs # gate y writer con reportes sintéticos
+    ├── baseline-guard.mjs    # impide aumentar deudas/bypasses versionados
+    ├── baseline-guard.test.mjs # regresiones de la política de baselines
     ├── db-migrations.mjs      # verifica/actualiza el manifiesto de migraciones
     ├── db-migrations.test.mjs # hash, migración nueva y edición detectadas
     ├── db-rls.mjs             # cobertura RLS real vs baseline (R-SB-2)
@@ -203,6 +205,7 @@ Los `npm scripts` de la raíz son **envoltorios** (sin ruptura para CI ni local)
 | `version:bump` | `node scripts/tools/version-bump.mjs` |
 | `coverage:compare` | `node scripts/tools/coverage-compare.mjs` |
 | `coverage:baseline` | `node scripts/tools/coverage-baseline.mjs` |
+| `baseline:guard` | `node scripts/tools/baseline-guard.mjs --base-ref origin/main` |
 | `db:migrations` | `node scripts/tools/db-migrations.mjs` |
 | `db:rls` | `node scripts/tools/db-rls.mjs` |
 | `env:check` | `node scripts/tools/env-check.mjs` |
@@ -216,6 +219,7 @@ Los `npm scripts` de la raíz son **envoltorios** (sin ruptura para CI ni local)
 | `swagger:export` | `node scripts/cli.mjs swagger` |
 | `test:engine` | autotests del motor, incluida una suite centinela que prueba el exit code ante assertions fallidas |
 | `test:smoke` | regresiones del runner, del agregador y del contrato OpenAPI (superficies, seguridad y respuestas); ejecutadas en CI |
+| `test:integration` | PostgreSQL efímero: proyección de stock, configuración de sitio API+BD y contrato runtime de errores 400/401/403/404/409/500; ejecutado en CI |
 
 `npm run demo` sigue ejercitando el stack completo levantado. El runner usa
 `SMOKE_REQUEST_TIMEOUT_MS` (10 000 ms) por petición y `SMOKE_WAIT_TIMEOUT_MS`
@@ -225,7 +229,8 @@ si falla la red; las mutaciones no se repiten sin clave de idempotencia.
 (`/health`, login y `GET /api/v1/catalog/productos`); lo ejecuta `deploy.yml`
 tras el despliegue (R-CD-12) y exige `ADMIN_EMAIL`/`ADMIN_PASSWORD` del
 environment. `test:smoke` prueba ese contrato con un servidor HTTP efímero y
-no sustituye el gate E2E completo pendiente (G-6).
+no sustituye el workflow E2E de release/manual (G-6), que ejecuta `npm run demo`
+contra el stack dev limpio.
 
 ## Cómo añadir una regla ejecutable
 
