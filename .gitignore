@@ -16,3 +16,5 @@ Thumbs.db
 packages/*/dist/
 packages/shared/dist/
 *.tsbuildinfo
+# Configuración local de OpenCode (MCP/rutas de la máquina): no versionar.
+opencode.jsonc
