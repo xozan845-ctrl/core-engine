@@ -64,6 +64,48 @@ export function backgroundDe(fila?: Partial<BackgroundCampos> | null): Backgroun
   };
 }
 
+/** Bloques de fondo soportados en una misma fila (ADR-38 / ADR-43). */
+export type BackgroundPrefijo = 'background' | 'panel_ai_background';
+
+/** Lee un bloque de fondo prefijado (`panel_ai_background_*`) desde una fila. */
+export function backgroundDeConPrefijo(
+  fila: unknown,
+  prefijo: BackgroundPrefijo,
+): BackgroundCampos {
+  if (!fila) return { ...BACKGROUND_POR_DEFECTO };
+  const datos = fila as Record<string, unknown>;
+  const leer = (campo: string): unknown => datos[`${prefijo}_${campo}`];
+  return {
+    background_objeto_id: (leer('objeto_id') as string | null | undefined) ?? null,
+    background_media_type:
+      (leer('media_type') as BackgroundMediaType | null | undefined) ?? null,
+    background_poster_objeto_id:
+      (leer('poster_objeto_id') as string | null | undefined) ?? null,
+    background_alt: (leer('alt') as string | undefined) ?? '',
+    background_overlay: (leer('overlay') as number | undefined) ?? 35,
+    background_position: (leer('position') as BackgroundPosition | undefined) ?? 'center',
+    background_activo: (leer('activo') as boolean | undefined) ?? false,
+  };
+}
+
+/** Extrae un bloque prefijado del payload de entrada como `BackgroundInput`. */
+export function backgroundInputConPrefijo(
+  datos: unknown,
+  prefijo: BackgroundPrefijo,
+): BackgroundInput {
+  if (!datos) return {};
+  const fila = datos as Record<string, unknown>;
+  const leer = (campo: string): unknown => fila[`${prefijo}_${campo}`];
+  return {
+    background_objeto_id: leer('objeto_id') as string | null | undefined,
+    background_poster_objeto_id: leer('poster_objeto_id') as string | null | undefined,
+    background_alt: leer('alt') as string | undefined,
+    background_overlay: leer('overlay') as number | undefined,
+    background_position: leer('position') as BackgroundPosition | undefined,
+    background_activo: leer('activo') as boolean | undefined,
+  };
+}
+
 interface ObjetoStorage {
   id: string;
   tenant_id: string;
