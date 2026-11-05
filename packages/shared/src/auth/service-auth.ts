@@ -6,6 +6,7 @@ import {
   SetMetadata,
 } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
+import { timingSafeEqual } from 'node:crypto';
 import { ForbiddenError, UnauthorizedError } from '../errors';
 import { Rol } from '../constants';
 import { usuarioDesdeHeaders, UsuarioContexto } from './jwt.utils';
@@ -49,12 +50,26 @@ export class RolesGuard implements CanActivate {
   }
 }
 
+/** Comparacion en tiempo constante para no filtrar la clave por prefijo. */
+function clavesIguales(a: string, b: string): boolean {
+  const bufferA = Buffer.from(a);
+  const bufferB = Buffer.from(b);
+  if (bufferA.length !== bufferB.length) return false;
+  return timingSafeEqual(bufferA, bufferB);
+}
+
 /** Clave interna entre servicios (llamadas back-to-back, nunca expuesta al publico). */
 export class ClaveInternaGuard implements CanActivate {
   canActivate(ctx: ExecutionContext): boolean {
     const req = ctx.switchToHttp().getRequest();
     const clave = req.headers?.['x-internal-key'];
-    if (!clave || clave !== process.env.INTERNAL_API_KEY) {
+    const esperada = process.env.INTERNAL_API_KEY;
+    if (
+      !esperada ||
+      typeof clave !== 'string' ||
+      clave.length === 0 ||
+      !clavesIguales(clave, esperada)
+    ) {
       throw new ForbiddenError('Clave interna invalida.');
     }
     return true;

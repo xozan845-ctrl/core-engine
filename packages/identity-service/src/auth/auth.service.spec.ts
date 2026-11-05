@@ -34,8 +34,11 @@ describe('ttlAMs', () => {
   });
 });
 
+// El servicio ya no admite el fallback `dev_secret`: el spec declara su secreto.
+process.env.JWT_SECRET = process.env.JWT_SECRET ?? 'test_secret_jwt_de_specs';
+
 describe('AuthService (sesiones JWT)', () => {
-  const SECRETO = process.env.JWT_SECRET ?? 'dev_secret';
+  const SECRETO = process.env.JWT_SECRET;
 
   const usuarioBase: Usuario = {
     id: 'u1',

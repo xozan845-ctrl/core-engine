@@ -72,8 +72,8 @@ Eventos del bus (topic `core-engine.events`): `order.created`, `stock.reservado`
 npm install                       # instala los workspaces (enlaza @core/shared, ...)
 npm run build                     # compila shared + gateway + los 9 microservicios
 npm test                          # los 12 workspaces, cada uno con --coverage (490 tests)
-cp .env.example .env              # variables de DESARROLLO (producción: .env.production.example)
-docker compose -f docker-compose.dev.yml up -d --build   # app: Postgres + RabbitMQ + MinIO + gateway y 10 servicios (8080 host + datos/broker 5432/5672/15672 + minio 9000/9001)
+npm run env:dev                   # genera .env con secretos aleatorios (producción: .env.production.example)
+docker compose -f docker-compose.dev.yml up -d --build   # app: Postgres + RabbitMQ + MinIO + gateway y 10 servicios (todo en 127.0.0.1)
 npm run demo                      # ejercicio end-to-end (TC-01..TC-08, RN-01..RN-08)
 
 # Dashboards (opcional): añade Prometheus + Grafana + exporters al stack de desarrollo

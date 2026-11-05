@@ -2,6 +2,7 @@ import { Request, Response, NextFunction } from 'express';
 import {
   verificarToken,
   TokenPayload,
+  leerSecretoJwt,
   ROLES,
   ROLES_LOGISTICA,
   Rol,
@@ -265,7 +266,7 @@ export const POLITICAS_RUTAS: PoliticaRuta[] = [
 export class GatewayAuthMiddleware {
   private readonly logger = Logger.create('gateway.auth');
 
-  constructor(private readonly secreto = process.env.JWT_SECRET ?? 'dev_secret') {}
+  constructor(private readonly secreto = leerSecretoJwt()) {}
 
   aplicar(req: Request, res: Response, next: NextFunction, politica: PoliticaRuta | null): void {
     const autorizacion = req.headers['authorization'] as string | undefined;

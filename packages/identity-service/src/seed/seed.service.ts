@@ -1,6 +1,6 @@
 import { Injectable, OnApplicationBootstrap } from '@nestjs/common';
 import { UsuariosService } from '../usuarios/usuarios.service';
-import { ROLES, Logger } from '@core/shared';
+import { ROLES, Logger, esProduccion } from '@core/shared';
 
 /**
  * Siembra del administrador de la bodega en el primer arranque
@@ -15,8 +15,18 @@ export class SeedService implements OnApplicationBootstrap {
   async onApplicationBootstrap(): Promise<void> {
     const existe = await this.usuarios.existeAdmin();
     if (existe) return;
-    const email = process.env.ADMIN_EMAIL ?? 'admin@core-engine.test';
-    const password = process.env.ADMIN_PASSWORD ?? 'AdminCore Engine2026!';
+    // Sin credenciales no se siembra nada: nunca un administrador con una
+    // contrasena por defecto (esa contrasena terminaria versionada y seria
+    // una puerta trasera conocida). En produccion el arranque falla.
+    const email = process.env.ADMIN_EMAIL?.trim();
+    const password = process.env.ADMIN_PASSWORD;
+    if (!email || !password || password.length < 12) {
+      const msg =
+        'No se siembra el administrador inicial: define ADMIN_EMAIL y ADMIN_PASSWORD (>= 12 caracteres).';
+      if (esProduccion()) throw new Error(msg);
+      this.logger.error({ msg });
+      return;
+    }
     try {
       const admin = await this.usuarios.crear({
         nombre: 'Administrador Core Engine',
