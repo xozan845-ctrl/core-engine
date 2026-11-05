@@ -31,6 +31,7 @@
     "mutation:critical": "npm run mutation -w @core/identity-service && npm run mutation -w @core/orders-service && npm run mutation -w @core/commissions-service && npm run mutation -w @core/finance-service",
     "coverage:compare": "node scripts/tools/coverage-compare.mjs",
     "coverage:baseline": "node scripts/tools/coverage-baseline.mjs",
+    "baseline:guard": "node scripts/tools/baseline-guard.mjs",
     "swagger:export": "npm run build && npm run swagger:export --workspaces --if-present && node scripts/cli.mjs swagger && npm run build -w @core/api-gateway"
   },
   "engines": {
