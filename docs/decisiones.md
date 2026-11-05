@@ -1250,6 +1250,39 @@ Este archivo registra decisiones técnicas deliberadas que se apartan del texto 
 
 ---
 
+## ADR-43: Fondo del panel de IA (extensión de ADR-38)
+
+- **Fecha**: 2026-11-05
+- **Estado**: Aceptado
+- **Contexto**: el chat de IA global necesita un fondo de imagen o video. El
+  contrato de media background de ADR-38 ya resuelve validación, poster,
+  overlay, posición y derivación de URLs para plataforma, empresa y tienda; no
+  hace falta un recurso nuevo.
+- **Decisión**:
+  1. Añadir un **segundo bloque** de fondo en la configuración singleton de
+     plataforma (`identity.configuracion_plataforma`), prefijado
+     `panel_ai_background_*`.
+  2. Reutilizar el mismo contrato y las mismas reglas de ADR-38: el cliente
+     envía ids y metadatos; el `media_type` se deriva del `content_type` real
+     de storage; el poster solo admite imagen; `panel_ai_background_objeto_id:
+     null` limpia el bloque completo.
+  3. Exponerlo en `GET /api/v1/configuracion/sitio` (público, cacheado 60 s) y
+     actualizarlo con el mismo `PATCH` para admin/super_admin.
+  4. Migración aditiva e idempotente: `23_configuracion_panel_ai.sql`.
+- **Consecuencias**:
+  - No hay endpoint ni entidad nueva: el panel de IA reutiliza el branding de
+    plataforma y el contrato existente.
+  - El frontend consume `panel_ai_background_url`,
+    `panel_ai_background_poster_url`, `panel_ai_background_media_type`,
+    `panel_ai_background_alt`, `panel_ai_background_overlay`,
+    `panel_ai_background_position` y `panel_ai_background_activo`.
+  - La personalización se edita desde `/admin/personalizacion`; el chat
+    `/ia/chat` solo lo visualiza.
+  - Si más adelante se necesita un fondo de panel de IA por empresa o tienda,
+    se reutiliza el mismo patrón de bloque prefijado en esas tablas.
+
+---
+
 ## Resumen de cumplimiento post-corrección
 
 | Ítem del documento          | Estado  | Nota |

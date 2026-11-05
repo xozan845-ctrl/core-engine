@@ -20,14 +20,25 @@ import {
   BackgroundCampos,
   BackgroundConUrls,
   BackgroundInput,
+  BackgroundMediaType,
+  BackgroundPosition,
   ValidadorMediaBackground,
   backgroundDe,
+  backgroundDeConPrefijo,
+  backgroundInputConPrefijo,
   conBackgroundUrls,
   normalizarBackground,
   validarBackground,
 } from '../media-background/media-background';
 
 export interface ConfiguracionSitio extends BackgroundCampos {
+  panel_ai_background_objeto_id: string | null;
+  panel_ai_background_media_type: BackgroundMediaType | null;
+  panel_ai_background_poster_objeto_id: string | null;
+  panel_ai_background_alt: string;
+  panel_ai_background_overlay: number;
+  panel_ai_background_position: BackgroundPosition;
+  panel_ai_background_activo: boolean;
   plantilla: Plantilla;
   tema: Tema;
   origen_personalizacion: {
@@ -38,6 +49,12 @@ export interface ConfiguracionSitio extends BackgroundCampos {
 }
 
 export interface ActualizarConfiguracionSitioInput extends BackgroundInput {
+  panel_ai_background_objeto_id?: string | null;
+  panel_ai_background_poster_objeto_id?: string | null;
+  panel_ai_background_alt?: string;
+  panel_ai_background_overlay?: number;
+  panel_ai_background_position?: BackgroundPosition;
+  panel_ai_background_activo?: boolean;
   plantilla?: Plantilla | null;
   tema?: TemaInput | null;
 }
@@ -50,8 +67,18 @@ type ConfiguracionSitioFila = Omit<
   tema_override: unknown;
 };
 
+type ConfiguracionSitioConUrls = ConfiguracionSitio &
+  BackgroundConUrls & {
+    panel_ai_background_url: string | null;
+    panel_ai_background_poster_url: string | null;
+  };
+
 const COLUMNAS = `background_objeto_id, background_media_type, background_poster_objeto_id,
   background_alt, background_overlay, background_position, background_activo,
+  panel_ai_background_objeto_id, panel_ai_background_media_type,
+  panel_ai_background_poster_objeto_id, panel_ai_background_alt,
+  panel_ai_background_overlay, panel_ai_background_position,
+  panel_ai_background_activo,
   plantilla_override, tema_override, actualizado_en`;
 
 /**
@@ -68,7 +95,7 @@ export class ConfiguracionSitioService {
 
   constructor(private readonly pg: PgService) {}
 
-  async obtener(): Promise<ConfiguracionSitio & BackgroundConUrls> {
+  async obtener(): Promise<ConfiguracionSitioConUrls> {
     const fila = await this.pg.queryOne<ConfiguracionSitioFila>(
       `SELECT ${COLUMNAS} FROM identity.configuracion_plataforma WHERE id = 1`,
     );
@@ -78,12 +105,17 @@ export class ConfiguracionSitioService {
   async actualizar(
     datos: ActualizarConfiguracionSitioInput,
     usuarioId: string,
-  ): Promise<ConfiguracionSitio & BackgroundConUrls> {
+  ): Promise<ConfiguracionSitioConUrls> {
     const actual = await this.pg.queryOne<ConfiguracionSitioFila>(
       `SELECT ${COLUMNAS} FROM identity.configuracion_plataforma WHERE id = 1`,
     );
     const meta = normalizarBackground(datos, actual ?? null);
     validarBackground(datos, meta);
+
+    const panelInput = backgroundInputConPrefijo(datos, 'panel_ai_background');
+    const panelActual = backgroundDeConPrefijo(actual, 'panel_ai_background');
+    const metaPanel = normalizarBackground(panelInput, panelActual);
+    validarBackground(panelInput, metaPanel);
 
     const overridesActuales = {
       plantilla: plantillaDe(actual?.plantilla_override),
@@ -114,13 +146,34 @@ export class ConfiguracionSitioService {
     ) {
       await this.validar(meta.background_poster_objeto_id, 'poster');
     }
+    if (
+      metaPanel.background_objeto_id &&
+      metaPanel.background_objeto_id !== actual?.panel_ai_background_objeto_id
+    ) {
+      metaPanel.background_media_type = await this.validar(
+        metaPanel.background_objeto_id,
+        'fondo',
+      );
+    }
+    if (
+      metaPanel.background_poster_objeto_id &&
+      metaPanel.background_poster_objeto_id !== actual?.panel_ai_background_poster_objeto_id
+    ) {
+      await this.validar(metaPanel.background_poster_objeto_id, 'poster');
+    }
 
     const fila = await this.pg.queryOne<ConfiguracionSitioFila>(
       `INSERT INTO identity.configuracion_plataforma
          (id, background_objeto_id, background_media_type, background_poster_objeto_id,
           background_alt, background_overlay, background_position, background_activo,
+          panel_ai_background_objeto_id, panel_ai_background_media_type,
+          panel_ai_background_poster_objeto_id, panel_ai_background_alt,
+          panel_ai_background_overlay, panel_ai_background_position,
+          panel_ai_background_activo,
           plantilla_override, tema_override, actualizado_por, actualizado_en)
-       VALUES (1, $1, $2, $3, $4, $5, $6, $7, $8, $9::jsonb, $10, NOW())
+       VALUES (1, $1, $2, $3, $4, $5, $6, $7,
+               $8, $9, $10, $11, $12, $13, $14,
+               $15, $16::jsonb, $17, NOW())
        ON CONFLICT (id) DO UPDATE SET
          background_objeto_id = EXCLUDED.background_objeto_id,
          background_media_type = EXCLUDED.background_media_type,
@@ -129,6 +182,13 @@ export class ConfiguracionSitioService {
          background_overlay = EXCLUDED.background_overlay,
          background_position = EXCLUDED.background_position,
          background_activo = EXCLUDED.background_activo,
+         panel_ai_background_objeto_id = EXCLUDED.panel_ai_background_objeto_id,
+         panel_ai_background_media_type = EXCLUDED.panel_ai_background_media_type,
+         panel_ai_background_poster_objeto_id = EXCLUDED.panel_ai_background_poster_objeto_id,
+         panel_ai_background_alt = EXCLUDED.panel_ai_background_alt,
+         panel_ai_background_overlay = EXCLUDED.panel_ai_background_overlay,
+         panel_ai_background_position = EXCLUDED.panel_ai_background_position,
+         panel_ai_background_activo = EXCLUDED.panel_ai_background_activo,
          plantilla_override = EXCLUDED.plantilla_override,
          tema_override = EXCLUDED.tema_override,
          actualizado_por = EXCLUDED.actualizado_por,
@@ -142,6 +202,13 @@ export class ConfiguracionSitioService {
         meta.background_overlay,
         meta.background_position,
         meta.background_activo,
+        metaPanel.background_objeto_id,
+        metaPanel.background_media_type,
+        metaPanel.background_poster_objeto_id,
+        metaPanel.background_alt,
+        metaPanel.background_overlay,
+        metaPanel.background_position,
+        metaPanel.background_activo,
         plantillaOverride,
         JSON.stringify(temaOverride),
         usuarioId,
@@ -184,16 +251,26 @@ export class ConfiguracionSitioService {
   }
 
   private porDefecto(): ConfiguracionSitioFila {
+    const panel = backgroundDeConPrefijo(null, 'panel_ai_background');
     return {
       ...BACKGROUND_POR_DEFECTO,
+      panel_ai_background_objeto_id: panel.background_objeto_id,
+      panel_ai_background_media_type: panel.background_media_type,
+      panel_ai_background_poster_objeto_id: panel.background_poster_objeto_id,
+      panel_ai_background_alt: panel.background_alt,
+      panel_ai_background_overlay: panel.background_overlay,
+      panel_ai_background_position: panel.background_position,
+      panel_ai_background_activo: panel.background_activo,
       plantilla_override: null,
       tema_override: {},
       actualizado_en: null,
     };
   }
 
-  private conUrls(fila: ConfiguracionSitioFila): ConfiguracionSitio & BackgroundConUrls {
+  private conUrls(fila: ConfiguracionSitioFila): ConfiguracionSitioConUrls {
     const { plantilla_override: _plantilla, tema_override: _tema, ...resto } = fila;
+    const panel = backgroundDeConPrefijo(fila, 'panel_ai_background');
+    const panelUrls = conBackgroundUrls(panel);
     const overrides = {
       plantilla: plantillaDe(fila.plantilla_override),
       tema: temaParcialDe(fila.tema_override),
@@ -207,6 +284,15 @@ export class ConfiguracionSitioService {
     return {
       ...resto,
       ...conBackgroundUrls(backgroundDe(fila)),
+      panel_ai_background_objeto_id: panel.background_objeto_id,
+      panel_ai_background_media_type: panel.background_media_type,
+      panel_ai_background_poster_objeto_id: panel.background_poster_objeto_id,
+      panel_ai_background_alt: panel.background_alt,
+      panel_ai_background_overlay: panel.background_overlay,
+      panel_ai_background_position: panel.background_position,
+      panel_ai_background_activo: panel.background_activo,
+      panel_ai_background_url: panelUrls.background_url,
+      panel_ai_background_poster_url: panelUrls.background_poster_url,
       plantilla: resuelta.plantilla,
       tema: resuelta.tema,
       origen_personalizacion: resuelta.origen,

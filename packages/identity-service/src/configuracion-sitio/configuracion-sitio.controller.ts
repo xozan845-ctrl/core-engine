@@ -24,6 +24,7 @@ import {
 import { PLANTILLAS, Plantilla, ROLES, Roles, UsuarioActual, UsuarioContexto } from '@core/shared';
 import {
   BACKGROUND_POSICIONES,
+  BackgroundMediaType,
   BackgroundPosition,
 } from '../media-background/media-background';
 import {
@@ -81,6 +82,49 @@ export class ActualizarConfiguracionSitioRequestDto implements ActualizarConfigu
   background_activo?: boolean;
 
   @ApiPropertyOptional({
+    type: String,
+    format: 'uuid',
+    nullable: true,
+    description: 'Objeto de storage del fondo del panel de IA; null limpia el bloque',
+  })
+  @IsOptional()
+  @IsUUID()
+  panel_ai_background_objeto_id?: string | null;
+
+  @ApiPropertyOptional({
+    type: String,
+    format: 'uuid',
+    nullable: true,
+    description: 'Imagen de portada para un fondo de video del panel de IA',
+  })
+  @IsOptional()
+  @IsUUID()
+  panel_ai_background_poster_objeto_id?: string | null;
+
+  @ApiPropertyOptional({ maxLength: 160, default: '' })
+  @IsOptional()
+  @IsString()
+  @Length(0, 160)
+  panel_ai_background_alt?: string;
+
+  @ApiPropertyOptional({ minimum: 0, maximum: 100, default: 35 })
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  @Max(100)
+  panel_ai_background_overlay?: number;
+
+  @ApiPropertyOptional({ enum: BACKGROUND_POSICIONES, default: 'center' })
+  @IsOptional()
+  @IsIn(BACKGROUND_POSICIONES)
+  panel_ai_background_position?: BackgroundPosition;
+
+  @ApiPropertyOptional({ default: false })
+  @IsOptional()
+  @IsBoolean()
+  panel_ai_background_activo?: boolean;
+
+  @ApiPropertyOptional({
     enum: PLANTILLAS,
     nullable: true,
     description: 'Plantilla de la plataforma; null usa el default',
@@ -116,6 +160,24 @@ export class ConfiguracionSitioResponseDto {
   @ApiProperty({ minimum: 0, maximum: 100 }) background_overlay: number;
   @ApiProperty({ enum: BACKGROUND_POSICIONES }) background_position: BackgroundPosition;
   @ApiProperty() background_activo: boolean;
+
+  @ApiProperty({ type: String, format: 'uuid', nullable: true })
+  panel_ai_background_objeto_id: string | null;
+  @ApiProperty({ enum: ['imagen', 'video'], nullable: true }) panel_ai_background_media_type:
+    | BackgroundMediaType
+    | null;
+  @ApiProperty({ type: String, nullable: true, description: 'URL pública derivada del panel de IA' })
+  panel_ai_background_url: string | null;
+  @ApiProperty({ type: String, format: 'uuid', nullable: true })
+  panel_ai_background_poster_objeto_id: string | null;
+  @ApiProperty({ type: String, nullable: true, description: 'URL pública del poster del panel de IA' })
+  panel_ai_background_poster_url: string | null;
+  @ApiProperty() panel_ai_background_alt: string;
+  @ApiProperty({ minimum: 0, maximum: 100 }) panel_ai_background_overlay: number;
+  @ApiProperty({ enum: BACKGROUND_POSICIONES })
+  panel_ai_background_position: BackgroundPosition;
+  @ApiProperty() panel_ai_background_activo: boolean;
+
   @ApiProperty({ enum: PLANTILLAS }) plantilla: Plantilla;
   @ApiProperty({ type: TemaResponseDto }) tema: TemaResponseDto;
   @ApiProperty({ type: OrigenPersonalizacionResponseDto })
