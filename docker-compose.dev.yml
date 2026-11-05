@@ -20,6 +20,8 @@ x-servicio-base: &servicio-base
     dockerfile: Dockerfile
   env_file:
     - .env
+  environment:
+    TZ: America/Managua
   depends_on:
     postgres:
       condition: service_healthy
@@ -110,6 +112,9 @@ services:
       # En desarrollo el diagnostico (/docs, /metrics) va abierto; en stage/prod
       # el borde lo cierra (DIAGNOSTICOS_PUBLICOS=false por defecto).
       DIAGNOSTICOS_PUBLICOS: "true"
+      # El smoke local/CI usa /ready sin una clave de borde; stage/prod lo
+      # mantiene privado y exige x-internal-key.
+      READY_PUBLIC: "true"
     ports:
       - "8080:8080"
     networks:

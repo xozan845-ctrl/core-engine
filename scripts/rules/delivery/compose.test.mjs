@@ -146,8 +146,21 @@ export default defineSuite({
         'e2e.yml debe levantar el stack dev (G-6)',
       );
       assert.ok(
+        e2e.includes('cp .env.example .env'),
+        'e2e.yml debe materializar la plantilla de entorno antes de levantar el stack',
+      );
+      assert.ok(
         e2e.includes('npm run demo'),
         'e2e.yml debe ejecutar el flujo E2E completo (G-6)',
+      );
+      assert.ok(
+        e2e.includes('UnhandledPromiseRejection') && e2e.includes('nivel":"error'),
+        'e2e.yml debe fallar ante errores estructurados o excepciones no controladas (R-E-8)',
+      );
+      assert.ok(
+        deploy.includes("if: github.event.inputs.environment == 'dev'") &&
+          deploy.includes('cp .env.example .env'),
+        'deploy.yml debe materializar la plantilla de entorno en el despliegue dev',
       );
     });
 
