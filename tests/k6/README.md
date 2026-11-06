@@ -12,6 +12,7 @@ un mix de lecturas reales.
 | `smoke.js` | 2 VUs / 20 s; valida rutas críticas | Manual o CI |
 | `load.js` | Ritmo sostenido (`K6_LOAD_RATE`) | **Gate de deploy** |
 | `breakpoint.js` | Rampa 10→800 req/s; aborta a p95>2 s o error>5 % | Manual, para calibrar |
+| `write.js` | Carrito + creación de orden con pool de compradores | Manual; no va en el deploy |
 
 Mix de `load`/`breakpoint`: catálogo público (45 %), tienda pública (30 %),
 `/health` (10 %), pedidos autenticados (10 %) y `/ready` (5 %, opcional).
@@ -51,6 +52,8 @@ números sin medir.
 | `K6_LOAD_RATE` / `K6_LOAD_DURATION` | Ritmo/duración de `load.js` |
 | `K6_LOAD_PRE_VUS` / `K6_LOAD_MAX_VUS` | VUs reservadas/máximas de `load.js` |
 | `K6_BREAK_*` | Rampa de `breakpoint.js` |
+| `K6_WRITE_RATE` / `K6_WRITE_DURATION` | Ritmo/duración de `write.js` |
+| `K6_WRITE_BUYERS` / `K6_WRITE_PASSWORD` | Pool de compradores y su clave |
 | `K6_SUMMARY` | Ruta del resumen JSON |
 
 > No uses `K6_DURATION`, `K6_VUS`, `K6_ITERATIONS` ni `K6_STAGES`: son
@@ -77,7 +80,17 @@ node scripts/tools/k6-compare.mjs --update --summary tests/k6/k6-summary.json \
 
 # Breakpoint manual (no en prod sin aprobación)
 npm run k6:breakpoint
+
+# Escritura: 20 compradores, 5 órdenes/s durante 30 s (crea datos reales)
+K6_WRITE_PASSWORD='<clave-fixture>' K6_WRITE_RATE=5 K6_WRITE_DURATION=30s npm run k6:write
+node scripts/tools/k6-compare.mjs --update --summary tests/k6/k6-summary.json \
+  --env local --scenario write --rate 5 --duration 30s
 ```
+
+> `write.js` crea usuarios `k6.write.*`, carritos y órdenes, y consume stock.
+> Úsalo solo contra el tenant de prueba. No está en el gate de deploy.
+> Mantén `K6_WRITE_BUYERS >= K6_WRITE_MAX_VUS` para que cada VU tenga su propio
+> carrito y no haya carreras.
 
 Los scripts de npm usan `grafana/k6` con `--network host` para alcanzar el
 gateway en loopback. En CI se usa la misma imagen.

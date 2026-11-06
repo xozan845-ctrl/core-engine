@@ -9,6 +9,16 @@
       "rate": 300,
       "duration": "2m",
       "updatedAt": "2026-11-06T15:44:52.876Z"
+    },
+    "write": {
+      "p95": 78,
+      "p99": 87,
+      "errorRate": 0,
+      "rps": 10.19,
+      "minRps": 8.15,
+      "rate": 5,
+      "duration": "30s",
+      "updatedAt": "2026-11-06T15:57:43.679Z"
     }
   },
   "stage": {},
