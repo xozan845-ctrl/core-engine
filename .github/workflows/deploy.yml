@@ -120,6 +120,30 @@ jobs:
           EDGE_BASIC_AUTH: ${{ secrets.EDGE_BASIC_AUTH }}
         run: npm run smoke:remote
 
+      - name: 📈 k6 load gate (R-CD-12)
+        if: github.event.inputs.environment != 'dev'
+        env:
+          BASE_URL: http://localhost:${{ steps.cfg.outputs.port }}
+          ENV: ${{ github.event.inputs.environment }}
+          K6_EMPRESA_ID: ${{ secrets.K6_EMPRESA_ID }}
+          K6_STORE_SLUG: ${{ secrets.K6_STORE_SLUG }}
+          K6_BUYER_EMAIL: ${{ secrets.K6_BUYER_EMAIL }}
+          K6_BUYER_PASSWORD: ${{ secrets.K6_BUYER_PASSWORD }}
+          K6_INTERNAL_KEY: ${{ secrets.K6_INTERNAL_KEY }}
+          K6_EDGE_BASIC_AUTH: ${{ secrets.EDGE_BASIC_AUTH }}
+          K6_READY: ${{ vars.K6_READY }}
+          K6_LOAD_RATE: ${{ github.event.inputs.environment == 'stage' && vars.K6_RATE_STAGE || vars.K6_RATE_PROD }}
+          K6_LOAD_DURATION: ${{ vars.K6_DURATION || '60s' }}
+          K6_SUMMARY: /scripts/k6-summary.json
+        run: |
+          docker run --rm --network host --user "$(id -u):$(id -g)" -e HOME=/tmp \
+            -v "$PWD/tests/k6:/scripts" \
+            -e BASE_URL -e K6_EMPRESA_ID -e K6_STORE_SLUG -e K6_BUYER_EMAIL -e K6_BUYER_PASSWORD \
+            -e K6_INTERNAL_KEY -e K6_EDGE_BASIC_AUTH -e K6_READY -e K6_LOAD_RATE -e K6_LOAD_DURATION -e K6_SUMMARY \
+            grafana/k6:latest run --quiet /scripts/load.js
+          node scripts/tools/k6-compare.mjs --summary tests/k6/k6-summary.json \
+            --env "$ENV" --scenario load --allow-missing
+
       - name: 📊 Evidence
         if: always()
         run: docker compose ${{ steps.cfg.outputs.files }} ps

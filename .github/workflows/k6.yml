@@ -1,0 +1,107 @@
+name: k6
+
+# Prueba de capacidad/no-regresión bajo demanda.
+# Para el gate automático de cada despliegue, ver `deploy.yml`.
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Entorno de GitHub (con sus secretos)'
+        required: true
+        default: stage
+        type: choice
+        options:
+          - stage
+          - prod
+      scenario:
+        description: 'Escenario k6'
+        required: true
+        default: load
+        type: choice
+        options:
+          - smoke
+          - load
+          - breakpoint
+      base_url:
+        description: 'URL del gateway (localhost si el runner está en el host desplegado)'
+        required: true
+        default: 'http://localhost:8080'
+      rate:
+        description: 'Ritmo de load en req/s (vacío = 20)'
+        required: false
+        default: ''
+      duration:
+        description: 'Duración (vacío = 2m para load, 45s por etapa en breakpoint)'
+        required: false
+        default: ''
+      update_baseline:
+        description: 'Actualizar la línea base con esta corrida'
+        required: false
+        default: false
+        type: boolean
+
+concurrency:
+  group: k6-${{ github.event.inputs.environment }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  k6:
+    name: k6-${{ github.event.inputs.scenario }}-${{ github.event.inputs.environment }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    environment: ${{ github.event.inputs.environment }}
+    steps:
+      - name: 📥 Checkout repository
+        uses: actions/checkout@v7
+
+      - name: 🏃 Run k6
+        env:
+          BASE_URL: ${{ github.event.inputs.base_url }}
+          K6_EMPRESA_ID: ${{ secrets.K6_EMPRESA_ID }}
+          K6_STORE_SLUG: ${{ secrets.K6_STORE_SLUG }}
+          K6_BUYER_EMAIL: ${{ secrets.K6_BUYER_EMAIL }}
+          K6_BUYER_PASSWORD: ${{ secrets.K6_BUYER_PASSWORD }}
+          K6_INTERNAL_KEY: ${{ secrets.K6_INTERNAL_KEY }}
+          K6_EDGE_BASIC_AUTH: ${{ secrets.EDGE_BASIC_AUTH }}
+          K6_READY: ${{ vars.K6_READY }}
+          K6_LOAD_RATE: ${{ github.event.inputs.rate }}
+          K6_LOAD_DURATION: ${{ github.event.inputs.duration }}
+          K6_BREAK_STAGE_DURATION: ${{ github.event.inputs.duration }}
+          K6_SUMMARY: /scripts/k6-summary.json
+        run: |
+          docker run --rm --network host --user "$(id -u):$(id -g)" -e HOME=/tmp \
+            -v "$PWD/tests/k6:/scripts" \
+            -e BASE_URL -e K6_EMPRESA_ID -e K6_STORE_SLUG -e K6_BUYER_EMAIL -e K6_BUYER_PASSWORD \
+            -e K6_INTERNAL_KEY -e K6_EDGE_BASIC_AUTH -e K6_READY -e K6_LOAD_RATE -e K6_LOAD_DURATION \
+            -e K6_BREAK_STAGE_DURATION -e K6_SUMMARY \
+            grafana/k6:latest run --quiet "/scripts/${{ github.event.inputs.scenario }}.js"
+
+      - name: 📊 Compare with baseline
+        if: github.event.inputs.scenario != 'breakpoint'
+        env:
+          ENV: ${{ github.event.inputs.environment }}
+          SCENARIO: ${{ github.event.inputs.scenario }}
+          UPDATE: ${{ github.event.inputs.update_baseline }}
+          RATE: ${{ github.event.inputs.rate }}
+          DURATION: ${{ github.event.inputs.duration }}
+        run: |
+          if [ "$UPDATE" = "true" ]; then
+            node scripts/tools/k6-compare.mjs --summary tests/k6/k6-summary.json \
+              --env "$ENV" --scenario "$SCENARIO" --update \
+              ${RATE:+--rate "$RATE"} ${DURATION:+--duration "$DURATION"}
+          else
+            node scripts/tools/k6-compare.mjs --summary tests/k6/k6-summary.json \
+              --env "$ENV" --scenario "$SCENARIO" --allow-missing
+          fi
+
+      - name: 📎 Upload k6 summary
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: k6-summary-${{ github.event.inputs.environment }}-${{ github.event.inputs.scenario }}
+          path: tests/k6/k6-summary.json
+          if-no-files-found: warn
+          retention-days: 14
