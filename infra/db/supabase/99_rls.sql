@@ -92,36 +92,41 @@ ALTER TABLE catalog.historico_precios ENABLE ROW LEVEL SECURITY;
 CREATE POLICY historico_admin ON catalog.historico_precios
   FOR ALL TO authenticated USING (auth.rol() IN ('super_admin', 'admin')) WITH CHECK (auth.rol() IN ('super_admin', 'admin'));
 CREATE POLICY historico_empresa ON catalog.historico_precios
-  FOR SELECT TO authenticated
-  USING (auth.rol() = 'empresario' AND empresa_id::text = (auth.jwt() ->> 'tenant_id'));
+  FOR ALL TO authenticated
+  USING (auth.rol() = 'empresario' AND empresa_id::text = (auth.jwt() ->> 'tenant_id'))
+  WITH CHECK (auth.rol() = 'empresario' AND empresa_id::text = (auth.jwt() ->> 'tenant_id'));
 
 ALTER TABLE catalog.ajustes_stock ENABLE ROW LEVEL SECURITY;
 CREATE POLICY ajustes_admin ON catalog.ajustes_stock
   FOR ALL TO authenticated USING (auth.rol() IN ('super_admin', 'admin')) WITH CHECK (auth.rol() IN ('super_admin', 'admin'));
 CREATE POLICY ajustes_empresa ON catalog.ajustes_stock
-  FOR SELECT TO authenticated
-  USING (auth.rol() = 'empresario' AND empresa_id::text = (auth.jwt() ->> 'tenant_id'));
+  FOR ALL TO authenticated
+  USING (auth.rol() = 'empresario' AND empresa_id::text = (auth.jwt() ->> 'tenant_id'))
+  WITH CHECK (auth.rol() = 'empresario' AND empresa_id::text = (auth.jwt() ->> 'tenant_id'));
 
 ALTER TABLE catalog.producto_catalogo_vista ENABLE ROW LEVEL SECURITY;
 CREATE POLICY catalogo_vista_admin ON catalog.producto_catalogo_vista
   FOR ALL TO authenticated USING (auth.rol() IN ('super_admin', 'admin')) WITH CHECK (auth.rol() IN ('super_admin', 'admin'));
 CREATE POLICY catalogo_vista_empresa ON catalog.producto_catalogo_vista
-  FOR SELECT TO authenticated
-  USING (empresa_id::text = (auth.jwt() ->> 'tenant_id'));
+  FOR ALL TO authenticated
+  USING (auth.rol() = 'empresario' AND empresa_id::text = (auth.jwt() ->> 'tenant_id'))
+  WITH CHECK (auth.rol() = 'empresario' AND empresa_id::text = (auth.jwt() ->> 'tenant_id'));
 
 ALTER TABLE catalog.stock_vista ENABLE ROW LEVEL SECURITY;
 CREATE POLICY stock_vista_admin ON catalog.stock_vista
   FOR ALL TO authenticated USING (auth.rol() IN ('super_admin', 'admin')) WITH CHECK (auth.rol() IN ('super_admin', 'admin'));
 CREATE POLICY stock_vista_empresa ON catalog.stock_vista
-  FOR SELECT TO authenticated
-  USING (empresa_id::text = (auth.jwt() ->> 'tenant_id'));
+  FOR ALL TO authenticated
+  USING (auth.rol() = 'empresario' AND empresa_id::text = (auth.jwt() ->> 'tenant_id'))
+  WITH CHECK (auth.rol() = 'empresario' AND empresa_id::text = (auth.jwt() ->> 'tenant_id'));
 
 ALTER TABLE catalog.inventario_mensual_mv ENABLE ROW LEVEL SECURITY;
 CREATE POLICY inventario_mensual_admin ON catalog.inventario_mensual_mv
   FOR ALL TO authenticated USING (auth.rol() IN ('super_admin', 'admin')) WITH CHECK (auth.rol() IN ('super_admin', 'admin'));
 CREATE POLICY inventario_mensual_empresa ON catalog.inventario_mensual_mv
-  FOR SELECT TO authenticated
-  USING (empresa_id::text = (auth.jwt() ->> 'tenant_id'));
+  FOR ALL TO authenticated
+  USING (auth.rol() = 'empresario' AND empresa_id::text = (auth.jwt() ->> 'tenant_id'))
+  WITH CHECK (auth.rol() = 'empresario' AND empresa_id::text = (auth.jwt() ->> 'tenant_id'));
 
 ALTER TABLE catalog.reservas_ordenes ENABLE ROW LEVEL SECURITY;
 CREATE POLICY reservas_admin ON catalog.reservas_ordenes
