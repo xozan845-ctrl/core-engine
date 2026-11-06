@@ -57,11 +57,15 @@ CREATE POLICY empresa_slugs_miembros ON identity.empresa_slugs FOR SELECT TO aut
 
 ALTER TABLE catalog.productos ENABLE ROW LEVEL SECURITY;
 CREATE POLICY productos_admin_all ON catalog.productos
-  FOR ALL TO authenticated USING (auth.rol() = 'admin') WITH CHECK (auth.rol() = 'admin');
+  FOR ALL TO authenticated USING (auth.rol() IN ('super_admin', 'admin')) WITH CHECK (auth.rol() IN ('super_admin', 'admin'));
 CREATE POLICY productos_empresa ON catalog.productos
   FOR ALL TO authenticated
   USING (auth.rol() = 'empresario' AND empresa_id::text = (auth.jwt() ->> 'tenant_id'))
   WITH CHECK (auth.rol() = 'empresario' AND empresa_id::text = (auth.jwt() ->> 'tenant_id'));
+-- El catálogo es público (ADR-27): cualquier sesión puede leer productos; el
+-- filtro por empresa lo aplica la consulta. Escritura sigue restringida.
+CREATE POLICY productos_lectura ON catalog.productos
+  FOR SELECT TO authenticated USING (true);
 -- ADR-27: el catálogo público se sirve por el API Gateway con el alcance de la
 -- empresa solicitada; no hay lectura anónima directa de la tabla.
 
@@ -76,50 +80,53 @@ CREATE POLICY producto_imagenes_empresa ON catalog.producto_imagenes
   FOR ALL TO authenticated
   USING (auth.rol() = 'empresario' AND empresa_id::text = (auth.jwt() ->> 'tenant_id'))
   WITH CHECK (auth.rol() = 'empresario' AND empresa_id::text = (auth.jwt() ->> 'tenant_id'));
+-- Las imágenes son parte del catálogo público (ADR-28): lectura para sesiones.
+CREATE POLICY producto_imagenes_lectura ON catalog.producto_imagenes
+  FOR SELECT TO authenticated USING (true);
 
 ALTER TABLE catalog.historico_precios ENABLE ROW LEVEL SECURITY;
 CREATE POLICY historico_admin ON catalog.historico_precios
-  FOR ALL TO authenticated USING (auth.rol() = 'admin') WITH CHECK (auth.rol() = 'admin');
+  FOR ALL TO authenticated USING (auth.rol() IN ('super_admin', 'admin')) WITH CHECK (auth.rol() IN ('super_admin', 'admin'));
 CREATE POLICY historico_empresa ON catalog.historico_precios
   FOR SELECT TO authenticated
   USING (auth.rol() = 'empresario' AND empresa_id::text = (auth.jwt() ->> 'tenant_id'));
 
 ALTER TABLE catalog.ajustes_stock ENABLE ROW LEVEL SECURITY;
 CREATE POLICY ajustes_admin ON catalog.ajustes_stock
-  FOR ALL TO authenticated USING (auth.rol() = 'admin') WITH CHECK (auth.rol() = 'admin');
+  FOR ALL TO authenticated USING (auth.rol() IN ('super_admin', 'admin')) WITH CHECK (auth.rol() IN ('super_admin', 'admin'));
 CREATE POLICY ajustes_empresa ON catalog.ajustes_stock
   FOR SELECT TO authenticated
   USING (auth.rol() = 'empresario' AND empresa_id::text = (auth.jwt() ->> 'tenant_id'));
 
 ALTER TABLE catalog.producto_catalogo_vista ENABLE ROW LEVEL SECURITY;
 CREATE POLICY catalogo_vista_admin ON catalog.producto_catalogo_vista
-  FOR ALL TO authenticated USING (auth.rol() = 'admin') WITH CHECK (auth.rol() = 'admin');
+  FOR ALL TO authenticated USING (auth.rol() IN ('super_admin', 'admin')) WITH CHECK (auth.rol() IN ('super_admin', 'admin'));
 CREATE POLICY catalogo_vista_empresa ON catalog.producto_catalogo_vista
   FOR SELECT TO authenticated
   USING (empresa_id::text = (auth.jwt() ->> 'tenant_id'));
 
 ALTER TABLE catalog.stock_vista ENABLE ROW LEVEL SECURITY;
 CREATE POLICY stock_vista_admin ON catalog.stock_vista
-  FOR ALL TO authenticated USING (auth.rol() = 'admin') WITH CHECK (auth.rol() = 'admin');
+  FOR ALL TO authenticated USING (auth.rol() IN ('super_admin', 'admin')) WITH CHECK (auth.rol() IN ('super_admin', 'admin'));
 CREATE POLICY stock_vista_empresa ON catalog.stock_vista
   FOR SELECT TO authenticated
   USING (empresa_id::text = (auth.jwt() ->> 'tenant_id'));
 
 ALTER TABLE catalog.inventario_mensual_mv ENABLE ROW LEVEL SECURITY;
 CREATE POLICY inventario_mensual_admin ON catalog.inventario_mensual_mv
-  FOR ALL TO authenticated USING (auth.rol() = 'admin') WITH CHECK (auth.rol() = 'admin');
+  FOR ALL TO authenticated USING (auth.rol() IN ('super_admin', 'admin')) WITH CHECK (auth.rol() IN ('super_admin', 'admin'));
 CREATE POLICY inventario_mensual_empresa ON catalog.inventario_mensual_mv
   FOR SELECT TO authenticated
   USING (empresa_id::text = (auth.jwt() ->> 'tenant_id'));
 
 ALTER TABLE catalog.reservas_ordenes ENABLE ROW LEVEL SECURITY;
 CREATE POLICY reservas_admin ON catalog.reservas_ordenes
-  FOR ALL TO authenticated USING (auth.rol() = 'admin') WITH CHECK (auth.rol() = 'admin');
+  FOR ALL TO authenticated USING (auth.rol() IN ('super_admin', 'admin')) WITH CHECK (auth.rol() IN ('super_admin', 'admin'));
 
 -- ── stores.tiendas ──────────────────────────────────────────────────────
 ALTER TABLE stores.tiendas ENABLE ROW LEVEL SECURITY;
 CREATE POLICY tiendas_admin ON stores.tiendas
-  FOR ALL TO authenticated USING (auth.rol() = 'admin') WITH CHECK (auth.rol() = 'admin');
+  FOR ALL TO authenticated USING (auth.rol() IN ('super_admin', 'admin')) WITH CHECK (auth.rol() IN ('super_admin', 'admin'));
 CREATE POLICY tiendas_vendedor_propias ON stores.tiendas
   FOR ALL TO authenticated
   USING (auth.rol() IN ('vendedor','empresario') AND empresa_id::text = (auth.jwt() ->> 'tenant_id')
@@ -146,7 +153,7 @@ CREATE POLICY tienda_slugs_lectura ON stores.tienda_slugs
 -- ── stores.ofertas ──────────────────────────────────────────────────────
 ALTER TABLE stores.ofertas ENABLE ROW LEVEL SECURITY;
 CREATE POLICY ofertas_admin ON stores.ofertas
-  FOR ALL TO authenticated USING (auth.rol() = 'admin') WITH CHECK (auth.rol() = 'admin');
+  FOR ALL TO authenticated USING (auth.rol() IN ('super_admin', 'admin')) WITH CHECK (auth.rol() IN ('super_admin', 'admin'));
 CREATE POLICY ofertas_vendedor_propias ON stores.ofertas
   FOR ALL TO authenticated
   USING (auth.rol() = 'vendedor'
@@ -159,7 +166,7 @@ CREATE POLICY ofertas_lectura ON stores.ofertas
 -- ── orders.proyeccion_ordenes ───────────────────────────────────────────
 ALTER TABLE orders.proyeccion_ordenes ENABLE ROW LEVEL SECURITY;
 CREATE POLICY ordenes_admin ON orders.proyeccion_ordenes
-  FOR ALL TO authenticated USING (auth.rol() = 'admin') WITH CHECK (auth.rol() = 'admin');
+  FOR ALL TO authenticated USING (auth.rol() IN ('super_admin', 'admin')) WITH CHECK (auth.rol() IN ('super_admin', 'admin'));
 CREATE POLICY ordenes_comprador_propias ON orders.proyeccion_ordenes
   FOR SELECT TO authenticated
   USING (auth.rol() = 'comprador' AND cliente_id = auth.uid());
@@ -177,24 +184,24 @@ CREATE POLICY carritos_comprador ON orders.carritos
   USING (auth.rol() = 'comprador' AND comprador_id = auth.uid())
   WITH CHECK (auth.rol() = 'comprador' AND comprador_id = auth.uid());
 CREATE POLICY carritos_admin ON orders.carritos
-  FOR ALL TO authenticated USING (auth.rol() = 'admin') WITH CHECK (auth.rol() = 'admin');
+  FOR ALL TO authenticated USING (auth.rol() IN ('super_admin', 'admin')) WITH CHECK (auth.rol() IN ('super_admin', 'admin'));
 
 -- ── stores.eventos_procesados (idempotencia interna, sin acceso publico) ─
 ALTER TABLE stores.eventos_procesados ENABLE ROW LEVEL SECURITY;
 CREATE POLICY eventos_procesados_admin ON stores.eventos_procesados
-  FOR ALL TO authenticated USING (auth.rol() = 'admin') WITH CHECK (auth.rol() = 'admin');
+  FOR ALL TO authenticated USING (auth.rol() IN ('super_admin', 'admin')) WITH CHECK (auth.rol() IN ('super_admin', 'admin'));
 
 -- ── commissions ─────────────────────────────────────────────────────────
 ALTER TABLE commissions.comisiones ENABLE ROW LEVEL SECURITY;
 CREATE POLICY comisiones_admin ON commissions.comisiones
-  FOR ALL TO authenticated USING (auth.rol() = 'admin') WITH CHECK (auth.rol() = 'admin');
+  FOR ALL TO authenticated USING (auth.rol() IN ('super_admin', 'admin')) WITH CHECK (auth.rol() IN ('super_admin', 'admin'));
 CREATE POLICY comisiones_vendedor_propias ON commissions.comisiones
   FOR SELECT TO authenticated
   USING (auth.rol() = 'vendedor' AND vendedor_id = auth.uid());
 
 ALTER TABLE commissions.liquidaciones ENABLE ROW LEVEL SECURITY;
 CREATE POLICY liquidaciones_admin ON commissions.liquidaciones
-  FOR ALL TO authenticated USING (auth.rol() = 'admin') WITH CHECK (auth.rol() = 'admin');
+  FOR ALL TO authenticated USING (auth.rol() IN ('super_admin', 'admin')) WITH CHECK (auth.rol() IN ('super_admin', 'admin'));
 CREATE POLICY liquidaciones_vendedor_propias ON commissions.liquidaciones
   FOR SELECT TO authenticated
   USING (auth.rol() = 'vendedor' AND vendedor_id = auth.uid());
@@ -210,7 +217,7 @@ CREATE POLICY liquidaciones_empresario_propias ON commissions.liquidaciones_empr
 
 ALTER TABLE commissions.pagos ENABLE ROW LEVEL SECURITY;
 CREATE POLICY pagos_admin ON commissions.pagos
-  FOR ALL TO authenticated USING (auth.rol() = 'admin') WITH CHECK (auth.rol() = 'admin');
+  FOR ALL TO authenticated USING (auth.rol() IN ('super_admin', 'admin')) WITH CHECK (auth.rol() IN ('super_admin', 'admin'));
 
 -- ── logistics.envios ────────────────────────────────────────────────────
 ALTER TABLE logistics.envios ENABLE ROW LEVEL SECURITY;
