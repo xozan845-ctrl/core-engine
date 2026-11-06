@@ -17,7 +17,12 @@ import { join, resolve } from 'node:path';
 import { repoRoot } from '../engine/lib/paths.mjs';
 
 const APP = new Set(['JWT_SECRET', 'INTERNAL_API_KEY', 'ADMIN_PASSWORD']);
-const DATOS = new Set(['POSTGRES_PASSWORD', 'RABBITMQ_PASSWORD', 'MINIO_ROOT_PASSWORD']);
+const DATOS = new Set([
+  'POSTGRES_PASSWORD',
+  'APP_DB_PASSWORD',
+  'RABBITMQ_PASSWORD',
+  'MINIO_ROOT_PASSWORD',
+]);
 const TODOS = new Set([...APP, ...DATOS]);
 
 function nuevosValores() {
@@ -27,6 +32,7 @@ function nuevosValores() {
     // >= 12 caracteres y variedad de clases para el seed del administrador.
     ADMIN_PASSWORD: `${randomBytes(18).toString('base64url')}aA1!`,
     POSTGRES_PASSWORD: randomBytes(24).toString('hex'),
+    APP_DB_PASSWORD: randomBytes(24).toString('hex'),
     RABBITMQ_PASSWORD: randomBytes(24).toString('hex'),
     MINIO_ROOT_PASSWORD: randomBytes(24).toString('hex'),
   };
@@ -51,10 +57,13 @@ function aplicar(contenido, overrides, incluirDatos) {
 
   // Reconstruir las URLs compuestas para que no queden con la credencial vieja.
   valores.POSTGRES_URL = `postgres://${valores.POSTGRES_USER}:${valores.POSTGRES_PASSWORD}@${valores.POSTGRES_HOST}:${valores.POSTGRES_PORT}/${valores.POSTGRES_DB}`;
-  valores.DATABASE_URL = valores.POSTGRES_URL;
+  if (valores.APP_DB_PASSWORD) {
+    valores.DATABASE_URL = `postgres://core_engine_app:${valores.APP_DB_PASSWORD}@${valores.POSTGRES_HOST}:${valores.POSTGRES_PORT}/${valores.POSTGRES_DB}`;
+  }
   valores.RABBITMQ_URL = `amqp://${valores.RABBITMQ_USER}:${valores.RABBITMQ_PASSWORD}@rabbitmq:5672`;
 
-  const reconstruidas = new Set(['POSTGRES_URL', 'DATABASE_URL', 'RABBITMQ_URL']);
+  const reconstruidas = new Set(['POSTGRES_URL', 'RABBITMQ_URL']);
+  if (valores.APP_DB_PASSWORD) reconstruidas.add('DATABASE_URL');
   return lineas
     .map((linea) => {
       const match = /^([A-Z][A-Z0-9_]*)=(.*)$/.exec(linea);

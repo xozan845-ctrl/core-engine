@@ -255,8 +255,8 @@ CREATE POLICY workspace_registros_empresa ON finance.workspace_registros
   WITH CHECK (auth.rol() = 'empresario' AND tenant_id::text = (auth.jwt() ->> 'tenant_id'));
 CREATE POLICY workspace_registros_vendedor ON finance.workspace_registros
   FOR ALL TO authenticated
-  USING (auth.rol() = 'vendedor' AND propietario_id::text = auth.uid())
-  WITH CHECK (auth.rol() = 'vendedor' AND propietario_id::text = auth.uid());
+  USING (auth.rol() = 'vendedor' AND propietario_id = auth.uid())
+  WITH CHECK (auth.rol() = 'vendedor' AND propietario_id = auth.uid());
 
 
 -- ── catalog.servicios (R-PS-02) ─────────────────────────────────────────

@@ -39,11 +39,14 @@ services:
       POSTGRES_DB: ${POSTGRES_DB:-core_engine}
       POSTGRES_USER: ${POSTGRES_USER:-core_engine}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD requerida en .env}
+      # Password del rol de aplicación (no superusuario, sin BYPASSRLS).
+      APP_DB_PASSWORD: ${APP_DB_PASSWORD:?APP_DB_PASSWORD requerida en .env}
     volumes:
       - pg_data:/var/lib/postgresql/data
-      # Solo el esquema estandar entra en Docker local; 99_rls.sql (Supabase)
-      # vive en infra/db/supabase/ y se aplica manualmente en staging/prod.
       - ./infra/db/init:/docker-entrypoint-initdb.d:ro
+      # 99_rls.sql se aplica desde 99_rls.sh para que el entorno local use las
+      # mismas políticas que Supabase (R-SB-2), después de los esquemas.
+      - ./infra/db/supabase:/rls:ro
     ports:
       - "5432:5432"
     healthcheck:
