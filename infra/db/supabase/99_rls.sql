@@ -14,6 +14,47 @@
 --   Ordenes:      admin lectura global | vendedor solo sus ventas | comprador solo sus compras
 --   Liquidaciones: admin gestion y cierre | vendedor solo las suyas | comprador --
 
+-- ── identity.multi_vertical (ADR-0001) ─────────────────────────────────
+ALTER TABLE identity.verticales ENABLE ROW LEVEL SECURITY;
+CREATE POLICY verticales_lectura ON identity.verticales
+  FOR SELECT TO authenticated USING (activo = true OR auth.rol() IN ('super_admin', 'admin'));
+CREATE POLICY verticales_admin ON identity.verticales
+  FOR ALL TO authenticated
+  USING (auth.rol() IN ('super_admin', 'admin'))
+  WITH CHECK (auth.rol() IN ('super_admin', 'admin'));
+
+ALTER TABLE identity.capacidades ENABLE ROW LEVEL SECURITY;
+CREATE POLICY capacidades_lectura ON identity.capacidades
+  FOR SELECT TO authenticated USING (activo = true OR auth.rol() IN ('super_admin', 'admin'));
+CREATE POLICY capacidades_admin ON identity.capacidades
+  FOR ALL TO authenticated
+  USING (auth.rol() IN ('super_admin', 'admin'))
+  WITH CHECK (auth.rol() IN ('super_admin', 'admin'));
+
+ALTER TABLE identity.vertical_capacidades ENABLE ROW LEVEL SECURITY;
+CREATE POLICY vertical_capacidades_lectura ON identity.vertical_capacidades
+  FOR SELECT TO authenticated USING (activo = true OR auth.rol() IN ('super_admin', 'admin'));
+CREATE POLICY vertical_capacidades_admin ON identity.vertical_capacidades
+  FOR ALL TO authenticated
+  USING (auth.rol() IN ('super_admin', 'admin'))
+  WITH CHECK (auth.rol() IN ('super_admin', 'admin'));
+
+ALTER TABLE identity.empresa_capacidades ENABLE ROW LEVEL SECURITY;
+CREATE POLICY empresa_capacidades_admin ON identity.empresa_capacidades
+  FOR ALL TO authenticated
+  USING (auth.rol() IN ('super_admin', 'admin'))
+  WITH CHECK (auth.rol() IN ('super_admin', 'admin'));
+CREATE POLICY empresa_capacidades_empresa ON identity.empresa_capacidades
+  FOR SELECT TO authenticated
+  USING (empresa_id::text = (auth.jwt() ->> 'tenant_id'));
+CREATE POLICY empresa_capacidades_empresario_update ON identity.empresa_capacidades
+  FOR UPDATE TO authenticated
+  USING (auth.rol() = 'empresario' AND empresa_id::text = (auth.jwt() ->> 'tenant_id'))
+  WITH CHECK (auth.rol() = 'empresario' AND empresa_id::text = (auth.jwt() ->> 'tenant_id'));
+CREATE POLICY empresa_capacidades_empresario_insert ON identity.empresa_capacidades
+  FOR INSERT TO authenticated
+  WITH CHECK (auth.rol() = 'empresario' AND empresa_id::text = (auth.jwt() ->> 'tenant_id'));
+
 -- ── identity.configuracion_plataforma (ADR-38) ─────────────────────────
 -- El singleton es de plataforma, no de tenant: cualquier usuario autenticado
 -- puede leer el estado público; solo los roles globales pueden modificarlo.

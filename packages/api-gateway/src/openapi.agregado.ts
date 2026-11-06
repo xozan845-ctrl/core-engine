@@ -7710,6 +7710,102 @@ export const OPENAPI_AGREGADO = {
         ]
       }
     },
+    "/api/v1/empresas/{empresaId}/capacidades": {
+      "get": {
+        "operationId": "CapacidadesController_listar",
+        "parameters": [
+          {
+            "name": "empresaId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Capacidades de la empresa",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/EmpresaCapacidadResponseDto"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Listar capacidades configuradas de una empresa",
+        "tags": [
+          "Capacidades"
+        ]
+      }
+    },
+    "/api/v1/empresas/{empresaId}/capacidades/{capacidad}": {
+      "patch": {
+        "operationId": "CapacidadesController_actualizar",
+        "parameters": [
+          {
+            "name": "empresaId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "name": "capacidad",
+            "required": true,
+            "in": "path",
+            "description": "Codigo estable de capacidad",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ActualizarCapacidadRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Capacidad actualizada",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EmpresaCapacidadResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Activar o desactivar una capacidad de la empresa",
+        "tags": [
+          "Capacidades"
+        ]
+      }
+    },
     "/api/v1/orders/{id}/estado": {
       "patch": {
         "operationId": "EstadoOrdenController_avanzar",
@@ -18385,6 +18481,22 @@ export const OPENAPI_AGREGADO = {
           "usuario"
         ]
       },
+      "ActualizarCapacidadRequestDto": {
+        "type": "object",
+        "properties": {
+          "activo": {
+            "type": "boolean",
+            "description": "Activa o desactiva la capacidad"
+          },
+          "config": {
+            "type": "object",
+            "description": "Configuracion especifica de la capacidad"
+          }
+        },
+        "required": [
+          "activo"
+        ]
+      },
       "ActualizarConfiguracionSitioRequestDto": {
         "type": "object",
         "properties": {
@@ -18821,11 +18933,24 @@ export const OPENAPI_AGREGADO = {
           },
           "modalidad_logistica": {
             "type": "string",
+            "nullable": true,
             "enum": [
               "plataforma",
               "propia",
               "hibrida"
-            ]
+            ],
+            "description": "Legado; puede omitirse y queda nullable"
+          },
+          "vertical_id": {
+            "type": "string",
+            "enum": [
+              "retail",
+              "farmacia",
+              "belleza",
+              "dental",
+              "flota"
+            ],
+            "default": "retail"
           },
           "tipo_empresa": {
             "type": "string",
@@ -18838,8 +18963,7 @@ export const OPENAPI_AGREGADO = {
           }
         },
         "required": [
-          "nombre",
-          "modalidad_logistica"
+          "nombre"
         ]
       },
       "CrearInvitacionRequestDto": {
@@ -18945,6 +19069,38 @@ export const OPENAPI_AGREGADO = {
           "participacion_porcentaje"
         ]
       },
+      "EmpresaCapacidadResponseDto": {
+        "type": "object",
+        "properties": {
+          "capacidad_codigo": {
+            "type": "string"
+          },
+          "nombre": {
+            "type": "string"
+          },
+          "modulo": {
+            "type": "string"
+          },
+          "activo": {
+            "type": "boolean"
+          },
+          "config": {
+            "type": "object"
+          },
+          "actualizado_en": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "capacidad_codigo",
+          "nombre",
+          "modulo",
+          "activo",
+          "config",
+          "actualizado_en"
+        ]
+      },
       "EmpresaResponseDto": {
         "type": "object",
         "properties": {
@@ -18955,6 +19111,17 @@ export const OPENAPI_AGREGADO = {
           "nombre": {
             "type": "string"
           },
+          "vertical_id": {
+            "type": "string",
+            "nullable": true,
+            "enum": [
+              "retail",
+              "farmacia",
+              "belleza",
+              "dental",
+              "flota"
+            ]
+          },
           "slug": {
             "type": "string",
             "description": "Slug público actual",
@@ -18962,6 +19129,7 @@ export const OPENAPI_AGREGADO = {
           },
           "modalidad_logistica": {
             "type": "string",
+            "nullable": true,
             "enum": [
               "plataforma",
               "propia",
@@ -19118,7 +19286,6 @@ export const OPENAPI_AGREGADO = {
         "required": [
           "id",
           "nombre",
-          "modalidad_logistica",
           "estado",
           "creado_por",
           "creado_en"
