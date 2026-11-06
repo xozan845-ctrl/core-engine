@@ -46,7 +46,8 @@ after(async () => {
   await client?.end();
 });
 
-test('reserva, reconstruccion y devolucion conservan stock disponible exacto', async () => {
+test('reserva, reconstruccion y devolucion conservan stock disponible exacto', { concurrency: false }, async () => {
+  await client.query('SELECT pg_advisory_lock(38194202)');
   await client.query('BEGIN');
   try {
     const sku = `REG-${randomUUID()}`;
@@ -97,6 +98,8 @@ test('reserva, reconstruccion y devolucion conservan stock disponible exacto', a
   } catch (error) {
     await client.query('ROLLBACK');
     throw error;
+  } finally {
+    await client.query('SELECT pg_advisory_unlock(38194202)');
   }
 });
 

@@ -62,3 +62,24 @@ export class ResumenInventarioResponseDto {
   @ApiProperty({ description: 'Valor del inventario en centavos', example: 12000000 })
   valor_inventario_cents: number;
 }
+
+export class ProveedorInventarioResponseDto {
+  @ApiProperty({ format: 'uuid' }) id: string;
+  @ApiProperty({ format: 'uuid' }) empresa_id: string;
+  @ApiProperty() codigo: string;
+  @ApiProperty() nombre: string;
+  @ApiProperty() correo: string;
+  @ApiProperty() telefono: string;
+  @ApiProperty() activo: boolean;
+}
+
+export class LoteInventarioResponseDto {
+  @ApiProperty({ format: 'uuid' }) id: string;
+  @ApiProperty({ format: 'uuid' }) empresa_id: string;
+  @ApiProperty({ format: 'uuid' }) item_id: string;
+  @ApiProperty({ nullable: true, format: 'uuid' }) proveedor_id: string | null;
+  @ApiProperty() codigo_lote: string;
+  @ApiProperty({ nullable: true, format: 'date' }) vence_en: string | null;
+  @ApiProperty() cantidad_inicial: number;
+  @ApiProperty() cantidad_disponible: number;
+}
