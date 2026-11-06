@@ -2,11 +2,12 @@ import { Controller, Get, Query } from '@nestjs/common';
 import { ApiBearerAuth, ApiOkResponse, ApiOperation, ApiQuery, ApiTags } from '@nestjs/swagger';
 import { InventarioService, LineaInventario } from './inventario.service';
 import { LineaInventarioResponseDto } from './inventario.response.dto';
-import { Roles, ROLES } from '@core/shared';
+import { CAPACIDADES, RequiereCapacidades, Roles, ROLES } from '@core/shared';
 
 @ApiTags('Catálogo')
 @ApiBearerAuth()
 @Controller('api/v1/admin/inventario')
+@RequiereCapacidades(CAPACIDADES.INVENTARIO_STOCK)
 export class InventarioController {
   constructor(private readonly inventario: InventarioService) {}
 
