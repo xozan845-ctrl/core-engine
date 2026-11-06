@@ -4,6 +4,12 @@ export class ItemOrdenResponseDto {
   @ApiProperty({ description: 'Id de la oferta', format: 'uuid' })
   oferta_id: string;
 
+  @ApiProperty({ required: false, enum: ['producto', 'servicio', 'alquiler'] })
+  item_type?: string;
+
+  @ApiProperty({ required: false, format: 'uuid' })
+  item_id?: string;
+
   @ApiProperty({ description: 'SKU del producto', example: 'SKU-001' })
   sku: string;
 
@@ -21,6 +27,12 @@ export class ItemOrdenResponseDto {
 
   @ApiProperty({ description: 'Id de la tienda', format: 'uuid' })
   tienda_id: string;
+
+  @ApiProperty({ required: false, enum: ['delivery', 'pickup', 'onsite', 'none'], default: 'none' })
+  fulfillment?: string;
+
+  @ApiProperty({ required: false, type: Object, additionalProperties: true })
+  fulfillment_config?: Record<string, unknown>;
 }
 
 export class OrderViewResponseDto {
@@ -38,6 +50,12 @@ export class OrderViewResponseDto {
 
   @ApiProperty({ description: 'Estado de la orden', example: 'pagada' })
   estado: string;
+
+  @ApiProperty({ required: false, enum: ['compra', 'reserva', 'cotizacion', 'orden_servicio'], default: 'compra' })
+  tipo_orden?: string;
+
+  @ApiProperty({ required: false, type: Object, additionalProperties: true })
+  fulfillment_config?: Record<string, unknown>;
 
   @ApiProperty({ description: 'Total en centavos', example: 230000 })
   total_cents: number;

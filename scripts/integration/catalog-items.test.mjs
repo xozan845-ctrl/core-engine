@@ -50,7 +50,7 @@ test('los productos y servicios legacy se proyectan como items estables', { conc
   const empresaId = randomUUID();
   const sku = `ITEM-${randomUUID().slice(0, 8).toUpperCase()}`;
   const codigoServicio = `SERV-${randomUUID().slice(0, 8).toUpperCase()}`;
-  await client.query('SELECT pg_advisory_lock(38194202)');
+  await client.query('SELECT pg_advisory_lock(38194201)');
   await client.query('BEGIN');
   try {
     await client.query(
@@ -93,7 +93,7 @@ test('los productos y servicios legacy se proyectan como items estables', { conc
     await client.query('ROLLBACK');
     throw error;
   } finally {
-    await client.query('SELECT pg_advisory_unlock(38194202)');
+    await client.query('SELECT pg_advisory_unlock(38194201)');
   }
 });
 
@@ -101,7 +101,7 @@ test('los alquileres y ofertas aceptan la superficie unificada', { concurrency: 
   const empresaId = randomUUID();
   const tiendaId = randomUUID();
   const itemId = randomUUID();
-  await client.query('SELECT pg_advisory_lock(38194202)');
+  await client.query('SELECT pg_advisory_lock(38194201)');
   await client.query('BEGIN');
   try {
     await client.query(
@@ -134,6 +134,6 @@ test('los alquileres y ofertas aceptan la superficie unificada', { concurrency: 
     await client.query('ROLLBACK');
     throw error;
   } finally {
-    await client.query('SELECT pg_advisory_unlock(38194202)');
+    await client.query('SELECT pg_advisory_unlock(38194201)');
   }
 });

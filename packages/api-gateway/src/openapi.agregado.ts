@@ -21795,6 +21795,16 @@ export const OPENAPI_AGREGADO = {
       "CreateOrderCommand": {
         "type": "object",
         "properties": {
+          "tipo_orden": {
+            "type": "string",
+            "enum": [
+              "compra",
+              "reserva",
+              "cotizacion",
+              "orden_servicio"
+            ],
+            "default": "compra"
+          },
           "items": {
             "description": "Artículos de la orden",
             "type": "array",
@@ -21822,6 +21832,20 @@ export const OPENAPI_AGREGADO = {
             "minimum": 1,
             "maximum": 99,
             "example": 1
+          },
+          "fulfillment": {
+            "type": "string",
+            "enum": [
+              "delivery",
+              "pickup",
+              "onsite",
+              "none"
+            ],
+            "default": "none"
+          },
+          "fulfillment_config": {
+            "type": "object",
+            "additionalProperties": true
           }
         },
         "required": [
@@ -21835,6 +21859,18 @@ export const OPENAPI_AGREGADO = {
           "oferta_id": {
             "type": "string",
             "description": "Id de la oferta",
+            "format": "uuid"
+          },
+          "item_type": {
+            "type": "string",
+            "enum": [
+              "producto",
+              "servicio",
+              "alquiler"
+            ]
+          },
+          "item_id": {
+            "type": "string",
             "format": "uuid"
           },
           "sku": {
@@ -21865,6 +21901,20 @@ export const OPENAPI_AGREGADO = {
             "type": "string",
             "description": "Id de la tienda",
             "format": "uuid"
+          },
+          "fulfillment": {
+            "type": "string",
+            "enum": [
+              "delivery",
+              "pickup",
+              "onsite",
+              "none"
+            ],
+            "default": "none"
+          },
+          "fulfillment_config": {
+            "type": "object",
+            "additionalProperties": true
           }
         },
         "required": [
@@ -21904,6 +21954,20 @@ export const OPENAPI_AGREGADO = {
             "type": "string",
             "description": "Estado de la orden",
             "example": "pagada"
+          },
+          "tipo_orden": {
+            "type": "string",
+            "enum": [
+              "compra",
+              "reserva",
+              "cotizacion",
+              "orden_servicio"
+            ],
+            "default": "compra"
+          },
+          "fulfillment_config": {
+            "type": "object",
+            "additionalProperties": true
           },
           "total_cents": {
             "type": "number",

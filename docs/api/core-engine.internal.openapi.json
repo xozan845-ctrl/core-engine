@@ -2125,6 +2125,18 @@
             "description": "Id de la oferta",
             "format": "uuid"
           },
+          "item_type": {
+            "type": "string",
+            "enum": [
+              "producto",
+              "servicio",
+              "alquiler"
+            ]
+          },
+          "item_id": {
+            "type": "string",
+            "format": "uuid"
+          },
           "sku": {
             "type": "string",
             "description": "SKU del producto",
@@ -2153,6 +2165,20 @@
             "type": "string",
             "description": "Id de la tienda",
             "format": "uuid"
+          },
+          "fulfillment": {
+            "type": "string",
+            "enum": [
+              "delivery",
+              "pickup",
+              "onsite",
+              "none"
+            ],
+            "default": "none"
+          },
+          "fulfillment_config": {
+            "type": "object",
+            "additionalProperties": true
           }
         },
         "required": [
@@ -2192,6 +2218,20 @@
             "type": "string",
             "description": "Estado de la orden",
             "example": "pagada"
+          },
+          "tipo_orden": {
+            "type": "string",
+            "enum": [
+              "compra",
+              "reserva",
+              "cotizacion",
+              "orden_servicio"
+            ],
+            "default": "compra"
+          },
+          "fulfillment_config": {
+            "type": "object",
+            "additionalProperties": true
           },
           "total_cents": {
             "type": "number",
