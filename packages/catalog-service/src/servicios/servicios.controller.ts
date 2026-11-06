@@ -32,7 +32,7 @@ import {
   Min,
   MinLength,
 } from 'class-validator';
-import { DomainError, NotFoundError, ROLES, Roles, UsuarioActual, UsuarioContexto } from '@core/shared';
+import { CAPACIDADES, DomainError, NotFoundError, RequiereCapacidades, ROLES, Roles, UsuarioActual, UsuarioContexto } from '@core/shared';
 import {
   ActualizarServicioInput,
   CrearServicioInput,
@@ -198,6 +198,7 @@ export class ListarServiciosRequestDto {
 @ApiBearerAuth()
 @Controller('api/v1/catalog/servicios')
 @Roles(ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.EMPRESARIO)
+@RequiereCapacidades(CAPACIDADES.CATALOGO_ITEMS)
 export class ServiciosController {
   constructor(private readonly servicios: ServiciosService) {}
 
