@@ -65,6 +65,10 @@ export const COLAS: Record<string, ColaConfig> = {
     cola: 'intelligence.venta_geo',
     routingKeys: ['venta.geolocalizada'],
   },
+  scheduling_orders: {
+    cola: 'scheduling.orders',
+    routingKeys: ['order.created'],
+  },
 };
 
 export const REINTENTOS_MAXIMOS = 3;
