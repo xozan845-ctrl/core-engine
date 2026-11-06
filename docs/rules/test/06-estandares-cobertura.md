@@ -30,7 +30,7 @@ Todo PR debe incluir las capas marcadas con ✅ para el tipo de cambio tocado.
 
 - Cobertura medida con `npm test` (que corre cada workspace con `--coverage`; es lo que ejecuta el job `test` de CI); los números se registran en `AUDIT.md` en cada auditoría (R-COV-3).
 - Además de los thresholds por workspace, el job `test` ejecuta `npm run coverage:compare` contra el baseline versionado; cualquier métrica que baje falla el job (R-COV-1).
-- El gate mecánico es `scripts/config/coverage.mjs` (fuente única de los porcentajes), consumido por los `thresholds` de cada `packages/*/vitest.config.ts`: **12 workspaces con suite**, todos con baseline medido redondeado a la baja (método de la línea de abajo) y subida +5 por release hasta la tabla:
+- El gate mecánico es `scripts/config/coverage.mjs` (fuente única de los porcentajes), consumido por los `thresholds` de cada `packages/*/vitest.config.ts`: **13 workspaces con suite**, todos con baseline medido redondeado a la baja (método de la línea de abajo) y subida +5 por release hasta la tabla:
 
   | Workspace | Líneas | Ramas | Funciones |
   |---|---|---|---|
@@ -46,8 +46,9 @@ Todo PR debe incluir las capas marcadas con ✅ para el tipo de cambio tocado.
   | `logistics-service` | 99 | 96 | 99 |
   | `market-intelligence-service` | 18 | 11 | 35 |
   | `storage-service` | 99 | 86 | 99 |
+  | `scheduling-service` | 94 | 77 | 88 |
 
-  **Enmienda (migración Jest → Vitest, 2026-10-14)**: el runner pasó de Jest/ts-jest a **Vitest 4** (config por workspace en `vitest.config.ts`, ver ADR-20). La cobertura se recalibró al nuevo baseline porque el proveedor de cobertura cambió y ahora instrumenta **todos** los ficheros del alcance (como hacía `collectCoverageFrom` en Jest), no solo los importados; verificado con el provider `istanbul` (mismos números). El ratchet sigue **solo sube** (nunca baja). `field-service` se incorporó con baseline 84/70/72 y ya no quedan workspaces sin suite.
+  **Enmienda (migración Jest → Vitest, 2026-10-14)**: el runner pasó de Jest/ts-jest a **Vitest 4** (config por workspace en `vitest.config.ts`, ver ADR-20). La cobertura se recalibró al nuevo baseline porque el proveedor de cobertura cambió y ahora instrumenta **todos** los ficheros del alcance (como hacía `collectCoverageFrom` en Jest), no solo los importados; verificado con el provider `istanbul` (mismos números). El ratchet sigue **solo sube** (nunca baja). `field-service` se incorporó con baseline 84/70/72 y `scheduling-service` con baseline 94/77/88; ya no quedan workspaces sin suite.
 - **Anti-inflado**: subir cobertura no puede lograrse agregando asserts triviales; el gate real es la mutación (R-MT-2).
 - **Ratchet (gate efectivo)**: la tabla es el objetivo final; el baseline se mide con el alcance de R-COV-4 redondeado a la baja (1 pt de margen de varianza) y sube **+5 puntos por release** hasta la tabla (tope: los mínimos de la tabla). Nunca baja (R-COV-1). Cada subida queda registrada en `AUDIT.md` (R-COV-3) y se vierte subiendo el umbral en `scripts/config/coverage.mjs`. La suite `microservices-ci-contract` compara la fuente central con esta tabla y falla si un umbral queda por debajo del baseline documentado (R-COV-1).
 

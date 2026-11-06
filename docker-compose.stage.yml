@@ -155,6 +155,15 @@ services:
       PORT: 3004
       OUTBOX_TABLA: orders.outbox
 
+  scheduling-service:
+    <<: *servicio-base
+    image: ghcr.io/xozan845-ctrl/core-engine-scheduling-service:stage
+    pull_policy: always
+    environment:
+      SERVICIO: scheduling-service
+      PORT: 3011
+      OUTBOX_TABLA: scheduling.outbox
+
   logistics-service:
     <<: *servicio-base
     image: ghcr.io/xozan845-ctrl/core-engine-logistics-service:stage

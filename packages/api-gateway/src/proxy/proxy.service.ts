@@ -51,6 +51,11 @@ export const DESTINOS: ServicioDestino[] = [
     ],
   },
   {
+    nombre: 'scheduling',
+    url: process.env.SCHEDULING_SERVICE_URL ?? 'http://scheduling-service:3011',
+    patrones: [{ patron: /^\/api\/v1\/scheduling(\/|$)/, metodos: ['*'] }],
+  },
+  {
     // Especifico ANTES del catch-all de orders: las transiciones de estado
     // (PATCH /orders/:id/estado) pertenecen a logistica (Tabla 21).
     nombre: 'logistics',

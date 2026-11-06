@@ -15,6 +15,7 @@ scrape_configs:
           - 'stores-service:3003'
           - 'orders-service:3004'
           - 'logistics-service:3005'
+          - 'scheduling-service:3011'
           - 'commissions-service:3006'
           - 'finance-service:3007'
           - 'field-service:3008'
