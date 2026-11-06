@@ -2,6 +2,23 @@
 
 Este archivo registra decisiones técnicas deliberadas que se apartan del texto literal del documento de referencia (Core Engine_Informe.pdf) o que requieren justificación para auditoría. Cada decisión se enmarca como **ADR-XX** con estado, contexto y consecuencias.
 
+> **Nuevo registro de arquitectura:** las decisiones de la plataforma
+> multi-vertical se mantienen en [`docs/adr/`](./adr/README.md). La primera
+> decisión es [ADR-0001: Plataforma multi-vertical por capacidades](./adr/0001-plataforma-multi-vertical.md)
+> (también identificada como ADR-44 en el histórico de este archivo).
+
+---
+
+## ADR-44: Plataforma multi-vertical por capacidades
+
+- **Fecha**: 2026-11-06
+- **Estado**: Aceptado
+- **Decisión**: Adoptar servicios por capacidad, crear `scheduling-service`,
+  mantener farmacia/retail, belleza y flota como pilotos iniciales, y dejar
+  historia clínica y recetas fuera de la primera fase.
+- **Registro canónico**: [`docs/adr/0001-plataforma-multi-vertical.md`](./adr/0001-plataforma-multi-vertical.md)
+
+---
 ---
 
 ## ADR-01: Montos en centavos (`*_cents`) — desviación de nombres de contrato
