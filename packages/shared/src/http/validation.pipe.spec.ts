@@ -50,6 +50,22 @@ describe('DtoValidationPipe (validacion de DTOs con class-validator)', () => {
     expect(error?.toResponse().detalles).toBeDefined();
   });
 
+  it('debe rechazar campos no declarados en el DTO (mass assignment)', async () => {
+    let error: ValidationError | undefined;
+    try {
+      await pipe.transform(
+        { nombre: 'teclado', stock: 5, rol: 'super_admin' },
+        { metatype: CrearOfertaDto, type: 'body' },
+      );
+    } catch (e) {
+      error = e as ValidationError;
+    }
+    expect(error?.codigo).toBe('VALIDACION');
+    expect(error?.toResponse().detalles).toEqual(
+      expect.arrayContaining([expect.objectContaining({ campo: 'rol' })]),
+    );
+  });
+
   it('debe devolver el valor tal cual cuando no hay metatype o es primitivo', async () => {
     expect(await pipe.transform('texto', { metatype: String, type: 'param' })).toBe('texto');
     expect(await pipe.transform({ a: 1 }, { metatype: undefined, type: 'body' })).toEqual({ a: 1 });

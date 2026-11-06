@@ -104,7 +104,7 @@ export class DtoValidationPipe implements PipeTransform {
     });
     const errores = await validate(objeto as object, {
       whitelist: true,
-      forbidNonWhitelisted: false,
+      forbidNonWhitelisted: true,
     });
     if (errores.length > 0) {
       const detalles = errores.map((e) => ({
