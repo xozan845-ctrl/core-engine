@@ -157,6 +157,59 @@ ALTER TABLE catalog.reservas_ordenes ENABLE ROW LEVEL SECURITY;
 CREATE POLICY reservas_admin ON catalog.reservas_ordenes
   FOR ALL TO authenticated USING (auth.rol() = 'admin') WITH CHECK (auth.rol() = 'admin');
 
+-- ── catalog.items (plataforma multi-vertical, fase 2) ───────────────────
+ALTER TABLE catalog.items ENABLE ROW LEVEL SECURITY;
+CREATE POLICY items_admin ON catalog.items
+  FOR ALL TO authenticated
+  USING (auth.rol() IN ('super_admin', 'admin'))
+  WITH CHECK (auth.rol() IN ('super_admin', 'admin'));
+CREATE POLICY items_empresa ON catalog.items
+  FOR ALL TO authenticated
+  USING (auth.rol() = 'empresario' AND empresa_id::text = (auth.jwt() ->> 'tenant_id'))
+  WITH CHECK (auth.rol() = 'empresario' AND empresa_id::text = (auth.jwt() ->> 'tenant_id'));
+
+ALTER TABLE catalog.item_atributo_esquemas ENABLE ROW LEVEL SECURITY;
+CREATE POLICY item_schemas_admin ON catalog.item_atributo_esquemas
+  FOR ALL TO authenticated
+  USING (auth.rol() IN ('super_admin', 'admin'))
+  WITH CHECK (auth.rol() IN ('super_admin', 'admin'));
+CREATE POLICY item_schemas_lectura ON catalog.item_atributo_esquemas
+  FOR SELECT TO authenticated
+  USING (empresa_id IS NULL OR empresa_id::text = (auth.jwt() ->> 'tenant_id'));
+CREATE POLICY item_schemas_empresa ON catalog.item_atributo_esquemas
+  FOR ALL TO authenticated
+  USING (auth.rol() = 'empresario' AND empresa_id::text = (auth.jwt() ->> 'tenant_id'))
+  WITH CHECK (auth.rol() = 'empresario' AND empresa_id::text = (auth.jwt() ->> 'tenant_id'));
+
+ALTER TABLE catalog.proveedores ENABLE ROW LEVEL SECURITY;
+CREATE POLICY proveedores_admin ON catalog.proveedores
+  FOR ALL TO authenticated USING (auth.rol() IN ('super_admin', 'admin'))
+  WITH CHECK (auth.rol() IN ('super_admin', 'admin'));
+CREATE POLICY proveedores_empresa ON catalog.proveedores
+  FOR ALL TO authenticated
+  USING (auth.rol() = 'empresario' AND empresa_id::text = (auth.jwt() ->> 'tenant_id'))
+  WITH CHECK (auth.rol() = 'empresario' AND empresa_id::text = (auth.jwt() ->> 'tenant_id'));
+
+ALTER TABLE catalog.item_proveedores ENABLE ROW LEVEL SECURITY;
+CREATE POLICY item_proveedores_admin ON catalog.item_proveedores
+  FOR ALL TO authenticated USING (auth.rol() IN ('super_admin', 'admin'))
+  WITH CHECK (auth.rol() IN ('super_admin', 'admin'));
+CREATE POLICY item_proveedores_empresa ON catalog.item_proveedores
+  FOR ALL TO authenticated
+  USING (EXISTS (SELECT 1 FROM catalog.items i
+                 WHERE i.id = item_id AND i.empresa_id::text = (auth.jwt() ->> 'tenant_id')))
+  WITH CHECK (EXISTS (SELECT 1 FROM catalog.items i
+                     WHERE i.id = item_id AND i.empresa_id::text = (auth.jwt() ->> 'tenant_id')));
+
+ALTER TABLE catalog.lotes_inventario ENABLE ROW LEVEL SECURITY;
+CREATE POLICY lotes_admin ON catalog.lotes_inventario
+  FOR ALL TO authenticated USING (auth.rol() IN ('super_admin', 'admin'))
+  WITH CHECK (auth.rol() IN ('super_admin', 'admin'));
+CREATE POLICY lotes_empresa ON catalog.lotes_inventario
+  FOR ALL TO authenticated
+  USING (auth.rol() = 'empresario' AND empresa_id::text = (auth.jwt() ->> 'tenant_id'))
+  WITH CHECK (auth.rol() = 'empresario' AND empresa_id::text = (auth.jwt() ->> 'tenant_id'));
+
 -- ── stores.tiendas ──────────────────────────────────────────────────────
 ALTER TABLE stores.tiendas ENABLE ROW LEVEL SECURITY;
 CREATE POLICY tiendas_admin ON stores.tiendas

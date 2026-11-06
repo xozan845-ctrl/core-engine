@@ -3,7 +3,7 @@ import 'reflect-metadata';
 import { OfertasController } from './ofertas.controller';
 import type { OfertasService } from './ofertas.service';
 import type { TiendasService } from '../tiendas/tiendas.service';
-import { NotFoundError, ROLES } from '@core/shared';
+import { CAPACIDADES, NotFoundError, ROLES } from '@core/shared';
 
 const oferta = { id: 'of-1', producto_id: 'p-1', vendedor_id: 'u-v', margen: 15, precio_final: '1150.00' };
 const tienda = { id: 't-1', vendedor_id: 'u-v', nombre: 'Mi tienda', slug: 'mi-tienda' };
@@ -24,6 +24,7 @@ function fabricar(): {
   const tiendas = { encontrarPorId: vi.fn(), deVendedor: vi.fn(), resolver: vi.fn() };
   const ofertas = {
     publicar: vi.fn(),
+    publicarItem: vi.fn(),
     cambiarMargen: vi.fn(),
     deVendedor: vi.fn(),
     deTienda: vi.fn(),
@@ -55,6 +56,17 @@ describe('OfertasController (api/v1, RN-01, R-U-10/11)', () => {
     await expect(controller.publicar(dto as never, vendedor as never)).resolves.toEqual(oferta);
     expect(tiendas.encontrarPorId).toHaveBeenCalledWith('mi-tienda');
     expect(ofertas.publicar).toHaveBeenCalledWith('u-v', 't-1', 'p-1', 15);
+  });
+
+  it('debe publicar un item unificado de servicio', async () => {
+    const { tiendas, ofertas, controller } = fabricar();
+    tiendas.encontrarPorId.mockResolvedValue(tienda);
+    ofertas.publicarItem.mockResolvedValue(oferta);
+    await expect(controller.publicar(
+      { tienda_id: 't-1', item_type: 'servicio', item_id: 'item-1', margen: 15 } as never,
+      vendedor as never,
+    )).resolves.toEqual(oferta);
+    expect(ofertas.publicarItem).toHaveBeenCalledWith('u-v', 't-1', 'item-1', 15);
   });
 
   it('debe lanzar NotFoundError si la tienda indicada no existe', async () => {
@@ -140,5 +152,10 @@ describe('OfertasController (api/v1, RN-01, R-U-10/11)', () => {
   it('debe exigir rol vendedor en publicar y cambiar margen', () => {
     expect(Reflect.getMetadata('roles_requeridos', OfertasController.prototype.publicar)).toEqual([ROLES.VENDEDOR, ROLES.EMPRESARIO]);
     expect(Reflect.getMetadata('roles_requeridos', OfertasController.prototype.cambiarMargen)).toEqual([ROLES.VENDEDOR, ROLES.EMPRESARIO]);
+  });
+
+  it('debe exigir catalogo_items para publicar y cambiar margen', () => {
+    expect(Reflect.getMetadata('capacidades_requeridas', OfertasController.prototype.publicar)).toEqual([CAPACIDADES.CATALOGO_ITEMS]);
+    expect(Reflect.getMetadata('capacidades_requeridas', OfertasController.prototype.cambiarMargen)).toEqual([CAPACIDADES.CATALOGO_ITEMS]);
   });
 });

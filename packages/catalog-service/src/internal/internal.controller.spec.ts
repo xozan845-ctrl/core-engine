@@ -3,6 +3,7 @@ import 'reflect-metadata';
 import { InternalController } from './internal.controller';
 import type { ProductosService } from '../productos/productos.service';
 import type { InventarioService } from '../inventario/inventario.service';
+import type { ItemsService } from '../items/items.service';
 import { ClaveInternaGuard, NotFoundError } from '@core/shared';
 
 const producto = {
@@ -20,6 +21,7 @@ const producto = {
 function fabricar(): {
   productos: Record<string, Mock>;
   inventario: Record<string, Mock>;
+  items: Record<string, Mock>;
   controller: InternalController;
 } {
   const productos = {
@@ -29,11 +31,13 @@ function fabricar(): {
     resumenInventario: vi.fn(),
   };
   const inventario = { listar: vi.fn() };
+  const items = { encontrarPorId: vi.fn() };
   const controller = new InternalController(
     productos as unknown as ProductosService,
     inventario as unknown as InventarioService,
+    items as unknown as ItemsService,
   );
-  return { productos, inventario, controller };
+  return { productos, inventario, items, controller };
 }
 
 describe('InternalController (internal, R-U-10/11)', () => {
@@ -74,6 +78,15 @@ describe('InternalController (internal, R-U-10/11)', () => {
     inventario.listar.mockResolvedValue([]);
     await expect(controller.resumen()).resolves.toEqual(resumen);
     await expect(controller.lineas()).resolves.toEqual([]);
+  });
+
+  it('debe devolver un item unificado o lanzar NotFoundError', async () => {
+    const { items, controller } = fabricar();
+    const item = { item_id: 'item-1', tipo: 'servicio' };
+    items.encontrarPorId.mockResolvedValue(item);
+    await expect(controller.itemPorId('item-1')).resolves.toEqual(item);
+    items.encontrarPorId.mockResolvedValue(null);
+    await expect(controller.itemPorId('item-1')).rejects.toBeInstanceOf(NotFoundError);
   });
 
   it('debe proteger todas las rutas con la clave interna', () => {

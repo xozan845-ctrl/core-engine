@@ -23,6 +23,7 @@ import {
 import {
   IsIn,
   IsInt,
+  IsObject,
   IsOptional,
   IsPositive,
   IsString,
@@ -92,6 +93,11 @@ export class CrearServicioRequestDto {
   @IsString()
   unidad?: string;
 
+  @ApiProperty({ description: 'Atributos del servicio según el JSON Schema de su categoría', required: false, type: Object, additionalProperties: true })
+  @IsOptional()
+  @IsObject()
+  atributos?: Record<string, unknown>;
+
   @ApiProperty({ description: 'Duración en minutos (1-1440)', minimum: 1, maximum: 1440 })
   @IsInt()
   @Min(1)
@@ -147,6 +153,11 @@ export class ActualizarServicioRequestDto {
   @IsOptional()
   @IsString()
   unidad?: string;
+
+  @ApiProperty({ description: 'Atributos del servicio según el JSON Schema de su categoría', required: false, type: Object, additionalProperties: true })
+  @IsOptional()
+  @IsObject()
+  atributos?: Record<string, unknown>;
 
   @ApiProperty({ required: false, minimum: 1, maximum: 1440 })
   @IsOptional()

@@ -19,7 +19,9 @@ export interface Oferta {
   vendedor_id: string;
   empresa_id: string;
   participacion_porcentaje: number;
-  producto_id: string;
+  item_type: 'producto' | 'servicio' | 'alquiler';
+  item_id: string;
+  producto_id: string | null;
   producto_padre_id: string | null;
   sku: string;
   producto_nombre: string;
@@ -40,7 +42,9 @@ interface OfertaRow {
   vendedor_id: string;
   empresa_id: string;
   participacion_porcentaje: number;
-  producto_id: string;
+  item_type: 'producto' | 'servicio' | 'alquiler';
+  item_id: string;
+  producto_id: string | null;
   producto_padre_id: string | null;
   sku: string;
   producto_nombre: string;
@@ -68,8 +72,24 @@ interface ProductoExterno {
   imagenes: { objeto_id: string; url: string; orden: number; es_principal: boolean }[];
 }
 
+interface ItemExterno {
+  item_id: string;
+  empresa_id: string;
+  tipo: 'producto' | 'servicio' | 'alquiler';
+  codigo: string;
+  nombre: string;
+  precio: string;
+  stock: number | null;
+  track_inventory: boolean;
+  duration_minutes: number | null;
+  atributos: Record<string, unknown>;
+  estado: 'activo' | 'inactivo';
+  source_type: 'producto' | 'servicio' | null;
+  source_id: string | null;
+}
+
 const COLUMNAS_OFERTA = `o.id, o.tienda_id, t.vendedor_id, t.empresa_id,
-  t.participacion_porcentaje, o.producto_id, o.producto_padre_id, o.sku,
+  t.participacion_porcentaje, o.item_type, o.item_id, o.producto_id, o.producto_padre_id, o.sku,
   o.producto_nombre, o.atributos, o.imagen_objeto_id, o.margen,
   o.precio_base_cents, o.precio_venta_cents, o.stock, o.estado, o.creado_en`;
 
@@ -201,10 +221,12 @@ export class OfertasService {
       producto.imagenes?.find((i) => i.es_principal) ?? producto.imagenes?.[0];
     const fila = await this.pg.queryOne<{ id: string }>(
       `INSERT INTO stores.ofertas
-        (id, tienda_id, producto_id, producto_padre_id, sku, producto_nombre,
+        (id, tienda_id, item_type, item_id, producto_id, producto_padre_id, sku, producto_nombre,
          atributos, imagen_objeto_id, margen, precio_base_cents, precio_venta_cents,
          stock, estado)
-       VALUES ($1, $2, $3, $4, $5, $6, $7::jsonb, $8, $9, $10, $11, $12, 'activa')
+       SELECT $1, $2, 'producto', i.id, $3, $4, $5, $6, $7::jsonb, $8, $9, $10, $11, $12, 'activa'
+         FROM catalog.items i
+        WHERE i.source_type = 'producto' AND i.source_id = $3
        RETURNING id`,
       [
         randomUUID(),
@@ -232,6 +254,72 @@ export class OfertasService {
     return creada;
   }
 
+  /** Publica cualquier item del catálogo unificado (producto, servicio o alquiler). */
+  async publicarItem(
+    vendedorId: string,
+    tiendaId: string,
+    itemId: string,
+    margen: number,
+  ): Promise<Oferta> {
+    if (margen < MARGEN_MINIMO || margen > MARGEN_MAXIMO) {
+      throw new DomainError('MARGEN_INVALIDO', `El margen debe estar entre ${MARGEN_MINIMO} y ${MARGEN_MAXIMO} por ciento (RN-01).`);
+    }
+    const tienda = await this.pg.queryOne<{ id: string; empresa_id: string }>(
+      `SELECT id, empresa_id FROM stores.tiendas WHERE id = $1 AND propietario_usuario_id = $2`,
+      [tiendaId, vendedorId],
+    );
+    if (!tienda) throw new DomainError('TIENDA_REQUERIDA', 'Crea primero tu tienda de vendedor.');
+
+    const item = await this.consultarItem(itemId);
+    if (!item) throw new NotFoundError('Item', itemId);
+    if (item.empresa_id !== tienda.empresa_id) {
+      throw new DomainError('ITEM_OTRA_EMPRESA', 'La tienda solo puede publicar items de su empresa.');
+    }
+    if (item.estado !== 'activo') throw new ConflictError('No se puede publicar un item inactivo.');
+    if (item.track_inventory && (item.stock ?? 0) < 1) {
+      throw new ConflictError('No se puede publicar un item sin stock disponible.');
+    }
+    const existente = await this.pg.queryOne<{ id: string }>(
+      `SELECT id FROM stores.ofertas WHERE tienda_id = $1 AND item_type = $2 AND item_id = $3`,
+      [tienda.id, item.tipo, item.item_id],
+    );
+    if (existente) throw new ConflictError('Este item ya esta publicado en tu tienda.');
+
+    const precioBase = Money.parsear(item.precio);
+    const precioVenta = precioBase.aplicarMargen(margen);
+    const fila = await this.pg.queryOne<{ id: string }>(
+      `INSERT INTO stores.ofertas
+        (id, tienda_id, item_type, item_id, producto_id, producto_padre_id, sku,
+         producto_nombre, atributos, imagen_objeto_id, margen, precio_base_cents,
+         precio_venta_cents, stock, estado)
+       VALUES ($1, $2, $3, $4, $5, NULL, $6, $7, $8::jsonb, NULL, $9, $10, $11, $12, 'activa')
+       RETURNING id`,
+      [
+        randomUUID(),
+        tienda.id,
+        item.tipo,
+        item.item_id,
+        item.source_type === 'producto' ? item.source_id : null,
+        item.codigo,
+        item.nombre,
+        JSON.stringify(item.atributos ?? {}),
+        margen,
+        precioBase.centavos,
+        precioVenta.centavos,
+        item.track_inventory ? item.stock : null,
+      ],
+    );
+    if (!fila) throw new DomainError('OFERTA_FALLIDA', 'No se pudo publicar el item.');
+    await this.pg.query(
+      `INSERT INTO stores.historico_precios (oferta_id, precio_anterior_cents, precio_nuevo_cents, vigente_desde)
+       VALUES ($1, NULL, $2, NOW())`,
+      [fila.id, precioVenta.centavos],
+    );
+    const creada = await this.encontrarPorId(fila.id);
+    if (!creada) throw new DomainError('OFERTA_FALLIDA', 'No se pudo leer la oferta creada.');
+    return creada;
+  }
+
   /** Cambio de margen del vendedor: afecta solo a compras nuevas. */
   async cambiarMargen(ofertaId: string, vendedorId: string, margen: number): Promise<Oferta> {
     if (margen < MARGEN_MINIMO || margen > MARGEN_MAXIMO) {
@@ -248,10 +336,9 @@ export class OfertasService {
     }
     const base = Money.desdeCentavos(oferta.precio_base_cents);
     const nuevo = base.aplicarMargen(margen);
-    const actualizado = await this.pg.queryOne<OfertaRow>(
+    const actualizado = await this.pg.queryOne<{ id: string }>(
       `UPDATE stores.ofertas SET margen = $2, precio_venta_cents = $3 WHERE id = $1
-       RETURNING id, tienda_id, producto_id, sku, producto_nombre, margen,
-                 precio_base_cents, precio_venta_cents, stock, estado, creado_en`,
+       RETURNING id`,
       [ofertaId, margen, nuevo.centavos],
     );
     if (!actualizado) throw new NotFoundError('Oferta', ofertaId);
@@ -260,7 +347,11 @@ export class OfertasService {
        VALUES ($1, $2, $3, NOW())`,
       [ofertaId, oferta.precio_venta_cents, nuevo.centavos],
     );
-    return this.serializar(actualizado);
+    return this.serializar({
+      ...oferta,
+      margen,
+      precio_venta_cents: nuevo.centavos,
+    });
   }
 
   /** Sincroniza el stock visible de las ofertas de UNA empresa (ADR-27). */
@@ -284,6 +375,7 @@ export class OfertasService {
        FROM stores.tiendas t
        WHERE t.id = o.tienda_id
          AND t.empresa_id = $1
+         AND o.item_type = 'producto'
          AND LOWER(o.sku) = LOWER($2)`,
       [empresaId, sku, Math.max(0, stockNuevo)],
     );
@@ -302,6 +394,18 @@ export class OfertasService {
     }
   }
 
+  private async consultarItem(itemId: string): Promise<ItemExterno | null> {
+    try {
+      const res = await fetch(`${this.catalogoUrl}/internal/items/${encodeURIComponent(itemId)}`, {
+        headers: { 'x-internal-key': this.claveInterna },
+      });
+      if (!res.ok) return null;
+      return (await res.json()) as ItemExterno;
+    } catch {
+      return null;
+    }
+  }
+
   private serializar(fila: OfertaRow): Oferta {
     return {
       id: fila.id,
@@ -309,6 +413,8 @@ export class OfertasService {
       vendedor_id: fila.vendedor_id,
       empresa_id: fila.empresa_id,
       participacion_porcentaje: fila.participacion_porcentaje,
+      item_type: fila.item_type,
+      item_id: fila.item_id,
       producto_id: fila.producto_id,
       producto_padre_id: fila.producto_padre_id ?? null,
       sku: fila.sku,
