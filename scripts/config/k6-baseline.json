@@ -1,0 +1,20 @@
+{
+  "local": {
+    "load": {
+      "p95": 19,
+      "p99": 62,
+      "errorRate": 0,
+      "rps": 299.8,
+      "minRps": 239.84,
+      "rate": 300,
+      "duration": "2m",
+      "updatedAt": "2026-11-06T15:44:52.876Z"
+    }
+  },
+  "stage": {},
+  "prod": {},
+  "meta": {
+    "note": "Calibra cada entorno con: node scripts/tools/k6-compare.mjs --update --env <env> --scenario load --summary <summary.json> --rate <rate> --duration <duration>. El deploy usa --allow-missing hasta que exista la entrada.",
+    "safetyMargin": "El ritmo de load debe ser 50-70% de la capacidad medida con breakpoint.js."
+  }
+}
