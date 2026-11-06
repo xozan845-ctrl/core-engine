@@ -38,7 +38,8 @@
     "coverage:baseline": "node scripts/tools/coverage-baseline.mjs",
     "baseline:guard": "node scripts/tools/baseline-guard.mjs",
     "swagger:export": "npm run build && npm run swagger:export --workspaces --if-present && node scripts/cli.mjs swagger && npm run build -w @core/api-gateway",
-    "k6:write": "docker run --rm --network host --user \"$(id -u):$(id -g)\" -e HOME=/tmp -v \"$PWD/tests/k6:/scripts\" -e BASE_URL -e K6_STORE_SLUG -e K6_EDGE_BASIC_AUTH -e K6_INTERNAL_KEY -e K6_WRITE_RATE -e K6_WRITE_DURATION -e K6_WRITE_PRE_VUS -e K6_WRITE_MAX_VUS -e K6_WRITE_BUYERS -e K6_WRITE_PASSWORD -e K6_SUMMARY=/scripts/k6-summary.json grafana/k6:latest run --quiet /scripts/write.js"
+    "k6:write": "docker run --rm --network host --user \"$(id -u):$(id -g)\" -e HOME=/tmp -v \"$PWD/tests/k6:/scripts\" -e BASE_URL -e K6_STORE_SLUG -e K6_EDGE_BASIC_AUTH -e K6_INTERNAL_KEY -e K6_WRITE_RATE -e K6_WRITE_DURATION -e K6_WRITE_PRE_VUS -e K6_WRITE_MAX_VUS -e K6_WRITE_BUYERS -e K6_WRITE_PASSWORD -e K6_SUMMARY=/scripts/k6-summary.json grafana/k6:latest run --quiet /scripts/write.js",
+    "k6:soak": "docker run --rm --network host --user \"$(id -u):$(id -g)\" -e HOME=/tmp -v \"$PWD/tests/k6:/scripts\" -e BASE_URL -e K6_EMPRESA_ID -e K6_STORE_SLUG -e K6_BUYER_EMAIL -e K6_BUYER_PASSWORD -e K6_EDGE_BASIC_AUTH -e K6_INTERNAL_KEY -e K6_READY -e K6_SOAK_RATE -e K6_SOAK_DURATION -e K6_SOAK_WRITE_PCT -e K6_SOAK_WRITE_BUYERS -e K6_SOAK_WRITE_PASSWORD -e K6_WRITE_PASSWORD -e K6_SOAK_READ_VUS -e K6_SOAK_MAX_VUS -e K6_SOAK_WRITE_VUS -e K6_SOAK_WRITE_MAX_VUS -e K6_SUMMARY=/scripts/k6-summary.json grafana/k6:latest run --quiet /scripts/soak.js"
   },
   "engines": {
     "node": ">=20"
