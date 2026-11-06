@@ -1,0 +1,19 @@
+/** Capacidades estables de la plataforma multi-vertical (ADR-0001). */
+export const CAPACIDADES = {
+  CATALOGO_ITEMS: 'catalogo_items',
+  INVENTARIO_STOCK: 'inventario_stock',
+  INVENTARIO_LOTES: 'inventario_lotes',
+  CODIGO_BARRAS: 'codigo_barras',
+  AGENDA_RECURSOS: 'agenda_recursos',
+  HISTORIA_CLINICA: 'historia_clinica',
+  RECETAS: 'recetas',
+  FULFILLMENT_DELIVERY: 'fulfillment_delivery',
+  FULFILLMENT_PICKUP: 'fulfillment_pickup',
+  FULFILLMENT_ONSITE: 'fulfillment_onsite',
+  LOGISTICA_RUTAS: 'logistica_rutas',
+  COTIZACIONES: 'cotizaciones',
+  FACTURACION: 'facturacion',
+  LIQUIDACIONES: 'liquidaciones',
+} as const;
+
+export type Capacidad = (typeof CAPACIDADES)[keyof typeof CAPACIDADES];
