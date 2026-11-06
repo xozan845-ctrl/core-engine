@@ -65,6 +65,24 @@ jobs:
       - name: Lint TypeScript sources (Gate G-7 — docs/rules/test/06-estandares-cobertura.md)
         run: npm run lint
 
+  qa-harness:
+    name: QA Harness (arranque)
+    runs-on: ubuntu-24.04
+    needs: security-gate
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "20"
+          cache: "npm"
+          cache-dependency-path: qa-harness/package-lock.json
+      - name: Install harness dependencies
+        run: npm ci --prefer-offline
+        working-directory: qa-harness
+      - name: Verify CLI and suite registry
+        run: npm run check
+        working-directory: qa-harness
+
   test:
     name: Unit Tests + Coverage
     runs-on: ubuntu-24.04

@@ -1,23 +1,23 @@
 {
   "name": "@core-engine/qa-harness",
   "version": "1.0.0",
-  "description": "QA Harness agresivo para Core Engine Core Engine - Testing automatizado con reporte ultra detallado",
+  "description": "QA Harness agresivo para Core Engine - testing automatizado con reporte ultra detallado",
   "type": "module",
-  "main": "src/index.ts",
+  "main": "src/index.js",
   "scripts": {
-    "start": "node src/index.ts",
-    "test": "node src/index.ts --suites 01-auth,02-role-access --format html",
-    "test:full": "node src/index.ts --format all",
-    "test:security": "node src/index.ts --suites 01-auth,02-role-access,11-fuzzing",
-    "test:business": "node src/index.ts --suites 03-catalog,04-stores,05-orders,06-cart,07-logistics,08-commissions,09-finanzas,21-market-intelligence",
-    "test:load": "node src/index.ts --suites 13-load --load agresivo --concurrency 100",
-    "test:concurrency": "node src/index.ts --suites 12-concurrency",
-    "test:static": "node src/index.ts --suites 15-static",
-    "test:queue": "node src/index.ts --suites 14-queue",
-    "report:html": "node src/index.ts --format html --output ./reports",
-    "report:md": "node src/index.ts --format md --output ./reports",
-    "report:json": "node src/index.ts --format json --output ./reports",
-    "clean": "rm -rf reports"
+    "start": "node src/index.js",
+    "test": "node src/index.js --suites 01-auth,02-role-access --format html",
+    "test:full": "node src/index.js --format all",
+    "test:security": "node src/index.js --suites 01-auth,02-role-access,11-fuzzing",
+    "test:business": "node src/index.js --suites 03-catalog,04-stores,05-orders,06-cart,07-logistics,08-commissions,09-finanzas,21-market-intelligence",
+    "test:concurrency": "node src/index.js --suites 12-concurrency",
+    "test:static": "node src/index.js --suites 15-static",
+    "test:queue": "node src/index.js --suites 14-queue",
+    "report:html": "node src/index.js --format html --output ./reports",
+    "report:md": "node src/index.js --format md --output ./reports",
+    "report:json": "node src/index.js --format json --output ./reports",
+    "clean": "rm -rf reports",
+    "check": "node src/index.js --help"
   },
   "engines": {
     "node": ">=20"
@@ -34,8 +34,9 @@
   "author": "Core Engine Team",
   "license": "MIT",
   "dependencies": {
-    "pg": "^8.11.0",
-    "jsonwebtoken": "^9.0.0"
+    "bcryptjs": "^3.0.3",
+    "jsonwebtoken": "^9.0.0",
+    "pg": "^8.11.0"
   },
   "devDependencies": {
     "@types/node": "^20.0.0",

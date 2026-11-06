@@ -1,7 +1,7 @@
 // Configuración ESLint (flat config) — única para todos los workspaces.
 // Alcance (G-7): TypeScript de los workspaces, `packages/*/src/**/*.ts`.
-// El tooling JS (`qa-harness/`) queda fuera de alcance; el motor de gobernanza
-// (`scripts/**/*.mjs`) SÍ se lintea.
+// El harness de QA (`qa-harness/src/**/*.js`) también se lintea para que no se
+// podra; los avisos no bloquean, los errores sí.
 // Uso: `npm run lint` (raíz). Los errores bloquean CI; las advertencias no.
 import js from '@eslint/js';
 import tseslint from 'typescript-eslint';
@@ -16,8 +16,39 @@ export default tseslint.config(
       '**/node_modules/**',
       '**/*.tsbuildinfo',
       '**/*.d.ts',
-      'qa-harness/**',
     ],
+  },
+  {
+    // Harness de QA: JS plano (ESM) sobre Node. Se lintea para que no se podra.
+    files: ['qa-harness/src/**/*.js'],
+    extends: [js.configs.recommended],
+    languageOptions: {
+      ecmaVersion: 2023,
+      sourceType: 'module',
+      globals: {
+        process: 'readonly',
+        console: 'readonly',
+        URL: 'readonly',
+        fetch: 'readonly',
+        setTimeout: 'readonly',
+        clearTimeout: 'readonly',
+        setInterval: 'readonly',
+        clearInterval: 'readonly',
+        Buffer: 'readonly',
+        crypto: 'readonly',
+        AbortController: 'readonly',
+        AbortSignal: 'readonly',
+        performance: 'readonly',
+      },
+    },
+    rules: {
+      // Deuda histórica del harness: los símbolos sin usar quedan como aviso
+      // para no bloquear el gate; se limpian de forma incremental.
+      'no-unused-vars': [
+        'warn',
+        { argsIgnorePattern: '^_', varsIgnorePattern: '^_', caughtErrorsIgnorePattern: '^_' },
+      ],
+    },
   },
   {
     // Motor de gobernanza y herramientas: JS plano (ESM) sobre Node.
@@ -35,6 +66,7 @@ export default tseslint.config(
         clearTimeout: 'readonly',
         Buffer: 'readonly',
         AbortController: 'readonly',
+        AbortSignal: 'readonly',
         performance: 'readonly',
       },
     },

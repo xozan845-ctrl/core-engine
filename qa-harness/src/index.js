@@ -22,8 +22,6 @@ const options = {
   baseUrl: config.baseUrl,
   suites: config.suites,
   format: config.format,
-  loadLevel: config.loadLevel,
-  concurrency: config.concurrency,
   fuzzRounds: config.fuzzRounds,
   cleanup: config.cleanup,
   outputDir: './reports',
@@ -43,14 +41,6 @@ for (let i = 0; i < args.length; i++) {
     case '--format':
     case '-f':
       options.format = args[++i];
-      break;
-    case '--load':
-    case '-l':
-      options.loadLevel = args[++i];
-      break;
-    case '--concurrency':
-    case '-c':
-      options.concurrency = parseInt(args[++i], 10);
       break;
     case '--fuzz':
       options.fuzzRounds = parseInt(args[++i], 10);
@@ -83,8 +73,6 @@ Opciones:
   -u, --base-url <url>      URL base del API Gateway (default: http://localhost:8080)
   -s, --suites <lista>      Suites a ejecutar, separadas por coma (default: todas)
   -f, --format <fmt>        Formato de reporte: html, md, json, all (default: all)
-  -l, --load <nivel>        Nivel de carga: agresivo, moderado, ligero (default: agresivo)
-  -c, --concurrency <n>     Concurrencia para tests de carga (default: 50)
   --fuzz <n>                Rondas de fuzzing (default: 10)
   --no-cleanup              No limpiar datos de prueba
   -o, --output <dir>        Directorio de salida para reportes (default: ./reports)
@@ -104,7 +92,6 @@ Suites disponibles:
   10-admin         Reportes admin e inventario
   11-fuzzing       Fuzzing y validación agresiva
   12-concurrency   Concurrencia y race conditions
-  13-load          Carga y rendimiento
   14-queue         Outbox, DLQ, RabbitMQ
   15-static        Análisis estático (lint, build, tests, debt)
   16-owasp         OWASP Top 10 vulnerabilities testing
@@ -116,7 +103,7 @@ Suites disponibles:
 
 Ejemplos:
   node src/index.js --suites 01-auth,02-role-access --format html
-  node src/index.js --load agresivo --concurrency 100 --fuzz 20
+  node src/index.js --suites 11-fuzzing --fuzz 20
   node src/index.js --no-cleanup --output ./my-reports
 `);
   process.exit(0);

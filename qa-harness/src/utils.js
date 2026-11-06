@@ -1,5 +1,3 @@
-import { readFileSync, writeFileSync, mkdirSync, existsSync } from 'fs';
-import { join, dirname } from 'path';
 import { createRequire } from 'module';
 
 const require = createRequire(import.meta.url);
@@ -151,12 +149,18 @@ export class ClientoRabbitMQ {
 // ── Cliente Postgres ──────────────────────────────────────────────────
 export class ClientoPostgres {
   constructor() {
-    // Use localhost from host, docker internal from containers
-    this.url = process.env.DATABASE_URL ?? 'postgres://core_engine:88cf331f0740655a65ac11877f1dc619@localhost:5432/core_engine';
+    // Sin fallback: una URL con credenciales versionada es un secreto filtrado.
+    this.url = process.env.DATABASE_URL;
     this.pool = null;
   }
 
   getPool() {
+    if (!this.url) {
+      throw new Error(
+        'Falta DATABASE_URL: las suites que usan PostgreSQL (00-preflight, 14-queue, 17-schema, 18-field) ' +
+        'necesitan la cadena de conexión en el entorno o en el .env del repo.',
+      );
+    }
     if (!this.pool) {
       const { Pool } = require('pg');
       this.pool = new Pool({ connectionString: this.url, max: 10 });
@@ -195,24 +199,31 @@ export class ClientoPostgres {
 // ── Token Manager ──────────────────────────────────────────────────────
 export class TokenManager {
   constructor(secret, accessTtl, refreshTtl) {
-    this.secret = secret ?? process.env.JWT_SECRET ?? 'dev_secret';
+    this.secret = secret ?? process.env.JWT_SECRET;
     this.accessTtl = accessTtl ?? '900s';
     this.refreshTtl = refreshTtl ?? '7d';
   }
 
+  requireSecret() {
+    if (!this.secret) {
+      throw new Error('Falta JWT_SECRET: TokenManager no firma tokens con un secreto por defecto.');
+    }
+    return this.secret;
+  }
+
   async generarToken(payload) {
     const jwt = require('jsonwebtoken');
-    return jwt.sign(payload, this.secret, { expiresIn: this.accessTtl, algorithm: 'HS256' });
+    return jwt.sign(payload, this.requireSecret(), { expiresIn: this.accessTtl, algorithm: 'HS256' });
   }
 
   async verificarToken(token) {
     const jwt = require('jsonwebtoken');
-    return jwt.verify(token, this.secret, { algorithms: ['HS256'] });
+    return jwt.verify(token, this.requireSecret(), { algorithms: ['HS256'] });
   }
 
   async refreshToken(refreshToken) {
     const jwt = require('jsonwebtoken');
-    const payload = jwt.verify(refreshToken, this.secret, { algorithms: ['HS256'] });
+    const payload = jwt.verify(refreshToken, this.requireSecret(), { algorithms: ['HS256'] });
     return this.generarToken(payload);
   }
 
@@ -228,7 +239,7 @@ export class TokenManager {
 // ── Utilities ────────────────────────────────────────────────────────────
 export function verificarContrasena(contrasena, minimo = 8) {
   if (!contrasena || contrasena.length < minimo) return false;
-  return /^[a-zA-Z0-9!@#$%^&*()_+\-=\[\]{}|;:',.<>?/~\s]+$/.test(contrasena);
+  return /^[a-zA-Z0-9!@#$%^&*()_+\-=[\]{}|;:',.<>?/~\s]+$/.test(contrasena);
 }
 
 export function generarId() {

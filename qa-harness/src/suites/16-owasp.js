@@ -203,7 +203,7 @@ export async function suite16Owas(client, cfg, adminToken, vendedorToken, compra
 
     let bruteforce = 0;
     for (let i = 0; i < 12; i++) {
-      const b = await client.post('/api/v1/auth/login', { correo: 'admin@core-engine.test', contrasena: 'Incorrecta123!' });
+      const b = await client.post('/api/v1/auth/login', { correo: cfg.adminEmail, contrasena: 'Incorrecta123!' });
       if (b.status === 429) bruteforce++;
     }
     r('A07 Brute force login mitigado (rate limit 429)', bruteforce >= 1, { detalle: `429s: ${bruteforce}/12` });

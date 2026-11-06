@@ -18,7 +18,6 @@ import { suite09Finanzas } from '../suites/09-finanzas.js';
 import { suite10Admin } from '../suites/10-admin.js';
 import { suite11Fuzzing } from '../suites/11-fuzzing.js';
 import { suite12Concurrencia } from '../suites/12-concurrency.js';
-import { suite13Carga } from '../suites/13-load.js';
 import { suite14Queue } from '../suites/14-queue.js';
 import { suite15Static } from '../suites/15-static.js';
 import { suite16Owas } from '../suites/16-owasp.js';
@@ -89,8 +88,15 @@ export class Runner {
   }
 
   async loginUsers() {
+    if (!this.config.adminEmail || !this.config.adminPassword) {
+      throw new Error(
+        'Faltan credenciales del admin: define ADMIN_EMAIL y ADMIN_PASSWORD en el .env o en el entorno. ' +
+        'El harness ya no usa una contraseña por defecto.',
+      );
+    }
+
     // Login admin
-    const adminLogin = await this.loginConReintento('admin@core-engine.test', 'AdminCore Engine2026!');
+    const adminLogin = await this.loginConReintento(this.config.adminEmail, this.config.adminPassword);
     if (adminLogin.status === 200 || adminLogin.status === 201) {
       this.adminToken = adminLogin.body.access_token;
     }
@@ -218,7 +224,6 @@ export class Runner {
     if (activo('12-concurrency')) await this.runSuite('12-concurrency', () => suite12Concurrencia(this.client, this.config, this.compradorToken, this.adminToken, this.vendedorToken));
     if (activo('14-queue')) await this.runSuite('14-queue', () => suite14Queue(this.client, this.rabbit, this.pg, this.config));
     if (activo('16-owasp')) await this.runSuite('16-owasp', () => suite16Owas(this.client, this.config, this.adminToken, this.vendedorToken, this.compradorToken));
-    if (activo('13-load')) await this.runSuite('13-load', () => suite13Carga(this.client, this.config));
     if (activo('15-static')) await this.runSuite('15-static', () => suite15Static(this.client, this.config));
 
     const totalDuration = Date.now() - startTime;

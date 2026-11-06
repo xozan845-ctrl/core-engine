@@ -1,21 +1,21 @@
-import { readFileSync, writeFileSync, mkdirSync, existsSync } from 'fs';
+import { readFileSync, existsSync } from 'fs';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
-import { createRequire } from 'module';
 
-const require = createRequire(import.meta.url);
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
 /**
  * Configuración base del QA Harness.
- * Lee .env.example por defecto y permite sobreescribir vía variables de entorno.
+ * Prioridad: argumentos CLI > variables de entorno > `.env` del repo > defaults
+ * no sensibles. Las credenciales (ADMIN_PASSWORD, DATABASE_URL, JWT_SECRET) NO
+ * tienen fallback: se validan al usarlas.
  */
 export class Configuracion {
   constructor(config) {
     this._private = {};
 
-    // Leer .env.example o .env si existe
+    // Leer `.env` del repo (las variables de proceso tienen prioridad).
     const envPath = join(__dirname, '../../.env');
     const envContent = existsSync(envPath) ? readFileSync(envPath, 'utf-8') : '';
     const parsed = {};
@@ -27,21 +27,26 @@ export class Configuracion {
         if (valStr) parsed[key] = valStr;
       }
     }
+    const env = (key) => process.env[key] ?? parsed[key];
 
-    this.baseUrl = config?.baseUrl ?? parsed?.BASE_URL ?? 'http://localhost:8080';
-    this.adminEmail = config?.adminEmail ?? parsed?.ADMIN_EMAIL ?? 'admin@core-engine.test';
-    this.adminPassword = config?.adminPassword ?? parsed?.ADMIN_PASSWORD ?? 'AdminCore Engine2026!';
-    this.timeoutMs = parseInt(config?.timeoutMs ?? parsed?.QA_TIMEOUT ?? '30000', 10);
-    this.concurrency = parseInt(config?.concurrency ?? parsed?.QA_CONCURRENCY ?? '50', 10);
-    this.fuzzRounds = parseInt(config?.fuzzRounds ?? parsed?.QA_FUZZ_ROUNDS ?? '10', 10);
-    this.loadLevel = config?.loadLevel ?? parsed?.QA_LOAD_LEVEL ?? 'agresivo';
-    this.cleanup = config?.cleanup !== false && parsed?.QA_CLEANUP !== 'false';
+    // Exportar el `.env` a process.env para los clientes que lo leen directo
+    // (Postgres, RabbitMQ, suites de identidad). No sobrescribe el entorno.
+    for (const [key, value] of Object.entries(parsed)) {
+      if (process.env[key] === undefined) process.env[key] = value;
+    }
+
+    this.baseUrl = config?.baseUrl ?? env('BASE_URL') ?? 'http://localhost:8080';
+    this.adminEmail = config?.adminEmail ?? env('ADMIN_EMAIL');
+    this.adminPassword = config?.adminPassword ?? env('ADMIN_PASSWORD');
+    this.timeoutMs = parseInt(config?.timeoutMs ?? env('QA_TIMEOUT') ?? '30000', 10);
+    this.fuzzRounds = parseInt(config?.fuzzRounds ?? env('QA_FUZZ_ROUNDS') ?? '10', 10);
+    this.cleanup = config?.cleanup !== false && env('QA_CLEANUP') !== 'false';
     
     // Fix: QA_SUITES can be undefined or string
-    const suitesStr = config?.suites ?? parsed?.QA_SUITES ?? '';
+    const suitesStr = config?.suites ?? env('QA_SUITES') ?? '';
     this.suites = suitesStr ? suitesStr.split(',') : [];
     
-    this.format = config?.format ?? parsed?.QA_FORMAT ?? 'all';
+    this.format = config?.format ?? env('QA_FORMAT') ?? 'all';
   }
 
   get(key) {
