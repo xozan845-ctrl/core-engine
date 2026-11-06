@@ -22,6 +22,7 @@ on:
           - smoke
           - load
           - breakpoint
+          - write
       base_url:
         description: 'URL del gateway (localhost si el runner está en el host desplegado)'
         required: true
@@ -70,13 +71,17 @@ jobs:
           K6_LOAD_RATE: ${{ github.event.inputs.rate }}
           K6_LOAD_DURATION: ${{ github.event.inputs.duration }}
           K6_BREAK_STAGE_DURATION: ${{ github.event.inputs.duration }}
+          K6_WRITE_RATE: ${{ github.event.inputs.rate }}
+          K6_WRITE_DURATION: ${{ github.event.inputs.duration }}
+          K6_WRITE_BUYERS: ${{ vars.K6_WRITE_BUYERS }}
+          K6_WRITE_PASSWORD: ${{ secrets.K6_WRITE_PASSWORD }}
           K6_SUMMARY: /scripts/k6-summary.json
         run: |
           docker run --rm --network host --user "$(id -u):$(id -g)" -e HOME=/tmp \
             -v "$PWD/tests/k6:/scripts" \
             -e BASE_URL -e K6_EMPRESA_ID -e K6_STORE_SLUG -e K6_BUYER_EMAIL -e K6_BUYER_PASSWORD \
             -e K6_INTERNAL_KEY -e K6_EDGE_BASIC_AUTH -e K6_READY -e K6_LOAD_RATE -e K6_LOAD_DURATION \
-            -e K6_BREAK_STAGE_DURATION -e K6_SUMMARY \
+            -e K6_BREAK_STAGE_DURATION -e K6_WRITE_RATE -e K6_WRITE_DURATION -e K6_WRITE_BUYERS -e K6_WRITE_PASSWORD -e K6_SUMMARY \
             grafana/k6:latest run --quiet "/scripts/${{ github.event.inputs.scenario }}.js"
 
       - name: 📊 Compare with baseline
