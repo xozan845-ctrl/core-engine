@@ -23,7 +23,7 @@ El problema es **la capa de configuración y secretos**. El entorno de desarroll
 - El rate-limit anti fuerza bruta es **evadible** con `X-Forwarded-For`.
 - El login permite **enumerar correos** por diferencia de tiempo (~73 ms vs ~5 ms).
 - El catálogo y la tienda públicos **filtran costo, margen, precio base, stock y IDs internos**.
-- La base del stack Docker corre como **superusuario con `BYPASSRLS`** y RLS está desactivado: el aislamiento depende solo de los filtros de la aplicación.
+- ~~La base del stack Docker corre como superusuario con `BYPASSRLS` y RLS está desactivado~~ **Corregido (2026-11-06)**: la app usa `core_engine_app` sin `BYPASSRLS`, RLS está activo con 68 políticas y los claims se inyectan por transacción.
 
 **Riesgo global:** Crítico en desarrollo (y potencialmente en cualquier entorno que reutilice `.env.example`). En producción el riesgo baja a Alto/Medio **solo si** los placeholders `<CAMBIAR …>` se reemplazaron y el borde (Traefik) no reenvía `X-Forwarded-For` del cliente.
 
@@ -47,7 +47,7 @@ El problema es **la capa de configuración y secretos**. El entorno de desarroll
 | M-05 · `.env` legible por terceros | **Corregido** | `chmod 600` y creación con modo `600` en el generador |
 | Nuevo · Endpoints de cuenta bloqueados | **Corregido** | `/auth/cambiar-contrasena` y `/auth/vincular-personal` caían en el *deny-by-default* (403); ahora exigen sesión válida |
 | H-03 · Fuga de costo/margen/stock | **Pendiente** | Requiere decisión de contrato: DTO público específico (no se tocó para no romper el frontend) |
-| H-04 · RLS con superusuario | **Pendiente** | Requiere rol `NOSUPERUSER NOBYPASSRLS`, funciones `auth.*` y aplicar `99_rls.sql` |
+| H-04 · RLS con superusuario | **Corregido y activo** | `core_engine_app` `NOSUPERUSER NOBYPASSRLS`, roles `authenticated`/`anon`, `core_engine_service` para background, funciones `auth.*` y `99_rls.sql` aplicado en Docker. Verificado en un Postgres desechable (tenant A/B) y en el stack local |
 | M-06 · Diagnóstico público en dev | **Pendiente/DX** | Sigue abierto en dev (`DIAGNOSTICOS_PUBLICOS/READY_PUBLIC=true`) pero ya solo escucha en loopback |
 
 Verificación posterior al cambio:
@@ -248,11 +248,20 @@ auth.*       → no existen auth.uid()/auth.rol()/auth.jwt()
 
 Impacto: el aislamiento multi-tenant queda al 100 % en los `WHERE tenant_id = $1` de la aplicación. Un fallo futuro en un endpoint (o una consulta nueva sin filtro) se convierte en fuga entre tenants. Hoy no encontré ese fallo, pero no hay red de seguridad.
 
-**Remediación**
+**Remediación aplicada (2026-11-06)**
 
-- Crear un rol `core_engine_app` `NOSUPERUSER NOBYPASSRLS` con permisos mínimos y usarlo en `DATABASE_URL`.
-- Definir `auth.uid()`, `auth.rol()` y `auth.jwt()` sobre `current_setting('request.jwt.claims', true)` en el Postgres Docker.
-- Aplicar `99_rls.sql`, activar `FORCE ROW LEVEL SECURITY` en tablas con datos de tenant y añadir pruebas negativas cross-tenant al CI.
+- Rol `core_engine_app` `NOSUPERUSER NOBYPASSRLS` en `DATABASE_URL`; `authenticated`/`anon` para sesión y `core_engine_service` (`BYPASSRLS`) para background.
+- Funciones `auth.uid()` (uuid), `auth.rol()` y `auth.jwt()` sobre `request.jwt.claims`; `PgService` hace `SET LOCAL ROLE` + claims en cada transacción (`DB_RLS_ENABLED=true`).
+- `99_rls.sql` se aplica en el init local (68 políticas, 30 tablas) y `99z_grants.sql` concede privilegios mínimos.
+- Políticas corregidas: `super_admin` incluido donde decía `admin`, lectura pública de catálogo/imágenes, creador de empresa y escritura del empresario en las tablas de proyección (`producto_catalogo_vista`, `stock_vista`, `inventario_mensual_mv`, `historico_precios`, `ajustes_stock`).
+
+Evidencia:
+
+```text
+Postgres desechable: tenant A -> 1, tenant B -> 1, sin claims -> 0, service role -> 2
+Stack local: /ready ok; registro + empresa + producto + catálogo público/privado ok
+Catálogo anónimo: sin costo/stock/umbrales; catálogo del dueño: stock/costo presentes
+```
 
 ---
 
@@ -348,7 +357,7 @@ No es explotable por sí solo, pero facilita el reconocimiento y confirma la top
 
 1. **Hoy:** rotar `JWT_SECRET`, `INTERNAL_API_KEY`, `ADMIN_PASSWORD`, `POSTGRES_PASSWORD`, `RABBITMQ_PASSWORD`, `MINIO_ROOT_PASSWORD`; cerrar 5432/5672/9000/9001/15672 a loopback.
 2. **Esta semana:** validación *fail-fast* de secretos + quitar `dev_secret`; corregir el rate-limit (no confiar en XFF) y el timing del login.
-3. **Este sprint:** DTOs públicos sin costo/margen/stock; rol no-superusuario + RLS real o eliminar la falsa expectativa; runner de migraciones.
+3. **Hecho:** DTOs públicos sin costo/margen/stock (#432/#433) y RLS real con rol de app (#434). Pendiente: runner de migraciones idempotente.
 4. **Siguiente:** rotación de refresh tokens, política `/auth/me`, `.env` 600, pruebas negativas cross-tenant en CI.
 
 ---
