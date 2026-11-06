@@ -40,6 +40,9 @@ export class ServicioResponseDto {
   @ApiProperty({ enum: ['activo', 'inactivo'] })
   estado: 'activo' | 'inactivo';
 
+  @ApiProperty({ type: 'object', additionalProperties: true })
+  atributos: Record<string, unknown>;
+
   @ApiProperty({ format: 'date-time' })
   creado_en: string;
 

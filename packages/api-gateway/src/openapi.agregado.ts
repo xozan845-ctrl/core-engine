@@ -445,6 +445,172 @@ export const OPENAPI_AGREGADO = {
         ]
       }
     },
+    "/api/v1/catalog/items": {
+      "get": {
+        "operationId": "ItemsController_listar",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginaItemsResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Listar items unificados de una empresa",
+        "tags": [
+          "Catálogo · Items"
+        ]
+      }
+    },
+    "/api/v1/catalog/items/alquileres": {
+      "post": {
+        "operationId": "ItemsController_crearAlquiler",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CrearAlquilerRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ItemResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Crear un item de alquiler",
+        "tags": [
+          "Catálogo · Items"
+        ]
+      }
+    },
+    "/api/v1/catalog/items/atributos/esquemas": {
+      "post": {
+        "operationId": "ItemsController_guardarEsquema",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/GuardarEsquemaRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Esquema registrado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EsquemaGuardadoResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Registrar un JSON Schema de atributos por categoría",
+        "tags": [
+          "Catálogo · Items"
+        ]
+      },
+      "get": {
+        "operationId": "ItemsController_esquemas",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Esquemas activos",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ItemSchemaResponseDto"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Listar JSON Schemas de atributos",
+        "tags": [
+          "Catálogo · Items"
+        ]
+      }
+    },
+    "/api/v1/catalog/items/{id}": {
+      "get": {
+        "operationId": "ItemsController_detalle",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ItemResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Consultar un item unificado",
+        "tags": [
+          "Catálogo · Items"
+        ]
+      }
+    },
     "/api/v1/admin/inventario": {
       "get": {
         "operationId": "InventarioController_listar",
@@ -480,6 +646,125 @@ export const OPENAPI_AGREGADO = {
           }
         ],
         "summary": "Niveles de stock (admin; Tabla 21)",
+        "tags": [
+          "Catálogo"
+        ]
+      }
+    },
+    "/api/v1/admin/inventario/proveedores": {
+      "post": {
+        "operationId": "InventarioController_crearProveedor",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CrearProveedorInventarioRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Proveedor creado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProveedorInventarioResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Crear proveedor de inventario",
+        "tags": [
+          "Catálogo"
+        ]
+      }
+    },
+    "/api/v1/admin/inventario/lotes": {
+      "post": {
+        "operationId": "InventarioController_crearLote",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CrearLoteInventarioRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Lote creado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LoteInventarioResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Registrar lote y vencimiento de un item",
+        "tags": [
+          "Catálogo"
+        ]
+      },
+      "get": {
+        "operationId": "InventarioController_listarLotes",
+        "parameters": [
+          {
+            "name": "empresa_id",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "item_id",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Lotes activos",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/LoteInventarioResponseDto"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Listar lotes de inventario",
         "tags": [
           "Catálogo"
         ]
@@ -10592,6 +10877,11 @@ export const OPENAPI_AGREGADO = {
           "unidad": {
             "type": "string"
           },
+          "atributos": {
+            "type": "object",
+            "description": "Atributos del servicio según el JSON Schema de su categoría",
+            "additionalProperties": true
+          },
           "duracion_minutos": {
             "type": "number",
             "minimum": 1,
@@ -10771,6 +11061,53 @@ export const OPENAPI_AGREGADO = {
           "actualizado_en"
         ]
       },
+      "CrearAlquilerRequestDto": {
+        "type": "object",
+        "properties": {
+          "codigo": {
+            "type": "string",
+            "example": "ALQ-001"
+          },
+          "nombre": {
+            "type": "string"
+          },
+          "descripcion": {
+            "type": "string"
+          },
+          "categoria": {
+            "type": "string",
+            "default": "general"
+          },
+          "precio": {
+            "type": "string",
+            "example": "1500.00"
+          },
+          "costo": {
+            "type": "string",
+            "example": "500.00"
+          },
+          "atributos": {
+            "type": "object",
+            "additionalProperties": true
+          },
+          "estado": {
+            "type": "string",
+            "enum": [
+              "activo",
+              "inactivo"
+            ]
+          },
+          "empresa_id": {
+            "type": "string",
+            "format": "uuid"
+          }
+        },
+        "required": [
+          "codigo",
+          "nombre",
+          "precio"
+        ]
+      },
       "CrearComboRequestDto": {
         "type": "object",
         "properties": {
@@ -10809,6 +11146,40 @@ export const OPENAPI_AGREGADO = {
           "nombre",
           "precio",
           "componentes"
+        ]
+      },
+      "CrearLoteInventarioRequestDto": {
+        "type": "object",
+        "properties": {
+          "empresa_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "item_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "proveedor_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "codigo_lote": {
+            "type": "string"
+          },
+          "vence_en": {
+            "type": "string",
+            "format": "date"
+          },
+          "cantidad_inicial": {
+            "type": "number",
+            "minimum": 0
+          }
+        },
+        "required": [
+          "empresa_id",
+          "item_id",
+          "codigo_lote",
+          "cantidad_inicial"
         ]
       },
       "CrearMovimientoInventarioRequestDto": {
@@ -11061,6 +11432,32 @@ export const OPENAPI_AGREGADO = {
           "fecha_hasta"
         ]
       },
+      "CrearProveedorInventarioRequestDto": {
+        "type": "object",
+        "properties": {
+          "empresa_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "codigo": {
+            "type": "string"
+          },
+          "nombre": {
+            "type": "string"
+          },
+          "correo": {
+            "type": "string"
+          },
+          "telefono": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "empresa_id",
+          "codigo",
+          "nombre"
+        ]
+      },
       "CrearServicioRequestDto": {
         "type": "object",
         "properties": {
@@ -11105,6 +11502,11 @@ export const OPENAPI_AGREGADO = {
           "unidad": {
             "type": "string",
             "example": "Hora (h)"
+          },
+          "atributos": {
+            "type": "object",
+            "description": "Atributos del servicio según el JSON Schema de su categoría",
+            "additionalProperties": true
           },
           "duracion_minutos": {
             "type": "number",
@@ -11158,6 +11560,42 @@ export const OPENAPI_AGREGADO = {
         },
         "required": [
           "tipo"
+        ]
+      },
+      "EsquemaGuardadoResponseDto": {
+        "type": "object",
+        "properties": {
+          "ok": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "ok"
+        ]
+      },
+      "GuardarEsquemaRequestDto": {
+        "type": "object",
+        "properties": {
+          "tipo": {
+            "type": "string",
+            "enum": [
+              "producto",
+              "servicio",
+              "alquiler"
+            ]
+          },
+          "categoria": {
+            "type": "string"
+          },
+          "esquema": {
+            "type": "object",
+            "additionalProperties": true
+          }
+        },
+        "required": [
+          "tipo",
+          "categoria",
+          "esquema"
         ]
       },
       "ImagenProductoRequestDto": {
@@ -11316,6 +11754,150 @@ export const OPENAPI_AGREGADO = {
           "errores"
         ]
       },
+      "ItemResponseDto": {
+        "type": "object",
+        "properties": {
+          "item_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "empresa_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "tipo": {
+            "type": "string",
+            "enum": [
+              "producto",
+              "servicio",
+              "alquiler"
+            ]
+          },
+          "codigo": {
+            "type": "string"
+          },
+          "nombre": {
+            "type": "string"
+          },
+          "descripcion": {
+            "type": "string"
+          },
+          "categoria": {
+            "type": "string"
+          },
+          "precio": {
+            "type": "string",
+            "example": "1500.00"
+          },
+          "costo": {
+            "type": "string",
+            "example": "500.00"
+          },
+          "track_inventory": {
+            "type": "boolean"
+          },
+          "stock": {
+            "type": "object",
+            "nullable": true
+          },
+          "duration_minutes": {
+            "type": "object",
+            "nullable": true
+          },
+          "atributos": {
+            "type": "object",
+            "additionalProperties": true
+          },
+          "estado": {
+            "type": "string",
+            "enum": [
+              "activo",
+              "inactivo"
+            ]
+          },
+          "source_type": {
+            "type": "object",
+            "nullable": true
+          },
+          "source_id": {
+            "type": "object",
+            "nullable": true,
+            "format": "uuid"
+          },
+          "creado_en": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "actualizado_en": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "item_id",
+          "empresa_id",
+          "tipo",
+          "codigo",
+          "nombre",
+          "descripcion",
+          "categoria",
+          "precio",
+          "costo",
+          "track_inventory",
+          "stock",
+          "duration_minutes",
+          "atributos",
+          "estado",
+          "source_type",
+          "source_id",
+          "creado_en",
+          "actualizado_en"
+        ]
+      },
+      "ItemSchemaResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "empresa_id": {
+            "type": "object",
+            "nullable": true,
+            "format": "uuid"
+          },
+          "tipo": {
+            "type": "string",
+            "enum": [
+              "producto",
+              "servicio",
+              "alquiler"
+            ]
+          },
+          "categoria": {
+            "type": "string"
+          },
+          "esquema": {
+            "type": "object",
+            "additionalProperties": true
+          },
+          "version": {
+            "type": "number"
+          },
+          "activo": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "id",
+          "empresa_id",
+          "tipo",
+          "categoria",
+          "esquema",
+          "version",
+          "activo"
+        ]
+      },
       "LineaInventarioResponseDto": {
         "type": "object",
         "properties": {
@@ -11385,6 +11967,52 @@ export const OPENAPI_AGREGADO = {
           "reservas_activas",
           "valor_disponible_cents",
           "valor_total_cents"
+        ]
+      },
+      "LoteInventarioResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "empresa_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "item_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "proveedor_id": {
+            "type": "object",
+            "nullable": true,
+            "format": "uuid"
+          },
+          "codigo_lote": {
+            "type": "string"
+          },
+          "vence_en": {
+            "type": "object",
+            "nullable": true,
+            "format": "date"
+          },
+          "cantidad_inicial": {
+            "type": "number"
+          },
+          "cantidad_disponible": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "id",
+          "empresa_id",
+          "item_id",
+          "proveedor_id",
+          "codigo_lote",
+          "vence_en",
+          "cantidad_inicial",
+          "cantidad_disponible"
         ]
       },
       "MovimientoInventarioResponseDto": {
@@ -11474,6 +12102,36 @@ export const OPENAPI_AGREGADO = {
             "type": "array",
             "items": {
               "$ref": "#/components/schemas/ComboResponseDto"
+            }
+          },
+          "total": {
+            "type": "number"
+          },
+          "pagina": {
+            "type": "number"
+          },
+          "limite": {
+            "type": "number"
+          },
+          "paginas": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "items",
+          "total",
+          "pagina",
+          "limite",
+          "paginas"
+        ]
+      },
+      "PaginaItemsResponseDto": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ItemResponseDto"
             }
           },
           "total": {
@@ -11901,6 +12559,43 @@ export const OPENAPI_AGREGADO = {
           "actualizado_en"
         ]
       },
+      "ProveedorInventarioResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "empresa_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "codigo": {
+            "type": "string"
+          },
+          "nombre": {
+            "type": "string"
+          },
+          "correo": {
+            "type": "string"
+          },
+          "telefono": {
+            "type": "string"
+          },
+          "activo": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "id",
+          "empresa_id",
+          "codigo",
+          "nombre",
+          "correo",
+          "telefono",
+          "activo"
+        ]
+      },
       "ServicioResponseDto": {
         "type": "object",
         "properties": {
@@ -11954,6 +12649,10 @@ export const OPENAPI_AGREGADO = {
               "inactivo"
             ]
           },
+          "atributos": {
+            "type": "object",
+            "additionalProperties": true
+          },
           "creado_en": {
             "type": "string",
             "format": "date-time"
@@ -11977,6 +12676,7 @@ export const OPENAPI_AGREGADO = {
           "unidad",
           "duracion_minutos",
           "estado",
+          "atributos",
           "creado_en",
           "actualizado_en"
         ]
@@ -22006,9 +22706,24 @@ export const OPENAPI_AGREGADO = {
             "minimum": 0,
             "maximum": 100
           },
+          "item_type": {
+            "type": "string",
+            "description": "Tipo del item publicado",
+            "enum": [
+              "producto",
+              "servicio",
+              "alquiler"
+            ]
+          },
+          "item_id": {
+            "type": "string",
+            "description": "Id del item unificado",
+            "format": "uuid"
+          },
           "producto_id": {
             "type": "string",
             "description": "Id del producto o variante vendible",
+            "nullable": true,
             "format": "uuid"
           },
           "producto_padre_id": {
@@ -22181,8 +22896,23 @@ export const OPENAPI_AGREGADO = {
           },
           "producto_id": {
             "type": "string",
-            "description": "Id del producto a publicar",
+            "description": "Id legacy del producto a publicar",
             "example": "a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11"
+          },
+          "item_type": {
+            "type": "string",
+            "description": "Tipo del item a publicar",
+            "enum": [
+              "producto",
+              "servicio",
+              "alquiler"
+            ],
+            "default": "producto"
+          },
+          "item_id": {
+            "type": "string",
+            "description": "Id del item unificado a publicar",
+            "format": "uuid"
           },
           "margen": {
             "type": "number",
@@ -22193,7 +22923,6 @@ export const OPENAPI_AGREGADO = {
           }
         },
         "required": [
-          "producto_id",
           "margen"
         ]
       },

@@ -14,8 +14,14 @@ export class OfertaResponseDto {
   @ApiProperty({ description: 'Empresa propietaria', format: 'uuid' }) empresa_id: string;
   @ApiProperty({ description: 'Participación congelable del vendedor', minimum: 0, maximum: 100 }) participacion_porcentaje: number;
 
-  @ApiProperty({ description: 'Id del producto o variante vendible', format: 'uuid' })
-  producto_id: string;
+  @ApiProperty({ description: 'Tipo del item publicado', required: false, enum: ['producto', 'servicio', 'alquiler'] })
+  item_type: 'producto' | 'servicio' | 'alquiler';
+
+  @ApiProperty({ description: 'Id del item unificado', required: false, format: 'uuid' })
+  item_id: string;
+
+  @ApiProperty({ description: 'Id del producto o variante vendible', type: 'string', nullable: true, format: 'uuid' })
+  producto_id: string | null;
 
   @ApiProperty({ description: 'Id del producto padre (si es variante)', required: false, nullable: true, format: 'uuid' })
   producto_padre_id: string | null;
