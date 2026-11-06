@@ -146,8 +146,8 @@ export default defineSuite({
         'e2e.yml debe levantar el stack dev (G-6)',
       );
       assert.ok(
-        e2e.includes('cp .env.example .env'),
-        'e2e.yml debe materializar la plantilla de entorno antes de levantar el stack',
+        e2e.includes('node scripts/tools/dev-env.mjs') || e2e.includes('npm run env:dev'),
+        'e2e.yml debe generar el .env con secretos aleatorios antes de levantar el stack',
       );
       assert.ok(
         e2e.includes('npm run demo'),
@@ -159,8 +159,8 @@ export default defineSuite({
       );
       assert.ok(
         deploy.includes("if: github.event.inputs.environment == 'dev'") &&
-          deploy.includes('cp .env.example .env'),
-        'deploy.yml debe materializar la plantilla de entorno en el despliegue dev',
+          (deploy.includes('node scripts/tools/dev-env.mjs') || deploy.includes('npm run env:dev')),
+        'deploy.yml debe generar el .env con secretos aleatorios en el despliegue dev',
       );
     });
 
