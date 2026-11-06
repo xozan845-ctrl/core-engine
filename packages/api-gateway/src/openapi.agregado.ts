@@ -11567,8 +11567,13 @@ export const OPENAPI_AGREGADO = {
           },
           "stock": {
             "type": "number",
-            "description": "Stock disponible (neto de reservas)",
+            "description": "Stock exacto; solo se expone al propietario del catálogo o a un admin",
             "example": 10
+          },
+          "disponible": {
+            "type": "boolean",
+            "description": "Disponible para compra (derivado; no expone el stock exacto)",
+            "example": true
           },
           "estado": {
             "type": "string",
@@ -11717,7 +11722,6 @@ export const OPENAPI_AGREGADO = {
           "descripcion",
           "categoria",
           "precio_base",
-          "stock",
           "estado",
           "creado_en"
         ]
@@ -11961,8 +11965,13 @@ export const OPENAPI_AGREGADO = {
           },
           "stock": {
             "type": "number",
-            "description": "Stock disponible",
+            "description": "Stock exacto; solo se expone al propietario del catálogo o a un admin",
             "example": 10
+          },
+          "disponible": {
+            "type": "boolean",
+            "description": "Disponible para compra (derivado; no expone el stock exacto)",
+            "example": true
           },
           "estado": {
             "type": "string",
@@ -11992,7 +12001,6 @@ export const OPENAPI_AGREGADO = {
           "nombre",
           "atributos",
           "precio_base",
-          "stock",
           "estado",
           "imagenes",
           "creado_en"

@@ -43,8 +43,19 @@ export class VarianteProductoResponseDto {
   @ApiProperty({ description: 'Precio base en córdobas con dos decimales', example: '1500.00' })
   precio_base: string;
 
-  @ApiProperty({ description: 'Stock disponible', example: 10 })
+  @ApiProperty({
+    description: 'Stock exacto; solo se expone al propietario del catálogo o a un admin',
+    example: 10,
+    required: false,
+  })
   stock: number;
+
+  @ApiProperty({
+    description: 'Disponible para compra (derivado; no expone el stock exacto)',
+    example: true,
+    required: false,
+  })
+  disponible: boolean;
 
   @ApiProperty({ description: 'Estado de la variante', enum: ['disponible', 'agotado'] })
   estado: 'disponible' | 'agotado';
@@ -80,8 +91,19 @@ export class ProductoResponseDto {
   })
   precio_base: string;
 
-  @ApiProperty({ description: 'Stock disponible (neto de reservas)', example: 10 })
+  @ApiProperty({
+    description: 'Stock exacto; solo se expone al propietario del catálogo o a un admin',
+    example: 10,
+    required: false,
+  })
   stock: number;
+
+  @ApiProperty({
+    description: 'Disponible para compra (derivado; no expone el stock exacto)',
+    example: true,
+    required: false,
+  })
+  disponible: boolean;
 
   @ApiProperty({ description: 'Estado del producto', enum: ['disponible', 'agotado'], example: 'disponible' })
   estado: 'disponible' | 'agotado';

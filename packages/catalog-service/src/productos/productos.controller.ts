@@ -42,6 +42,7 @@ import {
   PaginaProductosResponseDto,
   ProductoResponseDto,
 } from './productos.response.dto';
+import { aProductoPublico, ProductoPublico } from './productos.publico';
 import {
   DomainError,
   EMPRESA_LEGACY_ID,
@@ -439,13 +440,15 @@ export class ProductosController {
   async listar(
     @Query() query: ListarProductosRequestDto,
     @UsuarioActual() usuario: UsuarioContexto | null,
-  ): Promise<Pagina<Producto>> {
+  ): Promise<Pagina<Producto> | Pagina<ProductoPublico>> {
     const empresaId = this.empresaDeConsulta(usuario, query.empresa_id);
-    return this.productos.listar({
+    const pagina = await this.productos.listar({
       ...query,
       empresa_id: empresaId,
       incluir_inactivos: this.puedeVerInactivos(usuario, empresaId),
     });
+    if (this.esPropietarioCatalogo(usuario, empresaId)) return pagina;
+    return { ...pagina, items: pagina.items.map(aProductoPublico) };
   }
 
   /** GET /api/v1/catalog/productos/:id — detalle publico acotado a la empresa. */
@@ -458,7 +461,7 @@ export class ProductosController {
     @Param('id') id: string,
     @Query() query: DetalleProductoRequestDto,
     @UsuarioActual() usuario: UsuarioContexto | null,
-  ): Promise<Producto> {
+  ): Promise<Producto | ProductoPublico> {
     const empresaId = this.empresaDeConsulta(usuario, query.empresa_id);
     const producto = await this.productos.encontrarPorId(
       id,
@@ -468,7 +471,8 @@ export class ProductosController {
     if (!producto) {
       throw new NotFoundError('Producto', id);
     }
-    return producto;
+    if (this.esPropietarioCatalogo(usuario, empresaId)) return producto;
+    return aProductoPublico(producto);
   }
 
   /** POST /api/v1/catalog/productos — alta de producto (admin, TC-01). */
@@ -614,6 +618,20 @@ export class ProductosController {
 
   /** Solo el dueño del catálogo o un admin pueden ver productos inactivos. */
   private puedeVerInactivos(usuario: UsuarioContexto | null, empresaId: string): boolean {
+    if (!usuario) return false;
+    if (usuario.rol === ROLES.SUPER_ADMIN || usuario.rol === ROLES.ADMIN) return true;
+    return usuario.rol === ROLES.EMPRESARIO && usuario.tenant_id === empresaId;
+  }
+
+  /**
+   * Solo el dueño del catálogo o un admin reciben el DTO completo (costo,
+   * stock exacto, umbrales, código de barras). Cualquier otra lectura recibe
+   * la proyección pública (R-DS-3 / R-C-3).
+   */
+  private esPropietarioCatalogo(
+    usuario: UsuarioContexto | null,
+    empresaId: string,
+  ): boolean {
     if (!usuario) return false;
     if (usuario.rol === ROLES.SUPER_ADMIN || usuario.rol === ROLES.ADMIN) return true;
     return usuario.rol === ROLES.EMPRESARIO && usuario.tenant_id === empresaId;

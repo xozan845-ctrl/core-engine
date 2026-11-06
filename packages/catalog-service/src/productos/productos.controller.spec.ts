@@ -40,7 +40,31 @@ describe('ProductosController (api/v1/catalog, R-U-10/11)', () => {
     const query = { empresa_id: 'e-1', q: 'teclado', estado: 'disponible', pagina: '2', limite: '10' };
     const pagina = await controller.listar(query as never, null);
     expect(productos.listar).toHaveBeenCalledWith({ ...query, incluir_inactivos: false });
-    expect(pagina.items).toEqual([producto]);
+    expect(pagina.items[0]).toMatchObject({
+      id: producto.id,
+      nombre: producto.nombre,
+      disponible: true,
+    });
+    expect(pagina.items[0]).not.toHaveProperty('stock');
+  });
+
+  it('debe devolver el DTO completo al empresario dueño del catálogo', async () => {
+    const { productos, controller } = fabricar();
+    productos.listar.mockResolvedValue({
+      items: [producto],
+      total: 1,
+      pagina: 1,
+      limite: 20,
+      paginas: 1,
+    });
+    const pagina = await controller.listar({ empresa_id: 'e-1' } as never, {
+      user_id: 'u-1',
+      email: 'e@core.local',
+      rol: 'empresario',
+      tenant_id: 'e-1',
+    } as never);
+    expect(pagina.items[0]).toHaveProperty('stock', 10);
+    expect(pagina.items[0]).not.toHaveProperty('disponible');
   });
 
   it('debe usar la empresa del token cuando la query no trae empresa_id', async () => {
@@ -76,9 +100,9 @@ describe('ProductosController (api/v1/catalog, R-U-10/11)', () => {
   it('debe devolver el detalle acotado a la empresa cuando el producto existe', async () => {
     const { productos, controller } = fabricar();
     productos.encontrarPorId.mockResolvedValue(producto);
-    await expect(
-      controller.detalle(producto.id, { empresa_id: 'e-1' } as never, null),
-    ).resolves.toEqual(producto);
+    const detalle = await controller.detalle(producto.id, { empresa_id: 'e-1' } as never, null);
+    expect(detalle).toMatchObject({ id: producto.id, nombre: producto.nombre, disponible: true });
+    expect(detalle).not.toHaveProperty('stock');
     expect(productos.encontrarPorId).toHaveBeenCalledWith(producto.id, 'e-1', false);
   });
 
