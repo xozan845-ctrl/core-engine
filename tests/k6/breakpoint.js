@@ -9,7 +9,7 @@ import { endpoints, handleSummary, login, pick } from './lib.js';
  * aprobación.
  *
  *   K6_START_RATE=10 K6_RATE_1=50 ... K6_RATE_5=800 \
- *   K6_STAGE_DURATION=45s k6 run tests/k6/breakpoint.js
+ *   K6_BREAK_STAGE_DURATION=45s k6 run tests/k6/breakpoint.js
  */
 export const options = {
   scenarios: {

@@ -31,6 +31,14 @@ Herramienta de testing agresivo y automatizado para el proyecto **Core Engine Co
 | `14-queue` | Outbox, DLQ, RabbitMQ, mensajería |
 | `15-static` | Análisis estático (lint, build, tests, debt) |
 
+## Relación con k6
+
+`qa-harness` es QA **funcional/agresivo** (auth, ACL, negocio, fuzzing,
+concurrencia, colas). Las pruebas de **capacidad y no-regresión de rendimiento**
+viven en `tests/k6/` (`smoke`, `load`, `breakpoint`, `write`, `soak`) y son el
+gate de deploy de stage/prod. La suite `13-load` de este harness queda como
+legacy: usa k6 para medir concurrencia y comparar contra la línea base.
+
 ## Instalación
 
 ```bash

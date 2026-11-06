@@ -55,14 +55,16 @@ opencode mcp list
 pentest_httpxProbe / pentest_nmapScan / pentest_nucleiScan
 
 # Carga ligera (k6)
-k6_run_script con security/k6/health-smoke.js
+k6_run_script con tests/k6/health/health-smoke.js
 ```
 
 Scripts:
 
-- `k6/health-smoke.js`: 5 VUs, 20 s, solo `/health`. Baseline seguro.
-- `k6/health-load.js`: rampa hasta 20 VUs. **No ejecutar sin aprobación** y sin
+- `tests/k6/health/health-smoke.js`: 5 VUs, 20 s, solo `/health`. Baseline seguro.
+- `tests/k6/health/health-load.js`: rampa hasta 20 VUs. **No ejecutar sin aprobación** y sin
   monitorizar el VPS.
+- `tests/k6/`: capacidad y no-regresión (`smoke`, `load`, `breakpoint`, `write`,
+  `soak`) con línea base en `scripts/config/k6-baseline.json`.
 
 ## Remediación aplicada
 
@@ -76,7 +78,7 @@ Los hallazgos de la revisión del 2026-10-24 se corrigieron en el repositorio:
   sin ella. Un Bearer inválido ya no puede saltarse el Basic.
 - Cabeceras `Permissions-Policy`, COOP, COEP, CORP y
   `X-Permitted-Cross-Domain-Policies` añadidas.
-- Hardening de host en `security/hardening/` (SSH sin SHA-1 y Traefik sin CBC).
+- Hardening de host en `infra/security/hardening/` (SSH sin SHA-1 y Traefik sin CBC).
 
 Variables nuevas: `READY_PUBLIC`, `READY_CACHE_MS`, `TRUST_PROXY`,
 `REQUIRE_EDGE_AUTH`. Están documentadas en `.env.stage.example`,

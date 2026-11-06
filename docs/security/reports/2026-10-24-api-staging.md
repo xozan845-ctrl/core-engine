@@ -14,8 +14,8 @@
 | H-03 · rate limit compartido | **Corregido en repo** | `trust proxy` configurable (`TRUST_PROXY`, por defecto 1) |
 | M-01 · staging sin gate | **Corregido en repo** | `REQUIRE_EDGE_AUTH=true` en stage: el arranque falla sin `EDGE_BASIC_AUTH`; Bearer inválido ya no salta el Basic |
 | B-01 · cabeceras incompletas | **Corregido en repo** | `Permissions-Policy`, COOP, COEP, CORP y `X-Permitted-Cross-Domain-Policies` |
-| B-02 · SSH SHA-1 | **Pendiente de aplicar en host** | `security/hardening/sshd_config.d/99-core-engine.conf` |
-| B-03 · TLS 1.2 con CBC | **Pendiente de aplicar en host** | `security/hardening/traefik-tls.yml` |
+| B-02 · SSH SHA-1 | **Pendiente de aplicar en host** | `infra/security/hardening/sshd_config.d/99-core-engine.conf` |
+| B-03 · TLS 1.2 con CBC | **Pendiente de aplicar en host** | `infra/security/hardening/traefik-tls.yml` |
 
 Los cambios de repositorio no afectan al staging en ejecución hasta redesplegar
 la imagen `:stage` y actualizar las variables del entorno en Dockploy.
@@ -260,4 +260,4 @@ Criterios de aceptación:
 - `TRUST_PROXY=1` asume **un** proxy (Traefik/Dockploy). Si se añade otro salto
   (CDN, WAF), ajustar el número o validar la cadena `X-Forwarded-For`.
 - Los cambios de SSH/TLS son del host y no se aplican con el despliegue de la
-  imagen; requieren la intervención descrita en `security/hardening/README.md`.
+  imagen; requieren la intervención descrita en `infra/security/hardening/README.md`.

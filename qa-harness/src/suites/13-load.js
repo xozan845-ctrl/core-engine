@@ -1,5 +1,8 @@
 /**
- * Suite 13 — Carga y rendimiento
+ * Suite 13 — Carga y rendimiento (legacy)
+ *
+ * Para capacidad y no-regresión de stage/prod usa `tests/k6/` (smoke, load,
+ * breakpoint, write, soak) y la línea base de `scripts/config/k6-baseline.json`.
  */
 import { ClientoHTTP } from '../utils.js';
 import { Configuracion } from '../config.js';

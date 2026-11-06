@@ -7,7 +7,7 @@ import { endpoints, handleSummary, login, pick } from './lib.js';
  * El ritmo (`K6_RATE`) debe ser el 50-70 % de la capacidad medida con
  * `breakpoint.js`; así el gate detecta degradaciones sin tumbar el entorno.
  *
- *   K6_RATE=20 K6_DURATION=2m BASE_URL=http://127.0.0.1:8080 k6 run tests/k6/load.js
+ *   K6_LOAD_RATE=20 K6_LOAD_DURATION=2m BASE_URL=http://127.0.0.1:8080 k6 run tests/k6/load.js
  */
 export const options = {
   scenarios: {

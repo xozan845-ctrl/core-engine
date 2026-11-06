@@ -3,8 +3,8 @@
  * k6-compare.mjs — línea base y gate de no-regresión de k6.
  *
  * Uso:
- *   node scripts/tools/k6-compare.mjs --summary tests/k6/k6-summary.json --env stage
- *   node scripts/tools/k6-compare.mjs --update --summary ... --env stage --rate 20 --duration 2m
+ *   node tests/k6/tools/k6-compare.mjs --summary tests/k6/k6-summary.json --env stage
+ *   node tests/k6/tools/k6-compare.mjs --update --summary ... --env stage --rate 20 --duration 2m
  *
  * Compara p95, p99, error rate y RPS contra `scripts/config/k6-baseline.json`.
  * `--allow-missing` convierte la ausencia de baseline en un aviso (para el
@@ -12,7 +12,7 @@
  */
 import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { repoRoot } from '../engine/lib/paths.mjs';
+import { repoRoot } from '../../../scripts/engine/lib/paths.mjs';
 
 function parseArgs(argv) {
   const opciones = {
@@ -37,7 +37,7 @@ function parseArgs(argv) {
     else if (arg === '--allow-missing') opciones.allowMissing = true;
     else if (arg === '--help' || arg === '-h') {
       console.log(
-        'Uso: node scripts/tools/k6-compare.mjs [--summary <json>] [--env local|stage|prod] [--scenario load] [--update] [--allow-missing] [--rate <rps>] [--duration <t>]',
+        'Uso: node tests/k6/tools/k6-compare.mjs [--summary <json>] [--env local|stage|prod] [--scenario load] [--update] [--allow-missing] [--rate <rps>] [--duration <t>]',
       );
       process.exit(0);
     } else {

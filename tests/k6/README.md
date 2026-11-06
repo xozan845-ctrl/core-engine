@@ -14,6 +14,8 @@ un mix de lecturas reales.
 | `breakpoint.js` | Rampa 10→800 req/s; aborta a p95>2 s o error>5 % | Manual, para calibrar |
 | `write.js` | Carrito + creación de orden con pool de compradores | Manual; no va en el deploy |
 | `soak.js` | Lectura + % de checkout durante 30-60 min | Manual; no va en el deploy |
+| `health/health-smoke.js` | Smoke legacy de `/health` (5 VUs) | Manual |
+| `health/health-load.js` | Carga legacy de `/health` (máx. 20 VUs) | Manual |
 
 Mix de `load`/`breakpoint`: catálogo público (45 %), tienda pública (30 %),
 `/health` (10 %), pedidos autenticados (10 %) y `/ready` (5 %, opcional).
@@ -91,10 +93,10 @@ export K6_BUYER_EMAIL=<comprador> K6_BUYER_PASSWORD=<clave>
 
 npm run k6:smoke
 K6_LOAD_RATE=300 K6_LOAD_DURATION=2m npm run k6:load
-node scripts/tools/k6-compare.mjs --summary tests/k6/k6-summary.json --env local --scenario load
+node tests/k6/tools/k6-compare.mjs --summary tests/k6/k6-summary.json --env local --scenario load
 
 # Calibrar la línea base (una vez, con el entorno estable)
-node scripts/tools/k6-compare.mjs --update --summary tests/k6/k6-summary.json \
+node tests/k6/tools/k6-compare.mjs --update --summary tests/k6/k6-summary.json \
   --env local --scenario load --rate 300 --duration 2m
 
 # Breakpoint manual (no en prod sin aprobación)
@@ -102,7 +104,7 @@ npm run k6:breakpoint
 
 # Escritura: 20 compradores, 5 órdenes/s durante 30 s (crea datos reales)
 K6_WRITE_PASSWORD='<clave-fixture>' K6_WRITE_RATE=5 K6_WRITE_DURATION=30s npm run k6:write
-node scripts/tools/k6-compare.mjs --update --summary tests/k6/k6-summary.json \
+node tests/k6/tools/k6-compare.mjs --update --summary tests/k6/k6-summary.json \
   --env local --scenario write --rate 5 --duration 30s
 ```
 

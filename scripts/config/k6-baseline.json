@@ -24,7 +24,7 @@
   "stage": {},
   "prod": {},
   "meta": {
-    "note": "Calibra cada entorno con: node scripts/tools/k6-compare.mjs --update --env <env> --scenario load --summary <summary.json> --rate <rate> --duration <duration>. El deploy usa --allow-missing hasta que exista la entrada.",
+    "note": "Calibra cada entorno con: node tests/k6/tools/k6-compare.mjs --update --env <env> --scenario load --summary <summary.json> --rate <rate> --duration <duration>. El deploy usa --allow-missing hasta que exista la entrada.",
     "safetyMargin": "El ritmo de load debe ser 50-70% de la capacidad medida con breakpoint.js."
   }
 }

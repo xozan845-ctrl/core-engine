@@ -104,11 +104,11 @@ jobs:
           DURATION: ${{ github.event.inputs.duration }}
         run: |
           if [ "$UPDATE" = "true" ]; then
-            node scripts/tools/k6-compare.mjs --summary tests/k6/k6-summary.json \
+            node tests/k6/tools/k6-compare.mjs --summary tests/k6/k6-summary.json \
               --env "$ENV" --scenario "$SCENARIO" --update \
               ${RATE:+--rate "$RATE"} ${DURATION:+--duration "$DURATION"}
           else
-            node scripts/tools/k6-compare.mjs --summary tests/k6/k6-summary.json \
+            node tests/k6/tools/k6-compare.mjs --summary tests/k6/k6-summary.json \
               --env "$ENV" --scenario "$SCENARIO" --allow-missing
           fi
 

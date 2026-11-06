@@ -8,8 +8,8 @@ import { check, sleep } from 'k6';
 // - Aborta si el error rate supera el 10 % o la p95 supera 1,5 s.
 //
 // Uso (siempre con aprobación y monitorización del VPS):
-//   k6 run security/k6/health-load.js
-//   BASE_URL=https://api.kbcoleccion.com k6 run security/k6/health-load.js
+//   k6 run tests/k6/health/health-load.js
+//   BASE_URL=https://api.kbcoleccion.com k6 run tests/k6/health/health-load.js
 export const options = {
   scenarios: {
     load: {

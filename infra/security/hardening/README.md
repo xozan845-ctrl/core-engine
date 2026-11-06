@@ -9,7 +9,7 @@ recargar para no quedarte fuera.
 Hallazgo B-02: `ssh-sha1-hmac-algo` en `:22` (OpenSSH 10.2p1 Ubuntu).
 
 ```sh
-sudo install -m 0644 security/hardening/sshd_config.d/99-core-engine.conf \
+sudo install -m 0644 infra/security/hardening/sshd_config.d/99-core-engine.conf \
   /etc/ssh/sshd_config.d/99-core-engine.conf
 sudo sshd -t
 # En otra sesión, comprobar que entras antes de cerrar la actual:
@@ -39,7 +39,7 @@ dinámica (file provider) y recarga Traefik.
 
 ```sh
 # Ejemplo: copiar al directorio dinámico de Traefik y validar
-sudo cp security/hardening/traefik-tls.yml /etc/traefik/dynamic/tls.yml
+sudo cp infra/security/hardening/traefik-tls.yml /etc/traefik/dynamic/tls.yml
 docker restart traefik   # o el mecanismo de reload de Dockploy
 ```
 

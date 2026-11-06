@@ -13,7 +13,7 @@
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import pg from 'pg';
-import { repoRoot } from '../engine/lib/paths.mjs';
+import { repoRoot } from '../../../scripts/engine/lib/paths.mjs';
 
 const env = Object.fromEntries(
   readFileSync(join(repoRoot, '.env'), 'utf8')

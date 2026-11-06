@@ -1,6 +1,6 @@
 # Traefik (Dockploy) · TLS moderno sin suites CBC.
 # Aplicar como configuracion dinamica (file provider) y recargar Traefik.
-# Ver security/hardening/README.md.
+# Ver infra/security/hardening/README.md.
 tls:
   options:
     default:

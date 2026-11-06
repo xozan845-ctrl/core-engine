@@ -14,6 +14,7 @@ rules/
 ├── microservice/       ✅ activa (sin auditar) — estructura de servicios y excepción OLAP (R-MS/R-MI)
 ├── gateway/            ✅ activa (sin auditar) — perímetro, JWT y contrato externo (R-GW)
 ├── data/               ✅ activa (sin auditar) — integridad y seguridad de los datos (R-DI/R-DS)
+├── security/           ✅ activa (nueva) — checks ejecutables de seguridad (R-DS/R-GW/R-DB/R-C)
 ├── db/                 ✅ activa (sin auditar) — Postgres y Supabase (R-DB/R-SB)
 ├── observability/      ✅ activa (sin auditar) — logs/trazas y métricas/alertas (R-OB/R-TM)
 │
@@ -32,8 +33,8 @@ rules/
 
 **Regla de estructura (la más importante de esta carpeta):**
 
-> Un **área** (`architecture/`, `data/`, `db/`, `gateway/`, `microservice/`,
-> `observability/`, `test/`, `git/`, `ci/`, `cd/`) solo contiene `README.md` +
+> Un **área** (`architecture/`, `data/`, `security/`, `db/`, `gateway/`,
+> `microservice/`, `observability/`, `test/`, `git/`, `ci/`, `cd/`) solo contiene `README.md` +
 > archivos de reglas `NN-tema.md`. Todo documento derivado (audit, checklist,
 > log, estado) vive en `_meta/` y jamás dentro de un área.
 
@@ -45,6 +46,7 @@ rules/
 | `microservice/` | ✅ **activa** (sin auditar) | [`microservice/README.md`](./microservice/README.md) | Estructura de servicios (clean architecture, DI, DTOs, fail-fast, shutdown) y excepción OLAP de `market-intelligence` (IDs `R-MS/R-MI`) |
 | `gateway/` | ✅ **activa** (sin auditar) | [`gateway/README.md`](./gateway/README.md) | API Gateway: single entry point, edge offloading, JWT + scrub de headers, TTLs, errores normalizados (ADR-06), versionamiento (IDs `R-GW`) |
 | `data/` | ✅ **activa** (sin auditar) | [`data/README.md`](./data/README.md) | Integridad (centavos, stock atómico, estados, idempotencia, partida doble) y seguridad (secretos, PII, DTOs, rate limiting, `npm audit`) (IDs `R-DI/R-DS`) |
+| `security/` | ✅ **activa** (nueva) | [`security/README.md`](./security/README.md) | Checks ejecutables de seguridad (una suite por vulnerabilidad) y su mapa a las reglas de `data/`, `gateway/`, `db/` y `contract/` (IDs `R-DS/R-GW/R-DB/R-C`) |
 | `db/` | ✅ **activa** (sin auditar) | [`db/README.md`](./db/README.md) | Postgres: schema-per-service, RLS, transacciones, índices, soft delete, migraciones; Supabase: paridad, Auth, secretos (IDs `R-DB/R-SB`) |
 | `observability/` | ✅ **activa** (sin auditar) | [`observability/README.md`](./observability/README.md) | Logs JSON + `x-request-id`; métricas Prometheus, labels RED, dashboards as code, alertas (IDs `R-OB/R-TM`) |
 | `test/` | ✅ **activa** ⚠️ snapshot heredado | [`test/README.md`](./test/README.md) | Reglas de testing: unit, integración, E2E, contrato, robustez, cobertura, QA gates (IDs `R-U/R-I/R-E/R-C/…/R-QA`) |
