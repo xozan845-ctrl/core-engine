@@ -162,7 +162,8 @@ export class OfertasService {
       );
     }
     const tienda = await this.pg.queryOne<{ id: string; empresa_id: string }>(
-      `SELECT id, empresa_id FROM stores.tiendas WHERE id = $1 AND propietario_usuario_id = $2`,
+      `SELECT id, empresa_id FROM stores.tiendas
+        WHERE id = $1 AND (propietario_usuario_id = $2 OR vendedor_id = $2)`,
       [tiendaId, vendedorId],
     );
     if (!tienda) {

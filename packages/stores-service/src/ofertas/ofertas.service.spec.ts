@@ -73,6 +73,22 @@ describe('OfertasService (RN-01 / RN-02)', () => {
       expect(fetchSpy).not.toHaveBeenCalled();
     });
 
+    it('debe aceptar al vendedor asignado a la tienda, no solo al propietario', async () => {
+      const { servicio, pg } = crear();
+      (pg.queryOne as Mock)
+        .mockResolvedValueOnce({ id: 't1', empresa_id: 'e1' }) // tienda
+        .mockResolvedValueOnce(null) // sin oferta duplicada
+        .mockResolvedValueOnce({ id: 'of1' }) // INSERT
+        .mockResolvedValueOnce(filaOferta); // SELECT de la oferta
+      fetchResponde(true, productoExterno);
+
+      await servicio.publicar('v-asignado', 't1', 'p1', 25);
+
+      const sqlTienda = (pg.queryOne as Mock).mock.calls[0][0] as string;
+      expect(sqlTienda).toContain('propietario_usuario_id = $2');
+      expect(sqlTienda).toContain('vendedor_id = $2');
+    });
+
     it('debe lanzar NotFoundError cuando el producto no existe en el catalogo', async () => {
       const { servicio, pg } = crear();
       (pg.queryOne as Mock).mockResolvedValueOnce({ id: 't1', empresa_id: 'e1' }); // tienda
