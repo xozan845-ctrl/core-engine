@@ -45,7 +45,8 @@ export interface Empresa {
   id: string;
   nombre: string;
   slug: string;
-  modalidad_logistica: ModalidadLogistica;
+  modalidad_logistica: ModalidadLogistica | null;
+  vertical_id: string | null;
   tipo_empresa: TipoEmpresa;
   estado: string;
   creado_por: string;
@@ -177,15 +178,20 @@ export class EmpresasService {
   async crear(
     usuarioId: string,
     nombre: string,
-    modalidad: ModalidadLogistica,
+    modalidad: ModalidadLogistica | null | undefined,
     slugSolicitado?: string,
     perfil?: PerfilEmpresaInput,
     tipo: TipoEmpresa = 'comercial',
+    verticalId?: string,
   ): Promise<Empresa> {
     if (!['comercial', 'logistica', 'plataforma'].includes(tipo)) {
       throw new DomainError('TIPO_EMPRESA_INVALIDO', 'El tipo de empresa no es válido.');
     }
     const nombreFinal = nombre.trim();
+    const vertical = verticalId ?? (tipo === 'logistica' ? 'flota' : 'retail');
+    if (!['retail', 'farmacia', 'belleza', 'dental', 'flota'].includes(vertical)) {
+      throw new DomainError('VERTICAL_INVALIDA', 'La vertical seleccionada no existe.');
+    }
     const meta = this.normalizarPerfil({
       ...(perfil ?? {}),
       logo_objeto_id: null,
@@ -206,16 +212,17 @@ export class EmpresasService {
           const slug = await this.elegirSlug(client, nombreFinal, slugExplicito);
           const result = await client.query<EmpresaFila>(
             `INSERT INTO identity.empresas
-               (nombre, slug, modalidad_logistica, creado_por, ruc, razon_social,
+               (nombre, slug, modalidad_logistica, vertical_id, creado_por, ruc, razon_social,
                 nombre_comercial, descripcion, telefono, correo_contacto, sitio_web,
                 direccion, ciudad, departamento, pais, moneda, zona_horaria, sector,
                 representante_legal, horario_atencion, logo_objeto_id, tipo_empresa)
-             VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,NULL,$21)
+             VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,NULL,$22)
              RETURNING *`,
             [
               nombreFinal,
               slug,
               modalidad,
+              vertical,
               usuarioId,
               meta.ruc,
               meta.razon_social,
@@ -240,6 +247,14 @@ export class EmpresasService {
           await client.query(
             `INSERT INTO identity.empresa_miembros (empresa_id, usuario_id, rol) VALUES ($1,$2,'empresario')`,
             [empresa.id, usuarioId],
+          );
+          await client.query(
+            `INSERT INTO identity.empresa_capacidades (empresa_id, capacidad_codigo, config, activo)
+             SELECT $1, capacidad_codigo, config, activo
+             FROM identity.vertical_capacidades
+             WHERE vertical_codigo = $2
+             ON CONFLICT (empresa_id, capacidad_codigo) DO NOTHING`,
+            [empresa.id, vertical],
           );
           await client.query(`UPDATE identity.usuarios SET tenant_id=$1, rol='empresario' WHERE id=$2`, [empresa.id, usuarioId]);
           return await this.conUrls(empresa);

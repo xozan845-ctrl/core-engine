@@ -39,7 +39,8 @@ function clienteInsertable(): { query: Mock } {
       .mockResolvedValueOnce({ rows: [], rowCount: 0 }) // slug libre
       .mockResolvedValueOnce({ rows: [empresa], rowCount: 1 }) // INSERT empresa
       .mockResolvedValueOnce({ rows: [], rowCount: 1 }) // INSERT miembro
-      .mockResolvedValueOnce({ rows: [], rowCount: 1 }), // UPDATE usuario
+      .mockResolvedValueOnce({ rows: [], rowCount: 1 }) // UPDATE usuario
+      .mockResolvedValueOnce({ rows: [], rowCount: 1 }), // capacidades por vertical
   };
 }
 
@@ -62,7 +63,7 @@ describe('EmpresasService', () => {
         expect.stringContaining('INSERT INTO identity.empresas'),
         expect.arrayContaining(['Acme', 'acme', 'hibrida', 'u-1']),
       );
-      expect(client.query).toHaveBeenCalledTimes(4);
+      expect(client.query).toHaveBeenCalledTimes(5);
     });
 
     it('resuelve una colisión de slug automático con sufijo -2', async () => {
@@ -72,7 +73,8 @@ describe('EmpresasService', () => {
           .mockResolvedValueOnce({ rows: [], rowCount: 0 }) // acme-2 libre
           .mockResolvedValueOnce({ rows: [empresa], rowCount: 1 })
           .mockResolvedValueOnce({ rows: [], rowCount: 1 })
-          .mockResolvedValueOnce({ rows: [], rowCount: 1 }),
+          .mockResolvedValueOnce({ rows: [], rowCount: 1 }) // UPDATE usuario
+          .mockResolvedValueOnce({ rows: [], rowCount: 1 }), // capacidades por vertical
       };
       const pg = { transaccion: vi.fn(async (fn: (c: typeof client) => unknown) => fn(client)) };
       const servicio = new EmpresasService(pg as never, {} as never);
@@ -92,6 +94,7 @@ describe('EmpresasService', () => {
         query: vi.fn()
           .mockResolvedValueOnce({ rows: [], rowCount: 0 })
           .mockResolvedValueOnce({ rows: [empresa], rowCount: 1 })
+          .mockResolvedValueOnce({ rows: [], rowCount: 1 })
           .mockResolvedValueOnce({ rows: [], rowCount: 1 })
           .mockResolvedValueOnce({ rows: [], rowCount: 1 }),
       };

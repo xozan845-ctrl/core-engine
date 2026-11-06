@@ -32,5 +32,6 @@
   "20_contenido_tienda.sql": "6028cdbfc3e9ae13875e0ab17ab0a206b0919c493b77de8aa4c0f5a9e882ed62",
   "21_variantes_moviles_tienda.sql": "d264b6a232fc19ed57bfc23627cd5e726337badd86cfb4d3e663d676804daeb9",
   "22_herencia_tema.sql": "6cd68073a81b0793fbc203f75b7206bc2deedc1d104c90696653cdf006dc04db",
-  "23_configuracion_panel_ai.sql": "84ca9acb44adf3fe3fabc9bb0f9a3618b025c9aaab07df1b0aa278414f9177d0"
+  "23_configuracion_panel_ai.sql": "84ca9acb44adf3fe3fabc9bb0f9a3618b025c9aaab07df1b0aa278414f9177d0",
+  "24_multi_vertical.sql": "a891d53db380f09fd31233202413aa098e7f279b64fc26e6d1cdc4f814ae6e9a"
 }

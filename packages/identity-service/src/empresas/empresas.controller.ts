@@ -89,7 +89,10 @@ class CrearEmpresaRequestDto extends OmitType(PerfilEmpresaRequestDto, [
   @IsString()
   @Length(2, 80)
   slug?: string;
-  @ApiProperty({ enum: ['plataforma', 'propia', 'hibrida'] }) @IsIn(['plataforma', 'propia', 'hibrida']) modalidad_logistica: ModalidadLogistica;
+  @ApiProperty({ required: false, nullable: true, enum: ['plataforma', 'propia', 'hibrida'], description: 'Legado; puede omitirse y queda nullable' })
+  @IsOptional() @IsIn(['plataforma', 'propia', 'hibrida']) modalidad_logistica?: ModalidadLogistica | null;
+  @ApiProperty({ required: false, enum: ['retail', 'farmacia', 'belleza', 'dental', 'flota'], default: 'retail' })
+  @IsOptional() @IsIn(['retail', 'farmacia', 'belleza', 'dental', 'flota']) vertical_id?: string;
   @ApiProperty({ required: false, enum: ['comercial', 'logistica', 'plataforma'], default: 'comercial' })
   @IsOptional() @IsIn(['comercial', 'logistica', 'plataforma']) tipo_empresa?: TipoEmpresa;
 }
@@ -118,10 +121,11 @@ class ActualizarTipoEmpresaRequestDto {
 export class EmpresaResponseDto {
   @ApiProperty({ format: 'uuid' }) id: string;
   @ApiProperty() nombre: string;
+  @ApiProperty({ required: false, nullable: true, enum: ['retail', 'farmacia', 'belleza', 'dental', 'flota'] }) vertical_id?: string | null;
   // `required: false` mantiene el cambio como aditivo para el gate R-C-7;
   // el servicio siempre devuelve el slug en runtime.
   @ApiProperty({ required: false, description: 'Slug público actual', example: 'distribuidora-piloto' }) slug: string;
-  @ApiProperty({ enum: ['plataforma', 'propia', 'hibrida'] }) modalidad_logistica: ModalidadLogistica;
+  @ApiProperty({ required: false, nullable: true, enum: ['plataforma', 'propia', 'hibrida'] }) modalidad_logistica: ModalidadLogistica | null;
   @ApiProperty({
     enum: ['comercial', 'logistica', 'plataforma'],
     required: false,
@@ -178,7 +182,7 @@ export class EmpresasController {
   @Post() @Roles(ROLES.EMPRESARIO)
   @ApiOperation({ summary: 'Crear empresa y elegir modalidad logística' })
   @ApiCreatedResponse({ type: EmpresaResponseDto, description: 'Empresa creada con membresía del empresario' })
-  crear(@Body() dto: CrearEmpresaRequestDto, @UsuarioActual() u: UsuarioContexto) { return this.empresas.crear(u.user_id, dto.nombre, dto.modalidad_logistica, dto.slug, dto, dto.tipo_empresa); }
+  crear(@Body() dto: CrearEmpresaRequestDto, @UsuarioActual() u: UsuarioContexto) { return this.empresas.crear(u.user_id, dto.nombre, dto.modalidad_logistica, dto.slug, dto, dto.tipo_empresa, dto.vertical_id); }
   @Get(':id') @Roles(ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.EMPRESARIO, ROLES.VENDEDOR)
   @ApiOperation({ summary: 'Obtener una empresa por UUID o slug (solo miembros o administradores)' })
   @ApiParam({
