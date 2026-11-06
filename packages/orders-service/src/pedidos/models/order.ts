@@ -1,4 +1,4 @@
-import { ItemOrden, Money } from '@core/shared';
+import { ItemOrden, Money, TipoOrden } from '@core/shared';
 
 /**
  * Order: estructura de datos de la orden (modelo de dominio). El estado NO se
@@ -13,6 +13,7 @@ export interface OrderEstadoDerrivado {
   motivo?: string;
   creado_en: string;
   actualizado_en: string;
+  tipo_orden?: TipoOrden;
 }
 
 interface DatosDeEvento {
@@ -25,6 +26,7 @@ interface DatosDeEvento {
   motivo?: string;
   creado_en?: string;
   ocurrido_en?: string;
+  tipo_orden?: TipoOrden;
 }
 
 interface EventoReplay {
@@ -50,6 +52,7 @@ export function reconstruirDesdeEventos(
     estado: inicial.estado ?? 'creada',
     creado_en: inicial.creado_en ?? primero.creado_en,
     actualizado_en: primero.creado_en,
+    tipo_orden: inicial.tipo_orden ?? 'compra',
   };
 
   for (const evento of eventos.slice(1) as EventoReplay[]) {

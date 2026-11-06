@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { PgService, ItemOrden } from '@core/shared';
+import { PgService, ItemOrden, TipoOrden } from '@core/shared';
 
 /**
  * OrderView: proyeccion de lectura del lado CQRS (Tabla 8).
@@ -18,6 +18,8 @@ export interface OrderView {
   direccion_envio: unknown | null;
   creado_en: string;
   actualizado_en: string;
+  tipo_orden?: TipoOrden;
+  fulfillment_config?: Record<string, unknown>;
   pagada_en: string | null;
   enviada_en: string | null;
   entregada_en: string | null;
@@ -43,6 +45,8 @@ interface OrderViewRow {
   entregada_en: string | null;
   cancelada_en: string | null;
   devuelta_en: string | null;
+  tipo_orden?: TipoOrden;
+  fulfillment_config?: Record<string, unknown>;
 }
 
 export interface ComisionVista {
@@ -73,6 +77,7 @@ export class OrderViewRepository {
     const fila = await this.pg.queryOne<OrderViewRow>(
       `SELECT id, vendedor_id, comprador_id, tienda_id, estado, total_cents, comision_cents, moneda,
               items_json, direccion_envio, creado_en, actualizado_en,
+              tipo_orden, fulfillment_config,
               pagada_en, enviada_en, entregada_en, cancelada_en, devuelta_en
        FROM orders.orden_vista WHERE id = $1`,
       [id],
@@ -87,6 +92,7 @@ export class OrderViewRepository {
     const filas = await this.pg.query<OrderViewRow>(
       `SELECT id, vendedor_id, comprador_id, tienda_id, estado, total_cents, comision_cents, moneda,
               items_json, direccion_envio, creado_en, actualizado_en,
+              tipo_orden, fulfillment_config,
               pagada_en, enviada_en, entregada_en, cancelada_en, devuelta_en
        FROM orders.orden_vista WHERE comprador_id = $1${extra}
        ORDER BY creado_en DESC LIMIT 100`,
@@ -102,6 +108,7 @@ export class OrderViewRepository {
     const filas = await this.pg.query<OrderViewRow>(
       `SELECT id, vendedor_id, comprador_id, tienda_id, estado, total_cents, comision_cents, moneda,
               items_json, direccion_envio, creado_en, actualizado_en,
+              tipo_orden, fulfillment_config,
               pagada_en, enviada_en, entregada_en, cancelada_en, devuelta_en
        FROM orders.orden_vista
        WHERE EXISTS (SELECT 1 FROM jsonb_array_elements(items_json) item
@@ -136,6 +143,7 @@ export class OrderViewRepository {
     const filas = await this.pg.query<OrderViewRow>(
       `SELECT id, vendedor_id, comprador_id, tienda_id, estado, total_cents, comision_cents, moneda,
               items_json, direccion_envio, creado_en, actualizado_en,
+              tipo_orden, fulfillment_config,
               pagada_en, enviada_en, entregada_en, cancelada_en, devuelta_en
        FROM orders.orden_vista
        WHERE EXISTS (SELECT 1 FROM jsonb_array_elements(items_json) item
@@ -165,6 +173,7 @@ export class OrderViewRepository {
     const filas = await this.pg.query<OrderViewRow>(
       `SELECT id, vendedor_id, comprador_id, tienda_id, estado, total_cents, comision_cents, moneda,
               items_json, direccion_envio, creado_en, actualizado_en,
+              tipo_orden, fulfillment_config,
               pagada_en, enviada_en, entregada_en, cancelada_en, devuelta_en
        FROM orders.orden_vista
        WHERE EXISTS (SELECT 1 FROM jsonb_array_elements(items_json) item
@@ -186,6 +195,7 @@ export class OrderViewRepository {
     const filas = await this.pg.query<OrderViewRow>(
       `SELECT id, vendedor_id, comprador_id, tienda_id, estado, total_cents, comision_cents, moneda,
               items_json, direccion_envio, creado_en, actualizado_en,
+              tipo_orden, fulfillment_config,
               pagada_en, enviada_en, entregada_en, cancelada_en, devuelta_en
        FROM orders.orden_vista${where} ORDER BY creado_en DESC LIMIT $${params.length}`,
       params,
@@ -252,6 +262,8 @@ export class OrderViewRepository {
       direccion_envio: fila.direccion_envio,
       creado_en: fila.creado_en,
       actualizado_en: fila.actualizado_en,
+      tipo_orden: fila.tipo_orden ?? 'compra',
+      fulfillment_config: fila.fulfillment_config ?? {},
       pagada_en: fila.pagada_en,
       enviada_en: fila.enviada_en,
       entregada_en: fila.entregada_en,

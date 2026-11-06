@@ -3,13 +3,16 @@ import { Type } from 'class-transformer';
 import {
   IsArray,
   IsBoolean,
+  IsIn,
   IsInt,
+  IsObject,
   IsOptional,
   IsString,
   Max,
   Min,
   ValidateNested,
 } from 'class-validator';
+import { FULFILLMENTS, Fulfillment, TipoOrden, TIPOS_ORDEN } from '@core/shared';
 
 export class ItemOrdenRequestDto {
   @ApiProperty({ description: 'Id de la oferta (vendedor-producto)' })
@@ -21,6 +24,16 @@ export class ItemOrdenRequestDto {
   @Min(1)
   @Max(99)
   cantidad: number;
+
+  @ApiProperty({ required: false, enum: FULFILLMENTS, default: 'none' })
+  @IsOptional()
+  @IsIn(FULFILLMENTS)
+  fulfillment?: Fulfillment;
+
+  @ApiProperty({ required: false, type: Object, additionalProperties: true })
+  @IsOptional()
+  @IsObject()
+  fulfillment_config?: Record<string, unknown>;
 }
 
 /**
@@ -31,6 +44,11 @@ export class ItemOrdenRequestDto {
  * carrito se vacia en la misma transaccion (RN-05).
  */
 export class CreateOrderCommand {
+  @ApiProperty({ required: false, enum: TIPOS_ORDEN, default: 'compra' })
+  @IsOptional()
+  @IsIn(TIPOS_ORDEN)
+  tipo_orden?: TipoOrden;
+
   @ApiProperty({ description: 'Artículos de la orden', required: false, type: [ItemOrdenRequestDto] })
   @IsOptional()
   @IsArray()

@@ -37,6 +37,8 @@ export interface EventoBus<T = unknown> {
   data: T;
 }
 
+import type { Fulfillment, TipoOrden } from '../order-state';
+
 export interface ItemOrden {
   oferta_id: string;
   sku: string;
@@ -47,6 +49,10 @@ export interface ItemOrden {
   tienda_id: string;
   empresa_id: string;
   participacion_porcentaje: number;
+  item_type?: 'producto' | 'servicio' | 'alquiler';
+  item_id?: string;
+  fulfillment?: Fulfillment;
+  fulfillment_config?: Record<string, unknown>;
 }
 
 export interface OrdenData {
@@ -55,6 +61,7 @@ export interface OrdenData {
   items: ItemOrden[];
   total_cents: number;
   estado: 'creada';
+  tipo_orden?: TipoOrden;
 }
 
 export interface StockReservadoData {
