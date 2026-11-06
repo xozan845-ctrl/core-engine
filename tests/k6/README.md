@@ -13,6 +13,7 @@ un mix de lecturas reales.
 | `load.js` | Ritmo sostenido (`K6_LOAD_RATE`) | **Gate de deploy** |
 | `breakpoint.js` | Rampa 10→800 req/s; aborta a p95>2 s o error>5 % | Manual, para calibrar |
 | `write.js` | Carrito + creación de orden con pool de compradores | Manual; no va en el deploy |
+| `soak.js` | Lectura + % de checkout durante 30-60 min | Manual; no va en el deploy |
 
 Mix de `load`/`breakpoint`: catálogo público (45 %), tienda pública (30 %),
 `/health` (10 %), pedidos autenticados (10 %) y `/ready` (5 %, opcional).
@@ -70,6 +71,8 @@ seguro de escritura es **12-17 órdenes/s**. La baseline del gate se deja en
 | `K6_BREAK_*` | Rampa de `breakpoint.js` |
 | `K6_WRITE_RATE` / `K6_WRITE_DURATION` | Ritmo/duración de `write.js` |
 | `K6_WRITE_BUYERS` / `K6_WRITE_PASSWORD` | Pool de compradores y su clave |
+| `K6_SOAK_RATE` / `K6_SOAK_DURATION` | Ritmo total y duración del soak |
+| `K6_SOAK_WRITE_PCT` / `K6_SOAK_WRITE_BUYERS` | % de checkout y compradores del soak |
 | `K6_SUMMARY` | Ruta del resumen JSON |
 
 > No uses `K6_DURATION`, `K6_VUS`, `K6_ITERATIONS` ni `K6_STAGES`: son
@@ -107,6 +110,25 @@ node scripts/tools/k6-compare.mjs --update --summary tests/k6/k6-summary.json \
 > Úsalo solo contra el tenant de prueba. No está en el gate de deploy.
 > Mantén `K6_WRITE_BUYERS >= K6_WRITE_MAX_VUS` para que cada VU tenga su propio
 > carrito y no haya carreras.
+
+### Soak
+
+```bash
+# 30 min, 50 req/s, 2 % checkout (~1 orden/s)
+K6_BUYER_EMAIL=<comprador> K6_BUYER_PASSWORD=<clave> \
+K6_WRITE_PASSWORD=<clave-fixture> K6_STORE_SLUG=<slug> \
+K6_READY=true \
+K6_SOAK_RATE=50 K6_SOAK_DURATION=30m K6_SOAK_WRITE_PCT=2 \
+npm run k6:soak
+
+# Read-only, 60 min
+K6_SOAK_RATE=30 K6_SOAK_DURATION=60m K6_SOAK_WRITE_PCT=0 npm run k6:soak
+```
+
+El soak busca **deriva de latencia y errores a lo largo del tiempo**, no el
+codo. Compara el p95/p99 del final contra el inicio del summary y vigila la
+memoria/CPU con `docker stats` durante la corrida. `K6_SOAK_WRITE_PCT > 0`
+crea órdenes reales; usa el tenant de prueba. No está en el gate de deploy.
 
 Los scripts de npm usan `grafana/k6` con `--network host` para alcanzar el
 gateway en loopback. En CI se usa la misma imagen.
