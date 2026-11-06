@@ -11,6 +11,8 @@ packages/*/reports/
 !.env.example
 !.env*.example
 *.log
+# Salidas de k6 (se regeneran en cada corrida; la línea base vive en scripts/config)
+tests/k6/k6-*.json
 .DS_Store
 Thumbs.db
 packages/*/dist/
