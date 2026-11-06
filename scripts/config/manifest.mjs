@@ -32,4 +32,8 @@ export const requiredSuites = [
     id: 'observability-telemetry',
     file: 'rules/observability/telemetry.test.mjs',
   },
+  {
+    id: 'security-secrets-hygiene',
+    file: 'rules/security/secrets-hygiene.test.mjs',
+  },
 ];
