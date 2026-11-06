@@ -1,0 +1,749 @@
+{
+  "openapi": "3.0.0",
+  "info": {
+    "title": "Core Engine · scheduling-service · API pública",
+    "description": "Contrato público (/api/v1/**) de scheduling-service. No contiene rutas /internal/**.",
+    "version": "v1",
+    "contact": {}
+  },
+  "x-servicio": "scheduling-service",
+  "x-superficie": "publica",
+  "tags": [],
+  "paths": {
+    "/api/v1/scheduling/recursos": {
+      "get": {
+        "operationId": "SchedulingController_recursos",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/RecursoResponseDto"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Listar recursos reservables de la empresa activa",
+        "tags": [
+          "Scheduling · Agenda"
+        ]
+      },
+      "post": {
+        "operationId": "SchedulingController_crearRecurso",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CrearRecursoRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RecursoResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Crear un recurso reservable",
+        "tags": [
+          "Scheduling · Agenda"
+        ]
+      }
+    },
+    "/api/v1/scheduling/recursos/{recursoId}/disponibilidad": {
+      "get": {
+        "operationId": "SchedulingController_disponibilidad",
+        "parameters": [
+          {
+            "name": "recursoId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/DisponibilidadResponseDto"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Listar disponibilidad semanal de un recurso",
+        "tags": [
+          "Scheduling · Agenda"
+        ]
+      }
+    },
+    "/api/v1/scheduling/disponibilidad": {
+      "post": {
+        "operationId": "SchedulingController_crearDisponibilidad",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CrearDisponibilidadRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DisponibilidadResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Configurar un intervalo semanal de disponibilidad",
+        "tags": [
+          "Scheduling · Agenda"
+        ]
+      }
+    },
+    "/api/v1/scheduling/bloqueos": {
+      "post": {
+        "operationId": "SchedulingController_crearBloqueo",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CrearBloqueoRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BloqueoResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Bloquear un recurso en un intervalo",
+        "tags": [
+          "Scheduling · Agenda"
+        ]
+      }
+    },
+    "/api/v1/scheduling/citas": {
+      "get": {
+        "operationId": "SchedulingController_citas",
+        "parameters": [
+          {
+            "name": "desde",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "hasta",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/CitaResponseDto"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Listar citas de la empresa activa",
+        "tags": [
+          "Scheduling · Agenda"
+        ]
+      },
+      "post": {
+        "operationId": "SchedulingController_crearCita",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CrearCitaRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CitaResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Crear una cita con validacion de disponibilidad",
+        "tags": [
+          "Scheduling · Agenda"
+        ]
+      }
+    },
+    "/api/v1/scheduling/citas/{citaId}/cancelar": {
+      "patch": {
+        "operationId": "SchedulingController_cancelar",
+        "parameters": [
+          {
+            "name": "citaId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CitaResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Cancelar una cita activa",
+        "tags": [
+          "Scheduling · Agenda"
+        ]
+      }
+    },
+    "/api/v1/scheduling/recordatorios": {
+      "get": {
+        "operationId": "SchedulingController_recordatorios",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/RecordatorioResponseDto"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Listar recordatorios de citas",
+        "tags": [
+          "Scheduling · Agenda"
+        ]
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "bearer": {
+        "scheme": "bearer",
+        "bearerFormat": "JWT",
+        "type": "http"
+      }
+    },
+    "schemas": {
+      "BloqueoResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "empresa_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "recurso_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "inicia_en": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "termina_en": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "motivo": {
+            "type": "string"
+          },
+          "creado_en": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "empresa_id",
+          "recurso_id",
+          "inicia_en",
+          "termina_en",
+          "motivo",
+          "creado_en"
+        ]
+      },
+      "CitaResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "empresa_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "recurso_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "cliente_id": {
+            "type": "object",
+            "nullable": true,
+            "format": "uuid"
+          },
+          "order_id": {
+            "type": "object",
+            "nullable": true,
+            "format": "uuid"
+          },
+          "item_id": {
+            "type": "object",
+            "nullable": true,
+            "format": "uuid"
+          },
+          "estado": {
+            "type": "string",
+            "enum": [
+              "reservada",
+              "confirmada",
+              "en_atencion",
+              "completada",
+              "cancelada",
+              "no_asistio"
+            ]
+          },
+          "inicia_en": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "termina_en": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "notas": {
+            "type": "string"
+          },
+          "metadata": {
+            "type": "object"
+          },
+          "creado_en": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "actualizado_en": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "empresa_id",
+          "recurso_id",
+          "estado",
+          "inicia_en",
+          "termina_en",
+          "notas",
+          "metadata",
+          "creado_en",
+          "actualizado_en"
+        ]
+      },
+      "CrearBloqueoRequestDto": {
+        "type": "object",
+        "properties": {
+          "recurso_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "inicia_en": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "termina_en": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "motivo": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "recurso_id",
+          "inicia_en",
+          "termina_en"
+        ]
+      },
+      "CrearCitaRequestDto": {
+        "type": "object",
+        "properties": {
+          "recurso_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "cliente_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "order_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "item_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "inicia_en": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "termina_en": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "notas": {
+            "type": "string"
+          },
+          "metadata": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "recurso_id",
+          "inicia_en",
+          "termina_en"
+        ]
+      },
+      "CrearDisponibilidadRequestDto": {
+        "type": "object",
+        "properties": {
+          "recurso_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "dia_semana": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 6,
+            "description": "0 domingo, 6 sábado"
+          },
+          "inicia_hora": {
+            "type": "string",
+            "example": "08:00"
+          },
+          "termina_hora": {
+            "type": "string",
+            "example": "17:00"
+          },
+          "zona_horaria": {
+            "type": "string",
+            "example": "America/Managua"
+          },
+          "vigente_desde": {
+            "type": "string",
+            "format": "date"
+          },
+          "vigente_hasta": {
+            "type": "string",
+            "format": "date"
+          }
+        },
+        "required": [
+          "recurso_id",
+          "dia_semana",
+          "inicia_hora",
+          "termina_hora"
+        ]
+      },
+      "CrearRecursoRequestDto": {
+        "type": "object",
+        "properties": {
+          "tipo": {
+            "type": "string",
+            "enum": [
+              "profesional",
+              "sala",
+              "sillon",
+              "vehiculo",
+              "otro"
+            ]
+          },
+          "nombre": {
+            "type": "string",
+            "example": "Dra. Ana López"
+          },
+          "atributos": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "tipo",
+          "nombre"
+        ]
+      },
+      "DisponibilidadResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "empresa_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "recurso_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "dia_semana": {
+            "type": "number"
+          },
+          "inicia_hora": {
+            "type": "string"
+          },
+          "termina_hora": {
+            "type": "string"
+          },
+          "zona_horaria": {
+            "type": "string"
+          },
+          "vigente_desde": {
+            "type": "string",
+            "format": "date"
+          },
+          "vigente_hasta": {
+            "type": "object",
+            "nullable": true,
+            "format": "date"
+          }
+        },
+        "required": [
+          "id",
+          "empresa_id",
+          "recurso_id",
+          "dia_semana",
+          "inicia_hora",
+          "termina_hora",
+          "zona_horaria",
+          "vigente_desde"
+        ]
+      },
+      "RecordatorioResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "cita_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "tipo": {
+            "type": "string",
+            "enum": [
+              "24h",
+              "2h"
+            ]
+          },
+          "programado_en": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "estado": {
+            "type": "string",
+            "enum": [
+              "pendiente",
+              "enviado",
+              "cancelado"
+            ]
+          },
+          "enviado_en": {
+            "type": "object",
+            "nullable": true,
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "cita_id",
+          "tipo",
+          "programado_en",
+          "estado"
+        ]
+      },
+      "RecursoResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "empresa_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "tipo": {
+            "type": "string",
+            "enum": [
+              "profesional",
+              "sala",
+              "sillon",
+              "vehiculo",
+              "otro"
+            ]
+          },
+          "nombre": {
+            "type": "string"
+          },
+          "estado": {
+            "type": "string",
+            "enum": [
+              "activo",
+              "inactivo"
+            ]
+          },
+          "atributos": {
+            "type": "object"
+          },
+          "creado_en": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "actualizado_en": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "empresa_id",
+          "tipo",
+          "nombre",
+          "estado",
+          "atributos",
+          "creado_en",
+          "actualizado_en"
+        ]
+      }
+    }
+  }
+}

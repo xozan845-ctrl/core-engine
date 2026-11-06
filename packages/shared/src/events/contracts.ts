@@ -23,6 +23,9 @@ export const EVENTOS = {
   STORAGE_OBJETO_SUBIDO: 'storage.objeto.subido',
   /** Almacenamiento de objetos: el objeto se elimino (baja logica + borrado real). */
   STORAGE_OBJETO_ELIMINADO: 'storage.objeto.eliminado',
+  APPOINTMENT_CREATED: 'appointment.created',
+  APPOINTMENT_CANCELLED: 'appointment.cancelled',
+  APPOINTMENT_REMINDER_DUE: 'appointment.reminder.due',
 } as const;
 
 export type NombreEvento = (typeof EVENTOS)[keyof typeof EVENTOS];
@@ -62,6 +65,34 @@ export interface OrdenData {
   total_cents: number;
   estado: 'creada';
   tipo_orden?: TipoOrden;
+  fulfillment_config?: Record<string, unknown>;
+}
+
+export interface AppointmentCreatedData {
+  cita_id: string;
+  empresa_id: string;
+  recurso_id: string;
+  cliente_id?: string;
+  order_id?: string;
+  item_id?: string;
+  inicia_en: string;
+  termina_en: string;
+  estado: 'reservada' | 'confirmada';
+}
+
+export interface AppointmentCancelledData {
+  cita_id: string;
+  empresa_id: string;
+  order_id?: string;
+  motivo?: string;
+}
+
+export interface AppointmentReminderDueData {
+  recordatorio_id: string;
+  cita_id: string;
+  empresa_id: string;
+  tipo: '24h' | '2h';
+  programado_en: string;
 }
 
 export interface StockReservadoData {
@@ -296,5 +327,17 @@ export const CONTRATOS: Record<NombreEvento, { editor: string; consumidores: str
   [EVENTOS.STORAGE_OBJETO_ELIMINADO]: {
     editor: 'Almacenamiento',
     consumidores: ['Auditoria'],
+  },
+  [EVENTOS.APPOINTMENT_CREATED]: {
+    editor: 'Scheduling',
+    consumidores: ['Notificaciones'],
+  },
+  [EVENTOS.APPOINTMENT_CANCELLED]: {
+    editor: 'Scheduling',
+    consumidores: ['Notificaciones'],
+  },
+  [EVENTOS.APPOINTMENT_REMINDER_DUE]: {
+    editor: 'Scheduling',
+    consumidores: ['Notificaciones'],
   },
 };

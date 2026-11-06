@@ -406,3 +406,76 @@ CREATE POLICY movimientos_empresa ON catalog.movimientos_inventario
   FOR ALL TO authenticated
   USING (auth.rol() = 'empresario' AND empresa_id::text = (auth.jwt() ->> 'tenant_id'))
   WITH CHECK (auth.rol() = 'empresario' AND empresa_id::text = (auth.jwt() ->> 'tenant_id'));
+
+-- ── scheduling (plataforma multi-vertical, fase 4) ─────────────────────
+ALTER TABLE scheduling.recursos ENABLE ROW LEVEL SECURITY;
+CREATE POLICY scheduling_recursos_admin ON scheduling.recursos
+  FOR ALL TO authenticated
+  USING (auth.rol() IN ('super_admin', 'admin'))
+  WITH CHECK (auth.rol() IN ('super_admin', 'admin'));
+CREATE POLICY scheduling_recursos_empresa ON scheduling.recursos
+  FOR ALL TO authenticated
+  USING (auth.rol() IN ('empresario', 'coordinador', 'supervisor')
+        AND empresa_id::text = (auth.jwt() ->> 'tenant_id'))
+  WITH CHECK (auth.rol() IN ('empresario', 'coordinador', 'supervisor')
+             AND empresa_id::text = (auth.jwt() ->> 'tenant_id'));
+
+ALTER TABLE scheduling.disponibilidad ENABLE ROW LEVEL SECURITY;
+CREATE POLICY scheduling_disponibilidad_admin ON scheduling.disponibilidad
+  FOR ALL TO authenticated
+  USING (auth.rol() IN ('super_admin', 'admin'))
+  WITH CHECK (auth.rol() IN ('super_admin', 'admin'));
+CREATE POLICY scheduling_disponibilidad_empresa ON scheduling.disponibilidad
+  FOR ALL TO authenticated
+  USING (auth.rol() IN ('empresario', 'coordinador', 'supervisor')
+        AND empresa_id::text = (auth.jwt() ->> 'tenant_id'))
+  WITH CHECK (auth.rol() IN ('empresario', 'coordinador', 'supervisor')
+             AND empresa_id::text = (auth.jwt() ->> 'tenant_id'));
+
+ALTER TABLE scheduling.bloqueos ENABLE ROW LEVEL SECURITY;
+CREATE POLICY scheduling_bloqueos_admin ON scheduling.bloqueos
+  FOR ALL TO authenticated
+  USING (auth.rol() IN ('super_admin', 'admin'))
+  WITH CHECK (auth.rol() IN ('super_admin', 'admin'));
+CREATE POLICY scheduling_bloqueos_empresa ON scheduling.bloqueos
+  FOR ALL TO authenticated
+  USING (auth.rol() IN ('empresario', 'coordinador', 'supervisor')
+        AND empresa_id::text = (auth.jwt() ->> 'tenant_id'))
+  WITH CHECK (auth.rol() IN ('empresario', 'coordinador', 'supervisor')
+             AND empresa_id::text = (auth.jwt() ->> 'tenant_id'));
+
+ALTER TABLE scheduling.citas ENABLE ROW LEVEL SECURITY;
+CREATE POLICY scheduling_citas_admin ON scheduling.citas
+  FOR ALL TO authenticated
+  USING (auth.rol() IN ('super_admin', 'admin'))
+  WITH CHECK (auth.rol() IN ('super_admin', 'admin'));
+CREATE POLICY scheduling_citas_empresa ON scheduling.citas
+  FOR ALL TO authenticated
+  USING (auth.rol() IN ('empresario', 'coordinador', 'supervisor', 'operativo')
+        AND empresa_id::text = (auth.jwt() ->> 'tenant_id'))
+  WITH CHECK (auth.rol() IN ('empresario', 'coordinador', 'supervisor', 'operativo')
+             AND empresa_id::text = (auth.jwt() ->> 'tenant_id'));
+
+ALTER TABLE scheduling.recordatorios ENABLE ROW LEVEL SECURITY;
+CREATE POLICY scheduling_recordatorios_admin ON scheduling.recordatorios
+  FOR ALL TO authenticated
+  USING (auth.rol() IN ('super_admin', 'admin'))
+  WITH CHECK (auth.rol() IN ('super_admin', 'admin'));
+CREATE POLICY scheduling_recordatorios_empresa ON scheduling.recordatorios
+  FOR ALL TO authenticated
+  USING (auth.rol() IN ('empresario', 'coordinador', 'supervisor', 'operativo')
+        AND empresa_id::text = (auth.jwt() ->> 'tenant_id'))
+  WITH CHECK (auth.rol() IN ('empresario', 'coordinador', 'supervisor', 'operativo')
+             AND empresa_id::text = (auth.jwt() ->> 'tenant_id'));
+
+ALTER TABLE scheduling.eventos_procesados ENABLE ROW LEVEL SECURITY;
+CREATE POLICY scheduling_eventos_procesados_admin ON scheduling.eventos_procesados
+  FOR ALL TO authenticated
+  USING (auth.rol() IN ('super_admin', 'admin'))
+  WITH CHECK (auth.rol() IN ('super_admin', 'admin'));
+
+ALTER TABLE scheduling.outbox ENABLE ROW LEVEL SECURITY;
+CREATE POLICY scheduling_outbox_admin ON scheduling.outbox
+  FOR ALL TO authenticated
+  USING (auth.rol() IN ('super_admin', 'admin'))
+  WITH CHECK (auth.rol() IN ('super_admin', 'admin'));

@@ -59,6 +59,12 @@
     "functions": 56.07,
     "statements": 52.65
   },
+  "scheduling-service": {
+    "lines": 94.59,
+    "branches": 77.77,
+    "functions": 88.37,
+    "statements": 90.4
+  },
   "storage-service": {
     "lines": 100,
     "branches": 87.5,

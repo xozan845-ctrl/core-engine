@@ -36,5 +36,6 @@
   "24_multi_vertical.sql": "a891d53db380f09fd31233202413aa098e7f279b64fc26e6d1cdc4f814ae6e9a",
   "25_catalog_items.sql": "e92a32f3b89b41a7c8cec661996dee12b8ed5d8d38e296deed3b54158918e223",
     "26_stores_items.sql": "fe6e30bcf84ddef4f8e011932f50972dc72f9747ad0fc76209185c01b1129079",
-    "27_orders_types.sql": "1d57099118a0b2d5382eecb0f2c92ac1984b40110f015263bee16bec922feede"
+    "27_orders_types.sql": "1d57099118a0b2d5382eecb0f2c92ac1984b40110f015263bee16bec922feede",
+    "28_scheduling.sql": "1ee4a42a8de5dd81c7abf3d288e29ed12f78c4194588c8582ad6886b25ec0365"
 }

@@ -15,7 +15,7 @@ export interface ServicioSalud {
 
 /**
  * Servicios que SI se despliegan en produccion (`docker-compose.yml`) — incluido
- * `storage` (3010, ADR-24). Fuera quedan `commissions` (3006) y `market-intelligence`
+ * `storage` (3010, ADR-24) y `scheduling` (3011). Fuera quedan `commissions` (3006) y `market-intelligence`
  * (3009): no estan en el compose de produccion (ADR-17/ADR-22/ADR-37), asi que no
  * cuentan para readiness.
  */
@@ -25,6 +25,7 @@ export const SERVICIOS_PRODUCCION: ServicioSalud[] = [
   { nombre: 'stores', puerto: 3003 },
   { nombre: 'orders', puerto: 3004 },
   { nombre: 'logistics', puerto: 3005 },
+  { nombre: 'scheduling', puerto: 3011 },
   { nombre: 'finance', puerto: 3007 },
   { nombre: 'field', puerto: 3008 },
   { nombre: 'storage', puerto: 3010 },
