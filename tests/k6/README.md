@@ -39,6 +39,22 @@ es **300 req/s (60 %)**, con `p95 < 800 ms`, `p99 < 1500 ms` y error < 1 %.
 Stage y producción deben calibrarse en su propio hardware/VPS; no copies estos
 números sin medir.
 
+### Escritura (carrito + checkout)
+
+Cada orden son 2 requests (`/carrito/items` + `/orders`); el `http_reqs` incluye
+también los registros de compradores del setup.
+
+| Objetivo | http_reqs | p95 | p99 | Errores |
+| --- | --- | --- | --- | --- |
+| 5 órdenes/s (baseline) | 10.2 req/s | 78 ms | 87 ms | 0 % |
+| 10 órdenes/s | 19.1 req/s | 75 ms | 83 ms | 0 % |
+| 20 órdenes/s | 33.6 req/s | 82 ms | 131 ms | 0 % |
+| 40 órdenes/s | 55.9 req/s | 114 ms | 131 ms | 0.24 % |
+
+El checkout se aplana alrededor de **20-28 órdenes/s** en este host; el margen
+seguro de escritura es **12-17 órdenes/s**. La baseline del gate se deja en
+5 órdenes/s porque el escenario crea datos reales y no se ejecuta en el deploy.
+
 ## Variables
 
 | Variable | Uso |
