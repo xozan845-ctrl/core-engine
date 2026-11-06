@@ -106,12 +106,24 @@ describe('OfertasController (api/v1, RN-01, R-U-10/11)', () => {
     tiendas.resolver.mockResolvedValue({ tienda });
     ofertas.deTienda.mockResolvedValue([oferta]);
 
-    await expect(controller.tiendaPublica('mi-tienda', respuesta() as never)).resolves.toEqual({
-      tienda,
-      ofertas: [oferta],
-    });
+    const resultado = await controller.tiendaPublica('mi-tienda', respuesta() as never, null);
+    expect(resultado.tienda).toMatchObject({ id: 't-1', nombre: 'Mi tienda', slug: 'mi-tienda' });
+    expect(resultado.tienda).not.toHaveProperty('vendedor_id');
+    expect(resultado.ofertas[0]).toMatchObject({ id: 'of-1', producto_id: 'p-1' });
+    expect(resultado.ofertas[0]).not.toHaveProperty('margen');
     expect(tiendas.resolver).toHaveBeenCalledWith('mi-tienda');
     expect(ofertas.deTienda).toHaveBeenCalledWith('t-1');
+  });
+
+  it('debe devolver el DTO completo al vendedor dueño de la tienda', async () => {
+    const { tiendas, ofertas, controller } = fabricar();
+    tiendas.resolver.mockResolvedValue({ tienda });
+    ofertas.deTienda.mockResolvedValue([oferta]);
+
+    const resultado = await controller.tiendaPublica('mi-tienda', respuesta() as never, vendedor as never);
+
+    expect(resultado.tienda).toEqual(tienda);
+    expect(resultado.ofertas[0]).toEqual(oferta);
   });
 
   it('debe responder 301 cuando el slug público es anterior', async () => {
@@ -123,7 +135,7 @@ describe('OfertasController (api/v1, RN-01, R-U-10/11)', () => {
     ofertas.deTienda.mockResolvedValue([]);
     const res = respuesta();
 
-    await controller.tiendaPublica('mi-tienda-vieja', res as never);
+    await controller.tiendaPublica('mi-tienda-vieja', res as never, null);
 
     expect(res.status).toHaveBeenCalledWith(301);
     expect(res.setHeader).toHaveBeenCalledWith('Location', '/api/v1/tiendas/mi-tienda-nueva');
@@ -132,7 +144,7 @@ describe('OfertasController (api/v1, RN-01, R-U-10/11)', () => {
   it('debe lanzar NotFoundError cuando la tienda publica no existe', async () => {
     const { tiendas, controller } = fabricar();
     tiendas.resolver.mockResolvedValue(null);
-    await expect(controller.tiendaPublica('t-x', respuesta() as never)).rejects.toBeInstanceOf(
+    await expect(controller.tiendaPublica('t-x', respuesta() as never, null)).rejects.toBeInstanceOf(
       NotFoundError,
     );
   });

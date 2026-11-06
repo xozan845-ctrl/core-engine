@@ -92,7 +92,12 @@ export class TiendaResponseDto {
   id: string;
 
   @ApiProperty({ description: 'Empresa propietaria', format: 'uuid' }) empresa_id: string;
-  @ApiProperty({ description: 'Usuario propietario operativo', format: 'uuid' }) propietario_usuario_id: string;
+  @ApiProperty({
+    description: 'Usuario propietario operativo; solo propietario/admin',
+    format: 'uuid',
+    required: false,
+  })
+  propietario_usuario_id: string;
   @ApiProperty({ required: false, nullable: true, type: Number, minimum: 0, maximum: 100 })
   participacion_porcentaje: number | null;
 
@@ -323,7 +328,7 @@ export class TiendaResponseDto {
   })
   contenido_actualizado_en?: string | null;
 
-  @ApiProperty({ description: 'Fecha de creación (ISO 8601 UTC)', format: 'date-time' })
+  @ApiProperty({ description: 'Fecha de creación (ISO 8601 UTC)', format: 'date-time', required: false })
   creado_en: string;
 
   @ApiProperty({ description: 'Última actualización (ISO 8601 UTC)', required: false, format: 'date-time' })

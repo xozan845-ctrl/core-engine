@@ -5,14 +5,14 @@ export class OfertaResponseDto {
   @ApiProperty({ description: 'Id de la oferta', format: 'uuid' })
   id: string;
 
-  @ApiProperty({ description: 'Id de la tienda', format: 'uuid' })
+  @ApiProperty({ description: 'Id de la tienda; solo propietario/admin', format: 'uuid', required: false })
   tienda_id: string;
 
-  @ApiProperty({ description: 'Id del vendedor', format: 'uuid' })
+  @ApiProperty({ description: 'Id del vendedor; solo propietario/admin', format: 'uuid', required: false })
   vendedor_id: string;
 
-  @ApiProperty({ description: 'Empresa propietaria', format: 'uuid' }) empresa_id: string;
-  @ApiProperty({ description: 'Participación congelable del vendedor', minimum: 0, maximum: 100 }) participacion_porcentaje: number;
+  @ApiProperty({ description: 'Empresa propietaria', format: 'uuid', required: false }) empresa_id: string;
+  @ApiProperty({ description: 'Participación congelable del vendedor; solo propietario/admin', minimum: 0, maximum: 100, required: false }) participacion_porcentaje: number;
 
   @ApiProperty({ description: 'Id del producto o variante vendible', format: 'uuid' })
   producto_id: string;
@@ -40,17 +40,24 @@ export class OfertaResponseDto {
   @ApiProperty({ description: 'URL pública de la imagen principal', required: false, nullable: true })
   imagen_url: string | null;
 
-  @ApiProperty({ description: 'Margen aplicado (0–90)', example: 15 })
+  @ApiProperty({ description: 'Margen aplicado (0–90); solo propietario/admin', example: 15, required: false })
   margen: number;
 
-  @ApiProperty({ description: 'Precio base en córdobas con dos decimales', example: '1000.00' })
+  @ApiProperty({ description: 'Precio base; solo propietario/admin', example: '1000.00', required: false })
   precio_base: string;
 
   @ApiProperty({ description: 'Precio de venta en córdobas con dos decimales', example: '1150.00' })
   precio_venta: string;
 
-  @ApiProperty({ description: 'Stock disponible', example: 10 })
+  @ApiProperty({ description: 'Stock exacto; solo propietario/admin', example: 10, required: false })
   stock: number;
+
+  @ApiProperty({
+    description: 'Disponible para compra (derivado; no expone el stock exacto)',
+    example: true,
+    required: false,
+  })
+  disponible: boolean;
 
   @ApiProperty({ description: 'Estado de la oferta', example: 'activa' })
   estado: string;

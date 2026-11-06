@@ -11,8 +11,9 @@ import {
 } from '@nestjs/swagger';
 import type { Response } from 'express';
 import { IsInt, IsOptional, IsString, Max, Min } from 'class-validator';
-import { TiendasService } from '../tiendas/tiendas.service';
+import { TiendasService, Tienda } from '../tiendas/tiendas.service';
 import { OfertasService, Oferta } from './ofertas.service';
+import { aOfertaPublica, aTiendaPublica } from './ofertas.publico';
 import {
   OfertaResponseDto,
   PaginaOfertasResponseDto,
@@ -132,11 +133,35 @@ export class OfertasController {
   async tiendaPublica(
     @Param('id') tiendaId: string,
     @Res({ passthrough: true }) res: Response,
+    @UsuarioActual() usuario: UsuarioContexto | null,
   ) {
     const resuelta = await this.tiendas.resolver(tiendaId);
     if (!resuelta) throw new NotFoundError('Tienda', tiendaId);
     if (resuelta.redirigirA) res.status(301).setHeader('Location', resuelta.redirigirA);
     const ofertas = await this.ofertas.deTienda(resuelta.tienda.id);
-    return { tienda: resuelta.tienda, ofertas };
+    if (this.esDueno(usuario, resuelta.tienda)) {
+      return { tienda: resuelta.tienda, ofertas };
+    }
+    return {
+      tienda: aTiendaPublica(resuelta.tienda),
+      ofertas: ofertas.map(aOfertaPublica),
+    };
+  }
+
+  /**
+   * Solo el dueño de la tienda (propietario o vendedor asignado), su empresa o
+   * un admin reciben el DTO completo con IDs internos, margen, precio base y
+   * stock exacto. El resto ve la proyección pública (R-DS-3 / R-C-3).
+   */
+  private esDueno(usuario: UsuarioContexto | null, tienda: Tienda): boolean {
+    if (!usuario) return false;
+    if (usuario.rol === ROLES.SUPER_ADMIN || usuario.rol === ROLES.ADMIN) return true;
+    if (usuario.user_id === tienda.propietario_usuario_id) return true;
+    if (tienda.vendedor_id && usuario.user_id === tienda.vendedor_id) return true;
+    return (
+      usuario.rol === ROLES.EMPRESARIO &&
+      !!usuario.tenant_id &&
+      usuario.tenant_id === tienda.empresa_id
+    );
   }
 }

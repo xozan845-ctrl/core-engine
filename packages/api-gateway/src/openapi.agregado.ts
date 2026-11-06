@@ -21828,12 +21828,12 @@ export const OPENAPI_AGREGADO = {
           },
           "tienda_id": {
             "type": "string",
-            "description": "Id de la tienda",
+            "description": "Id de la tienda; solo propietario/admin",
             "format": "uuid"
           },
           "vendedor_id": {
             "type": "string",
-            "description": "Id del vendedor",
+            "description": "Id del vendedor; solo propietario/admin",
             "format": "uuid"
           },
           "empresa_id": {
@@ -21843,7 +21843,7 @@ export const OPENAPI_AGREGADO = {
           },
           "participacion_porcentaje": {
             "type": "number",
-            "description": "Participación congelable del vendedor",
+            "description": "Participación congelable del vendedor; solo propietario/admin",
             "minimum": 0,
             "maximum": 100
           },
@@ -21885,12 +21885,12 @@ export const OPENAPI_AGREGADO = {
           },
           "margen": {
             "type": "number",
-            "description": "Margen aplicado (0–90)",
+            "description": "Margen aplicado (0–90); solo propietario/admin",
             "example": 15
           },
           "precio_base": {
             "type": "string",
-            "description": "Precio base en córdobas con dos decimales",
+            "description": "Precio base; solo propietario/admin",
             "example": "1000.00"
           },
           "precio_venta": {
@@ -21900,8 +21900,13 @@ export const OPENAPI_AGREGADO = {
           },
           "stock": {
             "type": "number",
-            "description": "Stock disponible",
+            "description": "Stock exacto; solo propietario/admin",
             "example": 10
+          },
+          "disponible": {
+            "type": "boolean",
+            "description": "Disponible para compra (derivado; no expone el stock exacto)",
+            "example": true
           },
           "estado": {
             "type": "string",
@@ -21916,17 +21921,10 @@ export const OPENAPI_AGREGADO = {
         },
         "required": [
           "id",
-          "tienda_id",
-          "vendedor_id",
-          "empresa_id",
-          "participacion_porcentaje",
           "producto_id",
           "sku",
           "producto_nombre",
-          "margen",
-          "precio_base",
           "precio_venta",
-          "stock",
           "estado",
           "creado_en"
         ]
@@ -22198,7 +22196,7 @@ export const OPENAPI_AGREGADO = {
           },
           "propietario_usuario_id": {
             "type": "string",
-            "description": "Usuario propietario operativo",
+            "description": "Usuario propietario operativo; solo propietario/admin",
             "format": "uuid"
           },
           "participacion_porcentaje": {
@@ -22458,10 +22456,8 @@ export const OPENAPI_AGREGADO = {
         "required": [
           "id",
           "empresa_id",
-          "propietario_usuario_id",
           "nombre",
-          "descripcion",
-          "creado_en"
+          "descripcion"
         ]
       }
     }
