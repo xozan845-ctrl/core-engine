@@ -31,6 +31,10 @@ CREATE POLICY empresas_super_admin ON identity.empresas FOR ALL TO authenticated
   USING (auth.rol() IN ('super_admin', 'admin')) WITH CHECK (auth.rol() IN ('super_admin', 'admin'));
 CREATE POLICY empresas_miembros ON identity.empresas FOR SELECT TO authenticated
   USING (id::text = (auth.jwt() ->> 'tenant_id'));
+-- El creador debe poder ver la fila que acaba de insertar (INSERT ... RETURNING)
+-- antes de que su JWT tenga tenant_id.
+CREATE POLICY empresas_creador ON identity.empresas FOR SELECT TO authenticated
+  USING (creado_por = auth.uid());
 CREATE POLICY empresas_empresario_insert ON identity.empresas FOR INSERT TO authenticated
   WITH CHECK (auth.rol() = 'empresario' AND creado_por = auth.uid());
 CREATE POLICY empresas_empresario_update ON identity.empresas FOR UPDATE TO authenticated
