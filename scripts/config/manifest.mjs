@@ -32,4 +32,8 @@ export const requiredSuites = [
     id: 'observability-telemetry',
     file: 'rules/observability/telemetry.test.mjs',
   },
+  {
+    id: 'security-excessive-data-exposure',
+    file: 'rules/security/excessive-data-exposure.test.mjs',
+  },
 ];
