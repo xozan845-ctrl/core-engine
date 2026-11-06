@@ -39,7 +39,9 @@ export class TrazabilidadInterceptor implements NestInterceptor {
     const contexto: ContextoCorrelacion = {
       request_id,
       servicio: this.servicio ?? process.env.SERVICIO ?? 'servicio',
-      usuario_id: req.headers?.['x-user-personal'] ?? req.headers?.['x-user-id'] ?? undefined,
+      // `sub` para RLS es el usuario, no la ficha de personal: las políticas
+      // comparan contra columnas usuario_id/creado_por/propietario_usuario_id.
+      usuario_id: req.headers?.['x-user-id'] ?? req.headers?.['x-user-personal'] ?? undefined,
       rol: req.headers?.['x-user-rol'] ?? undefined,
       tenant_id: req.headers?.[TENANT_HEADER] ?? undefined,
     };
