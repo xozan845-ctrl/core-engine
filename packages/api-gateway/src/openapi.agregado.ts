@@ -8091,6 +8091,98 @@ export const OPENAPI_AGREGADO = {
         ]
       }
     },
+    "/api/v1/packs": {
+      "get": {
+        "operationId": "PacksController_listar",
+        "parameters": [
+          {
+            "name": "vertical_id",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "retail",
+                "farmacia",
+                "belleza",
+                "dental",
+                "flota"
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/PackResponseDto"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Listar packs activos disponibles para crear empresas",
+        "tags": [
+          "Packs"
+        ]
+      }
+    },
+    "/api/v1/packs/{codigo}/{version}": {
+      "get": {
+        "operationId": "PacksController_obtener",
+        "parameters": [
+          {
+            "name": "codigo",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "example": "pack_belleza",
+              "type": "string"
+            }
+          },
+          {
+            "name": "version",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "example": 1,
+              "type": "number"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PackResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Obtener un pack versionado y sus capacidades",
+        "tags": [
+          "Packs"
+        ]
+      }
+    },
     "/api/v1/orders/{id}/estado": {
       "patch": {
         "operationId": "EstadoOrdenController_avanzar",
@@ -19980,6 +20072,17 @@ export const OPENAPI_AGREGADO = {
             ],
             "default": "retail"
           },
+          "pack_codigo": {
+            "type": "string",
+            "enum": [
+              "pack_retail",
+              "pack_farmacia",
+              "pack_belleza",
+              "pack_dental",
+              "pack_flota"
+            ],
+            "description": "Pack versionado; si se omite se deriva de la vertical"
+          },
           "tipo_empresa": {
             "type": "string",
             "enum": [
@@ -20149,6 +20252,22 @@ export const OPENAPI_AGREGADO = {
               "dental",
               "flota"
             ]
+          },
+          "pack_codigo": {
+            "type": "string",
+            "nullable": true,
+            "enum": [
+              "pack_retail",
+              "pack_farmacia",
+              "pack_belleza",
+              "pack_dental",
+              "pack_flota"
+            ]
+          },
+          "pack_version": {
+            "type": "object",
+            "nullable": true,
+            "minimum": 1
           },
           "slug": {
             "type": "string",
@@ -20531,6 +20650,71 @@ export const OPENAPI_AGREGADO = {
         "required": [
           "plantilla",
           "tema"
+        ]
+      },
+      "PackCapacidadResponseDto": {
+        "type": "object",
+        "properties": {
+          "capacidad_codigo": {
+            "type": "string"
+          },
+          "nombre": {
+            "type": "string"
+          },
+          "modulo": {
+            "type": "string"
+          },
+          "activo": {
+            "type": "boolean"
+          },
+          "config": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "capacidad_codigo",
+          "nombre",
+          "modulo",
+          "activo",
+          "config"
+        ]
+      },
+      "PackResponseDto": {
+        "type": "object",
+        "properties": {
+          "codigo": {
+            "type": "string"
+          },
+          "version": {
+            "type": "number"
+          },
+          "vertical_codigo": {
+            "type": "string"
+          },
+          "nombre": {
+            "type": "string"
+          },
+          "descripcion": {
+            "type": "string"
+          },
+          "config": {
+            "type": "object"
+          },
+          "capacidades": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PackCapacidadResponseDto"
+            }
+          }
+        },
+        "required": [
+          "codigo",
+          "version",
+          "vertical_codigo",
+          "nombre",
+          "descripcion",
+          "config",
+          "capacidades"
         ]
       },
       "PerfilEmpresaRequestDto": {
