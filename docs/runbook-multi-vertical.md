@@ -1,0 +1,60 @@
+# Runbook — migración multi-vertical
+
+Este runbook cubre la adopción de packs por tenants existentes y la validación
+de los tres pilotos: farmacia/retail, belleza y flota. La migración es aditiva;
+no elimina columnas, capacidades ni datos legacy.
+
+## Precondiciones
+
+1. Ejecutar las migraciones 24, 29 y 30 en el entorno objetivo.
+2. Confirmar backup y ventana de observación.
+3. Verificar que `pack_migraciones` no tenga filas `requiere_revision`.
+4. Mantener activo el flag de compatibilidad legacy hasta cerrar los pilotos.
+
+## Verificación del backfill
+
+```sql
+SELECT estado, COUNT(*)
+  FROM identity.pack_migraciones
+ GROUP BY estado;
+
+SELECT e.id, e.nombre, e.vertical_id, e.pack_codigo, e.pack_version,
+       pm.estado, pm.detalles
+  FROM identity.empresas e
+  LEFT JOIN identity.pack_migraciones pm ON pm.empresa_id = e.id
+ WHERE e.pack_codigo IS NULL OR pm.estado = 'requiere_revision';
+```
+
+Una fila `requiere_revision` detiene la promoción del piloto. Se corrige la
+vertical o se crea el pack aprobado antes de relanzar la migración; no se
+asigna un pack manualmente sin dejar evidencia en la auditoría.
+
+## Pilotos
+
+Crear un tenant nuevo por pack y validar, en este orden:
+
+1. farmacia/retail: catálogo, stock, lotes cuando corresponda y facturación;
+2. belleza: servicio, recurso, disponibilidad, reserva y recordatorio;
+3. flota: rutas/vehículos, pickup/onsite, cotización y facturación.
+
+Para cada tenant:
+
+- consultar `GET /api/v1/packs?vertical_id=<vertical>`;
+- crear la empresa con `pack_codigo` explícito;
+- comprobar `identity.empresas.pack_codigo/pack_version`;
+- comprobar que las capacidades activas coinciden con el pack;
+- desactivar una capacidad y verificar `CAPACIDAD_NO_ACTIVA`;
+- verificar que un tenant distinto no puede leer ni modificar sus datos.
+
+## Rollback
+
+El rollback operativo consiste en apagar la capacidad o el flag del piloto y
+conservar la compatibilidad legacy. No se ejecutan `DROP`, `DELETE` ni cambios
+destructivos como parte de este runbook. Las filas de auditoría son evidencia de
+lo aplicado y se conservan.
+
+## Cierre
+
+El piloto se considera adoptado cuando no hay revisiones pendientes, los tres
+flujos pasan sus pruebas, p95 se mantiene dentro de la línea base y el equipo
+aprueba la deprecación gradual de `tipo_empresa`/`modalidad_logistica`.
