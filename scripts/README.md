@@ -219,7 +219,7 @@ Los `npm scripts` de la raíz son **envoltorios** (sin ruptura para CI ni local)
 | `swagger:export` | `node scripts/cli.mjs swagger` |
 | `test:engine` | autotests del motor, incluida una suite centinela que prueba el exit code ante assertions fallidas |
 | `test:smoke` | regresiones del runner, del agregador y del contrato OpenAPI (superficies, seguridad y respuestas); ejecutadas en CI |
-| `test:integration` | PostgreSQL efímero: proyección de stock, configuración de sitio API+BD y contrato runtime de errores 400/401/403/404/409/500; ejecutado en CI |
+| `test:integration` | PostgreSQL efímero, ejecutado en serie para evitar carreras entre migraciones compartidas: proyección de stock, configuración de sitio API+BD y contrato runtime de errores 400/401/403/404/409/500; ejecutado en CI |
 
 `npm run demo` sigue ejercitando el stack completo levantado. El runner usa
 `SMOKE_REQUEST_TIMEOUT_MS` (10 000 ms) por petición y `SMOKE_WAIT_TIMEOUT_MS`
