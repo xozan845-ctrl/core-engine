@@ -425,7 +425,7 @@ export default defineSuite({
 
     test('R-I-12: la integración de catálogo usa PostgreSQL efímero en CI', () => {
       const workflow = readText(join(repoRoot, WORKFLOWS_DIR, 'ci.yml'));
-      assert.equal(rootPackage.scripts?.['test:integration'], 'node --test scripts/integration/*.test.mjs');
+      assert.equal(rootPackage.scripts?.['test:integration'], 'node --test --test-concurrency=1 scripts/integration/*.test.mjs');
       assert.ok(existsSync(join(repoRoot, 'scripts', 'integration', 'catalog-stock.test.mjs')));
       assert.match(workflow, /^ {2}integration-catalog:$/m);
       assert.match(workflow, /^ {8}image: postgres:16-alpine$/m);
