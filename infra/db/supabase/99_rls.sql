@@ -39,6 +39,26 @@ CREATE POLICY vertical_capacidades_admin ON identity.vertical_capacidades
   USING (auth.rol() IN ('super_admin', 'admin'))
   WITH CHECK (auth.rol() IN ('super_admin', 'admin'));
 
+ALTER TABLE identity.packs ENABLE ROW LEVEL SECURITY;
+CREATE POLICY packs_lectura ON identity.packs
+  FOR SELECT TO authenticated USING (activo = true OR auth.rol() IN ('super_admin', 'admin'));
+CREATE POLICY packs_admin ON identity.packs
+  FOR ALL TO authenticated
+  USING (auth.rol() IN ('super_admin', 'admin'))
+  WITH CHECK (auth.rol() IN ('super_admin', 'admin'));
+
+ALTER TABLE identity.pack_capacidades ENABLE ROW LEVEL SECURITY;
+CREATE POLICY pack_capacidades_lectura ON identity.pack_capacidades
+  FOR SELECT TO authenticated
+  USING (EXISTS (
+    SELECT 1 FROM identity.packs p
+    WHERE p.codigo = pack_codigo AND p.version = pack_version AND p.activo = true
+  ));
+CREATE POLICY pack_capacidades_admin ON identity.pack_capacidades
+  FOR ALL TO authenticated
+  USING (auth.rol() IN ('super_admin', 'admin'))
+  WITH CHECK (auth.rol() IN ('super_admin', 'admin'));
+
 ALTER TABLE identity.empresa_capacidades ENABLE ROW LEVEL SECURITY;
 CREATE POLICY empresa_capacidades_admin ON identity.empresa_capacidades
   FOR ALL TO authenticated

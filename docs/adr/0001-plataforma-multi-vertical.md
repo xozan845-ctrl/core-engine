@@ -59,6 +59,9 @@ La evolución de identidad será aditiva:
 - `identity.capacidades(codigo, nombre, modulo)`;
 - `identity.vertical_capacidades` para defaults por vertical;
 - `identity.empresa_capacidades(empresa_id, capacidad, config jsonb, activo)`;
+- `identity.packs(codigo, version, vertical_codigo, config)` y
+  `identity.pack_capacidades` para presets versionados;
+- `identity.empresas.pack_codigo/pack_version` para conservar el pack elegido;
 - `identity.empresas.vertical_id`;
 - `tipo_empresa` se conserva como legado derivado;
 - `modalidad_logistica` se conserva nullable/deprecado y se reemplaza

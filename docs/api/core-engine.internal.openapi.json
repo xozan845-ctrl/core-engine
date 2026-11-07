@@ -1717,6 +1717,22 @@
               "flota"
             ]
           },
+          "pack_codigo": {
+            "type": "string",
+            "nullable": true,
+            "enum": [
+              "pack_retail",
+              "pack_farmacia",
+              "pack_belleza",
+              "pack_dental",
+              "pack_flota"
+            ]
+          },
+          "pack_version": {
+            "type": "object",
+            "nullable": true,
+            "minimum": 1
+          },
           "slug": {
             "type": "string",
             "description": "Slug público actual",
