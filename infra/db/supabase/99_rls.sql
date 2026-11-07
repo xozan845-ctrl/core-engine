@@ -59,6 +59,15 @@ CREATE POLICY pack_capacidades_admin ON identity.pack_capacidades
   USING (auth.rol() IN ('super_admin', 'admin'))
   WITH CHECK (auth.rol() IN ('super_admin', 'admin'));
 
+ALTER TABLE identity.pack_migraciones ENABLE ROW LEVEL SECURITY;
+CREATE POLICY pack_migraciones_admin ON identity.pack_migraciones
+  FOR ALL TO authenticated
+  USING (auth.rol() IN ('super_admin', 'admin'))
+  WITH CHECK (auth.rol() IN ('super_admin', 'admin'));
+CREATE POLICY pack_migraciones_empresa ON identity.pack_migraciones
+  FOR SELECT TO authenticated
+  USING (empresa_id::text = (auth.jwt() ->> 'tenant_id'));
+
 ALTER TABLE identity.empresa_capacidades ENABLE ROW LEVEL SECURITY;
 CREATE POLICY empresa_capacidades_admin ON identity.empresa_capacidades
   FOR ALL TO authenticated
