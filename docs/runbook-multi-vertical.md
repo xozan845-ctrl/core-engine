@@ -13,6 +13,16 @@ no elimina columnas, capacidades ni datos legacy.
 
 ## Verificación del backfill
 
+La auditoría automatizada de cierre se ejecuta con una conexión de solo lectura
+o de servicio restringida:
+
+```bash
+TEST_DATABASE_URL=postgres://core_engine_test:test_only@127.0.0.1:5432/core_engine_test \
+  npm run multi-vertical:check
+```
+
+El comando termina con código distinto de cero ante cualquier inconsistencia.
+
 ```sql
 SELECT estado, COUNT(*)
   FROM identity.pack_migraciones
