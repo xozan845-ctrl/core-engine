@@ -66,6 +66,34 @@ describe('EmpresasService', () => {
       expect(client.query).toHaveBeenCalledTimes(5);
     });
 
+    it('debe aplicar el pack seleccionado y sus capacidades al crear el tenant', async () => {
+      const client = {
+        query: vi.fn()
+          .mockResolvedValueOnce({ rows: [{ codigo: 'pack_belleza', version: 1, vertical_codigo: 'belleza' }], rowCount: 1 })
+          .mockResolvedValueOnce({ rows: [], rowCount: 0 })
+          .mockResolvedValueOnce({ rows: [empresa], rowCount: 1 })
+          .mockResolvedValueOnce({ rows: [], rowCount: 1 })
+          .mockResolvedValueOnce({ rows: [], rowCount: 1 })
+          .mockResolvedValueOnce({ rows: [], rowCount: 1 }),
+      };
+      const pg = { transaccion: vi.fn(async (fn: (c: typeof client) => unknown) => fn(client)) };
+      const servicio = new EmpresasService(pg as never, {} as never);
+
+      await servicio.crear('u-1', 'Salon Acme', null, undefined, undefined, undefined, undefined, 'pack_belleza');
+
+      expect(client.query).toHaveBeenNthCalledWith(1, expect.stringContaining('FROM identity.packs'), ['pack_belleza']);
+      expect(client.query).toHaveBeenNthCalledWith(3, expect.stringContaining('pack_codigo, pack_version'), expect.arrayContaining(['Salon Acme', 'salon-acme', null, 'belleza', 'pack_belleza', 1]));
+      expect(client.query).toHaveBeenNthCalledWith(5, expect.stringContaining('FROM identity.pack_capacidades'), [empresa.id, 'pack_belleza', 1]);
+    });
+
+    it('debe rechazar un pack que no corresponde a la vertical solicitada', async () => {
+      const client = { query: vi.fn().mockResolvedValueOnce({ rows: [{ codigo: 'pack_belleza', version: 1, vertical_codigo: 'belleza' }], rowCount: 1 }) };
+      const pg = { transaccion: vi.fn(async (fn: (c: typeof client) => unknown) => fn(client)) };
+      const servicio = new EmpresasService(pg as never, {} as never);
+
+      await expect(servicio.crear('u-1', 'Acme', null, undefined, undefined, undefined, 'retail', 'pack_belleza')).rejects.toThrow('vertical solicitada');
+    });
+
     it('resuelve una colisión de slug automático con sufijo -2', async () => {
       const client = {
         query: vi.fn()
