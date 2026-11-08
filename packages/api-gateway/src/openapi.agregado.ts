@@ -8099,15 +8099,9 @@ export const OPENAPI_AGREGADO = {
             "name": "vertical_id",
             "required": false,
             "in": "query",
+            "description": "Código dinámico de la vertical",
             "schema": {
-              "type": "string",
-              "enum": [
-                "retail",
-                "farmacia",
-                "belleza",
-                "dental",
-                "flota"
-              ]
+              "type": "string"
             }
           }
         ],
@@ -8132,6 +8126,171 @@ export const OPENAPI_AGREGADO = {
           }
         ],
         "summary": "Listar packs activos disponibles para crear empresas",
+        "tags": [
+          "Packs"
+        ]
+      },
+      "post": {
+        "operationId": "PacksController_crear",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CrearPackRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PackResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Crear una plantilla de pack con modelos y capacidades",
+        "tags": [
+          "Packs"
+        ]
+      }
+    },
+    "/api/v1/packs/modelos-operacion": {
+      "get": {
+        "operationId": "PacksController_listarModelos",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ModeloOperacionResponseDto"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Listar modelos operativos disponibles para construir packs",
+        "tags": [
+          "Packs"
+        ]
+      },
+      "post": {
+        "operationId": "PacksController_crearModelo",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CrearModeloOperacionRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ModeloOperacionResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Registrar un modelo operativo reutilizable",
+        "tags": [
+          "Packs"
+        ]
+      }
+    },
+    "/api/v1/packs/verticales": {
+      "get": {
+        "operationId": "PacksController_listarVerticales",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/VerticalOperacionResponseDto"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Listar verticales configurables disponibles",
+        "tags": [
+          "Packs"
+        ]
+      },
+      "post": {
+        "operationId": "PacksController_crearVertical",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CrearVerticalRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VerticalOperacionResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Registrar una vertical operativa sin crear un microservicio",
         "tags": [
           "Packs"
         ]
@@ -20063,25 +20222,11 @@ export const OPENAPI_AGREGADO = {
           },
           "vertical_id": {
             "type": "string",
-            "enum": [
-              "retail",
-              "farmacia",
-              "belleza",
-              "dental",
-              "flota"
-            ],
-            "default": "retail"
+            "description": "Código dinámico de la vertical; se valida contra identity.verticales"
           },
           "pack_codigo": {
             "type": "string",
-            "enum": [
-              "pack_retail",
-              "pack_farmacia",
-              "pack_belleza",
-              "pack_dental",
-              "pack_flota"
-            ],
-            "description": "Pack versionado; si se omite se deriva de la vertical"
+            "description": "Pack versionado; se valida contra identity.packs"
           },
           "tipo_empresa": {
             "type": "string",
@@ -20125,6 +20270,79 @@ export const OPENAPI_AGREGADO = {
           "correo",
           "tienda_id",
           "participacion_porcentaje"
+        ]
+      },
+      "CrearModeloOperacionRequestDto": {
+        "type": "object",
+        "properties": {
+          "codigo": {
+            "type": "string",
+            "example": "servicios_domicilio"
+          },
+          "nombre": {
+            "type": "string",
+            "example": "Servicios a domicilio"
+          },
+          "descripcion": {
+            "type": "string"
+          },
+          "config": {
+            "type": "object"
+          },
+          "activo": {
+            "type": "boolean",
+            "default": true
+          }
+        },
+        "required": [
+          "codigo",
+          "nombre"
+        ]
+      },
+      "CrearPackRequestDto": {
+        "type": "object",
+        "properties": {
+          "codigo": {
+            "type": "string",
+            "example": "pack_servicios_domicilio"
+          },
+          "version": {
+            "type": "number",
+            "minimum": 1,
+            "example": 1
+          },
+          "vertical_codigo": {
+            "type": "string",
+            "example": "servicios_domicilio"
+          },
+          "nombre": {
+            "type": "string",
+            "example": "Servicios a domicilio"
+          },
+          "descripcion": {
+            "type": "string"
+          },
+          "config": {
+            "type": "object"
+          },
+          "modelos": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PackBuilderItemRequestDto"
+            }
+          },
+          "capacidades": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PackBuilderItemRequestDto"
+            }
+          }
+        },
+        "required": [
+          "codigo",
+          "version",
+          "vertical_codigo",
+          "nombre"
         ]
       },
       "CrearUsuarioRequestDto": {
@@ -20200,6 +20418,32 @@ export const OPENAPI_AGREGADO = {
           "participacion_porcentaje"
         ]
       },
+      "CrearVerticalRequestDto": {
+        "type": "object",
+        "properties": {
+          "codigo": {
+            "type": "string",
+            "example": "servicios_domicilio"
+          },
+          "nombre": {
+            "type": "string",
+            "example": "Servicios a domicilio"
+          },
+          "modelo_operacion": {
+            "type": "string",
+            "example": "servicios_agendados"
+          },
+          "activo": {
+            "type": "boolean",
+            "default": true
+          }
+        },
+        "required": [
+          "codigo",
+          "nombre",
+          "modelo_operacion"
+        ]
+      },
       "EmpresaCapacidadResponseDto": {
         "type": "object",
         "properties": {
@@ -20243,26 +20487,14 @@ export const OPENAPI_AGREGADO = {
             "type": "string"
           },
           "vertical_id": {
-            "type": "string",
+            "type": "object",
             "nullable": true,
-            "enum": [
-              "retail",
-              "farmacia",
-              "belleza",
-              "dental",
-              "flota"
-            ]
+            "description": "Código dinámico de la vertical"
           },
           "pack_codigo": {
-            "type": "string",
+            "type": "object",
             "nullable": true,
-            "enum": [
-              "pack_retail",
-              "pack_farmacia",
-              "pack_belleza",
-              "pack_dental",
-              "pack_flota"
-            ]
+            "description": "Código dinámico del pack"
           },
           "pack_version": {
             "type": "object",
@@ -20610,6 +20842,33 @@ export const OPENAPI_AGREGADO = {
           }
         }
       },
+      "ModeloOperacionResponseDto": {
+        "type": "object",
+        "properties": {
+          "codigo": {
+            "type": "string"
+          },
+          "nombre": {
+            "type": "string"
+          },
+          "descripcion": {
+            "type": "string"
+          },
+          "config": {
+            "type": "object"
+          },
+          "activo": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "codigo",
+          "nombre",
+          "descripcion",
+          "config",
+          "activo"
+        ]
+      },
       "OkResponseDto": {
         "type": "object",
         "properties": {
@@ -20652,6 +20911,25 @@ export const OPENAPI_AGREGADO = {
           "tema"
         ]
       },
+      "PackBuilderItemRequestDto": {
+        "type": "object",
+        "properties": {
+          "codigo": {
+            "type": "string",
+            "example": "agenda_recursos"
+          },
+          "config": {
+            "type": "object"
+          },
+          "activo": {
+            "type": "boolean",
+            "default": true
+          }
+        },
+        "required": [
+          "codigo"
+        ]
+      },
       "PackCapacidadResponseDto": {
         "type": "object",
         "properties": {
@@ -20679,6 +20957,33 @@ export const OPENAPI_AGREGADO = {
           "config"
         ]
       },
+      "PackModeloResponseDto": {
+        "type": "object",
+        "properties": {
+          "modelo_codigo": {
+            "type": "string"
+          },
+          "nombre": {
+            "type": "string"
+          },
+          "descripcion": {
+            "type": "string"
+          },
+          "activo": {
+            "type": "boolean"
+          },
+          "config": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "modelo_codigo",
+          "nombre",
+          "descripcion",
+          "activo",
+          "config"
+        ]
+      },
       "PackResponseDto": {
         "type": "object",
         "properties": {
@@ -20700,6 +21005,12 @@ export const OPENAPI_AGREGADO = {
           "config": {
             "type": "object"
           },
+          "modelos": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PackModeloResponseDto"
+            }
+          },
           "capacidades": {
             "type": "array",
             "items": {
@@ -20714,6 +21025,7 @@ export const OPENAPI_AGREGADO = {
           "nombre",
           "descripcion",
           "config",
+          "modelos",
           "capacidades"
         ]
       },
@@ -21270,6 +21582,29 @@ export const OPENAPI_AGREGADO = {
           "correo",
           "rol",
           "participacion_porcentaje"
+        ]
+      },
+      "VerticalOperacionResponseDto": {
+        "type": "object",
+        "properties": {
+          "codigo": {
+            "type": "string"
+          },
+          "nombre": {
+            "type": "string"
+          },
+          "modelo_operacion": {
+            "type": "string"
+          },
+          "activo": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "codigo",
+          "nombre",
+          "modelo_operacion",
+          "activo"
         ]
       },
       "VincularPersonalRequestDto": {

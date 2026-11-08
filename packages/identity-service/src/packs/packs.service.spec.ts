@@ -23,6 +23,7 @@ describe('PacksService', () => {
     await expect(servicio.listar('belleza')).resolves.toEqual([{
       codigo: 'pack_belleza', version: 1, vertical_codigo: 'belleza', nombre: 'Belleza',
       descripcion: 'Servicios agendados', config: { modelo: 'servicios_agendados' },
+      modelos: [],
       capacidades: [
         { capacidad_codigo: 'agenda_recursos', nombre: 'Agenda y recursos', modulo: 'scheduling', activo: true, config: {} },
         { capacidad_codigo: 'facturacion', nombre: 'Facturacion', modulo: 'finance', activo: true, config: {} },
@@ -39,5 +40,39 @@ describe('PacksService', () => {
   it('debe lanzar NotFoundError cuando el pack no existe', async () => {
     const pg = { query: vi.fn().mockResolvedValue([]) };
     await expect(new PacksService(pg as never).obtener('pack_no', 1)).rejects.toBeInstanceOf(NotFoundError);
+  });
+
+  it('debe construir un pack dinámico con modelos y capacidades existentes', async () => {
+    const client = {
+      query: vi.fn()
+        .mockResolvedValueOnce({ rowCount: 1, rows: [{ codigo: 'servicios_domicilio' }] })
+        .mockResolvedValueOnce({ rowCount: 1, rows: [] })
+        .mockResolvedValueOnce({ rowCount: 1, rows: [] })
+        .mockResolvedValueOnce({ rowCount: 1, rows: [] }),
+    };
+    const resultado = {
+      ...fila,
+      codigo: 'pack_servicios_domicilio',
+      vertical_codigo: 'servicios_domicilio',
+      modelos: [{ modelo_codigo: 'servicios_agendados', nombre: 'Servicios agendados', descripcion: '', activo: true, config: {} }],
+    };
+    const pg = {
+      transaccion: vi.fn(async (fn: (c: typeof client) => unknown) => fn(client)),
+      query: vi.fn().mockResolvedValue([resultado]),
+    };
+    const servicio = new PacksService(pg as never);
+
+    await expect(servicio.crear({
+      codigo: 'pack_servicios_domicilio',
+      version: 1,
+      vertical_codigo: 'servicios_domicilio',
+      nombre: 'Servicios a domicilio',
+      modelos: [{ codigo: 'servicios_agendados' }],
+      capacidades: [{ codigo: 'agenda_recursos' }],
+    })).resolves.toMatchObject({
+      codigo: 'pack_servicios_domicilio',
+      modelos: [{ modelo_codigo: 'servicios_agendados' }],
+    });
+    expect(client.query).toHaveBeenCalledTimes(4);
   });
 });
