@@ -29,6 +29,7 @@ export interface Sesion {
     tenant_id?: string;
     personal_id?: string;
     participacion_porcentaje?: number;
+    rol_empresa_id?: string;
     avatar_objeto_id?: string;
     avatar_url?: string;
   };
@@ -145,6 +146,7 @@ export class AuthService {
       ...(usuario.tenant_id ? { tenant_id: usuario.tenant_id } : {}),
       ...(usuario.personal_id ? { personal_id: usuario.personal_id } : {}),
       ...(usuario.participacion_porcentaje !== undefined ? { participacion_porcentaje: usuario.participacion_porcentaje } : {}),
+      ...(usuario.rol_empresa_id ? { rol_empresa_id: usuario.rol_empresa_id } : {}),
     };
     const access = crearAccessToken(contexto, this.secreto, this.accessTtl);
     const refresh = crearRefreshToken(contexto, this.secreto, this.refreshTtl, jti);
@@ -160,6 +162,7 @@ export class AuthService {
         ...(usuario.tenant_id ? { tenant_id: usuario.tenant_id } : {}),
         ...(usuario.personal_id ? { personal_id: usuario.personal_id } : {}),
         ...(usuario.participacion_porcentaje !== undefined ? { participacion_porcentaje: usuario.participacion_porcentaje } : {}),
+        ...(usuario.rol_empresa_id ? { rol_empresa_id: usuario.rol_empresa_id } : {}),
         ...(usuario.avatar_objeto_id ? { avatar_objeto_id: usuario.avatar_objeto_id } : {}),
         ...(usuario.avatar_url ? { avatar_url: usuario.avatar_url } : {}),
       },

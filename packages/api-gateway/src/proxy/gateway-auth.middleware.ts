@@ -9,6 +9,7 @@ import {
   TENANT_HEADER,
   PERSONAL_HEADER,
   PARTICIPACION_HEADER,
+  ROL_EMPRESA_HEADER,
 } from '@core/shared';
 
 export interface PoliticaRuta {
@@ -146,6 +147,13 @@ export const POLITICAS_RUTAS: PoliticaRuta[] = [
       metodos: ['POST', 'DELETE'],
       roles: [ROLES.EMPRESARIO],
     },
+    {
+      patron: /^\/api\/v1\/empresas\/[^/]+\/(roles|puestos|asignaciones-personal|invitaciones\/personal)(\/|$)/,
+      metodos: ['GET', 'POST', 'PATCH'],
+      roles: [ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.EMPRESARIO],
+    },
+    { patron: /^\/api\/v1\/incorporaciones\/[^/]+$/, metodos: ['GET'], roles: null },
+    { patron: /^\/api\/v1\/incorporaciones\/[^/]+\/aceptar$/, metodos: ['POST'], roles: null },
     // Cambio de slug: solo el empresario; el servicio exige membresia activa.
     { patron: /^\/api\/v1\/empresas\/[^/]+\/slug$/, metodos: ['PATCH'], roles: [ROLES.EMPRESARIO] },
     // GET /empresas/:id acepta UUID o slug, pero sigue siendo privado: solo
@@ -336,6 +344,7 @@ export class GatewayAuthMiddleware {
       if (payload.tenant_id) req.headers[TENANT_HEADER] = payload.tenant_id;
       if (payload.personal_id) req.headers[PERSONAL_HEADER] = payload.personal_id;
       if (payload.participacion_porcentaje !== undefined) req.headers[PARTICIPACION_HEADER] = String(payload.participacion_porcentaje);
+      if (payload.rol_empresa_id) req.headers[ROL_EMPRESA_HEADER] = payload.rol_empresa_id;
 
       if (politica?.roles && !politica.roles.includes(payload.rol)) {
         this.logger.warn({ msg: 'acceso denegado por rol', ruta: req.originalUrl, rol: payload.rol });
