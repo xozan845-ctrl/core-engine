@@ -146,7 +146,7 @@ Este archivo registra decisiones técnicas deliberadas que se apartan del texto 
 - **Contexto**: el VPS (Dockploy) redispliega **producción en cada push a `main`**,
   de modo que cualquier commit que pase los tests aterriza en producción sin
   pasar por un entorno previo. `main` no tenía branch protection (HTTP 404) y
-  las reglas de despliegue (`R-CD` en `ci/03-deploy.md`) asumían "no hay a dónde
+  las reglas de despliegue (`R-CD` en `docs/rules/cd/`) asumían "no hay a dónde
   desplegar" — ambas cosas falsas frente a la realidad.
 - **Decisión**: modelo de **tres entornos por rama protegida** — `develop`
   (desarrollo) → `staging` (stage) → `main` (producción), con promoción en un
@@ -291,6 +291,10 @@ Este archivo registra decisiones técnicas deliberadas que se apartan del texto 
   estén bajados (no se tocan las políticas de ruta; se registra como punto a
   revisar si se alarga). Reversible: volver a mover las definiciones al compose
   base.
+- **Actualización (2026-11-08)**: la lista real de producción es **9
+  microservicios**: identity, catalog, stores, orders, logistics, scheduling
+  (3011), finance, field y storage. `storage` (ADR-24) y `scheduling` (ADR-44)
+  se incorporaron después de este ADR.
 - **Actualización (2026-11-03)**: ADR-37 despliega `commissions-service` en
   **stage** para validar el portal de empresa. La exclusión de **producción**
   se mantiene: sigue fuera de `docker-compose.yml`.
@@ -449,7 +453,9 @@ Este archivo registra decisiones técnicas deliberadas que se apartan del texto 
   y stage siguen compartiendo la lista de servicios entre sí; se aceptan como
   entornos separados con imágenes y variables distintas. **Actualización
   (2026-11-03)**: ADR-37 separa la lista: stage incluye `commissions-service`
-  y producción no.
+  y producción no. **Actualización (2026-11-08)**: dev construye **11
+  microservicios** (se añade `scheduling-service`, ADR-44) y stage despliega 10;
+  producción despliega 9 (sin `commissions` ni `market-intelligence`).
 ---
 
 ## ADR-23: Arquitectura modular del motor de gobernanza (`scripts/`)

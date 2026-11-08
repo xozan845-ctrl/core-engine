@@ -61,16 +61,17 @@ a la baja, +5/release, tope en la tabla, nunca baja — R-COV-1).
 
 ## Gates de CI (bloquean el merge)
 
-Estado verificado contra `.github/workflows/ci.yml` (único workflow existente):
+Estado verificado contra `.github/workflows/ci.yml` (uno de los seis workflows:
+`ci`, `deploy`, `e2e`, `mutation`, `promote`, `release`):
 ✅ = job existe y bloquea · ⏸ = regla vigente, paso aún no configurado (deuda en
 [`README.md`](./README.md)) · N/A = no aplica a este repo (ID reservado, nunca
 se reutiliza).
 
 | Gate | Condición | Estado |
 |---|---|---|
-| G-1 | Suite unit de todos los workspaces con tests en verde (100 %): job `test` (`npm test -- --coverage`), encadenado tras `security-gate`. | ✅ |
+| G-1 | Suite unit de todos los workspaces con tests en verde (100 %): job `test` (`npm test`), encadenado tras `security-gate`. | ✅ configurado · estado en [`AUDIT.md`](../_meta/AUDIT.md) |
 | G-2 | Suite unit frontend en verde. | N/A — no hay frontend. |
-| G-3 | Cobertura ≥ `thresholds` vigentes en `packages/*/vitest.config.ts` (ratchet +5/release; alcance según R-COV-4): incumplirlo o bajar el umbral falla el job `test`. | ✅ |
+| G-3 | Cobertura ≥ `thresholds` vigentes en `packages/*/vitest.config.ts` (ratchet +5/release; alcance según R-COV-4): incumplirlo o bajar el umbral falla el job `test`. | ✅ configurado · estado en [`AUDIT.md`](../_meta/AUDIT.md) |
 | G-4 | Suite de integración API+BD en verde. | ⏸ **parcial**: PostgreSQL efímero cubre stock y configuración de sitio GET/PATCH; faltan otros flujos críticos (R-I-12). |
 | G-5 | Test de contrato en verde. | ⏸: errores 400/401 verificados; el envelope requiere migración `/api/v2` y faltan otros shapes críticos (R-C-7). |
 | G-6 | E2E de flujos críticos en verde antes de release (puede ser etiqueta `release`, no cada PR). | ⏸ **parcial**: `e2e.yml` en tags `v*.*.*` y manual levanta `docker-compose.dev.yml`, ejecuta `npm run demo` y verifica logs R-E-8; el smoke cubre R-E-1…R-E-7, incluido R-E-4 (boundary de fecha). `deploy.yml` además ejecuta el smoke remoto de stage/prod (R-CD-12). |
@@ -84,8 +85,8 @@ se reutiliza).
 
 | ID | Regla |
 |---|---|
-| R-COV-1 | Ningún PR puede **bajar** la cobertura respecto al baseline versionado (`scripts/config/coverage-baseline.json`): `npm run coverage:compare` compara el reporte real de los 12 workspaces (lines/branches/functions/statements) y falla si cualquier métrica baja. Mejorar la cobertura exige actualizar el baseline con `npm run coverage:baseline` en el mismo PR; el gate nunca lo sube solo. |
-| R-COV-2 | Archivos de lógica de negocio sin spec → bloquea merge (R-U-17). La suite `microservices-ci-contract` recorre `*.service.ts` y `*.consumer.ts` y falla si aparece uno sin `*.spec.ts` que no esté en `scripts/config/spec-baseline.json`; el baseline es la deuda explícita (17 archivos) y también falla si queda obsoleto al añadir el spec. |
+| R-COV-1 | Ningún PR puede **bajar** la cobertura respecto al baseline versionado (`scripts/config/coverage-baseline.json`): `npm run coverage:compare` compara el reporte real de los 13 workspaces (lines/branches/functions/statements) y falla si cualquier métrica baja. Mejorar la cobertura exige actualizar el baseline con `npm run coverage:baseline` en el mismo PR; el gate nunca lo sube solo. |
+| R-COV-2 | Archivos de lógica de negocio sin spec → bloquea merge (R-U-17). La suite `microservices-ci-contract` recorre `*.service.ts` y `*.consumer.ts` y falla si aparece uno sin `*.spec.ts` que no esté en `scripts/config/spec-baseline.json`; el baseline es la deuda explícita (2 archivos: `shared/src/db/pg.service.ts` y `shared/src/outbox/outbox.service.ts`) y también falla si queda obsoleto al añadir el spec. |
 | R-COV-3 | La auditoría `AUDIT.md` se actualiza en cada release con: cobertura actual, nº tests por capa, mutantes, deudas abiertas. Un gate solo se marca ✅ con evidencia de un **run verde de CI** (tener el paso configurado o pasar en local no basta). |
 | R-COV-4 | **Alcance del gate**: solo se mide lógica ejecutable. El alcance se define en `coverage.include`/`coverage.exclude` de cada `packages/*/vitest.config.ts`: hoy `src/**/*.ts` excluyendo `main.ts` (bootstrap), `*.module.ts` (wiring DI) y `swagger*.ts` (bootstrap de OpenAPI). Exclusiones adicionales admitidas (DTOs `/dto/`, mocks `/mocks/`, scripts CLI) se añaden ahí y se documentan en `AUDIT.md`. El baseline medido con ese alcance fija los thresholds del ratchet. |
 | R-COV-5 | **N/A en este repo (sin frontend) — ID reservado, no reutilizar.** Regla heredada, exigible si algún día hay UI: el ratchet del frontend es norma, no una nota en el config — sigue el mismo método que el de Jest (baseline medido, redondeado a la baja con 1 pt de margen, +5 pts por release, tope en la tabla de umbrales y **nunca baja**, R-COV-1). Sin esta regla, G-3 protege solo los workspaces backend: la UI puede perder cobertura hasta el nivel del gate sin que nada lo note, porque un threshold obsoleto nunca falla. |

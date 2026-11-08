@@ -20,7 +20,7 @@ está repartido entre [`.github/README.md`](../.github/README.md),
 flowchart LR
     A[rama develop] -->|PR| B[staging]
     B -->|PR, CI verde| C[main]
-    C -->|git tag vX.Y.Z| R["release.yml\n10 imágenes + digests"]
+    C -->|git tag vX.Y.Z| R["release.yml\n12 imágenes + digests"]
     R -->|"promote.yml env=stage, source=vX.Y.Z"| S["GHCR :stage"]
     R -->|"promote.yml env=prod, source=vX.Y.Z"| P["GHCR :prod"]
     S --> DS[deploy.yml env=stage → docker-compose.stage.yml]
@@ -34,8 +34,10 @@ ghcr.io/xozan845-ctrl/core-engine-<servicio>:<tag|stage|prod>
 ```
 
 Servicios: `api-gateway`, `identity-service`, `catalog-service`, `stores-service`,
-`orders-service`, `logistics-service`, `commissions-service`, `finance-service`,
-`field-service`, `market-intelligence-service`, `storage-service`.
+`orders-service`, `logistics-service`, `scheduling-service`, `commissions-service`,
+`finance-service`, `field-service`, `market-intelligence-service`, `storage-service`
+(12 imágenes; `commissions` solo se despliega en stage y `market-intelligence` solo
+en desarrollo).
 
 ---
 
