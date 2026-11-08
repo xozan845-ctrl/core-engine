@@ -1,11 +1,13 @@
 import { CanActivate, ExecutionContext, Injectable } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
+import { randomUUID } from 'node:crypto';
 import { PgService } from '../db/pg.service';
 import { CapabilityDisabledError, DomainError, UnauthorizedError } from '../errors';
 import { ROLES } from '../constants';
 import { usuarioDesdeHeaders } from '../auth/jwt.utils';
 import { CAPABILITIES_KEY } from './capability.decorator';
 import { Capacidad } from './capability.constants';
+import { ejecutarConContexto } from '../logging/logger';
 
 interface CapacidadRow {
   capacidad_codigo: string;
@@ -38,18 +40,35 @@ export class CapabilityGuard implements CanActivate {
     if (!usuario.tenant_id) {
       throw new DomainError('TENANT_REQUERIDO', 'La operacion requiere un tenant activo.');
     }
+    const tenantId = usuario.tenant_id;
 
-    const filas = await this.pg.query<CapacidadRow>(
-      `SELECT capacidad_codigo, activo
-       FROM identity.empresa_capacidades
-       WHERE empresa_id = $1 AND capacidad_codigo = ANY($2::text[])`,
-      [usuario.tenant_id, requeridas],
-    );
-    const activas = new Set(filas.filter((fila) => fila.activo).map((fila) => fila.capacidad_codigo));
-    const faltantes = requeridas.filter((capacidad) => !activas.has(capacidad));
-    if (faltantes.length > 0) {
-      throw new CapabilityDisabledError(faltantes, usuario.tenant_id);
-    }
-    return true;
+    return ejecutarConContexto(
+      {
+        request_id: this.requestId(req),
+        servicio: process.env.SERVICIO ?? 'capability-guard',
+        usuario_id: usuario.user_id,
+        rol: usuario.rol,
+        tenant_id: tenantId,
+      },
+      async () => {
+        const filas = await this.pg.query<CapacidadRow>(
+          `SELECT capacidad_codigo, activo
+           FROM identity.empresa_capacidades
+           WHERE empresa_id = $1 AND capacidad_codigo = ANY($2::text[])`,
+          [tenantId, requeridas],
+        );
+        const activas = new Set(filas.filter((fila) => fila.activo).map((fila) => fila.capacidad_codigo));
+        const faltantes = requeridas.filter((capacidad) => !activas.has(capacidad));
+        if (faltantes.length > 0) {
+          throw new CapabilityDisabledError(faltantes, tenantId);
+        }
+        return true;
+      },
+    ) as Promise<boolean>;
+  }
+
+  private requestId(req: { headers?: Record<string, string | string[] | undefined> }): string {
+    const value = req.headers?.['x-request-id'];
+    return (Array.isArray(value) ? value[0] : value) ?? randomUUID();
   }
 }

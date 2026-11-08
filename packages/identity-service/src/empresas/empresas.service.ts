@@ -254,6 +254,13 @@ export class EmpresasService {
             ],
           );
           const empresa = result.rows[0];
+          // La empresa todavía no existe en el JWT del empresario durante el
+          // alta. Se fija el claim tenant dentro de la misma transacción antes
+          // de insertar sus miembros y capacidades, manteniendo RLS estricto.
+          await client.query(
+            `SELECT set_config('request.jwt.claims', $1, true)`,
+            [JSON.stringify({ sub: usuarioId, rol: 'empresario', tenant_id: empresa.id })],
+          );
           await client.query(
             `INSERT INTO identity.empresa_miembros (empresa_id, usuario_id, rol) VALUES ($1,$2,'empresario')`,
             [empresa.id, usuarioId],

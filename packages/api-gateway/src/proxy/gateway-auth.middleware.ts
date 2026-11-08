@@ -28,6 +28,13 @@ export const POLITICAS_RUTAS: PoliticaRuta[] = [
     { patron: /^\/api\/v1\/auth\/login$/, metodos: ['POST'], roles: null },
     { patron: /^\/api\/v1\/auth\/refresh$/, metodos: ['POST'], roles: null },
     { patron: /^\/api\/v1\/auth\/restablecer-contrasena$/, metodos: ['POST'], roles: null },
+    // Packs versionados: el empresario debe poder elegir el pack al crear su
+    // empresa; la selección concreta sigue validándose en identity-service.
+    {
+      patron: /^\/api\/v1\/packs(\/|$)/,
+      metodos: ['GET'],
+      roles: [ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.EMPRESARIO],
+    },
     // Invitaciones de vendedor: el token es la autorización temporal.
     { patron: /^\/api\/v1\/invitaciones\/vendedores\/[^/]+$/, metodos: ['GET'], roles: null },
     { patron: /^\/api\/v1\/invitaciones\/vendedores\/[^/]+\/aceptar$/, metodos: ['POST'], roles: null },
@@ -43,6 +50,11 @@ export const POLITICAS_RUTAS: PoliticaRuta[] = [
     // Servicios de empresa: recurso administrativo del catálogo (R-PS-02).
     {
       patron: /^\/api\/v1\/catalog\/servicios(\/|$)/,
+      metodos: ['*'],
+      roles: [ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.EMPRESARIO],
+    },
+    {
+      patron: /^\/api\/v1\/catalog\/items(\/|$)/,
       metodos: ['*'],
       roles: [ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.EMPRESARIO],
     },
