@@ -232,15 +232,21 @@ export class Runner {
     try {
       const result = await fn();
       const duration = Date.now() - start;
-      const passedTests = result.resultados ? result.resultados.filter(r => r.pass).length : 0;
-      const totalTests = result.resultados ? result.resultados.length : 0;
-      const pass = passedTests > 0;
-      this.report.addSuiteResult(name, { 
-        ...result, 
-        duration, 
-        tests: totalTests, 
-        pasos: passedTests, 
-        fallos: totalTests - passedTests 
+      const resultados = Array.isArray(result.resultados) ? result.resultados : [];
+      const passedTests = resultados.filter((r) => r.pass).length;
+      const totalTests = resultados.length;
+      // Una suite que devuelve `pass:false` sin resultados (p. ej. falta de
+      // token) NO puede contarse como verde: antes daba 0 tests y 0 fallos.
+      const declaredFail = result.pass === false || Boolean(result.error);
+      const pass = !declaredFail && (totalTests === 0 ? result.pass !== false : passedTests === totalTests);
+      const fallos = totalTests === 0 ? (pass ? 0 : 1) : totalTests - passedTests;
+      this.report.addSuiteResult(name, {
+        ...result,
+        pass,
+        duration,
+        tests: totalTests,
+        pasos: passedTests,
+        fallos,
       });
       console.log(`   ${pass ? '✅' : '❌'} ${name} (${duration}ms) - ${passedTests}/${totalTests} tests passed`);
     } catch (e) {
