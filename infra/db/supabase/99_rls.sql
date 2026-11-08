@@ -528,3 +528,19 @@ CREATE POLICY pack_modelos_admin ON identity.pack_modelos
   FOR ALL TO authenticated
   USING (auth.rol() IN ('super_admin', 'admin'))
   WITH CHECK (auth.rol() IN ('super_admin', 'admin'));
+
+ALTER TABLE identity.extensiones_empresa ENABLE ROW LEVEL SECURITY;
+CREATE POLICY extensiones_empresa_admin ON identity.extensiones_empresa
+  FOR ALL TO authenticated
+  USING (auth.rol() IN ('super_admin', 'admin'))
+  WITH CHECK (auth.rol() IN ('super_admin', 'admin'));
+CREATE POLICY extensiones_empresa_lectura ON identity.extensiones_empresa
+  FOR SELECT TO authenticated
+  USING (empresa_id::text = (auth.jwt() ->> 'tenant_id'));
+CREATE POLICY extensiones_empresa_insert ON identity.extensiones_empresa
+  FOR INSERT TO authenticated
+  WITH CHECK (auth.rol() = 'empresario' AND empresa_id::text = (auth.jwt() ->> 'tenant_id'));
+CREATE POLICY extensiones_empresa_update ON identity.extensiones_empresa
+  FOR UPDATE TO authenticated
+  USING (auth.rol() = 'empresario' AND empresa_id::text = (auth.jwt() ->> 'tenant_id'))
+  WITH CHECK (auth.rol() = 'empresario' AND empresa_id::text = (auth.jwt() ->> 'tenant_id'));
