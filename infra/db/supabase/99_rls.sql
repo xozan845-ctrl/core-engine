@@ -544,3 +544,22 @@ CREATE POLICY extensiones_empresa_update ON identity.extensiones_empresa
   FOR UPDATE TO authenticated
   USING (auth.rol() = 'empresario' AND empresa_id::text = (auth.jwt() ->> 'tenant_id'))
   WITH CHECK (auth.rol() = 'empresario' AND empresa_id::text = (auth.jwt() ->> 'tenant_id'));
+
+ALTER TABLE identity.extensiones_empresa_valores ENABLE ROW LEVEL SECURITY;
+CREATE POLICY extension_values_admin ON identity.extensiones_empresa_valores
+  FOR ALL TO authenticated
+  USING (auth.rol() IN ('super_admin', 'admin'))
+  WITH CHECK (auth.rol() IN ('super_admin', 'admin'));
+CREATE POLICY extension_values_lectura ON identity.extensiones_empresa_valores
+  FOR SELECT TO authenticated
+  USING (empresa_id::text = (auth.jwt() ->> 'tenant_id'));
+CREATE POLICY extension_values_insert ON identity.extensiones_empresa_valores
+  FOR INSERT TO authenticated
+  WITH CHECK (auth.rol() = 'empresario' AND empresa_id::text = (auth.jwt() ->> 'tenant_id'));
+CREATE POLICY extension_values_update ON identity.extensiones_empresa_valores
+  FOR UPDATE TO authenticated
+  USING (auth.rol() = 'empresario' AND empresa_id::text = (auth.jwt() ->> 'tenant_id'))
+  WITH CHECK (auth.rol() = 'empresario' AND empresa_id::text = (auth.jwt() ->> 'tenant_id'));
+CREATE POLICY extension_values_delete ON identity.extensiones_empresa_valores
+  FOR DELETE TO authenticated
+  USING (auth.rol() = 'empresario' AND empresa_id::text = (auth.jwt() ->> 'tenant_id'));
