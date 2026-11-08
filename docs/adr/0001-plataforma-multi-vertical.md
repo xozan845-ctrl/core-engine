@@ -108,7 +108,11 @@ extensión contiene:
 Las referencias externas `$ref` y los documentos mayores a 64 KiB quedan
 prohibidos. La validación se realiza en el servicio que registra la extensión
 y la API expone además una operación explícita de validación. RLS mantiene el
-alcance por empresa y los administradores pueden operar de forma global.
+alcance por empresa y los administradores pueden operar de forma global. Los
+valores se persisten en `identity.extensiones_empresa_valores`, asociados a
+la empresa, extensión y recurso estable, con `version_schema` para conservar
+la compatibilidad histórica entre versiones; una nueva versión no reescribe
+ni migra silenciosamente los valores existentes.
 
 ### 4. Órdenes y fulfillment
 

@@ -99,4 +99,45 @@ describe('ExtensionesService', () => {
       tenant_id: '99999999-aaaa-bbbb-cccc-dddddddddddd',
     })).rejects.toMatchObject({ codigo: 'ACCESO_DENEGADO' });
   });
+
+  it('guarda, consulta y elimina valores asociados a un recurso', async () => {
+    const { servicio, pg } = crear();
+    const extension = { id: '22222222-3333-4444-5555-666666666666', esquema, version: 1 };
+    const valor = {
+      id: '33333333-4444-5555-6666-777777777777',
+      empresa_id: EMPRESA,
+      extension_id: extension.id,
+      recurso_id: '44444444-5555-6666-7777-888888888888',
+      valores: { numero: 9 },
+      version_schema: 1,
+      creado_por: ADMIN.user_id,
+      creado_en: '2026-11-08T00:00:00.000Z',
+      actualizado_en: '2026-11-08T00:00:00.000Z',
+    };
+    (pg.queryOne as Mock)
+      .mockResolvedValueOnce(extension)
+      .mockResolvedValueOnce(valor)
+      .mockResolvedValueOnce(extension)
+      .mockResolvedValueOnce(valor)
+      .mockResolvedValueOnce(extension)
+      .mockResolvedValueOnce({ id: valor.id });
+
+    await expect(servicio.guardarValores(EMPRESA, 'ficha_cliente', valor.recurso_id, { numero: 9 }, ADMIN))
+      .resolves.toEqual(valor);
+    await expect(servicio.obtenerValores(EMPRESA, 'ficha_cliente', valor.recurso_id, ADMIN))
+      .resolves.toEqual(valor);
+    await expect(servicio.eliminarValores(EMPRESA, 'ficha_cliente', valor.recurso_id, ADMIN))
+      .resolves.toBeUndefined();
+    expect((pg.queryOne as Mock).mock.calls[1][0]).toContain('ON CONFLICT');
+  });
+
+  it('rechaza valores que no cumplen el schema o no tienen recurso UUID', async () => {
+    const { servicio, pg } = crear();
+    (pg.queryOne as Mock).mockResolvedValueOnce({ id: '22222222-3333-4444-5555-666666666666', esquema, version: 1 });
+    await expect(servicio.guardarValores(EMPRESA, 'ficha_cliente', '44444444-5555-6666-7777-888888888888', { numero: '9' }, ADMIN))
+      .rejects.toMatchObject({ codigo: 'VALORES_EXTENSION_INVALIDOS' });
+    await expect(servicio.guardarValores(EMPRESA, 'ficha_cliente', 'not-uuid', { numero: 9 }, ADMIN))
+      .rejects.toMatchObject({ codigo: 'RECURSO_INVALIDO' });
+    expect(pg.queryOne).toHaveBeenCalledTimes(1);
+  });
 });
