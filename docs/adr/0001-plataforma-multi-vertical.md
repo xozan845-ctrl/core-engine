@@ -93,6 +93,23 @@ Se introduce la abstracción `item` con `tipo` igual a `producto`, `servicio` o
 `stores.ofertas` usará `item_type + item_id`. El stock será nullable y los
 servicios podrán declarar capacidad o slots.
 
+### 3.1 Extensiones configurables por empresa
+
+Para permitir nuevos rubros sin crear un servicio por negocio, cada empresa
+podrá registrar extensiones versionadas sobre recursos estables de la
+plataforma (`cliente`, `item`, `orden`, `cita`, `recurso`, entre otros). Una
+extensión contiene:
+
+- un JSON Schema para validar los datos;
+- una definición de formulario declarativa para el cliente;
+- reglas descriptivas en JSON, sin código ejecutable ni workflows genéricos;
+- una versión activa por código y empresa.
+
+Las referencias externas `$ref` y los documentos mayores a 64 KiB quedan
+prohibidos. La validación se realiza en el servicio que registra la extensión
+y la API expone además una operación explícita de validación. RLS mantiene el
+alcance por empresa y los administradores pueden operar de forma global.
+
 ### 4. Órdenes y fulfillment
 
 Las órdenes tendrán tipos explícitos: `compra`, `reserva`, `cotizacion` y
