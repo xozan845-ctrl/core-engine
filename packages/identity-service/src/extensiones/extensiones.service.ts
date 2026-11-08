@@ -60,8 +60,8 @@ export interface ExtensionValue {
   actualizado_en: string;
 }
 
-interface ExtensionRow extends EmpresaExtension {}
-interface ExtensionValueRow extends ExtensionValue {}
+type ExtensionRow = EmpresaExtension;
+type ExtensionValueRow = ExtensionValue;
 interface ActiveExtension {
   id: string;
   esquema: Record<string, unknown>;

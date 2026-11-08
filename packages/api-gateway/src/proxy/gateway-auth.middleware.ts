@@ -120,6 +120,11 @@ export const POLITICAS_RUTAS: PoliticaRuta[] = [
     { patron: /^\/api\/v1\/auth\/crear-usuario$/, metodos: ['POST'], roles: [ROLES.SUPER_ADMIN, ROLES.ADMIN] },
     { patron: /^\/api\/v1\/empresas$/, metodos: ['POST'], roles: [ROLES.EMPRESARIO] },
     {
+      patron: /^\/api\/v1\/empresas\/[^/]+\/partes(?:\/|$)/,
+      metodos: ['GET', 'POST', 'PATCH', 'DELETE'],
+      roles: [ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.EMPRESARIO, ROLES.VENDEDOR, ROLES.COORDINADOR, ROLES.SUPERVISOR, ROLES.OPERATIVO],
+    },
+    {
       patron: /^\/api\/v1\/empresas\/[^/]+\/extensiones(?:\/|$)/,
       metodos: ['GET', 'POST', 'PATCH', 'PUT', 'DELETE'],
       roles: [ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.EMPRESARIO, ROLES.VENDEDOR, ROLES.COORDINADOR, ROLES.SUPERVISOR, ROLES.OPERATIVO],
