@@ -91,7 +91,10 @@ scripts/
     ├── smoke-remote.mjs       # smoke read-only para stage/prod (R-CD-12)
     ├── smoke-remote.test.mjs  # health, login y catálogo con HTTP efímero
     ├── swagger-aggregate.mjs  # agrega specs y separa superficie pública/interna
-    └── swagger-aggregate.test.mjs # regresiones del agregador (filtro y colisiones)
+    ├── swagger-aggregate.test.mjs # regresiones del agregador (filtro y colisiones)
+    ├── openapi-surface.test.mjs   # R-DO-8: rutas públicas/internas y superficies
+    ├── openapi-security.test.mjs  # seguridad declarada en el contrato
+    └── openapi-responses.test.mjs # R-DO-10: respuestas documentadas
 ```
 
 ### Regla de dependencia
@@ -178,7 +181,7 @@ Al terminar, el runner imprime cuántos IDs de regla tienen check ejecutable y
 `docs/rules`:
 
 ```
-Cobertura ejecutable: 30/238 IDs de regla tienen check.
+Cobertura ejecutable: 41/238 IDs de regla tienen check.
 ```
 
 > El reporte nació exponiendo un hallazgo real: `R-CI-9` y `R-CD-22` se citaban
