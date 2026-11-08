@@ -28,6 +28,7 @@ export class CitaResponseDto {
   @ApiProperty({ format: 'uuid' }) empresa_id: string;
   @ApiProperty({ format: 'uuid' }) recurso_id: string;
   @ApiProperty({ required: false, nullable: true, format: 'uuid' }) cliente_id: string | null;
+  @ApiProperty({ required: false, nullable: true, format: 'uuid' }) parte_id: string | null;
   @ApiProperty({ required: false, nullable: true, format: 'uuid' }) order_id: string | null;
   @ApiProperty({ required: false, nullable: true, format: 'uuid' }) item_id: string | null;
   @ApiProperty({ enum: ['reservada', 'confirmada', 'en_atencion', 'completada', 'cancelada', 'no_asistio'] }) estado: string;

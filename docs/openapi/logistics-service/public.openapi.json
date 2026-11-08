@@ -307,6 +307,12 @@
             "description": "Empresa propietaria de las líneas despachadas",
             "format": "uuid"
           },
+          "parte_id": {
+            "type": "object",
+            "description": "Referencia universal opcional del destinatario",
+            "format": "uuid",
+            "nullable": true
+          },
           "modalidad_logistica": {
             "type": "string",
             "enum": [
@@ -349,6 +355,7 @@
           "guia",
           "order_id",
           "empresa_id",
+          "parte_id",
           "modalidad_logistica",
           "proveedor_tipo",
           "proveedor_tenant_id",
@@ -379,6 +386,12 @@
             "type": "string",
             "description": "Empresa propietaria de las líneas despachadas",
             "format": "uuid"
+          },
+          "parte_id": {
+            "type": "object",
+            "description": "Referencia universal opcional del destinatario",
+            "format": "uuid",
+            "nullable": true
           },
           "modalidad_logistica": {
             "type": "string",
@@ -417,6 +430,7 @@
           "guia",
           "order_id",
           "empresa_id",
+          "parte_id",
           "modalidad_logistica",
           "proveedor_tipo",
           "proveedor_tenant_id",
