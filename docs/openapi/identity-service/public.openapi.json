@@ -1741,6 +1741,808 @@
           "Extensiones configurables"
         ]
       }
+    },
+    "/api/v1/empresas/{empresaId}/partes": {
+      "get": {
+        "operationId": "PartesController_listar",
+        "parameters": [
+          {
+            "name": "empresaId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "name": "limite",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 100,
+              "type": "number"
+            }
+          },
+          {
+            "name": "tipo",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "enum": [
+                "persona",
+                "organizacion"
+              ],
+              "type": "string"
+            }
+          },
+          {
+            "name": "q",
+            "required": false,
+            "in": "query",
+            "schema": {}
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ParteResponseDto"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Listar personas y organizaciones de una empresa",
+        "tags": [
+          "Partes universales"
+        ]
+      },
+      "post": {
+        "operationId": "PartesController_crear",
+        "parameters": [
+          {
+            "name": "empresaId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CrearParteRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ParteResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Crear una persona u organización universal",
+        "tags": [
+          "Partes universales"
+        ]
+      }
+    },
+    "/api/v1/empresas/{empresaId}/partes/{parteId}": {
+      "get": {
+        "operationId": "PartesController_obtener",
+        "parameters": [
+          {
+            "name": "empresaId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "name": "parteId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ParteResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Obtener una parte universal",
+        "tags": [
+          "Partes universales"
+        ]
+      },
+      "patch": {
+        "operationId": "PartesController_actualizar",
+        "parameters": [
+          {
+            "name": "empresaId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "name": "parteId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ActualizarParteRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ParteResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Actualizar una parte universal",
+        "tags": [
+          "Partes universales"
+        ]
+      },
+      "delete": {
+        "operationId": "PartesController_eliminar",
+        "parameters": [
+          {
+            "name": "empresaId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "name": "parteId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Parte archivada"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Archivar una parte universal y sus datos derivados",
+        "tags": [
+          "Partes universales"
+        ]
+      }
+    },
+    "/api/v1/empresas/{empresaId}/partes/{parteId}/contactos": {
+      "get": {
+        "operationId": "PartesController_listarContactos",
+        "parameters": [
+          {
+            "name": "empresaId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "parteId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/MedioContactoResponseDto"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Listar medios de contacto de una parte",
+        "tags": [
+          "Partes universales"
+        ]
+      },
+      "post": {
+        "operationId": "PartesController_crearContacto",
+        "parameters": [
+          {
+            "name": "empresaId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "parteId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CrearMedioContactoRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MedioContactoResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Agregar un medio de contacto",
+        "tags": [
+          "Partes universales"
+        ]
+      }
+    },
+    "/api/v1/empresas/{empresaId}/partes/{parteId}/contactos/{contactoId}": {
+      "patch": {
+        "operationId": "PartesController_actualizarContacto",
+        "parameters": [
+          {
+            "name": "empresaId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "parteId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "contactoId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ActualizarMedioContactoRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MedioContactoResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Actualizar un medio de contacto",
+        "tags": [
+          "Partes universales"
+        ]
+      },
+      "delete": {
+        "operationId": "PartesController_eliminarContacto",
+        "parameters": [
+          {
+            "name": "empresaId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "parteId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "contactoId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Medio de contacto archivado"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Archivar un medio de contacto",
+        "tags": [
+          "Partes universales"
+        ]
+      }
+    },
+    "/api/v1/empresas/{empresaId}/partes/{parteId}/direcciones": {
+      "get": {
+        "operationId": "PartesController_listarDirecciones",
+        "parameters": [
+          {
+            "name": "empresaId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "parteId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/DireccionResponseDto"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Listar direcciones de una parte",
+        "tags": [
+          "Partes universales"
+        ]
+      },
+      "post": {
+        "operationId": "PartesController_crearDireccion",
+        "parameters": [
+          {
+            "name": "empresaId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "parteId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CrearDireccionRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DireccionResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Agregar una dirección",
+        "tags": [
+          "Partes universales"
+        ]
+      }
+    },
+    "/api/v1/empresas/{empresaId}/partes/{parteId}/direcciones/{direccionId}": {
+      "patch": {
+        "operationId": "PartesController_actualizarDireccion",
+        "parameters": [
+          {
+            "name": "empresaId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "parteId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "direccionId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ActualizarDireccionRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DireccionResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Actualizar una dirección",
+        "tags": [
+          "Partes universales"
+        ]
+      },
+      "delete": {
+        "operationId": "PartesController_eliminarDireccion",
+        "parameters": [
+          {
+            "name": "empresaId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "parteId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "direccionId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Dirección archivada"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Archivar una dirección",
+        "tags": [
+          "Partes universales"
+        ]
+      }
+    },
+    "/api/v1/empresas/{empresaId}/partes/{parteId}/relaciones": {
+      "get": {
+        "operationId": "PartesController_listarRelaciones",
+        "parameters": [
+          {
+            "name": "empresaId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "parteId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/RelacionResponseDto"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Listar relaciones de una parte",
+        "tags": [
+          "Partes universales"
+        ]
+      },
+      "post": {
+        "operationId": "PartesController_crearRelacion",
+        "parameters": [
+          {
+            "name": "empresaId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "parteId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CrearRelacionRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RelacionResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Relacionar dos partes de la misma empresa",
+        "tags": [
+          "Partes universales"
+        ]
+      }
+    },
+    "/api/v1/empresas/{empresaId}/partes/{parteId}/relaciones/{relacionId}": {
+      "delete": {
+        "operationId": "PartesController_eliminarRelacion",
+        "parameters": [
+          {
+            "name": "empresaId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "parteId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "relacionId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Relación desactivada"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Desactivar una relación",
+        "tags": [
+          "Partes universales"
+        ]
+      }
     }
   },
   "components": {
@@ -1919,6 +2721,74 @@
           }
         }
       },
+      "ActualizarDireccionRequestDto": {
+        "type": "object",
+        "properties": {
+          "tipo": {
+            "type": "string",
+            "enum": [
+              "fiscal",
+              "comercial",
+              "entrega",
+              "operativa",
+              "otro"
+            ]
+          },
+          "etiqueta": {
+            "type": "string",
+            "maxLength": 120
+          },
+          "linea_1": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 240
+          },
+          "linea_2": {
+            "type": "string",
+            "maxLength": 240
+          },
+          "ciudad": {
+            "type": "string",
+            "maxLength": 120
+          },
+          "departamento": {
+            "type": "string",
+            "maxLength": 120
+          },
+          "pais": {
+            "type": "string",
+            "maxLength": 120
+          },
+          "codigo_postal": {
+            "type": "string",
+            "maxLength": 32
+          },
+          "referencias": {
+            "type": "string",
+            "maxLength": 500
+          },
+          "latitud": {
+            "type": "object",
+            "nullable": true,
+            "minimum": -90,
+            "maximum": 90
+          },
+          "longitud": {
+            "type": "object",
+            "nullable": true,
+            "minimum": -180,
+            "maximum": 180
+          },
+          "es_principal": {
+            "type": "boolean",
+            "default": false
+          },
+          "metadata": {
+            "type": "object",
+            "additionalProperties": true
+          }
+        }
+      },
       "ActualizarExtensionRequestDto": {
         "type": "object",
         "properties": {
@@ -1929,6 +2799,38 @@
         "required": [
           "activo"
         ]
+      },
+      "ActualizarMedioContactoRequestDto": {
+        "type": "object",
+        "properties": {
+          "tipo": {
+            "type": "string",
+            "enum": [
+              "email",
+              "telefono",
+              "whatsapp",
+              "web",
+              "otro"
+            ]
+          },
+          "valor": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 240
+          },
+          "etiqueta": {
+            "type": "string",
+            "maxLength": 120
+          },
+          "es_principal": {
+            "type": "boolean",
+            "default": false
+          },
+          "metadata": {
+            "type": "object",
+            "additionalProperties": true
+          }
+        }
       },
       "ActualizarModalidadLogisticaRequestDto": {
         "type": "object",
@@ -1945,6 +2847,48 @@
         "required": [
           "modalidad_logistica"
         ]
+      },
+      "ActualizarParteRequestDto": {
+        "type": "object",
+        "properties": {
+          "tipo": {
+            "type": "string",
+            "enum": [
+              "persona",
+              "organizacion"
+            ]
+          },
+          "nombre": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 240
+          },
+          "nombre_comercial": {
+            "type": "string",
+            "maxLength": 240
+          },
+          "identificador_tipo": {
+            "type": "string",
+            "maxLength": 40
+          },
+          "identificador_valor": {
+            "type": "string",
+            "maxLength": 120
+          },
+          "estado": {
+            "type": "string",
+            "enum": [
+              "activo",
+              "inactivo",
+              "archivado"
+            ],
+            "default": "activo"
+          },
+          "metadata": {
+            "type": "object",
+            "additionalProperties": true
+          }
+        }
       },
       "ActualizarSlugRequestDto": {
         "type": "object",
@@ -2150,6 +3094,78 @@
           "tema",
           "origen_personalizacion",
           "actualizado_en"
+        ]
+      },
+      "CrearDireccionRequestDto": {
+        "type": "object",
+        "properties": {
+          "tipo": {
+            "type": "string",
+            "enum": [
+              "fiscal",
+              "comercial",
+              "entrega",
+              "operativa",
+              "otro"
+            ]
+          },
+          "etiqueta": {
+            "type": "string",
+            "maxLength": 120
+          },
+          "linea_1": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 240
+          },
+          "linea_2": {
+            "type": "string",
+            "maxLength": 240
+          },
+          "ciudad": {
+            "type": "string",
+            "maxLength": 120
+          },
+          "departamento": {
+            "type": "string",
+            "maxLength": 120
+          },
+          "pais": {
+            "type": "string",
+            "maxLength": 120
+          },
+          "codigo_postal": {
+            "type": "string",
+            "maxLength": 32
+          },
+          "referencias": {
+            "type": "string",
+            "maxLength": 500
+          },
+          "latitud": {
+            "type": "object",
+            "nullable": true,
+            "minimum": -90,
+            "maximum": 90
+          },
+          "longitud": {
+            "type": "object",
+            "nullable": true,
+            "minimum": -180,
+            "maximum": 180
+          },
+          "es_principal": {
+            "type": "boolean",
+            "default": false
+          },
+          "metadata": {
+            "type": "object",
+            "additionalProperties": true
+          }
+        },
+        "required": [
+          "tipo",
+          "linea_1"
         ]
       },
       "CrearEmpresaRequestDto": {
@@ -2367,6 +3383,42 @@
           "participacion_porcentaje"
         ]
       },
+      "CrearMedioContactoRequestDto": {
+        "type": "object",
+        "properties": {
+          "tipo": {
+            "type": "string",
+            "enum": [
+              "email",
+              "telefono",
+              "whatsapp",
+              "web",
+              "otro"
+            ]
+          },
+          "valor": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 240
+          },
+          "etiqueta": {
+            "type": "string",
+            "maxLength": 120
+          },
+          "es_principal": {
+            "type": "boolean",
+            "default": false
+          },
+          "metadata": {
+            "type": "object",
+            "additionalProperties": true
+          }
+        },
+        "required": [
+          "tipo",
+          "valor"
+        ]
+      },
       "CrearModeloOperacionRequestDto": {
         "type": "object",
         "properties": {
@@ -2438,6 +3490,74 @@
           "version",
           "vertical_codigo",
           "nombre"
+        ]
+      },
+      "CrearParteRequestDto": {
+        "type": "object",
+        "properties": {
+          "tipo": {
+            "type": "string",
+            "enum": [
+              "persona",
+              "organizacion"
+            ]
+          },
+          "nombre": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 240
+          },
+          "nombre_comercial": {
+            "type": "string",
+            "maxLength": 240
+          },
+          "identificador_tipo": {
+            "type": "string",
+            "maxLength": 40
+          },
+          "identificador_valor": {
+            "type": "string",
+            "maxLength": 120
+          },
+          "estado": {
+            "type": "string",
+            "enum": [
+              "activo",
+              "inactivo",
+              "archivado"
+            ],
+            "default": "activo"
+          },
+          "metadata": {
+            "type": "object",
+            "additionalProperties": true
+          }
+        },
+        "required": [
+          "tipo",
+          "nombre"
+        ]
+      },
+      "CrearRelacionRequestDto": {
+        "type": "object",
+        "properties": {
+          "parte_destino_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "tipo": {
+            "type": "string",
+            "example": "cliente",
+            "pattern": "^[a-z][a-z0-9_]{1,39}$"
+          },
+          "metadata": {
+            "type": "object",
+            "additionalProperties": true
+          }
+        },
+        "required": [
+          "parte_destino_id",
+          "tipo"
         ]
       },
       "CrearUsuarioRequestDto": {
@@ -2537,6 +3657,106 @@
           "codigo",
           "nombre",
           "modelo_operacion"
+        ]
+      },
+      "DireccionResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "empresa_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "parte_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "tipo": {
+            "type": "string",
+            "enum": [
+              "fiscal",
+              "comercial",
+              "entrega",
+              "operativa",
+              "otro"
+            ]
+          },
+          "etiqueta": {
+            "type": "string"
+          },
+          "linea_1": {
+            "type": "string"
+          },
+          "linea_2": {
+            "type": "string"
+          },
+          "ciudad": {
+            "type": "string"
+          },
+          "departamento": {
+            "type": "string"
+          },
+          "pais": {
+            "type": "string"
+          },
+          "codigo_postal": {
+            "type": "string"
+          },
+          "referencias": {
+            "type": "string"
+          },
+          "latitud": {
+            "type": "object",
+            "nullable": true
+          },
+          "longitud": {
+            "type": "object",
+            "nullable": true
+          },
+          "es_principal": {
+            "type": "boolean"
+          },
+          "metadata": {
+            "type": "object",
+            "additionalProperties": true
+          },
+          "creado_en": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "actualizado_en": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "eliminado_en": {
+            "type": "object",
+            "nullable": true,
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "empresa_id",
+          "parte_id",
+          "tipo",
+          "etiqueta",
+          "linea_1",
+          "linea_2",
+          "ciudad",
+          "departamento",
+          "pais",
+          "codigo_postal",
+          "referencias",
+          "latitud",
+          "longitud",
+          "es_principal",
+          "metadata",
+          "creado_en",
+          "actualizado_en",
+          "eliminado_en"
         ]
       },
       "EmpresaCapacidadResponseDto": {
@@ -3071,6 +4291,78 @@
           }
         }
       },
+      "MedioContactoResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "empresa_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "parte_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "tipo": {
+            "type": "string",
+            "enum": [
+              "email",
+              "telefono",
+              "whatsapp",
+              "web",
+              "otro"
+            ]
+          },
+          "valor": {
+            "type": "string"
+          },
+          "etiqueta": {
+            "type": "string"
+          },
+          "es_principal": {
+            "type": "boolean"
+          },
+          "verificado_en": {
+            "type": "object",
+            "nullable": true,
+            "format": "date-time"
+          },
+          "metadata": {
+            "type": "object",
+            "additionalProperties": true
+          },
+          "creado_en": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "actualizado_en": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "eliminado_en": {
+            "type": "object",
+            "nullable": true,
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "empresa_id",
+          "parte_id",
+          "tipo",
+          "valor",
+          "etiqueta",
+          "es_principal",
+          "verificado_en",
+          "metadata",
+          "creado_en",
+          "actualizado_en",
+          "eliminado_en"
+        ]
+      },
       "ModeloOperacionResponseDto": {
         "type": "object",
         "properties": {
@@ -3258,6 +4550,82 @@
           "capacidades"
         ]
       },
+      "ParteResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "empresa_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "tipo": {
+            "type": "string",
+            "enum": [
+              "persona",
+              "organizacion"
+            ]
+          },
+          "nombre": {
+            "type": "string"
+          },
+          "nombre_comercial": {
+            "type": "string"
+          },
+          "identificador_tipo": {
+            "type": "string"
+          },
+          "identificador_valor": {
+            "type": "string"
+          },
+          "estado": {
+            "type": "string",
+            "enum": [
+              "activo",
+              "inactivo",
+              "archivado"
+            ]
+          },
+          "metadata": {
+            "type": "object",
+            "additionalProperties": true
+          },
+          "creado_por": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "creado_en": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "actualizado_en": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "eliminado_en": {
+            "type": "object",
+            "nullable": true,
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "empresa_id",
+          "tipo",
+          "nombre",
+          "nombre_comercial",
+          "identificador_tipo",
+          "identificador_valor",
+          "estado",
+          "metadata",
+          "creado_por",
+          "creado_en",
+          "actualizado_en",
+          "eliminado_en"
+        ]
+      },
       "PerfilEmpresaRequestDto": {
         "type": "object",
         "properties": {
@@ -3430,6 +4798,64 @@
           "correo",
           "contrasena",
           "rol"
+        ]
+      },
+      "RelacionResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "empresa_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "parte_origen_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "parte_destino_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "tipo": {
+            "type": "string"
+          },
+          "metadata": {
+            "type": "object",
+            "additionalProperties": true
+          },
+          "activo": {
+            "type": "boolean"
+          },
+          "creado_por": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "creado_en": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "actualizado_en": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "parte_relacionada": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "id",
+          "empresa_id",
+          "parte_origen_id",
+          "parte_destino_id",
+          "tipo",
+          "metadata",
+          "activo",
+          "creado_por",
+          "creado_en",
+          "actualizado_en"
         ]
       },
       "RestablecerContrasenaRequestDto": {
