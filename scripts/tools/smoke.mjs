@@ -259,7 +259,7 @@ async function main() {
     process.exit(1);
   }
   ok('empresario y comprador registrados');
-  const tokenEmpresario = regE.json.access_token;
+  let tokenEmpresario = regE.json.access_token;
   const tokenComprador = regC.json.access_token;
 
   // ── 1b. Empresa y vendedor (ADR-25) ──────────────────────────────────
@@ -267,7 +267,7 @@ async function main() {
   const empresa = await api(
     'POST',
     '/api/v1/empresas',
-    { nombre: 'Distribuidora Piloto', modalidad_logistica: 'plataforma' },
+    { nombre: `Distribuidora Piloto ${suf}`, modalidad_logistica: 'plataforma' },
     tokenEmpresario,
   );
   if (![200, 201].includes(empresa.status) || !empresa.json?.id) {
@@ -275,6 +275,18 @@ async function main() {
     process.exit(1);
   }
   ok(`empresa=${empresa.json.id.slice(0, 8)}`);
+
+  // La creación asigna tenant_id al usuario. Renovamos el access token para
+  // que las operaciones posteriores viajen con el claim requerido por RLS.
+  const loginEmpresarioActivo = await api('POST', '/api/v1/auth/login', {
+    correo: correoEmpresario,
+    contrasena,
+  });
+  if (loginEmpresarioActivo.status !== 200 || !loginEmpresarioActivo.json?.access_token) {
+    fail(`login empresario con tenant → ${loginEmpresarioActivo.status} ${JSON.stringify(loginEmpresarioActivo.json)}`);
+    process.exit(1);
+  }
+  tokenEmpresario = loginEmpresarioActivo.json.access_token;
 
   paso('El empresario crea al vendedor con participación 100 % (ADR-25)');
   const vendedor = await api(
