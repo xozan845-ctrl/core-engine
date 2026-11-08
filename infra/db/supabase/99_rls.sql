@@ -508,3 +508,23 @@ CREATE POLICY scheduling_outbox_admin ON scheduling.outbox
   FOR ALL TO authenticated
   USING (auth.rol() IN ('super_admin', 'admin'))
   WITH CHECK (auth.rol() IN ('super_admin', 'admin'));
+
+ALTER TABLE identity.modelos_operacion ENABLE ROW LEVEL SECURITY;
+CREATE POLICY modelos_operacion_lectura ON identity.modelos_operacion
+  FOR SELECT TO anon, authenticated USING (activo);
+CREATE POLICY modelos_operacion_admin ON identity.modelos_operacion
+  FOR ALL TO authenticated
+  USING (auth.rol() IN ('super_admin', 'admin'))
+  WITH CHECK (auth.rol() IN ('super_admin', 'admin'));
+
+ALTER TABLE identity.pack_modelos ENABLE ROW LEVEL SECURITY;
+CREATE POLICY pack_modelos_lectura ON identity.pack_modelos
+  FOR SELECT TO authenticated
+  USING (EXISTS (
+    SELECT 1 FROM identity.packs p
+     WHERE p.codigo = pack_codigo AND p.version = pack_version AND p.activo
+  ));
+CREATE POLICY pack_modelos_admin ON identity.pack_modelos
+  FOR ALL TO authenticated
+  USING (auth.rol() IN ('super_admin', 'admin'))
+  WITH CHECK (auth.rol() IN ('super_admin', 'admin'));

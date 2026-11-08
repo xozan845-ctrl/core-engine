@@ -18,6 +18,7 @@ import {
   IsIn,
   IsInt,
   IsOptional,
+  Matches,
   IsString,
   IsUUID,
   Length,
@@ -91,10 +92,10 @@ class CrearEmpresaRequestDto extends OmitType(PerfilEmpresaRequestDto, [
   slug?: string;
   @ApiProperty({ required: false, nullable: true, enum: ['plataforma', 'propia', 'hibrida'], description: 'Legado; puede omitirse y queda nullable' })
   @IsOptional() @IsIn(['plataforma', 'propia', 'hibrida']) modalidad_logistica?: ModalidadLogistica | null;
-  @ApiProperty({ required: false, enum: ['retail', 'farmacia', 'belleza', 'dental', 'flota'], default: 'retail' })
-  @IsOptional() @IsIn(['retail', 'farmacia', 'belleza', 'dental', 'flota']) vertical_id?: string;
-  @ApiProperty({ required: false, enum: ['pack_retail', 'pack_farmacia', 'pack_belleza', 'pack_dental', 'pack_flota'], description: 'Pack versionado; si se omite se deriva de la vertical' })
-  @IsOptional() @IsIn(['pack_retail', 'pack_farmacia', 'pack_belleza', 'pack_dental', 'pack_flota']) pack_codigo?: PackCodigo;
+  @ApiProperty({ required: false, description: 'Código dinámico de la vertical; se valida contra identity.verticales' })
+  @IsOptional() @IsString() @Matches(/^[a-z][a-z0-9_]{1,39}$/) vertical_id?: string;
+  @ApiProperty({ required: false, description: 'Pack versionado; se valida contra identity.packs' })
+  @IsOptional() @IsString() @Matches(/^pack_[a-z][a-z0-9_]{1,39}$/) pack_codigo?: PackCodigo;
   @ApiProperty({ required: false, enum: ['comercial', 'logistica', 'plataforma'], default: 'comercial' })
   @IsOptional() @IsIn(['comercial', 'logistica', 'plataforma']) tipo_empresa?: TipoEmpresa;
 }
@@ -123,8 +124,8 @@ class ActualizarTipoEmpresaRequestDto {
 export class EmpresaResponseDto {
   @ApiProperty({ format: 'uuid' }) id: string;
   @ApiProperty() nombre: string;
-  @ApiProperty({ required: false, nullable: true, enum: ['retail', 'farmacia', 'belleza', 'dental', 'flota'] }) vertical_id?: string | null;
-  @ApiProperty({ required: false, nullable: true, enum: ['pack_retail', 'pack_farmacia', 'pack_belleza', 'pack_dental', 'pack_flota'] }) pack_codigo?: PackCodigo | null;
+  @ApiProperty({ required: false, nullable: true, description: 'Código dinámico de la vertical' }) vertical_id?: string | null;
+  @ApiProperty({ required: false, nullable: true, description: 'Código dinámico del pack' }) pack_codigo?: PackCodigo | null;
   @ApiProperty({ required: false, nullable: true, minimum: 1 }) pack_version?: number | null;
   // `required: false` mantiene el cambio como aditivo para el gate R-C-7;
   // el servicio siempre devuelve el slug en runtime.
