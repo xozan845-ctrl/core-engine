@@ -12,6 +12,7 @@ import {
   NotFoundError,
   OutboxService,
   PgService,
+  ejecutarConContexto,
 } from '@core/shared';
 import {
   CrearBloqueoRequestDto,
@@ -47,7 +48,15 @@ export class SchedulingService implements OnModuleInit, OnModuleDestroy {
 
   onModuleInit(): void {
     this.timer = setInterval(() => {
-      this.procesarRecordatorios().catch((error: unknown) => {
+      void (ejecutarConContexto(
+        {
+          request_id: `scheduling-worker-${Date.now()}`,
+          servicio: 'scheduling-worker',
+          usuario_id: '00000000-0000-0000-0000-000000000000',
+          rol: 'super_admin',
+        },
+        () => this.procesarRecordatorios(),
+      ) as Promise<void>).catch((error: unknown) => {
         this.logger.error({ msg: 'Fallo al procesar recordatorios', err: error instanceof Error ? error.message : String(error) });
       });
     }, 60_000);

@@ -3,7 +3,7 @@ import { randomUUID } from 'crypto';
 import { PgService } from '../db/pg.service';
 import { RabbitService } from '../rabbitmq/rabbit.service';
 import { EventoBus, NombreEvento } from '../events/contracts';
-import { Logger, contextoActual } from '../logging/logger';
+import { Logger, contextoActual, ejecutarConContexto } from '../logging/logger';
 
 /**
  * Outbox (ADR-03): inserta eventos junto con la transaccion de negocio y un
@@ -26,7 +26,17 @@ export class OutboxService implements OnModuleInit, OnModuleDestroy {
   }
 
   onModuleInit(): void {
-    this.timer = setInterval(() => this.publicarPendientes().catch(() => undefined), 1000);
+    this.timer = setInterval(() => {
+      void (ejecutarConContexto(
+        {
+          request_id: `outbox-worker-${Date.now()}`,
+          servicio: 'outbox-worker',
+          usuario_id: '00000000-0000-0000-0000-000000000000',
+          rol: 'super_admin',
+        },
+        () => this.publicarPendientes(),
+      ) as Promise<void>).catch(() => undefined);
+    }, 1000);
   }
 
   onModuleDestroy(): void {

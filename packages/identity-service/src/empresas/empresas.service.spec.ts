@@ -63,7 +63,7 @@ describe('EmpresasService', () => {
         expect.stringContaining('INSERT INTO identity.empresas'),
         expect.arrayContaining(['Acme', 'acme', 'hibrida', 'u-1']),
       );
-      expect(client.query).toHaveBeenCalledTimes(5);
+      expect(client.query).toHaveBeenCalledTimes(6);
     });
 
     it('debe aplicar el pack seleccionado y sus capacidades al crear el tenant', async () => {
@@ -83,7 +83,7 @@ describe('EmpresasService', () => {
 
       expect(client.query).toHaveBeenNthCalledWith(1, expect.stringContaining('FROM identity.packs'), ['pack_belleza']);
       expect(client.query).toHaveBeenNthCalledWith(3, expect.stringContaining('pack_codigo, pack_version'), expect.arrayContaining(['Salon Acme', 'salon-acme', null, 'belleza', 'pack_belleza', 1]));
-      expect(client.query).toHaveBeenNthCalledWith(5, expect.stringContaining('FROM identity.pack_capacidades'), [empresa.id, 'pack_belleza', 1]);
+      expect(client.query).toHaveBeenNthCalledWith(6, expect.stringContaining('FROM identity.pack_capacidades'), [empresa.id, 'pack_belleza', 1]);
     });
 
     it('debe rechazar un pack que no corresponde a la vertical solicitada', async () => {

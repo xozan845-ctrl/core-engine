@@ -8,6 +8,7 @@ import {
   OrdenData,
   DevolucionSolicitadaData,
   Logger,
+  ejecutarConContexto,
 } from '@core/shared';
 import { ProductosService } from '../productos/productos.service';
 
@@ -36,16 +37,26 @@ export class PedidosConsumer implements OnModuleInit {
   }
 
   private async manejar(evento: EventoBus): Promise<void> {
-    switch (evento.tipo) {
-      case EVENTOS.ORDER_CREATED:
-        await this.ordenCreada(evento as EventoBus<OrdenData>);
-        break;
-      case EVENTOS.DEVOLUCION_SOLICITADA:
-        await this.devolucion(evento as EventoBus<DevolucionSolicitadaData>);
-        break;
-      default:
-        return;
-    }
+    await ejecutarConContexto(
+      {
+        request_id: `catalog-event-${evento.event_id}`,
+        servicio: 'catalog-consumer',
+        usuario_id: '00000000-0000-0000-0000-000000000000',
+        rol: 'super_admin',
+      },
+      async () => {
+        switch (evento.tipo) {
+          case EVENTOS.ORDER_CREATED:
+            await this.ordenCreada(evento as EventoBus<OrdenData>);
+            break;
+          case EVENTOS.DEVOLUCION_SOLICITADA:
+            await this.devolucion(evento as EventoBus<DevolucionSolicitadaData>);
+            break;
+          default:
+            return;
+        }
+      },
+    );
   }
 
   private async yaProcesado(evento: EventoBus): Promise<boolean> {

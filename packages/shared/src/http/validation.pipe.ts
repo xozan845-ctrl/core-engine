@@ -35,12 +35,24 @@ export class TrazabilidadInterceptor implements NestInterceptor {
     const res = ctx.switchToHttp().getResponse();
     const inicio = Date.now();
     const request_id = (req.headers?.['x-request-id'] as string) ?? randomUUID();
+    // Las rutas /internal/* pasan por ClaveInternaGuard y no llevan JWT de
+    // usuario. Aun así deben poder consultar datos cross-tenant necesarios
+    // para validaciones servicio-a-servicio bajo RLS; se expresa como un
+    // claim confiable en la transacción, no como BYPASSRLS para la cuenta app.
+    const claveInterna = req.headers?.['x-internal-key'];
+    const solicitudInterna =
+      typeof claveInterna === 'string' &&
+      !!process.env.INTERNAL_API_KEY &&
+      claveInterna === process.env.INTERNAL_API_KEY;
     res.setHeader('x-request-id', request_id);
     const contexto: ContextoCorrelacion = {
       request_id,
       servicio: this.servicio ?? process.env.SERVICIO ?? 'servicio',
-      usuario_id: req.headers?.['x-user-personal'] ?? req.headers?.['x-user-id'] ?? undefined,
-      rol: req.headers?.['x-user-rol'] ?? undefined,
+      usuario_id:
+        req.headers?.['x-user-personal'] ??
+        req.headers?.['x-user-id'] ??
+        (solicitudInterna ? '00000000-0000-0000-0000-000000000000' : undefined),
+      rol: req.headers?.['x-user-rol'] ?? (solicitudInterna ? 'super_admin' : undefined),
       tenant_id: req.headers?.[TENANT_HEADER] ?? undefined,
     };
 
