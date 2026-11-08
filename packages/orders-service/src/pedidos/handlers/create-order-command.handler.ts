@@ -125,6 +125,7 @@ export class CreateOrderCommandHandler {
       await this.eventStore.appendEnTransaccion(client, orderId, 'OrderCreatedEvent', {
         order_id: orderId,
         cliente_id: clienteId,
+        ...(comando.cliente_parte_id ? { cliente_parte_id: comando.cliente_parte_id } : {}),
         items,
         total_cents: total.centavos,
         estado: 'creada',
@@ -139,6 +140,7 @@ export class CreateOrderCommandHandler {
         data: {
           order_id: orderId,
           cliente_id: clienteId,
+          ...(comando.cliente_parte_id ? { cliente_parte_id: comando.cliente_parte_id } : {}),
           items,
           total_cents: total.centavos,
           estado: 'creada',

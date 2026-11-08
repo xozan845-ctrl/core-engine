@@ -7,6 +7,7 @@ export interface Envio {
   guia: string;
   order_id: string;
   empresa_id: string;
+  parte_id: string | null;
   modalidad_logistica: ModalidadLogistica;
   proveedor_tipo: ProveedorTipo | null;
   proveedor_tenant_id: string | null;
@@ -17,6 +18,7 @@ export interface Envio {
 export interface OrdenExterna {
   id: string;
   cliente_id: string;
+  parte_id?: string | null;
   items: { sku: string; cantidad: number; producto_nombre: string; empresa_id: string; precio_unitario_cents: number }[];
   total: string;
   total_cents: number;
@@ -47,6 +49,7 @@ export class EnviosService {
     empresaId: string,
     montoCents: number,
     modalidad: ModalidadLogistica,
+    parteId?: string | null,
   ): Promise<Envio> {
     const existente = await this.pg.queryOne<Envio>(
       `SELECT * FROM logistics.envios WHERE order_id = $1 AND empresa_id = $2`,
@@ -66,10 +69,10 @@ export class EnviosService {
     const proveedor = this.proveedorAutomatico(modalidad, empresaId);
     const fila = await this.pg.queryOne<Envio>(
       `INSERT INTO logistics.envios
-        (id, guia, order_id, empresa_id, modalidad_logistica, proveedor_tipo,
+        (id, guia, order_id, empresa_id, parte_id, modalidad_logistica, proveedor_tipo,
          proveedor_tenant_id, monto_cents, estado)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,'en_preparacion') RETURNING *`,
-      [randomUUID(), guia, orderId, empresaId, modalidad, proveedor.tipo, proveedor.tenantId, montoCents],
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,'en_preparacion') RETURNING *`,
+      [randomUUID(), guia, orderId, empresaId, parteId ?? null, modalidad, proveedor.tipo, proveedor.tenantId, montoCents],
     );
     if (!fila) throw new DomainError('ENVIO_FALLIDO', 'No se pudo preparar el envio.');
     if (proveedor.tipo && proveedor.tenantId) {
@@ -91,7 +94,7 @@ export class EnviosService {
     const envios: Envio[] = [];
     for (const [empresaId, monto] of montos) {
       const empresa = await this.consultarEmpresa(empresaId);
-      envios.push(await this.prepararEnvio(orderId, empresaId, monto, empresa.modalidad_logistica));
+      envios.push(await this.prepararEnvio(orderId, empresaId, monto, empresa.modalidad_logistica, orden.parte_id));
     }
     return envios;
   }

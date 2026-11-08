@@ -1803,6 +1803,11 @@
           },
           "urlGoogleMaps": {
             "type": "string"
+          },
+          "parteId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Referencia universal opcional de la parte"
           }
         }
       },
@@ -1878,6 +1883,10 @@
           },
           "notas": {
             "type": "string"
+          },
+          "parteId": {
+            "type": "string",
+            "format": "uuid"
           }
         }
       },
@@ -2236,6 +2245,11 @@
             "type": "object",
             "nullable": true
           },
+          "parte_id": {
+            "type": "object",
+            "nullable": true,
+            "format": "uuid"
+          },
           "synced": {
             "type": "boolean"
           },
@@ -2375,6 +2389,11 @@
           },
           "urlGoogleMaps": {
             "type": "string"
+          },
+          "parteId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Referencia universal opcional de la parte"
           }
         },
         "required": [
@@ -2457,6 +2476,10 @@
           },
           "notas": {
             "type": "string"
+          },
+          "parteId": {
+            "type": "string",
+            "format": "uuid"
           }
         }
       },
@@ -2710,6 +2733,10 @@
           },
           "notas": {
             "type": "string"
+          },
+          "parteId": {
+            "type": "string",
+            "format": "uuid"
           }
         },
         "required": [
@@ -2901,6 +2928,10 @@
           },
           "tipoCombustible": {
             "type": "string"
+          },
+          "parteId": {
+            "type": "string",
+            "format": "uuid"
           }
         },
         "required": [
@@ -2976,6 +3007,11 @@
             "type": "object",
             "nullable": true
           },
+          "parte_id": {
+            "type": "object",
+            "nullable": true,
+            "format": "uuid"
+          },
           "synced": {
             "type": "boolean"
           },
@@ -3021,6 +3057,11 @@
             "type": "string"
           },
           "cliente_id": {
+            "type": "object",
+            "nullable": true,
+            "format": "uuid"
+          },
+          "parte_id": {
             "type": "object",
             "nullable": true,
             "format": "uuid"
@@ -3554,6 +3595,11 @@
             "format": "uuid"
           },
           "cliente_id": {
+            "type": "object",
+            "nullable": true,
+            "format": "uuid"
+          },
+          "parte_id": {
             "type": "object",
             "nullable": true,
             "format": "uuid"

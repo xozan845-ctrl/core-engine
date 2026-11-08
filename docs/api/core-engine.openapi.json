@@ -15026,6 +15026,11 @@
           },
           "urlGoogleMaps": {
             "type": "string"
+          },
+          "parteId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Referencia universal opcional de la parte"
           }
         }
       },
@@ -15101,6 +15106,10 @@
           },
           "notas": {
             "type": "string"
+          },
+          "parteId": {
+            "type": "string",
+            "format": "uuid"
           }
         }
       },
@@ -15459,6 +15468,11 @@
             "type": "object",
             "nullable": true
           },
+          "parte_id": {
+            "type": "object",
+            "nullable": true,
+            "format": "uuid"
+          },
           "synced": {
             "type": "boolean"
           },
@@ -15598,6 +15612,11 @@
           },
           "urlGoogleMaps": {
             "type": "string"
+          },
+          "parteId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Referencia universal opcional de la parte"
           }
         },
         "required": [
@@ -15680,6 +15699,10 @@
           },
           "notas": {
             "type": "string"
+          },
+          "parteId": {
+            "type": "string",
+            "format": "uuid"
           }
         }
       },
@@ -15933,6 +15956,10 @@
           },
           "notas": {
             "type": "string"
+          },
+          "parteId": {
+            "type": "string",
+            "format": "uuid"
           }
         },
         "required": [
@@ -16124,6 +16151,10 @@
           },
           "tipoCombustible": {
             "type": "string"
+          },
+          "parteId": {
+            "type": "string",
+            "format": "uuid"
           }
         },
         "required": [
@@ -16199,6 +16230,11 @@
             "type": "object",
             "nullable": true
           },
+          "parte_id": {
+            "type": "object",
+            "nullable": true,
+            "format": "uuid"
+          },
           "synced": {
             "type": "boolean"
           },
@@ -16244,6 +16280,11 @@
             "type": "string"
           },
           "cliente_id": {
+            "type": "object",
+            "nullable": true,
+            "format": "uuid"
+          },
+          "parte_id": {
             "type": "object",
             "nullable": true,
             "format": "uuid"
@@ -16777,6 +16818,11 @@
             "format": "uuid"
           },
           "cliente_id": {
+            "type": "object",
+            "nullable": true,
+            "format": "uuid"
+          },
+          "parte_id": {
             "type": "object",
             "nullable": true,
             "format": "uuid"
@@ -17525,6 +17571,12 @@
           "cliente_id": {
             "type": "string",
             "description": "Id del cliente"
+          },
+          "parte_id": {
+            "type": "object",
+            "description": "Referencia universal del cliente",
+            "nullable": true,
+            "format": "uuid"
           },
           "base_gravada_cents": {
             "type": "number",
@@ -19056,6 +19108,11 @@
           "cliente_id": {
             "type": "string",
             "description": "Id del cliente"
+          },
+          "parte_id": {
+            "type": "string",
+            "description": "Referencia universal del cliente",
+            "format": "uuid"
           },
           "razon_social": {
             "type": "string",
@@ -23709,6 +23766,12 @@
             "description": "Empresa propietaria de las líneas despachadas",
             "format": "uuid"
           },
+          "parte_id": {
+            "type": "object",
+            "description": "Referencia universal opcional del destinatario",
+            "format": "uuid",
+            "nullable": true
+          },
           "modalidad_logistica": {
             "type": "string",
             "enum": [
@@ -23751,6 +23814,7 @@
           "guia",
           "order_id",
           "empresa_id",
+          "parte_id",
           "modalidad_logistica",
           "proveedor_tipo",
           "proveedor_tenant_id",
@@ -23781,6 +23845,12 @@
             "type": "string",
             "description": "Empresa propietaria de las líneas despachadas",
             "format": "uuid"
+          },
+          "parte_id": {
+            "type": "object",
+            "description": "Referencia universal opcional del destinatario",
+            "format": "uuid",
+            "nullable": true
           },
           "modalidad_logistica": {
             "type": "string",
@@ -23819,6 +23889,7 @@
           "guia",
           "order_id",
           "empresa_id",
+          "parte_id",
           "modalidad_logistica",
           "proveedor_tipo",
           "proveedor_tenant_id",
@@ -24642,6 +24713,11 @@
       "CreateOrderCommand": {
         "type": "object",
         "properties": {
+          "cliente_parte_id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Referencia universal opcional del comprador"
+          },
           "tipo_orden": {
             "type": "string",
             "enum": [
@@ -24791,6 +24867,12 @@
             "type": "string",
             "description": "Id del comprador",
             "format": "uuid"
+          },
+          "parte_id": {
+            "type": "object",
+            "nullable": true,
+            "format": "uuid",
+            "description": "Referencia universal opcional del comprador"
           },
           "tienda_id": {
             "type": "string",
@@ -24995,6 +25077,11 @@
             "nullable": true,
             "format": "uuid"
           },
+          "parte_id": {
+            "type": "object",
+            "nullable": true,
+            "format": "uuid"
+          },
           "order_id": {
             "type": "object",
             "nullable": true,
@@ -25087,6 +25174,12 @@
           "cliente_id": {
             "type": "string",
             "format": "uuid"
+          },
+          "parte_id": {
+            "type": "string",
+            "nullable": true,
+            "format": "uuid",
+            "description": "Referencia universal opcional del cliente"
           },
           "order_id": {
             "type": "string",

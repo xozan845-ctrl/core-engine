@@ -69,6 +69,7 @@ const MAP_CLIENTES: Mapa = {
   lng: 'lng',
   notasAdicionales: 'notas_adicionales',
   urlGoogleMaps: 'url_google_maps',
+  parteId: 'parte_id',
 };
 const DEF_CLIENTES = { tipoCliente: 'particular' };
 
@@ -119,6 +120,7 @@ const MAP_PARADAS: Mapa = {
   horarioAtencion: 'horario_atencion',
   notas: 'notas',
   tipoCombustible: 'tipo_combustible',
+  parteId: 'parte_id',
 };
 const DEF_PARADAS = { tipo: 'cliente', completada: false };
 
@@ -131,6 +133,7 @@ const MAP_PEDIDOS: Mapa = {
   estado: 'estado',
   rutaId: 'ruta_id',
   notas: 'notas',
+  parteId: 'parte_id',
 };
 const DEF_PEDIDOS = { estado: 'pendiente' };
 
@@ -184,6 +187,7 @@ const MAP_VISITAS: Mapa = {
   horaSalida: 'hora_salida',
   duracionMinutos: 'duracion_minutos',
   notas: 'notas',
+  parteId: 'parte_id',
 };
 const DEF_VISITAS = { resultado: 'no_visitado' };
 
@@ -222,6 +226,9 @@ export class FieldService {
   ): Promise<T> {
     const rec = dto as Record<string, unknown>;
     const rid = id ?? randomUUID();
+    if (Object.values(map).includes('parte_id') && rec.parteId !== undefined) {
+      await this.validarParte(tenant, rec.parteId);
+    }
     const now = new Date();
     const cols = ['tenant_id', 'id'];
     const vals: unknown[] = [tenant, rid];
@@ -259,6 +266,9 @@ export class FieldService {
     map: Mapa,
   ): Promise<T> {
     const rec = dto as Record<string, unknown>;
+    if (Object.values(map).includes('parte_id') && rec.parteId !== undefined) {
+      await this.validarParte(tenant, rec.parteId);
+    }
     const sets: string[] = [];
     const vals: unknown[] = [];
     let i = 1;
@@ -312,6 +322,18 @@ export class FieldService {
   private requerirTenant(tenant?: string): string {
     if (!tenant) throw new DomainError('TENANT_REQUERIDO', 'La operacion requiere un tenant valido (x-tenant).');
     return tenant;
+  }
+
+  private async validarParte(tenant: string, parteId: unknown): Promise<void> {
+    if (typeof parteId !== 'string') {
+      throw new DomainError('PARTE_INVALIDA', 'La parte debe ser un UUID valido.');
+    }
+    const parte = await this.pg.queryOne(
+      `SELECT 1 FROM identity.partes
+       WHERE id = $1 AND empresa_id = $2 AND eliminado_en IS NULL`,
+      [parteId, tenant],
+    );
+    if (!parte) throw new DomainError('PARTE_INVALIDA', 'La parte no pertenece al tenant activo.');
   }
 
   // ── personal ───────────────────────────────────────────────────────────

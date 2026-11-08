@@ -9,6 +9,7 @@ export interface Comprobante {
   tipo: 'FACTURA' | 'NOTA_CREDITO';
   orden_id?: string;
   cliente_id?: string;
+  parte_id?: string | null;
   base_gravada_cents: number;
   iva_cents: number;
   exento_cents: number;
@@ -55,7 +56,7 @@ export class FacturacionService {
   /** GET /api/v1/finanzas/comprobantes — listado con filtros. */
   async listar(desde?: string, hasta?: string, estado?: string): Promise<Comprobante[]> {
     return this.pg.query<Comprobante>(
-      `SELECT id, serie, numero, tipo, orden_id, cliente_id, base_gravada_cents, iva_cents,
+      `SELECT id, serie, numero, tipo, orden_id, cliente_id, parte_id, base_gravada_cents, iva_cents,
               exento_cents, total_cents, moneda, estado, datos_cliente, emitido_en, creado_en
        FROM finance.comprobantes
        WHERE ($1::timestamptz IS NULL OR creado_en >= $1)
@@ -100,11 +101,11 @@ export class FacturacionService {
     return this.pg.transaccion(async (client) => {
       const fila = await client.query<Comprobante>(
         `INSERT INTO finance.comprobantes
-          (id, serie, numero, tipo, orden_id, cliente_id, base_gravada_cents, iva_cents,
+          (id, serie, numero, tipo, orden_id, cliente_id, parte_id, base_gravada_cents, iva_cents,
            exento_cents, total_cents, moneda, estado, datos_cliente, emitido_en)
-         VALUES (gen_random_uuid(), $1, $2, $3, $4, $5, $6, $7, 0, $8, 'C$', $9, $10,
-                 CASE WHEN $9 = 'EMITIDO' THEN NOW() ELSE NULL END)
-         RETURNING id, serie, numero, tipo, orden_id, cliente_id, base_gravada_cents, iva_cents,
+         VALUES (gen_random_uuid(), $1, $2, $3, $4, $5, $6, $7, $8, 0, $9, 'C$', $10, $11,
+                 CASE WHEN $10 = 'EMITIDO' THEN NOW() ELSE NULL END)
+         RETURNING id, serie, numero, tipo, orden_id, cliente_id, parte_id, base_gravada_cents, iva_cents,
                    exento_cents, total_cents, moneda, estado, datos_cliente, emitido_en, creado_en`,
         [
           serie.serie,
@@ -112,6 +113,7 @@ export class FacturacionService {
           tipo,
           ordenId,
           (datosCliente as { cliente_id?: string } | undefined)?.cliente_id ?? null,
+          (datosCliente as { parte_id?: string } | undefined)?.parte_id ?? null,
           base.centavos,
           iva.centavos,
           total.centavos,
@@ -148,6 +150,7 @@ export class FacturacionService {
           numero: comprobante.numero,
           tipo,
           orden_id: ordenId,
+          ...(comprobante.parte_id ? { parte_id: comprobante.parte_id } : {}),
           base_gravada_cents: base.centavos,
           iva_cents: iva.centavos,
           total_cents: total.centavos,
@@ -170,7 +173,7 @@ export class FacturacionService {
       `UPDATE finance.comprobantes SET estado = 'ANULADO'
        WHERE id = $1 AND estado IN ('BORRADOR', 'EMITIDO')
        RETURNING id, serie, numero, tipo, orden_id, cliente_id, base_gravada_cents, iva_cents,
-                 exento_cents, total_cents, moneda, estado, datos_cliente, emitido_en, creado_en`,
+                 parte_id, exento_cents, total_cents, moneda, estado, datos_cliente, emitido_en, creado_en`,
       [id],
     );
   }

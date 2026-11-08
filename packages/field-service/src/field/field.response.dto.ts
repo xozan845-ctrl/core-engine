@@ -40,6 +40,7 @@ export class ClienteResponseDto {
   @ApiProperty({ required: false, nullable: true }) lng: number | null;
   @ApiProperty({ required: false, nullable: true }) notas_adicionales: string | null;
   @ApiProperty({ required: false, nullable: true }) url_google_maps: string | null;
+  @ApiProperty({ required: false, nullable: true, format: 'uuid' }) parte_id: string | null;
   @ApiProperty() synced: boolean;
   @ApiProperty({ required: false, nullable: true, format: 'date-time' }) deleted_at: string | null;
   @ApiProperty({ format: 'date-time' }) created_at: string;
@@ -89,6 +90,7 @@ export class ParadaResponseDto {
   @ApiProperty({ required: false, nullable: true }) horario_atencion: string | null;
   @ApiProperty({ required: false, nullable: true }) notas: string | null;
   @ApiProperty({ required: false, nullable: true }) tipo_combustible: string | null;
+  @ApiProperty({ required: false, nullable: true, format: 'uuid' }) parte_id: string | null;
   @ApiProperty() synced: boolean;
   @ApiProperty({ required: false, nullable: true, format: 'date-time' }) deleted_at: string | null;
   @ApiProperty({ format: 'date-time' }) created_at: string;
@@ -117,6 +119,7 @@ export class PedidoResponseDto {
   @ApiProperty({ format: 'uuid' }) tenant_id: string;
   @ApiProperty() cliente: string;
   @ApiProperty({ required: false, nullable: true, format: 'uuid' }) cliente_id: string | null;
+  @ApiProperty({ required: false, nullable: true, format: 'uuid' }) parte_id: string | null;
   @ApiProperty({ required: false, nullable: true }) direccion_entrega: string | null;
   @ApiProperty({ required: false, nullable: true }) lat: number | null;
   @ApiProperty({ required: false, nullable: true }) lng: number | null;
@@ -188,6 +191,7 @@ export class VisitaResponseDto {
   @ApiProperty({ format: 'uuid' }) tenant_id: string;
   @ApiProperty({ format: 'uuid' }) personal_id: string;
   @ApiProperty({ required: false, nullable: true, format: 'uuid' }) cliente_id: string | null;
+  @ApiProperty({ required: false, nullable: true, format: 'uuid' }) parte_id: string | null;
   @ApiProperty({ required: false, nullable: true, format: 'uuid' }) ruta_id: string | null;
   @ApiProperty() tipo_actividad: string;
   @ApiProperty() resultado: string;

@@ -45,6 +45,9 @@ export class EnvioResponseDto {
   @ApiProperty({ description: 'Empresa propietaria de las líneas despachadas', format: 'uuid' })
   empresa_id: string;
 
+  @ApiProperty({ description: 'Referencia universal opcional del destinatario', format: 'uuid', nullable: true })
+  parte_id: string | null;
+
   @ApiProperty({ enum: ['plataforma', 'propia', 'hibrida'] })
   modalidad_logistica: 'plataforma' | 'propia' | 'hibrida';
 

@@ -52,7 +52,7 @@ describe('EnviosService (guia de despacho y transiciones)', () => {
       expect(sql).toContain("'en_preparacion'");
       expect(params[2]).toBe('o1');
       expect(params[3]).toBe('empresa-1');
-      expect(params[7]).toBe(150000); // monto en centavos (A02)
+      expect(params[8]).toBe(150000); // monto en centavos (A02)
       expect(pg.query).toHaveBeenCalledWith(
         expect.stringContaining('logistics.asignaciones_envio'),
         ['e1', null, 'empresa', 'empresa-1', 'automatica', null],
@@ -81,7 +81,7 @@ describe('EnviosService (guia de despacho y transiciones)', () => {
       (pg.queryOne as Mock).mockResolvedValueOnce(null).mockResolvedValueOnce(envio);
       await servicio.prepararEnvio('o1', 'empresa-1', 1000, 'hibrida');
       const [, params] = (pg.queryOne as Mock).mock.calls[1];
-      expect(params.slice(4, 7)).toEqual(['hibrida', null, null]);
+      expect(params.slice(4, 8)).toEqual([null, 'hibrida', null, null]);
     });
 
     it('debe asignar la flota global en modalidad plataforma', async () => {
@@ -89,8 +89,8 @@ describe('EnviosService (guia de despacho y transiciones)', () => {
       (pg.queryOne as Mock).mockResolvedValueOnce(null).mockResolvedValueOnce(envio);
       await servicio.prepararEnvio('o1', 'empresa-1', 1000, 'plataforma');
       const [, params] = (pg.queryOne as Mock).mock.calls[1];
-      expect(params.slice(4, 7)).toEqual([
-        'plataforma', 'plataforma', '00000000-0000-0000-0000-000000000001',
+      expect(params.slice(4, 8)).toEqual([
+        null, 'plataforma', 'plataforma', '00000000-0000-0000-0000-000000000001',
       ]);
     });
   });
@@ -115,8 +115,8 @@ describe('EnviosService (guia de despacho y transiciones)', () => {
         .mockResolvedValueOnce({ ...envio, empresa_id: 'e2' } as never);
 
       await expect(servicio.prepararEnviosDeOrden('o1')).resolves.toHaveLength(2);
-      expect(preparar).toHaveBeenNthCalledWith(1, 'o1', 'e1', 2500, 'hibrida');
-      expect(preparar).toHaveBeenNthCalledWith(2, 'o1', 'e2', 1000, 'hibrida');
+      expect(preparar).toHaveBeenNthCalledWith(1, 'o1', 'e1', 2500, 'hibrida', undefined);
+      expect(preparar).toHaveBeenNthCalledWith(2, 'o1', 'e2', 1000, 'hibrida', undefined);
     });
 
     it('rechaza una orden sin lineas o con linea sin empresa', async () => {
