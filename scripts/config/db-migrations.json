@@ -40,5 +40,6 @@
     "28_scheduling.sql": "25f387ac81628a2857db06c65f514a4e636468faa5b8c311ce94e65cfcc45d1d",
     "29_vertical_packs.sql": "72c3d6dbe5608181a804c0141384055b5bb2ec63ddf416fa40894426d5c3d144",
     "30_pack_backfill.sql": "a8983bc56819aab9066ef02d05461ea90f687482ce6bad22ca86d6afafe4a57d",
-    "31_multi_vertical_rls.sql": "503d17e16ed1d7de2f16986f96c88a673e5f26a3a1fa0acc7cae000c234aef90"
+    "31_multi_vertical_rls.sql": "ea22617e25c56fd6996bb0abd7bfd45c8091421819029b59a8bb739fe424a7e1",
+    "32_pack_builder.sql": "fba72a2f85a27af870ca31afc459a766bdaddf1db803376795c2deb478f0ee99"
 }

@@ -41,7 +41,8 @@ export type ModalidadLogistica = 'plataforma' | 'propia' | 'hibrida';
  * la logística transporta y la plataforma agrupa empresas técnicas/comodín.
  */
 export type TipoEmpresa = 'comercial' | 'logistica' | 'plataforma';
-export type PackCodigo = 'pack_retail' | 'pack_farmacia' | 'pack_belleza' | 'pack_dental' | 'pack_flota';
+/** Código dinámico de una plantilla de operación; no se limita a los packs base. */
+export type PackCodigo = string;
 export interface Empresa {
   id: string;
   nombre: string;
@@ -192,8 +193,8 @@ export class EmpresasService {
       throw new DomainError('TIPO_EMPRESA_INVALIDO', 'El tipo de empresa no es válido.');
     }
     const nombreFinal = nombre.trim();
-    let vertical = verticalId ?? (tipo === 'logistica' ? 'flota' : 'retail');
-    if (!['retail', 'farmacia', 'belleza', 'dental', 'flota'].includes(vertical)) {
+    let vertical = (verticalId ?? (tipo === 'logistica' ? 'flota' : 'retail')).trim().toLowerCase();
+    if (!/^[a-z][a-z0-9_]{1,39}$/.test(vertical)) {
       throw new DomainError('VERTICAL_INVALIDA', 'La vertical seleccionada no existe.');
     }
     const meta = this.normalizarPerfil({
@@ -214,8 +215,10 @@ export class EmpresasService {
       try {
         return await this.pg.transaccion(async (client) => {
           const pack = packCodigo
-            ? await this.resolverPack(client, packCodigo, verticalId)
-            : { codigo: `pack_${vertical}` as PackCodigo, version: 1, vertical_codigo: vertical };
+            ? await this.resolverPack(client, packCodigo, verticalId ? vertical : undefined)
+            : verticalId
+              ? await this.resolverPackPorVertical(client, vertical)
+              : { codigo: `pack_${vertical}`, version: 1, vertical_codigo: vertical };
           vertical = pack.vertical_codigo;
           const slug = await this.elegirSlug(client, nombreFinal, slugExplicito);
           const result = await client.query<EmpresaFila>(
@@ -305,6 +308,23 @@ export class EmpresasService {
     if (verticalSolicitada && verticalSolicitada !== pack.vertical_codigo) {
       throw new DomainError('PACK_VERTICAL_INCOMPATIBLE', 'El pack no corresponde a la vertical solicitada.');
     }
+    return pack;
+  }
+
+  private async resolverPackPorVertical(
+    client: ClienteSlug,
+    verticalCodigo: string,
+  ): Promise<{ codigo: PackCodigo; version: number; vertical_codigo: string }> {
+    const resultado = await client.query(
+      'SELECT p.codigo, p.version, p.vertical_codigo\n' +
+        '  FROM identity.packs p\n' +
+        ' WHERE p.vertical_codigo = $1 AND p.activo = true\n' +
+        ' ORDER BY p.version DESC\n' +
+        ' LIMIT 1',
+      [verticalCodigo],
+    );
+    const pack = resultado.rows[0] as { codigo: PackCodigo; version: number; vertical_codigo: string } | undefined;
+    if (!pack) throw new DomainError('PACK_REQUERIDO', 'No existe un pack activo para la vertical "' + verticalCodigo + '".');
     return pack;
   }
 
