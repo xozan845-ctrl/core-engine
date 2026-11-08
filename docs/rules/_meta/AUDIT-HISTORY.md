@@ -1137,3 +1137,41 @@ El PR #90 se completó utilizando convenciones atómicas (R-PR-1, R-GC-1..5) gar
   Build all services.
 - **Snapshot:** estado consolidado reescrito en [`AUDIT.md`](./AUDIT.md),
   conforme a R-COV-3.
+
+---
+
+# AUDIT (histórico) — 14ª auditoría de Core Engine (revisión integral: lógica, tests, scripts y documentación)
+
+- **Fecha:** 2026-11-08
+- **SHA auditado:** `bb602b5` (`feat/pack-builder`, worktree independiente).
+- **Estado global:** 🔴 **NO CUMPLE — HEAD en rojo**. G-7 y G-8 verdes; G-1/G-3 y
+  G-5/R-C-7 rojos; G-4 y G-6 parciales.
+
+## Intervención
+
+1. Revisión integral de la lógica de los 11 microservicios, del motor de
+   gobernanza, del QA harness y de la documentación.
+2. Se midió la matriz real: **1.322 tests en 132 archivos y 13 workspaces**
+   (antes se documentaban 1.130/114/12). `identity-service` baja a
+   80,42/71,31/74,38 y **rompe su threshold** 89/78/85 por la deuda nueva de
+   packs/partes/extensiones/capacidades; `npm test` aborta ahí.
+3. `contract:breaking` contra `origin/main` sale 1: `parte_id` aparece como
+   propiedad obligatoria en cuatro respuestas de logística sin allowlist.
+4. OpenAPI real: **334 operaciones (310 públicas + 24 internas)** en 11
+   servicios; el export no deja diff (G-8 ✅).
+5. Se alineó la documentación con la realidad: README, reglas de testing,
+   auditoría, runbooks, `.github/README.md`, plantillas de entorno y QA harness.
+6. Se corrigió el QA harness para que sus comandos arranquen y no den falso
+   verde (entrypoint `.js`, `bcryptjs` declarado, conteo por `pass`, lectura de
+   profundidad de colas).
+
+## Evidencia
+
+- `npm run lint` → 0 errores / 45 warnings; `npm run build` → 0.
+- `npm run swagger:export` → 0 y sin diff.
+- `npm test` → 1 (cobertura de `identity-service`).
+- `npm run contract:breaking -- --base-ref origin/main` → 1.
+- `npm run rules:check` → 0 (59 tests, 11 suites, 41/238 IDs).
+- `npm audit --audit-level=high` → 0; `--audit-level=moderate` → 12.
+- **Snapshot:** estado consolidado reescrito en [`AUDIT.md`](./AUDIT.md),
+  conforme a R-COV-3.
