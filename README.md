@@ -6,7 +6,7 @@ RabbitMQ con outbox y DLQ, Postgres/Supabase-compatible con esquema por dominio,
 con autenticacion en el borde, observabilidad (Prometheus + Grafana) y suite de pruebas.
 
 Requiere **Node >= 20 (uso v24)** y **Docker with Compose v2**. Todas las rutas van por el
-gateway (`http://localhost:8080/api/v2/...`). Los montos se manejan como **enteros en centavos**
+gateway (`http://localhost:8080/api/v1/...`). Los montos se manejan como **enteros en centavos**
 (control OWASP A02): el JSON entrega strings con dos decimales (`"1150.00"`).
 
 ## Arquitectura
@@ -17,18 +17,18 @@ gateway (`http://localhost:8080/api/v2/...`). Los montos se manejan como **enter
                     │   :8080     │  Politicas por ruta/rol (Tabla 21) · UNICO puerto al host
                     └──────┬──────┘
                            │  red interna Docker `core-engine` (microservicios sin puerto al host)
-        ┌──────────┬───────────┬──────────┬─────────┬───────────┬────────────┬─────────┬─────────┬──────────────┬─────────┐
-   identity     catalog      stores     orders   logistics  commissions    finance    field   intelligence  storage
-      :3001        :3002       :3003      :3004      :3005       :3006       :3007     :3008      :3009       :3010
-        └──────────┴───────────┴──────────┴─────────┴───────────┴────────────┴─────────┴─────────┴──────────────┴─────────┘
+  identity  catalog  stores  orders  logistics  scheduling  commissions  finance  field  intelligence  storage
+    :3001    :3002    :3003   :3004     :3005      :3011       :3006      :3007   :3008     :3009      :3010
+  (commissions solo stage · market-intelligence solo dev)
        RabbitMQ · topic core-engine.events (+ DLQ, AD-04) + Postgres 16 + MinIO (un bucket por tenant, ADR-24)
 ```
 
 **Punto de entrada unico:** solo el servicio `gateway` publica un puerto de aplicación al host
-(`8080:8080`); los **diez microservicios** escuchan en `3001`–`3010` **solo dentro de la red interna
-Docker `core-engine`** y no tienen mapeo de puertos al host. La excepción es **MinIO** (`9000`), que sí
-se publica porque es el host **firmado** en las URLs prefirmadas (ADR-24). Toda llamada externa pasa por
-`http://localhost:8080/api/v2/...` (o el dominio del gateway en stage/produccion).
+(`8080:8080`); los **once microservicios** escuchan en `3001`–`3011` **solo dentro de la red interna
+Docker `core-engine`** y no tienen mapeo de puertos al host. La excepción es **MinIO** (`9000`), que se
+publica en **loopback** porque es el host local que Traefik firma como dominio HTTPS en las URLs
+prefirmadas (ADR-24). Toda llamada externa pasa por `http://localhost:8080/api/v1/...` (o el dominio
+del gateway en stage/produccion).
 
 - **CQRS + Event Sourcing** solo en `orders` (alta tasa de escritura, cap. 3.2); el resto usa
   CRUD convencional sobre su propio esquema (baja tasa de escritura).
@@ -38,7 +38,7 @@ se publica porque es el host **firmado** en las URLs prefirmadas (ADR-24). Toda 
   orders marca `pagada` y emite `payment.procesado` → logistics crea el envio → ...
   `stock.fallido` revierte la orden a `cancelada`.
 - **DLQ con backoff exponencial** (AD-04): reintentos hasta `REINTENTOS_MAXIMOS`; luego el
-  mensaje se declara muerto. `POST /api/v2/admin/...dlq...` (endpoint interno) permite reinyectar.
+  mensaje se declara muerto. `POST /api/v1/admin/...dlq...` (endpoint interno) permite reinyectar.
 - **Ciclo de vida de la orden** (Tabla 13): `creada → pagada → en_preparacion → enviada →
   entregada` (y `cancelada` / `devuelta`); las transiciones se validan con `validarTransicion`.
 
@@ -70,10 +70,10 @@ Eventos del bus (topic `core-engine.events`): `order.created`, `stock.reservado`
 
 ```bash
 npm install                       # instala los workspaces (enlaza @core/shared, ...)
-npm run build                     # compila shared + gateway + los 9 microservicios
-npm test                          # los 12 workspaces, cada uno con --coverage (490 tests)
+npm run build                     # compila shared + gateway + los 11 microservicios
+npm test                          # los 13 workspaces, cada uno con --coverage (1.322 tests)
 cp .env.example .env              # variables de DESARROLLO (producción: .env.production.example)
-docker compose -f docker-compose.dev.yml up -d --build   # app: Postgres + RabbitMQ + MinIO + gateway y 10 servicios (8080 host + datos/broker 5432/5672/15672 + minio 9000/9001)
+docker compose -f docker-compose.dev.yml up -d --build   # app: Postgres + RabbitMQ + MinIO + gateway y 11 servicios (8080 host + datos/broker 5432/5672/15672 + minio 9000/9001)
 npm run demo                      # ejercicio end-to-end (TC-01..TC-08, RN-01..RN-08)
 
 # Dashboards (opcional): añade Prometheus + Grafana + exporters al stack de desarrollo
@@ -89,12 +89,13 @@ seeds del plan contable NIC e indices). En **Supabase** (staging/prod) aplique a
 
 | Servicio | Puerto interno | Expuesto al host | Esquema | Fuente |
 |---|---|---|---|---|
-| api-gateway | 8080 | **Sí** (`8080:8080`) | — | `packages/api-gateway` |
+| api-gateway | 8080 | **Sí** (dev `8080:8080`; stage/prod `127.0.0.1:8080:8080` tras Traefik) | — | `packages/api-gateway` |
 | identity-service | 3001 | No | `identity` | `packages/identity-service` |
 | catalog-service | 3002 | No | `catalog` | `packages/catalog-service` |
 | stores-service | 3003 | No | `stores` | `packages/stores-service` |
 | orders-service | 3004 | No | `orders` | `packages/orders-service` |
 | logistics-service | 3005 | No | `logistics` | `packages/logistics-service` |
+| scheduling-service | 3011 | No | `scheduling` | `packages/scheduling-service` |
 | commissions-service | 3006 | No *(solo stage; fuera de prod)* | `commissions` | `packages/commissions-service` |
 | finance-service | 3007 | No | `finance` | `packages/finance-service` |
 | field-service | 3008 | No | `field` | `packages/field-service` |
@@ -140,37 +141,37 @@ en `docs/rules/cd/` (R-CD).
 
 ## API (resumen de Tabla 21, todas por el gateway)
 
-- `POST /api/v2/auth/registro|login|refresh`, `GET /api/v2/auth/me`
-- `POST /api/v2/empresas`, `GET /api/v2/empresas/:id`,
-  `PATCH /api/v2/empresas/:id/perfil` — RUC opcional, perfil comercial/fiscal
+- `POST /api/v1/auth/registro|login|refresh`, `GET /api/v1/auth/me`
+- `POST /api/v1/empresas`, `GET /api/v1/empresas/:id`,
+  `PATCH /api/v1/empresas/:id/perfil` — RUC opcional, perfil comercial/fiscal
   y logo (objeto público de storage validado por tenant).
-- `PATCH /api/v2/usuarios/:id/avatar` — avatar de vendedor/usuario validado
+- `PATCH /api/v1/usuarios/:id/avatar` — avatar de vendedor/usuario validado
   contra storage; `GET /empresas/:id/vendedores` devuelve `avatar_url`.
-- `PATCH /api/v2/tiendas/:id/logo` — logo público de la tienda, validado
+- `PATCH /api/v1/tiendas/:id/logo` — logo público de la tienda, validado
   contra storage por tenant.
-- `POST /api/v2/catalog/productos`, `GET /api/v2/catalog/productos(/:id)` (admin)
-- `GET|POST|PATCH|DELETE /api/v2/catalog/servicios` (empresa/admin) — recurso
+- `POST /api/v1/catalog/productos`, `GET /api/v1/catalog/productos(/:id)` (admin)
+- `GET|POST|PATCH|DELETE /api/v1/catalog/servicios` (empresa/admin) — recurso
   propio de servicios con baja lógica, duración y unicidad por empresa.
-- `/api/v2/catalog/configuracion-inventario`, `/productos/importar`, `/escanear`,
+- `/api/v1/catalog/configuracion-inventario`, `/productos/importar`, `/escanear`,
   `/combos`, `/promociones` e `/inventario/movimientos` (empresa/admin):
   configuración, importación, escaneo, combos, promociones y movimientos/traslados.
 - Los productos exponen costo, marca, código de barras, unidad, stock mínimo/máximo,
   garantía, materia prima, ubicación y `estado_operativo` (activo/inactivo)
   además de la disponibilidad de stock (`estado`).
-- `POST /api/v2/vendedores/tienda`, `POST|PATCH /api/v2/vendedores/productos(/:id)`,
-  `GET /api/v2/vendedores/me/ofertas`, `GET /api/v2/tiendas/:id` (publica)
-- `POST /api/v2/orders`, `GET /api/v2/orders(/:id)` (comprador/vendedor/admin)
-- `PATCH /api/v2/orders/:id/estado` (admin: en_preparacion/enviada/entregada/cancelada/devuelta)
-- `GET /api/v2/vendedores/me/ventas|liquidaciones`, `GET /api/v2/admin/reportes`,
-  `POST /api/v2/admin/liquidaciones/corte`, `POST /api/v2/admin/liquidaciones/:id/pagar`
-- `GET /api/v2/admin/inventario`, `GET /api/v2/admin/envios`
-- `GET /api/v2/finanzas/asientos|proyecciones|kpis|punto-equilibrio` (admin),
-  `POST /api/v2/finanzas/asientos`, `GET /api/v2/vendedores/me/fiscal`
-- `GET|POST|PATCH|DELETE /api/v2/comercio/**` (empresa/vendedor): bancos,
+- `POST /api/v1/vendedores/tienda`, `POST|PATCH /api/v1/vendedores/productos(/:id)`,
+  `GET /api/v1/vendedores/me/ofertas`, `GET /api/v1/tiendas/:id` (publica)
+- `POST /api/v1/orders`, `GET /api/v1/orders(/:id)` (comprador/vendedor/admin)
+- `PATCH /api/v1/orders/:id/estado` (admin: en_preparacion/enviada/entregada/cancelada/devuelta)
+- `GET /api/v1/vendedores/me/ventas|liquidaciones`, `GET /api/v1/admin/reportes`,
+  `POST /api/v1/admin/liquidaciones/corte`, `POST /api/v1/admin/liquidaciones/:id/pagar`
+- `GET /api/v1/admin/inventario`, `GET /api/v1/admin/envios`
+- `GET /api/v1/finanzas/asientos|proyecciones|kpis|punto-equilibrio` (admin),
+  `POST /api/v1/finanzas/asientos`, `GET /api/v1/vendedores/me/fiscal`
+- `GET|POST|PATCH|DELETE /api/v1/comercio/**` (empresa/vendedor): bancos,
   créditos, gastos, cuentas por pagar, proveedores, compras, órdenes de compra,
   caja (movimientos, métodos, cierres, caja chica y transferencias), clientes y
   códigos de barras — reemplaza la persistencia local de esos módulos.
-- Infra: `GET /health` (liveness) y `GET /ready` (readiness agregada de los servicios del entorno: 8 en producción, 9 en stage), `GET /metrics`, Swagger en `/docs` de cada servicio
+- Infra: `GET /health` (liveness) y `GET /ready` (readiness agregada de los servicios del entorno: 9 en producción, 10 en stage), `GET /metrics`, Swagger en `/docs` de cada servicio
 
 Endpoints internos (servicio→servicio) protegidos con `x-internal-key`: `internal/usuarios/:id`,
 `internal/vendedores`, `internal/productos/lote`, `internal/productos/sku/:sku`,
@@ -194,7 +195,7 @@ El **API Gateway** sirve en su `/docs` el **documento agregado de la superficie
 pública**: `scripts/tools/swagger-aggregate.mjs` fusiona
 `docs/openapi/<servicio>/{public,internal}.openapi.json` y escribe dos artefactos:
 
-- `docs/api/core-engine.openapi.json` — contrato público (solo `/api/v2/**`), que
+- `docs/api/core-engine.openapi.json` — contrato público (solo `/api/v1/**`), que
   también se publica en `packages/api-gateway/src/openapi.agregado.ts` (generado,
   versionado y verificado por el gate G-8);
 - `docs/api/core-engine.internal.openapi.json` — contrato interno (solo
@@ -211,9 +212,9 @@ pública**: `scripts/tools/swagger-aggregate.mjs` fusiona
 npm run swagger:export   # regenera docs/openapi/<servicio>/{public,internal} + los dos agregados de docs/api/
 ```
 
-Cobertura actual: **275/275 operaciones documentadas** en 10 servicios:
-**254 públicas** (231 con schema de respuesta + 23 sin contenido) y **21 internas**
-(todas con schema).
+Cobertura actual: **334/334 operaciones documentadas** en 11 servicios:
+**310 públicas** (221 rutas) y **24 internas** (todas con `x-internal-key` y
+schema de respuesta). El agregado público tiene 310 operaciones y el interno 24.
 
 ## Variables de entorno (`.env` en dev · `.env.production` en producción)
 
@@ -225,10 +226,15 @@ Cobertura actual: **275/275 operaciones documentadas** en 10 servicios:
 Claves: `DATABASE_URL`/`POSTGRES_*`, `RABBITMQ_URL` (+ `RABBITMQ_USER/PASSWORD`),
 `JWT_SECRET` (+ TTLs), `INTERNAL_API_KEY`, `ADMIN_EMAIL/ADMIN_PASSWORD`,
 `COMMISSION_RATE`, `OUTBOX_TABLA` (por servicio, ej. `orders.outbox`),
-`*_SERVICE_URL` (URLs internas), `CORS_ORIGINS`, `LOG_LEVEL`, las de almacenamiento
-(`MINIO_ROOT_USER/PASSWORD`, `MINIO_ENDPOINT/PORT`, **`MINIO_PUBLIC_ENDPOINT`**: el host
-firmado en las URLs prefirmadas, `STORAGE_*` de cuota/límites, ADR-24) y, si se activa
-la observabilidad, `GRAFANA_ADMIN_PASSWORD`.
+`*_SERVICE_URL` (URLs internas), `CORS_ORIGINS`, `FRONTEND_URL` (enlaces de
+invitación), `LOG_LEVEL`, las de almacenamiento (`MINIO_ROOT_USER/PASSWORD`,
+`MINIO_ENDPOINT/PORT`, **`MINIO_PUBLIC_ENDPOINT/PORT/USE_SSL`**: host, puerto y
+esquema firmados en las URLs prefirmadas; en stage/prod el público es el dominio
+HTTPS con `443`/`true`, `STORAGE_*` de cuota/límites, ADR-24), las de borde
+(`EDGE_BASIC_AUTH`, `REQUIRE_EDGE_AUTH`, `DIAGNOSTICOS_PUBLICOS`, `READY_PUBLIC`,
+`TRUST_PROXY`) y, si se activa la observabilidad, `GRAFANA_ADMIN_PASSWORD`.
+En stage/producción `RABBITMQ_PASSWORD` es **obligatoria** (el compose la exige
+con `${RABBITMQ_PASSWORD:?...}`), no solo `POSTGRES_PASSWORD`.
 
 ## Pruebas
 
@@ -238,7 +244,7 @@ TC-07 seguridad del gateway (401/403), TC-08 comision 12 % y liquidacion al vend
 RN-05/RN-06/RN-07/RN-08, partida doble y regimen fiscal NIC.
 
 ```bash
-npm test        # 490 tests en los 12 workspaces (cobertura por workspace, ratchet R-COV-1)
+npm test        # 1.322 tests en los 13 workspaces (cobertura por workspace, ratchet R-COV-1)
 npm run demo    # flujo real sobre el stack levantado (scripts/tools/smoke.mjs)
 ```
 
