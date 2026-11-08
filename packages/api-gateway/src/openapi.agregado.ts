@@ -15032,6 +15032,11 @@ export const OPENAPI_AGREGADO = {
           },
           "urlGoogleMaps": {
             "type": "string"
+          },
+          "parteId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Referencia universal opcional de la parte"
           }
         }
       },
@@ -15107,6 +15112,10 @@ export const OPENAPI_AGREGADO = {
           },
           "notas": {
             "type": "string"
+          },
+          "parteId": {
+            "type": "string",
+            "format": "uuid"
           }
         }
       },
@@ -15465,6 +15474,11 @@ export const OPENAPI_AGREGADO = {
             "type": "object",
             "nullable": true
           },
+          "parte_id": {
+            "type": "object",
+            "nullable": true,
+            "format": "uuid"
+          },
           "synced": {
             "type": "boolean"
           },
@@ -15604,6 +15618,11 @@ export const OPENAPI_AGREGADO = {
           },
           "urlGoogleMaps": {
             "type": "string"
+          },
+          "parteId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Referencia universal opcional de la parte"
           }
         },
         "required": [
@@ -15686,6 +15705,10 @@ export const OPENAPI_AGREGADO = {
           },
           "notas": {
             "type": "string"
+          },
+          "parteId": {
+            "type": "string",
+            "format": "uuid"
           }
         }
       },
@@ -15939,6 +15962,10 @@ export const OPENAPI_AGREGADO = {
           },
           "notas": {
             "type": "string"
+          },
+          "parteId": {
+            "type": "string",
+            "format": "uuid"
           }
         },
         "required": [
@@ -16130,6 +16157,10 @@ export const OPENAPI_AGREGADO = {
           },
           "tipoCombustible": {
             "type": "string"
+          },
+          "parteId": {
+            "type": "string",
+            "format": "uuid"
           }
         },
         "required": [
@@ -16205,6 +16236,11 @@ export const OPENAPI_AGREGADO = {
             "type": "object",
             "nullable": true
           },
+          "parte_id": {
+            "type": "object",
+            "nullable": true,
+            "format": "uuid"
+          },
           "synced": {
             "type": "boolean"
           },
@@ -16250,6 +16286,11 @@ export const OPENAPI_AGREGADO = {
             "type": "string"
           },
           "cliente_id": {
+            "type": "object",
+            "nullable": true,
+            "format": "uuid"
+          },
+          "parte_id": {
             "type": "object",
             "nullable": true,
             "format": "uuid"
@@ -16783,6 +16824,11 @@ export const OPENAPI_AGREGADO = {
             "format": "uuid"
           },
           "cliente_id": {
+            "type": "object",
+            "nullable": true,
+            "format": "uuid"
+          },
+          "parte_id": {
             "type": "object",
             "nullable": true,
             "format": "uuid"
@@ -17531,6 +17577,12 @@ export const OPENAPI_AGREGADO = {
           "cliente_id": {
             "type": "string",
             "description": "Id del cliente"
+          },
+          "parte_id": {
+            "type": "object",
+            "description": "Referencia universal del cliente",
+            "nullable": true,
+            "format": "uuid"
           },
           "base_gravada_cents": {
             "type": "number",
@@ -19062,6 +19114,11 @@ export const OPENAPI_AGREGADO = {
           "cliente_id": {
             "type": "string",
             "description": "Id del cliente"
+          },
+          "parte_id": {
+            "type": "string",
+            "description": "Referencia universal del cliente",
+            "format": "uuid"
           },
           "razon_social": {
             "type": "string",
@@ -23715,6 +23772,12 @@ export const OPENAPI_AGREGADO = {
             "description": "Empresa propietaria de las líneas despachadas",
             "format": "uuid"
           },
+          "parte_id": {
+            "type": "object",
+            "description": "Referencia universal opcional del destinatario",
+            "format": "uuid",
+            "nullable": true
+          },
           "modalidad_logistica": {
             "type": "string",
             "enum": [
@@ -23757,6 +23820,7 @@ export const OPENAPI_AGREGADO = {
           "guia",
           "order_id",
           "empresa_id",
+          "parte_id",
           "modalidad_logistica",
           "proveedor_tipo",
           "proveedor_tenant_id",
@@ -23787,6 +23851,12 @@ export const OPENAPI_AGREGADO = {
             "type": "string",
             "description": "Empresa propietaria de las líneas despachadas",
             "format": "uuid"
+          },
+          "parte_id": {
+            "type": "object",
+            "description": "Referencia universal opcional del destinatario",
+            "format": "uuid",
+            "nullable": true
           },
           "modalidad_logistica": {
             "type": "string",
@@ -23825,6 +23895,7 @@ export const OPENAPI_AGREGADO = {
           "guia",
           "order_id",
           "empresa_id",
+          "parte_id",
           "modalidad_logistica",
           "proveedor_tipo",
           "proveedor_tenant_id",
@@ -24648,6 +24719,11 @@ export const OPENAPI_AGREGADO = {
       "CreateOrderCommand": {
         "type": "object",
         "properties": {
+          "cliente_parte_id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Referencia universal opcional del comprador"
+          },
           "tipo_orden": {
             "type": "string",
             "enum": [
@@ -24797,6 +24873,12 @@ export const OPENAPI_AGREGADO = {
             "type": "string",
             "description": "Id del comprador",
             "format": "uuid"
+          },
+          "parte_id": {
+            "type": "object",
+            "nullable": true,
+            "format": "uuid",
+            "description": "Referencia universal opcional del comprador"
           },
           "tienda_id": {
             "type": "string",
@@ -25001,6 +25083,11 @@ export const OPENAPI_AGREGADO = {
             "nullable": true,
             "format": "uuid"
           },
+          "parte_id": {
+            "type": "object",
+            "nullable": true,
+            "format": "uuid"
+          },
           "order_id": {
             "type": "object",
             "nullable": true,
@@ -25093,6 +25180,12 @@ export const OPENAPI_AGREGADO = {
           "cliente_id": {
             "type": "string",
             "format": "uuid"
+          },
+          "parte_id": {
+            "type": "string",
+            "nullable": true,
+            "format": "uuid",
+            "description": "Referencia universal opcional del cliente"
           },
           "order_id": {
             "type": "string",

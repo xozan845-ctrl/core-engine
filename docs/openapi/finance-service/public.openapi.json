@@ -3983,6 +3983,12 @@
             "type": "string",
             "description": "Id del cliente"
           },
+          "parte_id": {
+            "type": "object",
+            "description": "Referencia universal del cliente",
+            "nullable": true,
+            "format": "uuid"
+          },
           "base_gravada_cents": {
             "type": "number",
             "description": "Base gravada en centavos",
@@ -5513,6 +5519,11 @@
           "cliente_id": {
             "type": "string",
             "description": "Id del cliente"
+          },
+          "parte_id": {
+            "type": "string",
+            "description": "Referencia universal del cliente",
+            "format": "uuid"
           },
           "razon_social": {
             "type": "string",

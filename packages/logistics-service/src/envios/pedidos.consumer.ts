@@ -61,6 +61,7 @@ export class PedidosConsumer implements OnModuleInit {
       await this.outbox.insertar(EVENTOS.SHIPMENT_STARTED, {
         order_id,
         empresa_id: envio.empresa_id,
+        ...(envio.parte_id ? { parte_id: envio.parte_id } : {}),
         guia: envio.guia,
         estado: 'en_preparacion',
         proveedor_tipo: envio.proveedor_tipo,

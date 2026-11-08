@@ -22,6 +22,11 @@ export class EmitirComprobanteRequestDto {
   @IsString()
   cliente_id?: string;
 
+  @ApiProperty({ description: 'Referencia universal del cliente', required: false, format: 'uuid' })
+  @IsOptional()
+  @IsUUID()
+  parte_id?: string;
+
   @ApiProperty({ description: 'Razón social', required: false })
   @IsOptional()
   @IsString()
@@ -71,6 +76,7 @@ export class FacturacionController {
   async emitir(@Body() dto: EmitirComprobanteRequestDto): Promise<Comprobante> {
     return this.facturacion.emitir(dto.tipo, dto.orden_id, {
       cliente_id: dto.cliente_id,
+      parte_id: dto.parte_id,
       razon_social: dto.razon_social,
       ruc: dto.ruc,
     });

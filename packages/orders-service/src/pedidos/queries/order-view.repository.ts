@@ -9,6 +9,7 @@ export interface OrderView {
   id: string;
   vendedor_id: string;
   comprador_id: string;
+  parte_id?: string | null;
   tienda_id: string;
   estado: string;
   total_cents: number;
@@ -31,6 +32,7 @@ interface OrderViewRow {
   id: string;
   vendedor_id: string;
   comprador_id: string;
+  parte_id?: string | null;
   tienda_id: string;
   estado: string;
   total_cents: number;
@@ -75,7 +77,7 @@ export class OrderViewRepository {
       return null;
     }
     const fila = await this.pg.queryOne<OrderViewRow>(
-      `SELECT id, vendedor_id, comprador_id, tienda_id, estado, total_cents, comision_cents, moneda,
+      `SELECT id, vendedor_id, comprador_id, parte_id, tienda_id, estado, total_cents, comision_cents, moneda,
               items_json, direccion_envio, creado_en, actualizado_en,
               tipo_orden, fulfillment_config,
               pagada_en, enviada_en, entregada_en, cancelada_en, devuelta_en
@@ -90,7 +92,7 @@ export class OrderViewRepository {
     const extra = estado ? ` AND estado = $2` : '';
     if (estado) params.push(estado);
     const filas = await this.pg.query<OrderViewRow>(
-      `SELECT id, vendedor_id, comprador_id, tienda_id, estado, total_cents, comision_cents, moneda,
+      `SELECT id, vendedor_id, comprador_id, parte_id, tienda_id, estado, total_cents, comision_cents, moneda,
               items_json, direccion_envio, creado_en, actualizado_en,
               tipo_orden, fulfillment_config,
               pagada_en, enviada_en, entregada_en, cancelada_en, devuelta_en
@@ -106,7 +108,7 @@ export class OrderViewRepository {
     const extra = estado ? ` AND estado = $2` : '';
     if (estado) params.push(estado);
     const filas = await this.pg.query<OrderViewRow>(
-      `SELECT id, vendedor_id, comprador_id, tienda_id, estado, total_cents, comision_cents, moneda,
+      `SELECT id, vendedor_id, comprador_id, parte_id, tienda_id, estado, total_cents, comision_cents, moneda,
               items_json, direccion_envio, creado_en, actualizado_en,
               tipo_orden, fulfillment_config,
               pagada_en, enviada_en, entregada_en, cancelada_en, devuelta_en
@@ -141,7 +143,7 @@ export class OrderViewRepository {
       extra = ` AND estado = $${params.length}`;
     }
     const filas = await this.pg.query<OrderViewRow>(
-      `SELECT id, vendedor_id, comprador_id, tienda_id, estado, total_cents, comision_cents, moneda,
+      `SELECT id, vendedor_id, comprador_id, parte_id, tienda_id, estado, total_cents, comision_cents, moneda,
               items_json, direccion_envio, creado_en, actualizado_en,
               tipo_orden, fulfillment_config,
               pagada_en, enviada_en, entregada_en, cancelada_en, devuelta_en
@@ -171,7 +173,7 @@ export class OrderViewRepository {
     }
     params.push(filtros.limite ?? 100);
     const filas = await this.pg.query<OrderViewRow>(
-      `SELECT id, vendedor_id, comprador_id, tienda_id, estado, total_cents, comision_cents, moneda,
+      `SELECT id, vendedor_id, comprador_id, parte_id, tienda_id, estado, total_cents, comision_cents, moneda,
               items_json, direccion_envio, creado_en, actualizado_en,
               tipo_orden, fulfillment_config,
               pagada_en, enviada_en, entregada_en, cancelada_en, devuelta_en
@@ -193,7 +195,7 @@ export class OrderViewRepository {
     }
     params.push(filtros.limite ?? 200);
     const filas = await this.pg.query<OrderViewRow>(
-      `SELECT id, vendedor_id, comprador_id, tienda_id, estado, total_cents, comision_cents, moneda,
+      `SELECT id, vendedor_id, comprador_id, parte_id, tienda_id, estado, total_cents, comision_cents, moneda,
               items_json, direccion_envio, creado_en, actualizado_en,
               tipo_orden, fulfillment_config,
               pagada_en, enviada_en, entregada_en, cancelada_en, devuelta_en
@@ -253,6 +255,7 @@ export class OrderViewRepository {
       id: fila.id,
       vendedor_id: fila.vendedor_id,
       comprador_id: fila.comprador_id,
+      parte_id: fila.parte_id ?? null,
       tienda_id: fila.tienda_id,
       estado: fila.estado,
       total_cents: fila.total_cents,
