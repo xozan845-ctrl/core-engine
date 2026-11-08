@@ -9,9 +9,10 @@ import { InvitacionesModule } from './invitaciones/invitaciones.module';
 import { ConfiguracionSitioModule } from './configuracion-sitio/configuracion-sitio.module';
 import { CapacidadesModule } from './capacidades/capacidades.module';
 import { PacksModule } from './packs/packs.module';
+import { ExtensionesModule } from './extensiones/extensiones.module';
 
 @Module({
-  imports: [PgModule, RabbitModule, OutboxModule, MetricsModule, AuthModule, UsuariosModule, EmpresasModule, InvitacionesModule, ConfiguracionSitioModule, CapacidadesModule, PacksModule],
+  imports: [PgModule, RabbitModule, OutboxModule, MetricsModule, AuthModule, UsuariosModule, EmpresasModule, InvitacionesModule, ConfiguracionSitioModule, CapacidadesModule, PacksModule, ExtensionesModule],
   providers: [SeedService],
   controllers: [InternalController],
 })
