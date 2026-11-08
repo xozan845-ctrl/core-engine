@@ -61,6 +61,7 @@ export interface ItemOrden {
 export interface OrdenData {
   order_id: string;
   cliente_id: string;
+  cliente_parte_id?: string;
   items: ItemOrden[];
   total_cents: number;
   estado: 'creada';
@@ -73,6 +74,7 @@ export interface AppointmentCreatedData {
   empresa_id: string;
   recurso_id: string;
   cliente_id?: string;
+  cliente_parte_id?: string;
   order_id?: string;
   item_id?: string;
   inicia_en: string;
@@ -127,6 +129,7 @@ export interface PaymentProcesadoData {
 export interface ShipmentStartedData {
   order_id: string;
   empresa_id: string;
+  parte_id?: string | null;
   guia: string;
   estado: 'en_preparacion';
   proveedor_tipo: 'plataforma' | 'empresa' | null;
@@ -198,6 +201,7 @@ export interface ComprobanteEmitidoData {
   numero: string;
   tipo: 'FACTURA' | 'NOTA_CREDITO';
   orden_id?: string;
+  parte_id?: string | null;
   base_gravada_cents: number;
   iva_cents: number;
   total_cents: number;

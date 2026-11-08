@@ -45,6 +45,9 @@ export class OrderViewResponseDto {
   @ApiProperty({ description: 'Id del comprador', format: 'uuid' })
   comprador_id: string;
 
+  @ApiProperty({ required: false, nullable: true, format: 'uuid', description: 'Referencia universal opcional del comprador' })
+  parte_id: string | null;
+
   @ApiProperty({ description: 'Id de la tienda', format: 'uuid' })
   tienda_id: string;
 

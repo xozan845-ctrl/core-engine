@@ -46,6 +46,31 @@ describe('FieldService', () => {
     });
   });
 
+  it('valida la parte contra el tenant antes de persistir un cliente legacy', async () => {
+    pg.queryOne.mockResolvedValueOnce({ id: 'parte-1' }).mockResolvedValueOnce({ id: 'cliente-1' });
+
+    await service.crearCliente('tenant-a', {
+      nombreCompleto: 'Ana',
+      parteId: '22222222-2222-4222-8222-222222222222',
+    });
+
+    expect(pg.queryOne.mock.calls[0][0]).toContain('identity.partes');
+    expect(pg.queryOne.mock.calls[0][1]).toEqual([
+      '22222222-2222-4222-8222-222222222222',
+      'tenant-a',
+    ]);
+    expect(pg.queryOne.mock.calls[1][0]).toContain('INSERT INTO field.clientes');
+  });
+
+  it('rechaza enlazar un cliente legacy con una parte de otro tenant', async () => {
+    pg.queryOne.mockResolvedValueOnce(null);
+
+    await expect(service.crearCliente('tenant-a', {
+      nombreCompleto: 'Ana',
+      parteId: '22222222-2222-4222-8222-222222222222',
+    })).rejects.toMatchObject({ codigo: 'PARTE_INVALIDA' });
+  });
+
   it('actualiza ubicación usando el contrato público lat/lng/precision/timestamp', async () => {
     pg.queryOne
       .mockResolvedValueOnce({ id: 'personal-1' })
