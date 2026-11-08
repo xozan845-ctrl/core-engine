@@ -10,6 +10,7 @@ export interface Usuario {
   tenant_id?: string;
   personal_id?: string;
   participacion_porcentaje?: number;
+  rol_empresa_id?: string;
   avatar_objeto_id?: string;
   avatar_url?: string;
   creado_en: string;
@@ -32,7 +33,9 @@ export class UsuariosService {
 
   async encontrarPorId(id: string): Promise<Usuario | null> {
     const fila = await this.pg.queryOne<UsuarioRow>(
-      `SELECT id, nombre, correo, rol, tenant_id, personal_id, participacion_porcentaje, avatar_objeto_id, creado_en FROM identity.usuarios WHERE id = $1`,
+      `SELECT u.id, u.nombre, u.correo, u.rol, u.tenant_id, u.personal_id, u.participacion_porcentaje, u.avatar_objeto_id, u.creado_en,
+              (SELECT m.rol_empresa_id FROM identity.empresa_miembros m WHERE m.usuario_id=u.id AND m.empresa_id=u.tenant_id AND m.estado='activo' LIMIT 1) AS rol_empresa_id
+       FROM identity.usuarios u WHERE u.id = $1`,
       [id],
     );
     return fila ? this.sanear(fila) : null;
@@ -40,8 +43,9 @@ export class UsuariosService {
 
   async encontrarPorCorreo(correo: string): Promise<UsuarioRow | null> {
     return this.pg.queryOne<UsuarioRow>(
-      `SELECT id, nombre, correo, rol, tenant_id, personal_id, participacion_porcentaje, avatar_objeto_id, contrasena_hash, creado_en
-       FROM identity.usuarios WHERE LOWER(correo) = LOWER($1)`,
+      `SELECT u.id, u.nombre, u.correo, u.rol, u.tenant_id, u.personal_id, u.participacion_porcentaje, u.avatar_objeto_id, u.contrasena_hash, u.creado_en,
+              (SELECT m.rol_empresa_id FROM identity.empresa_miembros m WHERE m.usuario_id=u.id AND m.empresa_id=u.tenant_id AND m.estado='activo' LIMIT 1) AS rol_empresa_id
+       FROM identity.usuarios u WHERE LOWER(u.correo) = LOWER($1)`,
       [correo.trim()],
     );
   }
@@ -151,8 +155,9 @@ export class UsuariosService {
       params.push(filtro.tenant_id);
       where.push(`tenant_id = $${params.length}`);
     }
-    const sql = `SELECT id, nombre, correo, rol, tenant_id, personal_id, avatar_objeto_id, creado_en
-                 FROM identity.usuarios${where.length ? ` WHERE ${where.join(' AND ')}` : ''}
+    const sql = `SELECT u.id, u.nombre, u.correo, u.rol, u.tenant_id, u.personal_id, u.avatar_objeto_id, u.creado_en,
+                        (SELECT m.rol_empresa_id FROM identity.empresa_miembros m WHERE m.usuario_id=u.id AND m.empresa_id=u.tenant_id AND m.estado='activo' LIMIT 1) AS rol_empresa_id
+                 FROM identity.usuarios u${where.length ? ` WHERE ${where.join(' AND ')}` : ''}
                  ORDER BY creado_en DESC LIMIT 500`;
     const filas = await this.pg.query<UsuarioRow>(sql, params);
     return filas.map((f) => this.sanear(f));
@@ -284,6 +289,7 @@ export class UsuariosService {
       ...(fila.personal_id ? { personal_id: fila.personal_id } : {}),
       ...(fila.participacion_porcentaje !== undefined && fila.participacion_porcentaje !== null
         ? { participacion_porcentaje: fila.participacion_porcentaje } : {}),
+      ...(fila.rol_empresa_id ? { rol_empresa_id: fila.rol_empresa_id } : {}),
       ...(fila.avatar_objeto_id
         ? {
             avatar_objeto_id: fila.avatar_objeto_id,
