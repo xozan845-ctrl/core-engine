@@ -1,4 +1,4 @@
-import { Body, Controller, Get, HttpCode, HttpStatus, Param, Patch, Post } from '@nestjs/common';
+import { Body, Controller, Delete, Get, HttpCode, HttpStatus, Param, Patch, Post, Put } from '@nestjs/common';
 import {
   ApiBearerAuth,
   ApiCreatedResponse,
@@ -10,7 +10,7 @@ import {
 } from '@nestjs/swagger';
 import { IsBoolean, IsObject, IsOptional, IsString, Length, Matches } from 'class-validator';
 import { ROLES, Roles, UsuarioActual, UsuarioContexto } from '@core/shared';
-import { EmpresaExtension, ExtensionesService } from './extensiones.service';
+import { EmpresaExtension, ExtensionValue, ExtensionesService } from './extensiones.service';
 
 export class CrearExtensionRequestDto {
   @ApiProperty({ example: 'ficha_cliente' }) @IsString() @Length(2, 40) @Matches(/^[a-z][a-z0-9_]{1,39}$/) codigo: string;
@@ -29,6 +29,10 @@ export class ActualizarExtensionRequestDto {
 
 export class ValidarExtensionRequestDto {
   @ApiProperty({ type: Object, additionalProperties: true }) @IsObject() datos: Record<string, unknown>;
+}
+
+export class GuardarExtensionValoresRequestDto {
+  @ApiProperty({ type: Object, additionalProperties: true }) @IsObject() valores: Record<string, unknown>;
 }
 
 class ExtensionResponseDto implements EmpresaExtension {
@@ -51,6 +55,18 @@ class ExtensionResponseDto implements EmpresaExtension {
 class ValidacionExtensionResponseDto {
   @ApiProperty() valido: boolean;
   @ApiProperty({ type: [Object] }) errores: Array<Record<string, unknown>>;
+}
+
+class ExtensionValueResponseDto implements ExtensionValue {
+  @ApiProperty({ format: 'uuid' }) id: string;
+  @ApiProperty({ format: 'uuid' }) empresa_id: string;
+  @ApiProperty({ format: 'uuid' }) extension_id: string;
+  @ApiProperty({ format: 'uuid' }) recurso_id: string;
+  @ApiProperty({ type: Object, additionalProperties: true }) valores: Record<string, unknown>;
+  @ApiProperty() version_schema: number;
+  @ApiProperty({ format: 'uuid' }) creado_por: string;
+  @ApiProperty({ format: 'date-time' }) creado_en: string;
+  @ApiProperty({ format: 'date-time' }) actualizado_en: string;
 }
 
 @ApiTags('Extensiones configurables')
@@ -105,5 +121,55 @@ export class ExtensionesController {
     @UsuarioActual() actor: UsuarioContexto,
   ) {
     return this.extensiones.validar(empresaId, codigo, dto.datos, actor);
+  }
+
+  @Get(':codigo/valores/:recursoId')
+  @Roles(ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.EMPRESARIO, ROLES.VENDEDOR, ROLES.COORDINADOR, ROLES.SUPERVISOR, ROLES.OPERATIVO)
+  @ApiOperation({ summary: 'Consultar valores de una extensión para un recurso' })
+  @ApiParam({ name: 'empresaId', format: 'uuid' })
+  @ApiParam({ name: 'codigo' })
+  @ApiParam({ name: 'recursoId', format: 'uuid' })
+  @ApiOkResponse({ type: ExtensionValueResponseDto, nullable: true })
+  obtenerValores(
+    @Param('empresaId') empresaId: string,
+    @Param('codigo') codigo: string,
+    @Param('recursoId') recursoId: string,
+    @UsuarioActual() actor: UsuarioContexto,
+  ) {
+    return this.extensiones.obtenerValores(empresaId, codigo, recursoId, actor);
+  }
+
+  @Put(':codigo/valores/:recursoId')
+  @Roles(ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.EMPRESARIO)
+  @ApiOperation({ summary: 'Guardar o actualizar valores de una extensión' })
+  @ApiParam({ name: 'empresaId', format: 'uuid' })
+  @ApiParam({ name: 'codigo' })
+  @ApiParam({ name: 'recursoId', format: 'uuid' })
+  @ApiOkResponse({ type: ExtensionValueResponseDto })
+  guardarValores(
+    @Param('empresaId') empresaId: string,
+    @Param('codigo') codigo: string,
+    @Param('recursoId') recursoId: string,
+    @Body() dto: GuardarExtensionValoresRequestDto,
+    @UsuarioActual() actor: UsuarioContexto,
+  ) {
+    return this.extensiones.guardarValores(empresaId, codigo, recursoId, dto.valores, actor);
+  }
+
+  @Delete(':codigo/valores/:recursoId')
+  @Roles(ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.EMPRESARIO)
+  @ApiOperation({ summary: 'Eliminar valores de una extensión para un recurso' })
+  @ApiParam({ name: 'empresaId', format: 'uuid' })
+  @ApiParam({ name: 'codigo' })
+  @ApiParam({ name: 'recursoId', format: 'uuid' })
+  @ApiOkResponse({ description: 'Valores eliminados' })
+  async eliminarValores(
+    @Param('empresaId') empresaId: string,
+    @Param('codigo') codigo: string,
+    @Param('recursoId') recursoId: string,
+    @UsuarioActual() actor: UsuarioContexto,
+  ) {
+    await this.extensiones.eliminarValores(empresaId, codigo, recursoId, actor);
+    return { ok: true };
   }
 }
