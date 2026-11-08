@@ -1,6 +1,55 @@
 -- Plataforma multi-vertical · RLS de las superficies nuevas.
 -- Idempotente para local/staging: reemplaza solo las politicas de tablas
 -- introducidas en las fases 1–4 y conserva el aislamiento por empresa.
+CREATE SCHEMA IF NOT EXISTS auth;
+
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
+     WHERE n.nspname = 'auth' AND p.proname = 'jwt' AND p.pronargs = 0
+  ) THEN
+    CREATE FUNCTION auth.jwt() RETURNS jsonb
+      LANGUAGE sql STABLE
+      AS $fn$ SELECT COALESCE(NULLIF(current_setting('request.jwt.claims', true), ''), '{}')::jsonb $fn$;
+  END IF;
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
+     WHERE n.nspname = 'auth' AND p.proname = 'uid' AND p.pronargs = 0
+  ) THEN
+    CREATE FUNCTION auth.uid() RETURNS uuid
+      LANGUAGE sql STABLE
+      AS $fn$ SELECT NULLIF(auth.jwt() ->> 'sub', '')::uuid $fn$;
+  END IF;
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
+     WHERE n.nspname = 'auth' AND p.proname = 'rol' AND p.pronargs = 0
+  ) THEN
+    CREATE FUNCTION auth.rol() RETURNS text
+      LANGUAGE sql STABLE
+      AS $fn$ SELECT COALESCE(auth.jwt() ->> 'rol', 'anon') $fn$;
+  END IF;
+END $$;
+
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'anon') THEN
+    CREATE ROLE anon NOLOGIN;
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'authenticated') THEN
+    CREATE ROLE authenticated NOLOGIN;
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'core_engine_app') THEN
+    CREATE ROLE core_engine_app NOLOGIN;
+  END IF;
+  GRANT authenticated TO core_engine_app;
+END $$;
+
+GRANT USAGE ON SCHEMA auth TO anon, authenticated;
+GRANT EXECUTE ON FUNCTION auth.jwt() TO anon, authenticated;
+GRANT EXECUTE ON FUNCTION auth.uid() TO anon, authenticated;
+GRANT EXECUTE ON FUNCTION auth.rol() TO anon, authenticated;
+
 BEGIN;
 
 DO $$

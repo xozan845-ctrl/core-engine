@@ -21,7 +21,7 @@ export const DESTINOS: ServicioDestino[] = [
       { patron: /^\/api\/v1\/auth\//, metodos: ['*'] },
       { patron: /^\/api\/v1\/usuarios(\/|$)/, metodos: ['*'] },
       { patron: /^\/api\/v1\/empresas(\/|$)/, metodos: ['*'] },
-      { patron: /^\/api\/v1\/packs(\/|$)/, metodos: ['GET'] },
+      { patron: /^\/api\/v1\/packs(\/|$)/, metodos: ['GET', 'POST'] },
       { patron: /^\/api\/v1\/invitaciones(\/|$)/, metodos: ['*'] },
       { patron: /^\/api\/v1\/configuracion(\/|$)/, metodos: ['*'] },
     ],

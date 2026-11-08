@@ -249,26 +249,14 @@
             "type": "string"
           },
           "vertical_id": {
-            "type": "string",
+            "type": "object",
             "nullable": true,
-            "enum": [
-              "retail",
-              "farmacia",
-              "belleza",
-              "dental",
-              "flota"
-            ]
+            "description": "Código dinámico de la vertical"
           },
           "pack_codigo": {
-            "type": "string",
+            "type": "object",
             "nullable": true,
-            "enum": [
-              "pack_retail",
-              "pack_farmacia",
-              "pack_belleza",
-              "pack_dental",
-              "pack_flota"
-            ]
+            "description": "Código dinámico del pack"
           },
           "pack_version": {
             "type": "object",

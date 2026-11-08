@@ -35,6 +35,21 @@ export const POLITICAS_RUTAS: PoliticaRuta[] = [
       metodos: ['GET'],
       roles: [ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.EMPRESARIO],
     },
+    {
+      patron: /^\/api\/v1\/packs$/,
+      metodos: ['POST'],
+      roles: [ROLES.SUPER_ADMIN, ROLES.ADMIN],
+    },
+    {
+      patron: /^\/api\/v1\/packs\/(modelos-operacion|verticales)(\/|$)/,
+      metodos: ['GET'],
+      roles: [ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.EMPRESARIO],
+    },
+    {
+      patron: /^\/api\/v1\/packs\/(modelos-operacion|verticales)(\/|$)/,
+      metodos: ['POST'],
+      roles: [ROLES.SUPER_ADMIN, ROLES.ADMIN],
+    },
     // Invitaciones de vendedor: el token es la autorización temporal.
     { patron: /^\/api\/v1\/invitaciones\/vendedores\/[^/]+$/, metodos: ['GET'], roles: null },
     { patron: /^\/api\/v1\/invitaciones\/vendedores\/[^/]+\/aceptar$/, metodos: ['POST'], roles: null },
