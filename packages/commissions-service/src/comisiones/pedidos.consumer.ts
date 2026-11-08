@@ -10,6 +10,7 @@ import {
   PaymentProcesadoData,
   DevolucionSolicitadaData,
   Logger,
+  ejecutarConContexto,
 } from '@core/shared';
 import { ComisionesService } from './comisiones.service';
 
@@ -40,24 +41,42 @@ export class PedidosConsumer implements OnModuleInit {
       { ...COLAS.commissions_liquidacion, nombre: COLAS.commissions_liquidacion.cola },
     ]);
     await this.rabbit.consumir(COLAS.commissions_pedidos.cola, (e) => this.manejar(e));
+    await this.rabbit.consumir(COLAS.commissions_liquidacion.cola, (e) => this.manejarLiquidacion(e));
     this.rabbit.activarReintento();
     this.logger.info({ msg: 'Consumidor de pedidos activo' });
   }
 
+  private async manejarLiquidacion(evento: EventoBus): Promise<void> {
+    if (evento.tipo !== EVENTOS.COMISION_ACREDITADA) return;
+    // La liquidación quincenal consolida commissions.comisiones; este consumo
+    // evita mensajes huérfanos en Rabbit y deja trazabilidad del evento.
+    this.logger.info({ msg: 'Comision disponible para liquidacion', event_id: evento.event_id });
+  }
+
   private async manejar(evento: EventoBus): Promise<void> {
-    switch (evento.tipo) {
-      case EVENTOS.PAYMENT_PROCESADO:
-        await this.pago(evento as EventoBus<PaymentProcesadoData>);
-        break;
-      case EVENTOS.ORDER_COMPLETADO:
-        await this.ordenCompletada(evento as EventoBus<OrderCompletadoData>);
-        break;
-      case EVENTOS.DEVOLUCION_SOLICITADA:
-        await this.devolucion(evento as EventoBus<DevolucionSolicitadaData>);
-        break;
-      default:
-        return;
-    }
+    await ejecutarConContexto(
+      {
+        request_id: `commissions-event-${evento.event_id}`,
+        servicio: 'commissions-consumer',
+        usuario_id: '00000000-0000-0000-0000-000000000000',
+        rol: 'super_admin',
+      },
+      async () => {
+        switch (evento.tipo) {
+          case EVENTOS.PAYMENT_PROCESADO:
+            await this.pago(evento as EventoBus<PaymentProcesadoData>);
+            break;
+          case EVENTOS.ORDER_COMPLETADO:
+            await this.ordenCompletada(evento as EventoBus<OrderCompletadoData>);
+            break;
+          case EVENTOS.DEVOLUCION_SOLICITADA:
+            await this.devolucion(evento as EventoBus<DevolucionSolicitadaData>);
+            break;
+          default:
+            return;
+        }
+      },
+    );
   }
 
   private async pago(evento: EventoBus<PaymentProcesadoData>): Promise<void> {

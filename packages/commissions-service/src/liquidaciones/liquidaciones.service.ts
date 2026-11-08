@@ -3,6 +3,7 @@ import * as cron from 'node-cron';
 import {
   PgService,
   Logger,
+  ejecutarConContexto,
 } from '@core/shared';
 
 export interface Liquidacion {
@@ -38,8 +39,16 @@ export class LiquidacionesService implements OnModuleInit {
   onModuleInit(): void {
     // dias 1 y 15 a las 00:05 (zona America/Managua): cierra el periodo previo
     cron.schedule('5 0 1,15 * *', () => {
-      this.cerrarPeriodoAnterior(new Date()).catch((err) =>
-        this.logger.error({ msg: 'Fallo el corte quincenal', err: err.message }),
+      void (ejecutarConContexto(
+        {
+          request_id: `liquidaciones-worker-${Date.now()}`,
+          servicio: 'liquidaciones-worker',
+          usuario_id: '00000000-0000-0000-0000-000000000000',
+          rol: 'super_admin',
+        },
+        () => this.cerrarPeriodoAnterior(new Date()),
+      ) as Promise<unknown>).catch((err: unknown) =>
+        this.logger.error({ msg: 'Fallo el corte quincenal', err: err instanceof Error ? err.message : String(err) }),
       );
     });
     this.logger.info({ msg: 'Planificador de liquidacion quincenal activo (dias 1 y 15)' });
