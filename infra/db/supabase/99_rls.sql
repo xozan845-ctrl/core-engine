@@ -563,3 +563,124 @@ CREATE POLICY extension_values_update ON identity.extensiones_empresa_valores
 CREATE POLICY extension_values_delete ON identity.extensiones_empresa_valores
   FOR DELETE TO authenticated
   USING (auth.rol() = 'empresario' AND empresa_id::text = (auth.jwt() ->> 'tenant_id'));
+
+ALTER TABLE identity.partes ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS partes_admin ON identity.partes;
+DROP POLICY IF EXISTS partes_empresa_lectura ON identity.partes;
+DROP POLICY IF EXISTS partes_empresa_escritura ON identity.partes;
+DROP POLICY IF EXISTS partes_empresa_insert ON identity.partes;
+DROP POLICY IF EXISTS partes_empresa_update ON identity.partes;
+DROP POLICY IF EXISTS partes_empresa_delete ON identity.partes;
+DROP POLICY IF EXISTS partes_empresa_archivar ON identity.partes;
+CREATE POLICY partes_admin ON identity.partes FOR ALL TO authenticated
+  USING (auth.rol() IN ('super_admin', 'admin'))
+  WITH CHECK (auth.rol() IN ('super_admin', 'admin'));
+CREATE POLICY partes_empresa_lectura ON identity.partes FOR SELECT TO authenticated
+  USING (empresa_id::text = (auth.jwt() ->> 'tenant_id'));
+CREATE POLICY partes_empresa_insert ON identity.partes FOR INSERT TO authenticated
+  WITH CHECK (auth.rol() IN ('empresario', 'vendedor', 'coordinador', 'supervisor', 'operativo')
+         AND empresa_id::text = (auth.jwt() ->> 'tenant_id'));
+CREATE POLICY partes_empresa_update ON identity.partes FOR UPDATE TO authenticated
+  USING (auth.rol() IN ('empresario', 'vendedor', 'coordinador', 'supervisor', 'operativo')
+         AND empresa_id::text = (auth.jwt() ->> 'tenant_id'))
+  WITH CHECK (auth.rol() IN ('empresario', 'vendedor', 'coordinador', 'supervisor', 'operativo')
+         AND empresa_id::text = (auth.jwt() ->> 'tenant_id'));
+CREATE POLICY partes_empresa_delete ON identity.partes FOR DELETE TO authenticated
+  USING (auth.rol() IN ('empresario', 'vendedor', 'coordinador', 'supervisor', 'operativo')
+         AND empresa_id::text = (auth.jwt() ->> 'tenant_id'));
+CREATE POLICY partes_empresa_archivar ON identity.partes FOR UPDATE TO authenticated
+  USING (auth.rol() IN ('empresario', 'vendedor', 'coordinador', 'supervisor', 'operativo')
+         AND empresa_id::text = (auth.jwt() ->> 'tenant_id') AND eliminado_en IS NULL)
+  WITH CHECK (auth.rol() IN ('empresario', 'vendedor', 'coordinador', 'supervisor', 'operativo')
+         AND empresa_id::text = (auth.jwt() ->> 'tenant_id')
+         AND eliminado_en IS NOT NULL AND estado = 'archivado');
+
+ALTER TABLE identity.medios_contacto ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS medios_contacto_admin ON identity.medios_contacto;
+DROP POLICY IF EXISTS medios_contacto_empresa_lectura ON identity.medios_contacto;
+DROP POLICY IF EXISTS medios_contacto_empresa_escritura ON identity.medios_contacto;
+DROP POLICY IF EXISTS medios_contacto_empresa_insert ON identity.medios_contacto;
+DROP POLICY IF EXISTS medios_contacto_empresa_update ON identity.medios_contacto;
+DROP POLICY IF EXISTS medios_contacto_empresa_delete ON identity.medios_contacto;
+DROP POLICY IF EXISTS medios_contacto_empresa_archivar ON identity.medios_contacto;
+CREATE POLICY medios_contacto_admin ON identity.medios_contacto FOR ALL TO authenticated
+  USING (auth.rol() IN ('super_admin', 'admin'))
+  WITH CHECK (auth.rol() IN ('super_admin', 'admin'));
+CREATE POLICY medios_contacto_empresa_lectura ON identity.medios_contacto FOR SELECT TO authenticated
+  USING (empresa_id::text = (auth.jwt() ->> 'tenant_id'));
+CREATE POLICY medios_contacto_empresa_insert ON identity.medios_contacto FOR INSERT TO authenticated
+  WITH CHECK (auth.rol() IN ('empresario', 'vendedor', 'coordinador', 'supervisor', 'operativo')
+         AND empresa_id::text = (auth.jwt() ->> 'tenant_id'));
+CREATE POLICY medios_contacto_empresa_update ON identity.medios_contacto FOR UPDATE TO authenticated
+  USING (auth.rol() IN ('empresario', 'vendedor', 'coordinador', 'supervisor', 'operativo')
+         AND empresa_id::text = (auth.jwt() ->> 'tenant_id'))
+  WITH CHECK (auth.rol() IN ('empresario', 'vendedor', 'coordinador', 'supervisor', 'operativo')
+         AND empresa_id::text = (auth.jwt() ->> 'tenant_id'));
+CREATE POLICY medios_contacto_empresa_delete ON identity.medios_contacto FOR DELETE TO authenticated
+  USING (auth.rol() IN ('empresario', 'vendedor', 'coordinador', 'supervisor', 'operativo')
+         AND empresa_id::text = (auth.jwt() ->> 'tenant_id'));
+CREATE POLICY medios_contacto_empresa_archivar ON identity.medios_contacto FOR UPDATE TO authenticated
+  USING (auth.rol() IN ('empresario', 'vendedor', 'coordinador', 'supervisor', 'operativo')
+         AND empresa_id::text = (auth.jwt() ->> 'tenant_id') AND eliminado_en IS NULL)
+  WITH CHECK (auth.rol() IN ('empresario', 'vendedor', 'coordinador', 'supervisor', 'operativo')
+         AND empresa_id::text = (auth.jwt() ->> 'tenant_id') AND eliminado_en IS NOT NULL);
+
+ALTER TABLE identity.direcciones_partes ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS direcciones_partes_admin ON identity.direcciones_partes;
+DROP POLICY IF EXISTS direcciones_partes_empresa_lectura ON identity.direcciones_partes;
+DROP POLICY IF EXISTS direcciones_partes_empresa_escritura ON identity.direcciones_partes;
+DROP POLICY IF EXISTS direcciones_partes_empresa_insert ON identity.direcciones_partes;
+DROP POLICY IF EXISTS direcciones_partes_empresa_update ON identity.direcciones_partes;
+DROP POLICY IF EXISTS direcciones_partes_empresa_delete ON identity.direcciones_partes;
+DROP POLICY IF EXISTS direcciones_partes_empresa_archivar ON identity.direcciones_partes;
+CREATE POLICY direcciones_partes_admin ON identity.direcciones_partes FOR ALL TO authenticated
+  USING (auth.rol() IN ('super_admin', 'admin'))
+  WITH CHECK (auth.rol() IN ('super_admin', 'admin'));
+CREATE POLICY direcciones_partes_empresa_lectura ON identity.direcciones_partes FOR SELECT TO authenticated
+  USING (empresa_id::text = (auth.jwt() ->> 'tenant_id'));
+CREATE POLICY direcciones_partes_empresa_insert ON identity.direcciones_partes FOR INSERT TO authenticated
+  WITH CHECK (auth.rol() IN ('empresario', 'vendedor', 'coordinador', 'supervisor', 'operativo')
+         AND empresa_id::text = (auth.jwt() ->> 'tenant_id'));
+CREATE POLICY direcciones_partes_empresa_update ON identity.direcciones_partes FOR UPDATE TO authenticated
+  USING (auth.rol() IN ('empresario', 'vendedor', 'coordinador', 'supervisor', 'operativo')
+         AND empresa_id::text = (auth.jwt() ->> 'tenant_id'))
+  WITH CHECK (auth.rol() IN ('empresario', 'vendedor', 'coordinador', 'supervisor', 'operativo')
+         AND empresa_id::text = (auth.jwt() ->> 'tenant_id'));
+CREATE POLICY direcciones_partes_empresa_delete ON identity.direcciones_partes FOR DELETE TO authenticated
+  USING (auth.rol() IN ('empresario', 'vendedor', 'coordinador', 'supervisor', 'operativo')
+         AND empresa_id::text = (auth.jwt() ->> 'tenant_id'));
+CREATE POLICY direcciones_partes_empresa_archivar ON identity.direcciones_partes FOR UPDATE TO authenticated
+  USING (auth.rol() IN ('empresario', 'vendedor', 'coordinador', 'supervisor', 'operativo')
+         AND empresa_id::text = (auth.jwt() ->> 'tenant_id') AND eliminado_en IS NULL)
+  WITH CHECK (auth.rol() IN ('empresario', 'vendedor', 'coordinador', 'supervisor', 'operativo')
+         AND empresa_id::text = (auth.jwt() ->> 'tenant_id') AND eliminado_en IS NOT NULL);
+
+ALTER TABLE identity.relaciones_partes ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS relaciones_partes_admin ON identity.relaciones_partes;
+DROP POLICY IF EXISTS relaciones_partes_empresa_lectura ON identity.relaciones_partes;
+DROP POLICY IF EXISTS relaciones_partes_empresa_escritura ON identity.relaciones_partes;
+DROP POLICY IF EXISTS relaciones_partes_empresa_insert ON identity.relaciones_partes;
+DROP POLICY IF EXISTS relaciones_partes_empresa_update ON identity.relaciones_partes;
+DROP POLICY IF EXISTS relaciones_partes_empresa_delete ON identity.relaciones_partes;
+DROP POLICY IF EXISTS relaciones_partes_empresa_desactivar ON identity.relaciones_partes;
+CREATE POLICY relaciones_partes_admin ON identity.relaciones_partes FOR ALL TO authenticated
+  USING (auth.rol() IN ('super_admin', 'admin'))
+  WITH CHECK (auth.rol() IN ('super_admin', 'admin'));
+CREATE POLICY relaciones_partes_empresa_lectura ON identity.relaciones_partes FOR SELECT TO authenticated
+  USING (empresa_id::text = (auth.jwt() ->> 'tenant_id'));
+CREATE POLICY relaciones_partes_empresa_insert ON identity.relaciones_partes FOR INSERT TO authenticated
+  WITH CHECK (auth.rol() IN ('empresario', 'vendedor', 'coordinador', 'supervisor', 'operativo')
+         AND empresa_id::text = (auth.jwt() ->> 'tenant_id'));
+CREATE POLICY relaciones_partes_empresa_update ON identity.relaciones_partes FOR UPDATE TO authenticated
+  USING (auth.rol() IN ('empresario', 'vendedor', 'coordinador', 'supervisor', 'operativo')
+         AND empresa_id::text = (auth.jwt() ->> 'tenant_id'))
+  WITH CHECK (auth.rol() IN ('empresario', 'vendedor', 'coordinador', 'supervisor', 'operativo')
+         AND empresa_id::text = (auth.jwt() ->> 'tenant_id'));
+CREATE POLICY relaciones_partes_empresa_delete ON identity.relaciones_partes FOR DELETE TO authenticated
+  USING (auth.rol() IN ('empresario', 'vendedor', 'coordinador', 'supervisor', 'operativo')
+         AND empresa_id::text = (auth.jwt() ->> 'tenant_id'));
+CREATE POLICY relaciones_partes_empresa_desactivar ON identity.relaciones_partes FOR UPDATE TO authenticated
+  USING (auth.rol() IN ('empresario', 'vendedor', 'coordinador', 'supervisor', 'operativo')
+         AND empresa_id::text = (auth.jwt() ->> 'tenant_id') AND activo)
+  WITH CHECK (auth.rol() IN ('empresario', 'vendedor', 'coordinador', 'supervisor', 'operativo')
+         AND empresa_id::text = (auth.jwt() ->> 'tenant_id') AND NOT activo);

@@ -43,5 +43,6 @@
     "31_multi_vertical_rls.sql": "ea22617e25c56fd6996bb0abd7bfd45c8091421819029b59a8bb739fe424a7e1",
   "32_pack_builder.sql": "fba72a2f85a27af870ca31afc459a766bdaddf1db803376795c2deb478f0ee99",
   "33_empresa_extensiones.sql": "db43fa2e09da8e07ce75e753a03c5269646122e4594520521cc38fe88137961d",
-  "34_extension_values.sql": "9249d6f7a91fad58c30ac7a6495a2b2cce4b9417b6717fd307a2d6f15358c0a3"
+  "34_extension_values.sql": "9249d6f7a91fad58c30ac7a6495a2b2cce4b9417b6717fd307a2d6f15358c0a3",
+  "35_partes_universales.sql": "4632132ac815ac33e078dc71bdb5a1501d966b919ae075057d7857bafb002397"
 }
