@@ -48,7 +48,25 @@ export interface CrearExtensionInput {
   activo?: boolean;
 }
 
+export interface ExtensionValue {
+  id: string;
+  empresa_id: string;
+  extension_id: string;
+  recurso_id: string;
+  valores: Record<string, unknown>;
+  version_schema: number;
+  creado_por: string;
+  creado_en: string;
+  actualizado_en: string;
+}
+
 interface ExtensionRow extends EmpresaExtension {}
+interface ExtensionValueRow extends ExtensionValue {}
+interface ActiveExtension {
+  id: string;
+  esquema: Record<string, unknown>;
+  version: number;
+}
 
 @Injectable()
 export class ExtensionesService {
@@ -173,6 +191,69 @@ export class ExtensionesService {
     };
   }
 
+  async guardarValores(
+    empresaId: string,
+    codigo: string,
+    recursoId: string,
+    valores: Record<string, unknown>,
+    actor: ExtensionActor,
+  ): Promise<ExtensionValue> {
+    await this.validarAcceso(empresaId, actor, true);
+    const recursoUuid = this.validarRecursoId(recursoId);
+    const extension = await this.obtenerExtensionActiva(empresaId, codigo);
+    this.validarValores(extension.esquema, valores);
+    const fila = await this.pg.queryOne<ExtensionValueRow>(
+      `INSERT INTO identity.extensiones_empresa_valores
+         (empresa_id, extension_id, recurso_id, valores, version_schema, creado_por)
+       VALUES ($1, $2, $3, $4::jsonb, $5, $6)
+       ON CONFLICT (empresa_id, extension_id, recurso_id) DO UPDATE
+         SET valores = EXCLUDED.valores,
+             version_schema = EXCLUDED.version_schema,
+             actualizado_en = NOW()
+       RETURNING id, empresa_id, extension_id, recurso_id, valores,
+                 version_schema, creado_por, creado_en, actualizado_en`,
+      [empresaId, extension.id, recursoUuid, JSON.stringify(valores), extension.version, actor.user_id],
+    );
+    if (!fila) throw new ConflictError('No se pudieron guardar los valores de la extensión.');
+    return fila;
+  }
+
+  async obtenerValores(
+    empresaId: string,
+    codigo: string,
+    recursoId: string,
+    actor: ExtensionActor,
+  ): Promise<ExtensionValue | null> {
+    await this.validarAcceso(empresaId, actor, false);
+    const recursoUuid = this.validarRecursoId(recursoId);
+    const extension = await this.obtenerExtensionActiva(empresaId, codigo);
+    return this.pg.queryOne<ExtensionValueRow>(
+      `SELECT id, empresa_id, extension_id, recurso_id, valores,
+              version_schema, creado_por, creado_en, actualizado_en
+         FROM identity.extensiones_empresa_valores
+        WHERE empresa_id = $1 AND extension_id = $2 AND recurso_id = $3`,
+      [empresaId, extension.id, recursoUuid],
+    );
+  }
+
+  async eliminarValores(
+    empresaId: string,
+    codigo: string,
+    recursoId: string,
+    actor: ExtensionActor,
+  ): Promise<void> {
+    await this.validarAcceso(empresaId, actor, true);
+    const recursoUuid = this.validarRecursoId(recursoId);
+    const extension = await this.obtenerExtensionActiva(empresaId, codigo);
+    const eliminado = await this.pg.queryOne<{ id: string }>(
+      `DELETE FROM identity.extensiones_empresa_valores
+        WHERE empresa_id = $1 AND extension_id = $2 AND recurso_id = $3
+      RETURNING id`,
+      [empresaId, extension.id, recursoUuid],
+    );
+    if (!eliminado) throw new NotFoundError('Valores de extensión', recursoUuid);
+  }
+
   private normalizar(datos: CrearExtensionInput): Required<CrearExtensionInput> {
     const codigo = this.normalizarCodigo(datos.codigo);
     const recurso = this.normalizarCodigo(datos.recurso);
@@ -222,6 +303,43 @@ export class ExtensionesService {
       parametro: error.params,
       mensaje: error.message ?? 'dato inválido',
     }));
+  }
+
+  private validarValores(esquema: Record<string, unknown>, valores: Record<string, unknown>): void {
+    if (!valores || typeof valores !== 'object' || Array.isArray(valores)) {
+      throw new DomainError('VALORES_EXTENSION_INVALIDOS', 'Los valores deben ser un objeto JSON.');
+    }
+    if (JSON.stringify(valores).length > MAX_JSON_BYTES) {
+      throw new DomainError('VALORES_EXTENSION_INVALIDOS', `Los valores no pueden superar ${MAX_JSON_BYTES} bytes.`);
+    }
+    const valido = this.ajv.validate(esquema, valores);
+    if (!valido) {
+      throw new DomainError(
+        'VALORES_EXTENSION_INVALIDOS',
+        'Los valores no cumplen el JSON Schema de la extensión.',
+        { errores: this.formatearErrores(this.ajv.errors) },
+      );
+    }
+  }
+
+  private async obtenerExtensionActiva(empresaId: string, codigo: string): Promise<ActiveExtension> {
+    const nombreCodigo = this.normalizarCodigo(codigo);
+    const extension = await this.pg.queryOne<ActiveExtension>(
+      `SELECT id, esquema, version
+         FROM identity.extensiones_empresa
+        WHERE empresa_id = $1 AND codigo = $2 AND activo = true
+        ORDER BY version DESC
+        LIMIT 1`,
+      [empresaId, nombreCodigo],
+    );
+    if (!extension) throw new NotFoundError('Extensión', nombreCodigo);
+    return extension;
+  }
+
+  private validarRecursoId(valor: string): string {
+    const recursoId = String(valor ?? '').trim();
+    if (!esUuid(recursoId)) throw new DomainError('RECURSO_INVALIDO', 'El recurso debe ser un UUID válido.');
+    return recursoId;
   }
 
   private normalizarCodigo(valor: unknown): string {

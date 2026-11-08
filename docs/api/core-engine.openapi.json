@@ -8530,6 +8530,174 @@
         ]
       }
     },
+    "/api/v1/empresas/{empresaId}/extensiones/{codigo}/valores/{recursoId}": {
+      "get": {
+        "operationId": "ExtensionesController_obtenerValores",
+        "parameters": [
+          {
+            "name": "empresaId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "name": "codigo",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "recursoId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/ExtensionValueResponseDto"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Consultar valores de una extensión para un recurso",
+        "tags": [
+          "Extensiones configurables"
+        ]
+      },
+      "put": {
+        "operationId": "ExtensionesController_guardarValores",
+        "parameters": [
+          {
+            "name": "empresaId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "name": "codigo",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "recursoId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/GuardarExtensionValoresRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExtensionValueResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Guardar o actualizar valores de una extensión",
+        "tags": [
+          "Extensiones configurables"
+        ]
+      },
+      "delete": {
+        "operationId": "ExtensionesController_eliminarValores",
+        "parameters": [
+          {
+            "name": "empresaId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "name": "codigo",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "recursoId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Valores eliminados"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Eliminar valores de una extensión para un recurso",
+        "tags": [
+          "Extensiones configurables"
+        ]
+      }
+    },
     "/api/v1/orders/{id}/estado": {
       "patch": {
         "operationId": "EstadoOrdenController_avanzar",
@@ -20981,6 +21149,69 @@
           "creado_por",
           "creado_en",
           "actualizado_en"
+        ]
+      },
+      "ExtensionValueResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "empresa_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "extension_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "recurso_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "valores": {
+            "type": "object",
+            "additionalProperties": true
+          },
+          "version_schema": {
+            "type": "number"
+          },
+          "creado_por": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "creado_en": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "actualizado_en": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "empresa_id",
+          "extension_id",
+          "recurso_id",
+          "valores",
+          "version_schema",
+          "creado_por",
+          "creado_en",
+          "actualizado_en"
+        ]
+      },
+      "GuardarExtensionValoresRequestDto": {
+        "type": "object",
+        "properties": {
+          "valores": {
+            "type": "object",
+            "additionalProperties": true
+          }
+        },
+        "required": [
+          "valores"
         ]
       },
       "InvitacionCreadaResponseDto": {
