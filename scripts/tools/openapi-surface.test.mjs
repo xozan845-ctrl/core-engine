@@ -32,7 +32,7 @@ function refs(valor, salida = new Set()) {
 
 test('cada servicio tiene contrato público e interno en su carpeta', () => {
   const encontrados = servicios();
-  assert.ok(encontrados.length >= 10, 'deben existir las carpetas de los 10 servicios');
+  assert.ok(encontrados.length >= 11, 'deben existir las carpetas de los 11 servicios');
   for (const servicio of encontrados) {
     for (const archivo of ['public.openapi.json', 'internal.openapi.json']) {
       const documento = leer(servicio, archivo);
