@@ -41,6 +41,7 @@ export const EMPRESA_MERCADO_ID = '00000000-0000-0000-0000-000000000001';
 export const TENANT_HEADER = 'x-tenant';
 export const PERSONAL_HEADER = 'x-user-personal';
 export const PARTICIPACION_HEADER = 'x-user-participacion';
+export const ROL_EMPRESA_HEADER = 'x-user-rol-empresa';
 
 /**
  * RN-01: el vendedor fija un margen entre 0 y 90 % (expresado en enteros, ej. 15 = 15 %).

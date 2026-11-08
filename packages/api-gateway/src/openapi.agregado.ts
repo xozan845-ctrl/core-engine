@@ -9506,6 +9506,497 @@ export const OPENAPI_AGREGADO = {
         ]
       }
     },
+    "/api/v1/empresas/{empresaId}/roles": {
+      "post": {
+        "operationId": "PersonalController_crearRol",
+        "parameters": [
+          {
+            "name": "empresaId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CrearRolRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Rol creado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Crear un rol de personal con permisos JSON",
+        "tags": [
+          "Personal"
+        ]
+      },
+      "get": {
+        "operationId": "PersonalController_listarRoles",
+        "parameters": [
+          {
+            "name": "empresaId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Roles de la empresa",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Listar roles configurables de la empresa",
+        "tags": [
+          "Personal"
+        ]
+      }
+    },
+    "/api/v1/empresas/{empresaId}/roles/{rolId}": {
+      "patch": {
+        "operationId": "PersonalController_actualizarRol",
+        "parameters": [
+          {
+            "name": "empresaId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "rolId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EstadoRolRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Rol actualizado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Activar o desactivar un rol configurable",
+        "tags": [
+          "Personal"
+        ]
+      }
+    },
+    "/api/v1/empresas/{empresaId}/puestos": {
+      "post": {
+        "operationId": "PersonalController_crearPuesto",
+        "parameters": [
+          {
+            "name": "empresaId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CrearPuestoRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Puesto creado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Crear un puesto operativo de la empresa",
+        "tags": [
+          "Personal"
+        ]
+      },
+      "get": {
+        "operationId": "PersonalController_listarPuestos",
+        "parameters": [
+          {
+            "name": "empresaId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Puestos de la empresa",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Listar puestos operativos de la empresa",
+        "tags": [
+          "Personal"
+        ]
+      }
+    },
+    "/api/v1/empresas/{empresaId}/asignaciones-personal": {
+      "post": {
+        "operationId": "PersonalController_asignar",
+        "parameters": [
+          {
+            "name": "empresaId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AsignarPersonalRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Asignación creada",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Asignar un miembro a un rol y tienda/puesto",
+        "tags": [
+          "Personal"
+        ]
+      },
+      "get": {
+        "operationId": "PersonalController_listarAsignaciones",
+        "parameters": [
+          {
+            "name": "empresaId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Asignaciones de la empresa",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Listar asignaciones de personal",
+        "tags": [
+          "Personal"
+        ]
+      }
+    },
+    "/api/v1/empresas/{empresaId}/invitaciones/personal": {
+      "post": {
+        "operationId": "PersonalController_crearInvitacion",
+        "parameters": [
+          {
+            "name": "empresaId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CrearInvitacionPersonalRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Enlace de incorporación generado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Correo o enlace duplicado"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Generar enlace de invitación o contratación",
+        "tags": [
+          "Personal"
+        ]
+      },
+      "get": {
+        "operationId": "PersonalController_listarInvitaciones",
+        "parameters": [
+          {
+            "name": "empresaId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Invitaciones de la empresa",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "Personal"
+        ]
+      }
+    },
+    "/api/v1/empresas/{empresaId}/invitaciones/personal/{invitacionId}/revocar": {
+      "post": {
+        "operationId": "PersonalController_revocarInvitacion",
+        "parameters": [
+          {
+            "name": "empresaId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "invitacionId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Invitación revocada",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "Personal"
+        ]
+      }
+    },
+    "/api/v1/incorporaciones/{token}": {
+      "get": {
+        "operationId": "PersonalPublicController_consultar",
+        "parameters": [
+          {
+            "name": "token",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Invitación vigente",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Consultar un enlace de incorporación",
+        "tags": [
+          "Personal"
+        ]
+      }
+    },
+    "/api/v1/incorporaciones/{token}/aceptar": {
+      "post": {
+        "operationId": "PersonalPublicController_aceptar",
+        "parameters": [
+          {
+            "name": "token",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AceptarInvitacionPersonalRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Cuenta y membresía creadas",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Aceptar una invitación o contratación y crear la cuenta",
+        "tags": [
+          "Personal"
+        ]
+      }
+    },
     "/api/v1/orders/{id}/estado": {
       "patch": {
         "operationId": "EstadoOrdenController_avanzar",
@@ -20937,6 +21428,24 @@ export const OPENAPI_AGREGADO = {
           "nota"
         ]
       },
+      "AceptarInvitacionPersonalRequestDto": {
+        "type": "object",
+        "properties": {
+          "nombre": {
+            "type": "string",
+            "minLength": 2,
+            "maxLength": 120
+          },
+          "contrasena": {
+            "type": "string",
+            "minLength": 8
+          }
+        },
+        "required": [
+          "nombre",
+          "contrasena"
+        ]
+      },
       "AceptarInvitacionRequestDto": {
         "type": "object",
         "properties": {
@@ -21296,6 +21805,35 @@ export const OPENAPI_AGREGADO = {
         },
         "required": [
           "tipo_empresa"
+        ]
+      },
+      "AsignarPersonalRequestDto": {
+        "type": "object",
+        "properties": {
+          "usuario_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "rol_empresa_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "tienda_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "puesto_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "metadata": {
+            "type": "object",
+            "additionalProperties": true
+          }
+        },
+        "required": [
+          "usuario_id",
+          "rol_empresa_id"
         ]
       },
       "AvatarUsuarioRequestDto": {
@@ -21731,6 +22269,48 @@ export const OPENAPI_AGREGADO = {
           "esquema"
         ]
       },
+      "CrearInvitacionPersonalRequestDto": {
+        "type": "object",
+        "properties": {
+          "correo": {
+            "type": "string",
+            "format": "email"
+          },
+          "nombre": {
+            "type": "string",
+            "minLength": 2,
+            "maxLength": 120
+          },
+          "tipo": {
+            "type": "string",
+            "enum": [
+              "invitacion",
+              "contratacion"
+            ],
+            "default": "invitacion"
+          },
+          "rol_empresa_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "tienda_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "puesto_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "metadata": {
+            "type": "object",
+            "additionalProperties": true
+          }
+        },
+        "required": [
+          "correo",
+          "rol_empresa_id"
+        ]
+      },
       "CrearInvitacionRequestDto": {
         "type": "object",
         "properties": {
@@ -21916,6 +22496,38 @@ export const OPENAPI_AGREGADO = {
           "nombre"
         ]
       },
+      "CrearPuestoRequestDto": {
+        "type": "object",
+        "properties": {
+          "codigo": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9_]{1,39}$",
+            "example": "sillon_1"
+          },
+          "nombre": {
+            "type": "string",
+            "minLength": 2,
+            "maxLength": 120,
+            "example": "Sillón 1"
+          },
+          "tipo": {
+            "type": "string",
+            "example": "sillon"
+          },
+          "tienda_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "metadata": {
+            "type": "object",
+            "additionalProperties": true
+          }
+        },
+        "required": [
+          "codigo",
+          "nombre"
+        ]
+      },
       "CrearRelacionRequestDto": {
         "type": "object",
         "properties": {
@@ -21936,6 +22548,34 @@ export const OPENAPI_AGREGADO = {
         "required": [
           "parte_destino_id",
           "tipo"
+        ]
+      },
+      "CrearRolRequestDto": {
+        "type": "object",
+        "properties": {
+          "codigo": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9_]{1,39}$",
+            "example": "estilista"
+          },
+          "nombre": {
+            "type": "string",
+            "minLength": 2,
+            "maxLength": 120,
+            "example": "Estilista"
+          },
+          "descripcion": {
+            "type": "string",
+            "maxLength": 500
+          },
+          "permisos": {
+            "$ref": "#/components/schemas/PermisosRequestDto"
+          }
+        },
+        "required": [
+          "codigo",
+          "nombre",
+          "permisos"
         ]
       },
       "CrearUsuarioRequestDto": {
@@ -22361,6 +23001,17 @@ export const OPENAPI_AGREGADO = {
           "estado",
           "creado_por",
           "creado_en"
+        ]
+      },
+      "EstadoRolRequestDto": {
+        "type": "object",
+        "properties": {
+          "activo": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "activo"
         ]
       },
       "ExtensionResponseDto": {
@@ -23140,6 +23791,41 @@ export const OPENAPI_AGREGADO = {
             ]
           }
         }
+      },
+      "PermisosRequestDto": {
+        "type": "object",
+        "properties": {
+          "acciones": {
+            "example": [
+              "catalogo.leer",
+              "ordenes.crear"
+            ],
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "recursos": {
+            "example": [
+              "tienda"
+            ],
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "condiciones": {
+            "type": "object",
+            "additionalProperties": true
+          },
+          "version": {
+            "type": "number",
+            "default": 1
+          }
+        },
+        "required": [
+          "acciones"
+        ]
       },
       "RegistroRequestDto": {
         "type": "object",

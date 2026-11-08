@@ -35,15 +35,16 @@
   "23_configuracion_panel_ai.sql": "84ca9acb44adf3fe3fabc9bb0f9a3618b025c9aaab07df1b0aa278414f9177d0",
   "24_multi_vertical.sql": "a891d53db380f09fd31233202413aa098e7f279b64fc26e6d1cdc4f814ae6e9a",
   "25_catalog_items.sql": "e92a32f3b89b41a7c8cec661996dee12b8ed5d8d38e296deed3b54158918e223",
-    "26_stores_items.sql": "fe6e30bcf84ddef4f8e011932f50972dc72f9747ad0fc76209185c01b1129079",
-    "27_orders_types.sql": "1d57099118a0b2d5382eecb0f2c92ac1984b40110f015263bee16bec922feede",
-    "28_scheduling.sql": "25f387ac81628a2857db06c65f514a4e636468faa5b8c311ce94e65cfcc45d1d",
-    "29_vertical_packs.sql": "72c3d6dbe5608181a804c0141384055b5bb2ec63ddf416fa40894426d5c3d144",
-    "30_pack_backfill.sql": "a8983bc56819aab9066ef02d05461ea90f687482ce6bad22ca86d6afafe4a57d",
-    "31_multi_vertical_rls.sql": "ea22617e25c56fd6996bb0abd7bfd45c8091421819029b59a8bb739fe424a7e1",
+  "26_stores_items.sql": "fe6e30bcf84ddef4f8e011932f50972dc72f9747ad0fc76209185c01b1129079",
+  "27_orders_types.sql": "1d57099118a0b2d5382eecb0f2c92ac1984b40110f015263bee16bec922feede",
+  "28_scheduling.sql": "25f387ac81628a2857db06c65f514a4e636468faa5b8c311ce94e65cfcc45d1d",
+  "29_vertical_packs.sql": "72c3d6dbe5608181a804c0141384055b5bb2ec63ddf416fa40894426d5c3d144",
+  "30_pack_backfill.sql": "a8983bc56819aab9066ef02d05461ea90f687482ce6bad22ca86d6afafe4a57d",
+  "31_multi_vertical_rls.sql": "ea22617e25c56fd6996bb0abd7bfd45c8091421819029b59a8bb739fe424a7e1",
   "32_pack_builder.sql": "fba72a2f85a27af870ca31afc459a766bdaddf1db803376795c2deb478f0ee99",
   "33_empresa_extensiones.sql": "db43fa2e09da8e07ce75e753a03c5269646122e4594520521cc38fe88137961d",
   "34_extension_values.sql": "9249d6f7a91fad58c30ac7a6495a2b2cce4b9417b6717fd307a2d6f15358c0a3",
   "35_partes_universales.sql": "4632132ac815ac33e078dc71bdb5a1501d966b919ae075057d7857bafb002397",
-  "36_partes_compatibilidad.sql": "2026016a4e97ef7758d870d38f97bb7472f02c5a17ae51787f8e3058cab78f6b"
+  "36_partes_compatibilidad.sql": "2026016a4e97ef7758d870d38f97bb7472f02c5a17ae51787f8e3058cab78f6b",
+  "37_personal_empresa.sql": "1b163833600836d9579b424e26026a013f4d8eff5304278b184c22c22e84c0a2"
 }

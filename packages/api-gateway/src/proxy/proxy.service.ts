@@ -21,6 +21,7 @@ export const DESTINOS: ServicioDestino[] = [
       { patron: /^\/api\/v1\/auth\//, metodos: ['*'] },
       { patron: /^\/api\/v1\/usuarios(\/|$)/, metodos: ['*'] },
       { patron: /^\/api\/v1\/empresas(\/|$)/, metodos: ['*'] },
+      { patron: /^\/api\/v1\/incorporaciones(\/|$)/, metodos: ['*'] },
       { patron: /^\/api\/v1\/packs(\/|$)/, metodos: ['GET', 'POST'] },
       { patron: /^\/api\/v1\/invitaciones(\/|$)/, metodos: ['*'] },
       { patron: /^\/api\/v1\/configuracion(\/|$)/, metodos: ['*'] },
@@ -154,7 +155,7 @@ export class ProxyService {
     // (TENANT_HEADER) y la de personal `x-user-personal` (PERSONAL_HEADER),
     // que son las que leen los servicios; borrar nombres inexistentes no
     // protegia contra el spoofing de tenant.
-    for (const h of ['x-user-id', 'x-user-email', 'x-user-rol', 'x-user-nombre',
+    for (const h of ['x-user-id', 'x-user-email', 'x-user-rol', 'x-user-nombre', 'x-user-rol-empresa',
       TENANT_HEADER, PERSONAL_HEADER, PARTICIPACION_HEADER, 'x-internal-key']) {
       delete req.headers[h];
     }
@@ -190,7 +191,7 @@ export class ProxyService {
         'content-type': esMediaPublica ? 'application/octet-stream' : 'application/json',
         accept: esMediaPublica ? 'image/*,video/*,*/*' : 'application/json',
       };
-      for (const k of ['x-user-id', 'x-user-email', 'x-user-rol', TENANT_HEADER, PERSONAL_HEADER, PARTICIPACION_HEADER] as const) {
+      for (const k of ['x-user-id', 'x-user-email', 'x-user-rol', TENANT_HEADER, PERSONAL_HEADER, PARTICIPACION_HEADER, 'x-user-rol-empresa'] as const) {
         const v = req.headers[k];
         if (v !== undefined) headers[k] = Array.isArray(v) ? v.join(', ') : String(v);
       }

@@ -684,3 +684,50 @@ CREATE POLICY relaciones_partes_empresa_desactivar ON identity.relaciones_partes
          AND empresa_id::text = (auth.jwt() ->> 'tenant_id') AND activo)
   WITH CHECK (auth.rol() IN ('empresario', 'vendedor', 'coordinador', 'supervisor', 'operativo')
          AND empresa_id::text = (auth.jwt() ->> 'tenant_id') AND NOT activo);
+
+-- Personal configurable por empresa: permisos, puestos, alcance e incorporación.
+ALTER TABLE identity.roles_empresa ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS roles_empresa_admin ON identity.roles_empresa;
+DROP POLICY IF EXISTS roles_empresa_tenant ON identity.roles_empresa;
+CREATE POLICY roles_empresa_admin ON identity.roles_empresa FOR ALL TO authenticated
+  USING (auth.rol() IN ('super_admin', 'admin'))
+  WITH CHECK (auth.rol() IN ('super_admin', 'admin'));
+CREATE POLICY roles_empresa_tenant ON identity.roles_empresa FOR ALL TO authenticated
+  USING (empresa_id::text = (auth.jwt() ->> 'tenant_id'))
+  WITH CHECK (auth.rol() = 'empresario' AND empresa_id::text = (auth.jwt() ->> 'tenant_id'));
+CREATE POLICY roles_empresa_app ON identity.roles_empresa FOR SELECT TO core_engine_app
+  USING (true);
+
+ALTER TABLE identity.puestos_empresa ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS puestos_empresa_admin ON identity.puestos_empresa;
+DROP POLICY IF EXISTS puestos_empresa_tenant ON identity.puestos_empresa;
+CREATE POLICY puestos_empresa_admin ON identity.puestos_empresa FOR ALL TO authenticated
+  USING (auth.rol() IN ('super_admin', 'admin'))
+  WITH CHECK (auth.rol() IN ('super_admin', 'admin'));
+CREATE POLICY puestos_empresa_tenant ON identity.puestos_empresa FOR ALL TO authenticated
+  USING (empresa_id::text = (auth.jwt() ->> 'tenant_id'))
+  WITH CHECK (auth.rol() = 'empresario' AND empresa_id::text = (auth.jwt() ->> 'tenant_id'));
+
+ALTER TABLE identity.asignaciones_personal ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS asignaciones_personal_admin ON identity.asignaciones_personal;
+DROP POLICY IF EXISTS asignaciones_personal_tenant ON identity.asignaciones_personal;
+CREATE POLICY asignaciones_personal_admin ON identity.asignaciones_personal FOR ALL TO authenticated
+  USING (auth.rol() IN ('super_admin', 'admin'))
+  WITH CHECK (auth.rol() IN ('super_admin', 'admin'));
+CREATE POLICY asignaciones_personal_tenant ON identity.asignaciones_personal FOR ALL TO authenticated
+  USING (empresa_id::text = (auth.jwt() ->> 'tenant_id'))
+  WITH CHECK (auth.rol() = 'empresario' AND empresa_id::text = (auth.jwt() ->> 'tenant_id'));
+
+ALTER TABLE identity.invitaciones_personal ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS invitaciones_personal_admin ON identity.invitaciones_personal;
+DROP POLICY IF EXISTS invitaciones_personal_tenant ON identity.invitaciones_personal;
+DROP POLICY IF EXISTS invitaciones_personal_app ON identity.invitaciones_personal;
+CREATE POLICY invitaciones_personal_admin ON identity.invitaciones_personal FOR ALL TO authenticated
+  USING (auth.rol() IN ('super_admin', 'admin'))
+  WITH CHECK (auth.rol() IN ('super_admin', 'admin'));
+CREATE POLICY invitaciones_personal_tenant ON identity.invitaciones_personal FOR ALL TO authenticated
+  USING (empresa_id::text = (auth.jwt() ->> 'tenant_id'))
+  WITH CHECK (auth.rol() = 'empresario' AND empresa_id::text = (auth.jwt() ->> 'tenant_id'));
+-- El servicio valida token, estado, expiración y tenant antes de devolver datos.
+CREATE POLICY invitaciones_personal_app ON identity.invitaciones_personal FOR ALL TO core_engine_app
+  USING (true) WITH CHECK (true);
