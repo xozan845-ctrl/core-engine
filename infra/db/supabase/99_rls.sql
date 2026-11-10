@@ -95,7 +95,7 @@ CREATE POLICY configuracion_plataforma_admin ON identity.configuracion_plataform
 CREATE POLICY configuracion_plataforma_lectura ON identity.configuracion_plataforma
   FOR SELECT TO authenticated USING (true);
 
--- ── catalog.productos ───────────────────────────────────────────────────
+-- ── identity.empresas ───────────────────────────────────────────────────
 ALTER TABLE identity.empresas ENABLE ROW LEVEL SECURITY;
 CREATE POLICY empresas_super_admin ON identity.empresas FOR ALL TO authenticated
   USING (auth.rol() IN ('super_admin', 'admin')) WITH CHECK (auth.rol() IN ('super_admin', 'admin'));
@@ -116,28 +116,6 @@ CREATE POLICY empresa_slugs_miembros ON identity.empresa_slugs FOR SELECT TO aut
   USING (empresa_id::text = (auth.jwt() ->> 'tenant_id')
          OR empresa_id IN (SELECT id FROM identity.empresas WHERE creado_por = auth.uid()));
 
-ALTER TABLE catalog.productos ENABLE ROW LEVEL SECURITY;
-CREATE POLICY productos_admin_all ON catalog.productos
-  FOR ALL TO authenticated USING (auth.rol() = 'admin') WITH CHECK (auth.rol() = 'admin');
-CREATE POLICY productos_empresa ON catalog.productos
-  FOR ALL TO authenticated
-  USING (auth.rol() = 'empresario' AND empresa_id::text = (auth.jwt() ->> 'tenant_id'))
-  WITH CHECK (auth.rol() = 'empresario' AND empresa_id::text = (auth.jwt() ->> 'tenant_id'));
--- ADR-27: el catálogo público se sirve por el API Gateway con el alcance de la
--- empresa solicitada; no hay lectura anónima directa de la tabla.
-
--- ADR-28: imágenes de producto/variante. El objeto binario vive en storage;
--- esta tabla solo relaciona y se aísla por empresa.
-ALTER TABLE catalog.producto_imagenes ENABLE ROW LEVEL SECURITY;
-CREATE POLICY producto_imagenes_admin ON catalog.producto_imagenes
-  FOR ALL TO authenticated
-  USING (auth.rol() IN ('super_admin', 'admin'))
-  WITH CHECK (auth.rol() IN ('super_admin', 'admin'));
-CREATE POLICY producto_imagenes_empresa ON catalog.producto_imagenes
-  FOR ALL TO authenticated
-  USING (auth.rol() = 'empresario' AND empresa_id::text = (auth.jwt() ->> 'tenant_id'))
-  WITH CHECK (auth.rol() = 'empresario' AND empresa_id::text = (auth.jwt() ->> 'tenant_id'));
-
 ALTER TABLE catalog.historico_precios ENABLE ROW LEVEL SECURITY;
 CREATE POLICY historico_admin ON catalog.historico_precios
   FOR ALL TO authenticated USING (auth.rol() = 'admin') WITH CHECK (auth.rol() = 'admin');
@@ -151,27 +129,6 @@ CREATE POLICY ajustes_admin ON catalog.ajustes_stock
 CREATE POLICY ajustes_empresa ON catalog.ajustes_stock
   FOR SELECT TO authenticated
   USING (auth.rol() = 'empresario' AND empresa_id::text = (auth.jwt() ->> 'tenant_id'));
-
-ALTER TABLE catalog.producto_catalogo_vista ENABLE ROW LEVEL SECURITY;
-CREATE POLICY catalogo_vista_admin ON catalog.producto_catalogo_vista
-  FOR ALL TO authenticated USING (auth.rol() = 'admin') WITH CHECK (auth.rol() = 'admin');
-CREATE POLICY catalogo_vista_empresa ON catalog.producto_catalogo_vista
-  FOR SELECT TO authenticated
-  USING (empresa_id::text = (auth.jwt() ->> 'tenant_id'));
-
-ALTER TABLE catalog.stock_vista ENABLE ROW LEVEL SECURITY;
-CREATE POLICY stock_vista_admin ON catalog.stock_vista
-  FOR ALL TO authenticated USING (auth.rol() = 'admin') WITH CHECK (auth.rol() = 'admin');
-CREATE POLICY stock_vista_empresa ON catalog.stock_vista
-  FOR SELECT TO authenticated
-  USING (empresa_id::text = (auth.jwt() ->> 'tenant_id'));
-
-ALTER TABLE catalog.inventario_mensual_mv ENABLE ROW LEVEL SECURITY;
-CREATE POLICY inventario_mensual_admin ON catalog.inventario_mensual_mv
-  FOR ALL TO authenticated USING (auth.rol() = 'admin') WITH CHECK (auth.rol() = 'admin');
-CREATE POLICY inventario_mensual_empresa ON catalog.inventario_mensual_mv
-  FOR SELECT TO authenticated
-  USING (empresa_id::text = (auth.jwt() ->> 'tenant_id'));
 
 ALTER TABLE catalog.reservas_ordenes ENABLE ROW LEVEL SECURITY;
 CREATE POLICY reservas_admin ON catalog.reservas_ordenes
@@ -386,19 +343,6 @@ CREATE POLICY workspace_registros_vendedor ON finance.workspace_registros
   USING (auth.rol() = 'vendedor' AND propietario_id::text = auth.uid())
   WITH CHECK (auth.rol() = 'vendedor' AND propietario_id::text = auth.uid());
 
-
--- ── catalog.servicios (R-PS-02) ─────────────────────────────────────────
--- Los servicios son administrados por la empresa dueña; el catálogo público
--- de servicios no se expone todavía, así que no hay política anónima.
-ALTER TABLE catalog.servicios ENABLE ROW LEVEL SECURITY;
-CREATE POLICY servicios_admin ON catalog.servicios
-  FOR ALL TO authenticated
-  USING (auth.rol() IN ('super_admin', 'admin'))
-  WITH CHECK (auth.rol() IN ('super_admin', 'admin'));
-CREATE POLICY servicios_empresa ON catalog.servicios
-  FOR ALL TO authenticated
-  USING (auth.rol() = 'empresario' AND empresa_id::text = (auth.jwt() ->> 'tenant_id'))
-  WITH CHECK (auth.rol() = 'empresario' AND empresa_id::text = (auth.jwt() ->> 'tenant_id'));
 
 -- ── catalog: operaciones avanzadas (R-PS-04) ───────────────────────────
 ALTER TABLE catalog.configuracion_inventario ENABLE ROW LEVEL SECURITY;
