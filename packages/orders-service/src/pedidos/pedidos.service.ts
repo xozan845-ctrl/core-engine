@@ -12,8 +12,6 @@ import {
   TimelineEvento,
 } from './queries/order-view.repository';
 
-const TASA_COMISION = 0.12;
-
 /**
  * Servicio de consulta de pedidos: aplica el control de acceso por dominio
  * (Tabla 15: comprador solo sus compras, admin lectura global; el vendedor
@@ -25,6 +23,9 @@ const TASA_COMISION = 0.12;
  */
 @Injectable()
 export class PedidosService {
+  /** RN-04: la tasa configurada manda; 12% es el default histórico. */
+  private readonly tasaComision = Number(process.env.COMMISSION_RATE ?? 0.12);
+
   constructor(private readonly views: OrderViewRepository) {}
 
   async detallePara(id: string, usuario: UsuarioContexto): Promise<OrderView> {
@@ -97,7 +98,7 @@ export class PedidosService {
       vendedor_id: items[0].vendedor_id,
       tienda_id: items[0].tienda_id,
       total_cents: total,
-      comision_cents: Money.desdeCentavos(total).comision(TASA_COMISION).centavos,
+      comision_cents: Money.desdeCentavos(total).comision(this.tasaComision).centavos,
       items,
     };
   }

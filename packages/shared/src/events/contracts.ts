@@ -67,6 +67,8 @@ export interface OrdenData {
   estado: 'creada';
   tipo_orden: TipoOrden;
   fulfillment_config?: Record<string, unknown>;
+  /** Comisión calculada con la misma tasa que commissions-service (RN-04). */
+  comision_cents?: number;
 }
 
 export interface AppointmentCreatedData {
@@ -219,9 +221,9 @@ export interface VentaGeolocalizadaData {
   /** SKUs vendidos (uno por item) — permite analisis por producto/zona. */
   skus: string[];
   monto_cents: number;
-  /** Coordenadas GPS completas del punto de venta (modelo Ubicacion del app-test). */
-  lat: number;
-  lng: number;
+  /** Coordenadas GPS del punto de venta (opcionales: la ingesta sin GPS es válida). */
+  lat?: number;
+  lng?: number;
   /** Precision del GPS en metros. */
   precision?: number;
   /** Velocidad en m/s en el momento del registro. */
