@@ -822,9 +822,24 @@
             "minimum": 0,
             "maximum": 100
           },
+          "item_type": {
+            "type": "string",
+            "description": "Tipo del item publicado",
+            "enum": [
+              "producto",
+              "servicio",
+              "alquiler"
+            ]
+          },
+          "item_id": {
+            "type": "string",
+            "description": "Id del item unificado",
+            "format": "uuid"
+          },
           "producto_id": {
             "type": "string",
             "description": "Id del producto o variante vendible",
+            "nullable": true,
             "format": "uuid"
           },
           "producto_padre_id": {
@@ -1026,8 +1041,23 @@
           },
           "producto_id": {
             "type": "string",
-            "description": "Id del producto a publicar",
+            "description": "Id legacy del producto a publicar",
             "example": "a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11"
+          },
+          "item_type": {
+            "type": "string",
+            "description": "Tipo del item a publicar",
+            "enum": [
+              "producto",
+              "servicio",
+              "alquiler"
+            ],
+            "default": "producto"
+          },
+          "item_id": {
+            "type": "string",
+            "description": "Id del item unificado a publicar",
+            "format": "uuid"
           },
           "margen": {
             "type": "number",
@@ -1038,7 +1068,6 @@
           }
         },
         "required": [
-          "producto_id",
           "margen"
         ]
       },

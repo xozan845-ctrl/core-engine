@@ -5,8 +5,13 @@ import {
   Money,
   DomainError,
   ConflictError,
+  CapabilityDisabledError,
+  FULFILLMENTS,
   NotFoundError,
-  validarTransicion,
+  Fulfillment,
+  TIPOS_ORDEN,
+  TipoOrden,
+  validarTransicionPorTipo,
   ItemOrden,
   EVENTOS,
 } from '@core/shared';
@@ -22,7 +27,9 @@ export interface OfertaExterna {
   vendedor_id: string;
   empresa_id: string;
   participacion_porcentaje: number;
-  producto_id: string;
+  producto_id: string | null;
+  item_type?: 'producto' | 'servicio' | 'alquiler';
+  item_id?: string;
   sku: string;
   producto_nombre: string;
   margen: number;
@@ -30,6 +37,13 @@ export interface OfertaExterna {
   precio_venta: string;
   stock: number;
   estado: string;
+}
+
+interface LineaAgrupada {
+  oferta_id: string;
+  cantidad: number;
+  fulfillment?: Fulfillment;
+  fulfillment_config?: Record<string, unknown>;
 }
 
 /**
@@ -52,6 +66,7 @@ export class CreateOrderCommandHandler {
   ) {}
 
   async ejecutar(comando: CreateOrderCommand, clienteId: string): Promise<OrderView> {
+    const tipoOrden = this.validarTipoOrden(comando.tipo_orden);
     let desdeCarrito = false;
     let lineas = comando.items;
     if (comando.usar_carrito) {
@@ -77,6 +92,8 @@ export class CreateOrderCommandHandler {
       if (!oferta || oferta.estado !== 'activa') {
         throw new NotFoundError('Oferta', linea.oferta_id);
       }
+      const itemType = oferta.item_type ?? 'producto';
+      const fulfillment = this.validarFulfillment(linea.fulfillment, tipoOrden, itemType);
       const precioUnitario = Money.parsear(oferta.precio_venta);
       total = total.sumar(precioUnitario.multiplicarPor(linea.cantidad));
       items.push({
@@ -89,8 +106,14 @@ export class CreateOrderCommandHandler {
         tienda_id: oferta.tienda_id,
         empresa_id: oferta.empresa_id,
         participacion_porcentaje: oferta.participacion_porcentaje,
+        item_type: itemType,
+        item_id: oferta.item_id ?? oferta.producto_id ?? undefined,
+        fulfillment,
+        fulfillment_config: linea.fulfillment_config,
       });
     }
+
+    await this.validarCapacidades(items, tipoOrden);
 
     // 2. control sincrono de viabilidad de stock (TC-04: respuesta 409 rapida)
     await this.verificarStock(items);
@@ -105,6 +128,8 @@ export class CreateOrderCommandHandler {
         items,
         total_cents: total.centavos,
         estado: 'creada',
+        tipo_orden: tipoOrden,
+        fulfillment_config: this.resumenFulfillment(items),
         creado_en: creadoEn,
       });
       const evento = {
@@ -117,6 +142,8 @@ export class CreateOrderCommandHandler {
           items,
           total_cents: total.centavos,
           estado: 'creada',
+          tipo_orden: tipoOrden,
+          fulfillment_config: this.resumenFulfillment(items),
         },
       };
       await client.query(
@@ -144,6 +171,8 @@ export class CreateOrderCommandHandler {
       direccion_envio: null,
       creado_en: creadoEn,
       actualizado_en: creadoEn,
+      tipo_orden: tipoOrden,
+      fulfillment_config: this.resumenFulfillment(items),
       pagada_en: null,
       enviada_en: null,
       entregada_en: null,
@@ -165,7 +194,11 @@ export class CreateOrderCommandHandler {
     const estado = reconstruirDesdeEventos(orden);
     if (!estado) throw new NotFoundError('Orden', orderId);
 
-    validarTransicion(estado.estado as never, estadoNuevo as never);
+    validarTransicionPorTipo(
+      (estado.tipo_orden ?? 'compra') as TipoOrden,
+      estado.estado as never,
+      estadoNuevo as never,
+    );
     const actorFinal = actor ?? 'sistema';
 
     await this.pg.transaccion(async (client) => {
@@ -204,12 +237,89 @@ export class CreateOrderCommandHandler {
     return this.views.encontrar(orderId);
   }
 
-  private agrupar(items: { oferta_id: string; cantidad: number }[]): { oferta_id: string; cantidad: number }[] {
-    const mapa = new Map<string, number>();
+  private agrupar(items: { oferta_id: string; cantidad: number; fulfillment?: Fulfillment; fulfillment_config?: Record<string, unknown> }[]): LineaAgrupada[] {
+    const mapa = new Map<string, LineaAgrupada>();
     for (const i of items) {
-      mapa.set(i.oferta_id, (mapa.get(i.oferta_id) ?? 0) + i.cantidad);
+      const actual = mapa.get(i.oferta_id);
+      if (actual && actual.fulfillment !== i.fulfillment) {
+        throw new DomainError('FULFILLMENT_CONFLICTO', 'Una misma oferta no puede tener dos fulfillments distintos en una orden.');
+      }
+      mapa.set(i.oferta_id, {
+        oferta_id: i.oferta_id,
+        cantidad: (actual?.cantidad ?? 0) + i.cantidad,
+        fulfillment: i.fulfillment ?? actual?.fulfillment,
+        fulfillment_config: i.fulfillment_config ?? actual?.fulfillment_config,
+      });
     }
-    return [...mapa.entries()].map(([oferta_id, cantidad]) => ({ oferta_id, cantidad }));
+    return [...mapa.values()];
+  }
+
+  private validarTipoOrden(valor?: string): TipoOrden {
+    if (!valor) return 'compra';
+    if (!TIPOS_ORDEN.includes(valor as TipoOrden)) {
+      throw new DomainError('TIPO_ORDEN_INVALIDO', 'El tipo de orden no es valido.');
+    }
+    return valor as TipoOrden;
+  }
+
+  private validarFulfillment(
+    valor: Fulfillment | undefined,
+    tipoOrden: TipoOrden,
+    itemType: 'producto' | 'servicio' | 'alquiler',
+  ): Fulfillment {
+    const fulfillment = valor ?? 'none';
+    if (!FULFILLMENTS.includes(fulfillment as Fulfillment)) {
+      throw new DomainError('FULFILLMENT_INVALIDO', 'El fulfillment no es valido.');
+    }
+    if (fulfillment === 'delivery' && tipoOrden === 'reserva') {
+      throw new DomainError('FULFILLMENT_INVALIDO', 'Una reserva no puede usar delivery.');
+    }
+    if (tipoOrden === 'reserva' && itemType !== 'servicio') {
+      throw new DomainError('TIPO_ITEM_INVALIDO', 'Las reservas solo aplican a servicios.');
+    }
+    return fulfillment;
+  }
+
+  private resumenFulfillment(items: ItemOrden[]): Record<string, unknown> {
+    return {
+      por_linea: items.map((item) => ({
+        oferta_id: item.oferta_id,
+        fulfillment: item.fulfillment ?? 'none',
+        config: item.fulfillment_config ?? {},
+      })),
+    };
+  }
+
+  private async validarCapacidades(items: ItemOrden[], tipoOrden: TipoOrden): Promise<void> {
+    const requeridas = new Set<string>();
+    if (tipoOrden === 'cotizacion') requeridas.add('cotizaciones');
+    for (const item of items) {
+      if (item.fulfillment === 'delivery') requeridas.add('fulfillment_delivery');
+      if (item.fulfillment === 'pickup') requeridas.add('fulfillment_pickup');
+      if (item.fulfillment === 'onsite') requeridas.add('fulfillment_onsite');
+    }
+    if (requeridas.size === 0) return;
+    const empresas = [...new Set(items.map((item) => item.empresa_id))];
+    const filas = await this.pg.query<{
+      empresa_id: string;
+      capacidad_codigo: string;
+      activo: boolean;
+    }>(
+      `SELECT empresa_id, capacidad_codigo, activo
+         FROM identity.empresa_capacidades
+        WHERE empresa_id = ANY($1::uuid[])
+          AND capacidad_codigo = ANY($2::text[])`,
+      [empresas, [...requeridas]],
+    );
+    const activas = new Set(
+      (Array.isArray(filas) ? filas : [])
+        .filter((fila) => fila.activo)
+        .map((fila) => `${fila.empresa_id}:${fila.capacidad_codigo}`),
+    );
+    for (const empresa of empresas) {
+      const faltantes = [...requeridas].filter((capacidad) => !activas.has(`${empresa}:${capacidad}`));
+      if (faltantes.length > 0) throw new CapabilityDisabledError(faltantes, empresa);
+    }
   }
 
   private async consultarOfertas(ids: string[]): Promise<OfertaExterna[]> {
@@ -228,7 +338,9 @@ export class CreateOrderCommandHandler {
   /** Consulta sincrona de stock al catalogo (lecturas por REST, sec. 3.2). */
   private async verificarStock(items: ItemOrden[]): Promise<void> {
     try {
-      const skus = [...new Set(items.map((i) => i.sku))];
+      const productosConStock = items.filter((item) => !item.item_type || item.item_type === 'producto');
+      if (productosConStock.length === 0) return;
+      const skus = [...new Set(productosConStock.map((i) => i.sku))];
       const res = await fetch(
         `${this.catalogUrl}/internal/productos/lote?skus=${encodeURIComponent(skus.join(','))}`,
         { headers: { 'x-internal-key': this.claveInterna } },
@@ -239,7 +351,7 @@ export class CreateOrderCommandHandler {
       const porClave = new Map(
         productos.map((p) => [`${p.empresa_id}:${p.sku.toLowerCase()}`, p]),
       );
-      for (const item of items) {
+      for (const item of productosConStock) {
         const producto = porClave.get(
           `${item.empresa_id}:${item.sku.toLowerCase()}`,
         );

@@ -4,11 +4,12 @@ import { ProductosModule } from './productos/productos.module';
 import { InventarioModule } from './inventario/inventario.module';
 import { ServiciosModule } from './servicios/servicios.module';
 import { OperacionesModule } from './operaciones/operaciones.module';
+import { ItemsModule } from './items/items.module';
 import { PedidosConsumer } from './eventos/pedidos.consumer';
 import { InternalController } from './internal/internal.controller';
 
 @Module({
-  imports: [PgModule, RabbitModule, OutboxModule, MetricsModule, ProductosModule, InventarioModule, ServiciosModule, OperacionesModule],
+  imports: [PgModule, RabbitModule, OutboxModule, MetricsModule, ProductosModule, InventarioModule, ServiciosModule, OperacionesModule, ItemsModule],
   providers: [PedidosConsumer],
   controllers: [InternalController],
 })

@@ -51,6 +51,8 @@ import {
   UsuarioActual,
   ROLES,
   NotFoundError,
+  CAPACIDADES,
+  RequiereCapacidades,
 } from '@core/shared';
 
 export class ImagenProductoRequestDto {
@@ -474,6 +476,7 @@ export class ProductosController {
   /** POST /api/v1/catalog/productos — alta de producto (admin, TC-01). */
   @Post('productos')
   @Roles(ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.EMPRESARIO)
+  @RequiereCapacidades(CAPACIDADES.CATALOGO_ITEMS)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Crear producto con variantes e imágenes (admin, TC-01)' })
   @ApiCreatedResponse({ type: ProductoResponseDto, description: 'Producto creado' })
@@ -490,6 +493,7 @@ export class ProductosController {
   /** PATCH /api/v1/catalog/productos/:id — edicion (admin; RN-08 historico). */
   @Patch('productos/:id')
   @Roles(ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.EMPRESARIO)
+  @RequiereCapacidades(CAPACIDADES.CATALOGO_ITEMS)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Editar producto (admin; RN-08 histórico)' })
   @ApiParam({ name: 'id', description: 'Id del producto' })
@@ -507,6 +511,7 @@ export class ProductosController {
   /** POST /api/v1/catalog/productos/:id/variantes — agrega una variante. */
   @Post('productos/:id/variantes')
   @Roles(ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.EMPRESARIO)
+  @RequiereCapacidades(CAPACIDADES.CATALOGO_ITEMS)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Agregar una variante al producto (ADR-28)' })
   @ApiParam({ name: 'id', description: 'Id del producto padre' })
@@ -523,6 +528,7 @@ export class ProductosController {
   /** PATCH /api/v1/catalog/productos/:id/variantes/:varianteId — edita la variante. */
   @Patch('productos/:id/variantes/:varianteId')
   @Roles(ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.EMPRESARIO)
+  @RequiereCapacidades(CAPACIDADES.CATALOGO_ITEMS)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Editar una variante (precio/stock/atributos)' })
   @ApiParam({ name: 'id', description: 'Id del producto padre' })
@@ -541,6 +547,7 @@ export class ProductosController {
   /** DELETE /api/v1/catalog/productos/:id/variantes/:varianteId — elimina la variante. */
   @Delete('productos/:id/variantes/:varianteId')
   @Roles(ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.EMPRESARIO)
+  @RequiereCapacidades(CAPACIDADES.CATALOGO_ITEMS)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Eliminar una variante' })
   @ApiParam({ name: 'id', description: 'Id del producto padre' })
@@ -559,6 +566,7 @@ export class ProductosController {
   /** POST /api/v1/catalog/productos/:id/imagenes — agrega una imagen (máx. 3). */
   @Post('productos/:id/imagenes')
   @Roles(ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.EMPRESARIO)
+  @RequiereCapacidades(CAPACIDADES.CATALOGO_ITEMS)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Agregar una imagen a un producto o variante (máx. 3)' })
   @ApiParam({ name: 'id', description: 'Id del producto o variante' })
@@ -575,6 +583,7 @@ export class ProductosController {
   /** DELETE /api/v1/catalog/productos/:id/imagenes/:imagenId — elimina una imagen. */
   @Delete('productos/:id/imagenes/:imagenId')
   @Roles(ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.EMPRESARIO)
+  @RequiereCapacidades(CAPACIDADES.CATALOGO_ITEMS)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Eliminar una imagen de un producto o variante' })
   @ApiParam({ name: 'id', description: 'Id del producto o variante' })

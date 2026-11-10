@@ -75,6 +75,7 @@ export const PUERTOS = {
   FIELD: 3008,
   INTELLIGENCE: 3009,
   STORAGE: 3010,
+  SCHEDULING: 3011,
 } as const;
 
 export const NOMBRE_SERVICIOS = {
@@ -89,6 +90,7 @@ export const NOMBRE_SERVICIOS = {
   FIELD: 'field-service',
   INTELLIGENCE: 'market-intelligence-service',
   STORAGE: 'storage-service',
+  SCHEDULING: 'scheduling-service',
 } as const;
 
 /** Cabecera de contexto cuando el gateway valida el JWT. */

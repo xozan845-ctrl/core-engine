@@ -20,7 +20,7 @@ import {
   ApiQuery,
   ApiTags,
 } from '@nestjs/swagger';
-import { DomainError, NotFoundError, ROLES, Roles, UsuarioActual, UsuarioContexto } from '@core/shared';
+import { CAPACIDADES, DomainError, NotFoundError, RequiereCapacidades, ROLES, Roles, UsuarioActual, UsuarioContexto } from '@core/shared';
 import {
   ActualizarComboRequestDto,
   ActualizarConfiguracionInventarioRequestDto,
@@ -57,10 +57,12 @@ import {
 @ApiBearerAuth()
 @Controller('api/v1/catalog')
 @Roles(ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.EMPRESARIO)
+@RequiereCapacidades(CAPACIDADES.CATALOGO_ITEMS)
 export class OperacionesController {
   constructor(private readonly operaciones: OperacionesService) {}
 
   @Get('configuracion-inventario')
+  @RequiereCapacidades(CAPACIDADES.INVENTARIO_STOCK)
   @ApiOperation({ summary: 'Obtener la configuración de inventario de la empresa' })
   @ApiQuery({ name: 'empresa_id', required: false, format: 'uuid' })
   @ApiOkResponse({ type: ConfiguracionInventarioResponseDto })
@@ -72,6 +74,7 @@ export class OperacionesController {
   }
 
   @Put('configuracion-inventario')
+  @RequiereCapacidades(CAPACIDADES.INVENTARIO_STOCK)
   @ApiOperation({ summary: 'Guardar la configuración de inventario' })
   @ApiQuery({ name: 'empresa_id', required: false, format: 'uuid' })
   @ApiOkResponse({ type: ConfiguracionInventarioResponseDto })
@@ -96,6 +99,7 @@ export class OperacionesController {
   }
 
   @Get('escanear')
+  @RequiereCapacidades(CAPACIDADES.CODIGO_BARRAS)
   @ApiOperation({ summary: 'Buscar un producto o servicio por código/barras' })
   @ApiQuery({ name: 'codigo', required: true })
   @ApiQuery({ name: 'empresa_id', required: false, format: 'uuid' })
@@ -237,6 +241,7 @@ export class OperacionesController {
 
   // ── inventario ───────────────────────────────────────────────────────────
   @Get('inventario/movimientos')
+  @RequiereCapacidades(CAPACIDADES.INVENTARIO_STOCK)
   @ApiOperation({ summary: 'Listar movimientos y traslados de inventario' })
   @ApiOkResponse({ type: PaginaMovimientosResponseDto })
   listarMovimientos(
@@ -247,6 +252,7 @@ export class OperacionesController {
   }
 
   @Post('inventario/movimientos')
+  @RequiereCapacidades(CAPACIDADES.INVENTARIO_STOCK)
   @ApiOperation({ summary: 'Registrar entrada, salida, ajuste o traslado' })
   @ApiCreatedResponse({ type: MovimientoInventarioResponseDto })
   registrarMovimiento(

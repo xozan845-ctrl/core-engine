@@ -10,7 +10,7 @@ import {
   ApiTags,
 } from '@nestjs/swagger';
 import type { Response } from 'express';
-import { IsInt, IsOptional, IsString, Max, Min } from 'class-validator';
+import { IsIn, IsInt, IsOptional, IsString, Max, Min } from 'class-validator';
 import { TiendasService } from '../tiendas/tiendas.service';
 import { OfertasService, Oferta } from './ofertas.service';
 import {
@@ -19,7 +19,9 @@ import {
   TiendaPublicaResponseDto,
 } from './ofertas.response.dto';
 import {
+  CAPACIDADES,
   Pagina,
+  RequiereCapacidades,
   Roles,
   ROLES,
   UsuarioActual,
@@ -37,9 +39,20 @@ export class PublicarProductoRequestDto {
   @IsString()
   tienda_id?: string;
 
-  @ApiProperty({ description: 'Id del producto a publicar', example: 'a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11' })
+  @ApiProperty({ description: 'Id legacy del producto a publicar', required: false, example: 'a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11' })
+  @IsOptional()
   @IsString()
-  producto_id: string;
+  producto_id?: string;
+
+  @ApiProperty({ description: 'Tipo del item a publicar', required: false, enum: ['producto', 'servicio', 'alquiler'], default: 'producto' })
+  @IsOptional()
+  @IsIn(['producto', 'servicio', 'alquiler'])
+  item_type?: 'producto' | 'servicio' | 'alquiler';
+
+  @ApiProperty({ description: 'Id del item unificado a publicar', required: false, format: 'uuid' })
+  @IsOptional()
+  @IsString()
+  item_id?: string;
 
   /** Margen en enteros (15 = 15 %). RN-01: 0 a 90. */
   @ApiProperty({ description: 'Margen en enteros (15 = 15 %). RN-01: 0 a 90', minimum: 0, maximum: 90, example: 15 })
@@ -68,6 +81,7 @@ export class OfertasController {
   /** POST /api/v1/vendedores/productos — publica producto con margen (Tabla 21). */
   @Post('vendedores/productos')
   @Roles(ROLES.VENDEDOR, ROLES.EMPRESARIO)
+  @RequiereCapacidades(CAPACIDADES.CATALOGO_ITEMS)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Publicar un producto con margen (vendedor)' })
   @ApiCreatedResponse({ type: OfertaResponseDto, description: 'Oferta creada' })
@@ -84,12 +98,18 @@ export class OfertasController {
       tiendaId = (await this.tiendas.deVendedor(usuario.user_id))?.id;
     }
     if (!tiendaId) throw new NotFoundError('Tienda del vendedor', usuario.user_id);
-    return this.ofertas.publicar(usuario.user_id, tiendaId, dto.producto_id, dto.margen);
+    const itemId = dto.item_id ?? dto.producto_id;
+    if (!itemId) throw new NotFoundError('Item', 'sin id');
+    if (dto.item_id || (dto.item_type && dto.item_type !== 'producto')) {
+      return this.ofertas.publicarItem(usuario.user_id, tiendaId, itemId, dto.margen);
+    }
+    return this.ofertas.publicar(usuario.user_id, tiendaId, itemId, dto.margen);
   }
 
   /** PATCH /api/v1/vendedores/productos/:id — cambia el margen de la oferta. */
   @Patch('vendedores/productos/:id')
   @Roles(ROLES.VENDEDOR, ROLES.EMPRESARIO)
+  @RequiereCapacidades(CAPACIDADES.CATALOGO_ITEMS)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Cambiar el margen de una oferta (vendedor)' })
   @ApiOkResponse({ type: OfertaResponseDto, description: 'Oferta actualizada' })

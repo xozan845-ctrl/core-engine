@@ -14,6 +14,8 @@ describe('OfertasService (RN-01 / RN-02)', () => {
     vendedor_id: 'v1',
     empresa_id: 'e1',
     participacion_porcentaje: 25,
+    item_type: 'producto',
+    item_id: 'item-p1',
     producto_id: 'p1',
     producto_padre_id: 'padre-1',
     sku: 'SKU-01',
@@ -188,6 +190,50 @@ describe('OfertasService (RN-01 / RN-02)', () => {
         .mockResolvedValueOnce({ ...filaOferta, vendedor_id: 'v1' })
         .mockResolvedValueOnce(null);
       await expect(servicio.cambiarMargen('of1', 'v1', 10)).rejects.toBeInstanceOf(NotFoundError);
+    });
+  });
+
+  describe('publicarItem (fase 2)', () => {
+    it('publica un servicio sin exigir stock y conserva item_type/item_id', async () => {
+      const { servicio, pg } = crear();
+      (pg.queryOne as Mock)
+        .mockResolvedValueOnce({ id: 't1', empresa_id: 'e1' })
+        .mockResolvedValueOnce(null)
+        .mockResolvedValueOnce({ id: 'of-servicio' })
+        .mockResolvedValueOnce({
+          ...filaOferta,
+          item_type: 'servicio',
+          item_id: 'item-servicio',
+          producto_id: null,
+          producto_padre_id: null,
+          stock: null,
+        });
+      fetchResponde(true, {
+        item_id: 'item-servicio',
+        empresa_id: 'e1',
+        tipo: 'servicio',
+        codigo: 'SERV-001',
+        nombre: 'Consulta',
+        precio: '100.00',
+        stock: null,
+        track_inventory: false,
+        duration_minutes: 60,
+        atributos: { especialidad: 'general' },
+        estado: 'activo',
+        source_type: 'servicio',
+        source_id: 'service-1',
+      });
+
+      const oferta = await servicio.publicarItem('v1', 't1', 'item-servicio', 20);
+
+      expect(oferta).toMatchObject({ item_type: 'servicio', item_id: 'item-servicio', stock: null });
+      expect(globalThis.fetch).toHaveBeenCalledWith(
+        expect.stringContaining('/internal/items/item-servicio'),
+        expect.any(Object),
+      );
+      const insert = (pg.queryOne as Mock).mock.calls[2];
+      expect(insert[0]).toContain('item_type');
+      expect(insert[1]).toContain('servicio');
     });
   });
 

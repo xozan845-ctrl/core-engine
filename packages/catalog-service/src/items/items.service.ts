@@ -1,0 +1,303 @@
+import { Injectable } from '@nestjs/common';
+import Ajv, { type ErrorObject, type JSONSchemaType } from 'ajv';
+import {
+  DomainError,
+  Money,
+  Pagina,
+  PgService,
+  crearPagina,
+  parsearPaginacion,
+} from '@core/shared';
+
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+const CODIGO = /^[A-Z0-9-]{2,32}$/;
+const TIPOS = ['producto', 'servicio', 'alquiler'] as const;
+
+export type TipoItem = (typeof TIPOS)[number];
+
+export interface Item {
+  item_id: string;
+  empresa_id: string;
+  tipo: TipoItem;
+  codigo: string;
+  nombre: string;
+  descripcion: string;
+  categoria: string;
+  precio: string;
+  costo: string;
+  track_inventory: boolean;
+  stock: number | null;
+  duration_minutes: number | null;
+  atributos: Record<string, unknown>;
+  estado: 'activo' | 'inactivo';
+  source_type: 'producto' | 'servicio' | null;
+  source_id: string | null;
+  creado_en: string;
+  actualizado_en: string;
+}
+
+export interface CrearAlquilerInput {
+  codigo: string;
+  nombre: string;
+  descripcion?: string;
+  categoria?: string;
+  precio: string | number;
+  costo?: string | number;
+  atributos?: Record<string, unknown>;
+  estado?: 'activo' | 'inactivo';
+}
+
+interface ItemRow {
+  item_id: string;
+  empresa_id: string;
+  tipo: TipoItem;
+  codigo: string;
+  nombre: string;
+  descripcion: string;
+  categoria: string;
+  precio_cents: number;
+  costo_cents: number;
+  track_inventory: boolean;
+  stock: number | null;
+  duration_minutes: number | null;
+  atributos: Record<string, unknown> | null;
+  estado: string;
+  source_type: 'producto' | 'servicio' | null;
+  source_id: string | null;
+  creado_en: string;
+  actualizado_en: string;
+}
+
+export interface ItemSchemaRow {
+  id: string;
+  empresa_id: string | null;
+  tipo: TipoItem;
+  categoria: string;
+  esquema: Record<string, unknown>;
+  version: number;
+  activo: boolean;
+}
+
+const COLUMNAS = `item_id, empresa_id, tipo, codigo, nombre, descripcion,
+  categoria, precio_cents, costo_cents, track_inventory, stock,
+  duration_minutes, atributos, estado, source_type, source_id, creado_en,
+  actualizado_en`;
+
+@Injectable()
+export class ItemsService {
+  private readonly ajv = new Ajv({ allErrors: true, strict: false });
+
+  constructor(private readonly pg: PgService) {}
+
+  async listar(filtros: {
+    empresa_id?: unknown;
+    tipo?: unknown;
+    categoria?: unknown;
+    q?: unknown;
+    pagina?: unknown;
+    limite?: unknown;
+    incluir_inactivos?: unknown;
+  }): Promise<Pagina<Item>> {
+    const empresaId = this.exigirEmpresa(filtros.empresa_id);
+    const { pagina, limite } = parsearPaginacion(filtros as Record<string, unknown>);
+    const params: unknown[] = [empresaId];
+    const condiciones = ['empresa_id = $1'];
+    if (filtros.tipo !== undefined) {
+      const tipo = this.exigirTipo(filtros.tipo);
+      params.push(tipo);
+      condiciones.push(`tipo = $${params.length}`);
+    }
+    if (filtros.categoria) {
+      params.push(String(filtros.categoria).trim().toLowerCase());
+      condiciones.push(`LOWER(categoria) = $${params.length}`);
+    }
+    if (filtros.q) {
+      params.push(`%${String(filtros.q).trim().toLowerCase()}%`);
+      condiciones.push(
+        `(LOWER(nombre) LIKE $${params.length} OR LOWER(codigo) LIKE $${params.length})`,
+      );
+    }
+    if (filtros.incluir_inactivos !== true) condiciones.push(`estado = 'activo'`);
+    const where = `WHERE ${condiciones.join(' AND ')}`;
+    const total = await this.pg
+      .queryOne<{ n: number }>(`SELECT COUNT(*)::int AS n FROM catalog.items_vista ${where}`, params)
+      .then((r) => r?.n ?? 0);
+    const filas = await this.pg.query<ItemRow>(
+      `SELECT ${COLUMNAS} FROM catalog.items_vista ${where}
+       ORDER BY creado_en DESC LIMIT $${params.length + 1} OFFSET $${params.length + 2}`,
+      [...params, limite, (pagina - 1) * limite],
+    );
+    return crearPagina(filas.map((fila) => this.serializar(fila)), total, { pagina, limite });
+  }
+
+  async encontrarPorId(id: string, empresaId?: string): Promise<Item | null> {
+    if (!UUID.test(id)) return null;
+    const params: unknown[] = [id];
+    const condiciones = ['item_id = $1'];
+    if (empresaId) {
+      params.push(empresaId);
+      condiciones.push(`empresa_id = $${params.length}`);
+    }
+    const fila = await this.pg.queryOne<ItemRow>(
+      `SELECT ${COLUMNAS} FROM catalog.items_vista WHERE ${condiciones.join(' AND ')}`,
+      params,
+    );
+    return fila ? this.serializar(fila) : null;
+  }
+
+  async crearAlquiler(datos: CrearAlquilerInput, empresaId: string): Promise<Item> {
+    const codigo = this.normalizarCodigo(datos.codigo);
+    const nombre = this.validarNombre(datos.nombre);
+    const precio = Money.parsear(datos.precio);
+    const costo = Money.parsear(datos.costo ?? '0');
+    const atributos = await this.validarAtributos(
+      empresaId,
+      'alquiler',
+      datos.categoria ?? 'general',
+      datos.atributos ?? {},
+    );
+    const fila = await this.pg.queryOne<ItemRow>(
+      `INSERT INTO catalog.items
+         (empresa_id, tipo, codigo, nombre, descripcion, categoria, precio_cents,
+          costo_cents, track_inventory, stock, atributos, estado)
+       VALUES ($1, 'alquiler', $2, $3, $4, $5, $6, $7, false, NULL, $8::jsonb, $9)
+       RETURNING ${COLUMNAS}`,
+      [
+        empresaId,
+        codigo,
+        nombre,
+        (datos.descripcion ?? '').trim(),
+        (datos.categoria ?? 'general').trim() || 'general',
+        precio.centavos,
+        costo.centavos,
+        JSON.stringify(atributos),
+        datos.estado === 'inactivo' ? 'inactivo' : 'activo',
+      ],
+    );
+    if (!fila) throw new DomainError('ITEM_NO_CREADO', 'No se pudo crear el alquiler.');
+    return this.serializar(fila);
+  }
+
+  async guardarEsquema(
+    empresaId: string | null,
+    tipo: unknown,
+    categoria: string,
+    esquema: Record<string, unknown>,
+  ): Promise<void> {
+    const itemTipo = this.exigirTipo(tipo);
+    const nombreCategoria = categoria.trim().toLowerCase();
+    if (!nombreCategoria) throw new DomainError('CATEGORIA_INVALIDA', 'La categoría es obligatoria.');
+    if (!esquema || typeof esquema !== 'object' || Array.isArray(esquema)) {
+      throw new DomainError('ESQUEMA_INVALIDO', 'El esquema debe ser un objeto JSON Schema.');
+    }
+    try {
+      this.ajv.compile(esquema as JSONSchemaType<Record<string, unknown>>);
+    } catch (error) {
+      throw new DomainError('ESQUEMA_INVALIDO', 'El esquema JSON no es válido.', {
+        mensaje: error instanceof Error ? error.message : 'schema inválido',
+      });
+    }
+    await this.pg.query(
+      `INSERT INTO catalog.item_atributo_esquemas
+         (empresa_id, tipo, categoria, esquema, version, activo)
+       VALUES ($1, $2, $3, $4::jsonb,
+               COALESCE((SELECT MAX(version) + 1 FROM catalog.item_atributo_esquemas
+                          WHERE empresa_id IS NOT DISTINCT FROM $1 AND tipo = $2
+                            AND LOWER(categoria) = LOWER($3)), 1),
+               true)
+       ON CONFLICT DO NOTHING`,
+      [empresaId, itemTipo, nombreCategoria, JSON.stringify(esquema)],
+    );
+  }
+
+  async esquemas(empresaId?: string): Promise<ItemSchemaRow[]> {
+    return this.pg.query<ItemSchemaRow>(
+      `SELECT id, empresa_id, tipo, categoria, esquema, version, activo
+         FROM catalog.item_atributo_esquemas
+        WHERE activo = true AND (empresa_id IS NULL OR empresa_id = $1)
+        ORDER BY empresa_id NULLS FIRST, tipo, categoria, version DESC`,
+      [empresaId ?? null],
+    );
+  }
+
+  async validarAtributos(
+    empresaId: string,
+    tipo: TipoItem,
+    categoria: string,
+    atributos: Record<string, unknown>,
+  ): Promise<Record<string, unknown>> {
+    if (!atributos || typeof atributos !== 'object' || Array.isArray(atributos)) {
+      throw new DomainError('ATRIBUTOS_INVALIDOS', 'attributes debe ser un objeto JSON.');
+    }
+    const esquema = await this.pg.queryOne<{ esquema: Record<string, unknown> }>(
+      `SELECT esquema
+         FROM catalog.item_atributo_esquemas
+        WHERE activo = true AND tipo = $1
+          AND LOWER(categoria) IN (LOWER($2), 'general')
+          AND (empresa_id = $3 OR empresa_id IS NULL)
+        ORDER BY (empresa_id IS NULL), (LOWER(categoria) = LOWER($2)) DESC, version DESC
+        LIMIT 1`,
+      [tipo, categoria.trim() || 'general', empresaId],
+    );
+    if (!esquema) return atributos;
+    const valido = this.ajv.validate(esquema.esquema, atributos);
+    if (!valido) {
+      throw new DomainError('ATRIBUTOS_INVALIDOS', 'Los atributos no cumplen el JSON Schema de la categoría.', {
+        errores: this.ajv.errors?.map((error: ErrorObject) => ({
+          instancia: error.instancePath,
+          parametro: error.params,
+          mensaje: error.message,
+        })),
+      });
+    }
+    return atributos;
+  }
+
+  private serializar(fila: ItemRow): Item {
+    return {
+      item_id: fila.item_id,
+      empresa_id: fila.empresa_id,
+      tipo: fila.tipo,
+      codigo: fila.codigo,
+      nombre: fila.nombre,
+      descripcion: fila.descripcion,
+      categoria: fila.categoria,
+      precio: Money.desdeCentavos(fila.precio_cents).string(),
+      costo: Money.desdeCentavos(fila.costo_cents).string(),
+      track_inventory: fila.track_inventory,
+      stock: fila.stock,
+      duration_minutes: fila.duration_minutes,
+      atributos: fila.atributos ?? {},
+      estado: fila.estado === 'inactivo' ? 'inactivo' : 'activo',
+      source_type: fila.source_type ?? null,
+      source_id: fila.source_id ?? null,
+      creado_en: fila.creado_en,
+      actualizado_en: fila.actualizado_en,
+    };
+  }
+
+  private exigirEmpresa(valor: unknown): string {
+    const empresaId = typeof valor === 'string' ? valor.trim() : '';
+    if (!UUID.test(empresaId)) throw new DomainError('EMPRESA_REQUERIDA', 'Indica una empresa válida.');
+    return empresaId;
+  }
+
+  private exigirTipo(valor: unknown): TipoItem {
+    if (typeof valor !== 'string' || !TIPOS.includes(valor as TipoItem)) {
+      throw new DomainError('TIPO_ITEM_INVALIDO', 'El tipo debe ser producto, servicio o alquiler.');
+    }
+    return valor as TipoItem;
+  }
+
+  private normalizarCodigo(valor: string): string {
+    const codigo = String(valor).trim().toUpperCase();
+    if (!CODIGO.test(codigo)) throw new DomainError('CODIGO_INVALIDO', 'El código solo admite letras, números y guiones (2-32).');
+    return codigo;
+  }
+
+  private validarNombre(valor: string): string {
+    const nombre = String(valor).trim();
+    if (nombre.length < 2 || nombre.length > 200) throw new DomainError('NOMBRE_INVALIDO', 'El nombre debe tener entre 2 y 200 caracteres.');
+    return nombre;
+  }
+}

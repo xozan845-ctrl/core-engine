@@ -13,6 +13,8 @@ import {
   PUERTOS,
   Logger,
   RolesGuard,
+  CapabilityGuard,
+  PgService,
 } from '@core/shared';
 
 async function bootstrap(): Promise<void> {
@@ -24,6 +26,7 @@ async function bootstrap(): Promise<void> {
   );
   app.useGlobalFilters(new DomainErrorFilter());
   app.useGlobalGuards(new RolesGuard());
+  app.useGlobalGuards(new CapabilityGuard(app.get(PgService)));
   const puerto = Number(process.env.PORT ?? PUERTOS.IDENTITY);
   const expressApp = app.getHttpAdapter().getInstance();
 

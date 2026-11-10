@@ -7,9 +7,11 @@ import { InternalController } from './internal/internal.controller';
 import { EmpresasModule } from './empresas/empresas.module';
 import { InvitacionesModule } from './invitaciones/invitaciones.module';
 import { ConfiguracionSitioModule } from './configuracion-sitio/configuracion-sitio.module';
+import { CapacidadesModule } from './capacidades/capacidades.module';
+import { PacksModule } from './packs/packs.module';
 
 @Module({
-  imports: [PgModule, RabbitModule, OutboxModule, MetricsModule, AuthModule, UsuariosModule, EmpresasModule, InvitacionesModule, ConfiguracionSitioModule],
+  imports: [PgModule, RabbitModule, OutboxModule, MetricsModule, AuthModule, UsuariosModule, EmpresasModule, InvitacionesModule, ConfiguracionSitioModule, CapacidadesModule, PacksModule],
   providers: [SeedService],
   controllers: [InternalController],
 })

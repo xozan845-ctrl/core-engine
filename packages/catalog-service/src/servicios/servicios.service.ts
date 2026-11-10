@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Optional } from '@nestjs/common';
 import {
   ConflictError,
   DomainError,
@@ -10,6 +10,7 @@ import {
   parsearPaginacion,
 } from '@core/shared';
 import { ProductosService } from '../productos/productos.service';
+import { ItemsService } from '../items/items.service';
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const CODIGO = /^[A-Z0-9-]{2,32}$/;
@@ -29,6 +30,7 @@ export interface Servicio {
   unidad: string;
   duracion_minutos: number;
   estado: 'activo' | 'inactivo';
+  atributos: Record<string, unknown>;
   creado_en: string;
   actualizado_en: string;
 }
@@ -47,6 +49,7 @@ interface ServicioRow {
   unidad: string;
   duracion_minutos: number;
   estado: string;
+  atributos: Record<string, unknown> | null;
   creado_en: string;
   actualizado_en: string;
 }
@@ -63,6 +66,7 @@ export interface CrearServicioInput {
   unidad?: string;
   duracion_minutos: number;
   estado?: 'activo' | 'inactivo';
+  atributos?: Record<string, unknown>;
 }
 
 export interface ActualizarServicioInput {
@@ -76,6 +80,7 @@ export interface ActualizarServicioInput {
   unidad?: string;
   duracion_minutos?: number;
   estado?: 'activo' | 'inactivo';
+  atributos?: Record<string, unknown>;
 }
 
 /**
@@ -87,6 +92,7 @@ export class ServiciosService {
   constructor(
     private readonly pg: PgService,
     private readonly productos: ProductosService,
+    @Optional() private readonly items?: ItemsService,
   ) {}
 
   async listar(filtros: {
@@ -123,7 +129,7 @@ export class ServiciosService {
     const filas = await this.pg.query<ServicioRow>(
       `SELECT id, empresa_id, codigo, nombre, descripcion, categoria, marca,
               codigo_barras, precio_cents, costo_cents, unidad, duracion_minutos,
-              estado, creado_en, actualizado_en
+              atributos, estado, creado_en, actualizado_en
          FROM catalog.servicios ${where}
         ORDER BY creado_en DESC
         LIMIT $${params.length + 1} OFFSET $${params.length + 2}`,
@@ -137,7 +143,7 @@ export class ServiciosService {
     const fila = await this.pg.queryOne<ServicioRow>(
       `SELECT id, empresa_id, codigo, nombre, descripcion, categoria, marca,
               codigo_barras, precio_cents, costo_cents, unidad, duracion_minutos,
-              estado, creado_en, actualizado_en
+              atributos, estado, creado_en, actualizado_en
          FROM catalog.servicios
         WHERE id = $1 AND empresa_id = $2 AND eliminado_en IS NULL`,
       [id, empresaId],
@@ -152,7 +158,7 @@ export class ServiciosService {
     const fila = await this.pg.queryOne<ServicioRow>(
       `SELECT id, empresa_id, codigo, nombre, descripcion, categoria, marca,
               codigo_barras, precio_cents, costo_cents, unidad, duracion_minutos,
-              estado, creado_en, actualizado_en
+              atributos, estado, creado_en, actualizado_en
          FROM catalog.servicios
         WHERE empresa_id = $1 AND eliminado_en IS NULL AND estado = 'activo'
           AND (codigo_barras = $2 OR upper(codigo) = upper($2))
@@ -169,17 +175,19 @@ export class ServiciosService {
     const precio = this.validarPrecio(datos.precio);
     const costo = this.validarPrecio(datos.costo ?? '0');
     const duracion = this.validarDuracion(datos.duracion_minutos);
+    const atributos = datos.atributos ?? {};
+    await this.items?.validarAtributos(empresaId, 'servicio', datos.categoria ?? 'general', atributos);
     const codigoBarras = (datos.codigo_barras ?? '').trim();
     await this.validarCodigoUnico(empresaId, codigo);
     await this.validarBarcodeUnico(empresaId, codigoBarras);
     const fila = await this.pg.queryOne<ServicioRow>(
       `INSERT INTO catalog.servicios
          (empresa_id, codigo, nombre, descripcion, categoria, marca, codigo_barras,
-          precio_cents, costo_cents, unidad, duracion_minutos, estado)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+          precio_cents, costo_cents, unidad, duracion_minutos, atributos, estado)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12::jsonb, $13)
        RETURNING id, empresa_id, codigo, nombre, descripcion, categoria, marca,
                  codigo_barras, precio_cents, costo_cents, unidad, duracion_minutos,
-                 estado, creado_en, actualizado_en`,
+                 atributos, estado, creado_en, actualizado_en`,
       [
         empresaId,
         codigo,
@@ -192,6 +200,7 @@ export class ServiciosService {
         costo.centavos,
         (datos.unidad ?? 'Hora (h)').trim() || 'Hora (h)',
         duracion,
+        JSON.stringify(atributos),
         datos.estado === 'inactivo' ? 'inactivo' : 'activo',
       ],
     );
@@ -217,6 +226,10 @@ export class ServiciosService {
     const nombre = cambios.nombre === undefined ? actual.nombre : this.validarNombre(cambios.nombre);
     const codigoBarras =
       cambios.codigo_barras === undefined ? actual.codigo_barras : cambios.codigo_barras.trim();
+    const atributos = cambios.atributos === undefined ? actual.atributos : cambios.atributos;
+    if (cambios.atributos !== undefined) {
+      await this.items?.validarAtributos(empresaId, 'servicio', cambios.categoria ?? actual.categoria, atributos);
+    }
     if (codigoBarras !== actual.codigo_barras) {
       await this.validarBarcodeUnico(empresaId, codigoBarras, id);
     }
@@ -224,11 +237,11 @@ export class ServiciosService {
       `UPDATE catalog.servicios
           SET nombre = $3, descripcion = $4, categoria = $5, marca = $6,
               codigo_barras = $7, precio_cents = $8, costo_cents = $9, unidad = $10,
-              duracion_minutos = $11, estado = $12, actualizado_en = NOW()
+              duracion_minutos = $11, atributos = $12::jsonb, estado = $13, actualizado_en = NOW()
         WHERE id = $1 AND empresa_id = $2 AND eliminado_en IS NULL
         RETURNING id, empresa_id, codigo, nombre, descripcion, categoria, marca,
                   codigo_barras, precio_cents, costo_cents, unidad, duracion_minutos,
-                  estado, creado_en, actualizado_en`,
+                  atributos, estado, creado_en, actualizado_en`,
       [
         id,
         empresaId,
@@ -241,6 +254,7 @@ export class ServiciosService {
         costo.centavos,
         cambios.unidad === undefined ? actual.unidad : cambios.unidad.trim() || actual.unidad,
         duracion,
+        JSON.stringify(atributos),
         cambios.estado ?? actual.estado,
       ],
     );
@@ -274,6 +288,7 @@ export class ServiciosService {
       costo: Money.desdeCentavos(fila.costo_cents).string(),
       unidad: fila.unidad,
       duracion_minutos: fila.duracion_minutos,
+      atributos: fila.atributos ?? {},
       estado: fila.estado === 'inactivo' ? 'inactivo' : 'activo',
       creado_en: fila.creado_en,
       actualizado_en: fila.actualizado_en,
