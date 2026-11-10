@@ -102,6 +102,25 @@ groups:
         description: "Solo {{ $value }} consumidores activos"
         runbook_url: "https://github.com/xozan845-ctrl/core-engine/blob/develop/docs/runbook-observabilidad.md#rabbitmq-y-dlq"
 
+    # --- Outbox ---
+    - alert: OutboxBacklog
+      expr: max by (instance) (core_engine_outbox_pending_events) > 100
+      for: 5m
+      labels: { severity: warning }
+      annotations:
+        summary: "Outbox con backlog en {{ $labels.instance }}: {{ $value }} eventos"
+        description: "El relay no drena la tabla outbox; revisar RabbitMQ, las confirmaciones y los errores del poller"
+        runbook_url: "https://github.com/xozan845-ctrl/core-engine/blob/develop/docs/runbook-observabilidad.md#outbox"
+
+    - alert: OutboxFallosPublicacion
+      expr: sum by (instance) (rate(core_engine_outbox_publish_failures_total[5m])) > 0
+      for: 5m
+      labels: { severity: critical }
+      annotations:
+        summary: "Fallos de publicación del Outbox en {{ $labels.instance }}"
+        description: "El relay acumula fallos al publicar; revisar RabbitMQ y las DLQ antes de que el backlog crezca"
+        runbook_url: "https://github.com/xozan845-ctrl/core-engine/blob/develop/docs/runbook-observabilidad.md#outbox"
+
     # --- HTTP ---
     - alert: HTTPErrorRateAlto
       expr: sum(rate(core_engine_http_server_errors_total[5m])) / clamp_min(sum(rate(core_engine_http_requests_total[5m])), 1e-9) * 100 > 5

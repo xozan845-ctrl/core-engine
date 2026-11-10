@@ -4,7 +4,8 @@ import type { PgService } from '../db/pg.service';
 import type { RabbitService } from '../rabbitmq/rabbit.service';
 import { EVENTOS, type EventoBus } from '../events/contracts';
 import { ejecutarConContexto } from '../logging/logger';
-import { OutboxService } from './outbox.service';
+import type { MetricsService } from '../metrics/metrics.service';
+import { METRICAS_OUTBOX, OutboxService } from './outbox.service';
 
 type FilaOutbox = { event_id: string; payload: string | EventoBus };
 
@@ -12,11 +13,21 @@ interface ClienteFalso {
   query: ReturnType<typeof vi.fn>;
 }
 
-function crearServicio(filas: FilaOutbox[] = [], publicar = vi.fn().mockResolvedValue(true)) {
+interface MetricsFalso {
+  registrarGauge: ReturnType<typeof vi.fn>;
+  incrementarContador: ReturnType<typeof vi.fn>;
+}
+
+function crearServicio(
+  filas: FilaOutbox[] = [],
+  publicar = vi.fn().mockResolvedValue(true),
+  metrics?: MetricsFalso,
+) {
   const consultas: Array<{ sql: string; params?: unknown[] }> = [];
   const client: ClienteFalso = {
     query: vi.fn(async (sql: string, params?: unknown[]) => {
       consultas.push({ sql, params });
+      if (sql.includes('COUNT(*)')) return { rows: [{ pendientes: filas.length }] };
       if (sql.includes('SELECT event_id')) return { rows: filas };
       return { rows: [] };
     }),
@@ -32,8 +43,9 @@ function crearServicio(filas: FilaOutbox[] = [], publicar = vi.fn().mockResolved
     pg as unknown as PgService,
     rabbit as unknown as RabbitService,
     'orders.outbox',
+    metrics as unknown as MetricsService | undefined,
   );
-  return { servicio, pg, rabbit, client, consultas };
+  return { servicio, pg, rabbit, client, consultas, metrics };
 }
 
 function publicarPendientes(servicio: OutboxService): Promise<void> {
@@ -154,6 +166,44 @@ describe('OutboxService · publicación (R-AR-3, R-RB-3)', () => {
     servicio.onModuleDestroy();
     await vi.advanceTimersByTimeAsync(1000);
     expect(pg.transaccion).toHaveBeenCalledOnce();
+  });
+});
+
+describe('OutboxService · métricas (R-OB-3, R-TM-5)', () => {
+  it('expone el backlog, los publicados y los fallos del relay', async () => {
+    const error = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    const metrics: MetricsFalso = {
+      registrarGauge: vi.fn(),
+      incrementarContador: vi.fn(),
+    };
+    const publicar = vi
+      .fn()
+      .mockResolvedValueOnce(true)
+      .mockResolvedValueOnce(false)
+      .mockRejectedValueOnce(new Error('broker caído'));
+    const filas = ['event-1', 'event-2', 'event-3'].map((event_id) => ({
+      event_id,
+      payload: JSON.stringify(evento(event_id)),
+    }));
+    const { servicio } = crearServicio(filas, publicar, metrics);
+
+    await publicarPendientes(servicio);
+
+    expect(metrics.registrarGauge).toHaveBeenCalledWith(METRICAS_OUTBOX.pendientes, 3);
+    expect(metrics.incrementarContador).toHaveBeenCalledWith(METRICAS_OUTBOX.publicados);
+    const fallos = metrics.incrementarContador.mock.calls.filter(
+      ([nombre]) => nombre === METRICAS_OUTBOX.fallos,
+    );
+    expect(fallos).toHaveLength(2);
+    expect(error).toHaveBeenCalled();
+  });
+
+  it('no falla si el servicio se construye sin MetricsService', async () => {
+    const { servicio } = crearServicio([
+      { event_id: 'event-1', payload: JSON.stringify(evento()) },
+    ]);
+
+    await expect(publicarPendientes(servicio)).resolves.toBeUndefined();
   });
 });
 

@@ -1,0 +1,108 @@
+{
+  "title": "Core Engine - Outbox y DLQ",
+  "uid": "core-engine-outbox",
+  "timezone": "browser",
+  "refresh": "10s",
+  "time": {
+    "from": "now-15m",
+    "to": "now"
+  },
+  "links": [
+    {
+      "title": "RabbitMQ y DLQ",
+      "url": "/d/core-engine-rabbitmq",
+      "type": "link",
+      "icon": "external link",
+      "targetBlank": false
+    }
+  ],
+  "panels": [
+    {
+      "type": "timeseries",
+      "title": "Eventos pendientes en Outbox (por instancia)",
+      "description": "Backlog real de la tabla outbox del servicio. Debe drenarse en segundos; un valor sostenido indica que el relay no publica o el broker no confirma.",
+      "gridPos": {
+        "x": 0,
+        "y": 0,
+        "w": 12,
+        "h": 8
+      },
+      "datasource": "Prometheus",
+      "targets": [
+        {
+          "expr": "max by (instance) (core_engine_outbox_pending_events)",
+          "legendFormat": "{{instance}}",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short"
+        }
+      }
+    },
+    {
+      "type": "timeseries",
+      "title": "Eventos publicados desde Outbox (por instancia)",
+      "description": "Eventos que el relay publicó y marcó como publicados en la tabla outbox.",
+      "gridPos": {
+        "x": 12,
+        "y": 0,
+        "w": 12,
+        "h": 8
+      },
+      "datasource": "Prometheus",
+      "targets": [
+        {
+          "expr": "sum by (instance) (rate(core_engine_outbox_published_events_total[5m]))",
+          "legendFormat": "{{instance}}",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "reqps"
+        }
+      }
+    },
+    {
+      "type": "timeseries",
+      "title": "Fallos de publicación del Outbox (por instancia)",
+      "description": "Intentos que no se confirmaron o fallaron; el evento queda pendiente para el siguiente ciclo.",
+      "gridPos": {
+        "x": 0,
+        "y": 8,
+        "w": 12,
+        "h": 8
+      },
+      "datasource": "Prometheus",
+      "targets": [
+        {
+          "expr": "sum by (instance) (rate(core_engine_outbox_publish_failures_total[5m]))",
+          "legendFormat": "{{instance}}",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "reqps"
+        }
+      }
+    },
+    {
+      "type": "text",
+      "title": "Profundidad de DLQ",
+      "description": "La profundidad de las DLQ se expone desde el exporter de RabbitMQ.",
+      "gridPos": {
+        "x": 12,
+        "y": 8,
+        "w": 12,
+        "h": 8
+      },
+      "options": {
+        "mode": "markdown",
+        "content": "La profundidad y el crecimiento de las DLQ se consultan en el tablero **Core Engine - RabbitMQ Overview**, panel **Mensajes en colas DLQ**. La alerta `RabbitMQDLQCrecimientoSostenido` vigila el crecimiento neto en 15 minutos.\n\nEste tablero no duplica esa serie; se enfoca en el backlog del Outbox y en la tasa de publicación/fallo por servicio."
+      }
+    }
+  ]
+}

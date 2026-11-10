@@ -164,6 +164,35 @@ export default defineSuite({
       );
     });
 
+    test('R-OB-3/R-TM-5: el Outbox expone backlog, publicados y fallos', () => {
+      const outbox = readText(
+        join(repoRoot, PACKAGES_DIR, 'shared', 'src', 'outbox', 'outbox.service.ts'),
+      );
+      for (const name of [
+        'core_engine_outbox_pending_events',
+        'core_engine_outbox_published_events_total',
+        'core_engine_outbox_publish_failures_total',
+      ]) {
+        assert.ok(outbox.includes(`'${name}'`), `falta ${name} en OutboxService`);
+      }
+
+      const dashboard = readJson(
+        join(grafanaRoot, 'dashboards', 'core-engine-outbox.json'),
+      );
+      const panels = JSON.stringify(dashboard.panels);
+      for (const name of [
+        'core_engine_outbox_pending_events',
+        'core_engine_outbox_published_events_total',
+        'core_engine_outbox_publish_failures_total',
+      ]) {
+        assert.ok(panels.includes(name), `falta ${name} en el dashboard de Outbox`);
+      }
+
+      const alerts = readText(alertsPath);
+      assert.match(alerts, /OutboxBacklog/);
+      assert.match(alerts, /OutboxFallosPublicacion/);
+    });
+
     test('R-TM-6: datasource, provider y dashboards se aprovisionan como código', () => {
       const datasource = join(grafanaRoot, 'datasources', 'datasources.yml');
       const provider = join(grafanaRoot, 'dashboards', 'dashboards.yml');
