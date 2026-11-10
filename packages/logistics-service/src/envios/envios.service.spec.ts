@@ -326,6 +326,15 @@ describe('EnviosService (guia de despacho y transiciones)', () => {
       );
     });
 
+    it('debe degradar con SERVICIO_NO_DISPONIBLE cuando orders no responde', async () => {
+      vi.spyOn(globalThis, 'fetch').mockRejectedValue(new Error('timeout'));
+      const { servicio } = crear();
+
+      await expect(
+        servicio.avanzarEstadoOrden('o1', 'enviado'),
+      ).rejects.toHaveProperty('codigo', 'SERVICIO_NO_DISPONIBLE');
+    });
+
     it('debe usar el error generico cuando el orders responde sin cuerpo util', async () => {
       vi.spyOn(globalThis, 'fetch').mockResolvedValue({
         ok: false,

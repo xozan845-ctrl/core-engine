@@ -11,6 +11,7 @@ import {
   DevolucionSolicitadaData,
   Logger,
   ejecutarConContexto,
+  timeoutInternoMs,
 } from '@core/shared';
 import { ComisionesService } from './comisiones.service';
 
@@ -149,6 +150,7 @@ export class PedidosConsumer implements OnModuleInit {
     try {
       const res = await fetch(`${this.ordersUrl}/internal/orders/${encodeURIComponent(orderId)}`, {
         headers: { 'x-internal-key': this.claveInterna },
+        signal: AbortSignal.timeout(timeoutInternoMs()),
       });
       if (!res.ok) return null;
       return (await res.json()) as { total_cents: number; items?: { oferta_id: string; vendedor_id?: string; empresa_id?: string; tienda_id?: string; participacion_porcentaje?: number; precio_unitario_cents: number; cantidad: number }[] };

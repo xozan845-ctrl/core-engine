@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { randomUUID } from 'crypto';
-import { PgService, DomainError, ForbiddenError, Logger, Money, NotFoundError, capacidadesDeEmpresas, ServiceUnavailableError } from '@core/shared';
+import { PgService, DomainError, ForbiddenError, Logger, Money, NotFoundError, capacidadesDeEmpresas, ServiceUnavailableError, timeoutInternoMs } from '@core/shared';
 
 export interface Envio {
   id: string;
@@ -224,10 +224,16 @@ export class EnviosService {
     if (motivo) query.push(`motivo=${encodeURIComponent(motivo)}`);
     if (actorUsuarioId) query.push(`actor=${encodeURIComponent(actorUsuarioId)}`);
     const url = `${this.ordersUrl}/internal/orders/${encodeURIComponent(orderId)}/transicion?${query.join('&')}`;
-    const res = await fetch(url, {
-      method: 'POST',
-      headers: { 'x-internal-key': this.claveInterna },
-    });
+    let res: Response;
+    try {
+      res = await fetch(url, {
+        method: 'POST',
+        headers: { 'x-internal-key': this.claveInterna },
+        signal: AbortSignal.timeout(timeoutInternoMs()),
+      });
+    } catch {
+      throw new ServiceUnavailableError('orders-service');
+    }
     if (!res.ok) {
       const cuerpo = (await res.json().catch(() => ({}))) as { codigo?: string; mensaje?: string };
       throw new DomainError(
@@ -245,6 +251,7 @@ export class EnviosService {
     try {
       const res = await fetch(`${this.ordersUrl}/internal/orders/${encodeURIComponent(orderId)}`, {
         headers: { 'x-internal-key': this.claveInterna },
+        signal: AbortSignal.timeout(timeoutInternoMs()),
       });
       if (!res.ok) return null;
       return (await res.json()) as OrdenExterna;

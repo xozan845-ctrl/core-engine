@@ -12,6 +12,7 @@ import {
   Logger,
   Money,
   ejecutarConContexto,
+  timeoutInternoMs,
 } from '@core/shared';
 import { ContabilidadService } from '../contabilidad/contabilidad.service';
 import { MetricasService } from './metricas.service';
@@ -211,6 +212,7 @@ export class EventsConsumer implements OnModuleInit {
     try {
       const res = await fetch(`${this.ordersUrl}/internal/orders/${encodeURIComponent(orderId)}`, {
         headers: { 'x-internal-key': this.claveInterna },
+        signal: AbortSignal.timeout(timeoutInternoMs()),
       });
       if (!res.ok) return null;
       return (await res.json()) as { total_cents: number };
