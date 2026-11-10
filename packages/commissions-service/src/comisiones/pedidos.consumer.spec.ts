@@ -9,10 +9,19 @@ describe('PedidosConsumer de commissions (Tabla 22)', () => {
       consumir: vi.fn().mockResolvedValue(undefined),
       activarReintento: vi.fn(),
     };
-    const outbox = { insertar: vi.fn().mockResolvedValue(undefined) };
+    const client = {
+      query: vi.fn().mockImplementation((sql: string) =>
+        Promise.resolve({ rows: [], rowCount: String(sql).includes('INSERT') ? 1 : 0 }),
+      ),
+    };
+    const outbox = {
+      insertar: vi.fn().mockResolvedValue(undefined),
+      insertarEnTransaccion: vi.fn().mockResolvedValue(undefined),
+    };
     const pg = {
       query: vi.fn().mockResolvedValue(undefined),
       queryOne: vi.fn().mockResolvedValue(null),
+      transaccion: vi.fn(async (fn: (c: unknown) => Promise<unknown>) => fn(client)),
     };
     const comisiones = {
       registrarPago: vi.fn().mockResolvedValue(undefined),
@@ -51,6 +60,7 @@ describe('PedidosConsumer de commissions (Tabla 22)', () => {
       rabbit,
       outbox,
       pg,
+      client,
       comisiones,
       fetchMock,
       cola: (rabbit.consumir as Mock).mock.calls[0][0],
@@ -80,23 +90,24 @@ describe('PedidosConsumer de commissions (Tabla 22)', () => {
     expect(rabbit.activarReintento).toHaveBeenCalledTimes(1);
   });
 
-  it('debe registrar el pago y marcar el evento como procesado', async () => {
-    const { dispatch, comisiones, pg } = await crear();
+  it('debe registrar el pago y marcar el evento dentro de la misma transacción', async () => {
+    const { dispatch, comisiones, pg, client } = await crear();
 
     await dispatch(evento(EVENTOS.PAYMENT_PROCESADO, {
       order_id: 'order-1',
       monto_cents: 2500,
     }));
 
-    expect(comisiones.registrarPago).toHaveBeenCalledWith('order-1', 2500);
-    expect(pg.query).toHaveBeenCalledWith(
+    expect(comisiones.registrarPago).toHaveBeenCalledWith('order-1', 2500, client);
+    expect(client.query).toHaveBeenCalledWith(
       expect.stringContaining('ON CONFLICT (event_id) DO NOTHING'),
       ['evt-1', EVENTOS.PAYMENT_PROCESADO],
     );
+    expect(pg.transaccion).toHaveBeenCalled();
   });
 
-  it('debe acreditar cada linea y emitir comision.acreditada al completar una orden', async () => {
-    const { dispatch, comisiones, outbox, fetchMock, pg } = await crear();
+  it('debe acreditar cada linea y emitir comision.acreditada en la misma transacción', async () => {
+    const { dispatch, comisiones, outbox, fetchMock, client } = await crear();
 
     await dispatch(evento(EVENTOS.ORDER_COMPLETADO, { order_id: 'order-1' }));
 
@@ -112,12 +123,16 @@ describe('PedidosConsumer de commissions (Tabla 22)', () => {
       vendedorId: 'ven-1',
       ventaCents: 1000,
       participacion: 70,
-    });
-    expect(outbox.insertar).toHaveBeenCalledWith(EVENTOS.COMISION_ACREDITADA, expect.objectContaining({
-      order_id: 'order-1',
-      monto_cents: 100,
-    }));
-    expect(pg.query).toHaveBeenCalled();
+    }, client);
+    expect(outbox.insertarEnTransaccion).toHaveBeenCalledWith(
+      client,
+      EVENTOS.COMISION_ACREDITADA,
+      expect.objectContaining({ order_id: 'order-1', monto_cents: 100 }),
+    );
+    expect(client.query).toHaveBeenCalledWith(
+      expect.stringContaining('ON CONFLICT (event_id) DO NOTHING'),
+      ['evt-1', EVENTOS.ORDER_COMPLETADO],
+    );
   });
 
   it('debe fallar si la orden completada no esta disponible', async () => {
@@ -126,19 +141,19 @@ describe('PedidosConsumer de commissions (Tabla 22)', () => {
 
     await expect(dispatch(evento(EVENTOS.ORDER_COMPLETADO, { order_id: 'order-1' })))
       .rejects.toThrow('Orden no disponible para acreditar comision.');
-    expect(outbox.insertar).not.toHaveBeenCalled();
+    expect(outbox.insertarEnTransaccion).not.toHaveBeenCalled();
   });
 
-  it('debe compensar una devolucion y marcar el evento como procesado', async () => {
-    const { dispatch, comisiones, pg } = await crear();
+  it('debe compensar una devolucion y marcar el evento en la misma transacción', async () => {
+    const { dispatch, comisiones, client } = await crear();
 
     await dispatch(evento(EVENTOS.DEVOLUCION_SOLICITADA, {
       order_id: 'order-1',
       motivo: 'devolucion aprobada',
     }));
 
-    expect(comisiones.compensar).toHaveBeenCalledWith('order-1', 'devolucion aprobada');
-    expect(pg.query).toHaveBeenCalledWith(
+    expect(comisiones.compensar).toHaveBeenCalledWith('order-1', 'devolucion aprobada', client);
+    expect(client.query).toHaveBeenCalledWith(
       expect.stringContaining('ON CONFLICT (event_id) DO NOTHING'),
       ['evt-1', EVENTOS.DEVOLUCION_SOLICITADA],
     );
@@ -149,11 +164,11 @@ describe('PedidosConsumer de commissions (Tabla 22)', () => {
     primero.pg.queryOne.mockResolvedValue({ '?column?': 1 });
     await primero.dispatch(evento(EVENTOS.PAYMENT_PROCESADO, { order_id: 'order-1', monto_cents: 1 }));
     expect(primero.comisiones.registrarPago).not.toHaveBeenCalled();
-    expect(primero.pg.query).not.toHaveBeenCalled();
+    expect(primero.client.query).not.toHaveBeenCalled();
 
     const segundo = await crear();
     await segundo.dispatch(evento(EVENTOS.ORDER_CREATED, { order_id: 'order-1' }));
     expect(segundo.comisiones.registrarPago).not.toHaveBeenCalled();
-    expect(segundo.outbox.insertar).not.toHaveBeenCalled();
+    expect(segundo.outbox.insertarEnTransaccion).not.toHaveBeenCalled();
   });
 });

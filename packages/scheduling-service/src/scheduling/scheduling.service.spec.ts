@@ -56,15 +56,24 @@ describe('SchedulingService', () => {
 
   it('crea un bloqueo y traduce el conflicto GiST', async () => {
     const { pg, service } = crear();
-    pg.queryOne
-      .mockResolvedValueOnce({ id: recurso })
-      .mockResolvedValueOnce({ id: 'bloqueo-1', recurso_id: recurso });
+    const client = {
+      query: vi.fn()
+        .mockResolvedValueOnce({ rowCount: 1, rows: [{ id: recurso }] })
+        .mockResolvedValueOnce({ rowCount: 1, rows: [{ id: 'bloqueo-1', recurso_id: recurso }] }),
+    };
+    pg.transaccion.mockImplementation(async (fn: (c: unknown) => Promise<unknown>) => fn(client));
     const bloqueo = await service.crearBloqueo(empresa, '44444444-4444-4444-8444-444444444444', {
       recurso_id: recurso, inicia_en: inicio, termina_en: fin, motivo: 'mantenimiento',
     });
     expect(bloqueo).toMatchObject({ id: 'bloqueo-1' });
+    expect(client.query.mock.calls[0][0]).toContain('FOR UPDATE');
 
-    pg.queryOne.mockResolvedValueOnce({ id: recurso }).mockRejectedValueOnce({ code: '23P01' });
+    const conflicto = {
+      query: vi.fn()
+        .mockResolvedValueOnce({ rowCount: 1, rows: [{ id: recurso }] })
+        .mockRejectedValueOnce({ code: '23P01' }),
+    };
+    pg.transaccion.mockImplementation(async (fn: (c: unknown) => Promise<unknown>) => fn(conflicto));
     await expect(service.crearBloqueo(empresa, undefined, {
       recurso_id: recurso, inicia_en: inicio, termina_en: fin,
     })).rejects.toMatchObject({ codigo: 'RECURSO_NO_DISPONIBLE' });

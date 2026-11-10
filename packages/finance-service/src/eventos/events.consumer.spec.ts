@@ -90,6 +90,56 @@ describe('EventsConsumer (idempotencia atomica y contabilidad)', () => {
     expect(marcar[1]).toEqual(['evt-1', EVENTOS.COMISION_ACREDITADA]);
   });
 
+  it('comision.acreditada: contabiliza también la parte del empresario', async () => {
+    const { dispatch, contabilidad } = await crear();
+    await dispatch(evento<ComisionAcreditadaData>(EVENTOS.COMISION_ACREDITADA, {
+      order_id: 'o1',
+      monto_cents: 5400,
+      monto_vendedor_cents: 30000,
+      monto_empresario_cents: 9600,
+      vendedor_id: 'v1',
+    }));
+
+    const { detalles } = (contabilidad.registrarEnTransaccion as Mock).mock.calls[0][1];
+    expect(detalles).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ cuenta_codigo: '2.1.2', debe_cents: 45000 }),
+        expect.objectContaining({ cuenta_codigo: '2.1.1', haber_cents: 30000 }),
+        expect.objectContaining({ cuenta_codigo: '2.1.6', haber_cents: 9600 }),
+      ]),
+    );
+  });
+
+  it('devolucion: revierte exactamente las líneas del asiento de realización', async () => {
+    const { dispatch, client, contabilidad } = await crear();
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue({
+      ok: true,
+      json: async () => ({ total_cents: 45000 }),
+    } as unknown as Response);
+    (client.query as Mock)
+      .mockResolvedValueOnce({ rows: [{ id: 'a-realizacion' }] })
+      .mockResolvedValueOnce({
+        rows: [
+          { cuenta_codigo: '2.1.2', debe_cents: 45000, haber_cents: 0 },
+          { cuenta_codigo: '4.1', debe_cents: 0, haber_cents: 5400 },
+          { cuenta_codigo: '2.1.1', debe_cents: 0, haber_cents: 30000 },
+          { cuenta_codigo: '2.1.6', debe_cents: 0, haber_cents: 9600 },
+        ],
+      });
+
+    await dispatch(evento(EVENTOS.DEVOLUCION_SOLICITADA, { order_id: 'o1', motivo: 'no le gusto', items: [] }));
+
+    const { detalles } = (contabilidad.registrarEnTransaccion as Mock).mock.calls[0][1];
+    expect(detalles).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ cuenta_codigo: '2.1.2', haber_cents: 45000 }),
+        expect.objectContaining({ cuenta_codigo: '4.1', debe_cents: 5400 }),
+        expect.objectContaining({ cuenta_codigo: '2.1.1', debe_cents: 30000 }),
+        expect.objectContaining({ cuenta_codigo: '2.1.6', debe_cents: 9600 }),
+      ]),
+    );
+  });
+
   it('order.created: alimenta el embudo (checkouts completados) con dedup en la misma tx', async () => {
     const { dispatch, client, metricas } = await crear();
     await dispatch(evento<OrdenData>(EVENTOS.ORDER_CREATED, { order_id: 'o1', cliente_id: 'c1', items: [], total_cents: 45000, estado: 'creada' }));

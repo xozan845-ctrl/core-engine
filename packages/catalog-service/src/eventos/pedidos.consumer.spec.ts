@@ -5,7 +5,8 @@ import { EVENTOS, COLAS, EventoBus, OrdenData, DevolucionSolicitadaData } from '
 /**
  * Consumidor de pedidos (Tabla 22): descuento atomico de stock al crear la
  * orden (RN-03), reversion en devoluciones (RN-06) e idempotencia por
- * event_id (doc 5.2). Consumer cableado con el handler real del bus.
+ * event_id (doc 5.2). Stock, outbox y marca de idempotencia comparten una
+ * única transacción.
  */
 describe('PedidosConsumer de catalog (RN-03 / RN-06)', () => {
   const crear = async () => {
@@ -14,23 +15,35 @@ describe('PedidosConsumer de catalog (RN-03 / RN-06)', () => {
       consumir: vi.fn().mockResolvedValue(undefined),
       activarReintento: vi.fn(),
     };
-    const outbox = { insertar: vi.fn().mockResolvedValue(undefined) };
+    const client = { query: vi.fn() };
+    const pg = { transaccion: vi.fn(async (fn: (c: unknown) => Promise<unknown>) => fn(client)) };
+    const outbox = {
+      insertar: vi.fn().mockResolvedValue(undefined),
+      insertarEnTransaccion: vi.fn().mockResolvedValue(undefined),
+    };
     const productos = {
       estaProcesado: vi.fn().mockResolvedValue(false),
       registrarProcesado: vi.fn().mockResolvedValue(undefined),
-      reservarStock: vi.fn().mockResolvedValue({
+      reservarStockEnTransaccion: vi.fn().mockResolvedValue({
         ok: true,
         fallidos: [],
         stock_restante: [{ sku: 'sku-01', stock_restante: 4 }],
       }),
-      reintegrarStock: vi.fn().mockResolvedValue(undefined),
+      reintegrarStockEnTransaccion: vi.fn().mockResolvedValue(undefined),
       stockActualDe: vi.fn().mockResolvedValue([{ sku: 'sku-01', stock_restante: 9 }]),
     };
-    const consumer = new PedidosConsumer(rabbit as never, outbox as never, productos as never);
+    const consumer = new PedidosConsumer(
+      rabbit as never,
+      outbox as never,
+      pg as never,
+      productos as never,
+    );
     await consumer.onModuleInit();
     return {
       rabbit,
       outbox,
+      pg,
+      client,
       productos,
       dispatch: (e: EventoBus) => (rabbit.consumir as Mock).mock.calls[0][1](e),
       cola: (rabbit.consumir as Mock).mock.calls[0][0],
@@ -42,7 +55,7 @@ describe('PedidosConsumer de catalog (RN-03 / RN-06)', () => {
 
   const ordenData = {
     order_id: 'o1',
-    items: [{ oferta_id: 'of1', sku: 'SKU-01', producto_nombre: 'Teclado', cantidad: 2 }],
+    items: [{ oferta_id: 'of1', sku: 'SKU-01', producto_nombre: 'Teclado', cantidad: 2, empresa_id: 'e-1' }],
   } as unknown as OrdenData;
 
   it('debe suscribir la cola de pedidos del catalogo al iniciar', async () => {
@@ -52,29 +65,30 @@ describe('PedidosConsumer de catalog (RN-03 / RN-06)', () => {
     expect(rabbit.activarReintento).toHaveBeenCalled();
   });
 
-  it('debe reservar stock y emitir stock.reservado + stock.updated cuando la orden es nueva', async () => {
-    const { dispatch, outbox, productos } = await crear();
+  it('debe reservar stock y emitir stock.reservado + stock.updated en la misma transacción', async () => {
+    const { dispatch, outbox, productos, client } = await crear();
     await dispatch(evento(EVENTOS.ORDER_CREATED, ordenData));
 
-    expect(productos.reservarStock).toHaveBeenCalledWith('o1', [{ sku: 'SKU-01', cantidad: 2 }]);
-    const emitidos = (outbox.insertar as Mock).mock.calls.map((c) => c[0]);
+    expect(productos.reservarStockEnTransaccion).toHaveBeenCalledWith(client, 'o1', [
+      { empresa_id: 'e-1', sku: 'SKU-01', cantidad: 2 },
+    ]);
+    const emitidos = (outbox.insertarEnTransaccion as Mock).mock.calls.map((c) => c[1]);
     expect(emitidos).toContain(EVENTOS.STOCK_RESERVADO);
     expect(emitidos).toContain(EVENTOS.STOCK_UPDATED);
-    expect(productos.registrarProcesado).toHaveBeenCalledWith('evt-1', EVENTOS.ORDER_CREATED);
+    expect(productos.registrarProcesado).toHaveBeenCalledWith('evt-1', EVENTOS.ORDER_CREATED, client);
   });
 
   it('debe emitir stock.fallido cuando la reserva es rechazada por stock insuficiente', async () => {
     const { dispatch, outbox, productos } = await crear();
-    (productos.reservarStock as Mock).mockResolvedValue({
+    (productos.reservarStockEnTransaccion as Mock).mockResolvedValue({
       ok: false,
       fallidos: [{ sku: 'SKU-01', cantidad: 2, motivo: 'stock_insuficiente' }],
     });
 
     await dispatch(evento(EVENTOS.ORDER_CREATED, ordenData));
 
-    const emitidos = (outbox.insertar as Mock).mock.calls.map((c) => c[0]);
+    const emitidos = (outbox.insertarEnTransaccion as Mock).mock.calls.map((c) => c[1]);
     expect(emitidos).toEqual([EVENTOS.STOCK_FALLIDO]);
-    expect(emitidos).not.toContain(EVENTOS.STOCK_RESERVADO);
     expect(productos.registrarProcesado).toHaveBeenCalled();
   });
 
@@ -84,12 +98,12 @@ describe('PedidosConsumer de catalog (RN-03 / RN-06)', () => {
 
     await dispatch(evento(EVENTOS.ORDER_CREATED, ordenData));
 
-    expect(productos.reservarStock).not.toHaveBeenCalled();
-    expect(outbox.insertar).not.toHaveBeenCalled();
+    expect(productos.reservarStockEnTransaccion).not.toHaveBeenCalled();
+    expect(outbox.insertarEnTransaccion).not.toHaveBeenCalled();
   });
 
   it('debe reintegrar stock y emitir stock.reintegrado cuando se solicita una devolucion', async () => {
-    const { dispatch, outbox, productos } = await crear();
+    const { dispatch, outbox, productos, client } = await crear();
     const data = {
       order_id: 'o1',
       motivo: 'tamano incorrecto',
@@ -98,21 +112,22 @@ describe('PedidosConsumer de catalog (RN-03 / RN-06)', () => {
 
     await dispatch(evento(EVENTOS.DEVOLUCION_SOLICITADA, data));
 
-    expect(productos.reintegrarStock).toHaveBeenCalledWith('o1', [
+    expect(productos.reintegrarStockEnTransaccion).toHaveBeenCalledWith(client, 'o1', [
       { empresa_id: 'e-1', sku: 'SKU-01', cantidad: 1 },
     ]);
-    const emitidos = (outbox.insertar as Mock).mock.calls.map((c) => c[0]);
+    const emitidos = (outbox.insertarEnTransaccion as Mock).mock.calls.map((c) => c[1]);
     expect(emitidos).toContain(EVENTOS.STOCK_REINTEGRADO);
     expect(emitidos).toContain(EVENTOS.STOCK_UPDATED);
-    expect(productos.stockActualDe).toHaveBeenCalledWith([
-      { empresa_id: 'e-1', sku: 'SKU-01' },
-    ]);
+    expect(productos.stockActualDe).toHaveBeenCalledWith(
+      [{ empresa_id: 'e-1', sku: 'SKU-01' }],
+      client,
+    );
     expect(productos.registrarProcesado).toHaveBeenCalled();
   });
 
   it('debe ignorar los eventos que no son de pedidos', async () => {
     const { dispatch, outbox } = await crear();
     await dispatch(evento(EVENTOS.PAYMENT_PROCESADO, { order_id: 'o1', monto_cents: 1, estado: 'procesado', metodo: 'x' }));
-    expect(outbox.insertar).not.toHaveBeenCalled();
+    expect(outbox.insertarEnTransaccion).not.toHaveBeenCalled();
   });
 });

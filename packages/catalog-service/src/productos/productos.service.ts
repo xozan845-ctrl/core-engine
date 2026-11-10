@@ -343,6 +343,7 @@ export class ProductosService {
   /** Stock restante por producto (alimenta stock.updated para RN-02). */
   async stockActualDe(
     items: ClaveProducto[],
+    client?: PoolClient,
   ): Promise<{ empresa_id: string; sku: string; stock_restante: number }[]> {
     if (!items.length) return [];
     const claves = [
@@ -356,11 +357,15 @@ export class ProductosService {
         ]),
       ).values(),
     ];
-    return this.pg.query<{ empresa_id: string; sku: string; stock_restante: number }>(
-      `SELECT p.empresa_id, LOWER(p.sku) AS sku, p.stock AS stock_restante
+    const sql = `SELECT p.empresa_id, LOWER(p.sku) AS sku, p.stock AS stock_restante
        FROM catalog.productos p
        JOIN jsonb_to_recordset($1::jsonb) AS i(empresa_id uuid, sku text)
-         ON p.empresa_id = i.empresa_id AND LOWER(p.sku) = LOWER(i.sku)`,
+         ON p.empresa_id = i.empresa_id AND LOWER(p.sku) = LOWER(i.sku)`;
+    if (client) {
+      return (await client.query<{ empresa_id: string; sku: string; stock_restante: number }>(sql, [JSON.stringify(claves)])).rows;
+    }
+    return this.pg.query<{ empresa_id: string; sku: string; stock_restante: number }>(
+      sql,
       [JSON.stringify(claves)],
     );
   }
@@ -886,10 +891,25 @@ export class ProductosService {
     fallidos: { empresa_id: string; sku: string; cantidad: number; motivo: string }[];
     stock_restante?: { empresa_id: string; sku: string; stock_restante: number }[];
   }> {
+    return this.pg.transaccion((client) => this.reservarStockEnTransaccion(client, orderId, items));
+  }
+
+  /**
+   * Variante transaccional: el descuento de stock, la reserva y los eventos
+   * que emite el consumidor comparten la misma transacción (saga atómica).
+   */
+  async reservarStockEnTransaccion(
+    client: PoolClient,
+    orderId: string,
+    items: { empresa_id: string; sku: string; cantidad: number }[],
+  ): Promise<{
+    ok: boolean;
+    fallidos: { empresa_id: string; sku: string; cantidad: number; motivo: string }[];
+    stock_restante?: { empresa_id: string; sku: string; stock_restante: number }[];
+  }> {
     const fallidos: { empresa_id: string; sku: string; cantidad: number; motivo: string }[] = [];
-    let reservado = false;
+    await client.query('SAVEPOINT reserva_stock');
     try {
-      await this.pg.transaccion(async (client) => {
         for (const item of items) {
           // Bloqueo pesimista requerido por regla dorada (Data Integrity)
           const lock = await client.query<{ stock: number; tiene_variantes: boolean }>(
@@ -937,13 +957,14 @@ export class ProductosService {
            VALUES ($1, $2, NOW())`,
           [orderId, JSON.stringify(items)],
         );
-        reservado = true;
-      });
+        await client.query('RELEASE SAVEPOINT reserva_stock');
     } catch (err) {
       if (!(err instanceof Error) || err.message !== 'STOCK_INSUFICIENTE') throw err;
+      await client.query('ROLLBACK TO SAVEPOINT reserva_stock');
+      await client.query('RELEASE SAVEPOINT reserva_stock');
+      return { ok: false, fallidos };
     }
-    if (!reservado) return { ok: false, fallidos };
-    const stock = await this.pg.query<{ empresa_id: string; sku: string; stock_restante: number }>(
+    const stock = await client.query<{ empresa_id: string; sku: string; stock_restante: number }>(
       `SELECT p.empresa_id, LOWER(p.sku) AS sku, p.stock AS stock_restante
        FROM catalog.productos p
        JOIN jsonb_to_recordset($1::jsonb) AS i(empresa_id uuid, sku text)
@@ -962,7 +983,7 @@ export class ProductosService {
         ]),
       ],
     );
-    return { ok: true, fallidos, stock_restante: stock };
+    return { ok: true, fallidos, stock_restante: stock.rows };
   }
 
   /** RN-06: devolución aprobada revierte stock por (empresa, SKU). */
@@ -970,7 +991,14 @@ export class ProductosService {
     orderId: string,
     items: { empresa_id: string; sku: string; cantidad: number }[],
   ): Promise<void> {
-    await this.pg.transaccion(async (client) => {
+    await this.pg.transaccion((client) => this.reintegrarStockEnTransaccion(client, orderId, items));
+  }
+
+  async reintegrarStockEnTransaccion(
+    client: PoolClient,
+    orderId: string,
+    items: { empresa_id: string; sku: string; cantidad: number }[],
+  ): Promise<void> {
       for (const item of items) {
         await client.query(
           `UPDATE catalog.productos
@@ -990,24 +1018,27 @@ export class ProductosService {
       );
       // La reserva de esta orden ya no está activa tras reintegrar el stock.
       await client.query('DELETE FROM catalog.reservas_ordenes WHERE order_id = $1', [orderId]);
-    });
   }
 
   /** Claves de eventos ya procesadas (idempotencia, doc 5.2). */
-  async estaProcesado(event_id: string): Promise<boolean> {
-    const fila = await this.pg.queryOne(
-      `SELECT 1 FROM catalog.eventos_procesados WHERE event_id = $1`,
-      [event_id],
-    );
+  async estaProcesado(event_id: string, client?: PoolClient): Promise<boolean> {
+    const fila = client
+      ? (await client.query(`SELECT 1 FROM catalog.eventos_procesados WHERE event_id = $1`, [event_id])).rows[0]
+      : await this.pg.queryOne(
+          `SELECT 1 FROM catalog.eventos_procesados WHERE event_id = $1`,
+          [event_id],
+        );
     return !!fila;
   }
 
-  async registrarProcesado(event_id: string, tipo: string): Promise<void> {
-    await this.pg.query(
-      `INSERT INTO catalog.eventos_procesados (event_id, tipo, procesado_en)
-       VALUES ($1, $2, NOW()) ON CONFLICT (event_id) DO NOTHING`,
-      [event_id, tipo],
-    );
+  async registrarProcesado(event_id: string, tipo: string, client?: PoolClient): Promise<void> {
+    const sql = `INSERT INTO catalog.eventos_procesados (event_id, tipo, procesado_en)
+       VALUES ($1, $2, NOW()) ON CONFLICT (event_id) DO NOTHING`;
+    if (client) {
+      await client.query(sql, [event_id, tipo]);
+      return;
+    }
+    await this.pg.query(sql, [event_id, tipo]);
   }
 
   resumenInventario(empresaId?: string): Promise<{
