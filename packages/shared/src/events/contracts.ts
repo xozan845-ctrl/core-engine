@@ -52,8 +52,8 @@ export interface ItemOrden {
   tienda_id: string;
   empresa_id: string;
   participacion_porcentaje: number;
-  item_type?: 'producto' | 'servicio' | 'alquiler';
-  item_id?: string;
+  item_type: 'producto' | 'servicio' | 'alquiler';
+  item_id: string;
   fulfillment?: Fulfillment;
   fulfillment_config?: Record<string, unknown>;
 }
@@ -65,7 +65,7 @@ export interface OrdenData {
   items: ItemOrden[];
   total_cents: number;
   estado: 'creada';
-  tipo_orden?: TipoOrden;
+  tipo_orden: TipoOrden;
   fulfillment_config?: Record<string, unknown>;
 }
 

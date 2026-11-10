@@ -2,7 +2,7 @@
   "openapi": "3.0.0",
   "info": {
     "title": "Core Engine · market-intelligence-service · API pública",
-    "description": "Contrato público (/api/v1/**) de market-intelligence-service. No contiene rutas /internal/**.",
+    "description": "Contrato público (/api/v2/**) de market-intelligence-service. No contiene rutas /internal/**.",
     "version": "v1",
     "contact": {}
   },
@@ -10,7 +10,7 @@
   "x-superficie": "publica",
   "tags": [],
   "paths": {
-    "/api/v1/inteligencia/mapa-calor": {
+    "/api/v2/inteligencia/mapa-calor": {
       "get": {
         "operationId": "MetricasController_getMapaCalor",
         "parameters": [
@@ -74,7 +74,7 @@
         ]
       }
     },
-    "/api/v1/inteligencia/me/mapa-calor": {
+    "/api/v2/inteligencia/me/mapa-calor": {
       "get": {
         "operationId": "MetricasController_getMiMapaCalor",
         "parameters": [
@@ -146,7 +146,7 @@
         ]
       }
     },
-    "/api/v1/inteligencia/rendimiento": {
+    "/api/v2/inteligencia/rendimiento": {
       "get": {
         "operationId": "MetricasController_getRendimiento",
         "parameters": [],
@@ -173,7 +173,7 @@
         ]
       }
     },
-    "/api/v1/inteligencia/me/rendimiento": {
+    "/api/v2/inteligencia/me/rendimiento": {
       "get": {
         "operationId": "MetricasController_getMiRendimiento",
         "parameters": [
@@ -209,7 +209,7 @@
         ]
       }
     },
-    "/api/v1/inteligencia/cobertura": {
+    "/api/v2/inteligencia/cobertura": {
       "get": {
         "operationId": "MetricasController_getCobertura",
         "parameters": [],
@@ -239,7 +239,7 @@
         ]
       }
     },
-    "/api/v1/inteligencia/demanda": {
+    "/api/v2/inteligencia/demanda": {
       "get": {
         "operationId": "MetricasController_getDemanda",
         "parameters": [],
@@ -266,7 +266,7 @@
         ]
       }
     },
-    "/api/v1/inteligencia/tendencias": {
+    "/api/v2/inteligencia/tendencias": {
       "get": {
         "operationId": "MetricasController_getTendencias",
         "parameters": [],
@@ -296,7 +296,7 @@
         ]
       }
     },
-    "/api/v1/inteligencia/resumen": {
+    "/api/v2/inteligencia/resumen": {
       "get": {
         "operationId": "MetricasController_getResumen",
         "parameters": [
@@ -360,7 +360,7 @@
         ]
       }
     },
-    "/api/v1/inteligencia/ventas/registrar": {
+    "/api/v2/inteligencia/ventas/registrar": {
       "post": {
         "operationId": "MetricasController_registrarVenta",
         "parameters": [],
@@ -397,7 +397,7 @@
         ]
       }
     },
-    "/api/v1/inteligencia/forecast/demanda": {
+    "/api/v2/inteligencia/forecast/demanda": {
       "get": {
         "operationId": "PrediccionController_forecastDemanda",
         "parameters": [
@@ -441,7 +441,7 @@
         ]
       }
     },
-    "/api/v1/inteligencia/anomalias": {
+    "/api/v2/inteligencia/anomalias": {
       "get": {
         "operationId": "PrediccionController_anomalias",
         "parameters": [
@@ -493,7 +493,7 @@
         ]
       }
     },
-    "/api/v1/inteligencia/vendedores/{id}/score": {
+    "/api/v2/inteligencia/vendedores/{id}/score": {
       "get": {
         "operationId": "PrediccionController_scoreVendedor",
         "parameters": [
@@ -529,7 +529,7 @@
         ]
       }
     },
-    "/api/v1/inteligencia/me/score": {
+    "/api/v2/inteligencia/me/score": {
       "get": {
         "operationId": "PrediccionController_miScore",
         "parameters": [
@@ -565,7 +565,7 @@
         ]
       }
     },
-    "/api/v1/inteligencia/calidad": {
+    "/api/v2/inteligencia/calidad": {
       "get": {
         "operationId": "PrediccionController_calidadDatos",
         "parameters": [

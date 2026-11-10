@@ -53,7 +53,7 @@ export class FacturacionService {
     private readonly contabilidad: ContabilidadService,
   ) {}
 
-  /** GET /api/v1/finanzas/comprobantes — listado con filtros. */
+  /** GET /api/v2/finanzas/comprobantes — listado con filtros. */
   async listar(desde?: string, hasta?: string, estado?: string): Promise<Comprobante[]> {
     return this.pg.query<Comprobante>(
       `SELECT id, serie, numero, tipo, orden_id, cliente_id, parte_id, base_gravada_cents, iva_cents,

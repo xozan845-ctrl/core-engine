@@ -5,7 +5,7 @@
 `public/config.json` y `environment.prod.ts` deben apuntar a:
 
 ```json
-{ "apiUrl": "https://api.kbcoleccion.com/api-proxy/api/v1", "aiScraperUrl": "" }
+{ "apiUrl": "https://api.kbcoleccion.com/api-proxy/api/v2", "aiScraperUrl": "" }
 ```
 
 El navegador ya no recibe ni envía el Basic. La API directa sigue con su gate.
@@ -14,10 +14,10 @@ El navegador ya no recibe ni envía el Basic. La API directa sigue con su gate.
 
 ```text
 Navegador (web.app)
-  └─ POST https://api.kbcoleccion.com/api-proxy/api/v1/auth/login
+  └─ POST https://api.kbcoleccion.com/api-proxy/api/v2/auth/login
        └─ gateway: handler /api-proxy (público)
             └─ añade Authorization: Basic … (EDGE_BASIC_AUTH del servidor)
-                 └─ POST http://127.0.0.1:8080/api/v1/auth/login
+                 └─ POST http://127.0.0.1:8080/api/v2/auth/login
 ```
 
 - `login`, `registro`, `refresh`, `restablecer-contrasena`: Basic interno.
@@ -51,16 +51,16 @@ autenticación propia.
 
 ```sh
 # Login sin Basic desde el navegador/proxy: debe llegar a identity
-curl -i -X POST https://api.kbcoleccion.com/api-proxy/api/v1/auth/login \
+curl -i -X POST https://api.kbcoleccion.com/api-proxy/api/v2/auth/login \
   -H 'Content-Type: application/json' \
   -d '{"correo":"noexiste@example.invalid","contrasena":"x"}'
 # 400/401 del API, NO 401 del gate
 
 # Catálogo público
-curl -i 'https://api.kbcoleccion.com/api-proxy/api/v1/catalog/productos?empresa_id=11111111-1111-4111-8111-111111111111'
+curl -i 'https://api.kbcoleccion.com/api-proxy/api/v2/catalog/productos?empresa_id=11111111-1111-4111-8111-111111111111'
 
 # Ruta directa sigue protegida
-curl -i https://api.kbcoleccion.com/api/v1/catalog/productos
+curl -i https://api.kbcoleccion.com/api/v2/catalog/productos
 # 401 Basic
 ```
 
@@ -78,5 +78,5 @@ esos dos datos un 504 no identifica al culpable.
 
 ## Rollback
 
-Cambia de nuevo `apiUrl` a `https://api.kbcoleccion.com/api/v1` y despliega el
+Cambia de nuevo `apiUrl` a `https://api.kbcoleccion.com/api/v2` y despliega el
 frontend. El proxy puede quedarse sin uso; no afecta a la API directa.

@@ -22,7 +22,7 @@
 | Unit backend | 🟢 | **1,130 tests / 114 archivos** en verde en **12 workspaces**; cobertura gateada por workspace (tabla abajo); CI post-merge 2026-11-04 |
 | Unit frontend | N/A | No hay frontend en el repo (G-2 y R-COV-5 **reservados, nunca reutilizados**) |
 | Integración (API+BD) | 🟡 | PostgreSQL efímero cubre stock y el flujo real de configuración de sitio GET/PATCH (G-4); faltan otros flujos críticos |
-| Contrato (API) | 🟡 | 6 pruebas runtime cubren 400/401/403/404/409/500 y OpenAPI está versionado; el envelope R-C-1 sigue pendiente por incompatibilidad de `/api/v1` (G-5) |
+| Contrato (API) | 🟡 | 6 pruebas runtime cubren 400/401/403/404/409/500 y OpenAPI está versionado; el envelope R-C-1 sigue pendiente por incompatibilidad de `/api/v2` (G-5) |
 | E2E | 🟡 | `e2e.yml` manual/en tags ejecuta `npm run demo` y verifica logs R-E-8; cubre los siete flujos R-E-1..7, incluido el boundary de fechas; no es gate de cada PR |
 | OpenAPI (spec) | 🟢 | Export por servicio (`swagger:export`) + specs versionados en `docs/openapi/` (**11 servicios, 278/278 operaciones**); contrato público (`docs/api/core-engine.openapi.json`, 257 operaciones) e interno (`core-engine.internal.openapi.json`, 21 operaciones con `x-internal-key`); **gate G-8** en CI (`git diff --exit-code`) |
 | Property-based | 🟡 | `fast-check` cubre dinero y ciclo de la orden en `shared`; faltan propiedades de fechas y flujos adicionales (R-PB-1..3) |
@@ -84,7 +84,7 @@
 | G-2 Unit frontend | N/A | No hay frontend (ID **reservado**, nunca se reutiliza) |
 | G-3 Cobertura ≥ ratchet | ✅ | 12 `coverageThreshold` aplicados; el job `test` genera **12 tablas de cobertura** y 0 `threshold not met` |
 | G-4 Integración | ⏸ parcial | `integration-catalog` usa PostgreSQL efímero y cubre catálogo + configuración de sitio API/BD; faltan otros flujos críticos (R-I-12) |
-| G-5 Contrato | ⏸ | El envelope `{data,meta}` no puede introducirse en `/api/v1` sin migración a `/api/v2`; los seis shapes de error 400/401/403/404/409/500 ya tienen prueba runtime (R-C-1/R-C-8/R-C-10) |
+| G-5 Contrato | ⏸ | El envelope `{data,meta}` no puede introducirse en `/api/v2` sin migración a `/api/v2`; los seis shapes de error 400/401/403/404/409/500 ya tienen prueba runtime (R-C-1/R-C-8/R-C-10) |
 | G-6 E2E de flujos | ⏸ parcial release/manual | `e2e.yml` levanta el stack dev, ejecuta `npm run demo` y verifica R-E-8 en logs; cubre 7/7 flujos R-E-1..7 y no corre en cada PR |
 | G-7 Lint **y** build | ✅ | job `lint` → 0 errores; job `build` → 0 errores TS |
 | G-8 Swagger sync | ✅ | job `build` → `npm run swagger:export` + `git diff --exit-code docs/openapi docs/api packages/api-gateway/src/openapi.agregado.ts` (278/278 operaciones; público 257 e interno 21) |

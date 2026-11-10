@@ -15,7 +15,7 @@ export interface ReporteKPI {
 }
 
 /**
- * H-06 / GET /api/v1/admin/reportes — KPIs de ventas e inventario (Tabla 21).
+ * H-06 / GET /api/v2/admin/reportes — KPIs de ventas e inventario (Tabla 21).
  * Las metricas derivan de los eventos de negocio (doc 8.8: misma fuente de
  * verdad que el sistema, sin reconciliacion manual).
  */

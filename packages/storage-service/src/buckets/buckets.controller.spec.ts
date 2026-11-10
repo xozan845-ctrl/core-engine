@@ -18,7 +18,7 @@ const crear = () => {
   return { controller: new BucketsController(buckets as unknown as BucketsService), buckets };
 };
 
-describe('BucketsController (api/v1/storage/bucket)', () => {
+describe('BucketsController (api/v2/storage/bucket)', () => {
   it('debe devolver el estado del bucket creandolo de forma perezosa', async () => {
     const { controller, buckets } = crear();
 

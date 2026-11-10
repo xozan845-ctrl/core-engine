@@ -16,6 +16,39 @@ versiones anteriores:
 - campos y endpoints deprecados
 - gates y baselines de contrato que ya no aplican
 
+## Estado de ejecución
+
+**API v2:** completado. Todos los controladores, gateway, smoke, QA y OpenAPI
+generado usan `/api/v2`.
+
+**Fase 1 (código muerto y aliases):** completada.
+- `puedeTransicionar()`/`validarTransicion()` eliminados.
+- `orders.proyeccion_ordenes` y `orders.comisiones_vista` eliminadas.
+- Endpoint `GET /orders/vendedor/comisiones` eliminado.
+- Aliases `reservas_activas` y `carrito.id` eliminados.
+- Wrapper `scripts/check-rules.mjs` eliminado.
+
+**Fase 2 (contrato):** completada.
+- `producto_id` eliminado de la API de ofertas y de `OfertaResponseDto`.
+- Campos de `ProductoResponseDto` y `slug` de empresa/tienda ya no se marcan
+  opcionales solo por R-C-7.
+- Gate `contract:breaking` y `docs/api/breaking-baseline.json` eliminados.
+- OpenAPI regenerado contra `/api/v2`.
+
+**Fase 7 (órdenes sin defaults):** completada.
+- `CreateOrderCommand.tipo_orden` es obligatorio.
+- `validarTipoOrden()` ya no devuelve `'compra'` por defecto.
+- `reconstruirDesdeEventos()` exige `tipo_orden` en el evento.
+- Migración `39_orders_sin_defaults.sql` retira el default de
+  `orders.orden_vista.tipo_orden`.
+
+**Pendiente:** fases 3 a 6 (catálogo unificado, partes, personal, empresas) y
+fase 8 (slugs, solo si se decide eliminar el historial). La Fase 5 tiene avance
+parcial por el módulo `personal` y el guard de permisos ya incorporados en la
+rama.
+
+---
+
 ## Estrategia de esquema
 
 Hay dos caminos:

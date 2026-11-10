@@ -18,44 +18,44 @@ export const DESTINOS: ServicioDestino[] = [
     nombre: 'identity',
     url: process.env.IDENTITY_SERVICE_URL ?? 'http://identity-service:3001',
     patrones: [
-      { patron: /^\/api\/v1\/auth\//, metodos: ['*'] },
-      { patron: /^\/api\/v1\/usuarios(\/|$)/, metodos: ['*'] },
-      { patron: /^\/api\/v1\/empresas(\/|$)/, metodos: ['*'] },
-      { patron: /^\/api\/v1\/incorporaciones(\/|$)/, metodos: ['*'] },
-      { patron: /^\/api\/v1\/packs(\/|$)/, metodos: ['GET', 'POST'] },
-      { patron: /^\/api\/v1\/invitaciones(\/|$)/, metodos: ['*'] },
-      { patron: /^\/api\/v1\/configuracion(\/|$)/, metodos: ['*'] },
+      { patron: /^\/api\/v2\/auth\//, metodos: ['*'] },
+      { patron: /^\/api\/v2\/usuarios(\/|$)/, metodos: ['*'] },
+      { patron: /^\/api\/v2\/empresas(\/|$)/, metodos: ['*'] },
+      { patron: /^\/api\/v2\/incorporaciones(\/|$)/, metodos: ['*'] },
+      { patron: /^\/api\/v2\/packs(\/|$)/, metodos: ['GET', 'POST'] },
+      { patron: /^\/api\/v2\/invitaciones(\/|$)/, metodos: ['*'] },
+      { patron: /^\/api\/v2\/configuracion(\/|$)/, metodos: ['*'] },
     ],
   },
   {
     nombre: 'storage',
     url: process.env.STORAGE_SERVICE_URL ?? 'http://storage-service:3010',
     patrones: [
-      { patron: /^\/api\/v1\/storage(\/|$)/, metodos: ['*'] },
-      { patron: /^\/api\/v1\/admin\/storage(\/|$)/, metodos: ['*'] },
+      { patron: /^\/api\/v2\/storage(\/|$)/, metodos: ['*'] },
+      { patron: /^\/api\/v2\/admin\/storage(\/|$)/, metodos: ['*'] },
     ],
   },
   {
     nombre: 'catalog',
     url: process.env.CATALOG_SERVICE_URL ?? 'http://catalog-service:3002',
     patrones: [
-      { patron: /^\/api\/v1\/catalog\//, metodos: ['*'] },
-      { patron: /^\/api\/v1\/admin\/inventario(\/|$)/, metodos: ['*'] },
+      { patron: /^\/api\/v2\/catalog\//, metodos: ['*'] },
+      { patron: /^\/api\/v2\/admin\/inventario(\/|$)/, metodos: ['*'] },
     ],
   },
   {
     nombre: 'stores',
     url: process.env.STORES_SERVICE_URL ?? 'http://stores-service:3003',
     patrones: [
-      { patron: /^\/api\/v1\/vendedores\/(productos|tienda|me\/(ofertas|tienda))/, metodos: ['*'] },
-      { patron: /^\/api\/v1\/empresarios\/me\/tiendas$/, metodos: ['GET'] },
-      { patron: /^\/api\/v1\/tiendas\//, metodos: ['*'] },
+      { patron: /^\/api\/v2\/vendedores\/(productos|tienda|me\/(ofertas|tienda))/, metodos: ['*'] },
+      { patron: /^\/api\/v2\/empresarios\/me\/tiendas$/, metodos: ['GET'] },
+      { patron: /^\/api\/v2\/tiendas\//, metodos: ['*'] },
     ],
   },
   {
     nombre: 'scheduling',
     url: process.env.SCHEDULING_SERVICE_URL ?? 'http://scheduling-service:3011',
-    patrones: [{ patron: /^\/api\/v1\/scheduling(\/|$)/, metodos: ['*'] }],
+    patrones: [{ patron: /^\/api\/v2\/scheduling(\/|$)/, metodos: ['*'] }],
   },
   {
     // Especifico ANTES del catch-all de orders: las transiciones de estado
@@ -63,50 +63,50 @@ export const DESTINOS: ServicioDestino[] = [
     nombre: 'logistics',
     url: process.env.LOGISTICS_SERVICE_URL ?? 'http://logistics-service:3005',
     patrones: [
-      { patron: /^\/api\/v1\/orders\/[^/]+\/estado/, metodos: ['PATCH', 'POST'] },
-      { patron: /^\/api\/v1\/admin\/envios/, metodos: ['*'] },
-      { patron: /^\/api\/v1\/empresarios\/me\/envios/, metodos: ['*'] },
-      { patron: /^\/api\/v1\/envios\/[^/]+\/estado$/, metodos: ['PATCH'] },
+      { patron: /^\/api\/v2\/orders\/[^/]+\/estado/, metodos: ['PATCH', 'POST'] },
+      { patron: /^\/api\/v2\/admin\/envios/, metodos: ['*'] },
+      { patron: /^\/api\/v2\/empresarios\/me\/envios/, metodos: ['*'] },
+      { patron: /^\/api\/v2\/envios\/[^/]+\/estado$/, metodos: ['PATCH'] },
     ],
   },
   {
     nombre: 'orders',
     url: process.env.ORDERS_SERVICE_URL ?? 'http://orders-service:3004',
     patrones: [
-      { patron: /^\/api\/v1\/orders(\/|$)/, metodos: ['*'] },
-      { patron: /^\/api\/v1\/carrito(\/|$)/, metodos: ['*'] },
+      { patron: /^\/api\/v2\/orders(\/|$)/, metodos: ['*'] },
+      { patron: /^\/api\/v2\/carrito(\/|$)/, metodos: ['*'] },
     ],
   },
   {
     nombre: 'commissions',
     url: process.env.COMMISSIONS_SERVICE_URL ?? 'http://commissions-service:3006',
     patrones: [
-      { patron: /^\/api\/v1\/vendedores\/me\/(ventas|liquidaciones)/, metodos: ['*'] },
-      { patron: /^\/api\/v1\/empresarios\/me\/(liquidaciones|ventas)/, metodos: ['*'] },
-      { patron: /^\/api\/v1\/admin\/reportes/, metodos: ['*'] },
-      { patron: /^\/api\/v1\/admin\/liquidaciones/, metodos: ['*'] },
+      { patron: /^\/api\/v2\/vendedores\/me\/(ventas|liquidaciones)/, metodos: ['*'] },
+      { patron: /^\/api\/v2\/empresarios\/me\/(liquidaciones|ventas)/, metodos: ['*'] },
+      { patron: /^\/api\/v2\/admin\/reportes/, metodos: ['*'] },
+      { patron: /^\/api\/v2\/admin\/liquidaciones/, metodos: ['*'] },
     ],
   },
   {
     nombre: 'finance',
     url: process.env.FINANCE_SERVICE_URL ?? 'http://finance-service:3007',
     patrones: [
-      { patron: /^\/api\/v1\/finanzas(\/|$)/, metodos: ['*'] },
-      { patron: /^\/api\/v1\/comercio(\/|$)/, metodos: ['*'] },
-      { patron: /^\/api\/v1\/vendedores\/me\/fiscal/, metodos: ['*'] },
+      { patron: /^\/api\/v2\/finanzas(\/|$)/, metodos: ['*'] },
+      { patron: /^\/api\/v2\/comercio(\/|$)/, metodos: ['*'] },
+      { patron: /^\/api\/v2\/vendedores\/me\/fiscal/, metodos: ['*'] },
     ],
   },
   {
     // field-service: dominio de logistica de campo (app-test).
     nombre: 'field',
     url: process.env.FIELD_SERVICE_URL ?? 'http://field-service:3008',
-    patrones: [{ patron: /^\/api\/v1\/field\//, metodos: ['*'] }],
+    patrones: [{ patron: /^\/api\/v2\/field\//, metodos: ['*'] }],
   },
   {
     nombre: 'intelligence',
     url: process.env.INTELLIGENCE_SERVICE_URL ?? 'http://market-intelligence-service:3009',
     patrones: [
-      { patron: /^\/api\/v1\/inteligencia(\/|$)/, metodos: ['*'] },
+      { patron: /^\/api\/v2\/inteligencia(\/|$)/, metodos: ['*'] },
     ],
   },
 ];
@@ -185,7 +185,7 @@ export class ProxyService {
       // Las imágenes y videos públicos son binarios: no se debe pedir JSON ni
       // decodificar el cuerpo como texto (ADR-28). `Range` viaja tal cual para
       // que storage-service pueda responder 206/416.
-      const esMediaPublica = /^\/api\/v1\/storage\/public\/objetos\/[^/]+$/.test(rutaBase);
+      const esMediaPublica = /^\/api\/v2\/storage\/public\/objetos\/[^/]+$/.test(rutaBase);
       const headers: Record<string, string> = {
         'x-request-id': (req.headers['x-request-id'] as string) ?? `gw-${Date.now()}`,
         'content-type': esMediaPublica ? 'application/octet-stream' : 'application/json',

@@ -4,18 +4,18 @@ import { resolve } from 'path';
 /** Superficies del contrato público e interno (R-DO-8). */
 export type SuperficieOpenApi = 'publica' | 'interna';
 
-const RE_PUBLICA = /^\/api\/v1(?:\/|$)/;
+const RE_PUBLICA = /^\/api\/v2(?:\/|$)/;
 const RE_INTERNA = /^\/internal(?:\/|$)/;
 
 /**
  * Clasifica una ruta por superficie. Falla si no pertenece a ninguna: una ruta
- * fuera de `/api/v1` o `/internal` rompería la taxonomía del contrato.
+ * fuera de `/api/v2` o `/internal` rompería la taxonomía del contrato.
  */
 export function clasificarRutaOpenApi(ruta: string): SuperficieOpenApi {
   if (RE_PUBLICA.test(ruta)) return 'publica';
   if (RE_INTERNA.test(ruta)) return 'interna';
   throw new Error(
-    `ruta fuera de las superficies conocidas: ${ruta} (esperado /api/v1/** o /internal/**)`,
+    `ruta fuera de las superficies conocidas: ${ruta} (esperado /api/v2/** o /internal/**)`,
   );
 }
 
@@ -100,7 +100,7 @@ function separar(
       ...info,
       title: `Core Engine · ${servicio} · API ${esPublica ? 'pública' : 'interna'}`,
       description: esPublica
-        ? `Contrato público (/api/v1/**) de ${servicio}. No contiene rutas /internal/**.`
+        ? `Contrato público (/api/v2/**) de ${servicio}. No contiene rutas /internal/**.`
         : `Contrato interno (/internal/**) de ${servicio}; requiere x-internal-key.`,
       version: esPublica ? 'v1' : 'internal',
     },

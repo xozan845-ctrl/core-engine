@@ -46,5 +46,7 @@
   "34_extension_values.sql": "9249d6f7a91fad58c30ac7a6495a2b2cce4b9417b6717fd307a2d6f15358c0a3",
   "35_partes_universales.sql": "4632132ac815ac33e078dc71bdb5a1501d966b919ae075057d7857bafb002397",
   "36_partes_compatibilidad.sql": "2026016a4e97ef7758d870d38f97bb7472f02c5a17ae51787f8e3058cab78f6b",
-  "37_personal_empresa.sql": "1b163833600836d9579b424e26026a013f4d8eff5304278b184c22c22e84c0a2"
+  "37_personal_empresa.sql": "1b163833600836d9579b424e26026a013f4d8eff5304278b184c22c22e84c0a2",
+  "38_drop_compatibilidad_fase1.sql": "5ca92d4fe3b7a300e545ef1a921c0397a0e5a4bd131a7ff7bfafd2c873af41c1",
+  "39_orders_sin_defaults.sql": "81a96868b261d7048e6f6c2bcc6f5aa2bb95af1b90a205f931dd5b0393933a41"
 }

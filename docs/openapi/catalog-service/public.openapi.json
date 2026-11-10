@@ -2,7 +2,7 @@
   "openapi": "3.0.0",
   "info": {
     "title": "Core Engine · catalog-service · API pública",
-    "description": "Contrato público (/api/v1/**) de catalog-service. No contiene rutas /internal/**.",
+    "description": "Contrato público (/api/v2/**) de catalog-service. No contiene rutas /internal/**.",
     "version": "v1",
     "contact": {}
   },
@@ -10,7 +10,7 @@
   "x-superficie": "publica",
   "tags": [],
   "paths": {
-    "/api/v1/catalog/productos": {
+    "/api/v2/catalog/productos": {
       "get": {
         "operationId": "ProductosController_listar",
         "parameters": [
@@ -126,7 +126,7 @@
         ]
       }
     },
-    "/api/v1/catalog/productos/{id}": {
+    "/api/v2/catalog/productos/{id}": {
       "get": {
         "operationId": "ProductosController_detalle",
         "parameters": [
@@ -216,7 +216,7 @@
         ]
       }
     },
-    "/api/v1/catalog/productos/{id}/variantes": {
+    "/api/v2/catalog/productos/{id}/variantes": {
       "post": {
         "operationId": "ProductosController_crearVariante",
         "parameters": [
@@ -263,7 +263,7 @@
         ]
       }
     },
-    "/api/v1/catalog/productos/{id}/variantes/{varianteId}": {
+    "/api/v2/catalog/productos/{id}/variantes/{varianteId}": {
       "patch": {
         "operationId": "ProductosController_actualizarVariante",
         "parameters": [
@@ -356,7 +356,7 @@
         ]
       }
     },
-    "/api/v1/catalog/productos/{id}/imagenes": {
+    "/api/v2/catalog/productos/{id}/imagenes": {
       "post": {
         "operationId": "ProductosController_agregarImagen",
         "parameters": [
@@ -403,7 +403,7 @@
         ]
       }
     },
-    "/api/v1/catalog/productos/{id}/imagenes/{imagenId}": {
+    "/api/v2/catalog/productos/{id}/imagenes/{imagenId}": {
       "delete": {
         "operationId": "ProductosController_eliminarImagen",
         "parameters": [
@@ -442,7 +442,7 @@
         ]
       }
     },
-    "/api/v1/catalog/items": {
+    "/api/v2/catalog/items": {
       "get": {
         "operationId": "ItemsController_listar",
         "parameters": [],
@@ -469,7 +469,7 @@
         ]
       }
     },
-    "/api/v1/catalog/items/alquileres": {
+    "/api/v2/catalog/items/alquileres": {
       "post": {
         "operationId": "ItemsController_crearAlquiler",
         "parameters": [],
@@ -506,7 +506,7 @@
         ]
       }
     },
-    "/api/v1/catalog/items/atributos/esquemas": {
+    "/api/v2/catalog/items/atributos/esquemas": {
       "post": {
         "operationId": "ItemsController_guardarEsquema",
         "parameters": [],
@@ -571,7 +571,7 @@
         ]
       }
     },
-    "/api/v1/catalog/items/{id}": {
+    "/api/v2/catalog/items/{id}": {
       "get": {
         "operationId": "ItemsController_detalle",
         "parameters": [
@@ -608,7 +608,7 @@
         ]
       }
     },
-    "/api/v1/admin/inventario": {
+    "/api/v2/admin/inventario": {
       "get": {
         "operationId": "InventarioController_listar",
         "parameters": [
@@ -648,7 +648,7 @@
         ]
       }
     },
-    "/api/v1/admin/inventario/proveedores": {
+    "/api/v2/admin/inventario/proveedores": {
       "post": {
         "operationId": "InventarioController_crearProveedor",
         "parameters": [],
@@ -685,7 +685,7 @@
         ]
       }
     },
-    "/api/v1/admin/inventario/lotes": {
+    "/api/v2/admin/inventario/lotes": {
       "post": {
         "operationId": "InventarioController_crearLote",
         "parameters": [],
@@ -767,7 +767,7 @@
         ]
       }
     },
-    "/api/v1/catalog/servicios": {
+    "/api/v2/catalog/servicios": {
       "get": {
         "operationId": "ServiciosController_listar",
         "parameters": [
@@ -886,7 +886,7 @@
         ]
       }
     },
-    "/api/v1/catalog/servicios/{id}": {
+    "/api/v2/catalog/servicios/{id}": {
       "get": {
         "operationId": "ServiciosController_detalle",
         "parameters": [
@@ -1020,7 +1020,7 @@
         ]
       }
     },
-    "/api/v1/catalog/configuracion-inventario": {
+    "/api/v2/catalog/configuracion-inventario": {
       "get": {
         "operationId": "OperacionesController_configuracion",
         "parameters": [
@@ -1100,7 +1100,7 @@
         ]
       }
     },
-    "/api/v1/catalog/productos/importar": {
+    "/api/v2/catalog/productos/importar": {
       "post": {
         "operationId": "OperacionesController_importar",
         "parameters": [
@@ -1146,7 +1146,7 @@
         ]
       }
     },
-    "/api/v1/catalog/escanear": {
+    "/api/v2/catalog/escanear": {
       "get": {
         "operationId": "OperacionesController_escanear",
         "parameters": [
@@ -1190,7 +1190,7 @@
         ]
       }
     },
-    "/api/v1/catalog/combos": {
+    "/api/v2/catalog/combos": {
       "get": {
         "operationId": "OperacionesController_listarCombos",
         "parameters": [
@@ -1301,7 +1301,7 @@
         ]
       }
     },
-    "/api/v1/catalog/combos/{id}": {
+    "/api/v2/catalog/combos/{id}": {
       "get": {
         "operationId": "OperacionesController_detalleCombo",
         "parameters": [
@@ -1408,7 +1408,7 @@
         ]
       }
     },
-    "/api/v1/catalog/promociones": {
+    "/api/v2/catalog/promociones": {
       "get": {
         "operationId": "OperacionesController_listarPromociones",
         "parameters": [
@@ -1511,7 +1511,7 @@
         ]
       }
     },
-    "/api/v1/catalog/promociones/{id}": {
+    "/api/v2/catalog/promociones/{id}": {
       "get": {
         "operationId": "OperacionesController_detallePromocion",
         "parameters": [
@@ -1618,7 +1618,7 @@
         ]
       }
     },
-    "/api/v1/catalog/inventario/movimientos": {
+    "/api/v2/catalog/inventario/movimientos": {
       "get": {
         "operationId": "OperacionesController_listarMovimientos",
         "parameters": [
@@ -2759,7 +2759,7 @@
           "url": {
             "type": "string",
             "description": "Ruta pública relativa servida por storage-service",
-            "example": "/api/v1/storage/public/objetos/8f0c..."
+            "example": "/api/v2/storage/public/objetos/8f0c..."
           },
           "orden": {
             "type": "number",
@@ -3061,11 +3061,6 @@
             "description": "Precio base en córdobas con dos decimales",
             "example": "1000.00"
           },
-          "reservas_activas": {
-            "type": "number",
-            "description": "Alias de reservado para consumidores internos",
-            "example": 2
-          },
           "valor_disponible_cents": {
             "type": "number",
             "description": "Valor del stock disponible en centavos",
@@ -3085,7 +3080,6 @@
           "reservado",
           "estado",
           "precio_base",
-          "reservas_activas",
           "valor_disponible_cents",
           "valor_total_cents"
         ]
@@ -3594,6 +3588,23 @@
           "precio_base",
           "stock",
           "estado",
+          "estado_operativo",
+          "costo",
+          "marca",
+          "codigo_barras",
+          "unidad",
+          "permite_fracciones",
+          "unidad_compra",
+          "contenido_cantidad",
+          "contenido_unidad",
+          "tipo_precio",
+          "tipo_costo",
+          "stock_minimo",
+          "stock_maximo",
+          "garantia_meses",
+          "es_materia_prima",
+          "ubicacion",
+          "actualizado_en",
           "creado_en"
         ]
       },

@@ -148,7 +148,7 @@ class RelacionResponseDto implements RelacionParte {
 
 @ApiTags('Partes universales')
 @ApiBearerAuth()
-@Controller('api/v1/empresas/:empresaId/partes')
+@Controller('api/v2/empresas/:empresaId/partes')
 export class PartesController {
   constructor(private readonly partes: PartesService) {}
 

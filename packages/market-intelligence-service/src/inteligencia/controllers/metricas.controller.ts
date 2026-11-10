@@ -14,7 +14,7 @@ import {
 
 @ApiTags('Inteligencia — Métricas')
 @ApiBearerAuth()
-@Controller('api/v1/inteligencia')
+@Controller('api/v2/inteligencia')
 export class MetricasController {
   constructor(private readonly inteligencia: InteligenciaService) {}
 

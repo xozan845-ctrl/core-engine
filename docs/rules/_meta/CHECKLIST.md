@@ -62,13 +62,13 @@ Matriz completa en [`06-estandares-cobertura.md`](../test/06-estandares-cobertur
 > envelope de éxito requiere una migración versionada `/api/v2` antes de marcar
 > G-5 como completo.
 
-- [ ] **R-C-1** — Éxito: envelope `{ data, meta: { timestamp, path, method, statusCode } }`; pendiente de migración versionada `/api/v2` para no romper `/api/v1`. Errores sin `meta` (R-C-8).
+- [ ] **R-C-1** — Éxito: envelope `{ data, meta: { timestamp, path, method, statusCode } }`; pendiente de migración versionada `/api/v2` para no romper `/api/v2`. Errores sin `meta` (R-C-8).
 - [ ] **R-C-3** — Respuestas vía DTO; nunca entidades/rows de persistencia crudos ni campos sensibles.
 - [ ] **R-C-4** — Fechas ISO 8601 UTC con `Z`.
 - [ ] **R-C-5** — Semántica de `dateFrom`/`dateTo` = día local documentada.
 - [x] **R-C-8** — Errores 400/401 en configuración y 403/404/409/500 en prueba runtime del filtro global; todos validan `{codigo,mensaje,detalles?}` sin `stack` ni detalles internos.
 - [ ] **R-C-11** — Campo nuevo: DTO + test de contrato + actualización de quien lo consume, en el mismo PR.
-- [ ] **R-DO-8** — Rutas públicas bajo `/api/v1/`, internas bajo `/internal/`; el contrato público no mezcla superficies y todo controlador interno usa `ClaveInternaGuard`.
+- [ ] **R-DO-8** — Rutas públicas bajo `/api/v2/`, internas bajo `/internal/`; el contrato público no mezcla superficies y todo controlador interno usa `ClaveInternaGuard`.
 - [ ] **R-DO-9** — Ninguna ruta estática queda tapada por una ruta `:param` previa en el mismo controlador y método.
 - [ ] **R-DO-10** — Toda operación documenta respuesta de éxito (schema 200/201 o 204/DELETE sin contenido).
 

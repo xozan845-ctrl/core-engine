@@ -13,7 +13,7 @@ export interface OrderEstadoDerrivado {
   motivo?: string;
   creado_en: string;
   actualizado_en: string;
-  tipo_orden?: TipoOrden;
+  tipo_orden: TipoOrden;
 }
 
 interface DatosDeEvento {
@@ -43,6 +43,7 @@ export function reconstruirDesdeEventos(
   const primero = eventos[0];
   if (primero.tipo !== 'OrderCreatedEvent') return null;
   const inicial = primero.payload as DatosDeEvento;
+  if (!inicial.tipo_orden) return null;
 
   const orden: OrderEstadoDerrivado = {
     order_id: inicial.order_id ?? '',
@@ -52,7 +53,7 @@ export function reconstruirDesdeEventos(
     estado: inicial.estado ?? 'creada',
     creado_en: inicial.creado_en ?? primero.creado_en,
     actualizado_en: primero.creado_en,
-    tipo_orden: inicial.tipo_orden ?? 'compra',
+    tipo_orden: inicial.tipo_orden,
   };
 
   for (const evento of eventos.slice(1) as EventoReplay[]) {

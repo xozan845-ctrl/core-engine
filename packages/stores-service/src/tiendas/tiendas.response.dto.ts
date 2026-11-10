@@ -108,9 +108,7 @@ export class TiendaResponseDto {
   @ApiProperty({ description: 'Nombre de la tienda', example: 'Mi tienda' })
   nombre: string;
 
-  // `required: false` mantiene el cambio como aditivo para el gate R-C-7;
-  // el servicio siempre devuelve el slug en runtime.
-  @ApiProperty({ required: false, description: 'Slug público actual', example: 'mi-tienda' })
+  @ApiProperty({ description: 'Slug público actual', example: 'mi-tienda' })
   slug: string;
 
   @ApiProperty({ description: 'Descripción de la tienda' })

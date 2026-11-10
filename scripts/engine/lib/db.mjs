@@ -109,6 +109,11 @@ export function readRlsStatus(root) {
     )) {
       tables.add(`${match[1].toLowerCase()}.${match[2].toLowerCase()}`);
     }
+    for (const match of sql.matchAll(
+      /DROP TABLE\s+(?:IF EXISTS\s+)?([a-z_][a-z0-9_]*)\.([a-z_][a-z0-9_]*)/gi,
+    )) {
+      tables.delete(`${match[1].toLowerCase()}.${match[2].toLowerCase()}`);
+    }
   }
 
   const rlsPath = join(root, RLS_FILE);

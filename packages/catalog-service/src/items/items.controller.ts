@@ -13,6 +13,7 @@ import {
   CAPACIDADES,
   DomainError,
   NotFoundError,
+  Permisos,
   RequiereCapacidades,
   Roles,
   ROLES,
@@ -47,13 +48,14 @@ export class GuardarEsquemaRequestDto {
 
 @ApiTags('Catálogo · Items')
 @ApiBearerAuth()
-@Controller('api/v1/catalog/items')
+@Controller('api/v2/catalog/items')
 @Roles(ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.EMPRESARIO)
 @RequiereCapacidades(CAPACIDADES.CATALOGO_ITEMS)
 export class ItemsController {
   constructor(private readonly items: ItemsService) {}
 
   @Get()
+  @Permisos('catalogo.leer')
   @ApiOperation({ summary: 'Listar items unificados de una empresa' })
   @ApiOkResponse({ type: PaginaItemsResponseDto })
   async listar(@Query() query: Record<string, unknown>, @UsuarioActual() usuario: UsuarioContexto) {
@@ -61,6 +63,7 @@ export class ItemsController {
   }
 
   @Post('alquileres')
+  @Permisos('catalogo.escribir')
   @ApiOperation({ summary: 'Crear un item de alquiler' })
   @ApiCreatedResponse({ type: ItemResponseDto })
   async crearAlquiler(@Body() dto: CrearAlquilerRequestDto, @UsuarioActual() usuario: UsuarioContexto) {
@@ -68,11 +71,12 @@ export class ItemsController {
   }
 
   @Post('atributos/esquemas')
+  @Permisos('catalogo.escribir')
   @ApiOperation({ summary: 'Registrar un JSON Schema de atributos por categoría' })
   @ApiOkResponse({ type: EsquemaGuardadoResponseDto, description: 'Esquema registrado' })
   async guardarEsquema(@Body() dto: GuardarEsquemaRequestDto, @UsuarioActual() usuario: UsuarioContexto) {
     await this.items.guardarEsquema(
-      usuario.rol === ROLES.EMPRESARIO ? usuario.tenant_id ?? null : null,
+      usuario.rol === ROLES.EMPRESARIO || usuario.rol_empresa_id ? usuario.tenant_id ?? null : null,
       dto.tipo,
       dto.categoria,
       dto.esquema,
@@ -81,6 +85,7 @@ export class ItemsController {
   }
 
   @Get('atributos/esquemas')
+  @Permisos('catalogo.leer')
   @ApiOperation({ summary: 'Listar JSON Schemas de atributos' })
   @ApiOkResponse({ type: [ItemSchemaResponseDto], description: 'Esquemas activos' })
   async esquemas(@UsuarioActual() usuario: UsuarioContexto) {
@@ -88,6 +93,7 @@ export class ItemsController {
   }
 
   @Get(':id')
+  @Permisos('catalogo.leer')
   @ApiOperation({ summary: 'Consultar un item unificado' })
   @ApiParam({ name: 'id', format: 'uuid' })
   @ApiOkResponse({ type: ItemResponseDto })
@@ -98,7 +104,7 @@ export class ItemsController {
   }
 
   private empresaDeConsulta(usuario: UsuarioContexto, solicitada: unknown): string {
-    if (usuario.rol === ROLES.EMPRESARIO) {
+    if (usuario.rol === ROLES.EMPRESARIO || usuario.rol_empresa_id) {
       if (!usuario.tenant_id) throw new DomainError('EMPRESA_REQUERIDA', 'No hay empresa activa.');
       if (typeof solicitada === 'string' && solicitada !== usuario.tenant_id) throw new DomainError('EMPRESA_NO_AUTORIZADA', 'No puedes consultar otra empresa.');
       return usuario.tenant_id;
@@ -108,7 +114,7 @@ export class ItemsController {
   }
 
   private empresaDeEscritura(usuario: UsuarioContexto, solicitada?: string): string {
-    if (usuario.rol === ROLES.EMPRESARIO) {
+    if (usuario.rol === ROLES.EMPRESARIO || usuario.rol_empresa_id) {
       if (!usuario.tenant_id) throw new DomainError('EMPRESA_REQUERIDA', 'No hay empresa activa.');
       return usuario.tenant_id;
     }

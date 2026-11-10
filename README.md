@@ -6,7 +6,7 @@ RabbitMQ con outbox y DLQ, Postgres/Supabase-compatible con esquema por dominio,
 con autenticacion en el borde, observabilidad (Prometheus + Grafana) y suite de pruebas.
 
 Requiere **Node >= 20 (uso v24)** y **Docker with Compose v2**. Todas las rutas van por el
-gateway (`http://localhost:8080/api/v1/...`). Los montos se manejan como **enteros en centavos**
+gateway (`http://localhost:8080/api/v2/...`). Los montos se manejan como **enteros en centavos**
 (control OWASP A02): el JSON entrega strings con dos decimales (`"1150.00"`).
 
 ## Arquitectura
@@ -28,7 +28,7 @@ gateway (`http://localhost:8080/api/v1/...`). Los montos se manejan como **enter
 (`8080:8080`); los **diez microservicios** escuchan en `3001`–`3010` **solo dentro de la red interna
 Docker `core-engine`** y no tienen mapeo de puertos al host. La excepción es **MinIO** (`9000`), que sí
 se publica porque es el host **firmado** en las URLs prefirmadas (ADR-24). Toda llamada externa pasa por
-`http://localhost:8080/api/v1/...` (o el dominio del gateway en stage/produccion).
+`http://localhost:8080/api/v2/...` (o el dominio del gateway en stage/produccion).
 
 - **CQRS + Event Sourcing** solo en `orders` (alta tasa de escritura, cap. 3.2); el resto usa
   CRUD convencional sobre su propio esquema (baja tasa de escritura).
@@ -38,7 +38,7 @@ se publica porque es el host **firmado** en las URLs prefirmadas (ADR-24). Toda 
   orders marca `pagada` y emite `payment.procesado` → logistics crea el envio → ...
   `stock.fallido` revierte la orden a `cancelada`.
 - **DLQ con backoff exponencial** (AD-04): reintentos hasta `REINTENTOS_MAXIMOS`; luego el
-  mensaje se declara muerto. `POST /api/v1/admin/...dlq...` (endpoint interno) permite reinyectar.
+  mensaje se declara muerto. `POST /api/v2/admin/...dlq...` (endpoint interno) permite reinyectar.
 - **Ciclo de vida de la orden** (Tabla 13): `creada → pagada → en_preparacion → enviada →
   entregada` (y `cancelada` / `devuelta`); las transiciones se validan con `validarTransicion`.
 
@@ -140,33 +140,33 @@ en `docs/rules/cd/` (R-CD).
 
 ## API (resumen de Tabla 21, todas por el gateway)
 
-- `POST /api/v1/auth/registro|login|refresh`, `GET /api/v1/auth/me`
-- `POST /api/v1/empresas`, `GET /api/v1/empresas/:id`,
-  `PATCH /api/v1/empresas/:id/perfil` — RUC opcional, perfil comercial/fiscal
+- `POST /api/v2/auth/registro|login|refresh`, `GET /api/v2/auth/me`
+- `POST /api/v2/empresas`, `GET /api/v2/empresas/:id`,
+  `PATCH /api/v2/empresas/:id/perfil` — RUC opcional, perfil comercial/fiscal
   y logo (objeto público de storage validado por tenant).
-- `PATCH /api/v1/usuarios/:id/avatar` — avatar de vendedor/usuario validado
+- `PATCH /api/v2/usuarios/:id/avatar` — avatar de vendedor/usuario validado
   contra storage; `GET /empresas/:id/vendedores` devuelve `avatar_url`.
-- `PATCH /api/v1/tiendas/:id/logo` — logo público de la tienda, validado
+- `PATCH /api/v2/tiendas/:id/logo` — logo público de la tienda, validado
   contra storage por tenant.
-- `POST /api/v1/catalog/productos`, `GET /api/v1/catalog/productos(/:id)` (admin)
-- `GET|POST|PATCH|DELETE /api/v1/catalog/servicios` (empresa/admin) — recurso
+- `POST /api/v2/catalog/productos`, `GET /api/v2/catalog/productos(/:id)` (admin)
+- `GET|POST|PATCH|DELETE /api/v2/catalog/servicios` (empresa/admin) — recurso
   propio de servicios con baja lógica, duración y unicidad por empresa.
-- `/api/v1/catalog/configuracion-inventario`, `/productos/importar`, `/escanear`,
+- `/api/v2/catalog/configuracion-inventario`, `/productos/importar`, `/escanear`,
   `/combos`, `/promociones` e `/inventario/movimientos` (empresa/admin):
   configuración, importación, escaneo, combos, promociones y movimientos/traslados.
 - Los productos exponen costo, marca, código de barras, unidad, stock mínimo/máximo,
   garantía, materia prima, ubicación y `estado_operativo` (activo/inactivo)
   además de la disponibilidad de stock (`estado`).
-- `POST /api/v1/vendedores/tienda`, `POST|PATCH /api/v1/vendedores/productos(/:id)`,
-  `GET /api/v1/vendedores/me/ofertas`, `GET /api/v1/tiendas/:id` (publica)
-- `POST /api/v1/orders`, `GET /api/v1/orders(/:id)` (comprador/vendedor/admin)
-- `PATCH /api/v1/orders/:id/estado` (admin: en_preparacion/enviada/entregada/cancelada/devuelta)
-- `GET /api/v1/vendedores/me/ventas|liquidaciones`, `GET /api/v1/admin/reportes`,
-  `POST /api/v1/admin/liquidaciones/corte`, `POST /api/v1/admin/liquidaciones/:id/pagar`
-- `GET /api/v1/admin/inventario`, `GET /api/v1/admin/envios`
-- `GET /api/v1/finanzas/asientos|proyecciones|kpis|punto-equilibrio` (admin),
-  `POST /api/v1/finanzas/asientos`, `GET /api/v1/vendedores/me/fiscal`
-- `GET|POST|PATCH|DELETE /api/v1/comercio/**` (empresa/vendedor): bancos,
+- `POST /api/v2/vendedores/tienda`, `POST|PATCH /api/v2/vendedores/productos(/:id)`,
+  `GET /api/v2/vendedores/me/ofertas`, `GET /api/v2/tiendas/:id` (publica)
+- `POST /api/v2/orders`, `GET /api/v2/orders(/:id)` (comprador/vendedor/admin)
+- `PATCH /api/v2/orders/:id/estado` (admin: en_preparacion/enviada/entregada/cancelada/devuelta)
+- `GET /api/v2/vendedores/me/ventas|liquidaciones`, `GET /api/v2/admin/reportes`,
+  `POST /api/v2/admin/liquidaciones/corte`, `POST /api/v2/admin/liquidaciones/:id/pagar`
+- `GET /api/v2/admin/inventario`, `GET /api/v2/admin/envios`
+- `GET /api/v2/finanzas/asientos|proyecciones|kpis|punto-equilibrio` (admin),
+  `POST /api/v2/finanzas/asientos`, `GET /api/v2/vendedores/me/fiscal`
+- `GET|POST|PATCH|DELETE /api/v2/comercio/**` (empresa/vendedor): bancos,
   créditos, gastos, cuentas por pagar, proveedores, compras, órdenes de compra,
   caja (movimientos, métodos, cierres, caja chica y transferencias), clientes y
   códigos de barras — reemplaza la persistencia local de esos módulos.
@@ -194,7 +194,7 @@ El **API Gateway** sirve en su `/docs` el **documento agregado de la superficie
 pública**: `scripts/tools/swagger-aggregate.mjs` fusiona
 `docs/openapi/<servicio>/{public,internal}.openapi.json` y escribe dos artefactos:
 
-- `docs/api/core-engine.openapi.json` — contrato público (solo `/api/v1/**`), que
+- `docs/api/core-engine.openapi.json` — contrato público (solo `/api/v2/**`), que
   también se publica en `packages/api-gateway/src/openapi.agregado.ts` (generado,
   versionado y verificado por el gate G-8);
 - `docs/api/core-engine.internal.openapi.json` — contrato interno (solo

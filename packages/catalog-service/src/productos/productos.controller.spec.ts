@@ -17,7 +17,7 @@ const producto = {
   creado_en: '2026-01-01T00:00:00.000Z',
 };
 
-describe('ProductosController (api/v1/catalog, R-U-10/11)', () => {
+describe('ProductosController (api/v2/catalog, R-U-10/11)', () => {
   function fabricar(): { productos: Record<string, Mock>; controller: ProductosController } {
     const productos = {
       listar: vi.fn(),

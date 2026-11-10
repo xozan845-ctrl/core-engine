@@ -14,7 +14,7 @@ const crear = () => {
   return { controller: new AdminStorageController(buckets as unknown as BucketsService), buckets };
 };
 
-describe('AdminStorageController (api/v1/admin/storage, multi-tenant)', () => {
+describe('AdminStorageController (api/v2/admin/storage, multi-tenant)', () => {
   it('debe listar los tenants con almacenamiento', async () => {
     const { controller, buckets } = crear();
 

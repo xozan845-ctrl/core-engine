@@ -246,7 +246,7 @@ describe('TiendasService (multiples tiendas por empresa)', () => {
 
       await expect(servicio.resolver('mi-tienda-vieja')).resolves.toMatchObject({
         tienda: { ...tienda, slug: 'mi-tienda-nueva' },
-        redirigirA: '/api/v1/tiendas/mi-tienda-nueva',
+        redirigirA: '/api/v2/tiendas/mi-tienda-nueva',
       });
     });
 
@@ -356,7 +356,7 @@ describe('TiendasService · logo de tienda', () => {
       't1',
       logoId,
     );
-    expect(resultado.logo_url).toBe(`/api/v1/storage/public/objetos/${logoId}`);
+    expect(resultado.logo_url).toBe(`/api/v2/storage/public/objetos/${logoId}`);
     // R-RB-4: la validación interna lleva timeout explícito.
     expect(fetchMock).toHaveBeenCalledWith(
       expect.stringContaining(`/internal/storage/objetos/${logoId}`),
@@ -466,10 +466,10 @@ describe('TiendasService · logo de tienda', () => {
     };
     const servicio = new TiendasService(pg as never, herenciaVacia() as never);
     await expect(servicio.deVendedor('v1')).resolves.toMatchObject({
-      logo_url: `/api/v1/storage/public/objetos/${logoId}`,
+      logo_url: `/api/v2/storage/public/objetos/${logoId}`,
     });
     await expect(servicio.deEmpresa('e1')).resolves.toEqual([
-      expect.objectContaining({ logo_url: `/api/v1/storage/public/objetos/${logoId}` }),
+      expect.objectContaining({ logo_url: `/api/v2/storage/public/objetos/${logoId}` }),
     ]);
   });
 });
@@ -529,8 +529,8 @@ describe('TiendasService · fondo de tienda (ADR-38)', () => {
     expect(fetchMock.mock.calls[1][0]).toContain(`/internal/storage/objetos/${posterId}`);
     expect(resultado).toMatchObject({
       background_media_type: 'video',
-      background_url: `/api/v1/storage/public/objetos/${fondoId}`,
-      background_poster_url: `/api/v1/storage/public/objetos/${posterId}`,
+      background_url: `/api/v2/storage/public/objetos/${fondoId}`,
+      background_poster_url: `/api/v2/storage/public/objetos/${posterId}`,
       background_activo: true,
     });
     expect(pg.queryOne).toHaveBeenLastCalledWith(
@@ -689,12 +689,12 @@ describe('TiendasService · fondo de tienda (ADR-38)', () => {
     const servicio = new TiendasService(pg as never, herenciaVacia() as never);
 
     await expect(servicio.deVendedor('v1')).resolves.toMatchObject({
-      background_url: `/api/v1/storage/public/objetos/${fondoId}`,
-      background_poster_url: `/api/v1/storage/public/objetos/${posterId}`,
+      background_url: `/api/v2/storage/public/objetos/${fondoId}`,
+      background_poster_url: `/api/v2/storage/public/objetos/${posterId}`,
     });
     await expect(servicio.deEmpresa('e1')).resolves.toEqual([
       expect.objectContaining({
-        background_url: `/api/v1/storage/public/objetos/${fondoId}`,
+        background_url: `/api/v2/storage/public/objetos/${fondoId}`,
       }),
     ]);
   });
@@ -752,8 +752,8 @@ describe('TiendasService · fondo móvil (ADR-41)', () => {
     expect(fetchMock).toHaveBeenCalledTimes(2);
     expect(resultado).toMatchObject({
       background_movil_media_type: 'video',
-      background_movil_url: `/api/v1/storage/public/objetos/${movilId}`,
-      background_movil_poster_url: `/api/v1/storage/public/objetos/${posterId}`,
+      background_movil_url: `/api/v2/storage/public/objetos/${movilId}`,
+      background_movil_poster_url: `/api/v2/storage/public/objetos/${posterId}`,
       background_movil_activo: true,
     });
   });
@@ -824,8 +824,8 @@ describe('TiendasService · fondo móvil (ADR-41)', () => {
     const servicio = new TiendasService(pg as never, herenciaVacia() as never);
 
     await expect(servicio.deVendedor('v1')).resolves.toMatchObject({
-      background_movil_url: `/api/v1/storage/public/objetos/${movilId}`,
-      background_movil_poster_url: `/api/v1/storage/public/objetos/${posterId}`,
+      background_movil_url: `/api/v2/storage/public/objetos/${movilId}`,
+      background_movil_poster_url: `/api/v2/storage/public/objetos/${posterId}`,
     });
   });
 });
@@ -883,7 +883,7 @@ describe('TiendasService · personalización visual (ADR-39)', () => {
         radio_bordes: 12,
       },
       hero_titulo: 'Colección',
-      seo_imagen_url: `/api/v1/storage/public/objetos/${seoId}`,
+      seo_imagen_url: `/api/v2/storage/public/objetos/${seoId}`,
     });
     const [sql, params] = pg.queryOne.mock.calls[1];
     expect(sql).toContain('UPDATE stores.tiendas');
@@ -914,7 +914,7 @@ describe('TiendasService · personalización visual (ADR-39)', () => {
         { seo_imagen_objeto_id: seoId },
       ),
     ).resolves.toMatchObject({
-      seo_imagen_url: `/api/v1/storage/public/objetos/${seoId}`,
+      seo_imagen_url: `/api/v2/storage/public/objetos/${seoId}`,
     });
     expect(fetchMock).toHaveBeenCalledWith(
       expect.stringContaining(`/internal/storage/objetos/${seoId}`),

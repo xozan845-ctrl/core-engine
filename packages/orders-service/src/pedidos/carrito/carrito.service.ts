@@ -31,7 +31,7 @@ interface FilaCarrito {
   actualizado_en: string;
 }
 
-export interface ItemCarritoEnriquecido extends ItemCarrito, OfertaLectura {}
+export interface ItemCarritoEnriquecido extends ItemCarrito, Omit<OfertaLectura, 'id'> {}
 
 export interface CarritoVista {
   items: ItemCarritoEnriquecido[];
@@ -189,7 +189,8 @@ export class CarritoService {
       const oferta = porId.get(item.oferta_id);
       if (!oferta) continue;
       total = total.sumar(Money.parsear(oferta.precio_venta).multiplicarPor(item.cantidad));
-      enriquecidos.push({ ...item, ...oferta });
+      const { id: _id, ...ofertaSinId } = oferta;
+      enriquecidos.push({ ...item, ...ofertaSinId });
     }
     const actualizado = new Date(fila.actualizado_en).getTime();
     return {

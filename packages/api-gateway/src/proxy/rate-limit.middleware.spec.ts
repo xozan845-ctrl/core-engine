@@ -1,6 +1,6 @@
 import { RateLimitMiddleware } from './rate-limit.middleware';
 
-const crearReq = (ip = '203.0.113.10', path = '/api/v1/orders', method = 'GET') =>
+const crearReq = (ip = '203.0.113.10', path = '/api/v2/orders', method = 'GET') =>
   ({
     ip,
     socket: { remoteAddress: ip },
@@ -65,7 +65,7 @@ describe('RateLimitMiddleware (ventana fija por IP)', () => {
     const res = crearRes();
     for (let i = 0; i < 400; i += 1) {
       limite.use(
-        crearReq('203.0.113.50', '/api/v1/storage/public/objetos/22222222-2222-4222-8222-222222222222'),
+        crearReq('203.0.113.50', '/api/v2/storage/public/objetos/22222222-2222-4222-8222-222222222222'),
         res as never,
         vi.fn(),
       );
@@ -79,7 +79,7 @@ describe('RateLimitMiddleware (ventana fija por IP)', () => {
     const res = crearRes();
     const req = crearReq(
       '203.0.113.51',
-      '/api/v1/storage/public/objetos/22222222-2222-4222-8222-222222222222',
+      '/api/v2/storage/public/objetos/22222222-2222-4222-8222-222222222222',
     );
     req.method = 'HEAD';
     for (let i = 0; i < 400; i += 1) {
@@ -89,19 +89,19 @@ describe('RateLimitMiddleware (ventana fija por IP)', () => {
     expect(res.statusCode).toBe(200);
   });
 
-  it('debe aplicar el limite estricto de login solo al POST /api/v1/auth/login', () => {
+  it('debe aplicar el limite estricto de login solo al POST /api/v2/auth/login', () => {
     const limite = new RateLimitMiddleware();
     const res = crearRes();
 
     for (let i = 0; i < 10; i += 1) {
       expect(
-        limite.use(crearReq('203.0.113.9', '/api/v1/auth/login', 'POST'), res as never, vi.fn()),
+        limite.use(crearReq('203.0.113.9', '/api/v2/auth/login', 'POST'), res as never, vi.fn()),
       ).toBeUndefined();
     }
     expect(res.statusCode).toBe(200);
 
     const resExcedido = crearRes();
-    limite.use(crearReq('203.0.113.9', '/api/v1/auth/login', 'POST'), resExcedido as never, vi.fn());
+    limite.use(crearReq('203.0.113.9', '/api/v2/auth/login', 'POST'), resExcedido as never, vi.fn());
     expect(resExcedido.statusCode).toBe(429);
   });
 });

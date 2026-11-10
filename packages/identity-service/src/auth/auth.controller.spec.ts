@@ -34,7 +34,7 @@ function fabricar(): {
   return { auth, usuarios, controller };
 }
 
-describe('AuthController (api/v1/auth, R-U-10/11)', () => {
+describe('AuthController (api/v2/auth, R-U-10/11)', () => {
   it('debe registrar con el dto completo y devolver la sesion', async () => {
     const { auth, controller } = fabricar();
     auth.registrar.mockResolvedValue(sesion);
