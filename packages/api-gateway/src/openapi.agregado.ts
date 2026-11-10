@@ -470,6 +470,41 @@ export const OPENAPI_AGREGADO = {
         "tags": [
           "Catálogo · Items"
         ]
+      },
+      "post": {
+        "operationId": "ItemsController_crear",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CrearItemRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ItemResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Crear un item unificado (producto, servicio o alquiler)",
+        "tags": [
+          "Catálogo · Items"
+        ]
       }
     },
     "/api/v2/catalog/items/alquileres": {
@@ -13031,6 +13066,78 @@ export const OPENAPI_AGREGADO = {
           "nombre",
           "precio",
           "componentes"
+        ]
+      },
+      "CrearItemRequestDto": {
+        "type": "object",
+        "properties": {
+          "tipo": {
+            "type": "string",
+            "enum": [
+              "producto",
+              "servicio",
+              "alquiler"
+            ]
+          },
+          "codigo": {
+            "type": "string",
+            "example": "SKU-001"
+          },
+          "nombre": {
+            "type": "string"
+          },
+          "descripcion": {
+            "type": "string"
+          },
+          "categoria": {
+            "type": "string",
+            "default": "general"
+          },
+          "precio": {
+            "type": "string",
+            "example": "1500.00"
+          },
+          "costo": {
+            "type": "string",
+            "example": "500.00"
+          },
+          "track_inventory": {
+            "type": "boolean"
+          },
+          "stock": {
+            "type": "object",
+            "nullable": true
+          },
+          "duration_minutes": {
+            "type": "object",
+            "nullable": true
+          },
+          "atributos": {
+            "type": "object",
+            "additionalProperties": true
+          },
+          "estado": {
+            "type": "string",
+            "enum": [
+              "activo",
+              "inactivo"
+            ]
+          },
+          "parent_item_id": {
+            "type": "object",
+            "nullable": true,
+            "format": "uuid"
+          },
+          "empresa_id": {
+            "type": "string",
+            "format": "uuid"
+          }
+        },
+        "required": [
+          "tipo",
+          "codigo",
+          "nombre",
+          "precio"
         ]
       },
       "CrearLoteInventarioRequestDto": {
