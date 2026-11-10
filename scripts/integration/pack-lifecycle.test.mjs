@@ -22,16 +22,12 @@ if (databaseUrl.pathname !== '/core_engine_test' || !['localhost', '127.0.0.1'].
 process.env.DATABASE_URL = connectionString;
 process.env.STORAGE_SERVICE_URL = 'http://127.0.0.1:9';
 
-const MIGRACIONES = [
+const MIGRACIONES_IDENTITY = [
   '01_esquemas.sql',
   '01c_cqrs_catalog.sql',
   '01e_adr25_empresas.sql',
   '01f_slugs.sql',
   '01h_catalogo_por_empresa.sql',
-  '01i_variantes_imagenes.sql',
-  '11_catalogo_productos_servicios.sql',
-  '25_catalog_items.sql',
-  '28_scheduling.sql',
   '13_empresa_metadatos.sql',
   '16_media_background_plataforma.sql',
   '17_media_background_empresa.sql',
@@ -40,7 +36,19 @@ const MIGRACIONES = [
   '24_multi_vertical.sql',
   '29_vertical_packs.sql',
   '30_pack_backfill.sql',
-  '31_multi_vertical_rls.sql',
+  '32_pack_builder.sql',
+  '37_personal_empresa.sql',
+];
+
+const MIGRACIONES_FINAL = [
+  '13_empresa_metadatos.sql',
+  '16_media_background_plataforma.sql',
+  '17_media_background_empresa.sql',
+  '19_personalizacion_tienda.sql',
+  '22_herencia_tema.sql',
+  '24_multi_vertical.sql',
+  '29_vertical_packs.sql',
+  '30_pack_backfill.sql',
   '32_pack_builder.sql',
   '37_personal_empresa.sql',
 ];
@@ -59,7 +67,30 @@ before(async () => {
     const { rows: [{ existe }] } = await client.query(
       `SELECT to_regnamespace('identity') IS NOT NULL AS existe`,
     );
-    const migraciones = existe ? MIGRACIONES.filter((name) => name !== '01_esquemas.sql') : MIGRACIONES;
+    const { rows: [{ final }] } = await client.query(
+      `SELECT to_regclass('catalog.items') IS NOT NULL
+              AND to_regclass('catalog.productos') IS NULL AS final`,
+    );
+    const migraciones = final
+      ? MIGRACIONES_FINAL
+      : existe
+        ? MIGRACIONES_IDENTITY.filter((name) => name !== '01_esquemas.sql')
+        : MIGRACIONES_IDENTITY;
+    // 32_pack_builder declara políticas contra auth.rol() y los roles de aplicación.
+    await client.query(`
+      CREATE SCHEMA IF NOT EXISTS auth;
+      CREATE OR REPLACE FUNCTION auth.jwt() RETURNS jsonb LANGUAGE sql STABLE AS $$
+        SELECT COALESCE(NULLIF(current_setting('request.jwt.claims', true), ''), '{}')::jsonb
+      $$;
+      CREATE OR REPLACE FUNCTION auth.rol() RETURNS text LANGUAGE sql STABLE AS $$
+        SELECT COALESCE(auth.jwt() ->> 'rol', 'anon')
+      $$;
+      DO $$ BEGIN
+        IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'anon') THEN CREATE ROLE anon NOLOGIN; END IF;
+        IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'authenticated') THEN CREATE ROLE authenticated NOLOGIN; END IF;
+        IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'core_engine_app') THEN CREATE ROLE core_engine_app NOLOGIN; END IF;
+      END $$;
+    `);
     for (const name of migraciones) {
       const sql = await readFile(new URL(`../../infra/db/init/${name}`, import.meta.url), 'utf8');
       await client.query(sql);
