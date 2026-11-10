@@ -6,7 +6,7 @@ import { ItemOrden, Money, TipoOrden } from '@core/shared';
  */
 export interface OrderEstadoDerrivado {
   order_id: string;
-  cliente_id: string;
+  comprador_id: string;
   items: ItemOrden[];
   total: Money;
   estado: string;
@@ -18,7 +18,7 @@ export interface OrderEstadoDerrivado {
 
 interface DatosDeEvento {
   order_id?: string;
-  cliente_id?: string;
+  comprador_id?: string;
   items?: ItemOrden[];
   total_cents?: number;
   estado?: string;
@@ -47,7 +47,7 @@ export function reconstruirDesdeEventos(
 
   const orden: OrderEstadoDerrivado = {
     order_id: inicial.order_id ?? '',
-    cliente_id: inicial.cliente_id ?? '',
+    comprador_id: inicial.comprador_id ?? '',
     items: inicial.items ?? [],
     total: Money.desdeCentavos(inicial.total_cents ?? 0),
     estado: inicial.estado ?? 'creada',

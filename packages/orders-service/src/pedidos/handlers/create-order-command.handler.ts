@@ -127,7 +127,7 @@ export class CreateOrderCommandHandler {
     await this.pg.transaccion(async (client) => {
       await this.eventStore.appendEnTransaccion(client, orderId, 'OrderCreatedEvent', {
         order_id: orderId,
-        cliente_id: clienteId,
+        comprador_id: clienteId,
         ...(comando.cliente_parte_id ? { cliente_parte_id: comando.cliente_parte_id } : {}),
         items,
         total_cents: total.centavos,
@@ -142,7 +142,7 @@ export class CreateOrderCommandHandler {
         ocurrido_en: creadoEn,
         data: {
           order_id: orderId,
-          cliente_id: clienteId,
+          comprador_id: clienteId,
           ...(comando.cliente_parte_id ? { cliente_parte_id: comando.cliente_parte_id } : {}),
           items,
           total_cents: total.centavos,

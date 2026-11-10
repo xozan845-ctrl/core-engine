@@ -44,7 +44,7 @@ test('proyecta tipo de orden y fulfillment por línea sin romper compras legacy'
   const creadoEn = new Date().toISOString();
   const payload = {
     order_id: orderId,
-    cliente_id: compradorId,
+    comprador_id: compradorId,
     tipo_orden: 'orden_servicio',
     fulfillment_config: { por_linea: [{ oferta_id: 'of-1', fulfillment: 'onsite' }] },
     items: [{

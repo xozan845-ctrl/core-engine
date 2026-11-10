@@ -59,8 +59,7 @@ describe('Contabilidad y facturacion (libros DGI e IVA)', () => {
       numero: 'F00000001',
       tipo: 'FACTURA',
       orden_id: 'o1',
-      cliente_id: null,
-      base_gravada_cents: 45000,
+        base_gravada_cents: 45000,
       iva_cents: 6750, // 15 %
       exento_cents: 0,
       total_cents: 51750,

@@ -60,7 +60,7 @@ export interface ItemOrden {
 
 export interface OrdenData {
   order_id: string;
-  cliente_id: string;
+  comprador_id: string;
   cliente_parte_id?: string;
   items: ItemOrden[];
   total_cents: number;
@@ -75,7 +75,6 @@ export interface AppointmentCreatedData {
   cita_id: string;
   empresa_id: string;
   recurso_id: string;
-  cliente_id?: string;
   cliente_parte_id?: string;
   order_id?: string;
   item_id?: string;

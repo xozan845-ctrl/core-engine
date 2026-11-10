@@ -17,7 +17,7 @@ export class OrdenExternaResponseDto {
   id: string;
 
   @ApiProperty({ description: 'Id del comprador', format: 'uuid' })
-  cliente_id: string;
+  comprador_id: string;
 
   @ApiProperty({ description: 'Líneas de la orden', type: () => [ItemOrdenExternaResponseDto] })
   items: ItemOrdenExternaResponseDto[];

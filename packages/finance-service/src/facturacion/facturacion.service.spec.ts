@@ -9,7 +9,6 @@ describe('FacturacionService (Ley 822 / comprobantes DGI)', () => {
     numero: 'F00000001',
     tipo: 'FACTURA',
     orden_id: 'o-1',
-    cliente_id: null,
     base_gravada_cents: 45000,
     iva_cents: 6750,
     exento_cents: 0,
@@ -111,7 +110,7 @@ describe('FacturacionService (Ley 822 / comprobantes DGI)', () => {
       .mockResolvedValueOnce({ tasa_iva: 0.15 });
     const client = mockTransaccion(pg, comprobante);
 
-    await expect(servicio.emitir('FACTURA', 'o-1', { cliente_id: 'cli-1' })).resolves.toEqual(comprobante);
+    await expect(servicio.emitir('FACTURA', 'o-1', { parte_id: 'p-1' })).resolves.toEqual(comprobante);
     expect(client.query).toHaveBeenCalledWith(
       expect.stringContaining('UPDATE finance.series_comprobantes'),
       ['F001'],

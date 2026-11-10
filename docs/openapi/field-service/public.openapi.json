@@ -954,7 +954,7 @@
             }
           },
           {
-            "name": "clienteId",
+            "name": "parteId",
             "required": true,
             "in": "query",
             "schema": {
@@ -1855,9 +1855,6 @@
           "cliente": {
             "type": "string"
           },
-          "clienteId": {
-            "type": "string"
-          },
           "direccionEntrega": {
             "type": "string"
           },
@@ -2448,9 +2445,6 @@
           "cliente": {
             "type": "string"
           },
-          "clienteId": {
-            "type": "string"
-          },
           "direccionEntrega": {
             "type": "string"
           },
@@ -2690,9 +2684,6 @@
           "personalId": {
             "type": "string"
           },
-          "clienteId": {
-            "type": "string"
-          },
           "rutaId": {
             "type": "string"
           },
@@ -2911,9 +2902,6 @@
               "logistica"
             ]
           },
-          "clienteId": {
-            "type": "string"
-          },
           "telefono": {
             "type": "string"
           },
@@ -2981,11 +2969,6 @@
           },
           "tipo": {
             "type": "string"
-          },
-          "cliente_id": {
-            "type": "object",
-            "nullable": true,
-            "format": "uuid"
           },
           "telefono": {
             "type": "object",
@@ -3055,11 +3038,6 @@
           },
           "cliente": {
             "type": "string"
-          },
-          "cliente_id": {
-            "type": "object",
-            "nullable": true,
-            "format": "uuid"
           },
           "parte_id": {
             "type": "object",
@@ -3592,11 +3570,6 @@
           },
           "personal_id": {
             "type": "string",
-            "format": "uuid"
-          },
-          "cliente_id": {
-            "type": "object",
-            "nullable": true,
             "format": "uuid"
           },
           "parte_id": {

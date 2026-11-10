@@ -142,7 +142,7 @@ describe('EventsConsumer (idempotencia atomica y contabilidad)', () => {
 
   it('order.created: alimenta el embudo (checkouts completados) con dedup en la misma tx', async () => {
     const { dispatch, client, metricas } = await crear();
-    await dispatch(evento<OrdenData>(EVENTOS.ORDER_CREATED, { order_id: 'o1', cliente_id: 'c1', items: [], total_cents: 45000, estado: 'creada' }));
+    await dispatch(evento<OrdenData>(EVENTOS.ORDER_CREATED, { order_id: 'o1', comprador_id: 'c1', items: [], total_cents: 45000, estado: 'creada' }));
     expect(metricas.sumarMetrica).toHaveBeenCalledWith(client, 'checkouts_completados', 0, 1);
     expect((client.query as Mock).mock.calls.find((c) => (c[0] as string).includes('eventos_procesados'))).toBeDefined();
   });

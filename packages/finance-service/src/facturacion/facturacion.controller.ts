@@ -17,11 +17,6 @@ export class EmitirComprobanteRequestDto {
   @IsUUID()
   orden_id: string;
 
-  @ApiProperty({ description: 'Id del cliente', required: false })
-  @IsOptional()
-  @IsString()
-  cliente_id?: string;
-
   @ApiProperty({ description: 'Referencia universal del cliente', required: false, format: 'uuid' })
   @IsOptional()
   @IsUUID()
@@ -76,7 +71,6 @@ export class FacturacionController {
   @ApiCreatedResponse({ type: ComprobanteResponseDto, description: 'Comprobante emitido' })
   async emitir(@Body() dto: EmitirComprobanteRequestDto): Promise<Comprobante> {
     return this.facturacion.emitir(dto.tipo, dto.orden_id, {
-      cliente_id: dto.cliente_id,
       parte_id: dto.parte_id,
       razon_social: dto.razon_social,
       ruc: dto.ruc,
