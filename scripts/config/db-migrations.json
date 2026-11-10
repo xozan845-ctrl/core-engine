@@ -52,6 +52,7 @@
   "40_empresas_sin_legacy.sql": "cf30a3d9ce2a700b9bec3dd4b20ae80ac86029b01490fccfb464dce16cfb9c92",
   "41_partes_sin_cliente_id.sql": "e3f3355789d3bedf5e7e1b4cc07da3170cd051f228bbea75235e48dccd1dd5f4",
   "42_personal_unico.sql": "afe6379517ad5cbe6b0290e50453fc4fb8dca61f210763916f56cbefe44a54eb",
+  "43_catalog_item_model.sql": "68e4e9818efdb7dc64bd0e6a1891bae72e1f8aaa34525adb56dd699a376c2954",
   "45_hardening.sql": "42a21f3f65a97c44c20068d3bf31d20b4537315d7e5b9917ca6be6e997d73a1f",
   "46_commission_payload.sql": "af743d2cb0163cf61064cf2d3cd645425211478611206f9bb68bfd002afbd37a",
   "47_orders_comprador_sin_comisiones.sql": "e609793e3d8d2cf5c764b7d5ea9503cdc9c0f50bc489335560f71bc3e1f0b357"

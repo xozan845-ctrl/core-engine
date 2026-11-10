@@ -15,6 +15,13 @@ const TIPOS = ['producto', 'servicio', 'alquiler'] as const;
 
 export type TipoItem = (typeof TIPOS)[number];
 
+export interface ItemImagen {
+  id: string;
+  objeto_id: string;
+  orden: number;
+  es_principal: boolean;
+}
+
 export interface Item {
   item_id: string;
   empresa_id: string;
@@ -29,6 +36,8 @@ export interface Item {
   stock: number | null;
   duration_minutes: number | null;
   atributos: Record<string, unknown>;
+  parent_item_id: string | null;
+  imagenes: ItemImagen[];
   estado: 'activo' | 'inactivo';
   source_type: 'producto' | 'servicio' | null;
   source_id: string | null;
@@ -61,6 +70,7 @@ interface ItemRow {
   stock: number | null;
   duration_minutes: number | null;
   atributos: Record<string, unknown> | null;
+  parent_item_id: string | null;
   estado: string;
   source_type: 'producto' | 'servicio' | null;
   source_id: string | null;
@@ -80,8 +90,8 @@ export interface ItemSchemaRow {
 
 const COLUMNAS = `item_id, empresa_id, tipo, codigo, nombre, descripcion,
   categoria, precio_cents, costo_cents, track_inventory, stock,
-  duration_minutes, atributos, estado, source_type, source_id, creado_en,
-  actualizado_en`;
+  duration_minutes, atributos, parent_item_id, estado, source_type, source_id,
+  creado_en, actualizado_en`;
 
 @Injectable()
 export class ItemsService {
@@ -127,7 +137,9 @@ export class ItemsService {
        ORDER BY creado_en DESC LIMIT $${params.length + 1} OFFSET $${params.length + 2}`,
       [...params, limite, (pagina - 1) * limite],
     );
-    return crearPagina(filas.map((fila) => this.serializar(fila)), total, { pagina, limite });
+    const items = filas.map((fila) => this.serializar(fila));
+    await this.adjuntarImagenes(items);
+    return crearPagina(items, total, { pagina, limite });
   }
 
   async encontrarPorId(id: string, empresaId?: string): Promise<Item | null> {
@@ -142,7 +154,10 @@ export class ItemsService {
       `SELECT ${COLUMNAS} FROM catalog.items_vista WHERE ${condiciones.join(' AND ')}`,
       params,
     );
-    return fila ? this.serializar(fila) : null;
+    if (!fila) return null;
+    const item = this.serializar(fila);
+    await this.adjuntarImagenes([item]);
+    return item;
   }
 
   async crearAlquiler(datos: CrearAlquilerInput, empresaId: string): Promise<Item> {
@@ -253,6 +268,30 @@ export class ItemsService {
     return atributos;
   }
 
+  private async adjuntarImagenes(items: Item[]): Promise<void> {
+    if (items.length === 0) return;
+    const ids = items.map((item) => item.item_id);
+    const filas = await this.pg.query<ItemImagen & { item_id: string }>(
+      `SELECT id, item_id, objeto_id, orden, es_principal
+         FROM catalog.item_imagenes
+        WHERE item_id = ANY($1::uuid[])
+        ORDER BY item_id, orden`,
+      [ids],
+    );
+    const porItem = new Map<string, ItemImagen[]>();
+    for (const fila of filas) {
+      const lista = porItem.get(fila.item_id) ?? [];
+      lista.push({
+        id: fila.id,
+        objeto_id: fila.objeto_id,
+        orden: fila.orden,
+        es_principal: fila.es_principal,
+      });
+      porItem.set(fila.item_id, lista);
+    }
+    for (const item of items) item.imagenes = porItem.get(item.item_id) ?? [];
+  }
+
   private serializar(fila: ItemRow): Item {
     return {
       item_id: fila.item_id,
@@ -268,6 +307,8 @@ export class ItemsService {
       stock: fila.stock,
       duration_minutes: fila.duration_minutes,
       atributos: fila.atributos ?? {},
+      parent_item_id: fila.parent_item_id ?? null,
+      imagenes: [],
       estado: fila.estado === 'inactivo' ? 'inactivo' : 'activo',
       source_type: fila.source_type ?? null,
       source_id: fila.source_id ?? null,
