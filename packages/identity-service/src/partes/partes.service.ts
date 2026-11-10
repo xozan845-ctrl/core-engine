@@ -272,6 +272,17 @@ export class PartesService {
     return { ok: true };
   }
 
+  /** Validación interna (servicio→servicio): ¿la parte vive en esa empresa? */
+  async perteneceAEmpresa(empresaId: string, parteId: string): Promise<boolean> {
+    if (!esUuid(empresaId) || !esUuid(parteId)) return false;
+    const fila = await this.pg.queryOne(
+      `SELECT 1 FROM identity.partes
+        WHERE id = $1 AND empresa_id = $2 AND eliminado_en IS NULL`,
+      [parteId, empresaId],
+    );
+    return !!fila;
+  }
+
   async listarContactos(empresaId: string, parteId: string, actor: ParteActor): Promise<MedioContacto[]> {
     await this.validarParteAcceso(empresaId, parteId, actor, false);
     return this.pg.query<MedioContacto>(

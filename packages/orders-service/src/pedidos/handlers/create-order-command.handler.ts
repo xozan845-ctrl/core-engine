@@ -6,6 +6,8 @@ import {
   DomainError,
   ConflictError,
   CapabilityDisabledError,
+  ServiceUnavailableError,
+  capacidadesDeEmpresas,
   FULFILLMENTS,
   NotFoundError,
   Fulfillment,
@@ -322,19 +324,12 @@ export class CreateOrderCommandHandler {
     }
     if (requeridas.size === 0) return;
     const empresas = [...new Set(items.map((item) => item.empresa_id))];
-    const filas = await this.pg.query<{
-      empresa_id: string;
-      capacidad_codigo: string;
-      activo: boolean;
-    }>(
-      `SELECT empresa_id, capacidad_codigo, activo
-         FROM identity.empresa_capacidades
-        WHERE empresa_id = ANY($1::uuid[])
-          AND capacidad_codigo = ANY($2::text[])`,
-      [empresas, [...requeridas]],
-    );
+    // identity es la dueña de sus capacidades: se consulta por su superficie
+    // interna en lugar de leer `identity.empresa_capacidades`.
+    const filas = await capacidadesDeEmpresas(empresas, [...requeridas]);
+    if (filas === null) throw new ServiceUnavailableError('identity-service');
     const activas = new Set(
-      (Array.isArray(filas) ? filas : [])
+      filas
         .filter((fila) => fila.activo)
         .map((fila) => `${fila.empresa_id}:${fila.capacidad_codigo}`),
     );

@@ -1,15 +1,32 @@
-import { Controller, Get, Param, UseGuards } from '@nestjs/common';
-import { ApiOkResponse, ApiOperation, ApiParam, ApiSecurity, ApiTags } from '@nestjs/swagger';
+import { Body, Controller, Get, Param, Post, Query, UseGuards } from '@nestjs/common';
+import { ApiOkResponse, ApiOperation, ApiParam, ApiProperty, ApiSecurity, ApiTags } from '@nestjs/swagger';
+import { ArrayNotEmpty, IsArray, IsString, IsUUID } from 'class-validator';
 import { ClaveInternaGuard, NotFoundError } from '@core/shared';
 import { UsuariosService } from '../usuarios/usuarios.service';
 import { EmpresasService } from '../empresas/empresas.service';
 import { EmpresaResponseDto } from '../empresas/empresas.controller';
 import { ConfiguracionSitioService } from '../configuracion-sitio/configuracion-sitio.service';
 import { TemaOverridesResponseDto } from '../personalizacion/tema.dto';
+import { CapacidadesService } from '../capacidades/capacidades.service';
+import { PartesService } from '../partes/partes.service';
 import {
   ContarVendedoresResponseDto,
   UsuarioResponseDto,
 } from '../usuarios/usuarios.response.dto';
+
+export class VerificarCapacidadesRequestDto {
+  @ApiProperty({ type: [String], format: 'uuid' })
+  @IsArray()
+  @ArrayNotEmpty()
+  @IsUUID('4', { each: true })
+  empresa_ids: string[];
+
+  @ApiProperty({ type: [String] })
+  @IsArray()
+  @ArrayNotEmpty()
+  @IsString({ each: true })
+  capacidades: string[];
+}
 
 /**
  * Endpoints internos (servicio -> servicio) protegidos por clave interna.
@@ -24,6 +41,8 @@ export class InternalController {
     private readonly usuarios: UsuariosService,
     private readonly empresas: EmpresasService,
     private readonly configuracion: ConfiguracionSitioService,
+    private readonly capacidades: CapacidadesService,
+    private readonly partes: PartesService,
   ) {}
 
   @Get('usuarios/:id')
@@ -79,5 +98,24 @@ export class InternalController {
   })
   async plataformaTema() {
     return this.configuracion.obtenerTemaOverrides();
+  }
+
+  @Post('empresas/capacidades')
+  @ApiOperation({ summary: 'Capacidades activas por empresa (servicio→servicio)' })
+  @ApiOkResponse({ description: 'Capacidades encontradas' })
+  async capacidadesDeEmpresas(@Body() dto: VerificarCapacidadesRequestDto) {
+    const filas = await this.capacidades.activasDeEmpresas(dto.empresa_ids, dto.capacidades);
+    return { capacidades: filas };
+  }
+
+  @Get('partes/:id')
+  @ApiOperation({ summary: 'Parte por id y empresa (servicio→servicio)' })
+  @ApiParam({ name: 'id', description: 'Id de la parte' })
+  @ApiOkResponse({ description: 'Parte encontrada' })
+  async parte(@Param('id') id: string, @Query('empresa_id') empresaId?: string) {
+    if (!empresaId) throw new NotFoundError('Parte', id);
+    const pertenece = await this.partes.perteneceAEmpresa(empresaId, id);
+    if (!pertenece) throw new NotFoundError('Parte', id);
+    return { id, empresa_id: empresaId };
   }
 }

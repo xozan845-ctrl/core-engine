@@ -17,6 +17,7 @@ export * from './outbox/outbox.service';
 export * from './auth/jwt.utils';
 export * from './auth/service-auth';
 export * from './config/runtime';
+export * from './clients/service-clients';
 export * from './logging/logger';
 export * from './metrics/metrics.module';
 export * from './metrics/metrics.service';

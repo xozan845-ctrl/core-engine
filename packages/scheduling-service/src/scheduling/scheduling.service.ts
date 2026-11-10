@@ -13,6 +13,8 @@ import {
   OutboxService,
   PgService,
   ejecutarConContexto,
+  partePerteneceAEmpresa,
+  ServiceUnavailableError,
 } from '@core/shared';
 import {
   CrearBloqueoRequestDto,
@@ -136,12 +138,9 @@ export class SchedulingService implements OnModuleInit, OnModuleDestroy {
   async crearCita(empresaId: string, dto: CrearCitaRequestDto): Promise<Fila> {
     this.validarPeriodo(dto.inicia_en, dto.termina_en);
     if (dto.parte_id) {
-      const parte = await this.pg.queryOne(
-        `SELECT 1 FROM identity.partes
-         WHERE id = $1 AND empresa_id = $2 AND eliminado_en IS NULL`,
-        [dto.parte_id, empresaId],
-      );
-      if (!parte) throw new DomainError('PARTE_INVALIDA', 'La parte no pertenece al tenant activo.');
+      const pertenece = await partePerteneceAEmpresa(empresaId, dto.parte_id);
+      if (pertenece === null) throw new ServiceUnavailableError('identity-service');
+      if (!pertenece) throw new DomainError('PARTE_INVALIDA', 'La parte no pertenece al tenant activo.');
     }
     try {
       return await this.pg.transaccion(async (client) => {

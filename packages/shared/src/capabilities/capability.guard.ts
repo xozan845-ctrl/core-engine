@@ -1,29 +1,20 @@
 import { CanActivate, ExecutionContext, Injectable } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
-import { randomUUID } from 'node:crypto';
-import { PgService } from '../db/pg.service';
-import { CapabilityDisabledError, DomainError, UnauthorizedError } from '../errors';
+import { CapabilityDisabledError, DomainError, ServiceUnavailableError, UnauthorizedError } from '../errors';
 import { ROLES } from '../constants';
 import { usuarioDesdeHeaders } from '../auth/jwt.utils';
 import { CAPABILITIES_KEY } from './capability.decorator';
 import { Capacidad } from './capability.constants';
-import { ejecutarConContexto } from '../logging/logger';
-
-interface CapacidadRow {
-  capacidad_codigo: string;
-  activo: boolean;
-}
+import { capacidadesDeEmpresas } from '../clients/service-clients';
 
 /**
  * Guard de negocio por tenant. El gateway solo propaga el contexto autenticado;
- * la empresa y sus capacidades se validan en el servicio que ejecuta la ruta.
+ * las capacidades se consultan a identity por su superficie interna (no se lee
+ * el esquema `identity` desde cada servicio).
  */
 @Injectable()
 export class CapabilityGuard implements CanActivate {
-  constructor(
-    private readonly pg: PgService,
-    private readonly reflector = new Reflector(),
-  ) {}
+  constructor(private readonly reflector = new Reflector()) {}
 
   async canActivate(ctx: ExecutionContext): Promise<boolean> {
     const requeridas = this.reflector.getAllAndMerge<Capacidad[]>(
@@ -42,33 +33,16 @@ export class CapabilityGuard implements CanActivate {
     }
     const tenantId = usuario.tenant_id;
 
-    return ejecutarConContexto(
-      {
-        request_id: this.requestId(req),
-        servicio: process.env.SERVICIO ?? 'capability-guard',
-        usuario_id: usuario.user_id,
-        rol: usuario.rol,
-        tenant_id: tenantId,
-      },
-      async () => {
-        const filas = await this.pg.query<CapacidadRow>(
-          `SELECT capacidad_codigo, activo
-           FROM identity.empresa_capacidades
-           WHERE empresa_id = $1 AND capacidad_codigo = ANY($2::text[])`,
-          [tenantId, requeridas],
-        );
-        const activas = new Set(filas.filter((fila) => fila.activo).map((fila) => fila.capacidad_codigo));
-        const faltantes = requeridas.filter((capacidad) => !activas.has(capacidad));
-        if (faltantes.length > 0) {
-          throw new CapabilityDisabledError(faltantes, tenantId);
-        }
-        return true;
-      },
-    ) as Promise<boolean>;
-  }
+    const filas = await capacidadesDeEmpresas([tenantId], requeridas);
+    if (filas === null) throw new ServiceUnavailableError('identity-service');
 
-  private requestId(req: { headers?: Record<string, string | string[] | undefined> }): string {
-    const value = req.headers?.['x-request-id'];
-    return (Array.isArray(value) ? value[0] : value) ?? randomUUID();
+    const activas = new Set(
+      filas.filter((fila) => fila.activo && fila.empresa_id === tenantId).map((fila) => fila.capacidad_codigo),
+    );
+    const faltantes = requeridas.filter((capacidad) => !activas.has(capacidad));
+    if (faltantes.length > 0) {
+      throw new CapabilityDisabledError(faltantes, tenantId);
+    }
+    return true;
   }
 }
