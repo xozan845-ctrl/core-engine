@@ -15,6 +15,9 @@
 /** Rama principal del repositorio. */
 export const MAIN_BRANCH = 'main';
 
+/** Rama desplegada de aceptación previa a producción. */
+export const STAGE_BRANCH = 'staging';
+
 /** Owner de GitHub Container Registry usado por los composes de stage/prod. */
 export const GHCR_OWNER = 'xozan845-ctrl';
 
