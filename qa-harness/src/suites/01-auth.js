@@ -30,7 +30,15 @@ export async function suite01Autenticacion(client, cfg, adminToken) {
       contrasena: 'Contrasena123!',
       rol: 'vendedor',
     });
-    resultados.push({ test: 'Registro vendedor', status: regV.status, pass: regV.status === 201 || regV.status === 200 });
+    resultados.push({ test: 'Registro vendedor por vía pública → 400 (ADR-25)', status: regV.status, pass: regV.status === 400 });
+
+    const regE = await client.post('/api/v2/auth/registro', {
+      nombre: 'Empresario Prueba',
+      correo: `empresario.${sufijo}@test.com`,
+      contrasena: 'Contrasena123!',
+      rol: 'empresario',
+    });
+    resultados.push({ test: 'Registro empresario', status: regE.status, pass: [200, 201].includes(regE.status) });
 
     const regC = await client.post('/api/v2/auth/registro', {
       nombre: 'Compradora Prueba',
