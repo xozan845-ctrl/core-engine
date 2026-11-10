@@ -242,3 +242,149 @@ describe('PartesService', () => {
       .rejects.toThrow('database unavailable');
   });
 });
+
+describe('PartesService — cobertura de ramas y errores', () => {
+  const OTRA_PARTE = '33333333-4444-4555-8666-777777777777';
+  const CONTACTO = '66666666-7777-4888-8999-aaaaaaaaaaaa';
+  const DIRECCION = '77777777-8888-4999-8aaa-bbbbbbbbbbbb';
+  const RELACION = '88888888-9999-4aaa-8bbb-cccccccccccc';
+
+  it('lista sin filtros con el límite por defecto', async () => {
+    const pg = crearPg({ query: vi.fn().mockResolvedValue([]) });
+    await new PartesService(pg as never).listar(EMPRESA, {}, actor);
+    expect(pg.query).toHaveBeenCalledWith(expect.stringContaining('LIMIT $2'), [EMPRESA, 50]);
+  });
+
+  it('obtiene una parte existente y falla si no existe', async () => {
+    const parte = { id: PARTE, empresa_id: EMPRESA };
+    const pg = crearPg({ queryOne: vi.fn().mockResolvedValueOnce({ 1: 1 }).mockResolvedValueOnce(parte) });
+    await expect(new PartesService(pg as never).obtener(EMPRESA, PARTE, actor)).resolves.toEqual(parte);
+
+    const vacio = crearPg({ queryOne: vi.fn().mockResolvedValueOnce({ 1: 1 }).mockResolvedValueOnce(null) });
+    await expect(new PartesService(vacio as never).obtener(EMPRESA, PARTE, actor)).rejects.toBeInstanceOf(NotFoundError);
+  });
+
+  it('rechaza identificadores UUID inválidos', async () => {
+    const servicio = new PartesService(crearPg() as never);
+    await expect(servicio.obtener(EMPRESA, 'no-uuid', actor)).rejects.toMatchObject({ codigo: 'PARTE_INVALIDA' });
+  });
+
+  it('actualiza una parte y traduce la violación de unicidad', async () => {
+    const fila = { id: PARTE, nombre: 'Ana' };
+    const pg = crearPg({ queryOne: vi.fn().mockResolvedValueOnce({ 1: 1 }).mockResolvedValueOnce(fila) });
+    await expect(new PartesService(pg as never).actualizar(EMPRESA, PARTE, { nombre: ' Ana ' }, actor)).resolves.toEqual(fila);
+
+    const dup = crearPg({ queryOne: vi.fn().mockResolvedValueOnce({ 1: 1 }).mockRejectedValueOnce({ code: '23505' }) });
+    await expect(new PartesService(dup as never).actualizar(EMPRESA, PARTE, { nombre: 'Ana' }, actor)).rejects.toMatchObject({ codigo: 'CONFLICTO' });
+
+    const vacio = crearPg({ queryOne: vi.fn().mockResolvedValueOnce({ 1: 1 }).mockResolvedValueOnce(null) });
+    await expect(new PartesService(vacio as never).actualizar(EMPRESA, PARTE, { nombre: 'Ana' }, actor)).rejects.toBeInstanceOf(NotFoundError);
+  });
+
+  it('valida tipo, estado y longitud del nombre al normalizar', async () => {
+    const servicio = new PartesService(crearPg() as never);
+    await expect(servicio.actualizar(EMPRESA, PARTE, { tipo: 'robot' as never }, actor)).rejects.toMatchObject({ codigo: 'TIPO_PARTE_INVALIDO' });
+    await expect(servicio.actualizar(EMPRESA, PARTE, { estado: 'raro' as never }, actor)).rejects.toMatchObject({ codigo: 'ESTADO_PARTE_INVALIDO' });
+    await expect(servicio.actualizar(EMPRESA, PARTE, { nombre: 'x'.repeat(241) }, actor)).rejects.toMatchObject({ codigo: 'NOMBRE_PARTE_INVALIDO' });
+  });
+
+  it('lista contactos, direcciones y relaciones con la parte relacionada', async () => {
+    const relacion = { id: RELACION, relacionada_id: OTRA_PARTE, relacionada_nombre: 'Luis', relacionada_tipo: 'persona' };
+    const pg = crearPg({
+      queryOne: vi.fn().mockResolvedValue({ 1: 1 }),
+      query: vi.fn().mockResolvedValueOnce([{ id: CONTACTO }]).mockResolvedValueOnce([{ id: DIRECCION }]).mockResolvedValueOnce([relacion]),
+    });
+    const servicio = new PartesService(pg as never);
+
+    await expect(servicio.listarContactos(EMPRESA, PARTE, actor)).resolves.toHaveLength(1);
+    await expect(servicio.listarDirecciones(EMPRESA, PARTE, actor)).resolves.toHaveLength(1);
+    const relaciones = await servicio.listarRelaciones(EMPRESA, PARTE, actor);
+    expect(relaciones[0].parte_relacionada).toEqual({ id: OTRA_PARTE, nombre: 'Luis', tipo: 'persona' });
+  });
+
+  it('crea y actualiza contactos, con errores de validación y unicidad', async () => {
+    const contacto = { id: CONTACTO };
+    const pg = crearPg({ queryOne: vi.fn().mockResolvedValueOnce({ 1: 1 }).mockResolvedValue({ id: CONTACTO }) });
+    const servicio = new PartesService(pg as never);
+    await expect(servicio.crearContacto(EMPRESA, PARTE, { tipo: 'email', valor: 'a@b.c' }, actor)).resolves.toEqual({ id: CONTACTO });
+
+    const sinValor = new PartesService(crearPg() as never);
+    await expect(sinValor.crearContacto(EMPRESA, PARTE, { tipo: 'email', valor: '' }, actor)).rejects.toMatchObject({ codigo: 'CONTACTO_INVALIDO' });
+    await expect(sinValor.crearContacto(EMPRESA, PARTE, { tipo: 'fax' as never, valor: 'x' }, actor)).rejects.toMatchObject({ codigo: 'TIPO_CONTACTO_INVALIDO' });
+
+    const dup = crearPg({ queryOne: vi.fn().mockResolvedValueOnce({ 1: 1 }).mockResolvedValueOnce({ id: PARTE }).mockRejectedValueOnce({ code: '23505' }) });
+    await expect(new PartesService(dup as never).crearContacto(EMPRESA, PARTE, { tipo: 'email', valor: 'a@b.c' }, actor)).rejects.toMatchObject({ codigo: 'CONFLICTO' });
+
+    const actualiza = crearPg({ queryOne: vi.fn().mockResolvedValueOnce({ 1: 1 }).mockResolvedValueOnce({ id: PARTE }).mockResolvedValueOnce({ id: CONTACTO }) });
+    await expect(new PartesService(actualiza as never).actualizarContacto(EMPRESA, PARTE, CONTACTO, { valor: 'b@c.d' }, actor)).resolves.toEqual({ id: CONTACTO });
+    await expect(new PartesService(crearPg({ queryOne: vi.fn().mockResolvedValueOnce({ 1: 1 }).mockResolvedValueOnce({ id: PARTE }).mockResolvedValueOnce(null) }) as never).actualizarContacto(EMPRESA, PARTE, CONTACTO, {}, actor)).rejects.toBeInstanceOf(NotFoundError);
+    expect(contacto.id).toBe(CONTACTO);
+  });
+
+  it('elimina contactos, direcciones y relaciones existentes o falla con 404', async () => {
+    const exists = crearPg({ queryOne: vi.fn().mockResolvedValue({ 1: 1 }) });
+    const servicio = new PartesService(exists as never);
+    await expect(servicio.eliminarContacto(EMPRESA, PARTE, CONTACTO, actor)).resolves.toEqual({ ok: true });
+    await expect(servicio.eliminarDireccion(EMPRESA, PARTE, DIRECCION, actor)).resolves.toEqual({ ok: true });
+    await expect(servicio.eliminarRelacion(EMPRESA, PARTE, RELACION, actor)).resolves.toEqual({ ok: true });
+
+    const missing = crearPg({ queryOne: vi.fn().mockResolvedValueOnce({ 1: 1 }).mockResolvedValueOnce({ id: PARTE }).mockResolvedValueOnce(null) });
+    await expect(new PartesService(missing as never).eliminarContacto(EMPRESA, PARTE, CONTACTO, actor)).rejects.toBeInstanceOf(NotFoundError);
+  });
+
+  it('crea y actualiza direcciones con defaults y errores', async () => {
+    const direccion = { id: DIRECCION };
+    const pg = crearPg({ queryOne: vi.fn().mockResolvedValueOnce({ 1: 1 }).mockResolvedValueOnce({ id: PARTE }).mockResolvedValueOnce(direccion) });
+    const servicio = new PartesService(pg as never);
+    await expect(servicio.crearDireccion(EMPRESA, PARTE, { tipo: 'fiscal', linea_1: 'Calle 1' }, actor)).resolves.toEqual(direccion);
+
+    const sinLinea = new PartesService(crearPg({ queryOne: vi.fn().mockResolvedValueOnce({ 1: 1 }).mockResolvedValueOnce({ 1: 1 }) }) as never);
+    await expect(sinLinea.crearDireccion(EMPRESA, PARTE, { tipo: 'fiscal', linea_1: ' ' }, actor)).rejects.toMatchObject({ codigo: 'DIRECCION_INVALIDA' });
+
+    const coord = new PartesService(crearPg() as never);
+    await expect(coord.crearDireccion(EMPRESA, PARTE, { tipo: 'fiscal', linea_1: 'C', longitud: 181 }, actor)).rejects.toMatchObject({ codigo: 'COORDENADA_INVALIDA' });
+
+    const act = crearPg({ queryOne: vi.fn().mockResolvedValueOnce({ 1: 1 }).mockResolvedValueOnce({ id: PARTE }).mockResolvedValueOnce({ id: DIRECCION }) });
+    await expect(new PartesService(act as never).actualizarDireccion(EMPRESA, PARTE, DIRECCION, { ciudad: 'Managua' }, actor)).resolves.toEqual({ id: DIRECCION });
+
+    const vacio = crearPg({ queryOne: vi.fn().mockResolvedValueOnce({ 1: 1 }).mockResolvedValueOnce({ id: PARTE }).mockResolvedValueOnce(null) });
+    await expect(new PartesService(vacio as never).actualizarDireccion(EMPRESA, PARTE, DIRECCION, {}, actor)).rejects.toBeInstanceOf(NotFoundError);
+  });
+
+  it('valida relaciones: destino, código, metadata y duplicados', async () => {
+    const servicio = new PartesService(crearPg() as never);
+    await expect(servicio.crearRelacion(EMPRESA, PARTE, 'no-uuid', 'cliente', undefined, actor)).rejects.toMatchObject({ codigo: 'PARTE_DESTINO_INVALIDA' });
+    await expect(servicio.crearRelacion(EMPRESA, PARTE, OTRA_PARTE, 'Cliente Inválido', undefined, actor)).rejects.toMatchObject({ codigo: 'TIPO_RELACION_INVALIDO' });
+    await expect(servicio.crearRelacion(EMPRESA, PARTE, OTRA_PARTE, 'cliente', [] as never, actor)).rejects.toMatchObject({ codigo: 'METADATA_INVALIDA' });
+
+    const destino = crearPg({ queryOne: vi.fn().mockResolvedValueOnce({ 1: 1 }).mockResolvedValueOnce({ id: PARTE }).mockResolvedValueOnce(null) });
+    await expect(new PartesService(destino as never).crearRelacion(EMPRESA, PARTE, OTRA_PARTE, 'cliente', undefined, actor)).rejects.toBeInstanceOf(NotFoundError);
+
+    const ok = crearPg({ queryOne: vi.fn().mockResolvedValueOnce({ 1: 1 }).mockResolvedValueOnce({ id: PARTE }).mockResolvedValueOnce({ id: OTRA_PARTE }).mockResolvedValueOnce({ id: RELACION }) });
+    await expect(new PartesService(ok as never).crearRelacion(EMPRESA, PARTE, OTRA_PARTE, ' Cliente ', undefined, actor)).resolves.toEqual({ id: RELACION });
+
+    const dup = crearPg({ queryOne: vi.fn().mockResolvedValueOnce({ 1: 1 }).mockResolvedValueOnce({ id: PARTE }).mockResolvedValueOnce({ id: OTRA_PARTE }).mockRejectedValueOnce({ code: '23505' }) });
+    await expect(new PartesService(dup as never).crearRelacion(EMPRESA, PARTE, OTRA_PARTE, 'cliente', undefined, actor)).rejects.toMatchObject({ codigo: 'CONFLICTO' });
+  });
+
+  it('aplica el control de acceso global, por tenant y por rol de escritura', async () => {
+    const admin = { user_id: USUARIO, rol: 'admin' as const };
+    const pgAdmin = crearPg({ query: vi.fn().mockResolvedValue([]) });
+    await expect(new PartesService(pgAdmin as never).listar(EMPRESA, {}, admin)).resolves.toEqual([]);
+    expect(pgAdmin.queryOne).not.toHaveBeenCalled();
+
+    const sinTenant = { user_id: USUARIO, rol: 'empresario' as const };
+    await expect(new PartesService(crearPg() as never).listar(EMPRESA, {}, sinTenant)).rejects.toBeInstanceOf(ForbiddenError);
+
+    const soloLectura = { user_id: USUARIO, rol: 'comprador' as const, tenant_id: EMPRESA };
+    await expect(new PartesService(crearPg() as never).crear(EMPRESA, { tipo: 'persona', nombre: 'Ana' }, soloLectura)).rejects.toBeInstanceOf(ForbiddenError);
+
+    const sinMiembro = crearPg({ queryOne: vi.fn().mockResolvedValue(null) });
+    await expect(new PartesService(sinMiembro as never).listar(EMPRESA, {}, actor)).rejects.toBeInstanceOf(ForbiddenError);
+  });
+
+  it('rechaza textos que exceden el máximo', async () => {
+    const servicio = new PartesService(crearPg() as never);
+    await expect(servicio.actualizar(EMPRESA, PARTE, { nombre_comercial: 'x'.repeat(241) }, actor)).rejects.toMatchObject({ codigo: 'VALOR_INVALIDO' });
+  });
+});
