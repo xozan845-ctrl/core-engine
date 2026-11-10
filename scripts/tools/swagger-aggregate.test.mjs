@@ -28,7 +28,7 @@ test('clasifica rutas por superficie y rechaza prefijos desconocidos', () => {
   assert.equal(clasificarRuta('/api/v2/catalog/productos'), 'publica');
   assert.equal(clasificarRuta('/internal/productos/lote'), 'interna');
   assert.throws(() => clasificarRuta('/health'), /superficies conocidas/);
-  assert.throws(() => clasificarRuta('/api/v2/catalog/productos'), /superficies conocidas/);
+  assert.throws(() => clasificarRuta('/api/v1/catalog/productos'), /superficies conocidas/);
 });
 
 test('el contrato público excluye /internal y el interno excluye /api/v2', () => {
