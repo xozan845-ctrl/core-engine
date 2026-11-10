@@ -86,6 +86,7 @@ describe('ItemsService (fase 2)', () => {
     (pg.queryOne as Mock)
       .mockResolvedValueOnce({ id: 'padre-1', tipo: 'producto', empresa_id: EMPRESA })
       .mockResolvedValueOnce({ esquema: { type: 'object', additionalProperties: true } })
+      .mockResolvedValueOnce(null)
       .mockResolvedValueOnce({ ...fila, tipo: 'producto', parent_item_id: 'padre-1', track_inventory: true, stock: 4 });
 
     const item = await servicio.crearItem({
@@ -105,6 +106,7 @@ describe('ItemsService (fase 2)', () => {
     const { servicio, pg } = crear();
     (pg.queryOne as Mock)
       .mockResolvedValueOnce({ esquema: { type: 'object', additionalProperties: true } })
+      .mockResolvedValueOnce(null)
       .mockResolvedValueOnce({ ...fila, tipo: 'servicio', duration_minutes: 60, track_inventory: false, stock: null });
     await expect(servicio.crearItem({
       tipo: 'servicio', codigo: 'SERV-001', nombre: 'Consulta', precio: '10.00', duration_minutes: 60,
@@ -112,6 +114,7 @@ describe('ItemsService (fase 2)', () => {
 
     (pg.queryOne as Mock)
       .mockResolvedValueOnce({ esquema: { type: 'object', additionalProperties: true } })
+      .mockResolvedValueOnce(null)
       .mockResolvedValueOnce({ ...fila, tipo: 'alquiler', track_inventory: false, stock: null });
     await expect(servicio.crearItem({
       tipo: 'alquiler', codigo: 'ALQ-001', nombre: 'Andamio', precio: '10.00',
@@ -187,7 +190,7 @@ describe('ItemsService (fase 2)', () => {
 
   it('crea un alquiler como item sin inventario', async () => {
     const { servicio, pg } = crear();
-    (pg.queryOne as Mock).mockResolvedValueOnce(null).mockResolvedValueOnce({
+    (pg.queryOne as Mock).mockResolvedValueOnce(null).mockResolvedValueOnce(null).mockResolvedValueOnce({
       ...fila,
       tipo: 'alquiler',
       source_type: null,
@@ -206,12 +209,12 @@ describe('ItemsService (fase 2)', () => {
     );
 
     expect(resultado).toMatchObject({ tipo: 'alquiler', codigo: 'ALQ-001', track_inventory: false });
-    expect((pg.queryOne as Mock).mock.calls[1][0]).toContain("INSERT INTO catalog.items");
+    expect((pg.queryOne as Mock).mock.calls.at(-1)?.[0]).toContain("INSERT INTO catalog.items");
   });
 
   it('normaliza defaults y permite alquilar inactivo', async () => {
     const { servicio, pg } = crear();
-    (pg.queryOne as Mock).mockResolvedValueOnce(null).mockResolvedValueOnce({
+    (pg.queryOne as Mock).mockResolvedValueOnce(null).mockResolvedValueOnce(null).mockResolvedValueOnce({
       ...fila,
       tipo: 'alquiler',
       source_type: null,
@@ -238,9 +241,20 @@ describe('ItemsService (fase 2)', () => {
       .rejects.toMatchObject({ codigo: 'CODIGO_INVALIDO' });
     await expect(servicio.crearAlquiler({ codigo: 'ALQ-01', nombre: 'S', precio: '10.00' }, EMPRESA))
       .rejects.toMatchObject({ codigo: 'NOMBRE_INVALIDO' });
-    (pg.queryOne as Mock).mockResolvedValueOnce(null).mockResolvedValueOnce(null);
+    (pg.queryOne as Mock).mockResolvedValueOnce(null).mockResolvedValueOnce(null).mockResolvedValueOnce(null);
     await expect(servicio.crearAlquiler({ codigo: 'ALQ-01', nombre: 'Sala', precio: '10.00' }, EMPRESA))
       .rejects.toMatchObject({ codigo: 'ITEM_NO_CREADO' });
+  });
+
+  it('traduce un código repetido en la misma empresa a conflicto', async () => {
+    const { servicio, pg } = crear();
+    (pg.queryOne as Mock)
+      .mockResolvedValueOnce(null)
+      .mockResolvedValueOnce({ id: 'item-existente' });
+    await expect(
+      servicio.crearItem({ tipo: 'producto', codigo: 'SKU-001', nombre: 'Teclado', precio: '10.00', stock: 1 }, EMPRESA),
+    ).rejects.toMatchObject({ codigo: 'CONFLICTO' });
+    expect((pg.queryOne as Mock).mock.calls.at(-1)?.[1]).toEqual([EMPRESA, 'producto', 'SKU-001']);
   });
 
   it('valida y registra esquemas JSON', async () => {
