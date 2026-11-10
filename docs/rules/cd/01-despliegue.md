@@ -3,9 +3,10 @@
 Reglas del pipeline de **artefactos de release** (tags, imágenes, migraciones),
 trasladadas de `ci/03-deploy.md` a esta área el 2026-10-01 sin renumerar.
 
-> **Estado hoy (2026-10-19):** `release.yml` **existe**: construye y publica una
-> imagen por servicio (`packages/<servicio>/Dockerfile`) en GHCR al empujar un tag,
-> con procedencia verificada (commit en `main` + `ci.yml` verde en el mismo SHA),
+> **Estado hoy (2026-11-10):** `release.yml` **existe**: antes de construir
+> imágenes ejecuta el gate E2E completo (`e2e.yml`, R-E-1..8) y después publica
+> una imagen por servicio (`packages/<servicio>/Dockerfile`) en GHCR al empujar
+> un tag, con procedencia verificada (commit en `main` + `ci.yml` verde en el mismo SHA),
 > tag anotado, monotonicidad y versiones alineadas (`scripts/tools/release-check.mjs`),
 > etiquetas OCI/semver y digest en el resumen. `promote.yml` las promueve a
 > `stage`/`prod` **por digest**, sin reconstruir, y `deploy.yml` valida el arranque.

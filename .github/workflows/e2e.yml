@@ -4,9 +4,9 @@ name: E2E
 # Se ejecuta en tags de release y manualmente; no en cada PR por coste.
 on:
   workflow_dispatch:
-  push:
-    tags:
-      - 'v*.*.*'
+  # Gate obligatorio de release: release.yml llama a este workflow antes de
+  # construir/publicar imágenes. Ya no se dispara por tag para no duplicar runs.
+  workflow_call:
 
 concurrency:
   group: e2e-${{ github.ref }}
