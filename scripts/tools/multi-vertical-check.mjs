@@ -1,5 +1,3 @@
-import pg from 'pg';
-
 export function validarCierre({ empresas, migraciones, packs, capacidades, packCapacidades, empresaCapacidades }) {
   const problemas = [];
   const packsActivos = new Set(packs.filter((pack) => pack.activo).map((pack) => `${pack.codigo}@${pack.version}`));
@@ -46,6 +44,7 @@ export function validarCierre({ empresas, migraciones, packs, capacidades, packC
 }
 
 async function ejecutar() {
+  const { default: pg } = await import('pg');
   const connectionString = process.env.DATABASE_URL ?? process.env.TEST_DATABASE_URL;
   if (!connectionString) throw new Error('DATABASE_URL o TEST_DATABASE_URL requerida');
   const client = new pg.Client({ connectionString });
