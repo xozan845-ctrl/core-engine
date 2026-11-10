@@ -94,7 +94,7 @@ TEST_DATABASE_URL=postgres://core_engine_test:test_only@127.0.0.1:5432/core_engi
   npm run multi-vertical:check
 ```
 
-Estas suites usan PostgreSQL real y no dobles de prueba. No sustituyen al E2E
-del stack: los consumidores de RabbitMQ y el gateway se siguen validando con
-`npm run demo`.
+Estas suites usan PostgreSQL real y no dobles de prueba. El E2E de stack
+completo ejecuta `npm run demo` y `npm run demo:verticals` (belleza y flota)
+contra el gateway real.
 
