@@ -313,14 +313,6 @@
             "format": "uuid",
             "nullable": true
           },
-          "modalidad_logistica": {
-            "type": "string",
-            "enum": [
-              "plataforma",
-              "propia",
-              "hibrida"
-            ]
-          },
           "proveedor_tipo": {
             "type": "string",
             "enum": [
@@ -355,7 +347,6 @@
           "guia",
           "order_id",
           "empresa_id",
-          "modalidad_logistica",
           "proveedor_tipo",
           "proveedor_tenant_id",
           "estado",
@@ -392,14 +383,6 @@
             "format": "uuid",
             "nullable": true
           },
-          "modalidad_logistica": {
-            "type": "string",
-            "enum": [
-              "plataforma",
-              "propia",
-              "hibrida"
-            ]
-          },
           "proveedor_tipo": {
             "type": "string",
             "enum": [
@@ -429,7 +412,6 @@
           "guia",
           "order_id",
           "empresa_id",
-          "modalidad_logistica",
           "proveedor_tipo",
           "proveedor_tenant_id",
           "estado",

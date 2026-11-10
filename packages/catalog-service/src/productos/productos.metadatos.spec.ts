@@ -67,10 +67,13 @@ describe('ProductosService · metadatos y estado operativo (R-PS-01/03)', () => 
   beforeEach(() => {
     vi.stubGlobal(
       'fetch',
-      vi.fn(async () => ({
+      vi.fn(async (url: string | URL | Request) => ({
         ok: true,
         status: 200,
-        json: async () => ({ estado: 'activa', tipo_empresa: 'comercial' }),
+        json: async () =>
+          String(url).includes('/internal/empresas/capacidades')
+            ? { capacidades: [{ empresa_id: EMPRESA, capacidad_codigo: 'catalogo_items', activo: true }] }
+            : { estado: 'activa' },
       })),
     );
   });

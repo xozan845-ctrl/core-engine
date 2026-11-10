@@ -52,9 +52,6 @@ export class EnvioResponseDto {
   })
   parte_id: string | null;
 
-  @ApiProperty({ enum: ['plataforma', 'propia', 'hibrida'] })
-  modalidad_logistica: 'plataforma' | 'propia' | 'hibrida';
-
   @ApiProperty({ enum: ['plataforma', 'empresa'], nullable: true })
   proveedor_tipo: 'plataforma' | 'empresa' | null;
 

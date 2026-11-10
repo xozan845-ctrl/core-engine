@@ -536,6 +536,90 @@
         ]
       }
     },
+    "/internal/empresas/capacidades": {
+      "post": {
+        "operationId": "InternalController_capacidadesDeEmpresas",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/VerificarCapacidadesRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Capacidades encontradas",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "internalKey": []
+          }
+        ],
+        "summary": "Capacidades activas por empresa (servicio→servicio)",
+        "tags": [
+          "Usuarios (interno)"
+        ]
+      }
+    },
+    "/internal/partes/{id}": {
+      "get": {
+        "operationId": "InternalController_parte",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "description": "Id de la parte",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "empresa_id",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Parte encontrada",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "internalKey": []
+          }
+        ],
+        "summary": "Parte por id y empresa (servicio→servicio)",
+        "tags": [
+          "Usuarios (interno)"
+        ]
+      }
+    },
     "/internal/orders/{id}/transicion": {
       "post": {
         "operationId": "InternoController_transicion",
@@ -949,6 +1033,253 @@
           }
         ],
         "summary": "Contar ofertas activas de un producto (servicio→servicio)",
+        "tags": [
+          "Tiendas (interno)"
+        ]
+      }
+    },
+    "/internal/tiendas": {
+      "get": {
+        "operationId": "InternalController_tiendasPorIds",
+        "parameters": [
+          {
+            "name": "ids",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Tiendas encontradas",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "internalKey": []
+          }
+        ],
+        "summary": "Tiendas por lote de ids (servicio→servicio)",
+        "tags": [
+          "Tiendas (interno)"
+        ]
+      }
+    },
+    "/internal/tiendas/empresa/{empresaId}": {
+      "get": {
+        "operationId": "InternalController_tiendasDeEmpresa",
+        "parameters": [
+          {
+            "name": "empresaId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Tiendas de la empresa",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "internalKey": []
+          }
+        ],
+        "summary": "Tiendas de una empresa (servicio→servicio)",
+        "tags": [
+          "Tiendas (interno)"
+        ]
+      }
+    },
+    "/internal/tiendas/vendedor/{vendedorId}": {
+      "get": {
+        "operationId": "InternalController_tiendaDeVendedor",
+        "parameters": [
+          {
+            "name": "vendedorId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Tienda del vendedor o null",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "internalKey": []
+          }
+        ],
+        "summary": "Tienda asignada a un vendedor (servicio→servicio)",
+        "tags": [
+          "Tiendas (interno)"
+        ]
+      }
+    },
+    "/internal/tiendas/{id}": {
+      "get": {
+        "operationId": "InternalController_tienda",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Tienda encontrada",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "internalKey": []
+          }
+        ],
+        "summary": "Tienda por id (servicio→servicio)",
+        "tags": [
+          "Tiendas (interno)"
+        ]
+      }
+    },
+    "/internal/tiendas/{id}/asignar-vendedor": {
+      "post": {
+        "operationId": "InternalController_asignarVendedor",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AsignarVendedorRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Vendedor asignado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "internalKey": []
+          }
+        ],
+        "summary": "Asignar vendedor a una tienda (servicio→servicio)",
+        "tags": [
+          "Tiendas (interno)"
+        ]
+      }
+    },
+    "/internal/tiendas/{id}/desasignar-vendedor": {
+      "post": {
+        "operationId": "InternalController_desasignarVendedor",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DesasignarVendedorRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Vendedor desasignado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "internalKey": []
+          }
+        ],
+        "summary": "Compensar asignación de vendedor (servicio→servicio)",
         "tags": [
           "Tiendas (interno)"
         ]
@@ -1737,24 +2068,6 @@
             "description": "Slug público actual",
             "example": "distribuidora-piloto"
           },
-          "modalidad_logistica": {
-            "type": "string",
-            "nullable": true,
-            "enum": [
-              "plataforma",
-              "propia",
-              "hibrida"
-            ]
-          },
-          "tipo_empresa": {
-            "type": "string",
-            "enum": [
-              "comercial",
-              "logistica",
-              "plataforma"
-            ],
-            "description": "Tipo de empresa; solo las comerciales tienen catálogo propio (ADR-27)"
-          },
           "estado": {
             "type": "string"
           },
@@ -2091,6 +2404,28 @@
           "creado_en"
         ]
       },
+      "VerificarCapacidadesRequestDto": {
+        "type": "object",
+        "properties": {
+          "empresa_ids": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          "capacidades": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": [
+          "empresa_ids",
+          "capacidades"
+        ]
+      },
       "HistoriaEventoResponseDto": {
         "type": "object",
         "properties": {
@@ -2250,8 +2585,7 @@
               "reserva",
               "cotizacion",
               "orden_servicio"
-            ],
-            "default": "compra"
+            ]
           },
           "fulfillment_config": {
             "type": "object",
@@ -2331,6 +2665,7 @@
           "comprador_id",
           "tienda_id",
           "estado",
+          "tipo_orden",
           "total_cents",
           "comision_cents",
           "moneda",
@@ -2514,6 +2849,36 @@
           "tamano_bytes",
           "estado",
           "creado_en"
+        ]
+      },
+      "AsignarVendedorRequestDto": {
+        "type": "object",
+        "properties": {
+          "usuario_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "participacion": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 100
+          }
+        },
+        "required": [
+          "usuario_id",
+          "participacion"
+        ]
+      },
+      "DesasignarVendedorRequestDto": {
+        "type": "object",
+        "properties": {
+          "usuario_id": {
+            "type": "string",
+            "format": "uuid"
+          }
+        },
+        "required": [
+          "usuario_id"
         ]
       },
       "OfertaResponseDto": {

@@ -209,6 +209,90 @@
           "Usuarios (interno)"
         ]
       }
+    },
+    "/internal/empresas/capacidades": {
+      "post": {
+        "operationId": "InternalController_capacidadesDeEmpresas",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/VerificarCapacidadesRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Capacidades encontradas",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "internalKey": []
+          }
+        ],
+        "summary": "Capacidades activas por empresa (servicio→servicio)",
+        "tags": [
+          "Usuarios (interno)"
+        ]
+      }
+    },
+    "/internal/partes/{id}": {
+      "get": {
+        "operationId": "InternalController_parte",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "description": "Id de la parte",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "empresa_id",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Parte encontrada",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "internalKey": []
+          }
+        ],
+        "summary": "Parte por id y empresa (servicio→servicio)",
+        "tags": [
+          "Usuarios (interno)"
+        ]
+      }
     }
   },
   "components": {
@@ -267,24 +351,6 @@
             "type": "string",
             "description": "Slug público actual",
             "example": "distribuidora-piloto"
-          },
-          "modalidad_logistica": {
-            "type": "string",
-            "nullable": true,
-            "enum": [
-              "plataforma",
-              "propia",
-              "hibrida"
-            ]
-          },
-          "tipo_empresa": {
-            "type": "string",
-            "enum": [
-              "comercial",
-              "logistica",
-              "plataforma"
-            ],
-            "description": "Tipo de empresa; solo las comerciales tienen catálogo propio (ADR-27)"
           },
           "estado": {
             "type": "string"
@@ -620,6 +686,28 @@
           "correo",
           "rol",
           "creado_en"
+        ]
+      },
+      "VerificarCapacidadesRequestDto": {
+        "type": "object",
+        "properties": {
+          "empresa_ids": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          "capacidades": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": [
+          "empresa_ids",
+          "capacidades"
         ]
       }
     }
