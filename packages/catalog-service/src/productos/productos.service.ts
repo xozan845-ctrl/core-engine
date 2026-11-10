@@ -14,6 +14,7 @@ import {
   Pagina,
   EMPRESA_LEGACY_ID,
   capacidadesDeEmpresas,
+  timeoutInternoMs,
 } from '@core/shared';
 import { ItemsService } from '../items/items.service';
 
@@ -1430,7 +1431,10 @@ export class ProductosService {
     try {
       res = await fetch(
         `${this.identidadUrl}/internal/empresas/${encodeURIComponent(empresaId)}`,
-        { headers: { 'x-internal-key': this.claveInterna } },
+        {
+          headers: { 'x-internal-key': this.claveInterna },
+          signal: AbortSignal.timeout(timeoutInternoMs()),
+        },
       );
     } catch {
       throw new DomainError('EMPRESA_NO_VERIFICABLE', 'No se pudo verificar la empresa del catálogo.');

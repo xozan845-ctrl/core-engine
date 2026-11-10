@@ -6,6 +6,7 @@ import {
   Money,
   NotFoundError,
   PgService,
+  timeoutInternoMs,
 } from '@core/shared';
 
 export interface ItemCarrito {
@@ -214,7 +215,10 @@ export class CarritoService {
     try {
       const res = await fetch(
         `${this.storesUrl}/internal/ofertas?ids=${encodeURIComponent([...new Set(ids)].join(','))}`,
-        { headers: { 'x-internal-key': this.claveInterna } },
+        {
+          headers: { 'x-internal-key': this.claveInterna },
+          signal: AbortSignal.timeout(timeoutInternoMs()),
+        },
       );
       if (!res.ok) return [];
       return (await res.json()) as OfertaLectura[];

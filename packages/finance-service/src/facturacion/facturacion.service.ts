@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { PgService, OutboxService, Money, DomainError, NotFoundError, EVENTOS, Logger } from '@core/shared';
+import { PgService, OutboxService, Money, DomainError, NotFoundError, EVENTOS, Logger, timeoutInternoMs } from '@core/shared';
 import { ContabilidadService } from '../contabilidad/contabilidad.service';
 
 export interface Comprobante {
@@ -189,6 +189,7 @@ export class FacturacionService {
     try {
       const res = await fetch(`${this.ordersUrl}/internal/orders/${encodeURIComponent(orderId)}`, {
         headers: { 'x-internal-key': this.claveInterna },
+        signal: AbortSignal.timeout(timeoutInternoMs()),
       });
       if (!res.ok) return null;
       return (await res.json()) as { total_cents: number };
