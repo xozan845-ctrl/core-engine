@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { EVENTOS } from '@core/shared';
 import { SchedulingService } from './scheduling.service';
 
@@ -15,8 +15,14 @@ function crear() {
     transaccion: vi.fn(),
   };
   const outbox = { insertarEnTransaccion: vi.fn().mockResolvedValue('event-id') };
+  const fetchMock = vi.fn().mockResolvedValue({
+    ok: true,
+    status: 200,
+    json: async () => ({ id: 'parte-1' }),
+  });
+  vi.stubGlobal('fetch', fetchMock);
   const service = new SchedulingService(pg as never, outbox as never);
-  return { pg, outbox, service };
+  return { pg, outbox, service, fetchMock };
 }
 
 function clientCon(...respuestas: unknown[]) {
@@ -26,6 +32,8 @@ function clientCon(...respuestas: unknown[]) {
 }
 
 describe('SchedulingService', () => {
+  afterEach(() => vi.unstubAllGlobals());
+
   it('crea y lista recursos y disponibilidad por tenant', async () => {
     const { pg, service } = crear();
     pg.queryOne.mockResolvedValueOnce({ id: recurso, empresa_id: empresa, nombre: 'Sala 1' });
@@ -37,6 +45,9 @@ describe('SchedulingService', () => {
       recurso_id: recurso, dia_semana: 1, inicia_hora: '08:00', termina_hora: '17:00',
     });
     const lista = await service.listarDisponibilidad(empresa, recurso);
+    pg.query.mockResolvedValueOnce([{ id: cita }]).mockResolvedValueOnce([{ id: 'recordatorio-1' }]);
+    await expect(service.listarCitas(empresa)).resolves.toEqual([{ id: cita }]);
+    await expect(service.listarRecordatorios(empresa)).resolves.toEqual([{ id: 'recordatorio-1' }]);
     expect(creado).toMatchObject({ id: recurso });
     expect(disponibilidad).toMatchObject({ id: 'disp-1' });
     expect(lista).toEqual([{ id: recurso }]);
@@ -53,15 +64,24 @@ describe('SchedulingService', () => {
 
   it('crea un bloqueo y traduce el conflicto GiST', async () => {
     const { pg, service } = crear();
-    pg.queryOne
-      .mockResolvedValueOnce({ id: recurso })
-      .mockResolvedValueOnce({ id: 'bloqueo-1', recurso_id: recurso });
+    const client = {
+      query: vi.fn()
+        .mockResolvedValueOnce({ rowCount: 1, rows: [{ id: recurso }] })
+        .mockResolvedValueOnce({ rowCount: 1, rows: [{ id: 'bloqueo-1', recurso_id: recurso }] }),
+    };
+    pg.transaccion.mockImplementation(async (fn: (c: unknown) => Promise<unknown>) => fn(client));
     const bloqueo = await service.crearBloqueo(empresa, '44444444-4444-4444-8444-444444444444', {
       recurso_id: recurso, inicia_en: inicio, termina_en: fin, motivo: 'mantenimiento',
     });
     expect(bloqueo).toMatchObject({ id: 'bloqueo-1' });
+    expect(client.query.mock.calls[0][0]).toContain('FOR UPDATE');
 
-    pg.queryOne.mockResolvedValueOnce({ id: recurso }).mockRejectedValueOnce({ code: '23P01' });
+    const conflicto = {
+      query: vi.fn()
+        .mockResolvedValueOnce({ rowCount: 1, rows: [{ id: recurso }] })
+        .mockRejectedValueOnce({ code: '23P01' }),
+    };
+    pg.transaccion.mockImplementation(async (fn: (c: unknown) => Promise<unknown>) => fn(conflicto));
     await expect(service.crearBloqueo(empresa, undefined, {
       recurso_id: recurso, inicia_en: inicio, termina_en: fin,
     })).rejects.toMatchObject({ codigo: 'RECURSO_NO_DISPONIBLE' });
@@ -69,18 +89,25 @@ describe('SchedulingService', () => {
 
   it('crea una cita, recordatorios y evento outbox', async () => {
     const { pg, outbox, service } = crear();
+    pg.queryOne.mockResolvedValueOnce({ id: 'parte-1' });
     const client = clientCon(
       { rowCount: 1, rows: [{ id: recurso }] },
       { rowCount: 1, rows: [{}] },
       { rowCount: 0, rows: [] },
       { rowCount: 1, rows: [{
-        id: cita, empresa_id: empresa, recurso_id: recurso, cliente_id: null,
+        id: cita, empresa_id: empresa, recurso_id: recurso,
+        parte_id: '66666666-6666-4666-8666-666666666666',
         order_id: null, item_id: null, estado: 'reservada', inicia_en: inicio, termina_en: fin,
       }] },
       { rowCount: 2, rows: [] },
     );
     pg.transaccion.mockImplementation(async (fn: (c: unknown) => Promise<unknown>) => fn(client));
-    const creada = await service.crearCita(empresa, { recurso_id: recurso, inicia_en: inicio, termina_en: fin });
+    const creada = await service.crearCita(empresa, {
+      recurso_id: recurso,
+      parte_id: '66666666-6666-4666-8666-666666666666',
+      inicia_en: inicio,
+      termina_en: fin,
+    });
     expect(creada).toMatchObject({ id: cita, estado: 'reservada' });
     expect(outbox.insertarEnTransaccion).toHaveBeenCalledWith(
       client,
@@ -111,6 +138,27 @@ describe('SchedulingService', () => {
     tercero.pg.transaccion.mockImplementation(async (fn: (c: unknown) => Promise<unknown>) => fn(exclusion));
     await expect(tercero.service.crearCita(empresa, { recurso_id: recurso, inicia_en: inicio, termina_en: fin }))
       .rejects.toMatchObject({ codigo: 'RECURSO_NO_DISPONIBLE' });
+
+    const parteInvalida = crear();
+    parteInvalida.fetchMock.mockResolvedValue({ ok: false, status: 404, json: async () => ({}) });
+    await expect(parteInvalida.service.crearCita(empresa, {
+      recurso_id: recurso,
+      parte_id: '66666666-6666-4666-8666-666666666666',
+      inicia_en: inicio,
+      termina_en: fin,
+    })).rejects.toMatchObject({ codigo: 'PARTE_INVALIDA' });
+  });
+
+  it('rechaza una cita cuando existe un bloqueo explícito', async () => {
+    const { pg, service } = crear();
+    const bloqueado = clientCon(
+      { rowCount: 1, rows: [{ id: recurso }] },
+      { rowCount: 1, rows: [{}] },
+      { rowCount: 1, rows: [{}] },
+    );
+    pg.transaccion.mockImplementation(async (fn: (c: unknown) => Promise<unknown>) => fn(bloqueado));
+    await expect(service.crearCita(empresa, { recurso_id: recurso, inicia_en: inicio, termina_en: fin }))
+      .rejects.toMatchObject({ codigo: 'RECURSO_NO_DISPONIBLE' });
   });
 
   it('cancela cita, cancela recordatorios y publica evento', async () => {
@@ -132,21 +180,23 @@ describe('SchedulingService', () => {
   it('crea la cita desde una reserva, es idempotente y valida su configuracion', async () => {
     const { pg, service } = crear();
     pg.queryOne.mockResolvedValueOnce({ id: cita });
-    await expect(service.crearDesdeReserva({ order_id: 'o-1', cliente_id: 'c-1', items: [] })).resolves.toMatchObject({ id: cita });
+    await expect(service.crearDesdeReserva({ order_id: 'o-1', cliente_parte_id: 'p-1', items: [] })).resolves.toMatchObject({ id: cita });
 
     pg.queryOne.mockResolvedValueOnce(null);
-    await expect(service.crearDesdeReserva({ order_id: 'o-2', cliente_id: 'c-1', items: [{ empresa_id: empresa, item_type: 'producto' }] }))
+    await expect(service.crearDesdeReserva({ order_id: 'o-2', cliente_parte_id: 'p-1', items: [{ empresa_id: empresa, item_type: 'producto' }] }))
       .rejects.toMatchObject({ codigo: 'CITA_CONFIGURACION_REQUERIDA' });
 
     pg.queryOne.mockResolvedValueOnce(null);
     const spy = vi.spyOn(service, 'crearCita').mockResolvedValue({ id: cita });
     await service.crearDesdeReserva({
-      order_id: 'o-3', cliente_id: 'c-1', items: [{
+      order_id: 'o-3', cliente_parte_id: '66666666-6666-4666-8666-666666666666', items: [{
         empresa_id: empresa, item_type: 'servicio', item_id: '66666666-6666-4666-8666-666666666666', fulfillment: 'onsite',
         fulfillment_config: { recurso_id: recurso, inicia_en: inicio, termina_en: fin },
       }],
     });
-    expect(spy).toHaveBeenCalledWith(empresa, expect.objectContaining({ order_id: 'o-3', recurso_id: recurso }));
+    expect(spy).toHaveBeenCalledWith(empresa, expect.objectContaining({
+      order_id: 'o-3', recurso_id: recurso, parte_id: '66666666-6666-4666-8666-666666666666',
+    }));
     spy.mockRestore();
   });
 

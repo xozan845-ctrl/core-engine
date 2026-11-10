@@ -18,6 +18,7 @@ import {
   IsIn,
   IsInt,
   IsOptional,
+  Matches,
   IsString,
   IsUUID,
   Length,
@@ -33,7 +34,7 @@ import {
   TemaRequestDto,
   TemaResponseDto,
 } from '../personalizacion/tema.dto';
-import { EmpresasService, ModalidadLogistica, PackCodigo, TipoEmpresa } from './empresas.service';
+import { EmpresasService, PackCodigo } from './empresas.service';
 
 class PerfilEmpresaRequestDto {
   @ApiProperty({ required: false, maxLength: 30, description: 'RUC opcional' })
@@ -89,14 +90,10 @@ class CrearEmpresaRequestDto extends OmitType(PerfilEmpresaRequestDto, [
   @IsString()
   @Length(2, 80)
   slug?: string;
-  @ApiProperty({ required: false, nullable: true, enum: ['plataforma', 'propia', 'hibrida'], description: 'Legado; puede omitirse y queda nullable' })
-  @IsOptional() @IsIn(['plataforma', 'propia', 'hibrida']) modalidad_logistica?: ModalidadLogistica | null;
-  @ApiProperty({ required: false, enum: ['retail', 'farmacia', 'belleza', 'dental', 'flota'], default: 'retail' })
-  @IsOptional() @IsIn(['retail', 'farmacia', 'belleza', 'dental', 'flota']) vertical_id?: string;
-  @ApiProperty({ required: false, enum: ['pack_retail', 'pack_farmacia', 'pack_belleza', 'pack_dental', 'pack_flota'], description: 'Pack versionado; si se omite se deriva de la vertical' })
-  @IsOptional() @IsIn(['pack_retail', 'pack_farmacia', 'pack_belleza', 'pack_dental', 'pack_flota']) pack_codigo?: PackCodigo;
-  @ApiProperty({ required: false, enum: ['comercial', 'logistica', 'plataforma'], default: 'comercial' })
-  @IsOptional() @IsIn(['comercial', 'logistica', 'plataforma']) tipo_empresa?: TipoEmpresa;
+  @ApiProperty({ required: false, description: 'Código dinámico de la vertical; se valida contra identity.verticales' })
+  @IsOptional() @IsString() @Matches(/^[a-z][a-z0-9_]{1,39}$/) vertical_id?: string;
+  @ApiProperty({ required: false, description: 'Pack versionado; se valida contra identity.packs' })
+  @IsOptional() @IsString() @Matches(/^pack_[a-z][a-z0-9_]{1,39}$/) pack_codigo?: PackCodigo;
 }
 class CrearVendedorRequestDto {
   @ApiProperty() @IsString() @Length(2, 120) nombre: string;
@@ -104,38 +101,19 @@ class CrearVendedorRequestDto {
   @ApiProperty({ minLength: 8 }) @IsString() @MinLength(8) contrasena: string;
   @ApiProperty({ minimum: 0, maximum: 100 }) @IsInt() @Min(0) @Max(100) participacion_porcentaje: number;
 }
-class ActualizarModalidadLogisticaRequestDto {
-  @ApiProperty({ enum: ['plataforma', 'propia', 'hibrida'] })
-  @IsIn(['plataforma', 'propia', 'hibrida'])
-  modalidad_logistica: ModalidadLogistica;
-}
 class ActualizarSlugRequestDto {
   @ApiProperty({ minLength: 2, maxLength: 80, example: 'distribuidora-piloto' })
   @IsString()
   @Length(2, 80)
   slug: string;
 }
-class ActualizarTipoEmpresaRequestDto {
-  @ApiProperty({ enum: ['comercial', 'logistica', 'plataforma'] })
-  @IsIn(['comercial', 'logistica', 'plataforma'])
-  tipo_empresa: TipoEmpresa;
-}
 export class EmpresaResponseDto {
   @ApiProperty({ format: 'uuid' }) id: string;
   @ApiProperty() nombre: string;
-  @ApiProperty({ required: false, nullable: true, enum: ['retail', 'farmacia', 'belleza', 'dental', 'flota'] }) vertical_id?: string | null;
-  @ApiProperty({ required: false, nullable: true, enum: ['pack_retail', 'pack_farmacia', 'pack_belleza', 'pack_dental', 'pack_flota'] }) pack_codigo?: PackCodigo | null;
+  @ApiProperty({ required: false, nullable: true, description: 'Código dinámico de la vertical' }) vertical_id?: string | null;
+  @ApiProperty({ required: false, nullable: true, description: 'Código dinámico del pack' }) pack_codigo?: PackCodigo | null;
   @ApiProperty({ required: false, nullable: true, minimum: 1 }) pack_version?: number | null;
-  // `required: false` mantiene el cambio como aditivo para el gate R-C-7;
-  // el servicio siempre devuelve el slug en runtime.
-  @ApiProperty({ required: false, description: 'Slug público actual', example: 'distribuidora-piloto' }) slug: string;
-  @ApiProperty({ required: false, nullable: true, enum: ['plataforma', 'propia', 'hibrida'] }) modalidad_logistica: ModalidadLogistica | null;
-  @ApiProperty({
-    enum: ['comercial', 'logistica', 'plataforma'],
-    required: false,
-    description: 'Tipo de empresa; solo las comerciales tienen catálogo propio (ADR-27)',
-  })
-  tipo_empresa: TipoEmpresa;
+  @ApiProperty({ description: 'Slug público actual', example: 'distribuidora-piloto' }) slug: string;
   @ApiProperty() estado: string;
   @ApiProperty({ format: 'uuid' }) creado_por: string;
   @ApiProperty() creado_en: string;
@@ -180,13 +158,13 @@ class VendedorEmpresaResponseDto {
   @ApiProperty({ minimum: 0, maximum: 100 }) participacion_porcentaje: number;
 }
 
-@ApiTags('Empresas') @ApiBearerAuth() @Controller('api/v1/empresas')
+@ApiTags('Empresas') @ApiBearerAuth() @Controller('api/v2/empresas')
 export class EmpresasController {
   constructor(private readonly empresas: EmpresasService) {}
   @Post() @Roles(ROLES.EMPRESARIO)
   @ApiOperation({ summary: 'Crear empresa y elegir modalidad logística' })
   @ApiCreatedResponse({ type: EmpresaResponseDto, description: 'Empresa creada con membresía del empresario' })
-  crear(@Body() dto: CrearEmpresaRequestDto, @UsuarioActual() u: UsuarioContexto) { return this.empresas.crear(u.user_id, dto.nombre, dto.modalidad_logistica, dto.slug, dto, dto.tipo_empresa, dto.vertical_id, dto.pack_codigo); }
+  crear(@Body() dto: CrearEmpresaRequestDto, @UsuarioActual() u: UsuarioContexto) { return this.empresas.crear(u.user_id, dto.nombre, dto.slug, dto, dto.vertical_id, dto.pack_codigo); }
   @Get(':id') @Roles(ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.EMPRESARIO, ROLES.VENDEDOR)
   @ApiOperation({ summary: 'Obtener una empresa por UUID o slug (solo miembros o administradores)' })
   @ApiParam({
@@ -237,24 +215,6 @@ export class EmpresasController {
     @UsuarioActual() u: UsuarioContexto,
   ) {
     return this.empresas.actualizarSlug(u.user_id, id, dto.slug);
-  }
-  @Patch(':id/logistica') @Roles(ROLES.EMPRESARIO)
-  @ApiOperation({ summary: 'Cambiar la modalidad logística para envíos futuros' })
-  @ApiOkResponse({ type: EmpresaResponseDto, description: 'Modalidad logística actualizada' })
-  actualizarLogistica(@Param('id') id: string, @Body() dto: ActualizarModalidadLogisticaRequestDto, @UsuarioActual() u: UsuarioContexto) {
-    return this.empresas.actualizarModalidad(u.user_id, id, dto.modalidad_logistica);
-  }
-  @Patch(':id/tipo') @Roles(ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.EMPRESARIO)
-  @ApiOperation({ summary: 'Clasificar la empresa (comercial, logística o plataforma)' })
-  @ApiParam({ name: 'id', description: 'UUID de la empresa' })
-  @ApiOkResponse({ type: EmpresaResponseDto, description: 'Tipo de empresa actualizado' })
-  actualizarTipo(
-    @Param('id') id: string,
-    @Body() dto: ActualizarTipoEmpresaRequestDto,
-    @UsuarioActual() u: UsuarioContexto,
-  ) {
-    const esGlobal = [ROLES.SUPER_ADMIN, ROLES.ADMIN].includes(u.rol as never);
-    return this.empresas.actualizarTipo(id, dto.tipo_empresa, u.user_id, esGlobal);
   }
   @Post(':id/vendedores') @Roles(ROLES.EMPRESARIO)
   @ApiOperation({ summary: 'Crear vendedor con participación predeterminada' })

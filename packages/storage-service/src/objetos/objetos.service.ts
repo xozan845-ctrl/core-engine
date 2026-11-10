@@ -14,6 +14,7 @@ import {
   OutboxService,
   Pagina,
   PgService,
+  Logger,
   ROLES,
   UsuarioContexto,
   crearPagina,
@@ -125,6 +126,8 @@ const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
  */
 @Injectable()
 export class ObjetosService {
+  private readonly logger = Logger.create('storage.objetos');
+
   constructor(
     private readonly pg: PgService,
     private readonly buckets: BucketsService,
@@ -250,11 +253,13 @@ export class ObjetosService {
       );
     }
 
-    // El tamano real manda: revalida la cuota antes de contabilizarlo.
-    const estado = await this.buckets.estado(tenantId);
-    this.buckets.verificarCuota(estado, Math.max(0, info.tamano_bytes - Number(fila.tamano_bytes)));
-
+    // El tamano real manda: la cuota se revalida DENTRO de la transacción y
+    // con la fila del bucket bloqueada, para que dos confirmaciones
+    // concurrentes no puedan superar el límite.
     const confirmado = await this.pg.transaccion(async (client) => {
+      const estado = await this.buckets.bloquearEstadoEnTransaccion(client, tenantId);
+      this.buckets.verificarCuota(estado, Math.max(0, info.tamano_bytes - Number(fila.tamano_bytes)));
+
       const r = await client.query<ObjetoRow>(
         `UPDATE storage.objetos
             SET estado = 'activo', tamano_bytes = $3, content_type = $4, etag = $5,
@@ -377,20 +382,35 @@ export class ObjetosService {
     }
     if (fila.estado === 'eliminado') return;
 
-    await this.almacen.eliminar(fila.bucket, fila.objeto);
-    await this.pg.transaccion(async (client) => {
+    // Primero la fuente de verdad (metadata + cuota + outbox) y después el
+    // borrado físico. Si MinIO falla, el objeto queda huérfano y se puede
+    // reconciliar; lo que no puede quedar es metadata "activo" sin bytes.
+    const eliminado = await this.pg.transaccion(async (client) => {
       const r = await client.query<ObjetoRow>(
         `UPDATE storage.objetos SET estado = 'eliminado', eliminado_en = NOW()
           WHERE tenant_id = $1 AND id = $2 AND estado <> 'eliminado'
           RETURNING ${COLUMNAS}`,
         [tenantId, id],
       );
-      if (r.rowCount === 0) return;
+      if (r.rowCount === 0) return null;
       if (fila.estado === 'activo') {
         await this.buckets.restarUsoEnTransaccion(client, tenantId, Number(fila.tamano_bytes));
       }
       await this.emitirEliminado(client, r.rows[0]);
+      return r.rows[0];
     });
+
+    if (!eliminado) return;
+    try {
+      await this.almacen.eliminar(fila.bucket, fila.objeto);
+    } catch (err) {
+      this.logger.error({
+        msg: 'No se pudo borrar el objeto físico; queda huérfano para reconciliación',
+        objeto_id: id,
+        bucket: fila.bucket,
+        err: err instanceof Error ? err.message : String(err),
+      });
+    }
   }
 
   private async filaPublica(id: string): Promise<ObjetoRow> {

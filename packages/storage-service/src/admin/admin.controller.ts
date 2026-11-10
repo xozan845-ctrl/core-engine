@@ -36,12 +36,12 @@ export class ActualizarTenantRequestDto {
 
 /**
  * Operacion multi-tenant (admin): inventario de buckets, cuotas y estado por
- * organizacion. Las rutas viven bajo `/api/v1/admin/...`, que el gateway ya
+ * organizacion. Las rutas viven bajo `/api/v2/admin/...`, que el gateway ya
  * restringe al rol admin (R-DS-3).
  */
 @ApiTags('Almacenamiento (admin)')
 @ApiBearerAuth()
-@Controller('api/v1/admin/storage')
+@Controller('api/v2/admin/storage')
 @Roles(ROLES.SUPER_ADMIN, ROLES.ADMIN)
 export class AdminStorageController {
   constructor(private readonly buckets: BucketsService) {}

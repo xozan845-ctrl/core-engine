@@ -421,7 +421,7 @@ export class ActualizarSlugTiendaRequestDto {
 
 @ApiTags('Tiendas')
 @ApiBearerAuth()
-@Controller('api/v1/vendedores')
+@Controller('api/v2/vendedores')
 export class TiendasController {
   constructor(private readonly tiendas: TiendasService) {}
 
@@ -461,10 +461,10 @@ export class TiendasController {
   }
 }
 
-/** GET /api/v1/empresarios/me/tiendas — tiendas de la empresa (ADR-25). */
+/** GET /api/v2/empresarios/me/tiendas — tiendas de la empresa (ADR-25). */
 @ApiTags('Tiendas')
 @ApiBearerAuth()
-@Controller('api/v1/empresarios/me')
+@Controller('api/v2/empresarios/me')
 export class TiendasEmpresaController {
   constructor(private readonly tiendas: TiendasService) {}
 
@@ -478,10 +478,10 @@ export class TiendasEmpresaController {
   }
 }
 
-/** PATCH /api/v1/tiendas/:id/slug — cambia el slug público (ADR-26). */
+/** PATCH /api/v2/tiendas/:id/slug — cambia el slug público (ADR-26). */
 @ApiTags('Tiendas')
 @ApiBearerAuth()
-@Controller('api/v1/tiendas')
+@Controller('api/v2/tiendas')
 export class TiendasSlugController {
   constructor(private readonly tiendas: TiendasService) {}
 

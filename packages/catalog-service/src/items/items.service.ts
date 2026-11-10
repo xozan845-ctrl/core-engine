@@ -15,6 +15,13 @@ const TIPOS = ['producto', 'servicio', 'alquiler'] as const;
 
 export type TipoItem = (typeof TIPOS)[number];
 
+export interface ItemImagen {
+  id: string;
+  objeto_id: string;
+  orden: number;
+  es_principal: boolean;
+}
+
 export interface Item {
   item_id: string;
   empresa_id: string;
@@ -29,11 +36,58 @@ export interface Item {
   stock: number | null;
   duration_minutes: number | null;
   atributos: Record<string, unknown>;
+  parent_item_id: string | null;
+  marca: string;
+  codigo_barras: string;
+  unidad: string;
+  permite_fracciones: boolean;
+  unidad_compra: string;
+  contenido_cantidad: number;
+  contenido_unidad: string;
+  tipo_precio: 'fijo' | 'escala';
+  tipo_costo: 'fijo' | 'escala';
+  stock_minimo: number;
+  stock_maximo: number | null;
+  garantia_meses: number | null;
+  es_materia_prima: boolean;
+  ubicacion: string;
+  imagenes: ItemImagen[];
   estado: 'activo' | 'inactivo';
-  source_type: 'producto' | 'servicio' | null;
-  source_id: string | null;
   creado_en: string;
   actualizado_en: string;
+}
+
+export interface MetadatosItemInput {
+  marca?: string;
+  codigo_barras?: string;
+  unidad?: string;
+  permite_fracciones?: boolean;
+  unidad_compra?: string;
+  contenido_cantidad?: number;
+  contenido_unidad?: string;
+  tipo_precio?: 'fijo' | 'escala';
+  tipo_costo?: 'fijo' | 'escala';
+  stock_minimo?: number;
+  stock_maximo?: number | null;
+  garantia_meses?: number | null;
+  es_materia_prima?: boolean;
+  ubicacion?: string;
+}
+
+export interface CrearItemInput extends MetadatosItemInput {
+  tipo: TipoItem;
+  codigo: string;
+  nombre: string;
+  descripcion?: string;
+  categoria?: string;
+  precio: string | number;
+  costo?: string | number;
+  track_inventory?: boolean;
+  stock?: number | null;
+  duration_minutes?: number | null;
+  atributos?: Record<string, unknown>;
+  estado?: 'activo' | 'inactivo';
+  parent_item_id?: string | null;
 }
 
 export interface CrearAlquilerInput {
@@ -61,9 +115,22 @@ interface ItemRow {
   stock: number | null;
   duration_minutes: number | null;
   atributos: Record<string, unknown> | null;
+  parent_item_id: string | null;
+  marca: string;
+  codigo_barras: string;
+  unidad: string;
+  permite_fracciones: boolean;
+  unidad_compra: string;
+  contenido_cantidad: number;
+  contenido_unidad: string;
+  tipo_precio: string;
+  tipo_costo: string;
+  stock_minimo: number;
+  stock_maximo: number | null;
+  garantia_meses: number | null;
+  es_materia_prima: boolean;
+  ubicacion: string;
   estado: string;
-  source_type: 'producto' | 'servicio' | null;
-  source_id: string | null;
   creado_en: string;
   actualizado_en: string;
 }
@@ -80,8 +147,10 @@ export interface ItemSchemaRow {
 
 const COLUMNAS = `item_id, empresa_id, tipo, codigo, nombre, descripcion,
   categoria, precio_cents, costo_cents, track_inventory, stock,
-  duration_minutes, atributos, estado, source_type, source_id, creado_en,
-  actualizado_en`;
+  duration_minutes, atributos, parent_item_id, marca, codigo_barras, unidad,
+  permite_fracciones, unidad_compra, contenido_cantidad, contenido_unidad,
+  tipo_precio, tipo_costo, stock_minimo, stock_maximo, garantia_meses,
+  es_materia_prima, ubicacion, estado, creado_en, actualizado_en`;
 
 @Injectable()
 export class ItemsService {
@@ -127,7 +196,9 @@ export class ItemsService {
        ORDER BY creado_en DESC LIMIT $${params.length + 1} OFFSET $${params.length + 2}`,
       [...params, limite, (pagina - 1) * limite],
     );
-    return crearPagina(filas.map((fila) => this.serializar(fila)), total, { pagina, limite });
+    const items = filas.map((fila) => this.serializar(fila));
+    await this.adjuntarImagenes(items);
+    return crearPagina(items, total, { pagina, limite });
   }
 
   async encontrarPorId(id: string, empresaId?: string): Promise<Item | null> {
@@ -142,11 +213,128 @@ export class ItemsService {
       `SELECT ${COLUMNAS} FROM catalog.items_vista WHERE ${condiciones.join(' AND ')}`,
       params,
     );
-    return fila ? this.serializar(fila) : null;
+    if (!fila) return null;
+    const item = this.serializar(fila);
+    await this.adjuntarImagenes([item]);
+    return item;
   }
 
-  async crearAlquiler(datos: CrearAlquilerInput, empresaId: string): Promise<Item> {
+  /**
+   * Consulta por lote de códigos. Un código puede repetirse en empresas
+   * distintas, por eso la fila incluye `empresa_id`: el consumidor debe
+   * emparejar la clave compuesta (ADR-27).
+   */
+  async lotePorSkus(
+    skus: string[],
+  ): Promise<{ empresa_id: string; sku: string; stock: number; estado: string }[]> {
+    if (!skus.length) return [];
+    const params: string[] = [...new Set(skus.map((s) => String(s).toLowerCase()))];
+    const marcadores = params.map((_, i) => `$${i + 1}`).join(', ');
+    return this.pg.query<{ empresa_id: string; sku: string; stock: number; estado: string }>(
+      `SELECT i.empresa_id, LOWER(i.codigo) AS sku, i.stock,
+              CASE WHEN i.stock > 0 THEN 'disponible' ELSE 'agotado' END AS estado
+         FROM catalog.items i
+        WHERE LOWER(i.codigo) IN (${marcadores})
+          AND i.tipo = 'producto' AND i.estado = 'activo' AND i.eliminado_en IS NULL
+        ORDER BY i.creado_en DESC`,
+      params,
+    );
+  }
+
+  async crearItem(datos: CrearItemInput, empresaId: string): Promise<Item> {
+    const tipo = this.exigirTipo(datos.tipo);
     const codigo = this.normalizarCodigo(datos.codigo);
+    const nombre = this.validarNombre(datos.nombre);
+    const precio = Money.parsear(datos.precio);
+    const costo = Money.parsear(datos.costo ?? '0');
+    const trackInventory = tipo === 'producto' ? datos.track_inventory !== false : false;
+    if (trackInventory) {
+      if (!Number.isInteger(datos.stock) || (datos.stock ?? -1) < 0) {
+        throw new DomainError('STOCK_INVALIDO', 'El stock debe ser un entero no negativo.');
+      }
+    }
+    let durationMinutes: number | null = null;
+    if (tipo === 'servicio') {
+      if (!Number.isInteger(datos.duration_minutes) || (datos.duration_minutes ?? 0) < 1 || (datos.duration_minutes ?? 0) > 1440) {
+        throw new DomainError('DURACION_INVALIDA', 'La duración debe estar entre 1 y 1440 minutos.');
+      }
+      durationMinutes = datos.duration_minutes ?? null;
+    }
+    if (datos.parent_item_id) {
+      const padre = await this.pg.queryOne<{ id: string; tipo: string; empresa_id: string }>(
+        `SELECT id, tipo, empresa_id FROM catalog.items WHERE id = $1 AND eliminado_en IS NULL`,
+        [datos.parent_item_id],
+      );
+      if (!padre || padre.empresa_id !== empresaId || padre.tipo !== tipo) {
+        throw new DomainError('ITEM_PADRE_INVALIDO', 'El item padre debe existir, ser del mismo tipo y de la misma empresa.');
+      }
+    }
+    const atributos = await this.validarAtributos(
+      empresaId,
+      tipo,
+      datos.categoria ?? 'general',
+      datos.atributos ?? {},
+    );
+    const fila = await this.pg.queryOne<ItemRow>(
+      `INSERT INTO catalog.items
+         (empresa_id, tipo, codigo, nombre, descripcion, categoria, precio_cents,
+          costo_cents, track_inventory, stock, duration_minutes, atributos, estado,
+          parent_item_id, marca, codigo_barras, unidad, permite_fracciones,
+          unidad_compra, contenido_cantidad, contenido_unidad, tipo_precio,
+          tipo_costo, stock_minimo, stock_maximo, garantia_meses, es_materia_prima,
+          ubicacion)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12::jsonb, $13, $14,
+               $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27, $28)
+       RETURNING ${COLUMNAS}`,
+      [
+        empresaId,
+        tipo,
+        codigo,
+        nombre,
+        (datos.descripcion ?? '').trim(),
+        (datos.categoria ?? 'general').trim() || 'general',
+        precio.centavos,
+        costo.centavos,
+        trackInventory,
+        trackInventory ? datos.stock : null,
+        durationMinutes,
+        JSON.stringify(atributos),
+        datos.estado === 'inactivo' ? 'inactivo' : 'activo',
+        datos.parent_item_id ?? null,
+        (datos.marca ?? '').trim(),
+        (datos.codigo_barras ?? '').trim(),
+        (datos.unidad ?? 'Unidad (u)').trim() || 'Unidad (u)',
+        datos.permite_fracciones === true,
+        (datos.unidad_compra ?? 'Igual que la de venta').trim() || 'Igual que la de venta',
+        datos.contenido_cantidad ?? 0,
+        (datos.contenido_unidad ?? 'Sin contenido').trim() || 'Sin contenido',
+        datos.tipo_precio === 'escala' ? 'escala' : 'fijo',
+        datos.tipo_costo === 'escala' ? 'escala' : 'fijo',
+        datos.stock_minimo ?? 0,
+        datos.stock_maximo ?? null,
+        datos.garantia_meses ?? null,
+        datos.es_materia_prima === true,
+        (datos.ubicacion ?? '').trim(),
+      ],
+    );
+    if (!fila) throw new DomainError('ITEM_NO_CREADO', 'No se pudo crear el item.');
+    return this.serializar(fila);
+  }
+
+  /** Baja lógica genérica de un item (R-DB-5). */
+  async eliminar(id: string, empresaId: string): Promise<void> {
+    if (!UUID.test(id)) throw new DomainError('ITEM_INVALIDO', 'El id del item no es válido.');
+    const fila = await this.pg.queryOne<{ id: string }>(
+      `UPDATE catalog.items
+          SET eliminado_en = NOW(), estado = 'inactivo', actualizado_en = NOW()
+        WHERE id = $1 AND empresa_id = $2 AND eliminado_en IS NULL
+        RETURNING id`,
+      [id, empresaId],
+    );
+    if (!fila) throw new DomainError('ITEM_NO_ENCONTRADO', 'El item no existe para esta empresa.');
+  }
+
+  async crearAlquiler(datos: CrearAlquilerInput, empresaId: string): Promise<Item> {    const codigo = this.normalizarCodigo(datos.codigo);
     const nombre = this.validarNombre(datos.nombre);
     const precio = Money.parsear(datos.precio);
     const costo = Money.parsear(datos.costo ?? '0');
@@ -253,6 +441,30 @@ export class ItemsService {
     return atributos;
   }
 
+  private async adjuntarImagenes(items: Item[]): Promise<void> {
+    if (items.length === 0) return;
+    const ids = items.map((item) => item.item_id);
+    const filas = await this.pg.query<ItemImagen & { item_id: string }>(
+      `SELECT id, item_id, objeto_id, orden, es_principal
+         FROM catalog.item_imagenes
+        WHERE item_id = ANY($1::uuid[])
+        ORDER BY item_id, orden`,
+      [ids],
+    );
+    const porItem = new Map<string, ItemImagen[]>();
+    for (const fila of filas) {
+      const lista = porItem.get(fila.item_id) ?? [];
+      lista.push({
+        id: fila.id,
+        objeto_id: fila.objeto_id,
+        orden: fila.orden,
+        es_principal: fila.es_principal,
+      });
+      porItem.set(fila.item_id, lista);
+    }
+    for (const item of items) item.imagenes = porItem.get(item.item_id) ?? [];
+  }
+
   private serializar(fila: ItemRow): Item {
     return {
       item_id: fila.item_id,
@@ -268,9 +480,23 @@ export class ItemsService {
       stock: fila.stock,
       duration_minutes: fila.duration_minutes,
       atributos: fila.atributos ?? {},
+      parent_item_id: fila.parent_item_id ?? null,
+      marca: fila.marca ?? '',
+      codigo_barras: fila.codigo_barras ?? '',
+      unidad: fila.unidad ?? 'Unidad (u)',
+      permite_fracciones: fila.permite_fracciones === true,
+      unidad_compra: fila.unidad_compra ?? 'Igual que la de venta',
+      contenido_cantidad: fila.contenido_cantidad ?? 0,
+      contenido_unidad: fila.contenido_unidad ?? 'Sin contenido',
+      tipo_precio: fila.tipo_precio === 'escala' ? 'escala' : 'fijo',
+      tipo_costo: fila.tipo_costo === 'escala' ? 'escala' : 'fijo',
+      stock_minimo: fila.stock_minimo ?? 0,
+      stock_maximo: fila.stock_maximo ?? null,
+      garantia_meses: fila.garantia_meses ?? null,
+      es_materia_prima: fila.es_materia_prima === true,
+      ubicacion: fila.ubicacion ?? '',
+      imagenes: [],
       estado: fila.estado === 'inactivo' ? 'inactivo' : 'activo',
-      source_type: fila.source_type ?? null,
-      source_id: fila.source_id ?? null,
       creado_en: fila.creado_en,
       actualizado_en: fila.actualizado_en,
     };

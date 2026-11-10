@@ -13,21 +13,29 @@ import {
   parsearPaginacion,
   Pagina,
   EMPRESA_LEGACY_ID,
+  capacidadesDeEmpresas,
 } from '@core/shared';
 import { ItemsService } from '../items/items.service';
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const MAX_IMAGENES = 3;
 const MAX_VARIANTES = 50;
-const URL_IMAGEN_PUBLICA = '/api/v1/storage/public/objetos';
+const URL_IMAGEN_PUBLICA = '/api/v2/storage/public/objetos';
 
 /** Columnas de lectura compartidas por listado, detalle y variantes. */
-const COLUMNAS_PRODUCTO = `v.id, v.empresa_id, v.sku, v.nombre, v.descripcion, v.categoria,
-  v.precio_base_cents, v.costo_cents, v.marca, v.codigo_barras, v.unidad,
-  v.permite_fracciones, v.unidad_compra, v.contenido_cantidad, v.contenido_unidad,
-  v.tipo_precio, v.tipo_costo, v.stock_minimo, v.stock_maximo, v.garantia_meses,
-  v.es_materia_prima, v.ubicacion, v.estado_operativo, v.actualizado_en,
-  v.disponible AS stock, v.estado, v.creado_en, v.producto_padre_id, v.atributos`;
+const COLUMNAS_PRODUCTO = `i.id, i.empresa_id, i.codigo AS sku, i.nombre, i.descripcion,
+  i.categoria, i.precio_cents, i.precio_cents AS precio_base_cents, i.costo_cents,
+  i.marca, i.codigo_barras, i.unidad, i.permite_fracciones, i.unidad_compra,
+  i.contenido_cantidad, i.contenido_unidad, i.tipo_precio, i.tipo_costo,
+  i.stock_minimo, i.stock_maximo, i.garantia_meses, i.es_materia_prima, i.ubicacion,
+  i.actualizado_en, i.stock, i.estado, i.creado_en,
+  i.parent_item_id AS producto_padre_id, i.atributos,
+  COALESCE((SELECT MIN(c.precio_cents) FROM catalog.items c
+             WHERE c.parent_item_id = i.id AND c.eliminado_en IS NULL),
+           i.precio_cents) AS precio_desde_cents,
+  COALESCE((SELECT SUM(c.stock) FROM catalog.items c
+             WHERE c.parent_item_id = i.id AND c.eliminado_en IS NULL),
+           i.stock) AS stock_total`;
 
 export interface ImagenProducto {
   id: string;
@@ -147,15 +155,16 @@ interface ProductoRow {
   garantia_meses?: number | null;
   es_materia_prima?: boolean;
   ubicacion?: string;
-  estado_operativo?: string;
   producto_padre_id?: string | null;
   atributos?: Record<string, unknown> | null;
   tiene_variantes?: boolean;
+  precio_desde_cents?: number;
+  stock_total?: number;
 }
 
 interface ImagenRow {
   id: string;
-  producto_id: string;
+  item_id: string;
   objeto_id: string;
   orden: number;
   es_principal: boolean;
@@ -163,7 +172,6 @@ interface ImagenRow {
 
 interface EmpresaCatalogo {
   estado: string;
-  tipo_empresa?: string;
 }
 
 interface MetadatosNormalizados {
@@ -187,9 +195,10 @@ interface MetadatosNormalizados {
 
 /**
  * Catálogo maestro **por empresa** (ADR-27) con variantes e imágenes (ADR-28).
- * Una variante es una fila hija de `catalog.productos`: conserva su SKU, precio
- * y stock, así que las reservas/órdenes siguen operando por (empresa, SKU).
- * El padre agrega stock y precio mínimo y no se vende si tiene variantes.
+ * Tras la Fase 3 todo el catálogo vive en `catalog.items`: un producto es un
+ * item `tipo='producto'`, una variante es un item hijo (`parent_item_id`) y las
+ * imágenes se guardan en `catalog.item_imagenes`. Las reservas/órdenes siguen
+ * operando por (empresa, código) y el padre agrega stock y precio mínimo.
  */
 @Injectable()
 export class ProductosService {
@@ -216,37 +225,44 @@ export class ProductosService {
     const empresaId = this.exigirEmpresa(filtros.empresa_id);
     const { pagina, limite } = parsearPaginacion(filtros as Record<string, unknown>);
     const params: unknown[] = [empresaId];
-    const condiciones: string[] = ['v.empresa_id = $1', 'v.producto_padre_id IS NULL'];
+    const condiciones: string[] = [
+      'i.empresa_id = $1',
+      "i.tipo = 'producto'",
+      'i.parent_item_id IS NULL',
+      'i.eliminado_en IS NULL',
+    ];
     if (filtros.incluir_inactivos !== true) {
-      condiciones.push(`v.estado_operativo = 'activo'`);
+      condiciones.push(`i.estado = 'activo'`);
     }
     if (filtros.q) {
       params.push(`%${String(filtros.q).toLowerCase()}%`);
       condiciones.push(
-        `(LOWER(v.nombre) LIKE $${params.length} OR LOWER(v.sku) LIKE $${params.length})`,
+        `(LOWER(i.nombre) LIKE $${params.length} OR LOWER(i.codigo) LIKE $${params.length})`,
       );
     }
     if (filtros.estado) {
-      params.push(String(filtros.estado));
-      condiciones.push(`v.estado = $${params.length}`);
+      condiciones.push(
+        String(filtros.estado) === 'disponible' ? 'i.stock > 0' : 'i.stock = 0',
+      );
     }
     if (filtros.categoria) {
       params.push(String(filtros.categoria));
-      condiciones.push(`LOWER(v.categoria) = LOWER($${params.length})`);
+      condiciones.push(`LOWER(i.categoria) = LOWER($${params.length})`);
     }
     const where = `WHERE ${condiciones.join(' AND ')}`;
     const total = await this.pg
       .queryOne<{ n: number }>(
-        `SELECT COUNT(*)::int AS n FROM catalog.producto_catalogo_vista v ${where}`,
+        `SELECT COUNT(*)::int AS n FROM catalog.items i ${where}`,
         params,
       )
       .then((r) => r?.n ?? 0);
     const offset = (pagina - 1) * limite;
     const filas = await this.pg.query<ProductoRow>(
       `SELECT ${COLUMNAS_PRODUCTO},
-              EXISTS (SELECT 1 FROM catalog.productos c WHERE c.producto_padre_id = v.id) AS tiene_variantes
-       FROM catalog.producto_catalogo_vista v ${where}
-       ORDER BY v.creado_en DESC LIMIT $${params.length + 1} OFFSET $${params.length + 2}`,
+              EXISTS (SELECT 1 FROM catalog.items c
+                       WHERE c.parent_item_id = i.id AND c.eliminado_en IS NULL) AS tiene_variantes
+       FROM catalog.items i ${where}
+       ORDER BY i.creado_en DESC LIMIT $${params.length + 1} OFFSET $${params.length + 2}`,
       [...params, limite, offset],
     );
     const imagenes = await this.imagenesDe(filas.map((f) => f.id));
@@ -264,16 +280,17 @@ export class ProductosService {
   ): Promise<Producto | null> {
     if (!UUID.test(id)) return null;
     const params: unknown[] = [id];
-    let where = 'v.id = $1';
+    let where = "i.id = $1 AND i.tipo = 'producto' AND i.eliminado_en IS NULL";
     if (empresaId) {
       params.push(empresaId);
-      where += ` AND v.empresa_id = $${params.length}`;
+      where += ` AND i.empresa_id = $${params.length}`;
     }
-    if (!incluirInactivos) where += ` AND v.estado_operativo = 'activo'`;
+    if (!incluirInactivos) where += ` AND i.estado = 'activo'`;
     const fila = await this.pg.queryOne<ProductoRow>(
       `SELECT ${COLUMNAS_PRODUCTO},
-              EXISTS (SELECT 1 FROM catalog.productos c WHERE c.producto_padre_id = v.id) AS tiene_variantes
-       FROM catalog.producto_catalogo_vista v WHERE ${where}`,
+              EXISTS (SELECT 1 FROM catalog.items c
+                       WHERE c.parent_item_id = i.id AND c.eliminado_en IS NULL) AS tiene_variantes
+       FROM catalog.items i WHERE ${where}`,
       params,
     );
     return fila ? this.detallar(fila) : null;
@@ -285,16 +302,17 @@ export class ProductosService {
     incluirInactivos = false,
   ): Promise<Producto | null> {
     const params: unknown[] = [sku];
-    let where = 'LOWER(v.sku) = LOWER($1)';
+    let where = "LOWER(i.codigo) = LOWER($1) AND i.tipo = 'producto' AND i.eliminado_en IS NULL";
     if (empresaId) {
       params.push(empresaId);
-      where += ` AND v.empresa_id = $${params.length}`;
+      where += ` AND i.empresa_id = $${params.length}`;
     }
-    if (!incluirInactivos) where += ` AND v.estado_operativo = 'activo'`;
+    if (!incluirInactivos) where += ` AND i.estado = 'activo'`;
     const fila = await this.pg.queryOne<ProductoRow>(
       `SELECT ${COLUMNAS_PRODUCTO},
-              EXISTS (SELECT 1 FROM catalog.productos c WHERE c.producto_padre_id = v.id) AS tiene_variantes
-       FROM catalog.producto_catalogo_vista v WHERE ${where}`,
+              EXISTS (SELECT 1 FROM catalog.items c
+                       WHERE c.parent_item_id = i.id AND c.eliminado_en IS NULL) AS tiene_variantes
+       FROM catalog.items i WHERE ${where}`,
       params,
     );
     return fila ? this.detallar(fila) : null;
@@ -309,10 +327,12 @@ export class ProductosService {
     if (!codigoBarras) return null;
     const fila = await this.pg.queryOne<ProductoRow>(
       `SELECT ${COLUMNAS_PRODUCTO},
-              EXISTS (SELECT 1 FROM catalog.productos c WHERE c.producto_padre_id = v.id) AS tiene_variantes
-       FROM catalog.producto_catalogo_vista v
-       WHERE v.empresa_id = $1 AND v.codigo_barras = $2
-         ${incluirInactivos ? '' : "AND v.estado_operativo = 'activo'"}
+              EXISTS (SELECT 1 FROM catalog.items c
+                       WHERE c.parent_item_id = i.id AND c.eliminado_en IS NULL) AS tiene_variantes
+       FROM catalog.items i
+       WHERE i.empresa_id = $1 AND i.codigo_barras = $2
+         AND i.tipo = 'producto' AND i.eliminado_en IS NULL
+         ${incluirInactivos ? '' : "AND i.estado = 'activo'"}
        LIMIT 1`,
       [empresaId, codigoBarras],
     );
@@ -320,9 +340,9 @@ export class ProductosService {
   }
 
   /**
-   * Consulta por lote de SKUs. Un SKU puede repetirse en empresas distintas,
-   * por eso la fila incluye `empresa_id`: el consumidor debe emparejar la
-   * clave compuesta (ADR-27).
+   * Consulta por lote de códigos. Un código puede repetirse en empresas
+   * distintas, por eso la fila incluye `empresa_id`: el consumidor debe
+   * emparejar la clave compuesta (ADR-27).
    */
   async lotePorSkus(
     skus: string[],
@@ -331,11 +351,12 @@ export class ProductosService {
     const params: string[] = [...new Set(skus.map((s) => String(s).toLowerCase()))];
     const marcadores = params.map((_, i) => `$${i + 1}`).join(', ');
     return this.pg.query<{ empresa_id: string; sku: string; stock: number; estado: string }>(
-      `SELECT empresa_id, LOWER(sku) AS sku, disponible AS stock, estado
-       FROM catalog.producto_catalogo_vista
-       WHERE LOWER(sku) IN (${marcadores})
-         AND estado_operativo = 'activo'
-       ORDER BY creado_en DESC`,
+      `SELECT i.empresa_id, LOWER(i.codigo) AS sku, i.stock,
+              CASE WHEN i.stock > 0 THEN 'disponible' ELSE 'agotado' END AS estado
+       FROM catalog.items i
+       WHERE LOWER(i.codigo) IN (${marcadores})
+         AND i.tipo = 'producto' AND i.estado = 'activo' AND i.eliminado_en IS NULL
+       ORDER BY i.creado_en DESC`,
       params,
     );
   }
@@ -343,6 +364,7 @@ export class ProductosService {
   /** Stock restante por producto (alimenta stock.updated para RN-02). */
   async stockActualDe(
     items: ClaveProducto[],
+    client?: PoolClient,
   ): Promise<{ empresa_id: string; sku: string; stock_restante: number }[]> {
     if (!items.length) return [];
     const claves = [
@@ -356,11 +378,16 @@ export class ProductosService {
         ]),
       ).values(),
     ];
+    const sql = `SELECT i.empresa_id, LOWER(i.codigo) AS sku, i.stock AS stock_restante
+       FROM catalog.items i
+       JOIN jsonb_to_recordset($1::jsonb) AS x(empresa_id uuid, sku text)
+         ON i.empresa_id = x.empresa_id AND LOWER(i.codigo) = LOWER(x.sku)
+      WHERE i.tipo = 'producto' AND i.eliminado_en IS NULL`;
+    if (client) {
+      return (await client.query<{ empresa_id: string; sku: string; stock_restante: number }>(sql, [JSON.stringify(claves)])).rows;
+    }
     return this.pg.query<{ empresa_id: string; sku: string; stock_restante: number }>(
-      `SELECT p.empresa_id, LOWER(p.sku) AS sku, p.stock AS stock_restante
-       FROM catalog.productos p
-       JOIN jsonb_to_recordset($1::jsonb) AS i(empresa_id uuid, sku text)
-         ON p.empresa_id = i.empresa_id AND LOWER(p.sku) = LOWER(i.sku)`,
+      sql,
       [JSON.stringify(claves)],
     );
   }
@@ -446,16 +473,16 @@ export class ProductosService {
     const padreId = randomUUID();
     await this.pg.transaccion(async (client) => {
       await client.query(
-        `INSERT INTO catalog.productos
-           (id, empresa_id, sku, nombre, descripcion, categoria, precio_base_cents,
+        `INSERT INTO catalog.items
+           (id, empresa_id, tipo, codigo, nombre, descripcion, categoria, precio_cents,
             costo_cents, marca, codigo_barras, unidad, permite_fracciones,
             unidad_compra, contenido_cantidad, contenido_unidad, tipo_precio,
             tipo_costo, stock_minimo, stock_maximo, garantia_meses,
-            es_materia_prima, ubicacion, estado_operativo, actualizado_en,
-            stock, estado, producto_padre_id, atributos)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14,
-                 $15, $16, $17, $18, $19, $20, $21, $22, $23, NOW(), $24,
-                 CASE WHEN $24 > 0 THEN 'disponible' ELSE 'agotado' END, NULL, $25::jsonb)`,
+            es_materia_prima, ubicacion, estado, track_inventory, stock,
+            parent_item_id, atributos, actualizado_en)
+         VALUES ($1, $2, 'producto', $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13,
+                 $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, true, $24,
+                 NULL, $25::jsonb, NOW())`,
         [
           padreId,
           datos.empresa_id,
@@ -484,18 +511,17 @@ export class ProductosService {
           JSON.stringify(datos.atributos ?? {}),
         ],
       );
-      await this.registrarHistorico(client, datos.empresa_id, sku, null, precio.centavos);
+      await this.registrarHistorico(client, datos.empresa_id, padreId, null, precio.centavos);
 
       for (const variante of variantes) {
         const varianteId = randomUUID();
         const varianteSku = this.normalizarSku(variante.sku);
         const variantePrecio = this.validarPrecio(variante.precio_base);
         await client.query(
-          `INSERT INTO catalog.productos
-             (id, empresa_id, sku, nombre, descripcion, categoria, precio_base_cents,
-              stock, estado, producto_padre_id, atributos)
-           VALUES ($1, $2, $3, $4, $5, $6, $7, $8,
-                   CASE WHEN $8 > 0 THEN 'disponible' ELSE 'agotado' END, $9, $10::jsonb)`,
+          `INSERT INTO catalog.items
+             (id, empresa_id, tipo, codigo, nombre, descripcion, categoria,
+              precio_cents, track_inventory, stock, parent_item_id, atributos)
+           VALUES ($1, $2, 'producto', $3, $4, $5, $6, $7, true, $8, $9, $10::jsonb)`,
           [
             varianteId,
             datos.empresa_id,
@@ -512,7 +538,7 @@ export class ProductosService {
         await this.registrarHistorico(
           client,
           datos.empresa_id,
-          varianteSku,
+          varianteId,
           null,
           variantePrecio.centavos,
         );
@@ -526,7 +552,7 @@ export class ProductosService {
 
       await this.insertarImagenes(client, datos.empresa_id, padreId, datos.imagenes ?? []);
       if (variantes.length > 0) {
-        await client.query('SELECT catalog.fn_recalcular_padre($1)', [padreId]);
+        await this.recalcularPadre(client, padreId);
       }
     });
 
@@ -570,11 +596,10 @@ export class ProductosService {
     const varianteId = randomUUID();
     await this.pg.transaccion(async (client) => {
       await client.query(
-        `INSERT INTO catalog.productos
-           (id, empresa_id, sku, nombre, descripcion, categoria, precio_base_cents,
-            stock, estado, producto_padre_id, atributos)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8,
-                 CASE WHEN $8 > 0 THEN 'disponible' ELSE 'agotado' END, $9, $10::jsonb)`,
+        `INSERT INTO catalog.items
+           (id, empresa_id, tipo, codigo, nombre, descripcion, categoria,
+            precio_cents, track_inventory, stock, parent_item_id, atributos)
+         VALUES ($1, $2, 'producto', $3, $4, $5, $6, $7, true, $8, $9, $10::jsonb)`,
         [
           varianteId,
           empresaId,
@@ -588,9 +613,9 @@ export class ProductosService {
           JSON.stringify(datos.atributos ?? {}),
         ],
       );
-      await this.registrarHistorico(client, empresaId, sku, null, precio.centavos);
+      await this.registrarHistorico(client, empresaId, varianteId, null, precio.centavos);
       await this.insertarImagenes(client, empresaId, varianteId, datos.imagenes ?? []);
-      await client.query('SELECT catalog.fn_recalcular_padre($1)', [padreId]);
+      await this.recalcularPadre(client, padreId);
     });
 
     const creada = await this.encontrarPorId(varianteId, empresaId, true);
@@ -662,7 +687,7 @@ export class ProductosService {
       push('garantia_meses = $', metadatos.garantia_meses);
       push('es_materia_prima = $', metadatos.es_materia_prima);
       push('ubicacion = $', metadatos.ubicacion);
-      push('estado_operativo = $', metadatos.estado_operativo);
+      push('estado = $', metadatos.estado_operativo);
       sets.push('actualizado_en = NOW()');
 
       if (cambios.atributos !== undefined) {
@@ -672,11 +697,11 @@ export class ProductosService {
 
       if (cambios.precio_base !== undefined) {
         const nuevo = this.validarPrecio(cambios.precio_base);
-        push('precio_base_cents = $', nuevo.centavos);
+        push('precio_cents = $', nuevo.centavos);
         await this.registrarHistorico(
           client,
           previo.empresa_id,
-          previo.sku,
+          previo.id,
           Money.parsear(previo.precio_base).centavos,
           nuevo.centavos,
         );
@@ -685,14 +710,13 @@ export class ProductosService {
       if (cambios.stock !== undefined) {
         this.validarStock(cambios.stock);
         push('stock = $', cambios.stock);
-        push('estado = $', cambios.stock > 0 ? 'disponible' : 'agotado');
         await client.query(
           `INSERT INTO catalog.ajustes_stock
-             (id, empresa_id, producto_sku, cantidad_anterior, cantidad_nueva, motivo, realizado_en)
-           VALUES (gen_random_uuid(), $1, $2, $3, $4, $5, NOW())`,
+             (empresa_id, item_id, cantidad_anterior, cantidad_nueva, motivo, realizado_en)
+           VALUES ($1, $2, $3, $4, $5, NOW())`,
           [
             previo.empresa_id,
-            previo.sku,
+            previo.id,
             previo.stock,
             cambios.stock,
             cambios.motivo ?? 'ajuste manual',
@@ -717,15 +741,15 @@ export class ProductosService {
       params.push(id);
       if (sets.length > 0) {
         await client.query(
-          `UPDATE catalog.productos SET ${sets.join(', ')} WHERE id = $${params.length}`,
+          `UPDATE catalog.items SET ${sets.join(', ')} WHERE id = $${params.length}`,
           params,
         );
       }
+      if (previo.producto_padre_id) {
+        await this.recalcularPadre(client, previo.producto_padre_id);
+      }
     });
 
-    if (previo.producto_padre_id) {
-      await this.recalcularPadre(previo.producto_padre_id);
-    }
     const actualizado = await this.encontrarPorId(id, empresaId, true);
     if (!actualizado) throw new NotFoundError('Producto', id);
     return actualizado;
@@ -753,12 +777,33 @@ export class ProductosService {
     return this.actualizar(varianteId, cambios, empresaId);
   }
 
+  /** Baja lógica del producto y de sus variantes (R-DB-5). */
+  async eliminar(id: string, empresaId?: string): Promise<void> {
+    const previo = await this.encontrarPorId(id, empresaId, true);
+    if (!previo) throw new NotFoundError('Producto', id);
+    await this.validarSinOfertasActivas(id);
+    await this.pg.transaccion(async (client) => {
+      await client.query(
+        `UPDATE catalog.items
+            SET eliminado_en = NOW(), estado = 'inactivo', actualizado_en = NOW()
+          WHERE id = $1 AND tipo = 'producto' AND eliminado_en IS NULL
+            ${empresaId ? 'AND empresa_id = $2' : ''}`,
+        empresaId ? [id, empresaId] : [id],
+      );
+      await client.query(
+        `UPDATE catalog.items
+            SET eliminado_en = NOW(), estado = 'inactivo', actualizado_en = NOW()
+          WHERE parent_item_id = $1 AND eliminado_en IS NULL`,
+        [id],
+      );
+    });
+  }
+
   async eliminarVariante(
     padreId: string,
     varianteId: string,
     empresaId: string,
-  ): Promise<void> {
-    const padre = await this.encontrarPorId(padreId, empresaId, true);
+  ): Promise<void> {    const padre = await this.encontrarPorId(padreId, empresaId, true);
     if (!padre) throw new NotFoundError('Producto', padreId);
     if (!padre.variantes?.some((v) => v.id === varianteId)) {
       throw new NotFoundError('Variante', varianteId);
@@ -766,11 +811,13 @@ export class ProductosService {
     await this.validarSinOfertasActivas(varianteId);
     await this.pg.transaccion(async (client) => {
       await client.query(
-        `DELETE FROM catalog.productos
-          WHERE id = $1 AND empresa_id = $2 AND producto_padre_id = $3`,
+        `UPDATE catalog.items
+            SET eliminado_en = NOW(), estado = 'inactivo', actualizado_en = NOW()
+          WHERE id = $1 AND empresa_id = $2 AND parent_item_id = $3
+            AND eliminado_en IS NULL`,
         [varianteId, empresaId, padreId],
       );
-      await client.query('SELECT catalog.fn_recalcular_padre($1)', [padreId]);
+      await this.recalcularPadre(client, padreId);
     });
   }
 
@@ -786,9 +833,9 @@ export class ProductosService {
 
     await this.pg.transaccion(async (client) => {
       const actuales = await client.query<ImagenRow>(
-        `SELECT id, producto_id, objeto_id, orden, es_principal
-           FROM catalog.producto_imagenes
-          WHERE producto_id = $1
+        `SELECT id, item_id, objeto_id, orden, es_principal
+           FROM catalog.item_imagenes
+          WHERE item_id = $1
           ORDER BY orden
           FOR UPDATE`,
         [productoId],
@@ -807,23 +854,23 @@ export class ProductosService {
       const principalSolicitada = imagen.es_principal === true;
       if (principalSolicitada) {
         await client.query(
-          `UPDATE catalog.producto_imagenes SET es_principal = false WHERE producto_id = $1`,
+          `UPDATE catalog.item_imagenes SET es_principal = false WHERE item_id = $1`,
           [productoId],
         );
       }
       await client.query(
-        `INSERT INTO catalog.producto_imagenes
-           (id, empresa_id, producto_id, objeto_id, orden, es_principal)
+        `INSERT INTO catalog.item_imagenes
+           (id, empresa_id, item_id, objeto_id, orden, es_principal)
          VALUES ($1, $2, $3, $4, $5, $6)`,
         [randomUUID(), empresaId, productoId, imagen.objeto_id, orden, principalSolicitada],
       );
       if (!principalSolicitada && !actuales.rows.some((r) => r.es_principal)) {
         await client.query(
-          `UPDATE catalog.producto_imagenes
+          `UPDATE catalog.item_imagenes
               SET es_principal = true
             WHERE id = (
-              SELECT id FROM catalog.producto_imagenes
-               WHERE producto_id = $1 ORDER BY orden LIMIT 1
+              SELECT id FROM catalog.item_imagenes
+               WHERE item_id = $1 ORDER BY orden LIMIT 1
             )`,
           [productoId],
         );
@@ -853,18 +900,18 @@ export class ProductosService {
     }
     await this.pg.transaccion(async (client) => {
       const eliminada = await client.query<{ es_principal: boolean }>(
-        `DELETE FROM catalog.producto_imagenes
-          WHERE id = $1 AND producto_id = $2 AND empresa_id = $3
+        `DELETE FROM catalog.item_imagenes
+          WHERE id = $1 AND item_id = $2 AND empresa_id = $3
           RETURNING es_principal`,
         [imagenId, productoId, empresaId],
       );
       if (eliminada.rows[0]?.es_principal) {
         await client.query(
-          `UPDATE catalog.producto_imagenes
+          `UPDATE catalog.item_imagenes
               SET es_principal = true
             WHERE id = (
-              SELECT id FROM catalog.producto_imagenes
-               WHERE producto_id = $1 ORDER BY orden LIMIT 1
+              SELECT id FROM catalog.item_imagenes
+               WHERE item_id = $1 ORDER BY orden LIMIT 1
             )`,
           [productoId],
         );
@@ -886,18 +933,35 @@ export class ProductosService {
     fallidos: { empresa_id: string; sku: string; cantidad: number; motivo: string }[];
     stock_restante?: { empresa_id: string; sku: string; stock_restante: number }[];
   }> {
+    return this.pg.transaccion((client) => this.reservarStockEnTransaccion(client, orderId, items));
+  }
+
+  /**
+   * Variante transaccional: el descuento de stock, la reserva y los eventos
+   * que emite el consumidor comparten la misma transacción (saga atómica).
+   */
+  async reservarStockEnTransaccion(
+    client: PoolClient,
+    orderId: string,
+    items: { empresa_id: string; sku: string; cantidad: number }[],
+  ): Promise<{
+    ok: boolean;
+    fallidos: { empresa_id: string; sku: string; cantidad: number; motivo: string }[];
+    stock_restante?: { empresa_id: string; sku: string; stock_restante: number }[];
+  }> {
     const fallidos: { empresa_id: string; sku: string; cantidad: number; motivo: string }[] = [];
-    let reservado = false;
+    await client.query('SAVEPOINT reserva_stock');
     try {
-      await this.pg.transaccion(async (client) => {
         for (const item of items) {
           // Bloqueo pesimista requerido por regla dorada (Data Integrity)
           const lock = await client.query<{ stock: number; tiene_variantes: boolean }>(
-            `SELECT p.stock,
-                    EXISTS (SELECT 1 FROM catalog.productos v WHERE v.producto_padre_id = p.id) AS tiene_variantes
-               FROM catalog.productos p
-              WHERE p.empresa_id = $1 AND LOWER(p.sku) = LOWER($2)
-                AND p.estado_operativo = 'activo' FOR UPDATE`,
+            `SELECT i.stock,
+                    EXISTS (SELECT 1 FROM catalog.items v
+                             WHERE v.parent_item_id = i.id AND v.eliminado_en IS NULL) AS tiene_variantes
+               FROM catalog.items i
+              WHERE i.empresa_id = $1 AND LOWER(i.codigo) = LOWER($2)
+                AND i.tipo = 'producto' AND i.estado = 'activo'
+                AND i.eliminado_en IS NULL FOR UPDATE`,
             [item.empresa_id, item.sku],
           );
 
@@ -921,11 +985,11 @@ export class ProductosService {
           }
 
           await client.query(
-            `UPDATE catalog.productos
-             SET stock = stock - $3,
-                 estado = CASE WHEN stock - $3 > 0 THEN 'disponible' ELSE 'agotado' END
-             WHERE empresa_id = $1 AND LOWER(sku) = LOWER($2)
-             RETURNING sku`,
+            `UPDATE catalog.items
+             SET stock = stock - $3, actualizado_en = NOW()
+             WHERE empresa_id = $1 AND LOWER(codigo) = LOWER($2)
+               AND tipo = 'producto' AND eliminado_en IS NULL
+             RETURNING codigo`,
             [item.empresa_id, item.sku, item.cantidad],
           );
         }
@@ -937,17 +1001,19 @@ export class ProductosService {
            VALUES ($1, $2, NOW())`,
           [orderId, JSON.stringify(items)],
         );
-        reservado = true;
-      });
+        await client.query('RELEASE SAVEPOINT reserva_stock');
     } catch (err) {
       if (!(err instanceof Error) || err.message !== 'STOCK_INSUFICIENTE') throw err;
+      await client.query('ROLLBACK TO SAVEPOINT reserva_stock');
+      await client.query('RELEASE SAVEPOINT reserva_stock');
+      return { ok: false, fallidos };
     }
-    if (!reservado) return { ok: false, fallidos };
-    const stock = await this.pg.query<{ empresa_id: string; sku: string; stock_restante: number }>(
-      `SELECT p.empresa_id, LOWER(p.sku) AS sku, p.stock AS stock_restante
-       FROM catalog.productos p
-       JOIN jsonb_to_recordset($1::jsonb) AS i(empresa_id uuid, sku text)
-         ON p.empresa_id = i.empresa_id AND LOWER(p.sku) = LOWER(i.sku)`,
+    const stock = await client.query<{ empresa_id: string; sku: string; stock_restante: number }>(
+      `SELECT i.empresa_id, LOWER(i.codigo) AS sku, i.stock AS stock_restante
+       FROM catalog.items i
+       JOIN jsonb_to_recordset($1::jsonb) AS x(empresa_id uuid, sku text)
+         ON i.empresa_id = x.empresa_id AND LOWER(i.codigo) = LOWER(x.sku)
+      WHERE i.tipo = 'producto' AND i.eliminado_en IS NULL`,
       [
         JSON.stringify([
           ...new Map(
@@ -962,7 +1028,7 @@ export class ProductosService {
         ]),
       ],
     );
-    return { ok: true, fallidos, stock_restante: stock };
+    return { ok: true, fallidos, stock_restante: stock.rows };
   }
 
   /** RN-06: devolución aprobada revierte stock por (empresa, SKU). */
@@ -970,44 +1036,57 @@ export class ProductosService {
     orderId: string,
     items: { empresa_id: string; sku: string; cantidad: number }[],
   ): Promise<void> {
-    await this.pg.transaccion(async (client) => {
+    await this.pg.transaccion((client) => this.reintegrarStockEnTransaccion(client, orderId, items));
+  }
+
+  async reintegrarStockEnTransaccion(
+    client: PoolClient,
+    orderId: string,
+    items: { empresa_id: string; sku: string; cantidad: number }[],
+  ): Promise<void> {
       for (const item of items) {
         await client.query(
-          `UPDATE catalog.productos
-           SET stock = stock + $3,
-               estado = 'disponible'
-           WHERE empresa_id = $1 AND LOWER(sku) = LOWER($2)`,
+          `UPDATE catalog.items
+           SET stock = stock + $3, actualizado_en = NOW()
+           WHERE empresa_id = $1 AND LOWER(codigo) = LOWER($2)
+             AND tipo = 'producto' AND eliminado_en IS NULL`,
           [item.empresa_id, item.sku, item.cantidad],
         );
       }
       await client.query(
-        `INSERT INTO catalog.ajustes_stock (empresa_id, producto_sku, cantidad_anterior, cantidad_nueva, motivo, realizado_en)
-         SELECT p.empresa_id, p.sku, p.stock - i.cantidad, p.stock, 'devolucion orden ' || $1, NOW()
-         FROM catalog.productos p
-         JOIN jsonb_to_recordset($2::jsonb) AS i(empresa_id uuid, sku text, cantidad int)
-           ON p.empresa_id = i.empresa_id AND LOWER(p.sku) = LOWER(i.sku)`,
+        `INSERT INTO catalog.ajustes_stock
+           (empresa_id, item_id, cantidad_anterior, cantidad_nueva, motivo, realizado_en)
+         SELECT i.empresa_id, i.id, i.stock - x.cantidad, i.stock,
+                'devolucion orden ' || $1, NOW()
+         FROM catalog.items i
+         JOIN jsonb_to_recordset($2::jsonb) AS x(empresa_id uuid, sku text, cantidad int)
+           ON i.empresa_id = x.empresa_id AND LOWER(i.codigo) = LOWER(x.sku)
+        WHERE i.tipo = 'producto' AND i.eliminado_en IS NULL`,
         [orderId, JSON.stringify(items)],
       );
       // La reserva de esta orden ya no está activa tras reintegrar el stock.
       await client.query('DELETE FROM catalog.reservas_ordenes WHERE order_id = $1', [orderId]);
-    });
   }
 
   /** Claves de eventos ya procesadas (idempotencia, doc 5.2). */
-  async estaProcesado(event_id: string): Promise<boolean> {
-    const fila = await this.pg.queryOne(
-      `SELECT 1 FROM catalog.eventos_procesados WHERE event_id = $1`,
-      [event_id],
-    );
+  async estaProcesado(event_id: string, client?: PoolClient): Promise<boolean> {
+    const fila = client
+      ? (await client.query(`SELECT 1 FROM catalog.eventos_procesados WHERE event_id = $1`, [event_id])).rows[0]
+      : await this.pg.queryOne(
+          `SELECT 1 FROM catalog.eventos_procesados WHERE event_id = $1`,
+          [event_id],
+        );
     return !!fila;
   }
 
-  async registrarProcesado(event_id: string, tipo: string): Promise<void> {
-    await this.pg.query(
-      `INSERT INTO catalog.eventos_procesados (event_id, tipo, procesado_en)
-       VALUES ($1, $2, NOW()) ON CONFLICT (event_id) DO NOTHING`,
-      [event_id, tipo],
-    );
+  async registrarProcesado(event_id: string, tipo: string, client?: PoolClient): Promise<void> {
+    const sql = `INSERT INTO catalog.eventos_procesados (event_id, tipo, procesado_en)
+       VALUES ($1, $2, NOW()) ON CONFLICT (event_id) DO NOTHING`;
+    if (client) {
+      await client.query(sql, [event_id, tipo]);
+      return;
+    }
+    await this.pg.query(sql, [event_id, tipo]);
   }
 
   resumenInventario(empresaId?: string): Promise<{
@@ -1017,8 +1096,10 @@ export class ProductosService {
     valor_inventario_cents: number;
   }> {
     const filtro = empresaId
-      ? 'WHERE p.empresa_id = $1 AND NOT EXISTS (SELECT 1 FROM catalog.productos v WHERE v.producto_padre_id = p.id)'
-      : 'WHERE NOT EXISTS (SELECT 1 FROM catalog.productos v WHERE v.producto_padre_id = p.id)';
+      ? `WHERE i.empresa_id = $1 AND i.tipo = 'producto' AND i.eliminado_en IS NULL
+           AND NOT EXISTS (SELECT 1 FROM catalog.items v WHERE v.parent_item_id = i.id AND v.eliminado_en IS NULL)`
+      : `WHERE i.tipo = 'producto' AND i.eliminado_en IS NULL
+           AND NOT EXISTS (SELECT 1 FROM catalog.items v WHERE v.parent_item_id = i.id AND v.eliminado_en IS NULL)`;
     const params = empresaId ? [empresaId] : [];
     return this.pg
       .queryOne<{
@@ -1028,10 +1109,10 @@ export class ProductosService {
         valor_inventario_cents: number;
       }>(
         `SELECT COUNT(*)::int AS productos,
-                COUNT(*) FILTER (WHERE p.estado = 'agotado')::int AS agotados,
-                COALESCE(SUM(p.stock), 0)::int AS stock_total,
-                COALESCE(SUM(p.stock * p.precio_base_cents), 0)::int AS valor_inventario_cents
-           FROM catalog.productos p ${filtro}`,
+                COUNT(*) FILTER (WHERE i.stock = 0)::int AS agotados,
+                COALESCE(SUM(i.stock), 0)::int AS stock_total,
+                COALESCE(SUM(i.stock * i.precio_cents), 0)::int AS valor_inventario_cents
+           FROM catalog.items i ${filtro}`,
         params,
       )
       .then(
@@ -1046,9 +1127,9 @@ export class ProductosService {
       fila.producto_padre_id === null || fila.producto_padre_id === undefined
         ? await this.pg.query<ProductoRow>(
             `SELECT ${COLUMNAS_PRODUCTO}, false AS tiene_variantes
-               FROM catalog.producto_catalogo_vista v
-              WHERE v.producto_padre_id = $1
-              ORDER BY v.creado_en ASC`,
+               FROM catalog.items i
+              WHERE i.parent_item_id = $1 AND i.tipo = 'producto' AND i.eliminado_en IS NULL
+              ORDER BY i.creado_en ASC`,
             [fila.id],
           )
         : [];
@@ -1061,16 +1142,16 @@ export class ProductosService {
     const mapa = new Map<string, ImagenRow[]>();
     if (!ids.length) return mapa;
     const filas = await this.pg.query<ImagenRow>(
-      `SELECT id, producto_id, objeto_id, orden, es_principal
-         FROM catalog.producto_imagenes
-        WHERE producto_id = ANY($1::uuid[])
-        ORDER BY producto_id, orden`,
+      `SELECT id, item_id, objeto_id, orden, es_principal
+         FROM catalog.item_imagenes
+        WHERE item_id = ANY($1::uuid[])
+        ORDER BY item_id, orden`,
       [ids],
     );
     for (const fila of filas) {
-      const lista = mapa.get(fila.producto_id) ?? [];
+      const lista = mapa.get(fila.item_id) ?? [];
       lista.push(fila);
-      mapa.set(fila.producto_id, lista);
+      mapa.set(fila.item_id, lista);
     }
     return mapa;
   }
@@ -1082,6 +1163,7 @@ export class ProductosService {
   ): Producto {
     const precio = Money.desdeCentavos(fila.precio_base_cents).string();
     const costo = Money.desdeCentavos(fila.costo_cents ?? 0).string();
+    const precioDesde = Money.desdeCentavos(fila.precio_desde_cents ?? fila.precio_base_cents).string();
     return {
       id: fila.id,
       empresa_id: fila.empresa_id,
@@ -1091,8 +1173,8 @@ export class ProductosService {
       categoria: fila.categoria,
       precio_base: precio,
       stock: fila.stock,
-      estado: fila.estado === 'disponible' ? 'disponible' : 'agotado',
-      estado_operativo: fila.estado_operativo === 'inactivo' ? 'inactivo' : 'activo',
+      estado: fila.stock > 0 ? 'disponible' : 'agotado',
+      estado_operativo: fila.estado === 'inactivo' ? 'inactivo' : 'activo',
       costo,
       marca: fila.marca ?? '',
       codigo_barras: fila.codigo_barras ?? '',
@@ -1115,8 +1197,8 @@ export class ProductosService {
       tiene_variantes: fila.tiene_variantes === true || variantes.length > 0,
       imagenes: imagenes.map((i) => this.serializarImagen(i)),
       ...(variantes.length > 0 ? { variantes } : {}),
-      precio_desde: precio,
-      stock_total: fila.stock,
+      precio_desde: precioDesde,
+      stock_total: fila.stock_total ?? fila.stock,
     };
   }
 
@@ -1232,13 +1314,13 @@ export class ProductosService {
   ): Promise<void> {
     if (!codigoBarras) return;
     const params: unknown[] = [empresaId, codigoBarras];
-    let where = 'empresa_id = $1 AND codigo_barras = $2';
+    let where = 'empresa_id = $1 AND codigo_barras = $2 AND eliminado_en IS NULL';
     if (excluirId) {
       params.push(excluirId);
       where += ` AND id <> $${params.length}`;
     }
     const fila = await this.pg.queryOne(
-      `SELECT 1 FROM catalog.productos WHERE ${where} LIMIT 1`,
+      `SELECT 1 FROM catalog.items WHERE ${where} LIMIT 1`,
       params,
     );
     if (fila) {
@@ -1256,7 +1338,9 @@ export class ProductosService {
 
   private async skuExiste(empresaId: string, sku: string): Promise<boolean> {
     const fila = await this.pg.queryOne(
-      `SELECT 1 FROM catalog.productos WHERE empresa_id = $1 AND LOWER(sku) = LOWER($2)`,
+      `SELECT 1 FROM catalog.items
+        WHERE empresa_id = $1 AND tipo = 'producto'
+          AND LOWER(codigo) = LOWER($2) AND eliminado_en IS NULL`,
       [empresaId, sku],
     );
     return !!fila;
@@ -1265,20 +1349,33 @@ export class ProductosService {
   private async registrarHistorico(
     client: PoolClient,
     empresaId: string,
-    sku: string,
+    itemId: string,
     anterior: number | null,
     nuevo: number,
   ): Promise<void> {
     await client.query(
       `INSERT INTO catalog.historico_precios
-         (id, empresa_id, producto_sku, precio_anterior_cents, precio_nuevo_cents, vigente_desde)
+         (id, empresa_id, item_id, precio_anterior_cents, precio_nuevo_cents, vigente_desde)
        VALUES (gen_random_uuid(), $1, $2, $3, $4, NOW())`,
-      [empresaId, sku, anterior, nuevo],
+      [empresaId, itemId, anterior, nuevo],
     );
   }
 
-  private async recalcularPadre(padreId: string): Promise<void> {
-    await this.pg.query('SELECT catalog.fn_recalcular_padre($1)', [padreId]);
+  /** Agrega stock y precio mínimo de las variantes al item padre. */
+  private async recalcularPadre(client: PoolClient, padreId: string): Promise<void> {
+    await client.query(
+      `UPDATE catalog.items p
+          SET stock = agregado.stock,
+              precio_cents = agregado.precio,
+              actualizado_en = NOW()
+         FROM (
+           SELECT SUM(c.stock)::int AS stock, MIN(c.precio_cents)::int AS precio
+             FROM catalog.items c
+            WHERE c.parent_item_id = $1 AND c.eliminado_en IS NULL
+         ) agregado
+        WHERE p.id = $1 AND agregado.stock IS NOT NULL`,
+      [padreId],
+    );
   }
 
   /**
@@ -1318,8 +1415,8 @@ export class ProductosService {
   }
 
   /**
-   * ADR-27: solo una empresa activa de tipo comercial tiene catálogo. Se
-   * consulta a identity por API interna (R-DB-1) y se falla cerrado si no se
+   * ADR-27: solo una empresa activa con la capacidad de catálogo tiene items.
+   * Se consulta a identity por API interna (R-DB-1) y se falla cerrado si no se
    * puede verificar.
    */
   async validarEmpresaCatalogo(empresaId: string): Promise<void> {
@@ -1346,8 +1443,12 @@ export class ProductosService {
     if (empresa.estado !== 'activa') {
       throw new DomainError('EMPRESA_INACTIVA', 'La empresa debe estar activa para operar su catálogo.');
     }
-    if (empresa.tipo_empresa && empresa.tipo_empresa !== 'comercial') {
-      throw new DomainError('EMPRESA_SIN_CATALOGO', 'Solo las empresas comerciales tienen catálogo propio.');
+    const capacidades = await capacidadesDeEmpresas([empresaId], ['catalogo_items']);
+    if (capacidades === null) {
+      throw new DomainError('EMPRESA_NO_VERIFICABLE', 'No se pudieron verificar las capacidades de la empresa.');
+    }
+    if (!capacidades.some((c) => c.empresa_id === empresaId && c.capacidad_codigo === 'catalogo_items' && c.activo)) {
+      throw new DomainError('EMPRESA_SIN_CATALOGO', 'La empresa no tiene activa la capacidad de catálogo.');
     }
   }
 
@@ -1439,7 +1540,7 @@ export class ProductosService {
   private async insertarImagenes(
     client: PoolClient,
     empresaId: string,
-    productoId: string,
+    itemId: string,
     imagenes: ImagenProductoInput[],
   ): Promise<void> {
     if (!imagenes.length) return;
@@ -1453,21 +1554,21 @@ export class ProductosService {
       }
       usados.add(orden);
       await client.query(
-        `INSERT INTO catalog.producto_imagenes
-           (id, empresa_id, producto_id, objeto_id, orden, es_principal)
+        `INSERT INTO catalog.item_imagenes
+           (id, empresa_id, item_id, objeto_id, orden, es_principal)
          VALUES ($1, $2, $3, $4, $5, $6)`,
-        [randomUUID(), empresaId, productoId, imagen.objeto_id, orden, imagen.es_principal === true],
+        [randomUUID(), empresaId, itemId, imagen.objeto_id, orden, imagen.es_principal === true],
       );
     }
     if (!hayPrincipal) {
       await client.query(
-        `UPDATE catalog.producto_imagenes
+        `UPDATE catalog.item_imagenes
             SET es_principal = true
           WHERE id = (
-            SELECT id FROM catalog.producto_imagenes
-             WHERE producto_id = $1 ORDER BY orden LIMIT 1
+            SELECT id FROM catalog.item_imagenes
+             WHERE item_id = $1 ORDER BY orden LIMIT 1
           )`,
-        [productoId],
+        [itemId],
       );
     }
   }

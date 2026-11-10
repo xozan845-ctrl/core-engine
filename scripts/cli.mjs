@@ -2,8 +2,8 @@
  * cli.mjs — Único entrypoint del motor de gobernanza.
  *
  * Es el *composition root*: es la única capa que puede importar de todas las
- * demás (`engine/`, `config/`, `tools/`). Los `npm scripts` de la raíz y el
- * wrapper `check-rules.mjs` delegan aquí.
+ * demás (`engine/`, `config/`, `tools/`). Los `npm scripts` de la raíz y la
+ * CI delegan aquí.
  *
  * Uso:
  *   node scripts/cli.mjs rules [--only <id|area>] [--mode pure|repo] [--reporter spec|tap|dot|junit]

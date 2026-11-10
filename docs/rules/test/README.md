@@ -69,8 +69,9 @@ validaban el comportamiento erróneo de la implementación en vez del requisito
 ## Cómo auditar (este repo)
 
 ```bash
-# Suite completa con cobertura (lo que corre CI: 12 workspaces con tests)
-npm test -- --coverage
+# Suite completa con cobertura (lo que corre CI: 13 workspaces con tests).
+# No añadas `-- --coverage`: el script raíz ya pasa el flag a cada workspace.
+npm test
 
 # Un solo servicio
 npm run test -w @core/orders-service
@@ -101,22 +102,22 @@ npm run demo
   configuración de sitio API+BD, pero todavía faltan otros flujos críticos.
   **G-5 pendiente**: los errores 400/401 se validan en runtime para configuración
   de sitio y 403/404/409/500 en el filtro global, pero el envelope `{data,meta}` requiere una migración versionada
-  `/api/v2` para no romper `/api/v1`.
-  `contract:breaking` y G-8 protegen el documento OpenAPI, pero no sustituyen
+  `/api/v2`.
+  G-8 protege el documento OpenAPI, pero no sustituye
   las pruebas runtime. **G-6** tiene workflow manual y de release que ejecuta `npm run demo`,
   pero no corre en cada PR; el smoke cubre los siete flujos R-E-1..7, incluido el
   boundary de fechas (R-E-4); `e2e.yml` ya inspecciona logs R-E-8. **G-8 sí está activo** en el job `build`.
-- **Cobertura (ratchet R-COV-1)**: los 12 workspaces cumplen su
-  `coverageThreshold`, y **7 de 12 ya alcanzan el objetivo 80/70** (`api-gateway`,
-  `catalog`, `identity`, `stores`, `logistics`, `field`, `storage`). Los más bajos
-  siguen siendo `market-intelligence`, `commissions`, `shared` y `orders` (suben
-  +5 por release).
+- **Cobertura (ratchet R-COV-1)**: de los 13 workspaces, **13 cumplen su `coverageThreshold`** y **11 ya alcanzan
+  el objetivo 80/70** de líneas/ramas. `market-intelligence` y `shared` siguen
+  bajo el objetivo. `identity-service` recuperó su umbral con specs de
+  controllers y ramas de servicio. El detalle vigente vive en
+  [`../_meta/AUDIT.md`](../_meta/AUDIT.md).
 - **Specs pendientes (R-U-18/R-COV-2)**: el baseline de lógica sin spec se
   mantiene versionado y el recuento vigente está en
   [`../_meta/AUDIT.md`](../_meta/AUDIT.md); el `baseline:guard` impide que esa
   deuda aumente en un PR.
 - **R-FL-3**: el setup central `scripts/config/test-timezone.mjs` fija
-  `America/Managua` para las 12 suites Vitest y los 5 runners de mutation; CI y
+  `America/Managua` para las 13 suites Vitest y los 5 runners de mutation; CI y
   los workflows E2E/deploy también fijan la misma zona.
 
 **Cerrado en la 3ª auditoría (2026-10-03):** `shared` puro **7/7** con spec

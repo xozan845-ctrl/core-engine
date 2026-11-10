@@ -1,7 +1,8 @@
-import { Body, Controller, Get, Header, Param, Post, Query } from '@nestjs/common';
+import { Body, Controller, Get, Param, Post, Query } from '@nestjs/common';
 import { ApiBearerAuth, ApiCreatedResponse, ApiOkResponse, ApiOperation, ApiParam, ApiQuery, ApiTags } from '@nestjs/swagger';
 import {
   DomainError,
+  Permisos,
   Roles,
   ROLES,
   UsuarioActual,
@@ -9,17 +10,16 @@ import {
 } from '@core/shared';
 import { CreateOrderCommand } from './commands/create-order.command';
 import { CreateOrderCommandHandler } from './handlers/create-order-command.handler';
-import { OrderViewRepository, OrderView, ComisionVista } from './queries/order-view.repository';
+import { OrderViewRepository, OrderView } from './queries/order-view.repository';
 import { PedidosService } from './pedidos.service';
 import {
-  ComisionVistaResponseDto,
   OrderViewResponseDto,
   TimelineEventoResponseDto,
 } from './orders.response.dto';
 
 @ApiTags('Pedidos')
 @ApiBearerAuth()
-@Controller('api/v1/orders')
+@Controller('api/v2/orders')
 export class PedidosController {
   constructor(
     private readonly handler: CreateOrderCommandHandler,
@@ -27,7 +27,7 @@ export class PedidosController {
     private readonly pedidos: PedidosService,
   ) {}
 
-  /** POST /api/v1/orders — crear orden desde el carrito (JWT comprador, Tabla 21). */
+  /** POST /api/v2/orders — crear orden desde el carrito (JWT comprador, Tabla 21). */
   @Post()
   @Roles(ROLES.COMPRADOR)
   @ApiOperation({ summary: 'Crear una orden desde el carrito (comprador)' })
@@ -39,7 +39,7 @@ export class PedidosController {
     return this.handler.ejecutar(comando, usuario.user_id);
   }
 
-  /** GET /api/v1/orders/admin/todas — todas las ordenes (admin). */
+  /** GET /api/v2/orders/admin/todas — todas las ordenes (admin). */
   @Get('admin/todas')
   @Roles(ROLES.SUPER_ADMIN, ROLES.ADMIN)
   @ApiOperation({ summary: 'Listar todas las órdenes (admin)' })
@@ -53,8 +53,9 @@ export class PedidosController {
     return this.views.listarTodo({ estado, limite });
   }
 
-  /** GET /api/v1/orders/vendedor/mis-ventas — ordenes del vendedor autenticado. */
+  /** GET /api/v2/orders/vendedor/mis-ventas — ordenes del vendedor autenticado. */
   @Get('vendedor/mis-ventas')
+  @Permisos('ordenes.leer')
   @Roles(ROLES.VENDEDOR)
   @ApiOperation({ summary: 'Órdenes del vendedor autenticado (mis ventas)' })
   @ApiQuery({ name: 'estado', required: false })
@@ -67,36 +68,9 @@ export class PedidosController {
     return ordenes.map((orden) => this.pedidos.paraVendedor(orden, usuario?.user_id ?? ''));
   }
 
-  /**
-   * GET /api/v1/orders/vendedor/comisiones — comisiones por periodo (vendedor/admin).
-   * Obsoleto: el estado de cuenta vigente vive en commissions-service
-   * (`GET /api/v1/vendedores/me/ventas`), que calcula por línea y conserva la
-   * participación de la empresa y del vendedor (ADR-25).
-   */
-  @Get('vendedor/comisiones')
-  @Roles(ROLES.SUPER_ADMIN, ROLES.VENDEDOR, ROLES.ADMIN)
-  @Header('Deprecation', 'true')
-  @Header('Link', '</api/v1/vendedores/me/ventas>; rel="successor-version"')
-  @ApiOperation({
-    summary: 'Comisiones por periodo (vendedor/admin) — obsoleto: usar /vendedores/me/ventas',
-    deprecated: true,
-  })
-  @ApiQuery({ name: 'periodo', required: false })
-  @ApiQuery({ name: 'vendedorId', required: false, description: 'Solo admin' })
-  @ApiOkResponse({ type: [ComisionVistaResponseDto], description: 'Comisiones por periodo' })
-  async comisiones(
-    @Query('periodo') periodo?: string,
-    @UsuarioActual() usuario?: UsuarioContexto,
-    @Query('vendedorId') vendedorId?: string,
-  ): Promise<ComisionVista[]> {
-    const targetVendedor = ['admin', 'super_admin'].includes(usuario?.rol ?? '')
-      ? (vendedorId ?? usuario?.user_id)
-      : usuario?.user_id;
-    return this.views.obtenerComisiones(targetVendedor ?? '', periodo);
-  }
-
-  /** GET /api/v1/orders/tienda/:tiendaId — ordenes de una tienda (vendedor dueño o admin). */
+  /** GET /api/v2/orders/tienda/:tiendaId — ordenes de una tienda (vendedor dueño o admin). */
   @Get('tienda/:tiendaId')
+  @Permisos('ordenes.leer')
   @Roles(ROLES.SUPER_ADMIN, ROLES.EMPRESARIO, ROLES.VENDEDOR, ROLES.ADMIN)
   @ApiOperation({ summary: 'Órdenes de una tienda (vendedor dueño, empresario de la empresa o admin)' })
   @ApiParam({ name: 'tiendaId', description: 'Id de la tienda' })
@@ -107,21 +81,23 @@ export class PedidosController {
     @Query('estado') estado?: string,
     @UsuarioActual() usuario?: UsuarioContexto,
   ): Promise<OrderView[]> {
-    const empresaId = usuario?.rol === 'empresario' ? usuario.tenant_id : undefined;
-    if (usuario?.rol === 'empresario' && !empresaId) {
+    const esPersonalEmpresa = usuario?.rol === 'empresario' || Boolean(usuario?.rol_empresa_id);
+    const empresaId = esPersonalEmpresa ? usuario?.tenant_id : undefined;
+    if (esPersonalEmpresa && !empresaId) {
       throw new DomainError('TENANT_REQUERIDO', 'Se requiere una empresa activa.');
     }
     const ordenes = await this.views.listarDeTienda(
       tiendaId,
       estado,
-      usuario?.rol === 'vendedor' ? usuario.user_id : undefined,
+      usuario?.rol === 'vendedor' || usuario?.rol_empresa_id ? usuario.user_id : undefined,
       empresaId,
     );
     return this.proyectar(ordenes, usuario, empresaId);
   }
 
-  /** GET /api/v1/orders/empresa — ordenes de la empresa activa (empresario/admin). */
+  /** GET /api/v2/orders/empresa — ordenes de la empresa activa (empresario/admin). */
   @Get('empresa')
+  @Permisos('ordenes.leer')
   @Roles(ROLES.SUPER_ADMIN, ROLES.EMPRESARIO, ROLES.ADMIN)
   @ApiOperation({ summary: 'Órdenes de una empresa (empresario de la empresa o admin)' })
   @ApiQuery({
@@ -141,7 +117,7 @@ export class PedidosController {
     @UsuarioActual() usuario?: UsuarioContexto,
   ): Promise<OrderView[]> {
     let objetivo = empresaId;
-    if (usuario?.rol === 'empresario') {
+    if (usuario?.rol === 'empresario' || usuario?.rol_empresa_id) {
       if (!usuario.tenant_id) {
         throw new DomainError('TENANT_REQUERIDO', 'Se requiere una empresa activa.');
       }
@@ -158,7 +134,7 @@ export class PedidosController {
     return this.proyectar(ordenes, usuario, objetivo);
   }
 
-  /** GET /api/v1/orders — historial del comprador autenticado. */
+  /** GET /api/v2/orders — historial del comprador autenticado. */
   @Get()
   @Roles(ROLES.COMPRADOR)
   @ApiOperation({ summary: 'Historial de órdenes del comprador autenticado' })
@@ -171,8 +147,9 @@ export class PedidosController {
     return this.views.listarDeCliente(usuario?.user_id ?? '', estado);
   }
 
-  /** GET /api/v1/orders/:id — estado de la orden (JWT; solo el dueno o admin). */
+  /** GET /api/v2/orders/:id — estado de la orden (JWT; solo el dueno o admin). */
   @Get(':id')
+  @Permisos('ordenes.leer')
   @Roles(ROLES.SUPER_ADMIN, ROLES.EMPRESARIO, ROLES.COMPRADOR, ROLES.VENDEDOR, ROLES.ADMIN)
   @ApiOperation({ summary: 'Estado/detalle de una orden (dueño o admin)' })
   @ApiParam({ name: 'id', description: 'Id de la orden' })
@@ -184,8 +161,9 @@ export class PedidosController {
     return this.pedidos.detallePara(id, usuario);
   }
 
-  /** GET /api/v1/orders/:id/timeline — historial de eventos de la orden. */
+  /** GET /api/v2/orders/:id/timeline — historial de eventos de la orden. */
   @Get(':id/timeline')
+  @Permisos('ordenes.leer')
   @Roles(ROLES.SUPER_ADMIN, ROLES.EMPRESARIO, ROLES.COMPRADOR, ROLES.VENDEDOR, ROLES.ADMIN)
   @ApiOperation({ summary: 'Timeline de eventos de la orden (Event Sourcing)' })
   @ApiParam({ name: 'id', description: 'Id de la orden' })
@@ -204,10 +182,10 @@ export class PedidosController {
     usuario?: UsuarioContexto,
     empresaId?: string,
   ): OrderView[] {
-    if (usuario?.rol === 'empresario' && empresaId) {
+    if ((usuario?.rol === 'empresario' || usuario?.rol_empresa_id) && empresaId) {
       return ordenes.map((orden) => this.pedidos.paraEmpresa(orden, empresaId));
     }
-    if (usuario?.rol === 'vendedor' && usuario.user_id) {
+    if ((usuario?.rol === 'vendedor' || usuario?.rol_empresa_id) && usuario.user_id) {
       return ordenes.map((orden) => this.pedidos.paraVendedor(orden, usuario.user_id));
     }
     return ordenes;

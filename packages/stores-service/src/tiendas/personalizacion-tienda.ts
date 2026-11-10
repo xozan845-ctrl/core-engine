@@ -318,7 +318,7 @@ export function conSeoImagenUrl(
   return {
     ...campos,
     seo_imagen_url: campos.seo_imagen_objeto_id
-      ? `/api/v1/storage/public/objetos/${campos.seo_imagen_objeto_id}`
+      ? `/api/v2/storage/public/objetos/${campos.seo_imagen_objeto_id}`
       : null,
   };
 }

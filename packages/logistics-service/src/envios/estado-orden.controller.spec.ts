@@ -20,7 +20,7 @@ function fabricar(): { envios: Record<string, Mock>; controller: EstadoOrdenCont
   return { envios, controller };
 }
 
-describe('EstadoOrdenController (api/v1/orders/:id/estado, Tabla 21, R-U-10/11)', () => {
+describe('EstadoOrdenController (api/v2/orders/:id/estado, Tabla 21, R-U-10/11)', () => {
   it('debe avanzar el estado delegando id, estado y motivo', async () => {
     const { envios, controller } = fabricar();
     envios.avanzarEstadoOrden.mockResolvedValue(orden);
@@ -82,7 +82,7 @@ describe('EstadoOrdenController (api/v1/orders/:id/estado, Tabla 21, R-U-10/11)'
   });
 });
 
-describe('EnviosAdminController (api/v1/admin/envios, R-U-10/11)', () => {
+describe('EnviosAdminController (api/v2/admin/envios, R-U-10/11)', () => {
   it('debe listar las guias de despacho', async () => {
     const envios = { listar: vi.fn().mockResolvedValue([{ ...envio, monto: '1150.00' }]) };
     const controller = new EnviosAdminController(envios as unknown as EnviosService);

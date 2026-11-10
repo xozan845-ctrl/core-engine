@@ -68,8 +68,8 @@ async function ejecutarSmoke(handler, timeoutMs = 1_000, waitTimeoutMs = 30_000)
 test('smoke falla de inmediato si el empresario no puede crear al vendedor', async () => {
   const result = await ejecutarSmoke(async (req, res) => {
     if (req.url === '/ready') return json(res, 200, { status: 'ok', servicios: {} });
-    if (req.url === '/api/v1/auth/login') return json(res, 200, { access_token: 'admin' });
-    if (req.url === '/api/v1/auth/registro') {
+    if (req.url === '/api/v2/auth/login') return json(res, 200, { access_token: 'admin' });
+    if (req.url === '/api/v2/auth/registro') {
       let body = '';
       for await (const chunk of req) body += chunk;
       const rol = JSON.parse(body).rol;
@@ -77,10 +77,10 @@ test('smoke falla de inmediato si el empresario no puede crear al vendedor', asy
         ? json(res, 201, { access_token: 'empresario' })
         : json(res, 201, { access_token: 'comprador' });
     }
-    if (req.url === '/api/v1/empresas' && req.method === 'POST') {
+    if (req.url === '/api/v2/empresas' && req.method === 'POST') {
       return json(res, 201, { id: 'empresa-1' });
     }
-    if (req.url === '/api/v1/empresas/empresa-1/vendedores' && req.method === 'POST') {
+    if (req.url === '/api/v2/empresas/empresa-1/vendedores' && req.method === 'POST') {
       return json(res, 500, { codigo: 'FALLO' });
     }
     return json(res, 500, { codigo: 'RUTA_INESPERADA' });
@@ -88,7 +88,7 @@ test('smoke falla de inmediato si el empresario no puede crear al vendedor', asy
 
   assert.equal(result.code, 1);
   assert.match(result.output, /crear vendedor → 500/);
-  assert.equal(result.requests.some((ruta) => ruta.startsWith('/api/v1/catalog')), false);
+  assert.equal(result.requests.some((ruta) => ruta.startsWith('/api/v2/catalog')), false);
 });
 
 test('smoke reintenta una sola vez un GET cuando se corta la red', async () => {
@@ -115,8 +115,8 @@ test('smoke no repite un POST si la respuesta se pierde', async () => {
   });
 
   assert.equal(result.code, 1);
-  assert.deepEqual(result.requests, ['/ready', '/api/v1/auth/login']);
-  assert.match(result.output, /POST \/api\/v1\/auth\/login: sin respuesta tras 1 intento\(s\)/);
+  assert.deepEqual(result.requests, ['/ready', '/api/v2/auth/login']);
+  assert.match(result.output, /POST \/api\/v2\/auth\/login: sin respuesta tras 1 intento\(s\)/);
 });
 
 test('smoke limita la espera de la saga asíncrona por paso', async () => {
@@ -128,29 +128,29 @@ test('smoke limita la espera de la saga asíncrona por paso', async () => {
   const result = await ejecutarSmoke(async (req, res) => {
     const ruta = req.url;
     if (ruta === '/ready') return json(res, 200, { status: 'ok', servicios: {} });
-    if (ruta === '/api/v1/auth/login') return json(res, 200, { access_token: 'admin' });
-    if (ruta === '/api/v1/auth/registro') {
+    if (ruta === '/api/v2/auth/login') return json(res, 200, { access_token: 'admin' });
+    if (ruta === '/api/v2/auth/registro') {
       const cuerpo = await leerCuerpo(req);
       return json(res, 201, {
         access_token: cuerpo.rol === 'empresario' ? 'empresario' : 'comprador',
       });
     }
-    if (ruta === '/api/v1/empresas' && req.method === 'POST') {
+    if (ruta === '/api/v2/empresas' && req.method === 'POST') {
       return json(res, 201, { id: 'empresa-1', slug: slugEmpresa });
     }
-    if (ruta === '/api/v1/empresas/empresa-1/vendedores' && req.method === 'POST') {
+    if (ruta === '/api/v2/empresas/empresa-1/vendedores' && req.method === 'POST') {
       return json(res, 201, { id: 'vendedor-1' });
     }
-    if (ruta === '/api/v1/empresas/empresa-1/slug' && req.method === 'PATCH') {
+    if (ruta === '/api/v2/empresas/empresa-1/slug' && req.method === 'PATCH') {
       const cuerpo = await leerCuerpo(req);
       slugEmpresaAnterior = slugEmpresa;
       slugEmpresa = cuerpo.slug;
       return json(res, 200, { id: 'empresa-1', slug: slugEmpresa });
     }
-    if (ruta === `/api/v1/empresas/${slugEmpresaAnterior}` && req.method === 'GET') {
-      return redirigir(res, `/api/v1/empresas/${slugEmpresa}`);
+    if (ruta === `/api/v2/empresas/${slugEmpresaAnterior}` && req.method === 'GET') {
+      return redirigir(res, `/api/v2/empresas/${slugEmpresa}`);
     }
-    if (ruta.startsWith('/api/v1/empresas/') && req.method === 'GET') {
+    if (ruta.startsWith('/api/v2/empresas/') && req.method === 'GET') {
       const autorizacion = req.headers.authorization;
       if (!autorizacion) return json(res, 401, { codigo: 'NO_AUTORIZADO' });
       if (autorizacion === 'Bearer comprador') {
@@ -158,33 +158,33 @@ test('smoke limita la espera de la saga asíncrona por paso', async () => {
       }
       return json(res, 200, { id: 'empresa-1', slug: slugEmpresa });
     }
-    if (ruta === '/api/v1/catalog/productos' && req.method === 'POST') {
-      return json(res, 201, { id: 'producto-1', sku: 'SKU-1' });
+    if (ruta === '/api/v2/catalog/items' && req.method === 'POST') {
+      return json(res, 201, { item_id: 'producto-1', codigo: 'SKU-1' });
     }
-    if (ruta === '/api/v1/admin/reportes') return json(res, 401, { codigo: 'NO_AUTORIZADO' });
-    if (ruta === '/api/v1/vendedores/tienda' && req.method === 'POST') {
+    if (ruta === '/api/v2/admin/reportes') return json(res, 401, { codigo: 'NO_AUTORIZADO' });
+    if (ruta === '/api/v2/vendedores/tienda' && req.method === 'POST') {
       return json(res, 201, { id: 'tienda-1', slug: slugTienda });
     }
-    if (ruta === '/api/v1/tiendas/tienda-1/slug' && req.method === 'PATCH') {
+    if (ruta === '/api/v2/tiendas/tienda-1/slug' && req.method === 'PATCH') {
       const cuerpo = await leerCuerpo(req);
       slugTiendaAnterior = slugTienda;
       slugTienda = cuerpo.slug;
       return json(res, 200, { id: 'tienda-1', slug: slugTienda });
     }
-    if (ruta === `/api/v1/tiendas/${slugTiendaAnterior}` && req.method === 'GET') {
-      return redirigir(res, `/api/v1/tiendas/${slugTienda}`);
+    if (ruta === `/api/v2/tiendas/${slugTiendaAnterior}` && req.method === 'GET') {
+      return redirigir(res, `/api/v2/tiendas/${slugTienda}`);
     }
-    if (ruta.startsWith('/api/v1/tiendas/') && req.method === 'GET') {
-      const ofertas = ruta === '/api/v1/tiendas/tienda-1' ? [{}] : [];
+    if (ruta.startsWith('/api/v2/tiendas/') && req.method === 'GET') {
+      const ofertas = ruta === '/api/v2/tiendas/tienda-1' ? [{}] : [];
       return json(res, 200, { tienda: { id: 'tienda-1', slug: slugTienda }, ofertas });
     }
-    if (ruta === '/api/v1/vendedores/productos') {
+    if (ruta === '/api/v2/vendedores/productos') {
       return json(res, 201, { id: 'oferta-1', precio_venta: '1150.00' });
     }
-    if (ruta === '/api/v1/orders' && req.method === 'POST') {
+    if (ruta === '/api/v2/orders' && req.method === 'POST') {
       return json(res, 201, { id: 'orden-1' });
     }
-    if (ruta === '/api/v1/orders/orden-1') return json(res, 200, { estado: 'pendiente' });
+    if (ruta === '/api/v2/orders/orden-1') return json(res, 200, { estado: 'pendiente' });
     return json(res, 500, { codigo: 'RUTA_INESPERADA' });
   }, 1_000, 200);
 

@@ -14,7 +14,7 @@ function fabricar(): { repo: Record<string, Mock>; controller: PrediccionControl
   return { repo, controller };
 }
 
-describe('PrediccionController (api/v1/inteligencia, R-U-10/11)', () => {
+describe('PrediccionController (api/v2/inteligencia, R-U-10/11)', () => {
   it('debe calcular el forecast con dias por defecto 7', async () => {
     const { repo, controller } = fabricar();
     repo.obtenerForecastDemanda.mockResolvedValue({ sku: 'SKU-01', proyeccion: [] });

@@ -1,13 +1,13 @@
 import { Injectable } from '@nestjs/common';
 import { randomUUID } from 'crypto';
-import { PgService, DomainError, ForbiddenError, Logger, Money, NotFoundError } from '@core/shared';
+import { PgService, DomainError, ForbiddenError, Logger, Money, NotFoundError, capacidadesDeEmpresas, ServiceUnavailableError } from '@core/shared';
 
 export interface Envio {
   id: string;
   guia: string;
   order_id: string;
   empresa_id: string;
-  modalidad_logistica: ModalidadLogistica;
+  parte_id: string | null;
   proveedor_tipo: ProveedorTipo | null;
   proveedor_tenant_id: string | null;
   estado: string;
@@ -16,16 +16,15 @@ export interface Envio {
 
 export interface OrdenExterna {
   id: string;
-  cliente_id: string;
+  comprador_id: string;
+  parte_id?: string | null;
   items: { sku: string; cantidad: number; producto_nombre: string; empresa_id: string; precio_unitario_cents: number }[];
   total: string;
   total_cents: number;
   estado: string;
 }
 
-export type ModalidadLogistica = 'plataforma' | 'propia' | 'hibrida';
 export type ProveedorTipo = 'plataforma' | 'empresa';
-interface EmpresaExterna { id: string; modalidad_logistica: ModalidadLogistica }
 
 /**
  * Logistica: el sistema logístico automatiza la operacion de la bodega
@@ -34,7 +33,6 @@ interface EmpresaExterna { id: string; modalidad_logistica: ModalidadLogistica }
 @Injectable()
 export class EnviosService {
   private readonly ordersUrl = process.env.ORDERS_SERVICE_URL ?? 'http://orders-service:3004';
-  private readonly identityUrl = process.env.IDENTITY_SERVICE_URL ?? 'http://identity-service:3001';
   private readonly claveInterna = process.env.INTERNAL_API_KEY ?? '';
   private readonly tenantPlataforma = process.env.PLATFORM_LOGISTICS_TENANT_ID ?? '00000000-0000-0000-0000-000000000001';
   private readonly logger = Logger.create('envios');
@@ -46,7 +44,7 @@ export class EnviosService {
     orderId: string,
     empresaId: string,
     montoCents: number,
-    modalidad: ModalidadLogistica,
+    parteId?: string | null,
   ): Promise<Envio> {
     const existente = await this.pg.queryOne<Envio>(
       `SELECT * FROM logistics.envios WHERE order_id = $1 AND empresa_id = $2`,
@@ -63,13 +61,13 @@ export class EnviosService {
     }
 
     const guia = `BGH-${Date.now().toString(36).toUpperCase()}-${randomUUID().slice(0, 6).toUpperCase()}`;
-    const proveedor = this.proveedorAutomatico(modalidad, empresaId);
+    const proveedor = await this.proveedorDeEmpresa(empresaId);
     const fila = await this.pg.queryOne<Envio>(
       `INSERT INTO logistics.envios
-        (id, guia, order_id, empresa_id, modalidad_logistica, proveedor_tipo,
+        (id, guia, order_id, empresa_id, parte_id, proveedor_tipo,
          proveedor_tenant_id, monto_cents, estado)
        VALUES ($1,$2,$3,$4,$5,$6,$7,$8,'en_preparacion') RETURNING *`,
-      [randomUUID(), guia, orderId, empresaId, modalidad, proveedor.tipo, proveedor.tenantId, montoCents],
+      [randomUUID(), guia, orderId, empresaId, parteId ?? null, proveedor.tipo, proveedor.tenantId, montoCents],
     );
     if (!fila) throw new DomainError('ENVIO_FALLIDO', 'No se pudo preparar el envio.');
     if (proveedor.tipo && proveedor.tenantId) {
@@ -90,16 +88,28 @@ export class EnviosService {
     }
     const envios: Envio[] = [];
     for (const [empresaId, monto] of montos) {
-      const empresa = await this.consultarEmpresa(empresaId);
-      envios.push(await this.prepararEnvio(orderId, empresaId, monto, empresa.modalidad_logistica));
+      envios.push(await this.prepararEnvio(orderId, empresaId, monto, orden.parte_id));
     }
     return envios;
   }
 
-  private proveedorAutomatico(modalidad: ModalidadLogistica, empresaId: string): { tipo: ProveedorTipo | null; tenantId: string | null } {
-    if (modalidad === 'plataforma') return { tipo: 'plataforma', tenantId: this.tenantPlataforma };
-    if (modalidad === 'propia') return { tipo: 'empresa', tenantId: empresaId };
-    return { tipo: null, tenantId: null };
+  /** Deriva la flota de las capacidades activas de la empresa. */
+  private async proveedorDeEmpresa(empresaId: string): Promise<{ tipo: ProveedorTipo | null; tenantId: string | null }> {
+    const capacidades = await capacidadesDeEmpresas(
+      [empresaId],
+      ['logistica_rutas', 'fulfillment_delivery'],
+    );
+    if (capacidades === null) throw new ServiceUnavailableError('identity-service');
+    const activas = new Set(
+      capacidades
+        .filter((c) => c.empresa_id === empresaId && c.activo)
+        .map((c) => c.capacidad_codigo),
+    );
+    const propia = activas.has('logistica_rutas');
+    const delivery = activas.has('fulfillment_delivery');
+    if (propia && delivery) return { tipo: null, tenantId: null };
+    if (propia) return { tipo: 'empresa', tenantId: empresaId };
+    return { tipo: 'plataforma', tenantId: this.tenantPlataforma };
   }
 
   async asignarProveedor(
@@ -112,7 +122,7 @@ export class EnviosService {
       `SELECT * FROM logistics.envios WHERE id = $1 AND empresa_id = $2`, [envioId, empresaId],
     );
     if (!envio) throw new DomainError('ENVIO_NO_ENCONTRADO', 'El envío no pertenece a la empresa activa.');
-    if (envio.modalidad_logistica !== 'hibrida') {
+    if (envio.proveedor_tipo !== null) {
       throw new DomainError('ASIGNACION_FIJA', 'Solo un envío híbrido permite elegir proveedor.');
     }
     const tenant = tipo === 'plataforma' ? this.tenantPlataforma : empresaId;
@@ -185,18 +195,6 @@ export class EnviosService {
       `SELECT * FROM logistics.envios WHERE order_id = $1 ORDER BY creado_en LIMIT 1`,
       [orderId],
     );
-  }
-
-  private async consultarEmpresa(empresaId: string): Promise<EmpresaExterna> {
-    try {
-      const res = await fetch(`${this.identityUrl}/internal/empresas/${encodeURIComponent(empresaId)}`, {
-        headers: { 'x-internal-key': this.claveInterna },
-      });
-      if (!res.ok) throw new Error('empresa no disponible');
-      return (await res.json()) as EmpresaExterna;
-    } catch {
-      throw new DomainError('EMPRESA_NO_DISPONIBLE', 'No se pudo resolver la modalidad logística de la empresa.');
-    }
   }
 
   async listar(): Promise<(Envio & { monto: string })[]> {

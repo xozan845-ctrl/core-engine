@@ -63,6 +63,21 @@ export class CapacidadesService {
     return fila;
   }
 
+  /** Lectura interna (servicio→servicio): capacidades activas por empresa. */
+  async activasDeEmpresas(
+    empresaIds: string[],
+    capacidades: string[],
+  ): Promise<{ empresa_id: string; capacidad_codigo: string; activo: boolean }[]> {
+    if (empresaIds.length === 0 || capacidades.length === 0) return [];
+    return this.pg.query<{ empresa_id: string; capacidad_codigo: string; activo: boolean }>(
+      `SELECT empresa_id, capacidad_codigo, activo
+         FROM identity.empresa_capacidades
+        WHERE empresa_id = ANY($1::uuid[])
+          AND capacidad_codigo = ANY($2::text[])`,
+      [empresaIds, capacidades],
+    );
+  }
+
   private async validarAcceso(
     empresaId: string,
     actor: { user_id: string; rol: Rol; tenant_id?: string },
@@ -74,8 +89,9 @@ export class CapacidadesService {
       throw new ForbiddenError('Solo el empresario activo de la empresa puede gestionar sus capacidades.');
     }
     const miembro = await this.pg.queryOne(
-      `SELECT 1 FROM identity.empresa_miembros
-       WHERE empresa_id = $1 AND usuario_id = $2 AND rol = 'empresario' AND estado = 'activo'`,
+      `SELECT 1 FROM identity.asignaciones_personal a
+       JOIN identity.roles_empresa r ON r.id = a.rol_empresa_id
+       WHERE a.empresa_id = $1 AND a.usuario_id = $2 AND r.codigo = 'empresario' AND a.estado = 'activa'`,
       [empresaId, actor.user_id],
     );
     if (!miembro) throw new ForbiddenError('El usuario no es empresario activo de esta empresa.');

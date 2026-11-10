@@ -8,179 +8,20 @@ export const OPENAPI_AGREGADO = {
   "openapi": "3.0.0",
   "info": {
     "title": "Core Engine · API pública (agregada)",
-    "description": "Contrato de la superficie pública (/api/v1/**) expuesta por el API Gateway. No incluye las rutas /internal/**, que son exclusivas del tráfico servicio→servicio.",
+    "description": "Contrato de la superficie pública (/api/v2/**) expuesta por el API Gateway. No incluye las rutas /internal/**, que son exclusivas del tráfico servicio→servicio.",
     "version": "v1"
   },
   "tags": [],
   "paths": {
-    "/api/v1/catalog/productos": {
-      "get": {
-        "operationId": "ProductosController_listar",
-        "parameters": [
-          {
-            "name": "empresa_id",
-            "required": false,
-            "in": "query",
-            "description": "Empresa cuyo catálogo se consulta (ADR-27). Obligatoria para lecturas anónimas; con sesión se usa la empresa del token.",
-            "schema": {
-              "format": "uuid",
-              "type": "string"
-            }
-          },
-          {
-            "name": "q",
-            "required": false,
-            "in": "query",
-            "description": "Búsqueda por texto",
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "estado",
-            "required": false,
-            "in": "query",
-            "description": "Filtrar por estado",
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "categoria",
-            "required": false,
-            "in": "query",
-            "description": "Filtrar por categoría",
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "pagina",
-            "required": false,
-            "in": "query",
-            "description": "Página (1-based)",
-            "schema": {
-              "minimum": 1,
-              "type": "number"
-            }
-          },
-          {
-            "name": "limite",
-            "required": false,
-            "in": "query",
-            "description": "Tamaño de página (máx 100)",
-            "schema": {
-              "minimum": 1,
-              "maximum": 100,
-              "type": "number"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Página de productos",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/PaginaProductosResponseDto"
-                }
-              }
-            }
-          }
-        },
-        "summary": "Listar productos de una empresa (público, filtros y paginación)",
-        "tags": [
-          "Catálogo"
-        ]
-      },
-      "post": {
-        "operationId": "ProductosController_crear",
-        "parameters": [],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/CrearProductoRequestDto"
-              }
-            }
-          }
-        },
-        "responses": {
-          "201": {
-            "description": "Producto creado",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProductoResponseDto"
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "bearer": []
-          }
-        ],
-        "summary": "Crear producto con variantes e imágenes (admin, TC-01)",
-        "tags": [
-          "Catálogo"
-        ]
-      }
-    },
-    "/api/v1/catalog/productos/{id}": {
-      "get": {
-        "operationId": "ProductosController_detalle",
-        "parameters": [
-          {
-            "name": "id",
-            "required": true,
-            "in": "path",
-            "description": "Id del producto",
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "empresa_id",
-            "required": false,
-            "in": "query",
-            "description": "Empresa a la que debe pertenecer el producto (ADR-27). Obligatoria para lecturas anónimas.",
-            "schema": {
-              "format": "uuid",
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Producto encontrado",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProductoResponseDto"
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "Producto inexistente o de otra empresa (NO_ENCONTRADO)"
-          }
-        },
-        "summary": "Detalle de producto de una empresa (público, incluye variantes)",
-        "tags": [
-          "Catálogo"
-        ]
-      },
+    "/api/v2/catalog/items/{id}": {
       "patch": {
-        "operationId": "ProductosController_actualizar",
+        "operationId": "ItemsCatalogoController_actualizar",
         "parameters": [
           {
             "name": "id",
             "required": true,
             "in": "path",
-            "description": "Id del producto",
+            "description": "Id del item",
             "schema": {
               "type": "string"
             }
@@ -191,18 +32,18 @@ export const OPENAPI_AGREGADO = {
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/ActualizarProductoRequestDto"
+                "$ref": "#/components/schemas/ActualizarItemCatalogoRequestDto"
               }
             }
           }
         },
         "responses": {
           "200": {
-            "description": "Producto actualizado",
+            "description": "Item actualizado",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ProductoResponseDto"
+                  "$ref": "#/components/schemas/ItemResponseDto"
                 }
               }
             }
@@ -213,15 +54,78 @@ export const OPENAPI_AGREGADO = {
             "bearer": []
           }
         ],
-        "summary": "Editar producto (admin; RN-08 histórico)",
+        "summary": "Editar un item (producto, servicio o alquiler)",
         "tags": [
-          "Catálogo"
+          "Catálogo · Items"
+        ]
+      },
+      "delete": {
+        "operationId": "ItemsCatalogoController_eliminar",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "description": "Id del item",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Item dado de baja"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Dar de baja un item (baja lógica)",
+        "tags": [
+          "Catálogo · Items"
+        ]
+      },
+      "get": {
+        "operationId": "ItemsController_detalle",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ItemResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Consultar un item unificado",
+        "tags": [
+          "Catálogo · Items"
         ]
       }
     },
-    "/api/v1/catalog/productos/{id}/variantes": {
+    "/api/v2/catalog/items/{id}/variantes": {
       "post": {
-        "operationId": "ProductosController_crearVariante",
+        "operationId": "ItemsCatalogoController_crearVariante",
         "parameters": [
           {
             "name": "id",
@@ -238,7 +142,7 @@ export const OPENAPI_AGREGADO = {
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/VarianteProductoRequestDto"
+                "$ref": "#/components/schemas/VarianteItemRequestDto"
               }
             }
           }
@@ -249,7 +153,7 @@ export const OPENAPI_AGREGADO = {
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ProductoResponseDto"
+                  "$ref": "#/components/schemas/ItemResponseDto"
                 }
               }
             }
@@ -260,15 +164,15 @@ export const OPENAPI_AGREGADO = {
             "bearer": []
           }
         ],
-        "summary": "Agregar una variante al producto (ADR-28)",
+        "summary": "Agregar una variante a un producto",
         "tags": [
-          "Catálogo"
+          "Catálogo · Items"
         ]
       }
     },
-    "/api/v1/catalog/productos/{id}/variantes/{varianteId}": {
+    "/api/v2/catalog/items/{id}/variantes/{varianteId}": {
       "patch": {
-        "operationId": "ProductosController_actualizarVariante",
+        "operationId": "ItemsCatalogoController_actualizarVariante",
         "parameters": [
           {
             "name": "id",
@@ -294,7 +198,7 @@ export const OPENAPI_AGREGADO = {
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/ActualizarProductoRequestDto"
+                "$ref": "#/components/schemas/ActualizarItemCatalogoRequestDto"
               }
             }
           }
@@ -305,7 +209,7 @@ export const OPENAPI_AGREGADO = {
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ProductoResponseDto"
+                  "$ref": "#/components/schemas/ItemResponseDto"
                 }
               }
             }
@@ -318,11 +222,11 @@ export const OPENAPI_AGREGADO = {
         ],
         "summary": "Editar una variante (precio/stock/atributos)",
         "tags": [
-          "Catálogo"
+          "Catálogo · Items"
         ]
       },
       "delete": {
-        "operationId": "ProductosController_eliminarVariante",
+        "operationId": "ItemsCatalogoController_eliminarVariante",
         "parameters": [
           {
             "name": "id",
@@ -355,19 +259,19 @@ export const OPENAPI_AGREGADO = {
         ],
         "summary": "Eliminar una variante",
         "tags": [
-          "Catálogo"
+          "Catálogo · Items"
         ]
       }
     },
-    "/api/v1/catalog/productos/{id}/imagenes": {
+    "/api/v2/catalog/items/{id}/imagenes": {
       "post": {
-        "operationId": "ProductosController_agregarImagen",
+        "operationId": "ItemsCatalogoController_agregarImagen",
         "parameters": [
           {
             "name": "id",
             "required": true,
             "in": "path",
-            "description": "Id del producto o variante",
+            "description": "Id del item",
             "schema": {
               "type": "string"
             }
@@ -378,7 +282,7 @@ export const OPENAPI_AGREGADO = {
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/ImagenProductoRequestDto"
+                "$ref": "#/components/schemas/ImagenItemRequestDto"
               }
             }
           }
@@ -389,7 +293,7 @@ export const OPENAPI_AGREGADO = {
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ProductoResponseDto"
+                  "$ref": "#/components/schemas/ItemResponseDto"
                 }
               }
             }
@@ -400,21 +304,21 @@ export const OPENAPI_AGREGADO = {
             "bearer": []
           }
         ],
-        "summary": "Agregar una imagen a un producto o variante (máx. 3)",
+        "summary": "Agregar una imagen a un item (máx. 3)",
         "tags": [
-          "Catálogo"
+          "Catálogo · Items"
         ]
       }
     },
-    "/api/v1/catalog/productos/{id}/imagenes/{imagenId}": {
+    "/api/v2/catalog/items/{id}/imagenes/{imagenId}": {
       "delete": {
-        "operationId": "ProductosController_eliminarImagen",
+        "operationId": "ItemsCatalogoController_eliminarImagen",
         "parameters": [
           {
             "name": "id",
             "required": true,
             "in": "path",
-            "description": "Id del producto o variante",
+            "description": "Id del item",
             "schema": {
               "type": "string"
             }
@@ -423,7 +327,7 @@ export const OPENAPI_AGREGADO = {
             "name": "imagenId",
             "required": true,
             "in": "path",
-            "description": "Id de la relación producto-imagen",
+            "description": "Id de la relación item-imagen",
             "schema": {
               "type": "string"
             }
@@ -439,13 +343,13 @@ export const OPENAPI_AGREGADO = {
             "bearer": []
           }
         ],
-        "summary": "Eliminar una imagen de un producto o variante",
+        "summary": "Eliminar una imagen de un item",
         "tags": [
-          "Catálogo"
+          "Catálogo · Items"
         ]
       }
     },
-    "/api/v1/catalog/items": {
+    "/api/v2/catalog/items": {
       "get": {
         "operationId": "ItemsController_listar",
         "parameters": [],
@@ -470,9 +374,44 @@ export const OPENAPI_AGREGADO = {
         "tags": [
           "Catálogo · Items"
         ]
+      },
+      "post": {
+        "operationId": "ItemsController_crear",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CrearItemRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ItemResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Crear un item unificado (producto, servicio o alquiler)",
+        "tags": [
+          "Catálogo · Items"
+        ]
       }
     },
-    "/api/v1/catalog/items/alquileres": {
+    "/api/v2/catalog/items/alquileres": {
       "post": {
         "operationId": "ItemsController_crearAlquiler",
         "parameters": [],
@@ -509,7 +448,7 @@ export const OPENAPI_AGREGADO = {
         ]
       }
     },
-    "/api/v1/catalog/items/atributos/esquemas": {
+    "/api/v2/catalog/items/atributos/esquemas": {
       "post": {
         "operationId": "ItemsController_guardarEsquema",
         "parameters": [],
@@ -574,44 +513,7 @@ export const OPENAPI_AGREGADO = {
         ]
       }
     },
-    "/api/v1/catalog/items/{id}": {
-      "get": {
-        "operationId": "ItemsController_detalle",
-        "parameters": [
-          {
-            "name": "id",
-            "required": true,
-            "in": "path",
-            "schema": {
-              "format": "uuid",
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ItemResponseDto"
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "bearer": []
-          }
-        ],
-        "summary": "Consultar un item unificado",
-        "tags": [
-          "Catálogo · Items"
-        ]
-      }
-    },
-    "/api/v1/admin/inventario": {
+    "/api/v2/admin/inventario": {
       "get": {
         "operationId": "InventarioController_listar",
         "parameters": [
@@ -651,7 +553,7 @@ export const OPENAPI_AGREGADO = {
         ]
       }
     },
-    "/api/v1/admin/inventario/proveedores": {
+    "/api/v2/admin/inventario/proveedores": {
       "post": {
         "operationId": "InventarioController_crearProveedor",
         "parameters": [],
@@ -688,7 +590,7 @@ export const OPENAPI_AGREGADO = {
         ]
       }
     },
-    "/api/v1/admin/inventario/lotes": {
+    "/api/v2/admin/inventario/lotes": {
       "post": {
         "operationId": "InventarioController_crearLote",
         "parameters": [],
@@ -770,260 +672,7 @@ export const OPENAPI_AGREGADO = {
         ]
       }
     },
-    "/api/v1/catalog/servicios": {
-      "get": {
-        "operationId": "ServiciosController_listar",
-        "parameters": [
-          {
-            "name": "empresa_id",
-            "required": false,
-            "in": "query",
-            "schema": {
-              "format": "uuid",
-              "type": "string"
-            }
-          },
-          {
-            "name": "q",
-            "required": false,
-            "in": "query",
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "estado",
-            "required": false,
-            "in": "query",
-            "schema": {
-              "type": "string",
-              "enum": [
-                "activo",
-                "inactivo"
-              ]
-            }
-          },
-          {
-            "name": "categoria",
-            "required": false,
-            "in": "query",
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "pagina",
-            "required": false,
-            "in": "query",
-            "schema": {
-              "minimum": 1,
-              "type": "number"
-            }
-          },
-          {
-            "name": "limite",
-            "required": false,
-            "in": "query",
-            "schema": {
-              "minimum": 1,
-              "maximum": 100,
-              "type": "number"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Página de servicios",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/PaginaServiciosResponseDto"
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "bearer": []
-          }
-        ],
-        "summary": "Listar servicios de una empresa",
-        "tags": [
-          "Catálogo · Servicios"
-        ]
-      },
-      "post": {
-        "operationId": "ServiciosController_crear",
-        "parameters": [],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/CrearServicioRequestDto"
-              }
-            }
-          }
-        },
-        "responses": {
-          "201": {
-            "description": "Servicio creado",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ServicioResponseDto"
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "bearer": []
-          }
-        ],
-        "summary": "Crear un servicio",
-        "tags": [
-          "Catálogo · Servicios"
-        ]
-      }
-    },
-    "/api/v1/catalog/servicios/{id}": {
-      "get": {
-        "operationId": "ServiciosController_detalle",
-        "parameters": [
-          {
-            "name": "id",
-            "required": true,
-            "in": "path",
-            "description": "Id del servicio",
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "empresa_id",
-            "required": false,
-            "in": "query",
-            "schema": {
-              "format": "uuid"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Servicio encontrado",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ServicioResponseDto"
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "bearer": []
-          }
-        ],
-        "summary": "Detalle de un servicio",
-        "tags": [
-          "Catálogo · Servicios"
-        ]
-      },
-      "patch": {
-        "operationId": "ServiciosController_actualizar",
-        "parameters": [
-          {
-            "name": "id",
-            "required": true,
-            "in": "path",
-            "description": "Id del servicio",
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "empresa_id",
-            "required": false,
-            "in": "query",
-            "schema": {
-              "format": "uuid"
-            }
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/ActualizarServicioRequestDto"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "Servicio actualizado",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ServicioResponseDto"
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "bearer": []
-          }
-        ],
-        "summary": "Actualizar un servicio",
-        "tags": [
-          "Catálogo · Servicios"
-        ]
-      },
-      "delete": {
-        "operationId": "ServiciosController_eliminar",
-        "parameters": [
-          {
-            "name": "id",
-            "required": true,
-            "in": "path",
-            "description": "Id del servicio",
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "empresa_id",
-            "required": false,
-            "in": "query",
-            "schema": {
-              "format": "uuid"
-            }
-          }
-        ],
-        "responses": {
-          "204": {
-            "description": "Servicio dado de baja"
-          }
-        },
-        "security": [
-          {
-            "bearer": []
-          }
-        ],
-        "summary": "Dar de baja un servicio (baja lógica)",
-        "tags": [
-          "Catálogo · Servicios"
-        ]
-      }
-    },
-    "/api/v1/catalog/configuracion-inventario": {
+    "/api/v2/catalog/configuracion-inventario": {
       "get": {
         "operationId": "OperacionesController_configuracion",
         "parameters": [
@@ -1103,7 +752,7 @@ export const OPENAPI_AGREGADO = {
         ]
       }
     },
-    "/api/v1/catalog/productos/importar": {
+    "/api/v2/catalog/items/importar": {
       "post": {
         "operationId": "OperacionesController_importar",
         "parameters": [
@@ -1143,13 +792,13 @@ export const OPENAPI_AGREGADO = {
             "bearer": []
           }
         ],
-        "summary": "Importar productos desde filas validadas (máx. 200)",
+        "summary": "Importar items tipo producto desde filas validadas (máx. 200)",
         "tags": [
           "Catálogo · Operaciones"
         ]
       }
     },
-    "/api/v1/catalog/escanear": {
+    "/api/v2/catalog/escanear": {
       "get": {
         "operationId": "OperacionesController_escanear",
         "parameters": [
@@ -1193,7 +842,7 @@ export const OPENAPI_AGREGADO = {
         ]
       }
     },
-    "/api/v1/catalog/combos": {
+    "/api/v2/catalog/combos": {
       "get": {
         "operationId": "OperacionesController_listarCombos",
         "parameters": [
@@ -1304,7 +953,7 @@ export const OPENAPI_AGREGADO = {
         ]
       }
     },
-    "/api/v1/catalog/combos/{id}": {
+    "/api/v2/catalog/combos/{id}": {
       "get": {
         "operationId": "OperacionesController_detalleCombo",
         "parameters": [
@@ -1411,7 +1060,7 @@ export const OPENAPI_AGREGADO = {
         ]
       }
     },
-    "/api/v1/catalog/promociones": {
+    "/api/v2/catalog/promociones": {
       "get": {
         "operationId": "OperacionesController_listarPromociones",
         "parameters": [
@@ -1514,7 +1163,7 @@ export const OPENAPI_AGREGADO = {
         ]
       }
     },
-    "/api/v1/catalog/promociones/{id}": {
+    "/api/v2/catalog/promociones/{id}": {
       "get": {
         "operationId": "OperacionesController_detallePromocion",
         "parameters": [
@@ -1621,7 +1270,7 @@ export const OPENAPI_AGREGADO = {
         ]
       }
     },
-    "/api/v1/catalog/inventario/movimientos": {
+    "/api/v2/catalog/inventario/movimientos": {
       "get": {
         "operationId": "OperacionesController_listarMovimientos",
         "parameters": [
@@ -1726,7 +1375,7 @@ export const OPENAPI_AGREGADO = {
         ]
       }
     },
-    "/api/v1/vendedores/me/liquidaciones": {
+    "/api/v2/vendedores/me/liquidaciones": {
       "get": {
         "operationId": "LiquidacionesController_mias",
         "parameters": [],
@@ -1756,7 +1405,7 @@ export const OPENAPI_AGREGADO = {
         ]
       }
     },
-    "/api/v1/empresarios/me/liquidaciones": {
+    "/api/v2/empresarios/me/liquidaciones": {
       "get": {
         "operationId": "LiquidacionesController_deMiEmpresa",
         "parameters": [],
@@ -1786,7 +1435,7 @@ export const OPENAPI_AGREGADO = {
         ]
       }
     },
-    "/api/v1/admin/liquidaciones/corte": {
+    "/api/v2/admin/liquidaciones/corte": {
       "post": {
         "operationId": "LiquidacionesController_corteManual",
         "parameters": [
@@ -1833,7 +1482,7 @@ export const OPENAPI_AGREGADO = {
         ]
       }
     },
-    "/api/v1/admin/liquidaciones/{id}/pagar": {
+    "/api/v2/admin/liquidaciones/{id}/pagar": {
       "post": {
         "operationId": "LiquidacionesController_pagar",
         "parameters": [
@@ -1878,7 +1527,7 @@ export const OPENAPI_AGREGADO = {
         ]
       }
     },
-    "/api/v1/vendedores/me/ventas": {
+    "/api/v2/vendedores/me/ventas": {
       "get": {
         "operationId": "VentasController_estado",
         "parameters": [],
@@ -1905,7 +1554,7 @@ export const OPENAPI_AGREGADO = {
         ]
       }
     },
-    "/api/v1/empresarios/me/ventas": {
+    "/api/v2/empresarios/me/ventas": {
       "get": {
         "operationId": "VentasEmpresaController_estado",
         "parameters": [],
@@ -1932,7 +1581,7 @@ export const OPENAPI_AGREGADO = {
         ]
       }
     },
-    "/api/v1/admin/reportes": {
+    "/api/v2/admin/reportes": {
       "get": {
         "operationId": "ReportesController_kpis",
         "parameters": [],
@@ -1959,7 +1608,7 @@ export const OPENAPI_AGREGADO = {
         ]
       }
     },
-    "/api/v1/field/personal": {
+    "/api/v2/field/personal": {
       "get": {
         "operationId": "FieldController_listarPersonal",
         "parameters": [],
@@ -2024,7 +1673,7 @@ export const OPENAPI_AGREGADO = {
         ]
       }
     },
-    "/api/v1/field/personal/{id}": {
+    "/api/v2/field/personal/{id}": {
       "get": {
         "operationId": "FieldController_obtenerPersonal",
         "parameters": [
@@ -2131,7 +1780,7 @@ export const OPENAPI_AGREGADO = {
         ]
       }
     },
-    "/api/v1/field/personal/{id}/ubicacion": {
+    "/api/v2/field/personal/{id}/ubicacion": {
       "get": {
         "operationId": "FieldController_ubicacionPersonal",
         "parameters": [
@@ -2211,7 +1860,7 @@ export const OPENAPI_AGREGADO = {
         ]
       }
     },
-    "/api/v1/field/clientes": {
+    "/api/v2/field/clientes": {
       "get": {
         "operationId": "FieldController_listarClientes",
         "parameters": [],
@@ -2276,7 +1925,7 @@ export const OPENAPI_AGREGADO = {
         ]
       }
     },
-    "/api/v1/field/clientes/{id}": {
+    "/api/v2/field/clientes/{id}": {
       "get": {
         "operationId": "FieldController_obtenerCliente",
         "parameters": [
@@ -2383,7 +2032,7 @@ export const OPENAPI_AGREGADO = {
         ]
       }
     },
-    "/api/v1/field/vehiculos": {
+    "/api/v2/field/vehiculos": {
       "get": {
         "operationId": "FieldController_listarVehiculos",
         "parameters": [],
@@ -2448,7 +2097,7 @@ export const OPENAPI_AGREGADO = {
         ]
       }
     },
-    "/api/v1/field/vehiculos/{id}": {
+    "/api/v2/field/vehiculos/{id}": {
       "get": {
         "operationId": "FieldController_obtenerVehiculo",
         "parameters": [
@@ -2555,7 +2204,7 @@ export const OPENAPI_AGREGADO = {
         ]
       }
     },
-    "/api/v1/field/rutas": {
+    "/api/v2/field/rutas": {
       "get": {
         "operationId": "FieldController_listarRutas",
         "parameters": [
@@ -2629,7 +2278,7 @@ export const OPENAPI_AGREGADO = {
         ]
       }
     },
-    "/api/v1/field/rutas/{id}": {
+    "/api/v2/field/rutas/{id}": {
       "get": {
         "operationId": "FieldController_obtenerRuta",
         "parameters": [
@@ -2736,7 +2385,7 @@ export const OPENAPI_AGREGADO = {
         ]
       }
     },
-    "/api/v1/field/rutas/{id}/paradas": {
+    "/api/v2/field/rutas/{id}/paradas": {
       "post": {
         "operationId": "FieldController_agregarParada",
         "parameters": [
@@ -2782,7 +2431,7 @@ export const OPENAPI_AGREGADO = {
         ]
       }
     },
-    "/api/v1/field/rutas/{id}/paradas/{paradaId}": {
+    "/api/v2/field/rutas/{id}/paradas/{paradaId}": {
       "patch": {
         "operationId": "FieldController_actualizarParada",
         "parameters": [
@@ -2836,7 +2485,7 @@ export const OPENAPI_AGREGADO = {
         ]
       }
     },
-    "/api/v1/field/rutas/{id}/asignar": {
+    "/api/v2/field/rutas/{id}/asignar": {
       "post": {
         "operationId": "FieldController_asignarRuta",
         "parameters": [
@@ -2882,7 +2531,7 @@ export const OPENAPI_AGREGADO = {
         ]
       }
     },
-    "/api/v1/field/pedidos": {
+    "/api/v2/field/pedidos": {
       "get": {
         "operationId": "FieldController_listarPedidos",
         "parameters": [
@@ -2903,7 +2552,7 @@ export const OPENAPI_AGREGADO = {
             }
           },
           {
-            "name": "clienteId",
+            "name": "parteId",
             "required": true,
             "in": "query",
             "schema": {
@@ -2972,7 +2621,7 @@ export const OPENAPI_AGREGADO = {
         ]
       }
     },
-    "/api/v1/field/pedidos/{id}": {
+    "/api/v2/field/pedidos/{id}": {
       "get": {
         "operationId": "FieldController_obtenerPedido",
         "parameters": [
@@ -3079,7 +2728,7 @@ export const OPENAPI_AGREGADO = {
         ]
       }
     },
-    "/api/v1/field/pedidos/{id}/estado": {
+    "/api/v2/field/pedidos/{id}/estado": {
       "patch": {
         "operationId": "FieldController_cambiarEstadoPedido",
         "parameters": [
@@ -3125,7 +2774,7 @@ export const OPENAPI_AGREGADO = {
         ]
       }
     },
-    "/api/v1/field/asistencia": {
+    "/api/v2/field/asistencia": {
       "get": {
         "operationId": "FieldController_listarAsistencia",
         "parameters": [
@@ -3207,7 +2856,7 @@ export const OPENAPI_AGREGADO = {
         ]
       }
     },
-    "/api/v1/field/incidencias": {
+    "/api/v2/field/incidencias": {
       "get": {
         "operationId": "FieldController_listarIncidencias",
         "parameters": [
@@ -3289,7 +2938,7 @@ export const OPENAPI_AGREGADO = {
         ]
       }
     },
-    "/api/v1/field/incidencias/{id}": {
+    "/api/v2/field/incidencias/{id}": {
       "get": {
         "operationId": "FieldController_obtenerIncidencia",
         "parameters": [
@@ -3396,7 +3045,7 @@ export const OPENAPI_AGREGADO = {
         ]
       }
     },
-    "/api/v1/field/tracking": {
+    "/api/v2/field/tracking": {
       "get": {
         "operationId": "FieldController_listarTracking",
         "parameters": [
@@ -3489,7 +3138,7 @@ export const OPENAPI_AGREGADO = {
         ]
       }
     },
-    "/api/v1/field/visitas": {
+    "/api/v2/field/visitas": {
       "get": {
         "operationId": "FieldController_listarVisitas",
         "parameters": [
@@ -3571,7 +3220,7 @@ export const OPENAPI_AGREGADO = {
         ]
       }
     },
-    "/api/v1/field/cumplimiento/{rutaId}/{fecha}": {
+    "/api/v2/field/cumplimiento/{rutaId}/{fecha}": {
       "get": {
         "operationId": "FieldController_obtenerCumplimiento",
         "parameters": [
@@ -3615,7 +3264,7 @@ export const OPENAPI_AGREGADO = {
         ]
       }
     },
-    "/api/v1/field/cumplimiento": {
+    "/api/v2/field/cumplimiento": {
       "post": {
         "operationId": "FieldController_guardarCumplimiento",
         "parameters": [],
@@ -3652,7 +3301,7 @@ export const OPENAPI_AGREGADO = {
         ]
       }
     },
-    "/api/v1/field/sync": {
+    "/api/v2/field/sync": {
       "post": {
         "operationId": "FieldController_sincronizar",
         "parameters": [],
@@ -3692,7 +3341,7 @@ export const OPENAPI_AGREGADO = {
         ]
       }
     },
-    "/api/v1/finanzas/cuentas": {
+    "/api/v2/finanzas/cuentas": {
       "get": {
         "operationId": "ContabilidadController_cuentas",
         "parameters": [],
@@ -3757,7 +3406,7 @@ export const OPENAPI_AGREGADO = {
         ]
       }
     },
-    "/api/v1/finanzas/cuentas/{codigo}/estado": {
+    "/api/v2/finanzas/cuentas/{codigo}/estado": {
       "post": {
         "operationId": "ContabilidadController_estadoCuenta",
         "parameters": [
@@ -3804,7 +3453,7 @@ export const OPENAPI_AGREGADO = {
         ]
       }
     },
-    "/api/v1/finanzas/asientos": {
+    "/api/v2/finanzas/asientos": {
       "get": {
         "operationId": "ContabilidadController_libroDiario",
         "parameters": [
@@ -3894,7 +3543,7 @@ export const OPENAPI_AGREGADO = {
         ]
       }
     },
-    "/api/v1/finanzas/asientos/{id}/anular": {
+    "/api/v2/finanzas/asientos/{id}/anular": {
       "post": {
         "operationId": "ContabilidadController_anular",
         "parameters": [
@@ -3931,7 +3580,7 @@ export const OPENAPI_AGREGADO = {
         ]
       }
     },
-    "/api/v1/finanzas/libro-mayor/{cuenta}": {
+    "/api/v2/finanzas/libro-mayor/{cuenta}": {
       "get": {
         "operationId": "ContabilidadController_libroMayor",
         "parameters": [
@@ -3984,7 +3633,7 @@ export const OPENAPI_AGREGADO = {
         ]
       }
     },
-    "/api/v1/finanzas/libro-ventas": {
+    "/api/v2/finanzas/libro-ventas": {
       "get": {
         "operationId": "ContabilidadController_libroVentas",
         "parameters": [
@@ -4031,7 +3680,7 @@ export const OPENAPI_AGREGADO = {
         ]
       }
     },
-    "/api/v1/finanzas/libro-compras": {
+    "/api/v2/finanzas/libro-compras": {
       "get": {
         "operationId": "ContabilidadController_libroCompras",
         "parameters": [
@@ -4078,7 +3727,7 @@ export const OPENAPI_AGREGADO = {
         ]
       }
     },
-    "/api/v1/finanzas/comprobantes": {
+    "/api/v2/finanzas/comprobantes": {
       "get": {
         "operationId": "FacturacionController_listar",
         "parameters": [
@@ -4168,7 +3817,7 @@ export const OPENAPI_AGREGADO = {
         ]
       }
     },
-    "/api/v1/finanzas/comprobantes/series": {
+    "/api/v2/finanzas/comprobantes/series": {
       "get": {
         "operationId": "FacturacionController_series",
         "parameters": [],
@@ -4198,7 +3847,7 @@ export const OPENAPI_AGREGADO = {
         ]
       }
     },
-    "/api/v1/finanzas/comprobantes/{id}/anular": {
+    "/api/v2/finanzas/comprobantes/{id}/anular": {
       "post": {
         "operationId": "FacturacionController_anular",
         "parameters": [
@@ -4235,7 +3884,7 @@ export const OPENAPI_AGREGADO = {
         ]
       }
     },
-    "/api/v1/finanzas/jurisdicciones": {
+    "/api/v2/finanzas/jurisdicciones": {
       "get": {
         "operationId": "TributacionController_jurisdicciones",
         "parameters": [],
@@ -4300,7 +3949,7 @@ export const OPENAPI_AGREGADO = {
         ]
       }
     },
-    "/api/v1/finanzas/regimenes": {
+    "/api/v2/finanzas/regimenes": {
       "get": {
         "operationId": "TributacionController_regimenes",
         "parameters": [
@@ -4374,7 +4023,7 @@ export const OPENAPI_AGREGADO = {
         ]
       }
     },
-    "/api/v1/finanzas/sujetos": {
+    "/api/v2/finanzas/sujetos": {
       "get": {
         "operationId": "TributacionController_sujetos",
         "parameters": [],
@@ -4439,7 +4088,7 @@ export const OPENAPI_AGREGADO = {
         ]
       }
     },
-    "/api/v1/finanzas/sujetos/{id}/baja": {
+    "/api/v2/finanzas/sujetos/{id}/baja": {
       "post": {
         "operationId": "TributacionController_darDeBaja",
         "parameters": [
@@ -4476,7 +4125,7 @@ export const OPENAPI_AGREGADO = {
         ]
       }
     },
-    "/api/v1/finanzas/declaraciones": {
+    "/api/v2/finanzas/declaraciones": {
       "get": {
         "operationId": "TributacionController_declaraciones",
         "parameters": [
@@ -4531,7 +4180,7 @@ export const OPENAPI_AGREGADO = {
         ]
       }
     },
-    "/api/v1/finanzas/declaraciones/generar": {
+    "/api/v2/finanzas/declaraciones/generar": {
       "post": {
         "operationId": "TributacionController_generar",
         "parameters": [],
@@ -4571,7 +4220,7 @@ export const OPENAPI_AGREGADO = {
         ]
       }
     },
-    "/api/v1/finanzas/declaraciones/{id}/presentar": {
+    "/api/v2/finanzas/declaraciones/{id}/presentar": {
       "post": {
         "operationId": "TributacionController_presentar",
         "parameters": [
@@ -4608,7 +4257,7 @@ export const OPENAPI_AGREGADO = {
         ]
       }
     },
-    "/api/v1/finanzas/declaraciones/{id}/pagar": {
+    "/api/v2/finanzas/declaraciones/{id}/pagar": {
       "post": {
         "operationId": "TributacionController_pagar",
         "parameters": [
@@ -4645,7 +4294,7 @@ export const OPENAPI_AGREGADO = {
         ]
       }
     },
-    "/api/v1/finanzas/proyecciones": {
+    "/api/v2/finanzas/proyecciones": {
       "post": {
         "operationId": "FinanzasController_crear",
         "parameters": [],
@@ -4710,7 +4359,7 @@ export const OPENAPI_AGREGADO = {
         ]
       }
     },
-    "/api/v1/finanzas/punto-equilibrio": {
+    "/api/v2/finanzas/punto-equilibrio": {
       "get": {
         "operationId": "FinanzasController_puntoEquilibrio",
         "parameters": [
@@ -4770,7 +4419,7 @@ export const OPENAPI_AGREGADO = {
         ]
       }
     },
-    "/api/v1/finanzas/kpis": {
+    "/api/v2/finanzas/kpis": {
       "get": {
         "operationId": "FinanzasController_kpisDelMes",
         "parameters": [
@@ -4806,7 +4455,7 @@ export const OPENAPI_AGREGADO = {
         ]
       }
     },
-    "/api/v1/finanzas/proyecciones/sensibilidad": {
+    "/api/v2/finanzas/proyecciones/sensibilidad": {
       "get": {
         "operationId": "FinanzasController_sensibilidad",
         "parameters": [],
@@ -4833,7 +4482,7 @@ export const OPENAPI_AGREGADO = {
         ]
       }
     },
-    "/api/v1/finanzas/proyecciones/plan-bienal": {
+    "/api/v2/finanzas/proyecciones/plan-bienal": {
       "get": {
         "operationId": "FinanzasController_planBienal",
         "parameters": [],
@@ -4860,7 +4509,7 @@ export const OPENAPI_AGREGADO = {
         ]
       }
     },
-    "/api/v1/finanzas/proyecciones/{id}": {
+    "/api/v2/finanzas/proyecciones/{id}": {
       "get": {
         "operationId": "FinanzasController_detalle",
         "parameters": [
@@ -4897,7 +4546,7 @@ export const OPENAPI_AGREGADO = {
         ]
       }
     },
-    "/api/v1/finanzas/tablero": {
+    "/api/v2/finanzas/tablero": {
       "get": {
         "operationId": "FinanzasController_tablero",
         "parameters": [
@@ -4941,7 +4590,7 @@ export const OPENAPI_AGREGADO = {
         ]
       }
     },
-    "/api/v1/vendedores/me/fiscal": {
+    "/api/v2/vendedores/me/fiscal": {
       "get": {
         "operationId": "VendedorFiscalController_situacion",
         "parameters": [
@@ -4977,7 +4626,7 @@ export const OPENAPI_AGREGADO = {
         ]
       }
     },
-    "/api/v1/comercio/bancos-cuentas": {
+    "/api/v2/comercio/bancos-cuentas": {
       "get": {
         "operationId": "ComercioController_listarBancos",
         "parameters": [],
@@ -5042,7 +4691,7 @@ export const OPENAPI_AGREGADO = {
         ]
       }
     },
-    "/api/v1/comercio/bancos-cuentas/{id}": {
+    "/api/v2/comercio/bancos-cuentas/{id}": {
       "patch": {
         "operationId": "ComercioController_actualizarBanco",
         "parameters": [
@@ -5117,7 +4766,7 @@ export const OPENAPI_AGREGADO = {
         ]
       }
     },
-    "/api/v1/comercio/creditos": {
+    "/api/v2/comercio/creditos": {
       "get": {
         "operationId": "ComercioController_listarCreditos",
         "parameters": [],
@@ -5182,7 +4831,7 @@ export const OPENAPI_AGREGADO = {
         ]
       }
     },
-    "/api/v1/comercio/creditos/{id}/pagar": {
+    "/api/v2/comercio/creditos/{id}/pagar": {
       "post": {
         "operationId": "ComercioController_pagarCredito",
         "parameters": [
@@ -5219,7 +4868,7 @@ export const OPENAPI_AGREGADO = {
         ]
       }
     },
-    "/api/v1/comercio/creditos/{id}": {
+    "/api/v2/comercio/creditos/{id}": {
       "delete": {
         "operationId": "ComercioController_eliminarCredito",
         "parameters": [
@@ -5249,7 +4898,7 @@ export const OPENAPI_AGREGADO = {
         ]
       }
     },
-    "/api/v1/comercio/gastos": {
+    "/api/v2/comercio/gastos": {
       "get": {
         "operationId": "ComercioController_listarGastos",
         "parameters": [],
@@ -5314,7 +4963,7 @@ export const OPENAPI_AGREGADO = {
         ]
       }
     },
-    "/api/v1/comercio/gastos/{id}": {
+    "/api/v2/comercio/gastos/{id}": {
       "patch": {
         "operationId": "ComercioController_actualizarGasto",
         "parameters": [
@@ -5389,7 +5038,7 @@ export const OPENAPI_AGREGADO = {
         ]
       }
     },
-    "/api/v1/comercio/gastos/{id}/pagar": {
+    "/api/v2/comercio/gastos/{id}/pagar": {
       "post": {
         "operationId": "ComercioController_pagarGasto",
         "parameters": [
@@ -5426,7 +5075,7 @@ export const OPENAPI_AGREGADO = {
         ]
       }
     },
-    "/api/v1/comercio/gastos/{id}/cancelar": {
+    "/api/v2/comercio/gastos/{id}/cancelar": {
       "post": {
         "operationId": "ComercioController_cancelarGasto",
         "parameters": [
@@ -5463,7 +5112,7 @@ export const OPENAPI_AGREGADO = {
         ]
       }
     },
-    "/api/v1/comercio/cuentas-por-pagar": {
+    "/api/v2/comercio/cuentas-por-pagar": {
       "get": {
         "operationId": "ComercioController_listarCuentasPorPagar",
         "parameters": [],
@@ -5528,7 +5177,7 @@ export const OPENAPI_AGREGADO = {
         ]
       }
     },
-    "/api/v1/comercio/cuentas-por-pagar/{id}/pagar": {
+    "/api/v2/comercio/cuentas-por-pagar/{id}/pagar": {
       "post": {
         "operationId": "ComercioController_pagarCuentaPorPagar",
         "parameters": [
@@ -5565,7 +5214,7 @@ export const OPENAPI_AGREGADO = {
         ]
       }
     },
-    "/api/v1/comercio/cuentas-por-pagar/{id}": {
+    "/api/v2/comercio/cuentas-por-pagar/{id}": {
       "delete": {
         "operationId": "ComercioController_eliminarCuentaPorPagar",
         "parameters": [
@@ -5595,7 +5244,7 @@ export const OPENAPI_AGREGADO = {
         ]
       }
     },
-    "/api/v1/comercio/proveedores": {
+    "/api/v2/comercio/proveedores": {
       "get": {
         "operationId": "ComercioController_listarProveedores",
         "parameters": [],
@@ -5660,7 +5309,7 @@ export const OPENAPI_AGREGADO = {
         ]
       }
     },
-    "/api/v1/comercio/proveedores/{id}": {
+    "/api/v2/comercio/proveedores/{id}": {
       "delete": {
         "operationId": "ComercioController_eliminarProveedor",
         "parameters": [
@@ -5690,7 +5339,7 @@ export const OPENAPI_AGREGADO = {
         ]
       }
     },
-    "/api/v1/comercio/compras": {
+    "/api/v2/comercio/compras": {
       "get": {
         "operationId": "ComercioController_listarCompras",
         "parameters": [],
@@ -5755,7 +5404,7 @@ export const OPENAPI_AGREGADO = {
         ]
       }
     },
-    "/api/v1/comercio/compras/directas": {
+    "/api/v2/comercio/compras/directas": {
       "post": {
         "operationId": "ComercioController_crearCompraDirecta",
         "parameters": [],
@@ -5792,7 +5441,7 @@ export const OPENAPI_AGREGADO = {
         ]
       }
     },
-    "/api/v1/comercio/compras/producto-nuevo": {
+    "/api/v2/comercio/compras/producto-nuevo": {
       "post": {
         "operationId": "ComercioController_crearCompraProductoNuevo",
         "parameters": [],
@@ -5829,7 +5478,7 @@ export const OPENAPI_AGREGADO = {
         ]
       }
     },
-    "/api/v1/comercio/compras/{id}/anular": {
+    "/api/v2/comercio/compras/{id}/anular": {
       "post": {
         "operationId": "ComercioController_anularCompra",
         "parameters": [
@@ -5866,7 +5515,7 @@ export const OPENAPI_AGREGADO = {
         ]
       }
     },
-    "/api/v1/comercio/compras/{id}": {
+    "/api/v2/comercio/compras/{id}": {
       "delete": {
         "operationId": "ComercioController_eliminarCompra",
         "parameters": [
@@ -5896,7 +5545,7 @@ export const OPENAPI_AGREGADO = {
         ]
       }
     },
-    "/api/v1/comercio/ordenes-compra": {
+    "/api/v2/comercio/ordenes-compra": {
       "get": {
         "operationId": "ComercioController_listarOrdenesCompra",
         "parameters": [],
@@ -5961,7 +5610,7 @@ export const OPENAPI_AGREGADO = {
         ]
       }
     },
-    "/api/v1/comercio/ordenes-compra/{id}/convertir": {
+    "/api/v2/comercio/ordenes-compra/{id}/convertir": {
       "post": {
         "operationId": "ComercioController_convertirOrdenCompra",
         "parameters": [
@@ -5998,7 +5647,7 @@ export const OPENAPI_AGREGADO = {
         ]
       }
     },
-    "/api/v1/comercio/ordenes-compra/{id}/anular": {
+    "/api/v2/comercio/ordenes-compra/{id}/anular": {
       "post": {
         "operationId": "ComercioController_anularOrdenCompra",
         "parameters": [
@@ -6035,7 +5684,7 @@ export const OPENAPI_AGREGADO = {
         ]
       }
     },
-    "/api/v1/comercio/configuracion-documentos": {
+    "/api/v2/comercio/configuracion-documentos": {
       "get": {
         "operationId": "ComercioController_obtenerConfiguracionDocumentos",
         "parameters": [],
@@ -6097,7 +5746,7 @@ export const OPENAPI_AGREGADO = {
         ]
       }
     },
-    "/api/v1/comercio/caja/metodos-pago": {
+    "/api/v2/comercio/caja/metodos-pago": {
       "get": {
         "operationId": "ComercioController_listarMetodosPago",
         "parameters": [],
@@ -6162,7 +5811,7 @@ export const OPENAPI_AGREGADO = {
         ]
       }
     },
-    "/api/v1/comercio/caja/metodos-pago/{id}": {
+    "/api/v2/comercio/caja/metodos-pago/{id}": {
       "patch": {
         "operationId": "ComercioController_actualizarMetodoPago",
         "parameters": [
@@ -6237,7 +5886,7 @@ export const OPENAPI_AGREGADO = {
         ]
       }
     },
-    "/api/v1/comercio/caja/movimientos": {
+    "/api/v2/comercio/caja/movimientos": {
       "get": {
         "operationId": "ComercioController_listarMovimientosCaja",
         "parameters": [],
@@ -6302,7 +5951,7 @@ export const OPENAPI_AGREGADO = {
         ]
       }
     },
-    "/api/v1/comercio/caja/movimientos/{id}/anular": {
+    "/api/v2/comercio/caja/movimientos/{id}/anular": {
       "post": {
         "operationId": "ComercioController_anularMovimientoCaja",
         "parameters": [
@@ -6339,7 +5988,7 @@ export const OPENAPI_AGREGADO = {
         ]
       }
     },
-    "/api/v1/comercio/caja/movimientos/{id}": {
+    "/api/v2/comercio/caja/movimientos/{id}": {
       "delete": {
         "operationId": "ComercioController_eliminarMovimientoCaja",
         "parameters": [
@@ -6369,7 +6018,7 @@ export const OPENAPI_AGREGADO = {
         ]
       }
     },
-    "/api/v1/comercio/caja/cierres": {
+    "/api/v2/comercio/caja/cierres": {
       "get": {
         "operationId": "ComercioController_listarCierres",
         "parameters": [],
@@ -6434,7 +6083,7 @@ export const OPENAPI_AGREGADO = {
         ]
       }
     },
-    "/api/v1/comercio/caja/cierres/preview": {
+    "/api/v2/comercio/caja/cierres/preview": {
       "get": {
         "operationId": "ComercioController_previewCierre",
         "parameters": [
@@ -6471,7 +6120,7 @@ export const OPENAPI_AGREGADO = {
         ]
       }
     },
-    "/api/v1/comercio/caja/chica/fondo": {
+    "/api/v2/comercio/caja/chica/fondo": {
       "get": {
         "operationId": "ComercioController_obtenerFondoCajaChica",
         "parameters": [],
@@ -6533,7 +6182,7 @@ export const OPENAPI_AGREGADO = {
         ]
       }
     },
-    "/api/v1/comercio/caja/chica/movimientos": {
+    "/api/v2/comercio/caja/chica/movimientos": {
       "get": {
         "operationId": "ComercioController_listarMovimientosCajaChica",
         "parameters": [],
@@ -6598,7 +6247,7 @@ export const OPENAPI_AGREGADO = {
         ]
       }
     },
-    "/api/v1/comercio/caja/transferencias": {
+    "/api/v2/comercio/caja/transferencias": {
       "get": {
         "operationId": "ComercioController_listarTransferencias",
         "parameters": [],
@@ -6663,7 +6312,7 @@ export const OPENAPI_AGREGADO = {
         ]
       }
     },
-    "/api/v1/comercio/caja/transferencias/{id}/anular": {
+    "/api/v2/comercio/caja/transferencias/{id}/anular": {
       "post": {
         "operationId": "ComercioController_anularTransferencia",
         "parameters": [
@@ -6700,7 +6349,7 @@ export const OPENAPI_AGREGADO = {
         ]
       }
     },
-    "/api/v1/comercio/clientes": {
+    "/api/v2/comercio/clientes": {
       "get": {
         "operationId": "ComercioController_listarClientes",
         "parameters": [],
@@ -6765,7 +6414,7 @@ export const OPENAPI_AGREGADO = {
         ]
       }
     },
-    "/api/v1/comercio/clientes/importar": {
+    "/api/v2/comercio/clientes/importar": {
       "post": {
         "operationId": "ComercioController_importarClientes",
         "parameters": [],
@@ -6802,7 +6451,7 @@ export const OPENAPI_AGREGADO = {
         ]
       }
     },
-    "/api/v1/comercio/clientes/{id}": {
+    "/api/v2/comercio/clientes/{id}": {
       "patch": {
         "operationId": "ComercioController_actualizarCliente",
         "parameters": [
@@ -6877,7 +6526,7 @@ export const OPENAPI_AGREGADO = {
         ]
       }
     },
-    "/api/v1/comercio/codigos-barras": {
+    "/api/v2/comercio/codigos-barras": {
       "get": {
         "operationId": "ComercioController_listarCodigosBarras",
         "parameters": [],
@@ -6942,7 +6591,7 @@ export const OPENAPI_AGREGADO = {
         ]
       }
     },
-    "/api/v1/comercio/codigos-barras/{id}": {
+    "/api/v2/comercio/codigos-barras/{id}": {
       "delete": {
         "operationId": "ComercioController_eliminarCodigoBarras",
         "parameters": [
@@ -6972,7 +6621,7 @@ export const OPENAPI_AGREGADO = {
         ]
       }
     },
-    "/api/v1/auth/registro": {
+    "/api/v2/auth/registro": {
       "post": {
         "operationId": "AuthController_registrar",
         "parameters": [],
@@ -7004,7 +6653,7 @@ export const OPENAPI_AGREGADO = {
         ]
       }
     },
-    "/api/v1/auth/login": {
+    "/api/v2/auth/login": {
       "post": {
         "operationId": "AuthController_login",
         "parameters": [],
@@ -7039,7 +6688,7 @@ export const OPENAPI_AGREGADO = {
         ]
       }
     },
-    "/api/v1/auth/refresh": {
+    "/api/v2/auth/refresh": {
       "post": {
         "operationId": "AuthController_refresh",
         "parameters": [],
@@ -7079,7 +6728,7 @@ export const OPENAPI_AGREGADO = {
         ]
       }
     },
-    "/api/v1/auth/logout": {
+    "/api/v2/auth/logout": {
       "post": {
         "operationId": "AuthController_logout",
         "parameters": [],
@@ -7116,7 +6765,7 @@ export const OPENAPI_AGREGADO = {
         ]
       }
     },
-    "/api/v1/auth/crear-usuario": {
+    "/api/v2/auth/crear-usuario": {
       "post": {
         "operationId": "AuthController_crearUsuario",
         "parameters": [],
@@ -7156,7 +6805,7 @@ export const OPENAPI_AGREGADO = {
         ]
       }
     },
-    "/api/v1/auth/cambiar-contrasena": {
+    "/api/v2/auth/cambiar-contrasena": {
       "post": {
         "operationId": "AuthController_cambiarContrasena",
         "parameters": [],
@@ -7193,7 +6842,7 @@ export const OPENAPI_AGREGADO = {
         ]
       }
     },
-    "/api/v1/auth/restablecer-contrasena": {
+    "/api/v2/auth/restablecer-contrasena": {
       "post": {
         "operationId": "AuthController_restablecerContrasena",
         "parameters": [],
@@ -7225,7 +6874,7 @@ export const OPENAPI_AGREGADO = {
         ]
       }
     },
-    "/api/v1/auth/me": {
+    "/api/v2/auth/me": {
       "get": {
         "operationId": "AuthController_yo",
         "parameters": [],
@@ -7252,7 +6901,7 @@ export const OPENAPI_AGREGADO = {
         ]
       }
     },
-    "/api/v1/auth/vincular-personal": {
+    "/api/v2/auth/vincular-personal": {
       "post": {
         "operationId": "AuthController_vincularPersonal",
         "parameters": [],
@@ -7289,7 +6938,7 @@ export const OPENAPI_AGREGADO = {
         ]
       }
     },
-    "/api/v1/usuarios": {
+    "/api/v2/usuarios": {
       "get": {
         "operationId": "UsuariosController_listar",
         "parameters": [],
@@ -7319,7 +6968,7 @@ export const OPENAPI_AGREGADO = {
         ]
       }
     },
-    "/api/v1/usuarios/{id}/avatar": {
+    "/api/v2/usuarios/{id}/avatar": {
       "patch": {
         "operationId": "UsuariosController_actualizarAvatar",
         "parameters": [
@@ -7366,7 +7015,7 @@ export const OPENAPI_AGREGADO = {
         ]
       }
     },
-    "/api/v1/usuarios/{id}": {
+    "/api/v2/usuarios/{id}": {
       "get": {
         "operationId": "UsuariosController_obtener",
         "parameters": [
@@ -7406,7 +7055,7 @@ export const OPENAPI_AGREGADO = {
         ]
       }
     },
-    "/api/v1/empresas": {
+    "/api/v2/empresas": {
       "post": {
         "operationId": "EmpresasController_crear",
         "parameters": [],
@@ -7443,7 +7092,7 @@ export const OPENAPI_AGREGADO = {
         ]
       }
     },
-    "/api/v1/empresas/{id}": {
+    "/api/v2/empresas/{id}": {
       "get": {
         "operationId": "EmpresasController_obtener",
         "parameters": [
@@ -7495,7 +7144,7 @@ export const OPENAPI_AGREGADO = {
         ]
       }
     },
-    "/api/v1/empresas/{id}/perfil": {
+    "/api/v2/empresas/{id}/perfil": {
       "patch": {
         "operationId": "EmpresasController_actualizarPerfil",
         "parameters": [
@@ -7542,7 +7191,7 @@ export const OPENAPI_AGREGADO = {
         ]
       }
     },
-    "/api/v1/empresas/{id}/slug": {
+    "/api/v2/empresas/{id}/slug": {
       "patch": {
         "operationId": "EmpresasController_actualizarSlug",
         "parameters": [
@@ -7592,100 +7241,7 @@ export const OPENAPI_AGREGADO = {
         ]
       }
     },
-    "/api/v1/empresas/{id}/logistica": {
-      "patch": {
-        "operationId": "EmpresasController_actualizarLogistica",
-        "parameters": [
-          {
-            "name": "id",
-            "required": true,
-            "in": "path",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/ActualizarModalidadLogisticaRequestDto"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "Modalidad logística actualizada",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/EmpresaResponseDto"
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "bearer": []
-          }
-        ],
-        "summary": "Cambiar la modalidad logística para envíos futuros",
-        "tags": [
-          "Empresas"
-        ]
-      }
-    },
-    "/api/v1/empresas/{id}/tipo": {
-      "patch": {
-        "operationId": "EmpresasController_actualizarTipo",
-        "parameters": [
-          {
-            "name": "id",
-            "required": true,
-            "in": "path",
-            "description": "UUID de la empresa",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/ActualizarTipoEmpresaRequestDto"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "Tipo de empresa actualizado",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/EmpresaResponseDto"
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "bearer": []
-          }
-        ],
-        "summary": "Clasificar la empresa (comercial, logística o plataforma)",
-        "tags": [
-          "Empresas"
-        ]
-      }
-    },
-    "/api/v1/empresas/{id}/vendedores": {
+    "/api/v2/empresas/{id}/vendedores": {
       "post": {
         "operationId": "EmpresasController_vendedor",
         "parameters": [
@@ -7731,214 +7287,7 @@ export const OPENAPI_AGREGADO = {
         ]
       }
     },
-    "/api/v1/empresas/{empresaId}/invitaciones/vendedores": {
-      "post": {
-        "operationId": "InvitacionesEmpresaController_crear",
-        "parameters": [
-          {
-            "name": "empresaId",
-            "required": true,
-            "in": "path",
-            "schema": {
-              "format": "uuid",
-              "type": "string"
-            }
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/CrearInvitacionRequestDto"
-              }
-            }
-          }
-        },
-        "responses": {
-          "201": {
-            "description": "Invitación generada",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/InvitacionCreadaResponseDto"
-                }
-              }
-            }
-          },
-          "409": {
-            "description": "Tienda asignada, invitación duplicada o correo ya miembro"
-          }
-        },
-        "security": [
-          {
-            "bearer": []
-          }
-        ],
-        "summary": "Generar una invitación para un futuro vendedor",
-        "tags": [
-          "Invitaciones"
-        ]
-      }
-    },
-    "/api/v1/empresas/{empresaId}/vendedores": {
-      "get": {
-        "operationId": "InvitacionesEmpresaController_listar",
-        "parameters": [
-          {
-            "name": "empresaId",
-            "required": true,
-            "in": "path",
-            "schema": {
-              "format": "uuid",
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Vendedores e invitaciones de la empresa",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ListarVendedoresResponseDto"
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "bearer": []
-          }
-        ],
-        "summary": "Listar vendedores activos e invitaciones de la empresa",
-        "tags": [
-          "Invitaciones"
-        ]
-      }
-    },
-    "/api/v1/empresas/{empresaId}/invitaciones/vendedores/{invitacionId}": {
-      "delete": {
-        "operationId": "InvitacionesEmpresaController_revocar",
-        "parameters": [
-          {
-            "name": "empresaId",
-            "required": true,
-            "in": "path",
-            "schema": {
-              "format": "uuid",
-              "type": "string"
-            }
-          },
-          {
-            "name": "invitacionId",
-            "required": true,
-            "in": "path",
-            "schema": {
-              "format": "uuid",
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Invitación revocada"
-          }
-        },
-        "security": [
-          {
-            "bearer": []
-          }
-        ],
-        "summary": "Revocar una invitación pendiente",
-        "tags": [
-          "Invitaciones"
-        ]
-      }
-    },
-    "/api/v1/invitaciones/vendedores/{token}": {
-      "get": {
-        "operationId": "InvitacionesPublicasController_consultar",
-        "parameters": [
-          {
-            "name": "token",
-            "required": true,
-            "in": "path",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Invitación válida",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/InvitacionPublicaResponseDto"
-                }
-              }
-            }
-          },
-          "410": {
-            "description": "Invitación inexistente, expirada o utilizada"
-          }
-        },
-        "summary": "Consultar una invitación por token (público)",
-        "tags": [
-          "Invitaciones"
-        ]
-      }
-    },
-    "/api/v1/invitaciones/vendedores/{token}/aceptar": {
-      "post": {
-        "operationId": "InvitacionesPublicasController_aceptar",
-        "parameters": [
-          {
-            "name": "token",
-            "required": true,
-            "in": "path",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/AceptarInvitacionRequestDto"
-              }
-            }
-          }
-        },
-        "responses": {
-          "201": {
-            "description": "Vendedor creado y sesión iniciada",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/AceptarInvitacionResponseDto"
-                }
-              }
-            }
-          },
-          "409": {
-            "description": "El correo ya tiene una cuenta o la tienda ya fue asignada"
-          },
-          "410": {
-            "description": "Invitación inexistente, expirada o utilizada"
-          }
-        },
-        "summary": "Aceptar una invitación y crear la cuenta del vendedor (público)",
-        "tags": [
-          "Invitaciones"
-        ]
-      }
-    },
-    "/api/v1/configuracion/sitio": {
+    "/api/v2/configuracion/sitio": {
       "get": {
         "operationId": "ConfiguracionSitioController_obtener",
         "parameters": [],
@@ -7995,7 +7344,7 @@ export const OPENAPI_AGREGADO = {
         ]
       }
     },
-    "/api/v1/empresas/{empresaId}/capacidades": {
+    "/api/v2/empresas/{empresaId}/capacidades": {
       "get": {
         "operationId": "CapacidadesController_listar",
         "parameters": [
@@ -8035,7 +7384,7 @@ export const OPENAPI_AGREGADO = {
         ]
       }
     },
-    "/api/v1/empresas/{empresaId}/capacidades/{capacidad}": {
+    "/api/v2/empresas/{empresaId}/capacidades/{capacidad}": {
       "patch": {
         "operationId": "CapacidadesController_actualizar",
         "parameters": [
@@ -8091,7 +7440,7 @@ export const OPENAPI_AGREGADO = {
         ]
       }
     },
-    "/api/v1/packs": {
+    "/api/v2/packs": {
       "get": {
         "operationId": "PacksController_listar",
         "parameters": [
@@ -8099,15 +7448,9 @@ export const OPENAPI_AGREGADO = {
             "name": "vertical_id",
             "required": false,
             "in": "query",
+            "description": "Código dinámico de la vertical",
             "schema": {
-              "type": "string",
-              "enum": [
-                "retail",
-                "farmacia",
-                "belleza",
-                "dental",
-                "flota"
-              ]
+              "type": "string"
             }
           }
         ],
@@ -8135,9 +7478,174 @@ export const OPENAPI_AGREGADO = {
         "tags": [
           "Packs"
         ]
+      },
+      "post": {
+        "operationId": "PacksController_crear",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CrearPackRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PackResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Crear una plantilla de pack con modelos y capacidades",
+        "tags": [
+          "Packs"
+        ]
       }
     },
-    "/api/v1/packs/{codigo}/{version}": {
+    "/api/v2/packs/modelos-operacion": {
+      "get": {
+        "operationId": "PacksController_listarModelos",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ModeloOperacionResponseDto"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Listar modelos operativos disponibles para construir packs",
+        "tags": [
+          "Packs"
+        ]
+      },
+      "post": {
+        "operationId": "PacksController_crearModelo",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CrearModeloOperacionRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ModeloOperacionResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Registrar un modelo operativo reutilizable",
+        "tags": [
+          "Packs"
+        ]
+      }
+    },
+    "/api/v2/packs/verticales": {
+      "get": {
+        "operationId": "PacksController_listarVerticales",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/VerticalOperacionResponseDto"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Listar verticales configurables disponibles",
+        "tags": [
+          "Packs"
+        ]
+      },
+      "post": {
+        "operationId": "PacksController_crearVertical",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CrearVerticalRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VerticalOperacionResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Registrar una vertical operativa sin crear un microservicio",
+        "tags": [
+          "Packs"
+        ]
+      }
+    },
+    "/api/v2/packs/{codigo}/{version}": {
       "get": {
         "operationId": "PacksController_obtener",
         "parameters": [
@@ -8183,7 +7691,1662 @@ export const OPENAPI_AGREGADO = {
         ]
       }
     },
-    "/api/v1/orders/{id}/estado": {
+    "/api/v2/empresas/{empresaId}/extensiones": {
+      "get": {
+        "operationId": "ExtensionesController_listar",
+        "parameters": [
+          {
+            "name": "empresaId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ExtensionResponseDto"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Listar extensiones configurables de una empresa",
+        "tags": [
+          "Extensiones configurables"
+        ]
+      },
+      "post": {
+        "operationId": "ExtensionesController_crear",
+        "parameters": [
+          {
+            "name": "empresaId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CrearExtensionRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExtensionResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Crear una extensión o una nueva versión",
+        "tags": [
+          "Extensiones configurables"
+        ]
+      }
+    },
+    "/api/v2/empresas/{empresaId}/extensiones/{codigo}": {
+      "patch": {
+        "operationId": "ExtensionesController_cambiarEstado",
+        "parameters": [
+          {
+            "name": "empresaId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "name": "codigo",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ActualizarExtensionRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExtensionResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Activar o desactivar la versión vigente de una extensión",
+        "tags": [
+          "Extensiones configurables"
+        ]
+      }
+    },
+    "/api/v2/empresas/{empresaId}/extensiones/{codigo}/validar": {
+      "post": {
+        "operationId": "ExtensionesController_validar",
+        "parameters": [
+          {
+            "name": "empresaId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "name": "codigo",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ValidarExtensionRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ValidacionExtensionResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Validar datos contra la extensión activa",
+        "tags": [
+          "Extensiones configurables"
+        ]
+      }
+    },
+    "/api/v2/empresas/{empresaId}/extensiones/{codigo}/valores/{recursoId}": {
+      "get": {
+        "operationId": "ExtensionesController_obtenerValores",
+        "parameters": [
+          {
+            "name": "empresaId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "name": "codigo",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "recursoId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/ExtensionValueResponseDto"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Consultar valores de una extensión para un recurso",
+        "tags": [
+          "Extensiones configurables"
+        ]
+      },
+      "put": {
+        "operationId": "ExtensionesController_guardarValores",
+        "parameters": [
+          {
+            "name": "empresaId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "name": "codigo",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "recursoId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/GuardarExtensionValoresRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExtensionValueResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Guardar o actualizar valores de una extensión",
+        "tags": [
+          "Extensiones configurables"
+        ]
+      },
+      "delete": {
+        "operationId": "ExtensionesController_eliminarValores",
+        "parameters": [
+          {
+            "name": "empresaId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "name": "codigo",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "recursoId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Valores eliminados"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Eliminar valores de una extensión para un recurso",
+        "tags": [
+          "Extensiones configurables"
+        ]
+      }
+    },
+    "/api/v2/empresas/{empresaId}/partes": {
+      "get": {
+        "operationId": "PartesController_listar",
+        "parameters": [
+          {
+            "name": "empresaId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "name": "limite",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 100,
+              "type": "number"
+            }
+          },
+          {
+            "name": "tipo",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "enum": [
+                "persona",
+                "organizacion"
+              ],
+              "type": "string"
+            }
+          },
+          {
+            "name": "q",
+            "required": false,
+            "in": "query",
+            "schema": {}
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ParteResponseDto"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Listar personas y organizaciones de una empresa",
+        "tags": [
+          "Partes universales"
+        ]
+      },
+      "post": {
+        "operationId": "PartesController_crear",
+        "parameters": [
+          {
+            "name": "empresaId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CrearParteRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ParteResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Crear una persona u organización universal",
+        "tags": [
+          "Partes universales"
+        ]
+      }
+    },
+    "/api/v2/empresas/{empresaId}/partes/{parteId}": {
+      "get": {
+        "operationId": "PartesController_obtener",
+        "parameters": [
+          {
+            "name": "empresaId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "name": "parteId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ParteResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Obtener una parte universal",
+        "tags": [
+          "Partes universales"
+        ]
+      },
+      "patch": {
+        "operationId": "PartesController_actualizar",
+        "parameters": [
+          {
+            "name": "empresaId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "name": "parteId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ActualizarParteRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ParteResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Actualizar una parte universal",
+        "tags": [
+          "Partes universales"
+        ]
+      },
+      "delete": {
+        "operationId": "PartesController_eliminar",
+        "parameters": [
+          {
+            "name": "empresaId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "name": "parteId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Parte archivada"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Archivar una parte universal y sus datos derivados",
+        "tags": [
+          "Partes universales"
+        ]
+      }
+    },
+    "/api/v2/empresas/{empresaId}/partes/{parteId}/contactos": {
+      "get": {
+        "operationId": "PartesController_listarContactos",
+        "parameters": [
+          {
+            "name": "empresaId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "parteId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/MedioContactoResponseDto"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Listar medios de contacto de una parte",
+        "tags": [
+          "Partes universales"
+        ]
+      },
+      "post": {
+        "operationId": "PartesController_crearContacto",
+        "parameters": [
+          {
+            "name": "empresaId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "parteId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CrearMedioContactoRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MedioContactoResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Agregar un medio de contacto",
+        "tags": [
+          "Partes universales"
+        ]
+      }
+    },
+    "/api/v2/empresas/{empresaId}/partes/{parteId}/contactos/{contactoId}": {
+      "patch": {
+        "operationId": "PartesController_actualizarContacto",
+        "parameters": [
+          {
+            "name": "empresaId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "parteId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "contactoId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ActualizarMedioContactoRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MedioContactoResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Actualizar un medio de contacto",
+        "tags": [
+          "Partes universales"
+        ]
+      },
+      "delete": {
+        "operationId": "PartesController_eliminarContacto",
+        "parameters": [
+          {
+            "name": "empresaId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "parteId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "contactoId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Medio de contacto archivado"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Archivar un medio de contacto",
+        "tags": [
+          "Partes universales"
+        ]
+      }
+    },
+    "/api/v2/empresas/{empresaId}/partes/{parteId}/direcciones": {
+      "get": {
+        "operationId": "PartesController_listarDirecciones",
+        "parameters": [
+          {
+            "name": "empresaId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "parteId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/DireccionResponseDto"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Listar direcciones de una parte",
+        "tags": [
+          "Partes universales"
+        ]
+      },
+      "post": {
+        "operationId": "PartesController_crearDireccion",
+        "parameters": [
+          {
+            "name": "empresaId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "parteId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CrearDireccionRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DireccionResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Agregar una dirección",
+        "tags": [
+          "Partes universales"
+        ]
+      }
+    },
+    "/api/v2/empresas/{empresaId}/partes/{parteId}/direcciones/{direccionId}": {
+      "patch": {
+        "operationId": "PartesController_actualizarDireccion",
+        "parameters": [
+          {
+            "name": "empresaId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "parteId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "direccionId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ActualizarDireccionRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DireccionResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Actualizar una dirección",
+        "tags": [
+          "Partes universales"
+        ]
+      },
+      "delete": {
+        "operationId": "PartesController_eliminarDireccion",
+        "parameters": [
+          {
+            "name": "empresaId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "parteId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "direccionId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Dirección archivada"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Archivar una dirección",
+        "tags": [
+          "Partes universales"
+        ]
+      }
+    },
+    "/api/v2/empresas/{empresaId}/partes/{parteId}/relaciones": {
+      "get": {
+        "operationId": "PartesController_listarRelaciones",
+        "parameters": [
+          {
+            "name": "empresaId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "parteId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/RelacionResponseDto"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Listar relaciones de una parte",
+        "tags": [
+          "Partes universales"
+        ]
+      },
+      "post": {
+        "operationId": "PartesController_crearRelacion",
+        "parameters": [
+          {
+            "name": "empresaId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "parteId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CrearRelacionRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RelacionResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Relacionar dos partes de la misma empresa",
+        "tags": [
+          "Partes universales"
+        ]
+      }
+    },
+    "/api/v2/empresas/{empresaId}/partes/{parteId}/relaciones/{relacionId}": {
+      "delete": {
+        "operationId": "PartesController_eliminarRelacion",
+        "parameters": [
+          {
+            "name": "empresaId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "parteId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "relacionId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Relación desactivada"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Desactivar una relación",
+        "tags": [
+          "Partes universales"
+        ]
+      }
+    },
+    "/api/v2/empresas/{empresaId}/roles": {
+      "post": {
+        "operationId": "PersonalController_crearRol",
+        "parameters": [
+          {
+            "name": "empresaId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CrearRolRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Rol creado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Crear un rol de personal con permisos JSON",
+        "tags": [
+          "Personal"
+        ]
+      },
+      "get": {
+        "operationId": "PersonalController_listarRoles",
+        "parameters": [
+          {
+            "name": "empresaId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Roles de la empresa",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Listar roles configurables de la empresa",
+        "tags": [
+          "Personal"
+        ]
+      }
+    },
+    "/api/v2/empresas/{empresaId}/roles/{rolId}": {
+      "patch": {
+        "operationId": "PersonalController_actualizarRol",
+        "parameters": [
+          {
+            "name": "empresaId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "rolId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EstadoRolRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Rol actualizado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Activar o desactivar un rol configurable",
+        "tags": [
+          "Personal"
+        ]
+      }
+    },
+    "/api/v2/empresas/{empresaId}/puestos": {
+      "post": {
+        "operationId": "PersonalController_crearPuesto",
+        "parameters": [
+          {
+            "name": "empresaId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CrearPuestoRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Puesto creado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Crear un puesto operativo de la empresa",
+        "tags": [
+          "Personal"
+        ]
+      },
+      "get": {
+        "operationId": "PersonalController_listarPuestos",
+        "parameters": [
+          {
+            "name": "empresaId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Puestos de la empresa",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Listar puestos operativos de la empresa",
+        "tags": [
+          "Personal"
+        ]
+      }
+    },
+    "/api/v2/empresas/{empresaId}/asignaciones-personal": {
+      "post": {
+        "operationId": "PersonalController_asignar",
+        "parameters": [
+          {
+            "name": "empresaId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AsignarPersonalRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Asignación creada",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Asignar un miembro a un rol y tienda/puesto",
+        "tags": [
+          "Personal"
+        ]
+      },
+      "get": {
+        "operationId": "PersonalController_listarAsignaciones",
+        "parameters": [
+          {
+            "name": "empresaId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Asignaciones de la empresa",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Listar asignaciones de personal",
+        "tags": [
+          "Personal"
+        ]
+      }
+    },
+    "/api/v2/empresas/{empresaId}/invitaciones/personal": {
+      "post": {
+        "operationId": "PersonalController_crearInvitacion",
+        "parameters": [
+          {
+            "name": "empresaId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CrearInvitacionPersonalRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Enlace de incorporación generado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Correo o enlace duplicado"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Generar enlace de invitación o contratación",
+        "tags": [
+          "Personal"
+        ]
+      },
+      "get": {
+        "operationId": "PersonalController_listarInvitaciones",
+        "parameters": [
+          {
+            "name": "empresaId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Invitaciones de la empresa",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "Personal"
+        ]
+      }
+    },
+    "/api/v2/empresas/{empresaId}/invitaciones/personal/{invitacionId}/revocar": {
+      "post": {
+        "operationId": "PersonalController_revocarInvitacion",
+        "parameters": [
+          {
+            "name": "empresaId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "invitacionId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Invitación revocada",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "Personal"
+        ]
+      }
+    },
+    "/api/v2/incorporaciones/{token}": {
+      "get": {
+        "operationId": "PersonalPublicController_consultar",
+        "parameters": [
+          {
+            "name": "token",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Invitación vigente",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Consultar un enlace de incorporación",
+        "tags": [
+          "Personal"
+        ]
+      }
+    },
+    "/api/v2/incorporaciones/{token}/aceptar": {
+      "post": {
+        "operationId": "PersonalPublicController_aceptar",
+        "parameters": [
+          {
+            "name": "token",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AceptarInvitacionPersonalRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Cuenta y membresía creadas",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Aceptar una invitación o contratación y crear la cuenta",
+        "tags": [
+          "Personal"
+        ]
+      }
+    },
+    "/api/v2/orders/{id}/estado": {
       "patch": {
         "operationId": "EstadoOrdenController_avanzar",
         "parameters": [
@@ -8233,7 +9396,7 @@ export const OPENAPI_AGREGADO = {
         ]
       }
     },
-    "/api/v1/admin/envios": {
+    "/api/v2/admin/envios": {
       "get": {
         "operationId": "EnviosAdminController_listar",
         "parameters": [],
@@ -8263,7 +9426,7 @@ export const OPENAPI_AGREGADO = {
         ]
       }
     },
-    "/api/v1/empresarios/me/envios": {
+    "/api/v2/empresarios/me/envios": {
       "get": {
         "operationId": "EnviosEmpresaController_listar",
         "parameters": [],
@@ -8293,7 +9456,7 @@ export const OPENAPI_AGREGADO = {
         ]
       }
     },
-    "/api/v1/empresarios/me/envios/{id}/asignacion": {
+    "/api/v2/empresarios/me/envios/{id}/asignacion": {
       "post": {
         "operationId": "EnviosEmpresaController_asignar",
         "parameters": [
@@ -8340,7 +9503,7 @@ export const OPENAPI_AGREGADO = {
         ]
       }
     },
-    "/api/v1/envios/{id}/estado": {
+    "/api/v2/envios/{id}/estado": {
       "patch": {
         "operationId": "EnviosFlotaController_avanzar",
         "parameters": [
@@ -8387,7 +9550,7 @@ export const OPENAPI_AGREGADO = {
         ]
       }
     },
-    "/api/v1/inteligencia/mapa-calor": {
+    "/api/v2/inteligencia/mapa-calor": {
       "get": {
         "operationId": "MetricasController_getMapaCalor",
         "parameters": [
@@ -8451,13 +9614,13 @@ export const OPENAPI_AGREGADO = {
         ]
       }
     },
-    "/api/v1/inteligencia/me/mapa-calor": {
+    "/api/v2/inteligencia/me/mapa-calor": {
       "get": {
         "operationId": "MetricasController_getMiMapaCalor",
         "parameters": [
           {
             "name": "x-user-personal",
-            "required": false,
+            "required": true,
             "in": "header",
             "schema": {
               "type": "string"
@@ -8523,7 +9686,7 @@ export const OPENAPI_AGREGADO = {
         ]
       }
     },
-    "/api/v1/inteligencia/rendimiento": {
+    "/api/v2/inteligencia/rendimiento": {
       "get": {
         "operationId": "MetricasController_getRendimiento",
         "parameters": [],
@@ -8550,13 +9713,13 @@ export const OPENAPI_AGREGADO = {
         ]
       }
     },
-    "/api/v1/inteligencia/me/rendimiento": {
+    "/api/v2/inteligencia/me/rendimiento": {
       "get": {
         "operationId": "MetricasController_getMiRendimiento",
         "parameters": [
           {
             "name": "x-user-personal",
-            "required": false,
+            "required": true,
             "in": "header",
             "schema": {
               "type": "string"
@@ -8586,7 +9749,7 @@ export const OPENAPI_AGREGADO = {
         ]
       }
     },
-    "/api/v1/inteligencia/cobertura": {
+    "/api/v2/inteligencia/cobertura": {
       "get": {
         "operationId": "MetricasController_getCobertura",
         "parameters": [],
@@ -8616,7 +9779,7 @@ export const OPENAPI_AGREGADO = {
         ]
       }
     },
-    "/api/v1/inteligencia/demanda": {
+    "/api/v2/inteligencia/demanda": {
       "get": {
         "operationId": "MetricasController_getDemanda",
         "parameters": [],
@@ -8643,7 +9806,7 @@ export const OPENAPI_AGREGADO = {
         ]
       }
     },
-    "/api/v1/inteligencia/tendencias": {
+    "/api/v2/inteligencia/tendencias": {
       "get": {
         "operationId": "MetricasController_getTendencias",
         "parameters": [],
@@ -8673,7 +9836,7 @@ export const OPENAPI_AGREGADO = {
         ]
       }
     },
-    "/api/v1/inteligencia/resumen": {
+    "/api/v2/inteligencia/resumen": {
       "get": {
         "operationId": "MetricasController_getResumen",
         "parameters": [
@@ -8737,7 +9900,7 @@ export const OPENAPI_AGREGADO = {
         ]
       }
     },
-    "/api/v1/inteligencia/ventas/registrar": {
+    "/api/v2/inteligencia/ventas/registrar": {
       "post": {
         "operationId": "MetricasController_registrarVenta",
         "parameters": [],
@@ -8746,7 +9909,7 @@ export const OPENAPI_AGREGADO = {
           "content": {
             "application/json": {
               "schema": {
-                "type": "object"
+                "$ref": "#/components/schemas/RegistrarVentaRequestDto"
               }
             }
           }
@@ -8774,7 +9937,7 @@ export const OPENAPI_AGREGADO = {
         ]
       }
     },
-    "/api/v1/inteligencia/forecast/demanda": {
+    "/api/v2/inteligencia/forecast/demanda": {
       "get": {
         "operationId": "PrediccionController_forecastDemanda",
         "parameters": [
@@ -8818,7 +9981,7 @@ export const OPENAPI_AGREGADO = {
         ]
       }
     },
-    "/api/v1/inteligencia/anomalias": {
+    "/api/v2/inteligencia/anomalias": {
       "get": {
         "operationId": "PrediccionController_anomalias",
         "parameters": [
@@ -8870,7 +10033,7 @@ export const OPENAPI_AGREGADO = {
         ]
       }
     },
-    "/api/v1/inteligencia/vendedores/{id}/score": {
+    "/api/v2/inteligencia/vendedores/{id}/score": {
       "get": {
         "operationId": "PrediccionController_scoreVendedor",
         "parameters": [
@@ -8906,7 +10069,7 @@ export const OPENAPI_AGREGADO = {
         ]
       }
     },
-    "/api/v1/inteligencia/me/score": {
+    "/api/v2/inteligencia/me/score": {
       "get": {
         "operationId": "PrediccionController_miScore",
         "parameters": [
@@ -8942,7 +10105,7 @@ export const OPENAPI_AGREGADO = {
         ]
       }
     },
-    "/api/v1/inteligencia/calidad": {
+    "/api/v2/inteligencia/calidad": {
       "get": {
         "operationId": "PrediccionController_calidadDatos",
         "parameters": [
@@ -8978,7 +10141,7 @@ export const OPENAPI_AGREGADO = {
         ]
       }
     },
-    "/api/v1/orders": {
+    "/api/v2/orders": {
       "post": {
         "operationId": "PedidosController_crear",
         "parameters": [],
@@ -9052,7 +10215,7 @@ export const OPENAPI_AGREGADO = {
         ]
       }
     },
-    "/api/v1/orders/admin/todas": {
+    "/api/v2/orders/admin/todas": {
       "get": {
         "operationId": "PedidosController_todas",
         "parameters": [
@@ -9099,7 +10262,7 @@ export const OPENAPI_AGREGADO = {
         ]
       }
     },
-    "/api/v1/orders/vendedor/mis-ventas": {
+    "/api/v2/orders/vendedor/mis-ventas": {
       "get": {
         "operationId": "PedidosController_misVentas",
         "parameters": [
@@ -9138,56 +10301,7 @@ export const OPENAPI_AGREGADO = {
         ]
       }
     },
-    "/api/v1/orders/vendedor/comisiones": {
-      "get": {
-        "deprecated": true,
-        "operationId": "PedidosController_comisiones",
-        "parameters": [
-          {
-            "name": "periodo",
-            "required": false,
-            "in": "query",
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "vendedorId",
-            "required": false,
-            "in": "query",
-            "description": "Solo admin",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Comisiones por periodo",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/components/schemas/ComisionVistaResponseDto"
-                  }
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "bearer": []
-          }
-        ],
-        "summary": "Comisiones por periodo (vendedor/admin) — obsoleto: usar /vendedores/me/ventas",
-        "tags": [
-          "Pedidos"
-        ]
-      }
-    },
-    "/api/v1/orders/tienda/{tiendaId}": {
+    "/api/v2/orders/tienda/{tiendaId}": {
       "get": {
         "operationId": "PedidosController_porTienda",
         "parameters": [
@@ -9235,7 +10349,7 @@ export const OPENAPI_AGREGADO = {
         ]
       }
     },
-    "/api/v1/orders/empresa": {
+    "/api/v2/orders/empresa": {
       "get": {
         "operationId": "PedidosController_porEmpresa",
         "parameters": [
@@ -9299,7 +10413,7 @@ export const OPENAPI_AGREGADO = {
         ]
       }
     },
-    "/api/v1/orders/{id}": {
+    "/api/v2/orders/{id}": {
       "get": {
         "operationId": "PedidosController_detalle",
         "parameters": [
@@ -9336,7 +10450,7 @@ export const OPENAPI_AGREGADO = {
         ]
       }
     },
-    "/api/v1/orders/{id}/timeline": {
+    "/api/v2/orders/{id}/timeline": {
       "get": {
         "operationId": "PedidosController_timeline",
         "parameters": [
@@ -9376,7 +10490,7 @@ export const OPENAPI_AGREGADO = {
         ]
       }
     },
-    "/api/v1/carrito": {
+    "/api/v2/carrito": {
       "get": {
         "operationId": "CarritoController_ver",
         "parameters": [],
@@ -9428,7 +10542,7 @@ export const OPENAPI_AGREGADO = {
         ]
       }
     },
-    "/api/v1/carrito/items": {
+    "/api/v2/carrito/items": {
       "post": {
         "operationId": "CarritoController_agregar",
         "parameters": [],
@@ -9465,7 +10579,7 @@ export const OPENAPI_AGREGADO = {
         ]
       }
     },
-    "/api/v1/carrito/items/{ofertaId}": {
+    "/api/v2/carrito/items/{ofertaId}": {
       "patch": {
         "operationId": "CarritoController_actualizar",
         "parameters": [
@@ -9547,7 +10661,7 @@ export const OPENAPI_AGREGADO = {
         ]
       }
     },
-    "/api/v1/scheduling/recursos": {
+    "/api/v2/scheduling/recursos": {
       "get": {
         "operationId": "SchedulingController_recursos",
         "parameters": [],
@@ -9612,7 +10726,7 @@ export const OPENAPI_AGREGADO = {
         ]
       }
     },
-    "/api/v1/scheduling/recursos/{recursoId}/disponibilidad": {
+    "/api/v2/scheduling/recursos/{recursoId}/disponibilidad": {
       "get": {
         "operationId": "SchedulingController_disponibilidad",
         "parameters": [
@@ -9652,7 +10766,7 @@ export const OPENAPI_AGREGADO = {
         ]
       }
     },
-    "/api/v1/scheduling/disponibilidad": {
+    "/api/v2/scheduling/disponibilidad": {
       "post": {
         "operationId": "SchedulingController_crearDisponibilidad",
         "parameters": [],
@@ -9689,7 +10803,7 @@ export const OPENAPI_AGREGADO = {
         ]
       }
     },
-    "/api/v1/scheduling/bloqueos": {
+    "/api/v2/scheduling/bloqueos": {
       "post": {
         "operationId": "SchedulingController_crearBloqueo",
         "parameters": [],
@@ -9726,7 +10840,7 @@ export const OPENAPI_AGREGADO = {
         ]
       }
     },
-    "/api/v1/scheduling/citas": {
+    "/api/v2/scheduling/citas": {
       "get": {
         "operationId": "SchedulingController_citas",
         "parameters": [
@@ -9808,7 +10922,7 @@ export const OPENAPI_AGREGADO = {
         ]
       }
     },
-    "/api/v1/scheduling/citas/{citaId}/cancelar": {
+    "/api/v2/scheduling/citas/{citaId}/cancelar": {
       "patch": {
         "operationId": "SchedulingController_cancelar",
         "parameters": [
@@ -9845,7 +10959,7 @@ export const OPENAPI_AGREGADO = {
         ]
       }
     },
-    "/api/v1/scheduling/recordatorios": {
+    "/api/v2/scheduling/recordatorios": {
       "get": {
         "operationId": "SchedulingController_recordatorios",
         "parameters": [],
@@ -9875,7 +10989,7 @@ export const OPENAPI_AGREGADO = {
         ]
       }
     },
-    "/api/v1/admin/storage/tenants": {
+    "/api/v2/admin/storage/tenants": {
       "get": {
         "operationId": "AdminStorageController_listar",
         "parameters": [
@@ -9924,7 +11038,7 @@ export const OPENAPI_AGREGADO = {
         ]
       }
     },
-    "/api/v1/admin/storage/tenants/{tenantId}": {
+    "/api/v2/admin/storage/tenants/{tenantId}": {
       "get": {
         "operationId": "AdminStorageController_estado",
         "parameters": [
@@ -10006,7 +11120,7 @@ export const OPENAPI_AGREGADO = {
         ]
       }
     },
-    "/api/v1/admin/storage/tenants/{tenantId}/recalcular": {
+    "/api/v2/admin/storage/tenants/{tenantId}/recalcular": {
       "post": {
         "operationId": "AdminStorageController_recalcular",
         "parameters": [
@@ -10043,7 +11157,7 @@ export const OPENAPI_AGREGADO = {
         ]
       }
     },
-    "/api/v1/storage/bucket": {
+    "/api/v2/storage/bucket": {
       "get": {
         "description": "Crea el bucket del tenant de forma perezosa la primera vez.",
         "operationId": "BucketsController_estado",
@@ -10109,7 +11223,7 @@ export const OPENAPI_AGREGADO = {
         ]
       }
     },
-    "/api/v1/storage/subidas": {
+    "/api/v2/storage/subidas": {
       "post": {
         "description": "Valida tipo, tamano y cuota del tenant; registra el objeto en estado pendiente y devuelve la URL prefirmada.",
         "operationId": "ObjetosController_solicitarSubida",
@@ -10153,7 +11267,7 @@ export const OPENAPI_AGREGADO = {
         ]
       }
     },
-    "/api/v1/storage/objetos/{id}/confirmar": {
+    "/api/v2/storage/objetos/{id}/confirmar": {
       "post": {
         "operationId": "ObjetosController_confirmar",
         "parameters": [
@@ -10190,7 +11304,7 @@ export const OPENAPI_AGREGADO = {
         ]
       }
     },
-    "/api/v1/storage/objetos": {
+    "/api/v2/storage/objetos": {
       "get": {
         "operationId": "ObjetosController_listar",
         "parameters": [
@@ -10271,7 +11385,7 @@ export const OPENAPI_AGREGADO = {
         ]
       }
     },
-    "/api/v1/storage/objetos/{id}": {
+    "/api/v2/storage/objetos/{id}": {
       "get": {
         "operationId": "ObjetosController_detalle",
         "parameters": [
@@ -10336,7 +11450,7 @@ export const OPENAPI_AGREGADO = {
         ]
       }
     },
-    "/api/v1/storage/objetos/{id}/descarga": {
+    "/api/v2/storage/objetos/{id}/descarga": {
       "get": {
         "operationId": "ObjetosController_descarga",
         "parameters": [
@@ -10373,7 +11487,7 @@ export const OPENAPI_AGREGADO = {
         ]
       }
     },
-    "/api/v1/storage/public/objetos/{id}": {
+    "/api/v2/storage/public/objetos/{id}": {
       "get": {
         "operationId": "PublicStorageController_servir",
         "parameters": [
@@ -10489,7 +11603,7 @@ export const OPENAPI_AGREGADO = {
         ]
       }
     },
-    "/api/v1/vendedores/tienda": {
+    "/api/v2/vendedores/tienda": {
       "post": {
         "operationId": "TiendasController_crear",
         "parameters": [],
@@ -10526,7 +11640,7 @@ export const OPENAPI_AGREGADO = {
         ]
       }
     },
-    "/api/v1/vendedores/me/tienda": {
+    "/api/v2/vendedores/me/tienda": {
       "get": {
         "operationId": "TiendasController_miTienda",
         "parameters": [],
@@ -10553,7 +11667,7 @@ export const OPENAPI_AGREGADO = {
         ]
       }
     },
-    "/api/v1/empresarios/me/tiendas": {
+    "/api/v2/empresarios/me/tiendas": {
       "get": {
         "operationId": "TiendasEmpresaController_listar",
         "parameters": [],
@@ -10583,7 +11697,7 @@ export const OPENAPI_AGREGADO = {
         ]
       }
     },
-    "/api/v1/tiendas/{id}/tema.css": {
+    "/api/v2/tiendas/{id}/tema.css": {
       "get": {
         "operationId": "TiendasSlugController_temaCss",
         "parameters": [
@@ -10624,7 +11738,7 @@ export const OPENAPI_AGREGADO = {
         ]
       }
     },
-    "/api/v1/tiendas/{id}/logo": {
+    "/api/v2/tiendas/{id}/logo": {
       "patch": {
         "operationId": "TiendasSlugController_actualizarLogo",
         "parameters": [
@@ -10671,7 +11785,7 @@ export const OPENAPI_AGREGADO = {
         ]
       }
     },
-    "/api/v1/tiendas/{id}/background": {
+    "/api/v2/tiendas/{id}/background": {
       "patch": {
         "operationId": "TiendasSlugController_actualizarBackground",
         "parameters": [
@@ -10718,7 +11832,7 @@ export const OPENAPI_AGREGADO = {
         ]
       }
     },
-    "/api/v1/tiendas/{id}/personalizacion": {
+    "/api/v2/tiendas/{id}/personalizacion": {
       "patch": {
         "operationId": "TiendasSlugController_actualizarPersonalizacion",
         "parameters": [
@@ -10765,7 +11879,7 @@ export const OPENAPI_AGREGADO = {
         ]
       }
     },
-    "/api/v1/tiendas/{id}/contenido": {
+    "/api/v2/tiendas/{id}/contenido": {
       "patch": {
         "operationId": "TiendasSlugController_actualizarContenido",
         "parameters": [
@@ -10812,7 +11926,7 @@ export const OPENAPI_AGREGADO = {
         ]
       }
     },
-    "/api/v1/tiendas/{id}/slug": {
+    "/api/v2/tiendas/{id}/slug": {
       "patch": {
         "operationId": "TiendasSlugController_actualizarSlug",
         "parameters": [
@@ -10865,7 +11979,7 @@ export const OPENAPI_AGREGADO = {
         ]
       }
     },
-    "/api/v1/vendedores/productos": {
+    "/api/v2/vendedores/productos": {
       "post": {
         "operationId": "OfertasController_publicar",
         "parameters": [],
@@ -10902,7 +12016,7 @@ export const OPENAPI_AGREGADO = {
         ]
       }
     },
-    "/api/v1/vendedores/productos/{id}": {
+    "/api/v2/vendedores/productos/{id}": {
       "patch": {
         "operationId": "OfertasController_cambiarMargen",
         "parameters": [
@@ -10948,7 +12062,7 @@ export const OPENAPI_AGREGADO = {
         ]
       }
     },
-    "/api/v1/vendedores/me/ofertas": {
+    "/api/v2/vendedores/me/ofertas": {
       "get": {
         "operationId": "OfertasController_misOfertas",
         "parameters": [],
@@ -10975,7 +12089,7 @@ export const OPENAPI_AGREGADO = {
         ]
       }
     },
-    "/api/v1/tiendas/{id}": {
+    "/api/v2/tiendas/{id}": {
       "get": {
         "operationId": "OfertasController_tiendaPublica",
         "parameters": [
@@ -11092,73 +12206,58 @@ export const OPENAPI_AGREGADO = {
           }
         }
       },
-      "ActualizarProductoRequestDto": {
+      "ActualizarItemCatalogoRequestDto": {
         "type": "object",
         "properties": {
           "nombre": {
-            "type": "string",
-            "description": "Nombre del producto",
-            "minLength": 2,
-            "maxLength": 200
+            "type": "string"
           },
           "descripcion": {
-            "type": "string",
-            "description": "Descripción"
+            "type": "string"
           },
           "categoria": {
+            "type": "string"
+          },
+          "precio": {
             "type": "string",
-            "description": "Categoría"
+            "example": "1000.00"
           },
           "precio_base": {
             "type": "string",
-            "description": "Precio base decimal (ej: 1000.00)"
+            "example": "1000.00"
           },
           "stock": {
             "type": "number",
-            "description": "Stock",
             "minimum": 0
           },
           "costo": {
             "type": "string",
-            "description": "Costo decimal en córdobas (ej: 150.00)",
             "example": "150.00"
           },
           "marca": {
-            "type": "string",
-            "description": "Marca"
+            "type": "string"
           },
           "codigo_barras": {
-            "type": "string",
-            "description": "Código de barras único por empresa"
+            "type": "string"
           },
           "unidad": {
-            "type": "string",
-            "description": "Unidad de venta",
-            "example": "Unidad (u)"
+            "type": "string"
           },
           "permite_fracciones": {
-            "type": "boolean",
-            "description": "Permite cantidades fraccionarias"
+            "type": "boolean"
           },
           "unidad_compra": {
-            "type": "string",
-            "description": "Unidad de compra",
-            "example": "Igual que la de venta"
+            "type": "string"
           },
           "contenido_cantidad": {
             "type": "number",
-            "description": "Contenido por unidad",
-            "minimum": 0,
-            "default": 0
+            "minimum": 0
           },
           "contenido_unidad": {
-            "type": "string",
-            "description": "Unidad del contenido",
-            "example": "Sin contenido"
+            "type": "string"
           },
           "tipo_precio": {
             "type": "string",
-            "description": "Tipo de precio",
             "enum": [
               "fijo",
               "escala"
@@ -11166,7 +12265,6 @@ export const OPENAPI_AGREGADO = {
           },
           "tipo_costo": {
             "type": "string",
-            "description": "Tipo de costo",
             "enum": [
               "fijo",
               "escala"
@@ -11174,46 +12272,43 @@ export const OPENAPI_AGREGADO = {
           },
           "stock_minimo": {
             "type": "number",
-            "description": "Stock mínimo para alertas",
-            "minimum": 0,
-            "default": 0
+            "minimum": 0
           },
           "stock_maximo": {
             "type": "object",
-            "description": "Stock máximo",
             "nullable": true,
             "minimum": 0
           },
           "garantia_meses": {
             "type": "object",
-            "description": "Garantía en meses",
             "nullable": true,
             "minimum": 0
           },
           "es_materia_prima": {
-            "type": "boolean",
-            "description": "Es materia prima"
+            "type": "boolean"
           },
           "ubicacion": {
-            "type": "string",
-            "description": "Ubicación física"
+            "type": "string"
           },
-          "estado_operativo": {
+          "estado": {
             "type": "string",
-            "description": "Estado comercial",
             "enum": [
               "activo",
               "inactivo"
-            ],
-            "default": "activo"
+            ]
+          },
+          "estado_operativo": {
+            "type": "string",
+            "enum": [
+              "activo",
+              "inactivo"
+            ]
           },
           "atributos": {
-            "type": "object",
-            "description": "Atributos de la variante"
+            "type": "object"
           },
           "motivo": {
-            "type": "string",
-            "description": "Motivo del cambio (RN-08 histórico)"
+            "type": "string"
           }
         }
       },
@@ -11232,7 +12327,7 @@ export const OPENAPI_AGREGADO = {
               "regalo"
             ]
           },
-          "producto_id": {
+          "item_id": {
             "type": "string",
             "format": "uuid"
           },
@@ -11269,57 +12364,10 @@ export const OPENAPI_AGREGADO = {
           }
         }
       },
-      "ActualizarServicioRequestDto": {
-        "type": "object",
-        "properties": {
-          "nombre": {
-            "type": "string",
-            "minLength": 2
-          },
-          "descripcion": {
-            "type": "string"
-          },
-          "categoria": {
-            "type": "string"
-          },
-          "marca": {
-            "type": "string"
-          },
-          "codigo_barras": {
-            "type": "string"
-          },
-          "precio": {
-            "type": "string"
-          },
-          "costo": {
-            "type": "string"
-          },
-          "unidad": {
-            "type": "string"
-          },
-          "atributos": {
-            "type": "object",
-            "description": "Atributos del servicio según el JSON Schema de su categoría",
-            "additionalProperties": true
-          },
-          "duracion_minutos": {
-            "type": "number",
-            "minimum": 1,
-            "maximum": 1440
-          },
-          "estado": {
-            "type": "string",
-            "enum": [
-              "activo",
-              "inactivo"
-            ]
-          }
-        }
-      },
       "ComboComponenteRequestDto": {
         "type": "object",
         "properties": {
-          "producto_id": {
+          "item_id": {
             "type": "string",
             "format": "uuid"
           },
@@ -11340,7 +12388,7 @@ export const OPENAPI_AGREGADO = {
       "ComboComponenteResponseDto": {
         "type": "object",
         "properties": {
-          "producto_id": {
+          "item_id": {
             "type": "string",
             "format": "uuid"
           },
@@ -11361,7 +12409,7 @@ export const OPENAPI_AGREGADO = {
           }
         },
         "required": [
-          "producto_id",
+          "item_id",
           "sku",
           "nombre",
           "cantidad",
@@ -11568,6 +12616,143 @@ export const OPENAPI_AGREGADO = {
           "componentes"
         ]
       },
+      "CrearItemRequestDto": {
+        "type": "object",
+        "properties": {
+          "tipo": {
+            "type": "string",
+            "enum": [
+              "producto",
+              "servicio",
+              "alquiler"
+            ]
+          },
+          "codigo": {
+            "type": "string",
+            "example": "SKU-001"
+          },
+          "nombre": {
+            "type": "string"
+          },
+          "descripcion": {
+            "type": "string"
+          },
+          "categoria": {
+            "type": "string",
+            "default": "general"
+          },
+          "precio": {
+            "type": "string",
+            "example": "1500.00"
+          },
+          "costo": {
+            "type": "string",
+            "example": "500.00"
+          },
+          "track_inventory": {
+            "type": "boolean"
+          },
+          "stock": {
+            "type": "object",
+            "nullable": true
+          },
+          "duration_minutes": {
+            "type": "object",
+            "nullable": true
+          },
+          "atributos": {
+            "type": "object",
+            "additionalProperties": true
+          },
+          "estado": {
+            "type": "string",
+            "enum": [
+              "activo",
+              "inactivo"
+            ]
+          },
+          "parent_item_id": {
+            "type": "object",
+            "nullable": true,
+            "format": "uuid"
+          },
+          "marca": {
+            "type": "string"
+          },
+          "codigo_barras": {
+            "type": "string"
+          },
+          "unidad": {
+            "type": "string",
+            "example": "Unidad (u)"
+          },
+          "permite_fracciones": {
+            "type": "boolean",
+            "default": false
+          },
+          "unidad_compra": {
+            "type": "string",
+            "example": "Igual que la de venta"
+          },
+          "contenido_cantidad": {
+            "type": "number",
+            "minimum": 0,
+            "default": 0
+          },
+          "contenido_unidad": {
+            "type": "string",
+            "example": "Sin contenido"
+          },
+          "tipo_precio": {
+            "type": "string",
+            "enum": [
+              "fijo",
+              "escala"
+            ],
+            "default": "fijo"
+          },
+          "tipo_costo": {
+            "type": "string",
+            "enum": [
+              "fijo",
+              "escala"
+            ],
+            "default": "fijo"
+          },
+          "stock_minimo": {
+            "type": "number",
+            "minimum": 0,
+            "default": 0
+          },
+          "stock_maximo": {
+            "type": "object",
+            "nullable": true,
+            "minimum": 0
+          },
+          "garantia_meses": {
+            "type": "object",
+            "nullable": true,
+            "minimum": 0
+          },
+          "es_materia_prima": {
+            "type": "boolean",
+            "default": false
+          },
+          "ubicacion": {
+            "type": "string"
+          },
+          "empresa_id": {
+            "type": "string",
+            "format": "uuid"
+          }
+        },
+        "required": [
+          "tipo",
+          "codigo",
+          "nombre",
+          "precio"
+        ]
+      },
       "CrearLoteInventarioRequestDto": {
         "type": "object",
         "properties": {
@@ -11638,162 +12823,6 @@ export const OPENAPI_AGREGADO = {
           "lineas"
         ]
       },
-      "CrearProductoRequestDto": {
-        "type": "object",
-        "properties": {
-          "sku": {
-            "type": "string",
-            "description": "SKU del producto",
-            "pattern": "^[A-Za-z0-9-]{2,32}$",
-            "example": "SKU-001"
-          },
-          "empresa_id": {
-            "type": "string",
-            "description": "Empresa destino. Obligatoria para super_admin/admin; el empresario usa su empresa activa.",
-            "format": "uuid"
-          },
-          "nombre": {
-            "type": "string",
-            "description": "Nombre del producto",
-            "minLength": 2,
-            "maxLength": 200
-          },
-          "descripcion": {
-            "type": "string",
-            "description": "Descripción"
-          },
-          "categoria": {
-            "type": "string",
-            "description": "Categoría"
-          },
-          "precio_base": {
-            "type": "string",
-            "description": "Precio base decimal (ej: 1000.00) en córdobas; se guarda en centavos",
-            "example": "1000.00"
-          },
-          "stock": {
-            "type": "number",
-            "description": "Stock inicial",
-            "minimum": 0,
-            "example": 10
-          },
-          "costo": {
-            "type": "string",
-            "description": "Costo decimal en córdobas (ej: 150.00)",
-            "example": "150.00"
-          },
-          "marca": {
-            "type": "string",
-            "description": "Marca"
-          },
-          "codigo_barras": {
-            "type": "string",
-            "description": "Código de barras único por empresa"
-          },
-          "unidad": {
-            "type": "string",
-            "description": "Unidad de venta",
-            "example": "Unidad (u)"
-          },
-          "permite_fracciones": {
-            "type": "boolean",
-            "description": "Permite cantidades fraccionarias",
-            "default": false
-          },
-          "unidad_compra": {
-            "type": "string",
-            "description": "Unidad de compra",
-            "example": "Igual que la de venta"
-          },
-          "contenido_cantidad": {
-            "type": "number",
-            "description": "Contenido por unidad",
-            "minimum": 0,
-            "default": 0
-          },
-          "contenido_unidad": {
-            "type": "string",
-            "description": "Unidad del contenido",
-            "example": "Sin contenido"
-          },
-          "tipo_precio": {
-            "type": "string",
-            "description": "Tipo de precio",
-            "enum": [
-              "fijo",
-              "escala"
-            ]
-          },
-          "tipo_costo": {
-            "type": "string",
-            "description": "Tipo de costo",
-            "enum": [
-              "fijo",
-              "escala"
-            ]
-          },
-          "stock_minimo": {
-            "type": "number",
-            "description": "Stock mínimo para alertas",
-            "minimum": 0,
-            "default": 0
-          },
-          "stock_maximo": {
-            "type": "object",
-            "description": "Stock máximo",
-            "nullable": true,
-            "minimum": 0
-          },
-          "garantia_meses": {
-            "type": "object",
-            "description": "Garantía en meses",
-            "nullable": true,
-            "minimum": 0
-          },
-          "es_materia_prima": {
-            "type": "boolean",
-            "description": "Es materia prima",
-            "default": false
-          },
-          "ubicacion": {
-            "type": "string",
-            "description": "Ubicación física"
-          },
-          "estado_operativo": {
-            "type": "string",
-            "description": "Estado comercial",
-            "enum": [
-              "activo",
-              "inactivo"
-            ],
-            "default": "activo"
-          },
-          "atributos": {
-            "type": "object",
-            "description": "Atributos del producto (si aplica)"
-          },
-          "imagenes": {
-            "description": "Imágenes del producto (máx. 3)",
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/ImagenProductoRequestDto"
-            }
-          },
-          "variantes": {
-            "description": "Variantes vendibles del producto (máx. 50)",
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/VarianteProductoRequestDto"
-            }
-          }
-        },
-        "required": [
-          "sku",
-          "nombre",
-          "precio_base",
-          "stock"
-        ]
-      },
       "CrearPromocionRequestDto": {
         "type": "object",
         "properties": {
@@ -11809,7 +12838,7 @@ export const OPENAPI_AGREGADO = {
               "regalo"
             ]
           },
-          "producto_id": {
+          "item_id": {
             "type": "string",
             "format": "uuid"
           },
@@ -11876,77 +12905,6 @@ export const OPENAPI_AGREGADO = {
           "empresa_id",
           "codigo",
           "nombre"
-        ]
-      },
-      "CrearServicioRequestDto": {
-        "type": "object",
-        "properties": {
-          "codigo": {
-            "type": "string",
-            "description": "Código interno del servicio",
-            "example": "SERV-001"
-          },
-          "empresa_id": {
-            "type": "string",
-            "description": "Empresa destino (solo admin/super_admin)",
-            "format": "uuid"
-          },
-          "nombre": {
-            "type": "string",
-            "description": "Nombre del servicio",
-            "minLength": 2,
-            "maxLength": 200
-          },
-          "descripcion": {
-            "type": "string"
-          },
-          "categoria": {
-            "type": "string"
-          },
-          "marca": {
-            "type": "string"
-          },
-          "codigo_barras": {
-            "type": "string"
-          },
-          "precio": {
-            "type": "string",
-            "description": "Precio decimal",
-            "example": "1500.00"
-          },
-          "costo": {
-            "type": "string",
-            "description": "Costo decimal",
-            "example": "500.00"
-          },
-          "unidad": {
-            "type": "string",
-            "example": "Hora (h)"
-          },
-          "atributos": {
-            "type": "object",
-            "description": "Atributos del servicio según el JSON Schema de su categoría",
-            "additionalProperties": true
-          },
-          "duracion_minutos": {
-            "type": "number",
-            "description": "Duración en minutos (1-1440)",
-            "minimum": 1,
-            "maximum": 1440
-          },
-          "estado": {
-            "type": "string",
-            "enum": [
-              "activo",
-              "inactivo"
-            ]
-          }
-        },
-        "required": [
-          "codigo",
-          "nombre",
-          "precio",
-          "duracion_minutos"
         ]
       },
       "EscaneoResponseDto": {
@@ -12018,7 +12976,7 @@ export const OPENAPI_AGREGADO = {
           "esquema"
         ]
       },
-      "ImagenProductoRequestDto": {
+      "ImagenItemRequestDto": {
         "type": "object",
         "properties": {
           "objeto_id": {
@@ -12058,7 +13016,7 @@ export const OPENAPI_AGREGADO = {
           "url": {
             "type": "string",
             "description": "Ruta pública relativa servida por storage-service",
-            "example": "/api/v1/storage/public/objetos/8f0c..."
+            "example": "/api/v2/storage/public/objetos/8f0c..."
           },
           "orden": {
             "type": "number",
@@ -12174,6 +13132,31 @@ export const OPENAPI_AGREGADO = {
           "errores"
         ]
       },
+      "ItemImagenResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "objeto_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "orden": {
+            "type": "number"
+          },
+          "es_principal": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "id",
+          "objeto_id",
+          "orden",
+          "es_principal"
+        ]
+      },
       "ItemResponseDto": {
         "type": "object",
         "properties": {
@@ -12228,21 +13211,75 @@ export const OPENAPI_AGREGADO = {
             "type": "object",
             "additionalProperties": true
           },
+          "parent_item_id": {
+            "type": "object",
+            "nullable": true,
+            "format": "uuid"
+          },
+          "marca": {
+            "type": "string"
+          },
+          "codigo_barras": {
+            "type": "string"
+          },
+          "unidad": {
+            "type": "string"
+          },
+          "permite_fracciones": {
+            "type": "boolean"
+          },
+          "unidad_compra": {
+            "type": "string"
+          },
+          "contenido_cantidad": {
+            "type": "number"
+          },
+          "contenido_unidad": {
+            "type": "string"
+          },
+          "tipo_precio": {
+            "type": "string",
+            "enum": [
+              "fijo",
+              "escala"
+            ]
+          },
+          "tipo_costo": {
+            "type": "string",
+            "enum": [
+              "fijo",
+              "escala"
+            ]
+          },
+          "stock_minimo": {
+            "type": "number"
+          },
+          "stock_maximo": {
+            "type": "object",
+            "nullable": true
+          },
+          "garantia_meses": {
+            "type": "object",
+            "nullable": true
+          },
+          "es_materia_prima": {
+            "type": "boolean"
+          },
+          "ubicacion": {
+            "type": "string"
+          },
+          "imagenes": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ItemImagenResponseDto"
+            }
+          },
           "estado": {
             "type": "string",
             "enum": [
               "activo",
               "inactivo"
             ]
-          },
-          "source_type": {
-            "type": "object",
-            "nullable": true
-          },
-          "source_id": {
-            "type": "object",
-            "nullable": true,
-            "format": "uuid"
           },
           "creado_en": {
             "type": "string",
@@ -12267,9 +13304,23 @@ export const OPENAPI_AGREGADO = {
           "stock",
           "duration_minutes",
           "atributos",
+          "parent_item_id",
+          "marca",
+          "codigo_barras",
+          "unidad",
+          "permite_fracciones",
+          "unidad_compra",
+          "contenido_cantidad",
+          "contenido_unidad",
+          "tipo_precio",
+          "tipo_costo",
+          "stock_minimo",
+          "stock_maximo",
+          "garantia_meses",
+          "es_materia_prima",
+          "ubicacion",
+          "imagenes",
           "estado",
-          "source_type",
-          "source_id",
           "creado_en",
           "actualizado_en"
         ]
@@ -12360,11 +13411,6 @@ export const OPENAPI_AGREGADO = {
             "description": "Precio base en córdobas con dos decimales",
             "example": "1000.00"
           },
-          "reservas_activas": {
-            "type": "number",
-            "description": "Alias de reservado para consumidores internos",
-            "example": 2
-          },
           "valor_disponible_cents": {
             "type": "number",
             "description": "Valor del stock disponible en centavos",
@@ -12384,7 +13430,6 @@ export const OPENAPI_AGREGADO = {
           "reservado",
           "estado",
           "precio_base",
-          "reservas_activas",
           "valor_disponible_cents",
           "valor_total_cents"
         ]
@@ -12498,7 +13543,7 @@ export const OPENAPI_AGREGADO = {
       "MovimientoLineaRequestDto": {
         "type": "object",
         "properties": {
-          "producto_id": {
+          "item_id": {
             "type": "string",
             "format": "uuid"
           },
@@ -12605,45 +13650,6 @@ export const OPENAPI_AGREGADO = {
           "paginas"
         ]
       },
-      "PaginaProductosResponseDto": {
-        "type": "object",
-        "properties": {
-          "items": {
-            "description": "Productos de la página",
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/ProductoResponseDto"
-            }
-          },
-          "total": {
-            "type": "number",
-            "description": "Total de productos que cumplen el filtro",
-            "example": 42
-          },
-          "pagina": {
-            "type": "number",
-            "description": "Página actual (1-based)",
-            "example": 1
-          },
-          "limite": {
-            "type": "number",
-            "description": "Tamaño de página",
-            "example": 20
-          },
-          "paginas": {
-            "type": "number",
-            "description": "Total de páginas",
-            "example": 3
-          }
-        },
-        "required": [
-          "items",
-          "total",
-          "pagina",
-          "limite",
-          "paginas"
-        ]
-      },
       "PaginaPromocionesResponseDto": {
         "type": "object",
         "properties": {
@@ -12651,36 +13657,6 @@ export const OPENAPI_AGREGADO = {
             "type": "array",
             "items": {
               "$ref": "#/components/schemas/PromocionResponseDto"
-            }
-          },
-          "total": {
-            "type": "number"
-          },
-          "pagina": {
-            "type": "number"
-          },
-          "limite": {
-            "type": "number"
-          },
-          "paginas": {
-            "type": "number"
-          }
-        },
-        "required": [
-          "items",
-          "total",
-          "pagina",
-          "limite",
-          "paginas"
-        ]
-      },
-      "PaginaServiciosResponseDto": {
-        "type": "object",
-        "properties": {
-          "items": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/ServicioResponseDto"
             }
           },
           "total": {
@@ -12893,6 +13869,23 @@ export const OPENAPI_AGREGADO = {
           "precio_base",
           "stock",
           "estado",
+          "estado_operativo",
+          "costo",
+          "marca",
+          "codigo_barras",
+          "unidad",
+          "permite_fracciones",
+          "unidad_compra",
+          "contenido_cantidad",
+          "contenido_unidad",
+          "tipo_precio",
+          "tipo_costo",
+          "stock_minimo",
+          "stock_maximo",
+          "garantia_meses",
+          "es_materia_prima",
+          "ubicacion",
+          "actualizado_en",
           "creado_en"
         ]
       },
@@ -12919,7 +13912,7 @@ export const OPENAPI_AGREGADO = {
               "regalo"
             ]
           },
-          "producto_id": {
+          "item_id": {
             "type": "object",
             "nullable": true
           },
@@ -12967,7 +13960,7 @@ export const OPENAPI_AGREGADO = {
           "empresa_id",
           "nombre",
           "tipo",
-          "producto_id",
+          "item_id",
           "sku",
           "cantidad_requerida",
           "cantidad_gratis",
@@ -13101,12 +14094,12 @@ export const OPENAPI_AGREGADO = {
           "actualizado_en"
         ]
       },
-      "VarianteProductoRequestDto": {
+      "VarianteItemRequestDto": {
         "type": "object",
         "properties": {
           "sku": {
             "type": "string",
-            "description": "SKU de la variante",
+            "description": "Código/SKU de la variante",
             "pattern": "^[A-Za-z0-9-]{2,32}$",
             "example": "SKU-001-ROJO-M"
           },
@@ -13120,7 +14113,7 @@ export const OPENAPI_AGREGADO = {
           },
           "precio_base": {
             "type": "string",
-            "description": "Precio base decimal (ej: 1000.00)",
+            "description": "Precio decimal (ej: 1000.00)",
             "example": "1500.00"
           },
           "stock": {
@@ -13133,7 +14126,7 @@ export const OPENAPI_AGREGADO = {
             "description": "Imágenes de la variante (máx. 3)",
             "type": "array",
             "items": {
-              "$ref": "#/components/schemas/ImagenProductoRequestDto"
+              "$ref": "#/components/schemas/ImagenItemRequestDto"
             }
           }
         },
@@ -13709,6 +14702,11 @@ export const OPENAPI_AGREGADO = {
           },
           "urlGoogleMaps": {
             "type": "string"
+          },
+          "parteId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Referencia universal opcional de la parte"
           }
         }
       },
@@ -13756,9 +14754,6 @@ export const OPENAPI_AGREGADO = {
           "cliente": {
             "type": "string"
           },
-          "clienteId": {
-            "type": "string"
-          },
           "direccionEntrega": {
             "type": "string"
           },
@@ -13784,6 +14779,10 @@ export const OPENAPI_AGREGADO = {
           },
           "notas": {
             "type": "string"
+          },
+          "parteId": {
+            "type": "string",
+            "format": "uuid"
           }
         }
       },
@@ -14142,6 +15141,11 @@ export const OPENAPI_AGREGADO = {
             "type": "object",
             "nullable": true
           },
+          "parte_id": {
+            "type": "object",
+            "nullable": true,
+            "format": "uuid"
+          },
           "synced": {
             "type": "boolean"
           },
@@ -14281,6 +15285,11 @@ export const OPENAPI_AGREGADO = {
           },
           "urlGoogleMaps": {
             "type": "string"
+          },
+          "parteId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Referencia universal opcional de la parte"
           }
         },
         "required": [
@@ -14335,9 +15344,6 @@ export const OPENAPI_AGREGADO = {
           "cliente": {
             "type": "string"
           },
-          "clienteId": {
-            "type": "string"
-          },
           "direccionEntrega": {
             "type": "string"
           },
@@ -14363,6 +15369,10 @@ export const OPENAPI_AGREGADO = {
           },
           "notas": {
             "type": "string"
+          },
+          "parteId": {
+            "type": "string",
+            "format": "uuid"
           }
         }
       },
@@ -14573,9 +15583,6 @@ export const OPENAPI_AGREGADO = {
           "personalId": {
             "type": "string"
           },
-          "clienteId": {
-            "type": "string"
-          },
           "rutaId": {
             "type": "string"
           },
@@ -14616,6 +15623,10 @@ export const OPENAPI_AGREGADO = {
           },
           "notas": {
             "type": "string"
+          },
+          "parteId": {
+            "type": "string",
+            "format": "uuid"
           }
         },
         "required": [
@@ -14790,9 +15801,6 @@ export const OPENAPI_AGREGADO = {
               "logistica"
             ]
           },
-          "clienteId": {
-            "type": "string"
-          },
           "telefono": {
             "type": "string"
           },
@@ -14807,6 +15815,10 @@ export const OPENAPI_AGREGADO = {
           },
           "tipoCombustible": {
             "type": "string"
+          },
+          "parteId": {
+            "type": "string",
+            "format": "uuid"
           }
         },
         "required": [
@@ -14857,11 +15869,6 @@ export const OPENAPI_AGREGADO = {
           "tipo": {
             "type": "string"
           },
-          "cliente_id": {
-            "type": "object",
-            "nullable": true,
-            "format": "uuid"
-          },
           "telefono": {
             "type": "object",
             "nullable": true
@@ -14881,6 +15888,11 @@ export const OPENAPI_AGREGADO = {
           "tipo_combustible": {
             "type": "object",
             "nullable": true
+          },
+          "parte_id": {
+            "type": "object",
+            "nullable": true,
+            "format": "uuid"
           },
           "synced": {
             "type": "boolean"
@@ -14926,7 +15938,7 @@ export const OPENAPI_AGREGADO = {
           "cliente": {
             "type": "string"
           },
-          "cliente_id": {
+          "parte_id": {
             "type": "object",
             "nullable": true,
             "format": "uuid"
@@ -15459,7 +16471,7 @@ export const OPENAPI_AGREGADO = {
             "type": "string",
             "format": "uuid"
           },
-          "cliente_id": {
+          "parte_id": {
             "type": "object",
             "nullable": true,
             "format": "uuid"
@@ -16205,9 +17217,11 @@ export const OPENAPI_AGREGADO = {
             "description": "Id de la orden",
             "format": "uuid"
           },
-          "cliente_id": {
-            "type": "string",
-            "description": "Id del cliente"
+          "parte_id": {
+            "type": "object",
+            "description": "Referencia universal del cliente",
+            "nullable": true,
+            "format": "uuid"
           },
           "base_gravada_cents": {
             "type": "number",
@@ -17736,9 +18750,10 @@ export const OPENAPI_AGREGADO = {
             "type": "string",
             "description": "Id de la orden (UUID)"
           },
-          "cliente_id": {
+          "parte_id": {
             "type": "string",
-            "description": "Id del cliente"
+            "description": "Referencia universal del cliente",
+            "format": "uuid"
           },
           "razon_social": {
             "type": "string",
@@ -19557,48 +20572,22 @@ export const OPENAPI_AGREGADO = {
           "nota"
         ]
       },
-      "AceptarInvitacionRequestDto": {
+      "AceptarInvitacionPersonalRequestDto": {
         "type": "object",
         "properties": {
           "nombre": {
             "type": "string",
             "minLength": 2,
-            "maxLength": 120,
-            "example": "Ana Pérez"
+            "maxLength": 120
           },
           "contrasena": {
             "type": "string",
-            "minLength": 8,
-            "example": "UnaClaveSegura123"
+            "minLength": 8
           }
         },
         "required": [
           "nombre",
           "contrasena"
-        ]
-      },
-      "AceptarInvitacionResponseDto": {
-        "type": "object",
-        "properties": {
-          "access_token": {
-            "type": "string"
-          },
-          "refresh_token": {
-            "type": "string"
-          },
-          "expira_en": {
-            "type": "number"
-          },
-          "usuario": {
-            "type": "object",
-            "description": "Usuario vendedor con tienda y participación asignadas"
-          }
-        },
-        "required": [
-          "access_token",
-          "refresh_token",
-          "expira_en",
-          "usuario"
         ]
       },
       "ActualizarCapacidadRequestDto": {
@@ -19719,21 +20708,158 @@ export const OPENAPI_AGREGADO = {
           }
         }
       },
-      "ActualizarModalidadLogisticaRequestDto": {
+      "ActualizarDireccionRequestDto": {
         "type": "object",
         "properties": {
-          "modalidad_logistica": {
+          "tipo": {
             "type": "string",
             "enum": [
-              "plataforma",
-              "propia",
-              "hibrida"
+              "fiscal",
+              "comercial",
+              "entrega",
+              "operativa",
+              "otro"
             ]
+          },
+          "etiqueta": {
+            "type": "string",
+            "maxLength": 120
+          },
+          "linea_1": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 240
+          },
+          "linea_2": {
+            "type": "string",
+            "maxLength": 240
+          },
+          "ciudad": {
+            "type": "string",
+            "maxLength": 120
+          },
+          "departamento": {
+            "type": "string",
+            "maxLength": 120
+          },
+          "pais": {
+            "type": "string",
+            "maxLength": 120
+          },
+          "codigo_postal": {
+            "type": "string",
+            "maxLength": 32
+          },
+          "referencias": {
+            "type": "string",
+            "maxLength": 500
+          },
+          "latitud": {
+            "type": "object",
+            "nullable": true,
+            "minimum": -90,
+            "maximum": 90
+          },
+          "longitud": {
+            "type": "object",
+            "nullable": true,
+            "minimum": -180,
+            "maximum": 180
+          },
+          "es_principal": {
+            "type": "boolean",
+            "default": false
+          },
+          "metadata": {
+            "type": "object",
+            "additionalProperties": true
+          }
+        }
+      },
+      "ActualizarExtensionRequestDto": {
+        "type": "object",
+        "properties": {
+          "activo": {
+            "type": "boolean"
           }
         },
         "required": [
-          "modalidad_logistica"
+          "activo"
         ]
+      },
+      "ActualizarMedioContactoRequestDto": {
+        "type": "object",
+        "properties": {
+          "tipo": {
+            "type": "string",
+            "enum": [
+              "email",
+              "telefono",
+              "whatsapp",
+              "web",
+              "otro"
+            ]
+          },
+          "valor": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 240
+          },
+          "etiqueta": {
+            "type": "string",
+            "maxLength": 120
+          },
+          "es_principal": {
+            "type": "boolean",
+            "default": false
+          },
+          "metadata": {
+            "type": "object",
+            "additionalProperties": true
+          }
+        }
+      },
+      "ActualizarParteRequestDto": {
+        "type": "object",
+        "properties": {
+          "tipo": {
+            "type": "string",
+            "enum": [
+              "persona",
+              "organizacion"
+            ]
+          },
+          "nombre": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 240
+          },
+          "nombre_comercial": {
+            "type": "string",
+            "maxLength": 240
+          },
+          "identificador_tipo": {
+            "type": "string",
+            "maxLength": 40
+          },
+          "identificador_valor": {
+            "type": "string",
+            "maxLength": 120
+          },
+          "estado": {
+            "type": "string",
+            "enum": [
+              "activo",
+              "inactivo",
+              "archivado"
+            ],
+            "default": "activo"
+          },
+          "metadata": {
+            "type": "object",
+            "additionalProperties": true
+          }
+        }
       },
       "ActualizarSlugRequestDto": {
         "type": "object",
@@ -19749,20 +20875,33 @@ export const OPENAPI_AGREGADO = {
           "slug"
         ]
       },
-      "ActualizarTipoEmpresaRequestDto": {
+      "AsignarPersonalRequestDto": {
         "type": "object",
         "properties": {
-          "tipo_empresa": {
+          "usuario_id": {
             "type": "string",
-            "enum": [
-              "comercial",
-              "logistica",
-              "plataforma"
-            ]
+            "format": "uuid"
+          },
+          "rol_empresa_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "tienda_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "puesto_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "metadata": {
+            "type": "object",
+            "additionalProperties": true
           }
         },
         "required": [
-          "tipo_empresa"
+          "usuario_id",
+          "rol_empresa_id"
         ]
       },
       "AvatarUsuarioRequestDto": {
@@ -19941,6 +21080,78 @@ export const OPENAPI_AGREGADO = {
           "actualizado_en"
         ]
       },
+      "CrearDireccionRequestDto": {
+        "type": "object",
+        "properties": {
+          "tipo": {
+            "type": "string",
+            "enum": [
+              "fiscal",
+              "comercial",
+              "entrega",
+              "operativa",
+              "otro"
+            ]
+          },
+          "etiqueta": {
+            "type": "string",
+            "maxLength": 120
+          },
+          "linea_1": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 240
+          },
+          "linea_2": {
+            "type": "string",
+            "maxLength": 240
+          },
+          "ciudad": {
+            "type": "string",
+            "maxLength": 120
+          },
+          "departamento": {
+            "type": "string",
+            "maxLength": 120
+          },
+          "pais": {
+            "type": "string",
+            "maxLength": 120
+          },
+          "codigo_postal": {
+            "type": "string",
+            "maxLength": 32
+          },
+          "referencias": {
+            "type": "string",
+            "maxLength": 500
+          },
+          "latitud": {
+            "type": "object",
+            "nullable": true,
+            "minimum": -90,
+            "maximum": 90
+          },
+          "longitud": {
+            "type": "object",
+            "nullable": true,
+            "minimum": -180,
+            "maximum": 180
+          },
+          "es_principal": {
+            "type": "boolean",
+            "default": false
+          },
+          "metadata": {
+            "type": "object",
+            "additionalProperties": true
+          }
+        },
+        "required": [
+          "tipo",
+          "linea_1"
+        ]
+      },
       "CrearEmpresaRequestDto": {
         "type": "object",
         "properties": {
@@ -20051,80 +21262,339 @@ export const OPENAPI_AGREGADO = {
             "description": "Slug público. Si se omite se deriva del nombre y se resuelven colisiones con sufijos.",
             "example": "distribuidora-piloto"
           },
-          "modalidad_logistica": {
-            "type": "string",
-            "nullable": true,
-            "enum": [
-              "plataforma",
-              "propia",
-              "hibrida"
-            ],
-            "description": "Legado; puede omitirse y queda nullable"
-          },
           "vertical_id": {
             "type": "string",
-            "enum": [
-              "retail",
-              "farmacia",
-              "belleza",
-              "dental",
-              "flota"
-            ],
-            "default": "retail"
+            "description": "Código dinámico de la vertical; se valida contra identity.verticales"
           },
           "pack_codigo": {
             "type": "string",
-            "enum": [
-              "pack_retail",
-              "pack_farmacia",
-              "pack_belleza",
-              "pack_dental",
-              "pack_flota"
-            ],
-            "description": "Pack versionado; si se omite se deriva de la vertical"
-          },
-          "tipo_empresa": {
-            "type": "string",
-            "enum": [
-              "comercial",
-              "logistica",
-              "plataforma"
-            ],
-            "default": "comercial"
+            "description": "Pack versionado; se valida contra identity.packs"
           }
         },
         "required": [
           "nombre"
         ]
       },
-      "CrearInvitacionRequestDto": {
+      "CrearExtensionRequestDto": {
+        "type": "object",
+        "properties": {
+          "codigo": {
+            "type": "string",
+            "example": "ficha_cliente"
+          },
+          "nombre": {
+            "type": "string",
+            "example": "Ficha de cliente"
+          },
+          "recurso": {
+            "type": "string",
+            "example": "cliente"
+          },
+          "descripcion": {
+            "type": "string",
+            "maxLength": 1000
+          },
+          "esquema": {
+            "type": "object",
+            "additionalProperties": true
+          },
+          "formulario": {
+            "type": "object",
+            "additionalProperties": true
+          },
+          "reglas": {
+            "type": "object",
+            "additionalProperties": true
+          },
+          "activo": {
+            "type": "boolean",
+            "default": true
+          }
+        },
+        "required": [
+          "codigo",
+          "nombre",
+          "recurso",
+          "esquema"
+        ]
+      },
+      "CrearInvitacionPersonalRequestDto": {
         "type": "object",
         "properties": {
           "correo": {
             "type": "string",
-            "format": "email",
-            "example": "vendedor@correo.com"
+            "format": "email"
           },
           "nombre": {
             "type": "string",
             "minLength": 2,
             "maxLength": 120
           },
+          "tipo": {
+            "type": "string",
+            "enum": [
+              "invitacion",
+              "contratacion"
+            ],
+            "default": "invitacion"
+          },
+          "rol_empresa_id": {
+            "type": "string",
+            "format": "uuid"
+          },
           "tienda_id": {
             "type": "string",
             "format": "uuid"
           },
-          "participacion_porcentaje": {
-            "type": "number",
-            "minimum": 0,
-            "maximum": 100,
-            "example": 25
+          "puesto_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "metadata": {
+            "type": "object",
+            "additionalProperties": true
           }
         },
         "required": [
           "correo",
-          "tienda_id",
-          "participacion_porcentaje"
+          "rol_empresa_id"
+        ]
+      },
+      "CrearMedioContactoRequestDto": {
+        "type": "object",
+        "properties": {
+          "tipo": {
+            "type": "string",
+            "enum": [
+              "email",
+              "telefono",
+              "whatsapp",
+              "web",
+              "otro"
+            ]
+          },
+          "valor": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 240
+          },
+          "etiqueta": {
+            "type": "string",
+            "maxLength": 120
+          },
+          "es_principal": {
+            "type": "boolean",
+            "default": false
+          },
+          "metadata": {
+            "type": "object",
+            "additionalProperties": true
+          }
+        },
+        "required": [
+          "tipo",
+          "valor"
+        ]
+      },
+      "CrearModeloOperacionRequestDto": {
+        "type": "object",
+        "properties": {
+          "codigo": {
+            "type": "string",
+            "example": "servicios_domicilio"
+          },
+          "nombre": {
+            "type": "string",
+            "example": "Servicios a domicilio"
+          },
+          "descripcion": {
+            "type": "string"
+          },
+          "config": {
+            "type": "object"
+          },
+          "activo": {
+            "type": "boolean",
+            "default": true
+          }
+        },
+        "required": [
+          "codigo",
+          "nombre"
+        ]
+      },
+      "CrearPackRequestDto": {
+        "type": "object",
+        "properties": {
+          "codigo": {
+            "type": "string",
+            "example": "pack_servicios_domicilio"
+          },
+          "version": {
+            "type": "number",
+            "minimum": 1,
+            "example": 1
+          },
+          "vertical_codigo": {
+            "type": "string",
+            "example": "servicios_domicilio"
+          },
+          "nombre": {
+            "type": "string",
+            "example": "Servicios a domicilio"
+          },
+          "descripcion": {
+            "type": "string"
+          },
+          "config": {
+            "type": "object"
+          },
+          "modelos": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PackBuilderItemRequestDto"
+            }
+          },
+          "capacidades": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PackBuilderItemRequestDto"
+            }
+          }
+        },
+        "required": [
+          "codigo",
+          "version",
+          "vertical_codigo",
+          "nombre"
+        ]
+      },
+      "CrearParteRequestDto": {
+        "type": "object",
+        "properties": {
+          "tipo": {
+            "type": "string",
+            "enum": [
+              "persona",
+              "organizacion"
+            ]
+          },
+          "nombre": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 240
+          },
+          "nombre_comercial": {
+            "type": "string",
+            "maxLength": 240
+          },
+          "identificador_tipo": {
+            "type": "string",
+            "maxLength": 40
+          },
+          "identificador_valor": {
+            "type": "string",
+            "maxLength": 120
+          },
+          "estado": {
+            "type": "string",
+            "enum": [
+              "activo",
+              "inactivo",
+              "archivado"
+            ],
+            "default": "activo"
+          },
+          "metadata": {
+            "type": "object",
+            "additionalProperties": true
+          }
+        },
+        "required": [
+          "tipo",
+          "nombre"
+        ]
+      },
+      "CrearPuestoRequestDto": {
+        "type": "object",
+        "properties": {
+          "codigo": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9_]{1,39}$",
+            "example": "sillon_1"
+          },
+          "nombre": {
+            "type": "string",
+            "minLength": 2,
+            "maxLength": 120,
+            "example": "Sillón 1"
+          },
+          "tipo": {
+            "type": "string",
+            "example": "sillon"
+          },
+          "tienda_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "metadata": {
+            "type": "object",
+            "additionalProperties": true
+          }
+        },
+        "required": [
+          "codigo",
+          "nombre"
+        ]
+      },
+      "CrearRelacionRequestDto": {
+        "type": "object",
+        "properties": {
+          "parte_destino_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "tipo": {
+            "type": "string",
+            "example": "cliente",
+            "pattern": "^[a-z][a-z0-9_]{1,39}$"
+          },
+          "metadata": {
+            "type": "object",
+            "additionalProperties": true
+          }
+        },
+        "required": [
+          "parte_destino_id",
+          "tipo"
+        ]
+      },
+      "CrearRolRequestDto": {
+        "type": "object",
+        "properties": {
+          "codigo": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9_]{1,39}$",
+            "example": "estilista"
+          },
+          "nombre": {
+            "type": "string",
+            "minLength": 2,
+            "maxLength": 120,
+            "example": "Estilista"
+          },
+          "descripcion": {
+            "type": "string",
+            "maxLength": 500
+          },
+          "permisos": {
+            "$ref": "#/components/schemas/PermisosRequestDto"
+          }
+        },
+        "required": [
+          "codigo",
+          "nombre",
+          "permisos"
         ]
       },
       "CrearUsuarioRequestDto": {
@@ -20200,6 +21670,132 @@ export const OPENAPI_AGREGADO = {
           "participacion_porcentaje"
         ]
       },
+      "CrearVerticalRequestDto": {
+        "type": "object",
+        "properties": {
+          "codigo": {
+            "type": "string",
+            "example": "servicios_domicilio"
+          },
+          "nombre": {
+            "type": "string",
+            "example": "Servicios a domicilio"
+          },
+          "modelo_operacion": {
+            "type": "string",
+            "example": "servicios_agendados"
+          },
+          "activo": {
+            "type": "boolean",
+            "default": true
+          }
+        },
+        "required": [
+          "codigo",
+          "nombre",
+          "modelo_operacion"
+        ]
+      },
+      "DireccionResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "empresa_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "parte_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "tipo": {
+            "type": "string",
+            "enum": [
+              "fiscal",
+              "comercial",
+              "entrega",
+              "operativa",
+              "otro"
+            ]
+          },
+          "etiqueta": {
+            "type": "string"
+          },
+          "linea_1": {
+            "type": "string"
+          },
+          "linea_2": {
+            "type": "string"
+          },
+          "ciudad": {
+            "type": "string"
+          },
+          "departamento": {
+            "type": "string"
+          },
+          "pais": {
+            "type": "string"
+          },
+          "codigo_postal": {
+            "type": "string"
+          },
+          "referencias": {
+            "type": "string"
+          },
+          "latitud": {
+            "type": "object",
+            "nullable": true
+          },
+          "longitud": {
+            "type": "object",
+            "nullable": true
+          },
+          "es_principal": {
+            "type": "boolean"
+          },
+          "metadata": {
+            "type": "object",
+            "additionalProperties": true
+          },
+          "creado_en": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "actualizado_en": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "eliminado_en": {
+            "type": "object",
+            "nullable": true,
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "empresa_id",
+          "parte_id",
+          "tipo",
+          "etiqueta",
+          "linea_1",
+          "linea_2",
+          "ciudad",
+          "departamento",
+          "pais",
+          "codigo_postal",
+          "referencias",
+          "latitud",
+          "longitud",
+          "es_principal",
+          "metadata",
+          "creado_en",
+          "actualizado_en",
+          "eliminado_en"
+        ]
+      },
       "EmpresaCapacidadResponseDto": {
         "type": "object",
         "properties": {
@@ -20243,26 +21839,14 @@ export const OPENAPI_AGREGADO = {
             "type": "string"
           },
           "vertical_id": {
-            "type": "string",
+            "type": "object",
             "nullable": true,
-            "enum": [
-              "retail",
-              "farmacia",
-              "belleza",
-              "dental",
-              "flota"
-            ]
+            "description": "Código dinámico de la vertical"
           },
           "pack_codigo": {
-            "type": "string",
+            "type": "object",
             "nullable": true,
-            "enum": [
-              "pack_retail",
-              "pack_farmacia",
-              "pack_belleza",
-              "pack_dental",
-              "pack_flota"
-            ]
+            "description": "Código dinámico del pack"
           },
           "pack_version": {
             "type": "object",
@@ -20273,24 +21857,6 @@ export const OPENAPI_AGREGADO = {
             "type": "string",
             "description": "Slug público actual",
             "example": "distribuidora-piloto"
-          },
-          "modalidad_logistica": {
-            "type": "string",
-            "nullable": true,
-            "enum": [
-              "plataforma",
-              "propia",
-              "hibrida"
-            ]
-          },
-          "tipo_empresa": {
-            "type": "string",
-            "enum": [
-              "comercial",
-              "logistica",
-              "plataforma"
-            ],
-            "description": "Tipo de empresa; solo las comerciales tienen catálogo propio (ADR-27)"
           },
           "estado": {
             "type": "string"
@@ -20433,12 +21999,24 @@ export const OPENAPI_AGREGADO = {
         "required": [
           "id",
           "nombre",
+          "slug",
           "estado",
           "creado_por",
           "creado_en"
         ]
       },
-      "InvitacionCreadaResponseDto": {
+      "EstadoRolRequestDto": {
+        "type": "object",
+        "properties": {
+          "activo": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "activo"
+        ]
+      },
+      "ExtensionResponseDto": {
         "type": "object",
         "properties": {
           "id": {
@@ -20449,137 +22027,127 @@ export const OPENAPI_AGREGADO = {
             "type": "string",
             "format": "uuid"
           },
-          "tienda_id": {
+          "codigo": {
+            "type": "string"
+          },
+          "nombre": {
+            "type": "string"
+          },
+          "recurso": {
+            "type": "string"
+          },
+          "descripcion": {
+            "type": "string"
+          },
+          "esquema": {
+            "type": "object",
+            "additionalProperties": true
+          },
+          "formulario": {
+            "type": "object",
+            "additionalProperties": true
+          },
+          "reglas": {
+            "type": "object",
+            "additionalProperties": true
+          },
+          "version": {
+            "type": "number"
+          },
+          "activo": {
+            "type": "boolean"
+          },
+          "creado_por": {
             "type": "string",
             "format": "uuid"
           },
-          "tienda_nombre": {
-            "type": "string"
-          },
-          "correo": {
-            "type": "string"
-          },
-          "participacion_porcentaje": {
-            "type": "number",
-            "minimum": 0,
-            "maximum": 100
-          },
-          "estado": {
-            "type": "string"
-          },
-          "expira_en": {
+          "creado_en": {
             "type": "string",
             "format": "date-time"
           },
-          "url_invitacion": {
-            "type": "string"
+          "actualizado_en": {
+            "type": "string",
+            "format": "date-time"
           }
         },
         "required": [
           "id",
           "empresa_id",
-          "tienda_id",
-          "tienda_nombre",
-          "correo",
-          "participacion_porcentaje",
-          "estado",
-          "expira_en",
-          "url_invitacion"
+          "codigo",
+          "nombre",
+          "recurso",
+          "descripcion",
+          "esquema",
+          "formulario",
+          "reglas",
+          "version",
+          "activo",
+          "creado_por",
+          "creado_en",
+          "actualizado_en"
         ]
       },
-      "InvitacionPublicaResponseDto": {
-        "type": "object",
-        "properties": {
-          "valida": {
-            "type": "boolean"
-          },
-          "correo": {
-            "type": "string"
-          },
-          "empresa_nombre": {
-            "type": "string"
-          },
-          "tienda_nombre": {
-            "type": "string"
-          },
-          "participacion_porcentaje": {
-            "type": "number",
-            "minimum": 0,
-            "maximum": 100
-          },
-          "expira_en": {
-            "type": "string",
-            "format": "date-time"
-          }
-        },
-        "required": [
-          "valida",
-          "correo",
-          "empresa_nombre",
-          "tienda_nombre",
-          "participacion_porcentaje",
-          "expira_en"
-        ]
-      },
-      "InvitacionResumenResponseDto": {
+      "ExtensionValueResponseDto": {
         "type": "object",
         "properties": {
           "id": {
             "type": "string",
             "format": "uuid"
           },
-          "correo": {
-            "type": "string"
-          },
-          "tienda_id": {
+          "empresa_id": {
             "type": "string",
             "format": "uuid"
           },
-          "tienda_nombre": {
-            "type": "string"
+          "extension_id": {
+            "type": "string",
+            "format": "uuid"
           },
-          "participacion_porcentaje": {
-            "type": "number",
-            "minimum": 0,
-            "maximum": 100
+          "recurso_id": {
+            "type": "string",
+            "format": "uuid"
           },
-          "estado": {
-            "type": "string"
+          "valores": {
+            "type": "object",
+            "additionalProperties": true
           },
-          "expira_en": {
+          "version_schema": {
+            "type": "number"
+          },
+          "creado_por": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "creado_en": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "actualizado_en": {
             "type": "string",
             "format": "date-time"
           }
         },
         "required": [
           "id",
-          "correo",
-          "tienda_id",
-          "tienda_nombre",
-          "participacion_porcentaje",
-          "estado",
-          "expira_en"
+          "empresa_id",
+          "extension_id",
+          "recurso_id",
+          "valores",
+          "version_schema",
+          "creado_por",
+          "creado_en",
+          "actualizado_en"
         ]
       },
-      "ListarVendedoresResponseDto": {
+      "GuardarExtensionValoresRequestDto": {
         "type": "object",
         "properties": {
-          "vendedores": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/VendedorEmpresaResponseDto"
-            }
-          },
-          "invitaciones": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/InvitacionResumenResponseDto"
-            }
+          "valores": {
+            "type": "object",
+            "additionalProperties": true
           }
         },
         "required": [
-          "vendedores",
-          "invitaciones"
+          "valores"
         ]
       },
       "LoginRequestDto": {
@@ -20609,6 +22177,105 @@ export const OPENAPI_AGREGADO = {
             "description": "Refresh token de la sesión a cerrar; si se omite, cierra todas"
           }
         }
+      },
+      "MedioContactoResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "empresa_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "parte_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "tipo": {
+            "type": "string",
+            "enum": [
+              "email",
+              "telefono",
+              "whatsapp",
+              "web",
+              "otro"
+            ]
+          },
+          "valor": {
+            "type": "string"
+          },
+          "etiqueta": {
+            "type": "string"
+          },
+          "es_principal": {
+            "type": "boolean"
+          },
+          "verificado_en": {
+            "type": "object",
+            "nullable": true,
+            "format": "date-time"
+          },
+          "metadata": {
+            "type": "object",
+            "additionalProperties": true
+          },
+          "creado_en": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "actualizado_en": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "eliminado_en": {
+            "type": "object",
+            "nullable": true,
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "empresa_id",
+          "parte_id",
+          "tipo",
+          "valor",
+          "etiqueta",
+          "es_principal",
+          "verificado_en",
+          "metadata",
+          "creado_en",
+          "actualizado_en",
+          "eliminado_en"
+        ]
+      },
+      "ModeloOperacionResponseDto": {
+        "type": "object",
+        "properties": {
+          "codigo": {
+            "type": "string"
+          },
+          "nombre": {
+            "type": "string"
+          },
+          "descripcion": {
+            "type": "string"
+          },
+          "config": {
+            "type": "object"
+          },
+          "activo": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "codigo",
+          "nombre",
+          "descripcion",
+          "config",
+          "activo"
+        ]
       },
       "OkResponseDto": {
         "type": "object",
@@ -20652,6 +22319,25 @@ export const OPENAPI_AGREGADO = {
           "tema"
         ]
       },
+      "PackBuilderItemRequestDto": {
+        "type": "object",
+        "properties": {
+          "codigo": {
+            "type": "string",
+            "example": "agenda_recursos"
+          },
+          "config": {
+            "type": "object"
+          },
+          "activo": {
+            "type": "boolean",
+            "default": true
+          }
+        },
+        "required": [
+          "codigo"
+        ]
+      },
       "PackCapacidadResponseDto": {
         "type": "object",
         "properties": {
@@ -20679,6 +22365,33 @@ export const OPENAPI_AGREGADO = {
           "config"
         ]
       },
+      "PackModeloResponseDto": {
+        "type": "object",
+        "properties": {
+          "modelo_codigo": {
+            "type": "string"
+          },
+          "nombre": {
+            "type": "string"
+          },
+          "descripcion": {
+            "type": "string"
+          },
+          "activo": {
+            "type": "boolean"
+          },
+          "config": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "modelo_codigo",
+          "nombre",
+          "descripcion",
+          "activo",
+          "config"
+        ]
+      },
       "PackResponseDto": {
         "type": "object",
         "properties": {
@@ -20700,6 +22413,12 @@ export const OPENAPI_AGREGADO = {
           "config": {
             "type": "object"
           },
+          "modelos": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PackModeloResponseDto"
+            }
+          },
           "capacidades": {
             "type": "array",
             "items": {
@@ -20714,7 +22433,84 @@ export const OPENAPI_AGREGADO = {
           "nombre",
           "descripcion",
           "config",
+          "modelos",
           "capacidades"
+        ]
+      },
+      "ParteResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "empresa_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "tipo": {
+            "type": "string",
+            "enum": [
+              "persona",
+              "organizacion"
+            ]
+          },
+          "nombre": {
+            "type": "string"
+          },
+          "nombre_comercial": {
+            "type": "string"
+          },
+          "identificador_tipo": {
+            "type": "string"
+          },
+          "identificador_valor": {
+            "type": "string"
+          },
+          "estado": {
+            "type": "string",
+            "enum": [
+              "activo",
+              "inactivo",
+              "archivado"
+            ]
+          },
+          "metadata": {
+            "type": "object",
+            "additionalProperties": true
+          },
+          "creado_por": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "creado_en": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "actualizado_en": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "eliminado_en": {
+            "type": "object",
+            "nullable": true,
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "empresa_id",
+          "tipo",
+          "nombre",
+          "nombre_comercial",
+          "identificador_tipo",
+          "identificador_valor",
+          "estado",
+          "metadata",
+          "creado_por",
+          "creado_en",
+          "actualizado_en",
+          "eliminado_en"
         ]
       },
       "PerfilEmpresaRequestDto": {
@@ -20854,6 +22650,41 @@ export const OPENAPI_AGREGADO = {
           }
         }
       },
+      "PermisosRequestDto": {
+        "type": "object",
+        "properties": {
+          "acciones": {
+            "example": [
+              "catalogo.leer",
+              "ordenes.crear"
+            ],
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "recursos": {
+            "example": [
+              "tienda"
+            ],
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "condiciones": {
+            "type": "object",
+            "additionalProperties": true
+          },
+          "version": {
+            "type": "number",
+            "default": 1
+          }
+        },
+        "required": [
+          "acciones"
+        ]
+      },
       "RegistroRequestDto": {
         "type": "object",
         "properties": {
@@ -20889,6 +22720,64 @@ export const OPENAPI_AGREGADO = {
           "correo",
           "contrasena",
           "rol"
+        ]
+      },
+      "RelacionResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "empresa_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "parte_origen_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "parte_destino_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "tipo": {
+            "type": "string"
+          },
+          "metadata": {
+            "type": "object",
+            "additionalProperties": true
+          },
+          "activo": {
+            "type": "boolean"
+          },
+          "creado_por": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "creado_en": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "actualizado_en": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "parte_relacionada": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "id",
+          "empresa_id",
+          "parte_origen_id",
+          "parte_destino_id",
+          "tipo",
+          "metadata",
+          "activo",
+          "creado_por",
+          "creado_en",
+          "actualizado_en"
         ]
       },
       "RestablecerContrasenaRequestDto": {
@@ -21239,6 +23128,36 @@ export const OPENAPI_AGREGADO = {
           "creado_en"
         ]
       },
+      "ValidacionExtensionResponseDto": {
+        "type": "object",
+        "properties": {
+          "valido": {
+            "type": "boolean"
+          },
+          "errores": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          }
+        },
+        "required": [
+          "valido",
+          "errores"
+        ]
+      },
+      "ValidarExtensionRequestDto": {
+        "type": "object",
+        "properties": {
+          "datos": {
+            "type": "object",
+            "additionalProperties": true
+          }
+        },
+        "required": [
+          "datos"
+        ]
+      },
       "VendedorEmpresaResponseDto": {
         "type": "object",
         "properties": {
@@ -21270,6 +23189,29 @@ export const OPENAPI_AGREGADO = {
           "correo",
           "rol",
           "participacion_porcentaje"
+        ]
+      },
+      "VerticalOperacionResponseDto": {
+        "type": "object",
+        "properties": {
+          "codigo": {
+            "type": "string"
+          },
+          "nombre": {
+            "type": "string"
+          },
+          "modelo_operacion": {
+            "type": "string"
+          },
+          "activo": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "codigo",
+          "nombre",
+          "modelo_operacion",
+          "activo"
         ]
       },
       "VincularPersonalRequestDto": {
@@ -21374,13 +23316,11 @@ export const OPENAPI_AGREGADO = {
             "description": "Empresa propietaria de las líneas despachadas",
             "format": "uuid"
           },
-          "modalidad_logistica": {
-            "type": "string",
-            "enum": [
-              "plataforma",
-              "propia",
-              "hibrida"
-            ]
+          "parte_id": {
+            "type": "object",
+            "description": "Referencia universal opcional del destinatario",
+            "format": "uuid",
+            "nullable": true
           },
           "proveedor_tipo": {
             "type": "string",
@@ -21416,7 +23356,6 @@ export const OPENAPI_AGREGADO = {
           "guia",
           "order_id",
           "empresa_id",
-          "modalidad_logistica",
           "proveedor_tipo",
           "proveedor_tenant_id",
           "estado",
@@ -21447,13 +23386,11 @@ export const OPENAPI_AGREGADO = {
             "description": "Empresa propietaria de las líneas despachadas",
             "format": "uuid"
           },
-          "modalidad_logistica": {
-            "type": "string",
-            "enum": [
-              "plataforma",
-              "propia",
-              "hibrida"
-            ]
+          "parte_id": {
+            "type": "object",
+            "description": "Referencia universal opcional del destinatario",
+            "format": "uuid",
+            "nullable": true
           },
           "proveedor_tipo": {
             "type": "string",
@@ -21484,7 +23421,6 @@ export const OPENAPI_AGREGADO = {
           "guia",
           "order_id",
           "empresa_id",
-          "modalidad_logistica",
           "proveedor_tipo",
           "proveedor_tenant_id",
           "estado",
@@ -21523,7 +23459,7 @@ export const OPENAPI_AGREGADO = {
             "description": "Id de la orden",
             "format": "uuid"
           },
-          "cliente_id": {
+          "comprador_id": {
             "type": "string",
             "description": "Id del comprador",
             "format": "uuid"
@@ -21553,7 +23489,7 @@ export const OPENAPI_AGREGADO = {
         },
         "required": [
           "id",
-          "cliente_id",
+          "comprador_id",
           "items",
           "total",
           "total_cents",
@@ -21953,6 +23889,100 @@ export const OPENAPI_AGREGADO = {
           "tipo"
         ]
       },
+      "RegistrarVentaRequestDto": {
+        "type": "object",
+        "properties": {
+          "order_id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Obligatorio en runtime"
+          },
+          "vendedor_id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Obligatorio en runtime"
+          },
+          "skus": {
+            "minItems": 1,
+            "description": "Obligatorio en runtime",
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "monto_cents": {
+            "type": "number",
+            "example": 115000,
+            "minimum": 0,
+            "description": "Obligatorio en runtime"
+          },
+          "lat": {
+            "type": "number",
+            "example": 12.136
+          },
+          "lng": {
+            "type": "number",
+            "example": -86.251
+          },
+          "precision": {
+            "type": "number",
+            "minimum": 0
+          },
+          "velocidad": {
+            "type": "number",
+            "minimum": 0
+          },
+          "rumbo": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 360
+          },
+          "tipo_actividad": {
+            "type": "string",
+            "enum": [
+              "impulsacion",
+              "venta",
+              "entrega",
+              "reparto"
+            ]
+          },
+          "resultado_visita": {
+            "type": "string",
+            "enum": [
+              "visitado",
+              "cerca_no_visitado",
+              "no_visitado"
+            ]
+          },
+          "distancia_cliente_metros": {
+            "type": "number",
+            "minimum": 0
+          },
+          "rango_edad": {
+            "type": "string",
+            "enum": [
+              "18-24",
+              "25-34",
+              "35-44",
+              "45-54",
+              "55+"
+            ]
+          },
+          "genero": {
+            "type": "string",
+            "enum": [
+              "M",
+              "F",
+              "NS"
+            ]
+          },
+          "evento_id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Clave de idempotencia; si falta se usa order_id."
+          }
+        }
+      },
       "RegistrarVentaResponseDto": {
         "type": "object",
         "properties": {
@@ -22181,11 +24211,6 @@ export const OPENAPI_AGREGADO = {
             "description": "Cantidad",
             "example": 2
           },
-          "id": {
-            "type": "string",
-            "description": "Id de la oferta (alias enriquecido)",
-            "format": "uuid"
-          },
           "tienda_id": {
             "type": "string",
             "description": "Id de la tienda",
@@ -22224,7 +24249,6 @@ export const OPENAPI_AGREGADO = {
         "required": [
           "oferta_id",
           "cantidad",
-          "id",
           "tienda_id",
           "vendedor_id",
           "sku",
@@ -22261,52 +24285,14 @@ export const OPENAPI_AGREGADO = {
           "total"
         ]
       },
-      "ComisionVistaResponseDto": {
-        "type": "object",
-        "properties": {
-          "vendedor_id": {
-            "type": "string",
-            "description": "Id del vendedor",
-            "format": "uuid"
-          },
-          "periodo": {
-            "type": "string",
-            "description": "Periodo (YYYY-MM)",
-            "example": "2026-10"
-          },
-          "ordenes": {
-            "type": "number",
-            "description": "Órdenes del periodo",
-            "example": 12
-          },
-          "total_ventas_cents": {
-            "type": "number",
-            "description": "Ventas del periodo en centavos",
-            "example": 1380000
-          },
-          "total_comision_cents": {
-            "type": "number",
-            "description": "Comisiones del periodo en centavos",
-            "example": 165600
-          },
-          "actualizado_en": {
-            "type": "string",
-            "description": "Última actualización (ISO 8601 UTC)",
-            "format": "date-time"
-          }
-        },
-        "required": [
-          "vendedor_id",
-          "periodo",
-          "ordenes",
-          "total_ventas_cents",
-          "total_comision_cents",
-          "actualizado_en"
-        ]
-      },
       "CreateOrderCommand": {
         "type": "object",
         "properties": {
+          "cliente_parte_id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Referencia universal opcional del comprador"
+          },
           "tipo_orden": {
             "type": "string",
             "enum": [
@@ -22315,7 +24301,7 @@ export const OPENAPI_AGREGADO = {
               "cotizacion",
               "orden_servicio"
             ],
-            "default": "compra"
+            "description": "Tipo de orden explícito"
           },
           "items": {
             "description": "Artículos de la orden",
@@ -22329,7 +24315,10 @@ export const OPENAPI_AGREGADO = {
             "description": "Crear la orden desde el carrito (RN-05)",
             "example": false
           }
-        }
+        },
+        "required": [
+          "tipo_orden"
+        ]
       },
       "ItemOrdenRequestDto": {
         "type": "object",
@@ -22431,6 +24420,8 @@ export const OPENAPI_AGREGADO = {
         },
         "required": [
           "oferta_id",
+          "item_type",
+          "item_id",
           "sku",
           "producto_nombre",
           "cantidad",
@@ -22457,6 +24448,12 @@ export const OPENAPI_AGREGADO = {
             "description": "Id del comprador",
             "format": "uuid"
           },
+          "parte_id": {
+            "type": "object",
+            "nullable": true,
+            "format": "uuid",
+            "description": "Referencia universal opcional del comprador"
+          },
           "tienda_id": {
             "type": "string",
             "description": "Id de la tienda",
@@ -22474,8 +24471,7 @@ export const OPENAPI_AGREGADO = {
               "reserva",
               "cotizacion",
               "orden_servicio"
-            ],
-            "default": "compra"
+            ]
           },
           "fulfillment_config": {
             "type": "object",
@@ -22555,6 +24551,7 @@ export const OPENAPI_AGREGADO = {
           "comprador_id",
           "tienda_id",
           "estado",
+          "tipo_orden",
           "total_cents",
           "comision_cents",
           "moneda",
@@ -22655,9 +24652,8 @@ export const OPENAPI_AGREGADO = {
             "type": "string",
             "format": "uuid"
           },
-          "cliente_id": {
-            "type": "object",
-            "nullable": true,
+          "parte_id": {
+            "type": "string",
             "format": "uuid"
           },
           "order_id": {
@@ -22708,6 +24704,7 @@ export const OPENAPI_AGREGADO = {
           "id",
           "empresa_id",
           "recurso_id",
+          "parte_id",
           "estado",
           "inicia_en",
           "termina_en",
@@ -22749,9 +24746,10 @@ export const OPENAPI_AGREGADO = {
             "type": "string",
             "format": "uuid"
           },
-          "cliente_id": {
+          "parte_id": {
             "type": "string",
-            "format": "uuid"
+            "format": "uuid",
+            "description": "Referencia universal del cliente"
           },
           "order_id": {
             "type": "string",
@@ -22778,6 +24776,7 @@ export const OPENAPI_AGREGADO = {
         },
         "required": [
           "recurso_id",
+          "parte_id",
           "inicia_en",
           "termina_en"
         ]
@@ -23692,18 +25691,6 @@ export const OPENAPI_AGREGADO = {
             "description": "Id del item unificado",
             "format": "uuid"
           },
-          "producto_id": {
-            "type": "string",
-            "description": "Id del producto o variante vendible",
-            "nullable": true,
-            "format": "uuid"
-          },
-          "producto_padre_id": {
-            "type": "object",
-            "description": "Id del producto padre (si es variante)",
-            "nullable": true,
-            "format": "uuid"
-          },
           "sku": {
             "type": "string",
             "description": "SKU de la variante o producto",
@@ -23766,7 +25753,8 @@ export const OPENAPI_AGREGADO = {
           "vendedor_id",
           "empresa_id",
           "participacion_porcentaje",
-          "producto_id",
+          "item_type",
+          "item_id",
           "sku",
           "producto_nombre",
           "margen",
@@ -23866,11 +25854,6 @@ export const OPENAPI_AGREGADO = {
             "description": "Tienda donde se publicará (UUID o slug). Si se omite, se usa la tienda del vendedor autenticado.",
             "example": "mi-tienda"
           },
-          "producto_id": {
-            "type": "string",
-            "description": "Id legacy del producto a publicar",
-            "example": "a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11"
-          },
           "item_type": {
             "type": "string",
             "description": "Tipo del item a publicar",
@@ -23895,6 +25878,7 @@ export const OPENAPI_AGREGADO = {
           }
         },
         "required": [
+          "item_id",
           "margen"
         ]
       },
@@ -24320,6 +26304,7 @@ export const OPENAPI_AGREGADO = {
           "empresa_id",
           "propietario_usuario_id",
           "nombre",
+          "slug",
           "descripcion",
           "creado_en"
         ]

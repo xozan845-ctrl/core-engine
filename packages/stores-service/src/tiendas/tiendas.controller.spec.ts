@@ -19,7 +19,7 @@ function fabricar(): { tiendas: Record<string, Mock>; controller: TiendasControl
   return { tiendas, controller };
 }
 
-describe('TiendasController (api/v1/vendedores, R-U-10/11)', () => {
+describe('TiendasController (api/v2/vendedores, R-U-10/11)', () => {
   it('debe crear la tienda con el vendedor y los datos del dto', async () => {
     const { tiendas, controller } = fabricar();
     tiendas.crear.mockResolvedValue(tienda);
@@ -77,7 +77,7 @@ describe('TiendasController (api/v1/vendedores, R-U-10/11)', () => {
   });
 });
 
-describe('TiendasEmpresaController (api/v1/empresarios/me/tiendas, ADR-25)', () => {
+describe('TiendasEmpresaController (api/v2/empresarios/me/tiendas, ADR-25)', () => {
   function fabricarEmpresa(): { tiendas: Record<string, Mock>; controller: TiendasEmpresaController } {
     const tiendas = { deEmpresa: vi.fn() };
     const controller = new TiendasEmpresaController(tiendas as unknown as TiendasService);
@@ -106,7 +106,7 @@ describe('TiendasEmpresaController (api/v1/empresarios/me/tiendas, ADR-25)', () 
   });
 });
 
-describe('TiendasSlugController (api/v1/tiendas/:id/slug, ADR-26)', () => {
+describe('TiendasSlugController (api/v2/tiendas/:id/slug, ADR-26)', () => {
   function fabricarSlug(): { tiendas: Record<string, Mock>; controller: TiendasSlugController } {
     const tiendas = {
       actualizarSlug: vi.fn(),

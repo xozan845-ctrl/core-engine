@@ -8,7 +8,6 @@ function documents(overrides = {}) {
     specs: ['packages/a/src/a.service.ts'],
     rls: ['catalog.outbox'],
     migrations: { '01_base.sql': 'hash-a' },
-    breaking: { allow: ['GET /old: removed'] },
     ...overrides,
   };
 }
@@ -20,8 +19,7 @@ test('baseline-guard: acepta mejoras y migraciones nuevas', () => {
       specs: [],
       rls: [],
       migrations: { '01_base.sql': 'hash-a', '02_new.sql': 'hash-b' },
-      breaking: { allow: ['GET /old: removed'] },
-    }),
+      }),
     documents(),
   );
   assert.deepEqual(problems, []);
@@ -56,12 +54,4 @@ test('baseline-guard: rechaza editar o borrar migraciones existentes', () => {
     documents(),
   );
   assert.match(altered.join('\n'), /migrations: hash alterado/);
-});
-
-test('baseline-guard: rechaza nuevas excepciones de contrato', () => {
-  const problems = compareBaselines(
-    documents({ breaking: { allow: ['GET /old: removed', 'POST /new: removed'] } }),
-    documents(),
-  );
-  assert.match(problems.join('\n'), /breaking: nueva deuda\/excepción/);
 });

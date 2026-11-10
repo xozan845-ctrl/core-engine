@@ -1,5 +1,12 @@
 import { ApiProperty } from '@nestjs/swagger';
 
+export class ItemImagenResponseDto {
+  @ApiProperty({ format: 'uuid' }) id: string;
+  @ApiProperty({ format: 'uuid' }) objeto_id: string;
+  @ApiProperty() orden: number;
+  @ApiProperty() es_principal: boolean;
+}
+
 export class ItemResponseDto {
   @ApiProperty({ format: 'uuid' }) item_id: string;
   @ApiProperty({ format: 'uuid' }) empresa_id: string;
@@ -14,9 +21,23 @@ export class ItemResponseDto {
   @ApiProperty({ nullable: true }) stock: number | null;
   @ApiProperty({ nullable: true }) duration_minutes: number | null;
   @ApiProperty({ type: 'object', additionalProperties: true }) atributos: Record<string, unknown>;
+  @ApiProperty({ nullable: true, format: 'uuid' }) parent_item_id: string | null;
+  @ApiProperty() marca: string;
+  @ApiProperty() codigo_barras: string;
+  @ApiProperty() unidad: string;
+  @ApiProperty() permite_fracciones: boolean;
+  @ApiProperty() unidad_compra: string;
+  @ApiProperty() contenido_cantidad: number;
+  @ApiProperty() contenido_unidad: string;
+  @ApiProperty({ enum: ['fijo', 'escala'] }) tipo_precio: 'fijo' | 'escala';
+  @ApiProperty({ enum: ['fijo', 'escala'] }) tipo_costo: 'fijo' | 'escala';
+  @ApiProperty() stock_minimo: number;
+  @ApiProperty({ nullable: true }) stock_maximo: number | null;
+  @ApiProperty({ nullable: true }) garantia_meses: number | null;
+  @ApiProperty() es_materia_prima: boolean;
+  @ApiProperty() ubicacion: string;
+  @ApiProperty({ type: () => [ItemImagenResponseDto] }) imagenes: ItemImagenResponseDto[];
   @ApiProperty({ enum: ['activo', 'inactivo'] }) estado: 'activo' | 'inactivo';
-  @ApiProperty({ nullable: true }) source_type: 'producto' | 'servicio' | null;
-  @ApiProperty({ nullable: true, format: 'uuid' }) source_id: string | null;
   @ApiProperty({ format: 'date-time' }) creado_en: string;
   @ApiProperty({ format: 'date-time' }) actualizado_en: string;
 }
@@ -41,4 +62,11 @@ export class ItemSchemaResponseDto {
 
 export class EsquemaGuardadoResponseDto {
   @ApiProperty() ok: boolean;
+}
+
+export class LoteItemResponseDto {
+  @ApiProperty({ format: 'uuid' }) empresa_id: string;
+  @ApiProperty() sku: string;
+  @ApiProperty() stock: number;
+  @ApiProperty({ enum: ['disponible', 'agotado'] }) estado: string;
 }

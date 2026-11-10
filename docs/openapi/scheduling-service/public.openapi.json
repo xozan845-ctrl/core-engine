@@ -2,7 +2,7 @@
   "openapi": "3.0.0",
   "info": {
     "title": "Core Engine · scheduling-service · API pública",
-    "description": "Contrato público (/api/v1/**) de scheduling-service. No contiene rutas /internal/**.",
+    "description": "Contrato público (/api/v2/**) de scheduling-service. No contiene rutas /internal/**.",
     "version": "v1",
     "contact": {}
   },
@@ -10,7 +10,7 @@
   "x-superficie": "publica",
   "tags": [],
   "paths": {
-    "/api/v1/scheduling/recursos": {
+    "/api/v2/scheduling/recursos": {
       "get": {
         "operationId": "SchedulingController_recursos",
         "parameters": [],
@@ -75,7 +75,7 @@
         ]
       }
     },
-    "/api/v1/scheduling/recursos/{recursoId}/disponibilidad": {
+    "/api/v2/scheduling/recursos/{recursoId}/disponibilidad": {
       "get": {
         "operationId": "SchedulingController_disponibilidad",
         "parameters": [
@@ -115,7 +115,7 @@
         ]
       }
     },
-    "/api/v1/scheduling/disponibilidad": {
+    "/api/v2/scheduling/disponibilidad": {
       "post": {
         "operationId": "SchedulingController_crearDisponibilidad",
         "parameters": [],
@@ -152,7 +152,7 @@
         ]
       }
     },
-    "/api/v1/scheduling/bloqueos": {
+    "/api/v2/scheduling/bloqueos": {
       "post": {
         "operationId": "SchedulingController_crearBloqueo",
         "parameters": [],
@@ -189,7 +189,7 @@
         ]
       }
     },
-    "/api/v1/scheduling/citas": {
+    "/api/v2/scheduling/citas": {
       "get": {
         "operationId": "SchedulingController_citas",
         "parameters": [
@@ -271,7 +271,7 @@
         ]
       }
     },
-    "/api/v1/scheduling/citas/{citaId}/cancelar": {
+    "/api/v2/scheduling/citas/{citaId}/cancelar": {
       "patch": {
         "operationId": "SchedulingController_cancelar",
         "parameters": [
@@ -308,7 +308,7 @@
         ]
       }
     },
-    "/api/v1/scheduling/recordatorios": {
+    "/api/v2/scheduling/recordatorios": {
       "get": {
         "operationId": "SchedulingController_recordatorios",
         "parameters": [],
@@ -404,9 +404,8 @@
             "type": "string",
             "format": "uuid"
           },
-          "cliente_id": {
-            "type": "object",
-            "nullable": true,
+          "parte_id": {
+            "type": "string",
             "format": "uuid"
           },
           "order_id": {
@@ -457,6 +456,7 @@
           "id",
           "empresa_id",
           "recurso_id",
+          "parte_id",
           "estado",
           "inicia_en",
           "termina_en",
@@ -498,9 +498,10 @@
             "type": "string",
             "format": "uuid"
           },
-          "cliente_id": {
+          "parte_id": {
             "type": "string",
-            "format": "uuid"
+            "format": "uuid",
+            "description": "Referencia universal del cliente"
           },
           "order_id": {
             "type": "string",
@@ -527,6 +528,7 @@
         },
         "required": [
           "recurso_id",
+          "parte_id",
           "inicia_en",
           "termina_en"
         ]

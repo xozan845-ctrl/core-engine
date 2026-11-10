@@ -6,7 +6,7 @@ export interface LineaInventario {
   sku: string;
   nombre: string;
   stock: number;           // stock_fisico
-  disponible: number;      // catalog.productos.stock, ya neto de reservas
+  disponible: number;      // catalog.items.stock, ya neto de reservas
   reservado: number;       // reservas activas
   estado: string;
   precio_base: string;
@@ -36,7 +36,7 @@ export interface LoteInventario {
 }
 
 /**
- * H-06 / GET /api/v1/admin/inventario: niveles de stock de la bodega (desde proyección CQRS).
+ * H-06 / GET /api/v2/admin/inventario: niveles de stock de la bodega (desde proyección CQRS).
  */
 @Injectable()
 export class InventarioService {
@@ -44,12 +44,14 @@ export class InventarioService {
 
   async listar(empresaId?: string): Promise<LineaInventario[]> {
     const condiciones = [
-      'NOT EXISTS (SELECT 1 FROM catalog.productos v WHERE v.producto_padre_id = p.id)',
+      "i.tipo = 'producto'",
+      'i.eliminado_en IS NULL',
+      'NOT EXISTS (SELECT 1 FROM catalog.items v WHERE v.parent_item_id = i.id AND v.eliminado_en IS NULL)',
     ];
     const params: string[] = [];
     if (empresaId) {
       params.push(empresaId);
-      condiciones.unshift('s.empresa_id = $1');
+      condiciones.unshift('i.empresa_id = $1');
     }
     const filtro = `WHERE ${condiciones.join(' AND ')}`;
     const filas = await this.pg.query<{
@@ -64,14 +66,28 @@ export class InventarioService {
       valor_disponible_cents: number;
       valor_total_cents: number;
     }>(
-      `SELECT s.empresa_id, s.sku, s.nombre, s.stock_fisico, s.reservado,
-              s.disponible, s.estado, s.precio_base_cents,
-              s.valor_disponible_cents, s.valor_total_cents
-       FROM catalog.stock_vista s
-       JOIN catalog.productos p
-         ON p.empresa_id = s.empresa_id AND LOWER(p.sku) = LOWER(s.sku)
+      `WITH reservas AS (
+         SELECT COALESCE(item->>'empresa_id', '00000000-0000-0000-0000-000000000000') AS empresa_id,
+                LOWER(item->>'sku') AS sku,
+                SUM((item->>'cantidad')::int) AS reservado
+           FROM catalog.reservas_ordenes ro,
+                jsonb_array_elements(ro.items_json) AS item
+          WHERE ro.creado_en > NOW() - INTERVAL '30 minutes'
+          GROUP BY 1, 2
+       )
+       SELECT i.empresa_id, i.codigo AS sku, i.nombre,
+              i.stock + COALESCE(r.reservado, 0) AS stock_fisico,
+              COALESCE(r.reservado, 0)::int AS reservado,
+              i.stock AS disponible,
+              CASE WHEN i.stock > 0 THEN 'disponible' ELSE 'agotado' END AS estado,
+              i.precio_cents AS precio_base_cents,
+              (i.stock * i.precio_cents)::int AS valor_disponible_cents,
+              ((i.stock + COALESCE(r.reservado, 0)) * i.precio_cents)::int AS valor_total_cents
+         FROM catalog.items i
+         LEFT JOIN reservas r
+           ON r.empresa_id = i.empresa_id::text AND r.sku = LOWER(i.codigo)
        ${filtro}
-       ORDER BY s.estado DESC, s.nombre ASC`,
+       ORDER BY estado DESC, i.nombre ASC`,
       params,
     );
     return filas.map((f) => ({
@@ -83,10 +99,40 @@ export class InventarioService {
       reservado: f.reservado,
       estado: f.estado,
       precio_base: Money.desdeCentavos(f.precio_base_cents).string(),
-      reservas_activas: f.reservado,
       valor_disponible_cents: f.valor_disponible_cents,
       valor_total_cents: f.valor_total_cents,
     }));
+  }
+
+  async resumen(empresaId?: string): Promise<{
+    productos: number;
+    agotados: number;
+    stock_total: number;
+    valor_inventario_cents: number;
+  }> {
+    const filtro = empresaId
+      ? `WHERE i.empresa_id = $1 AND i.tipo = 'producto' AND i.eliminado_en IS NULL
+           AND NOT EXISTS (SELECT 1 FROM catalog.items v WHERE v.parent_item_id = i.id AND v.eliminado_en IS NULL)`
+      : `WHERE i.tipo = 'producto' AND i.eliminado_en IS NULL
+           AND NOT EXISTS (SELECT 1 FROM catalog.items v WHERE v.parent_item_id = i.id AND v.eliminado_en IS NULL)`;
+    const params = empresaId ? [empresaId] : [];
+    return this.pg
+      .queryOne<{
+        productos: number;
+        agotados: number;
+        stock_total: number;
+        valor_inventario_cents: number;
+      }>(
+        `SELECT COUNT(*)::int AS productos,
+                COUNT(*) FILTER (WHERE i.stock = 0)::int AS agotados,
+                COALESCE(SUM(i.stock), 0)::int AS stock_total,
+                COALESCE(SUM(i.stock * i.precio_cents), 0)::int AS valor_inventario_cents
+           FROM catalog.items i ${filtro}`,
+        params,
+      )
+      .then(
+        (r) => r ?? { productos: 0, agotados: 0, stock_total: 0, valor_inventario_cents: 0 },
+      );
   }
 
   async crearProveedor(datos: {

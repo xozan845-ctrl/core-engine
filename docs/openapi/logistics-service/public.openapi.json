@@ -2,7 +2,7 @@
   "openapi": "3.0.0",
   "info": {
     "title": "Core Engine · logistics-service · API pública",
-    "description": "Contrato público (/api/v1/**) de logistics-service. No contiene rutas /internal/**.",
+    "description": "Contrato público (/api/v2/**) de logistics-service. No contiene rutas /internal/**.",
     "version": "v1",
     "contact": {}
   },
@@ -10,7 +10,7 @@
   "x-superficie": "publica",
   "tags": [],
   "paths": {
-    "/api/v1/orders/{id}/estado": {
+    "/api/v2/orders/{id}/estado": {
       "patch": {
         "operationId": "EstadoOrdenController_avanzar",
         "parameters": [
@@ -60,7 +60,7 @@
         ]
       }
     },
-    "/api/v1/admin/envios": {
+    "/api/v2/admin/envios": {
       "get": {
         "operationId": "EnviosAdminController_listar",
         "parameters": [],
@@ -90,7 +90,7 @@
         ]
       }
     },
-    "/api/v1/empresarios/me/envios": {
+    "/api/v2/empresarios/me/envios": {
       "get": {
         "operationId": "EnviosEmpresaController_listar",
         "parameters": [],
@@ -120,7 +120,7 @@
         ]
       }
     },
-    "/api/v1/empresarios/me/envios/{id}/asignacion": {
+    "/api/v2/empresarios/me/envios/{id}/asignacion": {
       "post": {
         "operationId": "EnviosEmpresaController_asignar",
         "parameters": [
@@ -167,7 +167,7 @@
         ]
       }
     },
-    "/api/v1/envios/{id}/estado": {
+    "/api/v2/envios/{id}/estado": {
       "patch": {
         "operationId": "EnviosFlotaController_avanzar",
         "parameters": [
@@ -307,13 +307,11 @@
             "description": "Empresa propietaria de las líneas despachadas",
             "format": "uuid"
           },
-          "modalidad_logistica": {
-            "type": "string",
-            "enum": [
-              "plataforma",
-              "propia",
-              "hibrida"
-            ]
+          "parte_id": {
+            "type": "object",
+            "description": "Referencia universal opcional del destinatario",
+            "format": "uuid",
+            "nullable": true
           },
           "proveedor_tipo": {
             "type": "string",
@@ -349,7 +347,6 @@
           "guia",
           "order_id",
           "empresa_id",
-          "modalidad_logistica",
           "proveedor_tipo",
           "proveedor_tenant_id",
           "estado",
@@ -380,13 +377,11 @@
             "description": "Empresa propietaria de las líneas despachadas",
             "format": "uuid"
           },
-          "modalidad_logistica": {
-            "type": "string",
-            "enum": [
-              "plataforma",
-              "propia",
-              "hibrida"
-            ]
+          "parte_id": {
+            "type": "object",
+            "description": "Referencia universal opcional del destinatario",
+            "format": "uuid",
+            "nullable": true
           },
           "proveedor_tipo": {
             "type": "string",
@@ -417,7 +412,6 @@
           "guia",
           "order_id",
           "empresa_id",
-          "modalidad_logistica",
           "proveedor_tipo",
           "proveedor_tenant_id",
           "estado",
@@ -456,7 +450,7 @@
             "description": "Id de la orden",
             "format": "uuid"
           },
-          "cliente_id": {
+          "comprador_id": {
             "type": "string",
             "description": "Id del comprador",
             "format": "uuid"
@@ -486,7 +480,7 @@
         },
         "required": [
           "id",
-          "cliente_id",
+          "comprador_id",
           "items",
           "total",
           "total_cents",

@@ -13,7 +13,7 @@
 import bcrypt from 'bcryptjs';
 import { ClientoHTTP, ClientoPostgres } from '../utils.js';
 
-const FIELD = '/api/v1/field';
+const FIELD = '/api/v2/field';
 
 async function sembrarUsuario(pg, correo, rol, tenantId, password = 'Field1234!') {
   const hash = bcrypt.hashSync(password, 10);
@@ -43,7 +43,7 @@ export async function suite18Field(client, cfg, adminToken, compradorToken, logi
 
   // Sembrar coordinador (rol con acceso total a field, incluídos deletes)
   await sembrarUsuario(pg, correo, 'coordinador', tenantId);
-  const login = await client.post('/api/v1/auth/login', { correo, contrasena: 'Field1234!' });
+  const login = await client.post('/api/v2/auth/login', { correo, contrasena: 'Field1234!' });
   if (login.status !== 200 && login.status !== 201) {
     errores.push(`No se pudo autenticar usuario field: ${JSON.stringify(login.body)}`);
     return { test: 'Field Service (backend móvil)', pass: false, errores, resultados, timestamp: new Date().toISOString() };
@@ -53,10 +53,10 @@ export async function suite18Field(client, cfg, adminToken, compradorToken, logi
 
   // Usuario comprador propio (fresco, evita token nulo por rate-limit del runner)
   const compCorreo = `comprador.qa.${suf}@test.com`;
-  const regC = await client.post('/api/v1/auth/registro', { nombre: 'Comprador QA', correo: compCorreo, contrasena: 'Contrasena123!', rol: 'comprador' });
+  const regC = await client.post('/api/v2/auth/registro', { nombre: 'Comprador QA', correo: compCorreo, contrasena: 'Contrasena123!', rol: 'comprador' });
   let compToken = regC.body?.access_token;
   if (!compToken) {
-    const lc = await client.post('/api/v1/auth/login', { correo: compCorreo, contrasena: 'Contrasena123!' });
+    const lc = await client.post('/api/v2/auth/login', { correo: compCorreo, contrasena: 'Contrasena123!' });
     compToken = lc.body?.access_token;
   }
   const authC = { authorization: `Bearer ${compToken}` };

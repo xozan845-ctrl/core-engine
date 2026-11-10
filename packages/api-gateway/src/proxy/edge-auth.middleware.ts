@@ -30,7 +30,7 @@ export interface OpcionesEdge {
 const RUTAS_DIAGNOSTICO = [/^\/docs(-|\/|$)/, /^\/metrics$/];
 
 // Imágenes de producto: públicas por diseño (ADR-28), incluso en staging.
-const RUTAS_ESTATICAS = [/^\/api\/v1\/storage\/public\/objetos\/[^/]+$/];
+const RUTAS_ESTATICAS = [/^\/api\/v2\/storage\/public\/objetos\/[^/]+$/];
 
 /** Comparacion en tiempo constante para no filtrar la credencial por prefijo. */
 function iguales(a: string, b: string): boolean {

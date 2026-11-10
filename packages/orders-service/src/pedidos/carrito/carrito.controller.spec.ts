@@ -19,7 +19,7 @@ function fabricar(): { carritos: Record<string, Mock>; controller: CarritoContro
   return { carritos, controller };
 }
 
-describe('CarritoController (api/v1/carrito, RN-05, R-U-10/11)', () => {
+describe('CarritoController (api/v2/carrito, RN-05, R-U-10/11)', () => {
   it('debe ver el carrito del comprador autenticado', async () => {
     const { carritos, controller } = fabricar();
     carritos.obtener.mockResolvedValue(carrito);

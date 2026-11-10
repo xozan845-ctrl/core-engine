@@ -6,7 +6,6 @@ const empresa = {
   id: 'e-1',
   nombre: 'Acme',
   slug: 'acme',
-  modalidad_logistica: 'hibrida' as const,
   estado: 'activa',
   creado_por: 'u-1',
   creado_en: '2026-10-23T00:00:00.000Z',
@@ -51,7 +50,7 @@ describe('EmpresasService', () => {
       const pg = { transaccion: vi.fn(async (fn: (c: typeof client) => unknown) => fn(client)) };
       const servicio = new EmpresasService(pg as never, {} as never);
 
-      await expect(servicio.crear('u-1', '  Acme  ', 'hibrida')).resolves.toEqual(empresa);
+      await expect(servicio.crear('u-1', '  Acme  ')).resolves.toEqual(empresa);
 
       expect(client.query).toHaveBeenNthCalledWith(
         1,
@@ -61,9 +60,9 @@ describe('EmpresasService', () => {
       expect(client.query).toHaveBeenNthCalledWith(
         2,
         expect.stringContaining('INSERT INTO identity.empresas'),
-        expect.arrayContaining(['Acme', 'acme', 'hibrida', 'u-1']),
+        expect.arrayContaining(['Acme', 'acme', 'retail', 'pack_retail', 1, 'u-1']),
       );
-      expect(client.query).toHaveBeenCalledTimes(5);
+      expect(client.query).toHaveBeenCalledTimes(7);
     });
 
     it('debe aplicar el pack seleccionado y sus capacidades al crear el tenant', async () => {
@@ -79,11 +78,11 @@ describe('EmpresasService', () => {
       const pg = { transaccion: vi.fn(async (fn: (c: typeof client) => unknown) => fn(client)) };
       const servicio = new EmpresasService(pg as never, {} as never);
 
-      await servicio.crear('u-1', 'Salon Acme', null, undefined, undefined, undefined, undefined, 'pack_belleza');
+      await servicio.crear('u-1', 'Salon Acme', undefined, undefined, undefined, 'pack_belleza');
 
       expect(client.query).toHaveBeenNthCalledWith(1, expect.stringContaining('FROM identity.packs'), ['pack_belleza']);
-      expect(client.query).toHaveBeenNthCalledWith(3, expect.stringContaining('pack_codigo, pack_version'), expect.arrayContaining(['Salon Acme', 'salon-acme', null, 'belleza', 'pack_belleza', 1]));
-      expect(client.query).toHaveBeenNthCalledWith(5, expect.stringContaining('FROM identity.pack_capacidades'), [empresa.id, 'pack_belleza', 1]);
+      expect(client.query).toHaveBeenNthCalledWith(3, expect.stringContaining('pack_codigo, pack_version'), expect.arrayContaining(['Salon Acme', 'salon-acme', 'belleza', 'pack_belleza', 1]));
+      expect(client.query).toHaveBeenNthCalledWith(7, expect.stringContaining('FROM identity.pack_capacidades'), [empresa.id, 'pack_belleza', 1]);
     });
 
     it('debe rechazar un pack que no corresponde a la vertical solicitada', async () => {
@@ -91,7 +90,7 @@ describe('EmpresasService', () => {
       const pg = { transaccion: vi.fn(async (fn: (c: typeof client) => unknown) => fn(client)) };
       const servicio = new EmpresasService(pg as never, {} as never);
 
-      await expect(servicio.crear('u-1', 'Acme', null, undefined, undefined, undefined, 'retail', 'pack_belleza')).rejects.toThrow('vertical solicitada');
+      await expect(servicio.crear('u-1', 'Acme', undefined, undefined, 'retail', 'pack_belleza')).rejects.toThrow('vertical solicitada');
     });
 
     it('resuelve una colisión de slug automático con sufijo -2', async () => {
@@ -107,13 +106,13 @@ describe('EmpresasService', () => {
       const pg = { transaccion: vi.fn(async (fn: (c: typeof client) => unknown) => fn(client)) };
       const servicio = new EmpresasService(pg as never, {} as never);
 
-      await servicio.crear('u-1', 'Acme', 'hibrida');
+      await servicio.crear('u-1', 'Acme');
 
       expect(client.query).toHaveBeenNthCalledWith(2, expect.any(String), ['acme-2']);
       expect(client.query).toHaveBeenNthCalledWith(
         3,
         expect.stringContaining('INSERT INTO identity.empresas'),
-        expect.arrayContaining(['Acme', 'acme-2', 'hibrida', 'u-1']),
+        expect.arrayContaining(['Acme', 'acme-2', 'retail', 'pack_retail', 1, 'u-1']),
       );
     });
 
@@ -129,13 +128,13 @@ describe('EmpresasService', () => {
       const pg = { transaccion: vi.fn(async (fn: (c: typeof client) => unknown) => fn(client)) };
       const servicio = new EmpresasService(pg as never, {} as never);
 
-      await servicio.crear('u-1', 'Acme', 'hibrida', '  Mi Empresa  ');
+      await servicio.crear('u-1', 'Acme', '  Mi Empresa  ');
 
       expect(client.query).toHaveBeenNthCalledWith(1, expect.any(String), ['mi-empresa']);
       expect(client.query).toHaveBeenNthCalledWith(
         2,
         expect.stringContaining('INSERT INTO identity.empresas'),
-        expect.arrayContaining(['Acme', 'mi-empresa', 'hibrida', 'u-1']),
+        expect.arrayContaining(['Acme', 'mi-empresa', 'retail', 'pack_retail', 1, 'u-1']),
       );
     });
 
@@ -144,7 +143,7 @@ describe('EmpresasService', () => {
       const pg = { transaccion: vi.fn(async (fn: (c: typeof client) => unknown) => fn(client)) };
       const servicio = new EmpresasService(pg as never, {} as never);
 
-      await expect(servicio.crear('u-1', 'Acme', 'hibrida', 'acme')).rejects.toBeInstanceOf(
+      await expect(servicio.crear('u-1', 'Acme', 'acme')).rejects.toBeInstanceOf(
         ConflictError,
       );
       expect(client.query).toHaveBeenCalledTimes(1);
@@ -159,7 +158,7 @@ describe('EmpresasService', () => {
       };
       const servicio = new EmpresasService(pg as never, {} as never);
 
-      await expect(servicio.crear('u-1', 'Acme', 'hibrida')).resolves.toEqual(empresa);
+      await expect(servicio.crear('u-1', 'Acme')).resolves.toEqual(empresa);
       expect(pg.transaccion).toHaveBeenCalledTimes(2);
     });
 
@@ -167,7 +166,7 @@ describe('EmpresasService', () => {
       const pg = { transaccion: vi.fn().mockRejectedValue({ code: '23505' }) };
       const servicio = new EmpresasService(pg as never, {} as never);
 
-      await expect(servicio.crear('u-1', 'Acme', 'hibrida', 'acme')).rejects.toBeInstanceOf(
+      await expect(servicio.crear('u-1', 'Acme', 'acme')).rejects.toBeInstanceOf(
         ConflictError,
       );
     });
@@ -187,7 +186,7 @@ describe('EmpresasService', () => {
       const pg = { transaccion: vi.fn(async (fn: (c: typeof client) => unknown) => fn(client)) };
       const servicio = new EmpresasService(pg as never, {} as never);
 
-      await expect(servicio.crear('u-1', 'Acme', 'hibrida')).resolves.toEqual(empresa);
+      await expect(servicio.crear('u-1', 'Acme')).resolves.toEqual(empresa);
 
       const insert = client.query.mock.calls.find(([sql]) => String(sql).includes('INSERT INTO identity.empresas'));
       expect(insert?.[1]?.[1]).toMatch(/^acme-[a-z0-9]+$/);
@@ -221,31 +220,6 @@ describe('EmpresasService', () => {
     expect(usuarios.crearVendedorEnEmpresa).not.toHaveBeenCalled();
   });
 
-  it('actualiza la modalidad cuando el actor es empresario activo', async () => {
-    const actualizada = { ...empresa, modalidad_logistica: 'propia' };
-    const pg = { queryOne: vi.fn().mockResolvedValueOnce({ ok: 1 }).mockResolvedValueOnce(actualizada) };
-    const servicio = new EmpresasService(pg as never, {} as never);
-
-    await expect(servicio.actualizarModalidad('u-1', 'e-1', 'propia')).resolves.toEqual(actualizada);
-    expect(pg.queryOne).toHaveBeenNthCalledWith(
-      2, expect.stringContaining('UPDATE identity.empresas'), ['propia', 'e-1'],
-    );
-  });
-
-  it('rechaza a quien no es empresario activo de la empresa', async () => {
-    const pg = { queryOne: vi.fn().mockResolvedValue(null) };
-    const servicio = new EmpresasService(pg as never, {} as never);
-    await expect(servicio.actualizarModalidad('u-x', 'e-1', 'hibrida'))
-      .rejects.toBeInstanceOf(ForbiddenError);
-  });
-
-  it('no modifica una empresa inactiva o inexistente', async () => {
-    const pg = { queryOne: vi.fn().mockResolvedValueOnce({ ok: 1 }).mockResolvedValueOnce(null) };
-    const servicio = new EmpresasService(pg as never, {} as never);
-    await expect(servicio.actualizarModalidad('u-1', 'e-1', 'plataforma'))
-      .rejects.toBeInstanceOf(NotFoundError);
-  });
-
   describe('resolverPara (UUID o slug, ADR-26)', () => {
     it('resuelve un UUID como administrador global sin consultar membresía', async () => {
       const pg = { queryOne: vi.fn().mockResolvedValue({ ...empresa, es_actual: true }) };
@@ -277,7 +251,7 @@ describe('EmpresasService', () => {
 
       await expect(servicio.resolverPara('u-1', 'acme-vieja', false)).resolves.toMatchObject({
         empresa: { ...empresa, slug: 'acme-nueva' },
-        redirigirA: '/api/v1/empresas/acme-nueva',
+        redirigirA: '/api/v2/empresas/acme-nueva',
       });
     });
 
@@ -471,7 +445,7 @@ describe('EmpresasService · perfil y logo', () => {
       logo_objeto_id: logoId,
     });
 
-    expect(resultado.logo_url).toBe(`/api/v1/storage/public/objetos/${logoId}`);
+    expect(resultado.logo_url).toBe(`/api/v2/storage/public/objetos/${logoId}`);
     // R-RB-4: la validación interna lleva timeout explícito.
     expect(fetchMock).toHaveBeenCalledWith(
       expect.stringContaining(`/internal/storage/objetos/${logoId}`),
@@ -583,8 +557,8 @@ describe('EmpresasService · perfil y logo', () => {
     expect(fetchMock.mock.calls[1][0]).toContain(`/internal/storage/objetos/${posterId}`);
     expect(resultado).toMatchObject({
       background_media_type: 'video',
-      background_url: `/api/v1/storage/public/objetos/${fondoId}`,
-      background_poster_url: `/api/v1/storage/public/objetos/${posterId}`,
+      background_url: `/api/v2/storage/public/objetos/${fondoId}`,
+      background_poster_url: `/api/v2/storage/public/objetos/${posterId}`,
       background_activo: true,
     });
     expect(pg.queryOne).toHaveBeenLastCalledWith(
@@ -744,95 +718,5 @@ describe('EmpresasService · perfil y logo', () => {
     await expect(
       crearServicio().actualizarPerfil('u-1', 'e-1', { logo_objeto_id: logoId }),
     ).rejects.toMatchObject({ codigo: 'LOGO_NO_VERIFICABLE' });
-  });
-});
-
-describe('EmpresasService · tipo de empresa', () => {
-  it('permite al empresario miembro cambiar el tipo', async () => {
-    const pg = {
-      queryOne: vi.fn()
-        .mockResolvedValueOnce({ ok: 1 })
-        .mockResolvedValueOnce({ ...empresa, tipo_empresa: 'logistica' }),
-    };
-    const servicio = new EmpresasService(pg as never, {} as never);
-    await expect(
-      servicio.actualizarTipo('e-1', 'logistica', 'u-1'),
-    ).resolves.toMatchObject({ tipo_empresa: 'logistica' });
-    expect(pg.queryOne).toHaveBeenNthCalledWith(
-      1,
-      expect.stringContaining('empresa_miembros'),
-      ['e-1', 'u-1'],
-    );
-  });
-
-  it('rechaza a un empresario que no pertenece a la empresa', async () => {
-    const pg = { queryOne: vi.fn().mockResolvedValueOnce(null) };
-    const servicio = new EmpresasService(pg as never, {} as never);
-    await expect(
-      servicio.actualizarTipo('e-1', 'logistica', 'u-2'),
-    ).rejects.toBeInstanceOf(ForbiddenError);
-  });
-
-  it('permite al admin global cambiar cualquier tipo y valida el enum', async () => {
-    const pg = {
-      queryOne: vi.fn().mockResolvedValueOnce({ ...empresa, tipo_empresa: 'plataforma' }),
-    };
-    const servicio = new EmpresasService(pg as never, {} as never);
-    await expect(
-      servicio.actualizarTipo('e-1', 'plataforma', 'admin-1', true),
-    ).resolves.toMatchObject({ tipo_empresa: 'plataforma' });
-    expect(pg.queryOne).toHaveBeenCalledTimes(1);
-
-    await expect(
-      servicio.actualizarTipo('e-1', 'otro' as never, 'admin-1', true),
-    ).rejects.toMatchObject({ codigo: 'TIPO_EMPRESA_INVALIDO' });
-  });
-});
-
-describe('EmpresasService · herencia de tema (ADR-42)', () => {
-  it('guarda overrides de tema y resuelve la herencia de la empresa', async () => {
-    const conOverrides = {
-      ...empresa,
-      plantilla_override: 'boutique',
-      tema_override: { color_primario: '#111111' },
-    };
-    const pg = {
-      queryOne: vi.fn()
-        .mockResolvedValueOnce({ ...conOverrides, es_actual: true })
-        .mockResolvedValueOnce({ ok: 1 })
-        .mockResolvedValueOnce({
-          ...conOverrides,
-          tema_override: { color_primario: '#AABBCC' },
-        }),
-    };
-    const servicio = new EmpresasService(pg as never, {} as never);
-
-    const resultado = await servicio.actualizarPerfil('u-1', 'e-1', {
-      tema: { color_primario: '#aabbcc' },
-    });
-
-    expect(resultado).toMatchObject({
-      plantilla: 'boutique',
-      tema: { color_primario: '#AABBCC' },
-      origen_personalizacion: { plantilla: 'empresa', tema: 'empresa' },
-    });
-    const [, params] = pg.queryOne.mock.calls[2];
-    expect(params).toContain('boutique');
-    expect(params).toContain('{"color_primario":"#AABBCC"}');
-  });
-
-  it('expone los overrides crudos para stores', async () => {
-    const pg = {
-      queryOne: vi.fn().mockResolvedValue({
-        plantilla_override: 'minimal',
-        tema_override: { fuente: 'inter' },
-      }),
-    };
-    const servicio = new EmpresasService(pg as never, {} as never);
-
-    await expect(servicio.obtenerTemaOverrides('e-1')).resolves.toEqual({
-      plantilla_override: 'minimal',
-      tema_override: { fuente: 'inter' },
-    });
   });
 });

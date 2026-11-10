@@ -12,7 +12,7 @@ function fabricar(): { facturacion: Record<string, Mock>; controller: Facturacio
   return { facturacion, controller };
 }
 
-describe('FacturacionController (api/v1/finanzas/comprobantes, Ley 822, R-U-10/11)', () => {
+describe('FacturacionController (api/v2/finanzas/comprobantes, Ley 822, R-U-10/11)', () => {
   it('debe listar comprobantes con rango y estado', async () => {
     const { facturacion, controller } = fabricar();
     facturacion.listar.mockResolvedValue([comprobante]);
@@ -32,7 +32,6 @@ describe('FacturacionController (api/v1/finanzas/comprobantes, Ley 822, R-U-10/1
     const dto = { tipo: 'FACTURA', orden_id: 'o-1', razon_social: 'ACME', ruc: 'J0310000' };
     await expect(controller.emitir(dto as never)).resolves.toEqual(comprobante);
     expect(facturacion.emitir).toHaveBeenCalledWith('FACTURA', 'o-1', {
-      cliente_id: undefined,
       razon_social: 'ACME',
       ruc: 'J0310000',
     });

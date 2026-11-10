@@ -185,7 +185,7 @@ describe('personalización de tienda (ADR-39)', () => {
       expect(
         conSeoImagenUrl({ ...personalizacionDe(null), seo_imagen_objeto_id: IMAGEN })
           .seo_imagen_url,
-      ).toBe(`/api/v1/storage/public/objetos/${IMAGEN}`);
+      ).toBe(`/api/v2/storage/public/objetos/${IMAGEN}`);
       expect(conSeoImagenUrl(personalizacionDe(null)).seo_imagen_url).toBeNull();
     });
   });

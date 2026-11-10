@@ -1,6 +1,6 @@
 import { Injectable, OnModuleDestroy, OnModuleInit, Optional } from '@nestjs/common';
 import * as amqp from 'amqplib';
-import type { ChannelModel, ConfirmChannel } from 'amqplib';
+import type { ChannelModel, ConfirmChannel, ConsumeMessage, GetMessage } from 'amqplib';
 import { Logger } from '../logging/logger';
 import {
   ColaConfig,
@@ -15,6 +15,9 @@ export interface ColaConNombre extends ColaConfig {
   nombre: string;
 }
 
+const RECONEXION_BASE_MS = 1_000;
+const RECONEXION_MAX_MS = 30_000;
+
 /**
  * Cliente RabbitMQ: declara el exchange topic de eventos, la DLQ y las colas
  * que este servicio consume (con dead-letter hacia la DLQ, AD-04).
@@ -26,6 +29,9 @@ export class RabbitService implements OnModuleInit, OnModuleDestroy {
   private readonly logger = Logger.create('rabbitmq');
   private colasDeclaradas = new Set<string>();
   private timerReintento?: NodeJS.Timeout;
+  private timerReconexion?: NodeJS.Timeout;
+  private intentosReconexion = 0;
+  private detenido = false;
 
   constructor(@Optional() private readonly url?: string) {
     this.url = this.url ?? process.env.RABBITMQ_URL ?? '';
@@ -36,16 +42,29 @@ export class RabbitService implements OnModuleInit, OnModuleDestroy {
   }
 
   async onModuleDestroy(): Promise<void> {
-    if (this.timerReintento) clearInterval(this.timerReintento);
+    this.detenido = true;
+    if (this.timerReintento) {
+      clearInterval(this.timerReintento);
+      this.timerReintento = undefined;
+    }
+    if (this.timerReconexion) {
+      clearTimeout(this.timerReconexion);
+      this.timerReconexion = undefined;
+    }
+    const canal = this.canal;
+    const conexion = this.conexion;
+    this.canal = undefined;
+    this.conexion = undefined;
     try {
-      if (this.canal) await this.canal.close();
-      if (this.conexion) await this.conexion.close();
+      if (canal) await canal.close();
+      if (conexion) await conexion.close();
     } catch {
       /* cierre en frio */
     }
   }
 
   private async conectar(): Promise<void> {
+    if (this.detenido) return;
     if (!this.url) {
       throw new Error('RABBITMQ_URL no esta definida.');
     }
@@ -55,15 +74,76 @@ export class RabbitService implements OnModuleInit, OnModuleDestroy {
     const url = /[?&]heartbeat=/.test(this.url)
       ? this.url
       : `${this.url}${this.url.includes('?') ? '&' : '?'}heartbeat=30`;
-    this.conexion = await amqp.connect(url);
-    this.conexion.on('close', () => {
-      this.logger.warn({ msg: 'Conexion al broker cerrada; reintentando en 5s' });
-      void this.conectar().catch((e) => this.logger.error({ msg: 'reconexion', err: e.message }));
-    });
-    this.canal = await this.conexion.createConfirmChannel();
-    await this.canal.assertExchange(EXCHANGE_EVENTS, 'topic', { durable: true });
-    await this.canal.assertExchange(EXCHANGE_DLQ, 'topic', { durable: true });
-    this.logger.info({ msg: 'Broker conectado', exchange: EXCHANGE_EVENTS });
+    const conexion = await amqp.connect(url);
+    if (this.detenido) {
+      try {
+        await conexion.close();
+      } catch {
+        /* conexion ya cerrada */
+      }
+      return;
+    }
+    try {
+      const canal = await conexion.createConfirmChannel();
+      await canal.assertExchange(EXCHANGE_EVENTS, 'topic', { durable: true });
+      await canal.assertExchange(EXCHANGE_DLQ, 'topic', { durable: true });
+      if (this.detenido) {
+        await conexion.close();
+        return;
+      }
+      // Los listeners se instalan despues del setup: si el arranque falla no
+      // se programa una reconexion para una conexion que nunca quedo activa.
+      conexion.on('error', (err) =>
+        this.logger.error({ msg: 'Error en conexion RabbitMQ', err: err.message }),
+      );
+      conexion.on('close', () => {
+        // Un evento 'close' tardio de una conexion vieja no debe borrar la
+        // conexion nueva que ya tomo el relevo.
+        if (this.conexion === conexion) this.alCerrarConexion();
+      });
+      this.conexion = conexion;
+      this.canal = canal;
+      this.intentosReconexion = 0;
+      this.logger.info({ msg: 'Broker conectado', exchange: EXCHANGE_EVENTS });
+    } catch (error) {
+      try {
+        await conexion.close();
+      } catch {
+        /* conexion ya cerrada */
+      }
+      throw error;
+    }
+  }
+
+  private alCerrarConexion(): void {
+    this.canal = undefined;
+    this.conexion = undefined;
+    if (this.detenido) return;
+    const espera = this.esperaReconexion();
+    this.logger.warn({ msg: 'Conexion al broker cerrada; reintentando', espera_ms: espera });
+    this.programarReconexion(espera);
+  }
+
+  private esperaReconexion(): number {
+    return Math.min(
+      RECONEXION_MAX_MS,
+      RECONEXION_BASE_MS * 2 ** Math.min(this.intentosReconexion, 5),
+    );
+  }
+
+  private programarReconexion(espera = this.esperaReconexion()): void {
+    if (this.detenido || this.timerReconexion) return;
+    this.intentosReconexion += 1;
+    this.timerReconexion = setTimeout(() => {
+      this.timerReconexion = undefined;
+      void this.conectar().catch((error) => {
+        this.logger.error({
+          msg: 'Fallo al reconectar con RabbitMQ',
+          err: error instanceof Error ? error.message : String(error),
+        });
+        this.programarReconexion();
+      });
+    }, espera);
   }
 
   private canalListo(): ConfirmChannel {
@@ -112,8 +192,20 @@ export class RabbitService implements OnModuleInit, OnModuleDestroy {
     await canal.prefetch(1);
     await canal.consume(nombreCola, async (msg) => {
       if (!msg) return;
-      const cuerpo = JSON.parse(msg.content.toString()) as EventoBus;
       const intentos = (msg.properties.headers?.['x-intentos'] ?? 0) as number;
+      let cuerpo: EventoBus;
+      try {
+        cuerpo = JSON.parse(msg.content.toString()) as EventoBus;
+      } catch (err) {
+        const errMsg = err instanceof Error ? err.message : String(err);
+        this.logger.error({
+          msg: 'Mensaje con JSON invalido; se envia a DLQ',
+          cola: nombreCola,
+          err: errMsg,
+        });
+        await this.deadLetter(canal, nombreCola, msg, REINTENTOS_MAXIMOS, `JSON invalido: ${errMsg}`, true);
+        return;
+      }
       try {
         await manejador(cuerpo);
         canal.ack(msg);
@@ -127,39 +219,63 @@ export class RabbitService implements OnModuleInit, OnModuleDestroy {
           intentos: siguiente,
           err: errMsg,
         });
-        if (siguiente <= REINTENTOS_MAXIMOS) {
-          // backoff exponencial: publicar en la cola DLQ y desde alli se reinyecta
-          canal.publish(
-            EXCHANGE_DLQ,
-            nombreCola,
-            msg.content,
-            {
-              persistent: true,
-              headers: {
-                ...msg.properties.headers,
-                'x-intentos': siguiente,
-                'x-error': errMsg,
-                'x-cola': nombreCola,
-                'x-routing-key-original': msg.fields.routingKey,
-              },
-            },
-          );
-        } else {
-          canal.publish(EXCHANGE_DLQ, nombreCola, msg.content, {
-            persistent: true,
-            headers: {
-              ...msg.properties.headers,
-              'x-intentos': siguiente,
-              'x-error': errMsg,
-              'x-cola': nombreCola,
-              'x-routing-key-original': msg.fields.routingKey,
-              'x-muerto': true,
-            },
-          });
-        }
-        canal.ack(msg);
+        await this.deadLetter(
+          canal,
+          nombreCola,
+          msg,
+          siguiente,
+          errMsg,
+          siguiente > REINTENTOS_MAXIMOS,
+        );
       }
     });
+  }
+
+  /**
+   * Publica el mensaje en la DLQ y solo entonces confirma el original. Si la
+   * publicacion no se confirma, devuelve el mensaje a su cola para no perderlo.
+   */
+  private async deadLetter(
+    canal: ConfirmChannel,
+    nombreCola: string,
+    msg: ConsumeMessage | GetMessage,
+    intentos: number,
+    error: string,
+    muerto: boolean,
+  ): Promise<void> {
+    const headers = {
+      ...msg.properties.headers,
+      'x-intentos': intentos,
+      'x-error': error,
+      'x-cola': nombreCola,
+      'x-routing-key-original': msg.fields.routingKey,
+      ...(muerto ? { 'x-muerto': true } : {}),
+    };
+    try {
+      canal.publish(EXCHANGE_DLQ, nombreCola, msg.content, {
+        persistent: true,
+        headers,
+      });
+      await canal.waitForConfirms();
+      canal.ack(msg);
+    } catch (dlqError) {
+      this.logger.error({
+        msg: 'Fallo al publicar en DLQ; se devuelve el mensaje a la cola',
+        cola: nombreCola,
+        err: dlqError instanceof Error ? dlqError.message : String(dlqError),
+      });
+      try {
+        // Los mensajes muertos no se reencolan: un mensaje corrupto que no
+        // puede llegar a la DLQ bloquearía la cola principal en bucle.
+        canal.nack(msg, false, !muerto);
+      } catch (nackError) {
+        this.logger.error({
+          msg: 'Fallo al devolver el mensaje a la cola',
+          cola: nombreCola,
+          err: nackError instanceof Error ? nackError.message : String(nackError),
+        });
+      }
+    }
   }
 
   /**
@@ -174,7 +290,6 @@ export class RabbitService implements OnModuleInit, OnModuleDestroy {
       const msg = await canal.get(dlq, { noAck: false });
       if (!msg) break;
       const intentos = (msg.properties.headers?.['x-intentos'] ?? 0) as number;
-      const espera = Math.min(30000, BACKOFF_BASE_MS * Math.pow(2, intentos));
       if (intentos >= REINTENTOS_MAXIMOS) {
         this.logger.error({
           msg: 'Mensaje descartado (muerto) tras maximos intentos',
@@ -184,26 +299,41 @@ export class RabbitService implements OnModuleInit, OnModuleDestroy {
         canal.ack(msg);
         continue;
       }
+      const espera = Math.min(30_000, BACKOFF_BASE_MS * 2 ** Math.min(intentos, 10));
+      await this.esperar(espera);
       const routingKey =
         (msg.properties.headers?.['x-routing-key-original'] as string) ?? msg.fields.routingKey;
-      setTimeout(() => {
+      try {
+        canal.publish(EXCHANGE_EVENTS, routingKey, msg.content, {
+          persistent: true,
+          headers: { ...msg.properties.headers, 'x-reintentado': true },
+        });
+        await canal.waitForConfirms();
+        canal.ack(msg);
+        reprocesados += 1;
+      } catch (error) {
+        this.logger.error({
+          msg: 'Fallo la reinyeccion desde DLQ; se conserva en la cola',
+          cola: nombreCola,
+          err: error instanceof Error ? error.message : String(error),
+        });
         try {
-          canal.publish(EXCHANGE_EVENTS, routingKey, msg.content, {
-            persistent: true,
-            headers: { ...msg.properties.headers, 'x-reintentado': true },
-          });
-        } catch (e) {
+          canal.nack(msg, false, true);
+        } catch (nackError) {
           this.logger.error({
-            msg: 'Fallo la reinyeccion desde DLQ',
+            msg: 'Fallo al devolver el mensaje de DLQ',
             cola: nombreCola,
-            err: e instanceof Error ? e.message : String(e),
+            err: nackError instanceof Error ? nackError.message : String(nackError),
           });
         }
-      }, espera);
-      canal.ack(msg);
-      reprocesados += 1;
+        break;
+      }
     }
     return reprocesados;
+  }
+
+  private esperar(ms: number): Promise<void> {
+    return new Promise((resolve) => setTimeout(resolve, ms));
   }
 
   /**

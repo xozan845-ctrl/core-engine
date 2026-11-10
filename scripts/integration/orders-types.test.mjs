@@ -11,7 +11,9 @@ if (databaseUrl.pathname !== '/core_engine_test' || !['localhost', '127.0.0.1'].
   throw new Error('La suite solo acepta core_engine_test en localhost');
 }
 
-const MIGRACIONES = ['01_esquemas.sql', '01d_es_orders.sql', '27_orders_types.sql'];
+const MIGRACIONES = ['01_esquemas.sql', '01d_es_orders.sql', '27_orders_types.sql', '45_hardening.sql', '46_commission_payload.sql',
+  '47_orders_comprador_sin_comisiones.sql',
+];
 let client;
 
 before(async () => {
@@ -44,7 +46,7 @@ test('proyecta tipo de orden y fulfillment por línea sin romper compras legacy'
   const creadoEn = new Date().toISOString();
   const payload = {
     order_id: orderId,
-    cliente_id: compradorId,
+    comprador_id: compradorId,
     tipo_orden: 'orden_servicio',
     fulfillment_config: { por_linea: [{ oferta_id: 'of-1', fulfillment: 'onsite' }] },
     items: [{

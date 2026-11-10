@@ -6,14 +6,14 @@ import { KpisService } from './kpis.service';
 import { VendedorFiscalResponseDto } from './finanzas.response.dto';
 
 /**
- * GET /api/v1/vendedores/me/fiscal — situacion tributaria del vendedor:
+ * GET /api/v2/vendedores/me/fiscal — situacion tributaria del vendedor:
  * su regimen (Cuota Fija o General) y las comisiones documentadas para su
  * declaracion (cap. 4.4: "la plataforma documenta comisiones para su
  * declaracion"). Solo lectura para el vendedor (matriz RLS, tabla 8.15).
  */
 @ApiTags('Finanzas · Vendedor')
 @ApiBearerAuth()
-@Controller('api/v1/vendedores')
+@Controller('api/v2/vendedores')
 @Roles(ROLES.VENDEDOR)
 export class VendedorFiscalController {
   constructor(

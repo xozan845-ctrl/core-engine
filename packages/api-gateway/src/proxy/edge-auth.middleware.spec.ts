@@ -144,7 +144,7 @@ describe('edgeAuth (endurecimiento del borde: gate de entornos y diagnostico)', 
     it('debe exigir credencial y anunciarla con WWW-Authenticate', () => {
       const next = vi.fn();
       const res = crearRes();
-      edgeAuth(opciones)(crearReq('/api/v1/orders') as never, res as never, next);
+      edgeAuth(opciones)(crearReq('/api/v2/orders') as never, res as never, next);
       expect(next).not.toHaveBeenCalled();
       expect(res.statusCode).toBe(401);
       expect(res.headers['WWW-Authenticate']).toContain('Basic');
@@ -155,7 +155,7 @@ describe('edgeAuth (endurecimiento del borde: gate de entornos y diagnostico)', 
       const next = vi.fn();
       const res = crearRes();
       edgeAuth(opciones)(
-        crearReq('/api/v1/orders', { headers: { authorization: basic('stage:otra') } }) as never,
+        crearReq('/api/v2/orders', { headers: { authorization: basic('stage:otra') } }) as never,
         res as never,
         next,
       );
@@ -166,7 +166,7 @@ describe('edgeAuth (endurecimiento del borde: gate de entornos y diagnostico)', 
     it('debe permitir el paso con la credencial correcta', () => {
       const next = vi.fn();
       edgeAuth(opciones)(
-        crearReq('/api/v1/orders', {
+        crearReq('/api/v2/orders', {
           headers: { authorization: basic('stage:secreto-e2e') },
         }) as never,
         crearRes() as never,
@@ -179,7 +179,7 @@ describe('edgeAuth (endurecimiento del borde: gate de entornos y diagnostico)', 
       const next = vi.fn();
       const res = crearRes();
       edgeAuth(opciones)(
-        crearReq('/api/v1/orders', { headers: { authorization: 'Bearer token-invalido' } }) as never,
+        crearReq('/api/v2/orders', { headers: { authorization: 'Bearer token-invalido' } }) as never,
         res as never,
         next,
       );
@@ -191,7 +191,7 @@ describe('edgeAuth (endurecimiento del borde: gate de entornos y diagnostico)', 
     it('debe aceptar un Bearer de acceso valido sin exigir Basic', () => {
       const next = vi.fn();
       edgeAuth(opciones)(
-        crearReq('/api/v1/orders', {
+        crearReq('/api/v2/orders', {
           headers: { authorization: `Bearer ${accessToken()}` },
         }) as never,
         crearRes() as never,
@@ -209,7 +209,7 @@ describe('edgeAuth (endurecimiento del borde: gate de entornos y diagnostico)', 
         '7d',
       );
       edgeAuth(opciones)(
-        crearReq('/api/v1/orders', { headers: { authorization: `Bearer ${refresh}` } }) as never,
+        crearReq('/api/v2/orders', { headers: { authorization: `Bearer ${refresh}` } }) as never,
         res as never,
         next,
       );
@@ -226,7 +226,7 @@ describe('edgeAuth (endurecimiento del borde: gate de entornos y diagnostico)', 
     it('debe dejar las imágenes públicas sin Basic (ADR-28)', () => {
       const next = vi.fn();
       edgeAuth(opciones)(
-        crearReq('/api/v1/storage/public/objetos/22222222-2222-4222-8222-222222222222') as never,
+        crearReq('/api/v2/storage/public/objetos/22222222-2222-4222-8222-222222222222') as never,
         crearRes() as never,
         next,
       );

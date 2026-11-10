@@ -24,7 +24,7 @@ function fabricar(): { contabilidad: Record<string, Mock>; controller: Contabili
   return { contabilidad, controller };
 }
 
-describe('ContabilidadController (api/v1/finanzas, partida doble, R-U-10/11)', () => {
+describe('ContabilidadController (api/v2/finanzas, partida doble, R-U-10/11)', () => {
   it('debe devolver el plan de cuentas', async () => {
     const { contabilidad, controller } = fabricar();
     contabilidad.planDeCuentas.mockResolvedValue([cuenta]);

@@ -76,7 +76,7 @@ export class Runner {
   /** Login con reintento ante 429 (gateway: 10 /auth/login por minuto por IP). */
   async loginConReintento(correo, pass) {
     for (let i = 0; i < 4; i++) {
-      const r = await this.client.post('/api/v1/auth/login', { correo, contrasena: pass });
+      const r = await this.client.post('/api/v2/auth/login', { correo, contrasena: pass });
       if (r.status === 200 || r.status === 201) return r;
       if (r.status === 429) {
         const ra = Number(r.body?.detalles?.reintente_en_seg) || 65;
@@ -85,7 +85,7 @@ export class Runner {
       }
       return r;
     }
-    return this.client.post('/api/v1/auth/login', { correo, contrasena: pass });
+    return this.client.post('/api/v2/auth/login', { correo, contrasena: pass });
   }
 
   async loginUsers() {
@@ -96,7 +96,7 @@ export class Runner {
     }
 
     // Crear y login vendedor
-    const regV = await this.client.post('/api/v1/auth/registro', {
+    const regV = await this.client.post('/api/v2/auth/registro', {
       nombre: 'Vendedor QA',
       correo: 'vendedor.qa@test.com',
       contrasena: 'Contrasena123!',
@@ -112,7 +112,7 @@ export class Runner {
     }
 
     // Crear y login comprador
-    const regC = await this.client.post('/api/v1/auth/registro', {
+    const regC = await this.client.post('/api/v2/auth/registro', {
       nombre: 'Comprador QA',
       correo: 'comprador.qa@test.com',
       contrasena: 'Contrasena123!',
@@ -232,15 +232,21 @@ export class Runner {
     try {
       const result = await fn();
       const duration = Date.now() - start;
-      const passedTests = result.resultados ? result.resultados.filter(r => r.pass).length : 0;
-      const totalTests = result.resultados ? result.resultados.length : 0;
-      const pass = passedTests > 0;
-      this.report.addSuiteResult(name, { 
-        ...result, 
-        duration, 
-        tests: totalTests, 
-        pasos: passedTests, 
-        fallos: totalTests - passedTests 
+      const resultados = Array.isArray(result.resultados) ? result.resultados : [];
+      const passedTests = resultados.filter((r) => r.pass).length;
+      const totalTests = resultados.length;
+      // Una suite que devuelve `pass:false` sin resultados (p. ej. falta de
+      // token) NO puede contarse como verde: antes daba 0 tests y 0 fallos.
+      const declaredFail = result.pass === false || Boolean(result.error);
+      const pass = !declaredFail && (totalTests === 0 ? result.pass !== false : passedTests === totalTests);
+      const fallos = totalTests === 0 ? (pass ? 0 : 1) : totalTests - passedTests;
+      this.report.addSuiteResult(name, {
+        ...result,
+        pass,
+        duration,
+        tests: totalTests,
+        pasos: passedTests,
+        fallos,
       });
       console.log(`   ${pass ? '✅' : '❌'} ${name} (${duration}ms) - ${passedTests}/${totalTests} tests passed`);
     } catch (e) {

@@ -2,7 +2,7 @@
   "openapi": "3.0.0",
   "info": {
     "title": "Core Engine · identity-service · API pública",
-    "description": "Contrato público (/api/v1/**) de identity-service. No contiene rutas /internal/**.",
+    "description": "Contrato público (/api/v2/**) de identity-service. No contiene rutas /internal/**.",
     "version": "v1",
     "contact": {}
   },
@@ -10,7 +10,7 @@
   "x-superficie": "publica",
   "tags": [],
   "paths": {
-    "/api/v1/auth/registro": {
+    "/api/v2/auth/registro": {
       "post": {
         "operationId": "AuthController_registrar",
         "parameters": [],
@@ -42,7 +42,7 @@
         ]
       }
     },
-    "/api/v1/auth/login": {
+    "/api/v2/auth/login": {
       "post": {
         "operationId": "AuthController_login",
         "parameters": [],
@@ -77,7 +77,7 @@
         ]
       }
     },
-    "/api/v1/auth/refresh": {
+    "/api/v2/auth/refresh": {
       "post": {
         "operationId": "AuthController_refresh",
         "parameters": [],
@@ -117,7 +117,7 @@
         ]
       }
     },
-    "/api/v1/auth/logout": {
+    "/api/v2/auth/logout": {
       "post": {
         "operationId": "AuthController_logout",
         "parameters": [],
@@ -154,7 +154,7 @@
         ]
       }
     },
-    "/api/v1/auth/crear-usuario": {
+    "/api/v2/auth/crear-usuario": {
       "post": {
         "operationId": "AuthController_crearUsuario",
         "parameters": [],
@@ -194,7 +194,7 @@
         ]
       }
     },
-    "/api/v1/auth/cambiar-contrasena": {
+    "/api/v2/auth/cambiar-contrasena": {
       "post": {
         "operationId": "AuthController_cambiarContrasena",
         "parameters": [],
@@ -231,7 +231,7 @@
         ]
       }
     },
-    "/api/v1/auth/restablecer-contrasena": {
+    "/api/v2/auth/restablecer-contrasena": {
       "post": {
         "operationId": "AuthController_restablecerContrasena",
         "parameters": [],
@@ -263,7 +263,7 @@
         ]
       }
     },
-    "/api/v1/auth/me": {
+    "/api/v2/auth/me": {
       "get": {
         "operationId": "AuthController_yo",
         "parameters": [],
@@ -290,7 +290,7 @@
         ]
       }
     },
-    "/api/v1/auth/vincular-personal": {
+    "/api/v2/auth/vincular-personal": {
       "post": {
         "operationId": "AuthController_vincularPersonal",
         "parameters": [],
@@ -327,7 +327,7 @@
         ]
       }
     },
-    "/api/v1/usuarios": {
+    "/api/v2/usuarios": {
       "get": {
         "operationId": "UsuariosController_listar",
         "parameters": [],
@@ -357,7 +357,7 @@
         ]
       }
     },
-    "/api/v1/usuarios/{id}/avatar": {
+    "/api/v2/usuarios/{id}/avatar": {
       "patch": {
         "operationId": "UsuariosController_actualizarAvatar",
         "parameters": [
@@ -404,7 +404,7 @@
         ]
       }
     },
-    "/api/v1/usuarios/{id}": {
+    "/api/v2/usuarios/{id}": {
       "get": {
         "operationId": "UsuariosController_obtener",
         "parameters": [
@@ -444,7 +444,7 @@
         ]
       }
     },
-    "/api/v1/empresas": {
+    "/api/v2/empresas": {
       "post": {
         "operationId": "EmpresasController_crear",
         "parameters": [],
@@ -481,7 +481,7 @@
         ]
       }
     },
-    "/api/v1/empresas/{id}": {
+    "/api/v2/empresas/{id}": {
       "get": {
         "operationId": "EmpresasController_obtener",
         "parameters": [
@@ -533,7 +533,7 @@
         ]
       }
     },
-    "/api/v1/empresas/{id}/perfil": {
+    "/api/v2/empresas/{id}/perfil": {
       "patch": {
         "operationId": "EmpresasController_actualizarPerfil",
         "parameters": [
@@ -580,7 +580,7 @@
         ]
       }
     },
-    "/api/v1/empresas/{id}/slug": {
+    "/api/v2/empresas/{id}/slug": {
       "patch": {
         "operationId": "EmpresasController_actualizarSlug",
         "parameters": [
@@ -630,100 +630,7 @@
         ]
       }
     },
-    "/api/v1/empresas/{id}/logistica": {
-      "patch": {
-        "operationId": "EmpresasController_actualizarLogistica",
-        "parameters": [
-          {
-            "name": "id",
-            "required": true,
-            "in": "path",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/ActualizarModalidadLogisticaRequestDto"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "Modalidad logística actualizada",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/EmpresaResponseDto"
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "bearer": []
-          }
-        ],
-        "summary": "Cambiar la modalidad logística para envíos futuros",
-        "tags": [
-          "Empresas"
-        ]
-      }
-    },
-    "/api/v1/empresas/{id}/tipo": {
-      "patch": {
-        "operationId": "EmpresasController_actualizarTipo",
-        "parameters": [
-          {
-            "name": "id",
-            "required": true,
-            "in": "path",
-            "description": "UUID de la empresa",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/ActualizarTipoEmpresaRequestDto"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "Tipo de empresa actualizado",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/EmpresaResponseDto"
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "bearer": []
-          }
-        ],
-        "summary": "Clasificar la empresa (comercial, logística o plataforma)",
-        "tags": [
-          "Empresas"
-        ]
-      }
-    },
-    "/api/v1/empresas/{id}/vendedores": {
+    "/api/v2/empresas/{id}/vendedores": {
       "post": {
         "operationId": "EmpresasController_vendedor",
         "parameters": [
@@ -769,214 +676,7 @@
         ]
       }
     },
-    "/api/v1/empresas/{empresaId}/invitaciones/vendedores": {
-      "post": {
-        "operationId": "InvitacionesEmpresaController_crear",
-        "parameters": [
-          {
-            "name": "empresaId",
-            "required": true,
-            "in": "path",
-            "schema": {
-              "format": "uuid",
-              "type": "string"
-            }
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/CrearInvitacionRequestDto"
-              }
-            }
-          }
-        },
-        "responses": {
-          "201": {
-            "description": "Invitación generada",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/InvitacionCreadaResponseDto"
-                }
-              }
-            }
-          },
-          "409": {
-            "description": "Tienda asignada, invitación duplicada o correo ya miembro"
-          }
-        },
-        "security": [
-          {
-            "bearer": []
-          }
-        ],
-        "summary": "Generar una invitación para un futuro vendedor",
-        "tags": [
-          "Invitaciones"
-        ]
-      }
-    },
-    "/api/v1/empresas/{empresaId}/vendedores": {
-      "get": {
-        "operationId": "InvitacionesEmpresaController_listar",
-        "parameters": [
-          {
-            "name": "empresaId",
-            "required": true,
-            "in": "path",
-            "schema": {
-              "format": "uuid",
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Vendedores e invitaciones de la empresa",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ListarVendedoresResponseDto"
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "bearer": []
-          }
-        ],
-        "summary": "Listar vendedores activos e invitaciones de la empresa",
-        "tags": [
-          "Invitaciones"
-        ]
-      }
-    },
-    "/api/v1/empresas/{empresaId}/invitaciones/vendedores/{invitacionId}": {
-      "delete": {
-        "operationId": "InvitacionesEmpresaController_revocar",
-        "parameters": [
-          {
-            "name": "empresaId",
-            "required": true,
-            "in": "path",
-            "schema": {
-              "format": "uuid",
-              "type": "string"
-            }
-          },
-          {
-            "name": "invitacionId",
-            "required": true,
-            "in": "path",
-            "schema": {
-              "format": "uuid",
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Invitación revocada"
-          }
-        },
-        "security": [
-          {
-            "bearer": []
-          }
-        ],
-        "summary": "Revocar una invitación pendiente",
-        "tags": [
-          "Invitaciones"
-        ]
-      }
-    },
-    "/api/v1/invitaciones/vendedores/{token}": {
-      "get": {
-        "operationId": "InvitacionesPublicasController_consultar",
-        "parameters": [
-          {
-            "name": "token",
-            "required": true,
-            "in": "path",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Invitación válida",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/InvitacionPublicaResponseDto"
-                }
-              }
-            }
-          },
-          "410": {
-            "description": "Invitación inexistente, expirada o utilizada"
-          }
-        },
-        "summary": "Consultar una invitación por token (público)",
-        "tags": [
-          "Invitaciones"
-        ]
-      }
-    },
-    "/api/v1/invitaciones/vendedores/{token}/aceptar": {
-      "post": {
-        "operationId": "InvitacionesPublicasController_aceptar",
-        "parameters": [
-          {
-            "name": "token",
-            "required": true,
-            "in": "path",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/AceptarInvitacionRequestDto"
-              }
-            }
-          }
-        },
-        "responses": {
-          "201": {
-            "description": "Vendedor creado y sesión iniciada",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/AceptarInvitacionResponseDto"
-                }
-              }
-            }
-          },
-          "409": {
-            "description": "El correo ya tiene una cuenta o la tienda ya fue asignada"
-          },
-          "410": {
-            "description": "Invitación inexistente, expirada o utilizada"
-          }
-        },
-        "summary": "Aceptar una invitación y crear la cuenta del vendedor (público)",
-        "tags": [
-          "Invitaciones"
-        ]
-      }
-    },
-    "/api/v1/configuracion/sitio": {
+    "/api/v2/configuracion/sitio": {
       "get": {
         "operationId": "ConfiguracionSitioController_obtener",
         "parameters": [],
@@ -1033,7 +733,7 @@
         ]
       }
     },
-    "/api/v1/empresas/{empresaId}/capacidades": {
+    "/api/v2/empresas/{empresaId}/capacidades": {
       "get": {
         "operationId": "CapacidadesController_listar",
         "parameters": [
@@ -1073,7 +773,7 @@
         ]
       }
     },
-    "/api/v1/empresas/{empresaId}/capacidades/{capacidad}": {
+    "/api/v2/empresas/{empresaId}/capacidades/{capacidad}": {
       "patch": {
         "operationId": "CapacidadesController_actualizar",
         "parameters": [
@@ -1129,7 +829,7 @@
         ]
       }
     },
-    "/api/v1/packs": {
+    "/api/v2/packs": {
       "get": {
         "operationId": "PacksController_listar",
         "parameters": [
@@ -1137,15 +837,9 @@
             "name": "vertical_id",
             "required": false,
             "in": "query",
+            "description": "Código dinámico de la vertical",
             "schema": {
-              "type": "string",
-              "enum": [
-                "retail",
-                "farmacia",
-                "belleza",
-                "dental",
-                "flota"
-              ]
+              "type": "string"
             }
           }
         ],
@@ -1173,9 +867,174 @@
         "tags": [
           "Packs"
         ]
+      },
+      "post": {
+        "operationId": "PacksController_crear",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CrearPackRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PackResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Crear una plantilla de pack con modelos y capacidades",
+        "tags": [
+          "Packs"
+        ]
       }
     },
-    "/api/v1/packs/{codigo}/{version}": {
+    "/api/v2/packs/modelos-operacion": {
+      "get": {
+        "operationId": "PacksController_listarModelos",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ModeloOperacionResponseDto"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Listar modelos operativos disponibles para construir packs",
+        "tags": [
+          "Packs"
+        ]
+      },
+      "post": {
+        "operationId": "PacksController_crearModelo",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CrearModeloOperacionRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ModeloOperacionResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Registrar un modelo operativo reutilizable",
+        "tags": [
+          "Packs"
+        ]
+      }
+    },
+    "/api/v2/packs/verticales": {
+      "get": {
+        "operationId": "PacksController_listarVerticales",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/VerticalOperacionResponseDto"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Listar verticales configurables disponibles",
+        "tags": [
+          "Packs"
+        ]
+      },
+      "post": {
+        "operationId": "PacksController_crearVertical",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CrearVerticalRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VerticalOperacionResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Registrar una vertical operativa sin crear un microservicio",
+        "tags": [
+          "Packs"
+        ]
+      }
+    },
+    "/api/v2/packs/{codigo}/{version}": {
       "get": {
         "operationId": "PacksController_obtener",
         "parameters": [
@@ -1220,6 +1079,1661 @@
           "Packs"
         ]
       }
+    },
+    "/api/v2/empresas/{empresaId}/extensiones": {
+      "get": {
+        "operationId": "ExtensionesController_listar",
+        "parameters": [
+          {
+            "name": "empresaId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ExtensionResponseDto"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Listar extensiones configurables de una empresa",
+        "tags": [
+          "Extensiones configurables"
+        ]
+      },
+      "post": {
+        "operationId": "ExtensionesController_crear",
+        "parameters": [
+          {
+            "name": "empresaId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CrearExtensionRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExtensionResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Crear una extensión o una nueva versión",
+        "tags": [
+          "Extensiones configurables"
+        ]
+      }
+    },
+    "/api/v2/empresas/{empresaId}/extensiones/{codigo}": {
+      "patch": {
+        "operationId": "ExtensionesController_cambiarEstado",
+        "parameters": [
+          {
+            "name": "empresaId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "name": "codigo",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ActualizarExtensionRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExtensionResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Activar o desactivar la versión vigente de una extensión",
+        "tags": [
+          "Extensiones configurables"
+        ]
+      }
+    },
+    "/api/v2/empresas/{empresaId}/extensiones/{codigo}/validar": {
+      "post": {
+        "operationId": "ExtensionesController_validar",
+        "parameters": [
+          {
+            "name": "empresaId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "name": "codigo",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ValidarExtensionRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ValidacionExtensionResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Validar datos contra la extensión activa",
+        "tags": [
+          "Extensiones configurables"
+        ]
+      }
+    },
+    "/api/v2/empresas/{empresaId}/extensiones/{codigo}/valores/{recursoId}": {
+      "get": {
+        "operationId": "ExtensionesController_obtenerValores",
+        "parameters": [
+          {
+            "name": "empresaId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "name": "codigo",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "recursoId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/ExtensionValueResponseDto"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Consultar valores de una extensión para un recurso",
+        "tags": [
+          "Extensiones configurables"
+        ]
+      },
+      "put": {
+        "operationId": "ExtensionesController_guardarValores",
+        "parameters": [
+          {
+            "name": "empresaId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "name": "codigo",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "recursoId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/GuardarExtensionValoresRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExtensionValueResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Guardar o actualizar valores de una extensión",
+        "tags": [
+          "Extensiones configurables"
+        ]
+      },
+      "delete": {
+        "operationId": "ExtensionesController_eliminarValores",
+        "parameters": [
+          {
+            "name": "empresaId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "name": "codigo",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "recursoId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Valores eliminados"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Eliminar valores de una extensión para un recurso",
+        "tags": [
+          "Extensiones configurables"
+        ]
+      }
+    },
+    "/api/v2/empresas/{empresaId}/partes": {
+      "get": {
+        "operationId": "PartesController_listar",
+        "parameters": [
+          {
+            "name": "empresaId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "name": "limite",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 100,
+              "type": "number"
+            }
+          },
+          {
+            "name": "tipo",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "enum": [
+                "persona",
+                "organizacion"
+              ],
+              "type": "string"
+            }
+          },
+          {
+            "name": "q",
+            "required": false,
+            "in": "query",
+            "schema": {}
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ParteResponseDto"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Listar personas y organizaciones de una empresa",
+        "tags": [
+          "Partes universales"
+        ]
+      },
+      "post": {
+        "operationId": "PartesController_crear",
+        "parameters": [
+          {
+            "name": "empresaId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CrearParteRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ParteResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Crear una persona u organización universal",
+        "tags": [
+          "Partes universales"
+        ]
+      }
+    },
+    "/api/v2/empresas/{empresaId}/partes/{parteId}": {
+      "get": {
+        "operationId": "PartesController_obtener",
+        "parameters": [
+          {
+            "name": "empresaId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "name": "parteId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ParteResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Obtener una parte universal",
+        "tags": [
+          "Partes universales"
+        ]
+      },
+      "patch": {
+        "operationId": "PartesController_actualizar",
+        "parameters": [
+          {
+            "name": "empresaId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "name": "parteId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ActualizarParteRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ParteResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Actualizar una parte universal",
+        "tags": [
+          "Partes universales"
+        ]
+      },
+      "delete": {
+        "operationId": "PartesController_eliminar",
+        "parameters": [
+          {
+            "name": "empresaId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "name": "parteId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Parte archivada"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Archivar una parte universal y sus datos derivados",
+        "tags": [
+          "Partes universales"
+        ]
+      }
+    },
+    "/api/v2/empresas/{empresaId}/partes/{parteId}/contactos": {
+      "get": {
+        "operationId": "PartesController_listarContactos",
+        "parameters": [
+          {
+            "name": "empresaId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "parteId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/MedioContactoResponseDto"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Listar medios de contacto de una parte",
+        "tags": [
+          "Partes universales"
+        ]
+      },
+      "post": {
+        "operationId": "PartesController_crearContacto",
+        "parameters": [
+          {
+            "name": "empresaId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "parteId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CrearMedioContactoRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MedioContactoResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Agregar un medio de contacto",
+        "tags": [
+          "Partes universales"
+        ]
+      }
+    },
+    "/api/v2/empresas/{empresaId}/partes/{parteId}/contactos/{contactoId}": {
+      "patch": {
+        "operationId": "PartesController_actualizarContacto",
+        "parameters": [
+          {
+            "name": "empresaId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "parteId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "contactoId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ActualizarMedioContactoRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MedioContactoResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Actualizar un medio de contacto",
+        "tags": [
+          "Partes universales"
+        ]
+      },
+      "delete": {
+        "operationId": "PartesController_eliminarContacto",
+        "parameters": [
+          {
+            "name": "empresaId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "parteId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "contactoId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Medio de contacto archivado"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Archivar un medio de contacto",
+        "tags": [
+          "Partes universales"
+        ]
+      }
+    },
+    "/api/v2/empresas/{empresaId}/partes/{parteId}/direcciones": {
+      "get": {
+        "operationId": "PartesController_listarDirecciones",
+        "parameters": [
+          {
+            "name": "empresaId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "parteId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/DireccionResponseDto"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Listar direcciones de una parte",
+        "tags": [
+          "Partes universales"
+        ]
+      },
+      "post": {
+        "operationId": "PartesController_crearDireccion",
+        "parameters": [
+          {
+            "name": "empresaId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "parteId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CrearDireccionRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DireccionResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Agregar una dirección",
+        "tags": [
+          "Partes universales"
+        ]
+      }
+    },
+    "/api/v2/empresas/{empresaId}/partes/{parteId}/direcciones/{direccionId}": {
+      "patch": {
+        "operationId": "PartesController_actualizarDireccion",
+        "parameters": [
+          {
+            "name": "empresaId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "parteId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "direccionId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ActualizarDireccionRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DireccionResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Actualizar una dirección",
+        "tags": [
+          "Partes universales"
+        ]
+      },
+      "delete": {
+        "operationId": "PartesController_eliminarDireccion",
+        "parameters": [
+          {
+            "name": "empresaId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "parteId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "direccionId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Dirección archivada"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Archivar una dirección",
+        "tags": [
+          "Partes universales"
+        ]
+      }
+    },
+    "/api/v2/empresas/{empresaId}/partes/{parteId}/relaciones": {
+      "get": {
+        "operationId": "PartesController_listarRelaciones",
+        "parameters": [
+          {
+            "name": "empresaId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "parteId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/RelacionResponseDto"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Listar relaciones de una parte",
+        "tags": [
+          "Partes universales"
+        ]
+      },
+      "post": {
+        "operationId": "PartesController_crearRelacion",
+        "parameters": [
+          {
+            "name": "empresaId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "parteId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CrearRelacionRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RelacionResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Relacionar dos partes de la misma empresa",
+        "tags": [
+          "Partes universales"
+        ]
+      }
+    },
+    "/api/v2/empresas/{empresaId}/partes/{parteId}/relaciones/{relacionId}": {
+      "delete": {
+        "operationId": "PartesController_eliminarRelacion",
+        "parameters": [
+          {
+            "name": "empresaId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "parteId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "relacionId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Relación desactivada"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Desactivar una relación",
+        "tags": [
+          "Partes universales"
+        ]
+      }
+    },
+    "/api/v2/empresas/{empresaId}/roles": {
+      "post": {
+        "operationId": "PersonalController_crearRol",
+        "parameters": [
+          {
+            "name": "empresaId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CrearRolRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Rol creado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Crear un rol de personal con permisos JSON",
+        "tags": [
+          "Personal"
+        ]
+      },
+      "get": {
+        "operationId": "PersonalController_listarRoles",
+        "parameters": [
+          {
+            "name": "empresaId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Roles de la empresa",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Listar roles configurables de la empresa",
+        "tags": [
+          "Personal"
+        ]
+      }
+    },
+    "/api/v2/empresas/{empresaId}/roles/{rolId}": {
+      "patch": {
+        "operationId": "PersonalController_actualizarRol",
+        "parameters": [
+          {
+            "name": "empresaId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "rolId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EstadoRolRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Rol actualizado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Activar o desactivar un rol configurable",
+        "tags": [
+          "Personal"
+        ]
+      }
+    },
+    "/api/v2/empresas/{empresaId}/puestos": {
+      "post": {
+        "operationId": "PersonalController_crearPuesto",
+        "parameters": [
+          {
+            "name": "empresaId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CrearPuestoRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Puesto creado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Crear un puesto operativo de la empresa",
+        "tags": [
+          "Personal"
+        ]
+      },
+      "get": {
+        "operationId": "PersonalController_listarPuestos",
+        "parameters": [
+          {
+            "name": "empresaId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Puestos de la empresa",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Listar puestos operativos de la empresa",
+        "tags": [
+          "Personal"
+        ]
+      }
+    },
+    "/api/v2/empresas/{empresaId}/asignaciones-personal": {
+      "post": {
+        "operationId": "PersonalController_asignar",
+        "parameters": [
+          {
+            "name": "empresaId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AsignarPersonalRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Asignación creada",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Asignar un miembro a un rol y tienda/puesto",
+        "tags": [
+          "Personal"
+        ]
+      },
+      "get": {
+        "operationId": "PersonalController_listarAsignaciones",
+        "parameters": [
+          {
+            "name": "empresaId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Asignaciones de la empresa",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Listar asignaciones de personal",
+        "tags": [
+          "Personal"
+        ]
+      }
+    },
+    "/api/v2/empresas/{empresaId}/invitaciones/personal": {
+      "post": {
+        "operationId": "PersonalController_crearInvitacion",
+        "parameters": [
+          {
+            "name": "empresaId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CrearInvitacionPersonalRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Enlace de incorporación generado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Correo o enlace duplicado"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Generar enlace de invitación o contratación",
+        "tags": [
+          "Personal"
+        ]
+      },
+      "get": {
+        "operationId": "PersonalController_listarInvitaciones",
+        "parameters": [
+          {
+            "name": "empresaId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Invitaciones de la empresa",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "Personal"
+        ]
+      }
+    },
+    "/api/v2/empresas/{empresaId}/invitaciones/personal/{invitacionId}/revocar": {
+      "post": {
+        "operationId": "PersonalController_revocarInvitacion",
+        "parameters": [
+          {
+            "name": "empresaId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "invitacionId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Invitación revocada",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "Personal"
+        ]
+      }
+    },
+    "/api/v2/incorporaciones/{token}": {
+      "get": {
+        "operationId": "PersonalPublicController_consultar",
+        "parameters": [
+          {
+            "name": "token",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Invitación vigente",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Consultar un enlace de incorporación",
+        "tags": [
+          "Personal"
+        ]
+      }
+    },
+    "/api/v2/incorporaciones/{token}/aceptar": {
+      "post": {
+        "operationId": "PersonalPublicController_aceptar",
+        "parameters": [
+          {
+            "name": "token",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AceptarInvitacionPersonalRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Cuenta y membresía creadas",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Aceptar una invitación o contratación y crear la cuenta",
+        "tags": [
+          "Personal"
+        ]
+      }
     }
   },
   "components": {
@@ -1236,48 +2750,22 @@
       }
     },
     "schemas": {
-      "AceptarInvitacionRequestDto": {
+      "AceptarInvitacionPersonalRequestDto": {
         "type": "object",
         "properties": {
           "nombre": {
             "type": "string",
             "minLength": 2,
-            "maxLength": 120,
-            "example": "Ana Pérez"
+            "maxLength": 120
           },
           "contrasena": {
             "type": "string",
-            "minLength": 8,
-            "example": "UnaClaveSegura123"
+            "minLength": 8
           }
         },
         "required": [
           "nombre",
           "contrasena"
-        ]
-      },
-      "AceptarInvitacionResponseDto": {
-        "type": "object",
-        "properties": {
-          "access_token": {
-            "type": "string"
-          },
-          "refresh_token": {
-            "type": "string"
-          },
-          "expira_en": {
-            "type": "number"
-          },
-          "usuario": {
-            "type": "object",
-            "description": "Usuario vendedor con tienda y participación asignadas"
-          }
-        },
-        "required": [
-          "access_token",
-          "refresh_token",
-          "expira_en",
-          "usuario"
         ]
       },
       "ActualizarCapacidadRequestDto": {
@@ -1398,21 +2886,158 @@
           }
         }
       },
-      "ActualizarModalidadLogisticaRequestDto": {
+      "ActualizarDireccionRequestDto": {
         "type": "object",
         "properties": {
-          "modalidad_logistica": {
+          "tipo": {
             "type": "string",
             "enum": [
-              "plataforma",
-              "propia",
-              "hibrida"
+              "fiscal",
+              "comercial",
+              "entrega",
+              "operativa",
+              "otro"
             ]
+          },
+          "etiqueta": {
+            "type": "string",
+            "maxLength": 120
+          },
+          "linea_1": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 240
+          },
+          "linea_2": {
+            "type": "string",
+            "maxLength": 240
+          },
+          "ciudad": {
+            "type": "string",
+            "maxLength": 120
+          },
+          "departamento": {
+            "type": "string",
+            "maxLength": 120
+          },
+          "pais": {
+            "type": "string",
+            "maxLength": 120
+          },
+          "codigo_postal": {
+            "type": "string",
+            "maxLength": 32
+          },
+          "referencias": {
+            "type": "string",
+            "maxLength": 500
+          },
+          "latitud": {
+            "type": "object",
+            "nullable": true,
+            "minimum": -90,
+            "maximum": 90
+          },
+          "longitud": {
+            "type": "object",
+            "nullable": true,
+            "minimum": -180,
+            "maximum": 180
+          },
+          "es_principal": {
+            "type": "boolean",
+            "default": false
+          },
+          "metadata": {
+            "type": "object",
+            "additionalProperties": true
+          }
+        }
+      },
+      "ActualizarExtensionRequestDto": {
+        "type": "object",
+        "properties": {
+          "activo": {
+            "type": "boolean"
           }
         },
         "required": [
-          "modalidad_logistica"
+          "activo"
         ]
+      },
+      "ActualizarMedioContactoRequestDto": {
+        "type": "object",
+        "properties": {
+          "tipo": {
+            "type": "string",
+            "enum": [
+              "email",
+              "telefono",
+              "whatsapp",
+              "web",
+              "otro"
+            ]
+          },
+          "valor": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 240
+          },
+          "etiqueta": {
+            "type": "string",
+            "maxLength": 120
+          },
+          "es_principal": {
+            "type": "boolean",
+            "default": false
+          },
+          "metadata": {
+            "type": "object",
+            "additionalProperties": true
+          }
+        }
+      },
+      "ActualizarParteRequestDto": {
+        "type": "object",
+        "properties": {
+          "tipo": {
+            "type": "string",
+            "enum": [
+              "persona",
+              "organizacion"
+            ]
+          },
+          "nombre": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 240
+          },
+          "nombre_comercial": {
+            "type": "string",
+            "maxLength": 240
+          },
+          "identificador_tipo": {
+            "type": "string",
+            "maxLength": 40
+          },
+          "identificador_valor": {
+            "type": "string",
+            "maxLength": 120
+          },
+          "estado": {
+            "type": "string",
+            "enum": [
+              "activo",
+              "inactivo",
+              "archivado"
+            ],
+            "default": "activo"
+          },
+          "metadata": {
+            "type": "object",
+            "additionalProperties": true
+          }
+        }
       },
       "ActualizarSlugRequestDto": {
         "type": "object",
@@ -1428,20 +3053,33 @@
           "slug"
         ]
       },
-      "ActualizarTipoEmpresaRequestDto": {
+      "AsignarPersonalRequestDto": {
         "type": "object",
         "properties": {
-          "tipo_empresa": {
+          "usuario_id": {
             "type": "string",
-            "enum": [
-              "comercial",
-              "logistica",
-              "plataforma"
-            ]
+            "format": "uuid"
+          },
+          "rol_empresa_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "tienda_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "puesto_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "metadata": {
+            "type": "object",
+            "additionalProperties": true
           }
         },
         "required": [
-          "tipo_empresa"
+          "usuario_id",
+          "rol_empresa_id"
         ]
       },
       "AvatarUsuarioRequestDto": {
@@ -1620,6 +3258,78 @@
           "actualizado_en"
         ]
       },
+      "CrearDireccionRequestDto": {
+        "type": "object",
+        "properties": {
+          "tipo": {
+            "type": "string",
+            "enum": [
+              "fiscal",
+              "comercial",
+              "entrega",
+              "operativa",
+              "otro"
+            ]
+          },
+          "etiqueta": {
+            "type": "string",
+            "maxLength": 120
+          },
+          "linea_1": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 240
+          },
+          "linea_2": {
+            "type": "string",
+            "maxLength": 240
+          },
+          "ciudad": {
+            "type": "string",
+            "maxLength": 120
+          },
+          "departamento": {
+            "type": "string",
+            "maxLength": 120
+          },
+          "pais": {
+            "type": "string",
+            "maxLength": 120
+          },
+          "codigo_postal": {
+            "type": "string",
+            "maxLength": 32
+          },
+          "referencias": {
+            "type": "string",
+            "maxLength": 500
+          },
+          "latitud": {
+            "type": "object",
+            "nullable": true,
+            "minimum": -90,
+            "maximum": 90
+          },
+          "longitud": {
+            "type": "object",
+            "nullable": true,
+            "minimum": -180,
+            "maximum": 180
+          },
+          "es_principal": {
+            "type": "boolean",
+            "default": false
+          },
+          "metadata": {
+            "type": "object",
+            "additionalProperties": true
+          }
+        },
+        "required": [
+          "tipo",
+          "linea_1"
+        ]
+      },
       "CrearEmpresaRequestDto": {
         "type": "object",
         "properties": {
@@ -1730,80 +3440,339 @@
             "description": "Slug público. Si se omite se deriva del nombre y se resuelven colisiones con sufijos.",
             "example": "distribuidora-piloto"
           },
-          "modalidad_logistica": {
-            "type": "string",
-            "nullable": true,
-            "enum": [
-              "plataforma",
-              "propia",
-              "hibrida"
-            ],
-            "description": "Legado; puede omitirse y queda nullable"
-          },
           "vertical_id": {
             "type": "string",
-            "enum": [
-              "retail",
-              "farmacia",
-              "belleza",
-              "dental",
-              "flota"
-            ],
-            "default": "retail"
+            "description": "Código dinámico de la vertical; se valida contra identity.verticales"
           },
           "pack_codigo": {
             "type": "string",
-            "enum": [
-              "pack_retail",
-              "pack_farmacia",
-              "pack_belleza",
-              "pack_dental",
-              "pack_flota"
-            ],
-            "description": "Pack versionado; si se omite se deriva de la vertical"
-          },
-          "tipo_empresa": {
-            "type": "string",
-            "enum": [
-              "comercial",
-              "logistica",
-              "plataforma"
-            ],
-            "default": "comercial"
+            "description": "Pack versionado; se valida contra identity.packs"
           }
         },
         "required": [
           "nombre"
         ]
       },
-      "CrearInvitacionRequestDto": {
+      "CrearExtensionRequestDto": {
+        "type": "object",
+        "properties": {
+          "codigo": {
+            "type": "string",
+            "example": "ficha_cliente"
+          },
+          "nombre": {
+            "type": "string",
+            "example": "Ficha de cliente"
+          },
+          "recurso": {
+            "type": "string",
+            "example": "cliente"
+          },
+          "descripcion": {
+            "type": "string",
+            "maxLength": 1000
+          },
+          "esquema": {
+            "type": "object",
+            "additionalProperties": true
+          },
+          "formulario": {
+            "type": "object",
+            "additionalProperties": true
+          },
+          "reglas": {
+            "type": "object",
+            "additionalProperties": true
+          },
+          "activo": {
+            "type": "boolean",
+            "default": true
+          }
+        },
+        "required": [
+          "codigo",
+          "nombre",
+          "recurso",
+          "esquema"
+        ]
+      },
+      "CrearInvitacionPersonalRequestDto": {
         "type": "object",
         "properties": {
           "correo": {
             "type": "string",
-            "format": "email",
-            "example": "vendedor@correo.com"
+            "format": "email"
           },
           "nombre": {
             "type": "string",
             "minLength": 2,
             "maxLength": 120
           },
+          "tipo": {
+            "type": "string",
+            "enum": [
+              "invitacion",
+              "contratacion"
+            ],
+            "default": "invitacion"
+          },
+          "rol_empresa_id": {
+            "type": "string",
+            "format": "uuid"
+          },
           "tienda_id": {
             "type": "string",
             "format": "uuid"
           },
-          "participacion_porcentaje": {
-            "type": "number",
-            "minimum": 0,
-            "maximum": 100,
-            "example": 25
+          "puesto_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "metadata": {
+            "type": "object",
+            "additionalProperties": true
           }
         },
         "required": [
           "correo",
-          "tienda_id",
-          "participacion_porcentaje"
+          "rol_empresa_id"
+        ]
+      },
+      "CrearMedioContactoRequestDto": {
+        "type": "object",
+        "properties": {
+          "tipo": {
+            "type": "string",
+            "enum": [
+              "email",
+              "telefono",
+              "whatsapp",
+              "web",
+              "otro"
+            ]
+          },
+          "valor": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 240
+          },
+          "etiqueta": {
+            "type": "string",
+            "maxLength": 120
+          },
+          "es_principal": {
+            "type": "boolean",
+            "default": false
+          },
+          "metadata": {
+            "type": "object",
+            "additionalProperties": true
+          }
+        },
+        "required": [
+          "tipo",
+          "valor"
+        ]
+      },
+      "CrearModeloOperacionRequestDto": {
+        "type": "object",
+        "properties": {
+          "codigo": {
+            "type": "string",
+            "example": "servicios_domicilio"
+          },
+          "nombre": {
+            "type": "string",
+            "example": "Servicios a domicilio"
+          },
+          "descripcion": {
+            "type": "string"
+          },
+          "config": {
+            "type": "object"
+          },
+          "activo": {
+            "type": "boolean",
+            "default": true
+          }
+        },
+        "required": [
+          "codigo",
+          "nombre"
+        ]
+      },
+      "CrearPackRequestDto": {
+        "type": "object",
+        "properties": {
+          "codigo": {
+            "type": "string",
+            "example": "pack_servicios_domicilio"
+          },
+          "version": {
+            "type": "number",
+            "minimum": 1,
+            "example": 1
+          },
+          "vertical_codigo": {
+            "type": "string",
+            "example": "servicios_domicilio"
+          },
+          "nombre": {
+            "type": "string",
+            "example": "Servicios a domicilio"
+          },
+          "descripcion": {
+            "type": "string"
+          },
+          "config": {
+            "type": "object"
+          },
+          "modelos": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PackBuilderItemRequestDto"
+            }
+          },
+          "capacidades": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PackBuilderItemRequestDto"
+            }
+          }
+        },
+        "required": [
+          "codigo",
+          "version",
+          "vertical_codigo",
+          "nombre"
+        ]
+      },
+      "CrearParteRequestDto": {
+        "type": "object",
+        "properties": {
+          "tipo": {
+            "type": "string",
+            "enum": [
+              "persona",
+              "organizacion"
+            ]
+          },
+          "nombre": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 240
+          },
+          "nombre_comercial": {
+            "type": "string",
+            "maxLength": 240
+          },
+          "identificador_tipo": {
+            "type": "string",
+            "maxLength": 40
+          },
+          "identificador_valor": {
+            "type": "string",
+            "maxLength": 120
+          },
+          "estado": {
+            "type": "string",
+            "enum": [
+              "activo",
+              "inactivo",
+              "archivado"
+            ],
+            "default": "activo"
+          },
+          "metadata": {
+            "type": "object",
+            "additionalProperties": true
+          }
+        },
+        "required": [
+          "tipo",
+          "nombre"
+        ]
+      },
+      "CrearPuestoRequestDto": {
+        "type": "object",
+        "properties": {
+          "codigo": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9_]{1,39}$",
+            "example": "sillon_1"
+          },
+          "nombre": {
+            "type": "string",
+            "minLength": 2,
+            "maxLength": 120,
+            "example": "Sillón 1"
+          },
+          "tipo": {
+            "type": "string",
+            "example": "sillon"
+          },
+          "tienda_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "metadata": {
+            "type": "object",
+            "additionalProperties": true
+          }
+        },
+        "required": [
+          "codigo",
+          "nombre"
+        ]
+      },
+      "CrearRelacionRequestDto": {
+        "type": "object",
+        "properties": {
+          "parte_destino_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "tipo": {
+            "type": "string",
+            "example": "cliente",
+            "pattern": "^[a-z][a-z0-9_]{1,39}$"
+          },
+          "metadata": {
+            "type": "object",
+            "additionalProperties": true
+          }
+        },
+        "required": [
+          "parte_destino_id",
+          "tipo"
+        ]
+      },
+      "CrearRolRequestDto": {
+        "type": "object",
+        "properties": {
+          "codigo": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9_]{1,39}$",
+            "example": "estilista"
+          },
+          "nombre": {
+            "type": "string",
+            "minLength": 2,
+            "maxLength": 120,
+            "example": "Estilista"
+          },
+          "descripcion": {
+            "type": "string",
+            "maxLength": 500
+          },
+          "permisos": {
+            "$ref": "#/components/schemas/PermisosRequestDto"
+          }
+        },
+        "required": [
+          "codigo",
+          "nombre",
+          "permisos"
         ]
       },
       "CrearUsuarioRequestDto": {
@@ -1879,6 +3848,132 @@
           "participacion_porcentaje"
         ]
       },
+      "CrearVerticalRequestDto": {
+        "type": "object",
+        "properties": {
+          "codigo": {
+            "type": "string",
+            "example": "servicios_domicilio"
+          },
+          "nombre": {
+            "type": "string",
+            "example": "Servicios a domicilio"
+          },
+          "modelo_operacion": {
+            "type": "string",
+            "example": "servicios_agendados"
+          },
+          "activo": {
+            "type": "boolean",
+            "default": true
+          }
+        },
+        "required": [
+          "codigo",
+          "nombre",
+          "modelo_operacion"
+        ]
+      },
+      "DireccionResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "empresa_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "parte_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "tipo": {
+            "type": "string",
+            "enum": [
+              "fiscal",
+              "comercial",
+              "entrega",
+              "operativa",
+              "otro"
+            ]
+          },
+          "etiqueta": {
+            "type": "string"
+          },
+          "linea_1": {
+            "type": "string"
+          },
+          "linea_2": {
+            "type": "string"
+          },
+          "ciudad": {
+            "type": "string"
+          },
+          "departamento": {
+            "type": "string"
+          },
+          "pais": {
+            "type": "string"
+          },
+          "codigo_postal": {
+            "type": "string"
+          },
+          "referencias": {
+            "type": "string"
+          },
+          "latitud": {
+            "type": "object",
+            "nullable": true
+          },
+          "longitud": {
+            "type": "object",
+            "nullable": true
+          },
+          "es_principal": {
+            "type": "boolean"
+          },
+          "metadata": {
+            "type": "object",
+            "additionalProperties": true
+          },
+          "creado_en": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "actualizado_en": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "eliminado_en": {
+            "type": "object",
+            "nullable": true,
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "empresa_id",
+          "parte_id",
+          "tipo",
+          "etiqueta",
+          "linea_1",
+          "linea_2",
+          "ciudad",
+          "departamento",
+          "pais",
+          "codigo_postal",
+          "referencias",
+          "latitud",
+          "longitud",
+          "es_principal",
+          "metadata",
+          "creado_en",
+          "actualizado_en",
+          "eliminado_en"
+        ]
+      },
       "EmpresaCapacidadResponseDto": {
         "type": "object",
         "properties": {
@@ -1922,26 +4017,14 @@
             "type": "string"
           },
           "vertical_id": {
-            "type": "string",
+            "type": "object",
             "nullable": true,
-            "enum": [
-              "retail",
-              "farmacia",
-              "belleza",
-              "dental",
-              "flota"
-            ]
+            "description": "Código dinámico de la vertical"
           },
           "pack_codigo": {
-            "type": "string",
+            "type": "object",
             "nullable": true,
-            "enum": [
-              "pack_retail",
-              "pack_farmacia",
-              "pack_belleza",
-              "pack_dental",
-              "pack_flota"
-            ]
+            "description": "Código dinámico del pack"
           },
           "pack_version": {
             "type": "object",
@@ -1952,24 +4035,6 @@
             "type": "string",
             "description": "Slug público actual",
             "example": "distribuidora-piloto"
-          },
-          "modalidad_logistica": {
-            "type": "string",
-            "nullable": true,
-            "enum": [
-              "plataforma",
-              "propia",
-              "hibrida"
-            ]
-          },
-          "tipo_empresa": {
-            "type": "string",
-            "enum": [
-              "comercial",
-              "logistica",
-              "plataforma"
-            ],
-            "description": "Tipo de empresa; solo las comerciales tienen catálogo propio (ADR-27)"
           },
           "estado": {
             "type": "string"
@@ -2112,12 +4177,24 @@
         "required": [
           "id",
           "nombre",
+          "slug",
           "estado",
           "creado_por",
           "creado_en"
         ]
       },
-      "InvitacionCreadaResponseDto": {
+      "EstadoRolRequestDto": {
+        "type": "object",
+        "properties": {
+          "activo": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "activo"
+        ]
+      },
+      "ExtensionResponseDto": {
         "type": "object",
         "properties": {
           "id": {
@@ -2128,137 +4205,127 @@
             "type": "string",
             "format": "uuid"
           },
-          "tienda_id": {
+          "codigo": {
+            "type": "string"
+          },
+          "nombre": {
+            "type": "string"
+          },
+          "recurso": {
+            "type": "string"
+          },
+          "descripcion": {
+            "type": "string"
+          },
+          "esquema": {
+            "type": "object",
+            "additionalProperties": true
+          },
+          "formulario": {
+            "type": "object",
+            "additionalProperties": true
+          },
+          "reglas": {
+            "type": "object",
+            "additionalProperties": true
+          },
+          "version": {
+            "type": "number"
+          },
+          "activo": {
+            "type": "boolean"
+          },
+          "creado_por": {
             "type": "string",
             "format": "uuid"
           },
-          "tienda_nombre": {
-            "type": "string"
-          },
-          "correo": {
-            "type": "string"
-          },
-          "participacion_porcentaje": {
-            "type": "number",
-            "minimum": 0,
-            "maximum": 100
-          },
-          "estado": {
-            "type": "string"
-          },
-          "expira_en": {
+          "creado_en": {
             "type": "string",
             "format": "date-time"
           },
-          "url_invitacion": {
-            "type": "string"
+          "actualizado_en": {
+            "type": "string",
+            "format": "date-time"
           }
         },
         "required": [
           "id",
           "empresa_id",
-          "tienda_id",
-          "tienda_nombre",
-          "correo",
-          "participacion_porcentaje",
-          "estado",
-          "expira_en",
-          "url_invitacion"
+          "codigo",
+          "nombre",
+          "recurso",
+          "descripcion",
+          "esquema",
+          "formulario",
+          "reglas",
+          "version",
+          "activo",
+          "creado_por",
+          "creado_en",
+          "actualizado_en"
         ]
       },
-      "InvitacionPublicaResponseDto": {
-        "type": "object",
-        "properties": {
-          "valida": {
-            "type": "boolean"
-          },
-          "correo": {
-            "type": "string"
-          },
-          "empresa_nombre": {
-            "type": "string"
-          },
-          "tienda_nombre": {
-            "type": "string"
-          },
-          "participacion_porcentaje": {
-            "type": "number",
-            "minimum": 0,
-            "maximum": 100
-          },
-          "expira_en": {
-            "type": "string",
-            "format": "date-time"
-          }
-        },
-        "required": [
-          "valida",
-          "correo",
-          "empresa_nombre",
-          "tienda_nombre",
-          "participacion_porcentaje",
-          "expira_en"
-        ]
-      },
-      "InvitacionResumenResponseDto": {
+      "ExtensionValueResponseDto": {
         "type": "object",
         "properties": {
           "id": {
             "type": "string",
             "format": "uuid"
           },
-          "correo": {
-            "type": "string"
-          },
-          "tienda_id": {
+          "empresa_id": {
             "type": "string",
             "format": "uuid"
           },
-          "tienda_nombre": {
-            "type": "string"
+          "extension_id": {
+            "type": "string",
+            "format": "uuid"
           },
-          "participacion_porcentaje": {
-            "type": "number",
-            "minimum": 0,
-            "maximum": 100
+          "recurso_id": {
+            "type": "string",
+            "format": "uuid"
           },
-          "estado": {
-            "type": "string"
+          "valores": {
+            "type": "object",
+            "additionalProperties": true
           },
-          "expira_en": {
+          "version_schema": {
+            "type": "number"
+          },
+          "creado_por": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "creado_en": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "actualizado_en": {
             "type": "string",
             "format": "date-time"
           }
         },
         "required": [
           "id",
-          "correo",
-          "tienda_id",
-          "tienda_nombre",
-          "participacion_porcentaje",
-          "estado",
-          "expira_en"
+          "empresa_id",
+          "extension_id",
+          "recurso_id",
+          "valores",
+          "version_schema",
+          "creado_por",
+          "creado_en",
+          "actualizado_en"
         ]
       },
-      "ListarVendedoresResponseDto": {
+      "GuardarExtensionValoresRequestDto": {
         "type": "object",
         "properties": {
-          "vendedores": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/VendedorEmpresaResponseDto"
-            }
-          },
-          "invitaciones": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/InvitacionResumenResponseDto"
-            }
+          "valores": {
+            "type": "object",
+            "additionalProperties": true
           }
         },
         "required": [
-          "vendedores",
-          "invitaciones"
+          "valores"
         ]
       },
       "LoginRequestDto": {
@@ -2288,6 +4355,105 @@
             "description": "Refresh token de la sesión a cerrar; si se omite, cierra todas"
           }
         }
+      },
+      "MedioContactoResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "empresa_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "parte_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "tipo": {
+            "type": "string",
+            "enum": [
+              "email",
+              "telefono",
+              "whatsapp",
+              "web",
+              "otro"
+            ]
+          },
+          "valor": {
+            "type": "string"
+          },
+          "etiqueta": {
+            "type": "string"
+          },
+          "es_principal": {
+            "type": "boolean"
+          },
+          "verificado_en": {
+            "type": "object",
+            "nullable": true,
+            "format": "date-time"
+          },
+          "metadata": {
+            "type": "object",
+            "additionalProperties": true
+          },
+          "creado_en": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "actualizado_en": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "eliminado_en": {
+            "type": "object",
+            "nullable": true,
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "empresa_id",
+          "parte_id",
+          "tipo",
+          "valor",
+          "etiqueta",
+          "es_principal",
+          "verificado_en",
+          "metadata",
+          "creado_en",
+          "actualizado_en",
+          "eliminado_en"
+        ]
+      },
+      "ModeloOperacionResponseDto": {
+        "type": "object",
+        "properties": {
+          "codigo": {
+            "type": "string"
+          },
+          "nombre": {
+            "type": "string"
+          },
+          "descripcion": {
+            "type": "string"
+          },
+          "config": {
+            "type": "object"
+          },
+          "activo": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "codigo",
+          "nombre",
+          "descripcion",
+          "config",
+          "activo"
+        ]
       },
       "OkResponseDto": {
         "type": "object",
@@ -2331,6 +4497,25 @@
           "tema"
         ]
       },
+      "PackBuilderItemRequestDto": {
+        "type": "object",
+        "properties": {
+          "codigo": {
+            "type": "string",
+            "example": "agenda_recursos"
+          },
+          "config": {
+            "type": "object"
+          },
+          "activo": {
+            "type": "boolean",
+            "default": true
+          }
+        },
+        "required": [
+          "codigo"
+        ]
+      },
       "PackCapacidadResponseDto": {
         "type": "object",
         "properties": {
@@ -2358,6 +4543,33 @@
           "config"
         ]
       },
+      "PackModeloResponseDto": {
+        "type": "object",
+        "properties": {
+          "modelo_codigo": {
+            "type": "string"
+          },
+          "nombre": {
+            "type": "string"
+          },
+          "descripcion": {
+            "type": "string"
+          },
+          "activo": {
+            "type": "boolean"
+          },
+          "config": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "modelo_codigo",
+          "nombre",
+          "descripcion",
+          "activo",
+          "config"
+        ]
+      },
       "PackResponseDto": {
         "type": "object",
         "properties": {
@@ -2379,6 +4591,12 @@
           "config": {
             "type": "object"
           },
+          "modelos": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PackModeloResponseDto"
+            }
+          },
           "capacidades": {
             "type": "array",
             "items": {
@@ -2393,7 +4611,84 @@
           "nombre",
           "descripcion",
           "config",
+          "modelos",
           "capacidades"
+        ]
+      },
+      "ParteResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "empresa_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "tipo": {
+            "type": "string",
+            "enum": [
+              "persona",
+              "organizacion"
+            ]
+          },
+          "nombre": {
+            "type": "string"
+          },
+          "nombre_comercial": {
+            "type": "string"
+          },
+          "identificador_tipo": {
+            "type": "string"
+          },
+          "identificador_valor": {
+            "type": "string"
+          },
+          "estado": {
+            "type": "string",
+            "enum": [
+              "activo",
+              "inactivo",
+              "archivado"
+            ]
+          },
+          "metadata": {
+            "type": "object",
+            "additionalProperties": true
+          },
+          "creado_por": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "creado_en": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "actualizado_en": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "eliminado_en": {
+            "type": "object",
+            "nullable": true,
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "empresa_id",
+          "tipo",
+          "nombre",
+          "nombre_comercial",
+          "identificador_tipo",
+          "identificador_valor",
+          "estado",
+          "metadata",
+          "creado_por",
+          "creado_en",
+          "actualizado_en",
+          "eliminado_en"
         ]
       },
       "PerfilEmpresaRequestDto": {
@@ -2533,6 +4828,41 @@
           }
         }
       },
+      "PermisosRequestDto": {
+        "type": "object",
+        "properties": {
+          "acciones": {
+            "example": [
+              "catalogo.leer",
+              "ordenes.crear"
+            ],
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "recursos": {
+            "example": [
+              "tienda"
+            ],
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "condiciones": {
+            "type": "object",
+            "additionalProperties": true
+          },
+          "version": {
+            "type": "number",
+            "default": 1
+          }
+        },
+        "required": [
+          "acciones"
+        ]
+      },
       "RegistroRequestDto": {
         "type": "object",
         "properties": {
@@ -2568,6 +4898,64 @@
           "correo",
           "contrasena",
           "rol"
+        ]
+      },
+      "RelacionResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "empresa_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "parte_origen_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "parte_destino_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "tipo": {
+            "type": "string"
+          },
+          "metadata": {
+            "type": "object",
+            "additionalProperties": true
+          },
+          "activo": {
+            "type": "boolean"
+          },
+          "creado_por": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "creado_en": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "actualizado_en": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "parte_relacionada": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "id",
+          "empresa_id",
+          "parte_origen_id",
+          "parte_destino_id",
+          "tipo",
+          "metadata",
+          "activo",
+          "creado_por",
+          "creado_en",
+          "actualizado_en"
         ]
       },
       "RestablecerContrasenaRequestDto": {
@@ -2918,6 +5306,36 @@
           "creado_en"
         ]
       },
+      "ValidacionExtensionResponseDto": {
+        "type": "object",
+        "properties": {
+          "valido": {
+            "type": "boolean"
+          },
+          "errores": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          }
+        },
+        "required": [
+          "valido",
+          "errores"
+        ]
+      },
+      "ValidarExtensionRequestDto": {
+        "type": "object",
+        "properties": {
+          "datos": {
+            "type": "object",
+            "additionalProperties": true
+          }
+        },
+        "required": [
+          "datos"
+        ]
+      },
       "VendedorEmpresaResponseDto": {
         "type": "object",
         "properties": {
@@ -2949,6 +5367,29 @@
           "correo",
           "rol",
           "participacion_porcentaje"
+        ]
+      },
+      "VerticalOperacionResponseDto": {
+        "type": "object",
+        "properties": {
+          "codigo": {
+            "type": "string"
+          },
+          "nombre": {
+            "type": "string"
+          },
+          "modelo_operacion": {
+            "type": "string"
+          },
+          "activo": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "codigo",
+          "nombre",
+          "modelo_operacion",
+          "activo"
         ]
       },
       "VincularPersonalRequestDto": {

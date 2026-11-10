@@ -35,22 +35,15 @@ import {
   validarBackground,
 } from '../media-background/media-background';
 
-export type ModalidadLogistica = 'plataforma' | 'propia' | 'hibrida';
-/**
- * Tipo de empresa (ADR-27). Solo las comerciales tienen catálogo propio:
- * la logística transporta y la plataforma agrupa empresas técnicas/comodín.
- */
-export type TipoEmpresa = 'comercial' | 'logistica' | 'plataforma';
-export type PackCodigo = 'pack_retail' | 'pack_farmacia' | 'pack_belleza' | 'pack_dental' | 'pack_flota';
+/** Código dinámico de una plantilla de operación; no se limita a los packs base. */
+export type PackCodigo = string;
 export interface Empresa {
   id: string;
   nombre: string;
   slug: string;
-  modalidad_logistica: ModalidadLogistica | null;
   vertical_id: string | null;
   pack_codigo: PackCodigo | null;
   pack_version: number | null;
-  tipo_empresa: TipoEmpresa;
   estado: string;
   creado_por: string;
   creado_en: string;
@@ -181,19 +174,14 @@ export class EmpresasService {
   async crear(
     usuarioId: string,
     nombre: string,
-    modalidad: ModalidadLogistica | null | undefined,
     slugSolicitado?: string,
     perfil?: PerfilEmpresaInput,
-    tipo: TipoEmpresa = 'comercial',
     verticalId?: string,
     packCodigo?: PackCodigo,
   ): Promise<Empresa> {
-    if (!['comercial', 'logistica', 'plataforma'].includes(tipo)) {
-      throw new DomainError('TIPO_EMPRESA_INVALIDO', 'El tipo de empresa no es válido.');
-    }
     const nombreFinal = nombre.trim();
-    let vertical = verticalId ?? (tipo === 'logistica' ? 'flota' : 'retail');
-    if (!['retail', 'farmacia', 'belleza', 'dental', 'flota'].includes(vertical)) {
+    let vertical = (verticalId ?? 'retail').trim().toLowerCase();
+    if (!/^[a-z][a-z0-9_]{1,39}$/.test(vertical)) {
       throw new DomainError('VERTICAL_INVALIDA', 'La vertical seleccionada no existe.');
     }
     const meta = this.normalizarPerfil({
@@ -214,22 +202,23 @@ export class EmpresasService {
       try {
         return await this.pg.transaccion(async (client) => {
           const pack = packCodigo
-            ? await this.resolverPack(client, packCodigo, verticalId)
-            : { codigo: `pack_${vertical}` as PackCodigo, version: 1, vertical_codigo: vertical };
+            ? await this.resolverPack(client, packCodigo, verticalId ? vertical : undefined)
+            : verticalId
+              ? await this.resolverPackPorVertical(client, vertical)
+              : { codigo: `pack_${vertical}`, version: 1, vertical_codigo: vertical };
           vertical = pack.vertical_codigo;
           const slug = await this.elegirSlug(client, nombreFinal, slugExplicito);
           const result = await client.query<EmpresaFila>(
             `INSERT INTO identity.empresas
-               (nombre, slug, modalidad_logistica, vertical_id, pack_codigo, pack_version, creado_por, ruc, razon_social,
+               (nombre, slug, vertical_id, pack_codigo, pack_version, creado_por, ruc, razon_social,
                 nombre_comercial, descripcion, telefono, correo_contacto, sitio_web,
                 direccion, ciudad, departamento, pais, moneda, zona_horaria, sector,
-                representante_legal, horario_atencion, logo_objeto_id, tipo_empresa)
-             VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,NULL,$24)
+                representante_legal, horario_atencion, logo_objeto_id)
+             VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,NULL)
              RETURNING *`,
             [
               nombreFinal,
               slug,
-              modalidad,
               vertical,
               pack.codigo,
               pack.version,
@@ -250,12 +239,29 @@ export class EmpresasService {
               meta.sector,
               meta.representante_legal,
               meta.horario_atencion,
-              tipo,
             ],
           );
           const empresa = result.rows[0];
+          // La empresa todavía no existe en el JWT del empresario durante el
+          // alta. Se fija el claim tenant dentro de la misma transacción antes
+          // de insertar sus miembros y capacidades, manteniendo RLS estricto.
           await client.query(
-            `INSERT INTO identity.empresa_miembros (empresa_id, usuario_id, rol) VALUES ($1,$2,'empresario')`,
+            `SELECT set_config('request.jwt.claims', $1, true)`,
+            [JSON.stringify({ sub: usuarioId, rol: 'empresario', tenant_id: empresa.id })],
+          );
+          await client.query(
+            `INSERT INTO identity.roles_empresa
+               (empresa_id, codigo, nombre, permisos, creado_por)
+             VALUES ($1, 'empresario', 'Empresario', '{}'::jsonb, $2)
+             ON CONFLICT (empresa_id, codigo) DO NOTHING`,
+            [empresa.id, usuarioId],
+          );
+          await client.query(
+            `INSERT INTO identity.asignaciones_personal
+               (empresa_id, usuario_id, rol_empresa_id, estado, creado_por)
+             SELECT $1,$2,r.id,'activa',$2
+               FROM identity.roles_empresa r
+              WHERE r.empresa_id=$1 AND r.codigo='empresario'`,
             [empresa.id, usuarioId],
           );
           await client.query(
@@ -301,64 +307,33 @@ export class EmpresasService {
     return pack;
   }
 
+  private async resolverPackPorVertical(
+    client: ClienteSlug,
+    verticalCodigo: string,
+  ): Promise<{ codigo: PackCodigo; version: number; vertical_codigo: string }> {
+    const resultado = await client.query(
+      'SELECT p.codigo, p.version, p.vertical_codigo\n' +
+        '  FROM identity.packs p\n' +
+        ' WHERE p.vertical_codigo = $1 AND p.activo = true\n' +
+        ' ORDER BY p.version DESC\n' +
+        ' LIMIT 1',
+      [verticalCodigo],
+    );
+    const pack = resultado.rows[0] as { codigo: PackCodigo; version: number; vertical_codigo: string } | undefined;
+    if (!pack) throw new DomainError('PACK_REQUERIDO', 'No existe un pack activo para la vertical "' + verticalCodigo + '".');
+    return pack;
+  }
+
   async crearVendedor(actorId: string, empresaId: string, datos: { nombre: string; correo: string; contrasena: string; participacion_porcentaje: number }) {
-    const miembro = await this.pg.queryOne(`SELECT 1 FROM identity.empresa_miembros WHERE empresa_id=$1 AND usuario_id=$2 AND rol='empresario' AND estado='activo'`, [empresaId, actorId]);
+    const miembro = await this.pg.queryOne(
+      `SELECT 1 FROM identity.asignaciones_personal a
+       JOIN identity.roles_empresa r ON r.id = a.rol_empresa_id
+       WHERE a.empresa_id=$1 AND a.usuario_id=$2 AND r.codigo='empresario' AND a.estado='activa'`,
+      [empresaId, actorId],
+    );
     if (!miembro) throw new ForbiddenError('Solo un empresario activo puede crear vendedores.');
     const usuario = await this.usuarios.crearVendedorEnEmpresa({ ...datos, empresa_id: empresaId });
     return { ...usuario, participacion_porcentaje: datos.participacion_porcentaje };
-  }
-
-  async actualizarModalidad(
-    actorId: string,
-    empresaId: string,
-    modalidad: ModalidadLogistica,
-  ): Promise<Empresa> {
-    const miembro = await this.pg.queryOne(
-      `SELECT 1 FROM identity.empresa_miembros
-       WHERE empresa_id=$1 AND usuario_id=$2 AND rol='empresario' AND estado='activo'`,
-      [empresaId, actorId],
-    );
-    if (!miembro) throw new ForbiddenError('Solo un empresario activo puede cambiar la logística.');
-    const empresa = await this.pg.queryOne<EmpresaFila>(
-      `UPDATE identity.empresas SET modalidad_logistica=$1
-       WHERE id=$2 AND estado='activa' RETURNING *`,
-      [modalidad, empresaId],
-    );
-    if (!empresa) throw new NotFoundError('Empresa', empresaId);
-    return await this.conUrls(empresa);
-  }
-
-  /**
-   * ADR-27: solo un administrador global clasifica una empresa. Cambiar a
-   * 'logistica' la excluye de los catálogos; los productos existentes dejan de
-   * ser publicables sin borrar datos.
-   */
-  async actualizarTipo(
-    empresaId: string,
-    tipo: TipoEmpresa,
-    actorId?: string,
-    esGlobal = false,
-  ): Promise<Empresa> {
-    if (!['comercial', 'logistica', 'plataforma'].includes(tipo)) {
-      throw new DomainError('TIPO_EMPRESA_INVALIDO', 'El tipo de empresa no es válido.');
-    }
-    if (!esGlobal) {
-      if (!actorId) throw new ForbiddenError('Se requiere un empresario activo.');
-      const miembro = await this.pg.queryOne(
-        `SELECT 1 FROM identity.empresa_miembros
-         WHERE empresa_id=$1 AND usuario_id=$2 AND rol='empresario' AND estado='activo'`,
-        [empresaId, actorId],
-      );
-      if (!miembro) {
-        throw new ForbiddenError('Solo un empresario activo puede cambiar el tipo de empresa.');
-      }
-    }
-    const empresa = await this.pg.queryOne<EmpresaFila>(
-      `UPDATE identity.empresas SET tipo_empresa=$1 WHERE id=$2 RETURNING *`,
-      [tipo, empresaId],
-    );
-    if (!empresa) throw new NotFoundError('Empresa', empresaId);
-    return await this.conUrls(empresa);
   }
 
   /**
@@ -378,13 +353,14 @@ export class EmpresasService {
     if (!esGlobal) {
       const miembro = rolMiembro
         ? await this.pg.queryOne(
-            `SELECT 1 FROM identity.empresa_miembros
-             WHERE empresa_id=$1 AND usuario_id=$2 AND rol=$3 AND estado='activo'`,
+            `SELECT 1 FROM identity.asignaciones_personal a
+             JOIN identity.roles_empresa r ON r.id = a.rol_empresa_id
+             WHERE a.empresa_id=$1 AND a.usuario_id=$2 AND r.codigo=$3 AND a.estado='activa'`,
             [fila.id, usuarioId, rolMiembro],
           )
         : await this.pg.queryOne(
-            `SELECT 1 FROM identity.empresa_miembros
-             WHERE empresa_id=$1 AND usuario_id=$2 AND estado='activo'`,
+            `SELECT 1 FROM identity.asignaciones_personal
+             WHERE empresa_id=$1 AND usuario_id=$2 AND estado='activa'`,
             [fila.id, usuarioId],
           );
       if (!miembro) throw new NotFoundError('Empresa', identificador);
@@ -398,7 +374,7 @@ export class EmpresasService {
     return {
       empresa: await this.conUrls(empresa),
       overrides,
-      redirigirA: es_actual ? undefined : `/api/v1/empresas/${empresa.slug}`,
+      redirigirA: es_actual ? undefined : `/api/v2/empresas/${empresa.slug}`,
     };
   }
 
@@ -681,7 +657,7 @@ export class EmpresasService {
       'empresa',
     );
     const logo = empresa.logo_objeto_id
-      ? { logo_url: `/api/v1/storage/public/objetos/${empresa.logo_objeto_id}` }
+      ? { logo_url: `/api/v2/storage/public/objetos/${empresa.logo_objeto_id}` }
       : {};
     return {
       ...resto,

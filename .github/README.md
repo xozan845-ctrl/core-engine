@@ -11,9 +11,11 @@ despliegan Core Engine. El despliegue de los entornos sigue el contrato de
 .github/
 ├── workflows/
 │   ├── ci.yml        # Integración continua (PR/push a main, develop, staging)
-│   ├── release.yml   # Release por tag: construye y publica las 11 imágenes en GHCR
+│   ├── release.yml   # Release por tag: construye y publica las 12 imágenes en GHCR (gateway + 11 servicios)
 │   ├── promote.yml   # Promueve imágenes publicadas a stage/prod POR DIGEST, sin reconstruir
-│   └── deploy.yml    # Despliegue manual por entorno + smoke del gateway
+│   ├── deploy.yml    # Despliegue manual por entorno + smoke del gateway
+│   ├── e2e.yml       # E2E manual/tag: stack dev + npm run demo + revisión de logs
+│   └── mutation.yml  # Mutation testing mensual/pre-release (Stryker)
 ├── CODEOWNERS        # Revisión de caminos sensibles (R-CI-10)
 └── dependabot.yml    # Actualización semanal (actions y npm) agrupada por familia
 ```
@@ -38,7 +40,7 @@ ghcr.io/xozan845-ctrl/core-engine-<servicio>:sha-<corto>
 flowchart LR
     A[rama develop] -->|PR| B[staging]
     B -->|CI verde| C[main]
-    C -->|git tag vX.Y.Z| R["release.yml\nbuild 11 imágenes + digests"]
+    C -->|git tag vX.Y.Z| R["release.yml\nbuild 12 imágenes + digests"]
     R -->|"promote.yml env=stage"| S["GHCR :stage"]
     R -->|"promote.yml env=prod"| P["GHCR :prod"]
     S --> DX["deploy.yml env=stage"]
@@ -49,8 +51,9 @@ flowchart LR
    lint, test+cobertura, build con gate OpenAPI `G-8`).
 2. **`release.yml`** se dispara al empujar un tag `vX.Y.Z`. Su `gate` exige
    tag semver válido, que el commit esté en `main` y que haya un run de `ci.yml` en
-   `success` **en ese SHA** (`R-CD-1`, `R-CD-2`). Luego construye y publica las 10
-   imágenes con etiquetas OCI/semver y deja el digest en el resumen (`R-CD-4`).
+   `success` **en ese SHA** (`R-CD-1`, `R-CD-2`). Luego construye y publica las 12
+   imágenes (gateway + 11 servicios) con etiquetas OCI/semver y deja el digest en
+   el resumen (`R-CD-4`).
 3. **`promote.yml`** (manual) mueve una release publicada a `stage` o `prod`
    **por digest** (`@sha256:`), sin reconstruir (`R-CD-3`), con `dry_run` por defecto
    (`R-CD-8`) y `environment` como gate de producción (`R-CD-6`).

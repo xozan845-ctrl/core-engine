@@ -101,12 +101,12 @@ export class CrearProyeccionRequestDto {
 }
 
 /**
- * GET/POST /api/v1/finanzas/{proyecciones,punto-equilibrio,kpis} — modelo
+ * GET/POST /api/v2/finanzas/{proyecciones,punto-equilibrio,kpis} — modelo
  * financiero del cap. 8: proyecciones auditables, KPIs y equilibrio.
  */
 @ApiTags('Finanzas · Modelo')
 @ApiBearerAuth()
-@Controller('api/v1/finanzas')
+@Controller('api/v2/finanzas')
 @Roles(ROLES.SUPER_ADMIN, ROLES.ADMIN)
 export class FinanzasController {
   constructor(

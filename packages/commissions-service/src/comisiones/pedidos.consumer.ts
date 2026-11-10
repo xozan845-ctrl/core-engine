@@ -10,6 +10,7 @@ import {
   PaymentProcesadoData,
   DevolucionSolicitadaData,
   Logger,
+  ejecutarConContexto,
 } from '@core/shared';
 import { ComisionesService } from './comisiones.service';
 
@@ -40,30 +41,50 @@ export class PedidosConsumer implements OnModuleInit {
       { ...COLAS.commissions_liquidacion, nombre: COLAS.commissions_liquidacion.cola },
     ]);
     await this.rabbit.consumir(COLAS.commissions_pedidos.cola, (e) => this.manejar(e));
+    await this.rabbit.consumir(COLAS.commissions_liquidacion.cola, (e) => this.manejarLiquidacion(e));
     this.rabbit.activarReintento();
     this.logger.info({ msg: 'Consumidor de pedidos activo' });
   }
 
+  private async manejarLiquidacion(evento: EventoBus): Promise<void> {
+    if (evento.tipo !== EVENTOS.COMISION_ACREDITADA) return;
+    // La liquidación quincenal consolida commissions.comisiones; este consumo
+    // evita mensajes huérfanos en Rabbit y deja trazabilidad del evento.
+    this.logger.info({ msg: 'Comision disponible para liquidacion', event_id: evento.event_id });
+  }
+
   private async manejar(evento: EventoBus): Promise<void> {
-    switch (evento.tipo) {
-      case EVENTOS.PAYMENT_PROCESADO:
-        await this.pago(evento as EventoBus<PaymentProcesadoData>);
-        break;
-      case EVENTOS.ORDER_COMPLETADO:
-        await this.ordenCompletada(evento as EventoBus<OrderCompletadoData>);
-        break;
-      case EVENTOS.DEVOLUCION_SOLICITADA:
-        await this.devolucion(evento as EventoBus<DevolucionSolicitadaData>);
-        break;
-      default:
-        return;
-    }
+    await ejecutarConContexto(
+      {
+        request_id: `commissions-event-${evento.event_id}`,
+        servicio: 'commissions-consumer',
+        usuario_id: '00000000-0000-0000-0000-000000000000',
+        rol: 'super_admin',
+      },
+      async () => {
+        switch (evento.tipo) {
+          case EVENTOS.PAYMENT_PROCESADO:
+            await this.pago(evento as EventoBus<PaymentProcesadoData>);
+            break;
+          case EVENTOS.ORDER_COMPLETADO:
+            await this.ordenCompletada(evento as EventoBus<OrderCompletadoData>);
+            break;
+          case EVENTOS.DEVOLUCION_SOLICITADA:
+            await this.devolucion(evento as EventoBus<DevolucionSolicitadaData>);
+            break;
+          default:
+            return;
+        }
+      },
+    );
   }
 
   private async pago(evento: EventoBus<PaymentProcesadoData>): Promise<void> {
     if (await this.yaProcesado(evento)) return;
-    await this.comisiones.registrarPago(evento.data.order_id, evento.data.monto_cents);
-    await this.marcarProcesado(evento);
+    await this.pg.transaccion(async (client) => {
+      await this.comisiones.registrarPago(evento.data.order_id, evento.data.monto_cents, client);
+      await this.marcarProcesadoEnTransaccion(client, evento);
+    });
   }
 
   private async ordenCompletada(evento: EventoBus<OrderCompletadoData>): Promise<void> {
@@ -72,44 +93,54 @@ export class PedidosConsumer implements OnModuleInit {
     if (!orden) throw new Error('Orden no disponible para acreditar comision.');
 
     if (!orden.items?.length) throw new Error('La orden no tiene lineas asignadas.');
-    for (const item of orden.items) {
-      if (!item.vendedor_id || !item.empresa_id || !item.tienda_id || item.participacion_porcentaje === undefined) {
-        throw new Error('La linea no tiene contexto empresarial completo.');
+    const acreditadas = await this.pg.transaccion(async (client) => {
+      if (await this.yaProcesadoEnTransaccion(client, evento)) return 0;
+      let total = 0;
+      for (const item of orden.items ?? []) {
+        if (!item.vendedor_id || !item.empresa_id || !item.tienda_id || item.participacion_porcentaje === undefined) {
+          throw new Error('La linea no tiene contexto empresarial completo.');
+        }
+        const comision = await this.comisiones.acreditarLinea({
+          orderId: evento.data.order_id,
+          lineaClave: item.oferta_id,
+          empresaId: item.empresa_id,
+          tiendaId: item.tienda_id,
+          vendedorId: item.vendedor_id,
+          ventaCents: item.precio_unitario_cents * item.cantidad,
+          participacion: item.participacion_porcentaje,
+        }, client);
+        if (!comision) continue;
+        await this.outbox.insertarEnTransaccion(client, EVENTOS.COMISION_ACREDITADA, {
+          order_id: evento.data.order_id,
+          monto_cents: comision.comision_cents,
+          monto_vendedor_cents: comision.monto_vendedor_cents,
+          monto_empresario_cents: comision.monto_empresario_cents,
+          vendedor_id: item.vendedor_id,
+          empresa_id: item.empresa_id,
+          tienda_id: item.tienda_id,
+          participacion_porcentaje: item.participacion_porcentaje,
+        });
+        total += 1;
+        this.logger.info({
+          msg: 'Comision acreditada',
+          order_id: evento.data.order_id,
+          comision_cents: comision.comision_cents,
+        });
       }
-      const comision = await this.comisiones.acreditarLinea({
-        orderId: evento.data.order_id,
-        lineaClave: item.oferta_id,
-        empresaId: item.empresa_id,
-        tiendaId: item.tienda_id,
-        vendedorId: item.vendedor_id,
-        ventaCents: item.precio_unitario_cents * item.cantidad,
-        participacion: item.participacion_porcentaje,
-      });
-      if (!comision) continue;
-      await this.outbox.insertar(EVENTOS.COMISION_ACREDITADA, {
-        order_id: evento.data.order_id,
-        monto_cents: comision.comision_cents,
-        monto_vendedor_cents: comision.monto_vendedor_cents,
-        monto_empresario_cents: comision.monto_empresario_cents,
-        vendedor_id: item.vendedor_id,
-        empresa_id: item.empresa_id,
-        tienda_id: item.tienda_id,
-        participacion_porcentaje: item.participacion_porcentaje,
-      });
-      this.logger.info({
-        msg: 'Comision acreditada',
-        order_id: evento.data.order_id,
-        comision_cents: comision.comision_cents,
-      });
-    }
-    await this.marcarProcesado(evento);
+      await this.marcarProcesadoEnTransaccion(client, evento);
+      return total;
+    });
+    this.logger.info({ msg: 'Comisiones procesadas', order_id: evento.data.order_id, lineas: acreditadas });
   }
 
   private async devolucion(evento: EventoBus<DevolucionSolicitadaData>): Promise<void> {
     if (await this.yaProcesado(evento)) return;
-    // RN-06: se compensa en la siguiente liquidacion
-    await this.comisiones.compensar(evento.data.order_id, evento.data.motivo);
-    await this.marcarProcesado(evento);
+    // RN-06: se compensa en la siguiente liquidacion, en una sola transacción
+    // con la marca de idempotencia.
+    await this.pg.transaccion(async (client) => {
+      await this.comisiones.compensar(evento.data.order_id, evento.data.motivo, client);
+      await this.marcarProcesadoEnTransaccion(client, evento);
+    });
   }
 
   private async consultarOrden(orderId: string): Promise<
@@ -134,8 +165,22 @@ export class PedidosConsumer implements OnModuleInit {
     return !!fila;
   }
 
-  private async marcarProcesado(evento: EventoBus): Promise<void> {
-    await this.pg.query(
+  private async yaProcesadoEnTransaccion(
+    client: import('pg').PoolClient,
+    evento: EventoBus,
+  ): Promise<boolean> {
+    const fila = await client.query(
+      `SELECT 1 FROM commissions.eventos_procesados WHERE event_id = $1`,
+      [evento.event_id],
+    );
+    return (fila.rowCount ?? 0) > 0;
+  }
+
+  private async marcarProcesadoEnTransaccion(
+    client: import('pg').PoolClient,
+    evento: EventoBus,
+  ): Promise<void> {
+    await client.query(
       `INSERT INTO commissions.eventos_procesados (event_id, tipo, procesado_en)
        VALUES ($1, $2, NOW()) ON CONFLICT (event_id) DO NOTHING`,
       [evento.event_id, evento.tipo],

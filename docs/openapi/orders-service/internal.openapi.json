@@ -354,6 +354,8 @@
         },
         "required": [
           "oferta_id",
+          "item_type",
+          "item_id",
           "sku",
           "producto_nombre",
           "cantidad",
@@ -380,6 +382,12 @@
             "description": "Id del comprador",
             "format": "uuid"
           },
+          "parte_id": {
+            "type": "object",
+            "nullable": true,
+            "format": "uuid",
+            "description": "Referencia universal opcional del comprador"
+          },
           "tienda_id": {
             "type": "string",
             "description": "Id de la tienda",
@@ -397,8 +405,7 @@
               "reserva",
               "cotizacion",
               "orden_servicio"
-            ],
-            "default": "compra"
+            ]
           },
           "fulfillment_config": {
             "type": "object",
@@ -478,6 +485,7 @@
           "comprador_id",
           "tienda_id",
           "estado",
+          "tipo_orden",
           "total_cents",
           "comision_cents",
           "moneda",

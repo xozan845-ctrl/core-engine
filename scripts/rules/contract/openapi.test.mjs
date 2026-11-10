@@ -7,7 +7,7 @@ import { readJson, readText, walkFiles } from '../../engine/lib/fs.mjs';
  * Regla R-DO-8: taxonomía y superficies del contrato OpenAPI.
  *
  * La API tiene dos superficies deliberadamente separadas:
- *   - pública: /api/v1/**  (expuesta por el gateway)
+ *   - pública: /api/v2/**  (expuesta por el gateway)
  *   - interna: /internal/** (servicio→servicio, con ClaveInternaGuard)
  *
  * El contrato público no puede anunciar rutas internas y el interno no puede
@@ -15,13 +15,13 @@ import { readJson, readText, walkFiles } from '../../engine/lib/fs.mjs';
  * guarda de clave interna (R-DS-5).
  */
 
-const RE_SUPERFICIE = /^(?:api\/v1|internal)(?:\/|$)/;
+const RE_SUPERFICIE = /^(?:api\/v2|internal)(?:\/|$)/;
 const RE_CONTROLLER = /@Controller\(\s*(['"`])([^'"`]+)\1\s*\)/g;
 const RE_RUTA = /@(Get|Post|Patch|Put|Delete)\(\s*(?:['"`]([^'"`]*)['"`])?\s*\)/g;
 
 const controladores = walkFiles(
   join(repoRoot, 'packages'),
-  (nombre) => nombre.endsWith('.controller.ts'),
+  (nombre) => nombre.endsWith('.controller.ts') && !nombre.includes('.stryker-tmp'),
 );
 
 function prefijosDe(texto) {
@@ -81,7 +81,7 @@ export default defineSuite({
   rules: ['R-DO-8', 'R-DO-9', 'R-DO-10', 'R-DS-5'],
   mode: 'repo',
   run: ({ test, assert }) => {
-    test('R-DO-8: cada controlador declara una superficie /api/v1 o /internal', () => {
+    test('R-DO-8: cada controlador declara una superficie /api/v2 o /internal', () => {
       const invalidos = [];
       const sinControlador = [];
 
@@ -106,7 +106,7 @@ export default defineSuite({
       assert.deepEqual(
         invalidos,
         [],
-        `Rutas fuera de las superficies /api/v1 o /internal (R-DO-8):\n${invalidos.join('\n')}`,
+        `Rutas fuera de las superficies /api/v2 o /internal (R-DO-8):\n${invalidos.join('\n')}`,
       );
     });
 
@@ -125,12 +125,12 @@ export default defineSuite({
       );
     });
 
-    test('R-DO-8: el contrato interno no contiene rutas /api/v1', () => {
+    test('R-DO-8: el contrato interno no contiene rutas /api/v2', () => {
       const documento = readJson(
         join(repoRoot, 'docs/api/core-engine.internal.openapi.json'),
       );
       const publicas = Object.keys(documento.paths).filter((ruta) =>
-        ruta.startsWith('/api/v1'),
+        ruta.startsWith('/api/v2'),
       );
 
       assert.deepEqual(

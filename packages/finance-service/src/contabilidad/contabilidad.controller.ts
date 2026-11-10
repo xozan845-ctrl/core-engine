@@ -111,12 +111,12 @@ export class EstadoCuentaRequestDto {
 }
 
 /**
- * GET/POST /api/v1/finanzas/{cuentas,asientos,libro-mayor} — contabilidad
+ * GET/POST /api/v2/finanzas/{cuentas,asientos,libro-mayor} — contabilidad
  * por partida doble: plan de cuentas, libro diario e historico por cuenta.
  */
 @ApiTags('Finanzas · Contabilidad')
 @ApiBearerAuth()
-@Controller('api/v1/finanzas')
+@Controller('api/v2/finanzas')
 @Roles(ROLES.SUPER_ADMIN, ROLES.ADMIN)
 export class ContabilidadController {
   constructor(private readonly contabilidad: ContabilidadService) {}
@@ -145,7 +145,7 @@ export class ContabilidadController {
     return cuenta;
   }
 
-  /** Libro diario: GET /api/v1/finanzas/asientos?desde=&hasta= */
+  /** Libro diario: GET /api/v2/finanzas/asientos?desde=&hasta= */
   @Get('asientos')
   @ApiOperation({ summary: 'Libro diario (asientos)' })
   @ApiOkResponse({ type: [AsientoResponseDto], description: 'Asientos del periodo' })
@@ -186,7 +186,7 @@ export class ContabilidadController {
     return asiento;
   }
 
-  /** Libro mayor por cuenta: GET /api/v1/finanzas/libro-mayor/:cuenta?desde=&hasta= */
+  /** Libro mayor por cuenta: GET /api/v2/finanzas/libro-mayor/:cuenta?desde=&hasta= */
   @Get('libro-mayor/:cuenta')
   @ApiOperation({ summary: 'Libro mayor por cuenta' })
   @ApiParam({ name: 'cuenta', description: 'Código de la cuenta' })
@@ -199,7 +199,7 @@ export class ContabilidadController {
     return this.contabilidad.libroMayor(cuenta, desde, hasta);
   }
 
-  /** Libro de ventas (DGI): GET /api/v1/finanzas/libro-ventas?desde=&hasta= */
+  /** Libro de ventas (DGI): GET /api/v2/finanzas/libro-ventas?desde=&hasta= */
   @Get('libro-ventas')
   @ApiOperation({ summary: 'Libro de ventas (DGI)' })
   @ApiOkResponse({ type: [LibroIvaResponseDto], description: 'Libro de ventas' })
@@ -207,7 +207,7 @@ export class ContabilidadController {
     return this.contabilidad.libroVentas(desde, hasta);
   }
 
-  /** Libro de compras (DGI): GET /api/v1/finanzas/libro-compras?desde=&hasta= */
+  /** Libro de compras (DGI): GET /api/v2/finanzas/libro-compras?desde=&hasta= */
   @Get('libro-compras')
   @ApiOperation({ summary: 'Libro de compras (DGI)' })
   @ApiOkResponse({ type: [LibroIvaResponseDto], description: 'Libro de compras' })
