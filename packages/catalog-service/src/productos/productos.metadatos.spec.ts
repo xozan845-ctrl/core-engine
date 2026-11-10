@@ -27,10 +27,10 @@ const fila = {
   garantia_meses: 12,
   es_materia_prima: false,
   ubicacion: 'A-1',
-  estado_operativo: 'activo',
+  estado: 'activo',
   actualizado_en: '2026-10-30T10:00:00.000Z',
   stock: 10,
-  estado: 'disponible',
+  estado: 'activo',
   creado_en: '2026-10-30T10:00:00.000Z',
 };
 
@@ -88,7 +88,7 @@ describe('ProductosService · metadatos y estado operativo (R-PS-01/03)', () => 
     const creado = await servicio.crear(datos);
 
     const insert = (client.query as Mock).mock.calls.find((c: unknown[]) =>
-      String(c[0]).includes('INSERT INTO catalog.productos'),
+      String(c[0]).includes('INSERT INTO catalog.items'),
     ) as [string, unknown[]];
     expect(insert[0]).toContain('costo_cents');
     expect(insert[1]).toContain(100000);
@@ -125,12 +125,12 @@ describe('ProductosService · metadatos y estado operativo (R-PS-01/03)', () => 
     const { servicio, pg } = crear();
     await servicio.listar({ empresa_id: EMPRESA });
     expect(String((pg.query as Mock).mock.calls[0][0])).toContain(
-      "estado_operativo = 'activo'",
+      "i.estado = 'activo'",
     );
 
     await servicio.listar({ empresa_id: EMPRESA, incluir_inactivos: true });
     expect(String((pg.query as Mock).mock.calls[1][0])).not.toContain(
-      "estado_operativo = 'activo'",
+      "i.estado = 'activo'",
     );
   });
 
@@ -139,7 +139,7 @@ describe('ProductosService · metadatos y estado operativo (R-PS-01/03)', () => 
     (pg.queryOne as Mock)
       .mockResolvedValueOnce(fila)
       .mockResolvedValueOnce(null)
-      .mockResolvedValueOnce({ ...fila, estado_operativo: 'inactivo', ubicacion: 'B-2' });
+      .mockResolvedValueOnce({ ...fila, estado: 'inactivo', ubicacion: 'B-2' });
 
     const actualizado = await servicio.actualizar(
       fila.id,
@@ -148,9 +148,9 @@ describe('ProductosService · metadatos y estado operativo (R-PS-01/03)', () => 
     );
 
     const update = (client.query as Mock).mock.calls.find((c: unknown[]) =>
-      String(c[0]).includes('UPDATE catalog.productos'),
+      String(c[0]).includes('UPDATE catalog.items'),
     ) as [string, unknown[]];
-    expect(update[0]).toContain('estado_operativo = $');
+    expect(update[0]).toContain('estado = $');
     expect(update[0]).toContain('actualizado_en = NOW()');
     expect(actualizado).toMatchObject({ estado_operativo: 'inactivo' });
   });

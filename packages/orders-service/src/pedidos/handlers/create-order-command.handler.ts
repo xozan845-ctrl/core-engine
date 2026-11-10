@@ -360,7 +360,7 @@ export class CreateOrderCommandHandler {
       if (productosConStock.length === 0) return;
       const skus = [...new Set(productosConStock.map((i) => i.sku))];
       const res = await fetch(
-        `${this.catalogUrl}/internal/productos/lote?skus=${encodeURIComponent(skus.join(','))}`,
+        `${this.catalogUrl}/internal/items/lote?skus=${encodeURIComponent(skus.join(','))}`,
         { headers: { 'x-internal-key': this.claveInterna } },
       );
       if (!res.ok) return;

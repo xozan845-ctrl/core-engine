@@ -111,8 +111,8 @@ async function main() {
   const token = await login(ADMIN_EMAIL, ADMIN_PASSWORD, 'login');
   console.log('OK');
 
-  paso('GET /api/v2/catalog/productos (lectura real autenticada)');
-  const catalog = await request('GET', '/api/v2/catalog/productos?limite=1', { token });
+  paso('GET /api/v2/catalog/items (lectura real autenticada)');
+  const catalog = await request('GET', '/api/v2/catalog/items?limite=1', { token });
   assertStatus(catalog, 200, 'catálogo');
   if (!Array.isArray(catalog.json?.items)) {
     throw new Error('el catálogo no devolvió una lista `items`');

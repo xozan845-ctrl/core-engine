@@ -25,8 +25,8 @@ const spec = (fichero, paths, schemas = {}) => ({
 });
 
 test('clasifica rutas por superficie y rechaza prefijos desconocidos', () => {
-  assert.equal(clasificarRuta('/api/v2/catalog/productos'), 'publica');
-  assert.equal(clasificarRuta('/internal/productos/lote'), 'interna');
+  assert.equal(clasificarRuta('/api/v2/catalog/items'), 'publica');
+  assert.equal(clasificarRuta('/internal/items/lote'), 'interna');
   assert.throws(() => clasificarRuta('/health'), /superficies conocidas/);
   assert.throws(() => clasificarRuta('/api/v1/catalog/productos'), /superficies conocidas/);
 });
@@ -34,17 +34,17 @@ test('clasifica rutas por superficie y rechaza prefijos desconocidos', () => {
 test('el contrato público excluye /internal y el interno excluye /api/v2', () => {
   const { publica, interna } = construirDocumentos([
     spec('catalog-service.json', {
-      '/api/v2/catalog/productos': { get: operacion('productos') },
-      '/internal/productos/lote': { get: operacion('lote') },
+      '/api/v2/catalog/items': { get: operacion('productos') },
+      '/internal/items/lote': { get: operacion('lote') },
     }),
     spec('identity-service.json', {
       '/internal/usuarios/{id}': { get: operacion('usuario') },
     }),
   ]);
 
-  assert.deepEqual(Object.keys(publica.paths), ['/api/v2/catalog/productos']);
+  assert.deepEqual(Object.keys(publica.paths), ['/api/v2/catalog/items']);
   assert.deepEqual(Object.keys(interna.paths), [
-    '/internal/productos/lote',
+    '/internal/items/lote',
     '/internal/usuarios/{id}',
   ]);
 });
@@ -52,8 +52,8 @@ test('el contrato público excluye /internal y el interno excluye /api/v2', () =
 test('el contrato interno declara x-internal-key y el público conserva bearer', () => {
   const { publica, interna } = construirDocumentos([
     spec('catalog-service.json', {
-      '/api/v2/catalog/productos': { get: operacion('productos') },
-      '/internal/productos/lote': { get: operacion('lote') },
+      '/api/v2/catalog/items': { get: operacion('productos') },
+      '/internal/items/lote': { get: operacion('lote') },
     }),
   ]);
 
@@ -74,10 +74,10 @@ test('el contrato interno declara x-internal-key y el público conserva bearer',
 test('falla si dos specs documentan el mismo path y método en la misma superficie', () => {
   const especificaciones = [
     spec('catalog-service.json', {
-      '/api/v2/catalog/productos': { get: operacion('uno') },
+      '/api/v2/catalog/items': { get: operacion('uno') },
     }),
     spec('stores-service.json', {
-      '/api/v2/catalog/productos': { get: operacion('dos') },
+      '/api/v2/catalog/items': { get: operacion('dos') },
     }),
   ];
 
@@ -96,7 +96,7 @@ test('no incluye schemas de specs que no aportan rutas a la superficie', () => {
     ),
     spec(
       'catalog-service.json',
-      { '/api/v2/catalog/productos': { get: operacion('productos') } },
+      { '/api/v2/catalog/items': { get: operacion('productos') } },
       { Producto: { type: 'object' } },
     ),
   ];

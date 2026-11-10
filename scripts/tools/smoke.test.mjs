@@ -158,8 +158,8 @@ test('smoke limita la espera de la saga asíncrona por paso', async () => {
       }
       return json(res, 200, { id: 'empresa-1', slug: slugEmpresa });
     }
-    if (ruta === '/api/v2/catalog/productos' && req.method === 'POST') {
-      return json(res, 201, { id: 'producto-1', sku: 'SKU-1' });
+    if (ruta === '/api/v2/catalog/items' && req.method === 'POST') {
+      return json(res, 201, { item_id: 'producto-1', codigo: 'SKU-1' });
     }
     if (ruta === '/api/v2/admin/reportes') return json(res, 401, { codigo: 'NO_AUTORIZADO' });
     if (ruta === '/api/v2/vendedores/tienda' && req.method === 'POST') {

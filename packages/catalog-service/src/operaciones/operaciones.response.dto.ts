@@ -49,7 +49,7 @@ export class EscaneoResponseDto {
 
 export class ComboComponenteResponseDto {
   @ApiProperty({ format: 'uuid' })
-  producto_id: string;
+  item_id: string;
 
   @ApiProperty()
   sku: string;
@@ -139,7 +139,7 @@ export class PromocionResponseDto {
   tipo: string;
 
   @ApiProperty({ nullable: true })
-  producto_id: string | null;
+  item_id: string | null;
 
   @ApiProperty()
   sku: string;
