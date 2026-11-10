@@ -72,7 +72,7 @@ function workspacesInScript(script, task) {
 export default defineSuite({
   id: 'microservices-ci-contract',
   area: 'test',
-  rules: ['R-MS-1', 'R-QA-1', 'R-COV-1', 'R-COV-2', 'R-COV-4', 'R-CI-5', 'R-I-12', 'R-DS-1', 'R-C-7', 'R-MT-1', 'R-MT-2', 'R-FL-3'],
+  rules: ['R-MS-1', 'R-QA-1', 'R-COV-1', 'R-COV-2', 'R-COV-4', 'R-CI-5', 'R-I-12', 'R-DS-1', 'R-C-7', 'R-MT-1', 'R-MT-2', 'R-FL-3', 'R-RB-4'],
   mode: 'repo',
   run: ({ test, assert }) => {
     test('R-MS-1: el inventario declara exactamente los servicios desplegables', () => {
@@ -419,6 +419,38 @@ export default defineSuite({
       assert.match(workflow, /^ {6}TEST_DATABASE_URL: postgres:\/\/core_engine_test:test_only@127\.0\.0\.1:5432\/core_engine_test$/m);
       assert.match(workflow, /^ {8}run: npm run test:integration$/m);
       assert.match(workflow, /^ {4}needs: \[rules-check, test, lint, integration-catalog\]$/m);
+    });
+
+    test('R-RB-4: toda llamada fetch interna declara un timeout', () => {
+      const problems = [];
+      for (const workspace of ['shared', ...SERVICES]) {
+        const sourceDir = join(packageDir(workspace), 'src');
+        if (!existsSync(sourceDir)) continue;
+        for (const file of walkFiles(
+          sourceDir,
+          (name) => name.endsWith('.ts') && !name.endsWith('.spec.ts'),
+        )) {
+          const text = readText(file);
+          const fetchCall = /\bfetch\s*\(/g;
+          let match;
+          while ((match = fetchCall.exec(text))) {
+            // El gateway usa AbortController + setTimeout; los servicios usan
+            // AbortSignal.timeout. Ambos son timeouts explícitos válidos.
+            const fragment = text.slice(
+              Math.max(0, match.index - 800),
+              match.index + 600,
+            );
+            if (
+              !/signal\s*:/.test(fragment) ||
+              !/(AbortSignal\.timeout|AbortController)/.test(fragment)
+            ) {
+              const linea = text.slice(0, match.index).split('\n').length;
+              problems.push(`${relative(repoRoot, file)}:${linea}`);
+            }
+          }
+        }
+      }
+      assert.deepEqual(problems, [], `fetch sin timeout (R-RB-4):\n${problems.join('\n')}`);
     });
 
     test('R-MT-1/R-MT-2: mutation testing tiene runtime y módulos protegidos', () => {
