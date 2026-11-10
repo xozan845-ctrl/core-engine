@@ -42,10 +42,36 @@ generado usan `/api/v2`.
 - Migración `39_orders_sin_defaults.sql` retira el default de
   `orders.orden_vista.tipo_orden`.
 
-**Pendiente:** fases 3 a 6 (catálogo unificado, partes, personal, empresas) y
-fase 8 (slugs, solo si se decide eliminar el historial). La Fase 5 tiene avance
-parcial por el módulo `personal` y el guard de permisos ya incorporados en la
-rama.
+**Pendiente:** fases 3 a 6 (catálogo unificado, partes, personal, empresas).
+La Fase 5 tiene avance parcial por el módulo `personal` y el guard de permisos ya
+incorporados en la rama.
+
+**Integración de worktrees:** la rama `docs/auditoria-integral-2026-11-08` y sus
+cambios de permisos/capacidades se integraron en `3c687e3`. Se conservó
+`/api/v2`, se mantuvo el refactor de `CapabilityGuard` por API interna, se
+conservaron las policies RLS de `orders.orden_vista` y se eliminó la policy de
+la tabla legacy `orders.proyeccion_ordenes`.
+
+**Fase 8:** decisión tomada: se **conservan** el historial de slugs y las
+redirecciones 301. No se elimina esa funcionalidad.
+
+---
+
+## Decisiones pendientes para las fases 3–6
+
+Antes de ejecutar las fases destructivas hay que cerrar estas decisiones de
+producto:
+
+1. **Catálogo (Fase 3):** ¿las variantes e imágenes pasan a `catalog.item_variantes`/
+   `catalog.item_imagenes` o se modelan como items hijos con `parent_item_id`?
+2. **Partes (Fase 4):** para `scheduling.citas.cliente_id` y
+   `finance.comprobantes.cliente_id`, ¿se descartan los valores históricos o se
+   migran a `parte_id` creando partes sintéticas?
+3. **Personal (Fase 5):** ¿`participacion_porcentaje` se mueve a
+   `asignaciones_personal.metadata` o se crea una tabla de participación?
+4. **Logística (Fase 6):** al retirar `identity.empresas.modalidad_logistica`,
+   ¿la flota se elige por capacidad (`logistica_rutas`) o por un nuevo campo de
+   configuración de fulfillment?
 
 ---
 
