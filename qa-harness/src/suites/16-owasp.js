@@ -64,16 +64,17 @@ export async function suite16Owas(client, cfg, adminToken, vendedorToken, compra
     // ── A01 Broken Access Control ────────────────────────────────────────
     // ACL por rol ya cubierto en 02; aqui el control faltante: IDOR (ownership).
     const suf = Date.now().toString(36) + Math.random().toString(36).slice(2, 5);
+    const empresaId = cfg.get ? cfg.get('empresaId') : cfg.empresaId;
     const setup = {};
     let setupOk = true;
     try {
-      setup.prod = await client.post('/api/v2/catalog/productos', {
-        sku: `SEC-${suf}`, nombre: 'Producto Seg 16', descripcion: '', categoria: 'general',
-        precio_base: '100.00', stock: 5,
+      setup.prod = await client.post('/api/v2/catalog/items', {
+        tipo: 'producto', codigo: `SEC-${suf}`, nombre: 'Producto Seg 16', descripcion: '', categoria: 'general',
+        precio: '100.00', track_inventory: true, stock: 5, empresa_id: empresaId,
       }, aAuth);
       setup.tienda = await client.get('/api/v2/vendedores/me/tienda', vAuth);
       setup.of = await client.post('/api/v2/vendedores/productos', {
-        producto_id: setup.prod.body?.id, margen: 10,
+        item_id: setup.prod.body?.item_id ?? setup.prod.body?.id, margen: 10,
         ...(setup.tienda.body?.id ? { tienda_id: setup.tienda.body.id } : {}),
       }, vAuth);
       setup.orden = setup.of.body?.id ? await client.post('/api/v2/orders', {
@@ -149,12 +150,15 @@ export async function suite16Owas(client, cfg, adminToken, vendedorToken, compra
     });
     r('A03 SQLi en login → 400/401 (no autentica)', [400, 401, 429].includes(sqliLogin.status), { status: sqliLogin.status });
 
-    const sqliId = await client.get('/api/v2/catalog/productos/' + encodeURIComponent(`1' OR '1'='1`), aAuth);
+    const sqliId = await client.get(
+      '/api/v2/catalog/items/' + encodeURIComponent(`1' OR '1'='1`) + `?empresa_id=${encodeURIComponent(empresaId)}`,
+      aAuth,
+    );
     r('A03 SQLi en id de producto → 400/404 (500 = bug de manejo, sin inyeccion)', [400, 404].includes(sqliId.status), { status: sqliId.status, detalle: sqliId.status === 500 ? '500 no gestionado para id malformado (no exfiltra datos)' : '' });
 
-    const xss = await client.post('/api/v2/catalog/productos', {
-      sku: `XSS-${suf}`, nombre: '<script>alert(1)</script>', descripcion: '', categoria: 'general',
-      precio_base: '10.00', stock: 2,
+    const xss = await client.post('/api/v2/catalog/items', {
+      tipo: 'producto', codigo: `XSS-${suf}`, nombre: '<script>alert(1)</script>', descripcion: '', categoria: 'general',
+      precio: '10.00', track_inventory: true, stock: 2, empresa_id: empresaId,
     }, aAuth);
     r('A03 XSS almacenado: nombre ejecutable rechazado o inofensivo (JSON, sin render) → 201 como dato', xss.status === 201 && (typeof xss.body?.nombre === 'string'), { status: xss.status });
 
@@ -231,7 +235,10 @@ export async function suite16Owas(client, cfg, adminToken, vendedorToken, compra
 
     // ── A10 SSRF ─────────────────────────────────────────────────────────
     const ssrf1 = await client.post('/api/v2/orders', { items: [{ oferta_id: 'http://169.254.169.254/latest/meta-data' }] }, cAuth);
-    const ssrf2 = await client.get('/api/v2/catalog/productos/' + encodeURIComponent('http://127.0.0.1:5432'));
+    const ssrf2 = await client.get(
+      '/api/v2/catalog/items/' + encodeURIComponent('http://127.0.0.1:5432') + `?empresa_id=${encodeURIComponent(empresaId)}`,
+      aAuth,
+    );
     r('A10 SSRF: rutas no consumen URLs del atacante (400/404/409, sin fetch interno)', ssrf1.status !== 500 && ssrf2.status !== 500, { s1: ssrf1.status, s2: ssrf2.status, detalle: `sin endpoints de fetch por diseño; ssrf1=${ssrf1.status} ssrf2=${ssrf2.status}` + (ssrf1.status === 500 ? ' (orden con oferta malformada → 500 no gestionado)' : '') });
 
     // ── DoS: limites de entrada ──────────────────────────────────────────

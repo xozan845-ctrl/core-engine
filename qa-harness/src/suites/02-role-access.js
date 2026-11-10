@@ -88,7 +88,7 @@ export async function suite02Acceso(client, cfg, adminToken, compradorToken, log
       nombre: 'Log ext', correo: `log.${Date.now()}@test.com`,
       contrasena: 'Contrasena123!', rol: 'logistica',
     });
-    resultados.push({ test: 'Registro publico con rol logistica → 400 (solo vendedor/comprador)', status: regL.status, pass: regL.status === 400 });
+    resultados.push({ test: 'Registro publico con rol logistica → 400 (solo empresario/comprador)', status: regL.status, pass: regL.status === 400 });
 
     // 15. 403: logistica no opera /orders (ruta solo-comprador)
     const lOrders = await client.get('/api/v2/orders', lAuth);

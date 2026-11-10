@@ -21,13 +21,14 @@ export async function suite06Carrito(client, cfg, compradorToken, adminToken, ve
 
   try {
     // Setup: producto + oferta reales
-    const prod = await client.post('/api/v2/catalog/productos', {
-      sku: `QA-C1-${suf}`, nombre: 'Producto QA Carrito', descripcion: '', categoria: 'general',
-      precio_base: '1000.00', stock: 50,
+    const empresaId = cfg.get ? cfg.get('empresaId') : cfg.empresaId;
+    const prod = await client.post('/api/v2/catalog/items', {
+      tipo: 'producto', codigo: `QA-C1-${suf}`, nombre: 'Producto QA Carrito', descripcion: '', categoria: 'general',
+      precio: '1000.00', track_inventory: true, stock: 50, empresa_id: empresaId,
     }, aAuth);
     const tienda = await client.get('/api/v2/vendedores/me/tienda', vAuth);
     const oferta = await client.post('/api/v2/vendedores/productos', {
-      producto_id: prod.body?.id, margen: 10,
+      item_id: prod.body?.item_id ?? prod.body?.id, margen: 10,
       ...(tienda.body?.id ? { tienda_id: tienda.body.id } : {}),
     }, vAuth);
     const ofertaId = oferta.body?.id ?? null;
