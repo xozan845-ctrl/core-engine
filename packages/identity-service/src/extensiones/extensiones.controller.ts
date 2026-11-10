@@ -71,7 +71,7 @@ class ExtensionValueResponseDto implements ExtensionValue {
 
 @ApiTags('Extensiones configurables')
 @ApiBearerAuth()
-@Controller('api/v1/empresas/:empresaId/extensiones')
+@Controller('api/v2/empresas/:empresaId/extensiones')
 export class ExtensionesController {
   constructor(private readonly extensiones: ExtensionesService) {}
 

@@ -28,8 +28,8 @@ type OrdenReserva = {
   cliente_parte_id?: string;
   items: Array<{
     empresa_id: string;
-    item_type?: string;
-    item_id?: string;
+    item_type: string;
+    item_id: string;
     fulfillment?: string;
     fulfillment_config?: Record<string, unknown>;
   }>;

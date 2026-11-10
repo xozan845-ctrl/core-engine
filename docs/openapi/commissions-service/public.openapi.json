@@ -2,7 +2,7 @@
   "openapi": "3.0.0",
   "info": {
     "title": "Core Engine · commissions-service · API pública",
-    "description": "Contrato público (/api/v1/**) de commissions-service. No contiene rutas /internal/**.",
+    "description": "Contrato público (/api/v2/**) de commissions-service. No contiene rutas /internal/**.",
     "version": "v1",
     "contact": {}
   },
@@ -10,7 +10,7 @@
   "x-superficie": "publica",
   "tags": [],
   "paths": {
-    "/api/v1/vendedores/me/liquidaciones": {
+    "/api/v2/vendedores/me/liquidaciones": {
       "get": {
         "operationId": "LiquidacionesController_mias",
         "parameters": [],
@@ -40,7 +40,7 @@
         ]
       }
     },
-    "/api/v1/empresarios/me/liquidaciones": {
+    "/api/v2/empresarios/me/liquidaciones": {
       "get": {
         "operationId": "LiquidacionesController_deMiEmpresa",
         "parameters": [],
@@ -70,7 +70,7 @@
         ]
       }
     },
-    "/api/v1/admin/liquidaciones/corte": {
+    "/api/v2/admin/liquidaciones/corte": {
       "post": {
         "operationId": "LiquidacionesController_corteManual",
         "parameters": [
@@ -117,7 +117,7 @@
         ]
       }
     },
-    "/api/v1/admin/liquidaciones/{id}/pagar": {
+    "/api/v2/admin/liquidaciones/{id}/pagar": {
       "post": {
         "operationId": "LiquidacionesController_pagar",
         "parameters": [
@@ -162,7 +162,7 @@
         ]
       }
     },
-    "/api/v1/vendedores/me/ventas": {
+    "/api/v2/vendedores/me/ventas": {
       "get": {
         "operationId": "VentasController_estado",
         "parameters": [],
@@ -189,7 +189,7 @@
         ]
       }
     },
-    "/api/v1/empresarios/me/ventas": {
+    "/api/v2/empresarios/me/ventas": {
       "get": {
         "operationId": "VentasEmpresaController_estado",
         "parameters": [],
@@ -216,7 +216,7 @@
         ]
       }
     },
-    "/api/v1/admin/reportes": {
+    "/api/v2/admin/reportes": {
       "get": {
         "operationId": "ReportesController_kpis",
         "parameters": [],

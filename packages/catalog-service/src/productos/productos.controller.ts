@@ -51,6 +51,7 @@ import {
   UsuarioActual,
   ROLES,
   NotFoundError,
+  Permisos,
   CAPACIDADES,
   RequiereCapacidades,
 } from '@core/shared';
@@ -430,11 +431,11 @@ export class DetalleProductoRequestDto {
 }
 
 @ApiTags('Catálogo')
-@Controller('api/v1/catalog')
+@Controller('api/v2/catalog')
 export class ProductosController {
   constructor(private readonly productos: ProductosService) {}
 
-  /** GET /api/v1/catalog/productos — listado publico de UNA empresa (ADR-27). */
+  /** GET /api/v2/catalog/productos — listado publico de UNA empresa (ADR-27). */
   @Get('productos')
   @ApiOperation({ summary: 'Listar productos de una empresa (público, filtros y paginación)' })
   @ApiOkResponse({ type: PaginaProductosResponseDto, description: 'Página de productos' })
@@ -450,7 +451,7 @@ export class ProductosController {
     });
   }
 
-  /** GET /api/v1/catalog/productos/:id — detalle publico acotado a la empresa. */
+  /** GET /api/v2/catalog/productos/:id — detalle publico acotado a la empresa. */
   @Get('productos/:id')
   @ApiOperation({ summary: 'Detalle de producto de una empresa (público, incluye variantes)' })
   @ApiParam({ name: 'id', description: 'Id del producto' })
@@ -473,8 +474,9 @@ export class ProductosController {
     return producto;
   }
 
-  /** POST /api/v1/catalog/productos — alta de producto (admin, TC-01). */
+  /** POST /api/v2/catalog/productos — alta de producto (admin, TC-01). */
   @Post('productos')
+  @Permisos('catalogo.escribir')
   @Roles(ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.EMPRESARIO)
   @RequiereCapacidades(CAPACIDADES.CATALOGO_ITEMS)
   @ApiBearerAuth()
@@ -490,8 +492,9 @@ export class ProductosController {
     return this.productos.crear({ ...dto, empresa_id: empresaId, precio_base: dto.precio_base });
   }
 
-  /** PATCH /api/v1/catalog/productos/:id — edicion (admin; RN-08 historico). */
+  /** PATCH /api/v2/catalog/productos/:id — edicion (admin; RN-08 historico). */
   @Patch('productos/:id')
+  @Permisos('catalogo.escribir')
   @Roles(ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.EMPRESARIO)
   @RequiereCapacidades(CAPACIDADES.CATALOGO_ITEMS)
   @ApiBearerAuth()
@@ -503,13 +506,15 @@ export class ProductosController {
     @Body() dto: ActualizarProductoRequestDto,
     @UsuarioActual() usuario: UsuarioContexto,
   ): Promise<Producto> {
-    const empresaId = usuario.rol === ROLES.EMPRESARIO ? usuario.tenant_id : undefined;
-    if (usuario.rol === ROLES.EMPRESARIO && !empresaId) throw new NotFoundError('Empresa', 'activa');
+    const esPersonalEmpresa = usuario.rol === ROLES.EMPRESARIO || Boolean(usuario.rol_empresa_id);
+    const empresaId = esPersonalEmpresa ? usuario.tenant_id : undefined;
+    if (esPersonalEmpresa && !empresaId) throw new NotFoundError('Empresa', 'activa');
     return this.productos.actualizar(id, dto, empresaId);
   }
 
-  /** POST /api/v1/catalog/productos/:id/variantes — agrega una variante. */
+  /** POST /api/v2/catalog/productos/:id/variantes — agrega una variante. */
   @Post('productos/:id/variantes')
+  @Permisos('catalogo.escribir')
   @Roles(ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.EMPRESARIO)
   @RequiereCapacidades(CAPACIDADES.CATALOGO_ITEMS)
   @ApiBearerAuth()
@@ -525,8 +530,9 @@ export class ProductosController {
     return this.productos.crearVariante(id, dto, empresaId);
   }
 
-  /** PATCH /api/v1/catalog/productos/:id/variantes/:varianteId — edita la variante. */
+  /** PATCH /api/v2/catalog/productos/:id/variantes/:varianteId — edita la variante. */
   @Patch('productos/:id/variantes/:varianteId')
+  @Permisos('catalogo.escribir')
   @Roles(ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.EMPRESARIO)
   @RequiereCapacidades(CAPACIDADES.CATALOGO_ITEMS)
   @ApiBearerAuth()
@@ -544,8 +550,9 @@ export class ProductosController {
     return this.productos.actualizarVariante(id, varianteId, dto, empresaId);
   }
 
-  /** DELETE /api/v1/catalog/productos/:id/variantes/:varianteId — elimina la variante. */
+  /** DELETE /api/v2/catalog/productos/:id/variantes/:varianteId — elimina la variante. */
   @Delete('productos/:id/variantes/:varianteId')
+  @Permisos('catalogo.escribir')
   @Roles(ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.EMPRESARIO)
   @RequiereCapacidades(CAPACIDADES.CATALOGO_ITEMS)
   @ApiBearerAuth()
@@ -563,8 +570,9 @@ export class ProductosController {
     await this.productos.eliminarVariante(id, varianteId, empresaId);
   }
 
-  /** POST /api/v1/catalog/productos/:id/imagenes — agrega una imagen (máx. 3). */
+  /** POST /api/v2/catalog/productos/:id/imagenes — agrega una imagen (máx. 3). */
   @Post('productos/:id/imagenes')
+  @Permisos('catalogo.escribir')
   @Roles(ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.EMPRESARIO)
   @RequiereCapacidades(CAPACIDADES.CATALOGO_ITEMS)
   @ApiBearerAuth()
@@ -580,8 +588,9 @@ export class ProductosController {
     return this.productos.agregarImagen(id, dto, empresaId);
   }
 
-  /** DELETE /api/v1/catalog/productos/:id/imagenes/:imagenId — elimina una imagen. */
+  /** DELETE /api/v2/catalog/productos/:id/imagenes/:imagenId — elimina una imagen. */
   @Delete('productos/:id/imagenes/:imagenId')
+  @Permisos('catalogo.escribir')
   @Roles(ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.EMPRESARIO)
   @RequiereCapacidades(CAPACIDADES.CATALOGO_ITEMS)
   @ApiBearerAuth()
@@ -601,7 +610,7 @@ export class ProductosController {
 
   /** ADR-27: el catálogo público exige empresa; la sesión aporta el tenant. */
   private empresaDeConsulta(usuario: UsuarioContexto | null, solicitada?: string): string {
-    if (usuario?.rol === ROLES.EMPRESARIO) {
+    if (usuario?.rol === ROLES.EMPRESARIO || usuario?.rol_empresa_id) {
       if (!usuario.tenant_id) throw new NotFoundError('Empresa', 'activa');
       if (solicitada && solicitada !== usuario.tenant_id) {
         throw new DomainError(
@@ -625,7 +634,7 @@ export class ProductosController {
   private puedeVerInactivos(usuario: UsuarioContexto | null, empresaId: string): boolean {
     if (!usuario) return false;
     if (usuario.rol === ROLES.SUPER_ADMIN || usuario.rol === ROLES.ADMIN) return true;
-    return usuario.rol === ROLES.EMPRESARIO && usuario.tenant_id === empresaId;
+    return (usuario.rol === ROLES.EMPRESARIO || Boolean(usuario.rol_empresa_id)) && usuario.tenant_id === empresaId;
   }
 
   /** Empresario: su tenant. Admin: la empresa del producto. */

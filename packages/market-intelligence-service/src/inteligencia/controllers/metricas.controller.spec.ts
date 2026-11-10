@@ -17,7 +17,7 @@ function fabricar(): { inteligencia: Record<string, Mock>; controller: MetricasC
   return { inteligencia, controller };
 }
 
-describe('MetricasController (api/v1/inteligencia, R-U-10/11)', () => {
+describe('MetricasController (api/v2/inteligencia, R-U-10/11)', () => {
   it('debe devolver el mapa de calor con los filtros recibidos', async () => {
     const { inteligencia, controller } = fabricar();
     inteligencia.obtenerMapaCalor.mockResolvedValue({ puntos: [] });

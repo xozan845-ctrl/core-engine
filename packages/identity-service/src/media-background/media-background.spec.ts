@@ -163,8 +163,8 @@ describe('media background (ADR-38)', () => {
           background_poster_objeto_id: POSTER,
         }),
       ).toMatchObject({
-        background_url: `/api/v1/storage/public/objetos/${OBJETO}`,
-        background_poster_url: `/api/v1/storage/public/objetos/${POSTER}`,
+        background_url: `/api/v2/storage/public/objetos/${OBJETO}`,
+        background_poster_url: `/api/v2/storage/public/objetos/${POSTER}`,
       });
     });
 

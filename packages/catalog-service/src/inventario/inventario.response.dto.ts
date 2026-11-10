@@ -2,8 +2,8 @@ import { ApiProperty } from '@nestjs/swagger';
 
 /**
  * Contrato de respuesta del inventario de bodega. `stock` es el stock físico,
- * `disponible` es el neto de reservas y `reservado`/`reservas_activas` el
- * importe reservado por órdenes activas.
+ * `disponible` es el neto de reservas y `reservado` el importe reservado por
+ * órdenes activas.
  */
 export class LineaInventarioResponseDto {
   @ApiProperty({ description: 'Empresa dueña del producto (ADR-27)', format: 'uuid', required: false })
@@ -32,9 +32,6 @@ export class LineaInventarioResponseDto {
     example: '1000.00',
   })
   precio_base: string;
-
-  @ApiProperty({ description: 'Alias de reservado para consumidores internos', example: 2 })
-  reservas_activas: number;
 
   @ApiProperty({
     description: 'Valor del stock disponible en centavos',

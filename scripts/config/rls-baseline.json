@@ -49,7 +49,6 @@
   "intelligence.tendencias_temporales",
   "logistics.eventos_procesados",
   "logistics.outbox",
-  "orders.comisiones_vista",
   "orders.eventos",
   "orders.eventos_procesados",
   "orders.orden_timeline",

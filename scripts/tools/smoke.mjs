@@ -110,7 +110,7 @@ async function main() {
   const contrasena = 'Contrasena123!';
 
   paso('Administrador: login (RF-01, seed del arranque)');
-  const loginAdmin = await api('POST', '/api/v1/auth/login', {
+  const loginAdmin = await api('POST', '/api/v2/auth/login', {
     correo: ADMIN_EMAIL,
     contrasena: ADMIN_PASSWORD,
   });
@@ -123,7 +123,7 @@ async function main() {
   const tokenAdmin = loginAdmin.json.access_token;
 
   paso('R-E-1: el token autentica el perfil real en /auth/me');
-  const perfilAdmin = await api('GET', '/api/v1/auth/me', null, tokenAdmin);
+  const perfilAdmin = await api('GET', '/api/v2/auth/me', null, tokenAdmin);
   if (perfilAdmin.status === 200 && perfilAdmin.json?.email === ADMIN_EMAIL) {
     ok(`usuario=${perfilAdmin.json.user_id ?? perfilAdmin.json.id ?? 'admin'}`);
   } else {
@@ -131,7 +131,7 @@ async function main() {
   }
 
   paso('R-E-2: credenciales inválidas → 401 sin token');
-  const loginInvalido = await api('POST', '/api/v1/auth/login', {
+  const loginInvalido = await api('POST', '/api/v2/auth/login', {
     correo: ADMIN_EMAIL,
     contrasena: `${ADMIN_PASSWORD}-invalida`,
   });
@@ -144,7 +144,7 @@ async function main() {
   const correoLogistica = `logistica.${suf}@core-engine.test`;
   const crearLogistica = await api(
     'POST',
-    '/api/v1/auth/crear-usuario',
+    '/api/v2/auth/crear-usuario',
     {
       nombre: 'Operadora E2E',
       correo: correoLogistica,
@@ -157,7 +157,7 @@ async function main() {
   if (![200, 201].includes(crearLogistica.status)) {
     fail(`crear usuario de logística → ${crearLogistica.status} ${JSON.stringify(crearLogistica.json)}`);
   } else {
-    const loginLogistica = await api('POST', '/api/v1/auth/login', {
+    const loginLogistica = await api('POST', '/api/v2/auth/login', {
       correo: correoLogistica,
       contrasena,
     });
@@ -165,7 +165,7 @@ async function main() {
     const personal = tokenLogistica
       ? await api(
           'POST',
-          '/api/v1/field/personal',
+          '/api/v2/field/personal',
           { nombre: 'Personal Boundary E2E', cargo: 'conductor' },
           tokenLogistica,
         )
@@ -174,7 +174,7 @@ async function main() {
     const entradaDia = personalId
       ? await api(
           'POST',
-          '/api/v1/field/asistencia',
+          '/api/v2/field/asistencia',
           {
             personalId,
             tipo: 'entrada',
@@ -187,7 +187,7 @@ async function main() {
     const entradaVecina = personalId
       ? await api(
           'POST',
-          '/api/v1/field/asistencia',
+          '/api/v2/field/asistencia',
           {
             personalId,
             tipo: 'entrada',
@@ -198,10 +198,10 @@ async function main() {
         )
       : { status: 0, json: { error: 'personal sin id' } };
     const filtradoDia = personalId
-      ? await api('GET', `/api/v1/field/asistencia?personalId=${encodeURIComponent(personalId)}&fecha=${fechaDia}`, null, tokenLogistica)
+      ? await api('GET', `/api/v2/field/asistencia?personalId=${encodeURIComponent(personalId)}&fecha=${fechaDia}`, null, tokenLogistica)
       : { status: 0, json: [] };
     const filtradoVecino = personalId
-      ? await api('GET', `/api/v1/field/asistencia?personalId=${encodeURIComponent(personalId)}&fecha=${fechaVecina}`, null, tokenLogistica)
+      ? await api('GET', `/api/v2/field/asistencia?personalId=${encodeURIComponent(personalId)}&fecha=${fechaVecina}`, null, tokenLogistica)
       : { status: 0, json: [] };
     const esFechaLocal = (valor, fecha) => {
       const partes = new Intl.DateTimeFormat('en-CA', {
@@ -237,13 +237,13 @@ async function main() {
 
   paso('Registro de empresario y comprador (RF-01)');
   const [regE, regC] = await Promise.all([
-    api('POST', '/api/v1/auth/registro', {
+    api('POST', '/api/v2/auth/registro', {
       nombre: 'Empresaria Piloto',
       correo: correoEmpresario,
       contrasena,
       rol: 'empresario',
     }),
-    api('POST', '/api/v1/auth/registro', {
+    api('POST', '/api/v2/auth/registro', {
       nombre: 'Comprador Piloto',
       correo: correoComprador,
       contrasena,
@@ -266,7 +266,7 @@ async function main() {
   paso('El empresario crea su empresa (ADR-25)');
   const empresa = await api(
     'POST',
-    '/api/v1/empresas',
+    '/api/v2/empresas',
     { nombre: `Distribuidora Piloto ${suf}`, modalidad_logistica: 'plataforma' },
     tokenEmpresario,
   );
@@ -278,7 +278,7 @@ async function main() {
 
   // La creación asigna tenant_id al usuario. Renovamos el access token para
   // que las operaciones posteriores viajen con el claim requerido por RLS.
-  const loginEmpresarioActivo = await api('POST', '/api/v1/auth/login', {
+  const loginEmpresarioActivo = await api('POST', '/api/v2/auth/login', {
     correo: correoEmpresario,
     contrasena,
   });
@@ -291,7 +291,7 @@ async function main() {
   paso('El empresario crea al vendedor con participación 100 % (ADR-25)');
   const vendedor = await api(
     'POST',
-    `/api/v1/empresas/${empresa.json.id}/vendedores`,
+    `/api/v2/empresas/${empresa.json.id}/vendedores`,
     {
       nombre: 'Vendedora Piloto',
       correo: correoVendedor,
@@ -307,7 +307,7 @@ async function main() {
   ok(`vendedor=${vendedor.json.id.slice(0, 8)}`);
 
   paso('Vendedor: login con la cuenta creada por su empresa');
-  const loginVendedor = await api('POST', '/api/v1/auth/login', {
+  const loginVendedor = await api('POST', '/api/v2/auth/login', {
     correo: correoVendedor,
     contrasena,
   });
@@ -321,8 +321,8 @@ async function main() {
 
   // ── 1c. Slugs de empresa (ADR-26) ────────────────────────────────────
   paso('La empresa se resuelve por UUID y por slug (ADR-26)');
-  const empresaPorId = await api('GET', `/api/v1/empresas/${empresa.json.id}`, null, tokenEmpresario);
-  const empresaPorSlug = await api('GET', `/api/v1/empresas/${empresa.json.slug}`, null, tokenEmpresario);
+  const empresaPorId = await api('GET', `/api/v2/empresas/${empresa.json.id}`, null, tokenEmpresario);
+  const empresaPorSlug = await api('GET', `/api/v2/empresas/${empresa.json.slug}`, null, tokenEmpresario);
   if (
     empresa.json.slug &&
     empresaPorId.status === 200 &&
@@ -335,10 +335,10 @@ async function main() {
   }
 
   paso('El slug de empresa no es público: exige sesión y rol autorizado (ADR-26)');
-  const empresaSinSesion = await api('GET', `/api/v1/empresas/${empresa.json.slug}`);
+  const empresaSinSesion = await api('GET', `/api/v2/empresas/${empresa.json.slug}`);
   const empresaConComprador = await api(
     'GET',
-    `/api/v1/empresas/${empresa.json.slug}`,
+    `/api/v2/empresas/${empresa.json.slug}`,
     null,
     tokenComprador,
   );
@@ -352,20 +352,20 @@ async function main() {
   const slugEmpresaNuevo = `${empresa.json.slug}-nueva`;
   const cambioSlugEmpresa = await api(
     'PATCH',
-    `/api/v1/empresas/${empresa.json.id}/slug`,
+    `/api/v2/empresas/${empresa.json.id}/slug`,
     { slug: slugEmpresaNuevo },
     tokenEmpresario,
   );
   const empresaSlugAnterior = await api(
     'GET',
-    `/api/v1/empresas/${empresa.json.slug}`,
+    `/api/v2/empresas/${empresa.json.slug}`,
     null,
     tokenEmpresario,
     { redirect: 'manual' },
   );
   const empresaSlugNuevo = await api(
     'GET',
-    `/api/v1/empresas/${slugEmpresaNuevo}`,
+    `/api/v2/empresas/${slugEmpresaNuevo}`,
     null,
     tokenEmpresario,
   );
@@ -373,7 +373,7 @@ async function main() {
     cambioSlugEmpresa.status === 200 &&
     cambioSlugEmpresa.json?.slug === slugEmpresaNuevo &&
     empresaSlugAnterior.status === 301 &&
-    empresaSlugAnterior.location === `/api/v1/empresas/${slugEmpresaNuevo}` &&
+    empresaSlugAnterior.location === `/api/v2/empresas/${slugEmpresaNuevo}` &&
     empresaSlugNuevo.status === 200 &&
     empresaSlugNuevo.json?.id === empresa.json.id
   ) {
@@ -389,7 +389,7 @@ async function main() {
   paso('Admin da de alta el producto (TC-01: stock 10, precio base C$ 1 000)');
   const crear = await api(
     'POST',
-    '/api/v1/catalog/productos',
+    '/api/v2/catalog/productos',
     { sku: `ACE-${suf.toUpperCase()}`, empresa_id: empresa.json.id, nombre: 'Aceite de cocina 1L', descripcion: 'Aceite vegetal', categoria: 'abarrotes', precio_base: '1000.00', stock: 10 },
     tokenAdmin,
   );
@@ -403,7 +403,7 @@ async function main() {
   paso('R-E-3: editar producto antes de publicarlo en el catálogo');
   const edicionProducto = await api(
     'PATCH',
-    `/api/v1/catalog/productos/${producto.id}`,
+    `/api/v2/catalog/productos/${producto.id}`,
     { descripcion: 'Aceite vegetal actualizado por E2E' },
     tokenAdmin,
   );
@@ -414,13 +414,13 @@ async function main() {
   }
 
   paso('Tc-07a: /admin/reportes sin token → 401');
-  const sinToken = await api('GET', '/api/v1/admin/reportes');
+  const sinToken = await api('GET', '/api/v2/admin/reportes');
   if (sinToken.status === 401) ok();
   else fail(`esperaba 401, obtuve ${sinToken.status}`);
 
   // ── 3. Tienda y oferta (TC-02) ────────────────────────────────────────
   paso('Vendedor crea su tienda virtual (H-01)');
-  const tienda = await api('POST', '/api/v1/vendedores/tienda', { nombre: 'Tienda de la Vendedora Piloto' }, tokenVendedor);
+  const tienda = await api('POST', '/api/v2/vendedores/tienda', { nombre: 'Tienda de la Vendedora Piloto' }, tokenVendedor);
   if (tienda.status === 201 || tienda.status === 200) ok();
   else {
     fail(`tienda → ${tienda.status} ${JSON.stringify(tienda.json)}`);
@@ -428,7 +428,7 @@ async function main() {
   }
 
   paso('La tienda se resuelve por slug en abierto (ADR-26)');
-  const tiendaPorSlug = await api('GET', `/api/v1/tiendas/${tienda.json.slug}`);
+  const tiendaPorSlug = await api('GET', `/api/v2/tiendas/${tienda.json.slug}`);
   if (
     tienda.json.slug &&
     tiendaPorSlug.status === 200 &&
@@ -443,23 +443,23 @@ async function main() {
   const slugTiendaNuevo = `${tienda.json.slug}-nueva`;
   const cambioSlugTienda = await api(
     'PATCH',
-    `/api/v1/tiendas/${tienda.json.id}/slug`,
+    `/api/v2/tiendas/${tienda.json.id}/slug`,
     { slug: slugTiendaNuevo },
     tokenVendedor,
   );
   const tiendaSlugAnterior = await api(
     'GET',
-    `/api/v1/tiendas/${tienda.json.slug}`,
+    `/api/v2/tiendas/${tienda.json.slug}`,
     null,
     null,
     { redirect: 'manual' },
   );
-  const tiendaSlugNuevo = await api('GET', `/api/v1/tiendas/${slugTiendaNuevo}`);
+  const tiendaSlugNuevo = await api('GET', `/api/v2/tiendas/${slugTiendaNuevo}`);
   if (
     cambioSlugTienda.status === 200 &&
     cambioSlugTienda.json?.slug === slugTiendaNuevo &&
     tiendaSlugAnterior.status === 301 &&
-    tiendaSlugAnterior.location === `/api/v1/tiendas/${slugTiendaNuevo}` &&
+    tiendaSlugAnterior.location === `/api/v2/tiendas/${slugTiendaNuevo}` &&
     tiendaSlugNuevo.status === 200 &&
     tiendaSlugNuevo.json?.tienda?.id === tienda.json.id
   ) {
@@ -474,7 +474,7 @@ async function main() {
   paso('Publica oferta con margen 15 % (TC-02: precio final = C$ 1 150,00)');
   const oferta = await api(
     'POST',
-    '/api/v1/vendedores/productos',
+    '/api/v2/vendedores/productos',
     { producto_id: producto.id, margen: 15 },
     tokenVendedor,
   );
@@ -488,14 +488,14 @@ async function main() {
   }
 
   paso('Tienda pública visible para el comprador (H-02 checkout < 2 min)');
-  const tiendaPublica = await api('GET', `/api/v1/tiendas/${tienda.json.id}`);
+  const tiendaPublica = await api('GET', `/api/v2/tiendas/${tienda.json.id}`);
   if (tiendaPublica.status === 200 && tiendaPublica.json.ofertas.length === 1) ok();
   else fail(`tienda pública → ${tiendaPublica.status}`);
 
   paso('R-E-5: paginación conserva empresa y búsqueda');
   const paginaCatalogo = await api(
     'GET',
-    `/api/v1/catalog/productos?empresa_id=${encodeURIComponent(empresa.json.id)}&q=${encodeURIComponent(producto.sku)}&pagina=1&limite=1`,
+    `/api/v2/catalog/productos?empresa_id=${encodeURIComponent(empresa.json.id)}&q=${encodeURIComponent(producto.sku)}&pagina=1&limite=1`,
   );
   if (
     paginaCatalogo.status === 200 &&
@@ -513,7 +513,7 @@ async function main() {
   paso('Comprador crea la orden (TC-03: checkout)');
   const orden = await api(
     'POST',
-    '/api/v1/orders',
+    '/api/v2/orders',
     { items: [{ oferta_id: oferta.json.id, cantidad: 1 }] },
     tokenComprador,
   );
@@ -527,7 +527,7 @@ async function main() {
   paso('Saga asíncrona: stock reservado → orden Pagada + pago simulado');
   const estadoPagada = await esperar(
     async () => {
-      const r = await api('GET', `/api/v1/orders/${orderId}`, null, tokenComprador);
+      const r = await api('GET', `/api/v2/orders/${orderId}`, null, tokenComprador);
       return r.json?.estado === 'pagada' ? r.json : null;
     },
     'orden pagada',
@@ -537,7 +537,7 @@ async function main() {
   paso('TC-03: el stock del catálogo decreció');
   const catalogo = await api(
     'GET',
-    `/api/v1/catalog/productos/${producto.id}?empresa_id=${encodeURIComponent(empresa.json.id)}`,
+    `/api/v2/catalog/productos/${producto.id}?empresa_id=${encodeURIComponent(empresa.json.id)}`,
     null,
     tokenAdmin,
   );
@@ -551,7 +551,7 @@ async function main() {
     ['entregada', 'el comprador confirma la recepción'],
   ]) {
     paso(`Admin avanza la orden → ${estado} (${descripcion})`);
-    const avance = await api('PATCH', `/api/v1/orders/${orderId}/estado`, { estado }, tokenAdmin);
+    const avance = await api('PATCH', `/api/v2/orders/${orderId}/estado`, { estado }, tokenAdmin);
     if (avance.status === 200 && avance.json?.estado === estado) ok();
     else fail(`avance → ${avance.status} ${JSON.stringify(avance.json)}`);
   }
@@ -560,7 +560,7 @@ async function main() {
   paso('TC-08: comisión 12 % acreditada (C$ 1 150,00 → C$ 138,00)');
   const estadoCuenta = await esperar(
     async () => {
-      const r = await api('GET', '/api/v1/vendedores/me/ventas', null, tokenVendedor);
+      const r = await api('GET', '/api/v2/vendedores/me/ventas', null, tokenVendedor);
       return r.json?.ventas?.length >= 1 ? r.json : null;
     },
     'comisión acreditada',
@@ -576,7 +576,7 @@ async function main() {
   paso('TC-04: producto con stock 1; compra de 2 unidades → 409');
   const prodUno = await api(
     'POST',
-    '/api/v1/catalog/productos',
+    '/api/v2/catalog/productos',
     { sku: `LEC-${suf.toUpperCase()}`, empresa_id: empresa.json.id, nombre: 'Leche 1L', precio_base: '50.00', stock: 1 },
     tokenAdmin,
   );
@@ -586,7 +586,7 @@ async function main() {
   }
   const ofertaUno = await api(
     'POST',
-    '/api/v1/vendedores/productos',
+    '/api/v2/vendedores/productos',
     { producto_id: prodUno.json.id, margen: 10 },
     tokenVendedor,
   );
@@ -596,7 +596,7 @@ async function main() {
   }
   const rechazo = await api(
     'POST',
-    '/api/v1/orders',
+    '/api/v2/orders',
     { items: [{ oferta_id: ofertaUno.json.id, cantidad: 2 }] },
     tokenComprador,
   );
@@ -605,7 +605,7 @@ async function main() {
 
   // ── 8. Devolución (RN-06) ─────────────────────────────────────────────
   paso('Admin registra la devolución de la orden entregada (RN-06)');
-  const devolucion = await api('PATCH', `/api/v1/orders/${orderId}/estado`, { estado: 'devuelta', motivo: 'cliente cambió de opinión' }, tokenAdmin);
+  const devolucion = await api('PATCH', `/api/v2/orders/${orderId}/estado`, { estado: 'devuelta', motivo: 'cliente cambió de opinión' }, tokenAdmin);
   if (devolucion.status === 200) ok();
   else fail(`devolución → ${devolucion.status} ${JSON.stringify(devolucion.json)}`);
 
@@ -614,7 +614,7 @@ async function main() {
     async () => {
       const r = await api(
         'GET',
-        `/api/v1/catalog/productos/${producto.id}?empresa_id=${encodeURIComponent(empresa.json.id)}`,
+        `/api/v2/catalog/productos/${producto.id}?empresa_id=${encodeURIComponent(empresa.json.id)}`,
         null,
         tokenAdmin,
       );
@@ -627,7 +627,7 @@ async function main() {
   paso('Compensación de comisión en la próxima liquidación (RN-06)');
   const compensada = await esperar(
     async () => {
-      const r = await api('GET', '/api/v1/vendedores/me/ventas', null, tokenVendedor);
+      const r = await api('GET', '/api/v2/vendedores/me/ventas', null, tokenVendedor);
       return r.json?.ventas?.[0]?.estado === 'compensada' ? r.json : null;
     },
     'comisión compensada',
@@ -638,7 +638,7 @@ async function main() {
   paso('Nueva venta que sí se entrega (para liquidación)');
   const orden2 = await api(
     'POST',
-    '/api/v1/orders',
+    '/api/v2/orders',
     { items: [{ oferta_id: oferta.json.id, cantidad: 2 }] },
     tokenComprador,
   );
@@ -649,13 +649,13 @@ async function main() {
   const orderId2 = orden2.json.id;
   await esperar(
     async () => {
-      const r = await api('GET', `/api/v1/orders/${orderId2}`, null, tokenComprador);
+      const r = await api('GET', `/api/v2/orders/${orderId2}`, null, tokenComprador);
       return r.json?.estado === 'pagada' ? r.json : null;
     },
     'orden2 pagada',
   );
   for (const estado of ['en_preparacion', 'enviada', 'entregada']) {
-    const avance = await api('PATCH', `/api/v1/orders/${orderId2}/estado`, { estado }, tokenAdmin);
+    const avance = await api('PATCH', `/api/v2/orders/${orderId2}/estado`, { estado }, tokenAdmin);
     if (avance.status !== 200 || avance.json?.estado !== estado) {
       fail(`segunda orden, avance ${estado} → ${avance.status} ${JSON.stringify(avance.json)}`);
       process.exit(1);
@@ -663,7 +663,7 @@ async function main() {
   }
   await esperar(
     async () => {
-      const r = await api('GET', '/api/v1/vendedores/me/ventas', null, tokenVendedor);
+      const r = await api('GET', '/api/v2/vendedores/me/ventas', null, tokenVendedor);
       return r.json?.comisiones_pendientes === '2024.00' ? r.json : null;
     },
     'neto pendiente 2x1150 - 12% = 2024.00',
@@ -671,7 +671,7 @@ async function main() {
   ok('comisión pendiente de 2024.00');
 
   paso('Corte de liquidación quincenal (RN-07, días 1 y 15)');
-  const corte = await api('POST', '/api/v1/admin/liquidaciones/corte', null, tokenAdmin);
+  const corte = await api('POST', '/api/v2/admin/liquidaciones/corte', null, tokenAdmin);
   if (corteLiquidacionesValido(corte)) {
     const conFondos = corte.json.find((l) => l.monto_cents > 0);
     if (conFondos) ok(`liquidación aprobada por C$${(conFondos.monto_cents / 100).toFixed(2)}`);
@@ -682,7 +682,7 @@ async function main() {
 
   // ── 10. Reportes admin (H-06) ─────────────────────────────────────────
   paso('Reportes del administrador (H-06: GMV, pedidos, inventario)');
-  const reportes = await api('GET', '/api/v1/admin/reportes', null, tokenAdmin);
+  const reportes = await api('GET', '/api/v2/admin/reportes', null, tokenAdmin);
   if (reportes.status === 200 && reportes.json?.gmv_mes) {
     ok(`gmv_mes=${reportes.json.gmv_mes} pedidos=${reportes.json.pedidos_mes} stock_total=${reportes.json.stock_total}`);
   } else {
@@ -690,20 +690,20 @@ async function main() {
   }
 
   paso('Inventario del administrador');
-  const inventario = await api('GET', '/api/v1/admin/inventario', null, tokenAdmin);
+  const inventario = await api('GET', '/api/v2/admin/inventario', null, tokenAdmin);
   if (inventario.status === 200 && inventario.json.length >= 2) ok(`líneas=${inventario.json.length}`);
   else fail(`inventario → ${inventario.status}`);
 
   paso('R-E-3: despublicar producto lo oculta del catálogo público');
   const despublicar = await api(
     'PATCH',
-    `/api/v1/catalog/productos/${producto.id}`,
+    `/api/v2/catalog/productos/${producto.id}`,
     { estado_operativo: 'inactivo', motivo: 'verificación E2E' },
     tokenAdmin,
   );
   const productoOculto = await api(
     'GET',
-    `/api/v1/catalog/productos?empresa_id=${encodeURIComponent(empresa.json.id)}&q=${encodeURIComponent(producto.sku)}`,
+    `/api/v2/catalog/productos?empresa_id=${encodeURIComponent(empresa.json.id)}&q=${encodeURIComponent(producto.sku)}`,
   );
   if (despublicar.status === 200 && productoOculto.status === 200 && productoOculto.json?.total === 0) {
     ok();
@@ -712,14 +712,14 @@ async function main() {
   }
 
   paso('R-E-7: refresh funciona y logout revoca el refresh token');
-  const renovada = await api('POST', '/api/v1/auth/refresh', { refresh_token: loginAdmin.json.refresh_token });
+  const renovada = await api('POST', '/api/v2/auth/refresh', { refresh_token: loginAdmin.json.refresh_token });
   const logout = await api(
     'POST',
-    '/api/v1/auth/logout',
+    '/api/v2/auth/logout',
     { refresh_token: loginAdmin.json.refresh_token },
     tokenAdmin,
   );
-  const refreshRevocado = await api('POST', '/api/v1/auth/refresh', {
+  const refreshRevocado = await api('POST', '/api/v2/auth/refresh', {
     refresh_token: loginAdmin.json.refresh_token,
   });
   if (

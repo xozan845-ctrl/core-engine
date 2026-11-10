@@ -36,7 +36,7 @@ export interface LoteInventario {
 }
 
 /**
- * H-06 / GET /api/v1/admin/inventario: niveles de stock de la bodega (desde proyección CQRS).
+ * H-06 / GET /api/v2/admin/inventario: niveles de stock de la bodega (desde proyección CQRS).
  */
 @Injectable()
 export class InventarioService {
@@ -83,7 +83,6 @@ export class InventarioService {
       reservado: f.reservado,
       estado: f.estado,
       precio_base: Money.desdeCentavos(f.precio_base_cents).string(),
-      reservas_activas: f.reservado,
       valor_disponible_cents: f.valor_disponible_cents,
       valor_total_cents: f.valor_total_cents,
     }));

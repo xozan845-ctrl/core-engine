@@ -12,7 +12,7 @@ function fabricar(): { facturacion: Record<string, Mock>; controller: Facturacio
   return { facturacion, controller };
 }
 
-describe('FacturacionController (api/v1/finanzas/comprobantes, Ley 822, R-U-10/11)', () => {
+describe('FacturacionController (api/v2/finanzas/comprobantes, Ley 822, R-U-10/11)', () => {
   it('debe listar comprobantes con rango y estado', async () => {
     const { facturacion, controller } = fabricar();
     facturacion.listar.mockResolvedValue([comprobante]);

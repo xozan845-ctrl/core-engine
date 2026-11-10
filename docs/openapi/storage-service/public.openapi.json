@@ -2,7 +2,7 @@
   "openapi": "3.0.0",
   "info": {
     "title": "Core Engine · storage-service · API pública",
-    "description": "Contrato público (/api/v1/**) de storage-service. No contiene rutas /internal/**.",
+    "description": "Contrato público (/api/v2/**) de storage-service. No contiene rutas /internal/**.",
     "version": "v1",
     "contact": {}
   },
@@ -10,7 +10,7 @@
   "x-superficie": "publica",
   "tags": [],
   "paths": {
-    "/api/v1/admin/storage/tenants": {
+    "/api/v2/admin/storage/tenants": {
       "get": {
         "operationId": "AdminStorageController_listar",
         "parameters": [
@@ -59,7 +59,7 @@
         ]
       }
     },
-    "/api/v1/admin/storage/tenants/{tenantId}": {
+    "/api/v2/admin/storage/tenants/{tenantId}": {
       "get": {
         "operationId": "AdminStorageController_estado",
         "parameters": [
@@ -141,7 +141,7 @@
         ]
       }
     },
-    "/api/v1/admin/storage/tenants/{tenantId}/recalcular": {
+    "/api/v2/admin/storage/tenants/{tenantId}/recalcular": {
       "post": {
         "operationId": "AdminStorageController_recalcular",
         "parameters": [
@@ -178,7 +178,7 @@
         ]
       }
     },
-    "/api/v1/storage/bucket": {
+    "/api/v2/storage/bucket": {
       "get": {
         "description": "Crea el bucket del tenant de forma perezosa la primera vez.",
         "operationId": "BucketsController_estado",
@@ -244,7 +244,7 @@
         ]
       }
     },
-    "/api/v1/storage/subidas": {
+    "/api/v2/storage/subidas": {
       "post": {
         "description": "Valida tipo, tamano y cuota del tenant; registra el objeto en estado pendiente y devuelve la URL prefirmada.",
         "operationId": "ObjetosController_solicitarSubida",
@@ -288,7 +288,7 @@
         ]
       }
     },
-    "/api/v1/storage/objetos/{id}/confirmar": {
+    "/api/v2/storage/objetos/{id}/confirmar": {
       "post": {
         "operationId": "ObjetosController_confirmar",
         "parameters": [
@@ -325,7 +325,7 @@
         ]
       }
     },
-    "/api/v1/storage/objetos": {
+    "/api/v2/storage/objetos": {
       "get": {
         "operationId": "ObjetosController_listar",
         "parameters": [
@@ -406,7 +406,7 @@
         ]
       }
     },
-    "/api/v1/storage/objetos/{id}": {
+    "/api/v2/storage/objetos/{id}": {
       "get": {
         "operationId": "ObjetosController_detalle",
         "parameters": [
@@ -471,7 +471,7 @@
         ]
       }
     },
-    "/api/v1/storage/objetos/{id}/descarga": {
+    "/api/v2/storage/objetos/{id}/descarga": {
       "get": {
         "operationId": "ObjetosController_descarga",
         "parameters": [
@@ -508,7 +508,7 @@
         ]
       }
     },
-    "/api/v1/storage/public/objetos/{id}": {
+    "/api/v2/storage/public/objetos/{id}": {
       "get": {
         "operationId": "PublicStorageController_servir",
         "parameters": [

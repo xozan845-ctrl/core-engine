@@ -341,7 +341,7 @@ export class InvitacionesService {
       filas.map((vendedor) => ({
         ...vendedor,
         avatar_url: vendedor.avatar_objeto_id
-          ? `/api/v1/storage/public/objetos/${vendedor.avatar_objeto_id}`
+          ? `/api/v2/storage/public/objetos/${vendedor.avatar_objeto_id}`
           : null,
       })),
     );

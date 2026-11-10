@@ -980,7 +980,7 @@
           "url": {
             "type": "string",
             "description": "Ruta pública relativa servida por storage-service",
-            "example": "/api/v1/storage/public/objetos/8f0c..."
+            "example": "/api/v2/storage/public/objetos/8f0c..."
           },
           "orden": {
             "type": "number",
@@ -1143,11 +1143,6 @@
             "description": "Precio base en córdobas con dos decimales",
             "example": "1000.00"
           },
-          "reservas_activas": {
-            "type": "number",
-            "description": "Alias de reservado para consumidores internos",
-            "example": 2
-          },
           "valor_disponible_cents": {
             "type": "number",
             "description": "Valor del stock disponible en centavos",
@@ -1167,7 +1162,6 @@
           "reservado",
           "estado",
           "precio_base",
-          "reservas_activas",
           "valor_disponible_cents",
           "valor_total_cents"
         ]
@@ -1395,6 +1389,23 @@
           "precio_base",
           "stock",
           "estado",
+          "estado_operativo",
+          "costo",
+          "marca",
+          "codigo_barras",
+          "unidad",
+          "permite_fracciones",
+          "unidad_compra",
+          "contenido_cantidad",
+          "contenido_unidad",
+          "tipo_precio",
+          "tipo_costo",
+          "stock_minimo",
+          "stock_maximo",
+          "garantia_meses",
+          "es_materia_prima",
+          "ubicacion",
+          "actualizado_en",
           "creado_en"
         ]
       },
@@ -1885,6 +1896,7 @@
         "required": [
           "id",
           "nombre",
+          "slug",
           "estado",
           "creado_por",
           "creado_en"
@@ -2187,6 +2199,8 @@
         },
         "required": [
           "oferta_id",
+          "item_type",
+          "item_id",
           "sku",
           "producto_nombre",
           "cantidad",
@@ -2545,18 +2559,6 @@
             "description": "Id del item unificado",
             "format": "uuid"
           },
-          "producto_id": {
-            "type": "string",
-            "description": "Id del producto o variante vendible",
-            "nullable": true,
-            "format": "uuid"
-          },
-          "producto_padre_id": {
-            "type": "object",
-            "description": "Id del producto padre (si es variante)",
-            "nullable": true,
-            "format": "uuid"
-          },
           "sku": {
             "type": "string",
             "description": "SKU de la variante o producto",
@@ -2619,7 +2621,8 @@
           "vendedor_id",
           "empresa_id",
           "participacion_porcentaje",
-          "producto_id",
+          "item_type",
+          "item_id",
           "sku",
           "producto_nombre",
           "margen",

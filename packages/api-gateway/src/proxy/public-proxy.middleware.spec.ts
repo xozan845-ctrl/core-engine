@@ -16,8 +16,8 @@ function crearReq(opciones: {
   const req = Readable.from(opciones.body ? [Buffer.from(opciones.body)] : []) as unknown as Request;
   Object.assign(req, {
     method: opciones.method ?? 'GET',
-    url: opciones.url ?? '/api/v1/catalog/productos',
-    originalUrl: `/api-proxy${opciones.url ?? '/api/v1/catalog/productos'}`,
+    url: opciones.url ?? '/api/v2/catalog/productos',
+    originalUrl: `/api-proxy${opciones.url ?? '/api/v2/catalog/productos'}`,
     headers: opciones.headers ?? {},
     ip: opciones.ip ?? '203.0.113.10',
     socket: { remoteAddress: opciones.ip ?? '203.0.113.10' },
@@ -91,7 +91,7 @@ describe('crearProxyPublico (ADR-29)', () => {
     vi.stubGlobal('fetch', fetchMock);
     const req = crearReq({
       method: 'POST',
-      url: '/api/v1/auth/login',
+      url: '/api/v2/auth/login',
       headers: { origin: ORIGEN, 'content-type': 'application/json' },
       body: '{"correo":"a@b.c","contrasena":"x"}',
     });
@@ -104,7 +104,7 @@ describe('crearProxyPublico (ADR-29)', () => {
     expect(res.headers['Access-Control-Allow-Origin']).toBe(ORIGEN);
     expect(res.headers['access-control-allow-origin']).toBeUndefined();
     const [url, init] = fetchMock.mock.calls[0];
-    expect(url).toBe('http://127.0.0.1:18080/api/v1/auth/login');
+    expect(url).toBe('http://127.0.0.1:18080/api/v2/auth/login');
     expect(init.method).toBe('POST');
     expect(init.headers.authorization).toBe(BASIC);
     expect(init.headers['x-forwarded-for']).toBe('203.0.113.10');
@@ -115,7 +115,7 @@ describe('crearProxyPublico (ADR-29)', () => {
     const fetchMock = vi.fn().mockResolvedValue(respuesta());
     vi.stubGlobal('fetch', fetchMock);
     const req = crearReq({
-      url: '/api/v1/orders',
+      url: '/api/v2/orders',
       headers: { authorization: 'Bearer jwt-del-usuario', origin: ORIGEN },
     });
 
@@ -128,7 +128,7 @@ describe('crearProxyPublico (ADR-29)', () => {
     const fetchMock = vi.fn().mockResolvedValue(respuesta());
     vi.stubGlobal('fetch', fetchMock);
 
-    await ejecutar(crearReq({ url: '/api/v1/orders', headers: { origin: ORIGEN } }), crearRes());
+    await ejecutar(crearReq({ url: '/api/v2/orders', headers: { origin: ORIGEN } }), crearRes());
 
     expect(fetchMock.mock.calls[0][1].headers.authorization).toBe(BASIC);
   });
@@ -139,7 +139,7 @@ describe('crearProxyPublico (ADR-29)', () => {
     const res = crearRes();
 
     await ejecutar(
-      crearReq({ method: 'OPTIONS', url: '/api/v1/auth/login', headers: { origin: ORIGEN } }),
+      crearReq({ method: 'OPTIONS', url: '/api/v2/auth/login', headers: { origin: ORIGEN } }),
       res,
     );
 
@@ -166,7 +166,7 @@ describe('crearProxyPublico (ADR-29)', () => {
     await ejecutar(
       crearReq({
         method: 'HEAD',
-        url: '/api/v1/storage/public/objetos/22222222-2222-4222-8222-222222222222',
+        url: '/api/v2/storage/public/objetos/22222222-2222-4222-8222-222222222222',
         headers: { origin: ORIGEN, range: 'bytes=0-9' },
       }),
       res,
@@ -191,7 +191,7 @@ describe('crearProxyPublico (ADR-29)', () => {
     expect(fetchMock).toHaveBeenCalled();
   });
 
-  it('debe rechazar rutas fuera de /api/v1 sin llamar al API', async () => {
+  it('debe rechazar rutas fuera de /api/v2 sin llamar al API', async () => {
     const fetchMock = vi.fn();
     vi.stubGlobal('fetch', fetchMock);
     const res = crearRes();
@@ -214,7 +214,7 @@ describe('crearProxyPublico (ADR-29)', () => {
     });
 
     await proxy(
-      crearReq({ method: 'POST', url: '/api/v1/orders', body: '12345', headers: { origin: ORIGEN } }),
+      crearReq({ method: 'POST', url: '/api/v2/orders', body: '12345', headers: { origin: ORIGEN } }),
       res,
     );
 

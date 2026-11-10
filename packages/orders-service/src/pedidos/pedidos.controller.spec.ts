@@ -10,7 +10,6 @@ const orden = { id: 'o-1', cliente_id: 'u-c', estado: 'creada', total_cents: 100
 const comprador = { user_id: 'u-c', email: 'c@core.local', rol: ROLES.COMPRADOR };
 const vendedor = { user_id: 'u-v', email: 'v@core.local', rol: ROLES.VENDEDOR };
 const admin = { user_id: 'u-a', email: 'a@core.local', rol: ROLES.ADMIN };
-const superAdmin = { user_id: 'u-sa', email: 'sa@core.local', rol: ROLES.SUPER_ADMIN };
 const empresario = { user_id: 'u-e', email: 'e@core.local', rol: ROLES.EMPRESARIO, tenant_id: 'e-1' };
 
 function fabricar(): {
@@ -23,7 +22,6 @@ function fabricar(): {
   const views = {
     listarTodo: vi.fn(),
     listarDeVendedor: vi.fn(),
-    obtenerComisiones: vi.fn(),
     listarDeTienda: vi.fn(),
     listarDeEmpresa: vi.fn(),
     listarDeCliente: vi.fn(),
@@ -43,7 +41,7 @@ function fabricar(): {
   return { handler, views, pedidos, controller };
 }
 
-describe('PedidosController (api/v1/orders, R-U-10/11)', () => {
+describe('PedidosController (api/v2/orders, R-U-10/11)', () => {
   it('debe crear la orden ejecutando el comando con el id del comprador', async () => {
     const { handler, controller } = fabricar();
     handler.ejecutar.mockResolvedValue(orden);
@@ -64,27 +62,6 @@ describe('PedidosController (api/v1/orders, R-U-10/11)', () => {
     views.listarDeVendedor.mockResolvedValue([orden]);
     await controller.misVentas('enviada', vendedor as never);
     expect(views.listarDeVendedor).toHaveBeenCalledWith('u-v', 'enviada');
-  });
-
-  it('debe pedir las comisiones del vendedor autenticado cuando no es admin', async () => {
-    const { views, controller } = fabricar();
-    views.obtenerComisiones.mockResolvedValue([]);
-    await controller.comisiones('2026-09', vendedor as never, undefined);
-    expect(views.obtenerComisiones).toHaveBeenCalledWith('u-v', '2026-09');
-  });
-
-  it('debe pedir las comisiones de otro vendedor cuando el contexto es admin', async () => {
-    const { views, controller } = fabricar();
-    views.obtenerComisiones.mockResolvedValue([]);
-    await controller.comisiones('2026-09', admin as never, 'u-v2');
-    expect(views.obtenerComisiones).toHaveBeenCalledWith('u-v2', '2026-09');
-  });
-
-  it('debe pedir las comisiones de otro vendedor cuando el contexto es super_admin', async () => {
-    const { views, controller } = fabricar();
-    views.obtenerComisiones.mockResolvedValue([]);
-    await controller.comisiones('2026-09', superAdmin as never, 'u-v2');
-    expect(views.obtenerComisiones).toHaveBeenCalledWith('u-v2', '2026-09');
   });
 
   it('debe listar las ordenes de la tienda pasando vendedor o empresa segun el contexto', async () => {
@@ -173,31 +150,8 @@ describe('PedidosController (api/v1/orders, R-U-10/11)', () => {
     expect(pedidos.timelineVisible).toHaveBeenCalledWith(eventos, orden.items);
   });
 
-  it('debe marcar las comisiones legadas como obsoletas y señalar su reemplazo', () => {
-    const operacion = Reflect.getMetadata(
-      'swagger/apiOperation',
-      PedidosController.prototype.comisiones,
-    ) as { deprecated?: boolean };
-    expect(operacion.deprecated).toBe(true);
-    const cabeceras = Reflect.getMetadata(
-      '__headers__',
-      PedidosController.prototype.comisiones,
-    ) as { name: string; value: string }[];
-    expect(cabeceras).toEqual(
-      expect.arrayContaining([
-        { name: 'Deprecation', value: 'true' },
-        { name: 'Link', value: '</api/v1/vendedores/me/ventas>; rel="successor-version"' },
-      ]),
-    );
-  });
-
-  it('debe exigir rol comprador en crear y vendedor, empresario, admin o super_admin en comisiones', () => {
+  it('debe exigir rol comprador en crear y los roles esperados en las consultas', () => {
     expect(Reflect.getMetadata('roles_requeridos', PedidosController.prototype.crear)).toEqual([ROLES.COMPRADOR]);
-    expect(Reflect.getMetadata('roles_requeridos', PedidosController.prototype.comisiones)).toEqual([
-      ROLES.SUPER_ADMIN,
-      ROLES.VENDEDOR,
-      ROLES.ADMIN,
-    ]);
     expect(Reflect.getMetadata('roles_requeridos', PedidosController.prototype.detalle)).toEqual([
       ROLES.SUPER_ADMIN,
       ROLES.EMPRESARIO,

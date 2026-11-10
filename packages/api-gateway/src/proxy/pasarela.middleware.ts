@@ -10,7 +10,7 @@ import {
 import { ProxyService } from './proxy.service';
 
 /**
- * Middleware comodin de la pasarela: enruta /api/v1/* hacia los servicios.
+ * Middleware comodin de la pasarela: enruta /api/v2/* hacia los servicios.
  * Genera el x-request-id de borde (doc 5.3: correlacion distribuida) y registra
  * las metricas http_* del gateway en cada peticion.
  * Se registra para todas las rutas y filtra por prefijo, evitando
@@ -37,7 +37,7 @@ export class PasarelaMiddleware implements NestMiddleware {
       );
     });
 
-    if (!req.path.startsWith('/api/v1/')) return next();
+    if (!req.path.startsWith('/api/v2/')) return next();
 
     const contexto: ContextoCorrelacion = {
       request_id,

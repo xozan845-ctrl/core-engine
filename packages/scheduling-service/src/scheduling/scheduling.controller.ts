@@ -11,6 +11,7 @@ import {
   CAPACIDADES,
   DomainError,
   RequiereCapacidades,
+  Permisos,
   ROLES,
   ROLES_LOGISTICA,
   Roles,
@@ -36,13 +37,14 @@ const ROLES_AGENDA = [ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.EMPRESARIO, ...ROLES
 
 @ApiTags('Scheduling · Agenda')
 @ApiBearerAuth()
-@Controller('api/v1/scheduling')
+@Controller('api/v2/scheduling')
 @Roles(...ROLES_AGENDA)
 @RequiereCapacidades(CAPACIDADES.AGENDA_RECURSOS)
 export class SchedulingController {
   constructor(private readonly scheduling: SchedulingService) {}
 
   @Get('recursos')
+  @Permisos('agenda.leer')
   @ApiOperation({ summary: 'Listar recursos reservables de la empresa activa' })
   @ApiOkResponse({ type: [RecursoResponseDto] })
   recursos(@UsuarioActual() usuario: UsuarioContexto) {
@@ -50,6 +52,7 @@ export class SchedulingController {
   }
 
   @Post('recursos')
+  @Permisos('agenda.escribir')
   @ApiOperation({ summary: 'Crear un recurso reservable' })
   @ApiCreatedResponse({ type: RecursoResponseDto })
   crearRecurso(@UsuarioActual() usuario: UsuarioContexto, @Body() dto: CrearRecursoRequestDto) {
@@ -57,6 +60,7 @@ export class SchedulingController {
   }
 
   @Get('recursos/:recursoId/disponibilidad')
+  @Permisos('agenda.leer')
   @ApiOperation({ summary: 'Listar disponibilidad semanal de un recurso' })
   @ApiParam({ name: 'recursoId', format: 'uuid' })
   @ApiOkResponse({ type: [DisponibilidadResponseDto] })
@@ -65,6 +69,7 @@ export class SchedulingController {
   }
 
   @Post('disponibilidad')
+  @Permisos('agenda.escribir')
   @ApiOperation({ summary: 'Configurar un intervalo semanal de disponibilidad' })
   @ApiCreatedResponse({ type: DisponibilidadResponseDto })
   crearDisponibilidad(@UsuarioActual() usuario: UsuarioContexto, @Body() dto: CrearDisponibilidadRequestDto) {
@@ -72,6 +77,7 @@ export class SchedulingController {
   }
 
   @Post('bloqueos')
+  @Permisos('agenda.escribir')
   @ApiOperation({ summary: 'Bloquear un recurso en un intervalo' })
   @ApiCreatedResponse({ type: BloqueoResponseDto })
   crearBloqueo(@UsuarioActual() usuario: UsuarioContexto, @Body() dto: CrearBloqueoRequestDto) {
@@ -79,6 +85,7 @@ export class SchedulingController {
   }
 
   @Get('citas')
+  @Permisos('agenda.leer')
   @ApiOperation({ summary: 'Listar citas de la empresa activa' })
   @ApiOkResponse({ type: [CitaResponseDto] })
   citas(@UsuarioActual() usuario: UsuarioContexto, @Query('desde') desde?: string, @Query('hasta') hasta?: string) {
@@ -86,6 +93,7 @@ export class SchedulingController {
   }
 
   @Post('citas')
+  @Permisos('agenda.escribir')
   @ApiOperation({ summary: 'Crear una cita con validacion de disponibilidad' })
   @ApiCreatedResponse({ type: CitaResponseDto })
   crearCita(@UsuarioActual() usuario: UsuarioContexto, @Body() dto: CrearCitaRequestDto) {
@@ -93,6 +101,7 @@ export class SchedulingController {
   }
 
   @Patch('citas/:citaId/cancelar')
+  @Permisos('agenda.escribir')
   @ApiOperation({ summary: 'Cancelar una cita activa' })
   @ApiParam({ name: 'citaId', format: 'uuid' })
   @ApiOkResponse({ type: CitaResponseDto })
@@ -101,6 +110,7 @@ export class SchedulingController {
   }
 
   @Get('recordatorios')
+  @Permisos('agenda.leer')
   @ApiOperation({ summary: 'Listar recordatorios de citas' })
   @ApiOkResponse({ type: [RecordatorioResponseDto] })
   recordatorios(@UsuarioActual() usuario: UsuarioContexto) {

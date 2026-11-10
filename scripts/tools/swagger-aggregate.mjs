@@ -1,7 +1,7 @@
 // Genera los documentos OpenAPI agregados del proyecto.
 //
 // Hay dos superficies de API distintas y no deben mezclarse:
-//   - pública:  /api/v1/**  (expuesta por el API Gateway, versionada)
+//   - pública:  /api/v2/**  (expuesta por el API Gateway, versionada)
 //   - interna:  /internal/** (servicio→servicio, protegida con x-internal-key)
 //
 // El contrato público es el que se sirve en /docs y se reparte al frontend.
@@ -20,12 +20,12 @@ const salidaGateway = resolve(raiz, 'packages/api-gateway/src/openapi.agregado.t
 const salidaPublica = resolve(raiz, 'docs/api/core-engine.openapi.json');
 const salidaInterna = resolve(raiz, 'docs/api/core-engine.internal.openapi.json');
 
-const RE_PUBLICA = /^\/api\/v1(?:\/|$)/;
+const RE_PUBLICA = /^\/api\/v2(?:\/|$)/;
 const RE_INTERNA = /^\/internal(?:\/|$)/;
 
 /**
  * Clasifica una ruta por superficie. Falla si no pertenece a ninguna: una ruta
- * fuera de `/api/v1` o `/internal` rompería la taxonomía del contrato.
+ * fuera de `/api/v2` o `/internal` rompería la taxonomía del contrato.
  *
  * @param {string} ruta
  * @returns {'publica'|'interna'}
@@ -34,7 +34,7 @@ export function clasificarRuta(ruta) {
   if (RE_PUBLICA.test(ruta)) return 'publica';
   if (RE_INTERNA.test(ruta)) return 'interna';
   throw new Error(
-    `ruta fuera de las superficies conocidas: ${ruta} (esperado /api/v1/** o /internal/**)`,
+    `ruta fuera de las superficies conocidas: ${ruta} (esperado /api/v2/** o /internal/**)`,
   );
 }
 
@@ -166,7 +166,7 @@ export function construirDocumento(especificaciones, superficie) {
         ? 'Core Engine · API pública (agregada)'
         : 'Core Engine · API interna (servicio→servicio)',
       description: esPublica
-        ? 'Contrato de la superficie pública (/api/v1/**) expuesta por el API Gateway. ' +
+        ? 'Contrato de la superficie pública (/api/v2/**) expuesta por el API Gateway. ' +
           'No incluye las rutas /internal/**, que son exclusivas del tráfico servicio→servicio.'
         : 'Contrato de la superficie interna (/internal/**). No se expone a través del API Gateway ' +
           'y requiere la cabecera x-internal-key.',

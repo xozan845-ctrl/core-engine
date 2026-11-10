@@ -64,19 +64,6 @@ const TRANSICIONES_POR_TIPO: Record<TipoOrden, Record<EstadoOrden, EstadoOrden[]
   },
 };
 
-export function puedeTransicionar(de: EstadoOrden, a: EstadoOrden): boolean {
-  return TRANSICIONES[de].includes(a);
-}
-
-export function validarTransicion(de: EstadoOrden, a: EstadoOrden): void {
-  if (!puedeTransicionar(de, a)) {
-    throw new DomainError(
-      'TRANSICION_INVALIDA',
-      `Transicion invalida de estado "${de}" a "${a}".`,
-    );
-  }
-}
-
 export function validarTransicionPorTipo(tipo: TipoOrden, de: EstadoOrden, a: EstadoOrden): void {
   if (!TRANSICIONES_POR_TIPO[tipo][de].includes(a)) {
     throw new DomainError(

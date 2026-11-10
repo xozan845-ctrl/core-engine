@@ -20,7 +20,7 @@ export class ConfigurarBucketRequestDto {
 
 @ApiTags('Almacenamiento')
 @ApiBearerAuth()
-@Controller('api/v1/storage')
+@Controller('api/v2/storage')
 export class BucketsController {
   constructor(private readonly buckets: BucketsService) {}
 

@@ -156,7 +156,7 @@ Migraciones solo hacia adelante.
 | 12 | `CORS_ORIGINS` con los orígenes reales del frontend | ☐ | ☐ |
 | 13 | `TRUST_PROXY=1` y rate limit por IP real (probar dos IPs o revisar `x-ratelimit-remaining`) | ☐ | ☐ |
 | 14 | `8080` solo en loopback y cerrado en el firewall del VPS | ☐ | ☐ |
-| 15 | Frontend público usa `/api-proxy/api/v1` y su origen está en `CORS_ORIGINS` (ADR-29) | ☐ | ☐ |
+| 15 | Frontend público usa `/api-proxy/api/v2` y su origen está en `CORS_ORIGINS` (ADR-29) | ☐ | ☐ |
 
 > `EDGE_BASIC_AUTH` debe existir también como secreto del GitHub Environment
 > (`EDGE_BASIC_AUTH`) para que el smoke remoto se autentique en staging. Sin
@@ -165,7 +165,7 @@ Migraciones solo hacia adelante.
 > Para cubrir `commissions-service` (ADR-37), añade además los secretos
 > `SMOKE_EMPRESARIO_EMAIL`/`SMOKE_EMPRESARIO_PASSWORD` con un usuario de rol
 > `empresario` y empresa activa. Sin ellos el smoke omite la comprobación de
-> `/api/v1/empresarios/me/ventas`; con ellos falla si el servicio no responde.
+> `/api/v2/empresarios/me/ventas`; con ellos falla si el servicio no responde.
 >
 > Desarrollo local: `docker compose -f docker-compose.dev.yml up -d --build` + `npm run demo` es la
 > verificación equivalente antes de cualquier PR (R-GC-5).

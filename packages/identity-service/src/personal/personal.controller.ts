@@ -62,7 +62,7 @@ class AceptarInvitacionPersonalRequestDto implements AceptarInvitacionPersonalDa
 }
 
 @ApiTags('Personal') @ApiBearerAuth()
-@Controller('api/v1/empresas/:empresaId')
+@Controller('api/v2/empresas/:empresaId')
 export class PersonalController {
   constructor(private readonly personal: PersonalService) {}
 
@@ -117,7 +117,7 @@ export class PersonalController {
 }
 
 @ApiTags('Personal')
-@Controller('api/v1/incorporaciones')
+@Controller('api/v2/incorporaciones')
 export class PersonalPublicController {
   constructor(private readonly personal: PersonalService) {}
 

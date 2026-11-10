@@ -4,11 +4,11 @@ export class ItemOrdenResponseDto {
   @ApiProperty({ description: 'Id de la oferta', format: 'uuid' })
   oferta_id: string;
 
-  @ApiProperty({ required: false, enum: ['producto', 'servicio', 'alquiler'] })
-  item_type?: string;
+  @ApiProperty({ enum: ['producto', 'servicio', 'alquiler'] })
+  item_type: string;
 
-  @ApiProperty({ required: false, format: 'uuid' })
-  item_id?: string;
+  @ApiProperty({ format: 'uuid' })
+  item_id: string;
 
   @ApiProperty({ description: 'SKU del producto', example: 'SKU-001' })
   sku: string;
@@ -54,8 +54,8 @@ export class OrderViewResponseDto {
   @ApiProperty({ description: 'Estado de la orden', example: 'pagada' })
   estado: string;
 
-  @ApiProperty({ required: false, enum: ['compra', 'reserva', 'cotizacion', 'orden_servicio'], default: 'compra' })
-  tipo_orden?: string;
+  @ApiProperty({ enum: ['compra', 'reserva', 'cotizacion', 'orden_servicio'] })
+  tipo_orden: string;
 
   @ApiProperty({ required: false, type: Object, additionalProperties: true })
   fulfillment_config?: Record<string, unknown>;
@@ -95,26 +95,6 @@ export class OrderViewResponseDto {
 
   @ApiProperty({ description: 'Fecha de devolución (ISO 8601 UTC)', required: false, nullable: true, format: 'date-time' })
   devuelta_en: string | null;
-}
-
-export class ComisionVistaResponseDto {
-  @ApiProperty({ description: 'Id del vendedor', format: 'uuid' })
-  vendedor_id: string;
-
-  @ApiProperty({ description: 'Periodo (YYYY-MM)', example: '2026-10' })
-  periodo: string;
-
-  @ApiProperty({ description: 'Órdenes del periodo', example: 12 })
-  ordenes: number;
-
-  @ApiProperty({ description: 'Ventas del periodo en centavos', example: 1380000 })
-  total_ventas_cents: number;
-
-  @ApiProperty({ description: 'Comisiones del periodo en centavos', example: 165600 })
-  total_comision_cents: number;
-
-  @ApiProperty({ description: 'Última actualización (ISO 8601 UTC)', format: 'date-time' })
-  actualizado_en: string;
 }
 
 export class TimelineEventoResponseDto {
