@@ -115,7 +115,7 @@ describe('VentasConsumer', () => {
         data,
       });
 
-      expect(mockAgregador.procesarVentaGeolocalizada).toHaveBeenCalledWith(data);
+      expect(mockAgregador.procesarVentaGeolocalizada).toHaveBeenCalledWith(data, 'e-new-1');
       expect(mockPg.query).toHaveBeenCalledWith(
         expect.stringContaining('INSERT INTO intelligence.eventos_procesados'),
         ['e-new-1', EVENTOS.VENTA_GEOLOCALIZADA],

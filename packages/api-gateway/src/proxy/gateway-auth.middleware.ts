@@ -1,6 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 import {
   verificarToken,
+  secretoJwt,
   TokenPayload,
   ROLES,
   ROLES_LOGISTICA,
@@ -163,6 +164,14 @@ export const POLITICAS_RUTAS: PoliticaRuta[] = [
     { patron: /^\/api\/v2\/auth\/me$/, metodos: ['GET'], roles: null }, // exige token (se valida abajo)
     // logout: exige un access token valido (cualquier rol); revoca el refresh (R-GW-4)
     { patron: /^\/api\/v2\/auth\/logout$/, metodos: ['POST'], roles: Object.values(ROLES) },
+    // cambio de contraseña y vinculación de personal: el propio usuario
+    // autenticado (el servicio valida que sea su sesión). Sin esta política la
+    // regla deny-by-default devolvía 403 aunque el token fuese válido.
+    {
+      patron: /^\/api\/v2\/auth\/(cambiar-contrasena|vincular-personal)$/,
+      metodos: ['POST'],
+      roles: Object.values(ROLES),
+    },
     // catálogo: escritura admin (el super_admin opera globalmente; para crear
     // debe indicar la empresa en el cuerpo)
     { patron: /^\/api\/v2\/catalog\/productos/, metodos: ['POST', 'PATCH', 'PUT', 'DELETE'], roles: [ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.EMPRESARIO] },
@@ -295,7 +304,9 @@ export const POLITICAS_RUTAS: PoliticaRuta[] = [
   {
     patron: /^\/api\/v2\/inteligencia\/ventas\/registrar$/,
     metodos: ['POST'],
-    roles: [ROLES.VENDEDOR, ROLES.COMPRADOR, ...ROLES_LOGISTICA],
+    // Ingesta de ventas: solo el vendedor (sus propias ventas) o un rol
+    // administrativo/empresario. Comprador y logística no registran ventas.
+    roles: [ROLES.VENDEDOR, ROLES.EMPRESARIO, ROLES.SUPER_ADMIN, ROLES.ADMIN],
   },
   // Deny-by-default: una ruta /api/v2 no declarada no queda abierta a cualquier
   // token valido. Las rutas publicas deben declarar roles: null antes de esta
@@ -315,7 +326,7 @@ export const POLITICAS_RUTAS: PoliticaRuta[] = [
 export class GatewayAuthMiddleware {
   private readonly logger = Logger.create('gateway.auth');
 
-  constructor(private readonly secreto = process.env.JWT_SECRET ?? 'dev_secret') {}
+  constructor(private readonly secreto = secretoJwt()) {}
 
   aplicar(req: Request, res: Response, next: NextFunction, politica: PoliticaRuta | null): void {
     const autorizacion = req.headers['authorization'] as string | undefined;

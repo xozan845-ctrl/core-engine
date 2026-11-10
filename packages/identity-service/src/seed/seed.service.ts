@@ -1,6 +1,11 @@
 import { Injectable, OnApplicationBootstrap } from '@nestjs/common';
 import { UsuariosService } from '../usuarios/usuarios.service';
-import { ROLES, Logger } from '@core/shared';
+import {
+  ROLES,
+  Logger,
+  emailAdminInicial,
+  passwordAdminInicial,
+} from '@core/shared';
 
 /**
  * Siembra del administrador de la bodega en el primer arranque
@@ -15,8 +20,8 @@ export class SeedService implements OnApplicationBootstrap {
   async onApplicationBootstrap(): Promise<void> {
     const existe = await this.usuarios.existeAdmin();
     if (existe) return;
-    const email = process.env.ADMIN_EMAIL ?? 'admin@core-engine.test';
-    const password = process.env.ADMIN_PASSWORD ?? 'AdminCore Engine2026!';
+    const email = emailAdminInicial();
+    const password = passwordAdminInicial();
     try {
       const admin = await this.usuarios.crear({
         nombre: 'Administrador Core Engine',

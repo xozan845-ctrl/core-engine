@@ -1,16 +1,27 @@
 import { Injectable } from '@nestjs/common';
+import type { PoolClient } from 'pg';
 import { PgService } from '@core/shared';
+
+interface Queryable {
+  query: (text: string, params?: unknown[]) => Promise<unknown>;
+}
 
 @Injectable()
 export class InteligenciaRepository {
   constructor(private readonly pg: PgService) {}
 
-  async guardarHechosVenta(hechos: any[], _clienteId?: string): Promise<void> {
+  async guardarHechosVenta(
+    hechos: any[],
+    _clienteId?: string,
+    client?: PoolClient,
+  ): Promise<void> {
     if (hechos.length === 0) return;
-    
-    // Simplificado para el MVP.
+
+    // Si el agregador ya abrio una transaccion, los hechos deben escribir en
+    // esa misma conexion para que la venta sea atomica e idempotente.
+    const db: Queryable = client ?? this.pg;
     for (const hecho of hechos) {
-      await this.pg.query(
+      await db.query(
         `INSERT INTO intelligence.hechos_venta 
           (order_id, sku, vendedor_id, cantidad, monto_cents, lat, lng, gps_precision_metros, 
            gps_velocidad_ms, gps_rumbo_grados, tipo_actividad, resultado_visita, 
