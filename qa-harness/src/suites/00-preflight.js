@@ -41,16 +41,19 @@ export async function preflight(config) {
 
   const endpoints = [
     '/api/v2/auth/login',
-    '/api/v2/catalog/productos',
+    '/api/v2/catalog/items',
     '/api/v2/orders',
     '/api/v2/admin/reportes',
     '/health',
     '/metrics',
   ];
+  // Una ruta protegida responde 401/403 (o 405 si el método no aplica): eso
+  // confirma que el endpoint está montado sin exigir credenciales en preflight.
+  const montado = (status) => (status >= 200 && status < 300) || [401, 403, 405].includes(status);
   for (const ep of endpoints) {
     try {
       const res = await new ClientoHTTP().get(ep);
-      if (res.status >= 200 && res.status < 300) {
+      if (montado(res.status)) {
         servicios[ep] = 'ok';
       } else {
         errores.push(`Endpoint ${ep}: ${res.status}`);
