@@ -7144,6 +7144,53 @@ export const OPENAPI_AGREGADO = {
         ]
       }
     },
+    "/api/v2/empresas/{id}/pack": {
+      "patch": {
+        "operationId": "EmpresasController_actualizarPack",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "description": "UUID de la empresa",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ActualizarPackRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Empresa con el pack actualizado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EmpresaResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Asignar o actualizar el pack versionado de una empresa",
+        "tags": [
+          "Empresas"
+        ]
+      }
+    },
     "/api/v2/empresas/{id}/perfil": {
       "patch": {
         "operationId": "EmpresasController_actualizarPerfil",
@@ -20819,6 +20866,23 @@ export const OPENAPI_AGREGADO = {
           }
         }
       },
+      "ActualizarPackRequestDto": {
+        "type": "object",
+        "properties": {
+          "pack_codigo": {
+            "type": "string",
+            "example": "pack_belleza"
+          },
+          "pack_version": {
+            "type": "number",
+            "minimum": 1,
+            "description": "Version concreta; por defecto la ultima activa"
+          }
+        },
+        "required": [
+          "pack_codigo"
+        ]
+      },
       "ActualizarParteRequestDto": {
         "type": "object",
         "properties": {
@@ -21269,6 +21333,11 @@ export const OPENAPI_AGREGADO = {
           "pack_codigo": {
             "type": "string",
             "description": "Pack versionado; se valida contra identity.packs"
+          },
+          "pack_version": {
+            "type": "number",
+            "minimum": 1,
+            "description": "Version concreta del pack; por defecto la ultima activa"
           }
         },
         "required": [
