@@ -71,7 +71,7 @@ Eventos del bus (topic `core-engine.events`): `order.created`, `stock.reservado`
 ```bash
 npm install                       # instala los workspaces (enlaza @core/shared, ...)
 npm run build                     # compila shared + gateway + los 11 microservicios
-npm test                          # los 13 workspaces, cada uno con --coverage (1.322 tests)
+npm test                          # los 13 workspaces, cada uno con --coverage (1.391 tests)
 cp .env.example .env              # variables de DESARROLLO (producción: .env.production.example)
 docker compose -f docker-compose.dev.yml up -d --build   # app: Postgres + RabbitMQ + MinIO + gateway y 11 servicios (8080 host + datos/broker 5432/5672/15672 + minio 9000/9001)
 npm run demo                      # ejercicio end-to-end (TC-01..TC-08, RN-01..RN-08)
@@ -244,7 +244,7 @@ TC-07 seguridad del gateway (401/403), TC-08 comision 12 % y liquidacion al vend
 RN-05/RN-06/RN-07/RN-08, partida doble y regimen fiscal NIC.
 
 ```bash
-npm test        # 1.322 tests en los 13 workspaces (cobertura por workspace, ratchet R-COV-1)
+npm test        # 1.391 tests en los 13 workspaces (cobertura por workspace, ratchet R-COV-1)
 npm run demo    # flujo real sobre el stack levantado (scripts/tools/smoke.mjs)
 ```
 
@@ -260,6 +260,11 @@ correlacionado (AsyncLocalStorage).
 
 ## Conmutacion a Supabase (produccion)
 
-1. Cree el proyecto Supabase (Postgres + Auth). 2. Ejecute `01_esquemas.sql` en la consola SQL.
-3. Ejecute `99_rls.sql` (activa RLS por rol). 4. Iguale el secreto JWT HS256 y las URL de los
-servicios al proyecto. La diferencia de implementacion queda aislada en `jwt.utils.ts`.
+1. Cree el proyecto Supabase (Postgres + Auth).
+2. Ejecute **todas** las migraciones de `infra/db/init/` en orden (incluidas
+   `45_hardening.sql` y `46_commission_payload.sql`) en la consola SQL. El
+   manifiesto `scripts/config/db-migrations.json` es la fuente de verdad de los
+   hashes (R-DB-6); no edite una migración ya aplicada.
+3. Ejecute `99_rls.sql` (activa RLS por rol).
+4. Iguale el secreto JWT HS256 y las URL de los servicios al proyecto. La
+   diferencia de implementacion queda aislada en `jwt.utils.ts`.
