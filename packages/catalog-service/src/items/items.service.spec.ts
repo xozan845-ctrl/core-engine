@@ -25,6 +25,7 @@ const fila = {
   stock: null,
   duration_minutes: 60,
   atributos: { especialidad: 'general' },
+  parent_item_id: null,
   estado: 'activo',
   source_type: 'servicio' as const,
   source_id: '22222222-3333-4444-5555-666666666666',
@@ -47,6 +48,36 @@ describe('ItemsService (fase 2)', () => {
       costo: '500.00',
       stock: null,
       duration_minutes: 60,
+    });
+  });
+
+  it('incluye parent_item_id e imágenes del item', async () => {
+    const { servicio, pg } = crear();
+    (pg.queryOne as Mock).mockResolvedValueOnce({ n: 1 }).mockResolvedValueOnce(fila);
+    (pg.query as Mock)
+      .mockResolvedValueOnce([fila])
+      .mockResolvedValueOnce([
+        {
+          id: 'img-1',
+          item_id: fila.item_id,
+          objeto_id: '33333333-4444-4555-8666-777777777777',
+          orden: 0,
+          es_principal: true,
+        },
+      ]);
+
+    const pagina = await servicio.listar({ empresa_id: EMPRESA });
+
+    expect(pagina.items[0]).toMatchObject({
+      parent_item_id: null,
+      imagenes: [
+        {
+          id: 'img-1',
+          objeto_id: '33333333-4444-4555-8666-777777777777',
+          orden: 0,
+          es_principal: true,
+        },
+      ],
     });
   });
 
