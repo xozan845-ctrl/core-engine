@@ -21,12 +21,12 @@ export class EstadoLiquidacionRequestDto {
 
 @ApiTags('Comisiones · Liquidaciones')
 @ApiBearerAuth()
-@Controller('api/v1')
+@Controller('api/v2')
 @RequiereCapacidades(CAPACIDADES.LIQUIDACIONES)
 export class LiquidacionesController {
   constructor(private readonly liquidaciones: LiquidacionesService) {}
 
-  /** GET /api/v1/vendedores/me/liquidaciones — cortes del vendedor. */
+  /** GET /api/v2/vendedores/me/liquidaciones — cortes del vendedor. */
   @Get('vendedores/me/liquidaciones')
   @Roles(ROLES.VENDEDOR)
   @ApiOperation({ summary: 'Cortes/liquidaciones del vendedor autenticado' })
@@ -44,7 +44,7 @@ export class LiquidacionesController {
     return this.liquidaciones.deEmpresa(usuario.tenant_id);
   }
 
-  /** POST /api/v1/admin/liquidaciones/corte — corte manual (admin, pruebas). */
+  /** POST /api/v2/admin/liquidaciones/corte — corte manual (admin, pruebas). */
   @Post('admin/liquidaciones/corte')
   @Roles(ROLES.SUPER_ADMIN, ROLES.ADMIN)
   @ApiOperation({ summary: 'Ejecutar un corte de liquidaciones (admin)' })
@@ -62,7 +62,7 @@ export class LiquidacionesController {
     return this.liquidaciones.cerrarPeriodoAnterior(new Date());
   }
 
-  /** PATCH /api/v1/admin/liquidaciones/:id/pagar — cierre de pago (RN-07). */
+  /** PATCH /api/v2/admin/liquidaciones/:id/pagar — cierre de pago (RN-07). */
   @Post('admin/liquidaciones/:id/pagar')
   @Roles(ROLES.SUPER_ADMIN, ROLES.ADMIN)
   @ApiOperation({ summary: 'Marcar una liquidación como pagada (RN-07)' })

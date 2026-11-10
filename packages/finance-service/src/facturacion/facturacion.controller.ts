@@ -34,12 +34,12 @@ export class EmitirComprobanteRequestDto {
 }
 
 /**
- * GET/POST /api/v1/finanzas/comprobantes — comprobantes fiscales DGI
+ * GET/POST /api/v2/finanzas/comprobantes — comprobantes fiscales DGI
  * (Ley 822: IVA 15 %; Ley 842: emision en cordobas).
  */
 @ApiTags('Finanzas · Facturación')
 @ApiBearerAuth()
-@Controller('api/v1/finanzas/comprobantes')
+@Controller('api/v2/finanzas/comprobantes')
 @RequiereCapacidades(CAPACIDADES.FACTURACION)
 @Roles(ROLES.SUPER_ADMIN, ROLES.ADMIN)
 export class FacturacionController {

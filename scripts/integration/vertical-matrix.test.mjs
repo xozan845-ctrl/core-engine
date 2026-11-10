@@ -35,6 +35,7 @@ const MIGRACIONES = [
   '22_herencia_tema.sql',
   '24_multi_vertical.sql',
   '29_vertical_packs.sql',
+  '37_personal_empresa.sql',
 ];
 
 const CASOS = [
@@ -122,7 +123,28 @@ before(async () => {
     const { rows: [{ existe }] } = await client.query(
       `SELECT to_regnamespace('identity') IS NOT NULL AS existe`,
     );
-    const migraciones = existe ? MIGRACIONES.filter((name) => name !== '01_esquemas.sql') : MIGRACIONES;
+    const { rows: [{ catalogoFinal }] } = await client.query(
+      `SELECT to_regclass('catalog.items') IS NOT NULL AND to_regclass('catalog.productos') IS NULL AS "catalogoFinal"`,
+    );
+    const migraciones = existe
+      ? MIGRACIONES.filter(
+          (name) =>
+            name !== '01_esquemas.sql' &&
+            !(catalogoFinal && ['01c_cqrs_catalog.sql', '01e_adr25_empresas.sql', '01h_catalogo_por_empresa.sql', '24_multi_vertical.sql'].includes(name)),
+        )
+      : MIGRACIONES;
+    await client.query(`
+      CREATE SCHEMA IF NOT EXISTS auth;
+      CREATE OR REPLACE FUNCTION auth.jwt() RETURNS jsonb LANGUAGE sql STABLE AS $$
+        SELECT COALESCE(NULLIF(current_setting('request.jwt.claims', true), ''), '{}')::jsonb
+      $$;
+      CREATE OR REPLACE FUNCTION auth.rol() RETURNS text LANGUAGE sql STABLE AS $$
+        SELECT COALESCE(auth.jwt() ->> 'rol', 'anon')
+      $$;
+      CREATE OR REPLACE FUNCTION auth.uid() RETURNS uuid LANGUAGE sql STABLE AS $$
+        SELECT NULLIF(auth.jwt() ->> 'sub', '')::uuid
+      $$;
+    `);
     for (const name of migraciones) {
       const sql = await readFile(new URL(`../../infra/db/init/${name}`, import.meta.url), 'utf8');
       await client.query(sql);
@@ -170,10 +192,8 @@ for (const caso of CASOS) {
       const empresa = await empresas.crear(
         usuarioId,
         `Tenant ${caso.vertical} ${randomUUID().slice(0, 8)}`,
-        caso.modalidad,
         undefined,
         undefined,
-        caso.tipo,
         caso.vertical,
         caso.pack,
       );
@@ -214,10 +234,8 @@ test('rechaza un pack que no corresponde a la vertical solicitada', async () => 
     empresas.crear(
       randomUUID(),
       `Tenant incompatible ${randomUUID().slice(0, 8)}`,
-      'plataforma',
       undefined,
       undefined,
-      'comercial',
       'retail',
       'pack_belleza',
     ),

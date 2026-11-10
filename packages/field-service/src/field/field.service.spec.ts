@@ -10,13 +10,19 @@ describe('FieldService', () => {
   let pg: ReturnType<typeof crearPg>;
   let service: FieldService;
 
+  const fetchMock = vi.fn();
+
   beforeEach(() => {
     pg = crearPg();
+    fetchMock.mockReset();
+    fetchMock.mockResolvedValue({ ok: true, status: 200, json: async () => ({ id: 'parte-1' }) });
+    vi.stubGlobal('fetch', fetchMock);
     service = new FieldService(pg as never);
   });
 
   afterEach(() => {
     vi.restoreAllMocks();
+    vi.unstubAllGlobals();
   });
 
   it('crea rutas persistiendo personalIds, defaults y aislamiento por tenant', async () => {
@@ -47,23 +53,22 @@ describe('FieldService', () => {
   });
 
   it('valida la parte contra el tenant antes de persistir un cliente legacy', async () => {
-    pg.queryOne.mockResolvedValueOnce({ id: 'parte-1' }).mockResolvedValueOnce({ id: 'cliente-1' });
+    pg.queryOne.mockResolvedValueOnce({ id: 'cliente-1' });
 
     await service.crearCliente('tenant-a', {
       nombreCompleto: 'Ana',
       parteId: '22222222-2222-4222-8222-222222222222',
     });
 
-    expect(pg.queryOne.mock.calls[0][0]).toContain('identity.partes');
-    expect(pg.queryOne.mock.calls[0][1]).toEqual([
-      '22222222-2222-4222-8222-222222222222',
-      'tenant-a',
-    ]);
-    expect(pg.queryOne.mock.calls[1][0]).toContain('INSERT INTO field.clientes');
+    expect(fetchMock).toHaveBeenCalledWith(
+      expect.stringContaining('/internal/partes/22222222-2222-4222-8222-222222222222'),
+      expect.anything(),
+    );
+    expect(pg.queryOne.mock.calls[0][0]).toContain('INSERT INTO field.clientes');
   });
 
   it('rechaza enlazar un cliente legacy con una parte de otro tenant', async () => {
-    pg.queryOne.mockResolvedValueOnce(null);
+    fetchMock.mockResolvedValueOnce({ ok: false, status: 404, json: async () => ({}) });
 
     await expect(service.crearCliente('tenant-a', {
       nombreCompleto: 'Ana',
@@ -72,15 +77,15 @@ describe('FieldService', () => {
   });
 
   it('valida la parte contra el tenant también al actualizar un cliente', async () => {
-    pg.queryOne.mockResolvedValueOnce({ id: 'parte-1' }).mockResolvedValueOnce({ id: 'cliente-1' });
+    pg.queryOne.mockResolvedValueOnce({ id: 'cliente-1' });
 
     await service.actualizarCliente('tenant-a', 'cliente-1', {
       nombreCompleto: 'Ana',
       parteId: '22222222-2222-4222-8222-222222222222',
     });
 
-    expect(pg.queryOne.mock.calls[0][0]).toContain('identity.partes');
-    expect(pg.queryOne.mock.calls[1][0]).toContain('UPDATE field.clientes');
+    expect(fetchMock).toHaveBeenCalled();
+    expect(pg.queryOne.mock.calls[0][0]).toContain('UPDATE field.clientes');
   });
 
   it('actualiza ubicación usando el contrato público lat/lng/precision/timestamp', async () => {

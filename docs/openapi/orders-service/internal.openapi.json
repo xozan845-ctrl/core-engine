@@ -405,8 +405,7 @@
               "reserva",
               "cotizacion",
               "orden_servicio"
-            ],
-            "default": "compra"
+            ]
           },
           "fulfillment_config": {
             "type": "object",
@@ -486,6 +485,7 @@
           "comprador_id",
           "tienda_id",
           "estado",
+          "tipo_orden",
           "total_cents",
           "comision_cents",
           "moneda",
