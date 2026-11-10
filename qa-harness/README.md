@@ -15,7 +15,7 @@ Genera reportes HTML, Markdown y JSON.
 | `00-preflight` | Health del gateway (el runner lo ejecuta como preflight) |
 | `01-auth` | Autenticación y sesiones (RF-01, RF-02, RF-03) |
 | `02-role-access` | Control de acceso y roles (ACL Tabla 21) |
-| `03-catalog` | Catálogo CRUD y reglas (RN-01, RN-02, RN-08) |
+| `03-catalog` | Catálogo unificado en items: producto, servicio y alquiler (RN-01, RN-02, RN-08) |
 | `04-stores` | Tiendas y ofertas (RN-02, RN-03) |
 | `05-orders` | Órdenes y saga (TC-03, TC-04, máquina de estados) |
 | `06-cart` | Carrito y checkout (RN-05) |
@@ -34,6 +34,20 @@ Genera reportes HTML, Markdown y JSON.
 | `19-identity` | Identity service (auth, usuarios, altas administrativas) |
 | `20-multitenant` | Aislamiento por tenant |
 | `21-market-intelligence` | Inteligencia de mercado, analítica y geoespacial |
+
+## Bootstrap de datos (ADR-25/27)
+
+El runner prepara el contexto multitenant antes de las suites:
+
+1. Login del `super_admin` sembrado.
+2. Registro/login de un **empresario** QA y alta (o recuperación) de la empresa
+   `qa-harness` con el pack `pack_retail`.
+3. Alta del **vendedor** dentro de esa empresa (participación 10 %) y creación de
+   su tienda. Así el JWT lleva `tenant_id` y `participacion_porcentaje`.
+4. Registro del comprador y login del usuario de logística sembrado por DB.
+
+El registro público solo admite `empresario` y `comprador`; un `vendedor` por esa
+vía responde `400`. La empresa y la tienda se reutilizan entre corridas.
 
 ## Instalación
 

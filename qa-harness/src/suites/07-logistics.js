@@ -23,13 +23,14 @@ export async function suite07Logistica(client, cfg, adminToken, compradorToken, 
 
   try {
     // Setup: producto + oferta + orden
-    const prod = await client.post('/api/v2/catalog/productos', {
-      sku: `QA-L1-${suf}`, nombre: 'Producto QA Log', descripcion: '', categoria: 'general',
-      precio_base: '500.00', stock: 3,
+    const empresaId = cfg.get ? cfg.get('empresaId') : cfg.empresaId;
+    const prod = await client.post('/api/v2/catalog/items', {
+      tipo: 'producto', codigo: `QA-L1-${suf}`, nombre: 'Producto QA Log', descripcion: '', categoria: 'general',
+      precio: '500.00', track_inventory: true, stock: 3, empresa_id: empresaId,
     }, aAuth);
     const tienda = await client.get('/api/v2/vendedores/me/tienda', vAuth);
     const oferta = await client.post('/api/v2/vendedores/productos', {
-      producto_id: prod.body?.id, margen: 10,
+      item_id: prod.body?.item_id ?? prod.body?.id, margen: 10,
       ...(tienda.body?.id ? { tienda_id: tienda.body.id } : {}),
     }, vAuth);
     const orden = oferta.body?.id ? await client.post('/api/v2/orders', {

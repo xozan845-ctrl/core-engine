@@ -52,17 +52,20 @@ export async function suite19Identity({ client, pg, config }) {
   // ── registro (Tabla 21) ──────────────────────────────────────────────────
   const vCorreo = `vend.${suf}@test.com`;
   const regV = await client.post('/api/v2/auth/registro', { nombre: 'Vendedor QA', correo: vCorreo, contrasena: 'Contrasena123!', rol: 'vendedor' });
-  T('registro: vendedor válido → 201 + tokens', assert(regV, regV.status === 201 && !!regV.body?.access_token && !!regV.body?.refresh_token), JSON.stringify(regV.status));
+  T('registro: vendedor por vía pública → 400 (ADR-25)', assert(regV, regV.status === 400), JSON.stringify(regV.status));
+  const eCorreo = `emp.${suf}@test.com`;
+  const regE = await client.post('/api/v2/auth/registro', { nombre: 'Empresario QA', correo: eCorreo, contrasena: 'Contrasena123!', rol: 'empresario' });
+  T('registro: empresario válido → 201 + tokens', assert(regE, regE.status === 201 && !!regE.body?.access_token && !!regE.body?.refresh_token), JSON.stringify(regE.status));
   const cCorreo = `comp.${suf}@test.com`;
   const regC = await client.post('/api/v2/auth/registro', { nombre: 'Comprador QA', correo: cCorreo, contrasena: 'Contrasena123!', rol: 'comprador' });
   T('registro: comprador válido → 201', assert(regC, regC.status === 201), JSON.stringify(regC.status));
-  const dup = await client.post('/api/v2/auth/registro', { nombre: 'Dupe', correo: vCorreo, contrasena: 'Contrasena123!', rol: 'vendedor' });
+  const dup = await client.post('/api/v2/auth/registro', { nombre: 'Dupe', correo: cCorreo, contrasena: 'Contrasena123!', rol: 'comprador' });
   T('registro: correo duplicado → 409', assert(dup, dup.status === 409), JSON.stringify(dup.status));
   const badRol = await client.post('/api/v2/auth/registro', { nombre: 'X', correo: `x.${suf}@test.com`, contrasena: 'Contrasena123!', rol: 'admin' });
   T('registro: rol no registrable (admin) → 400', assert(badRol, badRol.status === 400), JSON.stringify(badRol.status));
-  const shortPass = await client.post('/api/v2/auth/registro', { nombre: 'X', correo: `sp.${suf}@test.com`, contrasena: 'corto', rol: 'vendedor' });
+  const shortPass = await client.post('/api/v2/auth/registro', { nombre: 'X', correo: `sp.${suf}@test.com`, contrasena: 'corto', rol: 'comprador' });
   T('registro: contraseña corta → 400', assert(shortPass, shortPass.status === 400), JSON.stringify(shortPass.status));
-  const badCorreo = await client.post('/api/v2/auth/registro', { nombre: 'X', correo: 'no-es-correo', contrasena: 'Contrasena123!', rol: 'vendedor' });
+  const badCorreo = await client.post('/api/v2/auth/registro', { nombre: 'X', correo: 'no-es-correo', contrasena: 'Contrasena123!', rol: 'comprador' });
   T('registro: correo inválido → 400', assert(badCorreo, badCorreo.status === 400), JSON.stringify(badCorreo.status));
 
   // ── login ────────────────────────────────────────────────────────────────
@@ -104,7 +107,7 @@ export async function suite19Identity({ client, pg, config }) {
 
   // ── cambiar-contrasena ─────────────────────────────────────────────────────
   const ccCorreo = `cc.${suf}@test.com`;
-  const ccReg = await client.post('/api/v2/auth/registro', { nombre: 'CC', correo: ccCorreo, contrasena: 'PassUno123!', rol: 'vendedor' });
+  const ccReg = await client.post('/api/v2/auth/registro', { nombre: 'CC', correo: ccCorreo, contrasena: 'PassUno123!', rol: 'comprador' });
   const ccToken = ccReg.body?.access_token;
   const ccAuth = { authorization: `Bearer ${ccToken}` };
   // Un comprador (no admin) debe recibir 403 al intentar crear usuarios.
@@ -124,7 +127,7 @@ export async function suite19Identity({ client, pg, config }) {
   T('cambiar-contrasena: login con contraseña nueva → 200', assert(loginNueva, loginNueva.status === 200), JSON.stringify(loginNueva.status));
 
   // ── restablecer-contrasena ─────────────────────────────────────────────────
-  const rcOk = await client.post('/api/v2/auth/restablecer-contrasena', { correo: vCorreo });
+  const rcOk = await client.post('/api/v2/auth/restablecer-contrasena', { correo: cCorreo });
   T('restablecer: correo existente → 200/201 ok (no revela)', assert(rcOk, [200, 201].includes(rcOk.status) && rcOk.body?.ok === true), JSON.stringify(rcOk.status));
   const rcBad = await client.post('/api/v2/auth/restablecer-contrasena', { correo: 'no-correo' });
   T('restablecer: correo inválido → 400', assert(rcBad, rcBad.status === 400), JSON.stringify(rcBad.status));

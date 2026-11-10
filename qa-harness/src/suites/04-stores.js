@@ -35,16 +35,17 @@ export async function suite04Tiendas(client, cfg, vendedorToken, adminToken) {
     }
     resultados.push({ test: 'Alta/recuperar tienda', status: crear.status, pass: !!tiendaId });
 
+    const empresaId = cfg.get ? cfg.get('empresaId') : cfg.empresaId;
     const crearProducto = async (sku, stock) => {
-      const r = await client.post('/api/v2/catalog/productos', {
-        sku, nombre: `Prod ${sku}`, descripcion: 'd', categoria: 'general',
-        precio_base: '1000.00', stock,
+      const r = await client.post('/api/v2/catalog/items', {
+        tipo: 'producto', codigo: sku, nombre: `Prod ${sku}`, descripcion: 'd', categoria: 'general',
+        precio: '1000.00', track_inventory: true, stock, empresa_id: empresaId,
       }, aAuth);
-      return r.body?.id ?? null;
+      return r.body?.item_id ?? r.body?.id ?? null;
     };
 
-    const publicar = (productoId, margen) => client.post('/api/v2/vendedores/productos', {
-      producto_id: productoId, margen, ...(tiendaId ? { tienda_id: tiendaId } : {}),
+    const publicar = (itemId, margen) => client.post('/api/v2/vendedores/productos', {
+      item_id: itemId, margen, ...(tiendaId ? { tienda_id: tiendaId } : {}),
     }, vAuth);
 
     // 2. Ofertas validas: margen 15, 0 y 90 (RN-01)
@@ -75,8 +76,8 @@ export async function suite04Tiendas(client, cfg, vendedorToken, adminToken) {
     const margenFloat = await publicar(p15, 15.5);
     resultados.push({ test: 'Margen 15.5 → 400 (IsInt)', status: margenFloat.status, pass: margenFloat.status === 400 });
 
-    const sinProducto = await client.post('/api/v2/vendedores/productos', { margen: 10 }, vAuth);
-    resultados.push({ test: 'Sin producto_id → 400', status: sinProducto.status, pass: sinProducto.status === 400 });
+    const sinItem = await client.post('/api/v2/vendedores/productos', { margen: 10 }, vAuth);
+    resultados.push({ test: 'Sin item_id → 400', status: sinItem.status, pass: sinItem.status === 400 });
 
     // 5. Tienda publica y ofertas del vendedor
     const tiendaPublica = await client.get(`/api/v2/tiendas/${tiendaId}`);

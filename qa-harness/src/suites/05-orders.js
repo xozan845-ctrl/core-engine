@@ -21,17 +21,18 @@ export async function suite05Ordenes(client, cfg, compradorToken, adminToken, ve
 
   try {
     // Setup: producto (admin) + oferta (vendedor)
-    const prod = await client.post('/api/v2/catalog/productos', {
-      sku: `QA-O1-${suf}`, nombre: 'Producto QA Orden', descripcion: '', categoria: 'general',
-      precio_base: '2000.00', stock: 5,
+    const empresaId = cfg.get ? cfg.get('empresaId') : cfg.empresaId;
+    const prod = await client.post('/api/v2/catalog/items', {
+      tipo: 'producto', codigo: `QA-O1-${suf}`, nombre: 'Producto QA Orden', descripcion: '', categoria: 'general',
+      precio: '2000.00', track_inventory: true, stock: 5, empresa_id: empresaId,
     }, aAuth);
-    const productoId = prod.body?.id;
+    const itemId = prod.body?.item_id ?? prod.body?.id;
 
     const tienda = await client.get('/api/v2/vendedores/me/tienda', vAuth);
     const tiendaId = tienda.body?.id ?? tienda.body?.tienda?.id ?? null;
 
-    const oferta = productoId ? await client.post('/api/v2/vendedores/productos', {
-      producto_id: productoId, margen: 15, ...(tiendaId ? { tienda_id: tiendaId } : {}),
+    const oferta = itemId ? await client.post('/api/v2/vendedores/productos', {
+      item_id: itemId, margen: 15, ...(tiendaId ? { tienda_id: tiendaId } : {}),
     }, vAuth) : { status: 500 };
     const ofertaId = oferta.body?.id ?? null;
 
