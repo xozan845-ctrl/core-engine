@@ -63,6 +63,21 @@ export class CapacidadesService {
     return fila;
   }
 
+  /** Lectura interna (servicio→servicio): capacidades activas por empresa. */
+  async activasDeEmpresas(
+    empresaIds: string[],
+    capacidades: string[],
+  ): Promise<{ empresa_id: string; capacidad_codigo: string; activo: boolean }[]> {
+    if (empresaIds.length === 0 || capacidades.length === 0) return [];
+    return this.pg.query<{ empresa_id: string; capacidad_codigo: string; activo: boolean }>(
+      `SELECT empresa_id, capacidad_codigo, activo
+         FROM identity.empresa_capacidades
+        WHERE empresa_id = ANY($1::uuid[])
+          AND capacidad_codigo = ANY($2::text[])`,
+      [empresaIds, capacidades],
+    );
+  }
+
   private async validarAcceso(
     empresaId: string,
     actor: { user_id: string; rol: Rol; tenant_id?: string },

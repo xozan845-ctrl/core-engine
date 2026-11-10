@@ -9,10 +9,8 @@ import {
   Logger,
   MetricsService,
   NOMBRE_SERVICIOS,
-  PgService,
   PUERTOS,
   RolesGuard,
-  PermisosGuard,
   TrazabilidadInterceptor,
 } from '@core/shared';
 import { AppModule } from './app.module';
@@ -23,7 +21,7 @@ async function bootstrap(): Promise<void> {
   app.useGlobalPipes(new DtoValidationPipe());
   app.useGlobalInterceptors(new TrazabilidadInterceptor(app.get(MetricsService), NOMBRE_SERVICIOS.SCHEDULING));
   app.useGlobalFilters(new DomainErrorFilter());
-  app.useGlobalGuards(new RolesGuard(), new CapabilityGuard(app.get(PgService)), new PermisosGuard(app.get(PgService)));
+  app.useGlobalGuards(new RolesGuard(), new CapabilityGuard());
   const puerto = Number(process.env.PORT ?? PUERTOS.SCHEDULING);
   const expressApp = app.getHttpAdapter().getInstance();
   const metrics = app.get(MetricsService);
