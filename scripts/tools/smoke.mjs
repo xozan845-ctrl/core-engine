@@ -267,7 +267,7 @@ async function main() {
   const empresa = await api(
     'POST',
     '/api/v2/empresas',
-    { nombre: `Distribuidora Piloto ${suf}`, modalidad_logistica: 'plataforma' },
+    { nombre: `Distribuidora Piloto ${suf}` },
     tokenEmpresario,
   );
   if (![200, 201].includes(empresa.status) || !empresa.json?.id) {

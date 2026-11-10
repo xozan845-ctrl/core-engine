@@ -35,23 +35,15 @@ import {
   validarBackground,
 } from '../media-background/media-background';
 
-export type ModalidadLogistica = 'plataforma' | 'propia' | 'hibrida';
-/**
- * Tipo de empresa (ADR-27). Solo las comerciales tienen catálogo propio:
- * la logística transporta y la plataforma agrupa empresas técnicas/comodín.
- */
-export type TipoEmpresa = 'comercial' | 'logistica' | 'plataforma';
 /** Código dinámico de una plantilla de operación; no se limita a los packs base. */
 export type PackCodigo = string;
 export interface Empresa {
   id: string;
   nombre: string;
   slug: string;
-  modalidad_logistica: ModalidadLogistica | null;
   vertical_id: string | null;
   pack_codigo: PackCodigo | null;
   pack_version: number | null;
-  tipo_empresa: TipoEmpresa;
   estado: string;
   creado_por: string;
   creado_en: string;
@@ -182,18 +174,13 @@ export class EmpresasService {
   async crear(
     usuarioId: string,
     nombre: string,
-    modalidad: ModalidadLogistica | null | undefined,
     slugSolicitado?: string,
     perfil?: PerfilEmpresaInput,
-    tipo: TipoEmpresa = 'comercial',
     verticalId?: string,
     packCodigo?: PackCodigo,
   ): Promise<Empresa> {
-    if (!['comercial', 'logistica', 'plataforma'].includes(tipo)) {
-      throw new DomainError('TIPO_EMPRESA_INVALIDO', 'El tipo de empresa no es válido.');
-    }
     const nombreFinal = nombre.trim();
-    let vertical = (verticalId ?? (tipo === 'logistica' ? 'flota' : 'retail')).trim().toLowerCase();
+    let vertical = (verticalId ?? 'retail').trim().toLowerCase();
     if (!/^[a-z][a-z0-9_]{1,39}$/.test(vertical)) {
       throw new DomainError('VERTICAL_INVALIDA', 'La vertical seleccionada no existe.');
     }
@@ -223,16 +210,15 @@ export class EmpresasService {
           const slug = await this.elegirSlug(client, nombreFinal, slugExplicito);
           const result = await client.query<EmpresaFila>(
             `INSERT INTO identity.empresas
-               (nombre, slug, modalidad_logistica, vertical_id, pack_codigo, pack_version, creado_por, ruc, razon_social,
+               (nombre, slug, vertical_id, pack_codigo, pack_version, creado_por, ruc, razon_social,
                 nombre_comercial, descripcion, telefono, correo_contacto, sitio_web,
                 direccion, ciudad, departamento, pais, moneda, zona_horaria, sector,
-                representante_legal, horario_atencion, logo_objeto_id, tipo_empresa)
-             VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,NULL,$24)
+                representante_legal, horario_atencion, logo_objeto_id)
+             VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,NULL)
              RETURNING *`,
             [
               nombreFinal,
               slug,
-              modalidad,
               vertical,
               pack.codigo,
               pack.version,
@@ -253,7 +239,6 @@ export class EmpresasService {
               meta.sector,
               meta.representante_legal,
               meta.horario_atencion,
-              tipo,
             ],
           );
           const empresa = result.rows[0];
@@ -333,59 +318,6 @@ export class EmpresasService {
     if (!miembro) throw new ForbiddenError('Solo un empresario activo puede crear vendedores.');
     const usuario = await this.usuarios.crearVendedorEnEmpresa({ ...datos, empresa_id: empresaId });
     return { ...usuario, participacion_porcentaje: datos.participacion_porcentaje };
-  }
-
-  async actualizarModalidad(
-    actorId: string,
-    empresaId: string,
-    modalidad: ModalidadLogistica,
-  ): Promise<Empresa> {
-    const miembro = await this.pg.queryOne(
-      `SELECT 1 FROM identity.empresa_miembros
-       WHERE empresa_id=$1 AND usuario_id=$2 AND rol='empresario' AND estado='activo'`,
-      [empresaId, actorId],
-    );
-    if (!miembro) throw new ForbiddenError('Solo un empresario activo puede cambiar la logística.');
-    const empresa = await this.pg.queryOne<EmpresaFila>(
-      `UPDATE identity.empresas SET modalidad_logistica=$1
-       WHERE id=$2 AND estado='activa' RETURNING *`,
-      [modalidad, empresaId],
-    );
-    if (!empresa) throw new NotFoundError('Empresa', empresaId);
-    return await this.conUrls(empresa);
-  }
-
-  /**
-   * ADR-27: solo un administrador global clasifica una empresa. Cambiar a
-   * 'logistica' la excluye de los catálogos; los productos existentes dejan de
-   * ser publicables sin borrar datos.
-   */
-  async actualizarTipo(
-    empresaId: string,
-    tipo: TipoEmpresa,
-    actorId?: string,
-    esGlobal = false,
-  ): Promise<Empresa> {
-    if (!['comercial', 'logistica', 'plataforma'].includes(tipo)) {
-      throw new DomainError('TIPO_EMPRESA_INVALIDO', 'El tipo de empresa no es válido.');
-    }
-    if (!esGlobal) {
-      if (!actorId) throw new ForbiddenError('Se requiere un empresario activo.');
-      const miembro = await this.pg.queryOne(
-        `SELECT 1 FROM identity.empresa_miembros
-         WHERE empresa_id=$1 AND usuario_id=$2 AND rol='empresario' AND estado='activo'`,
-        [empresaId, actorId],
-      );
-      if (!miembro) {
-        throw new ForbiddenError('Solo un empresario activo puede cambiar el tipo de empresa.');
-      }
-    }
-    const empresa = await this.pg.queryOne<EmpresaFila>(
-      `UPDATE identity.empresas SET tipo_empresa=$1 WHERE id=$2 RETURNING *`,
-      [tipo, empresaId],
-    );
-    if (!empresa) throw new NotFoundError('Empresa', empresaId);
-    return await this.conUrls(empresa);
   }
 
   /**

@@ -7592,99 +7592,6 @@ export const OPENAPI_AGREGADO = {
         ]
       }
     },
-    "/api/v2/empresas/{id}/logistica": {
-      "patch": {
-        "operationId": "EmpresasController_actualizarLogistica",
-        "parameters": [
-          {
-            "name": "id",
-            "required": true,
-            "in": "path",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/ActualizarModalidadLogisticaRequestDto"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "Modalidad logística actualizada",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/EmpresaResponseDto"
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "bearer": []
-          }
-        ],
-        "summary": "Cambiar la modalidad logística para envíos futuros",
-        "tags": [
-          "Empresas"
-        ]
-      }
-    },
-    "/api/v2/empresas/{id}/tipo": {
-      "patch": {
-        "operationId": "EmpresasController_actualizarTipo",
-        "parameters": [
-          {
-            "name": "id",
-            "required": true,
-            "in": "path",
-            "description": "UUID de la empresa",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/ActualizarTipoEmpresaRequestDto"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "Tipo de empresa actualizado",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/EmpresaResponseDto"
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "bearer": []
-          }
-        ],
-        "summary": "Clasificar la empresa (comercial, logística o plataforma)",
-        "tags": [
-          "Empresas"
-        ]
-      }
-    },
     "/api/v2/empresas/{id}/vendedores": {
       "post": {
         "operationId": "EmpresasController_vendedor",
@@ -21681,22 +21588,6 @@ export const OPENAPI_AGREGADO = {
           }
         }
       },
-      "ActualizarModalidadLogisticaRequestDto": {
-        "type": "object",
-        "properties": {
-          "modalidad_logistica": {
-            "type": "string",
-            "enum": [
-              "plataforma",
-              "propia",
-              "hibrida"
-            ]
-          }
-        },
-        "required": [
-          "modalidad_logistica"
-        ]
-      },
       "ActualizarParteRequestDto": {
         "type": "object",
         "properties": {
@@ -21751,22 +21642,6 @@ export const OPENAPI_AGREGADO = {
         },
         "required": [
           "slug"
-        ]
-      },
-      "ActualizarTipoEmpresaRequestDto": {
-        "type": "object",
-        "properties": {
-          "tipo_empresa": {
-            "type": "string",
-            "enum": [
-              "comercial",
-              "logistica",
-              "plataforma"
-            ]
-          }
-        },
-        "required": [
-          "tipo_empresa"
         ]
       },
       "AsignarPersonalRequestDto": {
@@ -22156,16 +22031,6 @@ export const OPENAPI_AGREGADO = {
             "description": "Slug público. Si se omite se deriva del nombre y se resuelven colisiones con sufijos.",
             "example": "distribuidora-piloto"
           },
-          "modalidad_logistica": {
-            "type": "string",
-            "nullable": true,
-            "enum": [
-              "plataforma",
-              "propia",
-              "hibrida"
-            ],
-            "description": "Legado; puede omitirse y queda nullable"
-          },
           "vertical_id": {
             "type": "string",
             "description": "Código dinámico de la vertical; se valida contra identity.verticales"
@@ -22173,15 +22038,6 @@ export const OPENAPI_AGREGADO = {
           "pack_codigo": {
             "type": "string",
             "description": "Pack versionado; se valida contra identity.packs"
-          },
-          "tipo_empresa": {
-            "type": "string",
-            "enum": [
-              "comercial",
-              "logistica",
-              "plataforma"
-            ],
-            "default": "comercial"
           }
         },
         "required": [
@@ -22800,24 +22656,6 @@ export const OPENAPI_AGREGADO = {
             "type": "string",
             "description": "Slug público actual",
             "example": "distribuidora-piloto"
-          },
-          "modalidad_logistica": {
-            "type": "string",
-            "nullable": true,
-            "enum": [
-              "plataforma",
-              "propia",
-              "hibrida"
-            ]
-          },
-          "tipo_empresa": {
-            "type": "string",
-            "enum": [
-              "comercial",
-              "logistica",
-              "plataforma"
-            ],
-            "description": "Tipo de empresa; solo las comerciales tienen catálogo propio (ADR-27)"
           },
           "estado": {
             "type": "string"
@@ -24427,14 +24265,6 @@ export const OPENAPI_AGREGADO = {
             "format": "uuid",
             "nullable": true
           },
-          "modalidad_logistica": {
-            "type": "string",
-            "enum": [
-              "plataforma",
-              "propia",
-              "hibrida"
-            ]
-          },
           "proveedor_tipo": {
             "type": "string",
             "enum": [
@@ -24469,7 +24299,6 @@ export const OPENAPI_AGREGADO = {
           "guia",
           "order_id",
           "empresa_id",
-          "modalidad_logistica",
           "proveedor_tipo",
           "proveedor_tenant_id",
           "estado",
@@ -24506,14 +24335,6 @@ export const OPENAPI_AGREGADO = {
             "format": "uuid",
             "nullable": true
           },
-          "modalidad_logistica": {
-            "type": "string",
-            "enum": [
-              "plataforma",
-              "propia",
-              "hibrida"
-            ]
-          },
           "proveedor_tipo": {
             "type": "string",
             "enum": [
@@ -24543,7 +24364,6 @@ export const OPENAPI_AGREGADO = {
           "guia",
           "order_id",
           "empresa_id",
-          "modalidad_logistica",
           "proveedor_tipo",
           "proveedor_tenant_id",
           "estado",

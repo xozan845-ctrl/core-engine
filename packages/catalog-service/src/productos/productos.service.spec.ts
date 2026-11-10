@@ -25,10 +25,13 @@ describe('ProductosService (catalogo maestro y stock)', () => {
   beforeEach(() => {
     vi.stubGlobal(
       'fetch',
-      vi.fn(async () => ({
+      vi.fn(async (url: string | URL | Request) => ({
         ok: true,
         status: 200,
-        json: async () => ({ estado: 'activa', tipo_empresa: 'comercial' }),
+        json: async () =>
+          String(url).includes('/internal/empresas/capacidades')
+            ? { capacidades: [{ empresa_id: 'aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee', capacidad_codigo: 'catalogo_items', activo: true }] }
+            : { estado: 'activa' },
       })),
     );
   });
@@ -98,13 +101,16 @@ describe('ProductosService (catalogo maestro y stock)', () => {
       (pg.queryOne as Mock).mockResolvedValue(null);
       vi.stubGlobal(
         'fetch',
-        vi.fn(async () => ({
+        vi.fn(async (url: string | URL | Request) => ({
           ok: true,
           status: 200,
-          json: async () => ({ estado: 'activa', tipo_empresa: 'logistica' }),
+          json: async () =>
+            String(url).includes('/internal/empresas/capacidades')
+              ? { capacidades: [{ empresa_id: 'aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee', capacidad_codigo: 'catalogo_items', activo: false }] }
+              : { estado: 'activa' },
         })),
       );
-      await expect(servicio.crear(datosValidos)).rejects.toThrow(/comerciales|EMPRESA_SIN_CATALOGO/);
+      await expect(servicio.crear(datosValidos)).rejects.toThrow(/capacidad de catálogo|EMPRESA_SIN_CATALOGO/);
     });
 
     it('debe normalizar el SKU a mayusculas y registrar historico de precio cuando el alta es valida', async () => {
@@ -486,11 +492,18 @@ describe('ProductosService (catalogo maestro y stock)', () => {
       vi.stubGlobal(
         'fetch',
         vi.fn(async (url: string | URL | Request) => {
+          if (String(url).includes('/internal/empresas/capacidades')) {
+            return {
+              ok: true,
+              status: 200,
+              json: async () => ({ capacidades: [{ empresa_id: 'aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee', capacidad_codigo: 'catalogo_items', activo: true }] }),
+            } as Response;
+          }
           if (String(url).includes('/internal/empresas/')) {
             return {
               ok: true,
               status: 200,
-              json: async () => ({ estado: 'activa', tipo_empresa: 'comercial' }),
+              json: async () => ({ estado: 'activa' }),
             } as Response;
           }
           return {
@@ -632,11 +645,18 @@ describe('ProductosService (catalogo maestro y stock)', () => {
       vi.stubGlobal(
         'fetch',
         vi.fn(async (url: string | URL | Request) => {
+          if (String(url).includes('/internal/empresas/capacidades')) {
+            return {
+              ok: true,
+              status: 200,
+              json: async () => ({ capacidades: [{ empresa_id: 'aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee', capacidad_codigo: 'catalogo_items', activo: true }] }),
+            } as Response;
+          }
           if (String(url).includes('/internal/empresas/')) {
             return {
               ok: true,
               status: 200,
-              json: async () => ({ estado: 'activa', tipo_empresa: 'comercial' }),
+              json: async () => ({ estado: 'activa' }),
             } as Response;
           }
           if (respuesta instanceof Error) throw respuesta;
@@ -922,8 +942,11 @@ describe('ProductosService (catalogo maestro y stock)', () => {
       vi.stubGlobal(
         'fetch',
         vi.fn(async (url: string | URL | Request) => {
+          if (String(url).includes('/internal/empresas/capacidades')) {
+            return { ok: true, status: 200, json: async () => ({ capacidades: [{ empresa_id: 'aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee', capacidad_codigo: 'catalogo_items', activo: true }] }) } as Response;
+          }
           if (String(url).includes('/internal/empresas/')) {
-            return { ok: true, status: 200, json: async () => ({ estado: 'activa', tipo_empresa: 'comercial' }) } as Response;
+            return { ok: true, status: 200, json: async () => ({ estado: 'activa' }) } as Response;
           }
           return {
             ok: true,
@@ -980,10 +1003,13 @@ describe('ProductosService (catalogo maestro y stock)', () => {
           if (String(url).includes('/internal/ofertas/')) {
             return { ok: true, status: 200, json: async () => ({ total: 1 }) } as Response;
           }
+          if (String(url).includes('/internal/empresas/capacidades')) {
+            return { ok: true, status: 200, json: async () => ({ capacidades: [{ empresa_id: 'aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee', capacidad_codigo: 'catalogo_items', activo: true }] }) } as Response;
+          }
           return {
             ok: true,
             status: 200,
-            json: async () => ({ estado: 'activa', tipo_empresa: 'comercial' }),
+            json: async () => ({ estado: 'activa' }),
           } as Response;
         }),
       );
@@ -1016,10 +1042,13 @@ describe('ProductosService (catalogo maestro y stock)', () => {
           if (String(url).includes('/internal/ofertas/')) {
             return { ok: true, status: 200, json: async () => ({ total: 2 }) } as Response;
           }
+          if (String(url).includes('/internal/empresas/capacidades')) {
+            return { ok: true, status: 200, json: async () => ({ capacidades: [{ empresa_id: 'aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee', capacidad_codigo: 'catalogo_items', activo: true }] }) } as Response;
+          }
           return {
             ok: true,
             status: 200,
-            json: async () => ({ estado: 'activa', tipo_empresa: 'comercial' }),
+            json: async () => ({ estado: 'activa' }),
           } as Response;
         }),
       );
@@ -1056,10 +1085,13 @@ describe('ProductosService (catalogo maestro y stock)', () => {
           if (String(url).includes('/internal/ofertas/')) {
             return { ok: true, status: 200, json: async () => ({ total: 1 }) } as Response;
           }
+          if (String(url).includes('/internal/empresas/capacidades')) {
+            return { ok: true, status: 200, json: async () => ({ capacidades: [{ empresa_id: 'aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee', capacidad_codigo: 'catalogo_items', activo: true }] }) } as Response;
+          }
           return {
             ok: true,
             status: 200,
-            json: async () => ({ estado: 'activa', tipo_empresa: 'comercial' }),
+            json: async () => ({ estado: 'activa' }),
           } as Response;
         }),
       );

@@ -13,6 +13,7 @@ import {
   parsearPaginacion,
   Pagina,
   EMPRESA_LEGACY_ID,
+  capacidadesDeEmpresas,
 } from '@core/shared';
 import { ItemsService } from '../items/items.service';
 
@@ -163,7 +164,6 @@ interface ImagenRow {
 
 interface EmpresaCatalogo {
   estado: string;
-  tipo_empresa?: string;
 }
 
 interface MetadatosNormalizados {
@@ -1377,8 +1377,12 @@ export class ProductosService {
     if (empresa.estado !== 'activa') {
       throw new DomainError('EMPRESA_INACTIVA', 'La empresa debe estar activa para operar su catálogo.');
     }
-    if (empresa.tipo_empresa && empresa.tipo_empresa !== 'comercial') {
-      throw new DomainError('EMPRESA_SIN_CATALOGO', 'Solo las empresas comerciales tienen catálogo propio.');
+    const capacidades = await capacidadesDeEmpresas([empresaId], ['catalogo_items']);
+    if (capacidades === null) {
+      throw new DomainError('EMPRESA_NO_VERIFICABLE', 'No se pudieron verificar las capacidades de la empresa.');
+    }
+    if (!capacidades.some((c) => c.empresa_id === empresaId && c.capacidad_codigo === 'catalogo_items' && c.activo)) {
+      throw new DomainError('EMPRESA_SIN_CATALOGO', 'La empresa no tiene activa la capacidad de catálogo.');
     }
   }
 
