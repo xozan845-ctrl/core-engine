@@ -10,6 +10,7 @@ este índice evita mezclar las decisiones nuevas con las ADR históricas.
 | ADR | Estado | Decisión |
 |---|---|---|
 | [0001](./0001-plataforma-multi-vertical.md) | Aceptado | Capacidades compartidas por tenant, tres pilotos iniciales y `scheduling-service` como nuevo bounded context |
+| [0002](./0002-envelope-y-desacoplamiento.md) | Propuesto | Envelope `{data,meta}` por servicio y desacoplamiento de `orders`/`scheduling`/`field` mediante APIs internas |
 
 ## Convención
 

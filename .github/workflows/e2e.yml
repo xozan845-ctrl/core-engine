@@ -50,6 +50,10 @@ jobs:
         env:
           BASE_URL: http://localhost:8080
         run: npm run demo
+      - name: Run beauty and fleet E2E flows (G-6)
+        env:
+          BASE_URL: http://localhost:8080
+        run: npm run demo:verticals
       - name: Assert no unexpected service errors (R-E-8)
         run: |
           logs="$(docker compose -f docker-compose.dev.yml logs --no-color)"
