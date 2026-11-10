@@ -4,6 +4,7 @@ import { OfertasController } from './ofertas.controller';
 import type { OfertasService } from './ofertas.service';
 import type { TiendasService } from '../tiendas/tiendas.service';
 import { CAPACIDADES, NotFoundError, ROLES } from '@core/shared';
+import { aOfertaPublica, aTiendaPublica } from './publico';
 
 const oferta = { id: 'of-1', item_id: 'item-1', vendedor_id: 'u-v', margen: 15, precio_final: '1150.00' };
 const tienda = { id: 't-1', vendedor_id: 'u-v', nombre: 'Mi tienda', slug: 'mi-tienda' };
@@ -118,8 +119,8 @@ describe('OfertasController (api/v2, RN-01, R-U-10/11)', () => {
     ofertas.deTienda.mockResolvedValue([oferta]);
 
     await expect(controller.tiendaPublica('mi-tienda', respuesta() as never)).resolves.toEqual({
-      tienda,
-      ofertas: [oferta],
+      tienda: aTiendaPublica(tienda as never),
+      ofertas: [aOfertaPublica(oferta as never)],
     });
     expect(tiendas.resolver).toHaveBeenCalledWith('mi-tienda');
     expect(ofertas.deTienda).toHaveBeenCalledWith('t-1');

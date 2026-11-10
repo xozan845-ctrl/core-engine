@@ -18,6 +18,7 @@ import {
   PaginaOfertasResponseDto,
   TiendaPublicaResponseDto,
 } from './ofertas.response.dto';
+import { aOfertaPublica, aTiendaPublica } from './publico';
 import {
   CAPACIDADES,
   Pagina,
@@ -150,6 +151,11 @@ export class OfertasController {
     if (!resuelta) throw new NotFoundError('Tienda', tiendaId);
     if (resuelta.redirigirA) res.status(301).setHeader('Location', resuelta.redirigirA);
     const ofertas = await this.ofertas.deTienda(resuelta.tienda.id);
-    return { tienda: resuelta.tienda, ofertas };
+    // Proyección pública: el storefront no debe ver márgenes, costos ni IDs
+    // de usuario aunque el servicio devuelva la entidad completa (R-DS-3).
+    return {
+      tienda: aTiendaPublica(resuelta.tienda),
+      ofertas: ofertas.map(aOfertaPublica),
+    };
   }
 }
