@@ -168,6 +168,53 @@ export class TiendasService {
     return (await this.resolver(id))?.tienda ?? null;
   }
 
+  /** Lote interno por ids (identity no debe leer `stores.tiendas`). */
+  async porIds(ids: string[]): Promise<Tienda[]> {
+    if (ids.length === 0) return [];
+    const filas = await this.pg.query<TiendaFila>(
+      `SELECT ${CAMPOS_TIENDA} FROM stores.tiendas WHERE id = ANY($1::uuid[])`,
+      [ids],
+    );
+    return Promise.all(filas.map((fila) => this.conUrls(fila)));
+  }
+
+  /** Asignación atómica de vendedor (solo si la tienda sigue libre). */
+  async asignarVendedor(
+    tiendaId: string,
+    empresaId: string,
+    usuarioId: string,
+    participacion: number,
+  ): Promise<void> {
+    if (!Number.isInteger(participacion) || participacion < 0 || participacion > 100) {
+      throw new DomainError('PARTICIPACION_INVALIDA', 'La participación debe estar entre 0 y 100.');
+    }
+    const fila = await this.pg.queryOne(
+      `UPDATE stores.tiendas
+          SET vendedor_id = $1, propietario_usuario_id = $1,
+              participacion_porcentaje = $2, actualizado_en = NOW()
+        WHERE id = $3 AND empresa_id = $4 AND vendedor_id IS NULL
+      RETURNING id`,
+      [usuarioId, participacion, tiendaId, empresaId],
+    );
+    if (!fila) {
+      throw new ConflictError(
+        'La tienda ya tiene un vendedor asignado.',
+        { tienda_id: tiendaId },
+        'TIENDA_YA_ASIGNADA',
+      );
+    }
+  }
+
+  /** Compensación: libera la tienda si la transacción del llamador falla. */
+  async desasignarVendedor(tiendaId: string, usuarioId: string): Promise<void> {
+    await this.pg.query(
+      `UPDATE stores.tiendas
+          SET vendedor_id = NULL, participacion_porcentaje = NULL, actualizado_en = NOW()
+        WHERE id = $1 AND vendedor_id = $2`,
+      [tiendaId, usuarioId],
+    );
+  }
+
   async crear(
     empresaId: string,
     propietarioId: string,

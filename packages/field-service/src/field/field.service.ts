@@ -1,6 +1,13 @@
 import { Injectable } from '@nestjs/common';
 import { randomUUID } from 'crypto';
-import { PgService, DomainError, NotFoundError, Logger } from '@core/shared';
+import {
+  PgService,
+  DomainError,
+  NotFoundError,
+  Logger,
+  ServiceUnavailableError,
+  partePerteneceAEmpresa,
+} from '@core/shared';
 import {
   CrearPersonalRequestDto,
   ActualizarPersonalRequestDto,
@@ -328,12 +335,9 @@ export class FieldService {
     if (typeof parteId !== 'string') {
       throw new DomainError('PARTE_INVALIDA', 'La parte debe ser un UUID valido.');
     }
-    const parte = await this.pg.queryOne(
-      `SELECT 1 FROM identity.partes
-       WHERE id = $1 AND empresa_id = $2 AND eliminado_en IS NULL`,
-      [parteId, tenant],
-    );
-    if (!parte) throw new DomainError('PARTE_INVALIDA', 'La parte no pertenece al tenant activo.');
+    const pertenece = await partePerteneceAEmpresa(tenant, parteId);
+    if (pertenece === null) throw new ServiceUnavailableError('identity-service');
+    if (!pertenece) throw new DomainError('PARTE_INVALIDA', 'La parte no pertenece al tenant activo.');
   }
 
   // ── personal ───────────────────────────────────────────────────────────
