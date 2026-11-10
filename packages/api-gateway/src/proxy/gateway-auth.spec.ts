@@ -123,6 +123,31 @@ describe('Gateway auth (TC-07: seguridad en el borde)', () => {
     expect(next).toHaveBeenCalled();
     expect((req.headers as Record<string, string>)['x-user-id']).toBe('u-vend');
   });
+
+  it.each(['/api/v1/auth/cambiar-contrasena', '/api/v1/auth/vincular-personal'])(
+    'no debe devolver 403 en %s con un token válido (regresión de política)',
+    (ruta) => {
+      const token = firmarToken(
+        { sub: 'u-vend', email: 'v@t', rol: ROLES.VENDEDOR, tipo: 'access', personal_id: 'p-1' },
+        secreto,
+        '900s',
+      );
+      const { req, res, next } = crearPeticion({ ruta, metodo: 'POST', token });
+      auth.aplicar(req as never, res as never, next, politicaDe(ruta, 'POST'));
+      expect(res.statusCode).toBe(200);
+      expect(next).toHaveBeenCalled();
+      expect((req.headers as Record<string, string>)['x-user-id']).toBe('u-vend');
+    },
+  );
+
+  it.each(['/api/v1/auth/cambiar-contrasena', '/api/v1/auth/vincular-personal'])(
+    'debe exigir token en %s',
+    (ruta) => {
+      const { req, res, next } = crearPeticion({ ruta, metodo: 'POST' });
+      auth.aplicar(req as never, res as never, next, politicaDe(ruta, 'POST'));
+      expect(res.statusCode).toBe(401);
+    },
+  );
 });
 
 describe('Gateway auth — politicas de pedidos (R-GW-1, R-GW-3)', () => {

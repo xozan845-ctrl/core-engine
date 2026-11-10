@@ -56,7 +56,7 @@ export class InteligenciaService {
 
   // ── Ingesta: registrar venta geolocalizada ────────────────────────────────
 
-  async registrarVenta(data: VentaGeolocalizadaData): Promise<void> {
-    await this.agregador.procesarVentaGeolocalizada(data);
+  async registrarVenta(data: VentaGeolocalizadaData, eventoId?: string): Promise<void> {
+    await this.agregador.procesarVentaGeolocalizada(data, eventoId);
   }
 }
