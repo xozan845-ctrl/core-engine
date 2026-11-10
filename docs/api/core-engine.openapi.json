@@ -666,6 +666,43 @@
         ]
       }
     },
+    "/api/v2/admin/inventario/lotes/consumir": {
+      "post": {
+        "operationId": "InventarioController_consumirLotes",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ConsumirLotesRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Consumo aplicado por lote",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConsumoLotesResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Consumir cantidades de lotes aplicando FEFO",
+        "tags": [
+          "Catálogo"
+        ]
+      }
+    },
     "/api/v2/catalog/configuracion-inventario": {
       "get": {
         "operationId": "OperacionesController_configuracion",
@@ -12568,6 +12605,69 @@
           "actualizar_costo_en_compra",
           "unidad_defecto",
           "actualizado_en"
+        ]
+      },
+      "ConsumirLotesRequestDto": {
+        "type": "object",
+        "properties": {
+          "empresa_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "item_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "cantidad": {
+            "type": "number",
+            "minimum": 1
+          },
+          "codigo_lote": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "empresa_id",
+          "item_id",
+          "cantidad"
+        ]
+      },
+      "ConsumoLoteItemResponseDto": {
+        "type": "object",
+        "properties": {
+          "lote_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "codigo_lote": {
+            "type": "string"
+          },
+          "cantidad": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "lote_id",
+          "codigo_lote",
+          "cantidad"
+        ]
+      },
+      "ConsumoLotesResponseDto": {
+        "type": "object",
+        "properties": {
+          "consumidos": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ConsumoLoteItemResponseDto"
+            }
+          },
+          "total_consumido": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "consumidos",
+          "total_consumido"
         ]
       },
       "CrearAlquilerRequestDto": {
