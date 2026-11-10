@@ -125,3 +125,64 @@ describe('InventarioService (niveles de stock)', () => {
       .rejects.toMatchObject({ codigo: 'LOTE_NO_CREADO' });
   });
 });
+
+describe('InventarioService · consumo FEFO', () => {
+  it('consume primero el lote con vencimiento más próximo y divide la cantidad', async () => {
+    const client = {
+      query: vi.fn()
+        .mockResolvedValueOnce({ rows: [{ track_inventory: true }], rowCount: 1 })
+        .mockResolvedValueOnce({
+          rows: [
+            { id: 'lote-1', codigo_lote: 'L-1', cantidad_disponible: 5 },
+            { id: 'lote-2', codigo_lote: 'L-2', cantidad_disponible: 10 },
+          ],
+          rowCount: 2,
+        })
+        .mockResolvedValueOnce({ rows: [], rowCount: 1 })
+        .mockResolvedValueOnce({ rows: [], rowCount: 1 }),
+    };
+    const pg = { transaccion: vi.fn(async (fn: (c: typeof client) => unknown) => fn(client)) };
+    const servicio = new InventarioService(pg as never);
+
+    await expect(
+      servicio.consumirLotes({ empresa_id: 'e-1', item_id: 'item-1', cantidad: 8 }),
+    ).resolves.toEqual({
+      consumidos: [
+        { lote_id: 'lote-1', codigo_lote: 'L-1', cantidad: 5 },
+        { lote_id: 'lote-2', codigo_lote: 'L-2', cantidad: 3 },
+      ],
+      total_consumido: 8,
+    });
+    expect(client.query).toHaveBeenNthCalledWith(
+      2,
+      expect.stringContaining('ORDER BY vence_en NULLS LAST'),
+      ['e-1', 'item-1', null],
+    );
+  });
+
+  it('rechaza cantidades inválidas, items sin inventario y stock insuficiente', async () => {
+    const servicioInvalido = new InventarioService({ transaccion: vi.fn() } as never);
+    await expect(
+      servicioInvalido.consumirLotes({ empresa_id: 'e-1', item_id: 'item-1', cantidad: 0 }),
+    ).rejects.toMatchObject({ codigo: 'CANTIDAD_INVALIDA' });
+
+    const sinInventario = {
+      query: vi.fn().mockResolvedValueOnce({ rows: [{ track_inventory: false }], rowCount: 1 }),
+    };
+    await expect(
+      new InventarioService({ transaccion: vi.fn(async (fn: (c: typeof sinInventario) => unknown) => fn(sinInventario)) } as never)
+        .consumirLotes({ empresa_id: 'e-1', item_id: 'item-1', cantidad: 1 }),
+    ).rejects.toMatchObject({ codigo: 'INVENTARIO_NO_APLICA' });
+
+    const insuficiente = {
+      query: vi.fn()
+        .mockResolvedValueOnce({ rows: [{ track_inventory: true }], rowCount: 1 })
+        .mockResolvedValueOnce({ rows: [{ id: 'lote-1', codigo_lote: 'L-1', cantidad_disponible: 2 }], rowCount: 1 })
+        .mockResolvedValueOnce({ rows: [], rowCount: 1 }),
+    };
+    await expect(
+      new InventarioService({ transaccion: vi.fn(async (fn: (c: typeof insuficiente) => unknown) => fn(insuficiente)) } as never)
+        .consumirLotes({ empresa_id: 'e-1', item_id: 'item-1', cantidad: 3 }),
+    ).rejects.toMatchObject({ codigo: 'STOCK_LOTE_INSUFICIENTE' });
+  });
+});
