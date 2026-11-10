@@ -68,3 +68,26 @@ lo aplicado y se conservan.
 El piloto se considera adoptado cuando no hay revisiones pendientes, los tres
 flujos pasan sus pruebas, p95 se mantiene dentro de la línea base y el equipo
 aprueba la deprecación gradual de `tipo_empresa`/`modalidad_logistica`.
+
+
+## Automatización de la matriz
+
+La validación de piloto está cubierta en `scripts/integration/` y en el job
+`API + BD contracts`:
+
+| Suite | Casos | Qué fija |
+|---|---:|---|
+| `pack-lifecycle.test.mjs` | 3 | Vertical/modelo/pack v1 y v2, herencia de capacidades y rollback de packs inválidos. |
+| `vertical-rls.test.mjs` | 4 | Aislamiento de items, capacidades y citas por tenant; admin global. |
+| `capability-routes.test.mjs` | 5 | Permite/rechaza stock, agenda, rutas y lotes según el pack. |
+| `vertical-pilots.test.mjs` | 4 | Lotes, cita con outbox y vehículo → ruta → parada. |
+
+Además, el CI ejecuta `npm run multi-vertical:check` contra la misma BD efímera
+para detectar tenants sin pack, packs inactivos y migraciones pendientes.
+
+```bash
+TEST_DATABASE_URL=postgres://core_engine_test:test_only@127.0.0.1:5432/core_engine_test \
+  npm run test:integration
+TEST_DATABASE_URL=postgres://core_engine_test:test_only@127.0.0.1:5432/core_engine_test \
+  npm run multi-vertical:check
+```
