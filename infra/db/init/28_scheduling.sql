@@ -110,15 +110,4 @@ CREATE TABLE IF NOT EXISTS scheduling.outbox (
   publicado_en    timestamptz
 );
 
--- La cuenta de aplicación no es propietaria de los esquemas en staging/local.
--- Conservar el patrón de privilegios de los dominios existentes evita que el
--- bounded context nuevo falle por permisos antes de que RLS evalúe el tenant.
-DO $$
-BEGIN
-  IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'core_engine_app') THEN
-    GRANT USAGE ON SCHEMA scheduling TO core_engine_app;
-    GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA scheduling TO core_engine_app;
-  END IF;
-END $$;
-
 COMMIT;
