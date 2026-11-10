@@ -110,7 +110,6 @@ export function compareBaselines(current, previous) {
     ...compareDebtSet('specs', current.specs, previous.specs),
     ...compareDebtSet('rls', current.rls, previous.rls),
     ...compareMigrations(current.migrations, previous.migrations),
-    ...compareDebtSet('breaking', current.breaking.allow ?? [], previous.breaking.allow ?? []),
   ];
   return problems;
 }

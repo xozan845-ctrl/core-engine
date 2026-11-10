@@ -124,6 +124,53 @@ describe('OfertasService (RN-01 / RN-02)', () => {
       expect(insert[0]).toContain('item_type');
       expect(insert[1]).toContain('servicio');
     });
+
+    it('rechaza un item inexistente o de otra empresa', async () => {
+      const { servicio, pg } = crear();
+      (pg.queryOne as Mock).mockResolvedValueOnce({ id: 't1', empresa_id: 'e1' });
+      fetchResponde(false, {});
+      await expect(servicio.publicarItem('v1', 't1', 'item-x', 10)).rejects.toBeInstanceOf(NotFoundError);
+
+      (pg.queryOne as Mock).mockReset().mockResolvedValueOnce({ id: 't1', empresa_id: 'e1' });
+      fetchResponde(true, {
+        item_id: 'item-1', empresa_id: 'e-otra', tipo: 'producto', codigo: 'P1',
+        nombre: 'P1', precio: '10.00', stock: 5, track_inventory: true,
+        duration_minutes: null, atributos: {}, estado: 'activo', source_type: 'producto', source_id: 'p1',
+      });
+      await expect(servicio.publicarItem('v1', 't1', 'item-1', 10)).rejects.toThrow(/solo puede publicar items/);
+    });
+
+    it('rechaza items inactivos o sin stock', async () => {
+      const { servicio, pg } = crear();
+      (pg.queryOne as Mock).mockResolvedValueOnce({ id: 't1', empresa_id: 'e1' });
+      fetchResponde(true, {
+        item_id: 'item-1', empresa_id: 'e1', tipo: 'producto', codigo: 'P1',
+        nombre: 'P1', precio: '10.00', stock: 5, track_inventory: true,
+        duration_minutes: null, atributos: {}, estado: 'inactivo', source_type: 'producto', source_id: 'p1',
+      });
+      await expect(servicio.publicarItem('v1', 't1', 'item-1', 10)).rejects.toThrow(/inactivo/);
+
+      (pg.queryOne as Mock).mockReset().mockResolvedValueOnce({ id: 't1', empresa_id: 'e1' });
+      fetchResponde(true, {
+        item_id: 'item-1', empresa_id: 'e1', tipo: 'producto', codigo: 'P1',
+        nombre: 'P1', precio: '10.00', stock: 0, track_inventory: true,
+        duration_minutes: null, atributos: {}, estado: 'activo', source_type: 'producto', source_id: 'p1',
+      });
+      await expect(servicio.publicarItem('v1', 't1', 'item-1', 10)).rejects.toThrow(/sin stock/);
+    });
+
+    it('rechaza un item ya publicado en la tienda', async () => {
+      const { servicio, pg } = crear();
+      (pg.queryOne as Mock)
+        .mockResolvedValueOnce({ id: 't1', empresa_id: 'e1' })
+        .mockResolvedValueOnce({ id: 'of-existente' });
+      fetchResponde(true, {
+        item_id: 'item-1', empresa_id: 'e1', tipo: 'producto', codigo: 'P1',
+        nombre: 'P1', precio: '10.00', stock: 5, track_inventory: true,
+        duration_minutes: null, atributos: {}, estado: 'activo', source_type: 'producto', source_id: 'p1',
+      });
+      await expect(servicio.publicarItem('v1', 't1', 'item-1', 10)).rejects.toThrow(/ya esta publicado/);
+    });
   });
 
   describe('sincronizarStockDeOferta (RN-02)', () => {
