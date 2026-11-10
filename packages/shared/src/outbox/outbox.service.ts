@@ -67,31 +67,45 @@ export class OutboxService implements OnModuleInit, OnModuleDestroy {
 
   private async publicarPendientes(): Promise<void> {
     if (this.detenido) return;
-    const pendientes = await this.pg.query<{ event_id: string; payload: string }>(
-      `SELECT event_id, payload FROM ${this.tabla}
-       WHERE estado = 'pendiente' AND creado_en > NOW() - INTERVAL '30 minutes'
-       ORDER BY creado_en ASC LIMIT 50
-       FOR UPDATE SKIP LOCKED`,
-    );
-    for (const fila of pendientes) {
-      try {
-        const evento = this.deserializar(fila.payload);
-        const ok = await this.rabbit.publicar(evento);
-        if (ok) {
-          await this.pg.query(
-            `UPDATE ${this.tabla} SET estado = 'publicado', publicado_en = NOW()
-             WHERE event_id = $1 AND estado = 'pendiente'`,
-            [fila.event_id],
-          );
+    /**
+     * El claim y la publicación comparten transacción: `FOR UPDATE SKIP LOCKED`
+     * solo evita duplicados mientras el lock sigue vivo. Si se usara `pg.query`
+     * (autocommit), dos pollers podrían leer y publicar el mismo evento.
+     *
+     * La entrega es at-least-once: si el proceso muere después de publicar y
+     * antes del COMMIT, el evento vuelve a quedar pendiente y se reenvía. Los
+     * consumidores ya son idempotentes por `event_id`.
+     *
+     * No se filtra por antigüedad: un evento pendiente debe reintentarse aunque
+     * el servicio haya estado caído más de 30 minutos.
+     */
+    await this.pg.transaccion(async (client) => {
+      const { rows: pendientes } = await client.query<{ event_id: string; payload: string }>(
+        `SELECT event_id, payload FROM ${this.tabla}
+         WHERE estado = 'pendiente'
+         ORDER BY creado_en ASC LIMIT 50
+         FOR UPDATE SKIP LOCKED`,
+      );
+      for (const fila of pendientes) {
+        try {
+          const evento = this.deserializar(fila.payload);
+          const ok = await this.rabbit.publicar(evento);
+          if (ok) {
+            await client.query(
+              `UPDATE ${this.tabla} SET estado = 'publicado', publicado_en = NOW()
+               WHERE event_id = $1 AND estado = 'pendiente'`,
+              [fila.event_id],
+            );
+          }
+        } catch (err) {
+          this.logger.error({
+            msg: 'Fallo al publicar evento outbox',
+            event_id: fila.event_id,
+            err: err instanceof Error ? err.message : String(err),
+          });
         }
-      } catch (err) {
-        this.logger.error({
-          msg: 'Fallo al publicar evento outbox',
-          event_id: fila.event_id,
-          err: err instanceof Error ? err.message : String(err),
-        });
       }
-    }
+    });
   }
 
   /** Auditoria manual: reenvia eventos publicados (replay de proyecciones). */
