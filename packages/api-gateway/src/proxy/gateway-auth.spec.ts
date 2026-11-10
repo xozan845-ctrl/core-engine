@@ -254,7 +254,7 @@ describe('Gateway auth — politicas de pedidos (R-GW-1, R-GW-3)', () => {
   });
 
   it('debe permitir al super_admin escribir en el catalogo cuando intenta POST /catalog/productos', () => {
-    const { res, next } = evaluar('/api/v2/catalog/productos', 'POST', ROLES.SUPER_ADMIN);
+    const { res, next } = evaluar('/api/v2/catalog/items', 'POST', ROLES.SUPER_ADMIN);
     expect(res.statusCode).toBe(200);
     expect(next).toHaveBeenCalled();
   });
