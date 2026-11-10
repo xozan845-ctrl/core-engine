@@ -28,8 +28,13 @@ export function resolveBaseBranch({
   envBase,
   mainBranch,
   integrationBranch,
+  stageBranch = 'staging',
 }) {
   if (envBase) return `origin/${envBase}`;
+
+  if (currentBranch === stageBranch || currentBranch === `origin/${stageBranch}`) {
+    return `origin/${stageBranch}`;
+  }
 
   const localBase =
     currentBranch === mainBranch || currentBranch.startsWith('hotfix/')
@@ -40,7 +45,7 @@ export function resolveBaseBranch({
 }
 
 /** Rama actual y rama base, con soporte para el entorno de GitHub Actions. */
-export function getBranchContext(mainBranch, integrationBranch = mainBranch) {
+export function getBranchContext(mainBranch, integrationBranch = mainBranch, stageBranch = 'staging') {
   const envHead = process.env.GITHUB_HEAD_REF;
   const envBase = process.env.GITHUB_BASE_REF;
   let currentBranch = envHead || '';
@@ -55,6 +60,7 @@ export function getBranchContext(mainBranch, integrationBranch = mainBranch) {
     envBase,
     mainBranch,
     integrationBranch,
+    stageBranch,
   });
   return { currentBranch, baseBranch };
 }
