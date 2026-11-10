@@ -8,6 +8,7 @@ import {
   ComisionAcreditadaData,
   StockUpdatedData,
   Logger,
+  ejecutarConContexto,
 } from '@core/shared';
 import { AgregadorService } from '../services/agregador.service';
 import { DataQualityService } from '../services/data-quality.service';
@@ -59,12 +60,25 @@ export class VentasConsumer implements OnModuleInit {
     ]);
 
     // Suscribir handlers independientes por cola
-    await this.rabbit.consumir(COLA_GEO,    (e) => this.manejarVentaGeo(e));
-    await this.rabbit.consumir(COLA_ORDERS, (e) => this.manejarOrdenCompletada(e));
-    await this.rabbit.consumir(COLA_STOCK,  (e) => this.manejarStockActualizado(e));
+    await this.rabbit.consumir(COLA_GEO,    (e) => this.conContexto(e, () => this.manejarVentaGeo(e)));
+    await this.rabbit.consumir(COLA_ORDERS, (e) => this.conContexto(e, () => this.manejarOrdenCompletada(e)));
+    await this.rabbit.consumir(COLA_STOCK,  (e) => this.conContexto(e, () => this.manejarStockActualizado(e)));
 
     this.rabbit.activarReintento();
     this.logger.info({ msg: 'Consumer de inteligencia de mercado activo (3 colas)' });
+  }
+
+  /** Contexto de sistema para que PgService inyecte claims RLS. */
+  private conContexto(evento: EventoBus, fn: () => Promise<void>): Promise<void> {
+    return ejecutarConContexto(
+      {
+        request_id: `intelligence-event-${evento.event_id}`,
+        servicio: 'intelligence-consumer',
+        usuario_id: '00000000-0000-0000-0000-000000000000',
+        rol: 'super_admin',
+      },
+      fn,
+    ) as Promise<void>;
   }
 
   // ── Handlers privados ─────────────────────────────────────────────────────
@@ -90,7 +104,7 @@ export class VentasConsumer implements OnModuleInit {
       return;
     }
 
-    await this.agregador.procesarVentaGeolocalizada(data);
+    await this.agregador.procesarVentaGeolocalizada(data, evento.event_id);
     await this.marcarProcesado(evento.event_id, evento.tipo);
     this.logger.info({ msg: 'venta.geolocalizada procesada', event_id: evento.event_id, qualityTier: qualityResult.qualityTier });
   }
