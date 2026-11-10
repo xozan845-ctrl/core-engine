@@ -248,6 +248,33 @@
           "nombre": {
             "type": "string"
           },
+          "vertical_id": {
+            "type": "string",
+            "nullable": true,
+            "enum": [
+              "retail",
+              "farmacia",
+              "belleza",
+              "dental",
+              "flota"
+            ]
+          },
+          "pack_codigo": {
+            "type": "string",
+            "nullable": true,
+            "enum": [
+              "pack_retail",
+              "pack_farmacia",
+              "pack_belleza",
+              "pack_dental",
+              "pack_flota"
+            ]
+          },
+          "pack_version": {
+            "type": "object",
+            "nullable": true,
+            "minimum": 1
+          },
           "slug": {
             "type": "string",
             "description": "Slug público actual",
@@ -255,6 +282,7 @@
           },
           "modalidad_logistica": {
             "type": "string",
+            "nullable": true,
             "enum": [
               "plataforma",
               "propia",
@@ -411,7 +439,6 @@
         "required": [
           "id",
           "nombre",
-          "modalidad_logistica",
           "estado",
           "creado_por",
           "creado_en"

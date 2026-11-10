@@ -20,4 +20,6 @@ export * from './logging/logger';
 export * from './metrics/metrics.module';
 export * from './metrics/metrics.service';
 export * from './http/validation.pipe';
-export * from './http/domain-error.filter';export * from './openapi/documento';
+export * from './http/domain-error.filter';
+export * from './openapi/documento';
+export * from './capabilities';

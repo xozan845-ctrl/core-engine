@@ -43,8 +43,18 @@ export class UnauthorizedError extends DomainError {
 }
 
 export class ForbiddenError extends DomainError {
-  constructor(mensaje = 'Acceso denegado.') {
-    super('ACCESO_DENEGADO', mensaje);
+  constructor(mensaje = 'Acceso denegado.', codigo = 'ACCESO_DENEGADO', detalles?: unknown) {
+    super(codigo, mensaje, detalles);
+  }
+}
+
+export class CapabilityDisabledError extends ForbiddenError {
+  constructor(capacidades: string[], empresaId: string) {
+    super(
+      `La empresa no tiene activas las capacidades requeridas: ${capacidades.join(', ')}.`,
+      'CAPACIDAD_NO_ACTIVA',
+      { empresa_id: empresaId, capacidades },
+    );
   }
 }
 

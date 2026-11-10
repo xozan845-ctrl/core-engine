@@ -23,6 +23,7 @@ import {
 import {
   IsIn,
   IsInt,
+  IsObject,
   IsOptional,
   IsPositive,
   IsString,
@@ -32,7 +33,7 @@ import {
   Min,
   MinLength,
 } from 'class-validator';
-import { DomainError, NotFoundError, ROLES, Roles, UsuarioActual, UsuarioContexto } from '@core/shared';
+import { CAPACIDADES, DomainError, NotFoundError, RequiereCapacidades, ROLES, Roles, UsuarioActual, UsuarioContexto } from '@core/shared';
 import {
   ActualizarServicioInput,
   CrearServicioInput,
@@ -92,6 +93,11 @@ export class CrearServicioRequestDto {
   @IsString()
   unidad?: string;
 
+  @ApiProperty({ description: 'Atributos del servicio según el JSON Schema de su categoría', required: false, type: Object, additionalProperties: true })
+  @IsOptional()
+  @IsObject()
+  atributos?: Record<string, unknown>;
+
   @ApiProperty({ description: 'Duración en minutos (1-1440)', minimum: 1, maximum: 1440 })
   @IsInt()
   @Min(1)
@@ -148,6 +154,11 @@ export class ActualizarServicioRequestDto {
   @IsString()
   unidad?: string;
 
+  @ApiProperty({ description: 'Atributos del servicio según el JSON Schema de su categoría', required: false, type: Object, additionalProperties: true })
+  @IsOptional()
+  @IsObject()
+  atributos?: Record<string, unknown>;
+
   @ApiProperty({ required: false, minimum: 1, maximum: 1440 })
   @IsOptional()
   @IsInt()
@@ -198,6 +209,7 @@ export class ListarServiciosRequestDto {
 @ApiBearerAuth()
 @Controller('api/v1/catalog/servicios')
 @Roles(ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.EMPRESARIO)
+@RequiereCapacidades(CAPACIDADES.CATALOGO_ITEMS)
 export class ServiciosController {
   constructor(private readonly servicios: ServiciosService) {}
 

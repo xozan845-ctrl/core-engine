@@ -122,6 +122,7 @@ jobs:
           - stores-service
           - orders-service
           - logistics-service
+          - scheduling-service
           - commissions-service
           - finance-service
           - field-service

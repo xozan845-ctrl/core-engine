@@ -3,7 +3,7 @@ import { CreateOrderCommand } from './commands/create-order.command';
 import { Money } from '@core/shared';
 
 class PgFake {
-  query = vi.fn(async () => ({ rows: [] }));
+  query = vi.fn(async () => []);
   async transaccion<T>(fn: (client: unknown) => Promise<T>): Promise<T> {
     return fn({ query: this.query });
   }
@@ -157,6 +157,34 @@ describe('CreateOrderCommandHandler (CQRS + Event Sourcing)', () => {
       vendedor_id: 'vendedor-1',
       participacion_porcentaje: 25,
     });
+  });
+
+  it('crea una reserva de servicio onsite sin consultar stock y persiste fulfillment por línea', async () => {
+    const empresaId = '11111111-1111-4111-8111-111111111111';
+    const ofertaServicio = {
+      ...ofertaActiva,
+      empresa_id: empresaId,
+      item_type: 'servicio',
+      item_id: '22222222-2222-4222-8222-222222222222',
+      producto_id: null,
+      sku: 'CORTE-001',
+      producto_nombre: 'Corte de cabello',
+      precio_venta: '300.00',
+    };
+    const fixture = crearHandler([ofertaServicio], 'network-error');
+    fixture.pg.query.mockResolvedValue([
+      { empresa_id: empresaId, capacidad_codigo: 'fulfillment_onsite', activo: true },
+    ]);
+
+    const vista = await fixture.handler.ejecutar({
+      tipo_orden: 'reserva',
+      items: [{ oferta_id: 'oferta-1', cantidad: 1, fulfillment: 'onsite', fulfillment_config: { recurso_id: 'sillon-1' } }],
+    }, 'comprador-1');
+
+    expect(vista.tipo_orden).toBe('reserva');
+    expect(vista.items[0]).toMatchObject({ item_type: 'servicio', fulfillment: 'onsite' });
+    expect((fixture.store.appendEnTransaccion.mock.calls[0][3] as { tipo_orden: string }).tipo_orden).toBe('reserva');
+    expect(fixture.fetchMock).toHaveBeenCalledTimes(1);
   });
 
   it('total con cantidades multiples: 2 unidades = C$ 2 300', async () => {

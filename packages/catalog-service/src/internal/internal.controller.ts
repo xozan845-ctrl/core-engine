@@ -3,6 +3,8 @@ import { ApiOkResponse, ApiOperation, ApiParam, ApiQuery, ApiSecurity, ApiTags }
 import { ClaveInternaGuard, NotFoundError } from '@core/shared';
 import { ProductosService } from '../productos/productos.service';
 import { InventarioService } from '../inventario/inventario.service';
+import { ItemsService } from '../items/items.service';
+import { ItemResponseDto } from '../items/items.response.dto';
 import { LoteProductoResponseDto, ProductoResponseDto } from '../productos/productos.response.dto';
 import {
   LineaInventarioResponseDto,
@@ -20,6 +22,7 @@ export class InternalController {
   constructor(
     private readonly productos: ProductosService,
     private readonly inventario: InventarioService,
+    private readonly items: ItemsService,
   ) {}
 
   @Get('productos/lote')
@@ -53,6 +56,16 @@ export class InternalController {
     const producto = await this.productos.encontrarPorId(id);
     if (!producto) throw new NotFoundError('Producto', id);
     return producto;
+  }
+
+  @Get('items/:id')
+  @ApiOperation({ summary: 'Item unificado por id (servicio→servicio)' })
+  @ApiParam({ name: 'id', description: 'Id del item' })
+  @ApiOkResponse({ type: ItemResponseDto, description: 'Item encontrado' })
+  async itemPorId(@Param('id') id: string) {
+    const item = await this.items.encontrarPorId(id);
+    if (!item) throw new NotFoundError('Item', id);
+    return item;
   }
 
   @Get('inventario/resumen')

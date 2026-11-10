@@ -14,6 +14,7 @@ import {
   Pagina,
   EMPRESA_LEGACY_ID,
 } from '@core/shared';
+import { ItemsService } from '../items/items.service';
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const MAX_IMAGENES = 3;
@@ -200,6 +201,7 @@ export class ProductosService {
   constructor(
     private readonly pg: PgService,
     @Optional() private readonly outbox?: OutboxService,
+    @Optional() private readonly items?: ItemsService,
   ) {}
 
   async listar(filtros: {
@@ -423,9 +425,21 @@ export class ProductosService {
       }
     }
     if (!opciones?.empresaValidada) await this.validarEmpresaCatalogo(datos.empresa_id);
+    await this.items?.validarAtributos(
+      datos.empresa_id,
+      'producto',
+      datos.categoria ?? 'general',
+      datos.atributos ?? {},
+    );
     await this.validarCodigoBarras(datos.empresa_id, metadatos.codigo_barras);
     await this.validarImagenes(datos.empresa_id, datos.imagenes ?? []);
     for (const variante of variantes) {
+      await this.items?.validarAtributos(
+        datos.empresa_id,
+        'producto',
+        datos.categoria ?? 'general',
+        variante.atributos ?? {},
+      );
       await this.validarImagenes(datos.empresa_id, variante.imagenes ?? []);
     }
 
@@ -539,6 +553,12 @@ export class ProductosService {
       );
     }
     await this.validarSinOfertasActivas(padreId);
+    await this.items?.validarAtributos(
+      empresaId,
+      'producto',
+      padre.categoria,
+      datos.atributos ?? {},
+    );
     const sku = this.normalizarSku(datos.sku);
     this.validarStock(datos.stock);
     const precio = this.validarPrecio(datos.precio_base);
@@ -606,6 +626,14 @@ export class ProductosService {
     }
     const metadatos = this.combinarMetadatos(previo, cambios);
     this.validarMetadatos(metadatos);
+    if (cambios.atributos !== undefined) {
+      await this.items?.validarAtributos(
+        previo.empresa_id,
+        'producto',
+        cambios.categoria ?? previo.categoria,
+        cambios.atributos,
+      );
+    }
     await this.validarCodigoBarras(previo.empresa_id, metadatos.codigo_barras, id);
 
     await this.pg.transaccion(async (client) => {

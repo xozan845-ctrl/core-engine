@@ -141,9 +141,24 @@
             "minimum": 0,
             "maximum": 100
           },
+          "item_type": {
+            "type": "string",
+            "description": "Tipo del item publicado",
+            "enum": [
+              "producto",
+              "servicio",
+              "alquiler"
+            ]
+          },
+          "item_id": {
+            "type": "string",
+            "description": "Id del item unificado",
+            "format": "uuid"
+          },
           "producto_id": {
             "type": "string",
             "description": "Id del producto o variante vendible",
+            "nullable": true,
             "format": "uuid"
           },
           "producto_padre_id": {

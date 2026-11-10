@@ -135,6 +135,43 @@
         ]
       }
     },
+    "/internal/items/{id}": {
+      "get": {
+        "operationId": "InternalController_itemPorId",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "description": "Id del item",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Item encontrado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ItemResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "internalKey": []
+          }
+        ],
+        "summary": "Item unificado por id (servicio→servicio)",
+        "tags": [
+          "Catálogo (interno)"
+        ]
+      }
+    },
     "/internal/inventario/resumen": {
       "get": {
         "operationId": "InternalController_resumen",
@@ -964,6 +1001,106 @@
           "es_principal"
         ]
       },
+      "ItemResponseDto": {
+        "type": "object",
+        "properties": {
+          "item_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "empresa_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "tipo": {
+            "type": "string",
+            "enum": [
+              "producto",
+              "servicio",
+              "alquiler"
+            ]
+          },
+          "codigo": {
+            "type": "string"
+          },
+          "nombre": {
+            "type": "string"
+          },
+          "descripcion": {
+            "type": "string"
+          },
+          "categoria": {
+            "type": "string"
+          },
+          "precio": {
+            "type": "string",
+            "example": "1500.00"
+          },
+          "costo": {
+            "type": "string",
+            "example": "500.00"
+          },
+          "track_inventory": {
+            "type": "boolean"
+          },
+          "stock": {
+            "type": "object",
+            "nullable": true
+          },
+          "duration_minutes": {
+            "type": "object",
+            "nullable": true
+          },
+          "atributos": {
+            "type": "object",
+            "additionalProperties": true
+          },
+          "estado": {
+            "type": "string",
+            "enum": [
+              "activo",
+              "inactivo"
+            ]
+          },
+          "source_type": {
+            "type": "object",
+            "nullable": true
+          },
+          "source_id": {
+            "type": "object",
+            "nullable": true,
+            "format": "uuid"
+          },
+          "creado_en": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "actualizado_en": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "item_id",
+          "empresa_id",
+          "tipo",
+          "codigo",
+          "nombre",
+          "descripcion",
+          "categoria",
+          "precio",
+          "costo",
+          "track_inventory",
+          "stock",
+          "duration_minutes",
+          "atributos",
+          "estado",
+          "source_type",
+          "source_id",
+          "creado_en",
+          "actualizado_en"
+        ]
+      },
       "LineaInventarioResponseDto": {
         "type": "object",
         "properties": {
@@ -1569,6 +1706,33 @@
           "nombre": {
             "type": "string"
           },
+          "vertical_id": {
+            "type": "string",
+            "nullable": true,
+            "enum": [
+              "retail",
+              "farmacia",
+              "belleza",
+              "dental",
+              "flota"
+            ]
+          },
+          "pack_codigo": {
+            "type": "string",
+            "nullable": true,
+            "enum": [
+              "pack_retail",
+              "pack_farmacia",
+              "pack_belleza",
+              "pack_dental",
+              "pack_flota"
+            ]
+          },
+          "pack_version": {
+            "type": "object",
+            "nullable": true,
+            "minimum": 1
+          },
           "slug": {
             "type": "string",
             "description": "Slug público actual",
@@ -1576,6 +1740,7 @@
           },
           "modalidad_logistica": {
             "type": "string",
+            "nullable": true,
             "enum": [
               "plataforma",
               "propia",
@@ -1732,7 +1897,6 @@
         "required": [
           "id",
           "nombre",
-          "modalidad_logistica",
           "estado",
           "creado_por",
           "creado_en"
@@ -1977,6 +2141,18 @@
             "description": "Id de la oferta",
             "format": "uuid"
           },
+          "item_type": {
+            "type": "string",
+            "enum": [
+              "producto",
+              "servicio",
+              "alquiler"
+            ]
+          },
+          "item_id": {
+            "type": "string",
+            "format": "uuid"
+          },
           "sku": {
             "type": "string",
             "description": "SKU del producto",
@@ -2005,6 +2181,20 @@
             "type": "string",
             "description": "Id de la tienda",
             "format": "uuid"
+          },
+          "fulfillment": {
+            "type": "string",
+            "enum": [
+              "delivery",
+              "pickup",
+              "onsite",
+              "none"
+            ],
+            "default": "none"
+          },
+          "fulfillment_config": {
+            "type": "object",
+            "additionalProperties": true
           }
         },
         "required": [
@@ -2044,6 +2234,20 @@
             "type": "string",
             "description": "Estado de la orden",
             "example": "pagada"
+          },
+          "tipo_orden": {
+            "type": "string",
+            "enum": [
+              "compra",
+              "reserva",
+              "cotizacion",
+              "orden_servicio"
+            ],
+            "default": "compra"
+          },
+          "fulfillment_config": {
+            "type": "object",
+            "additionalProperties": true
           },
           "total_cents": {
             "type": "number",
@@ -2333,9 +2537,24 @@
             "minimum": 0,
             "maximum": 100
           },
+          "item_type": {
+            "type": "string",
+            "description": "Tipo del item publicado",
+            "enum": [
+              "producto",
+              "servicio",
+              "alquiler"
+            ]
+          },
+          "item_id": {
+            "type": "string",
+            "description": "Id del item unificado",
+            "format": "uuid"
+          },
           "producto_id": {
             "type": "string",
             "description": "Id del producto o variante vendible",
+            "nullable": true,
             "format": "uuid"
           },
           "producto_padre_id": {
