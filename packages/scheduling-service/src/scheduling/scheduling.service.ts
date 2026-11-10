@@ -164,7 +164,7 @@ export class SchedulingService implements OnModuleInit, OnModuleDestroy {
           `INSERT INTO scheduling.citas
             (id, empresa_id, recurso_id, parte_id, order_id, item_id,
              inicia_en, termina_en, notas, metadata)
-           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11::jsonb)
+           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10::jsonb)
            RETURNING id, empresa_id, recurso_id, parte_id, order_id, item_id,
                      estado, inicia_en, termina_en, notas, metadata, creado_en, actualizado_en`,
           [id, empresaId, dto.recurso_id, dto.parte_id, dto.order_id ?? null,

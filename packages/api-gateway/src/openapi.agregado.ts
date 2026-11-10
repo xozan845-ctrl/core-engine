@@ -24301,7 +24301,7 @@ export const OPENAPI_AGREGADO = {
               "cotizacion",
               "orden_servicio"
             ],
-            "default": "compra"
+            "description": "Tipo de orden explícito"
           },
           "items": {
             "description": "Artículos de la orden",
@@ -24315,7 +24315,10 @@ export const OPENAPI_AGREGADO = {
             "description": "Crear la orden desde el carrito (RN-05)",
             "example": false
           }
-        }
+        },
+        "required": [
+          "tipo_orden"
+        ]
       },
       "ItemOrdenRequestDto": {
         "type": "object",
@@ -24468,8 +24471,7 @@ export const OPENAPI_AGREGADO = {
               "reserva",
               "cotizacion",
               "orden_servicio"
-            ],
-            "default": "compra"
+            ]
           },
           "fulfillment_config": {
             "type": "object",
@@ -24549,6 +24551,7 @@ export const OPENAPI_AGREGADO = {
           "comprador_id",
           "tienda_id",
           "estado",
+          "tipo_orden",
           "total_cents",
           "comision_cents",
           "moneda",

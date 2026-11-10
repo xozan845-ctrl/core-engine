@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { EVENTOS } from '@core/shared';
 import { SchedulingService } from './scheduling.service';
 
@@ -15,8 +15,14 @@ function crear() {
     transaccion: vi.fn(),
   };
   const outbox = { insertarEnTransaccion: vi.fn().mockResolvedValue('event-id') };
+  const fetchMock = vi.fn().mockResolvedValue({
+    ok: true,
+    status: 200,
+    json: async () => ({ id: 'parte-1' }),
+  });
+  vi.stubGlobal('fetch', fetchMock);
   const service = new SchedulingService(pg as never, outbox as never);
-  return { pg, outbox, service };
+  return { pg, outbox, service, fetchMock };
 }
 
 function clientCon(...respuestas: unknown[]) {
@@ -26,6 +32,8 @@ function clientCon(...respuestas: unknown[]) {
 }
 
 describe('SchedulingService', () => {
+  afterEach(() => vi.unstubAllGlobals());
+
   it('crea y lista recursos y disponibilidad por tenant', async () => {
     const { pg, service } = crear();
     pg.queryOne.mockResolvedValueOnce({ id: recurso, empresa_id: empresa, nombre: 'Sala 1' });
@@ -132,7 +140,7 @@ describe('SchedulingService', () => {
       .rejects.toMatchObject({ codigo: 'RECURSO_NO_DISPONIBLE' });
 
     const parteInvalida = crear();
-    parteInvalida.pg.queryOne.mockResolvedValue(null);
+    parteInvalida.fetchMock.mockResolvedValue({ ok: false, status: 404, json: async () => ({}) });
     await expect(parteInvalida.service.crearCita(empresa, {
       recurso_id: recurso,
       parte_id: '66666666-6666-4666-8666-666666666666',

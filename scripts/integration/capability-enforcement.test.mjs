@@ -40,7 +40,6 @@ const TENANTS = [
 ];
 
 let client;
-let pgService;
 let guard;
 let CapabilityGuard;
 let CAPACIDADES;
@@ -66,7 +65,7 @@ function contextoCon(tenantId, usuarioId = 'u-guard') {
   };
 }
 
-async function crearTenant({ vertical, pack, tipo }) {
+async function crearTenant({ vertical, pack }) {
   const usuarioId = randomUUID();
   const empresaId = randomUUID();
   const sufijo = randomUUID().slice(0, 8);
@@ -77,11 +76,10 @@ async function crearTenant({ vertical, pack, tipo }) {
   );
   await client.query(
     `INSERT INTO identity.empresas
-       (id, nombre, slug, modalidad_logistica, vertical_id, pack_codigo, pack_version,
-        creado_por, tipo_empresa)
-     VALUES ($1, $2, $3, NULL, $4, $5, 1, $6, $7)`,
+       (id, nombre, slug, vertical_id, pack_codigo, pack_version, creado_por)
+     VALUES ($1, $2, $3, $4, $5, 1, $6)`,
     [empresaId, `Tenant ${vertical} ${sufijo}`, `tenant-${vertical}-${sufijo}`,
-      vertical, pack, usuarioId, tipo],
+      vertical, pack, usuarioId],
   );
   await client.query(
     `INSERT INTO identity.empresa_capacidades (empresa_id, capacidad_codigo, config, activo)
@@ -95,7 +93,6 @@ async function crearTenant({ vertical, pack, tipo }) {
 
 async function limpiarTenant({ empresaId, usuarioId }) {
   await client.query('DELETE FROM identity.empresa_capacidades WHERE empresa_id = $1', [empresaId]);
-  await client.query('DELETE FROM identity.empresa_miembros WHERE empresa_id = $1', [empresaId]);
   await client.query('DELETE FROM identity.empresas WHERE id = $1', [empresaId]);
   await client.query('DELETE FROM identity.usuarios WHERE id = $1', [usuarioId]);
 }
@@ -126,29 +123,42 @@ before(async () => {
   }
 
   const shared = await import('@core/shared');
-  const { PgService } = shared;
   CapabilityGuard = shared.CapabilityGuard;
   CAPACIDADES = shared.CAPACIDADES;
-  pgService = new PgService({ url: connectionString });
-  await pgService.onModuleInit();
-  guard = new CapabilityGuard(pgService, reflectorCon());
+
+  // Transporte interno simulado: el guard consulta las capacidades reales de
+  // PostgreSQL a través de la superficie de identity.
+  globalThis.fetch = async (_url, init) => {
+    const { empresa_ids: empresaIds = [], capacidades = [] } = JSON.parse(init.body);
+    const filas = [];
+    for (const empresaId of empresaIds) {
+      const { rows } = await client.query(
+        `SELECT empresa_id, capacidad_codigo, activo
+           FROM identity.empresa_capacidades
+          WHERE empresa_id = $1 AND capacidad_codigo = ANY($2::text[])`,
+        [empresaId, capacidades],
+      );
+      filas.push(...rows);
+    }
+    return { ok: true, status: 200, json: async () => ({ capacidades: filas }) };
+  };
+  guard = new CapabilityGuard(reflectorCon());
 });
 
 after(async () => {
   for (const creado of creados.values()) {
     await limpiarTenant(creado).catch(() => undefined);
   }
-  await pgService?.onModuleDestroy();
   await client?.end();
 });
 
 async function permite(vertical, capacidades) {
-  guard = new CapabilityGuard(pgService, reflectorCon(capacidades));
+  guard = new CapabilityGuard(reflectorCon(capacidades));
   return guard.canActivate(contextoCon(tenant(vertical).empresaId, tenant(vertical).usuarioId));
 }
 
 async function rechaza(vertical, capacidades) {
-  guard = new CapabilityGuard(pgService, reflectorCon(capacidades));
+  guard = new CapabilityGuard(reflectorCon(capacidades));
   await assert.rejects(
     guard.canActivate(contextoCon(tenant(vertical).empresaId, tenant(vertical).usuarioId)),
     (error) => {
@@ -223,7 +233,7 @@ test('desactivar la capacidad en la empresa la revoca de inmediato', async () =>
 });
 
 test('sin tenant activo el guard falla cerrado', async () => {
-  guard = new CapabilityGuard(pgService, reflectorCon([CAPACIDADES.CATALOGO_ITEMS]));
+  guard = new CapabilityGuard(reflectorCon([CAPACIDADES.CATALOGO_ITEMS]));
   await assert.rejects(
     guard.canActivate(contextoCon(null)),
     (error) => error.codigo === 'TENANT_REQUERIDO',

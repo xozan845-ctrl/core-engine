@@ -88,11 +88,29 @@ before(async () => {
     const { rows: [{ existe }] } = await client.query(
       `SELECT to_regnamespace('identity') IS NOT NULL AS existe`,
     );
-    const migraciones = existe ? MIGRACIONES.filter((name) => name !== '01_esquemas.sql') : MIGRACIONES;
+    const { rows: [{ catalogoFinal }] } = await client.query(
+      `SELECT to_regclass('catalog.items') IS NOT NULL AND to_regclass('catalog.productos') IS NULL AS "catalogoFinal"`,
+    );
+    const legacyCatalogo = new Set([
+      '01c_cqrs_catalog.sql',
+      '01e_adr25_empresas.sql',
+      '01h_catalogo_por_empresa.sql',
+      '01i_variantes_imagenes.sql',
+      '11_catalogo_productos_servicios.sql',
+      '24_multi_vertical.sql',
+      '25_catalog_items.sql',
+    ]);
+    const migraciones = existe
+      ? MIGRACIONES.filter(
+          (name) =>
+            name !== '01_esquemas.sql' && !(catalogoFinal && legacyCatalogo.has(name)),
+        )
+      : MIGRACIONES;
     for (const name of migraciones) {
       const sql = await readFile(new URL(`../../infra/db/init/${name}`, import.meta.url), 'utf8');
       await client.query(sql);
     }
+    await client.query('ALTER TABLE scheduling.citas ADD COLUMN IF NOT EXISTS parte_id uuid');
     for (const definicion of TENANTS) {
       creados.set(definicion.vertical, await crearTenant(definicion));
     }

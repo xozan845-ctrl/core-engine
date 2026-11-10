@@ -26,7 +26,7 @@ before(async () => {
       ? MIGRACIONES.filter(
           (name) =>
             name !== '01_esquemas.sql' &&
-            !(catalogoFinal && name === '01e_adr25_empresas.sql'),
+            !(catalogoFinal && ['01e_adr25_empresas.sql', '24_multi_vertical.sql'].includes(name)),
         )
       : MIGRACIONES;
     for (const name of migraciones) {
