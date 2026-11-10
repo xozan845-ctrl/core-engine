@@ -1,5 +1,12 @@
 import { ApiProperty } from '@nestjs/swagger';
 
+export class ItemImagenResponseDto {
+  @ApiProperty({ format: 'uuid' }) id: string;
+  @ApiProperty({ format: 'uuid' }) objeto_id: string;
+  @ApiProperty() orden: number;
+  @ApiProperty() es_principal: boolean;
+}
+
 export class ItemResponseDto {
   @ApiProperty({ format: 'uuid' }) item_id: string;
   @ApiProperty({ format: 'uuid' }) empresa_id: string;
@@ -14,6 +21,8 @@ export class ItemResponseDto {
   @ApiProperty({ nullable: true }) stock: number | null;
   @ApiProperty({ nullable: true }) duration_minutes: number | null;
   @ApiProperty({ type: 'object', additionalProperties: true }) atributos: Record<string, unknown>;
+  @ApiProperty({ nullable: true, format: 'uuid' }) parent_item_id: string | null;
+  @ApiProperty({ type: () => [ItemImagenResponseDto] }) imagenes: ItemImagenResponseDto[];
   @ApiProperty({ enum: ['activo', 'inactivo'] }) estado: 'activo' | 'inactivo';
   @ApiProperty({ nullable: true }) source_type: 'producto' | 'servicio' | null;
   @ApiProperty({ nullable: true, format: 'uuid' }) source_id: string | null;

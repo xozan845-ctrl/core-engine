@@ -188,6 +188,16 @@ CREATE POLICY items_empresa ON catalog.items
   USING (auth.rol() = 'empresario' AND empresa_id::text = (auth.jwt() ->> 'tenant_id'))
   WITH CHECK (auth.rol() = 'empresario' AND empresa_id::text = (auth.jwt() ->> 'tenant_id'));
 
+ALTER TABLE catalog.item_imagenes ENABLE ROW LEVEL SECURITY;
+CREATE POLICY item_imagenes_admin ON catalog.item_imagenes
+  FOR ALL TO authenticated
+  USING (auth.rol() IN ('super_admin', 'admin'))
+  WITH CHECK (auth.rol() IN ('super_admin', 'admin'));
+CREATE POLICY item_imagenes_empresa ON catalog.item_imagenes
+  FOR ALL TO authenticated
+  USING (auth.rol() = 'empresario' AND empresa_id::text = (auth.jwt() ->> 'tenant_id'))
+  WITH CHECK (auth.rol() = 'empresario' AND empresa_id::text = (auth.jwt() ->> 'tenant_id'));
+
 ALTER TABLE catalog.item_atributo_esquemas ENABLE ROW LEVEL SECURITY;
 CREATE POLICY item_schemas_admin ON catalog.item_atributo_esquemas
   FOR ALL TO authenticated
