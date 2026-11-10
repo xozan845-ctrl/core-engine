@@ -1211,3 +1211,45 @@ El PR #90 se completó utilizando convenciones atómicas (R-PR-1, R-GC-1..5) gar
 - `npm run baseline:guard` → 0; `db:migrations` → 49; `db:rls` → 61.
 - **Snapshot:** estado consolidado reescrito en [`AUDIT.md`](./AUDIT.md),
   conforme a R-COV-3.
+
+---
+
+# AUDIT (histórico) — 16ª auditoría de Core Engine (cierre de robustez y MVP)
+
+- **Fecha:** 2026-11-10
+- **SHA auditado:** `0c19300` (`develop`, tras integrar los worktrees y R-RB-3/R-RB-4).
+- **Estado global:** 🟢 **CUMPLE** en los gates automáticos de PR; G-5 y G-6
+  siguen parciales por diseño.
+
+## Intervención
+
+1. **R-RB-3 (Outbox):** reclamo y publicación en la misma transacción con
+   `FOR UPDATE SKIP LOCKED`, sin ventana de 30 minutos y con un test de
+   concurrencia real de dos pollers contra PostgreSQL.
+2. **R-RB-3/R-RB-4 (RabbitMQ):** JSON inválido a DLQ, confirmación de la DLQ
+   antes del `ack`, mensajes muertos sin bucle de reencolado y reconexión con
+   backoff 1s→30s.
+3. **R-RB-4 (timeouts):** `timeoutInternoMs()` se reutiliza en todos los `fetch`
+   internos; logistics degrada con `SERVICIO_NO_DISPONIBLE` y el check
+   ejecutable `R-RB-4` impide volver a introducir llamadas sin timeout.
+4. **Observabilidad del Outbox:** gauge de backlog, contadores de publicados y
+   fallos, dashboard provisionado y alertas `OutboxBacklog` /
+   `OutboxFallosPublicacion`, sin duplicar la profundidad de DLQ existente.
+5. La matriz real queda en **1.419 tests / 140 archivos / 13 workspaces**;
+   `coverage:compare` 13/13; 12/13 workspaces alcanzan el objetivo 80/70.
+
+## Evidencia
+
+- `npm test` → 0; **1.419 tests / 140 archivos / 13 workspaces**.
+- `npm run build` → 0; `npm run lint` → 0 (44 warnings).
+- `npm run coverage:compare` → 0 (13/13 ≥ baseline).
+- `npm run swagger:export` → 0 y sin diff (338 operaciones: 308 públicas + 30 internas).
+- `TEST_DATABASE_URL=... npm run test:integration` → 0 (16 archivos / 50 tests,
+  incluido el test de concurrencia del Outbox).
+- `npm run rules:check` → 0 (60 tests, 11 suites, 42/238 IDs); `test:engine` → 0 (21);
+  `test:smoke` → 0 (61).
+- `npm run baseline:guard` → 0; `db:migrations` → 61; `db:rls` → 59.
+- `npm audit --audit-level=high` → 0; `--audit-level=moderate` → 12.
+- **CI post-merge:** run `42908104513` sobre `develop` (`0c19300`) en `success`.
+- **Snapshot:** estado consolidado reescrito en [`AUDIT.md`](./AUDIT.md),
+  conforme a R-COV-3.
