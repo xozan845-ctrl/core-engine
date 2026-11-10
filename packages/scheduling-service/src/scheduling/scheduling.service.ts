@@ -24,10 +24,9 @@ import {
 } from './scheduling.dtos';
 
 type Fila = Record<string, unknown>;
-type OrdenReserva = {
+export type OrdenReserva = {
   order_id: string;
-  cliente_id: string;
-  cliente_parte_id?: string;
+  cliente_parte_id: string;
   items: Array<{
     empresa_id: string;
     item_type: string;
@@ -163,12 +162,12 @@ export class SchedulingService implements OnModuleInit, OnModuleDestroy {
         const id = randomUUID();
         const result = await client.query<Fila>(
           `INSERT INTO scheduling.citas
-            (id, empresa_id, recurso_id, cliente_id, parte_id, order_id, item_id,
+            (id, empresa_id, recurso_id, parte_id, order_id, item_id,
              inicia_en, termina_en, notas, metadata)
            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11::jsonb)
-           RETURNING id, empresa_id, recurso_id, cliente_id, parte_id, order_id, item_id,
+           RETURNING id, empresa_id, recurso_id, parte_id, order_id, item_id,
                      estado, inicia_en, termina_en, notas, metadata, creado_en, actualizado_en`,
-          [id, empresaId, dto.recurso_id, dto.cliente_id ?? null, dto.parte_id ?? null, dto.order_id ?? null,
+          [id, empresaId, dto.recurso_id, dto.parte_id, dto.order_id ?? null,
             dto.item_id ?? null, dto.inicia_en, dto.termina_en, dto.notas ?? '', JSON.stringify(dto.metadata ?? {})],
         );
         const cita = result.rows[0];
@@ -178,7 +177,6 @@ export class SchedulingService implements OnModuleInit, OnModuleDestroy {
           cita_id: String(cita.id),
           empresa_id: empresaId,
           recurso_id: String(cita.recurso_id),
-          ...(cita.cliente_id ? { cliente_id: String(cita.cliente_id) } : {}),
           ...(cita.parte_id ? { cliente_parte_id: String(cita.parte_id) } : {}),
           ...(cita.order_id ? { order_id: String(cita.order_id) } : {}),
           ...(cita.item_id ? { item_id: String(cita.item_id) } : {}),
@@ -195,7 +193,7 @@ export class SchedulingService implements OnModuleInit, OnModuleDestroy {
 
   listarCitas(empresaId: string, desde?: string, hasta?: string): Promise<Fila[]> {
     return this.pg.query<Fila>(
-      `SELECT id, empresa_id, recurso_id, cliente_id, parte_id, order_id, item_id, estado,
+      `SELECT id, empresa_id, recurso_id, parte_id, order_id, item_id, estado,
               inicia_en, termina_en, notas, metadata, creado_en, actualizado_en
        FROM scheduling.citas
        WHERE empresa_id = $1
@@ -213,7 +211,7 @@ export class SchedulingService implements OnModuleInit, OnModuleDestroy {
             SET estado = 'cancelada', actualizado_en = NOW()
           WHERE id = $1 AND empresa_id = $2
             AND estado = ANY($3::text[])
-        RETURNING id, empresa_id, recurso_id, cliente_id, parte_id, order_id, item_id, estado,
+        RETURNING id, empresa_id, recurso_id, parte_id, order_id, item_id, estado,
                   inicia_en, termina_en, notas, metadata, creado_en, actualizado_en`,
         [citaId, empresaId, ESTADOS_ACTIVOS],
       );
@@ -245,7 +243,7 @@ export class SchedulingService implements OnModuleInit, OnModuleDestroy {
 
   async crearDesdeReserva(orden: OrdenReserva): Promise<Fila | null> {
     const existente = await this.pg.queryOne<Fila>(
-      `SELECT id, empresa_id, recurso_id, cliente_id, parte_id, order_id, item_id, estado,
+      `SELECT id, empresa_id, recurso_id, parte_id, order_id, item_id, estado,
               inicia_en, termina_en, notas, metadata, creado_en, actualizado_en
        FROM scheduling.citas WHERE order_id = $1`,
       [orden.order_id],
@@ -264,7 +262,6 @@ export class SchedulingService implements OnModuleInit, OnModuleDestroy {
     }
     return this.crearCita(item.empresa_id, {
       recurso_id: recursoId,
-      cliente_id: orden.cliente_id,
       parte_id: orden.cliente_parte_id,
       order_id: orden.order_id,
       item_id: item.item_id,

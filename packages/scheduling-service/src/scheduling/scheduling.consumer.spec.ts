@@ -18,7 +18,7 @@ describe('SchedulingConsumer', () => {
 
     await manejar({ event_id: 'e-1', tipo: EVENTOS.ORDER_CREATED, data: { tipo_orden: 'compra' } });
     expect(scheduling.crearDesdeReserva).not.toHaveBeenCalled();
-    await manejar({ event_id: 'e-2', tipo: EVENTOS.ORDER_CREATED, data: { tipo_orden: 'reserva', order_id: 'o-1' } });
+    await manejar({ event_id: 'e-2', tipo: EVENTOS.ORDER_CREATED, data: { tipo_orden: 'reserva', order_id: 'o-1', cliente_parte_id: 'p-1' } });
     expect(scheduling.crearDesdeReserva).toHaveBeenCalledOnce();
 
     pg.queryOne.mockResolvedValueOnce({ ok: 1 });

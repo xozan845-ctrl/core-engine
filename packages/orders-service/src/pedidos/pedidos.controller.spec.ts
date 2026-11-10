@@ -6,7 +6,7 @@ import type { OrderViewRepository } from './queries/order-view.repository';
 import type { PedidosService } from './pedidos.service';
 import { ROLES } from '@core/shared';
 
-const orden = { id: 'o-1', cliente_id: 'u-c', estado: 'creada', total_cents: 1000 };
+const orden = { id: 'o-1', comprador_id: 'u-c', estado: 'creada', total_cents: 1000 };
 const comprador = { user_id: 'u-c', email: 'c@core.local', rol: ROLES.COMPRADOR };
 const vendedor = { user_id: 'u-v', email: 'v@core.local', rol: ROLES.VENDEDOR };
 const admin = { user_id: 'u-a', email: 'a@core.local', rol: ROLES.ADMIN };

@@ -1,6 +1,7 @@
 import { Injectable, OnModuleInit } from '@nestjs/common';
 import {
   COLAS,
+  DomainError,
   EVENTOS,
   EventoBus,
   Logger,
@@ -9,7 +10,7 @@ import {
   RabbitService,
   ejecutarConContexto,
 } from '@core/shared';
-import { SchedulingService } from './scheduling.service';
+import { SchedulingService, OrdenReserva } from './scheduling.service';
 
 @Injectable()
 export class SchedulingConsumer implements OnModuleInit {
@@ -41,7 +42,10 @@ export class SchedulingConsumer implements OnModuleInit {
         if (await this.yaProcesado(evento.event_id)) return;
         const orden = evento.data as OrdenData & { fulfillment_config?: Record<string, unknown> };
         if (orden.tipo_orden === 'reserva') {
-          await this.scheduling.crearDesdeReserva(orden);
+          if (!orden.cliente_parte_id) {
+            throw new DomainError('PARTE_REQUERIDA', 'Una reserva requiere cliente_parte_id.');
+          }
+          await this.scheduling.crearDesdeReserva(orden as OrdenReserva);
         }
         await this.marcarProcesado(evento);
       },

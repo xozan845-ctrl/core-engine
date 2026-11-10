@@ -130,7 +130,7 @@ describe('EnviosService (guia de despacho y transiciones)', () => {
     it('agrupa lineas por empresa y delega en prepararEnvio', async () => {
       const { servicio } = crear();
       vi.spyOn(servicio, 'consultarOrden').mockResolvedValue({
-        id: 'o1', cliente_id: 'c1', total: '35.00', total_cents: 3500, estado: 'pagada',
+        id: 'o1', comprador_id: 'c1', total: '35.00', total_cents: 3500, estado: 'pagada',
         items: [
           { sku: 'A', cantidad: 2, producto_nombre: 'A', empresa_id: 'e1', precio_unitario_cents: 1000 },
           { sku: 'B', cantidad: 1, producto_nombre: 'B', empresa_id: 'e1', precio_unitario_cents: 500 },
@@ -149,7 +149,7 @@ describe('EnviosService (guia de despacho y transiciones)', () => {
     it('rechaza una orden sin lineas o con linea sin empresa', async () => {
       const { servicio } = crear();
       vi.spyOn(servicio, 'consultarOrden').mockResolvedValueOnce(null).mockResolvedValueOnce({
-        id: 'o1', cliente_id: 'c1', total: '1.00', total_cents: 100, estado: 'pagada',
+        id: 'o1', comprador_id: 'c1', total: '1.00', total_cents: 100, estado: 'pagada',
         items: [{ sku: 'A', cantidad: 1, producto_nombre: 'A', empresa_id: '', precio_unitario_cents: 100 }],
       });
       await expect(servicio.prepararEnviosDeOrden('o1')).rejects.toThrow(/no tiene líneas/);
@@ -160,7 +160,7 @@ describe('EnviosService (guia de despacho y transiciones)', () => {
       const { servicio, fetchMock } = crear();
       fetchMock.mockRejectedValue(new Error('caido'));
       vi.spyOn(servicio, 'consultarOrden').mockResolvedValue({
-        id: 'o1', cliente_id: 'c1', total: '1.00', total_cents: 100, estado: 'pagada',
+        id: 'o1', comprador_id: 'c1', total: '1.00', total_cents: 100, estado: 'pagada',
         items: [{ sku: 'A', cantidad: 1, producto_nombre: 'A', empresa_id: 'e1', precio_unitario_cents: 100 }],
       });
       await expect(servicio.prepararEnviosDeOrden('o1')).rejects.toThrow(/identity-service/);
@@ -300,7 +300,7 @@ describe('EnviosService (guia de despacho y transiciones)', () => {
   describe('avanzarEstadoOrden (Tabla 13)', () => {
     const orden = {
       id: 'o1',
-      cliente_id: 'c1',
+      comprador_id: 'c1',
       items: [],
       total: '1500.00',
       total_cents: 150000,

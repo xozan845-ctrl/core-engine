@@ -22,7 +22,7 @@ class EventStoreFake {
 
 interface VistaFake {
   id: string;
-  cliente_id: string;
+  comprador_id: string;
   items: unknown[];
   total: string;
   total_cents: number;
@@ -257,7 +257,7 @@ describe('CreateOrderCommandHandler (CQRS + Event Sourcing)', () => {
     expect(append[2]).toBe('OrderCreatedEvent');
     expect(datos).toMatchObject({
       order_id: orderId,
-      cliente_id: 'comprador-1',
+      comprador_id: 'comprador-1',
       total_cents: 230_000,
       estado: 'creada',
       items: [
@@ -472,7 +472,7 @@ describe('CreateOrderCommandHandler (CQRS + Event Sourcing)', () => {
         tipo: 'OrderCreatedEvent',
         payload: {
           order_id: 'orden-1',
-          cliente_id: 'comprador-1',
+          comprador_id: 'comprador-1',
           items: [],
           total_cents: 100,
           estado: 'creada',
@@ -513,7 +513,7 @@ describe('CreateOrderCommandHandler (CQRS + Event Sourcing)', () => {
         tipo: 'OrderCreatedEvent',
         payload: {
           order_id: 'orden-1',
-          cliente_id: 'comprador-1',
+          comprador_id: 'comprador-1',
           items: [],
           total_cents: 100,
           estado: 'creada',
@@ -557,7 +557,7 @@ describe('CreateOrderCommandHandler (CQRS + Event Sourcing)', () => {
         tipo: 'OrderCreatedEvent',
         payload: {
           order_id: 'orden-1',
-          cliente_id: 'comprador-1',
+          comprador_id: 'comprador-1',
           items: [],
           total_cents: 100,
           estado: 'creada',

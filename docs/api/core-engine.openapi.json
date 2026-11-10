@@ -2897,7 +2897,7 @@
             }
           },
           {
-            "name": "clienteId",
+            "name": "parteId",
             "required": true,
             "in": "query",
             "schema": {
@@ -15438,9 +15438,6 @@
           "cliente": {
             "type": "string"
           },
-          "clienteId": {
-            "type": "string"
-          },
           "direccionEntrega": {
             "type": "string"
           },
@@ -16031,9 +16028,6 @@
           "cliente": {
             "type": "string"
           },
-          "clienteId": {
-            "type": "string"
-          },
           "direccionEntrega": {
             "type": "string"
           },
@@ -16273,9 +16267,6 @@
           "personalId": {
             "type": "string"
           },
-          "clienteId": {
-            "type": "string"
-          },
           "rutaId": {
             "type": "string"
           },
@@ -16494,9 +16485,6 @@
               "logistica"
             ]
           },
-          "clienteId": {
-            "type": "string"
-          },
           "telefono": {
             "type": "string"
           },
@@ -16564,11 +16552,6 @@
           },
           "tipo": {
             "type": "string"
-          },
-          "cliente_id": {
-            "type": "object",
-            "nullable": true,
-            "format": "uuid"
           },
           "telefono": {
             "type": "object",
@@ -16638,11 +16621,6 @@
           },
           "cliente": {
             "type": "string"
-          },
-          "cliente_id": {
-            "type": "object",
-            "nullable": true,
-            "format": "uuid"
           },
           "parte_id": {
             "type": "object",
@@ -17175,11 +17153,6 @@
           },
           "personal_id": {
             "type": "string",
-            "format": "uuid"
-          },
-          "cliente_id": {
-            "type": "object",
-            "nullable": true,
             "format": "uuid"
           },
           "parte_id": {
@@ -17927,10 +17900,6 @@
             "type": "string",
             "description": "Id de la orden",
             "format": "uuid"
-          },
-          "cliente_id": {
-            "type": "string",
-            "description": "Id del cliente"
           },
           "parte_id": {
             "type": "object",
@@ -19464,10 +19433,6 @@
           "orden_id": {
             "type": "string",
             "description": "Id de la orden (UUID)"
-          },
-          "cliente_id": {
-            "type": "string",
-            "description": "Id del cliente"
           },
           "parte_id": {
             "type": "string",
@@ -24396,7 +24361,7 @@
             "description": "Id de la orden",
             "format": "uuid"
           },
-          "cliente_id": {
+          "comprador_id": {
             "type": "string",
             "description": "Id del comprador",
             "format": "uuid"
@@ -24426,7 +24391,7 @@
         },
         "required": [
           "id",
-          "cliente_id",
+          "comprador_id",
           "items",
           "total",
           "total_cents",
@@ -25589,14 +25554,8 @@
             "type": "string",
             "format": "uuid"
           },
-          "cliente_id": {
-            "type": "object",
-            "nullable": true,
-            "format": "uuid"
-          },
           "parte_id": {
-            "type": "object",
-            "nullable": true,
+            "type": "string",
             "format": "uuid"
           },
           "order_id": {
@@ -25647,6 +25606,7 @@
           "id",
           "empresa_id",
           "recurso_id",
+          "parte_id",
           "estado",
           "inicia_en",
           "termina_en",
@@ -25688,15 +25648,10 @@
             "type": "string",
             "format": "uuid"
           },
-          "cliente_id": {
-            "type": "string",
-            "format": "uuid"
-          },
           "parte_id": {
             "type": "string",
-            "nullable": true,
             "format": "uuid",
-            "description": "Referencia universal opcional del cliente"
+            "description": "Referencia universal del cliente"
           },
           "order_id": {
             "type": "string",
@@ -25723,6 +25678,7 @@
         },
         "required": [
           "recurso_id",
+          "parte_id",
           "inicia_en",
           "termina_en"
         ]
