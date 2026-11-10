@@ -20,7 +20,7 @@ describe('CapacidadesService (ADR-0001)', () => {
     const servicio = new CapacidadesService(pg as never);
 
     await expect(servicio.listar('e-1', actor)).resolves.toEqual([capacidad]);
-    expect(pg.queryOne).toHaveBeenCalledWith(expect.stringContaining('empresa_miembros'), ['e-1', 'u-1']);
+    expect(pg.queryOne).toHaveBeenCalledWith(expect.stringContaining('asignaciones_personal'), ['e-1', 'u-1']);
   });
 
   it('rechaza listar una empresa que no pertenece al actor', async () => {

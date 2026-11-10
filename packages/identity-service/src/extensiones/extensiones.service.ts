@@ -361,8 +361,8 @@ export class ExtensionesService {
       throw new ForbiddenError('Solo el empresario puede modificar extensiones.');
     }
     const miembro = await this.pg.queryOne(
-      `SELECT 1 FROM identity.empresa_miembros
-        WHERE empresa_id = $1 AND usuario_id = $2 AND estado = 'activo'`,
+      `SELECT 1 FROM identity.asignaciones_personal
+        WHERE empresa_id = $1 AND usuario_id = $2 AND estado = 'activa'`,
       [empresaId, actor.user_id],
     );
     if (!miembro) throw new ForbiddenError('El usuario no es miembro activo de esta empresa.');

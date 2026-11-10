@@ -634,8 +634,8 @@ export class PartesService {
     if (!actor.tenant_id || actor.tenant_id !== empresaId) throw new ForbiddenError('No puedes operar partes de otra empresa.');
     if (escritura && !ROLES_ESCRITURA.includes(actor.rol)) throw new ForbiddenError('El rol no puede modificar los datos universales.');
     const miembro = await this.pg.queryOne(
-      `SELECT 1 FROM identity.empresa_miembros
-        WHERE empresa_id = $1 AND usuario_id = $2 AND estado = 'activo'`,
+      `SELECT 1 FROM identity.asignaciones_personal
+        WHERE empresa_id = $1 AND usuario_id = $2 AND estado = 'activa'`,
       [empresaId, actor.user_id],
     );
     if (!miembro) throw new ForbiddenError('El usuario no es miembro activo de esta empresa.');

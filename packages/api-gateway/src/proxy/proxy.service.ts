@@ -23,7 +23,6 @@ export const DESTINOS: ServicioDestino[] = [
       { patron: /^\/api\/v2\/empresas(\/|$)/, metodos: ['*'] },
       { patron: /^\/api\/v2\/incorporaciones(\/|$)/, metodos: ['*'] },
       { patron: /^\/api\/v2\/packs(\/|$)/, metodos: ['GET', 'POST'] },
-      { patron: /^\/api\/v2\/invitaciones(\/|$)/, metodos: ['*'] },
       { patron: /^\/api\/v2\/configuracion(\/|$)/, metodos: ['*'] },
     ],
   },
