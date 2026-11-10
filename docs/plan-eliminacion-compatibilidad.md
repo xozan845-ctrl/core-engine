@@ -21,6 +21,12 @@ versiones anteriores:
 **API v2:** completado. Todos los controladores, gateway, smoke, QA y OpenAPI
 generado usan `/api/v2`.
 
+**Integración de worktrees:** la rama `docs/auditoria-integral-2026-11-08` y sus
+cambios de permisos/capacidades se integraron en `3c687e3`. Se conservó
+`/api/v2`, el refactor de `CapabilityGuard` por API interna y las policies RLS
+de `orders.orden_vista`; se eliminó la policy de la tabla legacy
+`orders.proyeccion_ordenes`.
+
 **Fase 1 (código muerto y aliases):** completada.
 - `puedeTransicionar()`/`validarTransicion()` eliminados.
 - `orders.proyeccion_ordenes` y `orders.comisiones_vista` eliminadas.
@@ -42,36 +48,36 @@ generado usan `/api/v2`.
 - Migración `39_orders_sin_defaults.sql` retira el default de
   `orders.orden_vista.tipo_orden`.
 
-**Pendiente:** fases 3 a 6 (catálogo unificado, partes, personal, empresas).
-La Fase 5 tiene avance parcial por el módulo `personal` y el guard de permisos ya
-incorporados en la rama.
+**Fase 6 (empresas):** completada.
+- `identity.empresas.tipo_empresa` y `modalidad_logistica` eliminadas.
+- La logística deriva la flota de capacidades (`logistica_rutas`/`fulfillment_delivery`).
+- Catálogo valida `catalogo_items` por API interna, no `tipo_empresa`.
 
-**Integración de worktrees:** la rama `docs/auditoria-integral-2026-11-08` y sus
-cambios de permisos/capacidades se integraron en `3c687e3`. Se conservó
-`/api/v2`, se mantuvo el refactor de `CapabilityGuard` por API interna, se
-conservaron las policies RLS de `orders.orden_vista` y se eliminó la policy de
-la tabla legacy `orders.proyeccion_ordenes`.
+**Fase 4 (partes):** completada.
+- `cliente_id` retirado de field/finance/scheduling/logistics/orders.
+- `parte_id` es la referencia de cliente; eventos de orden usan `comprador_id`.
+- Migración `41_partes_sin_cliente_id.sql`.
 
-**Fase 8:** decisión tomada: se **conservan** el historial de slugs y las
-redirecciones 301. No se elimina esa funcionalidad.
+**Fase 5 (personal):** completada.
+- `identity.empresa_miembros` e `identity.invitaciones_vendedor` eliminadas.
+- `asignaciones_personal` es la única fuente de membresías, con
+  `participacion_porcentaje`.
+- Flujo legacy de invitaciones de vendedores retirado.
+- Migración `42_personal_unico.sql`.
+
+**Fase 3 (catálogo):** pendiente. Es la única fase que queda. Requiere
+reescribir `productos.service.ts`, `servicios.service.ts`, `operaciones`,
+`inventario`, `stores` y las proyecciones SQL sobre `catalog.items`, además de
+migrar variantes e imágenes. No se ejecutó a medias para no dejar el catálogo
+en un estado inconsistente.
 
 ---
 
-## Decisiones pendientes para las fases 3–6
+## Decisión pendiente para la Fase 3
 
-Antes de ejecutar las fases destructivas hay que cerrar estas decisiones de
-producto:
-
-1. **Catálogo (Fase 3):** ¿las variantes e imágenes pasan a `catalog.item_variantes`/
-   `catalog.item_imagenes` o se modelan como items hijos con `parent_item_id`?
-2. **Partes (Fase 4):** para `scheduling.citas.cliente_id` y
-   `finance.comprobantes.cliente_id`, ¿se descartan los valores históricos o se
-   migran a `parte_id` creando partes sintéticas?
-3. **Personal (Fase 5):** ¿`participacion_porcentaje` se mueve a
-   `asignaciones_personal.metadata` o se crea una tabla de participación?
-4. **Logística (Fase 6):** al retirar `identity.empresas.modalidad_logistica`,
-   ¿la flota se elige por capacidad (`logistica_rutas`) o por un nuevo campo de
-   configuración de fulfillment?
+La decisión de producto ya está tomada: variantes como items hijos con
+`parent_item_id` e imágenes en `catalog.item_imagenes`. Falta ejecutar la
+reescritura del catálogo, que es la única fase restante.
 
 ---
 
