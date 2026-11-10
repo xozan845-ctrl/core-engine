@@ -52,3 +52,16 @@ test('resolveBaseBranch respeta la base declarada por GitHub Actions', () => {
     'origin/staging',
   );
 });
+
+test('resolveBaseBranch usa staging como base en la rama de stage', () => {
+  assert.equal(
+    resolveBaseBranch({
+      currentBranch: 'staging',
+      envBase: '',
+      mainBranch: 'main',
+      integrationBranch: 'develop',
+      stageBranch: 'staging',
+    }),
+    'origin/staging',
+  );
+});

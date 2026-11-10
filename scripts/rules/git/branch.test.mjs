@@ -6,6 +6,7 @@ import {
   ALLOWED_COMMIT_TYPES,
   INTEGRATION_BRANCH,
   MAIN_BRANCH,
+  STAGE_BRANCH,
 } from '../../config/project.mjs';
 
 /**
@@ -28,6 +29,7 @@ export default defineSuite({
       const { currentBranch, baseBranch } = getBranchContext(
         MAIN_BRANCH,
         INTEGRATION_BRANCH,
+        STAGE_BRANCH,
       );
       if (currentBranch === MAIN_BRANCH || currentBranch === `origin/${MAIN_BRANCH}`) {
         return; // en main no hay commits que evaluar
