@@ -13,6 +13,9 @@ if (databaseUrl.pathname !== '/core_engine_test' || !['localhost', '127.0.0.1'].
 
 const MIGRACIONES = [
   '01_esquemas.sql',
+  // 01e redefine las proyecciones de catálogo y depende de la vista creada
+  // por 01c; sin esta migración la suite no es hermética.
+  '01c_cqrs_catalog.sql',
   '01e_adr25_empresas.sql',
   '01f_slugs.sql',
   '01h_catalogo_por_empresa.sql',
