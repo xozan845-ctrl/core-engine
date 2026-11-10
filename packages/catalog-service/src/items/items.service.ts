@@ -1,11 +1,13 @@
 import { Injectable } from '@nestjs/common';
 import Ajv, { type ErrorObject, type JSONSchemaType } from 'ajv';
 import {
+  ConflictError,
   DomainError,
   Money,
   Pagina,
   PgService,
   crearPagina,
+  esViolacionUnicidad,
   parsearPaginacion,
 } from '@core/shared';
 
@@ -275,7 +277,10 @@ export class ItemsService {
       datos.categoria ?? 'general',
       datos.atributos ?? {},
     );
-    const fila = await this.pg.queryOne<ItemRow>(
+    await this.exigirCodigoLibre(empresaId, tipo, codigo);
+    let fila: ItemRow | null;
+    try {
+      fila = await this.pg.queryOne<ItemRow>(
       `INSERT INTO catalog.items
          (empresa_id, tipo, codigo, nombre, descripcion, categoria, precio_cents,
           costo_cents, track_inventory, stock, duration_minutes, atributos, estado,
@@ -316,9 +321,28 @@ export class ItemsService {
         datos.es_materia_prima === true,
         (datos.ubicacion ?? '').trim(),
       ],
-    );
+      );
+    } catch (error) {
+      if (esViolacionUnicidad(error)) {
+        throw new ConflictError(`Ya existe un item con el código ${codigo} en esta empresa.`);
+      }
+      throw error;
+    }
     if (!fila) throw new DomainError('ITEM_NO_CREADO', 'No se pudo crear el item.');
     return this.serializar(fila);
+  }
+
+  /** Un código repetido en la misma empresa y tipo es un 409, no un 500. */
+  private async exigirCodigoLibre(empresaId: string, tipo: TipoItem, codigo: string): Promise<void> {
+    const existente = await this.pg.queryOne<{ id: string }>(
+      `SELECT id FROM catalog.items
+        WHERE empresa_id = $1 AND tipo = $2 AND upper(codigo) = upper($3)
+          AND eliminado_en IS NULL`,
+      [empresaId, tipo, codigo],
+    );
+    if (existente) {
+      throw new ConflictError(`Ya existe un item con el código ${codigo} en esta empresa.`);
+    }
   }
 
   /** Baja lógica genérica de un item (R-DB-5). */
@@ -344,6 +368,7 @@ export class ItemsService {
       datos.categoria ?? 'general',
       datos.atributos ?? {},
     );
+    await this.exigirCodigoLibre(empresaId, 'alquiler', codigo);
     const fila = await this.pg.queryOne<ItemRow>(
       `INSERT INTO catalog.items
          (empresa_id, tipo, codigo, nombre, descripcion, categoria, precio_cents,
