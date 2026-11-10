@@ -19,7 +19,16 @@ before(async () => {
   await client.query('SELECT pg_advisory_lock(38194201)');
   try {
     const { rows: [{ existe }] } = await client.query('SELECT to_regnamespace(\'identity\') IS NOT NULL AS existe');
-    const migraciones = existe ? MIGRACIONES.filter((name) => name !== '01_esquemas.sql') : MIGRACIONES;
+    const { rows: [{ catalogoFinal }] } = await client.query(
+      `SELECT to_regclass('catalog.items') IS NOT NULL AND to_regclass('catalog.productos') IS NULL AS "catalogoFinal"`,
+    );
+    const migraciones = existe
+      ? MIGRACIONES.filter(
+          (name) =>
+            name !== '01_esquemas.sql' &&
+            !(catalogoFinal && name === '01e_adr25_empresas.sql'),
+        )
+      : MIGRACIONES;
     for (const name of migraciones) {
       await client.query(await readFile(new URL(`../../infra/db/init/${name}`, import.meta.url), 'utf8'));
     }
