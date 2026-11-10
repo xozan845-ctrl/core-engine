@@ -81,6 +81,37 @@ describe('ItemsService (fase 2)', () => {
     });
   });
 
+  it('crea productos y servicios desde la superficie unificada', async () => {
+    const { servicio, pg } = crear();
+    (pg.queryOne as Mock)
+      .mockResolvedValueOnce({ id: 'padre-1', tipo: 'producto', empresa_id: EMPRESA })
+      .mockResolvedValueOnce({ esquema: { type: 'object', additionalProperties: true } })
+      .mockResolvedValueOnce({ ...fila, tipo: 'producto', parent_item_id: 'padre-1', track_inventory: true, stock: 4 });
+
+    const item = await servicio.crearItem({
+      tipo: 'producto',
+      codigo: 'SKU-001',
+      nombre: 'Teclado',
+      precio: '100.00',
+      stock: 4,
+      parent_item_id: 'padre-1',
+    }, EMPRESA);
+
+    expect(item).toMatchObject({ tipo: 'producto', parent_item_id: 'padre-1', track_inventory: true, stock: 4 });
+    expect(pg.queryOne).toHaveBeenCalledWith(expect.stringContaining('INSERT INTO catalog.items'), expect.any(Array));
+  });
+
+  it('exige duración en servicios y stock en productos inventariables', async () => {
+    const { servicio } = crear();
+    await expect(servicio.crearItem({
+      tipo: 'servicio', codigo: 'SERV-001', nombre: 'Consulta', precio: '10.00',
+    }, EMPRESA)).rejects.toMatchObject({ codigo: 'DURACION_INVALIDA' });
+
+    await expect(servicio.crearItem({
+      tipo: 'producto', codigo: 'SKU-001', nombre: 'Teclado', precio: '10.00',
+    }, EMPRESA)).rejects.toMatchObject({ codigo: 'STOCK_INVALIDO' });
+  });
+
   it('aplica filtros opcionales, incluye inactivos y valida ids', async () => {
     const { servicio, pg } = crear();
     (pg.queryOne as Mock).mockResolvedValue({ n: 0 });

@@ -45,6 +45,22 @@ export interface Item {
   actualizado_en: string;
 }
 
+export interface CrearItemInput {
+  tipo: TipoItem;
+  codigo: string;
+  nombre: string;
+  descripcion?: string;
+  categoria?: string;
+  precio: string | number;
+  costo?: string | number;
+  track_inventory?: boolean;
+  stock?: number | null;
+  duration_minutes?: number | null;
+  atributos?: Record<string, unknown>;
+  estado?: 'activo' | 'inactivo';
+  parent_item_id?: string | null;
+}
+
 export interface CrearAlquilerInput {
   codigo: string;
   nombre: string;
@@ -158,6 +174,68 @@ export class ItemsService {
     const item = this.serializar(fila);
     await this.adjuntarImagenes([item]);
     return item;
+  }
+
+  async crearItem(datos: CrearItemInput, empresaId: string): Promise<Item> {
+    const tipo = this.exigirTipo(datos.tipo);
+    const codigo = this.normalizarCodigo(datos.codigo);
+    const nombre = this.validarNombre(datos.nombre);
+    const precio = Money.parsear(datos.precio);
+    const costo = Money.parsear(datos.costo ?? '0');
+    const trackInventory = tipo === 'producto' ? datos.track_inventory !== false : false;
+    if (trackInventory) {
+      if (!Number.isInteger(datos.stock) || (datos.stock ?? -1) < 0) {
+        throw new DomainError('STOCK_INVALIDO', 'El stock debe ser un entero no negativo.');
+      }
+    }
+    let durationMinutes: number | null = null;
+    if (tipo === 'servicio') {
+      if (!Number.isInteger(datos.duration_minutes) || (datos.duration_minutes ?? 0) < 1 || (datos.duration_minutes ?? 0) > 1440) {
+        throw new DomainError('DURACION_INVALIDA', 'La duración debe estar entre 1 y 1440 minutos.');
+      }
+      durationMinutes = datos.duration_minutes ?? null;
+    }
+    if (datos.parent_item_id) {
+      const padre = await this.pg.queryOne<{ id: string; tipo: string; empresa_id: string }>(
+        `SELECT id, tipo, empresa_id FROM catalog.items WHERE id = $1 AND eliminado_en IS NULL`,
+        [datos.parent_item_id],
+      );
+      if (!padre || padre.empresa_id !== empresaId || padre.tipo !== tipo) {
+        throw new DomainError('ITEM_PADRE_INVALIDO', 'El item padre debe existir, ser del mismo tipo y de la misma empresa.');
+      }
+    }
+    const atributos = await this.validarAtributos(
+      empresaId,
+      tipo,
+      datos.categoria ?? 'general',
+      datos.atributos ?? {},
+    );
+    const fila = await this.pg.queryOne<ItemRow>(
+      `INSERT INTO catalog.items
+         (empresa_id, tipo, codigo, nombre, descripcion, categoria, precio_cents,
+          costo_cents, track_inventory, stock, duration_minutes, atributos, estado,
+          parent_item_id)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12::jsonb, $13, $14)
+       RETURNING ${COLUMNAS}`,
+      [
+        empresaId,
+        tipo,
+        codigo,
+        nombre,
+        (datos.descripcion ?? '').trim(),
+        (datos.categoria ?? 'general').trim() || 'general',
+        precio.centavos,
+        costo.centavos,
+        trackInventory,
+        trackInventory ? datos.stock : null,
+        durationMinutes,
+        JSON.stringify(atributos),
+        datos.estado === 'inactivo' ? 'inactivo' : 'activo',
+        datos.parent_item_id ?? null,
+      ],
+    );
+    if (!fila) throw new DomainError('ITEM_NO_CREADO', 'No se pudo crear el item.');
+    return this.serializar(fila);
   }
 
   async crearAlquiler(datos: CrearAlquilerInput, empresaId: string): Promise<Item> {

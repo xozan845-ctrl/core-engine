@@ -8,7 +8,7 @@ import {
   ApiProperty,
   ApiTags,
 } from '@nestjs/swagger';
-import { IsIn, IsObject, IsOptional, IsString, IsUUID } from 'class-validator';
+import { IsBoolean, IsIn, IsInt, IsObject, IsOptional, IsString, IsUUID, Max, Min } from 'class-validator';
 import {
   CAPACIDADES,
   DomainError,
@@ -40,6 +40,23 @@ export class CrearAlquilerRequestDto {
   @ApiProperty({ required: false, format: 'uuid' }) @IsOptional() @IsUUID() empresa_id?: string;
 }
 
+export class CrearItemRequestDto {
+  @ApiProperty({ enum: ['producto', 'servicio', 'alquiler'] }) @IsIn(['producto', 'servicio', 'alquiler']) tipo: TipoItem;
+  @ApiProperty({ example: 'SKU-001' }) @IsString() codigo: string;
+  @ApiProperty() @IsString() nombre: string;
+  @ApiProperty({ required: false }) @IsOptional() @IsString() descripcion?: string;
+  @ApiProperty({ required: false, default: 'general' }) @IsOptional() @IsString() categoria?: string;
+  @ApiProperty({ example: '1500.00' }) @IsString() precio: string;
+  @ApiProperty({ required: false, example: '500.00' }) @IsOptional() @IsString() costo?: string;
+  @ApiProperty({ required: false }) @IsOptional() @IsBoolean() track_inventory?: boolean;
+  @ApiProperty({ required: false, nullable: true }) @IsOptional() @IsInt() @Min(0) stock?: number | null;
+  @ApiProperty({ required: false, nullable: true }) @IsOptional() @IsInt() @Min(1) @Max(1440) duration_minutes?: number | null;
+  @ApiProperty({ required: false, type: Object, additionalProperties: true }) @IsOptional() @IsObject() atributos?: Record<string, unknown>;
+  @ApiProperty({ required: false, enum: ['activo', 'inactivo'] }) @IsOptional() @IsIn(['activo', 'inactivo']) estado?: 'activo' | 'inactivo';
+  @ApiProperty({ required: false, nullable: true, format: 'uuid' }) @IsOptional() @IsUUID() parent_item_id?: string | null;
+  @ApiProperty({ required: false, format: 'uuid' }) @IsOptional() @IsUUID() empresa_id?: string;
+}
+
 export class GuardarEsquemaRequestDto {
   @ApiProperty({ enum: ['producto', 'servicio', 'alquiler'] }) @IsIn(['producto', 'servicio', 'alquiler']) tipo: TipoItem;
   @ApiProperty() @IsString() categoria: string;
@@ -60,6 +77,14 @@ export class ItemsController {
   @ApiOkResponse({ type: PaginaItemsResponseDto })
   async listar(@Query() query: Record<string, unknown>, @UsuarioActual() usuario: UsuarioContexto) {
     return this.items.listar({ ...query, empresa_id: this.empresaDeConsulta(usuario, query.empresa_id) });
+  }
+
+  @Post()
+  @Permisos('catalogo.escribir')
+  @ApiOperation({ summary: 'Crear un item unificado (producto, servicio o alquiler)' })
+  @ApiCreatedResponse({ type: ItemResponseDto })
+  async crear(@Body() dto: CrearItemRequestDto, @UsuarioActual() usuario: UsuarioContexto) {
+    return this.items.crearItem(dto, this.empresaDeEscritura(usuario, dto.empresa_id));
   }
 
   @Post('alquileres')
