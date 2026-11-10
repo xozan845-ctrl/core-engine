@@ -52,7 +52,6 @@
   "orders.eventos",
   "orders.eventos_procesados",
   "orders.orden_timeline",
-  "orders.orden_vista",
   "orders.outbox",
   "storage.buckets",
   "storage.eventos_procesados",

@@ -9,7 +9,6 @@ describe('PedidosConsumer de resultados de stock (Tabla 22)', () => {
       consumir: vi.fn().mockResolvedValue(undefined),
       activarReintento: vi.fn(),
     };
-    const outbox = { insertar: vi.fn().mockResolvedValue(undefined) };
     const pg = {
       query: vi.fn().mockResolvedValue(undefined),
       queryOne: vi.fn().mockResolvedValue(null),
@@ -17,16 +16,10 @@ describe('PedidosConsumer de resultados de stock (Tabla 22)', () => {
     const handler = {
       transicionar: vi.fn().mockResolvedValue({ total_cents: 2500 }),
     };
-    const consumer = new PedidosConsumer(
-      rabbit as never,
-      outbox as never,
-      pg as never,
-      handler as never,
-    );
+    const consumer = new PedidosConsumer(rabbit as never, pg as never, handler as never);
     await consumer.onModuleInit();
     return {
       rabbit,
-      outbox,
       pg,
       handler,
       cola: (rabbit.consumir as Mock).mock.calls[0][0],
@@ -51,11 +44,11 @@ describe('PedidosConsumer de resultados de stock (Tabla 22)', () => {
     expect(rabbit.activarReintento).toHaveBeenCalledTimes(1);
   });
 
-  it('debe transicionar a pagada, emitir payment.procesado y marcar stock reservado', async () => {
-    const { dispatch, handler, outbox, pg } = await crear();
+  it('debe transicionar a pagada y emitir payment.procesado dentro de la misma transición', async () => {
+    const { dispatch, handler, pg } = await crear();
     (pg.queryOne as Mock)
       .mockResolvedValueOnce(null)
-      .mockResolvedValueOnce({ estado: 'creada' });
+      .mockResolvedValueOnce({ estado: 'creada', total_cents: 2500 });
 
     await dispatch(evento(EVENTOS.STOCK_RESERVADO, {
       order_id: 'order-1',
@@ -67,50 +60,50 @@ describe('PedidosConsumer de resultados de stock (Tabla 22)', () => {
       'pagada',
       'pago_simulado_aprobado',
       'inventario',
+      {
+        tipo: EVENTOS.PAYMENT_PROCESADO,
+        data: {
+          order_id: 'order-1',
+          monto_cents: 2500,
+          estado: 'procesado',
+          metodo: 'simulado',
+        },
+      },
     );
-    expect(outbox.insertar).toHaveBeenCalledWith(EVENTOS.PAYMENT_PROCESADO, {
-      order_id: 'order-1',
-      monto_cents: 2500,
-      estado: 'procesado',
-      metodo: 'simulado',
-    });
     expect(pg.query).toHaveBeenCalledWith(
       expect.stringContaining('ON CONFLICT (event_id) DO NOTHING'),
       ['evt-1', EVENTOS.STOCK_RESERVADO],
     );
   });
 
-  it('debe marcar stock reservado sin emitir pago si la orden ya no esta creada', async () => {
-    const { dispatch, handler, outbox, pg } = await crear();
+  it('debe marcar stock reservado sin transicionar si la orden ya no esta creada', async () => {
+    const { dispatch, handler, pg } = await crear();
     (pg.queryOne as Mock)
       .mockResolvedValueOnce(null)
-      .mockResolvedValueOnce({ estado: 'pagada' });
+      .mockResolvedValueOnce({ estado: 'pagada', total_cents: 2500 });
 
     await dispatch(evento(EVENTOS.STOCK_RESERVADO, { order_id: 'order-1', items: [] }));
 
     expect(handler.transicionar).not.toHaveBeenCalled();
-    expect(outbox.insertar).not.toHaveBeenCalled();
     expect(pg.query).toHaveBeenCalledTimes(1);
   });
 
   it('debe marcar stock reservado aunque la orden no exista en la vista', async () => {
-    const { dispatch, handler, outbox, pg } = await crear();
+    const { dispatch, handler, pg } = await crear();
 
     await dispatch(evento(EVENTOS.STOCK_RESERVADO, { order_id: 'missing', items: [] }));
 
     expect(handler.transicionar).not.toHaveBeenCalled();
-    expect(outbox.insertar).not.toHaveBeenCalled();
     expect(pg.query).toHaveBeenCalledTimes(1);
   });
 
   it('debe ignorar stock reservado ya procesado por event_id', async () => {
-    const { dispatch, handler, outbox, pg } = await crear();
+    const { dispatch, handler, pg } = await crear();
     (pg.queryOne as Mock).mockResolvedValue({ '?column?': 1 });
 
     await dispatch(evento(EVENTOS.STOCK_RESERVADO, { order_id: 'order-1', items: [] }));
 
     expect(handler.transicionar).not.toHaveBeenCalled();
-    expect(outbox.insertar).not.toHaveBeenCalled();
     expect(pg.query).not.toHaveBeenCalled();
   });
 
@@ -118,7 +111,7 @@ describe('PedidosConsumer de resultados de stock (Tabla 22)', () => {
     const { dispatch, handler, pg } = await crear();
     (pg.queryOne as Mock)
       .mockResolvedValueOnce(null)
-      .mockResolvedValueOnce({ estado: 'creada' });
+      .mockResolvedValueOnce({ estado: 'creada', total_cents: 0 });
 
     await dispatch(evento(EVENTOS.STOCK_FALLIDO, {
       order_id: 'order-2',
@@ -144,7 +137,7 @@ describe('PedidosConsumer de resultados de stock (Tabla 22)', () => {
     const { dispatch, handler, pg } = await crear();
     (pg.queryOne as Mock)
       .mockResolvedValueOnce(null)
-      .mockResolvedValueOnce({ estado: 'cancelada' });
+      .mockResolvedValueOnce({ estado: 'cancelada', total_cents: 0 });
 
     await dispatch(evento(EVENTOS.STOCK_FALLIDO, {
       order_id: 'order-2',
@@ -169,12 +162,11 @@ describe('PedidosConsumer de resultados de stock (Tabla 22)', () => {
   });
 
   it('debe ignorar eventos distintos de stock reservado o fallido', async () => {
-    const { dispatch, handler, outbox, pg } = await crear();
+    const { dispatch, handler, pg } = await crear();
 
     await dispatch(evento(EVENTOS.ORDER_CREATED, { order_id: 'order-1' }));
 
     expect(handler.transicionar).not.toHaveBeenCalled();
-    expect(outbox.insertar).not.toHaveBeenCalled();
     expect(pg.queryOne).not.toHaveBeenCalled();
   });
 });
