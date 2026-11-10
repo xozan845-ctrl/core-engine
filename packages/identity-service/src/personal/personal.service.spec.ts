@@ -107,7 +107,6 @@ describe('PersonalService', () => {
       .mockResolvedValueOnce({ id: 'p-1', tienda_id: 't-1' })
       .mockResolvedValueOnce({ id: 'a-1', usuario_id: 'u-1' });
     await expect(servicio.asignar(empresario, 'e-1', { usuario_id: 'u-1', rol_empresa_id: 'r-1', tienda_id: 't-1', puesto_id: 'p-1' })).resolves.toMatchObject({ id: 'a-1' });
-    expect(pg.query).toHaveBeenCalledWith(expect.stringContaining('UPDATE identity.empresa_miembros'), ['r-1', 'e-1', 'u-1']);
   });
 
   it('lista asignaciones y revoca invitaciones', async () => {

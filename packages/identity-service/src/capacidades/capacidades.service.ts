@@ -89,8 +89,9 @@ export class CapacidadesService {
       throw new ForbiddenError('Solo el empresario activo de la empresa puede gestionar sus capacidades.');
     }
     const miembro = await this.pg.queryOne(
-      `SELECT 1 FROM identity.empresa_miembros
-       WHERE empresa_id = $1 AND usuario_id = $2 AND rol = 'empresario' AND estado = 'activo'`,
+      `SELECT 1 FROM identity.asignaciones_personal a
+       JOIN identity.roles_empresa r ON r.id = a.rol_empresa_id
+       WHERE a.empresa_id = $1 AND a.usuario_id = $2 AND r.codigo = 'empresario' AND a.estado = 'activa'`,
       [empresaId, actor.user_id],
     );
     if (!miembro) throw new ForbiddenError('El usuario no es empresario activo de esta empresa.');

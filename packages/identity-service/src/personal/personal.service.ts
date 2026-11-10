@@ -45,6 +45,7 @@ export interface AsignarPersonalDatos {
   rol_empresa_id: string;
   tienda_id?: string;
   puesto_id?: string;
+  participacion_porcentaje?: number;
   metadata?: Record<string, unknown>;
 }
 
@@ -257,16 +258,16 @@ export class PersonalService {
     validarObjeto(datos.metadata ?? {}, 'metadata');
     const fila = await this.pg.queryOne(
       `INSERT INTO identity.asignaciones_personal
-         (empresa_id, usuario_id, rol_empresa_id, tienda_id, puesto_id, metadata, creado_por)
-       VALUES ($1,$2,$3,$4,$5,$6::jsonb,$7)
-       RETURNING id, empresa_id, usuario_id, rol_empresa_id, tienda_id, puesto_id, metadata, estado, inicia_en, termina_en, creado_en`,
-      [empresaId, datos.usuario_id, datos.rol_empresa_id, datos.tienda_id ?? null, datos.puesto_id ?? null, JSON.stringify(datos.metadata ?? {}), actor.user_id],
+         (empresa_id, usuario_id, rol_empresa_id, tienda_id, puesto_id,
+          participacion_porcentaje, metadata, creado_por)
+       VALUES ($1,$2,$3,$4,$5,$6,$7::jsonb,$8)
+       RETURNING id, empresa_id, usuario_id, rol_empresa_id, tienda_id, puesto_id,
+                 participacion_porcentaje, metadata, estado, inicia_en, termina_en, creado_en`,
+      [empresaId, datos.usuario_id, datos.rol_empresa_id, datos.tienda_id ?? null,
+       datos.puesto_id ?? null, datos.participacion_porcentaje ?? null,
+       JSON.stringify(datos.metadata ?? {}), actor.user_id],
     );
     if (!fila) throw new DomainError('ASIGNACION_FALLIDA', 'No se pudo crear la asignación.');
-    await this.pg.query(
-      `UPDATE identity.empresa_miembros SET rol_empresa_id=$1 WHERE empresa_id=$2 AND usuario_id=$3`,
-      [datos.rol_empresa_id, empresaId, datos.usuario_id],
-    );
     return fila;
   }
 
@@ -351,18 +352,11 @@ export class PersonalService {
       );
       const creado = usuario.rows[0];
       await client.query(
-        `INSERT INTO identity.empresa_miembros (empresa_id, usuario_id, rol, rol_empresa_id, estado)
-         VALUES ($1,$2,'operativo',$3,'activo')`,
-        [fila.empresa_id, creado.id, fila.rol_empresa_id],
+        `INSERT INTO identity.asignaciones_personal
+           (empresa_id, usuario_id, rol_empresa_id, tienda_id, puesto_id, metadata, creado_por)
+         VALUES ($1,$2,$3,$4,$5,$6::jsonb,$2)`,
+        [fila.empresa_id, creado.id, fila.rol_empresa_id, fila.tienda_id, fila.puesto_id, JSON.stringify(fila.metadata ?? {})],
       );
-      if (fila.tienda_id || fila.puesto_id) {
-        await client.query(
-          `INSERT INTO identity.asignaciones_personal
-             (empresa_id, usuario_id, rol_empresa_id, tienda_id, puesto_id, metadata, creado_por)
-           VALUES ($1,$2,$3,$4,$5,$6::jsonb,$2)`,
-          [fila.empresa_id, creado.id, fila.rol_empresa_id, fila.tienda_id, fila.puesto_id, JSON.stringify(fila.metadata ?? {})],
-        );
-      }
       await client.query(`UPDATE identity.invitaciones_personal SET estado='aceptada', aceptada_en=NOW(), aceptada_por_usuario_id=$1 WHERE id=$2`, [creado.id, fila.id]);
       return { usuario: creado, rol_empresa_id: fila.rol_empresa_id, tienda_id: fila.tienda_id, puesto_id: fila.puesto_id };
     });
@@ -405,7 +399,12 @@ export class PersonalService {
     const global = actor.rol === ROLES.SUPER_ADMIN || actor.rol === ROLES.ADMIN;
     if (global) return;
     if (actor.rol !== ROLES.EMPRESARIO || actor.tenant_id !== empresaId) throw new ForbiddenError('Solo el empresario activo puede administrar personal.');
-    const miembro = await this.pg.queryOne(`SELECT 1 FROM identity.empresa_miembros WHERE empresa_id=$1 AND usuario_id=$2 AND rol='empresario' AND estado='activo'`, [empresaId, actor.user_id]);
+    const miembro = await this.pg.queryOne(
+      `SELECT 1 FROM identity.asignaciones_personal a
+       JOIN identity.roles_empresa r ON r.id = a.rol_empresa_id
+       WHERE a.empresa_id=$1 AND a.usuario_id=$2 AND r.codigo='empresario' AND a.estado='activa'`,
+      [empresaId, actor.user_id],
+    );
     if (!miembro) throw new ForbiddenError('El usuario no es empresario activo de esta empresa.');
   }
 
@@ -426,7 +425,11 @@ export class PersonalService {
   }
 
   private async assertMiembro(empresaId: string, usuarioId: string): Promise<void> {
-    const fila = await this.pg.queryOne(`SELECT 1 FROM identity.empresa_miembros WHERE empresa_id=$1 AND usuario_id=$2 AND estado='activo'`, [empresaId, usuarioId]);
+    const fila = await this.pg.queryOne(
+      `SELECT 1 FROM identity.asignaciones_personal
+       WHERE empresa_id=$1 AND usuario_id=$2 AND estado='activa'`,
+      [empresaId, usuarioId],
+    );
     if (!fila) throw new NotFoundError('Miembro', usuarioId);
   }
 

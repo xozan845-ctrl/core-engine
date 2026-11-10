@@ -250,7 +250,18 @@ export class EmpresasService {
             [JSON.stringify({ sub: usuarioId, rol: 'empresario', tenant_id: empresa.id })],
           );
           await client.query(
-            `INSERT INTO identity.empresa_miembros (empresa_id, usuario_id, rol) VALUES ($1,$2,'empresario')`,
+            `INSERT INTO identity.roles_empresa
+               (empresa_id, codigo, nombre, permisos, creado_por)
+             VALUES ($1, 'empresario', 'Empresario', '{}'::jsonb, $2)
+             ON CONFLICT (empresa_id, codigo) DO NOTHING`,
+            [empresa.id, usuarioId],
+          );
+          await client.query(
+            `INSERT INTO identity.asignaciones_personal
+               (empresa_id, usuario_id, rol_empresa_id, estado, creado_por)
+             SELECT $1,$2,r.id,'activa',$2
+               FROM identity.roles_empresa r
+              WHERE r.empresa_id=$1 AND r.codigo='empresario'`,
             [empresa.id, usuarioId],
           );
           await client.query(
@@ -314,7 +325,12 @@ export class EmpresasService {
   }
 
   async crearVendedor(actorId: string, empresaId: string, datos: { nombre: string; correo: string; contrasena: string; participacion_porcentaje: number }) {
-    const miembro = await this.pg.queryOne(`SELECT 1 FROM identity.empresa_miembros WHERE empresa_id=$1 AND usuario_id=$2 AND rol='empresario' AND estado='activo'`, [empresaId, actorId]);
+    const miembro = await this.pg.queryOne(
+      `SELECT 1 FROM identity.asignaciones_personal a
+       JOIN identity.roles_empresa r ON r.id = a.rol_empresa_id
+       WHERE a.empresa_id=$1 AND a.usuario_id=$2 AND r.codigo='empresario' AND a.estado='activa'`,
+      [empresaId, actorId],
+    );
     if (!miembro) throw new ForbiddenError('Solo un empresario activo puede crear vendedores.');
     const usuario = await this.usuarios.crearVendedorEnEmpresa({ ...datos, empresa_id: empresaId });
     return { ...usuario, participacion_porcentaje: datos.participacion_porcentaje };
@@ -337,13 +353,14 @@ export class EmpresasService {
     if (!esGlobal) {
       const miembro = rolMiembro
         ? await this.pg.queryOne(
-            `SELECT 1 FROM identity.empresa_miembros
-             WHERE empresa_id=$1 AND usuario_id=$2 AND rol=$3 AND estado='activo'`,
+            `SELECT 1 FROM identity.asignaciones_personal a
+             JOIN identity.roles_empresa r ON r.id = a.rol_empresa_id
+             WHERE a.empresa_id=$1 AND a.usuario_id=$2 AND r.codigo=$3 AND a.estado='activa'`,
             [fila.id, usuarioId, rolMiembro],
           )
         : await this.pg.queryOne(
-            `SELECT 1 FROM identity.empresa_miembros
-             WHERE empresa_id=$1 AND usuario_id=$2 AND estado='activo'`,
+            `SELECT 1 FROM identity.asignaciones_personal
+             WHERE empresa_id=$1 AND usuario_id=$2 AND estado='activa'`,
             [fila.id, usuarioId],
           );
       if (!miembro) throw new NotFoundError('Empresa', identificador);

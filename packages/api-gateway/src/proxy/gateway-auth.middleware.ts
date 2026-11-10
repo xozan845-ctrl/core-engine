@@ -53,8 +53,6 @@ export const POLITICAS_RUTAS: PoliticaRuta[] = [
       roles: [ROLES.SUPER_ADMIN, ROLES.ADMIN],
     },
     // Invitaciones de vendedor: el token es la autorización temporal.
-    { patron: /^\/api\/v2\/invitaciones\/vendedores\/[^/]+$/, metodos: ['GET'], roles: null },
-    { patron: /^\/api\/v2\/invitaciones\/vendedores\/[^/]+\/aceptar$/, metodos: ['POST'], roles: null },
     { patron: /^\/api\/v2\/catalog\/productos$/, metodos: ['GET'], roles: null },
     { patron: /^\/api\/v2\/catalog\/productos\/[^/]+$/, metodos: ['GET'], roles: null },
     // Branding publico del sitio (fondo de plataforma, ADR-38).

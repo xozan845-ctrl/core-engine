@@ -107,15 +107,6 @@ CREATE POLICY empresas_empresario_update ON identity.empresas FOR UPDATE TO auth
   USING (auth.rol() = 'empresario' AND id::text = (auth.jwt() ->> 'tenant_id'))
   WITH CHECK (auth.rol() = 'empresario' AND id::text = (auth.jwt() ->> 'tenant_id'));
 
-ALTER TABLE identity.empresa_miembros ENABLE ROW LEVEL SECURITY;
-CREATE POLICY miembros_super_admin ON identity.empresa_miembros FOR ALL TO authenticated
-  USING (auth.rol() IN ('super_admin', 'admin')) WITH CHECK (auth.rol() IN ('super_admin', 'admin'));
-CREATE POLICY miembros_empresa ON identity.empresa_miembros FOR SELECT TO authenticated
-  USING (empresa_id::text = (auth.jwt() ->> 'tenant_id'));
-CREATE POLICY miembros_empresario_insert ON identity.empresa_miembros FOR INSERT TO authenticated
-  WITH CHECK (auth.rol() = 'empresario' AND (usuario_id = auth.uid() OR
-    empresa_id::text = (auth.jwt() ->> 'tenant_id')));
-
 -- ADR-26: historial de slugs de empresa. El trigger que lo mantiene es
 -- SECURITY DEFINER; las policies cubren la lectura de miembros y admin.
 ALTER TABLE identity.empresa_slugs ENABLE ROW LEVEL SECURITY;
