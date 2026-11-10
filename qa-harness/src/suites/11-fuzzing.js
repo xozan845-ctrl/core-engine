@@ -49,28 +49,29 @@ export async function suite11Fuzzing(client, cfg, adminToken, vendedorToken) {
     resultados.push({ test: 'Nombre vacío registro → 400', status: vacio.status, pass: vacio.status === 400 });
 
     // 7-9. fuzz sobre catálogo con token admin (DTO validation)
-    const sinToken = await client.post('/api/v2/catalog/productos', {
-      sku: `QA-F0-${suf}`, nombre: 'x', descripcion: 'x', categoria: 'x', precio_base: '1.00', stock: 1,
-    });
+    const empresaId = cfg.get ? cfg.get('empresaId') : cfg.empresaId;
+    const bodyItem = {
+      tipo: 'producto', codigo: `QA-F0-${suf}`, nombre: 'x', precio: '1.00', stock: 1, empresa_id: empresaId,
+    };
+    const sinToken = await client.post('/api/v2/catalog/items', bodyItem);
     resultados.push({ test: 'Catálogo sin token → 401', status: sinToken.status, pass: sinToken.status === 401 });
 
-    const tipos = await client.post('/api/v2/catalog/productos', {
-      sku: `QA-F1-${suf}`, nombre: 'x', descripcion: 'x', categoria: 'x', precio_base: '1.00', stock: '10',
-    }, aAuth);
+    const tipos = await client.post('/api/v2/catalog/items', { ...bodyItem, codigo: `QA-F1-${suf}`, stock: '10' }, aAuth);
     resultados.push({ test: 'Tipos incorrectos (stock str) → 400', status: tipos.status, pass: tipos.status === 400 });
 
-    const nulos = await client.post('/api/v2/catalog/productos', {
-      sku: null, nombre: 'x', descripcion: 'x', categoria: 'x', precio_base: '1.00', stock: 10,
-    }, aAuth);
+    const nulos = await client.post('/api/v2/catalog/items', { ...bodyItem, codigo: null }, aAuth);
     resultados.push({ test: 'null en campo requerido → 400', status: nulos.status, pass: nulos.status === 400 });
 
     // 10. margen fuera de rango con token vendedor
-    const rango = await client.post('/api/v2/vendedores/productos', { producto_id: 'x', margen: 91 }, vAuth);
+    const rango = await client.post('/api/v2/vendedores/productos', { item_id: 'x', margen: 91 }, vAuth);
     resultados.push({ test: 'Margen 91 → 400', status: rango.status, pass: rango.status === 400 });
 
-    // 11. producto inexistente publico → 404
-    const inexistente = await client.get('/api/v2/catalog/productos/00000000-0000-0000-0000-000000000000');
-    resultados.push({ test: 'Producto inexistente → 404', status: inexistente.status, pass: inexistente.status === 404 });
+    // 11. item inexistente en la empresa → 404
+    const inexistente = await client.get(
+      `/api/v2/catalog/items/00000000-0000-0000-0000-000000000000?empresa_id=${encodeURIComponent(empresaId)}`,
+      aAuth,
+    );
+    resultados.push({ test: 'Item inexistente → 404', status: inexistente.status, pass: inexistente.status === 404 });
   } catch (e) {
     errores.push(`Suite 11: ${e.message}`);
   }
