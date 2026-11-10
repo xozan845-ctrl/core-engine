@@ -31,7 +31,7 @@ function respuestaFetch(
 
 function reqCon(headers: Record<string, string>): Request {
   return {
-    originalUrl: '/api/v2/catalog/productos',
+    originalUrl: '/api/v2/catalog/items',
     method: 'GET',
     headers: { ...headers },
     body: undefined,
@@ -263,7 +263,7 @@ describe('ProxyService — query string en enrutado y politicas (R-GW-1 / R-GW-3
 
   it('debe resolver una ruta publica anclada aunque lleve filtros en la query', async () => {
     const politicasConCatchAll: PoliticaRuta[] = [
-      { patron: /^\/api\/v2\/catalog\/productos$/, metodos: ['GET'], roles: null },
+      { patron: /^\/api\/v2\/catalog\/items$/, metodos: ['GET'], roles: null },
       { patron: /^\/api\/v2\//, metodos: ['*'], roles: [] },
     ];
     let capturada: PoliticaRuta | null = null;
@@ -277,12 +277,12 @@ describe('ProxyService — query string en enrutado y politicas (R-GW-1 / R-GW-3
     globalThis.fetch = fetchMock as unknown as typeof fetch;
     const servicio = new ProxyService(auth, destinos, politicasConCatchAll);
 
-    await servicio.reenviar(reqPara('/api/v2/catalog/productos?limite=1&pagina=2'), resMock());
+    await servicio.reenviar(reqPara('/api/v2/catalog/items?limite=1&pagina=2'), resMock());
 
     expect(capturada).toBe(politicasConCatchAll[0]);
     expect(capturada?.roles).toBeNull();
     expect(fetchMock).toHaveBeenCalledWith(
-      'http://catalog-service:3002/api/v2/catalog/productos?limite=1&pagina=2',
+      'http://catalog-service:3002/api/v2/catalog/items?limite=1&pagina=2',
       expect.objectContaining({ method: 'GET' }),
     );
   });
@@ -391,7 +391,7 @@ describe('ProxyService — timeout al microservicio (R-RB-4)', () => {
 
   function reqCatalogo(): Request {
     return {
-      originalUrl: '/api/v2/catalog/productos',
+      originalUrl: '/api/v2/catalog/items',
       method: 'GET',
       headers: {},
       body: undefined,

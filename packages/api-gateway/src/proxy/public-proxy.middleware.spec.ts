@@ -16,8 +16,8 @@ function crearReq(opciones: {
   const req = Readable.from(opciones.body ? [Buffer.from(opciones.body)] : []) as unknown as Request;
   Object.assign(req, {
     method: opciones.method ?? 'GET',
-    url: opciones.url ?? '/api/v2/catalog/productos',
-    originalUrl: `/api-proxy${opciones.url ?? '/api/v2/catalog/productos'}`,
+    url: opciones.url ?? '/api/v2/catalog/items',
+    originalUrl: `/api-proxy${opciones.url ?? '/api/v2/catalog/items'}`,
     headers: opciones.headers ?? {},
     ip: opciones.ip ?? '203.0.113.10',
     socket: { remoteAddress: opciones.ip ?? '203.0.113.10' },

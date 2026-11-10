@@ -52,21 +52,12 @@ export const POLITICAS_RUTAS: PoliticaRuta[] = [
       metodos: ['POST'],
       roles: [ROLES.SUPER_ADMIN, ROLES.ADMIN],
     },
-    // Invitaciones de vendedor: el token es la autorización temporal.
-    { patron: /^\/api\/v2\/catalog\/productos$/, metodos: ['GET'], roles: null },
-    { patron: /^\/api\/v2\/catalog\/productos\/[^/]+$/, metodos: ['GET'], roles: null },
     // Branding publico del sitio (fondo de plataforma, ADR-38).
     { patron: /^\/api\/v2\/configuracion\/sitio$/, metodos: ['GET'], roles: null },
     {
       patron: /^\/api\/v2\/configuracion\/sitio$/,
       metodos: ['PATCH'],
       roles: [ROLES.SUPER_ADMIN, ROLES.ADMIN],
-    },
-    // Servicios de empresa: recurso administrativo del catálogo (R-PS-02).
-    {
-      patron: /^\/api\/v2\/catalog\/servicios(\/|$)/,
-      metodos: ['*'],
-      roles: [ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.EMPRESARIO],
     },
     {
       patron: /^\/api\/v2\/catalog\/items(\/|$)/,
@@ -170,9 +161,6 @@ export const POLITICAS_RUTAS: PoliticaRuta[] = [
       metodos: ['POST'],
       roles: Object.values(ROLES),
     },
-    // catálogo: escritura admin (el super_admin opera globalmente; para crear
-    // debe indicar la empresa en el cuerpo)
-    { patron: /^\/api\/v2\/catalog\/productos/, metodos: ['POST', 'PATCH', 'PUT', 'DELETE'], roles: [ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.EMPRESARIO] },
     // vendedores
     {
       patron: /^\/api\/v2\/vendedores\/(me\/ventas|me\/liquidaciones)$/,
