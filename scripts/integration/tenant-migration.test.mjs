@@ -84,7 +84,6 @@ test('el backfill asigna el pack de la vertical y deja auditoria', { concurrency
     await client.query('BEGIN');
     await client.query('DELETE FROM identity.pack_migraciones WHERE empresa_id = $1', [empresaId]);
     await client.query('DELETE FROM identity.empresa_capacidades WHERE empresa_id = $1', [empresaId]);
-    await client.query('DELETE FROM identity.empresa_miembros WHERE empresa_id = $1', [empresaId]);
     await client.query('DELETE FROM identity.empresas WHERE id = $1', [empresaId]);
     await client.query('DELETE FROM identity.usuarios WHERE id = $1', [usuarioId]);
     await client.query('COMMIT');

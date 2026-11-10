@@ -34,7 +34,7 @@ export class UsuariosService {
   async encontrarPorId(id: string): Promise<Usuario | null> {
     const fila = await this.pg.queryOne<UsuarioRow>(
       `SELECT u.id, u.nombre, u.correo, u.rol, u.tenant_id, u.personal_id, u.participacion_porcentaje, u.avatar_objeto_id, u.creado_en,
-              (SELECT m.rol_empresa_id FROM identity.empresa_miembros m WHERE m.usuario_id=u.id AND m.empresa_id=u.tenant_id AND m.estado='activo' LIMIT 1) AS rol_empresa_id
+              (SELECT a.rol_empresa_id FROM identity.asignaciones_personal a WHERE a.usuario_id=u.id AND a.empresa_id=u.tenant_id AND a.estado='activa' LIMIT 1) AS rol_empresa_id
        FROM identity.usuarios u WHERE u.id = $1`,
       [id],
     );
@@ -44,7 +44,7 @@ export class UsuariosService {
   async encontrarPorCorreo(correo: string): Promise<UsuarioRow | null> {
     return this.pg.queryOne<UsuarioRow>(
       `SELECT u.id, u.nombre, u.correo, u.rol, u.tenant_id, u.personal_id, u.participacion_porcentaje, u.avatar_objeto_id, u.contrasena_hash, u.creado_en,
-              (SELECT m.rol_empresa_id FROM identity.empresa_miembros m WHERE m.usuario_id=u.id AND m.empresa_id=u.tenant_id AND m.estado='activo' LIMIT 1) AS rol_empresa_id
+              (SELECT a.rol_empresa_id FROM identity.asignaciones_personal a WHERE a.usuario_id=u.id AND a.empresa_id=u.tenant_id AND a.estado='activa' LIMIT 1) AS rol_empresa_id
        FROM identity.usuarios u WHERE LOWER(u.correo) = LOWER($1)`,
       [correo.trim()],
     );
@@ -106,9 +106,18 @@ export class UsuariosService {
       );
       const usuario = result.rows[0];
       await client.query(
-        `INSERT INTO identity.empresa_miembros
-         (empresa_id, usuario_id, rol, participacion_porcentaje)
-         VALUES ($1,$2,'vendedor',$3)`,
+        `INSERT INTO identity.roles_empresa
+           (empresa_id, codigo, nombre, permisos, creado_por)
+         VALUES ($1, 'vendedor', 'Vendedor', '{}'::jsonb, $2)
+         ON CONFLICT (empresa_id, codigo) DO NOTHING`,
+        [datos.empresa_id, usuario.id],
+      );
+      await client.query(
+        `INSERT INTO identity.asignaciones_personal
+           (empresa_id, usuario_id, rol_empresa_id, participacion_porcentaje, estado, creado_por)
+         SELECT $1,$2,r.id,$3,'activa',$2
+           FROM identity.roles_empresa r
+          WHERE r.empresa_id=$1 AND r.codigo='vendedor'`,
         [datos.empresa_id, usuario.id, datos.participacion_porcentaje],
       );
       return this.sanear(usuario);
@@ -156,7 +165,7 @@ export class UsuariosService {
       where.push(`tenant_id = $${params.length}`);
     }
     const sql = `SELECT u.id, u.nombre, u.correo, u.rol, u.tenant_id, u.personal_id, u.avatar_objeto_id, u.creado_en,
-                        (SELECT m.rol_empresa_id FROM identity.empresa_miembros m WHERE m.usuario_id=u.id AND m.empresa_id=u.tenant_id AND m.estado='activo' LIMIT 1) AS rol_empresa_id
+                        (SELECT a.rol_empresa_id FROM identity.asignaciones_personal a WHERE a.usuario_id=u.id AND a.empresa_id=u.tenant_id AND a.estado='activa' LIMIT 1) AS rol_empresa_id
                  FROM identity.usuarios u${where.length ? ` WHERE ${where.join(' AND ')}` : ''}
                  ORDER BY creado_en DESC LIMIT 500`;
     const filas = await this.pg.query<UsuarioRow>(sql, params);
