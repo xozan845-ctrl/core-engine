@@ -65,19 +65,26 @@ de `orders.orden_vista`; se eliminó la policy de la tabla legacy
 - Flujo legacy de invitaciones de vendedores retirado.
 - Migración `42_personal_unico.sql`.
 
-**Fase 3 (catálogo):** pendiente. Es la única fase que queda. Requiere
-reescribir `productos.service.ts`, `servicios.service.ts`, `operaciones`,
-`inventario`, `stores` y las proyecciones SQL sobre `catalog.items`, además de
-migrar variantes e imágenes. No se ejecutó a medias para no dejar el catálogo
-en un estado inconsistente.
+**Fase 3 (catálogo):** completada.
+- `catalog.items` es la única fuente: productos, servicios y alquileres viven en
+  la misma tabla y las variantes usan `parent_item_id`.
+- Las imágenes se guardan en `catalog.item_imagenes`; `productos`,
+  `servicios` y `producto_imagenes` fueron retiradas junto con sus triggers de
+  sincronización (migraciones `42a`, `44` y `48`).
+- Las operaciones (combos, promociones, ajustes, histórico) referencian
+  `item_id`; `stores.ofertas` ya no conserva `producto_id`.
+- Los endpoints legacy `/catalog/productos*` y `/catalog/servicios*` se
+  retiraron; la edición del catálogo vive en `/catalog/items` y los endpoints
+  internos solo exponen `/internal/items/:id` y `/internal/items/lote`.
+- OpenAPI regenerado y smoke alineado con la superficie de items.
 
 ---
 
-## Decisión pendiente para la Fase 3
+## Decisión de la Fase 3
 
-La decisión de producto ya está tomada: variantes como items hijos con
-`parent_item_id` e imágenes en `catalog.item_imagenes`. Falta ejecutar la
-reescritura del catálogo, que es la única fase restante.
+Variantes como items hijos con `parent_item_id` e imágenes en
+`catalog.item_imagenes`. La reescritura del catálogo quedó ejecutada; `items`
+es la única fuente de verdad.
 
 ---
 
