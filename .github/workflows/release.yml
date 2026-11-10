@@ -102,13 +102,20 @@ jobs:
           fi
           echo "OK: ci.yml verde en $SHA"
 
+  # Gate E2E (G-6/R-E-1..8): el stack dev completo debe pasar `npm run demo`
+  # antes de construir una sola imagen de release.
+  e2e:
+    name: E2E (release gate)
+    needs: gate
+    uses: ./.github/workflows/e2e.yml
+
   # Matriz imagen-por-servicio (R-CD-4): cada servicio se construye una vez y se
   # publica con etiquetas semver + sha + latest + OCI, y emite su digest.
   images:
     name: images (${{ matrix.service }})
     runs-on: ubuntu-24.04
     timeout-minutes: 45
-    needs: gate
+    needs: [gate, e2e]
     permissions:
       contents: read
       packages: write
