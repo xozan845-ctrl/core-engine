@@ -11,6 +11,7 @@ import {
   Pagina,
   crearPagina,
   parsearPaginacion,
+  timeoutInternoMs,
 } from '@core/shared';
 
 export interface Oferta {
@@ -287,6 +288,7 @@ export class OfertasService {
     try {
       const res = await fetch(`${this.catalogoUrl}/internal/items/${encodeURIComponent(itemId)}`, {
         headers: { 'x-internal-key': this.claveInterna },
+        signal: AbortSignal.timeout(timeoutInternoMs()),
       });
       if (!res.ok) return null;
       return (await res.json()) as ItemExterno;

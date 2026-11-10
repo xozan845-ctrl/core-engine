@@ -33,7 +33,7 @@ Reglas transversales que suben la calidad más allá del happy-path.
 | R-RB-1 | Fuzz mínimo en parsers externos (query params, CSV export/import, payloads de mensajería y bodies de llegada por el gateway): entradas truncadas, Unicode raro, campos de más, números como strings. Implementado con `fast-check` en `packages/shared/src/fuzz-parsers.spec.ts` para `parsearPaginacion`, `crearPagina` y `parametrizarRuta`. |
 | R-RB-2 | Límites de rate/size: probar listados con `limit` gigante, búsqueda con string enorme, payload sobre el máximo permitido. |
 | R-RB-3 | Outbox/saga: probar reentrada/overlap (dos reenvíos del outbox o dos eventos de la misma saga simultáneos) y comportamiento ante fallo parcial (¿quedan datos a medias?, ¿va a DLQ con backoff?). |
-| R-RB-4 | Timeouts y caída de un servicio o del broker: el sistema degrada con error controlado, no excepción cruda. |
+| R-RB-4 | Timeouts y caída de un servicio o del broker: el sistema degrada con error controlado, no excepción cruda. Implementado: `timeoutInternoMs()` en `shared/src/clients` y check ejecutable en `microservices-ci-contract` que exige `signal` con timeout en todo `fetch` interno. |
 
 ## Anti-flakiness
 

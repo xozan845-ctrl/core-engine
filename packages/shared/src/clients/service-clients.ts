@@ -38,7 +38,8 @@ function storesUrl(): string {
   return (process.env.STORES_SERVICE_URL ?? 'http://stores-service:3003').replace(/\/+$/, '');
 }
 
-function timeoutMs(): number {
+/** Timeout de las llamadas internas; reutilizado por los `fetch` de los servicios. */
+export function timeoutInternoMs(): number {
   const valor = Number(process.env.INTERNAL_REQUEST_TIMEOUT_MS ?? 3000);
   return Number.isFinite(valor) && valor > 0 ? valor : 3000;
 }
@@ -52,7 +53,7 @@ async function pedir<T>(url: string, init?: RequestInit): Promise<Respuesta<T>> 
         'x-internal-key': process.env.INTERNAL_API_KEY ?? '',
         ...(init?.headers ?? {}),
       },
-      signal: AbortSignal.timeout(timeoutMs()),
+      signal: AbortSignal.timeout(timeoutInternoMs()),
     });
     if (!res.ok) return { status: res.status };
     return { status: res.status, data: (await res.json()) as T };

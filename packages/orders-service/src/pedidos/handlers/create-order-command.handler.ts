@@ -16,6 +16,7 @@ import {
   validarTransicionPorTipo,
   ItemOrden,
   EVENTOS,
+  timeoutInternoMs,
 } from '@core/shared';
 import { CreateOrderCommand } from '../commands/create-order.command';
 import { OrderEventStore } from '../repositories/order-event-store';
@@ -344,7 +345,10 @@ export class CreateOrderCommandHandler {
     try {
       const res = await fetch(
         `${this.storesUrl}/internal/ofertas?ids=${encodeURIComponent(ids.join(','))}`,
-        { headers: { 'x-internal-key': this.claveInterna } },
+        {
+          headers: { 'x-internal-key': this.claveInterna },
+          signal: AbortSignal.timeout(timeoutInternoMs()),
+        },
       );
       if (!res.ok) return [];
       return (await res.json()) as OfertaExterna[];
@@ -361,7 +365,10 @@ export class CreateOrderCommandHandler {
       const skus = [...new Set(productosConStock.map((i) => i.sku))];
       const res = await fetch(
         `${this.catalogUrl}/internal/items/lote?skus=${encodeURIComponent(skus.join(','))}`,
-        { headers: { 'x-internal-key': this.claveInterna } },
+        {
+          headers: { 'x-internal-key': this.claveInterna },
+          signal: AbortSignal.timeout(timeoutInternoMs()),
+        },
       );
       if (!res.ok) return;
       const productos = (await res.json()) as { empresa_id: string; sku: string; stock: number; estado: string }[];

@@ -71,19 +71,28 @@ aprueba la deprecación gradual de `tipo_empresa`/`modalidad_logistica`.
 
 ## Automatización de la matriz
 
-La validación de piloto ya tiene cobertura automatizada en `scripts/integration/`:
+La validación de piloto está cubierta en `scripts/integration/` y en el job
+`API + BD contracts`. Además de `vertical-matrix`, `capability-enforcement` y
+`vertical-operations`, se añaden:
 
 | Suite | Casos | Qué fija |
 |---|---:|---|
-| `vertical-matrix.test.mjs` | 6 | Crea un tenant real por cada pack y contrasta el conjunto exacto de capacidades activas; rechaza un pack incompatible con la vertical. |
-| `capability-enforcement.test.mjs` | 9 | Ejercita `CapabilityGuard` contra PostgreSQL: permite/rechaza stock, lotes, agenda y rutas según la vertical, revoca al desactivar y falla cerrado sin tenant. |
-| `vertical-operations.test.mjs` | 4 | Flujos piloto: lote con vencimiento, cita con recurso/disponibilidad y vehículo → ruta → parada. |
+| `pack-lifecycle.test.mjs` | 3 | Vertical/modelo/pack v1 y v2, herencia de capacidades y rollback de packs inválidos. |
+| `vertical-rls.test.mjs` | 4 | Aislamiento de items, capacidades y citas por tenant; admin global. |
+| `capability-routes.test.mjs` | 5 | Permite/rechaza stock, agenda, rutas y lotes según el pack. |
+| `vertical-pilots.test.mjs` | 4 | Lotes, cita con outbox y vehículo → ruta → parada. |
+
+El CI ejecuta `npm run multi-vertical:check` contra la misma BD efímera para
+detectar tenants sin pack, packs inactivos y migraciones pendientes.
 
 ```bash
 TEST_DATABASE_URL=postgres://core_engine_test:test_only@127.0.0.1:5432/core_engine_test \
   npm run test:integration
+TEST_DATABASE_URL=postgres://core_engine_test:test_only@127.0.0.1:5432/core_engine_test \
+  npm run multi-vertical:check
 ```
 
 Estas suites usan PostgreSQL real y no dobles de prueba. No sustituyen al E2E
 del stack: los consumidores de RabbitMQ y el gateway se siguen validando con
 `npm run demo`.
+

@@ -113,7 +113,10 @@ describe('PedidosConsumer de commissions (Tabla 22)', () => {
 
     expect(fetchMock).toHaveBeenCalledWith(
       'http://orders-service:3004/internal/orders/order-1',
-      { headers: { 'x-internal-key': '' } },
+      expect.objectContaining({
+        headers: { 'x-internal-key': '' },
+        signal: expect.any(AbortSignal),
+      }),
     );
     expect(comisiones.acreditarLinea).toHaveBeenCalledWith({
       orderId: 'order-1',

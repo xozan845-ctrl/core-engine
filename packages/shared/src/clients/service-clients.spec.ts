@@ -8,6 +8,7 @@ import {
   tiendaDeVendedor,
   tiendasPorEmpresa,
   tiendasPorIds,
+  timeoutInternoMs,
 } from './service-clients';
 
 const fetchMock = vi.fn();
@@ -32,6 +33,16 @@ describe('service-clients (servicio→servicio)', () => {
     vi.unstubAllEnvs();
   });
 
+  it('timeoutInternoMs usa 3000 por defecto y descarta valores inválidos', () => {
+    expect(timeoutInternoMs()).toBe(3000);
+    vi.stubEnv('INTERNAL_REQUEST_TIMEOUT_MS', '1500');
+    expect(timeoutInternoMs()).toBe(1500);
+    vi.stubEnv('INTERNAL_REQUEST_TIMEOUT_MS', '0');
+    expect(timeoutInternoMs()).toBe(3000);
+    vi.stubEnv('INTERNAL_REQUEST_TIMEOUT_MS', 'no-numerico');
+    expect(timeoutInternoMs()).toBe(3000);
+  });
+
   it('capacidadesDeEmpresas devuelve [] sin argumentos', async () => {
     await expect(capacidadesDeEmpresas([], ['x'])).resolves.toEqual([]);
     await expect(capacidadesDeEmpresas(['e'], [])).resolves.toEqual([]);
@@ -47,6 +58,7 @@ describe('service-clients (servicio→servicio)', () => {
       expect.objectContaining({
         method: 'POST',
         headers: expect.objectContaining({ 'x-internal-key': 'k' }),
+        signal: expect.any(AbortSignal),
       }),
     );
   });
