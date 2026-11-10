@@ -13,7 +13,7 @@ const documento = {
   info: { title: 'original', version: 'v1' },
   tags: [{ name: 'Catálogo' }],
   paths: {
-    '/api/v1/catalog/productos': {
+    '/api/v2/catalog/productos': {
       get: {
         responses: {
           200: {
@@ -48,7 +48,7 @@ const documento = {
 
 describe('documento OpenAPI por superficie', () => {
   it('clasifica rutas y rechaza prefijos desconocidos', () => {
-    expect(clasificarRutaOpenApi('/api/v1/catalog/productos')).toBe('publica');
+    expect(clasificarRutaOpenApi('/api/v2/catalog/productos')).toBe('publica');
     expect(clasificarRutaOpenApi('/internal/productos')).toBe('interna');
     expect(() => clasificarRutaOpenApi('/health')).toThrow(/superficies conocidas/);
   });
@@ -56,7 +56,7 @@ describe('documento OpenAPI por superficie', () => {
   it('separa paths y calcula la clausura de schemas por superficie', () => {
     const { publico, interno } = separarDocumentoOpenApi(documento, 'catalog-service');
 
-    expect(Object.keys(publico.paths as object)).toEqual(['/api/v1/catalog/productos']);
+    expect(Object.keys(publico.paths as object)).toEqual(['/api/v2/catalog/productos']);
     expect(Object.keys(interno.paths as object)).toEqual(['/internal/productos/lote']);
     expect(publico['x-servicio']).toBe('catalog-service');
     expect(publico['x-superficie']).toBe('publica');
@@ -76,7 +76,7 @@ describe('documento OpenAPI por superficie', () => {
     const refRoto = {
       ...documento,
       paths: {
-        '/api/v1/x': {
+        '/api/v2/x': {
           get: { responses: { 200: { content: { 'application/json': { schema: { $ref: '#/components/schemas/NoExiste' } } } } } },
         },
       },

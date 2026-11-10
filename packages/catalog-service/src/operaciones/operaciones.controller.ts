@@ -55,7 +55,7 @@ import {
  */
 @ApiTags('Catálogo · Operaciones')
 @ApiBearerAuth()
-@Controller('api/v1/catalog')
+@Controller('api/v2/catalog')
 @Roles(ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.EMPRESARIO)
 @RequiereCapacidades(CAPACIDADES.CATALOGO_ITEMS)
 export class OperacionesController {

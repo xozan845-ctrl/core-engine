@@ -513,7 +513,7 @@ describe('ProductosService (catalogo maestro y stock)', () => {
       expect(producto.tiene_variantes).toBe(true);
       expect(producto.variantes).toHaveLength(1);
       expect(producto.variantes?.[0].sku).toBe('SKU-01-ROJO');
-      expect(producto.imagenes[0].url).toBe(`/api/v1/storage/public/objetos/${OBJETO_ID}`);
+      expect(producto.imagenes[0].url).toBe(`/api/v2/storage/public/objetos/${OBJETO_ID}`);
       const sqls = (client.query as Mock).mock.calls.map((c) => String(c[0]));
       expect(sqls.some((s) => s.includes('producto_padre_id'))).toBe(true);
       expect(sqls.some((s) => s.includes('fn_recalcular_padre'))).toBe(true);

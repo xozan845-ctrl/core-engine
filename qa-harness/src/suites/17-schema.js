@@ -30,8 +30,8 @@ const ESPERADAS = {
   identity: ['outbox', 'usuarios'],
   logistics: ['envios', 'eventos_procesados', 'outbox'],
   orders: [
-    'carritos', 'comisiones_vista', 'eventos', 'eventos_procesados', 'orden_timeline',
-    'orden_vista', 'outbox', 'proyeccion_ordenes',
+    'carritos', 'eventos', 'eventos_procesados', 'orden_timeline',
+    'orden_vista', 'outbox',
   ],
   stores: ['eventos_procesados', 'historico_precios', 'ofertas', 'outbox', 'tiendas'],
 };

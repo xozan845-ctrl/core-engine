@@ -21,7 +21,7 @@ describe('MetricsService (R-TM-2/3/4)', () => {
   it('expone rate y duración con namespace, unidad y labels en español', async () => {
     metrics.registrarPeticion(
       'get',
-      '/api/v1/orders/550e8400-e29b-41d4-a716-446655440000?include=items',
+      '/api/v2/orders/550e8400-e29b-41d4-a716-446655440000?include=items',
       200,
       1250,
     );
@@ -32,7 +32,7 @@ describe('MetricsService (R-TM-2/3/4)', () => {
     for (const label of [
       'estado="200"',
       'metodo="GET"',
-      'ruta="/api/v1/orders/:id"',
+      'ruta="/api/v2/orders/:id"',
       'servicio="orders-service"',
     ]) {
       expect(peticion).toContain(label);
@@ -44,10 +44,10 @@ describe('MetricsService (R-TM-2/3/4)', () => {
   });
 
   it('separa 5xx de los 4xx relevantes sin clasificar otros 4xx como señal', async () => {
-    metrics.registrarPeticion('POST', '/api/v1/auth/login', 401, 10);
-    metrics.registrarPeticion('POST', '/api/v1/orders', 409, 20);
-    metrics.registrarPeticion('GET', '/api/v1/orders/no-existe', 404, 30);
-    metrics.registrarPeticion('GET', '/api/v1/orders/123', 503, 40);
+    metrics.registrarPeticion('POST', '/api/v2/auth/login', 401, 10);
+    metrics.registrarPeticion('POST', '/api/v2/orders', 409, 20);
+    metrics.registrarPeticion('GET', '/api/v2/orders/no-existe', 404, 30);
+    metrics.registrarPeticion('GET', '/api/v2/orders/123', 503, 40);
 
     const texto = await metrics.texto();
     const erroresCliente = series(texto, METRICAS_HTTP.erroresCliente);
@@ -61,9 +61,9 @@ describe('MetricsService (R-TM-2/3/4)', () => {
   });
 
   it.each([
-    ['/api/v1/orders/123?expand=true', '/api/v1/orders/:id'],
-    ['/api/v1/orders/abc-123', '/api/v1/orders/:id'],
-    ['/api/v1/orders/:orderId', '/api/v1/orders/:orderId'],
+    ['/api/v2/orders/123?expand=true', '/api/v2/orders/:id'],
+    ['/api/v2/orders/abc-123', '/api/v2/orders/:id'],
+    ['/api/v2/orders/:orderId', '/api/v2/orders/:orderId'],
     ['//health?full=1', '/health'],
   ])('parametriza %s como %s', (raw, expected) => {
     expect(parametrizarRuta(raw)).toBe(expected);

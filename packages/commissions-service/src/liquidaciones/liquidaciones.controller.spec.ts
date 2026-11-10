@@ -20,7 +20,7 @@ function fabricar(): { liquidaciones: Record<string, Mock>; controller: Liquidac
   return { liquidaciones, controller };
 }
 
-describe('LiquidacionesController (api/v1, RN-07, R-U-10/11)', () => {
+describe('LiquidacionesController (api/v2, RN-07, R-U-10/11)', () => {
   it('debe devolver las liquidaciones del vendedor autenticado', async () => {
     const { liquidaciones, controller } = fabricar();
     liquidaciones.deVendedor.mockResolvedValue([liquidacion]);

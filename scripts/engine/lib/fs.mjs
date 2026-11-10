@@ -11,6 +11,7 @@ const IGNORED_DIRS = new Set([
   '.agents',
   'dist',
   'coverage',
+  '.stryker-tmp',
 ]);
 
 /** Recorre recursivamente los archivos que cumplen `predicate`, saltando ruido. */

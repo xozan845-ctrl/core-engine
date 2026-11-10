@@ -8,7 +8,7 @@ name: Deploy
 # una lectura real del catálogo en stage/prod; en dev, el flujo E2E completo
 # (`npm run demo`). Stage/prod requieren SMOKE_ADMIN_EMAIL/SMOKE_ADMIN_PASSWORD.
 # Si existen SMOKE_EMPRESARIO_EMAIL/SMOKE_EMPRESARIO_PASSWORD, el smoke valida
-# además `/api/v1/empresarios/me/ventas` (commissions-service en stage, ADR-37).
+# además `/api/v2/empresarios/me/ventas` (commissions-service en stage, ADR-37).
 on:
   workflow_dispatch:
     inputs:

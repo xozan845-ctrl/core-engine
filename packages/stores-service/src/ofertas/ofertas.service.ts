@@ -21,8 +21,6 @@ export interface Oferta {
   participacion_porcentaje: number;
   item_type: 'producto' | 'servicio' | 'alquiler';
   item_id: string;
-  producto_id: string | null;
-  producto_padre_id: string | null;
   sku: string;
   producto_nombre: string;
   atributos: Record<string, unknown>;
@@ -44,8 +42,6 @@ interface OfertaRow {
   participacion_porcentaje: number;
   item_type: 'producto' | 'servicio' | 'alquiler';
   item_id: string;
-  producto_id: string | null;
-  producto_padre_id: string | null;
   sku: string;
   producto_nombre: string;
   atributos: Record<string, unknown> | null;
@@ -56,20 +52,6 @@ interface OfertaRow {
   stock: number;
   estado: string;
   creado_en: string;
-}
-
-interface ProductoExterno {
-  id: string;
-  empresa_id: string;
-  sku: string;
-  nombre: string;
-  precio_base: string;
-  stock: number;
-  estado: string;
-  producto_padre_id: string | null;
-  atributos: Record<string, unknown>;
-  tiene_variantes: boolean;
-  imagenes: { objeto_id: string; url: string; orden: number; es_principal: boolean }[];
 }
 
 interface ItemExterno {
@@ -89,11 +71,11 @@ interface ItemExterno {
 }
 
 const COLUMNAS_OFERTA = `o.id, o.tienda_id, t.vendedor_id, t.empresa_id,
-  t.participacion_porcentaje, o.item_type, o.item_id, o.producto_id, o.producto_padre_id, o.sku,
+  t.participacion_porcentaje, o.item_type, o.item_id, o.sku,
   o.producto_nombre, o.atributos, o.imagen_objeto_id, o.margen,
   o.precio_base_cents, o.precio_venta_cents, o.stock, o.estado, o.creado_en`;
 
-const URL_IMAGEN_PUBLICA = '/api/v1/storage/public/objetos';
+const URL_IMAGEN_PUBLICA = '/api/v2/storage/public/objetos';
 
 /**
  * Ofertas: relacion vendedor-producto con precio final (Tabla 11).
@@ -138,7 +120,11 @@ export class OfertasService {
     const total = await this.pg
       .queryOne<{ n: number }>(
         `SELECT COUNT(*)::int AS n FROM stores.ofertas o
-         JOIN stores.tiendas t ON t.id = o.tienda_id WHERE t.vendedor_id = $1`,
+         JOIN stores.tiendas t ON t.id = o.tienda_id
+         WHERE t.vendedor_id = $1 OR EXISTS (
+           SELECT 1 FROM identity.asignaciones_personal ap
+           WHERE ap.usuario_id = $1 AND ap.tienda_id = t.id AND ap.estado = 'activa'
+         )`,
         [vendedorId],
       )
       .then((r) => r?.n ?? 0);
@@ -147,7 +133,10 @@ export class OfertasService {
       `SELECT ${COLUMNAS_OFERTA}
        FROM stores.ofertas o
        JOIN stores.tiendas t ON t.id = o.tienda_id
-       WHERE t.vendedor_id = $1
+       WHERE t.vendedor_id = $1 OR EXISTS (
+         SELECT 1 FROM identity.asignaciones_personal ap
+         WHERE ap.usuario_id = $1 AND ap.tienda_id = t.id AND ap.estado = 'activa'
+       )
        ORDER BY o.creado_en DESC LIMIT $2 OFFSET $3`,
       [vendedorId, limite, offset],
     );
@@ -165,95 +154,6 @@ export class OfertasService {
     return filas.map((f) => this.serializar(f));
   }
 
-  /**
-   * H-01 / TC-02: el vendedor publica un producto con su margen (RN-01).
-   * RN-02: una oferta no puede publicarse con stock menor a 1.
-   */
-  async publicar(
-    vendedorId: string,
-    tiendaId: string,
-    productoId: string,
-    margen: number,
-  ): Promise<Oferta> {
-    if (margen < MARGEN_MINIMO || margen > MARGEN_MAXIMO) {
-      throw new DomainError(
-        'MARGEN_INVALIDO',
-        `El margen debe estar entre ${MARGEN_MINIMO} y ${MARGEN_MAXIMO} por ciento (RN-01).`,
-      );
-    }
-    const tienda = await this.pg.queryOne<{ id: string; empresa_id: string }>(
-      `SELECT id, empresa_id FROM stores.tiendas WHERE id = $1 AND propietario_usuario_id = $2`,
-      [tiendaId, vendedorId],
-    );
-    if (!tienda) {
-      throw new DomainError('TIENDA_REQUERIDA', 'Crea primero tu tienda de vendedor.');
-    }
-
-    const producto = await this.consultarCatalogo(productoId);
-    if (!producto) {
-      throw new NotFoundError('Producto', productoId);
-    }
-    if (producto.empresa_id !== tienda.empresa_id) {
-      throw new DomainError('PRODUCTO_OTRA_EMPRESA', 'La tienda solo puede publicar productos de su empresa.');
-    }
-    if (producto.tiene_variantes) {
-      throw new DomainError(
-        'VARIANTE_REQUERIDA',
-        'Este producto tiene variantes: publica una variante concreta (producto_id de la variante).',
-      );
-    }
-    // RN-02
-    if (producto.stock < 1 || producto.estado === 'agotado') {
-      throw new ConflictError('No se puede publicar un producto con stock menor a 1 (RN-02).');
-    }
-
-    const existente = await this.pg.queryOne<{ id: string }>(
-      `SELECT id FROM stores.ofertas WHERE tienda_id = $1 AND producto_id = $2`,
-      [tienda.id, productoId],
-    );
-    if (existente) {
-      throw new ConflictError('Este producto ya esta publicado en tu tienda.');
-    }
-
-    const precioBase = Money.parsear(producto.precio_base);
-    const precioVenta = precioBase.aplicarMargen(margen); // RN-01
-    const principal =
-      producto.imagenes?.find((i) => i.es_principal) ?? producto.imagenes?.[0];
-    const fila = await this.pg.queryOne<{ id: string }>(
-      `INSERT INTO stores.ofertas
-        (id, tienda_id, item_type, item_id, producto_id, producto_padre_id, sku, producto_nombre,
-         atributos, imagen_objeto_id, margen, precio_base_cents, precio_venta_cents,
-         stock, estado)
-       SELECT $1, $2, 'producto', i.id, $3, $4, $5, $6, $7::jsonb, $8, $9, $10, $11, $12, 'activa'
-         FROM catalog.items i
-        WHERE i.source_type = 'producto' AND i.source_id = $3
-       RETURNING id`,
-      [
-        randomUUID(),
-        tienda.id,
-        productoId,
-        producto.producto_padre_id ?? null,
-        producto.sku,
-        producto.nombre,
-        JSON.stringify(producto.atributos ?? {}),
-        principal?.objeto_id ?? null,
-        margen,
-        precioBase.centavos,
-        precioVenta.centavos,
-        producto.stock,
-      ],
-    );
-    if (!fila) throw new DomainError('OFERTA_FALLIDA', 'No se pudo publicar la oferta.');
-    await this.pg.query(
-      `INSERT INTO stores.historico_precios (oferta_id, precio_anterior_cents, precio_nuevo_cents, vigente_desde)
-       VALUES ($1, NULL, $2, NOW())`,
-      [fila.id, precioVenta.centavos],
-    );
-    const creada = await this.encontrarPorId(fila.id);
-    if (!creada) throw new DomainError('OFERTA_FALLIDA', 'No se pudo leer la oferta creada.');
-    return creada;
-  }
-
   /** Publica cualquier item del catálogo unificado (producto, servicio o alquiler). */
   async publicarItem(
     vendedorId: string,
@@ -265,7 +165,11 @@ export class OfertasService {
       throw new DomainError('MARGEN_INVALIDO', `El margen debe estar entre ${MARGEN_MINIMO} y ${MARGEN_MAXIMO} por ciento (RN-01).`);
     }
     const tienda = await this.pg.queryOne<{ id: string; empresa_id: string }>(
-      `SELECT id, empresa_id FROM stores.tiendas WHERE id = $1 AND propietario_usuario_id = $2`,
+      `SELECT id, empresa_id FROM stores.tiendas
+       WHERE id = $1 AND (propietario_usuario_id = $2 OR EXISTS (
+         SELECT 1 FROM identity.asignaciones_personal ap
+         WHERE ap.usuario_id = $2 AND ap.tienda_id = stores.tiendas.id AND ap.estado = 'activa'
+       ))`,
       [tiendaId, vendedorId],
     );
     if (!tienda) throw new DomainError('TIENDA_REQUERIDA', 'Crea primero tu tienda de vendedor.');
@@ -289,17 +193,16 @@ export class OfertasService {
     const precioVenta = precioBase.aplicarMargen(margen);
     const fila = await this.pg.queryOne<{ id: string }>(
       `INSERT INTO stores.ofertas
-        (id, tienda_id, item_type, item_id, producto_id, producto_padre_id, sku,
+        (id, tienda_id, item_type, item_id, sku,
          producto_nombre, atributos, imagen_objeto_id, margen, precio_base_cents,
          precio_venta_cents, stock, estado)
-       VALUES ($1, $2, $3, $4, $5, NULL, $6, $7, $8::jsonb, NULL, $9, $10, $11, $12, 'activa')
+       VALUES ($1, $2, $3, $4, $5, $6, $7::jsonb, NULL, $8, $9, $10, $11, 'activa')
        RETURNING id`,
       [
         randomUUID(),
         tienda.id,
         item.tipo,
         item.item_id,
-        item.source_type === 'producto' ? item.source_id : null,
         item.codigo,
         item.nombre,
         JSON.stringify(item.atributos ?? {}),
@@ -327,13 +230,14 @@ export class OfertasService {
     }
     const oferta = await this.pg.queryOne<OfertaRow>(
       `SELECT o.*, t.vendedor_id FROM stores.ofertas o
-       JOIN stores.tiendas t ON t.id = o.tienda_id WHERE o.id = $1`,
-      [ofertaId],
+       JOIN stores.tiendas t ON t.id = o.tienda_id
+       WHERE o.id = $1 AND (t.vendedor_id = $2 OR EXISTS (
+         SELECT 1 FROM identity.asignaciones_personal ap
+         WHERE ap.usuario_id = $2 AND ap.tienda_id = t.id AND ap.estado = 'activa'
+       ))`,
+      [ofertaId, vendedorId],
     );
     if (!oferta) throw new NotFoundError('Oferta', ofertaId);
-    if (oferta.vendedor_id !== vendedorId) {
-      throw new DomainError('NO_PROPIETARIO', 'Solo el vendedor dueno de la oferta puede editarla.');
-    }
     const base = Money.desdeCentavos(oferta.precio_base_cents);
     const nuevo = base.aplicarMargen(margen);
     const actualizado = await this.pg.queryOne<{ id: string }>(
@@ -362,7 +266,7 @@ export class OfertasService {
   async contarActivasPorProducto(productoId: string): Promise<number> {
     const fila = await this.pg.queryOne<{ n: number }>(
       `SELECT COUNT(*)::int AS n FROM stores.ofertas
-        WHERE producto_id = $1 AND estado = 'activa'`,
+        WHERE item_id = $1 AND estado = 'activa'`,
       [productoId],
     );
     return fila?.n ?? 0;
@@ -379,19 +283,6 @@ export class OfertasService {
          AND LOWER(o.sku) = LOWER($2)`,
       [empresaId, sku, Math.max(0, stockNuevo)],
     );
-  }
-
-  /** Consulta sincrona al catalogo (lecturas se resuelven por REST, sec. 3.2). */
-  private async consultarCatalogo(productoId: string): Promise<ProductoExterno | null> {
-    try {
-      const res = await fetch(`${this.catalogoUrl}/internal/productos/${encodeURIComponent(productoId)}`, {
-        headers: { 'x-internal-key': this.claveInterna },
-      });
-      if (!res.ok) return null;
-      return (await res.json()) as ProductoExterno;
-    } catch {
-      return null;
-    }
   }
 
   private async consultarItem(itemId: string): Promise<ItemExterno | null> {
@@ -415,8 +306,6 @@ export class OfertasService {
       participacion_porcentaje: fila.participacion_porcentaje,
       item_type: fila.item_type,
       item_id: fila.item_id,
-      producto_id: fila.producto_id,
-      producto_padre_id: fila.producto_padre_id ?? null,
       sku: fila.sku,
       producto_nombre: fila.producto_nombre,
       atributos: fila.atributos ?? {},

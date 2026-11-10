@@ -129,7 +129,8 @@ describe('CreateOrderCommandHandler (CQRS + Event Sourcing)', () => {
     vendedor_id: 'vendedor-1',
     empresa_id: 'empresa-1',
     participacion_porcentaje: 25,
-    producto_id: 'prod-1',
+    item_type: 'producto',
+    item_id: '11111111-1111-4111-8111-111111111111',
     sku: 'ACE-001',
     producto_nombre: 'Aceite 1L',
     margen: 15,
@@ -142,6 +143,7 @@ describe('CreateOrderCommandHandler (CQRS + Event Sourcing)', () => {
   it('TC-02/TC-03: calcula el total con las reglas RN-01/RN-04 y persiste evento OrderCreatedEvent', async () => {
     const { handler, store } = crearHandler([ofertaActiva], 'ok');
     const comando: CreateOrderCommand = {
+      tipo_orden: 'compra',
       items: [{ oferta_id: 'oferta-1', cantidad: 1 }],
     };
     await handler.ejecutar(comando, 'comprador-1');
@@ -166,7 +168,6 @@ describe('CreateOrderCommandHandler (CQRS + Event Sourcing)', () => {
       empresa_id: empresaId,
       item_type: 'servicio',
       item_id: '22222222-2222-4222-8222-222222222222',
-      producto_id: null,
       sku: 'CORTE-001',
       producto_nombre: 'Corte de cabello',
       precio_venta: '300.00',
@@ -190,6 +191,7 @@ describe('CreateOrderCommandHandler (CQRS + Event Sourcing)', () => {
   it('total con cantidades multiples: 2 unidades = C$ 2 300', async () => {
     const { handler } = crearHandler([ofertaActiva], 'ok');
     const comando: CreateOrderCommand = {
+      tipo_orden: 'compra',
       items: [{ oferta_id: 'oferta-1', cantidad: 2 }],
     };
     const vista = await handler.ejecutar(comando, 'comprador-1');
@@ -199,6 +201,7 @@ describe('CreateOrderCommandHandler (CQRS + Event Sourcing)', () => {
   it('agrupa lineas repetidas del carrito (RN-05: cantidades sumadas)', async () => {
     const { handler } = crearHandler([ofertaActiva], 'ok');
     const comando: CreateOrderCommand = {
+      tipo_orden: 'compra',
       items: [
         { oferta_id: 'oferta-1', cantidad: 1 },
         { oferta_id: 'oferta-1', cantidad: 2 },
@@ -210,7 +213,7 @@ describe('CreateOrderCommandHandler (CQRS + Event Sourcing)', () => {
 
   it('carrito vacio se rechaza (RN-05)', async () => {
     const { handler } = crearHandler([ofertaActiva], 'ok');
-    await expect(handler.ejecutar({ items: [] }, 'comprador-1')).rejects.toMatchObject({
+    await expect(handler.ejecutar({ tipo_orden: 'compra', items: [] }, 'comprador-1')).rejects.toMatchObject({
       codigo: 'CARRITO_VACIO',
     });
   });
@@ -218,14 +221,14 @@ describe('CreateOrderCommandHandler (CQRS + Event Sourcing)', () => {
   it('oferta inexistente -> 404', async () => {
     const { handler } = crearHandler([], 'ok');
     await expect(
-      handler.ejecutar({ items: [{ oferta_id: 'oferta-x', cantidad: 1 }] }, 'comprador-1'),
+      handler.ejecutar({ tipo_orden: 'compra', items: [{ oferta_id: 'oferta-x', cantidad: 1 }] }, 'comprador-1'),
     ).rejects.toMatchObject({ codigo: 'NO_ENCONTRADO' });
   });
 
   it('TC-04: viabilidad de stock rechaza con 409/stock_insuficiente como CONFLICTO', async () => {
     const { handler } = crearHandler([ofertaActiva], 'insuficiente');
     await expect(
-      handler.ejecutar({ items: [{ oferta_id: 'oferta-1', cantidad: 1 }] }, 'comprador-1'),
+      handler.ejecutar({ tipo_orden: 'compra', items: [{ oferta_id: 'oferta-1', cantidad: 1 }] }, 'comprador-1'),
     ).rejects.toMatchObject({ codigo: 'CONFLICTO' });
   });
 
@@ -237,7 +240,7 @@ describe('CreateOrderCommandHandler (CQRS + Event Sourcing)', () => {
       carrito,
     );
     const vista = await handler.ejecutar(
-      { items: [{ oferta_id: 'oferta-1', cantidad: 2 }] },
+      { tipo_orden: 'compra', items: [{ oferta_id: 'oferta-1', cantidad: 2 }] },
       'comprador-1',
     );
 
@@ -312,7 +315,7 @@ describe('CreateOrderCommandHandler (CQRS + Event Sourcing)', () => {
     ]);
     const { handler } = crearHandler([ofertaActiva], 'ok', carrito);
 
-    const vista = await handler.ejecutar({ usar_carrito: true }, 'comprador-1');
+    const vista = await handler.ejecutar({ tipo_orden: 'compra', usar_carrito: true }, 'comprador-1');
 
     expect(carrito.itemsParaCheckout).toHaveBeenCalledWith('comprador-1');
     expect(carrito.vaciarEnTransaccion).toHaveBeenCalledTimes(1);
@@ -325,7 +328,7 @@ describe('CreateOrderCommandHandler (CQRS + Event Sourcing)', () => {
     const { handler } = crearHandler([ofertaActiva], 'ok', carrito);
 
     await expect(
-      handler.ejecutar({ usar_carrito: true }, 'comprador-1'),
+      handler.ejecutar({ tipo_orden: 'compra', usar_carrito: true }, 'comprador-1'),
     ).rejects.toMatchObject({
       codigo: 'CARRITO_VACIO',
       message: expect.stringContaining('carrito esta vacio'),
@@ -334,7 +337,7 @@ describe('CreateOrderCommandHandler (CQRS + Event Sourcing)', () => {
 
   it('items ausente -> CARRITO_VACIO', async () => {
     const { handler } = crearHandler([ofertaActiva], 'ok');
-    await expect(handler.ejecutar({}, 'comprador-1')).rejects.toMatchObject({
+    await expect(handler.ejecutar({ tipo_orden: 'compra' }, 'comprador-1')).rejects.toMatchObject({
       codigo: 'CARRITO_VACIO',
       message: expect.stringContaining('no puede estar vacio'),
     });
@@ -346,7 +349,7 @@ describe('CreateOrderCommandHandler (CQRS + Event Sourcing)', () => {
       'ok',
     );
     await expect(
-      handler.ejecutar({ items: [{ oferta_id: 'oferta-1', cantidad: 1 }] }, 'comprador-1'),
+      handler.ejecutar({ tipo_orden: 'compra', items: [{ oferta_id: 'oferta-1', cantidad: 1 }] }, 'comprador-1'),
     ).rejects.toMatchObject({
       codigo: 'NO_ENCONTRADO',
       message: expect.stringContaining('Oferta oferta-1'),
@@ -356,7 +359,7 @@ describe('CreateOrderCommandHandler (CQRS + Event Sourcing)', () => {
   it('si stores-service responde !ok, la oferta no existe -> NOT_FOUND', async () => {
     const { handler } = crearHandler([], 'ok', undefined, true);
     await expect(
-      handler.ejecutar({ items: [{ oferta_id: 'oferta-1', cantidad: 1 }] }, 'comprador-1'),
+      handler.ejecutar({ tipo_orden: 'compra', items: [{ oferta_id: 'oferta-1', cantidad: 1 }] }, 'comprador-1'),
     ).rejects.toMatchObject({
       codigo: 'NO_ENCONTRADO',
       message: expect.stringContaining('Oferta oferta-1'),
@@ -366,7 +369,7 @@ describe('CreateOrderCommandHandler (CQRS + Event Sourcing)', () => {
   it('si stores-service lanza, la oferta no existe -> NOT_FOUND', async () => {
     const { handler } = crearHandler([], 'ok', undefined, false, true);
     await expect(
-      handler.ejecutar({ items: [{ oferta_id: 'oferta-1', cantidad: 1 }] }, 'comprador-1'),
+      handler.ejecutar({ tipo_orden: 'compra', items: [{ oferta_id: 'oferta-1', cantidad: 1 }] }, 'comprador-1'),
     ).rejects.toMatchObject({
       codigo: 'NO_ENCONTRADO',
       message: expect.stringContaining('Oferta oferta-1'),
@@ -376,7 +379,7 @@ describe('CreateOrderCommandHandler (CQRS + Event Sourcing)', () => {
   it('si el catálogo responde !ok, la orden se crea sin bloquear por stock', async () => {
     const { handler } = crearHandler([ofertaActiva], 'fetch-error');
     const vista = await handler.ejecutar(
-      { items: [{ oferta_id: 'oferta-1', cantidad: 1 }] },
+      { tipo_orden: 'compra', items: [{ oferta_id: 'oferta-1', cantidad: 1 }] },
       'comprador-1',
     );
     expect(vista.total_cents).toBe(115_000);
@@ -385,7 +388,7 @@ describe('CreateOrderCommandHandler (CQRS + Event Sourcing)', () => {
   it('si el catálogo lanza, la orden se crea (autoridad del evento stock.fallido)', async () => {
     const { handler } = crearHandler([ofertaActiva], 'network-error');
     const vista = await handler.ejecutar(
-      { items: [{ oferta_id: 'oferta-1', cantidad: 1 }] },
+      { tipo_orden: 'compra', items: [{ oferta_id: 'oferta-1', cantidad: 1 }] },
       'comprador-1',
     );
     expect(vista.total_cents).toBe(115_000);
@@ -394,7 +397,7 @@ describe('CreateOrderCommandHandler (CQRS + Event Sourcing)', () => {
   it('si el catálogo no devuelve el sku -> CONFLICTO con detalles', async () => {
     const { handler } = crearHandler([ofertaActiva], 'sin-sku');
     const error = await handler
-      .ejecutar({ items: [{ oferta_id: 'oferta-1', cantidad: 1 }] }, 'comprador-1')
+      .ejecutar({ tipo_orden: 'compra', items: [{ oferta_id: 'oferta-1', cantidad: 1 }] }, 'comprador-1')
       .catch((e) => e);
 
     expect(error.codigo).toBe('CONFLICTO');
@@ -405,7 +408,7 @@ describe('CreateOrderCommandHandler (CQRS + Event Sourcing)', () => {
   it('stock igual a la cantidad es válido (límite estricto)', async () => {
     const { handler } = crearHandler([ofertaActiva], 'ok');
     const vista = await handler.ejecutar(
-      { items: [{ oferta_id: 'oferta-1', cantidad: 10 }] },
+      { tipo_orden: 'compra', items: [{ oferta_id: 'oferta-1', cantidad: 10 }] },
       'comprador-1',
     );
     expect(vista.total_cents).toBe(1_150_000);
@@ -423,6 +426,7 @@ describe('CreateOrderCommandHandler (CQRS + Event Sourcing)', () => {
 
     const vista = await handler.ejecutar(
       {
+        tipo_orden: 'compra',
         items: [
           { oferta_id: 'oferta-1', cantidad: 1 },
           { oferta_id: 'oferta-2', cantidad: 2 },
@@ -465,6 +469,7 @@ describe('CreateOrderCommandHandler (CQRS + Event Sourcing)', () => {
           items: [],
           total_cents: 100,
           estado: 'creada',
+          tipo_orden: 'compra',
           creado_en: '2026-01-01T00:00:00.000Z',
         },
         creado_en: '2026-01-01T00:00:00.000Z',
@@ -505,6 +510,7 @@ describe('CreateOrderCommandHandler (CQRS + Event Sourcing)', () => {
           items: [],
           total_cents: 100,
           estado: 'creada',
+          tipo_orden: 'compra',
           creado_en: '2026-01-01T00:00:00.000Z',
         },
         creado_en: '2026-01-01T00:00:00.000Z',
@@ -548,6 +554,7 @@ describe('CreateOrderCommandHandler (CQRS + Event Sourcing)', () => {
           items: [],
           total_cents: 100,
           estado: 'creada',
+          tipo_orden: 'compra',
           creado_en: '2026-01-01T00:00:00.000Z',
         },
         creado_en: '2026-01-01T00:00:00.000Z',

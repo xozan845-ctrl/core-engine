@@ -21,7 +21,7 @@ function fabricar(): {
   return { tributacion, kpis, controller };
 }
 
-describe('VendedorFiscalController (api/v1/vendedores/me/fiscal, R-U-10/11)', () => {
+describe('VendedorFiscalController (api/v2/vendedores/me/fiscal, R-U-10/11)', () => {
   it('debe componer la situacion fiscal con sujeto y resumen de comisiones del mes', async () => {
     const { tributacion, kpis, controller } = fabricar();
     tributacion.sujetoFiscalDe.mockResolvedValue({ id: 's-1', regimen: 'Cuota Fija' });

@@ -3,7 +3,7 @@
 Reglas doradas del **API Gateway** (`packages/api-gateway`, :8080): único
 punto de entrada, descarga perimetral (CORS/throttling/TTL), validación JWT
 con prevención de spoofing, TTLs de token, errores normalizados (ADR-06) y versionamiento
-de rutas (`/api/v1/`).
+de rutas (`/api/v2/`).
 
 ## Archivos
 
@@ -28,7 +28,7 @@ de rutas (`/api/v1/`).
 | `R-GW-2` | Rate limiting del borde → `R-DS-6` (`../data/02-seguridad.md`) |
 | `R-GW-3` | Scrub de `x-internal-key` → `R-DS-5` (`../data/02-seguridad.md`) |
 | `R-GW-4` | TTLs por env, nunca hardcodeados → `R-DS-1` (`../data/02-seguridad.md`) |
-| `R-GW-7` | Prefijo `/api/v1/` en todas las rutas (ver `README.md` raíz del repo) |
+| `R-GW-7` | Prefijo `/api/v2/` en todas las rutas (ver `README.md` raíz del repo) |
 
 ## Pendientes
 

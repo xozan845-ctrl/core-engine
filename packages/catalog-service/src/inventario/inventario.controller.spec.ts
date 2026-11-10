@@ -16,7 +16,7 @@ const lineas = [
   },
 ];
 
-describe('InventarioController (api/v1/admin/inventario, R-U-10/11)', () => {
+describe('InventarioController (api/v2/admin/inventario, R-U-10/11)', () => {
   it('debe devolver las lineas de stock que entrega el servicio', async () => {
     const inventario = { listar: vi.fn().mockResolvedValue(lineas) };
     const controller = new InventarioController(inventario as unknown as InventarioService);

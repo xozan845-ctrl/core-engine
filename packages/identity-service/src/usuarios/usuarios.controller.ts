@@ -23,11 +23,11 @@ class AvatarUsuarioRequestDto {
  */
 @ApiTags('Usuarios')
 @ApiBearerAuth()
-@Controller('api/v1/usuarios')
+@Controller('api/v2/usuarios')
 export class UsuariosController {
   constructor(private readonly usuarios: UsuariosService) {}
 
-  /** GET /api/v1/usuarios — lista (admin). */
+  /** GET /api/v2/usuarios — lista (admin). */
   @Get()
   @Roles(ROLES.SUPER_ADMIN, ROLES.ADMIN)
   @ApiOperation({ summary: 'Listar usuarios (admin)' })
@@ -49,7 +49,7 @@ export class UsuariosController {
     return this.usuarios.actualizarAvatar(id, dto.avatar_objeto_id ?? null, usuario);
   }
 
-  /** GET /api/v1/usuarios/:id — perfil (admin o el propio usuario). */
+  /** GET /api/v2/usuarios/:id — perfil (admin o el propio usuario). */
   @Get(':id')
   @ApiOperation({ summary: 'Perfil de un usuario (admin o el propio)' })
   @ApiParam({ name: 'id', description: 'Id del usuario' })

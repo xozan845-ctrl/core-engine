@@ -122,7 +122,7 @@ class PackResponseDto implements Pack {
 
 @ApiTags('Packs')
 @ApiBearerAuth()
-@Controller('api/v1/packs')
+@Controller('api/v2/packs')
 export class PacksController {
   constructor(private readonly packs: PacksService) {}
 

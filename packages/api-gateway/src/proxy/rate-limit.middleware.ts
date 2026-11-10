@@ -91,12 +91,12 @@ export class RateLimitMiddleware implements NestMiddleware {
     // cubo de la API (una página de catálogo puede cargar decenas).
     if (
       (req.method === 'GET' || req.method === 'HEAD') &&
-      /^\/api\/v1\/storage\/public\/objetos\/[^/]+$/.test(req.path)
+      /^\/api\/v2\/storage\/public\/objetos\/[^/]+$/.test(req.path)
     ) {
       next();
       return;
     }
-    const esLogin = req.method === 'POST' && /\/api\/v1\/auth\/login$/.test(req.path);
+    const esLogin = req.method === 'POST' && /\/api\/v2\/auth\/login$/.test(req.path);
     const opciones: OpcionesLimite = esLogin
       ? { limite: this.login.limite, ttlMs: this.login.ttl_ms, clave: 'login' }
       : { limite: this.globales.limite, ttlMs: this.globales.ttl_ms };

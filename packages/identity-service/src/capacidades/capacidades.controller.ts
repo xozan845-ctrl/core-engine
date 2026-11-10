@@ -26,7 +26,7 @@ class EmpresaCapacidadResponseDto implements EmpresaCapacidad {
 
 @ApiTags('Capacidades')
 @ApiBearerAuth()
-@Controller('api/v1/empresas/:empresaId/capacidades')
+@Controller('api/v2/empresas/:empresaId/capacidades')
 export class CapacidadesController {
   constructor(private readonly capacidades: CapacidadesService) {}
 

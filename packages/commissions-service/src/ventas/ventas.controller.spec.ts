@@ -15,7 +15,7 @@ function fabricar(): { ventas: Record<string, Mock>; controller: VentasControlle
   return { ventas, controller };
 }
 
-describe('VentasController (api/v1/vendedores/me/ventas, R-U-10/11)', () => {
+describe('VentasController (api/v2/vendedores/me/ventas, R-U-10/11)', () => {
   it('debe devolver el estado de cuenta del vendedor autenticado', async () => {
     const { ventas, controller } = fabricar();
     ventas.estadoCuenta.mockResolvedValue(estado);
@@ -28,7 +28,7 @@ describe('VentasController (api/v1/vendedores/me/ventas, R-U-10/11)', () => {
   });
 });
 
-describe('VentasEmpresaController (api/v1/empresarios/me/ventas, ADR-25)', () => {
+describe('VentasEmpresaController (api/v2/empresarios/me/ventas, ADR-25)', () => {
   function fabricar(): { ventas: Record<string, Mock>; controller: VentasEmpresaController } {
     const ventas = { estadoCuentaEmpresa: vi.fn() };
     const controller = new VentasEmpresaController(ventas as unknown as VentasService);

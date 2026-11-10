@@ -195,10 +195,10 @@ export function conBackgroundUrls(campos: BackgroundCampos): BackgroundConUrls {
   return {
     ...campos,
     background_url: campos.background_objeto_id
-      ? `/api/v1/storage/public/objetos/${campos.background_objeto_id}`
+      ? `/api/v2/storage/public/objetos/${campos.background_objeto_id}`
       : null,
     background_poster_url: campos.background_poster_objeto_id
-      ? `/api/v1/storage/public/objetos/${campos.background_poster_objeto_id}`
+      ? `/api/v2/storage/public/objetos/${campos.background_poster_objeto_id}`
       : null,
   };
 }

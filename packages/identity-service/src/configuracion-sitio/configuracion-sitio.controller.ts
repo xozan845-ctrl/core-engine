@@ -187,7 +187,7 @@ export class ConfiguracionSitioResponseDto {
 }
 
 @ApiTags('Configuración del sitio')
-@Controller('api/v1/configuracion/sitio')
+@Controller('api/v2/configuracion/sitio')
 export class ConfiguracionSitioController {
   constructor(private readonly configuracion: ConfiguracionSitioService) {}
 

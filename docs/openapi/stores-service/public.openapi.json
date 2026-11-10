@@ -2,7 +2,7 @@
   "openapi": "3.0.0",
   "info": {
     "title": "Core Engine · stores-service · API pública",
-    "description": "Contrato público (/api/v1/**) de stores-service. No contiene rutas /internal/**.",
+    "description": "Contrato público (/api/v2/**) de stores-service. No contiene rutas /internal/**.",
     "version": "v1",
     "contact": {}
   },
@@ -10,7 +10,7 @@
   "x-superficie": "publica",
   "tags": [],
   "paths": {
-    "/api/v1/vendedores/tienda": {
+    "/api/v2/vendedores/tienda": {
       "post": {
         "operationId": "TiendasController_crear",
         "parameters": [],
@@ -47,7 +47,7 @@
         ]
       }
     },
-    "/api/v1/vendedores/me/tienda": {
+    "/api/v2/vendedores/me/tienda": {
       "get": {
         "operationId": "TiendasController_miTienda",
         "parameters": [],
@@ -74,7 +74,7 @@
         ]
       }
     },
-    "/api/v1/empresarios/me/tiendas": {
+    "/api/v2/empresarios/me/tiendas": {
       "get": {
         "operationId": "TiendasEmpresaController_listar",
         "parameters": [],
@@ -104,7 +104,7 @@
         ]
       }
     },
-    "/api/v1/tiendas/{id}/tema.css": {
+    "/api/v2/tiendas/{id}/tema.css": {
       "get": {
         "operationId": "TiendasSlugController_temaCss",
         "parameters": [
@@ -145,7 +145,7 @@
         ]
       }
     },
-    "/api/v1/tiendas/{id}/logo": {
+    "/api/v2/tiendas/{id}/logo": {
       "patch": {
         "operationId": "TiendasSlugController_actualizarLogo",
         "parameters": [
@@ -192,7 +192,7 @@
         ]
       }
     },
-    "/api/v1/tiendas/{id}/background": {
+    "/api/v2/tiendas/{id}/background": {
       "patch": {
         "operationId": "TiendasSlugController_actualizarBackground",
         "parameters": [
@@ -239,7 +239,7 @@
         ]
       }
     },
-    "/api/v1/tiendas/{id}/personalizacion": {
+    "/api/v2/tiendas/{id}/personalizacion": {
       "patch": {
         "operationId": "TiendasSlugController_actualizarPersonalizacion",
         "parameters": [
@@ -286,7 +286,7 @@
         ]
       }
     },
-    "/api/v1/tiendas/{id}/contenido": {
+    "/api/v2/tiendas/{id}/contenido": {
       "patch": {
         "operationId": "TiendasSlugController_actualizarContenido",
         "parameters": [
@@ -333,7 +333,7 @@
         ]
       }
     },
-    "/api/v1/tiendas/{id}/slug": {
+    "/api/v2/tiendas/{id}/slug": {
       "patch": {
         "operationId": "TiendasSlugController_actualizarSlug",
         "parameters": [
@@ -386,7 +386,7 @@
         ]
       }
     },
-    "/api/v1/vendedores/productos": {
+    "/api/v2/vendedores/productos": {
       "post": {
         "operationId": "OfertasController_publicar",
         "parameters": [],
@@ -423,7 +423,7 @@
         ]
       }
     },
-    "/api/v1/vendedores/productos/{id}": {
+    "/api/v2/vendedores/productos/{id}": {
       "patch": {
         "operationId": "OfertasController_cambiarMargen",
         "parameters": [
@@ -469,7 +469,7 @@
         ]
       }
     },
-    "/api/v1/vendedores/me/ofertas": {
+    "/api/v2/vendedores/me/ofertas": {
       "get": {
         "operationId": "OfertasController_misOfertas",
         "parameters": [],
@@ -496,7 +496,7 @@
         ]
       }
     },
-    "/api/v1/tiendas/{id}": {
+    "/api/v2/tiendas/{id}": {
       "get": {
         "operationId": "OfertasController_tiendaPublica",
         "parameters": [
@@ -836,18 +836,6 @@
             "description": "Id del item unificado",
             "format": "uuid"
           },
-          "producto_id": {
-            "type": "string",
-            "description": "Id del producto o variante vendible",
-            "nullable": true,
-            "format": "uuid"
-          },
-          "producto_padre_id": {
-            "type": "object",
-            "description": "Id del producto padre (si es variante)",
-            "nullable": true,
-            "format": "uuid"
-          },
           "sku": {
             "type": "string",
             "description": "SKU de la variante o producto",
@@ -910,7 +898,8 @@
           "vendedor_id",
           "empresa_id",
           "participacion_porcentaje",
-          "producto_id",
+          "item_type",
+          "item_id",
           "sku",
           "producto_nombre",
           "margen",
@@ -1039,11 +1028,6 @@
             "description": "Tienda donde se publicará (UUID o slug). Si se omite, se usa la tienda del vendedor autenticado.",
             "example": "mi-tienda"
           },
-          "producto_id": {
-            "type": "string",
-            "description": "Id legacy del producto a publicar",
-            "example": "a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11"
-          },
           "item_type": {
             "type": "string",
             "description": "Tipo del item a publicar",
@@ -1068,6 +1052,7 @@
           }
         },
         "required": [
+          "item_id",
           "margen"
         ]
       },
@@ -1621,6 +1606,7 @@
           "empresa_id",
           "propietario_usuario_id",
           "nombre",
+          "slug",
           "descripcion",
           "creado_en"
         ]

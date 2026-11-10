@@ -277,7 +277,7 @@ describe('EmpresasService', () => {
 
       await expect(servicio.resolverPara('u-1', 'acme-vieja', false)).resolves.toMatchObject({
         empresa: { ...empresa, slug: 'acme-nueva' },
-        redirigirA: '/api/v1/empresas/acme-nueva',
+        redirigirA: '/api/v2/empresas/acme-nueva',
       });
     });
 
@@ -471,7 +471,7 @@ describe('EmpresasService · perfil y logo', () => {
       logo_objeto_id: logoId,
     });
 
-    expect(resultado.logo_url).toBe(`/api/v1/storage/public/objetos/${logoId}`);
+    expect(resultado.logo_url).toBe(`/api/v2/storage/public/objetos/${logoId}`);
     // R-RB-4: la validación interna lleva timeout explícito.
     expect(fetchMock).toHaveBeenCalledWith(
       expect.stringContaining(`/internal/storage/objetos/${logoId}`),
@@ -583,8 +583,8 @@ describe('EmpresasService · perfil y logo', () => {
     expect(fetchMock.mock.calls[1][0]).toContain(`/internal/storage/objetos/${posterId}`);
     expect(resultado).toMatchObject({
       background_media_type: 'video',
-      background_url: `/api/v1/storage/public/objetos/${fondoId}`,
-      background_poster_url: `/api/v1/storage/public/objetos/${posterId}`,
+      background_url: `/api/v2/storage/public/objetos/${fondoId}`,
+      background_poster_url: `/api/v2/storage/public/objetos/${posterId}`,
       background_activo: true,
     });
     expect(pg.queryOne).toHaveBeenLastCalledWith(

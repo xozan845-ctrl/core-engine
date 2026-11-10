@@ -19,7 +19,7 @@ export interface OrderView {
   direccion_envio: unknown | null;
   creado_en: string;
   actualizado_en: string;
-  tipo_orden?: TipoOrden;
+  tipo_orden: TipoOrden;
   fulfillment_config?: Record<string, unknown>;
   pagada_en: string | null;
   enviada_en: string | null;
@@ -47,17 +47,8 @@ interface OrderViewRow {
   entregada_en: string | null;
   cancelada_en: string | null;
   devuelta_en: string | null;
-  tipo_orden?: TipoOrden;
+  tipo_orden: TipoOrden;
   fulfillment_config?: Record<string, unknown>;
-}
-
-export interface ComisionVista {
-  vendedor_id: string;
-  periodo: string;
-  ordenes: number;
-  total_ventas_cents: number;
-  total_comision_cents: number;
-  actualizado_en: string;
 }
 
 export interface TimelineEvento {
@@ -205,36 +196,6 @@ export class OrderViewRepository {
     return filas.map((f) => this.serializar(f));
   }
 
-  async obtenerComisiones(vendedorId: string, periodo?: string): Promise<ComisionVista[]> {
-    const params: unknown[] = [vendedorId];
-    let where = 'WHERE vendedor_id = $1';
-    if (periodo) {
-      params.push(periodo);
-      where += ' AND periodo = to_date($2, \'YYYY-MM\')';
-    }
-    const filas = await this.pg.query<{
-      vendedor_id: string;
-      periodo: string;
-      ordenes: number;
-      total_ventas_cents: number;
-      total_comision_cents: number;
-      actualizado_en: string;
-    }>(
-      `SELECT vendedor_id, periodo::text, ordenes, total_ventas_cents, total_comision_cents, actualizado_en
-       FROM orders.comisiones_vista ${where}
-       ORDER BY periodo DESC`,
-      params,
-    );
-    return filas.map((f) => ({
-      vendedor_id: f.vendedor_id,
-      periodo: f.periodo,
-      ordenes: f.ordenes,
-      total_ventas_cents: f.total_ventas_cents,
-      total_comision_cents: f.total_comision_cents,
-      actualizado_en: f.actualizado_en,
-    }));
-  }
-
   async obtenerTimeline(orderId: string): Promise<TimelineEvento[]> {
     const filas = await this.pg.query<{
       id: number;
@@ -265,7 +226,7 @@ export class OrderViewRepository {
       direccion_envio: fila.direccion_envio,
       creado_en: fila.creado_en,
       actualizado_en: fila.actualizado_en,
-      tipo_orden: fila.tipo_orden ?? 'compra',
+      tipo_orden: fila.tipo_orden,
       fulfillment_config: fila.fulfillment_config ?? {},
       pagada_en: fila.pagada_en,
       enviada_en: fila.enviada_en,

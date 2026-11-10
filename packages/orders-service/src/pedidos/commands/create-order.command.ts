@@ -50,10 +50,9 @@ export class CreateOrderCommand {
   @IsUUID()
   cliente_parte_id?: string;
 
-  @ApiProperty({ required: false, enum: TIPOS_ORDEN, default: 'compra' })
-  @IsOptional()
+  @ApiProperty({ enum: TIPOS_ORDEN, description: 'Tipo de orden explícito' })
   @IsIn(TIPOS_ORDEN)
-  tipo_orden?: TipoOrden;
+  tipo_orden: TipoOrden;
 
   @ApiProperty({ description: 'Artículos de la orden', required: false, type: [ItemOrdenRequestDto] })
   @IsOptional()

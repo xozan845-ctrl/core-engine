@@ -50,7 +50,7 @@ test('no quedan specs planos ni rutas fuera de la superficie declarada', () => {
   for (const servicio of servicios()) {
     const publico = leer(servicio, 'public.openapi.json');
     for (const ruta of Object.keys(publico.paths ?? {})) {
-      assert.match(ruta, /^\/api\/v1(?:\/|$)/, `${servicio}: ruta pública inválida ${ruta}`);
+      assert.match(ruta, /^\/api\/v2(?:\/|$)/, `${servicio}: ruta pública inválida ${ruta}`);
     }
     const interno = leer(servicio, 'internal.openapi.json');
     for (const ruta of Object.keys(interno.paths ?? {})) {

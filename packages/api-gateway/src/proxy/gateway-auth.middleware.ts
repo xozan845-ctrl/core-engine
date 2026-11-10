@@ -25,173 +25,173 @@ export interface PoliticaRuta {
  */
 export const POLITICAS_RUTAS: PoliticaRuta[] = [
     // publico: identidad y catalogo de lectura
-  { patron: /^\/api\/v1\/auth\/registro$/, metodos: ['POST'], roles: null },
-    { patron: /^\/api\/v1\/auth\/login$/, metodos: ['POST'], roles: null },
-    { patron: /^\/api\/v1\/auth\/refresh$/, metodos: ['POST'], roles: null },
-    { patron: /^\/api\/v1\/auth\/restablecer-contrasena$/, metodos: ['POST'], roles: null },
+  { patron: /^\/api\/v2\/auth\/registro$/, metodos: ['POST'], roles: null },
+    { patron: /^\/api\/v2\/auth\/login$/, metodos: ['POST'], roles: null },
+    { patron: /^\/api\/v2\/auth\/refresh$/, metodos: ['POST'], roles: null },
+    { patron: /^\/api\/v2\/auth\/restablecer-contrasena$/, metodos: ['POST'], roles: null },
     // Packs versionados: el empresario debe poder elegir el pack al crear su
     // empresa; la selección concreta sigue validándose en identity-service.
     {
-      patron: /^\/api\/v1\/packs(\/|$)/,
+      patron: /^\/api\/v2\/packs(\/|$)/,
       metodos: ['GET'],
       roles: [ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.EMPRESARIO],
     },
     {
-      patron: /^\/api\/v1\/packs$/,
+      patron: /^\/api\/v2\/packs$/,
       metodos: ['POST'],
       roles: [ROLES.SUPER_ADMIN, ROLES.ADMIN],
     },
     {
-      patron: /^\/api\/v1\/packs\/(modelos-operacion|verticales)(\/|$)/,
+      patron: /^\/api\/v2\/packs\/(modelos-operacion|verticales)(\/|$)/,
       metodos: ['GET'],
       roles: [ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.EMPRESARIO],
     },
     {
-      patron: /^\/api\/v1\/packs\/(modelos-operacion|verticales)(\/|$)/,
+      patron: /^\/api\/v2\/packs\/(modelos-operacion|verticales)(\/|$)/,
       metodos: ['POST'],
       roles: [ROLES.SUPER_ADMIN, ROLES.ADMIN],
     },
     // Invitaciones de vendedor: el token es la autorización temporal.
-    { patron: /^\/api\/v1\/invitaciones\/vendedores\/[^/]+$/, metodos: ['GET'], roles: null },
-    { patron: /^\/api\/v1\/invitaciones\/vendedores\/[^/]+\/aceptar$/, metodos: ['POST'], roles: null },
-    { patron: /^\/api\/v1\/catalog\/productos$/, metodos: ['GET'], roles: null },
-    { patron: /^\/api\/v1\/catalog\/productos\/[^/]+$/, metodos: ['GET'], roles: null },
+    { patron: /^\/api\/v2\/invitaciones\/vendedores\/[^/]+$/, metodos: ['GET'], roles: null },
+    { patron: /^\/api\/v2\/invitaciones\/vendedores\/[^/]+\/aceptar$/, metodos: ['POST'], roles: null },
+    { patron: /^\/api\/v2\/catalog\/productos$/, metodos: ['GET'], roles: null },
+    { patron: /^\/api\/v2\/catalog\/productos\/[^/]+$/, metodos: ['GET'], roles: null },
     // Branding publico del sitio (fondo de plataforma, ADR-38).
-    { patron: /^\/api\/v1\/configuracion\/sitio$/, metodos: ['GET'], roles: null },
+    { patron: /^\/api\/v2\/configuracion\/sitio$/, metodos: ['GET'], roles: null },
     {
-      patron: /^\/api\/v1\/configuracion\/sitio$/,
+      patron: /^\/api\/v2\/configuracion\/sitio$/,
       metodos: ['PATCH'],
       roles: [ROLES.SUPER_ADMIN, ROLES.ADMIN],
     },
     // Servicios de empresa: recurso administrativo del catálogo (R-PS-02).
     {
-      patron: /^\/api\/v1\/catalog\/servicios(\/|$)/,
+      patron: /^\/api\/v2\/catalog\/servicios(\/|$)/,
       metodos: ['*'],
       roles: [ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.EMPRESARIO],
     },
     {
-      patron: /^\/api\/v1\/catalog\/items(\/|$)/,
+      patron: /^\/api\/v2\/catalog\/items(\/|$)/,
       metodos: ['*'],
       roles: [ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.EMPRESARIO],
     },
     // Operaciones avanzadas del catálogo (R-PS-04).
     {
-      patron: /^\/api\/v1\/catalog\/(configuracion-inventario|escanear|combos|promociones|inventario)(\/|$)/,
+      patron: /^\/api\/v2\/catalog\/(configuracion-inventario|escanear|combos|promociones|inventario)(\/|$)/,
       metodos: ['*'],
       roles: [ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.EMPRESARIO],
     },
     // El slug de tienda forma parte de la URL publica del storefront (ADR-26);
     // el cambio de slug exige ser vendedor/empresario y se valida en el servicio.
-    { patron: /^\/api\/v1\/tiendas\/[^/]+\/slug$/, metodos: ['PATCH'], roles: [ROLES.VENDEDOR, ROLES.EMPRESARIO] },
+    { patron: /^\/api\/v2\/tiendas\/[^/]+\/slug$/, metodos: ['PATCH'], roles: [ROLES.VENDEDOR, ROLES.EMPRESARIO] },
     {
-      patron: /^\/api\/v1\/tiendas\/[^/]+\/logo$/,
+      patron: /^\/api\/v2\/tiendas\/[^/]+\/logo$/,
       metodos: ['PATCH'],
       roles: [ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.VENDEDOR, ROLES.EMPRESARIO],
     },
     {
-      patron: /^\/api\/v1\/tiendas\/[^/]+\/background$/,
+      patron: /^\/api\/v2\/tiendas\/[^/]+\/background$/,
       metodos: ['PATCH'],
       roles: [ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.VENDEDOR, ROLES.EMPRESARIO],
     },
     {
-      patron: /^\/api\/v1\/tiendas\/[^/]+\/personalizacion$/,
+      patron: /^\/api\/v2\/tiendas\/[^/]+\/personalizacion$/,
       metodos: ['PATCH'],
       roles: [ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.VENDEDOR, ROLES.EMPRESARIO],
     },
     {
-      patron: /^\/api\/v1\/tiendas\/[^/]+\/contenido$/,
+      patron: /^\/api\/v2\/tiendas\/[^/]+\/contenido$/,
       metodos: ['PATCH'],
       roles: [ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.VENDEDOR, ROLES.EMPRESARIO],
     },
-    { patron: /^\/api\/v1\/tiendas\/[^/]+\/tema\.css$/, metodos: ['GET'], roles: null },
-    { patron: /^\/api\/v1\/tiendas\/[^/]+$/, metodos: ['GET'], roles: null },
+    { patron: /^\/api\/v2\/tiendas\/[^/]+\/tema\.css$/, metodos: ['GET'], roles: null },
+    { patron: /^\/api\/v2\/tiendas\/[^/]+$/, metodos: ['GET'], roles: null },
     // usuarios: gestion administrativa (sustituye a Firebase gestion-usuarios)
     {
-      patron: /^\/api\/v1\/usuarios\/[^/]+\/avatar$/,
+      patron: /^\/api\/v2\/usuarios\/[^/]+\/avatar$/,
       metodos: ['PATCH'],
       roles: [ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.EMPRESARIO, ROLES.VENDEDOR],
     },
     {
-      patron: /^\/api\/v1\/usuarios\/[^/]+$/,
+      patron: /^\/api\/v2\/usuarios\/[^/]+$/,
       metodos: ['GET'],
       roles: [ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.EMPRESARIO, ROLES.VENDEDOR],
     },
-    { patron: /^\/api\/v1\/usuarios(\/|$)/, metodos: ['*'], roles: [ROLES.SUPER_ADMIN, ROLES.ADMIN] },
+    { patron: /^\/api\/v2\/usuarios(\/|$)/, metodos: ['*'], roles: [ROLES.SUPER_ADMIN, ROLES.ADMIN] },
     // creacion administrativa de usuarios (roles de tienda y logistica)
-    { patron: /^\/api\/v1\/auth\/crear-usuario$/, metodos: ['POST'], roles: [ROLES.SUPER_ADMIN, ROLES.ADMIN] },
-    { patron: /^\/api\/v1\/empresas$/, metodos: ['POST'], roles: [ROLES.EMPRESARIO] },
+    { patron: /^\/api\/v2\/auth\/crear-usuario$/, metodos: ['POST'], roles: [ROLES.SUPER_ADMIN, ROLES.ADMIN] },
+    { patron: /^\/api\/v2\/empresas$/, metodos: ['POST'], roles: [ROLES.EMPRESARIO] },
     {
-      patron: /^\/api\/v1\/empresas\/[^/]+\/partes(?:\/|$)/,
+      patron: /^\/api\/v2\/empresas\/[^/]+\/partes(?:\/|$)/,
       metodos: ['GET', 'POST', 'PATCH', 'DELETE'],
       roles: [ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.EMPRESARIO, ROLES.VENDEDOR, ROLES.COORDINADOR, ROLES.SUPERVISOR, ROLES.OPERATIVO],
     },
     {
-      patron: /^\/api\/v1\/empresas\/[^/]+\/extensiones(?:\/|$)/,
+      patron: /^\/api\/v2\/empresas\/[^/]+\/extensiones(?:\/|$)/,
       metodos: ['GET', 'POST', 'PATCH', 'PUT', 'DELETE'],
       roles: [ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.EMPRESARIO, ROLES.VENDEDOR, ROLES.COORDINADOR, ROLES.SUPERVISOR, ROLES.OPERATIVO],
     },
-    { patron: /^\/api\/v1\/empresas\/[^/]+\/logistica$/, metodos: ['PATCH'], roles: [ROLES.EMPRESARIO] },
+    { patron: /^\/api\/v2\/empresas\/[^/]+\/logistica$/, metodos: ['PATCH'], roles: [ROLES.EMPRESARIO] },
     {
-      patron: /^\/api\/v1\/empresas\/[^/]+\/perfil$/,
+      patron: /^\/api\/v2\/empresas\/[^/]+\/perfil$/,
       metodos: ['PATCH'],
       roles: [ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.EMPRESARIO],
     },
     {
-      patron: /^\/api\/v1\/empresas\/[^/]+\/tipo$/,
+      patron: /^\/api\/v2\/empresas\/[^/]+\/tipo$/,
       metodos: ['PATCH'],
       roles: [ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.EMPRESARIO],
     },
-    { patron: /^\/api\/v1\/empresas\/[^/]+\/vendedores$/, metodos: ['POST', 'GET'], roles: [ROLES.EMPRESARIO] },
+    { patron: /^\/api\/v2\/empresas\/[^/]+\/vendedores$/, metodos: ['POST', 'GET'], roles: [ROLES.EMPRESARIO] },
     {
-      patron: /^\/api\/v1\/empresas\/[^/]+\/invitaciones\/vendedores(\/|$)/,
+      patron: /^\/api\/v2\/empresas\/[^/]+\/invitaciones\/vendedores(\/|$)/,
       metodos: ['POST', 'DELETE'],
       roles: [ROLES.EMPRESARIO],
     },
     {
-      patron: /^\/api\/v1\/empresas\/[^/]+\/(roles|puestos|asignaciones-personal|invitaciones\/personal)(\/|$)/,
+      patron: /^\/api\/v2\/empresas\/[^/]+\/(roles|puestos|asignaciones-personal|invitaciones\/personal)(\/|$)/,
       metodos: ['GET', 'POST', 'PATCH'],
       roles: [ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.EMPRESARIO],
     },
-    { patron: /^\/api\/v1\/incorporaciones\/[^/]+$/, metodos: ['GET'], roles: null },
-    { patron: /^\/api\/v1\/incorporaciones\/[^/]+\/aceptar$/, metodos: ['POST'], roles: null },
+    { patron: /^\/api\/v2\/incorporaciones\/[^/]+$/, metodos: ['GET'], roles: null },
+    { patron: /^\/api\/v2\/incorporaciones\/[^/]+\/aceptar$/, metodos: ['POST'], roles: null },
     // Cambio de slug: solo el empresario; el servicio exige membresia activa.
-    { patron: /^\/api\/v1\/empresas\/[^/]+\/slug$/, metodos: ['PATCH'], roles: [ROLES.EMPRESARIO] },
+    { patron: /^\/api\/v2\/empresas\/[^/]+\/slug$/, metodos: ['PATCH'], roles: [ROLES.EMPRESARIO] },
     // GET /empresas/:id acepta UUID o slug, pero sigue siendo privado: solo
     // miembros o administradores. No debe existir una politica publica aqui.
-    { patron: /^\/api\/v1\/empresas\//, metodos: ['*'], roles: [ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.EMPRESARIO, ROLES.VENDEDOR] },
+    { patron: /^\/api\/v2\/empresas\//, metodos: ['*'], roles: [ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.EMPRESARIO, ROLES.VENDEDOR] },
     // autenticado
-    { patron: /^\/api\/v1\/auth\/me$/, metodos: ['GET'], roles: null }, // exige token (se valida abajo)
+    { patron: /^\/api\/v2\/auth\/me$/, metodos: ['GET'], roles: null }, // exige token (se valida abajo)
     // logout: exige un access token valido (cualquier rol); revoca el refresh (R-GW-4)
-    { patron: /^\/api\/v1\/auth\/logout$/, metodos: ['POST'], roles: Object.values(ROLES) },
+    { patron: /^\/api\/v2\/auth\/logout$/, metodos: ['POST'], roles: Object.values(ROLES) },
     // catálogo: escritura admin (el super_admin opera globalmente; para crear
     // debe indicar la empresa en el cuerpo)
-    { patron: /^\/api\/v1\/catalog\/productos/, metodos: ['POST', 'PATCH', 'PUT', 'DELETE'], roles: [ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.EMPRESARIO] },
+    { patron: /^\/api\/v2\/catalog\/productos/, metodos: ['POST', 'PATCH', 'PUT', 'DELETE'], roles: [ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.EMPRESARIO] },
     // vendedores
     {
-      patron: /^\/api\/v1\/vendedores\/(me\/ventas|me\/liquidaciones)$/,
+      patron: /^\/api\/v2\/vendedores\/(me\/ventas|me\/liquidaciones)$/,
       metodos: ['GET'],
       roles: [ROLES.VENDEDOR],
     },
-    { patron: /^\/api\/v1\/empresarios\/me\/liquidaciones$/, metodos: ['GET'], roles: [ROLES.EMPRESARIO] },
-    { patron: /^\/api\/v1\/empresarios\/me\/ventas$/, metodos: ['GET'], roles: [ROLES.EMPRESARIO] },
-    { patron: /^\/api\/v1\/empresarios\/me\/tiendas$/, metodos: ['GET'], roles: [ROLES.EMPRESARIO] },
-    { patron: /^\/api\/v1\/empresarios\/me\/envios(\/|$)/, metodos: ['GET', 'POST'], roles: [ROLES.EMPRESARIO] },
-    { patron: /^\/api\/v1\/envios\/[^/]+\/estado$/, metodos: ['PATCH'], roles: [ROLES.SUPER_ADMIN, ...ROLES_LOGISTICA] },
+    { patron: /^\/api\/v2\/empresarios\/me\/liquidaciones$/, metodos: ['GET'], roles: [ROLES.EMPRESARIO] },
+    { patron: /^\/api\/v2\/empresarios\/me\/ventas$/, metodos: ['GET'], roles: [ROLES.EMPRESARIO] },
+    { patron: /^\/api\/v2\/empresarios\/me\/tiendas$/, metodos: ['GET'], roles: [ROLES.EMPRESARIO] },
+    { patron: /^\/api\/v2\/empresarios\/me\/envios(\/|$)/, metodos: ['GET', 'POST'], roles: [ROLES.EMPRESARIO] },
+    { patron: /^\/api\/v2\/envios\/[^/]+\/estado$/, metodos: ['PATCH'], roles: [ROLES.SUPER_ADMIN, ...ROLES_LOGISTICA] },
     {
-      patron: /^\/api\/v1\/scheduling(\/|$)/,
+      patron: /^\/api\/v2\/scheduling(\/|$)/,
       metodos: ['*'],
       roles: [ROLES.SUPER_ADMIN, ROLES.ADMIN, ...ROLES_LOGISTICA],
     },
     {
-      patron: /^\/api\/v1\/vendedores\//,
+      patron: /^\/api\/v2\/vendedores\//,
       metodos: ['GET', 'POST', 'PATCH', 'PUT', 'DELETE'],
       roles: [ROLES.VENDEDOR, ROLES.EMPRESARIO],
     },
     // pedidos
-    { patron: /^\/api\/v1\/orders$/, metodos: ['POST'], roles: [ROLES.COMPRADOR] },
-    { patron: /^\/api\/v1\/orders$/, metodos: ['GET'], roles: [ROLES.COMPRADOR] },
+    { patron: /^\/api\/v2\/orders$/, metodos: ['POST'], roles: [ROLES.COMPRADOR] },
+    { patron: /^\/api\/v2\/orders$/, metodos: ['GET'], roles: [ROLES.COMPRADOR] },
     {
-      patron: /^\/api\/v1\/orders\/[^/]+\/estado$/,
+      patron: /^\/api\/v2\/orders\/[^/]+\/estado$/,
       metodos: ['PATCH', 'POST'],
       roles: [ROLES.SUPER_ADMIN, ROLES.EMPRESARIO, ROLES.ADMIN, ROLES.LOGISTICA],
     },
@@ -199,109 +199,109 @@ export const POLITICAS_RUTAS: PoliticaRuta[] = [
     // resuelve por primera coincidencia (find), así que una regla genérica
     // como /orders/ expondría las rutas admin y de tienda a otros roles
     // (R-GW-1, R-GW-3).
-    { patron: /^\/api\/v1\/orders\/admin\/todas$/, metodos: ['GET'], roles: [ROLES.SUPER_ADMIN, ROLES.ADMIN] },
-    { patron: /^\/api\/v1\/orders\/vendedor\/mis-ventas$/, metodos: ['GET'], roles: [ROLES.VENDEDOR] },
+    { patron: /^\/api\/v2\/orders\/admin\/todas$/, metodos: ['GET'], roles: [ROLES.SUPER_ADMIN, ROLES.ADMIN] },
+    { patron: /^\/api\/v2\/orders\/vendedor\/mis-ventas$/, metodos: ['GET'], roles: [ROLES.VENDEDOR] },
     {
-      patron: /^\/api\/v1\/orders\/vendedor\/comisiones$/,
+      patron: /^\/api\/v2\/orders\/vendedor\/comisiones$/,
       metodos: ['GET'],
       roles: [ROLES.SUPER_ADMIN, ROLES.VENDEDOR, ROLES.ADMIN],
     },
     {
-      patron: /^\/api\/v1\/orders\/tienda\/[^/]+$/,
+      patron: /^\/api\/v2\/orders\/tienda\/[^/]+$/,
       metodos: ['GET'],
       roles: [ROLES.SUPER_ADMIN, ROLES.EMPRESARIO, ROLES.VENDEDOR, ROLES.ADMIN],
     },
     {
-      patron: /^\/api\/v1\/orders\/empresa$/,
+      patron: /^\/api\/v2\/orders\/empresa$/,
       metodos: ['GET'],
       roles: [ROLES.SUPER_ADMIN, ROLES.EMPRESARIO, ROLES.ADMIN],
     },
     {
-      patron: /^\/api\/v1\/orders\/[^/]+\/timeline$/,
+      patron: /^\/api\/v2\/orders\/[^/]+\/timeline$/,
       metodos: ['GET'],
       roles: [ROLES.SUPER_ADMIN, ROLES.EMPRESARIO, ROLES.COMPRADOR, ROLES.VENDEDOR, ROLES.ADMIN],
     },
     {
-      patron: /^\/api\/v1\/orders\/[^/]+$/,
+      patron: /^\/api\/v2\/orders\/[^/]+$/,
       metodos: ['GET'],
       roles: [ROLES.SUPER_ADMIN, ROLES.EMPRESARIO, ROLES.COMPRADOR, ROLES.VENDEDOR, ROLES.ADMIN],
     },
     // carrito (RN-05): solo el comprador autenticado
     {
-      patron: /^\/api\/v1\/carrito/,
+      patron: /^\/api\/v2\/carrito/,
       metodos: ['GET', 'POST', 'PATCH', 'DELETE'],
       roles: [ROLES.COMPRADOR],
     },
   // Imágenes públicas estáticas (ADR-28): sin token; el UUID es la capacidad.
   {
-    patron: /^\/api\/v1\/storage\/public\/objetos\/[^/]+$/,
+    patron: /^\/api\/v2\/storage\/public\/objetos\/[^/]+$/,
     metodos: ['GET', 'HEAD'],
     roles: null,
   },
   // la configuracion de cuota del bucket es administrativa (Tabla 21)
   {
-    patron: /^\/api\/v1\/storage\/bucket$/,
+    patron: /^\/api\/v2\/storage\/bucket$/,
     metodos: ['POST'],
     roles: [ROLES.SUPER_ADMIN, ROLES.ADMIN],
   },
   // almacenamiento de objetos por tenant (ADR-24): cualquier usuario autenticado
   // con tenant; el aislamiento real lo garantiza el bucket + el filtro por tenant.
   {
-    patron: /^\/api\/v1\/storage\//,
+    patron: /^\/api\/v2\/storage\//,
     metodos: ['*'],
     roles: Object.values(ROLES),
   },
 // admin
   {
-    patron: /^\/api\/v1\/admin\/inventario/,
+    patron: /^\/api\/v2\/admin\/inventario/,
     metodos: ['GET', 'POST', 'PATCH'],
     roles: [ROLES.SUPER_ADMIN, ROLES.ADMIN],
   },
   {
-    patron: /^\/api\/v1\/admin\//,
+    patron: /^\/api\/v2\/admin\//,
     metodos: ['*'],
     roles: [ROLES.SUPER_ADMIN, ROLES.ADMIN],
   },
   // Operación de comercio del workspace: empresa y vendedor comparten recursos
   // (bancos, créditos, clientes, códigos) y la empresa administra caja/compras.
   {
-    patron: /^\/api\/v1\/comercio\//,
+    patron: /^\/api\/v2\/comercio\//,
     metodos: ['*'],
     roles: [ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.EMPRESARIO, ROLES.VENDEDOR],
   },
   // finanzas y regimen fiscal (contabilidad, comprobantes, proyecciones)
   {
-    patron: /^\/api\/v1\/finanzas\//,
+    patron: /^\/api\/v2\/finanzas\//,
     metodos: ['*'],
     roles: [ROLES.SUPER_ADMIN, ROLES.ADMIN],
   },
   // field-service: logistica de campo (app-test) — roles de logistica
   {
-    patron: /^\/api\/v1\/field\//,
+    patron: /^\/api\/v2\/field\//,
     metodos: ['*'],
     roles: [ROLES.SUPER_ADMIN, ...ROLES_LOGISTICA],
   },
   // market-intelligence: admin ve todo, vendedor ve lo suyo, endpoints internos protegidos
   {
-    patron: /^\/api\/v1\/inteligencia\/me\//,
+    patron: /^\/api\/v2\/inteligencia\/me\//,
     metodos: ['GET'],
     roles: [ROLES.VENDEDOR, ROLES.ADMIN],
   },
   {
-    patron: /^\/api\/v1\/inteligencia\//,
+    patron: /^\/api\/v2\/inteligencia\//,
     metodos: ['GET'],
     roles: [ROLES.SUPER_ADMIN, ROLES.ADMIN],
   },
   {
-    patron: /^\/api\/v1\/inteligencia\/ventas\/registrar$/,
+    patron: /^\/api\/v2\/inteligencia\/ventas\/registrar$/,
     metodos: ['POST'],
     roles: [ROLES.VENDEDOR, ROLES.COMPRADOR, ...ROLES_LOGISTICA],
   },
-  // Deny-by-default: una ruta /api/v1 no declarada no queda abierta a cualquier
+  // Deny-by-default: una ruta /api/v2 no declarada no queda abierta a cualquier
   // token valido. Las rutas publicas deben declarar roles: null antes de esta
   // regla; las protegidas, su lista de roles (R-GW-1, R-GW-3).
   {
-    patron: /^\/api\/v1\//,
+    patron: /^\/api\/v2\//,
     metodos: ['*'],
     roles: [],
   },

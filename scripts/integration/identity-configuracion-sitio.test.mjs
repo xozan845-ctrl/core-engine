@@ -100,7 +100,7 @@ after(async () => {
 });
 
 test('API+BD: GET de configuración devuelve valores persistidos', async () => {
-  const respuesta = await http.get('/api/v1/configuracion/sitio').expect(200);
+  const respuesta = await http.get('/api/v2/configuracion/sitio').expect(200);
   assert.deepEqual(
     {
       background_objeto_id: respuesta.body.background_objeto_id,
@@ -147,7 +147,7 @@ test('API+BD: GET de configuración devuelve valores persistidos', async () => {
 
 test('Contrato G-5: PATCH no autenticado devuelve error normalizado', async () => {
   const respuesta = await http
-    .patch('/api/v1/configuracion/sitio')
+    .patch('/api/v2/configuracion/sitio')
     .send({ background_alt: 'sin acceso' })
     .expect(401);
   assert.equal(respuesta.body.codigo, 'NO_AUTORIZADO');
@@ -161,21 +161,21 @@ test('API+BD: PATCH admin persiste y GET devuelve el cambio', async () => {
     'x-user-rol': 'admin',
   };
   const actualizado = await http
-    .patch('/api/v1/configuracion/sitio')
+    .patch('/api/v2/configuracion/sitio')
     .set(headers)
     .send({ background_alt: '  plataforma  ', background_overlay: 60, background_activo: false })
     .expect(200);
   assert.equal(actualizado.body.background_alt, 'plataforma');
   assert.equal(actualizado.body.background_overlay, 60);
 
-  const lectura = await http.get('/api/v1/configuracion/sitio').expect(200);
+  const lectura = await http.get('/api/v2/configuracion/sitio').expect(200);
   assert.equal(lectura.body.background_alt, 'plataforma');
   assert.equal(lectura.body.background_overlay, 60);
 });
 
 test('Contrato G-5: validación de entrada mantiene el shape de error', async () => {
   const respuesta = await http
-    .patch('/api/v1/configuracion/sitio')
+    .patch('/api/v2/configuracion/sitio')
     .set('x-user-id', '00000000-0000-4000-8000-000000000001')
     .set('x-user-rol', 'admin')
     .send({ background_overlay: 101 })

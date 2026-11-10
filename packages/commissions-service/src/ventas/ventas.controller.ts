@@ -10,10 +10,10 @@ import {
 import { VentasService, EstadoCuenta, EstadoCuentaEmpresa } from './ventas.service';
 import { EstadoCuentaEmpresaResponseDto, EstadoCuentaResponseDto } from './ventas.response.dto';
 
-/** GET /api/v1/vendedores/me/ventas — ordenes y comisiones del vendedor (Tabla 21). */
+/** GET /api/v2/vendedores/me/ventas — ordenes y comisiones del vendedor (Tabla 21). */
 @ApiTags('Comisiones · Ventas')
 @ApiBearerAuth()
-@Controller('api/v1/vendedores/me')
+@Controller('api/v2/vendedores/me')
 export class VentasController {
   constructor(private readonly ventas: VentasService) {}
 
@@ -26,10 +26,10 @@ export class VentasController {
   }
 }
 
-/** GET /api/v1/empresarios/me/ventas — estado de cuenta de la empresa (ADR-25). */
+/** GET /api/v2/empresarios/me/ventas — estado de cuenta de la empresa (ADR-25). */
 @ApiTags('Comisiones · Ventas')
 @ApiBearerAuth()
-@Controller('api/v1/empresarios/me')
+@Controller('api/v2/empresarios/me')
 export class VentasEmpresaController {
   constructor(private readonly ventas: VentasService) {}
 

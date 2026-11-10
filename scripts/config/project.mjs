@@ -89,6 +89,8 @@ export const ALLOWED_COMMIT_SCOPES = [
   'api-gateway',
   'identity',
   'identity-service',
+  'auth',
+  'personal',
   'catalog',
   'catalog-service',
   'stores',
@@ -111,6 +113,7 @@ export const ALLOWED_COMMIT_SCOPES = [
   'storage-service',
   // Infraestructura y transversal
   'infra',
+  'api',
   'compose',
   'db',
   'data',
@@ -120,6 +123,7 @@ export const ALLOWED_COMMIT_SCOPES = [
   // Gobernanza y entrega
   'rules',
   'docs',
+  'plan',
   'ci',
   'cd',
   'release',

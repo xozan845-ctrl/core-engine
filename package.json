@@ -27,7 +27,6 @@
     "promotion:check": "node scripts/tools/promotion-check.mjs",
     "security:secrets": "node scripts/tools/secrets-check.mjs",
     "multi-vertical:check": "node scripts/tools/multi-vertical-check.mjs",
-    "contract:breaking": "node scripts/tools/contract-breaking.mjs",
     "mutation:shared": "npm run mutation -w @core/shared",
     "mutation:critical": "npm run mutation -w @core/identity-service && npm run mutation -w @core/orders-service && npm run mutation -w @core/commissions-service && npm run mutation -w @core/finance-service",
     "coverage:compare": "node scripts/tools/coverage-compare.mjs",

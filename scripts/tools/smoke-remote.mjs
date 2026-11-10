@@ -11,7 +11,7 @@
  *
  * `EDGE_BASIC_AUTH` solo es necesario en entornos con gate de borde (staging).
  * `EMPRESARIO_EMAIL`/`EMPRESARIO_PASSWORD` son opcionales: si se configuran,
- * el smoke verifica además `GET /api/v1/empresarios/me/ventas` (ADR-37).
+ * el smoke verifica además `GET /api/v2/empresarios/me/ventas` (ADR-37).
  *
  * No crea usuarios, productos, órdenes ni pagos: solo comprueba salud del
  * gateway, login y lecturas reales. El flujo E2E completo sigue siendo
@@ -91,7 +91,7 @@ function assertStatus(result, expected, label) {
 }
 
 async function login(correo, contrasena, etiqueta) {
-  const result = await request('POST', '/api/v1/auth/login', {
+  const result = await request('POST', '/api/v2/auth/login', {
     body: { correo, contrasena },
   });
   assertStatus(result, 200, etiqueta);
@@ -111,8 +111,8 @@ async function main() {
   const token = await login(ADMIN_EMAIL, ADMIN_PASSWORD, 'login');
   console.log('OK');
 
-  paso('GET /api/v1/catalog/productos (lectura real autenticada)');
-  const catalog = await request('GET', '/api/v1/catalog/productos?limite=1', { token });
+  paso('GET /api/v2/catalog/productos (lectura real autenticada)');
+  const catalog = await request('GET', '/api/v2/catalog/productos?limite=1', { token });
   assertStatus(catalog, 200, 'catálogo');
   if (!Array.isArray(catalog.json?.items)) {
     throw new Error('el catálogo no devolvió una lista `items`');
@@ -131,8 +131,8 @@ async function main() {
     );
     console.log('OK');
 
-    paso('GET /api/v1/empresarios/me/ventas (commissions-service en stage, ADR-37)');
-    const ventas = await request('GET', '/api/v1/empresarios/me/ventas', {
+    paso('GET /api/v2/empresarios/me/ventas (commissions-service en stage, ADR-37)');
+    const ventas = await request('GET', '/api/v2/empresarios/me/ventas', {
       token: tokenEmpresario,
     });
     assertStatus(ventas, 200, 'ventas de empresa');
@@ -150,7 +150,7 @@ async function main() {
     );
   } else {
     paso(
-      'GET /api/v1/empresarios/me/ventas (omitido: faltan EMPRESARIO_EMAIL/EMPRESARIO_PASSWORD)',
+      'GET /api/v2/empresarios/me/ventas (omitido: faltan EMPRESARIO_EMAIL/EMPRESARIO_PASSWORD)',
     );
     console.log('OMITIDO');
   }
