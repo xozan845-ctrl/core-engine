@@ -109,14 +109,14 @@ export class ClientoRabbitMQ {
 
   async getQueueDepth(queue) {
     const info = await this.getQueueInfo(queue);
-    return info?.message_count ?? 0;
+    return info?.body?.message_count ?? 0;
   }
 
   async getDLQDepth() {
     let total = 0;
     for (const q of this.colasDlq) {
       const info = await this.getQueueInfo(q);
-      total += info?.message_count ?? 0;
+      total += info?.body?.message_count ?? 0;
     }
     return total;
   }

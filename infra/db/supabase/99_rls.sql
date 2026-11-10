@@ -279,6 +279,24 @@ CREATE POLICY ofertas_vendedor_propias ON stores.ofertas
 CREATE POLICY ofertas_lectura ON stores.ofertas
   FOR SELECT TO anon, authenticated USING (true);
 
+-- ── orders.orden_vista (proyección CQRS vigente) ────────────────────────
+-- El código y el event sourcing escriben/leen `orden_vista`.
+-- Sin estas políticas, la proyección real quedaba sin RLS en Supabase.
+ALTER TABLE orders.orden_vista ENABLE ROW LEVEL SECURITY;
+CREATE POLICY orden_vista_admin ON orders.orden_vista
+  FOR ALL TO authenticated
+  USING (auth.rol() IN ('super_admin', 'admin'))
+  WITH CHECK (auth.rol() IN ('super_admin', 'admin'));
+CREATE POLICY orden_vista_comprador ON orders.orden_vista
+  FOR SELECT TO authenticated
+  USING (auth.rol() = 'comprador' AND comprador_id = auth.uid());
+CREATE POLICY orden_vista_vendedor ON orders.orden_vista
+  FOR SELECT TO authenticated
+  USING (auth.rol() = 'vendedor'
+         AND (vendedor_id = auth.uid()
+              OR EXISTS (SELECT 1 FROM jsonb_array_elements(items_json) i
+                         WHERE i->>'vendedor_id' = auth.uid()::text)));
+
 -- ── orders.carritos (RN-05: cada comprador solo su carrito) ──────────────
 ALTER TABLE orders.carritos ENABLE ROW LEVEL SECURITY;
 CREATE POLICY carritos_comprador ON orders.carritos

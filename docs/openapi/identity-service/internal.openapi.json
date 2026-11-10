@@ -209,6 +209,74 @@
           "Usuarios (interno)"
         ]
       }
+    },
+    "/internal/empresas/capacidades": {
+      "post": {
+        "operationId": "InternalController_capacidadesDeEmpresas",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/VerificarCapacidadesRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Capacidades encontradas"
+          }
+        },
+        "security": [
+          {
+            "internalKey": []
+          }
+        ],
+        "summary": "Capacidades activas por empresa (servicio→servicio)",
+        "tags": [
+          "Usuarios (interno)"
+        ]
+      }
+    },
+    "/internal/partes/{id}": {
+      "get": {
+        "operationId": "InternalController_parte",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "description": "Id de la parte",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "empresa_id",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Parte encontrada"
+          }
+        },
+        "security": [
+          {
+            "internalKey": []
+          }
+        ],
+        "summary": "Parte por id y empresa (servicio→servicio)",
+        "tags": [
+          "Usuarios (interno)"
+        ]
+      }
     }
   },
   "components": {
@@ -620,6 +688,28 @@
           "correo",
           "rol",
           "creado_en"
+        ]
+      },
+      "VerificarCapacidadesRequestDto": {
+        "type": "object",
+        "properties": {
+          "empresa_ids": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          "capacidades": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": [
+          "empresa_ids",
+          "capacidades"
         ]
       }
     }

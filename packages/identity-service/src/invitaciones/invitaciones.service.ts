@@ -7,7 +7,15 @@ import {
   DomainError,
   ForbiddenError,
   GoneError,
+  Logger,
   NotFoundError,
+  ServiceUnavailableError,
+  asignarVendedorATienda,
+  desasignarVendedorDeTienda,
+  obtenerTienda,
+  tiendaDeVendedor,
+  tiendasPorEmpresa,
+  tiendasPorIds,
 } from '@core/shared';
 import { AuthService, Sesion } from '../auth/auth.service';
 import { Usuario } from '../usuarios/usuarios.service';
@@ -85,6 +93,7 @@ function normalizarCorreo(correo: string): string {
 
 @Injectable()
 export class InvitacionesService {
+  private readonly logger = Logger.create('identity.invitaciones');
   private readonly frontendUrl = (
     process.env.FRONTEND_URL ?? 'http://localhost:5173'
   ).replace(/\/+$/, '');
@@ -113,29 +122,38 @@ export class InvitacionesService {
 
     await this.assertEmpresario(actorId, empresaId);
 
-    return this.pg.transaccion(async (client) => {
-      const tienda = await client.query<{
-        id: string;
-        nombre: string;
-        empresa_id: string;
-        vendedor_id: string | null;
-      }>(
-        `SELECT id, nombre, empresa_id, vendedor_id
-         FROM stores.tiendas WHERE id=$1 FOR UPDATE`,
-        [datos.tienda_id],
+    // stores es la dueña de sus tiendas: se consulta por su superficie interna.
+    const consultaTienda = await obtenerTienda(datos.tienda_id);
+    if (consultaTienda.estado === 'error') throw new ServiceUnavailableError('stores-service');
+    if (consultaTienda.estado === 'no_encontrada' || consultaTienda.tienda.empresa_id !== empresaId) {
+      throw new NotFoundError('Tienda', datos.tienda_id);
+    }
+    const filaTienda = consultaTienda.tienda;
+    if (filaTienda.vendedor_id) {
+      throw new ConflictError(
+        'La tienda seleccionada ya tiene un vendedor asignado.',
+        { tienda_id: datos.tienda_id },
+        'TIENDA_YA_ASIGNADA',
       );
-      const filaTienda = tienda.rows[0];
-      if (!filaTienda || filaTienda.empresa_id !== empresaId) {
-        throw new NotFoundError('Tienda', datos.tienda_id);
-      }
-      if (filaTienda.vendedor_id) {
+    }
+
+    const usuarioExistente = await this.pg.queryOne<{ id: string }>(
+      `SELECT id FROM identity.usuarios WHERE LOWER(correo)=LOWER($1) LIMIT 1`,
+      [correo],
+    );
+    if (usuarioExistente) {
+      const tiendaActual = await tiendaDeVendedor(usuarioExistente.id);
+      if (tiendaActual.estado === 'error') throw new ServiceUnavailableError('stores-service');
+      if (tiendaActual.estado === 'ok') {
         throw new ConflictError(
-          'La tienda seleccionada ya tiene un vendedor asignado.',
-          { tienda_id: datos.tienda_id },
-          'TIENDA_YA_ASIGNADA',
+          'El vendedor ya tiene una tienda asignada.',
+          { correo },
+          'VENDEDOR_YA_TIENE_TIENDA',
         );
       }
+    }
 
+    return this.pg.transaccion(async (client) => {
       const miembro = await client.query(
         `SELECT 1
          FROM identity.empresa_miembros m
@@ -149,22 +167,6 @@ export class InvitacionesService {
           'El correo ya tiene una membresía activa en esta empresa.',
           { correo },
           'YA_ES_MIEMBRO',
-        );
-      }
-
-      const vendedorConTienda = await client.query(
-        `SELECT 1
-         FROM identity.usuarios u
-         JOIN stores.tiendas t ON t.vendedor_id = u.id
-         WHERE LOWER(u.correo)=LOWER($1)
-         LIMIT 1`,
-        [correo],
-      );
-      if (vendedorConTienda.rowCount) {
-        throw new ConflictError(
-          'El vendedor ya tiene una tienda asignada.',
-          { correo },
-          'VENDEDOR_YA_TIENE_TIENDA',
         );
       }
 
@@ -249,8 +251,16 @@ export class InvitacionesService {
       );
     }
 
-    const resultado = await this.pg.transaccion(async (client) => {
-      const fila = await this.buscarVigenteEnCliente(client, token);
+    let asignacion: { tiendaId: string; usuarioId: string } | undefined;
+    let resultado: {
+      usuario: Usuario;
+      tienda_id: string;
+      tienda_nombre: string;
+      participacion_porcentaje: number;
+    };
+    try {
+      resultado = await this.pg.transaccion(async (client) => {
+        const fila = await this.buscarVigenteEnCliente(client, token);
 
       const existente = await client.query(
         `SELECT 1 FROM identity.usuarios WHERE LOWER(correo)=LOWER($1) LIMIT 1`,
@@ -281,18 +291,19 @@ export class InvitacionesService {
         [fila.empresa_id, creado.id, fila.participacion_porcentaje],
       );
 
-      const tienda = await client.query(
-        `UPDATE stores.tiendas
-         SET vendedor_id=$1, propietario_usuario_id=$1, participacion_porcentaje=$2
-         WHERE id=$3 AND empresa_id=$4 AND vendedor_id IS NULL`,
-        [creado.id, fila.participacion_porcentaje, fila.tienda_id, fila.empresa_id],
+      const asignado = await asignarVendedorATienda(
+        fila.tienda_id,
+        creado.id,
+        fila.participacion_porcentaje,
       );
-      if (tienda.rowCount === 0) {
+      if (asignado === 'conflicto') {
         throw new GoneError(
           'INVITACION_NO_VALIDA',
           'La tienda ya no está disponible; solicita una nueva invitación.',
         );
       }
+      if (asignado === 'error') throw new ServiceUnavailableError('stores-service');
+      asignacion = { tiendaId: fila.tienda_id, usuarioId: creado.id };
 
       await client.query(
         `UPDATE identity.invitaciones_vendedor
@@ -307,7 +318,24 @@ export class InvitacionesService {
         tienda_nombre: fila.tienda_nombre,
         participacion_porcentaje: fila.participacion_porcentaje,
       };
-    });
+      });
+    } catch (error) {
+      // Compensación: si identity no pudo confirmar, liberamos la tienda.
+      if (asignacion) {
+        const compensado = await desasignarVendedorDeTienda(
+          asignacion.tiendaId,
+          asignacion.usuarioId,
+        );
+        if (!compensado) {
+          this.logger.error({
+            msg: 'No se pudo compensar la asignación de tienda',
+            tienda_id: asignacion.tiendaId,
+            usuario_id: asignacion.usuarioId,
+          });
+        }
+      }
+      throw error;
+    }
 
     const sesion = await this.auth.crearSesion(resultado.usuario);
     return {
@@ -327,37 +355,56 @@ export class InvitacionesService {
   ): Promise<{ vendedores: VendedorEmpresa[]; invitaciones: InvitacionResumen[] }> {
     await this.assertEmpresario(actorId, empresaId);
 
-    const vendedores = await this.pg.query<VendedorEmpresa>(
+    const tiendas = await tiendasPorEmpresa(empresaId);
+    if (tiendas === null) throw new ServiceUnavailableError('stores-service');
+    const tiendaPorVendedor = new Map(
+      tiendas.filter((t) => t.vendedor_id).map((t) => [t.vendedor_id as string, t]),
+    );
+
+    const vendedoresBase = await this.pg.query<
+      Omit<VendedorEmpresa, 'tienda_id' | 'tienda_nombre'>
+    >(
       `SELECT u.id, u.nombre, u.correo, u.rol, u.avatar_objeto_id,
-              t.id AS tienda_id, t.nombre AS tienda_nombre,
               m.participacion_porcentaje, m.estado
        FROM identity.empresa_miembros m
        JOIN identity.usuarios u ON u.id = m.usuario_id
-       LEFT JOIN stores.tiendas t ON t.vendedor_id = u.id AND t.empresa_id = m.empresa_id
        WHERE m.empresa_id=$1 AND m.rol='vendedor'
        ORDER BY u.nombre`,
       [empresaId],
-    ).then((filas) =>
-      filas.map((vendedor) => ({
+    );
+    const vendedores: VendedorEmpresa[] = vendedoresBase.map((vendedor) => {
+      const tienda = tiendaPorVendedor.get(vendedor.id);
+      return {
         ...vendedor,
+        tienda_id: tienda?.id ?? null,
+        tienda_nombre: tienda?.nombre ?? null,
         avatar_url: vendedor.avatar_objeto_id
           ? `/api/v2/storage/public/objetos/${vendedor.avatar_objeto_id}`
           : null,
-      })),
-    );
+      };
+    });
 
-    const invitaciones = await this.pg.query<InvitacionResumen>(
-      `SELECT i.id, i.correo, i.tienda_id, t.nombre AS tienda_nombre,
-              i.participacion_porcentaje,
+    const invitacionesBase = await this.pg.query<
+      Omit<InvitacionResumen, 'tienda_nombre'>
+    >(
+      `SELECT i.id, i.correo, i.tienda_id, i.participacion_porcentaje,
               CASE WHEN i.estado='pendiente' AND i.expira_en <= NOW()
                    THEN 'expirada' ELSE i.estado END AS estado,
               i.expira_en
        FROM identity.invitaciones_vendedor i
-       JOIN stores.tiendas t ON t.id = i.tienda_id
        WHERE i.empresa_id=$1
        ORDER BY i.creada_en DESC`,
       [empresaId],
     );
+    const tiendasInvitadas = await tiendasPorIds([
+      ...new Set(invitacionesBase.map((i) => i.tienda_id)),
+    ]);
+    if (tiendasInvitadas === null) throw new ServiceUnavailableError('stores-service');
+    const nombreTienda = new Map(tiendasInvitadas.map((t) => [t.id, t.nombre]));
+    const invitaciones: InvitacionResumen[] = invitacionesBase.map((invitacion) => ({
+      ...invitacion,
+      tienda_nombre: nombreTienda.get(invitacion.tienda_id) ?? '',
+    }));
 
     return { vendedores, invitaciones };
   }
@@ -398,8 +445,9 @@ export class InvitacionesService {
       `${SELECT_INVITACION} WHERE i.token_hash=$1 AND e.estado='activa'`,
       [hashToken(token)],
     );
-    this.validarVigente(fila);
-    return fila as InvitacionVigente;
+    const invitacion = await this.completarTienda(fila);
+    this.validarVigente(invitacion);
+    return invitacion;
   }
 
   private async buscarVigenteEnCliente(
@@ -407,12 +455,38 @@ export class InvitacionesService {
     token: string,
   ): Promise<InvitacionVigente> {
     const fila = await client.query<InvitacionVigente>(
-      `${SELECT_INVITACION} WHERE i.token_hash=$1 AND e.estado='activa' FOR UPDATE OF i, t`,
+      `${SELECT_INVITACION} WHERE i.token_hash=$1 AND e.estado='activa' FOR UPDATE OF i`,
       [hashToken(token)],
     );
-    const invitacion = fila.rows[0];
+    const invitacion = await this.completarTienda(fila.rows[0]);
     this.validarVigente(invitacion);
     return invitacion;
+  }
+
+  /** Completa nombres/estado de la tienda por la superficie interna de stores. */
+  private async completarTienda(
+    invitacion: InvitacionVigente | null | undefined,
+  ): Promise<InvitacionVigente> {
+    if (!invitacion) {
+      throw new GoneError(
+        'INVITACION_NO_VALIDA',
+        'La invitación no existe, expiró o ya fue utilizada.',
+      );
+    }
+    const consulta = await obtenerTienda(invitacion.tienda_id);
+    if (consulta.estado === 'error') throw new ServiceUnavailableError('stores-service');
+    if (consulta.estado === 'no_encontrada') {
+      throw new GoneError(
+        'INVITACION_NO_VALIDA',
+        'La tienda de la invitación ya no existe.',
+      );
+    }
+    return {
+      ...invitacion,
+      tienda_nombre: consulta.tienda.nombre,
+      tienda_empresa_id: consulta.tienda.empresa_id,
+      tienda_vendedor_id: consulta.tienda.vendedor_id,
+    };
   }
 
   private validarVigente(invitacion: InvitacionVigente | null | undefined): void {
@@ -446,9 +520,6 @@ interface InvitacionVigente {
 }
 
 const SELECT_INVITACION = `SELECT i.id, i.empresa_id, i.tienda_id, i.correo,
-       i.participacion_porcentaje, i.expira_en, i.estado, e.nombre AS empresa_nombre,
-       t.nombre AS tienda_nombre, t.empresa_id AS tienda_empresa_id,
-       t.vendedor_id AS tienda_vendedor_id
+       i.participacion_porcentaje, i.expira_en, i.estado, e.nombre AS empresa_nombre
 FROM identity.invitaciones_vendedor i
-JOIN identity.empresas e ON e.id = i.empresa_id
-JOIN stores.tiendas t ON t.id = i.tienda_id`;
+JOIN identity.empresas e ON e.id = i.empresa_id`;

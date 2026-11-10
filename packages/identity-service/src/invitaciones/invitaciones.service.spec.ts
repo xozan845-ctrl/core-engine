@@ -1,3 +1,4 @@
+import { afterEach, vi } from 'vitest';
 import { InvitacionesService } from './invitaciones.service';
 
 function crear() {
@@ -20,7 +21,25 @@ function crear() {
       },
     }),
   };
-  return { servicio: new InvitacionesService(pg as never, auth as never), pg, client, auth };
+  const tienda = { id: 't1', nombre: 'Tienda Principal', empresa_id: 'e1', vendedor_id: null };
+  const fetchMock = vi.fn(async (url: string | URL | Request) => {
+    const u = String(url);
+    if (u.includes('/asignar-vendedor') || u.includes('/desasignar-vendedor')) {
+      return { ok: true, status: 200, json: async () => ({ ok: true }) };
+    }
+    if (u.includes('/internal/tiendas?ids=')) {
+      return { ok: true, status: 200, json: async () => ({ tiendas: [tienda] }) };
+    }
+    if (u.includes('/internal/tiendas/empresa/')) {
+      return { ok: true, status: 200, json: async () => ({ tiendas: [tienda] }) };
+    }
+    if (u.includes('/internal/tiendas/')) {
+      return { ok: true, status: 200, json: async () => tienda };
+    }
+    return { ok: false, status: 404, json: async () => ({}) };
+  });
+  vi.stubGlobal('fetch', fetchMock);
+  return { servicio: new InvitacionesService(pg as never, auth as never), pg, client, auth, fetchMock };
 }
 
 const empate = { rowCount: 1, rows: [{ ok: 1 }] };
@@ -41,6 +60,8 @@ const invitacion = {
 };
 
 describe('InvitacionesService', () => {
+  afterEach(() => vi.unstubAllGlobals());
+
   it('genera una invitación con token, expiración y URL del frontend', async () => {
     const { servicio, pg, client } = crear();
     pg.queryOne.mockResolvedValueOnce(empate);
@@ -139,10 +160,6 @@ describe('InvitacionesService', () => {
       participacion_porcentaje: 25,
     });
     expect(resultado.access_token).toBe('access');
-    expect(client.query).toHaveBeenCalledWith(
-      expect.stringContaining('UPDATE stores.tiendas'),
-      ['u1', 25, 't1', 'e1'],
-    );
     expect(client.query).toHaveBeenCalledWith(
       expect.stringContaining("SET estado='aceptada'"),
       ['u1', 'i1'],

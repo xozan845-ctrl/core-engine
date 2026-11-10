@@ -96,6 +96,205 @@
           "Tiendas (interno)"
         ]
       }
+    },
+    "/internal/tiendas": {
+      "get": {
+        "operationId": "InternalController_tiendasPorIds",
+        "parameters": [
+          {
+            "name": "ids",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Tiendas encontradas"
+          }
+        },
+        "security": [
+          {
+            "internalKey": []
+          }
+        ],
+        "summary": "Tiendas por lote de ids (servicio→servicio)",
+        "tags": [
+          "Tiendas (interno)"
+        ]
+      }
+    },
+    "/internal/tiendas/empresa/{empresaId}": {
+      "get": {
+        "operationId": "InternalController_tiendasDeEmpresa",
+        "parameters": [
+          {
+            "name": "empresaId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Tiendas de la empresa"
+          }
+        },
+        "security": [
+          {
+            "internalKey": []
+          }
+        ],
+        "summary": "Tiendas de una empresa (servicio→servicio)",
+        "tags": [
+          "Tiendas (interno)"
+        ]
+      }
+    },
+    "/internal/tiendas/vendedor/{vendedorId}": {
+      "get": {
+        "operationId": "InternalController_tiendaDeVendedor",
+        "parameters": [
+          {
+            "name": "vendedorId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Tienda del vendedor o null"
+          }
+        },
+        "security": [
+          {
+            "internalKey": []
+          }
+        ],
+        "summary": "Tienda asignada a un vendedor (servicio→servicio)",
+        "tags": [
+          "Tiendas (interno)"
+        ]
+      }
+    },
+    "/internal/tiendas/{id}": {
+      "get": {
+        "operationId": "InternalController_tienda",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Tienda encontrada"
+          }
+        },
+        "security": [
+          {
+            "internalKey": []
+          }
+        ],
+        "summary": "Tienda por id (servicio→servicio)",
+        "tags": [
+          "Tiendas (interno)"
+        ]
+      }
+    },
+    "/internal/tiendas/{id}/asignar-vendedor": {
+      "post": {
+        "operationId": "InternalController_asignarVendedor",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AsignarVendedorRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Vendedor asignado"
+          }
+        },
+        "security": [
+          {
+            "internalKey": []
+          }
+        ],
+        "summary": "Asignar vendedor a una tienda (servicio→servicio)",
+        "tags": [
+          "Tiendas (interno)"
+        ]
+      }
+    },
+    "/internal/tiendas/{id}/desasignar-vendedor": {
+      "post": {
+        "operationId": "InternalController_desasignarVendedor",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DesasignarVendedorRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Vendedor desasignado"
+          }
+        },
+        "security": [
+          {
+            "internalKey": []
+          }
+        ],
+        "summary": "Compensar asignación de vendedor (servicio→servicio)",
+        "tags": [
+          "Tiendas (interno)"
+        ]
+      }
     }
   },
   "components": {
@@ -112,6 +311,36 @@
       }
     },
     "schemas": {
+      "AsignarVendedorRequestDto": {
+        "type": "object",
+        "properties": {
+          "usuario_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "participacion": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 100
+          }
+        },
+        "required": [
+          "usuario_id",
+          "participacion"
+        ]
+      },
+      "DesasignarVendedorRequestDto": {
+        "type": "object",
+        "properties": {
+          "usuario_id": {
+            "type": "string",
+            "format": "uuid"
+          }
+        },
+        "required": [
+          "usuario_id"
+        ]
+      },
       "OfertaResponseDto": {
         "type": "object",
         "properties": {

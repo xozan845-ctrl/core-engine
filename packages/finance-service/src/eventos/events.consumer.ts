@@ -11,6 +11,7 @@ import {
   DevolucionSolicitadaData,
   Logger,
   Money,
+  ejecutarConContexto,
 } from '@core/shared';
 import { ContabilidadService } from '../contabilidad/contabilidad.service';
 import { MetricasService } from './metricas.service';
@@ -49,23 +50,35 @@ export class EventsConsumer implements OnModuleInit {
   }
 
   private async manejar(evento: EventoBus): Promise<void> {
-    if (await this.yaProcesado(evento)) return;
-    switch (evento.tipo) {
-      case EVENTOS.ORDER_CREATED:
-        await this.checkout(evento as EventoBus<OrdenData>);
-        break;
-      case EVENTOS.PAYMENT_PROCESADO:
-        await this.pago(evento as EventoBus<PaymentProcesadoData>);
-        break;
-      case EVENTOS.COMISION_ACREDITADA:
-        await this.comisionAcreditada(evento as EventoBus<ComisionAcreditadaData>);
-        break;
-      case EVENTOS.DEVOLUCION_SOLICITADA:
-        await this.devolucion(evento as EventoBus<DevolucionSolicitadaData>);
-        break;
-      default:
-        return;
-    }
+    // Contexto de sistema: PgService inyecta claims RLS dentro de las
+    // transacciones contables del consumidor.
+    await ejecutarConContexto(
+      {
+        request_id: `finance-event-${evento.event_id}`,
+        servicio: 'finance-consumer',
+        usuario_id: '00000000-0000-0000-0000-000000000000',
+        rol: 'super_admin',
+      },
+      async () => {
+        if (await this.yaProcesado(evento)) return;
+        switch (evento.tipo) {
+          case EVENTOS.ORDER_CREATED:
+            await this.checkout(evento as EventoBus<OrdenData>);
+            break;
+          case EVENTOS.PAYMENT_PROCESADO:
+            await this.pago(evento as EventoBus<PaymentProcesadoData>);
+            break;
+          case EVENTOS.COMISION_ACREDITADA:
+            await this.comisionAcreditada(evento as EventoBus<ComisionAcreditadaData>);
+            break;
+          case EVENTOS.DEVOLUCION_SOLICITADA:
+            await this.devolucion(evento as EventoBus<DevolucionSolicitadaData>);
+            break;
+          default:
+            return;
+        }
+      },
+    );
   }
 
   /** Embudo (8.8): el checkout completado es la creacion de la orden (order.created). */
@@ -99,22 +112,29 @@ export class EventsConsumer implements OnModuleInit {
     this.logger.info({ msg: 'Asiento de pago registrado', order_id, monto_cents });
   }
 
-  /** La orden entregada realiza el ingreso (RN-04): comision + parte vendedor. */
+  /** La orden entregada realiza el ingreso (RN-04): comision + partes. */
   private async comisionAcreditada(evento: EventoBus<ComisionAcreditadaData>): Promise<void> {
     const { order_id, monto_cents, monto_vendedor_cents, vendedor_id } = evento.data;
-    const ventaCents = monto_cents + monto_vendedor_cents;
+    const montoEmpresario = evento.data.monto_empresario_cents ?? 0;
+    const ventaCents = monto_cents + monto_vendedor_cents + montoEmpresario;
+    const detalles = [
+      { cuenta_codigo: '2.1.2', debe_cents: ventaCents, haber_cents: 0, concepto: 'Fondos por liquidar' },
+      { cuenta_codigo: '4.1', debe_cents: 0, haber_cents: monto_cents, concepto: 'Comision de la plataforma' },
+      ...(monto_vendedor_cents > 0
+        ? [{ cuenta_codigo: '2.1.1', debe_cents: 0, haber_cents: monto_vendedor_cents, concepto: 'Liquidacion al vendedor' }]
+        : []),
+      ...(montoEmpresario > 0
+        ? [{ cuenta_codigo: '2.1.6', debe_cents: 0, haber_cents: montoEmpresario, concepto: 'Liquidacion al empresario' }]
+        : []),
+    ];
     await this.pg.transaccion(async (client) => {
       await this.contabilidad.registrarEnTransaccion(client, {
-        concepto: `Realizacion de venta ${order_id}: comision (RN-04) y parte del vendedor`,
+        concepto: `Realizacion de venta ${order_id}: comision (RN-04), vendedor y empresario`,
         tipo: 'AJUSTE',
         referencia_tipo: 'order',
         referencia_id: order_id,
         creado_por: 'sistema',
-        detalles: [
-          { cuenta_codigo: '2.1.2', debe_cents: ventaCents, haber_cents: 0, concepto: 'Fondos por liquidar' },
-          { cuenta_codigo: '4.1', debe_cents: 0, haber_cents: monto_cents, concepto: 'Comision de la plataforma' },
-          { cuenta_codigo: '2.1.1', debe_cents: 0, haber_cents: monto_vendedor_cents, concepto: 'Liquidacion al vendedor' },
-        ],
+        detalles,
       });
       await this.metricas.sumarMetrica(client, 'ingresos_comisiones', monto_cents, 0);
       await this.metricas.sumarMetrica(client, 'entregados', 0, 1);
@@ -128,28 +148,61 @@ export class EventsConsumer implements OnModuleInit {
     this.logger.info({ msg: 'Asiento de comision registrado', order_id, comision_cents: monto_cents });
   }
 
-  /** Devolucion (RN-06): revierte la comision acreditada y la devuelve al acreedor. */
+  /** Devolucion (RN-06): revierte exactamente el asiento de realizacion previo. */
   private async devolucion(evento: EventoBus<DevolucionSolicitadaData>): Promise<void> {
-    const orden = await this.consultarOrden(evento.data.order_id);
+    const orderId = evento.data.order_id;
+    const orden = await this.consultarOrden(orderId);
     if (!orden) throw new Error('Orden no disponible para el asiento de devolucion.');
-    const comision = Money.desdeCentavos(orden.total_cents).comision(this.comisionTasa).centavos;
 
     await this.pg.transaccion(async (client) => {
-      await this.contabilidad.registrarEnTransaccion(client, {
-        concepto: `Devolucion de la orden ${evento.data.order_id} (RN-06): compensacion de comision`,
-        tipo: 'AJUSTE',
-        referencia_tipo: 'order',
-        referencia_id: evento.data.order_id,
-        creado_por: 'sistema',
-        detalles: [
+      // Reverso exacto: se leen las líneas del asiento de realización de esta
+      // orden y se invierten debe/haber. Así se compensan comisión, vendedor
+      // y empresario con los montos realmente contabilizados (no con una
+      // estimación total*tasa que puede diferir por redondeo por línea).
+      const previo = await client.query<{ id: string }>(
+        `SELECT id FROM finance.asientos
+          WHERE referencia_tipo = 'order' AND referencia_id = $1
+            AND concepto LIKE 'Realizacion de venta%' AND estado = 'REGISTRADO'
+          ORDER BY creado_en DESC LIMIT 1`,
+        [orderId],
+      );
+      let detalles: { cuenta_codigo: string; debe_cents: number; haber_cents: number; concepto: string }[];
+      if (previo.rows[0]) {
+        const lineas = await client.query<{ cuenta_codigo: string; debe_cents: number; haber_cents: number }>(
+          `SELECT cuenta_codigo, debe_cents, haber_cents
+             FROM finance.asiento_detalles WHERE asiento_id = $1`,
+          [previo.rows[0].id],
+        );
+        detalles = lineas.rows
+          .map((l) => ({
+            cuenta_codigo: l.cuenta_codigo,
+            debe_cents: l.haber_cents,
+            haber_cents: l.debe_cents,
+            concepto: 'Reverso por devolucion (RN-06)',
+          }))
+          .filter((l) => l.debe_cents > 0 || l.haber_cents > 0);
+      } else {
+        // Fallback para ordenes sin asiento previo (datos historicos): se
+        // revierte la comision estimada.
+        const comision = Money.desdeCentavos(orden.total_cents).comision(this.comisionTasa).centavos;
+        detalles = [
           { cuenta_codigo: '4.1', debe_cents: comision, haber_cents: 0, concepto: 'Comision revertida' },
           { cuenta_codigo: '2.1.1', debe_cents: 0, haber_cents: comision, concepto: 'Compensacion en liquidacion' },
-        ],
+        ];
+      }
+
+      await this.contabilidad.registrarEnTransaccion(client, {
+        concepto: `Devolucion de la orden ${orderId} (RN-06): reverso del asiento de realizacion`,
+        tipo: 'AJUSTE',
+        referencia_tipo: 'order',
+        referencia_id: orderId,
+        creado_por: 'sistema',
+        detalles,
       });
       await this.metricas.sumarMetrica(client, 'devoluciones', 0, 1);
       await this.marcarEnTransaccion(client, evento);
     });
-    this.logger.info({ msg: 'Asiento de devolucion registrado', order_id: evento.data.order_id, comision_cents: comision });
+    this.logger.info({ msg: 'Asiento de devolucion registrado', order_id: orderId });
   }
 
   private async consultarOrden(

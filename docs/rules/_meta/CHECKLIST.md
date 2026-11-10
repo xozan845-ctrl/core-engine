@@ -29,7 +29,7 @@ Matriz completa en [`06-estandares-cobertura.md`](../test/06-estandares-cobertur
 
 - [ ] **R0** — Los tests asientan el requisito, no la implementación (nada de "actualizar el expected para que pase").
 - [ ] **R-U-2/R-U-3** — Nombres `debe <comportamiento> cuando <condición>`; un escenario por `it`.
-- [x] **R-FL-3** — `TZ=America/Managua` fijada en el setup central de las 12 suites Vitest, los 5 runners de mutation, CI y los workflows E2E/deploy.
+- [x] **R-FL-3** — `TZ=America/Managua` fijada en el setup central de las 13 suites Vitest, los 5 runners de mutation, CI y los workflows E2E/deploy.
 - [ ] **R-COV-1** — La cobertura no baja respecto a `main`.
 - [ ] **R-COV-2** — Todo archivo de lógica tocado (`*.service.ts`, `*.consumer.ts`, código puro de `shared`) tiene spec (o excepción documentada).
 - [ ] **R-COV-5** — N/A en este repo (sin frontend; ID **reservado**, nunca se reutiliza). Si algún día hay UI, su ratchet sigue el método de R-COV-1.
@@ -91,9 +91,9 @@ Matriz completa en [`06-estandares-cobertura.md`](../test/06-estandares-cobertur
 
 ## 8. Antes de merge (CI)
 
-- [ ] **G-1** unit backend (job `test`, `npm test -- --coverage`) ✅
+- [x] **G-1** unit backend (job `test`, `npm test`) — ✅ 13/13 workspaces, 1.391 tests (ver [`AUDIT.md`](./AUDIT.md))
 - [ ] **G-2** unit frontend — **N/A** (sin frontend; ID reservado)
-- [ ] **G-3** cobertura ≥ `coverageThreshold` vigente por workspace (ratchet R-COV-1) ✅
+- [x] **G-3** cobertura ≥ `coverageThreshold` vigente por workspace (ratchet R-COV-1) — ✅ 13/13 (ver [`AUDIT.md`](./AUDIT.md))
 - [ ] **G-4** integración — ⏸ parcial: catálogo y configuración de sitio API+BD; faltan otros flujos críticos (R-I-12)
 - [ ] **G-5** contrato — ⏸ pendiente: todos los shapes de error 400/401/403/404/409/500 están cubiertos; el envelope de éxito requiere `/api/v2` (R-C-7)
 - [ ] **G-7** lint + build (jobs `lint` y `build`) ✅

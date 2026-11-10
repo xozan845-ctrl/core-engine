@@ -7,6 +7,8 @@ import {
   UsuarioActual,
   UsuarioContexto,
   NotFoundError,
+  CAPACIDADES,
+  RequiereCapacidades,
 } from '@core/shared';
 import { LiquidacionesService, Liquidacion, LiquidacionEmpresa, Periodo } from './liquidaciones.service';
 import { LiquidacionEmpresaResponseDto, LiquidacionResponseDto } from './liquidaciones.response.dto';
@@ -20,6 +22,7 @@ export class EstadoLiquidacionRequestDto {
 @ApiTags('Comisiones · Liquidaciones')
 @ApiBearerAuth()
 @Controller('api/v2')
+@RequiereCapacidades(CAPACIDADES.LIQUIDACIONES)
 export class LiquidacionesController {
   constructor(private readonly liquidaciones: LiquidacionesService) {}
 

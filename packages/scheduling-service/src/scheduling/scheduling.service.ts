@@ -13,6 +13,8 @@ import {
   OutboxService,
   PgService,
   ejecutarConContexto,
+  partePerteneceAEmpresa,
+  ServiceUnavailableError,
 } from '@core/shared';
 import {
   CrearBloqueoRequestDto,
@@ -111,18 +113,23 @@ export class SchedulingService implements OnModuleInit, OnModuleDestroy {
 
   async crearBloqueo(empresaId: string, actorId: string | undefined, dto: CrearBloqueoRequestDto): Promise<Fila> {
     this.validarPeriodo(dto.inicia_en, dto.termina_en);
-    await this.recursoDeEmpresa(empresaId, dto.recurso_id);
     try {
-      const fila = await this.pg.queryOne<Fila>(
-        `INSERT INTO scheduling.bloqueos
-          (id, empresa_id, recurso_id, periodo, motivo, creado_por)
-         VALUES ($1, $2, $3, tstzrange($4::timestamptz, $5::timestamptz, '[)'), $6, $7)
-         RETURNING id, empresa_id, recurso_id, lower(periodo) AS inicia_en,
-                   upper(periodo) AS termina_en, motivo, creado_en`,
-        [randomUUID(), empresaId, dto.recurso_id, dto.inicia_en, dto.termina_en, dto.motivo ?? '', actorId ?? null],
-      );
-      if (!fila) throw new DomainError('PERSISTENCIA_FALLIDA', 'No se pudo crear el bloqueo.');
-      return fila;
+      return await this.pg.transaccion(async (client) => {
+        // El mismo lock que usa crearCita: serializa citas y bloqueos del
+        // recurso para que no puedan solaparse en una carrera.
+        await this.recursoDeEmpresaEnTransaccion(client, empresaId, dto.recurso_id);
+        const result = await client.query<Fila>(
+          `INSERT INTO scheduling.bloqueos
+            (id, empresa_id, recurso_id, periodo, motivo, creado_por)
+           VALUES ($1, $2, $3, tstzrange($4::timestamptz, $5::timestamptz, '[)'), $6, $7)
+           RETURNING id, empresa_id, recurso_id, lower(periodo) AS inicia_en,
+                     upper(periodo) AS termina_en, motivo, creado_en`,
+          [randomUUID(), empresaId, dto.recurso_id, dto.inicia_en, dto.termina_en, dto.motivo ?? '', actorId ?? null],
+        );
+        const fila = result.rows[0];
+        if (!fila) throw new DomainError('PERSISTENCIA_FALLIDA', 'No se pudo crear el bloqueo.');
+        return fila;
+      });
     } catch (error) {
       this.traducirConflictoPeriodo(error, 'El recurso ya tiene un bloqueo en ese horario.');
     }
@@ -131,12 +138,9 @@ export class SchedulingService implements OnModuleInit, OnModuleDestroy {
   async crearCita(empresaId: string, dto: CrearCitaRequestDto): Promise<Fila> {
     this.validarPeriodo(dto.inicia_en, dto.termina_en);
     if (dto.parte_id) {
-      const parte = await this.pg.queryOne(
-        `SELECT 1 FROM identity.partes
-         WHERE id = $1 AND empresa_id = $2 AND eliminado_en IS NULL`,
-        [dto.parte_id, empresaId],
-      );
-      if (!parte) throw new DomainError('PARTE_INVALIDA', 'La parte no pertenece al tenant activo.');
+      const pertenece = await partePerteneceAEmpresa(empresaId, dto.parte_id);
+      if (pertenece === null) throw new ServiceUnavailableError('identity-service');
+      if (!pertenece) throw new DomainError('PARTE_INVALIDA', 'La parte no pertenece al tenant activo.');
     }
     try {
       return await this.pg.transaccion(async (client) => {
@@ -306,6 +310,18 @@ export class SchedulingService implements OnModuleInit, OnModuleDestroy {
     if (!recurso) throw new NotFoundError('Recurso', recursoId);
   }
 
+  private async recursoDeEmpresaEnTransaccion(
+    client: PoolClient,
+    empresaId: string,
+    recursoId: string,
+  ): Promise<void> {
+    const recurso = await client.query(
+      `SELECT id FROM scheduling.recursos WHERE id = $1 AND empresa_id = $2 FOR UPDATE`,
+      [recursoId, empresaId],
+    );
+    if (recurso.rowCount === 0) throw new NotFoundError('Recurso', recursoId);
+  }
+
   private async validarDisponibilidad(client: PoolClient, recursoId: string, inicia: string, termina: string): Promise<void> {
     const disponible = await client.query(
       `SELECT 1 FROM scheduling.disponibilidad d
@@ -343,7 +359,12 @@ export class SchedulingService implements OnModuleInit, OnModuleDestroy {
   }
 
   private traducirConflictoPeriodo(error: unknown, mensaje: string): never {
-    if (typeof error === 'object' && error !== null && 'code' in error && (error as { code?: string }).code === '23P01') {
+    const codigo =
+      typeof error === 'object' && error !== null && 'code' in error
+        ? (error as { code?: string }).code
+        : undefined;
+    // 23P01 = exclusión de solapamiento; 23505 = unique (order_id repetido).
+    if (codigo === '23P01' || codigo === '23505') {
       throw new ConflictError(mensaje, undefined, 'RECURSO_NO_DISPONIBLE');
     }
     throw error;

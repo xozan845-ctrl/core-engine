@@ -26,7 +26,7 @@ async function bootstrap(): Promise<void> {
   );
   app.useGlobalFilters(new DomainErrorFilter());
   app.useGlobalGuards(new RolesGuard());
-  app.useGlobalGuards(new CapabilityGuard(app.get(PgService)));
+  app.useGlobalGuards(new CapabilityGuard());
   app.useGlobalGuards(new PermisosGuard(app.get(PgService)));
   const puerto = Number(process.env.PORT ?? PUERTOS.CATALOG);
   const expressApp = app.getHttpAdapter().getInstance();
