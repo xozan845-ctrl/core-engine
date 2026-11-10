@@ -188,15 +188,35 @@ describe('ProductosService (catalogo maestro y stock)', () => {
         { empresa_id: datosValidos.empresa_id, sku: 'sku-01' },
       ]);
     });
+
+    it('debe consultar el stock con el cliente de la transacción cuando se lo pasan', async () => {
+      const { servicio, pg, client } = crear();
+      (client.query as Mock).mockResolvedValue({
+        rows: [{ empresa_id: datosValidos.empresa_id, sku: 'sku-01', stock_restante: 9 }],
+      });
+
+      await expect(
+        servicio.stockActualDe(
+          [{ empresa_id: datosValidos.empresa_id, sku: 'SKU-01' }],
+          client,
+        ),
+      ).resolves.toEqual([
+        { empresa_id: datosValidos.empresa_id, sku: 'sku-01', stock_restante: 9 },
+      ]);
+      expect(client.query).toHaveBeenCalled();
+      expect(pg.query).not.toHaveBeenCalled();
+    });
   });
 
   describe('reservarStock (RN-03)', () => {
     const ordenOk = async (servicio: ProductosService, pg: any, client: any) => {
       (client.query as Mock)
+        .mockResolvedValueOnce({ rows: [], rowCount: 0 }) // SAVEPOINT
         .mockResolvedValueOnce({ rowCount: 1, rows: [{ stock: 10 }] }) // SELECT FOR UPDATE
         .mockResolvedValueOnce({ rows: [], rowCount: 1 }) // UPDATE stock
-        .mockResolvedValueOnce({ rows: [], rowCount: 1 }); // INSERT reserva
-      (pg.query as Mock).mockResolvedValue([{ empresa_id: datosValidos.empresa_id, sku: 'sku-01', stock_restante: 9 }]);
+        .mockResolvedValueOnce({ rows: [], rowCount: 1 }) // INSERT reserva
+        .mockResolvedValueOnce({ rows: [], rowCount: 0 }) // RELEASE
+        .mockResolvedValueOnce({ rows: [{ empresa_id: datosValidos.empresa_id, sku: 'sku-01', stock_restante: 9 }], rowCount: 1 }); // SELECT stock
       return servicio.reservarStock('o1', [
         { empresa_id: datosValidos.empresa_id, sku: 'sku-01', cantidad: 1 },
       ]);
@@ -211,16 +231,18 @@ describe('ProductosService (catalogo maestro y stock)', () => {
       expect(resultado.stock_restante).toEqual([
         { empresa_id: datosValidos.empresa_id, sku: 'sku-01', stock_restante: 9 },
       ]);
-      const sqlLock = (client.query as Mock).mock.calls[0][0];
+      const sqlLock = (client.query as Mock).mock.calls[1][0];
       expect(sqlLock).toContain('FOR UPDATE'); // bloqueo pesimista exigido por regla
       expect(sqlLock).toContain('empresa_id = $1');
-      const sqlReserva = (client.query as Mock).mock.calls[2][0];
+      const sqlReserva = (client.query as Mock).mock.calls[3][0];
       expect(sqlReserva).toContain('INSERT INTO catalog.reservas_ordenes');
     });
 
     it('debe rechazar la reserva completa cuando alguna linea no alcanza stock', async () => {
       const { servicio, client } = crear();
-      (client.query as Mock).mockResolvedValueOnce({ rowCount: 0, rows: [] }); // sin stock
+      (client.query as Mock)
+        .mockResolvedValueOnce({ rowCount: 0, rows: [] }) // SAVEPOINT
+        .mockResolvedValueOnce({ rowCount: 0, rows: [] }); // sin stock
 
       const resultado = await servicio.reservarStock('o2', [
         { empresa_id: datosValidos.empresa_id, sku: 'agotado', cantidad: 3 },
@@ -559,10 +581,12 @@ describe('ProductosService (catalogo maestro y stock)', () => {
 
     it('debe impedir reservar stock del padre si tiene variantes', async () => {
       const { servicio, client } = crear();
-      (client.query as Mock).mockResolvedValueOnce({
-        rowCount: 1,
-        rows: [{ stock: 10, tiene_variantes: true }],
-      });
+      (client.query as Mock)
+        .mockResolvedValueOnce({ rowCount: 0, rows: [] }) // SAVEPOINT
+        .mockResolvedValueOnce({
+          rowCount: 1,
+          rows: [{ stock: 10, tiene_variantes: true }],
+        });
 
       const resultado = await servicio.reservarStock('o1', [
         { empresa_id: datosValidos.empresa_id, sku: 'SKU-01', cantidad: 1 },

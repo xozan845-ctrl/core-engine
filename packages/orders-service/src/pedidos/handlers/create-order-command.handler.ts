@@ -57,6 +57,8 @@ export class CreateOrderCommandHandler {
   private readonly storesUrl = process.env.STORES_SERVICE_URL ?? 'http://stores-service:3003';
   private readonly catalogUrl = process.env.CATALOG_SERVICE_URL ?? 'http://catalog-service:3002';
   private readonly claveInterna = process.env.INTERNAL_API_KEY ?? '';
+  /** RN-04: misma tasa que commissions-service y el trigger de proyección. */
+  private readonly tasaComision = Number(process.env.COMMISSION_RATE ?? 0.12);
 
   constructor(
     private readonly pg: PgService,
@@ -146,6 +148,7 @@ export class CreateOrderCommandHandler {
           estado: 'creada',
           tipo_orden: tipoOrden,
           fulfillment_config: this.resumenFulfillment(items),
+          comision_cents: total.comision(this.tasaComision).centavos,
         },
       };
       await client.query(
@@ -190,6 +193,7 @@ export class CreateOrderCommandHandler {
     estadoNuevo: string,
     motivo?: string,
     actor?: string,
+    eventoAdicional?: { tipo: string; data: Record<string, unknown> },
   ): Promise<OrderView> {
     const orden = await this.eventStore.historiaDe(orderId);
     if (orden.length === 0) throw new NotFoundError('Orden', orderId);
@@ -229,6 +233,22 @@ export class CreateOrderCommandHandler {
          VALUES ($1, $2, $3, 'pendiente', NOW())`,
         [evento.event_id, evento.tipo, JSON.stringify(evento)],
       );
+      // Evento derivado (p. ej. payment.procesado) en la MISMA transacción:
+      // si falla el outbox, la transición también revierte y el reintento es
+      // seguro (antes la orden quedaba pagada sin evento de pago).
+      if (eventoAdicional) {
+        const extra = {
+          event_id: randomUUID(),
+          tipo: eventoAdicional.tipo,
+          ocurrido_en: new Date().toISOString(),
+          data: eventoAdicional.data,
+        };
+        await client.query(
+          `INSERT INTO orders.outbox (event_id, tipo, payload, estado, creado_en)
+           VALUES ($1, $2, $3, 'pendiente', NOW())`,
+          [extra.event_id, extra.tipo, JSON.stringify(extra)],
+        );
+      }
     });
     return (await this.views.encontrar(orderId)) as OrderView;
   }

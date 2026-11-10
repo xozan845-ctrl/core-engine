@@ -35,7 +35,14 @@ export class OutboxService implements OnModuleInit, OnModuleDestroy {
           rol: 'super_admin',
         },
         () => this.publicarPendientes(),
-      ) as Promise<void>).catch(() => undefined);
+      ) as Promise<void>).catch((err: unknown) => {
+        // Un fallo del poller no puede quedar silenciado: sin esta traza un
+        // outbox atascado se ve como "todo verde" en los logs.
+        this.logger.error({
+          msg: 'Fallo el ciclo del outbox',
+          err: err instanceof Error ? err.message : String(err),
+        });
+      });
     }, 1000);
   }
 
@@ -77,29 +84,48 @@ export class OutboxService implements OnModuleInit, OnModuleDestroy {
 
   private async publicarPendientes(): Promise<void> {
     if (this.detenido) return;
+    // Reclamo atómico: el UPDATE marca `bloqueado_en` en la misma sentencia
+    // que selecciona con SKIP LOCKED. Dos pollers (o dos réplicas) no pueden
+    // reclamar la misma fila. El lease de 5 minutos recupera filas de un
+    // proceso que murió después de reclamarlas.
     const pendientes = await this.pg.query<{ event_id: string; payload: string }>(
-      `SELECT event_id, payload FROM ${this.tabla}
-       WHERE estado = 'pendiente' AND creado_en > NOW() - INTERVAL '30 minutes'
-       ORDER BY creado_en ASC LIMIT 50
-       FOR UPDATE SKIP LOCKED`,
+      `UPDATE ${this.tabla}
+          SET bloqueado_en = NOW()
+        WHERE event_id IN (
+          SELECT event_id FROM ${this.tabla}
+           WHERE estado = 'pendiente'
+             AND (bloqueado_en IS NULL OR bloqueado_en < NOW() - INTERVAL '5 minutes')
+           ORDER BY creado_en ASC
+           LIMIT 50
+           FOR UPDATE SKIP LOCKED
+        )
+        RETURNING event_id, payload`,
     );
     for (const fila of pendientes) {
+      let publicado = false;
       try {
         const evento = this.deserializar(fila.payload);
-        const ok = await this.rabbit.publicar(evento);
-        if (ok) {
-          await this.pg.query(
-            `UPDATE ${this.tabla} SET estado = 'publicado', publicado_en = NOW()
-             WHERE event_id = $1 AND estado = 'pendiente'`,
-            [fila.event_id],
-          );
-        }
+        publicado = await this.rabbit.publicar(evento);
       } catch (err) {
         this.logger.error({
           msg: 'Fallo al publicar evento outbox',
           event_id: fila.event_id,
           err: err instanceof Error ? err.message : String(err),
         });
+      }
+      if (publicado) {
+        await this.pg.query(
+          `UPDATE ${this.tabla}
+              SET estado = 'publicado', publicado_en = NOW(), bloqueado_en = NULL
+            WHERE event_id = $1 AND estado = 'pendiente'`,
+          [fila.event_id],
+        );
+      } else {
+        // Liberar el lease para que el próximo ciclo lo reintente.
+        await this.pg.query(
+          `UPDATE ${this.tabla} SET bloqueado_en = NULL WHERE event_id = $1 AND estado = 'pendiente'`,
+          [fila.event_id],
+        );
       }
     }
   }

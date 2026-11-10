@@ -112,7 +112,29 @@ export class RabbitService implements OnModuleInit, OnModuleDestroy {
     await canal.prefetch(1);
     await canal.consume(nombreCola, async (msg) => {
       if (!msg) return;
-      const cuerpo = JSON.parse(msg.content.toString()) as EventoBus;
+      let cuerpo: EventoBus;
+      try {
+        cuerpo = JSON.parse(msg.content.toString()) as EventoBus;
+      } catch (err) {
+        // Un mensaje corrupto no puede quedar en requeue infinito ni fuera del
+        // try (antes el JSON.parse sucedía antes y el mensaje no se ackeaba).
+        this.logger.error({
+          msg: 'Mensaje con JSON inválido; se envía a la DLQ',
+          cola: nombreCola,
+          err: err instanceof Error ? err.message : String(err),
+        });
+        canal.publish(EXCHANGE_DLQ, nombreCola, msg.content, {
+          persistent: true,
+          headers: {
+            ...msg.properties.headers,
+            'x-cola': nombreCola,
+            'x-error': 'json_invalido',
+            'x-muerto': true,
+          },
+        });
+        canal.ack(msg);
+        return;
+      }
       const intentos = (msg.properties.headers?.['x-intentos'] ?? 0) as number;
       try {
         await manejador(cuerpo);
@@ -186,22 +208,26 @@ export class RabbitService implements OnModuleInit, OnModuleDestroy {
       }
       const routingKey =
         (msg.properties.headers?.['x-routing-key-original'] as string) ?? msg.fields.routingKey;
-      setTimeout(() => {
-        try {
-          canal.publish(EXCHANGE_EVENTS, routingKey, msg.content, {
-            persistent: true,
-            headers: { ...msg.properties.headers, 'x-reintentado': true },
-          });
-        } catch (e) {
-          this.logger.error({
-            msg: 'Fallo la reinyeccion desde DLQ',
-            cola: nombreCola,
-            err: e instanceof Error ? e.message : String(e),
-          });
-        }
-      }, espera);
-      canal.ack(msg);
-      reprocesados += 1;
+      // El mensaje NO se ackea hasta que la reinyección está confirmada. Antes
+      // se ackeaba y se publicaba en un setTimeout: si el proceso moría en esa
+      // ventana, el evento se perdía.
+      await new Promise((resolve) => setTimeout(resolve, espera));
+      try {
+        canal.publish(EXCHANGE_EVENTS, routingKey, msg.content, {
+          persistent: true,
+          headers: { ...msg.properties.headers, 'x-reintentado': true },
+        });
+        await canal.waitForConfirms();
+        canal.ack(msg);
+        reprocesados += 1;
+      } catch (e) {
+        this.logger.error({
+          msg: 'Fallo la reinyeccion desde DLQ; el mensaje queda en la DLQ',
+          cola: nombreCola,
+          err: e instanceof Error ? e.message : String(e),
+        });
+        canal.nack(msg, false, true);
+      }
     }
     return reprocesados;
   }
