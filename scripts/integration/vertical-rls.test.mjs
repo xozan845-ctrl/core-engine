@@ -75,11 +75,16 @@ before(async () => {
       `SELECT to_regclass('catalog.items') IS NOT NULL
               AND to_regclass('catalog.productos') IS NULL AS final`,
     );
-    const migraciones = final
+    const { rows: [{ rolesPersonal }] } = await client.query(
+      `SELECT to_regclass('identity.roles_empresa') IS NOT NULL AS "rolesPersonal"`,
+    );
+    const migraciones = (final
       ? MIGRACIONES_FINAL
       : existe
         ? MIGRACIONES_LEGACY.filter((name) => name !== '01_esquemas.sql')
-        : MIGRACIONES_LEGACY;
+        : MIGRACIONES_LEGACY).filter(
+      (name) => name !== '37_personal_empresa.sql' || !rolesPersonal,
+    );
     if (final) {
       // 31 todavía declara una policy sobre la vista legacy retirada por 48.
       // El stub permite aplicar la policy de las tablas finales sin resucitar
