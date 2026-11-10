@@ -71,6 +71,18 @@ describe('FieldService', () => {
     })).rejects.toMatchObject({ codigo: 'PARTE_INVALIDA' });
   });
 
+  it('valida la parte contra el tenant también al actualizar un cliente', async () => {
+    pg.queryOne.mockResolvedValueOnce({ id: 'parte-1' }).mockResolvedValueOnce({ id: 'cliente-1' });
+
+    await service.actualizarCliente('tenant-a', 'cliente-1', {
+      nombreCompleto: 'Ana',
+      parteId: '22222222-2222-4222-8222-222222222222',
+    });
+
+    expect(pg.queryOne.mock.calls[0][0]).toContain('identity.partes');
+    expect(pg.queryOne.mock.calls[1][0]).toContain('UPDATE field.clientes');
+  });
+
   it('actualiza ubicación usando el contrato público lat/lng/precision/timestamp', async () => {
     pg.queryOne
       .mockResolvedValueOnce({ id: 'personal-1' })
