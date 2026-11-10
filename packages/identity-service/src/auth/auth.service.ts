@@ -9,6 +9,7 @@ import {
   crearAccessToken,
   crearRefreshToken,
   verificarToken,
+  secretoJwt,
   TokenPayload,
   DomainError,
   UnauthorizedError,
@@ -54,7 +55,7 @@ export function ttlAMs(ttl: string): number {
  */
 @Injectable()
 export class AuthService {
-  private readonly secreto = process.env.JWT_SECRET ?? 'dev_secret';
+  private readonly secreto = secretoJwt();
   private readonly accessTtl = process.env.JWT_ACCESS_TTL ?? JWT_ACCESS_TTL_DEFAULT;
   private readonly refreshTtl = process.env.JWT_REFRESH_TTL ?? JWT_REFRESH_TTL_DEFAULT;
 
