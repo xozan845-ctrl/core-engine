@@ -2,7 +2,7 @@
   "openapi": "3.0.0",
   "info": {
     "title": "Core Engine · orders-service · API pública",
-    "description": "Contrato público (/api/v1/**) de orders-service. No contiene rutas /internal/**.",
+    "description": "Contrato público (/api/v2/**) de orders-service. No contiene rutas /internal/**.",
     "version": "v1",
     "contact": {}
   },
@@ -10,7 +10,7 @@
   "x-superficie": "publica",
   "tags": [],
   "paths": {
-    "/api/v1/orders": {
+    "/api/v2/orders": {
       "post": {
         "operationId": "PedidosController_crear",
         "parameters": [],
@@ -84,7 +84,7 @@
         ]
       }
     },
-    "/api/v1/orders/admin/todas": {
+    "/api/v2/orders/admin/todas": {
       "get": {
         "operationId": "PedidosController_todas",
         "parameters": [
@@ -131,7 +131,7 @@
         ]
       }
     },
-    "/api/v1/orders/vendedor/mis-ventas": {
+    "/api/v2/orders/vendedor/mis-ventas": {
       "get": {
         "operationId": "PedidosController_misVentas",
         "parameters": [
@@ -170,56 +170,7 @@
         ]
       }
     },
-    "/api/v1/orders/vendedor/comisiones": {
-      "get": {
-        "deprecated": true,
-        "operationId": "PedidosController_comisiones",
-        "parameters": [
-          {
-            "name": "periodo",
-            "required": false,
-            "in": "query",
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "vendedorId",
-            "required": false,
-            "in": "query",
-            "description": "Solo admin",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Comisiones por periodo",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/components/schemas/ComisionVistaResponseDto"
-                  }
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "bearer": []
-          }
-        ],
-        "summary": "Comisiones por periodo (vendedor/admin) — obsoleto: usar /vendedores/me/ventas",
-        "tags": [
-          "Pedidos"
-        ]
-      }
-    },
-    "/api/v1/orders/tienda/{tiendaId}": {
+    "/api/v2/orders/tienda/{tiendaId}": {
       "get": {
         "operationId": "PedidosController_porTienda",
         "parameters": [
@@ -267,7 +218,7 @@
         ]
       }
     },
-    "/api/v1/orders/empresa": {
+    "/api/v2/orders/empresa": {
       "get": {
         "operationId": "PedidosController_porEmpresa",
         "parameters": [
@@ -331,7 +282,7 @@
         ]
       }
     },
-    "/api/v1/orders/{id}": {
+    "/api/v2/orders/{id}": {
       "get": {
         "operationId": "PedidosController_detalle",
         "parameters": [
@@ -368,7 +319,7 @@
         ]
       }
     },
-    "/api/v1/orders/{id}/timeline": {
+    "/api/v2/orders/{id}/timeline": {
       "get": {
         "operationId": "PedidosController_timeline",
         "parameters": [
@@ -408,7 +359,7 @@
         ]
       }
     },
-    "/api/v1/carrito": {
+    "/api/v2/carrito": {
       "get": {
         "operationId": "CarritoController_ver",
         "parameters": [],
@@ -460,7 +411,7 @@
         ]
       }
     },
-    "/api/v1/carrito/items": {
+    "/api/v2/carrito/items": {
       "post": {
         "operationId": "CarritoController_agregar",
         "parameters": [],
@@ -497,7 +448,7 @@
         ]
       }
     },
-    "/api/v1/carrito/items/{ofertaId}": {
+    "/api/v2/carrito/items/{ofertaId}": {
       "patch": {
         "operationId": "CarritoController_actualizar",
         "parameters": [
@@ -643,11 +594,6 @@
             "description": "Cantidad",
             "example": 2
           },
-          "id": {
-            "type": "string",
-            "description": "Id de la oferta (alias enriquecido)",
-            "format": "uuid"
-          },
           "tienda_id": {
             "type": "string",
             "description": "Id de la tienda",
@@ -686,7 +632,6 @@
         "required": [
           "oferta_id",
           "cantidad",
-          "id",
           "tienda_id",
           "vendedor_id",
           "sku",
@@ -721,49 +666,6 @@
         "required": [
           "items",
           "total"
-        ]
-      },
-      "ComisionVistaResponseDto": {
-        "type": "object",
-        "properties": {
-          "vendedor_id": {
-            "type": "string",
-            "description": "Id del vendedor",
-            "format": "uuid"
-          },
-          "periodo": {
-            "type": "string",
-            "description": "Periodo (YYYY-MM)",
-            "example": "2026-10"
-          },
-          "ordenes": {
-            "type": "number",
-            "description": "Órdenes del periodo",
-            "example": 12
-          },
-          "total_ventas_cents": {
-            "type": "number",
-            "description": "Ventas del periodo en centavos",
-            "example": 1380000
-          },
-          "total_comision_cents": {
-            "type": "number",
-            "description": "Comisiones del periodo en centavos",
-            "example": 165600
-          },
-          "actualizado_en": {
-            "type": "string",
-            "description": "Última actualización (ISO 8601 UTC)",
-            "format": "date-time"
-          }
-        },
-        "required": [
-          "vendedor_id",
-          "periodo",
-          "ordenes",
-          "total_ventas_cents",
-          "total_comision_cents",
-          "actualizado_en"
         ]
       },
       "CreateOrderCommand": {
@@ -898,6 +800,8 @@
         },
         "required": [
           "oferta_id",
+          "item_type",
+          "item_id",
           "sku",
           "producto_nombre",
           "cantidad",

@@ -293,7 +293,7 @@ export class UsuariosService {
       ...(fila.avatar_objeto_id
         ? {
             avatar_objeto_id: fila.avatar_objeto_id,
-            avatar_url: `/api/v1/storage/public/objetos/${fila.avatar_objeto_id}`,
+            avatar_url: `/api/v2/storage/public/objetos/${fila.avatar_objeto_id}`,
           }
         : {}),
       creado_en: fila.creado_en,

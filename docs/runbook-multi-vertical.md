@@ -49,7 +49,7 @@ Crear un tenant nuevo por pack y validar, en este orden:
 
 Para cada tenant:
 
-- consultar `GET /api/v1/packs?vertical_id=<vertical>`;
+- consultar `GET /api/v2/packs?vertical_id=<vertical>`;
 - crear la empresa con `pack_codigo` explícito;
 - comprobar `identity.empresas.pack_codigo/pack_version`;
 - comprobar que las capacidades activas coinciden con el pack;

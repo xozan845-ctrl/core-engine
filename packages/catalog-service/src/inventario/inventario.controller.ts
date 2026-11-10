@@ -28,12 +28,12 @@ export class CrearLoteInventarioRequestDto {
 
 @ApiTags('Catálogo')
 @ApiBearerAuth()
-@Controller('api/v1/admin/inventario')
+@Controller('api/v2/admin/inventario')
 @RequiereCapacidades(CAPACIDADES.INVENTARIO_STOCK)
 export class InventarioController {
   constructor(private readonly inventario: InventarioService) {}
 
-  /** GET /api/v1/admin/inventario — niveles de stock (JWT admin, Tabla 21). */
+  /** GET /api/v2/admin/inventario — niveles de stock (JWT admin, Tabla 21). */
   @Get()
   @Roles(ROLES.SUPER_ADMIN, ROLES.ADMIN)
   @ApiOperation({ summary: 'Niveles de stock (admin; Tabla 21)' })

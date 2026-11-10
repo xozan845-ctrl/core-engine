@@ -81,7 +81,7 @@ describe('FinanzasController — orden de rutas (R-DO-9)', () => {
 
   it('debe resolver proyecciones/sensibilidad cuando compite con proyecciones/:id', async () => {
     const respuesta = await fetch(
-      `http://127.0.0.1:${puerto}/api/v1/finanzas/proyecciones/sensibilidad`,
+      `http://127.0.0.1:${puerto}/api/v2/finanzas/proyecciones/sensibilidad`,
     );
     expect(respuesta.status).toBe(200);
     const cuerpo = (await respuesta.json()) as {
@@ -94,14 +94,14 @@ describe('FinanzasController — orden de rutas (R-DO-9)', () => {
 
   it('debe resolver proyecciones/plan-bienal cuando compite con proyecciones/:id', async () => {
     const respuesta = await fetch(
-      `http://127.0.0.1:${puerto}/api/v1/finanzas/proyecciones/plan-bienal`,
+      `http://127.0.0.1:${puerto}/api/v2/finanzas/proyecciones/plan-bienal`,
     );
     expect(respuesta.status).toBe(200);
     await expect(respuesta.json()).resolves.toEqual({ rois: [] });
   });
 });
 
-describe('FinanzasController (api/v1/finanzas, cap. 8, R-U-10/11)', () => {
+describe('FinanzasController (api/v2/finanzas, cap. 8, R-U-10/11)', () => {
   it('debe crear una proyeccion con nombre y supuestos', async () => {
     const { proyecciones, controller } = fabricar();
     proyecciones.crear.mockResolvedValue(proyeccion);

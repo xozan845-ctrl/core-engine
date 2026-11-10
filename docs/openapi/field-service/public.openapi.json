@@ -2,7 +2,7 @@
   "openapi": "3.0.0",
   "info": {
     "title": "Core Engine · field-service · API pública",
-    "description": "Contrato público (/api/v1/**) de field-service. No contiene rutas /internal/**.",
+    "description": "Contrato público (/api/v2/**) de field-service. No contiene rutas /internal/**.",
     "version": "v1",
     "contact": {}
   },
@@ -10,7 +10,7 @@
   "x-superficie": "publica",
   "tags": [],
   "paths": {
-    "/api/v1/field/personal": {
+    "/api/v2/field/personal": {
       "get": {
         "operationId": "FieldController_listarPersonal",
         "parameters": [],
@@ -75,7 +75,7 @@
         ]
       }
     },
-    "/api/v1/field/personal/{id}": {
+    "/api/v2/field/personal/{id}": {
       "get": {
         "operationId": "FieldController_obtenerPersonal",
         "parameters": [
@@ -182,7 +182,7 @@
         ]
       }
     },
-    "/api/v1/field/personal/{id}/ubicacion": {
+    "/api/v2/field/personal/{id}/ubicacion": {
       "get": {
         "operationId": "FieldController_ubicacionPersonal",
         "parameters": [
@@ -262,7 +262,7 @@
         ]
       }
     },
-    "/api/v1/field/clientes": {
+    "/api/v2/field/clientes": {
       "get": {
         "operationId": "FieldController_listarClientes",
         "parameters": [],
@@ -327,7 +327,7 @@
         ]
       }
     },
-    "/api/v1/field/clientes/{id}": {
+    "/api/v2/field/clientes/{id}": {
       "get": {
         "operationId": "FieldController_obtenerCliente",
         "parameters": [
@@ -434,7 +434,7 @@
         ]
       }
     },
-    "/api/v1/field/vehiculos": {
+    "/api/v2/field/vehiculos": {
       "get": {
         "operationId": "FieldController_listarVehiculos",
         "parameters": [],
@@ -499,7 +499,7 @@
         ]
       }
     },
-    "/api/v1/field/vehiculos/{id}": {
+    "/api/v2/field/vehiculos/{id}": {
       "get": {
         "operationId": "FieldController_obtenerVehiculo",
         "parameters": [
@@ -606,7 +606,7 @@
         ]
       }
     },
-    "/api/v1/field/rutas": {
+    "/api/v2/field/rutas": {
       "get": {
         "operationId": "FieldController_listarRutas",
         "parameters": [
@@ -680,7 +680,7 @@
         ]
       }
     },
-    "/api/v1/field/rutas/{id}": {
+    "/api/v2/field/rutas/{id}": {
       "get": {
         "operationId": "FieldController_obtenerRuta",
         "parameters": [
@@ -787,7 +787,7 @@
         ]
       }
     },
-    "/api/v1/field/rutas/{id}/paradas": {
+    "/api/v2/field/rutas/{id}/paradas": {
       "post": {
         "operationId": "FieldController_agregarParada",
         "parameters": [
@@ -833,7 +833,7 @@
         ]
       }
     },
-    "/api/v1/field/rutas/{id}/paradas/{paradaId}": {
+    "/api/v2/field/rutas/{id}/paradas/{paradaId}": {
       "patch": {
         "operationId": "FieldController_actualizarParada",
         "parameters": [
@@ -887,7 +887,7 @@
         ]
       }
     },
-    "/api/v1/field/rutas/{id}/asignar": {
+    "/api/v2/field/rutas/{id}/asignar": {
       "post": {
         "operationId": "FieldController_asignarRuta",
         "parameters": [
@@ -933,7 +933,7 @@
         ]
       }
     },
-    "/api/v1/field/pedidos": {
+    "/api/v2/field/pedidos": {
       "get": {
         "operationId": "FieldController_listarPedidos",
         "parameters": [
@@ -1023,7 +1023,7 @@
         ]
       }
     },
-    "/api/v1/field/pedidos/{id}": {
+    "/api/v2/field/pedidos/{id}": {
       "get": {
         "operationId": "FieldController_obtenerPedido",
         "parameters": [
@@ -1130,7 +1130,7 @@
         ]
       }
     },
-    "/api/v1/field/pedidos/{id}/estado": {
+    "/api/v2/field/pedidos/{id}/estado": {
       "patch": {
         "operationId": "FieldController_cambiarEstadoPedido",
         "parameters": [
@@ -1176,7 +1176,7 @@
         ]
       }
     },
-    "/api/v1/field/asistencia": {
+    "/api/v2/field/asistencia": {
       "get": {
         "operationId": "FieldController_listarAsistencia",
         "parameters": [
@@ -1258,7 +1258,7 @@
         ]
       }
     },
-    "/api/v1/field/incidencias": {
+    "/api/v2/field/incidencias": {
       "get": {
         "operationId": "FieldController_listarIncidencias",
         "parameters": [
@@ -1340,7 +1340,7 @@
         ]
       }
     },
-    "/api/v1/field/incidencias/{id}": {
+    "/api/v2/field/incidencias/{id}": {
       "get": {
         "operationId": "FieldController_obtenerIncidencia",
         "parameters": [
@@ -1447,7 +1447,7 @@
         ]
       }
     },
-    "/api/v1/field/tracking": {
+    "/api/v2/field/tracking": {
       "get": {
         "operationId": "FieldController_listarTracking",
         "parameters": [
@@ -1540,7 +1540,7 @@
         ]
       }
     },
-    "/api/v1/field/visitas": {
+    "/api/v2/field/visitas": {
       "get": {
         "operationId": "FieldController_listarVisitas",
         "parameters": [
@@ -1622,7 +1622,7 @@
         ]
       }
     },
-    "/api/v1/field/cumplimiento/{rutaId}/{fecha}": {
+    "/api/v2/field/cumplimiento/{rutaId}/{fecha}": {
       "get": {
         "operationId": "FieldController_obtenerCumplimiento",
         "parameters": [
@@ -1666,7 +1666,7 @@
         ]
       }
     },
-    "/api/v1/field/cumplimiento": {
+    "/api/v2/field/cumplimiento": {
       "post": {
         "operationId": "FieldController_guardarCumplimiento",
         "parameters": [],
@@ -1703,7 +1703,7 @@
         ]
       }
     },
-    "/api/v1/field/sync": {
+    "/api/v2/field/sync": {
       "post": {
         "operationId": "FieldController_sincronizar",
         "parameters": [],

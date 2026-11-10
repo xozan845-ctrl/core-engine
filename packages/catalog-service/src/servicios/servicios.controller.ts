@@ -33,7 +33,7 @@ import {
   Min,
   MinLength,
 } from 'class-validator';
-import { CAPACIDADES, DomainError, NotFoundError, RequiereCapacidades, ROLES, Roles, UsuarioActual, UsuarioContexto } from '@core/shared';
+import { CAPACIDADES, DomainError, NotFoundError, Permisos, RequiereCapacidades, ROLES, Roles, UsuarioActual, UsuarioContexto } from '@core/shared';
 import {
   ActualizarServicioInput,
   CrearServicioInput,
@@ -207,13 +207,14 @@ export class ListarServiciosRequestDto {
 
 @ApiTags('Catálogo · Servicios')
 @ApiBearerAuth()
-@Controller('api/v1/catalog/servicios')
+@Controller('api/v2/catalog/servicios')
 @Roles(ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.EMPRESARIO)
 @RequiereCapacidades(CAPACIDADES.CATALOGO_ITEMS)
 export class ServiciosController {
   constructor(private readonly servicios: ServiciosService) {}
 
   @Get()
+  @Permisos('catalogo.leer')
   @ApiOperation({ summary: 'Listar servicios de una empresa' })
   @ApiOkResponse({ type: PaginaServiciosResponseDto, description: 'Página de servicios' })
   async listar(
@@ -225,6 +226,7 @@ export class ServiciosController {
   }
 
   @Get(':id')
+  @Permisos('catalogo.leer')
   @ApiOperation({ summary: 'Detalle de un servicio' })
   @ApiParam({ name: 'id', description: 'Id del servicio' })
   @ApiQuery({ name: 'empresa_id', required: false, format: 'uuid' })
@@ -243,6 +245,7 @@ export class ServiciosController {
   }
 
   @Post()
+  @Permisos('catalogo.escribir')
   @ApiOperation({ summary: 'Crear un servicio' })
   @ApiCreatedResponse({ type: ServicioResponseDto, description: 'Servicio creado' })
   async crear(
@@ -254,6 +257,7 @@ export class ServiciosController {
   }
 
   @Patch(':id')
+  @Permisos('catalogo.escribir')
   @ApiOperation({ summary: 'Actualizar un servicio' })
   @ApiParam({ name: 'id', description: 'Id del servicio' })
   @ApiQuery({ name: 'empresa_id', required: false, format: 'uuid' })
@@ -272,6 +276,7 @@ export class ServiciosController {
   }
 
   @Delete(':id')
+  @Permisos('catalogo.escribir')
   @HttpCode(204)
   @ApiOperation({ summary: 'Dar de baja un servicio (baja lógica)' })
   @ApiParam({ name: 'id', description: 'Id del servicio' })
@@ -286,7 +291,7 @@ export class ServiciosController {
   }
 
   private empresaDeConsulta(usuario: UsuarioContexto, solicitada?: string): string {
-    if (usuario.rol === ROLES.EMPRESARIO) {
+    if (usuario.rol === ROLES.EMPRESARIO || usuario.rol_empresa_id) {
       if (!usuario.tenant_id) throw new NotFoundError('Empresa', 'activa');
       if (solicitada && solicitada !== usuario.tenant_id) {
         throw new DomainError(

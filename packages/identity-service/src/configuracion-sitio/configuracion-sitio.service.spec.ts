@@ -83,8 +83,8 @@ describe('ConfiguracionSitioService (media background de plataforma, ADR-38)', (
 
     await expect(servicio.obtener()).resolves.toMatchObject({
       background_media_type: 'video',
-      background_url: `/api/v1/storage/public/objetos/${OBJETO}`,
-      background_poster_url: `/api/v1/storage/public/objetos/${POSTER}`,
+      background_url: `/api/v2/storage/public/objetos/${OBJETO}`,
+      background_poster_url: `/api/v2/storage/public/objetos/${POSTER}`,
       background_alt: 'Internacional',
       background_overlay: 40,
       background_position: 'top',
@@ -145,7 +145,7 @@ describe('ConfiguracionSitioService (media background de plataforma, ADR-38)', (
     expect(resultado).toMatchObject({
       background_objeto_id: OBJETO,
       background_media_type: 'imagen',
-      background_url: `/api/v1/storage/public/objetos/${OBJETO}`,
+      background_url: `/api/v2/storage/public/objetos/${OBJETO}`,
       background_alt: 'Colección',
       background_activo: true,
     });
@@ -181,7 +181,7 @@ describe('ConfiguracionSitioService (media background de plataforma, ADR-38)', (
     expect(fetchMock.mock.calls[1][0]).toContain(`/objetos/${POSTER}?tenant_id=${TENANT}`);
     expect(resultado).toMatchObject({
       background_media_type: 'video',
-      background_poster_url: `/api/v1/storage/public/objetos/${POSTER}`,
+      background_poster_url: `/api/v2/storage/public/objetos/${POSTER}`,
     });
   });
 
@@ -373,8 +373,8 @@ describe('ConfiguracionSitioService (media background de plataforma, ADR-38)', (
 
     await expect(servicio.obtener()).resolves.toMatchObject({
       panel_ai_background_media_type: 'video',
-      panel_ai_background_url: `/api/v1/storage/public/objetos/${OBJETO}`,
-      panel_ai_background_poster_url: `/api/v1/storage/public/objetos/${POSTER}`,
+      panel_ai_background_url: `/api/v2/storage/public/objetos/${OBJETO}`,
+      panel_ai_background_poster_url: `/api/v2/storage/public/objetos/${POSTER}`,
       panel_ai_background_alt: 'Asistente',
       panel_ai_background_overlay: 60,
       panel_ai_background_position: 'bottom',
@@ -414,8 +414,8 @@ describe('ConfiguracionSitioService (media background de plataforma, ADR-38)', (
     expect(fetchMock).toHaveBeenCalledTimes(2);
     expect(resultado).toMatchObject({
       panel_ai_background_media_type: 'video',
-      panel_ai_background_url: `/api/v1/storage/public/objetos/${OBJETO}`,
-      panel_ai_background_poster_url: `/api/v1/storage/public/objetos/${POSTER}`,
+      panel_ai_background_url: `/api/v2/storage/public/objetos/${OBJETO}`,
+      panel_ai_background_poster_url: `/api/v2/storage/public/objetos/${POSTER}`,
     });
     expect(queryOne).toHaveBeenLastCalledWith(expect.any(String), [
       null,

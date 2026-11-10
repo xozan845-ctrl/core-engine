@@ -19,7 +19,7 @@ import { ItemsService } from '../items/items.service';
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const MAX_IMAGENES = 3;
 const MAX_VARIANTES = 50;
-const URL_IMAGEN_PUBLICA = '/api/v1/storage/public/objetos';
+const URL_IMAGEN_PUBLICA = '/api/v2/storage/public/objetos';
 
 /** Columnas de lectura compartidas por listado, detalle y variantes. */
 const COLUMNAS_PRODUCTO = `v.id, v.empresa_id, v.sku, v.nombre, v.descripcion, v.categoria,

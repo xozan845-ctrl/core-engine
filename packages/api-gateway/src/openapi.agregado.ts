@@ -8,12 +8,12 @@ export const OPENAPI_AGREGADO = {
   "openapi": "3.0.0",
   "info": {
     "title": "Core Engine · API pública (agregada)",
-    "description": "Contrato de la superficie pública (/api/v1/**) expuesta por el API Gateway. No incluye las rutas /internal/**, que son exclusivas del tráfico servicio→servicio.",
+    "description": "Contrato de la superficie pública (/api/v2/**) expuesta por el API Gateway. No incluye las rutas /internal/**, que son exclusivas del tráfico servicio→servicio.",
     "version": "v1"
   },
   "tags": [],
   "paths": {
-    "/api/v1/catalog/productos": {
+    "/api/v2/catalog/productos": {
       "get": {
         "operationId": "ProductosController_listar",
         "parameters": [
@@ -129,7 +129,7 @@ export const OPENAPI_AGREGADO = {
         ]
       }
     },
-    "/api/v1/catalog/productos/{id}": {
+    "/api/v2/catalog/productos/{id}": {
       "get": {
         "operationId": "ProductosController_detalle",
         "parameters": [
@@ -219,7 +219,7 @@ export const OPENAPI_AGREGADO = {
         ]
       }
     },
-    "/api/v1/catalog/productos/{id}/variantes": {
+    "/api/v2/catalog/productos/{id}/variantes": {
       "post": {
         "operationId": "ProductosController_crearVariante",
         "parameters": [
@@ -266,7 +266,7 @@ export const OPENAPI_AGREGADO = {
         ]
       }
     },
-    "/api/v1/catalog/productos/{id}/variantes/{varianteId}": {
+    "/api/v2/catalog/productos/{id}/variantes/{varianteId}": {
       "patch": {
         "operationId": "ProductosController_actualizarVariante",
         "parameters": [
@@ -359,7 +359,7 @@ export const OPENAPI_AGREGADO = {
         ]
       }
     },
-    "/api/v1/catalog/productos/{id}/imagenes": {
+    "/api/v2/catalog/productos/{id}/imagenes": {
       "post": {
         "operationId": "ProductosController_agregarImagen",
         "parameters": [
@@ -406,7 +406,7 @@ export const OPENAPI_AGREGADO = {
         ]
       }
     },
-    "/api/v1/catalog/productos/{id}/imagenes/{imagenId}": {
+    "/api/v2/catalog/productos/{id}/imagenes/{imagenId}": {
       "delete": {
         "operationId": "ProductosController_eliminarImagen",
         "parameters": [
@@ -445,7 +445,7 @@ export const OPENAPI_AGREGADO = {
         ]
       }
     },
-    "/api/v1/catalog/items": {
+    "/api/v2/catalog/items": {
       "get": {
         "operationId": "ItemsController_listar",
         "parameters": [],
@@ -472,7 +472,7 @@ export const OPENAPI_AGREGADO = {
         ]
       }
     },
-    "/api/v1/catalog/items/alquileres": {
+    "/api/v2/catalog/items/alquileres": {
       "post": {
         "operationId": "ItemsController_crearAlquiler",
         "parameters": [],
@@ -509,7 +509,7 @@ export const OPENAPI_AGREGADO = {
         ]
       }
     },
-    "/api/v1/catalog/items/atributos/esquemas": {
+    "/api/v2/catalog/items/atributos/esquemas": {
       "post": {
         "operationId": "ItemsController_guardarEsquema",
         "parameters": [],
@@ -574,7 +574,7 @@ export const OPENAPI_AGREGADO = {
         ]
       }
     },
-    "/api/v1/catalog/items/{id}": {
+    "/api/v2/catalog/items/{id}": {
       "get": {
         "operationId": "ItemsController_detalle",
         "parameters": [
@@ -611,7 +611,7 @@ export const OPENAPI_AGREGADO = {
         ]
       }
     },
-    "/api/v1/admin/inventario": {
+    "/api/v2/admin/inventario": {
       "get": {
         "operationId": "InventarioController_listar",
         "parameters": [
@@ -651,7 +651,7 @@ export const OPENAPI_AGREGADO = {
         ]
       }
     },
-    "/api/v1/admin/inventario/proveedores": {
+    "/api/v2/admin/inventario/proveedores": {
       "post": {
         "operationId": "InventarioController_crearProveedor",
         "parameters": [],
@@ -688,7 +688,7 @@ export const OPENAPI_AGREGADO = {
         ]
       }
     },
-    "/api/v1/admin/inventario/lotes": {
+    "/api/v2/admin/inventario/lotes": {
       "post": {
         "operationId": "InventarioController_crearLote",
         "parameters": [],
@@ -770,7 +770,7 @@ export const OPENAPI_AGREGADO = {
         ]
       }
     },
-    "/api/v1/catalog/servicios": {
+    "/api/v2/catalog/servicios": {
       "get": {
         "operationId": "ServiciosController_listar",
         "parameters": [
@@ -889,7 +889,7 @@ export const OPENAPI_AGREGADO = {
         ]
       }
     },
-    "/api/v1/catalog/servicios/{id}": {
+    "/api/v2/catalog/servicios/{id}": {
       "get": {
         "operationId": "ServiciosController_detalle",
         "parameters": [
@@ -1023,7 +1023,7 @@ export const OPENAPI_AGREGADO = {
         ]
       }
     },
-    "/api/v1/catalog/configuracion-inventario": {
+    "/api/v2/catalog/configuracion-inventario": {
       "get": {
         "operationId": "OperacionesController_configuracion",
         "parameters": [
@@ -1103,7 +1103,7 @@ export const OPENAPI_AGREGADO = {
         ]
       }
     },
-    "/api/v1/catalog/productos/importar": {
+    "/api/v2/catalog/productos/importar": {
       "post": {
         "operationId": "OperacionesController_importar",
         "parameters": [
@@ -1149,7 +1149,7 @@ export const OPENAPI_AGREGADO = {
         ]
       }
     },
-    "/api/v1/catalog/escanear": {
+    "/api/v2/catalog/escanear": {
       "get": {
         "operationId": "OperacionesController_escanear",
         "parameters": [
@@ -1193,7 +1193,7 @@ export const OPENAPI_AGREGADO = {
         ]
       }
     },
-    "/api/v1/catalog/combos": {
+    "/api/v2/catalog/combos": {
       "get": {
         "operationId": "OperacionesController_listarCombos",
         "parameters": [
@@ -1304,7 +1304,7 @@ export const OPENAPI_AGREGADO = {
         ]
       }
     },
-    "/api/v1/catalog/combos/{id}": {
+    "/api/v2/catalog/combos/{id}": {
       "get": {
         "operationId": "OperacionesController_detalleCombo",
         "parameters": [
@@ -1411,7 +1411,7 @@ export const OPENAPI_AGREGADO = {
         ]
       }
     },
-    "/api/v1/catalog/promociones": {
+    "/api/v2/catalog/promociones": {
       "get": {
         "operationId": "OperacionesController_listarPromociones",
         "parameters": [
@@ -1514,7 +1514,7 @@ export const OPENAPI_AGREGADO = {
         ]
       }
     },
-    "/api/v1/catalog/promociones/{id}": {
+    "/api/v2/catalog/promociones/{id}": {
       "get": {
         "operationId": "OperacionesController_detallePromocion",
         "parameters": [
@@ -1621,7 +1621,7 @@ export const OPENAPI_AGREGADO = {
         ]
       }
     },
-    "/api/v1/catalog/inventario/movimientos": {
+    "/api/v2/catalog/inventario/movimientos": {
       "get": {
         "operationId": "OperacionesController_listarMovimientos",
         "parameters": [
@@ -1726,7 +1726,7 @@ export const OPENAPI_AGREGADO = {
         ]
       }
     },
-    "/api/v1/vendedores/me/liquidaciones": {
+    "/api/v2/vendedores/me/liquidaciones": {
       "get": {
         "operationId": "LiquidacionesController_mias",
         "parameters": [],
@@ -1756,7 +1756,7 @@ export const OPENAPI_AGREGADO = {
         ]
       }
     },
-    "/api/v1/empresarios/me/liquidaciones": {
+    "/api/v2/empresarios/me/liquidaciones": {
       "get": {
         "operationId": "LiquidacionesController_deMiEmpresa",
         "parameters": [],
@@ -1786,7 +1786,7 @@ export const OPENAPI_AGREGADO = {
         ]
       }
     },
-    "/api/v1/admin/liquidaciones/corte": {
+    "/api/v2/admin/liquidaciones/corte": {
       "post": {
         "operationId": "LiquidacionesController_corteManual",
         "parameters": [
@@ -1833,7 +1833,7 @@ export const OPENAPI_AGREGADO = {
         ]
       }
     },
-    "/api/v1/admin/liquidaciones/{id}/pagar": {
+    "/api/v2/admin/liquidaciones/{id}/pagar": {
       "post": {
         "operationId": "LiquidacionesController_pagar",
         "parameters": [
@@ -1878,7 +1878,7 @@ export const OPENAPI_AGREGADO = {
         ]
       }
     },
-    "/api/v1/vendedores/me/ventas": {
+    "/api/v2/vendedores/me/ventas": {
       "get": {
         "operationId": "VentasController_estado",
         "parameters": [],
@@ -1905,7 +1905,7 @@ export const OPENAPI_AGREGADO = {
         ]
       }
     },
-    "/api/v1/empresarios/me/ventas": {
+    "/api/v2/empresarios/me/ventas": {
       "get": {
         "operationId": "VentasEmpresaController_estado",
         "parameters": [],
@@ -1932,7 +1932,7 @@ export const OPENAPI_AGREGADO = {
         ]
       }
     },
-    "/api/v1/admin/reportes": {
+    "/api/v2/admin/reportes": {
       "get": {
         "operationId": "ReportesController_kpis",
         "parameters": [],
@@ -1959,7 +1959,7 @@ export const OPENAPI_AGREGADO = {
         ]
       }
     },
-    "/api/v1/field/personal": {
+    "/api/v2/field/personal": {
       "get": {
         "operationId": "FieldController_listarPersonal",
         "parameters": [],
@@ -2024,7 +2024,7 @@ export const OPENAPI_AGREGADO = {
         ]
       }
     },
-    "/api/v1/field/personal/{id}": {
+    "/api/v2/field/personal/{id}": {
       "get": {
         "operationId": "FieldController_obtenerPersonal",
         "parameters": [
@@ -2131,7 +2131,7 @@ export const OPENAPI_AGREGADO = {
         ]
       }
     },
-    "/api/v1/field/personal/{id}/ubicacion": {
+    "/api/v2/field/personal/{id}/ubicacion": {
       "get": {
         "operationId": "FieldController_ubicacionPersonal",
         "parameters": [
@@ -2211,7 +2211,7 @@ export const OPENAPI_AGREGADO = {
         ]
       }
     },
-    "/api/v1/field/clientes": {
+    "/api/v2/field/clientes": {
       "get": {
         "operationId": "FieldController_listarClientes",
         "parameters": [],
@@ -2276,7 +2276,7 @@ export const OPENAPI_AGREGADO = {
         ]
       }
     },
-    "/api/v1/field/clientes/{id}": {
+    "/api/v2/field/clientes/{id}": {
       "get": {
         "operationId": "FieldController_obtenerCliente",
         "parameters": [
@@ -2383,7 +2383,7 @@ export const OPENAPI_AGREGADO = {
         ]
       }
     },
-    "/api/v1/field/vehiculos": {
+    "/api/v2/field/vehiculos": {
       "get": {
         "operationId": "FieldController_listarVehiculos",
         "parameters": [],
@@ -2448,7 +2448,7 @@ export const OPENAPI_AGREGADO = {
         ]
       }
     },
-    "/api/v1/field/vehiculos/{id}": {
+    "/api/v2/field/vehiculos/{id}": {
       "get": {
         "operationId": "FieldController_obtenerVehiculo",
         "parameters": [
@@ -2555,7 +2555,7 @@ export const OPENAPI_AGREGADO = {
         ]
       }
     },
-    "/api/v1/field/rutas": {
+    "/api/v2/field/rutas": {
       "get": {
         "operationId": "FieldController_listarRutas",
         "parameters": [
@@ -2629,7 +2629,7 @@ export const OPENAPI_AGREGADO = {
         ]
       }
     },
-    "/api/v1/field/rutas/{id}": {
+    "/api/v2/field/rutas/{id}": {
       "get": {
         "operationId": "FieldController_obtenerRuta",
         "parameters": [
@@ -2736,7 +2736,7 @@ export const OPENAPI_AGREGADO = {
         ]
       }
     },
-    "/api/v1/field/rutas/{id}/paradas": {
+    "/api/v2/field/rutas/{id}/paradas": {
       "post": {
         "operationId": "FieldController_agregarParada",
         "parameters": [
@@ -2782,7 +2782,7 @@ export const OPENAPI_AGREGADO = {
         ]
       }
     },
-    "/api/v1/field/rutas/{id}/paradas/{paradaId}": {
+    "/api/v2/field/rutas/{id}/paradas/{paradaId}": {
       "patch": {
         "operationId": "FieldController_actualizarParada",
         "parameters": [
@@ -2836,7 +2836,7 @@ export const OPENAPI_AGREGADO = {
         ]
       }
     },
-    "/api/v1/field/rutas/{id}/asignar": {
+    "/api/v2/field/rutas/{id}/asignar": {
       "post": {
         "operationId": "FieldController_asignarRuta",
         "parameters": [
@@ -2882,7 +2882,7 @@ export const OPENAPI_AGREGADO = {
         ]
       }
     },
-    "/api/v1/field/pedidos": {
+    "/api/v2/field/pedidos": {
       "get": {
         "operationId": "FieldController_listarPedidos",
         "parameters": [
@@ -2972,7 +2972,7 @@ export const OPENAPI_AGREGADO = {
         ]
       }
     },
-    "/api/v1/field/pedidos/{id}": {
+    "/api/v2/field/pedidos/{id}": {
       "get": {
         "operationId": "FieldController_obtenerPedido",
         "parameters": [
@@ -3079,7 +3079,7 @@ export const OPENAPI_AGREGADO = {
         ]
       }
     },
-    "/api/v1/field/pedidos/{id}/estado": {
+    "/api/v2/field/pedidos/{id}/estado": {
       "patch": {
         "operationId": "FieldController_cambiarEstadoPedido",
         "parameters": [
@@ -3125,7 +3125,7 @@ export const OPENAPI_AGREGADO = {
         ]
       }
     },
-    "/api/v1/field/asistencia": {
+    "/api/v2/field/asistencia": {
       "get": {
         "operationId": "FieldController_listarAsistencia",
         "parameters": [
@@ -3207,7 +3207,7 @@ export const OPENAPI_AGREGADO = {
         ]
       }
     },
-    "/api/v1/field/incidencias": {
+    "/api/v2/field/incidencias": {
       "get": {
         "operationId": "FieldController_listarIncidencias",
         "parameters": [
@@ -3289,7 +3289,7 @@ export const OPENAPI_AGREGADO = {
         ]
       }
     },
-    "/api/v1/field/incidencias/{id}": {
+    "/api/v2/field/incidencias/{id}": {
       "get": {
         "operationId": "FieldController_obtenerIncidencia",
         "parameters": [
@@ -3396,7 +3396,7 @@ export const OPENAPI_AGREGADO = {
         ]
       }
     },
-    "/api/v1/field/tracking": {
+    "/api/v2/field/tracking": {
       "get": {
         "operationId": "FieldController_listarTracking",
         "parameters": [
@@ -3489,7 +3489,7 @@ export const OPENAPI_AGREGADO = {
         ]
       }
     },
-    "/api/v1/field/visitas": {
+    "/api/v2/field/visitas": {
       "get": {
         "operationId": "FieldController_listarVisitas",
         "parameters": [
@@ -3571,7 +3571,7 @@ export const OPENAPI_AGREGADO = {
         ]
       }
     },
-    "/api/v1/field/cumplimiento/{rutaId}/{fecha}": {
+    "/api/v2/field/cumplimiento/{rutaId}/{fecha}": {
       "get": {
         "operationId": "FieldController_obtenerCumplimiento",
         "parameters": [
@@ -3615,7 +3615,7 @@ export const OPENAPI_AGREGADO = {
         ]
       }
     },
-    "/api/v1/field/cumplimiento": {
+    "/api/v2/field/cumplimiento": {
       "post": {
         "operationId": "FieldController_guardarCumplimiento",
         "parameters": [],
@@ -3652,7 +3652,7 @@ export const OPENAPI_AGREGADO = {
         ]
       }
     },
-    "/api/v1/field/sync": {
+    "/api/v2/field/sync": {
       "post": {
         "operationId": "FieldController_sincronizar",
         "parameters": [],
@@ -3692,7 +3692,7 @@ export const OPENAPI_AGREGADO = {
         ]
       }
     },
-    "/api/v1/finanzas/cuentas": {
+    "/api/v2/finanzas/cuentas": {
       "get": {
         "operationId": "ContabilidadController_cuentas",
         "parameters": [],
@@ -3757,7 +3757,7 @@ export const OPENAPI_AGREGADO = {
         ]
       }
     },
-    "/api/v1/finanzas/cuentas/{codigo}/estado": {
+    "/api/v2/finanzas/cuentas/{codigo}/estado": {
       "post": {
         "operationId": "ContabilidadController_estadoCuenta",
         "parameters": [
@@ -3804,7 +3804,7 @@ export const OPENAPI_AGREGADO = {
         ]
       }
     },
-    "/api/v1/finanzas/asientos": {
+    "/api/v2/finanzas/asientos": {
       "get": {
         "operationId": "ContabilidadController_libroDiario",
         "parameters": [
@@ -3894,7 +3894,7 @@ export const OPENAPI_AGREGADO = {
         ]
       }
     },
-    "/api/v1/finanzas/asientos/{id}/anular": {
+    "/api/v2/finanzas/asientos/{id}/anular": {
       "post": {
         "operationId": "ContabilidadController_anular",
         "parameters": [
@@ -3931,7 +3931,7 @@ export const OPENAPI_AGREGADO = {
         ]
       }
     },
-    "/api/v1/finanzas/libro-mayor/{cuenta}": {
+    "/api/v2/finanzas/libro-mayor/{cuenta}": {
       "get": {
         "operationId": "ContabilidadController_libroMayor",
         "parameters": [
@@ -3984,7 +3984,7 @@ export const OPENAPI_AGREGADO = {
         ]
       }
     },
-    "/api/v1/finanzas/libro-ventas": {
+    "/api/v2/finanzas/libro-ventas": {
       "get": {
         "operationId": "ContabilidadController_libroVentas",
         "parameters": [
@@ -4031,7 +4031,7 @@ export const OPENAPI_AGREGADO = {
         ]
       }
     },
-    "/api/v1/finanzas/libro-compras": {
+    "/api/v2/finanzas/libro-compras": {
       "get": {
         "operationId": "ContabilidadController_libroCompras",
         "parameters": [
@@ -4078,7 +4078,7 @@ export const OPENAPI_AGREGADO = {
         ]
       }
     },
-    "/api/v1/finanzas/comprobantes": {
+    "/api/v2/finanzas/comprobantes": {
       "get": {
         "operationId": "FacturacionController_listar",
         "parameters": [
@@ -4168,7 +4168,7 @@ export const OPENAPI_AGREGADO = {
         ]
       }
     },
-    "/api/v1/finanzas/comprobantes/series": {
+    "/api/v2/finanzas/comprobantes/series": {
       "get": {
         "operationId": "FacturacionController_series",
         "parameters": [],
@@ -4198,7 +4198,7 @@ export const OPENAPI_AGREGADO = {
         ]
       }
     },
-    "/api/v1/finanzas/comprobantes/{id}/anular": {
+    "/api/v2/finanzas/comprobantes/{id}/anular": {
       "post": {
         "operationId": "FacturacionController_anular",
         "parameters": [
@@ -4235,7 +4235,7 @@ export const OPENAPI_AGREGADO = {
         ]
       }
     },
-    "/api/v1/finanzas/jurisdicciones": {
+    "/api/v2/finanzas/jurisdicciones": {
       "get": {
         "operationId": "TributacionController_jurisdicciones",
         "parameters": [],
@@ -4300,7 +4300,7 @@ export const OPENAPI_AGREGADO = {
         ]
       }
     },
-    "/api/v1/finanzas/regimenes": {
+    "/api/v2/finanzas/regimenes": {
       "get": {
         "operationId": "TributacionController_regimenes",
         "parameters": [
@@ -4374,7 +4374,7 @@ export const OPENAPI_AGREGADO = {
         ]
       }
     },
-    "/api/v1/finanzas/sujetos": {
+    "/api/v2/finanzas/sujetos": {
       "get": {
         "operationId": "TributacionController_sujetos",
         "parameters": [],
@@ -4439,7 +4439,7 @@ export const OPENAPI_AGREGADO = {
         ]
       }
     },
-    "/api/v1/finanzas/sujetos/{id}/baja": {
+    "/api/v2/finanzas/sujetos/{id}/baja": {
       "post": {
         "operationId": "TributacionController_darDeBaja",
         "parameters": [
@@ -4476,7 +4476,7 @@ export const OPENAPI_AGREGADO = {
         ]
       }
     },
-    "/api/v1/finanzas/declaraciones": {
+    "/api/v2/finanzas/declaraciones": {
       "get": {
         "operationId": "TributacionController_declaraciones",
         "parameters": [
@@ -4531,7 +4531,7 @@ export const OPENAPI_AGREGADO = {
         ]
       }
     },
-    "/api/v1/finanzas/declaraciones/generar": {
+    "/api/v2/finanzas/declaraciones/generar": {
       "post": {
         "operationId": "TributacionController_generar",
         "parameters": [],
@@ -4571,7 +4571,7 @@ export const OPENAPI_AGREGADO = {
         ]
       }
     },
-    "/api/v1/finanzas/declaraciones/{id}/presentar": {
+    "/api/v2/finanzas/declaraciones/{id}/presentar": {
       "post": {
         "operationId": "TributacionController_presentar",
         "parameters": [
@@ -4608,7 +4608,7 @@ export const OPENAPI_AGREGADO = {
         ]
       }
     },
-    "/api/v1/finanzas/declaraciones/{id}/pagar": {
+    "/api/v2/finanzas/declaraciones/{id}/pagar": {
       "post": {
         "operationId": "TributacionController_pagar",
         "parameters": [
@@ -4645,7 +4645,7 @@ export const OPENAPI_AGREGADO = {
         ]
       }
     },
-    "/api/v1/finanzas/proyecciones": {
+    "/api/v2/finanzas/proyecciones": {
       "post": {
         "operationId": "FinanzasController_crear",
         "parameters": [],
@@ -4710,7 +4710,7 @@ export const OPENAPI_AGREGADO = {
         ]
       }
     },
-    "/api/v1/finanzas/punto-equilibrio": {
+    "/api/v2/finanzas/punto-equilibrio": {
       "get": {
         "operationId": "FinanzasController_puntoEquilibrio",
         "parameters": [
@@ -4770,7 +4770,7 @@ export const OPENAPI_AGREGADO = {
         ]
       }
     },
-    "/api/v1/finanzas/kpis": {
+    "/api/v2/finanzas/kpis": {
       "get": {
         "operationId": "FinanzasController_kpisDelMes",
         "parameters": [
@@ -4806,7 +4806,7 @@ export const OPENAPI_AGREGADO = {
         ]
       }
     },
-    "/api/v1/finanzas/proyecciones/sensibilidad": {
+    "/api/v2/finanzas/proyecciones/sensibilidad": {
       "get": {
         "operationId": "FinanzasController_sensibilidad",
         "parameters": [],
@@ -4833,7 +4833,7 @@ export const OPENAPI_AGREGADO = {
         ]
       }
     },
-    "/api/v1/finanzas/proyecciones/plan-bienal": {
+    "/api/v2/finanzas/proyecciones/plan-bienal": {
       "get": {
         "operationId": "FinanzasController_planBienal",
         "parameters": [],
@@ -4860,7 +4860,7 @@ export const OPENAPI_AGREGADO = {
         ]
       }
     },
-    "/api/v1/finanzas/proyecciones/{id}": {
+    "/api/v2/finanzas/proyecciones/{id}": {
       "get": {
         "operationId": "FinanzasController_detalle",
         "parameters": [
@@ -4897,7 +4897,7 @@ export const OPENAPI_AGREGADO = {
         ]
       }
     },
-    "/api/v1/finanzas/tablero": {
+    "/api/v2/finanzas/tablero": {
       "get": {
         "operationId": "FinanzasController_tablero",
         "parameters": [
@@ -4941,7 +4941,7 @@ export const OPENAPI_AGREGADO = {
         ]
       }
     },
-    "/api/v1/vendedores/me/fiscal": {
+    "/api/v2/vendedores/me/fiscal": {
       "get": {
         "operationId": "VendedorFiscalController_situacion",
         "parameters": [
@@ -4977,7 +4977,7 @@ export const OPENAPI_AGREGADO = {
         ]
       }
     },
-    "/api/v1/comercio/bancos-cuentas": {
+    "/api/v2/comercio/bancos-cuentas": {
       "get": {
         "operationId": "ComercioController_listarBancos",
         "parameters": [],
@@ -5042,7 +5042,7 @@ export const OPENAPI_AGREGADO = {
         ]
       }
     },
-    "/api/v1/comercio/bancos-cuentas/{id}": {
+    "/api/v2/comercio/bancos-cuentas/{id}": {
       "patch": {
         "operationId": "ComercioController_actualizarBanco",
         "parameters": [
@@ -5117,7 +5117,7 @@ export const OPENAPI_AGREGADO = {
         ]
       }
     },
-    "/api/v1/comercio/creditos": {
+    "/api/v2/comercio/creditos": {
       "get": {
         "operationId": "ComercioController_listarCreditos",
         "parameters": [],
@@ -5182,7 +5182,7 @@ export const OPENAPI_AGREGADO = {
         ]
       }
     },
-    "/api/v1/comercio/creditos/{id}/pagar": {
+    "/api/v2/comercio/creditos/{id}/pagar": {
       "post": {
         "operationId": "ComercioController_pagarCredito",
         "parameters": [
@@ -5219,7 +5219,7 @@ export const OPENAPI_AGREGADO = {
         ]
       }
     },
-    "/api/v1/comercio/creditos/{id}": {
+    "/api/v2/comercio/creditos/{id}": {
       "delete": {
         "operationId": "ComercioController_eliminarCredito",
         "parameters": [
@@ -5249,7 +5249,7 @@ export const OPENAPI_AGREGADO = {
         ]
       }
     },
-    "/api/v1/comercio/gastos": {
+    "/api/v2/comercio/gastos": {
       "get": {
         "operationId": "ComercioController_listarGastos",
         "parameters": [],
@@ -5314,7 +5314,7 @@ export const OPENAPI_AGREGADO = {
         ]
       }
     },
-    "/api/v1/comercio/gastos/{id}": {
+    "/api/v2/comercio/gastos/{id}": {
       "patch": {
         "operationId": "ComercioController_actualizarGasto",
         "parameters": [
@@ -5389,7 +5389,7 @@ export const OPENAPI_AGREGADO = {
         ]
       }
     },
-    "/api/v1/comercio/gastos/{id}/pagar": {
+    "/api/v2/comercio/gastos/{id}/pagar": {
       "post": {
         "operationId": "ComercioController_pagarGasto",
         "parameters": [
@@ -5426,7 +5426,7 @@ export const OPENAPI_AGREGADO = {
         ]
       }
     },
-    "/api/v1/comercio/gastos/{id}/cancelar": {
+    "/api/v2/comercio/gastos/{id}/cancelar": {
       "post": {
         "operationId": "ComercioController_cancelarGasto",
         "parameters": [
@@ -5463,7 +5463,7 @@ export const OPENAPI_AGREGADO = {
         ]
       }
     },
-    "/api/v1/comercio/cuentas-por-pagar": {
+    "/api/v2/comercio/cuentas-por-pagar": {
       "get": {
         "operationId": "ComercioController_listarCuentasPorPagar",
         "parameters": [],
@@ -5528,7 +5528,7 @@ export const OPENAPI_AGREGADO = {
         ]
       }
     },
-    "/api/v1/comercio/cuentas-por-pagar/{id}/pagar": {
+    "/api/v2/comercio/cuentas-por-pagar/{id}/pagar": {
       "post": {
         "operationId": "ComercioController_pagarCuentaPorPagar",
         "parameters": [
@@ -5565,7 +5565,7 @@ export const OPENAPI_AGREGADO = {
         ]
       }
     },
-    "/api/v1/comercio/cuentas-por-pagar/{id}": {
+    "/api/v2/comercio/cuentas-por-pagar/{id}": {
       "delete": {
         "operationId": "ComercioController_eliminarCuentaPorPagar",
         "parameters": [
@@ -5595,7 +5595,7 @@ export const OPENAPI_AGREGADO = {
         ]
       }
     },
-    "/api/v1/comercio/proveedores": {
+    "/api/v2/comercio/proveedores": {
       "get": {
         "operationId": "ComercioController_listarProveedores",
         "parameters": [],
@@ -5660,7 +5660,7 @@ export const OPENAPI_AGREGADO = {
         ]
       }
     },
-    "/api/v1/comercio/proveedores/{id}": {
+    "/api/v2/comercio/proveedores/{id}": {
       "delete": {
         "operationId": "ComercioController_eliminarProveedor",
         "parameters": [
@@ -5690,7 +5690,7 @@ export const OPENAPI_AGREGADO = {
         ]
       }
     },
-    "/api/v1/comercio/compras": {
+    "/api/v2/comercio/compras": {
       "get": {
         "operationId": "ComercioController_listarCompras",
         "parameters": [],
@@ -5755,7 +5755,7 @@ export const OPENAPI_AGREGADO = {
         ]
       }
     },
-    "/api/v1/comercio/compras/directas": {
+    "/api/v2/comercio/compras/directas": {
       "post": {
         "operationId": "ComercioController_crearCompraDirecta",
         "parameters": [],
@@ -5792,7 +5792,7 @@ export const OPENAPI_AGREGADO = {
         ]
       }
     },
-    "/api/v1/comercio/compras/producto-nuevo": {
+    "/api/v2/comercio/compras/producto-nuevo": {
       "post": {
         "operationId": "ComercioController_crearCompraProductoNuevo",
         "parameters": [],
@@ -5829,7 +5829,7 @@ export const OPENAPI_AGREGADO = {
         ]
       }
     },
-    "/api/v1/comercio/compras/{id}/anular": {
+    "/api/v2/comercio/compras/{id}/anular": {
       "post": {
         "operationId": "ComercioController_anularCompra",
         "parameters": [
@@ -5866,7 +5866,7 @@ export const OPENAPI_AGREGADO = {
         ]
       }
     },
-    "/api/v1/comercio/compras/{id}": {
+    "/api/v2/comercio/compras/{id}": {
       "delete": {
         "operationId": "ComercioController_eliminarCompra",
         "parameters": [
@@ -5896,7 +5896,7 @@ export const OPENAPI_AGREGADO = {
         ]
       }
     },
-    "/api/v1/comercio/ordenes-compra": {
+    "/api/v2/comercio/ordenes-compra": {
       "get": {
         "operationId": "ComercioController_listarOrdenesCompra",
         "parameters": [],
@@ -5961,7 +5961,7 @@ export const OPENAPI_AGREGADO = {
         ]
       }
     },
-    "/api/v1/comercio/ordenes-compra/{id}/convertir": {
+    "/api/v2/comercio/ordenes-compra/{id}/convertir": {
       "post": {
         "operationId": "ComercioController_convertirOrdenCompra",
         "parameters": [
@@ -5998,7 +5998,7 @@ export const OPENAPI_AGREGADO = {
         ]
       }
     },
-    "/api/v1/comercio/ordenes-compra/{id}/anular": {
+    "/api/v2/comercio/ordenes-compra/{id}/anular": {
       "post": {
         "operationId": "ComercioController_anularOrdenCompra",
         "parameters": [
@@ -6035,7 +6035,7 @@ export const OPENAPI_AGREGADO = {
         ]
       }
     },
-    "/api/v1/comercio/configuracion-documentos": {
+    "/api/v2/comercio/configuracion-documentos": {
       "get": {
         "operationId": "ComercioController_obtenerConfiguracionDocumentos",
         "parameters": [],
@@ -6097,7 +6097,7 @@ export const OPENAPI_AGREGADO = {
         ]
       }
     },
-    "/api/v1/comercio/caja/metodos-pago": {
+    "/api/v2/comercio/caja/metodos-pago": {
       "get": {
         "operationId": "ComercioController_listarMetodosPago",
         "parameters": [],
@@ -6162,7 +6162,7 @@ export const OPENAPI_AGREGADO = {
         ]
       }
     },
-    "/api/v1/comercio/caja/metodos-pago/{id}": {
+    "/api/v2/comercio/caja/metodos-pago/{id}": {
       "patch": {
         "operationId": "ComercioController_actualizarMetodoPago",
         "parameters": [
@@ -6237,7 +6237,7 @@ export const OPENAPI_AGREGADO = {
         ]
       }
     },
-    "/api/v1/comercio/caja/movimientos": {
+    "/api/v2/comercio/caja/movimientos": {
       "get": {
         "operationId": "ComercioController_listarMovimientosCaja",
         "parameters": [],
@@ -6302,7 +6302,7 @@ export const OPENAPI_AGREGADO = {
         ]
       }
     },
-    "/api/v1/comercio/caja/movimientos/{id}/anular": {
+    "/api/v2/comercio/caja/movimientos/{id}/anular": {
       "post": {
         "operationId": "ComercioController_anularMovimientoCaja",
         "parameters": [
@@ -6339,7 +6339,7 @@ export const OPENAPI_AGREGADO = {
         ]
       }
     },
-    "/api/v1/comercio/caja/movimientos/{id}": {
+    "/api/v2/comercio/caja/movimientos/{id}": {
       "delete": {
         "operationId": "ComercioController_eliminarMovimientoCaja",
         "parameters": [
@@ -6369,7 +6369,7 @@ export const OPENAPI_AGREGADO = {
         ]
       }
     },
-    "/api/v1/comercio/caja/cierres": {
+    "/api/v2/comercio/caja/cierres": {
       "get": {
         "operationId": "ComercioController_listarCierres",
         "parameters": [],
@@ -6434,7 +6434,7 @@ export const OPENAPI_AGREGADO = {
         ]
       }
     },
-    "/api/v1/comercio/caja/cierres/preview": {
+    "/api/v2/comercio/caja/cierres/preview": {
       "get": {
         "operationId": "ComercioController_previewCierre",
         "parameters": [
@@ -6471,7 +6471,7 @@ export const OPENAPI_AGREGADO = {
         ]
       }
     },
-    "/api/v1/comercio/caja/chica/fondo": {
+    "/api/v2/comercio/caja/chica/fondo": {
       "get": {
         "operationId": "ComercioController_obtenerFondoCajaChica",
         "parameters": [],
@@ -6533,7 +6533,7 @@ export const OPENAPI_AGREGADO = {
         ]
       }
     },
-    "/api/v1/comercio/caja/chica/movimientos": {
+    "/api/v2/comercio/caja/chica/movimientos": {
       "get": {
         "operationId": "ComercioController_listarMovimientosCajaChica",
         "parameters": [],
@@ -6598,7 +6598,7 @@ export const OPENAPI_AGREGADO = {
         ]
       }
     },
-    "/api/v1/comercio/caja/transferencias": {
+    "/api/v2/comercio/caja/transferencias": {
       "get": {
         "operationId": "ComercioController_listarTransferencias",
         "parameters": [],
@@ -6663,7 +6663,7 @@ export const OPENAPI_AGREGADO = {
         ]
       }
     },
-    "/api/v1/comercio/caja/transferencias/{id}/anular": {
+    "/api/v2/comercio/caja/transferencias/{id}/anular": {
       "post": {
         "operationId": "ComercioController_anularTransferencia",
         "parameters": [
@@ -6700,7 +6700,7 @@ export const OPENAPI_AGREGADO = {
         ]
       }
     },
-    "/api/v1/comercio/clientes": {
+    "/api/v2/comercio/clientes": {
       "get": {
         "operationId": "ComercioController_listarClientes",
         "parameters": [],
@@ -6765,7 +6765,7 @@ export const OPENAPI_AGREGADO = {
         ]
       }
     },
-    "/api/v1/comercio/clientes/importar": {
+    "/api/v2/comercio/clientes/importar": {
       "post": {
         "operationId": "ComercioController_importarClientes",
         "parameters": [],
@@ -6802,7 +6802,7 @@ export const OPENAPI_AGREGADO = {
         ]
       }
     },
-    "/api/v1/comercio/clientes/{id}": {
+    "/api/v2/comercio/clientes/{id}": {
       "patch": {
         "operationId": "ComercioController_actualizarCliente",
         "parameters": [
@@ -6877,7 +6877,7 @@ export const OPENAPI_AGREGADO = {
         ]
       }
     },
-    "/api/v1/comercio/codigos-barras": {
+    "/api/v2/comercio/codigos-barras": {
       "get": {
         "operationId": "ComercioController_listarCodigosBarras",
         "parameters": [],
@@ -6942,7 +6942,7 @@ export const OPENAPI_AGREGADO = {
         ]
       }
     },
-    "/api/v1/comercio/codigos-barras/{id}": {
+    "/api/v2/comercio/codigos-barras/{id}": {
       "delete": {
         "operationId": "ComercioController_eliminarCodigoBarras",
         "parameters": [
@@ -6972,7 +6972,7 @@ export const OPENAPI_AGREGADO = {
         ]
       }
     },
-    "/api/v1/auth/registro": {
+    "/api/v2/auth/registro": {
       "post": {
         "operationId": "AuthController_registrar",
         "parameters": [],
@@ -7004,7 +7004,7 @@ export const OPENAPI_AGREGADO = {
         ]
       }
     },
-    "/api/v1/auth/login": {
+    "/api/v2/auth/login": {
       "post": {
         "operationId": "AuthController_login",
         "parameters": [],
@@ -7039,7 +7039,7 @@ export const OPENAPI_AGREGADO = {
         ]
       }
     },
-    "/api/v1/auth/refresh": {
+    "/api/v2/auth/refresh": {
       "post": {
         "operationId": "AuthController_refresh",
         "parameters": [],
@@ -7079,7 +7079,7 @@ export const OPENAPI_AGREGADO = {
         ]
       }
     },
-    "/api/v1/auth/logout": {
+    "/api/v2/auth/logout": {
       "post": {
         "operationId": "AuthController_logout",
         "parameters": [],
@@ -7116,7 +7116,7 @@ export const OPENAPI_AGREGADO = {
         ]
       }
     },
-    "/api/v1/auth/crear-usuario": {
+    "/api/v2/auth/crear-usuario": {
       "post": {
         "operationId": "AuthController_crearUsuario",
         "parameters": [],
@@ -7156,7 +7156,7 @@ export const OPENAPI_AGREGADO = {
         ]
       }
     },
-    "/api/v1/auth/cambiar-contrasena": {
+    "/api/v2/auth/cambiar-contrasena": {
       "post": {
         "operationId": "AuthController_cambiarContrasena",
         "parameters": [],
@@ -7193,7 +7193,7 @@ export const OPENAPI_AGREGADO = {
         ]
       }
     },
-    "/api/v1/auth/restablecer-contrasena": {
+    "/api/v2/auth/restablecer-contrasena": {
       "post": {
         "operationId": "AuthController_restablecerContrasena",
         "parameters": [],
@@ -7225,7 +7225,7 @@ export const OPENAPI_AGREGADO = {
         ]
       }
     },
-    "/api/v1/auth/me": {
+    "/api/v2/auth/me": {
       "get": {
         "operationId": "AuthController_yo",
         "parameters": [],
@@ -7252,7 +7252,7 @@ export const OPENAPI_AGREGADO = {
         ]
       }
     },
-    "/api/v1/auth/vincular-personal": {
+    "/api/v2/auth/vincular-personal": {
       "post": {
         "operationId": "AuthController_vincularPersonal",
         "parameters": [],
@@ -7289,7 +7289,7 @@ export const OPENAPI_AGREGADO = {
         ]
       }
     },
-    "/api/v1/usuarios": {
+    "/api/v2/usuarios": {
       "get": {
         "operationId": "UsuariosController_listar",
         "parameters": [],
@@ -7319,7 +7319,7 @@ export const OPENAPI_AGREGADO = {
         ]
       }
     },
-    "/api/v1/usuarios/{id}/avatar": {
+    "/api/v2/usuarios/{id}/avatar": {
       "patch": {
         "operationId": "UsuariosController_actualizarAvatar",
         "parameters": [
@@ -7366,7 +7366,7 @@ export const OPENAPI_AGREGADO = {
         ]
       }
     },
-    "/api/v1/usuarios/{id}": {
+    "/api/v2/usuarios/{id}": {
       "get": {
         "operationId": "UsuariosController_obtener",
         "parameters": [
@@ -7406,7 +7406,7 @@ export const OPENAPI_AGREGADO = {
         ]
       }
     },
-    "/api/v1/empresas": {
+    "/api/v2/empresas": {
       "post": {
         "operationId": "EmpresasController_crear",
         "parameters": [],
@@ -7443,7 +7443,7 @@ export const OPENAPI_AGREGADO = {
         ]
       }
     },
-    "/api/v1/empresas/{id}": {
+    "/api/v2/empresas/{id}": {
       "get": {
         "operationId": "EmpresasController_obtener",
         "parameters": [
@@ -7495,7 +7495,7 @@ export const OPENAPI_AGREGADO = {
         ]
       }
     },
-    "/api/v1/empresas/{id}/perfil": {
+    "/api/v2/empresas/{id}/perfil": {
       "patch": {
         "operationId": "EmpresasController_actualizarPerfil",
         "parameters": [
@@ -7542,7 +7542,7 @@ export const OPENAPI_AGREGADO = {
         ]
       }
     },
-    "/api/v1/empresas/{id}/slug": {
+    "/api/v2/empresas/{id}/slug": {
       "patch": {
         "operationId": "EmpresasController_actualizarSlug",
         "parameters": [
@@ -7592,7 +7592,7 @@ export const OPENAPI_AGREGADO = {
         ]
       }
     },
-    "/api/v1/empresas/{id}/logistica": {
+    "/api/v2/empresas/{id}/logistica": {
       "patch": {
         "operationId": "EmpresasController_actualizarLogistica",
         "parameters": [
@@ -7638,7 +7638,7 @@ export const OPENAPI_AGREGADO = {
         ]
       }
     },
-    "/api/v1/empresas/{id}/tipo": {
+    "/api/v2/empresas/{id}/tipo": {
       "patch": {
         "operationId": "EmpresasController_actualizarTipo",
         "parameters": [
@@ -7685,7 +7685,7 @@ export const OPENAPI_AGREGADO = {
         ]
       }
     },
-    "/api/v1/empresas/{id}/vendedores": {
+    "/api/v2/empresas/{id}/vendedores": {
       "post": {
         "operationId": "EmpresasController_vendedor",
         "parameters": [
@@ -7731,7 +7731,7 @@ export const OPENAPI_AGREGADO = {
         ]
       }
     },
-    "/api/v1/empresas/{empresaId}/invitaciones/vendedores": {
+    "/api/v2/empresas/{empresaId}/invitaciones/vendedores": {
       "post": {
         "operationId": "InvitacionesEmpresaController_crear",
         "parameters": [
@@ -7781,7 +7781,7 @@ export const OPENAPI_AGREGADO = {
         ]
       }
     },
-    "/api/v1/empresas/{empresaId}/vendedores": {
+    "/api/v2/empresas/{empresaId}/vendedores": {
       "get": {
         "operationId": "InvitacionesEmpresaController_listar",
         "parameters": [
@@ -7818,7 +7818,7 @@ export const OPENAPI_AGREGADO = {
         ]
       }
     },
-    "/api/v1/empresas/{empresaId}/invitaciones/vendedores/{invitacionId}": {
+    "/api/v2/empresas/{empresaId}/invitaciones/vendedores/{invitacionId}": {
       "delete": {
         "operationId": "InvitacionesEmpresaController_revocar",
         "parameters": [
@@ -7857,7 +7857,7 @@ export const OPENAPI_AGREGADO = {
         ]
       }
     },
-    "/api/v1/invitaciones/vendedores/{token}": {
+    "/api/v2/invitaciones/vendedores/{token}": {
       "get": {
         "operationId": "InvitacionesPublicasController_consultar",
         "parameters": [
@@ -7891,7 +7891,7 @@ export const OPENAPI_AGREGADO = {
         ]
       }
     },
-    "/api/v1/invitaciones/vendedores/{token}/aceptar": {
+    "/api/v2/invitaciones/vendedores/{token}/aceptar": {
       "post": {
         "operationId": "InvitacionesPublicasController_aceptar",
         "parameters": [
@@ -7938,7 +7938,7 @@ export const OPENAPI_AGREGADO = {
         ]
       }
     },
-    "/api/v1/configuracion/sitio": {
+    "/api/v2/configuracion/sitio": {
       "get": {
         "operationId": "ConfiguracionSitioController_obtener",
         "parameters": [],
@@ -7995,7 +7995,7 @@ export const OPENAPI_AGREGADO = {
         ]
       }
     },
-    "/api/v1/empresas/{empresaId}/capacidades": {
+    "/api/v2/empresas/{empresaId}/capacidades": {
       "get": {
         "operationId": "CapacidadesController_listar",
         "parameters": [
@@ -8035,7 +8035,7 @@ export const OPENAPI_AGREGADO = {
         ]
       }
     },
-    "/api/v1/empresas/{empresaId}/capacidades/{capacidad}": {
+    "/api/v2/empresas/{empresaId}/capacidades/{capacidad}": {
       "patch": {
         "operationId": "CapacidadesController_actualizar",
         "parameters": [
@@ -8091,7 +8091,7 @@ export const OPENAPI_AGREGADO = {
         ]
       }
     },
-    "/api/v1/packs": {
+    "/api/v2/packs": {
       "get": {
         "operationId": "PacksController_listar",
         "parameters": [
@@ -8166,7 +8166,7 @@ export const OPENAPI_AGREGADO = {
         ]
       }
     },
-    "/api/v1/packs/modelos-operacion": {
+    "/api/v2/packs/modelos-operacion": {
       "get": {
         "operationId": "PacksController_listarModelos",
         "parameters": [],
@@ -8231,7 +8231,7 @@ export const OPENAPI_AGREGADO = {
         ]
       }
     },
-    "/api/v1/packs/verticales": {
+    "/api/v2/packs/verticales": {
       "get": {
         "operationId": "PacksController_listarVerticales",
         "parameters": [],
@@ -8296,7 +8296,7 @@ export const OPENAPI_AGREGADO = {
         ]
       }
     },
-    "/api/v1/packs/{codigo}/{version}": {
+    "/api/v2/packs/{codigo}/{version}": {
       "get": {
         "operationId": "PacksController_obtener",
         "parameters": [
@@ -8342,7 +8342,7 @@ export const OPENAPI_AGREGADO = {
         ]
       }
     },
-    "/api/v1/empresas/{empresaId}/extensiones": {
+    "/api/v2/empresas/{empresaId}/extensiones": {
       "get": {
         "operationId": "ExtensionesController_listar",
         "parameters": [
@@ -8426,7 +8426,7 @@ export const OPENAPI_AGREGADO = {
         ]
       }
     },
-    "/api/v1/empresas/{empresaId}/extensiones/{codigo}": {
+    "/api/v2/empresas/{empresaId}/extensiones/{codigo}": {
       "patch": {
         "operationId": "ExtensionesController_cambiarEstado",
         "parameters": [
@@ -8481,7 +8481,7 @@ export const OPENAPI_AGREGADO = {
         ]
       }
     },
-    "/api/v1/empresas/{empresaId}/extensiones/{codigo}/validar": {
+    "/api/v2/empresas/{empresaId}/extensiones/{codigo}/validar": {
       "post": {
         "operationId": "ExtensionesController_validar",
         "parameters": [
@@ -8536,7 +8536,7 @@ export const OPENAPI_AGREGADO = {
         ]
       }
     },
-    "/api/v1/empresas/{empresaId}/extensiones/{codigo}/valores/{recursoId}": {
+    "/api/v2/empresas/{empresaId}/extensiones/{codigo}/valores/{recursoId}": {
       "get": {
         "operationId": "ExtensionesController_obtenerValores",
         "parameters": [
@@ -8704,7 +8704,7 @@ export const OPENAPI_AGREGADO = {
         ]
       }
     },
-    "/api/v1/empresas/{empresaId}/partes": {
+    "/api/v2/empresas/{empresaId}/partes": {
       "get": {
         "operationId": "PartesController_listar",
         "parameters": [
@@ -8817,7 +8817,7 @@ export const OPENAPI_AGREGADO = {
         ]
       }
     },
-    "/api/v1/empresas/{empresaId}/partes/{parteId}": {
+    "/api/v2/empresas/{empresaId}/partes/{parteId}": {
       "get": {
         "operationId": "PartesController_obtener",
         "parameters": [
@@ -8954,7 +8954,7 @@ export const OPENAPI_AGREGADO = {
         ]
       }
     },
-    "/api/v1/empresas/{empresaId}/partes/{parteId}/contactos": {
+    "/api/v2/empresas/{empresaId}/partes/{parteId}/contactos": {
       "get": {
         "operationId": "PartesController_listarContactos",
         "parameters": [
@@ -9053,7 +9053,7 @@ export const OPENAPI_AGREGADO = {
         ]
       }
     },
-    "/api/v1/empresas/{empresaId}/partes/{parteId}/contactos/{contactoId}": {
+    "/api/v2/empresas/{empresaId}/partes/{parteId}/contactos/{contactoId}": {
       "patch": {
         "operationId": "PartesController_actualizarContacto",
         "parameters": [
@@ -9158,7 +9158,7 @@ export const OPENAPI_AGREGADO = {
         ]
       }
     },
-    "/api/v1/empresas/{empresaId}/partes/{parteId}/direcciones": {
+    "/api/v2/empresas/{empresaId}/partes/{parteId}/direcciones": {
       "get": {
         "operationId": "PartesController_listarDirecciones",
         "parameters": [
@@ -9257,7 +9257,7 @@ export const OPENAPI_AGREGADO = {
         ]
       }
     },
-    "/api/v1/empresas/{empresaId}/partes/{parteId}/direcciones/{direccionId}": {
+    "/api/v2/empresas/{empresaId}/partes/{parteId}/direcciones/{direccionId}": {
       "patch": {
         "operationId": "PartesController_actualizarDireccion",
         "parameters": [
@@ -9362,7 +9362,7 @@ export const OPENAPI_AGREGADO = {
         ]
       }
     },
-    "/api/v1/empresas/{empresaId}/partes/{parteId}/relaciones": {
+    "/api/v2/empresas/{empresaId}/partes/{parteId}/relaciones": {
       "get": {
         "operationId": "PartesController_listarRelaciones",
         "parameters": [
@@ -9461,7 +9461,7 @@ export const OPENAPI_AGREGADO = {
         ]
       }
     },
-    "/api/v1/empresas/{empresaId}/partes/{parteId}/relaciones/{relacionId}": {
+    "/api/v2/empresas/{empresaId}/partes/{parteId}/relaciones/{relacionId}": {
       "delete": {
         "operationId": "PartesController_eliminarRelacion",
         "parameters": [
@@ -9506,7 +9506,7 @@ export const OPENAPI_AGREGADO = {
         ]
       }
     },
-    "/api/v1/empresas/{empresaId}/roles": {
+    "/api/v2/empresas/{empresaId}/roles": {
       "post": {
         "operationId": "PersonalController_crearRol",
         "parameters": [
@@ -9586,7 +9586,7 @@ export const OPENAPI_AGREGADO = {
         ]
       }
     },
-    "/api/v1/empresas/{empresaId}/roles/{rolId}": {
+    "/api/v2/empresas/{empresaId}/roles/{rolId}": {
       "patch": {
         "operationId": "PersonalController_actualizarRol",
         "parameters": [
@@ -9640,7 +9640,7 @@ export const OPENAPI_AGREGADO = {
         ]
       }
     },
-    "/api/v1/empresas/{empresaId}/puestos": {
+    "/api/v2/empresas/{empresaId}/puestos": {
       "post": {
         "operationId": "PersonalController_crearPuesto",
         "parameters": [
@@ -9720,7 +9720,7 @@ export const OPENAPI_AGREGADO = {
         ]
       }
     },
-    "/api/v1/empresas/{empresaId}/asignaciones-personal": {
+    "/api/v2/empresas/{empresaId}/asignaciones-personal": {
       "post": {
         "operationId": "PersonalController_asignar",
         "parameters": [
@@ -9800,7 +9800,7 @@ export const OPENAPI_AGREGADO = {
         ]
       }
     },
-    "/api/v1/empresas/{empresaId}/invitaciones/personal": {
+    "/api/v2/empresas/{empresaId}/invitaciones/personal": {
       "post": {
         "operationId": "PersonalController_crearInvitacion",
         "parameters": [
@@ -9882,7 +9882,7 @@ export const OPENAPI_AGREGADO = {
         ]
       }
     },
-    "/api/v1/empresas/{empresaId}/invitaciones/personal/{invitacionId}/revocar": {
+    "/api/v2/empresas/{empresaId}/invitaciones/personal/{invitacionId}/revocar": {
       "post": {
         "operationId": "PersonalController_revocarInvitacion",
         "parameters": [
@@ -9925,7 +9925,7 @@ export const OPENAPI_AGREGADO = {
         ]
       }
     },
-    "/api/v1/incorporaciones/{token}": {
+    "/api/v2/incorporaciones/{token}": {
       "get": {
         "operationId": "PersonalPublicController_consultar",
         "parameters": [
@@ -9956,7 +9956,7 @@ export const OPENAPI_AGREGADO = {
         ]
       }
     },
-    "/api/v1/incorporaciones/{token}/aceptar": {
+    "/api/v2/incorporaciones/{token}/aceptar": {
       "post": {
         "operationId": "PersonalPublicController_aceptar",
         "parameters": [
@@ -9997,7 +9997,7 @@ export const OPENAPI_AGREGADO = {
         ]
       }
     },
-    "/api/v1/orders/{id}/estado": {
+    "/api/v2/orders/{id}/estado": {
       "patch": {
         "operationId": "EstadoOrdenController_avanzar",
         "parameters": [
@@ -10047,7 +10047,7 @@ export const OPENAPI_AGREGADO = {
         ]
       }
     },
-    "/api/v1/admin/envios": {
+    "/api/v2/admin/envios": {
       "get": {
         "operationId": "EnviosAdminController_listar",
         "parameters": [],
@@ -10077,7 +10077,7 @@ export const OPENAPI_AGREGADO = {
         ]
       }
     },
-    "/api/v1/empresarios/me/envios": {
+    "/api/v2/empresarios/me/envios": {
       "get": {
         "operationId": "EnviosEmpresaController_listar",
         "parameters": [],
@@ -10107,7 +10107,7 @@ export const OPENAPI_AGREGADO = {
         ]
       }
     },
-    "/api/v1/empresarios/me/envios/{id}/asignacion": {
+    "/api/v2/empresarios/me/envios/{id}/asignacion": {
       "post": {
         "operationId": "EnviosEmpresaController_asignar",
         "parameters": [
@@ -10154,7 +10154,7 @@ export const OPENAPI_AGREGADO = {
         ]
       }
     },
-    "/api/v1/envios/{id}/estado": {
+    "/api/v2/envios/{id}/estado": {
       "patch": {
         "operationId": "EnviosFlotaController_avanzar",
         "parameters": [
@@ -10201,7 +10201,7 @@ export const OPENAPI_AGREGADO = {
         ]
       }
     },
-    "/api/v1/inteligencia/mapa-calor": {
+    "/api/v2/inteligencia/mapa-calor": {
       "get": {
         "operationId": "MetricasController_getMapaCalor",
         "parameters": [
@@ -10265,7 +10265,7 @@ export const OPENAPI_AGREGADO = {
         ]
       }
     },
-    "/api/v1/inteligencia/me/mapa-calor": {
+    "/api/v2/inteligencia/me/mapa-calor": {
       "get": {
         "operationId": "MetricasController_getMiMapaCalor",
         "parameters": [
@@ -10337,7 +10337,7 @@ export const OPENAPI_AGREGADO = {
         ]
       }
     },
-    "/api/v1/inteligencia/rendimiento": {
+    "/api/v2/inteligencia/rendimiento": {
       "get": {
         "operationId": "MetricasController_getRendimiento",
         "parameters": [],
@@ -10364,7 +10364,7 @@ export const OPENAPI_AGREGADO = {
         ]
       }
     },
-    "/api/v1/inteligencia/me/rendimiento": {
+    "/api/v2/inteligencia/me/rendimiento": {
       "get": {
         "operationId": "MetricasController_getMiRendimiento",
         "parameters": [
@@ -10400,7 +10400,7 @@ export const OPENAPI_AGREGADO = {
         ]
       }
     },
-    "/api/v1/inteligencia/cobertura": {
+    "/api/v2/inteligencia/cobertura": {
       "get": {
         "operationId": "MetricasController_getCobertura",
         "parameters": [],
@@ -10430,7 +10430,7 @@ export const OPENAPI_AGREGADO = {
         ]
       }
     },
-    "/api/v1/inteligencia/demanda": {
+    "/api/v2/inteligencia/demanda": {
       "get": {
         "operationId": "MetricasController_getDemanda",
         "parameters": [],
@@ -10457,7 +10457,7 @@ export const OPENAPI_AGREGADO = {
         ]
       }
     },
-    "/api/v1/inteligencia/tendencias": {
+    "/api/v2/inteligencia/tendencias": {
       "get": {
         "operationId": "MetricasController_getTendencias",
         "parameters": [],
@@ -10487,7 +10487,7 @@ export const OPENAPI_AGREGADO = {
         ]
       }
     },
-    "/api/v1/inteligencia/resumen": {
+    "/api/v2/inteligencia/resumen": {
       "get": {
         "operationId": "MetricasController_getResumen",
         "parameters": [
@@ -10551,7 +10551,7 @@ export const OPENAPI_AGREGADO = {
         ]
       }
     },
-    "/api/v1/inteligencia/ventas/registrar": {
+    "/api/v2/inteligencia/ventas/registrar": {
       "post": {
         "operationId": "MetricasController_registrarVenta",
         "parameters": [],
@@ -10588,7 +10588,7 @@ export const OPENAPI_AGREGADO = {
         ]
       }
     },
-    "/api/v1/inteligencia/forecast/demanda": {
+    "/api/v2/inteligencia/forecast/demanda": {
       "get": {
         "operationId": "PrediccionController_forecastDemanda",
         "parameters": [
@@ -10632,7 +10632,7 @@ export const OPENAPI_AGREGADO = {
         ]
       }
     },
-    "/api/v1/inteligencia/anomalias": {
+    "/api/v2/inteligencia/anomalias": {
       "get": {
         "operationId": "PrediccionController_anomalias",
         "parameters": [
@@ -10684,7 +10684,7 @@ export const OPENAPI_AGREGADO = {
         ]
       }
     },
-    "/api/v1/inteligencia/vendedores/{id}/score": {
+    "/api/v2/inteligencia/vendedores/{id}/score": {
       "get": {
         "operationId": "PrediccionController_scoreVendedor",
         "parameters": [
@@ -10720,7 +10720,7 @@ export const OPENAPI_AGREGADO = {
         ]
       }
     },
-    "/api/v1/inteligencia/me/score": {
+    "/api/v2/inteligencia/me/score": {
       "get": {
         "operationId": "PrediccionController_miScore",
         "parameters": [
@@ -10756,7 +10756,7 @@ export const OPENAPI_AGREGADO = {
         ]
       }
     },
-    "/api/v1/inteligencia/calidad": {
+    "/api/v2/inteligencia/calidad": {
       "get": {
         "operationId": "PrediccionController_calidadDatos",
         "parameters": [
@@ -10792,7 +10792,7 @@ export const OPENAPI_AGREGADO = {
         ]
       }
     },
-    "/api/v1/orders": {
+    "/api/v2/orders": {
       "post": {
         "operationId": "PedidosController_crear",
         "parameters": [],
@@ -10866,7 +10866,7 @@ export const OPENAPI_AGREGADO = {
         ]
       }
     },
-    "/api/v1/orders/admin/todas": {
+    "/api/v2/orders/admin/todas": {
       "get": {
         "operationId": "PedidosController_todas",
         "parameters": [
@@ -10913,7 +10913,7 @@ export const OPENAPI_AGREGADO = {
         ]
       }
     },
-    "/api/v1/orders/vendedor/mis-ventas": {
+    "/api/v2/orders/vendedor/mis-ventas": {
       "get": {
         "operationId": "PedidosController_misVentas",
         "parameters": [
@@ -10952,56 +10952,7 @@ export const OPENAPI_AGREGADO = {
         ]
       }
     },
-    "/api/v1/orders/vendedor/comisiones": {
-      "get": {
-        "deprecated": true,
-        "operationId": "PedidosController_comisiones",
-        "parameters": [
-          {
-            "name": "periodo",
-            "required": false,
-            "in": "query",
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "vendedorId",
-            "required": false,
-            "in": "query",
-            "description": "Solo admin",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Comisiones por periodo",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/components/schemas/ComisionVistaResponseDto"
-                  }
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "bearer": []
-          }
-        ],
-        "summary": "Comisiones por periodo (vendedor/admin) — obsoleto: usar /vendedores/me/ventas",
-        "tags": [
-          "Pedidos"
-        ]
-      }
-    },
-    "/api/v1/orders/tienda/{tiendaId}": {
+    "/api/v2/orders/tienda/{tiendaId}": {
       "get": {
         "operationId": "PedidosController_porTienda",
         "parameters": [
@@ -11049,7 +11000,7 @@ export const OPENAPI_AGREGADO = {
         ]
       }
     },
-    "/api/v1/orders/empresa": {
+    "/api/v2/orders/empresa": {
       "get": {
         "operationId": "PedidosController_porEmpresa",
         "parameters": [
@@ -11113,7 +11064,7 @@ export const OPENAPI_AGREGADO = {
         ]
       }
     },
-    "/api/v1/orders/{id}": {
+    "/api/v2/orders/{id}": {
       "get": {
         "operationId": "PedidosController_detalle",
         "parameters": [
@@ -11150,7 +11101,7 @@ export const OPENAPI_AGREGADO = {
         ]
       }
     },
-    "/api/v1/orders/{id}/timeline": {
+    "/api/v2/orders/{id}/timeline": {
       "get": {
         "operationId": "PedidosController_timeline",
         "parameters": [
@@ -11190,7 +11141,7 @@ export const OPENAPI_AGREGADO = {
         ]
       }
     },
-    "/api/v1/carrito": {
+    "/api/v2/carrito": {
       "get": {
         "operationId": "CarritoController_ver",
         "parameters": [],
@@ -11242,7 +11193,7 @@ export const OPENAPI_AGREGADO = {
         ]
       }
     },
-    "/api/v1/carrito/items": {
+    "/api/v2/carrito/items": {
       "post": {
         "operationId": "CarritoController_agregar",
         "parameters": [],
@@ -11279,7 +11230,7 @@ export const OPENAPI_AGREGADO = {
         ]
       }
     },
-    "/api/v1/carrito/items/{ofertaId}": {
+    "/api/v2/carrito/items/{ofertaId}": {
       "patch": {
         "operationId": "CarritoController_actualizar",
         "parameters": [
@@ -11361,7 +11312,7 @@ export const OPENAPI_AGREGADO = {
         ]
       }
     },
-    "/api/v1/scheduling/recursos": {
+    "/api/v2/scheduling/recursos": {
       "get": {
         "operationId": "SchedulingController_recursos",
         "parameters": [],
@@ -11426,7 +11377,7 @@ export const OPENAPI_AGREGADO = {
         ]
       }
     },
-    "/api/v1/scheduling/recursos/{recursoId}/disponibilidad": {
+    "/api/v2/scheduling/recursos/{recursoId}/disponibilidad": {
       "get": {
         "operationId": "SchedulingController_disponibilidad",
         "parameters": [
@@ -11466,7 +11417,7 @@ export const OPENAPI_AGREGADO = {
         ]
       }
     },
-    "/api/v1/scheduling/disponibilidad": {
+    "/api/v2/scheduling/disponibilidad": {
       "post": {
         "operationId": "SchedulingController_crearDisponibilidad",
         "parameters": [],
@@ -11503,7 +11454,7 @@ export const OPENAPI_AGREGADO = {
         ]
       }
     },
-    "/api/v1/scheduling/bloqueos": {
+    "/api/v2/scheduling/bloqueos": {
       "post": {
         "operationId": "SchedulingController_crearBloqueo",
         "parameters": [],
@@ -11540,7 +11491,7 @@ export const OPENAPI_AGREGADO = {
         ]
       }
     },
-    "/api/v1/scheduling/citas": {
+    "/api/v2/scheduling/citas": {
       "get": {
         "operationId": "SchedulingController_citas",
         "parameters": [
@@ -11622,7 +11573,7 @@ export const OPENAPI_AGREGADO = {
         ]
       }
     },
-    "/api/v1/scheduling/citas/{citaId}/cancelar": {
+    "/api/v2/scheduling/citas/{citaId}/cancelar": {
       "patch": {
         "operationId": "SchedulingController_cancelar",
         "parameters": [
@@ -11659,7 +11610,7 @@ export const OPENAPI_AGREGADO = {
         ]
       }
     },
-    "/api/v1/scheduling/recordatorios": {
+    "/api/v2/scheduling/recordatorios": {
       "get": {
         "operationId": "SchedulingController_recordatorios",
         "parameters": [],
@@ -11689,7 +11640,7 @@ export const OPENAPI_AGREGADO = {
         ]
       }
     },
-    "/api/v1/admin/storage/tenants": {
+    "/api/v2/admin/storage/tenants": {
       "get": {
         "operationId": "AdminStorageController_listar",
         "parameters": [
@@ -11738,7 +11689,7 @@ export const OPENAPI_AGREGADO = {
         ]
       }
     },
-    "/api/v1/admin/storage/tenants/{tenantId}": {
+    "/api/v2/admin/storage/tenants/{tenantId}": {
       "get": {
         "operationId": "AdminStorageController_estado",
         "parameters": [
@@ -11820,7 +11771,7 @@ export const OPENAPI_AGREGADO = {
         ]
       }
     },
-    "/api/v1/admin/storage/tenants/{tenantId}/recalcular": {
+    "/api/v2/admin/storage/tenants/{tenantId}/recalcular": {
       "post": {
         "operationId": "AdminStorageController_recalcular",
         "parameters": [
@@ -11857,7 +11808,7 @@ export const OPENAPI_AGREGADO = {
         ]
       }
     },
-    "/api/v1/storage/bucket": {
+    "/api/v2/storage/bucket": {
       "get": {
         "description": "Crea el bucket del tenant de forma perezosa la primera vez.",
         "operationId": "BucketsController_estado",
@@ -11923,7 +11874,7 @@ export const OPENAPI_AGREGADO = {
         ]
       }
     },
-    "/api/v1/storage/subidas": {
+    "/api/v2/storage/subidas": {
       "post": {
         "description": "Valida tipo, tamano y cuota del tenant; registra el objeto en estado pendiente y devuelve la URL prefirmada.",
         "operationId": "ObjetosController_solicitarSubida",
@@ -11967,7 +11918,7 @@ export const OPENAPI_AGREGADO = {
         ]
       }
     },
-    "/api/v1/storage/objetos/{id}/confirmar": {
+    "/api/v2/storage/objetos/{id}/confirmar": {
       "post": {
         "operationId": "ObjetosController_confirmar",
         "parameters": [
@@ -12004,7 +11955,7 @@ export const OPENAPI_AGREGADO = {
         ]
       }
     },
-    "/api/v1/storage/objetos": {
+    "/api/v2/storage/objetos": {
       "get": {
         "operationId": "ObjetosController_listar",
         "parameters": [
@@ -12085,7 +12036,7 @@ export const OPENAPI_AGREGADO = {
         ]
       }
     },
-    "/api/v1/storage/objetos/{id}": {
+    "/api/v2/storage/objetos/{id}": {
       "get": {
         "operationId": "ObjetosController_detalle",
         "parameters": [
@@ -12150,7 +12101,7 @@ export const OPENAPI_AGREGADO = {
         ]
       }
     },
-    "/api/v1/storage/objetos/{id}/descarga": {
+    "/api/v2/storage/objetos/{id}/descarga": {
       "get": {
         "operationId": "ObjetosController_descarga",
         "parameters": [
@@ -12187,7 +12138,7 @@ export const OPENAPI_AGREGADO = {
         ]
       }
     },
-    "/api/v1/storage/public/objetos/{id}": {
+    "/api/v2/storage/public/objetos/{id}": {
       "get": {
         "operationId": "PublicStorageController_servir",
         "parameters": [
@@ -12303,7 +12254,7 @@ export const OPENAPI_AGREGADO = {
         ]
       }
     },
-    "/api/v1/vendedores/tienda": {
+    "/api/v2/vendedores/tienda": {
       "post": {
         "operationId": "TiendasController_crear",
         "parameters": [],
@@ -12340,7 +12291,7 @@ export const OPENAPI_AGREGADO = {
         ]
       }
     },
-    "/api/v1/vendedores/me/tienda": {
+    "/api/v2/vendedores/me/tienda": {
       "get": {
         "operationId": "TiendasController_miTienda",
         "parameters": [],
@@ -12367,7 +12318,7 @@ export const OPENAPI_AGREGADO = {
         ]
       }
     },
-    "/api/v1/empresarios/me/tiendas": {
+    "/api/v2/empresarios/me/tiendas": {
       "get": {
         "operationId": "TiendasEmpresaController_listar",
         "parameters": [],
@@ -12397,7 +12348,7 @@ export const OPENAPI_AGREGADO = {
         ]
       }
     },
-    "/api/v1/tiendas/{id}/tema.css": {
+    "/api/v2/tiendas/{id}/tema.css": {
       "get": {
         "operationId": "TiendasSlugController_temaCss",
         "parameters": [
@@ -12438,7 +12389,7 @@ export const OPENAPI_AGREGADO = {
         ]
       }
     },
-    "/api/v1/tiendas/{id}/logo": {
+    "/api/v2/tiendas/{id}/logo": {
       "patch": {
         "operationId": "TiendasSlugController_actualizarLogo",
         "parameters": [
@@ -12485,7 +12436,7 @@ export const OPENAPI_AGREGADO = {
         ]
       }
     },
-    "/api/v1/tiendas/{id}/background": {
+    "/api/v2/tiendas/{id}/background": {
       "patch": {
         "operationId": "TiendasSlugController_actualizarBackground",
         "parameters": [
@@ -12532,7 +12483,7 @@ export const OPENAPI_AGREGADO = {
         ]
       }
     },
-    "/api/v1/tiendas/{id}/personalizacion": {
+    "/api/v2/tiendas/{id}/personalizacion": {
       "patch": {
         "operationId": "TiendasSlugController_actualizarPersonalizacion",
         "parameters": [
@@ -12579,7 +12530,7 @@ export const OPENAPI_AGREGADO = {
         ]
       }
     },
-    "/api/v1/tiendas/{id}/contenido": {
+    "/api/v2/tiendas/{id}/contenido": {
       "patch": {
         "operationId": "TiendasSlugController_actualizarContenido",
         "parameters": [
@@ -12626,7 +12577,7 @@ export const OPENAPI_AGREGADO = {
         ]
       }
     },
-    "/api/v1/tiendas/{id}/slug": {
+    "/api/v2/tiendas/{id}/slug": {
       "patch": {
         "operationId": "TiendasSlugController_actualizarSlug",
         "parameters": [
@@ -12679,7 +12630,7 @@ export const OPENAPI_AGREGADO = {
         ]
       }
     },
-    "/api/v1/vendedores/productos": {
+    "/api/v2/vendedores/productos": {
       "post": {
         "operationId": "OfertasController_publicar",
         "parameters": [],
@@ -12716,7 +12667,7 @@ export const OPENAPI_AGREGADO = {
         ]
       }
     },
-    "/api/v1/vendedores/productos/{id}": {
+    "/api/v2/vendedores/productos/{id}": {
       "patch": {
         "operationId": "OfertasController_cambiarMargen",
         "parameters": [
@@ -12762,7 +12713,7 @@ export const OPENAPI_AGREGADO = {
         ]
       }
     },
-    "/api/v1/vendedores/me/ofertas": {
+    "/api/v2/vendedores/me/ofertas": {
       "get": {
         "operationId": "OfertasController_misOfertas",
         "parameters": [],
@@ -12789,7 +12740,7 @@ export const OPENAPI_AGREGADO = {
         ]
       }
     },
-    "/api/v1/tiendas/{id}": {
+    "/api/v2/tiendas/{id}": {
       "get": {
         "operationId": "OfertasController_tiendaPublica",
         "parameters": [
@@ -13872,7 +13823,7 @@ export const OPENAPI_AGREGADO = {
           "url": {
             "type": "string",
             "description": "Ruta pública relativa servida por storage-service",
-            "example": "/api/v1/storage/public/objetos/8f0c..."
+            "example": "/api/v2/storage/public/objetos/8f0c..."
           },
           "orden": {
             "type": "number",
@@ -14174,11 +14125,6 @@ export const OPENAPI_AGREGADO = {
             "description": "Precio base en córdobas con dos decimales",
             "example": "1000.00"
           },
-          "reservas_activas": {
-            "type": "number",
-            "description": "Alias de reservado para consumidores internos",
-            "example": 2
-          },
           "valor_disponible_cents": {
             "type": "number",
             "description": "Valor del stock disponible en centavos",
@@ -14198,7 +14144,6 @@ export const OPENAPI_AGREGADO = {
           "reservado",
           "estado",
           "precio_base",
-          "reservas_activas",
           "valor_disponible_cents",
           "valor_total_cents"
         ]
@@ -14707,6 +14652,23 @@ export const OPENAPI_AGREGADO = {
           "precio_base",
           "stock",
           "estado",
+          "estado_operativo",
+          "costo",
+          "marca",
+          "codigo_barras",
+          "unidad",
+          "permite_fracciones",
+          "unidad_compra",
+          "contenido_cantidad",
+          "contenido_unidad",
+          "tipo_precio",
+          "tipo_costo",
+          "stock_minimo",
+          "stock_maximo",
+          "garantia_meses",
+          "es_materia_prima",
+          "ubicacion",
+          "actualizado_en",
           "creado_en"
         ]
       },
@@ -22998,6 +22960,7 @@ export const OPENAPI_AGREGADO = {
         "required": [
           "id",
           "nombre",
+          "slug",
           "estado",
           "creado_por",
           "creado_en"
@@ -25279,11 +25242,6 @@ export const OPENAPI_AGREGADO = {
             "description": "Cantidad",
             "example": 2
           },
-          "id": {
-            "type": "string",
-            "description": "Id de la oferta (alias enriquecido)",
-            "format": "uuid"
-          },
           "tienda_id": {
             "type": "string",
             "description": "Id de la tienda",
@@ -25322,7 +25280,6 @@ export const OPENAPI_AGREGADO = {
         "required": [
           "oferta_id",
           "cantidad",
-          "id",
           "tienda_id",
           "vendedor_id",
           "sku",
@@ -25357,49 +25314,6 @@ export const OPENAPI_AGREGADO = {
         "required": [
           "items",
           "total"
-        ]
-      },
-      "ComisionVistaResponseDto": {
-        "type": "object",
-        "properties": {
-          "vendedor_id": {
-            "type": "string",
-            "description": "Id del vendedor",
-            "format": "uuid"
-          },
-          "periodo": {
-            "type": "string",
-            "description": "Periodo (YYYY-MM)",
-            "example": "2026-10"
-          },
-          "ordenes": {
-            "type": "number",
-            "description": "Órdenes del periodo",
-            "example": 12
-          },
-          "total_ventas_cents": {
-            "type": "number",
-            "description": "Ventas del periodo en centavos",
-            "example": 1380000
-          },
-          "total_comision_cents": {
-            "type": "number",
-            "description": "Comisiones del periodo en centavos",
-            "example": 165600
-          },
-          "actualizado_en": {
-            "type": "string",
-            "description": "Última actualización (ISO 8601 UTC)",
-            "format": "date-time"
-          }
-        },
-        "required": [
-          "vendedor_id",
-          "periodo",
-          "ordenes",
-          "total_ventas_cents",
-          "total_comision_cents",
-          "actualizado_en"
         ]
       },
       "CreateOrderCommand": {
@@ -25534,6 +25448,8 @@ export const OPENAPI_AGREGADO = {
         },
         "required": [
           "oferta_id",
+          "item_type",
+          "item_id",
           "sku",
           "producto_nombre",
           "cantidad",
@@ -26812,18 +26728,6 @@ export const OPENAPI_AGREGADO = {
             "description": "Id del item unificado",
             "format": "uuid"
           },
-          "producto_id": {
-            "type": "string",
-            "description": "Id del producto o variante vendible",
-            "nullable": true,
-            "format": "uuid"
-          },
-          "producto_padre_id": {
-            "type": "object",
-            "description": "Id del producto padre (si es variante)",
-            "nullable": true,
-            "format": "uuid"
-          },
           "sku": {
             "type": "string",
             "description": "SKU de la variante o producto",
@@ -26886,7 +26790,8 @@ export const OPENAPI_AGREGADO = {
           "vendedor_id",
           "empresa_id",
           "participacion_porcentaje",
-          "producto_id",
+          "item_type",
+          "item_id",
           "sku",
           "producto_nombre",
           "margen",
@@ -26986,11 +26891,6 @@ export const OPENAPI_AGREGADO = {
             "description": "Tienda donde se publicará (UUID o slug). Si se omite, se usa la tienda del vendedor autenticado.",
             "example": "mi-tienda"
           },
-          "producto_id": {
-            "type": "string",
-            "description": "Id legacy del producto a publicar",
-            "example": "a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11"
-          },
           "item_type": {
             "type": "string",
             "description": "Tipo del item a publicar",
@@ -27015,6 +26915,7 @@ export const OPENAPI_AGREGADO = {
           }
         },
         "required": [
+          "item_id",
           "margen"
         ]
       },
@@ -27440,6 +27341,7 @@ export const OPENAPI_AGREGADO = {
           "empresa_id",
           "propietario_usuario_id",
           "nombre",
+          "slug",
           "descripcion",
           "creado_en"
         ]

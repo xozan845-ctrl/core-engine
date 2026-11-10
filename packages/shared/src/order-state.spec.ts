@@ -1,6 +1,15 @@
-import { ESTADOS_ORDEN, puedeTransicionar, validarTransicion } from './order-state';
+import { ESTADOS_ORDEN, validarTransicionPorTipo } from './order-state';
 import type { EstadoOrden } from './order-state';
 import { DomainError } from './errors';
+
+function puedeTransicionar(de: EstadoOrden, a: EstadoOrden): boolean {
+  try {
+    validarTransicionPorTipo('compra', de, a);
+    return true;
+  } catch {
+    return false;
+  }
+}
 
 describe('order-state (ciclo de vida de la orden, Tabla 13)', () => {
   it('debe permitir la cadena feliz cuando se avanza en orden', () => {
@@ -29,7 +38,7 @@ describe('order-state (ciclo de vida de la orden, Tabla 13)', () => {
   it('debe lanzar DomainError TRANSICION_INVALIDA cuando el salto no es valido', () => {
     let error: DomainError | undefined;
     try {
-      validarTransicion('creada', 'entregada');
+      validarTransicionPorTipo('compra', 'creada', 'entregada');
     } catch (e) {
       error = e as DomainError;
     }

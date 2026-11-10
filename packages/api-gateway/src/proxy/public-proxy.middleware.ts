@@ -5,7 +5,7 @@ import { Logger } from '@core/shared';
 /**
  * Proxy público same-origin para el frontend de Firebase (ADR-29).
  *
- * El navegador llama a `/api-proxy/api/v1/...`; este handler añade el Basic del
+ * El navegador llama a `/api-proxy/api/v2/...`; este handler añade el Basic del
  * gate de staging en el servidor y reenvía al gateway interno. El secreto nunca
  * viaja al navegador. Para rutas con sesión se reenvía el Bearer del cliente y
  * el gateway valida el JWT; el Basic solo se usa en login/registro/refresh y
@@ -27,7 +27,7 @@ const PREFIJO = '/api-proxy';
 const MAX_BODY_BYTES = 1024 * 1024;
 const TIMEOUT_MS = 60_000;
 const METODOS = new Set(['GET', 'HEAD', 'POST', 'PATCH', 'PUT', 'DELETE', 'OPTIONS']);
-const RUTA_AUTH = /^\/api\/v1\/auth\/(login|registro|refresh|restablecer-contrasena)$/;
+const RUTA_AUTH = /^\/api\/v2\/auth\/(login|registro|refresh|restablecer-contrasena)$/;
 const CABECERAS_PERMITIDAS = 'Content-Type,Authorization,x-request-id,Range';
 const METODOS_CORS = 'GET,HEAD,POST,PATCH,PUT,DELETE,OPTIONS';
 const CABECERAS_NO_REENVIABLES = new Set([
@@ -68,7 +68,7 @@ export function crearProxyPublico(opciones: OpcionesProxyPublico) {
 
   return async (req: Request, res: Response): Promise<void> => {
     const ruta = req.url; // app.use(PREFIJO, ...) ya quitó el prefijo
-    if (!ruta.startsWith('/api/v1/')) {
+    if (!ruta.startsWith('/api/v2/')) {
       res.status(404).json({
         codigo: 'NO_ENCONTRADO',
         mensaje: `No existe ruta ${req.method} ${PREFIJO}${ruta}.`,

@@ -53,7 +53,7 @@ const ROLES_CAMPO = [ROLES.SUPER_ADMIN, ...ROLES_LOGISTICA];
 
 @ApiTags('Field (logística de campo)')
 @ApiBearerAuth()
-@Controller('api/v1/field')
+@Controller('api/v2/field')
 export class FieldController {
   constructor(private readonly field: FieldService) {}
 

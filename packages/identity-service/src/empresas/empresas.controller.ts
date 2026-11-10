@@ -127,9 +127,7 @@ export class EmpresaResponseDto {
   @ApiProperty({ required: false, nullable: true, description: 'Código dinámico de la vertical' }) vertical_id?: string | null;
   @ApiProperty({ required: false, nullable: true, description: 'Código dinámico del pack' }) pack_codigo?: PackCodigo | null;
   @ApiProperty({ required: false, nullable: true, minimum: 1 }) pack_version?: number | null;
-  // `required: false` mantiene el cambio como aditivo para el gate R-C-7;
-  // el servicio siempre devuelve el slug en runtime.
-  @ApiProperty({ required: false, description: 'Slug público actual', example: 'distribuidora-piloto' }) slug: string;
+  @ApiProperty({ description: 'Slug público actual', example: 'distribuidora-piloto' }) slug: string;
   @ApiProperty({ required: false, nullable: true, enum: ['plataforma', 'propia', 'hibrida'] }) modalidad_logistica: ModalidadLogistica | null;
   @ApiProperty({
     enum: ['comercial', 'logistica', 'plataforma'],
@@ -181,7 +179,7 @@ class VendedorEmpresaResponseDto {
   @ApiProperty({ minimum: 0, maximum: 100 }) participacion_porcentaje: number;
 }
 
-@ApiTags('Empresas') @ApiBearerAuth() @Controller('api/v1/empresas')
+@ApiTags('Empresas') @ApiBearerAuth() @Controller('api/v2/empresas')
 export class EmpresasController {
   constructor(private readonly empresas: EmpresasService) {}
   @Post() @Roles(ROLES.EMPRESARIO)

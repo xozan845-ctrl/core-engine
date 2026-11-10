@@ -67,16 +67,16 @@ export async function suite16Owas(client, cfg, adminToken, vendedorToken, compra
     const setup = {};
     let setupOk = true;
     try {
-      setup.prod = await client.post('/api/v1/catalog/productos', {
+      setup.prod = await client.post('/api/v2/catalog/productos', {
         sku: `SEC-${suf}`, nombre: 'Producto Seg 16', descripcion: '', categoria: 'general',
         precio_base: '100.00', stock: 5,
       }, aAuth);
-      setup.tienda = await client.get('/api/v1/vendedores/me/tienda', vAuth);
-      setup.of = await client.post('/api/v1/vendedores/productos', {
+      setup.tienda = await client.get('/api/v2/vendedores/me/tienda', vAuth);
+      setup.of = await client.post('/api/v2/vendedores/productos', {
         producto_id: setup.prod.body?.id, margen: 10,
         ...(setup.tienda.body?.id ? { tienda_id: setup.tienda.body.id } : {}),
       }, vAuth);
-      setup.orden = setup.of.body?.id ? await client.post('/api/v1/orders', {
+      setup.orden = setup.of.body?.id ? await client.post('/api/v2/orders', {
         items: [{ oferta_id: setup.of.body.id, cantidad: 1 }],
       }, cAuth) : null;
       setupOk = !!setup.orden?.body?.id;
@@ -85,25 +85,25 @@ export async function suite16Owas(client, cfg, adminToken, vendedorToken, compra
     // Segundo comprador para IDOR (registro 409 -> login; preparado ANTES del
     // setup para no chocar con la ventana de rate-limit de /auth/login)
     const correoB = 'idor.comprador@test.com';
-    const regB = await client.post('/api/v1/auth/registro', {
+    const regB = await client.post('/api/v2/auth/registro', {
       nombre: 'Comprador IDOR', correo: correoB, contrasena: 'Contrasena123!', rol: 'comprador',
     });
     let cBToken = null;
     if (regB.status === 200 || regB.status === 201) {
       cBToken = regB.body.access_token;
     } else {
-      const lgB = await client.post('/api/v1/auth/login', { correo: correoB, contrasena: 'Contrasena123!' });
+      const lgB = await client.post('/api/v2/auth/login', { correo: correoB, contrasena: 'Contrasena123!' });
       if (lgB.status === 200 || lgB.status === 201) cBToken = lgB.body.access_token;
     }
     const cB = cBToken ? { authorization: `Bearer ${cBToken}` } : {};
     if (setupOk) {
-      let idor = await client.get(`/api/v1/orders/${setup.orden.body.id}`, cB);
+      let idor = await client.get(`/api/v2/orders/${setup.orden.body.id}`, cB);
       // Si el token del comprador B no era valido (p. ej. ventana de rate-limit),
       // reintentar una vez con login fresco antes de concluir
       if (idor.status === 401) {
-        const lgB2 = await client.post('/api/v1/auth/login', { correo: correoB, contrasena: 'Contrasena123!' });
+        const lgB2 = await client.post('/api/v2/auth/login', { correo: correoB, contrasena: 'Contrasena123!' });
         if (lgB2.status === 200 || lgB2.status === 201) {
-          idor = await client.get(`/api/v1/orders/${setup.orden.body.id}`, { authorization: `Bearer ${lgB2.body.access_token}` });
+          idor = await client.get(`/api/v2/orders/${setup.orden.body.id}`, { authorization: `Bearer ${lgB2.body.access_token}` });
         }
       }
       r('A01 IDOR: orden de otro comprador → 401/403/404 (ownership en servicio, sin fuga de datos)', [401, 403, 404].includes(idor.status), { status: idor.status, detalle: idor.status === 200 ? 'ORDEN DE OTRO COMPRADOR VISIBLE (IDOR REAL)' : `ownership: ${idor.status}` });
@@ -112,7 +112,7 @@ export async function suite16Owas(client, cfg, adminToken, vendedorToken, compra
     }
 
     // ── A02 Cryptographic Failures ───────────────────────────────────────
-    const loginAdmin = await client.post('/api/v1/auth/login', {
+    const loginAdmin = await client.post('/api/v2/auth/login', {
       correo: cfg.adminEmail, contrasena: cfg.adminPassword,
     });
     const adminId = loginAdmin.body?.usuario?.id;
@@ -124,51 +124,51 @@ export async function suite16Owas(client, cfg, adminToken, vendedorToken, compra
     const secretoDebil = !JWT_SECRET || JWT_SECRET.startsWith('dev_') || JWT_SECRET.length < 32;
     r('A02 Politica de secretos: JWT_SECRET del .env robusto (>=32 chars, sin prefijo dev_)', !secretoDebil, { detalle: `${JWT_SECRET?.length ?? 0} chars` });
     const forjado = forjarJWT(JWT_SECRET, payloadAdmin);
-    const intento = await client.get('/api/v1/admin/reportes', { authorization: `Bearer ${forjado}` });
+    const intento = await client.get('/api/v2/admin/reportes', { authorization: `Bearer ${forjado}` });
     r('A02 Rotacion aplicada: el gateway firma con el secreto del .env (JWT valido → 200, no 401)', intento.status === 200, { status: intento.status, detalle: intento.status === 401 ? 'servicios aun con un secreto distinto: la rotacion no esta aplicada' : 'firma del .env aceptada' });
     const secretosResiduales = ['dev_secret', 'dev_secret_cambiar_en_produccion'];
     const aceptados = [];
     for (const s of secretosResiduales) {
       const t = forjarJWT(s, payloadAdmin);
-      const rr = await client.get('/api/v1/admin/reportes', { authorization: `Bearer ${t}` });
+      const rr = await client.get('/api/v2/admin/reportes', { authorization: `Bearer ${t}` });
       if (rr.status !== 401) aceptados.push({ secreto: s, status: rr.status });
     }
     r('A02 JWT firmado con secretos residuales del repo → 401 (firma conocida ya no es suficiente)', aceptados.length === 0, { detalle: aceptados.length ? JSON.stringify(aceptados) : `rechazados: ${secretosResiduales.join(', ')}` });
 
     const none = `${b64url(JSON.stringify({ alg: 'none', typ: 'JWT' }))}.${b64url(JSON.stringify(payloadAdmin))}.`;
-    const noneRes = await client.get('/api/v1/orders', { authorization: `Bearer ${none}` });
+    const noneRes = await client.get('/api/v2/orders', { authorization: `Bearer ${none}` });
     r('A02 JWT alg=none rechazado → 401', noneRes.status === 401, { status: noneRes.status });
 
     const vencido = forjarJWT(JWT_SECRET, { ...payloadAdmin, exp: ahora - 60 });
-    const venRes = await client.get('/api/v1/orders', { authorization: `Bearer ${vencido}` });
+    const venRes = await client.get('/api/v2/orders', { authorization: `Bearer ${vencido}` });
     r('A02 JWT expirado rechazado → 401', venRes.status === 401, { status: venRes.status });
 
     // ── A03 Injection ────────────────────────────────────────────────────
-    const sqliLogin = await client.post('/api/v1/auth/login', {
+    const sqliLogin = await client.post('/api/v2/auth/login', {
       correo: `' OR '1'='1' --`, contrasena: `' OR '1'='1`,
     });
     r('A03 SQLi en login → 400/401 (no autentica)', [400, 401, 429].includes(sqliLogin.status), { status: sqliLogin.status });
 
-    const sqliId = await client.get('/api/v1/catalog/productos/' + encodeURIComponent(`1' OR '1'='1`), aAuth);
+    const sqliId = await client.get('/api/v2/catalog/productos/' + encodeURIComponent(`1' OR '1'='1`), aAuth);
     r('A03 SQLi en id de producto → 400/404 (500 = bug de manejo, sin inyeccion)', [400, 404].includes(sqliId.status), { status: sqliId.status, detalle: sqliId.status === 500 ? '500 no gestionado para id malformado (no exfiltra datos)' : '' });
 
-    const xss = await client.post('/api/v1/catalog/productos', {
+    const xss = await client.post('/api/v2/catalog/productos', {
       sku: `XSS-${suf}`, nombre: '<script>alert(1)</script>', descripcion: '', categoria: 'general',
       precio_base: '10.00', stock: 2,
     }, aAuth);
     r('A03 XSS almacenado: nombre ejecutable rechazado o inofensivo (JSON, sin render) → 201 como dato', xss.status === 201 && (typeof xss.body?.nombre === 'string'), { status: xss.status });
 
-    const xml = await client.request('POST', '/api/v1/auth/login', undefined, {
+    const xml = await client.request('POST', '/api/v2/auth/login', undefined, {
       'Content-Type': 'application/xml',
     });
     r('A03 XXE/XML body → 400/415 (solo JSON; 429 = rate global)', [400, 415, 429].includes(xml.status), { status: xml.status, detalle: `XXE no aplica: parser limita a JSON${xml.status === 429 ? ' (rate-limit global 300/min)' : ''}` });
 
     // ── A04 Insecure Design / Mass Assignment ────────────────────────────
-    const ma = await client.post('/api/v1/auth/registro', {
+    const ma = await client.post('/api/v2/auth/registro', {
       nombre: 'MA Probe', correo: `ma.${suf}@test.com`, contrasena: 'Contrasena123!',
       rol: 'comprador', es_admin: true, saldo_usd: 999999,
     });
-    const maMe = ma.status === 201 ? await client.get('/api/v1/auth/me', { authorization: `Bearer ${ma.body.access_token}` }) : null;
+    const maMe = ma.status === 201 ? await client.get('/api/v2/auth/me', { authorization: `Bearer ${ma.body.access_token}` }) : null;
     const maSeguro = maMe ? (maMe.body?.rol === 'comprador') : true;
     r('A04 Mass assignment en registro: campos extra no escalan rol', maSeguro, { status: ma.status, detalle: `/me rol=${maMe?.body?.rol}` });
 
@@ -178,7 +178,7 @@ export async function suite16Owas(client, cfg, adminToken, vendedorToken, compra
     r('A05 Header X-Powered-By:Express presente (fingerprint) → ausente ideal', !powered.includes('express'), { detalle: hdr['x-powered-by'] ?? '(ausente)', status: 200 });
     const seg = ['content-security-policy', 'x-frame-options', 'x-content-type-options', 'strict-transport-security'].filter((k) => !hdr[k]);
     r('A05 Security headers presentes (CSP/XFO/CTO/HSTS) → los 4 ideal', seg.length === 0, { detalle: seg.length ? `faltan: ${seg.join(', ')}` : 'ok' });
-    const cors = await client.get('/api/v1/vendedores/me/tienda', { ...vAuth, origin: 'https://evil.example.com' });
+    const cors = await client.get('/api/v2/vendedores/me/tienda', { ...vAuth, origin: 'https://evil.example.com' });
     const acao = cors.headers['access-control-allow-origin'];
     r('A05 CORS: no reflejar origenes no confiables', acao !== 'https://evil.example.com', { detalle: `ACAO=${acao}`, status: cors.status });
     const grafana = await raw('http://localhost:3000/api/frontend/settings');
@@ -203,7 +203,7 @@ export async function suite16Owas(client, cfg, adminToken, vendedorToken, compra
 
     let bruteforce = 0;
     for (let i = 0; i < 12; i++) {
-      const b = await client.post('/api/v1/auth/login', { correo: 'admin@core-engine.test', contrasena: 'Incorrecta123!' });
+      const b = await client.post('/api/v2/auth/login', { correo: 'admin@core-engine.test', contrasena: 'Incorrecta123!' });
       if (b.status === 429) bruteforce++;
     }
     r('A07 Brute force login mitigado (rate limit 429)', bruteforce >= 1, { detalle: `429s: ${bruteforce}/12` });
@@ -213,7 +213,7 @@ export async function suite16Owas(client, cfg, adminToken, vendedorToken, compra
 
     // ── A08 Software & Data Integrity ────────────────────────────────────
     const firmaRara = forjarJWT(INTERNAL_KEY || 'otro_secreto_distinto', payloadAdmin);
-    const fr = await client.get('/api/v1/orders', { authorization: `Bearer ${firmaRara}` });
+    const fr = await client.get('/api/v2/orders', { authorization: `Bearer ${firmaRara}` });
     r('A08 JWT con firma ajena → 401 (integridad de token)', fr.status === 401, { status: fr.status });
 
     const pub = await raw('http://localhost:15672/api/exchanges/%2F/core-engine.events/publish', {
@@ -226,20 +226,20 @@ export async function suite16Owas(client, cfg, adminToken, vendedorToken, compra
     const metrics = await client.get('/metrics');
     r('A09 Metrics expuestos para monitoreo (/metrics 200)', metrics.status === 200, { status: metrics.status });
 
-    const rid = (await client.get('/api/v1/orders', cAuth)).headers['x-request-id'];
+    const rid = (await client.get('/api/v2/orders', cAuth)).headers['x-request-id'];
     r('A09 Trazabilidad: x-request-id presente en respuestas', !!rid, { detalle: rid ?? '(ausente)' });
 
     // ── A10 SSRF ─────────────────────────────────────────────────────────
-    const ssrf1 = await client.post('/api/v1/orders', { items: [{ oferta_id: 'http://169.254.169.254/latest/meta-data' }] }, cAuth);
-    const ssrf2 = await client.get('/api/v1/catalog/productos/' + encodeURIComponent('http://127.0.0.1:5432'));
+    const ssrf1 = await client.post('/api/v2/orders', { items: [{ oferta_id: 'http://169.254.169.254/latest/meta-data' }] }, cAuth);
+    const ssrf2 = await client.get('/api/v2/catalog/productos/' + encodeURIComponent('http://127.0.0.1:5432'));
     r('A10 SSRF: rutas no consumen URLs del atacante (400/404/409, sin fetch interno)', ssrf1.status !== 500 && ssrf2.status !== 500, { s1: ssrf1.status, s2: ssrf2.status, detalle: `sin endpoints de fetch por diseño; ssrf1=${ssrf1.status} ssrf2=${ssrf2.status}` + (ssrf1.status === 500 ? ' (orden con oferta malformada → 500 no gestionado)' : '') });
 
     // ── DoS: limites de entrada ──────────────────────────────────────────
     const grande = { correo: 'x'.repeat(2 * 1024 * 1024) };
-    const big = await client.request('POST', '/api/v1/auth/login', grande);
+    const big = await client.request('POST', '/api/v2/auth/login', grande);
     r('DoS: body de 2MB → 413 (limite controlado, no 500)', big.status === 413, { status: big.status, detalle: big.status === 500 ? 'sin body-limit: peticion gigante procesada → 500 no gestionado' : '' });
 
-    const carga = await client.get('/api/v1/orders', cAuth);
+    const carga = await client.get('/api/v2/orders', cAuth);
     r('DoS: rate limiting global activo (429 eventual)', true, { detalle: 'verificado en suites 02/13 (429 en rafagas)' });
 
     // ── Superficie de ataque: servicios directos ─────────────────────────

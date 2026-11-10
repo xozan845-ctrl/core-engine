@@ -22,7 +22,7 @@ const crear = () => {
   return { controller: new ObjetosController(objetos as unknown as ObjetosService), objetos };
 };
 
-describe('ObjetosController (api/v1/storage, R-U-10/11)', () => {
+describe('ObjetosController (api/v2/storage, R-U-10/11)', () => {
   it('debe exigir el tenant del token en todas las operaciones', async () => {
     const { controller } = crear();
     const sinTenant: UsuarioContexto = { ...usuario, tenant_id: undefined };

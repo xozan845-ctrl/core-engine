@@ -425,7 +425,7 @@ export class EmpresasService {
     return {
       empresa: await this.conUrls(empresa),
       overrides,
-      redirigirA: es_actual ? undefined : `/api/v1/empresas/${empresa.slug}`,
+      redirigirA: es_actual ? undefined : `/api/v2/empresas/${empresa.slug}`,
     };
   }
 
@@ -708,7 +708,7 @@ export class EmpresasService {
       'empresa',
     );
     const logo = empresa.logo_objeto_id
-      ? { logo_url: `/api/v1/storage/public/objetos/${empresa.logo_objeto_id}` }
+      ? { logo_url: `/api/v2/storage/public/objetos/${empresa.logo_objeto_id}` }
       : {};
     return {
       ...resto,

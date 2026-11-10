@@ -27,9 +27,8 @@ export interface OfertaExterna {
   vendedor_id: string;
   empresa_id: string;
   participacion_porcentaje: number;
-  producto_id: string | null;
-  item_type?: 'producto' | 'servicio' | 'alquiler';
-  item_id?: string;
+  item_type: 'producto' | 'servicio' | 'alquiler';
+  item_id: string;
   sku: string;
   producto_nombre: string;
   margen: number;
@@ -49,7 +48,7 @@ interface LineaAgrupada {
 /**
  * CreateOrderCommandHandler: valida reglas (RN-03, RN-04, RN-05), persiste la
  * orden con el modelo Order y publica el evento (carpeta handlers, cap. 3.2).
- * Proyecciones (orden_vista, comisiones_vista, orden_timeline) se actualizan
+ * Proyecciones (orden_vista, orden_timeline) se actualizan
  * via trigger desde orders.eventos (CQRS + Event Sourcing, ADR-07/08).
  */
 @Injectable()
@@ -74,7 +73,7 @@ export class CreateOrderCommandHandler {
       if (delCarrito.length === 0) {
         throw new DomainError('CARRITO_VACIO', 'El carrito esta vacio o expiro (RN-05).');
       }
-      lineas = delCarrito;
+      lineas = delCarrito.map((linea) => ({ ...linea, fulfillment: 'none' as Fulfillment }));
       desdeCarrito = true;
     }
     if (!lineas?.length) {
@@ -92,7 +91,7 @@ export class CreateOrderCommandHandler {
       if (!oferta || oferta.estado !== 'activa') {
         throw new NotFoundError('Oferta', linea.oferta_id);
       }
-      const itemType = oferta.item_type ?? 'producto';
+      const itemType = oferta.item_type;
       const fulfillment = this.validarFulfillment(linea.fulfillment, tipoOrden, itemType);
       const precioUnitario = Money.parsear(oferta.precio_venta);
       total = total.sumar(precioUnitario.multiplicarPor(linea.cantidad));
@@ -107,7 +106,7 @@ export class CreateOrderCommandHandler {
         empresa_id: oferta.empresa_id,
         participacion_porcentaje: oferta.participacion_porcentaje,
         item_type: itemType,
-        item_id: oferta.item_id ?? oferta.producto_id ?? undefined,
+        item_id: oferta.item_id,
         fulfillment,
         fulfillment_config: linea.fulfillment_config,
       });
@@ -256,8 +255,10 @@ export class CreateOrderCommandHandler {
     return [...mapa.values()];
   }
 
-  private validarTipoOrden(valor?: string): TipoOrden {
-    if (!valor) return 'compra';
+  private validarTipoOrden(valor: string): TipoOrden {
+    if (!valor) {
+      throw new DomainError('TIPO_ORDEN_REQUERIDO', 'El tipo de orden es obligatorio.');
+    }
     if (!TIPOS_ORDEN.includes(valor as TipoOrden)) {
       throw new DomainError('TIPO_ORDEN_INVALIDO', 'El tipo de orden no es valido.');
     }
@@ -340,7 +341,7 @@ export class CreateOrderCommandHandler {
   /** Consulta sincrona de stock al catalogo (lecturas por REST, sec. 3.2). */
   private async verificarStock(items: ItemOrden[]): Promise<void> {
     try {
-      const productosConStock = items.filter((item) => !item.item_type || item.item_type === 'producto');
+      const productosConStock = items.filter((item) => item.item_type === 'producto');
       if (productosConStock.length === 0) return;
       const skus = [...new Set(productosConStock.map((i) => i.sku))];
       const res = await fetch(

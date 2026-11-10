@@ -134,7 +134,7 @@ class AceptarInvitacionResponseDto {
 
 @ApiTags('Invitaciones')
 @ApiBearerAuth()
-@Controller('api/v1/empresas')
+@Controller('api/v2/empresas')
 export class InvitacionesEmpresaController {
   constructor(private readonly invitaciones: InvitacionesService) {}
 
@@ -183,7 +183,7 @@ export class InvitacionesEmpresaController {
 }
 
 @ApiTags('Invitaciones')
-@Controller('api/v1/invitaciones/vendedores')
+@Controller('api/v2/invitaciones/vendedores')
 export class InvitacionesPublicasController {
   constructor(private readonly invitaciones: InvitacionesService) {}
 

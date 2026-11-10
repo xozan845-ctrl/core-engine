@@ -130,7 +130,13 @@ export class TiendasService {
   async deVendedor(vendedorId: string): Promise<Tienda | null> {
     const tienda = await this.pg.queryOne<TiendaFila>(
       `SELECT ${CAMPOS_TIENDA}
-       FROM stores.tiendas WHERE vendedor_id = $1`,
+       FROM stores.tiendas
+       WHERE vendedor_id = $1 OR EXISTS (
+         SELECT 1 FROM identity.asignaciones_personal ap
+         WHERE ap.usuario_id = $1 AND ap.tienda_id = stores.tiendas.id AND ap.estado = 'activa'
+       )
+       ORDER BY CASE WHEN vendedor_id = $1 THEN 0 ELSE 1 END, creado_en
+       LIMIT 1`,
       [vendedorId],
     );
     return tienda ? this.conUrls(tienda) : null;
@@ -154,7 +160,7 @@ export class TiendasService {
     return {
       tienda: await this.conUrls(tienda),
       overrides: overridesDe(tienda),
-      redirigirA: es_actual ? undefined : `/api/v1/tiendas/${tienda.slug}`,
+      redirigirA: es_actual ? undefined : `/api/v2/tiendas/${tienda.slug}`,
     };
   }
 
@@ -515,7 +521,7 @@ export class TiendasService {
       tema: resuelta.tema,
     };
     const logo = fila.logo_objeto_id
-      ? { logo_url: `/api/v1/storage/public/objetos/${fila.logo_objeto_id}` }
+      ? { logo_url: `/api/v2/storage/public/objetos/${fila.logo_objeto_id}` }
       : {};
     return {
       ...resto,

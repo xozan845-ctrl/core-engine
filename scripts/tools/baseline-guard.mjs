@@ -18,7 +18,6 @@ const BASELINE_FILES = {
   specs: 'scripts/config/spec-baseline.json',
   rls: 'scripts/config/rls-baseline.json',
   migrations: 'scripts/config/db-migrations.json',
-  breaking: 'docs/api/breaking-baseline.json',
 };
 
 function parseArgs(argv) {

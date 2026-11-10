@@ -462,7 +462,7 @@ Este archivo registra decisiones técnicas deliberadas que se apartan del texto 
   responsabilidades —**motor de gobernanza**, utilidades de build
   (`swagger-aggregate.mjs`) y demo E2E (`smoke.mjs`)— y dentro del motor no
   separa infraestructura reutilizable de reglas del proyecto:
-  - `check-rules.mjs` descubre suites por **nombre de archivo** (`*.test.mjs`):
+  - `cli.mjs rules` descubre suites por **nombre de archivo** (`*.test.mjs`):
     no hay registro ni metadata de qué IDs cubre cada suite.
   - `helpers/repo.mjs` mezcla utilidades genéricas (git, paths) con datos del
     proyecto (`MAIN_BRANCH`).

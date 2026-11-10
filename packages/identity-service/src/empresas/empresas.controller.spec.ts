@@ -83,14 +83,14 @@ describe('EmpresasController', () => {
   it('responde 301 con Location cuando el slug consultado es anterior', async () => {
     empresas.resolverPara.mockResolvedValue({
       empresa,
-      redirigirA: '/api/v1/empresas/acme-nueva',
+      redirigirA: '/api/v2/empresas/acme-nueva',
     });
     const res = respuesta();
 
     await controller.obtener('acme-vieja', empresario, res as never);
 
     expect(res.status).toHaveBeenCalledWith(301);
-    expect(res.setHeader).toHaveBeenCalledWith('Location', '/api/v1/empresas/acme-nueva');
+    expect(res.setHeader).toHaveBeenCalledWith('Location', '/api/v2/empresas/acme-nueva');
   });
 
   it('cambia el slug público de la empresa', async () => {

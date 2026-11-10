@@ -279,20 +279,6 @@ CREATE POLICY ofertas_vendedor_propias ON stores.ofertas
 CREATE POLICY ofertas_lectura ON stores.ofertas
   FOR SELECT TO anon, authenticated USING (true);
 
--- ── orders.proyeccion_ordenes ───────────────────────────────────────────
-ALTER TABLE orders.proyeccion_ordenes ENABLE ROW LEVEL SECURITY;
-CREATE POLICY ordenes_admin ON orders.proyeccion_ordenes
-  FOR ALL TO authenticated USING (auth.rol() = 'admin') WITH CHECK (auth.rol() = 'admin');
-CREATE POLICY ordenes_comprador_propias ON orders.proyeccion_ordenes
-  FOR SELECT TO authenticated
-  USING (auth.rol() = 'comprador' AND cliente_id = auth.uid());
--- el vendedor ve sus ventas a traves de los items enriquecidos (items_json)
-CREATE POLICY ordenes_vendedor_ventas ON orders.proyeccion_ordenes
-  FOR SELECT TO authenticated
-  USING (auth.rol() = 'vendedor'
-         AND EXISTS (SELECT 1 FROM jsonb_array_elements(items_json) i
-                     WHERE i->>'vendedor_id' = auth.uid()::text));
-
 -- ── orders.carritos (RN-05: cada comprador solo su carrito) ──────────────
 ALTER TABLE orders.carritos ENABLE ROW LEVEL SECURITY;
 CREATE POLICY carritos_comprador ON orders.carritos

@@ -2,7 +2,7 @@
   "openapi": "3.0.0",
   "info": {
     "title": "Core Engine · identity-service · API pública",
-    "description": "Contrato público (/api/v1/**) de identity-service. No contiene rutas /internal/**.",
+    "description": "Contrato público (/api/v2/**) de identity-service. No contiene rutas /internal/**.",
     "version": "v1",
     "contact": {}
   },
@@ -10,7 +10,7 @@
   "x-superficie": "publica",
   "tags": [],
   "paths": {
-    "/api/v1/auth/registro": {
+    "/api/v2/auth/registro": {
       "post": {
         "operationId": "AuthController_registrar",
         "parameters": [],
@@ -42,7 +42,7 @@
         ]
       }
     },
-    "/api/v1/auth/login": {
+    "/api/v2/auth/login": {
       "post": {
         "operationId": "AuthController_login",
         "parameters": [],
@@ -77,7 +77,7 @@
         ]
       }
     },
-    "/api/v1/auth/refresh": {
+    "/api/v2/auth/refresh": {
       "post": {
         "operationId": "AuthController_refresh",
         "parameters": [],
@@ -117,7 +117,7 @@
         ]
       }
     },
-    "/api/v1/auth/logout": {
+    "/api/v2/auth/logout": {
       "post": {
         "operationId": "AuthController_logout",
         "parameters": [],
@@ -154,7 +154,7 @@
         ]
       }
     },
-    "/api/v1/auth/crear-usuario": {
+    "/api/v2/auth/crear-usuario": {
       "post": {
         "operationId": "AuthController_crearUsuario",
         "parameters": [],
@@ -194,7 +194,7 @@
         ]
       }
     },
-    "/api/v1/auth/cambiar-contrasena": {
+    "/api/v2/auth/cambiar-contrasena": {
       "post": {
         "operationId": "AuthController_cambiarContrasena",
         "parameters": [],
@@ -231,7 +231,7 @@
         ]
       }
     },
-    "/api/v1/auth/restablecer-contrasena": {
+    "/api/v2/auth/restablecer-contrasena": {
       "post": {
         "operationId": "AuthController_restablecerContrasena",
         "parameters": [],
@@ -263,7 +263,7 @@
         ]
       }
     },
-    "/api/v1/auth/me": {
+    "/api/v2/auth/me": {
       "get": {
         "operationId": "AuthController_yo",
         "parameters": [],
@@ -290,7 +290,7 @@
         ]
       }
     },
-    "/api/v1/auth/vincular-personal": {
+    "/api/v2/auth/vincular-personal": {
       "post": {
         "operationId": "AuthController_vincularPersonal",
         "parameters": [],
@@ -327,7 +327,7 @@
         ]
       }
     },
-    "/api/v1/usuarios": {
+    "/api/v2/usuarios": {
       "get": {
         "operationId": "UsuariosController_listar",
         "parameters": [],
@@ -357,7 +357,7 @@
         ]
       }
     },
-    "/api/v1/usuarios/{id}/avatar": {
+    "/api/v2/usuarios/{id}/avatar": {
       "patch": {
         "operationId": "UsuariosController_actualizarAvatar",
         "parameters": [
@@ -404,7 +404,7 @@
         ]
       }
     },
-    "/api/v1/usuarios/{id}": {
+    "/api/v2/usuarios/{id}": {
       "get": {
         "operationId": "UsuariosController_obtener",
         "parameters": [
@@ -444,7 +444,7 @@
         ]
       }
     },
-    "/api/v1/empresas": {
+    "/api/v2/empresas": {
       "post": {
         "operationId": "EmpresasController_crear",
         "parameters": [],
@@ -481,7 +481,7 @@
         ]
       }
     },
-    "/api/v1/empresas/{id}": {
+    "/api/v2/empresas/{id}": {
       "get": {
         "operationId": "EmpresasController_obtener",
         "parameters": [
@@ -533,7 +533,7 @@
         ]
       }
     },
-    "/api/v1/empresas/{id}/perfil": {
+    "/api/v2/empresas/{id}/perfil": {
       "patch": {
         "operationId": "EmpresasController_actualizarPerfil",
         "parameters": [
@@ -580,7 +580,7 @@
         ]
       }
     },
-    "/api/v1/empresas/{id}/slug": {
+    "/api/v2/empresas/{id}/slug": {
       "patch": {
         "operationId": "EmpresasController_actualizarSlug",
         "parameters": [
@@ -630,7 +630,7 @@
         ]
       }
     },
-    "/api/v1/empresas/{id}/logistica": {
+    "/api/v2/empresas/{id}/logistica": {
       "patch": {
         "operationId": "EmpresasController_actualizarLogistica",
         "parameters": [
@@ -676,7 +676,7 @@
         ]
       }
     },
-    "/api/v1/empresas/{id}/tipo": {
+    "/api/v2/empresas/{id}/tipo": {
       "patch": {
         "operationId": "EmpresasController_actualizarTipo",
         "parameters": [
@@ -723,7 +723,7 @@
         ]
       }
     },
-    "/api/v1/empresas/{id}/vendedores": {
+    "/api/v2/empresas/{id}/vendedores": {
       "post": {
         "operationId": "EmpresasController_vendedor",
         "parameters": [
@@ -769,7 +769,7 @@
         ]
       }
     },
-    "/api/v1/empresas/{empresaId}/invitaciones/vendedores": {
+    "/api/v2/empresas/{empresaId}/invitaciones/vendedores": {
       "post": {
         "operationId": "InvitacionesEmpresaController_crear",
         "parameters": [
@@ -819,7 +819,7 @@
         ]
       }
     },
-    "/api/v1/empresas/{empresaId}/vendedores": {
+    "/api/v2/empresas/{empresaId}/vendedores": {
       "get": {
         "operationId": "InvitacionesEmpresaController_listar",
         "parameters": [
@@ -856,7 +856,7 @@
         ]
       }
     },
-    "/api/v1/empresas/{empresaId}/invitaciones/vendedores/{invitacionId}": {
+    "/api/v2/empresas/{empresaId}/invitaciones/vendedores/{invitacionId}": {
       "delete": {
         "operationId": "InvitacionesEmpresaController_revocar",
         "parameters": [
@@ -895,7 +895,7 @@
         ]
       }
     },
-    "/api/v1/invitaciones/vendedores/{token}": {
+    "/api/v2/invitaciones/vendedores/{token}": {
       "get": {
         "operationId": "InvitacionesPublicasController_consultar",
         "parameters": [
@@ -929,7 +929,7 @@
         ]
       }
     },
-    "/api/v1/invitaciones/vendedores/{token}/aceptar": {
+    "/api/v2/invitaciones/vendedores/{token}/aceptar": {
       "post": {
         "operationId": "InvitacionesPublicasController_aceptar",
         "parameters": [
@@ -976,7 +976,7 @@
         ]
       }
     },
-    "/api/v1/configuracion/sitio": {
+    "/api/v2/configuracion/sitio": {
       "get": {
         "operationId": "ConfiguracionSitioController_obtener",
         "parameters": [],
@@ -1033,7 +1033,7 @@
         ]
       }
     },
-    "/api/v1/empresas/{empresaId}/capacidades": {
+    "/api/v2/empresas/{empresaId}/capacidades": {
       "get": {
         "operationId": "CapacidadesController_listar",
         "parameters": [
@@ -1073,7 +1073,7 @@
         ]
       }
     },
-    "/api/v1/empresas/{empresaId}/capacidades/{capacidad}": {
+    "/api/v2/empresas/{empresaId}/capacidades/{capacidad}": {
       "patch": {
         "operationId": "CapacidadesController_actualizar",
         "parameters": [
@@ -1129,7 +1129,7 @@
         ]
       }
     },
-    "/api/v1/packs": {
+    "/api/v2/packs": {
       "get": {
         "operationId": "PacksController_listar",
         "parameters": [
@@ -1204,7 +1204,7 @@
         ]
       }
     },
-    "/api/v1/packs/modelos-operacion": {
+    "/api/v2/packs/modelos-operacion": {
       "get": {
         "operationId": "PacksController_listarModelos",
         "parameters": [],
@@ -1269,7 +1269,7 @@
         ]
       }
     },
-    "/api/v1/packs/verticales": {
+    "/api/v2/packs/verticales": {
       "get": {
         "operationId": "PacksController_listarVerticales",
         "parameters": [],
@@ -1334,7 +1334,7 @@
         ]
       }
     },
-    "/api/v1/packs/{codigo}/{version}": {
+    "/api/v2/packs/{codigo}/{version}": {
       "get": {
         "operationId": "PacksController_obtener",
         "parameters": [
@@ -1380,7 +1380,7 @@
         ]
       }
     },
-    "/api/v1/empresas/{empresaId}/extensiones": {
+    "/api/v2/empresas/{empresaId}/extensiones": {
       "get": {
         "operationId": "ExtensionesController_listar",
         "parameters": [
@@ -1464,7 +1464,7 @@
         ]
       }
     },
-    "/api/v1/empresas/{empresaId}/extensiones/{codigo}": {
+    "/api/v2/empresas/{empresaId}/extensiones/{codigo}": {
       "patch": {
         "operationId": "ExtensionesController_cambiarEstado",
         "parameters": [
@@ -1519,7 +1519,7 @@
         ]
       }
     },
-    "/api/v1/empresas/{empresaId}/extensiones/{codigo}/validar": {
+    "/api/v2/empresas/{empresaId}/extensiones/{codigo}/validar": {
       "post": {
         "operationId": "ExtensionesController_validar",
         "parameters": [
@@ -1574,7 +1574,7 @@
         ]
       }
     },
-    "/api/v1/empresas/{empresaId}/extensiones/{codigo}/valores/{recursoId}": {
+    "/api/v2/empresas/{empresaId}/extensiones/{codigo}/valores/{recursoId}": {
       "get": {
         "operationId": "ExtensionesController_obtenerValores",
         "parameters": [
@@ -1742,7 +1742,7 @@
         ]
       }
     },
-    "/api/v1/empresas/{empresaId}/partes": {
+    "/api/v2/empresas/{empresaId}/partes": {
       "get": {
         "operationId": "PartesController_listar",
         "parameters": [
@@ -1855,7 +1855,7 @@
         ]
       }
     },
-    "/api/v1/empresas/{empresaId}/partes/{parteId}": {
+    "/api/v2/empresas/{empresaId}/partes/{parteId}": {
       "get": {
         "operationId": "PartesController_obtener",
         "parameters": [
@@ -1992,7 +1992,7 @@
         ]
       }
     },
-    "/api/v1/empresas/{empresaId}/partes/{parteId}/contactos": {
+    "/api/v2/empresas/{empresaId}/partes/{parteId}/contactos": {
       "get": {
         "operationId": "PartesController_listarContactos",
         "parameters": [
@@ -2091,7 +2091,7 @@
         ]
       }
     },
-    "/api/v1/empresas/{empresaId}/partes/{parteId}/contactos/{contactoId}": {
+    "/api/v2/empresas/{empresaId}/partes/{parteId}/contactos/{contactoId}": {
       "patch": {
         "operationId": "PartesController_actualizarContacto",
         "parameters": [
@@ -2196,7 +2196,7 @@
         ]
       }
     },
-    "/api/v1/empresas/{empresaId}/partes/{parteId}/direcciones": {
+    "/api/v2/empresas/{empresaId}/partes/{parteId}/direcciones": {
       "get": {
         "operationId": "PartesController_listarDirecciones",
         "parameters": [
@@ -2295,7 +2295,7 @@
         ]
       }
     },
-    "/api/v1/empresas/{empresaId}/partes/{parteId}/direcciones/{direccionId}": {
+    "/api/v2/empresas/{empresaId}/partes/{parteId}/direcciones/{direccionId}": {
       "patch": {
         "operationId": "PartesController_actualizarDireccion",
         "parameters": [
@@ -2400,7 +2400,7 @@
         ]
       }
     },
-    "/api/v1/empresas/{empresaId}/partes/{parteId}/relaciones": {
+    "/api/v2/empresas/{empresaId}/partes/{parteId}/relaciones": {
       "get": {
         "operationId": "PartesController_listarRelaciones",
         "parameters": [
@@ -2499,7 +2499,7 @@
         ]
       }
     },
-    "/api/v1/empresas/{empresaId}/partes/{parteId}/relaciones/{relacionId}": {
+    "/api/v2/empresas/{empresaId}/partes/{parteId}/relaciones/{relacionId}": {
       "delete": {
         "operationId": "PartesController_eliminarRelacion",
         "parameters": [
@@ -2544,7 +2544,7 @@
         ]
       }
     },
-    "/api/v1/empresas/{empresaId}/roles": {
+    "/api/v2/empresas/{empresaId}/roles": {
       "post": {
         "operationId": "PersonalController_crearRol",
         "parameters": [
@@ -2624,7 +2624,7 @@
         ]
       }
     },
-    "/api/v1/empresas/{empresaId}/roles/{rolId}": {
+    "/api/v2/empresas/{empresaId}/roles/{rolId}": {
       "patch": {
         "operationId": "PersonalController_actualizarRol",
         "parameters": [
@@ -2678,7 +2678,7 @@
         ]
       }
     },
-    "/api/v1/empresas/{empresaId}/puestos": {
+    "/api/v2/empresas/{empresaId}/puestos": {
       "post": {
         "operationId": "PersonalController_crearPuesto",
         "parameters": [
@@ -2758,7 +2758,7 @@
         ]
       }
     },
-    "/api/v1/empresas/{empresaId}/asignaciones-personal": {
+    "/api/v2/empresas/{empresaId}/asignaciones-personal": {
       "post": {
         "operationId": "PersonalController_asignar",
         "parameters": [
@@ -2838,7 +2838,7 @@
         ]
       }
     },
-    "/api/v1/empresas/{empresaId}/invitaciones/personal": {
+    "/api/v2/empresas/{empresaId}/invitaciones/personal": {
       "post": {
         "operationId": "PersonalController_crearInvitacion",
         "parameters": [
@@ -2920,7 +2920,7 @@
         ]
       }
     },
-    "/api/v1/empresas/{empresaId}/invitaciones/personal/{invitacionId}/revocar": {
+    "/api/v2/empresas/{empresaId}/invitaciones/personal/{invitacionId}/revocar": {
       "post": {
         "operationId": "PersonalController_revocarInvitacion",
         "parameters": [
@@ -2963,7 +2963,7 @@
         ]
       }
     },
-    "/api/v1/incorporaciones/{token}": {
+    "/api/v2/incorporaciones/{token}": {
       "get": {
         "operationId": "PersonalPublicController_consultar",
         "parameters": [
@@ -2994,7 +2994,7 @@
         ]
       }
     },
-    "/api/v1/incorporaciones/{token}/aceptar": {
+    "/api/v2/incorporaciones/{token}/aceptar": {
       "post": {
         "operationId": "PersonalPublicController_aceptar",
         "parameters": [
@@ -4620,6 +4620,7 @@
         "required": [
           "id",
           "nombre",
+          "slug",
           "estado",
           "creado_por",
           "creado_en"

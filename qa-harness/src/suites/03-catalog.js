@@ -19,7 +19,7 @@ export async function suite03Catalogo(client, cfg, adminToken) {
   const suf = Date.now().toString(36) + Math.random().toString(36).slice(2, 5);
 
   try {
-    const crea = async (overrides) => client.post('/api/v1/catalog/productos', {
+    const crea = async (overrides) => client.post('/api/v2/catalog/productos', {
       sku: `QA-P-${suf}`,
       nombre: 'Producto QA',
       descripcion: 'desc',
@@ -57,18 +57,18 @@ export async function suite03Catalogo(client, cfg, adminToken) {
     const stockNeg = await crea({ sku: `QA-P4-${suf}`, stock: -1 });
     resultados.push({ test: 'Stock negativo → 400', status: stockNeg.status, pass: stockNeg.status === 400 });
 
-    const publico = await client.get('/api/v1/catalog/productos');
+    const publico = await client.get('/api/v2/catalog/productos');
     resultados.push({ test: 'Catálogo público GET', status: publico.status, pass: publico.status === 200 });
 
     if (productoId) {
-      const det = await client.get(`/api/v1/catalog/productos/${productoId}`);
+      const det = await client.get(`/api/v2/catalog/productos/${productoId}`);
       resultados.push({ test: 'Detalle producto creado', status: det.status, pass: det.status === 200 });
 
-      const det404 = await client.get('/api/v1/catalog/productos/00000000-0000-0000-0000-000000000000');
+      const det404 = await client.get('/api/v2/catalog/productos/00000000-0000-0000-0000-000000000000');
       resultados.push({ test: 'Producto inexistente → 404', status: det404.status, pass: det404.status === 404 });
     }
 
-    const sinToken = await client.post('/api/v1/catalog/productos', {
+    const sinToken = await client.post('/api/v2/catalog/productos', {
       sku: `QA-P5-${suf}`, nombre: 'x', descripcion: 'x', categoria: 'x', precio_base: '1.00', stock: 1,
     });
     resultados.push({ test: 'Alta sin token → 401', status: sinToken.status, pass: sinToken.status === 401 });

@@ -20,7 +20,7 @@ import { interpretarRango } from './range';
  * de video que el navegador reproduce por streaming.
  */
 @ApiTags('Almacenamiento público')
-@Controller('api/v1/storage/public')
+@Controller('api/v2/storage/public')
 export class PublicStorageController {
   constructor(private readonly objetos: ObjetosService) {}
 

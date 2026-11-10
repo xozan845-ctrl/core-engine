@@ -228,7 +228,7 @@ describe('UsuariosService · avatar', () => {
       rol: 'vendedor',
       tenant_id: 't1',
     });
-    expect(resultado.avatar_url).toBe(`/api/v1/storage/public/objetos/${avatarId}`);
+    expect(resultado.avatar_url).toBe(`/api/v2/storage/public/objetos/${avatarId}`);
     // R-RB-4: la validación interna lleva timeout explícito.
     expect(fetchMock).toHaveBeenCalledWith(
       expect.stringContaining(`/internal/storage/objetos/${avatarId}`),

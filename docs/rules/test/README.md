@@ -101,8 +101,8 @@ npm run demo
   configuración de sitio API+BD, pero todavía faltan otros flujos críticos.
   **G-5 pendiente**: los errores 400/401 se validan en runtime para configuración
   de sitio y 403/404/409/500 en el filtro global, pero el envelope `{data,meta}` requiere una migración versionada
-  `/api/v2` para no romper `/api/v1`.
-  `contract:breaking` y G-8 protegen el documento OpenAPI, pero no sustituyen
+  `/api/v2`.
+  G-8 protege el documento OpenAPI, pero no sustituye
   las pruebas runtime. **G-6** tiene workflow manual y de release que ejecuta `npm run demo`,
   pero no corre en cada PR; el smoke cubre los siete flujos R-E-1..7, incluido el
   boundary de fechas (R-E-4); `e2e.yml` ya inspecciona logs R-E-8. **G-8 sí está activo** en el job `build`.
