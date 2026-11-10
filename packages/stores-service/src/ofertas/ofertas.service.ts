@@ -66,8 +66,6 @@ interface ItemExterno {
   duration_minutes: number | null;
   atributos: Record<string, unknown>;
   estado: 'activo' | 'inactivo';
-  source_type: 'producto' | 'servicio' | null;
-  source_id: string | null;
 }
 
 const COLUMNAS_OFERTA = `o.id, o.tienda_id, t.vendedor_id, t.empresa_id,

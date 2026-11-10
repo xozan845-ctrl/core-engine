@@ -13,174 +13,15 @@ export const OPENAPI_AGREGADO = {
   },
   "tags": [],
   "paths": {
-    "/api/v2/catalog/productos": {
-      "get": {
-        "operationId": "ProductosController_listar",
-        "parameters": [
-          {
-            "name": "empresa_id",
-            "required": false,
-            "in": "query",
-            "description": "Empresa cuyo catálogo se consulta (ADR-27). Obligatoria para lecturas anónimas; con sesión se usa la empresa del token.",
-            "schema": {
-              "format": "uuid",
-              "type": "string"
-            }
-          },
-          {
-            "name": "q",
-            "required": false,
-            "in": "query",
-            "description": "Búsqueda por texto",
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "estado",
-            "required": false,
-            "in": "query",
-            "description": "Filtrar por estado",
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "categoria",
-            "required": false,
-            "in": "query",
-            "description": "Filtrar por categoría",
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "pagina",
-            "required": false,
-            "in": "query",
-            "description": "Página (1-based)",
-            "schema": {
-              "minimum": 1,
-              "type": "number"
-            }
-          },
-          {
-            "name": "limite",
-            "required": false,
-            "in": "query",
-            "description": "Tamaño de página (máx 100)",
-            "schema": {
-              "minimum": 1,
-              "maximum": 100,
-              "type": "number"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Página de productos",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/PaginaProductosResponseDto"
-                }
-              }
-            }
-          }
-        },
-        "summary": "Listar productos de una empresa (público, filtros y paginación)",
-        "tags": [
-          "Catálogo"
-        ]
-      },
-      "post": {
-        "operationId": "ProductosController_crear",
-        "parameters": [],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/CrearProductoRequestDto"
-              }
-            }
-          }
-        },
-        "responses": {
-          "201": {
-            "description": "Producto creado",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProductoResponseDto"
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "bearer": []
-          }
-        ],
-        "summary": "Crear producto con variantes e imágenes (admin, TC-01)",
-        "tags": [
-          "Catálogo"
-        ]
-      }
-    },
-    "/api/v2/catalog/productos/{id}": {
-      "get": {
-        "operationId": "ProductosController_detalle",
-        "parameters": [
-          {
-            "name": "id",
-            "required": true,
-            "in": "path",
-            "description": "Id del producto",
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "empresa_id",
-            "required": false,
-            "in": "query",
-            "description": "Empresa a la que debe pertenecer el producto (ADR-27). Obligatoria para lecturas anónimas.",
-            "schema": {
-              "format": "uuid",
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Producto encontrado",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProductoResponseDto"
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "Producto inexistente o de otra empresa (NO_ENCONTRADO)"
-          }
-        },
-        "summary": "Detalle de producto de una empresa (público, incluye variantes)",
-        "tags": [
-          "Catálogo"
-        ]
-      },
+    "/api/v2/catalog/items/{id}": {
       "patch": {
-        "operationId": "ProductosController_actualizar",
+        "operationId": "ItemsCatalogoController_actualizar",
         "parameters": [
           {
             "name": "id",
             "required": true,
             "in": "path",
-            "description": "Id del producto",
+            "description": "Id del item",
             "schema": {
               "type": "string"
             }
@@ -191,18 +32,18 @@ export const OPENAPI_AGREGADO = {
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/ActualizarProductoRequestDto"
+                "$ref": "#/components/schemas/ActualizarItemCatalogoRequestDto"
               }
             }
           }
         },
         "responses": {
           "200": {
-            "description": "Producto actualizado",
+            "description": "Item actualizado",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ProductoResponseDto"
+                  "$ref": "#/components/schemas/ItemResponseDto"
                 }
               }
             }
@@ -213,15 +54,78 @@ export const OPENAPI_AGREGADO = {
             "bearer": []
           }
         ],
-        "summary": "Editar producto (admin; RN-08 histórico)",
+        "summary": "Editar un item (producto, servicio o alquiler)",
         "tags": [
-          "Catálogo"
+          "Catálogo · Items"
+        ]
+      },
+      "delete": {
+        "operationId": "ItemsCatalogoController_eliminar",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "description": "Id del item",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Item dado de baja"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Dar de baja un item (baja lógica)",
+        "tags": [
+          "Catálogo · Items"
+        ]
+      },
+      "get": {
+        "operationId": "ItemsController_detalle",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ItemResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Consultar un item unificado",
+        "tags": [
+          "Catálogo · Items"
         ]
       }
     },
-    "/api/v2/catalog/productos/{id}/variantes": {
+    "/api/v2/catalog/items/{id}/variantes": {
       "post": {
-        "operationId": "ProductosController_crearVariante",
+        "operationId": "ItemsCatalogoController_crearVariante",
         "parameters": [
           {
             "name": "id",
@@ -238,7 +142,7 @@ export const OPENAPI_AGREGADO = {
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/VarianteProductoRequestDto"
+                "$ref": "#/components/schemas/VarianteItemRequestDto"
               }
             }
           }
@@ -249,7 +153,7 @@ export const OPENAPI_AGREGADO = {
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ProductoResponseDto"
+                  "$ref": "#/components/schemas/ItemResponseDto"
                 }
               }
             }
@@ -260,15 +164,15 @@ export const OPENAPI_AGREGADO = {
             "bearer": []
           }
         ],
-        "summary": "Agregar una variante al producto (ADR-28)",
+        "summary": "Agregar una variante a un producto",
         "tags": [
-          "Catálogo"
+          "Catálogo · Items"
         ]
       }
     },
-    "/api/v2/catalog/productos/{id}/variantes/{varianteId}": {
+    "/api/v2/catalog/items/{id}/variantes/{varianteId}": {
       "patch": {
-        "operationId": "ProductosController_actualizarVariante",
+        "operationId": "ItemsCatalogoController_actualizarVariante",
         "parameters": [
           {
             "name": "id",
@@ -294,7 +198,7 @@ export const OPENAPI_AGREGADO = {
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/ActualizarProductoRequestDto"
+                "$ref": "#/components/schemas/ActualizarItemCatalogoRequestDto"
               }
             }
           }
@@ -305,7 +209,7 @@ export const OPENAPI_AGREGADO = {
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ProductoResponseDto"
+                  "$ref": "#/components/schemas/ItemResponseDto"
                 }
               }
             }
@@ -318,11 +222,11 @@ export const OPENAPI_AGREGADO = {
         ],
         "summary": "Editar una variante (precio/stock/atributos)",
         "tags": [
-          "Catálogo"
+          "Catálogo · Items"
         ]
       },
       "delete": {
-        "operationId": "ProductosController_eliminarVariante",
+        "operationId": "ItemsCatalogoController_eliminarVariante",
         "parameters": [
           {
             "name": "id",
@@ -355,19 +259,19 @@ export const OPENAPI_AGREGADO = {
         ],
         "summary": "Eliminar una variante",
         "tags": [
-          "Catálogo"
+          "Catálogo · Items"
         ]
       }
     },
-    "/api/v2/catalog/productos/{id}/imagenes": {
+    "/api/v2/catalog/items/{id}/imagenes": {
       "post": {
-        "operationId": "ProductosController_agregarImagen",
+        "operationId": "ItemsCatalogoController_agregarImagen",
         "parameters": [
           {
             "name": "id",
             "required": true,
             "in": "path",
-            "description": "Id del producto o variante",
+            "description": "Id del item",
             "schema": {
               "type": "string"
             }
@@ -378,7 +282,7 @@ export const OPENAPI_AGREGADO = {
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/ImagenProductoRequestDto"
+                "$ref": "#/components/schemas/ImagenItemRequestDto"
               }
             }
           }
@@ -389,7 +293,7 @@ export const OPENAPI_AGREGADO = {
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ProductoResponseDto"
+                  "$ref": "#/components/schemas/ItemResponseDto"
                 }
               }
             }
@@ -400,21 +304,21 @@ export const OPENAPI_AGREGADO = {
             "bearer": []
           }
         ],
-        "summary": "Agregar una imagen a un producto o variante (máx. 3)",
+        "summary": "Agregar una imagen a un item (máx. 3)",
         "tags": [
-          "Catálogo"
+          "Catálogo · Items"
         ]
       }
     },
-    "/api/v2/catalog/productos/{id}/imagenes/{imagenId}": {
+    "/api/v2/catalog/items/{id}/imagenes/{imagenId}": {
       "delete": {
-        "operationId": "ProductosController_eliminarImagen",
+        "operationId": "ItemsCatalogoController_eliminarImagen",
         "parameters": [
           {
             "name": "id",
             "required": true,
             "in": "path",
-            "description": "Id del producto o variante",
+            "description": "Id del item",
             "schema": {
               "type": "string"
             }
@@ -423,7 +327,7 @@ export const OPENAPI_AGREGADO = {
             "name": "imagenId",
             "required": true,
             "in": "path",
-            "description": "Id de la relación producto-imagen",
+            "description": "Id de la relación item-imagen",
             "schema": {
               "type": "string"
             }
@@ -439,9 +343,9 @@ export const OPENAPI_AGREGADO = {
             "bearer": []
           }
         ],
-        "summary": "Eliminar una imagen de un producto o variante",
+        "summary": "Eliminar una imagen de un item",
         "tags": [
-          "Catálogo"
+          "Catálogo · Items"
         ]
       }
     },
@@ -609,43 +513,6 @@ export const OPENAPI_AGREGADO = {
         ]
       }
     },
-    "/api/v2/catalog/items/{id}": {
-      "get": {
-        "operationId": "ItemsController_detalle",
-        "parameters": [
-          {
-            "name": "id",
-            "required": true,
-            "in": "path",
-            "schema": {
-              "format": "uuid",
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ItemResponseDto"
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "bearer": []
-          }
-        ],
-        "summary": "Consultar un item unificado",
-        "tags": [
-          "Catálogo · Items"
-        ]
-      }
-    },
     "/api/v2/admin/inventario": {
       "get": {
         "operationId": "InventarioController_listar",
@@ -805,259 +672,6 @@ export const OPENAPI_AGREGADO = {
         ]
       }
     },
-    "/api/v2/catalog/servicios": {
-      "get": {
-        "operationId": "ServiciosController_listar",
-        "parameters": [
-          {
-            "name": "empresa_id",
-            "required": false,
-            "in": "query",
-            "schema": {
-              "format": "uuid",
-              "type": "string"
-            }
-          },
-          {
-            "name": "q",
-            "required": false,
-            "in": "query",
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "estado",
-            "required": false,
-            "in": "query",
-            "schema": {
-              "type": "string",
-              "enum": [
-                "activo",
-                "inactivo"
-              ]
-            }
-          },
-          {
-            "name": "categoria",
-            "required": false,
-            "in": "query",
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "pagina",
-            "required": false,
-            "in": "query",
-            "schema": {
-              "minimum": 1,
-              "type": "number"
-            }
-          },
-          {
-            "name": "limite",
-            "required": false,
-            "in": "query",
-            "schema": {
-              "minimum": 1,
-              "maximum": 100,
-              "type": "number"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Página de servicios",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/PaginaServiciosResponseDto"
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "bearer": []
-          }
-        ],
-        "summary": "Listar servicios de una empresa",
-        "tags": [
-          "Catálogo · Servicios"
-        ]
-      },
-      "post": {
-        "operationId": "ServiciosController_crear",
-        "parameters": [],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/CrearServicioRequestDto"
-              }
-            }
-          }
-        },
-        "responses": {
-          "201": {
-            "description": "Servicio creado",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ServicioResponseDto"
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "bearer": []
-          }
-        ],
-        "summary": "Crear un servicio",
-        "tags": [
-          "Catálogo · Servicios"
-        ]
-      }
-    },
-    "/api/v2/catalog/servicios/{id}": {
-      "get": {
-        "operationId": "ServiciosController_detalle",
-        "parameters": [
-          {
-            "name": "id",
-            "required": true,
-            "in": "path",
-            "description": "Id del servicio",
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "empresa_id",
-            "required": false,
-            "in": "query",
-            "schema": {
-              "format": "uuid"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Servicio encontrado",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ServicioResponseDto"
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "bearer": []
-          }
-        ],
-        "summary": "Detalle de un servicio",
-        "tags": [
-          "Catálogo · Servicios"
-        ]
-      },
-      "patch": {
-        "operationId": "ServiciosController_actualizar",
-        "parameters": [
-          {
-            "name": "id",
-            "required": true,
-            "in": "path",
-            "description": "Id del servicio",
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "empresa_id",
-            "required": false,
-            "in": "query",
-            "schema": {
-              "format": "uuid"
-            }
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/ActualizarServicioRequestDto"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "Servicio actualizado",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ServicioResponseDto"
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "bearer": []
-          }
-        ],
-        "summary": "Actualizar un servicio",
-        "tags": [
-          "Catálogo · Servicios"
-        ]
-      },
-      "delete": {
-        "operationId": "ServiciosController_eliminar",
-        "parameters": [
-          {
-            "name": "id",
-            "required": true,
-            "in": "path",
-            "description": "Id del servicio",
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "empresa_id",
-            "required": false,
-            "in": "query",
-            "schema": {
-              "format": "uuid"
-            }
-          }
-        ],
-        "responses": {
-          "204": {
-            "description": "Servicio dado de baja"
-          }
-        },
-        "security": [
-          {
-            "bearer": []
-          }
-        ],
-        "summary": "Dar de baja un servicio (baja lógica)",
-        "tags": [
-          "Catálogo · Servicios"
-        ]
-      }
-    },
     "/api/v2/catalog/configuracion-inventario": {
       "get": {
         "operationId": "OperacionesController_configuracion",
@@ -1138,7 +752,7 @@ export const OPENAPI_AGREGADO = {
         ]
       }
     },
-    "/api/v2/catalog/productos/importar": {
+    "/api/v2/catalog/items/importar": {
       "post": {
         "operationId": "OperacionesController_importar",
         "parameters": [
@@ -1178,7 +792,7 @@ export const OPENAPI_AGREGADO = {
             "bearer": []
           }
         ],
-        "summary": "Importar productos desde filas validadas (máx. 200)",
+        "summary": "Importar items tipo producto desde filas validadas (máx. 200)",
         "tags": [
           "Catálogo · Operaciones"
         ]
@@ -12592,73 +12206,58 @@ export const OPENAPI_AGREGADO = {
           }
         }
       },
-      "ActualizarProductoRequestDto": {
+      "ActualizarItemCatalogoRequestDto": {
         "type": "object",
         "properties": {
           "nombre": {
-            "type": "string",
-            "description": "Nombre del producto",
-            "minLength": 2,
-            "maxLength": 200
+            "type": "string"
           },
           "descripcion": {
-            "type": "string",
-            "description": "Descripción"
+            "type": "string"
           },
           "categoria": {
+            "type": "string"
+          },
+          "precio": {
             "type": "string",
-            "description": "Categoría"
+            "example": "1000.00"
           },
           "precio_base": {
             "type": "string",
-            "description": "Precio base decimal (ej: 1000.00)"
+            "example": "1000.00"
           },
           "stock": {
             "type": "number",
-            "description": "Stock",
             "minimum": 0
           },
           "costo": {
             "type": "string",
-            "description": "Costo decimal en córdobas (ej: 150.00)",
             "example": "150.00"
           },
           "marca": {
-            "type": "string",
-            "description": "Marca"
+            "type": "string"
           },
           "codigo_barras": {
-            "type": "string",
-            "description": "Código de barras único por empresa"
+            "type": "string"
           },
           "unidad": {
-            "type": "string",
-            "description": "Unidad de venta",
-            "example": "Unidad (u)"
+            "type": "string"
           },
           "permite_fracciones": {
-            "type": "boolean",
-            "description": "Permite cantidades fraccionarias"
+            "type": "boolean"
           },
           "unidad_compra": {
-            "type": "string",
-            "description": "Unidad de compra",
-            "example": "Igual que la de venta"
+            "type": "string"
           },
           "contenido_cantidad": {
             "type": "number",
-            "description": "Contenido por unidad",
-            "minimum": 0,
-            "default": 0
+            "minimum": 0
           },
           "contenido_unidad": {
-            "type": "string",
-            "description": "Unidad del contenido",
-            "example": "Sin contenido"
+            "type": "string"
           },
           "tipo_precio": {
             "type": "string",
-            "description": "Tipo de precio",
             "enum": [
               "fijo",
               "escala"
@@ -12666,7 +12265,6 @@ export const OPENAPI_AGREGADO = {
           },
           "tipo_costo": {
             "type": "string",
-            "description": "Tipo de costo",
             "enum": [
               "fijo",
               "escala"
@@ -12674,46 +12272,43 @@ export const OPENAPI_AGREGADO = {
           },
           "stock_minimo": {
             "type": "number",
-            "description": "Stock mínimo para alertas",
-            "minimum": 0,
-            "default": 0
+            "minimum": 0
           },
           "stock_maximo": {
             "type": "object",
-            "description": "Stock máximo",
             "nullable": true,
             "minimum": 0
           },
           "garantia_meses": {
             "type": "object",
-            "description": "Garantía en meses",
             "nullable": true,
             "minimum": 0
           },
           "es_materia_prima": {
-            "type": "boolean",
-            "description": "Es materia prima"
+            "type": "boolean"
           },
           "ubicacion": {
-            "type": "string",
-            "description": "Ubicación física"
+            "type": "string"
           },
-          "estado_operativo": {
+          "estado": {
             "type": "string",
-            "description": "Estado comercial",
             "enum": [
               "activo",
               "inactivo"
-            ],
-            "default": "activo"
+            ]
+          },
+          "estado_operativo": {
+            "type": "string",
+            "enum": [
+              "activo",
+              "inactivo"
+            ]
           },
           "atributos": {
-            "type": "object",
-            "description": "Atributos de la variante"
+            "type": "object"
           },
           "motivo": {
-            "type": "string",
-            "description": "Motivo del cambio (RN-08 histórico)"
+            "type": "string"
           }
         }
       },
@@ -12732,7 +12327,7 @@ export const OPENAPI_AGREGADO = {
               "regalo"
             ]
           },
-          "producto_id": {
+          "item_id": {
             "type": "string",
             "format": "uuid"
           },
@@ -12769,57 +12364,10 @@ export const OPENAPI_AGREGADO = {
           }
         }
       },
-      "ActualizarServicioRequestDto": {
-        "type": "object",
-        "properties": {
-          "nombre": {
-            "type": "string",
-            "minLength": 2
-          },
-          "descripcion": {
-            "type": "string"
-          },
-          "categoria": {
-            "type": "string"
-          },
-          "marca": {
-            "type": "string"
-          },
-          "codigo_barras": {
-            "type": "string"
-          },
-          "precio": {
-            "type": "string"
-          },
-          "costo": {
-            "type": "string"
-          },
-          "unidad": {
-            "type": "string"
-          },
-          "atributos": {
-            "type": "object",
-            "description": "Atributos del servicio según el JSON Schema de su categoría",
-            "additionalProperties": true
-          },
-          "duracion_minutos": {
-            "type": "number",
-            "minimum": 1,
-            "maximum": 1440
-          },
-          "estado": {
-            "type": "string",
-            "enum": [
-              "activo",
-              "inactivo"
-            ]
-          }
-        }
-      },
       "ComboComponenteRequestDto": {
         "type": "object",
         "properties": {
-          "producto_id": {
+          "item_id": {
             "type": "string",
             "format": "uuid"
           },
@@ -12840,7 +12388,7 @@ export const OPENAPI_AGREGADO = {
       "ComboComponenteResponseDto": {
         "type": "object",
         "properties": {
-          "producto_id": {
+          "item_id": {
             "type": "string",
             "format": "uuid"
           },
@@ -12861,7 +12409,7 @@ export const OPENAPI_AGREGADO = {
           }
         },
         "required": [
-          "producto_id",
+          "item_id",
           "sku",
           "nombre",
           "cantidad",
@@ -13128,6 +12676,71 @@ export const OPENAPI_AGREGADO = {
             "nullable": true,
             "format": "uuid"
           },
+          "marca": {
+            "type": "string"
+          },
+          "codigo_barras": {
+            "type": "string"
+          },
+          "unidad": {
+            "type": "string",
+            "example": "Unidad (u)"
+          },
+          "permite_fracciones": {
+            "type": "boolean",
+            "default": false
+          },
+          "unidad_compra": {
+            "type": "string",
+            "example": "Igual que la de venta"
+          },
+          "contenido_cantidad": {
+            "type": "number",
+            "minimum": 0,
+            "default": 0
+          },
+          "contenido_unidad": {
+            "type": "string",
+            "example": "Sin contenido"
+          },
+          "tipo_precio": {
+            "type": "string",
+            "enum": [
+              "fijo",
+              "escala"
+            ],
+            "default": "fijo"
+          },
+          "tipo_costo": {
+            "type": "string",
+            "enum": [
+              "fijo",
+              "escala"
+            ],
+            "default": "fijo"
+          },
+          "stock_minimo": {
+            "type": "number",
+            "minimum": 0,
+            "default": 0
+          },
+          "stock_maximo": {
+            "type": "object",
+            "nullable": true,
+            "minimum": 0
+          },
+          "garantia_meses": {
+            "type": "object",
+            "nullable": true,
+            "minimum": 0
+          },
+          "es_materia_prima": {
+            "type": "boolean",
+            "default": false
+          },
+          "ubicacion": {
+            "type": "string"
+          },
           "empresa_id": {
             "type": "string",
             "format": "uuid"
@@ -13210,162 +12823,6 @@ export const OPENAPI_AGREGADO = {
           "lineas"
         ]
       },
-      "CrearProductoRequestDto": {
-        "type": "object",
-        "properties": {
-          "sku": {
-            "type": "string",
-            "description": "SKU del producto",
-            "pattern": "^[A-Za-z0-9-]{2,32}$",
-            "example": "SKU-001"
-          },
-          "empresa_id": {
-            "type": "string",
-            "description": "Empresa destino. Obligatoria para super_admin/admin; el empresario usa su empresa activa.",
-            "format": "uuid"
-          },
-          "nombre": {
-            "type": "string",
-            "description": "Nombre del producto",
-            "minLength": 2,
-            "maxLength": 200
-          },
-          "descripcion": {
-            "type": "string",
-            "description": "Descripción"
-          },
-          "categoria": {
-            "type": "string",
-            "description": "Categoría"
-          },
-          "precio_base": {
-            "type": "string",
-            "description": "Precio base decimal (ej: 1000.00) en córdobas; se guarda en centavos",
-            "example": "1000.00"
-          },
-          "stock": {
-            "type": "number",
-            "description": "Stock inicial",
-            "minimum": 0,
-            "example": 10
-          },
-          "costo": {
-            "type": "string",
-            "description": "Costo decimal en córdobas (ej: 150.00)",
-            "example": "150.00"
-          },
-          "marca": {
-            "type": "string",
-            "description": "Marca"
-          },
-          "codigo_barras": {
-            "type": "string",
-            "description": "Código de barras único por empresa"
-          },
-          "unidad": {
-            "type": "string",
-            "description": "Unidad de venta",
-            "example": "Unidad (u)"
-          },
-          "permite_fracciones": {
-            "type": "boolean",
-            "description": "Permite cantidades fraccionarias",
-            "default": false
-          },
-          "unidad_compra": {
-            "type": "string",
-            "description": "Unidad de compra",
-            "example": "Igual que la de venta"
-          },
-          "contenido_cantidad": {
-            "type": "number",
-            "description": "Contenido por unidad",
-            "minimum": 0,
-            "default": 0
-          },
-          "contenido_unidad": {
-            "type": "string",
-            "description": "Unidad del contenido",
-            "example": "Sin contenido"
-          },
-          "tipo_precio": {
-            "type": "string",
-            "description": "Tipo de precio",
-            "enum": [
-              "fijo",
-              "escala"
-            ]
-          },
-          "tipo_costo": {
-            "type": "string",
-            "description": "Tipo de costo",
-            "enum": [
-              "fijo",
-              "escala"
-            ]
-          },
-          "stock_minimo": {
-            "type": "number",
-            "description": "Stock mínimo para alertas",
-            "minimum": 0,
-            "default": 0
-          },
-          "stock_maximo": {
-            "type": "object",
-            "description": "Stock máximo",
-            "nullable": true,
-            "minimum": 0
-          },
-          "garantia_meses": {
-            "type": "object",
-            "description": "Garantía en meses",
-            "nullable": true,
-            "minimum": 0
-          },
-          "es_materia_prima": {
-            "type": "boolean",
-            "description": "Es materia prima",
-            "default": false
-          },
-          "ubicacion": {
-            "type": "string",
-            "description": "Ubicación física"
-          },
-          "estado_operativo": {
-            "type": "string",
-            "description": "Estado comercial",
-            "enum": [
-              "activo",
-              "inactivo"
-            ],
-            "default": "activo"
-          },
-          "atributos": {
-            "type": "object",
-            "description": "Atributos del producto (si aplica)"
-          },
-          "imagenes": {
-            "description": "Imágenes del producto (máx. 3)",
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/ImagenProductoRequestDto"
-            }
-          },
-          "variantes": {
-            "description": "Variantes vendibles del producto (máx. 50)",
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/VarianteProductoRequestDto"
-            }
-          }
-        },
-        "required": [
-          "sku",
-          "nombre",
-          "precio_base",
-          "stock"
-        ]
-      },
       "CrearPromocionRequestDto": {
         "type": "object",
         "properties": {
@@ -13381,7 +12838,7 @@ export const OPENAPI_AGREGADO = {
               "regalo"
             ]
           },
-          "producto_id": {
+          "item_id": {
             "type": "string",
             "format": "uuid"
           },
@@ -13448,77 +12905,6 @@ export const OPENAPI_AGREGADO = {
           "empresa_id",
           "codigo",
           "nombre"
-        ]
-      },
-      "CrearServicioRequestDto": {
-        "type": "object",
-        "properties": {
-          "codigo": {
-            "type": "string",
-            "description": "Código interno del servicio",
-            "example": "SERV-001"
-          },
-          "empresa_id": {
-            "type": "string",
-            "description": "Empresa destino (solo admin/super_admin)",
-            "format": "uuid"
-          },
-          "nombre": {
-            "type": "string",
-            "description": "Nombre del servicio",
-            "minLength": 2,
-            "maxLength": 200
-          },
-          "descripcion": {
-            "type": "string"
-          },
-          "categoria": {
-            "type": "string"
-          },
-          "marca": {
-            "type": "string"
-          },
-          "codigo_barras": {
-            "type": "string"
-          },
-          "precio": {
-            "type": "string",
-            "description": "Precio decimal",
-            "example": "1500.00"
-          },
-          "costo": {
-            "type": "string",
-            "description": "Costo decimal",
-            "example": "500.00"
-          },
-          "unidad": {
-            "type": "string",
-            "example": "Hora (h)"
-          },
-          "atributos": {
-            "type": "object",
-            "description": "Atributos del servicio según el JSON Schema de su categoría",
-            "additionalProperties": true
-          },
-          "duracion_minutos": {
-            "type": "number",
-            "description": "Duración en minutos (1-1440)",
-            "minimum": 1,
-            "maximum": 1440
-          },
-          "estado": {
-            "type": "string",
-            "enum": [
-              "activo",
-              "inactivo"
-            ]
-          }
-        },
-        "required": [
-          "codigo",
-          "nombre",
-          "precio",
-          "duracion_minutos"
         ]
       },
       "EscaneoResponseDto": {
@@ -13590,7 +12976,7 @@ export const OPENAPI_AGREGADO = {
           "esquema"
         ]
       },
-      "ImagenProductoRequestDto": {
+      "ImagenItemRequestDto": {
         "type": "object",
         "properties": {
           "objeto_id": {
@@ -13830,6 +13216,58 @@ export const OPENAPI_AGREGADO = {
             "nullable": true,
             "format": "uuid"
           },
+          "marca": {
+            "type": "string"
+          },
+          "codigo_barras": {
+            "type": "string"
+          },
+          "unidad": {
+            "type": "string"
+          },
+          "permite_fracciones": {
+            "type": "boolean"
+          },
+          "unidad_compra": {
+            "type": "string"
+          },
+          "contenido_cantidad": {
+            "type": "number"
+          },
+          "contenido_unidad": {
+            "type": "string"
+          },
+          "tipo_precio": {
+            "type": "string",
+            "enum": [
+              "fijo",
+              "escala"
+            ]
+          },
+          "tipo_costo": {
+            "type": "string",
+            "enum": [
+              "fijo",
+              "escala"
+            ]
+          },
+          "stock_minimo": {
+            "type": "number"
+          },
+          "stock_maximo": {
+            "type": "object",
+            "nullable": true
+          },
+          "garantia_meses": {
+            "type": "object",
+            "nullable": true
+          },
+          "es_materia_prima": {
+            "type": "boolean"
+          },
+          "ubicacion": {
+            "type": "string"
+          },
           "imagenes": {
             "type": "array",
             "items": {
@@ -13842,15 +13280,6 @@ export const OPENAPI_AGREGADO = {
               "activo",
               "inactivo"
             ]
-          },
-          "source_type": {
-            "type": "object",
-            "nullable": true
-          },
-          "source_id": {
-            "type": "object",
-            "nullable": true,
-            "format": "uuid"
           },
           "creado_en": {
             "type": "string",
@@ -13876,10 +13305,22 @@ export const OPENAPI_AGREGADO = {
           "duration_minutes",
           "atributos",
           "parent_item_id",
+          "marca",
+          "codigo_barras",
+          "unidad",
+          "permite_fracciones",
+          "unidad_compra",
+          "contenido_cantidad",
+          "contenido_unidad",
+          "tipo_precio",
+          "tipo_costo",
+          "stock_minimo",
+          "stock_maximo",
+          "garantia_meses",
+          "es_materia_prima",
+          "ubicacion",
           "imagenes",
           "estado",
-          "source_type",
-          "source_id",
           "creado_en",
           "actualizado_en"
         ]
@@ -14102,7 +13543,7 @@ export const OPENAPI_AGREGADO = {
       "MovimientoLineaRequestDto": {
         "type": "object",
         "properties": {
-          "producto_id": {
+          "item_id": {
             "type": "string",
             "format": "uuid"
           },
@@ -14209,45 +13650,6 @@ export const OPENAPI_AGREGADO = {
           "paginas"
         ]
       },
-      "PaginaProductosResponseDto": {
-        "type": "object",
-        "properties": {
-          "items": {
-            "description": "Productos de la página",
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/ProductoResponseDto"
-            }
-          },
-          "total": {
-            "type": "number",
-            "description": "Total de productos que cumplen el filtro",
-            "example": 42
-          },
-          "pagina": {
-            "type": "number",
-            "description": "Página actual (1-based)",
-            "example": 1
-          },
-          "limite": {
-            "type": "number",
-            "description": "Tamaño de página",
-            "example": 20
-          },
-          "paginas": {
-            "type": "number",
-            "description": "Total de páginas",
-            "example": 3
-          }
-        },
-        "required": [
-          "items",
-          "total",
-          "pagina",
-          "limite",
-          "paginas"
-        ]
-      },
       "PaginaPromocionesResponseDto": {
         "type": "object",
         "properties": {
@@ -14255,36 +13657,6 @@ export const OPENAPI_AGREGADO = {
             "type": "array",
             "items": {
               "$ref": "#/components/schemas/PromocionResponseDto"
-            }
-          },
-          "total": {
-            "type": "number"
-          },
-          "pagina": {
-            "type": "number"
-          },
-          "limite": {
-            "type": "number"
-          },
-          "paginas": {
-            "type": "number"
-          }
-        },
-        "required": [
-          "items",
-          "total",
-          "pagina",
-          "limite",
-          "paginas"
-        ]
-      },
-      "PaginaServiciosResponseDto": {
-        "type": "object",
-        "properties": {
-          "items": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/ServicioResponseDto"
             }
           },
           "total": {
@@ -14540,7 +13912,7 @@ export const OPENAPI_AGREGADO = {
               "regalo"
             ]
           },
-          "producto_id": {
+          "item_id": {
             "type": "object",
             "nullable": true
           },
@@ -14588,7 +13960,7 @@ export const OPENAPI_AGREGADO = {
           "empresa_id",
           "nombre",
           "tipo",
-          "producto_id",
+          "item_id",
           "sku",
           "cantidad_requerida",
           "cantidad_gratis",
@@ -14722,12 +14094,12 @@ export const OPENAPI_AGREGADO = {
           "actualizado_en"
         ]
       },
-      "VarianteProductoRequestDto": {
+      "VarianteItemRequestDto": {
         "type": "object",
         "properties": {
           "sku": {
             "type": "string",
-            "description": "SKU de la variante",
+            "description": "Código/SKU de la variante",
             "pattern": "^[A-Za-z0-9-]{2,32}$",
             "example": "SKU-001-ROJO-M"
           },
@@ -14741,7 +14113,7 @@ export const OPENAPI_AGREGADO = {
           },
           "precio_base": {
             "type": "string",
-            "description": "Precio base decimal (ej: 1000.00)",
+            "description": "Precio decimal (ej: 1000.00)",
             "example": "1500.00"
           },
           "stock": {
@@ -14754,7 +14126,7 @@ export const OPENAPI_AGREGADO = {
             "description": "Imágenes de la variante (máx. 3)",
             "type": "array",
             "items": {
-              "$ref": "#/components/schemas/ImagenProductoRequestDto"
+              "$ref": "#/components/schemas/ImagenItemRequestDto"
             }
           }
         },

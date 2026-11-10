@@ -105,7 +105,7 @@ function crearHandler(
           }),
         } as Response;
       }
-      if (u.includes('productos/lote')) {        if (stockCatalog === 'fetch-error') return { ok: false } as Response;
+      if (u.includes('items/lote')) {        if (stockCatalog === 'fetch-error') return { ok: false } as Response;
         if (stockCatalog === 'network-error') throw new Error('network down');
         if (stockCatalog === 'sin-sku') {
           return { ok: true, json: async () => [] } as Response;
@@ -300,7 +300,7 @@ describe('CreateOrderCommandHandler (CQRS + Event Sourcing)', () => {
       headers: { 'x-internal-key': '' },
     });
     expect(fetchMock.mock.calls[1][0]).toBe(
-      'http://catalog-service:3002/internal/productos/lote?skus=ACE-001',
+      'http://catalog-service:3002/internal/items/lote?skus=ACE-001',
     );
     expect(fetchMock.mock.calls[1][1]).toMatchObject({
       headers: { 'x-internal-key': '' },

@@ -57,7 +57,7 @@ function happyPath(req, res) {
   if (req.url === '/api/v2/auth/login') {
     return json(res, 200, { access_token: 'token' });
   }
-  if (req.url.startsWith('/api/v2/catalog/productos')) {
+  if (req.url.startsWith('/api/v2/catalog/items')) {
     return json(res, 200, { items: [{ id: 'p1' }], total: 1 });
   }
   return json(res, 404, { codigo: 'NO_ENCONTRADO' });
@@ -71,7 +71,7 @@ test('smoke-remote: valida salud, login y lectura sin escribir datos', async () 
   assert.deepEqual(result.requests, [
     'GET /health',
     'POST /api/v2/auth/login',
-    'GET /api/v2/catalog/productos?limite=1',
+    'GET /api/v2/catalog/items?limite=1',
   ]);
 });
 
@@ -132,7 +132,7 @@ test('smoke-remote: verifica ventas de empresa cuando hay credenciales de empres
   assert.deepEqual(result.requests, [
     'GET /health',
     'POST /api/v2/auth/login',
-    'GET /api/v2/catalog/productos?limite=1',
+    'GET /api/v2/catalog/items?limite=1',
     'POST /api/v2/auth/login',
     'GET /api/v2/empresarios/me/ventas',
   ]);

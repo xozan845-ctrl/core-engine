@@ -1,13 +1,11 @@
 import { Module } from '@nestjs/common';
 import { ProductosModule } from '../productos/productos.module';
-import { ServiciosController } from './servicios.controller';
 import { ServiciosService } from './servicios.service';
 import { ItemsModule } from '../items/items.module';
 
-/** Servicios de la empresa (R-PS-02), separados del catálogo de productos. */
+/** Servicios de la empresa (R-PS-02) sobre `catalog.items` con tipo servicio. */
 @Module({
   imports: [ProductosModule, ItemsModule],
-  controllers: [ServiciosController],
   providers: [ServiciosService],
   exports: [ServiciosService],
 })
