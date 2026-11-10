@@ -32,7 +32,8 @@
     "coverage:compare": "node scripts/tools/coverage-compare.mjs",
     "coverage:baseline": "node scripts/tools/coverage-baseline.mjs",
     "baseline:guard": "node scripts/tools/baseline-guard.mjs",
-    "swagger:export": "npm run build && npm run swagger:export --workspaces --if-present && node scripts/cli.mjs swagger && npm run build -w @core/api-gateway"
+    "swagger:export": "npm run build && npm run swagger:export --workspaces --if-present && node scripts/cli.mjs swagger && npm run build -w @core/api-gateway",
+    "demo:verticals": "node scripts/tools/smoke-verticals.mjs"
   },
   "engines": {
     "node": ">=20"
