@@ -21,7 +21,7 @@ if (databaseUrl.pathname !== '/core_engine_test' || !['localhost', '127.0.0.1'].
 
 process.env.DATABASE_URL = connectionString;
 
-const MIGRACIONES = [
+const MIGRACIONES_LEGACY = [
   '01_esquemas.sql',
   '01c_cqrs_catalog.sql',
   '01e_adr25_empresas.sql',
@@ -30,6 +30,13 @@ const MIGRACIONES = [
   '01i_variantes_imagenes.sql',
   '11_catalogo_productos_servicios.sql',
   '25_catalog_items.sql',
+  '28_scheduling.sql',
+  '02_field.sql',
+  '24_multi_vertical.sql',
+  '29_vertical_packs.sql',
+];
+
+const MIGRACIONES_FINAL = [
   '28_scheduling.sql',
   '02_field.sql',
   '24_multi_vertical.sql',
@@ -86,7 +93,15 @@ before(async () => {
     const { rows: [{ existe }] } = await client.query(
       `SELECT to_regnamespace('identity') IS NOT NULL AS existe`,
     );
-    const migraciones = existe ? MIGRACIONES.filter((name) => name !== '01_esquemas.sql') : MIGRACIONES;
+    const { rows: [{ final }] } = await client.query(
+      `SELECT to_regclass('catalog.items') IS NOT NULL
+              AND to_regclass('catalog.productos') IS NULL AS final`,
+    );
+    const migraciones = final
+      ? MIGRACIONES_FINAL
+      : existe
+        ? MIGRACIONES_LEGACY.filter((name) => name !== '01_esquemas.sql')
+        : MIGRACIONES_LEGACY;
     for (const name of migraciones) {
       const sql = await readFile(new URL(`../../infra/db/init/${name}`, import.meta.url), 'utf8');
       await client.query(sql);
