@@ -178,6 +178,7 @@ export class EmpresasService {
     perfil?: PerfilEmpresaInput,
     verticalId?: string,
     packCodigo?: PackCodigo,
+    packVersion?: number,
   ): Promise<Empresa> {
     const nombreFinal = nombre.trim();
     let vertical = (verticalId ?? 'retail').trim().toLowerCase();
@@ -202,7 +203,7 @@ export class EmpresasService {
       try {
         return await this.pg.transaccion(async (client) => {
           const pack = packCodigo
-            ? await this.resolverPack(client, packCodigo, verticalId ? vertical : undefined)
+            ? await this.resolverPack(client, packCodigo, verticalId ? vertical : undefined, packVersion)
             : verticalId
               ? await this.resolverPackPorVertical(client, vertical)
               : { codigo: `pack_${vertical}`, version: 1, vertical_codigo: vertical };
@@ -286,19 +287,126 @@ export class EmpresasService {
     throw new ConflictError('No se pudo asignar un slug disponible.');
   }
 
+  /** Asigna o actualiza el pack de una empresa y reconcilia sus capacidades. */
+  async actualizarPack(
+    empresaId: string,
+    packCodigo: PackCodigo,
+    version?: number,
+  ): Promise<Empresa> {
+    return await this.pg.transaccion(async (client) => {
+      const actual = await client.query<EmpresaFila>(
+        `SELECT * FROM identity.empresas WHERE id = $1 FOR UPDATE`,
+        [empresaId],
+      );
+      const empresa = actual.rows[0];
+      if (!empresa) throw new NotFoundError('Empresa', empresaId);
+
+      const pack = await this.resolverPack(
+        client,
+        packCodigo,
+        empresa.vertical_id ?? undefined,
+        version,
+      );
+      if (empresa.pack_codigo === pack.codigo && empresa.pack_version === pack.version) {
+        return await this.conUrls(empresa);
+      }
+
+      const antes = await client.query<{ total: number }>(
+        `SELECT COUNT(*)::int AS total FROM identity.empresa_capacidades WHERE empresa_id = $1`,
+        [empresaId],
+      );
+      const capacidades = await client.query<{
+        capacidad_codigo: string;
+        config: Record<string, unknown>;
+        activo: boolean;
+      }>(
+        `SELECT capacidad_codigo, config, activo
+           FROM identity.pack_capacidades
+          WHERE pack_codigo = $1 AND pack_version = $2`,
+        [pack.codigo, pack.version],
+      );
+      const codigos = capacidades.rows.map((fila) => fila.capacidad_codigo);
+      await client.query(
+        `DELETE FROM identity.empresa_capacidades
+          WHERE empresa_id = $1 AND NOT (capacidad_codigo = ANY($2::text[]))`,
+        [empresaId, codigos],
+      );
+      for (const capacidad of capacidades.rows) {
+        await client.query(
+          `INSERT INTO identity.empresa_capacidades AS ec
+             (empresa_id, capacidad_codigo, config, activo)
+           VALUES ($1, $2, $3::jsonb, $4)
+           ON CONFLICT (empresa_id, capacidad_codigo) DO UPDATE
+             SET config = EXCLUDED.config,
+                 activo = EXCLUDED.activo,
+                 actualizado_en = NOW()`,
+          [empresaId, capacidad.capacidad_codigo, JSON.stringify(capacidad.config), capacidad.activo],
+        );
+      }
+      const actualizada = await client.query<EmpresaFila>(
+        `UPDATE identity.empresas
+            SET pack_codigo = $2, pack_version = $3
+          WHERE id = $1
+          RETURNING *`,
+        [empresaId, pack.codigo, pack.version],
+      );
+      const empresaActualizada = actualizada.rows[0];
+      if (!empresaActualizada) throw new NotFoundError('Empresa', empresaId);
+
+      await client.query(
+        `INSERT INTO identity.pack_migraciones
+           (empresa_id, vertical_origen, pack_codigo, pack_version,
+            capacidades_antes, capacidades_despues, estado, detalles)
+         VALUES ($1, $2, $3, $4, $5, $6, 'aplicado', $7::jsonb)
+         ON CONFLICT (empresa_id) DO UPDATE
+           SET pack_codigo = EXCLUDED.pack_codigo,
+               pack_version = EXCLUDED.pack_version,
+               capacidades_antes = EXCLUDED.capacidades_antes,
+               capacidades_despues = EXCLUDED.capacidades_despues,
+               estado = EXCLUDED.estado,
+               detalles = EXCLUDED.detalles,
+               migrado_en = NOW()`,
+        [
+          empresaId,
+          empresa.vertical_id,
+          pack.codigo,
+          pack.version,
+          antes.rows[0]?.total ?? 0,
+          capacidades.rows.length,
+          JSON.stringify({
+            origen: 'pack_upgrade',
+            pack_anterior: empresa.pack_codigo,
+            version_anterior: empresa.pack_version,
+            pack_nuevo: pack.codigo,
+            version_nueva: pack.version,
+          }),
+        ],
+      );
+      return await this.conUrls(empresaActualizada);
+    });
+  }
+
   private async resolverPack(
     client: ClienteSlug,
     packCodigo: PackCodigo,
     verticalSolicitada?: string,
+    version?: number,
   ): Promise<{ codigo: PackCodigo; version: number; vertical_codigo: string }> {
-    const resultado = await client.query(
-      `SELECT codigo, version, vertical_codigo
-       FROM identity.packs
-       WHERE codigo = $1 AND activo = true
-       ORDER BY version DESC
-       LIMIT 1`,
-      [packCodigo],
-    );
+    const resultado = version
+      ? await client.query(
+          `SELECT codigo, version, vertical_codigo
+           FROM identity.packs
+           WHERE codigo = $1 AND version = $2 AND activo = true`,
+          [packCodigo, version],
+        )
+      : await client.query(
+          `SELECT codigo, version, vertical_codigo
+           FROM identity.packs
+           WHERE codigo = $1 AND activo = true
+           ORDER BY version DESC
+           LIMIT 1`,
+          [packCodigo],
+        );
     const pack = resultado.rows[0] as { codigo: PackCodigo; version: number; vertical_codigo: string } | undefined;
     if (!pack) throw new DomainError('PACK_INVALIDO', `El pack "${packCodigo}" no existe o esta inactivo.`);
     if (verticalSolicitada && verticalSolicitada !== pack.vertical_codigo) {

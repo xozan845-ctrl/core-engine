@@ -181,6 +181,67 @@ export class InventarioService {
     return fila;
   }
 
+
+  async consumirLotes(datos: {
+    empresa_id: string;
+    item_id: string;
+    cantidad: number;
+    codigo_lote?: string;
+  }): Promise<{ consumidos: { lote_id: string; codigo_lote: string; cantidad: number }[]; total_consumido: number }> {
+    if (!Number.isInteger(datos.cantidad) || datos.cantidad <= 0) {
+      throw new DomainError('CANTIDAD_INVALIDA', 'La cantidad a consumir debe ser un entero mayor que cero.');
+    }
+    return await this.pg.transaccion(async (client) => {
+      const item = await client.query<{ track_inventory: boolean }>(
+        `SELECT track_inventory FROM catalog.items
+          WHERE id = $1 AND empresa_id = $2 AND estado = 'activo'
+          FOR UPDATE`,
+        [datos.item_id, datos.empresa_id],
+      );
+      if (item.rowCount === 0) throw new DomainError('ITEM_NO_ENCONTRADO', 'El item no existe para esta empresa.');
+      if (!item.rows[0].track_inventory) {
+        throw new DomainError('INVENTARIO_NO_APLICA', 'Los lotes solo aplican a items con inventario.');
+      }
+
+      const lotes = await client.query<{
+        id: string;
+        codigo_lote: string;
+        cantidad_disponible: number;
+      }>(
+        `SELECT id, codigo_lote, cantidad_disponible
+           FROM catalog.lotes_inventario
+          WHERE empresa_id = $1 AND item_id = $2 AND cantidad_disponible > 0
+            AND ($3::text IS NULL OR codigo_lote = $3)
+          ORDER BY vence_en NULLS LAST, creado_en, id
+          FOR UPDATE`,
+        [datos.empresa_id, datos.item_id, datos.codigo_lote?.trim() || null],
+      );
+
+      let restante = datos.cantidad;
+      const consumidos: { lote_id: string; codigo_lote: string; cantidad: number }[] = [];
+      for (const lote of lotes.rows) {
+        if (restante === 0) break;
+        const cantidad = Math.min(restante, lote.cantidad_disponible);
+        await client.query(
+          `UPDATE catalog.lotes_inventario
+              SET cantidad_disponible = cantidad_disponible - $1,
+                  actualizado_en = NOW()
+            WHERE id = $2`,
+          [cantidad, lote.id],
+        );
+        consumidos.push({ lote_id: lote.id, codigo_lote: lote.codigo_lote, cantidad });
+        restante -= cantidad;
+      }
+      if (restante > 0) {
+        throw new DomainError(
+          'STOCK_LOTE_INSUFICIENTE',
+          `No hay cantidad suficiente en los lotes; faltan ${restante}.`,
+        );
+      }
+      return { consumidos, total_consumido: datos.cantidad };
+    });
+  }
+
   async listarLotes(empresaId: string, itemId?: string): Promise<LoteInventario[]> {
     const params: unknown[] = [empresaId];
     const condiciones = ['empresa_id = $1'];

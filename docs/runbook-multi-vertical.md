@@ -77,10 +77,12 @@ La validación de piloto está cubierta en `scripts/integration/` y en el job
 
 | Suite | Casos | Qué fija |
 |---|---:|---|
-| `pack-lifecycle.test.mjs` | 3 | Vertical/modelo/pack v1 y v2, herencia de capacidades y rollback de packs inválidos. |
+| `pack-lifecycle.test.mjs` | 5 | Vertical/modelo/pack v1 y v2, herencia, upgrade auditado y rollback de packs inválidos. |
 | `vertical-rls.test.mjs` | 4 | Aislamiento de items, capacidades y citas por tenant; admin global. |
 | `capability-routes.test.mjs` | 5 | Permite/rechaza stock, agenda, rutas y lotes según el pack. |
 | `vertical-pilots.test.mjs` | 4 | Lotes, cita con outbox y vehículo → ruta → parada. |
+| `field-rls.test.mjs` | 3 | Aislamiento de las 11 tablas de flota por tenant. |
+| `lot-fefo.test.mjs` | 4 | Consumo FEFO, división entre lotes y rollback por stock insuficiente. |
 
 El CI ejecuta `npm run multi-vertical:check` contra la misma BD efímera para
 detectar tenants sin pack, packs inactivos y migraciones pendientes.

@@ -72,9 +72,12 @@ gh workflow run release.yml -f source_tag=v1.0.0            # dry_run=true por d
 gh workflow run release.yml -f source_tag=v1.0.0 -f dry_run=false   # publica
 ```
 
-`release.yml`: `gate` valida tag semver + procedencia; luego **una imagen por servicio**
-con etiquetas `vX.Y.Z`, `X.Y.Z`, `X.Y`, `X`, `latest` (solo no-prerelease), `sha-<corto>`,
-labels OCI y **digest** en el resumen del run (`R-CD-4`).
+`release.yml`: `gate` valida tag semver + procedencia; luego el job **E2E**
+levanta el stack limpio, ejecuta `npm run demo` y verifica R-E-8 antes de
+construir una sola imagen. Si E2E falla, `images` no arranca. Después se publica
+**una imagen por servicio** con etiquetas `vX.Y.Z`, `X.Y.Z`, `X.Y`, `X`, `latest`
+(solo no-prerelease), `sha-<corto>`, labels OCI y **digest** en el resumen del
+run (`R-CD-4`).
 
 ---
 

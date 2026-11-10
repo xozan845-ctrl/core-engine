@@ -2,7 +2,7 @@ import type { Mock } from 'vitest';
 import 'reflect-metadata';
 import { TributacionController } from './tributacion.controller';
 import type { TributacionService } from './tributacion.service';
-import { NotFoundError, ROLES } from '@core/shared';
+import { CAPABILITIES_KEY, CAPACIDADES, NotFoundError, ROLES } from '@core/shared';
 
 const jurisdiccion = { codigo_pais: 'NI', nombre: 'Nicaragua', moneda: 'NIO' };
 const declaracion = { id: 'd-1', tipo: 'IVA', periodo_inicio: '2026-09-01', estado: 'pendiente' };
@@ -87,7 +87,10 @@ describe('TributacionController (api/v2/finanzas, Ley 822, R-U-10/11)', () => {
     await expect(controller.pagar('d-x')).rejects.toBeInstanceOf(NotFoundError);
   });
 
-  it('debe exigir rol admin a nivel de controlador', () => {
+  it('debe exigir rol admin y la capacidad de facturacion', () => {
     expect(Reflect.getMetadata('roles_requeridos', TributacionController)).toEqual([ROLES.SUPER_ADMIN, ROLES.ADMIN]);
+    expect(Reflect.getMetadata(CAPABILITIES_KEY, TributacionController)).toEqual([
+      CAPACIDADES.FACTURACION,
+    ]);
   });
 });

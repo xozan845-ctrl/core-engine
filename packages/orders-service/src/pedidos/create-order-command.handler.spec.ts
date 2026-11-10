@@ -76,6 +76,7 @@ function crearHandler(
   carrito?: CarritoFake,
   storesFails = false,
   storesThrows = false,
+  capacidades: string[] = ['fulfillment_onsite'],
 ) {
   const pg = new PgFake();
   const store = new EventStoreFake();
@@ -99,9 +100,11 @@ function crearHandler(
         return {
           ok: true,
           json: async () => ({
-            capacidades: [
-              { empresa_id: empresaCap, capacidad_codigo: 'fulfillment_onsite', activo: true },
-            ],
+            capacidades: capacidades.map((capacidad) => ({
+              empresa_id: empresaCap,
+              capacidad_codigo: capacidad,
+              activo: true,
+            })),
           }),
         } as Response;
       }
@@ -589,5 +592,81 @@ describe('Calculo de comision TC-08 (RN-04)', () => {
     const venta = Money.parsear('1150.00');
     expect(venta.comision(0.12).string()).toBe('138.00');
     expect(venta.restar(venta.comision(0.12)).string()).toBe('1012.00');
+  });
+});
+
+
+describe('Fulfillment y cotizaciones por capacidad', () => {
+  const ofertaActiva = {
+    id: 'oferta-1',
+    tienda_id: 'tienda-1',
+    vendedor_id: 'vendedor-1',
+    empresa_id: 'empresa-1',
+    participacion_porcentaje: 25,
+    item_type: 'producto',
+    item_id: '11111111-1111-4111-8111-111111111111',
+    sku: 'ACE-001',
+    producto_nombre: 'Aceite 1L',
+    margen: 15,
+    precio_base: '1000.00',
+    precio_venta: '1150.00',
+    stock: 10,
+    estado: 'activa',
+  };
+
+  it('rechaza una cotizacion sin la capacidad cotizaciones', async () => {
+    const { handler } = crearHandler([ofertaActiva], 'ok', undefined, false, false, []);
+    await expect(
+      handler.ejecutar(
+        { tipo_orden: 'cotizacion', items: [{ oferta_id: 'oferta-1', cantidad: 1 }] },
+        'comprador-1',
+      ),
+    ).rejects.toMatchObject({
+      codigo: 'CAPACIDAD_NO_ACTIVA',
+      detalles: { capacidades: ['cotizaciones'] },
+    });
+  });
+
+  it('rechaza una entrega onsite sin fulfillment_onsite', async () => {
+    const ofertaServicio = {
+      ...ofertaActiva,
+      item_type: 'servicio',
+      item_id: '22222222-2222-4222-8222-222222222222',
+      sku: 'CORTE-001',
+      producto_nombre: 'Corte de cabello',
+      precio_venta: '300.00',
+    };
+    const { handler } = crearHandler([ofertaServicio], 'ok', undefined, false, false, []);
+    await expect(
+      handler.ejecutar(
+        {
+          tipo_orden: 'reserva',
+          items: [{ oferta_id: 'oferta-1', cantidad: 1, fulfillment: 'onsite' }],
+        },
+        'comprador-1',
+      ),
+    ).rejects.toMatchObject({
+      codigo: 'CAPACIDAD_NO_ACTIVA',
+      detalles: { capacidades: ['fulfillment_onsite'] },
+    });
+  });
+
+  it('permite pickup y delivery cuando el tenant tiene ambas capacidades', async () => {
+    const { handler } = crearHandler(
+      [ofertaActiva],
+      'ok',
+      undefined,
+      false,
+      false,
+      ['fulfillment_pickup', 'fulfillment_delivery'],
+    );
+    const vista = await handler.ejecutar(
+      {
+        tipo_orden: 'compra',
+        items: [{ oferta_id: 'oferta-1', cantidad: 1, fulfillment: 'pickup' }],
+      },
+      'comprador-1',
+    );
+    expect(vista.items[0]).toMatchObject({ fulfillment: 'pickup' });
   });
 });

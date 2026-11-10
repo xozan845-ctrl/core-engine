@@ -6,6 +6,8 @@ import {
   UsuarioActual,
   UsuarioContexto,
   NotFoundError,
+  CAPACIDADES,
+  RequiereCapacidades,
 } from '@core/shared';
 import { VentasService, EstadoCuenta, EstadoCuentaEmpresa } from './ventas.service';
 import { EstadoCuentaEmpresaResponseDto, EstadoCuentaResponseDto } from './ventas.response.dto';
@@ -14,6 +16,7 @@ import { EstadoCuentaEmpresaResponseDto, EstadoCuentaResponseDto } from './venta
 @ApiTags('Comisiones · Ventas')
 @ApiBearerAuth()
 @Controller('api/v2/vendedores/me')
+@RequiereCapacidades(CAPACIDADES.LIQUIDACIONES)
 export class VentasController {
   constructor(private readonly ventas: VentasService) {}
 
@@ -30,6 +33,7 @@ export class VentasController {
 @ApiTags('Comisiones · Ventas')
 @ApiBearerAuth()
 @Controller('api/v2/empresarios/me')
+@RequiereCapacidades(CAPACIDADES.LIQUIDACIONES)
 export class VentasEmpresaController {
   constructor(private readonly ventas: VentasService) {}
 

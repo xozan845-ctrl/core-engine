@@ -80,3 +80,14 @@ export class LoteInventarioResponseDto {
   @ApiProperty() cantidad_inicial: number;
   @ApiProperty() cantidad_disponible: number;
 }
+
+export class ConsumoLoteItemResponseDto {
+  @ApiProperty({ format: 'uuid' }) lote_id: string;
+  @ApiProperty() codigo_lote: string;
+  @ApiProperty() cantidad: number;
+}
+
+export class ConsumoLotesResponseDto {
+  @ApiProperty({ type: [ConsumoLoteItemResponseDto] }) consumidos: ConsumoLoteItemResponseDto[];
+  @ApiProperty() total_consumido: number;
+}

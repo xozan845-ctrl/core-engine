@@ -1,5 +1,6 @@
 import type { Mock } from 'vitest';
 import 'reflect-metadata';
+import { CAPABILITIES_KEY, CAPACIDADES } from '@core/shared';
 import { ReportesController } from './reportes.controller';
 import type { ReportesService } from './reportes.service';
 import { ROLES } from '@core/shared';
@@ -13,6 +14,12 @@ function fabricar(): { reportes: Record<string, Mock>; controller: ReportesContr
 }
 
 describe('ReportesController (api/v2/admin/reportes, R-U-10/11)', () => {
+  it('debe exigir la capacidad de liquidaciones', () => {
+    expect(Reflect.getMetadata(CAPABILITIES_KEY, ReportesController)).toEqual([
+      CAPACIDADES.LIQUIDACIONES,
+    ]);
+  });
+
   it('debe devolver los KPIs que entrega el servicio', async () => {
     const { reportes, controller } = fabricar();
     reportes.kpis.mockResolvedValue(kpis);

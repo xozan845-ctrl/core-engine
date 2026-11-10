@@ -27,6 +27,7 @@ describe('EmpresasController', () => {
     obtenerPara: vi.fn(),
     crearVendedor: vi.fn(),
     actualizarSlug: vi.fn(),
+    actualizarPack: vi.fn(),
   };
   const controller = new EmpresasController(empresas as unknown as EmpresasService);
   const empresario = { user_id: 'u-1', email: 'e@core.test', rol: ROLES.EMPRESARIO };
@@ -43,7 +44,14 @@ describe('EmpresasController', () => {
       expect.objectContaining({ nombre: 'Acme', slug: 'acme' }),
       undefined,
       undefined,
+      undefined,
     );
+  });
+
+  it('delega el cambio de pack versionado', async () => {
+    empresas.actualizarPack.mockResolvedValue({ id: 'e-1' });
+    await controller.actualizarPack('e-1', { pack_codigo: 'pack_belleza', pack_version: 2 });
+    expect(empresas.actualizarPack).toHaveBeenCalledWith('e-1', 'pack_belleza', 2);
   });
 
   it('crea un vendedor con su participacion', async () => {

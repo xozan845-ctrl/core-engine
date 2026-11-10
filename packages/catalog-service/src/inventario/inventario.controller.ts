@@ -3,6 +3,7 @@ import { ApiBearerAuth, ApiCreatedResponse, ApiOkResponse, ApiOperation, ApiQuer
 import { IsDateString, IsInt, IsOptional, IsString, IsUUID, Min } from 'class-validator';
 import { InventarioService, LineaInventario, LoteInventario, ProveedorInventario } from './inventario.service';
 import {
+  ConsumoLotesResponseDto,
   LineaInventarioResponseDto,
   LoteInventarioResponseDto,
   ProveedorInventarioResponseDto,
@@ -24,6 +25,13 @@ export class CrearLoteInventarioRequestDto {
   @ApiProperty() @IsString() codigo_lote: string;
   @ApiProperty({ required: false, format: 'date' }) @IsOptional() @IsDateString() vence_en?: string;
   @ApiProperty({ minimum: 0 }) @IsInt() @Min(0) cantidad_inicial: number;
+}
+
+export class ConsumirLotesRequestDto {
+  @ApiProperty({ format: 'uuid' }) @IsUUID() empresa_id: string;
+  @ApiProperty({ format: 'uuid' }) @IsUUID() item_id: string;
+  @ApiProperty({ minimum: 1 }) @IsInt() @Min(1) cantidad: number;
+  @ApiProperty({ required: false }) @IsOptional() @IsString() codigo_lote?: string;
 }
 
 @ApiTags('Catálogo')
@@ -59,6 +67,15 @@ export class InventarioController {
   @ApiCreatedResponse({ type: LoteInventarioResponseDto, description: 'Lote creado' })
   async crearLote(@Body() dto: CrearLoteInventarioRequestDto): Promise<LoteInventario> {
     return this.inventario.crearLote(dto);
+  }
+
+  @Post('lotes/consumir')
+  @Roles(ROLES.SUPER_ADMIN, ROLES.ADMIN)
+  @RequiereCapacidades(CAPACIDADES.INVENTARIO_LOTES)
+  @ApiOperation({ summary: 'Consumir cantidades de lotes aplicando FEFO' })
+  @ApiCreatedResponse({ type: ConsumoLotesResponseDto, description: 'Consumo aplicado por lote' })
+  async consumirLotes(@Body() dto: ConsumirLotesRequestDto) {
+    return this.inventario.consumirLotes(dto);
   }
 
   @Get('lotes')
