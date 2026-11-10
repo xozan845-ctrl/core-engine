@@ -7,7 +7,7 @@ import type { OrderEventStore } from './repositories/order-event-store';
 import type { PedidosService } from './pedidos.service';
 import { ClaveInternaGuard, NotFoundError } from '@core/shared';
 
-const orden = { id: 'o-1', cliente_id: 'u-c', estado: 'creada', total_cents: 1000 };
+const orden = { id: 'o-1', comprador_id: 'u-c', estado: 'creada', total_cents: 1000 };
 const evento = {
   event_id: 'ev-1',
   aggregate_id: 'o-1',

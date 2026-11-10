@@ -404,14 +404,8 @@
             "type": "string",
             "format": "uuid"
           },
-          "cliente_id": {
-            "type": "object",
-            "nullable": true,
-            "format": "uuid"
-          },
           "parte_id": {
-            "type": "object",
-            "nullable": true,
+            "type": "string",
             "format": "uuid"
           },
           "order_id": {
@@ -462,6 +456,7 @@
           "id",
           "empresa_id",
           "recurso_id",
+          "parte_id",
           "estado",
           "inicia_en",
           "termina_en",
@@ -503,15 +498,10 @@
             "type": "string",
             "format": "uuid"
           },
-          "cliente_id": {
-            "type": "string",
-            "format": "uuid"
-          },
           "parte_id": {
             "type": "string",
-            "nullable": true,
             "format": "uuid",
-            "description": "Referencia universal opcional del cliente"
+            "description": "Referencia universal del cliente"
           },
           "order_id": {
             "type": "string",
@@ -538,6 +528,7 @@
         },
         "required": [
           "recurso_id",
+          "parte_id",
           "inicia_en",
           "termina_en"
         ]

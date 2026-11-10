@@ -42,8 +42,7 @@ export class CrearBloqueoRequestDto {
 
 export class CrearCitaRequestDto {
   @ApiProperty({ format: 'uuid' }) @IsUUID() recurso_id: string;
-  @ApiProperty({ required: false, format: 'uuid' }) @IsOptional() @IsUUID() cliente_id?: string;
-  @ApiProperty({ required: false, nullable: true, format: 'uuid', description: 'Referencia universal opcional del cliente' }) @IsOptional() @IsUUID() parte_id?: string;
+  @ApiProperty({ format: 'uuid', description: 'Referencia universal del cliente' }) @IsUUID() parte_id: string;
   @ApiProperty({ required: false, format: 'uuid' }) @IsOptional() @IsUUID() order_id?: string;
   @ApiProperty({ required: false, format: 'uuid' }) @IsOptional() @IsUUID() item_id?: string;
   @ApiProperty({ format: 'date-time' }) @IsDateString() inicia_en: string;

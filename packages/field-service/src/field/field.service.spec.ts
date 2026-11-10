@@ -153,13 +153,13 @@ describe('FieldService', () => {
     await service.listarPedidos('tenant-a', {
       estado: 'en_camino',
       rutaId: 'ruta-1',
-      clienteId: 'cliente-1',
+      parteId: 'cliente-1',
     });
 
     const [sql, values] = pg.query.mock.calls[0] as [string, unknown[]];
     expect(sql).toContain('estado = $2');
     expect(sql).toContain('ruta_id = $3');
-    expect(sql).toContain('cliente_id = $4');
+    expect(sql).toContain('parte_id = $4');
     expect(sql).toContain('LIMIT 2000');
     expect(values).toEqual(['tenant-a', 'en_camino', 'ruta-1', 'cliente-1']);
   });

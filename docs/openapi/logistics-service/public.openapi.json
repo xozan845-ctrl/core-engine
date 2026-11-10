@@ -450,7 +450,7 @@
             "description": "Id de la orden",
             "format": "uuid"
           },
-          "cliente_id": {
+          "comprador_id": {
             "type": "string",
             "description": "Id del comprador",
             "format": "uuid"
@@ -480,7 +480,7 @@
         },
         "required": [
           "id",
-          "cliente_id",
+          "comprador_id",
           "items",
           "total",
           "total_cents",

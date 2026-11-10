@@ -2903,7 +2903,7 @@ export const OPENAPI_AGREGADO = {
             }
           },
           {
-            "name": "clienteId",
+            "name": "parteId",
             "required": true,
             "in": "query",
             "schema": {
@@ -15444,9 +15444,6 @@ export const OPENAPI_AGREGADO = {
           "cliente": {
             "type": "string"
           },
-          "clienteId": {
-            "type": "string"
-          },
           "direccionEntrega": {
             "type": "string"
           },
@@ -16037,9 +16034,6 @@ export const OPENAPI_AGREGADO = {
           "cliente": {
             "type": "string"
           },
-          "clienteId": {
-            "type": "string"
-          },
           "direccionEntrega": {
             "type": "string"
           },
@@ -16279,9 +16273,6 @@ export const OPENAPI_AGREGADO = {
           "personalId": {
             "type": "string"
           },
-          "clienteId": {
-            "type": "string"
-          },
           "rutaId": {
             "type": "string"
           },
@@ -16500,9 +16491,6 @@ export const OPENAPI_AGREGADO = {
               "logistica"
             ]
           },
-          "clienteId": {
-            "type": "string"
-          },
           "telefono": {
             "type": "string"
           },
@@ -16570,11 +16558,6 @@ export const OPENAPI_AGREGADO = {
           },
           "tipo": {
             "type": "string"
-          },
-          "cliente_id": {
-            "type": "object",
-            "nullable": true,
-            "format": "uuid"
           },
           "telefono": {
             "type": "object",
@@ -16644,11 +16627,6 @@ export const OPENAPI_AGREGADO = {
           },
           "cliente": {
             "type": "string"
-          },
-          "cliente_id": {
-            "type": "object",
-            "nullable": true,
-            "format": "uuid"
           },
           "parte_id": {
             "type": "object",
@@ -17181,11 +17159,6 @@ export const OPENAPI_AGREGADO = {
           },
           "personal_id": {
             "type": "string",
-            "format": "uuid"
-          },
-          "cliente_id": {
-            "type": "object",
-            "nullable": true,
             "format": "uuid"
           },
           "parte_id": {
@@ -17933,10 +17906,6 @@ export const OPENAPI_AGREGADO = {
             "type": "string",
             "description": "Id de la orden",
             "format": "uuid"
-          },
-          "cliente_id": {
-            "type": "string",
-            "description": "Id del cliente"
           },
           "parte_id": {
             "type": "object",
@@ -19470,10 +19439,6 @@ export const OPENAPI_AGREGADO = {
           "orden_id": {
             "type": "string",
             "description": "Id de la orden (UUID)"
-          },
-          "cliente_id": {
-            "type": "string",
-            "description": "Id del cliente"
           },
           "parte_id": {
             "type": "string",
@@ -24402,7 +24367,7 @@ export const OPENAPI_AGREGADO = {
             "description": "Id de la orden",
             "format": "uuid"
           },
-          "cliente_id": {
+          "comprador_id": {
             "type": "string",
             "description": "Id del comprador",
             "format": "uuid"
@@ -24432,7 +24397,7 @@ export const OPENAPI_AGREGADO = {
         },
         "required": [
           "id",
-          "cliente_id",
+          "comprador_id",
           "items",
           "total",
           "total_cents",
@@ -25592,14 +25557,8 @@ export const OPENAPI_AGREGADO = {
             "type": "string",
             "format": "uuid"
           },
-          "cliente_id": {
-            "type": "object",
-            "nullable": true,
-            "format": "uuid"
-          },
           "parte_id": {
-            "type": "object",
-            "nullable": true,
+            "type": "string",
             "format": "uuid"
           },
           "order_id": {
@@ -25650,6 +25609,7 @@ export const OPENAPI_AGREGADO = {
           "id",
           "empresa_id",
           "recurso_id",
+          "parte_id",
           "estado",
           "inicia_en",
           "termina_en",
@@ -25691,15 +25651,10 @@ export const OPENAPI_AGREGADO = {
             "type": "string",
             "format": "uuid"
           },
-          "cliente_id": {
-            "type": "string",
-            "format": "uuid"
-          },
           "parte_id": {
             "type": "string",
-            "nullable": true,
             "format": "uuid",
-            "description": "Referencia universal opcional del cliente"
+            "description": "Referencia universal del cliente"
           },
           "order_id": {
             "type": "string",
@@ -25726,6 +25681,7 @@ export const OPENAPI_AGREGADO = {
         },
         "required": [
           "recurso_id",
+          "parte_id",
           "inicia_en",
           "termina_en"
         ]
