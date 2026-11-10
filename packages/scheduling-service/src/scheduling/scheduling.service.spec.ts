@@ -87,7 +87,7 @@ describe('SchedulingService', () => {
       { rowCount: 1, rows: [{}] },
       { rowCount: 0, rows: [] },
       { rowCount: 1, rows: [{
-        id: cita, empresa_id: empresa, recurso_id: recurso, cliente_id: null,
+        id: cita, empresa_id: empresa, recurso_id: recurso,
         parte_id: '66666666-6666-4666-8666-666666666666',
         order_id: null, item_id: null, estado: 'reservada', inicia_en: inicio, termina_en: fin,
       }] },
@@ -172,16 +172,16 @@ describe('SchedulingService', () => {
   it('crea la cita desde una reserva, es idempotente y valida su configuracion', async () => {
     const { pg, service } = crear();
     pg.queryOne.mockResolvedValueOnce({ id: cita });
-    await expect(service.crearDesdeReserva({ order_id: 'o-1', cliente_id: 'c-1', items: [] })).resolves.toMatchObject({ id: cita });
+    await expect(service.crearDesdeReserva({ order_id: 'o-1', cliente_parte_id: 'p-1', items: [] })).resolves.toMatchObject({ id: cita });
 
     pg.queryOne.mockResolvedValueOnce(null);
-    await expect(service.crearDesdeReserva({ order_id: 'o-2', cliente_id: 'c-1', items: [{ empresa_id: empresa, item_type: 'producto' }] }))
+    await expect(service.crearDesdeReserva({ order_id: 'o-2', cliente_parte_id: 'p-1', items: [{ empresa_id: empresa, item_type: 'producto' }] }))
       .rejects.toMatchObject({ codigo: 'CITA_CONFIGURACION_REQUERIDA' });
 
     pg.queryOne.mockResolvedValueOnce(null);
     const spy = vi.spyOn(service, 'crearCita').mockResolvedValue({ id: cita });
     await service.crearDesdeReserva({
-      order_id: 'o-3', cliente_id: 'c-1', cliente_parte_id: '66666666-6666-4666-8666-666666666666', items: [{
+      order_id: 'o-3', cliente_parte_id: '66666666-6666-4666-8666-666666666666', items: [{
         empresa_id: empresa, item_type: 'servicio', item_id: '66666666-6666-4666-8666-666666666666', fulfillment: 'onsite',
         fulfillment_config: { recurso_id: recurso, inicia_en: inicio, termina_en: fin },
       }],

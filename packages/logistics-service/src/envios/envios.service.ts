@@ -16,7 +16,7 @@ export interface Envio {
 
 export interface OrdenExterna {
   id: string;
-  cliente_id: string;
+  comprador_id: string;
   parte_id?: string | null;
   items: { sku: string; cantidad: number; producto_nombre: string; empresa_id: string; precio_unitario_cents: number }[];
   total: string;

@@ -151,7 +151,6 @@ export class ParadaRequestDto {
   @ApiProperty({ required: false }) @IsOptional() @IsBoolean() completada?: boolean;
   @ApiProperty({ required: false }) @IsOptional() @IsString() pedidoId?: string;
   @ApiProperty({ required: false, enum: ['cliente', 'logistica'] }) @IsOptional() @IsIn(['cliente', 'logistica']) tipo?: string;
-  @ApiProperty({ required: false }) @IsOptional() @IsString() clienteId?: string;
   @ApiProperty({ required: false }) @IsOptional() @IsString() telefono?: string;
   @ApiProperty({ required: false }) @IsOptional() @IsString() referencias?: string;
   @ApiProperty({ required: false }) @IsOptional() @IsString() horarioAtencion?: string;
@@ -167,7 +166,6 @@ export class AsignarRutaRequestDto {
 // ── pedidos ──────────────────────────────────────────────────────────────
 export class CrearPedidoRequestDto {
   @ApiProperty({ required: false }) @IsOptional() @IsString() cliente?: string;
-  @ApiProperty({ required: false }) @IsOptional() @IsString() clienteId?: string;
   @ApiProperty({ required: false }) @IsOptional() @IsString() direccionEntrega?: string;
   @ApiProperty({ required: false }) @IsOptional() @IsNumber() lat?: number;
   @ApiProperty({ required: false }) @IsOptional() @IsNumber() lng?: number;
@@ -178,7 +176,6 @@ export class CrearPedidoRequestDto {
 }
 export class ActualizarPedidoRequestDto {
   @ApiProperty({ required: false }) @IsOptional() @IsString() cliente?: string;
-  @ApiProperty({ required: false }) @IsOptional() @IsString() clienteId?: string;
   @ApiProperty({ required: false }) @IsOptional() @IsString() direccionEntrega?: string;
   @ApiProperty({ required: false }) @IsOptional() @IsNumber() lat?: number;
   @ApiProperty({ required: false }) @IsOptional() @IsNumber() lng?: number;
@@ -246,7 +243,6 @@ export class TrackingBulkRequestDto {
 // ── visitas (telemetria) ─────────────────────────────────────────────────
 export class CrearVisitaRequestDto {
   @ApiProperty() @IsString() personalId: string;
-  @ApiProperty({ required: false }) @IsOptional() @IsString() clienteId?: string;
   @ApiProperty({ required: false }) @IsOptional() @IsString() rutaId?: string;
   @ApiProperty({ enum: ['impulsacion', 'venta', 'entrega', 'reparto'] }) @IsIn(['impulsacion', 'venta', 'entrega', 'reparto']) tipoActividad: string;
   @ApiProperty({ required: false, enum: ['visitado', 'cerca_no_visitado', 'no_visitado'] }) @IsOptional() @IsIn(['visitado', 'cerca_no_visitado', 'no_visitado']) resultado?: string;

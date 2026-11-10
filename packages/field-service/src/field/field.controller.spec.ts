@@ -129,7 +129,7 @@ describe('FieldController', () => {
     delega(
       'listarPedidos',
       () => controller.listarPedidos(usuario, 'pendiente', 'r1', 'c1'),
-      ['tenant-a', { estado: 'pendiente', rutaId: 'r1', clienteId: 'c1' }],
+      ['tenant-a', { estado: 'pendiente', rutaId: 'r1', parteId: 'c1' }],
     );
     delega('obtenerPedido', () => controller.obtenerPedido(usuario, 'pe1'), ['tenant-a', 'pe1']);
     delega(

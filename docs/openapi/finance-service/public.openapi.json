@@ -3979,10 +3979,6 @@
             "description": "Id de la orden",
             "format": "uuid"
           },
-          "cliente_id": {
-            "type": "string",
-            "description": "Id del cliente"
-          },
           "parte_id": {
             "type": "object",
             "description": "Referencia universal del cliente",
@@ -5515,10 +5511,6 @@
           "orden_id": {
             "type": "string",
             "description": "Id de la orden (UUID)"
-          },
-          "cliente_id": {
-            "type": "string",
-            "description": "Id del cliente"
           },
           "parte_id": {
             "type": "string",

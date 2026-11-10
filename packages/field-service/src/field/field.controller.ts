@@ -271,9 +271,9 @@ export class FieldController {
     @UsuarioActual() u: UsuarioContexto,
     @Query('estado') estado?: string,
     @Query('rutaId') rutaId?: string,
-    @Query('clienteId') clienteId?: string,
+    @Query('parteId') parteId?: string,
   ) {
-    return this.field.listarPedidos(this.tenant(u), { estado, rutaId, clienteId });
+    return this.field.listarPedidos(this.tenant(u), { estado, rutaId, parteId });
   }
   @Get('pedidos/:id')
   @Roles(...ROLES_CAMPO)
