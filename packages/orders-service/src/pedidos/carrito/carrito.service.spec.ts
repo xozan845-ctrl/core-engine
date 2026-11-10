@@ -76,8 +76,9 @@ describe('CarritoService (RN-05, R-U-18, R-COV-2)', () => {
     });
     fetchMock.mockResolvedValue(respuestaOfertas([ofertaActiva]));
 
+    const { id: _id, ...ofertaSinId } = ofertaActiva;
     await expect(servicio.obtener('comprador-1')).resolves.toEqual({
-      items: [{ ...item, ...ofertaActiva }],
+      items: [{ ...item, ...ofertaSinId }],
       total: '25.00',
       expira_en: new Date(new Date(actualizado).getTime() + CARRITO_EXPIRACION_MS).toISOString(),
     });

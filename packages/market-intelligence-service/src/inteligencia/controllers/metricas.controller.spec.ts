@@ -17,7 +17,7 @@ function fabricar(): { inteligencia: Record<string, Mock>; controller: MetricasC
   return { inteligencia, controller };
 }
 
-describe('MetricasController (api/v1/inteligencia, R-U-10/11)', () => {
+describe('MetricasController (api/v2/inteligencia, R-U-10/11)', () => {
   it('debe devolver el mapa de calor con los filtros recibidos', async () => {
     const { inteligencia, controller } = fabricar();
     inteligencia.obtenerMapaCalor.mockResolvedValue({ puntos: [] });
@@ -31,6 +31,18 @@ describe('MetricasController (api/v1/inteligencia, R-U-10/11)', () => {
     inteligencia.obtenerMapaCalor.mockResolvedValue({ puntos: [] });
     await controller.getMiMapaCalor('personal-7', { zona: 'norte' } as never);
     expect(inteligencia.obtenerMapaCalor).toHaveBeenCalledWith({ zona: 'norte', vendedor_id: 'personal-7' });
+  });
+
+  it('debe rechazar /me/* cuando falta la ficha de personal', async () => {
+    const { inteligencia, controller } = fabricar();
+    await expect(controller.getMiMapaCalor(undefined as never, {} as never)).rejects.toThrow(
+      /x-user-personal/,
+    );
+    await expect(controller.getMiRendimiento(undefined as never, {} as never)).rejects.toThrow(
+      /x-user-personal/,
+    );
+    expect(inteligencia.obtenerMapaCalor).not.toHaveBeenCalled();
+    expect(inteligencia.obtenerRendimientoVendedores).not.toHaveBeenCalled();
   });
 
   it('debe delegar rendimiento y su variante propia con el vendedor del header', async () => {
@@ -61,8 +73,31 @@ describe('MetricasController (api/v1/inteligencia, R-U-10/11)', () => {
   it('debe registrar la venta y devolver el acuse OK', async () => {
     const { inteligencia, controller } = fabricar();
     inteligencia.registrarVenta.mockResolvedValue(undefined);
-    const data = { order_id: 'o-1', monto_cents: 1000, lat: 12, lng: -86 };
-    await expect(controller.registrarVenta(data)).resolves.toEqual({ codigo: 'OK', mensaje: 'Venta registrada en inteligencia' });
-    expect(inteligencia.registrarVenta).toHaveBeenCalledWith(data);
+    const data = { order_id: 'o-1', vendedor_id: 'v-1', monto_cents: 1000, lat: 12, lng: -86, skus: ['SKU-1'] };
+    await expect(controller.registrarVenta(data, undefined, 'admin')).resolves.toEqual({
+      codigo: 'OK',
+      mensaje: 'Venta registrada en inteligencia',
+    });
+    expect(inteligencia.registrarVenta).toHaveBeenCalledWith(data, undefined);
+  });
+
+  it('debe forzar el vendedor del token y no aceptar el del cuerpo cuando el rol es vendedor', async () => {
+    const { inteligencia, controller } = fabricar();
+    inteligencia.registrarVenta.mockResolvedValue(undefined);
+    const data = { order_id: 'o-1', vendedor_id: 'otro-vendedor', monto_cents: 1000, skus: ['SKU-1'] };
+    await controller.registrarVenta(data as never, 'personal-7', 'vendedor');
+    expect(inteligencia.registrarVenta).toHaveBeenCalledWith(
+      expect.objectContaining({ vendedor_id: 'personal-7' }),
+      undefined,
+    );
+  });
+
+  it('debe rechazar la ingesta de un vendedor sin ficha de personal', async () => {
+    const { inteligencia, controller } = fabricar();
+    const data = { order_id: 'o-1', vendedor_id: 'v-1', monto_cents: 1000, skus: ['SKU-1'] };
+    await expect(controller.registrarVenta(data as never, undefined, 'vendedor')).rejects.toThrow(
+      /x-user-personal/,
+    );
+    expect(inteligencia.registrarVenta).not.toHaveBeenCalled();
   });
 });

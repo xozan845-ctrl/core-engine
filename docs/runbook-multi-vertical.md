@@ -49,7 +49,7 @@ Crear un tenant nuevo por pack y validar, en este orden:
 
 Para cada tenant:
 
-- consultar `GET /api/v1/packs?vertical_id=<vertical>`;
+- consultar `GET /api/v2/packs?vertical_id=<vertical>`;
 - crear la empresa con `pack_codigo` explícito;
 - comprobar `identity.empresas.pack_codigo/pack_version`;
 - comprobar que las capacidades activas coinciden con el pack;
@@ -68,3 +68,22 @@ lo aplicado y se conservan.
 El piloto se considera adoptado cuando no hay revisiones pendientes, los tres
 flujos pasan sus pruebas, p95 se mantiene dentro de la línea base y el equipo
 aprueba la deprecación gradual de `tipo_empresa`/`modalidad_logistica`.
+
+## Automatización de la matriz
+
+La validación de piloto ya tiene cobertura automatizada en `scripts/integration/`:
+
+| Suite | Casos | Qué fija |
+|---|---:|---|
+| `vertical-matrix.test.mjs` | 6 | Crea un tenant real por cada pack y contrasta el conjunto exacto de capacidades activas; rechaza un pack incompatible con la vertical. |
+| `capability-enforcement.test.mjs` | 9 | Ejercita `CapabilityGuard` contra PostgreSQL: permite/rechaza stock, lotes, agenda y rutas según la vertical, revoca al desactivar y falla cerrado sin tenant. |
+| `vertical-operations.test.mjs` | 4 | Flujos piloto: lote con vencimiento, cita con recurso/disponibilidad y vehículo → ruta → parada. |
+
+```bash
+TEST_DATABASE_URL=postgres://core_engine_test:test_only@127.0.0.1:5432/core_engine_test \
+  npm run test:integration
+```
+
+Estas suites usan PostgreSQL real y no dobles de prueba. No sustituyen al E2E
+del stack: los consumidores de RabbitMQ y el gateway se siguen validando con
+`npm run demo`.

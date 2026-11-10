@@ -253,7 +253,7 @@ describe('AuthService (sesiones JWT)', () => {
         personal_id: 'p1',
         participacion_porcentaje: 25,
         avatar_objeto_id: 'obj-1',
-        avatar_url: '/api/v1/storage/public/objetos/obj-1',
+        avatar_url: '/api/v2/storage/public/objetos/obj-1',
       };
 
       const sesion = await servicio.crearSesion(usuario);
@@ -264,7 +264,7 @@ describe('AuthService (sesiones JWT)', () => {
         personal_id: 'p1',
         participacion_porcentaje: 25,
         avatar_objeto_id: 'obj-1',
-        avatar_url: '/api/v1/storage/public/objetos/obj-1',
+        avatar_url: '/api/v2/storage/public/objetos/obj-1',
       });
       expect(verificarToken<TokenPayload>(sesion.access_token, SECRETO)).toMatchObject({
         tenant_id: 't1',

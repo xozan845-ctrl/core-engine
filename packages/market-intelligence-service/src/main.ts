@@ -11,6 +11,7 @@ import {
   DomainErrorFilter,
   Logger,
   RolesGuard,
+  CapabilityGuard,
 } from '@core/shared';
 
 async function bootstrap(): Promise<void> {
@@ -18,7 +19,7 @@ async function bootstrap(): Promise<void> {
 
   app.useGlobalPipes(new DtoValidationPipe());
   app.useGlobalFilters(new DomainErrorFilter());
-  app.useGlobalGuards(new RolesGuard());
+  app.useGlobalGuards(new RolesGuard(), new CapabilityGuard());
 
   const puerto = Number(process.env.PORT ?? PUERTOS.INTELLIGENCE);
   const expressApp = app.getHttpAdapter().getInstance();

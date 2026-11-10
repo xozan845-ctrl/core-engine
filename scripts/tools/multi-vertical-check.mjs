@@ -44,9 +44,9 @@ export function validarCierre({ empresas, migraciones, packs, capacidades, packC
 }
 
 async function ejecutar() {
+  const { default: pg } = await import('pg');
   const connectionString = process.env.DATABASE_URL ?? process.env.TEST_DATABASE_URL;
   if (!connectionString) throw new Error('DATABASE_URL o TEST_DATABASE_URL requerida');
-  const { default: pg } = await import('pg');
   const client = new pg.Client({ connectionString });
   await client.connect();
   try {

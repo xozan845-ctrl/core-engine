@@ -12,7 +12,7 @@ function fabricar(): { reportes: Record<string, Mock>; controller: ReportesContr
   return { reportes, controller };
 }
 
-describe('ReportesController (api/v1/admin/reportes, R-U-10/11)', () => {
+describe('ReportesController (api/v2/admin/reportes, R-U-10/11)', () => {
   it('debe devolver los KPIs que entrega el servicio', async () => {
     const { reportes, controller } = fabricar();
     reportes.kpis.mockResolvedValue(kpis);

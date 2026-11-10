@@ -7,6 +7,8 @@ import {
   ROLES,
   ROLES_LOGISTICA,
   DomainError,
+  CAPACIDADES,
+  RequiereCapacidades,
 } from '@core/shared';
 import { FieldService } from './field.service';
 import {
@@ -53,7 +55,7 @@ const ROLES_CAMPO = [ROLES.SUPER_ADMIN, ...ROLES_LOGISTICA];
 
 @ApiTags('Field (logística de campo)')
 @ApiBearerAuth()
-@Controller('api/v1/field')
+@Controller('api/v2/field')
 export class FieldController {
   constructor(private readonly field: FieldService) {}
 
@@ -191,6 +193,7 @@ export class FieldController {
 
   // ── rutas ──────────────────────────────────────────────────────────────
   @Get('rutas')
+  @RequiereCapacidades(CAPACIDADES.LOGISTICA_RUTAS)
   @Roles(...ROLES_CAMPO)
   @ApiOperation({ summary: 'Listar rutas' })
   @ApiOkResponse({ type: [RutaResponseDto], description: 'Rutas del tenant' })
@@ -198,6 +201,7 @@ export class FieldController {
     return this.field.listarRutas(this.tenant(u), personalId);
   }
   @Get('rutas/:id')
+  @RequiereCapacidades(CAPACIDADES.LOGISTICA_RUTAS)
   @Roles(...ROLES_CAMPO)
   @ApiOperation({ summary: 'Obtener ruta por id' })
   @ApiOkResponse({ type: RutaResponseDto, description: 'Ruta encontrada' })
@@ -205,6 +209,7 @@ export class FieldController {
     return this.field.obtenerRuta(this.tenant(u), id);
   }
   @Post('rutas')
+  @RequiereCapacidades(CAPACIDADES.LOGISTICA_RUTAS)
   @Roles(ROLES.SUPER_ADMIN, ROLES.EMPRESARIO, ROLES.ADMIN, ROLES.COORDINADOR, ROLES.SUPERVISOR)
   @ApiOperation({ summary: 'Crear ruta' })
   @ApiCreatedResponse({ type: RutaResponseDto, description: 'Ruta creada' })
@@ -212,6 +217,7 @@ export class FieldController {
     return this.field.crearRuta(this.tenant(u), dto);
   }
   @Patch('rutas/:id')
+  @RequiereCapacidades(CAPACIDADES.LOGISTICA_RUTAS)
   @Roles(ROLES.SUPER_ADMIN, ROLES.EMPRESARIO, ROLES.ADMIN, ROLES.COORDINADOR, ROLES.SUPERVISOR)
   @ApiOperation({ summary: 'Actualizar ruta' })
   @ApiOkResponse({ type: RutaResponseDto, description: 'Ruta actualizada' })
@@ -219,6 +225,7 @@ export class FieldController {
     return this.field.actualizarRuta(this.tenant(u), id, dto);
   }
   @Delete('rutas/:id')
+  @RequiereCapacidades(CAPACIDADES.LOGISTICA_RUTAS)
   @Roles(ROLES.SUPER_ADMIN, ROLES.EMPRESARIO, ROLES.ADMIN, ROLES.COORDINADOR)
   @ApiOperation({ summary: 'Eliminar ruta' })
   @ApiOkResponse({ description: 'Ruta eliminada' })
@@ -226,6 +233,7 @@ export class FieldController {
     return this.field.eliminarRuta(this.tenant(u), id);
   }
   @Post('rutas/:id/paradas')
+  @RequiereCapacidades(CAPACIDADES.LOGISTICA_RUTAS)
   @Roles(ROLES.SUPER_ADMIN, ROLES.EMPRESARIO, ROLES.ADMIN, ROLES.COORDINADOR, ROLES.SUPERVISOR)
   @ApiOperation({ summary: 'Agregar parada a la ruta' })
   @ApiCreatedResponse({ type: ParadaResponseDto, description: 'Parada creada' })
@@ -233,6 +241,7 @@ export class FieldController {
     return this.field.agregarParada(this.tenant(u), id, dto);
   }
   @Patch('rutas/:id/paradas/:paradaId')
+  @RequiereCapacidades(CAPACIDADES.LOGISTICA_RUTAS)
   @Roles(ROLES.SUPER_ADMIN, ROLES.EMPRESARIO, ROLES.ADMIN, ROLES.COORDINADOR, ROLES.SUPERVISOR)
   @ApiOperation({ summary: 'Actualizar parada de la ruta' })
   @ApiOkResponse({ type: ParadaResponseDto, description: 'Parada actualizada' })
@@ -245,6 +254,7 @@ export class FieldController {
     return this.field.actualizarParada(this.tenant(u), id, paradaId, dto);
   }
   @Post('rutas/:id/asignar')
+  @RequiereCapacidades(CAPACIDADES.LOGISTICA_RUTAS)
   @Roles(ROLES.SUPER_ADMIN, ROLES.EMPRESARIO, ROLES.ADMIN, ROLES.COORDINADOR, ROLES.SUPERVISOR)
   @ApiOperation({ summary: 'Asignar personal/vehículo a la ruta' })
   @ApiCreatedResponse({ type: RutaResponseDto, description: 'Ruta asignada' })
@@ -261,9 +271,9 @@ export class FieldController {
     @UsuarioActual() u: UsuarioContexto,
     @Query('estado') estado?: string,
     @Query('rutaId') rutaId?: string,
-    @Query('clienteId') clienteId?: string,
+    @Query('parteId') parteId?: string,
   ) {
-    return this.field.listarPedidos(this.tenant(u), { estado, rutaId, clienteId });
+    return this.field.listarPedidos(this.tenant(u), { estado, rutaId, parteId });
   }
   @Get('pedidos/:id')
   @Roles(...ROLES_CAMPO)

@@ -132,13 +132,13 @@ export class GenerarDeclaracionesRequestDto {
 }
 
 /**
- * Tributacion: GET/POST /api/v1/finanzas/{jurisdicciones,regimenes,sujetos,
+ * Tributacion: GET/POST /api/v2/finanzas/{jurisdicciones,regimenes,sujetos,
  * declaraciones} — regimen fiscal anual y declaraciones mensuales (Ley 822).
- * GET /api/v1/vendedores/me/fiscal — situacion del vendedor (cap. 4.4).
+ * GET /api/v2/vendedores/me/fiscal — situacion del vendedor (cap. 4.4).
  */
 @ApiTags('Finanzas · Tributación')
 @ApiBearerAuth()
-@Controller('api/v1/finanzas')
+@Controller('api/v2/finanzas')
 @Roles(ROLES.SUPER_ADMIN, ROLES.ADMIN)
 export class TributacionController {
   constructor(private readonly tributacion: TributacionService) {}

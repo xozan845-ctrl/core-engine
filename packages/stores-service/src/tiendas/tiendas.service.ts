@@ -130,7 +130,13 @@ export class TiendasService {
   async deVendedor(vendedorId: string): Promise<Tienda | null> {
     const tienda = await this.pg.queryOne<TiendaFila>(
       `SELECT ${CAMPOS_TIENDA}
-       FROM stores.tiendas WHERE vendedor_id = $1`,
+       FROM stores.tiendas
+       WHERE vendedor_id = $1 OR EXISTS (
+         SELECT 1 FROM identity.asignaciones_personal ap
+         WHERE ap.usuario_id = $1 AND ap.tienda_id = stores.tiendas.id AND ap.estado = 'activa'
+       )
+       ORDER BY CASE WHEN vendedor_id = $1 THEN 0 ELSE 1 END, creado_en
+       LIMIT 1`,
       [vendedorId],
     );
     return tienda ? this.conUrls(tienda) : null;
@@ -154,12 +160,59 @@ export class TiendasService {
     return {
       tienda: await this.conUrls(tienda),
       overrides: overridesDe(tienda),
-      redirigirA: es_actual ? undefined : `/api/v1/tiendas/${tienda.slug}`,
+      redirigirA: es_actual ? undefined : `/api/v2/tiendas/${tienda.slug}`,
     };
   }
 
   async encontrarPorId(id: string): Promise<Tienda | null> {
     return (await this.resolver(id))?.tienda ?? null;
+  }
+
+  /** Lote interno por ids (identity no debe leer `stores.tiendas`). */
+  async porIds(ids: string[]): Promise<Tienda[]> {
+    if (ids.length === 0) return [];
+    const filas = await this.pg.query<TiendaFila>(
+      `SELECT ${CAMPOS_TIENDA} FROM stores.tiendas WHERE id = ANY($1::uuid[])`,
+      [ids],
+    );
+    return Promise.all(filas.map((fila) => this.conUrls(fila)));
+  }
+
+  /** Asignación atómica de vendedor (solo si la tienda sigue libre). */
+  async asignarVendedor(
+    tiendaId: string,
+    empresaId: string,
+    usuarioId: string,
+    participacion: number,
+  ): Promise<void> {
+    if (!Number.isInteger(participacion) || participacion < 0 || participacion > 100) {
+      throw new DomainError('PARTICIPACION_INVALIDA', 'La participación debe estar entre 0 y 100.');
+    }
+    const fila = await this.pg.queryOne(
+      `UPDATE stores.tiendas
+          SET vendedor_id = $1, propietario_usuario_id = $1,
+              participacion_porcentaje = $2, actualizado_en = NOW()
+        WHERE id = $3 AND empresa_id = $4 AND vendedor_id IS NULL
+      RETURNING id`,
+      [usuarioId, participacion, tiendaId, empresaId],
+    );
+    if (!fila) {
+      throw new ConflictError(
+        'La tienda ya tiene un vendedor asignado.',
+        { tienda_id: tiendaId },
+        'TIENDA_YA_ASIGNADA',
+      );
+    }
+  }
+
+  /** Compensación: libera la tienda si la transacción del llamador falla. */
+  async desasignarVendedor(tiendaId: string, usuarioId: string): Promise<void> {
+    await this.pg.query(
+      `UPDATE stores.tiendas
+          SET vendedor_id = NULL, participacion_porcentaje = NULL, actualizado_en = NOW()
+        WHERE id = $1 AND vendedor_id = $2`,
+      [tiendaId, usuarioId],
+    );
   }
 
   async crear(
@@ -515,7 +568,7 @@ export class TiendasService {
       tema: resuelta.tema,
     };
     const logo = fila.logo_objeto_id
-      ? { logo_url: `/api/v1/storage/public/objetos/${fila.logo_objeto_id}` }
+      ? { logo_url: `/api/v2/storage/public/objetos/${fila.logo_objeto_id}` }
       : {};
     return {
       ...resto,

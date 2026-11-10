@@ -11,20 +11,20 @@ import {
 /**
  * Endpoints de Predictive Analytics.
  * La autorización por rol se aplica en el API Gateway (gateway-auth.middleware.ts):
- *   - /api/v1/inteligencia/* → solo ADMIN
- *   - /api/v1/inteligencia/me/* → ADMIN o VENDEDOR
+ *   - /api/v2/inteligencia/* → solo ADMIN
+ *   - /api/v2/inteligencia/me/* → ADMIN o VENDEDOR
  * Los servicios confían en los headers de contexto inyectados por el gateway
  * (x-user-id, x-user-rol). No se usa guarda local para evitar dependencias de
  * DI extra (Reflector) innecesarias dado el modelo de seguridad del proyecto.
  */
 @ApiTags('Inteligencia — Predicción')
 @ApiBearerAuth()
-@Controller('api/v1/inteligencia')
+@Controller('api/v2/inteligencia')
 export class PrediccionController {
   constructor(private readonly repo: InteligenciaRepository) {}
 
   /**
-   * GET /api/v1/inteligencia/forecast/demanda?sku=SKU-TEST&dias=7
+   * GET /api/v2/inteligencia/forecast/demanda?sku=SKU-TEST&dias=7
    * Proyección de demanda futura basada en media móvil ponderada 7d.
    * Acceso: solo ADMIN (el gateway lo restringe).
    */
@@ -40,7 +40,7 @@ export class PrediccionController {
   }
 
   /**
-   * GET /api/v1/inteligencia/anomalias?sku=&vendedor_id=&limite=
+   * GET /api/v2/inteligencia/anomalias?sku=&vendedor_id=&limite=
    * Ventas estadísticamente anómalas (Z-score > 2.5 en los últimos 30d).
    * Acceso: solo ADMIN (el gateway lo restringe).
    */
@@ -62,7 +62,7 @@ export class PrediccionController {
   }
 
   /**
-   * GET /api/v1/inteligencia/vendedores/:id/score
+   * GET /api/v2/inteligencia/vendedores/:id/score
    * Score de riesgo de churn y métricas predictivas de un vendedor.
    * Acceso: solo ADMIN (el gateway lo restringe).
    */
@@ -78,7 +78,7 @@ export class PrediccionController {
   }
 
   /**
-   * GET /api/v1/inteligencia/me/score
+   * GET /api/v2/inteligencia/me/score
    * El vendedor autenticado consulta su propio score predictivo.
    * El gateway inyecta x-user-id con el UUID del usuario autenticado.
    * Acceso: ADMIN o VENDEDOR (el gateway lo restringe).
@@ -95,7 +95,7 @@ export class PrediccionController {
   }
 
   /**
-   * GET /api/v1/inteligencia/calidad?horas=24
+   * GET /api/v2/inteligencia/calidad?horas=24
    * Dashboard de calidad del pipeline: tasa de rechazo, errores frecuentes.
    * Acceso: solo ADMIN (el gateway lo restringe).
    */

@@ -96,7 +96,7 @@ describe('TrazabilidadInterceptor (x-request-id y metricas, doc 5.3)', () => {
   it('agrupa rutas sin patrón para impedir cardinalidad por URLs arbitrarias', () => {
     const req = {
       method: 'GET',
-      originalUrl: '/api/v1/orders/identificador-impredecible',
+      originalUrl: '/api/v2/orders/identificador-impredecible',
       headers: {},
     };
     const res = {
@@ -130,8 +130,8 @@ describe('TrazabilidadInterceptor (x-request-id y metricas, doc 5.3)', () => {
     };
     const req = {
       method: 'GET',
-      originalUrl: '/api/v1/orders/order-123?expand=true',
-      baseUrl: '/api/v1/orders',
+      originalUrl: '/api/v2/orders/order-123?expand=true',
+      baseUrl: '/api/v2/orders',
       route: { path: '/:id' },
       headers: {},
     };
@@ -154,7 +154,7 @@ describe('TrazabilidadInterceptor (x-request-id y metricas, doc 5.3)', () => {
     res.finish?.();
     expect(metrics.registrarPeticion).toHaveBeenCalledWith(
       'GET',
-      '/api/v1/orders/:id',
+      '/api/v2/orders/:id',
       200,
       expect.any(Number),
     );

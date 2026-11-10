@@ -93,6 +93,46 @@ Se introduce la abstracción `item` con `tipo` igual a `producto`, `servicio` o
 `stores.ofertas` usará `item_type + item_id`. El stock será nullable y los
 servicios podrán declarar capacidad o slots.
 
+### 3.1 Extensiones configurables por empresa
+
+Para permitir nuevos rubros sin crear un servicio por negocio, cada empresa
+podrá registrar extensiones versionadas sobre recursos estables de la
+plataforma (`cliente`, `item`, `orden`, `cita`, `recurso`, entre otros). Una
+extensión contiene:
+
+- un JSON Schema para validar los datos;
+- una definición de formulario declarativa para el cliente;
+- reglas descriptivas en JSON, sin código ejecutable ni workflows genéricos;
+- una versión activa por código y empresa.
+
+Las referencias externas `$ref` y los documentos mayores a 64 KiB quedan
+prohibidos. La validación se realiza en el servicio que registra la extensión
+y la API expone además una operación explícita de validación. RLS mantiene el
+alcance por empresa y los administradores pueden operar de forma global. Los
+valores se persisten en `identity.extensiones_empresa_valores`, asociados a
+la empresa, extensión y recurso estable, con `version_schema` para conservar
+la compatibilidad histórica entre versiones; una nueva versión no reescribe
+ni migra silenciosamente los valores existentes.
+
+### 3.2 Núcleo universal de partes
+
+Los recursos que participan en una operación se modelan como `identity.partes`:
+una persona u organización perteneciente a una empresa. El modelo no asigna
+un significado fijo de negocio; cliente, proveedor, contacto, paciente o socio
+se expresan mediante relaciones tipadas entre partes.
+
+Cada parte puede tener múltiples medios de contacto y direcciones, además de
+metadata validada como objeto JSON. Los identificadores fiscales se mantienen
+separados del nombre y son únicos por empresa cuando están informados. Las
+eliminaciones son archivado lógico para no romper referencias históricas; las
+consultas públicas del servicio filtran los registros archivados y las
+políticas RLS conservan siempre el aislamiento por empresa.
+
+`identity.relaciones_partes` es dirigida, tipada y acotada al mismo tenant. No
+se permiten relaciones consigo misma ni enlaces entre empresas. Este núcleo
+reemplaza gradualmente los clientes específicos de flota y los registros JSON
+de cartera, sin romper sus endpoints legacy durante la migración.
+
 ### 4. Órdenes y fulfillment
 
 Las órdenes tendrán tipos explícitos: `compra`, `reserva`, `cotizacion` y
@@ -187,6 +227,7 @@ dependientes de HTTP síncrono.
 | 0 | ADR, glosario, matriz e inventario de acoplamientos | ADR aprobado, tres pilotos definidos y plan de migración |
 | 1 | Tenancy, capacidades, flags, `CapabilityGuard` y migraciones | Tenant dental/salón/flota creado sin logística obligatoria; RLS verde |
 | 2 | Ítems, atributos, ofertas de servicios e inventario opcional | Belleza vende un servicio y retail continúa operando |
+| 2A | Núcleo universal de partes, contactos, direcciones y relaciones | Una empresa crea personas/organizaciones y las aísla por RLS sin código por rubro |
 | 3 | Tipos de orden, fulfillment y cotizaciones | Compra, pickup y onsite funcionan con contratos verdes |
 | 4 | `scheduling-service` | Doble reserva imposible bajo concurrencia; reserva crea cita |
 | 5 | Packs versionados | Cada piloto se crea desde un pack sin cambios de código |
@@ -194,7 +235,8 @@ dependientes de HTTP síncrono.
 
 Cada fase se implementará en una rama/PR separado: `feat/tenancy-capacidades`,
 `feat/catalog-items`, `feat/orders-types`, `feat/scheduling` y
-`feat/vertical-packs`.
+`feat/vertical-packs`; las extensiones universales posteriores usan
+`feat/universal-parties`.
 
 ## Consecuencias
 

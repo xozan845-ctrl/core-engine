@@ -5,7 +5,7 @@ import type { OfertasService } from './ofertas.service';
 import type { TiendasService } from '../tiendas/tiendas.service';
 import { CAPACIDADES, NotFoundError, ROLES } from '@core/shared';
 
-const oferta = { id: 'of-1', producto_id: 'p-1', vendedor_id: 'u-v', margen: 15, precio_final: '1150.00' };
+const oferta = { id: 'of-1', item_id: 'item-1', vendedor_id: 'u-v', margen: 15, precio_final: '1150.00' };
 const tienda = { id: 't-1', vendedor_id: 'u-v', nombre: 'Mi tienda', slug: 'mi-tienda' };
 const vendedor = { user_id: 'u-v', email: 'v@core.local', rol: ROLES.VENDEDOR };
 
@@ -23,7 +23,6 @@ function fabricar(): {
 } {
   const tiendas = { encontrarPorId: vi.fn(), deVendedor: vi.fn(), resolver: vi.fn() };
   const ofertas = {
-    publicar: vi.fn(),
     publicarItem: vi.fn(),
     cambiarMargen: vi.fn(),
     deVendedor: vi.fn(),
@@ -36,26 +35,26 @@ function fabricar(): {
   return { tiendas, ofertas, controller };
 }
 
-describe('OfertasController (api/v1, RN-01, R-U-10/11)', () => {
-  it('debe publicar la oferta con vendedor, producto y margen', async () => {
+describe('OfertasController (api/v2, RN-01, R-U-10/11)', () => {
+  it('debe publicar la oferta con vendedor, item y margen', async () => {
     const { tiendas, ofertas, controller } = fabricar();
     tiendas.encontrarPorId.mockResolvedValue(tienda);
-    ofertas.publicar.mockResolvedValue(oferta);
-    const dto = { tienda_id: '11111111-2222-3333-4444-555555555555', producto_id: 'p-1', margen: 15 };
+    ofertas.publicarItem.mockResolvedValue(oferta);
+    const dto = { tienda_id: '11111111-2222-3333-4444-555555555555', item_id: 'item-1', margen: 15 };
     await expect(controller.publicar(dto as never, vendedor as never)).resolves.toEqual(oferta);
     expect(tiendas.encontrarPorId).toHaveBeenCalledWith(dto.tienda_id);
-    expect(ofertas.publicar).toHaveBeenCalledWith('u-v', 't-1', 'p-1', 15);
+    expect(ofertas.publicarItem).toHaveBeenCalledWith('u-v', 't-1', 'item-1', 15);
   });
 
   it('debe publicar usando una tienda resuelta por slug', async () => {
     const { tiendas, ofertas, controller } = fabricar();
     tiendas.encontrarPorId.mockResolvedValue(tienda);
-    ofertas.publicar.mockResolvedValue(oferta);
-    const dto = { tienda_id: 'mi-tienda', producto_id: 'p-1', margen: 15 };
+    ofertas.publicarItem.mockResolvedValue(oferta);
+    const dto = { tienda_id: 'mi-tienda', item_id: 'item-1', margen: 15 };
 
     await expect(controller.publicar(dto as never, vendedor as never)).resolves.toEqual(oferta);
     expect(tiendas.encontrarPorId).toHaveBeenCalledWith('mi-tienda');
-    expect(ofertas.publicar).toHaveBeenCalledWith('u-v', 't-1', 'p-1', 15);
+    expect(ofertas.publicarItem).toHaveBeenCalledWith('u-v', 't-1', 'item-1', 15);
   });
 
   it('debe publicar un item unificado de servicio', async () => {
@@ -73,28 +72,28 @@ describe('OfertasController (api/v1, RN-01, R-U-10/11)', () => {
     const { tiendas, ofertas, controller } = fabricar();
     tiendas.encontrarPorId.mockResolvedValue(null);
     await expect(
-      controller.publicar({ tienda_id: 'no-existe', producto_id: 'p-1', margen: 15 } as never, vendedor as never),
+      controller.publicar({ tienda_id: 'no-existe', item_id: 'item-1', margen: 15 } as never, vendedor as never),
     ).rejects.toBeInstanceOf(NotFoundError);
-    expect(ofertas.publicar).not.toHaveBeenCalled();
+    expect(ofertas.publicarItem).not.toHaveBeenCalled();
   });
 
   it('debe usar la tienda del vendedor cuando no se informa tienda_id', async () => {
     const { tiendas, ofertas, controller } = fabricar();
     tiendas.deVendedor.mockResolvedValue(tienda);
-    ofertas.publicar.mockResolvedValue(oferta);
-    const dto = { producto_id: 'p-1', margen: 15 };
+    ofertas.publicarItem.mockResolvedValue(oferta);
+    const dto = { item_id: 'item-1', margen: 15 };
     await expect(controller.publicar(dto as never, vendedor as never)).resolves.toEqual(oferta);
     expect(tiendas.deVendedor).toHaveBeenCalledWith('u-v');
-    expect(ofertas.publicar).toHaveBeenCalledWith('u-v', 't-1', 'p-1', 15);
+    expect(ofertas.publicarItem).toHaveBeenCalledWith('u-v', 't-1', 'item-1', 15);
   });
 
   it('debe lanzar NotFoundError si no hay tienda y no se informa tienda_id', async () => {
     const { tiendas, ofertas, controller } = fabricar();
     tiendas.deVendedor.mockResolvedValue(null);
     await expect(
-      controller.publicar({ producto_id: 'p-1', margen: 15 } as never, vendedor as never),
+      controller.publicar({ item_id: 'item-1', margen: 15 } as never, vendedor as never),
     ).rejects.toBeInstanceOf(NotFoundError);
-    expect(ofertas.publicar).not.toHaveBeenCalled();
+    expect(ofertas.publicarItem).not.toHaveBeenCalled();
   });
 
   it('debe cambiar el margen de una oferta del vendedor autenticado', async () => {
@@ -130,7 +129,7 @@ describe('OfertasController (api/v1, RN-01, R-U-10/11)', () => {
     const { tiendas, ofertas, controller } = fabricar();
     tiendas.resolver.mockResolvedValue({
       tienda,
-      redirigirA: '/api/v1/tiendas/mi-tienda-nueva',
+      redirigirA: '/api/v2/tiendas/mi-tienda-nueva',
     });
     ofertas.deTienda.mockResolvedValue([]);
     const res = respuesta();
@@ -138,7 +137,7 @@ describe('OfertasController (api/v1, RN-01, R-U-10/11)', () => {
     await controller.tiendaPublica('mi-tienda-vieja', res as never);
 
     expect(res.status).toHaveBeenCalledWith(301);
-    expect(res.setHeader).toHaveBeenCalledWith('Location', '/api/v1/tiendas/mi-tienda-nueva');
+    expect(res.setHeader).toHaveBeenCalledWith('Location', '/api/v2/tiendas/mi-tienda-nueva');
   });
 
   it('debe lanzar NotFoundError cuando la tienda publica no existe', async () => {

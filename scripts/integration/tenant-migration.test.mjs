@@ -22,7 +22,16 @@ let client;
 
 async function aplicarMigraciones() {
   const { rows: [{ existe }] } = await client.query('SELECT to_regnamespace(\'identity\') IS NOT NULL AS existe');
-  const migraciones = existe ? MIGRACIONES.filter((name) => name !== '01_esquemas.sql') : MIGRACIONES;
+  const { rows: [{ catalogoFinal }] } = await client.query(
+    `SELECT to_regclass('catalog.items') IS NOT NULL AND to_regclass('catalog.productos') IS NULL AS "catalogoFinal"`,
+  );
+  const migraciones = existe
+    ? MIGRACIONES.filter(
+        (name) =>
+          name !== '01_esquemas.sql' &&
+          !(catalogoFinal && ['01e_adr25_empresas.sql', '24_multi_vertical.sql'].includes(name)),
+      )
+    : MIGRACIONES;
   for (const name of migraciones) {
     await client.query(await readFile(new URL(`../../infra/db/init/${name}`, import.meta.url), 'utf8'));
   }
@@ -56,8 +65,8 @@ test('el backfill asigna el pack de la vertical y deja auditoria', { concurrency
     );
     await client.query(
       `INSERT INTO identity.empresas
-         (id, nombre, slug, modalidad_logistica, vertical_id, pack_codigo, pack_version, creado_por, tipo_empresa)
-       VALUES ($1, 'Tenant legado', $3, 'hibrida', 'retail', NULL, NULL, $2, 'comercial')`,
+         (id, nombre, slug, vertical_id, pack_codigo, pack_version, creado_por)
+       VALUES ($1, 'Tenant legado', $3, 'retail', NULL, NULL, $2)`,
       [empresaId, usuarioId, `tenant-${empresaId.slice(0, 8)}`],
     );
     await client.query('COMMIT');
@@ -84,7 +93,6 @@ test('el backfill asigna el pack de la vertical y deja auditoria', { concurrency
     await client.query('BEGIN');
     await client.query('DELETE FROM identity.pack_migraciones WHERE empresa_id = $1', [empresaId]);
     await client.query('DELETE FROM identity.empresa_capacidades WHERE empresa_id = $1', [empresaId]);
-    await client.query('DELETE FROM identity.empresa_miembros WHERE empresa_id = $1', [empresaId]);
     await client.query('DELETE FROM identity.empresas WHERE id = $1', [empresaId]);
     await client.query('DELETE FROM identity.usuarios WHERE id = $1', [usuarioId]);
     await client.query('COMMIT');

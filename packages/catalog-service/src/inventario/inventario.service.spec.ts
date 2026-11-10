@@ -30,7 +30,32 @@ describe('InventarioService (niveles de stock)', () => {
     expect(linea.reservado).toBe(3);
     expect(linea.precio_base).toBe('1500.00');
     expect(linea.empresa_id).toBe('e-1');
-    expect(pg.query).toHaveBeenCalledWith(expect.stringContaining('FROM catalog.stock_vista'), []);
+    expect(pg.query).toHaveBeenCalledWith(expect.stringContaining('FROM catalog.items i'), []);
+  });
+
+  it('debe devolver el resumen de inventario por empresa', async () => {
+    const pg = {
+      queryOne: vi.fn().mockResolvedValue({ productos: 2, agotados: 1, stock_total: 7, valor_inventario_cents: 7000 }),
+    };
+    const servicio = new InventarioService(pg as never);
+    await expect(servicio.resumen('e-1')).resolves.toEqual({
+      productos: 2,
+      agotados: 1,
+      stock_total: 7,
+      valor_inventario_cents: 7000,
+    });
+    expect(pg.queryOne).toHaveBeenCalledWith(expect.stringContaining('i.empresa_id = $1'), ['e-1']);
+  });
+
+  it('debe devolver ceros cuando el resumen no tiene filas', async () => {
+    const pg = { queryOne: vi.fn().mockResolvedValue(null) };
+    const servicio = new InventarioService(pg as never);
+    await expect(servicio.resumen()).resolves.toEqual({
+      productos: 0,
+      agotados: 0,
+      stock_total: 0,
+      valor_inventario_cents: 0,
+    });
   });
 
   it('debe devolver una lista vacia cuando no hay existencias', async () => {
@@ -46,8 +71,8 @@ describe('InventarioService (niveles de stock)', () => {
     await servicio.listar('e-1');
 
     const [sql, params] = (pg.query as Mock).mock.calls[0];
-    expect(sql).toContain('s.empresa_id = $1');
-    expect(sql).toContain('producto_padre_id');
+    expect(sql).toContain('i.empresa_id = $1');
+    expect(sql).toContain('parent_item_id');
     expect(params).toEqual(['e-1']);
   });
 

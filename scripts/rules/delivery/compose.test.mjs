@@ -76,7 +76,7 @@ export default defineSuite({
       );
     });
 
-    test('dev construye local: `docker-compose.dev.yml` define los 10 servicios con `build:`', () => {
+    test('dev construye local: `docker-compose.dev.yml` define los 11 microservicios con `build:`', () => {
       const rel = 'docker-compose.dev.yml';
       assert.ok(existsSync(join(repoRoot, rel)), `falta ${rel}`);
       const content = read(rel);
@@ -88,7 +88,7 @@ export default defineSuite({
       for (const svc of SERVICES) {
         assert.ok(
           content.includes(`SERVICIO: ${svc}`),
-          `${rel}: falta el servicio \`${svc}\` (dev es el único entorno con los 10)`,
+          `${rel}: falta el servicio \`${svc}\` (dev es el único entorno con los 11)`,
         );
       }
     });

@@ -168,8 +168,8 @@ describe('media background (ADR-38)', () => {
           background_poster_objeto_id: POSTER,
         }),
       ).toMatchObject({
-        background_url: `/api/v1/storage/public/objetos/${OBJETO}`,
-        background_poster_url: `/api/v1/storage/public/objetos/${POSTER}`,
+        background_url: `/api/v2/storage/public/objetos/${OBJETO}`,
+        background_poster_url: `/api/v2/storage/public/objetos/${POSTER}`,
       });
     });
 
@@ -350,8 +350,8 @@ describe('media background (ADR-38)', () => {
           background_movil_poster_objeto_id: POSTER,
         }),
       ).toMatchObject({
-        background_movil_url: `/api/v1/storage/public/objetos/${OBJETO}`,
-        background_movil_poster_url: `/api/v1/storage/public/objetos/${POSTER}`,
+        background_movil_url: `/api/v2/storage/public/objetos/${OBJETO}`,
+        background_movil_poster_url: `/api/v2/storage/public/objetos/${POSTER}`,
       });
       expect(conBackgroundMovilUrls(BACKGROUND_MOVIL_POR_DEFECTO)).toMatchObject({
         background_movil_url: null,

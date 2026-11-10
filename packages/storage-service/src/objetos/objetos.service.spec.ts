@@ -62,6 +62,7 @@ const crear = () => {
   const buckets = {
     asegurar: vi.fn().mockResolvedValue(estadoBucket()),
     estado: vi.fn().mockResolvedValue(estadoBucket()),
+    bloquearEstadoEnTransaccion: vi.fn().mockResolvedValue(estadoBucket()),
     verificarCuota: vi.fn(),
     sumarUsoEnTransaccion: vi.fn().mockResolvedValue(undefined),
     restarUsoEnTransaccion: vi.fn().mockResolvedValue(undefined),
@@ -388,7 +389,8 @@ describe('ObjetosService (URLs prefirmadas y cuotas por tenant)', () => {
       });
 
       await expect(servicio.confirmar(TENANT, OBJETO_ID)).rejects.toThrow(/CUOTA_EXCEDIDA|cuota/);
-      expect(pg.transaccion).not.toHaveBeenCalled();
+      expect(pg.transaccion).toHaveBeenCalled();
+      expect(buckets.bloquearEstadoEnTransaccion).toHaveBeenCalled();
     });
 
     it('debe activar el objeto, contabilizar cuota y emitir el evento', async () => {
@@ -725,5 +727,18 @@ describe('ObjetosService (URLs prefirmadas y cuotas por tenant)', () => {
       await expect(servicio.leerPublico('no-es-uuid')).rejects.toThrow(NotFoundError);
       expect(pg.queryOne).not.toHaveBeenCalled();
     });
+  });
+
+  it('debe mantener la baja lógica si MinIO falla al borrar (objeto huérfano)', async () => {
+    const { servicio, pg, almacen, outbox, buckets } = crear();
+    (pg.queryOne as Mock).mockResolvedValue(filaObjeto({ estado: 'activo' }));
+    (almacen.eliminar as Mock).mockRejectedValue(new Error('minio caido'));
+
+    await expect(servicio.eliminar(TENANT, OBJETO_ID, {
+      user_id: 'u-1', email: 'u@t', rol: ROLES.ADMIN,
+    })).resolves.toBeUndefined();
+
+    expect(outbox.insertarEnTransaccion).toHaveBeenCalled();
+    expect(buckets.restarUsoEnTransaccion).toHaveBeenCalled();
   });
 });

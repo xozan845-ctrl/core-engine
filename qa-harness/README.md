@@ -1,20 +1,18 @@
 # Core Engine QA Harness
 
-Herramienta de testing agresivo y automatizado para el proyecto **Core Engine Core Engine**.
+Herramienta **manual** de testing agresivo contra un stack Core Engine ya
+levantado (API Gateway + microservicios + PostgreSQL + RabbitMQ + MinIO).
+Genera reportes HTML, Markdown y JSON.
 
-## Características
+> **No es un gate de CI.** Se ejecuta a demanda contra `docker-compose.dev.yml`
+> (o un entorno con credenciales equivalentes). El gate automático de cada PR es
+> `npm test` de la raíz y los workflows de `.github/workflows/`.
 
-- **Testing agresivo**: 15 suites cubriendo cada rincón de la aplicación
-- **Reporte ultra detallado**: HTML interactivo, Markdown, JSON
-- **Evaluación de control y calidad**: Scoring por dimensiones (seguridad, negocio, datos, rendimiento)
-- **Pruebas de usuario**: Flujos completos comprador/vendedor/admin
-- **Cobertura total**: Auth, ACL, CRUD, reglas de negocio, saga, concurrencia, carga, fuzzing, estático
-
-## Suites incluidas
+## Suites (22)
 
 | Suite | Descripción |
 |-------|-------------|
-| `00-preflight` | Verificación pre-ejecución (health, puertos, BD, RabbitMQ) |
+| `00-preflight` | Health del gateway (el runner lo ejecuta como preflight) |
 | `01-auth` | Autenticación y sesiones (RF-01, RF-02, RF-03) |
 | `02-role-access` | Control de acceso y roles (ACL Tabla 21) |
 | `03-catalog` | Catálogo CRUD y reglas (RN-01, RN-02, RN-08) |
@@ -29,48 +27,47 @@ Herramienta de testing agresivo y automatizado para el proyecto **Core Engine Co
 | `12-concurrency` | Concurrencia y race conditions (oversell, double submit) |
 | `13-load` | Carga y rendimiento (p50/p90/p99, throughput) |
 | `14-queue` | Outbox, DLQ, RabbitMQ, mensajería |
-| `15-static` | Análisis estático (lint, build, tests, debt) |
+| `15-static` | Análisis estático (lint, build, tests, deuda) — lento y duplica CI |
+| `16-owasp` | OWASP Top 10 |
+| `17-schema` | Contratos de datos y esquemas de BD |
+| `18-field` | Field service (backend móvil) |
+| `19-identity` | Identity service (auth, usuarios, altas administrativas) |
+| `20-multitenant` | Aislamiento por tenant |
+| `21-market-intelligence` | Inteligencia de mercado, analítica y geoespacial |
 
 ## Instalación
 
 ```bash
-cd core-engine/qa-harness
+cd qa-harness
 npm install
+```
+
+Requiere Node >= 20 y el stack levantado:
+
+```bash
+docker compose -f docker-compose.dev.yml up -d --build
 ```
 
 ## Uso
 
 ```bash
-# Ejecutar todas las suites (reporte completo)
+# Todas las suites (reporte completo)
 npm run test:full
 
-# Solo suites de seguridad
-npm run test:security
-
-# Solo reglas de negocio
-npm run test:business
-
-# Test de carga agresivo
-npm run test:load
-
-# Test de concurrencia
-npm run test:concurrency
-
-# Análisis estático
-npm run test:static
-
-# Outbox/DLQ/RabbitMQ
-npm run test:queue
-
-# Suites específicas
-node src/index.ts --suites 01-auth,02-role-access,03-catalog --format html
+# Suites concretas
+npm start -- --suites 01-auth,02-role-access,03-catalog --format html
 
 # Carga personalizada
-node src/index.ts --load agresivo --concurrency 100 --fuzz 20
+npm start -- --load agresivo --concurrency 100 --fuzz 20
 
 # Sin limpieza de datos
-node src/index.ts --no-cleanup
+npm start -- --no-cleanup
+
+# Ayuda
+npm start -- --help
 ```
+
+El entrypoint real es `src/index.js`. Los scripts npm ya apuntan a él.
 
 ## Opciones CLI
 
@@ -85,31 +82,30 @@ node src/index.ts --no-cleanup
 | `--no-cleanup` | No limpiar datos de prueba | `false` |
 | `-o, --output` | Directorio de reportes | `./reports` |
 
-## Reportes generados
+Las opciones se aplican a la configuración que consume el `Runner`; `--format`
+decide qué archivos se escriben y `--output` dónde.
+
+## Reportes
 
 ```
 reports/
-├── report.html    # Reporte interactivo con métricas, gráficos, evidencia
-├── report.md      # Markdown para CI/CD y documentación
+├── report.html    # Reporte interactivo con métricas, gráficos y evidencia
+├── report.md      # Markdown para documentación
 └── report.json    # Machine-readable para automatización
 ```
 
-### HTML Report incluye:
-- Scorecards por dimensión (Seguridad, Negocio, Datos, Rendimiento, Observabilidad)
-- Tabla detallada por suite con ✅/❌
-- Evidencia expandible: request/response, headers, timing, traceId
-- Recomendaciones por control fallado
-- Badge de calidad general (A+/A/B/C/D/F)
+El código de salida es `1` si hay cualquier fallo de suite o de test. Una suite
+que devuelve `pass:false` sin resultados (por ejemplo, por falta de token)
+cuenta como fallo, no como verde.
 
 ## Variables de entorno
 
-El harness lee automáticamente `.env` del proyecto padre. Variables relevantes:
+El harness lee `.env` del proyecto padre (`../../.env`). Variables relevantes:
 
 ```env
 BASE_URL=http://localhost:8080
 ADMIN_EMAIL=admin@core-engine.test
 ADMIN_PASSWORD=AdminCore Engine2026!
-JWT_SECRET=dev_secret
 DATABASE_URL=postgres://core_engine:core_engine_dev@postgres:5432/core_engine
 INTERNAL_API_KEY=dev_internal_key
 QA_TIMEOUT=30000
@@ -120,53 +116,33 @@ QA_CLEANUP=true
 QA_FORMAT=all
 ```
 
-## Requisitos
-
-- Node.js >= 20 (usa v24 nativo: fetch, crypto, etc.)
-- Stack Core Engine corriendo (`docker compose -f docker-compose.dev.yml up -d --build`)
-- PostgreSQL y RabbitMQ accesibles
+Las credenciales de desarrollo anteriores son las de `.env.example`; en un
+entorno real se sobreescriben por variables de entorno.
 
 ## Arquitectura
 
 ```
 qa-harness/
 ├── src/
-│   ├── index.ts              # Entry point CLI
-│   ├── config.ts             # Configuración desde .env
-│   ├── client/
-│   │   ├── http-client.ts    # HTTP client con fetch nativo
-│   │   ├── rabbitmq.ts       # RabbitMQ Management API
-│   │   └── postgres.ts       # PostgreSQL directo (pg)
-│   ├── suites/               # 15 suites de testing
-│   ├── reporter/
-│   │   └── reportes.ts       # Generador HTML/MD/JSON
-│   ├── runner/
-│   │   └── runner.ts         # Orquestador de suites
-│   └── utils.ts              # Utilidades compartidas
+│   ├── index.js              # Entry point CLI
+│   ├── config.js             # Configuración desde ../../.env
+│   ├── utils.js              # Clientes HTTP, RabbitMQ (Management API) y PostgreSQL
+│   ├── runner/runner.js      # Orquestador de suites
+│   ├── reporter/reportes.js  # Generador HTML/MD/JSON
+│   └── suites/               # 22 suites (00-preflight … 21-market-intelligence)
 └── package.json
 ```
 
-## Filosofía "Roost-style"
+## Limitaciones conocidas
 
-Inspirado en **Roost.ai** (testing agent automatizado):
-- **Descubrimiento automático**: Lee .env, healthchecks, swagger
-- **Generación de casos**: Suites predefinidas cubriendo specs (Tabla 21, RN-01..08, TC-01..08)
-- **Ejecución agresiva**: Fuzzing, concurrencia, carga, negativos
-- **Evidencia completa**: Request/response/timing/traceId por test
-- **Scoring de calidad**: Control + calidad = grade actionable
-
-## Integración CI/CD
-
-```yaml
-# .github/workflows/qa.yml
-- name: QA Harness
-  run: |
-    cd core-engine/qa-harness
-    npm install
-    npm run test:full
-    # report.html se puede publicar como artifact
-```
+- Requiere un stack real; no sustituye a `npm test`, `test:integration` ni al
+  E2E de `e2e.yml`.
+- `15-static` ejecuta `npm test`, `npm run lint` y `npm run build`: es lento y
+  duplica el CI; úsalo solo a demanda.
+- No está cubierto por ESLint (`eslint.config.mjs` solo lintea
+  `packages/*/src/**/*.ts` y `scripts/**/*.mjs`).
+- No se ejecuta en ningún workflow; es una herramienta de operación manual.
 
 ## Licencia
 
-MIT - Core Engine Team
+MIT — Core Engine Team

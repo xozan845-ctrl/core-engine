@@ -1137,3 +1137,77 @@ El PR #90 se completó utilizando convenciones atómicas (R-PR-1, R-GC-1..5) gar
   Build all services.
 - **Snapshot:** estado consolidado reescrito en [`AUDIT.md`](./AUDIT.md),
   conforme a R-COV-3.
+
+---
+
+# AUDIT (histórico) — 14ª auditoría de Core Engine (revisión integral: lógica, tests, scripts y documentación)
+
+- **Fecha:** 2026-11-08
+- **SHA auditado:** `bb602b5` (`feat/pack-builder`, worktree independiente).
+- **Estado global:** 🔴 **NO CUMPLE — HEAD en rojo**. G-7 y G-8 verdes; G-1/G-3 y
+  G-5/R-C-7 rojos; G-4 y G-6 parciales.
+
+## Intervención
+
+1. Revisión integral de la lógica de los 11 microservicios, del motor de
+   gobernanza, del QA harness y de la documentación.
+2. Se midió la matriz real: **1.322 tests en 132 archivos y 13 workspaces**
+   (antes se documentaban 1.130/114/12). `identity-service` baja a
+   80,42/71,31/74,38 y **rompe su threshold** 89/78/85 por la deuda nueva de
+   packs/partes/extensiones/capacidades; `npm test` aborta ahí.
+3. `contract:breaking` contra `origin/main` sale 1: `parte_id` aparece como
+   propiedad obligatoria en cuatro respuestas de logística sin allowlist.
+4. OpenAPI real: **334 operaciones (310 públicas + 24 internas)** en 11
+   servicios; el export no deja diff (G-8 ✅).
+5. Se alineó la documentación con la realidad: README, reglas de testing,
+   auditoría, runbooks, `.github/README.md`, plantillas de entorno y QA harness.
+6. Se corrigió el QA harness para que sus comandos arranquen y no den falso
+   verde (entrypoint `.js`, `bcryptjs` declarado, conteo por `pass`, lectura de
+   profundidad de colas).
+
+## Evidencia
+
+- `npm run lint` → 0 errores / 45 warnings; `npm run build` → 0.
+- `npm run swagger:export` → 0 y sin diff.
+- `npm test` → 1 (cobertura de `identity-service`).
+- `npm run contract:breaking -- --base-ref origin/main` → 1.
+- `npm run rules:check` → 0 (59 tests, 11 suites, 41/238 IDs).
+- `npm audit --audit-level=high` → 0; `--audit-level=moderate` → 12.
+- **Snapshot:** estado consolidado reescrito en [`AUDIT.md`](./AUDIT.md),
+  conforme a R-COV-3.
+
+---
+
+# AUDIT (histórico) — 15ª auditoría de Core Engine (cierre de hallazgos)
+
+- **Fecha:** 2026-11-10
+- **Estado global:** 🟢 **CUMPLE** en los gates automáticos de PR; G-4/G-5/G-6
+  siguen parciales por diseño.
+
+## Intervención
+
+1. Se corrigieron los hallazgos de la revisión integral del 2026-11-08:
+   autorización del gateway, aislamiento de market-intelligence, secretos por
+   defecto, outbox con reclamo atómico, event store con versión única, saga
+   atómica (catalog/orders/commissions), RLS de `orden_vista`, tasa de comisión
+   unificada, cuota/borrado de storage, bloqueo de scheduling, JSON/DLQ de
+   RabbitMQ y contabilidad de la parte del empresario.
+2. `identity-service` volvió a su umbral con specs de controllers y ramas de
+   servicio; `spec-baseline` queda vacío.
+3. La integración se hizo hermética: `catalog-items` aplica `01c` antes de
+   `01e`; `orders-types` aplica las migraciones 45 y 46.
+4. OpenAPI: los campos nuevos quedan opcionales en el spec y
+   `contract:breaking` pasa con **0 excepciones** (se retiraron las excepciones
+   temporales que se habían propuesto).
+5. La matriz real queda en **1.391 tests / 139 archivos / 13 workspaces**;
+   `coverage:compare` 13/13 y `baseline:guard` sin retroceso.
+
+## Evidencia
+
+- `npm test` → 0; `npm run build` → 0; `npm run lint` → 0 (44 warnings).
+- `npm run contract:breaking` → 0 (0 excepciones); `swagger:export` sin diff.
+- `npm run test:integration` → 0 (14/14 contra PostgreSQL 16).
+- `npm run rules:check` → 0; `test:engine` → 0; `test:smoke` → 0.
+- `npm run baseline:guard` → 0; `db:migrations` → 49; `db:rls` → 61.
+- **Snapshot:** estado consolidado reescrito en [`AUDIT.md`](./AUDIT.md),
+  conforme a R-COV-3.

@@ -54,10 +54,10 @@
     "statements": 40.34
   },
   "shared": {
-    "lines": 53.8,
-    "branches": 51.73,
-    "functions": 56.07,
-    "statements": 52.65
+    "lines": 90,
+    "branches": 75,
+    "functions": 91,
+    "statements": 88
   },
   "scheduling-service": {
     "lines": 94.59,

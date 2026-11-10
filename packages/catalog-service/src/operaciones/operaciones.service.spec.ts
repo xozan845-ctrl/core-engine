@@ -20,7 +20,7 @@ const COMBO_ROW = {
   precio_cents: 3000,
   estado: 'activo',
   componentes: [
-    { producto_id: PRODUCTO.id, sku: PRODUCTO.sku, nombre: PRODUCTO.nombre, cantidad: 2 },
+    { item_id: PRODUCTO.id, sku: PRODUCTO.sku, nombre: PRODUCTO.nombre, cantidad: 2 },
   ],
   creado_en: '2026-10-30T10:00:00.000Z',
   actualizado_en: '2026-10-30T10:00:00.000Z',
@@ -30,7 +30,7 @@ const PROMO_ROW = {
   empresa_id: EMPRESA,
   nombre: '2x1',
   tipo: '2x1',
-  producto_id: PRODUCTO.id,
+  item_id: PRODUCTO.id,
   sku: PRODUCTO.sku,
   cantidad_requerida: 2,
   cantidad_gratis: 1,
@@ -312,7 +312,7 @@ describe('OperacionesService (R-PS-04)', () => {
     expect(mov.id).toBe(MOV_ROW.id);
     expect(outbox.insertarEnTransaccion).toHaveBeenCalled();
     expect(client.query).toHaveBeenCalledWith(
-      expect.stringContaining('UPDATE catalog.productos'),
+      expect.stringContaining('UPDATE catalog.items'),
       [PRODUCTO.id, EMPRESA, 15],
     );
   });
@@ -351,7 +351,7 @@ describe('OperacionesService (R-PS-04)', () => {
     expect(mov.id).toBe(MOV_ROW.id);
     expect(outbox.insertarEnTransaccion).not.toHaveBeenCalled();
     expect(client.query).not.toHaveBeenCalledWith(
-      expect.stringContaining('UPDATE catalog.productos'),
+      expect.stringContaining('UPDATE catalog.items'),
       expect.anything(),
     );
   });

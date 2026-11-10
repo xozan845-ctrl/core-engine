@@ -80,10 +80,11 @@ Pasos:
 5. **Variables de entorno**: cada environment recibe las suyas en la pestaña
    *Environment* (Dockploy las escribe al `.env` que consume el compose). La
    plantilla de producción es **`.env.production.example`** (secretos reales y
-   únicos); dev usa `.env.example`. **El compose de producción solo exige
-   `POSTGRES_PASSWORD`** (+ las claves de runtime: `DATABASE_URL`, `RABBITMQ_URL`,
-   `JWT_SECRET`, `INTERNAL_API_KEY`, …). `GRAFANA_ADMIN_PASSWORD` y
-   `RABBITMQ_PASSWORD` solo hacen falta si se activa la capa de observabilidad.
+   únicos); dev usa `.env.example`. **El compose de producción exige
+   `POSTGRES_PASSWORD` y `RABBITMQ_PASSWORD`** (el servicio `rabbitmq` usa
+   `${RABBITMQ_PASSWORD:?...}`), además de las claves de runtime (`DATABASE_URL`,
+   `RABBITMQ_URL`, `JWT_SECRET`, `INTERNAL_API_KEY`, …). `GRAFANA_ADMIN_PASSWORD`
+   solo hace falta si se activa la capa de observabilidad.
 6. **Puertos/red**: el gateway se publica **solo en loopback**
    (`127.0.0.1:8080:8080`); el proxy de borde (Traefik/Dockploy) enruta el 443
    hacia él. Nunca publicar `8080:8080` en todas las interfaces: saltaría TLS y
@@ -91,7 +92,7 @@ Pasos:
 7. **Healthcheck/Readiness**: `GET /health` (liveness del gateway; lo usa el
    healthcheck de Dockploy, siempre abierto) y `GET /ready` (readiness agregada:
    responde **503** si algún microservicio del entorno desplegado no está `ok`;
-   son 8 en producción y 9 en stage porque incluye `commissions-service`, ADR-37;
+   son 9 en producción y 10 en stage porque incluye `commissions-service`, ADR-37;
    lo usa el smoke, R-CD-12). `/ready` exige `x-internal-key` salvo
    `READY_PUBLIC=true` (solo desarrollo) y está limitado a 10 req/min por IP con
    caché de 5 s.
@@ -156,7 +157,7 @@ Migraciones solo hacia adelante.
 | 12 | `CORS_ORIGINS` con los orígenes reales del frontend | ☐ | ☐ |
 | 13 | `TRUST_PROXY=1` y rate limit por IP real (probar dos IPs o revisar `x-ratelimit-remaining`) | ☐ | ☐ |
 | 14 | `8080` solo en loopback y cerrado en el firewall del VPS | ☐ | ☐ |
-| 15 | Frontend público usa `/api-proxy/api/v1` y su origen está en `CORS_ORIGINS` (ADR-29) | ☐ | ☐ |
+| 15 | Frontend público usa `/api-proxy/api/v2` y su origen está en `CORS_ORIGINS` (ADR-29) | ☐ | ☐ |
 
 > `EDGE_BASIC_AUTH` debe existir también como secreto del GitHub Environment
 > (`EDGE_BASIC_AUTH`) para que el smoke remoto se autentique en staging. Sin
@@ -165,7 +166,7 @@ Migraciones solo hacia adelante.
 > Para cubrir `commissions-service` (ADR-37), añade además los secretos
 > `SMOKE_EMPRESARIO_EMAIL`/`SMOKE_EMPRESARIO_PASSWORD` con un usuario de rol
 > `empresario` y empresa activa. Sin ellos el smoke omite la comprobación de
-> `/api/v1/empresarios/me/ventas`; con ellos falla si el servicio no responde.
+> `/api/v2/empresarios/me/ventas`; con ellos falla si el servicio no responde.
 >
 > Desarrollo local: `docker compose -f docker-compose.dev.yml up -d --build` + `npm run demo` es la
 > verificación equivalente antes de cualquier PR (R-GC-5).

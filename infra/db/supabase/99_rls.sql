@@ -95,7 +95,7 @@ CREATE POLICY configuracion_plataforma_admin ON identity.configuracion_plataform
 CREATE POLICY configuracion_plataforma_lectura ON identity.configuracion_plataforma
   FOR SELECT TO authenticated USING (true);
 
--- ── catalog.productos ───────────────────────────────────────────────────
+-- ── identity.empresas ───────────────────────────────────────────────────
 ALTER TABLE identity.empresas ENABLE ROW LEVEL SECURITY;
 CREATE POLICY empresas_super_admin ON identity.empresas FOR ALL TO authenticated
   USING (auth.rol() IN ('super_admin', 'admin')) WITH CHECK (auth.rol() IN ('super_admin', 'admin'));
@@ -107,15 +107,6 @@ CREATE POLICY empresas_empresario_update ON identity.empresas FOR UPDATE TO auth
   USING (auth.rol() = 'empresario' AND id::text = (auth.jwt() ->> 'tenant_id'))
   WITH CHECK (auth.rol() = 'empresario' AND id::text = (auth.jwt() ->> 'tenant_id'));
 
-ALTER TABLE identity.empresa_miembros ENABLE ROW LEVEL SECURITY;
-CREATE POLICY miembros_super_admin ON identity.empresa_miembros FOR ALL TO authenticated
-  USING (auth.rol() IN ('super_admin', 'admin')) WITH CHECK (auth.rol() IN ('super_admin', 'admin'));
-CREATE POLICY miembros_empresa ON identity.empresa_miembros FOR SELECT TO authenticated
-  USING (empresa_id::text = (auth.jwt() ->> 'tenant_id'));
-CREATE POLICY miembros_empresario_insert ON identity.empresa_miembros FOR INSERT TO authenticated
-  WITH CHECK (auth.rol() = 'empresario' AND (usuario_id = auth.uid() OR
-    empresa_id::text = (auth.jwt() ->> 'tenant_id')));
-
 -- ADR-26: historial de slugs de empresa. El trigger que lo mantiene es
 -- SECURITY DEFINER; las policies cubren la lectura de miembros y admin.
 ALTER TABLE identity.empresa_slugs ENABLE ROW LEVEL SECURITY;
@@ -124,28 +115,6 @@ CREATE POLICY empresa_slugs_super_admin ON identity.empresa_slugs FOR ALL TO aut
 CREATE POLICY empresa_slugs_miembros ON identity.empresa_slugs FOR SELECT TO authenticated
   USING (empresa_id::text = (auth.jwt() ->> 'tenant_id')
          OR empresa_id IN (SELECT id FROM identity.empresas WHERE creado_por = auth.uid()));
-
-ALTER TABLE catalog.productos ENABLE ROW LEVEL SECURITY;
-CREATE POLICY productos_admin_all ON catalog.productos
-  FOR ALL TO authenticated USING (auth.rol() = 'admin') WITH CHECK (auth.rol() = 'admin');
-CREATE POLICY productos_empresa ON catalog.productos
-  FOR ALL TO authenticated
-  USING (auth.rol() = 'empresario' AND empresa_id::text = (auth.jwt() ->> 'tenant_id'))
-  WITH CHECK (auth.rol() = 'empresario' AND empresa_id::text = (auth.jwt() ->> 'tenant_id'));
--- ADR-27: el catálogo público se sirve por el API Gateway con el alcance de la
--- empresa solicitada; no hay lectura anónima directa de la tabla.
-
--- ADR-28: imágenes de producto/variante. El objeto binario vive en storage;
--- esta tabla solo relaciona y se aísla por empresa.
-ALTER TABLE catalog.producto_imagenes ENABLE ROW LEVEL SECURITY;
-CREATE POLICY producto_imagenes_admin ON catalog.producto_imagenes
-  FOR ALL TO authenticated
-  USING (auth.rol() IN ('super_admin', 'admin'))
-  WITH CHECK (auth.rol() IN ('super_admin', 'admin'));
-CREATE POLICY producto_imagenes_empresa ON catalog.producto_imagenes
-  FOR ALL TO authenticated
-  USING (auth.rol() = 'empresario' AND empresa_id::text = (auth.jwt() ->> 'tenant_id'))
-  WITH CHECK (auth.rol() = 'empresario' AND empresa_id::text = (auth.jwt() ->> 'tenant_id'));
 
 ALTER TABLE catalog.historico_precios ENABLE ROW LEVEL SECURITY;
 CREATE POLICY historico_admin ON catalog.historico_precios
@@ -161,27 +130,6 @@ CREATE POLICY ajustes_empresa ON catalog.ajustes_stock
   FOR SELECT TO authenticated
   USING (auth.rol() = 'empresario' AND empresa_id::text = (auth.jwt() ->> 'tenant_id'));
 
-ALTER TABLE catalog.producto_catalogo_vista ENABLE ROW LEVEL SECURITY;
-CREATE POLICY catalogo_vista_admin ON catalog.producto_catalogo_vista
-  FOR ALL TO authenticated USING (auth.rol() = 'admin') WITH CHECK (auth.rol() = 'admin');
-CREATE POLICY catalogo_vista_empresa ON catalog.producto_catalogo_vista
-  FOR SELECT TO authenticated
-  USING (empresa_id::text = (auth.jwt() ->> 'tenant_id'));
-
-ALTER TABLE catalog.stock_vista ENABLE ROW LEVEL SECURITY;
-CREATE POLICY stock_vista_admin ON catalog.stock_vista
-  FOR ALL TO authenticated USING (auth.rol() = 'admin') WITH CHECK (auth.rol() = 'admin');
-CREATE POLICY stock_vista_empresa ON catalog.stock_vista
-  FOR SELECT TO authenticated
-  USING (empresa_id::text = (auth.jwt() ->> 'tenant_id'));
-
-ALTER TABLE catalog.inventario_mensual_mv ENABLE ROW LEVEL SECURITY;
-CREATE POLICY inventario_mensual_admin ON catalog.inventario_mensual_mv
-  FOR ALL TO authenticated USING (auth.rol() = 'admin') WITH CHECK (auth.rol() = 'admin');
-CREATE POLICY inventario_mensual_empresa ON catalog.inventario_mensual_mv
-  FOR SELECT TO authenticated
-  USING (empresa_id::text = (auth.jwt() ->> 'tenant_id'));
-
 ALTER TABLE catalog.reservas_ordenes ENABLE ROW LEVEL SECURITY;
 CREATE POLICY reservas_admin ON catalog.reservas_ordenes
   FOR ALL TO authenticated USING (auth.rol() = 'admin') WITH CHECK (auth.rol() = 'admin');
@@ -193,6 +141,16 @@ CREATE POLICY items_admin ON catalog.items
   USING (auth.rol() IN ('super_admin', 'admin'))
   WITH CHECK (auth.rol() IN ('super_admin', 'admin'));
 CREATE POLICY items_empresa ON catalog.items
+  FOR ALL TO authenticated
+  USING (auth.rol() = 'empresario' AND empresa_id::text = (auth.jwt() ->> 'tenant_id'))
+  WITH CHECK (auth.rol() = 'empresario' AND empresa_id::text = (auth.jwt() ->> 'tenant_id'));
+
+ALTER TABLE catalog.item_imagenes ENABLE ROW LEVEL SECURITY;
+CREATE POLICY item_imagenes_admin ON catalog.item_imagenes
+  FOR ALL TO authenticated
+  USING (auth.rol() IN ('super_admin', 'admin'))
+  WITH CHECK (auth.rol() IN ('super_admin', 'admin'));
+CREATE POLICY item_imagenes_empresa ON catalog.item_imagenes
   FOR ALL TO authenticated
   USING (auth.rol() = 'empresario' AND empresa_id::text = (auth.jwt() ->> 'tenant_id'))
   WITH CHECK (auth.rol() = 'empresario' AND empresa_id::text = (auth.jwt() ->> 'tenant_id'));
@@ -279,19 +237,23 @@ CREATE POLICY ofertas_vendedor_propias ON stores.ofertas
 CREATE POLICY ofertas_lectura ON stores.ofertas
   FOR SELECT TO anon, authenticated USING (true);
 
--- ── orders.proyeccion_ordenes ───────────────────────────────────────────
-ALTER TABLE orders.proyeccion_ordenes ENABLE ROW LEVEL SECURITY;
-CREATE POLICY ordenes_admin ON orders.proyeccion_ordenes
-  FOR ALL TO authenticated USING (auth.rol() = 'admin') WITH CHECK (auth.rol() = 'admin');
-CREATE POLICY ordenes_comprador_propias ON orders.proyeccion_ordenes
+-- ── orders.orden_vista (proyección CQRS vigente) ────────────────────────
+-- El código y el event sourcing escriben/leen `orden_vista`.
+-- Sin estas políticas, la proyección real quedaba sin RLS en Supabase.
+ALTER TABLE orders.orden_vista ENABLE ROW LEVEL SECURITY;
+CREATE POLICY orden_vista_admin ON orders.orden_vista
+  FOR ALL TO authenticated
+  USING (auth.rol() IN ('super_admin', 'admin'))
+  WITH CHECK (auth.rol() IN ('super_admin', 'admin'));
+CREATE POLICY orden_vista_comprador ON orders.orden_vista
   FOR SELECT TO authenticated
-  USING (auth.rol() = 'comprador' AND cliente_id = auth.uid());
--- el vendedor ve sus ventas a traves de los items enriquecidos (items_json)
-CREATE POLICY ordenes_vendedor_ventas ON orders.proyeccion_ordenes
+  USING (auth.rol() = 'comprador' AND comprador_id = auth.uid());
+CREATE POLICY orden_vista_vendedor ON orders.orden_vista
   FOR SELECT TO authenticated
   USING (auth.rol() = 'vendedor'
-         AND EXISTS (SELECT 1 FROM jsonb_array_elements(items_json) i
-                     WHERE i->>'vendedor_id' = auth.uid()::text));
+         AND (vendedor_id = auth.uid()
+              OR EXISTS (SELECT 1 FROM jsonb_array_elements(items_json) i
+                         WHERE i->>'vendedor_id' = auth.uid()::text)));
 
 -- ── orders.carritos (RN-05: cada comprador solo su carrito) ──────────────
 ALTER TABLE orders.carritos ENABLE ROW LEVEL SECURITY;
@@ -381,19 +343,6 @@ CREATE POLICY workspace_registros_vendedor ON finance.workspace_registros
   USING (auth.rol() = 'vendedor' AND propietario_id::text = auth.uid())
   WITH CHECK (auth.rol() = 'vendedor' AND propietario_id::text = auth.uid());
 
-
--- ── catalog.servicios (R-PS-02) ─────────────────────────────────────────
--- Los servicios son administrados por la empresa dueña; el catálogo público
--- de servicios no se expone todavía, así que no hay política anónima.
-ALTER TABLE catalog.servicios ENABLE ROW LEVEL SECURITY;
-CREATE POLICY servicios_admin ON catalog.servicios
-  FOR ALL TO authenticated
-  USING (auth.rol() IN ('super_admin', 'admin'))
-  WITH CHECK (auth.rol() IN ('super_admin', 'admin'));
-CREATE POLICY servicios_empresa ON catalog.servicios
-  FOR ALL TO authenticated
-  USING (auth.rol() = 'empresario' AND empresa_id::text = (auth.jwt() ->> 'tenant_id'))
-  WITH CHECK (auth.rol() = 'empresario' AND empresa_id::text = (auth.jwt() ->> 'tenant_id'));
 
 -- ── catalog: operaciones avanzadas (R-PS-04) ───────────────────────────
 ALTER TABLE catalog.configuracion_inventario ENABLE ROW LEVEL SECURITY;
@@ -508,3 +457,226 @@ CREATE POLICY scheduling_outbox_admin ON scheduling.outbox
   FOR ALL TO authenticated
   USING (auth.rol() IN ('super_admin', 'admin'))
   WITH CHECK (auth.rol() IN ('super_admin', 'admin'));
+
+ALTER TABLE identity.modelos_operacion ENABLE ROW LEVEL SECURITY;
+CREATE POLICY modelos_operacion_lectura ON identity.modelos_operacion
+  FOR SELECT TO anon, authenticated USING (activo);
+CREATE POLICY modelos_operacion_admin ON identity.modelos_operacion
+  FOR ALL TO authenticated
+  USING (auth.rol() IN ('super_admin', 'admin'))
+  WITH CHECK (auth.rol() IN ('super_admin', 'admin'));
+
+ALTER TABLE identity.pack_modelos ENABLE ROW LEVEL SECURITY;
+CREATE POLICY pack_modelos_lectura ON identity.pack_modelos
+  FOR SELECT TO authenticated
+  USING (EXISTS (
+    SELECT 1 FROM identity.packs p
+     WHERE p.codigo = pack_codigo AND p.version = pack_version AND p.activo
+  ));
+CREATE POLICY pack_modelos_admin ON identity.pack_modelos
+  FOR ALL TO authenticated
+  USING (auth.rol() IN ('super_admin', 'admin'))
+  WITH CHECK (auth.rol() IN ('super_admin', 'admin'));
+
+ALTER TABLE identity.extensiones_empresa ENABLE ROW LEVEL SECURITY;
+CREATE POLICY extensiones_empresa_admin ON identity.extensiones_empresa
+  FOR ALL TO authenticated
+  USING (auth.rol() IN ('super_admin', 'admin'))
+  WITH CHECK (auth.rol() IN ('super_admin', 'admin'));
+CREATE POLICY extensiones_empresa_lectura ON identity.extensiones_empresa
+  FOR SELECT TO authenticated
+  USING (empresa_id::text = (auth.jwt() ->> 'tenant_id'));
+CREATE POLICY extensiones_empresa_insert ON identity.extensiones_empresa
+  FOR INSERT TO authenticated
+  WITH CHECK (auth.rol() = 'empresario' AND empresa_id::text = (auth.jwt() ->> 'tenant_id'));
+CREATE POLICY extensiones_empresa_update ON identity.extensiones_empresa
+  FOR UPDATE TO authenticated
+  USING (auth.rol() = 'empresario' AND empresa_id::text = (auth.jwt() ->> 'tenant_id'))
+  WITH CHECK (auth.rol() = 'empresario' AND empresa_id::text = (auth.jwt() ->> 'tenant_id'));
+
+ALTER TABLE identity.extensiones_empresa_valores ENABLE ROW LEVEL SECURITY;
+CREATE POLICY extension_values_admin ON identity.extensiones_empresa_valores
+  FOR ALL TO authenticated
+  USING (auth.rol() IN ('super_admin', 'admin'))
+  WITH CHECK (auth.rol() IN ('super_admin', 'admin'));
+CREATE POLICY extension_values_lectura ON identity.extensiones_empresa_valores
+  FOR SELECT TO authenticated
+  USING (empresa_id::text = (auth.jwt() ->> 'tenant_id'));
+CREATE POLICY extension_values_insert ON identity.extensiones_empresa_valores
+  FOR INSERT TO authenticated
+  WITH CHECK (auth.rol() = 'empresario' AND empresa_id::text = (auth.jwt() ->> 'tenant_id'));
+CREATE POLICY extension_values_update ON identity.extensiones_empresa_valores
+  FOR UPDATE TO authenticated
+  USING (auth.rol() = 'empresario' AND empresa_id::text = (auth.jwt() ->> 'tenant_id'))
+  WITH CHECK (auth.rol() = 'empresario' AND empresa_id::text = (auth.jwt() ->> 'tenant_id'));
+CREATE POLICY extension_values_delete ON identity.extensiones_empresa_valores
+  FOR DELETE TO authenticated
+  USING (auth.rol() = 'empresario' AND empresa_id::text = (auth.jwt() ->> 'tenant_id'));
+
+ALTER TABLE identity.partes ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS partes_admin ON identity.partes;
+DROP POLICY IF EXISTS partes_empresa_lectura ON identity.partes;
+DROP POLICY IF EXISTS partes_empresa_escritura ON identity.partes;
+DROP POLICY IF EXISTS partes_empresa_insert ON identity.partes;
+DROP POLICY IF EXISTS partes_empresa_update ON identity.partes;
+DROP POLICY IF EXISTS partes_empresa_delete ON identity.partes;
+DROP POLICY IF EXISTS partes_empresa_archivar ON identity.partes;
+CREATE POLICY partes_admin ON identity.partes FOR ALL TO authenticated
+  USING (auth.rol() IN ('super_admin', 'admin'))
+  WITH CHECK (auth.rol() IN ('super_admin', 'admin'));
+CREATE POLICY partes_empresa_lectura ON identity.partes FOR SELECT TO authenticated
+  USING (empresa_id::text = (auth.jwt() ->> 'tenant_id'));
+CREATE POLICY partes_empresa_insert ON identity.partes FOR INSERT TO authenticated
+  WITH CHECK (auth.rol() IN ('empresario', 'vendedor', 'coordinador', 'supervisor', 'operativo')
+         AND empresa_id::text = (auth.jwt() ->> 'tenant_id'));
+CREATE POLICY partes_empresa_update ON identity.partes FOR UPDATE TO authenticated
+  USING (auth.rol() IN ('empresario', 'vendedor', 'coordinador', 'supervisor', 'operativo')
+         AND empresa_id::text = (auth.jwt() ->> 'tenant_id'))
+  WITH CHECK (auth.rol() IN ('empresario', 'vendedor', 'coordinador', 'supervisor', 'operativo')
+         AND empresa_id::text = (auth.jwt() ->> 'tenant_id'));
+CREATE POLICY partes_empresa_delete ON identity.partes FOR DELETE TO authenticated
+  USING (auth.rol() IN ('empresario', 'vendedor', 'coordinador', 'supervisor', 'operativo')
+         AND empresa_id::text = (auth.jwt() ->> 'tenant_id'));
+CREATE POLICY partes_empresa_archivar ON identity.partes FOR UPDATE TO authenticated
+  USING (auth.rol() IN ('empresario', 'vendedor', 'coordinador', 'supervisor', 'operativo')
+         AND empresa_id::text = (auth.jwt() ->> 'tenant_id') AND eliminado_en IS NULL)
+  WITH CHECK (auth.rol() IN ('empresario', 'vendedor', 'coordinador', 'supervisor', 'operativo')
+         AND empresa_id::text = (auth.jwt() ->> 'tenant_id')
+         AND eliminado_en IS NOT NULL AND estado = 'archivado');
+
+ALTER TABLE identity.medios_contacto ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS medios_contacto_admin ON identity.medios_contacto;
+DROP POLICY IF EXISTS medios_contacto_empresa_lectura ON identity.medios_contacto;
+DROP POLICY IF EXISTS medios_contacto_empresa_escritura ON identity.medios_contacto;
+DROP POLICY IF EXISTS medios_contacto_empresa_insert ON identity.medios_contacto;
+DROP POLICY IF EXISTS medios_contacto_empresa_update ON identity.medios_contacto;
+DROP POLICY IF EXISTS medios_contacto_empresa_delete ON identity.medios_contacto;
+DROP POLICY IF EXISTS medios_contacto_empresa_archivar ON identity.medios_contacto;
+CREATE POLICY medios_contacto_admin ON identity.medios_contacto FOR ALL TO authenticated
+  USING (auth.rol() IN ('super_admin', 'admin'))
+  WITH CHECK (auth.rol() IN ('super_admin', 'admin'));
+CREATE POLICY medios_contacto_empresa_lectura ON identity.medios_contacto FOR SELECT TO authenticated
+  USING (empresa_id::text = (auth.jwt() ->> 'tenant_id'));
+CREATE POLICY medios_contacto_empresa_insert ON identity.medios_contacto FOR INSERT TO authenticated
+  WITH CHECK (auth.rol() IN ('empresario', 'vendedor', 'coordinador', 'supervisor', 'operativo')
+         AND empresa_id::text = (auth.jwt() ->> 'tenant_id'));
+CREATE POLICY medios_contacto_empresa_update ON identity.medios_contacto FOR UPDATE TO authenticated
+  USING (auth.rol() IN ('empresario', 'vendedor', 'coordinador', 'supervisor', 'operativo')
+         AND empresa_id::text = (auth.jwt() ->> 'tenant_id'))
+  WITH CHECK (auth.rol() IN ('empresario', 'vendedor', 'coordinador', 'supervisor', 'operativo')
+         AND empresa_id::text = (auth.jwt() ->> 'tenant_id'));
+CREATE POLICY medios_contacto_empresa_delete ON identity.medios_contacto FOR DELETE TO authenticated
+  USING (auth.rol() IN ('empresario', 'vendedor', 'coordinador', 'supervisor', 'operativo')
+         AND empresa_id::text = (auth.jwt() ->> 'tenant_id'));
+CREATE POLICY medios_contacto_empresa_archivar ON identity.medios_contacto FOR UPDATE TO authenticated
+  USING (auth.rol() IN ('empresario', 'vendedor', 'coordinador', 'supervisor', 'operativo')
+         AND empresa_id::text = (auth.jwt() ->> 'tenant_id') AND eliminado_en IS NULL)
+  WITH CHECK (auth.rol() IN ('empresario', 'vendedor', 'coordinador', 'supervisor', 'operativo')
+         AND empresa_id::text = (auth.jwt() ->> 'tenant_id') AND eliminado_en IS NOT NULL);
+
+ALTER TABLE identity.direcciones_partes ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS direcciones_partes_admin ON identity.direcciones_partes;
+DROP POLICY IF EXISTS direcciones_partes_empresa_lectura ON identity.direcciones_partes;
+DROP POLICY IF EXISTS direcciones_partes_empresa_escritura ON identity.direcciones_partes;
+DROP POLICY IF EXISTS direcciones_partes_empresa_insert ON identity.direcciones_partes;
+DROP POLICY IF EXISTS direcciones_partes_empresa_update ON identity.direcciones_partes;
+DROP POLICY IF EXISTS direcciones_partes_empresa_delete ON identity.direcciones_partes;
+DROP POLICY IF EXISTS direcciones_partes_empresa_archivar ON identity.direcciones_partes;
+CREATE POLICY direcciones_partes_admin ON identity.direcciones_partes FOR ALL TO authenticated
+  USING (auth.rol() IN ('super_admin', 'admin'))
+  WITH CHECK (auth.rol() IN ('super_admin', 'admin'));
+CREATE POLICY direcciones_partes_empresa_lectura ON identity.direcciones_partes FOR SELECT TO authenticated
+  USING (empresa_id::text = (auth.jwt() ->> 'tenant_id'));
+CREATE POLICY direcciones_partes_empresa_insert ON identity.direcciones_partes FOR INSERT TO authenticated
+  WITH CHECK (auth.rol() IN ('empresario', 'vendedor', 'coordinador', 'supervisor', 'operativo')
+         AND empresa_id::text = (auth.jwt() ->> 'tenant_id'));
+CREATE POLICY direcciones_partes_empresa_update ON identity.direcciones_partes FOR UPDATE TO authenticated
+  USING (auth.rol() IN ('empresario', 'vendedor', 'coordinador', 'supervisor', 'operativo')
+         AND empresa_id::text = (auth.jwt() ->> 'tenant_id'))
+  WITH CHECK (auth.rol() IN ('empresario', 'vendedor', 'coordinador', 'supervisor', 'operativo')
+         AND empresa_id::text = (auth.jwt() ->> 'tenant_id'));
+CREATE POLICY direcciones_partes_empresa_delete ON identity.direcciones_partes FOR DELETE TO authenticated
+  USING (auth.rol() IN ('empresario', 'vendedor', 'coordinador', 'supervisor', 'operativo')
+         AND empresa_id::text = (auth.jwt() ->> 'tenant_id'));
+CREATE POLICY direcciones_partes_empresa_archivar ON identity.direcciones_partes FOR UPDATE TO authenticated
+  USING (auth.rol() IN ('empresario', 'vendedor', 'coordinador', 'supervisor', 'operativo')
+         AND empresa_id::text = (auth.jwt() ->> 'tenant_id') AND eliminado_en IS NULL)
+  WITH CHECK (auth.rol() IN ('empresario', 'vendedor', 'coordinador', 'supervisor', 'operativo')
+         AND empresa_id::text = (auth.jwt() ->> 'tenant_id') AND eliminado_en IS NOT NULL);
+
+ALTER TABLE identity.relaciones_partes ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS relaciones_partes_admin ON identity.relaciones_partes;
+DROP POLICY IF EXISTS relaciones_partes_empresa_lectura ON identity.relaciones_partes;
+DROP POLICY IF EXISTS relaciones_partes_empresa_escritura ON identity.relaciones_partes;
+DROP POLICY IF EXISTS relaciones_partes_empresa_insert ON identity.relaciones_partes;
+DROP POLICY IF EXISTS relaciones_partes_empresa_update ON identity.relaciones_partes;
+DROP POLICY IF EXISTS relaciones_partes_empresa_delete ON identity.relaciones_partes;
+DROP POLICY IF EXISTS relaciones_partes_empresa_desactivar ON identity.relaciones_partes;
+CREATE POLICY relaciones_partes_admin ON identity.relaciones_partes FOR ALL TO authenticated
+  USING (auth.rol() IN ('super_admin', 'admin'))
+  WITH CHECK (auth.rol() IN ('super_admin', 'admin'));
+CREATE POLICY relaciones_partes_empresa_lectura ON identity.relaciones_partes FOR SELECT TO authenticated
+  USING (empresa_id::text = (auth.jwt() ->> 'tenant_id'));
+CREATE POLICY relaciones_partes_empresa_insert ON identity.relaciones_partes FOR INSERT TO authenticated
+  WITH CHECK (auth.rol() IN ('empresario', 'vendedor', 'coordinador', 'supervisor', 'operativo')
+         AND empresa_id::text = (auth.jwt() ->> 'tenant_id'));
+CREATE POLICY relaciones_partes_empresa_update ON identity.relaciones_partes FOR UPDATE TO authenticated
+  USING (auth.rol() IN ('empresario', 'vendedor', 'coordinador', 'supervisor', 'operativo')
+         AND empresa_id::text = (auth.jwt() ->> 'tenant_id'))
+  WITH CHECK (auth.rol() IN ('empresario', 'vendedor', 'coordinador', 'supervisor', 'operativo')
+         AND empresa_id::text = (auth.jwt() ->> 'tenant_id'));
+CREATE POLICY relaciones_partes_empresa_delete ON identity.relaciones_partes FOR DELETE TO authenticated
+  USING (auth.rol() IN ('empresario', 'vendedor', 'coordinador', 'supervisor', 'operativo')
+         AND empresa_id::text = (auth.jwt() ->> 'tenant_id'));
+CREATE POLICY relaciones_partes_empresa_desactivar ON identity.relaciones_partes FOR UPDATE TO authenticated
+  USING (auth.rol() IN ('empresario', 'vendedor', 'coordinador', 'supervisor', 'operativo')
+         AND empresa_id::text = (auth.jwt() ->> 'tenant_id') AND activo)
+  WITH CHECK (auth.rol() IN ('empresario', 'vendedor', 'coordinador', 'supervisor', 'operativo')
+         AND empresa_id::text = (auth.jwt() ->> 'tenant_id') AND NOT activo);
+
+-- Personal configurable por empresa: permisos, puestos, alcance e incorporación.
+ALTER TABLE identity.roles_empresa ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS roles_empresa_admin ON identity.roles_empresa;
+DROP POLICY IF EXISTS roles_empresa_tenant ON identity.roles_empresa;
+CREATE POLICY roles_empresa_admin ON identity.roles_empresa FOR ALL TO authenticated
+  USING (auth.rol() IN ('super_admin', 'admin'))
+  WITH CHECK (auth.rol() IN ('super_admin', 'admin'));
+CREATE POLICY roles_empresa_tenant ON identity.roles_empresa FOR ALL TO authenticated
+  USING (empresa_id::text = (auth.jwt() ->> 'tenant_id'))
+  WITH CHECK (auth.rol() = 'empresario' AND empresa_id::text = (auth.jwt() ->> 'tenant_id'));
+CREATE POLICY roles_empresa_app ON identity.roles_empresa FOR SELECT TO core_engine_app
+  USING (true);
+
+ALTER TABLE identity.puestos_empresa ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS puestos_empresa_admin ON identity.puestos_empresa;
+DROP POLICY IF EXISTS puestos_empresa_tenant ON identity.puestos_empresa;
+CREATE POLICY puestos_empresa_admin ON identity.puestos_empresa FOR ALL TO authenticated
+  USING (auth.rol() IN ('super_admin', 'admin'))
+  WITH CHECK (auth.rol() IN ('super_admin', 'admin'));
+CREATE POLICY puestos_empresa_tenant ON identity.puestos_empresa FOR ALL TO authenticated
+  USING (empresa_id::text = (auth.jwt() ->> 'tenant_id'))
+  WITH CHECK (auth.rol() = 'empresario' AND empresa_id::text = (auth.jwt() ->> 'tenant_id'));
+
+ALTER TABLE identity.asignaciones_personal ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS asignaciones_personal_admin ON identity.asignaciones_personal;
+DROP POLICY IF EXISTS asignaciones_personal_tenant ON identity.asignaciones_personal;
+CREATE POLICY asignaciones_personal_admin ON identity.asignaciones_personal FOR ALL TO authenticated
+  USING (auth.rol() IN ('super_admin', 'admin'))
+  WITH CHECK (auth.rol() IN ('super_admin', 'admin'));
+CREATE POLICY asignaciones_personal_tenant ON identity.asignaciones_personal FOR ALL TO authenticated
+  USING (empresa_id::text = (auth.jwt() ->> 'tenant_id'))
+  WITH CHECK (auth.rol() = 'empresario' AND empresa_id::text = (auth.jwt() ->> 'tenant_id'));
+
+ALTER TABLE identity.invitaciones_personal ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS invitaciones_personal_admin ON identity.invitaciones_personal;
+DROP POLICY IF EXISTS invitaciones_personal_tenant ON identity.invitaciones_personal;
+DROP POLICY IF EXISTS invitaciones_personal_app ON identity.invitaciones_personal;
+CREATE POLICY invitaciones_personal_admin ON identity.invitaciones_personal FOR ALL TO authenticated
+  USING (auth.rol() IN ('super_admin', 'admin'))
+  WITH CHECK (auth.rol() IN ('super_admin', 'admin'));
+CREATE POLICY invitaciones_personal_tenant ON identity.invitaciones_personal FOR ALL TO authenticated
+  USING (empresa_id::text = (auth.jwt() ->> 'tenant_id'))
+  WITH CHECK (auth.rol() = 'empresario' AND empresa_id::text = (auth.jwt() ->> 'tenant_id'));
+-- El servicio valida token, estado, expiración y tenant antes de devolver datos.
+CREATE POLICY invitaciones_personal_app ON identity.invitaciones_personal FOR ALL TO core_engine_app
+  USING (true) WITH CHECK (true);

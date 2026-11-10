@@ -17,7 +17,7 @@ function fabricar(): { usuarios: Record<string, Mock>; controller: UsuariosContr
   return { usuarios, controller };
 }
 
-describe('UsuariosController (api/v1/usuarios, R-U-10/11)', () => {
+describe('UsuariosController (api/v2/usuarios, R-U-10/11)', () => {
   it('debe listar los usuarios que entrega el servicio', async () => {
     const { usuarios, controller } = fabricar();
     usuarios.listar.mockResolvedValue([usuario]);

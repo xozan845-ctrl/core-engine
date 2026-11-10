@@ -19,7 +19,7 @@ import { CarritoResponseDto } from './carrito.response.dto';
  */
 @ApiTags('Carrito')
 @ApiBearerAuth()
-@Controller('api/v1/carrito')
+@Controller('api/v2/carrito')
 export class CarritoController {
   constructor(private readonly carritos: CarritoService) {}
 

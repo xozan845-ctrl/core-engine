@@ -25,7 +25,7 @@ function fabricar(): { tributacion: Record<string, Mock>; controller: Tributacio
   return { tributacion, controller };
 }
 
-describe('TributacionController (api/v1/finanzas, Ley 822, R-U-10/11)', () => {
+describe('TributacionController (api/v2/finanzas, Ley 822, R-U-10/11)', () => {
   it('debe listar y crear jurisdicciones convirtiendo tasas de por-mil a fraccion', async () => {
     const { tributacion, controller } = fabricar();
     tributacion.listarJurisdicciones.mockResolvedValue([jurisdiccion]);

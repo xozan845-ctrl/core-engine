@@ -73,7 +73,7 @@ import {
  */
 @ApiTags('Comercio · Operación de tienda')
 @ApiBearerAuth()
-@Controller('api/v1/comercio')
+@Controller('api/v2/comercio')
 @Roles(ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.EMPRESARIO, ROLES.VENDEDOR)
 export class ComercioController {
   constructor(private readonly comercio: ComercioService) {}

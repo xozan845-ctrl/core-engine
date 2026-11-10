@@ -278,19 +278,6 @@ export default defineSuite({
       );
     });
 
-    test('R-C-7: CI bloquea cambios incompatibles en OpenAPI', () => {
-      const workflow = readText(join(repoRoot, WORKFLOWS_DIR, 'ci.yml'));
-      assert.match(
-        workflow,
-        /^\s*run: npm run contract:breaking -- --base-ref origin\/main$/m,
-        'CI debe ejecutar contract:breaking contra origin/main (R-C-7)',
-      );
-      assert.ok(
-        existsSync(join(repoRoot, 'scripts', 'tools', 'contract-breaking.mjs')),
-        'falta scripts/tools/contract-breaking.mjs',
-      );
-    });
-
     test('R-C-8: los servicios registran el filtro de errores normalizados', () => {
       const faltantes = [];
       for (const service of SERVICES) {

@@ -40,10 +40,10 @@ export async function preflight(config) {
   }
 
   const endpoints = [
-    '/api/v1/auth/login',
-    '/api/v1/catalog/productos',
-    '/api/v1/orders',
-    '/api/v1/admin/reportes',
+    '/api/v2/auth/login',
+    '/api/v2/catalog/productos',
+    '/api/v2/orders',
+    '/api/v2/admin/reportes',
     '/health',
     '/metrics',
   ];

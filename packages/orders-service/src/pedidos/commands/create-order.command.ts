@@ -8,6 +8,7 @@ import {
   IsObject,
   IsOptional,
   IsString,
+  IsUUID,
   Max,
   Min,
   ValidateNested,
@@ -44,10 +45,14 @@ export class ItemOrdenRequestDto {
  * carrito se vacia en la misma transaccion (RN-05).
  */
 export class CreateOrderCommand {
-  @ApiProperty({ required: false, enum: TIPOS_ORDEN, default: 'compra' })
+  @ApiProperty({ required: false, format: 'uuid', description: 'Referencia universal opcional del comprador' })
   @IsOptional()
+  @IsUUID()
+  cliente_parte_id?: string;
+
+  @ApiProperty({ enum: TIPOS_ORDEN, description: 'Tipo de orden explícito' })
   @IsIn(TIPOS_ORDEN)
-  tipo_orden?: TipoOrden;
+  tipo_orden: TipoOrden;
 
   @ApiProperty({ description: 'Artículos de la orden', required: false, type: [ItemOrdenRequestDto] })
   @IsOptional()

@@ -9,6 +9,7 @@ import {
   crearAccessToken,
   crearRefreshToken,
   verificarToken,
+  secretoJwt,
   TokenPayload,
   DomainError,
   UnauthorizedError,
@@ -29,6 +30,7 @@ export interface Sesion {
     tenant_id?: string;
     personal_id?: string;
     participacion_porcentaje?: number;
+    rol_empresa_id?: string;
     avatar_objeto_id?: string;
     avatar_url?: string;
   };
@@ -53,7 +55,7 @@ export function ttlAMs(ttl: string): number {
  */
 @Injectable()
 export class AuthService {
-  private readonly secreto = process.env.JWT_SECRET ?? 'dev_secret';
+  private readonly secreto = secretoJwt();
   private readonly accessTtl = process.env.JWT_ACCESS_TTL ?? JWT_ACCESS_TTL_DEFAULT;
   private readonly refreshTtl = process.env.JWT_REFRESH_TTL ?? JWT_REFRESH_TTL_DEFAULT;
 
@@ -145,6 +147,7 @@ export class AuthService {
       ...(usuario.tenant_id ? { tenant_id: usuario.tenant_id } : {}),
       ...(usuario.personal_id ? { personal_id: usuario.personal_id } : {}),
       ...(usuario.participacion_porcentaje !== undefined ? { participacion_porcentaje: usuario.participacion_porcentaje } : {}),
+      ...(usuario.rol_empresa_id ? { rol_empresa_id: usuario.rol_empresa_id } : {}),
     };
     const access = crearAccessToken(contexto, this.secreto, this.accessTtl);
     const refresh = crearRefreshToken(contexto, this.secreto, this.refreshTtl, jti);
@@ -160,6 +163,7 @@ export class AuthService {
         ...(usuario.tenant_id ? { tenant_id: usuario.tenant_id } : {}),
         ...(usuario.personal_id ? { personal_id: usuario.personal_id } : {}),
         ...(usuario.participacion_porcentaje !== undefined ? { participacion_porcentaje: usuario.participacion_porcentaje } : {}),
+        ...(usuario.rol_empresa_id ? { rol_empresa_id: usuario.rol_empresa_id } : {}),
         ...(usuario.avatar_objeto_id ? { avatar_objeto_id: usuario.avatar_objeto_id } : {}),
         ...(usuario.avatar_url ? { avatar_url: usuario.avatar_url } : {}),
       },

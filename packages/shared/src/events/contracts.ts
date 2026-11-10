@@ -52,27 +52,30 @@ export interface ItemOrden {
   tienda_id: string;
   empresa_id: string;
   participacion_porcentaje: number;
-  item_type?: 'producto' | 'servicio' | 'alquiler';
-  item_id?: string;
+  item_type: 'producto' | 'servicio' | 'alquiler';
+  item_id: string;
   fulfillment?: Fulfillment;
   fulfillment_config?: Record<string, unknown>;
 }
 
 export interface OrdenData {
   order_id: string;
-  cliente_id: string;
+  comprador_id: string;
+  cliente_parte_id?: string;
   items: ItemOrden[];
   total_cents: number;
   estado: 'creada';
-  tipo_orden?: TipoOrden;
+  tipo_orden: TipoOrden;
   fulfillment_config?: Record<string, unknown>;
+  /** Comisión calculada con la misma tasa que commissions-service (RN-04). */
+  comision_cents?: number;
 }
 
 export interface AppointmentCreatedData {
   cita_id: string;
   empresa_id: string;
   recurso_id: string;
-  cliente_id?: string;
+  cliente_parte_id?: string;
   order_id?: string;
   item_id?: string;
   inicia_en: string;
@@ -127,6 +130,7 @@ export interface PaymentProcesadoData {
 export interface ShipmentStartedData {
   order_id: string;
   empresa_id: string;
+  parte_id?: string | null;
   guia: string;
   estado: 'en_preparacion';
   proveedor_tipo: 'plataforma' | 'empresa' | null;
@@ -198,6 +202,7 @@ export interface ComprobanteEmitidoData {
   numero: string;
   tipo: 'FACTURA' | 'NOTA_CREDITO';
   orden_id?: string;
+  parte_id?: string | null;
   base_gravada_cents: number;
   iva_cents: number;
   total_cents: number;
@@ -215,9 +220,9 @@ export interface VentaGeolocalizadaData {
   /** SKUs vendidos (uno por item) — permite analisis por producto/zona. */
   skus: string[];
   monto_cents: number;
-  /** Coordenadas GPS completas del punto de venta (modelo Ubicacion del app-test). */
-  lat: number;
-  lng: number;
+  /** Coordenadas GPS del punto de venta (opcionales: la ingesta sin GPS es válida). */
+  lat?: number;
+  lng?: number;
   /** Precision del GPS en metros. */
   precision?: number;
   /** Velocidad en m/s en el momento del registro. */

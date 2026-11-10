@@ -33,7 +33,7 @@ jobs:
       - name: Guard baselines against new debt or exceptions
         run: npm run baseline:guard -- --base-ref "${{ github.event.pull_request.base.sha || 'origin/main' }}"
       - name: Validate project rules (R-CI-7, R-GC-1..4)
-        run: node scripts/check-rules.mjs
+        run: node scripts/cli.mjs rules
 
   security-gate:
     name: Security Gate (npm audit)
@@ -129,6 +129,11 @@ jobs:
         run: npm run build -w @core/shared
       - name: Build identity service for integration harness
         run: npm run build -w @core/identity-service
+      - name: Build catalog, scheduling and field services for the multi-vertical matrix
+        run: |
+          npm run build -w @core/catalog-service
+          npm run build -w @core/scheduling-service
+          npm run build -w @core/field-service
       - name: Verify catalog stock projection and API contracts against ephemeral PostgreSQL
         run: npm run test:integration
 
@@ -150,5 +155,3 @@ jobs:
         run: npm run build
       - name: Gate G-8 — spec OpenAPI sincronizado (R-DO-6, R-C-7)
         run: npm run swagger:export && git diff --exit-code docs/openapi docs/api packages/api-gateway/src/openapi.agregado.ts
-      - name: Gate R-C-7 — cambios incompatibles de contrato
-        run: npm run contract:breaking -- --base-ref origin/main

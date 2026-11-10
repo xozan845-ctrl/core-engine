@@ -14,17 +14,11 @@ export class OfertaResponseDto {
   @ApiProperty({ description: 'Empresa propietaria', format: 'uuid' }) empresa_id: string;
   @ApiProperty({ description: 'Participación congelable del vendedor', minimum: 0, maximum: 100 }) participacion_porcentaje: number;
 
-  @ApiProperty({ description: 'Tipo del item publicado', required: false, enum: ['producto', 'servicio', 'alquiler'] })
+  @ApiProperty({ description: 'Tipo del item publicado', enum: ['producto', 'servicio', 'alquiler'] })
   item_type: 'producto' | 'servicio' | 'alquiler';
 
-  @ApiProperty({ description: 'Id del item unificado', required: false, format: 'uuid' })
+  @ApiProperty({ description: 'Id del item unificado', format: 'uuid' })
   item_id: string;
-
-  @ApiProperty({ description: 'Id del producto o variante vendible', type: 'string', nullable: true, format: 'uuid' })
-  producto_id: string | null;
-
-  @ApiProperty({ description: 'Id del producto padre (si es variante)', required: false, nullable: true, format: 'uuid' })
-  producto_padre_id: string | null;
 
   @ApiProperty({ description: 'SKU de la variante o producto', example: 'SKU-001' })
   sku: string;
@@ -82,7 +76,7 @@ export class PaginaOfertasResponseDto {
   paginas: number;
 }
 
-/** Tienda pública con sus ofertas (GET /api/v1/tiendas/:id). */
+/** Tienda pública con sus ofertas (GET /api/v2/tiendas/:id). */
 export class TiendaPublicaResponseDto {
   @ApiProperty({ description: 'Datos de la tienda', type: TiendaResponseDto })
   tienda: TiendaResponseDto;

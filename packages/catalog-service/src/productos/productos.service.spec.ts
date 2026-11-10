@@ -25,10 +25,13 @@ describe('ProductosService (catalogo maestro y stock)', () => {
   beforeEach(() => {
     vi.stubGlobal(
       'fetch',
-      vi.fn(async () => ({
+      vi.fn(async (url: string | URL | Request) => ({
         ok: true,
         status: 200,
-        json: async () => ({ estado: 'activa', tipo_empresa: 'comercial' }),
+        json: async () =>
+          String(url).includes('/internal/empresas/capacidades')
+            ? { capacidades: [{ empresa_id: 'aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee', capacidad_codigo: 'catalogo_items', activo: true }] }
+            : { estado: 'activa' },
       })),
     );
   });
@@ -46,7 +49,7 @@ describe('ProductosService (catalogo maestro y stock)', () => {
     categoria: 'perifericos',
     precio_base_cents: 150000,
     stock: 10,
-    estado: 'disponible',
+    estado: 'activo',
     creado_en: '2026-09-01T00:00:00.000Z',
   };
 
@@ -98,13 +101,16 @@ describe('ProductosService (catalogo maestro y stock)', () => {
       (pg.queryOne as Mock).mockResolvedValue(null);
       vi.stubGlobal(
         'fetch',
-        vi.fn(async () => ({
+        vi.fn(async (url: string | URL | Request) => ({
           ok: true,
           status: 200,
-          json: async () => ({ estado: 'activa', tipo_empresa: 'logistica' }),
+          json: async () =>
+            String(url).includes('/internal/empresas/capacidades')
+              ? { capacidades: [{ empresa_id: 'aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee', capacidad_codigo: 'catalogo_items', activo: false }] }
+              : { estado: 'activa' },
         })),
       );
-      await expect(servicio.crear(datosValidos)).rejects.toThrow(/comerciales|EMPRESA_SIN_CATALOGO/);
+      await expect(servicio.crear(datosValidos)).rejects.toThrow(/capacidad de catálogo|EMPRESA_SIN_CATALOGO/);
     });
 
     it('debe normalizar el SKU a mayusculas y registrar historico de precio cuando el alta es valida', async () => {
@@ -120,7 +126,7 @@ describe('ProductosService (catalogo maestro y stock)', () => {
 
       expect(resultado.sku).toBe('SKU-01'); // trim + upper
       const [sqlInsert, params] = (client.query as Mock).mock.calls[0];
-      expect(sqlInsert).toContain('INSERT INTO catalog.productos');
+      expect(sqlInsert).toContain('INSERT INTO catalog.items');
       expect(params[2]).toBe('SKU-01'); // sku normalizado
       expect(params[6]).toBe(150000); // precio en centavos (A02)
       const sqlHistorico = (client.query as Mock).mock.calls[1][0];
@@ -146,7 +152,7 @@ describe('ProductosService (catalogo maestro y stock)', () => {
 
     it('debe serializar como agotado cuando la fila no esta disponible', async () => {
       const { servicio, pg } = crear();
-      (pg.queryOne as Mock).mockResolvedValue({ ...filaProducto, estado: 'agotado' });
+      (pg.queryOne as Mock).mockResolvedValue({ ...filaProducto, stock: 0 });
       const producto = await servicio.encontrarPorId(filaProducto.id);
       expect((producto as Producto).estado).toBe('agotado');
     });
@@ -172,7 +178,7 @@ describe('ProductosService (catalogo maestro y stock)', () => {
         { sku: 'sku-01', stock: 9, estado: 'disponible' },
       ]);
       const [sql, params] = (pg.query as Mock).mock.calls[0];
-      expect(sql).toContain('LOWER(sku) IN');
+      expect(sql).toContain('LOWER(i.codigo) IN');
       expect(params).toEqual(['sku-01']); // deduplicado y en minusculas
     });
 
@@ -188,15 +194,35 @@ describe('ProductosService (catalogo maestro y stock)', () => {
         { empresa_id: datosValidos.empresa_id, sku: 'sku-01' },
       ]);
     });
+
+    it('debe consultar el stock con el cliente de la transacción cuando se lo pasan', async () => {
+      const { servicio, pg, client } = crear();
+      (client.query as Mock).mockResolvedValue({
+        rows: [{ empresa_id: datosValidos.empresa_id, sku: 'sku-01', stock_restante: 9 }],
+      });
+
+      await expect(
+        servicio.stockActualDe(
+          [{ empresa_id: datosValidos.empresa_id, sku: 'SKU-01' }],
+          client,
+        ),
+      ).resolves.toEqual([
+        { empresa_id: datosValidos.empresa_id, sku: 'sku-01', stock_restante: 9 },
+      ]);
+      expect(client.query).toHaveBeenCalled();
+      expect(pg.query).not.toHaveBeenCalled();
+    });
   });
 
   describe('reservarStock (RN-03)', () => {
     const ordenOk = async (servicio: ProductosService, pg: any, client: any) => {
       (client.query as Mock)
+        .mockResolvedValueOnce({ rows: [], rowCount: 0 }) // SAVEPOINT
         .mockResolvedValueOnce({ rowCount: 1, rows: [{ stock: 10 }] }) // SELECT FOR UPDATE
         .mockResolvedValueOnce({ rows: [], rowCount: 1 }) // UPDATE stock
-        .mockResolvedValueOnce({ rows: [], rowCount: 1 }); // INSERT reserva
-      (pg.query as Mock).mockResolvedValue([{ empresa_id: datosValidos.empresa_id, sku: 'sku-01', stock_restante: 9 }]);
+        .mockResolvedValueOnce({ rows: [], rowCount: 1 }) // INSERT reserva
+        .mockResolvedValueOnce({ rows: [], rowCount: 0 }) // RELEASE
+        .mockResolvedValueOnce({ rows: [{ empresa_id: datosValidos.empresa_id, sku: 'sku-01', stock_restante: 9 }], rowCount: 1 }); // SELECT stock
       return servicio.reservarStock('o1', [
         { empresa_id: datosValidos.empresa_id, sku: 'sku-01', cantidad: 1 },
       ]);
@@ -211,16 +237,18 @@ describe('ProductosService (catalogo maestro y stock)', () => {
       expect(resultado.stock_restante).toEqual([
         { empresa_id: datosValidos.empresa_id, sku: 'sku-01', stock_restante: 9 },
       ]);
-      const sqlLock = (client.query as Mock).mock.calls[0][0];
+      const sqlLock = (client.query as Mock).mock.calls[1][0];
       expect(sqlLock).toContain('FOR UPDATE'); // bloqueo pesimista exigido por regla
       expect(sqlLock).toContain('empresa_id = $1');
-      const sqlReserva = (client.query as Mock).mock.calls[2][0];
+      const sqlReserva = (client.query as Mock).mock.calls[3][0];
       expect(sqlReserva).toContain('INSERT INTO catalog.reservas_ordenes');
     });
 
     it('debe rechazar la reserva completa cuando alguna linea no alcanza stock', async () => {
       const { servicio, client } = crear();
-      (client.query as Mock).mockResolvedValueOnce({ rowCount: 0, rows: [] }); // sin stock
+      (client.query as Mock)
+        .mockResolvedValueOnce({ rowCount: 0, rows: [] }) // SAVEPOINT
+        .mockResolvedValueOnce({ rowCount: 0, rows: [] }); // sin stock
 
       const resultado = await servicio.reservarStock('o2', [
         { empresa_id: datosValidos.empresa_id, sku: 'agotado', cantidad: 3 },
@@ -328,7 +356,7 @@ describe('ProductosService (catalogo maestro y stock)', () => {
       expect(resultado.stock).toBe(25);
       const sqls = (client.query as Mock).mock.calls.map((c: any[]) => c[0] as string);
       expect(sqls.some((s: string) => s.includes('INSERT INTO catalog.ajustes_stock'))).toBe(true);
-      expect(sqls.some((s: string) => s.includes('UPDATE catalog.productos'))).toBe(true);
+      expect(sqls.some((s: string) => s.includes('UPDATE catalog.items'))).toBe(true);
     });
 
     it('debe registrar el historico cuando cambia el precio base (RN-08)', async () => {
@@ -347,7 +375,7 @@ describe('ProductosService (catalogo maestro y stock)', () => {
       expect(sqlHistorico).toContain('historico_precios');
       expect(paramsHistorico).toEqual([
         filaProducto.empresa_id,
-        'SKU-01',
+        filaProducto.id,
         150000,
         200000,
       ]);
@@ -367,7 +395,7 @@ describe('ProductosService (catalogo maestro y stock)', () => {
       });
 
       const [sqlUpdate, params] = (client.query as Mock).mock.calls.find(
-        (c: any[]) => String(c[0]).includes('UPDATE catalog.productos'),
+        (c: any[]) => String(c[0]).includes('UPDATE catalog.items'),
       ) as [string, unknown[]];
       expect(sqlUpdate).toContain('nombre = $1');
       expect(sqlUpdate).toContain('descripcion = $2');
@@ -409,10 +437,10 @@ describe('ProductosService (catalogo maestro y stock)', () => {
       });
 
       const [sqlCount, params] = (pg.queryOne as Mock).mock.calls[0];
-      expect(sqlCount).toContain('WHERE');
+      expect(sqlCount).toContain('i.stock > 0');
       expect(sqlCount).toContain('empresa_id = $1');
-      expect(sqlCount).toContain('LOWER(v.nombre) LIKE');
-      expect(params).toEqual([datosValidos.empresa_id, '%tecl%', 'disponible', 'Perifericos']);
+      expect(sqlCount).toContain('LOWER(i.nombre) LIKE');
+      expect(params).toEqual([datosValidos.empresa_id, '%tecl%', 'Perifericos']);
     });
 
     it('debe calcular offset con la pagina y el limite cuando pagina dos veces', async () => {
@@ -454,7 +482,7 @@ describe('ProductosService (catalogo maestro y stock)', () => {
     };
     const filaImagen = {
       id: IMAGEN_ID,
-      producto_id: filaProducto.id,
+      item_id: filaProducto.id,
       objeto_id: OBJETO_ID,
       orden: 0,
       es_principal: true,
@@ -464,11 +492,18 @@ describe('ProductosService (catalogo maestro y stock)', () => {
       vi.stubGlobal(
         'fetch',
         vi.fn(async (url: string | URL | Request) => {
+          if (String(url).includes('/internal/empresas/capacidades')) {
+            return {
+              ok: true,
+              status: 200,
+              json: async () => ({ capacidades: [{ empresa_id: 'aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee', capacidad_codigo: 'catalogo_items', activo: true }] }),
+            } as Response;
+          }
           if (String(url).includes('/internal/empresas/')) {
             return {
               ok: true,
               status: 200,
-              json: async () => ({ estado: 'activa', tipo_empresa: 'comercial' }),
+              json: async () => ({ estado: 'activa' }),
             } as Response;
           }
           return {
@@ -513,10 +548,10 @@ describe('ProductosService (catalogo maestro y stock)', () => {
       expect(producto.tiene_variantes).toBe(true);
       expect(producto.variantes).toHaveLength(1);
       expect(producto.variantes?.[0].sku).toBe('SKU-01-ROJO');
-      expect(producto.imagenes[0].url).toBe(`/api/v1/storage/public/objetos/${OBJETO_ID}`);
+      expect(producto.imagenes[0].url).toBe(`/api/v2/storage/public/objetos/${OBJETO_ID}`);
       const sqls = (client.query as Mock).mock.calls.map((c) => String(c[0]));
-      expect(sqls.some((s) => s.includes('producto_padre_id'))).toBe(true);
-      expect(sqls.some((s) => s.includes('fn_recalcular_padre'))).toBe(true);
+      expect(sqls.some((s) => s.includes('parent_item_id'))).toBe(true);
+      expect(sqls.some((s) => s.includes('UPDATE catalog.items p'))).toBe(true);
     });
 
     it('debe rechazar una imagen que no está marcada como pública', async () => {
@@ -554,15 +589,17 @@ describe('ProductosService (catalogo maestro y stock)', () => {
       expect(pagina.items[0].imagenes).toHaveLength(1);
       expect(pagina.items[0].imagenes[0].es_principal).toBe(true);
       const [sqlRows] = (pg.query as Mock).mock.calls[0];
-      expect(sqlRows).toContain('producto_padre_id IS NULL');
+      expect(sqlRows).toContain('i.parent_item_id IS NULL');
     });
 
     it('debe impedir reservar stock del padre si tiene variantes', async () => {
       const { servicio, client } = crear();
-      (client.query as Mock).mockResolvedValueOnce({
-        rowCount: 1,
-        rows: [{ stock: 10, tiene_variantes: true }],
-      });
+      (client.query as Mock)
+        .mockResolvedValueOnce({ rowCount: 0, rows: [] }) // SAVEPOINT
+        .mockResolvedValueOnce({
+          rowCount: 1,
+          rows: [{ stock: 10, tiene_variantes: true }],
+        });
 
       const resultado = await servicio.reservarStock('o1', [
         { empresa_id: datosValidos.empresa_id, sku: 'SKU-01', cantidad: 1 },
@@ -598,7 +635,7 @@ describe('ProductosService (catalogo maestro y stock)', () => {
     };
     const imagen = {
       id: IMAGEN_ID,
-      producto_id: filaProducto.id,
+      item_id: filaProducto.id,
       objeto_id: OBJETO_ID,
       orden: 0,
       es_principal: true,
@@ -608,11 +645,18 @@ describe('ProductosService (catalogo maestro y stock)', () => {
       vi.stubGlobal(
         'fetch',
         vi.fn(async (url: string | URL | Request) => {
+          if (String(url).includes('/internal/empresas/capacidades')) {
+            return {
+              ok: true,
+              status: 200,
+              json: async () => ({ capacidades: [{ empresa_id: 'aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee', capacidad_codigo: 'catalogo_items', activo: true }] }),
+            } as Response;
+          }
           if (String(url).includes('/internal/empresas/')) {
             return {
               ok: true,
               status: 200,
-              json: async () => ({ estado: 'activa', tipo_empresa: 'comercial' }),
+              json: async () => ({ estado: 'activa' }),
             } as Response;
           }
           if (respuesta instanceof Error) throw respuesta;
@@ -637,8 +681,8 @@ describe('ProductosService (catalogo maestro y stock)', () => {
 
       expect(creada.sku).toBe('SKU-01-ROJO');
       const sqls = (client.query as Mock).mock.calls.map((c) => String(c[0]));
-      expect(sqls.some((s) => s.includes('INSERT INTO catalog.productos'))).toBe(true);
-      expect(sqls.some((s) => s.includes('fn_recalcular_padre'))).toBe(true);
+      expect(sqls.some((s) => s.includes('INSERT INTO catalog.items'))).toBe(true);
+      expect(sqls.some((s) => s.includes('UPDATE catalog.items p'))).toBe(true);
     });
 
     it('debe rechazar una variante de una variante', async () => {
@@ -694,7 +738,7 @@ describe('ProductosService (catalogo maestro y stock)', () => {
       await expect(
         servicio.eliminarVariante(filaProducto.id, VARIANTE_ID, datosValidos.empresa_id),
       ).resolves.toBeUndefined();
-      expect((client.query as Mock).mock.calls.some((c) => String(c[0]).includes('DELETE FROM catalog.productos'))).toBe(true);
+      expect((client.query as Mock).mock.calls.some((c) => String(c[0]).includes('SET eliminado_en = NOW()'))).toBe(true);
     });
 
     it('debe rechazar eliminar una variante que no pertenece al padre', async () => {
@@ -735,7 +779,7 @@ describe('ProductosService (catalogo maestro y stock)', () => {
 
       expect(resultado.id).toBe(filaProducto.id);
       const sqls = (client.query as Mock).mock.calls.map((c) => String(c[0]));
-      expect(sqls.some((s) => s.includes('INSERT INTO catalog.producto_imagenes'))).toBe(true);
+      expect(sqls.some((s) => s.includes('INSERT INTO catalog.item_imagenes'))).toBe(true);
       expect(sqls.some((s) => s.includes('SET es_principal = true'))).toBe(true);
     });
 
@@ -781,7 +825,7 @@ describe('ProductosService (catalogo maestro y stock)', () => {
 
       await servicio.eliminarImagen(filaProducto.id, IMAGEN_ID, datosValidos.empresa_id);
       const sqls = (client.query as Mock).mock.calls.map((c) => String(c[0]));
-      expect(sqls.some((s) => s.includes('DELETE FROM catalog.producto_imagenes'))).toBe(true);
+      expect(sqls.some((s) => s.includes('DELETE FROM catalog.item_imagenes'))).toBe(true);
       expect(sqls.some((s) => s.includes('SET es_principal = true'))).toBe(true);
     });
 
@@ -898,8 +942,11 @@ describe('ProductosService (catalogo maestro y stock)', () => {
       vi.stubGlobal(
         'fetch',
         vi.fn(async (url: string | URL | Request) => {
+          if (String(url).includes('/internal/empresas/capacidades')) {
+            return { ok: true, status: 200, json: async () => ({ capacidades: [{ empresa_id: 'aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee', capacidad_codigo: 'catalogo_items', activo: true }] }) } as Response;
+          }
           if (String(url).includes('/internal/empresas/')) {
-            return { ok: true, status: 200, json: async () => ({ estado: 'activa', tipo_empresa: 'comercial' }) } as Response;
+            return { ok: true, status: 200, json: async () => ({ estado: 'activa' }) } as Response;
           }
           return {
             ok: true,
@@ -916,7 +963,7 @@ describe('ProductosService (catalogo maestro y stock)', () => {
       (pg.queryOne as Mock).mockResolvedValue({ ...filaProducto, tiene_variantes: false });
       (pg.query as Mock).mockResolvedValue([]);
       (client.query as Mock).mockResolvedValueOnce({
-        rows: [{ id: 'img-1', producto_id: filaProducto.id, objeto_id: OBJETO_ID, orden: 0, es_principal: true }],
+        rows: [{ id: 'img-1', item_id: filaProducto.id, objeto_id: OBJETO_ID, orden: 0, es_principal: true }],
         rowCount: 1,
       });
 
@@ -956,10 +1003,13 @@ describe('ProductosService (catalogo maestro y stock)', () => {
           if (String(url).includes('/internal/ofertas/')) {
             return { ok: true, status: 200, json: async () => ({ total: 1 }) } as Response;
           }
+          if (String(url).includes('/internal/empresas/capacidades')) {
+            return { ok: true, status: 200, json: async () => ({ capacidades: [{ empresa_id: 'aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee', capacidad_codigo: 'catalogo_items', activo: true }] }) } as Response;
+          }
           return {
             ok: true,
             status: 200,
-            json: async () => ({ estado: 'activa', tipo_empresa: 'comercial' }),
+            json: async () => ({ estado: 'activa' }),
           } as Response;
         }),
       );
@@ -992,10 +1042,13 @@ describe('ProductosService (catalogo maestro y stock)', () => {
           if (String(url).includes('/internal/ofertas/')) {
             return { ok: true, status: 200, json: async () => ({ total: 2 }) } as Response;
           }
+          if (String(url).includes('/internal/empresas/capacidades')) {
+            return { ok: true, status: 200, json: async () => ({ capacidades: [{ empresa_id: 'aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee', capacidad_codigo: 'catalogo_items', activo: true }] }) } as Response;
+          }
           return {
             ok: true,
             status: 200,
-            json: async () => ({ estado: 'activa', tipo_empresa: 'comercial' }),
+            json: async () => ({ estado: 'activa' }),
           } as Response;
         }),
       );
@@ -1020,7 +1073,7 @@ describe('ProductosService (catalogo maestro y stock)', () => {
         .mockResolvedValue([
           {
             id: '33333333-4444-4555-8666-777777777777',
-            producto_id: filaProducto.id,
+            item_id: filaProducto.id,
             objeto_id: 'o-1',
             orden: 0,
             es_principal: true,
@@ -1032,10 +1085,13 @@ describe('ProductosService (catalogo maestro y stock)', () => {
           if (String(url).includes('/internal/ofertas/')) {
             return { ok: true, status: 200, json: async () => ({ total: 1 }) } as Response;
           }
+          if (String(url).includes('/internal/empresas/capacidades')) {
+            return { ok: true, status: 200, json: async () => ({ capacidades: [{ empresa_id: 'aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee', capacidad_codigo: 'catalogo_items', activo: true }] }) } as Response;
+          }
           return {
             ok: true,
             status: 200,
-            json: async () => ({ estado: 'activa', tipo_empresa: 'comercial' }),
+            json: async () => ({ estado: 'activa' }),
           } as Response;
         }),
       );

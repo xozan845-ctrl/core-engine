@@ -32,7 +32,7 @@ function refs(valor, salida = new Set()) {
 
 test('cada servicio tiene contrato público e interno en su carpeta', () => {
   const encontrados = servicios();
-  assert.ok(encontrados.length >= 10, 'deben existir las carpetas de los 10 servicios');
+  assert.ok(encontrados.length >= 11, 'deben existir las carpetas de los 11 servicios');
   for (const servicio of encontrados) {
     for (const archivo of ['public.openapi.json', 'internal.openapi.json']) {
       const documento = leer(servicio, archivo);
@@ -50,7 +50,7 @@ test('no quedan specs planos ni rutas fuera de la superficie declarada', () => {
   for (const servicio of servicios()) {
     const publico = leer(servicio, 'public.openapi.json');
     for (const ruta of Object.keys(publico.paths ?? {})) {
-      assert.match(ruta, /^\/api\/v1(?:\/|$)/, `${servicio}: ruta pública inválida ${ruta}`);
+      assert.match(ruta, /^\/api\/v2(?:\/|$)/, `${servicio}: ruta pública inválida ${ruta}`);
     }
     const interno = leer(servicio, 'internal.openapi.json');
     for (const ruta of Object.keys(interno.paths ?? {})) {
