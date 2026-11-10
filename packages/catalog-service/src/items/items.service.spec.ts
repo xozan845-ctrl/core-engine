@@ -101,6 +101,28 @@ describe('ItemsService (fase 2)', () => {
     expect(pg.queryOne).toHaveBeenCalledWith(expect.stringContaining('INSERT INTO catalog.items'), expect.any(Array));
   });
 
+  it('crea servicios y alquileres válidos y rechaza un padre inválido', async () => {
+    const { servicio, pg } = crear();
+    (pg.queryOne as Mock)
+      .mockResolvedValueOnce({ esquema: { type: 'object', additionalProperties: true } })
+      .mockResolvedValueOnce({ ...fila, tipo: 'servicio', duration_minutes: 60, track_inventory: false, stock: null });
+    await expect(servicio.crearItem({
+      tipo: 'servicio', codigo: 'SERV-001', nombre: 'Consulta', precio: '10.00', duration_minutes: 60,
+    }, EMPRESA)).resolves.toMatchObject({ tipo: 'servicio', duration_minutes: 60 });
+
+    (pg.queryOne as Mock)
+      .mockResolvedValueOnce({ esquema: { type: 'object', additionalProperties: true } })
+      .mockResolvedValueOnce({ ...fila, tipo: 'alquiler', track_inventory: false, stock: null });
+    await expect(servicio.crearItem({
+      tipo: 'alquiler', codigo: 'ALQ-001', nombre: 'Andamio', precio: '10.00',
+    }, EMPRESA)).resolves.toMatchObject({ tipo: 'alquiler', track_inventory: false });
+
+    (pg.queryOne as Mock).mockResolvedValueOnce(null);
+    await expect(servicio.crearItem({
+      tipo: 'producto', codigo: 'SKU-002', nombre: 'Padre', precio: '10.00', stock: 1, parent_item_id: '00000000-0000-4000-8000-000000000000',
+    }, EMPRESA)).rejects.toMatchObject({ codigo: 'ITEM_PADRE_INVALIDO' });
+  });
+
   it('exige duración en servicios y stock en productos inventariables', async () => {
     const { servicio } = crear();
     await expect(servicio.crearItem({
