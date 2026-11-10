@@ -20,7 +20,7 @@
     "version:bump": "node scripts/tools/version-bump.mjs",
     "test:engine": "node --test scripts/engine/lib/*.test.mjs scripts/engine/*.test.mjs",
     "test:smoke": "node --test scripts/tools/*.test.mjs",
-    "test:integration": "node --test scripts/integration/*.test.mjs",
+    "test:integration": "node scripts/tools/integration-runner.mjs",
     "db:migrations": "node scripts/tools/db-migrations.mjs",
     "db:rls": "node scripts/tools/db-rls.mjs",
     "env:check": "node scripts/tools/env-check.mjs",
