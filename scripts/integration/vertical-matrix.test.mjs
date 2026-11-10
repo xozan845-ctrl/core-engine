@@ -35,7 +35,6 @@ const MIGRACIONES = [
   '22_herencia_tema.sql',
   '24_multi_vertical.sql',
   '29_vertical_packs.sql',
-  '37_personal_empresa.sql',
 ];
 
 const CASOS = [
@@ -133,22 +132,39 @@ before(async () => {
             !(catalogoFinal && ['01c_cqrs_catalog.sql', '01e_adr25_empresas.sql', '01h_catalogo_por_empresa.sql', '24_multi_vertical.sql'].includes(name)),
         )
       : MIGRACIONES;
-    await client.query(`
-      CREATE SCHEMA IF NOT EXISTS auth;
-      CREATE OR REPLACE FUNCTION auth.jwt() RETURNS jsonb LANGUAGE sql STABLE AS $$
-        SELECT COALESCE(NULLIF(current_setting('request.jwt.claims', true), ''), '{}')::jsonb
-      $$;
-      CREATE OR REPLACE FUNCTION auth.rol() RETURNS text LANGUAGE sql STABLE AS $$
-        SELECT COALESCE(auth.jwt() ->> 'rol', 'anon')
-      $$;
-      CREATE OR REPLACE FUNCTION auth.uid() RETURNS uuid LANGUAGE sql STABLE AS $$
-        SELECT NULLIF(auth.jwt() ->> 'sub', '')::uuid
-      $$;
-    `);
     for (const name of migraciones) {
       const sql = await readFile(new URL(`../../infra/db/init/${name}`, import.meta.url), 'utf8');
       await client.query(sql);
     }
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS identity.roles_empresa (
+        id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+        empresa_id uuid NOT NULL,
+        codigo text NOT NULL,
+        nombre text NOT NULL,
+        descripcion text NOT NULL DEFAULT '',
+        permisos jsonb NOT NULL DEFAULT '{}'::jsonb,
+        activo boolean NOT NULL DEFAULT true,
+        creado_por uuid NOT NULL,
+        creado_en timestamptz NOT NULL DEFAULT NOW(),
+        actualizado_en timestamptz NOT NULL DEFAULT NOW(),
+        UNIQUE (empresa_id, codigo)
+      );
+      CREATE TABLE IF NOT EXISTS identity.asignaciones_personal (
+        id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+        empresa_id uuid NOT NULL,
+        usuario_id uuid NOT NULL,
+        rol_empresa_id uuid NOT NULL,
+        tienda_id uuid,
+        puesto_id uuid,
+        metadata jsonb NOT NULL DEFAULT '{}'::jsonb,
+        estado text NOT NULL DEFAULT 'activa',
+        inicia_en timestamptz NOT NULL DEFAULT NOW(),
+        termina_en timestamptz,
+        creado_por uuid NOT NULL,
+        creado_en timestamptz NOT NULL DEFAULT NOW()
+      );
+    `);
   } finally {
     await client.query('SELECT pg_advisory_unlock(38194201)');
   }
