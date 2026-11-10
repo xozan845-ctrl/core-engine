@@ -1175,3 +1175,39 @@ El PR #90 se completó utilizando convenciones atómicas (R-PR-1, R-GC-1..5) gar
 - `npm audit --audit-level=high` → 0; `--audit-level=moderate` → 12.
 - **Snapshot:** estado consolidado reescrito en [`AUDIT.md`](./AUDIT.md),
   conforme a R-COV-3.
+
+---
+
+# AUDIT (histórico) — 15ª auditoría de Core Engine (cierre de hallazgos)
+
+- **Fecha:** 2026-11-10
+- **Estado global:** 🟢 **CUMPLE** en los gates automáticos de PR; G-4/G-5/G-6
+  siguen parciales por diseño.
+
+## Intervención
+
+1. Se corrigieron los hallazgos de la revisión integral del 2026-11-08:
+   autorización del gateway, aislamiento de market-intelligence, secretos por
+   defecto, outbox con reclamo atómico, event store con versión única, saga
+   atómica (catalog/orders/commissions), RLS de `orden_vista`, tasa de comisión
+   unificada, cuota/borrado de storage, bloqueo de scheduling, JSON/DLQ de
+   RabbitMQ y contabilidad de la parte del empresario.
+2. `identity-service` volvió a su umbral con specs de controllers y ramas de
+   servicio; `spec-baseline` queda vacío.
+3. La integración se hizo hermética: `catalog-items` aplica `01c` antes de
+   `01e`; `orders-types` aplica las migraciones 45 y 46.
+4. OpenAPI: los campos nuevos quedan opcionales en el spec y
+   `contract:breaking` pasa con **0 excepciones** (se retiraron las excepciones
+   temporales que se habían propuesto).
+5. La matriz real queda en **1.391 tests / 139 archivos / 13 workspaces**;
+   `coverage:compare` 13/13 y `baseline:guard` sin retroceso.
+
+## Evidencia
+
+- `npm test` → 0; `npm run build` → 0; `npm run lint` → 0 (44 warnings).
+- `npm run contract:breaking` → 0 (0 excepciones); `swagger:export` sin diff.
+- `npm run test:integration` → 0 (14/14 contra PostgreSQL 16).
+- `npm run rules:check` → 0; `test:engine` → 0; `test:smoke` → 0.
+- `npm run baseline:guard` → 0; `db:migrations` → 49; `db:rls` → 61.
+- **Snapshot:** estado consolidado reescrito en [`AUDIT.md`](./AUDIT.md),
+  conforme a R-COV-3.
