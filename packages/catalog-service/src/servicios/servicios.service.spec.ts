@@ -28,8 +28,9 @@ function crear() {
     queryOne: vi.fn().mockResolvedValue(null),
   };
   const productos = { validarEmpresaCatalogo: vi.fn().mockResolvedValue(undefined) };
-  const servicio = new ServiciosService(pg as never, productos as never);
-  return { servicio, pg, productos };
+  const items = { validarAtributos: vi.fn().mockResolvedValue(undefined) };
+  const servicio = new ServiciosService(pg as never, productos as never, items as never);
+  return { servicio, pg, productos, items };
 }
 
 const datos = {
@@ -65,7 +66,7 @@ describe('ServiciosService (R-PS-02)', () => {
       estado: 'activo',
     });
     expect(pg.query).toHaveBeenCalledWith(
-      expect.stringContaining('FROM catalog.servicios'),
+      expect.stringContaining('FROM catalog.items'),
       expect.arrayContaining(['%inst%', 'activo', 'servicios', 10, 10]),
     );
   });
@@ -94,7 +95,7 @@ describe('ServiciosService (R-PS-02)', () => {
 
     expect(productos.validarEmpresaCatalogo).toHaveBeenCalledWith(EMPRESA);
     const insert = (pg.queryOne as Mock).mock.calls[2];
-    expect(insert[0]).toContain('INSERT INTO catalog.servicios');
+    expect(insert[0]).toContain('INSERT INTO catalog.items');
     expect(insert[1]).toContain('SERV-001');
     expect(resultado.id).toBe(fila.id);
   });
@@ -138,7 +139,7 @@ describe('ServiciosService (R-PS-02)', () => {
 
     expect(resultado).toMatchObject({ nombre: 'Soporte', estado: 'inactivo' });
     const update = (pg.queryOne as Mock).mock.calls[1];
-    expect(update[0]).toContain('UPDATE catalog.servicios');
+    expect(update[0]).toContain('UPDATE catalog.items');
     expect(update[1]).toContain(90);
   });
 
@@ -172,6 +173,35 @@ describe('ServiciosService (R-PS-02)', () => {
 
     (pg.queryOne as Mock).mockResolvedValueOnce(null);
     await expect(servicio.eliminar(fila.id, EMPRESA)).rejects.toBeInstanceOf(NotFoundError);
+  });
+
+  it('busca un servicio activo por código o barras', async () => {
+    const { servicio, pg } = crear();
+    (pg.queryOne as Mock).mockResolvedValueOnce(fila).mockResolvedValueOnce(null);
+    await expect(servicio.encontrarPorCodigo('SERV-001', EMPRESA)).resolves.toMatchObject({
+      codigo: 'SERV-001',
+    });
+    await expect(servicio.encontrarPorCodigo('  ', EMPRESA)).resolves.toBeNull();
+    expect(pg.queryOne).toHaveBeenCalledWith(
+      expect.stringContaining("i.tipo = 'servicio'"),
+      [EMPRESA, 'SERV-001'],
+    );
+  });
+
+  it('valida los atributos al actualizar cuando llegan', async () => {
+    const { servicio, pg, items } = crear();
+    (pg.queryOne as Mock)
+      .mockResolvedValueOnce(fila)
+      .mockResolvedValueOnce({ ...fila, nombre: 'Soporte' });
+
+    await servicio.actualizar(fila.id, { nombre: 'Soporte', atributos: { nivel: 2 } }, EMPRESA);
+
+    expect(items.validarAtributos).toHaveBeenCalledWith(
+      EMPRESA,
+      'servicio',
+      fila.categoria,
+      { nivel: 2 },
+    );
   });
 
   it('valida el código de barras al actualizar si cambia', async () => {

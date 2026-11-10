@@ -94,8 +94,18 @@ function crearHandler(
         if (storesFails) return { ok: false } as Response;
         return { ok: true, json: async () => sobreOfertas } as Response;
       }
-      if (u.includes('productos/lote')) {
-        if (stockCatalog === 'fetch-error') return { ok: false } as Response;
+      if (u.includes('identity-service') && u.includes('/internal/empresas/capacidades')) {
+        const empresaCap = (sobreOfertas[0] as { empresa_id?: string } | undefined)?.empresa_id ?? 'empresa-1';
+        return {
+          ok: true,
+          json: async () => ({
+            capacidades: [
+              { empresa_id: empresaCap, capacidad_codigo: 'fulfillment_onsite', activo: true },
+            ],
+          }),
+        } as Response;
+      }
+      if (u.includes('items/lote')) {        if (stockCatalog === 'fetch-error') return { ok: false } as Response;
         if (stockCatalog === 'network-error') throw new Error('network down');
         if (stockCatalog === 'sin-sku') {
           return { ok: true, json: async () => [] } as Response;
@@ -173,9 +183,6 @@ describe('CreateOrderCommandHandler (CQRS + Event Sourcing)', () => {
       precio_venta: '300.00',
     };
     const fixture = crearHandler([ofertaServicio], 'network-error');
-    fixture.pg.query.mockResolvedValue([
-      { empresa_id: empresaId, capacidad_codigo: 'fulfillment_onsite', activo: true },
-    ]);
 
     const vista = await fixture.handler.ejecutar({
       tipo_orden: 'reserva',
@@ -185,7 +192,7 @@ describe('CreateOrderCommandHandler (CQRS + Event Sourcing)', () => {
     expect(vista.tipo_orden).toBe('reserva');
     expect(vista.items[0]).toMatchObject({ item_type: 'servicio', fulfillment: 'onsite' });
     expect((fixture.store.appendEnTransaccion.mock.calls[0][3] as { tipo_orden: string }).tipo_orden).toBe('reserva');
-    expect(fixture.fetchMock).toHaveBeenCalledTimes(1);
+    expect(fixture.fetchMock).toHaveBeenCalledTimes(2);
   });
 
   it('total con cantidades multiples: 2 unidades = C$ 2 300', async () => {
@@ -293,7 +300,7 @@ describe('CreateOrderCommandHandler (CQRS + Event Sourcing)', () => {
       headers: { 'x-internal-key': '' },
     });
     expect(fetchMock.mock.calls[1][0]).toBe(
-      'http://catalog-service:3002/internal/productos/lote?skus=ACE-001',
+      'http://catalog-service:3002/internal/items/lote?skus=ACE-001',
     );
     expect(fetchMock.mock.calls[1][1]).toMatchObject({
       headers: { 'x-internal-key': '' },

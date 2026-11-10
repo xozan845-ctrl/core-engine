@@ -83,9 +83,15 @@ export interface ActualizarServicioInput {
   atributos?: Record<string, unknown>;
 }
 
+const COLUMNAS_SERVICIO = `i.id, i.empresa_id, i.codigo, i.nombre, i.descripcion,
+  i.categoria, i.marca, i.codigo_barras, i.precio_cents, i.costo_cents, i.unidad,
+  i.duration_minutes AS duracion_minutos, i.atributos, i.estado, i.creado_en,
+  i.actualizado_en`;
+
 /**
  * Servicios de la empresa (R-PS-02). Es un recurso propio del catálogo, no un
- * producto sin stock: tiene duración, precio/costo y baja lógica por empresa.
+ * producto sin stock: tiene duración, precio/costo y baja lógica. Desde la
+ * Fase 3 vive en `catalog.items` con `tipo='servicio'`.
  */
 @Injectable()
 export class ServiciosService {
@@ -106,32 +112,34 @@ export class ServiciosService {
     const empresaId = this.exigirEmpresa(filtros.empresa_id);
     const { pagina, limite } = parsearPaginacion(filtros as Record<string, unknown>);
     const params: unknown[] = [empresaId];
-    const condiciones: string[] = ['empresa_id = $1', 'eliminado_en IS NULL'];
+    const condiciones: string[] = [
+      'i.empresa_id = $1',
+      "i.tipo = 'servicio'",
+      'i.eliminado_en IS NULL',
+    ];
     if (filtros.q) {
       params.push(`%${String(filtros.q).toLowerCase()}%`);
       condiciones.push(
-        `(LOWER(nombre) LIKE $${params.length} OR LOWER(codigo) LIKE $${params.length}
-          OR LOWER(marca) LIKE $${params.length} OR LOWER(codigo_barras) LIKE $${params.length})`,
+        `(LOWER(i.nombre) LIKE $${params.length} OR LOWER(i.codigo) LIKE $${params.length}
+          OR LOWER(i.marca) LIKE $${params.length} OR LOWER(i.codigo_barras) LIKE $${params.length})`,
       );
     }
     if (filtros.estado) {
       params.push(String(filtros.estado));
-      condiciones.push(`estado = $${params.length}`);
+      condiciones.push(`i.estado = $${params.length}`);
     }
     if (filtros.categoria) {
       params.push(String(filtros.categoria));
-      condiciones.push(`LOWER(categoria) = LOWER($${params.length})`);
+      condiciones.push(`LOWER(i.categoria) = LOWER($${params.length})`);
     }
     const where = `WHERE ${condiciones.join(' AND ')}`;
     const total = await this.pg
-      .queryOne<{ n: number }>(`SELECT COUNT(*)::int AS n FROM catalog.servicios ${where}`, params)
+      .queryOne<{ n: number }>(`SELECT COUNT(*)::int AS n FROM catalog.items i ${where}`, params)
       .then((r) => r?.n ?? 0);
     const filas = await this.pg.query<ServicioRow>(
-      `SELECT id, empresa_id, codigo, nombre, descripcion, categoria, marca,
-              codigo_barras, precio_cents, costo_cents, unidad, duracion_minutos,
-              atributos, estado, creado_en, actualizado_en
-         FROM catalog.servicios ${where}
-        ORDER BY creado_en DESC
+      `SELECT ${COLUMNAS_SERVICIO}
+         FROM catalog.items i ${where}
+        ORDER BY i.creado_en DESC
         LIMIT $${params.length + 1} OFFSET $${params.length + 2}`,
       [...params, limite, (pagina - 1) * limite],
     );
@@ -141,11 +149,10 @@ export class ServiciosService {
   async encontrarPorId(id: string, empresaId: string): Promise<Servicio | null> {
     if (!UUID.test(id)) return null;
     const fila = await this.pg.queryOne<ServicioRow>(
-      `SELECT id, empresa_id, codigo, nombre, descripcion, categoria, marca,
-              codigo_barras, precio_cents, costo_cents, unidad, duracion_minutos,
-              atributos, estado, creado_en, actualizado_en
-         FROM catalog.servicios
-        WHERE id = $1 AND empresa_id = $2 AND eliminado_en IS NULL`,
+      `SELECT ${COLUMNAS_SERVICIO}
+         FROM catalog.items i
+        WHERE i.id = $1 AND i.empresa_id = $2 AND i.tipo = 'servicio'
+          AND i.eliminado_en IS NULL`,
       [id, empresaId],
     );
     return fila ? this.serializar(fila) : null;
@@ -156,12 +163,11 @@ export class ServiciosService {
     const valor = codigo.trim();
     if (!valor) return null;
     const fila = await this.pg.queryOne<ServicioRow>(
-      `SELECT id, empresa_id, codigo, nombre, descripcion, categoria, marca,
-              codigo_barras, precio_cents, costo_cents, unidad, duracion_minutos,
-              atributos, estado, creado_en, actualizado_en
-         FROM catalog.servicios
-        WHERE empresa_id = $1 AND eliminado_en IS NULL AND estado = 'activo'
-          AND (codigo_barras = $2 OR upper(codigo) = upper($2))
+      `SELECT ${COLUMNAS_SERVICIO}
+         FROM catalog.items i
+        WHERE i.empresa_id = $1 AND i.tipo = 'servicio' AND i.eliminado_en IS NULL
+          AND i.estado = 'activo'
+          AND (i.codigo_barras = $2 OR upper(i.codigo) = upper($2))
         LIMIT 1`,
       [empresaId, valor],
     );
@@ -181,13 +187,16 @@ export class ServiciosService {
     await this.validarCodigoUnico(empresaId, codigo);
     await this.validarBarcodeUnico(empresaId, codigoBarras);
     const fila = await this.pg.queryOne<ServicioRow>(
-      `INSERT INTO catalog.servicios
-         (empresa_id, codigo, nombre, descripcion, categoria, marca, codigo_barras,
-          precio_cents, costo_cents, unidad, duracion_minutos, atributos, estado)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12::jsonb, $13)
+      `INSERT INTO catalog.items
+         (empresa_id, tipo, codigo, nombre, descripcion, categoria, marca, codigo_barras,
+          precio_cents, costo_cents, unidad, duration_minutes, atributos, estado,
+          track_inventory)
+       VALUES ($1, 'servicio', $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12::jsonb, $13,
+               false)
        RETURNING id, empresa_id, codigo, nombre, descripcion, categoria, marca,
-                 codigo_barras, precio_cents, costo_cents, unidad, duracion_minutos,
-                 atributos, estado, creado_en, actualizado_en`,
+                 codigo_barras, precio_cents, costo_cents, unidad,
+                 duration_minutes AS duracion_minutos, atributos, estado, creado_en,
+                 actualizado_en`,
       [
         empresaId,
         codigo,
@@ -234,14 +243,16 @@ export class ServiciosService {
       await this.validarBarcodeUnico(empresaId, codigoBarras, id);
     }
     const fila = await this.pg.queryOne<ServicioRow>(
-      `UPDATE catalog.servicios
+      `UPDATE catalog.items
           SET nombre = $3, descripcion = $4, categoria = $5, marca = $6,
               codigo_barras = $7, precio_cents = $8, costo_cents = $9, unidad = $10,
-              duracion_minutos = $11, atributos = $12::jsonb, estado = $13, actualizado_en = NOW()
-        WHERE id = $1 AND empresa_id = $2 AND eliminado_en IS NULL
+              duration_minutes = $11, atributos = $12::jsonb, estado = $13,
+              actualizado_en = NOW()
+        WHERE id = $1 AND empresa_id = $2 AND tipo = 'servicio' AND eliminado_en IS NULL
         RETURNING id, empresa_id, codigo, nombre, descripcion, categoria, marca,
-                  codigo_barras, precio_cents, costo_cents, unidad, duracion_minutos,
-                  atributos, estado, creado_en, actualizado_en`,
+                  codigo_barras, precio_cents, costo_cents, unidad,
+                  duration_minutes AS duracion_minutos, atributos, estado, creado_en,
+                  actualizado_en`,
       [
         id,
         empresaId,
@@ -265,9 +276,9 @@ export class ServiciosService {
   /** Baja lógica: conserva el registro y lo marca inactivo (R-DB-5). */
   async eliminar(id: string, empresaId: string): Promise<void> {
     const fila = await this.pg.queryOne<{ id: string }>(
-      `UPDATE catalog.servicios
+      `UPDATE catalog.items
           SET eliminado_en = NOW(), estado = 'inactivo', actualizado_en = NOW()
-        WHERE id = $1 AND empresa_id = $2 AND eliminado_en IS NULL
+        WHERE id = $1 AND empresa_id = $2 AND tipo = 'servicio' AND eliminado_en IS NULL
         RETURNING id`,
       [id, empresaId],
     );
@@ -323,8 +334,7 @@ export class ServiciosService {
   }
 
   private validarPrecio(valor: string | number): Money {
-    const precio = Money.parsear(valor);
-    return precio;
+    return Money.parsear(valor);
   }
 
   private validarDuracion(valor: number): number {
@@ -339,8 +349,9 @@ export class ServiciosService {
 
   private async validarCodigoUnico(empresaId: string, codigo: string): Promise<void> {
     const fila = await this.pg.queryOne(
-      `SELECT 1 FROM catalog.servicios
-        WHERE empresa_id = $1 AND upper(codigo) = $2 AND eliminado_en IS NULL`,
+      `SELECT 1 FROM catalog.items
+        WHERE empresa_id = $1 AND tipo = 'servicio' AND upper(codigo) = $2
+          AND eliminado_en IS NULL`,
       [empresaId, codigo],
     );
     if (fila) throw new ConflictError(`Ya existe un servicio con el código ${codigo}.`);
@@ -358,7 +369,10 @@ export class ServiciosService {
       params.push(excluirId);
       where += ` AND id <> $${params.length}`;
     }
-    const fila = await this.pg.queryOne(`SELECT 1 FROM catalog.servicios WHERE ${where}`, params);
+    const fila = await this.pg.queryOne(
+      `SELECT 1 FROM catalog.items WHERE ${where}`,
+      params,
+    );
     if (fila) throw new ConflictError(`El código de barras ${codigoBarras} ya está registrado.`);
   }
 }

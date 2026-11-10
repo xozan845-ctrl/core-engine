@@ -389,8 +389,8 @@ async function main() {
   paso('Admin da de alta el producto (TC-01: stock 10, precio base C$ 1 000)');
   const crear = await api(
     'POST',
-    '/api/v2/catalog/productos',
-    { sku: `ACE-${suf.toUpperCase()}`, empresa_id: empresa.json.id, nombre: 'Aceite de cocina 1L', descripcion: 'Aceite vegetal', categoria: 'abarrotes', precio_base: '1000.00', stock: 10 },
+    '/api/v2/catalog/items',
+    { tipo: 'producto', codigo: `ACE-${suf.toUpperCase()}`, empresa_id: empresa.json.id, nombre: 'Aceite de cocina 1L', descripcion: 'Aceite vegetal', categoria: 'abarrotes', precio: '1000.00', stock: 10 },
     tokenAdmin,
   );
   if (crear.status === 201 || crear.status === 200) ok(`sku=${crear.json.sku}`);
@@ -403,7 +403,7 @@ async function main() {
   paso('R-E-3: editar producto antes de publicarlo en el catálogo');
   const edicionProducto = await api(
     'PATCH',
-    `/api/v2/catalog/productos/${producto.id}`,
+    `/api/v2/catalog/items/${producto.item_id ?? producto.id}`,
     { descripcion: 'Aceite vegetal actualizado por E2E' },
     tokenAdmin,
   );
@@ -475,7 +475,7 @@ async function main() {
   const oferta = await api(
     'POST',
     '/api/v2/vendedores/productos',
-    { producto_id: producto.id, margen: 15 },
+    { item_id: producto.item_id ?? producto.id, margen: 15 },
     tokenVendedor,
   );
   if (oferta.status === 201 || oferta.status === 200) {
@@ -495,14 +495,14 @@ async function main() {
   paso('R-E-5: paginación conserva empresa y búsqueda');
   const paginaCatalogo = await api(
     'GET',
-    `/api/v2/catalog/productos?empresa_id=${encodeURIComponent(empresa.json.id)}&q=${encodeURIComponent(producto.sku)}&pagina=1&limite=1`,
+    `/api/v2/catalog/items?empresa_id=${encodeURIComponent(empresa.json.id)}&q=${encodeURIComponent((producto.codigo ?? producto.sku))}&pagina=1&limite=1`,
   );
   if (
     paginaCatalogo.status === 200 &&
     paginaCatalogo.json?.pagina === 1 &&
     paginaCatalogo.json?.limite === 1 &&
     paginaCatalogo.json?.total >= 1 &&
-    paginaCatalogo.json?.items?.some((item) => item.id === producto.id)
+    paginaCatalogo.json?.items?.some((item) => (item.item_id ?? item.id) === (producto.item_id ?? producto.id))
   ) {
     ok(`total=${paginaCatalogo.json.total}`);
   } else {
@@ -537,7 +537,7 @@ async function main() {
   paso('TC-03: el stock del catálogo decreció');
   const catalogo = await api(
     'GET',
-    `/api/v2/catalog/productos/${producto.id}?empresa_id=${encodeURIComponent(empresa.json.id)}`,
+    `/api/v2/catalog/items/${producto.item_id ?? producto.id}?empresa_id=${encodeURIComponent(empresa.json.id)}`,
     null,
     tokenAdmin,
   );
@@ -576,8 +576,8 @@ async function main() {
   paso('TC-04: producto con stock 1; compra de 2 unidades → 409');
   const prodUno = await api(
     'POST',
-    '/api/v2/catalog/productos',
-    { sku: `LEC-${suf.toUpperCase()}`, empresa_id: empresa.json.id, nombre: 'Leche 1L', precio_base: '50.00', stock: 1 },
+    '/api/v2/catalog/items',
+    { tipo: 'producto', codigo: `LEC-${suf.toUpperCase()}`, empresa_id: empresa.json.id, nombre: 'Leche 1L', precio: '50.00', stock: 1 },
     tokenAdmin,
   );
   if (![200, 201].includes(prodUno.status) || !prodUno.json?.id) {
@@ -587,7 +587,7 @@ async function main() {
   const ofertaUno = await api(
     'POST',
     '/api/v2/vendedores/productos',
-    { producto_id: prodUno.json.id, margen: 10 },
+    { item_id: prodUno.json.item_id ?? prodUno.json.id, margen: 10 },
     tokenVendedor,
   );
   if (![200, 201].includes(ofertaUno.status) || !ofertaUno.json?.id) {
@@ -614,7 +614,7 @@ async function main() {
     async () => {
       const r = await api(
         'GET',
-        `/api/v2/catalog/productos/${producto.id}?empresa_id=${encodeURIComponent(empresa.json.id)}`,
+        `/api/v2/catalog/items/${producto.item_id ?? producto.id}?empresa_id=${encodeURIComponent(empresa.json.id)}`,
         null,
         tokenAdmin,
       );
@@ -697,13 +697,13 @@ async function main() {
   paso('R-E-3: despublicar producto lo oculta del catálogo público');
   const despublicar = await api(
     'PATCH',
-    `/api/v2/catalog/productos/${producto.id}`,
-    { estado_operativo: 'inactivo', motivo: 'verificación E2E' },
+    `/api/v2/catalog/items/${producto.item_id ?? producto.id}`,
+    { estado: 'inactivo', motivo: 'verificación E2E' },
     tokenAdmin,
   );
   const productoOculto = await api(
     'GET',
-    `/api/v2/catalog/productos?empresa_id=${encodeURIComponent(empresa.json.id)}&q=${encodeURIComponent(producto.sku)}`,
+    `/api/v2/catalog/items?empresa_id=${encodeURIComponent(empresa.json.id)}&q=${encodeURIComponent((producto.codigo ?? producto.sku))}`,
   );
   if (despublicar.status === 200 && productoOculto.status === 200 && productoOculto.json?.total === 0) {
     ok();

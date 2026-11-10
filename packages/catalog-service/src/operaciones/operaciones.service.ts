@@ -46,7 +46,7 @@ export interface ImportarProductoFila {
 }
 
 export interface ComboComponenteInput {
-  producto_id?: string;
+  item_id?: string;
   sku: string;
   cantidad: number;
 }
@@ -62,7 +62,7 @@ export interface ComboInput {
 }
 
 export interface ComboComponente {
-  producto_id: string;
+  item_id: string;
   sku: string;
   nombre: string;
   cantidad: number;
@@ -89,7 +89,7 @@ export interface Combo {
 export interface PromocionInput {
   nombre: string;
   tipo: '2x1' | 'descuento_cantidad' | 'descuento_porcentaje' | 'regalo';
-  producto_id?: string;
+  item_id?: string;
   sku?: string;
   cantidad_requerida?: number | null;
   cantidad_gratis?: number | null;
@@ -104,7 +104,7 @@ export interface Promocion {
   empresa_id: string;
   nombre: string;
   tipo: string;
-  producto_id: string | null;
+  item_id: string | null;
   sku: string;
   cantidad_requerida: number | null;
   cantidad_gratis: number | null;
@@ -117,7 +117,7 @@ export interface Promocion {
 }
 
 export interface MovimientoLineaInput {
-  producto_id?: string;
+  item_id?: string;
   sku: string;
   cantidad: number;
 }
@@ -163,7 +163,7 @@ interface ComboRow {
   codigo_barras: string;
   precio_cents: number;
   estado: string;
-  componentes: Array<{ producto_id: string; sku: string; nombre: string; cantidad: number }>;
+  componentes: Array<{ item_id: string; sku: string; nombre: string; cantidad: number }>;
   creado_en: string;
   actualizado_en: string;
 }
@@ -173,7 +173,7 @@ interface PromocionRow {
   empresa_id: string;
   nombre: string;
   tipo: string;
-  producto_id: string | null;
+  item_id: string | null;
   sku: string;
   cantidad_requerida: number | null;
   cantidad_gratis: number | null;
@@ -198,7 +198,7 @@ interface MovimientoRow {
   creado_en: string;
 }
 
-interface ProductoResuelto {
+interface ItemResuelto {
   id: string;
   sku: string;
   nombre: string;
@@ -412,7 +412,7 @@ export class OperacionesService {
         precio.centavos,
         datos.estado === 'inactivo' ? 'inactivo' : 'activo',
         JSON.stringify(componentes.map((c) => ({
-          producto_id: c.producto_id,
+          item_id: c.item_id,
           sku: c.sku,
           nombre: c.nombre,
           cantidad: c.cantidad,
@@ -429,7 +429,7 @@ export class OperacionesService {
     const componentes =
       datos.componentes === undefined
         ? actual.componentes.map((c) => ({
-            producto_id: c.producto_id,
+            item_id: c.item_id,
             sku: c.sku,
             cantidad: c.cantidad,
           }))
@@ -456,7 +456,7 @@ export class OperacionesService {
         datos.precio === undefined ? Money.parsear(actual.precio).centavos : Money.parsear(datos.precio).centavos,
         datos.estado ?? actual.estado,
         JSON.stringify(resueltos.map((c) => ({
-          producto_id: c.producto_id,
+          item_id: c.item_id,
           sku: c.sku,
           nombre: c.nombre,
           cantidad: c.cantidad,
@@ -494,7 +494,7 @@ export class OperacionesService {
       .queryOne<{ n: number }>(`SELECT COUNT(*)::int AS n FROM catalog.promociones ${where}`, params)
       .then((r) => r?.n ?? 0);
     const filas = await this.pg.query<PromocionRow>(
-      `SELECT id, empresa_id, nombre, tipo, producto_id, sku, cantidad_requerida,
+      `SELECT id, empresa_id, nombre, tipo, item_id, sku, cantidad_requerida,
               cantidad_gratis, descuento_porcentaje, fecha_desde, fecha_hasta,
               estado, creado_en, actualizado_en
          FROM catalog.promociones ${where}
@@ -507,7 +507,7 @@ export class OperacionesService {
   async obtenerPromocion(id: string, empresaId: string): Promise<Promocion | null> {
     if (!UUID.test(id)) return null;
     const fila = await this.pg.queryOne<PromocionRow>(
-      `SELECT id, empresa_id, nombre, tipo, producto_id, sku, cantidad_requerida,
+      `SELECT id, empresa_id, nombre, tipo, item_id, sku, cantidad_requerida,
               cantidad_gratis, descuento_porcentaje, fecha_desde, fecha_hasta,
               estado, creado_en, actualizado_en
          FROM catalog.promociones
@@ -521,17 +521,17 @@ export class OperacionesService {
     const normalizada = await this.normalizarPromocion(empresaId, datos);
     const fila = await this.pg.queryOne<PromocionRow>(
       `INSERT INTO catalog.promociones
-         (empresa_id, nombre, tipo, producto_id, sku, cantidad_requerida, cantidad_gratis,
+         (empresa_id, nombre, tipo, item_id, sku, cantidad_requerida, cantidad_gratis,
           descuento_porcentaje, fecha_desde, fecha_hasta, estado)
        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
-       RETURNING id, empresa_id, nombre, tipo, producto_id, sku, cantidad_requerida,
+       RETURNING id, empresa_id, nombre, tipo, item_id, sku, cantidad_requerida,
                  cantidad_gratis, descuento_porcentaje, fecha_desde, fecha_hasta,
                  estado, creado_en, actualizado_en`,
       [
         empresaId,
         normalizada.nombre,
         normalizada.tipo,
-        normalizada.producto_id,
+        normalizada.item_id,
         normalizada.sku,
         normalizada.cantidad_requerida,
         normalizada.cantidad_gratis,
@@ -555,7 +555,7 @@ export class OperacionesService {
     const normalizada = await this.normalizarPromocion(empresaId, {
       nombre: datos.nombre ?? actual.nombre,
       tipo: (datos.tipo ?? actual.tipo) as PromocionInput['tipo'],
-      producto_id: datos.producto_id ?? actual.producto_id ?? undefined,
+      item_id: datos.item_id ?? actual.item_id ?? undefined,
       sku: datos.sku ?? actual.sku,
       cantidad_requerida:
         datos.cantidad_requerida !== undefined ? datos.cantidad_requerida : actual.cantidad_requerida,
@@ -571,11 +571,11 @@ export class OperacionesService {
     });
     const fila = await this.pg.queryOne<PromocionRow>(
       `UPDATE catalog.promociones SET
-         nombre = $3, tipo = $4, producto_id = $5, sku = $6, cantidad_requerida = $7,
+         nombre = $3, tipo = $4, item_id = $5, sku = $6, cantidad_requerida = $7,
          cantidad_gratis = $8, descuento_porcentaje = $9, fecha_desde = $10,
          fecha_hasta = $11, estado = $12, actualizado_en = NOW()
        WHERE id = $1 AND empresa_id = $2 AND eliminado_en IS NULL
-       RETURNING id, empresa_id, nombre, tipo, producto_id, sku, cantidad_requerida,
+       RETURNING id, empresa_id, nombre, tipo, item_id, sku, cantidad_requerida,
                  cantidad_gratis, descuento_porcentaje, fecha_desde, fecha_hasta,
                  estado, creado_en, actualizado_en`,
       [
@@ -583,7 +583,7 @@ export class OperacionesService {
         empresaId,
         normalizada.nombre,
         normalizada.tipo,
-        normalizada.producto_id,
+        normalizada.item_id,
         normalizada.sku,
         normalizada.cantidad_requerida,
         normalizada.cantidad_gratis,
@@ -683,22 +683,22 @@ export class OperacionesService {
         }
         if (tipo !== 'traslado') {
           await client.query(
-            `UPDATE catalog.productos
-                SET stock = $3, estado = CASE WHEN $3 > 0 THEN 'disponible' ELSE 'agotado' END,
-                    actualizado_en = NOW()
-              WHERE id = $1 AND empresa_id = $2`,
+            `UPDATE catalog.items
+                SET stock = $3, actualizado_en = NOW()
+              WHERE id = $1 AND empresa_id = $2 AND tipo = 'producto'
+                AND eliminado_en IS NULL`,
             [producto.id, empresaId, nuevo],
           );
           await client.query(
             `INSERT INTO catalog.ajustes_stock
-               (id, empresa_id, producto_sku, cantidad_anterior, cantidad_nueva, motivo, realizado_en)
+               (id, empresa_id, item_id, cantidad_anterior, cantidad_nueva, motivo, realizado_en)
              VALUES (gen_random_uuid(), $1, $2, $3, $4, $5, NOW())`,
-            [empresaId, producto.sku, anterior, nuevo, datos.motivo ?? `movimiento ${tipo}`],
+            [empresaId, producto.id, anterior, nuevo, datos.motivo ?? `movimiento ${tipo}`],
           );
           stockItems.push({ empresa_id: empresaId, sku: producto.sku, stock_restante: nuevo });
         }
         lineas.push({
-          producto_id: producto.id,
+          item_id: producto.id,
           sku: producto.sku,
           nombre: producto.nombre,
           cantidad,
@@ -756,7 +756,7 @@ export class OperacionesService {
       empresa_id: fila.empresa_id,
       nombre: fila.nombre,
       tipo: fila.tipo,
-      producto_id: fila.producto_id,
+      item_id: fila.item_id,
       sku: fila.sku,
       cantidad_requerida: fila.cantidad_requerida,
       cantidad_gratis: fila.cantidad_gratis,
@@ -785,22 +785,23 @@ export class OperacionesService {
   }
 
   private async hidratarCombos(filas: readonly ComboRow[]): Promise<Combo[]> {
-    const ids = [...new Set(filas.flatMap((f) => (f.componentes ?? []).map((c) => c.producto_id)))];
-    const productos = ids.length
+    const ids = [...new Set(filas.flatMap((f) => (f.componentes ?? []).map((c) => c.item_id)))];
+    const items = ids.length
       ? await this.pg.query<{ id: string; costo_cents: number; nombre: string }>(
-          `SELECT id, costo_cents, nombre FROM catalog.productos WHERE id = ANY($1::uuid[])`,
+          `SELECT id, costo_cents, nombre FROM catalog.items
+            WHERE id = ANY($1::uuid[]) AND eliminado_en IS NULL`,
           [ids],
         )
       : [];
-    const mapa = new Map(productos.map((p) => [p.id, p]));
+    const mapa = new Map(items.map((p) => [p.id, p]));
     return filas.map((fila) => {
       const componentes = (fila.componentes ?? []).map((componente) => {
-        const producto = mapa.get(componente.producto_id);
-        const costoUnitario = producto?.costo_cents ?? 0;
+        const item = mapa.get(componente.item_id);
+        const costoUnitario = item?.costo_cents ?? 0;
         return {
-          producto_id: componente.producto_id,
+          item_id: componente.item_id,
           sku: componente.sku,
-          nombre: producto?.nombre ?? componente.nombre,
+          nombre: item?.nombre ?? componente.nombre,
           cantidad: componente.cantidad,
           costo_unitario: Money.desdeCentavos(costoUnitario).string(),
           subtotal: Money.desdeCentavos(costoUnitario * componente.cantidad).string(),
@@ -835,26 +836,26 @@ export class OperacionesService {
   private async resolverComponentes(
     empresaId: string,
     componentes: readonly ComboComponenteInput[],
-  ): Promise<Array<{ producto_id: string; sku: string; nombre: string; cantidad: number }>> {
+  ): Promise<Array<{ item_id: string; sku: string; nombre: string; cantidad: number }>> {
     if (!Array.isArray(componentes) || componentes.length === 0) {
       throw new DomainError('COMBO_SIN_COMPONENTES', 'El combo requiere al menos un componente.');
     }
     const vistos = new Set<string>();
-    const resultado: Array<{ producto_id: string; sku: string; nombre: string; cantidad: number }> = [];
+    const resultado: Array<{ item_id: string; sku: string; nombre: string; cantidad: number }> = [];
     for (const componente of componentes) {
       const cantidad = Number(componente.cantidad);
       if (!Number.isInteger(cantidad) || cantidad < 1) {
         throw new DomainError('CANTIDAD_INVALIDA', 'La cantidad del componente debe ser un entero positivo.');
       }
-      const producto = await this.buscarProducto(empresaId, componente.producto_id, componente.sku);
-      if (vistos.has(producto.id)) {
+      const item = await this.buscarItem(empresaId, componente.item_id, componente.sku);
+      if (vistos.has(item.id)) {
         throw new DomainError('COMPONENTE_DUPLICADO', 'Un producto no puede repetirse en el combo.');
       }
-      vistos.add(producto.id);
+      vistos.add(item.id);
       resultado.push({
-        producto_id: producto.id,
-        sku: producto.sku,
-        nombre: producto.nombre,
+        item_id: item.id,
+        sku: item.sku,
+        nombre: item.nombre,
         cantidad,
       });
     }
@@ -877,10 +878,8 @@ export class OperacionesService {
     if (!codigoBarras) return;
     const barcode = await this.pg.queryOne(
       `SELECT 1 FROM (
-         SELECT codigo_barras FROM catalog.productos WHERE empresa_id = $1 AND codigo_barras = $2
-         UNION ALL
-         SELECT codigo_barras FROM catalog.servicios WHERE empresa_id = $1 AND codigo_barras = $2
-           AND eliminado_en IS NULL
+         SELECT codigo_barras FROM catalog.items
+          WHERE empresa_id = $1 AND codigo_barras = $2 AND eliminado_en IS NULL
          UNION ALL
          SELECT codigo_barras FROM catalog.combos WHERE empresa_id = $1 AND codigo_barras = $2
            AND eliminado_en IS NULL ${excluirId ? 'AND id <> $3' : ''}
@@ -896,7 +895,7 @@ export class OperacionesService {
   ): Promise<{
     nombre: string;
     tipo: string;
-    producto_id: string | null;
+    item_id: string | null;
     sku: string;
     cantidad_requerida: number | null;
     cantidad_gratis: number | null;
@@ -935,14 +934,14 @@ export class OperacionesService {
     if (!desde || !hasta || hasta < desde) {
       throw new DomainError('VIGENCIA_INVALIDA', 'La vigencia de la promoción no es válida.');
     }
-    const producto = datos.producto_id || datos.sku
-      ? await this.buscarProducto(empresaId, datos.producto_id, datos.sku ?? '')
+    const item = datos.item_id || datos.sku
+      ? await this.buscarItem(empresaId, datos.item_id, datos.sku ?? '')
       : null;
     return {
       nombre,
       tipo,
-      producto_id: producto?.id ?? null,
-      sku: producto?.sku ?? '',
+      item_id: item?.id ?? null,
+      sku: item?.sku ?? '',
       cantidad_requerida: cantidadRequerida,
       cantidad_gratis: cantidadGratis,
       descuento_porcentaje: descuento,
@@ -955,31 +954,33 @@ export class OperacionesService {
   private async resolverProductos(
     empresaId: string,
     lineas: readonly MovimientoLineaInput[],
-  ): Promise<ProductoResuelto[]> {
-    const resueltos: ProductoResuelto[] = [];
+  ): Promise<ItemResuelto[]> {
+    const resueltos: ItemResuelto[] = [];
     for (const linea of lineas) {
-      resueltos.push(await this.buscarProducto(empresaId, linea.producto_id, linea.sku));
+      resueltos.push(await this.buscarItem(empresaId, linea.item_id, linea.sku));
     }
     return resueltos;
   }
 
-  private async buscarProducto(
+  private async buscarItem(
     empresaId: string,
-    productoId: string | undefined,
+    itemId: string | undefined,
     sku: string,
-  ): Promise<ProductoResuelto> {
-    const fila = productoId
-      ? await this.pg.queryOne<ProductoResuelto>(
-          `SELECT id, sku, nombre, costo_cents, stock FROM catalog.productos
-            WHERE empresa_id = $1 AND id = $2`,
-          [empresaId, productoId],
+  ): Promise<ItemResuelto> {
+    const fila = itemId
+      ? await this.pg.queryOne<ItemResuelto>(
+          `SELECT id, codigo AS sku, nombre, costo_cents, stock FROM catalog.items
+            WHERE empresa_id = $1 AND tipo = 'producto' AND id = $2
+              AND eliminado_en IS NULL`,
+          [empresaId, itemId],
         )
-      : await this.pg.queryOne<ProductoResuelto>(
-          `SELECT id, sku, nombre, costo_cents, stock FROM catalog.productos
-            WHERE empresa_id = $1 AND upper(sku) = upper($2)`,
+      : await this.pg.queryOne<ItemResuelto>(
+          `SELECT id, codigo AS sku, nombre, costo_cents, stock FROM catalog.items
+            WHERE empresa_id = $1 AND tipo = 'producto'
+              AND upper(codigo) = upper($2) AND eliminado_en IS NULL`,
           [empresaId, sku],
         );
-    if (!fila) throw new NotFoundError('Producto', productoId ?? sku);
+    if (!fila) throw new NotFoundError('Producto', itemId ?? sku);
     return fila;
   }
 
