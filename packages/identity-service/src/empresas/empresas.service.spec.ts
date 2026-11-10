@@ -720,3 +720,56 @@ describe('EmpresasService · perfil y logo', () => {
     ).rejects.toMatchObject({ codigo: 'LOGO_NO_VERIFICABLE' });
   });
 });
+
+describe('EmpresasService · actualizarPack', () => {
+  const empresaConPack = {
+    ...empresa,
+    vertical_id: 'belleza',
+    pack_codigo: 'pack_belleza',
+    pack_version: 1,
+  };
+
+  it('devuelve la empresa sin tocar nada si el pack ya coincide', async () => {
+    const client = {
+      query: vi.fn()
+        .mockResolvedValueOnce({ rows: [empresaConPack], rowCount: 1 })
+        .mockResolvedValueOnce({ rows: [{ codigo: 'pack_belleza', version: 1, vertical_codigo: 'belleza' }], rowCount: 1 }),
+    };
+    const pg = { transaccion: vi.fn(async (fn: (c: typeof client) => unknown) => fn(client)) };
+    const servicio = new EmpresasService(pg as never, {} as never);
+
+    await expect(servicio.actualizarPack('e-1', 'pack_belleza', 1)).resolves.toMatchObject({
+      id: 'e-1',
+      pack_version: 1,
+    });
+    expect(client.query).toHaveBeenCalledTimes(2);
+  });
+
+  it('reconcilia capacidades y audita el cambio de versión', async () => {
+    const actualizada = { ...empresaConPack, pack_version: 2 };
+    const client = {
+      query: vi.fn()
+        .mockResolvedValueOnce({ rows: [empresaConPack], rowCount: 1 }) // lock empresa
+        .mockResolvedValueOnce({ rows: [{ codigo: 'pack_belleza', version: 2, vertical_codigo: 'belleza' }], rowCount: 1 }) // pack
+        .mockResolvedValueOnce({ rows: [{ total: 2 }], rowCount: 1 }) // conteo previo
+        .mockResolvedValueOnce({ rows: [{ capacidad_codigo: 'catalogo_items', config: {}, activo: true }], rowCount: 1 }) // nuevas
+        .mockResolvedValueOnce({ rows: [], rowCount: 1 }) // delete sobrantes
+        .mockResolvedValueOnce({ rows: [], rowCount: 1 }) // upsert capacidad
+        .mockResolvedValueOnce({ rows: [actualizada], rowCount: 1 }) // update empresa
+        .mockResolvedValueOnce({ rows: [], rowCount: 1 }), // auditoría
+    };
+    const pg = { transaccion: vi.fn(async (fn: (c: typeof client) => unknown) => fn(client)) };
+    const servicio = new EmpresasService(pg as never, {} as never);
+
+    const resultado = await servicio.actualizarPack('e-1', 'pack_belleza', 2);
+    expect(resultado.pack_version).toBe(2);
+    expect(client.query).toHaveBeenCalledWith(expect.stringContaining('DELETE FROM identity.empresa_capacidades'), [
+      'e-1',
+      ['catalogo_items'],
+    ]);
+    expect(client.query).toHaveBeenLastCalledWith(
+      expect.stringContaining('INSERT INTO identity.pack_migraciones'),
+      expect.arrayContaining(['e-1', 'belleza', 'pack_belleza', 2, 2, 1]),
+    );
+  });
+});
