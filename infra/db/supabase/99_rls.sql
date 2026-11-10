@@ -680,3 +680,172 @@ CREATE POLICY invitaciones_personal_tenant ON identity.invitaciones_personal FOR
 -- El servicio valida token, estado, expiración y tenant antes de devolver datos.
 CREATE POLICY invitaciones_personal_app ON identity.invitaciones_personal FOR ALL TO core_engine_app
   USING (true) WITH CHECK (true);
+
+-- ── field (logística de campo / piloto flota) ───────────────────────────
+-- Aísla cada tabla por tenant_id; eventos/outbox quedan para administración.
+ALTER TABLE field.personal ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS field_personal_admin ON field.personal;
+CREATE POLICY field_personal_admin ON field.personal
+  FOR ALL TO authenticated
+  USING (auth.rol() IN ('super_admin', 'admin'))
+  WITH CHECK (auth.rol() IN ('super_admin', 'admin'));
+DROP POLICY IF EXISTS field_personal_tenant ON field.personal;
+CREATE POLICY field_personal_tenant ON field.personal
+  FOR ALL TO authenticated
+  USING (auth.rol() IN ('empresario', 'logistica', 'coordinador', 'supervisor', 'operativo')
+         AND tenant_id::text = (auth.jwt() ->> 'tenant_id'))
+  WITH CHECK (auth.rol() IN ('empresario', 'logistica', 'coordinador', 'supervisor', 'operativo')
+              AND tenant_id::text = (auth.jwt() ->> 'tenant_id'));
+
+ALTER TABLE field.clientes ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS field_clientes_admin ON field.clientes;
+CREATE POLICY field_clientes_admin ON field.clientes
+  FOR ALL TO authenticated
+  USING (auth.rol() IN ('super_admin', 'admin'))
+  WITH CHECK (auth.rol() IN ('super_admin', 'admin'));
+DROP POLICY IF EXISTS field_clientes_tenant ON field.clientes;
+CREATE POLICY field_clientes_tenant ON field.clientes
+  FOR ALL TO authenticated
+  USING (auth.rol() IN ('empresario', 'logistica', 'coordinador', 'supervisor', 'operativo')
+         AND tenant_id::text = (auth.jwt() ->> 'tenant_id'))
+  WITH CHECK (auth.rol() IN ('empresario', 'logistica', 'coordinador', 'supervisor', 'operativo')
+              AND tenant_id::text = (auth.jwt() ->> 'tenant_id'));
+
+ALTER TABLE field.vehiculos ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS field_vehiculos_admin ON field.vehiculos;
+CREATE POLICY field_vehiculos_admin ON field.vehiculos
+  FOR ALL TO authenticated
+  USING (auth.rol() IN ('super_admin', 'admin'))
+  WITH CHECK (auth.rol() IN ('super_admin', 'admin'));
+DROP POLICY IF EXISTS field_vehiculos_tenant ON field.vehiculos;
+CREATE POLICY field_vehiculos_tenant ON field.vehiculos
+  FOR ALL TO authenticated
+  USING (auth.rol() IN ('empresario', 'logistica', 'coordinador', 'supervisor', 'operativo')
+         AND tenant_id::text = (auth.jwt() ->> 'tenant_id'))
+  WITH CHECK (auth.rol() IN ('empresario', 'logistica', 'coordinador', 'supervisor', 'operativo')
+              AND tenant_id::text = (auth.jwt() ->> 'tenant_id'));
+
+ALTER TABLE field.rutas ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS field_rutas_admin ON field.rutas;
+CREATE POLICY field_rutas_admin ON field.rutas
+  FOR ALL TO authenticated
+  USING (auth.rol() IN ('super_admin', 'admin'))
+  WITH CHECK (auth.rol() IN ('super_admin', 'admin'));
+DROP POLICY IF EXISTS field_rutas_tenant ON field.rutas;
+CREATE POLICY field_rutas_tenant ON field.rutas
+  FOR ALL TO authenticated
+  USING (auth.rol() IN ('empresario', 'logistica', 'coordinador', 'supervisor', 'operativo')
+         AND tenant_id::text = (auth.jwt() ->> 'tenant_id'))
+  WITH CHECK (auth.rol() IN ('empresario', 'logistica', 'coordinador', 'supervisor', 'operativo')
+              AND tenant_id::text = (auth.jwt() ->> 'tenant_id'));
+
+ALTER TABLE field.paradas ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS field_paradas_admin ON field.paradas;
+CREATE POLICY field_paradas_admin ON field.paradas
+  FOR ALL TO authenticated
+  USING (auth.rol() IN ('super_admin', 'admin'))
+  WITH CHECK (auth.rol() IN ('super_admin', 'admin'));
+DROP POLICY IF EXISTS field_paradas_tenant ON field.paradas;
+CREATE POLICY field_paradas_tenant ON field.paradas
+  FOR ALL TO authenticated
+  USING (auth.rol() IN ('empresario', 'logistica', 'coordinador', 'supervisor', 'operativo')
+         AND tenant_id::text = (auth.jwt() ->> 'tenant_id'))
+  WITH CHECK (auth.rol() IN ('empresario', 'logistica', 'coordinador', 'supervisor', 'operativo')
+              AND tenant_id::text = (auth.jwt() ->> 'tenant_id'));
+
+ALTER TABLE field.pedidos ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS field_pedidos_admin ON field.pedidos;
+CREATE POLICY field_pedidos_admin ON field.pedidos
+  FOR ALL TO authenticated
+  USING (auth.rol() IN ('super_admin', 'admin'))
+  WITH CHECK (auth.rol() IN ('super_admin', 'admin'));
+DROP POLICY IF EXISTS field_pedidos_tenant ON field.pedidos;
+CREATE POLICY field_pedidos_tenant ON field.pedidos
+  FOR ALL TO authenticated
+  USING (auth.rol() IN ('empresario', 'logistica', 'coordinador', 'supervisor', 'operativo')
+         AND tenant_id::text = (auth.jwt() ->> 'tenant_id'))
+  WITH CHECK (auth.rol() IN ('empresario', 'logistica', 'coordinador', 'supervisor', 'operativo')
+              AND tenant_id::text = (auth.jwt() ->> 'tenant_id'));
+
+ALTER TABLE field.asistencia ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS field_asistencia_admin ON field.asistencia;
+CREATE POLICY field_asistencia_admin ON field.asistencia
+  FOR ALL TO authenticated
+  USING (auth.rol() IN ('super_admin', 'admin'))
+  WITH CHECK (auth.rol() IN ('super_admin', 'admin'));
+DROP POLICY IF EXISTS field_asistencia_tenant ON field.asistencia;
+CREATE POLICY field_asistencia_tenant ON field.asistencia
+  FOR ALL TO authenticated
+  USING (auth.rol() IN ('empresario', 'logistica', 'coordinador', 'supervisor', 'operativo')
+         AND tenant_id::text = (auth.jwt() ->> 'tenant_id'))
+  WITH CHECK (auth.rol() IN ('empresario', 'logistica', 'coordinador', 'supervisor', 'operativo')
+              AND tenant_id::text = (auth.jwt() ->> 'tenant_id'));
+
+ALTER TABLE field.incidencias ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS field_incidencias_admin ON field.incidencias;
+CREATE POLICY field_incidencias_admin ON field.incidencias
+  FOR ALL TO authenticated
+  USING (auth.rol() IN ('super_admin', 'admin'))
+  WITH CHECK (auth.rol() IN ('super_admin', 'admin'));
+DROP POLICY IF EXISTS field_incidencias_tenant ON field.incidencias;
+CREATE POLICY field_incidencias_tenant ON field.incidencias
+  FOR ALL TO authenticated
+  USING (auth.rol() IN ('empresario', 'logistica', 'coordinador', 'supervisor', 'operativo')
+         AND tenant_id::text = (auth.jwt() ->> 'tenant_id'))
+  WITH CHECK (auth.rol() IN ('empresario', 'logistica', 'coordinador', 'supervisor', 'operativo')
+              AND tenant_id::text = (auth.jwt() ->> 'tenant_id'));
+
+ALTER TABLE field.tracking ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS field_tracking_admin ON field.tracking;
+CREATE POLICY field_tracking_admin ON field.tracking
+  FOR ALL TO authenticated
+  USING (auth.rol() IN ('super_admin', 'admin'))
+  WITH CHECK (auth.rol() IN ('super_admin', 'admin'));
+DROP POLICY IF EXISTS field_tracking_tenant ON field.tracking;
+CREATE POLICY field_tracking_tenant ON field.tracking
+  FOR ALL TO authenticated
+  USING (auth.rol() IN ('empresario', 'logistica', 'coordinador', 'supervisor', 'operativo')
+         AND tenant_id::text = (auth.jwt() ->> 'tenant_id'))
+  WITH CHECK (auth.rol() IN ('empresario', 'logistica', 'coordinador', 'supervisor', 'operativo')
+              AND tenant_id::text = (auth.jwt() ->> 'tenant_id'));
+
+ALTER TABLE field.visitas ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS field_visitas_admin ON field.visitas;
+CREATE POLICY field_visitas_admin ON field.visitas
+  FOR ALL TO authenticated
+  USING (auth.rol() IN ('super_admin', 'admin'))
+  WITH CHECK (auth.rol() IN ('super_admin', 'admin'));
+DROP POLICY IF EXISTS field_visitas_tenant ON field.visitas;
+CREATE POLICY field_visitas_tenant ON field.visitas
+  FOR ALL TO authenticated
+  USING (auth.rol() IN ('empresario', 'logistica', 'coordinador', 'supervisor', 'operativo')
+         AND tenant_id::text = (auth.jwt() ->> 'tenant_id'))
+  WITH CHECK (auth.rol() IN ('empresario', 'logistica', 'coordinador', 'supervisor', 'operativo')
+              AND tenant_id::text = (auth.jwt() ->> 'tenant_id'));
+
+ALTER TABLE field.cumplimiento ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS field_cumplimiento_admin ON field.cumplimiento;
+CREATE POLICY field_cumplimiento_admin ON field.cumplimiento
+  FOR ALL TO authenticated
+  USING (auth.rol() IN ('super_admin', 'admin'))
+  WITH CHECK (auth.rol() IN ('super_admin', 'admin'));
+DROP POLICY IF EXISTS field_cumplimiento_tenant ON field.cumplimiento;
+CREATE POLICY field_cumplimiento_tenant ON field.cumplimiento
+  FOR ALL TO authenticated
+  USING (auth.rol() IN ('empresario', 'logistica', 'coordinador', 'supervisor', 'operativo')
+         AND tenant_id::text = (auth.jwt() ->> 'tenant_id'))
+  WITH CHECK (auth.rol() IN ('empresario', 'logistica', 'coordinador', 'supervisor', 'operativo')
+              AND tenant_id::text = (auth.jwt() ->> 'tenant_id'));
+ALTER TABLE field.eventos_procesados ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS field_eventos_procesados_admin ON field.eventos_procesados;
+CREATE POLICY field_eventos_procesados_admin ON field.eventos_procesados
+  FOR ALL TO authenticated
+  USING (auth.rol() IN ('super_admin', 'admin'))
+  WITH CHECK (auth.rol() IN ('super_admin', 'admin'));
+
+ALTER TABLE field.outbox ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS field_outbox_admin ON field.outbox;
+CREATE POLICY field_outbox_admin ON field.outbox
+  FOR ALL TO authenticated
+  USING (auth.rol() IN ('super_admin', 'admin'))
+  WITH CHECK (auth.rol() IN ('super_admin', 'admin'));
