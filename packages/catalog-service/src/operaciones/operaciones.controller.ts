@@ -86,8 +86,8 @@ export class OperacionesController {
     return this.operaciones.guardarConfiguracion(this.empresa(usuario, empresaId), dto);
   }
 
-  @Post('productos/importar')
-  @ApiOperation({ summary: 'Importar productos desde filas validadas (máx. 200)' })
+  @Post('items/importar')
+  @ApiOperation({ summary: 'Importar items tipo producto desde filas validadas (máx. 200)' })
   @ApiQuery({ name: 'empresa_id', required: false, format: 'uuid' })
   @ApiCreatedResponse({ type: ImportarProductosResponseDto })
   importar(

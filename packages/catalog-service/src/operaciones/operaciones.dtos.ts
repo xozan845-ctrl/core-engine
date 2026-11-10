@@ -133,7 +133,7 @@ export class ComboComponenteRequestDto {
   @ApiProperty({ required: false, format: 'uuid' })
   @IsOptional()
   @IsUUID()
-  producto_id?: string;
+  item_id?: string;
 
   @ApiProperty({ description: 'SKU del producto componente' })
   @IsString()
@@ -234,7 +234,7 @@ export class CrearPromocionRequestDto {
   @ApiProperty({ required: false, format: 'uuid' })
   @IsOptional()
   @IsUUID()
-  producto_id?: string;
+  item_id?: string;
 
   @ApiProperty({ required: false })
   @IsOptional()
@@ -280,7 +280,7 @@ export class MovimientoLineaRequestDto {
   @ApiProperty({ required: false, format: 'uuid' })
   @IsOptional()
   @IsUUID()
-  producto_id?: string;
+  item_id?: string;
 
   @ApiProperty()
   @IsString()

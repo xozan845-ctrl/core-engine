@@ -54,6 +54,20 @@ export class CrearItemRequestDto {
   @ApiProperty({ required: false, type: Object, additionalProperties: true }) @IsOptional() @IsObject() atributos?: Record<string, unknown>;
   @ApiProperty({ required: false, enum: ['activo', 'inactivo'] }) @IsOptional() @IsIn(['activo', 'inactivo']) estado?: 'activo' | 'inactivo';
   @ApiProperty({ required: false, nullable: true, format: 'uuid' }) @IsOptional() @IsUUID() parent_item_id?: string | null;
+  @ApiProperty({ required: false }) @IsOptional() @IsString() marca?: string;
+  @ApiProperty({ required: false }) @IsOptional() @IsString() codigo_barras?: string;
+  @ApiProperty({ required: false, example: 'Unidad (u)' }) @IsOptional() @IsString() unidad?: string;
+  @ApiProperty({ required: false, default: false }) @IsOptional() @IsBoolean() permite_fracciones?: boolean;
+  @ApiProperty({ required: false, example: 'Igual que la de venta' }) @IsOptional() @IsString() unidad_compra?: string;
+  @ApiProperty({ required: false, minimum: 0, default: 0 }) @IsOptional() @IsInt() @Min(0) contenido_cantidad?: number;
+  @ApiProperty({ required: false, example: 'Sin contenido' }) @IsOptional() @IsString() contenido_unidad?: string;
+  @ApiProperty({ required: false, enum: ['fijo', 'escala'], default: 'fijo' }) @IsOptional() @IsIn(['fijo', 'escala']) tipo_precio?: 'fijo' | 'escala';
+  @ApiProperty({ required: false, enum: ['fijo', 'escala'], default: 'fijo' }) @IsOptional() @IsIn(['fijo', 'escala']) tipo_costo?: 'fijo' | 'escala';
+  @ApiProperty({ required: false, minimum: 0, default: 0 }) @IsOptional() @IsInt() @Min(0) stock_minimo?: number;
+  @ApiProperty({ required: false, nullable: true, minimum: 0 }) @IsOptional() @IsInt() @Min(0) stock_maximo?: number | null;
+  @ApiProperty({ required: false, nullable: true, minimum: 0 }) @IsOptional() @IsInt() @Min(0) garantia_meses?: number | null;
+  @ApiProperty({ required: false, default: false }) @IsOptional() @IsBoolean() es_materia_prima?: boolean;
+  @ApiProperty({ required: false }) @IsOptional() @IsString() ubicacion?: string;
   @ApiProperty({ required: false, format: 'uuid' }) @IsOptional() @IsUUID() empresa_id?: string;
 }
 
