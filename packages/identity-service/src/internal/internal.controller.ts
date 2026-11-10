@@ -102,7 +102,10 @@ export class InternalController {
 
   @Post('empresas/capacidades')
   @ApiOperation({ summary: 'Capacidades activas por empresa (servicio→servicio)' })
-  @ApiOkResponse({ description: 'Capacidades encontradas' })
+  @ApiOkResponse({
+    description: 'Capacidades encontradas',
+    schema: { type: 'object', additionalProperties: true },
+  })
   async capacidadesDeEmpresas(@Body() dto: VerificarCapacidadesRequestDto) {
     const filas = await this.capacidades.activasDeEmpresas(dto.empresa_ids, dto.capacidades);
     return { capacidades: filas };
@@ -111,7 +114,10 @@ export class InternalController {
   @Get('partes/:id')
   @ApiOperation({ summary: 'Parte por id y empresa (servicio→servicio)' })
   @ApiParam({ name: 'id', description: 'Id de la parte' })
-  @ApiOkResponse({ description: 'Parte encontrada' })
+  @ApiOkResponse({
+    description: 'Parte encontrada',
+    schema: { type: 'object', additionalProperties: true },
+  })
   async parte(@Param('id') id: string, @Query('empresa_id') empresaId?: string) {
     if (!empresaId) throw new NotFoundError('Parte', id);
     const pertenece = await this.partes.perteneceAEmpresa(empresaId, id);

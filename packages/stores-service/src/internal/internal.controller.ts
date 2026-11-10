@@ -62,7 +62,7 @@ export class InternalController {
   @Get('tiendas')
   @ApiOperation({ summary: 'Tiendas por lote de ids (servicio→servicio)' })
   @ApiQuery({ name: 'ids', required: false })
-  @ApiOkResponse({ description: 'Tiendas encontradas' })
+  @ApiOkResponse({ description: 'Tiendas encontradas', schema: { type: 'object', additionalProperties: true } })
   async tiendasPorIds(@Query('ids') idsRaw?: string) {
     const ids = (idsRaw ?? '').split(',').map((s) => s.trim()).filter(Boolean);
     return { tiendas: await this.tiendas.porIds(ids) };
@@ -71,7 +71,7 @@ export class InternalController {
   @Get('tiendas/empresa/:empresaId')
   @ApiOperation({ summary: 'Tiendas de una empresa (servicio→servicio)' })
   @ApiParam({ name: 'empresaId', format: 'uuid' })
-  @ApiOkResponse({ description: 'Tiendas de la empresa' })
+  @ApiOkResponse({ description: 'Tiendas de la empresa', schema: { type: 'object', additionalProperties: true } })
   async tiendasDeEmpresa(@Param('empresaId') empresaId: string) {
     return { tiendas: await this.tiendas.deEmpresa(empresaId) };
   }
@@ -79,7 +79,7 @@ export class InternalController {
   @Get('tiendas/vendedor/:vendedorId')
   @ApiOperation({ summary: 'Tienda asignada a un vendedor (servicio→servicio)' })
   @ApiParam({ name: 'vendedorId', format: 'uuid' })
-  @ApiOkResponse({ description: 'Tienda del vendedor o null' })
+  @ApiOkResponse({ description: 'Tienda del vendedor o null', schema: { type: 'object', additionalProperties: true } })
   async tiendaDeVendedor(@Param('vendedorId') vendedorId: string) {
     return { tienda: await this.tiendas.deVendedor(vendedorId) };
   }
@@ -87,7 +87,7 @@ export class InternalController {
   @Get('tiendas/:id')
   @ApiOperation({ summary: 'Tienda por id (servicio→servicio)' })
   @ApiParam({ name: 'id', format: 'uuid' })
-  @ApiOkResponse({ description: 'Tienda encontrada' })
+  @ApiOkResponse({ description: 'Tienda encontrada', schema: { type: 'object', additionalProperties: true } })
   async tienda(@Param('id') id: string) {
     const tienda = await this.tiendas.encontrarPorId(id);
     if (!tienda) throw new NotFoundError('Tienda', id);
@@ -97,7 +97,7 @@ export class InternalController {
   @Post('tiendas/:id/asignar-vendedor')
   @ApiOperation({ summary: 'Asignar vendedor a una tienda (servicio→servicio)' })
   @ApiParam({ name: 'id', format: 'uuid' })
-  @ApiOkResponse({ description: 'Vendedor asignado' })
+  @ApiOkResponse({ description: 'Vendedor asignado', schema: { type: 'object', additionalProperties: true } })
   async asignarVendedor(
     @Param('id') id: string,
     @Body() dto: AsignarVendedorRequestDto,
@@ -111,7 +111,7 @@ export class InternalController {
   @Post('tiendas/:id/desasignar-vendedor')
   @ApiOperation({ summary: 'Compensar asignación de vendedor (servicio→servicio)' })
   @ApiParam({ name: 'id', format: 'uuid' })
-  @ApiOkResponse({ description: 'Vendedor desasignado' })
+  @ApiOkResponse({ description: 'Vendedor desasignado', schema: { type: 'object', additionalProperties: true } })
   async desasignarVendedor(
     @Param('id') id: string,
     @Body() dto: DesasignarVendedorRequestDto,
