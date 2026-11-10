@@ -112,7 +112,15 @@
         ],
         "responses": {
           "200": {
-            "description": "Tiendas encontradas"
+            "description": "Tiendas encontradas",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
           }
         },
         "security": [
@@ -142,7 +150,15 @@
         ],
         "responses": {
           "200": {
-            "description": "Tiendas de la empresa"
+            "description": "Tiendas de la empresa",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
           }
         },
         "security": [
@@ -172,7 +188,15 @@
         ],
         "responses": {
           "200": {
-            "description": "Tienda del vendedor o null"
+            "description": "Tienda del vendedor o null",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
           }
         },
         "security": [
@@ -202,7 +226,15 @@
         ],
         "responses": {
           "200": {
-            "description": "Tienda encontrada"
+            "description": "Tienda encontrada",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
           }
         },
         "security": [
@@ -242,7 +274,15 @@
         },
         "responses": {
           "200": {
-            "description": "Vendedor asignado"
+            "description": "Vendedor asignado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
           }
         },
         "security": [
@@ -282,7 +322,15 @@
         },
         "responses": {
           "200": {
-            "description": "Vendedor desasignado"
+            "description": "Vendedor desasignado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
           }
         },
         "security": [

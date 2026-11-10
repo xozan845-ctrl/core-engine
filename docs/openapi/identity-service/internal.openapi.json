@@ -226,7 +226,15 @@
         },
         "responses": {
           "200": {
-            "description": "Capacidades encontradas"
+            "description": "Capacidades encontradas",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
           }
         },
         "security": [
@@ -264,7 +272,15 @@
         ],
         "responses": {
           "200": {
-            "description": "Parte encontrada"
+            "description": "Parte encontrada",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
           }
         },
         "security": [
@@ -335,24 +351,6 @@
             "type": "string",
             "description": "Slug público actual",
             "example": "distribuidora-piloto"
-          },
-          "modalidad_logistica": {
-            "type": "string",
-            "nullable": true,
-            "enum": [
-              "plataforma",
-              "propia",
-              "hibrida"
-            ]
-          },
-          "tipo_empresa": {
-            "type": "string",
-            "enum": [
-              "comercial",
-              "logistica",
-              "plataforma"
-            ],
-            "description": "Tipo de empresa; solo las comerciales tienen catálogo propio (ADR-27)"
           },
           "estado": {
             "type": "string"

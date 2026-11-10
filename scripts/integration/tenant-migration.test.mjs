@@ -56,8 +56,8 @@ test('el backfill asigna el pack de la vertical y deja auditoria', { concurrency
     );
     await client.query(
       `INSERT INTO identity.empresas
-         (id, nombre, slug, modalidad_logistica, vertical_id, pack_codigo, pack_version, creado_por, tipo_empresa)
-       VALUES ($1, 'Tenant legado', $3, 'hibrida', 'retail', NULL, NULL, $2, 'comercial')`,
+         (id, nombre, slug, vertical_id, pack_codigo, pack_version, creado_por)
+       VALUES ($1, 'Tenant legado', $3, 'retail', NULL, NULL, $2)`,
       [empresaId, usuarioId, `tenant-${empresaId.slice(0, 8)}`],
     );
     await client.query('COMMIT');
