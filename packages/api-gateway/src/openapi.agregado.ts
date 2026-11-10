@@ -13639,6 +13639,31 @@ export const OPENAPI_AGREGADO = {
           "errores"
         ]
       },
+      "ItemImagenResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "objeto_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "orden": {
+            "type": "number"
+          },
+          "es_principal": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "id",
+          "objeto_id",
+          "orden",
+          "es_principal"
+        ]
+      },
       "ItemResponseDto": {
         "type": "object",
         "properties": {
@@ -13693,6 +13718,17 @@ export const OPENAPI_AGREGADO = {
             "type": "object",
             "additionalProperties": true
           },
+          "parent_item_id": {
+            "type": "object",
+            "nullable": true,
+            "format": "uuid"
+          },
+          "imagenes": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ItemImagenResponseDto"
+            }
+          },
           "estado": {
             "type": "string",
             "enum": [
@@ -13732,6 +13768,8 @@ export const OPENAPI_AGREGADO = {
           "stock",
           "duration_minutes",
           "atributos",
+          "parent_item_id",
+          "imagenes",
           "estado",
           "source_type",
           "source_id",
