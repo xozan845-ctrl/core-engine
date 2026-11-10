@@ -2,7 +2,7 @@ import type { Mock } from 'vitest';
 import 'reflect-metadata';
 import { ContabilidadController } from './contabilidad.controller';
 import type { ContabilidadService } from './contabilidad.service';
-import { NotFoundError, ROLES } from '@core/shared';
+import { CAPABILITIES_KEY, CAPACIDADES, NotFoundError, ROLES } from '@core/shared';
 
 const asiento = { id: 'a-1', concepto: 'Venta', tipo: 'INGRESO', total_debe_cents: 1000, total_haber_cents: 1000 };
 const cuenta = { codigo: '1101', nombre: 'Caja', tipo: 'ACTIVO', naturaleza: 'DEUDORA' };
@@ -97,7 +97,10 @@ describe('ContabilidadController (api/v2/finanzas, partida doble, R-U-10/11)', (
     expect(contabilidad.libroCompras).toHaveBeenCalledWith('2026-09-01', '2026-09-30');
   });
 
-  it('debe exigir rol admin a nivel de controlador', () => {
+  it('debe exigir rol admin y la capacidad de facturacion', () => {
     expect(Reflect.getMetadata('roles_requeridos', ContabilidadController)).toEqual([ROLES.SUPER_ADMIN, ROLES.ADMIN]);
+    expect(Reflect.getMetadata(CAPABILITIES_KEY, ContabilidadController)).toEqual([
+      CAPACIDADES.FACTURACION,
+    ]);
   });
 });

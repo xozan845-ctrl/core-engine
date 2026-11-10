@@ -7,7 +7,7 @@ import { FinanzasController } from './finanzas.controller';
 import { ProyeccionesService } from './proyecciones.service';
 import { KpisService } from './kpis.service';
 import { AlertasService } from './alertas.service';
-import { NotFoundError, ROLES } from '@core/shared';
+import { CAPABILITIES_KEY, CAPACIDADES, NotFoundError, ROLES } from '@core/shared';
 
 const proyeccion = { id: 'pr-1', nombre: 'Base', supuestos: {}, resultado: {} };
 const indicadores = {
@@ -171,7 +171,10 @@ describe('FinanzasController (api/v2/finanzas, cap. 8, R-U-10/11)', () => {
     expect(alertas.tablero).toHaveBeenCalledWith({ mes: undefined, costo_entrega_por_pedido_cents: undefined });
   });
 
-  it('debe exigir rol admin a nivel de controlador', () => {
+  it('debe exigir rol admin y la capacidad de facturacion', () => {
     expect(Reflect.getMetadata('roles_requeridos', FinanzasController)).toEqual([ROLES.SUPER_ADMIN, ROLES.ADMIN]);
+    expect(Reflect.getMetadata(CAPABILITIES_KEY, FinanzasController)).toEqual([
+      CAPACIDADES.FACTURACION,
+    ]);
   });
 });

@@ -12,7 +12,7 @@ import {
   MinLength,
   ValidateNested,
 } from 'class-validator';
-import { Roles, ROLES, UsuarioActual, UsuarioContexto, NotFoundError } from '@core/shared';
+import { Roles, ROLES, UsuarioActual, UsuarioContexto, NotFoundError, CAPACIDADES, RequiereCapacidades } from '@core/shared';
 import { ContabilidadService, Asiento, Cuenta, ParametrosAsiento } from './contabilidad.service';
 import {
   AsientoResponseDto,
@@ -117,6 +117,7 @@ export class EstadoCuentaRequestDto {
 @ApiTags('Finanzas · Contabilidad')
 @ApiBearerAuth()
 @Controller('api/v2/finanzas')
+@RequiereCapacidades(CAPACIDADES.FACTURACION)
 @Roles(ROLES.SUPER_ADMIN, ROLES.ADMIN)
 export class ContabilidadController {
   constructor(private readonly contabilidad: ContabilidadService) {}
