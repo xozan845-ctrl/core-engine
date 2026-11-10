@@ -16,6 +16,8 @@ import {
   Permisos,
   UsuarioActual,
   UsuarioContexto,
+  CAPACIDADES,
+  RequiereCapacidades,
 } from '@core/shared';
 import { EnviosService, Envio, OrdenExterna, ProveedorTipo } from './envios.service';
 import { EnvioConMontoResponseDto, EnvioResponseDto, OrdenExternaResponseDto } from './envios.response.dto';
@@ -81,6 +83,7 @@ export class EstadoOrdenController {
 @ApiTags('Logística')
 @ApiBearerAuth()
 @Controller('api/v2/admin')
+@RequiereCapacidades(CAPACIDADES.FULFILLMENT_DELIVERY)
 export class EnviosAdminController {
   constructor(private readonly envios: EnviosService) {}
 
@@ -113,6 +116,7 @@ export class AvanzarEnvioRequestDto {
 @ApiTags('Logística empresarial')
 @ApiBearerAuth()
 @Controller('api/v2/empresarios/me/envios')
+@RequiereCapacidades(CAPACIDADES.FULFILLMENT_DELIVERY)
 export class EnviosEmpresaController {
   constructor(private readonly envios: EnviosService) {}
 
@@ -145,6 +149,7 @@ export class EnviosEmpresaController {
 @ApiTags('Logística')
 @ApiBearerAuth()
 @Controller('api/v2/envios')
+@RequiereCapacidades(CAPACIDADES.LOGISTICA_RUTAS)
 export class EnviosFlotaController {
   constructor(private readonly envios: EnviosService) {}
 
