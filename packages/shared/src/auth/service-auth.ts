@@ -94,10 +94,10 @@ export class PermisosGuard implements CanActivate {
     const filas = await this.pg.query<PermisosRolRow>(
       `SELECT r.permisos
        FROM identity.roles_empresa r
-       JOIN identity.empresa_miembros m
-         ON m.rol_empresa_id = r.id
-        AND m.usuario_id = $2
-        AND m.estado = 'activo'
+       JOIN identity.asignaciones_personal a
+         ON a.rol_empresa_id = r.id
+        AND a.usuario_id = $2
+        AND a.estado = 'activa'
        WHERE r.id = $1
          AND r.empresa_id = $3
          AND r.activo = true`,
