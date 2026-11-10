@@ -15,7 +15,7 @@
 |---|---|---|
 | Unit backend | 🟢 | **1.419 tests / 140 archivos** en verde en **13 workspaces**; `npm test` exit 0 con cobertura |
 | Unit frontend | N/A | No hay frontend en el repo (G-2 y R-COV-5 **reservados, nunca reutilizados**) |
-| Integración (API+BD) | 🟢 | **16 archivos / 50 tests** con PostgreSQL efímero; cubren stock, contratos, tipos de orden, scheduling, packs v1/v2, RLS entre verticales, enforcement por ruta, flujos piloto y **concurrencia real del Outbox** |
+| Integración (API+BD) | 🟢 | **18 archivos / 59 tests** con PostgreSQL efímero; cubren stock, contratos, tipos de orden, scheduling, packs v1/v2, RLS entre verticales, enforcement por ruta, flujos piloto y **concurrencia real del Outbox** |
 | Contrato (API) | 🟢/🟡 | OpenAPI versionado y sincronizado (G-8); errores 400/401/403/404/409/500 con prueba runtime; envelope `{data,meta}` de R-C-1 sigue pendiente (G-5 parcial) |
 | E2E | 🟡 | `e2e.yml` manual/tag ejecuta `npm run demo` y verifica logs R-E-8; cubre R-E-1..7, no es gate de cada PR |
 | OpenAPI (spec) | 🟢 | **11 servicios, 338 operaciones: 308 públicas y 30 internas**; `swagger:export` sin diff (G-8) |
@@ -63,7 +63,7 @@
 | `*.service.ts` / `*.consumer.ts` sin spec | **0 de 54** | 0 (R-U-18, R-COV-2) | ✅ |
 | Código puro de `shared` con spec (R-U-17) | 7 de 7 | 0 sin spec | ✅ |
 | Guards/pipes con spec (R-U-15) | `service-auth`, `validation.pipe` | 0 sin spec | ✅ |
-| Tests integración | 50 tests en 16 archivos | ≥1 por flujo crítico API+BD (R-I-1) | ✅ G-4 |
+| Tests integración | 59 tests en 18 archivos | ≥1 por flujo crítico API+BD (R-I-1) | ✅ G-4 |
 | Tests contrato | 6 runtime de errores + OpenAPI | ≥1 por shape (R-C-10) | ✅/🟡 envelope |
 | Tests E2E | workflow manual/release con `npm run demo` | R-E-1..7 | ⚠️ parcial G-6 |
 | Property-based | 3 suites en `shared` | R-PB-1..3 | ⚠️ parcial fechas |
@@ -84,7 +84,7 @@
 | G-1 Unit backend | ✅ | `npm test` exit 0; 13/13 workspaces; 1.419 tests |
 | G-2 Unit frontend | N/A | No hay frontend (ID reservado) |
 | G-3 Cobertura ≥ ratchet | ✅ | 13/13 sobre threshold y sobre baseline |
-| G-4 Integración | ✅ | 50 tests en 16 archivos; matriz multi-vertical, packs, RLS, enforcement, flujos piloto y concurrencia del Outbox. La saga asíncrona completa sigue en E2E |
+| G-4 Integración | ✅ | 59 tests en 18 archivos; matriz multi-vertical, packs, RLS, enforcement, flujos piloto y concurrencia del Outbox. La saga asíncrona completa sigue en E2E |
 | G-5 Contrato | ✅/🟡 | OpenAPI sincronizado y errores normalizados; envelope `{data,meta}` pendiente de `/api/v2`. No hay gate de breaking: el contrato se regenera y revisa por G-8 |
 | G-6 E2E de flujos | ✅/🟡 | `e2e.yml` release/manual; no corre en cada PR |
 | G-7 Lint **y** build | ✅ | 0 errores / 44 warnings; build 0 |
