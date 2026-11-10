@@ -158,6 +158,19 @@ export default defineSuite({
         'e2e.yml debe fallar ante errores estructurados o excepciones no controladas (R-E-8)',
       );
       assert.ok(
+        e2e.includes('workflow_call'),
+        'e2e.yml debe ser invocable como gate de release (G-6)',
+      );
+      assert.ok(
+        release.includes('uses: ./.github/workflows/e2e.yml'),
+        'release.yml debe ejecutar el gate E2E antes de las imágenes (G-6)',
+      );
+      assert.match(
+        release,
+        /needs:\s*\[gate,\s*e2e\]/,
+        'images debe depender de gate y e2e (G-6)',
+      );
+      assert.ok(
         deploy.includes("if: github.event.inputs.environment == 'dev'") &&
           deploy.includes('cp .env.example .env'),
         'deploy.yml debe materializar la plantilla de entorno en el despliegue dev',

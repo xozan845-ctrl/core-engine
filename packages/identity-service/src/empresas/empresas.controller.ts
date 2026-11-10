@@ -94,6 +94,15 @@ class CrearEmpresaRequestDto extends OmitType(PerfilEmpresaRequestDto, [
   @IsOptional() @IsString() @Matches(/^[a-z][a-z0-9_]{1,39}$/) vertical_id?: string;
   @ApiProperty({ required: false, description: 'Pack versionado; se valida contra identity.packs' })
   @IsOptional() @IsString() @Matches(/^pack_[a-z][a-z0-9_]{1,39}$/) pack_codigo?: PackCodigo;
+  @ApiProperty({ required: false, minimum: 1, description: 'Version concreta del pack; por defecto la ultima activa' })
+  @IsOptional() @IsInt() @Min(1) pack_version?: number;
+}
+
+class ActualizarPackRequestDto {
+  @ApiProperty({ example: 'pack_belleza' })
+  @IsString() @Matches(/^pack_[a-z][a-z0-9_]{1,39}$/) pack_codigo: PackCodigo;
+  @ApiProperty({ required: false, minimum: 1, description: 'Version concreta; por defecto la ultima activa' })
+  @IsOptional() @IsInt() @Min(1) pack_version?: number;
 }
 class CrearVendedorRequestDto {
   @ApiProperty() @IsString() @Length(2, 120) nombre: string;
@@ -164,7 +173,7 @@ export class EmpresasController {
   @Post() @Roles(ROLES.EMPRESARIO)
   @ApiOperation({ summary: 'Crear empresa y elegir modalidad logística' })
   @ApiCreatedResponse({ type: EmpresaResponseDto, description: 'Empresa creada con membresía del empresario' })
-  crear(@Body() dto: CrearEmpresaRequestDto, @UsuarioActual() u: UsuarioContexto) { return this.empresas.crear(u.user_id, dto.nombre, dto.slug, dto, dto.vertical_id, dto.pack_codigo); }
+  crear(@Body() dto: CrearEmpresaRequestDto, @UsuarioActual() u: UsuarioContexto) { return this.empresas.crear(u.user_id, dto.nombre, dto.slug, dto, dto.vertical_id, dto.pack_codigo, dto.pack_version); }
   @Get(':id') @Roles(ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.EMPRESARIO, ROLES.VENDEDOR)
   @ApiOperation({ summary: 'Obtener una empresa por UUID o slug (solo miembros o administradores)' })
   @ApiParam({
@@ -191,6 +200,16 @@ export class EmpresasController {
     );
     if (redirigirA) res.status(301).setHeader('Location', redirigirA);
     return empresa;
+  }
+  @Patch(':id/pack') @Roles(ROLES.SUPER_ADMIN, ROLES.ADMIN)
+  @ApiOperation({ summary: 'Asignar o actualizar el pack versionado de una empresa' })
+  @ApiParam({ name: 'id', description: 'UUID de la empresa' })
+  @ApiOkResponse({ type: EmpresaResponseDto, description: 'Empresa con el pack actualizado' })
+  actualizarPack(
+    @Param('id') id: string,
+    @Body() dto: ActualizarPackRequestDto,
+  ) {
+    return this.empresas.actualizarPack(id, dto.pack_codigo, dto.pack_version);
   }
   @Patch(':id/perfil') @Roles(ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.EMPRESARIO)
   @ApiOperation({ summary: 'Actualizar el perfil comercial/fiscal y el logo' })

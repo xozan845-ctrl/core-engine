@@ -33,3 +33,4 @@ UI, la capa pasa a navegador real (Playwright) conservando estos IDs.
 
 - Suite E2E que ejecute R-E-1 … R-E-7 con pass rate 100%.
 - Estado actual: `npm run demo` cubre R-E-1 … R-E-7, incluido el boundary de fecha R-E-4 mediante `field/asistencia` con registros en días vecinos; `e2e.yml` además verifica R-E-8 en los logs del stack.
+- **Gate de release:** `release.yml` llama a `e2e.yml` como job obligatorio antes de construir imágenes. Un fallo E2E bloquea la publicación; ya no se dispara por tag por separado para evitar runs duplicados.

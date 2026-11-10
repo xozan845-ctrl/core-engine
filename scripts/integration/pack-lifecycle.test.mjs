@@ -291,3 +291,77 @@ test('rechaza un pack con capacidad inexistente sin dejar el pack a medias', asy
   );
   assert.equal(rows.length, 0, 'la transacción debe revertir el pack completo');
 });
+
+test('actualizarPack reconcilia capacidades y deja auditoria', async () => {
+  const sufijo = randomUUID().slice(0, 8);
+  const modelo = `modelo_${sufijo}`;
+  const vertical = `mv_${sufijo}`;
+  const packCodigo = `pack_mv_${sufijo}`;
+  creados.push({ vertical, modelo, packCodigo });
+
+  await packs.crearModelo({ codigo: modelo, nombre: 'Modelo upgrade' });
+  await packs.crearVertical({ codigo: vertical, nombre: 'Vertical upgrade', modelo_operacion: modelo });
+  await packs.crear({
+    codigo: packCodigo,
+    version: 1,
+    vertical_codigo: vertical,
+    nombre: 'Pack upgrade v1',
+    capacidades: [{ codigo: 'catalogo_items' }, { codigo: 'agenda_recursos' }],
+  });
+  const empresa = await crearTenant({ vertical, packCodigo, sufijo });
+  await packs.crear({
+    codigo: packCodigo,
+    version: 2,
+    vertical_codigo: vertical,
+    nombre: 'Pack upgrade v2',
+    capacidades: [{ codigo: 'catalogo_items' }, { codigo: 'facturacion' }],
+  });
+
+  const actualizada = await empresas.actualizarPack(empresa.id, packCodigo, 2);
+  assert.equal(actualizada.pack_version, 2);
+  assert.deepEqual(await capacidadesActivas(empresa.id), ['catalogo_items', 'facturacion']);
+
+  const { rows: [auditoria] } = await client.query(
+    `SELECT pack_codigo, pack_version, detalles
+       FROM identity.pack_migraciones
+      WHERE empresa_id = $1`,
+    [empresa.id],
+  );
+  assert.equal(auditoria.pack_codigo, packCodigo);
+  assert.equal(auditoria.pack_version, 2);
+  assert.equal(auditoria.detalles.origen, 'pack_upgrade');
+  assert.equal(auditoria.detalles.version_anterior, 1);
+  assert.equal(auditoria.detalles.version_nueva, 2);
+});
+
+test('actualizarPack rechaza otra vertical y una version inexistente', async () => {
+  const sufijo = randomUUID().slice(0, 8);
+  const modelo = `modelo_${sufijo}`;
+  const vertical = `mv_${sufijo}`;
+  const packCodigo = `pack_mv_${sufijo}`;
+  creados.push({ vertical, modelo, packCodigo });
+
+  await packs.crearModelo({ codigo: modelo, nombre: 'Modelo rechazo upgrade' });
+  await packs.crearVertical({ codigo: vertical, nombre: 'Vertical rechazo upgrade', modelo_operacion: modelo });
+  await packs.crear({
+    codigo: packCodigo,
+    version: 1,
+    vertical_codigo: vertical,
+    nombre: 'Pack rechazo upgrade',
+    capacidades: [{ codigo: 'catalogo_items' }],
+  });
+  const empresa = await crearTenant({ vertical, packCodigo, sufijo });
+
+  await assert.rejects(
+    empresas.actualizarPack(empresa.id, 'pack_flota', 1),
+    (error) => error?.codigo === 'PACK_VERTICAL_INCOMPATIBLE',
+  );
+  await assert.rejects(
+    empresas.actualizarPack(empresa.id, packCodigo, 99),
+    (error) => error?.codigo === 'PACK_INVALIDO',
+  );
+  assert.equal(
+    (await client.query('SELECT pack_version FROM identity.empresas WHERE id = $1', [empresa.id])).rows[0].pack_version,
+    1,
+  );
+});

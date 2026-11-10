@@ -2,7 +2,7 @@ import type { Mock } from 'vitest';
 import 'reflect-metadata';
 import { VentasController, VentasEmpresaController } from './ventas.controller';
 import type { VentasService } from './ventas.service';
-import { NotFoundError, ROLES } from '@core/shared';
+import { CAPABILITIES_KEY, CAPACIDADES, NotFoundError, ROLES } from '@core/shared';
 
 const estado = { total_ventas_cents: 115000, comisiones_cents: 13800, liquidado_cents: 0 };
 const estadoEmpresa = { empresa_id: 'empresa-1', ventas: [], comisiones_pendientes: '0.00', liquidaciones: [] };
@@ -25,6 +25,15 @@ describe('VentasController (api/v2/vendedores/me/ventas, R-U-10/11)', () => {
 
   it('debe exigir rol vendedor', () => {
     expect(Reflect.getMetadata('roles_requeridos', VentasController.prototype.estado)).toEqual([ROLES.VENDEDOR]);
+  });
+
+  it('debe exigir la capacidad de liquidaciones en ambos controllers', () => {
+    expect(Reflect.getMetadata(CAPABILITIES_KEY, VentasController)).toEqual([
+      CAPACIDADES.LIQUIDACIONES,
+    ]);
+    expect(Reflect.getMetadata(CAPABILITIES_KEY, VentasEmpresaController)).toEqual([
+      CAPACIDADES.LIQUIDACIONES,
+    ]);
   });
 });
 

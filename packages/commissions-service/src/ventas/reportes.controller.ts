@@ -1,6 +1,6 @@
 import { Controller, Get } from '@nestjs/common';
 import { ApiBearerAuth, ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
-import { Roles, ROLES } from '@core/shared';
+import { Roles, ROLES, CAPACIDADES, RequiereCapacidades } from '@core/shared';
 import { ReportesService, ReporteKPI } from './reportes.service';
 import { ReporteKpiResponseDto } from './reportes.response.dto';
 
@@ -8,6 +8,7 @@ import { ReporteKpiResponseDto } from './reportes.response.dto';
 @ApiTags('Comisiones · Reportes')
 @ApiBearerAuth()
 @Controller('api/v2/admin/reportes')
+@RequiereCapacidades(CAPACIDADES.LIQUIDACIONES)
 export class ReportesController {
   constructor(private readonly reportes: ReportesService) {}
 
