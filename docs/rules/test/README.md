@@ -107,11 +107,11 @@ npm run demo
   las pruebas runtime. **G-6** tiene workflow manual y de release que ejecuta `npm run demo`,
   pero no corre en cada PR; el smoke cubre los siete flujos R-E-1..7, incluido el
   boundary de fechas (R-E-4); `e2e.yml` ya inspecciona logs R-E-8. **G-8 sí está activo** en el job `build`.
-- **Cobertura (ratchet R-COV-1)**: de los 13 workspaces, **12 cumplen su
-  `coverageThreshold`** y **11 ya alcanzan el objetivo 80/70** de líneas/ramas.
-  `identity-service` está por debajo de su umbral (89/78/85) tras añadir
-  packs/partes/extensiones; `market-intelligence` y `shared` siguen bajo el
-  objetivo. El detalle vigente vive en [`../_meta/AUDIT.md`](../_meta/AUDIT.md).
+- **Cobertura (ratchet R-COV-1)**: de los 13 workspaces, **13 cumplen su `coverageThreshold`** y **11 ya alcanzan
+  el objetivo 80/70** de líneas/ramas. `market-intelligence` y `shared` siguen
+  bajo el objetivo. `identity-service` recuperó su umbral con specs de
+  controllers y ramas de servicio. El detalle vigente vive en
+  [`../_meta/AUDIT.md`](../_meta/AUDIT.md).
 - **Specs pendientes (R-U-18/R-COV-2)**: el baseline de lógica sin spec se
   mantiene versionado y el recuento vigente está en
   [`../_meta/AUDIT.md`](../_meta/AUDIT.md); el `baseline:guard` impide que esa

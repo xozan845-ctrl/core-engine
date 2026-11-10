@@ -9780,7 +9780,7 @@ export const OPENAPI_AGREGADO = {
         "parameters": [
           {
             "name": "x-user-personal",
-            "required": false,
+            "required": true,
             "in": "header",
             "schema": {
               "type": "string"
@@ -9879,7 +9879,7 @@ export const OPENAPI_AGREGADO = {
         "parameters": [
           {
             "name": "x-user-personal",
-            "required": false,
+            "required": true,
             "in": "header",
             "schema": {
               "type": "string"
@@ -10069,7 +10069,7 @@ export const OPENAPI_AGREGADO = {
           "content": {
             "application/json": {
               "schema": {
-                "type": "object"
+                "$ref": "#/components/schemas/RegistrarVentaRequestDto"
               }
             }
           }
@@ -23820,7 +23820,6 @@ export const OPENAPI_AGREGADO = {
           "guia",
           "order_id",
           "empresa_id",
-          "parte_id",
           "modalidad_logistica",
           "proveedor_tipo",
           "proveedor_tenant_id",
@@ -23895,7 +23894,6 @@ export const OPENAPI_AGREGADO = {
           "guia",
           "order_id",
           "empresa_id",
-          "parte_id",
           "modalidad_logistica",
           "proveedor_tipo",
           "proveedor_tenant_id",
@@ -24364,6 +24362,100 @@ export const OPENAPI_AGREGADO = {
           "peso",
           "tipo"
         ]
+      },
+      "RegistrarVentaRequestDto": {
+        "type": "object",
+        "properties": {
+          "order_id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Obligatorio en runtime"
+          },
+          "vendedor_id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Obligatorio en runtime"
+          },
+          "skus": {
+            "minItems": 1,
+            "description": "Obligatorio en runtime",
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "monto_cents": {
+            "type": "number",
+            "example": 115000,
+            "minimum": 0,
+            "description": "Obligatorio en runtime"
+          },
+          "lat": {
+            "type": "number",
+            "example": 12.136
+          },
+          "lng": {
+            "type": "number",
+            "example": -86.251
+          },
+          "precision": {
+            "type": "number",
+            "minimum": 0
+          },
+          "velocidad": {
+            "type": "number",
+            "minimum": 0
+          },
+          "rumbo": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 360
+          },
+          "tipo_actividad": {
+            "type": "string",
+            "enum": [
+              "impulsacion",
+              "venta",
+              "entrega",
+              "reparto"
+            ]
+          },
+          "resultado_visita": {
+            "type": "string",
+            "enum": [
+              "visitado",
+              "cerca_no_visitado",
+              "no_visitado"
+            ]
+          },
+          "distancia_cliente_metros": {
+            "type": "number",
+            "minimum": 0
+          },
+          "rango_edad": {
+            "type": "string",
+            "enum": [
+              "18-24",
+              "25-34",
+              "35-44",
+              "45-54",
+              "55+"
+            ]
+          },
+          "genero": {
+            "type": "string",
+            "enum": [
+              "M",
+              "F",
+              "NS"
+            ]
+          },
+          "evento_id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Clave de idempotencia; si falta se usa order_id."
+          }
+        }
       },
       "RegistrarVentaResponseDto": {
         "type": "object",

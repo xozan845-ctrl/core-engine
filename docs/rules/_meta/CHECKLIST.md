@@ -91,9 +91,9 @@ Matriz completa en [`06-estandares-cobertura.md`](../test/06-estandares-cobertur
 
 ## 8. Antes de merge (CI)
 
-- [ ] **G-1** unit backend (job `test`, `npm test`) — ❌ estado actual en HEAD: `identity-service` bajo umbral (ver [`AUDIT.md`](./AUDIT.md))
+- [x] **G-1** unit backend (job `test`, `npm test`) — ✅ 13/13 workspaces, 1.391 tests (ver [`AUDIT.md`](./AUDIT.md))
 - [ ] **G-2** unit frontend — **N/A** (sin frontend; ID reservado)
-- [ ] **G-3** cobertura ≥ `coverageThreshold` vigente por workspace (ratchet R-COV-1) — ❌ estado actual en HEAD (ver [`AUDIT.md`](./AUDIT.md))
+- [x] **G-3** cobertura ≥ `coverageThreshold` vigente por workspace (ratchet R-COV-1) — ✅ 13/13 (ver [`AUDIT.md`](./AUDIT.md))
 - [ ] **G-4** integración — ⏸ parcial: catálogo y configuración de sitio API+BD; faltan otros flujos críticos (R-I-12)
 - [ ] **G-5** contrato — ⏸ pendiente: todos los shapes de error 400/401/403/404/409/500 están cubiertos; el envelope de éxito requiere `/api/v2` (R-C-7)
 - [ ] **G-7** lint + build (jobs `lint` y `build`) ✅
