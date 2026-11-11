@@ -17,6 +17,7 @@ pub struct Config {
     pub rabbitmq_url: Option<String>,
     pub internal_api_key: Option<String>,
     pub identity_service_url: String,
+    pub internal_request_timeout_ms: u64,
     pub outbox_tabla: String,
 }
 
@@ -61,6 +62,13 @@ impl Config {
                 .unwrap_or_else(|| "http://identity-service:3001".to_string())
                 .trim_end_matches('/')
                 .to_string(),
+            internal_request_timeout_ms: match leer("INTERNAL_REQUEST_TIMEOUT_MS") {
+                Some(valor) => match valor.parse::<u64>() {
+                    Ok(numero) if numero > 0 => numero,
+                    _ => 3000,
+                },
+                None => 3000,
+            },
             outbox_tabla: leer("OUTBOX_TABLA").unwrap_or_else(|| "outbox".to_string()),
         })
     }

@@ -1,26 +1,14 @@
-//! `scheduling-service` en Rust — reescritura con paridad de contrato.
-//!
-//! Ver `docs/adr/0004-scheduling-service-en-rust.md`. Este andamiaje conserva
-//! configuración, envelope, errores, correlación, métricas y apagado ordenado;
-//! las rutas de agenda y la infraestructura de datos llegan en los PR 3-5.
+//! Arranque del servicio: configuración, PostgreSQL, router y apagado ordenado.
 
-// El andamiaje expone piezas (auth, errores, métricas) que aún no tienen rutas
-// que las consuman; el `allow` desaparece al completar los PR 3-6.
-#![allow(dead_code)]
-
-mod auth;
-mod config;
-mod errors;
-mod http;
-mod logs;
-mod metrics;
-mod state;
-
-use crate::config::Config;
-use crate::http::build_router;
-use crate::logs::{ejecutar_con_contexto, ContextoCorrelacion};
-use crate::metrics::Metrics;
-use crate::state::AppState;
+use scheduling_service::auth::CapacidadesHttp;
+use scheduling_service::config::Config;
+use scheduling_service::db::Db;
+use scheduling_service::http::build_router;
+use scheduling_service::logs::{ejecutar_con_contexto, ContextoCorrelacion};
+use scheduling_service::metrics::Metrics;
+use scheduling_service::scheduling::Agenda;
+use scheduling_service::state::AppState;
+use std::sync::Arc;
 
 #[tokio::main]
 async fn main() {
@@ -44,7 +32,27 @@ async fn main() {
     };
     let puerto = config.puerto;
     let servicio = config.servicio.clone();
-    let estado = AppState::nueva(config, Metrics::nueva(servicio.clone()));
+
+    let db = match Db::conectar(config.database_url.as_deref().unwrap_or_default()).await {
+        Ok(db) => db,
+        Err(error) => {
+            eprintln!("No se pudo conectar a PostgreSQL: {error}");
+            std::process::exit(1);
+        }
+    };
+
+    let capacidades = Arc::new(CapacidadesHttp::nueva(
+        config.identity_service_url.clone(),
+        config.internal_api_key.clone(),
+        config.internal_request_timeout_ms,
+    ));
+    let agenda = Arc::new(Agenda::nueva(Arc::new(db)));
+    let estado = AppState::con_dependencias(
+        config,
+        Metrics::nueva(servicio.clone()),
+        agenda,
+        capacidades,
+    );
     let app = build_router(estado);
 
     let listener = match tokio::net::TcpListener::bind(("0.0.0.0", puerto)).await {
@@ -56,17 +64,17 @@ async fn main() {
     };
 
     ejecutar_con_contexto(contexto, async {
-        crate::logs::info(
+        scheduling_service::logs::info(
             "scheduling",
-            crate::campos! { "msg": "scheduling-service listo", "puerto": puerto },
+            scheduling_service::campos! { "msg": "scheduling-service listo", "puerto": puerto },
         );
         if let Err(error) = axum::serve(listener, app)
             .with_graceful_shutdown(apagar())
             .await
         {
-            crate::logs::error(
+            scheduling_service::logs::error(
                 "scheduling",
-                crate::campos! { "msg": "Fallo el servidor HTTP", "err": error.to_string() },
+                scheduling_service::campos! { "msg": "Fallo el servidor HTTP", "err": error.to_string() },
             );
             std::process::exit(1);
         }
@@ -99,5 +107,8 @@ async fn apagar() {
         _ = ctrl_c => {},
         _ = terminar => {},
     }
-    crate::logs::info("scheduling", crate::campos! { "msg": "apagando servicio" });
+    scheduling_service::logs::info(
+        "scheduling",
+        scheduling_service::campos! { "msg": "apagando servicio" },
+    );
 }

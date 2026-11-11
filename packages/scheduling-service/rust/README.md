@@ -17,10 +17,16 @@ cargo test
 cargo run   # requiere DATABASE_URL y RABBITMQ_URL (fail-fast, R-MS-5)
 ```
 
+Prueba de integración (solo corre con una BD con el esquema `scheduling`):
+
+```bash
+TEST_DATABASE_URL=postgres://user:pass@localhost:5432/core_engine_test cargo test --test agenda_pg
+```
+
 Variables de entorno: `PORT` (3011), `SERVICIO`, `DATABASE_URL`,
 `RABBITMQ_URL`, `INTERNAL_API_KEY`, `IDENTITY_SERVICE_URL`, `OUTBOX_TABLA`.
 
-## Alcance de este andamiaje
+## Alcance actual
 
 - Configuración con `fail-fast` de variables obligatorias.
 - `/health` (`{servicio, uptime_seg}`), `/metrics` (Prometheus) y `/docs`
@@ -28,6 +34,10 @@ Variables de entorno: `PORT` (3011), `SERVICIO`, `DATABASE_URL`,
 - Envelope `{data, meta}` en rutas públicas, errores `{codigo, mensaje,
   detalles?}`, `x-request-id` y logs JSON con contexto de correlación.
 - Apagado ordenado ante `SIGINT`/`SIGTERM`.
+- **Recursos, disponibilidad y bloqueos** (`/api/v2/scheduling/**`) con el
+  mismo SQL, RLS por claims, locks `FOR UPDATE`, traducción de `23P01/23505` a
+  `409 RECURSO_NO_DISPONIBLE` y verificación interna para `orders`.
+- Capability guard contra la API interna de identity (fail-closed 503).
 
-Pendiente en los PR 3-6: rutas de agenda, PostgreSQL/RLS, Outbox, RabbitMQ,
-worker de recordatorios, consumidor de reservas e imagen Docker.
+Pendiente en los PR 4-6: citas, recordatorios, Outbox, RabbitMQ, worker,
+consumidor de reservas e imagen Docker.
