@@ -66,10 +66,12 @@ Scripts:
 - `k6/health-smoke.js`: 5 VUs, 20 s, solo `/health`. Baseline seguro.
 - `k6/health-load.js`: rampa hasta 20 VUs. **No ejecutar sin aprobación** y sin
   monitorizar el VPS.
-- `k6/order-flow.js`: 5 VUs, 70 s, flujo real de pedido. Crea un tenant y un
+- `k6/order-flow.js`: 2 VUs, 60 s, flujo real de pedido. Crea un tenant y un
   producto efímeros (stock 5000) y mide `POST /orders` + `GET /orders/:id`.
-  Por defecto apunta a `localhost:8080`; **no ejecutar contra stage/producción
-  sin aprobación** y monitorización.
+  Respeta el rate limit del gateway (300/min por IP); cargas mayores exigen
+  IPs distribuidas o un bypass de test. `K6_VUS`/`K6_DURACION` ajustan el
+  escenario. Por defecto apunta a `localhost:8080`; **no ejecutar contra
+  stage/producción sin aprobación** y monitorización.
 
 ## Remediación aplicada
 
