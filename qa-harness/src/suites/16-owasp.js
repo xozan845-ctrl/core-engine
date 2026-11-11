@@ -78,6 +78,7 @@ export async function suite16Owas(client, cfg, adminToken, vendedorToken, compra
         ...(setup.tienda.body?.id ? { tienda_id: setup.tienda.body.id } : {}),
       }, vAuth);
       setup.orden = setup.of.body?.id ? await client.post('/api/v2/orders', {
+        tipo_orden: 'compra',
         items: [{ oferta_id: setup.of.body.id, cantidad: 1 }],
       }, cAuth) : null;
       setupOk = !!setup.orden?.body?.id;
@@ -234,7 +235,7 @@ export async function suite16Owas(client, cfg, adminToken, vendedorToken, compra
     r('A09 Trazabilidad: x-request-id presente en respuestas', !!rid, { detalle: rid ?? '(ausente)' });
 
     // ── A10 SSRF ─────────────────────────────────────────────────────────
-    const ssrf1 = await client.post('/api/v2/orders', { items: [{ oferta_id: 'http://169.254.169.254/latest/meta-data' }] }, cAuth);
+    const ssrf1 = await client.post('/api/v2/orders', { tipo_orden: 'compra', items: [{ oferta_id: 'http://169.254.169.254/latest/meta-data' }] }, cAuth);
     const ssrf2 = await client.get(
       '/api/v2/catalog/items/' + encodeURIComponent('http://127.0.0.1:5432') + `?empresa_id=${encodeURIComponent(empresaId)}`,
       aAuth,
