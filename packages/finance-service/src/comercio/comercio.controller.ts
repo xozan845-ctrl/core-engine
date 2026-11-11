@@ -21,6 +21,7 @@ import {
 import { ROLES, Roles, UsuarioActual, UsuarioContexto } from '@core/shared';
 import { ComercioService } from './comercio.service';
 import {
+  AbonarCreditoRequestDto,
   ActualizarClienteComercioRequestDto,
   ActualizarConfiguracionDocumentosRequestDto,
   ActualizarCuentaBancoRequestDto,
@@ -137,6 +138,18 @@ export class ComercioController {
   @ApiCreatedResponse({ type: CreditoResponseDto, description: 'Crédito pagado' })
   pagarCredito(@Param('id') id: string, @UsuarioActual() usuario: UsuarioContexto) {
     return this.comercio.pagarCredito(id, usuario);
+  }
+
+  @Post('creditos/:id/abonar')
+  @ApiOperation({ summary: 'Registrar un abono parcial del crédito' })
+  @ApiParam({ name: 'id', description: 'Id del crédito' })
+  @ApiCreatedResponse({ type: CreditoResponseDto, description: 'Abono registrado' })
+  abonarCredito(
+    @Param('id') id: string,
+    @Body() dto: AbonarCreditoRequestDto,
+    @UsuarioActual() usuario: UsuarioContexto,
+  ) {
+    return this.comercio.abonarCredito(id, dto, usuario);
   }
 
   @Delete('creditos/:id')

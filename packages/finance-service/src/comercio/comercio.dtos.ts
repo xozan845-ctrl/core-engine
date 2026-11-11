@@ -113,6 +113,23 @@ export class CrearCreditoRequestDto {
   amountCents: number;
 }
 
+export class AbonarCreditoRequestDto {
+  @ApiProperty({ description: 'Importe del abono en centavos', minimum: 1 })
+  @IsInt()
+  @Min(1)
+  montoCents: number;
+
+  @ApiProperty({
+    description: 'Medio del abono',
+    required: false,
+    enum: ['efectivo', 'tarjeta', 'transferencia', 'otro'],
+    default: 'efectivo',
+  })
+  @IsOptional()
+  @IsIn(['efectivo', 'tarjeta', 'transferencia', 'otro'])
+  metodoPago?: 'efectivo' | 'tarjeta' | 'transferencia' | 'otro';
+}
+
 export class CrearGastoRequestDto {
   @ApiProperty({ description: 'Fecha del gasto (yyyy-mm-dd)' })
   @IsDateString()
