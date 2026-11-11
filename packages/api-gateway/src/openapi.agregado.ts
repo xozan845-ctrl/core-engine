@@ -10444,7 +10444,17 @@ export const OPENAPI_AGREGADO = {
         ],
         "responses": {
           "200": {
-            "description": "Registros de la parte"
+            "description": "Registros de la parte",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/RegistroParteResponseDto"
+                  }
+                }
+              }
+            }
           }
         },
         "security": [
@@ -10491,7 +10501,14 @@ export const OPENAPI_AGREGADO = {
         },
         "responses": {
           "201": {
-            "description": "Registro creado"
+            "description": "Registro creado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RegistroParteResponseDto"
+                }
+              }
+            }
           }
         },
         "security": [
@@ -10537,7 +10554,14 @@ export const OPENAPI_AGREGADO = {
         ],
         "responses": {
           "200": {
-            "description": "Registro encontrado"
+            "description": "Registro encontrado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RegistroParteResponseDto"
+                }
+              }
+            }
           }
         },
         "security": [
@@ -10591,7 +10615,14 @@ export const OPENAPI_AGREGADO = {
         },
         "responses": {
           "200": {
-            "description": "Registro actualizado"
+            "description": "Registro actualizado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RegistroParteResponseDto"
+                }
+              }
+            }
           }
         },
         "security": [
@@ -24668,6 +24699,77 @@ export const OPENAPI_AGREGADO = {
         },
         "required": [
           "acciones"
+        ]
+      },
+      "RegistroParteResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "empresa_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "parte_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "tipo": {
+            "type": "string",
+            "example": "historia_clinica"
+          },
+          "titulo": {
+            "type": "string"
+          },
+          "datos": {
+            "type": "object",
+            "additionalProperties": true
+          },
+          "adjuntos": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          "cita_id": {
+            "type": "object",
+            "nullable": true,
+            "format": "uuid"
+          },
+          "item_id": {
+            "type": "object",
+            "nullable": true,
+            "format": "uuid"
+          },
+          "autor_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "creado_en": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "actualizado_en": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "empresa_id",
+          "parte_id",
+          "tipo",
+          "titulo",
+          "datos",
+          "adjuntos",
+          "cita_id",
+          "item_id",
+          "autor_id",
+          "creado_en",
+          "actualizado_en"
         ]
       },
       "RegistroRequestDto": {
