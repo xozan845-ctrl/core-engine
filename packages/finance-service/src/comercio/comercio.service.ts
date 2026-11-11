@@ -203,6 +203,42 @@ export class ComercioService {
     return this.actualizar('creditos', id, { balanceCents: 0, paidAt: this.hoy() }, usuario);
   }
 
+  /**
+   * Abono parcial: descuenta el saldo y deja el historial en `datos.abonos`.
+   * Cierra el crédito (`paidAt`) solo cuando el saldo llega a cero.
+   */
+  async abonarCredito(
+    id: string,
+    dto: { montoCents: number; metodoPago?: string },
+    usuario: UsuarioContexto,
+  ): Promise<RegistroComercio> {
+    const credito = await this.buscar('creditos', id, usuario);
+    const datos = credito.datos as Record<string, unknown>;
+    const saldo = Number(datos.balanceCents ?? 0);
+    const monto = Number(dto.montoCents);
+    if (!Number.isInteger(monto) || monto <= 0) {
+      throw new DomainError('ABONO_INVALIDO', 'El abono debe ser un entero positivo en centavos.');
+    }
+    if (monto > saldo) {
+      throw new DomainError('ABONO_EXCEDE_SALDO', 'El abono supera el saldo pendiente del credito.');
+    }
+    const abonos = Array.isArray(datos.abonos) ? datos.abonos : [];
+    const nuevoSaldo = saldo - monto;
+    return this.actualizar(
+      'creditos',
+      id,
+      {
+        balanceCents: nuevoSaldo,
+        ...(nuevoSaldo === 0 ? { paidAt: this.hoy() } : {}),
+        abonos: [
+          ...abonos,
+          { montoCents: monto, fecha: this.hoy(), metodoPago: dto.metodoPago ?? 'efectivo' },
+        ],
+      },
+      usuario,
+    );
+  }
+
   // ── gastos ───────────────────────────────────────────────────────────────
 
   listarGastos(usuario: UsuarioContexto): Promise<RegistroComercio[]> {

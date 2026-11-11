@@ -5364,6 +5364,65 @@ export const OPENAPI_AGREGADO = {
         ]
       }
     },
+    "/api/v2/comercio/creditos/{id}/abonar": {
+      "post": {
+        "operationId": "ComercioController_abonarCredito",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "description": "Id del crédito",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AbonarCreditoRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Abono registrado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/CreditoResponseDto"
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/MetaRespuesta"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Registrar un abono parcial del crédito",
+        "tags": [
+          "Comercio · Operación de tienda"
+        ]
+      }
+    },
     "/api/v2/comercio/creditos/{id}": {
       "delete": {
         "operationId": "ComercioController_eliminarCredito",
@@ -18438,6 +18497,30 @@ export const OPENAPI_AGREGADO = {
           "synced",
           "created_at",
           "updated_at"
+        ]
+      },
+      "AbonarCreditoRequestDto": {
+        "type": "object",
+        "properties": {
+          "montoCents": {
+            "type": "number",
+            "description": "Importe del abono en centavos",
+            "minimum": 1
+          },
+          "metodoPago": {
+            "type": "string",
+            "description": "Medio del abono",
+            "enum": [
+              "efectivo",
+              "tarjeta",
+              "transferencia",
+              "otro"
+            ],
+            "default": "efectivo"
+          }
+        },
+        "required": [
+          "montoCents"
         ]
       },
       "ActualizarClienteComercioRequestDto": {
