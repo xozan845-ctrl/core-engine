@@ -154,6 +154,12 @@ const COLUMNAS = `item_id, empresa_id, tipo, codigo, nombre, descripcion,
   tipo_precio, tipo_costo, stock_minimo, stock_maximo, garantia_meses,
   es_materia_prima, ubicacion, estado, creado_en, actualizado_en`;
 
+/**
+ * `catalog.items` expone la PK como `id`; la vista la publica como `item_id`.
+ * Un INSERT ... RETURNING debe usar la columna real de la tabla.
+ */
+const COLUMNAS_RETURNING = COLUMNAS.replace(/^item_id/, 'id AS item_id');
+
 @Injectable()
 export class ItemsService {
   private readonly ajv = new Ajv({ allErrors: true, strict: false });
@@ -290,7 +296,7 @@ export class ItemsService {
           ubicacion)
        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12::jsonb, $13, $14,
                $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27, $28)
-       RETURNING ${COLUMNAS}`,
+       RETURNING ${COLUMNAS_RETURNING}`,
       [
         empresaId,
         tipo,
@@ -374,7 +380,7 @@ export class ItemsService {
          (empresa_id, tipo, codigo, nombre, descripcion, categoria, precio_cents,
           costo_cents, track_inventory, stock, atributos, estado)
        VALUES ($1, 'alquiler', $2, $3, $4, $5, $6, $7, false, NULL, $8::jsonb, $9)
-       RETURNING ${COLUMNAS}`,
+       RETURNING ${COLUMNAS_RETURNING}`,
       [
         empresaId,
         codigo,

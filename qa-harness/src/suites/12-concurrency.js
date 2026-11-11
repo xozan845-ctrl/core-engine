@@ -34,7 +34,7 @@ export async function suite12Concurrencia(client, cfg, compradorToken, adminToke
   };
 
   const comprar = (ofertaId, cantidad) =>
-    client.post('/api/v2/orders', { items: [{ oferta_id: ofertaId, cantidad }] }, cAuth);
+    client.post('/api/v2/orders', { tipo_orden: 'compra', items: [{ oferta_id: ofertaId, cantidad }] }, cAuth);
 
   const estadoFinal = async (orderId) => {
     try {

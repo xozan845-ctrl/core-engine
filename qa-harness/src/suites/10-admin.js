@@ -26,7 +26,8 @@ export async function suite10Admin(client, cfg, adminToken) {
     const corte = await client.post('/api/v2/admin/liquidaciones/corte', {}, auth);
     resultados.push({ test: 'Corte liquidación', status: corte.status, pass: [200, 201].includes(corte.status) });
 
-    const liqs = Array.isArray(corte.body) ? corte.body : (corte.body?.liquidaciones ?? corte.body?.items ?? []);
+    const corteData = corte.body?.data ?? corte.body;
+    const liqs = Array.isArray(corteData) ? corteData : (corteData?.liquidaciones ?? corteData?.items ?? []);
     if (liqs.length > 0) {
       const pagar = await client.post(`/api/v2/admin/liquidaciones/${liqs[0].id}/pagar`, {}, auth);
       resultados.push({ test: 'Pagar liquidación', status: pagar.status, pass: [200, 201].includes(pagar.status) });

@@ -35,7 +35,7 @@ export async function suite08Comisiones(client, cfg, vendedorToken, adminToken, 
 
     let orderId = null;
     if (ofertaId) {
-      const venta = await client.post('/api/v2/orders', { items: [{ oferta_id: ofertaId, cantidad: 1 }] }, cAuth);
+      const venta = await client.post('/api/v2/orders', { tipo_orden: 'compra', items: [{ oferta_id: ofertaId, cantidad: 1 }] }, cAuth);
       orderId = venta.body?.id ?? null;
       resultados.push({ test: 'Venta real (comprador)', status: venta.status, pass: [200, 201].includes(venta.status) });
 
@@ -53,7 +53,8 @@ export async function suite08Comisiones(client, cfg, vendedorToken, adminToken, 
       resultados.push({ test: 'Corte liquidación (RN-07)', status: corte.status, pass: [200, 201].includes(corte.status) });
 
       // Pagar liquidacion si el corte genero alguna
-      const liqs = Array.isArray(corte.body) ? corte.body : (corte.body?.liquidaciones ?? corte.body?.items ?? []);
+      const corteData = corte.body?.data ?? corte.body;
+      const liqs = Array.isArray(corteData) ? corteData : (corteData?.liquidaciones ?? corteData?.items ?? []);
       if (liqs.length > 0) {
         const pagar = await client.post(`/api/v2/admin/liquidaciones/${liqs[0].id}/pagar`, {}, aAuth);
         resultados.push({ test: 'Pagar liquidación', status: pagar.status, pass: [200, 201].includes(pagar.status) });

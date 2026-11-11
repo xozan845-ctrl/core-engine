@@ -9,7 +9,7 @@ los tests unitarios de nadie.
 
 | ID | Regla |
 |---|---|
-| R-C-1 | Toda respuesta de éxito sigue el envelope `{ data: T, meta: { timestamp, path, method, statusCode } }`. En listas paginadas la paginación va anidada dentro de `data`: `{ data: { data: T[], total, page, limit, totalPages }, meta }`. El test de contrato valida presencia y tipos en ambos niveles. Los errores **no** usan este envelope (ver R-C-8). |
+| R-C-1 | Toda respuesta de éxito sigue el envelope `{ data: T, meta: { timestamp, path, method, statusCode } }`. En listas paginadas la paginación va anidada dentro de `data` conservando los nombres del dominio: `{ data: { items: T[], total, pagina, limite, paginas }, meta }`. El test de contrato valida presencia y tipos en ambos niveles. Los errores **no** usan este envelope (ver R-C-8). |
 | R-C-2 | Toda respuesta sigue el patrón de API estándar del proyecto (éxito vs error) y el test de contrato lo valida con un schema (Zod/JSON-Schema o aserturas de shape). |
 | R-C-3 | Todo objeto de dominio expuesto en el API tiene un **DTO de respuesta**; el contrato se testea contra el DTO, nunca exponer entidades/rows de persistencia crudos (prohibido filtrar `password` u otros campos sensibles). |
 
