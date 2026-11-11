@@ -89,6 +89,69 @@
         ]
       }
     },
+    "/internal/items/{id}/cotizacion": {
+      "get": {
+        "operationId": "InternalController_cotizar",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "description": "Id del item",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "empresa_id",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "desde",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "example": "2026-12-20",
+              "type": "string"
+            }
+          },
+          {
+            "name": "hasta",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "example": "2026-12-22",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Cotización del rango",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CotizacionItemResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "internalKey": []
+          }
+        ],
+        "summary": "Cotizar un item por rango de fechas (servicio→servicio)",
+        "tags": [
+          "Catálogo (interno)"
+        ]
+      }
+    },
     "/internal/inventario/resumen": {
       "get": {
         "operationId": "InternalController_resumen",
@@ -198,6 +261,73 @@
           }
         ],
         "summary": "Situación fiscal de un usuario (para identity)",
+        "tags": [
+          "Finanzas (interno)"
+        ]
+      }
+    },
+    "/internal/finance/creditos": {
+      "post": {
+        "operationId": "InternoController_registrarCredito",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RegistrarCreditoInternoRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Crédito registrado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CreditoOrdenResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "internalKey": []
+          }
+        ],
+        "summary": "Registrar una venta a crédito desde orders",
+        "tags": [
+          "Finanzas (interno)"
+        ]
+      }
+    },
+    "/internal/finance/creditos/orden/{orderId}": {
+      "delete": {
+        "operationId": "InternoController_anularCredito",
+        "parameters": [
+          {
+            "name": "orderId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Crédito anulado"
+          }
+        },
+        "security": [
+          {
+            "internalKey": []
+          }
+        ],
+        "summary": "Anular el crédito ligado a una orden no creada",
         "tags": [
           "Finanzas (interno)"
         ]
@@ -753,6 +883,43 @@
         ]
       }
     },
+    "/internal/scheduling/disponibilidad": {
+      "post": {
+        "operationId": "InternalSchedulingController_disponibilidad",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/VerificarDisponibilidadRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Recurso disponible",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DisponibilidadResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "internalKey": []
+          }
+        ],
+        "summary": "Verificar disponibilidad de un recurso en un rango",
+        "tags": [
+          "Scheduling (interno)"
+        ]
+      }
+    },
     "/internal/storage/tenants/{tenantId}": {
       "get": {
         "operationId": "InternalStorageController_estado",
@@ -1212,6 +1379,72 @@
       }
     },
     "schemas": {
+      "CotizacionItemResponseDto": {
+        "type": "object",
+        "properties": {
+          "item_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "desde": {
+            "type": "string",
+            "format": "date"
+          },
+          "hasta": {
+            "type": "string",
+            "format": "date"
+          },
+          "dias": {
+            "type": "number"
+          },
+          "total_cents": {
+            "type": "number"
+          },
+          "desglose": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/DesgloseTarifaResponseDto"
+            }
+          }
+        },
+        "required": [
+          "item_id",
+          "desde",
+          "hasta",
+          "dias",
+          "total_cents",
+          "desglose"
+        ]
+      },
+      "DesgloseTarifaResponseDto": {
+        "type": "object",
+        "properties": {
+          "desde": {
+            "type": "string",
+            "format": "date"
+          },
+          "hasta": {
+            "type": "string",
+            "format": "date"
+          },
+          "dias": {
+            "type": "number"
+          },
+          "precio_cents": {
+            "type": "number"
+          },
+          "subtotal_cents": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "desde",
+          "hasta",
+          "dias",
+          "precio_cents",
+          "subtotal_cents"
+        ]
+      },
       "ItemImagenResponseDto": {
         "type": "object",
         "properties": {
@@ -1529,6 +1762,26 @@
           "valor_inventario_cents"
         ]
       },
+      "CreditoOrdenResponseDto": {
+        "type": "object",
+        "properties": {
+          "credito_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "balance_cents": {
+            "type": "number"
+          },
+          "limite_cents": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "credito_id",
+          "balance_cents",
+          "limite_cents"
+        ]
+      },
       "DeclaracionResponseDto": {
         "type": "object",
         "properties": {
@@ -1651,6 +1904,42 @@
           "cuota_cents",
           "estado",
           "creado_en"
+        ]
+      },
+      "RegistrarCreditoInternoRequestDto": {
+        "type": "object",
+        "properties": {
+          "empresa_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "parte_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "order_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "monto_cents": {
+            "type": "number",
+            "minimum": 1
+          },
+          "concepto": {
+            "type": "string",
+            "minLength": 1
+          },
+          "vendedor_id": {
+            "type": "string",
+            "format": "uuid"
+          }
+        },
+        "required": [
+          "empresa_id",
+          "parte_id",
+          "order_id",
+          "monto_cents",
+          "concepto"
         ]
       },
       "SujetoTributarioResponseDto": {
@@ -2274,6 +2563,14 @@
               "orden_servicio"
             ]
           },
+          "metodo_pago": {
+            "type": "string",
+            "enum": [
+              "simulado",
+              "credito"
+            ],
+            "example": "simulado"
+          },
           "fulfillment_config": {
             "type": "object",
             "additionalProperties": true
@@ -2353,12 +2650,51 @@
           "tienda_id",
           "estado",
           "tipo_orden",
+          "metodo_pago",
           "total_cents",
           "comision_cents",
           "moneda",
           "items",
           "creado_en",
           "actualizado_en"
+        ]
+      },
+      "DisponibilidadResponseDto": {
+        "type": "object",
+        "properties": {
+          "disponible": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "disponible"
+        ]
+      },
+      "VerificarDisponibilidadRequestDto": {
+        "type": "object",
+        "properties": {
+          "empresa_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "recurso_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "inicia_en": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "termina_en": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "empresa_id",
+          "recurso_id",
+          "inicia_en",
+          "termina_en"
         ]
       },
       "EstadoBucketResponseDto": {

@@ -100,13 +100,11 @@ npm run demo
   gobernanza (`scripts/**/*.mjs`); `qa-harness/` sigue sin lintearse.
 - **G-4 parcial**: existen suites con PostgreSQL efímero para stock y
   configuración de sitio API+BD, pero todavía faltan otros flujos críticos.
-  **G-5 pendiente**: los errores 400/401 se validan en runtime para configuración
-  de sitio y 403/404/409/500 en el filtro global, pero el envelope `{data,meta}` requiere una migración versionada
-  `/api/v2`.
-  G-8 protege el documento OpenAPI, pero no sustituye
-  las pruebas runtime. **G-6** tiene workflow manual y de release que ejecuta `npm run demo`,
-  pero no corre en cada PR; el smoke cubre los siete flujos R-E-1..7, incluido el
-  boundary de fechas (R-E-4); `e2e.yml` ya inspecciona logs R-E-8. **G-8 sí está activo** en el job `build`.
+  **G-5**: envelope `{data,meta}` aplicado en todo `/api/v2`; los errores
+  400/401/403/404/409/500 se validan en runtime. G-8 protege el documento
+  OpenAPI, pero no sustituye las pruebas runtime. **G-6** es gate de release:
+  `release.yml` ejecuta `e2e.yml` (smoke R-E-1..7 + R-E-8) antes de publicar
+  imágenes; no corre en cada PR.
 - **Cobertura (ratchet R-COV-1)**: de los 13 workspaces, **13 cumplen su `coverageThreshold`** y **11 ya alcanzan
   el objetivo 80/70** de líneas/ramas. `market-intelligence` y `shared` siguen
   bajo el objetivo. `identity-service` recuperó su umbral con specs de

@@ -16,8 +16,8 @@ Todo PR debe incluir las capas marcadas con ✅ para el tipo de cambio tocado.
 
 > Las columnas Integración/Contrato/E2E son exigibles cuando la historia toque
 > esas capas; G-4 cubre la matriz multi-vertical, packs, RLS, enforcement, piloto y Outbox
-> sobre PostgreSQL efímero; G-5 sigue pendiente del envelope versionado y G-6
-> permanece condicionado a release/manual. La fila "Flujo de usuario nuevo" aplica
+> sobre PostgreSQL efímero; G-5 queda cubierto por el envelope `{data,meta}` de
+> `/api/v2` y G-6 es gate de release. La fila "Flujo de usuario nuevo" aplica
 > cuando exista UI en el repo (hoy no la hay).
 
 ## Umbrales de cobertura (workspaces con suite — Vitest)
@@ -47,6 +47,7 @@ Todo PR debe incluir las capas marcadas con ✅ para el tipo de cambio tocado.
   | `market-intelligence-service` | 18 | 11 | 35 |
   | `storage-service` | 99 | 86 | 99 |
   | `scheduling-service` | 94 | 77 | 88 |
+  | `notifications-service` | 99 | 85 | 99 |
 
   **Enmienda (migración Jest → Vitest, 2026-10-14)**: el runner pasó de Jest/ts-jest a **Vitest 4** (config por workspace en `vitest.config.ts`, ver ADR-20). La cobertura se recalibró al nuevo baseline porque el proveedor de cobertura cambió y ahora instrumenta **todos** los ficheros del alcance (como hacía `collectCoverageFrom` en Jest), no solo los importados; verificado con el provider `istanbul` (mismos números). El ratchet sigue **solo sube** (nunca baja). `field-service` se incorporó con baseline 84/70/72 y `scheduling-service` con baseline 94/77/88; ya no quedan workspaces sin suite.
 - **Anti-inflado**: subir cobertura no puede lograrse agregando asserts triviales; el gate real es la mutación (R-MT-2).
@@ -73,7 +74,7 @@ se reutiliza).
 | G-2 | Suite unit frontend en verde. | N/A — no hay frontend. |
 | G-3 | Cobertura ≥ `thresholds` vigentes en `packages/*/vitest.config.ts` (ratchet +5/release; alcance según R-COV-4): incumplirlo o bajar el umbral falla el job `test`. | ✅ configurado · estado en [`AUDIT.md`](../_meta/AUDIT.md) |
 | G-4 | Suite de integración API+BD en verde. | ✅ PostgreSQL efímero cubre matriz multi-vertical, packs v1/v2, RLS, enforcement, pilotos y concurrencia de Outbox (59 tests). |
-| G-5 | Test de contrato en verde. | ⏸: errores 400/401 verificados; el envelope requiere migración `/api/v2` y faltan otros shapes críticos (R-C-7). |
+| G-5 | Test de contrato en verde. | ✅ envelope `{data,meta}` en todo `/api/v2`; errores 400/401/403/404/409/500 verificados en runtime; R-C-1 comprobado sobre el OpenAPI público. |
 | G-6 | E2E de flujos críticos en verde antes de release (puede ser etiqueta `release`, no cada PR). | ✅ **gate de release**: `release.yml` llama a `e2e.yml` antes de `images`; el job levanta `docker-compose.dev.yml`, ejecuta `npm run demo` y verifica logs R-E-8 (R-E-1…R-E-7, incluido R-E-4). Un fallo bloquea la publicación. `deploy.yml` además ejecuta el smoke remoto de stage/prod (R-CD-12). |
 | G-7 | Lint **y** build sin errores: `npm run lint` (ESLint, alcance `packages/*/src/**/*.ts`, job `lint`) + `npm run build` (job `build`). | ✅ |
 | G-8 | Swagger spec sincronizado (R-C-7): `git diff --exit-code` tras el export. | ✅ `npm run swagger:export` + `git diff --exit-code docs/openapi docs/api packages/api-gateway/src/openapi.agregado.ts` en el job `build`. |

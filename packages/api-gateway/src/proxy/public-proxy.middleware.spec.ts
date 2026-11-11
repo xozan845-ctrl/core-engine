@@ -111,6 +111,24 @@ describe('crearProxyPublico (ADR-29)', () => {
     expect(Buffer.from(init.body).toString()).toContain('correo');
   });
 
+  it('debe añadir Basic en la confirmación del restablecimiento', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(respuesta());
+    vi.stubGlobal('fetch', fetchMock);
+    const req = crearReq({
+      method: 'POST',
+      url: '/api/v2/auth/restablecer-contrasena/confirmar',
+      headers: { origin: ORIGEN, 'content-type': 'application/json' },
+      body: '{"token":"t","contrasena":"NuevaClave123!"}',
+    });
+    const res = crearRes();
+
+    await ejecutar(req, res);
+
+    const [url, init] = fetchMock.mock.calls[0];
+    expect(url).toBe('http://127.0.0.1:18080/api/v2/auth/restablecer-contrasena/confirmar');
+    expect(init.headers.authorization).toBe(BASIC);
+  });
+
   it('debe reenviar el Bearer del navegador en rutas autenticadas', async () => {
     const fetchMock = vi.fn().mockResolvedValue(respuesta());
     vi.stubGlobal('fetch', fetchMock);

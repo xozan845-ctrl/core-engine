@@ -20,10 +20,12 @@ export function clasificarRutaOpenApi(ruta: string): SuperficieOpenApi {
 }
 
 const META_ENVELOPE = 'MetaRespuesta';
+const RE_STORAGE_PUBLICO = /^\/api\/v2\/storage\/public(?:\/|$)/;
 
 /**
  * Envuelve las respuestas 2xx de `/api/v2/**` en `{ data, meta }` (R-C-1).
- * No toca `/internal/**` ni respuestas sin schema JSON.
+ * No toca `/internal/**`, binarios públicos de storage ni respuestas sin
+ * schema JSON.
  */
 export function envolverDocumentoOpenApi(documento: object): Documento {
   const doc = clonar(documento) as Documento;
@@ -44,7 +46,7 @@ export function envolverDocumentoOpenApi(documento: object): Documento {
   doc.components = components;
 
   for (const [ruta, operaciones] of Object.entries(paths)) {
-    if (clasificarRutaOpenApi(ruta) !== 'publica') continue;
+    if (clasificarRutaOpenApi(ruta) !== 'publica' || RE_STORAGE_PUBLICO.test(ruta)) continue;
     for (const operacion of Object.values(operaciones)) {
       if (!operacion || typeof operacion !== 'object') continue;
       const responses = (operacion as Documento).responses as

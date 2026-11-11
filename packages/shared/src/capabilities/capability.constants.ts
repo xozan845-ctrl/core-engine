@@ -12,6 +12,7 @@ export const CAPACIDADES = {
   FULFILLMENT_ONSITE: 'fulfillment_onsite',
   LOGISTICA_RUTAS: 'logistica_rutas',
   COTIZACIONES: 'cotizaciones',
+  VENTAS_CREDITO: 'ventas_credito',
   FACTURACION: 'facturacion',
   LIQUIDACIONES: 'liquidaciones',
 } as const;

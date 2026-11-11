@@ -168,6 +168,45 @@ describe('ComercioService', () => {
       expect(pg.queryOne.mock.calls[1][1][3]).toContain('"balanceCents":0');
     });
 
+    it('registra abonos parciales y cierra el credito al llegar a cero', async () => {
+      const { servicio, pg } = crear();
+      pg.queryOne
+        .mockResolvedValueOnce(fila({ customer: 'Ana', balanceCents: 100, abonos: [] }))
+        .mockResolvedValueOnce(fila({ customer: 'Ana', balanceCents: 40 }));
+
+      const abono = await servicio.abonarCredito(
+        'r1',
+        { montoCents: 60, metodoPago: 'efectivo' },
+        empresa,
+      );
+      expect(abono).toMatchObject({ balanceCents: 40 });
+      const enviado = JSON.parse(pg.queryOne.mock.calls[1][1][3] as string);
+      expect(enviado).toMatchObject({
+        balanceCents: 40,
+        abonos: [{ montoCents: 60, metodoPago: 'efectivo', fecha: expect.any(String) }],
+      });
+      expect(enviado.paidAt).toBeUndefined();
+
+      pg.queryOne
+        .mockResolvedValueOnce(fila({ balanceCents: 40, abonos: [] }))
+        .mockResolvedValueOnce(fila({ balanceCents: 0 }));
+      await servicio.abonarCredito('r1', { montoCents: 40 }, empresa);
+      const cierre = JSON.parse(pg.queryOne.mock.calls[3][1][3] as string);
+      expect(cierre).toMatchObject({ balanceCents: 0, paidAt: expect.any(String) });
+    });
+
+    it('rechaza abonos invalidos o mayores al saldo', async () => {
+      const { servicio, pg } = crear();
+      pg.queryOne.mockResolvedValue(fila({ balanceCents: 50, abonos: [] }));
+
+      await expect(
+        servicio.abonarCredito('r1', { montoCents: 0 }, empresa),
+      ).rejects.toMatchObject({ codigo: 'ABONO_INVALIDO' });
+      await expect(
+        servicio.abonarCredito('r1', { montoCents: 51 }, empresa),
+      ).rejects.toMatchObject({ codigo: 'ABONO_EXCEDE_SALDO' });
+    });
+
     it('registra, actualiza y paga un gasto', async () => {
       const { servicio, pg } = crear();
       pg.queryOne.mockResolvedValue(fila({ concept: 'Renta' }));

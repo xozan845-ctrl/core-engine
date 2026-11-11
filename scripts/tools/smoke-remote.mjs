@@ -39,6 +39,21 @@ if (Boolean(EMPRESARIO_EMAIL) !== Boolean(EMPRESARIO_PASSWORD)) {
   );
 }
 
+/** Desenvuelve `{data,meta}` (R-C-1) sin alterar respuestas no migradas. */
+function desenvolver(json) {
+  if (
+    json &&
+    typeof json === 'object' &&
+    !Array.isArray(json) &&
+    Object.prototype.hasOwnProperty.call(json, 'data') &&
+    json.meta &&
+    typeof json.meta === 'object'
+  ) {
+    return json.data;
+  }
+  return json;
+}
+
 let pasoActual = 0;
 
 function paso(nombre) {
@@ -72,7 +87,7 @@ async function request(method, path, { token, body } = {}) {
       } catch {
         json = text;
       }
-      return { status: response.status, json, headers: response.headers };
+      return { status: response.status, json: desenvolver(json), headers: response.headers };
     } catch (error) {
       if (attempt === attempts - 1) {
         throw new Error(

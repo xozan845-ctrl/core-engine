@@ -76,6 +76,31 @@ describe('PedidosConsumer de resultados de stock (Tabla 22)', () => {
     );
   });
 
+  it('debe pagar una venta a credito sin simular la pasarela', async () => {
+    const { dispatch, handler, pg } = await crear();
+    (pg.queryOne as Mock)
+      .mockResolvedValueOnce(null)
+      .mockResolvedValueOnce({ estado: 'creada', total_cents: 2500, metodo_pago: 'credito' });
+
+    await dispatch(evento(EVENTOS.STOCK_RESERVADO, { order_id: 'order-1', items: [] }));
+
+    expect(handler.transicionar).toHaveBeenCalledWith(
+      'order-1',
+      'pagada',
+      'pago_credito_aprobado',
+      'inventario',
+      {
+        tipo: EVENTOS.PAYMENT_PROCESADO,
+        data: {
+          order_id: 'order-1',
+          monto_cents: 2500,
+          estado: 'procesado',
+          metodo: 'credito',
+        },
+      },
+    );
+  });
+
   it('debe marcar stock reservado sin transicionar si la orden ya no esta creada', async () => {
     const { dispatch, handler, pg } = await crear();
     (pg.queryOne as Mock)

@@ -57,6 +57,9 @@ export class OrderViewResponseDto {
   @ApiProperty({ enum: ['compra', 'reserva', 'cotizacion', 'orden_servicio'] })
   tipo_orden: string;
 
+  @ApiProperty({ enum: ['simulado', 'credito'], example: 'simulado' })
+  metodo_pago: string;
+
   @ApiProperty({ required: false, type: Object, additionalProperties: true })
   fulfillment_config?: Record<string, unknown>;
 
@@ -132,4 +135,13 @@ export class HistoriaEventoResponseDto {
 
   @ApiProperty({ description: 'Fecha del evento (ISO 8601 UTC)', format: 'date-time' })
   creado_en: string;
+}
+
+/** Respuesta de aceptar una cotizacion: queda aceptada y nace la compra. */
+export class CotizacionAceptadaResponseDto {
+  @ApiProperty({ description: 'Cotizacion aceptada', type: () => OrderViewResponseDto })
+  cotizacion: OrderViewResponseDto;
+
+  @ApiProperty({ description: 'Orden de compra generada desde la cotizacion', type: () => OrderViewResponseDto })
+  orden: OrderViewResponseDto;
 }

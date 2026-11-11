@@ -17,14 +17,14 @@ gateway (`http://localhost:8080/api/v1/...`). Los montos se manejan como **enter
                     │   :8080     │  Politicas por ruta/rol (Tabla 21) · UNICO puerto al host
                     └──────┬──────┘
                            │  red interna Docker `core-engine` (microservicios sin puerto al host)
-  identity  catalog  stores  orders  logistics  scheduling  commissions  finance  field  intelligence  storage
-    :3001    :3002    :3003   :3004     :3005      :3011       :3006      :3007   :3008     :3009      :3010
+  identity  catalog  stores  orders  logistics  scheduling  commissions  finance  field  intelligence  storage  notifications
+    :3001    :3002    :3003   :3004     :3005      :3011       :3006      :3007   :3008     :3009      :3010      :3012
   (commissions solo stage · market-intelligence solo dev)
        RabbitMQ · topic core-engine.events (+ DLQ, AD-04) + Postgres 16 + MinIO (un bucket por tenant, ADR-24)
 ```
 
 **Punto de entrada unico:** solo el servicio `gateway` publica un puerto de aplicación al host
-(`8080:8080`); los **once microservicios** escuchan en `3001`–`3011` **solo dentro de la red interna
+(`8080:8080`); los **doce microservicios** escuchan en `3001`–`3012` **solo dentro de la red interna
 Docker `core-engine`** y no tienen mapeo de puertos al host. La excepción es **MinIO** (`9000`), que se
 publica en **loopback** porque es el host local que Traefik firma como dominio HTTPS en las URLs
 prefirmadas (ADR-24). Toda llamada externa pasa por `http://localhost:8080/api/v1/...` (o el dominio
@@ -70,10 +70,10 @@ Eventos del bus (topic `core-engine.events`): `order.created`, `stock.reservado`
 
 ```bash
 npm install                       # instala los workspaces (enlaza @core/shared, ...)
-npm run build                     # compila shared + gateway + los 11 microservicios
-npm test                          # los 13 workspaces, cada uno con --coverage (1.391 tests)
+npm run build                     # compila shared + gateway + los 12 microservicios
+npm test                          # los 14 workspaces, cada uno con --coverage
 cp .env.example .env              # variables de DESARROLLO (producción: .env.production.example)
-docker compose -f docker-compose.dev.yml up -d --build   # app: Postgres + RabbitMQ + MinIO + gateway y 11 servicios (8080 host + datos/broker 5432/5672/15672 + minio 9000/9001)
+docker compose -f docker-compose.dev.yml up -d --build   # app: Postgres + RabbitMQ + MinIO + Mailpit + gateway y 12 servicios (8080 host + datos/broker 5432/5672/15672 + minio 9000/9001 + mailpit 1025/8025)
 npm run demo                      # ejercicio end-to-end (TC-01..TC-08, RN-01..RN-08)
 
 # Dashboards (opcional): añade Prometheus + Grafana + exporters al stack de desarrollo
@@ -101,9 +101,11 @@ seeds del plan contable NIC e indices). En **Supabase** (staging/prod) aplique a
 | field-service | 3008 | No | `field` | `packages/field-service` |
 | market-intelligence-service | 3009 | No *(fuera de stage/prod)* | `intelligence` | `packages/market-intelligence-service` |
 | storage-service | 3010 | No | `storage` | `packages/storage-service` |
+| notifications-service | 3012 | No | `notifications` | `packages/notifications-service` |
 | postgres | 5432 | No *(dev: `docker-compose.dev.yml`)* | todos | `infra/db/init/` |
 | rabbitmq (+ management) | 5672 / 15672 | No *(dev: `docker-compose.dev.yml`)* | — | — |
 | minio (+ consola) | 9000 / 9001 | Solo loopback *(el público es su dominio HTTPS, ADR-24)* | — | `docker-compose*.yml` |
+| mailpit *(capturador SMTP, solo dev)* | 1025 / 8025 | Solo loopback | — | `docker-compose.dev.yml` |
 | prometheus *(capa opcional)* | 9090 | No (solo red interna) | — | `infra/prometheus/` |
 | grafana *(capa opcional)* | 3000 | Sí (`3000:3000`) | — | `infra/grafana/` |
 
@@ -244,7 +246,7 @@ TC-07 seguridad del gateway (401/403), TC-08 comision 12 % y liquidacion al vend
 RN-05/RN-06/RN-07/RN-08, partida doble y regimen fiscal NIC.
 
 ```bash
-npm test        # 1.391 tests en los 13 workspaces (cobertura por workspace, ratchet R-COV-1)
+npm test        # todos los workspaces con cobertura (ratchet R-COV-1)
 npm run demo    # flujo real sobre el stack levantado (scripts/tools/smoke.mjs)
 ```
 

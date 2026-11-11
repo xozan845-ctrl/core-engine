@@ -48,4 +48,8 @@ export const requiredSuites = [
     id: 'security-secrets-hygiene',
     file: 'rules/security/secrets-hygiene.test.mjs',
   },
+  {
+    id: 'architecture-agnosticismo',
+    file: 'rules/architecture/agnosticismo.test.mjs',
+  },
 ];

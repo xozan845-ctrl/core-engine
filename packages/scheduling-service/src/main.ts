@@ -12,6 +12,7 @@ import {
   PUERTOS,
   RolesGuard,
   TrazabilidadInterceptor,
+  EnvelopeInterceptor,
 } from '@core/shared';
 import { AppModule } from './app.module';
 import { crearDocumentoOpenApi } from './swagger';
@@ -19,7 +20,10 @@ import { crearDocumentoOpenApi } from './swagger';
 async function bootstrap(): Promise<void> {
   const app = await NestFactory.create(AppModule, { logger: false });
   app.useGlobalPipes(new DtoValidationPipe());
-  app.useGlobalInterceptors(new TrazabilidadInterceptor(app.get(MetricsService), NOMBRE_SERVICIOS.SCHEDULING));
+  app.useGlobalInterceptors(
+    new TrazabilidadInterceptor(app.get(MetricsService), NOMBRE_SERVICIOS.SCHEDULING),
+    new EnvelopeInterceptor(),
+  );
   app.useGlobalFilters(new DomainErrorFilter());
   app.useGlobalGuards(new RolesGuard(), new CapabilityGuard());
   const puerto = Number(process.env.PORT ?? PUERTOS.SCHEDULING);

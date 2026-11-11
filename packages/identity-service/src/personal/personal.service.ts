@@ -1,16 +1,22 @@
-import { Injectable } from '@nestjs/common';
+import { Inject, Injectable } from '@nestjs/common';
 import { createHash, randomBytes } from 'node:crypto';
 import * as bcrypt from 'bcryptjs';
 import {
   ConflictError,
   DomainError,
+  EMAIL_PROVIDER,
   ForbiddenError,
   GoneError,
+  Logger,
   NotFoundError,
+  obtenerTienda,
   PgService,
   Rol,
   ROLES,
+  ServiceUnavailableError,
+  tiendasPorIds,
 } from '@core/shared';
+import type { EmailProvider } from '@core/shared';
 import { AuthService, Sesion } from '../auth/auth.service';
 
 const TOKEN_TTL_MS = 72 * 60 * 60 * 1000;
@@ -138,6 +144,15 @@ function hashToken(token: string): string {
   return createHash('sha256').update(token).digest('hex');
 }
 
+function escaparHtml(valor: string): string {
+  return valor
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
 function validarObjeto(valor: unknown, campo: string): Record<string, unknown> {
   if (!valor || typeof valor !== 'object' || Array.isArray(valor)) {
     throw new DomainError(`${campo.toUpperCase()}_INVALIDO`, `${campo} debe ser un objeto JSON.`);
@@ -181,8 +196,13 @@ function validarCorreo(correo: string): string {
 @Injectable()
 export class PersonalService {
   private readonly frontendUrl = (process.env.FRONTEND_URL ?? 'http://localhost:5173').replace(/\/+$/, '');
+  private readonly logger = Logger.create('identity.personal');
 
-  constructor(private readonly pg: PgService, private readonly auth: AuthService) {}
+  constructor(
+    private readonly pg: PgService,
+    private readonly auth: AuthService,
+    @Inject(EMAIL_PROVIDER) private readonly email: EmailProvider,
+  ) {}
 
   async crearRol(actor: Actor, empresaId: string, datos: CrearRolDatos): Promise<RolEmpresa> {
     await this.assertEmpresario(actor, empresaId);
@@ -273,19 +293,29 @@ export class PersonalService {
 
   async listarAsignaciones(actor: Actor, empresaId: string) {
     await this.assertAccesoEmpresa(actor, empresaId);
-    return this.pg.query(
+    const filas = await this.pg.query<{ tienda_id: string | null } & Record<string, unknown>>(
       `SELECT a.id, a.empresa_id, a.usuario_id, u.nombre AS usuario_nombre, u.correo AS usuario_correo,
               a.rol_empresa_id, r.codigo AS rol_codigo, r.nombre AS rol_nombre,
-              a.tienda_id, t.nombre AS tienda_nombre, a.puesto_id, p.nombre AS puesto_nombre,
+              a.tienda_id, a.puesto_id, p.nombre AS puesto_nombre,
               a.metadata, a.estado, a.inicia_en, a.termina_en, a.creado_en
        FROM identity.asignaciones_personal a
        JOIN identity.usuarios u ON u.id=a.usuario_id
        JOIN identity.roles_empresa r ON r.id=a.rol_empresa_id
-       LEFT JOIN stores.tiendas t ON t.id=a.tienda_id AND t.empresa_id=a.empresa_id
        LEFT JOIN identity.puestos_empresa p ON p.id=a.puesto_id AND p.empresa_id=a.empresa_id
        WHERE a.empresa_id=$1 ORDER BY a.creado_en DESC`,
       [empresaId],
     );
+
+    // stores es la autoridad de las tiendas: se resuelve por su API interna.
+    const ids = [...new Set(filas.map((f) => f.tienda_id).filter((id): id is string => Boolean(id)))];
+    if (ids.length === 0) return filas;
+    const tiendas = await tiendasPorIds(ids);
+    if (tiendas === null) {
+      // Degradación controlada del listado: se conserva la asignación sin nombre.
+      return filas.map((f) => (f.tienda_id ? { ...f, tienda_nombre: null } : f));
+    }
+    const nombres = new Map(tiendas.map((t) => [t.id, t.nombre]));
+    return filas.map((f) => (f.tienda_id ? { ...f, tienda_nombre: nombres.get(f.tienda_id) ?? null } : f));
   }
 
   async crearInvitacion(actor: Actor, empresaId: string, datos: CrearInvitacionPersonalDatos): Promise<InvitacionPersonal> {
@@ -310,7 +340,38 @@ export class PersonalService {
       [empresaId, correo, datos.nombre?.trim() || null, datos.tipo ?? 'invitacion', datos.rol_empresa_id, datos.tienda_id ?? null, datos.puesto_id ?? null, JSON.stringify(datos.metadata ?? {}), hashToken(token), expira, actor.user_id],
     );
     if (!fila) throw new ConflictError('No se pudo generar el enlace de incorporación.');
-    return { ...fila, url_invitacion: `${this.frontendUrl}/incorporacion/${encodeURIComponent(token)}` };
+    const url = `${this.frontendUrl}/incorporacion/${encodeURIComponent(token)}`;
+    await this.enviarInvitacion(fila, url);
+    return { ...fila, url_invitacion: url };
+  }
+
+  /**
+   * Envía el enlace de incorporación con el adapter compartido. Un fallo de
+   * correo no invalida la invitación ni rompe la respuesta: el enlace sigue
+   * disponible para reenviarlo (R-OB-1: nunca se registra el correo/token).
+   */
+  private async enviarInvitacion(
+    fila: InvitacionPersonal & { empresa_nombre: string },
+    url: string,
+  ): Promise<void> {
+    const nombre = fila.nombre?.trim() || 'Hola';
+    const asunto = `Invitación a ${fila.empresa_nombre}`;
+    const texto =
+      `${nombre}, te invitaron a unirte a ${fila.empresa_nombre} como ${fila.rol_nombre}. ` +
+      `Acepta la invitación (válida 72 horas): ${url}`;
+    const html =
+      `<p>${escaparHtml(nombre)}, te invitaron a unirte a ` +
+      `<strong>${escaparHtml(fila.empresa_nombre)}</strong> como ${escaparHtml(fila.rol_nombre)}.</p>` +
+      `<p><a href="${url}">Aceptar invitación</a> (válida 72 horas).</p>`;
+    try {
+      await this.email.send({ to: fila.correo, subject: asunto, text: texto, html });
+    } catch (error) {
+      const codigo = (error as { code?: unknown })?.code;
+      this.logger.error({
+        msg: 'email_invitacion_fallido',
+        ...(typeof codigo === 'string' ? { codigo } : {}),
+      });
+    }
   }
 
   async consultarInvitacion(token: string) {
@@ -420,8 +481,11 @@ export class PersonalService {
   }
 
   private async assertTienda(empresaId: string, tiendaId: string): Promise<void> {
-    const fila = await this.pg.queryOne(`SELECT 1 FROM stores.tiendas WHERE id=$1 AND empresa_id=$2`, [tiendaId, empresaId]);
-    if (!fila) throw new NotFoundError('Tienda', tiendaId);
+    const consulta = await obtenerTienda(tiendaId);
+    if (consulta.estado === 'error') throw new ServiceUnavailableError('stores-service');
+    if (consulta.estado !== 'ok' || consulta.tienda.empresa_id !== empresaId) {
+      throw new NotFoundError('Tienda', tiendaId);
+    }
   }
 
   private async assertMiembro(empresaId: string, usuarioId: string): Promise<void> {

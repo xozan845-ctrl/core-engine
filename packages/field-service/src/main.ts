@@ -14,6 +14,7 @@ import {
   Logger,
   RolesGuard,
   CapabilityGuard,
+  EnvelopeInterceptor,
 } from '@core/shared';
 
 async function bootstrap(): Promise<void> {
@@ -21,6 +22,7 @@ async function bootstrap(): Promise<void> {
   app.useGlobalPipes(new DtoValidationPipe());
   app.useGlobalInterceptors(
     new TrazabilidadInterceptor(app.get(MetricsService), NOMBRE_SERVICIOS.FIELD),
+    new EnvelopeInterceptor(),
   );
   app.useGlobalFilters(new DomainErrorFilter());
   app.useGlobalGuards(new RolesGuard(), new CapabilityGuard());

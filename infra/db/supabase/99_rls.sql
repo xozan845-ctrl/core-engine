@@ -544,6 +544,80 @@ CREATE POLICY partes_empresa_archivar ON identity.partes FOR UPDATE TO authentic
          AND empresa_id::text = (auth.jwt() ->> 'tenant_id')
          AND eliminado_en IS NOT NULL AND estado = 'archivado');
 
+-- Composición de items (BOM/kits).
+ALTER TABLE catalog.item_componentes ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS item_componentes_admin ON catalog.item_componentes;
+DROP POLICY IF EXISTS item_componentes_empresa ON catalog.item_componentes;
+DROP POLICY IF EXISTS item_componentes_lectura ON catalog.item_componentes;
+CREATE POLICY item_componentes_admin ON catalog.item_componentes FOR ALL TO authenticated
+  USING (auth.rol() IN ('super_admin', 'admin'))
+  WITH CHECK (auth.rol() IN ('super_admin', 'admin'));
+CREATE POLICY item_componentes_empresa ON catalog.item_componentes FOR ALL TO authenticated
+  USING (auth.rol() = 'empresario'
+         AND empresa_id::text = (auth.jwt() ->> 'tenant_id'))
+  WITH CHECK (auth.rol() = 'empresario'
+         AND empresa_id::text = (auth.jwt() ->> 'tenant_id'));
+CREATE POLICY item_componentes_lectura ON catalog.item_componentes FOR SELECT TO authenticated
+  USING (auth.rol() IN ('empresario', 'vendedor', 'coordinador', 'supervisor', 'operativo')
+         AND empresa_id::text = (auth.jwt() ->> 'tenant_id'));
+
+-- Tarifas por fecha/rango sobre items (temporadas, hotel, alquileres).
+ALTER TABLE catalog.item_tarifas ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS item_tarifas_admin ON catalog.item_tarifas;
+DROP POLICY IF EXISTS item_tarifas_empresa ON catalog.item_tarifas;
+DROP POLICY IF EXISTS item_tarifas_lectura ON catalog.item_tarifas;
+CREATE POLICY item_tarifas_admin ON catalog.item_tarifas FOR ALL TO authenticated
+  USING (auth.rol() IN ('super_admin', 'admin'))
+  WITH CHECK (auth.rol() IN ('super_admin', 'admin'));
+CREATE POLICY item_tarifas_empresa ON catalog.item_tarifas FOR ALL TO authenticated
+  USING (auth.rol() = 'empresario'
+         AND empresa_id::text = (auth.jwt() ->> 'tenant_id'))
+  WITH CHECK (auth.rol() = 'empresario'
+         AND empresa_id::text = (auth.jwt() ->> 'tenant_id'));
+CREATE POLICY item_tarifas_lectura ON catalog.item_tarifas FOR SELECT TO authenticated
+  USING (auth.rol() IN ('empresario', 'vendedor', 'coordinador', 'supervisor', 'operativo')
+         AND empresa_id::text = (auth.jwt() ->> 'tenant_id'));
+
+-- Cuentas de crédito por parte (venta a crédito desde checkout).
+ALTER TABLE finance.credito_cuentas ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS credito_cuentas_admin ON finance.credito_cuentas;
+DROP POLICY IF EXISTS credito_cuentas_lectura ON finance.credito_cuentas;
+DROP POLICY IF EXISTS credito_cuentas_escritura ON finance.credito_cuentas;
+CREATE POLICY credito_cuentas_admin ON finance.credito_cuentas FOR ALL TO authenticated
+  USING (auth.rol() IN ('super_admin', 'admin'))
+  WITH CHECK (auth.rol() IN ('super_admin', 'admin'));
+CREATE POLICY credito_cuentas_lectura ON finance.credito_cuentas FOR SELECT TO authenticated
+  USING (empresa_id::text = (auth.jwt() ->> 'tenant_id'));
+CREATE POLICY credito_cuentas_escritura ON finance.credito_cuentas FOR ALL TO authenticated
+  USING (auth.rol() IN ('empresario', 'vendedor')
+         AND empresa_id::text = (auth.jwt() ->> 'tenant_id'))
+  WITH CHECK (auth.rol() IN ('empresario', 'vendedor')
+         AND empresa_id::text = (auth.jwt() ->> 'tenant_id'));
+
+-- Registros genéricos por parte (historia clínica, recetas, expedientes).
+ALTER TABLE identity.partes_registros ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS partes_registros_admin ON identity.partes_registros;
+DROP POLICY IF EXISTS partes_registros_lectura ON identity.partes_registros;
+DROP POLICY IF EXISTS partes_registros_insert ON identity.partes_registros;
+DROP POLICY IF EXISTS partes_registros_update ON identity.partes_registros;
+DROP POLICY IF EXISTS partes_registros_delete ON identity.partes_registros;
+CREATE POLICY partes_registros_admin ON identity.partes_registros FOR ALL TO authenticated
+  USING (auth.rol() IN ('super_admin', 'admin'))
+  WITH CHECK (auth.rol() IN ('super_admin', 'admin'));
+CREATE POLICY partes_registros_lectura ON identity.partes_registros FOR SELECT TO authenticated
+  USING (empresa_id::text = (auth.jwt() ->> 'tenant_id'));
+CREATE POLICY partes_registros_insert ON identity.partes_registros FOR INSERT TO authenticated
+  WITH CHECK (auth.rol() IN ('empresario', 'vendedor', 'coordinador', 'supervisor', 'operativo')
+         AND empresa_id::text = (auth.jwt() ->> 'tenant_id'));
+CREATE POLICY partes_registros_update ON identity.partes_registros FOR UPDATE TO authenticated
+  USING (auth.rol() IN ('empresario', 'vendedor', 'coordinador', 'supervisor', 'operativo')
+         AND empresa_id::text = (auth.jwt() ->> 'tenant_id'))
+  WITH CHECK (auth.rol() IN ('empresario', 'vendedor', 'coordinador', 'supervisor', 'operativo')
+         AND empresa_id::text = (auth.jwt() ->> 'tenant_id'));
+CREATE POLICY partes_registros_delete ON identity.partes_registros FOR DELETE TO authenticated
+  USING (auth.rol() IN ('empresario', 'vendedor', 'coordinador', 'supervisor', 'operativo')
+         AND empresa_id::text = (auth.jwt() ->> 'tenant_id'));
+
 ALTER TABLE identity.medios_contacto ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS medios_contacto_admin ON identity.medios_contacto;
 DROP POLICY IF EXISTS medios_contacto_empresa_lectura ON identity.medios_contacto;
@@ -861,3 +935,20 @@ CREATE POLICY reservas_lotes_empresa ON catalog.reservas_lotes
   FOR SELECT TO authenticated
   USING (auth.rol() IN ('empresario', 'vendedor')
          AND empresa_id::text = (auth.jwt() ->> 'tenant_id'));
+
+-- ── identity.password_reset_tokens (ADR-0003) ───────────────────────────────
+-- El token es una capacidad de un solo uso: solo el rol de servicio de identity
+-- lo lee y consume. No se expone a `authenticated` (ni a admin/empresario).
+ALTER TABLE identity.password_reset_tokens ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS password_reset_tokens_app ON identity.password_reset_tokens;
+CREATE POLICY password_reset_tokens_app ON identity.password_reset_tokens
+  FOR ALL TO core_engine_app
+  USING (true) WITH CHECK (true);
+
+-- ── notifications.eventos_procesados (ADR-0003) ─────────────────────────────
+-- Idempotencia del consumidor: solo el rol de servicio accede.
+ALTER TABLE notifications.eventos_procesados ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS notifications_eventos_app ON notifications.eventos_procesados;
+CREATE POLICY notifications_eventos_app ON notifications.eventos_procesados
+  FOR ALL TO core_engine_app
+  USING (true) WITH CHECK (true);

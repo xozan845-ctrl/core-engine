@@ -1,6 +1,6 @@
 import { CreateOrderCommandHandler } from './handlers/create-order-command.handler';
 import { CreateOrderCommand } from './commands/create-order.command';
-import { Money } from '@core/shared';
+import { CapabilityDisabledError, Money } from '@core/shared';
 
 class PgFake {
   query = vi.fn(async () => []);
@@ -94,6 +94,19 @@ function crearHandler(
         if (storesThrows) throw new Error('stores down');
         if (storesFails) return { ok: false } as Response;
         return { ok: true, json: async () => sobreOfertas } as Response;
+      }
+      if (u.includes('/internal/items/') && u.includes('/cotizacion')) {
+        return { ok: true, json: async () => ({ total_cents: 90000, dias: 3 }) } as Response;
+      }
+      if (u.includes('scheduling-service') && u.includes('/internal/scheduling/disponibilidad')) {
+        return { ok: true, json: async () => ({ disponible: true }) } as Response;
+      }
+      if (u.includes('finance-service') && u.includes('/internal/finance/creditos')) {
+        return {
+          ok: true,
+          status: 201,
+          json: async () => ({ credito_id: 'c-1', balance_cents: 1150, limite_cents: 5000 }),
+        } as Response;
       }
       if (u.includes('identity-service') && u.includes('/internal/empresas/capacidades')) {
         const empresaCap = (sobreOfertas[0] as { empresa_id?: string } | undefined)?.empresa_id ?? 'empresa-1';
@@ -189,13 +202,33 @@ describe('CreateOrderCommandHandler (CQRS + Event Sourcing)', () => {
 
     const vista = await fixture.handler.ejecutar({
       tipo_orden: 'reserva',
-      items: [{ oferta_id: 'oferta-1', cantidad: 1, fulfillment: 'onsite', fulfillment_config: { recurso_id: 'sillon-1' } }],
+      cliente_parte_id: '33333333-3333-4333-8333-333333333333',
+      items: [{
+        oferta_id: 'oferta-1',
+        cantidad: 1,
+        fulfillment: 'onsite',
+        fulfillment_config: {
+          recurso_id: '44444444-4444-4444-8444-444444444444',
+          inicia_en: '2026-12-20T15:00:00.000Z',
+          termina_en: '2026-12-22T11:00:00.000Z',
+        },
+      }],
     }, 'comprador-1');
 
     expect(vista.tipo_orden).toBe('reserva');
-    expect(vista.items[0]).toMatchObject({ item_type: 'servicio', fulfillment: 'onsite' });
+    expect(vista.items[0]).toMatchObject({
+      item_type: 'servicio',
+      fulfillment: 'onsite',
+      precio_unitario_cents: 90000,
+    });
+    expect(vista.total_cents).toBe(90000);
     expect((fixture.store.appendEnTransaccion.mock.calls[0][3] as { tipo_orden: string }).tipo_orden).toBe('reserva');
-    expect(fixture.fetchMock).toHaveBeenCalledTimes(2);
+    expect(
+      fixture.fetchMock.mock.calls.some(([u]) => String(u).includes('/internal/items/') && String(u).includes('/cotizacion')),
+    ).toBe(true);
+    expect(
+      fixture.fetchMock.mock.calls.some(([u]) => String(u).includes('/internal/scheduling/disponibilidad')),
+    ).toBe(true);
   });
 
   it('total con cantidades multiples: 2 unidades = C$ 2 300', async () => {
@@ -627,6 +660,70 @@ describe('Fulfillment y cotizaciones por capacidad', () => {
     });
   });
 
+  it('una cotizacion no reserva stock ni genera comision', async () => {
+    // stockCatalog='insuficiente': si la cotizacion validara stock, fallaria.
+    const { handler } = crearHandler(
+      [ofertaActiva],
+      'insuficiente',
+      undefined,
+      false,
+      false,
+      ['cotizaciones'],
+    );
+    const vista = await handler.ejecutar(
+      { tipo_orden: 'cotizacion', items: [{ oferta_id: 'oferta-1', cantidad: 1 }] },
+      'comprador-1',
+    );
+    expect(vista.tipo_orden).toBe('cotizacion');
+    expect(vista.estado).toBe('creada');
+    expect(vista.comision_cents).toBe(0);
+  });
+
+  it('una venta a credito registra la cuenta por cobrar en finance', async () => {
+    const { handler, fetchMock } = crearHandler(
+      [ofertaActiva],
+      'ok',
+      undefined,
+      false,
+      false,
+      ['ventas_credito'],
+    );
+    const vista = await handler.ejecutar(
+      {
+        tipo_orden: 'compra',
+        metodo_pago: 'credito',
+        cliente_parte_id: '22222222-2222-4222-8222-222222222222',
+        items: [{ oferta_id: 'oferta-1', cantidad: 1 }],
+      },
+      'comprador-1',
+    );
+    expect(vista.metodo_pago).toBe('credito');
+    expect(fetchMock.mock.calls.some(([u]) => String(u).includes('/internal/finance/creditos'))).toBe(true);
+  });
+
+  it('exige cliente_parte_id y la capacidad ventas_credito', async () => {
+    const { handler } = crearHandler([ofertaActiva], 'ok', undefined, false, false, ['ventas_credito']);
+    await expect(
+      handler.ejecutar(
+        { tipo_orden: 'compra', metodo_pago: 'credito', items: [{ oferta_id: 'oferta-1', cantidad: 1 }] },
+        'comprador-1',
+      ),
+    ).rejects.toMatchObject({ codigo: 'CREDITO_REQUIERE_PARTE' });
+
+    const sinCapacidad = crearHandler([ofertaActiva], 'ok', undefined, false, false, []);
+    await expect(
+      sinCapacidad.handler.ejecutar(
+        {
+          tipo_orden: 'compra',
+          metodo_pago: 'credito',
+          cliente_parte_id: '22222222-2222-4222-8222-222222222222',
+          items: [{ oferta_id: 'oferta-1', cantidad: 1 }],
+        },
+        'comprador-1',
+      ),
+    ).rejects.toBeInstanceOf(CapabilityDisabledError);
+  });
+
   it('rechaza una entrega onsite sin fulfillment_onsite', async () => {
     const ofertaServicio = {
       ...ofertaActiva,
@@ -641,6 +738,7 @@ describe('Fulfillment y cotizaciones por capacidad', () => {
       handler.ejecutar(
         {
           tipo_orden: 'reserva',
+          cliente_parte_id: '33333333-3333-4333-8333-333333333333',
           items: [{ oferta_id: 'oferta-1', cantidad: 1, fulfillment: 'onsite' }],
         },
         'comprador-1',

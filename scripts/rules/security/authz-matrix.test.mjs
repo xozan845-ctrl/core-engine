@@ -44,6 +44,7 @@ export default defineSuite({
         'auth/registro',
         'auth/refresh',
         'auth/restablecer-contrasena',
+        'auth/restablecer-contrasena/confirmar',
         'configuracion/sitio',
         'tiendas/[^/]+$',
       ]) {

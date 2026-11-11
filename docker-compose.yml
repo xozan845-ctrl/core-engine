@@ -197,6 +197,14 @@ services:
       PORT: 3010
       OUTBOX_TABLA: storage.outbox
 
+  notifications-service:
+    <<: *servicio-base
+    image: ghcr.io/xozan845-ctrl/core-engine-notifications-service:prod
+    pull_policy: always
+    environment:
+      SERVICIO: notifications-service
+      PORT: 3012
+
 volumes:
   pg_data:
   rabbitmq_data:
