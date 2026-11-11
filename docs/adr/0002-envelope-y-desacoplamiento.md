@@ -1,7 +1,7 @@
 # ADR-0002: Envelope de respuestas y desacoplamiento entre servicios
 
 - **Fecha**: 2026-11-10
-- **Estado**: Aceptado — fases 1-2 y 5-6 implementadas; fase 3 en curso solo con `identity` pendiente
+- **Estado**: Aceptado — fases 1-3 y 5-6 implementadas; fase 4 (smoke/QA/OpenAPI agregado) en curso
 - **Ámbito**: contrato público `/api/v2`, paginación, límites entre bounded contexts
 
 ## Contexto
@@ -92,7 +92,7 @@ Cada fase es un PR atómico y no mezcla envelope con desacoplamiento.
 | 0 | Enmienda de R-C-1 con los nombres de paginación elegidos y contrato `RespuestaApi<T>` | Regla y ADR sin contradicción |
 | 1 | Interceptor compartido + tests puros + un servicio piloto (`commissions`) | ✅ `commissions` devuelve envelope; test de contrato y OpenAPI actualizados |
 | 2 | `finance`, `orders`, `logistics` | ✅ Tres servicios con envelope y consumidores smoke/QA adaptados |
-| 3 | `catalog`, `stores`, `scheduling`, `identity`, `field`, `storage`, `market-intelligence` | ⏳ `catalog`, `stores`, `scheduling`, `field`, `storage` e `market-intelligence` completados; falta `identity` |
+| 3 | `catalog`, `stores`, `scheduling`, `identity`, `field`, `storage`, `market-intelligence` | ✅ Todos los servicios públicos con envelope |
 | 4 | Gateway, smoke, QA harness y OpenAPI agregado | `npm run demo` verde y contrato público sin respuestas sin envolver |
 | 5 | Desacoplamiento de `orders`/`scheduling`/`field` hacia APIs internas | Sin SQL directo a tablas de identity; pruebas de caída con 503/degradación |
 | 6 | Mover la asignación vendedor–tienda de identity a stores | Identity sin escrituras a `stores.tiendas`; RLS y tests verdes |
@@ -128,10 +128,11 @@ Cada fase es un PR atómico y no mezcla envelope con desacoplamiento.
 
 ## Estado de implementación (2026-11-11)
 
-- Envelope `{ data, meta }` aplicado en **10 de 11** servicios:
+- Envelope `{ data, meta }` aplicado en **11 de 11** servicios:
   `commissions`, `finance`, `orders`, `logistics`, `scheduling`, `field`,
-  `storage`, `market-intelligence`, `catalog` y `stores`.
-- Pendiente de envelope: `identity` (fase 3).
+  `storage`, `market-intelligence`, `catalog`, `stores` e `identity`.
+- Fase 3 cerrada. `smoke` y `smoke-remote` desenvuelven `{data,meta}` de forma
+  central; QA harness hace lo mismo.
 - `orders` consulta capacidades por la API interna de identity; `scheduling` y
   `field` no leen tablas `identity.*`.
 - `identity` ya no lee `stores.tiendas`: `assertTienda` valida con

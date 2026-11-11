@@ -8637,7 +8637,19 @@ export const OPENAPI_AGREGADO = {
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/SesionResponseDto"
+                  "type": "object",
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/SesionResponseDto"
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/MetaRespuesta"
+                    }
+                  }
                 }
               }
             }
@@ -8669,7 +8681,19 @@ export const OPENAPI_AGREGADO = {
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/SesionResponseDto"
+                  "type": "object",
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/SesionResponseDto"
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/MetaRespuesta"
+                    }
+                  }
                 }
               }
             }
@@ -8712,7 +8736,19 @@ export const OPENAPI_AGREGADO = {
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/SesionResponseDto"
+                  "type": "object",
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/SesionResponseDto"
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/MetaRespuesta"
+                    }
+                  }
                 }
               }
             }
@@ -8744,7 +8780,19 @@ export const OPENAPI_AGREGADO = {
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/OkResponseDto"
+                  "type": "object",
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/OkResponseDto"
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/MetaRespuesta"
+                    }
+                  }
                 }
               }
             }
@@ -8781,7 +8829,19 @@ export const OPENAPI_AGREGADO = {
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/UsuarioResponseDto"
+                  "type": "object",
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/UsuarioResponseDto"
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/MetaRespuesta"
+                    }
+                  }
                 }
               }
             }
@@ -8821,7 +8881,19 @@ export const OPENAPI_AGREGADO = {
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/OkResponseDto"
+                  "type": "object",
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/OkResponseDto"
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/MetaRespuesta"
+                    }
+                  }
                 }
               }
             }
@@ -8858,7 +8930,19 @@ export const OPENAPI_AGREGADO = {
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/OkResponseDto"
+                  "type": "object",
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/OkResponseDto"
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/MetaRespuesta"
+                    }
+                  }
                 }
               }
             }
@@ -8890,7 +8974,19 @@ export const OPENAPI_AGREGADO = {
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/OkResponseDto"
+                  "type": "object",
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/OkResponseDto"
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/MetaRespuesta"
+                    }
+                  }
                 }
               }
             }
@@ -8912,7 +9008,19 @@ export const OPENAPI_AGREGADO = {
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/UsuarioContextoResponseDto"
+                  "type": "object",
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/UsuarioContextoResponseDto"
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/MetaRespuesta"
+                    }
+                  }
                 }
               }
             }
@@ -8949,7 +9057,19 @@ export const OPENAPI_AGREGADO = {
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/OkResponseDto"
+                  "type": "object",
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/OkResponseDto"
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/MetaRespuesta"
+                    }
+                  }
                 }
               }
             }
@@ -8976,9 +9096,21 @@ export const OPENAPI_AGREGADO = {
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/components/schemas/UsuarioResponseDto"
+                  "type": "object",
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
+                  "properties": {
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/UsuarioResponseDto"
+                      }
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/MetaRespuesta"
+                    }
                   }
                 }
               }
@@ -9026,7 +9158,19 @@ export const OPENAPI_AGREGADO = {
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/UsuarioResponseDto"
+                  "type": "object",
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/UsuarioResponseDto"
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/MetaRespuesta"
+                    }
+                  }
                 }
               }
             }
@@ -9063,7 +9207,19 @@ export const OPENAPI_AGREGADO = {
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/UsuarioResponseDto"
+                  "type": "object",
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/UsuarioResponseDto"
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/MetaRespuesta"
+                    }
+                  }
                 }
               }
             }
@@ -9103,7 +9259,19 @@ export const OPENAPI_AGREGADO = {
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/EmpresaResponseDto"
+                  "type": "object",
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/EmpresaResponseDto"
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/MetaRespuesta"
+                    }
+                  }
                 }
               }
             }
@@ -9141,7 +9309,19 @@ export const OPENAPI_AGREGADO = {
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/EmpresaResponseDto"
+                  "type": "object",
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/EmpresaResponseDto"
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/MetaRespuesta"
+                    }
+                  }
                 }
               }
             }
@@ -9202,7 +9382,19 @@ export const OPENAPI_AGREGADO = {
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/EmpresaResponseDto"
+                  "type": "object",
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/EmpresaResponseDto"
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/MetaRespuesta"
+                    }
+                  }
                 }
               }
             }
@@ -9249,7 +9441,19 @@ export const OPENAPI_AGREGADO = {
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/EmpresaResponseDto"
+                  "type": "object",
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/EmpresaResponseDto"
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/MetaRespuesta"
+                    }
+                  }
                 }
               }
             }
@@ -9296,7 +9500,19 @@ export const OPENAPI_AGREGADO = {
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/EmpresaResponseDto"
+                  "type": "object",
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/EmpresaResponseDto"
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/MetaRespuesta"
+                    }
+                  }
                 }
               }
             }
@@ -9345,7 +9561,19 @@ export const OPENAPI_AGREGADO = {
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/VendedorEmpresaResponseDto"
+                  "type": "object",
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/VendedorEmpresaResponseDto"
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/MetaRespuesta"
+                    }
+                  }
                 }
               }
             }
@@ -9372,7 +9600,19 @@ export const OPENAPI_AGREGADO = {
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ConfiguracionSitioResponseDto"
+                  "type": "object",
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/ConfiguracionSitioResponseDto"
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/MetaRespuesta"
+                    }
+                  }
                 }
               }
             }
@@ -9402,7 +9642,19 @@ export const OPENAPI_AGREGADO = {
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ConfiguracionSitioResponseDto"
+                  "type": "object",
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/ConfiguracionSitioResponseDto"
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/MetaRespuesta"
+                    }
+                  }
                 }
               }
             }
@@ -9439,9 +9691,21 @@ export const OPENAPI_AGREGADO = {
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/components/schemas/EmpresaCapacidadResponseDto"
+                  "type": "object",
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
+                  "properties": {
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/EmpresaCapacidadResponseDto"
+                      }
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/MetaRespuesta"
+                    }
                   }
                 }
               }
@@ -9498,7 +9762,19 @@ export const OPENAPI_AGREGADO = {
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/EmpresaCapacidadResponseDto"
+                  "type": "object",
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/EmpresaCapacidadResponseDto"
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/MetaRespuesta"
+                    }
+                  }
                 }
               }
             }
@@ -9535,9 +9811,21 @@ export const OPENAPI_AGREGADO = {
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/components/schemas/PackResponseDto"
+                  "type": "object",
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
+                  "properties": {
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/PackResponseDto"
+                      }
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/MetaRespuesta"
+                    }
                   }
                 }
               }
@@ -9573,7 +9861,19 @@ export const OPENAPI_AGREGADO = {
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/PackResponseDto"
+                  "type": "object",
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/PackResponseDto"
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/MetaRespuesta"
+                    }
+                  }
                 }
               }
             }
@@ -9600,9 +9900,21 @@ export const OPENAPI_AGREGADO = {
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/components/schemas/ModeloOperacionResponseDto"
+                  "type": "object",
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
+                  "properties": {
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/ModeloOperacionResponseDto"
+                      }
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/MetaRespuesta"
+                    }
                   }
                 }
               }
@@ -9638,7 +9950,19 @@ export const OPENAPI_AGREGADO = {
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ModeloOperacionResponseDto"
+                  "type": "object",
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/ModeloOperacionResponseDto"
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/MetaRespuesta"
+                    }
+                  }
                 }
               }
             }
@@ -9665,9 +9989,21 @@ export const OPENAPI_AGREGADO = {
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/components/schemas/VerticalOperacionResponseDto"
+                  "type": "object",
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
+                  "properties": {
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/VerticalOperacionResponseDto"
+                      }
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/MetaRespuesta"
+                    }
                   }
                 }
               }
@@ -9703,7 +10039,19 @@ export const OPENAPI_AGREGADO = {
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/VerticalOperacionResponseDto"
+                  "type": "object",
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/VerticalOperacionResponseDto"
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/MetaRespuesta"
+                    }
+                  }
                 }
               }
             }
@@ -9749,7 +10097,19 @@ export const OPENAPI_AGREGADO = {
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/PackResponseDto"
+                  "type": "object",
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/PackResponseDto"
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/MetaRespuesta"
+                    }
+                  }
                 }
               }
             }
@@ -9786,9 +10146,21 @@ export const OPENAPI_AGREGADO = {
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/components/schemas/ExtensionResponseDto"
+                  "type": "object",
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
+                  "properties": {
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/ExtensionResponseDto"
+                      }
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/MetaRespuesta"
+                    }
                   }
                 }
               }
@@ -9833,7 +10205,19 @@ export const OPENAPI_AGREGADO = {
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ExtensionResponseDto"
+                  "type": "object",
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/ExtensionResponseDto"
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/MetaRespuesta"
+                    }
+                  }
                 }
               }
             }
@@ -9888,7 +10272,19 @@ export const OPENAPI_AGREGADO = {
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ExtensionResponseDto"
+                  "type": "object",
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/ExtensionResponseDto"
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/MetaRespuesta"
+                    }
+                  }
                 }
               }
             }
@@ -9943,7 +10339,19 @@ export const OPENAPI_AGREGADO = {
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ValidacionExtensionResponseDto"
+                  "type": "object",
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/ValidacionExtensionResponseDto"
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/MetaRespuesta"
+                    }
+                  }
                 }
               }
             }
@@ -9997,14 +10405,26 @@ export const OPENAPI_AGREGADO = {
             "content": {
               "application/json": {
                 "schema": {
-                  "oneOf": [
-                    {
-                      "$ref": "#/components/schemas/ExtensionValueResponseDto"
+                  "type": "object",
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
+                  "properties": {
+                    "data": {
+                      "oneOf": [
+                        {
+                          "$ref": "#/components/schemas/ExtensionValueResponseDto"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
                     },
-                    {
-                      "type": "null"
+                    "meta": {
+                      "$ref": "#/components/schemas/MetaRespuesta"
                     }
-                  ]
+                  }
                 }
               }
             }
@@ -10066,7 +10486,19 @@ export const OPENAPI_AGREGADO = {
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ExtensionValueResponseDto"
+                  "type": "object",
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/ExtensionValueResponseDto"
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/MetaRespuesta"
+                    }
+                  }
                 }
               }
             }
@@ -10176,9 +10608,21 @@ export const OPENAPI_AGREGADO = {
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/components/schemas/ParteResponseDto"
+                  "type": "object",
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
+                  "properties": {
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/ParteResponseDto"
+                      }
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/MetaRespuesta"
+                    }
                   }
                 }
               }
@@ -10224,7 +10668,19 @@ export const OPENAPI_AGREGADO = {
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ParteResponseDto"
+                  "type": "object",
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/ParteResponseDto"
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/MetaRespuesta"
+                    }
+                  }
                 }
               }
             }
@@ -10270,7 +10726,19 @@ export const OPENAPI_AGREGADO = {
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ParteResponseDto"
+                  "type": "object",
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/ParteResponseDto"
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/MetaRespuesta"
+                    }
+                  }
                 }
               }
             }
@@ -10324,7 +10792,19 @@ export const OPENAPI_AGREGADO = {
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ParteResponseDto"
+                  "type": "object",
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/ParteResponseDto"
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/MetaRespuesta"
+                    }
+                  }
                 }
               }
             }
@@ -10405,9 +10885,21 @@ export const OPENAPI_AGREGADO = {
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/components/schemas/MedioContactoResponseDto"
+                  "type": "object",
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
+                  "properties": {
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/MedioContactoResponseDto"
+                      }
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/MetaRespuesta"
+                    }
                   }
                 }
               }
@@ -10460,7 +10952,19 @@ export const OPENAPI_AGREGADO = {
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/MedioContactoResponseDto"
+                  "type": "object",
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/MedioContactoResponseDto"
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/MetaRespuesta"
+                    }
+                  }
                 }
               }
             }
@@ -10522,7 +11026,19 @@ export const OPENAPI_AGREGADO = {
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/MedioContactoResponseDto"
+                  "type": "object",
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/MedioContactoResponseDto"
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/MetaRespuesta"
+                    }
+                  }
                 }
               }
             }
@@ -10609,9 +11125,21 @@ export const OPENAPI_AGREGADO = {
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/components/schemas/DireccionResponseDto"
+                  "type": "object",
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
+                  "properties": {
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/DireccionResponseDto"
+                      }
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/MetaRespuesta"
+                    }
                   }
                 }
               }
@@ -10664,7 +11192,19 @@ export const OPENAPI_AGREGADO = {
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/DireccionResponseDto"
+                  "type": "object",
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/DireccionResponseDto"
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/MetaRespuesta"
+                    }
+                  }
                 }
               }
             }
@@ -10726,7 +11266,19 @@ export const OPENAPI_AGREGADO = {
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/DireccionResponseDto"
+                  "type": "object",
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/DireccionResponseDto"
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/MetaRespuesta"
+                    }
+                  }
                 }
               }
             }
@@ -10813,9 +11365,21 @@ export const OPENAPI_AGREGADO = {
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/components/schemas/RelacionResponseDto"
+                  "type": "object",
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
+                  "properties": {
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/RelacionResponseDto"
+                      }
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/MetaRespuesta"
+                    }
                   }
                 }
               }
@@ -10868,7 +11432,19 @@ export const OPENAPI_AGREGADO = {
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/RelacionResponseDto"
+                  "type": "object",
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/RelacionResponseDto"
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/MetaRespuesta"
+                    }
+                  }
                 }
               }
             }
@@ -10959,7 +11535,19 @@ export const OPENAPI_AGREGADO = {
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object"
+                  "type": "object",
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
+                  "properties": {
+                    "data": {
+                      "type": "object"
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/MetaRespuesta"
+                    }
+                  }
                 }
               }
             }
@@ -10993,7 +11581,19 @@ export const OPENAPI_AGREGADO = {
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object"
+                  "type": "object",
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
+                  "properties": {
+                    "data": {
+                      "type": "object"
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/MetaRespuesta"
+                    }
+                  }
                 }
               }
             }
@@ -11047,7 +11647,19 @@ export const OPENAPI_AGREGADO = {
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object"
+                  "type": "object",
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
+                  "properties": {
+                    "data": {
+                      "type": "object"
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/MetaRespuesta"
+                    }
+                  }
                 }
               }
             }
@@ -11093,7 +11705,19 @@ export const OPENAPI_AGREGADO = {
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object"
+                  "type": "object",
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
+                  "properties": {
+                    "data": {
+                      "type": "object"
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/MetaRespuesta"
+                    }
+                  }
                 }
               }
             }
@@ -11127,7 +11751,19 @@ export const OPENAPI_AGREGADO = {
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object"
+                  "type": "object",
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
+                  "properties": {
+                    "data": {
+                      "type": "object"
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/MetaRespuesta"
+                    }
+                  }
                 }
               }
             }
@@ -11173,7 +11809,19 @@ export const OPENAPI_AGREGADO = {
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object"
+                  "type": "object",
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
+                  "properties": {
+                    "data": {
+                      "type": "object"
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/MetaRespuesta"
+                    }
+                  }
                 }
               }
             }
@@ -11207,7 +11855,19 @@ export const OPENAPI_AGREGADO = {
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object"
+                  "type": "object",
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
+                  "properties": {
+                    "data": {
+                      "type": "object"
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/MetaRespuesta"
+                    }
+                  }
                 }
               }
             }
@@ -11253,7 +11913,19 @@ export const OPENAPI_AGREGADO = {
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object"
+                  "type": "object",
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
+                  "properties": {
+                    "data": {
+                      "type": "object"
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/MetaRespuesta"
+                    }
+                  }
                 }
               }
             }
@@ -11290,7 +11962,19 @@ export const OPENAPI_AGREGADO = {
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object"
+                  "type": "object",
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
+                  "properties": {
+                    "data": {
+                      "type": "object"
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/MetaRespuesta"
+                    }
+                  }
                 }
               }
             }
@@ -11333,7 +12017,19 @@ export const OPENAPI_AGREGADO = {
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object"
+                  "type": "object",
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
+                  "properties": {
+                    "data": {
+                      "type": "object"
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/MetaRespuesta"
+                    }
+                  }
                 }
               }
             }
@@ -11368,7 +12064,19 @@ export const OPENAPI_AGREGADO = {
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object"
+                  "type": "object",
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
+                  "properties": {
+                    "data": {
+                      "type": "object"
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/MetaRespuesta"
+                    }
+                  }
                 }
               }
             }
@@ -11409,7 +12117,19 @@ export const OPENAPI_AGREGADO = {
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object"
+                  "type": "object",
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
+                  "properties": {
+                    "data": {
+                      "type": "object"
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/MetaRespuesta"
+                    }
+                  }
                 }
               }
             }
@@ -11464,9 +12184,21 @@ export const OPENAPI_AGREGADO = {
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/components/schemas/RegistroParteResponseDto"
+                  "type": "object",
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
+                  "properties": {
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/RegistroParteResponseDto"
+                      }
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/MetaRespuesta"
+                    }
                   }
                 }
               }
@@ -11521,7 +12253,19 @@ export const OPENAPI_AGREGADO = {
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/RegistroParteResponseDto"
+                  "type": "object",
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/RegistroParteResponseDto"
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/MetaRespuesta"
+                    }
+                  }
                 }
               }
             }
@@ -11574,7 +12318,19 @@ export const OPENAPI_AGREGADO = {
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/RegistroParteResponseDto"
+                  "type": "object",
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/RegistroParteResponseDto"
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/MetaRespuesta"
+                    }
+                  }
                 }
               }
             }
@@ -11635,7 +12391,19 @@ export const OPENAPI_AGREGADO = {
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/RegistroParteResponseDto"
+                  "type": "object",
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/RegistroParteResponseDto"
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/MetaRespuesta"
+                    }
+                  }
                 }
               }
             }
