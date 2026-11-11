@@ -26,3 +26,6 @@ export * from './http/domain-error.filter';
 export * from './http/response-envelope.interceptor';
 export * from './openapi/documento';
 export * from './capabilities';
+export * from './email/email.types';
+export * from './email/email.provider';
+export * from './email/email.module';
