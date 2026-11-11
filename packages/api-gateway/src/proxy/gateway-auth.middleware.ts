@@ -30,6 +30,7 @@ export const POLITICAS_RUTAS: PoliticaRuta[] = [
     { patron: /^\/api\/v2\/auth\/login$/, metodos: ['POST'], roles: null },
     { patron: /^\/api\/v2\/auth\/refresh$/, metodos: ['POST'], roles: null },
     { patron: /^\/api\/v2\/auth\/restablecer-contrasena$/, metodos: ['POST'], roles: null },
+    { patron: /^\/api\/v2\/auth\/restablecer-contrasena\/confirmar$/, metodos: ['POST'], roles: null },
     // Packs versionados: el empresario debe poder elegir el pack al crear su
     // empresa; la selección concreta sigue validándose en identity-service.
     {
@@ -189,6 +190,17 @@ export const POLITICAS_RUTAS: PoliticaRuta[] = [
       patron: /^\/api\/v2\/orders\/[^/]+\/estado$/,
       metodos: ['PATCH', 'POST'],
       roles: [ROLES.SUPER_ADMIN, ROLES.EMPRESARIO, ROLES.ADMIN, ROLES.LOGISTICA],
+    },
+    // Cotizaciones: el vendedor/empresa las envia; el comprador las responde.
+    {
+      patron: /^\/api\/v2\/orders\/[^/]+\/cotizacion\/enviar$/,
+      metodos: ['POST'],
+      roles: [ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.EMPRESARIO, ROLES.VENDEDOR],
+    },
+    {
+      patron: /^\/api\/v2\/orders\/[^/]+\/cotizacion\/(aceptar|rechazar)$/,
+      metodos: ['POST'],
+      roles: [ROLES.COMPRADOR],
     },
     // Pedidos: reglas específicas antes de cualquier catch-all. El gateway
     // resuelve por primera coincidencia (find), así que una regla genérica

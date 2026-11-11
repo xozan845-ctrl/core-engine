@@ -65,17 +65,22 @@ export class PedidosConsumer implements OnModuleInit {
   private async stockReservado(evento: EventoBus<StockReservadoData>): Promise<void> {
     if (await this.yaProcesado(evento)) return;
     const orderId = evento.data.order_id;
-    const actual = await this.pg.queryOne<{ estado: string; total_cents: number }>(
-      `SELECT estado, total_cents FROM orders.orden_vista WHERE id = $1`,
+    const actual = await this.pg.queryOne<{
+      estado: string;
+      total_cents: number;
+      metodo_pago: string;
+    }>(
+      `SELECT estado, total_cents, metodo_pago FROM orders.orden_vista WHERE id = $1`,
       [orderId],
     );
     if (actual && actual.estado === 'creada') {
+      const esCredito = actual.metodo_pago === 'credito';
       // pago.procesado viaja en la misma transacción que la transición a
       // `pagada` (no puede quedar una orden pagada sin evento de pago).
       await this.handler.transicionar(
         orderId,
         'pagada',
-        'pago_simulado_aprobado',
+        esCredito ? 'pago_credito_aprobado' : 'pago_simulado_aprobado',
         'inventario',
         {
           tipo: EVENTOS.PAYMENT_PROCESADO,
@@ -83,11 +88,14 @@ export class PedidosConsumer implements OnModuleInit {
             order_id: orderId,
             monto_cents: actual.total_cents,
             estado: 'procesado',
-            metodo: 'simulado',
+            metodo: esCredito ? 'credito' : 'simulado',
           },
         },
       );
-      this.logger.info({ msg: 'Pago simulado procesado', order_id: orderId });
+      this.logger.info({
+        msg: esCredito ? 'Venta a credito aprobada' : 'Pago simulado procesado',
+        order_id: orderId,
+      });
     }
     await this.marcarProcesado(evento);
   }

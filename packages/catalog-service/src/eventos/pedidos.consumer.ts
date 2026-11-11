@@ -62,11 +62,26 @@ export class PedidosConsumer implements OnModuleInit {
   }
 
   private async ordenCreada(evento: EventoBus<OrdenData>): Promise<void> {
-    const { order_id, items } = evento.data;
+    const { order_id, items, tipo_orden: tipoOrden } = evento.data;
+
+    // Una cotizacion no compromete inventario: solo se marca como procesada.
+    if (tipoOrden === 'cotizacion') {
+      const procesada = await this.pg.transaccion(async (client) => {
+        if (await this.productos.estaProcesado(evento.event_id, client)) return false;
+        await this.productos.registrarProcesado(evento.event_id, evento.tipo, client);
+        return true;
+      });
+      if (procesada) {
+        this.logger.info({ msg: 'Cotizacion sin reserva de stock', order_id });
+      }
+      return;
+    }
+
     const lineas = items.map((i) => ({
       empresa_id: i.empresa_id,
       sku: i.sku,
       cantidad: i.cantidad,
+      ...(i.item_id ? { item_id: i.item_id } : {}),
     }));
 
     // Stock + eventos + marca de idempotencia comparten UNA transacción: si
@@ -76,9 +91,10 @@ export class PedidosConsumer implements OnModuleInit {
       if (await this.productos.estaProcesado(evento.event_id, client)) return null;
       const reserva = await this.productos.reservarStockEnTransaccion(client, order_id, lineas);
       if (reserva.ok) {
+        const reservados = reserva.reservados ?? lineas;
         await this.outbox.insertarEnTransaccion(client, EVENTOS.STOCK_RESERVADO, {
           order_id,
-          items: lineas.map((l) => ({ sku: l.sku, cantidad: l.cantidad })),
+          items: reservados.map((l) => ({ sku: l.sku, cantidad: l.cantidad })),
         });
         await this.outbox.insertarEnTransaccion(client, EVENTOS.STOCK_UPDATED, {
           order_id,

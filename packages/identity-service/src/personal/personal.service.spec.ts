@@ -1,4 +1,10 @@
+import { obtenerTienda, tiendasPorIds } from '@core/shared';
 import { PersonalService } from './personal.service';
+
+vi.mock('@core/shared', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@core/shared')>();
+  return { ...actual, obtenerTienda: vi.fn(), tiendasPorIds: vi.fn() };
+});
 
 const empresario = { user_id: 'u-owner', rol: 'empresario' as const, tenant_id: 'e-1' };
 
@@ -10,10 +16,21 @@ function crear() {
     transaccion: vi.fn(async (fn: (client: unknown) => Promise<unknown>) => fn(client)),
   };
   const auth = { crearSesion: vi.fn().mockResolvedValue({ access_token: 'a', refresh_token: 'r', expira_en: 900, usuario: { id: 'u-new', rol: 'operativo' } }) };
-  return { servicio: new PersonalService(pg as never, auth as never), pg, auth, client };
+  const email = { send: vi.fn().mockResolvedValue(undefined) };
+  return { servicio: new PersonalService(pg as never, auth as never, email as never), pg, auth, email, client };
 }
 
 describe('PersonalService', () => {
+  beforeEach(() => {
+    vi.mocked(obtenerTienda).mockReset();
+    vi.mocked(tiendasPorIds).mockReset();
+    vi.mocked(obtenerTienda).mockResolvedValue({
+      estado: 'ok',
+      tienda: { id: 't-1', nombre: 'Tienda', empresa_id: 'e-1', vendedor_id: null },
+    });
+    vi.mocked(tiendasPorIds).mockResolvedValue([]);
+  });
+
   it('crea roles con permisos JSON normalizados y deduplicados', async () => {
     const { servicio, pg } = crear();
     pg.queryOne.mockResolvedValue({ id: 'r-1', empresa_id: 'e-1', codigo: 'estilista', nombre: 'Estilista', permisos: { version: 1, acciones: ['agenda.leer'] }, activo: true });
@@ -46,11 +63,10 @@ describe('PersonalService', () => {
     const { servicio, pg } = crear();
     pg.queryOne
       .mockResolvedValueOnce({})
-      .mockResolvedValueOnce({ id: 't-1' })
       .mockResolvedValueOnce({ id: 'p-1', empresa_id: 'e-1', codigo: 'caja_1', nombre: 'Caja 1', tipo: 'caja', tienda_id: 't-1', metadata: {}, activo: true });
 
     await expect(servicio.crearPuesto(empresario, 'e-1', { codigo: 'caja_1', nombre: 'Caja 1', tienda_id: 't-1' })).resolves.toMatchObject({ id: 'p-1' });
-    expect(pg.queryOne).toHaveBeenCalledWith(expect.stringContaining('FROM stores.tiendas'), ['t-1', 'e-1']);
+    expect(obtenerTienda).toHaveBeenCalledWith('t-1');
   });
 
   it('exige un alcance al crear una asignación de personal', async () => {
@@ -68,7 +84,6 @@ describe('PersonalService', () => {
     pg.queryOne
       .mockResolvedValueOnce({})
       .mockResolvedValueOnce({ id: 'r-1' })
-      .mockResolvedValueOnce({ id: 't-1' })
       .mockResolvedValueOnce({ id: 'i-1', empresa_id: 'e-1', correo: 'ana@core.test', nombre: 'Ana', tipo: 'contratacion', rol_empresa_id: 'r-1', rol_nombre: 'Estilista', tienda_id: 't-1', puesto_id: null, estado: 'pendiente', expira_en: '2026-11-11T00:00:00Z', empresa_nombre: 'Salón' });
 
     const invitacion = await servicio.crearInvitacion(empresario, 'e-1', {
@@ -78,6 +93,42 @@ describe('PersonalService', () => {
     expect(invitacion.url_invitacion).toMatch(/^http:\/\/localhost:5173\/incorporacion\//);
     expect(invitacion.tipo).toBe('contratacion');
     expect(pg.queryOne).toHaveBeenCalledWith(expect.stringContaining('INSERT INTO identity.invitaciones_personal'), expect.arrayContaining(['e-1', 'ana@core.test', 'contratacion', 'r-1', 't-1']));
+  });
+
+  it('envía el enlace de incorporación por correo', async () => {
+    const { servicio, pg, email } = crear();
+    pg.queryOne
+      .mockResolvedValueOnce({})
+      .mockResolvedValueOnce({ id: 'r-1' })
+      .mockResolvedValueOnce({ id: 'i-1', empresa_id: 'e-1', correo: 'ana@core.test', nombre: 'Ana', tipo: 'contratacion', rol_empresa_id: 'r-1', rol_nombre: 'Estilista', tienda_id: 't-1', puesto_id: null, estado: 'pendiente', expira_en: '2026-11-11T00:00:00Z', empresa_nombre: 'Salón' });
+
+    const invitacion = await servicio.crearInvitacion(empresario, 'e-1', {
+      correo: 'ana@core.test', tipo: 'contratacion', rol_empresa_id: 'r-1', tienda_id: 't-1',
+    });
+
+    expect(email.send).toHaveBeenCalledWith({
+      to: 'ana@core.test',
+      subject: 'Invitación a Salón',
+      text: expect.stringContaining(invitacion.url_invitacion),
+      html: expect.stringContaining(invitacion.url_invitacion),
+    });
+  });
+
+  it('mantiene la invitación si el correo falla', async () => {
+    const { servicio, pg, email } = crear();
+    pg.queryOne
+      .mockResolvedValueOnce({})
+      .mockResolvedValueOnce({ id: 'r-1' })
+      .mockResolvedValueOnce({ id: 'i-1', empresa_id: 'e-1', correo: 'ana@core.test', nombre: 'Ana', tipo: 'contratacion', rol_empresa_id: 'r-1', rol_nombre: 'Estilista', tienda_id: 't-1', puesto_id: null, estado: 'pendiente', expira_en: '2026-11-11T00:00:00Z', empresa_nombre: 'Salón' });
+    email.send.mockRejectedValue(new Error('SMTP caído'));
+    const spy = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+
+    await expect(
+      servicio.crearInvitacion(empresario, 'e-1', {
+        correo: 'ana@core.test', tipo: 'contratacion', rol_empresa_id: 'r-1', tienda_id: 't-1',
+      }),
+    ).resolves.toMatchObject({ url_invitacion: expect.stringContaining('/incorporacion/') });
+    spy.mockRestore();
   });
 
   it('lista y activa/desactiva roles y puestos del tenant', async () => {
@@ -93,7 +144,8 @@ describe('PersonalService', () => {
   it('rechaza administrar otra empresa o usar referencias de otro tenant', async () => {
     const { servicio, pg } = crear();
     await expect(servicio.listarRoles(empresario, 'e-2')).rejects.toMatchObject({ codigo: 'ACCESO_DENEGADO' });
-    pg.queryOne.mockResolvedValueOnce({}).mockResolvedValueOnce(null);
+    pg.queryOne.mockResolvedValueOnce({});
+    vi.mocked(obtenerTienda).mockResolvedValue({ estado: 'no_encontrada' });
     await expect(servicio.crearPuesto(empresario, 'e-1', { codigo: 'caja_2', nombre: 'Caja 2', tienda_id: 't-ajena' })).rejects.toMatchObject({ codigo: 'NO_ENCONTRADO' });
   });
 
@@ -103,7 +155,6 @@ describe('PersonalService', () => {
       .mockResolvedValueOnce({}) // empresario
       .mockResolvedValueOnce({}) // miembro
       .mockResolvedValueOnce({ id: 'r-1' })
-      .mockResolvedValueOnce({ id: 't-1' })
       .mockResolvedValueOnce({ id: 'p-1', tienda_id: 't-1' })
       .mockResolvedValueOnce({ id: 'a-1', usuario_id: 'u-1' });
     await expect(servicio.asignar(empresario, 'e-1', { usuario_id: 'u-1', rol_empresa_id: 'r-1', tienda_id: 't-1', puesto_id: 'p-1' })).resolves.toMatchObject({ id: 'a-1' });
@@ -116,6 +167,40 @@ describe('PersonalService', () => {
     await expect(servicio.listarAsignaciones(empresario, 'e-1')).resolves.toEqual([{ id: 'a-1' }]);
     await expect(servicio.listarInvitaciones(empresario, 'e-1')).resolves.toEqual([{ id: 'i-1' }]);
     await expect(servicio.revocarInvitacion(empresario, 'e-1', 'i-1')).resolves.toEqual({ ok: true });
+  });
+
+  it('resuelve el nombre de la tienda por API interna al listar asignaciones', async () => {
+    const { servicio, pg } = crear();
+    pg.queryOne.mockResolvedValue({});
+    pg.query.mockResolvedValue([{ id: 'a-1', tienda_id: 't-1' }]);
+    vi.mocked(tiendasPorIds).mockResolvedValue([
+      { id: 't-1', nombre: 'Tienda Centro', empresa_id: 'e-1', vendedor_id: null },
+    ]);
+
+    await expect(servicio.listarAsignaciones(empresario, 'e-1')).resolves.toEqual([
+      { id: 'a-1', tienda_id: 't-1', tienda_nombre: 'Tienda Centro' },
+    ]);
+  });
+
+  it('degrada el nombre de la tienda si stores no responde', async () => {
+    const { servicio, pg } = crear();
+    pg.queryOne.mockResolvedValue({});
+    pg.query.mockResolvedValue([{ id: 'a-1', tienda_id: 't-1' }]);
+    vi.mocked(tiendasPorIds).mockResolvedValue(null);
+
+    await expect(servicio.listarAsignaciones(empresario, 'e-1')).resolves.toEqual([
+      { id: 'a-1', tienda_id: 't-1', tienda_nombre: null },
+    ]);
+  });
+
+  it('falla cerrado al validar una tienda si stores no responde', async () => {
+    const { servicio, pg } = crear();
+    pg.queryOne.mockResolvedValueOnce({});
+    vi.mocked(obtenerTienda).mockResolvedValue({ estado: 'error' });
+
+    await expect(
+      servicio.crearPuesto(empresario, 'e-1', { codigo: 'caja_3', nombre: 'Caja 3', tienda_id: 't-1' }),
+    ).rejects.toMatchObject({ codigo: 'SERVICIO_NO_DISPONIBLE' });
   });
 
   it('consulta y acepta una incorporación creando cuenta, membresía y asignación', async () => {

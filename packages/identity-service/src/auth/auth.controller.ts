@@ -5,6 +5,7 @@ import {
   AuthService,
   Sesion,
 } from './auth.service';
+import { PasswordResetService } from './password-reset.service';
 import {
   UsuariosService,
   Usuario,
@@ -115,6 +116,18 @@ export class RestablecerContrasenaRequestDto {
   correo: string;
 }
 
+export class ConfirmarRestablecimientoRequestDto {
+  @ApiProperty({ description: 'Token recibido por correo' })
+  @IsString()
+  @Length(16, 256)
+  token: string;
+
+  @ApiProperty({ description: 'Contraseña nueva (mínimo 8 caracteres)', minLength: 8 })
+  @IsString()
+  @MinLength(8)
+  contrasena: string;
+}
+
 export class VincularPersonalRequestDto {
   /** Id de la ficha de personal en field-service (logistica de campo). */
   @ApiProperty({ description: 'Id de la ficha de personal en field-service', minLength: 1, maxLength: 100 })
@@ -143,6 +156,7 @@ export class AuthController {
   constructor(
     private readonly auth: AuthService,
     private readonly usuarios: UsuariosService,
+    private readonly passwordReset: PasswordResetService,
   ) {}
 
   /** POST /api/v2/auth/registro — alta de vendedor o comprador (Tabla 21). */
@@ -243,18 +257,29 @@ export class AuthController {
 
   /**
    * POST /api/v2/auth/restablecer-contrasena — publico (app: restablecer-contrasena).
-   * MVP: verifica existencia y confirma la peticion; el envio de correo se
-   * conecta a Supabase Auth/SMTP en staging/prod.
+   * Genera un token de un solo uso y envía el enlace por correo. Responde `ok`
+   * siempre, exista o no la cuenta (OWASP A07: no enumeración de usuarios).
    */
   @Post('restablecer-contrasena')
   @ApiOperation({ summary: 'Solicitar restablecimiento de contraseña (público)' })
   @ApiCreatedResponse({ type: OkResponseDto, description: 'Solicitud aceptada' })
   async restablecerContrasena(@Body() dto: RestablecerContrasenaRequestDto): Promise<{ ok: true }> {
-    const existe = await this.usuarios.encontrarPorCorreo(dto.correo);
-    if (!existe) {
-      // No revelar si existe o no (OWASP A07): siempre responde ok.
-      return { ok: true };
-    }
+    await this.passwordReset.solicitar(dto.correo);
+    return { ok: true };
+  }
+
+  /**
+   * POST /api/v2/auth/restablecer-contrasena/confirmar — publico.
+   * Consume el token de un solo uso, cambia la contraseña y revoca las sesiones.
+   */
+  @Post('restablecer-contrasena/confirmar')
+  @HttpCode(200)
+  @ApiOperation({ summary: 'Confirmar restablecimiento de contraseña (público)' })
+  @ApiOkResponse({ type: OkResponseDto, description: 'Contraseña restablecida' })
+  async confirmarRestablecimiento(
+    @Body() dto: ConfirmarRestablecimientoRequestDto,
+  ): Promise<{ ok: true }> {
+    await this.passwordReset.confirmar(dto.token, dto.contrasena);
     return { ok: true };
   }
 

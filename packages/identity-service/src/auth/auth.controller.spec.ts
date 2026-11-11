@@ -2,6 +2,7 @@ import type { Mock } from 'vitest';
 import 'reflect-metadata';
 import { AuthController } from './auth.controller';
 import type { AuthService } from './auth.service';
+import type { PasswordResetService } from './password-reset.service';
 import type { UsuariosService } from '../usuarios/usuarios.service';
 import { ROLES, DomainError, UnauthorizedError, ForbiddenError } from '@core/shared';
 
@@ -17,6 +18,7 @@ const adminContexto = { user_id: 'u-admin', email: 'admin@core.local', rol: ROLE
 function fabricar(): {
   auth: Record<string, Mock>;
   usuarios: Record<string, Mock>;
+  passwordReset: Record<string, Mock>;
   controller: AuthController;
 } {
   const auth = { registrar: vi.fn(), login: vi.fn(), refrescar: vi.fn(), cerrarSesion: vi.fn().mockResolvedValue(1) };
@@ -27,11 +29,16 @@ function fabricar(): {
     actualizarPerfil: vi.fn(),
     encontrarPorCorreo: vi.fn(),
   };
+  const passwordReset = {
+    solicitar: vi.fn().mockResolvedValue(undefined),
+    confirmar: vi.fn().mockResolvedValue(undefined),
+  };
   const controller = new AuthController(
     auth as unknown as AuthService,
     usuarios as unknown as UsuariosService,
+    passwordReset as unknown as PasswordResetService,
   );
-  return { auth, usuarios, controller };
+  return { auth, usuarios, passwordReset, controller };
 }
 
 describe('AuthController (api/v2/auth, R-U-10/11)', () => {
@@ -129,11 +136,18 @@ describe('AuthController (api/v2/auth, R-U-10/11)', () => {
     await expect(controller.cambiarContrasena({ actual: 'a', nueva: 'b' } as never, undefined as never)).rejects.toBeInstanceOf(UnauthorizedError);
   });
 
-  it('debe responder ok en restablecer-contrasena aunque el correo no exista', async () => {
-    const { usuarios, controller } = fabricar();
-    usuarios.encontrarPorCorreo.mockResolvedValue(null);
+  it('debe delegar la solicitud de restablecimiento sin revelar si existe', async () => {
+    const { passwordReset, controller } = fabricar();
     await expect(controller.restablecerContrasena({ correo: 'nadie@core.local' })).resolves.toEqual({ ok: true });
-    expect(usuarios.encontrarPorCorreo).toHaveBeenCalledWith('nadie@core.local');
+    expect(passwordReset.solicitar).toHaveBeenCalledWith('nadie@core.local');
+  });
+
+  it('debe confirmar el restablecimiento con token y contraseña nueva', async () => {
+    const { passwordReset, controller } = fabricar();
+    await expect(
+      controller.confirmarRestablecimiento({ token: 'token-de-prueba-123456', contrasena: 'NuevaClave123!' }),
+    ).resolves.toEqual({ ok: true });
+    expect(passwordReset.confirmar).toHaveBeenCalledWith('token-de-prueba-123456', 'NuevaClave123!');
   });
 
   it('debe devolver el contexto desde las cabeceras en /me', async () => {

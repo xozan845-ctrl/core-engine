@@ -1,8 +1,22 @@
 import { Body, Controller, Get, Param, Post, Query } from '@nestjs/common';
-import { ApiBearerAuth, ApiCreatedResponse, ApiOkResponse, ApiOperation, ApiParam, ApiQuery, ApiTags } from '@nestjs/swagger';
 import {
+  ApiBearerAuth,
+  ApiCreatedResponse,
+  ApiOkResponse,
+  ApiOperation,
+  ApiParam,
+  ApiProperty,
+  ApiQuery,
+  ApiTags,
+} from '@nestjs/swagger';
+import { IsOptional, IsString, Length } from 'class-validator';
+import {
+  CAPACIDADES,
   DomainError,
+  ForbiddenError,
+  NotFoundError,
   Permisos,
+  RequiereCapacidades,
   Roles,
   ROLES,
   UsuarioActual,
@@ -13,9 +27,18 @@ import { CreateOrderCommandHandler } from './handlers/create-order-command.handl
 import { OrderViewRepository, OrderView } from './queries/order-view.repository';
 import { PedidosService } from './pedidos.service';
 import {
+  CotizacionAceptadaResponseDto,
   OrderViewResponseDto,
   TimelineEventoResponseDto,
 } from './orders.response.dto';
+
+export class RechazarCotizacionRequestDto {
+  @ApiProperty({ required: false, maxLength: 500, description: 'Motivo del rechazo' })
+  @IsOptional()
+  @IsString()
+  @Length(0, 500)
+  motivo?: string;
+}
 
 @ApiTags('Pedidos')
 @ApiBearerAuth()
@@ -37,6 +60,97 @@ export class PedidosController {
     @UsuarioActual() usuario: UsuarioContexto,
   ): Promise<OrderView> {
     return this.handler.ejecutar(comando, usuario.user_id);
+  }
+
+  /** POST /api/v2/orders/:id/cotizacion/enviar — el vendedor envia la cotizacion. */
+  @Post(':id/cotizacion/enviar')
+  @Permisos('ordenes.leer')
+  @Roles(ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.EMPRESARIO, ROLES.VENDEDOR)
+  @RequiereCapacidades(CAPACIDADES.COTIZACIONES)
+  @ApiOperation({ summary: 'Enviar una cotizacion al comprador' })
+  @ApiParam({ name: 'id', description: 'Id de la cotizacion' })
+  @ApiOkResponse({ type: OrderViewResponseDto, description: 'Cotizacion enviada' })
+  async enviarCotizacion(
+    @Param('id') id: string,
+    @UsuarioActual() usuario: UsuarioContexto,
+  ): Promise<OrderView> {
+    const cotizacion = await this.cotizacionDe(id);
+    const esAdmin = [ROLES.SUPER_ADMIN, ROLES.ADMIN].includes(usuario.rol as never);
+    const esVendedor = cotizacion.vendedor_id === usuario.user_id;
+    const empresa = cotizacion.items[0]?.empresa_id;
+    const esEmpresario =
+      usuario.rol === ROLES.EMPRESARIO && Boolean(empresa) && usuario.tenant_id === empresa;
+    if (!esAdmin && !esVendedor && !esEmpresario) {
+      throw new ForbiddenError('Solo el vendedor o su empresa pueden enviar la cotizacion.');
+    }
+    if (cotizacion.estado !== 'creada') {
+      throw new DomainError('COTIZACION_ESTADO_INVALIDO', 'Solo una cotizacion en borrador puede enviarse.');
+    }
+    return this.handler.transicionar(id, 'enviada', 'cotizacion_enviada', usuario.user_id);
+  }
+
+  /**
+   * POST /api/v2/orders/:id/cotizacion/aceptar — el comprador acepta y se crea
+   * una orden de compra con las mismas lineas (el stock se reserva al convertir).
+   */
+  @Post(':id/cotizacion/aceptar')
+  @Roles(ROLES.COMPRADOR)
+  @ApiOperation({ summary: 'Aceptar una cotizacion y generar la orden de compra' })
+  @ApiParam({ name: 'id', description: 'Id de la cotizacion' })
+  @ApiCreatedResponse({ type: CotizacionAceptadaResponseDto, description: 'Cotizacion aceptada y orden creada' })
+  async aceptarCotizacion(
+    @Param('id') id: string,
+    @UsuarioActual() usuario: UsuarioContexto,
+  ): Promise<{ cotizacion: OrderView; orden: OrderView }> {
+    const cotizacion = await this.cotizacionDe(id);
+    if (cotizacion.comprador_id !== usuario.user_id) {
+      throw new ForbiddenError('Solo el comprador de la cotizacion puede aceptarla.');
+    }
+    if (cotizacion.estado !== 'enviada') {
+      throw new DomainError('COTIZACION_ESTADO_INVALIDO', 'Solo una cotizacion enviada puede aceptarse.');
+    }
+    const items = cotizacion.items.map((item) => ({
+      oferta_id: item.oferta_id,
+      cantidad: item.cantidad,
+    }));
+    // La orden se crea primero: si falla el stock, la cotizacion sigue enviada.
+    const orden = await this.handler.ejecutar(
+      { tipo_orden: 'compra', items } as CreateOrderCommand,
+      usuario.user_id,
+    );
+    const aceptada = await this.handler.transicionar(
+      id,
+      'aceptada',
+      'cotizacion_aceptada',
+      usuario.user_id,
+    );
+    return { cotizacion: aceptada, orden };
+  }
+
+  /** POST /api/v2/orders/:id/cotizacion/rechazar — el comprador rechaza. */
+  @Post(':id/cotizacion/rechazar')
+  @Roles(ROLES.COMPRADOR)
+  @ApiOperation({ summary: 'Rechazar una cotizacion enviada' })
+  @ApiParam({ name: 'id', description: 'Id de la cotizacion' })
+  @ApiOkResponse({ type: OrderViewResponseDto, description: 'Cotizacion rechazada' })
+  async rechazarCotizacion(
+    @Param('id') id: string,
+    @Body() dto: RechazarCotizacionRequestDto,
+    @UsuarioActual() usuario: UsuarioContexto,
+  ): Promise<OrderView> {
+    const cotizacion = await this.cotizacionDe(id);
+    if (cotizacion.comprador_id !== usuario.user_id) {
+      throw new ForbiddenError('Solo el comprador de la cotizacion puede rechazarla.');
+    }
+    if (cotizacion.estado !== 'enviada') {
+      throw new DomainError('COTIZACION_ESTADO_INVALIDO', 'Solo una cotizacion enviada puede rechazarse.');
+    }
+    return this.handler.transicionar(
+      id,
+      'rechazada',
+      dto.motivo?.trim() || 'cotizacion_rechazada',
+      usuario.user_id,
+    );
   }
 
   /** GET /api/v2/orders/admin/todas — todas las ordenes (admin). */
@@ -175,6 +289,15 @@ export class PedidosController {
     const orden = await this.pedidos.detallePara(id, usuario);
     const eventos = await this.views.obtenerTimeline(orden.id);
     return this.pedidos.timelineVisible(eventos, orden.items);
+  }
+
+  /** Carga una orden y exige que sea una cotizacion. */
+  private async cotizacionDe(id: string): Promise<OrderView> {
+    const cotizacion = await this.views.encontrar(id);
+    if (!cotizacion || cotizacion.tipo_orden !== 'cotizacion') {
+      throw new NotFoundError('Cotizacion', id);
+    }
+    return cotizacion;
   }
 
   private proyectar(

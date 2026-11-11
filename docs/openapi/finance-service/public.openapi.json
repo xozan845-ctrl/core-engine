@@ -2005,6 +2005,174 @@
         ]
       }
     },
+    "/api/v2/comercio/creditos/{id}/abonar": {
+      "post": {
+        "operationId": "ComercioController_abonarCredito",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "description": "Id del crédito",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AbonarCreditoRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Abono registrado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/CreditoResponseDto"
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/MetaRespuesta"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Registrar un abono parcial del crédito",
+        "tags": [
+          "Comercio · Operación de tienda"
+        ]
+      }
+    },
+    "/api/v2/comercio/credito-cuentas": {
+      "get": {
+        "operationId": "ComercioController_listarCuentasCredito",
+        "parameters": [
+          {
+            "name": "empresa_id",
+            "required": false,
+            "in": "query",
+            "description": "Solo admin global",
+            "schema": {}
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Cuentas de crédito",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
+                  "properties": {
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/CuentaCreditoResponseDto"
+                      }
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/MetaRespuesta"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Listar cuentas de crédito por parte de la empresa",
+        "tags": [
+          "Comercio · Operación de tienda"
+        ]
+      }
+    },
+    "/api/v2/comercio/credito-cuentas/{parteId}": {
+      "put": {
+        "operationId": "ComercioController_guardarCuentaCredito",
+        "parameters": [
+          {
+            "name": "parteId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/GuardarCuentaCreditoRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Cuenta de crédito guardada",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/CuentaCreditoResponseDto"
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/MetaRespuesta"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Definir el límite de crédito de una parte",
+        "tags": [
+          "Comercio · Operación de tienda"
+        ]
+      }
+    },
     "/api/v2/comercio/creditos/{id}": {
       "delete": {
         "operationId": "ComercioController_eliminarCredito",
@@ -4289,6 +4457,30 @@
       }
     },
     "schemas": {
+      "AbonarCreditoRequestDto": {
+        "type": "object",
+        "properties": {
+          "montoCents": {
+            "type": "number",
+            "description": "Importe del abono en centavos",
+            "minimum": 1
+          },
+          "metodoPago": {
+            "type": "string",
+            "description": "Medio del abono",
+            "enum": [
+              "efectivo",
+              "tarjeta",
+              "transferencia",
+              "otro"
+            ],
+            "default": "efectivo"
+          }
+        },
+        "required": [
+          "montoCents"
+        ]
+      },
       "ActualizarClienteComercioRequestDto": {
         "type": "object",
         "properties": {
@@ -6158,6 +6350,56 @@
           "balanceCents"
         ]
       },
+      "CuentaCreditoResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "empresa_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "parte_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "parte_nombre": {
+            "type": "string"
+          },
+          "limite_cents": {
+            "type": "number",
+            "description": "Limite en centavos"
+          },
+          "usado_cents": {
+            "type": "number",
+            "description": "Saldo usado en centavos"
+          },
+          "disponible_cents": {
+            "type": "number",
+            "description": "Credito disponible en centavos"
+          },
+          "activo": {
+            "type": "boolean"
+          },
+          "actualizado_en": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "empresa_id",
+          "parte_id",
+          "parte_nombre",
+          "limite_cents",
+          "usado_cents",
+          "disponible_cents",
+          "activo",
+          "actualizado_en"
+        ]
+      },
       "CuentaPorPagarResponseDto": {
         "type": "object",
         "properties": {
@@ -6761,6 +7003,23 @@
             "description": "Fin del periodo"
           }
         }
+      },
+      "GuardarCuentaCreditoRequestDto": {
+        "type": "object",
+        "properties": {
+          "limiteCents": {
+            "type": "number",
+            "description": "Limite de credito de la parte en centavos",
+            "minimum": 0
+          },
+          "activo": {
+            "type": "boolean",
+            "default": true
+          }
+        },
+        "required": [
+          "limiteCents"
+        ]
       },
       "ImportarClientesRequestDto": {
         "type": "object",

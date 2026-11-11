@@ -76,5 +76,11 @@
     "branches": 85.48,
     "functions": 77.14,
     "statements": 84.34
+  },
+  "notifications-service": {
+    "lines": 99,
+    "branches": 85,
+    "functions": 99,
+    "statements": 99
   }
 }

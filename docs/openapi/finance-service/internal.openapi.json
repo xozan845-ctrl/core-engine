@@ -52,6 +52,73 @@
         ]
       }
     },
+    "/internal/finance/creditos": {
+      "post": {
+        "operationId": "InternoController_registrarCredito",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RegistrarCreditoInternoRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Crédito registrado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CreditoOrdenResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "internalKey": []
+          }
+        ],
+        "summary": "Registrar una venta a crédito desde orders",
+        "tags": [
+          "Finanzas (interno)"
+        ]
+      }
+    },
+    "/internal/finance/creditos/orden/{orderId}": {
+      "delete": {
+        "operationId": "InternoController_anularCredito",
+        "parameters": [
+          {
+            "name": "orderId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Crédito anulado"
+          }
+        },
+        "security": [
+          {
+            "internalKey": []
+          }
+        ],
+        "summary": "Anular el crédito ligado a una orden no creada",
+        "tags": [
+          "Finanzas (interno)"
+        ]
+      }
+    },
     "/internal/finance/declaraciones": {
       "get": {
         "operationId": "InternoController_declaraciones",
@@ -122,6 +189,26 @@
       }
     },
     "schemas": {
+      "CreditoOrdenResponseDto": {
+        "type": "object",
+        "properties": {
+          "credito_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "balance_cents": {
+            "type": "number"
+          },
+          "limite_cents": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "credito_id",
+          "balance_cents",
+          "limite_cents"
+        ]
+      },
       "DeclaracionResponseDto": {
         "type": "object",
         "properties": {
@@ -244,6 +331,42 @@
           "cuota_cents",
           "estado",
           "creado_en"
+        ]
+      },
+      "RegistrarCreditoInternoRequestDto": {
+        "type": "object",
+        "properties": {
+          "empresa_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "parte_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "order_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "monto_cents": {
+            "type": "number",
+            "minimum": 1
+          },
+          "concepto": {
+            "type": "string",
+            "minLength": 1
+          },
+          "vendedor_id": {
+            "type": "string",
+            "format": "uuid"
+          }
+        },
+        "required": [
+          "empresa_id",
+          "parte_id",
+          "order_id",
+          "monto_cents",
+          "concepto"
         ]
       },
       "SujetoTributarioResponseDto": {

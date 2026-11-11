@@ -17,6 +17,10 @@ import {
   ItemOrden,
   EVENTOS,
   timeoutInternoMs,
+  registrarCreditoOrden,
+  anularCreditoOrden,
+  cotizarItemReserva,
+  verificarDisponibilidadReserva,
 } from '@core/shared';
 import { CreateOrderCommand } from '../commands/create-order.command';
 import { OrderEventStore } from '../repositories/order-event-store';
@@ -71,6 +75,21 @@ export class CreateOrderCommandHandler {
 
   async ejecutar(comando: CreateOrderCommand, clienteId: string): Promise<OrderView> {
     const tipoOrden = this.validarTipoOrden(comando.tipo_orden);
+    // Una cotizacion es una propuesta de precio: no reserva stock ni genera
+    // comision hasta que el cliente la acepte y se convierta en orden.
+    const esCotizacion = tipoOrden === 'cotizacion';
+    const esReserva = tipoOrden === 'reserva';
+    const metodoPago: 'simulado' | 'credito' =
+      comando.metodo_pago === 'credito' ? 'credito' : 'simulado';
+    if (esReserva && !comando.cliente_parte_id) {
+      throw new DomainError('PARTE_REQUERIDA', 'Una reserva requiere cliente_parte_id.');
+    }
+    if (metodoPago === 'credito' && !comando.cliente_parte_id) {
+      throw new DomainError(
+        'CREDITO_REQUIERE_PARTE',
+        'La venta a credito requiere identificar al cliente (cliente_parte_id).',
+      );
+    }
     let desdeCarrito = false;
     let lineas = comando.items;
     if (comando.usar_carrito) {
@@ -117,15 +136,102 @@ export class CreateOrderCommandHandler {
       });
     }
 
-    await this.validarCapacidades(items, tipoOrden);
+    if (metodoPago === 'credito') {
+      const empresas = new Set(items.map((item) => item.empresa_id));
+      if (empresas.size > 1) {
+        throw new DomainError(
+          'CREDITO_UNA_EMPRESA',
+          'Una venta a credito solo puede incluir items de una empresa.',
+        );
+      }
+    }
 
-    // 2. control sincrono de viabilidad de stock (TC-04: respuesta 409 rapida)
-    await this.verificarStock(items);
+    await this.validarCapacidades(items, tipoOrden, metodoPago);
 
-    // 3. transaccion: evento + outbox (proyecciones via trigger en orders.eventos)
+    // Reservas: el precio se calcula por rango (tarifas) y se valida que el
+    // recurso esté libre. Se hace después de las capacidades para fallar
+    // cerrado antes de llamar a otros servicios.
+    if (esReserva) {
+      total = Money.desdeCentavos(0);
+      for (let indice = 0; indice < items.length; indice += 1) {
+        const item = items[indice];
+        const linea = agrupados[indice];
+        const config = linea.fulfillment_config ?? {};
+        const recursoId = this.textoConfig(config, 'recurso_id');
+        const iniciaEn = this.textoConfig(config, 'inicia_en');
+        const terminaEn = this.textoConfig(config, 'termina_en');
+        if (!recursoId || !iniciaEn || !terminaEn) {
+          throw new DomainError(
+            'RESERVA_CONFIGURACION_REQUERIDA',
+            'Una reserva requiere recurso_id, inicia_en y termina_en.',
+          );
+        }
+        if (item.cantidad !== 1) {
+          throw new DomainError('RESERVA_CANTIDAD_INVALIDA', 'Una reserva admite cantidad 1.');
+        }
+        const desde = iniciaEn.slice(0, 10);
+        const hasta = terminaEn.slice(0, 10);
+        if (!/^\d{4}-\d{2}-\d{2}$/.test(desde) || !/^\d{4}-\d{2}-\d{2}$/.test(hasta)) {
+          throw new DomainError('RESERVA_FECHAS_INVALIDAS', 'Usa fechas ISO con hora en la reserva.');
+        }
+        const cotizacion = await cotizarItemReserva({
+          empresa_id: item.empresa_id,
+          item_id: item.item_id,
+          desde,
+          hasta,
+        });
+        if (!cotizacion) throw new ServiceUnavailableError('catalog-service');
+        const disponible = await verificarDisponibilidadReserva({
+          empresa_id: item.empresa_id,
+          recurso_id: recursoId,
+          inicia_en: iniciaEn,
+          termina_en: terminaEn,
+        });
+        if (disponible === false) {
+          throw new ConflictError(
+            'El recurso no esta disponible en ese rango.',
+            { recurso_id: recursoId },
+            'RESERVA_NO_DISPONIBLE',
+          );
+        }
+        if (disponible === null) throw new ServiceUnavailableError('scheduling-service');
+        item.precio_unitario_cents = cotizacion.total_cents;
+        total = total.sumar(Money.desdeCentavos(cotizacion.total_cents).multiplicarPor(item.cantidad));
+      }
+    }
+
+    // 2. control sincrono de viabilidad de stock (TC-04: respuesta 409 rapida).
+    // Las cotizaciones no comprometen inventario.
+    if (!esCotizacion) await this.verificarStock(items);
+
+    // 3. venta a credito: la cuenta por cobrar se registra antes de la orden
+    // (idempotente por order_id). Si la orden no se crea, se compensa.
     const orderId = randomUUID();
     const creadoEn = new Date().toISOString();
-    await this.pg.transaccion(async (client) => {
+    if (metodoPago === 'credito') {
+      const empresaId = items[0]?.empresa_id ?? '';
+      const credito = await registrarCreditoOrden({
+        empresa_id: empresaId,
+        parte_id: comando.cliente_parte_id as string,
+        order_id: orderId,
+        monto_cents: total.centavos,
+        concepto: `Pedido ${orderId.slice(0, 8)}`,
+        vendedor_id: items[0]?.vendedor_id,
+      });
+      if (credito.estado === 'rechazado') {
+        throw new ConflictError(
+          'CREDITO_RECHAZADO',
+          'La parte no tiene una cuenta de credito activa o cupo disponible.',
+        );
+      }
+      if (credito.estado === 'error') {
+        throw new ServiceUnavailableError('finance-service');
+      }
+    }
+
+    // 4. transaccion: evento + outbox (proyecciones via trigger en orders.eventos)
+    try {
+      await this.pg.transaccion(async (client) => {
       await this.eventStore.appendEnTransaccion(client, orderId, 'OrderCreatedEvent', {
         order_id: orderId,
         comprador_id: clienteId,
@@ -134,6 +240,7 @@ export class CreateOrderCommandHandler {
         total_cents: total.centavos,
         estado: 'creada',
         tipo_orden: tipoOrden,
+        metodo_pago: metodoPago,
         fulfillment_config: this.resumenFulfillment(items),
         creado_en: creadoEn,
       });
@@ -149,8 +256,9 @@ export class CreateOrderCommandHandler {
           total_cents: total.centavos,
           estado: 'creada',
           tipo_orden: tipoOrden,
+          metodo_pago: metodoPago,
           fulfillment_config: this.resumenFulfillment(items),
-          comision_cents: total.comision(this.tasaComision).centavos,
+          comision_cents: esCotizacion ? 0 : total.comision(this.tasaComision).centavos,
         },
       };
       await client.query(
@@ -162,7 +270,13 @@ export class CreateOrderCommandHandler {
       if (desdeCarrito) {
         await this.carritos.vaciarEnTransaccion(client, clienteId);
       }
-    });
+      });
+    } catch (error) {
+      if (metodoPago === 'credito') {
+        await anularCreditoOrden(orderId).catch(() => undefined);
+      }
+      throw error;
+    }
 
     const primerItem = items[0];
     const vista: OrderView = {
@@ -172,13 +286,14 @@ export class CreateOrderCommandHandler {
       tienda_id: primerItem?.tienda_id ?? '',
       estado: 'creada',
       total_cents: total.centavos,
-      comision_cents: total.comision(0.12).centavos,
+      comision_cents: esCotizacion ? 0 : total.comision(0.12).centavos,
       moneda: 'C$',
       items,
       direccion_envio: null,
       creado_en: creadoEn,
       actualizado_en: creadoEn,
       tipo_orden: tipoOrden,
+      metodo_pago: metodoPago,
       fulfillment_config: this.resumenFulfillment(items),
       pagada_en: null,
       enviada_en: null,
@@ -300,10 +415,18 @@ export class CreateOrderCommandHandler {
     if (fulfillment === 'delivery' && tipoOrden === 'reserva') {
       throw new DomainError('FULFILLMENT_INVALIDO', 'Una reserva no puede usar delivery.');
     }
-    if (tipoOrden === 'reserva' && itemType !== 'servicio') {
-      throw new DomainError('TIPO_ITEM_INVALIDO', 'Las reservas solo aplican a servicios.');
+    if (tipoOrden === 'reserva' && !['servicio', 'alquiler'].includes(itemType)) {
+      throw new DomainError('TIPO_ITEM_INVALIDO', 'Las reservas aplican a servicios o alquileres.');
+    }
+    if (tipoOrden === 'reserva' && fulfillment !== 'onsite') {
+      throw new DomainError('FULFILLMENT_INVALIDO', 'Una reserva requiere fulfillment onsite.');
     }
     return fulfillment;
+  }
+
+  private textoConfig(config: Record<string, unknown>, clave: string): string | undefined {
+    const valor = config[clave];
+    return typeof valor === 'string' && valor.trim() ? valor : undefined;
   }
 
   private resumenFulfillment(items: ItemOrden[]): Record<string, unknown> {
@@ -316,9 +439,14 @@ export class CreateOrderCommandHandler {
     };
   }
 
-  private async validarCapacidades(items: ItemOrden[], tipoOrden: TipoOrden): Promise<void> {
+  private async validarCapacidades(
+    items: ItemOrden[],
+    tipoOrden: TipoOrden,
+    metodoPago: 'simulado' | 'credito' = 'simulado',
+  ): Promise<void> {
     const requeridas = new Set<string>();
     if (tipoOrden === 'cotizacion') requeridas.add('cotizaciones');
+    if (metodoPago === 'credito') requeridas.add('ventas_credito');
     for (const item of items) {
       if (item.fulfillment === 'delivery') requeridas.add('fulfillment_delivery');
       if (item.fulfillment === 'pickup') requeridas.add('fulfillment_pickup');

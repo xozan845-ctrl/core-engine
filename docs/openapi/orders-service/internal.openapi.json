@@ -407,6 +407,14 @@
               "orden_servicio"
             ]
           },
+          "metodo_pago": {
+            "type": "string",
+            "enum": [
+              "simulado",
+              "credito"
+            ],
+            "example": "simulado"
+          },
           "fulfillment_config": {
             "type": "object",
             "additionalProperties": true
@@ -486,6 +494,7 @@
           "tienda_id",
           "estado",
           "tipo_orden",
+          "metodo_pago",
           "total_cents",
           "comision_cents",
           "moneda",

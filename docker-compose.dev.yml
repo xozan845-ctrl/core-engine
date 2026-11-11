@@ -1,6 +1,6 @@
 # Core Engine · DESARROLLO (construye las imágenes en local)
 # Entorno completo y autocontenido: Postgres + RabbitMQ + MinIO + gateway + los
-# 11 microservicios (incluye `scheduling-service`, `commissions-service` y `market-intelligence-service`,
+# 12 microservicios (incluye `scheduling-service`, `commissions-service` y `market-intelligence-service`,
 # que NO se despliegan en producción). Publica al host los puertos de datos y
 # broker SOLO para desarrollo (conectar un cliente de BD o abrir la UI de
 # RabbitMQ en localhost).
@@ -134,6 +134,13 @@ services:
       SERVICIO: identity-service
       PORT: 3001
       OUTBOX_TABLA: identity.outbox
+      # Correo transaccional (ADR-0003): en dev `log`; el E2E usa Mailpit.
+      EMAIL_MODE: ${EMAIL_MODE:-log}
+      EMAIL_FROM: ${EMAIL_FROM:-no-reply@core-engine.test}
+      SMTP_HOST: ${SMTP_HOST:-}
+      SMTP_PORT: ${SMTP_PORT:-587}
+      SMTP_USER: ${SMTP_USER:-}
+      SMTP_PASSWORD: ${SMTP_PASSWORD:-}
 
   catalog-service:
     <<: *servicio-base
@@ -255,6 +262,37 @@ services:
       SERVICIO: storage-service
       PORT: 3010
       OUTBOX_TABLA: storage.outbox
+
+  notifications-service:
+    <<: *servicio-base
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        SERVICIO: notifications-service
+    environment:
+      SERVICIO: notifications-service
+      PORT: 3012
+      # Mismo adapter que identity: el E2E conmuta a Mailpit.
+      EMAIL_MODE: ${EMAIL_MODE:-log}
+      EMAIL_FROM: ${EMAIL_FROM:-no-reply@core-engine.test}
+      SMTP_HOST: ${SMTP_HOST:-}
+      SMTP_PORT: ${SMTP_PORT:-587}
+      SMTP_USER: ${SMTP_USER:-}
+      SMTP_PASSWORD: ${SMTP_PASSWORD:-}
+
+  # Capturador SMTP solo para desarrollo: el E2E lee el enlace de reset desde
+  # su API. No se publica fuera de loopback ni se despliega en stage/prod.
+  mailpit:
+    image: axllent/mailpit:latest
+    environment:
+      MP_MAX_MESSAGES: 500
+    ports:
+      - "127.0.0.1:1025:1025"
+      - "127.0.0.1:8025:8025"
+    networks:
+      - core-engine
+    restart: unless-stopped
 
 volumes:
   pg_data:

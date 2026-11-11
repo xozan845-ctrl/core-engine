@@ -16,6 +16,7 @@ const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD ?? 'AdminCore Engine2026!';
 const FIELD_TENANT_ID = process.env.PLATFORM_LOGISTICS_TENANT_ID ?? '00000000-0000-0000-0000-000000000001';
 const REQUEST_TIMEOUT_MS = Number(process.env.SMOKE_REQUEST_TIMEOUT_MS ?? 10_000);
 const WAIT_TIMEOUT_MS = Number(process.env.SMOKE_WAIT_TIMEOUT_MS ?? 30_000);
+const MAILPIT_URL = (process.env.MAILPIT_URL ?? '').replace(/\/+$/, '');
 
 for (const [nombre, valor] of [
   ['SMOKE_REQUEST_TIMEOUT_MS', REQUEST_TIMEOUT_MS],
@@ -43,6 +44,21 @@ function fail(detalle = '') {
   console.log(`FAIL ${detalle}`);
 }
 
+/** Desenvuelve `{data,meta}` (R-C-1) sin alterar respuestas de servicios aún no migrados. */
+function desenvolver(json) {
+  if (
+    json &&
+    typeof json === 'object' &&
+    !Array.isArray(json) &&
+    Object.prototype.hasOwnProperty.call(json, 'data') &&
+    json.meta &&
+    typeof json.meta === 'object'
+  ) {
+    return json.data;
+  }
+  return json;
+}
+
 async function api(metodo, ruta, cuerpo, token, opciones = {}) {
   const intentos = metodo === 'GET' ? 2 : 1;
   for (let intento = 0; intento < intentos; intento += 1) {
@@ -64,7 +80,11 @@ async function api(metodo, ruta, cuerpo, token, opciones = {}) {
       } catch {
         json = texto;
       }
-      return { status: res.status, json, location: res.headers.get('location') ?? undefined };
+      return {
+        status: res.status,
+        json: desenvolver(json),
+        location: res.headers.get('location') ?? undefined,
+      };
     } catch (error) {
       if (intento === intentos - 1) {
         throw new Error(`${metodo} ${ruta}: sin respuesta tras ${intentos} intento(s) de ${REQUEST_TIMEOUT_MS} ms`, { cause: error });
@@ -86,6 +106,32 @@ async function esperar(fn, descripcion, intentos = 20, intervaloMs = 800) {
     }
   }
   throw new Error(`Expiró la espera de ${WAIT_TIMEOUT_MS} ms: ${descripcion} (último: ${JSON.stringify(ultimo)})`);
+}
+
+/** Consulta la API de Mailpit (capturador SMTP del stack dev). */
+async function mailpit(ruta) {
+  const res = await fetch(`${MAILPIT_URL}${ruta}`, {
+    signal: globalThis.AbortSignal.timeout(REQUEST_TIMEOUT_MS),
+  });
+  if (!res.ok) throw new Error(`Mailpit ${ruta} → ${res.status}`);
+  return res.json();
+}
+
+/** Devuelve el token del correo de reset del destinatario, o null si no llegó. */
+async function tokenDeReset(destinatario) {
+  const lista = await mailpit('/api/v1/messages?limit=100');
+  const correo = (lista.messages ?? []).find((m) => {
+    const destinatarios = m.To ?? m.to ?? [];
+    const asunto = m.Subject ?? m.subject ?? '';
+    return (
+      destinatarios.some((t) => (t.Address ?? t.address ?? '').toLowerCase() === destinatario.toLowerCase()) &&
+      asunto.includes('Restablece tu contraseña')
+    );
+  });
+  if (!correo) return null;
+  const detalle = await mailpit(`/api/v1/message/${encodeURIComponent(correo.ID ?? correo.id)}`);
+  const cuerpo = `${detalle.Text ?? detalle.text ?? ''}\n${detalle.HTML ?? detalle.html ?? ''}`;
+  return /token=([A-Za-z0-9_-]+)/.exec(cuerpo)?.[1] ?? null;
 }
 
 function sufijo() {
@@ -496,6 +542,8 @@ async function main() {
   const paginaCatalogo = await api(
     'GET',
     `/api/v2/catalog/items?empresa_id=${encodeURIComponent(empresa.json.id)}&q=${encodeURIComponent((producto.codigo ?? producto.sku))}&pagina=1&limite=1`,
+    null,
+    tokenAdmin,
   );
   if (
     paginaCatalogo.status === 200 &&
@@ -514,7 +562,7 @@ async function main() {
   const orden = await api(
     'POST',
     '/api/v2/orders',
-    { items: [{ oferta_id: oferta.json.id, cantidad: 1 }] },
+    { tipo_orden: 'compra', items: [{ oferta_id: oferta.json.id, cantidad: 1 }] },
     tokenComprador,
   );
   if (orden.status === 201 || orden.status === 200) ok(`order_id=${orden.json.id?.slice(0, 8)}`);
@@ -573,6 +621,27 @@ async function main() {
     fail(`comision=${comision.comision} liquida=${comision.monto_vendedor}`);
   }
 
+  // ── 6b. Asientos contables de la saga (finance) ───────────────────────
+  paso('Finance: asiento del pago y de la comisión para la orden');
+  const asientosOrden = await esperar(
+    async () => {
+      const r = await api('GET', '/api/v2/finanzas/asientos?limite=200', null, tokenAdmin);
+      const data = r.json?.data ?? r.json;
+      const lista = Array.isArray(data) ? data : data?.items ?? [];
+      const delPedido = lista.filter((a) => a.referencia_id === orderId);
+      return delPedido.length >= 2 ? delPedido : null;
+    },
+    'asientos de pago y comisión',
+  );
+  const tiposAsiento = asientosOrden.map((a) => a.tipo).sort().join(',');
+  const debeAsientos = asientosOrden.reduce((total, a) => total + a.debe_cents, 0);
+  const haberAsientos = asientosOrden.reduce((total, a) => total + a.haber_cents, 0);
+  if (tiposAsiento === 'AJUSTE,INGRESO' && debeAsientos === 230000 && haberAsientos === 230000) {
+    ok(`asientos=${tiposAsiento} · C$${(debeAsientos / 100).toFixed(2)}`);
+  } else {
+    fail(`asientos=${tiposAsiento} debe=${debeAsientos} haber=${haberAsientos}`);
+  }
+
   // ── 7. TC-04: stock insuficiente → 409 (compra de 2 con stock total 1) ─
   paso('TC-04: producto con stock 1; compra de 2 unidades → 409');
   const prodUno = await api(
@@ -581,7 +650,7 @@ async function main() {
     { tipo: 'producto', codigo: `LEC-${suf.toUpperCase()}`, empresa_id: empresa.json.id, nombre: 'Leche 1L', precio: '50.00', stock: 1 },
     tokenAdmin,
   );
-  if (![200, 201].includes(prodUno.status) || !prodUno.json?.id) {
+  if (![200, 201].includes(prodUno.status) || !(prodUno.json?.item_id ?? prodUno.json?.id)) {
     fail(`producto con stock 1 → ${prodUno.status} ${JSON.stringify(prodUno.json)}`);
     process.exit(1);
   }
@@ -598,7 +667,7 @@ async function main() {
   const rechazo = await api(
     'POST',
     '/api/v2/orders',
-    { items: [{ oferta_id: ofertaUno.json.id, cantidad: 2 }] },
+    { tipo_orden: 'compra', items: [{ oferta_id: ofertaUno.json.id, cantidad: 2 }] },
     tokenComprador,
   );
   if (rechazo.status === 409) ok();
@@ -641,7 +710,7 @@ async function main() {
   const orden2 = await api(
     'POST',
     '/api/v2/orders',
-    { items: [{ oferta_id: oferta.json.id, cantidad: 2 }] },
+    { tipo_orden: 'compra', items: [{ oferta_id: oferta.json.id, cantidad: 2 }] },
     tokenComprador,
   );
   if (![200, 201].includes(orden2.status) || !orden2.json?.id) {
@@ -699,7 +768,7 @@ async function main() {
   if (inventario.status === 200 && inventario.json.length >= 2) ok(`líneas=${inventario.json.length}`);
   else fail(`inventario → ${inventario.status}`);
 
-  paso('R-E-3: despublicar producto lo oculta del catálogo público');
+  paso('R-E-3: despublicar producto lo oculta del catálogo activo');
   const despublicar = await api(
     'PATCH',
     `/api/v2/catalog/items/${producto.item_id ?? producto.id}`,
@@ -708,7 +777,9 @@ async function main() {
   );
   const productoOculto = await api(
     'GET',
-    `/api/v2/catalog/items?empresa_id=${encodeURIComponent(empresa.json.id)}&q=${encodeURIComponent((producto.codigo ?? producto.sku))}`,
+    `/api/v2/catalog/items?empresa_id=${encodeURIComponent(empresa.json.id)}&q=${encodeURIComponent((producto.codigo ?? producto.sku))}&estado=activo`,
+    null,
+    tokenAdmin,
   );
   if (despublicar.status === 200 && productoOculto.status === 200 && productoOculto.json?.total === 0) {
     ok();
@@ -739,6 +810,60 @@ async function main() {
       `refresh=${renovada.status} logout=${logout.status} ` +
         `refresh_revocado=${refreshRevocado.status}`,
     );
+  }
+
+  // ── 11. Reset de contraseña con correo real (Mailpit) ─────────────────
+  if (MAILPIT_URL) {
+    paso('R-E-9: reset de contraseña con correo real (solicitud, enlace, un solo uso)');
+    const nuevaContrasena = 'NuevaClave456!';
+    const solicitud = await api('POST', '/api/v2/auth/restablecer-contrasena', {
+      correo: correoComprador,
+    });
+    let token;
+    try {
+      token = await esperar(() => tokenDeReset(correoComprador), 'correo de restablecimiento en Mailpit');
+    } catch {
+      token = null;
+    }
+    const confirmar = token
+      ? await api('POST', '/api/v2/auth/restablecer-contrasena/confirmar', {
+          token,
+          contrasena: nuevaContrasena,
+        })
+      : { status: 0, json: null };
+    const loginVieja = await api('POST', '/api/v2/auth/login', {
+      correo: correoComprador,
+      contrasena,
+    });
+    const loginNueva = await api('POST', '/api/v2/auth/login', {
+      correo: correoComprador,
+      contrasena: nuevaContrasena,
+    });
+    const reuso = token
+      ? await api('POST', '/api/v2/auth/restablecer-contrasena/confirmar', {
+          token,
+          contrasena: nuevaContrasena,
+        })
+      : { status: 0 };
+    const refreshRevocado = await api('POST', '/api/v2/auth/refresh', {
+      refresh_token: regC.json.refresh_token,
+    });
+    if (
+      [200, 201].includes(solicitud.status) &&
+      confirmar.status === 200 &&
+      confirmar.json?.ok === true &&
+      loginVieja.status === 401 &&
+      loginNueva.status === 200 &&
+      reuso.status === 410 &&
+      refreshRevocado.status === 401
+    ) {
+      ok('enlace consumido, contraseña nueva válida y sesiones revocadas');
+    } else {
+      fail(
+        `solicitud=${solicitud.status} confirmar=${confirmar.status} vieja=${loginVieja.status} ` +
+          `nueva=${loginNueva.status} reuso=${reuso.status} refresh=${refreshRevocado.status}`,
+      );
+    }
   }
 
   console.log('\n');

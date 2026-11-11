@@ -112,6 +112,31 @@ describe('documento OpenAPI por superficie', () => {
       .toBeDefined();
   });
 
+  it('no envuelve los binarios públicos de storage', () => {
+    const conStorage = {
+      ...documento,
+      paths: {
+        ...documento.paths,
+        '/api/v2/storage/public/objetos/x': {
+          get: {
+            responses: {
+              200: {
+                content: { 'application/json': { schema: { type: 'string', format: 'binary' } } },
+              },
+            },
+          },
+        },
+      },
+    };
+    const envuelto = envolverDocumentoOpenApi(conStorage);
+    const storage = (envuelto.paths as Record<string, Record<string, unknown>>)[
+      '/api/v2/storage/public/objetos/x'
+    ];
+    const schema = (storage.get as Record<string, Record<string, Record<string, unknown>>>)
+      .responses['200'].content['application/json'].schema;
+    expect(schema).toEqual({ type: 'string', format: 'binary' });
+  });
+
   it('no duplica un envelope ya envuelto', () => {
     const unaVez = envolverDocumentoOpenApi(documento);
     const dosVeces = envolverDocumentoOpenApi(unaVez);

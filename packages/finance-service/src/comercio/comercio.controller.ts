@@ -18,9 +18,17 @@ import {
   ApiQuery,
   ApiTags,
 } from '@nestjs/swagger';
-import { ROLES, Roles, UsuarioActual, UsuarioContexto } from '@core/shared';
+import {
+  CAPACIDADES,
+  RequiereCapacidades,
+  ROLES,
+  Roles,
+  UsuarioActual,
+  UsuarioContexto,
+} from '@core/shared';
 import { ComercioService } from './comercio.service';
 import {
+  AbonarCreditoRequestDto,
   ActualizarClienteComercioRequestDto,
   ActualizarConfiguracionDocumentosRequestDto,
   ActualizarCuentaBancoRequestDto,
@@ -43,6 +51,7 @@ import {
   CrearOrdenCompraRequestDto,
   CrearProveedorRequestDto,
   CrearTransferenciaCajaRequestDto,
+  GuardarCuentaCreditoRequestDto,
   ImportarClientesRequestDto,
 } from './comercio.dtos';
 import {
@@ -54,6 +63,7 @@ import {
   ConfiguracionDocumentosResponseDto,
   CreditoResponseDto,
   CuentaBancoResponseDto,
+  CuentaCreditoResponseDto,
   CuentaPorPagarResponseDto,
   FondoCajaChicaResponseDto,
   GastoResponseDto,
@@ -137,6 +147,44 @@ export class ComercioController {
   @ApiCreatedResponse({ type: CreditoResponseDto, description: 'Crédito pagado' })
   pagarCredito(@Param('id') id: string, @UsuarioActual() usuario: UsuarioContexto) {
     return this.comercio.pagarCredito(id, usuario);
+  }
+
+  @Post('creditos/:id/abonar')
+  @ApiOperation({ summary: 'Registrar un abono parcial del crédito' })
+  @ApiParam({ name: 'id', description: 'Id del crédito' })
+  @ApiCreatedResponse({ type: CreditoResponseDto, description: 'Abono registrado' })
+  abonarCredito(
+    @Param('id') id: string,
+    @Body() dto: AbonarCreditoRequestDto,
+    @UsuarioActual() usuario: UsuarioContexto,
+  ) {
+    return this.comercio.abonarCredito(id, dto, usuario);
+  }
+
+  @Get('credito-cuentas')
+  @RequiereCapacidades(CAPACIDADES.VENTAS_CREDITO)
+  @ApiOperation({ summary: 'Listar cuentas de crédito por parte de la empresa' })
+  @ApiQuery({ name: 'empresa_id', required: false, description: 'Solo admin global' })
+  @ApiOkResponse({ type: [CuentaCreditoResponseDto], description: 'Cuentas de crédito' })
+  listarCuentasCredito(
+    @Query('empresa_id') empresaId: string | undefined,
+    @UsuarioActual() usuario: UsuarioContexto,
+  ) {
+    return this.comercio.listarCuentasCredito(usuario, empresaId);
+  }
+
+  @Put('credito-cuentas/:parteId')
+  @RequiereCapacidades(CAPACIDADES.VENTAS_CREDITO)
+  @ApiOperation({ summary: 'Definir el límite de crédito de una parte' })
+  @ApiParam({ name: 'parteId', format: 'uuid' })
+  @ApiOkResponse({ type: CuentaCreditoResponseDto, description: 'Cuenta de crédito guardada' })
+  guardarCuentaCredito(
+    @Param('parteId') parteId: string,
+    @Body() dto: GuardarCuentaCreditoRequestDto,
+    @Query('empresa_id') empresaId: string | undefined,
+    @UsuarioActual() usuario: UsuarioContexto,
+  ) {
+    return this.comercio.guardarCuentaCredito(parteId, dto, usuario, empresaId);
   }
 
   @Delete('creditos/:id')

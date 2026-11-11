@@ -67,6 +67,8 @@ export interface OrdenData {
   estado: 'creada';
   tipo_orden: TipoOrden;
   fulfillment_config?: Record<string, unknown>;
+  /** 'simulado' (pasarela de prueba) o 'credito' (cuenta por cobrar). */
+  metodo_pago?: 'simulado' | 'credito';
   /** Comisión calculada con la misma tasa que commissions-service (RN-04). */
   comision_cents?: number;
 }

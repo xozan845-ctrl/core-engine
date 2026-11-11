@@ -944,16 +944,18 @@ export class ProductosService {
   async reservarStockEnTransaccion(
     client: PoolClient,
     orderId: string,
-    items: { empresa_id: string; sku: string; cantidad: number }[],
+    items: { empresa_id: string; sku: string; cantidad: number; item_id?: string }[],
   ): Promise<{
     ok: boolean;
     fallidos: { empresa_id: string; sku: string; cantidad: number; motivo: string }[];
     stock_restante?: { empresa_id: string; sku: string; stock_restante: number }[];
+    reservados?: { empresa_id: string; sku: string; cantidad: number; item_id?: string }[];
   }> {
     const fallidos: { empresa_id: string; sku: string; cantidad: number; motivo: string }[] = [];
+    const lineas = await this.expandirComponentes(client, items);
     await client.query('SAVEPOINT reserva_stock');
     try {
-        for (const item of items) {
+        for (const item of lineas) {
           // Bloqueo pesimista requerido por regla dorada (Data Integrity)
           const lock = await client.query<{ stock: number; item_id: string; tiene_variantes: boolean }>(
             `SELECT i.stock, i.id AS item_id,
@@ -1045,7 +1047,7 @@ export class ProductosService {
         await client.query(
           `INSERT INTO catalog.reservas_ordenes (order_id, items_json, creado_en)
            VALUES ($1, $2, NOW())`,
-          [orderId, JSON.stringify(items)],
+          [orderId, JSON.stringify(lineas)],
         );
         await client.query('RELEASE SAVEPOINT reserva_stock');
     } catch (err) {
@@ -1063,7 +1065,7 @@ export class ProductosService {
       [
         JSON.stringify([
           ...new Map(
-            items.map((i) => [
+            lineas.map((i) => [
               `${i.empresa_id}:${i.sku.toLowerCase()}`,
               {
                 empresa_id: i.empresa_id,
@@ -1074,7 +1076,72 @@ export class ProductosService {
         ]),
       ],
     );
-    return { ok: true, fallidos, stock_restante: stock.rows };
+    return { ok: true, fallidos, stock_restante: stock.rows, reservados: lineas };
+  }
+
+  /**
+   * Explota la composición (BOM) de cada línea: si el item tiene componentes,
+   * se reservan las hojas (productos) multiplicadas por la cantidad vendida.
+   * Los items sin composición se reservan tal cual.
+   */
+  async expandirComponentes(
+    client: Pick<PoolClient, 'query'>,
+    items: { empresa_id: string; sku: string; cantidad: number; item_id?: string }[],
+  ): Promise<{ empresa_id: string; sku: string; cantidad: number; item_id?: string }[]> {
+    const acumuladas = new Map<
+      string,
+      { empresa_id: string; sku: string; cantidad: number; item_id?: string }
+    >();
+    const sumar = (linea: { empresa_id: string; sku: string; cantidad: number; item_id?: string }) => {
+      const clave = `${linea.empresa_id}:${linea.sku.toLowerCase()}`;
+      const previa = acumuladas.get(clave);
+      if (previa) previa.cantidad += linea.cantidad;
+      else acumuladas.set(clave, { ...linea });
+    };
+
+    for (const item of items) {
+      if (!item.item_id) {
+        sumar(item);
+        continue;
+      }
+      const resultado = await client.query<{ item_id: string; sku: string; cantidad: number }>(
+        `WITH RECURSIVE bom(item_id, cantidad, ruta) AS (
+           SELECT c.componente_item_id, c.cantidad, ARRAY[$1::uuid, c.componente_item_id]
+             FROM catalog.item_componentes c
+            WHERE c.empresa_id = $2 AND c.item_id = $1
+           UNION ALL
+           SELECT c.componente_item_id, bom.cantidad * c.cantidad, bom.ruta || c.componente_item_id
+             FROM bom
+             JOIN catalog.item_componentes c
+               ON c.item_id = bom.item_id AND c.empresa_id = $2
+            WHERE NOT (c.componente_item_id = ANY(bom.ruta))
+              AND array_length(bom.ruta, 1) < 6
+         )
+         SELECT i.id AS item_id, i.codigo AS sku, SUM(bom.cantidad)::int AS cantidad
+           FROM bom
+           JOIN catalog.items i
+             ON i.id = bom.item_id AND i.eliminado_en IS NULL AND i.tipo = 'producto'
+          WHERE NOT EXISTS (
+            SELECT 1 FROM catalog.item_componentes c2
+             WHERE c2.item_id = i.id AND c2.empresa_id = $2
+          )
+          GROUP BY i.id, i.codigo`,
+        [item.item_id, item.empresa_id],
+      );
+      if (!resultado.rowCount) {
+        sumar(item);
+        continue;
+      }
+      for (const fila of resultado.rows) {
+        sumar({
+          empresa_id: item.empresa_id,
+          sku: fila.sku,
+          cantidad: fila.cantidad * item.cantidad,
+          item_id: fila.item_id,
+        });
+      }
+    }
+    return [...acumuladas.values()];
   }
 
   /** RN-06: devolución aprobada revierte stock por (empresa, SKU). */
