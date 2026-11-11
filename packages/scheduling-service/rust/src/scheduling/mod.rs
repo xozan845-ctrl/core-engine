@@ -767,6 +767,8 @@ pub trait AgendaPort: Send + Sync {
         motivo: Option<&str>,
     ) -> Result<Value, ApiError>;
     async fn listar_recordatorios(&self, empresa_id: &str) -> Result<Vec<Value>, ApiError>;
+    async fn crear_desde_reserva(&self, orden: &OrdenReserva) -> Result<Value, ApiError>;
+    async fn procesar_recordatorios(&self) -> Result<usize, ApiError>;
     async fn verificar_disponibilidad(&self, dto: &VerificarDisponibilidad)
         -> Result<(), ApiError>;
 }
@@ -832,6 +834,14 @@ impl AgendaPort for Agenda {
         Agenda::listar_recordatorios(self, empresa_id).await
     }
 
+    async fn crear_desde_reserva(&self, orden: &OrdenReserva) -> Result<Value, ApiError> {
+        Agenda::crear_desde_reserva(self, orden).await
+    }
+
+    async fn procesar_recordatorios(&self) -> Result<usize, ApiError> {
+        Agenda::procesar_recordatorios(self).await
+    }
+
     async fn verificar_disponibilidad(
         &self,
         dto: &VerificarDisponibilidad,
@@ -884,6 +894,12 @@ impl AgendaPort for AgendaNoDisponible {
         Err(ApiError::servicio_no_disponible("postgres"))
     }
     async fn listar_recordatorios(&self, _: &str) -> Result<Vec<Value>, ApiError> {
+        Err(ApiError::servicio_no_disponible("postgres"))
+    }
+    async fn crear_desde_reserva(&self, _: &OrdenReserva) -> Result<Value, ApiError> {
+        Err(ApiError::servicio_no_disponible("postgres"))
+    }
+    async fn procesar_recordatorios(&self) -> Result<usize, ApiError> {
         Err(ApiError::servicio_no_disponible("postgres"))
     }
     async fn verificar_disponibilidad(&self, _: &VerificarDisponibilidad) -> Result<(), ApiError> {

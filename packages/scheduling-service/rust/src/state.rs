@@ -30,13 +30,13 @@ impl AppState {
 
     pub fn con_dependencias(
         config: Config,
-        metrics: Metrics,
+        metrics: Arc<Metrics>,
         agenda: Arc<dyn AgendaPort>,
         capacidades: Arc<dyn Capacidades>,
     ) -> Self {
         Self {
             config: Arc::new(config),
-            metrics: Arc::new(metrics),
+            metrics,
             agenda,
             capacidades,
             inicio: Instant::now(),

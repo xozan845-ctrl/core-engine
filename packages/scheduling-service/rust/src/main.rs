@@ -1,4 +1,5 @@
-//! Arranque del servicio: configuración, PostgreSQL, router y apagado ordenado.
+//! Arranque del servicio: configuración, PostgreSQL, RabbitMQ, router, tareas
+//! de fondo y apagado ordenado.
 
 use scheduling_service::auth::CapacidadesHttp;
 use scheduling_service::clients::PartesHttp;
@@ -7,9 +8,15 @@ use scheduling_service::db::Db;
 use scheduling_service::http::build_router;
 use scheduling_service::logs::{ejecutar_con_contexto, ContextoCorrelacion};
 use scheduling_service::metrics::Metrics;
-use scheduling_service::scheduling::Agenda;
+use scheduling_service::outbox::Outbox;
+use scheduling_service::rabbit::{ColaConfig, Rabbit};
+use scheduling_service::scheduling::{Agenda, AgendaPort};
 use scheduling_service::state::AppState;
+use scheduling_service::tareas::{
+    handler_consumidor, iniciar_outbox, iniciar_worker, SchedulingConsumer,
+};
 use std::sync::Arc;
+use std::time::Duration;
 
 #[tokio::main]
 async fn main() {
@@ -33,32 +40,68 @@ async fn main() {
     };
     let puerto = config.puerto;
     let servicio = config.servicio.clone();
+    let outbox_tabla = config.outbox_tabla.clone();
 
     let db = match Db::conectar(config.database_url.as_deref().unwrap_or_default()).await {
-        Ok(db) => db,
+        Ok(db) => Arc::new(db),
         Err(error) => {
             eprintln!("No se pudo conectar a PostgreSQL: {error}");
             std::process::exit(1);
         }
     };
 
-    let capacidades = Arc::new(CapacidadesHttp::nueva(
-        config.identity_service_url.clone(),
-        config.internal_api_key.clone(),
-        config.internal_request_timeout_ms,
+    let rabbit = Arc::new(Rabbit::nueva(
+        config.rabbitmq_url.as_deref().unwrap_or_default(),
     ));
+    if let Err(error) = rabbit.conectar().await {
+        eprintln!("No se pudo conectar a RabbitMQ: {error}");
+        std::process::exit(1);
+    }
+    if rabbit
+        .declarar_colas(vec![ColaConfig {
+            nombre: "scheduling.orders".to_string(),
+            routing_keys: vec!["order.created".to_string()],
+        }])
+        .await
+        .is_err()
+    {
+        eprintln!("No se pudo declarar la cola scheduling.orders");
+        std::process::exit(1);
+    }
+
     let partes = Arc::new(PartesHttp::nueva(
         config.identity_service_url.clone(),
         config.internal_api_key.clone(),
         config.internal_request_timeout_ms,
     ));
-    let agenda = Arc::new(Agenda::nueva(Arc::new(db), partes, &config.outbox_tabla));
-    let estado = AppState::con_dependencias(
-        config,
-        Metrics::nueva(servicio.clone()),
-        agenda,
-        capacidades,
+    let agenda_concreta = Arc::new(Agenda::nueva(Arc::clone(&db), partes, &outbox_tabla));
+    let agenda: Arc<dyn AgendaPort> = agenda_concreta;
+
+    let consumidor = Arc::new(SchedulingConsumer::nuevo(
+        Arc::clone(&db),
+        Arc::clone(&agenda),
+    ));
+    rabbit
+        .consumir("scheduling.orders", handler_consumidor(consumidor))
+        .await;
+    rabbit.iniciar_supervisor();
+    rabbit.activar_reintento(Duration::from_secs(10));
+
+    let metrics = Arc::new(Metrics::nueva(servicio.clone()));
+    let tarea_outbox = iniciar_outbox(
+        Outbox::nueva(outbox_tabla),
+        Arc::clone(&db),
+        Arc::clone(&rabbit),
+        Arc::clone(&metrics),
     );
+    let tarea_worker = iniciar_worker(Arc::clone(&agenda));
+
+    let capacidades = Arc::new(CapacidadesHttp::nueva(
+        config.identity_service_url.clone(),
+        config.internal_api_key.clone(),
+        config.internal_request_timeout_ms,
+    ));
+    let estado = AppState::con_dependencias(config, metrics, agenda, capacidades);
     let app = build_router(estado);
 
     let listener = match tokio::net::TcpListener::bind(("0.0.0.0", puerto)).await {
@@ -82,8 +125,10 @@ async fn main() {
                 "scheduling",
                 scheduling_service::campos! { "msg": "Fallo el servidor HTTP", "err": error.to_string() },
             );
-            std::process::exit(1);
         }
+        tarea_outbox.abort();
+        tarea_worker.abort();
+        rabbit.cerrar().await;
     })
     .await;
 }

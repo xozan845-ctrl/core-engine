@@ -273,6 +273,15 @@ mod tests {
         async fn listar_recordatorios(&self, _: &str) -> Result<Vec<Value>, ApiError> {
             Ok(vec![])
         }
+        async fn crear_desde_reserva(
+            &self,
+            _: &crate::scheduling::OrdenReserva,
+        ) -> Result<Value, ApiError> {
+            Ok(json!({ "id": "c-1" }))
+        }
+        async fn procesar_recordatorios(&self) -> Result<usize, ApiError> {
+            Ok(0)
+        }
         async fn verificar_disponibilidad(
             &self,
             _: &VerificarDisponibilidad,
@@ -302,7 +311,7 @@ mod tests {
         .expect("config");
         let state = AppState::con_dependencias(
             config,
-            Metrics::nueva("scheduling-service"),
+            Arc::new(Metrics::nueva("scheduling-service")),
             Arc::new(AgendaFalsa),
             Arc::new(CapacidadesFijas(capacidad_activa)),
         );
@@ -507,7 +516,7 @@ mod tests {
         .expect("config");
         let state = AppState::con_dependencias(
             config,
-            Metrics::nueva("scheduling-service"),
+            Arc::new(Metrics::nueva("scheduling-service")),
             Arc::new(AgendaFalsa),
             Arc::new(crate::auth::CapacidadesNoDisponible),
         );

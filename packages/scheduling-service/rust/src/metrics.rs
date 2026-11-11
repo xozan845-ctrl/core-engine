@@ -31,6 +31,8 @@ struct Inner {
     errores_servidor: BTreeMap<Etiquetas, u64>,
     errores_cliente: BTreeMap<Etiquetas, u64>,
     latencia: BTreeMap<Etiquetas, Histograma>,
+    contadores: BTreeMap<String, u64>,
+    gauges: BTreeMap<String, f64>,
 }
 
 pub struct Metrics {
@@ -85,6 +87,30 @@ impl Metrics {
         histograma.total += 1;
     }
 
+    /// Contador de negocio acumulativo (`core_engine_<subsistema>_<nombre>_total`).
+    pub fn incrementar_contador(&self, nombre: &str) {
+        assert!(
+            nombre.starts_with("core_engine_")
+                && nombre.ends_with("_total")
+                && nombre.matches('_').count() >= 3,
+            "Métrica inválida: {nombre}. Usa core_engine_<subsistema>_<nombre>_total."
+        );
+        let mut inner = self.inner.lock().expect("metricas");
+        *inner.contadores.entry(nombre.to_string()).or_insert(0) += 1;
+    }
+
+    /// Gauge de negocio (`core_engine_<subsistema>_<nombre>_<unidad>`).
+    pub fn registrar_gauge(&self, nombre: &str, valor: f64) {
+        assert!(
+            nombre.starts_with("core_engine_")
+                && !nombre.ends_with("_total")
+                && nombre.matches('_').count() >= 3,
+            "Métrica inválida: {nombre}. Usa core_engine_<subsistema>_<nombre>_<unidad>."
+        );
+        let mut inner = self.inner.lock().expect("metricas");
+        inner.gauges.insert(nombre.to_string(), valor);
+    }
+
     pub fn salud(&self) -> MetricaSalud {
         MetricaSalud {
             servicio: self.servicio.clone(),
@@ -115,6 +141,16 @@ impl Metrics {
             &self.servicio,
         ));
         salida.push_str(&histograma_texto(&inner.latencia, &self.servicio));
+        for (nombre, valor) in &inner.contadores {
+            salida.push_str(&format!(
+                "# HELP {nombre} Counter de negocio: {nombre}\n# TYPE {nombre} counter\n{nombre} {valor}\n"
+            ));
+        }
+        for (nombre, valor) in &inner.gauges {
+            salida.push_str(&format!(
+                "# HELP {nombre} Gauge de negocio: {nombre}\n# TYPE {nombre} gauge\n{nombre} {valor}\n"
+            ));
+        }
         salida
     }
 }
@@ -290,6 +326,16 @@ mod tests {
         assert!(texto.contains("core_engine_http_relevant_client_errors_total{"));
         assert!(texto.contains("core_engine_http_server_errors_total{"));
         assert!(texto.contains("le=\"+Inf\""));
+    }
+
+    #[test]
+    fn debe_exponer_contadores_y_gauges_de_negocio() {
+        let metrics = Metrics::nueva("scheduling-service");
+        metrics.incrementar_contador("core_engine_outbox_published_events_total");
+        metrics.registrar_gauge("core_engine_outbox_pending_events", 3.0);
+        let texto = metrics.texto();
+        assert!(texto.contains("core_engine_outbox_published_events_total 1"));
+        assert!(texto.contains("core_engine_outbox_pending_events 3"));
     }
 
     #[test]
