@@ -78,6 +78,15 @@ pub fn uuid_texto(fila: &sqlx::postgres::PgRow, columna: &str) -> Result<String,
         .map(|valor| valor.to_string())
 }
 
+/// UUID opcional (columnas nullable) serializado como string o `null`.
+pub fn uuid_opcional(
+    fila: &sqlx::postgres::PgRow,
+    columna: &str,
+) -> Result<Option<String>, sqlx::Error> {
+    fila.try_get::<Option<uuid::Uuid>, _>(columna)
+        .map(|valor| valor.map(|uuid| uuid.to_string()))
+}
+
 pub fn timestamp(fila: &sqlx::postgres::PgRow, columna: &str) -> Result<String, sqlx::Error> {
     fila.try_get::<DateTime<Utc>, _>(columna).map(iso_ms)
 }

@@ -7,13 +7,14 @@ use crate::auth::{UsuarioContexto, ROLES_AGENDA};
 use crate::errors::ApiError;
 use crate::http::Cuerpo;
 use crate::scheduling::{
-    validar_crear_bloqueo, validar_crear_disponibilidad, validar_crear_recurso,
+    validar_crear_bloqueo, validar_crear_cita, validar_crear_disponibilidad, validar_crear_recurso,
     validar_verificar_disponibilidad,
 };
 use crate::state::AppState;
-use axum::extract::{Path, State};
-use axum::http::HeaderMap;
+use axum::extract::{Path, Query, State};
+use axum::http::{HeaderMap, StatusCode};
 use axum::Json;
+use serde::Deserialize;
 use serde_json::{json, Value};
 
 pub const CAPACIDAD_AGENDA: &str = "agenda_recursos";
@@ -68,11 +69,14 @@ pub async fn crear_recurso(
     State(state): State<AppState>,
     headers: HeaderMap,
     Cuerpo(cuerpo): Cuerpo,
-) -> Result<Json<Value>, ApiError> {
+) -> Result<(StatusCode, Json<Value>), ApiError> {
     let usuario = autorizar(&state, &headers, "agenda.escribir").await?;
     let tenant = usuario.tenant()?;
     let dto = validar_crear_recurso(&cuerpo)?;
-    Ok(Json(state.agenda.crear_recurso(tenant, &dto).await?))
+    Ok((
+        StatusCode::CREATED,
+        Json(state.agenda.crear_recurso(tenant, &dto).await?),
+    ))
 }
 
 pub async fn listar_disponibilidad(
@@ -105,16 +109,79 @@ pub async fn crear_bloqueo(
     State(state): State<AppState>,
     headers: HeaderMap,
     Cuerpo(cuerpo): Cuerpo,
-) -> Result<Json<Value>, ApiError> {
+) -> Result<(StatusCode, Json<Value>), ApiError> {
     let usuario = autorizar(&state, &headers, "agenda.escribir").await?;
     let tenant = usuario.tenant()?;
     let dto = validar_crear_bloqueo(&cuerpo)?;
-    Ok(Json(
+    Ok((
+        StatusCode::CREATED,
+        Json(
+            state
+                .agenda
+                .crear_bloqueo(tenant, Some(&usuario.user_id), &dto)
+                .await?,
+        ),
+    ))
+}
+
+#[derive(Debug, Deserialize)]
+pub struct FiltroCitas {
+    pub desde: Option<String>,
+    pub hasta: Option<String>,
+}
+
+pub async fn listar_citas(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    Query(filtro): Query<FiltroCitas>,
+) -> Result<Json<Value>, ApiError> {
+    let usuario = autorizar(&state, &headers, "agenda.leer").await?;
+    let tenant = usuario.tenant()?;
+    Ok(Json(json!(
         state
             .agenda
-            .crear_bloqueo(tenant, Some(&usuario.user_id), &dto)
-            .await?,
+            .listar_citas(tenant, filtro.desde.as_deref(), filtro.hasta.as_deref())
+            .await?
+    )))
+}
+
+pub async fn crear_cita(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    Cuerpo(cuerpo): Cuerpo,
+) -> Result<(StatusCode, Json<Value>), ApiError> {
+    let usuario = autorizar(&state, &headers, "agenda.escribir").await?;
+    let tenant = usuario.tenant()?;
+    let dto = validar_crear_cita(&cuerpo)?;
+    Ok((
+        StatusCode::CREATED,
+        Json(state.agenda.crear_cita(tenant, &dto).await?),
     ))
+}
+
+pub async fn cancelar_cita(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    Path(cita_id): Path<String>,
+    Cuerpo(cuerpo): Cuerpo,
+) -> Result<Json<Value>, ApiError> {
+    let usuario = autorizar(&state, &headers, "agenda.escribir").await?;
+    let tenant = usuario.tenant()?;
+    let motivo = cuerpo.get("motivo").and_then(Value::as_str);
+    Ok(Json(
+        state.agenda.cancelar_cita(tenant, &cita_id, motivo).await?,
+    ))
+}
+
+pub async fn listar_recordatorios(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+) -> Result<Json<Value>, ApiError> {
+    let usuario = autorizar(&state, &headers, "agenda.leer").await?;
+    let tenant = usuario.tenant()?;
+    Ok(Json(json!(
+        state.agenda.listar_recordatorios(tenant).await?
+    )))
 }
 
 /// Superficie interna: `orders` valida una reserva antes de crearla.
@@ -122,7 +189,7 @@ pub async fn verificar_disponibilidad(
     State(state): State<AppState>,
     headers: HeaderMap,
     Cuerpo(cuerpo): Cuerpo,
-) -> Result<Json<Value>, ApiError> {
+) -> Result<(StatusCode, Json<Value>), ApiError> {
     let clave = headers
         .get("x-internal-key")
         .and_then(|valor| valor.to_str().ok());
@@ -131,7 +198,7 @@ pub async fn verificar_disponibilidad(
     }
     let dto = validar_verificar_disponibilidad(&cuerpo)?;
     state.agenda.verificar_disponibilidad(&dto).await?;
-    Ok(Json(json!({ "disponible": true })))
+    Ok((StatusCode::CREATED, Json(json!({ "disponible": true }))))
 }
 
 #[cfg(test)]
@@ -142,7 +209,8 @@ mod tests {
     use crate::http::{aplicar_capas, estado_de_prueba};
     use crate::metrics::Metrics;
     use crate::scheduling::{
-        AgendaPort, CrearBloqueo, CrearDisponibilidad, CrearRecurso, VerificarDisponibilidad,
+        AgendaPort, CrearBloqueo, CrearCita, CrearDisponibilidad, CrearRecurso,
+        VerificarDisponibilidad,
     };
     use async_trait::async_trait;
     use axum::body::Body;
@@ -182,6 +250,28 @@ mod tests {
             _: &CrearBloqueo,
         ) -> Result<Value, ApiError> {
             Ok(json!({ "id": "b-1" }))
+        }
+        async fn crear_cita(&self, _: &str, _: &CrearCita) -> Result<Value, ApiError> {
+            Ok(json!({ "id": "c-1", "estado": "reservada" }))
+        }
+        async fn listar_citas(
+            &self,
+            _: &str,
+            _: Option<&str>,
+            _: Option<&str>,
+        ) -> Result<Vec<Value>, ApiError> {
+            Ok(vec![json!({ "id": "c-1" })])
+        }
+        async fn cancelar_cita(
+            &self,
+            _: &str,
+            _: &str,
+            _: Option<&str>,
+        ) -> Result<Value, ApiError> {
+            Ok(json!({ "id": "c-1", "estado": "cancelada" }))
+        }
+        async fn listar_recordatorios(&self, _: &str) -> Result<Vec<Value>, ApiError> {
+            Ok(vec![])
         }
         async fn verificar_disponibilidad(
             &self,
@@ -360,6 +450,23 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn debe_responder_201_en_creaciones_y_reflejarlo_en_el_envelope() {
+        let response = router(true)
+            .oneshot(peticion(
+                "POST",
+                "/api/v2/scheduling/recursos",
+                &headers("empresario"),
+                Some(json!({ "tipo": "sala", "nombre": "Sala 1" })),
+            ))
+            .await
+            .expect("response");
+        assert_eq!(response.status(), StatusCode::CREATED);
+        let cuerpo = json(response).await;
+        assert_eq!(cuerpo["meta"]["statusCode"], 201);
+        assert_eq!(cuerpo["data"]["id"], "r-1");
+    }
+
+    #[tokio::test]
     async fn debe_exigir_la_clave_interna_sin_envelope() {
         let sin_clave = router(true)
             .oneshot(peticion(
@@ -387,7 +494,7 @@ mod tests {
             ))
             .await
             .expect("response");
-        assert_eq!(response.status(), StatusCode::OK);
+        assert_eq!(response.status(), StatusCode::CREATED);
         assert_eq!(json(response).await, json!({ "disponible": true }));
     }
 

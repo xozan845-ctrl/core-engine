@@ -37,7 +37,12 @@ Variables de entorno: `PORT` (3011), `SERVICIO`, `DATABASE_URL`,
 - **Recursos, disponibilidad y bloqueos** (`/api/v2/scheduling/**`) con el
   mismo SQL, RLS por claims, locks `FOR UPDATE`, traducción de `23P01/23505` a
   `409 RECURSO_NO_DISPONIBLE` y verificación interna para `orders`.
+- **Citas y recordatorios**: validación de parte en identity, exclusión GiST,
+  recordatorios `24h`/`2h`, cancelación y procesamiento de vencidos.
+- **Outbox** (`OUTBOX_TABLA`): eventos `appointment.created`,
+  `appointment.cancelled` y `appointment.reminder.due` en la misma transacción.
+- **Reservas** desde `order.created`: materialización idempotente por `order_id`.
 - Capability guard contra la API interna de identity (fail-closed 503).
 
-Pendiente en los PR 4-6: citas, recordatorios, Outbox, RabbitMQ, worker,
-consumidor de reservas e imagen Docker.
+Pendiente en los PR 5-6: publicación RabbitMQ, consumidor de reservas, worker
+periódico, imagen Docker y cobertura.

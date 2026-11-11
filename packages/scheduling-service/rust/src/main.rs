@@ -1,6 +1,7 @@
 //! Arranque del servicio: configuración, PostgreSQL, router y apagado ordenado.
 
 use scheduling_service::auth::CapacidadesHttp;
+use scheduling_service::clients::PartesHttp;
 use scheduling_service::config::Config;
 use scheduling_service::db::Db;
 use scheduling_service::http::build_router;
@@ -46,7 +47,12 @@ async fn main() {
         config.internal_api_key.clone(),
         config.internal_request_timeout_ms,
     ));
-    let agenda = Arc::new(Agenda::nueva(Arc::new(db)));
+    let partes = Arc::new(PartesHttp::nueva(
+        config.identity_service_url.clone(),
+        config.internal_api_key.clone(),
+        config.internal_request_timeout_ms,
+    ));
+    let agenda = Arc::new(Agenda::nueva(Arc::new(db), partes, &config.outbox_tabla));
     let estado = AppState::con_dependencias(
         config,
         Metrics::nueva(servicio.clone()),
