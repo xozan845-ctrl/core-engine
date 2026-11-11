@@ -35,8 +35,9 @@ ghcr.io/xozan845-ctrl/core-engine-<servicio>:<tag|stage|prod>
 
 Servicios: `api-gateway`, `identity-service`, `catalog-service`, `stores-service`,
 `orders-service`, `logistics-service`, `scheduling-service`, `commissions-service`,
-`finance-service`, `field-service`, `market-intelligence-service`, `storage-service`
-(12 imágenes; `commissions` solo se despliega en stage y `market-intelligence` solo
+`finance-service`, `field-service`, `market-intelligence-service`, `storage-service`,
+`notifications-service`
+(13 imágenes; `commissions` solo se despliega en stage y `market-intelligence` solo
 en desarrollo).
 
 ---

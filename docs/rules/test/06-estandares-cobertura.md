@@ -47,6 +47,7 @@ Todo PR debe incluir las capas marcadas con ✅ para el tipo de cambio tocado.
   | `market-intelligence-service` | 18 | 11 | 35 |
   | `storage-service` | 99 | 86 | 99 |
   | `scheduling-service` | 94 | 77 | 88 |
+  | `notifications-service` | 99 | 85 | 99 |
 
   **Enmienda (migración Jest → Vitest, 2026-10-14)**: el runner pasó de Jest/ts-jest a **Vitest 4** (config por workspace en `vitest.config.ts`, ver ADR-20). La cobertura se recalibró al nuevo baseline porque el proveedor de cobertura cambió y ahora instrumenta **todos** los ficheros del alcance (como hacía `collectCoverageFrom` en Jest), no solo los importados; verificado con el provider `istanbul` (mismos números). El ratchet sigue **solo sube** (nunca baja). `field-service` se incorporó con baseline 84/70/72 y `scheduling-service` con baseline 94/77/88; ya no quedan workspaces sin suite.
 - **Anti-inflado**: subir cobertura no puede lograrse agregando asserts triviales; el gate real es la mutación (R-MT-2).

@@ -11,7 +11,7 @@ este índice evita mezclar las decisiones nuevas con las ADR históricas.
 |---|---|---|
 | [0001](./0001-plataforma-multi-vertical.md) | Aceptado | Capacidades compartidas por tenant, tres pilotos iniciales y `scheduling-service` como nuevo bounded context |
 | [0002](./0002-envelope-y-desacoplamiento.md) | Aceptado (fase 3 casi completa; falta `identity`) | Envelope `{data,meta}` por servicio y desacoplamiento de `orders`/`scheduling`/`field` mediante APIs internas |
-| [0003](./0003-notificaciones-correo.md) | Aceptado (fases 1-2; notificaciones pendientes) | Proveedor de correo intercambiable, notificaciones del pedido y reset de contraseña |
+| [0003](./0003-notificaciones-correo.md) | Aceptado (fases 1-3; invitaciones y E2E pendientes) | Proveedor de correo intercambiable, notificaciones del pedido y reset de contraseña |
 
 ## Convención
 

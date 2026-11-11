@@ -135,6 +135,7 @@ jobs:
           - field-service
           - market-intelligence-service
           - storage-service
+          - notifications-service
     steps:
       - name: 📥 Checkout repository
         uses: actions/checkout@v7

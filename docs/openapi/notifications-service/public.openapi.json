@@ -1,0 +1,23 @@
+{
+  "openapi": "3.0.0",
+  "info": {
+    "title": "Core Engine · notifications-service · API pública",
+    "description": "Contrato público (/api/v2/**) de notifications-service. No contiene rutas /internal/**.",
+    "version": "v1",
+    "contact": {}
+  },
+  "x-servicio": "notifications-service",
+  "x-superficie": "publica",
+  "tags": [],
+  "paths": {},
+  "components": {
+    "securitySchemes": {
+      "internalKey": {
+        "type": "apiKey",
+        "in": "header",
+        "name": "x-internal-key"
+      }
+    },
+    "schemas": {}
+  }
+}
