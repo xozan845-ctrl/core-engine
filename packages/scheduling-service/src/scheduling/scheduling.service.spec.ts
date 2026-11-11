@@ -200,6 +200,66 @@ describe('SchedulingService', () => {
     spy.mockRestore();
   });
 
+  it('crea la cita desde una reserva de alquiler', async () => {
+    const { pg, service } = crear();
+    pg.queryOne.mockResolvedValueOnce(null);
+    const spy = vi.spyOn(service, 'crearCita').mockResolvedValue({ id: cita });
+    await service.crearDesdeReserva({
+      order_id: 'o-4',
+      cliente_parte_id: '66666666-6666-4666-8666-666666666666',
+      items: [{
+        empresa_id: empresa,
+        item_type: 'alquiler',
+        item_id: '77777777-7777-4777-8777-777777777777',
+        fulfillment: 'onsite',
+        fulfillment_config: { recurso_id: recurso, inicia_en: inicio, termina_en: fin },
+      }],
+    });
+    expect(spy).toHaveBeenCalledWith(empresa, expect.objectContaining({
+      order_id: 'o-4',
+      recurso_id: recurso,
+      item_id: '77777777-7777-4777-8777-777777777777',
+    }));
+    spy.mockRestore();
+  });
+
+  it('verifica disponibilidad interna: recurso, ventana, bloqueo y solape', async () => {
+    const { pg, service } = crear();
+    pg.queryOne
+      .mockResolvedValueOnce({ id: recurso })
+      .mockResolvedValueOnce({ id: 'disp' })
+      .mockResolvedValueOnce(null)
+      .mockResolvedValueOnce(null);
+    await expect(service.verificarDisponibilidad(empresa, recurso, inicio, fin)).resolves.toBeUndefined();
+
+    pg.queryOne.mockResolvedValueOnce(null);
+    await expect(service.verificarDisponibilidad(empresa, recurso, inicio, fin)).rejects.toMatchObject({
+      codigo: 'NO_ENCONTRADO',
+    });
+
+    pg.queryOne.mockResolvedValueOnce({ id: recurso }).mockResolvedValueOnce(null);
+    await expect(service.verificarDisponibilidad(empresa, recurso, inicio, fin)).rejects.toMatchObject({
+      codigo: 'RECURSO_NO_DISPONIBLE',
+    });
+
+    pg.queryOne
+      .mockResolvedValueOnce({ id: recurso })
+      .mockResolvedValueOnce({ id: 'disp' })
+      .mockResolvedValueOnce({ id: 'bloqueo' });
+    await expect(service.verificarDisponibilidad(empresa, recurso, inicio, fin)).rejects.toMatchObject({
+      codigo: 'RECURSO_NO_DISPONIBLE',
+    });
+
+    pg.queryOne
+      .mockResolvedValueOnce({ id: recurso })
+      .mockResolvedValueOnce({ id: 'disp' })
+      .mockResolvedValueOnce(null)
+      .mockResolvedValueOnce({ id: 'cita' });
+    await expect(service.verificarDisponibilidad(empresa, recurso, inicio, fin)).rejects.toMatchObject({
+      codigo: 'RECURSO_NO_DISPONIBLE',
+    });
+  });
+
   it('procesa recordatorios vencidos de forma transaccional', async () => {
     const { pg, outbox, service } = crear();
     const client = clientCon(

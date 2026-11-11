@@ -9,6 +9,6 @@ import { TarifasService } from './tarifas.service';
   imports: [PgModule],
   controllers: [ItemsController, TarifasController],
   providers: [ItemsService, TarifasService],
-  exports: [ItemsService],
+  exports: [ItemsService, TarifasService],
 })
 export class ItemsModule {}

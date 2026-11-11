@@ -95,6 +95,12 @@ function crearHandler(
         if (storesFails) return { ok: false } as Response;
         return { ok: true, json: async () => sobreOfertas } as Response;
       }
+      if (u.includes('/internal/items/') && u.includes('/cotizacion')) {
+        return { ok: true, json: async () => ({ total_cents: 90000, dias: 3 }) } as Response;
+      }
+      if (u.includes('scheduling-service') && u.includes('/internal/scheduling/disponibilidad')) {
+        return { ok: true, json: async () => ({ disponible: true }) } as Response;
+      }
       if (u.includes('finance-service') && u.includes('/internal/finance/creditos')) {
         return {
           ok: true,
@@ -196,13 +202,33 @@ describe('CreateOrderCommandHandler (CQRS + Event Sourcing)', () => {
 
     const vista = await fixture.handler.ejecutar({
       tipo_orden: 'reserva',
-      items: [{ oferta_id: 'oferta-1', cantidad: 1, fulfillment: 'onsite', fulfillment_config: { recurso_id: 'sillon-1' } }],
+      cliente_parte_id: '33333333-3333-4333-8333-333333333333',
+      items: [{
+        oferta_id: 'oferta-1',
+        cantidad: 1,
+        fulfillment: 'onsite',
+        fulfillment_config: {
+          recurso_id: '44444444-4444-4444-8444-444444444444',
+          inicia_en: '2026-12-20T15:00:00.000Z',
+          termina_en: '2026-12-22T11:00:00.000Z',
+        },
+      }],
     }, 'comprador-1');
 
     expect(vista.tipo_orden).toBe('reserva');
-    expect(vista.items[0]).toMatchObject({ item_type: 'servicio', fulfillment: 'onsite' });
+    expect(vista.items[0]).toMatchObject({
+      item_type: 'servicio',
+      fulfillment: 'onsite',
+      precio_unitario_cents: 90000,
+    });
+    expect(vista.total_cents).toBe(90000);
     expect((fixture.store.appendEnTransaccion.mock.calls[0][3] as { tipo_orden: string }).tipo_orden).toBe('reserva');
-    expect(fixture.fetchMock).toHaveBeenCalledTimes(2);
+    expect(
+      fixture.fetchMock.mock.calls.some(([u]) => String(u).includes('/internal/items/') && String(u).includes('/cotizacion')),
+    ).toBe(true);
+    expect(
+      fixture.fetchMock.mock.calls.some(([u]) => String(u).includes('/internal/scheduling/disponibilidad')),
+    ).toBe(true);
   });
 
   it('total con cantidades multiples: 2 unidades = C$ 2 300', async () => {
@@ -712,6 +738,7 @@ describe('Fulfillment y cotizaciones por capacidad', () => {
       handler.ejecutar(
         {
           tipo_orden: 'reserva',
+          cliente_parte_id: '33333333-3333-4333-8333-333333333333',
           items: [{ oferta_id: 'oferta-1', cantidad: 1, fulfillment: 'onsite' }],
         },
         'comprador-1',

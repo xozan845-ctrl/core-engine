@@ -203,3 +203,51 @@ export async function anularCreditoOrden(orderId: string): Promise<boolean> {
   );
   return res.status >= 200 && res.status < 300 && !!res.data;
 }
+
+function catalogUrl(): string {
+  return (process.env.CATALOG_SERVICE_URL ?? 'http://catalog-service:3002').replace(/\/+$/, '');
+}
+
+function schedulingUrl(): string {
+  return (process.env.SCHEDULING_SERVICE_URL ?? 'http://scheduling-service:3011').replace(/\/+$/, '');
+}
+
+export interface CotizacionExterna {
+  total_cents: number;
+  dias: number;
+}
+
+/** Cotiza un item por rango de fechas (tarifas + precio base). */
+export async function cotizarItemReserva(input: {
+  empresa_id: string;
+  item_id: string;
+  desde: string;
+  hasta: string;
+}): Promise<CotizacionExterna | null> {
+  const query = new URLSearchParams({
+    empresa_id: input.empresa_id,
+    desde: input.desde,
+    hasta: input.hasta,
+  });
+  const res = await pedir<CotizacionExterna>(
+    `${catalogUrl()}/internal/items/${encodeURIComponent(input.item_id)}/cotizacion?${query.toString()}`,
+  );
+  if (res.status === 0 || !res.data) return null;
+  return res.data;
+}
+
+/** `true`/`false` si scheduling respondió; `null` si no está disponible. */
+export async function verificarDisponibilidadReserva(input: {
+  empresa_id: string;
+  recurso_id: string;
+  inicia_en: string;
+  termina_en: string;
+}): Promise<boolean | null> {
+  const res = await pedir<{ disponible: boolean }>(
+    `${schedulingUrl()}/internal/scheduling/disponibilidad`,
+    { method: 'POST', body: JSON.stringify(input) },
+  );
+  if (res.status === 409) return false;
+  if (res.status === 0 || !res.data) return null;
+  return res.data.disponible === true;
+}

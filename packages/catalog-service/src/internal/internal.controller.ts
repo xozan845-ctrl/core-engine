@@ -4,6 +4,8 @@ import { ClaveInternaGuard, NotFoundError } from '@core/shared';
 import { InventarioService } from '../inventario/inventario.service';
 import { ItemsService } from '../items/items.service';
 import { ItemResponseDto, LoteItemResponseDto } from '../items/items.response.dto';
+import { TarifasService } from '../items/tarifas.service';
+import { CotizacionItemResponseDto } from '../items/tarifas.controller';
 import {
   LineaInventarioResponseDto,
   ResumenInventarioResponseDto,
@@ -22,6 +24,7 @@ export class InternalController {
   constructor(
     private readonly inventario: InventarioService,
     private readonly items: ItemsService,
+    private readonly tarifas: TarifasService,
   ) {}
 
   @Get('items/lote')
@@ -44,6 +47,22 @@ export class InternalController {
     const item = await this.items.encontrarPorId(id);
     if (!item) throw new NotFoundError('Item', id);
     return item;
+  }
+
+  @Get('items/:id/cotizacion')
+  @ApiOperation({ summary: 'Cotizar un item por rango de fechas (servicio→servicio)' })
+  @ApiParam({ name: 'id', description: 'Id del item' })
+  @ApiQuery({ name: 'empresa_id', required: true })
+  @ApiQuery({ name: 'desde', required: true, example: '2026-12-20' })
+  @ApiQuery({ name: 'hasta', required: true, example: '2026-12-22' })
+  @ApiOkResponse({ type: CotizacionItemResponseDto, description: 'Cotización del rango' })
+  async cotizar(
+    @Param('id') id: string,
+    @Query('empresa_id') empresaId: string,
+    @Query('desde') desde: string,
+    @Query('hasta') hasta: string,
+  ) {
+    return this.tarifas.cotizar(empresaId, id, desde, hasta);
   }
 
   @Get('inventario/resumen')
