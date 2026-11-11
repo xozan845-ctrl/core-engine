@@ -145,10 +145,33 @@ jobs:
       - name: Verify multi-vertical pack/tenant consistency (R-I-12)
         run: npm run multi-vertical:check
 
+  rust:
+    name: Rust (scheduling-service)
+    runs-on: ubuntu-24.04
+    needs: security-gate
+    steps:
+      - uses: actions/checkout@v7
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: "1.85"
+          components: rustfmt, clippy
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: packages/scheduling-service/rust
+      - name: rustfmt
+        working-directory: packages/scheduling-service/rust
+        run: cargo fmt --check
+      - name: clippy
+        working-directory: packages/scheduling-service/rust
+        run: cargo clippy --all-targets -- -D warnings
+      - name: tests
+        working-directory: packages/scheduling-service/rust
+        run: cargo test
+
   build:
     name: Build all services
     runs-on: ubuntu-24.04
-    needs: [rules-check, test, lint, integration-catalog]
+    needs: [rules-check, test, lint, integration-catalog, rust]
     steps:
       - uses: actions/checkout@v7
         with:
