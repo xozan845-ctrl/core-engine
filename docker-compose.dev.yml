@@ -22,6 +22,14 @@ x-servicio-base: &servicio-base
     - .env
   environment:
     TZ: America/Managua
+    # Correo transaccional: en dev `log`; el E2E lo conmuta a Mailpit sin
+    # tocar el código (ADR-0003).
+    EMAIL_MODE: ${EMAIL_MODE:-log}
+    EMAIL_FROM: ${EMAIL_FROM:-no-reply@core-engine.test}
+    SMTP_HOST: ${SMTP_HOST:-}
+    SMTP_PORT: ${SMTP_PORT:-587}
+    SMTP_USER: ${SMTP_USER:-}
+    SMTP_PASSWORD: ${SMTP_PASSWORD:-}
   depends_on:
     postgres:
       condition: service_healthy
@@ -266,6 +274,19 @@ services:
     environment:
       SERVICIO: notifications-service
       PORT: 3012
+
+  # Capturador SMTP solo para desarrollo: el E2E lee el enlace de reset desde
+  # su API. No se publica fuera de loopback ni se despliega en stage/prod.
+  mailpit:
+    image: axllent/mailpit:latest
+    environment:
+      MP_MAX_MESSAGES: 500
+    ports:
+      - "127.0.0.1:1025:1025"
+      - "127.0.0.1:8025:8025"
+    networks:
+      - core-engine
+    restart: unless-stopped
 
 volumes:
   pg_data:

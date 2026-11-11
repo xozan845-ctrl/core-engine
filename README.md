@@ -73,7 +73,7 @@ npm install                       # instala los workspaces (enlaza @core/shared,
 npm run build                     # compila shared + gateway + los 12 microservicios
 npm test                          # los 14 workspaces, cada uno con --coverage
 cp .env.example .env              # variables de DESARROLLO (producción: .env.production.example)
-docker compose -f docker-compose.dev.yml up -d --build   # app: Postgres + RabbitMQ + MinIO + gateway y 12 servicios (8080 host + datos/broker 5432/5672/15672 + minio 9000/9001)
+docker compose -f docker-compose.dev.yml up -d --build   # app: Postgres + RabbitMQ + MinIO + Mailpit + gateway y 12 servicios (8080 host + datos/broker 5432/5672/15672 + minio 9000/9001 + mailpit 1025/8025)
 npm run demo                      # ejercicio end-to-end (TC-01..TC-08, RN-01..RN-08)
 
 # Dashboards (opcional): añade Prometheus + Grafana + exporters al stack de desarrollo
@@ -105,6 +105,7 @@ seeds del plan contable NIC e indices). En **Supabase** (staging/prod) aplique a
 | postgres | 5432 | No *(dev: `docker-compose.dev.yml`)* | todos | `infra/db/init/` |
 | rabbitmq (+ management) | 5672 / 15672 | No *(dev: `docker-compose.dev.yml`)* | — | — |
 | minio (+ consola) | 9000 / 9001 | Solo loopback *(el público es su dominio HTTPS, ADR-24)* | — | `docker-compose*.yml` |
+| mailpit *(capturador SMTP, solo dev)* | 1025 / 8025 | Solo loopback | — | `docker-compose.dev.yml` |
 | prometheus *(capa opcional)* | 9090 | No (solo red interna) | — | `infra/prometheus/` |
 | grafana *(capa opcional)* | 3000 | Sí (`3000:3000`) | — | `infra/grafana/` |
 

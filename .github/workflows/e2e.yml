@@ -33,6 +33,12 @@ jobs:
       - name: Prepare development environment
         run: cp .env.example .env
       - name: Bring the dev stack up
+        env:
+          # El E2E usa el SMTP real del stack (Mailpit), no logs.
+          EMAIL_MODE: smtp
+          EMAIL_FROM: no-reply@core-engine.test
+          SMTP_HOST: mailpit
+          SMTP_PORT: "1025"
         run: docker compose -f docker-compose.dev.yml up -d --build
       - name: Wait for gateway readiness
         run: |
@@ -49,6 +55,7 @@ jobs:
       - name: Run full E2E flow (G-6)
         env:
           BASE_URL: http://localhost:8080
+          MAILPIT_URL: http://localhost:8025
         run: npm run demo
       - name: Run beauty and fleet E2E flows (G-6)
         env:

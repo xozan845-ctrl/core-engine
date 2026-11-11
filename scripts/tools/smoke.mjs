@@ -16,6 +16,7 @@ const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD ?? 'AdminCore Engine2026!';
 const FIELD_TENANT_ID = process.env.PLATFORM_LOGISTICS_TENANT_ID ?? '00000000-0000-0000-0000-000000000001';
 const REQUEST_TIMEOUT_MS = Number(process.env.SMOKE_REQUEST_TIMEOUT_MS ?? 10_000);
 const WAIT_TIMEOUT_MS = Number(process.env.SMOKE_WAIT_TIMEOUT_MS ?? 30_000);
+const MAILPIT_URL = (process.env.MAILPIT_URL ?? '').replace(/\/+$/, '');
 
 for (const [nombre, valor] of [
   ['SMOKE_REQUEST_TIMEOUT_MS', REQUEST_TIMEOUT_MS],
@@ -105,6 +106,32 @@ async function esperar(fn, descripcion, intentos = 20, intervaloMs = 800) {
     }
   }
   throw new Error(`Expiró la espera de ${WAIT_TIMEOUT_MS} ms: ${descripcion} (último: ${JSON.stringify(ultimo)})`);
+}
+
+/** Consulta la API de Mailpit (capturador SMTP del stack dev). */
+async function mailpit(ruta) {
+  const res = await fetch(`${MAILPIT_URL}${ruta}`, {
+    signal: globalThis.AbortSignal.timeout(REQUEST_TIMEOUT_MS),
+  });
+  if (!res.ok) throw new Error(`Mailpit ${ruta} → ${res.status}`);
+  return res.json();
+}
+
+/** Devuelve el token del correo de reset del destinatario, o null si no llegó. */
+async function tokenDeReset(destinatario) {
+  const lista = await mailpit('/api/v1/messages?limit=100');
+  const correo = (lista.messages ?? []).find((m) => {
+    const destinatarios = m.To ?? m.to ?? [];
+    const asunto = m.Subject ?? m.subject ?? '';
+    return (
+      destinatarios.some((t) => (t.Address ?? t.address ?? '').toLowerCase() === destinatario.toLowerCase()) &&
+      asunto.includes('Restablece tu contraseña')
+    );
+  });
+  if (!correo) return null;
+  const detalle = await mailpit(`/api/v1/message/${encodeURIComponent(correo.ID ?? correo.id)}`);
+  const cuerpo = `${detalle.Text ?? detalle.text ?? ''}\n${detalle.HTML ?? detalle.html ?? ''}`;
+  return /token=([A-Za-z0-9_-]+)/.exec(cuerpo)?.[1] ?? null;
 }
 
 function sufijo() {
@@ -783,6 +810,60 @@ async function main() {
       `refresh=${renovada.status} logout=${logout.status} ` +
         `refresh_revocado=${refreshRevocado.status}`,
     );
+  }
+
+  // ── 11. Reset de contraseña con correo real (Mailpit) ─────────────────
+  if (MAILPIT_URL) {
+    paso('R-E-9: reset de contraseña con correo real (solicitud, enlace, un solo uso)');
+    const nuevaContrasena = 'NuevaClave456!';
+    const solicitud = await api('POST', '/api/v2/auth/restablecer-contrasena', {
+      correo: correoComprador,
+    });
+    let token;
+    try {
+      token = await esperar(() => tokenDeReset(correoComprador), 'correo de restablecimiento en Mailpit');
+    } catch {
+      token = null;
+    }
+    const confirmar = token
+      ? await api('POST', '/api/v2/auth/restablecer-contrasena/confirmar', {
+          token,
+          contrasena: nuevaContrasena,
+        })
+      : { status: 0, json: null };
+    const loginVieja = await api('POST', '/api/v2/auth/login', {
+      correo: correoComprador,
+      contrasena,
+    });
+    const loginNueva = await api('POST', '/api/v2/auth/login', {
+      correo: correoComprador,
+      contrasena: nuevaContrasena,
+    });
+    const reuso = token
+      ? await api('POST', '/api/v2/auth/restablecer-contrasena/confirmar', {
+          token,
+          contrasena: nuevaContrasena,
+        })
+      : { status: 0 };
+    const refreshRevocado = await api('POST', '/api/v2/auth/refresh', {
+      refresh_token: regC.json.refresh_token,
+    });
+    if (
+      [200, 201].includes(solicitud.status) &&
+      confirmar.status === 200 &&
+      confirmar.json?.ok === true &&
+      loginVieja.status === 401 &&
+      loginNueva.status === 200 &&
+      reuso.status === 410 &&
+      refreshRevocado.status === 401
+    ) {
+      ok('enlace consumido, contraseña nueva válida y sesiones revocadas');
+    } else {
+      fail(
+        `solicitud=${solicitud.status} confirmar=${confirmar.status} vieja=${loginVieja.status} ` +
+          `nueva=${loginNueva.status} reuso=${reuso.status} refresh=${refreshRevocado.status}`,
+      );
+    }
   }
 
   console.log('\n');
