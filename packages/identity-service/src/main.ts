@@ -7,6 +7,7 @@ import { crearDocumentoOpenApi } from './swagger';
 import {
   MetricsService,
   TrazabilidadInterceptor,
+  EnvelopeInterceptor,
   DtoValidationPipe,
   DomainErrorFilter,
   NOMBRE_SERVICIOS,
@@ -22,6 +23,7 @@ async function bootstrap(): Promise<void> {
   app.useGlobalPipes(new DtoValidationPipe());
   app.useGlobalInterceptors(
     new TrazabilidadInterceptor(app.get(MetricsService), NOMBRE_SERVICIOS.IDENTITY),
+    new EnvelopeInterceptor(),
   );
   app.useGlobalFilters(new DomainErrorFilter());
   app.useGlobalGuards(new RolesGuard());
