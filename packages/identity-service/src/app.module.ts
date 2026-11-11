@@ -1,5 +1,5 @@
 import { Module } from '@nestjs/common';
-import { PgModule, RabbitModule, OutboxModule, MetricsModule } from '@core/shared';
+import { PgModule, RabbitModule, OutboxModule, MetricsModule, EmailModule } from '@core/shared';
 import { AuthModule } from './auth/auth.module';
 import { UsuariosModule } from './usuarios/usuarios.module';
 import { SeedService } from './seed/seed.service';
@@ -14,7 +14,7 @@ import { PersonalModule } from './personal/personal.module';
 import { RegistrosModule } from './registros/registros.module';
 
 @Module({
-  imports: [PgModule, RabbitModule, OutboxModule, MetricsModule, AuthModule, UsuariosModule, EmpresasModule, ConfiguracionSitioModule, CapacidadesModule, PacksModule, ExtensionesModule, PartesModule, PersonalModule, RegistrosModule],
+  imports: [PgModule, RabbitModule, OutboxModule, MetricsModule, EmailModule, AuthModule, UsuariosModule, EmpresasModule, ConfiguracionSitioModule, CapacidadesModule, PacksModule, ExtensionesModule, PartesModule, PersonalModule, RegistrosModule],
   providers: [SeedService],
   controllers: [InternalController],
 })

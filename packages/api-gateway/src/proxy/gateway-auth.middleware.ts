@@ -30,6 +30,7 @@ export const POLITICAS_RUTAS: PoliticaRuta[] = [
     { patron: /^\/api\/v2\/auth\/login$/, metodos: ['POST'], roles: null },
     { patron: /^\/api\/v2\/auth\/refresh$/, metodos: ['POST'], roles: null },
     { patron: /^\/api\/v2\/auth\/restablecer-contrasena$/, metodos: ['POST'], roles: null },
+    { patron: /^\/api\/v2\/auth\/restablecer-contrasena\/confirmar$/, metodos: ['POST'], roles: null },
     // Packs versionados: el empresario debe poder elegir el pack al crear su
     // empresa; la selección concreta sigue validándose en identity-service.
     {
