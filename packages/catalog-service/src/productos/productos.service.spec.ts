@@ -1184,3 +1184,63 @@ describe('ProductosService (catalogo maestro y stock)', () => {
     });
   });
 });
+
+describe('ProductosService · composición (BOM)', () => {
+  const crear = () => {
+    const pg = { query: vi.fn(), queryOne: vi.fn(), transaccion: vi.fn() };
+    return { servicio: new ProductosService(pg as never) };
+  };
+
+  it('explota la composición a componentes hoja y multiplica la cantidad', async () => {
+    const { servicio } = crear();
+    const client = {
+      query: vi.fn().mockResolvedValue({
+        rowCount: 1,
+        rows: [{ item_id: 'c-1', sku: 'HARINA', cantidad: 2 }],
+      }),
+    };
+    await expect(
+      servicio.expandirComponentes(client as never, [
+        { empresa_id: 'e-1', sku: 'PLATO', cantidad: 3, item_id: 'i-1' },
+      ]),
+    ).resolves.toEqual([{ empresa_id: 'e-1', sku: 'HARINA', cantidad: 6, item_id: 'c-1' }]);
+  });
+
+  it('deja intactas las líneas sin composición o sin item_id', async () => {
+    const { servicio } = crear();
+    const client = {
+      query: vi.fn().mockResolvedValue({ rowCount: 0, rows: [] }),
+    };
+    await expect(
+      servicio.expandirComponentes(client as never, [
+        { empresa_id: 'e-1', sku: 'PLATO', cantidad: 1, item_id: 'i-1' },
+        { empresa_id: 'e-1', sku: 'SERVICIO', cantidad: 2 },
+      ]),
+    ).resolves.toEqual([
+      { empresa_id: 'e-1', sku: 'PLATO', cantidad: 1, item_id: 'i-1' },
+      { empresa_id: 'e-1', sku: 'SERVICIO', cantidad: 2 },
+    ]);
+  });
+
+  it('suma componentes repetidos entre líneas', async () => {
+    const { servicio } = crear();
+    const client = {
+      query: vi
+        .fn()
+        .mockResolvedValueOnce({
+          rowCount: 1,
+          rows: [{ item_id: 'c-1', sku: 'HARINA', cantidad: 1 }],
+        })
+        .mockResolvedValueOnce({
+          rowCount: 1,
+          rows: [{ item_id: 'c-1', sku: 'HARINA', cantidad: 2 }],
+        }),
+    };
+    await expect(
+      servicio.expandirComponentes(client as never, [
+        { empresa_id: 'e-1', sku: 'PLATO-A', cantidad: 1, item_id: 'i-1' },
+        { empresa_id: 'e-1', sku: 'PLATO-B', cantidad: 1, item_id: 'i-2' },
+      ]),
+    ).resolves.toEqual([{ empresa_id: 'e-1', sku: 'HARINA', cantidad: 3, item_id: 'c-1' }]);
+  });
+});

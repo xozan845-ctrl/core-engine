@@ -943,6 +943,248 @@
         ]
       }
     },
+    "/api/v2/catalog/items/{id}/componentes": {
+      "get": {
+        "operationId": "ComponentesController_listar",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "name": "empresa_id",
+            "required": false,
+            "in": "query",
+            "description": "Solo admin global",
+            "schema": {}
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Componentes del item",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
+                  "properties": {
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/ComponenteItemResponseDto"
+                      }
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/MetaRespuesta"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Listar la composición de un item (receta/kit)",
+        "tags": [
+          "Catálogo · Composición"
+        ]
+      },
+      "post": {
+        "operationId": "ComponentesController_crear",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "name": "empresa_id",
+            "required": false,
+            "in": "query",
+            "description": "Solo admin global",
+            "schema": {}
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CrearComponenteRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Componente agregado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/ComponenteItemResponseDto"
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/MetaRespuesta"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Agregar un componente a la composición",
+        "tags": [
+          "Catálogo · Composición"
+        ]
+      }
+    },
+    "/api/v2/catalog/items/{id}/componentes/{componenteId}": {
+      "patch": {
+        "operationId": "ComponentesController_actualizar",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "name": "componenteId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "name": "empresa_id",
+            "required": false,
+            "in": "query",
+            "description": "Solo admin global",
+            "schema": {}
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ActualizarComponenteRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Componente actualizado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/ComponenteItemResponseDto"
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/MetaRespuesta"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Cambiar la cantidad de un componente",
+        "tags": [
+          "Catálogo · Composición"
+        ]
+      },
+      "delete": {
+        "operationId": "ComponentesController_eliminar",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "name": "componenteId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "name": "empresa_id",
+            "required": false,
+            "in": "query",
+            "description": "Solo admin global",
+            "schema": {}
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Componente eliminado"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Quitar un componente de la composición",
+        "tags": [
+          "Catálogo · Composición"
+        ]
+      }
+    },
     "/api/v2/admin/inventario": {
       "get": {
         "operationId": "InventarioController_listar",
@@ -16534,6 +16776,19 @@
           }
         }
       },
+      "ActualizarComponenteRequestDto": {
+        "type": "object",
+        "properties": {
+          "cantidad": {
+            "type": "number",
+            "minimum": 1,
+            "example": 3
+          }
+        },
+        "required": [
+          "cantidad"
+        ]
+      },
       "ActualizarConfiguracionInventarioRequestDto": {
         "type": "object",
         "properties": {
@@ -16863,6 +17118,59 @@
           "actualizado_en"
         ]
       },
+      "ComponenteItemResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "empresa_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "item_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "componente_item_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "codigo": {
+            "type": "string"
+          },
+          "nombre": {
+            "type": "string"
+          },
+          "stock": {
+            "type": "number"
+          },
+          "cantidad": {
+            "type": "number"
+          },
+          "creado_en": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "actualizado_en": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "empresa_id",
+          "item_id",
+          "componente_item_id",
+          "codigo",
+          "nombre",
+          "stock",
+          "cantidad",
+          "creado_en",
+          "actualizado_en"
+        ]
+      },
       "ConfiguracionInventarioResponseDto": {
         "type": "object",
         "properties": {
@@ -17090,6 +17398,26 @@
           "nombre",
           "precio",
           "componentes"
+        ]
+      },
+      "CrearComponenteRequestDto": {
+        "type": "object",
+        "properties": {
+          "componente_item_id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Producto que consume el item compuesto"
+          },
+          "cantidad": {
+            "type": "number",
+            "minimum": 1,
+            "example": 2,
+            "description": "Unidades de stock por unidad vendida"
+          }
+        },
+        "required": [
+          "componente_item_id",
+          "cantidad"
         ]
       },
       "CrearItemRequestDto": {

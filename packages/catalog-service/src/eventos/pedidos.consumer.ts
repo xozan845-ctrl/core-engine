@@ -81,6 +81,7 @@ export class PedidosConsumer implements OnModuleInit {
       empresa_id: i.empresa_id,
       sku: i.sku,
       cantidad: i.cantidad,
+      ...(i.item_id ? { item_id: i.item_id } : {}),
     }));
 
     // Stock + eventos + marca de idempotencia comparten UNA transacción: si
@@ -90,9 +91,10 @@ export class PedidosConsumer implements OnModuleInit {
       if (await this.productos.estaProcesado(evento.event_id, client)) return null;
       const reserva = await this.productos.reservarStockEnTransaccion(client, order_id, lineas);
       if (reserva.ok) {
+        const reservados = reserva.reservados ?? lineas;
         await this.outbox.insertarEnTransaccion(client, EVENTOS.STOCK_RESERVADO, {
           order_id,
-          items: lineas.map((l) => ({ sku: l.sku, cantidad: l.cantidad })),
+          items: reservados.map((l) => ({ sku: l.sku, cantidad: l.cantidad })),
         });
         await this.outbox.insertarEnTransaccion(client, EVENTOS.STOCK_UPDATED, {
           order_id,

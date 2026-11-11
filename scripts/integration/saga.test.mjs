@@ -41,6 +41,7 @@ const CATALOGO = [
   '43_catalog_item_model.sql',
   '44_catalog_items_metadatos.sql',
   '48_catalog_retiro_legacy.sql',
+  '60_catalog_item_componentes.sql',
 ];
 const SIEMPRE = [
   '01b_cqrs_finance.sql',
@@ -129,8 +130,9 @@ async function aplicarMigraciones() {
     // pudo quedar de una cadena anterior. No se reaplican 01d/01e/27/45/46/47:
     // no son idempotentes sobre un esquema ya evolucionado.
     await aplicar('01b_cqrs_finance.sql');
-    // Cambio aditivo de la Fase B2: la proyección necesita metodo_pago.
+    // Cambios aditivos de las fases B2/D: método de pago y composición.
     await aplicar('57_orders_metodo_pago.sql');
+    await aplicar('60_catalog_item_componentes.sql');
     return;
   }
 
@@ -141,6 +143,9 @@ async function aplicarMigraciones() {
   nombres.push(...SIEMPRE.filter((nombre) => !nombres.includes(nombre)));
 
   for (const nombre of nombres) await aplicar(nombre);
+  // Cambio aditivo de la Fase D; idempotente y necesario aunque el esquema
+  // base ya exista (el camino rápido no recorre CATALOGO).
+  await aplicar('60_catalog_item_componentes.sql');
 }
 
 async function aplicar(nombre) {

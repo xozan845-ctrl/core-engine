@@ -4,11 +4,13 @@ import { ItemsController } from './items.controller';
 import { ItemsService } from './items.service';
 import { TarifasController } from './tarifas.controller';
 import { TarifasService } from './tarifas.service';
+import { ComponentesController } from './componentes.controller';
+import { ComponentesService } from './componentes.service';
 
 @Module({
   imports: [PgModule],
-  controllers: [ItemsController, TarifasController],
-  providers: [ItemsService, TarifasService],
-  exports: [ItemsService, TarifasService],
+  controllers: [ItemsController, TarifasController, ComponentesController],
+  providers: [ItemsService, TarifasService, ComponentesService],
+  exports: [ItemsService, TarifasService, ComponentesService],
 })
 export class ItemsModule {}

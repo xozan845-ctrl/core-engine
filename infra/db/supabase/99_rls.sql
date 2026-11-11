@@ -544,6 +544,23 @@ CREATE POLICY partes_empresa_archivar ON identity.partes FOR UPDATE TO authentic
          AND empresa_id::text = (auth.jwt() ->> 'tenant_id')
          AND eliminado_en IS NOT NULL AND estado = 'archivado');
 
+-- Composición de items (BOM/kits).
+ALTER TABLE catalog.item_componentes ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS item_componentes_admin ON catalog.item_componentes;
+DROP POLICY IF EXISTS item_componentes_empresa ON catalog.item_componentes;
+DROP POLICY IF EXISTS item_componentes_lectura ON catalog.item_componentes;
+CREATE POLICY item_componentes_admin ON catalog.item_componentes FOR ALL TO authenticated
+  USING (auth.rol() IN ('super_admin', 'admin'))
+  WITH CHECK (auth.rol() IN ('super_admin', 'admin'));
+CREATE POLICY item_componentes_empresa ON catalog.item_componentes FOR ALL TO authenticated
+  USING (auth.rol() = 'empresario'
+         AND empresa_id::text = (auth.jwt() ->> 'tenant_id'))
+  WITH CHECK (auth.rol() = 'empresario'
+         AND empresa_id::text = (auth.jwt() ->> 'tenant_id'));
+CREATE POLICY item_componentes_lectura ON catalog.item_componentes FOR SELECT TO authenticated
+  USING (auth.rol() IN ('empresario', 'vendedor', 'coordinador', 'supervisor', 'operativo')
+         AND empresa_id::text = (auth.jwt() ->> 'tenant_id'));
+
 -- Tarifas por fecha/rango sobre items (temporadas, hotel, alquileres).
 ALTER TABLE catalog.item_tarifas ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS item_tarifas_admin ON catalog.item_tarifas;
