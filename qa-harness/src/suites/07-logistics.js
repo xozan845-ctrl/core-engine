@@ -34,6 +34,7 @@ export async function suite07Logistica(client, cfg, adminToken, compradorToken, 
       ...(tienda.body?.id ? { tienda_id: tienda.body.id } : {}),
     }, vAuth);
     const orden = oferta.body?.id ? await client.post('/api/v2/orders', {
+      tipo_orden: 'compra',
       items: [{ oferta_id: oferta.body.id, cantidad: 1 }],
     }, cAuth) : null;
     const orderId = orden?.body?.id ?? null;

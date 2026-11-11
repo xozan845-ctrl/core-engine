@@ -66,7 +66,7 @@ export async function suite06Carrito(client, cfg, compradorToken, adminToken, ve
 
       // RN-05: checkout crea la orden (desde carrito con items)
       await client.post('/api/v2/carrito/items', { oferta_id: ofertaId, cantidad: 1 }, cAuth);
-      const checkout = await client.post('/api/v2/orders', { items: [{ oferta_id: ofertaId, cantidad: 1 }] }, cAuth);
+      const checkout = await client.post('/api/v2/orders', { tipo_orden: 'compra', items: [{ oferta_id: ofertaId, cantidad: 1 }] }, cAuth);
       resultados.push({ test: 'Checkout (crear orden)', status: checkout.status, pass: [200, 201].includes(checkout.status) });
 
       // Cantidad > 99 -> 400 (DTO Max 99)

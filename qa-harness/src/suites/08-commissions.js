@@ -35,7 +35,7 @@ export async function suite08Comisiones(client, cfg, vendedorToken, adminToken, 
 
     let orderId = null;
     if (ofertaId) {
-      const venta = await client.post('/api/v2/orders', { items: [{ oferta_id: ofertaId, cantidad: 1 }] }, cAuth);
+      const venta = await client.post('/api/v2/orders', { tipo_orden: 'compra', items: [{ oferta_id: ofertaId, cantidad: 1 }] }, cAuth);
       orderId = venta.body?.id ?? null;
       resultados.push({ test: 'Venta real (comprador)', status: venta.status, pass: [200, 201].includes(venta.status) });
 

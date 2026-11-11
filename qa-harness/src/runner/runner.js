@@ -172,7 +172,10 @@ export class Runner {
 
   async loginUsers() {
     // Login admin
-    const adminLogin = await this.loginConReintento('admin@core-engine.test', 'AdminCore Engine2026!');
+    const adminLogin = await this.loginConReintento(
+      this.config.adminEmail,
+      this.config.adminPassword,
+    );
     if (adminLogin.status === 200 || adminLogin.status === 201) {
       this.adminToken = adminLogin.body.access_token;
     }
