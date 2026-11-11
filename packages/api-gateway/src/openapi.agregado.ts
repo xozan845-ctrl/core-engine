@@ -10405,6 +10405,250 @@ export const OPENAPI_AGREGADO = {
         ]
       }
     },
+    "/api/v2/empresas/{empresaId}/partes/{parteId}/registros": {
+      "get": {
+        "operationId": "RegistrosController_listar",
+        "parameters": [
+          {
+            "name": "empresaId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "name": "parteId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "name": "limite",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "number"
+            }
+          },
+          {
+            "name": "tipo",
+            "required": false,
+            "in": "query",
+            "schema": {}
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Registros de la parte"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Listar registros de una parte (historia, recetas, expedientes)",
+        "tags": [
+          "Partes · Registros"
+        ]
+      },
+      "post": {
+        "operationId": "RegistrosController_crear",
+        "parameters": [
+          {
+            "name": "empresaId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "name": "parteId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CrearRegistroRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Registro creado"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Crear un registro para una parte",
+        "tags": [
+          "Partes · Registros"
+        ]
+      }
+    },
+    "/api/v2/empresas/{empresaId}/partes/{parteId}/registros/{registroId}": {
+      "get": {
+        "operationId": "RegistrosController_obtener",
+        "parameters": [
+          {
+            "name": "empresaId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "parteId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "registroId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Registro encontrado"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Consultar un registro de la parte",
+        "tags": [
+          "Partes · Registros"
+        ]
+      },
+      "patch": {
+        "operationId": "RegistrosController_actualizar",
+        "parameters": [
+          {
+            "name": "empresaId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "parteId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "registroId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ActualizarRegistroRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Registro actualizado"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Actualizar un registro de la parte",
+        "tags": [
+          "Partes · Registros"
+        ]
+      },
+      "delete": {
+        "operationId": "RegistrosController_eliminar",
+        "parameters": [
+          {
+            "name": "empresaId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "parteId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "registroId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Registro archivado"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Archivar (borrado logico) un registro de la parte",
+        "tags": [
+          "Partes · Registros"
+        ]
+      }
+    },
     "/api/v2/orders/{id}/estado": {
       "patch": {
         "operationId": "EstadoOrdenController_avanzar",
@@ -22524,6 +22768,41 @@ export const OPENAPI_AGREGADO = {
           }
         }
       },
+      "ActualizarRegistroRequestDto": {
+        "type": "object",
+        "properties": {
+          "tipo": {
+            "type": "string",
+            "description": "Tipo de registro (historia_clinica, receta, nota, inspeccion, expediente...)",
+            "example": "historia_clinica",
+            "pattern": "^[a-z][a-z0-9_]{1,39}$"
+          },
+          "titulo": {
+            "type": "string",
+            "maxLength": 200
+          },
+          "datos": {
+            "type": "object",
+            "additionalProperties": true
+          },
+          "adjuntos": {
+            "description": "Objetos de storage ya confirmados (maximo 10)",
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          "cita_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "item_id": {
+            "type": "string",
+            "format": "uuid"
+          }
+        }
+      },
       "ActualizarSlugRequestDto": {
         "type": "object",
         "properties": {
@@ -23213,6 +23492,44 @@ export const OPENAPI_AGREGADO = {
         "required": [
           "codigo",
           "nombre"
+        ]
+      },
+      "CrearRegistroRequestDto": {
+        "type": "object",
+        "properties": {
+          "tipo": {
+            "type": "string",
+            "description": "Tipo de registro (historia_clinica, receta, nota, inspeccion, expediente...)",
+            "example": "historia_clinica",
+            "pattern": "^[a-z][a-z0-9_]{1,39}$"
+          },
+          "titulo": {
+            "type": "string",
+            "maxLength": 200
+          },
+          "datos": {
+            "type": "object",
+            "additionalProperties": true
+          },
+          "adjuntos": {
+            "description": "Objetos de storage ya confirmados (maximo 10)",
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          "cita_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "item_id": {
+            "type": "string",
+            "format": "uuid"
+          }
+        },
+        "required": [
+          "tipo"
         ]
       },
       "CrearRelacionRequestDto": {
