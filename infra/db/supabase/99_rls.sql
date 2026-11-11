@@ -894,3 +894,11 @@ DROP POLICY IF EXISTS password_reset_tokens_app ON identity.password_reset_token
 CREATE POLICY password_reset_tokens_app ON identity.password_reset_tokens
   FOR ALL TO core_engine_app
   USING (true) WITH CHECK (true);
+
+-- ── notifications.eventos_procesados (ADR-0003) ─────────────────────────────
+-- Idempotencia del consumidor: solo el rol de servicio accede.
+ALTER TABLE notifications.eventos_procesados ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS notifications_eventos_app ON notifications.eventos_procesados;
+CREATE POLICY notifications_eventos_app ON notifications.eventos_procesados
+  FOR ALL TO core_engine_app
+  USING (true) WITH CHECK (true);

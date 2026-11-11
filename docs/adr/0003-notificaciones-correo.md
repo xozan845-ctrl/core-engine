@@ -1,7 +1,7 @@
 # ADR-0003: Notificaciones transaccionales y correo
 
 - **Fecha**: 2026-11-11
-- **Estado**: Aceptado — fases 1-2 (proveedor de correo y reset de contraseña) implementadas; fases 3-5 pendientes
+- **Estado**: Aceptado — fases 1-3 (correo, reset y notificaciones del pedido) implementadas; fases 4-5 pendientes
 - **Ámbito**: correo, notificaciones del pedido, reset de contraseña, secretos
 
 ## Contexto

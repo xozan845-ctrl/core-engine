@@ -1,6 +1,6 @@
 # Core Engine · DESARROLLO (construye las imágenes en local)
 # Entorno completo y autocontenido: Postgres + RabbitMQ + MinIO + gateway + los
-# 11 microservicios (incluye `scheduling-service`, `commissions-service` y `market-intelligence-service`,
+# 12 microservicios (incluye `scheduling-service`, `commissions-service` y `market-intelligence-service`,
 # que NO se despliegan en producción). Publica al host los puertos de datos y
 # broker SOLO para desarrollo (conectar un cliente de BD o abrir la UI de
 # RabbitMQ en localhost).
@@ -255,6 +255,17 @@ services:
       SERVICIO: storage-service
       PORT: 3010
       OUTBOX_TABLA: storage.outbox
+
+  notifications-service:
+    <<: *servicio-base
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        SERVICIO: notifications-service
+    environment:
+      SERVICIO: notifications-service
+      PORT: 3012
 
 volumes:
   pg_data:
