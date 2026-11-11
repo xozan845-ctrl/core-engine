@@ -515,6 +515,8 @@ async function main() {
   const paginaCatalogo = await api(
     'GET',
     `/api/v2/catalog/items?empresa_id=${encodeURIComponent(empresa.json.id)}&q=${encodeURIComponent((producto.codigo ?? producto.sku))}&pagina=1&limite=1`,
+    null,
+    tokenAdmin,
   );
   if (
     paginaCatalogo.status === 200 &&
@@ -533,7 +535,7 @@ async function main() {
   const orden = await api(
     'POST',
     '/api/v2/orders',
-    { items: [{ oferta_id: oferta.json.id, cantidad: 1 }] },
+    { tipo_orden: 'compra', items: [{ oferta_id: oferta.json.id, cantidad: 1 }] },
     tokenComprador,
   );
   if (orden.status === 201 || orden.status === 200) ok(`order_id=${orden.json.id?.slice(0, 8)}`);
@@ -617,7 +619,7 @@ async function main() {
   const rechazo = await api(
     'POST',
     '/api/v2/orders',
-    { items: [{ oferta_id: ofertaUno.json.id, cantidad: 2 }] },
+    { tipo_orden: 'compra', items: [{ oferta_id: ofertaUno.json.id, cantidad: 2 }] },
     tokenComprador,
   );
   if (rechazo.status === 409) ok();
@@ -660,7 +662,7 @@ async function main() {
   const orden2 = await api(
     'POST',
     '/api/v2/orders',
-    { items: [{ oferta_id: oferta.json.id, cantidad: 2 }] },
+    { tipo_orden: 'compra', items: [{ oferta_id: oferta.json.id, cantidad: 2 }] },
     tokenComprador,
   );
   if (![200, 201].includes(orden2.status) || !orden2.json?.id) {
