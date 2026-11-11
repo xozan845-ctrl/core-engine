@@ -602,7 +602,7 @@ async function main() {
     { tipo: 'producto', codigo: `LEC-${suf.toUpperCase()}`, empresa_id: empresa.json.id, nombre: 'Leche 1L', precio: '50.00', stock: 1 },
     tokenAdmin,
   );
-  if (![200, 201].includes(prodUno.status) || !prodUno.json?.id) {
+  if (![200, 201].includes(prodUno.status) || !(prodUno.json?.item_id ?? prodUno.json?.id)) {
     fail(`producto con stock 1 → ${prodUno.status} ${JSON.stringify(prodUno.json)}`);
     process.exit(1);
   }
