@@ -12,7 +12,7 @@ use serde_json::{json, Value};
 pub struct ApiError {
     pub codigo: String,
     pub mensaje: String,
-    pub detalles: Option<Value>,
+    pub detalles: Option<Box<Value>>,
     pub status: StatusCode,
 }
 
@@ -31,7 +31,7 @@ impl ApiError {
     }
 
     pub fn con_detalles(mut self, detalles: Value) -> Self {
-        self.detalles = Some(detalles);
+        self.detalles = Some(Box::new(detalles));
         self
     }
 
@@ -93,7 +93,7 @@ impl ApiError {
             Some(detalles) => json!({
                 "codigo": &self.codigo,
                 "mensaje": &self.mensaje,
-                "detalles": detalles,
+                "detalles": detalles.as_ref(),
             }),
             None => json!({
                 "codigo": &self.codigo,

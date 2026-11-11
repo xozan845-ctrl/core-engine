@@ -5,7 +5,10 @@
 //! RLS en PostgreSQL.
 
 use crate::errors::ApiError;
+use async_trait::async_trait;
 use axum::http::HeaderMap;
+use serde::Deserialize;
+use std::time::Duration;
 
 pub const ROLES: [&str; 9] = [
     "super_admin",
@@ -104,6 +107,96 @@ impl UsuarioContexto {
     pub fn desde_headers_o_error(headers: &HeaderMap) -> Result<Self, ApiError> {
         Self::desde_headers(headers)
             .ok_or_else(|| ApiError::no_autorizado("Se requiere un token valido."))
+    }
+}
+
+#[derive(Debug, Clone, Deserialize, PartialEq, Eq)]
+pub struct CapacidadActiva {
+    pub empresa_id: String,
+    pub capacidad_codigo: String,
+    pub activo: bool,
+}
+
+/// Consulta de capacidades a identity (R-AR-5): lectura idempotente por la
+/// superficie interna, con timeout y fallo cerrado.
+#[async_trait]
+pub trait Capacidades: Send + Sync {
+    async fn activas(
+        &self,
+        empresa_id: &str,
+        requeridas: &[&str],
+    ) -> Result<Vec<CapacidadActiva>, ()>;
+}
+
+pub struct CapacidadesHttp {
+    url: String,
+    clave: String,
+    timeout: Duration,
+}
+
+impl CapacidadesHttp {
+    pub fn nueva(url: String, clave: Option<String>, timeout_ms: u64) -> Self {
+        Self {
+            url,
+            clave: clave.unwrap_or_default(),
+            timeout: Duration::from_millis(timeout_ms),
+        }
+    }
+}
+
+#[derive(Deserialize)]
+struct RespuestaCapacidades {
+    #[serde(default)]
+    capacidades: Vec<CapacidadActiva>,
+}
+
+#[async_trait]
+impl Capacidades for CapacidadesHttp {
+    async fn activas(
+        &self,
+        empresa_id: &str,
+        requeridas: &[&str],
+    ) -> Result<Vec<CapacidadActiva>, ()> {
+        if requeridas.is_empty() {
+            return Ok(Vec::new());
+        }
+        let cliente = reqwest::Client::builder()
+            .timeout(self.timeout)
+            .build()
+            .map_err(|_| ())?;
+        let respuesta = cliente
+            .post(format!("{}/internal/empresas/capacidades", self.url))
+            .header("content-type", "application/json")
+            .header("x-internal-key", &self.clave)
+            .json(&serde_json::json!({
+                "empresa_ids": [empresa_id],
+                "capacidades": requeridas,
+            }))
+            .send()
+            .await
+            .map_err(|_| ())?;
+        if !respuesta.status().is_success() {
+            return Err(());
+        }
+        respuesta
+            .json::<RespuestaCapacidades>()
+            .await
+            .map(|cuerpo| cuerpo.capacidades)
+            .map_err(|_| ())
+    }
+}
+
+/// Implementación para tests: identity no disponible.
+pub struct CapacidadesNoDisponible;
+
+#[async_trait]
+impl Capacidades for CapacidadesNoDisponible {
+    async fn activas(
+        &self,
+        _empresa_id: &str,
+        _requeridas: &[&str],
+    ) -> Result<Vec<CapacidadActiva>, ()> {
+        Err(())
     }
 }
 

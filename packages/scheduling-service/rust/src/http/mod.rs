@@ -4,6 +4,7 @@
 //! `/metrics`, `/docs`). Las rutas de agenda se añaden en los PR 3-5 con la
 //! misma composición de capas (envelope, correlación y métricas).
 
+pub mod agenda;
 pub mod envelope;
 
 use crate::auth::UsuarioContexto;
@@ -12,12 +13,13 @@ use crate::config::Config;
 use crate::logs::{ejecutar_con_contexto, ContextoCorrelacion};
 use crate::metrics::Metrics;
 use crate::state::AppState;
-use axum::extract::{MatchedPath, Request, State};
+use axum::extract::{FromRequest, MatchedPath, Request, State};
 use axum::http::{header, HeaderValue, StatusCode};
 use axum::middleware::{self, Next};
 use axum::response::{Html, IntoResponse, Response};
-use axum::routing::get;
+use axum::routing::{get, post};
 use axum::{Json, Router};
+use serde_json::Value;
 use std::time::Instant;
 use uuid::Uuid;
 
@@ -48,6 +50,23 @@ pub fn build_router(state: AppState) -> Router {
         .route("/metrics", get(metrics))
         .route("/docs", get(docs))
         .route("/docs-json", get(docs_json))
+        .route(
+            "/api/v2/scheduling/recursos",
+            get(agenda::listar_recursos).post(agenda::crear_recurso),
+        )
+        .route(
+            "/api/v2/scheduling/recursos/{recurso_id}/disponibilidad",
+            get(agenda::listar_disponibilidad),
+        )
+        .route(
+            "/api/v2/scheduling/disponibilidad",
+            post(agenda::crear_disponibilidad),
+        )
+        .route("/api/v2/scheduling/bloqueos", post(agenda::crear_bloqueo))
+        .route(
+            "/internal/scheduling/disponibilidad",
+            post(agenda::verificar_disponibilidad),
+        )
         .fallback(no_encontrado)
         .with_state(state.clone());
     aplicar_capas(router, state)
@@ -55,7 +74,7 @@ pub fn build_router(state: AppState) -> Router {
 
 /// Capas en el mismo orden que los interceptores globales de Nest:
 /// correlación (más externa) → métricas → envelope → handler.
-fn aplicar_capas(router: Router, state: AppState) -> Router {
+pub(crate) fn aplicar_capas(router: Router, state: AppState) -> Router {
     router
         .layer(middleware::from_fn(envelope::envelope))
         .layer(middleware::from_fn_with_state(state.clone(), metricas))
@@ -94,6 +113,40 @@ async fn no_encontrado() -> Response {
         StatusCode::NOT_FOUND,
     )
     .into_response()
+}
+
+/// Cuerpo JSON con el shape de error de Nest cuando el payload es inválido.
+/// Un cuerpo vacío se trata como `null` para que la validación DTO reporte los
+/// campos requeridos (igual que el body-parser de Express).
+pub struct Cuerpo(pub Value);
+
+impl<S> FromRequest<S> for Cuerpo
+where
+    S: Send + Sync,
+{
+    type Rejection = crate::errors::ApiError;
+
+    async fn from_request(request: Request, _state: &S) -> Result<Self, Self::Rejection> {
+        let bytes = axum::body::to_bytes(request.into_body(), 100 * 1024)
+            .await
+            .map_err(|_| {
+                crate::errors::ApiError::nueva(
+                    "HTTP_413",
+                    "El cuerpo de la peticion excede el limite permitido.",
+                    StatusCode::PAYLOAD_TOO_LARGE,
+                )
+            })?;
+        if bytes.is_empty() {
+            return Ok(Cuerpo(Value::Null));
+        }
+        serde_json::from_slice(&bytes).map(Cuerpo).map_err(|_| {
+            crate::errors::ApiError::nueva(
+                "SOLICITUD_INVALIDA",
+                "Peticion invalida.",
+                StatusCode::BAD_REQUEST,
+            )
+        })
+    }
 }
 
 /// ID de correlación, logs de petición y contexto para RLS.
