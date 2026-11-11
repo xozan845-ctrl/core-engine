@@ -93,6 +93,26 @@ describe('PedidosConsumer de catalog (RN-03 / RN-06)', () => {
     );
   });
 
+  it('pasa el item_id a la reserva para expandir la composición', async () => {
+    const { dispatch, productos, client } = await crear();
+    await dispatch(
+      evento(EVENTOS.ORDER_CREATED, {
+        ...ordenData,
+        items: [{
+          oferta_id: 'of1',
+          item_id: 'item-1',
+          sku: 'SKU-01',
+          producto_nombre: 'Teclado',
+          cantidad: 2,
+          empresa_id: 'e-1',
+        }],
+      }),
+    );
+    expect(productos.reservarStockEnTransaccion).toHaveBeenCalledWith(client, 'o1', [
+      { empresa_id: 'e-1', sku: 'SKU-01', cantidad: 2, item_id: 'item-1' },
+    ]);
+  });
+
   it('debe emitir stock.fallido cuando la reserva es rechazada por stock insuficiente', async () => {
     const { dispatch, outbox, productos } = await crear();
     (productos.reservarStockEnTransaccion as Mock).mockResolvedValue({
