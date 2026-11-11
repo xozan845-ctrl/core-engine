@@ -16,7 +16,8 @@ function crear() {
     transaccion: vi.fn(async (fn: (client: unknown) => Promise<unknown>) => fn(client)),
   };
   const auth = { crearSesion: vi.fn().mockResolvedValue({ access_token: 'a', refresh_token: 'r', expira_en: 900, usuario: { id: 'u-new', rol: 'operativo' } }) };
-  return { servicio: new PersonalService(pg as never, auth as never), pg, auth, client };
+  const email = { send: vi.fn().mockResolvedValue(undefined) };
+  return { servicio: new PersonalService(pg as never, auth as never, email as never), pg, auth, email, client };
 }
 
 describe('PersonalService', () => {
@@ -92,6 +93,42 @@ describe('PersonalService', () => {
     expect(invitacion.url_invitacion).toMatch(/^http:\/\/localhost:5173\/incorporacion\//);
     expect(invitacion.tipo).toBe('contratacion');
     expect(pg.queryOne).toHaveBeenCalledWith(expect.stringContaining('INSERT INTO identity.invitaciones_personal'), expect.arrayContaining(['e-1', 'ana@core.test', 'contratacion', 'r-1', 't-1']));
+  });
+
+  it('envía el enlace de incorporación por correo', async () => {
+    const { servicio, pg, email } = crear();
+    pg.queryOne
+      .mockResolvedValueOnce({})
+      .mockResolvedValueOnce({ id: 'r-1' })
+      .mockResolvedValueOnce({ id: 'i-1', empresa_id: 'e-1', correo: 'ana@core.test', nombre: 'Ana', tipo: 'contratacion', rol_empresa_id: 'r-1', rol_nombre: 'Estilista', tienda_id: 't-1', puesto_id: null, estado: 'pendiente', expira_en: '2026-11-11T00:00:00Z', empresa_nombre: 'Salón' });
+
+    const invitacion = await servicio.crearInvitacion(empresario, 'e-1', {
+      correo: 'ana@core.test', tipo: 'contratacion', rol_empresa_id: 'r-1', tienda_id: 't-1',
+    });
+
+    expect(email.send).toHaveBeenCalledWith({
+      to: 'ana@core.test',
+      subject: 'Invitación a Salón',
+      text: expect.stringContaining(invitacion.url_invitacion),
+      html: expect.stringContaining(invitacion.url_invitacion),
+    });
+  });
+
+  it('mantiene la invitación si el correo falla', async () => {
+    const { servicio, pg, email } = crear();
+    pg.queryOne
+      .mockResolvedValueOnce({})
+      .mockResolvedValueOnce({ id: 'r-1' })
+      .mockResolvedValueOnce({ id: 'i-1', empresa_id: 'e-1', correo: 'ana@core.test', nombre: 'Ana', tipo: 'contratacion', rol_empresa_id: 'r-1', rol_nombre: 'Estilista', tienda_id: 't-1', puesto_id: null, estado: 'pendiente', expira_en: '2026-11-11T00:00:00Z', empresa_nombre: 'Salón' });
+    email.send.mockRejectedValue(new Error('SMTP caído'));
+    const spy = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+
+    await expect(
+      servicio.crearInvitacion(empresario, 'e-1', {
+        correo: 'ana@core.test', tipo: 'contratacion', rol_empresa_id: 'r-1', tienda_id: 't-1',
+      }),
+    ).resolves.toMatchObject({ url_invitacion: expect.stringContaining('/incorporacion/') });
+    spy.mockRestore();
   });
 
   it('lista y activa/desactiva roles y puestos del tenant', async () => {
