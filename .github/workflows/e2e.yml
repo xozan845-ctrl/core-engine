@@ -54,6 +54,14 @@ jobs:
         env:
           BASE_URL: http://localhost:8080
         run: npm run demo:verticals
+      - name: Run bounded k6 order flow (R-CD-12)
+        env:
+          BASE_URL: http://localhost:8080
+        run: |
+          docker run --rm -i --network host \
+            -e BASE_URL -e ADMIN_EMAIL -e ADMIN_PASSWORD \
+            -v "$PWD/security/k6:/scripts:ro" \
+            grafana/k6:latest run /scripts/order-flow.js
       - name: Assert no unexpected service errors (R-E-8)
         run: |
           logs="$(docker compose -f docker-compose.dev.yml logs --no-color)"
