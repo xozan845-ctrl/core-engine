@@ -1422,10 +1422,7 @@ export const OPENAPI_AGREGADO = {
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/components/schemas/LiquidacionResponseDto"
-                  }
+                  "$ref": "#/components/schemas/EnvelopeLiquidacionesResponseDto"
                 }
               }
             }
@@ -1452,10 +1449,7 @@ export const OPENAPI_AGREGADO = {
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/components/schemas/LiquidacionEmpresaResponseDto"
-                  }
+                  "$ref": "#/components/schemas/EnvelopeLiquidacionesEmpresaResponseDto"
                 }
               }
             }
@@ -1499,10 +1493,7 @@ export const OPENAPI_AGREGADO = {
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/components/schemas/LiquidacionResponseDto"
-                  }
+                  "$ref": "#/components/schemas/EnvelopeLiquidacionesResponseDto"
                 }
               }
             }
@@ -1547,7 +1538,7 @@ export const OPENAPI_AGREGADO = {
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/LiquidacionResponseDto"
+                  "$ref": "#/components/schemas/EnvelopeLiquidacionResponseDto"
                 }
               }
             }
@@ -1574,7 +1565,7 @@ export const OPENAPI_AGREGADO = {
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/EstadoCuentaResponseDto"
+                  "$ref": "#/components/schemas/EnvelopeEstadoCuentaResponseDto"
                 }
               }
             }
@@ -1601,7 +1592,7 @@ export const OPENAPI_AGREGADO = {
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/EstadoCuentaEmpresaResponseDto"
+                  "$ref": "#/components/schemas/EnvelopeEstadoCuentaEmpresaResponseDto"
                 }
               }
             }
@@ -1628,7 +1619,7 @@ export const OPENAPI_AGREGADO = {
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ReporteKpiResponseDto"
+                  "$ref": "#/components/schemas/EnvelopeReporteKpiResponseDto"
                 }
               }
             }
@@ -14354,6 +14345,102 @@ export const OPENAPI_AGREGADO = {
           "creado_en"
         ]
       },
+      "EnvelopeEstadoCuentaEmpresaResponseDto": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/EstadoCuentaEmpresaResponseDto"
+          },
+          "meta": {
+            "$ref": "#/components/schemas/MetaRespuestaResponseDto"
+          }
+        },
+        "required": [
+          "data",
+          "meta"
+        ]
+      },
+      "EnvelopeEstadoCuentaResponseDto": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/EstadoCuentaResponseDto"
+          },
+          "meta": {
+            "$ref": "#/components/schemas/MetaRespuestaResponseDto"
+          }
+        },
+        "required": [
+          "data",
+          "meta"
+        ]
+      },
+      "EnvelopeLiquidacionResponseDto": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/LiquidacionResponseDto"
+          },
+          "meta": {
+            "$ref": "#/components/schemas/MetaRespuestaResponseDto"
+          }
+        },
+        "required": [
+          "data",
+          "meta"
+        ]
+      },
+      "EnvelopeLiquidacionesEmpresaResponseDto": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/LiquidacionEmpresaResponseDto"
+            }
+          },
+          "meta": {
+            "$ref": "#/components/schemas/MetaRespuestaResponseDto"
+          }
+        },
+        "required": [
+          "data",
+          "meta"
+        ]
+      },
+      "EnvelopeLiquidacionesResponseDto": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/LiquidacionResponseDto"
+            }
+          },
+          "meta": {
+            "$ref": "#/components/schemas/MetaRespuestaResponseDto"
+          }
+        },
+        "required": [
+          "data",
+          "meta"
+        ]
+      },
+      "EnvelopeReporteKpiResponseDto": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/ReporteKpiResponseDto"
+          },
+          "meta": {
+            "$ref": "#/components/schemas/MetaRespuestaResponseDto"
+          }
+        },
+        "required": [
+          "data",
+          "meta"
+        ]
+      },
       "EstadoCuentaEmpresaResponseDto": {
         "type": "object",
         "properties": {
@@ -14644,6 +14731,37 @@ export const OPENAPI_AGREGADO = {
           "monto_cents",
           "estado",
           "creado_en"
+        ]
+      },
+      "MetaRespuestaResponseDto": {
+        "type": "object",
+        "properties": {
+          "timestamp": {
+            "type": "string",
+            "description": "Timestamp ISO 8601 UTC",
+            "example": "2026-11-11T00:00:00.000Z"
+          },
+          "path": {
+            "type": "string",
+            "description": "Ruta solicitada",
+            "example": "/api/v2/admin/reportes"
+          },
+          "method": {
+            "type": "string",
+            "description": "Método HTTP",
+            "example": "GET"
+          },
+          "statusCode": {
+            "type": "number",
+            "description": "Código HTTP de la respuesta",
+            "example": 200
+          }
+        },
+        "required": [
+          "timestamp",
+          "path",
+          "method",
+          "statusCode"
         ]
       },
       "ReporteKpiResponseDto": {

@@ -561,7 +561,8 @@ async function main() {
   const estadoCuenta = await esperar(
     async () => {
       const r = await api('GET', '/api/v2/vendedores/me/ventas', null, tokenVendedor);
-      return r.json?.ventas?.length >= 1 ? r.json : null;
+      const data = r.json?.data ?? r.json;
+      return data?.ventas?.length >= 1 ? data : null;
     },
     'comisión acreditada',
   );
@@ -628,7 +629,8 @@ async function main() {
   const compensada = await esperar(
     async () => {
       const r = await api('GET', '/api/v2/vendedores/me/ventas', null, tokenVendedor);
-      return r.json?.ventas?.[0]?.estado === 'compensada' ? r.json : null;
+      const data = r.json?.data ?? r.json;
+      return data?.ventas?.[0]?.estado === 'compensada' ? data : null;
     },
     'comisión compensada',
   );
@@ -664,7 +666,8 @@ async function main() {
   await esperar(
     async () => {
       const r = await api('GET', '/api/v2/vendedores/me/ventas', null, tokenVendedor);
-      return r.json?.comisiones_pendientes === '2024.00' ? r.json : null;
+      const data = r.json?.data ?? r.json;
+      return data?.comisiones_pendientes === '2024.00' ? data : null;
     },
     'neto pendiente 2x1150 - 12% = 2024.00',
   );
@@ -673,9 +676,10 @@ async function main() {
   paso('Corte de liquidación quincenal (RN-07, días 1 y 15)');
   const corte = await api('POST', '/api/v2/admin/liquidaciones/corte', null, tokenAdmin);
   if (corteLiquidacionesValido(corte)) {
-    const conFondos = corte.json.find((l) => l.monto_cents > 0);
+    const liquidaciones = corte.json?.data ?? corte.json;
+    const conFondos = liquidaciones.find((l) => l.monto_cents > 0);
     if (conFondos) ok(`liquidación aprobada por C$${(conFondos.monto_cents / 100).toFixed(2)}`);
-    else ok(`sin cortes con fondos (${corte.json.length} registros)`);
+    else ok(`sin cortes con fondos (${liquidaciones.length} registros)`);
   } else {
     fail(`corte → ${corte.status} ${JSON.stringify(corte.json)}`);
   }
@@ -683,8 +687,9 @@ async function main() {
   // ── 10. Reportes admin (H-06) ─────────────────────────────────────────
   paso('Reportes del administrador (H-06: GMV, pedidos, inventario)');
   const reportes = await api('GET', '/api/v2/admin/reportes', null, tokenAdmin);
-  if (reportes.status === 200 && reportes.json?.gmv_mes) {
-    ok(`gmv_mes=${reportes.json.gmv_mes} pedidos=${reportes.json.pedidos_mes} stock_total=${reportes.json.stock_total}`);
+  const reportesData = reportes.json?.data ?? reportes.json;
+  if (reportes.status === 200 && reportesData?.gmv_mes) {
+    ok(`gmv_mes=${reportesData.gmv_mes} pedidos=${reportesData.pedidos_mes} stock_total=${reportesData.stock_total}`);
   } else {
     fail(`reportes → ${reportes.status} ${JSON.stringify(reportes.json)}`);
   }
