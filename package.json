@@ -43,7 +43,7 @@
     "@stryker-mutator/core": "^10.1.1",
     "@stryker-mutator/vitest-runner": "^10.1.1",
     "@swc/core": "^1.16.20",
-    "@vitest/coverage-v8": "^5.0.4",
+    "@vitest/coverage-v8": "^5.1.0",
     "eslint": "^10.13.0",
     "fast-check": "^4.10.2",
     "pg": "^8.13.1",
