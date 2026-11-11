@@ -2,9 +2,12 @@
 //! definida y el esquema `scheduling` existe). El runner de CI las ejecuta con
 //! la BD efímera; en local se puede apuntar a un contenedor desechable.
 
+use async_trait::async_trait;
+use scheduling_service::clients::Partes;
 use scheduling_service::db::Db;
 use scheduling_service::scheduling::{
-    Agenda, CrearBloqueo, CrearDisponibilidad, CrearRecurso, VerificarDisponibilidad,
+    Agenda, CrearBloqueo, CrearCita, CrearDisponibilidad, CrearRecurso, OrdenItem, OrdenReserva,
+    VerificarDisponibilidad,
 };
 use serde_json::json;
 use std::sync::Arc;
@@ -14,6 +17,15 @@ fn url() -> Option<String> {
     std::env::var("TEST_DATABASE_URL").ok()
 }
 
+struct PartesPermitidas;
+
+#[async_trait]
+impl Partes for PartesPermitidas {
+    async fn pertenece(&self, _: &str, _: &str) -> Result<bool, ()> {
+        Ok(true)
+    }
+}
+
 #[tokio::test]
 async fn debe_crear_disponibilidad_y_bloqueos_con_las_mismas_reglas() {
     let Some(url) = url() else {
@@ -21,7 +33,7 @@ async fn debe_crear_disponibilidad_y_bloqueos_con_las_mismas_reglas() {
         return;
     };
     let db = Arc::new(Db::conectar(&url).await.expect("postgres"));
-    let agenda = Agenda::nueva(db.clone());
+    let agenda = Agenda::nueva(db.clone(), Arc::new(PartesPermitidas), "scheduling.outbox");
     let empresa = Uuid::new_v4().to_string();
     let empresa_uuid = Uuid::parse_str(&empresa).expect("uuid");
 
@@ -137,8 +149,139 @@ async fn debe_crear_disponibilidad_y_bloqueos_con_las_mismas_reglas() {
         .expect("listar disponibilidad");
     assert_eq!(listado.len(), 1);
 
+    // Citas: ventana 10:00-11:00 local (16:00-17:00Z) para no chocar con el bloqueo.
+    let parte = Uuid::new_v4().to_string();
+    let cita = agenda
+        .crear_cita(
+            &empresa,
+            &CrearCita {
+                recurso_id: recurso_id.clone(),
+                parte_id: parte.clone(),
+                order_id: None,
+                item_id: None,
+                inicia_en: "2032-04-12T16:00:00.000Z".to_string(),
+                termina_en: "2032-04-12T17:00:00.000Z".to_string(),
+                notas: Some("primera visita".to_string()),
+                metadata: json!({ "canal": "web" }),
+            },
+        )
+        .await
+        .expect("crear cita");
+    assert_eq!(cita["estado"], "reservada");
+    assert_eq!(cita["parte_id"], parte);
+    assert_eq!(cita["notas"], "primera visita");
+    assert_eq!(cita["metadata"]["canal"], "web");
+
+    let citas = agenda
+        .listar_citas(&empresa, None, None)
+        .await
+        .expect("citas");
+    assert_eq!(citas.len(), 1);
+    let recordatorios = agenda
+        .listar_recordatorios(&empresa)
+        .await
+        .expect("recordatorios");
+    assert_eq!(recordatorios.len(), 2);
+    assert_eq!(recordatorios[0]["estado"], "pendiente");
+
+    let outbox = sqlx::query_scalar::<_, i64>(
+        "SELECT COUNT(*) FROM scheduling.outbox WHERE payload->'data'->>'empresa_id' = $1",
+    )
+    .bind(&empresa)
+    .fetch_one(db.pool())
+    .await
+    .expect("outbox");
+    assert_eq!(outbox, 1);
+    let tipo = sqlx::query_scalar::<_, String>(
+        "SELECT tipo FROM scheduling.outbox WHERE payload->'data'->>'empresa_id' = $1",
+    )
+    .bind(&empresa)
+    .fetch_one(db.pool())
+    .await
+    .expect("tipo outbox");
+    assert_eq!(tipo, "appointment.created");
+
+    // Worker: un recordatorio vencido se marca enviado y publica su evento.
+    let cita_uuid = Uuid::parse_str(cita["id"].as_str().expect("id")).expect("uuid cita");
+    sqlx::query(
+        "UPDATE scheduling.recordatorios SET programado_en = NOW() - INTERVAL '1 minute'
+         WHERE cita_id = $1 AND tipo = '2h'",
+    )
+    .bind(cita_uuid)
+    .execute(db.pool())
+    .await
+    .expect("recordatorio vencido");
+    assert_eq!(agenda.procesar_recordatorios().await.expect("procesar"), 1);
+    let tipo_recordatorio: String = sqlx::query_scalar(
+        "SELECT tipo FROM scheduling.outbox WHERE tipo = 'appointment.reminder.due'",
+    )
+    .fetch_one(db.pool())
+    .await
+    .expect("outbox recordatorio");
+    assert_eq!(tipo_recordatorio, "appointment.reminder.due");
+
+    // Reserva desde `order.created` + idempotencia por order_id.
+    let orden = OrdenReserva {
+        order_id: Uuid::new_v4().to_string(),
+        cliente_parte_id: parte.clone(),
+        items: vec![OrdenItem {
+            empresa_id: empresa.clone(),
+            item_type: "servicio".to_string(),
+            item_id: Some(Uuid::new_v4().to_string()),
+            fulfillment: Some("onsite".to_string()),
+            fulfillment_config: Some(json!({
+                "recurso_id": recurso_id,
+                "inicia_en": "2032-04-12T17:00:00.000Z",
+                "termina_en": "2032-04-12T18:00:00.000Z",
+                "notas": "reserva"
+            })),
+        }],
+    };
+    let creada = agenda
+        .crear_desde_reserva(&orden)
+        .await
+        .expect("crear desde reserva");
+    assert_eq!(creada["order_id"], orden.order_id);
+    assert_eq!(creada["notas"], "reserva");
+    let repetida = agenda
+        .crear_desde_reserva(&orden)
+        .await
+        .expect("idempotente");
+    assert_eq!(repetida["id"], creada["id"]);
+
+    let sin_config = agenda
+        .crear_desde_reserva(&OrdenReserva {
+            order_id: Uuid::new_v4().to_string(),
+            cliente_parte_id: parte.clone(),
+            items: vec![],
+        })
+        .await
+        .expect_err("configuracion requerida");
+    assert_eq!(sin_config.codigo, "CITA_CONFIGURACION_REQUERIDA");
+
+    let cancelada = agenda
+        .cancelar_cita(&empresa, cita["id"].as_str().expect("id"), Some("cambio"))
+        .await
+        .expect("cancelar");
+    assert_eq!(cancelada["estado"], "cancelada");
+    let pendientes = sqlx::query_scalar::<_, i64>(
+        "SELECT COUNT(*) FROM scheduling.recordatorios
+         WHERE cita_id = $1 AND estado = 'pendiente'",
+    )
+    .bind(cita_uuid)
+    .fetch_one(db.pool())
+    .await
+    .expect("pendientes");
+    assert_eq!(pendientes, 0);
+
     // Limpieza (R-I-9): cada prueba deja la BD como la encontró.
-    for tabla in ["bloqueos", "disponibilidad", "recursos"] {
+    for tabla in [
+        "recordatorios",
+        "citas",
+        "bloqueos",
+        "disponibilidad",
+        "recursos",
+    ] {
         sqlx::query(&format!(
             "DELETE FROM scheduling.{tabla} WHERE empresa_id = $1"
         ))
@@ -147,4 +290,9 @@ async fn debe_crear_disponibilidad_y_bloqueos_con_las_mismas_reglas() {
         .await
         .expect("limpieza");
     }
+    sqlx::query("DELETE FROM scheduling.outbox WHERE payload->'data'->>'empresa_id' = $1")
+        .bind(&empresa)
+        .execute(db.pool())
+        .await
+        .expect("limpieza outbox");
 }
