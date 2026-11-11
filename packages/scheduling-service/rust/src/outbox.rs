@@ -4,9 +4,11 @@
 //! de la fila (`event_id`, `tipo`, `payload`, `estado`, `creado_en`) y el
 //! payload JSON del evento.
 
+use crate::db::{jsonb, uuid_texto, Db};
 use crate::errors::ApiError;
 use crate::logs::contexto_actual;
-use crate::metrics::ahora_iso;
+use crate::metrics::{ahora_iso, Metrics};
+use crate::rabbit::Rabbit;
 use serde_json::{json, Map, Value};
 use sqlx::{Postgres, Transaction};
 use uuid::Uuid;
@@ -14,6 +16,12 @@ use uuid::Uuid;
 pub const APPOINTMENT_CREATED: &str = "appointment.created";
 pub const APPOINTMENT_CANCELLED: &str = "appointment.cancelled";
 pub const APPOINTMENT_REMINDER_DUE: &str = "appointment.reminder.due";
+
+pub const METRICAS_OUTBOX: [&str; 3] = [
+    "core_engine_outbox_pending_events",
+    "core_engine_outbox_published_events_total",
+    "core_engine_outbox_publish_failures_total",
+];
 
 pub struct Outbox {
     tabla: String,
@@ -25,6 +33,65 @@ impl Outbox {
         Self {
             tabla: tabla.into(),
         }
+    }
+
+    /// Reclama y publica hasta 50 eventos pendientes. La transacción mantiene
+    /// el `FOR UPDATE SKIP LOCKED` mientras se confirma la publicación.
+    pub async fn publicar_pendientes(
+        &self,
+        db: &Db,
+        rabbit: &Rabbit,
+        metrics: &Metrics,
+    ) -> Result<(), ApiError> {
+        let mut tx = db
+            .transaccion()
+            .await
+            .map_err(crate::scheduling::error_db)?;
+
+        let sql_conteo = format!(
+            "SELECT COUNT(*)::bigint FROM {} WHERE estado = 'pendiente'",
+            self.tabla
+        );
+        let pendientes: i64 = sqlx::query_scalar(&sql_conteo)
+            .fetch_one(&mut *tx)
+            .await
+            .map_err(crate::scheduling::error_db)?;
+        metrics.registrar_gauge(METRICAS_OUTBOX[0], pendientes as f64);
+
+        let sql = format!(
+            "SELECT event_id, payload FROM {}
+             WHERE estado = 'pendiente'
+             ORDER BY creado_en ASC LIMIT 50
+             FOR UPDATE SKIP LOCKED",
+            self.tabla
+        );
+        let filas = sqlx::query(&sql)
+            .fetch_all(&mut *tx)
+            .await
+            .map_err(crate::scheduling::error_db)?;
+
+        for fila in filas {
+            let event_id = uuid_texto(&fila, "event_id").map_err(crate::scheduling::error_db)?;
+            let payload = jsonb(&fila, "payload").map_err(crate::scheduling::error_db)?;
+            if rabbit.publicar(&payload).await {
+                let sql_update = format!(
+                    "UPDATE {} SET estado = 'publicado', publicado_en = NOW()
+                     WHERE event_id = $1 AND estado = 'pendiente'",
+                    self.tabla
+                );
+                sqlx::query(&sql_update)
+                    .bind(crate::scheduling::parsear_uuid(&event_id)?)
+                    .execute(&mut *tx)
+                    .await
+                    .map_err(crate::scheduling::error_db)?;
+                metrics.incrementar_contador(METRICAS_OUTBOX[1]);
+            } else {
+                metrics.incrementar_contador(METRICAS_OUTBOX[2]);
+            }
+        }
+
+        tx.commit().await.map_err(crate::scheduling::error_db)?;
+        Ok(())
     }
 
     pub async fn insertar_en_transaccion(

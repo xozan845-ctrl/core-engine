@@ -42,7 +42,11 @@ Variables de entorno: `PORT` (3011), `SERVICIO`, `DATABASE_URL`,
 - **Outbox** (`OUTBOX_TABLA`): eventos `appointment.created`,
   `appointment.cancelled` y `appointment.reminder.due` en la misma transacción.
 - **Reservas** desde `order.created`: materialización idempotente por `order_id`.
+- **RabbitMQ** (`lapin`): exchanges `core-engine.events`/`core-engine.dlq`, cola
+  `scheduling.orders` con DLQ, confirmaciones, reintentos `x-intentos` y
+  republicación automática de la DLQ.
+- **Tareas de fondo**: publicador del Outbox cada 1 s y worker de recordatorios
+  cada 60 s, con contexto de correlación de servicio.
 - Capability guard contra la API interna de identity (fail-closed 503).
 
-Pendiente en los PR 5-6: publicación RabbitMQ, consumidor de reservas, worker
-periódico, imagen Docker y cobertura.
+Pendiente en el PR 6: imagen Docker y cobertura (`cargo-llvm-cov`).

@@ -17,5 +17,7 @@ pub mod http;
 pub mod logs;
 pub mod metrics;
 pub mod outbox;
+pub mod rabbit;
 pub mod scheduling;
 pub mod state;
+pub mod tareas;
