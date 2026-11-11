@@ -71,6 +71,9 @@ export class CreateOrderCommandHandler {
 
   async ejecutar(comando: CreateOrderCommand, clienteId: string): Promise<OrderView> {
     const tipoOrden = this.validarTipoOrden(comando.tipo_orden);
+    // Una cotizacion es una propuesta de precio: no reserva stock ni genera
+    // comision hasta que el cliente la acepte y se convierta en orden.
+    const esCotizacion = tipoOrden === 'cotizacion';
     let desdeCarrito = false;
     let lineas = comando.items;
     if (comando.usar_carrito) {
@@ -119,8 +122,9 @@ export class CreateOrderCommandHandler {
 
     await this.validarCapacidades(items, tipoOrden);
 
-    // 2. control sincrono de viabilidad de stock (TC-04: respuesta 409 rapida)
-    await this.verificarStock(items);
+    // 2. control sincrono de viabilidad de stock (TC-04: respuesta 409 rapida).
+    // Las cotizaciones no comprometen inventario.
+    if (!esCotizacion) await this.verificarStock(items);
 
     // 3. transaccion: evento + outbox (proyecciones via trigger en orders.eventos)
     const orderId = randomUUID();
@@ -150,7 +154,7 @@ export class CreateOrderCommandHandler {
           estado: 'creada',
           tipo_orden: tipoOrden,
           fulfillment_config: this.resumenFulfillment(items),
-          comision_cents: total.comision(this.tasaComision).centavos,
+          comision_cents: esCotizacion ? 0 : total.comision(this.tasaComision).centavos,
         },
       };
       await client.query(
@@ -172,7 +176,7 @@ export class CreateOrderCommandHandler {
       tienda_id: primerItem?.tienda_id ?? '',
       estado: 'creada',
       total_cents: total.centavos,
-      comision_cents: total.comision(0.12).centavos,
+      comision_cents: esCotizacion ? 0 : total.comision(0.12).centavos,
       moneda: 'C$',
       items,
       direccion_envio: null,

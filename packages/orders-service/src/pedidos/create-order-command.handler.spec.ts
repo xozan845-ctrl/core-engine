@@ -627,6 +627,25 @@ describe('Fulfillment y cotizaciones por capacidad', () => {
     });
   });
 
+  it('una cotizacion no reserva stock ni genera comision', async () => {
+    // stockCatalog='insuficiente': si la cotizacion validara stock, fallaria.
+    const { handler } = crearHandler(
+      [ofertaActiva],
+      'insuficiente',
+      undefined,
+      false,
+      false,
+      ['cotizaciones'],
+    );
+    const vista = await handler.ejecutar(
+      { tipo_orden: 'cotizacion', items: [{ oferta_id: 'oferta-1', cantidad: 1 }] },
+      'comprador-1',
+    );
+    expect(vista.tipo_orden).toBe('cotizacion');
+    expect(vista.estado).toBe('creada');
+    expect(vista.comision_cents).toBe(0);
+  });
+
   it('rechaza una entrega onsite sin fulfillment_onsite', async () => {
     const ofertaServicio = {
       ...ofertaActiva,

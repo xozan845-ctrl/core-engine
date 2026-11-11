@@ -62,7 +62,21 @@ export class PedidosConsumer implements OnModuleInit {
   }
 
   private async ordenCreada(evento: EventoBus<OrdenData>): Promise<void> {
-    const { order_id, items } = evento.data;
+    const { order_id, items, tipo_orden: tipoOrden } = evento.data;
+
+    // Una cotizacion no compromete inventario: solo se marca como procesada.
+    if (tipoOrden === 'cotizacion') {
+      const procesada = await this.pg.transaccion(async (client) => {
+        if (await this.productos.estaProcesado(evento.event_id, client)) return false;
+        await this.productos.registrarProcesado(evento.event_id, evento.tipo, client);
+        return true;
+      });
+      if (procesada) {
+        this.logger.info({ msg: 'Cotizacion sin reserva de stock', order_id });
+      }
+      return;
+    }
+
     const lineas = items.map((i) => ({
       empresa_id: i.empresa_id,
       sku: i.sku,
