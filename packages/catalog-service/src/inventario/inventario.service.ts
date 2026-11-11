@@ -207,8 +207,10 @@ export class InventarioService {
         id: string;
         codigo_lote: string;
         cantidad_disponible: number;
+        vencido: boolean;
       }>(
-        `SELECT id, codigo_lote, cantidad_disponible
+        `SELECT id, codigo_lote, cantidad_disponible,
+                (vence_en IS NOT NULL AND vence_en < CURRENT_DATE) AS vencido
            FROM catalog.lotes_inventario
           WHERE empresa_id = $1 AND item_id = $2 AND cantidad_disponible > 0
             AND ($3::text IS NULL OR codigo_lote = $3)
@@ -216,10 +218,13 @@ export class InventarioService {
           FOR UPDATE`,
         [datos.empresa_id, datos.item_id, datos.codigo_lote?.trim() || null],
       );
+      if (datos.codigo_lote && lotes.rows.some((lote) => lote.vencido)) {
+        throw new DomainError('LOTE_VENCIDO', 'El lote solicitado está vencido.');
+      }
 
       let restante = datos.cantidad;
       const consumidos: { lote_id: string; codigo_lote: string; cantidad: number }[] = [];
-      for (const lote of lotes.rows) {
+      for (const lote of lotes.rows.filter((fila) => !fila.vencido)) {
         if (restante === 0) break;
         const cantidad = Math.min(restante, lote.cantidad_disponible);
         await client.query(
@@ -235,8 +240,18 @@ export class InventarioService {
       if (restante > 0) {
         throw new DomainError(
           'STOCK_LOTE_INSUFICIENTE',
-          `No hay cantidad suficiente en los lotes; faltan ${restante}.`,
+          `No hay cantidad suficiente en lotes vigentes; faltan ${restante}.`,
         );
+      }
+      const stock = await client.query(
+        `UPDATE catalog.items
+            SET stock = stock - $3, actualizado_en = NOW()
+          WHERE id = $1 AND empresa_id = $2 AND stock >= $3
+          RETURNING stock`,
+        [datos.item_id, datos.empresa_id, datos.cantidad],
+      );
+      if (stock.rowCount === 0) {
+        throw new DomainError('STOCK_INSUFICIENTE', 'El stock del item no alcanza para el consumo.');
       }
       return { consumidos, total_consumido: datos.cantidad };
     });

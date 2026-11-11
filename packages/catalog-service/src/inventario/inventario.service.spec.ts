@@ -139,7 +139,8 @@ describe('InventarioService · consumo FEFO', () => {
           rowCount: 2,
         })
         .mockResolvedValueOnce({ rows: [], rowCount: 1 })
-        .mockResolvedValueOnce({ rows: [], rowCount: 1 }),
+        .mockResolvedValueOnce({ rows: [], rowCount: 1 })
+        .mockResolvedValueOnce({ rows: [{ stock: 7 }], rowCount: 1 }),
     };
     const pg = { transaccion: vi.fn(async (fn: (c: typeof client) => unknown) => fn(client)) };
     const servicio = new InventarioService(pg as never);
@@ -186,3 +187,28 @@ describe('InventarioService · consumo FEFO', () => {
     ).rejects.toMatchObject({ codigo: 'STOCK_LOTE_INSUFICIENTE' });
   });
 });
+
+
+  it('rechaza un lote vencido explícito y revierte si el stock no alcanza', async () => {
+    const clientVencido = {
+      query: vi.fn()
+        .mockResolvedValueOnce({ rows: [{ track_inventory: true }], rowCount: 1 })
+        .mockResolvedValueOnce({ rows: [{ id: 'lote-1', codigo_lote: 'L-1', cantidad_disponible: 5, vencido: true }], rowCount: 1 }),
+    };
+    await expect(
+      new InventarioService({ transaccion: vi.fn(async (fn: (c: typeof clientVencido) => unknown) => fn(clientVencido)) } as never)
+        .consumirLotes({ empresa_id: 'e-1', item_id: 'item-1', cantidad: 1, codigo_lote: 'L-1' }),
+    ).rejects.toMatchObject({ codigo: 'LOTE_VENCIDO' });
+
+    const clientSinStock = {
+      query: vi.fn()
+        .mockResolvedValueOnce({ rows: [{ track_inventory: true }], rowCount: 1 })
+        .mockResolvedValueOnce({ rows: [{ id: 'lote-1', codigo_lote: 'L-1', cantidad_disponible: 5, vencido: false }], rowCount: 1 })
+        .mockResolvedValueOnce({ rows: [], rowCount: 1 })
+        .mockResolvedValueOnce({ rows: [], rowCount: 0 }),
+    };
+    await expect(
+      new InventarioService({ transaccion: vi.fn(async (fn: (c: typeof clientSinStock) => unknown) => fn(clientSinStock)) } as never)
+        .consumirLotes({ empresa_id: 'e-1', item_id: 'item-1', cantidad: 1 }),
+    ).rejects.toMatchObject({ codigo: 'STOCK_INSUFICIENTE' });
+  });

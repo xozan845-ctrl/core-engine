@@ -218,7 +218,8 @@ describe('ProductosService (catalogo maestro y stock)', () => {
     const ordenOk = async (servicio: ProductosService, pg: any, client: any) => {
       (client.query as Mock)
         .mockResolvedValueOnce({ rows: [], rowCount: 0 }) // SAVEPOINT
-        .mockResolvedValueOnce({ rowCount: 1, rows: [{ stock: 10 }] }) // SELECT FOR UPDATE
+        .mockResolvedValueOnce({ rowCount: 1, rows: [{ stock: 10, item_id: 'item-1', tiene_variantes: false }] }) // SELECT FOR UPDATE
+        .mockResolvedValueOnce({ rowCount: 0, rows: [] }) // sin lotes
         .mockResolvedValueOnce({ rows: [], rowCount: 1 }) // UPDATE stock
         .mockResolvedValueOnce({ rows: [], rowCount: 1 }) // INSERT reserva
         .mockResolvedValueOnce({ rows: [], rowCount: 0 }) // RELEASE
@@ -240,8 +241,58 @@ describe('ProductosService (catalogo maestro y stock)', () => {
       const sqlLock = (client.query as Mock).mock.calls[1][0];
       expect(sqlLock).toContain('FOR UPDATE'); // bloqueo pesimista exigido por regla
       expect(sqlLock).toContain('empresa_id = $1');
-      const sqlReserva = (client.query as Mock).mock.calls[3][0];
+      const sqlReserva = (client.query as Mock).mock.calls[4][0];
       expect(sqlReserva).toContain('INSERT INTO catalog.reservas_ordenes');
+    });
+
+    it('debe consumir lotes FEFO y registrar las asignaciones de la reserva', async () => {
+      const { servicio, client } = crear();
+      (client.query as Mock)
+        .mockResolvedValueOnce({ rows: [], rowCount: 0 }) // SAVEPOINT
+        .mockResolvedValueOnce({ rowCount: 1, rows: [{ stock: 10, item_id: 'item-1', tiene_variantes: false }] })
+        .mockResolvedValueOnce({
+          rowCount: 2,
+          rows: [
+            { id: 'lote-1', cantidad_disponible: 5, vencido: false },
+            { id: 'lote-2', cantidad_disponible: 5, vencido: false },
+          ],
+        })
+        .mockResolvedValueOnce({ rows: [], rowCount: 1 }) // lote 1
+        .mockResolvedValueOnce({ rows: [], rowCount: 1 }) // reserva lote 1
+        .mockResolvedValueOnce({ rows: [], rowCount: 1 }) // lote 2
+        .mockResolvedValueOnce({ rows: [], rowCount: 1 }) // reserva lote 2
+        .mockResolvedValueOnce({ rows: [], rowCount: 1 }) // stock
+        .mockResolvedValueOnce({ rows: [], rowCount: 1 }) // reserva orden
+        .mockResolvedValueOnce({ rows: [], rowCount: 0 }) // release
+        .mockResolvedValueOnce({ rows: [{ empresa_id: datosValidos.empresa_id, sku: 'sku-01', stock_restante: 3 }], rowCount: 1 });
+
+      const resultado = await servicio.reservarStock('o-lotes', [
+        { empresa_id: datosValidos.empresa_id, sku: 'sku-01', cantidad: 7 },
+      ]);
+
+      expect(resultado.ok).toBe(true);
+      const sqls = (client.query as Mock).mock.calls.map((c: any[]) => c[0] as string);
+      expect(sqls.filter((s: string) => s.includes('INSERT INTO catalog.reservas_lotes'))).toHaveLength(2);
+      expect(sqls.some((s: string) => s.includes('UPDATE catalog.items'))).toBe(true);
+    });
+
+    it('debe rechazar la reserva si los lotes vigentes no alcanzan', async () => {
+      const { servicio, client } = crear();
+      (client.query as Mock)
+        .mockResolvedValueOnce({ rows: [], rowCount: 0 }) // SAVEPOINT
+        .mockResolvedValueOnce({ rowCount: 1, rows: [{ stock: 10, item_id: 'item-1', tiene_variantes: false }] })
+        .mockResolvedValueOnce({ rowCount: 1, rows: [{ id: 'lote-1', cantidad_disponible: 5, vencido: true }] })
+        .mockResolvedValueOnce({ rows: [], rowCount: 1 }) // rollback savepoint
+        .mockResolvedValueOnce({ rows: [], rowCount: 0 }); // release
+
+      const resultado = await servicio.reservarStock('o-vencido', [
+        { empresa_id: datosValidos.empresa_id, sku: 'sku-01', cantidad: 1 },
+      ]);
+
+      expect(resultado.ok).toBe(false);
+      expect(resultado.fallidos).toEqual([
+        expect.objectContaining({ motivo: 'lote_vencido' }),
+      ]);
     });
 
     it('debe rechazar la reserva completa cuando alguna linea no alcanza stock', async () => {
@@ -285,6 +336,8 @@ describe('ProductosService (catalogo maestro y stock)', () => {
       const sqls = (client.query as Mock).mock.calls.map((c: any[]) => c[0] as string);
       expect(sqls.filter((s: string) => s.includes('SET stock = stock +')).length).toBe(2);
       expect(sqls.some((s: string) => s.includes('INSERT INTO catalog.ajustes_stock'))).toBe(true);
+      expect(sqls.some((s: string) => s.includes('UPDATE catalog.lotes_inventario'))).toBe(true);
+      expect(sqls.some((s: string) => s.includes('DELETE FROM catalog.reservas_lotes'))).toBe(true);
       expect(sqls.some((s: string) => s.includes('DELETE FROM catalog.reservas_ordenes'))).toBe(true);
     });
   });

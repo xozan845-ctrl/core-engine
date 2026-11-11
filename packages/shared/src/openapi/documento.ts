@@ -19,6 +19,59 @@ export function clasificarRutaOpenApi(ruta: string): SuperficieOpenApi {
   );
 }
 
+const META_ENVELOPE = 'MetaRespuesta';
+
+/**
+ * Envuelve las respuestas 2xx de `/api/v2/**` en `{ data, meta }` (R-C-1).
+ * No toca `/internal/**` ni respuestas sin schema JSON.
+ */
+export function envolverDocumentoOpenApi(documento: object): Documento {
+  const doc = clonar(documento) as Documento;
+  const paths = (doc.paths ?? {}) as Record<string, Record<string, unknown>>;
+  const components = (doc.components ?? {}) as Documento;
+  const schemas = (components.schemas ?? {}) as Record<string, unknown>;
+  schemas[META_ENVELOPE] = {
+    type: 'object',
+    required: ['timestamp', 'path', 'method', 'statusCode'],
+    properties: {
+      timestamp: { type: 'string', format: 'date-time' },
+      path: { type: 'string' },
+      method: { type: 'string' },
+      statusCode: { type: 'integer' },
+    },
+  };
+  components.schemas = schemas;
+  doc.components = components;
+
+  for (const [ruta, operaciones] of Object.entries(paths)) {
+    if (clasificarRutaOpenApi(ruta) !== 'publica') continue;
+    for (const operacion of Object.values(operaciones)) {
+      if (!operacion || typeof operacion !== 'object') continue;
+      const responses = (operacion as Documento).responses as
+        | Record<string, Documento>
+        | undefined;
+      for (const [status, response] of Object.entries(responses ?? {})) {
+        if (!/^2\d\d$/.test(status)) continue;
+        const content = response.content as Record<string, Documento> | undefined;
+        const json = content?.['application/json'];
+        if (!json?.schema) continue;
+        const schema = json.schema as Documento;
+        const propiedades = schema.properties as Record<string, unknown> | undefined;
+        if (propiedades?.data && propiedades?.meta) continue;
+        json.schema = {
+          type: 'object',
+          required: ['data', 'meta'],
+          properties: {
+            data: schema,
+            meta: { $ref: `#/components/schemas/${META_ENVELOPE}` },
+          },
+        };
+      }
+    }
+  }
+  return doc;
+}
+
 type Documento = Record<string, unknown>;
 
 function clonar<T>(valor: T): T {
