@@ -544,6 +544,30 @@ CREATE POLICY partes_empresa_archivar ON identity.partes FOR UPDATE TO authentic
          AND empresa_id::text = (auth.jwt() ->> 'tenant_id')
          AND eliminado_en IS NOT NULL AND estado = 'archivado');
 
+-- Registros genéricos por parte (historia clínica, recetas, expedientes).
+ALTER TABLE identity.partes_registros ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS partes_registros_admin ON identity.partes_registros;
+DROP POLICY IF EXISTS partes_registros_lectura ON identity.partes_registros;
+DROP POLICY IF EXISTS partes_registros_insert ON identity.partes_registros;
+DROP POLICY IF EXISTS partes_registros_update ON identity.partes_registros;
+DROP POLICY IF EXISTS partes_registros_delete ON identity.partes_registros;
+CREATE POLICY partes_registros_admin ON identity.partes_registros FOR ALL TO authenticated
+  USING (auth.rol() IN ('super_admin', 'admin'))
+  WITH CHECK (auth.rol() IN ('super_admin', 'admin'));
+CREATE POLICY partes_registros_lectura ON identity.partes_registros FOR SELECT TO authenticated
+  USING (empresa_id::text = (auth.jwt() ->> 'tenant_id'));
+CREATE POLICY partes_registros_insert ON identity.partes_registros FOR INSERT TO authenticated
+  WITH CHECK (auth.rol() IN ('empresario', 'vendedor', 'coordinador', 'supervisor', 'operativo')
+         AND empresa_id::text = (auth.jwt() ->> 'tenant_id'));
+CREATE POLICY partes_registros_update ON identity.partes_registros FOR UPDATE TO authenticated
+  USING (auth.rol() IN ('empresario', 'vendedor', 'coordinador', 'supervisor', 'operativo')
+         AND empresa_id::text = (auth.jwt() ->> 'tenant_id'))
+  WITH CHECK (auth.rol() IN ('empresario', 'vendedor', 'coordinador', 'supervisor', 'operativo')
+         AND empresa_id::text = (auth.jwt() ->> 'tenant_id'));
+CREATE POLICY partes_registros_delete ON identity.partes_registros FOR DELETE TO authenticated
+  USING (auth.rol() IN ('empresario', 'vendedor', 'coordinador', 'supervisor', 'operativo')
+         AND empresa_id::text = (auth.jwt() ->> 'tenant_id'));
+
 ALTER TABLE identity.medios_contacto ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS medios_contacto_admin ON identity.medios_contacto;
 DROP POLICY IF EXISTS medios_contacto_empresa_lectura ON identity.medios_contacto;

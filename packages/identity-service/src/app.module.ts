@@ -11,9 +11,10 @@ import { PacksModule } from './packs/packs.module';
 import { ExtensionesModule } from './extensiones/extensiones.module';
 import { PartesModule } from './partes/partes.module';
 import { PersonalModule } from './personal/personal.module';
+import { RegistrosModule } from './registros/registros.module';
 
 @Module({
-  imports: [PgModule, RabbitModule, OutboxModule, MetricsModule, AuthModule, UsuariosModule, EmpresasModule, ConfiguracionSitioModule, CapacidadesModule, PacksModule, ExtensionesModule, PartesModule, PersonalModule],
+  imports: [PgModule, RabbitModule, OutboxModule, MetricsModule, AuthModule, UsuariosModule, EmpresasModule, ConfiguracionSitioModule, CapacidadesModule, PacksModule, ExtensionesModule, PartesModule, PersonalModule, RegistrosModule],
   providers: [SeedService],
   controllers: [InternalController],
 })
