@@ -9,11 +9,13 @@
 #![allow(dead_code)]
 
 pub mod auth;
+pub mod clients;
 pub mod config;
 pub mod db;
 pub mod errors;
 pub mod http;
 pub mod logs;
 pub mod metrics;
+pub mod outbox;
 pub mod scheduling;
 pub mod state;

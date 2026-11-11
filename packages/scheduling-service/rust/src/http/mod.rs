@@ -17,7 +17,7 @@ use axum::extract::{FromRequest, MatchedPath, Request, State};
 use axum::http::{header, HeaderValue, StatusCode};
 use axum::middleware::{self, Next};
 use axum::response::{Html, IntoResponse, Response};
-use axum::routing::{get, post};
+use axum::routing::{get, patch, post};
 use axum::{Json, Router};
 use serde_json::Value;
 use std::time::Instant;
@@ -63,6 +63,18 @@ pub fn build_router(state: AppState) -> Router {
             post(agenda::crear_disponibilidad),
         )
         .route("/api/v2/scheduling/bloqueos", post(agenda::crear_bloqueo))
+        .route(
+            "/api/v2/scheduling/citas",
+            get(agenda::listar_citas).post(agenda::crear_cita),
+        )
+        .route(
+            "/api/v2/scheduling/citas/{cita_id}/cancelar",
+            patch(agenda::cancelar_cita),
+        )
+        .route(
+            "/api/v2/scheduling/recordatorios",
+            get(agenda::listar_recordatorios),
+        )
         .route(
             "/internal/scheduling/disponibilidad",
             post(agenda::verificar_disponibilidad),
