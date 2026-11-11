@@ -1,7 +1,7 @@
 # ADR-0002: Envelope de respuestas y desacoplamiento entre servicios
 
 - **Fecha**: 2026-11-10
-- **Estado**: Aceptado — fase 1 implementada en `commissions-service`
+- **Estado**: Aceptado — fases 1-3 y 5-6 implementadas; envelope de `market-intelligence` (dev) pendiente
 - **Ámbito**: contrato público `/api/v2`, paginación, límites entre bounded contexts
 
 ## Contexto
@@ -125,3 +125,18 @@ Cada fase es un PR atómico y no mezcla envelope con desacoplamiento.
   lecturas directas fuera de migraciones o pruebas.
 - `identity` no escribe en `stores.tiendas`.
 - `npm run demo`, integración y OpenAPI quedan verdes en cada fase.
+
+## Estado de implementación (2026-11-11)
+
+- Envelope `{ data, meta }` aplicado en **10 de 11** servicios;
+  `market-intelligence` (solo dev) es el único pendiente. El criterio se cumple
+  en los servicios desplegados en stage/producción.
+- `orders` consulta capacidades por la API interna de identity; `scheduling` y
+  `field` no leen tablas `identity.*`.
+- `identity` ya no lee `stores.tiendas`: `assertTienda` valida con
+  `obtenerTienda` (falla cerrado 503 si stores no responde) y
+  `listarAsignaciones` resuelve los nombres con `tiendasPorIds` (degrada a
+  `null`). PR #528.
+- `identity` no escribe `stores.tiendas`; la asignación vendedor–tienda va por
+  la API interna de stores.
+- Pendiente único: envelope de `market-intelligence`, fuera de stage/producción.
