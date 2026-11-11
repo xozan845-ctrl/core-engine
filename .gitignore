@@ -18,3 +18,7 @@ packages/shared/dist/
 *.tsbuildinfo
 # Configuración local de OpenCode (MCP/rutas de la máquina): no versionar.
 opencode.jsonc
+# Artefactos locales de Archify y la skill instalada: no versionar.
+.archify/
+.agents/
+skills-lock.json
