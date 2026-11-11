@@ -57,9 +57,12 @@ jobs:
       - name: Run bounded k6 order flow (R-CD-12)
         env:
           BASE_URL: http://localhost:8080
+          K6_VUS: "2"
+          K6_DURACION: "20s"
         run: |
           docker run --rm -i --network host \
             -e BASE_URL -e ADMIN_EMAIL -e ADMIN_PASSWORD \
+            -e K6_VUS -e K6_DURACION \
             -v "$PWD/security/k6:/scripts:ro" \
             grafana/k6:latest run /scripts/order-flow.js
       - name: Assert no unexpected service errors (R-E-8)
