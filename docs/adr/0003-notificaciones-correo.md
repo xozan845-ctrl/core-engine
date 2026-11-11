@@ -1,7 +1,7 @@
 # ADR-0003: Notificaciones transaccionales y correo
 
 - **Fecha**: 2026-11-11
-- **Estado**: Aceptado — fases 1-4 (correo, reset, notificaciones del pedido e invitaciones) implementadas; fase 5 (E2E del reset) pendiente
+- **Estado**: Aceptado — fases 1-5 completas (2026-11-11)
 - **Ámbito**: correo, notificaciones del pedido, reset de contraseña, secretos
 
 ## Contexto
@@ -57,11 +57,11 @@
 
 | Fase | Alcance | PR |
 |---|---|---|
-| 1 | `@core/shared/email` + adapters + tests | `feat(shared)` |
-| 2 | Reset de contraseña en identity (migración, endpoints, tests) | `feat(identity)` |
-| 3 | `notifications-service` + plantillas + consumidor | `feat(notifications)` |
-| 4 | Invitaciones por correo con el mismo adapter | `feat(identity)` |
-| 5 | E2E del reset con fake provider | `test(integration)` |
+| 1 | `@core/shared/email` + adapters + tests | #536 |
+| 2 | Reset de contraseña en identity (migración, endpoints, tests) | #544 |
+| 3 | `notifications-service` + plantillas + consumidor | #545 |
+| 4 | Invitaciones por correo con el mismo adapter | #546 |
+| 5 | E2E del reset con SMTP real (Mailpit) | #547 |
 
 Cada fase es un PR atómico y no adelanta la siguiente. La migración de reset se
 registra en `scripts/config/db-migrations.json` (R-DB-6) y la tabla lleva RLS
@@ -87,5 +87,23 @@ registra en `scripts/config/db-migrations.json` (R-DB-6) y la tabla lleva RLS
 - Reset: la solicitud responde `ok` sin revelar existencia; la confirmación
   cambia la contraseña; token usado o expirado falla; tests.
 - Pedido: un correo por destinatario/evento, idempotente; reintentos y DLQ.
-- Tests/E2E con `EMAIL_MODE=log`; nunca SMTP real en CI.
+- Tests/E2E: unit e integración con `EMAIL_MODE=log`; el E2E usa SMTP
+  **local** (Mailpit en loopback). Nunca un proveedor externo en CI.
 - `git grep` no encuentra credenciales SMTP; solo aparecen en `.env*.example`.
+
+## Estado de implementación (2026-11-11)
+
+- Fases 1-5 mergeadas: #536 (`shared/email`), #544 (reset), #545
+  (`notifications-service`), #546 (invitaciones) y #547 (E2E con Mailpit).
+- `EmailProvider` intercambiable: `log` en dev/test y `smtp` en stage/prod;
+  `notifications-service` consume `notifications.todos` con idempotencia en
+  `notifications.eventos_procesados`, reintentos y DLQ.
+- Reset: token SHA-256 de un solo uso (30 min), sin enumeración de correos y con
+  revocación de sesiones al confirmar.
+- Invitaciones de personal: envío del enlace de 72 h; un fallo SMTP no invalida
+  la invitación.
+- E2E real: Mailpit captura el correo, el smoke extrae el enlace y valida
+  solicitud, confirmación, un solo uso, login nuevo y revocación de sesiones.
+  Mailpit solo vive en `docker-compose.dev.yml` y en loopback.
+- Pendiente fuera de alcance: notificaciones push y plantillas de otras
+  verticales.
