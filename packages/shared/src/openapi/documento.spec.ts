@@ -3,6 +3,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import {
   clasificarRutaOpenApi,
+  envolverDocumentoOpenApi,
   exportarDocumentoOpenApi,
   schemasAlcanzables,
   separarDocumentoOpenApi,
@@ -87,6 +88,34 @@ describe('documento OpenAPI por superficie', () => {
   it('schemasAlcanzables devuelve solo los referenciados', () => {
     const schemas = schemasAlcanzables(documento, documento.paths);
     expect(Object.keys(schemas).sort()).toEqual(['Empresa', 'Lote', 'Producto']);
+  });
+
+  it('envuelve las respuestas públicas sin tocar las internas', () => {
+    const envuelto = envolverDocumentoOpenApi(documento);
+    const publico = (envuelto.paths as Record<string, Record<string, unknown>>)['/api/v2/catalog/productos'];
+    const schema = (publico.get as Record<string, Record<string, Record<string, unknown>>>)
+      .responses['200'].content['application/json'].schema;
+    expect(schema).toMatchObject({
+      type: 'object',
+      required: ['data', 'meta'],
+      properties: { meta: { $ref: '#/components/schemas/MetaRespuesta' } },
+    });
+    expect((schema.properties as Record<string, unknown>).data).toEqual({
+      $ref: '#/components/schemas/Producto',
+    });
+
+    const interno = (envuelto.paths as Record<string, Record<string, unknown>>)['/internal/productos/lote'];
+    const schemaInterno = (interno.get as Record<string, Record<string, Record<string, unknown>>>)
+      .responses['200'].content['application/json'].schema;
+    expect(schemaInterno).toEqual({ $ref: '#/components/schemas/Lote' });
+    expect((envuelto.components as Record<string, Record<string, unknown>>).schemas.MetaRespuesta)
+      .toBeDefined();
+  });
+
+  it('no duplica un envelope ya envuelto', () => {
+    const unaVez = envolverDocumentoOpenApi(documento);
+    const dosVeces = envolverDocumentoOpenApi(unaVez);
+    expect(dosVeces.paths).toEqual(unaVez.paths);
   });
 
   it('exporta ambos archivos en la carpeta del servicio', () => {

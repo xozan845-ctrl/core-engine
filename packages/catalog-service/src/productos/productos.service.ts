@@ -955,8 +955,8 @@ export class ProductosService {
     try {
         for (const item of items) {
           // Bloqueo pesimista requerido por regla dorada (Data Integrity)
-          const lock = await client.query<{ stock: number; tiene_variantes: boolean }>(
-            `SELECT i.stock,
+          const lock = await client.query<{ stock: number; item_id: string; tiene_variantes: boolean }>(
+            `SELECT i.stock, i.id AS item_id,
                     EXISTS (SELECT 1 FROM catalog.items v
                              WHERE v.parent_item_id = i.id AND v.eliminado_en IS NULL) AS tiene_variantes
                FROM catalog.items i
@@ -983,6 +983,51 @@ export class ProductosService {
               motivo: 'variante_requerida',
             });
             continue;
+          }
+
+          const itemId = lock.rows[0].item_id;
+          const lotes = await client.query<{
+            id: string;
+            cantidad_disponible: number;
+            vencido: boolean;
+          }>(
+            `SELECT id, cantidad_disponible,
+                    (vence_en IS NOT NULL AND vence_en < CURRENT_DATE) AS vencido
+               FROM catalog.lotes_inventario
+              WHERE empresa_id = $1 AND item_id = $2 AND cantidad_disponible > 0
+              ORDER BY vence_en NULLS LAST, creado_en, id
+              FOR UPDATE`,
+            [item.empresa_id, itemId],
+          );
+          if ((lotes.rowCount ?? 0) > 0) {
+            let restante = item.cantidad;
+            for (const lote of lotes.rows.filter((fila) => !fila.vencido)) {
+              if (restante === 0) break;
+              const cantidad = Math.min(restante, lote.cantidad_disponible);
+              await client.query(
+                `UPDATE catalog.lotes_inventario
+                    SET cantidad_disponible = cantidad_disponible - $1,
+                        actualizado_en = NOW()
+                  WHERE id = $2`,
+                [cantidad, lote.id],
+              );
+              await client.query(
+                `INSERT INTO catalog.reservas_lotes
+                   (order_id, lote_id, empresa_id, item_id, cantidad)
+                 VALUES ($1, $2, $3, $4, $5)`,
+                [orderId, lote.id, item.empresa_id, itemId, cantidad],
+              );
+              restante -= cantidad;
+            }
+            if (restante > 0) {
+              fallidos.push({
+                empresa_id: item.empresa_id,
+                sku: item.sku,
+                cantidad: item.cantidad,
+                motivo: 'lote_vencido',
+              });
+              continue;
+            }
           }
 
           await client.query(
@@ -1065,6 +1110,16 @@ export class ProductosService {
         WHERE i.tipo = 'producto' AND i.eliminado_en IS NULL`,
         [orderId, JSON.stringify(items)],
       );
+      // Restaura exactamente las asignaciones FEFO de la reserva.
+      await client.query(
+        `UPDATE catalog.lotes_inventario l
+            SET cantidad_disponible = LEAST(l.cantidad_inicial, l.cantidad_disponible + r.cantidad),
+                actualizado_en = NOW()
+           FROM catalog.reservas_lotes r
+          WHERE r.lote_id = l.id AND r.order_id = $1`,
+        [orderId],
+      );
+      await client.query('DELETE FROM catalog.reservas_lotes WHERE order_id = $1', [orderId]);
       // La reserva de esta orden ya no está activa tras reintegrar el stock.
       await client.query('DELETE FROM catalog.reservas_ordenes WHERE order_id = $1', [orderId]);
   }

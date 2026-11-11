@@ -62,5 +62,6 @@
   "49_scheduling_grants.sql": "e76fa271a2e9a8e9bf2003ea9ea509bd88463678fc26643d69481876cc895fd1",
   "50_field_rls.sql": "6c4d8b5767c1918add003f231fd059fd6e3ea461b9a3d1ad37dafcaddc93b01e",
   "51_app_grants.sql": "5abe5ab703011047bad6af6ce46cd93728c6f82fb009133305d3042d16b3fc68",
-  "52_orders_proyeccion.sql": "0d4d0ac6131ad6d3b3bf7b175d420a5525898087ed899858512e775d52f84e34"
+  "52_orders_proyeccion.sql": "0d4d0ac6131ad6d3b3bf7b175d420a5525898087ed899858512e775d52f84e34",
+  "53_reservas_lotes.sql": "677c448f4f37f69cc0fcc8e6b19d987632b355cb434fe1503f5e06ccb532b931"
 }

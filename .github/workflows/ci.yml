@@ -134,6 +134,12 @@ jobs:
           npm run build -w @core/catalog-service
           npm run build -w @core/scheduling-service
           npm run build -w @core/field-service
+      - name: Build orders, logistics, commissions and finance for the saga integration
+        run: |
+          npm run build -w @core/orders-service
+          npm run build -w @core/logistics-service
+          npm run build -w @core/commissions-service
+          npm run build -w @core/finance-service
       - name: Verify catalog stock projection and API contracts against ephemeral PostgreSQL
         run: npm run test:integration
       - name: Verify multi-vertical pack/tenant consistency (R-I-12)
