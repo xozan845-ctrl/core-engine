@@ -100,6 +100,8 @@ describe('ItemsService (fase 2)', () => {
 
     expect(item).toMatchObject({ tipo: 'producto', parent_item_id: 'padre-1', track_inventory: true, stock: 4 });
     expect(pg.queryOne).toHaveBeenCalledWith(expect.stringContaining('INSERT INTO catalog.items'), expect.any(Array));
+    // La tabla expone `id`; RETURNING debe aliasarlo a item_id, no pedirlo crudo.
+    expect(pg.queryOne).toHaveBeenCalledWith(expect.stringContaining('RETURNING id AS item_id'), expect.any(Array));
   });
 
   it('crea servicios y alquileres válidos y rechaza un padre inválido', async () => {

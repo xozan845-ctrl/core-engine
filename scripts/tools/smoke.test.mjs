@@ -13,6 +13,13 @@ test('el corte quincenal acepta 201 con lista, como declara OpenAPI', () => {
   assert.equal(corteLiquidacionesValido({ status: 201, json: [] }), true);
   assert.equal(corteLiquidacionesValido({ status: 200, json: [] }), false);
   assert.equal(corteLiquidacionesValido({ status: 201, json: { monto_cents: 13800 } }), false);
+  assert.equal(
+    corteLiquidacionesValido({
+      status: 201,
+      json: { data: [{ monto_cents: 13800 }], meta: { timestamp: '', path: '', method: '', statusCode: 201 } },
+    }),
+    true,
+  );
 });
 
 function json(res, status, body) {

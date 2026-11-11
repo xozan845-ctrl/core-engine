@@ -38,7 +38,7 @@ export async function suite05Ordenes(client, cfg, compradorToken, adminToken, ve
 
     if (ofertaId) {
       // Crear orden
-      const orden = await client.post('/api/v2/orders', { items: [{ oferta_id: ofertaId, cantidad: 1 }] }, cAuth);
+      const orden = await client.post('/api/v2/orders', { tipo_orden: 'compra', items: [{ oferta_id: ofertaId, cantidad: 1 }] }, cAuth);
       resultados.push({ test: 'Crear orden (TC-03)', status: orden.status, pass: orden.status === 201 || orden.status === 200 });
       const orderId = orden.body?.id;
 
@@ -84,17 +84,17 @@ export async function suite05Ordenes(client, cfg, compradorToken, adminToken, ve
     }
 
     // Validaciones de payload (400 antes de tocar dominio)
-    const c0 = await client.post('/api/v2/orders', { items: [{ oferta_id: 'x', cantidad: 0 }] }, cAuth);
+    const c0 = await client.post('/api/v2/orders', { tipo_orden: 'compra', items: [{ oferta_id: 'x', cantidad: 0 }] }, cAuth);
     resultados.push({ test: 'Cantidad 0 → 400 (RN-05)', status: c0.status, pass: c0.status === 400 });
 
-    const vacios = await client.post('/api/v2/orders', { items: [] }, cAuth);
+    const vacios = await client.post('/api/v2/orders', { tipo_orden: 'compra', items: [] }, cAuth);
     resultados.push({ test: 'Items vacíos → 400 (RN-05)', status: vacios.status, pass: vacios.status === 400 });
 
-    const neg = await client.post('/api/v2/orders', { items: [{ oferta_id: 'x', cantidad: -1 }] }, cAuth);
+    const neg = await client.post('/api/v2/orders', { tipo_orden: 'compra', items: [{ oferta_id: 'x', cantidad: -1 }] }, cAuth);
     resultados.push({ test: 'Items negativos → 400', status: neg.status, pass: neg.status === 400 });
 
     // Oferta inexistente -> 404
-    const noOferta = await client.post('/api/v2/orders', { items: [{ oferta_id: '00000000-0000-0000-0000-000000000000', cantidad: 1 }] }, cAuth);
+    const noOferta = await client.post('/api/v2/orders', { tipo_orden: 'compra', items: [{ oferta_id: '00000000-0000-0000-0000-000000000000', cantidad: 1 }] }, cAuth);
     resultados.push({ test: 'Oferta inexistente → 404', status: noOferta.status, pass: noOferta.status === 404 });
 
     // Vendedor no puede comprar (ruta solo comprador)

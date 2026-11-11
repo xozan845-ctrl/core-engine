@@ -1,7 +1,7 @@
 # ADR-0002: Envelope de respuestas y desacoplamiento entre servicios
 
 - **Fecha**: 2026-11-10
-- **Estado**: Propuesto
+- **Estado**: Aceptado — fase 1 implementada en `commissions-service`
 - **Ámbito**: contrato público `/api/v2`, paginación, límites entre bounded contexts
 
 ## Contexto
@@ -54,20 +54,20 @@ La paginación viaja dentro de `data`:
 ```json
 {
   "data": {
-    "data": [],
+    "items": [],
     "total": 0,
-    "page": 1,
-    "limit": 20,
-    "totalPages": 1
+    "pagina": 1,
+    "limite": 20,
+    "paginas": 1
   },
   "meta": { "timestamp": "...", "path": "...", "method": "GET", "statusCode": 200 }
 }
 ```
 
-> **Decisión pendiente de nombres de paginación:** el `Pagina<T>` actual usa
-> `items/pagina/limite/paginas`. Antes de la fase 1 se decide si el envelope usa
-> esos nombres en español (consistencia con el dominio) o los de R-C-1. No se
-> cambia el contrato dos veces: la decisión se registra en una enmienda a R-C-1.
+> **Decisión de la fase 1:** se conservan los nombres actuales de `Pagina<T>`
+> (`items/total/pagina/limite/paginas`) dentro de `data`, para no cambiar dos
+> veces el contrato y mantener consistencia con el dominio. R-C-1 queda
+> enmendada con ese shape.
 
 ### 2. Desacoplamiento por APIs internas
 
@@ -90,7 +90,7 @@ Cada fase es un PR atómico y no mezcla envelope con desacoplamiento.
 | Fase | Alcance | Criterio de salida |
 |---|---|---|
 | 0 | Enmienda de R-C-1 con los nombres de paginación elegidos y contrato `RespuestaApi<T>` | Regla y ADR sin contradicción |
-| 1 | Interceptor compartido + tests puros + un servicio piloto (`commissions`) | `commissions` devuelve envelope; test de contrato y OpenAPI actualizados |
+| 1 | Interceptor compartido + tests puros + un servicio piloto (`commissions`) | ✅ `commissions` devuelve envelope; test de contrato y OpenAPI actualizados |
 | 2 | `finance`, `orders`, `logistics` | Tres servicios con envelope y smoke actualizado |
 | 3 | `catalog`, `stores`, `scheduling`, `identity`, `field`, `storage`, `market-intelligence` | Todos los servicios públicos con envelope |
 | 4 | Gateway, smoke, QA harness y OpenAPI agregado | `npm run demo` verde y contrato público sin respuestas sin envolver |
