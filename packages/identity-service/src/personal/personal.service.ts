@@ -1,11 +1,13 @@
-import { Injectable } from '@nestjs/common';
+import { Inject, Injectable } from '@nestjs/common';
 import { createHash, randomBytes } from 'node:crypto';
 import * as bcrypt from 'bcryptjs';
 import {
   ConflictError,
   DomainError,
+  EMAIL_PROVIDER,
   ForbiddenError,
   GoneError,
+  Logger,
   NotFoundError,
   obtenerTienda,
   PgService,
@@ -14,6 +16,7 @@ import {
   ServiceUnavailableError,
   tiendasPorIds,
 } from '@core/shared';
+import type { EmailProvider } from '@core/shared';
 import { AuthService, Sesion } from '../auth/auth.service';
 
 const TOKEN_TTL_MS = 72 * 60 * 60 * 1000;
@@ -141,6 +144,15 @@ function hashToken(token: string): string {
   return createHash('sha256').update(token).digest('hex');
 }
 
+function escaparHtml(valor: string): string {
+  return valor
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
 function validarObjeto(valor: unknown, campo: string): Record<string, unknown> {
   if (!valor || typeof valor !== 'object' || Array.isArray(valor)) {
     throw new DomainError(`${campo.toUpperCase()}_INVALIDO`, `${campo} debe ser un objeto JSON.`);
@@ -184,8 +196,13 @@ function validarCorreo(correo: string): string {
 @Injectable()
 export class PersonalService {
   private readonly frontendUrl = (process.env.FRONTEND_URL ?? 'http://localhost:5173').replace(/\/+$/, '');
+  private readonly logger = Logger.create('identity.personal');
 
-  constructor(private readonly pg: PgService, private readonly auth: AuthService) {}
+  constructor(
+    private readonly pg: PgService,
+    private readonly auth: AuthService,
+    @Inject(EMAIL_PROVIDER) private readonly email: EmailProvider,
+  ) {}
 
   async crearRol(actor: Actor, empresaId: string, datos: CrearRolDatos): Promise<RolEmpresa> {
     await this.assertEmpresario(actor, empresaId);
@@ -323,7 +340,38 @@ export class PersonalService {
       [empresaId, correo, datos.nombre?.trim() || null, datos.tipo ?? 'invitacion', datos.rol_empresa_id, datos.tienda_id ?? null, datos.puesto_id ?? null, JSON.stringify(datos.metadata ?? {}), hashToken(token), expira, actor.user_id],
     );
     if (!fila) throw new ConflictError('No se pudo generar el enlace de incorporación.');
-    return { ...fila, url_invitacion: `${this.frontendUrl}/incorporacion/${encodeURIComponent(token)}` };
+    const url = `${this.frontendUrl}/incorporacion/${encodeURIComponent(token)}`;
+    await this.enviarInvitacion(fila, url);
+    return { ...fila, url_invitacion: url };
+  }
+
+  /**
+   * Envía el enlace de incorporación con el adapter compartido. Un fallo de
+   * correo no invalida la invitación ni rompe la respuesta: el enlace sigue
+   * disponible para reenviarlo (R-OB-1: nunca se registra el correo/token).
+   */
+  private async enviarInvitacion(
+    fila: InvitacionPersonal & { empresa_nombre: string },
+    url: string,
+  ): Promise<void> {
+    const nombre = fila.nombre?.trim() || 'Hola';
+    const asunto = `Invitación a ${fila.empresa_nombre}`;
+    const texto =
+      `${nombre}, te invitaron a unirte a ${fila.empresa_nombre} como ${fila.rol_nombre}. ` +
+      `Acepta la invitación (válida 72 horas): ${url}`;
+    const html =
+      `<p>${escaparHtml(nombre)}, te invitaron a unirte a ` +
+      `<strong>${escaparHtml(fila.empresa_nombre)}</strong> como ${escaparHtml(fila.rol_nombre)}.</p>` +
+      `<p><a href="${url}">Aceptar invitación</a> (válida 72 horas).</p>`;
+    try {
+      await this.email.send({ to: fila.correo, subject: asunto, text: texto, html });
+    } catch (error) {
+      const codigo = (error as { code?: unknown })?.code;
+      this.logger.error({
+        msg: 'email_invitacion_fallido',
+        ...(typeof codigo === 'string' ? { codigo } : {}),
+      });
+    }
   }
 
   async consultarInvitacion(token: string) {
