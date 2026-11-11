@@ -1253,3 +1253,41 @@ El PR #90 se completó utilizando convenciones atómicas (R-PR-1, R-GC-1..5) gar
 - **CI post-merge:** run `42908104513` sobre `develop` (`0c19300`) en `success`.
 - **Snapshot:** estado consolidado reescrito en [`AUDIT.md`](./AUDIT.md),
   conforme a R-COV-3.
+
+---
+
+# AUDIT (histórico) — 17ª auditoría de Core Engine (cierre del envelope y de ADR-0003)
+
+- **Fecha:** 2026-11-11
+- **SHA auditado:** `753a6ff` (`develop`).
+- **Estado global:** 🟢 **CUMPLE** en los gates automáticos de PR; G-5 y G-6
+  cerrados. Quedan deudas de property/fuzz, cobertura objetivo y warnings.
+
+## Intervención
+
+1. Envelope `{data,meta}` aplicado en **11/11** servicios con API pública y
+   validado por `openapi-contract` sobre todo el contrato agregado (R-C-1).
+2. `smoke`, `smoke-remote` y QA harness desenvuelven el envelope de forma
+   central; el gateway sigue siendo un proxy sin transformar cuerpos.
+3. G-5 cerrado: OpenAPI sincronizado y sin respuestas públicas JSON 2xx sin
+   envelope. G-6 cerrado como gate de release (`release.yml` → `e2e.yml`).
+4. Se incorporaron notificaciones (ADR-0003), password reset/invitaciones por
+   correo, tarifas por rango y FEFO; la matriz de tests subió a
+   **1.533 tests / 151 archivos / 14 workspaces**.
+5. Integración: **20 archivos / 67 tests** con PostgreSQL efímero, incluidos
+   Outbox, saga completa y FEFO.
+
+## Evidencia
+
+- `npm test` → 0; **1.533 tests / 151 archivos / 14 workspaces**.
+- `npm run build` → 0; `npm run lint` → 0 (45 warnings).
+- `npm run coverage:compare` → 0 (14/14 ≥ baseline).
+- `npm run swagger:export` → 0 y sin diff (359 operaciones: 327 públicas + 32 internas).
+- `TEST_DATABASE_URL=... npm run test:integration` → 0 (20 archivos / 67 tests).
+- `npm run rules:check` → 0 (90 tests, 22 suites, 52/238 IDs); `test:engine` → 0 (21);
+  `test:smoke` → 0 (61).
+- `npm run baseline:guard` → 0; `db:migrations` → 71; `db:rls` → 46.
+- `npm audit --audit-level=high` → 0; `--audit-level=moderate` → 13 (1 low, 12 moderate).
+- **CI post-merge:** run `43088217913` sobre `develop` (`753a6ff`) en `success`.
+- **Snapshot:** estado consolidado reescrito en [`AUDIT.md`](./AUDIT.md),
+  conforme a R-COV-3.
