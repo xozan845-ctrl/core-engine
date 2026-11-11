@@ -9,6 +9,10 @@ import {
   tiendasPorEmpresa,
   tiendasPorIds,
   timeoutInternoMs,
+  registrarCreditoOrden,
+  anularCreditoOrden,
+  cotizarItemReserva,
+  verificarDisponibilidadReserva,
 } from './service-clients';
 
 const fetchMock = vi.fn();
@@ -129,6 +133,83 @@ describe('service-clients (servicio→servicio)', () => {
     await expect(asignarVendedorATienda('t', 'u', 10)).resolves.toBe('conflicto');
     fetchMock.mockRejectedValueOnce(new Error('caido'));
     await expect(asignarVendedorATienda('t', 'u', 10)).resolves.toBe('error');
+  });
+
+  it('registrarCreditoOrden distingue ok, rechazo y error', async () => {
+    fetchMock.mockResolvedValueOnce(
+      respuesta(201, { credito_id: 'c-1', balance_cents: 100, limite_cents: 500 }),
+    );
+    await expect(
+      registrarCreditoOrden({
+        empresa_id: 'e-1',
+        parte_id: 'p-1',
+        order_id: 'o-1',
+        monto_cents: 100,
+        concepto: 'Pedido',
+      }),
+    ).resolves.toEqual({ estado: 'ok', credito: { credito_id: 'c-1', balance_cents: 100, limite_cents: 500 } });
+    fetchMock.mockResolvedValueOnce(respuesta(409));
+    await expect(
+      registrarCreditoOrden({ empresa_id: 'e-1', parte_id: 'p-1', order_id: 'o-1', monto_cents: 100, concepto: 'x' }),
+    ).resolves.toEqual({ estado: 'rechazado' });
+    fetchMock.mockRejectedValueOnce(new Error('caido'));
+    await expect(
+      registrarCreditoOrden({ empresa_id: 'e-1', parte_id: 'p-1', order_id: 'o-1', monto_cents: 100, concepto: 'x' }),
+    ).resolves.toEqual({ estado: 'error' });
+  });
+
+  it('anularCreditoOrden devuelve true solo con respuesta válida', async () => {
+    fetchMock.mockResolvedValueOnce(respuesta(200, { ok: true }));
+    await expect(anularCreditoOrden('o-1')).resolves.toBe(true);
+    fetchMock.mockResolvedValueOnce(respuesta(500));
+    await expect(anularCreditoOrden('o-1')).resolves.toBe(false);
+    fetchMock.mockRejectedValueOnce(new Error('caido'));
+    await expect(anularCreditoOrden('o-1')).resolves.toBe(false);
+  });
+
+  it('cotizarItemReserva devuelve la cotización o null', async () => {
+    fetchMock.mockResolvedValueOnce(respuesta(200, { total_cents: 90000, dias: 3 }));
+    await expect(
+      cotizarItemReserva({ empresa_id: 'e-1', item_id: 'i-1', desde: '2026-12-20', hasta: '2026-12-22' }),
+    ).resolves.toEqual({ total_cents: 90000, dias: 3 });
+    fetchMock.mockResolvedValueOnce(respuesta(500));
+    await expect(
+      cotizarItemReserva({ empresa_id: 'e-1', item_id: 'i-1', desde: '2026-12-20', hasta: '2026-12-22' }),
+    ).resolves.toBeNull();
+    fetchMock.mockRejectedValueOnce(new Error('caido'));
+    await expect(
+      cotizarItemReserva({ empresa_id: 'e-1', item_id: 'i-1', desde: '2026-12-20', hasta: '2026-12-22' }),
+    ).resolves.toBeNull();
+  });
+
+  it('verificarDisponibilidadReserva distingue libre, ocupado y caída', async () => {
+    fetchMock.mockResolvedValueOnce(respuesta(201, { disponible: true }));
+    await expect(
+      verificarDisponibilidadReserva({
+        empresa_id: 'e-1',
+        recurso_id: 'r-1',
+        inicia_en: '2026-12-20T15:00:00.000Z',
+        termina_en: '2026-12-22T11:00:00.000Z',
+      }),
+    ).resolves.toBe(true);
+    fetchMock.mockResolvedValueOnce(respuesta(409));
+    await expect(
+      verificarDisponibilidadReserva({
+        empresa_id: 'e-1',
+        recurso_id: 'r-1',
+        inicia_en: '2026-12-20T15:00:00.000Z',
+        termina_en: '2026-12-22T11:00:00.000Z',
+      }),
+    ).resolves.toBe(false);
+    fetchMock.mockRejectedValueOnce(new Error('caido'));
+    await expect(
+      verificarDisponibilidadReserva({
+        empresa_id: 'e-1',
+        recurso_id: 'r-1',
+        inicia_en: '2026-12-20T15:00:00.000Z',
+        termina_en: '2026-12-22T11:00:00.000Z',
+      }),
+    ).resolves.toBeNull();
   });
 
   it('desasignarVendedorDeTienda devuelve true solo con respuesta válida', async () => {
