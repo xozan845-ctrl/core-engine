@@ -22,14 +22,6 @@ x-servicio-base: &servicio-base
     - .env
   environment:
     TZ: America/Managua
-    # Correo transaccional: en dev `log`; el E2E lo conmuta a Mailpit sin
-    # tocar el código (ADR-0003).
-    EMAIL_MODE: ${EMAIL_MODE:-log}
-    EMAIL_FROM: ${EMAIL_FROM:-no-reply@core-engine.test}
-    SMTP_HOST: ${SMTP_HOST:-}
-    SMTP_PORT: ${SMTP_PORT:-587}
-    SMTP_USER: ${SMTP_USER:-}
-    SMTP_PASSWORD: ${SMTP_PASSWORD:-}
   depends_on:
     postgres:
       condition: service_healthy
@@ -142,6 +134,13 @@ services:
       SERVICIO: identity-service
       PORT: 3001
       OUTBOX_TABLA: identity.outbox
+      # Correo transaccional (ADR-0003): en dev `log`; el E2E usa Mailpit.
+      EMAIL_MODE: ${EMAIL_MODE:-log}
+      EMAIL_FROM: ${EMAIL_FROM:-no-reply@core-engine.test}
+      SMTP_HOST: ${SMTP_HOST:-}
+      SMTP_PORT: ${SMTP_PORT:-587}
+      SMTP_USER: ${SMTP_USER:-}
+      SMTP_PASSWORD: ${SMTP_PASSWORD:-}
 
   catalog-service:
     <<: *servicio-base
@@ -274,6 +273,13 @@ services:
     environment:
       SERVICIO: notifications-service
       PORT: 3012
+      # Mismo adapter que identity: el E2E conmuta a Mailpit.
+      EMAIL_MODE: ${EMAIL_MODE:-log}
+      EMAIL_FROM: ${EMAIL_FROM:-no-reply@core-engine.test}
+      SMTP_HOST: ${SMTP_HOST:-}
+      SMTP_PORT: ${SMTP_PORT:-587}
+      SMTP_USER: ${SMTP_USER:-}
+      SMTP_PASSWORD: ${SMTP_PASSWORD:-}
 
   # Capturador SMTP solo para desarrollo: el E2E lee el enlace de reset desde
   # su API. No se publica fuera de loopback ni se despliega en stage/prod.
