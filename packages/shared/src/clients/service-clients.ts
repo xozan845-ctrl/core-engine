@@ -161,3 +161,45 @@ export async function desasignarVendedorDeTienda(
   );
   return res.status !== 0 && !!res.data;
 }
+
+function financeUrl(): string {
+  return (process.env.FINANCE_SERVICE_URL ?? 'http://finance-service:3007').replace(/\/+$/, '');
+}
+
+export interface CreditoOrdenResumen {
+  credito_id: string;
+  balance_cents: number;
+  limite_cents: number;
+}
+
+export type ResultadoCreditoOrden =
+  | { estado: 'ok'; credito: CreditoOrdenResumen }
+  | { estado: 'rechazado' }
+  | { estado: 'error' };
+
+/** Registra la cuenta por cobrar de una orden a crédito (idempotente por order_id). */
+export async function registrarCreditoOrden(input: {
+  empresa_id: string;
+  parte_id: string;
+  order_id: string;
+  monto_cents: number;
+  concepto: string;
+  vendedor_id?: string;
+}): Promise<ResultadoCreditoOrden> {
+  const res = await pedir<CreditoOrdenResumen>(`${financeUrl()}/internal/finance/creditos`, {
+    method: 'POST',
+    body: JSON.stringify(input),
+  });
+  if (res.status === 409) return { estado: 'rechazado' };
+  if (res.status === 0 || !res.data) return { estado: 'error' };
+  return { estado: 'ok', credito: res.data };
+}
+
+/** Compensa el crédito si la orden no llega a crearse. */
+export async function anularCreditoOrden(orderId: string): Promise<boolean> {
+  const res = await pedir<{ ok: boolean }>(
+    `${financeUrl()}/internal/finance/creditos/orden/${encodeURIComponent(orderId)}`,
+    { method: 'DELETE' },
+  );
+  return res.status >= 200 && res.status < 300 && !!res.data;
+}

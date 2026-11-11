@@ -66,5 +66,7 @@
   "53_reservas_lotes.sql": "677c448f4f37f69cc0fcc8e6b19d987632b355cb434fe1503f5e06ccb532b931",
   "54_partes_registros.sql": "ad42b1eaab09e6487dd93c84a5b158774f35de1494417befd41bd42053158938",
   "55_password_reset_tokens.sql": "7fc597f98a43a7101d4979b6b271560587ac43628ebb5584d009d3fdde3acd4c",
-  "56_notifications.sql": "a8b9d7463f20953b973f41a87e260da8c17cb084854905842c49e7513ab3620b"
+  "56_notifications.sql": "a8b9d7463f20953b973f41a87e260da8c17cb084854905842c49e7513ab3620b",
+  "57_orders_metodo_pago.sql": "9b68d204fe7018560a96cd6714293df67054a72eed30abc09f08c6894221384c",
+  "58_credito_checkout.sql": "cfaf64fcc84475be7a3d9c98b078c34c7fc6641eadce7a5a66340d92d5027e6e"
 }

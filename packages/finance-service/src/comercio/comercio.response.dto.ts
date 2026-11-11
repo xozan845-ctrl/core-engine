@@ -433,6 +433,24 @@ export class ClienteComercioResponseDto extends RegistroComercioResponseDto {
   source: string;
 }
 
+export class CuentaCreditoResponseDto {
+  @ApiProperty({ format: 'uuid' }) id: string;
+  @ApiProperty({ format: 'uuid' }) empresa_id: string;
+  @ApiProperty({ format: 'uuid' }) parte_id: string;
+  @ApiProperty() parte_nombre: string;
+  @ApiProperty({ description: 'Limite en centavos' }) limite_cents: number;
+  @ApiProperty({ description: 'Saldo usado en centavos' }) usado_cents: number;
+  @ApiProperty({ description: 'Credito disponible en centavos' }) disponible_cents: number;
+  @ApiProperty() activo: boolean;
+  @ApiProperty({ format: 'date-time' }) actualizado_en: string;
+}
+
+export class CreditoOrdenResponseDto {
+  @ApiProperty({ format: 'uuid' }) credito_id: string;
+  @ApiProperty() balance_cents: number;
+  @ApiProperty() limite_cents: number;
+}
+
 export class ImportarClientesResponseDto {
   @ApiProperty()
   imported: number;

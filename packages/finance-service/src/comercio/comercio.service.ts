@@ -2,7 +2,9 @@ import { Injectable } from '@nestjs/common';
 import { randomInt, randomUUID } from 'crypto';
 import type { PoolClient } from 'pg';
 import {
+  ConflictError,
   DomainError,
+  ForbiddenError,
   Logger,
   Money,
   NotFoundError,
@@ -58,6 +60,18 @@ type Datos = Record<string, unknown>;
  * empresa/vendedor administra (bancos, créditos, gastos, caja, compras,
  * clientes y códigos de barras) con aislamiento por tenant o por vendedor.
  */
+export interface CuentaCredito {
+  id: string;
+  empresa_id: string;
+  parte_id: string;
+  parte_nombre: string;
+  limite_cents: number;
+  usado_cents: number;
+  disponible_cents: number;
+  activo: boolean;
+  actualizado_en: string;
+}
+
 @Injectable()
 export class ComercioService {
   private readonly logger = Logger.create('finance.comercio');
@@ -237,6 +251,189 @@ export class ComercioService {
       },
       usuario,
     );
+  }
+
+  // ── cuentas de crédito por parte (venta a crédito) ──────────────────────
+
+  async listarCuentasCredito(
+    usuario: UsuarioContexto,
+    empresaId?: string,
+  ): Promise<CuentaCredito[]> {
+    const tenant = this.tenantCredito(usuario, empresaId, false);
+    return this.pg.query<CuentaCredito>(
+      `SELECT c.id, c.empresa_id, c.parte_id, p.nombre AS parte_nombre,
+              c.limite_cents, c.activo, c.actualizado_en,
+              COALESCE((
+                SELECT SUM((w.datos ->> 'balanceCents')::int)
+                  FROM finance.workspace_registros w
+                 WHERE w.recurso = 'creditos' AND w.eliminado_en IS NULL
+                   AND w.tenant_id = c.empresa_id AND w.parte_id = c.parte_id
+              ), 0)::int AS usado_cents
+         FROM finance.credito_cuentas c
+         JOIN identity.partes p ON p.id = c.parte_id
+        WHERE c.empresa_id = $1
+        ORDER BY p.nombre`,
+      [tenant],
+    ).then((filas) =>
+      filas.map((fila) => ({
+        ...fila,
+        disponible_cents: fila.limite_cents - fila.usado_cents,
+      })),
+    );
+  }
+
+  async guardarCuentaCredito(
+    parteId: string,
+    dto: { limiteCents: number; activo?: boolean },
+    usuario: UsuarioContexto,
+    empresaId?: string,
+  ): Promise<CuentaCredito> {
+    const tenant = this.tenantCredito(usuario, empresaId, true);
+    const parte = await this.pg.queryOne<{ nombre: string }>(
+      `SELECT nombre FROM identity.partes
+        WHERE id = $1 AND empresa_id = $2 AND eliminado_en IS NULL`,
+      [parteId, tenant],
+    );
+    if (!parte) throw new NotFoundError('Parte', parteId);
+
+    const fila = await this.pg.queryOne<Omit<CuentaCredito, 'parte_nombre' | 'usado_cents' | 'disponible_cents'>>(
+      `INSERT INTO finance.credito_cuentas (empresa_id, parte_id, limite_cents, activo)
+       VALUES ($1, $2, $3, COALESCE($4, true))
+       ON CONFLICT (empresa_id, parte_id) DO UPDATE
+         SET limite_cents = EXCLUDED.limite_cents,
+             activo = COALESCE($4, finance.credito_cuentas.activo),
+             actualizado_en = NOW()
+       RETURNING id, empresa_id, parte_id, limite_cents, activo, actualizado_en`,
+      [tenant, parteId, dto.limiteCents, dto.activo ?? null],
+    );
+    if (!fila) throw new DomainError('CUENTA_CREDITO_FALLIDA', 'No se pudo guardar la cuenta.');
+
+    const usado = await this.pg.queryOne<{ usado: number }>(
+      `SELECT COALESCE(SUM((datos ->> 'balanceCents')::int), 0)::int AS usado
+         FROM finance.workspace_registros
+        WHERE recurso = 'creditos' AND eliminado_en IS NULL
+          AND tenant_id = $1 AND parte_id = $2`,
+      [tenant, parteId],
+    );
+    return {
+      ...fila,
+      parte_nombre: parte.nombre,
+      usado_cents: Number(usado?.usado ?? 0),
+      disponible_cents: fila.limite_cents - Number(usado?.usado ?? 0),
+    };
+  }
+
+  /** Registro interno (orders → finance) de una venta a crédito. */
+  async registrarCreditoOrden(input: {
+    empresa_id: string;
+    parte_id: string;
+    order_id: string;
+    monto_cents: number;
+    concepto: string;
+    vendedor_id?: string;
+  }): Promise<{ credito_id: string; balance_cents: number; limite_cents: number }> {
+    const cuenta = await this.pg.queryOne<{ limite_cents: number; activo: boolean }>(
+      `SELECT limite_cents, activo FROM finance.credito_cuentas
+        WHERE empresa_id = $1 AND parte_id = $2`,
+      [input.empresa_id, input.parte_id],
+    );
+    if (!cuenta || !cuenta.activo) {
+      throw new ConflictError('La parte no tiene una cuenta de credito activa.');
+    }
+
+    const existente = await this.pg.queryOne<{ id: string; datos: Record<string, unknown> }>(
+      `SELECT id, datos FROM finance.workspace_registros
+        WHERE recurso = 'creditos' AND eliminado_en IS NULL
+          AND datos ->> 'orderId' = $1
+        LIMIT 1`,
+      [input.order_id],
+    );
+    if (existente) {
+      return {
+        credito_id: existente.id,
+        balance_cents: Number(existente.datos.balanceCents ?? 0),
+        limite_cents: cuenta.limite_cents,
+      };
+    }
+
+    const parte = await this.pg.queryOne<{ nombre: string }>(
+      `SELECT nombre FROM identity.partes
+        WHERE id = $1 AND empresa_id = $2 AND eliminado_en IS NULL`,
+      [input.parte_id, input.empresa_id],
+    );
+    if (!parte) throw new NotFoundError('Parte', input.parte_id);
+
+    const usado = await this.pg.queryOne<{ usado: number }>(
+      `SELECT COALESCE(SUM((datos ->> 'balanceCents')::int), 0)::int AS usado
+         FROM finance.workspace_registros
+        WHERE recurso = 'creditos' AND eliminado_en IS NULL
+          AND tenant_id = $1 AND parte_id = $2`,
+      [input.empresa_id, input.parte_id],
+    );
+    const disponible = cuenta.limite_cents - Number(usado?.usado ?? 0);
+    if (input.monto_cents > disponible) {
+      throw new ConflictError('El credito supera el limite disponible de la parte.');
+    }
+
+    const datos = {
+      customer: parte.nombre,
+      concept: input.concepto,
+      date: this.hoy(),
+      dueDate: '',
+      amountCents: input.monto_cents,
+      balanceCents: input.monto_cents,
+      orderId: input.order_id,
+      sellerId: input.vendedor_id ?? '',
+    };
+    const fila = await this.pg.queryOne<{ id: string }>(
+      `INSERT INTO finance.workspace_registros
+         (tenant_id, propietario_id, recurso, datos, parte_id)
+       VALUES ($1, NULL, 'creditos', $2::jsonb, $3)
+       RETURNING id`,
+      [input.empresa_id, this.json(datos), input.parte_id],
+    );
+    if (!fila) throw new DomainError('CREDITO_NO_CREADO', 'No se pudo registrar el credito.');
+    return {
+      credito_id: fila.id,
+      balance_cents: input.monto_cents,
+      limite_cents: cuenta.limite_cents,
+    };
+  }
+
+  /** Compensación si la orden no llega a crearse. */
+  async anularCreditoOrden(orderId: string): Promise<boolean> {
+    const fila = await this.pg.queryOne<{ id: string }>(
+      `UPDATE finance.workspace_registros
+          SET eliminado_en = NOW(), actualizado_en = NOW()
+        WHERE recurso = 'creditos' AND eliminado_en IS NULL
+          AND datos ->> 'orderId' = $1
+        RETURNING id`,
+      [orderId],
+    );
+    return !!fila;
+  }
+
+  private tenantCredito(
+    usuario: UsuarioContexto,
+    empresaId: string | undefined,
+    escritura: boolean,
+  ): string {
+    const lectura = [ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.EMPRESARIO, ROLES.VENDEDOR];
+    if (!usuario || !lectura.includes(usuario.rol as never)) {
+      throw new ForbiddenError('El rol no tiene acceso a cuentas de credito.');
+    }
+    if (escritura && ![ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.EMPRESARIO].includes(usuario.rol as never)) {
+      throw new ForbiddenError('Solo la empresa puede definir limites de credito.');
+    }
+    if (usuario.rol === ROLES.SUPER_ADMIN || usuario.rol === ROLES.ADMIN) {
+      if (!empresaId) throw new DomainError('EMPRESA_REQUERIDA', 'Indica empresa_id.');
+      return empresaId;
+    }
+    if (!usuario.tenant_id) throw new DomainError('TENANT_REQUERIDO', 'No hay empresa activa.');
+    if (empresaId && empresaId !== usuario.tenant_id) {
+      throw new ForbiddenError('No puedes operar otra empresa.');
+    }
+    return usuario.tenant_id;
   }
 
   // ── gastos ───────────────────────────────────────────────────────────────

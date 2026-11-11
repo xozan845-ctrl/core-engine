@@ -544,6 +544,22 @@ CREATE POLICY partes_empresa_archivar ON identity.partes FOR UPDATE TO authentic
          AND empresa_id::text = (auth.jwt() ->> 'tenant_id')
          AND eliminado_en IS NOT NULL AND estado = 'archivado');
 
+-- Cuentas de crédito por parte (venta a crédito desde checkout).
+ALTER TABLE finance.credito_cuentas ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS credito_cuentas_admin ON finance.credito_cuentas;
+DROP POLICY IF EXISTS credito_cuentas_lectura ON finance.credito_cuentas;
+DROP POLICY IF EXISTS credito_cuentas_escritura ON finance.credito_cuentas;
+CREATE POLICY credito_cuentas_admin ON finance.credito_cuentas FOR ALL TO authenticated
+  USING (auth.rol() IN ('super_admin', 'admin'))
+  WITH CHECK (auth.rol() IN ('super_admin', 'admin'));
+CREATE POLICY credito_cuentas_lectura ON finance.credito_cuentas FOR SELECT TO authenticated
+  USING (empresa_id::text = (auth.jwt() ->> 'tenant_id'));
+CREATE POLICY credito_cuentas_escritura ON finance.credito_cuentas FOR ALL TO authenticated
+  USING (auth.rol() IN ('empresario', 'vendedor')
+         AND empresa_id::text = (auth.jwt() ->> 'tenant_id'))
+  WITH CHECK (auth.rol() IN ('empresario', 'vendedor')
+         AND empresa_id::text = (auth.jwt() ->> 'tenant_id'));
+
 -- Registros genéricos por parte (historia clínica, recetas, expedientes).
 ALTER TABLE identity.partes_registros ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS partes_registros_admin ON identity.partes_registros;

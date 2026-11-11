@@ -57,6 +57,9 @@ export class OrderViewResponseDto {
   @ApiProperty({ enum: ['compra', 'reserva', 'cotizacion', 'orden_servicio'] })
   tipo_orden: string;
 
+  @ApiProperty({ enum: ['simulado', 'credito'], example: 'simulado' })
+  metodo_pago: string;
+
   @ApiProperty({ required: false, type: Object, additionalProperties: true })
   fulfillment_config?: Record<string, unknown>;
 

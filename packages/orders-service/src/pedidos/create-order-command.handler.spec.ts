@@ -1,6 +1,6 @@
 import { CreateOrderCommandHandler } from './handlers/create-order-command.handler';
 import { CreateOrderCommand } from './commands/create-order.command';
-import { Money } from '@core/shared';
+import { CapabilityDisabledError, Money } from '@core/shared';
 
 class PgFake {
   query = vi.fn(async () => []);
@@ -94,6 +94,13 @@ function crearHandler(
         if (storesThrows) throw new Error('stores down');
         if (storesFails) return { ok: false } as Response;
         return { ok: true, json: async () => sobreOfertas } as Response;
+      }
+      if (u.includes('finance-service') && u.includes('/internal/finance/creditos')) {
+        return {
+          ok: true,
+          status: 201,
+          json: async () => ({ credito_id: 'c-1', balance_cents: 1150, limite_cents: 5000 }),
+        } as Response;
       }
       if (u.includes('identity-service') && u.includes('/internal/empresas/capacidades')) {
         const empresaCap = (sobreOfertas[0] as { empresa_id?: string } | undefined)?.empresa_id ?? 'empresa-1';
@@ -644,6 +651,51 @@ describe('Fulfillment y cotizaciones por capacidad', () => {
     expect(vista.tipo_orden).toBe('cotizacion');
     expect(vista.estado).toBe('creada');
     expect(vista.comision_cents).toBe(0);
+  });
+
+  it('una venta a credito registra la cuenta por cobrar en finance', async () => {
+    const { handler, fetchMock } = crearHandler(
+      [ofertaActiva],
+      'ok',
+      undefined,
+      false,
+      false,
+      ['ventas_credito'],
+    );
+    const vista = await handler.ejecutar(
+      {
+        tipo_orden: 'compra',
+        metodo_pago: 'credito',
+        cliente_parte_id: '22222222-2222-4222-8222-222222222222',
+        items: [{ oferta_id: 'oferta-1', cantidad: 1 }],
+      },
+      'comprador-1',
+    );
+    expect(vista.metodo_pago).toBe('credito');
+    expect(fetchMock.mock.calls.some(([u]) => String(u).includes('/internal/finance/creditos'))).toBe(true);
+  });
+
+  it('exige cliente_parte_id y la capacidad ventas_credito', async () => {
+    const { handler } = crearHandler([ofertaActiva], 'ok', undefined, false, false, ['ventas_credito']);
+    await expect(
+      handler.ejecutar(
+        { tipo_orden: 'compra', metodo_pago: 'credito', items: [{ oferta_id: 'oferta-1', cantidad: 1 }] },
+        'comprador-1',
+      ),
+    ).rejects.toMatchObject({ codigo: 'CREDITO_REQUIERE_PARTE' });
+
+    const sinCapacidad = crearHandler([ofertaActiva], 'ok', undefined, false, false, []);
+    await expect(
+      sinCapacidad.handler.ejecutar(
+        {
+          tipo_orden: 'compra',
+          metodo_pago: 'credito',
+          cliente_parte_id: '22222222-2222-4222-8222-222222222222',
+          items: [{ oferta_id: 'oferta-1', cantidad: 1 }],
+        },
+        'comprador-1',
+      ),
+    ).rejects.toBeInstanceOf(CapabilityDisabledError);
   });
 
   it('rechaza una entrega onsite sin fulfillment_onsite', async () => {

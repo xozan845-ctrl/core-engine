@@ -65,4 +65,14 @@ export class CreateOrderCommand {
   @IsOptional()
   @IsBoolean()
   usar_carrito?: boolean;
+
+  @ApiProperty({
+    description: 'Medio de pago: simulado o credito (requiere cliente_parte_id con cupo)',
+    required: false,
+    enum: ['simulado', 'credito'],
+    default: 'simulado',
+  })
+  @IsOptional()
+  @IsIn(['simulado', 'credito'])
+  metodo_pago?: 'simulado' | 'credito';
 }
