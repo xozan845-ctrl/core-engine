@@ -11,6 +11,7 @@ import {
   IsNumber,
   IsOptional,
   IsString,
+  IsUUID,
   Max,
   Min,
   MinLength,
@@ -128,6 +129,27 @@ export class AbonarCreditoRequestDto {
   @IsOptional()
   @IsIn(['efectivo', 'tarjeta', 'transferencia', 'otro'])
   metodoPago?: 'efectivo' | 'tarjeta' | 'transferencia' | 'otro';
+}
+
+export class GuardarCuentaCreditoRequestDto {
+  @ApiProperty({ description: 'Limite de credito de la parte en centavos', minimum: 0 })
+  @IsInt()
+  @Min(0)
+  limiteCents: number;
+
+  @ApiProperty({ required: false, default: true })
+  @IsOptional()
+  @IsBoolean()
+  activo?: boolean;
+}
+
+export class RegistrarCreditoInternoRequestDto {
+  @ApiProperty({ format: 'uuid' }) @IsUUID() empresa_id: string;
+  @ApiProperty({ format: 'uuid' }) @IsUUID() parte_id: string;
+  @ApiProperty({ format: 'uuid' }) @IsUUID() order_id: string;
+  @ApiProperty({ minimum: 1 }) @IsInt() @Min(1) monto_cents: number;
+  @ApiProperty({ minLength: 1 }) @IsString() @MinLength(1) concepto: string;
+  @ApiProperty({ required: false, format: 'uuid' }) @IsOptional() @IsUUID() vendedor_id?: string;
 }
 
 export class CrearGastoRequestDto {

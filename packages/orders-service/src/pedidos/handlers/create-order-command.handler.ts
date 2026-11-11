@@ -17,6 +17,8 @@ import {
   ItemOrden,
   EVENTOS,
   timeoutInternoMs,
+  registrarCreditoOrden,
+  anularCreditoOrden,
 } from '@core/shared';
 import { CreateOrderCommand } from '../commands/create-order.command';
 import { OrderEventStore } from '../repositories/order-event-store';
@@ -74,6 +76,14 @@ export class CreateOrderCommandHandler {
     // Una cotizacion es una propuesta de precio: no reserva stock ni genera
     // comision hasta que el cliente la acepte y se convierta en orden.
     const esCotizacion = tipoOrden === 'cotizacion';
+    const metodoPago: 'simulado' | 'credito' =
+      comando.metodo_pago === 'credito' ? 'credito' : 'simulado';
+    if (metodoPago === 'credito' && !comando.cliente_parte_id) {
+      throw new DomainError(
+        'CREDITO_REQUIERE_PARTE',
+        'La venta a credito requiere identificar al cliente (cliente_parte_id).',
+      );
+    }
     let desdeCarrito = false;
     let lineas = comando.items;
     if (comando.usar_carrito) {
@@ -120,16 +130,50 @@ export class CreateOrderCommandHandler {
       });
     }
 
-    await this.validarCapacidades(items, tipoOrden);
+    if (metodoPago === 'credito') {
+      const empresas = new Set(items.map((item) => item.empresa_id));
+      if (empresas.size > 1) {
+        throw new DomainError(
+          'CREDITO_UNA_EMPRESA',
+          'Una venta a credito solo puede incluir items de una empresa.',
+        );
+      }
+    }
+
+    await this.validarCapacidades(items, tipoOrden, metodoPago);
 
     // 2. control sincrono de viabilidad de stock (TC-04: respuesta 409 rapida).
     // Las cotizaciones no comprometen inventario.
     if (!esCotizacion) await this.verificarStock(items);
 
-    // 3. transaccion: evento + outbox (proyecciones via trigger en orders.eventos)
+    // 3. venta a credito: la cuenta por cobrar se registra antes de la orden
+    // (idempotente por order_id). Si la orden no se crea, se compensa.
     const orderId = randomUUID();
     const creadoEn = new Date().toISOString();
-    await this.pg.transaccion(async (client) => {
+    if (metodoPago === 'credito') {
+      const empresaId = items[0]?.empresa_id ?? '';
+      const credito = await registrarCreditoOrden({
+        empresa_id: empresaId,
+        parte_id: comando.cliente_parte_id as string,
+        order_id: orderId,
+        monto_cents: total.centavos,
+        concepto: `Pedido ${orderId.slice(0, 8)}`,
+        vendedor_id: items[0]?.vendedor_id,
+      });
+      if (credito.estado === 'rechazado') {
+        throw new ConflictError(
+          'CREDITO_RECHAZADO',
+          'La parte no tiene una cuenta de credito activa o cupo disponible.',
+        );
+      }
+      if (credito.estado === 'error') {
+        throw new ServiceUnavailableError('finance-service');
+      }
+    }
+
+    // 4. transaccion: evento + outbox (proyecciones via trigger en orders.eventos)
+    try {
+      await this.pg.transaccion(async (client) => {
       await this.eventStore.appendEnTransaccion(client, orderId, 'OrderCreatedEvent', {
         order_id: orderId,
         comprador_id: clienteId,
@@ -138,6 +182,7 @@ export class CreateOrderCommandHandler {
         total_cents: total.centavos,
         estado: 'creada',
         tipo_orden: tipoOrden,
+        metodo_pago: metodoPago,
         fulfillment_config: this.resumenFulfillment(items),
         creado_en: creadoEn,
       });
@@ -153,6 +198,7 @@ export class CreateOrderCommandHandler {
           total_cents: total.centavos,
           estado: 'creada',
           tipo_orden: tipoOrden,
+          metodo_pago: metodoPago,
           fulfillment_config: this.resumenFulfillment(items),
           comision_cents: esCotizacion ? 0 : total.comision(this.tasaComision).centavos,
         },
@@ -166,7 +212,13 @@ export class CreateOrderCommandHandler {
       if (desdeCarrito) {
         await this.carritos.vaciarEnTransaccion(client, clienteId);
       }
-    });
+      });
+    } catch (error) {
+      if (metodoPago === 'credito') {
+        await anularCreditoOrden(orderId).catch(() => undefined);
+      }
+      throw error;
+    }
 
     const primerItem = items[0];
     const vista: OrderView = {
@@ -183,6 +235,7 @@ export class CreateOrderCommandHandler {
       creado_en: creadoEn,
       actualizado_en: creadoEn,
       tipo_orden: tipoOrden,
+      metodo_pago: metodoPago,
       fulfillment_config: this.resumenFulfillment(items),
       pagada_en: null,
       enviada_en: null,
@@ -320,9 +373,14 @@ export class CreateOrderCommandHandler {
     };
   }
 
-  private async validarCapacidades(items: ItemOrden[], tipoOrden: TipoOrden): Promise<void> {
+  private async validarCapacidades(
+    items: ItemOrden[],
+    tipoOrden: TipoOrden,
+    metodoPago: 'simulado' | 'credito' = 'simulado',
+  ): Promise<void> {
     const requeridas = new Set<string>();
     if (tipoOrden === 'cotizacion') requeridas.add('cotizaciones');
+    if (metodoPago === 'credito') requeridas.add('ventas_credito');
     for (const item of items) {
       if (item.fulfillment === 'delivery') requeridas.add('fulfillment_delivery');
       if (item.fulfillment === 'pickup') requeridas.add('fulfillment_pickup');

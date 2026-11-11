@@ -51,6 +51,7 @@ const SIEMPRE = [
   '45_hardening.sql',
   '46_commission_payload.sql',
   '47_orders_comprador_sin_comisiones.sql',
+  '57_orders_metodo_pago.sql',
 ];
 
 const rabbit = {
@@ -128,6 +129,8 @@ async function aplicarMigraciones() {
     // pudo quedar de una cadena anterior. No se reaplican 01d/01e/27/45/46/47:
     // no son idempotentes sobre un esquema ya evolucionado.
     await aplicar('01b_cqrs_finance.sql');
+    // Cambio aditivo de la Fase B2: la proyección necesita metodo_pago.
+    await aplicar('57_orders_metodo_pago.sql');
     return;
   }
 

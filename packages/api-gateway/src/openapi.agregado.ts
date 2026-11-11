@@ -6239,6 +6239,115 @@ export const OPENAPI_AGREGADO = {
         ]
       }
     },
+    "/api/v2/comercio/credito-cuentas": {
+      "get": {
+        "operationId": "ComercioController_listarCuentasCredito",
+        "parameters": [
+          {
+            "name": "empresa_id",
+            "required": false,
+            "in": "query",
+            "description": "Solo admin global",
+            "schema": {}
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Cuentas de crédito",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
+                  "properties": {
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/CuentaCreditoResponseDto"
+                      }
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/MetaRespuesta"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Listar cuentas de crédito por parte de la empresa",
+        "tags": [
+          "Comercio · Operación de tienda"
+        ]
+      }
+    },
+    "/api/v2/comercio/credito-cuentas/{parteId}": {
+      "put": {
+        "operationId": "ComercioController_guardarCuentaCredito",
+        "parameters": [
+          {
+            "name": "parteId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/GuardarCuentaCreditoRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Cuenta de crédito guardada",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/CuentaCreditoResponseDto"
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/MetaRespuesta"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Definir el límite de crédito de una parte",
+        "tags": [
+          "Comercio · Operación de tienda"
+        ]
+      }
+    },
     "/api/v2/comercio/creditos/{id}": {
       "delete": {
         "operationId": "ComercioController_eliminarCredito",
@@ -21816,6 +21925,56 @@ export const OPENAPI_AGREGADO = {
           "balanceCents"
         ]
       },
+      "CuentaCreditoResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "empresa_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "parte_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "parte_nombre": {
+            "type": "string"
+          },
+          "limite_cents": {
+            "type": "number",
+            "description": "Limite en centavos"
+          },
+          "usado_cents": {
+            "type": "number",
+            "description": "Saldo usado en centavos"
+          },
+          "disponible_cents": {
+            "type": "number",
+            "description": "Credito disponible en centavos"
+          },
+          "activo": {
+            "type": "boolean"
+          },
+          "actualizado_en": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "empresa_id",
+          "parte_id",
+          "parte_nombre",
+          "limite_cents",
+          "usado_cents",
+          "disponible_cents",
+          "activo",
+          "actualizado_en"
+        ]
+      },
       "CuentaPorPagarResponseDto": {
         "type": "object",
         "properties": {
@@ -22419,6 +22578,23 @@ export const OPENAPI_AGREGADO = {
             "description": "Fin del periodo"
           }
         }
+      },
+      "GuardarCuentaCreditoRequestDto": {
+        "type": "object",
+        "properties": {
+          "limiteCents": {
+            "type": "number",
+            "description": "Limite de credito de la parte en centavos",
+            "minimum": 0
+          },
+          "activo": {
+            "type": "boolean",
+            "default": true
+          }
+        },
+        "required": [
+          "limiteCents"
+        ]
       },
       "ImportarClientesRequestDto": {
         "type": "object",
@@ -27927,6 +28103,15 @@ export const OPENAPI_AGREGADO = {
             "type": "boolean",
             "description": "Crear la orden desde el carrito (RN-05)",
             "example": false
+          },
+          "metodo_pago": {
+            "type": "string",
+            "description": "Medio de pago: simulado o credito (requiere cliente_parte_id con cupo)",
+            "enum": [
+              "simulado",
+              "credito"
+            ],
+            "default": "simulado"
           }
         },
         "required": [
@@ -28086,6 +28271,14 @@ export const OPENAPI_AGREGADO = {
               "orden_servicio"
             ]
           },
+          "metodo_pago": {
+            "type": "string",
+            "enum": [
+              "simulado",
+              "credito"
+            ],
+            "example": "simulado"
+          },
           "fulfillment_config": {
             "type": "object",
             "additionalProperties": true
@@ -28165,6 +28358,7 @@ export const OPENAPI_AGREGADO = {
           "tienda_id",
           "estado",
           "tipo_orden",
+          "metodo_pago",
           "total_cents",
           "comision_cents",
           "moneda",
