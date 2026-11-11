@@ -190,6 +190,17 @@ export const POLITICAS_RUTAS: PoliticaRuta[] = [
       metodos: ['PATCH', 'POST'],
       roles: [ROLES.SUPER_ADMIN, ROLES.EMPRESARIO, ROLES.ADMIN, ROLES.LOGISTICA],
     },
+    // Cotizaciones: el vendedor/empresa las envia; el comprador las responde.
+    {
+      patron: /^\/api\/v2\/orders\/[^/]+\/cotizacion\/enviar$/,
+      metodos: ['POST'],
+      roles: [ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.EMPRESARIO, ROLES.VENDEDOR],
+    },
+    {
+      patron: /^\/api\/v2\/orders\/[^/]+\/cotizacion\/(aceptar|rechazar)$/,
+      metodos: ['POST'],
+      roles: [ROLES.COMPRADOR],
+    },
     // Pedidos: reglas específicas antes de cualquier catch-all. El gateway
     // resuelve por primera coincidencia (find), así que una regla genérica
     // como /orders/ expondría las rutas admin y de tienda a otros roles

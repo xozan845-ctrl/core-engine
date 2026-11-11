@@ -133,3 +133,12 @@ export class HistoriaEventoResponseDto {
   @ApiProperty({ description: 'Fecha del evento (ISO 8601 UTC)', format: 'date-time' })
   creado_en: string;
 }
+
+/** Respuesta de aceptar una cotizacion: queda aceptada y nace la compra. */
+export class CotizacionAceptadaResponseDto {
+  @ApiProperty({ description: 'Cotizacion aceptada', type: () => OrderViewResponseDto })
+  cotizacion: OrderViewResponseDto;
+
+  @ApiProperty({ description: 'Orden de compra generada desde la cotizacion', type: () => OrderViewResponseDto })
+  orden: OrderViewResponseDto;
+}
