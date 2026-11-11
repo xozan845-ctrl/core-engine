@@ -633,6 +633,322 @@ export const OPENAPI_AGREGADO = {
         ]
       }
     },
+    "/api/v2/catalog/items/{id}/tarifas": {
+      "get": {
+        "operationId": "TarifasController_listar",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "name": "empresa_id",
+            "required": false,
+            "in": "query",
+            "description": "Solo admin global",
+            "schema": {}
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Tarifas del item",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
+                  "properties": {
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/TarifaItemResponseDto"
+                      }
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/MetaRespuesta"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Listar tarifas por fecha de un item",
+        "tags": [
+          "Catálogo · Tarifas"
+        ]
+      },
+      "post": {
+        "operationId": "TarifasController_crear",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "name": "empresa_id",
+            "required": false,
+            "in": "query",
+            "description": "Solo admin global",
+            "schema": {}
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CrearTarifaRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Tarifa creada",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/TarifaItemResponseDto"
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/MetaRespuesta"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Crear una tarifa por rango de fechas",
+        "tags": [
+          "Catálogo · Tarifas"
+        ]
+      }
+    },
+    "/api/v2/catalog/items/{id}/tarifas/{tarifaId}": {
+      "patch": {
+        "operationId": "TarifasController_actualizar",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "name": "tarifaId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "name": "empresa_id",
+            "required": false,
+            "in": "query",
+            "description": "Solo admin global",
+            "schema": {}
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ActualizarTarifaRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Tarifa actualizada",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/TarifaItemResponseDto"
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/MetaRespuesta"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Actualizar una tarifa por fecha",
+        "tags": [
+          "Catálogo · Tarifas"
+        ]
+      },
+      "delete": {
+        "operationId": "TarifasController_eliminar",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "name": "tarifaId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "name": "empresa_id",
+            "required": false,
+            "in": "query",
+            "description": "Solo admin global",
+            "schema": {}
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Tarifa eliminada"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Eliminar una tarifa por fecha",
+        "tags": [
+          "Catálogo · Tarifas"
+        ]
+      }
+    },
+    "/api/v2/catalog/items/{id}/cotizacion": {
+      "get": {
+        "operationId": "TarifasController_cotizar",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "name": "desde",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "example": "2026-12-18",
+              "type": "string"
+            }
+          },
+          {
+            "name": "hasta",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "example": "2026-12-22",
+              "type": "string"
+            }
+          },
+          {
+            "name": "empresa_id",
+            "required": false,
+            "in": "query",
+            "description": "Solo admin global",
+            "schema": {}
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Cotización del rango",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/CotizacionItemResponseDto"
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/MetaRespuesta"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Cotizar un item por rango de fechas (tarifas + precio base)",
+        "tags": [
+          "Catálogo · Tarifas"
+        ]
+      }
+    },
     "/api/v2/admin/inventario": {
       "get": {
         "operationId": "InventarioController_listar",
@@ -16407,6 +16723,29 @@ export const OPENAPI_AGREGADO = {
           }
         }
       },
+      "ActualizarTarifaRequestDto": {
+        "type": "object",
+        "properties": {
+          "desde": {
+            "type": "string",
+            "description": "Inicio inclusive",
+            "format": "date",
+            "example": "2026-12-20"
+          },
+          "hasta": {
+            "type": "string",
+            "description": "Fin inclusive",
+            "format": "date",
+            "example": "2026-12-31"
+          },
+          "precio_cents": {
+            "type": "number",
+            "description": "Precio por dia en centavos",
+            "minimum": 0,
+            "example": 25000
+          }
+        }
+      },
       "ComboComponenteRequestDto": {
         "type": "object",
         "properties": {
@@ -16633,6 +16972,43 @@ export const OPENAPI_AGREGADO = {
         "required": [
           "consumidos",
           "total_consumido"
+        ]
+      },
+      "CotizacionItemResponseDto": {
+        "type": "object",
+        "properties": {
+          "item_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "desde": {
+            "type": "string",
+            "format": "date"
+          },
+          "hasta": {
+            "type": "string",
+            "format": "date"
+          },
+          "dias": {
+            "type": "number"
+          },
+          "total_cents": {
+            "type": "number"
+          },
+          "desglose": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/DesgloseTarifaResponseDto"
+            }
+          }
+        },
+        "required": [
+          "item_id",
+          "desde",
+          "hasta",
+          "dias",
+          "total_cents",
+          "desglose"
         ]
       },
       "CrearAlquilerRequestDto": {
@@ -17011,6 +17387,63 @@ export const OPENAPI_AGREGADO = {
           "empresa_id",
           "codigo",
           "nombre"
+        ]
+      },
+      "CrearTarifaRequestDto": {
+        "type": "object",
+        "properties": {
+          "desde": {
+            "type": "string",
+            "description": "Inicio inclusive",
+            "format": "date",
+            "example": "2026-12-20"
+          },
+          "hasta": {
+            "type": "string",
+            "description": "Fin inclusive",
+            "format": "date",
+            "example": "2026-12-31"
+          },
+          "precio_cents": {
+            "type": "number",
+            "description": "Precio por dia en centavos",
+            "minimum": 0,
+            "example": 25000
+          }
+        },
+        "required": [
+          "desde",
+          "hasta",
+          "precio_cents"
+        ]
+      },
+      "DesgloseTarifaResponseDto": {
+        "type": "object",
+        "properties": {
+          "desde": {
+            "type": "string",
+            "format": "date"
+          },
+          "hasta": {
+            "type": "string",
+            "format": "date"
+          },
+          "dias": {
+            "type": "number"
+          },
+          "precio_cents": {
+            "type": "number"
+          },
+          "subtotal_cents": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "desde",
+          "hasta",
+          "dias",
+          "precio_cents",
+          "subtotal_cents"
         ]
       },
       "EscaneoResponseDto": {
@@ -18220,6 +18653,52 @@ export const OPENAPI_AGREGADO = {
           "duracion_minutos",
           "estado",
           "atributos",
+          "creado_en",
+          "actualizado_en"
+        ]
+      },
+      "TarifaItemResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "empresa_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "item_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "desde": {
+            "type": "string",
+            "format": "date"
+          },
+          "hasta": {
+            "type": "string",
+            "format": "date"
+          },
+          "precio_cents": {
+            "type": "number"
+          },
+          "creado_en": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "actualizado_en": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "empresa_id",
+          "item_id",
+          "desde",
+          "hasta",
+          "precio_cents",
           "creado_en",
           "actualizado_en"
         ]

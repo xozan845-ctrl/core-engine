@@ -68,5 +68,6 @@
   "55_password_reset_tokens.sql": "7fc597f98a43a7101d4979b6b271560587ac43628ebb5584d009d3fdde3acd4c",
   "56_notifications.sql": "a8b9d7463f20953b973f41a87e260da8c17cb084854905842c49e7513ab3620b",
   "57_orders_metodo_pago.sql": "9b68d204fe7018560a96cd6714293df67054a72eed30abc09f08c6894221384c",
-  "58_credito_checkout.sql": "cfaf64fcc84475be7a3d9c98b078c34c7fc6641eadce7a5a66340d92d5027e6e"
+  "58_credito_checkout.sql": "cfaf64fcc84475be7a3d9c98b078c34c7fc6641eadce7a5a66340d92d5027e6e",
+  "59_catalog_item_tarifas.sql": "5bec35e79343016106a075d94dffc19a07d2bd8c1688fc01e997dce1fdf8c400"
 }

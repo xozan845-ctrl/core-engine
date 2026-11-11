@@ -544,6 +544,23 @@ CREATE POLICY partes_empresa_archivar ON identity.partes FOR UPDATE TO authentic
          AND empresa_id::text = (auth.jwt() ->> 'tenant_id')
          AND eliminado_en IS NOT NULL AND estado = 'archivado');
 
+-- Tarifas por fecha/rango sobre items (temporadas, hotel, alquileres).
+ALTER TABLE catalog.item_tarifas ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS item_tarifas_admin ON catalog.item_tarifas;
+DROP POLICY IF EXISTS item_tarifas_empresa ON catalog.item_tarifas;
+DROP POLICY IF EXISTS item_tarifas_lectura ON catalog.item_tarifas;
+CREATE POLICY item_tarifas_admin ON catalog.item_tarifas FOR ALL TO authenticated
+  USING (auth.rol() IN ('super_admin', 'admin'))
+  WITH CHECK (auth.rol() IN ('super_admin', 'admin'));
+CREATE POLICY item_tarifas_empresa ON catalog.item_tarifas FOR ALL TO authenticated
+  USING (auth.rol() = 'empresario'
+         AND empresa_id::text = (auth.jwt() ->> 'tenant_id'))
+  WITH CHECK (auth.rol() = 'empresario'
+         AND empresa_id::text = (auth.jwt() ->> 'tenant_id'));
+CREATE POLICY item_tarifas_lectura ON catalog.item_tarifas FOR SELECT TO authenticated
+  USING (auth.rol() IN ('empresario', 'vendedor', 'coordinador', 'supervisor', 'operativo')
+         AND empresa_id::text = (auth.jwt() ->> 'tenant_id'));
+
 -- Cuentas de crédito por parte (venta a crédito desde checkout).
 ALTER TABLE finance.credito_cuentas ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS credito_cuentas_admin ON finance.credito_cuentas;
