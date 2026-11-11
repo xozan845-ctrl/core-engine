@@ -218,7 +218,8 @@ describe('ProductosService (catalogo maestro y stock)', () => {
     const ordenOk = async (servicio: ProductosService, pg: any, client: any) => {
       (client.query as Mock)
         .mockResolvedValueOnce({ rows: [], rowCount: 0 }) // SAVEPOINT
-        .mockResolvedValueOnce({ rowCount: 1, rows: [{ stock: 10 }] }) // SELECT FOR UPDATE
+        .mockResolvedValueOnce({ rowCount: 1, rows: [{ stock: 10, item_id: 'item-1', tiene_variantes: false }] }) // SELECT FOR UPDATE
+        .mockResolvedValueOnce({ rowCount: 0, rows: [] }) // sin lotes
         .mockResolvedValueOnce({ rows: [], rowCount: 1 }) // UPDATE stock
         .mockResolvedValueOnce({ rows: [], rowCount: 1 }) // INSERT reserva
         .mockResolvedValueOnce({ rows: [], rowCount: 0 }) // RELEASE
@@ -240,7 +241,7 @@ describe('ProductosService (catalogo maestro y stock)', () => {
       const sqlLock = (client.query as Mock).mock.calls[1][0];
       expect(sqlLock).toContain('FOR UPDATE'); // bloqueo pesimista exigido por regla
       expect(sqlLock).toContain('empresa_id = $1');
-      const sqlReserva = (client.query as Mock).mock.calls[3][0];
+      const sqlReserva = (client.query as Mock).mock.calls[4][0];
       expect(sqlReserva).toContain('INSERT INTO catalog.reservas_ordenes');
     });
 
