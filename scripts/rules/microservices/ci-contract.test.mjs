@@ -418,7 +418,7 @@ export default defineSuite({
       assert.match(workflow, /^ {8}image: postgres:16-alpine$/m);
       assert.match(workflow, /^ {6}TEST_DATABASE_URL: postgres:\/\/core_engine_test:test_only@127\.0\.0\.1:5432\/core_engine_test$/m);
       assert.match(workflow, /^ {8}run: npm run test:integration$/m);
-      assert.match(workflow, /^ {4}needs: \[rules-check, test, lint, integration-catalog\]$/m);
+      assert.match(workflow, /^ {4}needs: \[rules-check, test, lint, integration-catalog, rust\]$/m);
     });
 
     test('R-RB-4: toda llamada fetch interna declara un timeout', () => {
