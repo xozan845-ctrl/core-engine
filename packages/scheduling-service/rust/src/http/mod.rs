@@ -160,6 +160,13 @@ async fn correlacion(State(state): State<AppState>, request: Request, next: Next
         .unwrap_or_else(|| Uuid::new_v4().to_string());
 
     let usuario = UsuarioContexto::desde_headers(request.headers());
+    let usuario_id = usuario.as_ref().map(|u| u.user_id.clone());
+    let metodo = request.method().as_str().to_string();
+    let ruta = request
+        .uri()
+        .path_and_query()
+        .map(|valor| valor.as_str().to_string())
+        .unwrap_or_else(|| request.uri().path().to_string());
     let contexto = ContextoCorrelacion {
         request_id: request_id.clone(),
         servicio: state.config.servicio.clone(),
@@ -168,17 +175,19 @@ async fn correlacion(State(state): State<AppState>, request: Request, next: Next
         tenant_id: usuario.as_ref().and_then(|u| u.tenant_id.clone()),
     };
 
-    crate::logs::info(
-        "http",
-        campos! {
-            "msg": "peticion",
-            "metodo": request.method().as_str(),
-            "ruta": request.uri().path_and_query().map(|p| p.as_str()).unwrap_or(request.uri().path()),
-            "usuario": usuario.as_ref().map(|u| u.user_id.clone()),
-        },
-    );
-
-    let mut response = ejecutar_con_contexto(contexto, next.run(request)).await;
+    let mut response = ejecutar_con_contexto(contexto, async move {
+        crate::logs::info(
+            "http",
+            campos! {
+                "msg": "peticion",
+                "metodo": metodo,
+                "ruta": ruta,
+                "usuario": usuario_id,
+            },
+        );
+        next.run(request).await
+    })
+    .await;
     if let Ok(valor) = HeaderValue::from_str(&request_id) {
         response.headers_mut().insert("x-request-id", valor);
     }

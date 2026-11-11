@@ -42,14 +42,7 @@ fn linea(nivel: &str, servicio: &str, campos: Map<String, Value>) -> String {
         "ts".into(),
         Value::String(Utc::now().to_rfc3339_opts(SecondsFormat::Millis, true)),
     );
-    salida.insert(
-        "servicio".into(),
-        Value::String(
-            ctx.as_ref()
-                .map(|c| c.servicio.clone())
-                .unwrap_or_else(|| servicio.to_string()),
-        ),
-    );
+    salida.insert("servicio".into(), Value::String(servicio.to_string()));
     if let Some(ctx) = &ctx {
         salida.insert("request_id".into(), Value::String(ctx.request_id.clone()));
     }
@@ -99,7 +92,7 @@ mod tests {
         .await;
         let valor: Value = serde_json::from_str(&texto).expect("json");
         assert_eq!(valor["request_id"], "req-1");
-        assert_eq!(valor["servicio"], "scheduling-service");
+        assert_eq!(valor["servicio"], "fallback");
         assert_eq!(valor["nivel"], "info");
         assert_eq!(valor["msg"], "peticion");
         assert!(valor["ts"].as_str().expect("ts").ends_with('Z'));
