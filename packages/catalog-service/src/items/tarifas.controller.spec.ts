@@ -43,6 +43,20 @@ describe('TarifasController (catálogo)', () => {
     expect(() => controller.listar('i-1', undefined, admin as never)).toThrow(/empresa_id/);
   });
 
+  it('rechaza otra empresa y empresario sin tenant', () => {
+    const { controller } = fabricar();
+    expect(() => controller.listar('i-1', 'otra', empresario as never)).toThrow(
+      /No puedes operar otra empresa/,
+    );
+    expect(() =>
+      controller.listar('i-1', undefined, {
+        user_id: 'u-3',
+        email: 'x@core.local',
+        rol: ROLES.EMPRESARIO,
+      } as never),
+    ).toThrow(/empresa activa/);
+  });
+
   it('delega cotización, actualización y borrado', async () => {
     const { servicio, controller } = fabricar();
     servicio.cotizar.mockResolvedValue({ total_cents: 100 });

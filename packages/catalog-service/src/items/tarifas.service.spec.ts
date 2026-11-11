@@ -61,6 +61,44 @@ describe('TarifasService (Fase C)', () => {
     await expect(servicio.eliminar(EMPRESA, ITEM, TARIFA)).rejects.toBeInstanceOf(NotFoundError);
   });
 
+  it('traduce 23505, repropaga errores ajenos y cubre actualización fallida', async () => {
+    const { servicio, pg } = crear();
+    (pg.queryOne as Mock).mockResolvedValueOnce(item).mockRejectedValueOnce({ code: '23505' });
+    await expect(
+      servicio.crear(EMPRESA, ITEM, { desde: '2026-12-20', hasta: '2026-12-31', precio_cents: 100 }),
+    ).rejects.toBeInstanceOf(ConflictError);
+
+    (pg.queryOne as Mock).mockResolvedValueOnce(item).mockRejectedValueOnce(new Error('db caida'));
+    await expect(
+      servicio.crear(EMPRESA, ITEM, { desde: '2026-12-20', hasta: '2026-12-31', precio_cents: 100 }),
+    ).rejects.toThrow('db caida');
+
+    (pg.queryOne as Mock).mockResolvedValueOnce(tarifa).mockRejectedValueOnce({ code: '23P01' });
+    await expect(
+      servicio.actualizar(EMPRESA, ITEM, TARIFA, { precio_cents: 30000 }),
+    ).rejects.toBeInstanceOf(ConflictError);
+
+    (pg.queryOne as Mock).mockResolvedValueOnce(tarifa).mockResolvedValueOnce(null);
+    await expect(
+      servicio.actualizar(EMPRESA, ITEM, TARIFA, { precio_cents: 30000 }),
+    ).rejects.toBeInstanceOf(NotFoundError);
+  });
+
+  it('cotiza sin tarifas usando solo el precio base', async () => {
+    const { servicio, pg } = crear();
+    (pg.queryOne as Mock).mockResolvedValue(item);
+    (pg.query as Mock).mockResolvedValue([]);
+
+    const cotizacion = await servicio.cotizar(EMPRESA, ITEM, '2026-12-18', '2026-12-20');
+    expect(cotizacion.total_cents).toBe(30000);
+    expect(cotizacion.desglose).toEqual([
+      { desde: '2026-12-18', hasta: '2026-12-20', dias: 3, precio_cents: 10000, subtotal_cents: 30000 },
+    ]);
+
+    const unDia = await servicio.cotizar(EMPRESA, ITEM, '2026-12-18', '2026-12-18');
+    expect(unDia.dias).toBe(1);
+  });
+
   it('cotiza el rango agrupando días con el mismo precio', async () => {
     const { servicio, pg } = crear();
     (pg.queryOne as Mock).mockResolvedValueOnce(item);
