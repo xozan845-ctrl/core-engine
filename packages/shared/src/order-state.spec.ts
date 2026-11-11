@@ -48,12 +48,29 @@ describe('order-state (ciclo de vida de la orden, Tabla 13)', () => {
     expect(error?.toResponse().mensaje).toContain('entregada');
   });
 
-  it('debe listar los siete estados del contrato en orden', () => {
+  it('debe permitir el ciclo de cotizacion y rechazar saltos', () => {
+    expect(() => validarTransicionPorTipo('cotizacion', 'creada', 'enviada')).not.toThrow();
+    expect(() => validarTransicionPorTipo('cotizacion', 'enviada', 'aceptada')).not.toThrow();
+    expect(() => validarTransicionPorTipo('cotizacion', 'enviada', 'rechazada')).not.toThrow();
+    expect(() => validarTransicionPorTipo('cotizacion', 'creada', 'aceptada')).toThrow(
+      /Transicion invalida/,
+    );
+    expect(() => validarTransicionPorTipo('cotizacion', 'aceptada', 'pagada')).toThrow(
+      /Transicion invalida/,
+    );
+    expect(() => validarTransicionPorTipo('compra', 'aceptada', 'pagada')).toThrow(
+      /Transicion invalida/,
+    );
+  });
+
+  it('debe listar los nueve estados del contrato en orden', () => {
     expect(ESTADOS_ORDEN).toEqual([
       'creada',
       'pagada',
       'en_preparacion',
       'enviada',
+      'aceptada',
+      'rechazada',
       'entregada',
       'cancelada',
       'devuelta',

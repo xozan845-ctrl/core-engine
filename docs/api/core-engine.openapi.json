@@ -11352,6 +11352,163 @@
         ]
       }
     },
+    "/api/v2/orders/{id}/cotizacion/enviar": {
+      "post": {
+        "operationId": "PedidosController_enviarCotizacion",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "description": "Id de la cotizacion",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Cotizacion enviada",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/OrderViewResponseDto"
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/MetaRespuesta"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Enviar una cotizacion al comprador",
+        "tags": [
+          "Pedidos"
+        ]
+      }
+    },
+    "/api/v2/orders/{id}/cotizacion/aceptar": {
+      "post": {
+        "operationId": "PedidosController_aceptarCotizacion",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "description": "Id de la cotizacion",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Cotizacion aceptada y orden creada",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/CotizacionAceptadaResponseDto"
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/MetaRespuesta"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Aceptar una cotizacion y generar la orden de compra",
+        "tags": [
+          "Pedidos"
+        ]
+      }
+    },
+    "/api/v2/orders/{id}/cotizacion/rechazar": {
+      "post": {
+        "operationId": "PedidosController_rechazarCotizacion",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "description": "Id de la cotizacion",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RechazarCotizacionRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Cotizacion rechazada",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/OrderViewResponseDto"
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/MetaRespuesta"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Rechazar una cotizacion enviada",
+        "tags": [
+          "Pedidos"
+        ]
+      }
+    },
     "/api/v2/orders/admin/todas": {
       "get": {
         "operationId": "PedidosController_todas",
@@ -25790,6 +25947,31 @@
           "total"
         ]
       },
+      "CotizacionAceptadaResponseDto": {
+        "type": "object",
+        "properties": {
+          "cotizacion": {
+            "description": "Cotizacion aceptada",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/OrderViewResponseDto"
+              }
+            ]
+          },
+          "orden": {
+            "description": "Orden de compra generada desde la cotizacion",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/OrderViewResponseDto"
+              }
+            ]
+          }
+        },
+        "required": [
+          "cotizacion",
+          "orden"
+        ]
+      },
       "CreateOrderCommand": {
         "type": "object",
         "properties": {
@@ -26064,6 +26246,16 @@
           "creado_en",
           "actualizado_en"
         ]
+      },
+      "RechazarCotizacionRequestDto": {
+        "type": "object",
+        "properties": {
+          "motivo": {
+            "type": "string",
+            "maxLength": 500,
+            "description": "Motivo del rechazo"
+          }
+        }
       },
       "TimelineEventoResponseDto": {
         "type": "object",
