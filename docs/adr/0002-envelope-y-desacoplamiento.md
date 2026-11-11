@@ -1,7 +1,7 @@
 # ADR-0002: Envelope de respuestas y desacoplamiento entre servicios
 
 - **Fecha**: 2026-11-10
-- **Estado**: Aceptado — fases 1-3 y 5-6 implementadas; envelope de `market-intelligence` (dev) pendiente
+- **Estado**: Aceptado — fases 1-2 y 5-6 implementadas; fase 3 en curso (`catalog`, `stores` e `identity` pendientes)
 - **Ámbito**: contrato público `/api/v2`, paginación, límites entre bounded contexts
 
 ## Contexto
@@ -92,7 +92,7 @@ Cada fase es un PR atómico y no mezcla envelope con desacoplamiento.
 | 0 | Enmienda de R-C-1 con los nombres de paginación elegidos y contrato `RespuestaApi<T>` | Regla y ADR sin contradicción |
 | 1 | Interceptor compartido + tests puros + un servicio piloto (`commissions`) | ✅ `commissions` devuelve envelope; test de contrato y OpenAPI actualizados |
 | 2 | `finance`, `orders`, `logistics` | ✅ Tres servicios con envelope y consumidores smoke/QA adaptados |
-| 3 | `catalog`, `stores`, `scheduling`, `identity`, `field`, `storage`, `market-intelligence` | Todos los servicios públicos con envelope |
+| 3 | `catalog`, `stores`, `scheduling`, `identity`, `field`, `storage`, `market-intelligence` | ⏳ `scheduling`, `field`, `storage` e `market-intelligence` completados; faltan `catalog`, `stores` e `identity` |
 | 4 | Gateway, smoke, QA harness y OpenAPI agregado | `npm run demo` verde y contrato público sin respuestas sin envolver |
 | 5 | Desacoplamiento de `orders`/`scheduling`/`field` hacia APIs internas | Sin SQL directo a tablas de identity; pruebas de caída con 503/degradación |
 | 6 | Mover la asignación vendedor–tienda de identity a stores | Identity sin escrituras a `stores.tiendas`; RLS y tests verdes |
@@ -128,9 +128,10 @@ Cada fase es un PR atómico y no mezcla envelope con desacoplamiento.
 
 ## Estado de implementación (2026-11-11)
 
-- Envelope `{ data, meta }` aplicado en **10 de 11** servicios;
-  `market-intelligence` (solo dev) es el único pendiente. El criterio se cumple
-  en los servicios desplegados en stage/producción.
+- Envelope `{ data, meta }` aplicado en **8 de 11** servicios:
+  `commissions`, `finance`, `orders`, `logistics`, `scheduling`, `field`,
+  `storage` y `market-intelligence`.
+- Pendientes de envelope: `catalog`, `stores` e `identity` (fase 3).
 - `orders` consulta capacidades por la API interna de identity; `scheduling` y
   `field` no leen tablas `identity.*`.
 - `identity` ya no lee `stores.tiendas`: `assertTienda` valida con
@@ -139,4 +140,3 @@ Cada fase es un PR atómico y no mezcla envelope con desacoplamiento.
   `null`). PR #528.
 - `identity` no escribe `stores.tiendas`; la asignación vendedor–tienda va por
   la API interna de stores.
-- Pendiente único: envelope de `market-intelligence`, fuera de stage/producción.

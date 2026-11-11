@@ -1,6 +1,7 @@
 import type { INestApplication } from '@nestjs/common';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import type { OpenAPIObject } from '@nestjs/swagger';
+import { envolverDocumentoOpenApi } from '@core/shared';
 
 /**
  * Construye el documento OpenAPI del servicio. Fuente de verdad del contrato
@@ -17,5 +18,7 @@ export function crearDocumentoOpenApi(app: INestApplication): OpenAPIObject {
     .setVersion('v1')
     .addBearerAuth()
     .build();
-  return SwaggerModule.createDocument(app, config);
+  return envolverDocumentoOpenApi(
+    SwaggerModule.createDocument(app, config),
+  ) as unknown as OpenAPIObject;
 }
