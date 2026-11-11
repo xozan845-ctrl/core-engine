@@ -594,6 +594,27 @@ async function main() {
     fail(`comision=${comision.comision} liquida=${comision.monto_vendedor}`);
   }
 
+  // ── 6b. Asientos contables de la saga (finance) ───────────────────────
+  paso('Finance: asiento del pago y de la comisión para la orden');
+  const asientosOrden = await esperar(
+    async () => {
+      const r = await api('GET', '/api/v2/finanzas/asientos?limite=200', null, tokenAdmin);
+      const data = r.json?.data ?? r.json;
+      const lista = Array.isArray(data) ? data : data?.items ?? [];
+      const delPedido = lista.filter((a) => a.referencia_id === orderId);
+      return delPedido.length >= 2 ? delPedido : null;
+    },
+    'asientos de pago y comisión',
+  );
+  const tiposAsiento = asientosOrden.map((a) => a.tipo).sort().join(',');
+  const debeAsientos = asientosOrden.reduce((total, a) => total + a.debe_cents, 0);
+  const haberAsientos = asientosOrden.reduce((total, a) => total + a.haber_cents, 0);
+  if (tiposAsiento === 'AJUSTE,INGRESO' && debeAsientos === 230000 && haberAsientos === 230000) {
+    ok(`asientos=${tiposAsiento} · C$${(debeAsientos / 100).toFixed(2)}`);
+  } else {
+    fail(`asientos=${tiposAsiento} debe=${debeAsientos} haber=${haberAsientos}`);
+  }
+
   // ── 7. TC-04: stock insuficiente → 409 (compra de 2 con stock total 1) ─
   paso('TC-04: producto con stock 1; compra de 2 unidades → 409');
   const prodUno = await api(
