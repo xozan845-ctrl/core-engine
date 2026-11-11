@@ -20,6 +20,8 @@ const SERVICIOS_MIGRADOS = [
   'commissions-service',
   'stores-service',
   'storage-service',
+  'scheduling-service',
+  'notifications-service',
 ];
 
 test('debe documentar schema de éxito en los servicios migrados cuando se exporta OpenAPI', () => {
