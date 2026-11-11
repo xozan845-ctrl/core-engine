@@ -10435,7 +10435,19 @@ export const OPENAPI_AGREGADO = {
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/OrdenExternaResponseDto"
+                  "type": "object",
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/OrdenExternaResponseDto"
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/MetaRespuesta"
+                    }
+                  }
                 }
               }
             }
@@ -10465,9 +10477,21 @@ export const OPENAPI_AGREGADO = {
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/components/schemas/EnvioConMontoResponseDto"
+                  "type": "object",
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
+                  "properties": {
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/EnvioConMontoResponseDto"
+                      }
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/MetaRespuesta"
+                    }
                   }
                 }
               }
@@ -10495,9 +10519,21 @@ export const OPENAPI_AGREGADO = {
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/components/schemas/EnvioResponseDto"
+                  "type": "object",
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
+                  "properties": {
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/EnvioResponseDto"
+                      }
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/MetaRespuesta"
+                    }
                   }
                 }
               }
@@ -10545,7 +10581,19 @@ export const OPENAPI_AGREGADO = {
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/EnvioResponseDto"
+                  "type": "object",
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/EnvioResponseDto"
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/MetaRespuesta"
+                    }
+                  }
                 }
               }
             }
@@ -10592,7 +10640,19 @@ export const OPENAPI_AGREGADO = {
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/EnvioResponseDto"
+                  "type": "object",
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/EnvioResponseDto"
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/MetaRespuesta"
+                    }
+                  }
                 }
               }
             }
@@ -11220,7 +11280,19 @@ export const OPENAPI_AGREGADO = {
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/OrderViewResponseDto"
+                  "type": "object",
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/OrderViewResponseDto"
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/MetaRespuesta"
+                    }
+                  }
                 }
               }
             }
@@ -11254,9 +11326,21 @@ export const OPENAPI_AGREGADO = {
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/components/schemas/OrderViewResponseDto"
+                  "type": "object",
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
+                  "properties": {
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/OrderViewResponseDto"
+                      }
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/MetaRespuesta"
+                    }
                   }
                 }
               }
@@ -11301,9 +11385,21 @@ export const OPENAPI_AGREGADO = {
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/components/schemas/OrderViewResponseDto"
+                  "type": "object",
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
+                  "properties": {
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/OrderViewResponseDto"
+                      }
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/MetaRespuesta"
+                    }
                   }
                 }
               }
@@ -11340,9 +11436,21 @@ export const OPENAPI_AGREGADO = {
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/components/schemas/OrderViewResponseDto"
+                  "type": "object",
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
+                  "properties": {
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/OrderViewResponseDto"
+                      }
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/MetaRespuesta"
+                    }
                   }
                 }
               }
@@ -11388,9 +11496,21 @@ export const OPENAPI_AGREGADO = {
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/components/schemas/OrderViewResponseDto"
+                  "type": "object",
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
+                  "properties": {
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/OrderViewResponseDto"
+                      }
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/MetaRespuesta"
+                    }
                   }
                 }
               }
@@ -11452,9 +11572,21 @@ export const OPENAPI_AGREGADO = {
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/components/schemas/OrderViewResponseDto"
+                  "type": "object",
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
+                  "properties": {
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/OrderViewResponseDto"
+                      }
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/MetaRespuesta"
+                    }
                   }
                 }
               }
@@ -11492,7 +11624,19 @@ export const OPENAPI_AGREGADO = {
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/OrderViewResponseDto"
+                  "type": "object",
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/OrderViewResponseDto"
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/MetaRespuesta"
+                    }
+                  }
                 }
               }
             }
@@ -11529,9 +11673,21 @@ export const OPENAPI_AGREGADO = {
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/components/schemas/TimelineEventoResponseDto"
+                  "type": "object",
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
+                  "properties": {
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/TimelineEventoResponseDto"
+                      }
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/MetaRespuesta"
+                    }
                   }
                 }
               }
@@ -11559,7 +11715,19 @@ export const OPENAPI_AGREGADO = {
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/CarritoResponseDto"
+                  "type": "object",
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/CarritoResponseDto"
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/MetaRespuesta"
+                    }
+                  }
                 }
               }
             }
@@ -11584,7 +11752,19 @@ export const OPENAPI_AGREGADO = {
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/CarritoResponseDto"
+                  "type": "object",
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/CarritoResponseDto"
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/MetaRespuesta"
+                    }
+                  }
                 }
               }
             }
@@ -11621,7 +11801,19 @@ export const OPENAPI_AGREGADO = {
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/CarritoResponseDto"
+                  "type": "object",
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/CarritoResponseDto"
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/MetaRespuesta"
+                    }
+                  }
                 }
               }
             }
@@ -11668,7 +11860,19 @@ export const OPENAPI_AGREGADO = {
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/CarritoResponseDto"
+                  "type": "object",
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/CarritoResponseDto"
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/MetaRespuesta"
+                    }
+                  }
                 }
               }
             }
@@ -11703,7 +11907,19 @@ export const OPENAPI_AGREGADO = {
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/CarritoResponseDto"
+                  "type": "object",
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/CarritoResponseDto"
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/MetaRespuesta"
+                    }
+                  }
                 }
               }
             }

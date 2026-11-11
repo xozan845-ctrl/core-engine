@@ -43,6 +43,21 @@ function fail(detalle = '') {
   console.log(`FAIL ${detalle}`);
 }
 
+/** Desenvuelve `{data,meta}` (R-C-1) sin alterar respuestas de servicios aún no migrados. */
+function desenvolver(json) {
+  if (
+    json &&
+    typeof json === 'object' &&
+    !Array.isArray(json) &&
+    Object.prototype.hasOwnProperty.call(json, 'data') &&
+    json.meta &&
+    typeof json.meta === 'object'
+  ) {
+    return json.data;
+  }
+  return json;
+}
+
 async function api(metodo, ruta, cuerpo, token, opciones = {}) {
   const intentos = metodo === 'GET' ? 2 : 1;
   for (let intento = 0; intento < intentos; intento += 1) {
@@ -64,7 +79,11 @@ async function api(metodo, ruta, cuerpo, token, opciones = {}) {
       } catch {
         json = texto;
       }
-      return { status: res.status, json, location: res.headers.get('location') ?? undefined };
+      return {
+        status: res.status,
+        json: desenvolver(json),
+        location: res.headers.get('location') ?? undefined,
+      };
     } catch (error) {
       if (intento === intentos - 1) {
         throw new Error(`${metodo} ${ruta}: sin respuesta tras ${intentos} intento(s) de ${REQUEST_TIMEOUT_MS} ms`, { cause: error });
