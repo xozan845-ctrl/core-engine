@@ -78,6 +78,21 @@ describe('PedidosConsumer de catalog (RN-03 / RN-06)', () => {
     expect(productos.registrarProcesado).toHaveBeenCalledWith('evt-1', EVENTOS.ORDER_CREATED, client);
   });
 
+  it('una cotizacion no reserva stock y solo registra idempotencia', async () => {
+    const { dispatch, outbox, productos, client } = await crear();
+    await dispatch(
+      evento(EVENTOS.ORDER_CREATED, { ...ordenData, tipo_orden: 'cotizacion' }),
+    );
+
+    expect(productos.reservarStockEnTransaccion).not.toHaveBeenCalled();
+    expect(outbox.insertarEnTransaccion).not.toHaveBeenCalled();
+    expect(productos.registrarProcesado).toHaveBeenCalledWith(
+      'evt-1',
+      EVENTOS.ORDER_CREATED,
+      client,
+    );
+  });
+
   it('debe emitir stock.fallido cuando la reserva es rechazada por stock insuficiente', async () => {
     const { dispatch, outbox, productos } = await crear();
     (productos.reservarStockEnTransaccion as Mock).mockResolvedValue({
