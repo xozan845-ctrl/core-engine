@@ -4,6 +4,21 @@ import { createRequire } from 'module';
 
 const require = createRequire(import.meta.url);
 
+/** Desenvuelve `{data,meta}` (R-C-1) sin alterar respuestas no migradas. */
+function desenvolver(body) {
+  if (
+    body &&
+    typeof body === 'object' &&
+    !Array.isArray(body) &&
+    Object.prototype.hasOwnProperty.call(body, 'data') &&
+    body.meta &&
+    typeof body.meta === 'object'
+  ) {
+    return body.data;
+  }
+  return body;
+}
+
 // ── Cliente HTTP (fetch nativo, sin dependencias) ──────────────
 export class ClientoHTTP {
   constructor(base) {
@@ -17,7 +32,7 @@ export class ClientoHTTP {
     const text = await res.text();
     let responseBody;
     try { responseBody = JSON.parse(text); } catch { responseBody = text; }
-    return { status: res.status, body: responseBody, headers: Object.fromEntries(res.headers.entries()) };
+    return { status: res.status, body: desenvolver(responseBody), headers: Object.fromEntries(res.headers.entries()) };
   }
 
   async post(path, body, headers) {
@@ -27,7 +42,7 @@ export class ClientoHTTP {
     const text = await res.text();
     let responseBody;
     try { responseBody = JSON.parse(text); } catch { responseBody = text; }
-    return { status: res.status, body: responseBody, headers: Object.fromEntries(res.headers.entries()) };
+    return { status: res.status, body: desenvolver(responseBody), headers: Object.fromEntries(res.headers.entries()) };
   }
 
   async patch(path, body, headers) {
@@ -37,7 +52,7 @@ export class ClientoHTTP {
     const text = await res.text();
     let responseBody;
     try { responseBody = JSON.parse(text); } catch { responseBody = text; }
-    return { status: res.status, body: responseBody, headers: Object.fromEntries(res.headers.entries()) };
+    return { status: res.status, body: desenvolver(responseBody), headers: Object.fromEntries(res.headers.entries()) };
   }
 
   async delete(path, headers) {
@@ -47,7 +62,7 @@ export class ClientoHTTP {
     const text = await res.text();
     let responseBody;
     try { responseBody = JSON.parse(text); } catch { responseBody = text; }
-    return { status: res.status, body: responseBody, headers: Object.fromEntries(res.headers.entries()) };
+    return { status: res.status, body: desenvolver(responseBody), headers: Object.fromEntries(res.headers.entries()) };
   }
 
   async put(path, body, headers) {
@@ -57,7 +72,7 @@ export class ClientoHTTP {
     const text = await res.text();
     let responseBody;
     try { responseBody = JSON.parse(text); } catch { responseBody = text; }
-    return { status: res.status, body: responseBody, headers: Object.fromEntries(res.headers.entries()) };
+    return { status: res.status, body: desenvolver(responseBody), headers: Object.fromEntries(res.headers.entries()) };
   }
 
   async request(method, path, body, headers) {
@@ -67,7 +82,7 @@ export class ClientoHTTP {
     const text = await res.text();
     let responseBody;
     try { responseBody = JSON.parse(text); } catch { responseBody = text; }
-    return { status: res.status, body: responseBody, headers: Object.fromEntries(res.headers.entries()) };
+    return { status: res.status, body: desenvolver(responseBody), headers: Object.fromEntries(res.headers.entries()) };
   }
 }
 
