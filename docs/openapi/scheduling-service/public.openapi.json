@@ -711,49 +711,12 @@
       "DisponibilidadResponseDto": {
         "type": "object",
         "properties": {
-          "id": {
-            "type": "string",
-            "format": "uuid"
-          },
-          "empresa_id": {
-            "type": "string",
-            "format": "uuid"
-          },
-          "recurso_id": {
-            "type": "string",
-            "format": "uuid"
-          },
-          "dia_semana": {
-            "type": "number"
-          },
-          "inicia_hora": {
-            "type": "string"
-          },
-          "termina_hora": {
-            "type": "string"
-          },
-          "zona_horaria": {
-            "type": "string"
-          },
-          "vigente_desde": {
-            "type": "string",
-            "format": "date"
-          },
-          "vigente_hasta": {
-            "type": "object",
-            "nullable": true,
-            "format": "date"
+          "disponible": {
+            "type": "boolean"
           }
         },
         "required": [
-          "id",
-          "empresa_id",
-          "recurso_id",
-          "dia_semana",
-          "inicia_hora",
-          "termina_hora",
-          "zona_horaria",
-          "vigente_desde"
+          "disponible"
         ]
       },
       "MetaRespuesta": {

@@ -191,6 +191,73 @@ export class SchedulingService implements OnModuleInit, OnModuleDestroy {
     }
   }
 
+  /**
+   * Verificación interna para reservas de orders (Fase C2): recurso activo,
+   * ventana de disponibilidad, bloqueos y solapes con citas activas.
+   */
+  async verificarDisponibilidad(
+    empresaId: string,
+    recursoId: string,
+    inicia: string,
+    termina: string,
+  ): Promise<void> {
+    this.validarPeriodo(inicia, termina);
+    const recurso = await this.pg.queryOne(
+      `SELECT id FROM scheduling.recursos
+        WHERE id = $1 AND empresa_id = $2 AND estado = 'activo'`,
+      [recursoId, empresaId],
+    );
+    if (!recurso) throw new NotFoundError('Recurso', recursoId);
+
+    const ventana = await this.pg.queryOne(
+      `SELECT 1 FROM scheduling.disponibilidad d
+        WHERE d.recurso_id = $1
+          AND d.dia_semana = EXTRACT(DOW FROM ($2::timestamptz AT TIME ZONE d.zona_horaria))::int
+          AND d.inicia_hora <= (($2::timestamptz AT TIME ZONE d.zona_horaria)::time)
+          AND d.termina_hora >= (($3::timestamptz AT TIME ZONE d.zona_horaria)::time)
+          AND d.vigente_desde <= (($2::timestamptz AT TIME ZONE d.zona_horaria)::date)
+          AND (d.vigente_hasta IS NULL OR d.vigente_hasta >= (($2::timestamptz AT TIME ZONE d.zona_horaria)::date))
+        LIMIT 1`,
+      [recursoId, inicia, termina],
+    );
+    if (!ventana) {
+      throw new ConflictError(
+        'El recurso no tiene disponibilidad en ese horario.',
+        undefined,
+        'RECURSO_NO_DISPONIBLE',
+      );
+    }
+
+    const bloqueo = await this.pg.queryOne(
+      `SELECT 1 FROM scheduling.bloqueos
+        WHERE recurso_id = $1
+          AND periodo && tstzrange($2::timestamptz, $3::timestamptz, '[)') LIMIT 1`,
+      [recursoId, inicia, termina],
+    );
+    if (bloqueo) {
+      throw new ConflictError(
+        'El recurso esta bloqueado en ese horario.',
+        undefined,
+        'RECURSO_NO_DISPONIBLE',
+      );
+    }
+
+    const cita = await this.pg.queryOne(
+      `SELECT 1 FROM scheduling.citas
+        WHERE recurso_id = $1
+          AND estado IN ('reservada', 'confirmada', 'en_atencion')
+          AND periodo && tstzrange($2::timestamptz, $3::timestamptz, '[)') LIMIT 1`,
+      [recursoId, inicia, termina],
+    );
+    if (cita) {
+      throw new ConflictError(
+        'El recurso ya esta reservado en ese horario.',
+        undefined,
+        'RECURSO_NO_DISPONIBLE',
+      );
+    }
+  }
+
   listarCitas(empresaId: string, desde?: string, hasta?: string): Promise<Fila[]> {
     return this.pg.query<Fila>(
       `SELECT id, empresa_id, recurso_id, parte_id, order_id, item_id, estado,
@@ -249,7 +316,10 @@ export class SchedulingService implements OnModuleInit, OnModuleDestroy {
       [orden.order_id],
     );
     if (existente) return existente;
-    const item = orden.items.find((linea) => linea.item_type === 'servicio' && linea.fulfillment === 'onsite');
+    const item = orden.items.find(
+      (linea) =>
+        ['servicio', 'alquiler'].includes(linea.item_type) && linea.fulfillment === 'onsite',
+    );
     const config = item?.fulfillment_config ?? {};
     const recursoId = this.textoConfig(config, 'recurso_id');
     const iniciaEn = this.textoConfig(config, 'inicia_en');
