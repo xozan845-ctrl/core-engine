@@ -7886,6 +7886,38 @@ export const OPENAPI_AGREGADO = {
         ]
       }
     },
+    "/api/v2/auth/restablecer-contrasena/confirmar": {
+      "post": {
+        "operationId": "AuthController_confirmarRestablecimiento",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ConfirmarRestablecimientoRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Contraseña restablecida",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OkResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Confirmar restablecimiento de contraseña (público)",
+        "tags": [
+          "Auth"
+        ]
+      }
+    },
     "/api/v2/auth/me": {
       "get": {
         "operationId": "AuthController_yo",
@@ -22741,6 +22773,24 @@ export const OPENAPI_AGREGADO = {
           "tema",
           "origen_personalizacion",
           "actualizado_en"
+        ]
+      },
+      "ConfirmarRestablecimientoRequestDto": {
+        "type": "object",
+        "properties": {
+          "token": {
+            "type": "string",
+            "description": "Token recibido por correo"
+          },
+          "contrasena": {
+            "type": "string",
+            "description": "Contraseña nueva (mínimo 8 caracteres)",
+            "minLength": 8
+          }
+        },
+        "required": [
+          "token",
+          "contrasena"
         ]
       },
       "CrearDireccionRequestDto": {

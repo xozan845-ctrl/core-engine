@@ -8,8 +8,8 @@ import { Logger } from '@core/shared';
  * El navegador llama a `/api-proxy/api/v2/...`; este handler añade el Basic del
  * gate de staging en el servidor y reenvía al gateway interno. El secreto nunca
  * viaja al navegador. Para rutas con sesión se reenvía el Bearer del cliente y
- * el gateway valida el JWT; el Basic solo se usa en login/registro/refresh y
- * cuando no hay Bearer.
+ * el gateway valida el JWT; el Basic solo se usa en login/registro/refresh,
+ * restablecer-contrasena y su confirmación, y cuando no hay Bearer.
  *
  * La ruta es deliberadamente pública: un frontend público no puede guardar un
  * secreto. La autorización real de datos sigue siendo el JWT. El resto de rutas
@@ -27,7 +27,7 @@ const PREFIJO = '/api-proxy';
 const MAX_BODY_BYTES = 1024 * 1024;
 const TIMEOUT_MS = 60_000;
 const METODOS = new Set(['GET', 'HEAD', 'POST', 'PATCH', 'PUT', 'DELETE', 'OPTIONS']);
-const RUTA_AUTH = /^\/api\/v2\/auth\/(login|registro|refresh|restablecer-contrasena)$/;
+const RUTA_AUTH = /^\/api\/v2\/auth\/(login|registro|refresh|restablecer-contrasena(?:\/confirmar)?)$/;
 const CABECERAS_PERMITIDAS = 'Content-Type,Authorization,x-request-id,Range';
 const METODOS_CORS = 'GET,HEAD,POST,PATCH,PUT,DELETE,OPTIONS';
 const CABECERAS_NO_REENVIABLES = new Set([

@@ -20,7 +20,8 @@ Navegador (web.app)
                  └─ POST http://127.0.0.1:8080/api/v2/auth/login
 ```
 
-- `login`, `registro`, `refresh`, `restablecer-contrasena`: Basic interno.
+- `login`, `registro`, `refresh`, `restablecer-contrasena` y
+  `restablecer-contrasena/confirmar`: Basic interno.
 - Resto: se reenvía el `Bearer` del navegador; el gateway valida el JWT.
 - CORS: solo los orígenes de `CORS_ORIGINS`; el preflight se responde en el proxy.
 - Body máximo: 1 MB (los archivos van directos a MinIO con URL prefirmada).

@@ -861,3 +861,12 @@ CREATE POLICY reservas_lotes_empresa ON catalog.reservas_lotes
   FOR SELECT TO authenticated
   USING (auth.rol() IN ('empresario', 'vendedor')
          AND empresa_id::text = (auth.jwt() ->> 'tenant_id'));
+
+-- ── identity.password_reset_tokens (ADR-0003) ───────────────────────────────
+-- El token es una capacidad de un solo uso: solo el rol de servicio de identity
+-- lo lee y consume. No se expone a `authenticated` (ni a admin/empresario).
+ALTER TABLE identity.password_reset_tokens ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS password_reset_tokens_app ON identity.password_reset_tokens;
+CREATE POLICY password_reset_tokens_app ON identity.password_reset_tokens
+  FOR ALL TO core_engine_app
+  USING (true) WITH CHECK (true);
