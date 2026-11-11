@@ -4,7 +4,8 @@ import { check, fail, sleep } from 'k6';
 // Carga acotada del camino crítico: auth → empresa → producto → oferta →
 // orden → pago. NO es una prueba de estrés ni un DoS.
 //
-// - 5 VUs máximo y 70 s de escenario.
+// - 2 VUs y 60 s por defecto (K6_VUS/K6_DURACION). El gateway limita 300/min
+//   por IP; cargas mayores exigen IPs distribuidas o un bypass de test.
 // - Crea un tenant/producto efímeros con stock 5000 en `setup()`.
 // - Por defecto apunta a localhost; para stage/producción exige aprobación y
 //   monitorización (R-CD-12).
@@ -13,18 +14,17 @@ import { check, fail, sleep } from 'k6';
 //   k6 run security/k6/order-flow.js
 //   BASE_URL=https://api.staging.example k6 run security/k6/order-flow.js
 //
-// Variables: BASE_URL, ADMIN_EMAIL, ADMIN_PASSWORD (los mismos del smoke).
+// Variables: BASE_URL, ADMIN_EMAIL, ADMIN_PASSWORD, K6_VUS, K6_DURACION.
+const VUS = Number(__ENV.K6_VUS || 2);
+const DURACION = __ENV.K6_DURACION || '60s';
+
 export const options = {
   scenarios: {
     orders: {
-      executor: 'ramping-vus',
-      startVUs: 0,
-      stages: [
-        { duration: '15s', target: 5 },
-        { duration: '45s', target: 5 },
-        { duration: '10s', target: 0 },
-      ],
-      gracefulRampDown: '10s',
+      executor: 'constant-vus',
+      vus: VUS,
+      duration: DURACION,
+      gracefulStop: '5s',
     },
   },
   thresholds: {
@@ -199,5 +199,5 @@ export default function (data) {
   check({ estado }, {
     'orden pagada': (valor) => valor.estado === 'pagada',
   });
-  sleep(0.5);
+  sleep(2);
 }
