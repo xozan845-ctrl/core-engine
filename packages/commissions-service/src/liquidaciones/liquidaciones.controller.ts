@@ -11,7 +11,11 @@ import {
   RequiereCapacidades,
 } from '@core/shared';
 import { LiquidacionesService, Liquidacion, LiquidacionEmpresa, Periodo } from './liquidaciones.service';
-import { LiquidacionEmpresaResponseDto, LiquidacionResponseDto } from './liquidaciones.response.dto';
+import {
+  EnvelopeLiquidacionResponseDto,
+  EnvelopeLiquidacionesEmpresaResponseDto,
+  EnvelopeLiquidacionesResponseDto,
+} from '../envelope.response.dto';
 
 export class EstadoLiquidacionRequestDto {
   @ApiProperty({ description: 'Estado de la liquidación', enum: ['pagada'] })
@@ -30,7 +34,7 @@ export class LiquidacionesController {
   @Get('vendedores/me/liquidaciones')
   @Roles(ROLES.VENDEDOR)
   @ApiOperation({ summary: 'Cortes/liquidaciones del vendedor autenticado' })
-  @ApiOkResponse({ type: [LiquidacionResponseDto], description: 'Liquidaciones del vendedor' })
+  @ApiOkResponse({ type: EnvelopeLiquidacionesResponseDto, description: 'Liquidaciones del vendedor' })
   async mias(@UsuarioActual() usuario: UsuarioContexto): Promise<Liquidacion[]> {
     return this.liquidaciones.deVendedor(usuario.user_id);
   }
@@ -38,7 +42,7 @@ export class LiquidacionesController {
   @Get('empresarios/me/liquidaciones')
   @Roles(ROLES.EMPRESARIO)
   @ApiOperation({ summary: 'Liquidaciones de la empresa autenticada' })
-  @ApiOkResponse({ type: [LiquidacionEmpresaResponseDto], description: 'Liquidaciones del empresario' })
+  @ApiOkResponse({ type: EnvelopeLiquidacionesEmpresaResponseDto, description: 'Liquidaciones del empresario' })
   async deMiEmpresa(@UsuarioActual() usuario: UsuarioContexto): Promise<LiquidacionEmpresa[]> {
     if (!usuario.tenant_id) throw new NotFoundError('Empresa', 'activa');
     return this.liquidaciones.deEmpresa(usuario.tenant_id);
@@ -50,7 +54,7 @@ export class LiquidacionesController {
   @ApiOperation({ summary: 'Ejecutar un corte de liquidaciones (admin)' })
   @ApiQuery({ name: 'inicio', required: false })
   @ApiQuery({ name: 'fin', required: false })
-  @ApiCreatedResponse({ type: [LiquidacionResponseDto], description: 'Liquidaciones generadas' })
+  @ApiCreatedResponse({ type: EnvelopeLiquidacionesResponseDto, description: 'Liquidaciones generadas' })
   async corteManual(
     @Query('inicio') inicio?: string,
     @Query('fin') fin?: string,
@@ -68,7 +72,7 @@ export class LiquidacionesController {
   @ApiOperation({ summary: 'Marcar una liquidación como pagada (RN-07)' })
   @ApiParam({ name: 'id', description: 'Id de la liquidación' })
   @ApiQuery({ name: 'estado', required: false })
-  @ApiCreatedResponse({ type: LiquidacionResponseDto, description: 'Liquidación pagada' })
+  @ApiCreatedResponse({ type: EnvelopeLiquidacionResponseDto, description: 'Liquidación pagada' })
   async pagar(
     @Param('id') id: string,
     @Query('estado') estado?: string,
