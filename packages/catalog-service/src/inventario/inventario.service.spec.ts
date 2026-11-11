@@ -139,7 +139,8 @@ describe('InventarioService · consumo FEFO', () => {
           rowCount: 2,
         })
         .mockResolvedValueOnce({ rows: [], rowCount: 1 })
-        .mockResolvedValueOnce({ rows: [], rowCount: 1 }),
+        .mockResolvedValueOnce({ rows: [], rowCount: 1 })
+        .mockResolvedValueOnce({ rows: [{ stock: 7 }], rowCount: 1 }),
     };
     const pg = { transaccion: vi.fn(async (fn: (c: typeof client) => unknown) => fn(client)) };
     const servicio = new InventarioService(pg as never);

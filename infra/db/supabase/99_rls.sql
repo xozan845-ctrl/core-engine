@@ -849,3 +849,15 @@ CREATE POLICY field_outbox_admin ON field.outbox
   FOR ALL TO authenticated
   USING (auth.rol() IN ('super_admin', 'admin'))
   WITH CHECK (auth.rol() IN ('super_admin', 'admin'));
+
+
+-- ── catalog.reservas_lotes (FEFO por orden) ─────────────────────────────
+ALTER TABLE catalog.reservas_lotes ENABLE ROW LEVEL SECURITY;
+CREATE POLICY reservas_lotes_admin ON catalog.reservas_lotes
+  FOR ALL TO authenticated
+  USING (auth.rol() IN ('super_admin', 'admin'))
+  WITH CHECK (auth.rol() IN ('super_admin', 'admin'));
+CREATE POLICY reservas_lotes_empresa ON catalog.reservas_lotes
+  FOR SELECT TO authenticated
+  USING (auth.rol() IN ('empresario', 'vendedor')
+         AND empresa_id::text = (auth.jwt() ->> 'tenant_id'));
