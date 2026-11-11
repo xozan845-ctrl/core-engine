@@ -31,6 +31,9 @@ const MIGRACIONES = [
   '29_vertical_packs.sql',
 ];
 
+/** Pack creado en tiempo de ejecución: no existe en el código ni en las semillas. */
+const PACK_DINAMICO = { vertical: 'agnostica', pack: 'pack_agnostica' };
+
 const TENANTS = [
   { vertical: 'retail', pack: 'pack_retail', tipo: 'comercial' },
   { vertical: 'farmacia', pack: 'pack_farmacia', tipo: 'comercial' },
@@ -109,15 +112,43 @@ before(async () => {
     const { rows: [{ existe }] } = await client.query(
       `SELECT to_regnamespace('identity') IS NOT NULL AS existe`,
     );
-    const migraciones = existe ? MIGRACIONES.filter((name) => name !== '01_esquemas.sql') : MIGRACIONES;
+    const { rows: [{ catalogoFinal }] } = await client.query(
+      `SELECT to_regclass('catalog.items') IS NOT NULL AND to_regclass('catalog.productos') IS NULL AS "catalogoFinal"`,
+    );
+    // Con el catálogo unificado ya aplicado no se reejecutan las migraciones
+    // legacy (referencian catalog.productos); solo se refrescan los seeds.
+    const migraciones = !existe
+      ? MIGRACIONES
+      : catalogoFinal
+        ? ['29_vertical_packs.sql']
+        : MIGRACIONES.filter((name) => name !== '01_esquemas.sql');
     for (const name of migraciones) {
       const sql = await readFile(new URL(`../../infra/db/init/${name}`, import.meta.url), 'utf8');
       await client.query(sql);
     }
+    await client.query(
+      `INSERT INTO identity.verticales (codigo, nombre, modelo_operacion)
+       VALUES ($1, 'Agnostica QA', 'Modelo configurable de prueba')
+       ON CONFLICT (codigo) DO NOTHING`,
+      [PACK_DINAMICO.vertical],
+    );
+    await client.query(
+      `INSERT INTO identity.packs (codigo, version, vertical_codigo, nombre, descripcion, config)
+       VALUES ($1, 1, $2, 'Agnostica QA', 'Pack de prueba', '{"modelo":"mixto"}'::jsonb)
+       ON CONFLICT (codigo, version) DO NOTHING`,
+      [PACK_DINAMICO.pack, PACK_DINAMICO.vertical],
+    );
+    await client.query(
+      `INSERT INTO identity.pack_capacidades (pack_codigo, pack_version, capacidad_codigo, activo)
+       VALUES ($1, 1, 'catalogo_items', true), ($1, 1, 'agenda_recursos', true)
+       ON CONFLICT DO NOTHING`,
+      [PACK_DINAMICO.pack],
+    );
     for (const definicion of TENANTS) {
       const creado = await crearTenant(definicion);
       creados.set(definicion.vertical, creado);
     }
+    creados.set(PACK_DINAMICO.vertical, await crearTenant(PACK_DINAMICO));
   } finally {
     await client.query('SELECT pg_advisory_unlock(38194201)');
   }
@@ -149,6 +180,15 @@ after(async () => {
   for (const creado of creados.values()) {
     await limpiarTenant(creado).catch(() => undefined);
   }
+  await client
+    ?.query('DELETE FROM identity.pack_capacidades WHERE pack_codigo = $1', [PACK_DINAMICO.pack])
+    .catch(() => undefined);
+  await client
+    ?.query('DELETE FROM identity.packs WHERE codigo = $1', [PACK_DINAMICO.pack])
+    .catch(() => undefined);
+  await client
+    ?.query('DELETE FROM identity.verticales WHERE codigo = $1', [PACK_DINAMICO.vertical])
+    .catch(() => undefined);
   await client?.end();
 });
 
@@ -230,6 +270,14 @@ test('desactivar la capacidad en la empresa la revoca de inmediato', async () =>
       [retail.empresaId, CAPACIDADES.INVENTARIO_STOCK],
     );
   }
+});
+
+test('un pack nuevo con capacidades arbitrarias se aplica sin tocar código', async () => {
+  // El pack se insertó en la BD en el setup: no existe en semillas ni en código.
+  await assert.doesNotReject(permite(PACK_DINAMICO.vertical, [CAPACIDADES.CATALOGO_ITEMS]));
+  await assert.doesNotReject(permite(PACK_DINAMICO.vertical, [CAPACIDADES.AGENDA_RECURSOS]));
+  await rechaza(PACK_DINAMICO.vertical, [CAPACIDADES.INVENTARIO_STOCK]);
+  await rechaza(PACK_DINAMICO.vertical, [CAPACIDADES.LOGISTICA_RUTAS]);
 });
 
 test('sin tenant activo el guard falla cerrado', async () => {
