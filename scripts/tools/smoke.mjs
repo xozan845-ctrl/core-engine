@@ -720,7 +720,7 @@ async function main() {
   if (inventario.status === 200 && inventario.json.length >= 2) ok(`líneas=${inventario.json.length}`);
   else fail(`inventario → ${inventario.status}`);
 
-  paso('R-E-3: despublicar producto lo oculta del catálogo público');
+  paso('R-E-3: despublicar producto lo oculta del catálogo activo');
   const despublicar = await api(
     'PATCH',
     `/api/v2/catalog/items/${producto.item_id ?? producto.id}`,
@@ -729,7 +729,9 @@ async function main() {
   );
   const productoOculto = await api(
     'GET',
-    `/api/v2/catalog/items?empresa_id=${encodeURIComponent(empresa.json.id)}&q=${encodeURIComponent((producto.codigo ?? producto.sku))}`,
+    `/api/v2/catalog/items?empresa_id=${encodeURIComponent(empresa.json.id)}&q=${encodeURIComponent((producto.codigo ?? producto.sku))}&estado=activo`,
+    null,
+    tokenAdmin,
   );
   if (despublicar.status === 200 && productoOculto.status === 200 && productoOculto.json?.total === 0) {
     ok();
