@@ -7,9 +7,12 @@ import {
   ForbiddenError,
   GoneError,
   NotFoundError,
+  obtenerTienda,
   PgService,
   Rol,
   ROLES,
+  ServiceUnavailableError,
+  tiendasPorIds,
 } from '@core/shared';
 import { AuthService, Sesion } from '../auth/auth.service';
 
@@ -273,19 +276,29 @@ export class PersonalService {
 
   async listarAsignaciones(actor: Actor, empresaId: string) {
     await this.assertAccesoEmpresa(actor, empresaId);
-    return this.pg.query(
+    const filas = await this.pg.query<{ tienda_id: string | null } & Record<string, unknown>>(
       `SELECT a.id, a.empresa_id, a.usuario_id, u.nombre AS usuario_nombre, u.correo AS usuario_correo,
               a.rol_empresa_id, r.codigo AS rol_codigo, r.nombre AS rol_nombre,
-              a.tienda_id, t.nombre AS tienda_nombre, a.puesto_id, p.nombre AS puesto_nombre,
+              a.tienda_id, a.puesto_id, p.nombre AS puesto_nombre,
               a.metadata, a.estado, a.inicia_en, a.termina_en, a.creado_en
        FROM identity.asignaciones_personal a
        JOIN identity.usuarios u ON u.id=a.usuario_id
        JOIN identity.roles_empresa r ON r.id=a.rol_empresa_id
-       LEFT JOIN stores.tiendas t ON t.id=a.tienda_id AND t.empresa_id=a.empresa_id
        LEFT JOIN identity.puestos_empresa p ON p.id=a.puesto_id AND p.empresa_id=a.empresa_id
        WHERE a.empresa_id=$1 ORDER BY a.creado_en DESC`,
       [empresaId],
     );
+
+    // stores es la autoridad de las tiendas: se resuelve por su API interna.
+    const ids = [...new Set(filas.map((f) => f.tienda_id).filter((id): id is string => Boolean(id)))];
+    if (ids.length === 0) return filas;
+    const tiendas = await tiendasPorIds(ids);
+    if (tiendas === null) {
+      // Degradación controlada del listado: se conserva la asignación sin nombre.
+      return filas.map((f) => (f.tienda_id ? { ...f, tienda_nombre: null } : f));
+    }
+    const nombres = new Map(tiendas.map((t) => [t.id, t.nombre]));
+    return filas.map((f) => (f.tienda_id ? { ...f, tienda_nombre: nombres.get(f.tienda_id) ?? null } : f));
   }
 
   async crearInvitacion(actor: Actor, empresaId: string, datos: CrearInvitacionPersonalDatos): Promise<InvitacionPersonal> {
@@ -420,8 +433,11 @@ export class PersonalService {
   }
 
   private async assertTienda(empresaId: string, tiendaId: string): Promise<void> {
-    const fila = await this.pg.queryOne(`SELECT 1 FROM stores.tiendas WHERE id=$1 AND empresa_id=$2`, [tiendaId, empresaId]);
-    if (!fila) throw new NotFoundError('Tienda', tiendaId);
+    const consulta = await obtenerTienda(tiendaId);
+    if (consulta.estado === 'error') throw new ServiceUnavailableError('stores-service');
+    if (consulta.estado !== 'ok' || consulta.tienda.empresa_id !== empresaId) {
+      throw new NotFoundError('Tienda', tiendaId);
+    }
   }
 
   private async assertMiembro(empresaId: string, usuarioId: string): Promise<void> {
