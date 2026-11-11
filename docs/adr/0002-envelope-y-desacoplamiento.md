@@ -1,7 +1,7 @@
 # ADR-0002: Envelope de respuestas y desacoplamiento entre servicios
 
 - **Fecha**: 2026-11-10
-- **Estado**: Aceptado — fases 1-3 y 5-6 implementadas; fase 4 (smoke/QA/OpenAPI agregado) en curso
+- **Estado**: Aceptado — fases 1-4 y 5-6 implementadas
 - **Ámbito**: contrato público `/api/v2`, paginación, límites entre bounded contexts
 
 ## Contexto
@@ -93,7 +93,7 @@ Cada fase es un PR atómico y no mezcla envelope con desacoplamiento.
 | 1 | Interceptor compartido + tests puros + un servicio piloto (`commissions`) | ✅ `commissions` devuelve envelope; test de contrato y OpenAPI actualizados |
 | 2 | `finance`, `orders`, `logistics` | ✅ Tres servicios con envelope y consumidores smoke/QA adaptados |
 | 3 | `catalog`, `stores`, `scheduling`, `identity`, `field`, `storage`, `market-intelligence` | ✅ Todos los servicios públicos con envelope |
-| 4 | Gateway, smoke, QA harness y OpenAPI agregado | `npm run demo` verde y contrato público sin respuestas sin envolver |
+| 4 | Gateway, smoke, QA harness y OpenAPI agregado | ✅ `smoke`/`smoke-remote`/QA desenvuelven `{data,meta}`; check R-C-1 sobre todo el OpenAPI público |
 | 5 | Desacoplamiento de `orders`/`scheduling`/`field` hacia APIs internas | Sin SQL directo a tablas de identity; pruebas de caída con 503/degradación |
 | 6 | Mover la asignación vendedor–tienda de identity a stores | Identity sin escrituras a `stores.tiendas`; RLS y tests verdes |
 
@@ -133,6 +133,9 @@ Cada fase es un PR atómico y no mezcla envelope con desacoplamiento.
   `storage`, `market-intelligence`, `catalog`, `stores` e `identity`.
 - Fase 3 cerrada. `smoke` y `smoke-remote` desenvuelven `{data,meta}` de forma
   central; QA harness hace lo mismo.
+- Fase 4 cerrada: el contrato público agregado no tiene respuestas JSON 2xx sin
+  envelope y `openapi-contract` comprueba que cada servicio con API pública
+  monta `EnvelopeInterceptor`.
 - `orders` consulta capacidades por la API interna de identity; `scheduling` y
   `field` no leen tablas `identity.*`.
 - `identity` ya no lee `stores.tiendas`: `assertTienda` valida con
