@@ -163,10 +163,10 @@ jobs:
         run: cargo fmt --check
       - name: clippy
         working-directory: packages/scheduling-service/rust
-        run: cargo clippy --all-targets -- -D warnings
+        run: cargo clippy --locked --all-targets -- -D warnings
       - name: tests
         working-directory: packages/scheduling-service/rust
-        run: cargo test
+        run: cargo test --locked
 
   build:
     name: Build all services
