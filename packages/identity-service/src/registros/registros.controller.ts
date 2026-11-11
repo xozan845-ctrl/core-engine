@@ -79,6 +79,21 @@ export class CrearRegistroRequestDto {
 
 export class ActualizarRegistroRequestDto extends PartialType(CrearRegistroRequestDto) {}
 
+export class RegistroParteResponseDto implements RegistroParte {
+  @ApiProperty({ format: 'uuid' }) id: string;
+  @ApiProperty({ format: 'uuid' }) empresa_id: string;
+  @ApiProperty({ format: 'uuid' }) parte_id: string;
+  @ApiProperty({ example: 'historia_clinica' }) tipo: string;
+  @ApiProperty() titulo: string;
+  @ApiProperty({ type: Object, additionalProperties: true }) datos: Record<string, unknown>;
+  @ApiProperty({ type: [String], format: 'uuid' }) adjuntos: string[];
+  @ApiProperty({ nullable: true, format: 'uuid' }) cita_id: string | null;
+  @ApiProperty({ nullable: true, format: 'uuid' }) item_id: string | null;
+  @ApiProperty({ format: 'uuid' }) autor_id: string;
+  @ApiProperty({ format: 'date-time' }) creado_en: string;
+  @ApiProperty({ format: 'date-time' }) actualizado_en: string;
+}
+
 @ApiTags('Partes · Registros')
 @ApiBearerAuth()
 @Controller('api/v2/empresas/:empresaId/partes/:parteId/registros')
@@ -92,7 +107,7 @@ export class RegistrosController {
   @ApiParam({ name: 'parteId', format: 'uuid' })
   @ApiQuery({ name: 'tipo', required: false })
   @ApiQuery({ name: 'limite', required: false, type: Number })
-  @ApiOkResponse({ description: 'Registros de la parte' })
+  @ApiOkResponse({ type: [RegistroParteResponseDto], description: 'Registros de la parte' })
   listar(
     @Param('empresaId') empresaId: string,
     @Param('parteId') parteId: string,
@@ -107,7 +122,7 @@ export class RegistrosController {
   @ApiOperation({ summary: 'Crear un registro para una parte' })
   @ApiParam({ name: 'empresaId', format: 'uuid' })
   @ApiParam({ name: 'parteId', format: 'uuid' })
-  @ApiCreatedResponse({ description: 'Registro creado' })
+  @ApiCreatedResponse({ type: RegistroParteResponseDto, description: 'Registro creado' })
   crear(
     @Param('empresaId') empresaId: string,
     @Param('parteId') parteId: string,
@@ -120,7 +135,7 @@ export class RegistrosController {
   @Get(':registroId')
   @ApiOperation({ summary: 'Consultar un registro de la parte' })
   @ApiParam({ name: 'registroId', format: 'uuid' })
-  @ApiOkResponse({ description: 'Registro encontrado' })
+  @ApiOkResponse({ type: RegistroParteResponseDto, description: 'Registro encontrado' })
   obtener(
     @Param('empresaId') empresaId: string,
     @Param('parteId') parteId: string,
@@ -133,7 +148,7 @@ export class RegistrosController {
   @Patch(':registroId')
   @ApiOperation({ summary: 'Actualizar un registro de la parte' })
   @ApiParam({ name: 'registroId', format: 'uuid' })
-  @ApiOkResponse({ description: 'Registro actualizado' })
+  @ApiOkResponse({ type: RegistroParteResponseDto, description: 'Registro actualizado' })
   actualizar(
     @Param('empresaId') empresaId: string,
     @Param('parteId') parteId: string,
