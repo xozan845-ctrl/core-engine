@@ -91,7 +91,7 @@ Cada fase es un PR atómico y no mezcla envelope con desacoplamiento.
 |---|---|---|
 | 0 | Enmienda de R-C-1 con los nombres de paginación elegidos y contrato `RespuestaApi<T>` | Regla y ADR sin contradicción |
 | 1 | Interceptor compartido + tests puros + un servicio piloto (`commissions`) | ✅ `commissions` devuelve envelope; test de contrato y OpenAPI actualizados |
-| 2 | `finance`, `orders`, `logistics` | Tres servicios con envelope y smoke actualizado |
+| 2 | `finance`, `orders`, `logistics` | ⏳ `finance` completado; faltan `orders` y `logistics` |
 | 3 | `catalog`, `stores`, `scheduling`, `identity`, `field`, `storage`, `market-intelligence` | Todos los servicios públicos con envelope |
 | 4 | Gateway, smoke, QA harness y OpenAPI agregado | `npm run demo` verde y contrato público sin respuestas sin envolver |
 | 5 | Desacoplamiento de `orders`/`scheduling`/`field` hacia APIs internas | Sin SQL directo a tablas de identity; pruebas de caída con 503/degradación |
