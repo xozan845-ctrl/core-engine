@@ -1,7 +1,7 @@
 # ADR-0005: Autenticación del gateway sin gate de borde y credenciales de máquina
 
 - **Fecha**: 2026-11-12
-- **Estado**: Propuesto — fase 1 (ADR y reglas)
+- **Estado**: Aceptado — fases 1-3 implementadas; despliegue de `staging` pendiente del acceso externo
 - **Ámbito**: `api-gateway` (perímetro), `identity-service` (emisión de credenciales), despliegue de `staging`
 
 ## Contexto
@@ -137,3 +137,22 @@ requisito de la promoción, no del PR de código.
 | 2 | Gateway sin Basic/`/api-proxy`; middleware de diagnóstico; compose/docs |
 | 3 | `identity.api_keys` (migración 62), CRUD, intercambio por JWT, tests |
 | 4 | Runbook de despliegue de staging y smoke; auditoría |
+
+## Estado de implementación (2026-11-12)
+
+| PR | Estado | Alcance |
+|---|---|---|
+| #571 | MERGED | ADR-0005 + R-GW-8 + estado de ADR-29 |
+| #573 | MERGED | Gateway sin Basic ni `/api-proxy`; diagnóstico mínimo |
+| #574 | MERGED | `identity.api_keys`, CRUD e intercambio por JWT |
+
+Verificación:
+
+- Gateway: 99 tests; identity: 279 tests; integración de API keys contra PostgreSQL 16 (alta, listado, token, revocación y rechazo posterior).
+- `node scripts/cli.mjs rules` y `baseline:guard` verdes; OpenAPI de identity y agregado regenerados.
+- Migración `62_api_keys.sql` registrada; política RLS de servicio en
+  `infra/db/supabase/99_rls.sql`; `identity.api_keys` fuera del baseline de deuda.
+
+**Pendiente operativo:** configurar el control de acceso externo de `staging`
+(Cloudflare Access/VPN/allowlist) antes de desplegar; el gateway ya no protege
+el entorno. Ver [`../runbook-gateway-auth.md`](../runbook-gateway-auth.md).
