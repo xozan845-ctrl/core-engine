@@ -153,15 +153,15 @@ Migraciones solo hacia adelante.
 | 8 | TLS en **todos** los dominios (API y MinIO) | ☐ | ☐ |
 | 9 | `/docs`, `/docs-json` y `/metrics` ocultos (`DIAGNOSTICOS_PUBLICOS=false`) | ☐ | ☐ |
 | 10 | MinIO sin puerto público (`9000` solo detrás de Traefik con TLS) | ☐ | ☐ |
-| 11 | Gate de staging (`EDGE_BASIC_AUTH`) — obligatorio (`REQUIRE_EDGE_AUTH=true`; el arranque falla sin él); producción sin gate | ☐ | n/a |
+| 11 | Acceso externo a `staging` (Cloudflare Access/VPN/allowlist) verificado; el gateway no implementa Basic (ADR-0005) | ☐ | n/a |
 | 12 | `CORS_ORIGINS` con los orígenes reales del frontend | ☐ | ☐ |
 | 13 | `TRUST_PROXY=1` y rate limit por IP real (probar dos IPs o revisar `x-ratelimit-remaining`) | ☐ | ☐ |
 | 14 | `8080` solo en loopback y cerrado en el firewall del VPS | ☐ | ☐ |
-| 15 | Frontend público usa `/api-proxy/api/v2` y su origen está en `CORS_ORIGINS` (ADR-29) | ☐ | ☐ |
+| 15 | Frontend público llama directo a `/api/v2` con JWT y su origen está en `CORS_ORIGINS` (ADR-0005) | ☐ | ☐ |
 
-> `EDGE_BASIC_AUTH` debe existir también como secreto del GitHub Environment
-> (`EDGE_BASIC_AUTH`) para que el smoke remoto se autentique en staging. Sin
-> él, el paso `npm run smoke:remote` recibe 401 en el login.
+> El smoke remoto del workflow corre contra `localhost` dentro del runner. Si se
+> ejecuta desde fuera del perímetro de `staging`, debe hacerse por VPN o con un
+> service token del borde externo. El gateway no tiene credencial Basic.
 >
 > Para cubrir `commissions-service` (ADR-37), añade además los secretos
 > `SMOKE_EMPRESARIO_EMAIL`/`SMOKE_EMPRESARIO_PASSWORD` con un usuario de rol

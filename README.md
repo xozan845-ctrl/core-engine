@@ -233,8 +233,8 @@ invitación), `LOG_LEVEL`, las de almacenamiento (`MINIO_ROOT_USER/PASSWORD`,
 `MINIO_ENDPOINT/PORT`, **`MINIO_PUBLIC_ENDPOINT/PORT/USE_SSL`**: host, puerto y
 esquema firmados en las URLs prefirmadas; en stage/prod el público es el dominio
 HTTPS con `443`/`true`, `STORAGE_*` de cuota/límites, ADR-24), las de borde
-(`EDGE_BASIC_AUTH`, `REQUIRE_EDGE_AUTH`, `DIAGNOSTICOS_PUBLICOS`, `READY_PUBLIC`,
-`TRUST_PROXY`) y, si se activa la observabilidad, `GRAFANA_ADMIN_PASSWORD`.
+(`DIAGNOSTICOS_PUBLICOS`, `READY_PUBLIC`, `TRUST_PROXY`; el control de acceso a
+staging vive fuera del gateway, ADR-0005) y, si se activa la observabilidad, `GRAFANA_ADMIN_PASSWORD`.
 En stage/producción `RABBITMQ_PASSWORD` es **obligatoria** (el compose la exige
 con `${RABBITMQ_PASSWORD:?...}`), no solo `POSTGRES_PASSWORD`.
 
