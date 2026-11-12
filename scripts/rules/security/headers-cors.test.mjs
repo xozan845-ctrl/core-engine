@@ -45,8 +45,8 @@ export default defineSuite({
     test('R-GW-2: CORS usa la whitelist del entorno y no refleja cualquier origen', () => {
       assert.ok(MAIN.includes('origin: origenes'), 'CORS debe usar la lista de CORS_ORIGINS');
       assert.ok(
-        MAIN.includes('credentials: Boolean(edge.basicAuth)'),
-        'las credenciales CORS deben depender del gate de borde',
+        MAIN.includes('credentials: false'),
+        'sin gate de borde no se habilitan credenciales CORS (ADR-0005)',
       );
       assert.ok(!MAIN.includes('origin: true'), 'CORS no debe reflejar cualquier origen');
       assert.ok(!MAIN.includes("origin: '*'"), 'CORS no debe usar wildcard');
