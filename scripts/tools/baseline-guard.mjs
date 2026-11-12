@@ -12,6 +12,7 @@ import { execFileSync } from 'node:child_process';
 import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { repoRoot } from '../engine/lib/paths.mjs';
+import { RUST_SERVICES } from '../config/project.mjs';
 
 const BASELINE_FILES = {
   coverage: 'scripts/config/coverage-baseline.json',
@@ -68,6 +69,10 @@ function compareCoverage(current, previous) {
   const problems = [];
   for (const [workspace, metrics] of Object.entries(previous)) {
     if (!current[workspace]) {
+      // Un servicio migrado a Rust sale del baseline Vitest (ADR-0004); su
+      // gate pasa a cargo-llvm-cov, así que la retirada es una migración, no
+      // una relajación silenciosa.
+      if (RUST_SERVICES.includes(workspace)) continue;
       problems.push(`coverage: se eliminó el workspace ${workspace}`);
       continue;
     }
