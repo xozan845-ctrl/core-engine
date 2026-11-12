@@ -82,6 +82,18 @@ describe('ComponentesService (Fase D)', () => {
     ).rejects.toMatchObject({ codigo: 'COMPONENTE_CANTIDAD_INVALIDA' });
   });
 
+  it('permite que un servicio consuma repuestos (padre servicio)', async () => {
+    const { servicio, pg } = crear();
+    (pg.queryOne as Mock)
+      .mockResolvedValueOnce({ ...padre, tipo: 'servicio', codigo: 'REPARACION' })
+      .mockResolvedValueOnce(hijo)
+      .mockResolvedValueOnce(null)
+      .mockResolvedValueOnce({ ...componente, item_id: PADRE });
+    await expect(
+      servicio.crear(EMPRESA, PADRE, { componente_item_id: HIJO, cantidad: 1 }),
+    ).resolves.toMatchObject({ item_id: PADRE, componente_item_id: HIJO });
+  });
+
   it('actualiza la cantidad y elimina el componente', async () => {
     const { servicio, pg } = crear();
     (pg.queryOne as Mock)
