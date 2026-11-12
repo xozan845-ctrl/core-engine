@@ -119,7 +119,11 @@ Se introduce la abstracción `item` con `tipo` igual a `producto`, `servicio` o
   `tipo_precio = 'escala'` y la que se usa cuando no hay lista;
 - la resolución de precio es una lectura con orden explícito: lista solicitada
   o segmento; si no hay filtro, lista predeterminada; la escala base solo aplica
-  cuando no hay lista; en última instancia, el precio del item.
+  cuando no hay lista; en última instancia, el precio del item;
+- una orden puede indicar `lista_precio_codigo` o `segmento_codigo`; el precio
+  resuelto sustituye el precio base del item y el margen del vendedor se aplica
+  igual (RN-01). Sin coincidencia se conserva el snapshot de la oferta, y una
+  selección explícita inexistente falla cerrada.
 
 `stores.ofertas` usará `item_type + item_id`. El stock será nullable y los
 servicios podrán declarar capacidad o slots.

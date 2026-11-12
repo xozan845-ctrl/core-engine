@@ -155,6 +155,115 @@
         ]
       }
     },
+    "/internal/items/{id}/precio": {
+      "get": {
+        "operationId": "InternalController_precio",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "description": "Id del item",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "empresa_id",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "cantidad",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "example": 1,
+              "type": "string"
+            }
+          },
+          {
+            "name": "lista",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "example": "mayorista",
+              "type": "string"
+            }
+          },
+          {
+            "name": "segmento",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "example": "mayorista",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Precio resuelto",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PrecioItemInternoResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "internalKey": []
+          }
+        ],
+        "summary": "Resolver el precio de un item por cantidad (servicio→servicio)",
+        "tags": [
+          "Catálogo (interno)"
+        ]
+      }
+    },
+    "/internal/items/precios": {
+      "post": {
+        "operationId": "InternalController_preciosPorLote",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ResolverPreciosInternoRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Precios resueltos",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PreciosInternosResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "internalKey": []
+          }
+        ],
+        "summary": "Resolver precios por lote (servicio→servicio)",
+        "tags": [
+          "Catálogo (interno)"
+        ]
+      }
+    },
     "/internal/inventario/resumen": {
       "get": {
         "operationId": "InternalController_resumen",
@@ -571,6 +680,29 @@
           "valor_total_cents"
         ]
       },
+      "LineaPrecioInternaRequestDto": {
+        "type": "object",
+        "properties": {
+          "clave": {
+            "type": "string",
+            "description": "Clave opaca para correlacionar la respuesta",
+            "example": "oferta-1"
+          },
+          "item_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "cantidad": {
+            "type": "number",
+            "minimum": 1
+          }
+        },
+        "required": [
+          "clave",
+          "item_id",
+          "cantidad"
+        ]
+      },
       "LoteItemResponseDto": {
         "type": "object",
         "properties": {
@@ -597,6 +729,108 @@
           "sku",
           "stock",
           "estado"
+        ]
+      },
+      "PrecioItemInternoResponseDto": {
+        "type": "object",
+        "properties": {
+          "item_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "cantidad": {
+            "type": "number"
+          },
+          "origen": {
+            "type": "string",
+            "enum": [
+              "lista",
+              "escala",
+              "base"
+            ]
+          },
+          "precio_unitario_cents": {
+            "type": "number"
+          },
+          "precio_total_cents": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "item_id",
+          "cantidad",
+          "origen",
+          "precio_unitario_cents",
+          "precio_total_cents"
+        ]
+      },
+      "PrecioLineaInternaResponseDto": {
+        "type": "object",
+        "properties": {
+          "clave": {
+            "type": "string"
+          },
+          "origen": {
+            "type": "string",
+            "enum": [
+              "lista",
+              "escala",
+              "base"
+            ]
+          },
+          "precio_unitario_cents": {
+            "type": "number"
+          },
+          "precio_total_cents": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "clave",
+          "origen",
+          "precio_unitario_cents",
+          "precio_total_cents"
+        ]
+      },
+      "PreciosInternosResponseDto": {
+        "type": "object",
+        "properties": {
+          "precios": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PrecioLineaInternaResponseDto"
+            }
+          }
+        },
+        "required": [
+          "precios"
+        ]
+      },
+      "ResolverPreciosInternoRequestDto": {
+        "type": "object",
+        "properties": {
+          "empresa_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "lista_codigo": {
+            "type": "string",
+            "example": "mayorista"
+          },
+          "segmento_codigo": {
+            "type": "string",
+            "example": "mayorista"
+          },
+          "lineas": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/LineaPrecioInternaRequestDto"
+            }
+          }
+        },
+        "required": [
+          "empresa_id",
+          "lineas"
         ]
       },
       "ResumenInventarioResponseDto": {

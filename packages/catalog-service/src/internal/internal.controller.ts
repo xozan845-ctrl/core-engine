@@ -1,4 +1,4 @@
-import { Controller, Get, Param, Query, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Param, Post, Query, UseGuards } from '@nestjs/common';
 import { ApiOkResponse, ApiOperation, ApiParam, ApiQuery, ApiSecurity, ApiTags } from '@nestjs/swagger';
 import { ClaveInternaGuard, NotFoundError } from '@core/shared';
 import { InventarioService } from '../inventario/inventario.service';
@@ -6,6 +6,12 @@ import { ItemsService } from '../items/items.service';
 import { ItemResponseDto, LoteItemResponseDto } from '../items/items.response.dto';
 import { TarifasService } from '../items/tarifas.service';
 import { CotizacionItemResponseDto } from '../items/tarifas.controller';
+import { PreciosService } from '../items/precios.service';
+import {
+  PrecioItemInternoResponseDto,
+  PreciosInternosResponseDto,
+  ResolverPreciosInternoRequestDto,
+} from '../items/precios.internal.dto';
 import {
   LineaInventarioResponseDto,
   ResumenInventarioResponseDto,
@@ -25,6 +31,7 @@ export class InternalController {
     private readonly inventario: InventarioService,
     private readonly items: ItemsService,
     private readonly tarifas: TarifasService,
+    private readonly precios: PreciosService,
   ) {}
 
   @Get('items/lote')
@@ -63,6 +70,60 @@ export class InternalController {
     @Query('hasta') hasta: string,
   ) {
     return this.tarifas.cotizar(empresaId, id, desde, hasta);
+  }
+
+  @Get('items/:id/precio')
+  @ApiOperation({ summary: 'Resolver el precio de un item por cantidad (servicio→servicio)' })
+  @ApiParam({ name: 'id', description: 'Id del item' })
+  @ApiQuery({ name: 'empresa_id', required: true })
+  @ApiQuery({ name: 'cantidad', required: false, example: 1 })
+  @ApiQuery({ name: 'lista', required: false, example: 'mayorista' })
+  @ApiQuery({ name: 'segmento', required: false, example: 'mayorista' })
+  @ApiOkResponse({ type: PrecioItemInternoResponseDto, description: 'Precio resuelto' })
+  async precio(
+    @Param('id') id: string,
+    @Query('empresa_id') empresaId: string,
+    @Query('cantidad') cantidad?: string,
+    @Query('lista') lista?: string,
+    @Query('segmento') segmento?: string,
+  ) {
+    const resuelto = await this.precios.resolver(empresaId, id, cantidad ?? 1, {
+      lista_codigo: lista,
+      segmento_codigo: segmento,
+    });
+    return {
+      item_id: resuelto.item_id,
+      cantidad: resuelto.cantidad,
+      origen: resuelto.origen,
+      precio_unitario_cents: resuelto.precio_unitario_cents,
+      precio_total_cents: resuelto.precio_total_cents,
+    };
+  }
+
+  @Post('items/precios')
+  @ApiOperation({ summary: 'Resolver precios por lote (servicio→servicio)' })
+  @ApiOkResponse({ type: PreciosInternosResponseDto, description: 'Precios resueltos' })
+  async preciosPorLote(@Body() dto: ResolverPreciosInternoRequestDto) {
+    const precios = await Promise.all(
+      dto.lineas.map(async (linea) => {
+        const resuelto = await this.precios.resolver(
+          dto.empresa_id,
+          linea.item_id,
+          linea.cantidad,
+          {
+            lista_codigo: dto.lista_codigo,
+            segmento_codigo: dto.segmento_codigo,
+          },
+        );
+        return {
+          clave: linea.clave,
+          origen: resuelto.origen,
+          precio_unitario_cents: resuelto.precio_unitario_cents,
+          precio_total_cents: resuelto.precio_total_cents,
+        };
+      }),
+    );
+    return { precios };
   }
 
   @Get('inventario/resumen')

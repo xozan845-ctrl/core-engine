@@ -12,6 +12,7 @@ import {
   registrarCreditoOrden,
   anularCreditoOrden,
   cotizarItemReserva,
+  resolverPreciosItems,
   verificarDisponibilidadReserva,
 } from './service-clients';
 
@@ -180,6 +181,43 @@ describe('service-clients (servicio→servicio)', () => {
     await expect(
       cotizarItemReserva({ empresa_id: 'e-1', item_id: 'i-1', desde: '2026-12-20', hasta: '2026-12-22' }),
     ).resolves.toBeNull();
+  });
+
+  it('resolverPreciosItems distingue ok, no encontrado y caída', async () => {
+    const precios = [{
+      clave: 'oferta-1',
+      origen: 'escala',
+      precio_unitario_cents: 8000,
+      precio_total_cents: 80000,
+    }];
+    fetchMock.mockResolvedValueOnce(respuesta(200, { precios }));
+    await expect(
+      resolverPreciosItems({
+        empresa_id: 'e-1',
+        lineas: [{ clave: 'oferta-1', item_id: 'i-1', cantidad: 10 }],
+        lista_codigo: 'mayorista',
+      }),
+    ).resolves.toEqual({ estado: 'ok', precios });
+
+    fetchMock.mockResolvedValueOnce(respuesta(404));
+    await expect(
+      resolverPreciosItems({ empresa_id: 'e-1', lineas: [{ clave: 'o', item_id: 'i', cantidad: 1 }] }),
+    ).resolves.toEqual({ estado: 'no_encontrado' });
+
+    fetchMock.mockResolvedValueOnce(respuesta(500));
+    await expect(
+      resolverPreciosItems({ empresa_id: 'e-1', lineas: [{ clave: 'o', item_id: 'i', cantidad: 1 }] }),
+    ).resolves.toEqual({ estado: 'error' });
+
+    fetchMock.mockRejectedValueOnce(new Error('caido'));
+    await expect(
+      resolverPreciosItems({ empresa_id: 'e-1', lineas: [{ clave: 'o', item_id: 'i', cantidad: 1 }] }),
+    ).resolves.toEqual({ estado: 'error' });
+
+    await expect(
+      resolverPreciosItems({ empresa_id: 'e-1', lineas: [] }),
+    ).resolves.toEqual({ estado: 'ok', precios: [] });
+    expect(fetchMock).toHaveBeenCalledTimes(4);
   });
 
   it('verificarDisponibilidadReserva distingue libre, ocupado y caída', async () => {
