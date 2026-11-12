@@ -9,7 +9,7 @@ de rutas (`/api/v2/`).
 
 | Archivo | Contenido | Sufijo |
 |---|---|---|
-| `01-auth.md` | Single entry point, edge offloading, JWT + scrub de headers, TTLs, errores, versionamiento | `R-GW` (1–7) |
+| `01-auth.md` | Single entry point, edge offloading, JWT + scrub de headers, TTLs, errores, versionamiento, credenciales de máquina | `R-GW` (1–8) |
 
 > Los documentos derivados de este área (**AUDIT, CHECKLIST, historiales**) no
 > viven aquí: están en [`../_meta/`](../_meta/README.md). Un área de reglas solo
@@ -19,7 +19,7 @@ de rutas (`/api/v2/`).
 
 | Prefijo | Rango | Archivo | Ámbito |
 |---|---|---|---|
-| `R-GW-*` | 1–7 | `01-auth.md` | Perímetro, autenticación y contrato externo |
+| `R-GW-*` | 1–8 | `01-auth.md` | Perímetro, autenticación y contrato externo |
 
 ## Reglas de otras áreas que exige esta (cross-refs)
 
@@ -29,6 +29,7 @@ de rutas (`/api/v2/`).
 | `R-GW-3` | Scrub de `x-internal-key` → `R-DS-5` (`../data/02-seguridad.md`) |
 | `R-GW-4` | TTLs por env, nunca hardcodeados → `R-DS-1` (`../data/02-seguridad.md`) |
 | `R-GW-7` | Prefijo `/api/v2/` en todas las rutas (ver `README.md` raíz del repo) |
+| `R-GW-8` | API keys → JWT corto (`identity`); privacidad de staging en el borde externo (ver ADR-0005) |
 
 ## Pendientes
 

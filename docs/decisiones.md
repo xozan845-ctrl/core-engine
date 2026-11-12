@@ -785,7 +785,7 @@ Este archivo registra decisiones técnicas deliberadas que se apartan del texto 
 ## ADR-29: Proxy público del API para el frontend de Firebase
 
 - **Fecha**: 2026-10-25
-- **Estado**: Aceptado
+- **Estado**: Aceptado — **sustituido por ADR-0005** (2026-11-12)
 - **Contexto**: el frontend público de Firebase no puede enviar el Basic Auth del
   gate de staging sin exponer la credencial en el bundle. Firebase Functions
   requeriría plan Blaze/Secret Manager; el bypass por `Origin` es falsificable y
