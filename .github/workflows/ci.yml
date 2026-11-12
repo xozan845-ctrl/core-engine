@@ -129,10 +129,9 @@ jobs:
         run: npm run build -w @core/shared
       - name: Build identity service for integration harness
         run: npm run build -w @core/identity-service
-      - name: Build catalog, scheduling and field services for the multi-vertical matrix
+      - name: Build catalog and field services for the multi-vertical matrix
         run: |
           npm run build -w @core/catalog-service
-          npm run build -w @core/scheduling-service
           npm run build -w @core/field-service
       - name: Build orders, logistics, commissions and finance for the saga integration
         run: |
