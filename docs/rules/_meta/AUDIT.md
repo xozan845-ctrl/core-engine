@@ -35,7 +35,7 @@
 | `api-gateway` | 7 | 121 | 85,71 | 79,06 | 72,91 | 50 / 51 / 57 | ✅ |
 | `orders-service` | 9 | 101 | 87,59 | 75,80 | 83,45 | 32 / 23 / 33 | ✅ |
 | `scheduling-service` | 3 | 14 | 95,96 | 81,81 | 91,48 | 94 / 77 / 88 | ✅ |
-| `commissions-service` | 10 | 49 | 83,17 | 68,75 | 79,71 | 20 / 14 / 22 | ✅ |
+| `commissions-service` (Rust) | — | 83 | 73,29 | — | 69,70 | 72 / N/A / 68 | ✅ |
 | `finance-service` | 19 | 153 | 88,71 | 74,33 | 89,27 | 70 / 52 / 72 | ✅ |
 | `market-intelligence-service` | 8 | 42 | 47,97 | 38,65 | 59,72 | 18 / 11 / 35 | ✅ |
 | `catalog-service` | 14 | 174 | 95,74 | 84,03 | 96,01 | 93 / 82 / 90 | ✅ |
@@ -45,19 +45,19 @@
 | `field-service` | 2 | 24 | 86,10 | 73,14 | 74,76 | 84 / 70 / 72 | ✅ |
 | `storage-service` | 11 | 119 | 100,00 | 98,51 | 100,00 | 99 / 86 / 99 | ✅ |
 | `notifications-service` | 4 | 25 | 100,00 | 88,88 | 100,00 | 99 / 85 / 99 | ✅ |
-| **Total** | **151** | **1.533** | — | — | — | 14 workspaces | **14/14 ✅** |
+| **Total** | **141** | **1.484** | — | — | — | 13 Vitest + 1 Rust | **14/14 ✅** |
 
-- **Objetivo final (80 líneas / 70 ramas): 12 de 14 workspaces lo alcanzan**. Quedan fuera `commissions-service` (ramas 68,75) y `market-intelligence-service` (47,97/38,65), que suben por ratchet (+5/release).
-- `npm run coverage:compare`: **14/14 workspaces iguales o por encima del baseline**.
+- **Objetivo final (80 líneas / 70 ramas): 11 de 13 workspaces Vitest lo alcanzan**. Queda fuera `market-intelligence-service` (47,97/38,65), que sube por ratchet (+5/release). `commissions-service` se mide con `cargo-llvm-cov` (73,29/69,70; gate 72/68).
+- `npm run coverage:compare`: **13/13 workspaces Vitest iguales o por encima del baseline**; el job `rust` cubre `scheduling-service` y `commissions-service`.
 - Método: baseline medido redondeado a la baja; los thresholds viven en `scripts/config/coverage.mjs`.
 
 ## Métricas actuales vs mínimos
 
 | Métrica | Valor actual | Mínimo (regla) | Cumple |
 |---|---|---|---|
-| Unit tests (14 workspaces) | 1.533/1.533 en verde | 100% (G-1) | ✅ |
-| Cobertura ≥ `coverageThreshold` | 14/14 workspaces | floor medido (R-COV-1) | ✅ |
-| Cobertura objetivo final | 12/14 ≥ 80/70 | 80/70 | ⚠️ ratchet +5/release |
+| Unit tests (13 workspaces Vitest + job Rust) | 1.484/1.484 + Rust en verde | 100% (G-1) | ✅ |
+| Cobertura ≥ `coverageThreshold` | 13/13 workspaces + gate Rust | floor medido (R-COV-1) | ✅ |
+| Cobertura objetivo final | 11/13 ≥ 80/70 | 80/70 | ⚠️ ratchet +5/release |
 | Controllers con spec | **43 de 43** | R-U-10/11 (al tocar endpoints) | ✅ |
 | Endpoints documentados (OpenAPI) | **359/359** en 12 servicios (327 públicas + 32 internas) | 100% (R-DO-6, R-DO-10, G-8) | ✅ |
 | `*.service.ts` / `*.consumer.ts` sin spec | **0 de 60** | 0 (R-U-18, R-COV-2) | ✅ |

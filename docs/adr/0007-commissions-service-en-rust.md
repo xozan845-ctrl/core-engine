@@ -174,6 +174,12 @@ permanece en borrador hasta cumplir la verificación de paridad.
 
 | PR | Estado | Alcance |
 |---|---|---|
-| #— | EN CURSO | ADR-0007 (este documento) |
+| #585 | MERGED | ADR-0007 (este documento) |
+| #589 | MERGED | Crate Rust con paridad + job `rust` y gate de cobertura (R-CI-1/R-COV-1) |
+| #— | EN CURSO | Conmutación: retirar TypeScript, mover el crate a la raíz, Docker/compose/scripts y saga |
 
-El detalle de PRs, cobertura y smoke se actualizará al cerrar cada uno.
+- Cobertura Rust medida con PostgreSQL efímero: **73,29 % líneas / 69,70 %
+  funciones** (sin `main.rs`); gate 72/68 con ratchet +5 por release hasta
+  94/77/88 (R-COV-1).
+- Pendiente: `npm run demo`, `smoke-remote` de `staging` y el PR final a
+  `develop` (borrador hasta cumplir el gate).
