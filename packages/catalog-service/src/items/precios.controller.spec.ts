@@ -66,6 +66,73 @@ describe('PreciosController (catálogo)', () => {
     });
   });
 
+
+  it('delega el ciclo completo de listas y precios', async () => {
+    const { servicio, controller } = fabricar();
+    servicio.crearLista.mockResolvedValue({ id: LISTA });
+    servicio.actualizarLista.mockResolvedValue({ id: LISTA });
+    servicio.listarPrecios.mockResolvedValue([]);
+    servicio.actualizarPrecio.mockResolvedValue({ id: PRECIO });
+    servicio.eliminarPrecio.mockResolvedValue({ ok: true });
+    servicio.listarEscalas.mockResolvedValue([]);
+
+    await controller.crearLista(
+      { codigo: 'vip', nombre: 'VIP' } as never,
+      undefined,
+      empresario as never,
+    );
+    expect(servicio.crearLista).toHaveBeenCalledWith('t-1', { codigo: 'vip', nombre: 'VIP' });
+
+    await controller.actualizarLista(
+      LISTA,
+      { activo: false } as never,
+      undefined,
+      empresario as never,
+    );
+    expect(servicio.actualizarLista).toHaveBeenCalledWith('t-1', LISTA, { activo: false });
+
+    await controller.listarPrecios(LISTA, undefined, empresario as never);
+    expect(servicio.listarPrecios).toHaveBeenCalledWith('t-1', LISTA);
+
+    await controller.actualizarPrecio(
+      LISTA,
+      PRECIO,
+      { precio_cents: 9000 } as never,
+      undefined,
+      empresario as never,
+    );
+    expect(servicio.actualizarPrecio).toHaveBeenCalledWith('t-1', LISTA, PRECIO, {
+      precio_cents: 9000,
+    });
+
+    await controller.eliminarPrecio(LISTA, PRECIO, undefined, empresario as never);
+    expect(servicio.eliminarPrecio).toHaveBeenCalledWith('t-1', LISTA, PRECIO);
+
+    await controller.listarEscalas(ITEM, undefined, empresario as never);
+    expect(servicio.listarEscalas).toHaveBeenCalledWith('t-1', ITEM);
+  });
+
+  it('permite al admin indicar empresa y rechaza a un empresario ajeno', async () => {
+    const { servicio, controller } = fabricar();
+    servicio.crearLista.mockResolvedValue({ id: LISTA });
+    await controller.crearLista(
+      { codigo: 'vip', nombre: 'VIP' } as never,
+      'e-9',
+      admin as never,
+    );
+    expect(servicio.crearLista).toHaveBeenCalledWith('e-9', { codigo: 'vip', nombre: 'VIP' });
+
+    expect(() =>
+      controller.crearLista({ codigo: 'vip', nombre: 'VIP' } as never, 'otra', empresario as never),
+    ).toThrow(/No puedes operar otra empresa/);
+    expect(() =>
+      controller.resolver(ITEM, '1', undefined, undefined, undefined, {
+        ...empresario,
+        tenant_id: undefined,
+      } as never),
+    ).toThrow(/No hay empresa activa/);
+  });
+
   it('delega la resolucion y las operaciones de listas', async () => {
     const { servicio, controller } = fabricar();
     servicio.resolver.mockResolvedValue({ precio_unitario_cents: 7000 });
