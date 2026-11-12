@@ -14,6 +14,11 @@ import pg from 'pg';
  * compilados contra PostgreSQL real y un broker falso. El outbox de cada
  * servicio es la fuente de verdad del paso anterior, así que la prueba verifica
  * la coreografía y la persistencia, no el transporte AMQP (eso queda en E2E).
+ *
+ * `commissions-service` ya no tiene consumidor TypeScript (ADR-0007): su
+ * acreditación se cubre en `packages/commissions-service/tests/comisiones_pg.rs`
+ * y en el E2E con el binario Rust. Aquí se inyecta un `comision.acreditada`
+ * realista para mantener la pata de finance.
  */
 
 const connectionString = process.env.TEST_DATABASE_URL;
@@ -68,7 +73,6 @@ let handler;
 let catalogConsumer;
 let ordersConsumer;
 let logisticsConsumer;
-let commissionsConsumer;
 let financeConsumer;
 
 let empresaId;
@@ -232,7 +236,6 @@ before(async () => {
 
   const outboxCatalog = new OutboxService(pgService, rabbit, 'catalog.outbox');
   const outboxLogistics = new OutboxService(pgService, rabbit, 'logistics.outbox');
-  const outboxCommissions = new OutboxService(pgService, rabbit, 'commissions.outbox');
   const outboxFinance = new OutboxService(pgService, rabbit, 'finance.outbox');
 
   const [
@@ -245,8 +248,6 @@ before(async () => {
     { PedidosConsumer: CatalogConsumer },
     { EnviosService },
     { PedidosConsumer: LogisticsConsumer },
-    { ComisionesService },
-    { PedidosConsumer: CommissionsConsumer },
     { EventsConsumer: FinanceConsumer },
     { ContabilidadService },
     { MetricasService },
@@ -260,8 +261,6 @@ before(async () => {
     import('../../packages/catalog-service/dist/eventos/pedidos.consumer.js'),
     import('../../packages/logistics-service/dist/envios/envios.service.js'),
     import('../../packages/logistics-service/dist/envios/pedidos.consumer.js'),
-    import('../../packages/commissions-service/dist/comisiones/comisiones.service.js'),
-    import('../../packages/commissions-service/dist/comisiones/pedidos.consumer.js'),
     import('../../packages/finance-service/dist/eventos/events.consumer.js'),
     import('../../packages/finance-service/dist/contabilidad/contabilidad.service.js'),
     import('../../packages/finance-service/dist/eventos/metricas.service.js'),
@@ -285,12 +284,6 @@ before(async () => {
     outboxLogistics,
     pgService,
     new EnviosService(pgService),
-  );
-  commissionsConsumer = new CommissionsConsumer(
-    rabbit,
-    outboxCommissions,
-    pgService,
-    new ComisionesService(pgService),
   );
   financeConsumer = new FinanceConsumer(
     rabbit,
@@ -351,7 +344,6 @@ test('saga completa: orden → stock → pago → envío → comisión → asien
 
   // 3. pago → logistics (envío), commissions (pago) y finance (asiento de caja)
   await logisticsConsumer['manejar'](payment);
-  await commissionsConsumer['manejar'](payment);
   await financeConsumer['manejar'](orderCreated);
   await financeConsumer['manejar'](payment);
 
@@ -382,9 +374,24 @@ test('saga completa: orden → stock → pago → envío → comisión → asien
   }
   const orderCompletado = await eventoDe('logistics.outbox', 'order.completado');
 
-  // 5. order.completado → commissions → comision.acreditada
-  await commissionsConsumer['manejar'](orderCompletado);
-  const comision = await eventoDe('commissions.outbox', 'comision.acreditada');
+  // 5. order.completado lo produce logistics; la comisión la acredita el
+  // servicio Rust (ADR-0007). Se inyecta el evento resultante para finance.
+  assert.equal(orderCompletado.tipo, 'order.completado');
+  const comision = {
+    event_id: randomUUID(),
+    tipo: 'comision.acreditada',
+    ocurrido_en: new Date().toISOString(),
+    data: {
+      order_id: orden.id,
+      monto_cents: 13800,
+      monto_vendedor_cents: 101200,
+      monto_empresario_cents: 0,
+      vendedor_id: vendedorId,
+      empresa_id: empresaId,
+      tienda_id: tiendaId,
+      participacion_porcentaje: 100,
+    },
+  };
   assert.equal(comision.data.monto_cents, 13800, '12 % de C$ 1 150,00');
 
   // 6. comisión → finance: realización del ingreso y asiento de cierre
@@ -395,15 +402,6 @@ test('saga completa: orden → stock → pago → envío → comisión → asien
     [orden.id],
   );
   assert.equal(final.estado, 'entregada');
-
-  const { rows: comisiones } = await client.query(
-    'SELECT comision_cents, monto_vendedor_cents, estado FROM commissions.comisiones WHERE order_id = $1',
-    [orden.id],
-  );
-  assert.equal(comisiones.length, 1);
-  assert.equal(comisiones[0].comision_cents, 13800);
-  assert.equal(comisiones[0].monto_vendedor_cents, 101200);
-  assert.equal(comisiones[0].estado, 'acreditada');
 
   const { rows: asientos } = await client.query(
     'SELECT tipo, referencia_tipo FROM finance.asientos WHERE referencia_id = $1 ORDER BY creado_en',
