@@ -109,6 +109,22 @@ export default defineSuite({
       );
     });
 
+    test('R-AR-5: el pack builder mantiene vertical y pack sincronizados', () => {
+      const packs = readText(
+        join(repoRoot, 'packages/identity-service/src/packs/packs.service.ts'),
+      );
+      assert.match(
+        packs,
+        /INSERT INTO identity\.vertical_capacidades/,
+        'las capacidades del pack deben quedar disponibles en la vertical (add-ons)',
+      );
+      assert.match(
+        packs,
+        /FROM identity\.modelos_operacion/,
+        'la vertical debe validar su modelo de operación contra el catálogo',
+      );
+    });
+
     test('ADR-0001: el pack builder crea verticales y packs con capacidades arbitrarias', () => {
       const builder = readText(
         join(repoRoot, 'packages/identity-service/src/packs/packs.controller.ts'),
