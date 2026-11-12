@@ -1,5 +1,6 @@
 import { Controller, Get, Param, Query, Headers } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth, ApiOkResponse } from '@nestjs/swagger';
+import { CAPACIDADES, RequiereCapacidades } from '@core/shared';
 import { InteligenciaRepository } from '../repositories/inteligencia.repository';
 import {
   AnomaliasResponseDto,
@@ -20,6 +21,7 @@ import {
 @ApiTags('Inteligencia — Predicción')
 @ApiBearerAuth()
 @Controller('api/v2/inteligencia')
+@RequiereCapacidades(CAPACIDADES.INTELIGENCIA_MERCADO)
 export class PrediccionController {
   constructor(private readonly repo: InteligenciaRepository) {}
 
