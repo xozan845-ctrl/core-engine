@@ -26502,7 +26502,9 @@ export const OPENAPI_AGREGADO = {
           }
         },
         "required": [
-          "nombre"
+          "nombre",
+          "vertical_id",
+          "pack_codigo"
         ]
       },
       "CrearExtensionRequestDto": {

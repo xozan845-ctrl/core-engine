@@ -34,12 +34,14 @@ const empresa = {
 
 function clienteInsertable(): { query: Mock } {
   return {
-    query: vi.fn()
-      .mockResolvedValueOnce({ rows: [], rowCount: 0 }) // slug libre
-      .mockResolvedValueOnce({ rows: [empresa], rowCount: 1 }) // INSERT empresa
-      .mockResolvedValueOnce({ rows: [], rowCount: 1 }) // INSERT miembro
-      .mockResolvedValueOnce({ rows: [], rowCount: 1 }) // UPDATE usuario
-      .mockResolvedValueOnce({ rows: [], rowCount: 1 }), // capacidades por vertical
+    query: vi.fn().mockImplementation(async (sql: string) => {
+      if (sql.includes('FROM identity.packs')) {
+        return { rows: [{ codigo: 'pack_retail', version: 1, vertical_codigo: 'retail' }], rowCount: 1 };
+      }
+      if (sql.includes('FROM identity.empresa_slugs')) return { rows: [], rowCount: 0 };
+      if (sql.includes('INSERT INTO identity.empresas')) return { rows: [empresa], rowCount: 1 };
+      return { rows: [], rowCount: 1 };
+    }),
   };
 }
 
@@ -50,19 +52,21 @@ describe('EmpresasService', () => {
       const pg = { transaccion: vi.fn(async (fn: (c: typeof client) => unknown) => fn(client)) };
       const servicio = new EmpresasService(pg as never, {} as never);
 
-      await expect(servicio.crear('u-1', '  Acme  ')).resolves.toEqual(empresa);
+      await expect(
+        servicio.crear('u-1', '  Acme  ', undefined, undefined, 'retail', 'pack_retail'),
+      ).resolves.toEqual(empresa);
 
       expect(client.query).toHaveBeenNthCalledWith(
-        1,
+        2,
         expect.stringContaining('FROM identity.empresa_slugs'),
         ['acme'],
       );
       expect(client.query).toHaveBeenNthCalledWith(
-        2,
+        3,
         expect.stringContaining('INSERT INTO identity.empresas'),
         expect.arrayContaining(['Acme', 'acme', 'retail', 'pack_retail', 1, 'u-1']),
       );
-      expect(client.query).toHaveBeenCalledTimes(7);
+      expect(client.query).toHaveBeenCalledTimes(8);
     });
 
     it('debe aplicar el pack seleccionado y sus capacidades al crear el tenant', async () => {
@@ -78,11 +82,24 @@ describe('EmpresasService', () => {
       const pg = { transaccion: vi.fn(async (fn: (c: typeof client) => unknown) => fn(client)) };
       const servicio = new EmpresasService(pg as never, {} as never);
 
-      await servicio.crear('u-1', 'Salon Acme', undefined, undefined, undefined, 'pack_belleza');
+      await servicio.crear('u-1', 'Salon Acme', undefined, undefined, 'belleza', 'pack_belleza');
 
       expect(client.query).toHaveBeenNthCalledWith(1, expect.stringContaining('FROM identity.packs'), ['pack_belleza']);
       expect(client.query).toHaveBeenNthCalledWith(3, expect.stringContaining('pack_codigo, pack_version'), expect.arrayContaining(['Salon Acme', 'salon-acme', 'belleza', 'pack_belleza', 1]));
-      expect(client.query).toHaveBeenNthCalledWith(7, expect.stringContaining('FROM identity.pack_capacidades'), [empresa.id, 'pack_belleza', 1]);
+      expect(client.query).toHaveBeenCalledWith(
+        expect.stringContaining('FROM identity.pack_capacidades'),
+        [empresa.id, 'pack_belleza', 1],
+      );
+    });
+
+    it('exige vertical y pack explícitos en el alta', async () => {
+      const servicio = new EmpresasService({} as never, {} as never);
+      await expect(servicio.crear('u-1', 'Acme')).rejects.toMatchObject({
+        codigo: 'VERTICAL_REQUERIDA',
+      });
+      await expect(
+        servicio.crear('u-1', 'Acme', undefined, undefined, 'retail'),
+      ).rejects.toMatchObject({ codigo: 'PACK_REQUERIDO' });
     });
 
     it('debe rechazar un pack que no corresponde a la vertical solicitada', async () => {
@@ -96,6 +113,7 @@ describe('EmpresasService', () => {
     it('resuelve una colisión de slug automático con sufijo -2', async () => {
       const client = {
         query: vi.fn()
+          .mockResolvedValueOnce({ rows: [{ codigo: 'pack_retail', version: 1, vertical_codigo: 'retail' }], rowCount: 1 })
           .mockResolvedValueOnce({ rows: [{ ok: 1 }], rowCount: 1 }) // acme ocupado
           .mockResolvedValueOnce({ rows: [], rowCount: 0 }) // acme-2 libre
           .mockResolvedValueOnce({ rows: [empresa], rowCount: 1 })
@@ -106,11 +124,11 @@ describe('EmpresasService', () => {
       const pg = { transaccion: vi.fn(async (fn: (c: typeof client) => unknown) => fn(client)) };
       const servicio = new EmpresasService(pg as never, {} as never);
 
-      await servicio.crear('u-1', 'Acme');
+      await servicio.crear('u-1', 'Acme', undefined, undefined, 'retail', 'pack_retail');
 
-      expect(client.query).toHaveBeenNthCalledWith(2, expect.any(String), ['acme-2']);
+      expect(client.query).toHaveBeenNthCalledWith(3, expect.any(String), ['acme-2']);
       expect(client.query).toHaveBeenNthCalledWith(
-        3,
+        4,
         expect.stringContaining('INSERT INTO identity.empresas'),
         expect.arrayContaining(['Acme', 'acme-2', 'retail', 'pack_retail', 1, 'u-1']),
       );
@@ -119,6 +137,7 @@ describe('EmpresasService', () => {
     it('acepta un slug explícito normalizado', async () => {
       const client = {
         query: vi.fn()
+          .mockResolvedValueOnce({ rows: [{ codigo: 'pack_retail', version: 1, vertical_codigo: 'retail' }], rowCount: 1 })
           .mockResolvedValueOnce({ rows: [], rowCount: 0 })
           .mockResolvedValueOnce({ rows: [empresa], rowCount: 1 })
           .mockResolvedValueOnce({ rows: [], rowCount: 1 })
@@ -128,25 +147,29 @@ describe('EmpresasService', () => {
       const pg = { transaccion: vi.fn(async (fn: (c: typeof client) => unknown) => fn(client)) };
       const servicio = new EmpresasService(pg as never, {} as never);
 
-      await servicio.crear('u-1', 'Acme', '  Mi Empresa  ');
+      await servicio.crear('u-1', 'Acme', '  Mi Empresa  ', undefined, 'retail', 'pack_retail');
 
-      expect(client.query).toHaveBeenNthCalledWith(1, expect.any(String), ['mi-empresa']);
+      expect(client.query).toHaveBeenNthCalledWith(2, expect.any(String), ['mi-empresa']);
       expect(client.query).toHaveBeenNthCalledWith(
-        2,
+        3,
         expect.stringContaining('INSERT INTO identity.empresas'),
         expect.arrayContaining(['Acme', 'mi-empresa', 'retail', 'pack_retail', 1, 'u-1']),
       );
     });
 
     it('rechaza con 409 un slug explícito ya usado (incluido histórico)', async () => {
-      const client = { query: vi.fn().mockResolvedValueOnce({ rows: [{ ok: 1 }], rowCount: 1 }) };
+      const client = {
+        query: vi.fn()
+          .mockResolvedValueOnce({ rows: [{ codigo: 'pack_retail', version: 1, vertical_codigo: 'retail' }], rowCount: 1 })
+          .mockResolvedValueOnce({ rows: [{ ok: 1 }], rowCount: 1 }),
+      };
       const pg = { transaccion: vi.fn(async (fn: (c: typeof client) => unknown) => fn(client)) };
       const servicio = new EmpresasService(pg as never, {} as never);
 
-      await expect(servicio.crear('u-1', 'Acme', 'acme')).rejects.toBeInstanceOf(
-        ConflictError,
-      );
-      expect(client.query).toHaveBeenCalledTimes(1);
+      await expect(
+        servicio.crear('u-1', 'Acme', 'acme', undefined, 'retail', 'pack_retail'),
+      ).rejects.toBeInstanceOf(ConflictError);
+      expect(client.query).toHaveBeenCalledTimes(2);
     });
 
     it('reintenta la transacción cuando otra petición gana la carrera del slug', async () => {
@@ -158,7 +181,9 @@ describe('EmpresasService', () => {
       };
       const servicio = new EmpresasService(pg as never, {} as never);
 
-      await expect(servicio.crear('u-1', 'Acme')).resolves.toEqual(empresa);
+      await expect(
+        servicio.crear('u-1', 'Acme', undefined, undefined, 'retail', 'pack_retail'),
+      ).resolves.toEqual(empresa);
       expect(pg.transaccion).toHaveBeenCalledTimes(2);
     });
 
@@ -166,14 +191,17 @@ describe('EmpresasService', () => {
       const pg = { transaccion: vi.fn().mockRejectedValue({ code: '23505' }) };
       const servicio = new EmpresasService(pg as never, {} as never);
 
-      await expect(servicio.crear('u-1', 'Acme', 'acme')).rejects.toBeInstanceOf(
-        ConflictError,
-      );
+      await expect(
+        servicio.crear('u-1', 'Acme', 'acme', undefined, 'retail', 'pack_retail'),
+      ).rejects.toBeInstanceOf(ConflictError);
     });
 
     it('usa un sufijo aleatorio cuando los 50 intentos automáticos están ocupados', async () => {
       const client = {
         query: vi.fn().mockImplementation(async (sql: string) => {
+          if (sql.includes('FROM identity.packs')) {
+            return { rows: [{ codigo: 'pack_retail', version: 1, vertical_codigo: 'retail' }], rowCount: 1 };
+          }
           if (sql.includes('FROM identity.empresa_slugs')) {
             return { rows: [{ ok: 1 }], rowCount: 1 };
           }
@@ -186,7 +214,9 @@ describe('EmpresasService', () => {
       const pg = { transaccion: vi.fn(async (fn: (c: typeof client) => unknown) => fn(client)) };
       const servicio = new EmpresasService(pg as never, {} as never);
 
-      await expect(servicio.crear('u-1', 'Acme')).resolves.toEqual(empresa);
+      await expect(
+        servicio.crear('u-1', 'Acme', undefined, undefined, 'retail', 'pack_retail'),
+      ).resolves.toEqual(empresa);
 
       const insert = client.query.mock.calls.find(([sql]) => String(sql).includes('INSERT INTO identity.empresas'));
       expect(insert?.[1]?.[1]).toMatch(/^acme-[a-z0-9]+$/);

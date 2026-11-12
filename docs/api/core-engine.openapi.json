@@ -26496,7 +26496,9 @@
           }
         },
         "required": [
-          "nombre"
+          "nombre",
+          "vertical_id",
+          "pack_codigo"
         ]
       },
       "CrearExtensionRequestDto": {

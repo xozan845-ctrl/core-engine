@@ -125,6 +125,18 @@ export default defineSuite({
       );
     });
 
+    test('R-AR-5: el alta de empresa exige vertical y pack explícitos', () => {
+      const controller = readText(
+        join(repoRoot, 'packages/identity-service/src/empresas/empresas.controller.ts'),
+      );
+      const inicio = controller.indexOf('class CrearEmpresaRequestDto');
+      const fin = controller.indexOf('class ActualizarPackRequestDto');
+      const dto = inicio >= 0 && fin > inicio ? controller.slice(inicio, fin) : '';
+      assert.ok(dto, 'no se encontró CrearEmpresaRequestDto');
+      assert.doesNotMatch(dto, /vertical_id\?/, 'vertical_id no puede ser opcional');
+      assert.doesNotMatch(dto, /pack_codigo\?/, 'pack_codigo no puede ser opcional');
+    });
+
     test('ADR-0001: el pack builder crea verticales y packs con capacidades arbitrarias', () => {
       const builder = readText(
         join(repoRoot, 'packages/identity-service/src/packs/packs.controller.ts'),
