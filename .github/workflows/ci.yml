@@ -174,16 +174,16 @@ jobs:
           components: rustfmt, clippy
       - uses: Swatinem/rust-cache@v2
         with:
-          workspaces: packages/scheduling-service/rust
+          workspaces: packages/scheduling-service
       - uses: taiki-e/install-action@cargo-llvm-cov
       - name: rustfmt
-        working-directory: packages/scheduling-service/rust
+        working-directory: packages/scheduling-service
         run: cargo fmt --check
       - name: clippy
-        working-directory: packages/scheduling-service/rust
+        working-directory: packages/scheduling-service
         run: cargo clippy --locked --all-targets -- -D warnings
       - name: tests + cobertura
-        working-directory: packages/scheduling-service/rust
+        working-directory: packages/scheduling-service
         run: >-
           cargo llvm-cov --locked --ignore-filename-regex 'src/main\.rs'
           --fail-under-lines 71 --fail-under-functions 65

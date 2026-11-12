@@ -7,6 +7,7 @@ import { COVERAGE_THRESHOLDS } from '../../config/coverage.mjs';
 import {
   PACKAGES_DIR,
   SERVICES,
+  SERVICES_NODE,
   SERVICE_TEST_EXCEPTIONS,
   WORKFLOWS_DIR,
 } from '../../config/project.mjs';
@@ -90,7 +91,7 @@ export default defineSuite({
 
     test('R-MS-1: cada paquete de servicio expone los scripts mínimos de runtime', () => {
       const problems = [];
-      for (const service of SERVICES) {
+      for (const service of SERVICES_NODE) {
         const pkg = packageJson(service);
         if (pkg.private !== true) problems.push(`${service}: private debe ser true`);
         if (pkg.main !== 'dist/main.js') problems.push(`${service}: main debe ser dist/main.js`);
@@ -115,7 +116,7 @@ export default defineSuite({
       );
       assert.deepEqual(
         sorted(workspacesInScript(rootPackage.scripts?.build ?? '', 'build')),
-        sorted(SERVICES),
+        sorted(SERVICES_NODE),
         'el script build raíz debe enumerar exactamente una vez todos los servicios',
       );
     });
@@ -123,7 +124,7 @@ export default defineSuite({
     test('R-QA-1: la matriz test raíz cubre cada workspace no exceptuado', () => {
       const expected = [
         'shared',
-        ...SERVICES.filter((service) => !SERVICE_TEST_EXCEPTIONS.includes(service)),
+        ...SERVICES_NODE.filter((service) => !SERVICE_TEST_EXCEPTIONS.includes(service)),
       ];
       const actual = workspacesInScript(rootPackage.scripts?.test ?? '', 'test');
       assert.deepEqual(
@@ -136,7 +137,7 @@ export default defineSuite({
     test('R-QA-1/R-COV-2: cada workspace exigible tiene runner, config y specs', () => {
       const workspaces = [
         'shared',
-        ...SERVICES.filter((service) => !SERVICE_TEST_EXCEPTIONS.includes(service)),
+        ...SERVICES_NODE.filter((service) => !SERVICE_TEST_EXCEPTIONS.includes(service)),
       ];
       const problems = [];
 
@@ -165,7 +166,7 @@ export default defineSuite({
     test('R-COV-4: la fuente central declara umbrales para cada workspace', () => {
       const workspaces = [
         'shared',
-        ...SERVICES.filter((service) => !SERVICE_TEST_EXCEPTIONS.includes(service)),
+        ...SERVICES_NODE.filter((service) => !SERVICE_TEST_EXCEPTIONS.includes(service)),
       ];
 
       assert.deepEqual(
@@ -220,7 +221,7 @@ export default defineSuite({
     test('R-COV-2: los services/consumers sin spec coinciden con el baseline', () => {
       const workspaces = [
         'shared',
-        ...SERVICES.filter((service) => !SERVICE_TEST_EXCEPTIONS.includes(service)),
+        ...SERVICES_NODE.filter((service) => !SERVICE_TEST_EXCEPTIONS.includes(service)),
       ];
       const baseline = new Set(
         readJson(join(repoRoot, 'scripts', 'config', 'spec-baseline.json')),
@@ -280,7 +281,7 @@ export default defineSuite({
 
     test('R-C-8: los servicios registran el filtro de errores normalizados', () => {
       const faltantes = [];
-      for (const service of SERVICES) {
+      for (const service of SERVICES_NODE) {
         const main = readText(join(packageDir(service), 'src', 'main.ts'));
         if (!main.includes('DomainErrorFilter')) {
           faltantes.push(`${service}: main.ts no registra DomainErrorFilter`);
@@ -307,7 +308,7 @@ export default defineSuite({
 
       const workspaces = [
         'shared',
-        ...SERVICES.filter((service) => !SERVICE_TEST_EXCEPTIONS.includes(service)),
+        ...SERVICES_NODE.filter((service) => !SERVICE_TEST_EXCEPTIONS.includes(service)),
       ];
       const baseline = readJson(
         join(repoRoot, 'scripts', 'config', 'coverage-baseline.json'),
@@ -346,7 +347,7 @@ export default defineSuite({
     test('R-COV-4: cada config Vitest aplica alcance y consume los thresholds centrales', () => {
       const workspaces = [
         'shared',
-        ...SERVICES.filter((service) => !SERVICE_TEST_EXCEPTIONS.includes(service)),
+        ...SERVICES_NODE.filter((service) => !SERVICE_TEST_EXCEPTIONS.includes(service)),
       ];
       const problems = [];
 
@@ -496,7 +497,7 @@ export default defineSuite({
 
       const workspaces = [
         'shared',
-        ...SERVICES.filter((service) => !SERVICE_TEST_EXCEPTIONS.includes(service)),
+        ...SERVICES_NODE.filter((service) => !SERVICE_TEST_EXCEPTIONS.includes(service)),
       ];
       const missingUnit = workspaces.filter((workspace) => {
         const config = readText(join(packageDir(workspace), 'vitest.config.ts'));
