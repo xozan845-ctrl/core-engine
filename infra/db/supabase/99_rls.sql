@@ -998,3 +998,38 @@ CREATE POLICY lista_precio_items_lectura ON catalog.lista_precio_items
   FOR SELECT TO authenticated
   USING (auth.rol() IN ('empresario', 'vendedor', 'coordinador', 'supervisor', 'operativo')
          AND empresa_id::text = (auth.jwt() ->> 'tenant_id'));
+
+-- ── catalog.ubicaciones y item_stock_ubicacion (P1.2) ───────────────────────
+ALTER TABLE catalog.ubicaciones ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS ubicaciones_admin ON catalog.ubicaciones;
+CREATE POLICY ubicaciones_admin ON catalog.ubicaciones
+  FOR ALL TO authenticated
+  USING (auth.rol() IN ('super_admin', 'admin'))
+  WITH CHECK (auth.rol() IN ('super_admin', 'admin'));
+DROP POLICY IF EXISTS ubicaciones_empresa ON catalog.ubicaciones;
+CREATE POLICY ubicaciones_empresa ON catalog.ubicaciones
+  FOR ALL TO authenticated
+  USING (auth.rol() = 'empresario' AND empresa_id::text = (auth.jwt() ->> 'tenant_id'))
+  WITH CHECK (auth.rol() = 'empresario' AND empresa_id::text = (auth.jwt() ->> 'tenant_id'));
+DROP POLICY IF EXISTS ubicaciones_lectura ON catalog.ubicaciones;
+CREATE POLICY ubicaciones_lectura ON catalog.ubicaciones
+  FOR SELECT TO authenticated
+  USING (auth.rol() IN ('empresario', 'vendedor', 'coordinador', 'supervisor', 'operativo')
+         AND empresa_id::text = (auth.jwt() ->> 'tenant_id'));
+
+ALTER TABLE catalog.item_stock_ubicacion ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS item_stock_ubicacion_admin ON catalog.item_stock_ubicacion;
+CREATE POLICY item_stock_ubicacion_admin ON catalog.item_stock_ubicacion
+  FOR ALL TO authenticated
+  USING (auth.rol() IN ('super_admin', 'admin'))
+  WITH CHECK (auth.rol() IN ('super_admin', 'admin'));
+DROP POLICY IF EXISTS item_stock_ubicacion_empresa ON catalog.item_stock_ubicacion;
+CREATE POLICY item_stock_ubicacion_empresa ON catalog.item_stock_ubicacion
+  FOR ALL TO authenticated
+  USING (auth.rol() = 'empresario' AND empresa_id::text = (auth.jwt() ->> 'tenant_id'))
+  WITH CHECK (auth.rol() = 'empresario' AND empresa_id::text = (auth.jwt() ->> 'tenant_id'));
+DROP POLICY IF EXISTS item_stock_ubicacion_lectura ON catalog.item_stock_ubicacion;
+CREATE POLICY item_stock_ubicacion_lectura ON catalog.item_stock_ubicacion
+  FOR SELECT TO authenticated
+  USING (auth.rol() IN ('empresario', 'vendedor', 'coordinador', 'supervisor', 'operativo')
+         AND empresa_id::text = (auth.jwt() ->> 'tenant_id'));

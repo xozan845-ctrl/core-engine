@@ -2176,6 +2176,424 @@
         ]
       }
     },
+    "/api/v2/admin/ubicaciones": {
+      "get": {
+        "operationId": "UbicacionesController_listar",
+        "parameters": [
+          {
+            "name": "empresa_id",
+            "required": false,
+            "in": "query",
+            "description": "Solo admin global",
+            "schema": {}
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Ubicaciones",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
+                  "properties": {
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/UbicacionInventarioResponseDto"
+                      }
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/MetaRespuesta"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Listar bodegas y sucursales de la empresa",
+        "tags": [
+          "Catálogo · Ubicaciones"
+        ]
+      },
+      "post": {
+        "operationId": "UbicacionesController_crear",
+        "parameters": [
+          {
+            "name": "empresa_id",
+            "required": false,
+            "in": "query",
+            "description": "Solo admin global",
+            "schema": {}
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CrearUbicacionInventarioRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Ubicacion creada",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/UbicacionInventarioResponseDto"
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/MetaRespuesta"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Crear una bodega o sucursal",
+        "tags": [
+          "Catálogo · Ubicaciones"
+        ]
+      }
+    },
+    "/api/v2/admin/ubicaciones/{id}": {
+      "patch": {
+        "operationId": "UbicacionesController_actualizar",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "name": "empresa_id",
+            "required": false,
+            "in": "query",
+            "description": "Solo admin global",
+            "schema": {}
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ActualizarUbicacionInventarioRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Ubicacion actualizada",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/UbicacionInventarioResponseDto"
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/MetaRespuesta"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Actualizar una ubicacion",
+        "tags": [
+          "Catálogo · Ubicaciones"
+        ]
+      }
+    },
+    "/api/v2/admin/ubicaciones/transferencias": {
+      "post": {
+        "operationId": "UbicacionesController_trasladar",
+        "parameters": [
+          {
+            "name": "empresa_id",
+            "required": false,
+            "in": "query",
+            "description": "Solo admin global",
+            "schema": {}
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TrasladarStockInventarioRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Stock trasladado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/TrasladoInventarioResponseDto"
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/MetaRespuesta"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Trasladar stock entre dos ubicaciones",
+        "tags": [
+          "Catálogo · Ubicaciones"
+        ]
+      }
+    },
+    "/api/v2/admin/ubicaciones/items/{itemId}/stock": {
+      "get": {
+        "operationId": "UbicacionesController_stockItem",
+        "parameters": [
+          {
+            "name": "itemId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "name": "empresa_id",
+            "required": false,
+            "in": "query",
+            "description": "Solo admin global",
+            "schema": {}
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Stock por ubicacion",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/StockItemUbicacionesInventarioResponseDto"
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/MetaRespuesta"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Consultar el desglose de stock de un item",
+        "tags": [
+          "Catálogo · Ubicaciones"
+        ]
+      }
+    },
+    "/api/v2/admin/ubicaciones/{id}/stock": {
+      "get": {
+        "operationId": "UbicacionesController_listarStock",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "name": "empresa_id",
+            "required": false,
+            "in": "query",
+            "description": "Solo admin global",
+            "schema": {}
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Stock de la ubicacion",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
+                  "properties": {
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/StockUbicacionInventarioResponseDto"
+                      }
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/MetaRespuesta"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Listar el stock de una ubicacion",
+        "tags": [
+          "Catálogo · Ubicaciones"
+        ]
+      }
+    },
+    "/api/v2/admin/ubicaciones/{id}/stock/{itemId}": {
+      "put": {
+        "operationId": "UbicacionesController_ajustarStock",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "name": "itemId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "name": "empresa_id",
+            "required": false,
+            "in": "query",
+            "description": "Solo admin global",
+            "schema": {}
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AjustarStockUbicacionInventarioRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Stock ajustado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/StockUbicacionInventarioResponseDto"
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/MetaRespuesta"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Fijar el stock de un item en una ubicacion",
+        "tags": [
+          "Catálogo · Ubicaciones"
+        ]
+      }
+    },
     "/api/v2/catalog/configuracion-inventario": {
       "get": {
         "operationId": "OperacionesController_configuracion",
@@ -17999,6 +18417,51 @@
           }
         }
       },
+      "ActualizarUbicacionInventarioRequestDto": {
+        "type": "object",
+        "properties": {
+          "codigo": {
+            "type": "string",
+            "example": "bodega-central"
+          },
+          "nombre": {
+            "type": "string",
+            "example": "Bodega central"
+          },
+          "tipo": {
+            "type": "string",
+            "enum": [
+              "bodega",
+              "sucursal",
+              "almacen",
+              "otro"
+            ],
+            "default": "bodega"
+          },
+          "direccion": {
+            "type": "string"
+          },
+          "predeterminada": {
+            "type": "boolean",
+            "default": false
+          },
+          "activo": {
+            "type": "boolean"
+          }
+        }
+      },
+      "AjustarStockUbicacionInventarioRequestDto": {
+        "type": "object",
+        "properties": {
+          "stock": {
+            "type": "number",
+            "minimum": 0
+          }
+        },
+        "required": [
+          "stock"
+        ]
+      },
       "ComboComponenteRequestDto": {
         "type": "object",
         "properties": {
@@ -18825,6 +19288,40 @@
           "desde",
           "hasta",
           "precio_cents"
+        ]
+      },
+      "CrearUbicacionInventarioRequestDto": {
+        "type": "object",
+        "properties": {
+          "codigo": {
+            "type": "string",
+            "example": "bodega-central"
+          },
+          "nombre": {
+            "type": "string",
+            "example": "Bodega central"
+          },
+          "tipo": {
+            "type": "string",
+            "enum": [
+              "bodega",
+              "sucursal",
+              "almacen",
+              "otro"
+            ],
+            "default": "bodega"
+          },
+          "direccion": {
+            "type": "string"
+          },
+          "predeterminada": {
+            "type": "boolean",
+            "default": false
+          }
+        },
+        "required": [
+          "codigo",
+          "nombre"
         ]
       },
       "DesgloseTarifaResponseDto": {
@@ -20250,6 +20747,97 @@
           "actualizado_en"
         ]
       },
+      "StockItemUbicacionesInventarioResponseDto": {
+        "type": "object",
+        "properties": {
+          "item_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "sku": {
+            "type": "string"
+          },
+          "nombre": {
+            "type": "string"
+          },
+          "stock_total": {
+            "type": "number"
+          },
+          "total_ubicaciones": {
+            "type": "number"
+          },
+          "ubicaciones": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "ubicacion_id": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "codigo": {
+                  "type": "string"
+                },
+                "nombre": {
+                  "type": "string"
+                },
+                "stock": {
+                  "type": "number"
+                }
+              }
+            }
+          }
+        },
+        "required": [
+          "item_id",
+          "sku",
+          "nombre",
+          "stock_total",
+          "total_ubicaciones",
+          "ubicaciones"
+        ]
+      },
+      "StockUbicacionInventarioResponseDto": {
+        "type": "object",
+        "properties": {
+          "ubicacion_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "ubicacion_codigo": {
+            "type": "string"
+          },
+          "ubicacion_nombre": {
+            "type": "string"
+          },
+          "item_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "sku": {
+            "type": "string"
+          },
+          "nombre": {
+            "type": "string"
+          },
+          "stock": {
+            "type": "number"
+          },
+          "stock_total": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "ubicacion_id",
+          "ubicacion_codigo",
+          "ubicacion_nombre",
+          "item_id",
+          "sku",
+          "nombre",
+          "stock",
+          "stock_total"
+        ]
+      },
       "TarifaItemResponseDto": {
         "type": "object",
         "properties": {
@@ -20292,6 +20880,105 @@
           "desde",
           "hasta",
           "precio_cents",
+          "creado_en",
+          "actualizado_en"
+        ]
+      },
+      "TrasladarStockInventarioRequestDto": {
+        "type": "object",
+        "properties": {
+          "item_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "origen_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "destino_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "cantidad": {
+            "type": "number",
+            "minimum": 1
+          }
+        },
+        "required": [
+          "item_id",
+          "origen_id",
+          "destino_id",
+          "cantidad"
+        ]
+      },
+      "TrasladoInventarioResponseDto": {
+        "type": "object",
+        "properties": {
+          "origen": {
+            "$ref": "#/components/schemas/StockUbicacionInventarioResponseDto"
+          },
+          "destino": {
+            "$ref": "#/components/schemas/StockUbicacionInventarioResponseDto"
+          }
+        },
+        "required": [
+          "origen",
+          "destino"
+        ]
+      },
+      "UbicacionInventarioResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "empresa_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "codigo": {
+            "type": "string"
+          },
+          "nombre": {
+            "type": "string"
+          },
+          "tipo": {
+            "type": "string",
+            "enum": [
+              "bodega",
+              "sucursal",
+              "almacen",
+              "otro"
+            ]
+          },
+          "direccion": {
+            "type": "string"
+          },
+          "predeterminada": {
+            "type": "boolean"
+          },
+          "activo": {
+            "type": "boolean"
+          },
+          "creado_en": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "actualizado_en": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "empresa_id",
+          "codigo",
+          "nombre",
+          "tipo",
+          "direccion",
+          "predeterminada",
+          "activo",
           "creado_en",
           "actualizado_en"
         ]
@@ -31117,6 +31804,16 @@
               "credito"
             ],
             "default": "simulado"
+          },
+          "lista_precio_codigo": {
+            "type": "string",
+            "description": "Lista de precios por codigo (sustituye el precio base del item)",
+            "example": "mayorista"
+          },
+          "segmento_codigo": {
+            "type": "string",
+            "description": "Segmento de precio; se resuelve a su lista activa",
+            "example": "mayorista"
           }
         },
         "required": [

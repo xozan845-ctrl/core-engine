@@ -9,6 +9,7 @@ import {
   IsOptional,
   IsString,
   IsUUID,
+  Matches,
   Max,
   Min,
   ValidateNested,
@@ -75,4 +76,22 @@ export class CreateOrderCommand {
   @IsOptional()
   @IsIn(['simulado', 'credito'])
   metodo_pago?: 'simulado' | 'credito';
+
+  @ApiProperty({
+    required: false,
+    description: 'Lista de precios por codigo (sustituye el precio base del item)',
+    example: 'mayorista',
+  })
+  @IsOptional()
+  @Matches(/^[a-z][a-z0-9_-]{1,39}$/)
+  lista_precio_codigo?: string;
+
+  @ApiProperty({
+    required: false,
+    description: 'Segmento de precio; se resuelve a su lista activa',
+    example: 'mayorista',
+  })
+  @IsOptional()
+  @Matches(/^[a-z][a-z0-9_-]{0,39}$/)
+  segmento_codigo?: string;
 }
