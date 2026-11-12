@@ -961,3 +961,40 @@ DROP POLICY IF EXISTS api_keys_app ON identity.api_keys;
 CREATE POLICY api_keys_app ON identity.api_keys
   FOR ALL TO core_engine_app
   USING (true) WITH CHECK (true);
+
+-- ── catalog.listas_precio y lista_precio_items (P1.1) ───────────────────────
+-- Listas por segmento y rangos de cantidad: admin global o empresario del
+-- tenant; lectura para los roles operativos de la misma empresa.
+ALTER TABLE catalog.listas_precio ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS listas_precio_admin ON catalog.listas_precio;
+CREATE POLICY listas_precio_admin ON catalog.listas_precio
+  FOR ALL TO authenticated
+  USING (auth.rol() IN ('super_admin', 'admin'))
+  WITH CHECK (auth.rol() IN ('super_admin', 'admin'));
+DROP POLICY IF EXISTS listas_precio_empresa ON catalog.listas_precio;
+CREATE POLICY listas_precio_empresa ON catalog.listas_precio
+  FOR ALL TO authenticated
+  USING (auth.rol() = 'empresario' AND empresa_id::text = (auth.jwt() ->> 'tenant_id'))
+  WITH CHECK (auth.rol() = 'empresario' AND empresa_id::text = (auth.jwt() ->> 'tenant_id'));
+DROP POLICY IF EXISTS listas_precio_lectura ON catalog.listas_precio;
+CREATE POLICY listas_precio_lectura ON catalog.listas_precio
+  FOR SELECT TO authenticated
+  USING (auth.rol() IN ('empresario', 'vendedor', 'coordinador', 'supervisor', 'operativo')
+         AND empresa_id::text = (auth.jwt() ->> 'tenant_id'));
+
+ALTER TABLE catalog.lista_precio_items ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS lista_precio_items_admin ON catalog.lista_precio_items;
+CREATE POLICY lista_precio_items_admin ON catalog.lista_precio_items
+  FOR ALL TO authenticated
+  USING (auth.rol() IN ('super_admin', 'admin'))
+  WITH CHECK (auth.rol() IN ('super_admin', 'admin'));
+DROP POLICY IF EXISTS lista_precio_items_empresa ON catalog.lista_precio_items;
+CREATE POLICY lista_precio_items_empresa ON catalog.lista_precio_items
+  FOR ALL TO authenticated
+  USING (auth.rol() = 'empresario' AND empresa_id::text = (auth.jwt() ->> 'tenant_id'))
+  WITH CHECK (auth.rol() = 'empresario' AND empresa_id::text = (auth.jwt() ->> 'tenant_id'));
+DROP POLICY IF EXISTS lista_precio_items_lectura ON catalog.lista_precio_items;
+CREATE POLICY lista_precio_items_lectura ON catalog.lista_precio_items
+  FOR SELECT TO authenticated
+  USING (auth.rol() IN ('empresario', 'vendedor', 'coordinador', 'supervisor', 'operativo')
+         AND empresa_id::text = (auth.jwt() ->> 'tenant_id'));

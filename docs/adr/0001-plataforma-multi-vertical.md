@@ -112,7 +112,14 @@ Se introduce la abstracción `item` con `tipo` igual a `producto`, `servicio` o
 - lotes, vencimiento, unidades y proveedores se habilitan solo con la
   capacidad de inventario correspondiente;
 - productos y servicios actuales se conservan durante la migración;
-- `items_vista` será la superficie de convergencia antes de retirar el legado.
+- `items_vista` será la superficie de convergencia antes de retirar el legado;
+- `catalog.listas_precio` agrupa precios por segmento (mayorista, VIP, convenio)
+  y `catalog.lista_precio_items` define rangos de cantidad por item. La lista
+  con `lista_id NULL` es la escala base: es la que activa
+  `tipo_precio = 'escala'` y la que se usa cuando no hay lista;
+- la resolución de precio es una lectura con orden explícito: lista solicitada
+  o segmento; si no hay filtro, lista predeterminada; la escala base solo aplica
+  cuando no hay lista; en última instancia, el precio del item.
 
 `stores.ofertas` usará `item_type + item_id`. El stock será nullable y los
 servicios podrán declarar capacidad o slots.
