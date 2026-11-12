@@ -22,3 +22,6 @@ opencode.jsonc
 .archify/
 .agents/
 skills-lock.json
+
+# Rust build artifacts (scheduling-service)
+packages/scheduling-service/target/
