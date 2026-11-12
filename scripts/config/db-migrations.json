@@ -73,5 +73,6 @@
   "60_catalog_item_componentes.sql": "9dbb635dfeea958b8404f231df33d2ed65a1570f75e32e9901a2f93cd51e0578",
   "61_registros_capacidad.sql": "a8321d141742bc35ff1fa0b37044fce41d0ee63de5bef6c1065df012eaa19715",
   "62_api_keys.sql": "bbc5eba99e7eccdac87af7d20080da81866a2788d2f8a9162d444cd4508190e1",
-  "63_gating_capacidades.sql": "e5c52a98d281b5012e94724509559b2b2a49eeee4d614a2d7abfb4e02fc1b84f"
+  "63_gating_capacidades.sql": "e5c52a98d281b5012e94724509559b2b2a49eeee4d614a2d7abfb4e02fc1b84f",
+  "64_listas_precio_escalas.sql": "4cef7f4cd0fa149bf66a8f10bc98751a43ecc3c31f529767a2c4fe6756634c68"
 }
