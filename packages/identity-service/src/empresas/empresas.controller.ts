@@ -90,10 +90,10 @@ class CrearEmpresaRequestDto extends OmitType(PerfilEmpresaRequestDto, [
   @IsString()
   @Length(2, 80)
   slug?: string;
-  @ApiProperty({ required: false, description: 'Código dinámico de la vertical; se valida contra identity.verticales' })
-  @IsOptional() @IsString() @Matches(/^[a-z][a-z0-9_]{1,39}$/) vertical_id?: string;
-  @ApiProperty({ required: false, description: 'Pack versionado; se valida contra identity.packs' })
-  @IsOptional() @IsString() @Matches(/^pack_[a-z][a-z0-9_]{1,39}$/) pack_codigo?: PackCodigo;
+  @ApiProperty({ description: 'Código dinámico de la vertical; se valida contra identity.verticales' })
+  @IsString() @Matches(/^[a-z][a-z0-9_]{1,39}$/) vertical_id: string;
+  @ApiProperty({ description: 'Pack versionado; se valida contra identity.packs' })
+  @IsString() @Matches(/^pack_[a-z][a-z0-9_]{1,39}$/) pack_codigo: PackCodigo;
   @ApiProperty({ required: false, minimum: 1, description: 'Version concreta del pack; por defecto la ultima activa' })
   @IsOptional() @IsInt() @Min(1) pack_version?: number;
 }
