@@ -81,14 +81,15 @@ Los hallazgos de la revisión del 2026-10-24 se corrigieron en el repositorio:
 - `/ready` exige `x-internal-key`, tiene límite propio (10/min) y caché de 5 s.
 - `trust proxy` configurable (`TRUST_PROXY`, por defecto `1`) para que el rate
   limit use la IP real detrás de Traefik/Dockploy.
-- Staging exige `EDGE_BASIC_AUTH` (`REQUIRE_EDGE_AUTH=true`): el arranque falla
-  sin ella. Un Bearer inválido ya no puede saltarse el Basic.
+- Staging se protege en el borde externo (Cloudflare Access/VPN/allowlist); el
+  gateway ya no implementa Basic ni `/api-proxy` (ADR-0005).
+- `/ready` y la superficie de diagnóstico (`/docs*`, `/metrics`) exigen
+  `x-internal-key` salvo que el entorno los declare públicos.
 - Cabeceras `Permissions-Policy`, COOP, COEP, CORP y
   `X-Permitted-Cross-Domain-Policies` añadidas.
 - Hardening de host en `security/hardening/` (SSH sin SHA-1 y Traefik sin CBC).
 
-Variables nuevas: `READY_PUBLIC`, `READY_CACHE_MS`, `TRUST_PROXY`,
-`REQUIRE_EDGE_AUTH`. Están documentadas en `.env.stage.example`,
+Variables nuevas: `READY_PUBLIC`, `READY_CACHE_MS`, `TRUST_PROXY`. Están documentadas en `.env.stage.example`,
 `.env.production.example` y `.env.example`.
 
 ## Reglas de engagement
