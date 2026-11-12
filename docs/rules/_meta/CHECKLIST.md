@@ -121,6 +121,7 @@ Matriz completa en [`06-estandares-cobertura.md`](../test/06-estandares-cobertur
 - [ ] **R-CD-2** — Contrato de release por tag ([`rules/cd/01`](../cd/01-despliegue.md)): `release.yml` exige commit en `main` **y** run de `ci.yml` en verde en ese mismo SHA antes de publicar.
 - [ ] **R-CD-7** — Ningún secreto como `ARG`/`ENV` de build ni en una capa de imagen; los secretos van en runtime.
 - [ ] **R-CD-9/10/11** — Dockploy: un proyecto con los environments `staging`/`produccion` y desarrollo local (R-CD-9); producción solo por promoción `staging → main` (R-CD-10); gate de producción: `ci.yml` verde en el SHA promovido (R-CD-11).
+- [ ] **R-GW-8** — API keys emitidas por `identity` e intercambiadas por JWT corto; el gateway sin Basic ni proxies de bypass; privacidad de `staging` en el borde externo (ADR-0005).
 
 ## 11. PR — rama, cuerpo, checks y merge ([`rules/git/04-pr.md`](../git/04-pr.md))
 
