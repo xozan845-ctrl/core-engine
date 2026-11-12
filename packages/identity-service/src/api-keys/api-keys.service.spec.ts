@@ -112,8 +112,14 @@ describe('ApiKeysService (ADR-0005/R-GW-8)', () => {
     vi.stubEnv('JWT_SECRET', 'secreto-de-prueba');
     vi.stubEnv('JWT_ACCESS_TTL', '900s');
     const { pg, service } = crear();
-    pg.queryOne.mockResolvedValue(filaKey());
-    pg.query.mockResolvedValue([]);
+    const client = {
+      query: vi
+        .fn()
+        .mockResolvedValueOnce({ rows: [] })
+        .mockResolvedValueOnce({ rows: [filaKey()] })
+        .mockResolvedValueOnce({ rows: [] }),
+    };
+    pg.transaccion.mockImplementation(async (fn: (c: unknown) => Promise<unknown>) => fn(client));
 
     const token = await service.token('cek_ab12cd34_secreto');
     expect(token.token_type).toBe('Bearer');
@@ -124,7 +130,8 @@ describe('ApiKeysService (ADR-0005/R-GW-8)', () => {
     expect(payload.sub).toBe(`api-key:${KEY_ID}`);
     expect(payload.rol).toBe(ROLES.VENDEDOR);
     expect(payload.tenant_id).toBe(EMPRESA);
-    expect(pg.query.mock.calls[0][0]).toContain('ultimo_uso_en = NOW()');
+    expect(client.query.mock.calls[0][0]).toContain('request.api_key_hash');
+    expect(client.query.mock.calls[2][0]).toContain('ultimo_uso_en = NOW()');
   });
 
   it('debe rechazar keys ausentes, revocadas o expiradas', async () => {
@@ -132,12 +139,21 @@ describe('ApiKeysService (ADR-0005/R-GW-8)', () => {
     await expect(service.token(undefined)).rejects.toMatchObject({ codigo: 'NO_AUTORIZADO' });
     await expect(service.token('otra_cosa')).rejects.toMatchObject({ codigo: 'NO_AUTORIZADO' });
 
-    pg.queryOne.mockResolvedValue(null);
+    pg.transaccion.mockImplementation(async (fn: (c: unknown) => Promise<unknown>) =>
+      fn({ query: vi.fn().mockResolvedValueOnce({ rows: [] }).mockResolvedValueOnce({ rows: [] }) }),
+    );
     await expect(service.token('cek_ab12cd34_x')).rejects.toMatchObject({
       codigo: 'NO_AUTORIZADO',
     });
 
-    pg.queryOne.mockResolvedValue(filaKey({ expira_en: '2020-01-01T00:00:00.000Z' }));
+    pg.transaccion.mockImplementation(async (fn: (c: unknown) => Promise<unknown>) =>
+      fn({
+        query: vi
+          .fn()
+          .mockResolvedValueOnce({ rows: [] })
+          .mockResolvedValueOnce({ rows: [filaKey({ expira_en: '2020-01-01T00:00:00.000Z' })] }),
+      }),
+    );
     await expect(service.token('cek_ab12cd34_x')).rejects.toMatchObject({
       codigo: 'NO_AUTORIZADO',
     });

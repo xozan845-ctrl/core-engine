@@ -17,6 +17,7 @@ const RUTAS_PUBLICAS = new Set([
   'GET /api/v2/storage/public/objetos/{id}',
   'HEAD /api/v2/storage/public/objetos/{id}',
   'POST /api/v2/auth/login',
+  'POST /api/v2/auth/token',
   'POST /api/v2/auth/refresh',
   'POST /api/v2/auth/registro',
   'POST /api/v2/auth/restablecer-contrasena',

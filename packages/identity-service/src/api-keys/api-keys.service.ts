@@ -128,19 +128,25 @@ export class ApiKeysService {
     if (!clave || !clave.startsWith('cek_')) {
       throw new UnauthorizedError('API key invalida o expirada.');
     }
-    const fila = await this.pg.queryOne<ApiKey>(
-      `SELECT ${COLUMNAS} FROM identity.api_keys
-        WHERE hash = $1 AND estado = 'activa' LIMIT 1`,
-      [hashDe(clave)],
-    );
-    if (!fila) throw new UnauthorizedError('API key invalida o expirada.');
-    if (fila.expira_en && new Date(fila.expira_en).getTime() <= Date.now()) {
-      throw new UnauthorizedError('API key invalida o expirada.');
-    }
-
-    await this.pg.query(`UPDATE identity.api_keys SET ultimo_uso_en = NOW() WHERE id = $1`, [
-      fila.id,
-    ]);
+    const hash = hashDe(clave);
+    const fila = await this.pg.transaccion<ApiKey>(async (client) => {
+      // RLS: la política de lookup solo expone la fila con este hash.
+      await client.query(`SELECT set_config('request.api_key_hash', $1, true)`, [hash]);
+      const resultado = await client.query<ApiKey>(
+        `SELECT ${COLUMNAS} FROM identity.api_keys
+          WHERE hash = $1 AND estado = 'activa' LIMIT 1`,
+        [hash],
+      );
+      const registro = resultado.rows[0];
+      if (!registro) throw new UnauthorizedError('API key invalida o expirada.');
+      if (registro.expira_en && new Date(registro.expira_en).getTime() <= Date.now()) {
+        throw new UnauthorizedError('API key invalida o expirada.');
+      }
+      await client.query(`UPDATE identity.api_keys SET ultimo_uso_en = NOW() WHERE id = $1`, [
+        registro.id,
+      ]);
+      return registro;
+    });
 
     const ttl = process.env.JWT_ACCESS_TTL ?? JWT_ACCESS_TTL_DEFAULT;
     const accessToken = crearAccessToken(
