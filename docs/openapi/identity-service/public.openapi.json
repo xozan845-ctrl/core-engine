@@ -3856,6 +3856,223 @@
           "Partes · Registros"
         ]
       }
+    },
+    "/api/v2/api-keys": {
+      "get": {
+        "operationId": "ApiKeysController_listar",
+        "parameters": [
+          {
+            "name": "empresa_id",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
+                  "properties": {
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/ApiKeyResponseDto"
+                      }
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/MetaRespuesta"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Listar API keys de una empresa",
+        "tags": [
+          "API keys"
+        ]
+      },
+      "post": {
+        "operationId": "ApiKeysController_crear",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CrearApiKeyRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/ApiKeyCreadaResponseDto"
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/MetaRespuesta"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Crear una API key (el secreto se muestra una vez)",
+        "tags": [
+          "API keys"
+        ]
+      }
+    },
+    "/api/v2/api-keys/{id}": {
+      "delete": {
+        "operationId": "ApiKeysController_revocar",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
+                  "properties": {
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string"
+                        },
+                        "estado": {
+                          "type": "string"
+                        }
+                      }
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/MetaRespuesta"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Revocar una API key",
+        "tags": [
+          "API keys"
+        ]
+      }
+    },
+    "/api/v2/auth/token": {
+      "post": {
+        "operationId": "TokenApiKeyController_token",
+        "parameters": [
+          {
+            "name": "x-api-key",
+            "required": false,
+            "in": "header",
+            "description": "API key de integración",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
+                  "properties": {
+                    "data": {
+                      "type": "object",
+                      "required": [
+                        "access_token",
+                        "token_type",
+                        "expires_in"
+                      ],
+                      "properties": {
+                        "access_token": {
+                          "type": "string"
+                        },
+                        "token_type": {
+                          "type": "string",
+                          "example": "Bearer"
+                        },
+                        "expires_in": {
+                          "type": "integer",
+                          "example": 900
+                        }
+                      }
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/MetaRespuesta"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "summary": "Intercambiar una API key por un JWT corto",
+        "tags": [
+          "API keys"
+        ]
+      }
     }
   },
   "components": {
@@ -4227,6 +4444,131 @@
           "slug"
         ]
       },
+      "ApiKeyCreadaResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "empresa_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "nombre": {
+            "type": "string"
+          },
+          "prefijo": {
+            "type": "string"
+          },
+          "rol": {
+            "type": "string",
+            "enum": [
+              "empresario",
+              "vendedor",
+              "logistica",
+              "coordinador",
+              "supervisor",
+              "operativo"
+            ]
+          },
+          "estado": {
+            "type": "string",
+            "enum": [
+              "activa",
+              "revocada"
+            ]
+          },
+          "expira_en": {
+            "type": "object",
+            "nullable": true,
+            "format": "date-time"
+          },
+          "creado_en": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "ultimo_uso_en": {
+            "type": "object",
+            "nullable": true,
+            "format": "date-time"
+          },
+          "key": {
+            "type": "string",
+            "description": "Clave completa; solo se muestra esta vez"
+          }
+        },
+        "required": [
+          "id",
+          "empresa_id",
+          "nombre",
+          "prefijo",
+          "rol",
+          "estado",
+          "creado_en",
+          "key"
+        ]
+      },
+      "ApiKeyResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "empresa_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "nombre": {
+            "type": "string"
+          },
+          "prefijo": {
+            "type": "string"
+          },
+          "rol": {
+            "type": "string",
+            "enum": [
+              "empresario",
+              "vendedor",
+              "logistica",
+              "coordinador",
+              "supervisor",
+              "operativo"
+            ]
+          },
+          "estado": {
+            "type": "string",
+            "enum": [
+              "activa",
+              "revocada"
+            ]
+          },
+          "expira_en": {
+            "type": "object",
+            "nullable": true,
+            "format": "date-time"
+          },
+          "creado_en": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "ultimo_uso_en": {
+            "type": "object",
+            "nullable": true,
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "empresa_id",
+          "nombre",
+          "prefijo",
+          "rol",
+          "estado",
+          "creado_en"
+        ]
+      },
       "AsignarPersonalRequestDto": {
         "type": "object",
         "properties": {
@@ -4450,6 +4792,44 @@
           "contrasena"
         ]
       },
+      "CrearApiKeyRequestDto": {
+        "type": "object",
+        "properties": {
+          "nombre": {
+            "type": "string",
+            "description": "Nombre para identificar la integración",
+            "minLength": 2,
+            "maxLength": 120
+          },
+          "rol": {
+            "type": "string",
+            "description": "Rol efectivo de la key",
+            "enum": [
+              "empresario",
+              "vendedor",
+              "logistica",
+              "coordinador",
+              "supervisor",
+              "operativo"
+            ]
+          },
+          "empresa_id": {
+            "type": "string",
+            "description": "Empresa (solo admin/super_admin)",
+            "format": "uuid"
+          },
+          "expira_en_dias": {
+            "type": "number",
+            "description": "Días de vigencia (opcional)",
+            "minimum": 1,
+            "maximum": 365
+          }
+        },
+        "required": [
+          "nombre",
+          "rol"
+        ]
+      },
       "CrearDireccionRequestDto": {
         "type": "object",
         "properties": {
@@ -4647,7 +5027,9 @@
           }
         },
         "required": [
-          "nombre"
+          "nombre",
+          "vertical_id",
+          "pack_codigo"
         ]
       },
       "CrearExtensionRequestDto": {

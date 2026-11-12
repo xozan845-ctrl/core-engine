@@ -12,7 +12,8 @@ este índice evita mezclar las decisiones nuevas con las ADR históricas.
 | [0001](./0001-plataforma-multi-vertical.md) | Aceptado | Capacidades compartidas por tenant, tres pilotos iniciales y `scheduling-service` como nuevo bounded context |
 | [0002](./0002-envelope-y-desacoplamiento.md) | Aceptado (fases 1-4 y 5-6 completas) | Envelope `{data,meta}` por servicio y desacoplamiento de `orders`/`scheduling`/`field` mediante APIs internas |
 | [0003](./0003-notificaciones-correo.md) | Aceptado (fases 1-5 completas) | Proveedor de correo intercambiable, notificaciones del pedido y reset de contraseña |
-| [0004](./0004-scheduling-service-en-rust.md) | Propuesto (en curso) | Reescribir `scheduling-service` en Rust con paridad de contrato, datos, eventos y métricas |
+| [0004](./0004-scheduling-service-en-rust.md) | Aceptado (implementado) | Reescribir `scheduling-service` en Rust con paridad de contrato, datos, eventos y métricas |
+| [0005](./0005-autenticacion-gateway-sin-gate-de-borde.md) | Propuesto (fase 1) | Gateway sin Basic ni `/api-proxy`; API keys de `identity` intercambiadas por JWT corto |
 
 ## Convención
 

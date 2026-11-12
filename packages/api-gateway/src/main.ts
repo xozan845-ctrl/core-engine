@@ -1,6 +1,6 @@
 import { NestFactory } from '@nestjs/core';
 import { SwaggerModule } from '@nestjs/swagger';
-import type { NextFunction, Request, Response } from 'express';
+import type { Request, Response } from 'express';
 import { AppModule } from './app.module';
 import { OPENAPI_AGREGADO } from './openapi.agregado';
 import {
@@ -8,8 +8,7 @@ import {
   codigoReadiness,
   type EstadoReadiness,
 } from './health/readiness.utils';
-import { edgeAuth, leerEdge } from './proxy/edge-auth.middleware';
-import { crearProxyPublico } from './proxy/public-proxy.middleware';
+import { diagnostico, leerDiagnostico } from './proxy/diagnostics.middleware';
 import { RateLimitMiddleware } from './proxy/rate-limit.middleware';
 import { securityHeaders } from './proxy/security-headers.middleware';
 import {
@@ -26,18 +25,12 @@ async function bootstrap(): Promise<void> {
   const puerto = Number(process.env.PORT ?? PUERTOS.GATEWAY);
 
   // CORS controlado en el borde (doc 5.4): whitelist explicita del entorno;
-  // nunca reflejar origenes arbitrarios (barrido A05). Con gate de borde activo
-  // (staging) se admiten credenciales: el navegador envia el Basic Auth.
-  const edge = leerEdge();
-  // Staging exige el gate de borde (M-01): fallar el arranque es preferible a
-  // desplegar un entorno interno sin autenticacion.
-  if ((process.env.REQUIRE_EDGE_AUTH ?? 'false').toLowerCase() === 'true' && !edge.basicAuth) {
-    throw new Error('EDGE_BASIC_AUTH es obligatoria cuando REQUIRE_EDGE_AUTH=true.');
-  }
+  // nunca reflejar origenes arbitrarios (barrido A05). Sin Basic no se usan
+  // credenciales de navegador (ADR-0005): el JWT viaja en Authorization.
   const origenes = (process.env.CORS_ORIGINS ?? '').split(',').map((o) => o.trim()).filter(Boolean);
   app.enableCors({
     origin: origenes,
-    credentials: Boolean(edge.basicAuth),
+    credentials: false,
     methods: ['GET', 'POST', 'PATCH', 'PUT', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization', 'x-request-id'],
     exposedHeaders: ['x-request-id'],
@@ -60,18 +53,9 @@ async function bootstrap(): Promise<void> {
   // antes del gate para que tambien las respuestas 401/404 las lleven.
   expressApp.disable('x-powered-by');
   expressApp.use(securityHeaders());
-  // Proxy server-side para el frontend público (ADR-29). Va ANTES del gate:
-  // el handler añade el Basic internamente y nunca lo expone al navegador.
-  const proxyPublico = crearProxyPublico({
-    basicAuth: edge.basicAuth,
-    origenes,
-    puerto,
-  });
-  expressApp.use('/api-proxy', (req: Request, res: Response, next: NextFunction) => {
-    proxyPublico(req, res).catch(next);
-  });
-  // Gate del borde ANTES de cualquier ruta (incluidas /metrics y /docs).
-  expressApp.use(edgeAuth(edge));
+  // Cierre de la superficie de diagnóstico (ADR-0005): /health abierto,
+  // /ready y /docs+/metrics con clave interna salvo desarrollo.
+  expressApp.use(diagnostico(leerDiagnostico()));
   const metrics = app.get(MetricsService);
   expressApp.get('/metrics', async (_req: Request, res: Response) =>
     res.type('text/plain').send(await metrics.texto()),
