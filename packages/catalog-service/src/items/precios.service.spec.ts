@@ -180,6 +180,166 @@ describe('PreciosService (Fase P1.1)', () => {
     });
   });
 
+
+  it('lista listas y precios de una lista', async () => {
+    const { servicio, pg } = crear();
+    (pg.query as Mock).mockResolvedValueOnce([lista]);
+    await expect(servicio.listarListas(EMPRESA)).resolves.toEqual([lista]);
+
+    (pg.queryOne as Mock).mockResolvedValueOnce(lista);
+    (pg.query as Mock).mockResolvedValueOnce([escala]);
+    await expect(servicio.listarPrecios(EMPRESA, LISTA)).resolves.toEqual([escala]);
+  });
+
+  it('crea una lista no predeterminada sin tocar otras listas', async () => {
+    const { servicio, pg } = crear();
+    const client = { query: vi.fn().mockResolvedValue({ rows: [{ ...lista, predeterminada: false }] }) };
+    (pg.transaccion as Mock).mockImplementationOnce(async (fn: (c: unknown) => unknown) => fn(client));
+
+    await expect(
+      servicio.crearLista(EMPRESA, { codigo: 'vip', nombre: 'VIP' }),
+    ).resolves.toMatchObject({ predeterminada: false });
+    expect(client.query).toHaveBeenCalledTimes(1);
+    expect(client.query).toHaveBeenCalledWith(
+      expect.stringContaining('INSERT INTO catalog.listas_precio'),
+      [EMPRESA, 'vip', 'VIP', '', 'NIO', '', false],
+    );
+  });
+
+  it('valida nombre, moneda, segmento y uuid de lista', async () => {
+    const { servicio } = crear();
+    await expect(
+      servicio.crearLista(EMPRESA, { codigo: 'vip', nombre: 'x' }),
+    ).rejects.toBeInstanceOf(DomainError);
+    await expect(
+      servicio.crearLista(EMPRESA, { codigo: 'vip', nombre: 'VIP', moneda: 'peso' }),
+    ).rejects.toBeInstanceOf(DomainError);
+    await expect(
+      servicio.crearLista(EMPRESA, { codigo: 'vip', nombre: 'VIP', segmento_codigo: 'V I P' }),
+    ).rejects.toBeInstanceOf(DomainError);
+    await expect(servicio.actualizarLista(EMPRESA, 'no-uuid', {})).rejects.toBeInstanceOf(DomainError);
+  });
+
+  it('actualiza una lista completa y traduce conflictos', async () => {
+    const { servicio, pg } = crear();
+    (pg.queryOne as Mock).mockResolvedValueOnce(lista);
+    const client = { query: vi.fn().mockResolvedValue({ rows: [{ ...lista, nombre: 'VIP' }] }) };
+    (pg.transaccion as Mock).mockImplementationOnce(async (fn: (c: unknown) => unknown) => fn(client));
+
+    await expect(
+      servicio.actualizarLista(EMPRESA, LISTA, {
+        codigo: 'vip',
+        nombre: 'VIP',
+        descripcion: 'Segmento vip',
+        moneda: 'usd',
+        segmento_codigo: 'vip',
+        predeterminada: true,
+      }),
+    ).resolves.toMatchObject({ nombre: 'VIP' });
+    expect(client.query).toHaveBeenNthCalledWith(
+      1,
+      expect.stringContaining('AND id <> $2'),
+      [EMPRESA, LISTA],
+    );
+
+    (pg.queryOne as Mock).mockResolvedValueOnce(lista);
+    (pg.transaccion as Mock).mockRejectedValueOnce({ code: '23505' });
+    await expect(
+      servicio.actualizarLista(EMPRESA, LISTA, { nombre: 'Otro' }),
+    ).rejects.toBeInstanceOf(ConflictError);
+  });
+
+  it('propaga errores no conflictivos y listas inexistentes', async () => {
+    const { servicio, pg } = crear();
+    (pg.queryOne as Mock).mockResolvedValueOnce(lista);
+    (pg.transaccion as Mock).mockRejectedValueOnce(new Error('db caida'));
+    await expect(servicio.actualizarLista(EMPRESA, LISTA, {})).rejects.toThrow('db caida');
+
+    (pg.queryOne as Mock).mockResolvedValueOnce(null);
+    await expect(servicio.listarPrecios(EMPRESA, LISTA)).rejects.toBeInstanceOf(NotFoundError);
+  });
+
+  it('actualiza un precio con campos totales o parciales y valida errores', async () => {
+    const { servicio, pg } = crear();
+    const actualizado = { ...escala, desde_cantidad: 1, hasta_cantidad: 9, precio_cents: 9000 };
+    (pg.queryOne as Mock)
+      .mockResolvedValueOnce(escala)
+      .mockResolvedValueOnce(actualizado);
+    await expect(
+      servicio.actualizarPrecio(EMPRESA, null, PRECIO, {
+        desde_cantidad: 1,
+        hasta_cantidad: 9,
+        precio_cents: 9000,
+      }),
+    ).resolves.toEqual(actualizado);
+
+    (pg.queryOne as Mock).mockResolvedValueOnce(escala).mockResolvedValueOnce(null);
+    await expect(servicio.actualizarPrecio(EMPRESA, null, PRECIO, {})).rejects.toBeInstanceOf(
+      NotFoundError,
+    );
+
+    (pg.queryOne as Mock).mockResolvedValueOnce(escala).mockRejectedValueOnce({ code: '23P01' });
+    await expect(servicio.actualizarPrecio(EMPRESA, null, PRECIO, {})).rejects.toBeInstanceOf(
+      ConflictError,
+    );
+  });
+
+  it('lista escalas y actualiza/elimina una escala existente', async () => {
+    const { servicio, pg } = crear();
+    (pg.queryOne as Mock).mockResolvedValueOnce(item);
+    (pg.query as Mock).mockResolvedValueOnce([escala]);
+    await expect(servicio.listarEscalas(EMPRESA, ITEM)).resolves.toEqual([escala]);
+
+    (pg.queryOne as Mock)
+      .mockResolvedValueOnce(escala)
+      .mockResolvedValueOnce(escala)
+      .mockResolvedValue({ ...escala, precio_cents: 7500 });
+    await expect(
+      servicio.actualizarEscala(EMPRESA, ITEM, PRECIO, { precio_cents: 7500 }),
+    ).resolves.toMatchObject({ precio_cents: 7500 });
+
+    (pg.queryOne as Mock)
+      .mockResolvedValueOnce(escala)
+      .mockResolvedValueOnce(escala)
+      .mockResolvedValueOnce({ id: PRECIO });
+    await expect(servicio.eliminarEscala(EMPRESA, ITEM, PRECIO)).resolves.toEqual({ ok: true });
+
+    (pg.queryOne as Mock).mockResolvedValueOnce(escala);
+    await expect(
+      servicio.eliminarEscala(EMPRESA, 'otro-item', PRECIO),
+    ).rejects.toBeInstanceOf(NotFoundError);
+  });
+
+  it('falla cerrado al pedir una lista inexistente o un codigo invalido', async () => {
+    const { servicio, pg } = crear();
+    (pg.queryOne as Mock).mockResolvedValueOnce(item).mockResolvedValueOnce(null);
+    await expect(
+      servicio.resolver(EMPRESA, ITEM, 1, { lista_codigo: 'no_existe' }),
+    ).rejects.toBeInstanceOf(NotFoundError);
+
+    (pg.queryOne as Mock).mockResolvedValueOnce(item);
+    await expect(
+      servicio.resolver(EMPRESA, ITEM, 1, { lista_codigo: 'X!' }),
+    ).rejects.toBeInstanceOf(DomainError);
+  });
+
+  it('rechaza un total que excede el rango seguro', async () => {
+    const { servicio, pg } = crear();
+    (pg.queryOne as Mock)
+      .mockResolvedValueOnce({ ...item, precio_cents: Number.MAX_SAFE_INTEGER })
+      .mockResolvedValueOnce(null)
+      .mockResolvedValueOnce(null);
+    await expect(servicio.resolver(EMPRESA, ITEM, 2)).rejects.toBeInstanceOf(DomainError);
+  });
+
+  it('rechaza la insercion de un precio nulo', async () => {
+    const { servicio, pg } = crear();
+    (pg.queryOne as Mock).mockResolvedValueOnce(item).mockResolvedValueOnce(null);
+    await expect(
+      servicio.crearPrecio(EMPRESA, null, { item_id: ITEM, precio_cents: 100 }),
+    ).rejects.toBeInstanceOf(DomainError);
+  });
+
   describe('resolucion', () => {
     it('usa la escala de una lista explicita', async () => {
       const { servicio, pg } = crear();
