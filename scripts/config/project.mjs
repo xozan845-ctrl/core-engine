@@ -15,6 +15,9 @@
 /** Rama principal del repositorio. */
 export const MAIN_BRANCH = 'main';
 
+/** Rama desplegada de aceptación previa a producción. */
+export const STAGE_BRANCH = 'staging';
+
 /** Owner de GitHub Container Registry usado por los composes de stage/prod. */
 export const GHCR_OWNER = 'xozan845-ctrl';
 
@@ -44,11 +47,13 @@ export const SERVICES = [
   'stores-service',
   'orders-service',
   'logistics-service',
+  'scheduling-service',
   'commissions-service',
   'finance-service',
   'field-service',
   'market-intelligence-service',
   'storage-service',
+  'notifications-service',
 ];
 
 /**
@@ -56,6 +61,18 @@ export const SERVICES = [
  * suite `microservices-ci-contract` impide que oculten una suite ya existente.
  */
 export const SERVICE_TEST_EXCEPTIONS = [];
+
+/**
+ * Servicios con implementación Rust (crate + cargo). Quedan fuera del runner
+ * Vitest y del contrato de scripts npm; su gate vive en el job `rust` de CI
+ * (ADR-0004 y docs/rules/test/06-estandares-cobertura.md).
+ */
+export const RUST_SERVICES = ['scheduling-service'];
+
+/** Servicios Node/NestJS con suite Vitest (todos menos los migrados a Rust). */
+export const SERVICES_NODE = SERVICES.filter(
+  (service) => !RUST_SERVICES.includes(service),
+);
 
 /**
  * Tipos de Conventional Commits admitidos (R-GC-1).
@@ -85,6 +102,8 @@ export const ALLOWED_COMMIT_SCOPES = [
   'api-gateway',
   'identity',
   'identity-service',
+  'auth',
+  'personal',
   'catalog',
   'catalog-service',
   'stores',
@@ -93,6 +112,8 @@ export const ALLOWED_COMMIT_SCOPES = [
   'orders-service',
   'logistics',
   'logistics-service',
+  'scheduling',
+  'scheduling-service',
   'commissions',
   'commissions-service',
   'finance',
@@ -103,8 +124,11 @@ export const ALLOWED_COMMIT_SCOPES = [
   'market-intelligence-service',
   'storage',
   'storage-service',
+  'notifications',
+  'notifications-service',
   // Infraestructura y transversal
   'infra',
+  'api',
   'compose',
   'db',
   'data',
@@ -114,6 +138,7 @@ export const ALLOWED_COMMIT_SCOPES = [
   // Gobernanza y entrega
   'rules',
   'docs',
+  'plan',
   'ci',
   'cd',
   'release',

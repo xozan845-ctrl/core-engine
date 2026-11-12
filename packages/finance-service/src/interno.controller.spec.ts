@@ -2,12 +2,21 @@ import type { Mock } from 'vitest';
 import 'reflect-metadata';
 import { InternoController } from './interno.controller';
 import type { TributacionService } from './tributacion/tributacion.service';
+import type { ComercioService } from './comercio/comercio.service';
 import { ClaveInternaGuard } from '@core/shared';
 
-function fabricar(): { tributacion: Record<string, Mock>; controller: InternoController } {
+function fabricar(): {
+  tributacion: Record<string, Mock>;
+  comercio: Record<string, Mock>;
+  controller: InternoController;
+} {
   const tributacion = { sujetoFiscalDe: vi.fn(), declaraciones: vi.fn() };
-  const controller = new InternoController(tributacion as unknown as TributacionService);
-  return { tributacion, controller };
+  const comercio = { registrarCreditoOrden: vi.fn(), anularCreditoOrden: vi.fn() };
+  const controller = new InternoController(
+    tributacion as unknown as TributacionService,
+    comercio as unknown as ComercioService,
+  );
+  return { tributacion, comercio, controller };
 }
 
 describe('InternoController (internal/finance, R-U-10/11)', () => {
@@ -27,6 +36,23 @@ describe('InternoController (internal/finance, R-U-10/11)', () => {
       periodo_inicio: '2026-09-01',
       estado: 'pendiente',
     });
+  });
+
+  it('debe registrar y anular el credito de una orden', async () => {
+    const { comercio, controller } = fabricar();
+    comercio.registrarCreditoOrden.mockResolvedValue({ credito_id: 'c-1' });
+    comercio.anularCreditoOrden.mockResolvedValue(true);
+
+    await expect(
+      controller.registrarCredito({
+        empresa_id: 'e-1',
+        parte_id: 'p-1',
+        order_id: 'o-1',
+        monto_cents: 100,
+        concepto: 'Pedido',
+      }),
+    ).resolves.toEqual({ credito_id: 'c-1' });
+    await expect(controller.anularCredito('o-1')).resolves.toEqual({ ok: true });
   });
 
   it('debe proteger las rutas con la clave interna', () => {

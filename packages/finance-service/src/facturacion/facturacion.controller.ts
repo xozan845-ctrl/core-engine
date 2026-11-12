@@ -1,7 +1,7 @@
 import { Controller, Get, Post, Param, Body, Query } from '@nestjs/common';
 import { ApiBearerAuth, ApiCreatedResponse, ApiOkResponse, ApiOperation, ApiParam, ApiProperty, ApiQuery, ApiTags } from '@nestjs/swagger';
 import { IsIn, IsOptional, IsString, IsUUID } from 'class-validator';
-import { Roles, ROLES, NotFoundError } from '@core/shared';
+import { Roles, ROLES, NotFoundError, CAPACIDADES, RequiereCapacidades } from '@core/shared';
 import { FacturacionService, Comprobante } from './facturacion.service';
 import {
   ComprobanteResponseDto,
@@ -17,10 +17,10 @@ export class EmitirComprobanteRequestDto {
   @IsUUID()
   orden_id: string;
 
-  @ApiProperty({ description: 'Id del cliente', required: false })
+  @ApiProperty({ description: 'Referencia universal del cliente', required: false, format: 'uuid' })
   @IsOptional()
-  @IsString()
-  cliente_id?: string;
+  @IsUUID()
+  parte_id?: string;
 
   @ApiProperty({ description: 'Razón social', required: false })
   @IsOptional()
@@ -34,12 +34,13 @@ export class EmitirComprobanteRequestDto {
 }
 
 /**
- * GET/POST /api/v1/finanzas/comprobantes — comprobantes fiscales DGI
+ * GET/POST /api/v2/finanzas/comprobantes — comprobantes fiscales DGI
  * (Ley 822: IVA 15 %; Ley 842: emision en cordobas).
  */
 @ApiTags('Finanzas · Facturación')
 @ApiBearerAuth()
-@Controller('api/v1/finanzas/comprobantes')
+@Controller('api/v2/finanzas/comprobantes')
+@RequiereCapacidades(CAPACIDADES.FACTURACION)
 @Roles(ROLES.SUPER_ADMIN, ROLES.ADMIN)
 export class FacturacionController {
   constructor(private readonly facturacion: FacturacionService) {}
@@ -70,7 +71,7 @@ export class FacturacionController {
   @ApiCreatedResponse({ type: ComprobanteResponseDto, description: 'Comprobante emitido' })
   async emitir(@Body() dto: EmitirComprobanteRequestDto): Promise<Comprobante> {
     return this.facturacion.emitir(dto.tipo, dto.orden_id, {
-      cliente_id: dto.cliente_id,
+      parte_id: dto.parte_id,
       razon_social: dto.razon_social,
       ruc: dto.ruc,
     });

@@ -4,9 +4,9 @@ name: E2E
 # Se ejecuta en tags de release y manualmente; no en cada PR por coste.
 on:
   workflow_dispatch:
-  push:
-    tags:
-      - 'v*.*.*'
+  # Gate obligatorio de release: release.yml llama a este workflow antes de
+  # construir/publicar imágenes. Ya no se dispara por tag para no duplicar runs.
+  workflow_call:
 
 concurrency:
   group: e2e-${{ github.ref }}
@@ -20,21 +20,31 @@ jobs:
     name: E2E (stack dev)
     runs-on: ubuntu-24.04
     timeout-minutes: 60
+    env:
+      TZ: America/Managua
     steps:
-      - uses: actions/checkout@v5
-      - uses: actions/setup-node@v5
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
         with:
           node-version: "20"
           cache: "npm"
       - name: Install dependencies
         run: npm ci --prefer-offline
+      - name: Prepare development environment
+        run: cp .env.example .env
       - name: Bring the dev stack up
+        env:
+          # El E2E usa el SMTP real del stack (Mailpit), no logs.
+          EMAIL_MODE: smtp
+          EMAIL_FROM: no-reply@core-engine.test
+          SMTP_HOST: mailpit
+          SMTP_PORT: "1025"
         run: docker compose -f docker-compose.dev.yml up -d --build
       - name: Wait for gateway readiness
         run: |
           for i in $(seq 1 60); do
-            if curl -fsS http://localhost:8080/health >/dev/null; then
-              echo "healthy"
+            if curl -fsS http://localhost:8080/ready | grep -q '"status":"ok"'; then
+              echo "ready"
               exit 0
             fi
             sleep 5
@@ -42,10 +52,38 @@ jobs:
           echo "unhealthy"
           docker compose -f docker-compose.dev.yml logs
           exit 1
+          exit 1
       - name: Run full E2E flow (G-6)
         env:
           BASE_URL: http://localhost:8080
+          MAILPIT_URL: http://localhost:8025
         run: npm run demo
+      - name: Run beauty and fleet E2E flows (G-6)
+        env:
+          BASE_URL: http://localhost:8080
+        run: npm run demo:verticals
+      - name: Wait for the rate-limit window before k6 (R-CD-12)
+        # El demo y el reset consumen la ventana de 300 req/min por IP; k6
+        # necesita una ventana limpia para no medir 429 del propio smoke.
+        run: sleep 60
+      - name: Run bounded k6 order flow (R-CD-12)
+        env:
+          BASE_URL: http://localhost:8080
+          K6_VUS: "2"
+          K6_DURACION: "20s"
+        run: |
+          docker run --rm -i --network host \
+            -e BASE_URL -e ADMIN_EMAIL -e ADMIN_PASSWORD \
+            -e K6_VUS -e K6_DURACION \
+            -v "$PWD/security/k6:/scripts:ro" \
+            grafana/k6:latest run /scripts/order-flow.js
+      - name: Assert no unexpected service errors (R-E-8)
+        run: |
+          logs="$(docker compose -f docker-compose.dev.yml logs --no-color)"
+          if printf '%s\n' "$logs" | grep -E '"nivel":"error"|UnhandledPromiseRejection|uncaughtException'; then
+            echo "Unexpected service error detected during E2E."
+            exit 1
+          fi
       - name: Evidence on failure
         if: failure()
         run: docker compose -f docker-compose.dev.yml logs --no-color

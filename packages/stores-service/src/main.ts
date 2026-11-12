@@ -7,12 +7,14 @@ import { crearDocumentoOpenApi } from './swagger';
 import {
   MetricsService,
   TrazabilidadInterceptor,
+  EnvelopeInterceptor,
   DtoValidationPipe,
   DomainErrorFilter,
   NOMBRE_SERVICIOS,
   PUERTOS,
   Logger,
   RolesGuard,
+  CapabilityGuard,
 } from '@core/shared';
 
 async function bootstrap(): Promise<void> {
@@ -20,9 +22,11 @@ async function bootstrap(): Promise<void> {
   app.useGlobalPipes(new DtoValidationPipe());
   app.useGlobalInterceptors(
     new TrazabilidadInterceptor(app.get(MetricsService), NOMBRE_SERVICIOS.STORES),
+    new EnvelopeInterceptor(),
   );
   app.useGlobalFilters(new DomainErrorFilter());
   app.useGlobalGuards(new RolesGuard());
+  app.useGlobalGuards(new CapabilityGuard());
   const puerto = Number(process.env.PORT ?? PUERTOS.STORES);
   const expressApp = app.getHttpAdapter().getInstance();
   const metrics = app.get(MetricsService);

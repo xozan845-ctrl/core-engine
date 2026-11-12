@@ -16,8 +16,8 @@ export class ComprobanteResponseDto {
   @ApiProperty({ description: 'Id de la orden', required: false, format: 'uuid' })
   orden_id?: string;
 
-  @ApiProperty({ description: 'Id del cliente', required: false })
-  cliente_id?: string;
+  @ApiProperty({ description: 'Referencia universal del cliente', required: false, nullable: true, format: 'uuid' })
+  parte_id?: string | null;
 
   @ApiProperty({ description: 'Base gravada en centavos', example: 1150000 })
   base_gravada_cents: number;

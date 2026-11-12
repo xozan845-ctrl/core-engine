@@ -7,6 +7,7 @@ import {
   EventoBus,
   StockUpdatedData,
   Logger,
+  ejecutarConContexto,
 } from '@core/shared';
 import { OfertasService } from '../ofertas/ofertas.service';
 
@@ -36,12 +37,22 @@ export class StockConsumer implements OnModuleInit {
 
   private async manejar(evento: EventoBus): Promise<void> {
     if (evento.tipo !== EVENTOS.STOCK_UPDATED) return;
-    if (await this.yaProcesado(evento)) return;
-    const datos = (evento as EventoBus<StockUpdatedData>).data;
-    for (const item of datos.items ?? []) {
-      await this.ofertas.sincronizarStockDeOferta(item.empresa_id, item.sku, item.stock_restante);
-    }
-    await this.marcarProcesado(evento);
+    await ejecutarConContexto(
+      {
+        request_id: `stores-event-${evento.event_id}`,
+        servicio: 'stores-consumer',
+        usuario_id: '00000000-0000-0000-0000-000000000000',
+        rol: 'super_admin',
+      },
+      async () => {
+        if (await this.yaProcesado(evento)) return;
+        const datos = (evento as EventoBus<StockUpdatedData>).data;
+        for (const item of datos.items ?? []) {
+          await this.ofertas.sincronizarStockDeOferta(item.empresa_id, item.sku, item.stock_restante);
+        }
+        await this.marcarProcesado(evento);
+      },
+    );
   }
 
   private async yaProcesado(evento: EventoBus): Promise<boolean> {

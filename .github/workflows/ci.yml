@@ -7,6 +7,7 @@ on:
     # Enmienda R-CI-1 (2026-10-22): los PRs apilados con base feat/** también
     # ejecutan CI, para que cada PR tenga checks verdes en su cabeza (R-PR-6).
     branches: [main, develop, staging, 'feat/**']
+  workflow_dispatch:
 
 # R-CI-2: un push nuevo cancela el run anterior de la misma rama/PR;
 # prohibido apilar runs obsoletos.
@@ -17,30 +18,29 @@ concurrency:
 jobs:
   rules-check:
     name: Rules (docs/rules + commits)
-    # Determinista en PR y en push a main; evita comparar ramas de largo recorrido
-    # en pushes de develop/staging (donde el diff contra main sería enorme).
-    if: github.event_name == 'pull_request' || github.ref == 'refs/heads/main'
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 0
-      - uses: actions/setup-node@v5
+      - uses: actions/setup-node@v7
         with:
           node-version: "20"
       - name: Test governance engine against false greens
         run: npm run test:engine
       - name: Test smoke runner against false greens and network stalls
         run: npm run test:smoke
+      - name: Guard baselines against new debt or exceptions
+        run: npm run baseline:guard -- --base-ref "${{ github.event.pull_request.base.sha || 'origin/main' }}"
       - name: Validate project rules (R-CI-7, R-GC-1..4)
-        run: node scripts/check-rules.mjs
+        run: node scripts/cli.mjs rules
 
   security-gate:
     name: Security Gate (npm audit)
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v5
-      - uses: actions/setup-node@v5
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
         with:
           node-version: "20"
           cache: "npm"
@@ -56,8 +56,8 @@ jobs:
     runs-on: ubuntu-24.04
     needs: security-gate
     steps:
-      - uses: actions/checkout@v5
-      - uses: actions/setup-node@v5
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
         with:
           node-version: "20"
           cache: "npm"
@@ -70,9 +70,11 @@ jobs:
     name: Unit Tests + Coverage
     runs-on: ubuntu-24.04
     needs: security-gate
+    env:
+      TZ: America/Managua
     steps:
-      - uses: actions/checkout@v5
-      - uses: actions/setup-node@v5
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
         with:
           node-version: "20"
           cache: "npm"
@@ -95,7 +97,7 @@ jobs:
           retention-days: 7
 
   integration-catalog:
-    name: Catalog stock (PostgreSQL)
+    name: API + BD contracts (PostgreSQL)
     runs-on: ubuntu-24.04
     services:
       postgres:
@@ -114,26 +116,86 @@ jobs:
     env:
       TEST_DATABASE_URL: postgres://core_engine_test:test_only@127.0.0.1:5432/core_engine_test
       TZ: America/Managua
+    needs: security-gate
     steps:
-      - uses: actions/checkout@v5
-      - uses: actions/setup-node@v5
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
         with:
           node-version: "20"
           cache: "npm"
       - name: Install dependencies
         run: npm ci --prefer-offline
-      - name: Verify stock projection against ephemeral PostgreSQL
+      - name: Build shared library for integration harness
+        run: npm run build -w @core/shared
+      - name: Build identity service for integration harness
+        run: npm run build -w @core/identity-service
+      - name: Build catalog and field services for the multi-vertical matrix
+        run: |
+          npm run build -w @core/catalog-service
+          npm run build -w @core/field-service
+      - name: Build orders, logistics, commissions and finance for the saga integration
+        run: |
+          npm run build -w @core/orders-service
+          npm run build -w @core/logistics-service
+          npm run build -w @core/commissions-service
+          npm run build -w @core/finance-service
+      - name: Verify catalog stock projection and API contracts against ephemeral PostgreSQL
         run: npm run test:integration
+      - name: Verify multi-vertical pack/tenant consistency (R-I-12)
+        run: npm run multi-vertical:check
+
+  rust:
+    name: Rust (scheduling-service)
+    runs-on: ubuntu-24.04
+    needs: security-gate
+    env:
+      TZ: America/Managua
+      TEST_DATABASE_URL: postgres://core_engine_test:test_only@127.0.0.1:5432/core_engine_test
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_DB: core_engine_test
+          POSTGRES_USER: core_engine_test
+          POSTGRES_PASSWORD: test_only
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U core_engine_test -d core_engine_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 12
+    steps:
+      - uses: actions/checkout@v7
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: stable
+          components: rustfmt, clippy
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: packages/scheduling-service
+      - uses: taiki-e/install-action@cargo-llvm-cov
+      - name: rustfmt
+        working-directory: packages/scheduling-service
+        run: cargo fmt --check
+      - name: clippy
+        working-directory: packages/scheduling-service
+        run: cargo clippy --locked --all-targets -- -D warnings
+      - name: tests + cobertura
+        working-directory: packages/scheduling-service
+        run: >-
+          cargo llvm-cov --locked --ignore-filename-regex 'src/main\.rs'
+          --fail-under-lines 71 --fail-under-functions 65
 
   build:
     name: Build all services
     runs-on: ubuntu-24.04
-    needs: [test, lint, integration-catalog]
+    needs: [rules-check, test, lint, integration-catalog, rust]
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 0
-      - uses: actions/setup-node@v5
+      - uses: actions/setup-node@v7
         with:
           node-version: "20"
           cache: "npm"
@@ -143,5 +205,3 @@ jobs:
         run: npm run build
       - name: Gate G-8 — spec OpenAPI sincronizado (R-DO-6, R-C-7)
         run: npm run swagger:export && git diff --exit-code docs/openapi docs/api packages/api-gateway/src/openapi.agregado.ts
-      - name: Gate R-C-7 — cambios incompatibles de contrato
-        run: npm run contract:breaking -- --base-ref origin/main

@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { PgService, Money, Logger } from '@core/shared';
+import { PgService, Money, Logger, timeoutInternoMs } from '@core/shared';
 
 export interface KpisFinancieros {
   periodo: string;
@@ -127,6 +127,7 @@ export class KpisService {
     try {
       const res = await fetch(`${this.identidadUrl}/internal/vendedores`, {
         headers: { 'x-internal-key': this.claveInterna },
+        signal: AbortSignal.timeout(timeoutInternoMs()),
       });
       if (!res.ok) return null;
       const vendedores = (await res.json()) as { id: string; creado_en: string }[];

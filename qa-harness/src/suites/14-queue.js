@@ -62,7 +62,7 @@ export async function suite14Queue(client, rabbit, pg, cfg) {
 
     // Endpoints de servicio no expuestos por el gateway (por diseño); el rate
     // limit global puede responder 429 bajo carga.
-    const internalRes = await client.get('/internal/productos/lote?skus=TEST-001');
+    const internalRes = await client.get('/internal/items/lote?skus=TEST-001');
     resultados.push({ test: 'Internal endpoint via gateway → no expuesto (404/429)', status: internalRes.status, pass: [404, 429].includes(internalRes.status) });
 
     const metricsRes = await client.get('/metrics');

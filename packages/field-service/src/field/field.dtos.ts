@@ -10,6 +10,7 @@ import {
   IsObject,
   IsOptional,
   IsString,
+  IsUUID,
   Min,
 } from 'class-validator';
 
@@ -63,6 +64,7 @@ export class CrearClienteRequestDto {
   @ApiProperty({ required: false }) @IsOptional() @IsNumber() lng?: number;
   @ApiProperty({ required: false }) @IsOptional() @IsString() notasAdicionales?: string;
   @ApiProperty({ required: false }) @IsOptional() @IsString() urlGoogleMaps?: string;
+  @ApiProperty({ required: false, format: 'uuid', description: 'Referencia universal opcional de la parte' }) @IsOptional() @IsUUID() parteId?: string;
 }
 export class ActualizarClienteRequestDto {
   @ApiProperty({ required: false }) @IsOptional() @IsString() nombreCompleto?: string;
@@ -79,6 +81,7 @@ export class ActualizarClienteRequestDto {
   @ApiProperty({ required: false }) @IsOptional() @IsNumber() lng?: number;
   @ApiProperty({ required: false }) @IsOptional() @IsString() notasAdicionales?: string;
   @ApiProperty({ required: false }) @IsOptional() @IsString() urlGoogleMaps?: string;
+  @ApiProperty({ required: false, format: 'uuid', description: 'Referencia universal opcional de la parte' }) @IsOptional() @IsUUID() parteId?: string;
 }
 
 // ── vehiculos ────────────────────────────────────────────────────────────
@@ -148,12 +151,12 @@ export class ParadaRequestDto {
   @ApiProperty({ required: false }) @IsOptional() @IsBoolean() completada?: boolean;
   @ApiProperty({ required: false }) @IsOptional() @IsString() pedidoId?: string;
   @ApiProperty({ required: false, enum: ['cliente', 'logistica'] }) @IsOptional() @IsIn(['cliente', 'logistica']) tipo?: string;
-  @ApiProperty({ required: false }) @IsOptional() @IsString() clienteId?: string;
   @ApiProperty({ required: false }) @IsOptional() @IsString() telefono?: string;
   @ApiProperty({ required: false }) @IsOptional() @IsString() referencias?: string;
   @ApiProperty({ required: false }) @IsOptional() @IsString() horarioAtencion?: string;
   @ApiProperty({ required: false }) @IsOptional() @IsString() notas?: string;
   @ApiProperty({ required: false }) @IsOptional() @IsString() tipoCombustible?: string;
+  @ApiProperty({ required: false, format: 'uuid' }) @IsOptional() @IsUUID() parteId?: string;
 }
 export class AsignarRutaRequestDto {
   @ApiProperty({ required: false, type: [String] }) @IsOptional() @IsArray() personalIds?: string[];
@@ -163,23 +166,23 @@ export class AsignarRutaRequestDto {
 // ── pedidos ──────────────────────────────────────────────────────────────
 export class CrearPedidoRequestDto {
   @ApiProperty({ required: false }) @IsOptional() @IsString() cliente?: string;
-  @ApiProperty({ required: false }) @IsOptional() @IsString() clienteId?: string;
   @ApiProperty({ required: false }) @IsOptional() @IsString() direccionEntrega?: string;
   @ApiProperty({ required: false }) @IsOptional() @IsNumber() lat?: number;
   @ApiProperty({ required: false }) @IsOptional() @IsNumber() lng?: number;
   @ApiProperty({ required: false, enum: ['pendiente', 'asignado', 'en_camino', 'entregado', 'fallido', 'cancelado'] }) @IsOptional() @IsIn(['pendiente', 'asignado', 'en_camino', 'entregado', 'fallido', 'cancelado']) estado?: string;
   @ApiProperty({ required: false }) @IsOptional() @IsString() rutaId?: string;
   @ApiProperty({ required: false }) @IsOptional() @IsString() notas?: string;
+  @ApiProperty({ required: false, format: 'uuid' }) @IsOptional() @IsUUID() parteId?: string;
 }
 export class ActualizarPedidoRequestDto {
   @ApiProperty({ required: false }) @IsOptional() @IsString() cliente?: string;
-  @ApiProperty({ required: false }) @IsOptional() @IsString() clienteId?: string;
   @ApiProperty({ required: false }) @IsOptional() @IsString() direccionEntrega?: string;
   @ApiProperty({ required: false }) @IsOptional() @IsNumber() lat?: number;
   @ApiProperty({ required: false }) @IsOptional() @IsNumber() lng?: number;
   @ApiProperty({ required: false, enum: ['pendiente', 'asignado', 'en_camino', 'entregado', 'fallido', 'cancelado'] }) @IsOptional() @IsIn(['pendiente', 'asignado', 'en_camino', 'entregado', 'fallido', 'cancelado']) estado?: string;
   @ApiProperty({ required: false }) @IsOptional() @IsString() rutaId?: string;
   @ApiProperty({ required: false }) @IsOptional() @IsString() notas?: string;
+  @ApiProperty({ required: false, format: 'uuid' }) @IsOptional() @IsUUID() parteId?: string;
 }
 export class CambiarEstadoPedidoRequestDto {
   @ApiProperty({ enum: ['pendiente', 'asignado', 'en_camino', 'entregado', 'fallido', 'cancelado'] }) @IsIn(['pendiente', 'asignado', 'en_camino', 'entregado', 'fallido', 'cancelado']) estado: string;
@@ -240,7 +243,6 @@ export class TrackingBulkRequestDto {
 // ── visitas (telemetria) ─────────────────────────────────────────────────
 export class CrearVisitaRequestDto {
   @ApiProperty() @IsString() personalId: string;
-  @ApiProperty({ required: false }) @IsOptional() @IsString() clienteId?: string;
   @ApiProperty({ required: false }) @IsOptional() @IsString() rutaId?: string;
   @ApiProperty({ enum: ['impulsacion', 'venta', 'entrega', 'reparto'] }) @IsIn(['impulsacion', 'venta', 'entrega', 'reparto']) tipoActividad: string;
   @ApiProperty({ required: false, enum: ['visitado', 'cerca_no_visitado', 'no_visitado'] }) @IsOptional() @IsIn(['visitado', 'cerca_no_visitado', 'no_visitado']) resultado?: string;
@@ -251,6 +253,7 @@ export class CrearVisitaRequestDto {
   @ApiProperty({ required: false }) @IsOptional() @IsString() horaSalida?: string;
   @ApiProperty({ required: false }) @IsOptional() @IsInt() duracionMinutos?: number;
   @ApiProperty({ required: false }) @IsOptional() @IsString() notas?: string;
+  @ApiProperty({ required: false, format: 'uuid' }) @IsOptional() @IsUUID() parteId?: string;
 }
 
 // ── cumplimiento ──────────────────────────────────────────────────────────

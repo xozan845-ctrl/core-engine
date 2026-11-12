@@ -1,5 +1,4 @@
 import { Money } from './money';
-import { puedeTransicionar } from './order-state';
 import { DomainError } from './errors';
 
 describe('Money (RN-01 y RN-04, ejemplo Tabla 5)', () => {
@@ -34,25 +33,5 @@ describe('Money (RN-01 y RN-04, ejemplo Tabla 5)', () => {
     const a = Money.parsear('0.10');
     const b = Money.parsear('0.20');
     expect(a.sumar(b).centavos).toBe(30);
-  });
-});
-
-describe('Ciclo de vida de la orden (Tabla 13)', () => {
-  it('cadena feliz creada -> pagada -> en_preparacion -> enviada -> entregada', () => {
-    expect(puedeTransicionar('creada', 'pagada')).toBe(true);
-    expect(puedeTransicionar('pagada', 'en_preparacion')).toBe(true);
-    expect(puedeTransicionar('en_preparacion', 'enviada')).toBe(true);
-    expect(puedeTransicionar('enviada', 'entregada')).toBe(true);
-  });
-
-  it('rechaza transiciones invalidas', () => {
-    expect(puedeTransicionar('creada', 'entregada')).toBe(false);
-    expect(puedeTransicionar('entregada', 'en_preparacion')).toBe(false);
-    expect(puedeTransicionar('cancelada', 'pagada')).toBe(false);
-  });
-
-  it('casos excepcionales: cancelada/devuelta con compensacion', () => {
-    expect(puedeTransicionar('creada', 'cancelada')).toBe(true);
-    expect(puedeTransicionar('entregada', 'devuelta')).toBe(true);
   });
 });

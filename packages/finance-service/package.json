@@ -1,6 +1,6 @@
 {
   "name": "@core/finance-service",
-  "version": "1.1.1",
+  "version": "1.0.9",
   "private": true,
   "description": "Finanzas y contabilidad: proyecciones financieras (cap. 8), contabilidad por partida doble y regimen fiscal multijurisdiccion (Nicaragua inicial, cap. 4.4)",
   "main": "dist/main.js",
@@ -13,10 +13,10 @@
   },
   "dependencies": {
     "@core/shared": "file:../shared",
-    "@nestjs/common": "^11.0.0",
-    "@nestjs/core": "^11.0.0",
-    "@nestjs/platform-express": "^11.0.0",
-    "@nestjs/swagger": "^11.0.5",
+    "@nestjs/common": "^11.2.8",
+    "@nestjs/core": "^11.2.8",
+    "@nestjs/platform-express": "^11.2.8",
+    "@nestjs/swagger": "^11.4.8",
     "class-transformer": "^0.5.1",
     "class-validator": "^0.14.1",
     "node-cron": "^4.6.0",
@@ -25,7 +25,7 @@
   },
   "devDependencies": {
     "@types/express": "^5.0.0",
-    "@types/node": "^22.10.5",
+    "@types/node": "^26.6.5",
     "typescript": "^7.0.2"
   }
 }

@@ -4,6 +4,12 @@ export class ItemOrdenResponseDto {
   @ApiProperty({ description: 'Id de la oferta', format: 'uuid' })
   oferta_id: string;
 
+  @ApiProperty({ enum: ['producto', 'servicio', 'alquiler'] })
+  item_type: string;
+
+  @ApiProperty({ format: 'uuid' })
+  item_id: string;
+
   @ApiProperty({ description: 'SKU del producto', example: 'SKU-001' })
   sku: string;
 
@@ -21,6 +27,12 @@ export class ItemOrdenResponseDto {
 
   @ApiProperty({ description: 'Id de la tienda', format: 'uuid' })
   tienda_id: string;
+
+  @ApiProperty({ required: false, enum: ['delivery', 'pickup', 'onsite', 'none'], default: 'none' })
+  fulfillment?: string;
+
+  @ApiProperty({ required: false, type: Object, additionalProperties: true })
+  fulfillment_config?: Record<string, unknown>;
 }
 
 export class OrderViewResponseDto {
@@ -33,11 +45,23 @@ export class OrderViewResponseDto {
   @ApiProperty({ description: 'Id del comprador', format: 'uuid' })
   comprador_id: string;
 
+  @ApiProperty({ required: false, nullable: true, format: 'uuid', description: 'Referencia universal opcional del comprador' })
+  parte_id: string | null;
+
   @ApiProperty({ description: 'Id de la tienda', format: 'uuid' })
   tienda_id: string;
 
   @ApiProperty({ description: 'Estado de la orden', example: 'pagada' })
   estado: string;
+
+  @ApiProperty({ enum: ['compra', 'reserva', 'cotizacion', 'orden_servicio'] })
+  tipo_orden: string;
+
+  @ApiProperty({ enum: ['simulado', 'credito'], example: 'simulado' })
+  metodo_pago: string;
+
+  @ApiProperty({ required: false, type: Object, additionalProperties: true })
+  fulfillment_config?: Record<string, unknown>;
 
   @ApiProperty({ description: 'Total en centavos', example: 230000 })
   total_cents: number;
@@ -76,26 +100,6 @@ export class OrderViewResponseDto {
   devuelta_en: string | null;
 }
 
-export class ComisionVistaResponseDto {
-  @ApiProperty({ description: 'Id del vendedor', format: 'uuid' })
-  vendedor_id: string;
-
-  @ApiProperty({ description: 'Periodo (YYYY-MM)', example: '2026-10' })
-  periodo: string;
-
-  @ApiProperty({ description: 'Órdenes del periodo', example: 12 })
-  ordenes: number;
-
-  @ApiProperty({ description: 'Ventas del periodo en centavos', example: 1380000 })
-  total_ventas_cents: number;
-
-  @ApiProperty({ description: 'Comisiones del periodo en centavos', example: 165600 })
-  total_comision_cents: number;
-
-  @ApiProperty({ description: 'Última actualización (ISO 8601 UTC)', format: 'date-time' })
-  actualizado_en: string;
-}
-
 export class TimelineEventoResponseDto {
   @ApiProperty({ description: 'Secuencia del evento', example: 3 })
   id: number;
@@ -131,4 +135,13 @@ export class HistoriaEventoResponseDto {
 
   @ApiProperty({ description: 'Fecha del evento (ISO 8601 UTC)', format: 'date-time' })
   creado_en: string;
+}
+
+/** Respuesta de aceptar una cotizacion: queda aceptada y nace la compra. */
+export class CotizacionAceptadaResponseDto {
+  @ApiProperty({ description: 'Cotizacion aceptada', type: () => OrderViewResponseDto })
+  cotizacion: OrderViewResponseDto;
+
+  @ApiProperty({ description: 'Orden de compra generada desde la cotizacion', type: () => OrderViewResponseDto })
+  orden: OrderViewResponseDto;
 }

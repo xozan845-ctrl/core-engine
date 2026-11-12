@@ -23,7 +23,7 @@ Cinco capas con dependencias en **un solo sentido**.
 scripts/
 ├── README.md                 # este documento: contrato y mapa del motor
 ├── cli.mjs                   # ÚNICO entrypoint (composition root)
-├── check-rules.mjs           # wrapper de compatibilidad -> cli.mjs rules
+├── cli.mjs                   # entrypoint del motor de gobernanza
 │
 ├── engine/                   # infra reutilizable (CERO conocimiento del proyecto)
 │   ├── runner.mjs            #   descubrimiento + manifiesto + ejecución
@@ -38,7 +38,6 @@ scripts/
 │       ├── coverage.mjs      #   lee coverage-summary y compara contra baseline
 │       ├── db.mjs            #   manifiesto SHA-256 de migraciones (R-DB-6)
 │       ├── env.mjs           #   compose ↔ plantillas de entorno (R-CD-7)
-│       ├── openapi-diff.mjs  #   diff de contrato: paths, tipos, required (R-C-7)
 │       └── rules-docs.mjs    #   áreas, archivos NN-tema.md e IDs de docs/rules
 │
 ├── config/                   # datos y helpers puros del proyecto
@@ -75,6 +74,8 @@ scripts/
     ├── coverage-compare.mjs   # gate de cobertura real vs baseline (R-COV-1)
     ├── coverage-baseline.mjs  # actualiza el baseline desde coverage-summary
     ├── coverage-compare.test.mjs # gate y writer con reportes sintéticos
+    ├── baseline-guard.mjs    # impide aumentar deudas/bypasses versionados
+    ├── baseline-guard.test.mjs # regresiones de la política de baselines
     ├── db-migrations.mjs      # verifica/actualiza el manifiesto de migraciones
     ├── db-migrations.test.mjs # hash, migración nueva y edición detectadas
     ├── db-rls.mjs             # cobertura RLS real vs baseline (R-SB-2)
@@ -85,13 +86,15 @@ scripts/
     ├── promotion-check.test.mjs # delta correcto, contenido faltante y base incorrecta
     ├── secrets-check.mjs      # secretos de alta confianza en archivos versionados (R-DS-1)
     ├── secrets-check.test.mjs # clave AWS detectada y archivo no versionado ignorado
-    ├── contract-breaking.mjs  # diff OpenAPI contra la ref base (R-C-7)
     ├── smoke.mjs              # flujo API completo contra stack levantado (dev)
     ├── smoke.test.mjs         # regresiones del runner con HTTP efímero
     ├── smoke-remote.mjs       # smoke read-only para stage/prod (R-CD-12)
     ├── smoke-remote.test.mjs  # health, login y catálogo con HTTP efímero
     ├── swagger-aggregate.mjs  # agrega specs y separa superficie pública/interna
-    └── swagger-aggregate.test.mjs # regresiones del agregador (filtro y colisiones)
+    ├── swagger-aggregate.test.mjs # regresiones del agregador (filtro y colisiones)
+    ├── openapi-surface.test.mjs   # R-DO-8: rutas públicas/internas y superficies
+    ├── openapi-security.test.mjs  # seguridad declarada en el contrato
+    └── openapi-responses.test.mjs # R-DO-10: respuestas documentadas
 ```
 
 ### Regla de dependencia
@@ -178,7 +181,7 @@ Al terminar, el runner imprime cuántos IDs de regla tienen check ejecutable y
 `docs/rules`:
 
 ```
-Cobertura ejecutable: 30/238 IDs de regla tienen check.
+Cobertura ejecutable: 41/238 IDs de regla tienen check.
 ```
 
 > El reporte nació exponiendo un hallazgo real: `R-CI-9` y `R-CD-22` se citaban
@@ -203,12 +206,12 @@ Los `npm scripts` de la raíz son **envoltorios** (sin ruptura para CI ni local)
 | `version:bump` | `node scripts/tools/version-bump.mjs` |
 | `coverage:compare` | `node scripts/tools/coverage-compare.mjs` |
 | `coverage:baseline` | `node scripts/tools/coverage-baseline.mjs` |
+| `baseline:guard` | `node scripts/tools/baseline-guard.mjs --base-ref origin/main` |
 | `db:migrations` | `node scripts/tools/db-migrations.mjs` |
 | `db:rls` | `node scripts/tools/db-rls.mjs` |
 | `env:check` | `node scripts/tools/env-check.mjs` |
 | `promotion:check` | `node scripts/tools/promotion-check.mjs` |
 | `security:secrets` | `node scripts/tools/secrets-check.mjs` |
-| `contract:breaking` | `node scripts/tools/contract-breaking.mjs` |
 | `mutation:shared` | `npm run mutation -w @core/shared` |
 | `mutation:critical` | Stryker secuencial en identity/orders/commissions/finance |
 | `demo` | `node scripts/cli.mjs smoke` |
@@ -216,16 +219,18 @@ Los `npm scripts` de la raíz son **envoltorios** (sin ruptura para CI ni local)
 | `swagger:export` | `node scripts/cli.mjs swagger` |
 | `test:engine` | autotests del motor, incluida una suite centinela que prueba el exit code ante assertions fallidas |
 | `test:smoke` | regresiones del runner, del agregador y del contrato OpenAPI (superficies, seguridad y respuestas); ejecutadas en CI |
+| `test:integration` | PostgreSQL efímero, ejecutado en serie para evitar carreras entre migraciones compartidas: proyección de stock, configuración de sitio API+BD y contrato runtime de errores 400/401/403/404/409/500; ejecutado en CI |
 
 `npm run demo` sigue ejercitando el stack completo levantado. El runner usa
 `SMOKE_REQUEST_TIMEOUT_MS` (10 000 ms) por petición y `SMOKE_WAIT_TIMEOUT_MS`
 (30 000 ms) por espera asíncrona. Reintenta una sola vez las peticiones GET
 si falla la red; las mutaciones no se repiten sin clave de idempotencia.
 `npm run smoke:remote` es el smoke de solo lectura para stage/prod
-(`/health`, login y `GET /api/v1/catalog/productos`); lo ejecuta `deploy.yml`
+(`/health`, login y `GET /api/v2/catalog/productos`); lo ejecuta `deploy.yml`
 tras el despliegue (R-CD-12) y exige `ADMIN_EMAIL`/`ADMIN_PASSWORD` del
 environment. `test:smoke` prueba ese contrato con un servidor HTTP efímero y
-no sustituye el gate E2E completo pendiente (G-6).
+no sustituye el workflow E2E de release/manual (G-6), que ejecuta `npm run demo`
+contra el stack dev limpio.
 
 ## Cómo añadir una regla ejecutable
 

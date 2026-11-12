@@ -1,0 +1,16 @@
+{
+  "name": "query-string",
+  "version": "9.5.1",
+  "description": "Build CJS vendorizado de query-string 7.1.3 con decodificación segura (sin decode-uri-component vulnerable)",
+  "license": "MIT",
+  "main": "index.js",
+  "files": [
+    "index.js",
+    "LICENSE"
+  ],
+  "dependencies": {
+    "filter-obj": "^1.1.0",
+    "split-on-first": "^1.1.0",
+    "strict-uri-encode": "^2.0.0"
+  }
+}

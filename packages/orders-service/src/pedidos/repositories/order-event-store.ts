@@ -1,6 +1,8 @@
 import { Injectable } from '@nestjs/common';
-import { PgService } from '@core/shared';
+import { PgService, esViolacionUnicidad } from '@core/shared';
 import { OrderStatusUpdatedEvent } from '../events/order-events';
+
+const INTENTOS_VERSION = 3;
 
 export interface EventoDeOrden {
   event_id: string;
@@ -26,15 +28,24 @@ export class OrderEventStore {
     tipo: string,
     payload: Record<string, unknown>,
   ): Promise<EventoDeOrden> {
-    const fila = await this.pg.queryOne<EventoDeOrden>(
-      `INSERT INTO orders.eventos (aggregate_id, aggregate_type, tipo, payload, metadata, version, creado_en)
-       SELECT $1, 'Order', $2, $3::jsonb, '{}'::jsonb, COALESCE(MAX(version), 0) + 1, NOW()
-       FROM orders.eventos WHERE aggregate_id = $1
-       RETURNING event_id, aggregate_id, aggregate_type, tipo, payload, metadata, version, creado_en`,
-      [orderId, tipo, JSON.stringify(payload)],
-    );
-    if (!fila) throw new Error('No se pudo anexar evento.');
-    return fila;
+    // Con el índice único (aggregate_id, version), dos appends concurrentes
+    // pueden chocar con 23505. Reintentamos recalculando la versión.
+    for (let intento = 0; intento < INTENTOS_VERSION; intento += 1) {
+      try {
+        const fila = await this.pg.queryOne<EventoDeOrden>(
+          `INSERT INTO orders.eventos (aggregate_id, aggregate_type, tipo, payload, metadata, version, creado_en)
+           SELECT $1, 'Order', $2, $3::jsonb, '{}'::jsonb, COALESCE(MAX(version), 0) + 1, NOW()
+           FROM orders.eventos WHERE aggregate_id = $1
+           RETURNING event_id, aggregate_id, aggregate_type, tipo, payload, metadata, version, creado_en`,
+          [orderId, tipo, JSON.stringify(payload)],
+        );
+        if (!fila) throw new Error('No se pudo anexar evento.');
+        return fila;
+      } catch (err) {
+        if (!esViolacionUnicidad(err) || intento === INTENTOS_VERSION - 1) throw err;
+      }
+    }
+    throw new Error('No se pudo anexar evento: conflicto de versión persistente.');
   }
 
   async appendEnTransaccion(
@@ -43,14 +54,24 @@ export class OrderEventStore {
     tipo: string,
     payload: Record<string, unknown>,
   ): Promise<EventoDeOrden> {
-    const r = await client.query<EventoDeOrden>(
-      `INSERT INTO orders.eventos (aggregate_id, aggregate_type, tipo, payload, metadata, version, creado_en)
-       SELECT $1, 'Order', $2, $3::jsonb, '{}'::jsonb, COALESCE(MAX(version), 0) + 1, NOW()
-       FROM orders.eventos WHERE aggregate_id = $1
-       RETURNING event_id, aggregate_id, aggregate_type, tipo, payload, metadata, version, creado_en`,
-      [orderId, tipo, JSON.stringify(payload)],
-    );
-    return r.rows[0];
+    for (let intento = 0; intento < INTENTOS_VERSION; intento += 1) {
+      await client.query('SAVEPOINT eventos_append');
+      try {
+        const r = await client.query<EventoDeOrden>(
+          `INSERT INTO orders.eventos (aggregate_id, aggregate_type, tipo, payload, metadata, version, creado_en)
+           SELECT $1, 'Order', $2, $3::jsonb, '{}'::jsonb, COALESCE(MAX(version), 0) + 1, NOW()
+           FROM orders.eventos WHERE aggregate_id = $1
+           RETURNING event_id, aggregate_id, aggregate_type, tipo, payload, metadata, version, creado_en`,
+          [orderId, tipo, JSON.stringify(payload)],
+        );
+        await client.query('RELEASE SAVEPOINT eventos_append');
+        return r.rows[0];
+      } catch (err) {
+        await client.query('ROLLBACK TO SAVEPOINT eventos_append');
+        if (!esViolacionUnicidad(err) || intento === INTENTOS_VERSION - 1) throw err;
+      }
+    }
+    throw new Error('No se pudo anexar evento: conflicto de versión persistente.');
   }
 
   /** Historia completa de una orden (para replay y reconstruccion). */

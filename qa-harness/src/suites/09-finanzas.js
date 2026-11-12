@@ -26,10 +26,10 @@ export async function suite09Finanzas(client, cfg, adminToken) {
   };
 
   try {
-    await probar('Plan de cuentas', 'GET', '/api/v1/finanzas/cuentas');
-    await probar('Asientos contables', 'GET', '/api/v1/finanzas/asientos');
+    await probar('Plan de cuentas', 'GET', '/api/v2/finanzas/cuentas');
+    await probar('Asientos contables', 'GET', '/api/v2/finanzas/asientos');
 
-    const asiento = await client.post('/api/v1/finanzas/asientos', {
+    const asiento = await client.post('/api/v2/finanzas/asientos', {
       tipo: 'MANUAL',
       concepto: 'Pruesta partida doble',
       moneda: 'C$',
@@ -40,21 +40,21 @@ export async function suite09Finanzas(client, cfg, adminToken) {
     }, auth);
     resultados.push({ test: 'Crear asiento (partida doble)', status: asiento.status, pass: [200, 201].includes(asiento.status) });
 
-    await probar('Libro mayor', 'GET', '/api/v1/finanzas/libro-mayor/1.1.1');
-    await probar('Libro de ventas', 'GET', '/api/v1/finanzas/libro-ventas');
-    await probar('Libro de compras', 'GET', '/api/v1/finanzas/libro-compras');
-    await probar('Proyecciones', 'GET', '/api/v1/finanzas/proyecciones');
-    await probar('Punto de equilibrio', 'GET', '/api/v1/finanzas/punto-equilibrio');
-    await probar('KPIs financieros', 'GET', '/api/v1/finanzas/kpis');
-    await probar('Tablero financiero', 'GET', '/api/v1/finanzas/tablero');
-    await probar('Regímenes fiscales', 'GET', '/api/v1/finanzas/regimenes');
-    await probar('Jurisdicciones', 'GET', '/api/v1/finanzas/jurisdicciones');
-    await probar('Sujetos fiscales', 'GET', '/api/v1/finanzas/sujetos');
-    await probar('Declaraciones', 'GET', '/api/v1/finanzas/declaraciones');
-    await probar('Comprobantes fiscales', 'GET', '/api/v1/finanzas/comprobantes');
+    await probar('Libro mayor', 'GET', '/api/v2/finanzas/libro-mayor/1.1.1');
+    await probar('Libro de ventas', 'GET', '/api/v2/finanzas/libro-ventas');
+    await probar('Libro de compras', 'GET', '/api/v2/finanzas/libro-compras');
+    await probar('Proyecciones', 'GET', '/api/v2/finanzas/proyecciones');
+    await probar('Punto de equilibrio', 'GET', '/api/v2/finanzas/punto-equilibrio');
+    await probar('KPIs financieros', 'GET', '/api/v2/finanzas/kpis');
+    await probar('Tablero financiero', 'GET', '/api/v2/finanzas/tablero');
+    await probar('Regímenes fiscales', 'GET', '/api/v2/finanzas/regimenes');
+    await probar('Jurisdicciones', 'GET', '/api/v2/finanzas/jurisdicciones');
+    await probar('Sujetos fiscales', 'GET', '/api/v2/finanzas/sujetos');
+    await probar('Declaraciones', 'GET', '/api/v2/finanzas/declaraciones');
+    await probar('Comprobantes fiscales', 'GET', '/api/v2/finanzas/comprobantes');
 
     // el vendedor consulta su situacion fiscal via /vendedores/me/fiscal
-    const vFiscal = await client.get('/api/v1/vendedores/me/fiscal', auth);
+    const vFiscal = await client.get('/api/v2/vendedores/me/fiscal', auth);
     resultados.push({ test: 'Fiscal del vendedor (admin → 403 o 200)', status: vFiscal.status, pass: [200, 403].includes(vFiscal.status) });
   } catch (e) {
     errores.push(`Suite 09: ${e.message}`);

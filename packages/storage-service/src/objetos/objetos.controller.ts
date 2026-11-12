@@ -103,7 +103,7 @@ export class ListarObjetosRequestDto {
 
 @ApiTags('Almacenamiento')
 @ApiBearerAuth()
-@Controller('api/v1/storage')
+@Controller('api/v2/storage')
 export class ObjetosController {
   constructor(private readonly objetos: ObjetosService) {}
 

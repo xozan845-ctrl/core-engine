@@ -1,0 +1,332 @@
+{
+  "openapi": "3.0.0",
+  "info": {
+    "title": "Core Engine · storage-service · API interna",
+    "description": "Contrato interno (/internal/**) de storage-service; requiere x-internal-key.",
+    "version": "internal",
+    "contact": {}
+  },
+  "x-servicio": "storage-service",
+  "x-superficie": "interna",
+  "security": [
+    {
+      "internalKey": []
+    }
+  ],
+  "tags": [],
+  "paths": {
+    "/internal/storage/tenants/{tenantId}": {
+      "get": {
+        "operationId": "InternalStorageController_estado",
+        "parameters": [
+          {
+            "name": "tenantId",
+            "required": true,
+            "in": "path",
+            "description": "Id del tenant",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Estado del tenant",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EstadoBucketResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "internalKey": []
+          }
+        ],
+        "summary": "Estado de almacenamiento del tenant (servicio→servicio)",
+        "tags": [
+          "Almacenamiento (interno)"
+        ]
+      }
+    },
+    "/internal/storage/tenants/{tenantId}/recalcular": {
+      "post": {
+        "operationId": "InternalStorageController_recalcular",
+        "parameters": [
+          {
+            "name": "tenantId",
+            "required": true,
+            "in": "path",
+            "description": "Id del tenant",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Uso recalculado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EstadoBucketResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "internalKey": []
+          }
+        ],
+        "summary": "Recalcular el uso del tenant (servicio→servicio)",
+        "tags": [
+          "Almacenamiento (interno)"
+        ]
+      }
+    },
+    "/internal/storage/objetos/{id}": {
+      "get": {
+        "operationId": "InternalStorageController_objeto",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "description": "Id del objeto",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "tenant_id",
+            "required": true,
+            "in": "query",
+            "description": "Tenant dueno del objeto",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Metadata del objeto",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ObjetoStorageResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "internalKey": []
+          }
+        ],
+        "summary": "Metadata de un objeto del tenant (servicio→servicio)",
+        "tags": [
+          "Almacenamiento (interno)"
+        ]
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "bearer": {
+        "scheme": "bearer",
+        "bearerFormat": "JWT",
+        "type": "http"
+      },
+      "internalKey": {
+        "type": "apiKey",
+        "in": "header",
+        "name": "x-internal-key"
+      }
+    },
+    "schemas": {
+      "EstadoBucketResponseDto": {
+        "type": "object",
+        "properties": {
+          "tenant_id": {
+            "type": "string",
+            "description": "Id del tenant",
+            "format": "uuid"
+          },
+          "bucket": {
+            "type": "string",
+            "description": "Nombre del bucket S3",
+            "example": "t-00000000-0000-0000-0000-000000000000"
+          },
+          "cuota_bytes": {
+            "type": "number",
+            "description": "Cuota asignada en bytes",
+            "example": 5368709120
+          },
+          "usado_bytes": {
+            "type": "number",
+            "description": "Bytes usados",
+            "example": 204800
+          },
+          "disponible_bytes": {
+            "type": "number",
+            "description": "Bytes disponibles",
+            "example": 5368504320
+          },
+          "objetos": {
+            "type": "number",
+            "description": "Objetos activos",
+            "example": 12
+          },
+          "estado": {
+            "type": "string",
+            "description": "Estado del almacenamiento",
+            "enum": [
+              "activo",
+              "suspendido"
+            ],
+            "example": "activo"
+          },
+          "creado_en": {
+            "type": "string",
+            "description": "Fecha de creación (ISO 8601 UTC)",
+            "format": "date-time"
+          },
+          "actualizado_en": {
+            "type": "string",
+            "description": "Última actualización (ISO 8601 UTC)",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "tenant_id",
+          "bucket",
+          "cuota_bytes",
+          "usado_bytes",
+          "disponible_bytes",
+          "objetos",
+          "estado",
+          "creado_en",
+          "actualizado_en"
+        ]
+      },
+      "ObjetoStorageResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Id del objeto",
+            "format": "uuid"
+          },
+          "tenant_id": {
+            "type": "string",
+            "description": "Id del tenant dueño",
+            "format": "uuid"
+          },
+          "bucket": {
+            "type": "string",
+            "description": "Bucket S3",
+            "example": "t-00000000-0000-0000-0000-000000000000"
+          },
+          "objeto": {
+            "type": "string",
+            "description": "Clave del objeto en el bucket",
+            "example": "productos/foto.jpg"
+          },
+          "nombre": {
+            "type": "string",
+            "description": "Nombre original del archivo",
+            "example": "foto-producto.jpg"
+          },
+          "content_type": {
+            "type": "string",
+            "description": "Content-Type",
+            "example": "image/jpeg"
+          },
+          "carpeta": {
+            "type": "string",
+            "description": "Carpeta lógica",
+            "example": "productos"
+          },
+          "descripcion": {
+            "type": "string",
+            "description": "Descripción libre"
+          },
+          "etiquetas": {
+            "type": "object",
+            "description": "Etiquetas clave-valor",
+            "additionalProperties": {
+              "type": "string"
+            }
+          },
+          "tamano_bytes": {
+            "type": "number",
+            "description": "Tamaño en bytes",
+            "example": 204800
+          },
+          "etag": {
+            "type": "object",
+            "description": "ETag devuelto por MinIO",
+            "nullable": true
+          },
+          "estado": {
+            "type": "string",
+            "description": "Estado del objeto",
+            "enum": [
+              "pendiente",
+              "activo",
+              "eliminado"
+            ],
+            "example": "activo"
+          },
+          "publico": {
+            "type": "boolean",
+            "description": "Servido por el endpoint estático público (ADR-28)",
+            "example": true
+          },
+          "subido_por": {
+            "type": "object",
+            "description": "Usuario que subió el objeto",
+            "nullable": true
+          },
+          "creado_en": {
+            "type": "string",
+            "description": "Fecha de creación (ISO 8601 UTC)",
+            "format": "date-time"
+          },
+          "confirmado_en": {
+            "type": "object",
+            "description": "Fecha de confirmación (ISO 8601 UTC)",
+            "nullable": true,
+            "format": "date-time"
+          },
+          "eliminado_en": {
+            "type": "object",
+            "description": "Fecha de eliminación lógica (ISO 8601 UTC)",
+            "nullable": true,
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "tenant_id",
+          "bucket",
+          "objeto",
+          "nombre",
+          "content_type",
+          "carpeta",
+          "descripcion",
+          "etiquetas",
+          "tamano_bytes",
+          "estado",
+          "creado_en"
+        ]
+      }
+    }
+  }
+}

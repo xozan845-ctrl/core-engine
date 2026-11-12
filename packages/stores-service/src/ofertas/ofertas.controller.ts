@@ -10,7 +10,7 @@ import {
   ApiTags,
 } from '@nestjs/swagger';
 import type { Response } from 'express';
-import { IsInt, IsOptional, IsString, Max, Min } from 'class-validator';
+import { IsIn, IsInt, IsOptional, IsString, Max, Min } from 'class-validator';
 import { TiendasService } from '../tiendas/tiendas.service';
 import { OfertasService, Oferta } from './ofertas.service';
 import {
@@ -18,13 +18,17 @@ import {
   PaginaOfertasResponseDto,
   TiendaPublicaResponseDto,
 } from './ofertas.response.dto';
+import { aOfertaPublica, aTiendaPublica } from './publico';
 import {
+  CAPACIDADES,
   Pagina,
+  RequiereCapacidades,
   Roles,
   ROLES,
   UsuarioActual,
   UsuarioContexto,
   NotFoundError,
+  Permisos,
 } from '@core/shared';
 
 export class PublicarProductoRequestDto {
@@ -37,9 +41,14 @@ export class PublicarProductoRequestDto {
   @IsString()
   tienda_id?: string;
 
-  @ApiProperty({ description: 'Id del producto a publicar', example: 'a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11' })
+  @ApiProperty({ description: 'Tipo del item a publicar', required: false, enum: ['producto', 'servicio', 'alquiler'], default: 'producto' })
+  @IsOptional()
+  @IsIn(['producto', 'servicio', 'alquiler'])
+  item_type?: 'producto' | 'servicio' | 'alquiler';
+
+  @ApiProperty({ description: 'Id del item unificado a publicar', format: 'uuid' })
   @IsString()
-  producto_id: string;
+  item_id: string;
 
   /** Margen en enteros (15 = 15 %). RN-01: 0 a 90. */
   @ApiProperty({ description: 'Margen en enteros (15 = 15 %). RN-01: 0 a 90', minimum: 0, maximum: 90, example: 15 })
@@ -58,16 +67,18 @@ export class CambiarMargenRequestDto {
 }
 
 @ApiTags('Tiendas')
-@Controller('api/v1')
+@Controller('api/v2')
 export class OfertasController {
   constructor(
     private readonly tiendas: TiendasService,
     private readonly ofertas: OfertasService,
   ) {}
 
-  /** POST /api/v1/vendedores/productos — publica producto con margen (Tabla 21). */
+  /** POST /api/v2/vendedores/productos — publica producto con margen (Tabla 21). */
   @Post('vendedores/productos')
+  @Permisos('tiendas.ofertas.gestionar')
   @Roles(ROLES.VENDEDOR, ROLES.EMPRESARIO)
+  @RequiereCapacidades(CAPACIDADES.CATALOGO_ITEMS)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Publicar un producto con margen (vendedor)' })
   @ApiCreatedResponse({ type: OfertaResponseDto, description: 'Oferta creada' })
@@ -84,12 +95,14 @@ export class OfertasController {
       tiendaId = (await this.tiendas.deVendedor(usuario.user_id))?.id;
     }
     if (!tiendaId) throw new NotFoundError('Tienda del vendedor', usuario.user_id);
-    return this.ofertas.publicar(usuario.user_id, tiendaId, dto.producto_id, dto.margen);
+    return this.ofertas.publicarItem(usuario.user_id, tiendaId, dto.item_id, dto.margen);
   }
 
-  /** PATCH /api/v1/vendedores/productos/:id — cambia el margen de la oferta. */
+  /** PATCH /api/v2/vendedores/productos/:id — cambia el margen de la oferta. */
   @Patch('vendedores/productos/:id')
+  @Permisos('tiendas.ofertas.gestionar')
   @Roles(ROLES.VENDEDOR, ROLES.EMPRESARIO)
+  @RequiereCapacidades(CAPACIDADES.CATALOGO_ITEMS)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Cambiar el margen de una oferta (vendedor)' })
   @ApiOkResponse({ type: OfertaResponseDto, description: 'Oferta actualizada' })
@@ -101,8 +114,9 @@ export class OfertasController {
     return this.ofertas.cambiarMargen(id, usuario.user_id, dto.margen);
   }
 
-  /** GET /api/v1/vendedores/me/ofertas — ofertas del vendedor autenticado. */
+  /** GET /api/v2/vendedores/me/ofertas — ofertas del vendedor autenticado. */
   @Get('vendedores/me/ofertas')
+  @Permisos('tiendas.ofertas.leer')
   @Roles(ROLES.VENDEDOR, ROLES.EMPRESARIO)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Listar las ofertas del vendedor autenticado' })
@@ -114,7 +128,7 @@ export class OfertasController {
     return this.ofertas.deVendedor(usuario.user_id, query as unknown as Record<string, unknown>);
   }
 
-  /** GET /api/v1/tiendas/:id — tienda publica con sus ofertas (ruta pública). */
+  /** GET /api/v2/tiendas/:id — tienda publica con sus ofertas (ruta pública). */
   @Get('tiendas/:id')
   @ApiOperation({ summary: 'Tienda pública con sus ofertas (UUID o slug; ruta pública)' })
   @ApiParam({
@@ -137,6 +151,11 @@ export class OfertasController {
     if (!resuelta) throw new NotFoundError('Tienda', tiendaId);
     if (resuelta.redirigirA) res.status(301).setHeader('Location', resuelta.redirigirA);
     const ofertas = await this.ofertas.deTienda(resuelta.tienda.id);
-    return { tienda: resuelta.tienda, ofertas };
+    // Proyección pública: el storefront no debe ver márgenes, costos ni IDs
+    // de usuario aunque el servicio devuelva la entidad completa (R-DS-3).
+    return {
+      tienda: aTiendaPublica(resuelta.tienda),
+      ofertas: ofertas.map(aOfertaPublica),
+    };
   }
 }

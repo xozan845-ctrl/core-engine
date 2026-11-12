@@ -1,6 +1,6 @@
 # 04 — Reglas de Contrato de API
 
-Aplica a: la forma de los payloads del API (`/api/v1/**`) y su documentación Swagger.
+Aplica a: la forma de los payloads del API (`/api/v2/**`) y su documentación Swagger.
 Los consumidores (clientes futuros y los servicios internos vía `x-internal-key`)
 dependen de estos contratos; un cambio inesperado rompe producción sin fallar
 los tests unitarios de nadie.
@@ -9,7 +9,7 @@ los tests unitarios de nadie.
 
 | ID | Regla |
 |---|---|
-| R-C-1 | Toda respuesta de éxito sigue el envelope `{ data: T, meta: { timestamp, path, method, statusCode } }`. En listas paginadas la paginación va anidada dentro de `data`: `{ data: { data: T[], total, page, limit, totalPages }, meta }`. El test de contrato valida presencia y tipos en ambos niveles. Los errores **no** usan este envelope (ver R-C-8). |
+| R-C-1 | Toda respuesta de éxito sigue el envelope `{ data: T, meta: { timestamp, path, method, statusCode } }`. En listas paginadas la paginación va anidada dentro de `data` conservando los nombres del dominio: `{ data: { items: T[], total, pagina, limite, paginas }, meta }`. El test de contrato valida presencia y tipos en ambos niveles. Los errores **no** usan este envelope (ver R-C-8). |
 | R-C-2 | Toda respuesta sigue el patrón de API estándar del proyecto (éxito vs error) y el test de contrato lo valida con un schema (Zod/JSON-Schema o aserturas de shape). |
 | R-C-3 | Todo objeto de dominio expuesto en el API tiene un **DTO de respuesta**; el contrato se testea contra el DTO, nunca exponer entidades/rows de persistencia crudos (prohibido filtrar `password` u otros campos sensibles). |
 
@@ -25,7 +25,7 @@ los tests unitarios de nadie.
 | ID | Regla |
 |---|---|
 | R-C-6 | Cambios incompatibles (renombrar/eliminar campo, cambiar tipo) solo en nueva versión `/api/v2`; test de contrato detecta la pérdida de campos. |
-| R-C-7 | Swagger se genera de los DTOs (no anotado a mano); el spec se exporta a un JSON versionado en el repo y CI lo bloquea con `git diff --exit-code` cuando está desfasado. El gate **G-8** está activo en el job `build` (`npm run swagger:export`) para `docs/openapi`, `docs/api` y el agregado del gateway. Además, `npm run contract:breaking -- --base-ref origin/main` compara el contrato agregado (público+interno) y falla ante paths/métodos/status/propiedades eliminadas, cambios de tipo o request obligatorio nuevo; `docs/api/breaking-baseline.json` explicita las excepciones decididas. |
+| R-C-7 | Swagger se genera de los DTOs (no anotado a mano); cada servicio exporta sus dos superficies a `docs/openapi/<servicio>/public.openapi.json` e `internal.openapi.json`, y CI bloquea con `git diff --exit-code` cuando están desfasadas. El gate **G-8** está activo en el job `build` (`npm run swagger:export`) para `docs/openapi`, `docs/api` y el agregado del gateway. Una validación adicional comprueba que no queden specs planos, que cada archivo solo contenga su superficie y que todos los `$ref` resuelvan. |
 
 ## Errores
 

@@ -155,3 +155,36 @@ describe('BucketsService (multitenancy por bucket y cuotas, ADR-24)', () => {
     expect(estado.usado_bytes).toBe(333);
   });
 });
+
+describe('BucketsService — lock de cuota en transacción', () => {
+  it('debe bloquear la fila del bucket con FOR UPDATE y devolver el estado', async () => {
+    const pg = { query: vi.fn(), queryOne: vi.fn(), transaccion: vi.fn() };
+    const almacen = { asegurarBucket: vi.fn(), eliminar: vi.fn() };
+    const servicio = new BucketsService(
+      pg as never,
+      almacen as never,
+      { prefijoBucket: 't-', cuotaDefaultBytes: 5000 } as unknown as StorageConfig,
+    );
+    const client = { query: vi.fn().mockResolvedValue({ rows: [filaBucket({ usado_bytes: '333' })], rowCount: 1 }) };
+
+    const estado = await servicio.bloquearEstadoEnTransaccion(client as never, 't1');
+
+    expect(client.query.mock.calls[0][0]).toContain('FOR UPDATE');
+    expect(estado.usado_bytes).toBe(333);
+  });
+
+  it('debe lanzar NotFoundError si el tenant no tiene bucket al bloquear', async () => {
+    const pg = { query: vi.fn(), queryOne: vi.fn(), transaccion: vi.fn() };
+    const almacen = { asegurarBucket: vi.fn(), eliminar: vi.fn() };
+    const servicio = new BucketsService(
+      pg as never,
+      almacen as never,
+      { prefijoBucket: 't-', cuotaDefaultBytes: 5000 } as unknown as StorageConfig,
+    );
+    const client = { query: vi.fn().mockResolvedValue({ rows: [], rowCount: 0 }) };
+
+    await expect(
+      servicio.bloquearEstadoEnTransaccion(client as never, 't1'),
+    ).rejects.toBeInstanceOf(NotFoundError);
+  });
+});

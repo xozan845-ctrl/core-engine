@@ -11,8 +11,10 @@ import { ClientoPostgres } from '../utils.js';
 
 const ESPERADAS = {
   catalog: [
-    'ajustes_stock', 'eventos_procesados', 'historico_precios', 'inventario_mensual_mv',
-    'outbox', 'producto_catalogo_vista', 'productos', 'reservas_ordenes', 'stock_vista',
+    'ajustes_stock', 'combos', 'configuracion_inventario', 'eventos_procesados',
+    'historico_precios', 'item_atributo_esquemas', 'item_imagenes', 'item_proveedores',
+    'items', 'lotes_inventario', 'movimientos_inventario', 'outbox', 'promociones',
+    'proveedores', 'reservas_ordenes',
   ],
   commissions: [
     'comisiones', 'compensaciones_devoluciones', 'eventos_procesados', 'liquidaciones', 'outbox', 'pagos',
@@ -30,8 +32,8 @@ const ESPERADAS = {
   identity: ['outbox', 'usuarios'],
   logistics: ['envios', 'eventos_procesados', 'outbox'],
   orders: [
-    'carritos', 'comisiones_vista', 'eventos', 'eventos_procesados', 'orden_timeline',
-    'orden_vista', 'outbox', 'proyeccion_ordenes',
+    'carritos', 'eventos', 'eventos_procesados', 'orden_timeline',
+    'orden_vista', 'outbox',
   ],
   stores: ['eventos_procesados', 'historico_precios', 'ofertas', 'outbox', 'tiendas'],
 };
@@ -76,8 +78,8 @@ export async function suite17Esquema(pg, cfg) {
 
     // Vistas materializadas / vistas CQRS críticas (tablas + views + matviews)
     for (const v of [
-      'catalog.producto_catalogo_vista', 'catalog.stock_vista',
-      'finance.asientos_vista', 'finance.libro_mayor_mv', 'catalog.inventario_mensual_mv',
+      'catalog.items_vista',
+      'finance.asientos_vista', 'finance.libro_mayor_mv',
     ]) {
       ok(`Vista ${v} existe`, existentes.has(v), 'no encontrada');
     }

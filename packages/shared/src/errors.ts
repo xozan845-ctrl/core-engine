@@ -29,6 +29,13 @@ export class ConflictError extends DomainError {
   }
 }
 
+/** Dependencia síncrona no disponible (servicio interno caído o timeout). */
+export class ServiceUnavailableError extends DomainError {
+  constructor(servicio: string, detalles?: unknown) {
+    super('SERVICIO_NO_DISPONIBLE', `El servicio "${servicio}" no está disponible.`, detalles);
+  }
+}
+
 /** Recurso que existió pero ya no es válido (token expirado, usado o revocado). */
 export class GoneError extends DomainError {
   constructor(codigo: string, mensaje: string, detalles?: unknown) {
@@ -43,8 +50,18 @@ export class UnauthorizedError extends DomainError {
 }
 
 export class ForbiddenError extends DomainError {
-  constructor(mensaje = 'Acceso denegado.') {
-    super('ACCESO_DENEGADO', mensaje);
+  constructor(mensaje = 'Acceso denegado.', codigo = 'ACCESO_DENEGADO', detalles?: unknown) {
+    super(codigo, mensaje, detalles);
+  }
+}
+
+export class CapabilityDisabledError extends ForbiddenError {
+  constructor(capacidades: string[], empresaId: string) {
+    super(
+      `La empresa no tiene activas las capacidades requeridas: ${capacidades.join(', ')}.`,
+      'CAPACIDAD_NO_ACTIVA',
+      { empresa_id: empresaId, capacidades },
+    );
   }
 }
 
@@ -74,6 +91,7 @@ export function httpStatusDe(error: unknown): number {
   if (error instanceof ForbiddenError) return 403;
   if (error instanceof ConflictError) return 409;
   if (error instanceof GoneError) return 410;
+  if (error instanceof ServiceUnavailableError) return 503;
   if (error instanceof ValidationError) return 400;
   if (error instanceof DomainError) return 400;
   return 500;

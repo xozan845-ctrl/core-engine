@@ -2,12 +2,16 @@ import { Module } from '@nestjs/common';
 import { PgModule, RabbitModule, OutboxModule, MetricsModule } from '@core/shared';
 import { ProductosModule } from './productos/productos.module';
 import { InventarioModule } from './inventario/inventario.module';
+import { ServiciosModule } from './servicios/servicios.module';
+import { OperacionesModule } from './operaciones/operaciones.module';
+import { ItemsModule } from './items/items.module';
 import { PedidosConsumer } from './eventos/pedidos.consumer';
 import { InternalController } from './internal/internal.controller';
+import { ItemsCatalogoController } from './items/items-catalogo.controller';
 
 @Module({
-  imports: [PgModule, RabbitModule, OutboxModule, MetricsModule, ProductosModule, InventarioModule],
+  imports: [PgModule, RabbitModule, OutboxModule, MetricsModule, ProductosModule, InventarioModule, ServiciosModule, OperacionesModule, ItemsModule],
   providers: [PedidosConsumer],
-  controllers: [InternalController],
+  controllers: [InternalController, ItemsCatalogoController],
 })
 export class AppModule {}

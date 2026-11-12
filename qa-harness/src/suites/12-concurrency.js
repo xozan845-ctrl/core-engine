@@ -19,25 +19,26 @@ export async function suite12Concurrencia(client, cfg, compradorToken, adminToke
   const vAuth = { authorization: `Bearer ${vendedorToken}` };
   const suf = Date.now().toString(36) + Math.random().toString(36).slice(2, 5);
 
+  const empresaId = cfg.get ? cfg.get('empresaId') : cfg.empresaId;
   const setup = async (stock, sufijo) => {
-    const prod = await client.post('/api/v1/catalog/productos', {
-      sku: `QA-R1-${suf}-${sufijo}`, nombre: 'Producto QA Race', descripcion: '', categoria: 'general',
-      precio_base: '1000.00', stock,
+    const prod = await client.post('/api/v2/catalog/items', {
+      tipo: 'producto', codigo: `QA-R1-${suf}-${sufijo}`, nombre: 'Producto QA Race', descripcion: '', categoria: 'general',
+      precio: '1000.00', track_inventory: true, stock, empresa_id: empresaId,
     }, aAuth);
-    const tienda = await client.get('/api/v1/vendedores/me/tienda', vAuth);
-    const oferta = await client.post('/api/v1/vendedores/productos', {
-      producto_id: prod.body?.id, margen: 10,
+    const tienda = await client.get('/api/v2/vendedores/me/tienda', vAuth);
+    const oferta = await client.post('/api/v2/vendedores/productos', {
+      item_id: prod.body?.item_id ?? prod.body?.id, margen: 10,
       ...(tienda.body?.id ? { tienda_id: tienda.body.id } : {}),
     }, vAuth);
     return oferta.body?.id ?? null;
   };
 
   const comprar = (ofertaId, cantidad) =>
-    client.post('/api/v1/orders', { items: [{ oferta_id: ofertaId, cantidad }] }, cAuth);
+    client.post('/api/v2/orders', { tipo_orden: 'compra', items: [{ oferta_id: ofertaId, cantidad }] }, cAuth);
 
   const estadoFinal = async (orderId) => {
     try {
-      const r = await client.get(`/api/v1/orders/${orderId}`, cAuth);
+      const r = await client.get(`/api/v2/orders/${orderId}`, cAuth);
       return r.body?.estado ?? null;
     } catch {
       return null;
@@ -101,7 +102,7 @@ export async function suite12Concurrencia(client, cfg, compradorToken, adminToke
     const ofertaCart = await setup(5, 'c');
     if (ofertaCart) {
       const carts = await Promise.allSettled(
-        Array.from({ length: 10 }, () => client.post('/api/v1/carrito/items', { oferta_id: ofertaCart, cantidad: 1 }, cAuth)),
+        Array.from({ length: 10 }, () => client.post('/api/v2/carrito/items', { oferta_id: ofertaCart, cantidad: 1 }, cAuth)),
       );
       const ok = carts.filter((r) => r.status === 'fulfilled' && [200, 201].includes(r.value.status)).length;
       resultados.push({ test: `Carrito 10× paralelo (200: ${ok}/10)`, pass: ok >= 9 });
@@ -115,8 +116,8 @@ export async function suite12Concurrencia(client, cfg, compradorToken, adminToke
       const ids = [o1.body?.id, o2.body?.id].filter(Boolean);
       if (ids.length === 2) {
         const [r1, r2] = await Promise.all([
-          client.patch(`/api/v1/orders/${ids[0]}/estado`, { estado: 'en_preparacion' }, aAuth),
-          client.patch(`/api/v1/orders/${ids[1]}/estado`, { estado: 'en_preparacion' }, aAuth),
+          client.patch(`/api/v2/orders/${ids[0]}/estado`, { estado: 'en_preparacion' }, aAuth),
+          client.patch(`/api/v2/orders/${ids[1]}/estado`, { estado: 'en_preparacion' }, aAuth),
         ]);
         const cod = [r1.status, r2.status].join(',');
         resultados.push({ test: `Transiciones concurrentes [${cod}]`, pass: true });
@@ -125,8 +126,8 @@ export async function suite12Concurrencia(client, cfg, compradorToken, adminToke
 
     // 5. Corte liquidación simultáneo (2 admin en paralelo) → sin 500
     const [c1, c2] = await Promise.all([
-      client.post('/api/v1/admin/liquidaciones/corte', {}, aAuth),
-      client.post('/api/v1/admin/liquidaciones/corte', {}, aAuth),
+      client.post('/api/v2/admin/liquidaciones/corte', {}, aAuth),
+      client.post('/api/v2/admin/liquidaciones/corte', {}, aAuth),
     ]);
     const codCorte = [c1.status, c2.status].join(',');
     resultados.push({ test: `Corte simultáneo [${codCorte}] (sin 500)`, pass: !codCorte.includes('500') });

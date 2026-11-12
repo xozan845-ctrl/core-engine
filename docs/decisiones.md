@@ -2,6 +2,23 @@
 
 Este archivo registra decisiones técnicas deliberadas que se apartan del texto literal del documento de referencia (Core Engine_Informe.pdf) o que requieren justificación para auditoría. Cada decisión se enmarca como **ADR-XX** con estado, contexto y consecuencias.
 
+> **Nuevo registro de arquitectura:** las decisiones de la plataforma
+> multi-vertical se mantienen en [`docs/adr/`](./adr/README.md). La primera
+> decisión es [ADR-0001: Plataforma multi-vertical por capacidades](./adr/0001-plataforma-multi-vertical.md)
+> (también identificada como ADR-44 en el histórico de este archivo).
+
+---
+
+## ADR-44: Plataforma multi-vertical por capacidades
+
+- **Fecha**: 2026-11-06
+- **Estado**: Aceptado
+- **Decisión**: Adoptar servicios por capacidad, crear `scheduling-service`,
+  mantener farmacia/retail, belleza y flota como pilotos iniciales, y dejar
+  historia clínica y recetas fuera de la primera fase.
+- **Registro canónico**: [`docs/adr/0001-plataforma-multi-vertical.md`](./adr/0001-plataforma-multi-vertical.md)
+
+---
 ---
 
 ## ADR-01: Montos en centavos (`*_cents`) — desviación de nombres de contrato
@@ -129,7 +146,7 @@ Este archivo registra decisiones técnicas deliberadas que se apartan del texto 
 - **Contexto**: el VPS (Dockploy) redispliega **producción en cada push a `main`**,
   de modo que cualquier commit que pase los tests aterriza en producción sin
   pasar por un entorno previo. `main` no tenía branch protection (HTTP 404) y
-  las reglas de despliegue (`R-CD` en `ci/03-deploy.md`) asumían "no hay a dónde
+  las reglas de despliegue (`R-CD` en `docs/rules/cd/`) asumían "no hay a dónde
   desplegar" — ambas cosas falsas frente a la realidad.
 - **Decisión**: modelo de **tres entornos por rama protegida** — `develop`
   (desarrollo) → `staging` (stage) → `main` (producción), con promoción en un
@@ -257,7 +274,7 @@ Este archivo registra decisiones técnicas deliberadas que se apartan del texto 
 ## ADR-17: `commissions-service` y `market-intelligence-service` fuera de producción (temporal)
 
 - **Fecha**: 2026-10-05
-- **Estado**: Aceptado (temporal) — mecanismo de overlay sustituido por ADR-22
+- **Estado**: Aceptado (temporal) — mecanismo de overlay sustituido por ADR-22; la exclusión de stage de `commissions-service` queda sustituida por ADR-37 (producción sigue fuera)
 - **Contexto**: por ahora no se quieren desplegar `commissions-service` ni
   `market-intelligence-service` en producción; el `docker-compose.yml` base los
   levantaba junto al resto.
@@ -274,6 +291,13 @@ Este archivo registra decisiones técnicas deliberadas que se apartan del texto 
   estén bajados (no se tocan las políticas de ruta; se registra como punto a
   revisar si se alarga). Reversible: volver a mover las definiciones al compose
   base.
+- **Actualización (2026-11-08)**: la lista real de producción es **9
+  microservicios**: identity, catalog, stores, orders, logistics, scheduling
+  (3011), finance, field y storage. `storage` (ADR-24) y `scheduling` (ADR-44)
+  se incorporaron después de este ADR.
+- **Actualización (2026-11-03)**: ADR-37 despliega `commissions-service` en
+  **stage** para validar el portal de empresa. La exclusión de **producción**
+  se mantiene: sigue fuera de `docker-compose.yml`.
 
 ---
 
@@ -427,7 +451,11 @@ Este archivo registra decisiones técnicas deliberadas que se apartan del texto 
   pasa a ser el de producción, los puertos de datos/broker viven en el entorno dev
   (ya no como overlay) y el overlay `extra` desaparece. **Trade-off asumido**: prod
   y stage siguen compartiendo la lista de servicios entre sí; se aceptan como
-  entornos separados con imágenes y variables distintas.
+  entornos separados con imágenes y variables distintas. **Actualización
+  (2026-11-03)**: ADR-37 separa la lista: stage incluye `commissions-service`
+  y producción no. **Actualización (2026-11-08)**: dev construye **11
+  microservicios** (se añade `scheduling-service`, ADR-44) y stage despliega 10;
+  producción despliega 9 (sin `commissions` ni `market-intelligence`).
 ---
 
 ## ADR-23: Arquitectura modular del motor de gobernanza (`scripts/`)
@@ -440,7 +468,7 @@ Este archivo registra decisiones técnicas deliberadas que se apartan del texto 
   responsabilidades —**motor de gobernanza**, utilidades de build
   (`swagger-aggregate.mjs`) y demo E2E (`smoke.mjs`)— y dentro del motor no
   separa infraestructura reutilizable de reglas del proyecto:
-  - `check-rules.mjs` descubre suites por **nombre de archivo** (`*.test.mjs`):
+  - `cli.mjs rules` descubre suites por **nombre de archivo** (`*.test.mjs`):
     no hay registro ni metadata de qué IDs cubre cada suite.
   - `helpers/repo.mjs` mezcla utilidades genéricas (git, paths) con datos del
     proyecto (`MAIN_BRANCH`).
@@ -757,7 +785,7 @@ Este archivo registra decisiones técnicas deliberadas que se apartan del texto 
 ## ADR-29: Proxy público del API para el frontend de Firebase
 
 - **Fecha**: 2026-10-25
-- **Estado**: Aceptado
+- **Estado**: Aceptado — **sustituido por ADR-0005** (2026-11-12)
 - **Contexto**: el frontend público de Firebase no puede enviar el Basic Auth del
   gate de staging sin exponer la credencial en el bundle. Firebase Functions
   requeriría plan Blaze/Secret Manager; el bypass por `Origin` es falsificable y
@@ -786,6 +814,495 @@ Este archivo registra decisiones técnicas deliberadas que se apartan del texto 
     problema del backend, no del proxy.
   - El bypass por `Origin` se retira en el mismo cambio.
   - La API directa sigue exigiendo Basic para clientes que no usan el proxy.
+
+---
+
+## ADR-30: Backend de operación de comercio para los módulos de workspace
+
+- **Fecha**: 2026-10-29
+- **Estado**: Aceptado
+- **Contexto**: los módulos `banks`, `barcodes`, `clients`, `credits`, `expenses`,
+  `finance`, `payables` y `purchases` del frontend persistían en `localStorage`
+  porque el contrato público no exponía sus operaciones. `catalog`, `sales` y
+  `reports` ya estaban cubiertos por `/catalog/productos` y `/orders`.
+- **Decisión**:
+  1. Exponer una superficie `/api/v1/comercio/**` atendida por
+     `finance-service` con los recursos que faltaban: bancos, créditos, gastos,
+     cuentas por pagar, proveedores, compras, órdenes de compra, caja
+     (movimientos, métodos, cierres, caja chica y transferencias), clientes y
+     códigos de barras.
+  2. Persistir en `finance.workspace_registros` con columnas de control
+     (`tenant_id`, `propietario_id`, soft delete) y un payload JSONB por
+     recurso. El empresario se aísla por tenant; el vendedor por
+     `propietario_id = auth.uid()` (RLS incluida).
+  3. Mantener montos en centavos enteros (`*_cents`) según R-DI-1 y reutilizar
+     `Money` para totales de compras y saldos de transferencias.
+  4. El gateway enruta `/api/v1/comercio/**` a `finance-service` y autoriza a
+     `super_admin`, `admin`, `empresario` y `vendedor`; los recursos de caja y
+     compras quedan restringidos a empresa en el servicio.
+- **Consecuencias**:
+  - El frontend puede migrar de `localStorage` a la API sin cambiar sus modelos
+    de dominio, y el contrato OpenAPI documenta cada operación.
+  - El libro JSONB prioriza la paridad con los cálculos locales; si un recurso
+    necesita consultas relacionales intensivas se promoverá a tabla propia.
+  - Los cierres y transferencias se calculan en servidor para evitar
+    duplicados y sobregiros por concurrencia.
+
+---
+
+## ADR-31: Catálogo operativo con metadatos y servicios
+
+- **Fecha**: 2026-10-30
+- **Estado**: Aceptado
+- **Contexto**: el QA del módulo Productos/Servicios detectó que costo y
+  metadatos operativos vivían en `localStorage`, que los servicios no tenían
+  recurso backend y que el estado comercial (`activo/inactivo`) se confundía con
+  la disponibilidad de stock (`disponible/agotado`).
+- **Decisión**:
+  1. Incorporar al contrato de producto `costo`, `marca`, `codigo_barras`,
+     `unidad`, `permite_fracciones`, `unidad_compra`, contenido, tipo de
+     precio/costo, stock mínimo/máximo, garantía, materia prima, ubicación y
+     `estado_operativo`.
+  2. Mantener `estado` como disponibilidad de stock y `estado_operativo` como
+     alta/baja comercial. El listado público solo devuelve activos; el dueño y
+     los admin ven también los inactivos.
+  3. Publicar `catalog.servicios` con CRUD por empresa, código único por empresa,
+     baja lógica y validación de precio, costo y duración (1-1440 min).
+  4. Reforzar el aislamiento: el empresario siempre consulta su tenant y no puede
+     pedir el catálogo de otra empresa.
+- **Consecuencias**:
+  - El frontend puede hidratar el modal y la tabla desde la respuesta del API y
+    dejar de usar `localStorage` como fuente de verdad.
+  - Los códigos de barras son únicos por empresa cuando están informados.
+  - Los servicios quedan separados del inventario: no afectan stock ni reservas.
+
+---
+
+## ADR-32: Contrato backend de operaciones avanzadas de catálogo
+
+- **Fecha**: 2026-10-30
+- **Estado**: Aceptado
+- **Contexto**: el QA dejó como “próxima fase” importación, configuración de
+  inventario, combos, promociones, movimientos/traslados y escaneo. El backend
+  es la fuente de verdad, así que esas funciones necesitan contrato y semántica
+  propias antes de habilitarlas en la UI.
+- **Decisión**:
+  1. `GET/PUT /catalog/configuracion-inventario`: método de costeo
+     (`promedio`/`fifo`/`ueps`), permitir stock negativo, alerta de stock bajo,
+     actualización de costo en compra y unidad por defecto.
+  2. `POST /catalog/productos/importar`: recibe filas ya parseadas (máx. 200),
+     reutiliza la validación de alta y devuelve `importados`, `omitidos` y
+     `errores` por fila.
+  3. `GET /catalog/escanear?codigo=`: busca primero producto por código de barras
+     y luego servicio por código/barras, respetando el tenant.
+  4. `catalog.combos`: SKU/precio/estado + componentes; el costo total se calcula
+     con el costo actual de los productos.
+  5. `catalog.promociones`: tipos `2x1`, `descuento_cantidad`,
+     `descuento_porcentaje` y `regalo`, con vigencia, producto y estado.
+  6. `POST /catalog/inventario/movimientos`: `entrada`, `salida`, `ajuste` y
+     `traslado`. Entrada/salida/ajuste modifican el stock y dejan auditoría en
+     `catalog.ajustes_stock`; el traslado conserva el stock total y registra
+     origen/destino. `salida` respeta `permitir_stock_negativo`.
+- **Consecuencias**:
+  - La UI ya tiene endpoints y reglas para dejar de mostrar “próximamente”.
+  - Los combos no crean stock paralelo: su venta deberá descontar componentes.
+  - Los traslados son un libro de movimientos; el stock por ubicación queda como
+    evolución futura si se necesita inventario multiubicación.
+
+---
+
+## ADR-33: Contrato OpenAPI por servicio y por superficie
+
+- **Fecha**: 2026-10-30
+- **Estado**: Aceptado
+- **Contexto**: cada servicio exportaba un único JSON con rutas públicas e
+  internas mezcladas. El agregador separaba por prefijo, pero el contrato
+  interno arrastraba todos los schemas, incluso los de uso exclusivamente
+  público, y no había una validación por archivo de la superficie.
+- **Decisión**:
+  1. Cada servicio exporta `docs/openapi/<servicio>/public.openapi.json` e
+     `internal.openapi.json` desde **el mismo documento Nest**. No se editan a
+     mano.
+  2. El exportador compartido calcula la clausura transitiva de `$ref`, de modo
+     que cada archivo solo incluye los schemas que realmente usa.
+  3. El agregador lee las carpetas, valida que el archivo público solo tenga
+     `/api/v1/**` y el interno solo `/internal/**`, y rechaza specs planos
+     obsoletos.
+  4. Se añaden validaciones de layout: ambos archivos existen por servicio, los
+     `$ref` resuelven y no quedan JSON planos.
+- **Consecuencias**:
+  - El contrato interno ya no incluye DTOs públicos (baja de ~155 a ~17 schemas
+    en la superficie interna agregada).
+  - El gate G-8 sigue igual (`git diff --exit-code docs/openapi ...`), pero ahora
+    cubre 20 archivos generados.
+  - Cinco servicios sin rutas internas mantienen un `internal.openapi.json`
+    vacío para que la verificación sea uniforme.
+
+---
+
+---
+
+## ADR-34: Perfil comercial y logo de empresa
+
+- **Fecha**: 2026-10-30
+- **Estado**: Aceptado
+- **Contexto**: la empresa solo exponía nombre, slug, modalidad logística y tipo.
+  El frontend necesitaba RUC opcional, datos de contacto/fiscales y logo para
+  usarlo en documentos y storefront, pero no existía contrato.
+- **Decisión**:
+  1. Añadir a `identity.empresas` metadatos editables: `ruc`, razón social,
+     nombre comercial, descripción, teléfono, correo, sitio web, dirección,
+     ciudad, departamento, país, moneda, zona horaria, sector, representante
+     legal y horario.
+  2. Exponer `PATCH /api/v1/empresas/{id}/perfil` para edición parcial; el
+     empresario solo edita su empresa y admin/super_admin cualquiera.
+  3. El logo se sube con el flujo existente de `storage-service` (objeto público)
+     y la empresa guarda `logo_objeto_id`. Identidad valida por API interna que
+     el objeto sea imagen, esté activo y pertenezca al tenant.
+  4. La respuesta incluye `logo_url` derivada; no se persiste una URL firmada.
+  5. `ruc` es opcional pero único por empresa cuando está informado.
+  6. `tipo_empresa` se puede enviar opcionalmente en `POST /empresas` y el
+     empresario dueño puede cambiarlo con `PATCH /empresas/{id}/tipo`; admin y
+     super_admin conservan el cambio global.
+- **Consecuencias**:
+  - El frontend puede completar el perfil gradualmente sin bloquear el alta.
+  - No hay FK cruzada entre identidad y storage (R-DB-1).
+  - El RUC vacío no participa en la unicidad; los RUC repetidos devuelven 409.
+
+---
+
+---
+
+## ADR-35: Avatar de vendedor y usuario
+
+- **Fecha**: 2026-11-03
+- **Estado**: Aceptado
+- **Contexto**: el empresario podía ver nombre, correo y participación de sus
+  vendedores, pero no una imagen. La empresa ya tenía logo; faltaba el avatar
+  individual.
+- **Decisión**:
+  1. Añadir `avatar_objeto_id` a `identity.usuarios` y validar el objeto contra
+     `storage-service` (imagen pública, activa y del mismo tenant).
+  2. Exponer `PATCH /api/v1/usuarios/{id}/avatar` para el propio vendedor, el
+     empresario de su tenant y admin/super_admin. `null` elimina el avatar.
+  3. Devolver `avatar_url` derivada en el usuario, la sesión y el listado de
+     vendedores de la empresa (`GET /empresas/{id}/vendedores`).
+  4. Mantener el binario en storage y la referencia en identidad, sin FK
+     cruzada (R-DB-1).
+- **Consecuencias**:
+  - El empresario puede mostrar el avatar de cada vendedor en su panel.
+  - El vendedor puede cambiar su propio avatar sin depender del empresario.
+  - El frontend reutiliza el flujo de subida de storage y solo envía el UUID.
+
+---
+
+---
+
+## ADR-36: Logo de tienda
+
+- **Fecha**: 2026-11-03
+- **Estado**: Aceptado
+- **Contexto**: el frontend del vendedor y del storefront ya esperaba
+  `logo_objeto_id`/`logo_url` en la tienda, pero `stores.tiendas` solo guardaba
+  nombre, descripción y slug.
+- **Decisión**:
+  1. Añadir `logo_objeto_id` y `actualizado_en` a `stores.tiendas`.
+  2. Exponer `PATCH /api/v1/tiendas/{id}/logo` para vendedor dueño, empresario
+     de la empresa y admin/super_admin. `null` elimina el logo.
+  3. Validar el objeto contra storage: imagen pública, activa y del tenant de la
+     empresa dueña de la tienda.
+  4. Devolver `logo_url` derivada en `GET /vendedores/me/tienda`,
+     `GET /empresarios/me/tiendas` y `GET /tiendas/{id}`.
+- **Consecuencias**:
+  - El logo de tienda y el avatar del vendedor son independientes.
+  - El binario sigue en storage; stores solo guarda la referencia (R-DB-1).
+  - El frontend reutiliza el flujo de subida y solo envía el UUID.
+
+---
+
+## ADR-37: `commissions-service` en stage, fuera de producción
+
+- **Fecha**: 2026-11-03
+- **Estado**: Aceptado
+- **Contexto**: el portal de empresa consume
+  `GET /api/v1/empresarios/me/ventas` y recibe 502 porque
+  `commissions-service` no está en el compose de stage (ADR-17/ADR-22). El
+  frontend ya está desplegado y la ruta está autorizada en el gateway para el
+  rol `empresario`; el gap es de despliegue, no de código. Se necesita validar
+  el flujo en stage antes de decidir producción.
+- **Decisión**:
+  1. Incluir `commissions-service` en `docker-compose.stage.yml` con la imagen
+     `ghcr.io/xozan845-ctrl/core-engine-commissions-service:stage`, puerto 3006
+     y `OUTBOX_TABLA: commissions.outbox` (ADR-25).
+  2. Mantenerlo fuera de `docker-compose.yml` (producción) y mantener
+     `market-intelligence-service` fuera de stage y producción; ambos siguen en
+     `docker-compose.dev.yml`.
+  3. Hacer la readiness dependiente del entorno: el gateway de stage declara
+     `ENTORNO: stage` y `/ready` incluye `commissions`; producción usa la lista
+     sin `commissions` (ADR-17/ADR-22).
+  4. Separar las exclusiones del test de composes: stage excluye solo
+     `market-intelligence-service`; producción excluye además
+     `commissions-service`.
+  5. Verificar la migración `01e_adr25_empresas.sql` en la BD de stage antes de
+     desplegar (las migraciones de `infra/db/init` solo corren en volúmenes
+     nuevos; en una BD existente se aplican a mano, R-DB-6/R-CD-5).
+- **Consecuencias**:
+  - Stage valida el portal de empresa y el smoke puede cubrir
+    `GET /api/v1/empresarios/me/ventas` con credenciales de empresario (R-CD-12).
+  - Producción sigue devolviendo 502 en esa ruta mientras `commissions` esté
+    fuera; es el comportamiento esperado, no un incidente.
+  - El compose de stage y el de producción dejan de compartir exactamente la
+    misma lista de servicios; el test de entrega lo hace explícito.
+  - Supersede parcialmente ADR-17/ADR-22 solo para stage; la exclusión de
+    producción se mantiene.
+
+---
+
+## ADR-38: Media background de plataforma, empresa y tienda
+
+- **Fecha**: 2026-11-04
+- **Estado**: Aceptado
+- **Contexto**: el frontend necesita fondos de imagen o video para la
+  plataforma, la empresa y la tienda, con metadatos de presentación (poster,
+  texto alternativo, overlay y posición). Solo existían logos; storage no
+  servía video ni rangos HTTP, y no había configuración global del sitio. El
+  contrato funcional está en
+  `frontend-ecomerce/frontend-app/docs/backend-media-background.md`.
+- **Decisión**:
+  1. Compartir un contrato único de campos: `background_objeto_id`,
+     `background_media_type`, `background_url`, `background_poster_objeto_id`,
+     `background_poster_url`, `background_alt`, `background_overlay`
+     (0-100), `background_position` (`center|top|bottom|left|right`) y
+     `background_activo`.
+  2. El cliente solo envía ids y metadatos. `background_media_type` se deriva
+     del `content_type` real del objeto y las URLs se derivan en cada
+     respuesta; ninguna URL firmada se persiste ni se devuelve.
+  3. Validar cada objeto contra la API interna de storage: mismo tenant,
+     `estado = activo`, `publico = true` y MIME
+     `image/jpeg|png|webp` o `video/mp4|webm` (el poster solo admite imagen).
+     `background_objeto_id: null` limpia el bloque completo; un campo ausente
+     no cambia.
+  4. Plataforma: tabla singleton `identity.configuracion_plataforma`,
+     `GET /api/v1/configuracion/sitio` público y `PATCH` para
+     admin/super_admin. Los assets se validan contra `PLATFORM_TENANT_ID`.
+  5. Empresa: columnas de fondo en `identity.empresas`, expuestas en
+     `EmpresaResponseDto` y actualizables con `PATCH /api/v1/empresas/{id}/perfil`.
+  6. Tienda: columnas de fondo en `stores.tiendas`, expuestas en
+     `TiendaResponseDto` y actualizables con `PATCH /api/v1/tiendas/{id}/background`.
+  7. Storage sirve imagen y video públicos con `Accept-Ranges`, `HEAD`, `206`
+     y `416`; el video tiene un límite propio de 100 MiB y SVG sigue
+     rechazado.
+  8. Migraciones separadas por ámbito: `16_media_background_plataforma.sql`,
+     `17_media_background_empresa.sql` y `18_media_background_tienda.sql`.
+- **Consecuencias**:
+  - Los tres ámbitos comparten normalización, validación y derivación de URLs
+    (helper de identity y equivalente en stores), sin duplicar reglas.
+  - El gateway autoriza la lectura pública de la configuración y reserva la
+    escritura a roles globales; empresa y tienda conservan sus reglas de
+    propiedad.
+  - El binario permanece en storage y los dominios solo guardan referencias
+    (R-DB-1); una caída de storage bloquea la actualización del fondo, no la
+    lectura del resto del recurso.
+  - El frontend puede precargar el poster y reproducir video por streaming sin
+    exponer credenciales de storage.
+
+---
+
+## ADR-39: Personalización visual de tienda
+
+- **Fecha**: 2026-11-04
+- **Estado**: Aceptado
+- **Contexto**: cada tienda es la identidad pública de su vendedor y el
+  storefront se resuelve por URL (`/tienda/:storeId`, ADR-15). Hasta ahora la
+  tienda solo tenía nombre, descripción, slug, logo y fondo (ADR-38); no podía
+  definir una plantilla, una paleta, tipografía, hero ni metadatos SEO. El
+  frontend necesita un diseño por defecto y overrides por tienda sin aceptar
+  CSS/HTML/JS libres.
+- **Decisión**:
+  1. El backend guarda **tokens validados**, no estilos: `plantilla`, `tema`
+     (colores, fuente, radio y modo), textos del hero y SEO. El frontend
+     traduce los tokens a su sistema de diseño.
+  2. Persistencia en `stores.tiendas` (`plantilla`, `tema jsonb`, `hero_*`,
+     `seo_*` y `personalizacion_actualizada_en`). El fondo sigue en las
+     columnas del ADR-38.
+  3. Allowlists cerradas: plantilla (`clasica|minimal|boutique|mercado`),
+     fuente (`system|inter|poppins|montserrat|playfair`), modo
+     (`claro|oscuro|auto`), colores hexadecimales `#RGB|#RRGGBB|#RRGGBBAA` y
+     radio de bordes entero `0..32`.
+  4. Actualización parcial: un campo ausente conserva su valor; `tema` se
+     mezcla token a token. La respuesta siempre devuelve el tema completo
+     resuelto con los valores por defecto.
+  5. `PATCH /api/v1/tiendas/{id}/personalizacion` con la misma autorización
+     que el logo y el fondo (vendedor dueño, empresario de la empresa o
+     admin/super_admin).
+  6. `GET /api/v1/tiendas/{id}` (público) devuelve la personalización resuelta
+     junto con la tienda y sus ofertas, para que el storefront pinte la
+     identidad en una sola llamada.
+  7. La imagen SEO se valida contra storage (imagen pública, activa y del
+     mismo tenant que la empresa) y su URL se deriva; nunca se acepta del
+     cliente. `hero_cta_url` solo admite rutas relativas seguras o HTTPS.
+  8. Migración `19_personalizacion_tienda.sql`. Sin cambios de RLS: las
+     columnas viven en `stores.tiendas`, que ya tiene lectura pública y
+     escritura restringida.
+- **Consecuencias**:
+  - Una tienda sin configuración devuelve `plantilla: "clasica"` y el tema por
+    defecto; el vendedor puede sobrescribir solo lo que quiera.
+  - El backend no puede ser vector de inyección de CSS/HTML/JS; el frontend
+    mantiene el control del renderizado y la accesibilidad.
+  - Quedan fuera de esta fase las secciones ordenables, el contenido
+    (sobre nosotros, políticas, redes, anuncio), la herencia
+    tienda→empresa→plataforma, las variantes móviles y el borrador/publicado.
+  - El contrato es aditivo para el frontend actual (`R-C-7`): los campos
+    nuevos son opcionales en el DTO y siempre vienen resueltos en runtime.
+
+---
+
+## ADR-40: Contenido del storefront de tienda
+
+- **Fecha**: 2026-11-04
+- **Estado**: Aceptado
+- **Contexto**: el ADR-39 resolvió la identidad visual (plantilla, tema, hero y
+  SEO), pero la tienda seguía sin estructura de contenido: no se podían
+  ordenar secciones ni publicar “sobre nosotros”, políticas, redes o un
+  anuncio. El storefront necesita un contrato estable para renderizar sin
+  aceptar HTML libre.
+- **Decisión**:
+  1. `secciones` JSONB con una lista ordenada de tipos permitidos (`hero`,
+     `destacados`, `categorias`, `ofertas`, `sobre_nosotros`, `politicas`,
+     `contacto`, `redes`). Máximo 12, sin tipos ni órdenes repetidos; una
+     lista vacía delega el orden por defecto a la plantilla del frontend.
+  2. `sobre_nosotros` (máx. 2000), `politicas` JSONB (`envio`, `devolucion`,
+     `privacidad`, máx. 1000 cada una), `redes` JSONB (máx. 6, URL HTTPS) y
+     `anuncio_texto` / `anuncio_enlace` / `anuncio_activo` (máx. 120/300).
+  3. Actualización parcial: un campo ausente conserva su valor; `secciones` y
+     `redes` se reemplazan completas y `null`/`[]` las limpia.
+  4. `PATCH /api/v1/tiendas/{id}/contenido` con la misma autorización que el
+     logo, el fondo y el tema (vendedor dueño, empresario o admin/super_admin).
+  5. `GET /api/v1/tiendas/{id}` devuelve el contenido junto con la tienda y sus
+     ofertas; el contrato es aditivo para el frontend actual (R-C-7).
+  6. El enlace del anuncio solo admite ruta relativa segura o HTTPS; las redes
+     exigen HTTPS. No se aceptan `javascript:`, `data:` ni `//host`.
+  7. Migración `20_contenido_tienda.sql`. Sin cambios de RLS: las columnas
+     viven en `stores.tiendas`, que ya tiene lectura pública y escritura
+     restringida.
+- **Consecuencias**:
+  - Una tienda sin configuración devuelve listas vacías y textos vacíos; el
+    frontend aplica el orden de secciones de su plantilla.
+  - El backend no renderiza ni acepta HTML: solo estructura y texto validados.
+  - Quedan para una fase posterior la herencia tienda→empresa→plataforma, las
+    variantes móviles, el borrador/publicado y el endpoint `tema.css`.
+
+---
+
+## ADR-41: Variante móvil del fondo y CSS del tema
+
+- **Fecha**: 2026-11-04
+- **Estado**: Aceptado
+- **Contexto**: el ADR-38 definió un fondo único por tienda y el ADR-39 los
+  tokens del tema. El storefront necesita un fondo específico para móvil (un
+  video horizontal no encuadra en vertical) y una forma barata de aplicar los
+  tokens sin duplicarlos en el cliente.
+- **Decisión**:
+  1. Añadir a `stores.tiendas` la variante móvil del fondo:
+     `background_movil_objeto_id`, `background_movil_media_type`,
+     `background_movil_poster_objeto_id`, `background_movil_alt` y
+     `background_movil_activo`. Reutiliza la validación del ADR-38 (mismo
+     tenant, objeto público y activo, imagen o video; poster solo imagen).
+  2. `PATCH /api/v1/tiendas/{id}/background` acepta los campos
+     `background_movil_*` en la misma actualización parcial. `null` en
+     `background_movil_objeto_id` limpia el bloque móvil; si no hay objeto, no
+     se puede activar ni poner poster.
+  3. `GET /api/v1/tiendas/{id}/tema.css` (público) devuelve
+     `text/css` con las variables `--tienda-*` del tema resuelto y
+     `color-scheme` (`light`, `dark` o `light dark`). Es una comodidad
+     cacheable (`max-age=60`); el frontend puede seguir usando el JSON.
+  4. Migración `21_variantes_moviles_tienda.sql`. Sin cambios de RLS: las
+     columnas viven en `stores.tiendas`.
+- **Consecuencias**:
+  - El frontend puede elegir el fondo móvil sin descargar el de escritorio y
+    aplicar el tema con un `<link rel="stylesheet">` o inline.
+  - La herencia tienda→empresa→plataforma, el borrador/publicado y la
+    previsualización quedan como trabajo posterior: requieren un contrato
+    entre stores e identity y un modelo de overrides parciales que no se
+    resuelve en este PR.
+
+---
+
+## ADR-42: Herencia de tema tienda → empresa → plataforma
+
+- **Fecha**: 2026-11-04
+- **Estado**: Aceptado
+- **Contexto**: el ADR-39 guardaba en la tienda un tema completo, así que una
+  tienda sin personalización no podía heredar el tema de su empresa o de la
+  plataforma: cualquier valor por defecto pisaba la capa superior. Se necesita
+  distinguir “override explícito” de “heredar” y resolver la cadena sin
+  duplicar reglas entre identity y stores.
+- **Decisión**:
+  1. Mover el contrato del tema (tipos, allowlists, defaults, normalización,
+     validación, `resolverPersonalizacion` y `generarTemaCss`) a
+     `@core/shared` (`packages/shared/src/tienda/tema.ts`).
+  2. Guardar **overrides parciales** en `plantilla_override` y `tema_override`
+     (JSONB) en `identity.configuracion_plataforma`, `identity.empresas` y
+     `stores.tiendas`. Un valor `null`/`{}` significa heredar.
+  3. Resolver en orden `tienda → empresa → plataforma → defaults`, token a
+     token. La respuesta expone `plantilla`, `tema` y
+     `origen_personalizacion` (`tienda|empresa|plataforma|defecto`).
+  4. La tienda resuelve la cadena al leer: `GET /api/v1/tiendas/{id}` incluye
+     el tema efectivo. Para ello stores consulta los overrides de identity en
+     `GET /internal/empresas/{id}/tema` y
+     `GET /internal/configuracion-sitio/tema` (protegidos con
+     `x-internal-key`).
+  5. Cachear la herencia en stores con TTL de 60 s (R-AR-7) y degradar a
+     “sin herencia” si identity no responde (R-RB-4): la tienda conserva sus
+     overrides y los defaults.
+  6. `PATCH /api/v1/tiendas/{id}/personalizacion`,
+     `PATCH /api/v1/empresas/{id}/perfil` y
+     `PATCH /api/v1/configuracion/sitio` aceptan `plantilla` y `tema` como
+     overrides; `null` los limpia y devuelve el control a la capa superior.
+  7. Migración `22_herencia_tema.sql`. Conserva la personalización explícita de
+     la Fase 1 copiándola a los overrides de la tienda.
+- **Consecuencias**:
+  - Una tienda sin overrides hereda el tema de su empresa y, si esta tampoco
+    define, el de la plataforma; el diseño por defecto sigue disponible.
+  - La respuesta de empresa resuelve su propia capa (empresa ← defaults); la
+    cadena completa se materializa en la respuesta de tienda.
+  - Identity caído no rompe el storefront: se sirve el tema de la tienda con
+    los defaults hasta que vuelva la caché.
+  - Sigue prohibido aceptar CSS/HTML/JS libres: la herencia solo mezcla tokens
+    validados.
+
+---
+
+## ADR-43: Fondo del panel de IA (extensión de ADR-38)
+
+- **Fecha**: 2026-11-05
+- **Estado**: Aceptado
+- **Contexto**: el chat de IA global necesita un fondo de imagen o video. El
+  contrato de media background de ADR-38 ya resuelve validación, poster,
+  overlay, posición y derivación de URLs para plataforma, empresa y tienda; no
+  hace falta un recurso nuevo.
+- **Decisión**:
+  1. Añadir un **segundo bloque** de fondo en la configuración singleton de
+     plataforma (`identity.configuracion_plataforma`), prefijado
+     `panel_ai_background_*`.
+  2. Reutilizar el mismo contrato y las mismas reglas de ADR-38: el cliente
+     envía ids y metadatos; el `media_type` se deriva del `content_type` real
+     de storage; el poster solo admite imagen; `panel_ai_background_objeto_id:
+     null` limpia el bloque completo.
+  3. Exponerlo en `GET /api/v1/configuracion/sitio` (público, cacheado 60 s) y
+     actualizarlo con el mismo `PATCH` para admin/super_admin.
+  4. Migración aditiva e idempotente: `23_configuracion_panel_ai.sql`.
+- **Consecuencias**:
+  - No hay endpoint ni entidad nueva: el panel de IA reutiliza el branding de
+    plataforma y el contrato existente.
+  - El frontend consume `panel_ai_background_url`,
+    `panel_ai_background_poster_url`, `panel_ai_background_media_type`,
+    `panel_ai_background_alt`, `panel_ai_background_overlay`,
+    `panel_ai_background_position` y `panel_ai_background_activo`.
+  - La personalización se edita desde `/admin/personalizacion`; el chat
+    `/ia/chat` solo lo visualiza.
+  - Si más adelante se necesita un fondo de panel de IA por empresa o tienda,
+    se reutiliza el mismo patrón de bloque prefijado en esas tablas.
 
 ---
 

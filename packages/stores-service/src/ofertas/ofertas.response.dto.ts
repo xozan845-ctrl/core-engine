@@ -1,4 +1,4 @@
-import { ApiProperty } from '@nestjs/swagger';
+import { ApiProperty, OmitType } from '@nestjs/swagger';
 import { TiendaResponseDto } from '../tiendas/tiendas.response.dto';
 
 export class OfertaResponseDto {
@@ -14,11 +14,11 @@ export class OfertaResponseDto {
   @ApiProperty({ description: 'Empresa propietaria', format: 'uuid' }) empresa_id: string;
   @ApiProperty({ description: 'Participación congelable del vendedor', minimum: 0, maximum: 100 }) participacion_porcentaje: number;
 
-  @ApiProperty({ description: 'Id del producto o variante vendible', format: 'uuid' })
-  producto_id: string;
+  @ApiProperty({ description: 'Tipo del item publicado', enum: ['producto', 'servicio', 'alquiler'] })
+  item_type: 'producto' | 'servicio' | 'alquiler';
 
-  @ApiProperty({ description: 'Id del producto padre (si es variante)', required: false, nullable: true, format: 'uuid' })
-  producto_padre_id: string | null;
+  @ApiProperty({ description: 'Id del item unificado', format: 'uuid' })
+  item_id: string;
 
   @ApiProperty({ description: 'SKU de la variante o producto', example: 'SKU-001' })
   sku: string;
@@ -76,11 +76,34 @@ export class PaginaOfertasResponseDto {
   paginas: number;
 }
 
-/** Tienda pública con sus ofertas (GET /api/v1/tiendas/:id). */
-export class TiendaPublicaResponseDto {
-  @ApiProperty({ description: 'Datos de la tienda', type: TiendaResponseDto })
-  tienda: TiendaResponseDto;
+/**
+ * Proyección pública de una oferta (R-DS-3).
+ *
+ * La ruta del storefront no está autenticada: no puede exponer margen, precio
+ * base, participación del vendedor ni identificadores internos.
+ */
+export class OfertaPublicaResponseDto extends OmitType(OfertaResponseDto, [
+  'tienda_id',
+  'vendedor_id',
+  'empresa_id',
+  'participacion_porcentaje',
+  'margen',
+  'precio_base',
+] as const) {}
 
-  @ApiProperty({ description: 'Ofertas de la tienda', type: () => [OfertaResponseDto] })
-  ofertas: OfertaResponseDto[];
+/** Proyección pública de la tienda: sin datos del propietario ni reparto. */
+export class TiendaPublicaDto extends OmitType(TiendaResponseDto, [
+  'empresa_id',
+  'propietario_usuario_id',
+  'participacion_porcentaje',
+  'vendedor_id',
+] as const) {}
+
+/** Tienda pública con sus ofertas (GET /api/v2/tiendas/:id). */
+export class TiendaPublicaResponseDto {
+  @ApiProperty({ description: 'Datos públicos de la tienda', type: TiendaPublicaDto })
+  tienda: TiendaPublicaDto;
+
+  @ApiProperty({ description: 'Ofertas públicas de la tienda', type: () => [OfertaPublicaResponseDto] })
+  ofertas: OfertaPublicaResponseDto[];
 }

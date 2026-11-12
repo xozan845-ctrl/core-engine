@@ -8,7 +8,6 @@ const empresa = {
   id: 'e-1',
   nombre: 'Acme',
   slug: 'acme',
-  modalidad_logistica: 'hibrida',
   estado: 'activa',
   creado_por: 'u-1',
   creado_en: '2026-10-23T00:00:00.000Z',
@@ -27,30 +26,38 @@ describe('EmpresasController', () => {
     resolverPara: vi.fn(),
     obtenerPara: vi.fn(),
     crearVendedor: vi.fn(),
-    actualizarModalidad: vi.fn(),
     actualizarSlug: vi.fn(),
+    actualizarPack: vi.fn(),
   };
   const controller = new EmpresasController(empresas as unknown as EmpresasService);
   const empresario = { user_id: 'u-1', email: 'e@core.test', rol: ROLES.EMPRESARIO };
 
   beforeEach(() => vi.clearAllMocks());
 
-  it('crea una empresa con la modalidad y el slug elegidos', async () => {
+  it('crea una empresa con la vertical, pack y slug elegidos', async () => {
     empresas.crear.mockResolvedValue({ id: 'e-1' });
-    await controller.crear({ nombre: 'Acme', modalidad_logistica: 'hibrida', slug: 'acme' }, empresario);
-    expect(empresas.crear).toHaveBeenCalledWith('u-1', 'Acme', 'hibrida', 'acme');
+    await controller.crear({ nombre: 'Acme', slug: 'acme' }, empresario);
+    expect(empresas.crear).toHaveBeenCalledWith(
+      'u-1',
+      'Acme',
+      'acme',
+      expect.objectContaining({ nombre: 'Acme', slug: 'acme' }),
+      undefined,
+      undefined,
+      undefined,
+    );
+  });
+
+  it('delega el cambio de pack versionado', async () => {
+    empresas.actualizarPack.mockResolvedValue({ id: 'e-1' });
+    await controller.actualizarPack('e-1', { pack_codigo: 'pack_belleza', pack_version: 2 });
+    expect(empresas.actualizarPack).toHaveBeenCalledWith('e-1', 'pack_belleza', 2);
   });
 
   it('crea un vendedor con su participacion', async () => {
     const dto = { nombre: 'Ventas', correo: 'ventas@acme.test', contrasena: 'secreto123', participacion_porcentaje: 25 };
     await controller.vendedor('e-1', dto, empresario);
     expect(empresas.crearVendedor).toHaveBeenCalledWith('u-1', 'e-1', dto);
-  });
-
-  it('cambia la modalidad logistica para envios futuros', async () => {
-    empresas.actualizarModalidad.mockResolvedValue({ id: 'e-1', modalidad_logistica: 'propia' });
-    await controller.actualizarLogistica('e-1', { modalidad_logistica: 'propia' }, empresario);
-    expect(empresas.actualizarModalidad).toHaveBeenCalledWith('u-1', 'e-1', 'propia');
   });
 
   it('resuelve la empresa por slug sin redirigir cuando es el actual', async () => {
@@ -74,14 +81,14 @@ describe('EmpresasController', () => {
   it('responde 301 con Location cuando el slug consultado es anterior', async () => {
     empresas.resolverPara.mockResolvedValue({
       empresa,
-      redirigirA: '/api/v1/empresas/acme-nueva',
+      redirigirA: '/api/v2/empresas/acme-nueva',
     });
     const res = respuesta();
 
     await controller.obtener('acme-vieja', empresario, res as never);
 
     expect(res.status).toHaveBeenCalledWith(301);
-    expect(res.setHeader).toHaveBeenCalledWith('Location', '/api/v1/empresas/acme-nueva');
+    expect(res.setHeader).toHaveBeenCalledWith('Location', '/api/v2/empresas/acme-nueva');
   });
 
   it('cambia el slug público de la empresa', async () => {
@@ -92,11 +99,8 @@ describe('EmpresasController', () => {
     expect(empresas.actualizarSlug).toHaveBeenCalledWith('u-1', 'e-1', 'acme-nueva');
   });
 
-  it('exige rol empresario para cambiar el slug y la logística', () => {
+  it('exige rol empresario para cambiar el slug', () => {
     expect(Reflect.getMetadata('roles_requeridos', EmpresasController.prototype.actualizarSlug)).toEqual([
-      ROLES.EMPRESARIO,
-    ]);
-    expect(Reflect.getMetadata('roles_requeridos', EmpresasController.prototype.actualizarLogistica)).toEqual([
       ROLES.EMPRESARIO,
     ]);
   });

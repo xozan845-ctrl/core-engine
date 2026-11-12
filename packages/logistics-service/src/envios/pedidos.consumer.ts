@@ -9,6 +9,7 @@ import {
   PaymentProcesadoData,
   OrderStatusUpdatedData,
   Logger,
+  ejecutarConContexto,
 } from '@core/shared';
 import { EnviosService } from './envios.service';
 
@@ -41,16 +42,28 @@ export class PedidosConsumer implements OnModuleInit {
   }
 
   private async manejar(evento: EventoBus): Promise<void> {
-    switch (evento.tipo) {
-      case EVENTOS.PAYMENT_PROCESADO:
-        await this.pagoProcesado(evento as EventoBus<PaymentProcesadoData>);
-        break;
-      case EVENTOS.ORDER_STATUS_UPDATED:
-        await this.estadoActualizado(evento as EventoBus<OrderStatusUpdatedData>);
-        break;
-      default:
-        return;
-    }
+    // Contexto de sistema para que PgService inyecte claims RLS en las
+    // consultas del consumidor (antes corrían como 'anon').
+    await ejecutarConContexto(
+      {
+        request_id: `logistics-event-${evento.event_id}`,
+        servicio: 'logistics-consumer',
+        usuario_id: '00000000-0000-0000-0000-000000000000',
+        rol: 'super_admin',
+      },
+      async () => {
+        switch (evento.tipo) {
+          case EVENTOS.PAYMENT_PROCESADO:
+            await this.pagoProcesado(evento as EventoBus<PaymentProcesadoData>);
+            break;
+          case EVENTOS.ORDER_STATUS_UPDATED:
+            await this.estadoActualizado(evento as EventoBus<OrderStatusUpdatedData>);
+            break;
+          default:
+            return;
+        }
+      },
+    );
   }
 
   private async pagoProcesado(evento: EventoBus<PaymentProcesadoData>): Promise<void> {
@@ -61,6 +74,7 @@ export class PedidosConsumer implements OnModuleInit {
       await this.outbox.insertar(EVENTOS.SHIPMENT_STARTED, {
         order_id,
         empresa_id: envio.empresa_id,
+        ...(envio.parte_id ? { parte_id: envio.parte_id } : {}),
         guia: envio.guia,
         estado: 'en_preparacion',
         proveedor_tipo: envio.proveedor_tipo,

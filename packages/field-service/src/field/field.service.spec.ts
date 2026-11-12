@@ -10,13 +10,19 @@ describe('FieldService', () => {
   let pg: ReturnType<typeof crearPg>;
   let service: FieldService;
 
+  const fetchMock = vi.fn();
+
   beforeEach(() => {
     pg = crearPg();
+    fetchMock.mockReset();
+    fetchMock.mockResolvedValue({ ok: true, status: 200, json: async () => ({ id: 'parte-1' }) });
+    vi.stubGlobal('fetch', fetchMock);
     service = new FieldService(pg as never);
   });
 
   afterEach(() => {
     vi.restoreAllMocks();
+    vi.unstubAllGlobals();
   });
 
   it('crea rutas persistiendo personalIds, defaults y aislamiento por tenant', async () => {
@@ -44,6 +50,42 @@ describe('FieldService', () => {
     await expect(service.crearCliente('tenant-a', { nombreCompleto: 'Ana' })).rejects.toMatchObject({
       codigo: 'PERSISTENCIA_FALLIDA',
     });
+  });
+
+  it('valida la parte contra el tenant antes de persistir un cliente legacy', async () => {
+    pg.queryOne.mockResolvedValueOnce({ id: 'cliente-1' });
+
+    await service.crearCliente('tenant-a', {
+      nombreCompleto: 'Ana',
+      parteId: '22222222-2222-4222-8222-222222222222',
+    });
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      expect.stringContaining('/internal/partes/22222222-2222-4222-8222-222222222222'),
+      expect.anything(),
+    );
+    expect(pg.queryOne.mock.calls[0][0]).toContain('INSERT INTO field.clientes');
+  });
+
+  it('rechaza enlazar un cliente legacy con una parte de otro tenant', async () => {
+    fetchMock.mockResolvedValueOnce({ ok: false, status: 404, json: async () => ({}) });
+
+    await expect(service.crearCliente('tenant-a', {
+      nombreCompleto: 'Ana',
+      parteId: '22222222-2222-4222-8222-222222222222',
+    })).rejects.toMatchObject({ codigo: 'PARTE_INVALIDA' });
+  });
+
+  it('valida la parte contra el tenant también al actualizar un cliente', async () => {
+    pg.queryOne.mockResolvedValueOnce({ id: 'cliente-1' });
+
+    await service.actualizarCliente('tenant-a', 'cliente-1', {
+      nombreCompleto: 'Ana',
+      parteId: '22222222-2222-4222-8222-222222222222',
+    });
+
+    expect(fetchMock).toHaveBeenCalled();
+    expect(pg.queryOne.mock.calls[0][0]).toContain('UPDATE field.clientes');
   });
 
   it('actualiza ubicación usando el contrato público lat/lng/precision/timestamp', async () => {
@@ -116,13 +158,13 @@ describe('FieldService', () => {
     await service.listarPedidos('tenant-a', {
       estado: 'en_camino',
       rutaId: 'ruta-1',
-      clienteId: 'cliente-1',
+      parteId: 'cliente-1',
     });
 
     const [sql, values] = pg.query.mock.calls[0] as [string, unknown[]];
     expect(sql).toContain('estado = $2');
     expect(sql).toContain('ruta_id = $3');
-    expect(sql).toContain('cliente_id = $4');
+    expect(sql).toContain('parte_id = $4');
     expect(sql).toContain('LIMIT 2000');
     expect(values).toEqual(['tenant-a', 'en_camino', 'ruta-1', 'cliente-1']);
   });
@@ -288,8 +330,8 @@ describe('FieldService', () => {
       expect.stringContaining('SET deleted_at = NOW()'),
       ['tenant-a', 'vehiculo-1'],
     ]);
-    expect(pg.query.mock.calls[1][0]).toContain('DATE(registrado_en) = $3');
+    expect(pg.query.mock.calls[1][0]).toContain("DATE(registrado_en AT TIME ZONE 'America/Managua') = $3");
     expect(pg.query.mock.calls[2][0]).toContain('ruta_id = $3');
-    expect(pg.query.mock.calls[3][0]).toContain('DATE(created_at) = $3');
+    expect(pg.query.mock.calls[3][0]).toContain("DATE(created_at AT TIME ZONE 'America/Managua') = $3");
   });
 });

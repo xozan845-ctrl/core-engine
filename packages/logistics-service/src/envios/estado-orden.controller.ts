@@ -13,8 +13,11 @@ import {
   ROLES,
   ROLES_LOGISTICA,
   DomainError,
+  Permisos,
   UsuarioActual,
   UsuarioContexto,
+  CAPACIDADES,
+  RequiereCapacidades,
 } from '@core/shared';
 import { EnviosService, Envio, OrdenExterna, ProveedorTipo } from './envios.service';
 import { EnvioConMontoResponseDto, EnvioResponseDto, OrdenExternaResponseDto } from './envios.response.dto';
@@ -35,17 +38,18 @@ export class AvanzarEstadoRequestDto {
 }
 
 /**
- * PATCH /api/v1/orders/:id/estado — el servicio de logistica avanza el ciclo de
+ * PATCH /api/v2/orders/:id/estado — el servicio de logistica avanza el ciclo de
  * vida de la orden (Tabla 21: JWT admin/logistica). La escritura real vive en
  * el orders-service (Event Sourcing) via endpoint interno.
  */
 @ApiTags('Logística')
 @ApiBearerAuth()
-@Controller('api/v1/orders')
+@Controller('api/v2/orders')
 export class EstadoOrdenController {
   constructor(private readonly envios: EnviosService) {}
 
   @Patch(':id/estado')
+  @Permisos('logistica.ordenes.actualizar')
   @Roles(ROLES.SUPER_ADMIN, ROLES.EMPRESARIO, ROLES.ADMIN, ROLES.LOGISTICA)
   @ApiOperation({ summary: 'Avanzar el estado de una orden (logística o empresario de la empresa)' })
   @ApiParam({ name: 'id', description: 'Id de la orden' })
@@ -59,7 +63,7 @@ export class EstadoOrdenController {
     if (!['en_preparacion', 'enviada', 'entregada', 'cancelada', 'devuelta'].includes(dto.estado)) {
       throw new DomainError('ESTADO_INVALIDO', 'Estado objetivo invalido para logistica.');
     }
-    if (usuario.rol === ROLES.EMPRESARIO) {
+    if (usuario.rol === ROLES.EMPRESARIO || usuario.rol_empresa_id) {
       if (!usuario.tenant_id) {
         throw new DomainError('TENANT_REQUERIDO', 'Se requiere una empresa activa.');
       }
@@ -75,10 +79,11 @@ export class EstadoOrdenController {
   }
 }
 
-/** GET /api/v1/admin/envios — guias de despacho (JWT admin). */
+/** GET /api/v2/admin/envios — guias de despacho (JWT admin). */
 @ApiTags('Logística')
 @ApiBearerAuth()
-@Controller('api/v1/admin')
+@Controller('api/v2/admin')
+@RequiereCapacidades(CAPACIDADES.FULFILLMENT_DELIVERY)
 export class EnviosAdminController {
   constructor(private readonly envios: EnviosService) {}
 
@@ -110,11 +115,13 @@ export class AvanzarEnvioRequestDto {
 
 @ApiTags('Logística empresarial')
 @ApiBearerAuth()
-@Controller('api/v1/empresarios/me/envios')
+@Controller('api/v2/empresarios/me/envios')
+@RequiereCapacidades(CAPACIDADES.FULFILLMENT_DELIVERY)
 export class EnviosEmpresaController {
   constructor(private readonly envios: EnviosService) {}
 
   @Get()
+  @Permisos('logistica.envios.leer')
   @Roles(ROLES.EMPRESARIO)
   @ApiOperation({ summary: 'Listar envíos de la empresa activa' })
   @ApiOkResponse({ type: [EnvioResponseDto] })
@@ -124,6 +131,7 @@ export class EnviosEmpresaController {
   }
 
   @Post(':id/asignacion')
+  @Permisos('logistica.envios.asignar')
   @Roles(ROLES.EMPRESARIO)
   @ApiOperation({ summary: 'Elegir flota para un envío de modalidad híbrida' })
   @ApiParam({ name: 'id', description: 'Id del envío' })
@@ -140,11 +148,13 @@ export class EnviosEmpresaController {
 
 @ApiTags('Logística')
 @ApiBearerAuth()
-@Controller('api/v1/envios')
+@Controller('api/v2/envios')
+@RequiereCapacidades(CAPACIDADES.LOGISTICA_RUTAS)
 export class EnviosFlotaController {
   constructor(private readonly envios: EnviosService) {}
 
   @Patch(':id/estado')
+  @Permisos('logistica.envios.actualizar')
   @Roles(ROLES.SUPER_ADMIN, ...ROLES_LOGISTICA)
   @ApiOperation({ summary: 'Avanzar un envío asignado a la flota activa' })
   @ApiParam({ name: 'id', description: 'Id del envío' })

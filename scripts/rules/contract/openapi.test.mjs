@@ -7,7 +7,7 @@ import { readJson, readText, walkFiles } from '../../engine/lib/fs.mjs';
  * Regla R-DO-8: taxonomía y superficies del contrato OpenAPI.
  *
  * La API tiene dos superficies deliberadamente separadas:
- *   - pública: /api/v1/**  (expuesta por el gateway)
+ *   - pública: /api/v2/**  (expuesta por el gateway)
  *   - interna: /internal/** (servicio→servicio, con ClaveInternaGuard)
  *
  * El contrato público no puede anunciar rutas internas y el interno no puede
@@ -15,13 +15,13 @@ import { readJson, readText, walkFiles } from '../../engine/lib/fs.mjs';
  * guarda de clave interna (R-DS-5).
  */
 
-const RE_SUPERFICIE = /^(?:api\/v1|internal)(?:\/|$)/;
+const RE_SUPERFICIE = /^(?:api\/v2|internal)(?:\/|$)/;
 const RE_CONTROLLER = /@Controller\(\s*(['"`])([^'"`]+)\1\s*\)/g;
 const RE_RUTA = /@(Get|Post|Patch|Put|Delete)\(\s*(?:['"`]([^'"`]*)['"`])?\s*\)/g;
 
 const controladores = walkFiles(
   join(repoRoot, 'packages'),
-  (nombre) => nombre.endsWith('.controller.ts'),
+  (nombre) => nombre.endsWith('.controller.ts') && !nombre.includes('.stryker-tmp'),
 );
 
 function prefijosDe(texto) {
@@ -78,10 +78,10 @@ function rutasTapadas(prefijo, rutas) {
 export default defineSuite({
   id: 'openapi-contract',
   area: 'documentation',
-  rules: ['R-DO-8', 'R-DO-9', 'R-DO-10', 'R-DS-5'],
+  rules: ['R-DO-8', 'R-DO-9', 'R-DO-10', 'R-DS-5', 'R-C-1'],
   mode: 'repo',
   run: ({ test, assert }) => {
-    test('R-DO-8: cada controlador declara una superficie /api/v1 o /internal', () => {
+    test('R-DO-8: cada controlador declara una superficie /api/v2 o /internal', () => {
       const invalidos = [];
       const sinControlador = [];
 
@@ -106,7 +106,7 @@ export default defineSuite({
       assert.deepEqual(
         invalidos,
         [],
-        `Rutas fuera de las superficies /api/v1 o /internal (R-DO-8):\n${invalidos.join('\n')}`,
+        `Rutas fuera de las superficies /api/v2 o /internal (R-DO-8):\n${invalidos.join('\n')}`,
       );
     });
 
@@ -125,12 +125,12 @@ export default defineSuite({
       );
     });
 
-    test('R-DO-8: el contrato interno no contiene rutas /api/v1', () => {
+    test('R-DO-8: el contrato interno no contiene rutas /api/v2', () => {
       const documento = readJson(
         join(repoRoot, 'docs/api/core-engine.internal.openapi.json'),
       );
       const publicas = Object.keys(documento.paths).filter((ruta) =>
-        ruta.startsWith('/api/v1'),
+        ruta.startsWith('/api/v2'),
       );
 
       assert.deepEqual(
@@ -180,6 +180,67 @@ export default defineSuite({
         faltantes,
         [],
         `Operaciones sin respuesta de éxito documentada (R-DO-10):\n${faltantes.join('\n')}`,
+      );
+    });
+
+    test('R-C-1: toda respuesta pública 2xx de JSON usa el envelope {data,meta}', () => {
+      const documento = readJson(join(repoRoot, 'docs/api/core-engine.openapi.json'));
+      const schemas = documento.components?.schemas ?? {};
+
+      function resolver(schema) {
+        let actual = schema;
+        const vistos = new Set();
+        while (actual && typeof actual === 'object' && typeof actual.$ref === 'string') {
+          const nombre = decodeURIComponent(actual.$ref.slice('#/components/schemas/'.length));
+          if (vistos.has(nombre)) return {};
+          vistos.add(nombre);
+          actual = schemas[nombre];
+        }
+        return actual;
+      }
+
+      const sinEnvelope = [];
+      for (const [ruta, operaciones] of Object.entries(documento.paths ?? {})) {
+        for (const [metodo, operacion] of Object.entries(operaciones)) {
+          for (const [status, response] of Object.entries(operacion.responses ?? {})) {
+            if (!/^2\d\d$/.test(status)) continue;
+            const schema = response.content?.['application/json']?.schema;
+            if (!schema) continue;
+            const resuelto = resolver(schema);
+            const propiedades = resuelto?.properties ?? {};
+            if (!propiedades.data || !propiedades.meta) {
+              sinEnvelope.push(`${metodo.toUpperCase()} ${ruta} ${status}`);
+            }
+          }
+        }
+      }
+
+      assert.deepEqual(
+        sinEnvelope,
+        [],
+        `Respuestas públicas sin envelope (R-C-1):\n${sinEnvelope.join('\n')}`,
+      );
+    });
+
+    test('R-C-1: todo servicio con API pública monta EnvelopeInterceptor', () => {
+      const paquetes = new Set(
+        controladores
+          .filter((archivo) =>
+            prefijosDe(readText(archivo)).some((prefijo) => prefijo.startsWith('api/v2')),
+          )
+          .map((archivo) => relative(repoRoot, archivo).split('/')[1]),
+      );
+      const problemas = [];
+      for (const paquete of paquetes) {
+        const main = join(repoRoot, 'packages', paquete, 'src', 'main.ts');
+        if (!readText(main).includes('EnvelopeInterceptor')) {
+          problemas.push(paquete);
+        }
+      }
+      assert.deepEqual(
+        problemas,
+        [],
+        `Servicios con API pública sin EnvelopeInterceptor (R-C-1):\n${problemas.join('\n')}`,
       );
     });
 

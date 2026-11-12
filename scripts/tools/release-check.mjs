@@ -17,7 +17,7 @@
 import { execFileSync } from 'node:child_process';
 import { repoRoot } from '../engine/lib/paths.mjs';
 import { compareSemver, parseTag } from '../engine/lib/semver.mjs';
-import { SERVICES } from '../config/project.mjs';
+import { SERVICES_NODE } from '../config/project.mjs';
 import {
   DEFAULT_MAIN_REF,
   RELEASE_TAG_PATTERN,
@@ -91,7 +91,7 @@ function readJsonAt(root, sha, file) {
 
 function checkVersionMatch(root, sha, tag) {
   const expected = tag.slice(1);
-  const workspaces = ['shared', ...SERVICES];
+  const workspaces = ['shared', ...SERVICES_NODE];
   const files = ['package.json', ...workspaces.map((ws) => `packages/${ws}/package.json`)];
   const problems = [];
 

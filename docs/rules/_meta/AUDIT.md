@@ -6,195 +6,166 @@
 > anteriores a 2026-10-01 pertenecen al proyecto origen y se conservan como
 > procedencia.
 
-- **Última auditoría:** 2026-10-19 — **9ª de Core Engine** (R-COV-3). Cierre de la Etapa 1 de OpenAPI: contrato público/interno separado, seguridad declarada, respuestas documentadas y reglas ejecutables `R-DO-8/9/10`.
-- **Estado global:** 🟡 **CUMPLE PARCIAL** — gates **G-1, G-3, G-7 y G-8 efectivos
-  y verdes en CI**, G-2 N/A y G-4/G-5/G-6 pendientes; audit de dependencias a
-  **0 (high y moderate)**; deudas abiertas: capas de test enteras sin suites
-  (integración, contrato, E2E), robustez no implementada
-  (property-based, mutación, fuzz), cobertura por debajo del objetivo 80/70 y
-  specs pendientes en services/consumers.
+- **Última auditoría de testing:** 2026-11-11 — **17ª de Core Engine** (cierre del envelope `{data,meta}` y de los ADR de notificaciones).
+- **Estado global:** 🟢 **CUMPLE** en los gates automáticos de PR. G-1, G-3, G-4, G-5, G-6, G-7 y G-8 configurados y verdes; G-2 N/A. Deudas restantes: property/fuzz de fechas y fallos de broker, cobertura de `market-intelligence` y `commissions`, 45 warnings `no-explicit-any` y 12 moderates + 1 low de tooling.
 
 ## Resumen por capa
 
 | Capa | Estado | Evidencia |
 |---|---|---|
-| Unit backend | 🟢 | **503 tests / 72 archivos** en verde en **12 workspaces**; cobertura gateada por workspace (tabla abajo); medición local 2026-10-19 |
+| Unit backend | 🟢 | **1.533 tests / 151 archivos** en verde en **14 workspaces**; `npm test` exit 0 con cobertura |
 | Unit frontend | N/A | No hay frontend en el repo (G-2 y R-COV-5 **reservados, nunca reutilizados**) |
-| Integración (API+BD) | 🔴 | **0 tests** — capa entera sin cubrir; deuda G-4 (R-I-* exigibles cuando la historia toque la capa) |
-| Contrato (API) | 🔴 | **0 tests**; deuda G-5 (R-C-7) |
-| E2E | 🔴 | **0 automatizados**; solo smoke local `docker compose -f docker-compose.dev.yml up -d --build` + `npm run demo` (`scripts/tools/smoke.mjs`); deuda G-6 |
-| OpenAPI (spec) | 🟢 | Export por servicio (`swagger:export`) + specs versionados en `docs/openapi/` (**10 servicios, 165/165 operaciones**); contrato público (`docs/api/core-engine.openapi.json`, 146/146 documentadas: 139 con schema + 7 sin contenido) e interno (`core-engine.internal.openapi.json`, 19/19 con schema, `x-internal-key`); **gate G-8** en CI (`git diff --exit-code`) |
-| Property-based | 🔴 | Sin `fast-check` en ningún paquete (R-PB-1..3: dinero y ciclo de la orden) |
-| Mutation testing | 🔴 | Sin Stryker; la mutación **nunca se ha ejecutado** (R-MT-1..3; módulos críticos `identity`/`orders`/`commissions`/`finance`) |
-| Fuzz / robustez de entradas | 🔴 | Sin fuzz de parsers (R-RB-1..4: outbox/saga/broker) |
-| Lint (G-7) | 🟢 | ESLint flat, alcance `packages/*/src/**/*.ts`: **0 errores**, 43 warnings `no-explicit-any` |
-| Security gate (R-QA-6) | 🟢 | `npm audit --audit-level=high` → exit 0 **y** `--audit-level=moderate` → exit 0 (jest 30 cerró los 29 `high` de devDeps) |
-| Flujo de PR | 🟢 | **118 PRs** mergeados por `--rebase`; **0 merge commits** en **76 commits** de `main`; checks verdes en la cabeza y run de la rama de entorno verificado tras cada merge (R-PR-1..9, R-GE-*) |
+| Integración (API+BD) | 🟢 | **20 archivos / 67 tests** con PostgreSQL efímero; cubren stock, contratos, tipos de orden, scheduling, packs v1/v2, RLS, enforcement, pilotos, concurrencia del Outbox, saga completa y FEFO |
+| Contrato (API) | 🟢 | Envelope `{data,meta}` en **11/11** servicios; OpenAPI sincronizado; errores 400/401/403/404/409/500 con prueba runtime; check R-C-1 sobre todo el contrato público |
+| E2E | 🟢 | `release.yml` ejecuta `e2e.yml` antes de publicar imágenes; `npm run demo` cubre R-E-1..7 y el workflow verifica R-E-8 |
+| OpenAPI (spec) | 🟢 | **12 servicios, 359 operaciones: 327 públicas y 32 internas**; `swagger:export` sin diff (G-8) |
+| Property-based | 🟡 | `fast-check` cubre dinero, ciclo de orden y parsers; faltan propiedades de fechas |
+| Mutation testing | 🟢 | Stryker con `break:90` en cinco módulos críticos; mensual/pre-release, no gate de PR |
+| Fuzz / robustez de entradas | 🟢/🟡 | Parsers, concurrencia del Outbox, DLQ/reconexión, timeouts internos y saga cubiertos; faltan límites de payload y fallos de broker más amplios |
+| Lint (G-7) | 🟢 | **0 errores, 45 warnings** `no-explicit-any` |
+| Build (G-7) | 🟢 | shared + gateway + 12 servicios: exit 0 |
+| Security gate (R-QA-6) | 🟡 | `npm audit --audit-level=high` → 0; `--audit-level=moderate` → 13 (1 low, 12 moderate; tooling) |
+| Motor de gobernanza | 🟢 | `rules:check`: 90/90 tests, 22 suites, **52/238 IDs ejecutables**; `test:engine` 21; `test:smoke` 61; baselines sin retroceso |
 
-## Cobertura por workspace (ratchet R-COV-1, medición de tests 2026-10-19)
+## Cobertura por workspace (ratchet R-COV-1, medición 2026-11-11)
 
-| Workspace | Suites | Tests | Líneas | Ramas | Threshold (L/B) | Gate |
-|---|---|---|---|---|---|---|
-| `shared` | 11 | 72 | 53.48 | 52.50 | 39 / 39 | ✅ |
-| `api-gateway` | 4 | 26 | 51.82 | 52.38 | 50 / 51 | ✅ |
-| `orders-service` | 4 | 31 | 33.00 | 24.32 | 32 / 23 | ✅ |
-| `commissions-service` | 4 | 15 | 21.38 | 15.85 | 20 / 14 | ✅ |
-| `finance-service` | 13 | 79 | 71.89 | 53.04 | 70 / 52 | ✅ |
-| `market-intelligence-service` | 4 | 19 | 19.93 | 12.64 | 18 / 11 | ✅ |
-| `catalog-service` | 6 | 46 | 94.70 | 83.50 | 93 / 82 | ✅ |
-| `identity-service` | 6 | 62 | 90.69 | 79.50 | 89 / 78 | ✅ |
-| `stores-service` | 6 | 37 | 87.00 | 85.48 | 86 / 84 | ✅ |
-| `logistics-service` | 3 | 24 | 100.00 | 97.14 | 99 / 96 | ✅ |
-| `field-service` | 2 | 20 | 85.24 | 71.27 | 84 / 70 | ✅ |
-| `storage-service` | 9 | 72 | 100.00 | 87.50 | 99 / 86 | ✅ |
-| **Total** | **72** | **503** | — | — | 12 workspaces | **12/12 ✅** |
+| Workspace | Suites | Tests | Líneas | Ramas | Funciones | Threshold (L/B/F) | Gate |
+|---|---|---|---|---|---|---|---|
+| `shared` | 26 | 222 | 91,58 | 77,94 | 91,23 | 39 / 39 / 55 | ✅ |
+| `api-gateway` | 7 | 121 | 85,71 | 79,06 | 72,91 | 50 / 51 / 57 | ✅ |
+| `orders-service` | 9 | 101 | 87,59 | 75,80 | 83,45 | 32 / 23 / 33 | ✅ |
+| `scheduling-service` | 3 | 14 | 95,96 | 81,81 | 91,48 | 94 / 77 / 88 | ✅ |
+| `commissions-service` | 10 | 49 | 83,17 | 68,75 | 79,71 | 20 / 14 / 22 | ✅ |
+| `finance-service` | 19 | 153 | 88,71 | 74,33 | 89,27 | 70 / 52 / 72 | ✅ |
+| `market-intelligence-service` | 8 | 42 | 47,97 | 38,65 | 59,72 | 18 / 11 / 35 | ✅ |
+| `catalog-service` | 14 | 174 | 95,74 | 84,03 | 96,01 | 93 / 82 / 90 | ✅ |
+| `identity-service` | 25 | 272 | 93,41 | 82,12 | 94,42 | 89 / 78 / 85 | ✅ |
+| `stores-service` | 10 | 163 | 94,02 | 86,45 | 94,91 | 86 / 84 / 76 | ✅ |
+| `logistics-service` | 3 | 54 | 100,00 | 99,04 | 100,00 | 99 / 96 / 99 | ✅ |
+| `field-service` | 2 | 24 | 86,10 | 73,14 | 74,76 | 84 / 70 / 72 | ✅ |
+| `storage-service` | 11 | 119 | 100,00 | 98,51 | 100,00 | 99 / 86 / 99 | ✅ |
+| `notifications-service` | 4 | 25 | 100,00 | 88,88 | 100,00 | 99 / 85 / 99 | ✅ |
+| **Total** | **151** | **1.533** | — | — | — | 14 workspaces | **14/14 ✅** |
 
-- **Evolución:** de 175 tests / 23 suites a **503 / 72**; métricas HTTP y correlación asíncrona tienen regresiones directas. **Ningún threshold bajó** (R-COV-1: el ratchet solo sube).
-- **Objetivo final (80 líneas / 70 ramas): 6 de 12 workspaces lo alcanzan** (`catalog`, `identity`, `stores`, `logistics`, `field`, `storage`); el resto sube por ratchet (+5/release).
-- Método: baseline medido redondeado a la baja; los 6 thresholds legacy se recalibraron una única vez en la Etapa 2b (enmienda en [`test/06`](../test/06-estandares-cobertura.md)).
+- **Objetivo final (80 líneas / 70 ramas): 12 de 14 workspaces lo alcanzan**. Quedan fuera `commissions-service` (ramas 68,75) y `market-intelligence-service` (47,97/38,65), que suben por ratchet (+5/release).
+- `npm run coverage:compare`: **14/14 workspaces iguales o por encima del baseline**.
+- Método: baseline medido redondeado a la baja; los thresholds viven en `scripts/config/coverage.mjs`.
 
 ## Métricas actuales vs mínimos
 
 | Métrica | Valor actual | Mínimo (regla) | Cumple |
 |---|---|---|---|
-| Unit tests (12 workspaces) | 503/503 en verde | 100% (G-1) | ✅ |
-| Cobertura ≥ `coverageThreshold` | 12/12 workspaces | floor medido (R-COV-1) | ✅ gate · ⚠️ objetivo |
-| Cobertura objetivo final | 5/11 ≥ 80/70 | 80/70 | ⚠️ ratchet +5/release |
-| Controllers con spec | **25 de 25** | R-U-10/11 (al tocar endpoints) | ✅ cerrado |
-| Endpoints documentados (OpenAPI) | **165/165** en 10 servicios (146 públicas + 19 internas; todas con respuesta documentada) | 100% (R-DO-6, R-DO-10, G-8) | ✅ |
-| `*.service.ts` / `*.consumer.ts` sin spec | **17 de 39** | 0 (R-U-18, R-COV-2) | ❌ deuda |
-| Código puro de `shared` con spec (R-U-17) | **7 de 7** | 0 sin spec | ✅ cerrado |
-| Guards/pipes con spec (R-U-15) | `service-auth`, `validation.pipe` | 0 sin spec | ✅ cerrado |
-| Tests integración | 0 | ≥1 por flujo crítico (R-I-1) | ❌ deuda G-4 |
-| Tests contrato | 0 | ≥1 por shape (R-C-10) | ❌ deuda G-5 |
-| Tests E2E | 0 automatizados | 7 flujos (R-E-1..7) | ❌ deuda G-6 |
-| Property-based | 0 (sin `fast-check`) | R-PB-1..3 | ❌ |
-| Mutación | sin ejecutar (sin Stryker) | ≥ 90% (R-MT-2) | ❌ |
-| Fuzz de parsers | sin implementar | R-RB-1..4 | ❌ |
-| Lint | 0 errores / 43 warns | 0 errores (G-7) | ✅ |
-| Audit `high` **y `moderate`** | exit 0 ×2 | 0 (R-QA-6) | ✅ |
-| Historial lineal | 0 merge commits en `main` (118 PRs `--rebase`, 76 commits) | 0 (R-PR-7) | ✅ |
+| Unit tests (14 workspaces) | 1.533/1.533 en verde | 100% (G-1) | ✅ |
+| Cobertura ≥ `coverageThreshold` | 14/14 workspaces | floor medido (R-COV-1) | ✅ |
+| Cobertura objetivo final | 12/14 ≥ 80/70 | 80/70 | ⚠️ ratchet +5/release |
+| Controllers con spec | **43 de 43** | R-U-10/11 (al tocar endpoints) | ✅ |
+| Endpoints documentados (OpenAPI) | **359/359** en 12 servicios (327 públicas + 32 internas) | 100% (R-DO-6, R-DO-10, G-8) | ✅ |
+| `*.service.ts` / `*.consumer.ts` sin spec | **0 de 60** | 0 (R-U-18, R-COV-2) | ✅ |
+| Código puro de `shared` con spec (R-U-17) | 7 de 7 | 0 sin spec | ✅ |
+| Guards/pipes con spec (R-U-15) | `service-auth`, `validation.pipe` | 0 sin spec | ✅ |
+| Tests integración | 67 tests en 20 archivos | ≥1 por flujo crítico API+BD (R-I-1) | ✅ G-4 |
+| Tests contrato | 6 runtime de errores + OpenAPI + envelope | ≥1 por shape (R-C-10) | ✅ |
+| Tests E2E | `release.yml` → `e2e.yml` (R-E-1..7 + R-E-8) | R-E-1..7 | ✅ G-6 |
+| Property-based | 3 suites en `shared` | R-PB-1..3 | ⚠️ parcial fechas |
+| Mutación | 5 módulos con `break:90` | ≥ 90% (R-MT-2) | ✅ 5/5 |
+| Lint | 0 errores / 45 warnings | 0 errores (G-7) | ✅ |
+| Build | 0 errores TS | 0 errores (G-7) | ✅ |
+| Audit `high` | exit 0 | 0 (R-QA-6) | ✅ |
+| Audit `moderate` | **13 totales** (1 low, 12 moderate) | 0 (objetivo, no gate) | ⚠️ |
+| Motor de reglas | 90 tests / 22 suites; 52/238 IDs | R-CI-7 | ✅ |
+| Baselines | coverage/specs/rls/migrations sin retroceso | `baseline:guard` | ✅ |
+| Migraciones | 71 íntegras y registradas | R-DB-6 | ✅ |
+| RLS | 46 tablas; ninguna nueva sin RLS | R-SB-2 | ✅ |
 
 ## Gates de CI (verificados contra `.github/workflows/ci.yml`)
 
 | Gate | Estado | Evidencia |
 |---|---|---|
-| G-1 Unit backend | ✅ | job `test` → `npm test`: los 12 workspaces ejecutan cobertura; 503/503 verdes en la medición local |
-| G-2 Unit frontend | N/A | No hay frontend (ID **reservado**, nunca se reutiliza) |
-| G-3 Cobertura ≥ ratchet | ✅ | 11 `coverageThreshold` aplicados; el job `test` genera **11 tablas de cobertura** y 0 `threshold not met` |
-| G-4 Integración | ⏸ | Sin suites de integración (exigible cuando existan, R-I-12) |
-| G-5 Contrato | ⏸ | Sin suites de contrato (R-C-7) |
-| G-6 E2E de flujos | ⏸ | Sin job E2E; lo más cercano hoy es el smoke local `docker compose -f docker-compose.dev.yml up -d --build` + `npm run demo` |
-| G-7 Lint **y** build | ✅ | job `lint` → 0 errores; job `build` → 0 errores TS |
-| G-8 Swagger sync | ✅ | job `build` → `npm run swagger:export` + `git diff --exit-code docs/openapi docs/api packages/api-gateway/src/openapi.agregado.ts` (165/165 operaciones; público 146/146 e interno 19/19); run de `develop` verificado tras el cierre de la Etapa 1 |
+| G-1 Unit backend | ✅ | `npm test` exit 0; 14/14 workspaces; 1.533 tests |
+| G-2 Unit frontend | N/A | No hay frontend (ID reservado) |
+| G-3 Cobertura ≥ ratchet | ✅ | 14/14 sobre threshold y sobre baseline |
+| G-4 Integración | ✅ | 67 tests en 20 archivos; matriz multi-vertical, packs, RLS, enforcement, pilotos, Outbox, saga y FEFO |
+| G-5 Contrato | ✅ | Envelope `{data,meta}` en 11/11 servicios; R-C-1 comprobado sobre el OpenAPI público; errores normalizados con prueba runtime |
+| G-6 E2E de flujos | ✅ | `release.yml` llama a `e2e.yml` antes de `images`; `npm run demo` + R-E-8 |
+| G-7 Lint **y** build | ✅ | 0 errores / 45 warnings; build 0 |
+| G-8 Swagger sync | ✅ | `swagger:export` sin diff (359 operaciones) |
 
-**Total: 4 ✅ · 1 N/A · 3 ⏸ (deudas).**
+**Total: 7 ✅ · 1 N/A.** Ningún gate automático de PR está rojo.
 
-### Controles que no son gates `G-*`
+## Correcciones aplicadas en el cierre (2026-11-11)
 
-- **Security gate** (job `security-gate`) = regla **R-QA-6**: `npm audit --audit-level=high`
-  encadena el resto de jobs. Exit 0; tras la subida a **jest 30** (que eliminó el
-  árbol con `braces`/`micromatch`) también **moderate es 0**.
+### Contrato y envelope
 
-## Deudas abiertas (orden de ataque)
+- `EnvelopeInterceptor` compartido y aplicado en los **11 servicios** con API pública: `commissions`, `finance`, `orders`, `logistics`, `scheduling`, `field`, `storage`, `market-intelligence`, `catalog`, `stores` e `identity`.
+- OpenAPI público de cada servicio envuelto en `{data,meta}`; `/internal`, `/health`, `/metrics`, `/docs` y binarios públicos de storage quedan fuera.
+- `smoke`, `smoke-remote` y QA harness desenvuelven el envelope de forma central.
+- `openapi-contract` comprueba que toda respuesta pública JSON 2xx tiene `data` y `meta`, y que todo servicio con `/api/v2` monta el interceptor (R-C-1).
 
-1. **G-4/G-5/G-6 — capas de test sin suites ni pasos en CI**: integración API+BD, contrato de API y E2E de flujos. Capas enteras sin cubrir; las reglas `R-I-*`/`R-C-*`/`R-E-*` ya son exigibles cuando una historia toque cada capa. (G-8 quedó cerrado en la 5ª auditoría.)
-2. **Robustez no implementada**: property-based (R-PB-1..3, sin `fast-check`), mutation testing (R-MT-1..3, nunca ejecutada — R-MT-1 la acota a mensual/pre-release, **no debe añadirse gate de PR**) y fuzz de parsers (R-RB-1..4).
-3. **Cobertura por debajo del objetivo 80/70**: ya lo alcanzan 5/11 (`catalog`, `identity`, `stores`, `logistics`, `field`); los más bajos siguen siendo `market-intelligence` 19.9, `commissions` 21.4, `orders` 33.0 y `shared` 53.2 de líneas — suben por el ratchet +5/release (R-COV-1).
-4. **Specs pendientes**: **17 de 39 `*.service.ts`/`*.consumer.ts`** sin spec (R-U-18, R-COV-2) — preexistentes al PR que los introduce. Controllers queda cerrado en 25/25.
-5. **Tooling JS parcialmente fuera del alcance de ESLint**: `qa-harness/` sigue sin lintearse; el motor de gobernanza (`scripts/**/*.mjs`) ya se lintea (ADR-23).
-6. **R-FL-3 sin cumplir**: ningún setup de Jest fija `TZ`; los specs actuales no usan hora local.
-7. **43 warnings `no-explicit-any`** en `packages/*/src` — auditables con cada auditoría (R-COV-3).
+### Robustez y concurrencia
 
-### Cerradas en este ciclo (Auditoría 8ª)
+- **Outbox**: reclamo y publicación en la misma transacción con `FOR UPDATE SKIP LOCKED`; sin ventana de 30 minutos; test de concurrencia real con dos pollers.
+- **RabbitMQ**: JSON inválido a DLQ, confirmación de la DLQ antes del `ack`, mensajes muertos sin bucle y reconexión con backoff 1s→30s.
+- **Timeouts internos**: `timeoutInternoMs()` reutilizado en todos los `fetch`; logistics degrada con `SERVICIO_NO_DISPONIBLE`; check R-RB-4 en CI.
+- **Observabilidad**: backlog y fallos del Outbox, dashboard y alertas; DLQ sigue con su métrica existente sin duplicarse.
 
-- **8ª auditoría (esta, 2026-10-15):**
-  - **R-TM-2/3/4:** checks ejecutables para nombres, labels, cardinalidad y métricas RED.
-  - **Regresión de instrumentación:** patrón de ruta de Nest conserva `:param` en vez del ID de URL.
-  - **Métricas HTTP:** namespace `core_engine_`, unidad segundos, labels `servicio/metodo/ruta/estado`, series separadas 5xx y 401/403/409.
-  - **Métricas de negocio:** productores de inteligencia migrados al namespace canónico y duración de refresco en segundos.
-  - **Dashboards y alertas:** migrados desde los nombres y unidad previos, con alertas separadas para fallos de servidor, credenciales y conflictos.
+### Seguridad, tenancy y datos
 
-### Cerradas en el ciclo anterior (Auditoría 7ª)
+- Gateway con políticas para cambio de contraseña y vinculación de personal.
+- Market intelligence aislado por vendedor; ingesta idempotente y roles acotados.
+- Secretos obligatorios en producción; RLS para `field` y proyecciones de órdenes.
+- Capacidades exigidas en finance, commissions, envíos y rutas de capacidad multi-vertical.
+- FEFO con stock, reservas y vencimientos; saga completa cubierta por integración.
 
-- **7ª auditoría (2026-10-14):**
-  - **R-OB-1/2:** checks ejecutables de logging estructurado y correlación HTTP/outbox/RabbitMQ.
-  - **R-TM-1/5/6/7:** checks ejecutables de exposición y scrape universal, infraestructura/DLQ, dashboards y alertas accionables.
-  - **Regresiones corregidas:** `/metrics` faltante en `market-intelligence-service`, targets 3008/3009 ausentes en Prometheus y header AMQP `x-request-id` omitido.
-  - **Operación:** todas las alertas enlazan un runbook versionado; DLQ alerta por crecimiento sostenido y no por mera existencia.
+### Tests y tooling
 
-### Cerradas en el ciclo anterior (Auditoría 6ª)
+- Specs nuevas para Outbox, PgService, service-clients, configuración runtime, event store, controllers de capacidades/extensiones/partes y notificaciones.
+- `spec-baseline` vacío: **0 servicios/consumers sin spec**.
+- E2E de release como gate obligatorio; smoke y QA con desenvuelto central.
+- Documentación, ADR y runbooks alineados.
 
-- **6ª auditoría (2026-10-14):**
-  - **R-QA-1:** `field-service` entra en `npm test`; ya no quedan excepciones de workspace.
-  - **R-U-10/11:** controller specs pasa de 24/25 a **25/25**.
-  - **R-COV-1:** baseline de `field-service` medido en 85.24/71.27 y gate fijado en 84/70.
-  - **Regresiones corregidas:** persistencia de `personalIds`, actualización GPS y filtros de rango de tracking.
-  - **Tipado:** warnings `no-explicit-any` 47 → 43.
+## Deudas abiertas que NO son fallos de gate
 
-### Cerradas en el ciclo anterior (Auditoría 5ª)
+1. **G-6**: el gate de release está configurado; la primera release real debe dejar la evidencia del run E2E.
+2. **Property/fuzz**: faltan propiedades de fechas y fallos de broker más amplios (R-PB/R-RB parciales).
+3. **Cobertura objetivo**: 12/14 workspaces alcanzan 80/70; `commissions` (ramas 68,75) y `market-intelligence` (47,97/38,65) suben por ratchet.
+4. **45 warnings `no-explicit-any`** en `packages/*/src`.
+5. **13 vulnerabilidades de tooling** (1 low, 12 moderate): no hay fix seguro sin bajar ESLint 10→9; el gate solo exige `high`.
+6. **QA harness fuera de ESLint**: `qa-harness/` no está linteado.
+7. **Cobertura de capacidades**: se amplió a finance/commissions/envíos, pero no todas las rutas de todos los servicios declaran una capacidad de negocio.
 
-- **5ª auditoría (2026-10-06):**
-  - **G-8 (OpenAPI):** export por servicio (`swagger.ts` + `swagger-export.ts` + script `swagger:export`), specs versionados en `docs/openapi/` (**165/165 operaciones** en 10 servicios), **gate G-8** en el job `build` (`git diff --exit-code`) y **dos contratos agregados**: público (`docs/api/core-engine.openapi.json`, 146/146 documentadas) e interno (`core-engine.internal.openapi.json`, 19/19 con schema). El agregador separa superficies y **aborta ante colisiones** de path/schema. Cumple **R-DO-6/R-DO-10**.
-  - **Reglas R-DO:** oficializado `docs/rules/documentation/` (R-DO-1..7).
-  - **Deps (R-QA-6):** advisory `critical` nuevo en `proxy-addr` (rango `1.1.0–2.0.7`, vía `express`) → `overrides.proxy-addr = ^2.0.8`; `npm audit --audit-level=high` de nuevo **0**.
+## Evidencia de la auditoría (2026-11-11)
 
-### Cerradas en ciclos anteriores (Auditoría 4ª)
-
-- **4ª auditoría (2026-10-05):** Fixes inmediatos aplicados (PR #90):
-  - **R-CI-2:** Concurrencia añadida en `ci.yml` (`cancel-in-progress`).
-  - **R-OB-1:** Removido `console.log` en `market-intelligence-service` por `Logger` + manejador de error `.catch()`.
-  - **R-GW-3 / R-DS-5:** Gateway limpia headers internos (`x-user-id`, `x-internal-key`, etc) de clientes antes de evaluación.
-  - **R-MS-6:** Implementado `app.enableShutdownHooks()` en los 10 servicios para apagado limpio.
-  - **R-AR-3 / R-MS-5:** Documentada la variable `OUTBOX_TABLA` en las plantillas `.env`.
-  - **Higiene:** `*.tsbuildinfo` excluidos en `.gitignore` y eliminados del índice de git.
-
-### Histórico (Etapas 1–5 + Fase A/B + deps/infra)
-
-- **3ª auditoría (2026-10-03):** snapshot reescrito con evidencia fresca y
-  entrada nueva en el histórico. Registra el salto de testing (175→358 tests) y
-  de cobertura por la Fase A/B.
-- **Fase B — specs de controllers (R-U-10/11):** de **0/25 a 24/25**; los 10
-  servicios con suite (catalog 46, identity 45, orders 31, stores 37, commissions
-  15, finance 77, market-intelligence 19, logistics 24 tests). `field-service`
-  queda exceptuado (R-QA-1).
-- **Fase A — código puro y guards/pipes (R-U-17, R-U-15):** `shared` puro **7/7**
-  con spec y `service-auth`/`validation.pipe` testeados.
-- **jest 29 → 30 (fix(deps), R-QA-6):** un aviso `high` nuevo (`braces`/
-  `micromatch`, ~29 paquetes de devDeps) bloqueaba el gate; se subió a jest 30
-  (su árbol no usa esos paquetes). Audit `high` **29 → 0**, 358 tests verdes.
-- **Separación dev/prod del compose + imagen (ADR-15):** `docker-compose.yml`
-  base (solo `POSTGRES_PASSWORD`) + overlay de observabilidad opcional;
-  `Dockerfile` a `node:20-alpine` + `npm ci`; sin `container_name` fijo (staging
-  y produccion coexisten). Plantillas `.env.example` (dev) y
-  `.env.production.example` (prod).
-- **Etapas 1–5 (previas):** CI real (Etapa 1), ESLint + job `lint` (2a),
-  cobertura efectiva por workspace (2b), 1ª auditoría `_meta/` (3), moderates de
-  npm audit a 0 (4), herencias de `test/01..05` y README reescritas (5).
-
-## Evidencia
-
-- **Local (2026-10-19, comandos de abajo):** `npm test` exit 0 → **503 tests / 72 archivos** con **12 tablas de cobertura** y 0 `threshold not met` · `npm run lint` exit 0 (0 errores / 43 warnings) · `npm run build` exit 0 (0 errores TS) · `npm run rules:check` y `npm run test:engine` exit 0.
-- **Conteos de specs (R-U-10/11/15/17/18):** 25 de 25 controllers, 22 de 39 services/consumers con spec, `shared` puro 7/7, guards/pipes con spec.
-- **CI (R-COV-3: un gate no se marca ✅ sin run verde):** run `37505390920` sobre `main` (`f552627`) = 4/4 jobs success; ramas de entorno verdes en cada salto del modelo CD (R-GE-*). No se citan runs de la entrega de la propia auditoría para no crear el ciclo commit → run → commit.
-- **Flujo de PR:** `gh pr list --state merged` → **118 PRs**, todos `--rebase` con run de rama de entorno verificado (R-PR-7/8, R-GE-*); `git rev-list --merges --count origin/main` → **0** merge commits de 76.
+- `npm ci` → 0; `npm run lint` → 0 (45 warnings); `npm run build` → 0.
+- `npm test` → 0; **1.533 tests / 151 archivos / 14 workspaces**.
+- `npm run coverage:compare` → 0 (14/14 ≥ baseline).
+- `npm run swagger:export` → 0 y sin diff; 327 públicas + 32 internas = 359.
+- `npm run rules:check` → 0 (90 tests, 22 suites, 52/238 IDs); `test:engine` → 0 (21);
+  `test:smoke` → 0 (61).
+- `TEST_DATABASE_URL=... npm run test:integration` → 0 (20 archivos / 67 tests).
+- `npm run baseline:guard` → 0; `db:migrations` → 71 íntegras; `db:rls` → 46
+  tablas, ninguna nueva sin RLS.
+- `npm audit --audit-level=high` → 0; `--audit-level=moderate` → 13 totales
+  (1 low, 12 moderate).
+- **CI post-merge:** run `43088217913` sobre `develop` (`753a6ff`) en `success`
+  en Rules, Security Gate, ESLint, Unit Tests + Coverage, API + BD contracts y
+  Build all services.
 
 ## Cómo re-auditar
 
 ```bash
-npm test                                  # G-1/G-3: los 12 workspaces con cobertura
-npm run test -w @core/<pkg> -- --coverage  # cobertura de un workspace (ratchet R-COV-1)
-npm run lint                               # G-7 (ESLint, alcance packages/*/src)
-npm run build                              # G-7 (tsc)
-npm run swagger:export                     # G-8: exporta specs + agregado; debe salir 0 diff
-npm audit --audit-level=high               # R-QA-6 (job security-gate)
-npm audit --audit-level=moderate           # el árbol también está limpio de moderates
-npm run demo                               # smoke de arranque (G-6 más cercano hoy)
-
-# evidencia CI por rama de entorno (R-GE-1, R-CI-6); gh run view <id> / --log-failed
-gh run list --branch main --limit 3
-gh run list --branch staging --limit 3
-gh run list --branch develop --limit 3
+npm ci
+npm run build:shared
+npm test                                  # G-1/G-3
+npm run coverage:compare                  # R-COV-1
+npm run lint                              # G-7
+npm run build                             # G-7
+npm run swagger:export && git diff --exit-code docs/openapi docs/api packages/api-gateway/src/openapi.agregado.ts   # G-8
+npm run baseline:guard                    # baselines sin retroceso
+npm run rules:check                       # motor de gobernanza
+npm run test:engine && npm run test:smoke
+npm run db:migrations && npm run db:rls
+TEST_DATABASE_URL=postgres://core_engine_test:test_only@127.0.0.1:55432/core_engine_test npm run test:integration
+npm audit --audit-level=high
 ```
 
 Al terminar: **reescribir este snapshot** y **agregar una entrada nueva** al final de `AUDIT-HISTORY.md` (R-COV-3).

@@ -1,4 +1,5 @@
 import { Inject, Injectable, OnModuleInit } from '@nestjs/common';
+import type { Readable } from 'stream';
 import { Client } from 'minio';
 import {
   AlmacenObjetos,
@@ -102,18 +103,44 @@ export class MinioAlmacen implements AlmacenObjetos, OnModuleInit {
     try {
       const info = await this.cliente.statObject(bucket, objeto);
       const stream = await this.cliente.getObject(bucket, objeto);
-      const meta = (info.metaData ?? {}) as Record<string, unknown>;
-      const contentType = meta['content-type'];
-      return {
-        stream,
-        tamano_bytes: info.size,
-        ...(typeof contentType === 'string' ? { content_type: contentType } : {}),
-        ...(info.etag ? { etag: info.etag } : {}),
-      };
+      return this.objetoLeido(info, stream);
     } catch (err) {
       if (this.esNoEncontrado(err)) return null;
       throw err;
     }
+  }
+
+  async leerRango(
+    bucket: string,
+    objeto: string,
+    inicio: number,
+    fin: number,
+  ): Promise<ObjetoLeido | null> {
+    try {
+      // `statObject` da el tamano total y el content-type real; el stream solo
+      // transporta el tramo solicitado.
+      const info = await this.cliente.statObject(bucket, objeto);
+      const longitud = fin - inicio + 1;
+      const stream = await this.cliente.getPartialObject(bucket, objeto, inicio, longitud);
+      return this.objetoLeido(info, stream);
+    } catch (err) {
+      if (this.esNoEncontrado(err)) return null;
+      throw err;
+    }
+  }
+
+  private objetoLeido(
+    info: { size: number; etag?: string; metaData?: Record<string, unknown> | null },
+    stream: Readable,
+  ): ObjetoLeido {
+    const meta = (info.metaData ?? {}) as Record<string, unknown>;
+    const contentType = meta['content-type'];
+    return {
+      stream,
+      tamano_bytes: info.size,
+      ...(typeof contentType === 'string' ? { content_type: contentType } : {}),
+      ...(info.etag ? { etag: info.etag } : {}),
+    };
   }
 
   async eliminar(bucket: string, objeto: string): Promise<void> {

@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import * as bcrypt from 'bcryptjs';
-import { PgService, DomainError, ConflictError, NotFoundError, UnauthorizedError, Rol } from '@core/shared';
+import { PgService, DomainError, ConflictError, ForbiddenError, NotFoundError, UnauthorizedError, Rol, esUuid } from '@core/shared';
 
 export interface Usuario {
   id: string;
@@ -10,6 +10,9 @@ export interface Usuario {
   tenant_id?: string;
   personal_id?: string;
   participacion_porcentaje?: number;
+  rol_empresa_id?: string;
+  avatar_objeto_id?: string;
+  avatar_url?: string;
   creado_en: string;
 }
 
@@ -23,11 +26,16 @@ interface UsuarioRow extends Usuario {
  */
 @Injectable()
 export class UsuariosService {
+  private readonly storageUrl = process.env.STORAGE_SERVICE_URL ?? 'http://storage-service:3010';
+  private readonly claveInterna = process.env.INTERNAL_API_KEY ?? '';
+
   constructor(private readonly pg: PgService) {}
 
   async encontrarPorId(id: string): Promise<Usuario | null> {
     const fila = await this.pg.queryOne<UsuarioRow>(
-      `SELECT id, nombre, correo, rol, tenant_id, personal_id, participacion_porcentaje, creado_en FROM identity.usuarios WHERE id = $1`,
+      `SELECT u.id, u.nombre, u.correo, u.rol, u.tenant_id, u.personal_id, u.participacion_porcentaje, u.avatar_objeto_id, u.creado_en,
+              (SELECT a.rol_empresa_id FROM identity.asignaciones_personal a WHERE a.usuario_id=u.id AND a.empresa_id=u.tenant_id AND a.estado='activa' LIMIT 1) AS rol_empresa_id
+       FROM identity.usuarios u WHERE u.id = $1`,
       [id],
     );
     return fila ? this.sanear(fila) : null;
@@ -35,8 +43,9 @@ export class UsuariosService {
 
   async encontrarPorCorreo(correo: string): Promise<UsuarioRow | null> {
     return this.pg.queryOne<UsuarioRow>(
-      `SELECT id, nombre, correo, rol, tenant_id, personal_id, participacion_porcentaje, contrasena_hash, creado_en
-       FROM identity.usuarios WHERE LOWER(correo) = LOWER($1)`,
+      `SELECT u.id, u.nombre, u.correo, u.rol, u.tenant_id, u.personal_id, u.participacion_porcentaje, u.avatar_objeto_id, u.contrasena_hash, u.creado_en,
+              (SELECT a.rol_empresa_id FROM identity.asignaciones_personal a WHERE a.usuario_id=u.id AND a.empresa_id=u.tenant_id AND a.estado='activa' LIMIT 1) AS rol_empresa_id
+       FROM identity.usuarios u WHERE LOWER(u.correo) = LOWER($1)`,
       [correo.trim()],
     );
   }
@@ -64,7 +73,7 @@ export class UsuariosService {
     const fila = await this.pg.queryOne<UsuarioRow>(
       `INSERT INTO identity.usuarios (id, nombre, correo, contrasena_hash, rol, tenant_id, personal_id)
        VALUES (gen_random_uuid(), $1, $2, $3, $4, $5, $6)
-       RETURNING id, nombre, correo, rol, tenant_id, personal_id, creado_en`,
+       RETURNING id, nombre, correo, rol, tenant_id, personal_id, avatar_objeto_id, creado_en`,
       [datos.nombre.trim(), correo, hash, datos.rol, datos.tenant_id ?? null, datos.personal_id ?? null],
     );
     if (!fila) throw new DomainError('REGISTRO_FALLIDO', 'No se pudo crear el usuario.');
@@ -92,14 +101,23 @@ export class UsuariosService {
       const result = await client.query<UsuarioRow>(
         `INSERT INTO identity.usuarios (nombre, correo, contrasena_hash, rol, tenant_id, participacion_porcentaje)
          VALUES ($1,$2,$3,'vendedor',$4,$5)
-         RETURNING id, nombre, correo, rol, tenant_id, personal_id, participacion_porcentaje, creado_en`,
+         RETURNING id, nombre, correo, rol, tenant_id, personal_id, participacion_porcentaje, avatar_objeto_id, creado_en`,
         [datos.nombre.trim(), correo, hash, datos.empresa_id, datos.participacion_porcentaje],
       );
       const usuario = result.rows[0];
       await client.query(
-        `INSERT INTO identity.empresa_miembros
-         (empresa_id, usuario_id, rol, participacion_porcentaje)
-         VALUES ($1,$2,'vendedor',$3)`,
+        `INSERT INTO identity.roles_empresa
+           (empresa_id, codigo, nombre, permisos, creado_por)
+         VALUES ($1, 'vendedor', 'Vendedor', '{}'::jsonb, $2)
+         ON CONFLICT (empresa_id, codigo) DO NOTHING`,
+        [datos.empresa_id, usuario.id],
+      );
+      await client.query(
+        `INSERT INTO identity.asignaciones_personal
+           (empresa_id, usuario_id, rol_empresa_id, participacion_porcentaje, estado, creado_por)
+         SELECT $1,$2,r.id,$3,'activa',$2
+           FROM identity.roles_empresa r
+          WHERE r.empresa_id=$1 AND r.codigo='vendedor'`,
         [datos.empresa_id, usuario.id, datos.participacion_porcentaje],
       );
       return this.sanear(usuario);
@@ -130,7 +148,7 @@ export class UsuariosService {
 
   listarVendedores(): Promise<Usuario[]> {
     return this.pg
-      .query<UsuarioRow>(`SELECT id, nombre, correo, rol, creado_en FROM identity.usuarios WHERE rol = 'vendedor'`)
+      .query<UsuarioRow>(`SELECT id, nombre, correo, rol, avatar_objeto_id, creado_en FROM identity.usuarios WHERE rol = 'vendedor'`)
       .then((filas) => filas.map((f) => this.sanear(f)));
   }
 
@@ -146,8 +164,9 @@ export class UsuariosService {
       params.push(filtro.tenant_id);
       where.push(`tenant_id = $${params.length}`);
     }
-    const sql = `SELECT id, nombre, correo, rol, tenant_id, personal_id, creado_en
-                 FROM identity.usuarios${where.length ? ` WHERE ${where.join(' AND ')}` : ''}
+    const sql = `SELECT u.id, u.nombre, u.correo, u.rol, u.tenant_id, u.personal_id, u.avatar_objeto_id, u.creado_en,
+                        (SELECT a.rol_empresa_id FROM identity.asignaciones_personal a WHERE a.usuario_id=u.id AND a.empresa_id=u.tenant_id AND a.estado='activa' LIMIT 1) AS rol_empresa_id
+                 FROM identity.usuarios u${where.length ? ` WHERE ${where.join(' AND ')}` : ''}
                  ORDER BY creado_en DESC LIMIT 500`;
     const filas = await this.pg.query<UsuarioRow>(sql, params);
     return filas.map((f) => this.sanear(f));
@@ -193,6 +212,81 @@ export class UsuariosService {
     await this.pg.query(`UPDATE identity.usuarios SET ${sets.join(', ')} WHERE id = $${params.length}`, params);
   }
 
+  /**
+   * Asocia un avatar público ya confirmado en storage. El vendedor puede
+   * editar el suyo; el empresario, los de su tenant; admin/super_admin, todos.
+   */
+  async actualizarAvatar(
+    id: string,
+    avatarObjetoId: string | null,
+    actor: { user_id: string; rol: Rol; tenant_id?: string },
+  ): Promise<Usuario> {
+    const objetivo = await this.encontrarPorId(id);
+    if (!objetivo) throw new NotFoundError('Usuario', id);
+    const esGlobal = actor.rol === 'super_admin' || actor.rol === 'admin';
+    const esPropio = actor.user_id === id;
+    const esEmpresarioDelTenant =
+      actor.rol === 'empresario' && !!actor.tenant_id && actor.tenant_id === objetivo.tenant_id;
+    if (!esGlobal && !esPropio && !esEmpresarioDelTenant) {
+      throw new ForbiddenError('No puedes cambiar el avatar de este usuario.');
+    }
+    if (avatarObjetoId !== null) {
+      if (!esUuid(avatarObjetoId)) {
+        throw new DomainError('AVATAR_INVALIDO', 'El avatar debe ser un objeto de storage válido.');
+      }
+      const tenantId = objetivo.tenant_id ?? actor.tenant_id;
+      if (!tenantId) throw new DomainError('TENANT_REQUERIDO', 'El usuario no tiene tenant para el avatar.');
+      await this.validarAvatar(tenantId, avatarObjetoId);
+    }
+    const fila = await this.pg.queryOne<UsuarioRow>(
+      `UPDATE identity.usuarios SET avatar_objeto_id=$1, actualizado_en=NOW()
+        WHERE id=$2
+        RETURNING id, nombre, correo, rol, tenant_id, personal_id, participacion_porcentaje, avatar_objeto_id, creado_en`,
+      [avatarObjetoId, id],
+    );
+    if (!fila) throw new NotFoundError('Usuario', id);
+    return this.sanear(fila);
+  }
+
+  /** El avatar debe ser una imagen pública, activa y del tenant del usuario. */
+  private async validarAvatar(tenantId: string, objetoId: string): Promise<void> {
+    let respuesta: Response;
+    try {
+      respuesta = await fetch(
+        `${this.storageUrl}/internal/storage/objetos/${encodeURIComponent(objetoId)}` +
+          `?tenant_id=${encodeURIComponent(tenantId)}`,
+        {
+          headers: { 'x-internal-key': this.claveInterna },
+          // R-RB-4: fallar rapido en vez de esperar el timeout del proxy.
+          signal: AbortSignal.timeout(4000),
+        },
+      );
+    } catch {
+      throw new DomainError('AVATAR_NO_VERIFICABLE', 'No se pudo verificar el avatar.');
+    }
+    if (respuesta.status === 404) throw new NotFoundError('Avatar', objetoId);
+    if (!respuesta.ok) {
+      throw new DomainError('AVATAR_NO_VERIFICABLE', 'No se pudo verificar el avatar.');
+    }
+    const objeto = (await respuesta.json()) as {
+      tenant_id?: string;
+      estado?: string;
+      publico?: boolean;
+      content_type?: string;
+    };
+    if (
+      objeto.tenant_id !== tenantId ||
+      objeto.estado !== 'activo' ||
+      objeto.publico !== true ||
+      !String(objeto.content_type ?? '').startsWith('image/')
+    ) {
+      throw new DomainError(
+        'AVATAR_INVALIDO',
+        'El avatar debe ser una imagen pública y activa del tenant.',
+      );
+    }
+  }
+
   private sanear(fila: UsuarioRow): Usuario {
     // los tokens de acceso nunca exponen el hash (minima exposicion de datos)
     return {
@@ -204,6 +298,13 @@ export class UsuariosService {
       ...(fila.personal_id ? { personal_id: fila.personal_id } : {}),
       ...(fila.participacion_porcentaje !== undefined && fila.participacion_porcentaje !== null
         ? { participacion_porcentaje: fila.participacion_porcentaje } : {}),
+      ...(fila.rol_empresa_id ? { rol_empresa_id: fila.rol_empresa_id } : {}),
+      ...(fila.avatar_objeto_id
+        ? {
+            avatar_objeto_id: fila.avatar_objeto_id,
+            avatar_url: `/api/v2/storage/public/objetos/${fila.avatar_objeto_id}`,
+          }
+        : {}),
       creado_en: fila.creado_en,
     };
   }

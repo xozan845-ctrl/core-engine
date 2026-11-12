@@ -5,6 +5,7 @@ import { FacturacionModule } from './facturacion/facturacion.module';
 import { TributacionModule } from './tributacion/tributacion.module';
 import { FinanzasModule } from './finanzas/finanzas.module';
 import { EventosModule } from './eventos/eventos.module';
+import { ComercioModule } from './comercio/comercio.module';
 import { InternoController } from './interno.controller';
 
 @Module({
@@ -18,6 +19,7 @@ import { InternoController } from './interno.controller';
     TributacionModule,
     FinanzasModule,
     EventosModule,
+    ComercioModule,
   ],
   controllers: [InternoController],
 })

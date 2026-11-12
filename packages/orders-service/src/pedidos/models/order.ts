@@ -1,4 +1,4 @@
-import { ItemOrden, Money } from '@core/shared';
+import { ItemOrden, Money, TipoOrden } from '@core/shared';
 
 /**
  * Order: estructura de datos de la orden (modelo de dominio). El estado NO se
@@ -6,18 +6,19 @@ import { ItemOrden, Money } from '@core/shared';
  */
 export interface OrderEstadoDerrivado {
   order_id: string;
-  cliente_id: string;
+  comprador_id: string;
   items: ItemOrden[];
   total: Money;
   estado: string;
   motivo?: string;
   creado_en: string;
   actualizado_en: string;
+  tipo_orden: TipoOrden;
 }
 
 interface DatosDeEvento {
   order_id?: string;
-  cliente_id?: string;
+  comprador_id?: string;
   items?: ItemOrden[];
   total_cents?: number;
   estado?: string;
@@ -25,6 +26,7 @@ interface DatosDeEvento {
   motivo?: string;
   creado_en?: string;
   ocurrido_en?: string;
+  tipo_orden?: TipoOrden;
 }
 
 interface EventoReplay {
@@ -41,15 +43,17 @@ export function reconstruirDesdeEventos(
   const primero = eventos[0];
   if (primero.tipo !== 'OrderCreatedEvent') return null;
   const inicial = primero.payload as DatosDeEvento;
+  if (!inicial.tipo_orden) return null;
 
   const orden: OrderEstadoDerrivado = {
     order_id: inicial.order_id ?? '',
-    cliente_id: inicial.cliente_id ?? '',
+    comprador_id: inicial.comprador_id ?? '',
     items: inicial.items ?? [],
     total: Money.desdeCentavos(inicial.total_cents ?? 0),
     estado: inicial.estado ?? 'creada',
     creado_en: inicial.creado_en ?? primero.creado_en,
     actualizado_en: primero.creado_en,
+    tipo_orden: inicial.tipo_orden,
   };
 
   for (const evento of eventos.slice(1) as EventoReplay[]) {

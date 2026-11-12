@@ -6,6 +6,7 @@ import {
   Money,
   NotFoundError,
   PgService,
+  timeoutInternoMs,
 } from '@core/shared';
 
 export interface ItemCarrito {
@@ -31,7 +32,7 @@ interface FilaCarrito {
   actualizado_en: string;
 }
 
-export interface ItemCarritoEnriquecido extends ItemCarrito, OfertaLectura {}
+export interface ItemCarritoEnriquecido extends ItemCarrito, Omit<OfertaLectura, 'id'> {}
 
 export interface CarritoVista {
   items: ItemCarritoEnriquecido[];
@@ -189,7 +190,8 @@ export class CarritoService {
       const oferta = porId.get(item.oferta_id);
       if (!oferta) continue;
       total = total.sumar(Money.parsear(oferta.precio_venta).multiplicarPor(item.cantidad));
-      enriquecidos.push({ ...item, ...oferta });
+      const { id: _id, ...ofertaSinId } = oferta;
+      enriquecidos.push({ ...item, ...ofertaSinId });
     }
     const actualizado = new Date(fila.actualizado_en).getTime();
     return {
@@ -213,7 +215,10 @@ export class CarritoService {
     try {
       const res = await fetch(
         `${this.storesUrl}/internal/ofertas?ids=${encodeURIComponent([...new Set(ids)].join(','))}`,
-        { headers: { 'x-internal-key': this.claveInterna } },
+        {
+          headers: { 'x-internal-key': this.claveInterna },
+          signal: AbortSignal.timeout(timeoutInternoMs()),
+        },
       );
       if (!res.ok) return [];
       return (await res.json()) as OfertaLectura[];

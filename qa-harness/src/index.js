@@ -8,7 +8,7 @@
 import { Configuracion } from './config.js';
 import { Runner } from './runner/runner.js';
 import { readFileSync, writeFileSync, mkdirSync, existsSync } from 'fs';
-import { join, dirname } from 'path';
+import { join, dirname, isAbsolute } from 'path';
 import { createRequire } from 'module';
 
 const require = createRequire(import.meta.url);
@@ -69,8 +69,14 @@ for (let i = 0; i < args.length; i++) {
   }
 }
 
-// Hacer efectivo --suites en el Runner
+// Hacer efectivas las opciones CLI en la configuración que consume el Runner.
 config.suites = options.suites ?? config.suites ?? [];
+config.baseUrl = options.baseUrl ?? config.baseUrl;
+config.format = options.format ?? config.format;
+config.loadLevel = options.loadLevel ?? config.loadLevel;
+config.concurrency = options.concurrency ?? config.concurrency;
+config.fuzzRounds = options.fuzzRounds ?? config.fuzzRounds;
+config.cleanup = options.cleanup ?? config.cleanup;
 
 if (options.help) {
   console.log(`
@@ -135,18 +141,30 @@ async function main() {
     await runner.runAll();
     const reports = runner.generateReports();
 
-    // Guardar reportes
-    const outputDir = join(process.cwd(), options.outputDir);
+    // Guardar reportes según --format (html | md | json | all)
+    const outputDir = isAbsolute(options.outputDir)
+      ? options.outputDir
+      : join(process.cwd(), options.outputDir);
     if (!existsSync(outputDir)) mkdirSync(outputDir, { recursive: true });
-    
-    writeFileSync(join(outputDir, 'report.html'), reports.html);
-    writeFileSync(join(outputDir, 'report.md'), reports.markdown);
-    writeFileSync(join(outputDir, 'report.json'), reports.json);
+    const formato = String(config.format || 'all').toLowerCase();
+    const quiere = (f) => formato === 'all' || formato === f || (f === 'md' && formato === 'markdown');
+    const escritos = [];
+
+    if (quiere('html')) {
+      writeFileSync(join(outputDir, 'report.html'), reports.html);
+      escritos.push('report.html (interactivo)');
+    }
+    if (quiere('md')) {
+      writeFileSync(join(outputDir, 'report.md'), reports.markdown);
+      escritos.push('report.md (Markdown)');
+    }
+    if (quiere('json')) {
+      writeFileSync(join(outputDir, 'report.json'), reports.json);
+      escritos.push('report.json (machine-readable)');
+    }
 
     console.log(`\n📄 Reportes guardados en: ${outputDir}`);
-    console.log(`   - report.html (reporte interactivo)`);
-    console.log(`   - report.md (Markdown para CI/CD)`);
-    console.log(`   - report.json (machine-readable)`);
+    for (const archivo of escritos) console.log(`   - ${archivo}`);
 
     // Resumen final
     const resumen = runner.report.getResumen();

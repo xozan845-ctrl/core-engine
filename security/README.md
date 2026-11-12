@@ -56,6 +56,9 @@ pentest_httpxProbe / pentest_nmapScan / pentest_nucleiScan
 
 # Carga ligera (k6)
 k6_run_script con security/k6/health-smoke.js
+
+# Camino crítico: auth → empresa → producto → oferta → orden → pago
+BASE_URL=http://localhost:8080 k6 run security/k6/order-flow.js
 ```
 
 Scripts:
@@ -63,6 +66,12 @@ Scripts:
 - `k6/health-smoke.js`: 5 VUs, 20 s, solo `/health`. Baseline seguro.
 - `k6/health-load.js`: rampa hasta 20 VUs. **No ejecutar sin aprobación** y sin
   monitorizar el VPS.
+- `k6/order-flow.js`: 2 VUs, 60 s, flujo real de pedido. Crea un tenant y un
+  producto efímeros (stock 5000) y mide `POST /orders` + `GET /orders/:id`.
+  Respeta el rate limit del gateway (300/min por IP); cargas mayores exigen
+  IPs distribuidas o un bypass de test. `K6_VUS`/`K6_DURACION` ajustan el
+  escenario. Por defecto apunta a `localhost:8080`; **no ejecutar contra
+  stage/producción sin aprobación** y monitorización.
 
 ## Remediación aplicada
 
@@ -72,14 +81,15 @@ Los hallazgos de la revisión del 2026-10-24 se corrigieron en el repositorio:
 - `/ready` exige `x-internal-key`, tiene límite propio (10/min) y caché de 5 s.
 - `trust proxy` configurable (`TRUST_PROXY`, por defecto `1`) para que el rate
   limit use la IP real detrás de Traefik/Dockploy.
-- Staging exige `EDGE_BASIC_AUTH` (`REQUIRE_EDGE_AUTH=true`): el arranque falla
-  sin ella. Un Bearer inválido ya no puede saltarse el Basic.
+- Staging se protege en el borde externo (Cloudflare Access/VPN/allowlist); el
+  gateway ya no implementa Basic ni `/api-proxy` (ADR-0005).
+- `/ready` y la superficie de diagnóstico (`/docs*`, `/metrics`) exigen
+  `x-internal-key` salvo que el entorno los declare públicos.
 - Cabeceras `Permissions-Policy`, COOP, COEP, CORP y
   `X-Permitted-Cross-Domain-Policies` añadidas.
 - Hardening de host en `security/hardening/` (SSH sin SHA-1 y Traefik sin CBC).
 
-Variables nuevas: `READY_PUBLIC`, `READY_CACHE_MS`, `TRUST_PROXY`,
-`REQUIRE_EDGE_AUTH`. Están documentadas en `.env.stage.example`,
+Variables nuevas: `READY_PUBLIC`, `READY_CACHE_MS`, `TRUST_PROXY`. Están documentadas en `.env.stage.example`,
 `.env.production.example` y `.env.example`.
 
 ## Reglas de engagement

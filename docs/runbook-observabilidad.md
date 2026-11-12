@@ -26,6 +26,14 @@ Antes de intervenir, registrar la hora, la alerta, el servicio afectado y un
 3. Para dead tuples, validar autovacuum y programar mantenimiento fuera del pico.
 4. Escalar al responsable de datos si hay bloqueos, saturación o riesgo de capacidad.
 
+## Outbox
+
+1. Revisar `core_engine_outbox_pending_events` por instancia y comparar con la tasa de `core_engine_outbox_published_events_total`.
+2. Si `core_engine_outbox_publish_failures_total` crece, revisar la conexión a RabbitMQ, las confirmaciones y las DLQ antes de tocar la tabla outbox.
+3. Buscar en logs JSON del servicio los mensajes `Fallo al publicar evento outbox`; conservar `event_id` y `x-request-id`.
+4. No borrar filas pendientes ni publicar manualmente sin evidencia: el relay reintenta en el siguiente ciclo.
+5. Confirmar que el backlog vuelve a cero y que la tasa de fallos se detiene durante dos ventanas.
+
 ## RabbitMQ y DLQ
 
 1. Identificar la cola, su tasa de publicación/entrega, consumidores y antigüedad del mensaje.

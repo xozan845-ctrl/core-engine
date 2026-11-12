@@ -2,8 +2,8 @@ import { ApiProperty } from '@nestjs/swagger';
 
 /**
  * Contrato de respuesta del inventario de bodega. `stock` es el stock físico,
- * `disponible` es el neto de reservas y `reservado`/`reservas_activas` el
- * importe reservado por órdenes activas.
+ * `disponible` es el neto de reservas y `reservado` el importe reservado por
+ * órdenes activas.
  */
 export class LineaInventarioResponseDto {
   @ApiProperty({ description: 'Empresa dueña del producto (ADR-27)', format: 'uuid', required: false })
@@ -33,9 +33,6 @@ export class LineaInventarioResponseDto {
   })
   precio_base: string;
 
-  @ApiProperty({ description: 'Alias de reservado para consumidores internos', example: 2 })
-  reservas_activas: number;
-
   @ApiProperty({
     description: 'Valor del stock disponible en centavos',
     example: 1000000,
@@ -61,4 +58,36 @@ export class ResumenInventarioResponseDto {
 
   @ApiProperty({ description: 'Valor del inventario en centavos', example: 12000000 })
   valor_inventario_cents: number;
+}
+
+export class ProveedorInventarioResponseDto {
+  @ApiProperty({ format: 'uuid' }) id: string;
+  @ApiProperty({ format: 'uuid' }) empresa_id: string;
+  @ApiProperty() codigo: string;
+  @ApiProperty() nombre: string;
+  @ApiProperty() correo: string;
+  @ApiProperty() telefono: string;
+  @ApiProperty() activo: boolean;
+}
+
+export class LoteInventarioResponseDto {
+  @ApiProperty({ format: 'uuid' }) id: string;
+  @ApiProperty({ format: 'uuid' }) empresa_id: string;
+  @ApiProperty({ format: 'uuid' }) item_id: string;
+  @ApiProperty({ nullable: true, format: 'uuid' }) proveedor_id: string | null;
+  @ApiProperty() codigo_lote: string;
+  @ApiProperty({ nullable: true, format: 'date' }) vence_en: string | null;
+  @ApiProperty() cantidad_inicial: number;
+  @ApiProperty() cantidad_disponible: number;
+}
+
+export class ConsumoLoteItemResponseDto {
+  @ApiProperty({ format: 'uuid' }) lote_id: string;
+  @ApiProperty() codigo_lote: string;
+  @ApiProperty() cantidad: number;
+}
+
+export class ConsumoLotesResponseDto {
+  @ApiProperty({ type: [ConsumoLoteItemResponseDto] }) consumidos: ConsumoLoteItemResponseDto[];
+  @ApiProperty() total_consumido: number;
 }
