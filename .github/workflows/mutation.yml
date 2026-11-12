@@ -26,8 +26,9 @@ jobs:
           - shared
           - identity-service
           - orders-service
-          - commissions-service
           - finance-service
+          # commissions-service migró a Rust (ADR-0007): su mutación se cubre
+          # con property tests y queda cargo-mutants como deuda (R-COV-3).
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-node@v7
