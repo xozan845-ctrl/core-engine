@@ -20,28 +20,37 @@ Todo PR debe incluir las capas marcadas con ✅ para el tipo de cambio tocado.
 > `/api/v2` y G-6 es gate de release. La fila "Flujo de usuario nuevo" aplica
 > cuando exista UI en el repo (hoy no la hay).
 
-## Cobertura del servicio Rust (migración ADR-0004)
+## Cobertura de los servicios Rust (migraciones ADR-0004 y ADR-0007)
 
-`packages/scheduling-service` se mide con `cargo-llvm-cov` en el job
-`rust` de CI, con PostgreSQL efímero para ejecutar también la integración:
+`packages/scheduling-service` y `packages/commissions-service` (ADR-0007) se
+miden con `cargo-llvm-cov` en el job `rust` de CI (matriz por servicio), con
+PostgreSQL efímero para ejecutar también las pruebas de integración:
 
 ```bash
+# scheduling-service
 cargo llvm-cov --locked --ignore-filename-regex 'src/main\.rs' \
   --fail-under-lines 71 --fail-under-functions 65
+
+# commissions-service (crate en rust/ durante la migración)
+cargo llvm-cov --locked --ignore-filename-regex 'src/main\.rs' \
+  --fail-under-lines 72 --fail-under-functions 68
 ```
 
 - **Alcance** (equivalente a R-COV-4): todo `src/**`, excluyendo `main.rs`
   (bootstrap). `llvm-cov` no mide ramas: la métrica de branches queda **N/A**
-  para este servicio y se justifica aquí (no se inventa un número).
-- **Baseline medido (2026-11-12)**: 72,86 % líneas y 66,82 % funciones. El
-  gate arranca en 71/65 (redondeo a la baja con el margen de 1 punto) y sube
-  +5 por release hasta el objetivo histórico 94/77/88 de R-COV-1.
-- Mientras dure la migración conviven el gate Vitest del TS (retirado en el PR
-  de conmutación) y este gate Rust; el ADR-0004 fija el orden.
-- `rabbit.rs` y `tareas.rs` tienen baja cobertura unitaria porque requieren un
-  broker real; la integración con RabbitMQ se valida con la prueba manual del
-  PR 5 y el smoke de `staging` (R-PR-8). Subir esa cobertura es deuda
-  registrada para la siguiente auditoría (R-COV-3).
+  para estos servicios y se justifica aquí (no se inventa un número).
+- **Baseline medido (2026-11-12)**: `scheduling-service` 72,86 % líneas y
+  66,82 % funciones; `commissions-service` 73,29 % líneas y 69,70 % funciones
+  con PostgreSQL efímero. Los gates arrancan en 71/65 y 72/68 (redondeo a la
+  baja con margen) y suben +5 por release hasta el objetivo histórico 94/77/88
+  de R-COV-1.
+- Mientras dure cada migración conviven el gate Vitest del TS (retirado en el
+  PR de conmutación) y este gate Rust; los ADR fijan el orden.
+- `rabbit.rs`, `outbox.rs` y el worker tienen baja cobertura unitaria porque
+  requieren un broker, una BD o tiempo real; la integración con PostgreSQL y
+  RabbitMQ se valida en el job `rust` y en el smoke de `staging` (R-PR-8).
+  Subir esa cobertura es deuda registrada para la siguiente auditoría
+  (R-COV-3).
 
 ## Umbrales de cobertura (workspaces con suite — Vitest)
 
