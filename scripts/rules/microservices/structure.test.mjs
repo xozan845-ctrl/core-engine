@@ -3,7 +3,7 @@ import { join } from 'node:path';
 import { defineSuite } from '../../engine/suite.mjs';
 import { repoRoot } from '../../engine/lib/paths.mjs';
 import { readJson, readText } from '../../engine/lib/fs.mjs';
-import { PACKAGES_DIR, SERVICES } from '../../config/project.mjs';
+import { PACKAGES_DIR, RUST_SERVICES, SERVICES } from '../../config/project.mjs';
 
 /**
  * Reglas estructurales de microservicios: cada servicio listado en
@@ -21,7 +21,10 @@ export default defineSuite({
     test('R-CD-3: cada servicio tiene package.json, src/main.ts y Dockerfile propio', () => {
       const missing = [];
       for (const svc of SERVICES) {
-        for (const rel of ['package.json', join('src', 'main.ts'), 'Dockerfile']) {
+        const artefactos = RUST_SERVICES.includes(svc)
+          ? ['Cargo.toml', join('src', 'main.rs'), 'Dockerfile']
+          : ['package.json', join('src', 'main.ts'), 'Dockerfile'];
+        for (const rel of artefactos) {
           if (!existsSync(join(serviceDir(svc), rel))) {
             missing.push(`${PACKAGES_DIR}/${svc}/${rel}`);
           }
@@ -35,7 +38,7 @@ export default defineSuite({
     });
 
     test('R-CD-3: el nombre del paquete coincide con @core/<servicio>', () => {
-      for (const svc of SERVICES) {
+      for (const svc of SERVICES.filter((service) => !RUST_SERVICES.includes(service))) {
         const pkg = readJson(join(serviceDir(svc), 'package.json'));
         assert.equal(
           pkg.name,
@@ -48,6 +51,16 @@ export default defineSuite({
     test('R-CD-4: cada Dockerfile compila su servicio, corre como node y arranca su main', () => {
       for (const svc of SERVICES) {
         const df = readText(join(serviceDir(svc), 'Dockerfile'));
+        if (RUST_SERVICES.includes(svc)) {
+          assert.match(df, /^FROM rust:/m, `${svc}/Dockerfile no compila con Rust`);
+          assert.match(df, /cargo build --release --locked/, `${svc}/Dockerfile no compila el crate`);
+          assert.match(
+            df,
+            new RegExp(`(?:ENTRYPOINT|CMD) \\["/usr/local/bin/${svc}"\\]`),
+            `${svc}/Dockerfile no arranca el binario Rust`,
+          );
+          continue;
+        }
         assert.match(
           df,
           new RegExp(`npm run build -w @core/${svc}\\b`),
@@ -81,6 +94,20 @@ export default defineSuite({
       // El runtime debe podar el árbol tras compilar: el tooling de test (vitest,
       // swc, eslint…) no debe viajar en la imagen que se publica.
       for (const svc of SERVICES) {
+        if (RUST_SERVICES.includes(svc)) {
+          const df = readText(join(serviceDir(svc), 'Dockerfile'));
+          assert.match(
+            df,
+            /^FROM debian:/m,
+            `${svc}/Dockerfile debe usar una imagen de runtime sin toolchain`,
+          );
+          assert.doesNotMatch(
+            df,
+            /COPY .*node_modules/,
+            `${svc}/Dockerfile no debe copiar node_modules al runtime`,
+          );
+          continue;
+        }
         const df = readText(join(serviceDir(svc), 'Dockerfile'));
         assert.match(
           df,

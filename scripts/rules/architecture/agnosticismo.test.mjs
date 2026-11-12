@@ -25,7 +25,6 @@ const EXCLUIDOS = [
 const GATEADOS_POR_CAPACIDAD = [
   'packages/catalog-service/src/items/items.controller.ts',
   'packages/stores-service/src/ofertas/ofertas.controller.ts',
-  'packages/scheduling-service/src/scheduling/scheduling.controller.ts',
   'packages/finance-service/src/facturacion/facturacion.controller.ts',
   'packages/logistics-service/src/envios/estado-orden.controller.ts',
 ];

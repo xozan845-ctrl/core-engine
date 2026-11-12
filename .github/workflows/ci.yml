@@ -129,10 +129,9 @@ jobs:
         run: npm run build -w @core/shared
       - name: Build identity service for integration harness
         run: npm run build -w @core/identity-service
-      - name: Build catalog, scheduling and field services for the multi-vertical matrix
+      - name: Build catalog and field services for the multi-vertical matrix
         run: |
           npm run build -w @core/catalog-service
-          npm run build -w @core/scheduling-service
           npm run build -w @core/field-service
       - name: Build orders, logistics, commissions and finance for the saga integration
         run: |
@@ -145,10 +144,53 @@ jobs:
       - name: Verify multi-vertical pack/tenant consistency (R-I-12)
         run: npm run multi-vertical:check
 
+  rust:
+    name: Rust (scheduling-service)
+    runs-on: ubuntu-24.04
+    needs: security-gate
+    env:
+      TZ: America/Managua
+      TEST_DATABASE_URL: postgres://core_engine_test:test_only@127.0.0.1:5432/core_engine_test
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_DB: core_engine_test
+          POSTGRES_USER: core_engine_test
+          POSTGRES_PASSWORD: test_only
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U core_engine_test -d core_engine_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 12
+    steps:
+      - uses: actions/checkout@v7
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: stable
+          components: rustfmt, clippy
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: packages/scheduling-service
+      - uses: taiki-e/install-action@cargo-llvm-cov
+      - name: rustfmt
+        working-directory: packages/scheduling-service
+        run: cargo fmt --check
+      - name: clippy
+        working-directory: packages/scheduling-service
+        run: cargo clippy --locked --all-targets -- -D warnings
+      - name: tests + cobertura
+        working-directory: packages/scheduling-service
+        run: >-
+          cargo llvm-cov --locked --ignore-filename-regex 'src/main\.rs'
+          --fail-under-lines 71 --fail-under-functions 65
+
   build:
     name: Build all services
     runs-on: ubuntu-24.04
-    needs: [rules-check, test, lint, integration-catalog]
+    needs: [rules-check, test, lint, integration-catalog, rust]
     steps:
       - uses: actions/checkout@v7
         with:

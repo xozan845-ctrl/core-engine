@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { compareBaselines } from './baseline-guard.mjs';
+import { RUST_SERVICES } from '../config/project.mjs';
 
 function documents(overrides = {}) {
   return {
@@ -54,4 +55,18 @@ test('baseline-guard: rechaza editar o borrar migraciones existentes', () => {
     documents(),
   );
   assert.match(altered.join('\n'), /migrations: hash alterado/);
+});
+
+test('baseline-guard: permite retirar un workspace migrado a Rust', () => {
+  const metrics = { lines: 90, branches: 80, functions: 85, statements: 88 };
+  const problems = compareBaselines(
+    documents(),
+    documents({
+      coverage: {
+        ...documents().coverage,
+        [RUST_SERVICES[0]]: metrics,
+      },
+    }),
+  );
+  assert.deepEqual(problems, []);
 });
