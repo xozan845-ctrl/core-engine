@@ -67,7 +67,7 @@ export const SERVICE_TEST_EXCEPTIONS = [];
  * Vitest y del contrato de scripts npm; su gate vive en el job `rust` de CI
  * (ADR-0004, ADR-0006 y docs/rules/test/06-estandares-cobertura.md).
  */
-export const RUST_SERVICES = ['scheduling-service', 'notifications-service'];
+export const RUST_SERVICES = ['scheduling-service', 'notifications-service', 'commissions-service'];
 
 /** Servicios Node/NestJS con suite Vitest (todos menos los migrados a Rust). */
 export const SERVICES_NODE = SERVICES.filter(

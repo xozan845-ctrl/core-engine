@@ -47,6 +47,19 @@ const packageDir = (workspace) => join(packagesRoot, workspace);
 const packageJson = (workspace) =>
   readJson(join(packageDir(workspace), 'package.json'));
 
+/**
+ * Módulos críticos de mutación (R-MT-1). Los servicios migrados a Rust salen
+ * de Stryker (ADR-0004/ADR-0007): su mutación se cubre con property tests y el
+ * gate Rust, así que se filtran por `SERVICES_NODE`.
+ */
+const CRITICOS_MUTACION = [
+  'shared',
+  'identity-service',
+  'orders-service',
+  'commissions-service',
+  'finance-service',
+];
+
 function sorted(values) {
   return [...values].sort((a, b) => a.localeCompare(b));
 }
@@ -462,13 +475,9 @@ export default defineSuite({
         'mutation.yml debe usar Node 22 porque StrykerJS 10 lo requiere',
       );
 
-      const expected = [
-        'shared',
-        'identity-service',
-        'orders-service',
-        'commissions-service',
-        'finance-service',
-      ];
+      const expected = CRITICOS_MUTACION.filter(
+        (workspace) => workspace === 'shared' || SERVICES_NODE.includes(workspace),
+      );
       const missing = expected.filter(
         (workspace) =>
           !workflow.includes(`- ${workspace}`) ||
@@ -506,13 +515,9 @@ export default defineSuite({
       });
       assert.deepEqual(missingUnit, [], `Vitest sin timezone fija: ${missingUnit.join(', ')}`);
 
-      const mutationWorkspaces = [
-        'shared',
-        'identity-service',
-        'orders-service',
-        'commissions-service',
-        'finance-service',
-      ];
+      const mutationWorkspaces = CRITICOS_MUTACION.filter(
+        (workspace) => workspace === 'shared' || SERVICES_NODE.includes(workspace),
+      );
       const missingMutation = mutationWorkspaces.filter((workspace) => {
         const config = readText(join(packageDir(workspace), 'vitest.mutation.config.ts'));
         return !config.includes("setupFiles: [resolve(repoRoot, 'scripts/config/test-timezone.mjs')]");
