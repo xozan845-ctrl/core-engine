@@ -205,9 +205,7 @@ services:
     <<: *servicio-base
     build:
       context: .
-      dockerfile: Dockerfile
-      args:
-        SERVICIO: commissions-service
+      dockerfile: packages/commissions-service/Dockerfile
     environment:
       SERVICIO: commissions-service
       PORT: 3006

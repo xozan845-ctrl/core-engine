@@ -11,12 +11,6 @@
     "functions": 91.07,
     "statements": 90.15
   },
-  "commissions-service": {
-    "lines": 21.38,
-    "branches": 15.85,
-    "functions": 23.52,
-    "statements": 19.66
-  },
   "field-service": {
     "lines": 85.24,
     "branches": 71.27,

@@ -133,11 +133,10 @@ jobs:
         run: |
           npm run build -w @core/catalog-service
           npm run build -w @core/field-service
-      - name: Build orders, logistics, commissions and finance for the saga integration
+      - name: Build orders, logistics and finance for the saga integration
         run: |
           npm run build -w @core/orders-service
           npm run build -w @core/logistics-service
-          npm run build -w @core/commissions-service
           npm run build -w @core/finance-service
       - name: Verify catalog stock projection and API contracts against ephemeral PostgreSQL
         run: npm run test:integration
@@ -161,7 +160,7 @@ jobs:
             lines: 74
             functions: 74
           - service: commissions-service
-            dir: packages/commissions-service/rust
+            dir: packages/commissions-service
             lines: 72
             functions: 68
     env:
