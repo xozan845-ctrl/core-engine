@@ -107,3 +107,9 @@ registra en `scripts/config/db-migrations.json` (R-DB-6) y la tabla lleva RLS
   Mailpit solo vive en `docker-compose.dev.yml` y en loopback.
 - Pendiente fuera de alcance: notificaciones push y plantillas de otras
   verticales.
+
+## Migración de implementación
+
+El 2026-11-12 `notifications-service` se reescribió en Rust con paridad de
+contrato (ADR-0006). Se conservan proveedor de correo (`log`/SMTP), eventos,
+idempotencia, plantillas y operación; cambia solo la implementación.

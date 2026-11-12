@@ -1,6 +1,6 @@
 # Core Engine · Core Engine
 
-Plataforma de comercio electronico distribuido (microservicios sobre Node.js/NestJS + TypeScript)
+Plataforma de comercio electronico distribuido (microservicios sobre Node.js/NestJS + TypeScript y Rust)
 conforme al documento **Core Engine_Informe.docx v1.6**: CQRS + Event Sourcing en las ordenes,
 RabbitMQ con outbox y DLQ, Postgres/Supabase-compatible con esquema por dominio, API Gateway
 con autenticacion en el borde, observabilidad (Prometheus + Grafana) y suite de pruebas.
