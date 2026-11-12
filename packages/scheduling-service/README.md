@@ -2,11 +2,10 @@
 
 Reescritura en Rust de `scheduling-service` con **paridad de contrato**. La
 decisión y los invariantes están en
-[`docs/adr/0004-scheduling-service-en-rust.md`](../../../../docs/adr/0004-scheduling-service-en-rust.md).
+[`docs/adr/0004-scheduling-service-en-rust.md`](../../docs/adr/0004-scheduling-service-en-rust.md).
 
-Durante la migración conviven el servicio TypeScript (`../src`) y este crate; el
-PR de conmutación mueve el crate a la raíz del paquete y retira el código
-anterior. **Este crate no se despliega todavía.**
+El crate vive en la raíz del paquete desde la conmutación (ADR-0004); la
+implementación TypeScript se retiró y el servicio se construye con `cargo`.
 
 ## Comandos
 

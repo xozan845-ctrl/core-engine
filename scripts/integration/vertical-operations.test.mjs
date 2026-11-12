@@ -45,7 +45,6 @@ const TENANTS = [
 let client;
 let pgService;
 let inventario;
-let scheduling;
 let field;
 const creados = new Map();
 
@@ -119,20 +118,15 @@ before(async () => {
   }
 
   const shared = await import('@core/shared');
-  const { PgService, OutboxService } = shared;
-  const [{ InventarioService }, { SchedulingService }, { FieldService }] = await Promise.all([
+  const { PgService } = shared;
+  const [{ InventarioService }, { FieldService }] = await Promise.all([
     import('../../packages/catalog-service/dist/inventario/inventario.service.js'),
-    import('../../packages/scheduling-service/dist/scheduling/scheduling.service.js'),
     import('../../packages/field-service/dist/field/field.service.js'),
   ]);
 
   pgService = new PgService({ url: connectionString });
   await pgService.onModuleInit();
   inventario = new InventarioService(pgService);
-  scheduling = new SchedulingService(
-    pgService,
-    new OutboxService(pgService, {}, 'scheduling.outbox'),
-  );
   field = new FieldService(pgService);
 });
 
@@ -219,39 +213,6 @@ test('farmacia: un servicio sin inventario no admite lotes', async () => {
     }),
     (error) => error?.codigo === 'INVENTARIO_NO_APLICA',
   );
-});
-
-test('belleza: agenda un recurso, publica disponibilidad y crea la cita', async () => {
-  const { empresaId } = tenant('belleza');
-  const recurso = await scheduling.crearRecurso(empresaId, {
-    tipo: 'profesional',
-    nombre: 'Estilista principal',
-    atributos: { especialidad: 'corte' },
-  });
-  await scheduling.crearDisponibilidad(empresaId, {
-    recurso_id: recurso.id,
-    dia_semana: 1,
-    inicia_hora: '08:00',
-    termina_hora: '18:00',
-    zona_horaria: 'America/Managua',
-  });
-  const cita = await scheduling.crearCita(empresaId, {
-    recurso_id: recurso.id,
-    inicia_en: '2032-04-12T14:00:00Z',
-    termina_en: '2032-04-12T15:00:00Z',
-    notas: 'Corte y peinado',
-  });
-
-  assert.equal(cita.empresa_id, empresaId);
-  assert.equal(cita.recurso_id, recurso.id);
-  assert.equal(cita.estado, 'reservada');
-
-  const { rows: [outbox] } = await client.query(
-    `SELECT tipo FROM scheduling.outbox
-      WHERE payload->'data'->>'cita_id' = $1`,
-    [cita.id],
-  );
-  assert.equal(outbox.tipo, 'appointment.created');
 });
 
 test('flota: crea vehículo, ruta y parada sobre el mismo tenant', async () => {

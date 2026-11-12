@@ -21,7 +21,6 @@ export const COVERAGE_THRESHOLDS = {
   'finance-service': { lines: 70, branches: 52, functions: 72 },
   'identity-service': { lines: 89, branches: 78, functions: 85 },
   'logistics-service': { lines: 99, branches: 96, functions: 99 },
-  'scheduling-service': { lines: 94, branches: 77, functions: 88 },
   'market-intelligence-service': { lines: 18, branches: 11, functions: 35 },
   'orders-service': { lines: 32, branches: 23, functions: 33 },
   'storage-service': { lines: 99, branches: 86, functions: 99 },

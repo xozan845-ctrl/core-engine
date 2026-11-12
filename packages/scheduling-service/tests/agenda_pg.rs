@@ -34,7 +34,7 @@ async fn debe_crear_disponibilidad_y_bloqueos_con_las_mismas_reglas() {
     };
     // La prueba provisiona su propio esquema para poder correr en CI sin psql.
     let pool = sqlx::PgPool::connect(&url).await.expect("postgres");
-    sqlx::raw_sql(include_str!("../../../../infra/db/init/28_scheduling.sql"))
+    sqlx::raw_sql(include_str!("../../../infra/db/init/28_scheduling.sql"))
         .execute(&pool)
         .await
         .expect("migracion scheduling");

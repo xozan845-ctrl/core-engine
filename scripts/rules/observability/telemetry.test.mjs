@@ -3,7 +3,7 @@ import { join } from 'node:path';
 import { defineSuite } from '../../engine/suite.mjs';
 import { readJson, readText } from '../../engine/lib/fs.mjs';
 import { repoRoot } from '../../engine/lib/paths.mjs';
-import { PACKAGES_DIR, SERVICES } from '../../config/project.mjs';
+import { PACKAGES_DIR, RUST_SERVICES, SERVICES } from '../../config/project.mjs';
 
 const prometheusPath = join(repoRoot, 'infra', 'prometheus', 'prometheus.yml');
 const alertsPath = join(repoRoot, 'infra', 'prometheus', 'rules', 'alerts.yml');
@@ -43,6 +43,17 @@ export default defineSuite({
     test('R-TM-1: todos los servicios exponen /metrics mediante MetricsService', () => {
       const problems = [];
       for (const service of SERVICES) {
+        if (RUST_SERVICES.includes(service)) {
+          const http = readText(join(serviceDir(service), 'src', 'http', 'mod.rs'));
+          const main = readText(join(serviceDir(service), 'src', 'main.rs'));
+          if (!/\/metrics/.test(http)) {
+            problems.push(`${service}: router sin GET /metrics`);
+          }
+          if (!/Metrics::nueva/.test(main)) {
+            problems.push(`${service}: main no crea el registro de métricas`);
+          }
+          continue;
+        }
         const appModule = readText(join(serviceDir(service), 'src', 'app.module.ts'));
         const main = readText(join(serviceDir(service), 'src', 'main.ts'));
         if (!/\bMetricsModule\b/.test(appModule)) {
