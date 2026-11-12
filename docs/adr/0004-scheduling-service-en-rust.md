@@ -1,7 +1,7 @@
 # ADR-0004: Reescritura de `scheduling-service` en Rust sin cambio de contrato
 
 - **Fecha**: 2026-11-11
-- **Estado**: Propuesto — migración en curso sobre `feat/scheduling-rust`
+- **Estado**: Aceptado — implementación completa en `feat/scheduling-rust`; pendiente el smoke de `staging` antes del merge a `develop`
 - **Ámbito**: `scheduling-service` (HTTP público e interno, PostgreSQL, RabbitMQ, Outbox, métricas)
 
 ## Contexto
@@ -154,13 +154,37 @@ permanece en borrador hasta cumplir la verificación de paridad.
 
 ## Estado de implementación (2026-11-12)
 
-- PR 0 (ADR) y PR 2-5 mergeados en `feat/scheduling-rust`: andamiaje + gate CI,
-  recursos/disponibilidad/bloqueos, citas/recordatorios/Outbox y
-  RabbitMQ/consumidor/worker.
+Implementación completa sobre `feat/scheduling-rust`; **no mergeada a
+`develop`** hasta cumplir el gate de `staging`.
+
+| PR | Estado | Alcance |
+|---|---|---|
+| #555 | MERGED | ADR-0004 (este documento) |
+| #560 | MERGED | Andamiaje Rust + job `rust` de CI (R-CI-1) |
+| #561 | MERGED | Recursos, disponibilidad y bloqueos |
+| #562 | MERGED | Citas, recordatorios y Outbox |
+| #563 | MERGED | RabbitMQ, consumidor y worker |
+| #564 | MERGED | Imagen Docker + gate `cargo-llvm-cov` |
+| #565 | MERGED | Conmutación: se retira TypeScript y se mueve el crate a la raíz |
+
 - Cobertura Rust medida con `cargo-llvm-cov` sobre PostgreSQL efímero:
   **72,86 % líneas / 66,82 % funciones** (sin `main.rs`), gate 71/65 con
-  ratchet +5 por release hasta 94/77/88 (R-COV-1, enmienda registrada en
+  ratchet +5 por release hasta 94/77/88 (R-COV-1, enmienda en
   `docs/rules/test/06-estandares-cobertura.md`).
-- Imagen Rust verificada localmente (build + `/health` con PostgreSQL y
-  RabbitMQ reales); la conmutación del Dockerfile/CI y el retiro del TS
-  quedan para el PR 7.
+- Imagen Rust verificada con PostgreSQL y RabbitMQ reales (`/health`, cola
+  declarada, outbox publicado, evento procesado y DLQ).
+- El contrato OpenAPI versionado no cambió (`docs/openapi/scheduling-service/`).
+- **Cambio respecto al plan**: la suite diferencial TS↔Rust no se ejecutó como
+  PR independiente porque el TypeScript se retiró en la conmutación. La
+  paridad se verificó con los OpenAPI goldens, la prueba de integración Rust
+  contra PostgreSQL real y las corridas manuales con RabbitMQ. La comparación
+  diferencial queda como técnica aplicable a futuras migraciones, no como gate
+  pendiente de este ADR.
+
+## Gate pendiente antes de `develop`
+
+1. Desplegar la imagen Rust en `staging` y ejecutar `scripts/tools/smoke-verticals.mjs`
+   (recurso → disponibilidad → cita) contra el contenedor.
+2. Correr `npm run demo` con el stack completo (el compose ya construye la
+   imagen Rust).
+3. Verificar el run de `ci.yml` en `develop` tras el merge (R-PR-8).
