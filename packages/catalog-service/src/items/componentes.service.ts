@@ -58,7 +58,7 @@ export class ComponentesService {
     itemId: string,
     input: CrearComponenteInput,
   ): Promise<ComponenteItem> {
-    const padre = await this.verificarItem(empresaId, itemId);
+    await this.verificarItem(empresaId, itemId);
     const componenteId = String(input.componente_item_id ?? '');
     if (!UUID.test(componenteId)) {
       throw new DomainError('COMPONENTE_INVALIDO', 'El componente debe ser un UUID.');
@@ -68,10 +68,12 @@ export class ComponentesService {
     }
     const cantidad = this.validarCantidad(input.cantidad);
     const componente = await this.verificarItem(empresaId, componenteId);
-    if (padre.tipo !== 'producto' || componente.tipo !== 'producto') {
+    // El padre puede ser producto, servicio o alquiler (una reparacion consume
+    // repuestos); los componentes siempre deben ser productos inventariables.
+    if (componente.tipo !== 'producto') {
       throw new DomainError(
         'COMPONENTE_INVALIDO',
-        'Solo los productos pueden componerse de productos.',
+        'Los componentes deben ser productos de la empresa.',
       );
     }
     if (await this.hayCiclo(empresaId, itemId, componenteId)) {

@@ -7,6 +7,7 @@ export const CAPACIDADES = {
   AGENDA_RECURSOS: 'agenda_recursos',
   HISTORIA_CLINICA: 'historia_clinica',
   RECETAS: 'recetas',
+  REGISTROS: 'registros',
   FULFILLMENT_DELIVERY: 'fulfillment_delivery',
   FULFILLMENT_PICKUP: 'fulfillment_pickup',
   FULFILLMENT_ONSITE: 'fulfillment_onsite',

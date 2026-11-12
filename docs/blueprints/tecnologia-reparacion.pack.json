@@ -1,0 +1,29 @@
+{
+  "codigo": "pack_tecnologia_reparacion",
+  "version": 1,
+  "vertical_codigo": "tecnologia_reparacion",
+  "nombre": "Tecnología y reparación",
+  "descripcion": "Venta de tecnología, repuestos e insumos con reparación, agenda, logística propia/global/híbrida y crédito.",
+  "config": {
+    "modelo": "mixto"
+  },
+  "modelos": [
+    { "codigo": "mixto" }
+  ],
+  "capacidades": [
+    { "codigo": "catalogo_items" },
+    { "codigo": "inventario_stock" },
+    { "codigo": "codigo_barras" },
+    { "codigo": "inventario_lotes" },
+    { "codigo": "agenda_recursos" },
+    { "codigo": "cotizaciones" },
+    { "codigo": "facturacion" },
+    { "codigo": "liquidaciones" },
+    { "codigo": "fulfillment_delivery" },
+    { "codigo": "fulfillment_pickup" },
+    { "codigo": "fulfillment_onsite" },
+    { "codigo": "logistica_rutas" },
+    { "codigo": "ventas_credito" },
+    { "codigo": "registros" }
+  ]
+}
