@@ -20,6 +20,7 @@
   "finance.regimenes_fiscales",
   "finance.series_comprobantes",
   "finance.sujetos_fiscales",
+  "identity.api_keys",
   "identity.outbox",
   "identity.sesiones",
   "identity.usuarios",

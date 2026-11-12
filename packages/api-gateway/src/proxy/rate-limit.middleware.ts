@@ -96,7 +96,7 @@ export class RateLimitMiddleware implements NestMiddleware {
       next();
       return;
     }
-    const esLogin = req.method === 'POST' && /\/api\/v2\/auth\/login$/.test(req.path);
+    const esLogin = req.method === 'POST' && /^\/api\/v2\/auth\/(login|token)$/.test(req.path);
     const opciones: OpcionesLimite = esLogin
       ? { limite: this.login.limite, ttlMs: this.login.ttl_ms, clave: 'login' }
       : { limite: this.globales.limite, ttlMs: this.globales.ttl_ms };

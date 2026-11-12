@@ -29,6 +29,9 @@ export const POLITICAS_RUTAS: PoliticaRuta[] = [
   { patron: /^\/api\/v2\/auth\/registro$/, metodos: ['POST'], roles: null },
     { patron: /^\/api\/v2\/auth\/login$/, metodos: ['POST'], roles: null },
     { patron: /^\/api\/v2\/auth\/refresh$/, metodos: ['POST'], roles: null },
+    // Intercambio de API key por JWT corto (ADR-0005/R-GW-8): la key es la
+    // credencial; el resto de rutas siguen exigiendo el JWT resultante.
+    { patron: /^\/api\/v2\/auth\/token$/, metodos: ['POST'], roles: null },
     { patron: /^\/api\/v2\/auth\/restablecer-contrasena$/, metodos: ['POST'], roles: null },
     { patron: /^\/api\/v2\/auth\/restablecer-contrasena\/confirmar$/, metodos: ['POST'], roles: null },
     // Packs versionados: el empresario debe poder elegir el pack al crear su
@@ -257,6 +260,12 @@ export const POLITICAS_RUTAS: PoliticaRuta[] = [
     patron: /^\/api\/v2\/storage\//,
     metodos: ['*'],
     roles: Object.values(ROLES),
+  },
+// API keys de integración: el empresario sobre su tenant; admin sobre cualquiera.
+  {
+    patron: /^\/api\/v2\/api-keys(\/|$)/,
+    metodos: ['GET', 'POST', 'DELETE'],
+    roles: [ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.EMPRESARIO],
   },
 // admin
   {

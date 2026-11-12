@@ -12,9 +12,10 @@ import { ExtensionesModule } from './extensiones/extensiones.module';
 import { PartesModule } from './partes/partes.module';
 import { PersonalModule } from './personal/personal.module';
 import { RegistrosModule } from './registros/registros.module';
+import { ApiKeysModule } from './api-keys/api-keys.module';
 
 @Module({
-  imports: [PgModule, RabbitModule, OutboxModule, MetricsModule, EmailModule, AuthModule, UsuariosModule, EmpresasModule, ConfiguracionSitioModule, CapacidadesModule, PacksModule, ExtensionesModule, PartesModule, PersonalModule, RegistrosModule],
+  imports: [PgModule, RabbitModule, OutboxModule, MetricsModule, EmailModule, AuthModule, UsuariosModule, EmpresasModule, ConfiguracionSitioModule, CapacidadesModule, PacksModule, ExtensionesModule, PartesModule, PersonalModule, RegistrosModule, ApiKeysModule],
   providers: [SeedService],
   controllers: [InternalController],
 })
