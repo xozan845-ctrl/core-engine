@@ -53,25 +53,33 @@ describe('RegistrosService (Fase A)', () => {
     expect((pg.queryOne as Mock).mock.calls.at(-1)?.[0]).toContain('INSERT INTO identity.partes_registros');
   });
 
-  it('usa historia_clinica para los tipos que no son receta', async () => {
+  it('separa tipos clínicos de los registros operativos genéricos', async () => {
     const { servicio, pg, capacidades } = crear();
-    (pg.queryOne as Mock).mockResolvedValueOnce({ id: PARTE }).mockResolvedValueOnce({
-      ...fila,
-      tipo: 'historia_clinica',
-    });
+    (pg.queryOne as Mock)
+      .mockResolvedValueOnce({ id: PARTE })
+      .mockResolvedValueOnce({ ...fila, tipo: 'historia_clinica' });
     (capacidades.activasDeEmpresas as Mock).mockResolvedValue([
       { empresa_id: EMPRESA, capacidad_codigo: 'historia_clinica', activo: true },
     ]);
-
     await servicio.crear(EMPRESA, PARTE, { tipo: 'historia_clinica' }, actor);
-    expect(capacidades.activasDeEmpresas).toHaveBeenCalledWith([EMPRESA], ['historia_clinica']);
+    expect(capacidades.activasDeEmpresas).toHaveBeenLastCalledWith([EMPRESA], ['historia_clinica']);
+
+    (pg.queryOne as Mock).mockResolvedValueOnce({ id: PARTE }).mockResolvedValueOnce({
+      ...fila,
+      tipo: 'diagnostico',
+    });
+    (capacidades.activasDeEmpresas as Mock).mockResolvedValue([
+      { empresa_id: EMPRESA, capacidad_codigo: 'registros', activo: true },
+    ]);
+    await servicio.crear(EMPRESA, PARTE, { tipo: 'diagnostico' }, actor);
+    expect(capacidades.activasDeEmpresas).toHaveBeenLastCalledWith([EMPRESA], ['registros']);
   });
 
   it('rechaza el alta si la capacidad esta inactiva', async () => {
     const { servicio, pg, capacidades } = crear();
     (pg.queryOne as Mock).mockResolvedValueOnce({ id: PARTE });
     (capacidades.activasDeEmpresas as Mock).mockResolvedValue([
-      { empresa_id: EMPRESA, capacidad_codigo: 'historia_clinica', activo: false },
+      { empresa_id: EMPRESA, capacidad_codigo: 'registros', activo: false },
     ]);
 
     await expect(
@@ -136,7 +144,7 @@ describe('RegistrosService (Fase A)', () => {
     const { servicio, pg, capacidades } = crear();
     (pg.queryOne as Mock).mockResolvedValue({ id: PARTE });
     (capacidades.activasDeEmpresas as Mock).mockResolvedValue([
-      { empresa_id: EMPRESA, capacidad_codigo: 'historia_clinica', activo: true },
+      { empresa_id: EMPRESA, capacidad_codigo: 'registros', activo: true },
     ]);
 
     await expect(servicio.crear(EMPRESA, PARTE, { tipo: 'Tipo Invalido' }, actor)).rejects.toMatchObject({

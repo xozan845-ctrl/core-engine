@@ -245,7 +245,13 @@ export class RegistrosService {
   }
 
   private async exigirCapacidad(empresaId: string, tipo: string): Promise<void> {
-    const requerida = tipo === 'receta' ? CAPACIDADES.RECETAS : CAPACIDADES.HISTORIA_CLINICA;
+    // Los tipos clínicos conservan su capacidad; el resto usa la genérica.
+    const requerida =
+      tipo === 'receta'
+        ? CAPACIDADES.RECETAS
+        : tipo === 'historia_clinica'
+          ? CAPACIDADES.HISTORIA_CLINICA
+          : CAPACIDADES.REGISTROS;
     const filas = await this.capacidades.activasDeEmpresas([empresaId], [requerida]);
     if (!filas.some((fila) => fila.activo && fila.empresa_id === empresaId)) {
       throw new CapabilityDisabledError([requerida], empresaId);
