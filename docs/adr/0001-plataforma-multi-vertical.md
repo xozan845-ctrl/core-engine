@@ -124,6 +124,11 @@ Se introduce la abstracción `item` con `tipo` igual a `producto`, `servicio` o
   resuelto sustituye el precio base del item y el margen del vendedor se aplica
   igual (RN-01). Sin coincidencia se conserva el snapshot de la oferta, y una
   selección explícita inexistente falla cerrada.
+- `catalog.ubicaciones` modela bodegas, sucursales y almacenes;
+  `catalog.item_stock_ubicacion` desglosa el stock y `catalog.items.stock`
+  conserva el total. La primera ubicación absorbe el stock existente, las
+  transferencias mueven cantidades sin cambiar el total y un trigger distribuye
+  los cambios directos de stock a la ubicación predeterminada.
 
 `stores.ofertas` usará `item_type + item_id`. El stock será nullable y los
 servicios podrán declarar capacidad o slots.
