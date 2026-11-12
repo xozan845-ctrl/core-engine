@@ -49,4 +49,9 @@ Variables de entorno: `PORT` (3011), `SERVICIO`, `DATABASE_URL`,
   cada 60 s, con contexto de correlación de servicio.
 - Capability guard contra la API interna de identity (fail-closed 503).
 
-Pendiente en el PR 6: imagen Docker y cobertura (`cargo-llvm-cov`).
+- **Imagen Docker** multi-stage (`rust:1.89-bookworm` → `debian:bookworm-slim`)
+  con el mismo contrato de contenedor (puerto 3011, variables de entorno).
+- **Cobertura** con `cargo-llvm-cov` y gate 71/65 (baseline 72,86/66,82), que
+  sube +5 por release hasta el objetivo 94/77/88.
+
+Pendiente en el PR 7: retirar el TypeScript y conmutar el servicio.

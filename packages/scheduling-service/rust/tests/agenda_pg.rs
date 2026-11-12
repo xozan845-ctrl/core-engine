@@ -32,6 +32,18 @@ async fn debe_crear_disponibilidad_y_bloqueos_con_las_mismas_reglas() {
         eprintln!("TEST_DATABASE_URL no definida: se omite la integración");
         return;
     };
+    // La prueba provisiona su propio esquema para poder correr en CI sin psql.
+    let pool = sqlx::PgPool::connect(&url).await.expect("postgres");
+    sqlx::raw_sql(include_str!("../../../../infra/db/init/28_scheduling.sql"))
+        .execute(&pool)
+        .await
+        .expect("migracion scheduling");
+    sqlx::query("ALTER TABLE scheduling.citas ADD COLUMN IF NOT EXISTS parte_id uuid")
+        .execute(&pool)
+        .await
+        .expect("compatibilidad parte_id");
+    pool.close().await;
+
     let db = Arc::new(Db::conectar(&url).await.expect("postgres"));
     let agenda = Agenda::nueva(db.clone(), Arc::new(PartesPermitidas), "scheduling.outbox");
     let empresa = Uuid::new_v4().to_string();

@@ -20,6 +20,29 @@ Todo PR debe incluir las capas marcadas con ✅ para el tipo de cambio tocado.
 > `/api/v2` y G-6 es gate de release. La fila "Flujo de usuario nuevo" aplica
 > cuando exista UI en el repo (hoy no la hay).
 
+## Cobertura del servicio Rust (migración ADR-0004)
+
+`packages/scheduling-service/rust` se mide con `cargo-llvm-cov` en el job
+`rust` de CI, con PostgreSQL efímero para ejecutar también la integración:
+
+```bash
+cargo llvm-cov --locked --ignore-filename-regex 'src/main\.rs' \
+  --fail-under-lines 71 --fail-under-functions 65
+```
+
+- **Alcance** (equivalente a R-COV-4): todo `src/**`, excluyendo `main.rs`
+  (bootstrap). `llvm-cov` no mide ramas: la métrica de branches queda **N/A**
+  para este servicio y se justifica aquí (no se inventa un número).
+- **Baseline medido (2026-11-12)**: 72,86 % líneas y 66,82 % funciones. El
+  gate arranca en 71/65 (redondeo a la baja con el margen de 1 punto) y sube
+  +5 por release hasta el objetivo histórico 94/77/88 de R-COV-1.
+- Mientras dure la migración conviven el gate Vitest del TS (retirado en el PR
+  de conmutación) y este gate Rust; el ADR-0004 fija el orden.
+- `rabbit.rs` y `tareas.rs` tienen baja cobertura unitaria porque requieren un
+  broker real; la integración con RabbitMQ se valida con la prueba manual del
+  PR 5 y el smoke de `staging` (R-PR-8). Subir esa cobertura es deuda
+  registrada para la siguiente auditoría (R-COV-3).
+
 ## Umbrales de cobertura (workspaces con suite — Vitest)
 
 | Métrica | Mínimo global (objetivo) |
