@@ -20,11 +20,12 @@ Todo PR debe incluir las capas marcadas con ✅ para el tipo de cambio tocado.
 > `/api/v2` y G-6 es gate de release. La fila "Flujo de usuario nuevo" aplica
 > cuando exista UI en el repo (hoy no la hay).
 
-## Cobertura de los servicios Rust (migraciones ADR-0004 y ADR-0006)
+## Cobertura de los servicios Rust (migraciones ADR-0004, ADR-0006 y ADR-0007)
 
-`packages/scheduling-service` y `packages/notifications-service` se miden con
-`cargo-llvm-cov` en el job `rust` de CI (matriz por servicio), con PostgreSQL
-efímero para ejecutar también las pruebas de integración:
+`packages/scheduling-service`, `packages/notifications-service` y
+`packages/commissions-service` se miden con `cargo-llvm-cov` en el job `rust`
+de CI (matriz por servicio), con PostgreSQL efímero para ejecutar también las
+pruebas de integración:
 
 ```bash
 # scheduling-service
@@ -34,6 +35,10 @@ cargo llvm-cov --locked --ignore-filename-regex 'src/main\.rs' \
 # notifications-service
 cargo llvm-cov --locked --ignore-filename-regex 'src/main\.rs' \
   --fail-under-lines 74 --fail-under-functions 74
+
+# commissions-service (crate en rust/ durante la migración)
+cargo llvm-cov --locked --ignore-filename-regex 'src/main\.rs' \
+  --fail-under-lines 72 --fail-under-functions 68
 ```
 
 - **Alcance** (equivalente a R-COV-4): todo `src/**`, excluyendo `main.rs`
@@ -41,16 +46,18 @@ cargo llvm-cov --locked --ignore-filename-regex 'src/main\.rs' \
   para estos servicios y se justifica aquí (no se inventa un número).
 - **Baseline medido (2026-11-12)**: `scheduling-service` 72,86 % líneas y
   66,82 % funciones; `notifications-service` 75,36 % líneas y 75,38 %
-  funciones con la integración PostgreSQL. Los gates arrancan en 71/65 y 74/74
-  (redondeo a la baja con el margen de 1 punto) y suben +5 por release hasta el
+  funciones con la integración PostgreSQL; `commissions-service` 73,29 % líneas
+  y 69,70 % funciones con PostgreSQL efímero. Los gates arrancan en 71/65,
+  74/74 y 72/68 (redondeo a la baja con margen) y suben +5 por release hasta el
   objetivo histórico 94/77/88 de R-COV-1.
-- Mientras dure cada migración conviven el gate Vitest del TS (retirado en el PR
-  de conmutación) y este gate Rust; los ADR fijan el orden.
-- `rabbit.rs` y, en `notifications-service`, `consumidor.rs`/`db.rs` tienen baja
-  cobertura unitaria porque requieren broker o base de datos reales; la
-  integración con PostgreSQL y RabbitMQ se valida en el job `rust` y en el
-  smoke de `staging` (R-PR-8). Subir esa cobertura es deuda registrada para la
-  siguiente auditoría (R-COV-3).
+- Mientras dure cada migración conviven el gate Vitest del TS (retirado en el
+  PR de conmutación) y este gate Rust; los ADR fijan el orden.
+- `rabbit.rs` y, en `notifications-service`, `consumidor.rs`/`db.rs`, y en
+  `commissions-service` `outbox.rs`/el worker tienen baja cobertura unitaria
+  porque requieren broker, base de datos o tiempo real; la integración con
+  PostgreSQL y RabbitMQ se valida en el job `rust` y en el smoke de `staging`
+  (R-PR-8). Subir esa cobertura es deuda registrada para la siguiente auditoría
+  (R-COV-3).
 
 ## Umbrales de cobertura (workspaces con suite — Vitest)
 
