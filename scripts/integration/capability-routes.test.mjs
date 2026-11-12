@@ -141,10 +141,6 @@ before(async () => {
     import('../../packages/catalog-service/dist/inventario/inventario.controller.js'),
     import('../../packages/catalog-service/dist/inventario/inventario.service.js'),
   ]);
-  const [{ SchedulingController }, { SchedulingService }] = await Promise.all([
-    import('../../packages/scheduling-service/dist/scheduling/scheduling.controller.js'),
-    import('../../packages/scheduling-service/dist/scheduling/scheduling.service.js'),
-  ]);
   const [{ FieldController }, { FieldService }] = await Promise.all([
     import('../../packages/field-service/dist/field/field.controller.js'),
     import('../../packages/field-service/dist/field/field.service.js'),
@@ -154,15 +150,13 @@ before(async () => {
     listar: async () => [],
     listarLotes: async () => [],
   };
-  const schedulingStub = { listarRecursos: async () => [] };
   const fieldStub = { listarRutas: async () => [] };
 
   class RutasModule {}
   Module({
-    controllers: [InventarioController, SchedulingController, FieldController],
+    controllers: [InventarioController, FieldController],
     providers: [
       { provide: InventarioService, useValue: inventarioStub },
-      { provide: SchedulingService, useValue: schedulingStub },
       { provide: FieldService, useValue: fieldStub },
     ],
   })(RutasModule);
@@ -190,13 +184,6 @@ test('retail permite inventario y belleza recibe CAPACIDAD_NO_ACTIVA', async () 
   const respuesta = await http.get('/api/v2/admin/inventario').set(headers('belleza')).expect(403);
   assert.equal(respuesta.body.codigo, 'CAPACIDAD_NO_ACTIVA');
   assert.ok(respuesta.body.detalles.capacidades.includes('inventario_stock'));
-});
-
-test('belleza permite agenda y retail no', async () => {
-  await http.get('/api/v2/scheduling/recursos').set(headers('belleza')).expect(200);
-  const respuesta = await http.get('/api/v2/scheduling/recursos').set(headers('retail')).expect(403);
-  assert.equal(respuesta.body.codigo, 'CAPACIDAD_NO_ACTIVA');
-  assert.deepEqual(respuesta.body.detalles.capacidades, ['agenda_recursos']);
 });
 
 test('flota permite rutas y retail no', async () => {

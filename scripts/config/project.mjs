@@ -63,6 +63,18 @@ export const SERVICES = [
 export const SERVICE_TEST_EXCEPTIONS = [];
 
 /**
+ * Servicios con implementación Rust (crate + cargo). Quedan fuera del runner
+ * Vitest y del contrato de scripts npm; su gate vive en el job `rust` de CI
+ * (ADR-0004 y docs/rules/test/06-estandares-cobertura.md).
+ */
+export const RUST_SERVICES = ['scheduling-service'];
+
+/** Servicios Node/NestJS con suite Vitest (todos menos los migrados a Rust). */
+export const SERVICES_NODE = SERVICES.filter(
+  (service) => !RUST_SERVICES.includes(service),
+);
+
+/**
  * Tipos de Conventional Commits admitidos (R-GC-1).
  */
 export const ALLOWED_COMMIT_TYPES = [
