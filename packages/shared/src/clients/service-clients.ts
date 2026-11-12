@@ -236,6 +236,40 @@ export async function cotizarItemReserva(input: {
   return res.data;
 }
 
+export interface PrecioLineaExterna {
+  clave: string;
+  origen: 'lista' | 'escala' | 'base';
+  precio_unitario_cents: number;
+  precio_total_cents: number;
+}
+
+export type PreciosExternos =
+  | { estado: 'ok'; precios: PrecioLineaExterna[] }
+  | { estado: 'no_encontrado' }
+  | { estado: 'error' };
+
+/**
+ * Resuelve precios por cantidad/lista/segmento en una sola llamada.
+ * `no_encontrado` permite fallar cerrado cuando el llamador pidió una lista o
+ * segmento explícito; `error` habilita la degradación a precio de oferta.
+ */
+export async function resolverPreciosItems(input: {
+  empresa_id: string;
+  lineas: { clave: string; item_id: string; cantidad: number }[];
+  lista_codigo?: string;
+  segmento_codigo?: string;
+}): Promise<PreciosExternos> {
+  if (input.lineas.length === 0) return { estado: 'ok', precios: [] };
+  const res = await pedir<{ precios: PrecioLineaExterna[] }>(
+    `${catalogUrl()}/internal/items/precios`,
+    { method: 'POST', body: JSON.stringify(input) },
+  );
+  if (res.status === 0) return { estado: 'error' };
+  if (res.status === 404) return { estado: 'no_encontrado' };
+  if (res.status < 200 || res.status >= 300 || !res.data) return { estado: 'error' };
+  return { estado: 'ok', precios: res.data.precios };
+}
+
 /** `true`/`false` si scheduling respondió; `null` si no está disponible. */
 export async function verificarDisponibilidadReserva(input: {
   empresa_id: string;

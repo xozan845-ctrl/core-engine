@@ -1,6 +1,11 @@
 import { CreateOrderCommandHandler } from './handlers/create-order-command.handler';
 import { CreateOrderCommand } from './commands/create-order.command';
-import { CapabilityDisabledError, Money } from '@core/shared';
+import {
+  CapabilityDisabledError,
+  Money,
+  NotFoundError,
+  ServiceUnavailableError,
+} from '@core/shared';
 
 class PgFake {
   query = vi.fn(async () => []);
@@ -94,6 +99,9 @@ function crearHandler(
         if (storesThrows) throw new Error('stores down');
         if (storesFails) return { ok: false } as Response;
         return { ok: true, json: async () => sobreOfertas } as Response;
+      }
+      if (u.includes('/internal/items/precios')) {
+        return { ok: true, json: async () => ({ precios: [] }) } as Response;
       }
       if (u.includes('/internal/items/') && u.includes('/cotizacion')) {
         return { ok: true, json: async () => ({ total_cents: 90000, dias: 3 }) } as Response;
@@ -335,10 +343,13 @@ describe('CreateOrderCommandHandler (CQRS + Event Sourcing)', () => {
     expect(fetchMock.mock.calls[0][1]).toMatchObject({
       headers: { 'x-internal-key': '' },
     });
-    expect(fetchMock.mock.calls[1][0]).toBe(
+    const llamadaStock = fetchMock.mock.calls.find(([url]) =>
+      String(url).includes('/internal/items/lote'),
+    );
+    expect(llamadaStock?.[0]).toBe(
       'http://catalog-service:3002/internal/items/lote?skus=ACE-001',
     );
-    expect(fetchMock.mock.calls[1][1]).toMatchObject({
+    expect(llamadaStock?.[1]).toMatchObject({
       headers: { 'x-internal-key': '' },
     });
     expect(pg.query).toHaveBeenCalledWith(
@@ -747,6 +758,132 @@ describe('Fulfillment y cotizaciones por capacidad', () => {
       codigo: 'CAPACIDAD_NO_ACTIVA',
       detalles: { capacidades: ['fulfillment_onsite'] },
     });
+  });
+
+
+  it('aplica la escala por cantidad al precio base y conserva el margen RN-01', async () => {
+    const { handler, fetchMock } = crearHandler([ofertaActiva], 'ok');
+    const base = fetchMock.getMockImplementation() as (
+      url: string | URL | Request,
+      init?: RequestInit,
+    ) => Promise<Response>;
+    fetchMock.mockImplementation(async (url, init) => {
+      if (String(url).includes('/internal/items/precios')) {
+        return {
+          ok: true,
+          status: 200,
+          json: async () => ({
+            precios: [{
+              clave: 'oferta-1',
+              origen: 'escala',
+              precio_unitario_cents: 8000,
+              precio_total_cents: 80000,
+            }],
+          }),
+        } as Response;
+      }
+      return base(url, init);
+    });
+
+    const vista = await handler.ejecutar(
+      {
+        tipo_orden: 'compra',
+        items: [{ oferta_id: 'oferta-1', cantidad: 10 }],
+      },
+      'comprador-1',
+    );
+
+    // 8000 base + 15 % de margen = 9200 por unidad; 10 unidades = 92000.
+    expect(vista.total_cents).toBe(92000);
+    expect(vista.items[0]).toMatchObject({ precio_unitario_cents: 9200, cantidad: 10 });
+  });
+
+  it('falla cerrado si la lista o el segmento de precio no existen', async () => {
+    const { handler, fetchMock } = crearHandler([ofertaActiva], 'ok');
+    fetchMock.mockImplementation(async (url) => {
+      if (String(url).includes('/internal/items/precios')) {
+        return { ok: false, status: 404 } as Response;
+      }
+      return { ok: true, json: async () => [ofertaActiva] } as Response;
+    });
+
+    await expect(
+      handler.ejecutar(
+        {
+          tipo_orden: 'compra',
+          lista_precio_codigo: 'mayorista',
+          items: [{ oferta_id: 'oferta-1', cantidad: 1 }],
+        },
+        'comprador-1',
+      ),
+    ).rejects.toBeInstanceOf(NotFoundError);
+  });
+
+  it('falla cerrado si el catalogo no responde con una seleccion explicita', async () => {
+    const { handler, fetchMock } = crearHandler([ofertaActiva], 'ok');
+    fetchMock.mockImplementation(async (url) => {
+      if (String(url).includes('/internal/items/precios')) {
+        return { ok: false, status: 500 } as Response;
+      }
+      return { ok: true, json: async () => [ofertaActiva] } as Response;
+    });
+
+    await expect(
+      handler.ejecutar(
+        {
+          tipo_orden: 'compra',
+          segmento_codigo: 'mayorista',
+          items: [{ oferta_id: 'oferta-1', cantidad: 1 }],
+        },
+        'comprador-1',
+      ),
+    ).rejects.toBeInstanceOf(ServiceUnavailableError);
+  });
+
+  it('degrada al precio de la oferta si el catalogo no conoce el item sin seleccion', async () => {
+    const { handler, fetchMock } = crearHandler([ofertaActiva], 'ok');
+    const base = fetchMock.getMockImplementation() as (
+      url: string | URL | Request,
+      init?: RequestInit,
+    ) => Promise<Response>;
+    fetchMock.mockImplementation(async (url, init) => {
+      if (String(url).includes('/internal/items/precios')) {
+        return { ok: false, status: 404 } as Response;
+      }
+      return base(url, init);
+    });
+
+    const vista = await handler.ejecutar(
+      {
+        tipo_orden: 'compra',
+        items: [{ oferta_id: 'oferta-1', cantidad: 1 }],
+      },
+      'comprador-1',
+    );
+    expect(vista.total_cents).toBe(115000);
+  });
+
+  it('degrada al precio de la oferta si el catalogo cae sin seleccion explicita', async () => {
+    const { handler, fetchMock } = crearHandler([ofertaActiva], 'ok');
+    const base = fetchMock.getMockImplementation() as (
+      url: string | URL | Request,
+      init?: RequestInit,
+    ) => Promise<Response>;
+    fetchMock.mockImplementation(async (url, init) => {
+      if (String(url).includes('/internal/items/precios')) {
+        return { ok: false, status: 500 } as Response;
+      }
+      return base(url, init);
+    });
+
+    const vista = await handler.ejecutar(
+      {
+        tipo_orden: 'compra',
+        items: [{ oferta_id: 'oferta-1', cantidad: 1 }],
+      },
+      'comprador-1',
+    );
+    expect(vista.total_cents).toBe(115000);
   });
 
   it('permite pickup y delivery cuando el tenant tiene ambas capacidades', async () => {
