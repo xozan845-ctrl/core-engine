@@ -429,14 +429,18 @@ export class CreateOrderCommandHandler {
         ...(comando.lista_precio_codigo ? { lista_codigo: comando.lista_precio_codigo } : {}),
         ...(comando.segmento_codigo ? { segmento_codigo: comando.segmento_codigo } : {}),
       });
+      // Sin seleccion explicita se degrada al precio de la oferta (R-AR-2):
+      // un catalogo antiguo o caido no debe bloquear ventas existentes.
       if (respuesta.estado === 'no_encontrado') {
-        throw new NotFoundError(
-          'Lista de precios',
-          comando.lista_precio_codigo ?? comando.segmento_codigo ?? '',
-        );
+        if (comando.lista_precio_codigo || comando.segmento_codigo) {
+          throw new NotFoundError(
+            'Lista de precios',
+            comando.lista_precio_codigo ?? comando.segmento_codigo ?? '',
+          );
+        }
+        continue;
       }
       if (respuesta.estado === 'error') {
-        // Sin seleccion explicita se degrada al precio de la oferta (R-AR-2).
         if (comando.lista_precio_codigo || comando.segmento_codigo) {
           throw new ServiceUnavailableError('catalog-service');
         }

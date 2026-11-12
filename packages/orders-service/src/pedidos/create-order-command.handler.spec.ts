@@ -840,6 +840,29 @@ describe('Fulfillment y cotizaciones por capacidad', () => {
     ).rejects.toBeInstanceOf(ServiceUnavailableError);
   });
 
+  it('degrada al precio de la oferta si el catalogo no conoce el item sin seleccion', async () => {
+    const { handler, fetchMock } = crearHandler([ofertaActiva], 'ok');
+    const base = fetchMock.getMockImplementation() as (
+      url: string | URL | Request,
+      init?: RequestInit,
+    ) => Promise<Response>;
+    fetchMock.mockImplementation(async (url, init) => {
+      if (String(url).includes('/internal/items/precios')) {
+        return { ok: false, status: 404 } as Response;
+      }
+      return base(url, init);
+    });
+
+    const vista = await handler.ejecutar(
+      {
+        tipo_orden: 'compra',
+        items: [{ oferta_id: 'oferta-1', cantidad: 1 }],
+      },
+      'comprador-1',
+    );
+    expect(vista.total_cents).toBe(115000);
+  });
+
   it('degrada al precio de la oferta si el catalogo cae sin seleccion explicita', async () => {
     const { handler, fetchMock } = crearHandler([ofertaActiva], 'ok');
     const base = fetchMock.getMockImplementation() as (
