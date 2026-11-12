@@ -153,11 +153,17 @@ jobs:
       matrix:
         include:
           - service: scheduling-service
+            dir: packages/scheduling-service
             lines: 71
             functions: 65
           - service: notifications-service
+            dir: packages/notifications-service
             lines: 74
             functions: 74
+          - service: commissions-service
+            dir: packages/commissions-service/rust
+            lines: 72
+            functions: 68
     env:
       TZ: America/Managua
       TEST_DATABASE_URL: postgres://core_engine_test:test_only@127.0.0.1:5432/core_engine_test
@@ -183,16 +189,16 @@ jobs:
           components: rustfmt, clippy
       - uses: Swatinem/rust-cache@v2
         with:
-          workspaces: packages/${{ matrix.service }}
+          workspaces: ${{ matrix.dir }}
       - uses: taiki-e/install-action@cargo-llvm-cov
       - name: rustfmt
-        working-directory: packages/${{ matrix.service }}
+        working-directory: ${{ matrix.dir }}
         run: cargo fmt --check
       - name: clippy
-        working-directory: packages/${{ matrix.service }}
+        working-directory: ${{ matrix.dir }}
         run: cargo clippy --locked --all-targets -- -D warnings
       - name: tests + cobertura
-        working-directory: packages/${{ matrix.service }}
+        working-directory: ${{ matrix.dir }}
         run: >-
           cargo llvm-cov --locked --ignore-filename-regex 'src/main\.rs'
           --fail-under-lines ${{ matrix.lines }} --fail-under-functions ${{ matrix.functions }}
