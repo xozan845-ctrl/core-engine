@@ -92,8 +92,13 @@ describe('PacksService', () => {
     );
   });
 
-  it('debe crear verticales válidas y rechazar datos inválidos o persistencia nula', async () => {
-    const pg = { queryOne: vi.fn().mockResolvedValueOnce(null).mockResolvedValueOnce({ codigo: 'vertical' }) };
+  it('debe crear verticales válidas, validar el modelo y rechazar datos inválidos', async () => {
+    const pg = { queryOne: vi.fn() };
+    pg.queryOne
+      .mockResolvedValueOnce({ codigo: 'modelo' })
+      .mockResolvedValueOnce(null)
+      .mockResolvedValueOnce({ codigo: 'modelo' })
+      .mockResolvedValueOnce({ codigo: 'vertical' });
     const servicio = new PacksService(pg as never);
 
     await expect(
@@ -105,6 +110,11 @@ describe('PacksService', () => {
     await expect(
       servicio.crearVertical({ codigo: 'vertical', nombre: 'x', modelo_operacion: 'modelo' }),
     ).rejects.toThrow(/datos de la vertical/);
+
+    pg.queryOne.mockResolvedValueOnce(null);
+    await expect(
+      servicio.crearVertical({ codigo: 'vertical', nombre: 'Vertical', modelo_operacion: 'inexistente' }),
+    ).rejects.toBeInstanceOf(NotFoundError);
   });
 
   it('debe rechazar packs con código, versión o nombre inválidos', async () => {
@@ -155,6 +165,7 @@ describe('PacksService', () => {
         .mockResolvedValueOnce({ rowCount: 1, rows: [{ codigo: 'servicios_domicilio' }] })
         .mockResolvedValueOnce({ rowCount: 1, rows: [] })
         .mockResolvedValueOnce({ rowCount: 1, rows: [] })
+        .mockResolvedValueOnce({ rowCount: 1, rows: [] })
         .mockResolvedValueOnce({ rowCount: 1, rows: [] }),
     };
     const resultado = {
@@ -180,6 +191,10 @@ describe('PacksService', () => {
       codigo: 'pack_servicios_domicilio',
       modelos: [{ modelo_codigo: 'servicios_agendados' }],
     });
-    expect(client.query).toHaveBeenCalledTimes(4);
+    expect(client.query).toHaveBeenCalledTimes(5);
+    expect(client.query).toHaveBeenCalledWith(
+      expect.stringContaining('INSERT INTO identity.vertical_capacidades'),
+      ['servicios_domicilio', 'pack_servicios_domicilio', 1],
+    );
   });
 });

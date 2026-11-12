@@ -21,12 +21,31 @@ const EXCLUIDOS = [
   'packages/api-gateway/src/openapi.agregado.ts',
 ];
 
-/** Controladores que deben exigir capacidades en vez de mirar el rubro. */
-const GATEADOS_POR_CAPACIDAD = [
-  'packages/catalog-service/src/items/items.controller.ts',
-  'packages/stores-service/src/ofertas/ofertas.controller.ts',
-  'packages/finance-service/src/facturacion/facturacion.controller.ts',
-  'packages/logistics-service/src/envios/estado-orden.controller.ts',
+/**
+ * Servicios siempre activos: no representan una capacidad de negocio
+ * opcional. identity configura, gateway autentica/enruta, storage guarda
+ * objetos y notifications entrega mensajes.
+ */
+const SERVICIOS_SIEMPRE_ACTIVOS = [
+  'packages/identity-service/',
+  'packages/api-gateway/',
+  'packages/storage-service/',
+  'packages/notifications-service/',
+];
+
+/**
+ * Controladores transversales que no exponen una capacidad de negocio:
+ * superficie interna (ClaveInternaGuard), carrito del comprador, tienda
+ * publica y perfil fiscal del vendedor.
+ */
+const CONTROLADORES_TRANSVERSALES = [
+  'packages/catalog-service/src/internal/internal.controller.ts',
+  'packages/finance-service/src/interno.controller.ts',
+  'packages/finance-service/src/finanzas/vendedor-fiscal.controller.ts',
+  'packages/orders-service/src/pedidos/carrito/carrito.controller.ts',
+  'packages/orders-service/src/pedidos/interno.controller.ts',
+  'packages/stores-service/src/internal/internal.controller.ts',
+  'packages/stores-service/src/tiendas/tiendas.controller.ts',
 ];
 
 const RE_BRANCH = /(?:vertical_id|verticalId|vertical|pack_codigo|packCodigo)\s*(?:===|!==|==|!=)\s*['"`]/;
@@ -98,15 +117,71 @@ export default defineSuite({
       );
     });
 
-    test('R-AR-5: los servicios de dominio exigen capacidades, no rubro', () => {
-      const faltantes = GATEADOS_POR_CAPACIDAD.filter(
-        (rel) => !readText(join(repoRoot, rel)).includes('@RequiereCapacidades('),
-      );
+    test('R-AR-5: los servicios de feature exigen capacidades, no rubro', () => {
+      const faltantes = walkFiles(
+        join(repoRoot, 'packages'),
+        (nombre) => nombre.endsWith('.controller.ts') && !nombre.endsWith('.spec.ts'),
+      )
+        .map((archivo) => archivo.replace(`${repoRoot}/`, ''))
+        .filter(
+          (rel) =>
+            !SERVICIOS_SIEMPRE_ACTIVOS.some((prefijo) => rel.startsWith(prefijo)) &&
+            !CONTROLADORES_TRANSVERSALES.includes(rel),
+        )
+        .filter((rel) => !readText(join(repoRoot, rel)).includes('@RequiereCapacidades('));
       assert.deepEqual(
         faltantes,
         [],
         `Controladores sin @RequiereCapacidades (R-AR-5):\n${faltantes.join('\n')}`,
       );
+    });
+
+    test('R-AR-5: toda capacidad declarada existe en las migraciones', () => {
+      const constantes = readText(
+        join(repoRoot, 'packages/shared/src/capabilities/capability.constants.ts'),
+      );
+      const codigos = [...constantes.matchAll(/:\s*'([a-z_]+)'/g)].map((match) => match[1]);
+      assert.ok(codigos.length > 0, 'no se encontraron capacidades declaradas');
+      const migraciones = walkFiles(
+        join(repoRoot, 'infra/db/init'),
+        (nombre) => nombre.endsWith('.sql'),
+      )
+        .map((archivo) => readText(archivo))
+        .join('\n');
+      const faltantes = codigos.filter((codigo) => !migraciones.includes(`'${codigo}'`));
+      assert.deepEqual(
+        faltantes,
+        [],
+        `Capacidades sin migracion que las registre (R-AR-5):\n${faltantes.join('\n')}`,
+      );
+    });
+
+    test('R-AR-5: el pack builder mantiene vertical y pack sincronizados', () => {
+      const packs = readText(
+        join(repoRoot, 'packages/identity-service/src/packs/packs.service.ts'),
+      );
+      assert.match(
+        packs,
+        /INSERT INTO identity\.vertical_capacidades/,
+        'las capacidades del pack deben quedar disponibles en la vertical (add-ons)',
+      );
+      assert.match(
+        packs,
+        /FROM identity\.modelos_operacion/,
+        'la vertical debe validar su modelo de operación contra el catálogo',
+      );
+    });
+
+    test('R-AR-5: el alta de empresa exige vertical y pack explícitos', () => {
+      const controller = readText(
+        join(repoRoot, 'packages/identity-service/src/empresas/empresas.controller.ts'),
+      );
+      const inicio = controller.indexOf('class CrearEmpresaRequestDto');
+      const fin = controller.indexOf('class ActualizarPackRequestDto');
+      const dto = inicio >= 0 && fin > inicio ? controller.slice(inicio, fin) : '';
+      assert.ok(dto, 'no se encontró CrearEmpresaRequestDto');
+      assert.doesNotMatch(dto, /vertical_id\?/, 'vertical_id no puede ser opcional');
+      assert.doesNotMatch(dto, /pack_codigo\?/, 'pack_codigo no puede ser opcional');
     });
 
     test('ADR-0001: el pack builder crea verticales y packs con capacidades arbitrarias', () => {

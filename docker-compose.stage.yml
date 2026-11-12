@@ -103,9 +103,9 @@ services:
       SERVICIO: api-gateway
       PORT: 8080
       OUTBOX_TABLA: identity.outbox
-      # Staging NO es publico: el arranque falla si EDGE_BASIC_AUTH no llega
-      # por el env_file (asi no se despliega sin autenticacion por descuido).
-      REQUIRE_EDGE_AUTH: "true"
+      # Staging NO es publico: su acceso se cierra en el borde externo
+      # (Cloudflare Access/VPN/allowlist) segun ADR-0005. El gateway ya no
+      # implementa Basic Auth ni /api-proxy.
       # Readiness de stage: incluye commissions (ADR-37). Produccion no lo fija
       # y usa la lista sin commissions.
       ENTORNO: stage

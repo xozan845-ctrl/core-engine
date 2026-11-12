@@ -952,3 +952,12 @@ DROP POLICY IF EXISTS notifications_eventos_app ON notifications.eventos_procesa
 CREATE POLICY notifications_eventos_app ON notifications.eventos_procesados
   FOR ALL TO core_engine_app
   USING (true) WITH CHECK (true);
+
+-- ── identity.api_keys (ADR-0005/R-GW-8) ─────────────────────────────────────
+-- Tabla de credenciales de máquina: solo el rol de servicio de identity la lee,
+-- crea y revoca. El aislamiento por tenant lo aplica el servicio (empresa_id).
+ALTER TABLE identity.api_keys ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS api_keys_app ON identity.api_keys;
+CREATE POLICY api_keys_app ON identity.api_keys
+  FOR ALL TO core_engine_app
+  USING (true) WITH CHECK (true);

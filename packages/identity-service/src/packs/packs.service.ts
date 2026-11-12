@@ -171,6 +171,13 @@ export class PacksService {
     if (nombre.length < 2 || nombre.length > 120 || modelo.length < 2 || modelo.length > 160) {
       throw new DomainError('VERTICAL_INVALIDA', 'Los datos de la vertical no son válidos.');
     }
+    // El modelo de operación debe existir: evita verticales con modelos libres
+    // que luego no pueden componer packs.
+    const modeloValido = await this.pg.queryOne<{ codigo: string }>(
+      `SELECT codigo FROM identity.modelos_operacion WHERE codigo = $1 AND activo = true`,
+      [modelo],
+    );
+    if (!modeloValido) throw new NotFoundError('Modelo operativo', modelo);
     const fila = await this.pg.queryOne<VerticalOperacion>(
       `INSERT INTO identity.verticales (codigo, nombre, modelo_operacion, activo)
        VALUES ($1, $2, $3, COALESCE($4, true))
@@ -224,6 +231,17 @@ export class PacksService {
         );
         if (!capacidadInsertada.rowCount) throw new NotFoundError('Capacidad', capacidad.codigo);
       }
+      // Las capacidades del pack también quedan disponibles en la vertical para
+      // que la empresa pueda activarlas/desactivarlas (add-ons) sin código.
+      await client.query(
+        `INSERT INTO identity.vertical_capacidades AS vc
+           (vertical_codigo, capacidad_codigo, config, activo)
+         SELECT $1, pc.capacidad_codigo, pc.config, pc.activo
+           FROM identity.pack_capacidades pc
+          WHERE pc.pack_codigo = $2 AND pc.pack_version = $3
+         ON CONFLICT (vertical_codigo, capacidad_codigo) DO NOTHING`,
+        [vertical, codigo, input.version],
+      );
     });
     return this.obtener(codigo, input.version);
   }

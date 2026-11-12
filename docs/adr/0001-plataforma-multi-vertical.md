@@ -76,6 +76,30 @@ pack del tenant.
 Las migraciones serán aditivas, reversibles y con backfill de tenants actuales.
 No se elimina ni renombra una columna existente antes de la fase 6.
 
+### 2.1 Servicios siempre activos y gating
+
+No todo servicio de la plataforma representa una capacidad de negocio
+opcional. La allowlist de servicios siempre activos es:
+
+| Servicio | Motivo |
+|---|---|
+| `identity-service` | autoridad de tenants, roles, verticales y capacidades |
+| `api-gateway` | autenticación, contexto y enrutamiento |
+| `storage-service` | objetos y medios de la plataforma |
+| `notifications-service` | entrega de mensajes y notificaciones |
+
+El resto de servicios de dominio son features y deben declarar
+`@RequiereCapacidades` en sus controladores. En particular:
+
+- `field-service` exige `operacion_campo`; las rutas y vehículos exigen además
+  `logistica_rutas`;
+- `market-intelligence-service` exige `inteligencia_mercado`.
+
+Una capacidad nueva se registra en `identity.capacidades`, se publica como
+add-on en las verticales activas y se incluye en los packs solo cuando el
+modelo de operación lo justifica. Los servicios siempre activos no se gatean
+por capacidad y cualquier excepción a esta política requiere un ADR.
+
 ### 3. Catálogo y ofertas
 
 Se introduce la abstracción `item` con `tipo` igual a `producto`, `servicio` o

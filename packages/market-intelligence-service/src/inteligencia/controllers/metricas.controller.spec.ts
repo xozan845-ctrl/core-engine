@@ -1,5 +1,6 @@
 import type { Mock } from 'vitest';
 import 'reflect-metadata';
+import { CAPABILITIES_KEY, CAPACIDADES } from '@core/shared';
 import { MetricasController } from './metricas.controller';
 import type { InteligenciaService } from '../services/inteligencia.service';
 
@@ -18,6 +19,12 @@ function fabricar(): { inteligencia: Record<string, Mock>; controller: MetricasC
 }
 
 describe('MetricasController (api/v2/inteligencia, R-U-10/11)', () => {
+  it('debe exigir la capacidad de inteligencia de mercado', () => {
+    expect(Reflect.getMetadata(CAPABILITIES_KEY, MetricasController)).toEqual([
+      CAPACIDADES.INTELIGENCIA_MERCADO,
+    ]);
+  });
+
   it('debe devolver el mapa de calor con los filtros recibidos', async () => {
     const { inteligencia, controller } = fabricar();
     inteligencia.obtenerMapaCalor.mockResolvedValue({ puntos: [] });

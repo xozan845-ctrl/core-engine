@@ -1,7 +1,13 @@
-import { DomainError, ROLES } from '@core/shared';
+import { CAPABILITIES_KEY, CAPACIDADES, DomainError, ROLES } from '@core/shared';
 import { FieldController } from './field.controller';
 
 describe('FieldController', () => {
+  it('debe exigir la capacidad de operacion de campo', () => {
+    expect(Reflect.getMetadata(CAPABILITIES_KEY, FieldController)).toEqual([
+      CAPACIDADES.OPERACION_CAMPO,
+    ]);
+  });
+
   let mocks: Record<string, ReturnType<typeof vi.fn>>;
   let controller: FieldController;
   const usuario = { tenant_id: 'tenant-a' } as never;

@@ -181,9 +181,13 @@ export class EmpresasService {
     packVersion?: number,
   ): Promise<Empresa> {
     const nombreFinal = nombre.trim();
-    let vertical = (verticalId ?? 'retail').trim().toLowerCase();
+    // El rubro es configuración explícita: no hay vertical ni pack por defecto.
+    let vertical = (verticalId ?? '').trim().toLowerCase();
     if (!/^[a-z][a-z0-9_]{1,39}$/.test(vertical)) {
-      throw new DomainError('VERTICAL_INVALIDA', 'La vertical seleccionada no existe.');
+      throw new DomainError('VERTICAL_REQUERIDA', 'Selecciona una vertical para la empresa.');
+    }
+    if (!packCodigo) {
+      throw new DomainError('PACK_REQUERIDO', 'Selecciona un pack para la empresa.');
     }
     const meta = this.normalizarPerfil({
       ...(perfil ?? {}),
@@ -202,11 +206,7 @@ export class EmpresasService {
     for (let intento = 1; intento <= maxIntentos; intento += 1) {
       try {
         return await this.pg.transaccion(async (client) => {
-          const pack = packCodigo
-            ? await this.resolverPack(client, packCodigo, verticalId ? vertical : undefined, packVersion)
-            : verticalId
-              ? await this.resolverPackPorVertical(client, vertical)
-              : { codigo: `pack_${vertical}`, version: 1, vertical_codigo: vertical };
+          const pack = await this.resolverPack(client, packCodigo, vertical, packVersion);
           vertical = pack.vertical_codigo;
           const slug = await this.elegirSlug(client, nombreFinal, slugExplicito);
           const result = await client.query<EmpresaFila>(
@@ -412,23 +412,6 @@ export class EmpresasService {
     if (verticalSolicitada && verticalSolicitada !== pack.vertical_codigo) {
       throw new DomainError('PACK_VERTICAL_INCOMPATIBLE', 'El pack no corresponde a la vertical solicitada.');
     }
-    return pack;
-  }
-
-  private async resolverPackPorVertical(
-    client: ClienteSlug,
-    verticalCodigo: string,
-  ): Promise<{ codigo: PackCodigo; version: number; vertical_codigo: string }> {
-    const resultado = await client.query(
-      'SELECT p.codigo, p.version, p.vertical_codigo\n' +
-        '  FROM identity.packs p\n' +
-        ' WHERE p.vertical_codigo = $1 AND p.activo = true\n' +
-        ' ORDER BY p.version DESC\n' +
-        ' LIMIT 1',
-      [verticalCodigo],
-    );
-    const pack = resultado.rows[0] as { codigo: PackCodigo; version: number; vertical_codigo: string } | undefined;
-    if (!pack) throw new DomainError('PACK_REQUERIDO', 'No existe un pack activo para la vertical "' + verticalCodigo + '".');
     return pack;
   }
 

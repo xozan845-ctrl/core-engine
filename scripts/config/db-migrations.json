@@ -71,5 +71,7 @@
   "58_credito_checkout.sql": "cfaf64fcc84475be7a3d9c98b078c34c7fc6641eadce7a5a66340d92d5027e6e",
   "59_catalog_item_tarifas.sql": "5bec35e79343016106a075d94dffc19a07d2bd8c1688fc01e997dce1fdf8c400",
   "60_catalog_item_componentes.sql": "9dbb635dfeea958b8404f231df33d2ed65a1570f75e32e9901a2f93cd51e0578",
-  "61_registros_capacidad.sql": "a8321d141742bc35ff1fa0b37044fce41d0ee63de5bef6c1065df012eaa19715"
+  "61_registros_capacidad.sql": "a8321d141742bc35ff1fa0b37044fce41d0ee63de5bef6c1065df012eaa19715",
+  "62_api_keys.sql": "bbc5eba99e7eccdac87af7d20080da81866a2788d2f8a9162d444cd4508190e1",
+  "63_gating_capacidades.sql": "e5c52a98d281b5012e94724509559b2b2a49eeee4d614a2d7abfb4e02fc1b84f"
 }

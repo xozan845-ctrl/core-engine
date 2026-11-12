@@ -31,9 +31,14 @@ const MIGRACIONES_LEGACY = [
   '01h_catalogo_por_empresa.sql',
   '24_multi_vertical.sql',
   '29_vertical_packs.sql',
+  '63_gating_capacidades.sql',
 ];
 
-const MIGRACIONES_FINAL = ['24_multi_vertical.sql', '29_vertical_packs.sql'];
+const MIGRACIONES_FINAL = [
+  '24_multi_vertical.sql',
+  '29_vertical_packs.sql',
+  '63_gating_capacidades.sql',
+];
 
 const TENANTS = [
   { vertical: 'retail', pack: 'pack_retail' },
@@ -190,7 +195,10 @@ test('flota permite rutas y retail no', async () => {
   await http.get('/api/v2/field/rutas').set(headers('flota')).expect(200);
   const respuesta = await http.get('/api/v2/field/rutas').set(headers('retail')).expect(403);
   assert.equal(respuesta.body.codigo, 'CAPACIDAD_NO_ACTIVA');
-  assert.deepEqual(respuesta.body.detalles.capacidades, ['logistica_rutas']);
+  assert.deepEqual(
+    [...respuesta.body.detalles.capacidades].sort(),
+    ['logistica_rutas', 'operacion_campo'],
+  );
 });
 
 test('farmacia permite lotes y retail no', async () => {
