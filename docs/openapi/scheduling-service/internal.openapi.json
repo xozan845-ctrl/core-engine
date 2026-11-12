@@ -1,0 +1,105 @@
+{
+  "openapi": "3.0.0",
+  "info": {
+    "title": "Core Engine · scheduling-service · API interna",
+    "description": "Contrato interno (/internal/**) de scheduling-service; requiere x-internal-key.",
+    "version": "internal",
+    "contact": {}
+  },
+  "x-servicio": "scheduling-service",
+  "x-superficie": "interna",
+  "security": [
+    {
+      "internalKey": []
+    }
+  ],
+  "tags": [],
+  "paths": {
+    "/internal/scheduling/disponibilidad": {
+      "post": {
+        "operationId": "InternalSchedulingController_disponibilidad",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/VerificarDisponibilidadRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Recurso disponible",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DisponibilidadResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "internalKey": []
+          }
+        ],
+        "summary": "Verificar disponibilidad de un recurso en un rango",
+        "tags": [
+          "Scheduling (interno)"
+        ]
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "bearer": {
+        "scheme": "bearer",
+        "bearerFormat": "JWT",
+        "type": "http"
+      }
+    },
+    "schemas": {
+      "DisponibilidadResponseDto": {
+        "type": "object",
+        "properties": {
+          "disponible": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "disponible"
+        ]
+      },
+      "VerificarDisponibilidadRequestDto": {
+        "type": "object",
+        "properties": {
+          "empresa_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "recurso_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "inicia_en": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "termina_en": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "empresa_id",
+          "recurso_id",
+          "inicia_en",
+          "termina_en"
+        ]
+      }
+    }
+  }
+}

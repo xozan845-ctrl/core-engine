@@ -7,7 +7,7 @@ import {
   EnviosFlotaController,
 } from './estado-orden.controller';
 import type { EnviosService } from './envios.service';
-import { DomainError, ROLES } from '@core/shared';
+import { CAPABILITIES_KEY, CAPACIDADES, DomainError, ROLES } from '@core/shared';
 
 const orden = { id: 'o-1', estado: 'enviada' };
 const envio = { id: 'e-1', order_id: 'o-1', estado: 'en_preparacion' };
@@ -20,7 +20,19 @@ function fabricar(): { envios: Record<string, Mock>; controller: EstadoOrdenCont
   return { envios, controller };
 }
 
-describe('EstadoOrdenController (api/v1/orders/:id/estado, Tabla 21, R-U-10/11)', () => {
+describe('EstadoOrdenController (api/v2/orders/:id/estado, Tabla 21, R-U-10/11)', () => {
+  it('debe exigir capacidades de fulfillment y flota en sus rutas', () => {
+    expect(Reflect.getMetadata(CAPABILITIES_KEY, EnviosAdminController)).toEqual([
+      CAPACIDADES.FULFILLMENT_DELIVERY,
+    ]);
+    expect(Reflect.getMetadata(CAPABILITIES_KEY, EnviosEmpresaController)).toEqual([
+      CAPACIDADES.FULFILLMENT_DELIVERY,
+    ]);
+    expect(Reflect.getMetadata(CAPABILITIES_KEY, EnviosFlotaController)).toEqual([
+      CAPACIDADES.LOGISTICA_RUTAS,
+    ]);
+  });
+
   it('debe avanzar el estado delegando id, estado y motivo', async () => {
     const { envios, controller } = fabricar();
     envios.avanzarEstadoOrden.mockResolvedValue(orden);
@@ -82,7 +94,7 @@ describe('EstadoOrdenController (api/v1/orders/:id/estado, Tabla 21, R-U-10/11)'
   });
 });
 
-describe('EnviosAdminController (api/v1/admin/envios, R-U-10/11)', () => {
+describe('EnviosAdminController (api/v2/admin/envios, R-U-10/11)', () => {
   it('debe listar las guias de despacho', async () => {
     const envios = { listar: vi.fn().mockResolvedValue([{ ...envio, monto: '1150.00' }]) };
     const controller = new EnviosAdminController(envios as unknown as EnviosService);

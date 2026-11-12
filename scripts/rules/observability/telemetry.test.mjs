@@ -3,7 +3,7 @@ import { join } from 'node:path';
 import { defineSuite } from '../../engine/suite.mjs';
 import { readJson, readText } from '../../engine/lib/fs.mjs';
 import { repoRoot } from '../../engine/lib/paths.mjs';
-import { PACKAGES_DIR, SERVICES } from '../../config/project.mjs';
+import { PACKAGES_DIR, RUST_SERVICES, SERVICES } from '../../config/project.mjs';
 
 const prometheusPath = join(repoRoot, 'infra', 'prometheus', 'prometheus.yml');
 const alertsPath = join(repoRoot, 'infra', 'prometheus', 'rules', 'alerts.yml');
@@ -43,6 +43,17 @@ export default defineSuite({
     test('R-TM-1: todos los servicios exponen /metrics mediante MetricsService', () => {
       const problems = [];
       for (const service of SERVICES) {
+        if (RUST_SERVICES.includes(service)) {
+          const http = readText(join(serviceDir(service), 'src', 'http', 'mod.rs'));
+          const main = readText(join(serviceDir(service), 'src', 'main.rs'));
+          if (!/\/metrics/.test(http)) {
+            problems.push(`${service}: router sin GET /metrics`);
+          }
+          if (!/Metrics::nueva/.test(main)) {
+            problems.push(`${service}: main no crea el registro de métricas`);
+          }
+          continue;
+        }
         const appModule = readText(join(serviceDir(service), 'src', 'app.module.ts'));
         const main = readText(join(serviceDir(service), 'src', 'main.ts'));
         if (!/\bMetricsModule\b/.test(appModule)) {
@@ -162,6 +173,35 @@ export default defineSuite({
         /RabbitMQDLQCrecimientoSostenido[\s\S]*?for:\s*(1[0-9]|[2-9][0-9])m/,
         'el crecimiento de DLQ debe sostenerse antes de alertar',
       );
+    });
+
+    test('R-OB-3/R-TM-5: el Outbox expone backlog, publicados y fallos', () => {
+      const outbox = readText(
+        join(repoRoot, PACKAGES_DIR, 'shared', 'src', 'outbox', 'outbox.service.ts'),
+      );
+      for (const name of [
+        'core_engine_outbox_pending_events',
+        'core_engine_outbox_published_events_total',
+        'core_engine_outbox_publish_failures_total',
+      ]) {
+        assert.ok(outbox.includes(`'${name}'`), `falta ${name} en OutboxService`);
+      }
+
+      const dashboard = readJson(
+        join(grafanaRoot, 'dashboards', 'core-engine-outbox.json'),
+      );
+      const panels = JSON.stringify(dashboard.panels);
+      for (const name of [
+        'core_engine_outbox_pending_events',
+        'core_engine_outbox_published_events_total',
+        'core_engine_outbox_publish_failures_total',
+      ]) {
+        assert.ok(panels.includes(name), `falta ${name} en el dashboard de Outbox`);
+      }
+
+      const alerts = readText(alertsPath);
+      assert.match(alerts, /OutboxBacklog/);
+      assert.match(alerts, /OutboxFallosPublicacion/);
     });
 
     test('R-TM-6: datasource, provider y dashboards se aprovisionan como código', () => {

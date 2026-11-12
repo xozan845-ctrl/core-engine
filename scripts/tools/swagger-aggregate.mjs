@@ -1,7 +1,7 @@
 // Genera los documentos OpenAPI agregados del proyecto.
 //
 // Hay dos superficies de API distintas y no deben mezclarse:
-//   - pública:  /api/v1/**  (expuesta por el API Gateway, versionada)
+//   - pública:  /api/v2/**  (expuesta por el API Gateway, versionada)
 //   - interna:  /internal/** (servicio→servicio, protegida con x-internal-key)
 //
 // El contrato público es el que se sirve en /docs y se reparte al frontend.
@@ -20,12 +20,12 @@ const salidaGateway = resolve(raiz, 'packages/api-gateway/src/openapi.agregado.t
 const salidaPublica = resolve(raiz, 'docs/api/core-engine.openapi.json');
 const salidaInterna = resolve(raiz, 'docs/api/core-engine.internal.openapi.json');
 
-const RE_PUBLICA = /^\/api\/v1(?:\/|$)/;
+const RE_PUBLICA = /^\/api\/v2(?:\/|$)/;
 const RE_INTERNA = /^\/internal(?:\/|$)/;
 
 /**
  * Clasifica una ruta por superficie. Falla si no pertenece a ninguna: una ruta
- * fuera de `/api/v1` o `/internal` rompería la taxonomía del contrato.
+ * fuera de `/api/v2` o `/internal` rompería la taxonomía del contrato.
  *
  * @param {string} ruta
  * @returns {'publica'|'interna'}
@@ -34,7 +34,7 @@ export function clasificarRuta(ruta) {
   if (RE_PUBLICA.test(ruta)) return 'publica';
   if (RE_INTERNA.test(ruta)) return 'interna';
   throw new Error(
-    `ruta fuera de las superficies conocidas: ${ruta} (esperado /api/v1/** o /internal/**)`,
+    `ruta fuera de las superficies conocidas: ${ruta} (esperado /api/v2/** o /internal/**)`,
   );
 }
 
@@ -45,18 +45,45 @@ export function clasificarRuta(ruta) {
  * @returns {{ fichero: string, spec: object }[]}
  */
 export function cargarEspecificaciones(directorio = dirSpecs) {
-  const ficheros = readdirSync(directorio)
-    .filter((f) => f.endsWith('.json'))
-    .sort();
+  const entradas = readdirSync(directorio, { withFileTypes: true });
+  const planos = entradas.filter((e) => e.isFile() && e.name.endsWith('.json'));
+  if (planos.length > 0) {
+    throw new Error(
+      `specs planos obsoletos en docs/openapi: ${planos.map((e) => e.name).join(', ')}. ` +
+        'La generación debe usar docs/openapi/<servicio>/{public,internal}.openapi.json.',
+    );
+  }
 
-  if (ficheros.length === 0) {
+  const servicios = entradas
+    .filter((e) => e.isDirectory())
+    .map((e) => e.name)
+    .sort();
+  if (servicios.length === 0) {
     throw new Error('no hay specs en docs/openapi (¿faltó swagger:export?)');
   }
 
-  return ficheros.map((fichero) => ({
-    fichero,
-    spec: JSON.parse(readFileSync(resolve(directorio, fichero), 'utf8')),
-  }));
+  const especificaciones = [];
+  for (const servicio of servicios) {
+    for (const [superficie, archivo] of [
+      ['publica', 'public.openapi.json'],
+      ['interna', 'internal.openapi.json'],
+    ]) {
+      const fichero = `${servicio}/${archivo}`;
+      const ruta = resolve(directorio, fichero);
+      let contenido;
+      try {
+        contenido = readFileSync(ruta, 'utf8');
+      } catch {
+        throw new Error(`falta ${fichero}: cada servicio debe exportar público e interno`);
+      }
+      especificaciones.push({
+        fichero,
+        superficie,
+        spec: JSON.parse(contenido),
+      });
+    }
+  }
+  return especificaciones;
 }
 
 /**
@@ -74,10 +101,15 @@ export function construirDocumento(especificaciones, superficie) {
   const origenSchema = new Map();
   const colisiones = [];
 
-  for (const { fichero, spec } of especificaciones) {
-    const rutasDeLaSuperficie = Object.entries(spec.paths ?? {}).filter(
-      ([ruta]) => clasificarRuta(ruta) === superficie,
-    );
+  for (const { fichero, spec, superficie: declarada } of especificaciones) {
+    if (declarada && declarada !== superficie) continue;
+    const rutasDeLaSuperficie = Object.entries(spec.paths ?? {}).filter(([ruta]) => {
+      const clase = clasificarRuta(ruta);
+      if (declarada && clase !== superficie) {
+        throw new Error(`${fichero} declara superficie ${superficie} pero contiene ${ruta} (${clase})`);
+      }
+      return clase === superficie;
+    });
     if (rutasDeLaSuperficie.length === 0) continue;
 
     for (const tag of spec.tags ?? []) {
@@ -134,7 +166,7 @@ export function construirDocumento(especificaciones, superficie) {
         ? 'Core Engine · API pública (agregada)'
         : 'Core Engine · API interna (servicio→servicio)',
       description: esPublica
-        ? 'Contrato de la superficie pública (/api/v1/**) expuesta por el API Gateway. ' +
+        ? 'Contrato de la superficie pública (/api/v2/**) expuesta por el API Gateway. ' +
           'No incluye las rutas /internal/**, que son exclusivas del tráfico servicio→servicio.'
         : 'Contrato de la superficie interna (/internal/**). No se expone a través del API Gateway ' +
           'y requiere la cabecera x-internal-key.',
@@ -167,7 +199,7 @@ export function construirDocumentos(especificaciones) {
 export function escribirDocumentos(documentos) {
   const cabecera = `/**
  * GENERADO por scripts/tools/swagger-aggregate.mjs — NO editar a mano.
- * Fuente: docs/openapi/*.json (npm run swagger:export). Verifica: gate G-8.
+ * Fuente: docs/openapi/<servicio>/{public,internal}.openapi.json (npm run swagger:export). Verifica: gate G-8.
  */
 import type { OpenAPIObject } from '@nestjs/swagger';
 

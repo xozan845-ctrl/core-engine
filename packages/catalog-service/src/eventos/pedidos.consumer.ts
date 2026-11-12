@@ -2,12 +2,14 @@ import { Injectable, OnModuleInit } from '@nestjs/common';
 import {
   RabbitService,
   OutboxService,
+  PgService,
   COLAS,
   EVENTOS,
   EventoBus,
   OrdenData,
   DevolucionSolicitadaData,
   Logger,
+  ejecutarConContexto,
 } from '@core/shared';
 import { ProductosService } from '../productos/productos.service';
 
@@ -23,6 +25,7 @@ export class PedidosConsumer implements OnModuleInit {
   constructor(
     private readonly rabbit: RabbitService,
     private readonly outbox: OutboxService,
+    private readonly pg: PgService,
     private readonly productos: ProductosService,
   ) {}
 
@@ -36,55 +39,79 @@ export class PedidosConsumer implements OnModuleInit {
   }
 
   private async manejar(evento: EventoBus): Promise<void> {
-    switch (evento.tipo) {
-      case EVENTOS.ORDER_CREATED:
-        await this.ordenCreada(evento as EventoBus<OrdenData>);
-        break;
-      case EVENTOS.DEVOLUCION_SOLICITADA:
-        await this.devolucion(evento as EventoBus<DevolucionSolicitadaData>);
-        break;
-      default:
-        return;
-    }
-  }
-
-  private async yaProcesado(evento: EventoBus): Promise<boolean> {
-    return this.productos.estaProcesado(evento.event_id);
-  }
-
-  private async marcarProcesado(evento: EventoBus): Promise<void> {
-    await this.productos.registrarProcesado(evento.event_id, evento.tipo);
+    await ejecutarConContexto(
+      {
+        request_id: `catalog-event-${evento.event_id}`,
+        servicio: 'catalog-consumer',
+        usuario_id: '00000000-0000-0000-0000-000000000000',
+        rol: 'super_admin',
+      },
+      async () => {
+        switch (evento.tipo) {
+          case EVENTOS.ORDER_CREATED:
+            await this.ordenCreada(evento as EventoBus<OrdenData>);
+            break;
+          case EVENTOS.DEVOLUCION_SOLICITADA:
+            await this.devolucion(evento as EventoBus<DevolucionSolicitadaData>);
+            break;
+          default:
+            return;
+        }
+      },
+    );
   }
 
   private async ordenCreada(evento: EventoBus<OrdenData>): Promise<void> {
-    if (await this.yaProcesado(evento)) return;
-    const { order_id, items } = evento.data;
+    const { order_id, items, tipo_orden: tipoOrden } = evento.data;
+
+    // Una cotizacion no compromete inventario: solo se marca como procesada.
+    if (tipoOrden === 'cotizacion') {
+      const procesada = await this.pg.transaccion(async (client) => {
+        if (await this.productos.estaProcesado(evento.event_id, client)) return false;
+        await this.productos.registrarProcesado(evento.event_id, evento.tipo, client);
+        return true;
+      });
+      if (procesada) {
+        this.logger.info({ msg: 'Cotizacion sin reserva de stock', order_id });
+      }
+      return;
+    }
+
     const lineas = items.map((i) => ({
       empresa_id: i.empresa_id,
       sku: i.sku,
       cantidad: i.cantidad,
+      ...(i.item_id ? { item_id: i.item_id } : {}),
     }));
-    const resultado = await this.productos.reservarStock(order_id, lineas);
 
-    if (resultado.ok) {
-      // emite el evento de reserva junto con la escritura (outbox, ADR-03)
-      await this.outbox.insertar(EVENTOS.STOCK_RESERVADO, {
-        order_id,
-        items: lineas.map((l) => ({ sku: l.sku, cantidad: l.cantidad })),
-      });
-      // stock restante por SKU (RN-02: las ofertas del stores se marcan agotadas)
-      await this.outbox.insertar(EVENTOS.STOCK_UPDATED, {
-        order_id,
-        tipo: 'reservado',
-        items: resultado.stock_restante ?? [],
-      });
-    } else {
-      await this.outbox.insertar(EVENTOS.STOCK_FALLIDO, {
-        order_id,
-        items: resultado.fallidos,
-      });
-    }
-    await this.marcarProcesado(evento);
+    // Stock + eventos + marca de idempotencia comparten UNA transacción: si
+    // falla el outbox, el descuento de stock también revierte y el reintento
+    // es seguro.
+    const resultado = await this.pg.transaccion(async (client) => {
+      if (await this.productos.estaProcesado(evento.event_id, client)) return null;
+      const reserva = await this.productos.reservarStockEnTransaccion(client, order_id, lineas);
+      if (reserva.ok) {
+        const reservados = reserva.reservados ?? lineas;
+        await this.outbox.insertarEnTransaccion(client, EVENTOS.STOCK_RESERVADO, {
+          order_id,
+          items: reservados.map((l) => ({ sku: l.sku, cantidad: l.cantidad })),
+        });
+        await this.outbox.insertarEnTransaccion(client, EVENTOS.STOCK_UPDATED, {
+          order_id,
+          tipo: 'reservado',
+          items: reserva.stock_restante ?? [],
+        });
+      } else {
+        await this.outbox.insertarEnTransaccion(client, EVENTOS.STOCK_FALLIDO, {
+          order_id,
+          items: reserva.fallidos,
+        });
+      }
+      await this.productos.registrarProcesado(evento.event_id, evento.tipo, client);
+      return reserva;
+    });
+    if (!resultado) return;
+
     this.logger.info({
       msg: resultado.ok ? 'Stock reservado atomico' : 'Stock insuficiente',
       order_id,
@@ -93,26 +120,32 @@ export class PedidosConsumer implements OnModuleInit {
   }
 
   private async devolucion(evento: EventoBus<DevolucionSolicitadaData>): Promise<void> {
-    if (await this.yaProcesado(evento)) return;
     const items = evento.data.items;
-    await this.productos.reintegrarStock(
-      evento.data.order_id,
-      items.map((i) => ({ empresa_id: i.empresa_id, sku: i.sku, cantidad: i.cantidad })),
-    );
-    await this.outbox.insertar(EVENTOS.STOCK_REINTEGRADO, {
-      order_id: evento.data.order_id,
-      items: items.map((i) => ({ sku: i.sku, cantidad: i.cantidad })),
+    const reintegrado = await this.pg.transaccion(async (client) => {
+      if (await this.productos.estaProcesado(evento.event_id, client)) return false;
+      await this.productos.reintegrarStockEnTransaccion(
+        client,
+        evento.data.order_id,
+        items.map((i) => ({ empresa_id: i.empresa_id, sku: i.sku, cantidad: i.cantidad })),
+      );
+      await this.outbox.insertarEnTransaccion(client, EVENTOS.STOCK_REINTEGRADO, {
+        order_id: evento.data.order_id,
+        items: items.map((i) => ({ sku: i.sku, cantidad: i.cantidad })),
+      });
+      // stock.updated tras la devolucion (RN-06 revierte stock; RN-02 actualiza ofertas)
+      const stock = await this.productos.stockActualDe(
+        items.map((i) => ({ empresa_id: i.empresa_id, sku: i.sku })),
+        client,
+      );
+      await this.outbox.insertarEnTransaccion(client, EVENTOS.STOCK_UPDATED, {
+        order_id: evento.data.order_id,
+        tipo: 'reintegrado',
+        items: stock,
+      });
+      await this.productos.registrarProcesado(evento.event_id, evento.tipo, client);
+      return true;
     });
-    // stock.updated tras la devolucion (RN-06 revierte stock; RN-02 actualiza ofertas)
-    const stock = await this.productos.stockActualDe(
-      items.map((i) => ({ empresa_id: i.empresa_id, sku: i.sku })),
-    );
-    await this.outbox.insertar(EVENTOS.STOCK_UPDATED, {
-      order_id: evento.data.order_id,
-      tipo: 'reintegrado',
-      items: stock,
-    });
-    await this.marcarProcesado(evento);
+    if (!reintegrado) return;
     this.logger.info({ msg: 'Stock reintegrado por devolucion', order_id: evento.data.order_id });
   }
 }

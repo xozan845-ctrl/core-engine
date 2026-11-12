@@ -1,14 +1,21 @@
 import { Module } from '@nestjs/common';
-import { PgModule, RabbitModule, OutboxModule, MetricsModule } from '@core/shared';
+import { PgModule, RabbitModule, OutboxModule, MetricsModule, EmailModule } from '@core/shared';
 import { AuthModule } from './auth/auth.module';
 import { UsuariosModule } from './usuarios/usuarios.module';
 import { SeedService } from './seed/seed.service';
 import { InternalController } from './internal/internal.controller';
 import { EmpresasModule } from './empresas/empresas.module';
-import { InvitacionesModule } from './invitaciones/invitaciones.module';
+import { ConfiguracionSitioModule } from './configuracion-sitio/configuracion-sitio.module';
+import { CapacidadesModule } from './capacidades/capacidades.module';
+import { PacksModule } from './packs/packs.module';
+import { ExtensionesModule } from './extensiones/extensiones.module';
+import { PartesModule } from './partes/partes.module';
+import { PersonalModule } from './personal/personal.module';
+import { RegistrosModule } from './registros/registros.module';
+import { ApiKeysModule } from './api-keys/api-keys.module';
 
 @Module({
-  imports: [PgModule, RabbitModule, OutboxModule, MetricsModule, AuthModule, UsuariosModule, EmpresasModule, InvitacionesModule],
+  imports: [PgModule, RabbitModule, OutboxModule, MetricsModule, EmailModule, AuthModule, UsuariosModule, EmpresasModule, ConfiguracionSitioModule, CapacidadesModule, PacksModule, ExtensionesModule, PartesModule, PersonalModule, RegistrosModule, ApiKeysModule],
   providers: [SeedService],
   controllers: [InternalController],
 })

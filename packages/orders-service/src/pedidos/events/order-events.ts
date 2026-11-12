@@ -6,7 +6,7 @@ import { ItemOrden } from '@core/shared';
  */
 export interface OrderCreatedEvent {
   order_id: string;
-  cliente_id: string;
+  comprador_id: string;
   items: ItemOrden[];
   total_cents: number;
   estado: 'creada';

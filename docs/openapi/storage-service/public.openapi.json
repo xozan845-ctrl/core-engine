@@ -1,0 +1,1219 @@
+{
+  "openapi": "3.0.0",
+  "info": {
+    "title": "Core Engine · storage-service · API pública",
+    "description": "Contrato público (/api/v2/**) de storage-service. No contiene rutas /internal/**.",
+    "version": "v1",
+    "contact": {}
+  },
+  "x-servicio": "storage-service",
+  "x-superficie": "publica",
+  "tags": [],
+  "paths": {
+    "/api/v2/admin/storage/tenants": {
+      "get": {
+        "operationId": "AdminStorageController_listar",
+        "parameters": [
+          {
+            "name": "pagina",
+            "required": false,
+            "in": "query",
+            "description": "Pagina (1-based)",
+            "schema": {
+              "minimum": 1,
+              "type": "number"
+            }
+          },
+          {
+            "name": "limite",
+            "required": false,
+            "in": "query",
+            "description": "Tamano de pagina (max 100)",
+            "schema": {
+              "minimum": 1,
+              "maximum": 100,
+              "type": "number"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Página de tenants",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/PaginaBucketsResponseDto"
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/MetaRespuesta"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Listar tenants con almacenamiento (cuota y uso)",
+        "tags": [
+          "Almacenamiento (admin)"
+        ]
+      }
+    },
+    "/api/v2/admin/storage/tenants/{tenantId}": {
+      "get": {
+        "operationId": "AdminStorageController_estado",
+        "parameters": [
+          {
+            "name": "tenantId",
+            "required": true,
+            "in": "path",
+            "description": "Id del tenant (organizacion)",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Estado del tenant",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/EstadoBucketResponseDto"
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/MetaRespuesta"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Estado de almacenamiento de un tenant",
+        "tags": [
+          "Almacenamiento (admin)"
+        ]
+      },
+      "patch": {
+        "operationId": "AdminStorageController_actualizar",
+        "parameters": [
+          {
+            "name": "tenantId",
+            "required": true,
+            "in": "path",
+            "description": "Id del tenant (organizacion)",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ActualizarTenantRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Tenant actualizado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/EstadoBucketResponseDto"
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/MetaRespuesta"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Ajustar cuota y/o suspender el almacenamiento del tenant",
+        "tags": [
+          "Almacenamiento (admin)"
+        ]
+      }
+    },
+    "/api/v2/admin/storage/tenants/{tenantId}/recalcular": {
+      "post": {
+        "operationId": "AdminStorageController_recalcular",
+        "parameters": [
+          {
+            "name": "tenantId",
+            "required": true,
+            "in": "path",
+            "description": "Id del tenant (organizacion)",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Uso recalculado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/EstadoBucketResponseDto"
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/MetaRespuesta"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Recalcular el uso del tenant desde la metadata (idempotente)",
+        "tags": [
+          "Almacenamiento (admin)"
+        ]
+      }
+    },
+    "/api/v2/storage/bucket": {
+      "get": {
+        "description": "Crea el bucket del tenant de forma perezosa la primera vez.",
+        "operationId": "BucketsController_estado",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Estado del bucket del tenant",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/EstadoBucketResponseDto"
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/MetaRespuesta"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Estado del almacenamiento del tenant (bucket, cuota, uso)",
+        "tags": [
+          "Almacenamiento"
+        ]
+      },
+      "post": {
+        "operationId": "BucketsController_configurar",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ConfigurarBucketRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Bucket asegurado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/EstadoBucketResponseDto"
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/MetaRespuesta"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Cuota invalida (CUOTA_INVALIDA/CUOTA_MENOR_AL_USO)"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Asegurar el bucket del tenant y fijar su cuota (admin)",
+        "tags": [
+          "Almacenamiento"
+        ]
+      }
+    },
+    "/api/v2/storage/subidas": {
+      "post": {
+        "description": "Valida tipo, tamano y cuota del tenant; registra el objeto en estado pendiente y devuelve la URL prefirmada.",
+        "operationId": "ObjetosController_solicitarSubida",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SolicitarSubidaRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "URL de subida creada",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/SolicitudSubidaResponseDto"
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/MetaRespuesta"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Tipo o tamano invalido (VALIDACION)"
+          },
+          "409": {
+            "description": "Cuota excedida (CUOTA_EXCEDIDA)"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Solicitar URL prefirmada de subida (PUT directo a MinIO)",
+        "tags": [
+          "Almacenamiento"
+        ]
+      }
+    },
+    "/api/v2/storage/objetos/{id}/confirmar": {
+      "post": {
+        "operationId": "ObjetosController_confirmar",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "description": "Id del objeto",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Objeto activado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/ObjetoStorageResponseDto"
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/MetaRespuesta"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Confirmar la subida y activar el objeto (contabiliza cuota)",
+        "tags": [
+          "Almacenamiento"
+        ]
+      }
+    },
+    "/api/v2/storage/objetos": {
+      "get": {
+        "operationId": "ObjetosController_listar",
+        "parameters": [
+          {
+            "name": "q",
+            "required": false,
+            "in": "query",
+            "description": "Busqueda por nombre",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "carpeta",
+            "required": false,
+            "in": "query",
+            "description": "Filtrar por carpeta",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "estado",
+            "required": false,
+            "in": "query",
+            "description": "Filtrar por estado",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "pendiente",
+                "activo",
+                "eliminado"
+              ]
+            }
+          },
+          {
+            "name": "pagina",
+            "required": false,
+            "in": "query",
+            "description": "Pagina (1-based)",
+            "schema": {
+              "minimum": 1,
+              "type": "number"
+            }
+          },
+          {
+            "name": "limite",
+            "required": false,
+            "in": "query",
+            "description": "Tamano de pagina (max 100)",
+            "schema": {
+              "minimum": 1,
+              "maximum": 100,
+              "type": "number"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Página de objetos",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/PaginaObjetosResponseDto"
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/MetaRespuesta"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Listar objetos del tenant (paginado, sin eliminados por defecto)",
+        "tags": [
+          "Almacenamiento"
+        ]
+      }
+    },
+    "/api/v2/storage/objetos/{id}": {
+      "get": {
+        "operationId": "ObjetosController_detalle",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "description": "Id del objeto",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Metadata del objeto",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/ObjetoStorageResponseDto"
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/MetaRespuesta"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Detalle (metadata) de un objeto del tenant",
+        "tags": [
+          "Almacenamiento"
+        ]
+      },
+      "delete": {
+        "operationId": "ObjetosController_eliminar",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "description": "Id del objeto",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Objeto eliminado"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Eliminar un objeto (baja logica + borrado en MinIO)",
+        "tags": [
+          "Almacenamiento"
+        ]
+      }
+    },
+    "/api/v2/storage/objetos/{id}/descarga": {
+      "get": {
+        "operationId": "ObjetosController_descarga",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "description": "Id del objeto",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "URL de descarga",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/UrlDescargaResponseDto"
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/MetaRespuesta"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "URL prefirmada de descarga (GET) con validez limitada",
+        "tags": [
+          "Almacenamiento"
+        ]
+      }
+    },
+    "/api/v2/storage/public/objetos/{id}": {
+      "get": {
+        "operationId": "PublicStorageController_servir",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "description": "Id del objeto",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Media (binario); con Range responde 206",
+            "content": {
+              "image/*": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              },
+              "video/*": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              }
+            }
+          },
+          "206": {
+            "description": "Tramo parcial solicitado con Range",
+            "headers": {
+              "Content-Range": {
+                "description": "Tramo servido y tamaño total",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Accept-Ranges": {
+                "description": "Unidad de rangos soportada",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Objeto inexistente, privado, eliminado o no servible"
+          },
+          "416": {
+            "description": "Rango inválido o fuera del objeto",
+            "headers": {
+              "Content-Range": {
+                "description": "Tamaño total del objeto",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Servir una imagen o video público (cacheable, sin auth, Range)",
+        "tags": [
+          "Almacenamiento público"
+        ]
+      },
+      "head": {
+        "operationId": "PublicStorageController_cabeceras",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "description": "Id del objeto",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Cabeceras de la media (sin cuerpo); con Range responde 206",
+            "content": {
+              "image/*": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              },
+              "video/*": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              }
+            }
+          },
+          "206": {
+            "description": "Cabeceras del tramo solicitado con Range"
+          },
+          "404": {
+            "description": "Objeto inexistente, privado, eliminado o no servible"
+          },
+          "416": {
+            "description": "Rango inválido o fuera del objeto"
+          }
+        },
+        "summary": "Cabeceras de una imagen o video público (sin cuerpo)",
+        "tags": [
+          "Almacenamiento público"
+        ]
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "bearer": {
+        "scheme": "bearer",
+        "bearerFormat": "JWT",
+        "type": "http"
+      },
+      "internalKey": {
+        "type": "apiKey",
+        "in": "header",
+        "name": "x-internal-key"
+      }
+    },
+    "schemas": {
+      "ActualizarTenantRequestDto": {
+        "type": "object",
+        "properties": {
+          "cuota_bytes": {
+            "type": "number",
+            "description": "Nueva cuota en bytes"
+          },
+          "estado": {
+            "type": "string",
+            "description": "Estado del almacenamiento del tenant",
+            "enum": [
+              "activo",
+              "suspendido"
+            ]
+          }
+        }
+      },
+      "ConfigurarBucketRequestDto": {
+        "type": "object",
+        "properties": {
+          "cuota_bytes": {
+            "type": "number",
+            "description": "Cuota del tenant en bytes (por defecto la del entorno)",
+            "example": 5368709120
+          }
+        }
+      },
+      "EstadoBucketResponseDto": {
+        "type": "object",
+        "properties": {
+          "tenant_id": {
+            "type": "string",
+            "description": "Id del tenant",
+            "format": "uuid"
+          },
+          "bucket": {
+            "type": "string",
+            "description": "Nombre del bucket S3",
+            "example": "t-00000000-0000-0000-0000-000000000000"
+          },
+          "cuota_bytes": {
+            "type": "number",
+            "description": "Cuota asignada en bytes",
+            "example": 5368709120
+          },
+          "usado_bytes": {
+            "type": "number",
+            "description": "Bytes usados",
+            "example": 204800
+          },
+          "disponible_bytes": {
+            "type": "number",
+            "description": "Bytes disponibles",
+            "example": 5368504320
+          },
+          "objetos": {
+            "type": "number",
+            "description": "Objetos activos",
+            "example": 12
+          },
+          "estado": {
+            "type": "string",
+            "description": "Estado del almacenamiento",
+            "enum": [
+              "activo",
+              "suspendido"
+            ],
+            "example": "activo"
+          },
+          "creado_en": {
+            "type": "string",
+            "description": "Fecha de creación (ISO 8601 UTC)",
+            "format": "date-time"
+          },
+          "actualizado_en": {
+            "type": "string",
+            "description": "Última actualización (ISO 8601 UTC)",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "tenant_id",
+          "bucket",
+          "cuota_bytes",
+          "usado_bytes",
+          "disponible_bytes",
+          "objetos",
+          "estado",
+          "creado_en",
+          "actualizado_en"
+        ]
+      },
+      "MetaRespuesta": {
+        "type": "object",
+        "required": [
+          "timestamp",
+          "path",
+          "method",
+          "statusCode"
+        ],
+        "properties": {
+          "timestamp": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "path": {
+            "type": "string"
+          },
+          "method": {
+            "type": "string"
+          },
+          "statusCode": {
+            "type": "integer"
+          }
+        }
+      },
+      "ObjetoStorageResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Id del objeto",
+            "format": "uuid"
+          },
+          "tenant_id": {
+            "type": "string",
+            "description": "Id del tenant dueño",
+            "format": "uuid"
+          },
+          "bucket": {
+            "type": "string",
+            "description": "Bucket S3",
+            "example": "t-00000000-0000-0000-0000-000000000000"
+          },
+          "objeto": {
+            "type": "string",
+            "description": "Clave del objeto en el bucket",
+            "example": "productos/foto.jpg"
+          },
+          "nombre": {
+            "type": "string",
+            "description": "Nombre original del archivo",
+            "example": "foto-producto.jpg"
+          },
+          "content_type": {
+            "type": "string",
+            "description": "Content-Type",
+            "example": "image/jpeg"
+          },
+          "carpeta": {
+            "type": "string",
+            "description": "Carpeta lógica",
+            "example": "productos"
+          },
+          "descripcion": {
+            "type": "string",
+            "description": "Descripción libre"
+          },
+          "etiquetas": {
+            "type": "object",
+            "description": "Etiquetas clave-valor",
+            "additionalProperties": {
+              "type": "string"
+            }
+          },
+          "tamano_bytes": {
+            "type": "number",
+            "description": "Tamaño en bytes",
+            "example": 204800
+          },
+          "etag": {
+            "type": "object",
+            "description": "ETag devuelto por MinIO",
+            "nullable": true
+          },
+          "estado": {
+            "type": "string",
+            "description": "Estado del objeto",
+            "enum": [
+              "pendiente",
+              "activo",
+              "eliminado"
+            ],
+            "example": "activo"
+          },
+          "publico": {
+            "type": "boolean",
+            "description": "Servido por el endpoint estático público (ADR-28)",
+            "example": true
+          },
+          "subido_por": {
+            "type": "object",
+            "description": "Usuario que subió el objeto",
+            "nullable": true
+          },
+          "creado_en": {
+            "type": "string",
+            "description": "Fecha de creación (ISO 8601 UTC)",
+            "format": "date-time"
+          },
+          "confirmado_en": {
+            "type": "object",
+            "description": "Fecha de confirmación (ISO 8601 UTC)",
+            "nullable": true,
+            "format": "date-time"
+          },
+          "eliminado_en": {
+            "type": "object",
+            "description": "Fecha de eliminación lógica (ISO 8601 UTC)",
+            "nullable": true,
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "tenant_id",
+          "bucket",
+          "objeto",
+          "nombre",
+          "content_type",
+          "carpeta",
+          "descripcion",
+          "etiquetas",
+          "tamano_bytes",
+          "estado",
+          "creado_en"
+        ]
+      },
+      "PaginaBucketsResponseDto": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "description": "Buckets de la página",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/EstadoBucketResponseDto"
+            }
+          },
+          "total": {
+            "type": "number",
+            "description": "Total de tenants con almacenamiento",
+            "example": 8
+          },
+          "pagina": {
+            "type": "number",
+            "description": "Página actual (1-based)",
+            "example": 1
+          },
+          "limite": {
+            "type": "number",
+            "description": "Tamaño de página",
+            "example": 20
+          },
+          "paginas": {
+            "type": "number",
+            "description": "Total de páginas",
+            "example": 1
+          }
+        },
+        "required": [
+          "items",
+          "total",
+          "pagina",
+          "limite",
+          "paginas"
+        ]
+      },
+      "PaginaObjetosResponseDto": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "description": "Objetos de la página",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ObjetoStorageResponseDto"
+            }
+          },
+          "total": {
+            "type": "number",
+            "description": "Total de objetos",
+            "example": 12
+          },
+          "pagina": {
+            "type": "number",
+            "description": "Página actual (1-based)",
+            "example": 1
+          },
+          "limite": {
+            "type": "number",
+            "description": "Tamaño de página",
+            "example": 20
+          },
+          "paginas": {
+            "type": "number",
+            "description": "Total de páginas",
+            "example": 1
+          }
+        },
+        "required": [
+          "items",
+          "total",
+          "pagina",
+          "limite",
+          "paginas"
+        ]
+      },
+      "SolicitarSubidaRequestDto": {
+        "type": "object",
+        "properties": {
+          "nombre": {
+            "type": "string",
+            "description": "Nombre del archivo (sin rutas)",
+            "example": "foto-producto.jpg"
+          },
+          "content_type": {
+            "type": "string",
+            "description": "Content-Type del archivo (whitelist)",
+            "example": "image/jpeg"
+          },
+          "tamano_bytes": {
+            "type": "number",
+            "description": "Tamano en bytes que el cliente subira",
+            "example": 204800
+          },
+          "carpeta": {
+            "type": "string",
+            "description": "Carpeta logica dentro del bucket",
+            "example": "productos"
+          },
+          "descripcion": {
+            "type": "string",
+            "description": "Descripcion libre"
+          },
+          "etiquetas": {
+            "type": "object",
+            "description": "Etiquetas clave-valor (max 20)"
+          },
+          "publico": {
+            "type": "boolean",
+            "description": "Servir el objeto como imagen estática pública (ADR-28)",
+            "default": false
+          }
+        },
+        "required": [
+          "nombre",
+          "content_type",
+          "tamano_bytes"
+        ]
+      },
+      "SolicitudSubidaResponseDto": {
+        "type": "object",
+        "properties": {
+          "objeto_id": {
+            "type": "string",
+            "description": "Id del objeto pendiente",
+            "format": "uuid"
+          },
+          "bucket": {
+            "type": "string",
+            "description": "Bucket S3"
+          },
+          "objeto": {
+            "type": "string",
+            "description": "Clave del objeto en el bucket"
+          },
+          "url_subida": {
+            "type": "string",
+            "description": "URL prefirmada para el PUT directo",
+            "format": "uri"
+          },
+          "metodo": {
+            "type": "string",
+            "description": "Método HTTP de subida",
+            "enum": [
+              "PUT"
+            ],
+            "example": "PUT"
+          },
+          "headers": {
+            "type": "object",
+            "description": "Cabeceras que debe enviar el cliente",
+            "additionalProperties": {
+              "type": "string"
+            }
+          },
+          "expira_en": {
+            "type": "string",
+            "description": "Expiración de la URL (ISO 8601 UTC)",
+            "format": "date-time"
+          },
+          "max_bytes": {
+            "type": "number",
+            "description": "Tamaño máximo permitido en bytes",
+            "example": 204800
+          }
+        },
+        "required": [
+          "objeto_id",
+          "bucket",
+          "objeto",
+          "url_subida",
+          "metodo",
+          "headers",
+          "expira_en",
+          "max_bytes"
+        ]
+      },
+      "UrlDescargaResponseDto": {
+        "type": "object",
+        "properties": {
+          "url_descarga": {
+            "type": "string",
+            "description": "URL prefirmada de descarga",
+            "format": "uri"
+          },
+          "expira_en": {
+            "type": "string",
+            "description": "Expiración de la URL (ISO 8601 UTC)",
+            "format": "date-time"
+          },
+          "nombre": {
+            "type": "string",
+            "description": "Nombre original del archivo"
+          },
+          "content_type": {
+            "type": "string",
+            "description": "Content-Type",
+            "example": "image/jpeg"
+          },
+          "tamano_bytes": {
+            "type": "number",
+            "description": "Tamaño en bytes",
+            "example": 204800
+          }
+        },
+        "required": [
+          "url_descarga",
+          "expira_en",
+          "nombre",
+          "content_type",
+          "tamano_bytes"
+        ]
+      }
+    }
+  }
+}

@@ -4,13 +4,12 @@ import { PedidosController } from './pedidos.controller';
 import type { CreateOrderCommandHandler } from './handlers/create-order-command.handler';
 import type { OrderViewRepository } from './queries/order-view.repository';
 import type { PedidosService } from './pedidos.service';
-import { ROLES } from '@core/shared';
+import { ForbiddenError, ROLES } from '@core/shared';
 
-const orden = { id: 'o-1', cliente_id: 'u-c', estado: 'creada', total_cents: 1000 };
+const orden = { id: 'o-1', comprador_id: 'u-c', estado: 'creada', total_cents: 1000 };
 const comprador = { user_id: 'u-c', email: 'c@core.local', rol: ROLES.COMPRADOR };
 const vendedor = { user_id: 'u-v', email: 'v@core.local', rol: ROLES.VENDEDOR };
 const admin = { user_id: 'u-a', email: 'a@core.local', rol: ROLES.ADMIN };
-const superAdmin = { user_id: 'u-sa', email: 'sa@core.local', rol: ROLES.SUPER_ADMIN };
 const empresario = { user_id: 'u-e', email: 'e@core.local', rol: ROLES.EMPRESARIO, tenant_id: 'e-1' };
 
 function fabricar(): {
@@ -21,9 +20,9 @@ function fabricar(): {
 } {
   const handler = { ejecutar: vi.fn(), transicionar: vi.fn(), reproyectar: vi.fn() };
   const views = {
+    encontrar: vi.fn(),
     listarTodo: vi.fn(),
     listarDeVendedor: vi.fn(),
-    obtenerComisiones: vi.fn(),
     listarDeTienda: vi.fn(),
     listarDeEmpresa: vi.fn(),
     listarDeCliente: vi.fn(),
@@ -43,13 +42,74 @@ function fabricar(): {
   return { handler, views, pedidos, controller };
 }
 
-describe('PedidosController (api/v1/orders, R-U-10/11)', () => {
+describe('PedidosController (api/v2/orders, R-U-10/11)', () => {
   it('debe crear la orden ejecutando el comando con el id del comprador', async () => {
     const { handler, controller } = fabricar();
     handler.ejecutar.mockResolvedValue(orden);
     const comando = { items: [{ oferta_id: 'of-1', cantidad: 2 }] };
     await expect(controller.crear(comando as never, comprador as never)).resolves.toEqual(orden);
     expect(handler.ejecutar).toHaveBeenCalledWith(comando, 'u-c');
+  });
+
+  const cotizacion = {
+    id: 'cot-1',
+    vendedor_id: 'u-v',
+    comprador_id: 'u-c',
+    estado: 'creada',
+    tipo_orden: 'cotizacion',
+    items: [{ oferta_id: 'of-1', cantidad: 2, empresa_id: 'e-1' }],
+  };
+
+  it('debe enviar una cotizacion solo desde el vendedor o su empresa', async () => {
+    const { views, handler, controller } = fabricar();
+    views.encontrar.mockResolvedValue(cotizacion);
+    handler.transicionar.mockResolvedValue({ ...cotizacion, estado: 'enviada' });
+
+    await expect(
+      controller.enviarCotizacion('cot-1', vendedor as never),
+    ).resolves.toMatchObject({ estado: 'enviada' });
+    expect(handler.transicionar).toHaveBeenCalledWith(
+      'cot-1',
+      'enviada',
+      'cotizacion_enviada',
+      'u-v',
+    );
+
+    views.encontrar.mockResolvedValue({ ...cotizacion, vendedor_id: 'otro' });
+    await expect(
+      controller.enviarCotizacion('cot-1', comprador as never),
+    ).rejects.toBeInstanceOf(ForbiddenError);
+  });
+
+  it('debe aceptar la cotizacion generando una orden de compra', async () => {
+    const { views, handler, controller } = fabricar();
+    views.encontrar.mockResolvedValue({ ...cotizacion, estado: 'enviada' });
+    const nuevaOrden = { id: 'o-2', estado: 'creada' };
+    handler.ejecutar.mockResolvedValue(nuevaOrden);
+    handler.transicionar.mockResolvedValue({ ...cotizacion, estado: 'aceptada' });
+
+    await expect(
+      controller.aceptarCotizacion('cot-1', comprador as never),
+    ).resolves.toEqual({ cotizacion: { ...cotizacion, estado: 'aceptada' }, orden: nuevaOrden });
+    expect(handler.ejecutar).toHaveBeenCalledWith(
+      { tipo_orden: 'compra', items: [{ oferta_id: 'of-1', cantidad: 2 }] },
+      'u-c',
+    );
+    expect(handler.transicionar).toHaveBeenCalledWith(
+      'cot-1',
+      'aceptada',
+      'cotizacion_aceptada',
+      'u-c',
+    );
+  });
+
+  it('debe rechazar la cotizacion con el motivo indicado', async () => {
+    const { views, handler, controller } = fabricar();
+    views.encontrar.mockResolvedValue({ ...cotizacion, estado: 'enviada' });
+    handler.transicionar.mockResolvedValue({ ...cotizacion, estado: 'rechazada' });
+
+    await controller.rechazarCotizacion('cot-1', { motivo: 'precio' } as never, comprador as never);
+    expect(handler.transicionar).toHaveBeenCalledWith('cot-1', 'rechazada', 'precio', 'u-c');
   });
 
   it('debe listar todas las ordenes con filtro de estado y limite', async () => {
@@ -64,27 +124,6 @@ describe('PedidosController (api/v1/orders, R-U-10/11)', () => {
     views.listarDeVendedor.mockResolvedValue([orden]);
     await controller.misVentas('enviada', vendedor as never);
     expect(views.listarDeVendedor).toHaveBeenCalledWith('u-v', 'enviada');
-  });
-
-  it('debe pedir las comisiones del vendedor autenticado cuando no es admin', async () => {
-    const { views, controller } = fabricar();
-    views.obtenerComisiones.mockResolvedValue([]);
-    await controller.comisiones('2026-09', vendedor as never, undefined);
-    expect(views.obtenerComisiones).toHaveBeenCalledWith('u-v', '2026-09');
-  });
-
-  it('debe pedir las comisiones de otro vendedor cuando el contexto es admin', async () => {
-    const { views, controller } = fabricar();
-    views.obtenerComisiones.mockResolvedValue([]);
-    await controller.comisiones('2026-09', admin as never, 'u-v2');
-    expect(views.obtenerComisiones).toHaveBeenCalledWith('u-v2', '2026-09');
-  });
-
-  it('debe pedir las comisiones de otro vendedor cuando el contexto es super_admin', async () => {
-    const { views, controller } = fabricar();
-    views.obtenerComisiones.mockResolvedValue([]);
-    await controller.comisiones('2026-09', superAdmin as never, 'u-v2');
-    expect(views.obtenerComisiones).toHaveBeenCalledWith('u-v2', '2026-09');
   });
 
   it('debe listar las ordenes de la tienda pasando vendedor o empresa segun el contexto', async () => {
@@ -173,31 +212,8 @@ describe('PedidosController (api/v1/orders, R-U-10/11)', () => {
     expect(pedidos.timelineVisible).toHaveBeenCalledWith(eventos, orden.items);
   });
 
-  it('debe marcar las comisiones legadas como obsoletas y señalar su reemplazo', () => {
-    const operacion = Reflect.getMetadata(
-      'swagger/apiOperation',
-      PedidosController.prototype.comisiones,
-    ) as { deprecated?: boolean };
-    expect(operacion.deprecated).toBe(true);
-    const cabeceras = Reflect.getMetadata(
-      '__headers__',
-      PedidosController.prototype.comisiones,
-    ) as { name: string; value: string }[];
-    expect(cabeceras).toEqual(
-      expect.arrayContaining([
-        { name: 'Deprecation', value: 'true' },
-        { name: 'Link', value: '</api/v1/vendedores/me/ventas>; rel="successor-version"' },
-      ]),
-    );
-  });
-
-  it('debe exigir rol comprador en crear y vendedor, empresario, admin o super_admin en comisiones', () => {
+  it('debe exigir rol comprador en crear y los roles esperados en las consultas', () => {
     expect(Reflect.getMetadata('roles_requeridos', PedidosController.prototype.crear)).toEqual([ROLES.COMPRADOR]);
-    expect(Reflect.getMetadata('roles_requeridos', PedidosController.prototype.comisiones)).toEqual([
-      ROLES.SUPER_ADMIN,
-      ROLES.VENDEDOR,
-      ROLES.ADMIN,
-    ]);
     expect(Reflect.getMetadata('roles_requeridos', PedidosController.prototype.detalle)).toEqual([
       ROLES.SUPER_ADMIN,
       ROLES.EMPRESARIO,

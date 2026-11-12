@@ -20,7 +20,7 @@ está repartido entre [`.github/README.md`](../.github/README.md),
 flowchart LR
     A[rama develop] -->|PR| B[staging]
     B -->|PR, CI verde| C[main]
-    C -->|git tag vX.Y.Z| R["release.yml\n10 imágenes + digests"]
+    C -->|git tag vX.Y.Z| R["release.yml\n12 imágenes + digests"]
     R -->|"promote.yml env=stage, source=vX.Y.Z"| S["GHCR :stage"]
     R -->|"promote.yml env=prod, source=vX.Y.Z"| P["GHCR :prod"]
     S --> DS[deploy.yml env=stage → docker-compose.stage.yml]
@@ -34,8 +34,11 @@ ghcr.io/xozan845-ctrl/core-engine-<servicio>:<tag|stage|prod>
 ```
 
 Servicios: `api-gateway`, `identity-service`, `catalog-service`, `stores-service`,
-`orders-service`, `logistics-service`, `commissions-service`, `finance-service`,
-`field-service`, `market-intelligence-service`, `storage-service`.
+`orders-service`, `logistics-service`, `scheduling-service`, `commissions-service`,
+`finance-service`, `field-service`, `market-intelligence-service`, `storage-service`,
+`notifications-service`
+(13 imágenes; `commissions` solo se despliega en stage y `market-intelligence` solo
+en desarrollo).
 
 ---
 
@@ -70,9 +73,12 @@ gh workflow run release.yml -f source_tag=v1.0.0            # dry_run=true por d
 gh workflow run release.yml -f source_tag=v1.0.0 -f dry_run=false   # publica
 ```
 
-`release.yml`: `gate` valida tag semver + procedencia; luego **una imagen por servicio**
-con etiquetas `vX.Y.Z`, `X.Y.Z`, `X.Y`, `X`, `latest` (solo no-prerelease), `sha-<corto>`,
-labels OCI y **digest** en el resumen del run (`R-CD-4`).
+`release.yml`: `gate` valida tag semver + procedencia; luego el job **E2E**
+levanta el stack limpio, ejecuta `npm run demo` y verifica R-E-8 antes de
+construir una sola imagen. Si E2E falla, `images` no arranca. Después se publica
+**una imagen por servicio** con etiquetas `vX.Y.Z`, `X.Y.Z`, `X.Y`, `X`, `latest`
+(solo no-prerelease), `sha-<corto>`, labels OCI y **digest** en el resumen del
+run (`R-CD-4`).
 
 ---
 

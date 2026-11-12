@@ -7,6 +7,7 @@ import {
 } from './tiendas.controller';
 import type { TiendasService } from './tiendas.service';
 import { NotFoundError, ROLES } from '@core/shared';
+import { TEMA_POR_DEFECTO } from './personalizacion-tienda';
 
 const tienda = { id: 't-1', vendedor_id: 'u-v', nombre: 'Mi tienda', slug: 'mi-tienda', descripcion: 'x' };
 const vendedor = { user_id: 'u-v', email: 'v@core.local', rol: ROLES.VENDEDOR, tenant_id: 'e-1', participacion_porcentaje: 25 };
@@ -18,7 +19,7 @@ function fabricar(): { tiendas: Record<string, Mock>; controller: TiendasControl
   return { tiendas, controller };
 }
 
-describe('TiendasController (api/v1/vendedores, R-U-10/11)', () => {
+describe('TiendasController (api/v2/vendedores, R-U-10/11)', () => {
   it('debe crear la tienda con el vendedor y los datos del dto', async () => {
     const { tiendas, controller } = fabricar();
     tiendas.crear.mockResolvedValue(tienda);
@@ -76,7 +77,7 @@ describe('TiendasController (api/v1/vendedores, R-U-10/11)', () => {
   });
 });
 
-describe('TiendasEmpresaController (api/v1/empresarios/me/tiendas, ADR-25)', () => {
+describe('TiendasEmpresaController (api/v2/empresarios/me/tiendas, ADR-25)', () => {
   function fabricarEmpresa(): { tiendas: Record<string, Mock>; controller: TiendasEmpresaController } {
     const tiendas = { deEmpresa: vi.fn() };
     const controller = new TiendasEmpresaController(tiendas as unknown as TiendasService);
@@ -105,12 +106,108 @@ describe('TiendasEmpresaController (api/v1/empresarios/me/tiendas, ADR-25)', () 
   });
 });
 
-describe('TiendasSlugController (api/v1/tiendas/:id/slug, ADR-26)', () => {
+describe('TiendasSlugController (api/v2/tiendas/:id/slug, ADR-26)', () => {
   function fabricarSlug(): { tiendas: Record<string, Mock>; controller: TiendasSlugController } {
-    const tiendas = { actualizarSlug: vi.fn() };
+    const tiendas = {
+      actualizarSlug: vi.fn(),
+      actualizarBackground: vi.fn(),
+      actualizarPersonalizacion: vi.fn(),
+      actualizarContenido: vi.fn(),
+      encontrarPorId: vi.fn(),
+    };
     const controller = new TiendasSlugController(tiendas as unknown as TiendasService);
     return { tiendas, controller };
   }
+
+  it('debe servir el tema como CSS público', async () => {
+    const { tiendas, controller } = fabricarSlug();
+    tiendas.encontrarPorId.mockResolvedValue({ ...tienda, tema: TEMA_POR_DEFECTO });
+    const res = { setHeader: vi.fn() };
+
+    const css = await controller.temaCss('t-1', res as never);
+
+    expect(css).toContain('--tienda-color-primario: #1F2937;');
+    expect(css).toContain('--tienda-radio-bordes: 12px;');
+    expect(res.setHeader).toHaveBeenCalledWith('Content-Type', 'text/css; charset=utf-8');
+    expect(res.setHeader).toHaveBeenCalledWith('Cache-Control', 'public, max-age=60');
+  });
+
+  it('debe lanzar NotFound si la tienda del tema no existe', async () => {
+    const { tiendas, controller } = fabricarSlug();
+    tiendas.encontrarPorId.mockResolvedValue(null);
+
+    await expect(
+      controller.temaCss('no-existe', { setHeader: vi.fn() } as never),
+    ).rejects.toBeInstanceOf(NotFoundError);
+  });
+
+  it('debe actualizar el contenido con el usuario autenticado', async () => {
+    const { tiendas, controller } = fabricarSlug();
+    const dto = {
+      secciones: [{ tipo: 'hero', visible: true, orden: 0 }],
+      sobre_nosotros: 'Mi historia',
+      anuncio_texto: 'Envío gratis',
+    };
+    tiendas.actualizarContenido.mockResolvedValue(tienda);
+
+    await expect(
+      controller.actualizarContenido('t-1', dto as never, vendedor as never),
+    ).resolves.toEqual(tienda);
+    expect(tiendas.actualizarContenido).toHaveBeenCalledWith(vendedor, 't-1', dto);
+  });
+
+  it('debe exigir dueño, empresario o rol global para el contenido', () => {
+    expect(
+      Reflect.getMetadata(
+        'roles_requeridos',
+        TiendasSlugController.prototype.actualizarContenido,
+      ),
+    ).toEqual([ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.VENDEDOR, ROLES.EMPRESARIO]);
+  });
+
+  it('debe actualizar la personalización con el usuario autenticado', async () => {
+    const { tiendas, controller } = fabricarSlug();
+    const dto = {
+      plantilla: 'boutique',
+      tema: { color_primario: '#112233' },
+      hero_titulo: 'Mi tienda',
+    };
+    tiendas.actualizarPersonalizacion.mockResolvedValue(tienda);
+
+    await expect(
+      controller.actualizarPersonalizacion('t-1', dto as never, vendedor as never),
+    ).resolves.toEqual(tienda);
+    expect(tiendas.actualizarPersonalizacion).toHaveBeenCalledWith(vendedor, 't-1', dto);
+  });
+
+  it('debe exigir dueño, empresario o rol global para la personalización', () => {
+    expect(
+      Reflect.getMetadata(
+        'roles_requeridos',
+        TiendasSlugController.prototype.actualizarPersonalizacion,
+      ),
+    ).toEqual([ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.VENDEDOR, ROLES.EMPRESARIO]);
+  });
+
+  it('debe actualizar el fondo con el usuario autenticado', async () => {
+    const { tiendas, controller } = fabricarSlug();
+    const dto = {
+      background_objeto_id: '22222222-3333-4444-8555-666666666666',
+      background_activo: true,
+    };
+    tiendas.actualizarBackground.mockResolvedValue(tienda);
+
+    await expect(
+      controller.actualizarBackground('t-1', dto, vendedor as never),
+    ).resolves.toEqual(tienda);
+    expect(tiendas.actualizarBackground).toHaveBeenCalledWith(vendedor, 't-1', dto);
+  });
+
+  it('debe exigir dueño, empresario o rol global para el fondo', () => {
+    expect(
+      Reflect.getMetadata('roles_requeridos', TiendasSlugController.prototype.actualizarBackground),
+    ).toEqual([ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.VENDEDOR, ROLES.EMPRESARIO]);
+  });
 
   it('debe cambiar el slug con el usuario autenticado', async () => {
     const { tiendas, controller } = fabricarSlug();

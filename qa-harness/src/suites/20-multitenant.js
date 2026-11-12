@@ -31,7 +31,7 @@ export async function suite20Multitenant({ client, pg, config }) {
     resultados.push({ test, status: res.status, pass: res.pass });
     if (!res.pass) errores.push(`${test} :: ${detail || res.status}`);
   };
-  const FIELD = '/api/v1/field';
+  const FIELD = '/api/v2/field';
   const limpieza = [];
 
   try {
@@ -42,8 +42,8 @@ export async function suite20Multitenant({ client, pg, config }) {
     const correoB = `tenantB.${suf}@test.com`;
     await sembrar(pg, correoA, 'coordinador', tenantA);
     await sembrar(pg, correoB, 'coordinador', tenantB);
-    const loginA = await client.post('/api/v1/auth/login', { correo: correoA, contrasena: 'Multi1234!' });
-    const loginB = await client.post('/api/v1/auth/login', { correo: correoB, contrasena: 'Multi1234!' });
+    const loginA = await client.post('/api/v2/auth/login', { correo: correoA, contrasena: 'Multi1234!' });
+    const loginB = await client.post('/api/v2/auth/login', { correo: correoB, contrasena: 'Multi1234!' });
     const tokenA = loginA.body?.access_token;
     const tokenB = loginB.body?.access_token;
     const authA = { authorization: `Bearer ${tokenA}` };

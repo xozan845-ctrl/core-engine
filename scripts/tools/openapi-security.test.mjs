@@ -10,16 +10,18 @@ import { repoRoot } from '../engine/lib/paths.mjs';
  * debe declarar seguridad en OpenAPI.
  */
 const RUTAS_PUBLICAS = new Set([
-  'GET /api/v1/catalog/productos',
-  'GET /api/v1/catalog/productos/{id}',
-  'GET /api/v1/tiendas/{id}',
-  'GET /api/v1/storage/public/objetos/{id}',
-  'POST /api/v1/auth/login',
-  'POST /api/v1/auth/refresh',
-  'POST /api/v1/auth/registro',
-  'POST /api/v1/auth/restablecer-contrasena',
-  'GET /api/v1/invitaciones/vendedores/{token}',
-  'POST /api/v1/invitaciones/vendedores/{token}/aceptar',
+  'GET /api/v2/configuracion/sitio',
+  'GET /api/v2/incorporaciones/{token}',
+  'POST /api/v2/incorporaciones/{token}/aceptar',
+  'GET /api/v2/tiendas/{id}',
+  'GET /api/v2/storage/public/objetos/{id}',
+  'HEAD /api/v2/storage/public/objetos/{id}',
+  'POST /api/v2/auth/login',
+  'POST /api/v2/auth/token',
+  'POST /api/v2/auth/refresh',
+  'POST /api/v2/auth/registro',
+  'POST /api/v2/auth/restablecer-contrasena',
+  'POST /api/v2/auth/restablecer-contrasena/confirmar',
 ]);
 
 function leerDocumento(nombre) {
@@ -64,14 +66,17 @@ test('debe declarar internalKey en cada operación /internal de los specs por se
   const directorio = resolve(repoRoot, 'docs/openapi');
   const faltantes = [];
 
-  for (const fichero of readdirSync(directorio).filter((f) => f.endsWith('.json'))) {
-    const documento = JSON.parse(readFileSync(resolve(directorio, fichero), 'utf8'));
+  for (const servicio of readdirSync(directorio, { withFileTypes: true })
+    .filter((e) => e.isDirectory())
+    .map((e) => e.name)
+    .sort()) {
+    const fichero = resolve(directorio, servicio, 'internal.openapi.json');
+    const documento = JSON.parse(readFileSync(fichero, 'utf8'));
     for (const [ruta, operaciones] of Object.entries(documento.paths ?? {})) {
-      if (!ruta.startsWith('/internal')) continue;
       for (const [metodo, operacion] of Object.entries(operaciones)) {
         const seguridad = operacion.security ?? documento.security ?? [];
         if (!seguridad.some((requisito) => 'internalKey' in requisito)) {
-          faltantes.push(`${fichero}: ${metodo.toUpperCase()} ${ruta}`);
+          faltantes.push(`${servicio}/internal.openapi.json: ${metodo.toUpperCase()} ${ruta}`);
         }
       }
     }

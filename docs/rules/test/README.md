@@ -69,8 +69,9 @@ validaban el comportamiento erróneo de la implementación en vez del requisito
 ## Cómo auditar (este repo)
 
 ```bash
-# Suite completa con cobertura (lo que corre CI: 11 workspaces con tests)
-npm test -- --coverage
+# Suite completa con cobertura (lo que corre CI: 13 workspaces con tests).
+# No añadas `-- --coverage`: el script raíz ya pasa el flag a cada workspace.
+npm test
 
 # Un solo servicio
 npm run test -w @core/orders-service
@@ -97,22 +98,25 @@ npm run demo
 - **Tooling JS parcialmente fuera de ESLint**: `eslint.config.mjs` cubre
   `packages/*/src/**/*.ts` (el alcance de G-7) y ahora también el motor de
   gobernanza (`scripts/**/*.mjs`); `qa-harness/` sigue sin lintearse.
-- **G-4/G-5/G-6 sin paso en CI**: no existen suites de integración,
-  contrato ni E2E (estado detallado en
-  [`06-estandares-cobertura.md`](./06-estandares-cobertura.md)). **G-8 sí está
-  activo** en el job `build` desde la Etapa 1 de OpenAPI.
-- **Cobertura (ratchet R-COV-1)**: los 12 workspaces cumplen su
-  `coverageThreshold`, y **6 de 12 ya alcanzan el objetivo 80/70** (`catalog`,
-  `identity`, `stores`, `logistics`, `field`, `storage`). Los más bajos
-  siguen siendo `api-gateway` 22.8, `market-intelligence` 30.3, `commissions`
-  32.7 y `shared` 40.3 (suben +5 por release).
-- **Specs pendientes (R-U-10/11, R-U-18)**: **25 de 25** `*.controller.ts` y
-  **19 de 39** `*.service.ts`/`*.consumer.ts` siguen sin spec; la presión la
-  ejerce el ratchet (recuento en
-  [`../_meta/AUDIT.md`](../_meta/AUDIT.md)).
-- **R-FL-3 sin cumplir**: ningún setup de Vitest fija `TZ`; los specs actuales
-  no usan hora local, pero un spec futuro podría depender de la timezone de la
-  máquina sin que nada lo avise.
+- **G-4 parcial**: existen suites con PostgreSQL efímero para stock y
+  configuración de sitio API+BD, pero todavía faltan otros flujos críticos.
+  **G-5**: envelope `{data,meta}` aplicado en todo `/api/v2`; los errores
+  400/401/403/404/409/500 se validan en runtime. G-8 protege el documento
+  OpenAPI, pero no sustituye las pruebas runtime. **G-6** es gate de release:
+  `release.yml` ejecuta `e2e.yml` (smoke R-E-1..7 + R-E-8) antes de publicar
+  imágenes; no corre en cada PR.
+- **Cobertura (ratchet R-COV-1)**: de los 13 workspaces, **13 cumplen su `coverageThreshold`** y **11 ya alcanzan
+  el objetivo 80/70** de líneas/ramas. `market-intelligence` y `shared` siguen
+  bajo el objetivo. `identity-service` recuperó su umbral con specs de
+  controllers y ramas de servicio. El detalle vigente vive en
+  [`../_meta/AUDIT.md`](../_meta/AUDIT.md).
+- **Specs pendientes (R-U-18/R-COV-2)**: el baseline de lógica sin spec se
+  mantiene versionado y el recuento vigente está en
+  [`../_meta/AUDIT.md`](../_meta/AUDIT.md); el `baseline:guard` impide que esa
+  deuda aumente en un PR.
+- **R-FL-3**: el setup central `scripts/config/test-timezone.mjs` fija
+  `America/Managua` para las 13 suites Vitest y los 5 runners de mutation; CI y
+  los workflows E2E/deploy también fijan la misma zona.
 
 **Cerrado en la 3ª auditoría (2026-10-03):** `shared` puro **7/7** con spec
 (R-U-17) y guards/pipes (`service-auth`, `validation.pipe`) testeados (R-U-15);

@@ -1,7 +1,13 @@
-import { DomainError, ROLES } from '@core/shared';
+import { CAPABILITIES_KEY, CAPACIDADES, DomainError, ROLES } from '@core/shared';
 import { FieldController } from './field.controller';
 
 describe('FieldController', () => {
+  it('debe exigir la capacidad de operacion de campo', () => {
+    expect(Reflect.getMetadata(CAPABILITIES_KEY, FieldController)).toEqual([
+      CAPACIDADES.OPERACION_CAMPO,
+    ]);
+  });
+
   let mocks: Record<string, ReturnType<typeof vi.fn>>;
   let controller: FieldController;
   const usuario = { tenant_id: 'tenant-a' } as never;
@@ -129,7 +135,7 @@ describe('FieldController', () => {
     delega(
       'listarPedidos',
       () => controller.listarPedidos(usuario, 'pendiente', 'r1', 'c1'),
-      ['tenant-a', { estado: 'pendiente', rutaId: 'r1', clienteId: 'c1' }],
+      ['tenant-a', { estado: 'pendiente', rutaId: 'r1', parteId: 'c1' }],
     );
     delega('obtenerPedido', () => controller.obtenerPedido(usuario, 'pe1'), ['tenant-a', 'pe1']);
     delega(

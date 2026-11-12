@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { PgService, Money } from '@core/shared';
+import { PgService, Money, timeoutInternoMs } from '@core/shared';
 
 export interface ReporteKPI {
   gmv_mes_cents: number;
@@ -15,7 +15,7 @@ export interface ReporteKPI {
 }
 
 /**
- * H-06 / GET /api/v1/admin/reportes — KPIs de ventas e inventario (Tabla 21).
+ * H-06 / GET /api/v2/admin/reportes — KPIs de ventas e inventario (Tabla 21).
  * Las metricas derivan de los eventos de negocio (doc 8.8: misma fuente de
  * verdad que el sistema, sin reconciliacion manual).
  */
@@ -86,6 +86,7 @@ export class ReportesService {
     try {
       const res = await fetch(`${this.catalogoUrl}/internal/inventario/resumen`, {
         headers: { 'x-internal-key': this.claveInterna },
+        signal: AbortSignal.timeout(timeoutInternoMs()),
       });
       if (!res.ok) return { productos: 0, stock_total: 0, agotados: 0 };
       return (await res.json()) as { productos: number; stock_total: number; agotados: number };
@@ -98,6 +99,7 @@ export class ReportesService {
     try {
       const res = await fetch(`${this.identidadUrl}/internal/contar-vendedores`, {
         headers: { 'x-internal-key': this.claveInterna },
+        signal: AbortSignal.timeout(timeoutInternoMs()),
       });
       if (!res.ok) return 0;
       const cuerpo = (await res.json()) as { vendedores?: number };

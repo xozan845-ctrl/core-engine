@@ -25,11 +25,12 @@ UI, la capa pasa a navegador real (Playwright) conservando estos IDs.
 | R-E-8 | **Cero errores en los logs de los servicios** (5xx, excepciones no capturadas) durante el flujo. Con UI: además cero errores de consola. Un error = test fallido. |
 | R-E-9 | Cada flujo verifica el resultado por **datos** (cuerpo de la respuesta, conteos, estados en BD, URL), no solo por screenshots. Screenshots son evidencia complementaria. |
 | R-E-10 | Con UI (cuando exista): selectores estables (`data-testid` preferido; CSS/roles como alternativa), prohibido depender de clases generadas por el build. Sin UI: verificación por datos de respuesta (R-E-9). |
-| R-E-11 | **Suite hermética**: todo dato que un test necesita (usuarios, productos, registros boundary) viene del seed versionado en el repo (`infra/db/init/*.sql`, idempotente; fechas fijas con offset local `-06:00` explícito) — o lo crea la propia prueba vía API. Prohibido depender del estado manual de la BD local. Verificable: la suite completa pasa contra una BD recreada desde cero (init SQL), que es lo que ejecutará G-6 en CI cuando exista (hoy deuda). |
+| R-E-11 | **Suite hermética**: todo dato que un test necesita (usuarios, productos, registros boundary) viene del seed versionado en el repo (`infra/db/init/*.sql`, idempotente; fechas fijas con offset local `-06:00` explícito) — o lo crea la propia prueba vía API. Prohibido depender del estado manual de la BD local. El workflow G-6 levanta un stack limpio en el runner y el smoke crea sus datos por API. |
 | R-E-12 | Ejecución headless en CI con retry único de red para operaciones idempotentes; no repetir mutaciones sin clave de idempotencia. Timeout explícito por petición y por espera asíncrona, no global largo. Los jobs de CI que arrancan la app fijan `TZ: America/Managua` (paridad con local, R-I-3). |
 | R-E-13 | Los scripts E2E viven en el repo (no en `/tmp`), con `package.json` propio o script npm que instale sus dependencias. |
 
 ## Mínimo aceptable por release
 
 - Suite E2E que ejecute R-E-1 … R-E-7 con pass rate 100%.
-- Si un flujo crítico no puede automatizarse, queda registrado en `AUDIT.md` como deuda con responsable y fecha.
+- Estado actual: `npm run demo` cubre R-E-1 … R-E-7, incluido el boundary de fecha R-E-4 mediante `field/asistencia` con registros en días vecinos; `e2e.yml` además verifica R-E-8 en los logs del stack.
+- **Gate de release:** `release.yml` llama a `e2e.yml` como job obligatorio antes de construir imágenes. Un fallo E2E bloquea la publicación; ya no se dispara por tag por separado para evitar runs duplicados.

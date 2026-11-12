@@ -36,9 +36,12 @@ export class Runner {
     this.pg = new ClientoPostgres();
     this.report = new Reporta();
     this.adminToken = null;
+    this.empresarioToken = null;
     this.vendedorToken = null;
     this.compradorToken = null;
     this.logisticaToken = null;
+    this.empresaId = null;
+    this.tiendaId = null;
   }
 
   async runPreflight() {
@@ -76,7 +79,7 @@ export class Runner {
   /** Login con reintento ante 429 (gateway: 10 /auth/login por minuto por IP). */
   async loginConReintento(correo, pass) {
     for (let i = 0; i < 4; i++) {
-      const r = await this.client.post('/api/v1/auth/login', { correo, contrasena: pass });
+      const r = await this.client.post('/api/v2/auth/login', { correo, contrasena: pass });
       if (r.status === 200 || r.status === 201) return r;
       if (r.status === 429) {
         const ra = Number(r.body?.detalles?.reintente_en_seg) || 65;
@@ -85,34 +88,104 @@ export class Runner {
       }
       return r;
     }
-    return this.client.post('/api/v1/auth/login', { correo, contrasena: pass });
+    return this.client.post('/api/v2/auth/login', { correo, contrasena: pass });
+  }
+
+  /** Login tolerante: devuelve el access token o null. */
+  async sesionDe(correo, contrasena) {
+    const login = await this.loginConReintento(correo, contrasena);
+    return [200, 201].includes(login.status) ? login.body?.access_token ?? null : null;
+  }
+
+  /**
+   * Bootstrap multitenant (ADR-25/27): el registro público solo admite
+   * empresario o comprador, y las tiendas exigen tenant_id + participación en
+   * el JWT. Se crea (o recupera) una empresa QA y un vendedor dentro de ella.
+   */
+  async asegurarEmpresa() {
+    const datos = {
+      nombre: 'Empresario QA',
+      correo: 'empresario.qa@test.com',
+      contrasena: 'Empresario123!',
+    };
+    const registro = await this.client.post('/api/v2/auth/registro', {
+      ...datos,
+      rol: 'empresario',
+    });
+    this.empresarioToken = [200, 201].includes(registro.status)
+      ? registro.body?.access_token ?? null
+      : await this.sesionDe(datos.correo, datos.contrasena);
+    if (!this.empresarioToken) throw new Error('No se pudo autenticar al empresario QA');
+
+    const auth = { authorization: `Bearer ${this.empresarioToken}` };
+    const crear = await this.client.post('/api/v2/empresas', {
+      nombre: 'QA Harness',
+      slug: 'qa-harness',
+      vertical_id: 'retail',
+      pack_codigo: 'pack_retail',
+    }, auth);
+    let empresa = [200, 201].includes(crear.status) ? crear.body : null;
+    if (!empresa?.id) {
+      const existente = await this.client.get('/api/v2/empresas/qa-harness', auth);
+      empresa = [200, 301].includes(existente.status) ? existente.body : null;
+    }
+    if (!empresa?.id) throw new Error('No se pudo crear ni recuperar la empresa QA');
+
+    this.empresaId = empresa.id;
+    this.config.set('empresaId', empresa.id);
+
+    // Re-login: el JWT emitido antes del alta no lleva tenant_id.
+    this.empresarioToken =
+      (await this.sesionDe(datos.correo, datos.contrasena)) ?? this.empresarioToken;
+    return empresa.id;
+  }
+
+  /** Crea el vendedor dentro de la empresa (o lo reutiliza) y abre su tienda. */
+  async asegurarVendedor() {
+    const datos = {
+      nombre: 'Vendedor QA',
+      correo: 'vendedor.qa@test.com',
+      contrasena: 'Contrasena123!',
+      participacion_porcentaje: 10,
+    };
+    const auth = { authorization: `Bearer ${this.empresarioToken}` };
+    await this.client.post(`/api/v2/empresas/${this.empresaId}/vendedores`, datos, auth);
+    this.vendedorToken = await this.sesionDe(datos.correo, datos.contrasena);
+    if (!this.vendedorToken) throw new Error('No se pudo autenticar al vendedor QA');
+    await this.asegurarTienda();
+  }
+
+  /** Garantiza la tienda del vendedor; 04-stores sigue probando el alta. */
+  async asegurarTienda() {
+    const auth = { authorization: `Bearer ${this.vendedorToken}` };
+    const crear = await this.client.post('/api/v2/vendedores/tienda', {
+      nombre: 'Tienda QA',
+      descripcion: 'Tienda del harness',
+    }, auth);
+    let tiendaId = [200, 201].includes(crear.status) ? crear.body?.id ?? null : null;
+    if (!tiendaId) {
+      const mia = await this.client.get('/api/v2/vendedores/me/tienda', auth);
+      tiendaId = mia.body?.id ?? mia.body?.tienda?.id ?? null;
+    }
+    if (tiendaId) this.config.set('tiendaId', tiendaId);
   }
 
   async loginUsers() {
     // Login admin
-    const adminLogin = await this.loginConReintento('admin@core-engine.test', 'AdminCore Engine2026!');
+    const adminLogin = await this.loginConReintento(
+      this.config.adminEmail,
+      this.config.adminPassword,
+    );
     if (adminLogin.status === 200 || adminLogin.status === 201) {
       this.adminToken = adminLogin.body.access_token;
     }
 
-    // Crear y login vendedor
-    const regV = await this.client.post('/api/v1/auth/registro', {
-      nombre: 'Vendedor QA',
-      correo: 'vendedor.qa@test.com',
-      contrasena: 'Contrasena123!',
-      rol: 'vendedor',
-    });
-    if (regV.status === 200 || regV.status === 201) {
-      this.vendedorToken = regV.body.access_token;
-    } else {
-      const loginV = await this.loginConReintento('vendedor.qa@test.com', 'Contrasena123!');
-      if (loginV.status === 200 || loginV.status === 201) {
-        this.vendedorToken = loginV.body.access_token;
-      }
-    }
+    // Empresa + vendedor con tenant y participación (ADR-25/27)
+    await this.asegurarEmpresa();
+    await this.asegurarVendedor();
 
     // Crear y login comprador
-    const regC = await this.client.post('/api/v1/auth/registro', {
+    const regC = await this.client.post('/api/v2/auth/registro', {
       nombre: 'Comprador QA',
       correo: 'comprador.qa@test.com',
       contrasena: 'Contrasena123!',
@@ -178,6 +251,7 @@ export class Runner {
       await this.asegurarLogistica();
       await this.loginUsers();
       console.log(`   Admin: ${this.adminToken ? '✅' : '❌'}`);
+      console.log(`   Empresa QA: ${this.empresaId ?? '❌'}`);
       console.log(`   Vendedor: ${this.vendedorToken ? '✅' : '❌'}`);
       console.log(`   Comprador: ${this.compradorToken ? '✅' : '❌'}`);
       console.log(`   Logistica: ${this.logisticaToken ? '✅' : '❌'}`);
@@ -232,15 +306,21 @@ export class Runner {
     try {
       const result = await fn();
       const duration = Date.now() - start;
-      const passedTests = result.resultados ? result.resultados.filter(r => r.pass).length : 0;
-      const totalTests = result.resultados ? result.resultados.length : 0;
-      const pass = passedTests > 0;
-      this.report.addSuiteResult(name, { 
-        ...result, 
-        duration, 
-        tests: totalTests, 
-        pasos: passedTests, 
-        fallos: totalTests - passedTests 
+      const resultados = Array.isArray(result.resultados) ? result.resultados : [];
+      const passedTests = resultados.filter((r) => r.pass).length;
+      const totalTests = resultados.length;
+      // Una suite que devuelve `pass:false` sin resultados (p. ej. falta de
+      // token) NO puede contarse como verde: antes daba 0 tests y 0 fallos.
+      const declaredFail = result.pass === false || Boolean(result.error);
+      const pass = !declaredFail && (totalTests === 0 ? result.pass !== false : passedTests === totalTests);
+      const fallos = totalTests === 0 ? (pass ? 0 : 1) : totalTests - passedTests;
+      this.report.addSuiteResult(name, {
+        ...result,
+        pass,
+        duration,
+        tests: totalTests,
+        pasos: passedTests,
+        fallos,
       });
       console.log(`   ${pass ? '✅' : '❌'} ${name} (${duration}ms) - ${passedTests}/${totalTests} tests passed`);
     } catch (e) {

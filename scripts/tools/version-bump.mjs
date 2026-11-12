@@ -6,7 +6,7 @@
  *   node scripts/tools/version-bump.mjs 1.0.7
  *   npm run version:bump -- 1.0.7
  *
- * Actualiza el `package.json` raíz, los 12 workspaces y `package-lock.json`.
+ * Actualiza el `package.json` raíz, los 13 workspaces y `package-lock.json`.
  * No commitea ni crea tags: el release sigue siendo un acto humano y revisable
  * (R-CD-1).
  */

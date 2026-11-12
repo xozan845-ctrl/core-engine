@@ -1,4 +1,4 @@
-import { ApiProperty } from '@nestjs/swagger';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
 export class ItemOrdenExternaResponseDto {
   @ApiProperty({ description: 'SKU del producto', example: 'SKU-001' })
@@ -17,7 +17,7 @@ export class OrdenExternaResponseDto {
   id: string;
 
   @ApiProperty({ description: 'Id del comprador', format: 'uuid' })
-  cliente_id: string;
+  comprador_id: string;
 
   @ApiProperty({ description: 'Líneas de la orden', type: () => [ItemOrdenExternaResponseDto] })
   items: ItemOrdenExternaResponseDto[];
@@ -45,8 +45,12 @@ export class EnvioResponseDto {
   @ApiProperty({ description: 'Empresa propietaria de las líneas despachadas', format: 'uuid' })
   empresa_id: string;
 
-  @ApiProperty({ enum: ['plataforma', 'propia', 'hibrida'] })
-  modalidad_logistica: 'plataforma' | 'propia' | 'hibrida';
+  @ApiPropertyOptional({
+    description: 'Referencia universal opcional del destinatario',
+    format: 'uuid',
+    nullable: true,
+  })
+  parte_id: string | null;
 
   @ApiProperty({ enum: ['plataforma', 'empresa'], nullable: true })
   proveedor_tipo: 'plataforma' | 'empresa' | null;

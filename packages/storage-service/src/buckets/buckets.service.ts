@@ -81,6 +81,21 @@ export class BucketsService {
     return this.serializar(fila);
   }
 
+  /**
+   * Bloquea la fila del bucket dentro de una transacción. Cualquier
+   * verificación de cuota + suma de uso debe hacerlo bajo este lock para que
+   * dos confirmaciones concurrentes no superen el límite.
+   */
+  async bloquearEstadoEnTransaccion(client: PoolClient, tenantId: string): Promise<EstadoBucket> {
+    const r = await client.query<BucketRow>(
+      `SELECT ${COLUMNAS_BUCKET} FROM storage.buckets b WHERE b.tenant_id = $1 FOR UPDATE`,
+      [tenantId],
+    );
+    const fila = r.rows[0];
+    if (!fila) throw new NotFoundError('Bucket del tenant', tenantId);
+    return this.serializar(fila);
+  }
+
   async listar(pagina?: unknown, limite?: unknown): Promise<Pagina<EstadoBucket>> {
     const { pagina: p, limite: l } = parsearPaginacion({ pagina, limite });
     const total = await this.pg

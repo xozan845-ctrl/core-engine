@@ -12,7 +12,7 @@ import {
   ValidateNested,
 } from 'class-validator';
 import { Type } from 'class-transformer';
-import { Roles, ROLES, NotFoundError } from '@core/shared';
+import { Roles, ROLES, NotFoundError, CAPACIDADES, RequiereCapacidades } from '@core/shared';
 import { ProyeccionesService, Proyeccion, SupuestosProyeccion } from './proyecciones.service';
 import { KpisService, KpisFinancieros } from './kpis.service';
 import { AlertasService } from './alertas.service';
@@ -101,12 +101,13 @@ export class CrearProyeccionRequestDto {
 }
 
 /**
- * GET/POST /api/v1/finanzas/{proyecciones,punto-equilibrio,kpis} — modelo
+ * GET/POST /api/v2/finanzas/{proyecciones,punto-equilibrio,kpis} — modelo
  * financiero del cap. 8: proyecciones auditables, KPIs y equilibrio.
  */
 @ApiTags('Finanzas · Modelo')
 @ApiBearerAuth()
-@Controller('api/v1/finanzas')
+@Controller('api/v2/finanzas')
+@RequiereCapacidades(CAPACIDADES.FACTURACION)
 @Roles(ROLES.SUPER_ADMIN, ROLES.ADMIN)
 export class FinanzasController {
   constructor(

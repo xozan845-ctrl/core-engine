@@ -2,7 +2,7 @@ import type { Mock } from 'vitest';
 import 'reflect-metadata';
 import { VentasController, VentasEmpresaController } from './ventas.controller';
 import type { VentasService } from './ventas.service';
-import { NotFoundError, ROLES } from '@core/shared';
+import { CAPABILITIES_KEY, CAPACIDADES, NotFoundError, ROLES } from '@core/shared';
 
 const estado = { total_ventas_cents: 115000, comisiones_cents: 13800, liquidado_cents: 0 };
 const estadoEmpresa = { empresa_id: 'empresa-1', ventas: [], comisiones_pendientes: '0.00', liquidaciones: [] };
@@ -15,7 +15,7 @@ function fabricar(): { ventas: Record<string, Mock>; controller: VentasControlle
   return { ventas, controller };
 }
 
-describe('VentasController (api/v1/vendedores/me/ventas, R-U-10/11)', () => {
+describe('VentasController (api/v2/vendedores/me/ventas, R-U-10/11)', () => {
   it('debe devolver el estado de cuenta del vendedor autenticado', async () => {
     const { ventas, controller } = fabricar();
     ventas.estadoCuenta.mockResolvedValue(estado);
@@ -26,9 +26,18 @@ describe('VentasController (api/v1/vendedores/me/ventas, R-U-10/11)', () => {
   it('debe exigir rol vendedor', () => {
     expect(Reflect.getMetadata('roles_requeridos', VentasController.prototype.estado)).toEqual([ROLES.VENDEDOR]);
   });
+
+  it('debe exigir la capacidad de liquidaciones en ambos controllers', () => {
+    expect(Reflect.getMetadata(CAPABILITIES_KEY, VentasController)).toEqual([
+      CAPACIDADES.LIQUIDACIONES,
+    ]);
+    expect(Reflect.getMetadata(CAPABILITIES_KEY, VentasEmpresaController)).toEqual([
+      CAPACIDADES.LIQUIDACIONES,
+    ]);
+  });
 });
 
-describe('VentasEmpresaController (api/v1/empresarios/me/ventas, ADR-25)', () => {
+describe('VentasEmpresaController (api/v2/empresarios/me/ventas, ADR-25)', () => {
   function fabricar(): { ventas: Record<string, Mock>; controller: VentasEmpresaController } {
     const ventas = { estadoCuentaEmpresa: vi.fn() };
     const controller = new VentasEmpresaController(ventas as unknown as VentasService);

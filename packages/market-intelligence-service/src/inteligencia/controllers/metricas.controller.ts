@@ -1,8 +1,16 @@
 import { Controller, Get, Query, Headers, Post, Body } from '@nestjs/common';
-import { ApiBearerAuth, ApiBody, ApiCreatedResponse, ApiHeader, ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
+import { ApiBearerAuth, ApiCreatedResponse, ApiHeader, ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
+import {
+  CAPACIDADES,
+  ForbiddenError,
+  ROLES,
+  RequiereCapacidades,
+  UnauthorizedError,
+} from '@core/shared';
 import { InteligenciaService } from '../services/inteligencia.service';
 import { FiltrosInteligenciaDto } from '../models/dto/filtros.request.dto';
 import { MapaCalorResponseDto } from '../models/dto/mapa-calor.response.dto';
+import { RegistrarVentaRequestDto } from '../models/dto/registrar-venta.request.dto';
 import {
   CoberturaZonaResponseDto,
   PaginaDemandaResponseDto,
@@ -14,7 +22,8 @@ import {
 
 @ApiTags('Inteligencia — Métricas')
 @ApiBearerAuth()
-@Controller('api/v1/inteligencia')
+@Controller('api/v2/inteligencia')
+@RequiereCapacidades(CAPACIDADES.INTELIGENCIA_MERCADO)
 export class MetricasController {
   constructor(private readonly inteligencia: InteligenciaService) {}
 
@@ -29,14 +38,14 @@ export class MetricasController {
 
   @Get('me/mapa-calor')
   @ApiOperation({ summary: 'Mi mapa de calor (vendedor)' })
-  @ApiHeader({ name: 'x-user-personal', required: false })
+  @ApiHeader({ name: 'x-user-personal', required: true })
   @ApiOkResponse({ type: MapaCalorResponseDto, description: 'Puntos del mapa de calor del vendedor' })
   async getMiMapaCalor(
     @Headers('x-user-personal') userId: string,
     @Query() filtros: FiltrosInteligenciaDto
   ): Promise<MapaCalorResponseDto> {
-    const f = { ...filtros, vendedor_id: userId };
-    return this.inteligencia.obtenerMapaCalor(f);
+    const vendedorId = this.exigirPersonal(userId);
+    return this.inteligencia.obtenerMapaCalor({ ...filtros, vendedor_id: vendedorId });
   }
 
   // ── Rendimiento ───────────────────────────────────────────────────────────
@@ -50,13 +59,14 @@ export class MetricasController {
 
   @Get('me/rendimiento')
   @ApiOperation({ summary: 'Mi rendimiento como vendedor' })
-  @ApiHeader({ name: 'x-user-personal', required: false })
+  @ApiHeader({ name: 'x-user-personal', required: true })
   @ApiOkResponse({ type: PaginaRendimientoResponseDto, description: 'Rendimiento del vendedor' })
   async getMiRendimiento(
     @Headers('x-user-personal') userId: string,
     @Query() filtros: FiltrosInteligenciaDto & { cursor?: string; limite?: number }
   ) {
-    return this.inteligencia.obtenerRendimientoVendedores({ ...filtros, vendedor_id: userId });
+    const vendedorId = this.exigirPersonal(userId);
+    return this.inteligencia.obtenerRendimientoVendedores({ ...filtros, vendedor_id: vendedorId });
   }
 
   // ── Otras metricas (Admin) ────────────────────────────────────────────────
@@ -94,11 +104,32 @@ export class MetricasController {
   @Post('ventas/registrar')
   @ApiOperation({ summary: 'Registrar una venta en inteligencia (ingesta manual)' })
   @ApiCreatedResponse({ type: RegistrarVentaResponseDto, description: 'Venta registrada' })
-  @ApiBody({ schema: { type: 'object' } })
-  async registrarVenta(@Body() data: any) {
-    // Aquí el gateway ya validó que el rol pueda acceder, y el validation pipe
-    // debería validar el payload real (omitido el DTO estricto por simplicidad MVP)
-    await this.inteligencia.registrarVenta(data);
+  async registrarVenta(
+    @Body() data: RegistrarVentaRequestDto,
+    @Headers('x-user-personal') personal: string | undefined,
+    @Headers('x-user-rol') rol: string | undefined,
+  ) {
+    // Un vendedor solo registra sus propias ventas: el claim del token manda
+    // sobre el cuerpo. Los roles administrativos pueden indicar el vendedor.
+    if (rol === ROLES.VENDEDOR) {
+      if (!personal) {
+        throw new ForbiddenError(
+          'El usuario vendedor no tiene ficha de personal vinculada (x-user-personal).',
+        );
+      }
+      data.vendedor_id = personal;
+    }
+    await this.inteligencia.registrarVenta(data, data.evento_id);
     return { codigo: 'OK', mensaje: 'Venta registrada en inteligencia' };
+  }
+
+  /** El endpoint `/me/*` nunca debe ejecutarse sin una ficha de personal. */
+  private exigirPersonal(personal: string | undefined): string {
+    if (!personal) {
+      throw new UnauthorizedError(
+        'La ruta /me requiere una ficha de personal vinculada (x-user-personal).',
+      );
+    }
+    return personal;
   }
 }

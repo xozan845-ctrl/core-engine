@@ -999,3 +999,295 @@ El PR #90 se completó utilizando convenciones atómicas (R-PR-1, R-GC-1..5) gar
 - **Snapshot:** estado consolidado reescrito en [`AUDIT.md`](./AUDIT.md). La
   evidencia del PR y del run post-merge vive en GitHub para evitar el ciclo
   commit → run → commit descrito por R-COV-3.
+
+---
+
+# AUDIT (histórico) — 9ª auditoría de Core Engine (gobernanza, integración y cobertura)
+
+- **Fecha:** 2026-11-04
+- **Estado global:** 🟡 CUMPLE PARCIAL — los gates G-1, G-3, G-7 y G-8 permanecen
+  verdes; G-4 y G-6 siguen parciales y G-5 pendiente.
+
+## Intervención
+
+1. Se cerraron dos unidades de R-U-18/R-COV-2 con specs para
+   `MetricasService` y `ReportesService`, retirando ambas excepciones del
+   baseline de servicios sin spec.
+2. La matriz queda en **1,092 tests y 108 archivos** en 12 workspaces; los
+   servicios/consumers con spec pasan de 22/39 a **24/39**, dejando 15/39
+   pendientes.
+3. `commissions-service` queda en 9 suites/41 tests y `finance-service` en
+   17 suites/133 tests; ningún threshold de cobertura fue reducido.
+
+## Evidencia
+
+- **CI post-merge:** run `41894837171` sobre `develop` (`4c2e735`) completado
+  con éxito en Security, Catalog stock, Rules, ESLint, Unit Tests + Coverage y
+  Build all services.
+- **Snapshot:** estado consolidado reescrito en [`AUDIT.md`](./AUDIT.md),
+  conforme a R-COV-3.
+
+---
+
+# AUDIT (histórico) — 10ª auditoría de Core Engine (gobernanza, integración y cobertura)
+
+- **Fecha:** 2026-11-04
+- **Estado global:** 🟡 CUMPLE PARCIAL — los gates G-1, G-3, G-7 y G-8 permanecen
+  verdes; G-4 y G-6 siguen parciales y G-5 pendiente.
+
+## Intervención
+
+1. Se cerraron dos unidades adicionales de R-U-18/R-COV-2 con specs para
+   `PedidosConsumer` de commissions y `FacturacionService` de finance,
+   retirando ambas excepciones del baseline.
+2. La matriz queda en **1,105 tests y 110 archivos** en 12 workspaces; los
+   servicios/consumers con spec pasan de 24/39 a **26/39**, dejando 13/39
+   pendientes.
+3. `commissions-service` queda en 10 suites/47 tests y `finance-service` en
+   18 suites/140 tests; ambos alcanzan el objetivo 80/70 sin reducir thresholds.
+
+## Evidencia
+
+- **CI post-merge:** run `41901904723` sobre `develop` (`2dea998`) completado
+  con éxito en Security, Catalog stock, Rules, ESLint, Unit Tests + Coverage y
+  Build all services.
+- **Snapshot:** estado consolidado reescrito en [`AUDIT.md`](./AUDIT.md),
+  conforme a R-COV-3.
+
+---
+
+# AUDIT (histórico) — 11ª auditoría de Core Engine (gobernanza, integración y cobertura)
+
+- **Fecha:** 2026-11-04
+- **Estado global:** 🟡 CUMPLE PARCIAL — los gates G-1, G-3, G-7 y G-8 permanecen
+  verdes; G-4 y G-6 siguen parciales y G-5 pendiente.
+
+## Intervención
+
+1. Se cerraron dos unidades adicionales de R-U-18/R-COV-2 con specs para
+   `KpisService` de finance y `DataQualityService` de market-intelligence,
+   retirando ambas excepciones del baseline.
+2. La matriz queda en **1,121 tests y 112 archivos** en 12 workspaces; los
+   servicios/consumers con spec pasan de 26/39 a **28/39**, dejando 11/39
+   pendientes.
+3. `finance-service` queda en 19 suites/148 tests y
+   `market-intelligence-service` en 6 suites/29 tests; ningún threshold de
+   cobertura fue reducido.
+
+## Evidencia
+
+- **CI post-merge:** run `41908569101` sobre `develop` (`22cac9b`) completado
+  con éxito en Security, Catalog stock, Rules, ESLint, Unit Tests + Coverage y
+  Build all services.
+- **Snapshot:** estado consolidado reescrito en [`AUDIT.md`](./AUDIT.md),
+  conforme a R-COV-3.
+
+---
+
+# AUDIT (histórico) — 12ª auditoría de Core Engine (gobernanza, integración y cobertura)
+
+- **Fecha:** 2026-11-04
+- **Estado global:** 🟡 CUMPLE PARCIAL — los gates G-1, G-3, G-7 y G-8 permanecen
+  verdes; G-4 y G-6 siguen parciales y G-5 pendiente.
+
+## Intervención
+
+1. Se cerró una unidad adicional de R-U-18/R-COV-2 con spec para
+   `FeatureComputerService` de market-intelligence, retirando su excepción del
+   baseline.
+2. La matriz queda en **1,126 tests y 113 archivos** en 12 workspaces; los
+   servicios/consumers con spec pasan de 28/39 a **29/39**, dejando 10/39
+   pendientes.
+3. `market-intelligence-service` queda en 7 suites/34 tests, con 41.31% de
+   líneas y 35.22% de ramas; ningún threshold de cobertura fue reducido.
+
+## Evidencia
+
+- **CI post-merge:** run `41912725303` sobre `develop` (`aad58e9`) completado
+  con éxito en Security, Catalog stock, Rules, ESLint, Unit Tests + Coverage y
+  Build all services.
+- **Snapshot:** estado consolidado reescrito en [`AUDIT.md`](./AUDIT.md),
+  conforme a R-COV-3.
+
+---
+
+# AUDIT (histórico) — 13ª auditoría de Core Engine (gobernanza, integración y cobertura)
+
+- **Fecha:** 2026-11-04
+- **Estado global:** 🟡 CUMPLE PARCIAL — los gates G-1, G-3, G-7 y G-8 permanecen
+  verdes; G-4 y G-6 siguen parciales y G-5 pendiente.
+
+## Intervención
+
+1. Se cerró una unidad adicional de R-U-18/R-COV-2 con spec para
+   `ViewRefresherService` de market-intelligence, retirando su excepción del
+   baseline.
+2. La matriz queda en **1,130 tests y 114 archivos** en 12 workspaces; los
+   servicios/consumers con spec pasan de 29/39 a **30/39**, dejando 9/39
+   pendientes.
+3. `market-intelligence-service` queda en 8 suites/38 tests, con 45.57% de
+   líneas y 35.22% de ramas; ningún threshold de cobertura fue reducido.
+4. El baseline restante queda limitado a cuatro unidades: `CarritoService`,
+   `PedidosConsumer` de orders, `PgService` y `OutboxService` de shared.
+
+## Evidencia
+
+- **CI post-merge:** run `41917193799` sobre `develop` (`e09a3c6`) completado
+  con éxito en Security, Catalog stock, Rules, ESLint, Unit Tests + Coverage y
+  Build all services.
+- **Snapshot:** estado consolidado reescrito en [`AUDIT.md`](./AUDIT.md),
+  conforme a R-COV-3.
+
+---
+
+# AUDIT (histórico) — 14ª auditoría de Core Engine (revisión integral: lógica, tests, scripts y documentación)
+
+- **Fecha:** 2026-11-08
+- **SHA auditado:** `bb602b5` (`feat/pack-builder`, worktree independiente).
+- **Estado global:** 🔴 **NO CUMPLE — HEAD en rojo**. G-7 y G-8 verdes; G-1/G-3 y
+  G-5/R-C-7 rojos; G-4 y G-6 parciales.
+
+## Intervención
+
+1. Revisión integral de la lógica de los 11 microservicios, del motor de
+   gobernanza, del QA harness y de la documentación.
+2. Se midió la matriz real: **1.322 tests en 132 archivos y 13 workspaces**
+   (antes se documentaban 1.130/114/12). `identity-service` baja a
+   80,42/71,31/74,38 y **rompe su threshold** 89/78/85 por la deuda nueva de
+   packs/partes/extensiones/capacidades; `npm test` aborta ahí.
+3. `contract:breaking` contra `origin/main` sale 1: `parte_id` aparece como
+   propiedad obligatoria en cuatro respuestas de logística sin allowlist.
+4. OpenAPI real: **334 operaciones (310 públicas + 24 internas)** en 11
+   servicios; el export no deja diff (G-8 ✅).
+5. Se alineó la documentación con la realidad: README, reglas de testing,
+   auditoría, runbooks, `.github/README.md`, plantillas de entorno y QA harness.
+6. Se corrigió el QA harness para que sus comandos arranquen y no den falso
+   verde (entrypoint `.js`, `bcryptjs` declarado, conteo por `pass`, lectura de
+   profundidad de colas).
+
+## Evidencia
+
+- `npm run lint` → 0 errores / 45 warnings; `npm run build` → 0.
+- `npm run swagger:export` → 0 y sin diff.
+- `npm test` → 1 (cobertura de `identity-service`).
+- `npm run contract:breaking -- --base-ref origin/main` → 1.
+- `npm run rules:check` → 0 (59 tests, 11 suites, 41/238 IDs).
+- `npm audit --audit-level=high` → 0; `--audit-level=moderate` → 12.
+- **Snapshot:** estado consolidado reescrito en [`AUDIT.md`](./AUDIT.md),
+  conforme a R-COV-3.
+
+---
+
+# AUDIT (histórico) — 15ª auditoría de Core Engine (cierre de hallazgos)
+
+- **Fecha:** 2026-11-10
+- **Estado global:** 🟢 **CUMPLE** en los gates automáticos de PR; G-4/G-5/G-6
+  siguen parciales por diseño.
+
+## Intervención
+
+1. Se corrigieron los hallazgos de la revisión integral del 2026-11-08:
+   autorización del gateway, aislamiento de market-intelligence, secretos por
+   defecto, outbox con reclamo atómico, event store con versión única, saga
+   atómica (catalog/orders/commissions), RLS de `orden_vista`, tasa de comisión
+   unificada, cuota/borrado de storage, bloqueo de scheduling, JSON/DLQ de
+   RabbitMQ y contabilidad de la parte del empresario.
+2. `identity-service` volvió a su umbral con specs de controllers y ramas de
+   servicio; `spec-baseline` queda vacío.
+3. La integración se hizo hermética: `catalog-items` aplica `01c` antes de
+   `01e`; `orders-types` aplica las migraciones 45 y 46.
+4. OpenAPI: los campos nuevos quedan opcionales en el spec y
+   `contract:breaking` pasa con **0 excepciones** (se retiraron las excepciones
+   temporales que se habían propuesto).
+5. La matriz real queda en **1.391 tests / 139 archivos / 13 workspaces**;
+   `coverage:compare` 13/13 y `baseline:guard` sin retroceso.
+
+## Evidencia
+
+- `npm test` → 0; `npm run build` → 0; `npm run lint` → 0 (44 warnings).
+- `npm run contract:breaking` → 0 (0 excepciones); `swagger:export` sin diff.
+- `npm run test:integration` → 0 (14/14 contra PostgreSQL 16).
+- `npm run rules:check` → 0; `test:engine` → 0; `test:smoke` → 0.
+- `npm run baseline:guard` → 0; `db:migrations` → 49; `db:rls` → 61.
+- **Snapshot:** estado consolidado reescrito en [`AUDIT.md`](./AUDIT.md),
+  conforme a R-COV-3.
+
+---
+
+# AUDIT (histórico) — 16ª auditoría de Core Engine (cierre de robustez y MVP)
+
+- **Fecha:** 2026-11-10
+- **SHA auditado:** `0c19300` (`develop`, tras integrar los worktrees y R-RB-3/R-RB-4).
+- **Estado global:** 🟢 **CUMPLE** en los gates automáticos de PR; G-5 y G-6
+  siguen parciales por diseño.
+
+## Intervención
+
+1. **R-RB-3 (Outbox):** reclamo y publicación en la misma transacción con
+   `FOR UPDATE SKIP LOCKED`, sin ventana de 30 minutos y con un test de
+   concurrencia real de dos pollers contra PostgreSQL.
+2. **R-RB-3/R-RB-4 (RabbitMQ):** JSON inválido a DLQ, confirmación de la DLQ
+   antes del `ack`, mensajes muertos sin bucle de reencolado y reconexión con
+   backoff 1s→30s.
+3. **R-RB-4 (timeouts):** `timeoutInternoMs()` se reutiliza en todos los `fetch`
+   internos; logistics degrada con `SERVICIO_NO_DISPONIBLE` y el check
+   ejecutable `R-RB-4` impide volver a introducir llamadas sin timeout.
+4. **Observabilidad del Outbox:** gauge de backlog, contadores de publicados y
+   fallos, dashboard provisionado y alertas `OutboxBacklog` /
+   `OutboxFallosPublicacion`, sin duplicar la profundidad de DLQ existente.
+5. La matriz real queda en **1.419 tests / 140 archivos / 13 workspaces**;
+   `coverage:compare` 13/13; 12/13 workspaces alcanzan el objetivo 80/70.
+
+## Evidencia
+
+- `npm test` → 0; **1.419 tests / 140 archivos / 13 workspaces**.
+- `npm run build` → 0; `npm run lint` → 0 (44 warnings).
+- `npm run coverage:compare` → 0 (13/13 ≥ baseline).
+- `npm run swagger:export` → 0 y sin diff (338 operaciones: 308 públicas + 30 internas).
+- `TEST_DATABASE_URL=... npm run test:integration` → 0 (16 archivos / 50 tests,
+  incluido el test de concurrencia del Outbox).
+- `npm run rules:check` → 0 (60 tests, 11 suites, 42/238 IDs); `test:engine` → 0 (21);
+  `test:smoke` → 0 (61).
+- `npm run baseline:guard` → 0; `db:migrations` → 61; `db:rls` → 59.
+- `npm audit --audit-level=high` → 0; `--audit-level=moderate` → 12.
+- **CI post-merge:** run `42908104513` sobre `develop` (`0c19300`) en `success`.
+- **Snapshot:** estado consolidado reescrito en [`AUDIT.md`](./AUDIT.md),
+  conforme a R-COV-3.
+
+---
+
+# AUDIT (histórico) — 17ª auditoría de Core Engine (cierre del envelope y de ADR-0003)
+
+- **Fecha:** 2026-11-11
+- **SHA auditado:** `753a6ff` (`develop`).
+- **Estado global:** 🟢 **CUMPLE** en los gates automáticos de PR; G-5 y G-6
+  cerrados. Quedan deudas de property/fuzz, cobertura objetivo y warnings.
+
+## Intervención
+
+1. Envelope `{data,meta}` aplicado en **11/11** servicios con API pública y
+   validado por `openapi-contract` sobre todo el contrato agregado (R-C-1).
+2. `smoke`, `smoke-remote` y QA harness desenvuelven el envelope de forma
+   central; el gateway sigue siendo un proxy sin transformar cuerpos.
+3. G-5 cerrado: OpenAPI sincronizado y sin respuestas públicas JSON 2xx sin
+   envelope. G-6 cerrado como gate de release (`release.yml` → `e2e.yml`).
+4. Se incorporaron notificaciones (ADR-0003), password reset/invitaciones por
+   correo, tarifas por rango y FEFO; la matriz de tests subió a
+   **1.533 tests / 151 archivos / 14 workspaces**.
+5. Integración: **20 archivos / 67 tests** con PostgreSQL efímero, incluidos
+   Outbox, saga completa y FEFO.
+
+## Evidencia
+
+- `npm test` → 0; **1.533 tests / 151 archivos / 14 workspaces**.
+- `npm run build` → 0; `npm run lint` → 0 (45 warnings).
+- `npm run coverage:compare` → 0 (14/14 ≥ baseline).
+- `npm run swagger:export` → 0 y sin diff (359 operaciones: 327 públicas + 32 internas).
+- `TEST_DATABASE_URL=... npm run test:integration` → 0 (20 archivos / 67 tests).
+- `npm run rules:check` → 0 (90 tests, 22 suites, 52/238 IDs); `test:engine` → 0 (21);
+  `test:smoke` → 0 (61).
+- `npm run baseline:guard` → 0; `db:migrations` → 71; `db:rls` → 46.
+- `npm audit --audit-level=high` → 0; `--audit-level=moderate` → 13 (1 low, 12 moderate).
+- **CI post-merge:** run `43088217913` sobre `develop` (`753a6ff`) en `success`.
+- **Snapshot:** estado consolidado reescrito en [`AUDIT.md`](./AUDIT.md),
+  conforme a R-COV-3.

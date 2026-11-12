@@ -3,13 +3,17 @@ import { Type } from 'class-transformer';
 import {
   IsArray,
   IsBoolean,
+  IsIn,
   IsInt,
+  IsObject,
   IsOptional,
   IsString,
+  IsUUID,
   Max,
   Min,
   ValidateNested,
 } from 'class-validator';
+import { FULFILLMENTS, Fulfillment, TipoOrden, TIPOS_ORDEN } from '@core/shared';
 
 export class ItemOrdenRequestDto {
   @ApiProperty({ description: 'Id de la oferta (vendedor-producto)' })
@@ -21,6 +25,16 @@ export class ItemOrdenRequestDto {
   @Min(1)
   @Max(99)
   cantidad: number;
+
+  @ApiProperty({ required: false, enum: FULFILLMENTS, default: 'none' })
+  @IsOptional()
+  @IsIn(FULFILLMENTS)
+  fulfillment?: Fulfillment;
+
+  @ApiProperty({ required: false, type: Object, additionalProperties: true })
+  @IsOptional()
+  @IsObject()
+  fulfillment_config?: Record<string, unknown>;
 }
 
 /**
@@ -31,6 +45,15 @@ export class ItemOrdenRequestDto {
  * carrito se vacia en la misma transaccion (RN-05).
  */
 export class CreateOrderCommand {
+  @ApiProperty({ required: false, format: 'uuid', description: 'Referencia universal opcional del comprador' })
+  @IsOptional()
+  @IsUUID()
+  cliente_parte_id?: string;
+
+  @ApiProperty({ enum: TIPOS_ORDEN, description: 'Tipo de orden explícito' })
+  @IsIn(TIPOS_ORDEN)
+  tipo_orden: TipoOrden;
+
   @ApiProperty({ description: 'Artículos de la orden', required: false, type: [ItemOrdenRequestDto] })
   @IsOptional()
   @IsArray()
@@ -42,4 +65,14 @@ export class CreateOrderCommand {
   @IsOptional()
   @IsBoolean()
   usar_carrito?: boolean;
+
+  @ApiProperty({
+    description: 'Medio de pago: simulado o credito (requiere cliente_parte_id con cupo)',
+    required: false,
+    enum: ['simulado', 'credito'],
+    default: 'simulado',
+  })
+  @IsOptional()
+  @IsIn(['simulado', 'credito'])
+  metodo_pago?: 'simulado' | 'credito';
 }

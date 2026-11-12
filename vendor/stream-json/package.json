@@ -1,0 +1,12 @@
+{
+  "name": "stream-json",
+  "version": "3.8.0",
+  "description": "Shim CJS de stream-json que implementa jsonl/Parser para minio sin las advisories de las versiones <=3.5.0",
+  "license": "MIT",
+  "main": "index.js",
+  "files": [
+    "jsonl/Parser.js",
+    "LICENSE",
+    "index.js"
+  ]
+}

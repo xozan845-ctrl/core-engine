@@ -1,0 +1,2122 @@
+{
+  "openapi": "3.0.0",
+  "info": {
+    "title": "Core Engine · stores-service · API pública",
+    "description": "Contrato público (/api/v2/**) de stores-service. No contiene rutas /internal/**.",
+    "version": "v1",
+    "contact": {}
+  },
+  "x-servicio": "stores-service",
+  "x-superficie": "publica",
+  "tags": [],
+  "paths": {
+    "/api/v2/vendedores/tienda": {
+      "post": {
+        "operationId": "TiendasController_crear",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CrearTiendaRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Tienda creada",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/TiendaResponseDto"
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/MetaRespuesta"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Crear la tienda del vendedor autenticado",
+        "tags": [
+          "Tiendas"
+        ]
+      }
+    },
+    "/api/v2/vendedores/me/tienda": {
+      "get": {
+        "operationId": "TiendasController_miTienda",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Tienda del vendedor",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/TiendaResponseDto"
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/MetaRespuesta"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Tienda del vendedor autenticado",
+        "tags": [
+          "Tiendas"
+        ]
+      }
+    },
+    "/api/v2/empresarios/me/tiendas": {
+      "get": {
+        "operationId": "TiendasEmpresaController_listar",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Tiendas de la empresa",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
+                  "properties": {
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/TiendaResponseDto"
+                      }
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/MetaRespuesta"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Tiendas de la empresa autenticada",
+        "tags": [
+          "Tiendas"
+        ]
+      }
+    },
+    "/api/v2/tiendas/{id}/tema.css": {
+      "get": {
+        "operationId": "TiendasSlugController_temaCss",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "description": "UUID de la tienda o su slug actual",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Variables CSS del tema resuelto",
+            "content": {
+              "text/css": {
+                "schema": {
+                  "type": "string",
+                  "example": ":root { --tienda-color-primario: #1F2937; }"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Tienda inexistente (NO_ENCONTRADO)"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Variables CSS del tema de la tienda (público)",
+        "tags": [
+          "Tiendas"
+        ]
+      }
+    },
+    "/api/v2/tiendas/{id}/logo": {
+      "patch": {
+        "operationId": "TiendasSlugController_actualizarLogo",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "description": "UUID de la tienda o su slug actual",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ActualizarLogoTiendaRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Logo actualizado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/TiendaResponseDto"
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/MetaRespuesta"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Asociar o quitar el logo público de la tienda",
+        "tags": [
+          "Tiendas"
+        ]
+      }
+    },
+    "/api/v2/tiendas/{id}/background": {
+      "patch": {
+        "operationId": "TiendasSlugController_actualizarBackground",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "description": "UUID de la tienda o su slug actual",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ActualizarBackgroundTiendaRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Fondo actualizado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/TiendaResponseDto"
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/MetaRespuesta"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Asociar, cambiar o quitar el fondo público de la tienda",
+        "tags": [
+          "Tiendas"
+        ]
+      }
+    },
+    "/api/v2/tiendas/{id}/personalizacion": {
+      "patch": {
+        "operationId": "TiendasSlugController_actualizarPersonalizacion",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "description": "UUID de la tienda o su slug actual",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ActualizarPersonalizacionTiendaRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Personalización actualizada",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/TiendaResponseDto"
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/MetaRespuesta"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Actualizar la identidad visual de la tienda (plantilla, tema, hero y SEO)",
+        "tags": [
+          "Tiendas"
+        ]
+      }
+    },
+    "/api/v2/tiendas/{id}/contenido": {
+      "patch": {
+        "operationId": "TiendasSlugController_actualizarContenido",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "description": "UUID de la tienda o su slug actual",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ActualizarContenidoTiendaRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Contenido actualizado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/TiendaResponseDto"
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/MetaRespuesta"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Actualizar el contenido del storefront (secciones, políticas, redes y anuncio)",
+        "tags": [
+          "Tiendas"
+        ]
+      }
+    },
+    "/api/v2/tiendas/{id}/slug": {
+      "patch": {
+        "operationId": "TiendasSlugController_actualizarSlug",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "description": "UUID de la tienda o su slug actual/anterior",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ActualizarSlugTiendaRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Slug actualizado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/TiendaResponseDto"
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/MetaRespuesta"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "El usuario no es propietario de la tienda"
+          },
+          "409": {
+            "description": "El slug ya está en uso (incluye slugs históricos)"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Cambiar el slug público; los anteriores redirigen 301",
+        "tags": [
+          "Tiendas"
+        ]
+      }
+    },
+    "/api/v2/vendedores/productos": {
+      "post": {
+        "operationId": "OfertasController_publicar",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PublicarProductoRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Oferta creada",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/OfertaResponseDto"
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/MetaRespuesta"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Publicar un producto con margen (vendedor)",
+        "tags": [
+          "Tiendas"
+        ]
+      }
+    },
+    "/api/v2/vendedores/productos/{id}": {
+      "patch": {
+        "operationId": "OfertasController_cambiarMargen",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CambiarMargenRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Oferta actualizada",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/OfertaResponseDto"
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/MetaRespuesta"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Cambiar el margen de una oferta (vendedor)",
+        "tags": [
+          "Tiendas"
+        ]
+      }
+    },
+    "/api/v2/vendedores/me/ofertas": {
+      "get": {
+        "operationId": "OfertasController_misOfertas",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Página de ofertas",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/PaginaOfertasResponseDto"
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/MetaRespuesta"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Listar las ofertas del vendedor autenticado",
+        "tags": [
+          "Tiendas"
+        ]
+      }
+    },
+    "/api/v2/tiendas/{id}": {
+      "get": {
+        "operationId": "OfertasController_tiendaPublica",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "description": "UUID de la tienda o su slug público actual/anterior. Un slug anterior responde 301.",
+            "schema": {
+              "example": "mi-tienda",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Tienda con sus ofertas",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/TiendaPublicaResponseDto"
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/MetaRespuesta"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "301": {
+            "description": "Slug anterior; Location apunta al slug actual",
+            "headers": {
+              "Location": {
+                "description": "Ruta con el slug actual",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Tienda inexistente (NO_ENCONTRADO)"
+          }
+        },
+        "summary": "Tienda pública con sus ofertas (UUID o slug; ruta pública)",
+        "tags": [
+          "Tiendas"
+        ]
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "bearer": {
+        "scheme": "bearer",
+        "bearerFormat": "JWT",
+        "type": "http"
+      },
+      "internalKey": {
+        "type": "apiKey",
+        "in": "header",
+        "name": "x-internal-key"
+      }
+    },
+    "schemas": {
+      "ActualizarBackgroundTiendaRequestDto": {
+        "type": "object",
+        "properties": {
+          "background_objeto_id": {
+            "type": "string",
+            "description": "Objeto de storage del fondo; null limpia el bloque completo",
+            "nullable": true,
+            "format": "uuid"
+          },
+          "background_poster_objeto_id": {
+            "type": "string",
+            "description": "Imagen de portada para un fondo de video",
+            "nullable": true,
+            "format": "uuid"
+          },
+          "background_alt": {
+            "type": "string",
+            "maxLength": 160
+          },
+          "background_overlay": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 100,
+            "default": 35
+          },
+          "background_position": {
+            "type": "string",
+            "enum": [
+              "center",
+              "top",
+              "bottom",
+              "left",
+              "right"
+            ],
+            "default": "center"
+          },
+          "background_activo": {
+            "type": "boolean",
+            "default": false
+          },
+          "background_movil_objeto_id": {
+            "type": "string",
+            "description": "Objeto de storage del fondo móvil; null limpia el bloque móvil",
+            "nullable": true,
+            "format": "uuid"
+          },
+          "background_movil_poster_objeto_id": {
+            "type": "string",
+            "description": "Imagen de portada para un fondo móvil de video",
+            "nullable": true,
+            "format": "uuid"
+          },
+          "background_movil_alt": {
+            "type": "string",
+            "maxLength": 160
+          },
+          "background_movil_activo": {
+            "type": "boolean",
+            "default": false
+          }
+        }
+      },
+      "ActualizarContenidoTiendaRequestDto": {
+        "type": "object",
+        "properties": {
+          "secciones": {
+            "description": "Orden y visibilidad de las secciones; null o [] las limpia",
+            "maxItems": 12,
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SeccionRequestDto"
+            }
+          },
+          "sobre_nosotros": {
+            "type": "string",
+            "description": "Texto \"sobre nosotros\"",
+            "maxLength": 2000
+          },
+          "politicas": {
+            "description": "Políticas de la tienda",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/PoliticasRequestDto"
+              }
+            ]
+          },
+          "redes": {
+            "description": "Redes sociales; null o [] las limpia",
+            "maxItems": 6,
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/RedSocialRequestDto"
+            }
+          },
+          "anuncio_texto": {
+            "type": "string",
+            "description": "Texto del anuncio superior",
+            "maxLength": 120
+          },
+          "anuncio_enlace": {
+            "type": "string",
+            "description": "Ruta relativa o URL HTTPS del anuncio",
+            "maxLength": 300
+          },
+          "anuncio_activo": {
+            "type": "boolean",
+            "description": "Si el anuncio está activo",
+            "default": false
+          }
+        }
+      },
+      "ActualizarLogoTiendaRequestDto": {
+        "type": "object",
+        "properties": {
+          "logo_objeto_id": {
+            "type": "object",
+            "description": "Objeto de storage público confirmado como imagen; null para quitar el logo",
+            "nullable": true,
+            "format": "uuid"
+          }
+        }
+      },
+      "ActualizarPersonalizacionTiendaRequestDto": {
+        "type": "object",
+        "properties": {
+          "plantilla": {
+            "type": "string",
+            "description": "Plantilla visual base; null vuelve a heredar de empresa/plataforma",
+            "enum": [
+              "clasica",
+              "minimal",
+              "boutique",
+              "mercado"
+            ],
+            "nullable": true
+          },
+          "tema": {
+            "description": "Tokens de tema; null limpia los overrides y vuelve a heredar",
+            "nullable": true,
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/TemaRequestDto"
+              }
+            ]
+          },
+          "hero_titulo": {
+            "type": "string",
+            "maxLength": 80
+          },
+          "hero_subtitulo": {
+            "type": "string",
+            "maxLength": 160
+          },
+          "hero_cta_texto": {
+            "type": "string",
+            "maxLength": 40
+          },
+          "hero_cta_url": {
+            "type": "string",
+            "description": "Ruta relativa o URL HTTPS del CTA",
+            "maxLength": 300
+          },
+          "seo_titulo": {
+            "type": "string",
+            "maxLength": 70
+          },
+          "seo_descripcion": {
+            "type": "string",
+            "maxLength": 300
+          },
+          "seo_imagen_objeto_id": {
+            "type": "object",
+            "description": "Objeto de storage público confirmado como imagen; null para quitarla",
+            "format": "uuid",
+            "nullable": true
+          }
+        }
+      },
+      "ActualizarSlugTiendaRequestDto": {
+        "type": "object",
+        "properties": {
+          "slug": {
+            "type": "string",
+            "minLength": 2,
+            "maxLength": 80,
+            "example": "tienda-de-la-vendedora"
+          }
+        },
+        "required": [
+          "slug"
+        ]
+      },
+      "CambiarMargenRequestDto": {
+        "type": "object",
+        "properties": {
+          "margen": {
+            "type": "number",
+            "description": "Nuevo margen en enteros (0 a 90)",
+            "minimum": 0,
+            "maximum": 90,
+            "example": 20
+          }
+        },
+        "required": [
+          "margen"
+        ]
+      },
+      "CrearTiendaRequestDto": {
+        "type": "object",
+        "properties": {
+          "nombre": {
+            "type": "string",
+            "description": "Nombre de la tienda",
+            "minLength": 2,
+            "maxLength": 100,
+            "example": "Mi tienda"
+          },
+          "descripcion": {
+            "type": "string",
+            "description": "Descripción de la tienda",
+            "example": "Ropa y accesorios"
+          },
+          "slug": {
+            "type": "string",
+            "description": "Slug público. Si se omite se deriva del nombre y se resuelven colisiones con sufijos.",
+            "minLength": 2,
+            "maxLength": 80,
+            "example": "tienda-de-la-vendedora-piloto"
+          }
+        },
+        "required": [
+          "nombre"
+        ]
+      },
+      "MetaRespuesta": {
+        "type": "object",
+        "required": [
+          "timestamp",
+          "path",
+          "method",
+          "statusCode"
+        ],
+        "properties": {
+          "timestamp": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "path": {
+            "type": "string"
+          },
+          "method": {
+            "type": "string"
+          },
+          "statusCode": {
+            "type": "integer"
+          }
+        }
+      },
+      "OfertaPublicaResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Id de la oferta",
+            "format": "uuid"
+          },
+          "item_type": {
+            "type": "string",
+            "description": "Tipo del item publicado",
+            "enum": [
+              "producto",
+              "servicio",
+              "alquiler"
+            ]
+          },
+          "item_id": {
+            "type": "string",
+            "description": "Id del item unificado",
+            "format": "uuid"
+          },
+          "sku": {
+            "type": "string",
+            "description": "SKU de la variante o producto",
+            "example": "SKU-001"
+          },
+          "producto_nombre": {
+            "type": "string",
+            "description": "Nombre del producto/variante"
+          },
+          "atributos": {
+            "type": "object",
+            "description": "Atributos de la variante (color, talla, etc.)",
+            "additionalProperties": true
+          },
+          "imagen_objeto_id": {
+            "type": "object",
+            "description": "Id del objeto de la imagen principal",
+            "nullable": true,
+            "format": "uuid"
+          },
+          "imagen_url": {
+            "type": "object",
+            "description": "URL pública de la imagen principal",
+            "nullable": true
+          },
+          "precio_venta": {
+            "type": "string",
+            "description": "Precio de venta en córdobas con dos decimales",
+            "example": "1150.00"
+          },
+          "stock": {
+            "type": "number",
+            "description": "Stock disponible",
+            "example": 10
+          },
+          "estado": {
+            "type": "string",
+            "description": "Estado de la oferta",
+            "example": "activa"
+          },
+          "creado_en": {
+            "type": "string",
+            "description": "Fecha de creación (ISO 8601 UTC)",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "item_type",
+          "item_id",
+          "sku",
+          "producto_nombre",
+          "precio_venta",
+          "stock",
+          "estado",
+          "creado_en"
+        ]
+      },
+      "OfertaResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Id de la oferta",
+            "format": "uuid"
+          },
+          "tienda_id": {
+            "type": "string",
+            "description": "Id de la tienda",
+            "format": "uuid"
+          },
+          "vendedor_id": {
+            "type": "string",
+            "description": "Id del vendedor",
+            "format": "uuid"
+          },
+          "empresa_id": {
+            "type": "string",
+            "description": "Empresa propietaria",
+            "format": "uuid"
+          },
+          "participacion_porcentaje": {
+            "type": "number",
+            "description": "Participación congelable del vendedor",
+            "minimum": 0,
+            "maximum": 100
+          },
+          "item_type": {
+            "type": "string",
+            "description": "Tipo del item publicado",
+            "enum": [
+              "producto",
+              "servicio",
+              "alquiler"
+            ]
+          },
+          "item_id": {
+            "type": "string",
+            "description": "Id del item unificado",
+            "format": "uuid"
+          },
+          "sku": {
+            "type": "string",
+            "description": "SKU de la variante o producto",
+            "example": "SKU-001"
+          },
+          "producto_nombre": {
+            "type": "string",
+            "description": "Nombre del producto/variante"
+          },
+          "atributos": {
+            "type": "object",
+            "description": "Atributos de la variante (color, talla, etc.)",
+            "additionalProperties": true
+          },
+          "imagen_objeto_id": {
+            "type": "object",
+            "description": "Id del objeto de la imagen principal",
+            "nullable": true,
+            "format": "uuid"
+          },
+          "imagen_url": {
+            "type": "object",
+            "description": "URL pública de la imagen principal",
+            "nullable": true
+          },
+          "margen": {
+            "type": "number",
+            "description": "Margen aplicado (0–90)",
+            "example": 15
+          },
+          "precio_base": {
+            "type": "string",
+            "description": "Precio base en córdobas con dos decimales",
+            "example": "1000.00"
+          },
+          "precio_venta": {
+            "type": "string",
+            "description": "Precio de venta en córdobas con dos decimales",
+            "example": "1150.00"
+          },
+          "stock": {
+            "type": "number",
+            "description": "Stock disponible",
+            "example": 10
+          },
+          "estado": {
+            "type": "string",
+            "description": "Estado de la oferta",
+            "example": "activa"
+          },
+          "creado_en": {
+            "type": "string",
+            "description": "Fecha de creación (ISO 8601 UTC)",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "tienda_id",
+          "vendedor_id",
+          "empresa_id",
+          "participacion_porcentaje",
+          "item_type",
+          "item_id",
+          "sku",
+          "producto_nombre",
+          "margen",
+          "precio_base",
+          "precio_venta",
+          "stock",
+          "estado",
+          "creado_en"
+        ]
+      },
+      "OrigenPersonalizacionResponseDto": {
+        "type": "object",
+        "properties": {
+          "plantilla": {
+            "type": "string",
+            "description": "Nivel que aportó la plantilla efectiva",
+            "enum": [
+              "tienda",
+              "empresa",
+              "plataforma",
+              "defecto"
+            ]
+          },
+          "tema": {
+            "type": "string",
+            "description": "Nivel más específico que aportó overrides de tema",
+            "enum": [
+              "tienda",
+              "empresa",
+              "plataforma",
+              "defecto"
+            ]
+          }
+        },
+        "required": [
+          "plantilla",
+          "tema"
+        ]
+      },
+      "PaginaOfertasResponseDto": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "description": "Ofertas de la página",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/OfertaResponseDto"
+            }
+          },
+          "total": {
+            "type": "number",
+            "description": "Total de ofertas",
+            "example": 42
+          },
+          "pagina": {
+            "type": "number",
+            "description": "Página actual (1-based)",
+            "example": 1
+          },
+          "limite": {
+            "type": "number",
+            "description": "Tamaño de página",
+            "example": 20
+          },
+          "paginas": {
+            "type": "number",
+            "description": "Total de páginas",
+            "example": 3
+          }
+        },
+        "required": [
+          "items",
+          "total",
+          "pagina",
+          "limite",
+          "paginas"
+        ]
+      },
+      "PoliticasRequestDto": {
+        "type": "object",
+        "properties": {
+          "envio": {
+            "type": "string",
+            "description": "Política de envío",
+            "maxLength": 1000
+          },
+          "devolucion": {
+            "type": "string",
+            "description": "Política de devolución",
+            "maxLength": 1000
+          },
+          "privacidad": {
+            "type": "string",
+            "description": "Política de privacidad",
+            "maxLength": 1000
+          }
+        }
+      },
+      "PoliticasResponseDto": {
+        "type": "object",
+        "properties": {
+          "envio": {
+            "type": "string",
+            "description": "Política de envío"
+          },
+          "devolucion": {
+            "type": "string",
+            "description": "Política de devolución"
+          },
+          "privacidad": {
+            "type": "string",
+            "description": "Política de privacidad"
+          }
+        },
+        "required": [
+          "envio",
+          "devolucion",
+          "privacidad"
+        ]
+      },
+      "PublicarProductoRequestDto": {
+        "type": "object",
+        "properties": {
+          "tienda_id": {
+            "type": "string",
+            "description": "Tienda donde se publicará (UUID o slug). Si se omite, se usa la tienda del vendedor autenticado.",
+            "example": "mi-tienda"
+          },
+          "item_type": {
+            "type": "string",
+            "description": "Tipo del item a publicar",
+            "enum": [
+              "producto",
+              "servicio",
+              "alquiler"
+            ],
+            "default": "producto"
+          },
+          "item_id": {
+            "type": "string",
+            "description": "Id del item unificado a publicar",
+            "format": "uuid"
+          },
+          "margen": {
+            "type": "number",
+            "description": "Margen en enteros (15 = 15 %). RN-01: 0 a 90",
+            "minimum": 0,
+            "maximum": 90,
+            "example": 15
+          }
+        },
+        "required": [
+          "item_id",
+          "margen"
+        ]
+      },
+      "RedSocialRequestDto": {
+        "type": "object",
+        "properties": {
+          "red": {
+            "type": "string",
+            "description": "Red social",
+            "enum": [
+              "instagram",
+              "facebook",
+              "tiktok",
+              "x",
+              "whatsapp",
+              "youtube",
+              "otra"
+            ]
+          },
+          "url": {
+            "type": "string",
+            "description": "URL HTTPS del perfil",
+            "example": "https://instagram.com/mitienda"
+          }
+        },
+        "required": [
+          "red",
+          "url"
+        ]
+      },
+      "RedSocialResponseDto": {
+        "type": "object",
+        "properties": {
+          "red": {
+            "type": "string",
+            "description": "Red social",
+            "enum": [
+              "instagram",
+              "facebook",
+              "tiktok",
+              "x",
+              "whatsapp",
+              "youtube",
+              "otra"
+            ]
+          },
+          "url": {
+            "type": "string",
+            "description": "URL HTTPS del perfil"
+          }
+        },
+        "required": [
+          "red",
+          "url"
+        ]
+      },
+      "SeccionRequestDto": {
+        "type": "object",
+        "properties": {
+          "tipo": {
+            "type": "string",
+            "description": "Tipo de sección",
+            "enum": [
+              "hero",
+              "destacados",
+              "categorias",
+              "ofertas",
+              "sobre_nosotros",
+              "politicas",
+              "contacto",
+              "redes"
+            ]
+          },
+          "visible": {
+            "type": "boolean",
+            "description": "Si la sección se muestra",
+            "default": true
+          },
+          "orden": {
+            "type": "number",
+            "description": "Orden de la sección",
+            "minimum": 0,
+            "maximum": 11
+          }
+        },
+        "required": [
+          "tipo",
+          "visible",
+          "orden"
+        ]
+      },
+      "SeccionResponseDto": {
+        "type": "object",
+        "properties": {
+          "tipo": {
+            "type": "string",
+            "description": "Tipo de sección",
+            "enum": [
+              "hero",
+              "destacados",
+              "categorias",
+              "ofertas",
+              "sobre_nosotros",
+              "politicas",
+              "contacto",
+              "redes"
+            ]
+          },
+          "visible": {
+            "type": "boolean",
+            "description": "Si la sección se muestra"
+          },
+          "orden": {
+            "type": "number",
+            "description": "Orden de la sección",
+            "minimum": 0
+          }
+        },
+        "required": [
+          "tipo",
+          "visible",
+          "orden"
+        ]
+      },
+      "TemaRequestDto": {
+        "type": "object",
+        "properties": {
+          "color_primario": {
+            "type": "string",
+            "description": "Color primario (hex)",
+            "example": "#1F2937"
+          },
+          "color_secundario": {
+            "type": "string",
+            "description": "Color secundario (hex)",
+            "example": "#F59E0B"
+          },
+          "color_acento": {
+            "type": "string",
+            "description": "Color de acento (hex)",
+            "example": "#10B981"
+          },
+          "color_fondo": {
+            "type": "string",
+            "description": "Color de fondo (hex)",
+            "example": "#FFFFFF"
+          },
+          "color_texto": {
+            "type": "string",
+            "description": "Color de texto (hex)",
+            "example": "#111827"
+          },
+          "fuente": {
+            "type": "string",
+            "description": "Fuente del tema",
+            "enum": [
+              "system",
+              "inter",
+              "poppins",
+              "montserrat",
+              "playfair"
+            ],
+            "default": "system"
+          },
+          "radio_bordes": {
+            "type": "number",
+            "description": "Radio de bordes en píxeles",
+            "minimum": 0,
+            "maximum": 32,
+            "default": 12
+          },
+          "modo": {
+            "type": "string",
+            "description": "Modo de color",
+            "enum": [
+              "claro",
+              "oscuro",
+              "auto"
+            ],
+            "default": "claro"
+          }
+        }
+      },
+      "TemaResponseDto": {
+        "type": "object",
+        "properties": {
+          "color_primario": {
+            "type": "string",
+            "description": "Color primario (hex)",
+            "example": "#1F2937"
+          },
+          "color_secundario": {
+            "type": "string",
+            "description": "Color secundario (hex)",
+            "example": "#F59E0B"
+          },
+          "color_acento": {
+            "type": "string",
+            "description": "Color de acento (hex)",
+            "example": "#10B981"
+          },
+          "color_fondo": {
+            "type": "string",
+            "description": "Color de fondo (hex)",
+            "example": "#FFFFFF"
+          },
+          "color_texto": {
+            "type": "string",
+            "description": "Color de texto (hex)",
+            "example": "#111827"
+          },
+          "fuente": {
+            "type": "string",
+            "description": "Fuente del tema",
+            "enum": [
+              "system",
+              "inter",
+              "poppins",
+              "montserrat",
+              "playfair"
+            ],
+            "example": "system"
+          },
+          "radio_bordes": {
+            "type": "number",
+            "description": "Radio de bordes en píxeles",
+            "minimum": 0,
+            "maximum": 32,
+            "example": 12
+          },
+          "modo": {
+            "type": "string",
+            "description": "Modo de color",
+            "enum": [
+              "claro",
+              "oscuro",
+              "auto"
+            ],
+            "example": "claro"
+          }
+        },
+        "required": [
+          "color_primario",
+          "color_secundario",
+          "color_acento",
+          "color_fondo",
+          "color_texto",
+          "fuente",
+          "radio_bordes",
+          "modo"
+        ]
+      },
+      "TiendaPublicaDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Id de la tienda",
+            "format": "uuid"
+          },
+          "nombre": {
+            "type": "string",
+            "description": "Nombre de la tienda",
+            "example": "Mi tienda"
+          },
+          "slug": {
+            "type": "string",
+            "description": "Slug público actual",
+            "example": "mi-tienda"
+          },
+          "descripcion": {
+            "type": "string",
+            "description": "Descripción de la tienda"
+          },
+          "logo_objeto_id": {
+            "type": "object",
+            "description": "Objeto de storage del logo",
+            "nullable": true,
+            "format": "uuid"
+          },
+          "logo_url": {
+            "type": "object",
+            "description": "URL pública del logo",
+            "nullable": true
+          },
+          "background_objeto_id": {
+            "type": "string",
+            "description": "Objeto de storage del fondo",
+            "nullable": true,
+            "format": "uuid"
+          },
+          "background_media_type": {
+            "type": "string",
+            "description": "Tipo derivado del fondo",
+            "nullable": true,
+            "enum": [
+              "imagen",
+              "video"
+            ]
+          },
+          "background_url": {
+            "type": "string",
+            "description": "URL pública derivada del fondo",
+            "nullable": true
+          },
+          "background_poster_objeto_id": {
+            "type": "string",
+            "description": "Objeto de storage del poster",
+            "nullable": true,
+            "format": "uuid"
+          },
+          "background_poster_url": {
+            "type": "string",
+            "description": "URL pública derivada del poster",
+            "nullable": true
+          },
+          "background_alt": {
+            "type": "string",
+            "description": "Texto alternativo del fondo"
+          },
+          "background_overlay": {
+            "type": "number",
+            "description": "Opacidad del overlay (0-100)",
+            "minimum": 0,
+            "maximum": 100
+          },
+          "background_position": {
+            "type": "string",
+            "description": "Posición del fondo",
+            "enum": [
+              "center",
+              "top",
+              "bottom",
+              "left",
+              "right"
+            ]
+          },
+          "background_activo": {
+            "type": "boolean",
+            "description": "Si el fondo está activo"
+          },
+          "background_movil_objeto_id": {
+            "type": "string",
+            "description": "Objeto de storage del fondo móvil",
+            "nullable": true,
+            "format": "uuid"
+          },
+          "background_movil_media_type": {
+            "type": "string",
+            "description": "Tipo derivado del fondo móvil",
+            "nullable": true,
+            "enum": [
+              "imagen",
+              "video"
+            ]
+          },
+          "background_movil_url": {
+            "type": "string",
+            "description": "URL pública derivada del fondo móvil",
+            "nullable": true
+          },
+          "background_movil_poster_objeto_id": {
+            "type": "string",
+            "description": "Objeto de storage del poster móvil",
+            "nullable": true,
+            "format": "uuid"
+          },
+          "background_movil_poster_url": {
+            "type": "string",
+            "description": "URL pública derivada del poster móvil",
+            "nullable": true
+          },
+          "background_movil_alt": {
+            "type": "string",
+            "description": "Texto alternativo del fondo móvil"
+          },
+          "background_movil_activo": {
+            "type": "boolean",
+            "description": "Si el fondo móvil está activo"
+          },
+          "plantilla": {
+            "type": "string",
+            "description": "Plantilla visual base (ADR-39)",
+            "enum": [
+              "clasica",
+              "minimal",
+              "boutique",
+              "mercado"
+            ]
+          },
+          "tema": {
+            "description": "Tokens de tema resueltos; siempre incluye todos los campos",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/TemaResponseDto"
+              }
+            ]
+          },
+          "origen_personalizacion": {
+            "description": "Origen de la plantilla y el tema efectivos (ADR-42)",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/OrigenPersonalizacionResponseDto"
+              }
+            ]
+          },
+          "hero_titulo": {
+            "type": "string",
+            "description": "Título del hero"
+          },
+          "hero_subtitulo": {
+            "type": "string",
+            "description": "Subtítulo del hero"
+          },
+          "hero_cta_texto": {
+            "type": "string",
+            "description": "Texto del CTA del hero"
+          },
+          "hero_cta_url": {
+            "type": "string",
+            "description": "Ruta o URL HTTPS del CTA del hero"
+          },
+          "seo_titulo": {
+            "type": "string",
+            "description": "Título SEO de la tienda"
+          },
+          "seo_descripcion": {
+            "type": "string",
+            "description": "Descripción SEO de la tienda"
+          },
+          "seo_imagen_objeto_id": {
+            "type": "object",
+            "description": "Objeto de storage de la imagen SEO",
+            "nullable": true,
+            "format": "uuid"
+          },
+          "seo_imagen_url": {
+            "type": "object",
+            "description": "URL pública derivada de la imagen SEO",
+            "nullable": true
+          },
+          "personalizacion_actualizada_en": {
+            "type": "object",
+            "description": "Última actualización de la personalización",
+            "nullable": true,
+            "format": "date-time"
+          },
+          "secciones": {
+            "description": "Orden y visibilidad de las secciones del storefront (ADR-40)",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SeccionResponseDto"
+            }
+          },
+          "sobre_nosotros": {
+            "type": "string",
+            "description": "Texto \"sobre nosotros\""
+          },
+          "politicas": {
+            "description": "Políticas de la tienda",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/PoliticasResponseDto"
+              }
+            ]
+          },
+          "redes": {
+            "description": "Redes sociales de la tienda",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/RedSocialResponseDto"
+            }
+          },
+          "anuncio_texto": {
+            "type": "string",
+            "description": "Texto del anuncio superior"
+          },
+          "anuncio_enlace": {
+            "type": "string",
+            "description": "Ruta o URL HTTPS del anuncio"
+          },
+          "anuncio_activo": {
+            "type": "boolean",
+            "description": "Si el anuncio está activo"
+          },
+          "contenido_actualizado_en": {
+            "type": "object",
+            "description": "Última actualización del contenido",
+            "nullable": true,
+            "format": "date-time"
+          },
+          "creado_en": {
+            "type": "string",
+            "description": "Fecha de creación (ISO 8601 UTC)",
+            "format": "date-time"
+          },
+          "actualizado_en": {
+            "type": "string",
+            "description": "Última actualización (ISO 8601 UTC)",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "nombre",
+          "slug",
+          "descripcion",
+          "creado_en"
+        ]
+      },
+      "TiendaPublicaResponseDto": {
+        "type": "object",
+        "properties": {
+          "tienda": {
+            "description": "Datos públicos de la tienda",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/TiendaPublicaDto"
+              }
+            ]
+          },
+          "ofertas": {
+            "description": "Ofertas públicas de la tienda",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/OfertaPublicaResponseDto"
+            }
+          }
+        },
+        "required": [
+          "tienda",
+          "ofertas"
+        ]
+      },
+      "TiendaResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Id de la tienda",
+            "format": "uuid"
+          },
+          "empresa_id": {
+            "type": "string",
+            "description": "Empresa propietaria",
+            "format": "uuid"
+          },
+          "propietario_usuario_id": {
+            "type": "string",
+            "description": "Usuario propietario operativo",
+            "format": "uuid"
+          },
+          "participacion_porcentaje": {
+            "type": "number",
+            "nullable": true,
+            "minimum": 0,
+            "maximum": 100
+          },
+          "vendedor_id": {
+            "type": "string",
+            "nullable": true,
+            "description": "Id del vendedor asignado; null si la tienda está disponible",
+            "format": "uuid"
+          },
+          "nombre": {
+            "type": "string",
+            "description": "Nombre de la tienda",
+            "example": "Mi tienda"
+          },
+          "slug": {
+            "type": "string",
+            "description": "Slug público actual",
+            "example": "mi-tienda"
+          },
+          "descripcion": {
+            "type": "string",
+            "description": "Descripción de la tienda"
+          },
+          "logo_objeto_id": {
+            "type": "object",
+            "description": "Objeto de storage del logo",
+            "nullable": true,
+            "format": "uuid"
+          },
+          "logo_url": {
+            "type": "object",
+            "description": "URL pública del logo",
+            "nullable": true
+          },
+          "background_objeto_id": {
+            "type": "string",
+            "description": "Objeto de storage del fondo",
+            "nullable": true,
+            "format": "uuid"
+          },
+          "background_media_type": {
+            "type": "string",
+            "description": "Tipo derivado del fondo",
+            "nullable": true,
+            "enum": [
+              "imagen",
+              "video"
+            ]
+          },
+          "background_url": {
+            "type": "string",
+            "description": "URL pública derivada del fondo",
+            "nullable": true
+          },
+          "background_poster_objeto_id": {
+            "type": "string",
+            "description": "Objeto de storage del poster",
+            "nullable": true,
+            "format": "uuid"
+          },
+          "background_poster_url": {
+            "type": "string",
+            "description": "URL pública derivada del poster",
+            "nullable": true
+          },
+          "background_alt": {
+            "type": "string",
+            "description": "Texto alternativo del fondo"
+          },
+          "background_overlay": {
+            "type": "number",
+            "description": "Opacidad del overlay (0-100)",
+            "minimum": 0,
+            "maximum": 100
+          },
+          "background_position": {
+            "type": "string",
+            "description": "Posición del fondo",
+            "enum": [
+              "center",
+              "top",
+              "bottom",
+              "left",
+              "right"
+            ]
+          },
+          "background_activo": {
+            "type": "boolean",
+            "description": "Si el fondo está activo"
+          },
+          "background_movil_objeto_id": {
+            "type": "string",
+            "description": "Objeto de storage del fondo móvil",
+            "nullable": true,
+            "format": "uuid"
+          },
+          "background_movil_media_type": {
+            "type": "string",
+            "description": "Tipo derivado del fondo móvil",
+            "nullable": true,
+            "enum": [
+              "imagen",
+              "video"
+            ]
+          },
+          "background_movil_url": {
+            "type": "string",
+            "description": "URL pública derivada del fondo móvil",
+            "nullable": true
+          },
+          "background_movil_poster_objeto_id": {
+            "type": "string",
+            "description": "Objeto de storage del poster móvil",
+            "nullable": true,
+            "format": "uuid"
+          },
+          "background_movil_poster_url": {
+            "type": "string",
+            "description": "URL pública derivada del poster móvil",
+            "nullable": true
+          },
+          "background_movil_alt": {
+            "type": "string",
+            "description": "Texto alternativo del fondo móvil"
+          },
+          "background_movil_activo": {
+            "type": "boolean",
+            "description": "Si el fondo móvil está activo"
+          },
+          "plantilla": {
+            "type": "string",
+            "description": "Plantilla visual base (ADR-39)",
+            "enum": [
+              "clasica",
+              "minimal",
+              "boutique",
+              "mercado"
+            ]
+          },
+          "tema": {
+            "description": "Tokens de tema resueltos; siempre incluye todos los campos",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/TemaResponseDto"
+              }
+            ]
+          },
+          "origen_personalizacion": {
+            "description": "Origen de la plantilla y el tema efectivos (ADR-42)",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/OrigenPersonalizacionResponseDto"
+              }
+            ]
+          },
+          "hero_titulo": {
+            "type": "string",
+            "description": "Título del hero"
+          },
+          "hero_subtitulo": {
+            "type": "string",
+            "description": "Subtítulo del hero"
+          },
+          "hero_cta_texto": {
+            "type": "string",
+            "description": "Texto del CTA del hero"
+          },
+          "hero_cta_url": {
+            "type": "string",
+            "description": "Ruta o URL HTTPS del CTA del hero"
+          },
+          "seo_titulo": {
+            "type": "string",
+            "description": "Título SEO de la tienda"
+          },
+          "seo_descripcion": {
+            "type": "string",
+            "description": "Descripción SEO de la tienda"
+          },
+          "seo_imagen_objeto_id": {
+            "type": "object",
+            "description": "Objeto de storage de la imagen SEO",
+            "nullable": true,
+            "format": "uuid"
+          },
+          "seo_imagen_url": {
+            "type": "object",
+            "description": "URL pública derivada de la imagen SEO",
+            "nullable": true
+          },
+          "personalizacion_actualizada_en": {
+            "type": "object",
+            "description": "Última actualización de la personalización",
+            "nullable": true,
+            "format": "date-time"
+          },
+          "secciones": {
+            "description": "Orden y visibilidad de las secciones del storefront (ADR-40)",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SeccionResponseDto"
+            }
+          },
+          "sobre_nosotros": {
+            "type": "string",
+            "description": "Texto \"sobre nosotros\""
+          },
+          "politicas": {
+            "description": "Políticas de la tienda",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/PoliticasResponseDto"
+              }
+            ]
+          },
+          "redes": {
+            "description": "Redes sociales de la tienda",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/RedSocialResponseDto"
+            }
+          },
+          "anuncio_texto": {
+            "type": "string",
+            "description": "Texto del anuncio superior"
+          },
+          "anuncio_enlace": {
+            "type": "string",
+            "description": "Ruta o URL HTTPS del anuncio"
+          },
+          "anuncio_activo": {
+            "type": "boolean",
+            "description": "Si el anuncio está activo"
+          },
+          "contenido_actualizado_en": {
+            "type": "object",
+            "description": "Última actualización del contenido",
+            "nullable": true,
+            "format": "date-time"
+          },
+          "creado_en": {
+            "type": "string",
+            "description": "Fecha de creación (ISO 8601 UTC)",
+            "format": "date-time"
+          },
+          "actualizado_en": {
+            "type": "string",
+            "description": "Última actualización (ISO 8601 UTC)",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "empresa_id",
+          "propietario_usuario_id",
+          "nombre",
+          "slug",
+          "descripcion",
+          "creado_en"
+        ]
+      }
+    }
+  }
+}

@@ -12,7 +12,17 @@ describe('EnviosService (guia de despacho y transiciones)', () => {
       queryOne: vi.fn().mockResolvedValue(null),
     };
     const servicio = new EnviosService(pg as never);
-    return { servicio, pg };
+    const capacidades = [
+      { empresa_id: 'empresa-1', capacidad_codigo: 'logistica_rutas', activo: true },
+      { empresa_id: 'empresa-1', capacidad_codigo: 'fulfillment_delivery', activo: true },
+    ];
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: async () => ({ capacidades }),
+    });
+    if (!vi.isMockFunction(globalThis.fetch)) vi.stubGlobal('fetch', fetchMock);
+    return { servicio, pg, fetchMock };
   };
 
   const envio = {
@@ -20,39 +30,48 @@ describe('EnviosService (guia de despacho y transiciones)', () => {
     guia: 'BGH-ABC-123456',
     order_id: 'o1',
     empresa_id: 'empresa-1',
-    modalidad_logistica: 'propia',
     proveedor_tipo: 'empresa',
     proveedor_tenant_id: 'empresa-1',
     estado: 'en_preparacion',
     creado_en: '2026-09-01T00:00:00.000Z',
   };
 
-  afterEach(() => vi.restoreAllMocks());
+  afterEach(() => {
+    vi.restoreAllMocks();
+    vi.unstubAllGlobals();
+  });
 
   describe('prepararEnvio (payment.procesado)', () => {
     it('debe devolver el envio existente sin insertar nada (idempotencia del consumidor)', async () => {
       const { servicio, pg } = crear();
       (pg.queryOne as Mock).mockResolvedValue(envio);
-      const resultado = await servicio.prepararEnvio('o1', 'empresa-1', 150000, 'propia');
+      const resultado = await servicio.prepararEnvio('o1', 'empresa-1', 150000);
       expect(resultado).toEqual(envio);
-      expect(pg.queryOne).toHaveBeenCalledTimes(1); // solo el SELECT de busqueda
+      expect(pg.queryOne).toHaveBeenCalledTimes(1);
       const [sql] = (pg.queryOne as Mock).mock.calls[0];
       expect(sql).toContain('SELECT');
     });
 
     it('debe crear el envio en preparacion con la guia cuando no existe', async () => {
-      const { servicio, pg } = crear();
+      const { servicio, pg, fetchMock } = crear();
+      fetchMock.mockResolvedValue({
+        ok: true,
+        status: 200,
+        json: async () => ({
+          capacidades: [{ empresa_id: 'empresa-1', capacidad_codigo: 'logistica_rutas', activo: true }],
+        }),
+      });
       (pg.queryOne as Mock)
-        .mockResolvedValueOnce(null) // no existe
-        .mockResolvedValueOnce(envio); // INSERT ... RETURNING
-      const resultado = await servicio.prepararEnvio('o1', 'empresa-1', 150000, 'propia');
-      expect(resultado.guia).toMatch(/^BGH-/); // guia con prefijo del proyecto
+        .mockResolvedValueOnce(null)
+        .mockResolvedValueOnce(envio);
+      const resultado = await servicio.prepararEnvio('o1', 'empresa-1', 150000);
+      expect(resultado.guia).toMatch(/^BGH-/);
       const [sql, params] = (pg.queryOne as Mock).mock.calls[1];
       expect(sql).toContain('INSERT INTO logistics.envios');
       expect(sql).toContain("'en_preparacion'");
       expect(params[2]).toBe('o1');
       expect(params[3]).toBe('empresa-1');
-      expect(params[7]).toBe(150000); // monto en centavos (A02)
+      expect(params[7]).toBe(150000);
       expect(pg.query).toHaveBeenCalledWith(
         expect.stringContaining('logistics.asignaciones_envio'),
         ['e1', null, 'empresa', 'empresa-1', 'automatica', null],
@@ -62,81 +81,89 @@ describe('EnviosService (guia de despacho y transiciones)', () => {
     it('debe devolver el envio existente sin re-registrar asignacion cuando sigue sin proveedor', async () => {
       const { servicio, pg } = crear();
       (pg.queryOne as Mock).mockResolvedValue({ ...envio, proveedor_tipo: null, proveedor_tenant_id: null });
-      const resultado = await servicio.prepararEnvio('o1', 'empresa-1', 150000, 'hibrida');
+      const resultado = await servicio.prepararEnvio('o1', 'empresa-1', 150000);
       expect(resultado.proveedor_tipo).toBeNull();
-      expect(pg.query).not.toHaveBeenCalled(); // no inserta asignacion ni envio
+      expect(pg.query).not.toHaveBeenCalled();
       expect(pg.queryOne).toHaveBeenCalledTimes(1);
     });
 
     it('debe lanzar DomainError cuando el INSERT no devuelve fila', async () => {
-      const { servicio, pg } = crear();
-      (pg.queryOne as Mock)
-        .mockResolvedValueOnce(null)
-        .mockResolvedValueOnce(null);
-      await expect(servicio.prepararEnvio('o1', 'empresa-1', 1, 'propia')).rejects.toThrow(/no se pudo preparar/i);
+      const { servicio, pg, fetchMock } = crear();
+      fetchMock.mockResolvedValue({
+        ok: true,
+        status: 200,
+        json: async () => ({
+          capacidades: [{ empresa_id: 'empresa-1', capacidad_codigo: 'logistica_rutas', activo: true }],
+        }),
+      });
+      (pg.queryOne as Mock).mockResolvedValueOnce(null).mockResolvedValueOnce(null);
+      await expect(servicio.prepararEnvio('o1', 'empresa-1', 1)).rejects.toThrow(/no se pudo preparar/i);
     });
 
     it('debe dejar pendiente de proveedor un envio hibrido', async () => {
       const { servicio, pg } = crear();
       (pg.queryOne as Mock).mockResolvedValueOnce(null).mockResolvedValueOnce(envio);
-      await servicio.prepararEnvio('o1', 'empresa-1', 1000, 'hibrida');
+      await servicio.prepararEnvio('o1', 'empresa-1', 1000);
       const [, params] = (pg.queryOne as Mock).mock.calls[1];
-      expect(params.slice(4, 7)).toEqual(['hibrida', null, null]);
+      expect(params.slice(4, 7)).toEqual([null, null, null]);
     });
 
-    it('debe asignar la flota global en modalidad plataforma', async () => {
-      const { servicio, pg } = crear();
+    it('debe asignar la flota global cuando solo hay fulfillment_delivery', async () => {
+      const { servicio, pg, fetchMock } = crear();
+      fetchMock.mockResolvedValue({
+        ok: true,
+        status: 200,
+        json: async () => ({
+          capacidades: [{ empresa_id: 'empresa-1', capacidad_codigo: 'fulfillment_delivery', activo: true }],
+        }),
+      });
       (pg.queryOne as Mock).mockResolvedValueOnce(null).mockResolvedValueOnce(envio);
-      await servicio.prepararEnvio('o1', 'empresa-1', 1000, 'plataforma');
+      await servicio.prepararEnvio('o1', 'empresa-1', 1000);
       const [, params] = (pg.queryOne as Mock).mock.calls[1];
       expect(params.slice(4, 7)).toEqual([
-        'plataforma', 'plataforma', '00000000-0000-0000-0000-000000000001',
+        null, 'plataforma', '00000000-0000-0000-0000-000000000001',
       ]);
     });
   });
 
   describe('prepararEnviosDeOrden', () => {
-    it('agrupa lineas por empresa y congela la modalidad vigente', async () => {
+    it('agrupa lineas por empresa y delega en prepararEnvio', async () => {
       const { servicio } = crear();
       vi.spyOn(servicio, 'consultarOrden').mockResolvedValue({
-        id: 'o1', cliente_id: 'c1', total: '35.00', total_cents: 3500, estado: 'pagada',
+        id: 'o1', comprador_id: 'c1', total: '35.00', total_cents: 3500, estado: 'pagada',
         items: [
           { sku: 'A', cantidad: 2, producto_nombre: 'A', empresa_id: 'e1', precio_unitario_cents: 1000 },
           { sku: 'B', cantidad: 1, producto_nombre: 'B', empresa_id: 'e1', precio_unitario_cents: 500 },
           { sku: 'C', cantidad: 1, producto_nombre: 'C', empresa_id: 'e2', precio_unitario_cents: 1000 },
         ],
       });
-      vi.spyOn(globalThis, 'fetch').mockImplementation(async (url) => ({
-        ok: true,
-        json: async () => ({ id: String(url).includes('/e1') ? 'e1' : 'e2', modalidad_logistica: 'hibrida' }),
-      } as Response));
       const preparar = vi.spyOn(servicio, 'prepararEnvio')
         .mockResolvedValueOnce({ ...envio, empresa_id: 'e1' } as never)
         .mockResolvedValueOnce({ ...envio, empresa_id: 'e2' } as never);
 
       await expect(servicio.prepararEnviosDeOrden('o1')).resolves.toHaveLength(2);
-      expect(preparar).toHaveBeenNthCalledWith(1, 'o1', 'e1', 2500, 'hibrida');
-      expect(preparar).toHaveBeenNthCalledWith(2, 'o1', 'e2', 1000, 'hibrida');
+      expect(preparar).toHaveBeenNthCalledWith(1, 'o1', 'e1', 2500, undefined);
+      expect(preparar).toHaveBeenNthCalledWith(2, 'o1', 'e2', 1000, undefined);
     });
 
     it('rechaza una orden sin lineas o con linea sin empresa', async () => {
       const { servicio } = crear();
       vi.spyOn(servicio, 'consultarOrden').mockResolvedValueOnce(null).mockResolvedValueOnce({
-        id: 'o1', cliente_id: 'c1', total: '1.00', total_cents: 100, estado: 'pagada',
+        id: 'o1', comprador_id: 'c1', total: '1.00', total_cents: 100, estado: 'pagada',
         items: [{ sku: 'A', cantidad: 1, producto_nombre: 'A', empresa_id: '', precio_unitario_cents: 100 }],
       });
       await expect(servicio.prepararEnviosDeOrden('o1')).rejects.toThrow(/no tiene líneas/);
       await expect(servicio.prepararEnviosDeOrden('o1')).rejects.toThrow(/no tiene empresa/);
     });
 
-    it('falla de forma controlada si identidad no resuelve la empresa', async () => {
-      const { servicio } = crear();
+    it('falla de forma controlada si identity no responde', async () => {
+      const { servicio, fetchMock } = crear();
+      fetchMock.mockRejectedValue(new Error('caido'));
       vi.spyOn(servicio, 'consultarOrden').mockResolvedValue({
-        id: 'o1', cliente_id: 'c1', total: '1.00', total_cents: 100, estado: 'pagada',
+        id: 'o1', comprador_id: 'c1', total: '1.00', total_cents: 100, estado: 'pagada',
         items: [{ sku: 'A', cantidad: 1, producto_nombre: 'A', empresa_id: 'e1', precio_unitario_cents: 100 }],
       });
-      vi.spyOn(globalThis, 'fetch').mockResolvedValue({ ok: false } as Response);
-      await expect(servicio.prepararEnviosDeOrden('o1')).rejects.toThrow(/modalidad logística/);
+      await expect(servicio.prepararEnviosDeOrden('o1')).rejects.toThrow(/identity-service/);
     });
   });
 
@@ -144,8 +171,8 @@ describe('EnviosService (guia de despacho y transiciones)', () => {
     it('debe asignar la flota propia usando el tenant de la empresa', async () => {
       const { servicio, pg } = crear();
       (pg.queryOne as Mock)
-        .mockResolvedValueOnce({ ...envio, modalidad_logistica: 'hibrida', proveedor_tipo: null })
-        .mockResolvedValueOnce({ ...envio, modalidad_logistica: 'hibrida' });
+        .mockResolvedValueOnce({ ...envio, proveedor_tipo: null, proveedor_tenant_id: null })
+        .mockResolvedValueOnce({ ...envio, proveedor_tipo: 'empresa' });
       await servicio.asignarProveedor('e1', 'empresa-1', 'empresa');
       expect(pg.queryOne).toHaveBeenNthCalledWith(
         2, expect.stringContaining('UPDATE logistics.envios'),
@@ -169,7 +196,7 @@ describe('EnviosService (guia de despacho y transiciones)', () => {
       await expect(servicio.asignarProveedor('e-x', 'empresa-1', 'empresa'))
         .rejects.toThrow(/no pertenece/);
       (pg.queryOne as Mock)
-        .mockResolvedValueOnce({ ...envio, modalidad_logistica: 'hibrida' })
+        .mockResolvedValueOnce({ ...envio, proveedor_tipo: null })
         .mockResolvedValueOnce(null);
       await expect(servicio.asignarProveedor('e1', 'empresa-1', 'plataforma', 'u-e'))
         .rejects.toThrow(/No se pudo asignar/);
@@ -273,7 +300,7 @@ describe('EnviosService (guia de despacho y transiciones)', () => {
   describe('avanzarEstadoOrden (Tabla 13)', () => {
     const orden = {
       id: 'o1',
-      cliente_id: 'c1',
+      comprador_id: 'c1',
       items: [],
       total: '1500.00',
       total_cents: 150000,
@@ -297,6 +324,15 @@ describe('EnviosService (guia de despacho y transiciones)', () => {
         'codigo',
         'ESTADO_INVALIDO',
       );
+    });
+
+    it('debe degradar con SERVICIO_NO_DISPONIBLE cuando orders no responde', async () => {
+      vi.spyOn(globalThis, 'fetch').mockRejectedValue(new Error('timeout'));
+      const { servicio } = crear();
+
+      await expect(
+        servicio.avanzarEstadoOrden('o1', 'enviado'),
+      ).rejects.toHaveProperty('codigo', 'SERVICIO_NO_DISPONIBLE');
     });
 
     it('debe usar el error generico cuando el orders responde sin cuerpo util', async () => {

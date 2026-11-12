@@ -16,6 +16,7 @@ import {
   NOMBRE_SERVICIOS,
   STORAGE_BUCKET_PREFIX_DEFAULT,
   STORAGE_MAX_OBJETO_BYTES_DEFAULT,
+  STORAGE_MAX_VIDEO_BYTES_DEFAULT,
   STORAGE_CUOTA_DEFAULT_BYTES,
   STORAGE_URL_TTL_SEGUNDOS_DEFAULT,
   STORAGE_CONTENT_TYPES_DEFAULT,
@@ -69,9 +70,12 @@ describe('constants (reglas de negocio y configuracion)', () => {
   it('debe fijar los limites por defecto del almacenamiento de objetos', () => {
     expect(STORAGE_BUCKET_PREFIX_DEFAULT).toBe('t-');
     expect(STORAGE_MAX_OBJETO_BYTES_DEFAULT).toBe(25 * 1024 * 1024);
+    expect(STORAGE_MAX_VIDEO_BYTES_DEFAULT).toBe(100 * 1024 * 1024);
     expect(STORAGE_CUOTA_DEFAULT_BYTES).toBe(5 * 1024 * 1024 * 1024);
     expect(STORAGE_URL_TTL_SEGUNDOS_DEFAULT).toBe(900);
     expect([...STORAGE_CONTENT_TYPES_DEFAULT]).toContain('image/png');
+    expect([...STORAGE_CONTENT_TYPES_DEFAULT]).toContain('video/mp4');
+    expect([...STORAGE_CONTENT_TYPES_DEFAULT]).toContain('video/webm');
   });
 
   it('debe marcar solo enviada y entregada como estados visibles al publico', () => {

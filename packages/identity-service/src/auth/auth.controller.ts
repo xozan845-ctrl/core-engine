@@ -5,6 +5,7 @@ import {
   AuthService,
   Sesion,
 } from './auth.service';
+import { PasswordResetService } from './password-reset.service';
 import {
   UsuariosService,
   Usuario,
@@ -115,6 +116,18 @@ export class RestablecerContrasenaRequestDto {
   correo: string;
 }
 
+export class ConfirmarRestablecimientoRequestDto {
+  @ApiProperty({ description: 'Token recibido por correo' })
+  @IsString()
+  @Length(16, 256)
+  token: string;
+
+  @ApiProperty({ description: 'Contraseña nueva (mínimo 8 caracteres)', minLength: 8 })
+  @IsString()
+  @MinLength(8)
+  contrasena: string;
+}
+
 export class VincularPersonalRequestDto {
   /** Id de la ficha de personal en field-service (logistica de campo). */
   @ApiProperty({ description: 'Id de la ficha de personal en field-service', minLength: 1, maxLength: 100 })
@@ -138,14 +151,15 @@ export class LogoutRequestDto {
 }
 
 @ApiTags('Auth')
-@Controller('api/v1/auth')
+@Controller('api/v2/auth')
 export class AuthController {
   constructor(
     private readonly auth: AuthService,
     private readonly usuarios: UsuariosService,
+    private readonly passwordReset: PasswordResetService,
   ) {}
 
-  /** POST /api/v1/auth/registro — alta de vendedor o comprador (Tabla 21). */
+  /** POST /api/v2/auth/registro — alta de vendedor o comprador (Tabla 21). */
   @Post('registro')
   @ApiOperation({ summary: 'Registrar vendedor o comprador' })
   @ApiCreatedResponse({ type: SesionResponseDto, description: 'Sesión creada (JWT + refresh)' })
@@ -153,7 +167,7 @@ export class AuthController {
     return this.auth.registrar(dto);
   }
 
-  /** POST /api/v1/auth/login — JWT + refresh (Tabla 21). */
+  /** POST /api/v2/auth/login — JWT + refresh (Tabla 21). */
   @HttpCode(200)
   @Post('login')
   @ApiOperation({ summary: 'Iniciar sesión (JWT + refresh)' })
@@ -163,7 +177,7 @@ export class AuthController {
     return this.auth.login(dto.correo, dto.contrasena);
   }
 
-  /** POST /api/v1/auth/refresh — renueva sesion con token de refresco. */
+  /** POST /api/v2/auth/refresh — renueva sesion con token de refresco. */
   @Post('refresh')
   @ApiOperation({ summary: 'Renovar la sesión con refresh token' })
   @ApiCreatedResponse({ type: SesionResponseDto, description: 'Sesión renovada' })
@@ -176,7 +190,7 @@ export class AuthController {
   }
 
   /**
-   * POST /api/v1/auth/logout — cierra la sesion (R-GW-4): revoca la sesion del
+   * POST /api/v2/auth/logout — cierra la sesion (R-GW-4): revoca la sesion del
    * refresh presentado o, si no se envia, todas las del usuario autenticado.
    */
   @Post('logout')
@@ -193,7 +207,7 @@ export class AuthController {
   }
 
   /**
-   * POST /api/v1/auth/crear-usuario — alta administrativa (admin). Sustituye a la
+   * POST /api/v2/auth/crear-usuario — alta administrativa (admin). Sustituye a la
    * Cloud Function `crearUsuario` de Firebase: crea el usuario y devuelve su id.
    */
   @Post('crear-usuario')
@@ -225,7 +239,7 @@ export class AuthController {
     });
   }
 
-  /** POST /api/v1/auth/cambiar-contrasena — cambio autenticado (app: cambiar-contrasena). */
+  /** POST /api/v2/auth/cambiar-contrasena — cambio autenticado (app: cambiar-contrasena). */
   @Post('cambiar-contrasena')
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Cambiar la contraseña (autenticado)' })
@@ -242,23 +256,34 @@ export class AuthController {
   }
 
   /**
-   * POST /api/v1/auth/restablecer-contrasena — publico (app: restablecer-contrasena).
-   * MVP: verifica existencia y confirma la peticion; el envio de correo se
-   * conecta a Supabase Auth/SMTP en staging/prod.
+   * POST /api/v2/auth/restablecer-contrasena — publico (app: restablecer-contrasena).
+   * Genera un token de un solo uso y envía el enlace por correo. Responde `ok`
+   * siempre, exista o no la cuenta (OWASP A07: no enumeración de usuarios).
    */
   @Post('restablecer-contrasena')
   @ApiOperation({ summary: 'Solicitar restablecimiento de contraseña (público)' })
   @ApiCreatedResponse({ type: OkResponseDto, description: 'Solicitud aceptada' })
   async restablecerContrasena(@Body() dto: RestablecerContrasenaRequestDto): Promise<{ ok: true }> {
-    const existe = await this.usuarios.encontrarPorCorreo(dto.correo);
-    if (!existe) {
-      // No revelar si existe o no (OWASP A07): siempre responde ok.
-      return { ok: true };
-    }
+    await this.passwordReset.solicitar(dto.correo);
     return { ok: true };
   }
 
-  /** GET /api/v1/auth/me — perfil de la sesion actual. */
+  /**
+   * POST /api/v2/auth/restablecer-contrasena/confirmar — publico.
+   * Consume el token de un solo uso, cambia la contraseña y revoca las sesiones.
+   */
+  @Post('restablecer-contrasena/confirmar')
+  @HttpCode(200)
+  @ApiOperation({ summary: 'Confirmar restablecimiento de contraseña (público)' })
+  @ApiOkResponse({ type: OkResponseDto, description: 'Contraseña restablecida' })
+  async confirmarRestablecimiento(
+    @Body() dto: ConfirmarRestablecimientoRequestDto,
+  ): Promise<{ ok: true }> {
+    await this.passwordReset.confirmar(dto.token, dto.contrasena);
+    return { ok: true };
+  }
+
+  /** GET /api/v2/auth/me — perfil de la sesion actual. */
   @Get('me')
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Perfil de la sesión actual' })
@@ -272,7 +297,7 @@ export class AuthController {
   }
 
   /**
-   * POST /api/v1/auth/vincular-personal — vincula la ficha de personal del
+   * POST /api/v2/auth/vincular-personal — vincula la ficha de personal del
    * usuario autenticado (app: UsuarioRepositoryPort.saveUsuario con personalId).
    * Sustituye el setDoc de Firestore `usuarios/{uid}` desde la app.
    */

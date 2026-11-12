@@ -1,6 +1,6 @@
 import 'reflect-metadata';
 import { PassThrough, Readable } from 'stream';
-import { ProxyService, ServicioDestino } from './proxy.service';
+import { DESTINOS, ProxyService, ServicioDestino } from './proxy.service';
 import { GatewayAuthMiddleware, PoliticaRuta } from './gateway-auth.middleware';
 import { TENANT_HEADER, PERSONAL_HEADER, PARTICIPACION_HEADER, ROLES } from '@core/shared';
 import type { Request, Response } from 'express';
@@ -9,12 +9,12 @@ const destinos: ServicioDestino[] = [
   {
     nombre: 'catalog',
     url: 'http://catalog-service:3002',
-    patrones: [{ patron: /^\/api\/v1\/catalog\//, metodos: ['*'] }],
+    patrones: [{ patron: /^\/api\/v2\/catalog\//, metodos: ['*'] }],
   },
 ];
 
 const politicas: PoliticaRuta[] = [
-  { patron: /^\/api\/v1\/catalog\//, metodos: ['*'], roles: null },
+  { patron: /^\/api\/v2\/catalog\//, metodos: ['*'], roles: null },
 ];
 
 function respuestaFetch(
@@ -31,7 +31,7 @@ function respuestaFetch(
 
 function reqCon(headers: Record<string, string>): Request {
   return {
-    originalUrl: '/api/v1/catalog/productos',
+    originalUrl: '/api/v2/catalog/items',
     method: 'GET',
     headers: { ...headers },
     body: undefined,
@@ -53,6 +53,29 @@ describe('ProxyService — scrub de cabeceras de contexto (R-GW-3 / R-DS-5)', ()
   afterEach(() => {
     globalThis.fetch = fetchOriginal;
     vi.restoreAllMocks();
+  });
+
+  it('debe enrutar la configuración del sitio al identity-service (ADR-38)', async () => {
+    const auth = { aplicar: (_req: Request, _res: Response, next: () => void) => next() } as unknown as GatewayAuthMiddleware;
+    const fetchMock = vi.fn().mockResolvedValue(respuestaFetch(200, '{}'));
+    globalThis.fetch = fetchMock as unknown as typeof fetch;
+    const destinosIdentity = DESTINOS.filter((destino) => destino.nombre === 'identity');
+    const servicio = new ProxyService(auth, destinosIdentity, [
+      { patron: /^\/api\/v2\/configuracion\//, metodos: ['*'], roles: null },
+    ]);
+
+    await servicio.reenviar(
+      {
+        originalUrl: '/api/v2/configuracion/sitio',
+        method: 'GET',
+        headers: {},
+      } as unknown as Request,
+      resMock(),
+    );
+
+    expect(fetchMock.mock.calls[0][0]).toBe(
+      'http://identity-service:3001/api/v2/configuracion/sitio',
+    );
   });
 
   it('debe eliminar x-tenant y x-user-personal inyectados por el cliente cuando el token no los trae', async () => {
@@ -126,11 +149,11 @@ describe('ProxyService — scrub de cabeceras de contexto (R-GW-3 / R-DS-5)', ()
       {
         nombre: 'storage',
         url: 'http://storage-service:3010',
-        patrones: [{ patron: /^\/api\/v1\/storage\/public\//, metodos: ['*'] }],
+        patrones: [{ patron: /^\/api\/v2\/storage\/public\//, metodos: ['*'] }],
       },
     ];
     const politicasImagen: PoliticaRuta[] = [
-      { patron: /^\/api\/v1\/storage\/public\//, metodos: ['*'], roles: null },
+      { patron: /^\/api\/v2\/storage\/public\//, metodos: ['*'], roles: null },
     ];
     const body = Readable.toWeb(Readable.from([Buffer.from('PNG-BYTES')]));
     const fetchMock = vi.fn().mockResolvedValue({
@@ -156,7 +179,7 @@ describe('ProxyService — scrub de cabeceras de contexto (R-GW-3 / R-DS-5)', ()
 
     await servicio.reenviar(
       {
-        originalUrl: '/api/v1/storage/public/objetos/22222222-2222-4222-8222-222222222222',
+        originalUrl: '/api/v2/storage/public/objetos/22222222-2222-4222-8222-222222222222',
         method: 'GET',
         headers: {},
       } as unknown as Request,
@@ -168,7 +191,62 @@ describe('ProxyService — scrub de cabeceras de contexto (R-GW-3 / R-DS-5)', ()
     expect(res.setHeader).toHaveBeenCalledWith('content-type', 'image/png');
     const [, init] = fetchMock.mock.calls[0];
     expect(init.headers['content-type']).toBe('application/octet-stream');
-    expect(init.headers.accept).toBe('image/*');
+    expect(init.headers.accept).toBe('image/*,video/*,*/*');
+  });
+
+  it('debe reenviar Range y propagar 206 con el tramo de video', async () => {
+    const auth = { aplicar: (_req: Request, _res: Response, next: () => void) => next() } as unknown as GatewayAuthMiddleware;
+    const destinosMedia: ServicioDestino[] = [
+      {
+        nombre: 'storage',
+        url: 'http://storage-service:3010',
+        patrones: [{ patron: /^\/api\/v2\/storage\/public\//, metodos: ['*'] }],
+      },
+    ];
+    const politicasMedia: PoliticaRuta[] = [
+      { patron: /^\/api\/v2\/storage\/public\//, metodos: ['*'], roles: null },
+    ];
+    const body = Readable.toWeb(Readable.from([Buffer.from('MP4')]));
+    const fetchMock = vi.fn().mockResolvedValue({
+      status: 206,
+      headers: new Headers({
+        'content-type': 'video/mp4',
+        'content-range': 'bytes 10-12/1000',
+        'accept-ranges': 'bytes',
+        'content-length': '3',
+      }),
+      body,
+    } as unknown as globalThis.Response);
+    globalThis.fetch = fetchMock as unknown as typeof fetch;
+    const servicio = new ProxyService(auth, destinosMedia, politicasMedia);
+
+    const res = new PassThrough() as unknown as Response & PassThrough;
+    Object.assign(res, {
+      headersSent: false,
+      status: vi.fn().mockReturnValue(res),
+      setHeader: vi.fn(),
+      send: vi.fn(),
+      json: vi.fn(),
+    });
+    res.on('data', () => undefined);
+    const fin = new Promise<void>((resolve) => res.on('end', () => resolve()));
+
+    await servicio.reenviar(
+      {
+        originalUrl: '/api/v2/storage/public/objetos/22222222-2222-4222-8222-222222222222',
+        method: 'GET',
+        headers: { range: 'bytes=10-12' },
+      } as unknown as Request,
+      res,
+    );
+    await fin;
+
+    expect(res.status).toHaveBeenCalledWith(206);
+    expect(res.setHeader).toHaveBeenCalledWith('content-range', 'bytes 10-12/1000');
+    expect(res.setHeader).toHaveBeenCalledWith('accept-ranges', 'bytes');
+    expect(res.setHeader).toHaveBeenCalledWith('Content-Length', '3');
+    const [, init] = fetchMock.mock.calls[0];
+    expect(init.headers.range).toBe('bytes=10-12');
   });
 });
 
@@ -185,8 +263,8 @@ describe('ProxyService — query string en enrutado y politicas (R-GW-1 / R-GW-3
 
   it('debe resolver una ruta publica anclada aunque lleve filtros en la query', async () => {
     const politicasConCatchAll: PoliticaRuta[] = [
-      { patron: /^\/api\/v1\/catalog\/productos$/, metodos: ['GET'], roles: null },
-      { patron: /^\/api\/v1\//, metodos: ['*'], roles: [] },
+      { patron: /^\/api\/v2\/catalog\/items$/, metodos: ['GET'], roles: null },
+      { patron: /^\/api\/v2\//, metodos: ['*'], roles: [] },
     ];
     let capturada: PoliticaRuta | null = null;
     const auth = {
@@ -199,12 +277,12 @@ describe('ProxyService — query string en enrutado y politicas (R-GW-1 / R-GW-3
     globalThis.fetch = fetchMock as unknown as typeof fetch;
     const servicio = new ProxyService(auth, destinos, politicasConCatchAll);
 
-    await servicio.reenviar(reqPara('/api/v1/catalog/productos?limite=1&pagina=2'), resMock());
+    await servicio.reenviar(reqPara('/api/v2/catalog/items?limite=1&pagina=2'), resMock());
 
     expect(capturada).toBe(politicasConCatchAll[0]);
     expect(capturada?.roles).toBeNull();
     expect(fetchMock).toHaveBeenCalledWith(
-      'http://catalog-service:3002/api/v1/catalog/productos?limite=1&pagina=2',
+      'http://catalog-service:3002/api/v2/catalog/items?limite=1&pagina=2',
       expect.objectContaining({ method: 'GET' }),
     );
   });
@@ -214,16 +292,16 @@ describe('ProxyService — query string en enrutado y politicas (R-GW-1 / R-GW-3
       {
         nombre: 'orders',
         url: 'http://orders-service:3004',
-        patrones: [{ patron: /^\/api\/v1\/orders(\/|$)/, metodos: ['*'] }],
+        patrones: [{ patron: /^\/api\/v2\/orders(\/|$)/, metodos: ['*'] }],
       },
     ];
     const politicasOrders: PoliticaRuta[] = [
       {
-        patron: /^\/api\/v1\/orders\/admin\/todas$/,
+        patron: /^\/api\/v2\/orders\/admin\/todas$/,
         metodos: ['GET'],
         roles: [ROLES.SUPER_ADMIN, ROLES.ADMIN],
       },
-      { patron: /^\/api\/v1\//, metodos: ['*'], roles: [] },
+      { patron: /^\/api\/v2\//, metodos: ['*'], roles: [] },
     ];
     let capturada: PoliticaRuta | null = null;
     const auth = {
@@ -236,12 +314,12 @@ describe('ProxyService — query string en enrutado y politicas (R-GW-1 / R-GW-3
     globalThis.fetch = fetchMock as unknown as typeof fetch;
     const servicio = new ProxyService(auth, destinosOrders, politicasOrders);
 
-    await servicio.reenviar(reqPara('/api/v1/orders/admin/todas?estado=pagada'), resMock());
+    await servicio.reenviar(reqPara('/api/v2/orders/admin/todas?estado=pagada'), resMock());
 
     expect(capturada).toBe(politicasOrders[0]);
     expect(capturada?.roles).toEqual([ROLES.SUPER_ADMIN, ROLES.ADMIN]);
     expect(fetchMock).toHaveBeenCalledWith(
-      'http://orders-service:3004/api/v1/orders/admin/todas?estado=pagada',
+      'http://orders-service:3004/api/v2/orders/admin/todas?estado=pagada',
       expect.objectContaining({ method: 'GET' }),
     );
   });
@@ -259,18 +337,18 @@ describe('ProxyService — propagación de 301 por slug (ADR-26)', () => {
       {
         nombre: 'stores',
         url: 'http://stores-service:3003',
-        patrones: [{ patron: /^\/api\/v1\/tiendas\//, metodos: ['*'] }],
+        patrones: [{ patron: /^\/api\/v2\/tiendas\//, metodos: ['*'] }],
       },
     ];
     const politicasStores: PoliticaRuta[] = [
-      { patron: /^\/api\/v1\/tiendas\/[^/]+$/, metodos: ['GET'], roles: null },
+      { patron: /^\/api\/v2\/tiendas\/[^/]+$/, metodos: ['GET'], roles: null },
     ];
     const auth = {
       aplicar: (_req: Request, _res: Response, next: () => void) => next(),
     } as unknown as GatewayAuthMiddleware;
     const fetchMock = vi.fn().mockResolvedValue(
       respuestaFetch(301, '', {
-        location: '/api/v1/tiendas/mi-tienda-nueva',
+        location: '/api/v2/tiendas/mi-tienda-nueva',
         connection: 'keep-alive',
         'content-length': '0',
       }),
@@ -281,7 +359,7 @@ describe('ProxyService — propagación de 301 por slug (ADR-26)', () => {
 
     await servicio.reenviar(
       {
-        originalUrl: '/api/v1/tiendas/mi-tienda-vieja',
+        originalUrl: '/api/v2/tiendas/mi-tienda-vieja',
         method: 'GET',
         headers: {},
         body: undefined,
@@ -290,12 +368,69 @@ describe('ProxyService — propagación de 301 por slug (ADR-26)', () => {
     );
 
     expect(fetchMock).toHaveBeenCalledWith(
-      'http://stores-service:3003/api/v1/tiendas/mi-tienda-vieja',
+      'http://stores-service:3003/api/v2/tiendas/mi-tienda-vieja',
       expect.objectContaining({ redirect: 'manual' }),
     );
     expect(res.status).toHaveBeenCalledWith(301);
-    expect(res.setHeader).toHaveBeenCalledWith('location', '/api/v1/tiendas/mi-tienda-nueva');
+    expect(res.setHeader).toHaveBeenCalledWith('location', '/api/v2/tiendas/mi-tienda-nueva');
     expect(res.setHeader).not.toHaveBeenCalledWith('connection', 'keep-alive');
     expect(res.setHeader).not.toHaveBeenCalledWith('content-length', '0');
+  });
+});
+
+describe('ProxyService — timeout al microservicio (R-RB-4)', () => {
+  const fetchOriginal = globalThis.fetch;
+  afterEach(() => {
+    globalThis.fetch = fetchOriginal;
+    vi.restoreAllMocks();
+  });
+
+  const auth = {
+    aplicar: (_req: Request, _res: Response, next: () => void) => next(),
+  } as unknown as GatewayAuthMiddleware;
+
+  function reqCatalogo(): Request {
+    return {
+      originalUrl: '/api/v2/catalog/items',
+      method: 'GET',
+      headers: {},
+      body: undefined,
+    } as unknown as Request;
+  }
+
+  it('debe responder 504 DESTINO_TIMEOUT cuando el servicio no contesta a tiempo', async () => {
+    globalThis.fetch = vi.fn(
+      (_url: string, init: RequestInit) =>
+        new Promise<globalThis.Response>((_resolve, reject) => {
+          init.signal?.addEventListener('abort', () =>
+            reject(Object.assign(new Error('abortado'), { name: 'AbortError' })),
+          );
+        }),
+    ) as unknown as typeof fetch;
+    const servicio = new ProxyService(auth, destinos, politicas, 5);
+    const res = resMock();
+
+    await servicio.reenviar(reqCatalogo(), res);
+
+    expect(res.status).toHaveBeenCalledWith(504);
+    expect(res.json).toHaveBeenCalledWith(
+      expect.objectContaining({
+        codigo: 'DESTINO_TIMEOUT',
+        detalles: expect.objectContaining({ servicio: 'catalog', timeout_ms: 5 }),
+      }),
+    );
+  });
+
+  it('debe mantener 502 DESTINO_NO_DISPONIBLE cuando el fallo no es un timeout', async () => {
+    globalThis.fetch = vi.fn().mockRejectedValue(new Error('ECONNREFUSED')) as unknown as typeof fetch;
+    const servicio = new ProxyService(auth, destinos, politicas, 5);
+    const res = resMock();
+
+    await servicio.reenviar(reqCatalogo(), res);
+
+    expect(res.status).toHaveBeenCalledWith(502);
+    expect(res.json).toHaveBeenCalledWith(
+      expect.objectContaining({ codigo: 'DESTINO_NO_DISPONIBLE' }),
+    );
   });
 });

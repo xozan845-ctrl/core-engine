@@ -1,6 +1,13 @@
 import { Injectable } from '@nestjs/common';
 import { randomUUID } from 'crypto';
-import { PgService, DomainError, NotFoundError, Logger } from '@core/shared';
+import {
+  PgService,
+  DomainError,
+  NotFoundError,
+  Logger,
+  ServiceUnavailableError,
+  partePerteneceAEmpresa,
+} from '@core/shared';
 import {
   CrearPersonalRequestDto,
   ActualizarPersonalRequestDto,
@@ -69,6 +76,7 @@ const MAP_CLIENTES: Mapa = {
   lng: 'lng',
   notasAdicionales: 'notas_adicionales',
   urlGoogleMaps: 'url_google_maps',
+  parteId: 'parte_id',
 };
 const DEF_CLIENTES = { tipoCliente: 'particular' };
 
@@ -113,24 +121,24 @@ const MAP_PARADAS: Mapa = {
   completada: 'completada',
   pedidoId: 'pedido_id',
   tipo: 'tipo',
-  clienteId: 'cliente_id',
   telefono: 'telefono',
   referencias: 'referencias',
   horarioAtencion: 'horario_atencion',
   notas: 'notas',
   tipoCombustible: 'tipo_combustible',
+  parteId: 'parte_id',
 };
 const DEF_PARADAS = { tipo: 'cliente', completada: false };
 
 const MAP_PEDIDOS: Mapa = {
   cliente: 'cliente',
-  clienteId: 'cliente_id',
   direccionEntrega: 'direccion_entrega',
   lat: 'lat',
   lng: 'lng',
   estado: 'estado',
   rutaId: 'ruta_id',
   notas: 'notas',
+  parteId: 'parte_id',
 };
 const DEF_PEDIDOS = { estado: 'pendiente' };
 
@@ -173,7 +181,6 @@ const MAP_TRACKING: Mapa = {
 
 const MAP_VISITAS: Mapa = {
   personalId: 'personal_id',
-  clienteId: 'cliente_id',
   rutaId: 'ruta_id',
   tipoActividad: 'tipo_actividad',
   resultado: 'resultado',
@@ -184,6 +191,7 @@ const MAP_VISITAS: Mapa = {
   horaSalida: 'hora_salida',
   duracionMinutos: 'duracion_minutos',
   notas: 'notas',
+  parteId: 'parte_id',
 };
 const DEF_VISITAS = { resultado: 'no_visitado' };
 
@@ -222,6 +230,9 @@ export class FieldService {
   ): Promise<T> {
     const rec = dto as Record<string, unknown>;
     const rid = id ?? randomUUID();
+    if (Object.values(map).includes('parte_id') && rec.parteId !== undefined) {
+      await this.validarParte(tenant, rec.parteId);
+    }
     const now = new Date();
     const cols = ['tenant_id', 'id'];
     const vals: unknown[] = [tenant, rid];
@@ -259,6 +270,9 @@ export class FieldService {
     map: Mapa,
   ): Promise<T> {
     const rec = dto as Record<string, unknown>;
+    if (Object.values(map).includes('parte_id') && rec.parteId !== undefined) {
+      await this.validarParte(tenant, rec.parteId);
+    }
     const sets: string[] = [];
     const vals: unknown[] = [];
     let i = 1;
@@ -312,6 +326,15 @@ export class FieldService {
   private requerirTenant(tenant?: string): string {
     if (!tenant) throw new DomainError('TENANT_REQUERIDO', 'La operacion requiere un tenant valido (x-tenant).');
     return tenant;
+  }
+
+  private async validarParte(tenant: string, parteId: unknown): Promise<void> {
+    if (typeof parteId !== 'string') {
+      throw new DomainError('PARTE_INVALIDA', 'La parte debe ser un UUID valido.');
+    }
+    const pertenece = await partePerteneceAEmpresa(tenant, parteId);
+    if (pertenece === null) throw new ServiceUnavailableError('identity-service');
+    if (!pertenece) throw new DomainError('PARTE_INVALIDA', 'La parte no pertenece al tenant activo.');
   }
 
   // ── personal ───────────────────────────────────────────────────────────
@@ -475,11 +498,11 @@ export class FieldService {
   }
 
   // ── pedidos ────────────────────────────────────────────────────────────
-  listarPedidos(tenant: string, filtro: { estado?: string; rutaId?: string; clienteId?: string }) {
+  listarPedidos(tenant: string, filtro: { estado?: string; rutaId?: string; parteId?: string }) {
     const extras: FiltroSql[] = [];
     if (filtro.estado) extras.push({ col: 'estado', val: filtro.estado });
     if (filtro.rutaId) extras.push({ col: 'ruta_id', val: filtro.rutaId });
-    if (filtro.clienteId) extras.push({ col: 'cliente_id', val: filtro.clienteId });
+    if (filtro.parteId) extras.push({ col: 'parte_id', val: filtro.parteId });
     return this.listar('pedidos', tenant, extras);
   }
   obtenerPedido(tenant: string, id: string) {
@@ -500,10 +523,23 @@ export class FieldService {
 
   // ── asistencia ─────────────────────────────────────────────────────────
   listarAsistencia(tenant: string, filtro: { personalId?: string; fecha?: string }) {
-    const extras: FiltroSql[] = [];
-    if (filtro.personalId) extras.push({ col: 'personal_id', val: filtro.personalId });
-    if (filtro.fecha) extras.push({ col: 'DATE(registrado_en)', val: filtro.fecha });
-    return this.listar('asistencia', tenant, extras);
+    const params: unknown[] = [tenant];
+    const condiciones = ['tenant_id = $1', 'deleted_at IS NULL'];
+    if (filtro.personalId) {
+      params.push(filtro.personalId);
+      condiciones.push(`personal_id = $${params.length}`);
+    }
+    if (filtro.fecha) {
+      params.push(filtro.fecha);
+      // `timestamptz::date` usa la timezone de la sesión de PostgreSQL (UTC en
+      // el contenedor). La regla de negocio es día local nicaragüense, por lo
+      // que la conversión debe quedar explícita en la consulta.
+      condiciones.push(`DATE(registrado_en AT TIME ZONE 'America/Managua') = $${params.length}`);
+    }
+    return this.pg.query(
+      `SELECT * FROM field.asistencia WHERE ${condiciones.join(' AND ')} ORDER BY created_at DESC LIMIT 2000`,
+      params,
+    );
   }
   registrarAsistencia(tenant: string, dto: CrearAsistenciaRequestDto) {
     return this.insertar('asistencia', tenant, undefined, dto, MAP_ASISTENCIA, {}, false);
@@ -547,7 +583,7 @@ export class FieldService {
   listarVisitas(tenant: string, filtro: { personalId?: string; fecha?: string }) {
     const extras: FiltroSql[] = [];
     if (filtro.personalId) extras.push({ col: 'personal_id', val: filtro.personalId });
-    if (filtro.fecha) extras.push({ col: 'DATE(created_at)', val: filtro.fecha });
+    if (filtro.fecha) extras.push({ col: "DATE(created_at AT TIME ZONE 'America/Managua')", val: filtro.fecha });
     return this.listar('visitas', tenant, extras);
   }
   registrarVisita(tenant: string, dto: CrearVisitaRequestDto) {

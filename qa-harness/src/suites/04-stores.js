@@ -22,29 +22,30 @@ export async function suite04Tiendas(client, cfg, vendedorToken, adminToken) {
   try {
     // 1. Alta tienda (una por vendedor; 409 si ya existe -> recuperar)
     let tiendaId = null;
-    const crear = await client.post('/api/v1/vendedores/tienda', {
+    const crear = await client.post('/api/v2/vendedores/tienda', {
       nombre: `Tienda QA ${suf}`,
       descripcion: 'Tienda de prueba',
     }, vAuth);
     if ([200, 201].includes(crear.status)) {
       tiendaId = crear.body?.id ?? crear.body?.tienda?.id ?? null;
     }
-    const miTienda = await client.get('/api/v1/vendedores/me/tienda', vAuth);
+    const miTienda = await client.get('/api/v2/vendedores/me/tienda', vAuth);
     if (!tiendaId && miTienda.status === 200) {
       tiendaId = miTienda.body?.id ?? miTienda.body?.tienda?.id ?? null;
     }
     resultados.push({ test: 'Alta/recuperar tienda', status: crear.status, pass: !!tiendaId });
 
+    const empresaId = cfg.get ? cfg.get('empresaId') : cfg.empresaId;
     const crearProducto = async (sku, stock) => {
-      const r = await client.post('/api/v1/catalog/productos', {
-        sku, nombre: `Prod ${sku}`, descripcion: 'd', categoria: 'general',
-        precio_base: '1000.00', stock,
+      const r = await client.post('/api/v2/catalog/items', {
+        tipo: 'producto', codigo: sku, nombre: `Prod ${sku}`, descripcion: 'd', categoria: 'general',
+        precio: '1000.00', track_inventory: true, stock, empresa_id: empresaId,
       }, aAuth);
-      return r.body?.id ?? null;
+      return r.body?.item_id ?? r.body?.id ?? null;
     };
 
-    const publicar = (productoId, margen) => client.post('/api/v1/vendedores/productos', {
-      producto_id: productoId, margen, ...(tiendaId ? { tienda_id: tiendaId } : {}),
+    const publicar = (itemId, margen) => client.post('/api/v2/vendedores/productos', {
+      item_id: itemId, margen, ...(tiendaId ? { tienda_id: tiendaId } : {}),
     }, vAuth);
 
     // 2. Ofertas validas: margen 15, 0 y 90 (RN-01)
@@ -75,24 +76,24 @@ export async function suite04Tiendas(client, cfg, vendedorToken, adminToken) {
     const margenFloat = await publicar(p15, 15.5);
     resultados.push({ test: 'Margen 15.5 → 400 (IsInt)', status: margenFloat.status, pass: margenFloat.status === 400 });
 
-    const sinProducto = await client.post('/api/v1/vendedores/productos', { margen: 10 }, vAuth);
-    resultados.push({ test: 'Sin producto_id → 400', status: sinProducto.status, pass: sinProducto.status === 400 });
+    const sinItem = await client.post('/api/v2/vendedores/productos', { margen: 10 }, vAuth);
+    resultados.push({ test: 'Sin item_id → 400', status: sinItem.status, pass: sinItem.status === 400 });
 
     // 5. Tienda publica y ofertas del vendedor
-    const tiendaPublica = await client.get(`/api/v1/tiendas/${tiendaId}`);
+    const tiendaPublica = await client.get(`/api/v2/tiendas/${tiendaId}`);
     resultados.push({ test: 'Tienda pública', status: tiendaPublica.status, pass: tiendaPublica.status === 200 });
 
-    const misOfertas = await client.get('/api/v1/vendedores/me/ofertas', vAuth);
+    const misOfertas = await client.get('/api/v2/vendedores/me/ofertas', vAuth);
     resultados.push({ test: 'Mis ofertas', status: misOfertas.status, pass: misOfertas.status === 200 });
 
     // 6. Cambiar margen de la oferta (historico de precios RN-08)
     if (of15.body?.id) {
-      const cambio = await client.patch(`/api/v1/vendedores/productos/${of15.body.id}`, { margen: 20 }, vAuth);
+      const cambio = await client.patch(`/api/v2/vendedores/productos/${of15.body.id}`, { margen: 20 }, vAuth);
       resultados.push({ test: 'Cambiar margen 15→20%', status: cambio.status, pass: cambio.status === 200 });
     }
 
     // 7. Sin token -> 401; vendedor en ruta admin -> 403
-    const sinToken = await client.get('/api/v1/vendedores/me/ofertas');
+    const sinToken = await client.get('/api/v2/vendedores/me/ofertas');
     resultados.push({ test: 'Sin token → 401', status: sinToken.status, pass: sinToken.status === 401 });
   } catch (e) {
     errores.push(`Suite 04: ${e.message}`);

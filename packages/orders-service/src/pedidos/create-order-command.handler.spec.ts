@@ -1,9 +1,9 @@
 import { CreateOrderCommandHandler } from './handlers/create-order-command.handler';
 import { CreateOrderCommand } from './commands/create-order.command';
-import { Money } from '@core/shared';
+import { CapabilityDisabledError, Money } from '@core/shared';
 
 class PgFake {
-  query = vi.fn(async () => ({ rows: [] }));
+  query = vi.fn(async () => []);
   async transaccion<T>(fn: (client: unknown) => Promise<T>): Promise<T> {
     return fn({ query: this.query });
   }
@@ -22,7 +22,7 @@ class EventStoreFake {
 
 interface VistaFake {
   id: string;
-  cliente_id: string;
+  comprador_id: string;
   items: unknown[];
   total: string;
   total_cents: number;
@@ -76,6 +76,7 @@ function crearHandler(
   carrito?: CarritoFake,
   storesFails = false,
   storesThrows = false,
+  capacidades: string[] = ['fulfillment_onsite'],
 ) {
   const pg = new PgFake();
   const store = new EventStoreFake();
@@ -94,8 +95,33 @@ function crearHandler(
         if (storesFails) return { ok: false } as Response;
         return { ok: true, json: async () => sobreOfertas } as Response;
       }
-      if (u.includes('productos/lote')) {
-        if (stockCatalog === 'fetch-error') return { ok: false } as Response;
+      if (u.includes('/internal/items/') && u.includes('/cotizacion')) {
+        return { ok: true, json: async () => ({ total_cents: 90000, dias: 3 }) } as Response;
+      }
+      if (u.includes('scheduling-service') && u.includes('/internal/scheduling/disponibilidad')) {
+        return { ok: true, json: async () => ({ disponible: true }) } as Response;
+      }
+      if (u.includes('finance-service') && u.includes('/internal/finance/creditos')) {
+        return {
+          ok: true,
+          status: 201,
+          json: async () => ({ credito_id: 'c-1', balance_cents: 1150, limite_cents: 5000 }),
+        } as Response;
+      }
+      if (u.includes('identity-service') && u.includes('/internal/empresas/capacidades')) {
+        const empresaCap = (sobreOfertas[0] as { empresa_id?: string } | undefined)?.empresa_id ?? 'empresa-1';
+        return {
+          ok: true,
+          json: async () => ({
+            capacidades: capacidades.map((capacidad) => ({
+              empresa_id: empresaCap,
+              capacidad_codigo: capacidad,
+              activo: true,
+            })),
+          }),
+        } as Response;
+      }
+      if (u.includes('items/lote')) {        if (stockCatalog === 'fetch-error') return { ok: false } as Response;
         if (stockCatalog === 'network-error') throw new Error('network down');
         if (stockCatalog === 'sin-sku') {
           return { ok: true, json: async () => [] } as Response;
@@ -129,7 +155,8 @@ describe('CreateOrderCommandHandler (CQRS + Event Sourcing)', () => {
     vendedor_id: 'vendedor-1',
     empresa_id: 'empresa-1',
     participacion_porcentaje: 25,
-    producto_id: 'prod-1',
+    item_type: 'producto',
+    item_id: '11111111-1111-4111-8111-111111111111',
     sku: 'ACE-001',
     producto_nombre: 'Aceite 1L',
     margen: 15,
@@ -142,6 +169,7 @@ describe('CreateOrderCommandHandler (CQRS + Event Sourcing)', () => {
   it('TC-02/TC-03: calcula el total con las reglas RN-01/RN-04 y persiste evento OrderCreatedEvent', async () => {
     const { handler, store } = crearHandler([ofertaActiva], 'ok');
     const comando: CreateOrderCommand = {
+      tipo_orden: 'compra',
       items: [{ oferta_id: 'oferta-1', cantidad: 1 }],
     };
     await handler.ejecutar(comando, 'comprador-1');
@@ -159,9 +187,54 @@ describe('CreateOrderCommandHandler (CQRS + Event Sourcing)', () => {
     });
   });
 
+  it('crea una reserva de servicio onsite sin consultar stock y persiste fulfillment por línea', async () => {
+    const empresaId = '11111111-1111-4111-8111-111111111111';
+    const ofertaServicio = {
+      ...ofertaActiva,
+      empresa_id: empresaId,
+      item_type: 'servicio',
+      item_id: '22222222-2222-4222-8222-222222222222',
+      sku: 'CORTE-001',
+      producto_nombre: 'Corte de cabello',
+      precio_venta: '300.00',
+    };
+    const fixture = crearHandler([ofertaServicio], 'network-error');
+
+    const vista = await fixture.handler.ejecutar({
+      tipo_orden: 'reserva',
+      cliente_parte_id: '33333333-3333-4333-8333-333333333333',
+      items: [{
+        oferta_id: 'oferta-1',
+        cantidad: 1,
+        fulfillment: 'onsite',
+        fulfillment_config: {
+          recurso_id: '44444444-4444-4444-8444-444444444444',
+          inicia_en: '2026-12-20T15:00:00.000Z',
+          termina_en: '2026-12-22T11:00:00.000Z',
+        },
+      }],
+    }, 'comprador-1');
+
+    expect(vista.tipo_orden).toBe('reserva');
+    expect(vista.items[0]).toMatchObject({
+      item_type: 'servicio',
+      fulfillment: 'onsite',
+      precio_unitario_cents: 90000,
+    });
+    expect(vista.total_cents).toBe(90000);
+    expect((fixture.store.appendEnTransaccion.mock.calls[0][3] as { tipo_orden: string }).tipo_orden).toBe('reserva');
+    expect(
+      fixture.fetchMock.mock.calls.some(([u]) => String(u).includes('/internal/items/') && String(u).includes('/cotizacion')),
+    ).toBe(true);
+    expect(
+      fixture.fetchMock.mock.calls.some(([u]) => String(u).includes('/internal/scheduling/disponibilidad')),
+    ).toBe(true);
+  });
+
   it('total con cantidades multiples: 2 unidades = C$ 2 300', async () => {
     const { handler } = crearHandler([ofertaActiva], 'ok');
     const comando: CreateOrderCommand = {
+      tipo_orden: 'compra',
       items: [{ oferta_id: 'oferta-1', cantidad: 2 }],
     };
     const vista = await handler.ejecutar(comando, 'comprador-1');
@@ -171,6 +244,7 @@ describe('CreateOrderCommandHandler (CQRS + Event Sourcing)', () => {
   it('agrupa lineas repetidas del carrito (RN-05: cantidades sumadas)', async () => {
     const { handler } = crearHandler([ofertaActiva], 'ok');
     const comando: CreateOrderCommand = {
+      tipo_orden: 'compra',
       items: [
         { oferta_id: 'oferta-1', cantidad: 1 },
         { oferta_id: 'oferta-1', cantidad: 2 },
@@ -182,7 +256,7 @@ describe('CreateOrderCommandHandler (CQRS + Event Sourcing)', () => {
 
   it('carrito vacio se rechaza (RN-05)', async () => {
     const { handler } = crearHandler([ofertaActiva], 'ok');
-    await expect(handler.ejecutar({ items: [] }, 'comprador-1')).rejects.toMatchObject({
+    await expect(handler.ejecutar({ tipo_orden: 'compra', items: [] }, 'comprador-1')).rejects.toMatchObject({
       codigo: 'CARRITO_VACIO',
     });
   });
@@ -190,14 +264,14 @@ describe('CreateOrderCommandHandler (CQRS + Event Sourcing)', () => {
   it('oferta inexistente -> 404', async () => {
     const { handler } = crearHandler([], 'ok');
     await expect(
-      handler.ejecutar({ items: [{ oferta_id: 'oferta-x', cantidad: 1 }] }, 'comprador-1'),
+      handler.ejecutar({ tipo_orden: 'compra', items: [{ oferta_id: 'oferta-x', cantidad: 1 }] }, 'comprador-1'),
     ).rejects.toMatchObject({ codigo: 'NO_ENCONTRADO' });
   });
 
   it('TC-04: viabilidad de stock rechaza con 409/stock_insuficiente como CONFLICTO', async () => {
     const { handler } = crearHandler([ofertaActiva], 'insuficiente');
     await expect(
-      handler.ejecutar({ items: [{ oferta_id: 'oferta-1', cantidad: 1 }] }, 'comprador-1'),
+      handler.ejecutar({ tipo_orden: 'compra', items: [{ oferta_id: 'oferta-1', cantidad: 1 }] }, 'comprador-1'),
     ).rejects.toMatchObject({ codigo: 'CONFLICTO' });
   });
 
@@ -209,7 +283,7 @@ describe('CreateOrderCommandHandler (CQRS + Event Sourcing)', () => {
       carrito,
     );
     const vista = await handler.ejecutar(
-      { items: [{ oferta_id: 'oferta-1', cantidad: 2 }] },
+      { tipo_orden: 'compra', items: [{ oferta_id: 'oferta-1', cantidad: 2 }] },
       'comprador-1',
     );
 
@@ -219,7 +293,7 @@ describe('CreateOrderCommandHandler (CQRS + Event Sourcing)', () => {
     expect(append[2]).toBe('OrderCreatedEvent');
     expect(datos).toMatchObject({
       order_id: orderId,
-      cliente_id: 'comprador-1',
+      comprador_id: 'comprador-1',
       total_cents: 230_000,
       estado: 'creada',
       items: [
@@ -262,7 +336,7 @@ describe('CreateOrderCommandHandler (CQRS + Event Sourcing)', () => {
       headers: { 'x-internal-key': '' },
     });
     expect(fetchMock.mock.calls[1][0]).toBe(
-      'http://catalog-service:3002/internal/productos/lote?skus=ACE-001',
+      'http://catalog-service:3002/internal/items/lote?skus=ACE-001',
     );
     expect(fetchMock.mock.calls[1][1]).toMatchObject({
       headers: { 'x-internal-key': '' },
@@ -284,7 +358,7 @@ describe('CreateOrderCommandHandler (CQRS + Event Sourcing)', () => {
     ]);
     const { handler } = crearHandler([ofertaActiva], 'ok', carrito);
 
-    const vista = await handler.ejecutar({ usar_carrito: true }, 'comprador-1');
+    const vista = await handler.ejecutar({ tipo_orden: 'compra', usar_carrito: true }, 'comprador-1');
 
     expect(carrito.itemsParaCheckout).toHaveBeenCalledWith('comprador-1');
     expect(carrito.vaciarEnTransaccion).toHaveBeenCalledTimes(1);
@@ -297,7 +371,7 @@ describe('CreateOrderCommandHandler (CQRS + Event Sourcing)', () => {
     const { handler } = crearHandler([ofertaActiva], 'ok', carrito);
 
     await expect(
-      handler.ejecutar({ usar_carrito: true }, 'comprador-1'),
+      handler.ejecutar({ tipo_orden: 'compra', usar_carrito: true }, 'comprador-1'),
     ).rejects.toMatchObject({
       codigo: 'CARRITO_VACIO',
       message: expect.stringContaining('carrito esta vacio'),
@@ -306,7 +380,7 @@ describe('CreateOrderCommandHandler (CQRS + Event Sourcing)', () => {
 
   it('items ausente -> CARRITO_VACIO', async () => {
     const { handler } = crearHandler([ofertaActiva], 'ok');
-    await expect(handler.ejecutar({}, 'comprador-1')).rejects.toMatchObject({
+    await expect(handler.ejecutar({ tipo_orden: 'compra' }, 'comprador-1')).rejects.toMatchObject({
       codigo: 'CARRITO_VACIO',
       message: expect.stringContaining('no puede estar vacio'),
     });
@@ -318,7 +392,7 @@ describe('CreateOrderCommandHandler (CQRS + Event Sourcing)', () => {
       'ok',
     );
     await expect(
-      handler.ejecutar({ items: [{ oferta_id: 'oferta-1', cantidad: 1 }] }, 'comprador-1'),
+      handler.ejecutar({ tipo_orden: 'compra', items: [{ oferta_id: 'oferta-1', cantidad: 1 }] }, 'comprador-1'),
     ).rejects.toMatchObject({
       codigo: 'NO_ENCONTRADO',
       message: expect.stringContaining('Oferta oferta-1'),
@@ -328,7 +402,7 @@ describe('CreateOrderCommandHandler (CQRS + Event Sourcing)', () => {
   it('si stores-service responde !ok, la oferta no existe -> NOT_FOUND', async () => {
     const { handler } = crearHandler([], 'ok', undefined, true);
     await expect(
-      handler.ejecutar({ items: [{ oferta_id: 'oferta-1', cantidad: 1 }] }, 'comprador-1'),
+      handler.ejecutar({ tipo_orden: 'compra', items: [{ oferta_id: 'oferta-1', cantidad: 1 }] }, 'comprador-1'),
     ).rejects.toMatchObject({
       codigo: 'NO_ENCONTRADO',
       message: expect.stringContaining('Oferta oferta-1'),
@@ -338,7 +412,7 @@ describe('CreateOrderCommandHandler (CQRS + Event Sourcing)', () => {
   it('si stores-service lanza, la oferta no existe -> NOT_FOUND', async () => {
     const { handler } = crearHandler([], 'ok', undefined, false, true);
     await expect(
-      handler.ejecutar({ items: [{ oferta_id: 'oferta-1', cantidad: 1 }] }, 'comprador-1'),
+      handler.ejecutar({ tipo_orden: 'compra', items: [{ oferta_id: 'oferta-1', cantidad: 1 }] }, 'comprador-1'),
     ).rejects.toMatchObject({
       codigo: 'NO_ENCONTRADO',
       message: expect.stringContaining('Oferta oferta-1'),
@@ -348,7 +422,7 @@ describe('CreateOrderCommandHandler (CQRS + Event Sourcing)', () => {
   it('si el catálogo responde !ok, la orden se crea sin bloquear por stock', async () => {
     const { handler } = crearHandler([ofertaActiva], 'fetch-error');
     const vista = await handler.ejecutar(
-      { items: [{ oferta_id: 'oferta-1', cantidad: 1 }] },
+      { tipo_orden: 'compra', items: [{ oferta_id: 'oferta-1', cantidad: 1 }] },
       'comprador-1',
     );
     expect(vista.total_cents).toBe(115_000);
@@ -357,7 +431,7 @@ describe('CreateOrderCommandHandler (CQRS + Event Sourcing)', () => {
   it('si el catálogo lanza, la orden se crea (autoridad del evento stock.fallido)', async () => {
     const { handler } = crearHandler([ofertaActiva], 'network-error');
     const vista = await handler.ejecutar(
-      { items: [{ oferta_id: 'oferta-1', cantidad: 1 }] },
+      { tipo_orden: 'compra', items: [{ oferta_id: 'oferta-1', cantidad: 1 }] },
       'comprador-1',
     );
     expect(vista.total_cents).toBe(115_000);
@@ -366,7 +440,7 @@ describe('CreateOrderCommandHandler (CQRS + Event Sourcing)', () => {
   it('si el catálogo no devuelve el sku -> CONFLICTO con detalles', async () => {
     const { handler } = crearHandler([ofertaActiva], 'sin-sku');
     const error = await handler
-      .ejecutar({ items: [{ oferta_id: 'oferta-1', cantidad: 1 }] }, 'comprador-1')
+      .ejecutar({ tipo_orden: 'compra', items: [{ oferta_id: 'oferta-1', cantidad: 1 }] }, 'comprador-1')
       .catch((e) => e);
 
     expect(error.codigo).toBe('CONFLICTO');
@@ -377,7 +451,7 @@ describe('CreateOrderCommandHandler (CQRS + Event Sourcing)', () => {
   it('stock igual a la cantidad es válido (límite estricto)', async () => {
     const { handler } = crearHandler([ofertaActiva], 'ok');
     const vista = await handler.ejecutar(
-      { items: [{ oferta_id: 'oferta-1', cantidad: 10 }] },
+      { tipo_orden: 'compra', items: [{ oferta_id: 'oferta-1', cantidad: 10 }] },
       'comprador-1',
     );
     expect(vista.total_cents).toBe(1_150_000);
@@ -395,6 +469,7 @@ describe('CreateOrderCommandHandler (CQRS + Event Sourcing)', () => {
 
     const vista = await handler.ejecutar(
       {
+        tipo_orden: 'compra',
         items: [
           { oferta_id: 'oferta-1', cantidad: 1 },
           { oferta_id: 'oferta-2', cantidad: 2 },
@@ -433,10 +508,11 @@ describe('CreateOrderCommandHandler (CQRS + Event Sourcing)', () => {
         tipo: 'OrderCreatedEvent',
         payload: {
           order_id: 'orden-1',
-          cliente_id: 'comprador-1',
+          comprador_id: 'comprador-1',
           items: [],
           total_cents: 100,
           estado: 'creada',
+          tipo_orden: 'compra',
           creado_en: '2026-01-01T00:00:00.000Z',
         },
         creado_en: '2026-01-01T00:00:00.000Z',
@@ -473,10 +549,11 @@ describe('CreateOrderCommandHandler (CQRS + Event Sourcing)', () => {
         tipo: 'OrderCreatedEvent',
         payload: {
           order_id: 'orden-1',
-          cliente_id: 'comprador-1',
+          comprador_id: 'comprador-1',
           items: [],
           total_cents: 100,
           estado: 'creada',
+          tipo_orden: 'compra',
           creado_en: '2026-01-01T00:00:00.000Z',
         },
         creado_en: '2026-01-01T00:00:00.000Z',
@@ -516,10 +593,11 @@ describe('CreateOrderCommandHandler (CQRS + Event Sourcing)', () => {
         tipo: 'OrderCreatedEvent',
         payload: {
           order_id: 'orden-1',
-          cliente_id: 'comprador-1',
+          comprador_id: 'comprador-1',
           items: [],
           total_cents: 100,
           estado: 'creada',
+          tipo_orden: 'compra',
           creado_en: '2026-01-01T00:00:00.000Z',
         },
         creado_en: '2026-01-01T00:00:00.000Z',
@@ -547,5 +625,146 @@ describe('Calculo de comision TC-08 (RN-04)', () => {
     const venta = Money.parsear('1150.00');
     expect(venta.comision(0.12).string()).toBe('138.00');
     expect(venta.restar(venta.comision(0.12)).string()).toBe('1012.00');
+  });
+});
+
+
+describe('Fulfillment y cotizaciones por capacidad', () => {
+  const ofertaActiva = {
+    id: 'oferta-1',
+    tienda_id: 'tienda-1',
+    vendedor_id: 'vendedor-1',
+    empresa_id: 'empresa-1',
+    participacion_porcentaje: 25,
+    item_type: 'producto',
+    item_id: '11111111-1111-4111-8111-111111111111',
+    sku: 'ACE-001',
+    producto_nombre: 'Aceite 1L',
+    margen: 15,
+    precio_base: '1000.00',
+    precio_venta: '1150.00',
+    stock: 10,
+    estado: 'activa',
+  };
+
+  it('rechaza una cotizacion sin la capacidad cotizaciones', async () => {
+    const { handler } = crearHandler([ofertaActiva], 'ok', undefined, false, false, []);
+    await expect(
+      handler.ejecutar(
+        { tipo_orden: 'cotizacion', items: [{ oferta_id: 'oferta-1', cantidad: 1 }] },
+        'comprador-1',
+      ),
+    ).rejects.toMatchObject({
+      codigo: 'CAPACIDAD_NO_ACTIVA',
+      detalles: { capacidades: ['cotizaciones'] },
+    });
+  });
+
+  it('una cotizacion no reserva stock ni genera comision', async () => {
+    // stockCatalog='insuficiente': si la cotizacion validara stock, fallaria.
+    const { handler } = crearHandler(
+      [ofertaActiva],
+      'insuficiente',
+      undefined,
+      false,
+      false,
+      ['cotizaciones'],
+    );
+    const vista = await handler.ejecutar(
+      { tipo_orden: 'cotizacion', items: [{ oferta_id: 'oferta-1', cantidad: 1 }] },
+      'comprador-1',
+    );
+    expect(vista.tipo_orden).toBe('cotizacion');
+    expect(vista.estado).toBe('creada');
+    expect(vista.comision_cents).toBe(0);
+  });
+
+  it('una venta a credito registra la cuenta por cobrar en finance', async () => {
+    const { handler, fetchMock } = crearHandler(
+      [ofertaActiva],
+      'ok',
+      undefined,
+      false,
+      false,
+      ['ventas_credito'],
+    );
+    const vista = await handler.ejecutar(
+      {
+        tipo_orden: 'compra',
+        metodo_pago: 'credito',
+        cliente_parte_id: '22222222-2222-4222-8222-222222222222',
+        items: [{ oferta_id: 'oferta-1', cantidad: 1 }],
+      },
+      'comprador-1',
+    );
+    expect(vista.metodo_pago).toBe('credito');
+    expect(fetchMock.mock.calls.some(([u]) => String(u).includes('/internal/finance/creditos'))).toBe(true);
+  });
+
+  it('exige cliente_parte_id y la capacidad ventas_credito', async () => {
+    const { handler } = crearHandler([ofertaActiva], 'ok', undefined, false, false, ['ventas_credito']);
+    await expect(
+      handler.ejecutar(
+        { tipo_orden: 'compra', metodo_pago: 'credito', items: [{ oferta_id: 'oferta-1', cantidad: 1 }] },
+        'comprador-1',
+      ),
+    ).rejects.toMatchObject({ codigo: 'CREDITO_REQUIERE_PARTE' });
+
+    const sinCapacidad = crearHandler([ofertaActiva], 'ok', undefined, false, false, []);
+    await expect(
+      sinCapacidad.handler.ejecutar(
+        {
+          tipo_orden: 'compra',
+          metodo_pago: 'credito',
+          cliente_parte_id: '22222222-2222-4222-8222-222222222222',
+          items: [{ oferta_id: 'oferta-1', cantidad: 1 }],
+        },
+        'comprador-1',
+      ),
+    ).rejects.toBeInstanceOf(CapabilityDisabledError);
+  });
+
+  it('rechaza una entrega onsite sin fulfillment_onsite', async () => {
+    const ofertaServicio = {
+      ...ofertaActiva,
+      item_type: 'servicio',
+      item_id: '22222222-2222-4222-8222-222222222222',
+      sku: 'CORTE-001',
+      producto_nombre: 'Corte de cabello',
+      precio_venta: '300.00',
+    };
+    const { handler } = crearHandler([ofertaServicio], 'ok', undefined, false, false, []);
+    await expect(
+      handler.ejecutar(
+        {
+          tipo_orden: 'reserva',
+          cliente_parte_id: '33333333-3333-4333-8333-333333333333',
+          items: [{ oferta_id: 'oferta-1', cantidad: 1, fulfillment: 'onsite' }],
+        },
+        'comprador-1',
+      ),
+    ).rejects.toMatchObject({
+      codigo: 'CAPACIDAD_NO_ACTIVA',
+      detalles: { capacidades: ['fulfillment_onsite'] },
+    });
+  });
+
+  it('permite pickup y delivery cuando el tenant tiene ambas capacidades', async () => {
+    const { handler } = crearHandler(
+      [ofertaActiva],
+      'ok',
+      undefined,
+      false,
+      false,
+      ['fulfillment_pickup', 'fulfillment_delivery'],
+    );
+    const vista = await handler.ejecutar(
+      {
+        tipo_orden: 'compra',
+        items: [{ oferta_id: 'oferta-1', cantidad: 1, fulfillment: 'pickup' }],
+      },
+      'comprador-1',
+    );
+    expect(vista.items[0]).toMatchObject({ fulfillment: 'pickup' });
   });
 });

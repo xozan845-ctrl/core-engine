@@ -7,9 +7,6 @@ export class CarritoItemResponseDto {
   @ApiProperty({ description: 'Cantidad', example: 2 })
   cantidad: number;
 
-  @ApiProperty({ description: 'Id de la oferta (alias enriquecido)', format: 'uuid' })
-  id: string;
-
   @ApiProperty({ description: 'Id de la tienda', format: 'uuid' })
   tienda_id: string;
 

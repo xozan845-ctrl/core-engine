@@ -28,7 +28,7 @@ export async function suite13Carga(client, cfg) {
     const loginTimes = [];
     for (let i = 0; i < iteraciones; i++) {
       const start = Date.now();
-      const res = await client.post('/api/v1/auth/login', {
+      const res = await client.post('/api/v2/auth/login', {
         correo: 'admin@core-engine.test',
         contrasena: 'AdminCore Engine2026!',
       });
@@ -47,7 +47,7 @@ export async function suite13Carga(client, cfg) {
     const orderTimes = [];
     for (let i = 0; i < iteraciones / 10; i++) {
       const start = Date.now();
-      const res = await client.post('/api/v1/orders', {
+      const res = await client.post('/api/v2/orders', {
         items: [{ oferta_id: 'oferta-test', cantidad: 1 }],
       });
       if (res.status === 201 || res.status === 200 || res.status === 409) {
@@ -80,7 +80,7 @@ export async function suite13Carga(client, cfg) {
 
     const ratePromises = [];
     for (let i = 0; i < 20; i++) {
-      ratePromises.push(client.post('/api/v1/auth/login', {
+      ratePromises.push(client.post('/api/v2/auth/login', {
         correo: 'admin@core-engine.test',
         contrasena: 'AdminCore Engine2026!',
       }));
@@ -92,7 +92,7 @@ export async function suite13Carga(client, cfg) {
     const adminTimes = [];
     for (let i = 0; i < 50; i++) {
       const start = Date.now();
-      const res = await client.get('/api/v1/admin/reportes');
+      const res = await client.get('/api/v2/admin/reportes');
       adminTimes.push(Date.now() - start);
     }
     adminTimes.sort((a, b) => a - b);

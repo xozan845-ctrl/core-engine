@@ -54,27 +54,22 @@ estaba verde" — que es exactamente lo que la regla prohíbe.
 | `gh run view <id> --log-failed` | Log del job fallido del run → punto de partida del fix-forward (R-GP-3) |
 | `gh auth status` / `gh auth login` | Estado / autenticación (una vez por máquina) |
 | `gh release list` | ¿Hay ya una release para este tag? Un tag publicado no se mueve (R-CD-1 en [`../cd/01-despliegue.md`](../cd/01-despliegue.md)) |
-| `gh run list --workflow ci.yml` | Estado de la integración: los 4 jobs (`security-gate` → `lint`/`test` → `build`) del único workflow (R-CI-4) |
-| `gh run list --workflow release.yml` | Estado del run de la release **(cuando exista `release.yml`, hoy no)**: construido, publicado o abortado por procedencia (R-CD-2 en `cd/01`) |
+| `gh run list --workflow ci.yml` | Estado de la integración: `rules-check`, `security-gate`, `lint`/`test`/`integration-catalog` y `build` del workflow (R-CI-4) |
+| `gh run list --workflow release.yml` | Estado de la release: construido, publicado o abortado por procedencia (R-CD-2 en `cd/01`) |
 | `gh run list --branch staging` | CI en la rama de stage (R-GE-1): el run que una promoción `develop → staging` debe dejar verde antes de `staging → main` |
 
 La importancia es cerrar la evidencia: un cambio "terminado" es un commit con
 `completed success` en **su** run (R-CI-6). Todo lo demás es opinión.
 
-## Pendientes
+## Estado y pendientes
 
-- **Workflow de release aún no existe aquí**: en este repo solo existe
-  [`ci.yml`](../../../.github/workflows/ci.yml) (jobs `security-gate` → `lint`/`test` →
-  `build`), así que los `R-CD-1..8` (en [`../cd/01-despliegue.md`](../cd/01-despliegue.md))
-  son el contrato exigible el día que exista un `release.yml` (R-CI-4), no la
-  descripción de algo existente; los `R-CD-9..13` (`cd/02`) describen el
-  despliegue que sí existe (Dockploy). Definir el flujo de release de Core Engine
-  —tag, build, imágenes— es una decisión de arquitectura y un cambio de regla.
-- **`ci.yml` sin grupo de concurrencia**: R-CI-2 exige
-  `concurrency`/`cancel-in-progress` por ref y el workflow no lo declara, así
-  que pushes seguidos en la misma rama apilan runs en paralelo. Deuda de
-  configuración (no de redacción), recogida para la auditoría (R-COV-3).
-- **`01`/`02` alineados con el pipeline real** (2026-10-01): sus descripciones
-  ya coinciden con `ci.yml` (jobs, gatillos con `staging` tras la enmienda de
-  R-CI-1, comandos, rutas). Cualquier referencia restante al pipeline heredado
-  del proyecto origen fuera de esta área se audita con R-COV-3.
+- El pipeline actual sí contiene `release.yml`, `promote.yml`, `deploy.yml` y
+  `e2e.yml`, además de `ci.yml`; los contratos de entrega viven en `cd/`.
+- `ci.yml` declara concurrencia por ref y cancela runs obsoletos (R-CI-2).
+- `rules-check` forma parte del camino requerido por `build`; aun así, los
+  required status checks y la protección de ramas son configuración externa de
+  GitHub y deben verificarse con `gh api`/Settings.
+- La integración ya corre con PostgreSQL efímero para catálogo y para el flujo
+  API+BD de configuración de sitio. Sigue pendiente ampliar la cobertura a
+  todos los flujos críticos (G-4) y a todos los shapes de respuesta (G-5); la
+  comprobación remota de la configuración de ramas también queda fuera del repo.

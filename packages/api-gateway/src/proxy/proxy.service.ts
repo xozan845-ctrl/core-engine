@@ -18,36 +18,43 @@ export const DESTINOS: ServicioDestino[] = [
     nombre: 'identity',
     url: process.env.IDENTITY_SERVICE_URL ?? 'http://identity-service:3001',
     patrones: [
-      { patron: /^\/api\/v1\/auth\//, metodos: ['*'] },
-      { patron: /^\/api\/v1\/usuarios(\/|$)/, metodos: ['*'] },
-      { patron: /^\/api\/v1\/empresas(\/|$)/, metodos: ['*'] },
-      { patron: /^\/api\/v1\/invitaciones(\/|$)/, metodos: ['*'] },
+      { patron: /^\/api\/v2\/auth\//, metodos: ['*'] },
+      { patron: /^\/api\/v2\/usuarios(\/|$)/, metodos: ['*'] },
+      { patron: /^\/api\/v2\/empresas(\/|$)/, metodos: ['*'] },
+      { patron: /^\/api\/v2\/incorporaciones(\/|$)/, metodos: ['*'] },
+      { patron: /^\/api\/v2\/packs(\/|$)/, metodos: ['GET', 'POST'] },
+      { patron: /^\/api\/v2\/configuracion(\/|$)/, metodos: ['*'] },
     ],
   },
   {
     nombre: 'storage',
     url: process.env.STORAGE_SERVICE_URL ?? 'http://storage-service:3010',
     patrones: [
-      { patron: /^\/api\/v1\/storage(\/|$)/, metodos: ['*'] },
-      { patron: /^\/api\/v1\/admin\/storage(\/|$)/, metodos: ['*'] },
+      { patron: /^\/api\/v2\/storage(\/|$)/, metodos: ['*'] },
+      { patron: /^\/api\/v2\/admin\/storage(\/|$)/, metodos: ['*'] },
     ],
   },
   {
     nombre: 'catalog',
     url: process.env.CATALOG_SERVICE_URL ?? 'http://catalog-service:3002',
     patrones: [
-      { patron: /^\/api\/v1\/catalog\//, metodos: ['*'] },
-      { patron: /^\/api\/v1\/admin\/inventario(\/|$)/, metodos: ['*'] },
+      { patron: /^\/api\/v2\/catalog\//, metodos: ['*'] },
+      { patron: /^\/api\/v2\/admin\/inventario(\/|$)/, metodos: ['*'] },
     ],
   },
   {
     nombre: 'stores',
     url: process.env.STORES_SERVICE_URL ?? 'http://stores-service:3003',
     patrones: [
-      { patron: /^\/api\/v1\/vendedores\/(productos|tienda|me\/(ofertas|tienda))/, metodos: ['*'] },
-      { patron: /^\/api\/v1\/empresarios\/me\/tiendas$/, metodos: ['GET'] },
-      { patron: /^\/api\/v1\/tiendas\//, metodos: ['*'] },
+      { patron: /^\/api\/v2\/vendedores\/(productos|tienda|me\/(ofertas|tienda))/, metodos: ['*'] },
+      { patron: /^\/api\/v2\/empresarios\/me\/tiendas$/, metodos: ['GET'] },
+      { patron: /^\/api\/v2\/tiendas\//, metodos: ['*'] },
     ],
+  },
+  {
+    nombre: 'scheduling',
+    url: process.env.SCHEDULING_SERVICE_URL ?? 'http://scheduling-service:3011',
+    patrones: [{ patron: /^\/api\/v2\/scheduling(\/|$)/, metodos: ['*'] }],
   },
   {
     // Especifico ANTES del catch-all de orders: las transiciones de estado
@@ -55,49 +62,50 @@ export const DESTINOS: ServicioDestino[] = [
     nombre: 'logistics',
     url: process.env.LOGISTICS_SERVICE_URL ?? 'http://logistics-service:3005',
     patrones: [
-      { patron: /^\/api\/v1\/orders\/[^/]+\/estado/, metodos: ['PATCH', 'POST'] },
-      { patron: /^\/api\/v1\/admin\/envios/, metodos: ['*'] },
-      { patron: /^\/api\/v1\/empresarios\/me\/envios/, metodos: ['*'] },
-      { patron: /^\/api\/v1\/envios\/[^/]+\/estado$/, metodos: ['PATCH'] },
+      { patron: /^\/api\/v2\/orders\/[^/]+\/estado/, metodos: ['PATCH', 'POST'] },
+      { patron: /^\/api\/v2\/admin\/envios/, metodos: ['*'] },
+      { patron: /^\/api\/v2\/empresarios\/me\/envios/, metodos: ['*'] },
+      { patron: /^\/api\/v2\/envios\/[^/]+\/estado$/, metodos: ['PATCH'] },
     ],
   },
   {
     nombre: 'orders',
     url: process.env.ORDERS_SERVICE_URL ?? 'http://orders-service:3004',
     patrones: [
-      { patron: /^\/api\/v1\/orders(\/|$)/, metodos: ['*'] },
-      { patron: /^\/api\/v1\/carrito(\/|$)/, metodos: ['*'] },
+      { patron: /^\/api\/v2\/orders(\/|$)/, metodos: ['*'] },
+      { patron: /^\/api\/v2\/carrito(\/|$)/, metodos: ['*'] },
     ],
   },
   {
     nombre: 'commissions',
     url: process.env.COMMISSIONS_SERVICE_URL ?? 'http://commissions-service:3006',
     patrones: [
-      { patron: /^\/api\/v1\/vendedores\/me\/(ventas|liquidaciones)/, metodos: ['*'] },
-      { patron: /^\/api\/v1\/empresarios\/me\/(liquidaciones|ventas)/, metodos: ['*'] },
-      { patron: /^\/api\/v1\/admin\/reportes/, metodos: ['*'] },
-      { patron: /^\/api\/v1\/admin\/liquidaciones/, metodos: ['*'] },
+      { patron: /^\/api\/v2\/vendedores\/me\/(ventas|liquidaciones)/, metodos: ['*'] },
+      { patron: /^\/api\/v2\/empresarios\/me\/(liquidaciones|ventas)/, metodos: ['*'] },
+      { patron: /^\/api\/v2\/admin\/reportes/, metodos: ['*'] },
+      { patron: /^\/api\/v2\/admin\/liquidaciones/, metodos: ['*'] },
     ],
   },
   {
     nombre: 'finance',
     url: process.env.FINANCE_SERVICE_URL ?? 'http://finance-service:3007',
     patrones: [
-      { patron: /^\/api\/v1\/finanzas(\/|$)/, metodos: ['*'] },
-      { patron: /^\/api\/v1\/vendedores\/me\/fiscal/, metodos: ['*'] },
+      { patron: /^\/api\/v2\/finanzas(\/|$)/, metodos: ['*'] },
+      { patron: /^\/api\/v2\/comercio(\/|$)/, metodos: ['*'] },
+      { patron: /^\/api\/v2\/vendedores\/me\/fiscal/, metodos: ['*'] },
     ],
   },
   {
     // field-service: dominio de logistica de campo (app-test).
     nombre: 'field',
     url: process.env.FIELD_SERVICE_URL ?? 'http://field-service:3008',
-    patrones: [{ patron: /^\/api\/v1\/field\//, metodos: ['*'] }],
+    patrones: [{ patron: /^\/api\/v2\/field\//, metodos: ['*'] }],
   },
   {
     nombre: 'intelligence',
     url: process.env.INTELLIGENCE_SERVICE_URL ?? 'http://market-intelligence-service:3009',
     patrones: [
-      { patron: /^\/api\/v1\/inteligencia(\/|$)/, metodos: ['*'] },
+      { patron: /^\/api\/v2\/inteligencia(\/|$)/, metodos: ['*'] },
     ],
   },
 ];
@@ -112,15 +120,23 @@ export class ProxyService {
   private readonly auth: GatewayAuthMiddleware;
   private readonly destinos: ServicioDestino[];
   private readonly politicas: PoliticaRuta[];
+  private readonly timeoutMs: number;
 
   constructor(
     @Optional() auth?: GatewayAuthMiddleware,
     @Optional() destinos?: ServicioDestino[],
     @Optional() politicas?: PoliticaRuta[],
+    @Optional() timeoutMs?: number,
   ) {
     this.auth = auth ?? new GatewayAuthMiddleware();
     this.destinos = destinos ?? DESTINOS;
     this.politicas = politicas ?? POLITICAS_RUTAS;
+    // R-RB-4: el gateway no puede esperar indefinidamente a un microservicio.
+    // 30 s queda por debajo de los 60 s del proxy publico para que el cliente
+    // reciba el servicio culpable en vez de un 504 generico.
+    const configurado = timeoutMs ?? Number(process.env.PROXY_UPSTREAM_TIMEOUT_MS ?? 30_000);
+    this.timeoutMs =
+      Number.isFinite(configurado) && configurado > 0 ? Math.trunc(configurado) : 30_000;
   }
 
   async reenviar(req: Request, res: Response): Promise<void> {
@@ -138,7 +154,7 @@ export class ProxyService {
     // (TENANT_HEADER) y la de personal `x-user-personal` (PERSONAL_HEADER),
     // que son las que leen los servicios; borrar nombres inexistentes no
     // protegia contra el spoofing de tenant.
-    for (const h of ['x-user-id', 'x-user-email', 'x-user-rol', 'x-user-nombre',
+    for (const h of ['x-user-id', 'x-user-email', 'x-user-rol', 'x-user-nombre', 'x-user-rol-empresa',
       TENANT_HEADER, PERSONAL_HEADER, PARTICIPACION_HEADER, 'x-internal-key']) {
       delete req.headers[h];
     }
@@ -156,32 +172,52 @@ export class ProxyService {
     }
 
     // 3. reenvío con las cabeceras de contexto del gateway
+    // Solo se limita la espera de la respuesta (cabeceras). El cuerpo en
+    // streaming (imágenes públicas) sigue su curso sin abortarse por lentitud
+    // del cliente: el temporizador se limpia al recibir la respuesta.
+    let agoto = false;
     try {
       const cuerpo = ['GET', 'HEAD', 'OPTIONS'].includes(req.method.toUpperCase()) ? undefined : await this.leerCuerpo(req);
       // Whitelist: solo contexto de usuario y correlacion; el resto (host,
       // content-length, transfer-encoding, cookie, etc.) lo calcula fetch
       // y evita cabeceras invalidas hacia el destino.
-      // Las imágenes públicas son binarias: no se debe pedir JSON ni decodificar
-      // el cuerpo como texto (ADR-28).
-      const esImagenPublica = /^\/api\/v1\/storage\/public\/objetos\/[^/]+$/.test(rutaBase);
+      // Las imágenes y videos públicos son binarios: no se debe pedir JSON ni
+      // decodificar el cuerpo como texto (ADR-28). `Range` viaja tal cual para
+      // que storage-service pueda responder 206/416.
+      const esMediaPublica = /^\/api\/v2\/storage\/public\/objetos\/[^/]+$/.test(rutaBase);
       const headers: Record<string, string> = {
         'x-request-id': (req.headers['x-request-id'] as string) ?? `gw-${Date.now()}`,
-        'content-type': esImagenPublica ? 'application/octet-stream' : 'application/json',
-        accept: esImagenPublica ? 'image/*' : 'application/json',
+        'content-type': esMediaPublica ? 'application/octet-stream' : 'application/json',
+        accept: esMediaPublica ? 'image/*,video/*,*/*' : 'application/json',
       };
-      for (const k of ['x-user-id', 'x-user-email', 'x-user-rol', TENANT_HEADER, PERSONAL_HEADER, PARTICIPACION_HEADER] as const) {
+      for (const k of ['x-user-id', 'x-user-email', 'x-user-rol', TENANT_HEADER, PERSONAL_HEADER, PARTICIPACION_HEADER, 'x-user-rol-empresa'] as const) {
         const v = req.headers[k];
         if (v !== undefined) headers[k] = Array.isArray(v) ? v.join(', ') : String(v);
       }
+      const rango = req.headers.range;
+      if (esMediaPublica && rango !== undefined) {
+        headers.range = Array.isArray(rango) ? rango.join(', ') : String(rango);
+      }
 
-      const respuesta = await fetch(`${destino.url}${ruta}`, {
-        method: req.method,
-        headers,
-        body: cuerpo ? JSON.stringify(cuerpo) : undefined,
-        // Los 301 de slug (ADR-26) deben llegar al cliente con su Location;
-        // si fetch los sigue, el cliente recibe 200 y pierde la redireccion.
-        redirect: 'manual',
-      });
+      const controlador = new AbortController();
+      const temporizador = setTimeout(() => {
+        agoto = true;
+        controlador.abort();
+      }, this.timeoutMs);
+      let respuesta: globalThis.Response;
+      try {
+        respuesta = await fetch(`${destino.url}${ruta}`, {
+          method: req.method,
+          headers,
+          body: cuerpo ? JSON.stringify(cuerpo) : undefined,
+          // Los 301 de slug (ADR-26) deben llegar al cliente con su Location;
+          // si fetch los sigue, el cliente recibe 200 y pierde la redireccion.
+          redirect: 'manual',
+          signal: controlador.signal,
+        });
+      } finally {
+        clearTimeout(temporizador);
+      }
 
       res.status(respuesta.status);
       // `fetch` devuelve un objeto `Headers` (iterable), no un objeto plano:
@@ -200,10 +236,18 @@ export class ProxyService {
           /* headers no reenvariables */
         }
       });
-      // Streaming binario: `text()` corrompería una imagen. El body de fetch es
-      // un ReadableStream web; se puentea al response de Express.
+      // Streaming binario: `text()` corrompería una imagen o un video. El body
+      // de fetch es un ReadableStream web; se puentea al response de Express.
       const contentType = respuesta.headers.get('content-type') ?? '';
-      if (contentType.startsWith('image/') || contentType.startsWith('application/octet-stream')) {
+      const esBinario =
+        contentType.startsWith('image/') ||
+        contentType.startsWith('video/') ||
+        contentType.startsWith('application/octet-stream');
+      // `content-length` se excluye del reenvío genérico porque Express lo
+      // gestiona; para media binaria sí importa (206 y reproducción de video).
+      const longitud = respuesta.headers.get('content-length');
+      if (esBinario && longitud) res.setHeader('Content-Length', longitud);
+      if (esBinario) {
         if (respuesta.body) {
           const stream = Readable.fromWeb(
             respuesta.body as unknown as import('stream/web').ReadableStream,
@@ -223,13 +267,22 @@ export class ProxyService {
       res.send(texto || undefined);
     } catch (err) {
       this.logger.error({
-        msg: 'Fallo el reenvio al servicio',
+        msg: agoto ? 'Timeout esperando al servicio' : 'Fallo el reenvio al servicio',
         ruta,
         destino: destino.nombre,
+        ...(agoto ? { timeout_ms: this.timeoutMs } : {}),
         err: err instanceof Error ? err.message : String(err),
       });
       if (res.headersSent) {
         res.end();
+        return;
+      }
+      if (agoto) {
+        res.status(504).json({
+          codigo: 'DESTINO_TIMEOUT',
+          mensaje: `El servicio de destino no respondio en ${this.timeoutMs} ms.`,
+          detalles: { servicio: destino.nombre, timeout_ms: this.timeoutMs },
+        });
         return;
       }
       res.status(502).json({

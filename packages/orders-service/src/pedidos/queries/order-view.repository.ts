@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { PgService, ItemOrden } from '@core/shared';
+import { PgService, ItemOrden, TipoOrden } from '@core/shared';
 
 /**
  * OrderView: proyeccion de lectura del lado CQRS (Tabla 8).
@@ -9,6 +9,7 @@ export interface OrderView {
   id: string;
   vendedor_id: string;
   comprador_id: string;
+  parte_id?: string | null;
   tienda_id: string;
   estado: string;
   total_cents: number;
@@ -18,6 +19,9 @@ export interface OrderView {
   direccion_envio: unknown | null;
   creado_en: string;
   actualizado_en: string;
+  tipo_orden: TipoOrden;
+  metodo_pago: string;
+  fulfillment_config?: Record<string, unknown>;
   pagada_en: string | null;
   enviada_en: string | null;
   entregada_en: string | null;
@@ -29,6 +33,7 @@ interface OrderViewRow {
   id: string;
   vendedor_id: string;
   comprador_id: string;
+  parte_id?: string | null;
   tienda_id: string;
   estado: string;
   total_cents: number;
@@ -43,15 +48,9 @@ interface OrderViewRow {
   entregada_en: string | null;
   cancelada_en: string | null;
   devuelta_en: string | null;
-}
-
-export interface ComisionVista {
-  vendedor_id: string;
-  periodo: string;
-  ordenes: number;
-  total_ventas_cents: number;
-  total_comision_cents: number;
-  actualizado_en: string;
+  tipo_orden: TipoOrden;
+  metodo_pago: string;
+  fulfillment_config?: Record<string, unknown>;
 }
 
 export interface TimelineEvento {
@@ -71,8 +70,9 @@ export class OrderViewRepository {
       return null;
     }
     const fila = await this.pg.queryOne<OrderViewRow>(
-      `SELECT id, vendedor_id, comprador_id, tienda_id, estado, total_cents, comision_cents, moneda,
+      `SELECT id, vendedor_id, comprador_id, parte_id, tienda_id, estado, total_cents, comision_cents, moneda,
               items_json, direccion_envio, creado_en, actualizado_en,
+              tipo_orden, metodo_pago, fulfillment_config,
               pagada_en, enviada_en, entregada_en, cancelada_en, devuelta_en
        FROM orders.orden_vista WHERE id = $1`,
       [id],
@@ -85,8 +85,9 @@ export class OrderViewRepository {
     const extra = estado ? ` AND estado = $2` : '';
     if (estado) params.push(estado);
     const filas = await this.pg.query<OrderViewRow>(
-      `SELECT id, vendedor_id, comprador_id, tienda_id, estado, total_cents, comision_cents, moneda,
+      `SELECT id, vendedor_id, comprador_id, parte_id, tienda_id, estado, total_cents, comision_cents, moneda,
               items_json, direccion_envio, creado_en, actualizado_en,
+              tipo_orden, metodo_pago, fulfillment_config,
               pagada_en, enviada_en, entregada_en, cancelada_en, devuelta_en
        FROM orders.orden_vista WHERE comprador_id = $1${extra}
        ORDER BY creado_en DESC LIMIT 100`,
@@ -100,8 +101,9 @@ export class OrderViewRepository {
     const extra = estado ? ` AND estado = $2` : '';
     if (estado) params.push(estado);
     const filas = await this.pg.query<OrderViewRow>(
-      `SELECT id, vendedor_id, comprador_id, tienda_id, estado, total_cents, comision_cents, moneda,
+      `SELECT id, vendedor_id, comprador_id, parte_id, tienda_id, estado, total_cents, comision_cents, moneda,
               items_json, direccion_envio, creado_en, actualizado_en,
+              tipo_orden, metodo_pago, fulfillment_config,
               pagada_en, enviada_en, entregada_en, cancelada_en, devuelta_en
        FROM orders.orden_vista
        WHERE EXISTS (SELECT 1 FROM jsonb_array_elements(items_json) item
@@ -134,8 +136,9 @@ export class OrderViewRepository {
       extra = ` AND estado = $${params.length}`;
     }
     const filas = await this.pg.query<OrderViewRow>(
-      `SELECT id, vendedor_id, comprador_id, tienda_id, estado, total_cents, comision_cents, moneda,
+      `SELECT id, vendedor_id, comprador_id, parte_id, tienda_id, estado, total_cents, comision_cents, moneda,
               items_json, direccion_envio, creado_en, actualizado_en,
+              tipo_orden, metodo_pago, fulfillment_config,
               pagada_en, enviada_en, entregada_en, cancelada_en, devuelta_en
        FROM orders.orden_vista
        WHERE EXISTS (SELECT 1 FROM jsonb_array_elements(items_json) item
@@ -163,8 +166,9 @@ export class OrderViewRepository {
     }
     params.push(filtros.limite ?? 100);
     const filas = await this.pg.query<OrderViewRow>(
-      `SELECT id, vendedor_id, comprador_id, tienda_id, estado, total_cents, comision_cents, moneda,
+      `SELECT id, vendedor_id, comprador_id, parte_id, tienda_id, estado, total_cents, comision_cents, moneda,
               items_json, direccion_envio, creado_en, actualizado_en,
+              tipo_orden, metodo_pago, fulfillment_config,
               pagada_en, enviada_en, entregada_en, cancelada_en, devuelta_en
        FROM orders.orden_vista
        WHERE EXISTS (SELECT 1 FROM jsonb_array_elements(items_json) item
@@ -184,43 +188,14 @@ export class OrderViewRepository {
     }
     params.push(filtros.limite ?? 200);
     const filas = await this.pg.query<OrderViewRow>(
-      `SELECT id, vendedor_id, comprador_id, tienda_id, estado, total_cents, comision_cents, moneda,
+      `SELECT id, vendedor_id, comprador_id, parte_id, tienda_id, estado, total_cents, comision_cents, moneda,
               items_json, direccion_envio, creado_en, actualizado_en,
+              tipo_orden, metodo_pago, fulfillment_config,
               pagada_en, enviada_en, entregada_en, cancelada_en, devuelta_en
        FROM orders.orden_vista${where} ORDER BY creado_en DESC LIMIT $${params.length}`,
       params,
     );
     return filas.map((f) => this.serializar(f));
-  }
-
-  async obtenerComisiones(vendedorId: string, periodo?: string): Promise<ComisionVista[]> {
-    const params: unknown[] = [vendedorId];
-    let where = 'WHERE vendedor_id = $1';
-    if (periodo) {
-      params.push(periodo);
-      where += ' AND periodo = to_date($2, \'YYYY-MM\')';
-    }
-    const filas = await this.pg.query<{
-      vendedor_id: string;
-      periodo: string;
-      ordenes: number;
-      total_ventas_cents: number;
-      total_comision_cents: number;
-      actualizado_en: string;
-    }>(
-      `SELECT vendedor_id, periodo::text, ordenes, total_ventas_cents, total_comision_cents, actualizado_en
-       FROM orders.comisiones_vista ${where}
-       ORDER BY periodo DESC`,
-      params,
-    );
-    return filas.map((f) => ({
-      vendedor_id: f.vendedor_id,
-      periodo: f.periodo,
-      ordenes: f.ordenes,
-      total_ventas_cents: f.total_ventas_cents,
-      total_comision_cents: f.total_comision_cents,
-      actualizado_en: f.actualizado_en,
-    }));
   }
 
   async obtenerTimeline(orderId: string): Promise<TimelineEvento[]> {
@@ -243,6 +218,7 @@ export class OrderViewRepository {
       id: fila.id,
       vendedor_id: fila.vendedor_id,
       comprador_id: fila.comprador_id,
+      parte_id: fila.parte_id ?? null,
       tienda_id: fila.tienda_id,
       estado: fila.estado,
       total_cents: fila.total_cents,
@@ -252,6 +228,9 @@ export class OrderViewRepository {
       direccion_envio: fila.direccion_envio,
       creado_en: fila.creado_en,
       actualizado_en: fila.actualizado_en,
+      tipo_orden: fila.tipo_orden,
+      metodo_pago: fila.metodo_pago,
+      fulfillment_config: fila.fulfillment_config ?? {},
       pagada_en: fila.pagada_en,
       enviada_en: fila.enviada_en,
       entregada_en: fila.entregada_en,

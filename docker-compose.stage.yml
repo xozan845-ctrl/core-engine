@@ -11,12 +11,15 @@
 # Solo se publica el gateway (8080); Postgres y RabbitMQ quedan internos a la red
 # `core-engine`. La observabilidad es opcional:
 #   docker compose -f docker-compose.stage.yml -f docker-compose.observability.yml up -d
-# `commissions-service` y `market-intelligence-service` no entran en este
-# compose: viven en `docker-compose.dev.yml` (desarrollo).
+# `commissions-service` SI se despliega en stage (portal de empresa, ADR-37),
+# pero sigue fuera de produccion. `market-intelligence-service` no entra en
+# stage ni produccion: vive en `docker-compose.dev.yml` (desarrollo).
 
 x-servicio-base: &servicio-base
   env_file:
     - ${ENV_FILE:-.env}
+  environment:
+    TZ: America/Managua
   depends_on:
     postgres:
       condition: service_healthy
@@ -100,9 +103,12 @@ services:
       SERVICIO: api-gateway
       PORT: 8080
       OUTBOX_TABLA: identity.outbox
-      # Staging NO es publico: el arranque falla si EDGE_BASIC_AUTH no llega
-      # por el env_file (asi no se despliega sin autenticacion por descuido).
-      REQUIRE_EDGE_AUTH: "true"
+      # Staging NO es publico: su acceso se cierra en el borde externo
+      # (Cloudflare Access/VPN/allowlist) segun ADR-0005. El gateway ya no
+      # implementa Basic Auth ni /api-proxy.
+      # Readiness de stage: incluye commissions (ADR-37). Produccion no lo fija
+      # y usa la lista sin commissions.
+      ENTORNO: stage
     # Solo loopback: el proxy de borde (Traefik/Dockploy) alcanza el gateway por
     # el puerto publicado, pero el puerto NO queda expuesto a Internet en HTTP
     # plano (H-01). Si el proxy corre en otro contenedor, conectar ambos por la
@@ -149,6 +155,15 @@ services:
       PORT: 3004
       OUTBOX_TABLA: orders.outbox
 
+  scheduling-service:
+    <<: *servicio-base
+    image: ghcr.io/xozan845-ctrl/core-engine-scheduling-service:stage
+    pull_policy: always
+    environment:
+      SERVICIO: scheduling-service
+      PORT: 3011
+      OUTBOX_TABLA: scheduling.outbox
+
   logistics-service:
     <<: *servicio-base
     image: ghcr.io/xozan845-ctrl/core-engine-logistics-service:stage
@@ -157,6 +172,16 @@ services:
       SERVICIO: logistics-service
       PORT: 3005
       OUTBOX_TABLA: logistics.outbox
+
+  # Stage valida el portal de empresa (ADR-37); produccion sigue sin el.
+  commissions-service:
+    <<: *servicio-base
+    image: ghcr.io/xozan845-ctrl/core-engine-commissions-service:stage
+    pull_policy: always
+    environment:
+      SERVICIO: commissions-service
+      PORT: 3006
+      OUTBOX_TABLA: commissions.outbox
 
   finance-service:
     <<: *servicio-base
@@ -185,6 +210,14 @@ services:
       SERVICIO: storage-service
       PORT: 3010
       OUTBOX_TABLA: storage.outbox
+
+  notifications-service:
+    <<: *servicio-base
+    image: ghcr.io/xozan845-ctrl/core-engine-notifications-service:stage
+    pull_policy: always
+    environment:
+      SERVICIO: notifications-service
+      PORT: 3012
 
 volumes:
   pg_data:

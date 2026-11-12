@@ -13,7 +13,8 @@
 #   docker compose -f docker-compose.yml -f docker-compose.observability.yml up -d
 #
 # `commissions-service` y `market-intelligence-service` no entran en este
-# compose (producción); viven en `docker-compose.dev.yml` (desarrollo).
+# compose (producción): commissions se despliega en stage (ADR-37) y ambos
+# viven en `docker-compose.dev.yml` (desarrollo).
 #
 # Entornos (3): producción = este archivo · pre-producción = `docker-compose.stage.yml`
 # · desarrollo = `docker-compose.dev.yml` (construye local).
@@ -21,6 +22,8 @@
 x-servicio-base: &servicio-base
   env_file:
     - ${ENV_FILE:-.env}
+  environment:
+    TZ: America/Managua
   depends_on:
     postgres:
       condition: service_healthy
@@ -148,6 +151,15 @@ services:
       PORT: 3004
       OUTBOX_TABLA: orders.outbox
 
+  scheduling-service:
+    <<: *servicio-base
+    image: ghcr.io/xozan845-ctrl/core-engine-scheduling-service:prod
+    pull_policy: always
+    environment:
+      SERVICIO: scheduling-service
+      PORT: 3011
+      OUTBOX_TABLA: scheduling.outbox
+
   logistics-service:
     <<: *servicio-base
     image: ghcr.io/xozan845-ctrl/core-engine-logistics-service:prod
@@ -184,6 +196,14 @@ services:
       SERVICIO: storage-service
       PORT: 3010
       OUTBOX_TABLA: storage.outbox
+
+  notifications-service:
+    <<: *servicio-base
+    image: ghcr.io/xozan845-ctrl/core-engine-notifications-service:prod
+    pull_policy: always
+    environment:
+      SERVICIO: notifications-service
+      PORT: 3012
 
 volumes:
   pg_data:

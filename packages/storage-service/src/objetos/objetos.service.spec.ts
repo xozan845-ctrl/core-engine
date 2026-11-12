@@ -62,6 +62,7 @@ const crear = () => {
   const buckets = {
     asegurar: vi.fn().mockResolvedValue(estadoBucket()),
     estado: vi.fn().mockResolvedValue(estadoBucket()),
+    bloquearEstadoEnTransaccion: vi.fn().mockResolvedValue(estadoBucket()),
     verificarCuota: vi.fn(),
     sumarUsoEnTransaccion: vi.fn().mockResolvedValue(undefined),
     restarUsoEnTransaccion: vi.fn().mockResolvedValue(undefined),
@@ -88,6 +89,12 @@ const crear = () => {
       content_type: 'image/png',
       etag: 'etag-1',
     }),
+    leerRango: vi.fn().mockResolvedValue({
+      stream: { pipe: vi.fn() },
+      tamano_bytes: 2048,
+      content_type: 'video/mp4',
+      etag: 'etag-1',
+    }),
     eliminar: vi.fn().mockResolvedValue(undefined),
   };
   const config = {
@@ -98,9 +105,10 @@ const crear = () => {
     secretKey: 'p',
     prefijoBucket: 't-',
     maxObjetoBytes: 10 * 1024 * 1024,
+    maxVideoBytes: 100 * 1024 * 1024,
     cuotaDefaultBytes: 100000,
     urlTtlSegundos: 900,
-    contentTypesPermitidos: ['image/png', 'application/pdf'],
+    contentTypesPermitidos: ['image/png', 'application/pdf', 'video/mp4', 'video/webm'],
   } as StorageConfig;
   return {
     servicio: new ObjetosService(
@@ -138,6 +146,13 @@ describe('ObjetosService (URLs prefirmadas y cuotas por tenant)', () => {
       expect(pg.queryOne).not.toHaveBeenCalled();
     });
 
+    it('debe rechazar una solicitud sin content-type', async () => {
+      const { servicio } = crear();
+      await expect(
+        servicio.solicitarSubida(TENANT, undefined, dto({ content_type: undefined })),
+      ).rejects.toThrow(/CONTENT_TYPE_NO_PERMITIDO|no esta permitido/);
+    });
+
     it('debe rechazar tamanos invalidos o no positivos', async () => {
       const { servicio } = crear();
       await expect(
@@ -153,6 +168,32 @@ describe('ObjetosService (URLs prefirmadas y cuotas por tenant)', () => {
       await expect(
         servicio.solicitarSubida(TENANT, 'usuario-1', dto({ tamano_bytes: 20 * 1024 * 1024 })),
       ).rejects.toThrow(/OBJETO_DEMASIADO_GRANDE|excede el maximo/);
+    });
+
+    it('debe aceptar un video dentro del limite especifico de 100 MiB', async () => {
+      const { servicio, pg } = crear();
+      (pg.queryOne as Mock).mockResolvedValue(filaObjeto({ content_type: 'video/mp4' }));
+
+      const solicitud = await servicio.solicitarSubida(
+        TENANT,
+        'usuario-1',
+        dto({ nombre: 'fondo.mp4', content_type: 'video/mp4', tamano_bytes: 100 * 1024 * 1024 }),
+      );
+
+      expect(solicitud.max_bytes).toBe(100 * 1024 * 1024);
+      expect(solicitud.headers['Content-Type']).toBe('video/mp4');
+    });
+
+    it('debe rechazar un video que excede el limite especifico', async () => {
+      const { servicio, pg } = crear();
+      await expect(
+        servicio.solicitarSubida(
+          TENANT,
+          'usuario-1',
+          dto({ content_type: 'video/mp4', tamano_bytes: 100 * 1024 * 1024 + 1 }),
+        ),
+      ).rejects.toThrow(/OBJETO_DEMASIADO_GRANDE|excede el maximo/);
+      expect(pg.queryOne).not.toHaveBeenCalled();
     });
 
     it('debe propagar el rechazo de cuota del tenant', async () => {
@@ -215,6 +256,34 @@ describe('ObjetosService (URLs prefirmadas y cuotas por tenant)', () => {
       expect(params[10]).toBeNull();
     });
 
+    it('debe aplicar los valores por defecto al sanear nombre, carpeta y etiquetas', async () => {
+      const { servicio, pg } = crear();
+      (pg.queryOne as Mock).mockResolvedValue(filaObjeto());
+
+      await servicio.solicitarSubida(TENANT, undefined, {
+        ...dto(),
+        nombre: undefined,
+        carpeta: undefined,
+        descripcion: undefined,
+        etiquetas: { nula: null, vacia: '' },
+      });
+
+      const [, params] = (pg.queryOne as Mock).mock.calls[0];
+      expect(params[3]).toMatch(/^general\/[0-9a-f-]{36}\/archivo$/);
+      expect(params[4]).toBe('archivo');
+      expect(params[7]).toBe('');
+      expect(params[8]).toBe(JSON.stringify({ nula: '', vacia: '' }));
+    });
+
+    it('debe fallar si no se registra la solicitud de subida', async () => {
+      const { servicio, pg } = crear();
+      (pg.queryOne as Mock).mockResolvedValue(null);
+
+      await expect(servicio.solicitarSubida(TENANT, undefined, dto())).rejects.toThrow(
+        ConflictError,
+      );
+    });
+
     it('no debe romper si el id del autor no es uuid (contrato del gateway)', async () => {
       const { servicio, pg } = crear();
       (pg.queryOne as Mock).mockResolvedValue(filaObjeto());
@@ -231,6 +300,17 @@ describe('ObjetosService (URLs prefirmadas y cuotas por tenant)', () => {
       const { servicio, pg } = crear();
       await expect(servicio.confirmar(TENANT, 'no-uuid')).rejects.toThrow(NotFoundError);
       expect(pg.queryOne).not.toHaveBeenCalled();
+    });
+
+    it('debe fallar si el uuid no existe en el tenant', async () => {
+      const { servicio, pg } = crear();
+      (pg.queryOne as Mock).mockResolvedValue(null);
+
+      await expect(servicio.confirmar(TENANT, OBJETO_ID)).rejects.toThrow(NotFoundError);
+      expect(pg.queryOne).toHaveBeenCalledWith(expect.stringContaining('tenant_id = $1'), [
+        TENANT,
+        OBJETO_ID,
+      ]);
     });
 
     it('debe rechazar confirmar un objeto eliminado', async () => {
@@ -309,7 +389,8 @@ describe('ObjetosService (URLs prefirmadas y cuotas por tenant)', () => {
       });
 
       await expect(servicio.confirmar(TENANT, OBJETO_ID)).rejects.toThrow(/CUOTA_EXCEDIDA|cuota/);
-      expect(pg.transaccion).not.toHaveBeenCalled();
+      expect(pg.transaccion).toHaveBeenCalled();
+      expect(buckets.bloquearEstadoEnTransaccion).toHaveBeenCalled();
     });
 
     it('debe activar el objeto, contabilizar cuota y emitir el evento', async () => {
@@ -334,6 +415,29 @@ describe('ObjetosService (URLs prefirmadas y cuotas por tenant)', () => {
         }),
       );
       expect(objeto.estado).toBe('activo');
+    });
+
+    it('debe usar el content-type de la fila y omitir etag y autor ausentes', async () => {
+      const { servicio, pg, outbox, client, almacen } = crear();
+      (pg.queryOne as Mock).mockResolvedValue(filaObjeto({ subido_por: null }));
+      (almacen.estadisticas as Mock).mockResolvedValue({
+        bucket: BUCKET,
+        objeto: 'productos/22222222-2222-4222-8222-222222222222/foto.png',
+        tamano_bytes: 2048,
+      });
+      client.query.mockResolvedValue({
+        rows: [filaObjeto({ estado: 'activo', subido_por: null })],
+        rowCount: 1,
+      });
+
+      const objeto = await servicio.confirmar(TENANT, OBJETO_ID);
+
+      const [sql, params] = client.query.mock.calls[0];
+      expect(sql).toContain("SET estado = 'activo'");
+      expect(params).toEqual([TENANT, OBJETO_ID, 2048, 'image/png', null]);
+      const evento = (outbox.insertarEnTransaccion as Mock).mock.calls[0][2];
+      expect(evento).not.toHaveProperty('subido_por');
+      expect(objeto.subido_por).toBeNull();
     });
 
     it('debe devolver el estado actual si otra confirmacion gano la carrera', async () => {
@@ -448,6 +552,17 @@ describe('ObjetosService (URLs prefirmadas y cuotas por tenant)', () => {
       expect(outbox.insertarEnTransaccion).not.toHaveBeenCalled();
     });
 
+    it('no debe emitir evento si otra eliminacion gano la carrera', async () => {
+      const { servicio, pg, client, outbox, buckets } = crear();
+      (pg.queryOne as Mock).mockResolvedValue(filaObjeto({ estado: 'activo' }));
+      client.query.mockResolvedValue({ rows: [], rowCount: 0 });
+
+      await servicio.eliminar(TENANT, OBJETO_ID, usuario());
+
+      expect(outbox.insertarEnTransaccion).not.toHaveBeenCalled();
+      expect(buckets.restarUsoEnTransaccion).not.toHaveBeenCalled();
+    });
+
     it('no debe descontar cuota por un objeto pendiente (nunca contabilizado)', async () => {
       const { servicio, pg, buckets } = crear();
       (pg.queryOne as Mock).mockResolvedValue(filaObjeto({ estado: 'pendiente' }));
@@ -528,7 +643,70 @@ describe('ObjetosService (URLs prefirmadas y cuotas por tenant)', () => {
       expect(objeto.etag).toBe('etag-fila');
     });
 
-    it('debe ocultar un objeto que no es imagen', async () => {
+    it('debe servir un video público activo', async () => {
+      const { servicio, pg, almacen } = crear();
+      (pg.queryOne as Mock).mockResolvedValue(
+        filaObjeto({ estado: 'activo', publico: true, content_type: 'video/mp4' }),
+      );
+      (almacen.leer as Mock).mockResolvedValue({
+        stream: { pipe: vi.fn() },
+        tamano_bytes: 2048,
+        content_type: 'video/mp4',
+      });
+
+      const objeto = await servicio.leerPublico(OBJETO_ID);
+
+      expect(objeto.content_type).toBe('video/mp4');
+      expect(almacen.leer).toHaveBeenCalled();
+    });
+
+    it('debe abrir solo el rango público solicitado', async () => {
+      const { servicio, pg, almacen } = crear();
+      (pg.queryOne as Mock).mockResolvedValue(
+        filaObjeto({ estado: 'activo', publico: true, content_type: 'video/webm' }),
+      );
+
+      await servicio.leerPublico(OBJETO_ID, { inicio: 10, fin: 19 });
+
+      expect(almacen.leerRango).toHaveBeenCalledWith(
+        BUCKET,
+        'productos/22222222-2222-4222-8222-222222222222/foto.png',
+        10,
+        19,
+      );
+      expect(almacen.leer).not.toHaveBeenCalled();
+    });
+
+    it('debe devolver metadatos públicos sin abrir stream (HEAD)', async () => {
+      const { servicio, pg, almacen } = crear();
+      (pg.queryOne as Mock).mockResolvedValue(
+        filaObjeto({ estado: 'activo', publico: true, content_type: 'video/mp4', etag: 'etag-1' }),
+      );
+
+      await expect(servicio.obtenerPublicoMeta(OBJETO_ID)).resolves.toEqual({
+        content_type: 'video/mp4',
+        tamano_bytes: 2048,
+        etag: 'etag-1',
+        nombre: 'foto.png',
+      });
+      expect(almacen.leer).not.toHaveBeenCalled();
+      expect(almacen.leerRango).not.toHaveBeenCalled();
+    });
+
+    it('debe devolver metadatos públicos sin etag cuando la fila no lo tiene', async () => {
+      const { servicio, pg } = crear();
+      (pg.queryOne as Mock).mockResolvedValue(
+        filaObjeto({ estado: 'activo', publico: true, etag: null }),
+      );
+
+      await expect(servicio.obtenerPublicoMeta(OBJETO_ID)).resolves.toEqual({
+        content_type: 'image/png',
+        tamano_bytes: 2048,
+        nombre: 'foto.png',
+      });
+    });
+
+    it('debe ocultar un objeto que no es imagen ni video', async () => {
       const { servicio, pg } = crear();
       (pg.queryOne as Mock).mockResolvedValue(
         filaObjeto({ estado: 'activo', publico: true, content_type: 'application/pdf' }),
@@ -549,5 +727,18 @@ describe('ObjetosService (URLs prefirmadas y cuotas por tenant)', () => {
       await expect(servicio.leerPublico('no-es-uuid')).rejects.toThrow(NotFoundError);
       expect(pg.queryOne).not.toHaveBeenCalled();
     });
+  });
+
+  it('debe mantener la baja lógica si MinIO falla al borrar (objeto huérfano)', async () => {
+    const { servicio, pg, almacen, outbox, buckets } = crear();
+    (pg.queryOne as Mock).mockResolvedValue(filaObjeto({ estado: 'activo' }));
+    (almacen.eliminar as Mock).mockRejectedValue(new Error('minio caido'));
+
+    await expect(servicio.eliminar(TENANT, OBJETO_ID, {
+      user_id: 'u-1', email: 'u@t', rol: ROLES.ADMIN,
+    })).resolves.toBeUndefined();
+
+    expect(outbox.insertarEnTransaccion).toHaveBeenCalled();
+    expect(buckets.restarUsoEnTransaccion).toHaveBeenCalled();
   });
 });

@@ -2,7 +2,9 @@ import type { Mock } from 'vitest';
 import {
   evaluarReadiness,
   codigoReadiness,
+  serviciosReadiness,
   SERVICIOS_PRODUCCION,
+  SERVICIOS_STAGE,
   type FetchComo,
 } from './readiness.utils';
 
@@ -52,12 +54,29 @@ describe('readiness.utils (readiness agregada del gateway)', () => {
     expect(urls).toContain('http://catalog-service:3002/health');
   });
 
-  it('debe cubrir los 8 servicios de produccion (incluye field y storage, excluye commissions/intelligence)', () => {
+  it('debe cubrir los 9 servicios de produccion (incluye scheduling, field y storage)', () => {
     const nombres = SERVICIOS_PRODUCCION.map((s) => s.nombre);
     expect(nombres).toContain('field');
     expect(nombres).toContain('storage');
+    expect(nombres).toContain('scheduling');
     expect(nombres).not.toContain('commissions');
     expect(nombres).not.toContain('market-intelligence');
-    expect(nombres).toHaveLength(8);
+    expect(nombres).toHaveLength(9);
+  });
+
+  it('debe añadir commissions a la lista de stage sin incluir market-intelligence', () => {
+    const nombres = SERVICIOS_STAGE.map((s) => s.nombre);
+    expect(nombres).toContain('commissions');
+    expect(nombres).not.toContain('market-intelligence');
+    expect(nombres).toHaveLength(10);
+    expect(SERVICIOS_STAGE).toContainEqual({ nombre: 'commissions', puerto: 3006 });
+  });
+
+  it('debe elegir la lista por entorno y mantener produccion como valor seguro', () => {
+    expect(serviciosReadiness('stage')).toEqual(SERVICIOS_STAGE);
+    expect(serviciosReadiness('staging')).toEqual(SERVICIOS_STAGE);
+    expect(serviciosReadiness('prod')).toEqual(SERVICIOS_PRODUCCION);
+    expect(serviciosReadiness('')).toEqual(SERVICIOS_PRODUCCION);
+    expect(serviciosReadiness('desconocido')).toEqual(SERVICIOS_PRODUCCION);
   });
 });

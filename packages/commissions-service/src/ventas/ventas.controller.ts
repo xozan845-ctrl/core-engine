@@ -6,30 +6,37 @@ import {
   UsuarioActual,
   UsuarioContexto,
   NotFoundError,
+  CAPACIDADES,
+  RequiereCapacidades,
 } from '@core/shared';
 import { VentasService, EstadoCuenta, EstadoCuentaEmpresa } from './ventas.service';
-import { EstadoCuentaEmpresaResponseDto, EstadoCuentaResponseDto } from './ventas.response.dto';
+import {
+  EnvelopeEstadoCuentaEmpresaResponseDto,
+  EnvelopeEstadoCuentaResponseDto,
+} from '../envelope.response.dto';
 
-/** GET /api/v1/vendedores/me/ventas — ordenes y comisiones del vendedor (Tabla 21). */
+/** GET /api/v2/vendedores/me/ventas — ordenes y comisiones del vendedor (Tabla 21). */
 @ApiTags('Comisiones · Ventas')
 @ApiBearerAuth()
-@Controller('api/v1/vendedores/me')
+@Controller('api/v2/vendedores/me')
+@RequiereCapacidades(CAPACIDADES.LIQUIDACIONES)
 export class VentasController {
   constructor(private readonly ventas: VentasService) {}
 
   @Get('ventas')
   @Roles(ROLES.VENDEDOR)
   @ApiOperation({ summary: 'Estado de cuenta de ventas/comisiones del vendedor' })
-  @ApiOkResponse({ type: EstadoCuentaResponseDto, description: 'Estado de cuenta del vendedor' })
+  @ApiOkResponse({ type: EnvelopeEstadoCuentaResponseDto, description: 'Estado de cuenta del vendedor' })
   async estado(@UsuarioActual() usuario: UsuarioContexto): Promise<EstadoCuenta> {
     return this.ventas.estadoCuenta(usuario.user_id);
   }
 }
 
-/** GET /api/v1/empresarios/me/ventas — estado de cuenta de la empresa (ADR-25). */
+/** GET /api/v2/empresarios/me/ventas — estado de cuenta de la empresa (ADR-25). */
 @ApiTags('Comisiones · Ventas')
 @ApiBearerAuth()
-@Controller('api/v1/empresarios/me')
+@Controller('api/v2/empresarios/me')
+@RequiereCapacidades(CAPACIDADES.LIQUIDACIONES)
 export class VentasEmpresaController {
   constructor(private readonly ventas: VentasService) {}
 
@@ -37,7 +44,7 @@ export class VentasEmpresaController {
   @Roles(ROLES.EMPRESARIO)
   @ApiOperation({ summary: 'Estado de cuenta de ventas/comisiones de la empresa' })
   @ApiOkResponse({
-    type: EstadoCuentaEmpresaResponseDto,
+    type: EnvelopeEstadoCuentaEmpresaResponseDto,
     description: 'Estado de cuenta de la empresa',
   })
   async estado(@UsuarioActual() usuario: UsuarioContexto): Promise<EstadoCuentaEmpresa> {

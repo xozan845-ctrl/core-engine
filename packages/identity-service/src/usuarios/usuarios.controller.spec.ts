@@ -12,12 +12,12 @@ const usuario = {
 };
 
 function fabricar(): { usuarios: Record<string, Mock>; controller: UsuariosController } {
-  const usuarios = { listar: vi.fn(), encontrarPorId: vi.fn() };
+  const usuarios = { listar: vi.fn(), encontrarPorId: vi.fn(), actualizarAvatar: vi.fn() };
   const controller = new UsuariosController(usuarios as unknown as UsuariosService);
   return { usuarios, controller };
 }
 
-describe('UsuariosController (api/v1/usuarios, R-U-10/11)', () => {
+describe('UsuariosController (api/v2/usuarios, R-U-10/11)', () => {
   it('debe listar los usuarios que entrega el servicio', async () => {
     const { usuarios, controller } = fabricar();
     usuarios.listar.mockResolvedValue([usuario]);
@@ -44,6 +44,16 @@ describe('UsuariosController (api/v1/usuarios, R-U-10/11)', () => {
     await expect(
       controller.obtener(usuario.id, { user_id: 'u-sa', email: 'sa@core.local', rol: ROLES.SUPER_ADMIN } as never),
     ).resolves.toEqual(usuario);
+  });
+
+  it('debe delegar el avatar al servicio', async () => {
+    const { usuarios, controller } = fabricar();
+    usuarios.actualizarAvatar.mockResolvedValue({ ...usuario, avatar_url: '/x' });
+    const actor = { user_id: 'u-1', email: 'e@core.local', rol: ROLES.VENDEDOR };
+    await expect(
+      controller.actualizarAvatar(usuario.id, { avatar_objeto_id: null }, actor as never),
+    ).resolves.toMatchObject({ avatar_url: '/x' });
+    expect(usuarios.actualizarAvatar).toHaveBeenCalledWith(usuario.id, null, actor);
   });
 
   it('debe exigir rol global en el listado', () => {

@@ -11,14 +11,17 @@ import {
   DomainErrorFilter,
   Logger,
   RolesGuard,
+  CapabilityGuard,
+  EnvelopeInterceptor,
 } from '@core/shared';
 
 async function bootstrap(): Promise<void> {
   const app = await NestFactory.create(AppModule, { logger: false });
 
   app.useGlobalPipes(new DtoValidationPipe());
+  app.useGlobalInterceptors(new EnvelopeInterceptor());
   app.useGlobalFilters(new DomainErrorFilter());
-  app.useGlobalGuards(new RolesGuard());
+  app.useGlobalGuards(new RolesGuard(), new CapabilityGuard());
 
   const puerto = Number(process.env.PORT ?? PUERTOS.INTELLIGENCE);
   const expressApp = app.getHttpAdapter().getInstance();

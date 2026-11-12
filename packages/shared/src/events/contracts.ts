@@ -23,6 +23,9 @@ export const EVENTOS = {
   STORAGE_OBJETO_SUBIDO: 'storage.objeto.subido',
   /** Almacenamiento de objetos: el objeto se elimino (baja logica + borrado real). */
   STORAGE_OBJETO_ELIMINADO: 'storage.objeto.eliminado',
+  APPOINTMENT_CREATED: 'appointment.created',
+  APPOINTMENT_CANCELLED: 'appointment.cancelled',
+  APPOINTMENT_REMINDER_DUE: 'appointment.reminder.due',
 } as const;
 
 export type NombreEvento = (typeof EVENTOS)[keyof typeof EVENTOS];
@@ -37,6 +40,8 @@ export interface EventoBus<T = unknown> {
   data: T;
 }
 
+import type { Fulfillment, TipoOrden } from '../order-state';
+
 export interface ItemOrden {
   oferta_id: string;
   sku: string;
@@ -47,14 +52,52 @@ export interface ItemOrden {
   tienda_id: string;
   empresa_id: string;
   participacion_porcentaje: number;
+  item_type: 'producto' | 'servicio' | 'alquiler';
+  item_id: string;
+  fulfillment?: Fulfillment;
+  fulfillment_config?: Record<string, unknown>;
 }
 
 export interface OrdenData {
   order_id: string;
-  cliente_id: string;
+  comprador_id: string;
+  cliente_parte_id?: string;
   items: ItemOrden[];
   total_cents: number;
   estado: 'creada';
+  tipo_orden: TipoOrden;
+  fulfillment_config?: Record<string, unknown>;
+  /** 'simulado' (pasarela de prueba) o 'credito' (cuenta por cobrar). */
+  metodo_pago?: 'simulado' | 'credito';
+  /** Comisión calculada con la misma tasa que commissions-service (RN-04). */
+  comision_cents?: number;
+}
+
+export interface AppointmentCreatedData {
+  cita_id: string;
+  empresa_id: string;
+  recurso_id: string;
+  cliente_parte_id?: string;
+  order_id?: string;
+  item_id?: string;
+  inicia_en: string;
+  termina_en: string;
+  estado: 'reservada' | 'confirmada';
+}
+
+export interface AppointmentCancelledData {
+  cita_id: string;
+  empresa_id: string;
+  order_id?: string;
+  motivo?: string;
+}
+
+export interface AppointmentReminderDueData {
+  recordatorio_id: string;
+  cita_id: string;
+  empresa_id: string;
+  tipo: '24h' | '2h';
+  programado_en: string;
 }
 
 export interface StockReservadoData {
@@ -89,6 +132,7 @@ export interface PaymentProcesadoData {
 export interface ShipmentStartedData {
   order_id: string;
   empresa_id: string;
+  parte_id?: string | null;
   guia: string;
   estado: 'en_preparacion';
   proveedor_tipo: 'plataforma' | 'empresa' | null;
@@ -160,6 +204,7 @@ export interface ComprobanteEmitidoData {
   numero: string;
   tipo: 'FACTURA' | 'NOTA_CREDITO';
   orden_id?: string;
+  parte_id?: string | null;
   base_gravada_cents: number;
   iva_cents: number;
   total_cents: number;
@@ -177,9 +222,9 @@ export interface VentaGeolocalizadaData {
   /** SKUs vendidos (uno por item) — permite analisis por producto/zona. */
   skus: string[];
   monto_cents: number;
-  /** Coordenadas GPS completas del punto de venta (modelo Ubicacion del app-test). */
-  lat: number;
-  lng: number;
+  /** Coordenadas GPS del punto de venta (opcionales: la ingesta sin GPS es válida). */
+  lat?: number;
+  lng?: number;
   /** Precision del GPS en metros. */
   precision?: number;
   /** Velocidad en m/s en el momento del registro. */
@@ -289,5 +334,17 @@ export const CONTRATOS: Record<NombreEvento, { editor: string; consumidores: str
   [EVENTOS.STORAGE_OBJETO_ELIMINADO]: {
     editor: 'Almacenamiento',
     consumidores: ['Auditoria'],
+  },
+  [EVENTOS.APPOINTMENT_CREATED]: {
+    editor: 'Scheduling',
+    consumidores: ['Notificaciones'],
+  },
+  [EVENTOS.APPOINTMENT_CANCELLED]: {
+    editor: 'Scheduling',
+    consumidores: ['Notificaciones'],
+  },
+  [EVENTOS.APPOINTMENT_REMINDER_DUE]: {
+    editor: 'Scheduling',
+    consumidores: ['Notificaciones'],
   },
 };
