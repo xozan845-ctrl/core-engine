@@ -1,6 +1,12 @@
 import { Controller, Get, Query, Headers, Post, Body } from '@nestjs/common';
 import { ApiBearerAuth, ApiCreatedResponse, ApiHeader, ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
-import { ForbiddenError, ROLES, UnauthorizedError } from '@core/shared';
+import {
+  CAPACIDADES,
+  ForbiddenError,
+  ROLES,
+  RequiereCapacidades,
+  UnauthorizedError,
+} from '@core/shared';
 import { InteligenciaService } from '../services/inteligencia.service';
 import { FiltrosInteligenciaDto } from '../models/dto/filtros.request.dto';
 import { MapaCalorResponseDto } from '../models/dto/mapa-calor.response.dto';
@@ -17,6 +23,7 @@ import {
 @ApiTags('Inteligencia — Métricas')
 @ApiBearerAuth()
 @Controller('api/v2/inteligencia')
+@RequiereCapacidades(CAPACIDADES.INTELIGENCIA_MERCADO)
 export class MetricasController {
   constructor(private readonly inteligencia: InteligenciaService) {}
 
