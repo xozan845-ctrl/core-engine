@@ -4,10 +4,10 @@ import { execFileSync, spawnSync } from 'node:child_process';
 import { mkdtempSync, mkdirSync, rmSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
-import { SERVICES } from '../config/project.mjs';
+import { SERVICES_NODE } from '../config/project.mjs';
 
 const script = new URL('./release-check.mjs', import.meta.url).pathname;
-const workspaces = ['shared', ...SERVICES];
+const workspaces = ['shared', ...SERVICES_NODE];
 
 function git(cwd, args) {
   return execFileSync('git', args, { cwd, encoding: 'utf8' }).trim();

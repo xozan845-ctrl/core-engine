@@ -1191,6 +1191,741 @@ export const OPENAPI_AGREGADO = {
         ]
       }
     },
+    "/api/v2/catalog/listas-precio": {
+      "get": {
+        "operationId": "PreciosController_listarListas",
+        "parameters": [
+          {
+            "name": "empresa_id",
+            "required": false,
+            "in": "query",
+            "description": "Solo admin global",
+            "schema": {}
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Listas de precio",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
+                  "properties": {
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/ListaPrecioResponseDto"
+                      }
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/MetaRespuesta"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Listar listas de precio de la empresa",
+        "tags": [
+          "Catálogo · Precios"
+        ]
+      },
+      "post": {
+        "operationId": "PreciosController_crearLista",
+        "parameters": [
+          {
+            "name": "empresa_id",
+            "required": false,
+            "in": "query",
+            "description": "Solo admin global",
+            "schema": {}
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CrearListaPrecioRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Lista creada",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/ListaPrecioResponseDto"
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/MetaRespuesta"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Crear una lista de precio o segmento",
+        "tags": [
+          "Catálogo · Precios"
+        ]
+      }
+    },
+    "/api/v2/catalog/listas-precio/{listaId}": {
+      "patch": {
+        "operationId": "PreciosController_actualizarLista",
+        "parameters": [
+          {
+            "name": "listaId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "name": "empresa_id",
+            "required": false,
+            "in": "query",
+            "description": "Solo admin global",
+            "schema": {}
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ActualizarListaPrecioRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Lista actualizada",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/ListaPrecioResponseDto"
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/MetaRespuesta"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Actualizar una lista de precio",
+        "tags": [
+          "Catálogo · Precios"
+        ]
+      }
+    },
+    "/api/v2/catalog/listas-precio/{listaId}/precios": {
+      "get": {
+        "operationId": "PreciosController_listarPrecios",
+        "parameters": [
+          {
+            "name": "listaId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "name": "empresa_id",
+            "required": false,
+            "in": "query",
+            "description": "Solo admin global",
+            "schema": {}
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Precios de la lista",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
+                  "properties": {
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/PrecioItemResponseDto"
+                      }
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/MetaRespuesta"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Listar precios y escalas de una lista",
+        "tags": [
+          "Catálogo · Precios"
+        ]
+      },
+      "post": {
+        "operationId": "PreciosController_crearPrecio",
+        "parameters": [
+          {
+            "name": "listaId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "name": "empresa_id",
+            "required": false,
+            "in": "query",
+            "description": "Solo admin global",
+            "schema": {}
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CrearPrecioListaRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Precio creado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/PrecioItemResponseDto"
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/MetaRespuesta"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Agregar un precio o rango de cantidad a una lista",
+        "tags": [
+          "Catálogo · Precios"
+        ]
+      }
+    },
+    "/api/v2/catalog/listas-precio/{listaId}/precios/{precioId}": {
+      "patch": {
+        "operationId": "PreciosController_actualizarPrecio",
+        "parameters": [
+          {
+            "name": "listaId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "name": "precioId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "name": "empresa_id",
+            "required": false,
+            "in": "query",
+            "description": "Solo admin global",
+            "schema": {}
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ActualizarPrecioRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Precio actualizado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/PrecioItemResponseDto"
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/MetaRespuesta"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Actualizar un precio de la lista",
+        "tags": [
+          "Catálogo · Precios"
+        ]
+      },
+      "delete": {
+        "operationId": "PreciosController_eliminarPrecio",
+        "parameters": [
+          {
+            "name": "listaId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "name": "precioId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "name": "empresa_id",
+            "required": false,
+            "in": "query",
+            "description": "Solo admin global",
+            "schema": {}
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Precio eliminado"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Eliminar un precio de la lista",
+        "tags": [
+          "Catálogo · Precios"
+        ]
+      }
+    },
+    "/api/v2/catalog/items/{id}/escalas": {
+      "get": {
+        "operationId": "PreciosController_listarEscalas",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "name": "empresa_id",
+            "required": false,
+            "in": "query",
+            "description": "Solo admin global",
+            "schema": {}
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Escalas del item",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
+                  "properties": {
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/PrecioItemResponseDto"
+                      }
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/MetaRespuesta"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Listar escalas base de un item (tipo_precio = escala)",
+        "tags": [
+          "Catálogo · Precios"
+        ]
+      },
+      "post": {
+        "operationId": "PreciosController_crearEscala",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "name": "empresa_id",
+            "required": false,
+            "in": "query",
+            "description": "Solo admin global",
+            "schema": {}
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CrearEscalaRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Escala creada",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/PrecioItemResponseDto"
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/MetaRespuesta"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Agregar una escala de cantidad al item",
+        "tags": [
+          "Catálogo · Precios"
+        ]
+      }
+    },
+    "/api/v2/catalog/items/{id}/escalas/{escalaId}": {
+      "patch": {
+        "operationId": "PreciosController_actualizarEscala",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "name": "escalaId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "name": "empresa_id",
+            "required": false,
+            "in": "query",
+            "description": "Solo admin global",
+            "schema": {}
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ActualizarPrecioRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Escala actualizada",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/PrecioItemResponseDto"
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/MetaRespuesta"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Actualizar una escala del item",
+        "tags": [
+          "Catálogo · Precios"
+        ]
+      },
+      "delete": {
+        "operationId": "PreciosController_eliminarEscala",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "name": "escalaId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "name": "empresa_id",
+            "required": false,
+            "in": "query",
+            "description": "Solo admin global",
+            "schema": {}
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Escala eliminada"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Eliminar una escala del item",
+        "tags": [
+          "Catálogo · Precios"
+        ]
+      }
+    },
+    "/api/v2/catalog/items/{id}/precio": {
+      "get": {
+        "operationId": "PreciosController_resolver",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "name": "empresa_id",
+            "required": false,
+            "in": "query",
+            "description": "Solo admin global",
+            "schema": {}
+          },
+          {
+            "name": "segmento",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "example": "mayorista"
+            }
+          },
+          {
+            "name": "lista",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "example": "mayorista"
+            }
+          },
+          {
+            "name": "cantidad",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "example": 1
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Precio resuelto",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/PrecioResueltoResponseDto"
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/MetaRespuesta"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Resolver el precio unitario por cantidad, lista o segmento",
+        "tags": [
+          "Catálogo · Precios"
+        ]
+      }
+    },
     "/api/v2/admin/inventario": {
       "get": {
         "operationId": "InventarioController_listar",
@@ -17143,6 +17878,58 @@ export const OPENAPI_AGREGADO = {
           }
         }
       },
+      "ActualizarListaPrecioRequestDto": {
+        "type": "object",
+        "properties": {
+          "codigo": {
+            "type": "string",
+            "description": "Codigo estable de la lista",
+            "example": "mayorista"
+          },
+          "nombre": {
+            "type": "string",
+            "example": "Mayorista"
+          },
+          "descripcion": {
+            "type": "string"
+          },
+          "moneda": {
+            "type": "string",
+            "default": "NIO",
+            "example": "NIO"
+          },
+          "segmento_codigo": {
+            "type": "string",
+            "description": "Segmento al que aplica la lista",
+            "example": "mayorista"
+          },
+          "predeterminada": {
+            "type": "boolean",
+            "default": false
+          },
+          "activo": {
+            "type": "boolean"
+          }
+        }
+      },
+      "ActualizarPrecioRequestDto": {
+        "type": "object",
+        "properties": {
+          "desde_cantidad": {
+            "type": "number",
+            "minimum": 1
+          },
+          "hasta_cantidad": {
+            "type": "object",
+            "nullable": true,
+            "minimum": 1
+          },
+          "precio_cents": {
+            "type": "number",
+            "minimum": 0
+          }
+        }
+      },
       "ActualizarPromocionRequestDto": {
         "type": "object",
         "properties": {
@@ -17643,6 +18430,28 @@ export const OPENAPI_AGREGADO = {
           "cantidad"
         ]
       },
+      "CrearEscalaRequestDto": {
+        "type": "object",
+        "properties": {
+          "desde_cantidad": {
+            "type": "number",
+            "minimum": 1,
+            "default": 1
+          },
+          "hasta_cantidad": {
+            "type": "object",
+            "nullable": true,
+            "minimum": 1
+          },
+          "precio_cents": {
+            "type": "number",
+            "minimum": 0
+          }
+        },
+        "required": [
+          "precio_cents"
+        ]
+      },
       "CrearItemRequestDto": {
         "type": "object",
         "properties": {
@@ -17780,6 +18589,41 @@ export const OPENAPI_AGREGADO = {
           "precio"
         ]
       },
+      "CrearListaPrecioRequestDto": {
+        "type": "object",
+        "properties": {
+          "codigo": {
+            "type": "string",
+            "description": "Codigo estable de la lista",
+            "example": "mayorista"
+          },
+          "nombre": {
+            "type": "string",
+            "example": "Mayorista"
+          },
+          "descripcion": {
+            "type": "string"
+          },
+          "moneda": {
+            "type": "string",
+            "default": "NIO",
+            "example": "NIO"
+          },
+          "segmento_codigo": {
+            "type": "string",
+            "description": "Segmento al que aplica la lista",
+            "example": "mayorista"
+          },
+          "predeterminada": {
+            "type": "boolean",
+            "default": false
+          }
+        },
+        "required": [
+          "codigo",
+          "nombre"
+        ]
+      },
       "CrearLoteInventarioRequestDto": {
         "type": "object",
         "properties": {
@@ -17848,6 +18692,33 @@ export const OPENAPI_AGREGADO = {
         "required": [
           "tipo",
           "lineas"
+        ]
+      },
+      "CrearPrecioListaRequestDto": {
+        "type": "object",
+        "properties": {
+          "item_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "desde_cantidad": {
+            "type": "number",
+            "minimum": 1,
+            "default": 1
+          },
+          "hasta_cantidad": {
+            "type": "object",
+            "nullable": true,
+            "minimum": 1
+          },
+          "precio_cents": {
+            "type": "number",
+            "minimum": 0
+          }
+        },
+        "required": [
+          "item_id",
+          "precio_cents"
         ]
       },
       "CrearPromocionRequestDto": {
@@ -18518,6 +19389,85 @@ export const OPENAPI_AGREGADO = {
           "valor_total_cents"
         ]
       },
+      "ListaPrecioResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "empresa_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "codigo": {
+            "type": "string"
+          },
+          "nombre": {
+            "type": "string"
+          },
+          "descripcion": {
+            "type": "string"
+          },
+          "moneda": {
+            "type": "string"
+          },
+          "segmento_codigo": {
+            "type": "string"
+          },
+          "predeterminada": {
+            "type": "boolean"
+          },
+          "activo": {
+            "type": "boolean"
+          },
+          "creado_en": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "actualizado_en": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "empresa_id",
+          "codigo",
+          "nombre",
+          "descripcion",
+          "moneda",
+          "segmento_codigo",
+          "predeterminada",
+          "activo",
+          "creado_en",
+          "actualizado_en"
+        ]
+      },
+      "ListaPrecioResumenResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "codigo": {
+            "type": "string"
+          },
+          "nombre": {
+            "type": "string"
+          },
+          "segmento_codigo": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "codigo",
+          "nombre",
+          "segmento_codigo"
+        ]
+      },
       "LoteInventarioResponseDto": {
         "type": "object",
         "properties": {
@@ -18786,6 +19736,110 @@ export const OPENAPI_AGREGADO = {
           "pagina",
           "limite",
           "paginas"
+        ]
+      },
+      "PrecioItemResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "empresa_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "lista_id": {
+            "type": "object",
+            "format": "uuid",
+            "nullable": true
+          },
+          "item_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "desde_cantidad": {
+            "type": "number"
+          },
+          "hasta_cantidad": {
+            "type": "object",
+            "nullable": true
+          },
+          "precio_cents": {
+            "type": "number"
+          },
+          "creado_en": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "actualizado_en": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "empresa_id",
+          "lista_id",
+          "item_id",
+          "desde_cantidad",
+          "hasta_cantidad",
+          "precio_cents",
+          "creado_en",
+          "actualizado_en"
+        ]
+      },
+      "PrecioResueltoResponseDto": {
+        "type": "object",
+        "properties": {
+          "item_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "cantidad": {
+            "type": "number"
+          },
+          "lista": {
+            "nullable": true,
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/ListaPrecioResumenResponseDto"
+              }
+            ]
+          },
+          "origen": {
+            "type": "string",
+            "enum": [
+              "lista",
+              "escala",
+              "base"
+            ]
+          },
+          "escala": {
+            "nullable": true,
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/PrecioItemResponseDto"
+              }
+            ]
+          },
+          "precio_unitario_cents": {
+            "type": "number"
+          },
+          "precio_total_cents": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "item_id",
+          "cantidad",
+          "lista",
+          "origen",
+          "escala",
+          "precio_unitario_cents",
+          "precio_total_cents"
         ]
       },
       "ProductoResponseDto": {
