@@ -151,3 +151,16 @@ permanece en borrador hasta cumplir la verificación de paridad.
   cobertura Rust en verde en CI.
 - `develop` no recibe la migración hasta que el PR 8 tenga paridad + smoke de
   `staging` y los checks verdes en su cabeza (R-PR-6).
+
+## Estado de implementación (2026-11-12)
+
+- PR 0 (ADR) y PR 2-5 mergeados en `feat/scheduling-rust`: andamiaje + gate CI,
+  recursos/disponibilidad/bloqueos, citas/recordatorios/Outbox y
+  RabbitMQ/consumidor/worker.
+- Cobertura Rust medida con `cargo-llvm-cov` sobre PostgreSQL efímero:
+  **72,86 % líneas / 66,82 % funciones** (sin `main.rs`), gate 71/65 con
+  ratchet +5 por release hasta 94/77/88 (R-COV-1, enmienda registrada en
+  `docs/rules/test/06-estandares-cobertura.md`).
+- Imagen Rust verificada localmente (build + `/health` con PostgreSQL y
+  RabbitMQ reales); la conmutación del Dockerfile/CI y el retiro del TS
+  quedan para el PR 7.
