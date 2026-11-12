@@ -31123,6 +31123,16 @@ export const OPENAPI_AGREGADO = {
               "credito"
             ],
             "default": "simulado"
+          },
+          "lista_precio_codigo": {
+            "type": "string",
+            "description": "Lista de precios por codigo (sustituye el precio base del item)",
+            "example": "mayorista"
+          },
+          "segmento_codigo": {
+            "type": "string",
+            "description": "Segmento de precio; se resuelve a su lista activa",
+            "example": "mayorista"
           }
         },
         "required": [
