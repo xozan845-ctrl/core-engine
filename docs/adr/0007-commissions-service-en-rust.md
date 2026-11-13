@@ -1,7 +1,7 @@
 # ADR-0007: Reescritura de `commissions-service` en Rust sin cambio de contrato
 
 - **Fecha**: 2026-11-12
-- **Estado**: Aceptado — implementación en curso sobre `feat/commissions-rust`; pendiente el smoke de `staging`
+- **Estado**: Aceptado — implementación completa sobre `feat/commissions-rust`; pendiente el smoke de `staging` antes del merge a `develop`
 - **Ámbito**: `commissions-service` (HTTP público, PostgreSQL, RabbitMQ, Outbox, worker quincenal, métricas)
 - **Referencias**: [ADR-0004](./0004-scheduling-service-en-rust.md), [ADR-0006](./0006-notifications-service-en-rust.md), [ADR-37](../decisiones.md)
 
@@ -176,10 +176,17 @@ permanece en borrador hasta cumplir la verificación de paridad.
 |---|---|---|
 | #585 | MERGED | ADR-0007 (este documento) |
 | #589 | MERGED | Crate Rust con paridad + job `rust` y gate de cobertura (R-CI-1/R-COV-1) |
-| #— | EN CURSO | Conmutación: retirar TypeScript, mover el crate a la raíz, Docker/compose/scripts y saga |
+| #598 | MERGED | Conmutación: TypeScript retirado, crate en la raíz, Docker/compose/scripts y saga |
+| #— | ABIERTO | PR final `feat/commissions-rust → develop` (borrador hasta el smoke de `staging`) |
 
 - Cobertura Rust medida con PostgreSQL efímero: **73,29 % líneas / 69,70 %
   funciones** (sin `main.rs`); gate 72/68 con ratchet +5 por release hasta
   94/77/88 (R-COV-1).
+- `cargo fmt --check`, `cargo clippy --locked --all-targets -- -D warnings`,
+  `cargo test --locked` (77 unit + 6 integración PostgreSQL), `npm test`,
+  `npm run build` y la integración API+BD quedaron verdes en la cabeza de #598.
 - Pendiente: `npm run demo`, `smoke-remote` de `staging` y el PR final a
-  `develop` (borrador hasta cumplir el gate).
+  `develop` (borrador hasta cumplir el gate). El run `workflow_dispatch` sobre
+  `feat/commissions-rust` reporta `baseline:guard` en rojo por comparar contra
+  `origin/main` desde una base anterior a la migración 65; el PR final usa la
+  cabeza de `develop`, que ya la incluye.
