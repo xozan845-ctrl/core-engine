@@ -16,9 +16,7 @@ export const COVERAGE_THRESHOLDS = {
   shared: { lines: 39, branches: 39, functions: 55 },
   'api-gateway': { lines: 50, branches: 51, functions: 57 },
   'catalog-service': { lines: 93, branches: 82, functions: 90 },
-  'finance-service': { lines: 70, branches: 52, functions: 72 },
   'identity-service': { lines: 89, branches: 78, functions: 85 },
-  'orders-service': { lines: 32, branches: 23, functions: 33 },
 };
 
 /**
