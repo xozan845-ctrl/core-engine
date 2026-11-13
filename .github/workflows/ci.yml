@@ -190,6 +190,10 @@ jobs:
             dir: packages/api-gateway
             lines: 78
             functions: 73
+          - service: identity-service
+            dir: packages/identity-service/rust
+            lines: 83
+            functions: 74
     env:
       TZ: America/Managua
       TEST_DATABASE_URL: postgres://core_engine_test:test_only@127.0.0.1:5432/core_engine_test
