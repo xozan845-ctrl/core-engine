@@ -1,4 +1,5 @@
 import { Injectable, Optional } from '@nestjs/common';
+import { randomUUID } from 'crypto';
 import {
   ConflictError,
   DomainError,
@@ -17,6 +18,11 @@ const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const SKU = /^[A-Z0-9-]{2,32}$/;
 const MAX_IMPORTACION = 200;
 const MAX_LINEAS = 200;
+
+function esViolacionUnicidad(error: unknown): boolean {
+  const codigo = (error as { code?: unknown })?.code;
+  return codigo === '23505' || codigo === '23P01';
+}
 
 export interface ConfiguracionInventario {
   empresa_id: string;
@@ -204,6 +210,7 @@ interface ItemResuelto {
   nombre: string;
   costo_cents: number;
   stock: number;
+  es_combo: boolean;
 }
 
 /**
@@ -351,27 +358,51 @@ export class OperacionesService {
   ): Promise<Pagina<Combo>> {
     const { pagina, limite } = parsearPaginacion(filtros as Record<string, unknown>);
     const params: unknown[] = [empresaId];
-    const condiciones: string[] = ['empresa_id = $1', 'eliminado_en IS NULL'];
+    const condiciones: string[] = [
+      'i.empresa_id = $1',
+      "i.tipo = 'producto'",
+      'i.es_combo',
+      'i.eliminado_en IS NULL',
+    ];
     if (filtros.q) {
       params.push(`%${String(filtros.q).toLowerCase()}%`);
       condiciones.push(
-        `(LOWER(nombre) LIKE $${params.length} OR LOWER(sku) LIKE $${params.length}
-          OR LOWER(codigo_barras) LIKE $${params.length})`,
+        `(LOWER(i.nombre) LIKE $${params.length} OR LOWER(i.codigo) LIKE $${params.length}
+          OR LOWER(i.codigo_barras) LIKE $${params.length})`,
       );
     }
     if (filtros.estado) {
       params.push(String(filtros.estado));
-      condiciones.push(`estado = $${params.length}`);
+      condiciones.push(`i.estado = $${params.length}`);
     }
     const where = `WHERE ${condiciones.join(' AND ')}`;
     const total = await this.pg
-      .queryOne<{ n: number }>(`SELECT COUNT(*)::int AS n FROM catalog.combos ${where}`, params)
+      .queryOne<{ n: number }>(`SELECT COUNT(*)::int AS n FROM catalog.items i ${where}`, params)
       .then((r) => r?.n ?? 0);
     const filas = await this.pg.query<ComboRow>(
-      `SELECT id, empresa_id, sku, nombre, descripcion, codigo_barras, precio_cents,
-              estado, componentes, creado_en, actualizado_en
-         FROM catalog.combos ${where}
-        ORDER BY creado_en DESC LIMIT $${params.length + 1} OFFSET $${params.length + 2}`,
+      `SELECT i.id, i.empresa_id, i.codigo AS sku, i.nombre, i.descripcion,
+              i.codigo_barras, i.precio_cents, i.estado,
+              COALESCE(
+                jsonb_agg(
+                  jsonb_build_object(
+                    'item_id', ci.id,
+                    'sku', ci.codigo,
+                    'nombre', ci.nombre,
+                    'cantidad', ic.cantidad
+                  )
+                  ORDER BY ci.nombre
+                ) FILTER (WHERE ic.id IS NOT NULL),
+                '[]'::jsonb
+              ) AS componentes,
+              i.creado_en, i.actualizado_en
+         FROM catalog.items i
+         LEFT JOIN catalog.item_componentes ic ON ic.item_id = i.id
+         LEFT JOIN catalog.items ci
+           ON ci.id = ic.componente_item_id AND ci.eliminado_en IS NULL
+        ${where}
+        GROUP BY i.id
+        ORDER BY i.creado_en DESC
+        LIMIT $${params.length + 1} OFFSET $${params.length + 2}`,
       [...params, limite, (pagina - 1) * limite],
     );
     return crearPagina(await this.hidratarCombos(filas), total, { pagina, limite });
@@ -380,10 +411,28 @@ export class OperacionesService {
   async obtenerCombo(id: string, empresaId: string): Promise<Combo | null> {
     if (!UUID.test(id)) return null;
     const fila = await this.pg.queryOne<ComboRow>(
-      `SELECT id, empresa_id, sku, nombre, descripcion, codigo_barras, precio_cents,
-              estado, componentes, creado_en, actualizado_en
-         FROM catalog.combos
-        WHERE id = $1 AND empresa_id = $2 AND eliminado_en IS NULL`,
+      `SELECT i.id, i.empresa_id, i.codigo AS sku, i.nombre, i.descripcion,
+              i.codigo_barras, i.precio_cents, i.estado,
+              COALESCE(
+                jsonb_agg(
+                  jsonb_build_object(
+                    'item_id', ci.id,
+                    'sku', ci.codigo,
+                    'nombre', ci.nombre,
+                    'cantidad', ic.cantidad
+                  )
+                  ORDER BY ci.nombre
+                ) FILTER (WHERE ic.id IS NOT NULL),
+                '[]'::jsonb
+              ) AS componentes,
+              i.creado_en, i.actualizado_en
+         FROM catalog.items i
+         LEFT JOIN catalog.item_componentes ic ON ic.item_id = i.id
+         LEFT JOIN catalog.items ci
+           ON ci.id = ic.componente_item_id AND ci.eliminado_en IS NULL
+        WHERE i.id = $1 AND i.empresa_id = $2
+          AND i.tipo = 'producto' AND i.es_combo AND i.eliminado_en IS NULL
+        GROUP BY i.id`,
       [id, empresaId],
     );
     if (!fila) return null;
@@ -397,30 +446,43 @@ export class OperacionesService {
     const componentes = await this.resolverComponentes(empresaId, datos.componentes);
     const codigoBarras = (datos.codigo_barras ?? '').trim();
     await this.validarComboUnico(empresaId, sku, codigoBarras);
-    const fila = await this.pg.queryOne<ComboRow>(
-      `INSERT INTO catalog.combos
-         (empresa_id, sku, nombre, descripcion, codigo_barras, precio_cents, estado, componentes)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8::jsonb)
-       RETURNING id, empresa_id, sku, nombre, descripcion, codigo_barras, precio_cents,
-                 estado, componentes, creado_en, actualizado_en`,
-      [
-        empresaId,
-        sku,
-        nombre,
-        (datos.descripcion ?? '').trim(),
-        codigoBarras,
-        precio.centavos,
-        datos.estado === 'inactivo' ? 'inactivo' : 'activo',
-        JSON.stringify(componentes.map((c) => ({
-          item_id: c.item_id,
-          sku: c.sku,
-          nombre: c.nombre,
-          cantidad: c.cantidad,
-        }))),
-      ],
-    );
-    if (!fila) throw new DomainError('COMBO_NO_CREADO', 'No se pudo crear el combo.');
-    return (await this.hidratarCombos([fila]))[0];
+    const id = randomUUID();
+    try {
+      await this.pg.transaccion(async (client) => {
+        await client.query(
+          `INSERT INTO catalog.items
+             (id, empresa_id, tipo, codigo, nombre, descripcion, categoria,
+              precio_cents, costo_cents, track_inventory, stock, atributos, estado,
+              codigo_barras, es_combo)
+           VALUES ($1, $2, 'producto', $3, $4, $5, 'combo', $6, 0, false, NULL,
+                   '{}'::jsonb, $7, $8, true)`,
+          [
+            id,
+            empresaId,
+            sku,
+            nombre,
+            (datos.descripcion ?? '').trim(),
+            precio.centavos,
+            datos.estado === 'inactivo' ? 'inactivo' : 'activo',
+            codigoBarras,
+          ],
+        );
+        for (const componente of componentes) {
+          await client.query(
+            `INSERT INTO catalog.item_componentes
+               (empresa_id, item_id, componente_item_id, cantidad)
+             VALUES ($1, $2, $3, $4)`,
+            [empresaId, id, componente.item_id, componente.cantidad],
+          );
+        }
+      });
+    } catch (error) {
+      if (esViolacionUnicidad(error)) {
+        throw new ConflictError(`Ya existe un item con el SKU ${sku}.`);
+      }
+      throw error;
+    }
+    return (await this.obtenerCombo(id, empresaId)) as Combo;
   }
 
   async actualizarCombo(id: string, empresaId: string, datos: Partial<ComboInput>): Promise<Combo> {
@@ -440,37 +502,55 @@ export class OperacionesService {
     if (codigoBarras !== actual.codigo_barras) {
       await this.validarComboUnico(empresaId, actual.sku, codigoBarras, id);
     }
-    const fila = await this.pg.queryOne<ComboRow>(
-      `UPDATE catalog.combos SET
-         nombre = $3, descripcion = $4, codigo_barras = $5,
-         precio_cents = $6, estado = $7, componentes = $8::jsonb, actualizado_en = NOW()
-       WHERE id = $1 AND empresa_id = $2 AND eliminado_en IS NULL
-       RETURNING id, empresa_id, sku, nombre, descripcion, codigo_barras, precio_cents,
-                 estado, componentes, creado_en, actualizado_en`,
-      [
-        id,
-        empresaId,
-        datos.nombre === undefined ? actual.nombre : this.validarNombre(datos.nombre),
-        datos.descripcion === undefined ? actual.descripcion : datos.descripcion.trim(),
-        codigoBarras,
-        datos.precio === undefined ? Money.parsear(actual.precio).centavos : Money.parsear(datos.precio).centavos,
-        datos.estado ?? actual.estado,
-        JSON.stringify(resueltos.map((c) => ({
-          item_id: c.item_id,
-          sku: c.sku,
-          nombre: c.nombre,
-          cantidad: c.cantidad,
-        }))),
-      ],
-    );
-    if (!fila) throw new NotFoundError('Combo', id);
-    return (await this.hidratarCombos([fila]))[0];
+    try {
+      await this.pg.transaccion(async (client) => {
+        const actualizado = await client.query(
+          `UPDATE catalog.items
+              SET nombre = $3, descripcion = $4, codigo_barras = $5,
+                  precio_cents = $6, estado = $7, actualizado_en = NOW()
+            WHERE id = $1 AND empresa_id = $2
+              AND tipo = 'producto' AND es_combo AND eliminado_en IS NULL`,
+          [
+            id,
+            empresaId,
+            datos.nombre === undefined ? actual.nombre : this.validarNombre(datos.nombre),
+            datos.descripcion === undefined ? actual.descripcion : datos.descripcion.trim(),
+            codigoBarras,
+            datos.precio === undefined
+              ? Money.parsear(actual.precio).centavos
+              : Money.parsear(datos.precio).centavos,
+            datos.estado ?? actual.estado,
+          ],
+        );
+        if (actualizado.rowCount === 0) throw new NotFoundError('Combo', id);
+        await client.query(
+          `DELETE FROM catalog.item_componentes WHERE item_id = $1 AND empresa_id = $2`,
+          [id, empresaId],
+        );
+        for (const componente of resueltos) {
+          await client.query(
+            `INSERT INTO catalog.item_componentes
+               (empresa_id, item_id, componente_item_id, cantidad)
+             VALUES ($1, $2, $3, $4)`,
+            [empresaId, id, componente.item_id, componente.cantidad],
+          );
+        }
+      });
+    } catch (error) {
+      if (esViolacionUnicidad(error)) {
+        throw new ConflictError(`El código de barras ${codigoBarras} ya está registrado.`);
+      }
+      throw error;
+    }
+    return (await this.obtenerCombo(id, empresaId)) as Combo;
   }
 
   async eliminarCombo(id: string, empresaId: string): Promise<void> {
     const fila = await this.pg.queryOne<{ id: string }>(
-      `UPDATE catalog.combos SET eliminado_en = NOW(), actualizado_en = NOW()
-        WHERE id = $1 AND empresa_id = $2 AND eliminado_en IS NULL RETURNING id`,
+      `UPDATE catalog.items SET eliminado_en = NOW(), actualizado_en = NOW()
+        WHERE id = $1 AND empresa_id = $2
+          AND tipo = 'producto' AND es_combo AND eliminado_en IS NULL
+        RETURNING id`,
       [id, empresaId],
     );
     if (!fila) throw new NotFoundError('Combo', id);
@@ -848,6 +928,12 @@ export class OperacionesService {
         throw new DomainError('CANTIDAD_INVALIDA', 'La cantidad del componente debe ser un entero positivo.');
       }
       const item = await this.buscarItem(empresaId, componente.item_id, componente.sku);
+      if (item.es_combo) {
+        throw new DomainError(
+          'COMPONENTE_INVALIDO',
+          'Un combo no puede incluir otro combo; usa sus productos base.',
+        );
+      }
       if (vistos.has(item.id)) {
         throw new DomainError('COMPONENTE_DUPLICADO', 'Un producto no puede repetirse en el combo.');
       }
@@ -869,21 +955,19 @@ export class OperacionesService {
     excluirId?: string,
   ): Promise<void> {
     const combo = await this.pg.queryOne(
-      `SELECT 1 FROM catalog.combos
-        WHERE empresa_id = $1 AND upper(sku) = $2 AND eliminado_en IS NULL
+      `SELECT 1 FROM catalog.items
+        WHERE empresa_id = $1 AND tipo = 'producto'
+          AND upper(codigo) = upper($2) AND eliminado_en IS NULL
           ${excluirId ? 'AND id <> $3' : ''}`,
       excluirId ? [empresaId, sku, excluirId] : [empresaId, sku],
     );
-    if (combo) throw new ConflictError(`Ya existe un combo con el SKU ${sku}.`);
+    if (combo) throw new ConflictError(`Ya existe un item con el SKU ${sku}.`);
     if (!codigoBarras) return;
     const barcode = await this.pg.queryOne(
-      `SELECT 1 FROM (
-         SELECT codigo_barras FROM catalog.items
-          WHERE empresa_id = $1 AND codigo_barras = $2 AND eliminado_en IS NULL
-         UNION ALL
-         SELECT codigo_barras FROM catalog.combos WHERE empresa_id = $1 AND codigo_barras = $2
-           AND eliminado_en IS NULL ${excluirId ? 'AND id <> $3' : ''}
-       ) t LIMIT 1`,
+      `SELECT 1 FROM catalog.items
+        WHERE empresa_id = $1 AND codigo_barras = $2 AND eliminado_en IS NULL
+          ${excluirId ? 'AND id <> $3' : ''}
+        LIMIT 1`,
       excluirId ? [empresaId, codigoBarras, excluirId] : [empresaId, codigoBarras],
     );
     if (barcode) throw new ConflictError(`El código de barras ${codigoBarras} ya está registrado.`);
@@ -969,13 +1053,15 @@ export class OperacionesService {
   ): Promise<ItemResuelto> {
     const fila = itemId
       ? await this.pg.queryOne<ItemResuelto>(
-          `SELECT id, codigo AS sku, nombre, costo_cents, stock FROM catalog.items
+          `SELECT id, codigo AS sku, nombre, costo_cents, stock, es_combo
+             FROM catalog.items
             WHERE empresa_id = $1 AND tipo = 'producto' AND id = $2
               AND eliminado_en IS NULL`,
           [empresaId, itemId],
         )
       : await this.pg.queryOne<ItemResuelto>(
-          `SELECT id, codigo AS sku, nombre, costo_cents, stock FROM catalog.items
+          `SELECT id, codigo AS sku, nombre, costo_cents, stock, es_combo
+             FROM catalog.items
             WHERE empresa_id = $1 AND tipo = 'producto'
               AND upper(codigo) = upper($2) AND eliminado_en IS NULL`,
           [empresaId, sku],

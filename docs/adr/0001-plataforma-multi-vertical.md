@@ -129,6 +129,9 @@ Se introduce la abstracción `item` con `tipo` igual a `producto`, `servicio` o
   conserva el total. La primera ubicación absorbe el stock existente, las
   transferencias mueven cantidades sin cambiar el total y un trigger distribuye
   los cambios directos de stock a la ubicación predeterminada.
+- `catalog.combos` quedó retirado: un combo es un item con `es_combo = true`
+  y componentes en `catalog.item_componentes`. La API de combos se conserva como
+  adaptador para no romper clientes;
 - `catalog.items.track_serial` y `catalog.item_series` identifican cada unidad
   física (serial/IMEI). La venta marca la unidad como vendida y calcula la
   garantía con `garantia_meses`; la devolución la marca como devuelta y la
