@@ -1,7 +1,7 @@
 # ADR-0017: Reescritura de `identity-service` en Rust sin cambio de contrato
 
 - **Fecha**: 2026-11-13
-- **Estado**: Aceptado — implementación en curso (PR 1: andamiaje Rust)
+- **Estado**: Aceptado — implementación en curso (PR 1-2: andamiaje y auth)
 - **Ámbito**: `identity-service` (HTTP público e interno, PostgreSQL/RLS,
   JWT HS256, sesiones, usuarios, empresas, personales, packs, extensiones,
   partes, registros, API keys, correo de restablecimiento, seed y métricas)
@@ -146,11 +146,17 @@ Actualmente usa `EMAIL_PROVIDER` de `@core/shared` (SMTP/Mailpit).
 ## Estado de implementación (2026-11-13)
 
 - PR 1 completo: crate `packages/identity-service/rust/` con configuración
-  fail-fast (JWT, TTL, admin y storage), JWT HS256 de access/refresh con `jti`,
-  bcrypt coste 10, contexto `x-user-*`, PostgreSQL con claims de RLS, errores
-  `{codigo, mensaje, detalles?}`, envelope, logs JSON, métricas Prometheus,
-  `/health`, `/metrics`, `/docs` y `/docs-json`.
-- 36 pruebas unitarias; cobertura medida 85,24 % líneas / 74,88 % funciones
-  (gate 84/73 en CI).
+  fail-fast (JWT, TTL, admin, SMTP y storage), JWT HS256 de access/refresh con
+  `jti`, bcrypt coste 10, contexto `x-user-*`, PostgreSQL con claims de RLS,
+  errores `{codigo, mensaje, detalles?}`, envelope, logs JSON, métricas
+  Prometheus, `/health`, `/metrics`, `/docs` y `/docs-json`.
+- PR 2 completo: registro, login, refresh, logout, `/auth/me`, alta
+  administrativa, cambio y restablecimiento de contraseña, vinculación de
+  personal y revocación de sesiones. Incluye el puerto `Email` con modo `log`
+  y SMTP (`lettre`).
+- 64 pruebas (52 unitarias + 6 PostgreSQL de auth/sesiones + 6 HTTP del
+  contrato); cobertura medida 81,40 % líneas / 76,36 % funciones (gate 80/75 en
+  CI). Las integraciones aplican las migraciones reales de `infra/db/init` en
+  orden, no un dump paralelo.
 - El TypeScript sigue siendo el runtime activo y el servicio permanece fuera de
   `RUST_SERVICES` hasta el PR 9.
