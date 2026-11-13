@@ -235,11 +235,10 @@ services:
 
   market-intelligence-service:
     <<: *servicio-base
+    # ADR-0009: el servicio es Rust y tiene su propio Dockerfile multi-stage.
     build:
       context: .
-      dockerfile: Dockerfile
-      args:
-        SERVICIO: market-intelligence-service
+      dockerfile: packages/market-intelligence-service/Dockerfile
     environment:
       SERVICIO: market-intelligence-service
       PORT: 3009

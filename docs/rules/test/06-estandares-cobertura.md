@@ -20,13 +20,13 @@ Todo PR debe incluir las capas marcadas con ✅ para el tipo de cambio tocado.
 > `/api/v2` y G-6 es gate de release. La fila "Flujo de usuario nuevo" aplica
 > cuando exista UI en el repo (hoy no la hay).
 
-## Cobertura de los servicios Rust (migraciones ADR-0004, ADR-0006, ADR-0007, ADR-0008 y ADR-0010)
+## Cobertura de los servicios Rust (migraciones ADR-0004, ADR-0006, ADR-0007, ADR-0008, ADR-0009 y ADR-0010)
 
 `packages/scheduling-service`, `packages/notifications-service`,
-`packages/commissions-service`, `packages/field-service` y
-`packages/logistics-service` se miden con `cargo-llvm-cov` en el job `rust` de
-CI (matriz por servicio), con PostgreSQL efímero para ejecutar también las
-pruebas de integración:
+`packages/commissions-service`, `packages/field-service`,
+`packages/market-intelligence-service` y `packages/logistics-service` se miden
+con `cargo-llvm-cov` en el job `rust` de CI (matriz por servicio), con
+PostgreSQL/PostGIS efímero para ejecutar también las pruebas de integración:
 
 ```bash
 # scheduling-service
@@ -48,6 +48,10 @@ cargo llvm-cov --locked --ignore-filename-regex 'src/main\.rs' \
 # logistics-service
 cargo llvm-cov --locked --ignore-filename-regex 'src/main\.rs' \
   --fail-under-lines 63 --fail-under-functions 62
+
+# market-intelligence-service
+cargo llvm-cov --locked --ignore-filename-regex 'src/main\.rs' \
+  --fail-under-lines 63 --fail-under-functions 60
 ```
 
 - **Alcance** (equivalente a R-COV-4): todo `src/**`, excluyendo `main.rs`
@@ -58,18 +62,19 @@ cargo llvm-cov --locked --ignore-filename-regex 'src/main\.rs' \
   funciones (2026-11-12); `commissions-service` 73,29 % líneas y 69,70 %
   funciones con PostgreSQL efímero; `field-service` 78,52 % líneas y 72,38 %
   funciones (2026-11-13, suites PostgreSQL y HTTP); `logistics-service`
-  64,57 % líneas y 63,42 % funciones con integración PostgreSQL (2026-11-13).
-  Los gates arrancan en 71/65, 74/74, 72/68, 77/71 y 63/62 (redondeo a la baja
-  con el margen de 1 punto) y suben +5 por release hasta el objetivo histórico
-  94/77/88 de R-COV-1.
+  64,57 % líneas y 63,42 % funciones; `market-intelligence-service`
+  64,41 % líneas y 61,82 % funciones con PostgreSQL/PostGIS (2026-11-13).
+  Los gates arrancan en 71/65, 74/74, 72/68, 77/71, 63/62 y 63/60 (redondeo a
+  la baja con el margen de 1 punto) y suben +5 por release hasta el objetivo
+  histórico 94/77/88 de R-COV-1.
 - Mientras dure cada migración conviven el gate Vitest del TS (retirado en el
   PR de conmutación) y este gate Rust; los ADR fijan el orden.
 - `rabbit.rs` y, en `notifications-service`, `consumidor.rs`/`db.rs`, y en
   `commissions-service` `outbox.rs`/el worker tienen baja cobertura unitaria
   porque requieren broker, base de datos o tiempo real; en `field-service` los
-  handlers HTTP dependen de PostgreSQL y se cubren con `tests/http_field.rs`, y
-  `logistics-service` cubre sus guías en `tests/envios_pg.rs`. La integración
-  con PostgreSQL y RabbitMQ se valida en el job `rust` y en el
+  handlers HTTP dependen de PostgreSQL (`tests/http_field.rs`), `logistics`
+  cubre guías (`tests/envios_pg.rs`) y `market-intelligence` analítica
+  (`tests/`). La integración se valida en el job `rust` y en el
   smoke de `staging` (R-PR-8). Subir esa cobertura es deuda registrada para la
   siguiente auditoría (R-COV-3).
 
@@ -83,7 +88,7 @@ cargo llvm-cov --locked --ignore-filename-regex 'src/main\.rs' \
 
 - Cobertura medida con `npm test` (que corre cada workspace con `--coverage`; es lo que ejecuta el job `test` de CI); los números se registran en `AUDIT.md` en cada auditoría (R-COV-3).
 - Además de los thresholds por workspace, el job `test` ejecuta `npm run coverage:compare` contra el baseline versionado; cualquier métrica que baje falla el job (R-COV-1).
-- El gate mecánico es `scripts/config/coverage.mjs` (fuente única de los porcentajes), consumido por los `thresholds` de cada `packages/*/vitest.config.ts`: **11 workspaces con suite**, todos con baseline medido redondeado a la baja (método de la línea de abajo) y subida +5 por release hasta la tabla:
+- El gate mecánico es `scripts/config/coverage.mjs` (fuente única de los porcentajes), consumido por los `thresholds` de cada `packages/*/vitest.config.ts`: **8 workspaces con suite**, todos con baseline medido redondeado a la baja (método de la línea de abajo) y subida +5 por release hasta la tabla:
 
   | Workspace | Líneas | Ramas | Funciones |
   |---|---|---|---|
@@ -94,10 +99,9 @@ cargo llvm-cov --locked --ignore-filename-regex 'src/main\.rs' \
   | `catalog-service` | 93 | 82 | 90 |
   | `identity-service` | 89 | 78 | 85 |
   | `stores-service` | 86 | 84 | 76 |
-  | `market-intelligence-service` | 18 | 11 | 35 |
   | `storage-service` | 99 | 86 | 99 |
 
-  **Enmienda (migración Jest → Vitest, 2026-10-14)**: el runner pasó de Jest/ts-jest a **Vitest 4** (config por workspace en `vitest.config.ts`, ver ADR-20). La cobertura se recalibró al nuevo baseline porque el proveedor de cobertura cambió y ahora instrumenta **todos** los ficheros del alcance (como hacía `collectCoverageFrom` en Jest), no solo los importados; verificado con el provider `istanbul` (mismos números). El ratchet sigue **solo sube** (nunca baja). `scheduling-service` salió del runner Vitest al migrar a Rust (ADR-0004), `notifications-service` hizo lo mismo (ADR-0006), `commissions-service` también (ADR-0007), `field-service` (ADR-0008) y `logistics-service` (ADR-0010): su gate es el de la sección anterior (`cargo-llvm-cov`), no un workspace npm.
+  **Enmienda (migración Jest → Vitest, 2026-10-14)**: el runner pasó de Jest/ts-jest a **Vitest 4** (config por workspace en `vitest.config.ts`, ver ADR-20). La cobertura se recalibró al nuevo baseline porque el proveedor de cobertura cambió y ahora instrumenta **todos** los ficheros del alcance (como hacía `collectCoverageFrom` en Jest), no solo los importados; verificado con el provider `istanbul` (mismos números). El ratchet sigue **solo sube** (nunca baja). `scheduling-service` salió del runner Vitest al migrar a Rust (ADR-0004), `notifications-service` (ADR-0006), `commissions-service` (ADR-0007), `field-service` (ADR-0008), `market-intelligence-service` (ADR-0009) y `logistics-service` (ADR-0010): su gate es el de la sección anterior (`cargo-llvm-cov`), no un workspace npm.
 - **Anti-inflado**: subir cobertura no puede lograrse agregando asserts triviales; el gate real es la mutación (R-MT-2).
 - **Ratchet (gate efectivo)**: la tabla es el objetivo final; el baseline se mide con el alcance de R-COV-4 redondeado a la baja (1 pt de margen de varianza) y sube **+5 puntos por release** hasta la tabla (tope: los mínimos de la tabla). Nunca baja (R-COV-1). Cada subida queda registrada en `AUDIT.md` (R-COV-3) y se vierte subiendo el umbral en `scripts/config/coverage.mjs`. La suite `microservices-ci-contract` compara la fuente central con esta tabla y falla si un umbral queda por debajo del baseline documentado (R-COV-1).
 
@@ -134,7 +138,7 @@ se reutiliza).
 
 | ID | Regla |
 |---|---|
-| R-COV-1 | Ningún PR puede **bajar** la cobertura respecto al baseline versionado (`scripts/config/coverage-baseline.json`): `npm run coverage:compare` compara el reporte real de los 12 workspaces Vitest (lines/branches/functions/statements) y, en paralelo, el job `rust` aplica el gate de `cargo-llvm-cov` y falla si cualquier métrica baja. Mejorar la cobertura exige actualizar el baseline con `npm run coverage:baseline` en el mismo PR; el gate nunca lo sube solo. |
+| R-COV-1 | Ningún PR puede **bajar** la cobertura respecto al baseline versionado (`scripts/config/coverage-baseline.json`): `npm run coverage:compare` compara el reporte real de los 8 workspaces Vitest (lines/branches/functions/statements) y, en paralelo, el job `rust` aplica el gate de `cargo-llvm-cov` y falla si cualquier métrica baja. Mejorar la cobertura exige actualizar el baseline con `npm run coverage:baseline` en el mismo PR; el gate nunca lo sube solo. |
 | R-COV-2 | Archivos de lógica de negocio sin spec → bloquea merge (R-U-17). La suite `microservices-ci-contract` recorre `*.service.ts` y `*.consumer.ts` y falla si aparece uno sin `*.spec.ts` que no esté en `scripts/config/spec-baseline.json`; el baseline está vacío: **0 servicios/consumers sin spec**; también falla si queda obsoleto al añadir el spec. |
 | R-COV-3 | La auditoría `AUDIT.md` se actualiza en cada release con: cobertura actual, nº tests por capa, mutantes, deudas abiertas. Un gate solo se marca ✅ con evidencia de un **run verde de CI** (tener el paso configurado o pasar en local no basta). |
 | R-COV-4 | **Alcance del gate**: solo se mide lógica ejecutable. El alcance se define en `coverage.include`/`coverage.exclude` de cada `packages/*/vitest.config.ts`: hoy `src/**/*.ts` excluyendo `main.ts` (bootstrap), `*.module.ts` (wiring DI) y `swagger*.ts` (bootstrap de OpenAPI). Exclusiones adicionales admitidas (DTOs `/dto/`, mocks `/mocks/`, scripts CLI) se añaden ahí y se documentan en `AUDIT.md`. El baseline medido con ese alcance fija los thresholds del ratchet. |

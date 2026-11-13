@@ -17,6 +17,7 @@ este índice evita mezclar las decisiones nuevas con las ADR históricas.
 | [0006](./0006-notifications-service-en-rust.md) | Aceptado (implementado) | Reescribir `notifications-service` en Rust con paridad de contrato, eventos, correo y métricas |
 | [0007](./0007-commissions-service-en-rust.md) | Aceptado (en curso) | Reescribir `commissions-service` en Rust con paridad de contrato, dinero, liquidaciones, eventos y métricas |
 | [0008](./0008-field-service-en-rust.md) | Aceptado (implementado) | Reescribir `field-service` en Rust con paridad de contrato, datos y autorización |
+| [0009](./0009-market-intelligence-service-en-rust.md) | Aceptado (implementado) | Reescribir `market-intelligence-service` en Rust con paridad de contrato, analítica y predicción |
 | [0010](./0010-logistics-service-en-rust.md) | Aceptado (implementado) | Reescribir `logistics-service` en Rust con paridad de contrato, guías, flotas, eventos y métricas |
 
 ## Convención
