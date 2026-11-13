@@ -333,7 +333,7 @@ before(async () => {
   itemId = await crearItem(sku, 10);
 
   const shared = await import('@core/shared');
-  const { PgService, OutboxService } = shared;
+  const { PgService } = shared;
   pgService = new PgService({ url: connectionString });
   await pgService.onModuleInit();
 
