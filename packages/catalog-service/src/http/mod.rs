@@ -1,6 +1,17 @@
 //! Router HTTP y middlewares transversales.
 
+pub mod componentes;
+pub mod empresa;
 pub mod envelope;
+pub mod internal;
+pub mod inventario;
+pub mod items;
+pub mod operaciones;
+pub mod precios;
+pub mod series;
+pub mod tarifas;
+pub mod ubicaciones;
+pub mod validacion;
 
 use crate::auth::{clave_interna_valida, UsuarioContexto};
 use crate::config::Config;
@@ -12,7 +23,7 @@ use axum::extract::{FromRequest, MatchedPath, Request, State};
 use axum::http::{header, HeaderMap, HeaderValue, StatusCode};
 use axum::middleware::{self, Next};
 use axum::response::{Html, IntoResponse, Response};
-use axum::routing::get;
+use axum::routing::{get, patch, post, put};
 use axum::{Json, Router};
 use serde_json::Value;
 use std::time::Instant;
@@ -45,6 +56,189 @@ pub fn build_router(state: AppState) -> Router {
         .route("/metrics", get(metrics))
         .route("/docs", get(docs))
         .route("/docs-json", get(docs_json))
+        .route(
+            "/api/v2/catalog/items",
+            get(items::listar).post(items::crear),
+        )
+        .route(
+            "/api/v2/catalog/items/alquileres",
+            post(items::crear_alquiler),
+        )
+        .route(
+            "/api/v2/catalog/items/atributos/esquemas",
+            get(items::esquemas).post(items::guardar_esquema),
+        )
+        .route(
+            "/api/v2/catalog/items/{id}",
+            get(items::detalle)
+                .patch(items::actualizar)
+                .delete(items::eliminar),
+        )
+        .route(
+            "/api/v2/catalog/items/{id}/variantes",
+            post(items::crear_variante),
+        )
+        .route(
+            "/api/v2/catalog/items/{id}/variantes/{variante_id}",
+            patch(items::actualizar_variante).delete(items::eliminar_variante),
+        )
+        .route(
+            "/api/v2/catalog/items/{id}/imagenes",
+            post(items::agregar_imagen),
+        )
+        .route(
+            "/api/v2/catalog/items/{id}/imagenes/{imagen_id}",
+            axum::routing::delete(items::eliminar_imagen),
+        )
+        // precios
+        .route(
+            "/api/v2/catalog/listas-precio",
+            get(precios::listar_listas).post(precios::crear_lista),
+        )
+        .route(
+            "/api/v2/catalog/listas-precio/{lista_id}",
+            patch(precios::actualizar_lista),
+        )
+        .route(
+            "/api/v2/catalog/listas-precio/{lista_id}/precios",
+            get(precios::listar_precios).post(precios::crear_precio),
+        )
+        .route(
+            "/api/v2/catalog/listas-precio/{lista_id}/precios/{precio_id}",
+            patch(precios::actualizar_precio).delete(precios::eliminar_precio),
+        )
+        .route(
+            "/api/v2/catalog/items/{id}/escalas",
+            get(precios::listar_escalas).post(precios::crear_escala),
+        )
+        .route(
+            "/api/v2/catalog/items/{id}/escalas/{escala_id}",
+            patch(precios::actualizar_escala).delete(precios::eliminar_escala),
+        )
+        .route(
+            "/api/v2/catalog/items/{id}/precio",
+            get(precios::resolver_precio),
+        )
+        // tarifas
+        .route(
+            "/api/v2/catalog/items/{id}/tarifas",
+            get(tarifas::listar).post(tarifas::crear),
+        )
+        .route(
+            "/api/v2/catalog/items/{id}/tarifas/{tarifa_id}",
+            patch(tarifas::actualizar).delete(tarifas::eliminar),
+        )
+        .route(
+            "/api/v2/catalog/items/{id}/cotizacion",
+            get(tarifas::cotizar),
+        )
+        // series
+        .route(
+            "/api/v2/catalog/items/{id}/series",
+            get(series::listar).post(series::crear),
+        )
+        .route(
+            "/api/v2/catalog/items/{id}/serializacion",
+            patch(series::habilitar),
+        )
+        .route(
+            "/api/v2/catalog/series/{id}",
+            patch(series::actualizar).get(series::buscar),
+        )
+        // componentes
+        .route(
+            "/api/v2/catalog/items/{id}/componentes",
+            get(componentes::listar).post(componentes::crear),
+        )
+        .route(
+            "/api/v2/catalog/items/{id}/componentes/{componente_id}",
+            patch(componentes::actualizar).delete(componentes::eliminar),
+        )
+        // operaciones
+        .route(
+            "/api/v2/catalog/configuracion-inventario",
+            get(operaciones::configuracion).put(operaciones::guardar_configuracion),
+        )
+        .route(
+            "/api/v2/catalog/items/importar",
+            post(operaciones::importar),
+        )
+        .route("/api/v2/catalog/escanear", get(operaciones::escanear))
+        .route(
+            "/api/v2/catalog/combos",
+            get(operaciones::listar_combos).post(operaciones::crear_combo),
+        )
+        .route(
+            "/api/v2/catalog/combos/{id}",
+            get(operaciones::detalle_combo)
+                .patch(operaciones::actualizar_combo)
+                .delete(operaciones::eliminar_combo),
+        )
+        .route(
+            "/api/v2/catalog/promociones",
+            get(operaciones::listar_promociones).post(operaciones::crear_promocion),
+        )
+        .route(
+            "/api/v2/catalog/promociones/{id}",
+            get(operaciones::detalle_promocion)
+                .patch(operaciones::actualizar_promocion)
+                .delete(operaciones::eliminar_promocion),
+        )
+        .route(
+            "/api/v2/catalog/inventario/movimientos",
+            get(operaciones::listar_movimientos).post(operaciones::crear_movimiento),
+        )
+        // superficie interna
+        .route("/internal/items/lote", get(internal::lote_items))
+        .route("/internal/items/precios", post(internal::precios_lote))
+        .route("/internal/items/{id}", get(internal::item_por_id))
+        .route("/internal/items/{id}/cotizacion", get(internal::cotizacion))
+        .route("/internal/items/{id}/precio", get(internal::precio))
+        .route(
+            "/internal/inventario/resumen",
+            get(internal::resumen_inventario),
+        )
+        .route(
+            "/internal/inventario/lineas",
+            get(internal::lineas_inventario),
+        )
+        .route("/api/v2/admin/inventario", get(inventario::listar))
+        .route(
+            "/api/v2/admin/inventario/proveedores",
+            post(inventario::crear_proveedor),
+        )
+        .route(
+            "/api/v2/admin/inventario/lotes",
+            get(inventario::listar_lotes).post(inventario::crear_lote),
+        )
+        .route(
+            "/api/v2/admin/inventario/lotes/consumir",
+            post(inventario::consumir_lote),
+        )
+        .route(
+            "/api/v2/admin/ubicaciones",
+            get(ubicaciones::listar).post(ubicaciones::crear),
+        )
+        .route(
+            "/api/v2/admin/ubicaciones/transferencias",
+            post(ubicaciones::transferir),
+        )
+        .route(
+            "/api/v2/admin/ubicaciones/items/{item_id}/stock",
+            get(ubicaciones::stock_item),
+        )
+        .route(
+            "/api/v2/admin/ubicaciones/{id}",
+            patch(ubicaciones::actualizar),
+        )
+        .route(
+            "/api/v2/admin/ubicaciones/{id}/stock",
+            get(ubicaciones::stock_ubicacion),
+        )
+        .route(
+            "/api/v2/admin/ubicaciones/{id}/stock/{item_id}",
+            put(ubicaciones::fijar_stock),
+        )
         .fallback(no_encontrado)
         .with_state(state.clone());
     aplicar_capas(router, state)

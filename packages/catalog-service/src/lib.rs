@@ -10,12 +10,25 @@
 #![allow(dead_code)]
 
 pub mod auth;
+pub mod componentes;
 pub mod config;
+pub mod consumidor;
 pub mod db;
 pub mod errors;
 pub mod http;
+pub mod inventario;
+pub mod items;
 pub mod logs;
 pub mod metrics;
+pub mod money;
+pub mod operaciones;
 pub mod outbox;
+pub mod paginacion;
+pub mod precios;
+pub mod productos;
 pub mod rabbit;
+pub mod series;
+pub mod servicios;
 pub mod state;
+pub mod tarifas;
+pub mod ubicaciones;

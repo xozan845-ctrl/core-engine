@@ -19,7 +19,7 @@ const CONTROLLER = join(
 );
 const CATALOGO_DTO = join(
   repoRoot,
-  'packages/catalog-service/src/items/items.response.dto.ts',
+  'packages/catalog-service/src/items/mod.rs',
 );
 
 /** Campos que jamás deben publicarse en el storefront. */
