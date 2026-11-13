@@ -8,7 +8,9 @@ use stores_service::db::Db;
 use stores_service::http::build_router;
 use stores_service::logs::{ejecutar_con_contexto, ContextoCorrelacion};
 use stores_service::metrics::Metrics;
+use stores_service::ofertas::Ofertas;
 use stores_service::state::AppState;
+use stores_service::tiendas::Tiendas;
 
 #[tokio::main]
 async fn main() {
@@ -62,8 +64,27 @@ async fn main() {
         config.internal_request_timeout_ms,
     ));
 
+    let tiendas = Arc::new(Tiendas::nueva(
+        Arc::clone(&db),
+        Arc::clone(&temas) as Arc<dyn stores_service::clients::TemasIdentity>,
+        Arc::clone(&storage) as Arc<dyn stores_service::clients::ObjetosStorage>,
+    ));
+    let ofertas = Arc::new(Ofertas::nueva(
+        Arc::clone(&db),
+        Arc::clone(&catalogo) as Arc<dyn stores_service::clients::Catalogo>,
+    ));
+
     let metrics = Arc::new(Metrics::nueva(servicio.clone()));
-    let estado = AppState::con_dependencias(config, metrics, capacidades, temas, storage, catalogo);
+    let estado = AppState::con_dependencias(
+        config,
+        metrics,
+        capacidades,
+        temas,
+        storage,
+        catalogo,
+        tiendas,
+        ofertas,
+    );
     let app = build_router(estado);
 
     let listener = match tokio::net::TcpListener::bind(("0.0.0.0", puerto)).await {

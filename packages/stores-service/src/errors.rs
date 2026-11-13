@@ -51,6 +51,14 @@ impl ApiError {
         Self::nueva("CONFLICTO", mensaje, StatusCode::CONFLICT)
     }
 
+    pub fn conflicto_codigo(
+        mensaje: impl Into<String>,
+        codigo: impl Into<String>,
+        detalles: Value,
+    ) -> Self {
+        Self::nueva(codigo, mensaje, StatusCode::CONFLICT).con_detalles(detalles)
+    }
+
     pub fn no_autorizado(mensaje: impl Into<String>) -> Self {
         Self::nueva("NO_AUTORIZADO", mensaje, StatusCode::UNAUTHORIZED)
     }

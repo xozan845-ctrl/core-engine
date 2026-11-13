@@ -25,6 +25,11 @@ pub const ROLES: [&str; 9] = [
 pub const TENANT_HEADER: &str = "x-tenant";
 pub const CAPACIDAD_CATALOGO_ITEMS: &str = "catalogo_items";
 
+pub const ROLES_VENDEDOR: &[&str] = &["vendedor", "empresario"];
+pub const ROLES_EMPRESARIO: &[&str] = &["empresario"];
+pub const ROLES_TIENDA_GESTION: &[&str] = &["super_admin", "admin", "vendedor", "empresario"];
+pub const ROLES_SOLO_VENDEDOR: &[&str] = &["vendedor"];
+
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct UsuarioContexto {
     pub user_id: String,
@@ -211,10 +216,11 @@ impl Capacidades for CapacidadesFijas {
 pub async fn autorizar(
     usuario: &UsuarioContexto,
     roles: &[&str],
+    permisos: &[&str],
     capacidades_extra: &[&str],
     capacidades: &dyn Capacidades,
 ) -> Result<(), ApiError> {
-    usuario.exigir_roles(roles, capacidades_extra)?;
+    usuario.exigir_roles(roles, permisos)?;
     if capacidades_extra.is_empty() || usuario.es_administrador_global() {
         return Ok(());
     }
@@ -352,6 +358,7 @@ mod tests {
         let error = autorizar(
             &usuario,
             &["vendedor"],
+            &[],
             &[CAPACIDAD_CATALOGO_ITEMS],
             &capacidades,
         )
@@ -380,6 +387,7 @@ mod tests {
         assert!(autorizar(
             &usuario,
             &["vendedor"],
+            &[],
             &[CAPACIDAD_CATALOGO_ITEMS],
             &capacidades
         )
@@ -395,7 +403,7 @@ mod tests {
             ..Default::default()
         };
         assert!(
-            autorizar(&usuario, &["admin"], &[], &CapacidadesNoDisponible)
+            autorizar(&usuario, &["admin"], &[], &[], &CapacidadesNoDisponible)
                 .await
                 .is_ok()
         );
