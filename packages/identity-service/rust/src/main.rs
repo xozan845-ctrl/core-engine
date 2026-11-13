@@ -9,6 +9,7 @@ use identity_service::dominio::configuracion_sitio::ConfiguracionSitio;
 use identity_service::dominio::empresas::Empresas;
 use identity_service::dominio::packs::Packs;
 use identity_service::dominio::password_reset::PasswordReset;
+use identity_service::dominio::personal::Personal;
 use identity_service::dominio::sesiones::Sesiones;
 use identity_service::dominio::usuarios::Usuarios;
 use identity_service::email::{crear_email, Email};
@@ -17,6 +18,7 @@ use identity_service::logs::{ejecutar_con_contexto, ContextoCorrelacion};
 use identity_service::metrics::Metrics;
 use identity_service::state::{AppState, Servicios};
 use identity_service::storage::Storage;
+use identity_service::stores::Stores;
 use std::sync::Arc;
 
 #[tokio::main]
@@ -86,7 +88,19 @@ async fn main() {
         Arc::clone(&db),
         Arc::clone(&usuarios),
         Arc::clone(&sesiones),
-        email,
+        Arc::clone(&email),
+        config.frontend_url.clone(),
+    ));
+    let stores = Arc::new(Stores::nueva(
+        config.stores_service_url.clone(),
+        config.internal_api_key.clone(),
+        3000,
+    ));
+    let personal = Arc::new(Personal::nueva(
+        Arc::clone(&db),
+        Arc::clone(&auth),
+        Arc::clone(&email),
+        stores,
         config.frontend_url.clone(),
     ));
     let estado = AppState::con_servicios(
@@ -99,6 +113,7 @@ async fn main() {
             capacidades,
             configuracion,
             empresas,
+            personal,
             packs,
             password_reset,
         },

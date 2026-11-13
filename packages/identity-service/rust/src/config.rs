@@ -30,6 +30,7 @@ pub struct Config {
     pub frontend_url: String,
     pub storage_service_url: String,
     pub internal_api_key: Option<String>,
+    pub stores_service_url: String,
     pub platform_tenant_id: Option<String>,
     pub admin_email: String,
     pub admin_password: String,
@@ -99,6 +100,10 @@ impl Config {
                 .trim_end_matches('/')
                 .to_string(),
             internal_api_key: leer("INTERNAL_API_KEY"),
+            stores_service_url: leer("STORES_SERVICE_URL")
+                .unwrap_or_else(|| "http://stores-service:3003".to_string())
+                .trim_end_matches('/')
+                .to_string(),
             platform_tenant_id: leer("PLATFORM_TENANT_ID"),
             admin_email: requerido_en_produccion("ADMIN_EMAIL", ADMIN_EMAIL_DEFAULT)?,
             admin_password: requerido_en_produccion("ADMIN_PASSWORD", ADMIN_PASSWORD_DEFAULT)?,
