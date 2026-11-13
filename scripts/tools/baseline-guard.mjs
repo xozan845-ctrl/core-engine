@@ -11,6 +11,7 @@
 import { execFileSync } from 'node:child_process';
 import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
+import { pathToFileURL } from 'node:url';
 import { repoRoot } from '../engine/lib/paths.mjs';
 import { RUST_SERVICES } from '../config/project.mjs';
 
@@ -145,9 +146,16 @@ function main() {
   console.log(`✅ Baselines no retroceden respecto a '${baseRef}'.`);
 }
 
-try {
-  main();
-} catch (error) {
-  console.error(`❌ ${error.message}`);
-  process.exit(1);
+// Solo se ejecuta como CLI: el test importa `compareBaselines` y no debe
+// disparar la comparación contra `origin/main` durante `node --test`.
+if (
+  process.argv[1] &&
+  import.meta.url === pathToFileURL(process.argv[1]).href
+) {
+  try {
+    main();
+  } catch (error) {
+    console.error(`❌ ${error.message}`);
+    process.exit(1);
+  }
 }
