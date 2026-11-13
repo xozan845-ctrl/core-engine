@@ -1,49 +1,29 @@
-# Core Engine · api-gateway
-# Dockerfile del servicio `api-gateway` (workspace NestJS, npm workspaces).
-# Contexto de build: la RAÍZ del workspace.
-#   docker build -f packages/api-gateway/Dockerfile -t core-engine-api-gateway .
-#
-# Imagen por servicio: sustituye al Dockerfile raíz parametrizado por
-# `--build-arg SERVICIO` y habilita el release a GHCR imagen-por-servicio
-# (R-CD-1..8): cada servicio se publica y se promueve con su propia etiqueta.
+# Core Engine · api-gateway (Rust)
+# Contexto de build: raíz del repositorio.
+FROM rust:1.89-bookworm AS build
+WORKDIR /repo
 
-FROM node:20-alpine AS build
+COPY packages/api-gateway/Cargo.toml packages/api-gateway/Cargo.lock ./packages/api-gateway/
+COPY docs/api ./docs/api
+
+# Cachea las dependencias con un binario vacío antes de copiar el código real.
+RUN cd packages/api-gateway \
+    && mkdir -p src \
+    && echo "fn main() {}" > src/main.rs \
+    && cargo build --release --locked
+
+COPY packages/api-gateway/src ./packages/api-gateway/src
+RUN touch packages/api-gateway/src/main.rs \
+    && cd packages/api-gateway \
+    && cargo build --release --locked
+
+FROM debian:bookworm-slim AS runtime
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
 WORKDIR /app
-
-# Declaraciones de todos los workspaces + escaneo ligero del código.
-# Node 20 = misma versión que CI (R-EN-1); engines del repo pide >=20.
-COPY package.json package-lock.json tsconfig.base.json ./
-COPY packages packages
-
-# Instalación reproducible desde el lock (R-EN-1): npm ci, no npm install.
-RUN npm ci --prefer-offline --no-audit --no-fund
-# npm workspaces anida algunas dependencias por workspace (p. ej. node-cron en
-# commissions/finance); crear el directorio asegura que el COPY del runtime no falle.
-RUN mkdir -p packages/api-gateway/node_modules packages/shared/node_modules
-
-# Compilación: shared primero (dependencia), luego el servicio objetivo.
-RUN npm run build -w @core/shared && npm run build -w @core/api-gateway
-
-# El runtime NO lleva dependencias de desarrollo (R-CD-14): tras compilar
-# se poda el árbol para no enviar tooling de test (vitest, swc, eslint…).
-RUN npm prune --omit=dev
-
-FROM node:20-alpine AS runtime
-WORKDIR /app
+COPY --from=build /repo/packages/api-gateway/target/release/api-gateway /usr/local/bin/api-gateway
 ENV NODE_ENV=production
-
-COPY --from=build /app/node_modules ./node_modules
-COPY --from=build /app/package.json ./package.json
-COPY --from=build /app/packages/shared/dist ./packages/shared/dist
-COPY --from=build /app/packages/shared/package.json ./packages/shared/package.json
-# dependencias que npm anida bajo `shared` (no hoisted en la raiz): sin esto el
-# servicio no arranca (MODULE_NOT_FOUND en rabbit.service; p. ej. amqplib 2).
-COPY --from=build /app/packages/shared/node_modules ./packages/shared/node_modules
-COPY --from=build /app/packages/api-gateway/dist ./packages/api-gateway/dist
-COPY --from=build /app/packages/api-gateway/package.json ./packages/api-gateway/package.json
-# dependencias que npm anida bajo el propio workspace (no hoisted en la raíz).
-COPY --from=build /app/packages/api-gateway/node_modules ./packages/api-gateway/node_modules
-
-USER node
 EXPOSE 8080
-CMD ["node", "packages/api-gateway/dist/main.js"]
+USER 10001:10001
+ENTRYPOINT ["/usr/local/bin/api-gateway"]

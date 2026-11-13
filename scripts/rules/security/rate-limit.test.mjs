@@ -10,10 +10,8 @@ import { readText } from '../../engine/lib/fs.mjs';
  * /ready no puede quedar sin límite.
  */
 
-const MIDDLEWARE = readText(
-  join(repoRoot, 'packages/api-gateway/src/proxy/rate-limit.middleware.ts'),
-);
-const MAIN = readText(join(repoRoot, 'packages/api-gateway/src/main.ts'));
+const LIMITE = readText(join(repoRoot, 'packages/api-gateway/src/rate_limit.rs'));
+const HTTP = readText(join(repoRoot, 'packages/api-gateway/src/http/mod.rs'));
 
 export default defineSuite({
   id: 'security-rate-limit',
@@ -22,21 +20,24 @@ export default defineSuite({
   mode: 'repo',
   run: ({ test, assert }) => {
     test('R-DS-6: el login tiene un cubo estricto separado del global', () => {
-      assert.ok(MIDDLEWARE.includes('this.login'), 'falta el cubo de login');
-      assert.ok(MIDDLEWARE.includes('this.globales'), 'falta el cubo global');
-      assert.ok(MIDDLEWARE.includes('esLogin'), 'no se distingue POST /auth/login');
-      assert.ok(MIDDLEWARE.includes('/auth/login'), 'falta la ruta /auth/login');
+      assert.ok(LIMITE.includes('es_login'), 'no se distingue POST /auth/login');
+      assert.ok(LIMITE.includes('/auth/login'), 'falta la ruta /auth/login');
+      assert.ok(HTTP.includes('"login"'), 'falta el cubo de login');
+      assert.ok(HTTP.includes('"global"'), 'falta el cubo global');
     });
 
     test('R-DS-6: el limitador responde 429 con Retry-After', () => {
-      assert.ok(MIDDLEWARE.includes("'x-ratelimit-limit'"), 'falta x-ratelimit-limit');
-      assert.ok(MIDDLEWARE.includes("'Retry-After'"), 'falta Retry-After');
-      assert.ok(MIDDLEWARE.includes('DEMASIADAS_PETICIONES'), 'falta el error 429');
+      assert.ok(HTTP.includes('"x-ratelimit-limit"'), 'falta x-ratelimit-limit');
+      assert.ok(HTTP.includes('RETRY_AFTER'), 'falta Retry-After');
+      assert.ok(HTTP.includes('DEMASIADAS_PETICIONES'), 'falta el error 429');
     });
 
     test('R-DS-6: /ready pasa por el limitador', () => {
-      assert.ok(MAIN.includes("expressApp.get('/ready'"), 'falta la ruta /ready');
-      assert.ok(MAIN.includes('limitador.consumir'), '/ready no consume el limitador');
+      assert.ok(HTTP.includes('ruta == "/ready"'), 'falta la ruta /ready en el limitador');
+      assert.ok(
+        /\.rate\s*\.\s*consumir\(/.test(HTTP),
+        '/ready no consume el limitador',
+      );
     });
   },
 });

@@ -186,7 +186,7 @@ jobs:
             lines: 52
             functions: 45
           - service: api-gateway
-            dir: packages/api-gateway/rust
+            dir: packages/api-gateway
             lines: 78
             functions: 73
     env:
@@ -245,4 +245,4 @@ jobs:
       - name: Build all packages
         run: npm run build
       - name: Gate G-8 — spec OpenAPI sincronizado (R-DO-6, R-C-7)
-        run: npm run swagger:export && git diff --exit-code docs/openapi docs/api packages/api-gateway/src/openapi.agregado.ts
+        run: npm run swagger:export && git diff --exit-code docs/openapi docs/api

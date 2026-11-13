@@ -24,5 +24,5 @@ cargo test
 cargo llvm-cov --ignore-filename-regex 'src/main\.rs' --summary-only
 ```
 
-Durante la migración el TypeScript sigue siendo el runtime activo; el binario
-Rust pasa a serlo en el PR de conmutación (ADR-0015).
+El binario Rust es el runtime activo; el TypeScript se retiró en la
+conmutación (ADR-0015).
