@@ -11,6 +11,7 @@ pub mod configuracion_sitio;
 pub mod empresas;
 pub mod envelope;
 pub mod packs;
+pub mod personal;
 pub mod usuarios;
 pub mod validacion;
 
@@ -112,6 +113,38 @@ pub fn build_router(state: AppState) -> Router {
         .route(
             "/api/v2/configuracion/sitio",
             get(configuracion_sitio::obtener).patch(configuracion_sitio::actualizar),
+        )
+        .route(
+            "/api/v2/empresas/{empresa_id}/roles",
+            get(personal::listar_roles).post(personal::crear_rol),
+        )
+        .route(
+            "/api/v2/empresas/{empresa_id}/roles/{rol_id}",
+            patch(personal::actualizar_rol),
+        )
+        .route(
+            "/api/v2/empresas/{empresa_id}/puestos",
+            get(personal::listar_puestos).post(personal::crear_puesto),
+        )
+        .route(
+            "/api/v2/empresas/{empresa_id}/asignaciones-personal",
+            get(personal::listar_asignaciones).post(personal::asignar),
+        )
+        .route(
+            "/api/v2/empresas/{empresa_id}/invitaciones/personal",
+            get(personal::listar_invitaciones).post(personal::crear_invitacion),
+        )
+        .route(
+            "/api/v2/empresas/{empresa_id}/invitaciones/personal/{invitacion_id}/revocar",
+            post(personal::revocar_invitacion),
+        )
+        .route(
+            "/api/v2/incorporaciones/{token}",
+            get(personal::consultar_invitacion),
+        )
+        .route(
+            "/api/v2/incorporaciones/{token}/aceptar",
+            post(personal::aceptar_invitacion),
         )
         .route(
             "/api/v2/empresas/{empresa_id}/capacidades",
