@@ -49,13 +49,11 @@
 
 > **Nota (2026-11-12/13)**: `scheduling-service` (ADR-0004),
 > `notifications-service` (ADR-0006), `commissions-service` (ADR-0007),
-> `field-service` (ADR-0008) y `logistics-service` (ADR-0010) migraron a Rust y
-> salen del gate Vitest; su cobertura se mide con `cargo-llvm-cov` en el job
-> `rust` de CI. La tabla anterior conserva el snapshot histórico; las filas de
-> los servicios Rust se actualizan con la medición del job.
-
-- **Objetivo final (80 líneas / 70 ramas): 10 de 11 workspaces Vitest lo alcanzan**. Queda fuera `market-intelligence-service` (47,97/38,65), que sube por ratchet (+5/release).
-- `npm run coverage:compare`: **11/11 workspaces Vitest iguales o por encima del baseline**; el job `rust` cubre `scheduling-service`, `notifications-service` y `commissions-service`.
+> `field-service` (ADR-0008), `market-intelligence-service` (ADR-0009) y
+> `logistics-service` (ADR-0010) migraron a Rust y salen del gate Vitest; su
+> cobertura se mide con `cargo-llvm-cov` en el job `rust` de CI. La tabla
+> anterior conserva el snapshot histórico; las filas de los servicios Rust se
+> actualizan con la medición del job.
 - Método: baseline medido redondeado a la baja; los thresholds viven en `scripts/config/coverage.mjs`.
 
 ## Métricas actuales vs mínimos

@@ -23,12 +23,6 @@
     "functions": 86,
     "statements": 88.23
   },
-  "market-intelligence-service": {
-    "lines": 19.93,
-    "branches": 12.64,
-    "functions": 36.36,
-    "statements": 19.87
-  },
   "orders-service": {
     "lines": 43.05,
     "branches": 24.86,
