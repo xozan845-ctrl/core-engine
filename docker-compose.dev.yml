@@ -248,9 +248,7 @@ services:
     <<: *servicio-base
     build:
       context: .
-      dockerfile: Dockerfile
-      args:
-        SERVICIO: storage-service
+      dockerfile: packages/storage-service/Dockerfile
     environment:
       SERVICIO: storage-service
       PORT: 3010
