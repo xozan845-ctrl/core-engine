@@ -23,7 +23,7 @@ export type EstadoOrden = (typeof ESTADOS_ORDEN)[number];
 export const TIPOS_ORDEN = ['compra', 'reserva', 'cotizacion', 'orden_servicio'] as const;
 export type TipoOrden = (typeof TIPOS_ORDEN)[number];
 
-export const FULFILLMENTS = ['delivery', 'pickup', 'onsite', 'none'] as const;
+export const FULFILLMENTS = ['delivery', 'pickup', 'onsite', 'digital', 'none'] as const;
 export type Fulfillment = (typeof FULFILLMENTS)[number];
 
 const TRANSICIONES: Record<EstadoOrden, EstadoOrden[]> = {

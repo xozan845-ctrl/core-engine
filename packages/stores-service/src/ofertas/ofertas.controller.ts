@@ -10,7 +10,7 @@ import {
   ApiTags,
 } from '@nestjs/swagger';
 import type { Response } from 'express';
-import { IsIn, IsInt, IsOptional, IsString, Max, Min } from 'class-validator';
+import { IsIn, IsInt, IsOptional, IsString, Matches, Max, Min } from 'class-validator';
 import { TiendasService } from '../tiendas/tiendas.service';
 import { OfertasService, Oferta } from './ofertas.service';
 import {
@@ -56,6 +56,11 @@ export class PublicarProductoRequestDto {
   @Min(0)
   @Max(90)
   margen: number;
+
+  @ApiProperty({ required: false, default: 'NIO', description: 'Moneda ISO de la oferta' })
+  @IsOptional()
+  @Matches(/^[A-Za-z]{3}$/)
+  moneda?: string;
 }
 
 export class CambiarMargenRequestDto {
@@ -95,7 +100,7 @@ export class OfertasController {
       tiendaId = (await this.tiendas.deVendedor(usuario.user_id))?.id;
     }
     if (!tiendaId) throw new NotFoundError('Tienda del vendedor', usuario.user_id);
-    return this.ofertas.publicarItem(usuario.user_id, tiendaId, dto.item_id, dto.margen);
+    return this.ofertas.publicarItem(usuario.user_id, tiendaId, dto.item_id, dto.margen, dto.moneda);
   }
 
   /** PATCH /api/v2/vendedores/productos/:id — cambia el margen de la oferta. */

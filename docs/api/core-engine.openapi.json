@@ -16552,6 +16552,1290 @@
         ]
       }
     },
+    "/api/v2/pedidos/{id}/entregas-digitales": {
+      "get": {
+        "operationId": "EntregasDigitalesController_listar",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Accesos digitales",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
+                  "properties": {
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/EntregaDigitalResponseDto"
+                      }
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/MetaRespuesta"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Listar los accesos digitales de una orden",
+        "tags": [
+          "Entregas digitales"
+        ]
+      }
+    },
+    "/api/v2/entregas-digitales/{token}": {
+      "get": {
+        "operationId": "EntregasDigitalesController_descargar",
+        "parameters": [
+          {
+            "name": "token",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Acceso digital",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/DescargaDigitalResponseDto"
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/MetaRespuesta"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Consumir un acceso digital y obtener su recurso",
+        "tags": [
+          "Entregas digitales"
+        ]
+      }
+    },
+    "/api/v2/contratos": {
+      "get": {
+        "operationId": "ContratosController_listar",
+        "parameters": [
+          {
+            "name": "estado",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "order_id",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "name": "parte_id",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "name": "pagina",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "limite",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "empresa_id",
+            "required": false,
+            "in": "query",
+            "description": "Solo admin global",
+            "schema": {}
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Contratos",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
+                  "properties": {
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/ContratoResponseDto"
+                      }
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/MetaRespuesta"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Listar contratos de la empresa",
+        "tags": [
+          "Contratos"
+        ]
+      },
+      "post": {
+        "operationId": "ContratosController_crear",
+        "parameters": [
+          {
+            "name": "empresa_id",
+            "required": false,
+            "in": "query",
+            "description": "Solo admin global",
+            "schema": {}
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CrearContratoRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Contrato creado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/ContratoResponseDto"
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/MetaRespuesta"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Crear un contrato con deposito o garantia",
+        "tags": [
+          "Contratos"
+        ]
+      }
+    },
+    "/api/v2/contratos/{id}": {
+      "get": {
+        "operationId": "ContratosController_obtener",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "name": "empresa_id",
+            "required": false,
+            "in": "query",
+            "description": "Solo admin global",
+            "schema": {}
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Contrato encontrado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/ContratoResponseDto"
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/MetaRespuesta"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Obtener un contrato",
+        "tags": [
+          "Contratos"
+        ]
+      },
+      "patch": {
+        "operationId": "ContratosController_actualizar",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "name": "empresa_id",
+            "required": false,
+            "in": "query",
+            "description": "Solo admin global",
+            "schema": {}
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ActualizarContratoRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Contrato actualizado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/ContratoResponseDto"
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/MetaRespuesta"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Actualizar o activar/cancelar un contrato",
+        "tags": [
+          "Contratos"
+        ]
+      }
+    },
+    "/api/v2/contratos/{id}/finalizar": {
+      "post": {
+        "operationId": "ContratosController_finalizar",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "name": "empresa_id",
+            "required": false,
+            "in": "query",
+            "description": "Solo admin global",
+            "schema": {}
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FinalizarContratoRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Contrato finalizado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/ContratoResponseDto"
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/MetaRespuesta"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Finalizar el contrato y registrar la retencion",
+        "tags": [
+          "Contratos"
+        ]
+      }
+    },
+    "/api/v2/contratos/{id}/movimientos": {
+      "get": {
+        "operationId": "ContratosController_movimientos",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "name": "empresa_id",
+            "required": false,
+            "in": "query",
+            "description": "Solo admin global",
+            "schema": {}
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Movimientos del contrato",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
+                  "properties": {
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/ContratoEventoResponseDto"
+                      }
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/MetaRespuesta"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Listar los movimientos de deposito y retencion",
+        "tags": [
+          "Contratos"
+        ]
+      }
+    },
+    "/api/v2/suscripciones": {
+      "get": {
+        "operationId": "SuscripcionesController_listar",
+        "parameters": [
+          {
+            "name": "comprador_id",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "estado",
+            "required": false,
+            "in": "query",
+            "schema": {}
+          },
+          {
+            "name": "empresa_id",
+            "required": false,
+            "in": "query",
+            "description": "Solo admin global",
+            "schema": {}
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Suscripciones",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
+                  "properties": {
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/SuscripcionResponseDto"
+                      }
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/MetaRespuesta"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Listar suscripciones de la empresa",
+        "tags": [
+          "Suscripciones"
+        ]
+      },
+      "post": {
+        "operationId": "SuscripcionesController_crear",
+        "parameters": [
+          {
+            "name": "empresa_id",
+            "required": false,
+            "in": "query",
+            "description": "Solo admin global",
+            "schema": {}
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CrearSuscripcionRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Suscripcion creada",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/SuscripcionResponseDto"
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/MetaRespuesta"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Crear una suscripcion a una oferta",
+        "tags": [
+          "Suscripciones"
+        ]
+      }
+    },
+    "/api/v2/suscripciones/{id}": {
+      "get": {
+        "operationId": "SuscripcionesController_obtener",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "name": "empresa_id",
+            "required": false,
+            "in": "query",
+            "description": "Solo admin global",
+            "schema": {}
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Suscripcion encontrada",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/SuscripcionResponseDto"
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/MetaRespuesta"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Obtener una suscripcion",
+        "tags": [
+          "Suscripciones"
+        ]
+      }
+    },
+    "/api/v2/suscripciones/{id}/pausar": {
+      "post": {
+        "operationId": "SuscripcionesController_pausar",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Suscripcion pausada",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/SuscripcionResponseDto"
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/MetaRespuesta"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Pausar una suscripcion",
+        "tags": [
+          "Suscripciones"
+        ]
+      }
+    },
+    "/api/v2/suscripciones/{id}/reanudar": {
+      "post": {
+        "operationId": "SuscripcionesController_reanudar",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Suscripcion reanudada",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/SuscripcionResponseDto"
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/MetaRespuesta"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Reanudar una suscripcion pausada",
+        "tags": [
+          "Suscripciones"
+        ]
+      }
+    },
+    "/api/v2/suscripciones/{id}/cancelar": {
+      "post": {
+        "operationId": "SuscripcionesController_cancelar",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Suscripcion cancelada",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/SuscripcionResponseDto"
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/MetaRespuesta"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Cancelar una suscripcion",
+        "tags": [
+          "Suscripciones"
+        ]
+      }
+    },
+    "/api/v2/suscripciones/{id}/renovar": {
+      "post": {
+        "operationId": "SuscripcionesController_renovar",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Suscripcion renovada",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/RenovarSuscripcionResponseDto"
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/MetaRespuesta"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Renovar ahora y crear la orden de la suscripcion",
+        "tags": [
+          "Suscripciones"
+        ]
+      }
+    },
+    "/api/v2/suscripciones/{id}/ejecuciones": {
+      "get": {
+        "operationId": "SuscripcionesController_ejecuciones",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "name": "empresa_id",
+            "required": false,
+            "in": "query",
+            "description": "Solo admin global",
+            "schema": {}
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Ejecuciones",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
+                  "properties": {
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/SuscripcionEjecucionResponseDto"
+                      }
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/MetaRespuesta"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Listar las renovaciones de una suscripcion",
+        "tags": [
+          "Suscripciones"
+        ]
+      }
+    },
+    "/api/v2/mesas": {
+      "get": {
+        "operationId": "SalonController_listarMesas",
+        "parameters": [
+          {
+            "name": "estado",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "enum": [
+                "libre",
+                "ocupada",
+                "reservada",
+                "inactiva"
+              ],
+              "type": "string"
+            }
+          },
+          {
+            "name": "zona",
+            "required": false,
+            "in": "query",
+            "schema": {}
+          },
+          {
+            "name": "empresa_id",
+            "required": false,
+            "in": "query",
+            "description": "Solo admin global",
+            "schema": {}
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Mesas",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
+                  "properties": {
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/MesaResponseDto"
+                      }
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/MetaRespuesta"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Listar mesas de la empresa",
+        "tags": [
+          "Salón · Mesas y comandas"
+        ]
+      },
+      "post": {
+        "operationId": "SalonController_crearMesa",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CrearMesaRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Mesa creada",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/MesaResponseDto"
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/MetaRespuesta"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Crear una mesa",
+        "tags": [
+          "Salón · Mesas y comandas"
+        ]
+      }
+    },
+    "/api/v2/mesas/{id}": {
+      "patch": {
+        "operationId": "SalonController_actualizarMesa",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ActualizarMesaRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Mesa actualizada",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/MesaResponseDto"
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/MetaRespuesta"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Actualizar una mesa o su estado",
+        "tags": [
+          "Salón · Mesas y comandas"
+        ]
+      }
+    },
+    "/api/v2/comandas": {
+      "get": {
+        "operationId": "SalonController_listarComandas",
+        "parameters": [
+          {
+            "name": "mesa_id",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "estacion",
+            "required": false,
+            "in": "query",
+            "schema": {}
+          },
+          {
+            "name": "estado",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "enum": [
+                "pendiente",
+                "en_preparacion",
+                "lista",
+                "entregada",
+                "cancelada"
+              ],
+              "type": "string"
+            }
+          },
+          {
+            "name": "empresa_id",
+            "required": false,
+            "in": "query",
+            "description": "Solo admin global",
+            "schema": {}
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Comandas",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
+                  "properties": {
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/ComandaResponseDto"
+                      }
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/MetaRespuesta"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Listar comandas de preparacion",
+        "tags": [
+          "Salón · Mesas y comandas"
+        ]
+      },
+      "post": {
+        "operationId": "SalonController_crearComanda",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CrearComandaRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Comanda creada",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/ComandaResponseDto"
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/MetaRespuesta"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Crear una comanda desde una orden o items libres",
+        "tags": [
+          "Salón · Mesas y comandas"
+        ]
+      }
+    },
+    "/api/v2/comandas/{id}": {
+      "patch": {
+        "operationId": "SalonController_actualizarComanda",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ActualizarComandaRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Comanda actualizada",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/ComandaResponseDto"
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/MetaRespuesta"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Avanzar el estado de una comanda",
+        "tags": [
+          "Salón · Mesas y comandas"
+        ]
+      }
+    },
     "/api/v2/scheduling/recursos": {
       "get": {
         "operationId": "SchedulingController_recursos",
@@ -32217,6 +33501,121 @@
           "cantidad"
         ]
       },
+      "ActualizarComandaRequestDto": {
+        "type": "object",
+        "properties": {
+          "estado": {
+            "type": "string",
+            "enum": [
+              "pendiente",
+              "en_preparacion",
+              "lista",
+              "entregada",
+              "cancelada"
+            ]
+          },
+          "notas": {
+            "type": "string"
+          }
+        }
+      },
+      "ActualizarContratoRequestDto": {
+        "type": "object",
+        "properties": {
+          "order_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "parte_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "item_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "tipo": {
+            "type": "string",
+            "enum": [
+              "alquiler",
+              "servicio",
+              "compra",
+              "otro"
+            ],
+            "default": "otro"
+          },
+          "titulo": {
+            "type": "string",
+            "example": "Alquiler de equipo"
+          },
+          "descripcion": {
+            "type": "string"
+          },
+          "inicia_en": {
+            "type": "string",
+            "format": "date"
+          },
+          "termina_en": {
+            "type": "string",
+            "format": "date"
+          },
+          "deposito": {
+            "type": "string",
+            "example": "500.00"
+          },
+          "garantia": {
+            "type": "string",
+            "example": "200.00"
+          },
+          "moneda": {
+            "type": "string",
+            "default": "NIO"
+          },
+          "metadata": {
+            "type": "object",
+            "additionalProperties": true
+          },
+          "estado": {
+            "type": "string",
+            "enum": [
+              "activo",
+              "cancelado"
+            ]
+          }
+        }
+      },
+      "ActualizarMesaRequestDto": {
+        "type": "object",
+        "properties": {
+          "codigo": {
+            "type": "string",
+            "example": "M-01"
+          },
+          "nombre": {
+            "type": "string",
+            "example": "Mesa 1"
+          },
+          "capacidad": {
+            "type": "number",
+            "minimum": 1,
+            "maximum": 999,
+            "default": 1
+          },
+          "zona": {
+            "type": "string"
+          },
+          "estado": {
+            "type": "string",
+            "enum": [
+              "libre",
+              "ocupada",
+              "reservada",
+              "inactiva"
+            ],
+            "default": "libre"
+          }
+        }
+      },
       "AgregarItemRequestDto": {
         "type": "object",
         "properties": {
@@ -32325,6 +33724,262 @@
           "total"
         ]
       },
+      "ComandaItemRequestDto": {
+        "type": "object",
+        "properties": {
+          "sku": {
+            "type": "string"
+          },
+          "nombre": {
+            "type": "string"
+          },
+          "cantidad": {
+            "type": "number",
+            "minimum": 1
+          },
+          "notas": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "sku",
+          "nombre",
+          "cantidad"
+        ]
+      },
+      "ComandaResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "empresa_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "order_id": {
+            "type": "object",
+            "format": "uuid",
+            "nullable": true
+          },
+          "mesa_id": {
+            "type": "object",
+            "format": "uuid",
+            "nullable": true
+          },
+          "estacion": {
+            "type": "string"
+          },
+          "estado": {
+            "type": "string",
+            "enum": [
+              "pendiente",
+              "en_preparacion",
+              "lista",
+              "entregada",
+              "cancelada"
+            ]
+          },
+          "notas": {
+            "type": "string"
+          },
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ComandaItemRequestDto"
+            }
+          },
+          "creado_en": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "actualizado_en": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "listo_en": {
+            "type": "object",
+            "format": "date-time",
+            "nullable": true
+          },
+          "entregado_en": {
+            "type": "object",
+            "format": "date-time",
+            "nullable": true
+          }
+        },
+        "required": [
+          "id",
+          "empresa_id",
+          "order_id",
+          "mesa_id",
+          "estacion",
+          "estado",
+          "notas",
+          "items",
+          "creado_en",
+          "actualizado_en",
+          "listo_en",
+          "entregado_en"
+        ]
+      },
+      "ContratoEventoResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "contrato_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "tipo": {
+            "type": "string"
+          },
+          "monto": {
+            "type": "string"
+          },
+          "motivo": {
+            "type": "string"
+          },
+          "creado_por": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "creado_en": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "contrato_id",
+          "tipo",
+          "monto",
+          "motivo",
+          "creado_por",
+          "creado_en"
+        ]
+      },
+      "ContratoResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "empresa_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "order_id": {
+            "type": "object",
+            "format": "uuid",
+            "nullable": true
+          },
+          "parte_id": {
+            "type": "object",
+            "format": "uuid",
+            "nullable": true
+          },
+          "item_id": {
+            "type": "object",
+            "format": "uuid",
+            "nullable": true
+          },
+          "tipo": {
+            "type": "string",
+            "enum": [
+              "alquiler",
+              "servicio",
+              "compra",
+              "otro"
+            ]
+          },
+          "titulo": {
+            "type": "string"
+          },
+          "descripcion": {
+            "type": "string"
+          },
+          "estado": {
+            "type": "string",
+            "enum": [
+              "borrador",
+              "activo",
+              "finalizado",
+              "cancelado"
+            ]
+          },
+          "inicia_en": {
+            "type": "object",
+            "format": "date",
+            "nullable": true
+          },
+          "termina_en": {
+            "type": "object",
+            "format": "date",
+            "nullable": true
+          },
+          "deposito": {
+            "type": "string"
+          },
+          "garantia": {
+            "type": "string"
+          },
+          "retenido": {
+            "type": "string"
+          },
+          "moneda": {
+            "type": "string"
+          },
+          "metadata": {
+            "type": "object",
+            "additionalProperties": true
+          },
+          "creado_por": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "creado_en": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "actualizado_en": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "finalizado_en": {
+            "type": "object",
+            "format": "date-time",
+            "nullable": true
+          }
+        },
+        "required": [
+          "id",
+          "empresa_id",
+          "order_id",
+          "parte_id",
+          "item_id",
+          "tipo",
+          "titulo",
+          "descripcion",
+          "estado",
+          "inicia_en",
+          "termina_en",
+          "deposito",
+          "garantia",
+          "retenido",
+          "moneda",
+          "metadata",
+          "creado_por",
+          "creado_en",
+          "actualizado_en",
+          "finalizado_en"
+        ]
+      },
       "CotizacionAceptadaResponseDto": {
         "type": "object",
         "properties": {
@@ -32348,6 +34003,203 @@
         "required": [
           "cotizacion",
           "orden"
+        ]
+      },
+      "CrearComandaRequestDto": {
+        "type": "object",
+        "properties": {
+          "order_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "mesa_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "estacion": {
+            "type": "string",
+            "example": "cocina"
+          },
+          "notas": {
+            "type": "string"
+          },
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ComandaItemRequestDto"
+            }
+          }
+        },
+        "required": [
+          "estacion"
+        ]
+      },
+      "CrearContratoRequestDto": {
+        "type": "object",
+        "properties": {
+          "order_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "parte_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "item_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "tipo": {
+            "type": "string",
+            "enum": [
+              "alquiler",
+              "servicio",
+              "compra",
+              "otro"
+            ],
+            "default": "otro"
+          },
+          "titulo": {
+            "type": "string",
+            "example": "Alquiler de equipo"
+          },
+          "descripcion": {
+            "type": "string"
+          },
+          "inicia_en": {
+            "type": "string",
+            "format": "date"
+          },
+          "termina_en": {
+            "type": "string",
+            "format": "date"
+          },
+          "deposito": {
+            "type": "string",
+            "example": "500.00"
+          },
+          "garantia": {
+            "type": "string",
+            "example": "200.00"
+          },
+          "moneda": {
+            "type": "string",
+            "default": "NIO"
+          },
+          "metadata": {
+            "type": "object",
+            "additionalProperties": true
+          }
+        },
+        "required": [
+          "titulo"
+        ]
+      },
+      "CrearMesaRequestDto": {
+        "type": "object",
+        "properties": {
+          "codigo": {
+            "type": "string",
+            "example": "M-01"
+          },
+          "nombre": {
+            "type": "string",
+            "example": "Mesa 1"
+          },
+          "capacidad": {
+            "type": "number",
+            "minimum": 1,
+            "maximum": 999,
+            "default": 1
+          },
+          "zona": {
+            "type": "string"
+          },
+          "estado": {
+            "type": "string",
+            "enum": [
+              "libre",
+              "ocupada",
+              "reservada",
+              "inactiva"
+            ],
+            "default": "libre"
+          }
+        },
+        "required": [
+          "codigo",
+          "nombre"
+        ]
+      },
+      "CrearSuscripcionRequestDto": {
+        "type": "object",
+        "properties": {
+          "oferta_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "item_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "cantidad": {
+            "type": "number",
+            "minimum": 1,
+            "maximum": 99,
+            "default": 1
+          },
+          "comprador_id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Solo admin/empresario"
+          },
+          "cliente_parte_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "metodo_pago": {
+            "type": "string",
+            "enum": [
+              "simulado",
+              "credito"
+            ],
+            "default": "simulado"
+          },
+          "fulfillment": {
+            "type": "string",
+            "enum": [
+              "delivery",
+              "pickup",
+              "onsite",
+              "digital",
+              "none"
+            ],
+            "default": "none"
+          },
+          "intervalo": {
+            "type": "string",
+            "enum": [
+              "semanal",
+              "mensual",
+              "anual"
+            ]
+          },
+          "proxima_ejecucion": {
+            "type": "string",
+            "format": "date"
+          },
+          "fin_en": {
+            "type": "string",
+            "format": "date"
+          },
+          "metadata": {
+            "type": "object",
+            "additionalProperties": true
+          }
+        },
+        "required": [
+          "oferta_id",
+          "intervalo"
         ]
       },
       "CreateOrderCommand": {
@@ -32404,6 +34256,169 @@
           "tipo_orden"
         ]
       },
+      "DescargaDigitalResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "order_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "item_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "sku": {
+            "type": "string"
+          },
+          "token": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "estado": {
+            "type": "string",
+            "enum": [
+              "activo",
+              "revocado"
+            ]
+          },
+          "descargas": {
+            "type": "number"
+          },
+          "max_descargas": {
+            "type": "object",
+            "nullable": true
+          },
+          "expira_en": {
+            "type": "object",
+            "format": "date-time",
+            "nullable": true
+          },
+          "primera_descarga_en": {
+            "type": "object",
+            "format": "date-time",
+            "nullable": true
+          },
+          "ultima_descarga_en": {
+            "type": "object",
+            "format": "date-time",
+            "nullable": true
+          },
+          "creado_en": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "comprador_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "recurso_url": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "order_id",
+          "item_id",
+          "sku",
+          "token",
+          "estado",
+          "descargas",
+          "max_descargas",
+          "expira_en",
+          "primera_descarga_en",
+          "ultima_descarga_en",
+          "creado_en",
+          "comprador_id",
+          "recurso_url"
+        ]
+      },
+      "EntregaDigitalResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "order_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "item_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "sku": {
+            "type": "string"
+          },
+          "token": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "estado": {
+            "type": "string",
+            "enum": [
+              "activo",
+              "revocado"
+            ]
+          },
+          "descargas": {
+            "type": "number"
+          },
+          "max_descargas": {
+            "type": "object",
+            "nullable": true
+          },
+          "expira_en": {
+            "type": "object",
+            "format": "date-time",
+            "nullable": true
+          },
+          "primera_descarga_en": {
+            "type": "object",
+            "format": "date-time",
+            "nullable": true
+          },
+          "ultima_descarga_en": {
+            "type": "object",
+            "format": "date-time",
+            "nullable": true
+          },
+          "creado_en": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "order_id",
+          "item_id",
+          "sku",
+          "token",
+          "estado",
+          "descargas",
+          "max_descargas",
+          "expira_en",
+          "primera_descarga_en",
+          "ultima_descarga_en",
+          "creado_en"
+        ]
+      },
+      "FinalizarContratoRequestDto": {
+        "type": "object",
+        "properties": {
+          "retenido": {
+            "type": "string",
+            "example": "50.00"
+          },
+          "motivo": {
+            "type": "string"
+          }
+        }
+      },
       "ItemOrdenRequestDto": {
         "type": "object",
         "properties": {
@@ -32424,6 +34439,7 @@
               "delivery",
               "pickup",
               "onsite",
+              "digital",
               "none"
             ],
             "default": "none"
@@ -32512,6 +34528,59 @@
           "precio_unitario_cents",
           "vendedor_id",
           "tienda_id"
+        ]
+      },
+      "MesaResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "empresa_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "codigo": {
+            "type": "string"
+          },
+          "nombre": {
+            "type": "string"
+          },
+          "capacidad": {
+            "type": "number"
+          },
+          "zona": {
+            "type": "string"
+          },
+          "estado": {
+            "type": "string",
+            "enum": [
+              "libre",
+              "ocupada",
+              "reservada",
+              "inactiva"
+            ]
+          },
+          "creado_en": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "actualizado_en": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "empresa_id",
+          "codigo",
+          "nombre",
+          "capacidad",
+          "zona",
+          "estado",
+          "creado_en",
+          "actualizado_en"
         ]
       },
       "OrderViewResponseDto": {
@@ -32662,6 +34731,179 @@
             "description": "Motivo del rechazo"
           }
         }
+      },
+      "RenovarSuscripcionResponseDto": {
+        "type": "object",
+        "properties": {
+          "suscripcion": {
+            "$ref": "#/components/schemas/SuscripcionResponseDto"
+          },
+          "order_id": {
+            "type": "string",
+            "format": "uuid"
+          }
+        },
+        "required": [
+          "suscripcion",
+          "order_id"
+        ]
+      },
+      "SuscripcionEjecucionResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "suscripcion_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "order_id": {
+            "type": "object",
+            "format": "uuid",
+            "nullable": true
+          },
+          "estado": {
+            "type": "string",
+            "enum": [
+              "creada",
+              "error"
+            ]
+          },
+          "error": {
+            "type": "string"
+          },
+          "ejecutada_en": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "suscripcion_id",
+          "order_id",
+          "estado",
+          "error",
+          "ejecutada_en"
+        ]
+      },
+      "SuscripcionResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "empresa_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "oferta_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "item_id": {
+            "type": "object",
+            "format": "uuid",
+            "nullable": true
+          },
+          "cantidad": {
+            "type": "number"
+          },
+          "comprador_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "cliente_parte_id": {
+            "type": "object",
+            "format": "uuid",
+            "nullable": true
+          },
+          "tipo_orden": {
+            "type": "string",
+            "enum": [
+              "compra"
+            ]
+          },
+          "metodo_pago": {
+            "type": "string",
+            "enum": [
+              "simulado",
+              "credito"
+            ]
+          },
+          "fulfillment": {
+            "type": "string"
+          },
+          "intervalo": {
+            "type": "string",
+            "enum": [
+              "semanal",
+              "mensual",
+              "anual"
+            ]
+          },
+          "estado": {
+            "type": "string",
+            "enum": [
+              "activa",
+              "pausada",
+              "cancelada"
+            ]
+          },
+          "proxima_ejecucion": {
+            "type": "string",
+            "format": "date"
+          },
+          "ultima_ejecucion": {
+            "type": "object",
+            "format": "date",
+            "nullable": true
+          },
+          "fin_en": {
+            "type": "object",
+            "format": "date",
+            "nullable": true
+          },
+          "metadata": {
+            "type": "object",
+            "additionalProperties": true
+          },
+          "creado_por": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "creado_en": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "actualizado_en": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "empresa_id",
+          "oferta_id",
+          "item_id",
+          "cantidad",
+          "comprador_id",
+          "cliente_parte_id",
+          "tipo_orden",
+          "metodo_pago",
+          "fulfillment",
+          "intervalo",
+          "estado",
+          "proxima_ejecucion",
+          "ultima_ejecucion",
+          "fin_en",
+          "metadata",
+          "creado_por",
+          "creado_en",
+          "actualizado_en"
+        ]
       },
       "TimelineEventoResponseDto": {
         "type": "object",
@@ -33776,8 +36018,13 @@
           },
           "precio_venta": {
             "type": "string",
-            "description": "Precio de venta en córdobas con dos decimales",
+            "description": "Precio de venta en la moneda de la oferta",
             "example": "1150.00"
+          },
+          "moneda": {
+            "type": "string",
+            "description": "Moneda ISO de la oferta",
+            "example": "NIO"
           },
           "stock": {
             "type": "number",
@@ -33802,6 +36049,7 @@
           "sku",
           "producto_nombre",
           "precio_venta",
+          "moneda",
           "stock",
           "estado",
           "creado_en"
@@ -33887,8 +36135,13 @@
           },
           "precio_venta": {
             "type": "string",
-            "description": "Precio de venta en córdobas con dos decimales",
+            "description": "Precio de venta en la moneda de la oferta",
             "example": "1150.00"
+          },
+          "moneda": {
+            "type": "string",
+            "description": "Moneda ISO de la oferta",
+            "example": "NIO"
           },
           "stock": {
             "type": "number",
@@ -33919,6 +36172,7 @@
           "margen",
           "precio_base",
           "precio_venta",
+          "moneda",
           "stock",
           "estado",
           "creado_en"
@@ -34034,6 +36288,11 @@
             "minimum": 0,
             "maximum": 90,
             "example": 15
+          },
+          "moneda": {
+            "type": "string",
+            "default": "NIO",
+            "description": "Moneda ISO de la oferta"
           }
         },
         "required": [

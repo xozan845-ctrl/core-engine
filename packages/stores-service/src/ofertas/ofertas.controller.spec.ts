@@ -41,10 +41,10 @@ describe('OfertasController (api/v2, RN-01, R-U-10/11)', () => {
     const { tiendas, ofertas, controller } = fabricar();
     tiendas.encontrarPorId.mockResolvedValue(tienda);
     ofertas.publicarItem.mockResolvedValue(oferta);
-    const dto = { tienda_id: '11111111-2222-3333-4444-555555555555', item_id: 'item-1', margen: 15 };
+    const dto = { tienda_id: '11111111-2222-3333-4444-555555555555', item_id: 'item-1', margen: 15, moneda: 'USD' };
     await expect(controller.publicar(dto as never, vendedor as never)).resolves.toEqual(oferta);
     expect(tiendas.encontrarPorId).toHaveBeenCalledWith(dto.tienda_id);
-    expect(ofertas.publicarItem).toHaveBeenCalledWith('u-v', 't-1', 'item-1', 15);
+    expect(ofertas.publicarItem).toHaveBeenCalledWith('u-v', 't-1', 'item-1', 15, 'USD');
   });
 
   it('debe publicar usando una tienda resuelta por slug', async () => {
@@ -55,7 +55,7 @@ describe('OfertasController (api/v2, RN-01, R-U-10/11)', () => {
 
     await expect(controller.publicar(dto as never, vendedor as never)).resolves.toEqual(oferta);
     expect(tiendas.encontrarPorId).toHaveBeenCalledWith('mi-tienda');
-    expect(ofertas.publicarItem).toHaveBeenCalledWith('u-v', 't-1', 'item-1', 15);
+    expect(ofertas.publicarItem).toHaveBeenCalledWith('u-v', 't-1', 'item-1', 15, undefined);
   });
 
   it('debe publicar un item unificado de servicio', async () => {
@@ -66,7 +66,7 @@ describe('OfertasController (api/v2, RN-01, R-U-10/11)', () => {
       { tienda_id: 't-1', item_type: 'servicio', item_id: 'item-1', margen: 15 } as never,
       vendedor as never,
     )).resolves.toEqual(oferta);
-    expect(ofertas.publicarItem).toHaveBeenCalledWith('u-v', 't-1', 'item-1', 15);
+    expect(ofertas.publicarItem).toHaveBeenCalledWith('u-v', 't-1', 'item-1', 15, undefined);
   });
 
   it('debe lanzar NotFoundError si la tienda indicada no existe', async () => {
@@ -85,7 +85,7 @@ describe('OfertasController (api/v2, RN-01, R-U-10/11)', () => {
     const dto = { item_id: 'item-1', margen: 15 };
     await expect(controller.publicar(dto as never, vendedor as never)).resolves.toEqual(oferta);
     expect(tiendas.deVendedor).toHaveBeenCalledWith('u-v');
-    expect(ofertas.publicarItem).toHaveBeenCalledWith('u-v', 't-1', 'item-1', 15);
+    expect(ofertas.publicarItem).toHaveBeenCalledWith('u-v', 't-1', 'item-1', 15, undefined);
   });
 
   it('debe lanzar NotFoundError si no hay tienda y no se informa tienda_id', async () => {

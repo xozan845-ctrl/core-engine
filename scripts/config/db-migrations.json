@@ -77,5 +77,12 @@
   "64_listas_precio_escalas.sql": "4cef7f4cd0fa149bf66a8f10bc98751a43ecc3c31f529767a2c4fe6756634c68",
   "65_inventario_ubicaciones.sql": "99a00ea76c3731687862ecdf053fe653726eb2686cca89af2b476f2946e5c77d",
   "66_item_series.sql": "b73714bcf34093d90f8541f68cb41018e00fd586bff863fdab68baf2fe96b7b7",
-  "67_citas_capacidad.sql": "94a5bd8e1d19ae0b761a98997c1ff1278bffeed12fdde3508ac0bb4a51ab9b5f"
+  "67_citas_capacidad.sql": "94a5bd8e1d19ae0b761a98997c1ff1278bffeed12fdde3508ac0bb4a51ab9b5f",
+  "68_retirar_combos.sql": "a6945c2b37a48c17e6fdc556643a6082cc0267d7fb4de121c79e6b8d9df8d710",
+  "69_entrega_digital.sql": "50c1d7f36c948aeac0280390ad8d1cd0c736673936d97db5b57ab4e4bcae072e",
+  "70_contratos_depositos.sql": "8e8e3e0fbfc5a7a2329eccc2628049f1792bf617b253cda97878754a709d19e2",
+  "71_suscripciones.sql": "d5ed6c1c7aaab1b8b4449cdde19c02f3dcc7fd2f5910f50cc646c05513c60bbd",
+  "72_multimoneda_ofertas.sql": "884cc55cb122f95955edcddc2205a543efc1be24c05578ebad3d315847068744",
+  "73_orders_moneda_proyeccion.sql": "799d5ca787e6b1c35dccb188e54cf6d2c852a1529ab23a389b505d17e8b7dccc",
+  "74_mesas_comandas.sql": "43c8470f9faa205497da9cce60e0191d9c782a57ffc310c751a3404969f5508e"
 }

@@ -355,16 +355,6 @@ CREATE POLICY config_inventario_empresa ON catalog.configuracion_inventario
   USING (auth.rol() = 'empresario' AND empresa_id::text = (auth.jwt() ->> 'tenant_id'))
   WITH CHECK (auth.rol() = 'empresario' AND empresa_id::text = (auth.jwt() ->> 'tenant_id'));
 
-ALTER TABLE catalog.combos ENABLE ROW LEVEL SECURITY;
-CREATE POLICY combos_admin ON catalog.combos
-  FOR ALL TO authenticated
-  USING (auth.rol() IN ('super_admin', 'admin'))
-  WITH CHECK (auth.rol() IN ('super_admin', 'admin'));
-CREATE POLICY combos_empresa ON catalog.combos
-  FOR ALL TO authenticated
-  USING (auth.rol() = 'empresario' AND empresa_id::text = (auth.jwt() ->> 'tenant_id'))
-  WITH CHECK (auth.rol() = 'empresario' AND empresa_id::text = (auth.jwt() ->> 'tenant_id'));
-
 ALTER TABLE catalog.promociones ENABLE ROW LEVEL SECURITY;
 CREATE POLICY promociones_admin ON catalog.promociones
   FOR ALL TO authenticated
@@ -1048,6 +1038,128 @@ CREATE POLICY item_series_empresa ON catalog.item_series
   WITH CHECK (auth.rol() = 'empresario' AND empresa_id::text = (auth.jwt() ->> 'tenant_id'));
 DROP POLICY IF EXISTS item_series_lectura ON catalog.item_series;
 CREATE POLICY item_series_lectura ON catalog.item_series
+  FOR SELECT TO authenticated
+  USING (auth.rol() IN ('empresario', 'vendedor', 'coordinador', 'supervisor', 'operativo')
+         AND empresa_id::text = (auth.jwt() ->> 'tenant_id'));
+
+-- ── orders.entregas_digitales (P2.1) ────────────────────────────────────────
+ALTER TABLE orders.entregas_digitales ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS entregas_digitales_admin ON orders.entregas_digitales;
+CREATE POLICY entregas_digitales_admin ON orders.entregas_digitales
+  FOR ALL TO authenticated
+  USING (auth.rol() IN ('super_admin', 'admin'))
+  WITH CHECK (auth.rol() IN ('super_admin', 'admin'));
+DROP POLICY IF EXISTS entregas_digitales_comprador ON orders.entregas_digitales;
+CREATE POLICY entregas_digitales_comprador ON orders.entregas_digitales
+  FOR SELECT TO authenticated
+  USING (auth.rol() = 'comprador' AND comprador_id = auth.uid());
+DROP POLICY IF EXISTS entregas_digitales_app ON orders.entregas_digitales;
+CREATE POLICY entregas_digitales_app ON orders.entregas_digitales
+  FOR ALL TO core_engine_app
+  USING (true) WITH CHECK (true);
+
+-- ── orders.contratos y contrato_eventos (P2.2) ──────────────────────────────
+ALTER TABLE orders.contratos ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS contratos_admin ON orders.contratos;
+CREATE POLICY contratos_admin ON orders.contratos
+  FOR ALL TO authenticated
+  USING (auth.rol() IN ('super_admin', 'admin'))
+  WITH CHECK (auth.rol() IN ('super_admin', 'admin'));
+DROP POLICY IF EXISTS contratos_empresa ON orders.contratos;
+CREATE POLICY contratos_empresa ON orders.contratos
+  FOR ALL TO authenticated
+  USING (auth.rol() = 'empresario' AND empresa_id::text = (auth.jwt() ->> 'tenant_id'))
+  WITH CHECK (auth.rol() = 'empresario' AND empresa_id::text = (auth.jwt() ->> 'tenant_id'));
+DROP POLICY IF EXISTS contratos_lectura ON orders.contratos;
+CREATE POLICY contratos_lectura ON orders.contratos
+  FOR SELECT TO authenticated
+  USING (auth.rol() IN ('empresario', 'vendedor', 'coordinador', 'supervisor', 'operativo')
+         AND empresa_id::text = (auth.jwt() ->> 'tenant_id'));
+
+ALTER TABLE orders.contrato_eventos ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS contrato_eventos_admin ON orders.contrato_eventos;
+CREATE POLICY contrato_eventos_admin ON orders.contrato_eventos
+  FOR ALL TO authenticated
+  USING (auth.rol() IN ('super_admin', 'admin'))
+  WITH CHECK (auth.rol() IN ('super_admin', 'admin'));
+DROP POLICY IF EXISTS contrato_eventos_empresa ON orders.contrato_eventos;
+CREATE POLICY contrato_eventos_empresa ON orders.contrato_eventos
+  FOR ALL TO authenticated
+  USING (auth.rol() = 'empresario' AND empresa_id::text = (auth.jwt() ->> 'tenant_id'))
+  WITH CHECK (auth.rol() = 'empresario' AND empresa_id::text = (auth.jwt() ->> 'tenant_id'));
+DROP POLICY IF EXISTS contrato_eventos_lectura ON orders.contrato_eventos;
+CREATE POLICY contrato_eventos_lectura ON orders.contrato_eventos
+  FOR SELECT TO authenticated
+  USING (auth.rol() IN ('empresario', 'vendedor', 'coordinador', 'supervisor', 'operativo')
+         AND empresa_id::text = (auth.jwt() ->> 'tenant_id'));
+
+-- ── orders.suscripciones y suscripcion_ejecuciones (P2.3) ───────────────────
+ALTER TABLE orders.suscripciones ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS suscripciones_admin ON orders.suscripciones;
+CREATE POLICY suscripciones_admin ON orders.suscripciones
+  FOR ALL TO authenticated
+  USING (auth.rol() IN ('super_admin', 'admin'))
+  WITH CHECK (auth.rol() IN ('super_admin', 'admin'));
+DROP POLICY IF EXISTS suscripciones_empresa ON orders.suscripciones;
+CREATE POLICY suscripciones_empresa ON orders.suscripciones
+  FOR ALL TO authenticated
+  USING (auth.rol() = 'empresario' AND empresa_id::text = (auth.jwt() ->> 'tenant_id'))
+  WITH CHECK (auth.rol() = 'empresario' AND empresa_id::text = (auth.jwt() ->> 'tenant_id'));
+DROP POLICY IF EXISTS suscripciones_comprador ON orders.suscripciones;
+CREATE POLICY suscripciones_comprador ON orders.suscripciones
+  FOR SELECT TO authenticated
+  USING (auth.rol() = 'comprador' AND comprador_id = auth.uid());
+
+ALTER TABLE orders.suscripcion_ejecuciones ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS suscripcion_ejecuciones_admin ON orders.suscripcion_ejecuciones;
+CREATE POLICY suscripcion_ejecuciones_admin ON orders.suscripcion_ejecuciones
+  FOR ALL TO authenticated
+  USING (auth.rol() IN ('super_admin', 'admin'))
+  WITH CHECK (auth.rol() IN ('super_admin', 'admin'));
+DROP POLICY IF EXISTS suscripcion_ejecuciones_empresa ON orders.suscripcion_ejecuciones;
+CREATE POLICY suscripcion_ejecuciones_empresa ON orders.suscripcion_ejecuciones
+  FOR ALL TO authenticated
+  USING (auth.rol() = 'empresario' AND empresa_id::text = (auth.jwt() ->> 'tenant_id'))
+  WITH CHECK (auth.rol() = 'empresario' AND empresa_id::text = (auth.jwt() ->> 'tenant_id'));
+DROP POLICY IF EXISTS suscripcion_ejecuciones_comprador ON orders.suscripcion_ejecuciones;
+CREATE POLICY suscripcion_ejecuciones_comprador ON orders.suscripcion_ejecuciones
+  FOR SELECT TO authenticated
+  USING (auth.rol() = 'comprador' AND empresa_id::text IN (
+    SELECT empresa_id::text FROM orders.suscripciones s
+     WHERE s.comprador_id = auth.uid()
+  ));
+
+-- ── orders.mesas y orders.comandas (P2.5) ───────────────────────────────────
+ALTER TABLE orders.mesas ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS mesas_admin ON orders.mesas;
+CREATE POLICY mesas_admin ON orders.mesas
+  FOR ALL TO authenticated
+  USING (auth.rol() IN ('super_admin', 'admin'))
+  WITH CHECK (auth.rol() IN ('super_admin', 'admin'));
+DROP POLICY IF EXISTS mesas_empresa ON orders.mesas;
+CREATE POLICY mesas_empresa ON orders.mesas
+  FOR ALL TO authenticated
+  USING (auth.rol() = 'empresario' AND empresa_id::text = (auth.jwt() ->> 'tenant_id'))
+  WITH CHECK (auth.rol() = 'empresario' AND empresa_id::text = (auth.jwt() ->> 'tenant_id'));
+DROP POLICY IF EXISTS mesas_lectura ON orders.mesas;
+CREATE POLICY mesas_lectura ON orders.mesas
+  FOR SELECT TO authenticated
+  USING (auth.rol() IN ('empresario', 'vendedor', 'coordinador', 'supervisor', 'operativo')
+         AND empresa_id::text = (auth.jwt() ->> 'tenant_id'));
+
+ALTER TABLE orders.comandas ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS comandas_admin ON orders.comandas;
+CREATE POLICY comandas_admin ON orders.comandas
+  FOR ALL TO authenticated
+  USING (auth.rol() IN ('super_admin', 'admin'))
+  WITH CHECK (auth.rol() IN ('super_admin', 'admin'));
+DROP POLICY IF EXISTS comandas_empresa ON orders.comandas;
+CREATE POLICY comandas_empresa ON orders.comandas
+  FOR ALL TO authenticated
+  USING (auth.rol() = 'empresario' AND empresa_id::text = (auth.jwt() ->> 'tenant_id'))
+  WITH CHECK (auth.rol() = 'empresario' AND empresa_id::text = (auth.jwt() ->> 'tenant_id'));
+DROP POLICY IF EXISTS comandas_lectura ON orders.comandas;
+CREATE POLICY comandas_lectura ON orders.comandas
   FOR SELECT TO authenticated
   USING (auth.rol() IN ('empresario', 'vendedor', 'coordinador', 'supervisor', 'operativo')
          AND empresa_id::text = (auth.jwt() ->> 'tenant_id'));

@@ -79,6 +79,17 @@ describe('PedidosConsumer de catalog (RN-03 / RN-06)', () => {
     expect(productos.registrarProcesado).toHaveBeenCalledWith('evt-1', EVENTOS.ORDER_CREATED, client);
   });
 
+  it('no reserva stock cuando la linea es de entrega digital', async () => {
+    const { dispatch, productos, client } = await crear();
+    await dispatch(
+      evento(EVENTOS.ORDER_CREATED, {
+        ...ordenData,
+        items: [{ ...ordenData.items[0], fulfillment: 'digital' }],
+      }),
+    );
+    expect(productos.reservarStockEnTransaccion).toHaveBeenCalledWith(client, 'o1', []);
+  });
+
   it('una cotizacion no reserva stock y solo registra idempotencia', async () => {
     const { dispatch, outbox, productos, client } = await crear();
     await dispatch(
