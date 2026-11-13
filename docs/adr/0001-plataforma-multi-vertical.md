@@ -137,6 +137,9 @@ Se introduce la abstracción `item` con `tipo` igual a `producto`, `servicio` o
   garantía con `garantia_meses`; la devolución la marca como devuelta y la
   reubica en la ubicación predeterminada. Un item serializado sin unidades
   disponibles no se vende aunque su stock agregado sea positivo.
+- `stores.ofertas.moneda` es el código ISO de la moneda final. La orden copia
+  la moneda de sus ofertas y rechaza mezclar monedas; no hay conversión
+  implícita (el tipo de cambio sería una extensión explícita);
 - `orders.suscripciones` compra una oferta cada semana/mes/año y genera una
   orden normal al vencer, con historial en `orders.suscripcion_ejecuciones`.
   La reclamación es atómica y la capacidad `suscripciones` la gatea;

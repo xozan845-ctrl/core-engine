@@ -44,6 +44,7 @@ export interface OfertaExterna {
   precio_venta: string;
   stock: number;
   estado: string;
+  moneda?: string;
   atributos?: Record<string, unknown>;
 }
 
@@ -113,6 +114,7 @@ export class CreateOrderCommandHandler {
     const preciosPorOferta = await this.resolverPrecios(agrupados, porId, comando);
     const items: ItemOrden[] = [];
     const urlDigital = new Map<string, string>();
+    let monedaOrden: string | null = null;
     let total = Money.desdeCentavos(0);
     for (const linea of agrupados) {
       const oferta = porId.get(linea.oferta_id);
@@ -120,6 +122,14 @@ export class CreateOrderCommandHandler {
         throw new NotFoundError('Oferta', linea.oferta_id);
       }
       const itemType = oferta.item_type;
+      const monedaOferta = String(oferta.moneda ?? 'NIO').toUpperCase();
+      if (monedaOrden && monedaOrden !== monedaOferta) {
+        throw new DomainError(
+          'MONEDA_MIXTA',
+          'Una orden no puede mezclar ofertas en monedas distintas.',
+        );
+      }
+      monedaOrden = monedaOferta;
       const fulfillment = this.validarFulfillment(linea.fulfillment, tipoOrden, itemType);
       if (fulfillment === 'digital') {
         const url = this.urlEntregaDigital(oferta.atributos);
@@ -294,6 +304,7 @@ export class CreateOrderCommandHandler {
           ...(comando.cliente_parte_id ? { cliente_parte_id: comando.cliente_parte_id } : {}),
           items,
           total_cents: total.centavos,
+          moneda: monedaOrden ?? 'NIO',
           estado: 'creada',
           tipo_orden: tipoOrden,
           metodo_pago: metodoPago,
@@ -348,7 +359,7 @@ export class CreateOrderCommandHandler {
       estado: 'creada',
       total_cents: total.centavos,
       comision_cents: esCotizacion ? 0 : total.comision(0.12).centavos,
-      moneda: 'C$',
+      moneda: monedaOrden ?? 'NIO',
       items,
       direccion_envio: null,
       creado_en: creadoEn,

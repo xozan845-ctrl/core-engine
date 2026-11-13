@@ -81,5 +81,7 @@
   "68_retirar_combos.sql": "a6945c2b37a48c17e6fdc556643a6082cc0267d7fb4de121c79e6b8d9df8d710",
   "69_entrega_digital.sql": "50c1d7f36c948aeac0280390ad8d1cd0c736673936d97db5b57ab4e4bcae072e",
   "70_contratos_depositos.sql": "8e8e3e0fbfc5a7a2329eccc2628049f1792bf617b253cda97878754a709d19e2",
-  "71_suscripciones.sql": "d5ed6c1c7aaab1b8b4449cdde19c02f3dcc7fd2f5910f50cc646c05513c60bbd"
+  "71_suscripciones.sql": "d5ed6c1c7aaab1b8b4449cdde19c02f3dcc7fd2f5910f50cc646c05513c60bbd",
+  "72_multimoneda_ofertas.sql": "884cc55cb122f95955edcddc2205a543efc1be24c05578ebad3d315847068744",
+  "73_orders_moneda_proyeccion.sql": "799d5ca787e6b1c35dccb188e54cf6d2c852a1529ab23a389b505d17e8b7dccc"
 }

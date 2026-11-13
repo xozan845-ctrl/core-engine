@@ -19,6 +19,7 @@ export interface OfertaPublica {
   imagen_objeto_id: string | null;
   imagen_url: string | null;
   precio_venta: string;
+  moneda: string;
   stock: number;
   estado: string;
   creado_en: string;
@@ -81,6 +82,7 @@ export function aOfertaPublica(oferta: Oferta): OfertaPublica {
     imagen_objeto_id: oferta.imagen_objeto_id,
     imagen_url: oferta.imagen_url,
     precio_venta: oferta.precio_venta,
+    moneda: oferta.moneda,
     stock: oferta.stock,
     estado: oferta.estado,
     creado_en: oferta.creado_en,

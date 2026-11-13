@@ -32,6 +32,7 @@ export interface Oferta {
   precio_venta: string;
   stock: number;
   estado: string;
+  moneda: string;
   creado_en: string;
 }
 
@@ -52,6 +53,7 @@ interface OfertaRow {
   precio_venta_cents: number;
   stock: number;
   estado: string;
+  moneda: string;
   creado_en: string;
 }
 
@@ -72,7 +74,8 @@ interface ItemExterno {
 const COLUMNAS_OFERTA = `o.id, o.tienda_id, t.vendedor_id, t.empresa_id,
   t.participacion_porcentaje, o.item_type, o.item_id, o.sku,
   o.producto_nombre, o.atributos, o.imagen_objeto_id, o.margen,
-  o.precio_base_cents, o.precio_venta_cents, o.stock, o.estado, o.creado_en`;
+  o.precio_base_cents, o.precio_venta_cents, o.stock, o.estado, o.moneda,
+  o.creado_en`;
 
 const URL_IMAGEN_PUBLICA = '/api/v2/storage/public/objetos';
 
@@ -159,7 +162,12 @@ export class OfertasService {
     tiendaId: string,
     itemId: string,
     margen: number,
+    monedaValor = 'NIO',
   ): Promise<Oferta> {
+    const moneda = String(monedaValor).trim().toUpperCase();
+    if (!/^[A-Z]{3}$/.test(moneda)) {
+      throw new DomainError('MONEDA_INVALIDA', 'La moneda debe ser un codigo ISO de 3 letras.');
+    }
     if (margen < MARGEN_MINIMO || margen > MARGEN_MAXIMO) {
       throw new DomainError('MARGEN_INVALIDO', `El margen debe estar entre ${MARGEN_MINIMO} y ${MARGEN_MAXIMO} por ciento (RN-01).`);
     }
@@ -194,8 +202,8 @@ export class OfertasService {
       `INSERT INTO stores.ofertas
         (id, tienda_id, item_type, item_id, sku,
          producto_nombre, atributos, imagen_objeto_id, margen, precio_base_cents,
-         precio_venta_cents, stock, estado)
-       VALUES ($1, $2, $3, $4, $5, $6, $7::jsonb, NULL, $8, $9, $10, $11, 'activa')
+         precio_venta_cents, stock, estado, moneda)
+       VALUES ($1, $2, $3, $4, $5, $6, $7::jsonb, NULL, $8, $9, $10, $11, 'activa', $12)
        RETURNING id`,
       [
         randomUUID(),
@@ -209,6 +217,7 @@ export class OfertasService {
         precioBase.centavos,
         precioVenta.centavos,
         item.track_inventory ? item.stock : null,
+        moneda,
       ],
     );
     if (!fila) throw new DomainError('OFERTA_FALLIDA', 'No se pudo publicar el item.');
@@ -318,6 +327,7 @@ export class OfertasService {
       precio_venta: Money.desdeCentavos(fila.precio_venta_cents).string(),
       stock: fila.stock,
       estado: fila.estado,
+      moneda: fila.moneda ?? 'NIO',
       creado_en: fila.creado_en,
     };
   }
