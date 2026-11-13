@@ -1,10 +1,4 @@
 {
-  "catalog-service": {
-    "lines": 94.73,
-    "branches": 83.5,
-    "functions": 91.07,
-    "statements": 90.15
-  },
   "identity-service": {
     "lines": 90.69,
     "branches": 79.5,

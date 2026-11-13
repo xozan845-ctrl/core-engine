@@ -51,7 +51,6 @@ const TENANTS = [
 
 let client;
 let pgService;
-let inventario;
 const creados = new Map();
 
 async function crearTenant({ vertical, pack }) {
@@ -116,13 +115,8 @@ before(async () => {
 
   const shared = await import('@core/shared');
   const { PgService } = shared;
-  const { InventarioService } = await import(
-    '../../packages/catalog-service/dist/inventario/inventario.service.js'
-  );
-
   pgService = new PgService({ url: connectionString });
   await pgService.onModuleInit();
-  inventario = new InventarioService(pgService);
 });
 
 after(async () => {
@@ -145,56 +139,8 @@ after(async () => {
   await client?.end();
 });
 
-test('farmacia: un producto con inventario acepta lotes y vencimiento', async () => {
-  const { empresaId } = tenant('farmacia');
-  const { rows: [capacidad] } = await client.query(
-    `SELECT 1 FROM identity.empresa_capacidades
-      WHERE empresa_id = $1 AND capacidad_codigo = 'inventario_lotes' AND activo = true`,
-    [empresaId],
-  );
-  assert.ok(capacidad, 'farmacia debe tener inventario_lotes activo');
-
-  const { rows: [item] } = await client.query(
-    `INSERT INTO catalog.items
-       (empresa_id, tipo, codigo, nombre, precio_cents, track_inventory, stock)
-     VALUES ($1, 'producto', $2, 'Medicamento con lote', 2500, true, 20)
-     RETURNING id`,
-    [empresaId, `MED-${randomUUID().slice(0, 8)}`],
-  );
-  const lote = await inventario.crearLote({
-    empresa_id: empresaId,
-    item_id: item.id,
-    codigo_lote: `LOTE-${randomUUID().slice(0, 8)}`,
-    vence_en: '2031-12-31',
-    cantidad_inicial: 20,
-  });
-
-  assert.equal(lote.empresa_id, empresaId);
-  assert.equal(lote.cantidad_inicial, 20);
-  assert.equal(lote.cantidad_disponible, 20);
-  assert.equal(new Date(lote.vence_en).toISOString().slice(0, 10), '2031-12-31');
-});
-
-test('farmacia: un servicio sin inventario no admite lotes', async () => {
-  const { empresaId } = tenant('farmacia');
-  const { rows: [servicio] } = await client.query(
-    `INSERT INTO catalog.items
-       (empresa_id, tipo, codigo, nombre, precio_cents, track_inventory, duration_minutes)
-     VALUES ($1, 'servicio', $2, 'Consulta', 5000, false, 30)
-     RETURNING id`,
-    [empresaId, `SERV-${randomUUID().slice(0, 8)}`],
-  );
-
-  await assert.rejects(
-    inventario.crearLote({
-      empresa_id: empresaId,
-      item_id: servicio.id,
-      codigo_lote: 'LOTE-SERVICIO',
-      cantidad_inicial: 1,
-    }),
-    (error) => error?.codigo === 'INVENTARIO_NO_APLICA',
-  );
-});
+// Los flujos de lotes FEFO y serialización se cubren en
+// `packages/catalog-service/tests/catalog_pg.rs` (ADR-0016).
 
 test('flota: crea vehículo, ruta y parada sobre el mismo tenant', async () => {
   const { empresaId } = tenant('flota');

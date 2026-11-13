@@ -91,7 +91,7 @@ seeds del plan contable NIC e indices). En **Supabase** (staging/prod) aplique a
 |---|---|---|---|---|
 | api-gateway | 8080 | **Sí** (dev `8080:8080`; stage/prod `127.0.0.1:8080:8080` tras Traefik) | — | `packages/api-gateway` |
 | identity-service | 3001 | No | `identity` | `packages/identity-service` |
-| catalog-service | 3002 | No | `catalog` | `packages/catalog-service` |
+| catalog-service | 3002 | No | `catalog` | `packages/catalog-service` (Rust) |
 | stores-service | 3003 | No | `stores` | `packages/stores-service` (Rust) |
 | orders-service | 3004 | No | `orders` | `packages/orders-service` (Rust) |
 | logistics-service | 3005 | No | `logistics` | `packages/logistics-service` |

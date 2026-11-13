@@ -141,11 +141,10 @@ services:
 
   catalog-service:
     <<: *servicio-base
+    # ADR-0016: el servicio es Rust y tiene su propio Dockerfile multi-stage.
     build:
       context: .
-      dockerfile: Dockerfile
-      args:
-        SERVICIO: catalog-service
+      dockerfile: packages/catalog-service/Dockerfile
     environment:
       SERVICIO: catalog-service
       PORT: 3002
