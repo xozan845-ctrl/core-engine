@@ -1033,3 +1033,21 @@ CREATE POLICY item_stock_ubicacion_lectura ON catalog.item_stock_ubicacion
   FOR SELECT TO authenticated
   USING (auth.rol() IN ('empresario', 'vendedor', 'coordinador', 'supervisor', 'operativo')
          AND empresa_id::text = (auth.jwt() ->> 'tenant_id'));
+
+-- ── catalog.item_series (P1.3) ──────────────────────────────────────────────
+ALTER TABLE catalog.item_series ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS item_series_admin ON catalog.item_series;
+CREATE POLICY item_series_admin ON catalog.item_series
+  FOR ALL TO authenticated
+  USING (auth.rol() IN ('super_admin', 'admin'))
+  WITH CHECK (auth.rol() IN ('super_admin', 'admin'));
+DROP POLICY IF EXISTS item_series_empresa ON catalog.item_series;
+CREATE POLICY item_series_empresa ON catalog.item_series
+  FOR ALL TO authenticated
+  USING (auth.rol() = 'empresario' AND empresa_id::text = (auth.jwt() ->> 'tenant_id'))
+  WITH CHECK (auth.rol() = 'empresario' AND empresa_id::text = (auth.jwt() ->> 'tenant_id'));
+DROP POLICY IF EXISTS item_series_lectura ON catalog.item_series;
+CREATE POLICY item_series_lectura ON catalog.item_series
+  FOR SELECT TO authenticated
+  USING (auth.rol() IN ('empresario', 'vendedor', 'coordinador', 'supervisor', 'operativo')
+         AND empresa_id::text = (auth.jwt() ->> 'tenant_id'));
