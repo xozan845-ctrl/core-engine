@@ -11,7 +11,9 @@ pub mod configuracion_sitio;
 pub mod empresas;
 pub mod envelope;
 pub mod packs;
+pub mod partes;
 pub mod personal;
+pub mod registros;
 pub mod usuarios;
 pub mod validacion;
 
@@ -113,6 +115,50 @@ pub fn build_router(state: AppState) -> Router {
         .route(
             "/api/v2/configuracion/sitio",
             get(configuracion_sitio::obtener).patch(configuracion_sitio::actualizar),
+        )
+        .route(
+            "/api/v2/empresas/{empresa_id}/partes",
+            get(partes::listar).post(partes::crear),
+        )
+        .route(
+            "/api/v2/empresas/{empresa_id}/partes/{parte_id}",
+            get(partes::obtener)
+                .patch(partes::actualizar)
+                .delete(partes::eliminar),
+        )
+        .route(
+            "/api/v2/empresas/{empresa_id}/partes/{parte_id}/contactos",
+            get(partes::listar_contactos).post(partes::crear_contacto),
+        )
+        .route(
+            "/api/v2/empresas/{empresa_id}/partes/{parte_id}/contactos/{contacto_id}",
+            patch(partes::actualizar_contacto).delete(partes::eliminar_contacto),
+        )
+        .route(
+            "/api/v2/empresas/{empresa_id}/partes/{parte_id}/direcciones",
+            get(partes::listar_direcciones).post(partes::crear_direccion),
+        )
+        .route(
+            "/api/v2/empresas/{empresa_id}/partes/{parte_id}/direcciones/{direccion_id}",
+            patch(partes::actualizar_direccion).delete(partes::eliminar_direccion),
+        )
+        .route(
+            "/api/v2/empresas/{empresa_id}/partes/{parte_id}/relaciones",
+            get(partes::listar_relaciones).post(partes::crear_relacion),
+        )
+        .route(
+            "/api/v2/empresas/{empresa_id}/partes/{parte_id}/relaciones/{relacion_id}",
+            delete(partes::eliminar_relacion),
+        )
+        .route(
+            "/api/v2/empresas/{empresa_id}/partes/{parte_id}/registros",
+            get(registros::listar).post(registros::crear),
+        )
+        .route(
+            "/api/v2/empresas/{empresa_id}/partes/{parte_id}/registros/{registro_id}",
+            get(registros::obtener)
+                .patch(registros::actualizar)
+                .delete(registros::eliminar),
         )
         .route(
             "/api/v2/empresas/{empresa_id}/roles",

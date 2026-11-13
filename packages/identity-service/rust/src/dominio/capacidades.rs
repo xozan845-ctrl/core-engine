@@ -184,6 +184,40 @@ fn interno(error: sqlx::Error) -> ApiError {
     ApiError::interno()
 }
 
+impl Capacidades {
+    /// Lectura interna (servicio→servicio): capacidades por empresa.
+    pub async fn activas_de_empresas(
+        &self,
+        empresa_ids: &[String],
+        capacidades: &[String],
+    ) -> Result<Vec<Value>, ApiError> {
+        if empresa_ids.is_empty() || capacidades.is_empty() {
+            return Ok(Vec::new());
+        }
+        let mut tx = self.db.transaccion().await.map_err(interno)?;
+        let filas = sqlx::query(
+            "SELECT jsonb_build_object(
+                      'empresa_id', empresa_id,
+                      'capacidad_codigo', capacidad_codigo,
+                      'activo', activo
+                    ) AS datos
+               FROM identity.empresa_capacidades
+              WHERE empresa_id = ANY($1::uuid[])
+                AND capacidad_codigo = ANY($2::text[])",
+        )
+        .bind(empresa_ids)
+        .bind(capacidades)
+        .fetch_all(&mut *tx)
+        .await
+        .map_err(interno)?;
+        tx.commit().await.map_err(interno)?;
+        filas
+            .iter()
+            .map(|fila| fila.try_get("datos").map_err(interno))
+            .collect()
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
