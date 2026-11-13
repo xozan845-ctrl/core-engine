@@ -1,6 +1,6 @@
 # storage-service (Rust)
 
-Reescritura en Rust del servicio de almacenamiento de objetos (ADR-0011),
+Reescritura en Rust del servicio de almacenamiento de objetos (ADR-0012),
 siguiendo el patrón de `scheduling-service`, `notifications-service` y
 `field-service`.
 

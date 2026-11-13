@@ -1,4 +1,4 @@
-//! `storage-service` en Rust — reescritura con paridad de contrato (ADR-0011).
+//! `storage-service` en Rust — reescritura con paridad de contrato (ADR-0012).
 
 pub mod almacen;
 pub mod auth;
