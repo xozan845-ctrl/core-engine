@@ -30,6 +30,7 @@ pub struct Config {
     pub frontend_url: String,
     pub storage_service_url: String,
     pub internal_api_key: Option<String>,
+    pub platform_tenant_id: Option<String>,
     pub admin_email: String,
     pub admin_password: String,
     pub email_mode: String,
@@ -98,6 +99,7 @@ impl Config {
                 .trim_end_matches('/')
                 .to_string(),
             internal_api_key: leer("INTERNAL_API_KEY"),
+            platform_tenant_id: leer("PLATFORM_TENANT_ID"),
             admin_email: requerido_en_produccion("ADMIN_EMAIL", ADMIN_EMAIL_DEFAULT)?,
             admin_password: requerido_en_produccion("ADMIN_PASSWORD", ADMIN_PASSWORD_DEFAULT)?,
             email_mode: leer("EMAIL_MODE")
