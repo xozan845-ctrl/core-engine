@@ -14,12 +14,13 @@ use uuid::Uuid;
 
 pub const TIPOS: [&str; 3] = ["producto", "servicio", "alquiler"];
 
-const COLUMNAS: &str = "item_id, empresa_id, tipo, codigo, nombre, descripcion,
-  categoria, precio_cents, costo_cents, track_inventory, track_serial, stock,
-  duration_minutes, atributos, parent_item_id, marca, codigo_barras, unidad,
-  permite_fracciones, unidad_compra, contenido_cantidad, contenido_unidad,
-  tipo_precio, tipo_costo, stock_minimo, stock_maximo, garantia_meses,
-  es_materia_prima, ubicacion, estado, creado_en, actualizado_en";
+const COLUMNAS: &str = "i.id AS item_id, i.empresa_id, i.tipo, i.codigo, i.nombre,
+  i.descripcion, i.categoria, i.precio_cents, i.costo_cents, i.track_inventory,
+  i.track_serial, i.stock, i.duration_minutes, i.atributos, i.parent_item_id,
+  i.marca, i.codigo_barras, i.unidad, i.permite_fracciones, i.unidad_compra,
+  i.contenido_cantidad, i.contenido_unidad, i.tipo_precio, i.tipo_costo,
+  i.stock_minimo, i.stock_maximo, i.garantia_meses, i.es_materia_prima,
+  i.ubicacion, i.estado, i.creado_en, i.actualizado_en";
 
 const COLUMNAS_RETURNING: &str = "id AS item_id, empresa_id, tipo, codigo, nombre, descripcion,
   categoria, precio_cents, costo_cents, track_inventory, track_serial, stock,
@@ -108,21 +109,24 @@ impl Items {
             filtros.get("pagina").and_then(Value::as_str),
             filtros.get("limite").and_then(Value::as_str),
         );
-        let mut condiciones = vec!["empresa_id = $1".to_string()];
+        let mut condiciones = vec![
+            "i.empresa_id = $1::uuid".to_string(),
+            "i.eliminado_en IS NULL".to_string(),
+        ];
         let mut params: Vec<String> = vec![empresa.clone()];
         if let Some(tipo) = filtros.get("tipo") {
             let tipo = exigir_tipo(tipo)?;
             params.push(tipo.to_string());
-            condiciones.push(format!("tipo = ${}", params.len()));
+            condiciones.push(format!("i.tipo = ${}", params.len()));
         }
         if let Some(categoria) = texto_opcional(filtros, "categoria").filter(|v| !v.is_empty()) {
             params.push(categoria.to_lowercase());
-            condiciones.push(format!("LOWER(categoria) = ${}", params.len()));
+            condiciones.push(format!("LOWER(i.categoria) = ${}", params.len()));
         }
         if let Some(q) = texto_opcional(filtros, "q").filter(|v| !v.is_empty()) {
             params.push(format!("%{}%", q.to_lowercase()));
             condiciones.push(format!(
-                "(LOWER(nombre) LIKE ${0} OR LOWER(codigo) LIKE ${0})",
+                "(LOWER(i.nombre) LIKE ${0} OR LOWER(i.codigo) LIKE ${0})",
                 params.len()
             ));
         }
@@ -131,12 +135,12 @@ impl Items {
             .and_then(Value::as_bool)
             .unwrap_or(false);
         if !incluir_inactivos {
-            condiciones.push("estado = 'activo'".to_string());
+            condiciones.push("i.estado = 'activo'".to_string());
         }
         let where_clause = condiciones.join(" AND ");
         let mut tx = self.db.transaccion().await.map_err(interno)?;
         let sql_total =
-            format!("SELECT COUNT(*)::int AS n FROM catalog.items_vista WHERE {where_clause}");
+            format!("SELECT COUNT(*)::int AS n FROM catalog.items i WHERE {where_clause}");
         let mut consulta_total = sqlx::query(&sql_total);
         for parametro in &params {
             consulta_total = consulta_total.bind(parametro);
@@ -149,7 +153,7 @@ impl Items {
         let limite = paginacion.limite;
         let offset = (paginacion.pagina - 1) * paginacion.limite;
         let sql = format!(
-            "SELECT {COLUMNAS} FROM catalog.items_vista WHERE {where_clause}
+            "SELECT {COLUMNAS} FROM catalog.items i WHERE {where_clause}
              ORDER BY creado_en DESC LIMIT ${} OFFSET ${}",
             params.len() + 1,
             params.len() + 2
@@ -188,7 +192,7 @@ impl Items {
         let fila = match empresa_id {
             Some(empresa) => {
                 sqlx::query(&format!(
-                    "SELECT {COLUMNAS} FROM catalog.items_vista WHERE item_id = $1::uuid AND empresa_id = $2::uuid"
+                    "SELECT {COLUMNAS} FROM catalog.items i WHERE i.id = $1::uuid AND i.empresa_id = $2::uuid AND i.eliminado_en IS NULL"
                 ))
                 .bind(id)
                 .bind(empresa)
@@ -197,7 +201,7 @@ impl Items {
             }
             None => {
                 sqlx::query(&format!(
-                    "SELECT {COLUMNAS} FROM catalog.items_vista WHERE item_id = $1::uuid"
+                    "SELECT {COLUMNAS} FROM catalog.items i WHERE i.id = $1::uuid AND i.eliminado_en IS NULL"
                 ))
                 .bind(id)
                 .fetch_optional(&mut *tx)

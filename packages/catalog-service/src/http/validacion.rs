@@ -86,6 +86,55 @@ fn coincide(texto: &str, patron: &str) -> bool {
                 && resto.chars().all(|caracter| caracter.is_ascii_hexdigit())
         }
         "codigo_barras" => !texto.trim().is_empty(),
+        "sku" => {
+            (2..=32).contains(&texto.len())
+                && texto
+                    .chars()
+                    .all(|caracter| caracter.is_ascii_alphanumeric() || caracter == '-')
+        }
+        "monto" => {
+            let partes: Vec<&str> = texto.split('.').collect();
+            (partes.len() == 1 || partes.len() == 2)
+                && !partes[0].is_empty()
+                && partes[0].chars().all(|caracter| caracter.is_ascii_digit())
+                && partes
+                    .get(1)
+                    .map(|decimales| {
+                        (1..=2).contains(&decimales.len())
+                            && decimales.chars().all(|caracter| caracter.is_ascii_digit())
+                    })
+                    .unwrap_or(true)
+        }
+        "serial" => {
+            (1..=120).contains(&texto.chars().count())
+                && texto.chars().all(|caracter| {
+                    caracter.is_ascii_alphanumeric()
+                        || caracter == '.'
+                        || caracter == '_'
+                        || caracter == '-'
+                })
+        }
+        "imei" => texto.len() <= 20 && texto.chars().all(|caracter| caracter.is_ascii_digit()),
+        "fecha_corta" => {
+            let bytes = texto.as_bytes();
+            bytes.len() == 10
+                && bytes[4] == b'-'
+                && bytes[7] == b'-'
+                && bytes[..4].iter().all(u8::is_ascii_digit)
+                && bytes[5..7].iter().all(u8::is_ascii_digit)
+                && bytes[8..].iter().all(u8::is_ascii_digit)
+        }
+        "segmento" => {
+            let mut caracteres = texto.chars();
+            matches!(caracteres.next(), Some(primero) if primero.is_ascii_lowercase())
+                && (1..=40).contains(&texto.chars().count())
+                && texto.chars().all(|caracter| {
+                    caracter.is_ascii_lowercase()
+                        || caracter.is_ascii_digit()
+                        || caracter == '_'
+                        || caracter == '-'
+                })
+        }
         "codigo_ubicacion" => {
             let mut caracteres = texto.chars();
             matches!(caracteres.next(), Some(primero) if primero.is_ascii_lowercase())

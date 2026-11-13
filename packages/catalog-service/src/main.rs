@@ -2,15 +2,24 @@
 //! apagado ordenado.
 
 use catalog_service::auth::CapacidadesHttp;
+use catalog_service::componentes::Componentes;
 use catalog_service::config::Config;
+use catalog_service::consumidor::{cola, handler_consumidor, PedidosConsumer};
 use catalog_service::db::Db;
 use catalog_service::http::build_router;
 use catalog_service::inventario::Inventario;
 use catalog_service::items::Items;
 use catalog_service::logs::{ejecutar_con_contexto, ContextoCorrelacion};
 use catalog_service::metrics::Metrics;
+use catalog_service::operaciones::Operaciones;
+use catalog_service::outbox::Outbox;
+use catalog_service::precios::Precios;
+use catalog_service::productos::Productos;
 use catalog_service::rabbit::Rabbit;
+use catalog_service::series::Series;
+use catalog_service::servicios::Servicios;
 use catalog_service::state::AppState;
+use catalog_service::tarifas::Tarifas;
 use catalog_service::ubicaciones::Ubicaciones;
 use std::sync::Arc;
 
@@ -59,10 +68,52 @@ async fn main() {
         config.internal_request_timeout_ms,
     ));
 
+    let outbox = Arc::new(Outbox::nueva(config.outbox_tabla.clone()));
     let items = Arc::new(Items::nueva(Arc::clone(&db)));
     let inventario = Arc::new(Inventario::nueva(Arc::clone(&db)));
     let ubicaciones = Arc::new(Ubicaciones::nueva(Arc::clone(&db), Arc::clone(&items)));
+    let productos = Arc::new(Productos::nueva(
+        Arc::clone(&db),
+        Some(Arc::clone(&outbox)),
+        Some(Arc::clone(&items)),
+    ));
+    let servicios = Arc::new(Servicios::con_productos(
+        Arc::clone(&db),
+        Arc::clone(&productos),
+        Some(Arc::clone(&items)),
+    ));
+    let precios = Arc::new(Precios::nueva(Arc::clone(&db)));
+    let tarifas = Arc::new(Tarifas::nueva(Arc::clone(&db)));
+    let series = Arc::new(Series::nueva(Arc::clone(&db)));
+    let componentes = Arc::new(Componentes::nueva(Arc::clone(&db), Arc::clone(&items)));
+    let operaciones = Arc::new(Operaciones::nueva(
+        Arc::clone(&db),
+        Some(Arc::clone(&outbox)),
+    ));
+
+    if rabbit.declarar_colas(vec![cola()]).await.is_err() {
+        eprintln!("No se pudo declarar la cola catalog.pedidos");
+        std::process::exit(1);
+    }
+    let consumidor = Arc::new(PedidosConsumer::nuevo(
+        Arc::clone(&db),
+        Arc::clone(&outbox),
+        Arc::clone(&productos),
+    ));
+    rabbit
+        .consumir("catalog.pedidos", handler_consumidor(consumidor))
+        .await;
+    rabbit.iniciar_supervisor();
+    rabbit.activar_reintento(std::time::Duration::from_secs(10));
+
     let metrics = Arc::new(Metrics::nueva(servicio.clone()));
+    let tarea_outbox = iniciar_outbox(
+        Arc::clone(&outbox),
+        Arc::clone(&db),
+        Arc::clone(&rabbit),
+        Arc::clone(&metrics),
+    );
+
     let estado = AppState::con_dependencias(
         config,
         metrics,
@@ -71,6 +122,13 @@ async fn main() {
         items,
         inventario,
         ubicaciones,
+        productos,
+        servicios,
+        precios,
+        tarifas,
+        series,
+        componentes,
+        operaciones,
     );
     let app = build_router(estado);
 
@@ -96,10 +154,35 @@ async fn main() {
                 catalog_service::campos! { "msg": "Fallo el servidor HTTP", "err": error.to_string() },
             );
         }
+        tarea_outbox.abort();
         rabbit.cerrar().await;
         db.cerrar().await;
     })
     .await;
+}
+
+/// Poller del Outbox: publica pendientes cada segundo (ADR-03).
+fn iniciar_outbox(
+    outbox: Arc<Outbox>,
+    db: Arc<Db>,
+    rabbit: Arc<Rabbit>,
+    metrics: Arc<Metrics>,
+) -> tokio::task::JoinHandle<()> {
+    tokio::spawn(async move {
+        let mut ticker = tokio::time::interval(std::time::Duration::from_secs(1));
+        loop {
+            ticker.tick().await;
+            if let Err(error) = outbox.publicar_pendientes(&db, &rabbit, &metrics).await {
+                catalog_service::logs::error(
+                    "outbox",
+                    catalog_service::campos! {
+                        "msg": "Fallo al publicar pendientes",
+                        "err": format!("{error:?}"),
+                    },
+                );
+            }
+        }
+    })
 }
 
 /// SIGINT/SIGTERM: deja de aceptar peticiones y cierra ordenadamente (R-MS-6).
