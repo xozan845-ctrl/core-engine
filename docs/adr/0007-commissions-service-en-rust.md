@@ -177,7 +177,7 @@ permanece en borrador hasta cumplir la verificación de paridad.
 | #585 | MERGED | ADR-0007 (este documento) |
 | #589 | MERGED | Crate Rust con paridad + job `rust` y gate de cobertura (R-CI-1/R-COV-1) |
 | #598 | MERGED | Conmutación: TypeScript retirado, crate en la raíz, Docker/compose/scripts y saga |
-| #— | ABIERTO | PR final `feat/commissions-rust → develop` (borrador hasta el smoke de `staging`) |
+| #603 | ABIERTO (DRAFT) | PR final `feat/commissions-rust-develop → develop` (borrador hasta el smoke de `staging`); checks verdes en la cabeza |
 
 - Cobertura Rust medida con PostgreSQL efímero: **73,29 % líneas / 69,70 %
   funciones** (sin `main.rs`); gate 72/68 con ratchet +5 por release hasta
