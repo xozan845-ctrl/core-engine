@@ -266,9 +266,7 @@ services:
     <<: *servicio-base
     build:
       context: .
-      dockerfile: Dockerfile
-      args:
-        SERVICIO: notifications-service
+      dockerfile: packages/notifications-service/Dockerfile
     environment:
       SERVICIO: notifications-service
       PORT: 3012

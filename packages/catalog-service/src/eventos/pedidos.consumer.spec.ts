@@ -30,6 +30,7 @@ describe('PedidosConsumer de catalog (RN-03 / RN-06)', () => {
         stock_restante: [{ sku: 'sku-01', stock_restante: 4 }],
       }),
       reintegrarStockEnTransaccion: vi.fn().mockResolvedValue(undefined),
+      devolverSeriesEnTransaccion: vi.fn().mockResolvedValue(undefined),
       stockActualDe: vi.fn().mockResolvedValue([{ sku: 'sku-01', stock_restante: 9 }]),
     };
     const consumer = new PedidosConsumer(
@@ -148,6 +149,9 @@ describe('PedidosConsumer de catalog (RN-03 / RN-06)', () => {
     await dispatch(evento(EVENTOS.DEVOLUCION_SOLICITADA, data));
 
     expect(productos.reintegrarStockEnTransaccion).toHaveBeenCalledWith(client, 'o1', [
+      { empresa_id: 'e-1', sku: 'SKU-01', cantidad: 1 },
+    ]);
+    expect(productos.devolverSeriesEnTransaccion).toHaveBeenCalledWith(client, 'o1', [
       { empresa_id: 'e-1', sku: 'SKU-01', cantidad: 1 },
     ]);
     const emitidos = (outbox.insertarEnTransaccion as Mock).mock.calls.map((c) => c[1]);

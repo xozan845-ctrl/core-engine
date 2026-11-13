@@ -47,6 +47,12 @@
 | `notifications-service` | 4 | 25 | 100,00 | 88,88 | 100,00 | 99 / 85 / 99 | ✅ |
 | **Total** | **151** | **1.533** | — | — | — | 14 workspaces | **14/14 ✅** |
 
+> **Nota (2026-11-12)**: `notifications-service` migró a Rust (ADR-0006) y sale
+> del gate Vitest; su cobertura se mide con `cargo-llvm-cov` en el job `rust`
+> de CI. `scheduling-service` ya estaba en esa situación (ADR-0004). La tabla
+> anterior es el snapshot histórico de la última auditoría Vitest.
+
+
 - **Objetivo final (80 líneas / 70 ramas): 12 de 14 workspaces lo alcanzan**. Quedan fuera `commissions-service` (ramas 68,75) y `market-intelligence-service` (47,97/38,65), que suben por ratchet (+5/release).
 - `npm run coverage:compare`: **14/14 workspaces iguales o por encima del baseline**.
 - Método: baseline medido redondeado a la baja; los thresholds viven en `scripts/config/coverage.mjs`.

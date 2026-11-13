@@ -75,5 +75,7 @@
   "62_api_keys.sql": "bbc5eba99e7eccdac87af7d20080da81866a2788d2f8a9162d444cd4508190e1",
   "63_gating_capacidades.sql": "e5c52a98d281b5012e94724509559b2b2a49eeee4d614a2d7abfb4e02fc1b84f",
   "64_listas_precio_escalas.sql": "4cef7f4cd0fa149bf66a8f10bc98751a43ecc3c31f529767a2c4fe6756634c68",
-  "65_inventario_ubicaciones.sql": "99a00ea76c3731687862ecdf053fe653726eb2686cca89af2b476f2946e5c77d"
+  "65_inventario_ubicaciones.sql": "99a00ea76c3731687862ecdf053fe653726eb2686cca89af2b476f2946e5c77d",
+  "66_item_series.sql": "b73714bcf34093d90f8541f68cb41018e00fd586bff863fdab68baf2fe96b7b7",
+  "67_citas_capacidad.sql": "94a5bd8e1d19ae0b761a98997c1ff1278bffeed12fdde3508ac0bb4a51ab9b5f"
 }
