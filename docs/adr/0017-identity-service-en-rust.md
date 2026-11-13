@@ -1,7 +1,7 @@
 # ADR-0017: Reescritura de `identity-service` en Rust sin cambio de contrato
 
 - **Fecha**: 2026-11-13
-- **Estado**: Aceptado — implementación en curso (PR 1-2: andamiaje y auth)
+- **Estado**: Aceptado — implementación en curso (PR 1-3: andamiaje, auth y catálogo de identidad)
 - **Ámbito**: `identity-service` (HTTP público e interno, PostgreSQL/RLS,
   JWT HS256, sesiones, usuarios, empresas, personales, packs, extensiones,
   partes, registros, API keys, correo de restablecimiento, seed y métricas)
@@ -102,7 +102,8 @@ Actualmente usa `EMAIL_PROVIDER` de `@core/shared` (SMTP/Mailpit).
 |---|---|---|
 | 1 | ADR y andamiaje: configuración, logs, errores, métricas, envelope, auth (JWT/bcrypt), DB/RLS, `/health`, `/metrics`, `/docs` y job `rust` de CI | `cargo fmt`, `clippy`, `test` y gate de cobertura verdes |
 | 2 | Auth y sesiones: registro, login, refresh, logout, `/auth/me`, crear usuario, cambiar contraseña, restablecer contraseña y vincular personal | Pruebas de JWT, sesiones y contraseñas; PostgreSQL verde |
-| 3 | Usuarios, API keys, empresas, capacidades, verticales, packs y configuración del sitio | Contratos HTTP y RLS por tenant verdes |
+| 3 | Usuarios (listado/avatar), capacidades, verticales, packs y modelos de operación | Contratos HTTP y RLS por tenant verdes |
+| 3b | Empresas, configuración del sitio (tema/media) y API keys | Contratos HTTP y RLS por tenant verdes |
 | 4 | Personal: roles, puestos, asignaciones, invitaciones e incorporaciones | Flujo invitación/aceptación y guards verdes |
 | 5 | Partes y registros: contactos, direcciones, relaciones y registros genéricos | CRUD y aislamiento por empresa verdes |
 | 6 | Extensiones, media/fondos y personalización | JSON Schema y validación de medios verdes |
@@ -154,9 +155,14 @@ Actualmente usa `EMAIL_PROVIDER` de `@core/shared` (SMTP/Mailpit).
   administrativa, cambio y restablecimiento de contraseña, vinculación de
   personal y revocación de sesiones. Incluye el puerto `Email` con modo `log`
   y SMTP (`lettre`).
-- 64 pruebas (52 unitarias + 6 PostgreSQL de auth/sesiones + 6 HTTP del
-  contrato); cobertura medida 81,40 % líneas / 76,36 % funciones (gate 80/75 en
+- PR 3 completo: listado y perfil de usuarios, avatar validado contra storage,
+  capacidades por empresa (con guard de empresario activo), verticales,
+  packs, modelos de operación y sus altas administrativas.
+- 78 pruebas (63 unitarias + 6 PostgreSQL de auth/sesiones + 9 HTTP del
+  contrato); cobertura medida 81,26 % líneas / 76,07 % funciones (gate 78/75 en
   CI). Las integraciones aplican las migraciones reales de `infra/db/init` en
   orden, no un dump paralelo.
+- Pendiente en 3b: empresas (perfil, slug, pack y vendedores), configuración
+  del sitio y API keys.
 - El TypeScript sigue siendo el runtime activo y el servicio permanece fuera de
   `RUST_SERVICES` hasta el PR 9.

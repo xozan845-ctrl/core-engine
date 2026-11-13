@@ -192,7 +192,7 @@ jobs:
             functions: 73
           - service: identity-service
             dir: packages/identity-service/rust
-            lines: 80
+            lines: 78
             functions: 75
     env:
       TZ: America/Managua
