@@ -95,7 +95,7 @@ pub async fn crear_proveedor(
         &headers,
         ROLES_INVENTARIO_ADMIN,
         &[],
-        &[CAP_STOCK[0], CAP_LOTES[0]],
+        &[CAP_LOTES[0], CAP_STOCK[0]],
     )
     .await?;
     validar(CREAR_PROVEEDOR, &cuerpo)?;
@@ -113,7 +113,7 @@ pub async fn crear_lote(
         &headers,
         ROLES_INVENTARIO_ADMIN,
         &[],
-        &[CAP_STOCK[0], CAP_LOTES[0]],
+        &[CAP_LOTES[0], CAP_STOCK[0]],
     )
     .await?;
     validar(CREAR_LOTE, &cuerpo)?;
@@ -131,7 +131,7 @@ pub async fn consumir_lote(
         &headers,
         ROLES_INVENTARIO_ADMIN,
         &[],
-        &[CAP_STOCK[0], CAP_LOTES[0]],
+        &[CAP_LOTES[0], CAP_STOCK[0]],
     )
     .await?;
     validar(CONSUMIR_LOTES, &cuerpo)?;
@@ -149,7 +149,7 @@ pub async fn listar_lotes(
         &headers,
         ROLES_INVENTARIO_ADMIN,
         &[],
-        &[CAP_STOCK[0], CAP_LOTES[0]],
+        &[CAP_LOTES[0], CAP_STOCK[0]],
     )
     .await?;
     let empresa = empresa(&usuario, query.get("empresa_id").map(String::as_str))?;
