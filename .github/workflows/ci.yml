@@ -173,6 +173,10 @@ jobs:
             dir: packages/stores-service
             lines: 76
             functions: 76
+          - service: catalog-service
+            dir: packages/catalog-service
+            lines: 40
+            functions: 43
           - service: storage-service
             dir: packages/storage-service
             lines: 54
