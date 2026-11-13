@@ -1,48 +1,30 @@
-# Core Engine · storage-service
-# Dockerfile del servicio `storage-service` (workspace NestJS, npm workspaces).
-# Contexto de build: la RAÍZ del workspace.
-#   docker build -f packages/storage-service/Dockerfile -t core-engine-storage-service .
-#
-# Imagen por servicio: se publica y promueve por su propia etiqueta (R-CD-1..8).
+# Core Engine · storage-service (Rust)
+# Contexto de build: raíz del repositorio.
+FROM rust:1.89-bookworm AS build
+WORKDIR /repo
 
-FROM node:20-alpine AS build
+COPY packages/storage-service/Cargo.toml packages/storage-service/Cargo.lock ./packages/storage-service/
+COPY docs/openapi/storage-service ./docs/openapi/storage-service
+
+# Cachea las dependencias con un binario vacío antes de copiar el código real.
+RUN cd packages/storage-service \
+    && mkdir -p src \
+    && echo "fn main() {}" > src/main.rs \
+    && cargo build --release --locked
+
+COPY packages/storage-service/src ./packages/storage-service/src
+COPY packages/storage-service/tests ./packages/storage-service/tests
+RUN touch packages/storage-service/src/main.rs \
+    && cd packages/storage-service \
+    && cargo build --release --locked
+
+FROM debian:bookworm-slim AS runtime
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
 WORKDIR /app
-
-# Declaraciones de todos los workspaces + escaneo ligero del código.
-# Node 20 = misma versión que CI (R-EN-1); engines del repo pide >=20.
-COPY package.json package-lock.json tsconfig.base.json ./
-COPY packages packages
-
-# Instalación reproducible desde el lock (R-EN-1): npm ci, no npm install.
-RUN npm ci --prefer-offline --no-audit --no-fund
-# npm workspaces anida algunas dependencias por workspace; crear los directorios
-# asegura que el COPY del runtime no falle.
-RUN mkdir -p packages/storage-service/node_modules packages/shared/node_modules
-
-# Compilación: shared primero (dependencia), luego el servicio objetivo.
-RUN npm run build -w @core/shared && npm run build -w @core/storage-service
-
-# El runtime NO lleva dependencias de desarrollo (R-CD-14): tras compilar
-# se poda el árbol para no enviar tooling de test (vitest, swc, eslint…).
-RUN npm prune --omit=dev
-
-FROM node:20-alpine AS runtime
-WORKDIR /app
+COPY --from=build /repo/packages/storage-service/target/release/storage-service /usr/local/bin/storage-service
 ENV NODE_ENV=production
-
-COPY --from=build /app/node_modules ./node_modules
-COPY --from=build /app/package.json ./package.json
-COPY --from=build /app/packages/shared/dist ./packages/shared/dist
-COPY --from=build /app/packages/shared/package.json ./packages/shared/package.json
-# dependencias que npm anida bajo `shared` (no hoisted en la raiz): sin esto el
-# servicio no arranca (MODULE_NOT_FOUND en rabbit.service; p. ej. amqplib 2).
-COPY --from=build /app/packages/shared/node_modules ./packages/shared/node_modules
-COPY --from=build /app/packages/storage-service/dist ./packages/storage-service/dist
-COPY --from=build /app/packages/storage-service/package.json ./packages/storage-service/package.json
-# dependencias que npm anida bajo el propio workspace (no hoisted en la raíz):
-# `minio` y sus transitivas quedan aquí en algunas resoluciones del workspace.
-COPY --from=build /app/packages/storage-service/node_modules ./packages/storage-service/node_modules
-
-USER node
 EXPOSE 3010
-CMD ["node", "packages/storage-service/dist/main.js"]
+USER 10001:10001
+ENTRYPOINT ["/usr/local/bin/storage-service"]

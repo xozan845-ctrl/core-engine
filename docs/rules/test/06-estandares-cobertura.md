@@ -99,7 +99,6 @@ cargo llvm-cov --locked --ignore-filename-regex 'src/main\.rs' \
   | `catalog-service` | 93 | 82 | 90 |
   | `identity-service` | 89 | 78 | 85 |
   | `stores-service` | 86 | 84 | 76 |
-  | `storage-service` | 99 | 86 | 99 |
 
   **Enmienda (migración Jest → Vitest, 2026-10-14)**: el runner pasó de Jest/ts-jest a **Vitest 4** (config por workspace en `vitest.config.ts`, ver ADR-20). La cobertura se recalibró al nuevo baseline porque el proveedor de cobertura cambió y ahora instrumenta **todos** los ficheros del alcance (como hacía `collectCoverageFrom` en Jest), no solo los importados; verificado con el provider `istanbul` (mismos números). El ratchet sigue **solo sube** (nunca baja). `scheduling-service` salió del runner Vitest al migrar a Rust (ADR-0004), `notifications-service` (ADR-0006), `commissions-service` (ADR-0007), `field-service` (ADR-0008), `market-intelligence-service` (ADR-0009) y `logistics-service` (ADR-0010): su gate es el de la sección anterior (`cargo-llvm-cov`), no un workspace npm.
 - **Anti-inflado**: subir cobertura no puede lograrse agregando asserts triviales; el gate real es la mutación (R-MT-2).
