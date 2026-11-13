@@ -82,26 +82,26 @@ docker compose -f docker-compose.dev.yml -f docker-compose.observability.yml up 
 
 Postgres siembra automáticamente `infra/db/init/01_esquemas.sql` (esquemas, tablas, checks,
 seeds del plan contable NIC e indices). En **Supabase** (staging/prod) aplique ademas
-`infra/db/init/99_rls.sql`, que activa el aislamiento por rol de Tabla 15 (funciones
+`infra/db/supabase/99_rls.sql`, que activa el aislamiento por rol de Tabla 15 (funciones
 `auth.rol()`/`auth.uid()`).
 
 ### Servicios
 
 | Servicio | Puerto interno | Expuesto al host | Esquema | Fuente |
 |---|---|---|---|---|
-| api-gateway | 8080 | **Sí** (dev `8080:8080`; stage/prod `127.0.0.1:8080:8080` tras Traefik) | — | `packages/api-gateway` |
+| api-gateway | 8080 | **Sí** (dev `8080:8080`; stage/prod `127.0.0.1:8080:8080` tras Traefik) | — | `packages/api-gateway` (Rust) |
 | identity-service | 3001 | No | `identity` | `packages/identity-service` |
 | catalog-service | 3002 | No | `catalog` | `packages/catalog-service` (Rust) |
 | stores-service | 3003 | No | `stores` | `packages/stores-service` (Rust) |
 | orders-service | 3004 | No | `orders` | `packages/orders-service` (Rust) |
-| logistics-service | 3005 | No | `logistics` | `packages/logistics-service` |
-| scheduling-service | 3011 | No | `scheduling` | `packages/scheduling-service` |
+| logistics-service | 3005 | No | `logistics` | `packages/logistics-service` (Rust) |
+| scheduling-service | 3011 | No | `scheduling` | `packages/scheduling-service` (Rust) |
 | commissions-service | 3006 | No *(solo stage; fuera de prod)* | `commissions` | `packages/commissions-service` (Rust) |
-| finance-service | 3007 | No | `finance` | `packages/finance-service` |
-| field-service | 3008 | No | `field` | `packages/field-service` |
-| market-intelligence-service | 3009 | No *(fuera de stage/prod)* | `intelligence` | `packages/market-intelligence-service` |
-| storage-service | 3010 | No | `storage` | `packages/storage-service` |
-| notifications-service | 3012 | No | `notifications` | `packages/notifications-service` |
+| finance-service | 3007 | No | `finance` | `packages/finance-service` (Rust) |
+| field-service | 3008 | No | `field` | `packages/field-service` (Rust) |
+| market-intelligence-service | 3009 | No *(fuera de stage/prod)* | `intelligence` | `packages/market-intelligence-service` (Rust) |
+| storage-service | 3010 | No | `storage` | `packages/storage-service` (Rust) |
+| notifications-service | 3012 | No | `notifications` | `packages/notifications-service` (Rust) |
 | postgres | 5432 | No *(dev: `docker-compose.dev.yml`)* | todos | `infra/db/init/` |
 | rabbitmq (+ management) | 5672 / 15672 | No *(dev: `docker-compose.dev.yml`)* | — | — |
 | minio (+ consola) | 9000 / 9001 | Solo loopback *(el público es su dominio HTTPS, ADR-24)* | — | `docker-compose*.yml` |

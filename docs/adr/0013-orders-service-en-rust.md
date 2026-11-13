@@ -1,7 +1,7 @@
 # ADR-0013: Reescritura de `orders-service` en Rust sin cambio de contrato
 
 - **Fecha**: 2026-11-13
-- **Estado**: Aceptado — en implementación
+- **Estado**: Aceptado — implementado; pendiente el smoke de `staging` en la primera promoción de la imagen
 - **Ámbito**: `orders-service` (HTTP público e interno, PostgreSQL, RabbitMQ, Outbox, scheduler, métricas)
 - **Referencias**: [ADR-0004](./0004-scheduling-service-en-rust.md), [ADR-0006](./0006-notifications-service-en-rust.md), [ADR-0010](./0010-logistics-service-en-rust.md)
 
