@@ -11,18 +11,6 @@
     "functions": 91.07,
     "statements": 90.15
   },
-  "commissions-service": {
-    "lines": 21.38,
-    "branches": 15.85,
-    "functions": 23.52,
-    "statements": 19.66
-  },
-  "field-service": {
-    "lines": 85.24,
-    "branches": 71.27,
-    "functions": 73.58,
-    "statements": 85.4
-  },
   "finance-service": {
     "lines": 71.89,
     "branches": 53.04,
@@ -34,18 +22,6 @@
     "branches": 79.5,
     "functions": 86,
     "statements": 88.23
-  },
-  "logistics-service": {
-    "lines": 100,
-    "branches": 97.14,
-    "functions": 100,
-    "statements": 98.75
-  },
-  "market-intelligence-service": {
-    "lines": 19.93,
-    "branches": 12.64,
-    "functions": 36.36,
-    "statements": 19.87
   },
   "orders-service": {
     "lines": 43.05,
