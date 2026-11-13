@@ -137,6 +137,9 @@ Se introduce la abstracción `item` con `tipo` igual a `producto`, `servicio` o
   garantía con `garantia_meses`; la devolución la marca como devuelta y la
   reubica en la ubicación predeterminada. Un item serializado sin unidades
   disponibles no se vende aunque su stock agregado sea positivo.
+- `orders.contratos` modela acuerdos con depósito/garantía y retención, con un
+  historial en `orders.contrato_eventos`. Puede vincularse a una orden y se
+  gatea con la capacidad `contratos`;
 - `fulfillment = digital` crea un acceso por línea de orden en
   `orders.entregas_digitales`. La URL se configura en el item
   (`atributos.entrega_digital_url`), el acceso solo se consume con la orden

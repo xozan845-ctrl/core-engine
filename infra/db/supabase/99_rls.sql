@@ -1057,3 +1057,38 @@ DROP POLICY IF EXISTS entregas_digitales_app ON orders.entregas_digitales;
 CREATE POLICY entregas_digitales_app ON orders.entregas_digitales
   FOR ALL TO core_engine_app
   USING (true) WITH CHECK (true);
+
+-- ── orders.contratos y contrato_eventos (P2.2) ──────────────────────────────
+ALTER TABLE orders.contratos ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS contratos_admin ON orders.contratos;
+CREATE POLICY contratos_admin ON orders.contratos
+  FOR ALL TO authenticated
+  USING (auth.rol() IN ('super_admin', 'admin'))
+  WITH CHECK (auth.rol() IN ('super_admin', 'admin'));
+DROP POLICY IF EXISTS contratos_empresa ON orders.contratos;
+CREATE POLICY contratos_empresa ON orders.contratos
+  FOR ALL TO authenticated
+  USING (auth.rol() = 'empresario' AND empresa_id::text = (auth.jwt() ->> 'tenant_id'))
+  WITH CHECK (auth.rol() = 'empresario' AND empresa_id::text = (auth.jwt() ->> 'tenant_id'));
+DROP POLICY IF EXISTS contratos_lectura ON orders.contratos;
+CREATE POLICY contratos_lectura ON orders.contratos
+  FOR SELECT TO authenticated
+  USING (auth.rol() IN ('empresario', 'vendedor', 'coordinador', 'supervisor', 'operativo')
+         AND empresa_id::text = (auth.jwt() ->> 'tenant_id'));
+
+ALTER TABLE orders.contrato_eventos ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS contrato_eventos_admin ON orders.contrato_eventos;
+CREATE POLICY contrato_eventos_admin ON orders.contrato_eventos
+  FOR ALL TO authenticated
+  USING (auth.rol() IN ('super_admin', 'admin'))
+  WITH CHECK (auth.rol() IN ('super_admin', 'admin'));
+DROP POLICY IF EXISTS contrato_eventos_empresa ON orders.contrato_eventos;
+CREATE POLICY contrato_eventos_empresa ON orders.contrato_eventos
+  FOR ALL TO authenticated
+  USING (auth.rol() = 'empresario' AND empresa_id::text = (auth.jwt() ->> 'tenant_id'))
+  WITH CHECK (auth.rol() = 'empresario' AND empresa_id::text = (auth.jwt() ->> 'tenant_id'));
+DROP POLICY IF EXISTS contrato_eventos_lectura ON orders.contrato_eventos;
+CREATE POLICY contrato_eventos_lectura ON orders.contrato_eventos
+  FOR SELECT TO authenticated
+  USING (auth.rol() IN ('empresario', 'vendedor', 'coordinador', 'supervisor', 'operativo')
+         AND empresa_id::text = (auth.jwt() ->> 'tenant_id'));
