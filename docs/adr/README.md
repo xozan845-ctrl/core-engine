@@ -20,6 +20,7 @@ este índice evita mezclar las decisiones nuevas con las ADR históricas.
 | [0009](./0009-market-intelligence-service-en-rust.md) | Aceptado (implementado) | Reescribir `market-intelligence-service` en Rust con paridad de contrato, analítica y predicción |
 | [0010](./0010-logistics-service-en-rust.md) | Aceptado (implementado) | Reescribir `logistics-service` en Rust con paridad de contrato, guías, flotas, eventos y métricas |
 | [0011](./0011-stores-service-en-rust.md) | Aceptado (en curso) | Reescribir `stores-service` en Rust con paridad de contrato, tiendas, ofertas, tema y métricas |
+| [0012](./0012-storage-service-en-rust.md) | Aceptado (en curso) | Reescribir `storage-service` en Rust con paridad de contrato, S3/MinIO, cuotas, media pública y eventos |
 
 ## Convención
 
