@@ -1,8 +1,8 @@
 # ADR-0015: Reescritura del `api-gateway` en Rust sin cambio de contrato
 
 - **Fecha**: 2026-11-13
-- **Estado**: Aceptado (en curso) — crate Rust con paridad; el TypeScript sigue
-  activo hasta el PR de conmutación
+- **Estado**: Aceptado (implementado) — el binario Rust es el runtime activo y
+  el TypeScript fue retirado
 - **Ámbito**: `api-gateway` (borde HTTP, JWT HS256, políticas por ruta/rol,
   proxy, rate limit, CORS, diagnóstico, readiness y métricas)
 - **Referencias**: [ADR-0004](./0004-scheduling-service-en-rust.md),

@@ -197,9 +197,8 @@ El **API Gateway** sirve en su `/docs` el **documento agregado de la superficie
 pública**: `scripts/tools/swagger-aggregate.mjs` fusiona
 `docs/openapi/<servicio>/{public,internal}.openapi.json` y escribe dos artefactos:
 
-- `docs/api/core-engine.openapi.json` — contrato público (solo `/api/v1/**`), que
-  también se publica en `packages/api-gateway/src/openapi.agregado.ts` (generado,
-  versionado y verificado por el gate G-8);
+- `docs/api/core-engine.openapi.json` — contrato público (solo `/api/v2/**`),
+  versionado y verificado por el gate G-8, que el gateway sirve en `/docs-json`;
 - `docs/api/core-engine.internal.openapi.json` — contrato interno (solo
   `/internal/**`, con `x-internal-key`), que **nunca** se expone por el gateway.
 

@@ -18,7 +18,6 @@ const VERTICALES = ['retail', 'farmacia', 'belleza', 'dental', 'flota'];
 const EXCLUIDOS = [
   'packages/identity-service/',
   'packages/shared/src/capabilities/',
-  'packages/api-gateway/src/openapi.agregado.ts',
 ];
 
 /**
