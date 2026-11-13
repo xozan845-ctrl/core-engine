@@ -70,8 +70,8 @@ export class SeedService implements OnApplicationBootstrap {
       if (!admin) return;
       await this.pg.query(
         `INSERT INTO identity.empresas
-           (id, nombre, slug, modalidad_logistica, vertical_id, pack_codigo, pack_version, creado_por)
-         VALUES ($1, 'Plataforma logística', 'plataforma-logistica', 'plataforma', 'flota', 'pack_flota', 1, $2)
+           (id, nombre, slug, vertical_id, pack_codigo, pack_version, creado_por)
+         VALUES ($1, 'Plataforma logística', 'plataforma-logistica', 'flota', 'pack_flota', 1, $2)
          ON CONFLICT DO NOTHING`,
         [id, admin.id],
       );

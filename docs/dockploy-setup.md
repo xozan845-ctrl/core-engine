@@ -113,7 +113,7 @@ Pasos:
 | Prometheus/Grafana | **capa opcional** (`docker-compose.observability.yml`); si se activa, exige `GRAFANA_ADMIN_PASSWORD` | `produccion` (+ opcional staging) |
 
 El esquema se aplica **solo desde el DDL versionado**
-(`infra/db/init/01_esquemas.sql` + `99_rls.sql` en Supabase) — `R-DB-6/R-CD-5`.
+(`infra/db/init/01_esquemas.sql` + `infra/db/supabase/99_rls.sql` en Supabase) — `R-DB-6/R-CD-5`.
 Migraciones solo hacia adelante.
 > **Entornos ya desplegados**: un DDL nuevo (p. ej. `09_storage.sql`, ADR-24) **no**
 > se aplica solo (el init corre únicamente en un volumen Postgres nuevo). Aplícalo
