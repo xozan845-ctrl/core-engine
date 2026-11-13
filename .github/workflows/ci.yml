@@ -132,9 +132,8 @@ jobs:
       - name: Build catalog for the multi-vertical matrix
         run: |
           npm run build -w @core/catalog-service
-      - name: Build orders and finance for the saga integration
+      - name: Build finance for the saga integration
         run: |
-          npm run build -w @core/orders-service
           npm run build -w @core/finance-service
       - name: Verify catalog stock projection and API contracts against ephemeral PostgreSQL
         run: npm run test:integration

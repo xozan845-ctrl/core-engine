@@ -76,6 +76,7 @@ export const RUST_SERVICES = [
   'market-intelligence-service',
   'storage-service',
   'stores-service',
+  'orders-service',
 ];
 
 /** Servicios Node/NestJS con suite Vitest (todos menos los migrados a Rust). */

@@ -33,7 +33,7 @@
 |---|---|---|---|---|---|---|---|
 | `shared` | 26 | 222 | 91,58 | 77,94 | 91,23 | 39 / 39 / 55 | ✅ |
 | `api-gateway` | 7 | 121 | 85,71 | 79,06 | 72,91 | 50 / 51 / 57 | ✅ |
-| `orders-service` | 9 | 101 | 87,59 | 75,80 | 83,45 | 32 / 23 / 33 | ✅ |
+| `orders-service` (Rust) | — | 122 | 62,70 | — | 64,35 | 62 / N/A / 63 | ✅ |
 | `scheduling-service` | 3 | 14 | 95,96 | 81,81 | 91,48 | 94 / 77 / 88 | ✅ |
 | `commissions-service` (Rust) | — | 83 | 73,29 | — | 69,70 | 72 / N/A / 68 | ✅ |
 | `finance-service` | 19 | 153 | 88,71 | 74,33 | 89,27 | 70 / 52 / 72 | ✅ |
@@ -45,24 +45,25 @@
 | `field-service` | 2 | 24 | 86,10 | 73,14 | 74,76 | 84 / 70 / 72 | ✅ |
 | `storage-service` | 11 | 119 | 100,00 | 98,51 | 100,00 | 99 / 86 / 99 | ✅ |
 | `notifications-service` | 4 | 25 | 100,00 | 88,88 | 100,00 | 99 / 85 / 99 | ✅ |
-| **Total** | **141** | **1.484** | — | — | — | 11 Vitest + 3 Rust | **14/14 ✅** |
+| **Total** | — | — | — | — | — | 5 Vitest + 9 Rust | ✅ |
 
 > **Nota (2026-11-12/13)**: `scheduling-service` (ADR-0004),
 > `notifications-service` (ADR-0006), `commissions-service` (ADR-0007),
 > `field-service` (ADR-0008), `market-intelligence-service` (ADR-0009) y
-> `logistics-service` (ADR-0010) migraron a Rust y salen del gate Vitest; su
-> cobertura se mide con `cargo-llvm-cov` en el job `rust` de CI. La tabla
-> anterior conserva el snapshot histórico; las filas de los servicios Rust se
-> actualizan con la medición del job.
+> `logistics-service` (ADR-0010), `stores-service` (ADR-0011),
+> `storage-service` (ADR-0012) y `orders-service` (ADR-0013) migraron a Rust y
+> salen del gate Vitest; su cobertura se mide con `cargo-llvm-cov` en el job
+> `rust` de CI. La tabla anterior conserva el snapshot histórico; las filas de
+> los servicios Rust se actualizan con la medición del job.
 - Método: baseline medido redondeado a la baja; los thresholds viven en `scripts/config/coverage.mjs`.
 
 ## Métricas actuales vs mínimos
 
 | Métrica | Valor actual | Mínimo (regla) | Cumple |
 |---|---|---|---|
-| Unit tests (11 workspaces Vitest + 3 Rust) | 1.484/1.484 + Rust en verde | 100% (G-1) | ✅ |
-| Cobertura ≥ `coverageThreshold` | 11/11 workspaces + 3 gates Rust | floor medido (R-COV-1) | ✅ |
-| Cobertura objetivo final | 10/11 ≥ 80/70 | 80/70 | ⚠️ ratchet +5/release |
+| Unit tests (5 workspaces Vitest + 9 Rust) | Vitest + Rust en verde | 100% (G-1) | ✅ |
+| Cobertura ≥ `coverageThreshold` | 5/5 workspaces + 9 gates Rust | floor medido (R-COV-1) | ✅ |
+| Cobertura objetivo final | 9/10 ≥ 80/70 | 80/70 | ⚠️ ratchet +5/release |
 | Controllers con spec | **43 de 43** | R-U-10/11 (al tocar endpoints) | ✅ |
 | Endpoints documentados (OpenAPI) | **359/359** en 12 servicios (327 públicas + 32 internas) | 100% (R-DO-6, R-DO-10, G-8) | ✅ |
 | `*.service.ts` / `*.consumer.ts` sin spec | **0 de 60** | 0 (R-U-18, R-COV-2) | ✅ |
@@ -72,7 +73,7 @@
 | Tests contrato | 6 runtime de errores + OpenAPI + envelope | ≥1 por shape (R-C-10) | ✅ |
 | Tests E2E | `release.yml` → `e2e.yml` (R-E-1..7 + R-E-8) | R-E-1..7 | ✅ G-6 |
 | Property-based | 3 suites en `shared` | R-PB-1..3 | ⚠️ parcial fechas |
-| Mutación | 4 módulos con `break:90` (commissions sale a Rust) | ≥ 90% (R-MT-2) | ✅ 4/4 |
+| Mutación | 3 módulos con `break:90` (commissions y orders salen a Rust) | ≥ 90% (R-MT-2) | ✅ 3/3 |
 | Lint | 0 errores / 45 warnings | 0 errores (G-7) | ✅ |
 | Build | 0 errores TS | 0 errores (G-7) | ✅ |
 | Audit `high` | exit 0 | 0 (R-QA-6) | ✅ |
@@ -86,9 +87,9 @@
 
 | Gate | Estado | Evidencia |
 |---|---|---|
-| G-1 Unit backend | ✅ | `npm test` exit 0; 11/11 workspaces Vitest + 3 Rust; 1.484 tests |
+| G-1 Unit backend | ✅ | `npm test` exit 0; 5/5 workspaces Vitest + 9 gates Rust |
 | G-2 Unit frontend | N/A | No hay frontend (ID reservado) |
-| G-3 Cobertura ≥ ratchet | ✅ | 11/11 Vitest + 3 gates Rust sobre threshold y baseline |
+| G-3 Cobertura ≥ ratchet | ✅ | 5/5 Vitest + 9 gates Rust sobre threshold y baseline |
 | G-4 Integración | ✅ | 67 tests en 20 archivos; matriz multi-vertical, packs, RLS, enforcement, pilotos, Outbox, saga y FEFO |
 | G-5 Contrato | ✅ | Envelope `{data,meta}` en 11/11 servicios; R-C-1 comprobado sobre el OpenAPI público; errores normalizados con prueba runtime |
 | G-6 E2E de flujos | ✅ | `release.yml` llama a `e2e.yml` antes de `images`; `npm run demo` + R-E-8 |
