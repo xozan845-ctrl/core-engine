@@ -132,6 +132,22 @@ export default defineSuite({
     });
 
     test('R-TM-2: los productores de métricas de negocio usan nombres canónicos', () => {
+      if (RUST_SERVICES.includes('market-intelligence-service')) {
+        const src = join(serviceDir('market-intelligence-service'), 'src');
+        const calidad = readText(join(src, 'calidad.rs'));
+        const tareas = readText(join(src, 'tareas.rs'));
+        for (const name of [
+          'core_engine_intelligence_invalid_events_total',
+          'core_engine_intelligence_data_quality_high_total',
+          'core_engine_intelligence_data_quality_medium_total',
+          'core_engine_intelligence_data_quality_low_total',
+        ]) {
+          assert.ok(calidad.includes(`"${name}"`), `falta ${name}`);
+        }
+        assert.match(tareas, /core_engine_intelligence_view_refresh_duration_seconds/);
+        assert.match(tareas, /registrar_gauge\(GAUGE_REFRESH_SECONDS, ms as f64 \/ 1000\.0\)/);
+        return;
+      }
       const servicesRoot = join(repoRoot, PACKAGES_DIR, 'market-intelligence-service', 'src', 'inteligencia', 'services');
       const quality = readText(join(servicesRoot, 'data-quality.service.ts'));
       const refresher = readText(join(servicesRoot, 'view-refresher.service.ts'));
