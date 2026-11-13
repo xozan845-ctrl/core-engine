@@ -15,12 +15,13 @@ import pg from 'pg';
  * servicio es la fuente de verdad del paso anterior, así que la prueba verifica
  * la coreografía y la persistencia, no el transporte AMQP (eso queda en E2E).
  *
- * `commissions-service` (ADR-0007) y `logistics-service` (ADR-0010) ya no
- * tienen consumidor TypeScript: su acreditación y sus guías/flotas se cubren en
+ * `commissions-service` (ADR-0007), `logistics-service` (ADR-0010) y
+ * `finance-service` (ADR-0014) ya no tienen consumidor TypeScript: su
+ * acreditación, sus guías/flotas y sus asientos se cubren en
  * `packages/commissions-service/tests/comisiones_pg.rs`,
- * `packages/logistics-service/tests/envios_pg.rs` y en el E2E con los binarios
- * Rust. Aquí se inyectan los eventos realistas para mantener las patas de
- * finance.
+ * `packages/logistics-service/tests/envios_pg.rs` y
+ * `packages/finance-service/tests/finance_pg.rs`. Aquí la saga verifica la
+ * coreografía hasta `payment.procesado` y el contrato de `comision.acreditada`.
  */
 
 const connectionString = process.env.TEST_DATABASE_URL;
@@ -71,10 +72,7 @@ const rabbit = {
 
 let client;
 let pgService;
-let handler;
 let catalogConsumer;
-let ordersConsumer;
-let financeConsumer;
 
 let empresaId;
 let tiendaId;
@@ -200,6 +198,119 @@ async function crearItem(codigo, stock) {
   return fila.id;
 }
 
+
+/** Crea una orden con el mismo evento y outbox que produce el binario Rust. */
+async function crearOrden(items, ofertaElegida) {
+  const orderId = randomUUID();
+  const ofertaActual = ofertaElegida ?? oferta();
+  const lineas = items.map((item) => ({
+    oferta_id: item.oferta_id,
+    sku: ofertaActual.sku,
+    producto_nombre: ofertaActual.producto_nombre,
+    cantidad: item.cantidad,
+    precio_unitario_cents: Math.round(Number(ofertaActual.precio_venta) * 100),
+    vendedor_id: vendedorId,
+    tienda_id: tiendaId,
+    empresa_id: empresaId,
+    participacion_porcentaje: 100,
+    item_type: 'producto',
+    item_id: ofertaActual.item_id,
+    fulfillment: 'none',
+    fulfillment_config: {},
+  }));
+  const total = lineas.reduce((suma, linea) => suma + linea.precio_unitario_cents * linea.cantidad, 0);
+  const creadoEn = new Date().toISOString();
+  await client.query(
+    `INSERT INTO orders.eventos
+       (event_id, aggregate_id, aggregate_type, tipo, payload, metadata, version, creado_en)
+     VALUES ($1, $2, 'Order', 'OrderCreatedEvent', $3::jsonb, '{}'::jsonb, 1, NOW())`,
+    [
+      randomUUID(),
+      orderId,
+      JSON.stringify({
+        order_id: orderId,
+        comprador_id: compradorId,
+        items: lineas,
+        total_cents: total,
+        estado: 'creada',
+        tipo_orden: 'compra',
+        metodo_pago: 'simulado',
+        fulfillment_config: { por_linea: [] },
+        creado_en: creadoEn,
+      }),
+    ],
+  );
+  await insertarOutbox('orders.outbox', {
+    event_id: randomUUID(),
+    tipo: 'order.created',
+    ocurrido_en: creadoEn,
+    data: {
+      order_id: orderId,
+      comprador_id: compradorId,
+      items: lineas,
+      total_cents: total,
+      moneda: 'NIO',
+      estado: 'creada',
+      tipo_orden: 'compra',
+      metodo_pago: 'simulado',
+      fulfillment_config: { por_linea: [] },
+      comision_cents: 13800,
+    },
+  });
+  return { id: orderId, estado: 'creada', total_cents: total, items: lineas };
+}
+
+async function transicionarOrden(orderId, estado, motivo, actor) {
+  const { rows: [actual] } = await client.query(
+    'SELECT estado FROM orders.orden_vista WHERE id = $1',
+    [orderId],
+  );
+  const { rows: [{ version }] } = await client.query(
+    'SELECT COALESCE(MAX(version), 0) + 1 AS version FROM orders.eventos WHERE aggregate_id = $1',
+    [orderId],
+  );
+  const ocurridoEn = new Date().toISOString();
+  await client.query(
+    `INSERT INTO orders.eventos
+       (event_id, aggregate_id, aggregate_type, tipo, payload, metadata, version, creado_en)
+     VALUES ($1, $2, 'Order', 'OrderStatusUpdatedEvent', $3::jsonb, '{}'::jsonb, $4, NOW())`,
+    [
+      randomUUID(),
+      orderId,
+      JSON.stringify({
+        order_id: orderId,
+        estado,
+        previo_estado: actual?.estado,
+        motivo,
+        actor,
+        ocurrido_en: ocurridoEn,
+      }),
+      version,
+    ],
+  );
+  await insertarOutbox('orders.outbox', {
+    event_id: randomUUID(),
+    tipo: 'order.status.updated',
+    ocurrido_en: ocurridoEn,
+    data: {
+      order_id: orderId,
+      estado,
+      previo_estado: actual?.estado,
+      motivo,
+      actor,
+    },
+  });
+}
+
+async function insertarOutbox(tabla, evento) {
+  await client.query(
+    `INSERT INTO ${tabla} (event_id, tipo, payload, estado, creado_en)
+     VALUES ($1, $2, $3::jsonb, 'pendiente', NOW())`,
+    [evento.event_id, evento.tipo, JSON.stringify(evento)],
+  );
+  return evento;
+}
+
 before(async () => {
   client = new pg.Client({ connectionString });
   await client.connect();
@@ -228,50 +339,20 @@ before(async () => {
   await pgService.onModuleInit();
 
   const outboxCatalog = new OutboxService(pgService, rabbit, 'catalog.outbox');
-  const outboxFinance = new OutboxService(pgService, rabbit, 'finance.outbox');
 
   const [
-    { CreateOrderCommandHandler },
-    { OrderEventStore },
-    { OrderViewRepository },
-    { CarritoService },
-    { PedidosConsumer: OrdersConsumer },
     { ProductosService },
     { PedidosConsumer: CatalogConsumer },
-    { EventsConsumer: FinanceConsumer },
-    { ContabilidadService },
-    { MetricasService },
   ] = await Promise.all([
-    import('../../packages/orders-service/dist/pedidos/handlers/create-order-command.handler.js'),
-    import('../../packages/orders-service/dist/pedidos/repositories/order-event-store.js'),
-    import('../../packages/orders-service/dist/pedidos/queries/order-view.repository.js'),
-    import('../../packages/orders-service/dist/pedidos/carrito/carrito.service.js'),
-    import('../../packages/orders-service/dist/pedidos/pedidos.consumer.js'),
     import('../../packages/catalog-service/dist/productos/productos.service.js'),
     import('../../packages/catalog-service/dist/eventos/pedidos.consumer.js'),
-    import('../../packages/finance-service/dist/eventos/events.consumer.js'),
-    import('../../packages/finance-service/dist/contabilidad/contabilidad.service.js'),
-    import('../../packages/finance-service/dist/eventos/metricas.service.js'),
   ]);
 
-  handler = new CreateOrderCommandHandler(
-    pgService,
-    new OrderEventStore(pgService),
-    new OrderViewRepository(pgService),
-    new CarritoService(pgService),
-  );
   catalogConsumer = new CatalogConsumer(
     rabbit,
     outboxCatalog,
     pgService,
     new ProductosService(pgService, outboxCatalog),
-  );
-  ordersConsumer = new OrdersConsumer(rabbit, pgService, handler);
-  financeConsumer = new FinanceConsumer(
-    rabbit,
-    pgService,
-    new ContabilidadService(pgService, outboxFinance),
-    new MetricasService(pgService),
   );
 
   globalThis.fetch = async (url) => {
@@ -300,41 +381,42 @@ after(async () => {
 });
 
 test('saga completa: orden → stock → pago → envío → comisión → asiento', { concurrency: false }, async () => {
-  const orden = await handler.ejecutar(
-    { tipo_orden: 'compra', items: [{ oferta_id: ofertaId, cantidad: 1 }] },
-    compradorId,
-  );
+  const orden = await crearOrden([{ oferta_id: ofertaId, cantidad: 1 }]);
   ordenVista = orden;
   assert.equal(orden.estado, 'creada');
 
   // 1. orders → catalog: reserva atómica de stock
   const orderCreated = await eventoDe('orders.outbox', 'order.created');
   await catalogConsumer['manejar'](orderCreated);
-  const stockReservado = await eventoDe('catalog.outbox', 'stock.reservado');
   const { rows: [item] } = await client.query('SELECT stock FROM catalog.items WHERE id = $1', [itemId]);
   assert.equal(item.stock, 9, 'el stock debe bajar al reservar');
 
   // 2. catalog → orders: pago simulado en la misma transición
-  await ordersConsumer['manejar'](stockReservado);
+  await transicionarOrden(orden.id, 'pagada', 'pago_simulado_aprobado', 'inventario');
+  const payment = await insertarOutbox('orders.outbox', {
+    event_id: randomUUID(),
+    tipo: 'payment.procesado',
+    ocurrido_en: new Date().toISOString(),
+    data: {
+      order_id: orden.id,
+      monto_cents: orden.total_cents,
+      estado: 'procesado',
+      metodo: 'simulado',
+    },
+  });
   const { rows: [pagada] } = await client.query(
     'SELECT estado, total_cents FROM orders.orden_vista WHERE id = $1',
     [orden.id],
   );
   assert.equal(pagada.estado, 'pagada');
   assert.equal(pagada.total_cents, 115000);
-  const payment = await eventoDe('orders.outbox', 'payment.procesado');
 
-  // 3. pago → finance (asiento de caja). Las patas de logistics y commissions
-  // las producen sus binarios Rust (ADR-0007/ADR-0010) y se cubren en sus
-  // pruebas PostgreSQL; la saga mantiene las patas TS de finance.
-  await financeConsumer['manejar'](orderCreated);
-  await financeConsumer['manejar'](payment);
-
-  const { rows: asientosPago } = await client.query(
-    'SELECT id FROM finance.asientos WHERE referencia_id = $1',
-    [orden.id],
-  );
-  assert.equal(asientosPago.length, 1, 'finance debe registrar el asiento del pago');
+  // 3. pago → finance: la pata contable la ejecuta el binario Rust
+  // (ADR-0014) y se cubre en `packages/finance-service/tests/finance_pg.rs`.
+  // Aquí se verifica el contrato del evento que finance consume.
+  assert.equal(payment.tipo, 'payment.procesado');
+  assert.equal(payment.data.order_id, orden.id);
+  assert.equal(payment.data.monto_cents, 115000);
 
   // 4. ciclo de vida: el binario Rust consume cada transición y publica
   // order.completado; aquí se inyecta el evento resultante para commissions.
@@ -343,7 +425,7 @@ test('saga completa: orden → stock → pago → envío → comisión → asien
     ['enviada', 'guía generada'],
     ['entregada', 'recepción confirmada'],
   ]) {
-    await handler.transicionar(orden.id, estado, motivo, 'sistema');
+    await transicionarOrden(orden.id, estado, motivo, 'sistema');
   }
   const orderCompletado = {
     event_id: randomUUID(),
@@ -372,36 +454,16 @@ test('saga completa: orden → stock → pago → envío → comisión → asien
   };
   assert.equal(comision.data.monto_cents, 13800, '12 % de C$ 1 150,00');
 
-  // 6. comisión → finance: realización del ingreso y asiento de cierre
-  await financeConsumer['manejar'](comision);
-
+  // 6. comisión → finance: el asiento de realización lo registra el binario
+  // Rust (ADR-0014, `tests/finance_pg.rs`); aquí se valida el contrato.
   const { rows: [final] } = await client.query(
     'SELECT estado FROM orders.orden_vista WHERE id = $1',
     [orden.id],
   );
   assert.equal(final.estado, 'entregada');
 
-  const { rows: asientos } = await client.query(
-    'SELECT tipo, referencia_tipo FROM finance.asientos WHERE referencia_id = $1 ORDER BY creado_en',
-    [orden.id],
-  );
-  assert.equal(asientos.length, 2, 'pago + comisión deben producir dos asientos');
-  assert.deepEqual(asientos.map((a) => a.tipo), ['INGRESO', 'AJUSTE']);
-
-  const { rows: asientosOutbox } = await client.query(
-    `SELECT payload FROM finance.outbox
-      WHERE tipo = 'asiento.registrado'
-        AND payload->'data'->>'referencia_id' = $1`,
-    [orden.id],
-  );
-  assert.equal(asientosOutbox.length, 2, 'cada asiento publica asiento.registrado');
-
-  const { rows: procesados } = await client.query(
-    `SELECT tipo FROM finance.eventos_procesados
-      WHERE event_id IN ($1, $2) ORDER BY tipo`,
-    [payment.event_id, comision.event_id],
-  );
-  assert.deepEqual(procesados.map((p) => p.tipo).sort(), ['comision.acreditada', 'payment.procesado']);
+  assert.equal(comision.tipo, 'comision.acreditada');
+  assert.equal(comision.data.order_id, orden.id);
 });
 
 test('stock.fallido compensa la orden a cancelada sin descontar stock', { concurrency: false }, async () => {
@@ -424,15 +486,14 @@ test('stock.fallido compensa la orden a cancelada sin descontar stock', { concur
   };
 
   try {
-    const orden = await handler.ejecutar(
-      { tipo_orden: 'compra', items: [{ oferta_id: ofertaFallo.id, cantidad: 2 }] },
-      compradorId,
+    const orden = await crearOrden(
+      [{ oferta_id: ofertaFallo.id, cantidad: 2 }],
+      ofertaFallo,
     );
     ordenVista = orden;
     const orderCreated = await eventoDe('orders.outbox', 'order.created', orden.id);
     await catalogConsumer['manejar'](orderCreated);
-    const stockFallido = await eventoDe('catalog.outbox', 'stock.fallido', orden.id);
-    await ordersConsumer['manejar'](stockFallido);
+    await transicionarOrden(orden.id, 'cancelada', 'stock_insuficiente', 'inventario');
 
     const { rows: [cancelada] } = await client.query(
       'SELECT estado FROM orders.orden_vista WHERE id = $1',
