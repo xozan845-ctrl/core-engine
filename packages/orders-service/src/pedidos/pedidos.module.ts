@@ -12,10 +12,12 @@ import { ContratosController } from './contratos.controller';
 import { SuscripcionesService } from './suscripciones.service';
 import { SuscripcionesController } from './suscripciones.controller';
 import { SuscripcionesScheduler } from './suscripciones.scheduler';
+import { SalonService } from './salon.service';
+import { SalonController } from './salon.controller';
 import { EntregasDigitalesController } from './entregas-digitales.controller';
 
 @Module({
-  controllers: [PedidosController, CarritoController, EntregasDigitalesController, ContratosController, SuscripcionesController],
+  controllers: [PedidosController, CarritoController, EntregasDigitalesController, ContratosController, SuscripcionesController, SalonController],
   providers: [
     PedidosService,
     OrderEventStore,
@@ -26,6 +28,7 @@ import { EntregasDigitalesController } from './entregas-digitales.controller';
     ContratosService,
     SuscripcionesService,
     SuscripcionesScheduler,
+    SalonService,
   ],
   exports: [
     PedidosService,
@@ -37,6 +40,7 @@ import { EntregasDigitalesController } from './entregas-digitales.controller';
     ContratosService,
     SuscripcionesService,
     SuscripcionesScheduler,
+    SalonService,
   ],
 })
 export class PedidosModule {}

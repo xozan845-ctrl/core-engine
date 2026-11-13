@@ -1128,3 +1128,38 @@ CREATE POLICY suscripcion_ejecuciones_comprador ON orders.suscripcion_ejecucione
     SELECT empresa_id::text FROM orders.suscripciones s
      WHERE s.comprador_id = auth.uid()
   ));
+
+-- ── orders.mesas y orders.comandas (P2.5) ───────────────────────────────────
+ALTER TABLE orders.mesas ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS mesas_admin ON orders.mesas;
+CREATE POLICY mesas_admin ON orders.mesas
+  FOR ALL TO authenticated
+  USING (auth.rol() IN ('super_admin', 'admin'))
+  WITH CHECK (auth.rol() IN ('super_admin', 'admin'));
+DROP POLICY IF EXISTS mesas_empresa ON orders.mesas;
+CREATE POLICY mesas_empresa ON orders.mesas
+  FOR ALL TO authenticated
+  USING (auth.rol() = 'empresario' AND empresa_id::text = (auth.jwt() ->> 'tenant_id'))
+  WITH CHECK (auth.rol() = 'empresario' AND empresa_id::text = (auth.jwt() ->> 'tenant_id'));
+DROP POLICY IF EXISTS mesas_lectura ON orders.mesas;
+CREATE POLICY mesas_lectura ON orders.mesas
+  FOR SELECT TO authenticated
+  USING (auth.rol() IN ('empresario', 'vendedor', 'coordinador', 'supervisor', 'operativo')
+         AND empresa_id::text = (auth.jwt() ->> 'tenant_id'));
+
+ALTER TABLE orders.comandas ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS comandas_admin ON orders.comandas;
+CREATE POLICY comandas_admin ON orders.comandas
+  FOR ALL TO authenticated
+  USING (auth.rol() IN ('super_admin', 'admin'))
+  WITH CHECK (auth.rol() IN ('super_admin', 'admin'));
+DROP POLICY IF EXISTS comandas_empresa ON orders.comandas;
+CREATE POLICY comandas_empresa ON orders.comandas
+  FOR ALL TO authenticated
+  USING (auth.rol() = 'empresario' AND empresa_id::text = (auth.jwt() ->> 'tenant_id'))
+  WITH CHECK (auth.rol() = 'empresario' AND empresa_id::text = (auth.jwt() ->> 'tenant_id'));
+DROP POLICY IF EXISTS comandas_lectura ON orders.comandas;
+CREATE POLICY comandas_lectura ON orders.comandas
+  FOR SELECT TO authenticated
+  USING (auth.rol() IN ('empresario', 'vendedor', 'coordinador', 'supervisor', 'operativo')
+         AND empresa_id::text = (auth.jwt() ->> 'tenant_id'));

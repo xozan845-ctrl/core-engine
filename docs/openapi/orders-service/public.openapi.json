@@ -1765,6 +1765,367 @@
           "Suscripciones"
         ]
       }
+    },
+    "/api/v2/mesas": {
+      "get": {
+        "operationId": "SalonController_listarMesas",
+        "parameters": [
+          {
+            "name": "estado",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "enum": [
+                "libre",
+                "ocupada",
+                "reservada",
+                "inactiva"
+              ],
+              "type": "string"
+            }
+          },
+          {
+            "name": "zona",
+            "required": false,
+            "in": "query",
+            "schema": {}
+          },
+          {
+            "name": "empresa_id",
+            "required": false,
+            "in": "query",
+            "description": "Solo admin global",
+            "schema": {}
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Mesas",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
+                  "properties": {
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/MesaResponseDto"
+                      }
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/MetaRespuesta"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Listar mesas de la empresa",
+        "tags": [
+          "Salón · Mesas y comandas"
+        ]
+      },
+      "post": {
+        "operationId": "SalonController_crearMesa",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CrearMesaRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Mesa creada",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/MesaResponseDto"
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/MetaRespuesta"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Crear una mesa",
+        "tags": [
+          "Salón · Mesas y comandas"
+        ]
+      }
+    },
+    "/api/v2/mesas/{id}": {
+      "patch": {
+        "operationId": "SalonController_actualizarMesa",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ActualizarMesaRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Mesa actualizada",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/MesaResponseDto"
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/MetaRespuesta"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Actualizar una mesa o su estado",
+        "tags": [
+          "Salón · Mesas y comandas"
+        ]
+      }
+    },
+    "/api/v2/comandas": {
+      "get": {
+        "operationId": "SalonController_listarComandas",
+        "parameters": [
+          {
+            "name": "mesa_id",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "estacion",
+            "required": false,
+            "in": "query",
+            "schema": {}
+          },
+          {
+            "name": "estado",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "enum": [
+                "pendiente",
+                "en_preparacion",
+                "lista",
+                "entregada",
+                "cancelada"
+              ],
+              "type": "string"
+            }
+          },
+          {
+            "name": "empresa_id",
+            "required": false,
+            "in": "query",
+            "description": "Solo admin global",
+            "schema": {}
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Comandas",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
+                  "properties": {
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/ComandaResponseDto"
+                      }
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/MetaRespuesta"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Listar comandas de preparacion",
+        "tags": [
+          "Salón · Mesas y comandas"
+        ]
+      },
+      "post": {
+        "operationId": "SalonController_crearComanda",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CrearComandaRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Comanda creada",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/ComandaResponseDto"
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/MetaRespuesta"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Crear una comanda desde una orden o items libres",
+        "tags": [
+          "Salón · Mesas y comandas"
+        ]
+      }
+    },
+    "/api/v2/comandas/{id}": {
+      "patch": {
+        "operationId": "SalonController_actualizarComanda",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ActualizarComandaRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Comanda actualizada",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/ComandaResponseDto"
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/MetaRespuesta"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Avanzar el estado de una comanda",
+        "tags": [
+          "Salón · Mesas y comandas"
+        ]
+      }
     }
   },
   "components": {
@@ -1795,6 +2156,24 @@
         "required": [
           "cantidad"
         ]
+      },
+      "ActualizarComandaRequestDto": {
+        "type": "object",
+        "properties": {
+          "estado": {
+            "type": "string",
+            "enum": [
+              "pendiente",
+              "en_preparacion",
+              "lista",
+              "entregada",
+              "cancelada"
+            ]
+          },
+          "notas": {
+            "type": "string"
+          }
+        }
       },
       "ActualizarContratoRequestDto": {
         "type": "object",
@@ -1858,6 +2237,38 @@
               "activo",
               "cancelado"
             ]
+          }
+        }
+      },
+      "ActualizarMesaRequestDto": {
+        "type": "object",
+        "properties": {
+          "codigo": {
+            "type": "string",
+            "example": "M-01"
+          },
+          "nombre": {
+            "type": "string",
+            "example": "Mesa 1"
+          },
+          "capacidad": {
+            "type": "number",
+            "minimum": 1,
+            "maximum": 999,
+            "default": 1
+          },
+          "zona": {
+            "type": "string"
+          },
+          "estado": {
+            "type": "string",
+            "enum": [
+              "libre",
+              "ocupada",
+              "reservada",
+              "inactiva"
+            ],
+            "default": "libre"
           }
         }
       },
@@ -1967,6 +2378,106 @@
         "required": [
           "items",
           "total"
+        ]
+      },
+      "ComandaItemRequestDto": {
+        "type": "object",
+        "properties": {
+          "sku": {
+            "type": "string"
+          },
+          "nombre": {
+            "type": "string"
+          },
+          "cantidad": {
+            "type": "number",
+            "minimum": 1
+          },
+          "notas": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "sku",
+          "nombre",
+          "cantidad"
+        ]
+      },
+      "ComandaResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "empresa_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "order_id": {
+            "type": "object",
+            "format": "uuid",
+            "nullable": true
+          },
+          "mesa_id": {
+            "type": "object",
+            "format": "uuid",
+            "nullable": true
+          },
+          "estacion": {
+            "type": "string"
+          },
+          "estado": {
+            "type": "string",
+            "enum": [
+              "pendiente",
+              "en_preparacion",
+              "lista",
+              "entregada",
+              "cancelada"
+            ]
+          },
+          "notas": {
+            "type": "string"
+          },
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ComandaItemRequestDto"
+            }
+          },
+          "creado_en": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "actualizado_en": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "listo_en": {
+            "type": "object",
+            "format": "date-time",
+            "nullable": true
+          },
+          "entregado_en": {
+            "type": "object",
+            "format": "date-time",
+            "nullable": true
+          }
+        },
+        "required": [
+          "id",
+          "empresa_id",
+          "order_id",
+          "mesa_id",
+          "estacion",
+          "estado",
+          "notas",
+          "items",
+          "creado_en",
+          "actualizado_en",
+          "listo_en",
+          "entregado_en"
         ]
       },
       "ContratoEventoResponseDto": {
@@ -2150,6 +2661,35 @@
           "orden"
         ]
       },
+      "CrearComandaRequestDto": {
+        "type": "object",
+        "properties": {
+          "order_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "mesa_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "estacion": {
+            "type": "string",
+            "example": "cocina"
+          },
+          "notas": {
+            "type": "string"
+          },
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ComandaItemRequestDto"
+            }
+          }
+        },
+        "required": [
+          "estacion"
+        ]
+      },
       "CrearContratoRequestDto": {
         "type": "object",
         "properties": {
@@ -2209,6 +2749,42 @@
         },
         "required": [
           "titulo"
+        ]
+      },
+      "CrearMesaRequestDto": {
+        "type": "object",
+        "properties": {
+          "codigo": {
+            "type": "string",
+            "example": "M-01"
+          },
+          "nombre": {
+            "type": "string",
+            "example": "Mesa 1"
+          },
+          "capacidad": {
+            "type": "number",
+            "minimum": 1,
+            "maximum": 999,
+            "default": 1
+          },
+          "zona": {
+            "type": "string"
+          },
+          "estado": {
+            "type": "string",
+            "enum": [
+              "libre",
+              "ocupada",
+              "reservada",
+              "inactiva"
+            ],
+            "default": "libre"
+          }
+        },
+        "required": [
+          "codigo",
+          "nombre"
         ]
       },
       "CrearSuscripcionRequestDto": {
@@ -2608,6 +3184,59 @@
           "precio_unitario_cents",
           "vendedor_id",
           "tienda_id"
+        ]
+      },
+      "MesaResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "empresa_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "codigo": {
+            "type": "string"
+          },
+          "nombre": {
+            "type": "string"
+          },
+          "capacidad": {
+            "type": "number"
+          },
+          "zona": {
+            "type": "string"
+          },
+          "estado": {
+            "type": "string",
+            "enum": [
+              "libre",
+              "ocupada",
+              "reservada",
+              "inactiva"
+            ]
+          },
+          "creado_en": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "actualizado_en": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "empresa_id",
+          "codigo",
+          "nombre",
+          "capacidad",
+          "zona",
+          "estado",
+          "creado_en",
+          "actualizado_en"
         ]
       },
       "MetaRespuesta": {

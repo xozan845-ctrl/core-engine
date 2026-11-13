@@ -137,6 +137,9 @@ Se introduce la abstracción `item` con `tipo` igual a `producto`, `servicio` o
   garantía con `garantia_meses`; la devolución la marca como devuelta y la
   reubica en la ubicación predeterminada. Un item serializado sin unidades
   disponibles no se vende aunque su stock agregado sea positivo.
+- `orders.mesas` y `orders.comandas` modelan salón y estaciones de preparación
+  (cocina, bar, etc.). Una comanda puede nacer de una orden o de items libres y
+  avanza pendiente → en preparación → lista → entregada; se gatea con `mesas`;
 - `stores.ofertas.moneda` es el código ISO de la moneda final. La orden copia
   la moneda de sus ofertas y rechaza mezclar monedas; no hay conversión
   implícita (el tipo de cambio sería una extensión explícita);
