@@ -20,7 +20,6 @@ export const COVERAGE_THRESHOLDS = {
   'identity-service': { lines: 89, branches: 78, functions: 85 },
   'orders-service': { lines: 32, branches: 23, functions: 33 },
   'storage-service': { lines: 99, branches: 86, functions: 99 },
-  'stores-service': { lines: 86, branches: 84, functions: 76 },
 };
 
 /**

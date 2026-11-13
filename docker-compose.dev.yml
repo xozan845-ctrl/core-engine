@@ -156,11 +156,10 @@ services:
 
   stores-service:
     <<: *servicio-base
+    # ADR-0011: el servicio es Rust y tiene su propio Dockerfile multi-stage.
     build:
       context: .
-      dockerfile: Dockerfile
-      args:
-        SERVICIO: stores-service
+      dockerfile: packages/stores-service/Dockerfile
     environment:
       SERVICIO: stores-service
       PORT: 3003

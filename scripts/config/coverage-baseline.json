@@ -40,11 +40,5 @@
     "branches": 87.5,
     "functions": 100,
     "statements": 98.32
-  },
-  "stores-service": {
-    "lines": 87,
-    "branches": 85.48,
-    "functions": 77.14,
-    "statements": 84.34
   }
 }
