@@ -24,7 +24,8 @@ Todo PR debe incluir las capas marcadas con ✅ para el tipo de cambio tocado.
 
 `packages/scheduling-service`, `packages/notifications-service`,
 `packages/commissions-service`, `packages/field-service`,
-`packages/market-intelligence-service` y `packages/logistics-service` se miden
+`packages/market-intelligence-service`, `packages/logistics-service` y
+`packages/finance-service` se miden
 con `cargo-llvm-cov` en el job `rust` de CI (matriz por servicio), con
 PostgreSQL/PostGIS efímero para ejecutar también las pruebas de integración:
 
@@ -52,6 +53,10 @@ cargo llvm-cov --locked --ignore-filename-regex 'src/main\.rs' \
 # market-intelligence-service
 cargo llvm-cov --locked --ignore-filename-regex 'src/main\.rs' \
   --fail-under-lines 63 --fail-under-functions 60
+
+# finance-service
+cargo llvm-cov --locked --ignore-filename-regex 'src/main\.rs' \
+  --fail-under-lines 52 --fail-under-functions 45
 ```
 
 - **Alcance** (equivalente a R-COV-4): todo `src/**`, excluyendo `main.rs`
@@ -65,11 +70,17 @@ cargo llvm-cov --locked --ignore-filename-regex 'src/main\.rs' \
   64,57 % líneas y 63,42 % funciones; `market-intelligence-service`
   64,41 % líneas y 61,82 % funciones con PostgreSQL/PostGIS (2026-11-13);
   `stores-service` 77,74 % líneas y 77,61 % funciones con suites PostgreSQL y
-  HTTP (2026-11-13). Los gates arrancan en 71/65, 74/74, 72/68, 77/71, 63/62,
-  63/60 y 76/76 (redondeo a la baja con el margen de 1 punto) y suben +5 por
-  release hasta el objetivo histórico 94/77/88 de R-COV-1.
+  HTTP (2026-11-13); `finance-service` 53,32 % líneas y 46,90 % funciones con
+  PostgreSQL efímero (2026-11-13, suites unitarias y `tests/finance_pg.rs`).
+  Los gates arrancan en 71/65, 74/74, 72/68, 77/71, 63/62, 63/60, 76/76 y 52/45
+  (redondeo a la baja con el margen de 1 punto) y suben +5 por release hasta el
+  objetivo histórico 94/77/88 de R-COV-1.
 - Mientras dure cada migración conviven el gate Vitest del TS (retirado en el
   PR de conmutación) y este gate Rust; los ADR fijan el orden.
+- En `finance-service` el lado de lectura de comercio usa un libro JSONB
+  genérico y los handlers dependen de PostgreSQL; por eso el gate arranca más
+  bajo y la integración (`tests/finance_pg.rs`) cubre asientos, libros,
+  créditos, declaraciones, comprobantes y consumidor idempotente.
 - `rabbit.rs` y, en `notifications-service`, `consumidor.rs`/`db.rs`, y en
   `commissions-service` `outbox.rs`/el worker tienen baja cobertura unitaria
   porque requieren broker, base de datos o tiempo real; en `field-service` los
@@ -96,7 +107,6 @@ cargo llvm-cov --locked --ignore-filename-regex 'src/main\.rs' \
   | `shared` | 39 | 39 | 55 |
   | `api-gateway` | 50 | 51 | 57 |
   | `orders-service` | 32 | 23 | 33 |
-  | `finance-service` | 70 | 52 | 72 |
   | `catalog-service` | 93 | 82 | 90 |
   | `identity-service` | 89 | 78 | 85 |
 

@@ -1,7 +1,7 @@
 # ADR-0014: Reescritura de `finance-service` en Rust sin cambio de contrato
 
 - **Fecha**: 2026-11-13
-- **Estado**: Aceptado — implementación en curso
+- **Estado**: Aceptado — implementado; pendiente el smoke de `staging` en la primera promoción de la imagen
 - **Ámbito**: `finance-service` (HTTP público e interno, PostgreSQL/RLS,
   RabbitMQ, Outbox, contabilidad, tributación, facturación, comercio y métricas)
 - **Referencias**: [ADR-0002](./0002-envelope-y-desacoplamiento.md),
@@ -125,3 +125,21 @@ y `orders`; este ADR no invade su alcance.
 - Partida doble, declaraciones y comprobantes conservan sus invariantes.
 - OpenAPI, salud y métricas conservan el contrato.
 - Smoke de `staging` verde en la primera promoción.
+
+## Estado de implementación (2026-11-13)
+
+- Crate completo en `packages/finance-service/` con 88 pruebas unitarias y 8
+  de integración PostgreSQL (`tests/finance_pg.rs`): asientos y libros,
+  aislamiento de comercio por tenant/vendedor, crédito de orden idempotente,
+  declaraciones idempotentes, comprobantes con secuencial consecutivo,
+  consumidor idempotente y persistencia de proyecciones.
+- Imagen Docker multi-stage equivalente (puerto 3007) y compose de desarrollo
+  apuntando al Dockerfile del servicio.
+- Gate Rust en el job `rust` de CI con cobertura 52/45 (medida: 53,32 % líneas
+  / 46,90 % funciones), según el baseline de `docs/rules/test/06`.
+- TypeScript retirado; el servicio entra en `RUST_SERVICES`, sale del runner
+  Vitest, de Stryker y de los scripts raíz.
+- Pendiente: smoke de `staging` en la primera promoción de la imagen. El
+  consumidor financiero de la saga se valida en `tests/finance_pg.rs` (la saga
+  Node conserva la coreografía hasta `payment.procesado` y el contrato de
+  `comision.acreditada`).
