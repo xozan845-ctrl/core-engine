@@ -32948,6 +32948,14 @@ export const OPENAPI_AGREGADO = {
             "type": "string",
             "example": "Dra. Ana López"
           },
+          "capacidad": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 100000,
+            "default": 1,
+            "example": 20,
+            "description": "Citas activas que pueden solaparse en el mismo horario"
+          },
           "atributos": {
             "type": "object"
           }
@@ -33036,6 +33044,10 @@ export const OPENAPI_AGREGADO = {
           "nombre": {
             "type": "string"
           },
+          "capacidad": {
+            "type": "integer",
+            "minimum": 1
+          },
           "estado": {
             "type": "string",
             "enum": [
@@ -33060,6 +33072,7 @@ export const OPENAPI_AGREGADO = {
           "empresa_id",
           "tipo",
           "nombre",
+          "capacidad",
           "estado",
           "atributos",
           "creado_en",

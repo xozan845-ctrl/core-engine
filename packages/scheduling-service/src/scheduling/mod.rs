@@ -23,6 +23,7 @@ const TIPOS_RECURSO: [&str; 5] = ["profesional", "sala", "sillon", "vehiculo", "
 pub struct CrearRecurso {
     pub tipo: String,
     pub nombre: String,
+    pub capacidad: i32,
     pub atributos: Value,
 }
 
@@ -110,13 +111,14 @@ impl Agenda {
         let empresa = parsear_uuid(empresa_id)?;
         let mut tx = self.db.transaccion().await.map_err(error_db)?;
         let fila = sqlx::query(
-            "INSERT INTO scheduling.recursos (id, empresa_id, tipo, nombre, atributos)
-             VALUES ($1, $2, $3, $4, $5::jsonb) RETURNING *",
+            "INSERT INTO scheduling.recursos (id, empresa_id, tipo, nombre, capacidad, atributos)
+             VALUES ($1, $2, $3, $4, $5, $6::jsonb) RETURNING *",
         )
         .bind(Uuid::new_v4())
         .bind(empresa)
         .bind(&dto.tipo)
         .bind(dto.nombre.trim())
+        .bind(dto.capacidad)
         .bind(sqlx::types::Json(&dto.atributos))
         .fetch_one(&mut *tx)
         .await
@@ -256,8 +258,8 @@ impl Agenda {
 
         let mut tx = self.db.transaccion().await.map_err(error_db)?;
 
-        let existe = sqlx::query(
-            "SELECT id FROM scheduling.recursos
+        let recurso_activo = sqlx::query(
+            "SELECT capacidad FROM scheduling.recursos
               WHERE id = $1 AND empresa_id = $2 AND estado = 'activo'",
         )
         .bind(recurso)
@@ -265,9 +267,14 @@ impl Agenda {
         .fetch_optional(&mut *tx)
         .await
         .map_err(error_db)?;
-        if existe.is_none() {
+        let Some(fila_recurso) = recurso_activo else {
             return Err(ApiError::no_encontrado("Recurso", &dto.recurso_id));
-        }
+        };
+        let capacidad: i64 = i64::from(
+            fila_recurso
+                .try_get::<i32, _>("capacidad")
+                .map_err(error_db)?,
+        );
 
         let ventana = sqlx::query(
             "SELECT 1 FROM scheduling.disponibilidad d
@@ -308,21 +315,21 @@ impl Agenda {
             ));
         }
 
-        let cita = sqlx::query(
-            "SELECT 1 FROM scheduling.citas
+        let ocupadas: i64 = sqlx::query_scalar(
+            "SELECT COUNT(*) FROM scheduling.citas
               WHERE recurso_id = $1
                 AND estado IN ('reservada', 'confirmada', 'en_atencion')
-                AND periodo && tstzrange($2::timestamptz, $3::timestamptz, '[)') LIMIT 1",
+                AND periodo && tstzrange($2::timestamptz, $3::timestamptz, '[)')",
         )
         .bind(recurso)
         .bind(&dto.inicia_en)
         .bind(&dto.termina_en)
-        .fetch_optional(&mut *tx)
+        .fetch_one(&mut *tx)
         .await
         .map_err(error_db)?;
-        if cita.is_some() {
+        if ocupadas >= capacidad {
             return Err(ApiError::recurso_no_disponible(
-                "El recurso ya esta reservado en ese horario.",
+                "El recurso alcanzo su capacidad en ese horario.",
             ));
         }
 
@@ -949,6 +956,7 @@ fn fila_recurso(fila: &sqlx::postgres::PgRow) -> Result<Value, ApiError> {
         "empresa_id": uuid_texto(fila, "empresa_id").map_err(error_db)?,
         "tipo": fila.try_get::<String, _>("tipo").map_err(error_db)?,
         "nombre": fila.try_get::<String, _>("nombre").map_err(error_db)?,
+        "capacidad": fila.try_get::<i32, _>("capacidad").map_err(error_db)?,
         "estado": fila.try_get::<String, _>("estado").map_err(error_db)?,
         "atributos": jsonb(fila, "atributos").map_err(error_db)?,
         "creado_en": timestamp(fila, "creado_en").map_err(error_db)?,
@@ -1145,12 +1153,24 @@ pub fn validar_crear_recurso(valor: &Value) -> Result<CrearRecurso, ApiError> {
         }
     };
 
+    let capacidad = match objeto.get("capacidad") {
+        None | Some(Value::Null) => 1,
+        Some(valor) => match valor.as_i64() {
+            Some(valor) if (1..=100_000).contains(&valor) => valor as i32,
+            _ => {
+                errores.push(error_campo("capacidad", &["isInt", "min"]));
+                1
+            }
+        },
+    };
+
     if !errores.is_empty() {
         return Err(error_validacion(errores));
     }
     Ok(CrearRecurso {
         tipo,
         nombre,
+        capacidad,
         atributos,
     })
 }
@@ -1388,7 +1408,26 @@ mod tests {
         .expect("valido");
         assert_eq!(dto.tipo, "sala");
         assert_eq!(dto.nombre, " Sala 1 ");
+        assert_eq!(dto.capacidad, 1);
         assert_eq!(dto.atributos["piso"], 2);
+    }
+
+    #[test]
+    fn debe_validar_la_capacidad_del_recurso() {
+        let dto = validar_crear_recurso(&json!({
+            "tipo": "sala", "nombre": "Clase grupal", "capacidad": 20
+        }))
+        .expect("valido");
+        assert_eq!(dto.capacidad, 20);
+
+        let error = validar_crear_recurso(&json!({
+            "tipo": "sala", "nombre": "Clase grupal", "capacidad": 0
+        }))
+        .expect_err("invalido");
+        assert_eq!(
+            error.cuerpo()["detalles"],
+            json!([{"campo": "capacidad", "restricciones": ["isInt", "min"]}])
+        );
     }
 
     #[test]

@@ -38,6 +38,12 @@ async fn debe_crear_disponibilidad_y_bloqueos_con_las_mismas_reglas() {
         .execute(&pool)
         .await
         .expect("migracion scheduling");
+    sqlx::raw_sql(include_str!(
+        "../../../infra/db/init/67_citas_capacidad.sql"
+    ))
+    .execute(&pool)
+    .await
+    .expect("migracion capacidad de citas");
     sqlx::query("ALTER TABLE scheduling.citas ADD COLUMN IF NOT EXISTS parte_id uuid")
         .execute(&pool)
         .await
@@ -55,6 +61,7 @@ async fn debe_crear_disponibilidad_y_bloqueos_con_las_mismas_reglas() {
             &CrearRecurso {
                 tipo: "sala".to_string(),
                 nombre: format!("Sala {}", &empresa[..8]),
+                capacidad: 1,
                 atributos: json!({ "piso": 2 }),
             },
         )
@@ -307,4 +314,129 @@ async fn debe_crear_disponibilidad_y_bloqueos_con_las_mismas_reglas() {
         .execute(db.pool())
         .await
         .expect("limpieza outbox");
+}
+
+#[tokio::test]
+async fn debe_permitir_clases_grupales_hasta_la_capacidad_del_recurso() {
+    let Some(url) = url() else {
+        eprintln!("TEST_DATABASE_URL no definida: se omite la integración");
+        return;
+    };
+    let pool = sqlx::PgPool::connect(&url).await.expect("postgres");
+    sqlx::raw_sql(include_str!("../../../infra/db/init/28_scheduling.sql"))
+        .execute(&pool)
+        .await
+        .expect("migracion scheduling");
+    sqlx::raw_sql(include_str!(
+        "../../../infra/db/init/67_citas_capacidad.sql"
+    ))
+    .execute(&pool)
+    .await
+    .expect("migracion capacidad de citas");
+    sqlx::query("ALTER TABLE scheduling.citas ADD COLUMN IF NOT EXISTS parte_id uuid")
+        .execute(&pool)
+        .await
+        .expect("compatibilidad parte_id");
+    pool.close().await;
+
+    let db = Arc::new(Db::conectar(&url).await.expect("postgres"));
+    let agenda = Agenda::nueva(db.clone(), Arc::new(PartesPermitidas), "scheduling.outbox");
+    let empresa = Uuid::new_v4().to_string();
+
+    let recurso = agenda
+        .crear_recurso(
+            &empresa,
+            &CrearRecurso {
+                tipo: "sala".to_string(),
+                nombre: format!("Clase {}", &empresa[..8]),
+                capacidad: 2,
+                atributos: json!({}),
+            },
+        )
+        .await
+        .expect("crear recurso");
+    assert_eq!(recurso["capacidad"], 2);
+    let recurso_id = recurso["id"].as_str().expect("id").to_string();
+
+    agenda
+        .crear_disponibilidad(
+            &empresa,
+            &CrearDisponibilidad {
+                recurso_id: recurso_id.clone(),
+                dia_semana: 1,
+                inicia_hora: "08:00".to_string(),
+                termina_hora: "18:00".to_string(),
+                zona_horaria: Some("America/Managua".to_string()),
+                vigente_desde: None,
+                vigente_hasta: None,
+            },
+        )
+        .await
+        .expect("crear disponibilidad");
+
+    let inicia_en = "2032-04-12T14:00:00.000Z".to_string();
+    let termina_en = "2032-04-12T15:00:00.000Z".to_string();
+    let ventana = VerificarDisponibilidad {
+        empresa_id: empresa.clone(),
+        recurso_id: recurso_id.clone(),
+        inicia_en: inicia_en.clone(),
+        termina_en: termina_en.clone(),
+    };
+    agenda
+        .verificar_disponibilidad(&ventana)
+        .await
+        .expect("disponible antes de llenar el cupo");
+
+    let crear = |parte_id: String| {
+        let agenda = agenda.clone();
+        let empresa = empresa.clone();
+        let recurso_id = recurso_id.clone();
+        let inicia_en = inicia_en.clone();
+        let termina_en = termina_en.clone();
+        async move {
+            agenda
+                .crear_cita(
+                    &empresa,
+                    &CrearCita {
+                        recurso_id,
+                        parte_id,
+                        order_id: None,
+                        item_id: None,
+                        inicia_en,
+                        termina_en,
+                        notas: None,
+                        metadata: json!({}),
+                    },
+                )
+                .await
+        }
+    };
+
+    let primera = crear(Uuid::new_v4().to_string())
+        .await
+        .expect("primera cita");
+    crear(Uuid::new_v4().to_string())
+        .await
+        .expect("segunda cita");
+
+    agenda
+        .verificar_disponibilidad(&ventana)
+        .await
+        .expect_err("el cupo lleno debe rechazar la verificacion");
+
+    let tercera = crear(Uuid::new_v4().to_string()).await;
+    let error = tercera.expect_err("la tercera cita excede el cupo");
+    assert_eq!(error.codigo, "RECURSO_NO_DISPONIBLE");
+
+    agenda
+        .cancelar_cita(
+            &empresa,
+            primera["id"].as_str().expect("id"),
+            Some("libera cupo"),
+        )
+        .await
+        .expect("cancelar cita");
+    crear(Uuid::new_v4().to_string())
+        .await
+        .expect("el cupo liberado permite una nueva cita");
 }
