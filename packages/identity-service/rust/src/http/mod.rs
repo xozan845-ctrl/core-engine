@@ -5,7 +5,10 @@
 //! misma composición de capas (envelope, correlación y métricas).
 
 pub mod auth;
+pub mod capacidades;
 pub mod envelope;
+pub mod packs;
+pub mod usuarios;
 pub mod validacion;
 
 use crate::auth::UsuarioContexto;
@@ -18,7 +21,7 @@ use axum::extract::{FromRequest, MatchedPath, Request, State};
 use axum::http::{header, HeaderValue, StatusCode};
 use axum::middleware::{self, Next};
 use axum::response::{Html, IntoResponse, Response};
-use axum::routing::{get, post};
+use axum::routing::{get, patch, post};
 use axum::{Json, Router};
 use serde_json::Value;
 use std::time::Instant;
@@ -73,6 +76,30 @@ pub fn build_router(state: AppState) -> Router {
             "/api/v2/auth/vincular-personal",
             post(auth::vincular_personal),
         )
+        .route("/api/v2/usuarios", get(usuarios::listar))
+        .route("/api/v2/usuarios/{id}", get(usuarios::obtener))
+        .route(
+            "/api/v2/usuarios/{id}/avatar",
+            patch(usuarios::actualizar_avatar),
+        )
+        .route(
+            "/api/v2/empresas/{empresa_id}/capacidades",
+            get(capacidades::listar),
+        )
+        .route(
+            "/api/v2/empresas/{empresa_id}/capacidades/{capacidad}",
+            patch(capacidades::actualizar),
+        )
+        .route("/api/v2/packs", get(packs::listar).post(packs::crear))
+        .route(
+            "/api/v2/packs/modelos-operacion",
+            get(packs::listar_modelos).post(packs::crear_modelo),
+        )
+        .route(
+            "/api/v2/packs/verticales",
+            get(packs::listar_verticales).post(packs::crear_vertical),
+        )
+        .route("/api/v2/packs/{codigo}/{version}", get(packs::obtener))
         .fallback(no_encontrado)
         .with_state(state.clone());
     aplicar_capas(router, state)

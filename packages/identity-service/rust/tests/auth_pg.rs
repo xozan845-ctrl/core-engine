@@ -11,6 +11,7 @@ use identity_service::dominio::password_reset::PasswordReset;
 use identity_service::dominio::sesiones::Sesiones;
 use identity_service::dominio::usuarios::{CrearUsuario, FiltroUsuarios, Usuarios};
 use identity_service::email::{Email, EmailMessage};
+use identity_service::storage::Storage;
 use std::sync::{Arc, Mutex};
 use tokio::sync::Mutex as AsyncMutex;
 use uuid::Uuid;
@@ -100,7 +101,8 @@ async fn preparar() -> Option<Contexto> {
         ("EMAIL_MODE", "log"),
     ])
     .expect("config");
-    let usuarios = Arc::new(Usuarios::nueva(Arc::clone(&db)));
+    let storage = Arc::new(Storage::nueva("http://storage.test", None));
+    let usuarios = Arc::new(Usuarios::nueva(Arc::clone(&db), storage));
     let sesiones = Arc::new(Sesiones::nueva(Arc::clone(&db)));
     let auth = Auth::nueva(Arc::clone(&usuarios), Arc::clone(&sesiones), &config);
     let email = Arc::new(EmailFake::default());

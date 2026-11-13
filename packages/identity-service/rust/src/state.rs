@@ -2,6 +2,8 @@
 
 use crate::config::Config;
 use crate::dominio::auth::Auth;
+use crate::dominio::capacidades::Capacidades;
+use crate::dominio::packs::Packs;
 use crate::dominio::password_reset::PasswordReset;
 use crate::dominio::usuarios::Usuarios;
 use crate::metrics::Metrics;
@@ -12,6 +14,8 @@ use std::time::Instant;
 pub struct Servicios {
     pub auth: Arc<Auth>,
     pub usuarios: Arc<Usuarios>,
+    pub capacidades: Arc<Capacidades>,
+    pub packs: Arc<Packs>,
     pub password_reset: Arc<PasswordReset>,
 }
 

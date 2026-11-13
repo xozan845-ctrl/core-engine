@@ -18,3 +18,4 @@ pub mod http;
 pub mod logs;
 pub mod metrics;
 pub mod state;
+pub mod storage;
