@@ -4,7 +4,9 @@
 //! `/metrics`, `/docs`). Las rutas de identidad se añaden en los PR 2-7 con la
 //! misma composición de capas (envelope, correlación y métricas).
 
+pub mod auth;
 pub mod envelope;
+pub mod validacion;
 
 use crate::auth::UsuarioContexto;
 use crate::campos;
@@ -16,7 +18,7 @@ use axum::extract::{FromRequest, MatchedPath, Request, State};
 use axum::http::{header, HeaderValue, StatusCode};
 use axum::middleware::{self, Next};
 use axum::response::{Html, IntoResponse, Response};
-use axum::routing::get;
+use axum::routing::{get, post};
 use axum::{Json, Router};
 use serde_json::Value;
 use std::time::Instant;
@@ -49,6 +51,28 @@ pub fn build_router(state: AppState) -> Router {
         .route("/metrics", get(metrics))
         .route("/docs", get(docs))
         .route("/docs-json", get(docs_json))
+        .route("/api/v2/auth/registro", post(auth::registrar))
+        .route("/api/v2/auth/login", post(auth::login))
+        .route("/api/v2/auth/refresh", post(auth::refresh))
+        .route("/api/v2/auth/logout", post(auth::logout))
+        .route("/api/v2/auth/crear-usuario", post(auth::crear_usuario))
+        .route(
+            "/api/v2/auth/cambiar-contrasena",
+            post(auth::cambiar_contrasena),
+        )
+        .route(
+            "/api/v2/auth/restablecer-contrasena",
+            post(auth::restablecer_contrasena),
+        )
+        .route(
+            "/api/v2/auth/restablecer-contrasena/confirmar",
+            post(auth::confirmar_restablecimiento),
+        )
+        .route("/api/v2/auth/me", get(auth::me))
+        .route(
+            "/api/v2/auth/vincular-personal",
+            post(auth::vincular_personal),
+        )
         .fallback(no_encontrado)
         .with_state(state.clone());
     aplicar_capas(router, state)

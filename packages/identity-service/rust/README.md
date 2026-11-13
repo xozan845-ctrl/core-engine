@@ -25,22 +25,26 @@ Variables de entorno: `PORT` (3001), `SERVICIO`, `DATABASE_URL`,
 
 En producción `JWT_SECRET`, `ADMIN_EMAIL` y `ADMIN_PASSWORD` son obligatorias.
 
-## Alcance actual (PR 1)
+## Alcance actual (PR 1-2)
 
-- Configuración con `fail-fast` de variables obligatorias y TTL de JWT.
+- Configuración con `fail-fast` de variables obligatorias, TTL de JWT y SMTP.
 - JWT HS256 de `access`/`refresh` con el mismo payload que
   `packages/shared/src/auth/jwt.utils.ts` y `jti` en el refresh.
 - bcrypt coste 10 y contexto `x-user-*` del gateway.
 - PostgreSQL con claims de RLS (`request.jwt.claims`).
+- **Auth y sesiones**: registro, login, refresh, logout, `/auth/me`, alta
+  administrativa, cambio y restablecimiento de contraseña, vinculación de
+  personal y revocación de sesiones en `identity.sesiones`.
+- **Correo**: puerto `Email` con modo `log` y SMTP (`lettre`) para el enlace de
+  restablecimiento.
 - Errores `{codigo, mensaje, detalles?}`, envelope `{data, meta}`, logs JSON,
   `x-request-id` y métricas Prometheus.
 - `/health`, `/metrics`, `/docs` y `/docs-json` (OpenAPI versionado).
 - Apagado ordenado ante `SIGINT`/`SIGTERM`.
-- Gate Rust en CI con cobertura 84/73 (medida 85,24/74,88).
+- Gate Rust en CI con cobertura 80/75 (medida 81,40/76,36).
 
-Pendiente en los PR 2-9: auth/sesiones, usuarios, empresas, personal, partes,
-registros, extensiones, API interna, seed, correo de restablecimiento, imagen
-Docker y conmutación.
+Pendiente en los PR 3-9: usuarios (listado/avatar), empresas, personal, partes,
+registros, extensiones, API interna, seed, imagen Docker y conmutación.
 
 ## Cobertura
 
