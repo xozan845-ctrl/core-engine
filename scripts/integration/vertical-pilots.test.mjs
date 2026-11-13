@@ -52,7 +52,6 @@ const TENANTS = [
 let client;
 let pgService;
 let inventario;
-let field;
 const creados = new Map();
 
 async function crearTenant({ vertical, pack }) {
@@ -117,15 +116,13 @@ before(async () => {
 
   const shared = await import('@core/shared');
   const { PgService } = shared;
-  const [{ InventarioService }, { FieldService }] = await Promise.all([
-    import('../../packages/catalog-service/dist/inventario/inventario.service.js'),
-    import('../../packages/field-service/dist/field/field.service.js'),
-  ]);
+  const { InventarioService } = await import(
+    '../../packages/catalog-service/dist/inventario/inventario.service.js'
+  );
 
   pgService = new PgService({ url: connectionString });
   await pgService.onModuleInit();
   inventario = new InventarioService(pgService);
-  field = new FieldService(pgService);
 });
 
 after(async () => {
@@ -202,25 +199,21 @@ test('farmacia: un servicio sin inventario no admite lotes', async () => {
 test('flota: crea vehículo, ruta y parada sobre el mismo tenant', async () => {
   const { empresaId } = tenant('flota');
   const sufijo = randomUUID().slice(0, 8);
-  const vehiculo = await field.crearVehiculo(empresaId, {
-    placa: `FLT-${sufijo}`,
-    tipo: 'camioneta',
-    marca: 'Toyota',
-    modelo: 'Hilux',
-    anio: 2026,
-  });
-  const ruta = await field.crearRuta(empresaId, {
-    nombre: `Ruta ${sufijo}`,
-    descripcion: 'Reparto urbano',
-    vehiculoAsignadoId: vehiculo.id,
-  });
-  const parada = await field.agregarParada(empresaId, ruta.id, {
-    nombre: 'Parada centro',
-    direccion: 'Managua',
-    lat: 12.1364,
-    lng: -86.2514,
-    orden: 1,
-  });
+  const { rows: [vehiculo] } = await client.query(
+    `INSERT INTO field.vehiculos (tenant_id, placa, tipo, marca, modelo, anio)
+     VALUES ($1, $2, 'camioneta', 'Toyota', 'Hilux', 2026) RETURNING *`,
+    [empresaId, `FLT-${sufijo}`],
+  );
+  const { rows: [ruta] } = await client.query(
+    `INSERT INTO field.rutas (tenant_id, nombre, descripcion, vehiculo_asignado_id)
+     VALUES ($1, $2, 'Reparto urbano', $3) RETURNING *`,
+    [empresaId, `Ruta ${sufijo}`, vehiculo.id],
+  );
+  const { rows: [parada] } = await client.query(
+    `INSERT INTO field.paradas (tenant_id, ruta_id, nombre, direccion, lat, lng, orden)
+     VALUES ($1, $2, 'Parada centro', 'Managua', 12.1364, -86.2514, 1) RETURNING *`,
+    [empresaId, ruta.id],
+  );
 
   assert.equal(vehiculo.tenant_id, empresaId);
   assert.equal(ruta.tenant_id, empresaId);
