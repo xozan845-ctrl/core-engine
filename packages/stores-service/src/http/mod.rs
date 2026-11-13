@@ -1,17 +1,22 @@
 //! Router HTTP y middlewares transversales.
 
 pub mod envelope;
+pub mod internal;
+pub mod ofertas;
+pub mod tiendas;
+pub mod validacion;
 
 use crate::auth::{clave_interna_valida, UsuarioContexto};
 use crate::config::Config;
+use crate::errors::ApiError;
 use crate::logs::{ejecutar_con_contexto, ContextoCorrelacion};
 use crate::metrics::Metrics;
 use crate::state::AppState;
 use axum::extract::{FromRequest, MatchedPath, Request, State};
-use axum::http::{header, HeaderValue, StatusCode};
+use axum::http::{header, HeaderMap, HeaderValue, StatusCode};
 use axum::middleware::{self, Next};
 use axum::response::{Html, IntoResponse, Response};
-use axum::routing::get;
+use axum::routing::{get, patch, post};
 use axum::{Json, Router};
 use serde_json::Value;
 use std::time::Instant;
@@ -44,6 +49,60 @@ pub fn build_router(state: AppState) -> Router {
         .route("/metrics", get(metrics))
         .route("/docs", get(docs))
         .route("/docs-json", get(docs_json))
+        // tiendas
+        .route("/api/v2/vendedores/tienda", post(tiendas::crear))
+        .route("/api/v2/vendedores/me/tienda", get(tiendas::mi_tienda))
+        .route(
+            "/api/v2/empresarios/me/tiendas",
+            get(tiendas::tiendas_de_empresa),
+        )
+        .route("/api/v2/tiendas/{id}/tema.css", get(tiendas::tema_css))
+        .route("/api/v2/tiendas/{id}/logo", patch(tiendas::actualizar_logo))
+        .route(
+            "/api/v2/tiendas/{id}/background",
+            patch(tiendas::actualizar_background),
+        )
+        .route(
+            "/api/v2/tiendas/{id}/personalizacion",
+            patch(tiendas::actualizar_personalizacion),
+        )
+        .route(
+            "/api/v2/tiendas/{id}/contenido",
+            patch(tiendas::actualizar_contenido),
+        )
+        .route("/api/v2/tiendas/{id}/slug", patch(tiendas::actualizar_slug))
+        .route("/api/v2/tiendas/{id}", get(tiendas::tienda_publica))
+        // ofertas
+        .route("/api/v2/vendedores/productos", post(ofertas::publicar))
+        .route(
+            "/api/v2/vendedores/productos/{id}",
+            patch(ofertas::cambiar_margen),
+        )
+        .route("/api/v2/vendedores/me/ofertas", get(ofertas::mis_ofertas))
+        // superficie interna
+        .route("/internal/ofertas", get(internal::ofertas_por_ids))
+        .route(
+            "/internal/ofertas/producto/{producto_id}/activas",
+            get(internal::ofertas_activas_producto),
+        )
+        .route("/internal/tiendas", get(internal::tiendas_por_ids))
+        .route(
+            "/internal/tiendas/empresa/{empresa_id}",
+            get(internal::tiendas_de_empresa),
+        )
+        .route(
+            "/internal/tiendas/vendedor/{vendedor_id}",
+            get(internal::tienda_de_vendedor),
+        )
+        .route(
+            "/internal/tiendas/{id}/asignar-vendedor",
+            post(internal::asignar_vendedor),
+        )
+        .route(
+            "/internal/tiendas/{id}/desasignar-vendedor",
+            post(internal::desasignar_vendedor),
+        )
+        .route("/internal/tiendas/{id}", get(internal::tienda_por_id))
         .fallback(no_encontrado)
         .with_state(state.clone());
     aplicar_capas(router, state)
@@ -56,6 +115,26 @@ pub(crate) fn aplicar_capas(router: Router, state: AppState) -> Router {
         .layer(middleware::from_fn(envelope::envelope))
         .layer(middleware::from_fn_with_state(state.clone(), metricas))
         .layer(middleware::from_fn_with_state(state, correlacion))
+}
+
+/// Equivalente a la cadena global `RolesGuard` → `CapabilityGuard`.
+pub(crate) async fn autorizar(
+    state: &AppState,
+    headers: &HeaderMap,
+    roles: &[&str],
+    permisos: &[&str],
+    capacidades_extra: &[&str],
+) -> Result<UsuarioContexto, ApiError> {
+    let usuario = UsuarioContexto::desde_headers_o_error(headers)?;
+    crate::auth::autorizar(
+        &usuario,
+        roles,
+        permisos,
+        capacidades_extra,
+        state.capacidades.as_ref(),
+    )
+    .await?;
+    Ok(usuario)
 }
 
 async fn health(State(state): State<AppState>) -> Json<crate::metrics::MetricaSalud> {

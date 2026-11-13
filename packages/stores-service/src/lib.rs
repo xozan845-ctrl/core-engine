@@ -16,4 +16,6 @@ pub mod errors;
 pub mod http;
 pub mod logs;
 pub mod metrics;
+pub mod ofertas;
 pub mod state;
+pub mod tiendas;

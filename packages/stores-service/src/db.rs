@@ -104,6 +104,16 @@ pub fn fila_a_json(fila: &PgRow) -> Result<Value, sqlx::Error> {
     Ok(Value::Object(objeto))
 }
 
+/// Traduce un error de infraestructura a 500 y lo deja en el log (sin filtrar
+/// detalles internos al cliente).
+pub fn interno(error: impl std::fmt::Display) -> crate::errors::ApiError {
+    crate::logs::error(
+        "db",
+        crate::campos! { "msg": "error de infraestructura", "err": error.to_string() },
+    );
+    crate::errors::ApiError::interno()
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

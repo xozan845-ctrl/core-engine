@@ -7,6 +7,8 @@ use crate::clients::{
 };
 use crate::config::Config;
 use crate::metrics::Metrics;
+use crate::ofertas::Ofertas;
+use crate::tiendas::Tiendas;
 use std::sync::Arc;
 use std::time::Instant;
 
@@ -18,6 +20,10 @@ pub struct AppState {
     pub temas: Arc<dyn TemasIdentity>,
     pub storage: Arc<dyn ObjetosStorage>,
     pub catalogo: Arc<dyn Catalogo>,
+    /// `None` solo en el estado de pruebas de infraestructura; las rutas de
+    /// negocio fallan con 500 si no hay base de datos.
+    pub tiendas: Option<Arc<Tiendas>>,
+    pub ofertas: Option<Arc<Ofertas>>,
     pub inicio: Instant,
 }
 
@@ -31,6 +37,8 @@ impl AppState {
             temas: Arc::new(TemasSinHerencia),
             storage: Arc::new(StorageSinConexion),
             catalogo: Arc::new(CatalogoSinConexion),
+            tiendas: None,
+            ofertas: None,
             inicio: Instant::now(),
         }
     }
@@ -43,6 +51,8 @@ impl AppState {
         temas: Arc<dyn TemasIdentity>,
         storage: Arc<dyn ObjetosStorage>,
         catalogo: Arc<dyn Catalogo>,
+        tiendas: Arc<Tiendas>,
+        ofertas: Arc<Ofertas>,
     ) -> Self {
         Self {
             config: Arc::new(config),
@@ -51,7 +61,21 @@ impl AppState {
             temas,
             storage,
             catalogo,
+            tiendas: Some(tiendas),
+            ofertas: Some(ofertas),
             inicio: Instant::now(),
         }
+    }
+
+    pub fn tiendas(&self) -> Result<&Arc<Tiendas>, crate::errors::ApiError> {
+        self.tiendas
+            .as_ref()
+            .ok_or_else(crate::errors::ApiError::interno)
+    }
+
+    pub fn ofertas(&self) -> Result<&Arc<Ofertas>, crate::errors::ApiError> {
+        self.ofertas
+            .as_ref()
+            .ok_or_else(crate::errors::ApiError::interno)
     }
 }
