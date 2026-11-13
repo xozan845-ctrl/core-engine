@@ -35389,8 +35389,13 @@
           },
           "precio_venta": {
             "type": "string",
-            "description": "Precio de venta en córdobas con dos decimales",
+            "description": "Precio de venta en la moneda de la oferta",
             "example": "1150.00"
+          },
+          "moneda": {
+            "type": "string",
+            "description": "Moneda ISO de la oferta",
+            "example": "NIO"
           },
           "stock": {
             "type": "number",
@@ -35415,6 +35420,7 @@
           "sku",
           "producto_nombre",
           "precio_venta",
+          "moneda",
           "stock",
           "estado",
           "creado_en"
@@ -35500,8 +35506,13 @@
           },
           "precio_venta": {
             "type": "string",
-            "description": "Precio de venta en córdobas con dos decimales",
+            "description": "Precio de venta en la moneda de la oferta",
             "example": "1150.00"
+          },
+          "moneda": {
+            "type": "string",
+            "description": "Moneda ISO de la oferta",
+            "example": "NIO"
           },
           "stock": {
             "type": "number",
@@ -35532,6 +35543,7 @@
           "margen",
           "precio_base",
           "precio_venta",
+          "moneda",
           "stock",
           "estado",
           "creado_en"
@@ -35647,6 +35659,11 @@
             "minimum": 0,
             "maximum": 90,
             "example": 15
+          },
+          "moneda": {
+            "type": "string",
+            "default": "NIO",
+            "description": "Moneda ISO de la oferta"
           }
         },
         "required": [

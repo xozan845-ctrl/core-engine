@@ -35395,8 +35395,13 @@ export const OPENAPI_AGREGADO = {
           },
           "precio_venta": {
             "type": "string",
-            "description": "Precio de venta en córdobas con dos decimales",
+            "description": "Precio de venta en la moneda de la oferta",
             "example": "1150.00"
+          },
+          "moneda": {
+            "type": "string",
+            "description": "Moneda ISO de la oferta",
+            "example": "NIO"
           },
           "stock": {
             "type": "number",
@@ -35421,6 +35426,7 @@ export const OPENAPI_AGREGADO = {
           "sku",
           "producto_nombre",
           "precio_venta",
+          "moneda",
           "stock",
           "estado",
           "creado_en"
@@ -35506,8 +35512,13 @@ export const OPENAPI_AGREGADO = {
           },
           "precio_venta": {
             "type": "string",
-            "description": "Precio de venta en córdobas con dos decimales",
+            "description": "Precio de venta en la moneda de la oferta",
             "example": "1150.00"
+          },
+          "moneda": {
+            "type": "string",
+            "description": "Moneda ISO de la oferta",
+            "example": "NIO"
           },
           "stock": {
             "type": "number",
@@ -35538,6 +35549,7 @@ export const OPENAPI_AGREGADO = {
           "margen",
           "precio_base",
           "precio_venta",
+          "moneda",
           "stock",
           "estado",
           "creado_en"
@@ -35653,6 +35665,11 @@ export const OPENAPI_AGREGADO = {
             "minimum": 0,
             "maximum": 90,
             "example": 15
+          },
+          "moneda": {
+            "type": "string",
+            "default": "NIO",
+            "description": "Moneda ISO de la oferta"
           }
         },
         "required": [

@@ -123,6 +123,17 @@ describe('OfertasService (RN-01 / RN-02)', () => {
       const insert = (pg.queryOne as Mock).mock.calls[2];
       expect(insert[0]).toContain('item_type');
       expect(insert[1]).toContain('servicio');
+      expect(insert[1]).toContain('NIO');
+    });
+
+    it('valida la moneda ISO de la oferta', async () => {
+      const { servicio } = crear();
+      await expect(
+        servicio.publicarItem('v1', 't1', 'item-1', 10, 'US'),
+      ).rejects.toThrow(/moneda/);
+      await expect(
+        servicio.publicarItem('v1', 't1', 'item-1', 10, 'usd'),
+      ).rejects.toBeInstanceOf(Error);
     });
 
     it('rechaza un item inexistente o de otra empresa', async () => {

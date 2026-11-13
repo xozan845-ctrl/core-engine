@@ -3230,8 +3230,13 @@
           },
           "precio_venta": {
             "type": "string",
-            "description": "Precio de venta en córdobas con dos decimales",
+            "description": "Precio de venta en la moneda de la oferta",
             "example": "1150.00"
+          },
+          "moneda": {
+            "type": "string",
+            "description": "Moneda ISO de la oferta",
+            "example": "NIO"
           },
           "stock": {
             "type": "number",
@@ -3262,6 +3267,7 @@
           "margen",
           "precio_base",
           "precio_venta",
+          "moneda",
           "stock",
           "estado",
           "creado_en"
