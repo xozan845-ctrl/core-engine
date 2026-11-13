@@ -123,10 +123,20 @@ export class PedidosConsumer implements OnModuleInit {
     const items = evento.data.items;
     const reintegrado = await this.pg.transaccion(async (client) => {
       if (await this.productos.estaProcesado(evento.event_id, client)) return false;
+      const lineas = items.map((i) => ({
+        empresa_id: i.empresa_id,
+        sku: i.sku,
+        cantidad: i.cantidad,
+      }));
       await this.productos.reintegrarStockEnTransaccion(
         client,
         evento.data.order_id,
-        items.map((i) => ({ empresa_id: i.empresa_id, sku: i.sku, cantidad: i.cantidad })),
+        lineas,
+      );
+      await this.productos.devolverSeriesEnTransaccion(
+        client,
+        evento.data.order_id,
+        lineas,
       );
       await this.outbox.insertarEnTransaccion(client, EVENTOS.STOCK_REINTEGRADO, {
         order_id: evento.data.order_id,
