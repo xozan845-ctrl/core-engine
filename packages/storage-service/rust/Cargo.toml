@@ -1,0 +1,33 @@
+[package]
+name = "storage-service"
+version = "1.0.9"
+edition = "2021"
+rust-version = "1.89"
+description = "Almacenamiento de objetos por tenant (S3/MinIO) con URLs prefirmadas"
+publish = false
+
+[[bin]]
+name = "storage-service"
+path = "src/main.rs"
+
+[dependencies]
+aws-sdk-s3 = { version = "1", default-features = false, features = ["rustls"] }
+axum = "0.8"
+async-trait = "0.1"
+chrono = { version = "0.4", features = ["serde"] }
+chrono-tz = "0.10"
+aws-smithy-runtime-api = "1"
+aws-smithy-types = { version = "1", features = ["rt-tokio"] }
+futures-util = "0.3"
+http-body-util = "0.1"
+lapin = "2"
+serde = { version = "1", features = ["derive"] }
+serde_json = { version = "1", features = ["preserve_order"] }
+sqlx = { version = "0.8", default-features = false, features = ["runtime-tokio-rustls", "postgres", "chrono", "json", "uuid"] }
+thiserror = "2"
+tokio = { version = "1", features = ["macros", "net", "rt-multi-thread", "signal", "sync", "time"] }
+tokio-util = { version = "0.7", features = ["io"] }
+uuid = { version = "1", features = ["v4", "serde"] }
+
+[dev-dependencies]
+tower = { version = "0.5", features = ["util"] }
