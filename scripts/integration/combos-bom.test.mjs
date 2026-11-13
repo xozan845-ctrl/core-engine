@@ -116,6 +116,10 @@ before(async () => {
       );
     }
     await aplicar('68_retirar_combos.sql');
+  } catch (error) {
+    await client.query('ROLLBACK').catch(() => undefined);
+    console.error('combos-bom setup:', error);
+    throw error;
   } finally {
     await client.query('SELECT pg_advisory_unlock(38194201)');
   }
