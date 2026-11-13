@@ -355,16 +355,6 @@ CREATE POLICY config_inventario_empresa ON catalog.configuracion_inventario
   USING (auth.rol() = 'empresario' AND empresa_id::text = (auth.jwt() ->> 'tenant_id'))
   WITH CHECK (auth.rol() = 'empresario' AND empresa_id::text = (auth.jwt() ->> 'tenant_id'));
 
-ALTER TABLE catalog.combos ENABLE ROW LEVEL SECURITY;
-CREATE POLICY combos_admin ON catalog.combos
-  FOR ALL TO authenticated
-  USING (auth.rol() IN ('super_admin', 'admin'))
-  WITH CHECK (auth.rol() IN ('super_admin', 'admin'));
-CREATE POLICY combos_empresa ON catalog.combos
-  FOR ALL TO authenticated
-  USING (auth.rol() = 'empresario' AND empresa_id::text = (auth.jwt() ->> 'tenant_id'))
-  WITH CHECK (auth.rol() = 'empresario' AND empresa_id::text = (auth.jwt() ->> 'tenant_id'));
-
 ALTER TABLE catalog.promociones ENABLE ROW LEVEL SECURITY;
 CREATE POLICY promociones_admin ON catalog.promociones
   FOR ALL TO authenticated
