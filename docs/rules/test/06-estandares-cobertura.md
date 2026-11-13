@@ -107,7 +107,6 @@ cargo llvm-cov --locked --ignore-filename-regex 'src/main\.rs' \
   | `shared` | 39 | 39 | 55 |
   | `api-gateway` | 50 | 51 | 57 |
   | `orders-service` | 32 | 23 | 33 |
-  | `finance-service` | 70 | 52 | 72 |
   | `catalog-service` | 93 | 82 | 90 |
   | `identity-service` | 89 | 78 | 85 |
 
