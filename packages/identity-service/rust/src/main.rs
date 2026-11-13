@@ -3,6 +3,8 @@
 use identity_service::config::Config;
 use identity_service::db::Db;
 use identity_service::dominio::auth::Auth;
+use identity_service::dominio::capacidades::Capacidades;
+use identity_service::dominio::packs::Packs;
 use identity_service::dominio::password_reset::PasswordReset;
 use identity_service::dominio::sesiones::Sesiones;
 use identity_service::dominio::usuarios::Usuarios;
@@ -11,6 +13,7 @@ use identity_service::http::build_router;
 use identity_service::logs::{ejecutar_con_contexto, ContextoCorrelacion};
 use identity_service::metrics::Metrics;
 use identity_service::state::{AppState, Servicios};
+use identity_service::storage::Storage;
 use std::sync::Arc;
 
 #[tokio::main]
@@ -52,8 +55,14 @@ async fn main() {
             std::process::exit(1);
         }
     };
-    let usuarios = Arc::new(Usuarios::nueva(Arc::clone(&db)));
+    let storage = Arc::new(Storage::nueva(
+        config.storage_service_url.clone(),
+        config.internal_api_key.clone(),
+    ));
+    let usuarios = Arc::new(Usuarios::nueva(Arc::clone(&db), storage));
     let sesiones = Arc::new(Sesiones::nueva(Arc::clone(&db)));
+    let capacidades = Arc::new(Capacidades::nueva(Arc::clone(&db)));
+    let packs = Arc::new(Packs::nueva(Arc::clone(&db)));
     let auth = Arc::new(Auth::nueva(
         Arc::clone(&usuarios),
         Arc::clone(&sesiones),
@@ -72,6 +81,8 @@ async fn main() {
         Servicios {
             auth,
             usuarios,
+            capacidades,
+            packs,
             password_reset,
         },
     );

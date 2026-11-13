@@ -9,13 +9,16 @@ use http_body_util::BodyExt;
 use identity_service::config::Config;
 use identity_service::db::Db;
 use identity_service::dominio::auth::Auth;
+use identity_service::dominio::capacidades::Capacidades;
+use identity_service::dominio::packs::Packs;
 use identity_service::dominio::password_reset::PasswordReset;
 use identity_service::dominio::sesiones::Sesiones;
-use identity_service::dominio::usuarios::Usuarios;
+use identity_service::dominio::usuarios::{CrearUsuario, Usuarios};
 use identity_service::email::{Email, EmailMessage};
 use identity_service::http::build_router;
 use identity_service::metrics::Metrics;
 use identity_service::state::{AppState, Servicios};
+use identity_service::storage::Storage;
 use serde_json::{json, Value};
 use std::sync::{Arc, Mutex};
 use tower::ServiceExt;
@@ -41,6 +44,7 @@ struct Contexto {
     app: Router,
     usuarios: Arc<Usuarios>,
     email: Arc<EmailFake>,
+    db: Arc<Db>,
 }
 
 fn url() -> Option<String> {
@@ -91,7 +95,8 @@ async fn preparar() -> Option<Contexto> {
         ("EMAIL_MODE", "log"),
     ])
     .expect("config");
-    let usuarios = Arc::new(Usuarios::nueva(Arc::clone(&db)));
+    let storage = Arc::new(Storage::nueva("http://127.0.0.1:9", None));
+    let usuarios = Arc::new(Usuarios::nueva(Arc::clone(&db), storage));
     let sesiones = Arc::new(Sesiones::nueva(Arc::clone(&db)));
     let auth = Arc::new(Auth::nueva(
         Arc::clone(&usuarios),
@@ -113,6 +118,8 @@ async fn preparar() -> Option<Contexto> {
         Servicios {
             auth,
             usuarios: Arc::clone(&usuarios),
+            capacidades: Arc::new(Capacidades::nueva(Arc::clone(&db))),
+            packs: Arc::new(Packs::nueva(Arc::clone(&db))),
             password_reset,
         },
     );
@@ -121,6 +128,7 @@ async fn preparar() -> Option<Contexto> {
         app: build_router(estado),
         usuarios,
         email,
+        db,
     })
 }
 
@@ -500,4 +508,327 @@ async fn debe_rechazar_me_sin_contexto() {
     let (status, error) = enviar(&ctx.app, "GET", "/api/v2/auth/me", Value::Null, &[]).await;
     assert_eq!(status, StatusCode::UNAUTHORIZED);
     assert_eq!(error["codigo"], "NO_AUTORIZADO");
+}
+
+#[tokio::test]
+async fn debe_gestionar_packs_y_verticales() {
+    let Some(ctx) = preparar().await else {
+        return;
+    };
+    let sufijo = Uuid::new_v4().simple().to_string();
+    let sufijo = &sufijo[..8];
+    let modelo = format!("modelo_{sufijo}");
+    let vertical = format!("vert_{sufijo}");
+    let pack = format!("pack_p{sufijo}");
+    let admin = autorizacion(&Uuid::new_v4().to_string(), "super_admin");
+
+    let (status, creado) = enviar(
+        &ctx.app,
+        "POST",
+        "/api/v2/packs/modelos-operacion",
+        json!({ "codigo": modelo, "nombre": "Modelo de prueba" }),
+        &headers(&admin),
+    )
+    .await;
+    assert_eq!(status, StatusCode::CREATED);
+    assert_eq!(creado["data"]["codigo"], modelo);
+
+    let (status, _) = enviar(
+        &ctx.app,
+        "POST",
+        "/api/v2/packs/verticales",
+        json!({
+            "codigo": vertical,
+            "nombre": "Vertical de prueba",
+            "modelo_operacion": modelo
+        }),
+        &headers(&admin),
+    )
+    .await;
+    assert_eq!(status, StatusCode::CREATED);
+
+    let (status, pack_creado) = enviar(
+        &ctx.app,
+        "POST",
+        "/api/v2/packs",
+        json!({
+            "codigo": pack,
+            "version": 1,
+            "vertical_codigo": vertical,
+            "nombre": "Pack de prueba",
+            "capacidades": [{ "codigo": "catalogo_items" }]
+        }),
+        &headers(&admin),
+    )
+    .await;
+    assert_eq!(status, StatusCode::CREATED);
+    assert_eq!(pack_creado["data"]["codigo"], pack);
+    assert_eq!(
+        pack_creado["data"]["capacidades"][0]["capacidad_codigo"],
+        "catalogo_items"
+    );
+
+    let (status, listado) = enviar(
+        &ctx.app,
+        "GET",
+        &format!("/api/v2/packs?vertical_id={vertical}"),
+        Value::Null,
+        &headers(&admin),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK);
+    assert!(listado["data"]
+        .as_array()
+        .expect("packs")
+        .iter()
+        .any(|item| item["codigo"] == pack));
+
+    let (status, obtenido) = enviar(
+        &ctx.app,
+        "GET",
+        &format!("/api/v2/packs/{pack}/1"),
+        Value::Null,
+        &headers(&admin),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK);
+    assert_eq!(obtenido["data"]["vertical_codigo"], vertical);
+
+    let comprador = autorizacion(&Uuid::new_v4().to_string(), "comprador");
+    let (status, _) = enviar(
+        &ctx.app,
+        "GET",
+        "/api/v2/packs",
+        Value::Null,
+        &headers(&comprador),
+    )
+    .await;
+    assert_eq!(status, StatusCode::FORBIDDEN);
+}
+
+#[tokio::test]
+async fn debe_listar_y_actualizar_capacidades_por_empresa() {
+    let Some(ctx) = preparar().await else {
+        return;
+    };
+    let admin_usuario = ctx
+        .usuarios
+        .crear(CrearUsuario {
+            nombre: "Admin de prueba".into(),
+            correo: format!("admin-{}@tienda.test", Uuid::new_v4()),
+            contrasena: "secreto123".into(),
+            rol: "super_admin".into(),
+            tenant_id: None,
+            personal_id: None,
+        })
+        .await
+        .expect("admin");
+    let admin_id = admin_usuario.id;
+    let empresa = Uuid::new_v4().to_string();
+    let admin = autorizacion(&admin_id, "super_admin");
+    let mut tx = ctx.db.transaccion().await.expect("tx");
+    sqlx::query(
+        "INSERT INTO identity.empresas
+           (id, nombre, slug, vertical_id, pack_codigo, pack_version, creado_por)
+         VALUES ($1::uuid, 'Empresa de prueba', $2, 'retail', 'pack_retail', 1, $3::uuid)",
+    )
+    .bind(&empresa)
+    .bind(format!("empresa-{}", &empresa[..8]))
+    .bind(&admin_id)
+    .execute(&mut *tx)
+    .await
+    .expect("empresa");
+    sqlx::query(
+        "INSERT INTO identity.empresa_capacidades
+           (empresa_id, capacidad_codigo, activo, config, actualizado_en)
+         VALUES ($1::uuid, 'catalogo_items', true, '{}'::jsonb, NOW())",
+    )
+    .bind(&empresa)
+    .execute(&mut *tx)
+    .await
+    .expect("capacidad");
+    tx.commit().await.expect("commit");
+
+    let (status, capacidades) = enviar(
+        &ctx.app,
+        "GET",
+        &format!("/api/v2/empresas/{empresa}/capacidades"),
+        Value::Null,
+        &headers(&admin),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK);
+    assert!(capacidades["data"]
+        .as_array()
+        .expect("capacidades")
+        .iter()
+        .any(|item| item["capacidad_codigo"] == "catalogo_items"));
+
+    let (status, actualizada) = enviar(
+        &ctx.app,
+        "PATCH",
+        &format!("/api/v2/empresas/{empresa}/capacidades/catalogo_items"),
+        json!({ "activo": false }),
+        &headers(&admin),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK);
+    assert_eq!(actualizada["data"]["activo"], false);
+
+    let (status, _) = enviar(
+        &ctx.app,
+        "PATCH",
+        &format!("/api/v2/empresas/{empresa}/capacidades/no_existe"),
+        json!({ "activo": true }),
+        &headers(&admin),
+    )
+    .await;
+    assert_eq!(status, StatusCode::CONFLICT);
+
+    let comprador = autorizacion(&Uuid::new_v4().to_string(), "comprador");
+    let (status, _) = enviar(
+        &ctx.app,
+        "GET",
+        &format!("/api/v2/empresas/{empresa}/capacidades"),
+        Value::Null,
+        &headers(&comprador),
+    )
+    .await;
+    assert_eq!(status, StatusCode::FORBIDDEN);
+}
+
+#[tokio::test]
+async fn debe_listar_usuarios_y_limitar_el_avatar() {
+    let Some(ctx) = preparar().await else {
+        return;
+    };
+    let correo_a = correo();
+    let correo_b = correo();
+    let (_, a) = enviar(
+        &ctx.app,
+        "POST",
+        "/api/v2/auth/registro",
+        json!({
+            "nombre": "Ana",
+            "correo": correo_a,
+            "contrasena": "secreto123",
+            "rol": "comprador"
+        }),
+        &[],
+    )
+    .await;
+    let (_, b) = enviar(
+        &ctx.app,
+        "POST",
+        "/api/v2/auth/registro",
+        json!({
+            "nombre": "Beto",
+            "correo": correo_b,
+            "contrasena": "secreto123",
+            "rol": "comprador"
+        }),
+        &[],
+    )
+    .await;
+    let id_a = a["data"]["usuario"]["id"].as_str().expect("a").to_string();
+    let id_b = b["data"]["usuario"]["id"].as_str().expect("b").to_string();
+    let admin = autorizacion(&Uuid::new_v4().to_string(), "admin");
+
+    let (status, listado) = enviar(
+        &ctx.app,
+        "GET",
+        "/api/v2/usuarios",
+        Value::Null,
+        &headers(&admin),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK);
+    assert!(listado["data"]
+        .as_array()
+        .expect("usuarios")
+        .iter()
+        .any(|item| item["id"] == id_a));
+
+    let auth_a = autorizacion(&id_a, "comprador");
+    let (status, propio) = enviar(
+        &ctx.app,
+        "GET",
+        &format!("/api/v2/usuarios/{id_a}"),
+        Value::Null,
+        &headers(&auth_a),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK);
+    assert_eq!(propio["data"]["id"], id_a);
+
+    let auth_b = autorizacion(&id_b, "comprador");
+    let (status, _) = enviar(
+        &ctx.app,
+        "GET",
+        &format!("/api/v2/usuarios/{id_a}"),
+        Value::Null,
+        &headers(&auth_b),
+    )
+    .await;
+    assert_eq!(status, StatusCode::NOT_FOUND);
+
+    let (status, _) = enviar(
+        &ctx.app,
+        "GET",
+        "/api/v2/usuarios",
+        Value::Null,
+        &headers(&auth_a),
+    )
+    .await;
+    assert_eq!(status, StatusCode::FORBIDDEN);
+
+    let (status, _) = enviar(
+        &ctx.app,
+        "PATCH",
+        &format!("/api/v2/usuarios/{id_a}/avatar"),
+        json!({ "avatar_objeto_id": null }),
+        &headers(&auth_b),
+    )
+    .await;
+    assert_eq!(status, StatusCode::FORBIDDEN);
+
+    let (status, error) = enviar(
+        &ctx.app,
+        "PATCH",
+        &format!("/api/v2/usuarios/{id_a}/avatar"),
+        json!({ "avatar_objeto_id": "no-uuid" }),
+        &headers(&auth_a),
+    )
+    .await;
+    assert_eq!(status, StatusCode::BAD_REQUEST);
+    assert_eq!(error["codigo"], "VALIDACION");
+
+    let (status, error) = enviar(
+        &ctx.app,
+        "PATCH",
+        &format!("/api/v2/usuarios/{id_a}/avatar"),
+        json!({ "avatar_objeto_id": Uuid::new_v4().to_string() }),
+        &headers(&auth_a),
+    )
+    .await;
+    assert_eq!(status, StatusCode::BAD_REQUEST);
+    assert_eq!(error["codigo"], "TENANT_REQUERIDO");
+
+    sqlx::query("UPDATE identity.usuarios SET tenant_id = $1::uuid WHERE id = $2::uuid")
+        .bind(Uuid::new_v4().to_string())
+        .bind(&id_a)
+        .execute(ctx.db.pool())
+        .await
+        .expect("tenant");
+
+    let (status, error) = enviar(
+        &ctx.app,
+        "PATCH",
+        &format!("/api/v2/usuarios/{id_a}/avatar"),
+        json!({ "avatar_objeto_id": Uuid::new_v4().to_string() }),
+        &headers(&auth_a),
+    )
+    .await;
+    assert_eq!(status, StatusCode::BAD_REQUEST);
+    assert_eq!(error["codigo"], "AVATAR_NO_VERIFICABLE");
 }

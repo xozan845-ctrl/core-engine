@@ -5,9 +5,10 @@
 
 #[cfg(test)]
 use crate::auth::ROLES;
-use crate::auth::{es_rol, hash_contrasena, verificar_contrasena};
+use crate::auth::{es_rol, hash_contrasena, verificar_contrasena, UsuarioContexto};
 use crate::db::{iso_ms, Db};
 use crate::errors::ApiError;
+use crate::storage::Storage;
 use chrono::{DateTime, Utc};
 use serde::Serialize;
 use sqlx::postgres::PgRow;
@@ -65,11 +66,12 @@ pub struct FiltroUsuarios {
 
 pub struct Usuarios {
     db: Arc<Db>,
+    storage: Arc<Storage>,
 }
 
 impl Usuarios {
-    pub fn nueva(db: Arc<Db>) -> Self {
-        Self { db }
+    pub fn nueva(db: Arc<Db>, storage: Arc<Storage>) -> Self {
+        Self { db, storage }
     }
 
     pub async fn encontrar_por_id(&self, id: &str) -> Result<Option<Usuario>, ApiError> {
@@ -294,6 +296,59 @@ impl Usuarios {
         Ok(())
     }
 
+    /// Asocia un avatar público ya confirmado en storage. El vendedor puede
+    /// editar el suyo; el empresario, los de su tenant; admin/super_admin, todos.
+    pub async fn actualizar_avatar(
+        &self,
+        id: &str,
+        avatar_objeto_id: Option<&str>,
+        actor: &UsuarioContexto,
+    ) -> Result<Usuario, ApiError> {
+        let objetivo = self
+            .encontrar_por_id(id)
+            .await?
+            .ok_or_else(|| ApiError::no_encontrado("Usuario", id))?;
+        if !puede_cambiar_avatar(actor, id, objetivo.tenant_id.as_deref()) {
+            return Err(ApiError::acceso_denegado(
+                "No puedes cambiar el avatar de este usuario.",
+            ));
+        }
+        if let Some(objeto_id) = avatar_objeto_id {
+            if !es_uuid(objeto_id) {
+                return Err(ApiError::dominio(
+                    "AVATAR_INVALIDO",
+                    "El avatar debe ser un objeto de storage válido.",
+                ));
+            }
+            let tenant = objetivo
+                .tenant_id
+                .as_deref()
+                .or(actor.tenant_id.as_deref())
+                .ok_or_else(|| {
+                    ApiError::dominio(
+                        "TENANT_REQUERIDO",
+                        "El usuario no tiene tenant para el avatar.",
+                    )
+                })?;
+            self.storage.validar_avatar(tenant, objeto_id).await?;
+        }
+        let mut tx = self.db.transaccion().await.map_err(interno)?;
+        sqlx::query(
+            "UPDATE identity.usuarios
+                SET avatar_objeto_id = $1::uuid, actualizado_en = NOW()
+              WHERE id = $2::uuid",
+        )
+        .bind(avatar_objeto_id)
+        .bind(id)
+        .execute(&mut *tx)
+        .await
+        .map_err(interno)?;
+        tx.commit().await.map_err(interno)?;
+        self.encontrar_por_id(id)
+            .await?
+            .ok_or_else(|| ApiError::no_encontrado("Usuario", id))
+    }
+
     pub async fn actualizar_perfil(
         &self,
         id: &str,
@@ -361,6 +416,20 @@ fn sanear(fila: &PgRow) -> Result<Usuario, sqlx::Error> {
         avatar_objeto_id: avatar_texto,
         creado_en: iso_ms(creado_en),
     })
+}
+
+/// Contrato de `actualizarAvatar`: global, el propio usuario o el empresario
+/// del mismo tenant.
+pub fn puede_cambiar_avatar(
+    actor: &UsuarioContexto,
+    objetivo_id: &str,
+    tenant_objetivo: Option<&str>,
+) -> bool {
+    actor.es_admin_global()
+        || actor.user_id == objetivo_id
+        || (actor.rol == "empresario"
+            && actor.tenant_id.is_some()
+            && actor.tenant_id.as_deref() == tenant_objetivo)
 }
 
 pub(crate) fn correo_valido(correo: &str) -> bool {
