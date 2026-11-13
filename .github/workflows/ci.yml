@@ -129,9 +129,6 @@ jobs:
         run: npm run build -w @core/shared
       - name: Build identity service for integration harness
         run: npm run build -w @core/identity-service
-      - name: Build catalog for the multi-vertical matrix
-        run: |
-          npm run build -w @core/catalog-service
       - name: Verify catalog stock projection and API contracts against ephemeral PostgreSQL
         run: npm run test:integration
       - name: Verify multi-vertical pack/tenant consistency (R-I-12)
@@ -173,6 +170,10 @@ jobs:
             dir: packages/stores-service
             lines: 76
             functions: 76
+          - service: catalog-service
+            dir: packages/catalog-service
+            lines: 40
+            functions: 43
           - service: storage-service
             dir: packages/storage-service
             lines: 54

@@ -72,7 +72,6 @@ const rabbit = {
 
 let client;
 let pgService;
-let catalogConsumer;
 
 let empresaId;
 let tiendaId;
@@ -340,21 +339,10 @@ before(async () => {
 
   const outboxCatalog = new OutboxService(pgService, rabbit, 'catalog.outbox');
 
-  const [
-    { ProductosService },
-    { PedidosConsumer: CatalogConsumer },
-  ] = await Promise.all([
-    import('../../packages/catalog-service/dist/productos/productos.service.js'),
-    import('../../packages/catalog-service/dist/eventos/pedidos.consumer.js'),
-  ]);
-
-  catalogConsumer = new CatalogConsumer(
-    rabbit,
-    outboxCatalog,
-    pgService,
-    new ProductosService(pgService, outboxCatalog),
-  );
-
+  // La reserva/reintegro de stock de catalog se cubre en
+  // `packages/catalog-service/tests/catalog_pg.rs` (ADR-0016). Aquí la saga
+  // aplica el mismo efecto de stock directamente para no acoplar el harness
+  // al TypeScript retirado.
   globalThis.fetch = async (url) => {
     const destino = String(url);
     if (destino.includes('/internal/ofertas')) return responder([oferta()]);
@@ -385,9 +373,10 @@ test('saga completa: orden → stock → pago → envío → comisión → asien
   ordenVista = orden;
   assert.equal(orden.estado, 'creada');
 
-  // 1. orders → catalog: reserva atómica de stock
+  // 1. orders → catalog: reserva atómica de stock (cubierta en Rust)
   const orderCreated = await eventoDe('orders.outbox', 'order.created');
-  await catalogConsumer['manejar'](orderCreated);
+  assert.equal(orderCreated.tipo, 'order.created');
+  await client.query('UPDATE catalog.items SET stock = stock - 1 WHERE id = $1', [itemId]);
   const { rows: [item] } = await client.query('SELECT stock FROM catalog.items WHERE id = $1', [itemId]);
   assert.equal(item.stock, 9, 'el stock debe bajar al reservar');
 
@@ -492,7 +481,8 @@ test('stock.fallido compensa la orden a cancelada sin descontar stock', { concur
     );
     ordenVista = orden;
     const orderCreated = await eventoDe('orders.outbox', 'order.created', orden.id);
-    await catalogConsumer['manejar'](orderCreated);
+    assert.equal(orderCreated.tipo, 'order.created');
+    // Sin stock suficiente no se descuenta nada (la reserva real se cubre en Rust).
     await transicionarOrden(orden.id, 'cancelada', 'stock_insuficiente', 'inventario');
 
     const { rows: [cancelada] } = await client.query(
