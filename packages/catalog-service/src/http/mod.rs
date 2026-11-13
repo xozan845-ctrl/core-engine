@@ -1,7 +1,9 @@
 //! Router HTTP y middlewares transversales.
 
 pub mod envelope;
+pub mod inventario;
 pub mod items;
+pub mod ubicaciones;
 pub mod validacion;
 
 use crate::auth::{clave_interna_valida, UsuarioContexto};
@@ -14,7 +16,7 @@ use axum::extract::{FromRequest, MatchedPath, Request, State};
 use axum::http::{header, HeaderMap, HeaderValue, StatusCode};
 use axum::middleware::{self, Next};
 use axum::response::{Html, IntoResponse, Response};
-use axum::routing::{get, post};
+use axum::routing::{get, patch, post, put};
 use axum::{Json, Router};
 use serde_json::Value;
 use std::time::Instant;
@@ -60,6 +62,43 @@ pub fn build_router(state: AppState) -> Router {
             get(items::esquemas).post(items::guardar_esquema),
         )
         .route("/api/v2/catalog/items/{id}", get(items::detalle))
+        .route("/api/v2/admin/inventario", get(inventario::listar))
+        .route(
+            "/api/v2/admin/inventario/proveedores",
+            post(inventario::crear_proveedor),
+        )
+        .route(
+            "/api/v2/admin/inventario/lotes",
+            get(inventario::listar_lotes).post(inventario::crear_lote),
+        )
+        .route(
+            "/api/v2/admin/inventario/lotes/consumir",
+            post(inventario::consumir_lote),
+        )
+        .route(
+            "/api/v2/admin/ubicaciones",
+            get(ubicaciones::listar).post(ubicaciones::crear),
+        )
+        .route(
+            "/api/v2/admin/ubicaciones/transferencias",
+            post(ubicaciones::transferir),
+        )
+        .route(
+            "/api/v2/admin/ubicaciones/items/{item_id}/stock",
+            get(ubicaciones::stock_item),
+        )
+        .route(
+            "/api/v2/admin/ubicaciones/{id}",
+            patch(ubicaciones::actualizar),
+        )
+        .route(
+            "/api/v2/admin/ubicaciones/{id}/stock",
+            get(ubicaciones::stock_ubicacion),
+        )
+        .route(
+            "/api/v2/admin/ubicaciones/{id}/stock/{item_id}",
+            put(ubicaciones::fijar_stock),
+        )
         .fallback(no_encontrado)
         .with_state(state.clone());
     aplicar_capas(router, state)
