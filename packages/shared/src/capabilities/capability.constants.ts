@@ -11,6 +11,7 @@ export const CAPACIDADES = {
   FULFILLMENT_DELIVERY: 'fulfillment_delivery',
   FULFILLMENT_PICKUP: 'fulfillment_pickup',
   FULFILLMENT_ONSITE: 'fulfillment_onsite',
+  FULFILLMENT_DIGITAL: 'fulfillment_digital',
   LOGISTICA_RUTAS: 'logistica_rutas',
   OPERACION_CAMPO: 'operacion_campo',
   INTELIGENCIA_MERCADO: 'inteligencia_mercado',

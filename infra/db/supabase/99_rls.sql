@@ -1041,3 +1041,19 @@ CREATE POLICY item_series_lectura ON catalog.item_series
   FOR SELECT TO authenticated
   USING (auth.rol() IN ('empresario', 'vendedor', 'coordinador', 'supervisor', 'operativo')
          AND empresa_id::text = (auth.jwt() ->> 'tenant_id'));
+
+-- ── orders.entregas_digitales (P2.1) ────────────────────────────────────────
+ALTER TABLE orders.entregas_digitales ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS entregas_digitales_admin ON orders.entregas_digitales;
+CREATE POLICY entregas_digitales_admin ON orders.entregas_digitales
+  FOR ALL TO authenticated
+  USING (auth.rol() IN ('super_admin', 'admin'))
+  WITH CHECK (auth.rol() IN ('super_admin', 'admin'));
+DROP POLICY IF EXISTS entregas_digitales_comprador ON orders.entregas_digitales;
+CREATE POLICY entregas_digitales_comprador ON orders.entregas_digitales
+  FOR SELECT TO authenticated
+  USING (auth.rol() = 'comprador' AND comprador_id = auth.uid());
+DROP POLICY IF EXISTS entregas_digitales_app ON orders.entregas_digitales;
+CREATE POLICY entregas_digitales_app ON orders.entregas_digitales
+  FOR ALL TO core_engine_app
+  USING (true) WITH CHECK (true);
