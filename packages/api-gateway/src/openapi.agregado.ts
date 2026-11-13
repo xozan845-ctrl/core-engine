@@ -16659,6 +16659,398 @@ export const OPENAPI_AGREGADO = {
         ]
       }
     },
+    "/api/v2/contratos": {
+      "get": {
+        "operationId": "ContratosController_listar",
+        "parameters": [
+          {
+            "name": "estado",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "order_id",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "name": "parte_id",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "name": "pagina",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "limite",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "empresa_id",
+            "required": false,
+            "in": "query",
+            "description": "Solo admin global",
+            "schema": {}
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Contratos",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
+                  "properties": {
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/ContratoResponseDto"
+                      }
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/MetaRespuesta"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Listar contratos de la empresa",
+        "tags": [
+          "Contratos"
+        ]
+      },
+      "post": {
+        "operationId": "ContratosController_crear",
+        "parameters": [
+          {
+            "name": "empresa_id",
+            "required": false,
+            "in": "query",
+            "description": "Solo admin global",
+            "schema": {}
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CrearContratoRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Contrato creado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/ContratoResponseDto"
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/MetaRespuesta"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Crear un contrato con deposito o garantia",
+        "tags": [
+          "Contratos"
+        ]
+      }
+    },
+    "/api/v2/contratos/{id}": {
+      "get": {
+        "operationId": "ContratosController_obtener",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "name": "empresa_id",
+            "required": false,
+            "in": "query",
+            "description": "Solo admin global",
+            "schema": {}
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Contrato encontrado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/ContratoResponseDto"
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/MetaRespuesta"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Obtener un contrato",
+        "tags": [
+          "Contratos"
+        ]
+      },
+      "patch": {
+        "operationId": "ContratosController_actualizar",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "name": "empresa_id",
+            "required": false,
+            "in": "query",
+            "description": "Solo admin global",
+            "schema": {}
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ActualizarContratoRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Contrato actualizado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/ContratoResponseDto"
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/MetaRespuesta"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Actualizar o activar/cancelar un contrato",
+        "tags": [
+          "Contratos"
+        ]
+      }
+    },
+    "/api/v2/contratos/{id}/finalizar": {
+      "post": {
+        "operationId": "ContratosController_finalizar",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "name": "empresa_id",
+            "required": false,
+            "in": "query",
+            "description": "Solo admin global",
+            "schema": {}
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FinalizarContratoRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Contrato finalizado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/ContratoResponseDto"
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/MetaRespuesta"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Finalizar el contrato y registrar la retencion",
+        "tags": [
+          "Contratos"
+        ]
+      }
+    },
+    "/api/v2/contratos/{id}/movimientos": {
+      "get": {
+        "operationId": "ContratosController_movimientos",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "name": "empresa_id",
+            "required": false,
+            "in": "query",
+            "description": "Solo admin global",
+            "schema": {}
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Movimientos del contrato",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
+                  "properties": {
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/ContratoEventoResponseDto"
+                      }
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/MetaRespuesta"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Listar los movimientos de deposito y retencion",
+        "tags": [
+          "Contratos"
+        ]
+      }
+    },
     "/api/v2/scheduling/recursos": {
       "get": {
         "operationId": "SchedulingController_recursos",
@@ -32324,6 +32716,71 @@ export const OPENAPI_AGREGADO = {
           "cantidad"
         ]
       },
+      "ActualizarContratoRequestDto": {
+        "type": "object",
+        "properties": {
+          "order_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "parte_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "item_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "tipo": {
+            "type": "string",
+            "enum": [
+              "alquiler",
+              "servicio",
+              "compra",
+              "otro"
+            ],
+            "default": "otro"
+          },
+          "titulo": {
+            "type": "string",
+            "example": "Alquiler de equipo"
+          },
+          "descripcion": {
+            "type": "string"
+          },
+          "inicia_en": {
+            "type": "string",
+            "format": "date"
+          },
+          "termina_en": {
+            "type": "string",
+            "format": "date"
+          },
+          "deposito": {
+            "type": "string",
+            "example": "500.00"
+          },
+          "garantia": {
+            "type": "string",
+            "example": "200.00"
+          },
+          "moneda": {
+            "type": "string",
+            "default": "NIO"
+          },
+          "metadata": {
+            "type": "object",
+            "additionalProperties": true
+          },
+          "estado": {
+            "type": "string",
+            "enum": [
+              "activo",
+              "cancelado"
+            ]
+          }
+        }
+      },
       "AgregarItemRequestDto": {
         "type": "object",
         "properties": {
@@ -32432,6 +32889,162 @@ export const OPENAPI_AGREGADO = {
           "total"
         ]
       },
+      "ContratoEventoResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "contrato_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "tipo": {
+            "type": "string"
+          },
+          "monto": {
+            "type": "string"
+          },
+          "motivo": {
+            "type": "string"
+          },
+          "creado_por": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "creado_en": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "contrato_id",
+          "tipo",
+          "monto",
+          "motivo",
+          "creado_por",
+          "creado_en"
+        ]
+      },
+      "ContratoResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "empresa_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "order_id": {
+            "type": "object",
+            "format": "uuid",
+            "nullable": true
+          },
+          "parte_id": {
+            "type": "object",
+            "format": "uuid",
+            "nullable": true
+          },
+          "item_id": {
+            "type": "object",
+            "format": "uuid",
+            "nullable": true
+          },
+          "tipo": {
+            "type": "string",
+            "enum": [
+              "alquiler",
+              "servicio",
+              "compra",
+              "otro"
+            ]
+          },
+          "titulo": {
+            "type": "string"
+          },
+          "descripcion": {
+            "type": "string"
+          },
+          "estado": {
+            "type": "string",
+            "enum": [
+              "borrador",
+              "activo",
+              "finalizado",
+              "cancelado"
+            ]
+          },
+          "inicia_en": {
+            "type": "object",
+            "format": "date",
+            "nullable": true
+          },
+          "termina_en": {
+            "type": "object",
+            "format": "date",
+            "nullable": true
+          },
+          "deposito": {
+            "type": "string"
+          },
+          "garantia": {
+            "type": "string"
+          },
+          "retenido": {
+            "type": "string"
+          },
+          "moneda": {
+            "type": "string"
+          },
+          "metadata": {
+            "type": "object",
+            "additionalProperties": true
+          },
+          "creado_por": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "creado_en": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "actualizado_en": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "finalizado_en": {
+            "type": "object",
+            "format": "date-time",
+            "nullable": true
+          }
+        },
+        "required": [
+          "id",
+          "empresa_id",
+          "order_id",
+          "parte_id",
+          "item_id",
+          "tipo",
+          "titulo",
+          "descripcion",
+          "estado",
+          "inicia_en",
+          "termina_en",
+          "deposito",
+          "garantia",
+          "retenido",
+          "moneda",
+          "metadata",
+          "creado_por",
+          "creado_en",
+          "actualizado_en",
+          "finalizado_en"
+        ]
+      },
       "CotizacionAceptadaResponseDto": {
         "type": "object",
         "properties": {
@@ -32455,6 +33068,67 @@ export const OPENAPI_AGREGADO = {
         "required": [
           "cotizacion",
           "orden"
+        ]
+      },
+      "CrearContratoRequestDto": {
+        "type": "object",
+        "properties": {
+          "order_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "parte_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "item_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "tipo": {
+            "type": "string",
+            "enum": [
+              "alquiler",
+              "servicio",
+              "compra",
+              "otro"
+            ],
+            "default": "otro"
+          },
+          "titulo": {
+            "type": "string",
+            "example": "Alquiler de equipo"
+          },
+          "descripcion": {
+            "type": "string"
+          },
+          "inicia_en": {
+            "type": "string",
+            "format": "date"
+          },
+          "termina_en": {
+            "type": "string",
+            "format": "date"
+          },
+          "deposito": {
+            "type": "string",
+            "example": "500.00"
+          },
+          "garantia": {
+            "type": "string",
+            "example": "200.00"
+          },
+          "moneda": {
+            "type": "string",
+            "default": "NIO"
+          },
+          "metadata": {
+            "type": "object",
+            "additionalProperties": true
+          }
+        },
+        "required": [
+          "titulo"
         ]
       },
       "CreateOrderCommand": {
@@ -32661,6 +33335,18 @@ export const OPENAPI_AGREGADO = {
           "ultima_descarga_en",
           "creado_en"
         ]
+      },
+      "FinalizarContratoRequestDto": {
+        "type": "object",
+        "properties": {
+          "retenido": {
+            "type": "string",
+            "example": "50.00"
+          },
+          "motivo": {
+            "type": "string"
+          }
+        }
       },
       "ItemOrdenRequestDto": {
         "type": "object",

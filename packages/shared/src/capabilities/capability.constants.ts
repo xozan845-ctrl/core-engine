@@ -19,6 +19,7 @@ export const CAPACIDADES = {
   VENTAS_CREDITO: 'ventas_credito',
   FACTURACION: 'facturacion',
   LIQUIDACIONES: 'liquidaciones',
+  CONTRATOS: 'contratos',
 } as const;
 
 export type Capacidad = (typeof CAPACIDADES)[keyof typeof CAPACIDADES];

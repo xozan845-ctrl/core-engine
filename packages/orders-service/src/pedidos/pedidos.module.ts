@@ -7,10 +7,12 @@ import { CreateOrderCommandHandler } from './handlers/create-order-command.handl
 import { CarritoService } from './carrito/carrito.service';
 import { CarritoController } from './carrito/carrito.controller';
 import { EntregasDigitalesService } from './entregas-digitales.service';
+import { ContratosService } from './contratos.service';
+import { ContratosController } from './contratos.controller';
 import { EntregasDigitalesController } from './entregas-digitales.controller';
 
 @Module({
-  controllers: [PedidosController, CarritoController, EntregasDigitalesController],
+  controllers: [PedidosController, CarritoController, EntregasDigitalesController, ContratosController],
   providers: [
     PedidosService,
     OrderEventStore,
@@ -18,6 +20,7 @@ import { EntregasDigitalesController } from './entregas-digitales.controller';
     CreateOrderCommandHandler,
     CarritoService,
     EntregasDigitalesService,
+    ContratosService,
   ],
   exports: [
     PedidosService,
@@ -26,6 +29,7 @@ import { EntregasDigitalesController } from './entregas-digitales.controller';
     CreateOrderCommandHandler,
     CarritoService,
     EntregasDigitalesService,
+    ContratosService,
   ],
 })
 export class PedidosModule {}
