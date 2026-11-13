@@ -1,0 +1,32 @@
+[package]
+name = "identity-service"
+version = "1.0.9"
+edition = "2021"
+rust-version = "1.89"
+description = "Identidad: auth, sesiones, usuarios, empresas, personales, packs y extensiones"
+publish = false
+
+[[bin]]
+name = "identity-service"
+path = "src/main.rs"
+
+[dependencies]
+axum = "0.8"
+base64 = "0.22"
+bcrypt = "0.19"
+chrono = { version = "0.4", features = ["serde"] }
+chrono-tz = "0.10"
+futures-util = "0.3"
+http-body-util = "0.1"
+jsonwebtoken = "9"
+rand = "0.9"
+serde = { version = "1", features = ["derive"] }
+serde_json = { version = "1", features = ["preserve_order"] }
+sha2 = "0.10"
+sqlx = { version = "0.8", default-features = false, features = ["runtime-tokio-rustls", "postgres", "chrono", "json", "uuid"] }
+thiserror = "2"
+tokio = { version = "1", features = ["macros", "net", "rt-multi-thread", "signal", "sync", "time"] }
+uuid = { version = "1", features = ["v4", "serde"] }
+
+[dev-dependencies]
+tower = { version = "0.5", features = ["util"] }
