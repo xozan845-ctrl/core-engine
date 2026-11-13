@@ -15,6 +15,7 @@ use identity_service::dominio::configuracion_sitio::ConfiguracionSitio;
 use identity_service::dominio::empresas::Empresas;
 use identity_service::dominio::packs::Packs;
 use identity_service::dominio::password_reset::PasswordReset;
+use identity_service::dominio::personal::Personal;
 use identity_service::dominio::sesiones::Sesiones;
 use identity_service::dominio::usuarios::{CrearUsuario, Usuarios};
 use identity_service::email::{Email, EmailMessage};
@@ -22,6 +23,7 @@ use identity_service::http::build_router;
 use identity_service::metrics::Metrics;
 use identity_service::state::{AppState, Servicios};
 use identity_service::storage::Storage;
+use identity_service::stores::Stores;
 use serde_json::{json, Value};
 use std::sync::{Arc, Mutex};
 use tower::ServiceExt;
@@ -115,6 +117,13 @@ async fn preparar() -> Option<Contexto> {
         "http://app.test".to_string(),
     ));
     let api_keys = Arc::new(ApiKeys::nueva(Arc::clone(&db), &config));
+    let personal = Arc::new(Personal::nueva(
+        Arc::clone(&db),
+        Arc::clone(&auth),
+        email.clone(),
+        Arc::new(Stores::nueva("http://127.0.0.1:9", None, 1000)),
+        "http://app.test".to_string(),
+    ));
     let metrics = Arc::new(Metrics::nueva("identity-service"));
     let estado = AppState::con_servicios(
         config,
@@ -134,6 +143,7 @@ async fn preparar() -> Option<Contexto> {
                 Arc::clone(&usuarios),
                 Arc::clone(&storage),
             )),
+            personal,
             packs: Arc::new(Packs::nueva(Arc::clone(&db))),
             password_reset,
         },
@@ -1315,4 +1325,219 @@ async fn debe_negar_empresas_a_quien_no_es_miembro() {
     )
     .await;
     assert_eq!(status, StatusCode::FORBIDDEN);
+}
+
+#[tokio::test]
+async fn debe_gestionar_personal_e_incorporaciones() {
+    let Some(ctx) = preparar().await else {
+        return;
+    };
+    let correo_empresario = correo();
+    let empresario = ctx
+        .usuarios
+        .crear(CrearUsuario {
+            nombre: "Empresario".into(),
+            correo: correo_empresario,
+            contrasena: "secreto123".into(),
+            rol: "empresario".into(),
+            tenant_id: None,
+            personal_id: None,
+        })
+        .await
+        .expect("empresario");
+    let actor = autorizacion(&empresario.id, "empresario");
+    let actor_headers = headers(&actor);
+    let slug = format!("empresa-{}", &Uuid::new_v4().simple().to_string()[..8]);
+    let (_, creada) = enviar(
+        &ctx.app,
+        "POST",
+        "/api/v2/empresas",
+        json!({
+            "nombre": "Empresa personal",
+            "slug": slug,
+            "vertical_id": "retail",
+            "pack_codigo": "pack_retail"
+        }),
+        &actor_headers,
+    )
+    .await;
+    let empresa_id = creada["data"]["id"].as_str().expect("empresa").to_string();
+    let mut actor_pares = actor.clone();
+    actor_pares.push(("x-tenant", empresa_id.clone()));
+    let actor_headers = headers(&actor_pares);
+
+    let (status, rol) = enviar(
+        &ctx.app,
+        "POST",
+        &format!("/api/v2/empresas/{empresa_id}/roles"),
+        json!({
+            "codigo": "estilista",
+            "nombre": "Estilista",
+            "descripcion": "Atiende citas",
+            "permisos": {"acciones": ["agenda.leer", "agenda.escribir"]}
+        }),
+        &actor_headers,
+    )
+    .await;
+    assert_eq!(status, StatusCode::CREATED);
+    let rol_id = rol["data"]["id"].as_str().expect("rol").to_string();
+    assert_eq!(rol["data"]["codigo"], "estilista");
+
+    let (status, _) = enviar(
+        &ctx.app,
+        "PATCH",
+        &format!("/api/v2/empresas/{empresa_id}/roles/{rol_id}"),
+        json!({ "activo": true }),
+        &actor_headers,
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK);
+
+    let (status, puesto) = enviar(
+        &ctx.app,
+        "POST",
+        &format!("/api/v2/empresas/{empresa_id}/puestos"),
+        json!({ "codigo": "sillon_1", "nombre": "Sillón 1", "tipo": "sillon" }),
+        &actor_headers,
+    )
+    .await;
+    assert_eq!(status, StatusCode::CREATED);
+    let puesto_id = puesto["data"]["id"].as_str().expect("puesto").to_string();
+
+    let (status, vendedor) = enviar(
+        &ctx.app,
+        "POST",
+        &format!("/api/v2/empresas/{empresa_id}/vendedores"),
+        json!({
+            "nombre": "Vendedor",
+            "correo": correo(),
+            "contrasena": "secreto123",
+            "participacion_porcentaje": 20
+        }),
+        &actor_headers,
+    )
+    .await;
+    assert_eq!(status, StatusCode::CREATED);
+    let vendedor_id = vendedor["data"]["id"]
+        .as_str()
+        .expect("vendedor")
+        .to_string();
+
+    let (status, asignacion) = enviar(
+        &ctx.app,
+        "POST",
+        &format!("/api/v2/empresas/{empresa_id}/asignaciones-personal"),
+        json!({
+            "usuario_id": vendedor_id,
+            "rol_empresa_id": rol_id,
+            "puesto_id": puesto_id
+        }),
+        &actor_headers,
+    )
+    .await;
+    assert_eq!(status, StatusCode::CREATED);
+    assert_eq!(asignacion["data"]["estado"], "activa");
+
+    let (status, asignaciones) = enviar(
+        &ctx.app,
+        "GET",
+        &format!("/api/v2/empresas/{empresa_id}/asignaciones-personal"),
+        Value::Null,
+        &actor_headers,
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK);
+    assert!(asignaciones["data"]
+        .as_array()
+        .expect("asignaciones")
+        .iter()
+        .any(|item| item["usuario_id"] == vendedor_id));
+
+    let correo_invitado = correo();
+    let (status, invitacion) = enviar(
+        &ctx.app,
+        "POST",
+        &format!("/api/v2/empresas/{empresa_id}/invitaciones/personal"),
+        json!({
+            "correo": correo_invitado,
+            "nombre": "Nuevo",
+            "rol_empresa_id": rol_id,
+            "puesto_id": puesto_id
+        }),
+        &actor_headers,
+    )
+    .await;
+    assert_eq!(status, StatusCode::CREATED);
+    assert!(invitacion["data"]["url_invitacion"]
+        .as_str()
+        .expect("url")
+        .contains("/incorporacion/"));
+
+    let mensaje = ctx
+        .email
+        .enviados
+        .lock()
+        .expect("email")
+        .last()
+        .cloned()
+        .expect("correo invitación");
+    let token = mensaje
+        .text
+        .split("/incorporacion/")
+        .nth(1)
+        .and_then(|resto| resto.split_whitespace().next())
+        .expect("token")
+        .to_string();
+
+    let (status, consulta) = enviar(
+        &ctx.app,
+        "GET",
+        &format!("/api/v2/incorporaciones/{token}"),
+        Value::Null,
+        &[],
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK);
+    assert_eq!(consulta["data"]["valida"], true);
+    assert_eq!(consulta["data"]["correo"], correo_invitado);
+
+    let (status, sesion) = enviar(
+        &ctx.app,
+        "POST",
+        &format!("/api/v2/incorporaciones/{token}/aceptar"),
+        json!({ "nombre": "Nuevo Operativo", "contrasena": "secreto123" }),
+        &[],
+    )
+    .await;
+    assert_eq!(status, StatusCode::CREATED);
+    assert_eq!(sesion["data"]["usuario"]["rol"], "operativo");
+    assert_eq!(sesion["data"]["usuario"]["rol_empresa_id"], rol_id);
+    assert_eq!(sesion["data"]["usuario"]["puesto_id"], puesto_id);
+
+    let (status, segunda) = enviar(
+        &ctx.app,
+        "POST",
+        &format!("/api/v2/empresas/{empresa_id}/invitaciones/personal"),
+        json!({
+            "correo": correo(),
+            "rol_empresa_id": rol_id
+        }),
+        &actor_headers,
+    )
+    .await;
+    assert_eq!(status, StatusCode::CREATED);
+    let segunda_id = segunda["data"]["id"]
+        .as_str()
+        .expect("invitación")
+        .to_string();
+    let (status, revocada) = enviar(
+        &ctx.app,
+        "POST",
+        &format!("/api/v2/empresas/{empresa_id}/invitaciones/personal/{segunda_id}/revocar"),
+        Value::Null,
+        &actor_headers,
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK);
+    assert_eq!(revocada["data"]["ok"], true);
 }

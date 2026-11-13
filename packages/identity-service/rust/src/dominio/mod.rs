@@ -8,6 +8,7 @@ pub mod empresas;
 pub mod media;
 pub mod packs;
 pub mod password_reset;
+pub mod personal;
 pub mod sesiones;
 pub mod slug;
 pub mod tema;
