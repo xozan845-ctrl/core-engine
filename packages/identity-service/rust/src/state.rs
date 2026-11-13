@@ -1,8 +1,11 @@
 //! Estado compartido del servicio (equivalente a la DI de NestJS, R-MS-3).
 
 use crate::config::Config;
+use crate::dominio::api_keys::ApiKeys;
 use crate::dominio::auth::Auth;
 use crate::dominio::capacidades::Capacidades;
+use crate::dominio::configuracion_sitio::ConfiguracionSitio;
+use crate::dominio::empresas::Empresas;
 use crate::dominio::packs::Packs;
 use crate::dominio::password_reset::PasswordReset;
 use crate::dominio::usuarios::Usuarios;
@@ -14,7 +17,10 @@ use std::time::Instant;
 pub struct Servicios {
     pub auth: Arc<Auth>,
     pub usuarios: Arc<Usuarios>,
+    pub api_keys: Arc<ApiKeys>,
     pub capacidades: Arc<Capacidades>,
+    pub configuracion: Arc<ConfiguracionSitio>,
+    pub empresas: Arc<Empresas>,
     pub packs: Arc<Packs>,
     pub password_reset: Arc<PasswordReset>,
 }

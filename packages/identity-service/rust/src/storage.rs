@@ -85,6 +85,109 @@ fn no_verificable() -> ApiError {
     ApiError::dominio("AVATAR_NO_VERIFICABLE", "No se pudo verificar el avatar.")
 }
 
+impl Storage {
+    /// Valida un fondo o poster contra storage-service y deriva `imagen|video`.
+    /// El poster solo admite imágenes; el fondo admite imágenes y videos.
+    pub async fn validar_media(
+        &self,
+        tenant_id: &str,
+        objeto_id: &str,
+        uso: &str,
+    ) -> Result<String, ApiError> {
+        let cliente = reqwest::Client::builder()
+            .timeout(self.timeout)
+            .build()
+            .map_err(|_| no_verificable_media())?;
+        let respuesta = cliente
+            .get(format!("{}/internal/storage/objetos/{objeto_id}", self.url))
+            .query(&[("tenant_id", tenant_id)])
+            .header("x-internal-key", &self.clave)
+            .send()
+            .await
+            .map_err(|_| no_verificable_media())?;
+        if respuesta.status() == StatusCode::NOT_FOUND {
+            return Err(ApiError::no_encontrado(
+                if uso == "poster" { "Poster" } else { "Fondo" },
+                objeto_id,
+            ));
+        }
+        if !respuesta.status().is_success() {
+            return Err(no_verificable_media());
+        }
+        let objeto = respuesta
+            .json::<ObjetoStorage>()
+            .await
+            .map_err(|_| no_verificable_media())?;
+        let tipo = objeto.content_type.as_deref().unwrap_or("").to_lowercase();
+        let permitidos: Vec<&str> = if uso == "poster" {
+            crate::dominio::media::BACKGROUND_IMAGENES.to_vec()
+        } else {
+            let mut permitidos = crate::dominio::media::BACKGROUND_IMAGENES.to_vec();
+            permitidos.extend(crate::dominio::media::BACKGROUND_VIDEOS);
+            permitidos
+        };
+        if objeto.tenant_id.as_deref() != Some(tenant_id)
+            || objeto.estado.as_deref() != Some("activo")
+            || objeto.publico != Some(true)
+            || !permitidos.contains(&tipo.as_str())
+        {
+            return Err(ApiError::dominio(
+                crate::dominio::media::ERROR_INVALIDO,
+                if uso == "poster" {
+                    "El poster debe ser una imagen pública y activa del mismo tenant."
+                } else {
+                    "El fondo debe ser una imagen o video público y activo del mismo tenant."
+                },
+            ));
+        }
+        Ok(if tipo.starts_with("video/") {
+            "video".to_string()
+        } else {
+            "imagen".to_string()
+        })
+    }
+}
+
+fn no_verificable_media() -> ApiError {
+    ApiError::dominio(
+        crate::dominio::media::ERROR_NO_VERIFICABLE,
+        "No se pudo verificar la media del fondo.",
+    )
+}
+
+impl Storage {
+    /// El logo debe ser una imagen pública y activa de la empresa.
+    pub async fn validar_logo(&self, tenant_id: &str, objeto_id: &str) -> Result<(), ApiError> {
+        let objeto = match self.objeto(tenant_id, objeto_id).await {
+            Ok(objeto) => objeto,
+            Err(error) if error.codigo == "NO_ENCONTRADO" => {
+                return Err(ApiError::no_encontrado("Logo", objeto_id))
+            }
+            Err(_) => {
+                return Err(ApiError::dominio(
+                    "LOGO_NO_VERIFICABLE",
+                    "No se pudo verificar el logo.",
+                ))
+            }
+        };
+        let es_imagen = objeto
+            .content_type
+            .as_deref()
+            .is_some_and(|tipo| tipo.starts_with("image/"));
+        if objeto.tenant_id.as_deref() != Some(tenant_id)
+            || objeto.estado.as_deref() != Some("activo")
+            || objeto.publico != Some(true)
+            || !es_imagen
+        {
+            return Err(ApiError::dominio(
+                "LOGO_INVALIDO",
+                "El logo debe ser una imagen pública y activa de la empresa.",
+            ));
+        }
+        Ok(())
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
