@@ -2,10 +2,15 @@
 
 use identity_service::config::Config;
 use identity_service::db::Db;
+use identity_service::dominio::auth::Auth;
+use identity_service::dominio::password_reset::PasswordReset;
+use identity_service::dominio::sesiones::Sesiones;
+use identity_service::dominio::usuarios::Usuarios;
+use identity_service::email::{crear_email, Email};
 use identity_service::http::build_router;
 use identity_service::logs::{ejecutar_con_contexto, ContextoCorrelacion};
 use identity_service::metrics::Metrics;
-use identity_service::state::AppState;
+use identity_service::state::{AppState, Servicios};
 use std::sync::Arc;
 
 #[tokio::main]
@@ -40,7 +45,36 @@ async fn main() {
     };
 
     let metrics = Arc::new(Metrics::nueva(servicio.clone()));
-    let estado = AppState::nueva(config, metrics);
+    let email: Arc<dyn Email> = match crear_email(&config) {
+        Ok(email) => Arc::from(email),
+        Err(error) => {
+            eprintln!("No se pudo configurar el correo: {error}");
+            std::process::exit(1);
+        }
+    };
+    let usuarios = Arc::new(Usuarios::nueva(Arc::clone(&db)));
+    let sesiones = Arc::new(Sesiones::nueva(Arc::clone(&db)));
+    let auth = Arc::new(Auth::nueva(
+        Arc::clone(&usuarios),
+        Arc::clone(&sesiones),
+        &config,
+    ));
+    let password_reset = Arc::new(PasswordReset::nueva(
+        Arc::clone(&db),
+        Arc::clone(&usuarios),
+        Arc::clone(&sesiones),
+        email,
+        config.frontend_url.clone(),
+    ));
+    let estado = AppState::con_servicios(
+        config,
+        metrics,
+        Servicios {
+            auth,
+            usuarios,
+            password_reset,
+        },
+    );
     let app = build_router(estado);
 
     let listener = match tokio::net::TcpListener::bind(("0.0.0.0", puerto)).await {

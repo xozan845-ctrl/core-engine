@@ -11,6 +11,8 @@
 pub mod auth;
 pub mod config;
 pub mod db;
+pub mod dominio;
+pub mod email;
 pub mod errors;
 pub mod http;
 pub mod logs;
