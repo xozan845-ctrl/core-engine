@@ -191,11 +191,10 @@ services:
 
   logistics-service:
     <<: *servicio-base
+    # ADR-0010: el servicio es Rust y tiene su propio Dockerfile multi-stage.
     build:
       context: .
-      dockerfile: Dockerfile
-      args:
-        SERVICIO: logistics-service
+      dockerfile: packages/logistics-service/Dockerfile
     environment:
       SERVICIO: logistics-service
       PORT: 3005

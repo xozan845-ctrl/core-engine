@@ -23,12 +23,6 @@
     "functions": 86,
     "statements": 88.23
   },
-  "logistics-service": {
-    "lines": 100,
-    "branches": 97.14,
-    "functions": 100,
-    "statements": 98.75
-  },
   "market-intelligence-service": {
     "lines": 19.93,
     "branches": 12.64,
