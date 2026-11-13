@@ -8,8 +8,10 @@ use identity_service::dominio::capacidades::Capacidades;
 use identity_service::dominio::configuracion_sitio::ConfiguracionSitio;
 use identity_service::dominio::empresas::Empresas;
 use identity_service::dominio::packs::Packs;
+use identity_service::dominio::partes::Partes;
 use identity_service::dominio::password_reset::PasswordReset;
 use identity_service::dominio::personal::Personal;
+use identity_service::dominio::registros::Registros;
 use identity_service::dominio::sesiones::Sesiones;
 use identity_service::dominio::usuarios::Usuarios;
 use identity_service::email::{crear_email, Email};
@@ -96,6 +98,8 @@ async fn main() {
         config.internal_api_key.clone(),
         3000,
     ));
+    let partes = Arc::new(Partes::nueva(Arc::clone(&db)));
+    let registros = Arc::new(Registros::nueva(Arc::clone(&db), Arc::clone(&capacidades)));
     let personal = Arc::new(Personal::nueva(
         Arc::clone(&db),
         Arc::clone(&auth),
@@ -114,6 +118,8 @@ async fn main() {
             configuracion,
             empresas,
             personal,
+            partes,
+            registros,
             packs,
             password_reset,
         },
