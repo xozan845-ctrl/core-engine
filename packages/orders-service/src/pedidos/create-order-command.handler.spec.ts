@@ -886,6 +886,69 @@ describe('Fulfillment y cotizaciones por capacidad', () => {
     expect(vista.total_cents).toBe(115000);
   });
 
+  it('crea el acceso digital sin comprometer stock fisico', async () => {
+    const ofertaDigital = {
+      ...ofertaActiva,
+      id: 'oferta-digital',
+      sku: 'DIG-001',
+      item_type: 'producto',
+      atributos: {
+        entrega_digital_url: 'https://cdn.example.com/curso.pdf',
+        entrega_digital_max_descargas: 2,
+      },
+    };
+    const { handler, pg, fetchMock } = crearHandler(
+      [ofertaDigital],
+      'ok',
+      undefined,
+      false,
+      false,
+      ['fulfillment_digital'],
+    );
+
+    const vista = await handler.ejecutar(
+      {
+        tipo_orden: 'compra',
+        items: [{ oferta_id: 'oferta-digital', cantidad: 1, fulfillment: 'digital' }],
+      },
+      'comprador-1',
+    );
+    expect(vista.items[0]).toMatchObject({ fulfillment: 'digital', sku: 'DIG-001' });
+    expect(fetchMock.mock.calls.some(([url]) => String(url).includes('/internal/items/lote'))).toBe(false);
+
+    const insert = pg.query.mock.calls.find(([sql]) =>
+      String(sql).includes('INSERT INTO orders.entregas_digitales'),
+    );
+    expect(insert?.[1]).toEqual(
+      expect.arrayContaining([
+        'DIG-001',
+        'https://cdn.example.com/curso.pdf',
+        2,
+        'comprador-1',
+      ]),
+    );
+  });
+
+  it('rechaza la entrega digital sin URL configurada', async () => {
+    const ofertaDigital = {
+      ...ofertaActiva,
+      id: 'oferta-digital',
+      sku: 'DIG-002',
+      item_type: 'producto',
+      atributos: {},
+    };
+    const { handler } = crearHandler([ofertaDigital], 'ok');
+    await expect(
+      handler.ejecutar(
+        {
+          tipo_orden: 'compra',
+          items: [{ oferta_id: 'oferta-digital', cantidad: 1, fulfillment: 'digital' }],
+        },
+        'comprador-1',
+      ),
+    ).rejects.toMatchObject({ codigo: 'ENTREGA_DIGITAL_NO_CONFIGURADA' });
+  });
+
   it('permite pickup y delivery cuando el tenant tiene ambas capacidades', async () => {
     const { handler } = crearHandler(
       [ofertaActiva],

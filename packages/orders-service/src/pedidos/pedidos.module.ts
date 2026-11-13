@@ -6,15 +6,18 @@ import { OrderViewRepository } from './queries/order-view.repository';
 import { CreateOrderCommandHandler } from './handlers/create-order-command.handler';
 import { CarritoService } from './carrito/carrito.service';
 import { CarritoController } from './carrito/carrito.controller';
+import { EntregasDigitalesService } from './entregas-digitales.service';
+import { EntregasDigitalesController } from './entregas-digitales.controller';
 
 @Module({
-  controllers: [PedidosController, CarritoController],
+  controllers: [PedidosController, CarritoController, EntregasDigitalesController],
   providers: [
     PedidosService,
     OrderEventStore,
     OrderViewRepository,
     CreateOrderCommandHandler,
     CarritoService,
+    EntregasDigitalesService,
   ],
   exports: [
     PedidosService,
@@ -22,6 +25,7 @@ import { CarritoController } from './carrito/carrito.controller';
     OrderViewRepository,
     CreateOrderCommandHandler,
     CarritoService,
+    EntregasDigitalesService,
   ],
 })
 export class PedidosModule {}

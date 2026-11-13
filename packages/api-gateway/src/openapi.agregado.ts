@@ -16558,6 +16558,107 @@ export const OPENAPI_AGREGADO = {
         ]
       }
     },
+    "/api/v2/pedidos/{id}/entregas-digitales": {
+      "get": {
+        "operationId": "EntregasDigitalesController_listar",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Accesos digitales",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
+                  "properties": {
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/EntregaDigitalResponseDto"
+                      }
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/MetaRespuesta"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Listar los accesos digitales de una orden",
+        "tags": [
+          "Entregas digitales"
+        ]
+      }
+    },
+    "/api/v2/entregas-digitales/{token}": {
+      "get": {
+        "operationId": "EntregasDigitalesController_descargar",
+        "parameters": [
+          {
+            "name": "token",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Acceso digital",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/DescargaDigitalResponseDto"
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/MetaRespuesta"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Consumir un acceso digital y obtener su recurso",
+        "tags": [
+          "Entregas digitales"
+        ]
+      }
+    },
     "/api/v2/scheduling/recursos": {
       "get": {
         "operationId": "SchedulingController_recursos",
@@ -32410,6 +32511,157 @@ export const OPENAPI_AGREGADO = {
           "tipo_orden"
         ]
       },
+      "DescargaDigitalResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "order_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "item_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "sku": {
+            "type": "string"
+          },
+          "token": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "estado": {
+            "type": "string",
+            "enum": [
+              "activo",
+              "revocado"
+            ]
+          },
+          "descargas": {
+            "type": "number"
+          },
+          "max_descargas": {
+            "type": "object",
+            "nullable": true
+          },
+          "expira_en": {
+            "type": "object",
+            "format": "date-time",
+            "nullable": true
+          },
+          "primera_descarga_en": {
+            "type": "object",
+            "format": "date-time",
+            "nullable": true
+          },
+          "ultima_descarga_en": {
+            "type": "object",
+            "format": "date-time",
+            "nullable": true
+          },
+          "creado_en": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "comprador_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "recurso_url": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "order_id",
+          "item_id",
+          "sku",
+          "token",
+          "estado",
+          "descargas",
+          "max_descargas",
+          "expira_en",
+          "primera_descarga_en",
+          "ultima_descarga_en",
+          "creado_en",
+          "comprador_id",
+          "recurso_url"
+        ]
+      },
+      "EntregaDigitalResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "order_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "item_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "sku": {
+            "type": "string"
+          },
+          "token": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "estado": {
+            "type": "string",
+            "enum": [
+              "activo",
+              "revocado"
+            ]
+          },
+          "descargas": {
+            "type": "number"
+          },
+          "max_descargas": {
+            "type": "object",
+            "nullable": true
+          },
+          "expira_en": {
+            "type": "object",
+            "format": "date-time",
+            "nullable": true
+          },
+          "primera_descarga_en": {
+            "type": "object",
+            "format": "date-time",
+            "nullable": true
+          },
+          "ultima_descarga_en": {
+            "type": "object",
+            "format": "date-time",
+            "nullable": true
+          },
+          "creado_en": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "order_id",
+          "item_id",
+          "sku",
+          "token",
+          "estado",
+          "descargas",
+          "max_descargas",
+          "expira_en",
+          "primera_descarga_en",
+          "ultima_descarga_en",
+          "creado_en"
+        ]
+      },
       "ItemOrdenRequestDto": {
         "type": "object",
         "properties": {
@@ -32430,6 +32682,7 @@ export const OPENAPI_AGREGADO = {
               "delivery",
               "pickup",
               "onsite",
+              "digital",
               "none"
             ],
             "default": "none"

@@ -137,6 +137,11 @@ Se introduce la abstracción `item` con `tipo` igual a `producto`, `servicio` o
   garantía con `garantia_meses`; la devolución la marca como devuelta y la
   reubica en la ubicación predeterminada. Un item serializado sin unidades
   disponibles no se vende aunque su stock agregado sea positivo.
+- `fulfillment = digital` crea un acceso por línea de orden en
+  `orders.entregas_digitales`. La URL se configura en el item
+  (`atributos.entrega_digital_url`), el acceso solo se consume con la orden
+  pagada y admite límites de descargas y expiración. La capacidad
+  `fulfillment_digital` gatea las ventas digitales;
 - `scheduling.recursos.capacidad` define cuántas citas activas pueden solaparse
   en el mismo horario (clases y grupos). Un trigger serializa las reservas por
   recurso y rechaza la cita que excede el cupo; `capacidad = 1` conserva el

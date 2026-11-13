@@ -77,12 +77,15 @@ export class PedidosConsumer implements OnModuleInit {
       return;
     }
 
-    const lineas = items.map((i) => ({
-      empresa_id: i.empresa_id,
-      sku: i.sku,
-      cantidad: i.cantidad,
-      ...(i.item_id ? { item_id: i.item_id } : {}),
-    }));
+    // La entrega digital no compromete stock fisico.
+    const lineas = items
+      .filter((i) => i.fulfillment !== 'digital')
+      .map((i) => ({
+        empresa_id: i.empresa_id,
+        sku: i.sku,
+        cantidad: i.cantidad,
+        ...(i.item_id ? { item_id: i.item_id } : {}),
+      }));
 
     // Stock + eventos + marca de idempotencia comparten UNA transacción: si
     // falla el outbox, el descuento de stock también revierte y el reintento
