@@ -1092,3 +1092,39 @@ CREATE POLICY contrato_eventos_lectura ON orders.contrato_eventos
   FOR SELECT TO authenticated
   USING (auth.rol() IN ('empresario', 'vendedor', 'coordinador', 'supervisor', 'operativo')
          AND empresa_id::text = (auth.jwt() ->> 'tenant_id'));
+
+-- ── orders.suscripciones y suscripcion_ejecuciones (P2.3) ───────────────────
+ALTER TABLE orders.suscripciones ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS suscripciones_admin ON orders.suscripciones;
+CREATE POLICY suscripciones_admin ON orders.suscripciones
+  FOR ALL TO authenticated
+  USING (auth.rol() IN ('super_admin', 'admin'))
+  WITH CHECK (auth.rol() IN ('super_admin', 'admin'));
+DROP POLICY IF EXISTS suscripciones_empresa ON orders.suscripciones;
+CREATE POLICY suscripciones_empresa ON orders.suscripciones
+  FOR ALL TO authenticated
+  USING (auth.rol() = 'empresario' AND empresa_id::text = (auth.jwt() ->> 'tenant_id'))
+  WITH CHECK (auth.rol() = 'empresario' AND empresa_id::text = (auth.jwt() ->> 'tenant_id'));
+DROP POLICY IF EXISTS suscripciones_comprador ON orders.suscripciones;
+CREATE POLICY suscripciones_comprador ON orders.suscripciones
+  FOR SELECT TO authenticated
+  USING (auth.rol() = 'comprador' AND comprador_id = auth.uid());
+
+ALTER TABLE orders.suscripcion_ejecuciones ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS suscripcion_ejecuciones_admin ON orders.suscripcion_ejecuciones;
+CREATE POLICY suscripcion_ejecuciones_admin ON orders.suscripcion_ejecuciones
+  FOR ALL TO authenticated
+  USING (auth.rol() IN ('super_admin', 'admin'))
+  WITH CHECK (auth.rol() IN ('super_admin', 'admin'));
+DROP POLICY IF EXISTS suscripcion_ejecuciones_empresa ON orders.suscripcion_ejecuciones;
+CREATE POLICY suscripcion_ejecuciones_empresa ON orders.suscripcion_ejecuciones
+  FOR ALL TO authenticated
+  USING (auth.rol() = 'empresario' AND empresa_id::text = (auth.jwt() ->> 'tenant_id'))
+  WITH CHECK (auth.rol() = 'empresario' AND empresa_id::text = (auth.jwt() ->> 'tenant_id'));
+DROP POLICY IF EXISTS suscripcion_ejecuciones_comprador ON orders.suscripcion_ejecuciones;
+CREATE POLICY suscripcion_ejecuciones_comprador ON orders.suscripcion_ejecuciones
+  FOR SELECT TO authenticated
+  USING (auth.rol() = 'comprador' AND empresa_id::text IN (
+    SELECT empresa_id::text FROM orders.suscripciones s
+     WHERE s.comprador_id = auth.uid()
+  ));

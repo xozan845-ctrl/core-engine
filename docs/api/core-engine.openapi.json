@@ -17045,6 +17045,436 @@
         ]
       }
     },
+    "/api/v2/suscripciones": {
+      "get": {
+        "operationId": "SuscripcionesController_listar",
+        "parameters": [
+          {
+            "name": "comprador_id",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "estado",
+            "required": false,
+            "in": "query",
+            "schema": {}
+          },
+          {
+            "name": "empresa_id",
+            "required": false,
+            "in": "query",
+            "description": "Solo admin global",
+            "schema": {}
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Suscripciones",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
+                  "properties": {
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/SuscripcionResponseDto"
+                      }
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/MetaRespuesta"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Listar suscripciones de la empresa",
+        "tags": [
+          "Suscripciones"
+        ]
+      },
+      "post": {
+        "operationId": "SuscripcionesController_crear",
+        "parameters": [
+          {
+            "name": "empresa_id",
+            "required": false,
+            "in": "query",
+            "description": "Solo admin global",
+            "schema": {}
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CrearSuscripcionRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Suscripcion creada",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/SuscripcionResponseDto"
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/MetaRespuesta"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Crear una suscripcion a una oferta",
+        "tags": [
+          "Suscripciones"
+        ]
+      }
+    },
+    "/api/v2/suscripciones/{id}": {
+      "get": {
+        "operationId": "SuscripcionesController_obtener",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "name": "empresa_id",
+            "required": false,
+            "in": "query",
+            "description": "Solo admin global",
+            "schema": {}
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Suscripcion encontrada",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/SuscripcionResponseDto"
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/MetaRespuesta"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Obtener una suscripcion",
+        "tags": [
+          "Suscripciones"
+        ]
+      }
+    },
+    "/api/v2/suscripciones/{id}/pausar": {
+      "post": {
+        "operationId": "SuscripcionesController_pausar",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Suscripcion pausada",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/SuscripcionResponseDto"
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/MetaRespuesta"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Pausar una suscripcion",
+        "tags": [
+          "Suscripciones"
+        ]
+      }
+    },
+    "/api/v2/suscripciones/{id}/reanudar": {
+      "post": {
+        "operationId": "SuscripcionesController_reanudar",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Suscripcion reanudada",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/SuscripcionResponseDto"
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/MetaRespuesta"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Reanudar una suscripcion pausada",
+        "tags": [
+          "Suscripciones"
+        ]
+      }
+    },
+    "/api/v2/suscripciones/{id}/cancelar": {
+      "post": {
+        "operationId": "SuscripcionesController_cancelar",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Suscripcion cancelada",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/SuscripcionResponseDto"
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/MetaRespuesta"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Cancelar una suscripcion",
+        "tags": [
+          "Suscripciones"
+        ]
+      }
+    },
+    "/api/v2/suscripciones/{id}/renovar": {
+      "post": {
+        "operationId": "SuscripcionesController_renovar",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Suscripcion renovada",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/RenovarSuscripcionResponseDto"
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/MetaRespuesta"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Renovar ahora y crear la orden de la suscripcion",
+        "tags": [
+          "Suscripciones"
+        ]
+      }
+    },
+    "/api/v2/suscripciones/{id}/ejecuciones": {
+      "get": {
+        "operationId": "SuscripcionesController_ejecuciones",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "name": "empresa_id",
+            "required": false,
+            "in": "query",
+            "description": "Solo admin global",
+            "schema": {}
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Ejecuciones",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
+                  "properties": {
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/SuscripcionEjecucionResponseDto"
+                      }
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/MetaRespuesta"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Listar las renovaciones de una suscripcion",
+        "tags": [
+          "Suscripciones"
+        ]
+      }
+    },
     "/api/v2/scheduling/recursos": {
       "get": {
         "operationId": "SchedulingController_recursos",
@@ -33125,6 +33555,77 @@
           "titulo"
         ]
       },
+      "CrearSuscripcionRequestDto": {
+        "type": "object",
+        "properties": {
+          "oferta_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "item_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "cantidad": {
+            "type": "number",
+            "minimum": 1,
+            "maximum": 99,
+            "default": 1
+          },
+          "comprador_id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Solo admin/empresario"
+          },
+          "cliente_parte_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "metodo_pago": {
+            "type": "string",
+            "enum": [
+              "simulado",
+              "credito"
+            ],
+            "default": "simulado"
+          },
+          "fulfillment": {
+            "type": "string",
+            "enum": [
+              "delivery",
+              "pickup",
+              "onsite",
+              "digital",
+              "none"
+            ],
+            "default": "none"
+          },
+          "intervalo": {
+            "type": "string",
+            "enum": [
+              "semanal",
+              "mensual",
+              "anual"
+            ]
+          },
+          "proxima_ejecucion": {
+            "type": "string",
+            "format": "date"
+          },
+          "fin_en": {
+            "type": "string",
+            "format": "date"
+          },
+          "metadata": {
+            "type": "object",
+            "additionalProperties": true
+          }
+        },
+        "required": [
+          "oferta_id",
+          "intervalo"
+        ]
+      },
       "CreateOrderCommand": {
         "type": "object",
         "properties": {
@@ -33601,6 +34102,179 @@
             "description": "Motivo del rechazo"
           }
         }
+      },
+      "RenovarSuscripcionResponseDto": {
+        "type": "object",
+        "properties": {
+          "suscripcion": {
+            "$ref": "#/components/schemas/SuscripcionResponseDto"
+          },
+          "order_id": {
+            "type": "string",
+            "format": "uuid"
+          }
+        },
+        "required": [
+          "suscripcion",
+          "order_id"
+        ]
+      },
+      "SuscripcionEjecucionResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "suscripcion_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "order_id": {
+            "type": "object",
+            "format": "uuid",
+            "nullable": true
+          },
+          "estado": {
+            "type": "string",
+            "enum": [
+              "creada",
+              "error"
+            ]
+          },
+          "error": {
+            "type": "string"
+          },
+          "ejecutada_en": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "suscripcion_id",
+          "order_id",
+          "estado",
+          "error",
+          "ejecutada_en"
+        ]
+      },
+      "SuscripcionResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "empresa_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "oferta_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "item_id": {
+            "type": "object",
+            "format": "uuid",
+            "nullable": true
+          },
+          "cantidad": {
+            "type": "number"
+          },
+          "comprador_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "cliente_parte_id": {
+            "type": "object",
+            "format": "uuid",
+            "nullable": true
+          },
+          "tipo_orden": {
+            "type": "string",
+            "enum": [
+              "compra"
+            ]
+          },
+          "metodo_pago": {
+            "type": "string",
+            "enum": [
+              "simulado",
+              "credito"
+            ]
+          },
+          "fulfillment": {
+            "type": "string"
+          },
+          "intervalo": {
+            "type": "string",
+            "enum": [
+              "semanal",
+              "mensual",
+              "anual"
+            ]
+          },
+          "estado": {
+            "type": "string",
+            "enum": [
+              "activa",
+              "pausada",
+              "cancelada"
+            ]
+          },
+          "proxima_ejecucion": {
+            "type": "string",
+            "format": "date"
+          },
+          "ultima_ejecucion": {
+            "type": "object",
+            "format": "date",
+            "nullable": true
+          },
+          "fin_en": {
+            "type": "object",
+            "format": "date",
+            "nullable": true
+          },
+          "metadata": {
+            "type": "object",
+            "additionalProperties": true
+          },
+          "creado_por": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "creado_en": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "actualizado_en": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "empresa_id",
+          "oferta_id",
+          "item_id",
+          "cantidad",
+          "comprador_id",
+          "cliente_parte_id",
+          "tipo_orden",
+          "metodo_pago",
+          "fulfillment",
+          "intervalo",
+          "estado",
+          "proxima_ejecucion",
+          "ultima_ejecucion",
+          "fin_en",
+          "metadata",
+          "creado_por",
+          "creado_en",
+          "actualizado_en"
+        ]
       },
       "TimelineEventoResponseDto": {
         "type": "object",
