@@ -1,6 +1,7 @@
 //! Router HTTP y middlewares transversales.
 
 pub mod envelope;
+pub mod validacion;
 
 use crate::auth::{clave_interna_valida, UsuarioContexto};
 use crate::config::Config;
