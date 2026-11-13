@@ -33,7 +33,7 @@ impl Componentes {
                     i.codigo, i.nombre, i.stock, c.cantidad, c.creado_en, c.actualizado_en
                FROM catalog.item_componentes c
                JOIN catalog.items i ON i.id = c.componente_item_id
-              WHERE c.empresa_id = $1 AND c.item_id = $2
+              WHERE c.empresa_id = $1::uuid AND c.item_id = $2::uuid
               ORDER BY i.nombre",
         )
         .bind(empresa_id)
@@ -74,7 +74,7 @@ impl Componentes {
                 "WITH insertado AS (
                    INSERT INTO catalog.item_componentes
                      (empresa_id, item_id, componente_item_id, cantidad)
-                   VALUES ($1, $2, $3, $4::bigint)
+                   VALUES ($1::uuid, $2::uuid, $3::uuid, $4::bigint)
                    RETURNING id, empresa_id, item_id, componente_item_id, cantidad,
                              creado_en, actualizado_en
                  )
@@ -131,7 +131,7 @@ impl Componentes {
         let fila = sqlx::query(
             "UPDATE catalog.item_componentes
                 SET cantidad = $1::bigint, actualizado_en = NOW()
-              WHERE id = $2 AND empresa_id = $3 AND item_id = $4
+              WHERE id = $2::uuid AND empresa_id = $3::uuid AND item_id = $4::uuid
               RETURNING id",
         )
         .bind(cantidad)
@@ -159,7 +159,7 @@ impl Componentes {
         let mut tx = self.db.transaccion().await.map_err(interno)?;
         let fila = sqlx::query(
             "DELETE FROM catalog.item_componentes
-              WHERE id = $1 AND empresa_id = $2 AND item_id = $3
+              WHERE id = $1::uuid AND empresa_id = $2::uuid AND item_id = $3::uuid
               RETURNING id",
         )
         .bind(componente_id)
@@ -200,14 +200,14 @@ impl Componentes {
             "WITH RECURSIVE alcanzables AS (
                SELECT componente_item_id
                  FROM catalog.item_componentes
-                WHERE item_id = $1 AND empresa_id = $3
+                WHERE item_id = $1::uuid AND empresa_id = $3::uuid
                 UNION
                SELECT c.componente_item_id
                  FROM catalog.item_componentes c
                  JOIN alcanzables a ON c.item_id = a.componente_item_id
-                WHERE c.empresa_id = $3
+                WHERE c.empresa_id = $3::uuid
              )
-             SELECT 1 AS uno FROM alcanzables WHERE componente_item_id = $2 LIMIT 1",
+             SELECT 1 AS uno FROM alcanzables WHERE componente_item_id = $2::uuid LIMIT 1",
         )
         .bind(componente_id)
         .bind(item_id)
@@ -231,7 +231,7 @@ impl Componentes {
                     i.codigo, i.nombre, i.stock, c.cantidad, c.creado_en, c.actualizado_en
                FROM catalog.item_componentes c
                JOIN catalog.items i ON i.id = c.componente_item_id
-              WHERE c.id = $1 AND c.empresa_id = $2 AND c.item_id = $3",
+              WHERE c.id = $1::uuid AND c.empresa_id = $2::uuid AND c.item_id = $3::uuid",
         )
         .bind(componente_id)
         .bind(empresa_id)
@@ -254,7 +254,7 @@ impl Componentes {
         let mut tx = self.db.transaccion().await.map_err(interno)?;
         let fila = sqlx::query(
             "SELECT id, tipo, codigo, nombre, stock FROM catalog.items
-              WHERE id = $1 AND empresa_id = $2 AND eliminado_en IS NULL",
+              WHERE id = $1::uuid AND empresa_id = $2::uuid AND eliminado_en IS NULL",
         )
         .bind(item_id)
         .bind(empresa_id)

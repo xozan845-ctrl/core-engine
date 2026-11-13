@@ -36,7 +36,7 @@ impl Tarifas {
         let filas = sqlx::query(&format!(
             "SELECT {COLUMNAS}
                FROM catalog.item_tarifas
-              WHERE empresa_id = $1 AND item_id = $2
+              WHERE empresa_id = $1::uuid AND item_id = $2::uuid
               ORDER BY desde"
         ))
         .bind(empresa_id)
@@ -61,7 +61,7 @@ impl Tarifas {
         let resultado: Result<Option<PgRow>, sqlx::Error> = async {
             let fila = sqlx::query(&format!(
                 "INSERT INTO catalog.item_tarifas (empresa_id, item_id, desde, hasta, precio_cents)
-                 VALUES ($1, $2, $3::date, $4::date, $5::bigint)
+                 VALUES ($1::uuid, $2::uuid, $3::date, $4::date, $5::bigint)
                  RETURNING {COLUMNAS}"
             ))
             .bind(empresa_id)
@@ -131,7 +131,7 @@ impl Tarifas {
                 "UPDATE catalog.item_tarifas
                     SET desde = $1::date, hasta = $2::date, precio_cents = $3::bigint,
                         actualizado_en = NOW()
-                  WHERE id = $4 AND empresa_id = $5 AND item_id = $6
+                  WHERE id = $4::uuid AND empresa_id = $5::uuid AND item_id = $6::uuid
                   RETURNING {COLUMNAS}"
             ))
             .bind(&rango.desde)
@@ -172,7 +172,7 @@ impl Tarifas {
         let mut tx = self.db.transaccion().await.map_err(interno)?;
         let fila = sqlx::query(
             "DELETE FROM catalog.item_tarifas
-              WHERE id = $1 AND empresa_id = $2 AND item_id = $3
+              WHERE id = $1::uuid AND empresa_id = $2::uuid AND item_id = $3::uuid
               RETURNING id",
         )
         .bind(tarifa_id)
@@ -227,7 +227,7 @@ impl Tarifas {
         let filas = sqlx::query(&format!(
             "SELECT {COLUMNAS}
                FROM catalog.item_tarifas
-              WHERE empresa_id = $1 AND item_id = $2
+              WHERE empresa_id = $1::uuid AND item_id = $2::uuid
                 AND daterange(desde, hasta, '[]') && daterange($3::date, $4::date, '[]')
               ORDER BY desde"
         ))
@@ -271,7 +271,7 @@ impl Tarifas {
         let mut tx = self.db.transaccion().await.map_err(interno)?;
         let fila = sqlx::query(
             "SELECT id, tipo, precio_cents FROM catalog.items
-              WHERE id = $1 AND empresa_id = $2 AND eliminado_en IS NULL",
+              WHERE id = $1::uuid AND empresa_id = $2::uuid AND eliminado_en IS NULL",
         )
         .bind(item_id)
         .bind(empresa_id)
@@ -296,7 +296,7 @@ impl Tarifas {
         let fila = sqlx::query(&format!(
             "SELECT {COLUMNAS}
                FROM catalog.item_tarifas
-              WHERE id = $1 AND empresa_id = $2 AND item_id = $3"
+              WHERE id = $1::uuid AND empresa_id = $2::uuid AND item_id = $3::uuid"
         ))
         .bind(tarifa_id)
         .bind(empresa_id)
