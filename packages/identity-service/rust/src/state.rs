@@ -8,6 +8,7 @@ use crate::dominio::configuracion_sitio::ConfiguracionSitio;
 use crate::dominio::empresas::Empresas;
 use crate::dominio::packs::Packs;
 use crate::dominio::password_reset::PasswordReset;
+use crate::dominio::personal::Personal;
 use crate::dominio::usuarios::Usuarios;
 use crate::metrics::Metrics;
 use std::sync::Arc;
@@ -21,6 +22,7 @@ pub struct Servicios {
     pub capacidades: Arc<Capacidades>,
     pub configuracion: Arc<ConfiguracionSitio>,
     pub empresas: Arc<Empresas>,
+    pub personal: Arc<Personal>,
     pub packs: Arc<Packs>,
     pub password_reset: Arc<PasswordReset>,
 }
