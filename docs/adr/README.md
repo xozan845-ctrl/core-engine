@@ -19,6 +19,7 @@ este índice evita mezclar las decisiones nuevas con las ADR históricas.
 | [0008](./0008-field-service-en-rust.md) | Aceptado (implementado) | Reescribir `field-service` en Rust con paridad de contrato, datos y autorización |
 | [0009](./0009-market-intelligence-service-en-rust.md) | Aceptado (implementado) | Reescribir `market-intelligence-service` en Rust con paridad de contrato, analítica y predicción |
 | [0010](./0010-logistics-service-en-rust.md) | Aceptado (implementado) | Reescribir `logistics-service` en Rust con paridad de contrato, guías, flotas, eventos y métricas |
+| [0012](./0012-orders-service-en-rust.md) | Aceptado (en curso) | Reescribir `orders-service` en Rust con paridad de contrato, CQRS, Event Sourcing, carrito, contratos, suscripciones y salón |
 
 ## Convención
 
