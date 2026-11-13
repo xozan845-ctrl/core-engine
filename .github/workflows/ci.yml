@@ -174,7 +174,7 @@ jobs:
             lines: 63
             functions: 60
           - service: storage-service
-            dir: packages/storage-service/rust
+            dir: packages/storage-service
             lines: 54
             functions: 52
     env:

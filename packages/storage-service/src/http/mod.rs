@@ -20,7 +20,7 @@ use std::time::Instant;
 use uuid::Uuid;
 
 const OPENAPI_PUBLICO: &str =
-    include_str!("../../../../../docs/openapi/storage-service/public.openapi.json");
+    include_str!("../../../../docs/openapi/storage-service/public.openapi.json");
 
 const DOCS_HTML: &str = r#"<!doctype html>
 <html lang="es">

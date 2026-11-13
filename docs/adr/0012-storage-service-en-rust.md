@@ -1,7 +1,7 @@
 # ADR-0012: Reescritura de `storage-service` en Rust sin cambio de contrato
 
 - **Fecha**: 2026-11-13
-- **Estado**: Aceptado — implementación Rust en curso; el TypeScript sigue siendo el runtime activo hasta la conmutación
+- **Estado**: Aceptado (implementado) — el binario Rust es el runtime activo y el TypeScript fue retirado
 - **Ámbito**: `storage-service` (HTTP público, admin e interno, PostgreSQL, S3/MinIO, Outbox, métricas)
 - **Referencias**: [ADR-0004](./0004-scheduling-service-en-rust.md), [ADR-0006](./0006-notifications-service-en-rust.md), [ADR-0010](./0010-logistics-service-en-rust.md), [ADR-0011](./0011-stores-service-en-rust.md)
 
