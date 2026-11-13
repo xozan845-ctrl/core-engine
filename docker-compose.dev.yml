@@ -168,11 +168,10 @@ services:
 
   orders-service:
     <<: *servicio-base
+    # ADR-0013: el servicio es Rust y tiene su propio Dockerfile multi-stage.
     build:
       context: .
-      dockerfile: Dockerfile
-      args:
-        SERVICIO: orders-service
+      dockerfile: packages/orders-service/Dockerfile
     environment:
       SERVICIO: orders-service
       PORT: 3004

@@ -23,12 +23,6 @@
     "functions": 86,
     "statements": 88.23
   },
-  "orders-service": {
-    "lines": 43.05,
-    "branches": 24.86,
-    "functions": 34.02,
-    "statements": 40.34
-  },
   "shared": {
     "lines": 90,
     "branches": 75,
