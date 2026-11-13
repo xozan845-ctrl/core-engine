@@ -1,6 +1,7 @@
 //! Router HTTP y middlewares transversales.
 
 pub mod envelope;
+pub mod items;
 pub mod validacion;
 
 use crate::auth::{clave_interna_valida, UsuarioContexto};
@@ -13,7 +14,7 @@ use axum::extract::{FromRequest, MatchedPath, Request, State};
 use axum::http::{header, HeaderMap, HeaderValue, StatusCode};
 use axum::middleware::{self, Next};
 use axum::response::{Html, IntoResponse, Response};
-use axum::routing::get;
+use axum::routing::{get, post};
 use axum::{Json, Router};
 use serde_json::Value;
 use std::time::Instant;
@@ -46,6 +47,19 @@ pub fn build_router(state: AppState) -> Router {
         .route("/metrics", get(metrics))
         .route("/docs", get(docs))
         .route("/docs-json", get(docs_json))
+        .route(
+            "/api/v2/catalog/items",
+            get(items::listar).post(items::crear),
+        )
+        .route(
+            "/api/v2/catalog/items/alquileres",
+            post(items::crear_alquiler),
+        )
+        .route(
+            "/api/v2/catalog/items/atributos/esquemas",
+            get(items::esquemas).post(items::guardar_esquema),
+        )
+        .route("/api/v2/catalog/items/{id}", get(items::detalle))
         .fallback(no_encontrado)
         .with_state(state.clone());
     aplicar_capas(router, state)
