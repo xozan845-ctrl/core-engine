@@ -11,7 +11,12 @@ use scheduling_service::scheduling::{
 };
 use serde_json::json;
 use std::sync::Arc;
+use tokio::sync::Mutex;
 use uuid::Uuid;
+
+/// Las dos pruebas provisionan el mismo esquema: se serializan para evitar
+/// carreras de `CREATE EXTENSION` cuando cargo ejecuta en paralelo.
+static DB_LOCK: Mutex<()> = Mutex::const_new(());
 
 fn url() -> Option<String> {
     std::env::var("TEST_DATABASE_URL").ok()
@@ -32,6 +37,7 @@ async fn debe_crear_disponibilidad_y_bloqueos_con_las_mismas_reglas() {
         eprintln!("TEST_DATABASE_URL no definida: se omite la integración");
         return;
     };
+    let _guard = DB_LOCK.lock().await;
     // La prueba provisiona su propio esquema para poder correr en CI sin psql.
     let pool = sqlx::PgPool::connect(&url).await.expect("postgres");
     sqlx::raw_sql(include_str!("../../../infra/db/init/28_scheduling.sql"))
@@ -322,6 +328,7 @@ async fn debe_permitir_clases_grupales_hasta_la_capacidad_del_recurso() {
         eprintln!("TEST_DATABASE_URL no definida: se omite la integración");
         return;
     };
+    let _guard = DB_LOCK.lock().await;
     let pool = sqlx::PgPool::connect(&url).await.expect("postgres");
     sqlx::raw_sql(include_str!("../../../infra/db/init/28_scheduling.sql"))
         .execute(&pool)
