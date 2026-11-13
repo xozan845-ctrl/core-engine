@@ -25,7 +25,7 @@ Variables de entorno: `PORT` (3001), `SERVICIO`, `DATABASE_URL`,
 
 En producción `JWT_SECRET`, `ADMIN_EMAIL` y `ADMIN_PASSWORD` son obligatorias.
 
-## Alcance actual (PR 1-2)
+## Alcance actual (PR 1-3)
 
 - Configuración con `fail-fast` de variables obligatorias, TTL de JWT y SMTP.
 - JWT HS256 de `access`/`refresh` con el mismo payload que
@@ -37,14 +37,18 @@ En producción `JWT_SECRET`, `ADMIN_EMAIL` y `ADMIN_PASSWORD` son obligatorias.
   personal y revocación de sesiones en `identity.sesiones`.
 - **Correo**: puerto `Email` con modo `log` y SMTP (`lettre`) para el enlace de
   restablecimiento.
+- **Usuarios**: listado, perfil con control admin/propio, avatar validado
+  contra `storage-service`.
+- **Capacidades, verticales y packs**: lectura y altas administrativas, con
+  guard de empresario activo por tenant.
 - Errores `{codigo, mensaje, detalles?}`, envelope `{data, meta}`, logs JSON,
   `x-request-id` y métricas Prometheus.
 - `/health`, `/metrics`, `/docs` y `/docs-json` (OpenAPI versionado).
 - Apagado ordenado ante `SIGINT`/`SIGTERM`.
-- Gate Rust en CI con cobertura 80/75 (medida 81,40/76,36).
+- Gate Rust en CI con cobertura 78/75 (medida 81,26/76,07).
 
-Pendiente en los PR 3-9: usuarios (listado/avatar), empresas, personal, partes,
-registros, extensiones, API interna, seed, imagen Docker y conmutación.
+Pendiente en los PR 3b-9: empresas, configuración del sitio, API keys, personal,
+partes, registros, extensiones, API interna, seed, imagen Docker y conmutación.
 
 ## Cobertura
 
