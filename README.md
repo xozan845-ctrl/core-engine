@@ -93,7 +93,7 @@ seeds del plan contable NIC e indices). En **Supabase** (staging/prod) aplique a
 | identity-service | 3001 | No | `identity` | `packages/identity-service` |
 | catalog-service | 3002 | No | `catalog` | `packages/catalog-service` |
 | stores-service | 3003 | No | `stores` | `packages/stores-service` (Rust) |
-| orders-service | 3004 | No | `orders` | `packages/orders-service` |
+| orders-service | 3004 | No | `orders` | `packages/orders-service` (Rust) |
 | logistics-service | 3005 | No | `logistics` | `packages/logistics-service` |
 | scheduling-service | 3011 | No | `scheduling` | `packages/scheduling-service` |
 | commissions-service | 3006 | No *(solo stage; fuera de prod)* | `commissions` | `packages/commissions-service` (Rust) |

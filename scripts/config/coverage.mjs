@@ -17,7 +17,6 @@ export const COVERAGE_THRESHOLDS = {
   'api-gateway': { lines: 50, branches: 51, functions: 57 },
   'catalog-service': { lines: 93, branches: 82, functions: 90 },
   'identity-service': { lines: 89, branches: 78, functions: 85 },
-  'orders-service': { lines: 32, branches: 23, functions: 33 },
 };
 
 /**
