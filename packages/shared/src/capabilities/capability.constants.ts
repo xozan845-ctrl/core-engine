@@ -20,6 +20,7 @@ export const CAPACIDADES = {
   FACTURACION: 'facturacion',
   LIQUIDACIONES: 'liquidaciones',
   CONTRATOS: 'contratos',
+  SUSCRIPCIONES: 'suscripciones',
 } as const;
 
 export type Capacidad = (typeof CAPACIDADES)[keyof typeof CAPACIDADES];

@@ -80,5 +80,6 @@
   "67_citas_capacidad.sql": "94a5bd8e1d19ae0b761a98997c1ff1278bffeed12fdde3508ac0bb4a51ab9b5f",
   "68_retirar_combos.sql": "a6945c2b37a48c17e6fdc556643a6082cc0267d7fb4de121c79e6b8d9df8d710",
   "69_entrega_digital.sql": "50c1d7f36c948aeac0280390ad8d1cd0c736673936d97db5b57ab4e4bcae072e",
-  "70_contratos_depositos.sql": "8e8e3e0fbfc5a7a2329eccc2628049f1792bf617b253cda97878754a709d19e2"
+  "70_contratos_depositos.sql": "8e8e3e0fbfc5a7a2329eccc2628049f1792bf617b253cda97878754a709d19e2",
+  "71_suscripciones.sql": "d5ed6c1c7aaab1b8b4449cdde19c02f3dcc7fd2f5910f50cc646c05513c60bbd"
 }

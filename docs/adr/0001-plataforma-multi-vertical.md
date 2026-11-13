@@ -137,6 +137,9 @@ Se introduce la abstracción `item` con `tipo` igual a `producto`, `servicio` o
   garantía con `garantia_meses`; la devolución la marca como devuelta y la
   reubica en la ubicación predeterminada. Un item serializado sin unidades
   disponibles no se vende aunque su stock agregado sea positivo.
+- `orders.suscripciones` compra una oferta cada semana/mes/año y genera una
+  orden normal al vencer, con historial en `orders.suscripcion_ejecuciones`.
+  La reclamación es atómica y la capacidad `suscripciones` la gatea;
 - `orders.contratos` modela acuerdos con depósito/garantía y retención, con un
   historial en `orders.contrato_eventos`. Puede vincularse a una orden y se
   gatea con la capacidad `contratos`;
