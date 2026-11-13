@@ -170,6 +170,7 @@ describe('CreateOrderCommandHandler (CQRS + Event Sourcing)', () => {
     margen: 15,
     precio_base: '1000.00',
     precio_venta: '1150.00',
+    moneda: 'NIO',
     stock: 10,
     estado: 'activa',
   };
@@ -326,7 +327,7 @@ describe('CreateOrderCommandHandler (CQRS + Event Sourcing)', () => {
       estado: 'creada',
       total_cents: 230_000,
       comision_cents: 27_600,
-      moneda: 'C$',
+      moneda: 'NIO',
       direccion_envio: null,
       pagada_en: null,
       enviada_en: null,
@@ -544,7 +545,7 @@ describe('CreateOrderCommandHandler (CQRS + Event Sourcing)', () => {
       estado: 'pagada',
       total_cents: 100,
       comision_cents: 12,
-      moneda: 'C$',
+      moneda: 'NIO',
       items: [],
       direccion_envio: null,
       creado_en: '2026-01-01T00:00:00.000Z',
@@ -654,6 +655,7 @@ describe('Fulfillment y cotizaciones por capacidad', () => {
     margen: 15,
     precio_base: '1000.00',
     precio_venta: '1150.00',
+    moneda: 'NIO',
     stock: 10,
     estado: 'activa',
   };
@@ -884,6 +886,91 @@ describe('Fulfillment y cotizaciones por capacidad', () => {
       'comprador-1',
     );
     expect(vista.total_cents).toBe(115000);
+  });
+
+  it('rechaza una orden que mezcla monedas', async () => {
+    const segunda = {
+      ...ofertaActiva,
+      id: 'oferta-usd',
+      sku: 'USD-001',
+      moneda: 'USD',
+    };
+    const { handler } = crearHandler([ofertaActiva, segunda], 'ok');
+    await expect(
+      handler.ejecutar(
+        {
+          tipo_orden: 'compra',
+          items: [
+            { oferta_id: 'oferta-1', cantidad: 1 },
+            { oferta_id: 'oferta-usd', cantidad: 1 },
+          ],
+        },
+        'comprador-1',
+      ),
+    ).rejects.toMatchObject({ codigo: 'MONEDA_MIXTA' });
+  });
+
+  it('crea el acceso digital sin comprometer stock fisico', async () => {
+    const ofertaDigital = {
+      ...ofertaActiva,
+      id: 'oferta-digital',
+      sku: 'DIG-001',
+      item_type: 'producto',
+      atributos: {
+        entrega_digital_url: 'https://cdn.example.com/curso.pdf',
+        entrega_digital_max_descargas: 2,
+      },
+    };
+    const { handler, pg, fetchMock } = crearHandler(
+      [ofertaDigital],
+      'ok',
+      undefined,
+      false,
+      false,
+      ['fulfillment_digital'],
+    );
+
+    const vista = await handler.ejecutar(
+      {
+        tipo_orden: 'compra',
+        items: [{ oferta_id: 'oferta-digital', cantidad: 1, fulfillment: 'digital' }],
+      },
+      'comprador-1',
+    );
+    expect(vista.items[0]).toMatchObject({ fulfillment: 'digital', sku: 'DIG-001' });
+    expect(fetchMock.mock.calls.some(([url]) => String(url).includes('/internal/items/lote'))).toBe(false);
+
+    const insert = pg.query.mock.calls.find(([sql]) =>
+      String(sql).includes('INSERT INTO orders.entregas_digitales'),
+    );
+    expect(insert?.[1]).toEqual(
+      expect.arrayContaining([
+        'DIG-001',
+        'https://cdn.example.com/curso.pdf',
+        2,
+        'comprador-1',
+      ]),
+    );
+  });
+
+  it('rechaza la entrega digital sin URL configurada', async () => {
+    const ofertaDigital = {
+      ...ofertaActiva,
+      id: 'oferta-digital',
+      sku: 'DIG-002',
+      item_type: 'producto',
+      atributos: {},
+    };
+    const { handler } = crearHandler([ofertaDigital], 'ok');
+    await expect(
+      handler.ejecutar(
+        {
+          tipo_orden: 'compra',
+          items: [{ oferta_id: 'oferta-digital', cantidad: 1, fulfillment: 'digital' }],
+        },
+        'comprador-1',
+      ),
+    ).rejects.toMatchObject({ codigo: 'ENTREGA_DIGITAL_NO_CONFIGURADA' });
   });
 
   it('permite pickup y delivery cuando el tenant tiene ambas capacidades', async () => {

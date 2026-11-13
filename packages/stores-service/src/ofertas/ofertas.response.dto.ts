@@ -46,8 +46,11 @@ export class OfertaResponseDto {
   @ApiProperty({ description: 'Precio base en córdobas con dos decimales', example: '1000.00' })
   precio_base: string;
 
-  @ApiProperty({ description: 'Precio de venta en córdobas con dos decimales', example: '1150.00' })
+  @ApiProperty({ description: 'Precio de venta en la moneda de la oferta', example: '1150.00' })
   precio_venta: string;
+
+  @ApiProperty({ description: 'Moneda ISO de la oferta', example: 'NIO' })
+  moneda: string;
 
   @ApiProperty({ description: 'Stock disponible', example: 10 })
   stock: number;

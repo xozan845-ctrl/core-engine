@@ -44,6 +44,8 @@ export interface OfertaExterna {
   precio_venta: string;
   stock: number;
   estado: string;
+  moneda?: string;
+  atributos?: Record<string, unknown>;
 }
 
 interface LineaAgrupada {
@@ -111,6 +113,8 @@ export class CreateOrderCommandHandler {
     const porId = new Map(ofertas.map((o) => [o.id, o]));
     const preciosPorOferta = await this.resolverPrecios(agrupados, porId, comando);
     const items: ItemOrden[] = [];
+    const urlDigital = new Map<string, string>();
+    let monedaOrden: string | null = null;
     let total = Money.desdeCentavos(0);
     for (const linea of agrupados) {
       const oferta = porId.get(linea.oferta_id);
@@ -118,7 +122,25 @@ export class CreateOrderCommandHandler {
         throw new NotFoundError('Oferta', linea.oferta_id);
       }
       const itemType = oferta.item_type;
+      const monedaOferta = String(oferta.moneda ?? 'NIO').toUpperCase();
+      if (monedaOrden && monedaOrden !== monedaOferta) {
+        throw new DomainError(
+          'MONEDA_MIXTA',
+          'Una orden no puede mezclar ofertas en monedas distintas.',
+        );
+      }
+      monedaOrden = monedaOferta;
       const fulfillment = this.validarFulfillment(linea.fulfillment, tipoOrden, itemType);
+      if (fulfillment === 'digital') {
+        const url = this.urlEntregaDigital(oferta.atributos);
+        if (!url) {
+          throw new DomainError(
+            'ENTREGA_DIGITAL_NO_CONFIGURADA',
+            'El item digital no tiene configurada su URL de entrega.',
+          );
+        }
+        urlDigital.set(oferta.id, url);
+      }
       let precioUnitario = Money.parsear(oferta.precio_venta);
       const resuelto = preciosPorOferta.get(oferta.id);
       // La lista o escala sustituye el precio base; el margen del vendedor se
@@ -239,6 +261,24 @@ export class CreateOrderCommandHandler {
       }
     }
 
+    const entregasDigitales = esCotizacion
+      ? []
+      : items
+          .filter((item) => item.fulfillment === 'digital')
+          .map((item) => ({
+            empresa_id: item.empresa_id,
+            item_id: item.item_id,
+            sku: item.sku,
+            comprador_id: clienteId,
+            cliente_parte_id: comando.cliente_parte_id ?? null,
+            recurso_url: urlDigital.get(item.oferta_id) as string,
+            token: randomUUID(),
+            max_descargas: this.maxDescargasDigital(
+              porId.get(item.oferta_id)?.atributos,
+            ),
+            expira_en: this.expiraDigital(porId.get(item.oferta_id)?.atributos),
+          }));
+
     // 4. transaccion: evento + outbox (proyecciones via trigger en orders.eventos)
     try {
       await this.pg.transaccion(async (client) => {
@@ -264,6 +304,7 @@ export class CreateOrderCommandHandler {
           ...(comando.cliente_parte_id ? { cliente_parte_id: comando.cliente_parte_id } : {}),
           items,
           total_cents: total.centavos,
+          moneda: monedaOrden ?? 'NIO',
           estado: 'creada',
           tipo_orden: tipoOrden,
           metodo_pago: metodoPago,
@@ -276,6 +317,27 @@ export class CreateOrderCommandHandler {
          VALUES ($1, $2, $3, 'pendiente', NOW())`,
         [evento.event_id, evento.tipo, JSON.stringify(evento)],
       );
+      for (const entrega of entregasDigitales) {
+        await client.query(
+          `INSERT INTO orders.entregas_digitales
+             (empresa_id, order_id, item_id, sku, comprador_id, cliente_parte_id,
+              token, recurso_url, max_descargas, expira_en)
+           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+           ON CONFLICT (order_id, item_id) DO NOTHING`,
+          [
+            entrega.empresa_id,
+            orderId,
+            entrega.item_id,
+            entrega.sku,
+            entrega.comprador_id,
+            entrega.cliente_parte_id,
+            entrega.token,
+            entrega.recurso_url,
+            entrega.max_descargas,
+            entrega.expira_en,
+          ],
+        );
+      }
       // checkout desde el carrito: se vacia en la misma transaccion (RN-05)
       if (desdeCarrito) {
         await this.carritos.vaciarEnTransaccion(client, clienteId);
@@ -297,7 +359,7 @@ export class CreateOrderCommandHandler {
       estado: 'creada',
       total_cents: total.centavos,
       comision_cents: esCotizacion ? 0 : total.comision(0.12).centavos,
-      moneda: 'C$',
+      moneda: monedaOrden ?? 'NIO',
       items,
       direccion_envio: null,
       creado_en: creadoEn,
@@ -453,6 +515,25 @@ export class CreateOrderCommandHandler {
     return resultado;
   }
 
+  private urlEntregaDigital(atributos?: Record<string, unknown>): string | null {
+    const valor = atributos?.entrega_digital_url;
+    if (typeof valor !== 'string') return null;
+    const url = valor.trim();
+    if (!/^(https?:\/\/|\/)/.test(url) || url.length > 2048) return null;
+    return url;
+  }
+
+  private maxDescargasDigital(atributos?: Record<string, unknown>): number | null {
+    const valor = Number(atributos?.entrega_digital_max_descargas);
+    return Number.isInteger(valor) && valor >= 1 ? valor : null;
+  }
+
+  private expiraDigital(atributos?: Record<string, unknown>): string | null {
+    const dias = Number(atributos?.entrega_digital_expira_dias);
+    if (!Number.isInteger(dias) || dias < 1) return null;
+    return new Date(Date.now() + dias * 86_400_000).toISOString();
+  }
+
   private validarTipoOrden(valor: string): TipoOrden {
     if (!valor) {
       throw new DomainError('TIPO_ORDEN_REQUERIDO', 'El tipo de orden es obligatorio.');
@@ -511,6 +592,7 @@ export class CreateOrderCommandHandler {
       if (item.fulfillment === 'delivery') requeridas.add('fulfillment_delivery');
       if (item.fulfillment === 'pickup') requeridas.add('fulfillment_pickup');
       if (item.fulfillment === 'onsite') requeridas.add('fulfillment_onsite');
+      if (item.fulfillment === 'digital') requeridas.add('fulfillment_digital');
     }
     if (requeridas.size === 0) return;
     const empresas = [...new Set(items.map((item) => item.empresa_id))];
@@ -548,7 +630,9 @@ export class CreateOrderCommandHandler {
   /** Consulta sincrona de stock al catalogo (lecturas por REST, sec. 3.2). */
   private async verificarStock(items: ItemOrden[]): Promise<void> {
     try {
-      const productosConStock = items.filter((item) => item.item_type === 'producto');
+      const productosConStock = items.filter(
+        (item) => item.item_type === 'producto' && item.fulfillment !== 'digital',
+      );
       if (productosConStock.length === 0) return;
       const skus = [...new Set(productosConStock.map((i) => i.sku))];
       const res = await fetch(

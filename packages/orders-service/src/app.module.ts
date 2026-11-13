@@ -1,4 +1,5 @@
 import { Module } from '@nestjs/common';
+import { ScheduleModule } from '@nestjs/schedule';
 import {
   PgModule,
   RabbitModule,
@@ -10,7 +11,7 @@ import { PedidosConsumer } from './pedidos/pedidos.consumer';
 import { InternoController } from './pedidos/interno.controller';
 
 @Module({
-  imports: [PgModule, RabbitModule, OutboxModule, MetricsModule, PedidosModule],
+  imports: [ScheduleModule.forRoot(), PgModule, RabbitModule, OutboxModule, MetricsModule, PedidosModule],
   providers: [PedidosConsumer],
   controllers: [InternoController],
 })
