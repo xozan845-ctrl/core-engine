@@ -145,9 +145,19 @@ jobs:
         run: npm run multi-vertical:check
 
   rust:
-    name: Rust (scheduling-service)
+    name: Rust (${{ matrix.service }})
     runs-on: ubuntu-24.04
     needs: security-gate
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - service: scheduling-service
+            lines: 71
+            functions: 65
+          - service: notifications-service
+            lines: 74
+            functions: 74
     env:
       TZ: America/Managua
       TEST_DATABASE_URL: postgres://core_engine_test:test_only@127.0.0.1:5432/core_engine_test
@@ -173,19 +183,19 @@ jobs:
           components: rustfmt, clippy
       - uses: Swatinem/rust-cache@v2
         with:
-          workspaces: packages/scheduling-service
+          workspaces: packages/${{ matrix.service }}
       - uses: taiki-e/install-action@cargo-llvm-cov
       - name: rustfmt
-        working-directory: packages/scheduling-service
+        working-directory: packages/${{ matrix.service }}
         run: cargo fmt --check
       - name: clippy
-        working-directory: packages/scheduling-service
+        working-directory: packages/${{ matrix.service }}
         run: cargo clippy --locked --all-targets -- -D warnings
       - name: tests + cobertura
-        working-directory: packages/scheduling-service
+        working-directory: packages/${{ matrix.service }}
         run: >-
           cargo llvm-cov --locked --ignore-filename-regex 'src/main\.rs'
-          --fail-under-lines 71 --fail-under-functions 65
+          --fail-under-lines ${{ matrix.lines }} --fail-under-functions ${{ matrix.functions }}
 
   build:
     name: Build all services

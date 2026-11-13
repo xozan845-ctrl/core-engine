@@ -559,7 +559,14 @@ export class CreateOrderCommandHandler {
         },
       );
       if (!res.ok) return;
-      const productos = (await res.json()) as { empresa_id: string; sku: string; stock: number; estado: string }[];
+      const productos = (await res.json()) as {
+        empresa_id: string;
+        sku: string;
+        stock: number;
+        track_serial: boolean;
+        seriales_disponibles: number;
+        estado: string;
+      }[];
       // ADR-27: el SKU se repite entre empresas; la clave es (empresa, SKU).
       const porClave = new Map(
         productos.map((p) => [`${p.empresa_id}:${p.sku.toLowerCase()}`, p]),
@@ -568,7 +575,10 @@ export class CreateOrderCommandHandler {
         const producto = porClave.get(
           `${item.empresa_id}:${item.sku.toLowerCase()}`,
         );
-        if (!producto || producto.stock < item.cantidad) {
+        const disponible = producto?.track_serial
+          ? Math.min(producto.stock, producto.seriales_disponibles)
+          : producto?.stock ?? 0;
+        if (!producto || disponible < item.cantidad) {
           throw new ConflictError(
             'Stock insuficiente (RN-03): se rechaza la orden.',
             { sku: item.sku, cantidad_solicitada: item.cantidad },
