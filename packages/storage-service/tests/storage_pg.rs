@@ -126,12 +126,12 @@ async fn debe_gestionar_buckets_objetos_cuotas_y_publicos() {
         return;
     };
     let pool = PgPool::connect(&url).await.expect("postgres");
-    sqlx::raw_sql(include_str!("../../../../infra/db/init/09_storage.sql"))
+    sqlx::raw_sql(include_str!("../../../infra/db/init/09_storage.sql"))
         .execute(&pool)
         .await
         .expect("migracion storage");
     sqlx::raw_sql(include_str!(
-        "../../../../infra/db/init/09a_storage_publico.sql"
+        "../../../infra/db/init/09a_storage_publico.sql"
     ))
     .execute(&pool)
     .await
