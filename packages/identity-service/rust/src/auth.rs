@@ -15,10 +15,21 @@ pub const ROLES: [&str; 9] = [
     "empresario",
     "vendedor",
     "comprador",
+    "logistica",
     "coordinador",
     "supervisor",
     "operativo",
-    "personal",
+];
+
+pub const ROLES_REGISTRABLES: [&str; 2] = ["empresario", "comprador"];
+
+pub const ROLES_LOGISTICA: [&str; 6] = [
+    "empresario",
+    "admin",
+    "logistica",
+    "coordinador",
+    "supervisor",
+    "operativo",
 ];
 
 pub const BCRYPT_COST: u32 = 10;
@@ -201,15 +212,20 @@ pub fn verificar_contrasena(contrasena: &str, hash: &str) -> bool {
 }
 
 /// Contexto que el gateway inyecta en `x-user-*` (R-GW-3).
-#[derive(Debug, Clone, PartialEq, Eq, Default)]
+#[derive(Debug, Clone, PartialEq, Eq, Default, serde::Serialize)]
 pub struct UsuarioContexto {
     pub user_id: String,
     pub email: String,
     pub rol: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub nombre: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub tenant_id: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub personal_id: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub participacion_porcentaje: Option<i64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub rol_empresa_id: Option<String>,
 }
 
@@ -225,6 +241,9 @@ impl UsuarioContexto {
         };
         let user_id = leer("x-user-id")?;
         let rol = leer("x-user-rol")?;
+        if !es_rol(&rol) {
+            return None;
+        }
         Some(Self {
             user_id,
             email: leer("x-user-email").unwrap_or_default(),
@@ -236,6 +255,36 @@ impl UsuarioContexto {
                 .and_then(|valor| valor.parse::<i64>().ok()),
             rol_empresa_id: leer("x-user-rol-empresa"),
         })
+    }
+
+    pub fn desde_headers_o_error(headers: &HeaderMap) -> Result<Self, ApiError> {
+        Self::desde_headers(headers)
+            .ok_or_else(|| ApiError::no_autorizado("Token invalido o ausente."))
+    }
+
+    /// Equivalente a `RolesGuard`: exige rol permitido salvo que el usuario
+    /// tenga un rol configurable con permisos declarados.
+    pub fn exigir_roles(&self, roles: &[&str], permisos: &[&str]) -> Result<(), ApiError> {
+        if roles.contains(&self.rol.as_str()) {
+            return Ok(());
+        }
+        if self.rol_empresa_id.is_some() && !permisos.is_empty() {
+            return Ok(());
+        }
+        Err(ApiError::acceso_denegado(format!(
+            "Rol \"{}\" no tiene acceso a este recurso.",
+            self.rol
+        )))
+    }
+
+    pub fn es_admin_global(&self) -> bool {
+        matches!(self.rol.as_str(), "super_admin" | "admin")
+    }
+
+    pub fn tenant(&self) -> Result<&str, ApiError> {
+        self.tenant_id
+            .as_deref()
+            .ok_or_else(|| ApiError::dominio("TENANT_REQUERIDO", "Se requiere una empresa activa."))
     }
 }
 

@@ -32,6 +32,12 @@ pub struct Config {
     pub internal_api_key: Option<String>,
     pub admin_email: String,
     pub admin_password: String,
+    pub email_mode: String,
+    pub email_from: Option<String>,
+    pub smtp_host: Option<String>,
+    pub smtp_port: u16,
+    pub smtp_user: Option<String>,
+    pub smtp_password: Option<String>,
 }
 
 impl Config {
@@ -94,6 +100,21 @@ impl Config {
             internal_api_key: leer("INTERNAL_API_KEY"),
             admin_email: requerido_en_produccion("ADMIN_EMAIL", ADMIN_EMAIL_DEFAULT)?,
             admin_password: requerido_en_produccion("ADMIN_PASSWORD", ADMIN_PASSWORD_DEFAULT)?,
+            email_mode: leer("EMAIL_MODE")
+                .unwrap_or_else(|| "log".to_string())
+                .to_lowercase(),
+            email_from: leer("EMAIL_FROM"),
+            smtp_host: leer("SMTP_HOST"),
+            smtp_port: match leer("SMTP_PORT") {
+                Some(valor) => valor
+                    .parse::<u16>()
+                    .ok()
+                    .filter(|puerto| *puerto > 0)
+                    .ok_or(ConfigError::Invalida("SMTP_PORT", valor))?,
+                None => 587,
+            },
+            smtp_user: leer("SMTP_USER"),
+            smtp_password: leer("SMTP_PASSWORD"),
         })
     }
 
@@ -101,6 +122,23 @@ impl Config {
     pub fn validar_arranque(&self) -> Result<(), ConfigError> {
         if self.database_url.is_none() {
             return Err(ConfigError::Faltante("DATABASE_URL"));
+        }
+        if self.email_mode != "log" && self.email_mode != "smtp" {
+            return Err(ConfigError::Invalida("EMAIL_MODE", self.email_mode.clone()));
+        }
+        if self.email_mode == "smtp" {
+            if self.smtp_host.is_none() {
+                return Err(ConfigError::Faltante("SMTP_HOST"));
+            }
+            if self.email_from.is_none() {
+                return Err(ConfigError::Faltante("EMAIL_FROM"));
+            }
+            if self.smtp_user.is_some() != self.smtp_password.is_some() {
+                return Err(ConfigError::Invalida(
+                    "SMTP_USER",
+                    "SMTP_USER y SMTP_PASSWORD deben configurarse juntos.".to_string(),
+                ));
+            }
         }
         Ok(())
     }
@@ -192,6 +230,29 @@ mod tests {
         assert_eq!(
             config.validar_arranque(),
             Err(ConfigError::Faltante("DATABASE_URL"))
+        );
+    }
+
+    #[test]
+    fn debe_exigir_configuracion_smtp_completa() {
+        let config = Config::from_pairs([
+            ("DATABASE_URL", "postgres://localhost/core"),
+            ("EMAIL_MODE", "smtp"),
+        ])
+        .expect("config");
+        assert_eq!(
+            config.validar_arranque(),
+            Err(ConfigError::Faltante("SMTP_HOST"))
+        );
+
+        let config = Config::from_pairs([
+            ("DATABASE_URL", "postgres://localhost/core"),
+            ("EMAIL_MODE", "invalido"),
+        ])
+        .expect("config");
+        assert_eq!(
+            config.validar_arranque(),
+            Err(ConfigError::Invalida("EMAIL_MODE", "invalido".to_string()))
         );
     }
 
