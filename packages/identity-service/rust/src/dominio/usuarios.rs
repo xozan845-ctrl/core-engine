@@ -512,3 +512,94 @@ mod tests {
         assert!(roles.contains(&"comprador"));
     }
 }
+
+/// Alta de vendedor dentro de una empresa (usada por empresas y personal).
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct CrearVendedor {
+    pub nombre: String,
+    pub correo: String,
+    pub contrasena: String,
+    pub empresa_id: String,
+    pub participacion_porcentaje: i32,
+}
+
+impl Usuarios {
+    pub async fn crear_vendedor_en_empresa(
+        &self,
+        datos: CrearVendedor,
+    ) -> Result<Usuario, ApiError> {
+        let correo = datos.correo.trim().to_lowercase();
+        if !correo_valido(&correo) {
+            return Err(ApiError::dominio(
+                "CORREO_INVALIDO",
+                "El correo no tiene un formato valido.",
+            ));
+        }
+        if datos.contrasena.chars().count() < 8 {
+            return Err(ApiError::dominio(
+                "CONTRASENA_DEBIL",
+                "La contrasena debe tener al menos 8 caracteres.",
+            ));
+        }
+        if !(0..=100).contains(&datos.participacion_porcentaje) {
+            return Err(ApiError::dominio(
+                "PARTICIPACION_INVALIDA",
+                "La participacion debe estar entre 0 y 100.",
+            ));
+        }
+        let hash = hash_contrasena(&datos.contrasena)?;
+        let mut tx = self.db.transaccion().await.map_err(interno)?;
+        let existente =
+            sqlx::query("SELECT 1 FROM identity.usuarios WHERE LOWER(correo) = LOWER($1)")
+                .bind(&correo)
+                .fetch_optional(&mut *tx)
+                .await
+                .map_err(interno)?;
+        if existente.is_some() {
+            return Err(ApiError::conflicto("Ya existe una cuenta con ese correo."));
+        }
+        let fila = sqlx::query(
+            "INSERT INTO identity.usuarios
+               (nombre, correo, contrasena_hash, rol, tenant_id, participacion_porcentaje)
+             VALUES ($1, $2, $3, 'vendedor', $4::uuid, $5)
+             RETURNING id",
+        )
+        .bind(datos.nombre.trim())
+        .bind(&correo)
+        .bind(hash)
+        .bind(&datos.empresa_id)
+        .bind(datos.participacion_porcentaje)
+        .fetch_one(&mut *tx)
+        .await
+        .map_err(interno)?;
+        let id: uuid::Uuid = fila.try_get("id").map_err(interno)?;
+        sqlx::query(
+            "INSERT INTO identity.roles_empresa
+               (empresa_id, codigo, nombre, permisos, creado_por)
+             VALUES ($1::uuid, 'vendedor', 'Vendedor', '{}'::jsonb, $2::uuid)
+             ON CONFLICT (empresa_id, codigo) DO NOTHING",
+        )
+        .bind(&datos.empresa_id)
+        .bind(id.to_string())
+        .execute(&mut *tx)
+        .await
+        .map_err(interno)?;
+        sqlx::query(
+            "INSERT INTO identity.asignaciones_personal
+               (empresa_id, usuario_id, rol_empresa_id, participacion_porcentaje, estado, creado_por)
+             SELECT $1::uuid, $2::uuid, r.id, $3, 'activa', $2::uuid
+               FROM identity.roles_empresa r
+              WHERE r.empresa_id = $1::uuid AND r.codigo = 'vendedor'",
+        )
+        .bind(&datos.empresa_id)
+        .bind(id.to_string())
+        .bind(datos.participacion_porcentaje)
+        .execute(&mut *tx)
+        .await
+        .map_err(interno)?;
+        tx.commit().await.map_err(interno)?;
+        self.encontrar_por_id(&id.to_string())
+            .await?
+            .ok_or_else(ApiError::interno)
+    }
+}
