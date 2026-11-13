@@ -43,6 +43,7 @@ let operaciones;
 const empresaId = randomUUID();
 const componenteId = randomUUID();
 const comboId = randomUUID();
+let habiaCombos = false;
 
 async function aplicar(nombre) {
   const sql = await readFile(new URL(`../../infra/db/init/${nombre}`, import.meta.url), 'utf8');
@@ -94,6 +95,7 @@ before(async () => {
     const { rows: [{ existe: hayCombos }] } = await client.query(
       `SELECT to_regclass('catalog.combos') IS NOT NULL AS existe`,
     );
+    habiaCombos = hayCombos;
     if (hayCombos) {
       await client.query(
         `INSERT INTO catalog.combos
@@ -146,15 +148,17 @@ test('migra combos a items + BOM y mantiene el contrato de la API', { concurrenc
     );
     assert.equal(existe, false, 'catalog.combos debe haberse retirado');
 
-    const legado = await operaciones.obtenerCombo(comboId, empresaId);
-    assert.ok(legado);
-    assert.equal(legado.sku, 'COMBO-01');
-    assert.equal(legado.costo_total, '10.00');
-    assert.equal(legado.componentes.length, 1);
-    assert.equal(legado.componentes[0].item_id, componenteId);
+    if (habiaCombos) {
+      const legado = await operaciones.obtenerCombo(comboId, empresaId);
+      assert.ok(legado);
+      assert.equal(legado.sku, 'COMBO-01');
+      assert.equal(legado.costo_total, '10.00');
+      assert.equal(legado.componentes.length, 1);
+      assert.equal(legado.componentes[0].item_id, componenteId);
 
-    const pagina = await operaciones.listarCombos(empresaId, { q: 'combo' });
-    assert.equal(pagina.total, 1);
+      const pagina = await operaciones.listarCombos(empresaId, { q: 'combo' });
+      assert.equal(pagina.total, 1);
+    }
 
     const creado = await operaciones.crearCombo(empresaId, {
       sku: 'COMBO-02',
