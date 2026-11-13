@@ -63,13 +63,6 @@ const SIEMPRE = [
   '57_orders_metodo_pago.sql',
 ];
 
-const rabbit = {
-  declararColas: async () => {},
-  consumir: async () => {},
-  activarReintento: () => {},
-  publicar: async () => true,
-};
-
 let client;
 let pgService;
 
