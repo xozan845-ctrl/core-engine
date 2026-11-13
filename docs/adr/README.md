@@ -22,6 +22,7 @@ este índice evita mezclar las decisiones nuevas con las ADR históricas.
 | [0011](./0011-stores-service-en-rust.md) | Aceptado (en curso) | Reescribir `stores-service` en Rust con paridad de contrato, tiendas, ofertas, tema y métricas |
 | [0012](./0012-storage-service-en-rust.md) | Aceptado (en curso) | Reescribir `storage-service` en Rust con paridad de contrato, S3/MinIO, cuotas, media pública y eventos |
 | [0013](./0013-orders-service-en-rust.md) | Aceptado (en curso) | Reescribir `orders-service` en Rust con paridad de contrato, CQRS, Event Sourcing, carrito, contratos, suscripciones y salón |
+| [0014](./0014-finance-service-en-rust.md) | Aceptado (en curso) | Reescribir `finance-service` en Rust con paridad de contrato, contabilidad, tributación, facturación y métricas |
 
 ## Convención
 
