@@ -1,7 +1,8 @@
 # ADR-0011: Reescritura de `stores-service` en Rust sin cambio de contrato
 
 - **Fecha**: 2026-11-13
-- **Estado**: Aceptado — implementación en curso
+- **Estado**: Aceptado — implementación completa; smoke de `staging` pendiente
+  en la primera promoción de la imagen
 - **Ámbito**: `stores-service` (HTTP público e interno, PostgreSQL/RLS,
   RabbitMQ, herencia de tema y validación contra `storage`/`catalog`)
 - **Referencias**: [ADR-0002](./0002-envelope-y-desacoplamiento.md),
@@ -132,7 +133,15 @@ RabbitMQ + capacidades ya validado en ADR-0006/ADR-0010.
 - OpenAPI, salud, métricas y rutas internas conservan el contrato.
 - Smoke de `staging` verde en la primera promoción.
 
-## Estado de implementación
+## Estado de implementación (2026-11-13)
 
-En curso. El detalle de commits y verificaciones se registra en el PR final de
-la migración.
+- Crate completo en `packages/stores-service/` con 85 pruebas (77 unitarias, 6
+  PostgreSQL y 2 HTTP).
+- TypeScript retirado; el servicio entra en `RUST_SERVICES` y su gate pasa al
+  job `rust` de CI con cobertura 76/76 (medida: 77,74 % líneas / 77,61 %
+  funciones).
+- Consumidor `stores.stock` con idempotencia por `event_id`, DLQ y reintentos;
+  imagen Docker multi-stage equivalente (puerto 3003).
+- Paridad verificada contra el servicio TypeScript sobre la base de datos de
+  desarrollo para lectura y escritura (tienda, slug, fondos, personalización,
+  contenido, oferta y asignación de vendedor).
