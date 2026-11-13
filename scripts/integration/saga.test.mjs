@@ -15,10 +15,12 @@ import pg from 'pg';
  * servicio es la fuente de verdad del paso anterior, así que la prueba verifica
  * la coreografía y la persistencia, no el transporte AMQP (eso queda en E2E).
  *
- * `commissions-service` ya no tiene consumidor TypeScript (ADR-0007): su
- * acreditación se cubre en `packages/commissions-service/tests/comisiones_pg.rs`
- * y en el E2E con el binario Rust. Aquí se inyecta un `comision.acreditada`
- * realista para mantener la pata de finance.
+ * `commissions-service` (ADR-0007) y `logistics-service` (ADR-0010) ya no
+ * tienen consumidor TypeScript: su acreditación y sus guías/flotas se cubren en
+ * `packages/commissions-service/tests/comisiones_pg.rs`,
+ * `packages/logistics-service/tests/envios_pg.rs` y en el E2E con los binarios
+ * Rust. Aquí se inyectan los eventos realistas para mantener las patas de
+ * finance.
  */
 
 const connectionString = process.env.TEST_DATABASE_URL;
@@ -72,7 +74,6 @@ let pgService;
 let handler;
 let catalogConsumer;
 let ordersConsumer;
-let logisticsConsumer;
 let financeConsumer;
 
 let empresaId;
@@ -188,14 +189,6 @@ async function eventoDe(tabla, tipo, orderId) {
   return rows[0].payload;
 }
 
-async function eventosDe(tabla, tipo) {
-  const { rows } = await client.query(
-    `SELECT payload FROM ${tabla} WHERE tipo = $1 ORDER BY creado_en ASC`,
-    [tipo],
-  );
-  return rows.map((fila) => fila.payload);
-}
-
 async function crearItem(codigo, stock) {
   const { rows: [fila] } = await client.query(
     `INSERT INTO catalog.items
@@ -235,7 +228,6 @@ before(async () => {
   await pgService.onModuleInit();
 
   const outboxCatalog = new OutboxService(pgService, rabbit, 'catalog.outbox');
-  const outboxLogistics = new OutboxService(pgService, rabbit, 'logistics.outbox');
   const outboxFinance = new OutboxService(pgService, rabbit, 'finance.outbox');
 
   const [
@@ -246,8 +238,6 @@ before(async () => {
     { PedidosConsumer: OrdersConsumer },
     { ProductosService },
     { PedidosConsumer: CatalogConsumer },
-    { EnviosService },
-    { PedidosConsumer: LogisticsConsumer },
     { EventsConsumer: FinanceConsumer },
     { ContabilidadService },
     { MetricasService },
@@ -259,8 +249,6 @@ before(async () => {
     import('../../packages/orders-service/dist/pedidos/pedidos.consumer.js'),
     import('../../packages/catalog-service/dist/productos/productos.service.js'),
     import('../../packages/catalog-service/dist/eventos/pedidos.consumer.js'),
-    import('../../packages/logistics-service/dist/envios/envios.service.js'),
-    import('../../packages/logistics-service/dist/envios/pedidos.consumer.js'),
     import('../../packages/finance-service/dist/eventos/events.consumer.js'),
     import('../../packages/finance-service/dist/contabilidad/contabilidad.service.js'),
     import('../../packages/finance-service/dist/eventos/metricas.service.js'),
@@ -279,12 +267,6 @@ before(async () => {
     new ProductosService(pgService, outboxCatalog),
   );
   ordersConsumer = new OrdersConsumer(rabbit, pgService, handler);
-  logisticsConsumer = new LogisticsConsumer(
-    rabbit,
-    outboxLogistics,
-    pgService,
-    new EnviosService(pgService),
-  );
   financeConsumer = new FinanceConsumer(
     rabbit,
     pgService,
@@ -342,18 +324,11 @@ test('saga completa: orden → stock → pago → envío → comisión → asien
   assert.equal(pagada.total_cents, 115000);
   const payment = await eventoDe('orders.outbox', 'payment.procesado');
 
-  // 3. pago → logistics (envío), commissions (pago) y finance (asiento de caja)
-  await logisticsConsumer['manejar'](payment);
+  // 3. pago → finance (asiento de caja). Las patas de logistics y commissions
+  // las producen sus binarios Rust (ADR-0007/ADR-0010) y se cubren en sus
+  // pruebas PostgreSQL; la saga mantiene las patas TS de finance.
   await financeConsumer['manejar'](orderCreated);
   await financeConsumer['manejar'](payment);
-
-  const { rows: envios } = await client.query(
-    'SELECT guia, estado FROM logistics.envios WHERE order_id = $1',
-    [orden.id],
-  );
-  assert.equal(envios.length, 1, 'logistics debe crear un envío');
-  assert.equal(envios[0].estado, 'en_preparacion');
-  assert.match(envios[0].guia, /^BGH-/);
 
   const { rows: asientosPago } = await client.query(
     'SELECT id FROM finance.asientos WHERE referencia_id = $1',
@@ -361,7 +336,8 @@ test('saga completa: orden → stock → pago → envío → comisión → asien
   );
   assert.equal(asientosPago.length, 1, 'finance debe registrar el asiento del pago');
 
-  // 4. ciclo de vida: logistics consume cada transición y publica order.completado
+  // 4. ciclo de vida: el binario Rust consume cada transición y publica
+  // order.completado; aquí se inyecta el evento resultante para commissions.
   for (const [estado, motivo] of [
     ['en_preparacion', 'bodega alista'],
     ['enviada', 'guía generada'],
@@ -369,10 +345,12 @@ test('saga completa: orden → stock → pago → envío → comisión → asien
   ]) {
     await handler.transicionar(orden.id, estado, motivo, 'sistema');
   }
-  for (const evento of await eventosDe('orders.outbox', 'order.status.updated')) {
-    await logisticsConsumer['manejar'](evento);
-  }
-  const orderCompletado = await eventoDe('logistics.outbox', 'order.completado');
+  const orderCompletado = {
+    event_id: randomUUID(),
+    tipo: 'order.completado',
+    ocurrido_en: new Date().toISOString(),
+    data: { order_id: orden.id, entregado_en: new Date().toISOString() },
+  };
 
   // 5. order.completado lo produce logistics; la comisión la acredita el
   // servicio Rust (ADR-0007). Se inyecta el evento resultante para finance.
