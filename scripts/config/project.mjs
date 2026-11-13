@@ -68,6 +68,7 @@ export const SERVICE_TEST_EXCEPTIONS = [];
  * (ADR-0004, ADR-0006, ADR-0008, ADR-0010, ADR-0014 y docs/rules/test/06-estandares-cobertura.md).
  */
 export const RUST_SERVICES = [
+  'api-gateway',
   'scheduling-service',
   'notifications-service',
   'commissions-service',

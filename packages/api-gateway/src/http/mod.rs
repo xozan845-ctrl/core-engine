@@ -18,7 +18,7 @@ use serde_json::json;
 use std::time::{Duration, Instant};
 use uuid::Uuid;
 
-const OPENAPI: &str = include_str!("../../../../../docs/api/core-engine.openapi.json");
+const OPENAPI: &str = include_str!("../../../../docs/api/core-engine.openapi.json");
 
 const DOCS_HTML: &str = r#"<!doctype html>
 <html lang="es">

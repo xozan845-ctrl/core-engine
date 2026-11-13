@@ -104,13 +104,10 @@ services:
     <<: *servicio-base
     build:
       context: .
-      dockerfile: Dockerfile
-      args:
-        SERVICIO: api-gateway
+      dockerfile: packages/api-gateway/Dockerfile
     environment:
       SERVICIO: api-gateway
       PORT: 8080
-      OUTBOX_TABLA: identity.outbox
       # En desarrollo el diagnostico (/docs, /metrics) va abierto; en stage/prod
       # el borde lo cierra (DIAGNOSTICOS_PUBLICOS=false por defecto).
       DIAGNOSTICOS_PUBLICOS: "true"

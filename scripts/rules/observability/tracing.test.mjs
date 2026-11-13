@@ -37,18 +37,22 @@ export default defineSuite({
     });
 
     test('R-OB-2: el gateway crea, devuelve y propaga x-request-id por HTTP', () => {
-      const middleware = readText(
-        join(packagesRoot, 'api-gateway', 'src', 'proxy', 'pasarela.middleware.ts'),
+      const http = readText(join(packagesRoot, 'api-gateway', 'src', 'http', 'mod.rs'));
+      const proxy = readText(join(packagesRoot, 'api-gateway', 'src', 'proxy.rs'));
+      assert.match(http, /Uuid::new_v4\(\)/, 'el gateway no genera el ID');
+      assert.match(
+        http,
+        /request\.headers_mut\(\)\.insert\("x-request-id"/,
+        'el gateway no inyecta el ID en la petición',
       );
-      const proxy = readText(
-        join(packagesRoot, 'api-gateway', 'src', 'proxy', 'proxy.service.ts'),
+      assert.match(
+        http,
+        /response\.headers_mut\(\)\.insert\("x-request-id"/,
+        'el gateway no devuelve el ID al cliente',
       );
-      assert.match(middleware, /\?\?\s*randomUUID\(\)/, 'el gateway no genera el ID');
-      assert.match(middleware, /req\.headers\[['"]x-request-id['"]\]\s*=\s*request_id/);
-      assert.match(middleware, /res\.setHeader\(['"]x-request-id['"],\s*request_id\)/);
       assert.match(
         proxy,
-        /['"]x-request-id['"]:\s*\(req\.headers\[['"]x-request-id['"]\]/,
+        /headers\.insert\("x-request-id"/,
         'el proxy no reenvía el ID al servicio destino',
       );
     });
