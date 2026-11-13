@@ -16,7 +16,6 @@ import { pathToFileURL } from 'node:url';
 import { repoRoot as raiz } from '../engine/lib/paths.mjs';
 
 const dirSpecs = resolve(raiz, 'docs/openapi');
-const salidaGateway = resolve(raiz, 'packages/api-gateway/src/openapi.agregado.ts');
 const salidaPublica = resolve(raiz, 'docs/api/core-engine.openapi.json');
 const salidaInterna = resolve(raiz, 'docs/api/core-engine.internal.openapi.json');
 
@@ -197,16 +196,6 @@ export function construirDocumentos(especificaciones) {
 
 /** Escribe los artefactos generados. */
 export function escribirDocumentos(documentos) {
-  const cabecera = `/**
- * GENERADO por scripts/tools/swagger-aggregate.mjs — NO editar a mano.
- * Fuente: docs/openapi/<servicio>/{public,internal}.openapi.json (npm run swagger:export). Verifica: gate G-8.
- */
-import type { OpenAPIObject } from '@nestjs/swagger';
-
-export const OPENAPI_AGREGADO = `;
-
-  writeFileSync(salidaGateway, `${cabecera}${JSON.stringify(documentos.publica, null, 2)} as unknown as OpenAPIObject;\n`);
-
   mkdirSync(resolve(raiz, 'docs/api'), { recursive: true });
   writeFileSync(salidaPublica, `${JSON.stringify(documentos.publica, null, 2)}\n`);
   writeFileSync(salidaInterna, `${JSON.stringify(documentos.interna, null, 2)}\n`);
@@ -227,8 +216,8 @@ export function main() {
       `swagger-aggregate: ${especificaciones.length} specs -> ` +
         `pública ${rutas(documentos.publica)} rutas/${operaciones(documentos.publica)} ops, ` +
         `interna ${rutas(documentos.interna)} rutas/${operaciones(documentos.interna)} ops -> ` +
-        `${salidaGateway.replace(`${raiz}/`, '')} (+ ${salidaPublica.replace(`${raiz}/`, '')}, ` +
-        `${salidaInterna.replace(`${raiz}/`, '')})`,
+        `${salidaPublica.replace(`${raiz}/`, '')}, ` +
+        `${salidaInterna.replace(`${raiz}/`, '')}`,
     );
     return 0;
   } catch (err) {
