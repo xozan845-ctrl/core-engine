@@ -4,11 +4,13 @@ use std::sync::Arc;
 use stores_service::auth::CapacidadesHttp;
 use stores_service::clients::{CatalogoHttp, ObjetosStorageHttp, TemasIdentityHttp};
 use stores_service::config::Config;
+use stores_service::consumidor::{cola, handler_consumidor, StockConsumer};
 use stores_service::db::Db;
 use stores_service::http::build_router;
 use stores_service::logs::{ejecutar_con_contexto, ContextoCorrelacion};
 use stores_service::metrics::Metrics;
 use stores_service::ofertas::Ofertas;
+use stores_service::rabbit::Rabbit;
 use stores_service::state::AppState;
 use stores_service::tiendas::Tiendas;
 
@@ -64,6 +66,18 @@ async fn main() {
         config.internal_request_timeout_ms,
     ));
 
+    let rabbit = Arc::new(Rabbit::nueva(
+        config.rabbitmq_url.as_deref().unwrap_or_default(),
+    ));
+    if let Err(error) = rabbit.conectar().await {
+        eprintln!("No se pudo conectar a RabbitMQ: {error}");
+        std::process::exit(1);
+    }
+    if rabbit.declarar_colas(vec![cola()]).await.is_err() {
+        eprintln!("No se pudo declarar la cola stores.stock");
+        std::process::exit(1);
+    }
+
     let tiendas = Arc::new(Tiendas::nueva(
         Arc::clone(&db),
         Arc::clone(&temas) as Arc<dyn stores_service::clients::TemasIdentity>,
@@ -73,6 +87,13 @@ async fn main() {
         Arc::clone(&db),
         Arc::clone(&catalogo) as Arc<dyn stores_service::clients::Catalogo>,
     ));
+
+    let consumidor = Arc::new(StockConsumer::nuevo(Arc::clone(&db), Arc::clone(&ofertas)));
+    rabbit
+        .consumir("stores.stock", handler_consumidor(consumidor))
+        .await;
+    rabbit.iniciar_supervisor();
+    rabbit.activar_reintento(std::time::Duration::from_secs(10));
 
     let metrics = Arc::new(Metrics::nueva(servicio.clone()));
     let estado = AppState::con_dependencias(
@@ -109,6 +130,7 @@ async fn main() {
                 stores_service::campos! { "msg": "Fallo el servidor HTTP", "err": error.to_string() },
             );
         }
+        rabbit.cerrar().await;
         db.cerrar().await;
     })
     .await;
