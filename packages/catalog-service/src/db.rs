@@ -8,7 +8,8 @@
 //!   como ISO 8601 con milisegundos, jsonb como objeto, etc.).
 
 use crate::logs::contexto_actual;
-use chrono::{DateTime, NaiveDateTime, SecondsFormat, Utc};
+use chrono::{DateTime, NaiveDate, NaiveDateTime, SecondsFormat, TimeZone, Utc};
+use chrono_tz::Tz;
 use serde_json::{json, Map, Value};
 use sqlx::postgres::{PgPoolOptions, PgRow};
 use sqlx::{Column, PgPool, Postgres, Row, Transaction, TypeInfo, ValueRef};
@@ -64,6 +65,23 @@ pub fn iso_ms(fecha: DateTime<Utc>) -> String {
     fecha.to_rfc3339_opts(SecondsFormat::Millis, true)
 }
 
+/// Fecha `date` tal como la serializa node-postgres: medianoche en la zona del
+/// proceso y luego ISO UTC (R-C-4).
+pub fn fecha_local_iso(fecha: NaiveDate) -> String {
+    let zona = std::env::var("TZ")
+        .ok()
+        .and_then(|valor| valor.parse::<Tz>().ok())
+        .unwrap_or(chrono_tz::America::Managua);
+    let medianoche = fecha
+        .and_hms_opt(0, 0, 0)
+        .expect("medianoche siempre existe");
+    let local = zona
+        .from_local_datetime(&medianoche)
+        .single()
+        .unwrap_or_else(|| zona.from_utc_datetime(&medianoche));
+    iso_ms(local.with_timezone(&Utc))
+}
+
 /// Convierte una fila de PostgreSQL a JSON con los tipos de node-postgres.
 pub fn fila_a_json(fila: &PgRow) -> Result<Value, sqlx::Error> {
     let mut objeto = Map::new();
@@ -95,6 +113,7 @@ pub fn fila_a_json(fila: &PgRow) -> Result<Value, sqlx::Error> {
                         fecha, Utc
                     )))
                 }
+                "DATE" => json!(fecha_local_iso(fila.try_get::<NaiveDate, _>(indice)?)),
                 "JSON" | "JSONB" => fila.try_get::<Value, _>(indice)?,
                 _ => Value::Null,
             }
@@ -117,6 +136,12 @@ pub fn interno(error: impl std::fmt::Display) -> crate::errors::ApiError {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn debe_serializar_una_fecha_date_como_medianoche_local() {
+        let fecha = NaiveDate::from_ymd_opt(2026, 11, 13).expect("fecha");
+        assert_eq!(fecha_local_iso(fecha), "2026-11-13T06:00:00.000Z");
+    }
 
     #[test]
     fn debe_formatear_timestamp_iso_con_milisegundos_y_z() {
