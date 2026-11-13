@@ -21,6 +21,7 @@ import {
   anularCreditoOrden,
   cotizarItemReserva,
   verificarDisponibilidadReserva,
+  resolverPreciosItems,
 } from '@core/shared';
 import { CreateOrderCommand } from '../commands/create-order.command';
 import { OrderEventStore } from '../repositories/order-event-store';
@@ -108,6 +109,7 @@ export class CreateOrderCommandHandler {
     // 1. enriquecer con precios finales del stores-service (RN-01)
     const ofertas = await this.consultarOfertas(agrupados.map((i) => i.oferta_id));
     const porId = new Map(ofertas.map((o) => [o.id, o]));
+    const preciosPorOferta = await this.resolverPrecios(agrupados, porId, comando);
     const items: ItemOrden[] = [];
     let total = Money.desdeCentavos(0);
     for (const linea of agrupados) {
@@ -117,7 +119,15 @@ export class CreateOrderCommandHandler {
       }
       const itemType = oferta.item_type;
       const fulfillment = this.validarFulfillment(linea.fulfillment, tipoOrden, itemType);
-      const precioUnitario = Money.parsear(oferta.precio_venta);
+      let precioUnitario = Money.parsear(oferta.precio_venta);
+      const resuelto = preciosPorOferta.get(oferta.id);
+      // La lista o escala sustituye el precio base; el margen del vendedor se
+      // mantiene (RN-01). Sin lista/escala aplicable se conserva el snapshot
+      // de la oferta para no alterar ventas existentes.
+      if (resuelto && resuelto.origen !== 'base') {
+        precioUnitario = Money.desdeCentavos(resuelto.precio_unitario_cents)
+          .aplicarMargen(oferta.margen);
+      }
       total = total.sumar(precioUnitario.multiplicarPor(linea.cantidad));
       items.push({
         oferta_id: oferta.id,
@@ -391,6 +401,56 @@ export class CreateOrderCommandHandler {
       });
     }
     return [...mapa.values()];
+  }
+
+  /**
+   * Resuelve precios por empresa en una llamada por lote. Los alquileres se
+   * excluyen porque su precio se cotiza por rango de fechas (tarifas).
+   */
+  private async resolverPrecios(
+    lineas: LineaAgrupada[],
+    porId: Map<string, OfertaExterna>,
+    comando: CreateOrderCommand,
+  ): Promise<Map<string, { origen: string; precio_unitario_cents: number }>> {
+    const resultado = new Map<string, { origen: string; precio_unitario_cents: number }>();
+    const porEmpresa = new Map<string, { clave: string; item_id: string; cantidad: number }[]>();
+    for (const linea of lineas) {
+      const oferta = porId.get(linea.oferta_id);
+      if (!oferta || oferta.item_type === 'alquiler') continue;
+      const grupo = porEmpresa.get(oferta.empresa_id) ?? [];
+      grupo.push({ clave: oferta.id, item_id: oferta.item_id, cantidad: linea.cantidad });
+      porEmpresa.set(oferta.empresa_id, grupo);
+    }
+
+    for (const [empresaId, grupo] of porEmpresa) {
+      const respuesta = await resolverPreciosItems({
+        empresa_id: empresaId,
+        lineas: grupo,
+        ...(comando.lista_precio_codigo ? { lista_codigo: comando.lista_precio_codigo } : {}),
+        ...(comando.segmento_codigo ? { segmento_codigo: comando.segmento_codigo } : {}),
+      });
+      // Sin seleccion explicita se degrada al precio de la oferta (R-AR-2):
+      // un catalogo antiguo o caido no debe bloquear ventas existentes.
+      if (respuesta.estado === 'no_encontrado') {
+        if (comando.lista_precio_codigo || comando.segmento_codigo) {
+          throw new NotFoundError(
+            'Lista de precios',
+            comando.lista_precio_codigo ?? comando.segmento_codigo ?? '',
+          );
+        }
+        continue;
+      }
+      if (respuesta.estado === 'error') {
+        if (comando.lista_precio_codigo || comando.segmento_codigo) {
+          throw new ServiceUnavailableError('catalog-service');
+        }
+        continue;
+      }
+      for (const precio of respuesta.precios) {
+        resultado.set(precio.clave, precio);
+      }
+    }
+    return resultado;
   }
 
   private validarTipoOrden(valor: string): TipoOrden {

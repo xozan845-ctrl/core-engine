@@ -3,6 +3,8 @@ import 'reflect-metadata';
 import { InternalController } from './internal.controller';
 import type { InventarioService } from '../inventario/inventario.service';
 import type { ItemsService } from '../items/items.service';
+import type { TarifasService } from '../items/tarifas.service';
+import type { PreciosService } from '../items/precios.service';
 import { ClaveInternaGuard, NotFoundError } from '@core/shared';
 
 const item = {
@@ -15,15 +17,20 @@ const item = {
 function fabricar(): {
   inventario: Record<string, Mock>;
   items: Record<string, Mock>;
+  precios: Record<string, Mock>;
   controller: InternalController;
 } {
   const inventario = { listar: vi.fn(), resumen: vi.fn() };
   const items = { encontrarPorId: vi.fn(), lotePorSkus: vi.fn() };
+  const tarifas = { cotizar: vi.fn() };
+  const precios = { resolver: vi.fn() };
   const controller = new InternalController(
     inventario as unknown as InventarioService,
     items as unknown as ItemsService,
+    tarifas as unknown as TarifasService,
+    precios as unknown as PreciosService,
   );
-  return { inventario, items, controller };
+  return { inventario, items, precios, controller };
 }
 
 describe('InternalController (internal, R-U-10/11)', () => {
@@ -56,6 +63,52 @@ describe('InternalController (internal, R-U-10/11)', () => {
     await expect(controller.itemPorId(item.item_id)).resolves.toEqual(item);
     items.encontrarPorId.mockResolvedValue(null);
     await expect(controller.itemPorId(item.item_id)).rejects.toBeInstanceOf(NotFoundError);
+  });
+
+
+  it('debe resolver un precio individual y por lote', async () => {
+    const { precios, controller } = fabricar();
+    precios.resolver.mockResolvedValue({
+      item_id: 'i-1',
+      cantidad: 10,
+      origen: 'escala',
+      precio_unitario_cents: 8000,
+      precio_total_cents: 80000,
+    });
+
+    await expect(controller.precio('i-1', 'e-1', '10', 'mayorista', undefined))
+      .resolves.toEqual({
+        item_id: 'i-1',
+        cantidad: 10,
+        origen: 'escala',
+        precio_unitario_cents: 8000,
+        precio_total_cents: 80000,
+      });
+    expect(precios.resolver).toHaveBeenCalledWith('e-1', 'i-1', '10', {
+      lista_codigo: 'mayorista',
+      segmento_codigo: undefined,
+    });
+
+    precios.resolver.mockResolvedValueOnce({
+      item_id: 'i-1',
+      cantidad: 1,
+      origen: 'base',
+      precio_unitario_cents: 10000,
+      precio_total_cents: 10000,
+    });
+    await expect(
+      controller.preciosPorLote({
+        empresa_id: 'e-1',
+        lineas: [{ clave: 'oferta-1', item_id: 'i-1', cantidad: 1 }],
+      } as never),
+    ).resolves.toEqual({
+      precios: [{
+        clave: 'oferta-1',
+        origen: 'base',
+        precio_unitario_cents: 10000,
+        precio_total_cents: 10000,
+      }],
+    });
   });
 
   it('debe proteger todas las rutas con la clave interna', () => {

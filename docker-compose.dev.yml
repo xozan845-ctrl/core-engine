@@ -180,11 +180,10 @@ services:
 
   scheduling-service:
     <<: *servicio-base
+    # ADR-0004: el servicio es Rust y tiene su propio Dockerfile multi-stage.
     build:
       context: .
-      dockerfile: Dockerfile
-      args:
-        SERVICIO: scheduling-service
+      dockerfile: packages/scheduling-service/Dockerfile
     environment:
       SERVICIO: scheduling-service
       PORT: 3011
