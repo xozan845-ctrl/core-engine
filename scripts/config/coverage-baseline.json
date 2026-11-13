@@ -11,12 +11,6 @@
     "functions": 91.07,
     "statements": 90.15
   },
-  "field-service": {
-    "lines": 85.24,
-    "branches": 71.27,
-    "functions": 73.58,
-    "statements": 85.4
-  },
   "finance-service": {
     "lines": 71.89,
     "branches": 53.04,

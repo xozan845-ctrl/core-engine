@@ -228,9 +228,7 @@ services:
     <<: *servicio-base
     build:
       context: .
-      dockerfile: Dockerfile
-      args:
-        SERVICIO: field-service
+      dockerfile: packages/field-service/Dockerfile
     environment:
       SERVICIO: field-service
       PORT: 3008
