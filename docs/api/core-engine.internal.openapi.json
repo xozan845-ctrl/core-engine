@@ -1621,6 +1621,9 @@
           "track_inventory": {
             "type": "boolean"
           },
+          "track_serial": {
+            "type": "boolean"
+          },
           "stock": {
             "type": "object",
             "nullable": true
@@ -1723,6 +1726,7 @@
           "precio",
           "costo",
           "track_inventory",
+          "track_serial",
           "stock",
           "duration_minutes",
           "atributos",
@@ -1848,6 +1852,12 @@
           "stock": {
             "type": "number"
           },
+          "track_serial": {
+            "type": "boolean"
+          },
+          "seriales_disponibles": {
+            "type": "number"
+          },
           "estado": {
             "type": "string",
             "enum": [
@@ -1860,6 +1870,8 @@
           "empresa_id",
           "sku",
           "stock",
+          "track_serial",
+          "seriales_disponibles",
           "estado"
         ]
       },

@@ -18,6 +18,7 @@ export class ItemResponseDto {
   @ApiProperty({ example: '1500.00' }) precio: string;
   @ApiProperty({ example: '500.00' }) costo: string;
   @ApiProperty() track_inventory: boolean;
+  @ApiProperty() track_serial: boolean;
   @ApiProperty({ nullable: true }) stock: number | null;
   @ApiProperty({ nullable: true }) duration_minutes: number | null;
   @ApiProperty({ type: 'object', additionalProperties: true }) atributos: Record<string, unknown>;
@@ -68,5 +69,7 @@ export class LoteItemResponseDto {
   @ApiProperty({ format: 'uuid' }) empresa_id: string;
   @ApiProperty() sku: string;
   @ApiProperty() stock: number;
+  @ApiProperty() track_serial: boolean;
+  @ApiProperty() seriales_disponibles: number;
   @ApiProperty({ enum: ['disponible', 'agotado'] }) estado: string;
 }
