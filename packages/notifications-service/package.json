@@ -1,6 +1,6 @@
 {
   "name": "@core/notifications-service",
-  "version": "1.0.9",
+  "version": "1.2.1",
   "private": true,
   "description": "Notificaciones transaccionales por correo del ciclo del pedido (ADR-0003)",
   "main": "dist/main.js",
