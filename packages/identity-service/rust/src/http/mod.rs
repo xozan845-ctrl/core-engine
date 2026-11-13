@@ -4,8 +4,11 @@
 //! `/metrics`, `/docs`). Las rutas de identidad se añaden en los PR 2-7 con la
 //! misma composición de capas (envelope, correlación y métricas).
 
+pub mod api_keys;
 pub mod auth;
 pub mod capacidades;
+pub mod configuracion_sitio;
+pub mod empresas;
 pub mod envelope;
 pub mod packs;
 pub mod usuarios;
@@ -21,7 +24,7 @@ use axum::extract::{FromRequest, MatchedPath, Request, State};
 use axum::http::{header, HeaderValue, StatusCode};
 use axum::middleware::{self, Next};
 use axum::response::{Html, IntoResponse, Response};
-use axum::routing::{get, patch, post};
+use axum::routing::{delete, get, patch, post};
 use axum::{Json, Router};
 use serde_json::Value;
 use std::time::Instant;
@@ -73,6 +76,12 @@ pub fn build_router(state: AppState) -> Router {
         )
         .route("/api/v2/auth/me", get(auth::me))
         .route(
+            "/api/v2/api-keys",
+            get(api_keys::listar).post(api_keys::crear),
+        )
+        .route("/api/v2/api-keys/{id}", delete(api_keys::revocar))
+        .route("/api/v2/auth/token", post(api_keys::token))
+        .route(
             "/api/v2/auth/vincular-personal",
             post(auth::vincular_personal),
         )
@@ -81,6 +90,28 @@ pub fn build_router(state: AppState) -> Router {
         .route(
             "/api/v2/usuarios/{id}/avatar",
             patch(usuarios::actualizar_avatar),
+        )
+        .route("/api/v2/empresas", post(empresas::crear))
+        .route("/api/v2/empresas/{id}", get(empresas::obtener))
+        .route(
+            "/api/v2/empresas/{id}/perfil",
+            patch(empresas::actualizar_perfil),
+        )
+        .route(
+            "/api/v2/empresas/{id}/pack",
+            patch(empresas::actualizar_pack),
+        )
+        .route(
+            "/api/v2/empresas/{id}/slug",
+            patch(empresas::actualizar_slug),
+        )
+        .route(
+            "/api/v2/empresas/{id}/vendedores",
+            post(empresas::crear_vendedor),
+        )
+        .route(
+            "/api/v2/configuracion/sitio",
+            get(configuracion_sitio::obtener).patch(configuracion_sitio::actualizar),
         )
         .route(
             "/api/v2/empresas/{empresa_id}/capacidades",
