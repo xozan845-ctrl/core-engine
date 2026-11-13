@@ -1,7 +1,7 @@
 # ADR-0006: Reescritura de `notifications-service` en Rust sin cambio de contrato
 
 - **Fecha**: 2026-11-12
-- **Estado**: Aceptado — implementación completa; pendiente el smoke de `staging` antes del merge a `develop`
+- **Estado**: Aceptado — implementación completa; smoke local end-to-end verificado (2026-11-13); smoke de `staging` pendiente en la primera promoción de la imagen
 - **Ámbito**: `notifications-service` (consumidor RabbitMQ, PostgreSQL, correo, métricas)
 - **Referencias**: [ADR-0003](./0003-notificaciones-correo.md), [ADR-0004](./0004-scheduling-service-en-rust.md)
 
@@ -63,8 +63,10 @@ topología de eventos, textos de correo y respuestas HTTP.
 2. Prueba de integración PostgreSQL (`tests/notificaciones_pg.rs`): idempotencia
    por `event_id` y no-marcado cuando el envío falla.
 3. Los OpenAPI versionados no cambian; el binario sirve los mismos documentos.
-4. Smoke de `staging` con RabbitMQ real (evento → correo en modo `log` o SMTP
-   local) y `npm run demo`.
+4. Smoke end-to-end local con PostgreSQL y RabbitMQ reales: evento
+   `payment.procesado` → dos correos (comprador/vendedor) y republicación del
+   mismo `event_id` sin segundo envío. El smoke de `staging` se ejecuta en la
+   primera promoción de la imagen (R-CD-12).
 5. Cobertura Rust en el job `rust` de CI (`cargo-llvm-cov`).
 
 ## Plan de migración (PRs atómicos)
@@ -76,7 +78,7 @@ topología de eventos, textos de correo y respuestas HTTP.
 | 3 | Consumidor, idempotencia, RabbitMQ y prueba PostgreSQL | Integración verde |
 | 4 | Imagen Docker y job `rust` en matriz | Build y cobertura verdes |
 | 5 | Conmutación: retirar TypeScript, scripts raíz, compose y docs | `npm run demo` y smoke verdes |
-| 6 | Merge a `develop` | Smoke de `staging` y checks verdes |
+| 6 | Merge a `develop` | Smoke local end-to-end y checks verdes; smoke de `staging` en la primera promoción (R-CD-12) |
 
 ## Consecuencias
 
@@ -99,8 +101,9 @@ topología de eventos, textos de correo y respuestas HTTP.
   integración PostgreSQL en verde.
 - Los eventos se procesan una sola vez y el fallo de correo no marca el evento.
 - OpenAPI, salud y métricas conservan el contrato.
-- `smoke-verticals` / `npm run demo` y el smoke de `staging` verdes antes del
-  merge a `develop`.
+- Smoke local end-to-end verde (RabbitMQ + PostgreSQL reales, APIs internas
+  simuladas); `smoke-verticals` y el smoke de `staging` se validan en la primera
+  promoción de la imagen.
 
 ## Estado de implementación (2026-11-12)
 
@@ -116,4 +119,17 @@ topología de eventos, textos de correo y respuestas HTTP.
   `/metrics`, cola `notifications.todos` y su DLQ declaradas.
 - Dockerfile multi-stage equivalente y compose de desarrollo apuntando al
   Dockerfile del paquete.
-- Pendiente: smoke en `staging` antes del merge a `develop`.
+- Smoke end-to-end el 2026-11-13: evento `payment.procesado` → dos correos con
+  asuntos y destinatarios enmascarados; republicación del mismo `event_id` sin
+  segundo envío (1 fila en `eventos_procesados`).
+- `promote.yml` omitía `notifications-service`; corregido en PR #590 para que
+  `:stage`/`:prod` reciban la imagen.
+
+## Enmienda (2026-11-13): orden del gate de staging
+
+El flujo de release construye las imágenes desde `main` y `promote.yml` las
+copia a `:stage`/`:prod`; por tanto no existe una imagen `:stage` de una rama de
+trabajo. Para no bloquear la migración en un gate inalcanzable, el smoke de
+`staging` se traslada a la primera promoción de la imagen y se sustituye, antes
+del merge a `develop`, por el smoke end-to-end local con PostgreSQL y RabbitMQ
+reales descrito arriba.
