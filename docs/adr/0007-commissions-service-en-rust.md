@@ -177,7 +177,7 @@ permanece en borrador hasta cumplir la verificación de paridad.
 | #585 | MERGED | ADR-0007 (este documento) |
 | #589 | MERGED | Crate Rust con paridad + job `rust` y gate de cobertura (R-CI-1/R-COV-1) |
 | #598 | MERGED | Conmutación: TypeScript retirado, crate en la raíz, Docker/compose/scripts y saga |
-| #603 | ABIERTO (DRAFT) | PR final `feat/commissions-rust-develop → develop` (borrador hasta el smoke de `staging`); checks verdes en la cabeza |
+| #603 | ABIERTO | PR final `feat/commissions-rust-develop → develop`; checks verdes en la cabeza y pendiente el smoke de `staging` antes del merge |
 
 - Cobertura Rust medida con PostgreSQL efímero: **73,29 % líneas / 69,70 %
   funciones** (sin `main.rs`); gate 72/68 con ratchet +5 por release hasta
@@ -185,8 +185,8 @@ permanece en borrador hasta cumplir la verificación de paridad.
 - `cargo fmt --check`, `cargo clippy --locked --all-targets -- -D warnings`,
   `cargo test --locked` (77 unit + 6 integración PostgreSQL), `npm test`,
   `npm run build` y la integración API+BD quedaron verdes en la cabeza de #598.
-- Pendiente: `npm run demo`, `smoke-remote` de `staging` y el PR final a
-  `develop` (borrador hasta cumplir el gate). El run `workflow_dispatch` sobre
-  `feat/commissions-rust` reporta `baseline:guard` en rojo por comparar contra
-  `origin/main` desde una base anterior a la migración 65; el PR final usa la
-  cabeza de `develop`, que ya la incluye.
+- Pendiente para mergear #603: `npm run demo` y `smoke-remote` de `staging`
+  (R-CD-12). El run `workflow_dispatch` sobre la antigua `feat/commissions-rust`
+  reportó `baseline:guard` en rojo por comparar contra `origin/main` desde una
+  base anterior a la migración 65; la rama publicada del PR final nace de la
+  cabeza de `develop`, que ya la incluye, y tiene todos los checks verdes.
