@@ -45,7 +45,7 @@ impl Precios {
         let filas = sqlx::query(&format!(
             "SELECT {COLUMNAS_LISTA}
                FROM catalog.listas_precio
-              WHERE empresa_id = $1
+              WHERE empresa_id = $1::uuid
               ORDER BY predeterminada DESC, nombre"
         ))
         .bind(empresa_id)
@@ -77,7 +77,7 @@ impl Precios {
                 sqlx::query(
                     "UPDATE catalog.listas_precio
                         SET predeterminada = false, actualizado_en = NOW()
-                      WHERE empresa_id = $1 AND predeterminada",
+                      WHERE empresa_id = $1::uuid AND predeterminada",
                 )
                 .bind(empresa_id)
                 .execute(&mut *tx)
@@ -86,7 +86,7 @@ impl Precios {
             let fila = sqlx::query(&format!(
                 "INSERT INTO catalog.listas_precio
                    (empresa_id, codigo, nombre, descripcion, moneda, segmento_codigo, predeterminada)
-                 VALUES ($1, $2, $3, $4, $5, $6, $7)
+                 VALUES ($1::uuid, $2, $3, $4, $5, $6, $7)
                  RETURNING {COLUMNAS_LISTA}"
             ))
             .bind(empresa_id)
@@ -166,7 +166,7 @@ impl Precios {
                 sqlx::query(
                     "UPDATE catalog.listas_precio
                         SET predeterminada = false, actualizado_en = NOW()
-                      WHERE empresa_id = $1 AND predeterminada AND id <> $2",
+                      WHERE empresa_id = $1::uuid AND predeterminada AND id <> $2",
                 )
                 .bind(empresa_id)
                 .bind(lista_id)
@@ -178,7 +178,7 @@ impl Precios {
                     SET codigo = $1, nombre = $2, descripcion = $3, moneda = $4,
                         segmento_codigo = $5, predeterminada = $6, activo = $7,
                         actualizado_en = NOW()
-                  WHERE id = $8 AND empresa_id = $9
+                  WHERE id = $8::uuid AND empresa_id = $9::uuid
                   RETURNING {COLUMNAS_LISTA}"
             ))
             .bind(&codigo)
@@ -220,7 +220,7 @@ impl Precios {
         let filas = sqlx::query(&format!(
             "SELECT {COLUMNAS_PRECIO}
                FROM catalog.lista_precio_items
-              WHERE empresa_id = $1 AND lista_id = $2
+              WHERE empresa_id = $1::uuid AND lista_id = $2::uuid
               ORDER BY item_id, desde_cantidad"
         ))
         .bind(empresa_id)
@@ -263,7 +263,7 @@ impl Precios {
             let fila = sqlx::query(&format!(
                 "INSERT INTO catalog.lista_precio_items
                    (empresa_id, lista_id, item_id, desde_cantidad, hasta_cantidad, precio_cents)
-                 VALUES ($1, $2::uuid, $3, $4::bigint, $5::bigint, $6::bigint)
+                 VALUES ($1::uuid, $2::uuid, $3::uuid, $4::bigint, $5::bigint, $6::bigint)
                  RETURNING {COLUMNAS_PRECIO}"
             ))
             .bind(empresa_id)
@@ -340,7 +340,7 @@ impl Precios {
                 "UPDATE catalog.lista_precio_items
                     SET desde_cantidad = $1::bigint, hasta_cantidad = $2::bigint,
                         precio_cents = $3::bigint, actualizado_en = NOW()
-                  WHERE id = $4 AND empresa_id = $5
+                  WHERE id = $4::uuid AND empresa_id = $5::uuid
                     AND lista_id IS NOT DISTINCT FROM $6::uuid
                   RETURNING {COLUMNAS_PRECIO}"
             ))
@@ -384,7 +384,7 @@ impl Precios {
         let mut tx = self.db.transaccion().await.map_err(interno)?;
         let fila = sqlx::query(
             "DELETE FROM catalog.lista_precio_items
-              WHERE id = $1 AND empresa_id = $2
+              WHERE id = $1::uuid AND empresa_id = $2::uuid
                 AND lista_id IS NOT DISTINCT FROM $3::uuid
               RETURNING id",
         )
@@ -415,7 +415,7 @@ impl Precios {
         let filas = sqlx::query(&format!(
             "SELECT {COLUMNAS_PRECIO}
                FROM catalog.lista_precio_items
-              WHERE empresa_id = $1 AND item_id = $2 AND lista_id IS NULL
+              WHERE empresa_id = $1::uuid AND item_id = $2::uuid AND lista_id IS NULL
               ORDER BY desde_cantidad"
         ))
         .bind(empresa_id)
@@ -588,7 +588,7 @@ impl Precios {
                     &format!(
                         "SELECT {COLUMNAS_LISTA}
                            FROM catalog.listas_precio
-                          WHERE empresa_id = $1 AND lower(codigo) = $2 AND activo"
+                          WHERE empresa_id = $1::uuid AND lower(codigo) = $2 AND activo"
                     ),
                     empresa_id,
                     &codigo,
@@ -604,7 +604,7 @@ impl Precios {
                     &format!(
                         "SELECT {COLUMNAS_LISTA}
                            FROM catalog.listas_precio
-                          WHERE empresa_id = $1 AND segmento_codigo = $2 AND activo
+                          WHERE empresa_id = $1::uuid AND segmento_codigo = $2 AND activo
                           ORDER BY predeterminada DESC, creado_en
                           LIMIT 1"
                     ),
@@ -621,7 +621,7 @@ impl Precios {
         let fila = sqlx::query(&format!(
             "SELECT {COLUMNAS_LISTA}
                FROM catalog.listas_precio
-              WHERE empresa_id = $1 AND predeterminada AND activo
+              WHERE empresa_id = $1::uuid AND predeterminada AND activo
               LIMIT 1"
         ))
         .bind(empresa_id)
@@ -666,7 +666,7 @@ impl Precios {
         let fila = sqlx::query(&format!(
             "SELECT {COLUMNAS_PRECIO}
                FROM catalog.lista_precio_items
-              WHERE empresa_id = $1 AND item_id = $2
+              WHERE empresa_id = $1::uuid AND item_id = $2::uuid
                 AND lista_id IS NOT DISTINCT FROM $3::uuid
                 AND desde_cantidad <= $4::bigint
                 AND (hasta_cantidad IS NULL OR hasta_cantidad >= $4::bigint)
@@ -699,7 +699,7 @@ impl Precios {
         let fila = sqlx::query(
             "SELECT id, precio_cents, tipo_precio
                FROM catalog.items
-              WHERE id = $1 AND empresa_id = $2 AND eliminado_en IS NULL",
+              WHERE id = $1::uuid AND empresa_id = $2::uuid AND eliminado_en IS NULL",
         )
         .bind(&id)
         .bind(empresa_id)
@@ -722,7 +722,7 @@ impl Precios {
         let fila = sqlx::query(&format!(
             "SELECT {COLUMNAS_LISTA}
                FROM catalog.listas_precio
-              WHERE id = $1 AND empresa_id = $2"
+              WHERE id = $1::uuid AND empresa_id = $2::uuid"
         ))
         .bind(&id)
         .bind(empresa_id)
@@ -748,7 +748,7 @@ impl Precios {
         let fila = sqlx::query(&format!(
             "SELECT {COLUMNAS_PRECIO}
                FROM catalog.lista_precio_items
-              WHERE id = $1 AND empresa_id = $2
+              WHERE id = $1::uuid AND empresa_id = $2::uuid
                 AND lista_id IS NOT DISTINCT FROM $3::uuid"
         ))
         .bind(&id)
@@ -769,7 +769,7 @@ impl Precios {
         sqlx::query(
             "UPDATE catalog.items
                 SET tipo_precio = 'escala', actualizado_en = NOW()
-              WHERE id = $1 AND empresa_id = $2 AND tipo_precio <> 'escala'",
+              WHERE id = $1::uuid AND empresa_id = $2::uuid AND tipo_precio <> 'escala'",
         )
         .bind(item_id)
         .bind(empresa_id)
@@ -794,7 +794,7 @@ impl Precios {
                          AND p.lista_id IS NULL
                     ) THEN 'escala' ELSE 'fijo' END,
                     actualizado_en = NOW()
-              WHERE i.id = $1 AND i.empresa_id = $2",
+              WHERE i.id = $1::uuid AND i.empresa_id = $2::uuid",
         )
         .bind(item_id)
         .bind(empresa_id)

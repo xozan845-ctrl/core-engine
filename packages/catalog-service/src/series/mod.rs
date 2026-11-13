@@ -43,7 +43,7 @@ impl Series {
         let filas = sqlx::query(&format!(
             "SELECT {COLUMNAS}
                FROM catalog.item_series
-              WHERE empresa_id = $1 AND item_id = $2
+              WHERE empresa_id = $1::uuid AND item_id = $2::uuid
               ORDER BY estado, creado_en"
         ))
         .bind(empresa_id)
@@ -80,7 +80,7 @@ impl Series {
             let fila = sqlx::query(&format!(
                 "INSERT INTO catalog.item_series
                    (empresa_id, item_id, ubicacion_id, serial, imei, metadata)
-                 VALUES ($1, $2, $3, $4, $5, $6::jsonb)
+                 VALUES ($1::uuid, $2::uuid, $3::uuid, $4, $5, $6::jsonb)
                  RETURNING {COLUMNAS}"
             ))
             .bind(empresa_id)
@@ -150,11 +150,11 @@ impl Series {
         let resultado: Result<Option<PgRow>, sqlx::Error> = async {
             let fila = sqlx::query(&format!(
                 "UPDATE catalog.item_series
-                    SET serial = $1, imei = $2, ubicacion_id = $3, estado = $4,
+                    SET serial = $1, imei = $2, ubicacion_id = $3::uuid, estado = $4,
                         metadata = $5::jsonb,
                         devuelto_en = CASE WHEN $4 = 'disponible' THEN NULL ELSE devuelto_en END,
                         actualizado_en = NOW()
-                  WHERE id = $6 AND empresa_id = $7
+                  WHERE id = $6::uuid AND empresa_id = $7::uuid
                   RETURNING {COLUMNAS}"
             ))
             .bind(&serial)
@@ -203,7 +203,7 @@ impl Series {
                       AS garantia_vigente
                FROM catalog.item_series s
                JOIN catalog.items i ON i.id = s.item_id
-              WHERE s.empresa_id = $1 AND lower(s.serial) = lower($2)",
+              WHERE s.empresa_id = $1::uuid AND lower(s.serial) = lower($2)",
         )
         .bind(empresa_id)
         .bind(&serial)
@@ -234,7 +234,7 @@ impl Series {
         let fila = sqlx::query(
             "UPDATE catalog.items
                 SET track_serial = $1, actualizado_en = NOW()
-              WHERE id = $2 AND empresa_id = $3
+              WHERE id = $2::uuid AND empresa_id = $3::uuid
               RETURNING id AS item_id, track_serial",
         )
         .bind(activo)
@@ -293,7 +293,7 @@ impl Series {
                 "SELECT s.id
                    FROM catalog.item_series s
                    LEFT JOIN catalog.ubicaciones u ON u.id = s.ubicacion_id
-                  WHERE s.empresa_id = $1 AND s.item_id = $2 AND s.estado = 'disponible'
+                  WHERE s.empresa_id = $1::uuid AND s.item_id = $2::uuid AND s.estado = 'disponible'
                   ORDER BY (u.predeterminada IS TRUE) DESC, s.creado_en, s.id
                   LIMIT $3
                   FOR UPDATE OF s",
@@ -323,7 +323,7 @@ impl Series {
 
             sqlx::query(
                 "UPDATE catalog.item_series
-                    SET estado = 'vendido', order_id = $1, vendido_en = NOW(),
+                    SET estado = 'vendido', order_id = $1::uuid, vendido_en = NOW(),
                         ubicacion_id = NULL,
                         garantia_hasta = CASE WHEN $3::int IS NULL THEN NULL
                           ELSE (CURRENT_DATE + ($3::int || ' months')::interval)::date END,
@@ -359,7 +359,7 @@ impl Series {
                        LIMIT 1
                     ), s.ubicacion_id),
                     actualizado_en = NOW()
-              WHERE s.order_id = $1 AND s.estado IN ('vendido', 'reservado')",
+              WHERE s.order_id = $1::uuid AND s.estado IN ('vendido', 'reservado')",
         )
         .bind(order_id)
         .execute(&mut **tx)
@@ -389,8 +389,8 @@ impl Series {
                    SELECT s.id
                      FROM catalog.item_series s
                      JOIN catalog.items i ON i.id = s.item_id
-                    WHERE s.order_id = $1 AND s.estado = 'vendido'
-                      AND i.empresa_id = $2 AND LOWER(i.codigo) = LOWER($3)
+                    WHERE s.order_id = $1::uuid AND s.estado = 'vendido'
+                      AND i.empresa_id = $2::uuid AND LOWER(i.codigo) = LOWER($3)
                     ORDER BY s.vendido_en, s.id
                     LIMIT $4
                     FOR UPDATE OF s
@@ -399,7 +399,7 @@ impl Series {
                     SET estado = 'devuelto', devuelto_en = NOW(),
                         ubicacion_id = COALESCE((
                           SELECT u.id FROM catalog.ubicaciones u
-                           WHERE u.empresa_id = $2 AND u.predeterminada AND u.activo
+                           WHERE u.empresa_id = $2::uuid AND u.predeterminada AND u.activo
                            LIMIT 1
                         ), s.ubicacion_id),
                         actualizado_en = NOW()
@@ -423,7 +423,7 @@ impl Series {
         let fila = sqlx::query(&format!(
             "SELECT {COLUMNAS}
                FROM catalog.item_series
-              WHERE id = $1 AND empresa_id = $2"
+              WHERE id = $1::uuid AND empresa_id = $2::uuid"
         ))
         .bind(&id)
         .bind(empresa_id)
@@ -447,7 +447,7 @@ impl Series {
         let fila = sqlx::query(
             "SELECT id, tipo, track_inventory, track_serial, codigo, nombre, garantia_meses
                FROM catalog.items
-              WHERE id = $1 AND empresa_id = $2 AND eliminado_en IS NULL",
+              WHERE id = $1::uuid AND empresa_id = $2::uuid AND eliminado_en IS NULL",
         )
         .bind(&id)
         .bind(empresa_id)
@@ -488,7 +488,7 @@ impl Series {
         let id = validar_uuid(&ubicacion, "ubicacion")?;
         let mut tx = self.db.transaccion().await.map_err(interno)?;
         let fila = sqlx::query(
-            "SELECT id FROM catalog.ubicaciones WHERE id = $1 AND empresa_id = $2 AND activo",
+            "SELECT id FROM catalog.ubicaciones WHERE id = $1::uuid AND empresa_id = $2::uuid AND activo",
         )
         .bind(&id)
         .bind(empresa_id)
@@ -515,7 +515,7 @@ impl Series {
             Some(id) => sqlx::query(
                 "SELECT id, track_serial, garantia_meses
                        FROM catalog.items
-                      WHERE id = $1 AND empresa_id = $2
+                      WHERE id = $1::uuid AND empresa_id = $2::uuid
                         AND tipo = 'producto' AND eliminado_en IS NULL",
             )
             .bind(id)
@@ -526,7 +526,7 @@ impl Series {
             None => sqlx::query(
                 "SELECT id, track_serial, garantia_meses
                        FROM catalog.items
-                      WHERE empresa_id = $1 AND LOWER(codigo) = LOWER($2)
+                      WHERE empresa_id = $1::uuid AND LOWER(codigo) = LOWER($2)
                         AND tipo = 'producto' AND eliminado_en IS NULL",
             )
             .bind(empresa_id)
