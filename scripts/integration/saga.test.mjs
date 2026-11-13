@@ -337,7 +337,6 @@ before(async () => {
   pgService = new PgService({ url: connectionString });
   await pgService.onModuleInit();
 
-  const outboxCatalog = new OutboxService(pgService, rabbit, 'catalog.outbox');
 
   // La reserva/reintegro de stock de catalog se cubre en
   // `packages/catalog-service/tests/catalog_pg.rs` (ADR-0016). Aquí la saga
