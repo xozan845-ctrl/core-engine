@@ -6,11 +6,13 @@
 use crate::clients::Catalogo;
 use crate::db::{fila_a_json, Db};
 use crate::errors::ApiError;
-use serde::Serialize;
 use serde_json::{json, Map, Value};
 use sqlx::Row;
 use std::sync::Arc;
 use uuid::Uuid;
+
+pub mod publico;
+pub use publico::{a_oferta_publica, OfertaPublica};
 
 pub const MARGEN_MINIMO: i64 = 0;
 pub const MARGEN_MAXIMO: i64 = 90;
@@ -236,45 +238,6 @@ pub fn serializar(fila: &Value) -> Result<Value, ApiError> {
 pub struct Ofertas {
     db: Arc<Db>,
     catalogo: Arc<dyn Catalogo>,
-}
-
-#[derive(Debug, Clone, Serialize)]
-pub struct OfertaPublica {
-    pub id: String,
-    pub item_type: String,
-    pub item_id: String,
-    pub sku: String,
-    pub producto_nombre: String,
-    pub atributos: Value,
-    pub imagen_objeto_id: Option<String>,
-    pub imagen_url: Option<String>,
-    pub precio_venta: String,
-    pub moneda: String,
-    pub stock: Value,
-    pub estado: String,
-    pub creado_en: String,
-}
-
-/// Lista blanca explícita: un campo nuevo no se publica por accidente.
-pub fn a_oferta_publica(oferta: &Value) -> OfertaPublica {
-    OfertaPublica {
-        id: texto(oferta, "id"),
-        item_type: texto(oferta, "item_type"),
-        item_id: texto(oferta, "item_id"),
-        sku: texto(oferta, "sku"),
-        producto_nombre: texto(oferta, "producto_nombre"),
-        atributos: oferta
-            .get("atributos")
-            .cloned()
-            .unwrap_or_else(|| json!({})),
-        imagen_objeto_id: texto_opcional(oferta, "imagen_objeto_id"),
-        imagen_url: texto_opcional(oferta, "imagen_url"),
-        precio_venta: texto(oferta, "precio_venta"),
-        moneda: texto(oferta, "moneda"),
-        stock: oferta.get("stock").cloned().unwrap_or(Value::Null),
-        estado: texto(oferta, "estado"),
-        creado_en: texto(oferta, "creado_en"),
-    }
 }
 
 impl Ofertas {

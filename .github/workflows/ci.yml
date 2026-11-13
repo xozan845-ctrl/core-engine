@@ -173,6 +173,10 @@ jobs:
             dir: packages/market-intelligence-service
             lines: 63
             functions: 60
+          - service: stores-service
+            dir: packages/stores-service
+            lines: 76
+            functions: 76
           - service: storage-service
             dir: packages/storage-service
             lines: 54

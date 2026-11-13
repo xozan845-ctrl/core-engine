@@ -12,10 +12,10 @@ import { readText } from '../../engine/lib/fs.mjs';
  * proyección pública; si alguien lo agrega, esta suite falla y señala el campo.
  */
 
-const PUBLICO = join(repoRoot, 'packages/stores-service/src/ofertas/publico.ts');
+const PUBLICO = join(repoRoot, 'packages/stores-service/src/ofertas/publico.rs');
 const CONTROLLER = join(
   repoRoot,
-  'packages/stores-service/src/ofertas/ofertas.controller.ts',
+  'packages/stores-service/src/http/tiendas.rs',
 );
 const CATALOGO_DTO = join(
   repoRoot,
@@ -47,7 +47,7 @@ const SENSIBLES_CATALOGO = [
  * comentario.
  */
 function declaraCampo(texto, campo) {
-  return new RegExp(`^\\s*${campo}\\??\\s*:`, 'm').test(texto);
+  return new RegExp(`^\\s*(?:pub\\s+)?${campo}\\??\\s*:`, 'm').test(texto);
 }
 
 export default defineSuite({
@@ -71,17 +71,17 @@ export default defineSuite({
       const texto = readText(CONTROLLER);
       assert.match(
         texto,
-        /aTiendaPublica\(/,
-        'el controlador no aplica aTiendaPublica (R-C-3)',
+        /a_tienda_publica\(/,
+        'el controlador no aplica a_tienda_publica (R-C-3)',
       );
       assert.match(
         texto,
-        /aOfertaPublica/,
-        'el controlador no aplica aOfertaPublica (R-C-3)',
+        /a_oferta_publica/,
+        'el controlador no aplica a_oferta_publica (R-C-3)',
       );
       assert.match(
         texto,
-        /ofertas\.map\(aOfertaPublica\)/,
+        /ofertas[\s\S]*\.map\(crate::ofertas::a_oferta_publica\)/,
         'las ofertas públicas deben mapearse una a una (R-C-3)',
       );
     });
