@@ -3,8 +3,10 @@
 use crate::auth::{Capacidades, CapacidadesNoDisponible};
 use crate::config::Config;
 use crate::db::Db;
+use crate::inventario::Inventario;
 use crate::items::Items;
 use crate::metrics::Metrics;
+use crate::ubicaciones::Ubicaciones;
 use std::sync::Arc;
 use std::time::Instant;
 
@@ -17,6 +19,8 @@ pub struct AppState {
     /// negocio fallan con 500 si no hay base de datos.
     pub db: Option<Arc<Db>>,
     pub items: Option<Arc<Items>>,
+    pub inventario: Option<Arc<Inventario>>,
+    pub ubicaciones: Option<Arc<Ubicaciones>>,
     pub inicio: Instant,
 }
 
@@ -29,6 +33,8 @@ impl AppState {
             capacidades: Arc::new(CapacidadesNoDisponible),
             db: None,
             items: None,
+            inventario: None,
+            ubicaciones: None,
             inicio: Instant::now(),
         }
     }
@@ -39,12 +45,16 @@ impl AppState {
         db: Arc<Db>,
         capacidades: Arc<dyn Capacidades>,
         items: Arc<Items>,
+        inventario: Arc<Inventario>,
+        ubicaciones: Arc<Ubicaciones>,
     ) -> Self {
         Self {
             config: Arc::new(config),
             metrics,
             capacidades,
             items: Some(items),
+            inventario: Some(inventario),
+            ubicaciones: Some(ubicaciones),
             db: Some(db),
             inicio: Instant::now(),
         }
@@ -52,6 +62,18 @@ impl AppState {
 
     pub fn items(&self) -> Result<&Arc<Items>, crate::errors::ApiError> {
         self.items
+            .as_ref()
+            .ok_or_else(crate::errors::ApiError::interno)
+    }
+
+    pub fn inventario(&self) -> Result<&Arc<Inventario>, crate::errors::ApiError> {
+        self.inventario
+            .as_ref()
+            .ok_or_else(crate::errors::ApiError::interno)
+    }
+
+    pub fn ubicaciones(&self) -> Result<&Arc<Ubicaciones>, crate::errors::ApiError> {
+        self.ubicaciones
             .as_ref()
             .ok_or_else(crate::errors::ApiError::interno)
     }

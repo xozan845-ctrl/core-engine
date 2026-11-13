@@ -5,11 +5,13 @@ use catalog_service::auth::CapacidadesHttp;
 use catalog_service::config::Config;
 use catalog_service::db::Db;
 use catalog_service::http::build_router;
+use catalog_service::inventario::Inventario;
 use catalog_service::items::Items;
 use catalog_service::logs::{ejecutar_con_contexto, ContextoCorrelacion};
 use catalog_service::metrics::Metrics;
 use catalog_service::rabbit::Rabbit;
 use catalog_service::state::AppState;
+use catalog_service::ubicaciones::Ubicaciones;
 use std::sync::Arc;
 
 #[tokio::main]
@@ -58,8 +60,18 @@ async fn main() {
     ));
 
     let items = Arc::new(Items::nueva(Arc::clone(&db)));
+    let inventario = Arc::new(Inventario::nueva(Arc::clone(&db)));
+    let ubicaciones = Arc::new(Ubicaciones::nueva(Arc::clone(&db), Arc::clone(&items)));
     let metrics = Arc::new(Metrics::nueva(servicio.clone()));
-    let estado = AppState::con_dependencias(config, metrics, Arc::clone(&db), capacidades, items);
+    let estado = AppState::con_dependencias(
+        config,
+        metrics,
+        Arc::clone(&db),
+        capacidades,
+        items,
+        inventario,
+        ubicaciones,
+    );
     let app = build_router(estado);
 
     let listener = match tokio::net::TcpListener::bind(("0.0.0.0", puerto)).await {

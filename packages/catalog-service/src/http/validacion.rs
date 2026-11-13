@@ -86,6 +86,17 @@ fn coincide(texto: &str, patron: &str) -> bool {
                 && resto.chars().all(|caracter| caracter.is_ascii_hexdigit())
         }
         "codigo_barras" => !texto.trim().is_empty(),
+        "codigo_ubicacion" => {
+            let mut caracteres = texto.chars();
+            matches!(caracteres.next(), Some(primero) if primero.is_ascii_lowercase())
+                && (2..=40).contains(&texto.chars().count())
+                && texto.chars().all(|caracter| {
+                    caracter.is_ascii_lowercase()
+                        || caracter.is_ascii_digit()
+                        || caracter == '_'
+                        || caracter == '-'
+                })
+        }
         _ => false,
     }
 }
