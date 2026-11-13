@@ -11,11 +11,13 @@
 pub mod auth;
 pub mod clients;
 pub mod config;
+pub mod consumidor;
 pub mod db;
 pub mod errors;
 pub mod http;
 pub mod logs;
 pub mod metrics;
 pub mod ofertas;
+pub mod rabbit;
 pub mod state;
 pub mod tiendas;
