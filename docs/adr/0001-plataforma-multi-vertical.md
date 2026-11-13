@@ -129,6 +129,11 @@ Se introduce la abstracción `item` con `tipo` igual a `producto`, `servicio` o
   conserva el total. La primera ubicación absorbe el stock existente, las
   transferencias mueven cantidades sin cambiar el total y un trigger distribuye
   los cambios directos de stock a la ubicación predeterminada.
+- `catalog.items.track_serial` y `catalog.item_series` identifican cada unidad
+  física (serial/IMEI). La venta marca la unidad como vendida y calcula la
+  garantía con `garantia_meses`; la devolución la marca como devuelta y la
+  reubica en la ubicación predeterminada. Un item serializado sin unidades
+  disponibles no se vende aunque su stock agregado sea positivo.
 
 `stores.ofertas` usará `item_type + item_id`. El stock será nullable y los
 servicios podrán declarar capacidad o slots.

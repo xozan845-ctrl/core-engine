@@ -35,6 +35,7 @@ export interface Item {
   precio: string;
   costo: string;
   track_inventory: boolean;
+  track_serial: boolean;
   stock: number | null;
   duration_minutes: number | null;
   atributos: Record<string, unknown>;
@@ -114,6 +115,7 @@ interface ItemRow {
   precio_cents: number;
   costo_cents: number;
   track_inventory: boolean;
+  track_serial: boolean;
   stock: number | null;
   duration_minutes: number | null;
   atributos: Record<string, unknown> | null;
@@ -148,7 +150,7 @@ export interface ItemSchemaRow {
 }
 
 const COLUMNAS = `item_id, empresa_id, tipo, codigo, nombre, descripcion,
-  categoria, precio_cents, costo_cents, track_inventory, stock,
+  categoria, precio_cents, costo_cents, track_inventory, track_serial, stock,
   duration_minutes, atributos, parent_item_id, marca, codigo_barras, unidad,
   permite_fracciones, unidad_compra, contenido_cantidad, contenido_unidad,
   tipo_precio, tipo_costo, stock_minimo, stock_maximo, garantia_meses,
@@ -234,13 +236,34 @@ export class ItemsService {
    */
   async lotePorSkus(
     skus: string[],
-  ): Promise<{ empresa_id: string; sku: string; stock: number; estado: string }[]> {
+  ): Promise<{
+    empresa_id: string;
+    sku: string;
+    stock: number;
+    track_serial: boolean;
+    seriales_disponibles: number;
+    estado: string;
+  }[]> {
     if (!skus.length) return [];
     const params: string[] = [...new Set(skus.map((s) => String(s).toLowerCase()))];
     const marcadores = params.map((_, i) => `$${i + 1}`).join(', ');
-    return this.pg.query<{ empresa_id: string; sku: string; stock: number; estado: string }>(
-      `SELECT i.empresa_id, LOWER(i.codigo) AS sku, i.stock,
-              CASE WHEN i.stock > 0 THEN 'disponible' ELSE 'agotado' END AS estado
+    return this.pg.query<{
+      empresa_id: string;
+      sku: string;
+      stock: number;
+      track_serial: boolean;
+      seriales_disponibles: number;
+      estado: string;
+    }>(
+      `SELECT i.empresa_id, LOWER(i.codigo) AS sku, i.stock, i.track_serial,
+              (SELECT COUNT(*)::int FROM catalog.item_series s
+                WHERE s.item_id = i.id AND s.estado = 'disponible') AS seriales_disponibles,
+              CASE WHEN i.stock > 0
+                    AND (NOT i.track_serial OR EXISTS (
+                      SELECT 1 FROM catalog.item_series s
+                       WHERE s.item_id = i.id AND s.estado = 'disponible'
+                    ))
+                   THEN 'disponible' ELSE 'agotado' END AS estado
          FROM catalog.items i
         WHERE LOWER(i.codigo) IN (${marcadores})
           AND i.tipo = 'producto' AND i.estado = 'activo' AND i.eliminado_en IS NULL
@@ -508,6 +531,7 @@ export class ItemsService {
       precio: Money.desdeCentavos(fila.precio_cents).string(),
       costo: Money.desdeCentavos(fila.costo_cents).string(),
       track_inventory: fila.track_inventory,
+      track_serial: fila.track_serial === true,
       stock: fila.stock,
       duration_minutes: fila.duration_minutes,
       atributos: fila.atributos ?? {},

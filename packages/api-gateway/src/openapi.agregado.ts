@@ -1926,6 +1926,316 @@ export const OPENAPI_AGREGADO = {
         ]
       }
     },
+    "/api/v2/catalog/items/{id}/series": {
+      "get": {
+        "operationId": "SeriesController_listar",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "name": "empresa_id",
+            "required": false,
+            "in": "query",
+            "description": "Solo admin global",
+            "schema": {}
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Unidades del item",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
+                  "properties": {
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/ItemSerieResponseDto"
+                      }
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/MetaRespuesta"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Listar las unidades serializadas de un item",
+        "tags": [
+          "Catálogo · Series"
+        ]
+      },
+      "post": {
+        "operationId": "SeriesController_crear",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "name": "empresa_id",
+            "required": false,
+            "in": "query",
+            "description": "Solo admin global",
+            "schema": {}
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CrearItemSerieRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Unidad registrada",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/ItemSerieResponseDto"
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/MetaRespuesta"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Registrar una unidad serializada",
+        "tags": [
+          "Catálogo · Series"
+        ]
+      }
+    },
+    "/api/v2/catalog/items/{id}/serializacion": {
+      "patch": {
+        "operationId": "SeriesController_habilitar",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "name": "empresa_id",
+            "required": false,
+            "in": "query",
+            "description": "Solo admin global",
+            "schema": {}
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/HabilitarSerializacionItemRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Estado de serializacion",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/HabilitarSerializacionItemResponseDto"
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/MetaRespuesta"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Activar o desactivar la serializacion de un item",
+        "tags": [
+          "Catálogo · Series"
+        ]
+      }
+    },
+    "/api/v2/catalog/series/{serieId}": {
+      "patch": {
+        "operationId": "SeriesController_actualizar",
+        "parameters": [
+          {
+            "name": "serieId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "name": "empresa_id",
+            "required": false,
+            "in": "query",
+            "description": "Solo admin global",
+            "schema": {}
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ActualizarItemSerieRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Unidad actualizada",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/ItemSerieResponseDto"
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/MetaRespuesta"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Actualizar una unidad serializada",
+        "tags": [
+          "Catálogo · Series"
+        ]
+      }
+    },
+    "/api/v2/catalog/series/{serial}": {
+      "get": {
+        "operationId": "SeriesController_buscar",
+        "parameters": [
+          {
+            "name": "serial",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "empresa_id",
+            "required": false,
+            "in": "query",
+            "description": "Solo admin global",
+            "schema": {}
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Unidad y garantia",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/ItemSerieDetalleResponseDto"
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/MetaRespuesta"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Consultar una unidad por serial y su garantia",
+        "tags": [
+          "Catálogo · Series"
+        ]
+      }
+    },
     "/api/v2/admin/inventario": {
       "get": {
         "operationId": "InventarioController_listar",
@@ -18296,6 +18606,35 @@ export const OPENAPI_AGREGADO = {
           }
         }
       },
+      "ActualizarItemSerieRequestDto": {
+        "type": "object",
+        "properties": {
+          "serial": {
+            "type": "string",
+            "example": "SN-2026-0001"
+          },
+          "imei": {
+            "type": "string",
+            "example": "356789012345678"
+          },
+          "ubicacion_id": {
+            "type": "object",
+            "nullable": true,
+            "format": "uuid"
+          },
+          "metadata": {
+            "type": "object",
+            "additionalProperties": true
+          },
+          "estado": {
+            "type": "string",
+            "enum": [
+              "disponible",
+              "baja"
+            ]
+          }
+        }
+      },
       "ActualizarListaPrecioRequestDto": {
         "type": "object",
         "properties": {
@@ -19052,6 +19391,31 @@ export const OPENAPI_AGREGADO = {
           "precio"
         ]
       },
+      "CrearItemSerieRequestDto": {
+        "type": "object",
+        "properties": {
+          "serial": {
+            "type": "string",
+            "example": "SN-2026-0001"
+          },
+          "imei": {
+            "type": "string",
+            "example": "356789012345678"
+          },
+          "ubicacion_id": {
+            "type": "object",
+            "nullable": true,
+            "format": "uuid"
+          },
+          "metadata": {
+            "type": "object",
+            "additionalProperties": true
+          }
+        },
+        "required": [
+          "serial"
+        ]
+      },
       "CrearListaPrecioRequestDto": {
         "type": "object",
         "properties": {
@@ -19428,6 +19792,33 @@ export const OPENAPI_AGREGADO = {
           "esquema"
         ]
       },
+      "HabilitarSerializacionItemRequestDto": {
+        "type": "object",
+        "properties": {
+          "activo": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "activo"
+        ]
+      },
+      "HabilitarSerializacionItemResponseDto": {
+        "type": "object",
+        "properties": {
+          "item_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "track_serial": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "item_id",
+          "track_serial"
+        ]
+      },
       "ImagenItemRequestDto": {
         "type": "object",
         "properties": {
@@ -19651,6 +20042,9 @@ export const OPENAPI_AGREGADO = {
           "track_inventory": {
             "type": "boolean"
           },
+          "track_serial": {
+            "type": "boolean"
+          },
           "stock": {
             "type": "object",
             "nullable": true
@@ -19753,6 +20147,7 @@ export const OPENAPI_AGREGADO = {
           "precio",
           "costo",
           "track_inventory",
+          "track_serial",
           "stock",
           "duration_minutes",
           "atributos",
@@ -19819,6 +20214,195 @@ export const OPENAPI_AGREGADO = {
           "esquema",
           "version",
           "activo"
+        ]
+      },
+      "ItemSerieDetalleResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "empresa_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "item_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "ubicacion_id": {
+            "type": "object",
+            "format": "uuid",
+            "nullable": true
+          },
+          "serial": {
+            "type": "string"
+          },
+          "imei": {
+            "type": "string"
+          },
+          "estado": {
+            "type": "string",
+            "enum": [
+              "disponible",
+              "reservado",
+              "vendido",
+              "devuelto",
+              "baja"
+            ]
+          },
+          "order_id": {
+            "type": "object",
+            "format": "uuid",
+            "nullable": true
+          },
+          "vendido_en": {
+            "type": "object",
+            "format": "date-time",
+            "nullable": true
+          },
+          "garantia_hasta": {
+            "type": "object",
+            "format": "date",
+            "nullable": true
+          },
+          "devuelto_en": {
+            "type": "object",
+            "format": "date-time",
+            "nullable": true
+          },
+          "metadata": {
+            "type": "object",
+            "additionalProperties": true
+          },
+          "creado_en": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "actualizado_en": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "sku": {
+            "type": "string"
+          },
+          "nombre_item": {
+            "type": "string"
+          },
+          "garantia_meses": {
+            "type": "object",
+            "nullable": true
+          },
+          "garantia_vigente": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "id",
+          "empresa_id",
+          "item_id",
+          "ubicacion_id",
+          "serial",
+          "imei",
+          "estado",
+          "order_id",
+          "vendido_en",
+          "garantia_hasta",
+          "devuelto_en",
+          "metadata",
+          "creado_en",
+          "actualizado_en",
+          "sku",
+          "nombre_item",
+          "garantia_meses",
+          "garantia_vigente"
+        ]
+      },
+      "ItemSerieResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "empresa_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "item_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "ubicacion_id": {
+            "type": "object",
+            "format": "uuid",
+            "nullable": true
+          },
+          "serial": {
+            "type": "string"
+          },
+          "imei": {
+            "type": "string"
+          },
+          "estado": {
+            "type": "string",
+            "enum": [
+              "disponible",
+              "reservado",
+              "vendido",
+              "devuelto",
+              "baja"
+            ]
+          },
+          "order_id": {
+            "type": "object",
+            "format": "uuid",
+            "nullable": true
+          },
+          "vendido_en": {
+            "type": "object",
+            "format": "date-time",
+            "nullable": true
+          },
+          "garantia_hasta": {
+            "type": "object",
+            "format": "date",
+            "nullable": true
+          },
+          "devuelto_en": {
+            "type": "object",
+            "format": "date-time",
+            "nullable": true
+          },
+          "metadata": {
+            "type": "object",
+            "additionalProperties": true
+          },
+          "creado_en": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "actualizado_en": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "empresa_id",
+          "item_id",
+          "ubicacion_id",
+          "serial",
+          "imei",
+          "estado",
+          "order_id",
+          "vendido_en",
+          "garantia_hasta",
+          "devuelto_en",
+          "metadata",
+          "creado_en",
+          "actualizado_en"
         ]
       },
       "LineaInventarioResponseDto": {

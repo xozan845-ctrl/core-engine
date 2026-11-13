@@ -957,8 +957,14 @@ export class ProductosService {
     try {
         for (const item of lineas) {
           // Bloqueo pesimista requerido por regla dorada (Data Integrity)
-          const lock = await client.query<{ stock: number; item_id: string; tiene_variantes: boolean }>(
-            `SELECT i.stock, i.id AS item_id,
+          const lock = await client.query<{
+            stock: number;
+            item_id: string;
+            tiene_variantes: boolean;
+            track_serial: boolean;
+            garantia_meses: number | null;
+          }>(
+            `SELECT i.stock, i.id AS item_id, i.track_serial, i.garantia_meses,
                     EXISTS (SELECT 1 FROM catalog.items v
                              WHERE v.parent_item_id = i.id AND v.eliminado_en IS NULL) AS tiene_variantes
                FROM catalog.items i
@@ -1030,6 +1036,38 @@ export class ProductosService {
               });
               continue;
             }
+          }
+
+          if (lock.rows[0].track_serial) {
+            const series = await client.query<{ id: string }>(
+              `SELECT s.id
+                 FROM catalog.item_series s
+                 LEFT JOIN catalog.ubicaciones u ON u.id = s.ubicacion_id
+                WHERE s.empresa_id = $1 AND s.item_id = $2 AND s.estado = 'disponible'
+                ORDER BY (u.predeterminada IS TRUE) DESC, s.creado_en, s.id
+                LIMIT $3
+                FOR UPDATE OF s`,
+              [item.empresa_id, itemId, item.cantidad],
+            );
+            if ((series.rowCount ?? 0) < item.cantidad) {
+              fallidos.push({
+                empresa_id: item.empresa_id,
+                sku: item.sku,
+                cantidad: item.cantidad,
+                motivo: 'serial_insuficiente',
+              });
+              continue;
+            }
+            await client.query(
+              `UPDATE catalog.item_series
+                  SET estado = 'vendido', order_id = $1, vendido_en = NOW(),
+                      ubicacion_id = NULL,
+                      garantia_hasta = CASE WHEN $3::int IS NULL THEN NULL
+                        ELSE (CURRENT_DATE + ($3::int || ' months')::interval)::date END,
+                      actualizado_en = NOW()
+                WHERE id = ANY($2::uuid[])`,
+              [orderId, series.rows.map((fila) => fila.id), lock.rows[0].garantia_meses],
+            );
           }
 
           await client.query(
@@ -1150,6 +1188,43 @@ export class ProductosService {
     items: { empresa_id: string; sku: string; cantidad: number }[],
   ): Promise<void> {
     await this.pg.transaccion((client) => this.reintegrarStockEnTransaccion(client, orderId, items));
+  }
+
+  /**
+   * Marca como devueltas las unidades vendidas de una orden. Se ejecuta en la
+   * misma transaccion que el reintegro de stock; si hay devolucion parcial,
+   * toma primero las unidades mas antiguas.
+   */
+  async devolverSeriesEnTransaccion(
+    client: PoolClient,
+    orderId: string,
+    items: { empresa_id: string; sku: string; cantidad: number }[],
+  ): Promise<void> {
+    for (const item of items) {
+      await client.query(
+        `WITH objetivo AS (
+           SELECT s.id
+             FROM catalog.item_series s
+             JOIN catalog.items i ON i.id = s.item_id
+            WHERE s.order_id = $1 AND s.estado = 'vendido'
+              AND i.empresa_id = $2 AND LOWER(i.codigo) = LOWER($3)
+            ORDER BY s.vendido_en, s.id
+            LIMIT $4
+            FOR UPDATE OF s
+         )
+         UPDATE catalog.item_series s
+            SET estado = 'devuelto', devuelto_en = NOW(),
+                ubicacion_id = COALESCE((
+                  SELECT u.id FROM catalog.ubicaciones u
+                   WHERE u.empresa_id = $2 AND u.predeterminada AND u.activo
+                   LIMIT 1
+                ), s.ubicacion_id),
+                actualizado_en = NOW()
+           FROM objetivo o
+          WHERE s.id = o.id`,
+        [orderId, item.empresa_id, item.sku, item.cantidad],
+      );
+    }
   }
 
   async reintegrarStockEnTransaccion(
