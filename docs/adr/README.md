@@ -16,6 +16,7 @@ este índice evita mezclar las decisiones nuevas con las ADR históricas.
 | [0005](./0005-autenticacion-gateway-sin-gate-de-borde.md) | Propuesto (fase 1) | Gateway sin Basic ni `/api-proxy`; API keys de `identity` intercambiadas por JWT corto |
 | [0006](./0006-notifications-service-en-rust.md) | Aceptado (implementado) | Reescribir `notifications-service` en Rust con paridad de contrato, eventos, correo y métricas |
 | [0007](./0007-commissions-service-en-rust.md) | Aceptado (en curso) | Reescribir `commissions-service` en Rust con paridad de contrato, dinero, liquidaciones, eventos y métricas |
+| [0008](./0008-field-service-en-rust.md) | Aceptado (implementado) | Reescribir `field-service` en Rust con paridad de contrato, datos y autorización |
 
 ## Convención
 
