@@ -40,8 +40,6 @@ const SERVICIOS_SIEMPRE_ACTIVOS = [
  */
 const CONTROLADORES_TRANSVERSALES = [
   'packages/catalog-service/src/internal/internal.controller.ts',
-  'packages/finance-service/src/interno.controller.ts',
-  'packages/finance-service/src/finanzas/vendedor-fiscal.controller.ts',
   'packages/orders-service/src/pedidos/carrito/carrito.controller.ts',
   'packages/orders-service/src/pedidos/interno.controller.ts',
   'packages/stores-service/src/internal/internal.controller.ts',
