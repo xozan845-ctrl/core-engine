@@ -14,8 +14,10 @@ use identity_service::dominio::capacidades::Capacidades;
 use identity_service::dominio::configuracion_sitio::ConfiguracionSitio;
 use identity_service::dominio::empresas::Empresas;
 use identity_service::dominio::packs::Packs;
+use identity_service::dominio::partes::Partes;
 use identity_service::dominio::password_reset::PasswordReset;
 use identity_service::dominio::personal::Personal;
+use identity_service::dominio::registros::Registros;
 use identity_service::dominio::sesiones::Sesiones;
 use identity_service::dominio::usuarios::{CrearUsuario, Usuarios};
 use identity_service::email::{Email, EmailMessage};
@@ -117,6 +119,7 @@ async fn preparar() -> Option<Contexto> {
         "http://app.test".to_string(),
     ));
     let api_keys = Arc::new(ApiKeys::nueva(Arc::clone(&db), &config));
+    let capacidades = Arc::new(Capacidades::nueva(Arc::clone(&db)));
     let personal = Arc::new(Personal::nueva(
         Arc::clone(&db),
         Arc::clone(&auth),
@@ -124,6 +127,8 @@ async fn preparar() -> Option<Contexto> {
         Arc::new(Stores::nueva("http://127.0.0.1:9", None, 1000)),
         "http://app.test".to_string(),
     ));
+    let partes = Arc::new(Partes::nueva(Arc::clone(&db)));
+    let registros = Arc::new(Registros::nueva(Arc::clone(&db), Arc::clone(&capacidades)));
     let metrics = Arc::new(Metrics::nueva("identity-service"));
     let estado = AppState::con_servicios(
         config,
@@ -132,7 +137,7 @@ async fn preparar() -> Option<Contexto> {
             auth,
             usuarios: Arc::clone(&usuarios),
             api_keys,
-            capacidades: Arc::new(Capacidades::nueva(Arc::clone(&db))),
+            capacidades: Arc::clone(&capacidades),
             configuracion: Arc::new(ConfiguracionSitio::nueva(
                 Arc::clone(&db),
                 Arc::clone(&storage),
@@ -144,6 +149,8 @@ async fn preparar() -> Option<Contexto> {
                 Arc::clone(&storage),
             )),
             personal,
+            partes,
+            registros,
             packs: Arc::new(Packs::nueva(Arc::clone(&db))),
             password_reset,
         },
@@ -1540,4 +1547,312 @@ async fn debe_gestionar_personal_e_incorporaciones() {
     .await;
     assert_eq!(status, StatusCode::OK);
     assert_eq!(revocada["data"]["ok"], true);
+}
+
+#[tokio::test]
+async fn debe_gestionar_partes_contactos_direcciones_y_relaciones() {
+    let Some(ctx) = preparar().await else {
+        return;
+    };
+    let empresario = ctx
+        .usuarios
+        .crear(CrearUsuario {
+            nombre: "Empresario".into(),
+            correo: correo(),
+            contrasena: "secreto123".into(),
+            rol: "empresario".into(),
+            tenant_id: None,
+            personal_id: None,
+        })
+        .await
+        .expect("empresario");
+    let actor_base = autorizacion(&empresario.id, "empresario");
+    let slug = format!("empresa-{}", &Uuid::new_v4().simple().to_string()[..8]);
+    let (_, creada) = enviar(
+        &ctx.app,
+        "POST",
+        "/api/v2/empresas",
+        json!({
+            "nombre": "Empresa partes",
+            "slug": slug,
+            "vertical_id": "retail",
+            "pack_codigo": "pack_retail",
+            "pack_version": 1
+        }),
+        &headers(&actor_base),
+    )
+    .await;
+    let empresa_id = creada["data"]["id"].as_str().expect("empresa").to_string();
+    let mut actor_pares = actor_base.clone();
+    actor_pares.push(("x-tenant", empresa_id.clone()));
+    let actor = headers(&actor_pares);
+
+    let (status, parte) = enviar(
+        &ctx.app,
+        "POST",
+        &format!("/api/v2/empresas/{empresa_id}/partes"),
+        json!({
+            "tipo": "persona",
+            "nombre": "Ana Pérez",
+            "nombre_comercial": "Ana",
+            "identificador_tipo": "cedula",
+            "identificador_valor": "001-010190-0001A"
+        }),
+        &actor,
+    )
+    .await;
+    assert_eq!(status, StatusCode::CREATED);
+    let parte_id = parte["data"]["id"].as_str().expect("parte").to_string();
+    assert_eq!(parte["data"]["estado"], "activo");
+
+    let (status, listado) = enviar(
+        &ctx.app,
+        "GET",
+        &format!("/api/v2/empresas/{empresa_id}/partes?q=Ana"),
+        Value::Null,
+        &actor,
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK);
+    assert_eq!(listado["data"].as_array().expect("partes").len(), 1);
+
+    let (status, actualizada) = enviar(
+        &ctx.app,
+        "PATCH",
+        &format!("/api/v2/empresas/{empresa_id}/partes/{parte_id}"),
+        json!({ "nombre": "Ana María", "estado": "inactivo" }),
+        &actor,
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK);
+    assert_eq!(actualizada["data"]["nombre"], "Ana María");
+    assert_eq!(actualizada["data"]["estado"], "inactivo");
+
+    let (status, contacto) = enviar(
+        &ctx.app,
+        "POST",
+        &format!("/api/v2/empresas/{empresa_id}/partes/{parte_id}/contactos"),
+        json!({ "tipo": "email", "valor": "ana@test.dev", "es_principal": true }),
+        &actor,
+    )
+    .await;
+    assert_eq!(status, StatusCode::CREATED);
+    let contacto_id = contacto["data"]["id"]
+        .as_str()
+        .expect("contacto")
+        .to_string();
+    let (status, contactos) = enviar(
+        &ctx.app,
+        "GET",
+        &format!("/api/v2/empresas/{empresa_id}/partes/{parte_id}/contactos"),
+        Value::Null,
+        &actor,
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK);
+    assert_eq!(contactos["data"].as_array().expect("contactos").len(), 1);
+    let (status, _) = enviar(
+        &ctx.app,
+        "PATCH",
+        &format!("/api/v2/empresas/{empresa_id}/partes/{parte_id}/contactos/{contacto_id}"),
+        json!({ "etiqueta": "trabajo" }),
+        &actor,
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK);
+
+    let (status, direccion) = enviar(
+        &ctx.app,
+        "POST",
+        &format!("/api/v2/empresas/{empresa_id}/partes/{parte_id}/direcciones"),
+        json!({ "tipo": "entrega", "linea_1": "Calle 1", "latitud": 12.1 }),
+        &actor,
+    )
+    .await;
+    assert_eq!(status, StatusCode::CREATED);
+    let direccion_id = direccion["data"]["id"]
+        .as_str()
+        .expect("direccion")
+        .to_string();
+    let (status, _) = enviar(
+        &ctx.app,
+        "DELETE",
+        &format!("/api/v2/empresas/{empresa_id}/partes/{parte_id}/direcciones/{direccion_id}"),
+        Value::Null,
+        &actor,
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK);
+
+    let (_, otra) = enviar(
+        &ctx.app,
+        "POST",
+        &format!("/api/v2/empresas/{empresa_id}/partes"),
+        json!({ "tipo": "organizacion", "nombre": "Proveedor S.A." }),
+        &actor,
+    )
+    .await;
+    let otra_id = otra["data"]["id"].as_str().expect("otra").to_string();
+    let (status, relacion) = enviar(
+        &ctx.app,
+        "POST",
+        &format!("/api/v2/empresas/{empresa_id}/partes/{parte_id}/relaciones"),
+        json!({ "parte_destino_id": otra_id, "tipo": "proveedor" }),
+        &actor,
+    )
+    .await;
+    assert_eq!(status, StatusCode::CREATED);
+    let relacion_id = relacion["data"]["id"]
+        .as_str()
+        .expect("relacion")
+        .to_string();
+    let (status, relaciones) = enviar(
+        &ctx.app,
+        "GET",
+        &format!("/api/v2/empresas/{empresa_id}/partes/{parte_id}/relaciones"),
+        Value::Null,
+        &actor,
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK);
+    assert_eq!(relaciones["data"][0]["parte_relacionada"]["id"], otra_id);
+    let (status, _) = enviar(
+        &ctx.app,
+        "DELETE",
+        &format!("/api/v2/empresas/{empresa_id}/partes/{parte_id}/relaciones/{relacion_id}"),
+        Value::Null,
+        &actor,
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK);
+
+    let (status, _) = enviar(
+        &ctx.app,
+        "DELETE",
+        &format!("/api/v2/empresas/{empresa_id}/partes/{parte_id}"),
+        Value::Null,
+        &actor,
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK);
+    let (status, _) = enviar(
+        &ctx.app,
+        "GET",
+        &format!("/api/v2/empresas/{empresa_id}/partes/{parte_id}"),
+        Value::Null,
+        &actor,
+    )
+    .await;
+    assert_eq!(status, StatusCode::NOT_FOUND);
+}
+
+#[tokio::test]
+async fn debe_gestionar_registros_y_exigir_capacidad() {
+    let Some(ctx) = preparar().await else {
+        return;
+    };
+    let empresario = ctx
+        .usuarios
+        .crear(CrearUsuario {
+            nombre: "Empresario".into(),
+            correo: correo(),
+            contrasena: "secreto123".into(),
+            rol: "empresario".into(),
+            tenant_id: None,
+            personal_id: None,
+        })
+        .await
+        .expect("empresario");
+    let actor_base = autorizacion(&empresario.id, "empresario");
+    let slug = format!("empresa-{}", &Uuid::new_v4().simple().to_string()[..8]);
+    let (_, creada) = enviar(
+        &ctx.app,
+        "POST",
+        "/api/v2/empresas",
+        json!({
+            "nombre": "Empresa registros",
+            "slug": slug,
+            "vertical_id": "retail",
+            "pack_codigo": "pack_retail",
+            "pack_version": 1
+        }),
+        &headers(&actor_base),
+    )
+    .await;
+    let empresa_id = creada["data"]["id"].as_str().expect("empresa").to_string();
+    let mut actor_pares = actor_base.clone();
+    actor_pares.push(("x-tenant", empresa_id.clone()));
+    let actor = headers(&actor_pares);
+    let (_, parte) = enviar(
+        &ctx.app,
+        "POST",
+        &format!("/api/v2/empresas/{empresa_id}/partes"),
+        json!({ "tipo": "persona", "nombre": "Paciente" }),
+        &actor,
+    )
+    .await;
+    let parte_id = parte["data"]["id"].as_str().expect("parte").to_string();
+
+    let (status, registro) = enviar(
+        &ctx.app,
+        "POST",
+        &format!("/api/v2/empresas/{empresa_id}/partes/{parte_id}/registros"),
+        json!({
+            "tipo": "nota",
+            "titulo": "Primera nota",
+            "datos": {"texto": "ok"},
+            "adjuntos": ["11111111-1111-4111-8111-111111111111"]
+        }),
+        &actor,
+    )
+    .await;
+    assert_eq!(status, StatusCode::CREATED);
+    let registro_id = registro["data"]["id"]
+        .as_str()
+        .expect("registro")
+        .to_string();
+    assert_eq!(registro["data"]["tipo"], "nota");
+
+    let (status, listado) = enviar(
+        &ctx.app,
+        "GET",
+        &format!("/api/v2/empresas/{empresa_id}/partes/{parte_id}/registros"),
+        Value::Null,
+        &actor,
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK);
+    assert_eq!(listado["data"].as_array().expect("registros").len(), 1);
+
+    let (status, actualizado) = enviar(
+        &ctx.app,
+        "PATCH",
+        &format!("/api/v2/empresas/{empresa_id}/partes/{parte_id}/registros/{registro_id}"),
+        json!({ "titulo": "Nota corregida", "datos": {"texto": "corregido"} }),
+        &actor,
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK);
+    assert_eq!(actualizado["data"]["titulo"], "Nota corregida");
+
+    let (status, error) = enviar(
+        &ctx.app,
+        "POST",
+        &format!("/api/v2/empresas/{empresa_id}/partes/{parte_id}/registros"),
+        json!({ "tipo": "historia_clinica", "datos": {} }),
+        &actor,
+    )
+    .await;
+    assert_eq!(status, StatusCode::FORBIDDEN);
+    assert_eq!(error["codigo"], "CAPACIDAD_NO_ACTIVA");
+
+    let (status, _) = enviar(
+        &ctx.app,
+        "DELETE",
+        &format!("/api/v2/empresas/{empresa_id}/partes/{parte_id}/registros/{registro_id}"),
+        Value::Null,
+        &actor,
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK);
 }
