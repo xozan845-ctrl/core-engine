@@ -5,6 +5,7 @@ use catalog_service::auth::CapacidadesHttp;
 use catalog_service::config::Config;
 use catalog_service::db::Db;
 use catalog_service::http::build_router;
+use catalog_service::items::Items;
 use catalog_service::logs::{ejecutar_con_contexto, ContextoCorrelacion};
 use catalog_service::metrics::Metrics;
 use catalog_service::rabbit::Rabbit;
@@ -56,8 +57,9 @@ async fn main() {
         config.internal_request_timeout_ms,
     ));
 
+    let items = Arc::new(Items::nueva(Arc::clone(&db)));
     let metrics = Arc::new(Metrics::nueva(servicio.clone()));
-    let estado = AppState::con_dependencias(config, metrics, Arc::clone(&db), capacidades);
+    let estado = AppState::con_dependencias(config, metrics, Arc::clone(&db), capacidades, items);
     let app = build_router(estado);
 
     let listener = match tokio::net::TcpListener::bind(("0.0.0.0", puerto)).await {
