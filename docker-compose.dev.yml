@@ -191,11 +191,10 @@ services:
 
   logistics-service:
     <<: *servicio-base
+    # ADR-0010: el servicio es Rust y tiene su propio Dockerfile multi-stage.
     build:
       context: .
-      dockerfile: Dockerfile
-      args:
-        SERVICIO: logistics-service
+      dockerfile: packages/logistics-service/Dockerfile
     environment:
       SERVICIO: logistics-service
       PORT: 3005
@@ -205,9 +204,7 @@ services:
     <<: *servicio-base
     build:
       context: .
-      dockerfile: Dockerfile
-      args:
-        SERVICIO: commissions-service
+      dockerfile: packages/commissions-service/Dockerfile
     environment:
       SERVICIO: commissions-service
       PORT: 3006
@@ -230,9 +227,7 @@ services:
     <<: *servicio-base
     build:
       context: .
-      dockerfile: Dockerfile
-      args:
-        SERVICIO: field-service
+      dockerfile: packages/field-service/Dockerfile
     environment:
       SERVICIO: field-service
       PORT: 3008
@@ -240,11 +235,10 @@ services:
 
   market-intelligence-service:
     <<: *servicio-base
+    # ADR-0009: el servicio es Rust y tiene su propio Dockerfile multi-stage.
     build:
       context: .
-      dockerfile: Dockerfile
-      args:
-        SERVICIO: market-intelligence-service
+      dockerfile: packages/market-intelligence-service/Dockerfile
     environment:
       SERVICIO: market-intelligence-service
       PORT: 3009

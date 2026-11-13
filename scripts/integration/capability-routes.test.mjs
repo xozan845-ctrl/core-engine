@@ -146,23 +146,17 @@ before(async () => {
     import('../../packages/catalog-service/dist/inventario/inventario.controller.js'),
     import('../../packages/catalog-service/dist/inventario/inventario.service.js'),
   ]);
-  const [{ FieldController }, { FieldService }] = await Promise.all([
-    import('../../packages/field-service/dist/field/field.controller.js'),
-    import('../../packages/field-service/dist/field/field.service.js'),
-  ]);
 
   const inventarioStub = {
     listar: async () => [],
     listarLotes: async () => [],
   };
-  const fieldStub = { listarRutas: async () => [] };
 
   class RutasModule {}
   Module({
-    controllers: [InventarioController, FieldController],
+    controllers: [InventarioController],
     providers: [
       { provide: InventarioService, useValue: inventarioStub },
-      { provide: FieldService, useValue: fieldStub },
     ],
   })(RutasModule);
 
@@ -189,16 +183,6 @@ test('retail permite inventario y belleza recibe CAPACIDAD_NO_ACTIVA', async () 
   const respuesta = await http.get('/api/v2/admin/inventario').set(headers('belleza')).expect(403);
   assert.equal(respuesta.body.codigo, 'CAPACIDAD_NO_ACTIVA');
   assert.ok(respuesta.body.detalles.capacidades.includes('inventario_stock'));
-});
-
-test('flota permite rutas y retail no', async () => {
-  await http.get('/api/v2/field/rutas').set(headers('flota')).expect(200);
-  const respuesta = await http.get('/api/v2/field/rutas').set(headers('retail')).expect(403);
-  assert.equal(respuesta.body.codigo, 'CAPACIDAD_NO_ACTIVA');
-  assert.deepEqual(
-    [...respuesta.body.detalles.capacidades].sort(),
-    ['logistica_rutas', 'operacion_campo'],
-  );
 });
 
 test('farmacia permite lotes y retail no', async () => {
