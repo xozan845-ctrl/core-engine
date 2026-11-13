@@ -533,7 +533,7 @@ impl Ofertas {
         let oferta_id: Uuid = fila.get("id");
         sqlx::query(
             "INSERT INTO stores.historico_precios (oferta_id, precio_anterior_cents, precio_nuevo_cents, vigente_desde)
-             VALUES ($1, NULL, $2::int, NOW())",
+             VALUES ($1::uuid, NULL, $2::int, NOW())",
         )
         .bind(oferta_id)
         .bind(precio_venta.centavos)
@@ -597,7 +597,7 @@ impl Ofertas {
         }
         sqlx::query(
             "INSERT INTO stores.historico_precios (oferta_id, precio_anterior_cents, precio_nuevo_cents, vigente_desde)
-             VALUES ($1, $2::int, $3::int, NOW())",
+             VALUES ($1::uuid, $2::int, $3::int, NOW())",
         )
         .bind(oferta_id)
         .bind(entero(&oferta, "precio_venta_cents"))
