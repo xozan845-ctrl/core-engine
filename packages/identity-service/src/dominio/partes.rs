@@ -249,7 +249,7 @@ impl Partes {
         if !es_uuid(empresa_id) || !es_uuid(parte_id) {
             return Ok(false);
         }
-        let mut tx = self.db.transaccion().await.map_err(interno)?;
+        let mut tx = self.db.transaccion_servicio().await.map_err(interno)?;
         let fila = sqlx::query(
             "SELECT 1 FROM identity.partes
               WHERE id = $1::uuid AND empresa_id = $2::uuid AND eliminado_en IS NULL",

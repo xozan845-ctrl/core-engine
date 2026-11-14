@@ -194,7 +194,7 @@ impl Capacidades {
         if empresa_ids.is_empty() || capacidades.is_empty() {
             return Ok(Vec::new());
         }
-        let mut tx = self.db.transaccion().await.map_err(interno)?;
+        let mut tx = self.db.transaccion_servicio().await.map_err(interno)?;
         let filas = sqlx::query(
             "SELECT jsonb_build_object(
                       'empresa_id', empresa_id,
