@@ -1,6 +1,6 @@
 # Core Engine · market-intelligence-service (Rust)
 # Contexto de build: raíz del repositorio.
-FROM rust:1.89-bookworm AS build
+FROM rust:1.94.1-bookworm AS build
 WORKDIR /repo
 
 COPY packages/market-intelligence-service/Cargo.toml packages/market-intelligence-service/Cargo.lock ./packages/market-intelligence-service/
