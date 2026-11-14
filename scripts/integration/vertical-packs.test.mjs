@@ -22,11 +22,13 @@ before(async () => {
     const { rows: [{ catalogoFinal }] } = await client.query(
       `SELECT to_regclass('catalog.items') IS NOT NULL AND to_regclass('catalog.productos') IS NULL AS "catalogoFinal"`,
     );
+    // Si el esquema ya existe (otras suites crean catalog), 01e puede fallar
+    // porque la vista legacy ya no está; 24 y 29 son aditivas e idempotentes.
     const migraciones = existe
       ? MIGRACIONES.filter(
           (name) =>
             name !== '01_esquemas.sql' &&
-            !(catalogoFinal && ['01e_adr25_empresas.sql', '24_multi_vertical.sql'].includes(name)),
+            !(catalogoFinal && name === '01e_adr25_empresas.sql'),
         )
       : MIGRACIONES;
     for (const name of migraciones) {
