@@ -5,6 +5,7 @@ pub mod auth;
 pub mod capacidades;
 pub mod configuracion_sitio;
 pub mod empresas;
+pub mod extensiones;
 pub mod media;
 pub mod packs;
 pub mod partes;

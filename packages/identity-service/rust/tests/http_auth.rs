@@ -13,6 +13,7 @@ use identity_service::dominio::auth::Auth;
 use identity_service::dominio::capacidades::Capacidades;
 use identity_service::dominio::configuracion_sitio::ConfiguracionSitio;
 use identity_service::dominio::empresas::Empresas;
+use identity_service::dominio::extensiones::Extensiones;
 use identity_service::dominio::packs::Packs;
 use identity_service::dominio::partes::Partes;
 use identity_service::dominio::password_reset::PasswordReset;
@@ -127,6 +128,7 @@ async fn preparar() -> Option<Contexto> {
         Arc::new(Stores::nueva("http://127.0.0.1:9", None, 1000)),
         "http://app.test".to_string(),
     ));
+    let extensiones = Arc::new(Extensiones::nueva(Arc::clone(&db)));
     let partes = Arc::new(Partes::nueva(Arc::clone(&db)));
     let registros = Arc::new(Registros::nueva(Arc::clone(&db), Arc::clone(&capacidades)));
     let metrics = Arc::new(Metrics::nueva("identity-service"));
@@ -148,6 +150,7 @@ async fn preparar() -> Option<Contexto> {
                 Arc::clone(&usuarios),
                 Arc::clone(&storage),
             )),
+            extensiones,
             personal,
             partes,
             registros,
@@ -1855,4 +1858,182 @@ async fn debe_gestionar_registros_y_exigir_capacidad() {
     )
     .await;
     assert_eq!(status, StatusCode::OK);
+}
+
+#[tokio::test]
+async fn debe_gestionar_extensiones_y_validar_json_schema() {
+    let Some(ctx) = preparar().await else {
+        return;
+    };
+    let empresario = ctx
+        .usuarios
+        .crear(CrearUsuario {
+            nombre: "Empresario".into(),
+            correo: correo(),
+            contrasena: "secreto123".into(),
+            rol: "empresario".into(),
+            tenant_id: None,
+            personal_id: None,
+        })
+        .await
+        .expect("empresario");
+    let actor_base = autorizacion(&empresario.id, "empresario");
+    let slug = format!("empresa-{}", &Uuid::new_v4().simple().to_string()[..8]);
+    let (_, creada) = enviar(
+        &ctx.app,
+        "POST",
+        "/api/v2/empresas",
+        json!({
+            "nombre": "Empresa extensiones",
+            "slug": slug,
+            "vertical_id": "retail",
+            "pack_codigo": "pack_retail",
+            "pack_version": 1
+        }),
+        &headers(&actor_base),
+    )
+    .await;
+    let empresa_id = creada["data"]["id"].as_str().expect("empresa").to_string();
+    let mut actor_pares = actor_base.clone();
+    actor_pares.push(("x-tenant", empresa_id.clone()));
+    let actor = headers(&actor_pares);
+
+    let (status, extension) = enviar(
+        &ctx.app,
+        "POST",
+        &format!("/api/v2/empresas/{empresa_id}/extensiones"),
+        json!({
+            "codigo": "ficha_cliente",
+            "nombre": "Ficha de cliente",
+            "recurso": "cliente",
+            "esquema": {
+                "type": "object",
+                "properties": {"edad": {"type": "integer", "minimum": 0}},
+                "required": ["edad"],
+                "additionalProperties": false
+            }
+        }),
+        &actor,
+    )
+    .await;
+    assert_eq!(status, StatusCode::CREATED);
+    assert_eq!(extension["data"]["codigo"], "ficha_cliente");
+    assert_eq!(extension["data"]["version"], 1);
+    assert_eq!(extension["data"]["activo"], true);
+
+    let (status, listado) = enviar(
+        &ctx.app,
+        "GET",
+        &format!("/api/v2/empresas/{empresa_id}/extensiones"),
+        Value::Null,
+        &actor,
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK);
+    assert_eq!(listado["data"].as_array().expect("extensiones").len(), 1);
+
+    let (status, valido) = enviar(
+        &ctx.app,
+        "POST",
+        &format!("/api/v2/empresas/{empresa_id}/extensiones/ficha_cliente/validar"),
+        json!({ "datos": { "edad": 20 } }),
+        &actor,
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK);
+    assert_eq!(valido["data"]["valido"], true);
+
+    let (status, invalido) = enviar(
+        &ctx.app,
+        "POST",
+        &format!("/api/v2/empresas/{empresa_id}/extensiones/ficha_cliente/validar"),
+        json!({ "datos": { "edad": -1 } }),
+        &actor,
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK);
+    assert_eq!(invalido["data"]["valido"], false);
+    assert!(!invalido["data"]["errores"]
+        .as_array()
+        .expect("errores")
+        .is_empty());
+
+    let recurso_id = Uuid::new_v4().to_string();
+    let (status, valores) = enviar(
+        &ctx.app,
+        "PUT",
+        &format!("/api/v2/empresas/{empresa_id}/extensiones/ficha_cliente/valores/{recurso_id}"),
+        json!({ "valores": { "edad": 20 } }),
+        &actor,
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK);
+    assert_eq!(valores["data"]["valores"]["edad"], 20);
+
+    let (status, guardados) = enviar(
+        &ctx.app,
+        "GET",
+        &format!("/api/v2/empresas/{empresa_id}/extensiones/ficha_cliente/valores/{recurso_id}"),
+        Value::Null,
+        &actor,
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK);
+    assert_eq!(guardados["data"]["version_schema"], 1);
+
+    let (status, error) = enviar(
+        &ctx.app,
+        "PUT",
+        &format!("/api/v2/empresas/{empresa_id}/extensiones/ficha_cliente/valores/{recurso_id}"),
+        json!({ "valores": { "edad": -1 } }),
+        &actor,
+    )
+    .await;
+    assert_eq!(status, StatusCode::BAD_REQUEST);
+    assert_eq!(error["codigo"], "VALORES_EXTENSION_INVALIDOS");
+
+    let (status, error) = enviar(
+        &ctx.app,
+        "POST",
+        &format!("/api/v2/empresas/{empresa_id}/extensiones"),
+        json!({
+            "codigo": "con_ref",
+            "nombre": "Con ref",
+            "recurso": "cliente",
+            "esquema": {"$ref": "https://example.com/schema.json"}
+        }),
+        &actor,
+    )
+    .await;
+    assert_eq!(status, StatusCode::BAD_REQUEST);
+    assert_eq!(error["codigo"], "ESQUEMA_EXTENSION_INVALIDO");
+
+    let (status, _) = enviar(
+        &ctx.app,
+        "PATCH",
+        &format!("/api/v2/empresas/{empresa_id}/extensiones/ficha_cliente"),
+        json!({ "activo": false }),
+        &actor,
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK);
+    let (status, _) = enviar(
+        &ctx.app,
+        "GET",
+        &format!("/api/v2/empresas/{empresa_id}/extensiones/ficha_cliente/valores/{recurso_id}"),
+        Value::Null,
+        &actor,
+    )
+    .await;
+    assert_eq!(status, StatusCode::NOT_FOUND);
+
+    let (status, _) = enviar(
+        &ctx.app,
+        "DELETE",
+        &format!("/api/v2/empresas/{empresa_id}/extensiones/ficha_cliente/valores/{recurso_id}"),
+        Value::Null,
+        &actor,
+    )
+    .await;
+    assert_eq!(status, StatusCode::NOT_FOUND);
 }

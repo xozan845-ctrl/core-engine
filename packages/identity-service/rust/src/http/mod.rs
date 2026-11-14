@@ -10,6 +10,7 @@ pub mod capacidades;
 pub mod configuracion_sitio;
 pub mod empresas;
 pub mod envelope;
+pub mod extensiones;
 pub mod packs;
 pub mod partes;
 pub mod personal;
@@ -159,6 +160,24 @@ pub fn build_router(state: AppState) -> Router {
             get(registros::obtener)
                 .patch(registros::actualizar)
                 .delete(registros::eliminar),
+        )
+        .route(
+            "/api/v2/empresas/{empresa_id}/extensiones",
+            get(extensiones::listar).post(extensiones::crear),
+        )
+        .route(
+            "/api/v2/empresas/{empresa_id}/extensiones/{codigo}",
+            patch(extensiones::cambiar_estado),
+        )
+        .route(
+            "/api/v2/empresas/{empresa_id}/extensiones/{codigo}/validar",
+            post(extensiones::validar_datos),
+        )
+        .route(
+            "/api/v2/empresas/{empresa_id}/extensiones/{codigo}/valores/{recurso_id}",
+            get(extensiones::obtener_valores)
+                .put(extensiones::guardar_valores)
+                .delete(extensiones::eliminar_valores),
         )
         .route(
             "/api/v2/empresas/{empresa_id}/roles",
