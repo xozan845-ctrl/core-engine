@@ -25,7 +25,7 @@ este índice evita mezclar las decisiones nuevas con las ADR históricas.
 | [0014](./0014-finance-service-en-rust.md) | Aceptado (en curso) | Reescribir `finance-service` en Rust con paridad de contrato, contabilidad, tributación, facturación y métricas |
 | [0015](./0015-api-gateway-en-rust.md) | Aceptado (implementado) | Reescribir `api-gateway` en Rust con paridad de contrato, JWT, políticas de borde, proxy, rate limit, readiness y métricas |
 | [0016](./0016-catalog-service-en-rust.md) | Aceptado (implementado) | Reescribir `catalog-service` en Rust con paridad de contrato, items, precios, inventario, stock y eventos |
-| [0017](./0017-identity-service-en-rust.md) | Aceptado (en curso; PR 1-6) | Reescribir `identity-service` en Rust con paridad de contrato, JWT, sesiones, usuarios, empresas, personal, partes y métricas |
+| [0017](./0017-identity-service-en-rust.md) | Aceptado (en curso; PR 1-7) | Reescribir `identity-service` en Rust con paridad de contrato, JWT, sesiones, usuarios, empresas, personal, partes y métricas |
 
 ## Convención
 
