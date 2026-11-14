@@ -29,6 +29,23 @@ impl Db {
         &self.pool
     }
 
+    /// Transacción con claims de servicio interno.
+    ///
+    /// Las llamadas servicio→servicio (protegidas por `x-internal-key`) no
+    /// traen usuario, pero necesitan leer datos de cualquier tenant. Se
+    /// ejecutan con rol `super_admin` para que RLS no las filtre; no se usa
+    /// en endpoints públicos.
+    pub async fn transaccion_servicio(
+        &self,
+    ) -> Result<Transaction<'static, Postgres>, sqlx::Error> {
+        let mut tx = self.pool.begin().await?;
+        sqlx::query("SELECT set_config('request.jwt.claims', $1, true)")
+            .bind(json!({ "rol": "super_admin" }).to_string())
+            .execute(&mut *tx)
+            .await?;
+        Ok(tx)
+    }
+
     /// Transacción con los claims de RLS del contexto actual.
     pub async fn transaccion(&self) -> Result<Transaction<'static, Postgres>, sqlx::Error> {
         let mut tx = self.pool.begin().await?;

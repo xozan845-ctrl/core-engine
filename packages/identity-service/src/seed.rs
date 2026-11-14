@@ -71,7 +71,7 @@ async fn sembrar_tenant_plataforma(db: &Db, config: &Config) {
         );
         return;
     }
-    let mut tx = match db.transaccion().await {
+    let mut tx = match db.transaccion_servicio().await {
         Ok(tx) => tx,
         Err(error) => {
             logs::warn(
