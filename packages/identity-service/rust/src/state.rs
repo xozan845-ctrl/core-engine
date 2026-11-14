@@ -6,6 +6,7 @@ use crate::dominio::auth::Auth;
 use crate::dominio::capacidades::Capacidades;
 use crate::dominio::configuracion_sitio::ConfiguracionSitio;
 use crate::dominio::empresas::Empresas;
+use crate::dominio::extensiones::Extensiones;
 use crate::dominio::packs::Packs;
 use crate::dominio::partes::Partes;
 use crate::dominio::password_reset::PasswordReset;
@@ -24,6 +25,7 @@ pub struct Servicios {
     pub capacidades: Arc<Capacidades>,
     pub configuracion: Arc<ConfiguracionSitio>,
     pub empresas: Arc<Empresas>,
+    pub extensiones: Arc<Extensiones>,
     pub personal: Arc<Personal>,
     pub partes: Arc<Partes>,
     pub registros: Arc<Registros>,

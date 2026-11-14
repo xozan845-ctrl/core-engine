@@ -18,6 +18,7 @@ chrono = { version = "0.4", features = ["serde"] }
 chrono-tz = "0.10"
 futures-util = "0.3"
 http-body-util = "0.1"
+jsonschema = { version = "0.61", default-features = false }
 jsonwebtoken = "9"
 lettre = { version = "0.11", default-features = false, features = ["builder", "smtp-transport", "rustls-tls"] }
 rand = "0.9"
