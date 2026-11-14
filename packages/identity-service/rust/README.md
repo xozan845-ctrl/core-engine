@@ -25,7 +25,7 @@ Variables de entorno: `PORT` (3001), `SERVICIO`, `DATABASE_URL`,
 
 En producción `JWT_SECRET`, `ADMIN_EMAIL` y `ADMIN_PASSWORD` son obligatorias.
 
-## Alcance actual (PR 1-7)
+## Alcance actual (PR 1-8)
 
 - Configuración con `fail-fast` de variables obligatorias, TTL de JWT y SMTP.
 - JWT HS256 de `access`/`refresh` con el mismo payload que
@@ -60,9 +60,20 @@ En producción `JWT_SECRET`, `ADMIN_EMAIL` y `ADMIN_PASSWORD` son obligatorias.
   `x-request-id` y métricas Prometheus.
 - `/health`, `/metrics`, `/docs` y `/docs-json` (OpenAPI versionado).
 - Apagado ordenado ante `SIGINT`/`SIGTERM`.
-- Gate Rust en CI con cobertura 77/74 (medida 80,93/75,64).
+- Gate Rust en CI con cobertura 79/75 (medida 81,65/76,98).
 
-Pendiente en los PR 8-9: imagen Docker, compose y conmutación.
+Pendiente en el PR 9: conmutación, compose y retirada del TypeScript.
+
+## Imagen Docker
+
+`packages/identity-service/Dockerfile.rust` es la imagen multi-stage preparada
+para la conmutación (el Dockerfile activo sigue siendo el TS hasta el PR 9):
+
+```bash
+docker build -f packages/identity-service/Dockerfile.rust -t core-engine-identity-service .
+```
+
+Expone el puerto 3001 y ejecuta como usuario `10001:10001`.
 
 ## Cobertura
 
