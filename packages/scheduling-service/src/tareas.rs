@@ -74,25 +74,39 @@ impl SchedulingConsumer {
 
     async fn ya_procesado(&self, event_id: &str) -> Result<bool, ApiError> {
         let id = crate::scheduling::parsear_uuid(event_id)?;
-        let fila = sqlx::query("SELECT 1 FROM scheduling.eventos_procesados WHERE event_id = $1")
-            .bind(id)
-            .fetch_optional(self.db.pool())
+        // El consumidor corre con contexto de servicio (super_admin); usar la
+        // transacción aplica los claims que exige la RLS de la tabla.
+        let mut tx = self
+            .db
+            .transaccion()
             .await
             .map_err(crate::scheduling::error_db)?;
+        let fila = sqlx::query("SELECT 1 FROM scheduling.eventos_procesados WHERE event_id = $1")
+            .bind(id)
+            .fetch_optional(&mut *tx)
+            .await
+            .map_err(crate::scheduling::error_db)?;
+        tx.commit().await.map_err(crate::scheduling::error_db)?;
         Ok(fila.is_some())
     }
 
     async fn marcar_procesado(&self, event_id: &str, tipo: &str) -> Result<(), ApiError> {
         let id = crate::scheduling::parsear_uuid(event_id)?;
+        let mut tx = self
+            .db
+            .transaccion()
+            .await
+            .map_err(crate::scheduling::error_db)?;
         sqlx::query(
             "INSERT INTO scheduling.eventos_procesados (event_id, tipo, procesado_en)
              VALUES ($1, $2, NOW()) ON CONFLICT (event_id) DO NOTHING",
         )
         .bind(id)
         .bind(tipo)
-        .execute(self.db.pool())
+        .execute(&mut *tx)
         .await
         .map_err(crate::scheduling::error_db)?;
+        tx.commit().await.map_err(crate::scheduling::error_db)?;
         Ok(())
     }
 }

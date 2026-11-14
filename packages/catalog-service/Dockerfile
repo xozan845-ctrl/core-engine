@@ -1,6 +1,6 @@
 # Core Engine · catalog-service (Rust)
 # Contexto de build: raíz del repositorio (igual que el resto de servicios).
-FROM rust:1.89-bookworm AS build
+FROM rust:1.94.1-bookworm AS build
 WORKDIR /repo
 
 COPY packages/catalog-service/Cargo.toml packages/catalog-service/Cargo.lock ./packages/catalog-service/

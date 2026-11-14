@@ -27,6 +27,10 @@ pub struct OrdenExterna {
     pub parte_id: Option<String>,
     #[serde(default)]
     pub items: Vec<OrdenItemExterna>,
+    /// Compatibilidad con el contrato TS histórico: la vista real de orders
+    /// expone `total_cents` y `moneda`, no `total`. Deserializar sin él no
+    /// debe romper la transición.
+    #[serde(default)]
     pub total: String,
     pub total_cents: i64,
     pub estado: String,
@@ -190,6 +194,38 @@ mod tests {
             .expect_err("503");
         assert_eq!(error.codigo, "SERVICIO_NO_DISPONIBLE");
         assert_eq!(error.status, axum::http::StatusCode::SERVICE_UNAVAILABLE);
+    }
+
+    #[test]
+    fn debe_deserializar_la_vista_real_de_orders_sin_total() {
+        // `OrderView` de orders-service no serializa `total`; exigirlo hacía
+        // que una transición exitosa se reportara como TRANSICION_FALLIDA.
+        let orden: OrdenExterna = serde_json::from_value(serde_json::json!({
+            "id": "o-1",
+            "vendedor_id": "v-1",
+            "comprador_id": "c-1",
+            "parte_id": null,
+            "tienda_id": "t-1",
+            "estado": "en_preparacion",
+            "total_cents": 115000,
+            "comision_cents": 13800,
+            "moneda": "NIO",
+            "items": [{
+                "empresa_id": "e-1",
+                "sku": "SKU-1",
+                "cantidad": 1,
+                "producto_nombre": "Cafe",
+                "precio_unitario_cents": 115000
+            }],
+            "creado_en": "2026-11-14T00:00:00.000Z",
+            "actualizado_en": "2026-11-14T00:00:00.000Z",
+            "tipo_orden": "compra",
+            "metodo_pago": "simulado"
+        }))
+        .expect("vista de orders");
+        assert_eq!(orden.estado, "en_preparacion");
+        assert_eq!(orden.total, "");
+        assert_eq!(orden.total_cents, 115000);
     }
 
     #[test]

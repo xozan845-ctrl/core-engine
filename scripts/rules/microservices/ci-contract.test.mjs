@@ -1,64 +1,24 @@
 import { existsSync, readdirSync } from 'node:fs';
-import { join, relative, sep } from 'node:path';
+import { join } from 'node:path';
 import { defineSuite } from '../../engine/suite.mjs';
-import { readJson, readText, walkFiles } from '../../engine/lib/fs.mjs';
+import { readJson, readText } from '../../engine/lib/fs.mjs';
 import { repoRoot } from '../../engine/lib/paths.mjs';
-import { COVERAGE_THRESHOLDS } from '../../config/coverage.mjs';
+import {
+  COVERAGE_THRESHOLDS,
+} from '../../config/coverage.mjs';
 import {
   PACKAGES_DIR,
+  RUST_SERVICES,
   SERVICES,
-  SERVICES_NODE,
-  SERVICE_TEST_EXCEPTIONS,
   WORKFLOWS_DIR,
 } from '../../config/project.mjs';
 
 const packagesRoot = join(repoRoot, PACKAGES_DIR);
 const rootPackage = readJson(join(repoRoot, 'package.json'));
-const coverageDoc = join(
-  repoRoot,
-  'docs',
-  'rules',
-  'test',
-  '06-estandares-cobertura.md',
+const ciWorkflowPath = join(repoRoot, WORKFLOWS_DIR, 'ci.yml');
+const coverageBaseline = readJson(
+  join(repoRoot, 'scripts', 'config', 'coverage-baseline.json'),
 );
-
-/**
- * Extrae el baseline documentado de la tabla de umbrales por workspace. La
- * tabla es la referencia normativa; `coverage.mjs` no puede quedar por debajo.
- */
-function documentedCoverageThresholds() {
-  const thresholds = new Map();
-  for (const line of readText(coverageDoc).split('\n')) {
-    const match =
-      /^\s*\|\s*`([a-z0-9-]+)`\s*\|\s*(\d+)\s*\|\s*(\d+)\s*\|\s*(\d+)\s*\|\s*$/.exec(
-        line,
-      );
-    if (!match) continue;
-    thresholds.set(match[1], {
-      lines: Number(match[2]),
-      branches: Number(match[3]),
-      functions: Number(match[4]),
-    });
-  }
-  return thresholds;
-}
-
-const packageDir = (workspace) => join(packagesRoot, workspace);
-const packageJson = (workspace) =>
-  readJson(join(packageDir(workspace), 'package.json'));
-
-/**
- * Módulos críticos de mutación (R-MT-1). Los servicios migrados a Rust salen
- * de Stryker (ADR-0004/ADR-0007): su mutación se cubre con property tests y el
- * gate Rust, así que se filtran por `SERVICES_NODE`.
- */
-const CRITICOS_MUTACION = [
-  'shared',
-  'identity-service',
-  'orders-service',
-  'commissions-service',
-  'finance-service',
-];
 
 function sorted(values) {
   return [...values].sort((a, b) => a.localeCompare(b));
@@ -74,19 +34,31 @@ function deployedWorkspaceDirs() {
     .map((entry) => entry.name);
 }
 
-function workspacesInScript(script, task) {
-  const coverageArgs = task === 'test' ? '\\s+--\\s+--coverage' : '';
-  const pattern = new RegExp(
-    `npm run ${task} -w @core/([a-z0-9-]+)${coverageArgs}`,
-    'g',
-  );
-  return [...script.matchAll(pattern)].map((match) => match[1]);
+function rustMatrix() {
+  const workflow = readText(ciWorkflowPath);
+  const start = workflow.indexOf('  rust:');
+  const end = workflow.indexOf('  build:', start);
+  const section = start >= 0 && end > start ? workflow.slice(start, end) : '';
+  return [...section.matchAll(/^\s+- service: ([a-z-]+)$/gm)].map((match) => match[1]);
 }
 
 export default defineSuite({
   id: 'microservices-ci-contract',
   area: 'test',
-  rules: ['R-MS-1', 'R-QA-1', 'R-COV-1', 'R-COV-2', 'R-COV-4', 'R-CI-5', 'R-I-12', 'R-DS-1', 'R-C-7', 'R-MT-1', 'R-MT-2', 'R-FL-3', 'R-RB-4'],
+  rules: [
+    'R-MS-1',
+    'R-QA-1',
+    'R-COV-1',
+    'R-COV-4',
+    'R-CI-5',
+    'R-I-12',
+    'R-DS-1',
+    'R-C-7',
+    'R-MT-1',
+    'R-MT-2',
+    'R-FL-3',
+    'R-RB-4',
+  ],
   mode: 'repo',
   run: ({ test, assert }) => {
     test('R-MS-1: el inventario declara exactamente los servicios desplegables', () => {
@@ -95,438 +67,123 @@ export default defineSuite({
         sorted(deployedWorkspaceDirs()),
         'SERVICES debe coincidir con los directorios packages/* que tienen Dockerfile',
       );
-      assert.equal(
-        new Set(SERVICES).size,
-        SERVICES.length,
-        'SERVICES no admite entradas duplicadas',
+      assert.equal(new Set(SERVICES).size, SERVICES.length, 'SERVICES no admite duplicados');
+      assert.deepEqual(
+        sorted(RUST_SERVICES),
+        sorted(SERVICES),
+        'todos los servicios deben estar en RUST_SERVICES',
       );
     });
 
-    test('R-MS-1: cada paquete de servicio expone los scripts mínimos de runtime', () => {
+    test('R-MS-1: cada servicio es un crate Rust sin artefactos Node', () => {
       const problems = [];
-      for (const service of SERVICES_NODE) {
-        const pkg = packageJson(service);
-        if (pkg.private !== true) problems.push(`${service}: private debe ser true`);
-        if (pkg.main !== 'dist/main.js') problems.push(`${service}: main debe ser dist/main.js`);
-        if (!/^tsc -p tsconfig(?:\.build)?\.json$/.test(pkg.scripts?.build ?? '')) {
-          problems.push(`${service}: script build no compila un tsconfig válido`);
+      for (const service of SERVICES) {
+        const dir = join(packagesRoot, service);
+        if (!existsSync(join(dir, 'Cargo.toml'))) problems.push(`${service}: falta Cargo.toml`);
+        if (!existsSync(join(dir, 'Cargo.lock'))) problems.push(`${service}: falta Cargo.lock`);
+        if (!existsSync(join(dir, 'src', 'main.rs'))) problems.push(`${service}: falta src/main.rs`);
+        for (const nodeArtifact of ['package.json', 'tsconfig.json', 'vitest.config.ts']) {
+          if (existsSync(join(dir, nodeArtifact))) {
+            problems.push(`${service}: queda ${nodeArtifact}`);
+          }
         }
-        if (pkg.scripts?.start !== 'node dist/main.js') {
-          problems.push(`${service}: script start debe ejecutar node dist/main.js`);
+        const dockerfile = readText(join(dir, 'Dockerfile'));
+        if (/^FROM\s+node:/m.test(dockerfile)) {
+          problems.push(`${service}: el Dockerfile usa Node`);
         }
-        if (pkg.dependencies?.['@core/shared'] !== 'file:../shared') {
-          problems.push(`${service}: debe depender de @core/shared por file:../shared`);
+        if (!/^EXPOSE\s+\d+$/m.test(dockerfile)) {
+          problems.push(`${service}: el Dockerfile no declara EXPOSE`);
         }
       }
       assert.deepEqual(problems, [], problems.join('\n'));
     });
 
-    test('R-CI-5: el build raíz incluye una sola vez todos los servicios', () => {
-      assert.equal(
-        rootPackage.scripts?.['build:shared'],
-        'npm run build -w @core/shared',
-        'build:shared debe compilar la librería transversal antes de los servicios',
-      );
-      assert.deepEqual(
-        sorted(workspacesInScript(rootPackage.scripts?.build ?? '', 'build')),
-        sorted(SERVICES_NODE),
-        'el script build raíz debe enumerar exactamente una vez todos los servicios',
-      );
-    });
-
-    test('R-QA-1: la matriz test raíz cubre cada workspace no exceptuado', () => {
-      const expected = [
-        'shared',
-        ...SERVICES_NODE.filter((service) => !SERVICE_TEST_EXCEPTIONS.includes(service)),
-      ];
-      const actual = workspacesInScript(rootPackage.scripts?.test ?? '', 'test');
-      assert.deepEqual(
-        sorted(actual),
-        sorted(expected),
-        'el script test raíz debe ejecutar con coverage cada workspace exigible, sin duplicados',
-      );
-    });
-
-    test('R-QA-1/R-COV-2: cada workspace exigible tiene runner, config y specs', () => {
-      const workspaces = [
-        'shared',
-        ...SERVICES_NODE.filter((service) => !SERVICE_TEST_EXCEPTIONS.includes(service)),
-      ];
-      const problems = [];
-
-      for (const workspace of workspaces) {
-        const pkg = packageJson(workspace);
-        const configPath = join(packageDir(workspace), 'vitest.config.ts');
-        const specs = walkFiles(
-          join(packageDir(workspace), 'src'),
-          (name) => name.endsWith('.spec.ts'),
+    test('R-CI-5: la matriz Rust de CI cubre exactamente los servicios', () => {
+      assert.deepEqual(sorted(rustMatrix()), sorted(SERVICES));
+      const workflow = readText(ciWorkflowPath);
+      for (const service of SERVICES) {
+        assert.match(
+          workflow,
+          new RegExp(`dir: packages/${service}\\n`),
+          `falta el directorio de ${service} en la matriz Rust`,
         );
-
-        if (pkg.scripts?.test !== 'vitest run') {
-          problems.push(`${workspace}: falta script test = vitest run`);
-        }
-        if (!existsSync(configPath)) {
-          problems.push(`${workspace}: falta vitest.config.ts`);
-        }
-        if (specs.length === 0) {
-          problems.push(`${workspace}: no contiene archivos *.spec.ts`);
-        }
       }
-
-      assert.deepEqual(problems, [], problems.join('\n'));
+      assert.doesNotMatch(workflow, /^ {2}test:$/m, 'no debe quedar el job Node de tests');
+      assert.doesNotMatch(workflow, /npm run build$/m, 'no debe quedar build Node');
+      assert.doesNotMatch(workflow, /npm test$/m, 'no debe quedar npm test Node');
     });
 
-    test('R-COV-4: la fuente central declara umbrales para cada workspace', () => {
-      const workspaces = [
-        'shared',
-        ...SERVICES_NODE.filter((service) => !SERVICE_TEST_EXCEPTIONS.includes(service)),
-      ];
-
-      assert.deepEqual(
-        sorted(Object.keys(COVERAGE_THRESHOLDS)),
-        sorted(workspaces),
-        'scripts/config/coverage.mjs debe declarar exactamente los workspaces con suite',
-      );
-
-      const problems = [];
-      for (const [workspace, thresholds] of Object.entries(COVERAGE_THRESHOLDS)) {
-        for (const metric of ['lines', 'branches', 'functions']) {
-          if (!Number.isInteger(thresholds[metric])) {
-            problems.push(`${workspace}: falta el umbral de ${metric}`);
-          }
-        }
-      }
-      assert.deepEqual(problems, [], problems.join('\n'));
-    });
-
-    test('R-COV-1: la fuente central no queda por debajo del baseline documentado', () => {
-      const documented = documentedCoverageThresholds();
-      const problems = [];
-
-      for (const [workspace, floor] of documented) {
-        const current = COVERAGE_THRESHOLDS[workspace];
-        if (!current) {
-          problems.push(`${workspace}: documentado pero sin umbral central`);
-          continue;
-        }
-        for (const metric of ['lines', 'branches', 'functions']) {
-          if (current[metric] < floor[metric]) {
-            problems.push(
-              `${workspace}: ${metric} ${current[metric]} < baseline documentado ${floor[metric]}`,
-            );
-          }
-        }
-      }
-
-      for (const workspace of Object.keys(COVERAGE_THRESHOLDS)) {
-        if (!documented.has(workspace)) {
-          problems.push(`${workspace}: sin fila en la tabla de docs/rules/test/06`);
-        }
-      }
-
-      assert.deepEqual(
-        problems,
-        [],
-        `Umbrales por debajo del baseline o desalineados (R-COV-1):\n${problems.join('\n')}`,
-      );
-    });
-
-    test('R-COV-2: los services/consumers sin spec coinciden con el baseline', () => {
-      const workspaces = [
-        'shared',
-        ...SERVICES_NODE.filter((service) => !SERVICE_TEST_EXCEPTIONS.includes(service)),
-      ];
-      const baseline = new Set(
-        readJson(join(repoRoot, 'scripts', 'config', 'spec-baseline.json')),
-      );
-      const problems = [];
-      const missing = new Set();
-
-      for (const workspace of workspaces) {
-        const sourceDir = join(packageDir(workspace), 'src');
-        if (!existsSync(sourceDir)) continue;
-
-        for (const file of walkFiles(
-          sourceDir,
-          (name) => /\.(service|consumer)\.ts$/.test(name) && !name.endsWith('.spec.ts'),
-        )) {
-          const path = relative(repoRoot, file).split(sep).join('/');
-          const spec = file.replace(/\.ts$/, '.spec.ts');
-
-          if (!existsSync(spec)) {
-            missing.add(path);
-            if (!baseline.has(path)) {
-              problems.push(`${path}: sin spec y no está en el baseline`);
-            }
-          } else if (baseline.has(path)) {
-            problems.push(`${path}: ya tiene spec; elimina la excepción del baseline`);
-          }
-        }
-      }
-
-      for (const path of baseline) {
-        if (!existsSync(join(repoRoot, path))) {
-          problems.push(`${path}: el baseline apunta a un archivo que no existe`);
-        } else if (!missing.has(path)) {
-          problems.push(`${path}: baseline obsoleto (ya no falta el spec)`);
-        }
-      }
-
-      assert.deepEqual(
-        problems,
-        [],
-        `Specs faltantes fuera del baseline (R-COV-2):\n${problems.join('\n')}`,
-      );
-    });
-
-    test('R-DS-1: CI escanea secretos de alta confianza en archivos versionados', () => {
-      const workflow = readText(join(repoRoot, WORKFLOWS_DIR, 'ci.yml'));
-      assert.match(
-        workflow,
-        /^\s*run: npm run security:secrets$/m,
-        'CI debe ejecutar security:secrets (R-DS-1)',
-      );
+    test('R-COV-1/R-COV-4: la cobertura Node retirada no conserva umbrales', () => {
+      assert.deepEqual(COVERAGE_THRESHOLDS, {}, 'coverage.mjs debe quedar vacío');
+      assert.deepEqual(coverageBaseline, {}, 'el baseline Node debe quedar vacío');
       assert.ok(
-        existsSync(join(repoRoot, 'scripts', 'tools', 'secrets-check.mjs')),
-        'falta scripts/tools/secrets-check.mjs',
+        rootPackage.scripts['test:integration'] === 'node scripts/tools/integration-runner.mjs',
+        'falta el runner de integración',
       );
+      assert.ok(rootPackage.scripts['rules:check'], 'falta rules:check');
+      assert.ok(rootPackage.scripts['test:engine'], 'falta test:engine');
+      assert.ok(rootPackage.scripts['test:smoke'], 'falta test:smoke');
     });
 
-    test('R-C-8: los servicios registran el filtro de errores normalizados', () => {
-      const faltantes = [];
-      for (const service of SERVICES_NODE) {
-        const main = readText(join(packageDir(service), 'src', 'main.ts'));
-        if (!main.includes('DomainErrorFilter')) {
-          faltantes.push(`${service}: main.ts no registra DomainErrorFilter`);
-        }
-      }
-      assert.ok(
-        existsSync(join(repoRoot, 'scripts', 'integration', 'identity-configuracion-sitio.test.mjs')),
-        'falta la prueba API+BD de configuración y errores normalizados',
-      );
-      assert.ok(
-        existsSync(join(repoRoot, 'scripts', 'integration', 'error-contract.test.mjs')),
-        'falta la prueba runtime de los shapes 403/404/409/500',
-      );
-      assert.deepEqual(faltantes, [], faltantes.join('\n'));
-    });
-
-    test('R-COV-1: CI compara la cobertura real contra el baseline', () => {
-      const workflow = readText(join(repoRoot, WORKFLOWS_DIR, 'ci.yml'));
-      assert.match(
-        workflow,
-        /^\s*run: npm run coverage:compare$/m,
-        'CI debe ejecutar coverage:compare después de npm test (R-COV-1)',
-      );
-
-      const workspaces = [
-        'shared',
-        ...SERVICES_NODE.filter((service) => !SERVICE_TEST_EXCEPTIONS.includes(service)),
-      ];
-      const baseline = readJson(
-        join(repoRoot, 'scripts', 'config', 'coverage-baseline.json'),
-      );
-
-      assert.deepEqual(
-        sorted(Object.keys(baseline)),
-        sorted(workspaces),
-        'el baseline debe declarar exactamente los workspaces con suite',
-      );
-
-      const problems = [];
-      for (const [workspace, metrics] of Object.entries(baseline)) {
-        for (const metric of ['lines', 'branches', 'functions', 'statements']) {
-          if (typeof metrics[metric] !== 'number') {
-            problems.push(`${workspace}: baseline sin la métrica '${metric}'`);
-          }
-        }
-      }
-      assert.deepEqual(problems, [], problems.join('\n'));
-    });
-
-    test('R-COV-1/R-DB-6/R-SB-2/R-C-7: CI impide relajar baselines o excepciones', () => {
-      const workflow = readText(join(repoRoot, WORKFLOWS_DIR, 'ci.yml'));
-      assert.match(
-        workflow,
-        /run: npm run baseline:guard -- --base-ref /,
-        'CI debe comparar baselines contra la base del cambio',
-      );
-      assert.ok(
-        existsSync(join(repoRoot, 'scripts', 'tools', 'baseline-guard.mjs')),
-        'falta scripts/tools/baseline-guard.mjs',
-      );
-    });
-
-    test('R-COV-4: cada config Vitest aplica alcance y consume los thresholds centrales', () => {
-      const workspaces = [
-        'shared',
-        ...SERVICES_NODE.filter((service) => !SERVICE_TEST_EXCEPTIONS.includes(service)),
-      ];
-      const problems = [];
-
-      for (const workspace of workspaces) {
-        const configPath = join(packageDir(workspace), 'vitest.config.ts');
-        if (!existsSync(configPath)) continue;
-        const config = readText(configPath);
-        for (const [label, pattern] of [
-          ['specs', /include:\s*\['src\/\*\*\/\*\.spec\.ts'\]/],
-          ['lógica ejecutable', /include:\s*\['src\/\*\*\/\*\.ts'\]/],
-          [
-            'import de la fuente central',
-            /import \{ coverageThresholdsFor \} from '\.\.\/\.\.\/scripts\/config\/coverage\.mjs';/,
-          ],
-          [
-            'thresholds centrales',
-            new RegExp(`thresholds:\\s*coverageThresholdsFor\\(\\s*'${workspace}'\\s*\\)`),
-          ],
-          ['reporte al fallar', /reportOnFailure:\s*true/],
-        ]) {
-          if (!pattern.test(config)) problems.push(`${workspace}: cobertura sin ${label}`);
-        }
-      }
-
-      assert.deepEqual(problems, [], problems.join('\n'));
-    });
-
-    test('R-QA-1: las excepciones son explícitas, únicas y todavía no tienen suite', () => {
-      assert.equal(
-        new Set(SERVICE_TEST_EXCEPTIONS).size,
-        SERVICE_TEST_EXCEPTIONS.length,
-        'SERVICE_TEST_EXCEPTIONS no admite duplicados',
-      );
-
-      const problems = [];
-      for (const service of SERVICE_TEST_EXCEPTIONS) {
-        if (!SERVICES.includes(service)) {
-          problems.push(`${service}: no existe en SERVICES`);
-          continue;
-        }
-        const pkg = packageJson(service);
-        const specs = walkFiles(
-          join(packageDir(service), 'src'),
-          (name) => name.endsWith('.spec.ts'),
-        );
-        if (pkg.scripts?.test) problems.push(`${service}: ya tiene script test; elimina la excepción`);
-        if (existsSync(join(packageDir(service), 'vitest.config.ts'))) {
-          problems.push(`${service}: ya tiene vitest.config.ts; elimina la excepción`);
-        }
-        if (specs.length > 0) problems.push(`${service}: ya tiene specs; elimina la excepción`);
-      }
-      assert.deepEqual(problems, [], problems.join('\n'));
-    });
-
-    test('R-CI-5: el workflow delega test, smoke y build en los comandos raíz', () => {
-      const workflow = readText(join(repoRoot, WORKFLOWS_DIR, 'ci.yml'));
-      assert.match(workflow, /^\s*run: npm test$/m, 'CI debe ejecutar npm test');
-      assert.equal(rootPackage.scripts?.['test:smoke'], 'node --test scripts/tools/*.test.mjs');
-      assert.ok(existsSync(join(repoRoot, 'scripts', 'tools', 'smoke.test.mjs')));
-      assert.match(workflow, /^\s*run: npm run test:smoke$/m, 'CI debe probar el smoke');
-      assert.match(workflow, /^\s*run: npm run build$/m, 'CI debe ejecutar npm run build');
-    });
-
-    test('R-I-12: la integración de catálogo usa PostgreSQL efímero en CI', () => {
-      const workflow = readText(join(repoRoot, WORKFLOWS_DIR, 'ci.yml'));
-      assert.equal(rootPackage.scripts?.['test:integration'], 'node scripts/tools/integration-runner.mjs');
-      assert.ok(existsSync(join(repoRoot, 'scripts', 'integration', 'catalog-stock.test.mjs')));
+    test('R-I-12: la integración usa PostgreSQL efímero en CI', () => {
+      const workflow = readText(ciWorkflowPath);
       assert.match(workflow, /^ {2}integration-catalog:$/m);
       assert.match(workflow, /^ {8}image: postgres:16-alpine$/m);
-      assert.match(workflow, /^ {6}TEST_DATABASE_URL: postgres:\/\/core_engine_test:test_only@127\.0\.0\.1:5432\/core_engine_test$/m);
-      assert.match(workflow, /^ {8}run: npm run test:integration$/m);
-      assert.match(workflow, /^ {4}needs: \[rules-check, test, lint, integration-catalog, rust\]$/m);
-    });
-
-    test('R-RB-4: toda llamada fetch interna declara un timeout', () => {
-      const problems = [];
-      for (const workspace of ['shared', ...SERVICES]) {
-        const sourceDir = join(packageDir(workspace), 'src');
-        if (!existsSync(sourceDir)) continue;
-        for (const file of walkFiles(
-          sourceDir,
-          (name) => name.endsWith('.ts') && !name.endsWith('.spec.ts'),
-        )) {
-          const text = readText(file);
-          const fetchCall = /\bfetch\s*\(/g;
-          let match;
-          while ((match = fetchCall.exec(text))) {
-            // El gateway usa AbortController + setTimeout; los servicios usan
-            // AbortSignal.timeout. Ambos son timeouts explícitos válidos.
-            const fragment = text.slice(
-              Math.max(0, match.index - 800),
-              match.index + 600,
-            );
-            if (
-              !/signal\s*:/.test(fragment) ||
-              !/(AbortSignal\.timeout|AbortController)/.test(fragment)
-            ) {
-              const linea = text.slice(0, match.index).split('\n').length;
-              problems.push(`${relative(repoRoot, file)}:${linea}`);
-            }
-          }
-        }
-      }
-      assert.deepEqual(problems, [], `fetch sin timeout (R-RB-4):\n${problems.join('\n')}`);
-    });
-
-    test('R-MT-1/R-MT-2: mutation testing tiene runtime y módulos protegidos', () => {
-      const workflow = readText(join(repoRoot, WORKFLOWS_DIR, 'mutation.yml'));
       assert.match(
         workflow,
-        /node-version:\s*["']22["']/,
-        'mutation.yml debe usar Node 22 porque StrykerJS 10 lo requiere',
+        /^ {6}TEST_DATABASE_URL: postgres:\/\/core_engine_test:test_only@127\.0\.0\.1:5432\/core_engine_test$/m,
       );
+      assert.match(workflow, /^ {8}run: npm run test:integration$/m);
+    });
 
-      const expected = CRITICOS_MUTACION.filter(
-        (workspace) => workspace === 'shared' || SERVICES_NODE.includes(workspace),
+    test('R-DS-1/R-C-7: CI mantiene secreto, baseline y OpenAPI', () => {
+      const workflow = readText(ciWorkflowPath);
+      assert.match(workflow, /^\s*run: npm run security:secrets$/m);
+      assert.match(workflow, /run: npm run baseline:guard -- --base-ref /);
+      assert.match(
+        workflow,
+        /^\s*run: npm run swagger:export && git diff --exit-code docs\/openapi docs\/api$/m,
       );
-      const missing = expected.filter(
-        (workspace) =>
-          !workflow.includes(`- ${workspace}`) ||
-          !existsSync(join(packageDir(workspace), 'stryker.config.mjs')) ||
-          packageJson(workspace).scripts?.mutation !== 'stryker run',
-      );
-      assert.deepEqual(
-        missing,
-        [],
-        `mutation testing incompleto para: ${missing.join(', ')}`,
-      );
-
-      for (const workspace of expected) {
-        const config = readText(join(packageDir(workspace), 'stryker.config.mjs'));
-        assert.match(
-          config,
-          /break:\s*90/,
-          `${workspace}: Stryker debe bloquear por debajo de 90 (R-MT-2)`,
-        );
+      for (const service of SERVICES) {
+        if (service === 'api-gateway') continue;
+        for (const spec of ['public.openapi.json', 'internal.openapi.json']) {
+          assert.ok(
+            existsSync(join(repoRoot, 'docs', 'openapi', service, spec)),
+            `falta docs/openapi/${service}/${spec}`,
+          );
+        }
+      }
+      for (const api of ['core-engine.openapi.json', 'core-engine.internal.openapi.json']) {
+        assert.ok(existsSync(join(repoRoot, 'docs', 'api', api)), `falta docs/api/${api}`);
       }
     });
 
-    test('R-FL-3: unit, mutation y E2E fijan la timezone del entorno', () => {
-      const setup = join(repoRoot, 'scripts', 'config', 'test-timezone.mjs');
-      assert.ok(existsSync(setup), 'falta el setup central de timezone');
-
-      const workspaces = [
-        'shared',
-        ...SERVICES_NODE.filter((service) => !SERVICE_TEST_EXCEPTIONS.includes(service)),
-      ];
-      const missingUnit = workspaces.filter((workspace) => {
-        const config = readText(join(packageDir(workspace), 'vitest.config.ts'));
-        return !config.includes("import { resolve } from 'node:path';") ||
-          !config.includes("setupFiles: [resolve(__dirname, '../../scripts/config/test-timezone.mjs')]");
-      });
-      assert.deepEqual(missingUnit, [], `Vitest sin timezone fija: ${missingUnit.join(', ')}`);
-
-      const mutationWorkspaces = CRITICOS_MUTACION.filter(
-        (workspace) => workspace === 'shared' || SERVICES_NODE.includes(workspace),
+    test('R-MT-1/R-MT-2: no queda mutación Node; la deuda Rust es explícita', () => {
+      assert.ok(
+        !existsSync(join(repoRoot, WORKFLOWS_DIR, 'mutation.yml')),
+        'no debe quedar mutation.yml de Stryker',
       );
-      const missingMutation = mutationWorkspaces.filter((workspace) => {
-        const config = readText(join(packageDir(workspace), 'vitest.mutation.config.ts'));
-        return !config.includes("setupFiles: [resolve(repoRoot, 'scripts/config/test-timezone.mjs')]");
-      });
-      assert.deepEqual(missingMutation, [], `Mutation sin timezone fija: ${missingMutation.join(', ')}`);
+      for (const service of SERVICES) {
+        const dir = join(packagesRoot, service);
+        assert.ok(!existsSync(join(dir, 'stryker.config.mjs')), `${service}: queda Stryker`);
+      }
+    });
 
+    test('R-FL-3: los workflows fijan la timezone', () => {
       for (const workflow of ['ci.yml', 'e2e.yml', 'deploy.yml']) {
         const content = readText(join(repoRoot, WORKFLOWS_DIR, workflow));
         assert.match(content, /TZ:\s*America\/Managua/, `${workflow}: falta TZ fija`);
+      }
+    });
+
+    test('R-RB-4: las llamadas internas Rust declaran timeout', () => {
+      for (const file of [
+        join(packagesRoot, 'identity-service', 'src', 'storage.rs'),
+        join(packagesRoot, 'identity-service', 'src', 'stores.rs'),
+      ]) {
+        const codigo = readText(file);
+        assert.match(codigo, /Client::builder\(\)/, `${file}: falta cliente HTTP`);
+        assert.match(codigo, /\.timeout\(/, `${file}: falta timeout`);
       }
     });
   },

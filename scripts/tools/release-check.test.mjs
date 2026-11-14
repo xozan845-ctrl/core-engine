@@ -7,7 +7,7 @@ import { tmpdir } from 'node:os';
 import { SERVICES_NODE } from '../config/project.mjs';
 
 const script = new URL('./release-check.mjs', import.meta.url).pathname;
-const workspaces = ['shared', ...SERVICES_NODE];
+const workspaces = [...SERVICES_NODE];
 
 function git(cwd, args) {
   return execFileSync('git', args, { cwd, encoding: 'utf8' }).trim();

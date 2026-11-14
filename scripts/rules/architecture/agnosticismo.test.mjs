@@ -15,10 +15,7 @@ import { readText, walkFiles } from '../../engine/lib/fs.mjs';
 const VERTICALES = ['retail', 'farmacia', 'belleza', 'dental', 'flota'];
 
 /** Carpetas que sí conocen el modelo de verticales/packs. */
-const EXCLUIDOS = [
-  'packages/identity-service/',
-  'packages/shared/src/capabilities/',
-];
+const EXCLUIDOS = ['packages/identity-service/'];
 
 /**
  * Servicios siempre activos: no representan una capacidad de negocio
@@ -97,7 +94,6 @@ export default defineSuite({
       const violaciones = [];
       for (const archivo of archivosDePaquetes()) {
         const rel = archivo.replace(`${repoRoot}/`, '');
-        if (rel === 'packages/shared/src/constants.ts') continue;
         readText(archivo)
           .split('\n')
           .forEach((linea, indice) => {
@@ -133,29 +129,30 @@ export default defineSuite({
       );
     });
 
-    test('R-AR-5: toda capacidad declarada existe en las migraciones', () => {
-      const constantes = readText(
-        join(repoRoot, 'packages/shared/src/capabilities/capability.constants.ts'),
-      );
-      const codigos = [...constantes.matchAll(/:\s*'([a-z_]+)'/g)].map((match) => match[1]);
-      assert.ok(codigos.length > 0, 'no se encontraron capacidades declaradas');
+    test('R-AR-5: las capacidades base viven en las migraciones', () => {
       const migraciones = walkFiles(
         join(repoRoot, 'infra/db/init'),
         (nombre) => nombre.endsWith('.sql'),
       )
         .map((archivo) => readText(archivo))
         .join('\n');
-      const faltantes = codigos.filter((codigo) => !migraciones.includes(`'${codigo}'`));
-      assert.deepEqual(
-        faltantes,
-        [],
-        `Capacidades sin migracion que las registre (R-AR-5):\n${faltantes.join('\n')}`,
-      );
+      for (const codigo of [
+        'catalogo_items',
+        'registros',
+        'historia_clinica',
+        'recetas',
+        'operacion_campo',
+      ]) {
+        assert.ok(
+          migraciones.includes(`'${codigo}'`),
+          `capacidad sin migración que la registre: ${codigo}`,
+        );
+      }
     });
 
     test('R-AR-5: el pack builder mantiene vertical y pack sincronizados', () => {
       const packs = readText(
-        join(repoRoot, 'packages/identity-service/src/packs/packs.service.ts'),
+        join(repoRoot, 'packages/identity-service/src/dominio/packs.rs'),
       );
       assert.match(
         packs,
@@ -171,25 +168,25 @@ export default defineSuite({
 
     test('R-AR-5: el alta de empresa exige vertical y pack explícitos', () => {
       const controller = readText(
-        join(repoRoot, 'packages/identity-service/src/empresas/empresas.controller.ts'),
+        join(repoRoot, 'packages/identity-service/src/http/empresas.rs'),
       );
-      const inicio = controller.indexOf('class CrearEmpresaRequestDto');
-      const fin = controller.indexOf('class ActualizarPackRequestDto');
+      const inicio = controller.indexOf('const CREAR');
+      const fin = controller.indexOf('const PACK');
       const dto = inicio >= 0 && fin > inicio ? controller.slice(inicio, fin) : '';
-      assert.ok(dto, 'no se encontró CrearEmpresaRequestDto');
-      assert.doesNotMatch(dto, /vertical_id\?/, 'vertical_id no puede ser opcional');
-      assert.doesNotMatch(dto, /pack_codigo\?/, 'pack_codigo no puede ser opcional');
+      assert.ok(dto, 'no se encontró el esquema de creación de empresa');
+      assert.match(dto, /campo\(\s*"vertical_id",\s*true/, 'vertical_id debe ser obligatorio');
+      assert.match(dto, /campo\(\s*"pack_codigo",\s*true/, 'pack_codigo debe ser obligatorio');
     });
 
     test('ADR-0001: el pack builder crea verticales y packs con capacidades arbitrarias', () => {
       const builder = readText(
-        join(repoRoot, 'packages/identity-service/src/packs/packs.controller.ts'),
+        join(repoRoot, 'packages/identity-service/src/http/packs.rs'),
       );
-      assert.match(builder, /@Post\('verticales'\)/, 'falta POST /packs/verticales');
-      assert.match(builder, /@Post\('modelos-operacion'\)/, 'falta POST /packs/modelos-operacion');
-      assert.match(builder, /@Post\(\)/, 'falta POST /packs');
+      assert.match(builder, /pub async fn crear_vertical/, 'falta POST /packs/verticales');
+      assert.match(builder, /pub async fn crear_modelo/, 'falta POST /packs/modelos-operacion');
+      assert.match(builder, /pub async fn crear\(/, 'falta POST /packs');
       assert.match(builder, /capacidades/, 'el pack no acepta capacidades arbitrarias');
-      assert.match(builder, /@Roles\(ROLES\.SUPER_ADMIN, ROLES\.ADMIN\)/, 'el alta de packs debe ser administrativa');
+      assert.match(builder, /exigir_roles\(&\["super_admin", "admin"\]/, 'el alta de packs debe ser administrativa');
     });
   },
 });
