@@ -301,8 +301,8 @@ export default defineSuite({
         }
       }
       assert.ok(
-        existsSync(join(repoRoot, 'scripts', 'integration', 'identity-configuracion-sitio.test.mjs')),
-        'falta la prueba API+BD de configuración y errores normalizados',
+        existsSync(join(repoRoot, 'packages', 'identity-service', 'tests', 'http_auth.rs')),
+        'falta la prueba HTTP de configuración y errores normalizados',
       );
       assert.ok(
         existsSync(join(repoRoot, 'scripts', 'integration', 'error-contract.test.mjs')),

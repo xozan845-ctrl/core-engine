@@ -122,11 +122,10 @@ services:
   # ── Microservicios por dominio (Tabla 7) ───────────────────────────────
   identity-service:
     <<: *servicio-base
+    # ADR-0017: el servicio es Rust y tiene su propio Dockerfile multi-stage.
     build:
       context: .
-      dockerfile: Dockerfile
-      args:
-        SERVICIO: identity-service
+      dockerfile: packages/identity-service/Dockerfile
     environment:
       SERVICIO: identity-service
       PORT: 3001

@@ -57,14 +57,12 @@ async fn provisionar(url: &str) {
     // Se aplican las migraciones reales en el mismo orden que Docker
     // (`docker-entrypoint-initdb.d`), no un dump paralelo: así una deriva entre
     // migraciones y código hace fallar la prueba (como el caso items_vista).
-    let mut archivos: Vec<std::path::PathBuf> = std::fs::read_dir(concat!(
-        env!("CARGO_MANIFEST_DIR"),
-        "/../../../infra/db/init"
-    ))
-    .expect("infra/db/init")
-    .filter_map(|entrada| entrada.ok().map(|entrada| entrada.path()))
-    .filter(|ruta| ruta.extension().is_some_and(|extension| extension == "sql"))
-    .collect();
+    let mut archivos: Vec<std::path::PathBuf> =
+        std::fs::read_dir(concat!(env!("CARGO_MANIFEST_DIR"), "/../../infra/db/init"))
+            .expect("infra/db/init")
+            .filter_map(|entrada| entrada.ok().map(|entrada| entrada.path()))
+            .filter(|ruta| ruta.extension().is_some_and(|extension| extension == "sql"))
+            .collect();
     archivos.sort();
     for archivo in archivos {
         let sql = std::fs::read_to_string(&archivo).expect("leer migracion");

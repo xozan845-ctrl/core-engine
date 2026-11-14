@@ -1,6 +1,6 @@
 # Core Engine · Core Engine
 
-Plataforma de comercio electronico distribuido (microservicios sobre Node.js/NestJS + TypeScript y Rust)
+Plataforma de comercio electronico distribuido (microservicios en Rust y PostgreSQL/Supabase)
 conforme al documento **Core Engine_Informe.docx v1.6**: CQRS + Event Sourcing en las ordenes,
 RabbitMQ con outbox y DLQ, Postgres/Supabase-compatible con esquema por dominio, API Gateway
 con autenticacion en el borde, observabilidad (Prometheus + Grafana) y suite de pruebas.
@@ -90,7 +90,7 @@ seeds del plan contable NIC e indices). En **Supabase** (staging/prod) aplique a
 | Servicio | Puerto interno | Expuesto al host | Esquema | Fuente |
 |---|---|---|---|---|
 | api-gateway | 8080 | **Sí** (dev `8080:8080`; stage/prod `127.0.0.1:8080:8080` tras Traefik) | — | `packages/api-gateway` |
-| identity-service | 3001 | No | `identity` | `packages/identity-service` |
+| identity-service | 3001 | No | `identity` | `packages/identity-service` (Rust) |
 | catalog-service | 3002 | No | `catalog` | `packages/catalog-service` (Rust) |
 | stores-service | 3003 | No | `stores` | `packages/stores-service` (Rust) |
 | orders-service | 3004 | No | `orders` | `packages/orders-service` (Rust) |
