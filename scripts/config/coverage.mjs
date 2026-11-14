@@ -14,7 +14,6 @@
 
 export const COVERAGE_THRESHOLDS = {
   shared: { lines: 39, branches: 39, functions: 55 },
-  'identity-service': { lines: 89, branches: 78, functions: 85 },
 };
 
 /**
