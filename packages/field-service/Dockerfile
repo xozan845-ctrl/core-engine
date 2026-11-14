@@ -1,6 +1,6 @@
 # Core Engine · field-service (Rust)
 # Contexto de build: raíz del repositorio (igual que el Dockerfile TypeScript).
-FROM rust:1.89-bookworm AS build
+FROM rust:1.94.1-bookworm AS build
 WORKDIR /repo
 
 COPY packages/field-service/Cargo.toml packages/field-service/Cargo.lock ./packages/field-service/

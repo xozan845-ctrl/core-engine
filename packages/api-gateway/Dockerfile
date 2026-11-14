@@ -1,6 +1,6 @@
 # Core Engine · api-gateway (Rust)
 # Contexto de build: raíz del repositorio.
-FROM rust:1.89-bookworm AS build
+FROM rust:1.94.1-bookworm AS build
 WORKDIR /repo
 
 COPY packages/api-gateway/Cargo.toml packages/api-gateway/Cargo.lock ./packages/api-gateway/

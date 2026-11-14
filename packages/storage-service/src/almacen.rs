@@ -320,3 +320,18 @@ impl AlmacenObjetos for AlmacenNoDisponible {
         Ok(())
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// Regresión: aws-sdk-s3 con timeouts por defecto exige un `sleep_impl`;
+    /// sin la feature `rt-tokio` el constructor del cliente paniquea en runtime.
+    #[tokio::test]
+    async fn construye_los_clientes_s3_sin_panico() {
+        let config =
+            Config::from_pairs(std::iter::empty::<(&str, &str)>()).expect("config por defecto");
+        let almacen = AlmacenS3::nueva(&config);
+        assert_eq!(almacen.asegurados.lock().await.len(), 0);
+    }
+}

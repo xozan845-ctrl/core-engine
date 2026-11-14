@@ -6,4 +6,4 @@ desarrollo. Complementa el contrato de imágenes de
 
 | ID | Regla |
 |---|---|
-| R-CD-14 | **Higiene de la imagen de runtime**: cada imagen corre como usuario no-root (`USER node`) y poda las devDependencies tras compilar (`npm prune --omit=dev`), de modo que el tooling de test y build (vitest, swc, eslint…) no viaja en la imagen publicada. Aplica al `Dockerfile` raíz, a `packages/Dockerfile.template` y a cada `packages/<servicio>/Dockerfile`. |
+| R-CD-14 | **Higiene de la imagen de runtime**: cada imagen Rust es multi-stage (`rust:<version>-bookworm` → `debian:bookworm-slim`), arranca como usuario no-root (`USER 10001:10001`) y el runtime no lleva toolchain de compilación ni artefactos Node (`node_modules`, `dist`). La toolchain de build debe soportar el `rust-version` de todas las dependencias del `Cargo.lock`. Aplica a `packages/Dockerfile.template` y a cada `packages/<servicio>/Dockerfile`. |

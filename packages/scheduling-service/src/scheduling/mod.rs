@@ -543,15 +543,19 @@ impl Agenda {
     /// Materializa una reserva de `order.created` (idempotente por `order_id`).
     pub async fn crear_desde_reserva(&self, orden: &OrdenReserva) -> Result<Value, ApiError> {
         let order_id = parsear_uuid(&orden.order_id)?;
+        // Consumidor de eventos: contexto de servicio (super_admin) para que
+        // la RLS de citas no oculte la reserva ya creada.
+        let mut tx = self.db.transaccion().await.map_err(error_db)?;
         let existente = sqlx::query(
             "SELECT id, empresa_id, recurso_id, parte_id, order_id, item_id, estado,
                     inicia_en, termina_en, notas, metadata, creado_en, actualizado_en
              FROM scheduling.citas WHERE order_id = $1",
         )
         .bind(order_id)
-        .fetch_optional(self.db.pool())
+        .fetch_optional(&mut *tx)
         .await
         .map_err(error_db)?;
+        tx.commit().await.map_err(error_db)?;
         if let Some(fila) = existente {
             return fila_cita(&fila);
         }

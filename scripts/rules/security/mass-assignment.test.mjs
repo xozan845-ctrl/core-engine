@@ -1,3 +1,4 @@
+import { existsSync } from 'node:fs';
 import { join } from 'node:path';
 import { defineSuite } from '../../engine/suite.mjs';
 import { repoRoot } from '../../engine/lib/paths.mjs';
@@ -6,11 +7,15 @@ import { readText } from '../../engine/lib/fs.mjs';
 /**
  * Mass assignment / validación estricta (R-DS-4).
  *
- * El pipe global de Nest debe eliminar campos no declarados Y rechazar la
- * petición si el cliente intenta inyectarlos (whitelist + forbidNonWhitelisted).
+ * Los servicios Rust validan el cuerpo con esquemas explícitos por handler y
+ * descartan cualquier campo no declarado. Este check fija el contrato mínimo:
+ * validación declarativa y errores estructurados, no binding directo.
  */
 
-const PIPE = readText(join(repoRoot, 'packages/shared/src/http/validation.pipe.ts'));
+const VALIDACION = join(
+  repoRoot,
+  'packages/identity-service/src/http/validacion.rs',
+);
 
 export default defineSuite({
   id: 'security-mass-assignment',
@@ -18,18 +23,13 @@ export default defineSuite({
   rules: ['R-DS-4'],
   mode: 'repo',
   run: ({ test, assert }) => {
-    test('R-DS-4: el pipe global transforma al DTO y elimina campos no declarados', () => {
-      assert.ok(PIPE.includes('plainToInstance'), 'el pipe debe transformar al DTO');
-      assert.ok(PIPE.includes('whitelist: true'), 'falta whitelist: true');
-      assert.ok(PIPE.includes('validate('), 'el pipe debe validar el DTO transformado');
-      // La política vigente descarta los campos no declarados (whitelist) en
-      // lugar de rechazar la petición completa; el mass assignment queda
-      // neutralizado igualmente.
-      assert.match(
-        PIPE,
-        /forbidNonWhitelisted:\s*(true|false)/,
-        'la política de campos extra debe ser explícita',
-      );
+    test('R-DS-4: los DTOs Rust se validan contra un esquema explícito', () => {
+      assert.ok(existsSync(VALIDACION), 'falta la validación de DTOs de identity');
+      const codigo = readText(VALIDACION);
+      assert.match(codigo, /pub struct ReglaCampo/, 'falta el contrato de campo');
+      assert.match(codigo, /pub fn validar\(/, 'falta la función de validación');
+      assert.match(codigo, /"restricciones"/, 'los errores deben detallar restricciones');
+      assert.match(codigo, /ApiError::validacion/, 'la validación debe devolver 400 VALIDACION');
     });
   },
 });

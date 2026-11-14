@@ -7,8 +7,8 @@
  * `manifest.mjs`); `scripts/engine/` no se toca.
  *
  * Core Engine es un **monorepo npm workspaces**: varios servicios NestJS en
- * `packages/*` comparten `packages/shared`. Por eso la configuración es
- * multi-paquete (lista de servicios) y no un único `APP_DIR`.
+ * Todos los servicios son crates Rust independientes. La configuración sigue
+ * siendo multi-paquete (lista de servicios) y no un único `APP_DIR`.
  * ──────────────────────────────────────────────────────────────────────────────
  */
 
@@ -38,7 +38,7 @@ export const WORKFLOWS_DIR = '.github/workflows';
 
 /**
  * Servicios desplegables del monorepo (uno por carpeta `packages/<servicio>`
- * con `Dockerfile` propio). `shared` es librería, no servicio.
+ * con `Dockerfile` propio).
  */
 export const SERVICES = [
   'api-gateway',
@@ -80,6 +80,7 @@ export const RUST_SERVICES = [
   'finance-service',
   'orders-service',
   'catalog-service',
+  'identity-service',
 ];
 
 /** Servicios Node/NestJS con suite Vitest (todos menos los migrados a Rust). */
@@ -110,8 +111,8 @@ export const ALLOWED_COMMIT_TYPES = [
  */
 export const ALLOWED_COMMIT_SCOPES = [
   // Servicios (nombre corto y nombre completo del paquete)
-  'shared',
   'gateway',
+  'shared',
   'api-gateway',
   'identity',
   'identity-service',

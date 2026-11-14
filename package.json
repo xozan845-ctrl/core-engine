@@ -2,15 +2,8 @@
   "name": "core-engine",
   "version": "1.0.9",
   "private": true,
-  "description": "Core Engine - Core Engine: plataforma de comercio electronico distribuido (microservicios NestJS + Rust + Supabase + Docker)",
-  "workspaces": [
-    "packages/shared",
-    "packages/*"
-  ],
+  "description": "Core Engine - plataforma de comercio electronico distribuido (microservicios Rust + PostgreSQL/Supabase + Docker)",
   "scripts": {
-    "build:shared": "npm run build -w @core/shared",
-    "build": "npm run build:shared && npm run build -w @core/identity-service",
-    "test": "npm run test -w @core/shared -- --coverage && npm run test -w @core/identity-service -- --coverage",
     "demo": "node scripts/cli.mjs smoke",
     "smoke:remote": "node scripts/tools/smoke-remote.mjs",
     "lint": "eslint .",
@@ -26,12 +19,8 @@
     "promotion:check": "node scripts/tools/promotion-check.mjs",
     "security:secrets": "node scripts/tools/secrets-check.mjs",
     "multi-vertical:check": "node scripts/tools/multi-vertical-check.mjs",
-    "mutation:shared": "npm run mutation -w @core/shared",
-    "mutation:critical": "npm run mutation -w @core/identity-service",
-    "coverage:compare": "node scripts/tools/coverage-compare.mjs",
-    "coverage:baseline": "node scripts/tools/coverage-baseline.mjs",
     "baseline:guard": "node scripts/tools/baseline-guard.mjs",
-    "swagger:export": "npm run build && npm run swagger:export --workspaces --if-present && node scripts/cli.mjs swagger",
+    "swagger:export": "node scripts/cli.mjs swagger",
     "demo:verticals": "node scripts/tools/smoke-verticals.mjs"
   },
   "engines": {
@@ -39,30 +28,8 @@
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
-    "@stryker-mutator/core": "^10.1.1",
-    "@stryker-mutator/vitest-runner": "^10.1.1",
-    "@swc/core": "^1.16.22",
-    "@vitest/coverage-v8": "^5.1.0",
     "eslint": "^10.13.0",
-    "fast-check": "^4.10.2",
     "pg": "^8.13.1",
-    "supertest": "^7.3.2",
-    "typescript-eslint": "^8.72.1",
-    "unplugin-swc": "^2.0.0",
-    "vitest": "^5.0.4"
-  },
-  "overrides": {
-    "@nestjs/swagger": {
-      "js-yaml": "^5.4.2"
-    },
-    "proxy-addr": "^2.0.8",
-    "query-string": "file:./vendor/query-string-9.5.1.tgz",
-    "multer": "^2.5.0",
-    "qs": "^6.17.1",
-    "stream-json": "file:./vendor/stream-json-3.8.0.tgz"
-  },
-  "dependencies": {
-    "body-parser": "^2.4.0",
-    "multer": "^2.5.0"
+    "typescript-eslint": "^8.72.1"
   }
 }
