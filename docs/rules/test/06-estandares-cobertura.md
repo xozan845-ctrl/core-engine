@@ -117,7 +117,7 @@ cargo llvm-cov --locked --ignore-filename-regex 'src/main\.rs' \
   smoke de `staging` (R-PR-8). Subir esa cobertura es deuda registrada para la
   siguiente auditoría (R-COV-3).
 
-## Umbrales de cobertura (workspaces con suite — Vitest)
+## Umbrales de cobertura Node (histórico, sin workspaces activos)
 
 | Métrica | Mínimo global (objetivo) |
 |---|---|
@@ -131,7 +131,6 @@ cargo llvm-cov --locked --ignore-filename-regex 'src/main\.rs' \
 
   | Workspace | Líneas | Ramas | Funciones |
   |---|---|---|---|
-  | `shared` | 39 | 39 | 55 |
   
   **Enmienda (migración Jest → Vitest, 2026-10-14)**: el runner pasó de Jest/ts-jest a **Vitest 4** (config por workspace en `vitest.config.ts`, ver ADR-20). La cobertura se recalibró al nuevo baseline porque el proveedor de cobertura cambió y ahora instrumenta **todos** los ficheros del alcance (como hacía `collectCoverageFrom` en Jest), no solo los importados; verificado con el provider `istanbul` (mismos números). El ratchet sigue **solo sube** (nunca baja). `scheduling-service` salió del runner Vitest al migrar a Rust (ADR-0004), `notifications-service` (ADR-0006), `commissions-service` (ADR-0007), `field-service` (ADR-0008), `market-intelligence-service` (ADR-0009), `logistics-service` (ADR-0010), `stores-service` (ADR-0011), `storage-service` (ADR-0012), `orders-service` (ADR-0013), `finance-service` (ADR-0014), `api-gateway` (ADR-0015), `catalog-service` (ADR-0016) e `identity-service` (ADR-0017): su gate es el de la sección anterior (`cargo-llvm-cov`), no un workspace npm.
 - **Anti-inflado**: subir cobertura no puede lograrse agregando asserts triviales; el gate real es la mutación (R-MT-2).
@@ -160,7 +159,7 @@ se reutiliza).
 | G-4 | Suite de integración API+BD en verde. | ✅ PostgreSQL efímero cubre matriz multi-vertical, packs v1/v2, RLS, enforcement, pilotos y concurrencia de Outbox (59 tests). |
 | G-5 | Test de contrato en verde. | ✅ envelope `{data,meta}` en todo `/api/v2`; errores 400/401/403/404/409/500 verificados en runtime; R-C-1 comprobado sobre el OpenAPI público. |
 | G-6 | E2E de flujos críticos en verde antes de release (puede ser etiqueta `release`, no cada PR). | ✅ **gate de release**: `release.yml` llama a `e2e.yml` antes de `images`; el job levanta `docker-compose.dev.yml`, ejecuta `npm run demo` y verifica logs R-E-8 (R-E-1…R-E-7, incluido R-E-4). Un fallo bloquea la publicación. `deploy.yml` además ejecuta el smoke remoto de stage/prod (R-CD-12). |
-| G-7 | Lint **y** build sin errores: `npm run lint` (ESLint, alcance `packages/*/src/**/*.ts`, job `lint`) + `npm run build` (job `build`). | ✅ |
+| G-7 | Lint de scripts y build Rust sin errores: `npm run lint` (job `lint`) + `cargo check`/`clippy` (jobs `rust`). | ✅ |
 | G-8 | Swagger spec sincronizado (R-C-7): `git diff --exit-code` tras el export. | ✅ `npm run swagger:export` + `git diff --exit-code docs/openapi docs/api` en el job `build`. |
 
 > `security-gate` (job `npm audit --audit-level=high` que encadena los demás) no
@@ -170,7 +169,7 @@ se reutiliza).
 
 | ID | Regla |
 |---|---|
-| R-COV-1 | Ningún PR puede **bajar** la cobertura respecto al baseline versionado (`scripts/config/coverage-baseline.json`): `npm run coverage:compare` compara el reporte real de los 7 workspaces Vitest (lines/branches/functions/statements) y, en paralelo, el job `rust` aplica el gate de `cargo-llvm-cov` y falla si cualquier métrica baja. Mejorar la cobertura exige actualizar el baseline con `npm run coverage:baseline` en el mismo PR; el gate nunca lo sube solo. |
+| R-COV-1 | Ningún PR puede **bajar** la cobertura respecto al baseline versionado (`scripts/config/coverage-baseline.json`): el baseline Node quedó vacío al retirarse `shared`; el gate real es el job `rust` con `cargo-llvm-cov`, que falla si cualquier métrica baja. Mejorar la cobertura exige actualizar el umbral del servicio en la matriz de CI en el mismo PR. |
 | R-COV-2 | Archivos de lógica de negocio sin spec → bloquea merge (R-U-17). La suite `microservices-ci-contract` recorre `*.service.ts` y `*.consumer.ts` y falla si aparece uno sin `*.spec.ts` que no esté en `scripts/config/spec-baseline.json`; el baseline está vacío: **0 servicios/consumers sin spec**; también falla si queda obsoleto al añadir el spec. |
 | R-COV-3 | La auditoría `AUDIT.md` se actualiza en cada release con: cobertura actual, nº tests por capa, mutantes, deudas abiertas. Un gate solo se marca ✅ con evidencia de un **run verde de CI** (tener el paso configurado o pasar en local no basta). |
 | R-COV-4 | **Alcance del gate**: solo se mide lógica ejecutable. El alcance se define en `coverage.include`/`coverage.exclude` de cada `packages/*/vitest.config.ts`: hoy `src/**/*.ts` excluyendo `main.ts` (bootstrap), `*.module.ts` (wiring DI) y `swagger*.ts` (bootstrap de OpenAPI). Exclusiones adicionales admitidas (DTOs `/dto/`, mocks `/mocks/`, scripts CLI) se añaden ahí y se documentan en `AUDIT.md`. El baseline medido con ese alcance fija los thresholds del ratchet. |

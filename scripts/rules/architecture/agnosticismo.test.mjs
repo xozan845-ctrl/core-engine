@@ -15,10 +15,7 @@ import { readText, walkFiles } from '../../engine/lib/fs.mjs';
 const VERTICALES = ['retail', 'farmacia', 'belleza', 'dental', 'flota'];
 
 /** Carpetas que sí conocen el modelo de verticales/packs. */
-const EXCLUIDOS = [
-  'packages/identity-service/',
-  'packages/shared/src/capabilities/',
-];
+const EXCLUIDOS = ['packages/identity-service/'];
 
 /**
  * Servicios siempre activos: no representan una capacidad de negocio
@@ -97,7 +94,6 @@ export default defineSuite({
       const violaciones = [];
       for (const archivo of archivosDePaquetes()) {
         const rel = archivo.replace(`${repoRoot}/`, '');
-        if (rel === 'packages/shared/src/constants.ts') continue;
         readText(archivo)
           .split('\n')
           .forEach((linea, indice) => {
@@ -133,24 +129,25 @@ export default defineSuite({
       );
     });
 
-    test('R-AR-5: toda capacidad declarada existe en las migraciones', () => {
-      const constantes = readText(
-        join(repoRoot, 'packages/shared/src/capabilities/capability.constants.ts'),
-      );
-      const codigos = [...constantes.matchAll(/:\s*'([a-z_]+)'/g)].map((match) => match[1]);
-      assert.ok(codigos.length > 0, 'no se encontraron capacidades declaradas');
+    test('R-AR-5: las capacidades base viven en las migraciones', () => {
       const migraciones = walkFiles(
         join(repoRoot, 'infra/db/init'),
         (nombre) => nombre.endsWith('.sql'),
       )
         .map((archivo) => readText(archivo))
         .join('\n');
-      const faltantes = codigos.filter((codigo) => !migraciones.includes(`'${codigo}'`));
-      assert.deepEqual(
-        faltantes,
-        [],
-        `Capacidades sin migracion que las registre (R-AR-5):\n${faltantes.join('\n')}`,
-      );
+      for (const codigo of [
+        'catalogo_items',
+        'registros',
+        'historia_clinica',
+        'recetas',
+        'operacion_campo',
+      ]) {
+        assert.ok(
+          migraciones.includes(`'${codigo}'`),
+          `capacidad sin migración que la registre: ${codigo}`,
+        );
+      }
     });
 
     test('R-AR-5: el pack builder mantiene vertical y pack sincronizados', () => {

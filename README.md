@@ -69,8 +69,8 @@ Eventos del bus (topic `core-engine.events`): `order.created`, `stock.reservado`
 > (R-EN-1).
 
 ```bash
-npm install                       # instala los workspaces (enlaza @core/shared, ...)
-npm run build                     # compila shared + gateway + los 12 microservicios
+npm install                       # instala el tooling Node de scripts (ESLint, pg)
+npm run lint                      # lint de los scripts de gobernanza
 npm test                          # los 14 workspaces, cada uno con --coverage
 cp .env.example .env              # variables de DESARROLLO (producción: .env.production.example)
 docker compose -f docker-compose.dev.yml up -d --build   # app: Postgres + RabbitMQ + MinIO + Mailpit + gateway y 12 servicios (8080 host + datos/broker 5432/5672/15672 + minio 9000/9001 + mailpit 1025/8025)
