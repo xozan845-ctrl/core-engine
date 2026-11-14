@@ -74,6 +74,9 @@ function compareCoverage(current, previous) {
       // gate pasa a cargo-llvm-cov, así que la retirada es una migración, no
       // una relajación silenciosa.
       if (RUST_SERVICES.includes(workspace)) continue;
+      // `shared` era la librería transversal; al conmutar identity a Rust
+      // quedó sin consumidores y se retira por completo. No es una relajación.
+      if (workspace === 'shared') continue;
       problems.push(`coverage: se eliminó el workspace ${workspace}`);
       continue;
     }
