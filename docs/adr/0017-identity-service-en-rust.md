@@ -1,7 +1,7 @@
 # ADR-0017: Reescritura de `identity-service` en Rust sin cambio de contrato
 
 - **Fecha**: 2026-11-13
-- **Estado**: Aceptado — implementación en curso (PR 1-8: código, tests, API interna e imagen Rust)
+- **Estado**: Aceptado (implementado) — binario Rust activo; TypeScript retirado
 - **Ámbito**: `identity-service` (HTTP público e interno, PostgreSQL/RLS,
   JWT HS256, sesiones, usuarios, empresas, personales, packs, extensiones,
   partes, registros, API keys, correo de restablecimiento, seed y métricas)
@@ -65,8 +65,8 @@ Actualmente usa `EMAIL_PROVIDER` de `@core/shared` (SMTP/Mailpit).
 
 ### 2. Implementación destino
 
-- Crate `packages/identity-service/rust/`, binario `identity-service`; se mueve
-  a la raíz del paquete en la conmutación (como `catalog-service`).
+- Crate en la raíz de `packages/identity-service/`, binario `identity-service`
+  (el TypeScript se retiró en la conmutación).
 - `axum` + `tokio`, `sqlx` (PostgreSQL), `jsonwebtoken`, `bcrypt`, `sha2`,
   `rand`, `base64`, `serde`, `uuid`, `thiserror`.
 - Capas: `config.rs`, `auth.rs` (JWT, bcrypt y contexto), `db.rs` (pool y RLS),
@@ -146,7 +146,7 @@ Actualmente usa `EMAIL_PROVIDER` de `@core/shared` (SMTP/Mailpit).
 
 ## Estado de implementación (2026-11-13)
 
-- PR 1 completo: crate `packages/identity-service/rust/` con configuración
+- PR 1 completo: crate Rust con configuración
   fail-fast (JWT, TTL, admin, SMTP y storage), JWT HS256 de access/refresh con
   `jti`, bcrypt coste 10, contexto `x-user-*`, PostgreSQL con claims de RLS,
   errores `{codigo, mensaje, detalles?}`, envelope, logs JSON, métricas
@@ -179,9 +179,12 @@ Actualmente usa `EMAIL_PROVIDER` de `@core/shared` (SMTP/Mailpit).
 - PR 8 completo: `Dockerfile.rust` multi-stage equivalente (puerto 3001,
   variables de entorno y usuario no root), build de la imagen en CI y gate de
   cobertura final 79/75.
+- PR 9 completo: TypeScript retirado, crate movido a la raíz, `Dockerfile`
+  multi-stage activo y `identity-service` añadido a `RUST_SERVICES`.
 - 134 pruebas (109 unitarias + 6 PostgreSQL de auth/sesiones + 19 HTTP del
   contrato); cobertura medida 81,65 % líneas / 76,98 % funciones. Las
   integraciones aplican las migraciones reales de `infra/db/init` en orden, no
   un dump paralelo.
-- El TypeScript sigue siendo el runtime activo y el servicio permanece fuera de
-  `RUST_SERVICES` hasta el PR 9.
+- El binario Rust es el runtime activo. `packages/shared` queda como librería
+  TypeScript sin consumidores de servicio; su retirada queda como limpieza
+  posterior.

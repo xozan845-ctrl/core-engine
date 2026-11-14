@@ -37,7 +37,7 @@ use uuid::Uuid;
 
 /// Documento OpenAPI público versionado (golden del contrato, R-C-7).
 const OPENAPI_PUBLICO: &str =
-    include_str!("../../../../../docs/openapi/identity-service/public.openapi.json");
+    include_str!("../../../../docs/openapi/identity-service/public.openapi.json");
 
 const DOCS_HTML: &str = r#"<!doctype html>
 <html lang="es">
