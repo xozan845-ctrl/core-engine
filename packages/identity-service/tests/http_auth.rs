@@ -69,14 +69,12 @@ async fn provisionar(url: &str) {
     .execute(&pool)
     .await
     .expect("reset de esquemas de prueba");
-    let mut archivos: Vec<std::path::PathBuf> = std::fs::read_dir(concat!(
-        env!("CARGO_MANIFEST_DIR"),
-        "/../../../infra/db/init"
-    ))
-    .expect("infra/db/init")
-    .filter_map(|entrada| entrada.ok().map(|entrada| entrada.path()))
-    .filter(|ruta| ruta.extension().is_some_and(|extension| extension == "sql"))
-    .collect();
+    let mut archivos: Vec<std::path::PathBuf> =
+        std::fs::read_dir(concat!(env!("CARGO_MANIFEST_DIR"), "/../../infra/db/init"))
+            .expect("infra/db/init")
+            .filter_map(|entrada| entrada.ok().map(|entrada| entrada.path()))
+            .filter(|ruta| ruta.extension().is_some_and(|extension| extension == "sql"))
+            .collect();
     archivos.sort();
     for archivo in archivos {
         let sql = std::fs::read_to_string(&archivo).expect("leer migracion");

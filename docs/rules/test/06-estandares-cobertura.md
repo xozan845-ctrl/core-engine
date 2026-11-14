@@ -20,7 +20,7 @@ Todo PR debe incluir las capas marcadas con ✅ para el tipo de cambio tocado.
 > `/api/v2` y G-6 es gate de release. La fila "Flujo de usuario nuevo" aplica
 > cuando exista UI en el repo (hoy no la hay).
 
-## Cobertura de los servicios Rust (migraciones ADR-0004, ADR-0006, ADR-0007, ADR-0008, ADR-0009, ADR-0010, ADR-0011, ADR-0012, ADR-0013, ADR-0014 y ADR-0015)
+## Cobertura de los servicios Rust (migraciones ADR-0004, ADR-0006, ADR-0007, ADR-0008, ADR-0009, ADR-0010, ADR-0011, ADR-0012, ADR-0013, ADR-0014, ADR-0015, ADR-0016 y ADR-0017)
 
 `packages/api-gateway`, `packages/scheduling-service`,
 `packages/notifications-service`, `packages/commissions-service`,
@@ -132,9 +132,8 @@ cargo llvm-cov --locked --ignore-filename-regex 'src/main\.rs' \
   | Workspace | Líneas | Ramas | Funciones |
   |---|---|---|---|
   | `shared` | 39 | 39 | 55 |
-  | `identity-service` | 89 | 78 | 85 |
-
-  **Enmienda (migración Jest → Vitest, 2026-10-14)**: el runner pasó de Jest/ts-jest a **Vitest 4** (config por workspace en `vitest.config.ts`, ver ADR-20). La cobertura se recalibró al nuevo baseline porque el proveedor de cobertura cambió y ahora instrumenta **todos** los ficheros del alcance (como hacía `collectCoverageFrom` en Jest), no solo los importados; verificado con el provider `istanbul` (mismos números). El ratchet sigue **solo sube** (nunca baja). `scheduling-service` salió del runner Vitest al migrar a Rust (ADR-0004), `notifications-service` (ADR-0006), `commissions-service` (ADR-0007), `field-service` (ADR-0008), `market-intelligence-service` (ADR-0009), `logistics-service` (ADR-0010), `stores-service` (ADR-0011), `storage-service` (ADR-0012), `orders-service` (ADR-0013), `finance-service` (ADR-0014), `api-gateway` (ADR-0015) y `catalog-service` (ADR-0016): su gate es el de la sección anterior (`cargo-llvm-cov`), no un workspace npm.
+  
+  **Enmienda (migración Jest → Vitest, 2026-10-14)**: el runner pasó de Jest/ts-jest a **Vitest 4** (config por workspace en `vitest.config.ts`, ver ADR-20). La cobertura se recalibró al nuevo baseline porque el proveedor de cobertura cambió y ahora instrumenta **todos** los ficheros del alcance (como hacía `collectCoverageFrom` en Jest), no solo los importados; verificado con el provider `istanbul` (mismos números). El ratchet sigue **solo sube** (nunca baja). `scheduling-service` salió del runner Vitest al migrar a Rust (ADR-0004), `notifications-service` (ADR-0006), `commissions-service` (ADR-0007), `field-service` (ADR-0008), `market-intelligence-service` (ADR-0009), `logistics-service` (ADR-0010), `stores-service` (ADR-0011), `storage-service` (ADR-0012), `orders-service` (ADR-0013), `finance-service` (ADR-0014), `api-gateway` (ADR-0015), `catalog-service` (ADR-0016) e `identity-service` (ADR-0017): su gate es el de la sección anterior (`cargo-llvm-cov`), no un workspace npm.
 - **Anti-inflado**: subir cobertura no puede lograrse agregando asserts triviales; el gate real es la mutación (R-MT-2).
 - **Ratchet (gate efectivo)**: la tabla es el objetivo final; el baseline se mide con el alcance de R-COV-4 redondeado a la baja (1 pt de margen de varianza) y sube **+5 puntos por release** hasta la tabla (tope: los mínimos de la tabla). Nunca baja (R-COV-1). Cada subida queda registrada en `AUDIT.md` (R-COV-3) y se vierte subiendo el umbral en `scripts/config/coverage.mjs`. La suite `microservices-ci-contract` compara la fuente central con esta tabla y falla si un umbral queda por debajo del baseline documentado (R-COV-1).
 

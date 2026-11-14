@@ -1,10 +1,4 @@
 {
-  "identity-service": {
-    "lines": 90.69,
-    "branches": 79.5,
-    "functions": 86,
-    "statements": 88.23
-  },
   "shared": {
     "lines": 90,
     "branches": 75,

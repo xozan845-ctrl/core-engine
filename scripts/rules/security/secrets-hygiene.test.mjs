@@ -13,7 +13,8 @@ import { readText } from '../../engine/lib/fs.mjs';
 
 const ENV = readText(join(repoRoot, '.env.example'));
 const RUNTIME = readText(join(repoRoot, 'packages/shared/src/config/runtime.ts'));
-const SEED = readText(join(repoRoot, 'packages/identity-service/src/seed/seed.service.ts'));
+const SEED = readText(join(repoRoot, 'packages/identity-service/src/seed.rs'));
+const RUST_CONFIG = readText(join(repoRoot, 'packages/identity-service/src/config.rs'));
 
 // Secretos de despliegue que ya se filtraron una vez; no deben volver al repo.
 const SECRETOS_REALES = ['846eb67047faf8686b561c5c5d096cbb7b2f980e92d6e205'];
@@ -62,9 +63,13 @@ export default defineSuite({
         'el seed conserva la contraseña por defecto',
       );
       assert.ok(
-        SEED.includes('passwordAdminInicial'),
+        SEED.includes('admin_password'),
         'el seed debe obtener la contraseña del runtime',
       );
+      for (const clave of CLAVES_RUNTIME) {
+        assert.ok(RUST_CONFIG.includes(clave), `config.rs no exige ${clave}`);
+      }
+      assert.match(RUST_CONFIG, /produccion/, 'config.rs no distingue producción');
     });
   },
 });

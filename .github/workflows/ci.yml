@@ -127,8 +127,6 @@ jobs:
         run: npm ci --prefer-offline
       - name: Build shared library for integration harness
         run: npm run build -w @core/shared
-      - name: Build identity service for integration harness
-        run: npm run build -w @core/identity-service
       - name: Verify catalog stock projection and API contracts against ephemeral PostgreSQL
         run: npm run test:integration
       - name: Verify multi-vertical pack/tenant consistency (R-I-12)
@@ -191,7 +189,7 @@ jobs:
             lines: 78
             functions: 73
           - service: identity-service
-            dir: packages/identity-service/rust
+            dir: packages/identity-service
             lines: 79
             functions: 75
     env:
@@ -234,7 +232,7 @@ jobs:
           --fail-under-lines ${{ matrix.lines }} --fail-under-functions ${{ matrix.functions }}
       - name: Build Rust image (identity)
         if: matrix.service == 'identity-service'
-        run: docker build -f packages/identity-service/Dockerfile.rust -t core-engine-identity-service:ci .
+        run: docker build -f packages/identity-service/Dockerfile -t core-engine-identity-service:ci .
 
   build:
     name: Build all services

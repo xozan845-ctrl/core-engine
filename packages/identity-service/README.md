@@ -4,14 +4,13 @@ Reescritura en Rust de `identity-service` con **paridad de contrato**. La
 decisión y los invariantes están en
 [`docs/adr/0017-identity-service-en-rust.md`](../../../docs/adr/0017-identity-service-en-rust.md).
 
-El crate vive en `packages/identity-service/rust/` durante la migración; se
-moverá a la raíz del paquete en la conmutación (PR 9). Hasta entonces el
-runtime activo sigue siendo el TypeScript.
+El crate vive en la raíz de `packages/identity-service/`; el TypeScript se
+retiró en la conmutación (PR 9) y el servicio se construye con `cargo`.
 
 ## Comandos
 
 ```bash
-cd packages/identity-service/rust
+cd packages/identity-service
 cargo fmt --check
 cargo clippy --all-targets -- -D warnings
 cargo test
@@ -25,7 +24,7 @@ Variables de entorno: `PORT` (3001), `SERVICIO`, `DATABASE_URL`,
 
 En producción `JWT_SECRET`, `ADMIN_EMAIL` y `ADMIN_PASSWORD` son obligatorias.
 
-## Alcance actual (PR 1-8)
+## Alcance actual (implementado)
 
 - Configuración con `fail-fast` de variables obligatorias, TTL de JWT y SMTP.
 - JWT HS256 de `access`/`refresh` con el mismo payload que
@@ -62,15 +61,14 @@ En producción `JWT_SECRET`, `ADMIN_EMAIL` y `ADMIN_PASSWORD` son obligatorias.
 - Apagado ordenado ante `SIGINT`/`SIGTERM`.
 - Gate Rust en CI con cobertura 79/75 (medida 81,65/76,98).
 
-Pendiente en el PR 9: conmutación, compose y retirada del TypeScript.
+El servicio está conmutado: el binario Rust es el runtime activo y el TypeScript fue retirado.
 
 ## Imagen Docker
 
-`packages/identity-service/Dockerfile.rust` es la imagen multi-stage preparada
-para la conmutación (el Dockerfile activo sigue siendo el TS hasta el PR 9):
+`packages/identity-service/Dockerfile` es la imagen multi-stage activa:
 
 ```bash
-docker build -f packages/identity-service/Dockerfile.rust -t core-engine-identity-service .
+docker build -f packages/identity-service/Dockerfile -t core-engine-identity-service .
 ```
 
 Expone el puerto 3001 y ejecuta como usuario `10001:10001`.
