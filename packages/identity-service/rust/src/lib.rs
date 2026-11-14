@@ -17,6 +17,7 @@ pub mod errors;
 pub mod http;
 pub mod logs;
 pub mod metrics;
+pub mod seed;
 pub mod state;
 pub mod storage;
 pub mod stores;

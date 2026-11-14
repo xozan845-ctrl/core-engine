@@ -19,6 +19,7 @@ use identity_service::email::{crear_email, Email};
 use identity_service::http::build_router;
 use identity_service::logs::{ejecutar_con_contexto, ContextoCorrelacion};
 use identity_service::metrics::Metrics;
+use identity_service::seed;
 use identity_service::state::{AppState, Servicios};
 use identity_service::storage::Storage;
 use identity_service::stores::Stores;
@@ -109,6 +110,7 @@ async fn main() {
         stores,
         config.frontend_url.clone(),
     ));
+    seed::sembrar(&usuarios, &db, &config).await;
     let estado = AppState::con_servicios(
         config,
         metrics,

@@ -101,6 +101,7 @@ async fn preparar() -> Option<Contexto> {
         ("DATABASE_URL", url.as_str()),
         ("JWT_SECRET", "secreto-de-prueba"),
         ("EMAIL_MODE", "log"),
+        ("INTERNAL_API_KEY", "clave-interna-test"),
     ])
     .expect("config");
     let storage = Arc::new(Storage::nueva("http://127.0.0.1:9", None));
@@ -2036,4 +2037,202 @@ async fn debe_gestionar_extensiones_y_validar_json_schema() {
     )
     .await;
     assert_eq!(status, StatusCode::NOT_FOUND);
+}
+
+#[tokio::test]
+async fn debe_servir_la_api_interna_con_clave() {
+    let Some(ctx) = preparar().await else {
+        return;
+    };
+    let usuario = ctx
+        .usuarios
+        .crear(CrearUsuario {
+            nombre: "Empresario".into(),
+            correo: correo(),
+            contrasena: "secreto123".into(),
+            rol: "empresario".into(),
+            tenant_id: None,
+            personal_id: None,
+        })
+        .await
+        .expect("usuario");
+    let actor_base = autorizacion(&usuario.id, "empresario");
+    let slug = format!("empresa-{}", &Uuid::new_v4().simple().to_string()[..8]);
+    let (_, creada) = enviar(
+        &ctx.app,
+        "POST",
+        "/api/v2/empresas",
+        json!({
+            "nombre": "Empresa interna",
+            "slug": slug,
+            "vertical_id": "retail",
+            "pack_codigo": "pack_retail",
+            "pack_version": 1
+        }),
+        &headers(&actor_base),
+    )
+    .await;
+    let empresa_id = creada["data"]["id"].as_str().expect("empresa").to_string();
+    let mut actor_pares = actor_base.clone();
+    actor_pares.push(("x-tenant", empresa_id.clone()));
+    let actor = headers(&actor_pares);
+    let (_, parte) = enviar(
+        &ctx.app,
+        "POST",
+        &format!("/api/v2/empresas/{empresa_id}/partes"),
+        json!({ "tipo": "persona", "nombre": "Cliente interno" }),
+        &actor,
+    )
+    .await;
+    let parte_id = parte["data"]["id"].as_str().expect("parte").to_string();
+
+    let clave = [("x-internal-key", "clave-interna-test")];
+    let (status, usuario_interno) = enviar(
+        &ctx.app,
+        "GET",
+        &format!("/internal/usuarios/{}", usuario.id),
+        Value::Null,
+        &clave,
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK);
+    assert_eq!(usuario_interno["id"], usuario.id);
+
+    let (status, _) = enviar(
+        &ctx.app,
+        "GET",
+        &format!("/internal/usuarios/{}", usuario.id),
+        Value::Null,
+        &[],
+    )
+    .await;
+    assert_eq!(status, StatusCode::FORBIDDEN);
+
+    let (status, vendedores) =
+        enviar(&ctx.app, "GET", "/internal/vendedores", Value::Null, &clave).await;
+    assert_eq!(status, StatusCode::OK);
+    assert!(vendedores.as_array().is_some());
+    let (status, conteo) = enviar(
+        &ctx.app,
+        "GET",
+        "/internal/contar-vendedores",
+        Value::Null,
+        &clave,
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK);
+    assert!(conteo["vendedores"].as_i64().is_some());
+
+    let (status, empresa) = enviar(
+        &ctx.app,
+        "GET",
+        &format!("/internal/empresas/{empresa_id}"),
+        Value::Null,
+        &clave,
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK);
+    assert_eq!(empresa["id"], empresa_id);
+    let (status, tema) = enviar(
+        &ctx.app,
+        "GET",
+        &format!("/internal/empresas/{empresa_id}/tema"),
+        Value::Null,
+        &clave,
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK);
+    assert_eq!(tema["tema_override"], json!({}));
+    let (status, plataforma) = enviar(
+        &ctx.app,
+        "GET",
+        "/internal/configuracion-sitio/tema",
+        Value::Null,
+        &clave,
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK);
+    assert!(plataforma.get("plantilla_override").is_some());
+
+    let (status, capacidades) = enviar(
+        &ctx.app,
+        "POST",
+        "/internal/empresas/capacidades",
+        json!({ "empresa_ids": [empresa_id], "capacidades": ["registros"] }),
+        &clave,
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK);
+    assert_eq!(capacidades["capacidades"][0]["activo"], true);
+
+    let (status, parte_interna) = enviar(
+        &ctx.app,
+        "GET",
+        &format!("/internal/partes/{parte_id}?empresa_id={empresa_id}"),
+        Value::Null,
+        &clave,
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK);
+    assert_eq!(parte_interna["id"], parte_id);
+
+    let (status, _) = enviar(
+        &ctx.app,
+        "GET",
+        &format!("/internal/partes/{parte_id}"),
+        Value::Null,
+        &clave,
+    )
+    .await;
+    assert_eq!(status, StatusCode::NOT_FOUND);
+}
+
+#[tokio::test]
+async fn debe_sembrar_administrador_y_tenant_de_plataforma() {
+    let Some(ctx) = preparar().await else {
+        return;
+    };
+    let url = std::env::var("TEST_DATABASE_URL").expect("url");
+    let admin_email = format!("seed-{}@core-engine.test", Uuid::new_v4());
+    let config = Config::from_pairs([
+        ("DATABASE_URL", url.as_str()),
+        ("JWT_SECRET", "secreto-de-prueba"),
+        ("ADMIN_EMAIL", admin_email.as_str()),
+        ("ADMIN_PASSWORD", "AdminSeed2026!"),
+    ])
+    .expect("config");
+
+    let ya_habia_admin = ctx.usuarios.existe_admin().await.expect("admin previo");
+    identity_service::seed::sembrar(&ctx.usuarios, &ctx.db, &config).await;
+    assert!(ctx.usuarios.existe_admin().await.expect("admin"));
+    if !ya_habia_admin {
+        let admin = ctx
+            .usuarios
+            .encontrar_por_correo(&admin_email)
+            .await
+            .expect("buscar")
+            .expect("admin creado");
+        assert_eq!(admin.usuario.rol, "super_admin");
+    }
+
+    let tenant = identity_service::seed::tenant_por_defecto();
+    let fila = sqlx::query(
+        "SELECT e.nombre, e.vertical_id, e.pack_codigo,
+                (SELECT COUNT(*)::int FROM identity.empresa_capacidades c
+                  WHERE c.empresa_id = e.id) AS capacidades
+           FROM identity.empresas e WHERE e.id = $1::uuid",
+    )
+    .bind(tenant)
+    .fetch_one(ctx.db.pool())
+    .await
+    .expect("tenant");
+    use sqlx::Row;
+    assert_eq!(fila.get::<String, _>("nombre"), "Plataforma logística");
+    assert_eq!(fila.get::<String, _>("vertical_id"), "flota");
+    assert_eq!(fila.get::<String, _>("pack_codigo"), "pack_flota");
+    assert!(fila.get::<i32, _>("capacidades") > 0);
+
+    // Idempotente
+    identity_service::seed::sembrar(&ctx.usuarios, &ctx.db, &config).await;
+    assert!(ctx.usuarios.existe_admin().await.expect("admin"));
 }
