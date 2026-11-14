@@ -304,7 +304,7 @@ impl Rabbit {
             let mut consumidor = match canal
                 .basic_consume(
                     &cola,
-                    "commissions-service",
+                    &format!("commissions-service-{cola}"),
                     BasicConsumeOptions::default(),
                     FieldTable::default(),
                 )
