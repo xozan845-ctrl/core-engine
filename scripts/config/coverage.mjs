@@ -1,28 +1,14 @@
 /**
  * config/coverage.mjs — Core Engine
- * ──────────────────────────────────────────────────────────────────────────────
- * Fuente única de los umbrales de cobertura por workspace (R-COV-1, R-COV-4).
  *
- * Cada `packages/<workspace>/vitest.config.ts` consume `coverageThresholdsFor()`; no
- * repite porcentajes. Así el ratchet (+5 por release, nunca a la baja) se edita
- * en un solo lugar; el baseline documentado vive en
- * `docs/rules/test/06-estandares-cobertura.md`.
- *
- * `shared` es librería; el resto son servicios desplegables.
- * ──────────────────────────────────────────────────────────────────────────────
+ * Ya no hay workspaces Node con suite Vitest: todos los servicios están en
+ * Rust y su gate vive en `cargo llvm-cov` (jobs `rust` de CI). Este módulo se
+ * conserva vacío para las reglas de gobernanza que lo importan y para dejar
+ * explícito que no queda cobertura Node que comparar.
  */
 
-export const COVERAGE_THRESHOLDS = {
-  shared: { lines: 39, branches: 39, functions: 55 },
-};
+export const COVERAGE_THRESHOLDS = {};
 
-/**
- * Devuelve los umbrales del workspace o falla si no está declarado. Falla
- * ruidosamente para que un servicio nuevo no quede sin gate por omisión.
- *
- * @param {string} workspace Nombre de la carpeta en `packages/`.
- * @returns {{ lines: number, branches: number, functions: number }}
- */
 export function coverageThresholdsFor(workspace) {
   const thresholds = COVERAGE_THRESHOLDS[workspace];
   if (!thresholds) {

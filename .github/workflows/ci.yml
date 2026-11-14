@@ -63,38 +63,8 @@ jobs:
           cache: "npm"
       - name: Install dependencies
         run: npm ci --prefer-offline
-      - name: Lint TypeScript sources (Gate G-7 — docs/rules/test/06-estandares-cobertura.md)
+      - name: Lint de scripts de gobernanza (Gate G-7 — docs/rules/test/06-estandares-cobertura.md)
         run: npm run lint
-
-  test:
-    name: Unit Tests + Coverage
-    runs-on: ubuntu-24.04
-    needs: security-gate
-    env:
-      TZ: America/Managua
-    steps:
-      - uses: actions/checkout@v7
-      - uses: actions/setup-node@v7
-        with:
-          node-version: "20"
-          cache: "npm"
-      - name: Install dependencies
-        run: npm ci --prefer-offline
-      - name: Build shared library
-        run: npm run build -w @core/shared
-      - name: Run tests with coverage
-        # El script raíz `test` ya corre cada workspace con `--coverage`
-        # (los umbrales viven en `scripts/config/coverage.mjs`).
-        run: npm test
-      - name: Compare coverage against baseline (R-COV-1)
-        run: npm run coverage:compare
-      - name: Upload coverage report
-        uses: actions/upload-artifact@v7
-        if: always()
-        with:
-          name: coverage-report
-          path: packages/*/coverage/
-          retention-days: 7
 
   integration-catalog:
     name: API + BD contracts (PostgreSQL)
@@ -125,8 +95,6 @@ jobs:
           cache: "npm"
       - name: Install dependencies
         run: npm ci --prefer-offline
-      - name: Build shared library for integration harness
-        run: npm run build -w @core/shared
       - name: Verify catalog stock projection and API contracts against ephemeral PostgreSQL
         run: npm run test:integration
       - name: Verify multi-vertical pack/tenant consistency (R-I-12)
@@ -237,7 +205,7 @@ jobs:
   build:
     name: Build all services
     runs-on: ubuntu-24.04
-    needs: [rules-check, test, lint, integration-catalog, rust]
+    needs: [rules-check, lint, integration-catalog, rust]
     steps:
       - uses: actions/checkout@v7
         with:
@@ -246,9 +214,5 @@ jobs:
         with:
           node-version: "20"
           cache: "npm"
-      - name: Install dependencies
-        run: npm ci --prefer-offline
-      - name: Build all packages
-        run: npm run build
       - name: Gate G-8 — spec OpenAPI sincronizado (R-DO-6, R-C-7)
         run: npm run swagger:export && git diff --exit-code docs/openapi docs/api
