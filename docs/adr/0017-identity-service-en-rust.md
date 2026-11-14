@@ -1,7 +1,7 @@
 # ADR-0017: Reescritura de `identity-service` en Rust sin cambio de contrato
 
 - **Fecha**: 2026-11-13
-- **Estado**: Aceptado — implementación en curso (PR 1-6: andamiaje, auth, dominio, empresas, personal, partes y extensiones)
+- **Estado**: Aceptado — implementación en curso (PR 1-7: andamiaje, auth, dominio, empresas, personal, partes, extensiones e interno)
 - **Ámbito**: `identity-service` (HTTP público e interno, PostgreSQL/RLS,
   JWT HS256, sesiones, usuarios, empresas, personales, packs, extensiones,
   partes, registros, API keys, correo de restablecimiento, seed y métricas)
@@ -172,8 +172,12 @@ Actualmente usa `EMAIL_PROVIDER` de `@core/shared` (SMTP/Mailpit).
 - PR 6 completo: extensiones configurables versionadas por empresa, con
   JSON Schema (sin `$ref` externas), activación de una sola versión y valores
   por recurso validados contra el esquema activo.
-- 129 pruebas (106 unitarias + 6 PostgreSQL de auth/sesiones + 17 HTTP del
-  contrato); cobertura medida 81,33 % líneas / 76,09 % funciones (gate 77/74 en
+- PR 7 completo: API interna protegida por `x-internal-key` (usuarios,
+  vendedores, conteo, empresas, tema de empresa/plataforma, capacidades por
+  lote y pertenencia de partes) y seed idempotente de administrador y tenant
+  de flota de plataforma.
+- 134 pruebas (109 unitarias + 6 PostgreSQL de auth/sesiones + 19 HTTP del
+  contrato); cobertura medida 81,65 % líneas / 76,98 % funciones (gate 77/74 en
   CI). Las integraciones aplican las migraciones reales de `infra/db/init` en
   orden, no un dump paralelo.
 - El TypeScript sigue siendo el runtime activo y el servicio permanece fuera de

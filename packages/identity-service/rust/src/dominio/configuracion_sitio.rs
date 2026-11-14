@@ -396,6 +396,32 @@ fn interno(error: sqlx::Error) -> ApiError {
     ApiError::interno()
 }
 
+impl ConfiguracionSitio {
+    /// Overrides crudos de tema de la plataforma (ADR-42).
+    pub async fn tema_overrides(&self) -> Result<Value, ApiError> {
+        let mut tx = self.db.transaccion().await.map_err(interno)?;
+        let fila = sqlx::query(
+            "SELECT plantilla_override, tema_override
+               FROM identity.configuracion_plataforma WHERE id = 1",
+        )
+        .fetch_optional(&mut *tx)
+        .await
+        .map_err(interno)?;
+        tx.commit().await.map_err(interno)?;
+        let Some(fila) = fila else {
+            return Ok(json!({ "plantilla_override": Value::Null, "tema_override": {} }));
+        };
+        let plantilla: Option<String> = fila.try_get("plantilla_override").map_err(interno)?;
+        let tema: Value = fila.try_get("tema_override").map_err(interno)?;
+        Ok(json!({
+            "plantilla_override": plantilla
+                .as_deref()
+                .filter(|valor| es_plantilla(valor)),
+            "tema_override": tema_parcial_de(&tema),
+        }))
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

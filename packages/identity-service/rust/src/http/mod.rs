@@ -11,6 +11,7 @@ pub mod configuracion_sitio;
 pub mod empresas;
 pub mod envelope;
 pub mod extensiones;
+pub mod internal;
 pub mod packs;
 pub mod partes;
 pub mod personal;
@@ -161,6 +162,23 @@ pub fn build_router(state: AppState) -> Router {
                 .patch(registros::actualizar)
                 .delete(registros::eliminar),
         )
+        .route("/internal/usuarios/{id}", get(internal::usuario))
+        .route("/internal/vendedores", get(internal::vendedores))
+        .route(
+            "/internal/contar-vendedores",
+            get(internal::contar_vendedores),
+        )
+        .route("/internal/empresas/{id}", get(internal::empresa))
+        .route("/internal/empresas/{id}/tema", get(internal::empresa_tema))
+        .route(
+            "/internal/configuracion-sitio/tema",
+            get(internal::plataforma_tema),
+        )
+        .route(
+            "/internal/empresas/capacidades",
+            post(internal::capacidades_empresas),
+        )
+        .route("/internal/partes/{id}", get(internal::parte))
         .route(
             "/api/v2/empresas/{empresa_id}/extensiones",
             get(extensiones::listar).post(extensiones::crear),

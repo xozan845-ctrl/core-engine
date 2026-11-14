@@ -32,6 +32,7 @@ pub struct Config {
     pub internal_api_key: Option<String>,
     pub stores_service_url: String,
     pub platform_tenant_id: Option<String>,
+    pub platform_logistics_tenant_id: Option<String>,
     pub admin_email: String,
     pub admin_password: String,
     pub email_mode: String,
@@ -105,6 +106,7 @@ impl Config {
                 .trim_end_matches('/')
                 .to_string(),
             platform_tenant_id: leer("PLATFORM_TENANT_ID"),
+            platform_logistics_tenant_id: leer("PLATFORM_LOGISTICS_TENANT_ID"),
             admin_email: requerido_en_produccion("ADMIN_EMAIL", ADMIN_EMAIL_DEFAULT)?,
             admin_password: requerido_en_produccion("ADMIN_PASSWORD", ADMIN_PASSWORD_DEFAULT)?,
             email_mode: leer("EMAIL_MODE")
