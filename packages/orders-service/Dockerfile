@@ -1,6 +1,6 @@
 # Core Engine · orders-service (Rust)
 # Contexto de build: raíz del repositorio (igual que el resto de servicios).
-FROM rust:1.89-bookworm AS build
+FROM rust:1.94.1-bookworm AS build
 WORKDIR /repo
 
 COPY packages/orders-service/Cargo.toml packages/orders-service/Cargo.lock ./packages/orders-service/

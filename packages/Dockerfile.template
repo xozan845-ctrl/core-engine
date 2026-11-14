@@ -1,58 +1,36 @@
-# Core Engine · plantilla de Dockerfile por servicio
+# Core Engine · plantilla de Dockerfile por servicio (Rust)
 # Copia este archivo a `packages/<servicio>/Dockerfile` al crear un servicio
 # nuevo (R-CD-14 aplica al Dockerfile raiz, a esta plantilla y a cada servicio).
-# Contexto de build: la RAÍZ del workspace.
-#   docker build -f packages/<servicio>/Dockerfile --build-arg SERVICIO=<servicio> .
+# Contexto de build: la RAÍZ del repositorio.
+#   docker build -f packages/<servicio>/Dockerfile -t core-engine-<servicio> .
+FROM rust:1.94.1-bookworm AS build
+WORKDIR /repo
 
-FROM node:20-alpine AS build
-# Node 20 = misma version que CI (R-EN-1); engines del repo pide >=20.
+# Cargo.lock se copia para que `--locked` sea reproducible; la toolchain de la
+# imagen debe soportar el `rust-version` de todas las dependencias.
+COPY packages/<servicio>/Cargo.toml packages/<servicio>/Cargo.lock ./packages/<servicio>/
+COPY docs/openapi/<servicio> ./docs/openapi/<servicio>
+
+# Cachea las dependencias con un binario vacío antes de copiar el código real.
+RUN cd packages/<servicio> \
+    && mkdir -p src \
+    && echo "fn main() {}" > src/main.rs \
+    && cargo build --release --locked
+
+COPY packages/<servicio>/src ./packages/<servicio>/src
+COPY packages/<servicio>/tests ./packages/<servicio>/tests
+RUN touch packages/<servicio>/src/main.rs \
+    && cd packages/<servicio> \
+    && cargo build --release --locked
+
+FROM debian:bookworm-slim AS runtime
+# El runtime NO lleva toolchain de compilación (R-CD-14): solo CA certs.
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
 WORKDIR /app
-
-# declaraciones de todos los workspaces + escaneo ligero de codigo
-COPY package.json package-lock.json tsconfig.base.json ./
-COPY packages packages
-
-# La instalación es idéntica para todos los servicios. Declarar SERVICIO
-# después permite compartir esta capa en el build paralelo de Compose.
-# El cache conserva tarballs entre builds sin entrar en la imagen final.
-RUN --mount=type=cache,target=/root/.npm,sharing=locked \
-    npm ci --prefer-offline --no-audit --no-fund
-
-ARG SERVICIO
-ENV SERVICIO=$SERVICIO
-# npm workspaces anida dependencias por workspace: las del propio servicio
-# (p. ej. node-cron en commissions/finance) y las de `shared` que no hoistea a
-# la raiz (p. ej. amqplib). Crear los directorios asegura que el COPY del
-# runtime no falle.
-RUN mkdir -p packages/$SERVICIO/node_modules packages/shared/node_modules
-
-# compilacion: shared primero (dependencia), luego el servicio objetivo
-RUN npm run build -w @core/shared && npm run build -w @core/$SERVICIO
-
-# El runtime NO lleva dependencias de desarrollo (R-CD-14): tras compilar se
-# poda el arbol para no enviar tooling de test (vitest, swc, eslint…).
-RUN npm prune --omit=dev
-
-FROM node:20-alpine AS runtime
-WORKDIR /app
+COPY --from=build /repo/packages/<servicio>/target/release/<servicio> /usr/local/bin/<servicio>
 ENV NODE_ENV=production
-
-ARG SERVICIO
-ENV SERVICIO=$SERVICIO
-
-COPY --from=build /app/node_modules ./node_modules
-COPY --from=build /app/package.json ./package.json
-COPY --from=build /app/packages/shared/dist ./packages/shared/dist
-COPY --from=build /app/packages/shared/package.json ./packages/shared/package.json
-# dependencias que npm anida bajo `shared` (no hoisted en la raiz): sin esto el
-# servicio no arranca (MODULE_NOT_FOUND en rabbit.service; p. ej. amqplib 2).
-COPY --from=build /app/packages/shared/node_modules ./packages/shared/node_modules
-COPY --from=build /app/packages/$SERVICIO/dist ./packages/$SERVICIO/dist
-COPY --from=build /app/packages/$SERVICIO/package.json ./packages/$SERVICIO/package.json
-# dependencias que npm anida bajo el propio workspace (no hoisted en la raiz):
-# sin esto, un servicio como commissions/finance no encuentra node-cron en runtime.
-COPY --from=build /app/packages/$SERVICIO/node_modules ./packages/$SERVICIO/node_modules
-
-USER node
-EXPOSE 3000
-CMD ["sh", "-c", "node packages/$SERVICIO/dist/main.js"]
+EXPOSE <puerto>
+USER 10001:10001
+ENTRYPOINT ["/usr/local/bin/<servicio>"]

@@ -15,9 +15,8 @@
 # (imágenes de GHCR, sin `build:`); este archivo nunca se despliega.
 
 x-servicio-base: &servicio-base
-  build:
-    context: .
-    dockerfile: Dockerfile
+  # Cada servicio declara su propio `build.dockerfile` (crate Rust); el
+  # contexto siempre es la raíz del repositorio.
   env_file:
     - .env
   environment:

@@ -1,6 +1,6 @@
 # Core Engine · storage-service (Rust)
 # Contexto de build: raíz del repositorio.
-FROM rust:1.89-bookworm AS build
+FROM rust:1.94.1-bookworm AS build
 WORKDIR /repo
 
 COPY packages/storage-service/Cargo.toml packages/storage-service/Cargo.lock ./packages/storage-service/

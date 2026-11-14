@@ -1,7 +1,7 @@
 # Core Engine · identity-service (Rust)
 # Contexto de build: raíz del repositorio.
 #   docker build -f packages/identity-service/Dockerfile -t core-engine-identity-service .
-FROM rust:1.89-bookworm AS build
+FROM rust:1.94.1-bookworm AS build
 WORKDIR /repo
 
 COPY packages/identity-service/Cargo.toml packages/identity-service/Cargo.lock ./packages/identity-service/
