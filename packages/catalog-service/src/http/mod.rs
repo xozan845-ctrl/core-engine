@@ -300,6 +300,72 @@ pub(crate) async fn validar_tipo_permitido(
     Ok(())
 }
 
+/// Id del ítem en la vista (`item_id` o `id`).
+fn id_de_item(item: &serde_json::Value) -> Option<&str> {
+    item.get("item_id")
+        .or_else(|| item.get("id"))
+        .and_then(serde_json::Value::as_str)
+}
+
+/// Fusiona los valores de extensión de un ítem bajo `extensiones[codigo]`.
+fn fusionar_extensiones(item: &mut serde_json::Value, valores: &[crate::auth::ValorExtension]) {
+    let Some(id) = id_de_item(item).map(str::to_string) else {
+        return;
+    };
+    let mut mapa = serde_json::Map::new();
+    for valor in valores.iter().filter(|valor| valor.recurso_id == id) {
+        mapa.insert(valor.codigo.clone(), valor.valores.clone());
+    }
+    if !mapa.is_empty() {
+        item["extensiones"] = serde_json::Value::Object(mapa);
+    }
+}
+
+/// Adjunta extensiones a un ítem o a una página `{items:[...]}`. Es aditivo:
+/// si identity no responde, la respuesta del catálogo no se bloquea.
+pub(crate) async fn adjuntar_extensiones(
+    state: &AppState,
+    empresa: &str,
+    respuesta: &mut serde_json::Value,
+) {
+    let ids: Vec<String> = respuesta
+        .get("items")
+        .and_then(serde_json::Value::as_array)
+        .map(|items| {
+            items
+                .iter()
+                .filter_map(id_de_item)
+                .map(str::to_string)
+                .collect()
+        })
+        .unwrap_or_else(|| {
+            id_de_item(respuesta)
+                .map(str::to_string)
+                .into_iter()
+                .collect()
+        });
+    if ids.is_empty() {
+        return;
+    }
+    let Some(valores) = state
+        .capacidades
+        .valores_extensiones(empresa, "item", &ids)
+        .await
+    else {
+        return;
+    };
+    if let Some(items) = respuesta
+        .get_mut("items")
+        .and_then(serde_json::Value::as_array_mut)
+    {
+        for item in items {
+            fusionar_extensiones(item, &valores);
+        }
+    } else {
+        fusionar_extensiones(respuesta, &valores);
+    }
+}
+
 async fn health(State(state): State<AppState>) -> Json<crate::metrics::MetricaSalud> {
     Json(state.metrics.salud())
 }
@@ -613,6 +679,32 @@ mod tests {
         validar_tipo_permitido(&state, "empresa", "servicio")
             .await
             .expect("tipo permitido");
+    }
+
+    #[test]
+    fn debe_fusionar_extensiones_por_item() {
+        let mut item = serde_json::json!({ "item_id": "i-1", "nombre": "Cafe" });
+        let valores = vec![crate::auth::ValorExtension {
+            recurso_id: "i-1".into(),
+            codigo: "ficha".into(),
+            version_schema: 1,
+            valores: serde_json::json!({ "edad": 20 }),
+        }];
+        fusionar_extensiones(&mut item, &valores);
+        assert_eq!(item["extensiones"]["ficha"]["edad"], 20);
+    }
+
+    #[test]
+    fn debe_ignorar_extensiones_de_otro_item() {
+        let mut item = serde_json::json!({ "item_id": "i-1" });
+        let valores = vec![crate::auth::ValorExtension {
+            recurso_id: "i-2".into(),
+            codigo: "ficha".into(),
+            version_schema: 1,
+            valores: serde_json::json!({ "edad": 20 }),
+        }];
+        fusionar_extensiones(&mut item, &valores);
+        assert!(item.get("extensiones").is_none());
     }
 
     #[tokio::test]
