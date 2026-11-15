@@ -1,6 +1,6 @@
 {
   "name": "core-engine",
-  "version": "1.3.0",
+  "version": "1.0.9",
   "private": true,
   "description": "Core Engine - plataforma de comercio electronico distribuido (microservicios Rust + PostgreSQL/Supabase + Docker)",
   "scripts": {
