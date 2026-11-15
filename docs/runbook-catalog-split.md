@@ -95,3 +95,37 @@ el mismo despliegue, con el gateway apuntando al servicio nuevo.
   integración y en el smoke de staging.
 - `catalog-service` ya no existe en `SERVICES`, compose, CI ni docs.
 - El PR de promoción incluye la evidencia de todos los gates y del smoke.
+
+## Smoke de staging (después de promover `develop → staging`)
+
+1. Confirmar que `/ready` incluye `inventory: ok` y que el gateway enruta:
+   - `GET /api/v2/admin/inventario?empresa_id=<tenant>`
+   - `GET /api/v2/catalog/configuracion-inventario?empresa_id=<tenant>`
+2. Ejecutar el smoke remoto con las credenciales del environment:
+
+```bash
+BASE_URL=https://<stage> \
+ADMIN_EMAIL=... ADMIN_PASSWORD=... \
+SMOKE_EMPRESA_ID=<tenant-con-datos> \
+npm run smoke:remote
+```
+
+3. Verificar la saga completa en staging con una orden real de prueba:
+   - `order.created` → `stock.reservado`
+   - orden en `pagada`
+   - `payment.procesado`
+   - entrega → `order.completado`
+   - `comision.acreditada` y asiento en finance
+4. Revisar `inventory.outbox` sin pendientes y `orders.resultados` sin mensajes
+   atascados.
+
+## Rollback
+
+- **Código:** volver a la imagen/digest anterior de `gateway`, `catalog`,
+  `commissions` e `inventory`; el flag de gateway debe apuntar otra vez a
+  `catalog` para las rutas de inventario.
+- **Datos:** no borrar `catalog.*` ni `inventory.*`. Las tablas antiguas se
+  conservan precisamente para rollback.
+- **Consumidores:** si la saga falla, detener `inventory-service` y reactivar
+  temporalmente el consumidor de `catalog-service` solo con la cola
+  `catalog.pedidos`; nunca ambos a la vez.
