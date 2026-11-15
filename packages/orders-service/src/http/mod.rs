@@ -17,6 +17,7 @@ pub mod carrito;
 pub mod contratos;
 pub mod entregas;
 pub mod interno;
+pub mod pagos;
 pub mod pedidos;
 pub mod salon;
 pub mod suscripciones;
@@ -50,6 +51,7 @@ pub fn build_router(state: AppState) -> Router {
         .route("/docs", get(docs))
         .route("/docs-json", get(docs_json))
         .merge(pedidos::rutas())
+        .merge(pagos::rutas())
         .merge(carrito::rutas())
         .merge(entregas::rutas())
         .merge(contratos::rutas())

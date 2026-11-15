@@ -25,6 +25,7 @@ pub mod metrics;
 pub mod money;
 pub mod order_state;
 pub mod outbox;
+pub mod pagos;
 pub mod pedidos;
 pub mod rabbit;
 pub mod salon;
