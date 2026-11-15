@@ -205,7 +205,7 @@ jobs:
   build:
     name: Build all services
     runs-on: ubuntu-24.04
-    needs: [rules-check, lint, integration-catalog, rust]
+    needs: [rules-check, lint, integration-catalog, rust, rust-inventory]
     steps:
       - uses: actions/checkout@v7
         with:
@@ -216,3 +216,34 @@ jobs:
           cache: "npm"
       - name: Gate G-8 — spec OpenAPI sincronizado (R-DO-6, R-C-7)
         run: npm run swagger:export && git diff --exit-code docs/openapi docs/api
+
+  # El crate de inventario aún no entra en `SERVICES` para no desplegar una
+  # imagen vacía en staging; este job lo mantiene con fmt/clippy/tests/cobertura
+  # hasta el PR de corte, donde pasa a la matriz `rust` (ADR-0018).
+  rust-inventory:
+    name: Rust (inventory-service scaffold)
+    runs-on: ubuntu-24.04
+    needs: security-gate
+    env:
+      TZ: America/Managua
+    steps:
+      - uses: actions/checkout@v7
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: stable
+          components: rustfmt, clippy
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: packages/inventory-service
+      - uses: taiki-e/install-action@cargo-llvm-cov
+      - name: rustfmt
+        working-directory: packages/inventory-service
+        run: cargo fmt --check
+      - name: clippy
+        working-directory: packages/inventory-service
+        run: cargo clippy --locked --all-targets -- -D warnings
+      - name: tests + cobertura
+        working-directory: packages/inventory-service
+        run: >-
+          cargo llvm-cov --locked --ignore-filename-regex 'src/main\.rs'
+          --fail-under-lines 80 --fail-under-functions 72
