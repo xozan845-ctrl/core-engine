@@ -1,0 +1,59 @@
+-- Esquema mínimo de la migración para las pruebas de inventario (ADR-0018).
+-- El servicio usa `catalog.*` como fuente transitoria hasta el PR 5; este
+-- esquema reproduce solo las tablas que el dominio necesita.
+DROP SCHEMA IF EXISTS catalog CASCADE;
+CREATE SCHEMA catalog;
+
+CREATE TABLE catalog.items (
+  id              uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  empresa_id      uuid NOT NULL,
+  tipo            text NOT NULL DEFAULT 'producto',
+  codigo          text NOT NULL,
+  nombre          text NOT NULL,
+  precio_cents    integer NOT NULL DEFAULT 0,
+  track_inventory boolean NOT NULL DEFAULT true,
+  stock           integer,
+  estado          text NOT NULL DEFAULT 'activo',
+  parent_item_id  uuid,
+  eliminado_en    timestamptz,
+  actualizado_en  timestamptz NOT NULL DEFAULT NOW()
+);
+
+CREATE TABLE catalog.configuracion_inventario (
+  empresa_id                uuid PRIMARY KEY,
+  metodo_costeo             text NOT NULL DEFAULT 'promedio',
+  permitir_stock_negativo   boolean NOT NULL DEFAULT false,
+  alerta_stock_bajo         boolean NOT NULL DEFAULT true,
+  actualizar_costo_en_compra boolean NOT NULL DEFAULT true,
+  unidad_defecto            text NOT NULL DEFAULT 'Unidad (u)',
+  actualizado_en            timestamptz NOT NULL DEFAULT NOW()
+);
+
+CREATE TABLE catalog.proveedores (
+  id         uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  empresa_id uuid NOT NULL,
+  codigo     text NOT NULL,
+  nombre     text NOT NULL,
+  correo     text NOT NULL DEFAULT '',
+  telefono   text NOT NULL DEFAULT '',
+  activo     boolean NOT NULL DEFAULT true
+);
+
+CREATE TABLE catalog.lotes_inventario (
+  id                  uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  empresa_id          uuid NOT NULL,
+  item_id             uuid NOT NULL,
+  proveedor_id        uuid,
+  codigo_lote         text NOT NULL,
+  vence_en            date,
+  cantidad_inicial    integer NOT NULL DEFAULT 0,
+  cantidad_disponible integer NOT NULL DEFAULT 0,
+  creado_en           timestamptz NOT NULL DEFAULT NOW(),
+  actualizado_en      timestamptz NOT NULL DEFAULT NOW()
+);
+
+CREATE TABLE catalog.reservas_ordenes (
+  order_id   uuid PRIMARY KEY,
+  items_json jsonb NOT NULL,
+  creado_en  timestamptz NOT NULL DEFAULT NOW()
+);

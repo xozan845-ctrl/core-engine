@@ -143,7 +143,8 @@ distribuidas. Cada PR debe dejar el sistema arrancable y con la suite del
 |---|---|---|
 | 1 | Este ADR, índice y runbook de migración | `rules:check` verde; decisión registrada |
 | 2 | Andamiaje de `inventory-service`: crate, config, DB/RLS, envelope, auth, métricas, Outbox/Rabbit, `/health`, `/metrics`, `/docs`, Dockerfile, CI y README | `cargo fmt`, `clippy`, `test` y gate de cobertura verdes |
-| 3 | Dominio de inventario: stock, lotes FEFO, ubicaciones, movimientos, ajustes, transferencias y configuración | Pruebas PostgreSQL y HTTP verdes |
+| 3a | Núcleo de inventario: configuración, proveedores, niveles de stock, resumen y lotes FEFO | Pruebas PostgreSQL y HTTP verdes |
+| 3b | Ubicaciones, movimientos, ajustes y transferencias | Pruebas PostgreSQL y HTTP verdes |
 | 4 | Consumidor de saga en inventario: reserva, rechazo, devolución, idempotencia y Outbox | Pruebas de concurrencia y saga verdes |
 | 5 | Migración de datos y rutas: esquema `inventory`, migración SQL, manifiesto, RLS, gateway y clientes internos | Integración PostgreSQL y contrato verde; `catalog` deja de servir inventario |
 | 6 | Andamiaje y dominio de `pricing-service` (listas, escalas, tarifas, histórico, promociones, `price.changed`) | Suite y contrato verdes |
@@ -212,4 +213,8 @@ gates y del smoke de `staging`.
   `/docs` y `/docs-json`). Sin rutas de dominio, consumidor ni RabbitMQ
   todavía; el servicio no se registra en `SERVICES` hasta el PR de corte para
   no desplegar una imagen vacía en `staging`.
-- 37 pruebas unitarias; cobertura medida 83,30 % líneas / 75,60 % funciones.
+- PR 3a completo: configuración de inventario, proveedores, niveles de
+  stock, resumen y lotes FEFO con consumo atómico. Las tablas siguen en el
+  esquema `catalog` como fuente transitoria; el PR 5 las mueve a `inventory`.
+- 50 pruebas unitarias + 7 de PostgreSQL; cobertura medida 81,15 % líneas /
+  76,44 % funciones.

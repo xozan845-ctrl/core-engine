@@ -3,6 +3,7 @@
 use crate::auth::{Capacidades, CapacidadesNoDisponible};
 use crate::config::Config;
 use crate::db::Db;
+use crate::inventario::Inventario;
 use crate::metrics::Metrics;
 use std::sync::Arc;
 use std::time::Instant;
@@ -15,6 +16,7 @@ pub struct AppState {
     /// `None` solo en el estado de pruebas de infraestructura; las rutas de
     /// negocio fallarán con 500 si no hay base de datos.
     pub db: Option<Arc<Db>>,
+    pub inventario: Option<Arc<Inventario>>,
     pub inicio: Instant,
 }
 
@@ -25,6 +27,7 @@ impl AppState {
             metrics: Arc::new(metrics),
             capacidades: Arc::new(CapacidadesNoDisponible),
             db: None,
+            inventario: None,
             inicio: Instant::now(),
         }
     }
@@ -35,17 +38,25 @@ impl AppState {
         db: Arc<Db>,
         capacidades: Arc<dyn Capacidades>,
     ) -> Self {
+        let inventario = Arc::new(Inventario::nueva(Arc::clone(&db)));
         Self {
             config: Arc::new(config),
             metrics,
             capacidades,
             db: Some(db),
+            inventario: Some(inventario),
             inicio: Instant::now(),
         }
     }
 
     pub fn db(&self) -> Result<&Arc<Db>, crate::errors::ApiError> {
         self.db
+            .as_ref()
+            .ok_or_else(crate::errors::ApiError::interno)
+    }
+
+    pub fn inventario(&self) -> Result<&Arc<Inventario>, crate::errors::ApiError> {
+        self.inventario
             .as_ref()
             .ok_or_else(crate::errors::ApiError::interno)
     }
