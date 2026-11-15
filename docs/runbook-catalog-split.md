@@ -48,6 +48,13 @@ smoke de `staging` haya pasado.**
 | E2E local | `npm run demo` | PR de corte |
 | Smoke staging | `npm run smoke:remote` (o el runner de staging) | PR 10 / promoción |
 
+## Corte de consumidores
+
+Mientras `catalog-service` siga consumiendo `catalog.pedidos`, **no levantar**
+`inventory-service` contra la misma base: ambos descuentan stock y duplicarían
+la reserva. El PR 5 retira el consumidor viejo y activa `inventory.pedidos` en
+el mismo despliegue, con el gateway apuntando al servicio nuevo.
+
 ## Base de datos
 
 - El esquema nuevo se crea en `infra/db/init/75_inventory_schema.sql` (o el
