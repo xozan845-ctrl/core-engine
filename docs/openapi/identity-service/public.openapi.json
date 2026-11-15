@@ -1116,6 +1116,55 @@
         ]
       }
     },
+    "/api/v2/empresas/{empresaId}/features": {
+      "get": {
+        "operationId": "CapacidadesController_manifiesto",
+        "parameters": [
+          {
+            "name": "empresaId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Manifiesto de capacidades, modelos y features de la empresa",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/ManifiestoEmpresaResponseDto"
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/MetaRespuesta"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Manifiesto de capacidades y features de una empresa",
+        "tags": [
+          "Capacidades"
+        ]
+      }
+    },
     "/api/v2/empresas/{empresaId}/capacidades/{capacidad}": {
       "patch": {
         "operationId": "CapacidadesController_actualizar",
@@ -5621,6 +5670,120 @@
           "activo",
           "config",
           "actualizado_en"
+        ]
+      },
+      "ManifiestoEmpresaResponseDto": {
+        "type": "object",
+        "properties": {
+          "empresa_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "vertical_id": {
+            "type": "string",
+            "nullable": true
+          },
+          "pack": {
+            "type": "object",
+            "nullable": true,
+            "properties": {
+              "codigo": {
+                "type": "string"
+              },
+              "version": {
+                "type": "integer"
+              },
+              "nombre": {
+                "type": "string"
+              },
+              "config": {
+                "type": "object"
+              }
+            },
+            "required": [
+              "codigo",
+              "version",
+              "nombre",
+              "config"
+            ]
+          },
+          "modelos": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "codigo": {
+                  "type": "string"
+                },
+                "nombre": {
+                  "type": "string"
+                },
+                "descripcion": {
+                  "type": "string"
+                },
+                "config": {
+                  "type": "object"
+                }
+              },
+              "required": [
+                "codigo",
+                "nombre",
+                "descripcion",
+                "config"
+              ]
+            }
+          },
+          "capacidades": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "codigo": {
+                  "type": "string"
+                },
+                "nombre": {
+                  "type": "string"
+                },
+                "modulo": {
+                  "type": "string"
+                },
+                "activo": {
+                  "type": "boolean"
+                },
+                "config": {
+                  "type": "object"
+                },
+                "features": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                }
+              },
+              "required": [
+                "codigo",
+                "nombre",
+                "modulo",
+                "activo",
+                "config",
+                "features"
+              ]
+            }
+          },
+          "features": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": [
+          "empresa_id",
+          "vertical_id",
+          "pack",
+          "modelos",
+          "capacidades",
+          "features"
         ]
       },
       "EmpresaResponseDto": {

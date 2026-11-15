@@ -234,6 +234,10 @@ pub fn build_router(state: AppState) -> Router {
             get(capacidades::listar),
         )
         .route(
+            "/api/v2/empresas/{empresa_id}/features",
+            get(capacidades::manifiesto),
+        )
+        .route(
             "/api/v2/empresas/{empresa_id}/capacidades/{capacidad}",
             patch(capacidades::actualizar),
         )
