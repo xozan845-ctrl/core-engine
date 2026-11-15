@@ -1,17 +1,111 @@
-# Core Engine · Core Engine
+# Core Engine
 
-Plataforma de comercio electronico distribuido (microservicios en Rust y PostgreSQL/Supabase)
-conforme al documento **Core Engine_Informe.docx v1.6**: CQRS + Event Sourcing en las ordenes,
-RabbitMQ con outbox y DLQ, Postgres/Supabase-compatible con esquema por dominio, API Gateway
-con autenticacion en el borde, observabilidad (Prometheus + Grafana) y suite de pruebas.
+**Plataforma multi-vertical por capacidades** (microservicios en Rust y
+PostgreSQL/Supabase). Un mismo backend opera negocios de rubros distintos: una
+empresa nueva elige una **vertical**, adopta un **pack** versionado y activa sus
+**capacidades**; no hay microservicios por rubro ni cambios de código para
+arrancar un negocio nuevo.
 
-Requiere **Node >= 20 (uso v24)** y **Docker with Compose v2**. Todas las rutas van por el
-gateway (`http://localhost:8080/api/v1/...`). Los montos se manejan como **enteros en centavos**
-(control OWASP A02): el JSON entrega strings con dos decimales (`"1150.00"`).
+La decisión que rige la arquitectura es
+[**ADR-0001 · Plataforma multi-vertical por capacidades**](docs/adr/0001-plataforma-multi-vertical.md)
+(ADR-44 en el histórico de `docs/decisiones.md`). El documento
+**Core Engine_Informe.docx v1.6** acota el dominio comercial original; el modelo
+por capacidades lo generaliza a retail, farmacia, belleza, dental, flota,
+talleres y verticales que se definan por configuración.
+
+Límites deliberados (ADR-0001): **no** es un ERP universal ni un motor de
+workflow genérico, y `historia_clinica` / `recetas` quedan fuera de la primera
+fase.
+
+Requiere **Node >= 20 (uso v24)**, **Rust estable** y **Docker con Compose v2**.
+Todas las rutas públicas van por el gateway (`http://localhost:8080/api/v2/...`).
+Los montos se manejan como **enteros en centavos** (control OWASP A02): el JSON
+entrega strings con dos decimales (`"1150.00"`).
+
+## Modelo multi-vertical (ADR-0001)
+
+```text
+vertical ─────────▶ pack (versionado) ─────────▶ capacidades ─────▶ empresa (tenant)
+retail              pack_retail v1                catalogo_items      TechFix
+farmacia            pack_farmacia v1              inventario_lotes    ...
+belleza             pack_belleza v1               agenda_recursos
+dental              pack_dental v1                logistica_rutas
+flota               pack_flota v1                 cotizaciones
+tecnologia_         pack_tecnologia_              facturacion
+reparacion *        reparacion v1                 liquidaciones
+```
+
+\* La vertical de tecnología y reparación es un **blueprint de configuración**,
+no código nuevo: [`docs/blueprints/tecnologia-reparacion.md`](docs/blueprints/tecnologia-reparacion.md)
+compone las piezas existentes (ítems, inventario, agenda, cotizaciones,
+logística, crédito y registros).
+
+### Verticales sembradas
+
+| Vertical | Modelo de operación |
+|---|---|
+| `retail` | Venta de productos con inventario y canales de entrega |
+| `farmacia` | Venta de productos con lotes, vencimiento y trazabilidad |
+| `belleza` | Venta de servicios con agenda y recursos reservables |
+| `dental` | Servicios agendados; capacidades clínicas en fase posterior |
+| `flota` | Vehículos, rutas y servicios cotizables |
+
+### Capacidades
+
+| Capacidad | Módulo | Habilita |
+|---|---|---|
+| `catalogo_items` | catalog | Productos, servicios y alquileres |
+| `inventario_stock` | catalog | Stock, mínimos/máximos y movimientos |
+| `inventario_lotes` | catalog | Lotes, vencimiento y consumo FEFO |
+| `codigo_barras` | catalog | Etiquetas y escaneo en mostrador |
+| `agenda_recursos` | scheduling | Recursos, disponibilidad, citas y bloqueos |
+| `fulfillment_delivery` | logistics | Entrega con flota de plataforma |
+| `fulfillment_pickup` | logistics | Retiro en tienda |
+| `fulfillment_onsite` | logistics | Servicio a domicilio |
+| `logistica_rutas` | logistics | Flota propia: vehículos, rutas y paradas |
+| `cotizaciones` | orders | Presupuesto → aceptación → orden |
+| `facturacion` | finance | Facturas, comprobantes y régimen fiscal |
+| `liquidaciones` | commissions | Comisiones y liquidaciones |
+| `operacion_campo` | field | Personal, visitas, tracking e incidencias |
+| `inteligencia_mercado` | intelligence | Demanda, tendencias, forecast y score |
+| `historia_clinica` / `recetas` | clinical | Fuera de la primera fase |
+
+Los servicios **siempre activos** (`identity-service`, `api-gateway`,
+`storage-service`, `notifications-service`) no se gatean. Los servicios de
+feature validan `CapabilityGuard` antes de operar: una capacidad inactiva
+devuelve el error estructurado `CAPACIDAD_NO_ACTIVA` y sus rutas no se anuncian
+en el pack del tenant. El aislamiento de datos entre tenants es por **RLS**
+(esquema por dominio + `empresa_id`).
+
+### Alta de un tenant nuevo
+
+```bash
+# 1) (Opcional) registrar una vertical y su pack versionado
+curl -X POST http://localhost:8080/api/v2/packs/verticales \
+  -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
+  -d '{"codigo":"tecnologia_reparacion","nombre":"Tecnología y reparación","modelo_operacion":"mixto"}'
+
+# 2) consultar verticales, packs y capacidades disponibles
+curl -H "Authorization: Bearer $TOKEN" http://localhost:8080/api/v2/packs/verticales
+curl -H "Authorization: Bearer $TOKEN" "http://localhost:8080/api/v2/packs?vertical_id=tecnologia_reparacion"
+
+# 3) crear la empresa eligiendo vertical + pack
+curl -X POST http://localhost:8080/api/v2/empresas \
+  -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
+  -d '{"nombre":"TechFix","slug":"techfix","vertical_id":"tecnologia_reparacion",
+       "pack_codigo":"pack_tecnologia_reparacion","pack_version":1}'
+
+# 4) verificar capacidades efectivas del tenant
+curl -H "Authorization: Bearer $TOKEN" \
+  http://localhost:8080/api/v2/empresas/<empresaId>/capacidades
+```
+
+Migración de tenants existentes, pilotos y rollback:
+[`docs/runbook-multi-vertical.md`](docs/runbook-multi-vertical.md).
 
 ## Arquitectura
 
-```
+```text
                     ┌─────────────┐   TLS/CORS/Throttling en el borde
   Cliente ─────────▶│ API Gateway │  JWT HS256 (access 15 min + refresh 7 d)
                     │   :8080     │  Politicas por ruta/rol (Tabla 21) · UNICO puerto al host
@@ -23,11 +117,18 @@ gateway (`http://localhost:8080/api/v1/...`). Los montos se manejan como **enter
        RabbitMQ · topic core-engine.events (+ DLQ, AD-04) + Postgres 16 + MinIO (un bucket por tenant, ADR-24)
 ```
 
+Los bounded contexts se organizan **por capacidad de negocio**, no por rubro:
+`identity` es la autoridad de tenants, roles, verticales, capacidades y packs;
+`catalog`, `stores`, `orders`, `scheduling`, `logistics`, `finance`,
+`commissions` y `field` habilitan las capacidades del pack; `storage`,
+`notifications` y `intelligence` son transversales. No existen
+`dentista-service`, `farmacia-service` ni `pulperia-service` (ADR-0001).
+
 **Punto de entrada unico:** solo el servicio `gateway` publica un puerto de aplicación al host
 (`8080:8080`); los **doce microservicios** escuchan en `3001`–`3012` **solo dentro de la red interna
 Docker `core-engine`** y no tienen mapeo de puertos al host. La excepción es **MinIO** (`9000`), que se
 publica en **loopback** porque es el host local que Traefik firma como dominio HTTPS en las URLs
-prefirmadas (ADR-24). Toda llamada externa pasa por `http://localhost:8080/api/v1/...` (o el dominio
+prefirmadas (ADR-24). Toda llamada externa pasa por `http://localhost:8080/api/v2/...` (o el dominio
 del gateway en stage/produccion).
 
 - **CQRS + Event Sourcing** solo en `orders` (alta tasa de escritura, cap. 3.2); el resto usa
@@ -38,11 +139,18 @@ del gateway en stage/produccion).
   orders marca `pagada` y emite `payment.procesado` → logistics crea el envio → ...
   `stock.fallido` revierte la orden a `cancelada`.
 - **DLQ con backoff exponencial** (AD-04): reintentos hasta `REINTENTOS_MAXIMOS`; luego el
-  mensaje se declara muerto. `POST /api/v1/admin/...dlq...` (endpoint interno) permite reinyectar.
+  mensaje se declara muerto. `POST /api/v2/admin/...dlq...` (endpoint interno) permite reinyectar.
 - **Ciclo de vida de la orden** (Tabla 13): `creada → pagada → en_preparacion → enviada →
   entregada` (y `cancelada` / `devuelta`); las transiciones se validan con `validarTransicion`.
+- **Capacidades por tenant** (ADR-0001): vertical + pack versionado + `empresa_capacidades`;
+  `CapabilityGuard` aplica el gating en cada servicio y el gateway solo autentica y enruta.
 
-## Reglas de negocio implementadas
+## Reglas de negocio del dominio comercial
+
+Las reglas RN del documento original siguen vigentes en los packs que activan las
+capacidades comerciales (`catalogo_items`, `inventario_stock`, `orders`,
+`facturacion`, `liquidaciones`). Una vertical que no venda productos puede
+desactivarlas por capacidad sin tocar código.
 
 | Regla | Descripcion |
 |---|---|
@@ -62,23 +170,36 @@ Eventos del bus (topic `core-engine.events`): `order.created`, `stock.reservado`
 
 ## Puesta en marcha
 
-> **Enlaces de paquete:** los workspaces de npm crean symlinks a los paquetes
-> (`packages/*` → `node_modules/@core/*`). En discos **exFAT/FAT32** (sin soporte
-> de enlaces) `npm install` falla con `EISDIR`; mueva el repositorio a un sistema
-> de archivos con symlinks (ext4/APFS/NTFS). La instalación es siempre con npm
-> (R-EN-1).
+> **Enlaces de paquete:** en discos **exFAT/FAT32** (sin soporte de enlaces)
+> `npm install` falla con `EISDIR`; mueva el repositorio a un sistema de archivos
+> con symlinks (ext4/APFS/NTFS). La instalación es siempre con npm (R-EN-1).
 
 ```bash
-npm install                       # instala el tooling Node de scripts (ESLint, pg)
+npm install                       # tooling Node de los scripts de gobernanza (ESLint, pg)
 npm run lint                      # lint de los scripts de gobernanza
-npm test                          # los 14 workspaces, cada uno con --coverage
+npm run test:engine               # unitarias del motor de reglas
+npm run test:smoke                # unitarias de los scripts de smoke
+npm run rules:check               # verificación de reglas del repositorio
 cp .env.example .env              # variables de DESARROLLO (producción: .env.production.example)
 docker compose -f docker-compose.dev.yml up -d --build   # app: Postgres + RabbitMQ + MinIO + Mailpit + gateway y 12 servicios (8080 host + datos/broker 5432/5672/15672 + minio 9000/9001 + mailpit 1025/8025)
 npm run demo                      # ejercicio end-to-end (TC-01..TC-08, RN-01..RN-08)
+npm run demo:verticals            # E2E de los pilotos belleza y flota contra el gateway real
 
 # Dashboards (opcional): añade Prometheus + Grafana + exporters al stack de desarrollo
 docker compose -f docker-compose.dev.yml -f docker-compose.observability.yml up -d --build
 ```
+
+Cada paquete Rust se verifica con su propio crate:
+
+```bash
+cd packages/orders-service
+cargo fmt --check
+cargo clippy --all-targets -- -D warnings
+cargo test
+```
+
+La suite API+BD (`npm run test:integration`) usa PostgreSQL efímero real y no
+dobles de prueba; requiere `TEST_DATABASE_URL`.
 
 Postgres siembra automáticamente `infra/db/init/01_esquemas.sql` (esquemas, tablas, checks,
 seeds del plan contable NIC e indices). En **Supabase** (staging/prod) aplique ademas
@@ -141,52 +262,44 @@ rompe producción. Dockploy aloja **un solo proyecto con dos environments**
 entorno). Modelo completo en `docs/rules/git/00-entornos.md` (R-GE) y despliegue
 en `docs/rules/cd/` (R-CD).
 
-## API (resumen de Tabla 21, todas por el gateway)
+## API (superficie pública `/api/v2`, por el gateway)
 
-- `POST /api/v1/auth/registro|login|refresh`, `GET /api/v1/auth/me`
-- `POST /api/v1/empresas`, `GET /api/v1/empresas/:id`,
-  `PATCH /api/v1/empresas/:id/perfil` — RUC opcional, perfil comercial/fiscal
-  y logo (objeto público de storage validado por tenant).
-- `PATCH /api/v1/usuarios/:id/avatar` — avatar de vendedor/usuario validado
-  contra storage; `GET /empresas/:id/vendedores` devuelve `avatar_url`.
-- `PATCH /api/v1/tiendas/:id/logo` — logo público de la tienda, validado
-  contra storage por tenant.
-- `POST /api/v1/catalog/productos`, `GET /api/v1/catalog/productos(/:id)` (admin)
-- `GET|POST|PATCH|DELETE /api/v1/catalog/servicios` (empresa/admin) — recurso
-  propio de servicios con baja lógica, duración y unicidad por empresa.
-- `/api/v1/catalog/configuracion-inventario`, `/productos/importar`, `/escanear`,
-  `/combos`, `/promociones` e `/inventario/movimientos` (empresa/admin):
-  configuración, importación, escaneo, combos, promociones y movimientos/traslados.
-- Los productos exponen costo, marca, código de barras, unidad, stock mínimo/máximo,
-  garantía, materia prima, ubicación y `estado_operativo` (activo/inactivo)
-  además de la disponibilidad de stock (`estado`).
-- `POST /api/v1/vendedores/tienda`, `POST|PATCH /api/v1/vendedores/productos(/:id)`,
-  `GET /api/v1/vendedores/me/ofertas`, `GET /api/v1/tiendas/:id` (publica)
-- `POST /api/v1/orders`, `GET /api/v1/orders(/:id)` (comprador/vendedor/admin)
-- `PATCH /api/v1/orders/:id/estado` (admin: en_preparacion/enviada/entregada/cancelada/devuelta)
-- `GET /api/v1/vendedores/me/ventas|liquidaciones`, `GET /api/v1/admin/reportes`,
-  `POST /api/v1/admin/liquidaciones/corte`, `POST /api/v1/admin/liquidaciones/:id/pagar`
-- `GET /api/v1/admin/inventario`, `GET /api/v1/admin/envios`
-- `GET /api/v1/finanzas/asientos|proyecciones|kpis|punto-equilibrio` (admin),
-  `POST /api/v1/finanzas/asientos`, `GET /api/v1/vendedores/me/fiscal`
-- `GET|POST|PATCH|DELETE /api/v1/comercio/**` (empresa/vendedor): bancos,
-  créditos, gastos, cuentas por pagar, proveedores, compras, órdenes de compra,
-  caja (movimientos, métodos, cierres, caja chica y transferencias), clientes y
-  códigos de barras — reemplaza la persistencia local de esos módulos.
-- Infra: `GET /health` (liveness) y `GET /ready` (readiness agregada de los servicios del entorno: 9 en producción, 10 en stage), `GET /metrics`, Swagger en `/docs` de cada servicio
+La **fuente de verdad** es el contrato OpenAPI versionado, no esta tabla:
+`docs/api/core-engine.openapi.json` (público) y
+`docs/api/core-engine.internal.openapi.json` (interno, `x-internal-key`).
+Toda ruta pública empieza por `/api/v2/` y toda ruta interna por `/internal/`
+(R-DO-8).
 
-Endpoints internos (servicio→servicio) protegidos con `x-internal-key`: `internal/usuarios/:id`,
-`internal/vendedores`, `internal/productos/lote`, `internal/productos/sku/:sku`,
-`internal/ofertas`, `internal/orders(/:id|transicion|reproyectar|historia)`, `internal/envios`,
-`internal/liquidaciones/*`.
+| Área | Rutas principales |
+|---|---|
+| auth | `/auth/{registro,login,refresh,logout,me,token}` |
+| tenancy | `/empresas/**` (alta con `vertical_id` + `pack_codigo`, perfil, slug, roles, puestos, personal, partes, registros, extensiones y capacidades) |
+| packs | `/packs`, `/packs/verticales`, `/packs/modelos-operacion`, `/packs/{codigo}/{version}` |
+| catálogo | `/catalog/items/**` (productos, servicios, alquileres, variantes, imágenes, tarifas, escalas, componentes, series), `/catalog/listas-precio/**`, `/catalog/combos`, `/catalog/promociones`, `/catalog/inventario/movimientos` |
+| tiendas | `/tiendas/{id}` + logo, `tema.css`, background, contenido, personalización y slug |
+| órdenes | `/orders/**`, `/carrito/**`, `/pedidos/{id}/entregas-digitales`, `/entregas-digitales/{token}`, `/contratos/**`, `/suscripciones/**`, `/mesas`, `/comandas` |
+| agenda | `/scheduling/{recursos,disponibilidad,bloqueos,citas,recordatorios}` |
+| logística | `/envios/{id}/estado`, `/empresarios/me/envios`, `/field/**` (personal, vehículos, rutas, visitas, tracking, incidencias, cumplimiento y sync) |
+| finanzas | `/finanzas/**` (cuentas, asientos, libros, comprobantes, regímenes, declaraciones, proyecciones, KPIs y tablero) |
+| comercio | `/comercio/**` (bancos, créditos, gastos, cuentas por pagar, proveedores, compras, órdenes de compra, caja, clientes y códigos de barras) |
+| comisiones | `/vendedores/me/{ventas,liquidaciones,fiscal,tienda,ofertas}`, `/empresarios/me/{ventas,liquidaciones,tiendas}`, `/admin/liquidaciones/**` |
+| administración | `/admin/**` (inventario, lotes, ubicaciones, reportes, envíos y storage por tenant) |
+| inteligencia | `/inteligencia/**` (mapa de calor, rendimiento, cobertura, demanda, tendencias, forecast, anomalías y score) |
+| storage | `/storage/**` (buckets, subidas, objetos y media pública) |
+| operación | `GET /health` (liveness), `GET /ready` (readiness agregada: 9 servicios en producción, 10 en stage), `GET /metrics`, Swagger en `/docs` y `/docs-json` |
+
+Endpoints internos (servicio→servicio) protegidos con `x-internal-key`:
+`internal/items/**`, `internal/inventario/**`, `internal/usuarios/:id`,
+`internal/vendedores`, `internal/empresas/**`, `internal/partes/:id`,
+`internal/orders/**`, `internal/scheduling/disponibilidad`,
+`internal/storage/**`, `internal/ofertas/**`, `internal/tiendas/**` e
+`internal/finance/**`.
 
 ## Contrato OpenAPI (Swagger)
 
-La **fuente de verdad** del contrato es la especificación OpenAPI de cada servicio
-(R-DO-6). Cada microservicio:
-
-- monta Swagger UI en **`/docs`** (su `main.ts` usa `crearDocumentoOpenApi`);
-- versiona sus dos superficies en **`docs/openapi/<servicio>/public.openapi.json`** e **`internal.openapi.json`**.
+Cada microservicio monta Swagger UI en **`/docs`** (su `main.ts` usa
+`crearDocumentoOpenApi`) y versiona sus dos superficies en
+`docs/openapi/<servicio>/public.openapi.json` e `internal.openapi.json`.
 
 El spec se regenera y se verifica en CI con el **gate G-8** (`R-C-7`): el job *Build*
 ejecuta `npm run swagger:export` y falla si `docs/openapi`, `docs/api` o el
@@ -213,9 +326,9 @@ pública**: `scripts/tools/swagger-aggregate.mjs` fusiona
 npm run swagger:export   # regenera docs/openapi/<servicio>/{public,internal} + los dos agregados de docs/api/
 ```
 
-Cobertura actual: **334/334 operaciones documentadas** en 11 servicios:
-**310 públicas** (221 rutas) y **24 internas** (todas con `x-internal-key` y
-schema de respuesta). El agregado público tiene 310 operaciones y el interno 24.
+Cobertura actual: **417/417 operaciones documentadas** en los 12 servicios con
+contrato versionado: **381 públicas** (270 rutas) y **36 internas** (todas con
+`x-internal-key` y schema de respuesta).
 
 ## Variables de entorno (`.env` en dev · `.env.production` en producción)
 
@@ -242,12 +355,23 @@ con `${RABBITMQ_PASSWORD:?...}`), no solo `POSTGRES_PASSWORD`.
 `sandbox` de reglas (Tabla 5) y casos de aceptacion cubiertos: TC-01 alta de producto,
 TC-02 oferta con margen, TC-03 checkout con descuento de stock, TC-04 stock insuficiente (409),
 TC-07 seguridad del gateway (401/403), TC-08 comision 12 % y liquidacion al vendedor,
-RN-05/RN-06/RN-07/RN-08, partida doble y regimen fiscal NIC.
+RN-05/RN-06/RN-07/RN-08, partida doble y regimen fiscal NIC. La matriz
+multi-vertical añade `vertical-matrix`, `capability-enforcement`,
+`vertical-operations`, `pack-lifecycle`, `vertical-rls`, `capability-routes`,
+`vertical-pilots`, `field-rls` y `lot-fefo`.
 
 ```bash
-npm test        # todos los workspaces con cobertura (ratchet R-COV-1)
-npm run demo    # flujo real sobre el stack levantado (scripts/tools/smoke.mjs)
+npm run test:engine     # unitarias del motor de reglas
+npm run test:smoke      # unitarias de los scripts de smoke
+npm run test:integration   # API+BD sobre PostgreSQL efímero (TEST_DATABASE_URL)
+npm run multi-vertical:check   # tenants sin pack, packs inactivos y migraciones pendientes
+cargo test --manifest-path packages/orders-service/Cargo.toml   # unitarias del crate
+npm run demo            # flujo real sobre el stack levantado
+npm run demo:verticals  # pilotos belleza y flota
 ```
+
+La cobertura Rust se mide con `cargo llvm-cov` y ratchet por servicio en CI
+(`R-COV-1`).
 
 ## Observabilidad
 
@@ -255,9 +379,9 @@ La observabilidad es una **capa opcional** (`docker-compose.observability.yml`):
 se activa con `docker compose -f docker-compose.dev.yml -f docker-compose.observability.yml up`
 y exige `GRAFANA_ADMIN_PASSWORD` en el `.env`. Prometheus scrapea `/metrics` de
 los servicios (`infra/prometheus/prometheus.yml`) y Grafana provisiona el
-dashboard `Core Engine · Core Engine` (latencia p99, peticiones/s, errores 5xx,
-backlog de RabbitMQ). Los logs son JSON estructurados con `x-request-id`
-correlacionado (AsyncLocalStorage).
+dashboard de Core Engine (latencia p99, peticiones/s, errores 5xx, backlog de
+RabbitMQ). Los logs son JSON estructurados con `x-request-id` correlacionado
+(AsyncLocalStorage).
 
 ## Conmutacion a Supabase (produccion)
 
@@ -269,3 +393,12 @@ correlacionado (AsyncLocalStorage).
 3. Ejecute `99_rls.sql` (activa RLS por rol).
 4. Iguale el secreto JWT HS256 y las URL de los servicios al proyecto. La
    diferencia de implementacion queda aislada en `jwt.utils.ts`.
+
+## Contribuir
+
+El proyecto se gobierna por reglas ejecutables en `docs/rules/` y por PR
+obligatorio (`R-PR-1..9`, `R-IA-5`): rama semántica desde `develop`, commits
+Conventional Commits en español con el ID de regla, y checks verdes en la cabeza
+del PR antes de mergear con `--rebase`. Punto de entrada:
+[`docs/rules/README.md`](docs/rules/README.md) y
+[`docs/rules/_meta/CHECKLIST.md`](docs/rules/_meta/CHECKLIST.md).
