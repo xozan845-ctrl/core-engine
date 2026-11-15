@@ -26,6 +26,7 @@ este índice evita mezclar las decisiones nuevas con las ADR históricas.
 | [0015](./0015-api-gateway-en-rust.md) | Aceptado (implementado) | Reescribir `api-gateway` en Rust con paridad de contrato, JWT, políticas de borde, proxy, rate limit, readiness y métricas |
 | [0016](./0016-catalog-service-en-rust.md) | Aceptado (implementado) | Reescribir `catalog-service` en Rust con paridad de contrato, items, precios, inventario, stock y eventos |
 | [0017](./0017-identity-service-en-rust.md) | Aceptado (implementado) | Reescribir `identity-service` en Rust con paridad de contrato, JWT, sesiones, usuarios, empresas, personal, partes y métricas |
+| [0018](./0018-catalog-split-item-pricing-inventory.md) | Aceptado (migración en curso) | Separar `catalog-service` en `item-service`, `pricing-service` e `inventory-service` por bounded context |
 
 ## Convención
 
