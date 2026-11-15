@@ -732,6 +732,84 @@ async fn debe_listar_y_actualizar_capacidades_por_empresa() {
 }
 
 #[tokio::test]
+async fn debe_exponer_el_manifiesto_de_capacidades_y_features() {
+    let Some(ctx) = preparar().await else {
+        return;
+    };
+    let admin_usuario = ctx
+        .usuarios
+        .crear(CrearUsuario {
+            nombre: "Admin manifiesto".into(),
+            correo: format!("admin-{}@tienda.test", Uuid::new_v4()),
+            contrasena: "secreto123".into(),
+            rol: "super_admin".into(),
+            tenant_id: None,
+            personal_id: None,
+        })
+        .await
+        .expect("admin");
+    let admin_id = admin_usuario.id;
+    let empresa = Uuid::new_v4().to_string();
+    let admin = autorizacion(&admin_id, "super_admin");
+    let mut tx = ctx.db.transaccion().await.expect("tx");
+    sqlx::query(
+        "INSERT INTO identity.empresas
+           (id, nombre, slug, vertical_id, pack_codigo, pack_version, creado_por)
+         VALUES ($1::uuid, 'Empresa manifiesto', $2, 'retail', 'pack_retail', 1, $3::uuid)",
+    )
+    .bind(&empresa)
+    .bind(format!("manifiesto-{}", &empresa[..8]))
+    .bind(&admin_id)
+    .execute(&mut *tx)
+    .await
+    .expect("empresa");
+    for capacidad in ["catalogo_items", "inventario_stock"] {
+        sqlx::query(
+            "INSERT INTO identity.empresa_capacidades
+               (empresa_id, capacidad_codigo, activo, config, actualizado_en)
+             VALUES ($1::uuid, $2, true, '{}'::jsonb, NOW())",
+        )
+        .bind(&empresa)
+        .bind(capacidad)
+        .execute(&mut *tx)
+        .await
+        .expect("capacidad");
+    }
+    tx.commit().await.expect("commit");
+
+    let (status, manifiesto) = enviar(
+        &ctx.app,
+        "GET",
+        &format!("/api/v2/empresas/{empresa}/features"),
+        Value::Null,
+        &headers(&admin),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK);
+    let data = &manifiesto["data"];
+    assert_eq!(data["empresa_id"], empresa);
+    assert_eq!(data["vertical_id"], "retail");
+    assert_eq!(data["pack"]["codigo"], "pack_retail");
+    assert_eq!(data["pack"]["version"], 1);
+    assert_eq!(data["modelos"][0]["codigo"], "comercio");
+    let features = data["features"].as_array().expect("features");
+    assert!(features.iter().any(|feature| feature == "catalogo.items"));
+    assert!(features.iter().any(|feature| feature == "inventario.stock"));
+    assert!(!features.iter().any(|feature| feature == "agenda.citas"));
+
+    let comprador = autorizacion(&Uuid::new_v4().to_string(), "comprador");
+    let (status, _) = enviar(
+        &ctx.app,
+        "GET",
+        &format!("/api/v2/empresas/{empresa}/features"),
+        Value::Null,
+        &headers(&comprador),
+    )
+    .await;
+    assert_eq!(status, StatusCode::FORBIDDEN);
+}
+
+#[tokio::test]
 async fn debe_listar_usuarios_y_limitar_el_avatar() {
     let Some(ctx) = preparar().await else {
         return;

@@ -6,6 +6,7 @@
 
 use crate::auth::UsuarioContexto;
 use crate::db::{iso_ms, Db};
+use crate::dominio::features::features_de;
 use crate::errors::ApiError;
 use chrono::{DateTime, Utc};
 use serde::Serialize;
@@ -21,6 +22,42 @@ pub struct EmpresaCapacidad {
     pub activo: bool,
     pub config: Value,
     pub actualizado_en: String,
+}
+
+#[derive(Debug, Clone, Serialize, PartialEq)]
+pub struct PackManifiesto {
+    pub codigo: String,
+    pub version: i32,
+    pub nombre: String,
+    pub config: Value,
+}
+
+#[derive(Debug, Clone, Serialize, PartialEq)]
+pub struct ModeloManifiesto {
+    pub codigo: String,
+    pub nombre: String,
+    pub descripcion: String,
+    pub config: Value,
+}
+
+#[derive(Debug, Clone, Serialize, PartialEq)]
+pub struct CapacidadManifiesto {
+    pub codigo: String,
+    pub nombre: String,
+    pub modulo: String,
+    pub activo: bool,
+    pub config: Value,
+    pub features: Vec<&'static str>,
+}
+
+#[derive(Debug, Clone, Serialize, PartialEq)]
+pub struct Manifiesto {
+    pub empresa_id: String,
+    pub vertical_id: Option<String>,
+    pub pack: Option<PackManifiesto>,
+    pub modelos: Vec<ModeloManifiesto>,
+    pub capacidades: Vec<CapacidadManifiesto>,
+    pub features: Vec<String>,
 }
 
 pub struct Capacidades {
@@ -54,6 +91,116 @@ impl Capacidades {
         .map_err(interno)?;
         tx.commit().await.map_err(interno)?;
         filas.iter().map(fila_a_capacidad).collect()
+    }
+
+    /// Manifiesto efectivo: vertical, pack, modelos, capacidades y features.
+    pub async fn manifiesto(
+        &self,
+        empresa_id: &str,
+        actor: &UsuarioContexto,
+    ) -> Result<Manifiesto, ApiError> {
+        validar_empresa(empresa_id)?;
+        self.validar_acceso(empresa_id, actor).await?;
+        let mut tx = self.db.transaccion().await.map_err(interno)?;
+
+        let empresa = sqlx::query(
+            "SELECT vertical_id, pack_codigo, pack_version
+               FROM identity.empresas WHERE id = $1::uuid",
+        )
+        .bind(empresa_id)
+        .fetch_optional(&mut *tx)
+        .await
+        .map_err(interno)?
+        .ok_or_else(|| ApiError::no_encontrado("Empresa", empresa_id))?;
+        let vertical_id: Option<String> = empresa.try_get("vertical_id").map_err(interno)?;
+        let pack_codigo: Option<String> = empresa.try_get("pack_codigo").map_err(interno)?;
+        let pack_version: Option<i32> = empresa.try_get("pack_version").map_err(interno)?;
+
+        let mut pack = None;
+        let mut modelos = Vec::new();
+        if let (Some(codigo), Some(version)) = (pack_codigo.as_deref(), pack_version) {
+            let fila = sqlx::query(
+                "SELECT nombre, config FROM identity.packs
+                  WHERE codigo = $1 AND version = $2",
+            )
+            .bind(codigo)
+            .bind(version)
+            .fetch_optional(&mut *tx)
+            .await
+            .map_err(interno)?;
+            if let Some(fila) = fila {
+                pack = Some(PackManifiesto {
+                    codigo: codigo.to_string(),
+                    version,
+                    nombre: fila.try_get("nombre").map_err(interno)?,
+                    config: fila.try_get("config").map_err(interno)?,
+                });
+            }
+            let filas = sqlx::query(
+                "SELECT mo.codigo, mo.nombre, mo.descripcion, mo.config
+                   FROM identity.pack_modelos pm
+                   JOIN identity.modelos_operacion mo ON mo.codigo = pm.modelo_codigo
+                  WHERE pm.pack_codigo = $1 AND pm.pack_version = $2
+                    AND pm.activo = true AND mo.activo = true
+                  ORDER BY mo.codigo",
+            )
+            .bind(codigo)
+            .bind(version)
+            .fetch_all(&mut *tx)
+            .await
+            .map_err(interno)?;
+            for fila in &filas {
+                modelos.push(ModeloManifiesto {
+                    codigo: fila.try_get("codigo").map_err(interno)?,
+                    nombre: fila.try_get("nombre").map_err(interno)?,
+                    descripcion: fila.try_get("descripcion").map_err(interno)?,
+                    config: fila.try_get("config").map_err(interno)?,
+                });
+            }
+        }
+
+        let filas = sqlx::query(
+            "SELECT c.codigo, c.nombre, c.modulo, ec.activo, ec.config
+               FROM identity.empresa_capacidades ec
+               JOIN identity.capacidades c ON c.codigo = ec.capacidad_codigo
+              WHERE ec.empresa_id = $1::uuid
+              ORDER BY c.modulo, c.codigo",
+        )
+        .bind(empresa_id)
+        .fetch_all(&mut *tx)
+        .await
+        .map_err(interno)?;
+        tx.commit().await.map_err(interno)?;
+
+        let mut capacidades = Vec::with_capacity(filas.len());
+        for fila in &filas {
+            let codigo: String = fila.try_get("codigo").map_err(interno)?;
+            capacidades.push(CapacidadManifiesto {
+                features: features_de(&codigo).to_vec(),
+                codigo,
+                nombre: fila.try_get("nombre").map_err(interno)?,
+                modulo: fila.try_get("modulo").map_err(interno)?,
+                activo: fila.try_get("activo").map_err(interno)?,
+                config: fila.try_get("config").map_err(interno)?,
+            });
+        }
+        let mut features: Vec<String> = capacidades
+            .iter()
+            .filter(|capacidad| capacidad.activo)
+            .flat_map(|capacidad| capacidad.features.iter().copied())
+            .map(str::to_string)
+            .collect();
+        features.sort();
+        features.dedup();
+
+        Ok(Manifiesto {
+            empresa_id: empresa_id.to_string(),
+            vertical_id,
+            pack,
+            modelos,
+            capacidades,
+            features,
+        })
     }
 
     pub async fn actualizar(
