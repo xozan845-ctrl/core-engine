@@ -115,14 +115,13 @@ export default defineSuite({
           `${svc}/Dockerfile debe podar las devDependencies del runtime (npm prune --omit=dev)`,
         );
       }
-      for (const rel of ['Dockerfile', join('packages', 'Dockerfile.template')]) {
-        const content = readText(join(repoRoot, rel));
-        assert.match(
-          content,
-          /npm prune --omit=dev/,
-          `${rel} debe podar las devDependencies del runtime (npm prune --omit=dev)`,
-        );
-      }
+      // La plantilla es la referencia para servicios nuevos: runtime sin
+      // toolchain (debian slim) y sin artefactos Node.
+      const template = readText(join(repoRoot, 'packages', 'Dockerfile.template'));
+      assert.match(template, /^FROM debian:/m, 'la plantilla debe usar un runtime sin toolchain');
+      assert.doesNotMatch(template, /node_modules/, 'la plantilla no debe copiar node_modules');
+      assert.match(template, /^USER \d+:\d+$/m, 'la plantilla debe correr como usuario no-root');
+      assert.match(template, /^ENTRYPOINT /m, 'la plantilla debe arrancar el binario Rust');
     });
   },
 });

@@ -98,11 +98,14 @@ pub async fn crear_disponibilidad(
     State(state): State<AppState>,
     headers: HeaderMap,
     Cuerpo(cuerpo): Cuerpo,
-) -> Result<Json<Value>, ApiError> {
+) -> Result<(StatusCode, Json<Value>), ApiError> {
     let usuario = autorizar(&state, &headers, "agenda.escribir").await?;
     let tenant = usuario.tenant()?;
     let dto = validar_crear_disponibilidad(&cuerpo)?;
-    Ok(Json(state.agenda.crear_disponibilidad(tenant, &dto).await?))
+    Ok((
+        StatusCode::CREATED,
+        Json(state.agenda.crear_disponibilidad(tenant, &dto).await?),
+    ))
 }
 
 pub async fn crear_bloqueo(
@@ -473,6 +476,28 @@ mod tests {
         let cuerpo = json(response).await;
         assert_eq!(cuerpo["meta"]["statusCode"], 201);
         assert_eq!(cuerpo["data"]["id"], "r-1");
+    }
+
+    #[tokio::test]
+    async fn debe_responder_201_al_crear_disponibilidad() {
+        let response = router(true)
+            .oneshot(peticion(
+                "POST",
+                "/api/v2/scheduling/disponibilidad",
+                &headers("empresario"),
+                Some(json!({
+                    "recurso_id": "22222222-2222-4222-8222-222222222222",
+                    "dia_semana": 1,
+                    "inicia_hora": "08:00",
+                    "termina_hora": "18:00",
+                    "zona_horaria": "America/Managua"
+                })),
+            ))
+            .await
+            .expect("response");
+        assert_eq!(response.status(), StatusCode::CREATED);
+        let cuerpo = json(response).await;
+        assert_eq!(cuerpo["meta"]["statusCode"], 201);
     }
 
     #[tokio::test]

@@ -129,11 +129,31 @@ Se introduce la abstracción `item` con `tipo` igual a `producto`, `servicio` o
   conserva el total. La primera ubicación absorbe el stock existente, las
   transferencias mueven cantidades sin cambiar el total y un trigger distribuye
   los cambios directos de stock a la ubicación predeterminada.
+- `catalog.combos` quedó retirado: un combo es un item con `es_combo = true`
+  y componentes en `catalog.item_componentes`. La API de combos se conserva como
+  adaptador para no romper clientes;
 - `catalog.items.track_serial` y `catalog.item_series` identifican cada unidad
   física (serial/IMEI). La venta marca la unidad como vendida y calcula la
   garantía con `garantia_meses`; la devolución la marca como devuelta y la
   reubica en la ubicación predeterminada. Un item serializado sin unidades
   disponibles no se vende aunque su stock agregado sea positivo.
+- `orders.mesas` y `orders.comandas` modelan salón y estaciones de preparación
+  (cocina, bar, etc.). Una comanda puede nacer de una orden o de items libres y
+  avanza pendiente → en preparación → lista → entregada; se gatea con `mesas`;
+- `stores.ofertas.moneda` es el código ISO de la moneda final. La orden copia
+  la moneda de sus ofertas y rechaza mezclar monedas; no hay conversión
+  implícita (el tipo de cambio sería una extensión explícita);
+- `orders.suscripciones` compra una oferta cada semana/mes/año y genera una
+  orden normal al vencer, con historial en `orders.suscripcion_ejecuciones`.
+  La reclamación es atómica y la capacidad `suscripciones` la gatea;
+- `orders.contratos` modela acuerdos con depósito/garantía y retención, con un
+  historial en `orders.contrato_eventos`. Puede vincularse a una orden y se
+  gatea con la capacidad `contratos`;
+- `fulfillment = digital` crea un acceso por línea de orden en
+  `orders.entregas_digitales`. La URL se configura en el item
+  (`atributos.entrega_digital_url`), el acceso solo se consume con la orden
+  pagada y admite límites de descargas y expiración. La capacidad
+  `fulfillment_digital` gatea las ventas digitales;
 - `scheduling.recursos.capacidad` define cuántas citas activas pueden solaparse
   en el mismo horario (clases y grupos). Un trigger serializa las reservas por
   recurso y rechaza la cita que excede el cupo; `capacidad = 1` conserva el

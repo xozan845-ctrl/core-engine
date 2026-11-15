@@ -74,7 +74,12 @@ function api(metodo, ruta, cuerpo, token, nombre) {
   });
 }
 
-function crear(cuerpo, etiqueta) {
+/** Exige 2xx y cuerpo JSON: un fallo de setup debe abortar con el status real. */
+function crear(res, etiqueta) {
+  const cuerpo = desenvolver(res);
+  if (!res || res.status < 200 || res.status >= 300) {
+    fail(`${etiqueta}: ${res?.status} ${res?.body ?? '(sin cuerpo)'}`);
+  }
   if (!cuerpo) fail(`${etiqueta}: respuesta sin cuerpo`);
   return cuerpo;
 }
@@ -86,80 +91,110 @@ export function setup() {
   const correoComprador = `carga.comp.${suf}@core-engine.test`;
 
   const admin = crear(
-    desenvolver(api('POST', '/api/v2/auth/login', { correo: ADMIN_EMAIL, contrasena: ADMIN_PASSWORD })),
+    api('POST', '/api/v2/auth/login', { correo: ADMIN_EMAIL, contrasena: ADMIN_PASSWORD }),
     'login admin',
   );
   if (!admin.access_token) fail('login admin: sin access_token');
 
   const empresario = crear(
-    desenvolver(api('POST', '/api/v2/auth/registro', {
+    api('POST', '/api/v2/auth/registro', {
       nombre: 'Carga Empresario',
       correo: correoEmpresario,
       contrasena: PASSWORD,
       rol: 'empresario',
-    })),
+    }),
     'registro empresario',
   );
   const comprador = crear(
-    desenvolver(api('POST', '/api/v2/auth/registro', {
+    api('POST', '/api/v2/auth/registro', {
       nombre: 'Carga Comprador',
       correo: correoComprador,
       contrasena: PASSWORD,
       rol: 'comprador',
-    })),
+    }),
     'registro comprador',
   );
 
+  // Desde ADR-25 la empresa exige vertical y pack (multi-vertical).
   const empresa = crear(
-    desenvolver(api('POST', '/api/v2/empresas', { nombre: `Carga ${suf}` }, empresario.access_token)),
+    api(
+      'POST',
+      '/api/v2/empresas',
+      {
+        nombre: `Carga ${suf}`,
+        vertical_id: 'retail',
+        pack_codigo: 'pack_retail',
+      },
+      empresario.access_token,
+    ),
     'crear empresa',
   );
 
   // La creación de la empresa asigna tenant_id; se renueva el token para RLS.
   const empresarioActivo = crear(
-    desenvolver(api('POST', '/api/v2/auth/login', { correo: correoEmpresario, contrasena: PASSWORD })),
+    api('POST', '/api/v2/auth/login', { correo: correoEmpresario, contrasena: PASSWORD }),
     'login empresario con tenant',
   );
 
   crear(
-    desenvolver(api('POST', `/api/v2/empresas/${empresa.id}/vendedores`, {
-      nombre: 'Carga Vendedor',
-      correo: correoVendedor,
-      contrasena: PASSWORD,
-      participacion_porcentaje: 100,
-    }, empresarioActivo.access_token)),
+    api(
+      'POST',
+      `/api/v2/empresas/${empresa.id}/vendedores`,
+      {
+        nombre: 'Carga Vendedor',
+        correo: correoVendedor,
+        contrasena: PASSWORD,
+        participacion_porcentaje: 100,
+      },
+      empresarioActivo.access_token,
+    ),
     'crear vendedor',
   );
 
   const vendedor = crear(
-    desenvolver(api('POST', '/api/v2/auth/login', { correo: correoVendedor, contrasena: PASSWORD })),
+    api('POST', '/api/v2/auth/login', { correo: correoVendedor, contrasena: PASSWORD }),
     'login vendedor',
   );
 
   crear(
-    desenvolver(api('POST', '/api/v2/vendedores/tienda', { nombre: `Tienda Carga ${suf}` }, vendedor.access_token)),
+    api(
+      'POST',
+      '/api/v2/vendedores/tienda',
+      { nombre: `Tienda Carga ${suf}` },
+      vendedor.access_token,
+    ),
     'crear tienda',
   );
 
   const producto = crear(
-    desenvolver(api('POST', '/api/v2/catalog/items', {
-      tipo: 'producto',
-      codigo: `CARGA-${suf.toUpperCase()}`,
-      empresa_id: empresa.id,
-      nombre: 'Producto de carga',
-      descripcion: 'Producto efímero para la prueba k6',
-      categoria: 'general',
-      precio: '1000.00',
-      stock: 5000,
-    }, admin.access_token)),
+    api(
+      'POST',
+      '/api/v2/catalog/items',
+      {
+        tipo: 'producto',
+        codigo: `CARGA-${suf.toUpperCase()}`,
+        empresa_id: empresa.id,
+        nombre: 'Producto de carga',
+        descripcion: 'Producto efímero para la prueba k6',
+        categoria: 'general',
+        precio: '1000.00',
+        stock: 5000,
+      },
+      admin.access_token,
+    ),
     'crear producto',
   );
 
   const oferta = crear(
-    desenvolver(api('POST', '/api/v2/vendedores/productos', {
-      item_id: producto.item_id ?? producto.id,
-      margen: 15,
-    }, vendedor.access_token)),
+    api(
+      'POST',
+      '/api/v2/vendedores/productos',
+      {
+        item_id: producto.item_id ?? producto.id,
+        margen: 15,
+      },
+      vendedor.access_token,
+    ),
     'crear oferta',
   );
 

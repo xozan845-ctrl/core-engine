@@ -1,0 +1,30 @@
+[package]
+name = "finance-service"
+version = "1.0.9"
+edition = "2021"
+rust-version = "1.89"
+description = "Finanzas y contabilidad: comercio, partida doble, tributacion, facturacion y proyecciones"
+publish = false
+
+[[bin]]
+name = "finance-service"
+path = "src/main.rs"
+
+[dependencies]
+async-trait = "0.1"
+axum = "0.8"
+chrono = { version = "0.4", features = ["serde"] }
+futures-util = "0.3"
+http-body-util = "0.1"
+lapin = "2"
+reqwest = { version = "0.12", default-features = false, features = ["json", "rustls-tls"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = { version = "1", features = ["preserve_order"] }
+sqlx = { version = "0.8", default-features = false, features = ["runtime-tokio-rustls", "postgres", "chrono", "json", "uuid"] }
+thiserror = "2"
+urlencoding = "2"
+tokio = { version = "1", features = ["macros", "net", "rt-multi-thread", "signal", "sync", "time"] }
+uuid = { version = "1", features = ["v4", "serde"] }
+
+[dev-dependencies]
+tower = { version = "0.5", features = ["util"] }

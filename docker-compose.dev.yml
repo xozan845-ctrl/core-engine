@@ -15,9 +15,8 @@
 # (imágenes de GHCR, sin `build:`); este archivo nunca se despliega.
 
 x-servicio-base: &servicio-base
-  build:
-    context: .
-    dockerfile: Dockerfile
+  # Cada servicio declara su propio `build.dockerfile` (crate Rust); el
+  # contexto siempre es la raíz del repositorio.
   env_file:
     - .env
   environment:
@@ -104,13 +103,10 @@ services:
     <<: *servicio-base
     build:
       context: .
-      dockerfile: Dockerfile
-      args:
-        SERVICIO: api-gateway
+      dockerfile: packages/api-gateway/Dockerfile
     environment:
       SERVICIO: api-gateway
       PORT: 8080
-      OUTBOX_TABLA: identity.outbox
       # En desarrollo el diagnostico (/docs, /metrics) va abierto; en stage/prod
       # el borde lo cierra (DIAGNOSTICOS_PUBLICOS=false por defecto).
       DIAGNOSTICOS_PUBLICOS: "true"
@@ -125,11 +121,10 @@ services:
   # ── Microservicios por dominio (Tabla 7) ───────────────────────────────
   identity-service:
     <<: *servicio-base
+    # ADR-0017: el servicio es Rust y tiene su propio Dockerfile multi-stage.
     build:
       context: .
-      dockerfile: Dockerfile
-      args:
-        SERVICIO: identity-service
+      dockerfile: packages/identity-service/Dockerfile
     environment:
       SERVICIO: identity-service
       PORT: 3001
@@ -144,11 +139,10 @@ services:
 
   catalog-service:
     <<: *servicio-base
+    # ADR-0016: el servicio es Rust y tiene su propio Dockerfile multi-stage.
     build:
       context: .
-      dockerfile: Dockerfile
-      args:
-        SERVICIO: catalog-service
+      dockerfile: packages/catalog-service/Dockerfile
     environment:
       SERVICIO: catalog-service
       PORT: 3002
@@ -156,11 +150,10 @@ services:
 
   stores-service:
     <<: *servicio-base
+    # ADR-0011: el servicio es Rust y tiene su propio Dockerfile multi-stage.
     build:
       context: .
-      dockerfile: Dockerfile
-      args:
-        SERVICIO: stores-service
+      dockerfile: packages/stores-service/Dockerfile
     environment:
       SERVICIO: stores-service
       PORT: 3003
@@ -168,11 +161,10 @@ services:
 
   orders-service:
     <<: *servicio-base
+    # ADR-0013: el servicio es Rust y tiene su propio Dockerfile multi-stage.
     build:
       context: .
-      dockerfile: Dockerfile
-      args:
-        SERVICIO: orders-service
+      dockerfile: packages/orders-service/Dockerfile
     environment:
       SERVICIO: orders-service
       PORT: 3004
@@ -191,11 +183,10 @@ services:
 
   logistics-service:
     <<: *servicio-base
+    # ADR-0010: el servicio es Rust y tiene su propio Dockerfile multi-stage.
     build:
       context: .
-      dockerfile: Dockerfile
-      args:
-        SERVICIO: logistics-service
+      dockerfile: packages/logistics-service/Dockerfile
     environment:
       SERVICIO: logistics-service
       PORT: 3005
@@ -205,9 +196,7 @@ services:
     <<: *servicio-base
     build:
       context: .
-      dockerfile: Dockerfile
-      args:
-        SERVICIO: commissions-service
+      dockerfile: packages/commissions-service/Dockerfile
     environment:
       SERVICIO: commissions-service
       PORT: 3006
@@ -215,11 +204,10 @@ services:
 
   finance-service:
     <<: *servicio-base
+    # ADR-0014: el servicio es Rust y tiene su propio Dockerfile multi-stage.
     build:
       context: .
-      dockerfile: Dockerfile
-      args:
-        SERVICIO: finance-service
+      dockerfile: packages/finance-service/Dockerfile
     environment:
       SERVICIO: finance-service
       PORT: 3007
@@ -230,9 +218,7 @@ services:
     <<: *servicio-base
     build:
       context: .
-      dockerfile: Dockerfile
-      args:
-        SERVICIO: field-service
+      dockerfile: packages/field-service/Dockerfile
     environment:
       SERVICIO: field-service
       PORT: 3008
@@ -240,11 +226,10 @@ services:
 
   market-intelligence-service:
     <<: *servicio-base
+    # ADR-0009: el servicio es Rust y tiene su propio Dockerfile multi-stage.
     build:
       context: .
-      dockerfile: Dockerfile
-      args:
-        SERVICIO: market-intelligence-service
+      dockerfile: packages/market-intelligence-service/Dockerfile
     environment:
       SERVICIO: market-intelligence-service
       PORT: 3009
@@ -254,9 +239,7 @@ services:
     <<: *servicio-base
     build:
       context: .
-      dockerfile: Dockerfile
-      args:
-        SERVICIO: storage-service
+      dockerfile: packages/storage-service/Dockerfile
     environment:
       SERVICIO: storage-service
       PORT: 3010

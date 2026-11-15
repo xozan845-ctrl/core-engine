@@ -7,8 +7,8 @@
  * `manifest.mjs`); `scripts/engine/` no se toca.
  *
  * Core Engine es un **monorepo npm workspaces**: varios servicios NestJS en
- * `packages/*` comparten `packages/shared`. Por eso la configuración es
- * multi-paquete (lista de servicios) y no un único `APP_DIR`.
+ * Todos los servicios son crates Rust independientes. La configuración sigue
+ * siendo multi-paquete (lista de servicios) y no un único `APP_DIR`.
  * ──────────────────────────────────────────────────────────────────────────────
  */
 
@@ -38,7 +38,7 @@ export const WORKFLOWS_DIR = '.github/workflows';
 
 /**
  * Servicios desplegables del monorepo (uno por carpeta `packages/<servicio>`
- * con `Dockerfile` propio). `shared` es librería, no servicio.
+ * con `Dockerfile` propio).
  */
 export const SERVICES = [
   'api-gateway',
@@ -65,9 +65,23 @@ export const SERVICE_TEST_EXCEPTIONS = [];
 /**
  * Servicios con implementación Rust (crate + cargo). Quedan fuera del runner
  * Vitest y del contrato de scripts npm; su gate vive en el job `rust` de CI
- * (ADR-0004, ADR-0006 y docs/rules/test/06-estandares-cobertura.md).
+ * (ADR-0004, ADR-0006, ADR-0008, ADR-0010, ADR-0014 y docs/rules/test/06-estandares-cobertura.md).
  */
-export const RUST_SERVICES = ['scheduling-service', 'notifications-service'];
+export const RUST_SERVICES = [
+  'api-gateway',
+  'scheduling-service',
+  'notifications-service',
+  'commissions-service',
+  'field-service',
+  'logistics-service',
+  'market-intelligence-service',
+  'storage-service',
+  'stores-service',
+  'finance-service',
+  'orders-service',
+  'catalog-service',
+  'identity-service',
+];
 
 /** Servicios Node/NestJS con suite Vitest (todos menos los migrados a Rust). */
 export const SERVICES_NODE = SERVICES.filter(
@@ -97,8 +111,8 @@ export const ALLOWED_COMMIT_TYPES = [
  */
 export const ALLOWED_COMMIT_SCOPES = [
   // Servicios (nombre corto y nombre completo del paquete)
-  'shared',
   'gateway',
+  'shared',
   'api-gateway',
   'identity',
   'identity-service',
