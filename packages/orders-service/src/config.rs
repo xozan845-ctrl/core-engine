@@ -27,6 +27,7 @@ pub struct Config {
     pub internal_request_timeout_ms: u64,
     pub outbox_tabla: String,
     pub tasa_comision: f64,
+    pub pago_webhook_secret: Option<String>,
 }
 
 impl Config {
@@ -97,6 +98,7 @@ impl Config {
                 None => TIMEOUT_INTERNO_DEFAULT_MS,
             },
             outbox_tabla: leer("OUTBOX_TABLA").unwrap_or_else(|| "orders.outbox".to_string()),
+            pago_webhook_secret: leer("PAGO_WEBHOOK_SECRET"),
             tasa_comision: match leer("COMMISSION_RATE") {
                 Some(valor) => valor
                     .parse::<f64>()

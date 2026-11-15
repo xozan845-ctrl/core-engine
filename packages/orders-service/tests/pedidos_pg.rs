@@ -821,6 +821,7 @@ async fn router_completo(db: Arc<Db>, stock: i64) -> axum::Router {
     let config = Config::from_pairs([
         ("SERVICIO", "orders-service"),
         ("INTERNAL_API_KEY", "clave-interna"),
+        ("PAGO_WEBHOOK_SECRET", "webhook-secreto"),
     ])
     .expect("config");
     let clientes: Arc<dyn ClientesPort> = Arc::new(ClientesFake {
@@ -1315,4 +1316,58 @@ async fn debe_confirmar_y_rechazar_pagos_manuales() {
         .expect("response");
     let orden = json_de(response).await;
     assert_eq!(orden["data"]["estado"], "cancelada");
+}
+
+#[tokio::test]
+async fn debe_procesar_un_webhook_de_pago_con_secreto() {
+    use axum::body::Body;
+    use axum::http::{Request, StatusCode};
+    use tower::ServiceExt;
+    let _guard = DB_LOCK.lock().await;
+    let Some(db) = con_bd().await else { return };
+    let router = router_completo(Arc::clone(&db), 10).await;
+    let (order_id, pago_id) = crear_orden_manual(router.clone()).await;
+
+    let request = Request::post("/internal/pagos/webhook")
+        .header("content-type", "application/json")
+        .header("x-webhook-secret", "incorrecto");
+    let response = router
+        .clone()
+        .oneshot(
+            request
+                .body(Body::from(format!(
+                    r#"{{"pago_id":"{pago_id}","estado":"confirmado"}}"#
+                )))
+                .expect("request"),
+        )
+        .await
+        .expect("response");
+    assert_eq!(response.status(), StatusCode::FORBIDDEN);
+
+    let request = Request::post("/internal/pagos/webhook")
+        .header("content-type", "application/json")
+        .header("x-webhook-secret", "webhook-secreto");
+    let response = router
+        .clone()
+        .oneshot(
+            request
+                .body(Body::from(format!(
+                    r#"{{"pago_id":"{pago_id}","estado":"confirmado"}}"#
+                )))
+                .expect("request"),
+        )
+        .await
+        .expect("response");
+    assert_eq!(response.status(), StatusCode::OK);
+
+    let mut request = Request::get(format!("/api/v2/orders/{order_id}"));
+    for (clave, valor) in headers_comprador() {
+        request = request.header(clave, valor);
+    }
+    let response = router
+        .oneshot(request.body(Body::empty()).expect("request"))
+        .await
+        .expect("response");
+    let orden = json_de(response).await;
+    assert_eq!(orden["data"]["estado"], "pagada");
 }

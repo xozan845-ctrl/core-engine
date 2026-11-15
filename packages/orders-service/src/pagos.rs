@@ -85,6 +85,26 @@ impl Pagos {
         filas.iter().map(fila_pago).collect()
     }
 
+    pub async fn obtener(&self, pago_id: &str) -> Result<Option<Pago>, ApiError> {
+        let mut tx = self
+            .db
+            .transaccion()
+            .await
+            .map_err(crate::event_store::error_db)?;
+        let fila = sqlx::query(
+            "SELECT id, order_id, empresa_id, metodo_codigo, estado, monto_cents,
+                    moneda, referencia, motivo_rechazo, confirmado_por,
+                    confirmado_en, creado_en
+               FROM orders.pagos WHERE id = $1::uuid",
+        )
+        .bind(pago_id)
+        .fetch_optional(&mut *tx)
+        .await
+        .map_err(crate::event_store::error_db)?;
+        tx.commit().await.map_err(crate::event_store::error_db)?;
+        fila.as_ref().map(fila_pago).transpose()
+    }
+
     pub async fn confirmar(&self, pago_id: &str, actor_id: &str) -> Result<Pago, ApiError> {
         self.procesar(pago_id, "confirmado", "", actor_id).await
     }
