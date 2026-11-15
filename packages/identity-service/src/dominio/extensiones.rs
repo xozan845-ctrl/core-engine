@@ -8,11 +8,20 @@ use crate::db::{iso_ms, Db};
 use crate::dominio::slug::es_uuid;
 use crate::errors::ApiError;
 use chrono::Utc;
+use serde::Serialize;
 use serde_json::{json, Value};
 use sqlx::Row;
 use std::sync::Arc;
 
 const MAX_JSON_BYTES: usize = 64 * 1024;
+
+#[derive(Debug, Clone, Serialize, PartialEq)]
+pub struct ValorExtension {
+    pub recurso_id: String,
+    pub codigo: String,
+    pub version_schema: i32,
+    pub valores: Value,
+}
 
 pub struct Extensiones {
     db: Arc<Db>,
@@ -250,6 +259,56 @@ impl Extensiones {
             Ok(normalizar_fechas(datos, &["creado_en", "actualizado_en"]))
         })
         .transpose()
+    }
+
+    /// Lectura interna (servicio→servicio): valores activos por recurso.
+    pub async fn valores_por_recursos(
+        &self,
+        empresa_id: &str,
+        recurso: &str,
+        recurso_ids: &[String],
+    ) -> Result<Vec<ValorExtension>, ApiError> {
+        if !es_uuid(empresa_id) {
+            return Err(ApiError::dominio(
+                "EMPRESA_INVALIDA",
+                "La empresa debe ser un UUID válido.",
+            ));
+        }
+        let recurso = normalizar_codigo(recurso)?;
+        let mut ids = Vec::with_capacity(recurso_ids.len());
+        for id in recurso_ids {
+            ids.push(validar_recurso_id(id)?);
+        }
+        if ids.is_empty() {
+            return Ok(Vec::new());
+        }
+        let mut tx = self.db.transaccion_servicio().await.map_err(interno)?;
+        let filas = sqlx::query(
+            "SELECT v.recurso_id, e.codigo, v.version_schema, v.valores
+               FROM identity.extensiones_empresa_valores v
+               JOIN identity.extensiones_empresa e ON e.id = v.extension_id
+              WHERE v.empresa_id = $1::uuid AND e.recurso = $2
+                AND e.activo = true AND v.recurso_id = ANY($3::uuid[])
+              ORDER BY e.codigo",
+        )
+        .bind(empresa_id)
+        .bind(&recurso)
+        .bind(&ids)
+        .fetch_all(&mut *tx)
+        .await
+        .map_err(interno)?;
+        tx.commit().await.map_err(interno)?;
+        filas
+            .iter()
+            .map(|fila| {
+                Ok(ValorExtension {
+                    recurso_id: crate::db::uuid_texto(fila, "recurso_id").map_err(interno)?,
+                    codigo: fila.try_get("codigo").map_err(interno)?,
+                    version_schema: fila.try_get("version_schema").map_err(interno)?,
+                    valores: fila.try_get("valores").map_err(interno)?,
+                })
+            })
+            .collect()
     }
 
     pub async fn eliminar_valores(

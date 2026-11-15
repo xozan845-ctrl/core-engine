@@ -2062,6 +2062,38 @@ async fn debe_gestionar_extensiones_y_validar_json_schema() {
     assert_eq!(status, StatusCode::OK);
     assert_eq!(guardados["data"]["version_schema"], 1);
 
+    let clave = [("x-internal-key", "clave-interna-test")];
+    let (status, internos) = enviar(
+        &ctx.app,
+        "POST",
+        "/internal/extensiones/valores",
+        json!({
+            "empresa_id": empresa_id,
+            "recurso": "cliente",
+            "recurso_ids": [recurso_id]
+        }),
+        &clave,
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK);
+    assert_eq!(internos["valores"][0]["codigo"], "ficha_cliente");
+    assert_eq!(internos["valores"][0]["version_schema"], 1);
+    assert_eq!(internos["valores"][0]["valores"]["edad"], 20);
+
+    let (status, _) = enviar(
+        &ctx.app,
+        "POST",
+        "/internal/extensiones/valores",
+        json!({
+            "empresa_id": empresa_id,
+            "recurso": "cliente",
+            "recurso_ids": [recurso_id]
+        }),
+        &[],
+    )
+    .await;
+    assert_eq!(status, StatusCode::FORBIDDEN);
+
     let (status, error) = enviar(
         &ctx.app,
         "PUT",

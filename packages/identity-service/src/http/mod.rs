@@ -182,6 +182,10 @@ pub fn build_router(state: AppState) -> Router {
             "/internal/empresas/capacidades",
             post(internal::capacidades_empresas),
         )
+        .route(
+            "/internal/extensiones/valores",
+            post(internal::valores_extensiones),
+        )
         .route("/internal/partes/{id}", get(internal::parte))
         .route(
             "/api/v2/empresas/{empresa_id}/extensiones",
