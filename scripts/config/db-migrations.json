@@ -85,7 +85,7 @@
   "72_multimoneda_ofertas.sql": "884cc55cb122f95955edcddc2205a543efc1be24c05578ebad3d315847068744",
   "73_orders_moneda_proyeccion.sql": "799d5ca787e6b1c35dccb188e54cf6d2c852a1529ab23a389b505d17e8b7dccc",
   "74_mesas_comandas.sql": "43c8470f9faa205497da9cce60e0191d9c782a57ffc310c751a3404969f5508e",
-  "75_inventory_schema.sql": "2bb34362185924805870bd2b0f90a151bab02657ef08b3d182ea89d947f7ee2e",
+  "75_inventory_schema.sql": "62aa53429fe15376a92048cb2355e32660da8325db322b1b82720c37f03dfe3b",
   "75_items_vista_columnas.sql": "4c8c8ec565e8e5655f34bd0f701e530555cd1b08b2197a1b65f15c0007add787",
   "76_mv_owner.sql": "9b0e44199826bfc7f69cd0319ce38314817570eb0ea9bd65236fcc33e1180607"
 }
