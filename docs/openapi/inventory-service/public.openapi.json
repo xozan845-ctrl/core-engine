@@ -5,13 +5,314 @@
     "version": "1.0.9",
     "description": "Inventario y almacenes: stock, lotes FEFO, ubicaciones, movimientos y reservas (ADR-0018)."
   },
+  "x-servicio": "inventory-service",
+  "x-superficie": "publica",
   "servers": [
     {
       "url": "http://localhost:8080/api/v2"
     }
   ],
-  "paths": {},
+  "security": [
+    {
+      "bearerAuth": []
+    }
+  ],
+  "paths": {
+    "/api/v2/admin/inventario": {
+      "get": {
+        "summary": "Listar niveles de stock",
+        "responses": {
+          "200": {
+            "description": "Niveles de stock"
+          },
+          "401": {
+            "description": "No autorizado"
+          },
+          "403": {
+            "description": "Capacidad no activa"
+          }
+        }
+      }
+    },
+    "/api/v2/admin/inventario/proveedores": {
+      "post": {
+        "summary": "Crear proveedor",
+        "responses": {
+          "201": {
+            "description": "Proveedor creado"
+          },
+          "400": {
+            "description": "Validacion"
+          },
+          "403": {
+            "description": "Capacidad no activa"
+          },
+          "409": {
+            "description": "Conflicto"
+          }
+        }
+      }
+    },
+    "/api/v2/admin/inventario/lotes": {
+      "get": {
+        "summary": "Listar lotes",
+        "responses": {
+          "200": {
+            "description": "Lotes"
+          },
+          "403": {
+            "description": "Capacidad no activa"
+          }
+        }
+      },
+      "post": {
+        "summary": "Crear lote",
+        "responses": {
+          "201": {
+            "description": "Lote creado"
+          },
+          "400": {
+            "description": "Validacion"
+          },
+          "409": {
+            "description": "Conflicto"
+          }
+        }
+      }
+    },
+    "/api/v2/admin/inventario/lotes/consumir": {
+      "post": {
+        "summary": "Consumir lotes en orden FEFO",
+        "responses": {
+          "201": {
+            "description": "Consumo aplicado"
+          },
+          "400": {
+            "description": "Validacion"
+          },
+          "409": {
+            "description": "Stock o lote insuficiente"
+          }
+        }
+      }
+    },
+    "/api/v2/catalog/configuracion-inventario": {
+      "get": {
+        "summary": "Leer configuracion de inventario",
+        "responses": {
+          "200": {
+            "description": "Configuracion"
+          },
+          "403": {
+            "description": "Capacidad no activa"
+          }
+        }
+      },
+      "put": {
+        "summary": "Guardar configuracion de inventario",
+        "responses": {
+          "200": {
+            "description": "Configuracion guardada"
+          },
+          "400": {
+            "description": "Validacion"
+          },
+          "403": {
+            "description": "Capacidad no activa"
+          }
+        }
+      }
+    },
+    "/api/v2/admin/ubicaciones": {
+      "get": {
+        "summary": "Listar ubicaciones",
+        "responses": {
+          "200": {
+            "description": "Ubicaciones"
+          },
+          "403": {
+            "description": "Capacidad no activa"
+          }
+        }
+      },
+      "post": {
+        "summary": "Crear ubicacion",
+        "responses": {
+          "201": {
+            "description": "Ubicacion creada"
+          },
+          "400": {
+            "description": "Validacion"
+          },
+          "409": {
+            "description": "Conflicto"
+          }
+        }
+      }
+    },
+    "/api/v2/admin/ubicaciones/transferencias": {
+      "post": {
+        "summary": "Transferir stock entre ubicaciones",
+        "responses": {
+          "201": {
+            "description": "Transferencia aplicada"
+          },
+          "400": {
+            "description": "Validacion"
+          },
+          "409": {
+            "description": "Stock insuficiente"
+          }
+        }
+      }
+    },
+    "/api/v2/admin/ubicaciones/items/{item_id}/stock": {
+      "get": {
+        "summary": "Stock de un item por ubicacion",
+        "parameters": [
+          {
+            "name": "item_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Stock por ubicacion"
+          },
+          "404": {
+            "description": "Item no encontrado"
+          }
+        }
+      }
+    },
+    "/api/v2/admin/ubicaciones/{id}": {
+      "patch": {
+        "summary": "Actualizar ubicacion",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Ubicacion actualizada"
+          },
+          "400": {
+            "description": "Validacion"
+          },
+          "404": {
+            "description": "Ubicacion no encontrada"
+          }
+        }
+      }
+    },
+    "/api/v2/admin/ubicaciones/{id}/stock": {
+      "get": {
+        "summary": "Stock de una ubicacion",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Stock de la ubicacion"
+          },
+          "404": {
+            "description": "Ubicacion no encontrada"
+          }
+        }
+      }
+    },
+    "/api/v2/admin/ubicaciones/{id}/stock/{item_id}": {
+      "put": {
+        "summary": "Fijar stock de un item en una ubicacion",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "item_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Stock fijado"
+          },
+          "400": {
+            "description": "Validacion"
+          },
+          "409": {
+            "description": "Conflicto"
+          }
+        }
+      }
+    },
+    "/api/v2/catalog/inventario/movimientos": {
+      "get": {
+        "summary": "Listar movimientos de inventario",
+        "responses": {
+          "200": {
+            "description": "Movimientos"
+          },
+          "400": {
+            "description": "Validacion"
+          }
+        }
+      },
+      "post": {
+        "summary": "Crear movimiento de inventario",
+        "responses": {
+          "201": {
+            "description": "Movimiento creado"
+          },
+          "400": {
+            "description": "Validacion"
+          },
+          "409": {
+            "description": "Stock insuficiente"
+          }
+        }
+      }
+    }
+  },
   "components": {
+    "securitySchemes": {
+      "bearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT"
+      }
+    },
     "schemas": {}
   }
 }
