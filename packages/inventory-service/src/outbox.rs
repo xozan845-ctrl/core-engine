@@ -1,6 +1,6 @@
 //! Outbox (ADR-03): el evento se persiste en la misma transacción del negocio.
 //!
-//! La tabla viene de `OUTBOX_TABLA` (`catalog.outbox` en compose) y el
+//! La tabla viene de `OUTBOX_TABLA` (`inventory.outbox` en compose) y el
 //! publicador corre cada segundo, con lote de 50 y `FOR UPDATE SKIP LOCKED`.
 
 use crate::db::{interno, Db};
@@ -130,7 +130,7 @@ mod tests {
 
     #[test]
     fn debe_crear_la_tabla_desde_la_configuracion() {
-        let outbox = Outbox::nueva("catalog.outbox");
-        assert_eq!(outbox.tabla(), "catalog.outbox");
+        let outbox = Outbox::nueva("inventory.outbox");
+        assert_eq!(outbox.tabla(), "inventory.outbox");
     }
 }

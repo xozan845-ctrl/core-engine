@@ -17,14 +17,14 @@ gateway (`http://localhost:8080/api/v1/...`). Los montos se manejan como **enter
                     │   :8080     │  Politicas por ruta/rol (Tabla 21) · UNICO puerto al host
                     └──────┬──────┘
                            │  red interna Docker `core-engine` (microservicios sin puerto al host)
-  identity  catalog  stores  orders  logistics  scheduling  commissions  finance  field  intelligence  storage  notifications
-    :3001    :3002    :3003   :3004     :3005      :3011       :3006      :3007   :3008     :3009      :3010      :3012
+  identity  catalog  inventory  stores  orders  logistics  scheduling  commissions  finance  field  intelligence  storage  notifications
+    :3001    :3002    :3013     :3003   :3004     :3005      :3011       :3006      :3007   :3008     :3009      :3010      :3012
   (commissions solo stage · market-intelligence solo dev)
        RabbitMQ · topic core-engine.events (+ DLQ, AD-04) + Postgres 16 + MinIO (un bucket por tenant, ADR-24)
 ```
 
 **Punto de entrada unico:** solo el servicio `gateway` publica un puerto de aplicación al host
-(`8080:8080`); los **doce microservicios** escuchan en `3001`–`3012` **solo dentro de la red interna
+(`8080:8080`); los **trece microservicios** escuchan en `3001`–`3013` **solo dentro de la red interna
 Docker `core-engine`** y no tienen mapeo de puertos al host. La excepción es **MinIO** (`9000`), que se
 publica en **loopback** porque es el host local que Traefik firma como dominio HTTPS en las URLs
 prefirmadas (ADR-24). Toda llamada externa pasa por `http://localhost:8080/api/v1/...` (o el dominio
@@ -73,7 +73,7 @@ npm install                       # instala el tooling Node de scripts (ESLint, 
 npm run lint                      # lint de los scripts de gobernanza
 npm test                          # los 14 workspaces, cada uno con --coverage
 cp .env.example .env              # variables de DESARROLLO (producción: .env.production.example)
-docker compose -f docker-compose.dev.yml up -d --build   # app: Postgres + RabbitMQ + MinIO + Mailpit + gateway y 12 servicios (8080 host + datos/broker 5432/5672/15672 + minio 9000/9001 + mailpit 1025/8025)
+docker compose -f docker-compose.dev.yml up -d --build   # app: Postgres + RabbitMQ + MinIO + Mailpit + gateway y 13 servicios (8080 host + datos/broker 5432/5672/15672 + minio 9000/9001 + mailpit 1025/8025)
 npm run demo                      # ejercicio end-to-end (TC-01..TC-08, RN-01..RN-08)
 
 # Dashboards (opcional): añade Prometheus + Grafana + exporters al stack de desarrollo
@@ -92,6 +92,7 @@ seeds del plan contable NIC e indices). En **Supabase** (staging/prod) aplique a
 | api-gateway | 8080 | **Sí** (dev `8080:8080`; stage/prod `127.0.0.1:8080:8080` tras Traefik) | — | `packages/api-gateway` |
 | identity-service | 3001 | No | `identity` | `packages/identity-service` (Rust) |
 | catalog-service | 3002 | No | `catalog` | `packages/catalog-service` (Rust) |
+| inventory-service | 3013 | No | `inventory` | `packages/inventory-service` (Rust, ADR-0018) |
 | stores-service | 3003 | No | `stores` | `packages/stores-service` (Rust) |
 | orders-service | 3004 | No | `orders` | `packages/orders-service` (Rust) |
 | logistics-service | 3005 | No | `logistics` | `packages/logistics-service` |
@@ -173,7 +174,7 @@ en `docs/rules/cd/` (R-CD).
   créditos, gastos, cuentas por pagar, proveedores, compras, órdenes de compra,
   caja (movimientos, métodos, cierres, caja chica y transferencias), clientes y
   códigos de barras — reemplaza la persistencia local de esos módulos.
-- Infra: `GET /health` (liveness) y `GET /ready` (readiness agregada de los servicios del entorno: 9 en producción, 10 en stage), `GET /metrics`, Swagger en `/docs` de cada servicio
+- Infra: `GET /health` (liveness) y `GET /ready` (readiness agregada de los servicios del entorno: 10 en producción, 11 en stage), `GET /metrics`, Swagger en `/docs` de cada servicio
 
 Endpoints internos (servicio→servicio) protegidos con `x-internal-key`: `internal/usuarios/:id`,
 `internal/vendedores`, `internal/productos/lote`, `internal/productos/sku/:sku`,

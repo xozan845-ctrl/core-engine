@@ -4,13 +4,11 @@ pub mod componentes;
 pub mod empresa;
 pub mod envelope;
 pub mod internal;
-pub mod inventario;
 pub mod items;
 pub mod operaciones;
 pub mod precios;
 pub mod series;
 pub mod tarifas;
-pub mod ubicaciones;
 pub mod validacion;
 
 use crate::auth::{clave_interna_valida, UsuarioContexto};
@@ -23,7 +21,7 @@ use axum::extract::{FromRequest, MatchedPath, Request, State};
 use axum::http::{header, HeaderMap, HeaderValue, StatusCode};
 use axum::middleware::{self, Next};
 use axum::response::{Html, IntoResponse, Response};
-use axum::routing::{get, patch, post, put};
+use axum::routing::{get, patch, post};
 use axum::{Json, Router};
 use serde_json::Value;
 use std::time::Instant;
@@ -154,11 +152,6 @@ pub fn build_router(state: AppState) -> Router {
             "/api/v2/catalog/items/{id}/componentes/{componente_id}",
             patch(componentes::actualizar).delete(componentes::eliminar),
         )
-        // operaciones
-        .route(
-            "/api/v2/catalog/configuracion-inventario",
-            get(operaciones::configuracion).put(operaciones::guardar_configuracion),
-        )
         .route(
             "/api/v2/catalog/items/importar",
             post(operaciones::importar),
@@ -184,61 +177,12 @@ pub fn build_router(state: AppState) -> Router {
                 .patch(operaciones::actualizar_promocion)
                 .delete(operaciones::eliminar_promocion),
         )
-        .route(
-            "/api/v2/catalog/inventario/movimientos",
-            get(operaciones::listar_movimientos).post(operaciones::crear_movimiento),
-        )
         // superficie interna
         .route("/internal/items/lote", get(internal::lote_items))
         .route("/internal/items/precios", post(internal::precios_lote))
         .route("/internal/items/{id}", get(internal::item_por_id))
         .route("/internal/items/{id}/cotizacion", get(internal::cotizacion))
         .route("/internal/items/{id}/precio", get(internal::precio))
-        .route(
-            "/internal/inventario/resumen",
-            get(internal::resumen_inventario),
-        )
-        .route(
-            "/internal/inventario/lineas",
-            get(internal::lineas_inventario),
-        )
-        .route("/api/v2/admin/inventario", get(inventario::listar))
-        .route(
-            "/api/v2/admin/inventario/proveedores",
-            post(inventario::crear_proveedor),
-        )
-        .route(
-            "/api/v2/admin/inventario/lotes",
-            get(inventario::listar_lotes).post(inventario::crear_lote),
-        )
-        .route(
-            "/api/v2/admin/inventario/lotes/consumir",
-            post(inventario::consumir_lote),
-        )
-        .route(
-            "/api/v2/admin/ubicaciones",
-            get(ubicaciones::listar).post(ubicaciones::crear),
-        )
-        .route(
-            "/api/v2/admin/ubicaciones/transferencias",
-            post(ubicaciones::transferir),
-        )
-        .route(
-            "/api/v2/admin/ubicaciones/items/{item_id}/stock",
-            get(ubicaciones::stock_item),
-        )
-        .route(
-            "/api/v2/admin/ubicaciones/{id}",
-            patch(ubicaciones::actualizar),
-        )
-        .route(
-            "/api/v2/admin/ubicaciones/{id}/stock",
-            get(ubicaciones::stock_ubicacion),
-        )
-        .route(
-            "/api/v2/admin/ubicaciones/{id}/stock/{item_id}",
-            put(ubicaciones::fijar_stock),
-        )
         .fallback(no_encontrado)
         .with_state(state.clone());
     aplicar_capas(router, state)

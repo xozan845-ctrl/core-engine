@@ -39,7 +39,7 @@ impl Ubicaciones {
         let mut tx = self.db.transaccion().await.map_err(interno)?;
         let filas = sqlx::query(&format!(
             "SELECT {COLUMNAS}
-               FROM catalog.ubicaciones
+               FROM inventory.ubicaciones
               WHERE empresa_id = $1::uuid
               ORDER BY predeterminada DESC, nombre"
         ))
@@ -64,7 +64,7 @@ impl Ubicaciones {
         let mut tx = self.db.transaccion().await.map_err(interno)?;
         if predeterminada {
             sqlx::query(
-                "UPDATE catalog.ubicaciones SET predeterminada = false, actualizado_en = NOW()
+                "UPDATE inventory.ubicaciones SET predeterminada = false, actualizado_en = NOW()
                   WHERE empresa_id = $1::uuid AND predeterminada",
             )
             .bind(empresa_id)
@@ -73,7 +73,7 @@ impl Ubicaciones {
             .map_err(error_ubicacion)?;
         }
         let creada = sqlx::query(&format!(
-            "INSERT INTO catalog.ubicaciones
+            "INSERT INTO inventory.ubicaciones
                (empresa_id, codigo, nombre, tipo, direccion, predeterminada)
              VALUES ($1::uuid, $2, $3, $4, $5, $6)
              RETURNING {COLUMNAS}"
@@ -93,7 +93,7 @@ impl Ubicaciones {
         let ubicacion_id: Uuid = ubicacion.try_get("id").map_err(interno)?;
 
         let total: i32 = sqlx::query(
-            "SELECT COUNT(*)::int AS total FROM catalog.ubicaciones WHERE empresa_id = $1::uuid",
+            "SELECT COUNT(*)::int AS total FROM inventory.ubicaciones WHERE empresa_id = $1::uuid",
         )
         .bind(empresa_id)
         .fetch_one(&mut *tx)
@@ -103,7 +103,7 @@ impl Ubicaciones {
         // La primera ubicación absorbe el stock que ya existía en el item.
         if total == 1 {
             sqlx::query(
-                "INSERT INTO catalog.item_stock_ubicacion (empresa_id, item_id, ubicacion_id, stock)
+                "INSERT INTO inventory.item_stock_ubicacion (empresa_id, item_id, ubicacion_id, stock)
                  SELECT i.empresa_id, i.id, $2::uuid, COALESCE(i.stock, 0)
                    FROM catalog.items i
                   WHERE i.empresa_id = $1::uuid AND i.tipo = 'producto'
@@ -163,7 +163,7 @@ impl Ubicaciones {
             let mut tx = self.db.transaccion().await.map_err(interno)?;
             let ocupada: i32 = sqlx::query(
                 "SELECT COALESCE(SUM(stock), 0)::int AS total
-                   FROM catalog.item_stock_ubicacion
+                   FROM inventory.item_stock_ubicacion
                   WHERE empresa_id = $1::uuid AND ubicacion_id = $2::uuid AND stock > 0",
             )
             .bind(empresa_id)
@@ -183,7 +183,7 @@ impl Ubicaciones {
         let mut tx = self.db.transaccion().await.map_err(interno)?;
         if predeterminada && !actual_predeterminada {
             sqlx::query(
-                "UPDATE catalog.ubicaciones SET predeterminada = false, actualizado_en = NOW()
+                "UPDATE inventory.ubicaciones SET predeterminada = false, actualizado_en = NOW()
                   WHERE empresa_id = $1::uuid AND predeterminada AND id <> $2::uuid",
             )
             .bind(empresa_id)
@@ -193,7 +193,7 @@ impl Ubicaciones {
             .map_err(error_ubicacion)?;
         }
         let fila = sqlx::query(&format!(
-            "UPDATE catalog.ubicaciones
+            "UPDATE inventory.ubicaciones
                 SET codigo = $1, nombre = $2, tipo = $3, direccion = $4,
                     predeterminada = $5, activo = $6, actualizado_en = NOW()
               WHERE id = $7::uuid AND empresa_id = $8::uuid
@@ -223,8 +223,8 @@ impl Ubicaciones {
         let mut tx = self.db.transaccion().await.map_err(interno)?;
         let filas = sqlx::query(
             "SELECT s.ubicacion_id, u.codigo, u.nombre, s.stock
-               FROM catalog.item_stock_ubicacion s
-               JOIN catalog.ubicaciones u ON u.id = s.ubicacion_id
+               FROM inventory.item_stock_ubicacion s
+               JOIN inventory.ubicaciones u ON u.id = s.ubicacion_id
               WHERE s.empresa_id = $1::uuid AND s.item_id = $2::uuid
               ORDER BY u.predeterminada DESC, u.nombre",
         )
@@ -261,8 +261,8 @@ impl Ubicaciones {
         let filas = sqlx::query(
             "SELECT s.ubicacion_id, u.codigo AS ubicacion_codigo, u.nombre AS ubicacion_nombre,
                     s.item_id, i.codigo AS sku, i.nombre, s.stock, i.stock AS stock_total
-               FROM catalog.item_stock_ubicacion s
-               JOIN catalog.ubicaciones u ON u.id = s.ubicacion_id
+               FROM inventory.item_stock_ubicacion s
+               JOIN inventory.ubicaciones u ON u.id = s.ubicacion_id
                JOIN catalog.items i ON i.id = s.item_id
               WHERE s.empresa_id = $1::uuid AND s.ubicacion_id = $2::uuid AND i.eliminado_en IS NULL
               ORDER BY i.nombre",
@@ -300,7 +300,7 @@ impl Ubicaciones {
 
         let mut tx = self.db.transaccion().await.map_err(interno)?;
         sqlx::query(
-            "INSERT INTO catalog.item_stock_ubicacion AS s
+            "INSERT INTO inventory.item_stock_ubicacion AS s
                (empresa_id, item_id, ubicacion_id, stock)
              VALUES ($1::uuid, $2::uuid, $3::uuid, $4)
              ON CONFLICT (item_id, ubicacion_id) DO UPDATE
@@ -317,8 +317,8 @@ impl Ubicaciones {
         let fila = sqlx::query(
             "SELECT s.ubicacion_id, u.codigo AS ubicacion_codigo, u.nombre AS ubicacion_nombre,
                     s.item_id, i.codigo AS sku, i.nombre, s.stock, i.stock AS stock_total
-               FROM catalog.item_stock_ubicacion s
-               JOIN catalog.ubicaciones u ON u.id = s.ubicacion_id
+               FROM inventory.item_stock_ubicacion s
+               JOIN inventory.ubicaciones u ON u.id = s.ubicacion_id
                JOIN catalog.items i ON i.id = s.item_id
               WHERE s.empresa_id = $1::uuid AND s.item_id = $2::uuid AND s.ubicacion_id = $3::uuid",
         )
@@ -353,7 +353,7 @@ impl Ubicaciones {
 
         let mut tx = self.db.transaccion().await.map_err(interno)?;
         let origen = sqlx::query(
-            "SELECT stock FROM catalog.item_stock_ubicacion
+            "SELECT stock FROM inventory.item_stock_ubicacion
               WHERE empresa_id = $1::uuid AND item_id = $2::uuid AND ubicacion_id = $3::uuid
               FOR UPDATE",
         )
@@ -376,7 +376,7 @@ impl Ubicaciones {
         }
         let cantidad_i32 = i32::try_from(cantidad).map_err(|_| ApiError::interno())?;
         sqlx::query(
-            "UPDATE catalog.item_stock_ubicacion
+            "UPDATE inventory.item_stock_ubicacion
                 SET stock = stock - $1, actualizado_en = NOW()
               WHERE empresa_id = $2::uuid AND item_id = $3::uuid AND ubicacion_id = $4::uuid",
         )
@@ -388,7 +388,7 @@ impl Ubicaciones {
         .await
         .map_err(interno)?;
         sqlx::query(
-            "INSERT INTO catalog.item_stock_ubicacion AS s
+            "INSERT INTO inventory.item_stock_ubicacion AS s
                (empresa_id, item_id, ubicacion_id, stock)
              VALUES ($1::uuid, $2::uuid, $3::uuid, $4)
              ON CONFLICT (item_id, ubicacion_id) DO UPDATE
@@ -404,8 +404,8 @@ impl Ubicaciones {
         let filas = sqlx::query(
             "SELECT s.ubicacion_id, u.codigo AS ubicacion_codigo, u.nombre AS ubicacion_nombre,
                     s.item_id, i.codigo AS sku, i.nombre, s.stock, i.stock AS stock_total
-               FROM catalog.item_stock_ubicacion s
-               JOIN catalog.ubicaciones u ON u.id = s.ubicacion_id
+               FROM inventory.item_stock_ubicacion s
+               JOIN inventory.ubicaciones u ON u.id = s.ubicacion_id
                JOIN catalog.items i ON i.id = s.item_id
               WHERE s.empresa_id = $1::uuid AND s.item_id = $2::uuid
                 AND s.ubicacion_id IN ($3::uuid, $4::uuid)",
@@ -445,7 +445,7 @@ impl Ubicaciones {
         let mut tx = self.db.transaccion().await.map_err(interno)?;
         let fila = sqlx::query(&format!(
             "SELECT {COLUMNAS}
-               FROM catalog.ubicaciones
+               FROM inventory.ubicaciones
               WHERE id = $1::uuid AND empresa_id = $2::uuid"
         ))
         .bind(ubicacion_id)
@@ -508,7 +508,7 @@ async fn sincronizar_total(
     empresa_id: &str,
     item_id: &str,
 ) -> Result<(), ApiError> {
-    sqlx::query("SELECT set_config('catalog.stock_sync', 'on', true)")
+    sqlx::query("SELECT set_config('inventory.stock_sync', 'on', true)")
         .execute(&mut **tx)
         .await
         .map_err(interno)?;
@@ -516,7 +516,7 @@ async fn sincronizar_total(
         "UPDATE catalog.items
             SET stock = (
                   SELECT COALESCE(SUM(stock), 0)::int
-                    FROM catalog.item_stock_ubicacion
+                    FROM inventory.item_stock_ubicacion
                    WHERE empresa_id = $1::uuid AND item_id = $2::uuid
                 ),
                 actualizado_en = NOW()
@@ -527,7 +527,7 @@ async fn sincronizar_total(
     .execute(&mut **tx)
     .await
     .map_err(interno)?;
-    sqlx::query("SELECT set_config('catalog.stock_sync', 'off', true)")
+    sqlx::query("SELECT set_config('inventory.stock_sync', 'off', true)")
         .execute(&mut **tx)
         .await
         .map_err(interno)?;

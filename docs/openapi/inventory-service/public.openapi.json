@@ -23,7 +23,14 @@
         "summary": "Listar niveles de stock",
         "responses": {
           "200": {
-            "description": "Niveles de stock"
+            "description": "Niveles de stock",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope"
+                }
+              }
+            }
           },
           "401": {
             "description": "No autorizado"
@@ -31,7 +38,12 @@
           "403": {
             "description": "Capacidad no activa"
           }
-        }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
       }
     },
     "/api/v2/admin/inventario/proveedores": {
@@ -39,7 +51,14 @@
         "summary": "Crear proveedor",
         "responses": {
           "201": {
-            "description": "Proveedor creado"
+            "description": "Proveedor creado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope"
+                }
+              }
+            }
           },
           "400": {
             "description": "Validacion"
@@ -50,7 +69,12 @@
           "409": {
             "description": "Conflicto"
           }
-        }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
       }
     },
     "/api/v2/admin/inventario/lotes": {
@@ -58,18 +82,37 @@
         "summary": "Listar lotes",
         "responses": {
           "200": {
-            "description": "Lotes"
+            "description": "Lotes",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope"
+                }
+              }
+            }
           },
           "403": {
             "description": "Capacidad no activa"
           }
-        }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
       },
       "post": {
         "summary": "Crear lote",
         "responses": {
           "201": {
-            "description": "Lote creado"
+            "description": "Lote creado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope"
+                }
+              }
+            }
           },
           "400": {
             "description": "Validacion"
@@ -77,7 +120,12 @@
           "409": {
             "description": "Conflicto"
           }
-        }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
       }
     },
     "/api/v2/admin/inventario/lotes/consumir": {
@@ -85,7 +133,14 @@
         "summary": "Consumir lotes en orden FEFO",
         "responses": {
           "201": {
-            "description": "Consumo aplicado"
+            "description": "Consumo aplicado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope"
+                }
+              }
+            }
           },
           "400": {
             "description": "Validacion"
@@ -93,7 +148,12 @@
           "409": {
             "description": "Stock o lote insuficiente"
           }
-        }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
       }
     },
     "/api/v2/catalog/configuracion-inventario": {
@@ -101,18 +161,37 @@
         "summary": "Leer configuracion de inventario",
         "responses": {
           "200": {
-            "description": "Configuracion"
+            "description": "Configuracion",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope"
+                }
+              }
+            }
           },
           "403": {
             "description": "Capacidad no activa"
           }
-        }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
       },
       "put": {
         "summary": "Guardar configuracion de inventario",
         "responses": {
           "200": {
-            "description": "Configuracion guardada"
+            "description": "Configuracion guardada",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope"
+                }
+              }
+            }
           },
           "400": {
             "description": "Validacion"
@@ -120,7 +199,12 @@
           "403": {
             "description": "Capacidad no activa"
           }
-        }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
       }
     },
     "/api/v2/admin/ubicaciones": {
@@ -128,18 +212,37 @@
         "summary": "Listar ubicaciones",
         "responses": {
           "200": {
-            "description": "Ubicaciones"
+            "description": "Ubicaciones",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope"
+                }
+              }
+            }
           },
           "403": {
             "description": "Capacidad no activa"
           }
-        }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
       },
       "post": {
         "summary": "Crear ubicacion",
         "responses": {
           "201": {
-            "description": "Ubicacion creada"
+            "description": "Ubicacion creada",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope"
+                }
+              }
+            }
           },
           "400": {
             "description": "Validacion"
@@ -147,7 +250,12 @@
           "409": {
             "description": "Conflicto"
           }
-        }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
       }
     },
     "/api/v2/admin/ubicaciones/transferencias": {
@@ -155,7 +263,14 @@
         "summary": "Transferir stock entre ubicaciones",
         "responses": {
           "201": {
-            "description": "Transferencia aplicada"
+            "description": "Transferencia aplicada",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope"
+                }
+              }
+            }
           },
           "400": {
             "description": "Validacion"
@@ -163,7 +278,12 @@
           "409": {
             "description": "Stock insuficiente"
           }
-        }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
       }
     },
     "/api/v2/admin/ubicaciones/items/{item_id}/stock": {
@@ -182,12 +302,24 @@
         ],
         "responses": {
           "200": {
-            "description": "Stock por ubicacion"
+            "description": "Stock por ubicacion",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope"
+                }
+              }
+            }
           },
           "404": {
             "description": "Item no encontrado"
           }
-        }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
       }
     },
     "/api/v2/admin/ubicaciones/{id}": {
@@ -206,7 +338,14 @@
         ],
         "responses": {
           "200": {
-            "description": "Ubicacion actualizada"
+            "description": "Ubicacion actualizada",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope"
+                }
+              }
+            }
           },
           "400": {
             "description": "Validacion"
@@ -214,7 +353,12 @@
           "404": {
             "description": "Ubicacion no encontrada"
           }
-        }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
       }
     },
     "/api/v2/admin/ubicaciones/{id}/stock": {
@@ -233,12 +377,24 @@
         ],
         "responses": {
           "200": {
-            "description": "Stock de la ubicacion"
+            "description": "Stock de la ubicacion",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope"
+                }
+              }
+            }
           },
           "404": {
             "description": "Ubicacion no encontrada"
           }
-        }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
       }
     },
     "/api/v2/admin/ubicaciones/{id}/stock/{item_id}": {
@@ -266,7 +422,14 @@
         ],
         "responses": {
           "200": {
-            "description": "Stock fijado"
+            "description": "Stock fijado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope"
+                }
+              }
+            }
           },
           "400": {
             "description": "Validacion"
@@ -274,7 +437,12 @@
           "409": {
             "description": "Conflicto"
           }
-        }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
       }
     },
     "/api/v2/catalog/inventario/movimientos": {
@@ -282,18 +450,37 @@
         "summary": "Listar movimientos de inventario",
         "responses": {
           "200": {
-            "description": "Movimientos"
+            "description": "Movimientos",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope"
+                }
+              }
+            }
           },
           "400": {
             "description": "Validacion"
           }
-        }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
       },
       "post": {
         "summary": "Crear movimiento de inventario",
         "responses": {
           "201": {
-            "description": "Movimiento creado"
+            "description": "Movimiento creado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope"
+                }
+              }
+            }
           },
           "400": {
             "description": "Validacion"
@@ -301,7 +488,12 @@
           "409": {
             "description": "Stock insuficiente"
           }
-        }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
       }
     }
   },
@@ -313,6 +505,20 @@
         "bearerFormat": "JWT"
       }
     },
-    "schemas": {}
+    "schemas": {
+      "Envelope": {
+        "type": "object",
+        "properties": {
+          "data": {},
+          "meta": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data",
+          "meta"
+        ]
+      }
+    }
   }
 }

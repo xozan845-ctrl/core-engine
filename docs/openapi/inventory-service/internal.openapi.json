@@ -34,12 +34,24 @@
         ],
         "responses": {
           "200": {
-            "description": "Resumen"
+            "description": "Resumen",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
           },
           "403": {
             "description": "Clave interna invalida"
           }
-        }
+        },
+        "security": [
+          {
+            "internalKey": []
+          }
+        ]
       }
     },
     "/internal/inventario/lineas": {
@@ -58,12 +70,24 @@
         ],
         "responses": {
           "200": {
-            "description": "Lineas"
+            "description": "Lineas",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
           },
           "403": {
             "description": "Clave interna invalida"
           }
-        }
+        },
+        "security": [
+          {
+            "internalKey": []
+          }
+        ]
       }
     }
   },

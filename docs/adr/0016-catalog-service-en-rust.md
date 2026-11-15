@@ -1,7 +1,7 @@
 # ADR-0016: Reescritura de `catalog-service` en Rust sin cambio de contrato
 
 - **Fecha**: 2026-11-13
-- **Estado**: Aceptado — implementación completa; smoke de `staging` pendiente
+- **Estado**: Aceptado — implementación completa; inventario separado en ADR-0018; smoke de `staging` pendiente
 - **Ámbito**: `catalog-service` (HTTP público e interno, PostgreSQL/RLS,
   RabbitMQ, Outbox, capacidades y validación JSON Schema)
 - **Referencias**: [ADR-0002](./0002-envelope-y-desacoplamiento.md),
