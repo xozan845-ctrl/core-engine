@@ -218,6 +218,11 @@ gates y del smoke de `staging`.
 - PR 3b completo: ubicaciones, stock por ubicación, transferencias,
   movimientos, ajustes y superficie interna. Las tablas siguen en el esquema
   `catalog` como fuente transitoria; el PR 5 las mueve a `inventory`.
-- 60 pruebas unitarias + 7 de PostgreSQL de inventario + 4 de ubicaciones y
-  movimientos + 1 HTTP integral; cobertura medida 85,75 % líneas / 81,91 %
-  funciones.
+- PR 4 completo: consumidor `inventory.pedidos` con reserva atómica,
+  rechazo total, FEFO, series, expansión BOM, devolución, idempotencia por
+  `event_id`, Outbox transaccional y DLQ. El evento se publica con los mismos
+  nombres (`stock.reservado`, `stock.fallido`, `stock.reintegrado`,
+  `stock.updated`).
+- 69 pruebas unitarias + 7 de PostgreSQL de inventario + 9 de saga + 4 de
+  ubicaciones y movimientos + 1 HTTP integral; cobertura medida 80,97 % líneas
+  / 77,04 % funciones.

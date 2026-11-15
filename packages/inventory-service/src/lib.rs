@@ -8,6 +8,7 @@
 
 pub mod auth;
 pub mod config;
+pub mod consumidor;
 pub mod db;
 pub mod errors;
 pub mod http;
@@ -16,6 +17,9 @@ pub mod logs;
 pub mod metrics;
 pub mod money;
 pub mod movimientos;
+pub mod outbox;
 pub mod paginacion;
+pub mod rabbit;
+pub mod reservas;
 pub mod state;
 pub mod ubicaciones;
