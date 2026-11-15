@@ -4,6 +4,7 @@ use super::{created, ok, Cuerpo};
 use crate::auth::UsuarioContexto;
 use crate::checkout::PAYMENT_PROCESADO;
 use crate::errors::ApiError;
+use crate::pagos::Pago;
 use crate::state::AppState;
 use axum::extract::{Path, Query, State};
 use axum::http::HeaderMap;
@@ -24,6 +25,7 @@ pub fn rutas() -> Router<AppState> {
         .route("/api/v2/admin/pagos", get(listar_pagos))
         .route("/api/v2/admin/pagos/{id}/confirmar", post(confirmar_pago))
         .route("/api/v2/admin/pagos/{id}/rechazar", post(rechazar_pago))
+        .route("/internal/pagos/webhook", post(webhook_pago))
 }
 
 /// `GET /api/v2/orders/metodos-pago` (cualquier usuario autenticado).
@@ -92,6 +94,90 @@ pub async fn confirmar_pago(
     let actor = UsuarioContexto::desde_headers_o_error(&headers)?;
     actor.exigir_roles(&["super_admin", "admin"], &[])?;
     let pago = state.pagos()?.confirmar(&id, &actor.user_id).await?;
+    confirmar_y_avanzar(&state, pago, &actor.user_id).await
+}
+
+/// `POST /api/v2/admin/pagos/:id/rechazar` (admin).
+pub async fn rechazar_pago(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    Path(id): Path<String>,
+    Cuerpo(dto): Cuerpo,
+) -> Result<Response, ApiError> {
+    let actor = UsuarioContexto::desde_headers_o_error(&headers)?;
+    actor.exigir_roles(&["super_admin", "admin"], &[])?;
+    let motivo = motivo_de(&dto);
+    let pago = state
+        .pagos()?
+        .rechazar(&id, &motivo, &actor.user_id)
+        .await?;
+    rechazar_y_cancelar(&state, pago, &motivo, &actor.user_id).await
+}
+
+/// `POST /internal/pagos/webhook` (proveedor de pagos; secreto compartido).
+pub async fn webhook_pago(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    Cuerpo(dto): Cuerpo,
+) -> Result<Response, ApiError> {
+    let esperado = state.config.pago_webhook_secret.as_deref().unwrap_or("");
+    let recibido = headers
+        .get("x-webhook-secret")
+        .and_then(|valor| valor.to_str().ok())
+        .unwrap_or("");
+    if esperado.is_empty() || recibido != esperado {
+        return Err(ApiError::acceso_denegado("Secreto de webhook invalido."));
+    }
+    let pago_id = dto
+        .get("pago_id")
+        .and_then(Value::as_str)
+        .map(str::trim)
+        .filter(|valor| !valor.is_empty())
+        .ok_or_else(|| {
+            ApiError::validacion(json!([
+                {"campo": "pago_id", "restricciones": ["isString"]}
+            ]))
+        })?;
+    let estado = dto
+        .get("estado")
+        .and_then(Value::as_str)
+        .unwrap_or_default();
+    let actor = dto
+        .get("actor")
+        .and_then(Value::as_str)
+        .map(str::trim)
+        .filter(|valor| !valor.is_empty())
+        .unwrap_or("00000000-0000-4000-8000-000000000000");
+    match estado {
+        "confirmado" => {
+            let pago = state.pagos()?.confirmar(pago_id, actor).await?;
+            confirmar_y_avanzar(&state, pago, actor).await
+        }
+        "rechazado" => {
+            let motivo = motivo_de(&dto);
+            let pago = state.pagos()?.rechazar(pago_id, &motivo, actor).await?;
+            rechazar_y_cancelar(&state, pago, &motivo, actor).await
+        }
+        _ => Err(ApiError::validacion(json!([
+            {"campo": "estado", "restricciones": ["isIn"]}
+        ]))),
+    }
+}
+
+fn motivo_de(dto: &Value) -> String {
+    dto.get("motivo")
+        .and_then(Value::as_str)
+        .map(str::trim)
+        .filter(|valor| !valor.is_empty())
+        .unwrap_or("pago_rechazado")
+        .to_string()
+}
+
+async fn confirmar_y_avanzar(
+    state: &AppState,
+    pago: Pago,
+    actor_id: &str,
+) -> Result<Response, ApiError> {
     let vista = state
         .vistas()?
         .encontrar(state.db()?, &pago.order_id)
@@ -103,7 +189,7 @@ pub async fn confirmar_pago(
             &pago.order_id,
             "pagada",
             Some("pago_confirmado"),
-            Some(&actor.user_id),
+            Some(actor_id),
             Some((
                 PAYMENT_PROCESADO,
                 json!({
@@ -124,26 +210,12 @@ pub async fn confirmar_pago(
     ok(serde_json::to_value(pago).map_err(|_| ApiError::interno())?)
 }
 
-/// `POST /api/v2/admin/pagos/:id/rechazar` (admin).
-pub async fn rechazar_pago(
-    State(state): State<AppState>,
-    headers: HeaderMap,
-    Path(id): Path<String>,
-    Cuerpo(dto): Cuerpo,
+async fn rechazar_y_cancelar(
+    state: &AppState,
+    pago: Pago,
+    motivo: &str,
+    actor_id: &str,
 ) -> Result<Response, ApiError> {
-    let actor = UsuarioContexto::desde_headers_o_error(&headers)?;
-    actor.exigir_roles(&["super_admin", "admin"], &[])?;
-    let motivo = dto
-        .get("motivo")
-        .and_then(Value::as_str)
-        .map(str::trim)
-        .filter(|valor| !valor.is_empty())
-        .unwrap_or("pago_rechazado")
-        .to_string();
-    let pago = state
-        .pagos()?
-        .rechazar(&id, &motivo, &actor.user_id)
-        .await?;
     let vista = state
         .vistas()?
         .encontrar(state.db()?, &pago.order_id)
@@ -159,8 +231,8 @@ pub async fn rechazar_pago(
         .transicionar(
             &pago.order_id,
             "cancelada",
-            Some(&motivo),
-            Some(&actor.user_id),
+            Some(motivo),
+            Some(actor_id),
             Some((
                 "devolucion.solicitada",
                 json!({

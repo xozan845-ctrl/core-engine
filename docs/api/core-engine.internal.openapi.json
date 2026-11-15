@@ -855,6 +855,42 @@
         ]
       }
     },
+    "/internal/pagos/webhook": {
+      "post": {
+        "operationId": "PagosController_webhookPago",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/WebhookPagoRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Pago procesado por el proveedor",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WebhookPagoResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "internalKey": []
+          }
+        ],
+        "summary": "Webhook de proveedor de pagos (secreto compartido)",
+        "tags": [
+          "Pagos (interno)"
+        ]
+      }
+    },
     "/internal/orders/{id}/transicion": {
       "post": {
         "operationId": "InternoController_transicion",
@@ -2836,6 +2872,97 @@
         "required": [
           "empresa_ids",
           "capacidades"
+        ]
+      },
+      "WebhookPagoRequestDto": {
+        "type": "object",
+        "properties": {
+          "pago_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "estado": {
+            "type": "string",
+            "enum": [
+              "confirmado",
+              "rechazado"
+            ]
+          },
+          "motivo": {
+            "type": "string"
+          },
+          "actor": {
+            "type": "string",
+            "format": "uuid"
+          }
+        },
+        "required": [
+          "pago_id",
+          "estado"
+        ]
+      },
+      "WebhookPagoResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "order_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "empresa_id": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true
+          },
+          "metodo_codigo": {
+            "type": "string"
+          },
+          "estado": {
+            "type": "string"
+          },
+          "monto_cents": {
+            "type": "integer"
+          },
+          "moneda": {
+            "type": "string"
+          },
+          "referencia": {
+            "type": "string"
+          },
+          "motivo_rechazo": {
+            "type": "string"
+          },
+          "confirmado_por": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true
+          },
+          "confirmado_en": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "creado_en": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "order_id",
+          "empresa_id",
+          "metodo_codigo",
+          "estado",
+          "monto_cents",
+          "moneda",
+          "referencia",
+          "motivo_rechazo",
+          "confirmado_por",
+          "confirmado_en",
+          "creado_en"
         ]
       },
       "HistoriaEventoResponseDto": {
