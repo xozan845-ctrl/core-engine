@@ -1,0 +1,80 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "inventory-service (interno)",
+    "version": "1.0.9",
+    "description": "Superficie interna de inventario para orders, stores y commissions."
+  },
+  "x-servicio": "inventory-service",
+  "x-superficie": "interna",
+  "servers": [
+    {
+      "url": "http://inventory-service:3013"
+    }
+  ],
+  "security": [
+    {
+      "internalKey": []
+    }
+  ],
+  "paths": {
+    "/internal/inventario/resumen": {
+      "get": {
+        "summary": "Resumen de inventario",
+        "parameters": [
+          {
+            "name": "empresa_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Resumen"
+          },
+          "403": {
+            "description": "Clave interna invalida"
+          }
+        }
+      }
+    },
+    "/internal/inventario/lineas": {
+      "get": {
+        "summary": "Lineas de inventario",
+        "parameters": [
+          {
+            "name": "empresa_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Lineas"
+          },
+          "403": {
+            "description": "Clave interna invalida"
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "internalKey": {
+        "type": "apiKey",
+        "in": "header",
+        "name": "x-internal-key"
+      }
+    },
+    "schemas": {}
+  }
+}
