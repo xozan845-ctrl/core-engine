@@ -12,6 +12,7 @@ use crate::event_store::{error_db, parsear_uuid, OrderEventStore};
 use crate::money;
 use crate::order_state::{validar_transicion_por_tipo, ItemOrden, FULFILLMENTS, TIPOS_ORDEN};
 use crate::outbox::Outbox;
+use crate::pagos::Pagos;
 use crate::pedidos::Pedidos;
 use crate::views::{OrderView, OrderViewRepository};
 use chrono::{Duration, Utc};
@@ -100,6 +101,7 @@ pub struct Checkout {
     pub vistas: Arc<OrderViewRepository>,
     pub pedidos: Arc<Pedidos>,
     pub outbox: Outbox,
+    pub pagos: Arc<Pagos>,
     pub tasa_comision: f64,
 }
 
@@ -113,11 +115,23 @@ impl Checkout {
         let tipo_orden = validar_tipo_orden(&comando.tipo_orden)?;
         let es_cotizacion = tipo_orden == "cotizacion";
         let es_reserva = tipo_orden == "reserva";
-        let metodo_pago = if comando.metodo_pago.as_deref() == Some("credito") {
-            "credito"
-        } else {
-            "simulado"
-        };
+        let metodo_pago = comando
+            .metodo_pago
+            .as_deref()
+            .map(str::trim)
+            .filter(|valor| !valor.is_empty())
+            .unwrap_or("simulado")
+            .to_lowercase();
+        let metodo = self
+            .pagos
+            .metodo_activo(&metodo_pago)
+            .await?
+            .ok_or_else(|| {
+                ApiError::dominio(
+                    "METODO_PAGO_INVALIDO",
+                    format!("El metodo de pago \"{metodo_pago}\" no existe o esta inactivo."),
+                )
+            })?;
         if es_reserva && comando.cliente_parte_id.is_none() {
             return Err(ApiError::dominio(
                 "PARTE_REQUERIDA",
@@ -231,7 +245,7 @@ impl Checkout {
             }
         }
 
-        self.validar_capacidades(&items, tipo_orden, metodo_pago)
+        self.validar_capacidades(&items, tipo_orden, &metodo_pago)
             .await?;
 
         if es_reserva {
@@ -415,6 +429,16 @@ impl Checkout {
             }
             return Err(error);
         }
+        let empresa_pago = empresa_unica(&items);
+        self.pagos
+            .registrar(
+                &order_id,
+                empresa_pago.as_deref(),
+                &metodo,
+                total,
+                &moneda_orden.clone().unwrap_or_else(|| "NIO".to_string()),
+            )
+            .await?;
 
         let primer_item = items.first();
         Ok(OrderView {
@@ -1026,6 +1050,18 @@ pub fn reconstruir_desde_eventos(
         }
     }
     Some(estado)
+}
+
+/// Empresa del pago cuando todas las líneas pertenecen a la misma; si no,
+/// `None` (orden multi-empresa).
+fn empresa_unica(items: &[ItemOrden]) -> Option<String> {
+    let mut empresas = items.iter().map(|item| item.empresa_id.as_str());
+    let primera = empresas.next()?;
+    if empresas.all(|empresa| empresa == primera) {
+        Some(primera.to_string())
+    } else {
+        None
+    }
 }
 
 /// `true` si el fulfillment está permitido por el pack; lista vacía = sin

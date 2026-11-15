@@ -34132,10 +34132,6 @@
           },
           "metodo_pago": {
             "type": "string",
-            "enum": [
-              "simulado",
-              "credito"
-            ],
             "default": "simulado"
           },
           "fulfillment": {
@@ -34207,11 +34203,7 @@
           },
           "metodo_pago": {
             "type": "string",
-            "description": "Medio de pago: simulado o credito (requiere cliente_parte_id con cupo)",
-            "enum": [
-              "simulado",
-              "credito"
-            ],
+            "description": "Código de un método de pago activo (orders.metodos_pago). Credito requiere cliente_parte_id con cupo.",
             "default": "simulado"
           },
           "lista_precio_codigo": {
@@ -34601,10 +34593,6 @@
           },
           "metodo_pago": {
             "type": "string",
-            "enum": [
-              "simulado",
-              "credito"
-            ],
             "example": "simulado"
           },
           "fulfillment_config": {

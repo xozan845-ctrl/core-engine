@@ -91,6 +91,7 @@ async fn main() {
         vistas: Arc::clone(&vistas),
         pedidos: Arc::clone(&pedidos),
         outbox: Outbox::nueva(&outbox_tabla),
+        pagos: Arc::new(Pagos::nueva(Arc::clone(&db))),
         tasa_comision: config.tasa_comision,
     });
     let contratos = Arc::new(Contratos::nueva(Arc::clone(&db)));
