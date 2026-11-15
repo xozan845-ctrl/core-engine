@@ -3,7 +3,9 @@
 //! Además aplica transiciones (logística → orders) y replay.
 
 use crate::carrito::{Carrito, ItemCarrito};
-use crate::clients::{ClientesPort, CreditoEstado, OfertaExterna, PreciosExternos};
+use crate::clients::{
+    ClientesPort, ConfiguracionExterna, CreditoEstado, OfertaExterna, PreciosExternos,
+};
 use crate::db::{iso_ms, Db};
 use crate::errors::ApiError;
 use crate::event_store::{error_db, parsear_uuid, OrderEventStore};
@@ -728,14 +730,38 @@ impl Checkout {
             .filter(|fila| fila.activo)
             .map(|fila| format!("{}:{}", fila.empresa_id, fila.capacidad_codigo))
             .collect();
-        for empresa in empresas {
+        for empresa in &empresas {
             let faltantes: Vec<String> = capacidades
                 .iter()
                 .filter(|capacidad| !activas.contains(&format!("{empresa}:{capacidad}")))
                 .cloned()
                 .collect();
             if !faltantes.is_empty() {
-                return Err(ApiError::capacidad_no_activa(&faltantes, &empresa));
+                return Err(ApiError::capacidad_no_activa(&faltantes, empresa));
+            }
+        }
+        for empresa in &empresas {
+            let config = match self.clientes.configuracion(empresa).await {
+                ConfiguracionExterna::Ok(config) => config,
+                ConfiguracionExterna::SinConfiguracion => continue,
+                ConfiguracionExterna::Error => {
+                    return Err(ApiError::servicio_no_disponible("identity-service"))
+                }
+            };
+            if config.fulfillment.is_empty() {
+                continue;
+            }
+            for item in items.iter().filter(|item| &item.empresa_id == empresa) {
+                let fulfillment = item.fulfillment.as_deref();
+                if !fulfillment_permitido(&config, fulfillment) {
+                    return Err(ApiError::dominio(
+                        "FULFILLMENT_NO_PERMITIDO",
+                        format!(
+                            "El modelo operativo de la empresa no permite fulfillment \"{}\".",
+                            fulfillment.unwrap_or("none")
+                        ),
+                    ));
+                }
             }
         }
         Ok(())
@@ -1002,6 +1028,24 @@ pub fn reconstruir_desde_eventos(
     Some(estado)
 }
 
+/// `true` si el fulfillment está permitido por el pack; lista vacía = sin
+/// restricción (compatibilidad con packs antiguos).
+fn fulfillment_permitido(
+    config: &crate::clients::ConfiguracionOperativa,
+    fulfillment: Option<&str>,
+) -> bool {
+    if config.fulfillment.is_empty() {
+        return true;
+    }
+    match fulfillment {
+        Some(valor) => config
+            .fulfillment
+            .iter()
+            .any(|permitido| permitido == valor),
+        None => true,
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -1100,6 +1144,25 @@ mod tests {
             creado_en: "2026-01-01T00:00:00.000Z".into(),
         }];
         assert!(reconstruir_desde_eventos(&eventos).is_none());
+    }
+
+    #[test]
+    fn debe_permitir_fulfillment_sin_restriccion() {
+        let config = crate::clients::ConfiguracionOperativa::default();
+        assert!(fulfillment_permitido(&config, Some("delivery")));
+        assert!(fulfillment_permitido(&config, None));
+    }
+
+    #[test]
+    fn debe_respetar_los_fulfillment_del_modelo() {
+        let config = crate::clients::ConfiguracionOperativa {
+            fulfillment: vec!["delivery".to_string(), "pickup".to_string()],
+            ..Default::default()
+        };
+        assert!(fulfillment_permitido(&config, Some("delivery")));
+        assert!(fulfillment_permitido(&config, Some("pickup")));
+        assert!(fulfillment_permitido(&config, None));
+        assert!(!fulfillment_permitido(&config, Some("onsite")));
     }
 
     #[test]
