@@ -327,7 +327,7 @@ pública**: `scripts/tools/swagger-aggregate.mjs` fusiona
 npm run swagger:export   # regenera docs/openapi/<servicio>/{public,internal} + los dos agregados de docs/api/
 ```
 
-Cobertura actual: **417/417 operaciones documentadas** en los 13 servicios con
+Cobertura actual: **420/420 operaciones documentadas** en los 13 servicios con
 contrato versionado: **381 públicas** (270 rutas) y **36 internas** (todas con
 `x-internal-key` y schema de respuesta).
 
