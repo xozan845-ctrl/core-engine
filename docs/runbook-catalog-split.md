@@ -20,7 +20,8 @@ smoke de `staging` haya pasado.**
 |---|---|---|---|
 | 1 | `feat/catalog-split` (ADR) | Completo | `rules:check` 83/83 |
 | 2 | `feat/inventory-scaffold` | Completo | `cargo fmt/clippy/test/llvm-cov` (83,30/75,60) |
-| 3 | `feat/inventory-domain` | Pendiente | PostgreSQL + HTTP |
+| 3a | `feat/inventory-core` | Completo | PostgreSQL + HTTP (81,15/76,44) |
+| 3b | `feat/inventory-locations` | Pendiente | PostgreSQL + HTTP |
 | 4 | `feat/inventory-saga` | Pendiente | Saga + concurrencia + Outbox |
 | 5 | `feat/inventory-cutover` | Pendiente | Integración + contrato |
 | 6 | `feat/pricing-scaffold-domain` | Pendiente | Suite + contrato |

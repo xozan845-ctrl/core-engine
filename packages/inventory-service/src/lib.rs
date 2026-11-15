@@ -11,6 +11,8 @@ pub mod config;
 pub mod db;
 pub mod errors;
 pub mod http;
+pub mod inventario;
 pub mod logs;
 pub mod metrics;
+pub mod money;
 pub mod state;
