@@ -109,6 +109,19 @@ pub struct CapacidadActiva {
     pub activo: bool,
 }
 
+/// Defaults operativos del pack/modelo de la empresa (identity interno).
+#[derive(Debug, Clone, Default, Deserialize, PartialEq, Eq)]
+pub struct ConfiguracionOperativa {
+    #[serde(default)]
+    pub items: Vec<String>,
+    #[serde(default)]
+    pub fulfillment: Vec<String>,
+    #[serde(default)]
+    pub requiere_agenda: bool,
+    #[serde(default)]
+    pub trazabilidad: bool,
+}
+
 /// Consulta de capacidades a identity (R-AR-5): lectura idempotente por la
 /// superficie interna, con timeout y fallo cerrado.
 #[async_trait]
@@ -118,6 +131,11 @@ pub trait Capacidades: Send + Sync {
         empresa_id: &str,
         requeridas: &[&str],
     ) -> Result<Vec<CapacidadActiva>, ()>;
+
+    /// Configuración operativa efectiva; `None` = sin restricción.
+    async fn configuracion(&self, _empresa_id: &str) -> Result<Option<ConfiguracionOperativa>, ()> {
+        Ok(None)
+    }
 }
 
 pub struct CapacidadesHttp {
@@ -174,6 +192,33 @@ impl Capacidades for CapacidadesHttp {
             .json::<RespuestaCapacidades>()
             .await
             .map(|cuerpo| cuerpo.capacidades)
+            .map_err(|_| ())
+    }
+
+    async fn configuracion(&self, empresa_id: &str) -> Result<Option<ConfiguracionOperativa>, ()> {
+        let cliente = reqwest::Client::builder()
+            .timeout(self.timeout)
+            .build()
+            .map_err(|_| ())?;
+        let respuesta = cliente
+            .get(format!(
+                "{}/internal/empresas/{empresa_id}/configuracion",
+                self.url
+            ))
+            .header("x-internal-key", &self.clave)
+            .send()
+            .await
+            .map_err(|_| ())?;
+        if respuesta.status() == reqwest::StatusCode::NOT_FOUND {
+            return Ok(None);
+        }
+        if !respuesta.status().is_success() {
+            return Err(());
+        }
+        respuesta
+            .json::<ConfiguracionOperativa>()
+            .await
+            .map(Some)
             .map_err(|_| ())
     }
 }

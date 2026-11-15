@@ -170,6 +170,11 @@ pub async fn crear(
     .await?;
     validar(CREAR_ITEM, &cuerpo)?;
     let empresa = empresa_de_escritura(&usuario, cuerpo.get("empresa_id").and_then(Value::as_str))?;
+    let tipo = cuerpo
+        .get("tipo")
+        .and_then(Value::as_str)
+        .unwrap_or_default();
+    super::validar_tipo_permitido(&state, &empresa, tipo).await?;
     created(state.items()?.crear_item(&cuerpo, &empresa).await?)
 }
 
@@ -189,6 +194,7 @@ pub async fn crear_alquiler(
     .await?;
     validar(CREAR_ALQUILER, &cuerpo)?;
     let empresa = empresa_de_escritura(&usuario, cuerpo.get("empresa_id").and_then(Value::as_str))?;
+    super::validar_tipo_permitido(&state, &empresa, "alquiler").await?;
     created(state.items()?.crear_alquiler(&cuerpo, &empresa).await?)
 }
 
