@@ -71,7 +71,20 @@ test('smoke-remote: valida salud, login y lectura sin escribir datos', async () 
   assert.deepEqual(result.requests, [
     'GET /health',
     'POST /api/v2/auth/login',
-    'GET /api/v2/catalog/items?limite=1',
+    'GET /api/v2/catalog/items?limite=1&empresa_id=00000000-0000-4000-8000-000000000001',
+  ]);
+});
+
+test('smoke-remote: usa SMOKE_EMPRESA_ID cuando se configura', async () => {
+  const result = await run(happyPath, {
+    SMOKE_EMPRESA_ID: '22222222-2222-4222-8222-222222222222',
+  });
+
+  assert.equal(result.code, 0, result.output);
+  assert.deepEqual(result.requests, [
+    'GET /health',
+    'POST /api/v2/auth/login',
+    'GET /api/v2/catalog/items?limite=1&empresa_id=22222222-2222-4222-8222-222222222222',
   ]);
 });
 
@@ -132,7 +145,7 @@ test('smoke-remote: verifica ventas de empresa cuando hay credenciales de empres
   assert.deepEqual(result.requests, [
     'GET /health',
     'POST /api/v2/auth/login',
-    'GET /api/v2/catalog/items?limite=1',
+    'GET /api/v2/catalog/items?limite=1&empresa_id=00000000-0000-4000-8000-000000000001',
     'POST /api/v2/auth/login',
     'GET /api/v2/empresarios/me/ventas',
   ]);

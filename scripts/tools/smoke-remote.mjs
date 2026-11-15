@@ -23,6 +23,13 @@ const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD;
 const EMPRESARIO_EMAIL = process.env.EMPRESARIO_EMAIL;
 const EMPRESARIO_PASSWORD = process.env.EMPRESARIO_PASSWORD;
 const EDGE_BASIC_AUTH = process.env.EDGE_BASIC_AUTH;
+// El catálogo es multi-tenant (ADR-25): el admin global no tiene tenant, así
+// que la lectura necesita una empresa. Por defecto, el tenant de plataforma
+// sembrado por identity; `SMOKE_EMPRESA_ID` permite apuntar a otra.
+const EMPRESA_ID =
+  (process.env.SMOKE_EMPRESA_ID ?? '').trim() ||
+  (process.env.PLATFORM_LOGISTICS_TENANT_ID ?? '').trim() ||
+  '00000000-0000-4000-8000-000000000001';
 const REQUEST_TIMEOUT_MS = Number(process.env.SMOKE_REQUEST_TIMEOUT_MS ?? 10_000);
 
 if (!Number.isInteger(REQUEST_TIMEOUT_MS) || REQUEST_TIMEOUT_MS < 1) {
@@ -127,7 +134,11 @@ async function main() {
   console.log('OK');
 
   paso('GET /api/v2/catalog/items (lectura real autenticada)');
-  const catalog = await request('GET', '/api/v2/catalog/items?limite=1', { token });
+  const catalog = await request(
+    'GET',
+    `/api/v2/catalog/items?limite=1&empresa_id=${encodeURIComponent(EMPRESA_ID)}`,
+    { token },
+  );
   assertStatus(catalog, 200, 'catálogo');
   if (!Array.isArray(catalog.json?.items)) {
     throw new Error('el catálogo no devolvió una lista `items`');

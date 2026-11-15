@@ -171,9 +171,9 @@ export default defineSuite({
         'images debe depender de gate y e2e (G-6)',
       );
       assert.ok(
-        deploy.includes("if: github.event.inputs.environment == 'dev'") &&
+        deploy.includes("if: github.event.inputs.environment != 'prod'") &&
           deploy.includes('cp .env.example .env'),
-        'deploy.yml debe materializar la plantilla de entorno en el despliegue dev',
+        'deploy.yml debe materializar la plantilla de entorno en dev y stage',
       );
     });
 
