@@ -144,14 +144,16 @@ pub async fn listar(
     let usuario = autorizar(&state, &headers, ROLES_CATALOGO, PERMISO_LEER, CAPACIDAD).await?;
     let empresa = empresa_de_consulta(&usuario, query.get("empresa_id").map(String::as_str))?;
     let mut filtros = serde_json::Map::new();
-    filtros.insert("empresa_id".into(), Value::String(empresa));
+    filtros.insert("empresa_id".into(), Value::String(empresa.clone()));
     for (clave, valor) in query {
         if clave == "empresa_id" {
             continue;
         }
         filtros.insert(clave, Value::String(valor));
     }
-    ok(state.items()?.listar(&Value::Object(filtros)).await?)
+    let mut respuesta = state.items()?.listar(&Value::Object(filtros)).await?;
+    super::adjuntar_extensiones(&state, &empresa, &mut respuesta).await;
+    ok(respuesta)
 }
 
 /// `POST /api/v2/catalog/items`.
@@ -256,11 +258,12 @@ pub async fn detalle(
 ) -> Result<Response, ApiError> {
     let usuario = autorizar(&state, &headers, ROLES_CATALOGO, PERMISO_LEER, CAPACIDAD).await?;
     let empresa = empresa_de_consulta(&usuario, query.get("empresa_id").map(String::as_str))?;
-    let item = state
+    let mut item = state
         .items()?
         .encontrar_por_id(&id, Some(&empresa))
         .await?
         .ok_or_else(|| ApiError::no_encontrado("Item", &id))?;
+    super::adjuntar_extensiones(&state, &empresa, &mut item).await;
     ok(item)
 }
 

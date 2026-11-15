@@ -5364,6 +5364,12 @@
       "ItemResponseDto": {
         "type": "object",
         "properties": {
+          "extensiones": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "object"
+            }
+          },
           "item_id": {
             "type": "string",
             "format": "uuid"
