@@ -232,3 +232,5 @@ gates y del smoke de `staging`.
   ubicaciones y movimientos + 1 HTTP integral; cobertura medida 80,97 % líneas
   / 77,04 % funciones. Migración aplicada íntegra sobre PostgreSQL/PostGIS
   efímero.
+- E2E local `npm run demo` 39/39 tras aplicar `75_inventory_schema` sobre la
+  base de desarrollo y corregir la RLS del poller (`outbox_app`).
