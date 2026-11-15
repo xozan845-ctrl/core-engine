@@ -223,6 +223,12 @@ gates y del smoke de `staging`.
   `event_id`, Outbox transaccional y DLQ. El evento se publica con los mismos
   nombres (`stock.reservado`, `stock.fallido`, `stock.reintegrado`,
   `stock.updated`).
+- PR 5 completo: esquema `inventory` con las tablas de inventario, `inventory.outbox`,
+  copia idempotente desde `catalog`, RLS y grants; `inventory-service` registrado
+  en `SERVICES`/CI/compose; gateway con destino propio y readiness 10/11;
+  consumidor viejo retirado de `catalog-service`. `catalog.items.stock` queda
+  como proyección transitoria hasta la extracción de `item-service` (PR 8).
 - 69 pruebas unitarias + 7 de PostgreSQL de inventario + 9 de saga + 4 de
   ubicaciones y movimientos + 1 HTTP integral; cobertura medida 80,97 % líneas
-  / 77,04 % funciones.
+  / 77,04 % funciones. Migración aplicada íntegra sobre PostgreSQL/PostGIS
+  efímero.

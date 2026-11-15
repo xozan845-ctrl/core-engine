@@ -44,6 +44,7 @@ export const SERVICES = [
   'api-gateway',
   'identity-service',
   'catalog-service',
+  'inventory-service',
   'stores-service',
   'orders-service',
   'logistics-service',
@@ -80,6 +81,7 @@ export const RUST_SERVICES = [
   'finance-service',
   'orders-service',
   'catalog-service',
+  'inventory-service',
   'identity-service',
 ];
 
@@ -120,6 +122,8 @@ export const ALLOWED_COMMIT_SCOPES = [
   'personal',
   'catalog',
   'catalog-service',
+  'inventory',
+  'inventory-service',
   'stores',
   'stores-service',
   'orders',

@@ -16,7 +16,7 @@ use sqlx::Row;
 use std::sync::Arc;
 use uuid::Uuid;
 
-/// Métodos de costeo admitidos por `catalog.configuracion_inventario`.
+/// Métodos de costeo admitidos por `inventory.configuracion_inventario`.
 pub const METODOS_COSTEO: [&str; 3] = ["promedio", "fifo", "ueps"];
 
 pub struct Inventario {
@@ -135,7 +135,7 @@ impl Inventario {
         let fila = sqlx::query(
             "SELECT empresa_id, metodo_costeo, permitir_stock_negativo, alerta_stock_bajo,
                     actualizar_costo_en_compra, unidad_defecto, actualizado_en
-               FROM catalog.configuracion_inventario WHERE empresa_id = $1::uuid",
+               FROM inventory.configuracion_inventario WHERE empresa_id = $1::uuid",
         )
         .bind(empresa_id)
         .fetch_optional(&mut *tx)
@@ -222,7 +222,7 @@ impl Inventario {
 
         let mut tx = self.db.transaccion().await.map_err(interno)?;
         let fila = sqlx::query(
-            "INSERT INTO catalog.configuracion_inventario
+            "INSERT INTO inventory.configuracion_inventario
                (empresa_id, metodo_costeo, permitir_stock_negativo, alerta_stock_bajo,
                 actualizar_costo_en_compra, unidad_defecto)
              VALUES ($1::uuid, $2, $3, $4, $5, $6)
@@ -274,7 +274,7 @@ impl Inventario {
                SELECT COALESCE(item->>'empresa_id', '00000000-0000-0000-0000-000000000000') AS empresa_id,
                       LOWER(item->>'sku') AS sku,
                       SUM((item->>'cantidad')::int) AS reservado
-                 FROM catalog.reservas_ordenes ro,
+                 FROM inventory.reservas_ordenes ro,
                       jsonb_array_elements(ro.items_json) AS item
                 WHERE ro.creado_en > NOW() - INTERVAL '30 minutes'
                 GROUP BY 1, 2
@@ -400,7 +400,7 @@ impl Inventario {
     pub async fn crear_proveedor(&self, datos: &Value) -> Result<Value, ApiError> {
         let mut tx = self.db.transaccion().await.map_err(interno)?;
         let fila = sqlx::query(
-            "INSERT INTO catalog.proveedores (empresa_id, codigo, nombre, correo, telefono)
+            "INSERT INTO inventory.proveedores (empresa_id, codigo, nombre, correo, telefono)
              VALUES ($1::uuid, UPPER($2), $3, $4, $5)
              RETURNING id, empresa_id, codigo, nombre, correo, telefono, activo",
         )
@@ -462,7 +462,7 @@ impl Inventario {
 
         let mut tx = self.db.transaccion().await.map_err(interno)?;
         let fila = sqlx::query(
-            "INSERT INTO catalog.lotes_inventario
+            "INSERT INTO inventory.lotes_inventario
                (empresa_id, item_id, proveedor_id, codigo_lote, vence_en, cantidad_inicial, cantidad_disponible)
              VALUES ($1::uuid, $2::uuid, $3::uuid, $4, $5::date, $6, $6)
              RETURNING id, empresa_id, item_id, proveedor_id, codigo_lote, vence_en,
@@ -543,7 +543,7 @@ impl Inventario {
         let filas = sqlx::query(
             "SELECT id, codigo_lote, cantidad_disponible,
                     (vence_en IS NOT NULL AND vence_en < CURRENT_DATE) AS vencido
-               FROM catalog.lotes_inventario
+               FROM inventory.lotes_inventario
               WHERE empresa_id = $1::uuid AND item_id = $2::uuid AND cantidad_disponible > 0
                 AND ($3::text IS NULL OR codigo_lote = $3)
               ORDER BY vence_en NULLS LAST, creado_en, id
@@ -583,7 +583,7 @@ impl Inventario {
         for consumo in &plan {
             let consumir = i32::try_from(consumo.cantidad).map_err(|_| ApiError::interno())?;
             sqlx::query(
-                "UPDATE catalog.lotes_inventario
+                "UPDATE inventory.lotes_inventario
                     SET cantidad_disponible = cantidad_disponible - $1,
                         actualizado_en = NOW()
                   WHERE id = $2::uuid",
@@ -646,7 +646,7 @@ impl Inventario {
         let sql = format!(
             "SELECT id, empresa_id, item_id, proveedor_id, codigo_lote, vence_en,
                     cantidad_inicial, cantidad_disponible
-               FROM catalog.lotes_inventario
+               FROM inventory.lotes_inventario
               WHERE {}
               ORDER BY vence_en NULLS LAST, codigo_lote",
             condiciones.join(" AND ")

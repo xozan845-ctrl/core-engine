@@ -111,8 +111,8 @@ Migración de tenants existentes, pilotos y rollback:
                     │   :8080     │  Politicas por ruta/rol (Tabla 21) · UNICO puerto al host
                     └──────┬──────┘
                            │  red interna Docker `core-engine` (microservicios sin puerto al host)
-  identity  catalog  stores  orders  logistics  scheduling  commissions  finance  field  intelligence  storage  notifications
-    :3001    :3002    :3003   :3004     :3005      :3011       :3006      :3007   :3008     :3009      :3010      :3012
+  identity  catalog  inventory  stores  orders  logistics  scheduling  commissions  finance  field  intelligence  storage  notifications
+    :3001    :3002    :3013     :3003   :3004     :3005      :3011       :3006      :3007   :3008     :3009      :3010      :3012
   (commissions solo stage · market-intelligence solo dev)
        RabbitMQ · topic core-engine.events (+ DLQ, AD-04) + Postgres 16 + MinIO (un bucket por tenant, ADR-24)
 ```
@@ -125,7 +125,7 @@ Los bounded contexts se organizan **por capacidad de negocio**, no por rubro:
 `dentista-service`, `farmacia-service` ni `pulperia-service` (ADR-0001).
 
 **Punto de entrada unico:** solo el servicio `gateway` publica un puerto de aplicación al host
-(`8080:8080`); los **doce microservicios** escuchan en `3001`–`3012` **solo dentro de la red interna
+(`8080:8080`); los **trece microservicios** escuchan en `3001`–`3013` **solo dentro de la red interna
 Docker `core-engine`** y no tienen mapeo de puertos al host. La excepción es **MinIO** (`9000`), que se
 publica en **loopback** porque es el host local que Traefik firma como dominio HTTPS en las URLs
 prefirmadas (ADR-24). Toda llamada externa pasa por `http://localhost:8080/api/v2/...` (o el dominio
@@ -181,7 +181,7 @@ npm run test:engine               # unitarias del motor de reglas
 npm run test:smoke                # unitarias de los scripts de smoke
 npm run rules:check               # verificación de reglas del repositorio
 cp .env.example .env              # variables de DESARROLLO (producción: .env.production.example)
-docker compose -f docker-compose.dev.yml up -d --build   # app: Postgres + RabbitMQ + MinIO + Mailpit + gateway y 12 servicios (8080 host + datos/broker 5432/5672/15672 + minio 9000/9001 + mailpit 1025/8025)
+docker compose -f docker-compose.dev.yml up -d --build   # app: Postgres + RabbitMQ + MinIO + Mailpit + gateway y 13 servicios (8080 host + datos/broker 5432/5672/15672 + minio 9000/9001 + mailpit 1025/8025)
 npm run demo                      # ejercicio end-to-end (TC-01..TC-08, RN-01..RN-08)
 npm run demo:verticals            # E2E de los pilotos belleza y flota contra el gateway real
 
@@ -213,6 +213,7 @@ seeds del plan contable NIC e indices). En **Supabase** (staging/prod) aplique a
 | api-gateway | 8080 | **Sí** (dev `8080:8080`; stage/prod `127.0.0.1:8080:8080` tras Traefik) | — | `packages/api-gateway` |
 | identity-service | 3001 | No | `identity` | `packages/identity-service` (Rust) |
 | catalog-service | 3002 | No | `catalog` | `packages/catalog-service` (Rust) |
+| inventory-service | 3013 | No | `inventory` | `packages/inventory-service` (Rust, ADR-0018) |
 | stores-service | 3003 | No | `stores` | `packages/stores-service` (Rust) |
 | orders-service | 3004 | No | `orders` | `packages/orders-service` (Rust) |
 | logistics-service | 3005 | No | `logistics` | `packages/logistics-service` |
@@ -286,7 +287,7 @@ Toda ruta pública empieza por `/api/v2/` y toda ruta interna por `/internal/`
 | administración | `/admin/**` (inventario, lotes, ubicaciones, reportes, envíos y storage por tenant) |
 | inteligencia | `/inteligencia/**` (mapa de calor, rendimiento, cobertura, demanda, tendencias, forecast, anomalías y score) |
 | storage | `/storage/**` (buckets, subidas, objetos y media pública) |
-| operación | `GET /health` (liveness), `GET /ready` (readiness agregada: 9 servicios en producción, 10 en stage), `GET /metrics`, Swagger en `/docs` y `/docs-json` |
+| operación | `GET /health` (liveness), `GET /ready` (readiness agregada: 10 servicios en producción, 11 en stage), `GET /metrics`, Swagger en `/docs` y `/docs-json` |
 
 Endpoints internos (servicio→servicio) protegidos con `x-internal-key`:
 `internal/items/**`, `internal/inventario/**`, `internal/usuarios/:id`,
@@ -326,7 +327,7 @@ pública**: `scripts/tools/swagger-aggregate.mjs` fusiona
 npm run swagger:export   # regenera docs/openapi/<servicio>/{public,internal} + los dos agregados de docs/api/
 ```
 
-Cobertura actual: **417/417 operaciones documentadas** en los 12 servicios con
+Cobertura actual: **417/417 operaciones documentadas** en los 13 servicios con
 contrato versionado: **381 públicas** (270 rutas) y **36 internas** (todas con
 `x-internal-key` y schema de respuesta).
 

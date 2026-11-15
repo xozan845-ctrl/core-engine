@@ -186,7 +186,7 @@ async fn debe_listar_stock_fisico_reservado_y_valorizado() {
     let ctx = preparar().await;
     crear_item(&ctx.db, ITEM, "SKU-LISTA", 10, 1000).await;
     sqlx::query(
-        "INSERT INTO catalog.reservas_ordenes (order_id, items_json, creado_en)
+        "INSERT INTO inventory.reservas_ordenes (order_id, items_json, creado_en)
          VALUES (gen_random_uuid(),
                  $1::jsonb,
                  NOW())",
