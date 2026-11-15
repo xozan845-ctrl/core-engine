@@ -6,9 +6,15 @@ transferencias, reservas y configuración de inventario.
 
 ## Estado
 
-Andamiaje (PR 2): configuración fail-fast, PostgreSQL con RLS, envelope,
-errores, métricas, `/health`, `/metrics`, `/docs` y `/docs-json`. Las rutas de
-dominio, el consumidor de la saga y RabbitMQ se incorporan en los PRs 3-5.
+- PR 2: andamiaje con configuración fail-fast, PostgreSQL con RLS, envelope,
+  errores, métricas, `/health`, `/metrics`, `/docs` y `/docs-json`.
+- PR 3a: configuración de inventario, proveedores, niveles de stock, resumen y
+  lotes FEFO con consumo atómico.
+- Pendiente: ubicaciones, movimientos, ajustes, transferencias (PR 3b),
+  consumidor de saga (PR 4) y migración al esquema `inventory` (PR 5).
+
+Mientras dure la transición, el SQL apunta a `catalog.*`; el PR 5 mueve las
+tablas al esquema propio y elimina esa dependencia.
 
 ## Comandos
 

@@ -1,6 +1,9 @@
 //! Router HTTP y middlewares transversales del servicio de inventario.
 
 pub mod envelope;
+pub mod internal;
+pub mod inventario;
+pub mod validacion;
 
 use crate::auth::{clave_interna_valida, UsuarioContexto};
 use crate::config::Config;
@@ -12,7 +15,7 @@ use axum::extract::{FromRequest, MatchedPath, Request, State};
 use axum::http::{header, HeaderMap, HeaderValue, StatusCode};
 use axum::middleware::{self, Next};
 use axum::response::{Html, IntoResponse, Response};
-use axum::routing::get;
+use axum::routing::{get, post};
 use axum::{Json, Router};
 use serde_json::Value;
 use std::time::Instant;
@@ -45,6 +48,27 @@ pub fn build_router(state: AppState) -> Router {
         .route("/metrics", get(metrics))
         .route("/docs", get(docs))
         .route("/docs-json", get(docs_json))
+        // inventario: stock, lotes, proveedores y configuración
+        .route("/api/v2/admin/inventario", get(inventario::listar))
+        .route(
+            "/api/v2/admin/inventario/proveedores",
+            post(inventario::crear_proveedor),
+        )
+        .route(
+            "/api/v2/admin/inventario/lotes",
+            get(inventario::listar_lotes).post(inventario::crear_lote),
+        )
+        .route(
+            "/api/v2/admin/inventario/lotes/consumir",
+            post(inventario::consumir_lote),
+        )
+        .route(
+            "/api/v2/catalog/configuracion-inventario",
+            get(inventario::configuracion).put(inventario::guardar_configuracion),
+        )
+        // superficie interna
+        .route("/internal/inventario/resumen", get(internal::resumen))
+        .route("/internal/inventario/lineas", get(internal::lineas))
         .fallback(no_encontrado)
         .with_state(state.clone());
     aplicar_capas(router, state)
