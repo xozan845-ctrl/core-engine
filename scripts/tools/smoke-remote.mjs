@@ -148,6 +148,30 @@ async function main() {
   }
   console.log(`OK (${catalog.json.items.length} producto(s), total=${catalog.json.total ?? '?'})`);
 
+  paso('GET /api/v2/admin/inventario (inventory-service)');
+  const inventario = await request(
+    'GET',
+    `/api/v2/admin/inventario?empresa_id=${encodeURIComponent(EMPRESA_ID)}`,
+    { token },
+  );
+  assertStatus(inventario, 200, 'inventario');
+  if (!Array.isArray(inventario.json)) {
+    throw new Error('inventario no devolvió una lista de líneas');
+  }
+  console.log(`OK (${inventario.json.length} línea(s) de stock)`);
+
+  paso('GET /api/v2/catalog/configuracion-inventario (inventory-service)');
+  const configuracion = await request(
+    'GET',
+    `/api/v2/catalog/configuracion-inventario?empresa_id=${encodeURIComponent(EMPRESA_ID)}`,
+    { token },
+  );
+  assertStatus(configuracion, 200, 'configuración de inventario');
+  if (typeof configuracion.json?.metodo_costeo !== 'string') {
+    throw new Error('configuración de inventario no devolvió metodo_costeo');
+  }
+  console.log(`OK (${configuracion.json.metodo_costeo})`);
+
   if (EMPRESARIO_EMAIL && EMPRESARIO_PASSWORD) {
     paso('Login de empresario (credenciales del environment)');
     const tokenEmpresario = await login(
