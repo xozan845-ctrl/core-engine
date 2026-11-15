@@ -23,7 +23,7 @@ const CREAR_ORDEN: &[ReglaCampo] = &[
     ),
     campo("items", false, &[Regla::Arreglo]),
     campo("usar_carrito", false, &[Regla::Booleano]),
-    campo("metodo_pago", false, &[Regla::En(&["simulado", "credito"])]),
+    campo("metodo_pago", false, &[Regla::Texto]),
     campo(
         "lista_precio_codigo",
         false,

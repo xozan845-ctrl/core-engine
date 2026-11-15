@@ -470,6 +470,7 @@ fn infra(db: Arc<Db>, stock: i64) -> (Arc<Checkout>, Arc<Carrito>, Arc<Pedidos>)
         vistas,
         pedidos: Arc::clone(&pedidos),
         outbox: Outbox::nueva("orders.outbox"),
+        pagos: Arc::new(Pagos::nueva(Arc::clone(&db))),
         tasa_comision: 0.12,
     });
     (checkout, carrito, pedidos)
@@ -504,6 +505,62 @@ async fn debe_crear_orden_con_evento_y_outbox() {
         .await
         .expect("eventos");
     assert_eq!(eventos, 1);
+}
+
+fn compra_con_metodo(cantidad: i64, metodo: &str) -> ComandoCrear {
+    ComandoCrear {
+        metodo_pago: Some(metodo.to_string()),
+        ..compra(cantidad)
+    }
+}
+
+#[tokio::test]
+async fn debe_dejar_pendiente_el_pago_manual_hasta_confirmacion() {
+    let _guard = DB_LOCK.lock().await;
+    let Some(db) = con_bd().await else { return };
+    let (checkout, _, _) = infra(Arc::clone(&db), 10);
+    let orden = checkout
+        .ejecutar(&compra_con_metodo(1, "efectivo"), COMPRADOR)
+        .await
+        .expect("orden");
+    assert_eq!(orden.estado, "creada");
+    assert_eq!(orden.metodo_pago, "efectivo");
+    let (estado, metodo): (String, String) =
+        sqlx::query_as("SELECT estado, metodo_codigo FROM orders.pagos WHERE order_id = $1::uuid")
+            .bind(Uuid::parse_str(&orden.id).expect("uuid"))
+            .fetch_one(db.pool())
+            .await
+            .expect("pago");
+    assert_eq!(estado, "pendiente");
+    assert_eq!(metodo, "efectivo");
+
+    let consumer = PedidosConsumer::nuevo(Arc::clone(&db), Arc::clone(&checkout));
+    consumer
+        .manejar(json!({
+            "event_id": Uuid::new_v4().to_string(),
+            "tipo": STOCK_RESERVADO,
+            "data": {"order_id": orden.id}
+        }))
+        .await
+        .expect("consumir");
+    let vista = OrderViewRepository
+        .encontrar(&db, &orden.id)
+        .await
+        .expect("vista")
+        .expect("existe");
+    assert_eq!(vista.estado, "creada");
+}
+
+#[tokio::test]
+async fn debe_rechazar_un_metodo_de_pago_desconocido() {
+    let _guard = DB_LOCK.lock().await;
+    let Some(db) = con_bd().await else { return };
+    let (checkout, _, _) = infra(Arc::clone(&db), 10);
+    let error = checkout
+        .ejecutar(&compra_con_metodo(1, "no_existe"), COMPRADOR)
+        .await
+        .expect_err("metodo invalido");
+    assert_eq!(error.codigo, "METODO_PAGO_INVALIDO");
 }
 
 #[tokio::test]
@@ -798,6 +855,7 @@ async fn router_completo(db: Arc<Db>, stock: i64) -> axum::Router {
         vistas: Arc::clone(&vistas),
         pedidos: Arc::clone(&pedidos),
         outbox: Outbox::nueva("orders.outbox"),
+        pagos: Arc::new(Pagos::nueva(Arc::clone(&db))),
         tasa_comision: 0.12,
     });
     let contratos = Arc::new(Contratos::nueva(Arc::clone(&db)));

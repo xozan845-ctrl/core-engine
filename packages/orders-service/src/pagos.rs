@@ -46,6 +46,66 @@ impl Pagos {
         filas.iter().map(fila_metodo).collect()
     }
 
+    /// Método activo por código; `None` si no existe o está inactivo.
+    pub async fn metodo_activo(&self, codigo: &str) -> Result<Option<MetodoPago>, ApiError> {
+        let mut tx = self
+            .db
+            .transaccion()
+            .await
+            .map_err(crate::event_store::error_db)?;
+        let fila = sqlx::query(
+            "SELECT codigo, nombre, requiere_confirmacion, activo, config
+               FROM orders.metodos_pago
+              WHERE codigo = $1 AND activo = true",
+        )
+        .bind(codigo)
+        .fetch_optional(&mut *tx)
+        .await
+        .map_err(crate::event_store::error_db)?;
+        tx.commit().await.map_err(crate::event_store::error_db)?;
+        fila.as_ref().map(fila_metodo).transpose()
+    }
+
+    /// Registra el pago de una orden. Los métodos automáticos nacen
+    /// confirmados; los manuales quedan pendientes hasta la confirmación.
+    pub async fn registrar(
+        &self,
+        order_id: &str,
+        empresa_id: Option<&str>,
+        metodo: &MetodoPago,
+        monto_cents: i64,
+        moneda: &str,
+    ) -> Result<(), ApiError> {
+        let estado = if metodo.requiere_confirmacion {
+            "pendiente"
+        } else {
+            "confirmado"
+        };
+        let mut tx = self
+            .db
+            .transaccion_servicio()
+            .await
+            .map_err(crate::event_store::error_db)?;
+        sqlx::query(
+            "INSERT INTO orders.pagos
+               (order_id, empresa_id, metodo_codigo, estado, monto_cents, moneda,
+                confirmado_en)
+             VALUES ($1::uuid, $2::uuid, $3, $4, $5, $6,
+                     CASE WHEN $4 = 'confirmado' THEN NOW() ELSE NULL END)",
+        )
+        .bind(order_id)
+        .bind(empresa_id)
+        .bind(&metodo.codigo)
+        .bind(estado)
+        .bind(monto_cents)
+        .bind(moneda)
+        .execute(&mut *tx)
+        .await
+        .map_err(crate::event_store::error_db)?;
+        tx.commit().await.map_err(crate::event_store::error_db)?;
+        Ok(())
+    }
+
     pub async fn crear_metodo(&self, datos: &Value) -> Result<MetodoPago, ApiError> {
         let codigo = validar_codigo(campo(datos, "codigo"))?;
         let nombre = validar_nombre(campo(datos, "nombre"))?;

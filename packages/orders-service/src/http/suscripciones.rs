@@ -24,7 +24,7 @@ const CREAR: &[ReglaCampo] = &[
     ),
     campo("comprador_id", false, &[Regla::Uuid]),
     campo("cliente_parte_id", false, &[Regla::Uuid]),
-    campo("metodo_pago", false, &[Regla::En(&["simulado", "credito"])]),
+    campo("metodo_pago", false, &[Regla::Texto]),
     campo(
         "fulfillment",
         false,
