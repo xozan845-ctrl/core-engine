@@ -15,4 +15,7 @@ pub mod inventario;
 pub mod logs;
 pub mod metrics;
 pub mod money;
+pub mod movimientos;
+pub mod paginacion;
 pub mod state;
+pub mod ubicaciones;
