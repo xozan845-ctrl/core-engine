@@ -73,6 +73,9 @@ de `orders.orden_vista`; se eliminó la policy de la tabla legacy
   sincronización (migraciones `42a`, `44` y `48`).
 - Las operaciones (combos, promociones, ajustes, histórico) referencian
   `item_id`; `stores.ofertas` ya no conserva `producto_id`.
+- `catalog.combos` se retiró (migración `68`): un combo es un item con
+  `es_combo = true` y sus componentes viven en `catalog.item_componentes`. La
+  API `/catalog/combos` se mantiene como adaptador sin tabla duplicada.
 - Los endpoints legacy `/catalog/productos*` y `/catalog/servicios*` se
   retiraron; la edición del catálogo vive en `/catalog/items` y los endpoints
   internos solo exponen `/internal/items/:id` y `/internal/items/lote`.

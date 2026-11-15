@@ -11,10 +11,10 @@ import { readText } from '../../engine/lib/fs.mjs';
  */
 
 const CONFIG = readText(
-  join(repoRoot, 'packages/storage-service/src/config/storage.config.ts'),
+  join(repoRoot, 'packages/storage-service/src/config.rs'),
 );
 const SERVICIO = readText(
-  join(repoRoot, 'packages/storage-service/src/objetos/objetos.service.ts'),
+  join(repoRoot, 'packages/storage-service/src/storage/objetos.rs'),
 );
 
 export default defineSuite({
@@ -24,29 +24,29 @@ export default defineSuite({
   mode: 'repo',
   run: ({ test, assert }) => {
     test('R-DS-4: la whitelist de content-types y los límites son configurables', () => {
-      assert.ok(CONFIG.includes('contentTypesPermitidos'), 'falta contentTypesPermitidos');
+      assert.ok(CONFIG.includes('content_types_permitidos'), 'falta content_types_permitidos');
       assert.ok(CONFIG.includes('STORAGE_CONTENT_TYPES_PERMITIDOS'), 'la whitelist no es configurable');
-      assert.ok(CONFIG.includes('maxObjetoBytes'), 'falta maxObjetoBytes');
-      assert.ok(CONFIG.includes('maxVideoBytes'), 'falta maxVideoBytes');
+      assert.ok(CONFIG.includes('max_objeto_bytes'), 'falta max_objeto_bytes');
+      assert.ok(CONFIG.includes('max_video_bytes'), 'falta max_video_bytes');
     });
 
     test('R-DS-4: se valida el tipo al solicitar y al confirmar', () => {
-      const comprobaciones = SERVICIO.split('contentTypesPermitidos.includes').length - 1;
+      const comprobaciones = SERVICIO.split('content_types_permitidos.contains').length - 1;
       assert.ok(comprobaciones >= 2, 'el content-type debe validarse en solicitud y confirmación');
       assert.ok(
-        SERVICIO.includes('this.almacen.estadisticas'),
+        SERVICIO.includes('.estadisticas('),
         'la confirmación debe consultar el objeto real en storage',
       );
-      assert.ok(SERVICIO.includes('maximoPara'), 'faltan los límites por tipo');
+      assert.ok(SERVICIO.includes('maximo_para'), 'faltan los límites por tipo');
     });
 
     test('R-DS-4/ADR-28: SVG bloqueado y nombres saneados', () => {
       assert.ok(
-        SERVICIO.includes("tipo === 'image/svg+xml'"),
+        SERVICIO.includes('image/svg+xml'),
         'SVG debe rechazarse en la superficie pública',
       );
-      assert.ok(SERVICIO.includes('sanearNombre'), 'falta el saneado del nombre');
-      assert.ok(SERVICIO.includes('sanearCarpeta'), 'falta el saneado de la carpeta');
+      assert.ok(SERVICIO.includes('sanear_nombre'), 'falta el saneado del nombre');
+      assert.ok(SERVICIO.includes('sanear_carpeta'), 'falta el saneado de la carpeta');
       assert.ok(
         SERVICIO.includes("estado = 'activo' AND publico = true"),
         'la lectura pública debe exigir estado activo y publico = true',

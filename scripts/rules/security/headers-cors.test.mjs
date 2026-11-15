@@ -10,24 +10,21 @@ import { readText } from '../../engine/lib/fs.mjs';
  * CORS debe usar la whitelist del entorno, nunca reflejar cualquier origen.
  */
 
-const HEADERS = readText(
-  join(repoRoot, 'packages/api-gateway/src/proxy/security-headers.middleware.ts'),
-);
-const MAIN = readText(join(repoRoot, 'packages/api-gateway/src/main.ts'));
+const HTTP = readText(join(repoRoot, 'packages/api-gateway/src/http/mod.rs'));
 const ENV = readText(join(repoRoot, '.env.example'));
 const STAGE_ENV = readText(join(repoRoot, '.env.stage.example'));
 const PROD_ENV = readText(join(repoRoot, '.env.production.example'));
 
 const REQUERIDAS = [
-  'X-Content-Type-Options',
-  'X-Frame-Options',
-  'Referrer-Policy',
-  'Content-Security-Policy',
-  'Strict-Transport-Security',
-  'Permissions-Policy',
-  'Cross-Origin-Opener-Policy',
-  'Cross-Origin-Embedder-Policy',
-  'Cross-Origin-Resource-Policy',
+  'x-content-type-options',
+  'x-frame-options',
+  'referrer-policy',
+  'content-security-policy',
+  'strict-transport-security',
+  'permissions-policy',
+  'cross-origin-opener-policy',
+  'cross-origin-embedder-policy',
+  'cross-origin-resource-policy',
 ];
 
 export default defineSuite({
@@ -38,18 +35,27 @@ export default defineSuite({
   run: ({ test, assert }) => {
     test('R-GW-2: el gateway envía las cabeceras de seguridad', () => {
       for (const cabecera of REQUERIDAS) {
-        assert.ok(HEADERS.includes(cabecera), `falta la cabecera ${cabecera}`);
+        assert.ok(HTTP.includes(cabecera), `falta la cabecera ${cabecera}`);
       }
     });
 
     test('R-GW-2: CORS usa la whitelist del entorno y no refleja cualquier origen', () => {
-      assert.ok(MAIN.includes('origin: origenes'), 'CORS debe usar la lista de CORS_ORIGINS');
       assert.ok(
-        MAIN.includes('credentials: false'),
+        HTTP.includes('cors_origins') && HTTP.includes('.any(|permitido| permitido == origen)'),
+        'CORS debe usar la lista de CORS_ORIGINS',
+      );
+      assert.ok(
+        HTTP.includes('ACCESS_CONTROL_ALLOW_ORIGIN'),
+        'falta la cabecera Access-Control-Allow-Origin',
+      );
+      assert.ok(
+        !HTTP.includes('ACCESS_CONTROL_ALLOW_CREDENTIALS'),
         'sin gate de borde no se habilitan credenciales CORS (ADR-0005)',
       );
-      assert.ok(!MAIN.includes('origin: true'), 'CORS no debe reflejar cualquier origen');
-      assert.ok(!MAIN.includes("origin: '*'"), 'CORS no debe usar wildcard');
+      assert.ok(
+        !HTTP.includes('HeaderValue::from_static("*")'),
+        'CORS no debe usar wildcard',
+      );
     });
 
     test('R-GW-2: las plantillas de stage y producción no habilitan wildcard CORS', () => {

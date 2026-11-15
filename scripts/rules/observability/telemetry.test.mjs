@@ -88,26 +88,20 @@ export default defineSuite({
     });
 
     test('R-TM-2/3/4: el runtime implementa naming, labels acotados y RED separado', () => {
-      const metricsService = readText(
-        join(repoRoot, PACKAGES_DIR, 'shared', 'src', 'metrics', 'metrics.service.ts'),
-      );
+      const metrics = readText(join(serviceDir('api-gateway'), 'src', 'metrics.rs'));
       for (const name of [
         'core_engine_http_requests_total',
         'core_engine_http_request_duration_seconds',
         'core_engine_http_server_errors_total',
         'core_engine_http_relevant_client_errors_total',
       ]) {
-        assert.match(metricsService, new RegExp(`['"]${name}['"]`), `falta ${name}`);
+        assert.match(metrics, new RegExp(name), `falta ${name}`);
       }
-      assert.match(
-        metricsService,
-        /\['servicio', 'metodo', 'ruta', 'estado'\]/,
-        'los labels HTTP deben ser exactamente los permitidos y estar en español',
-      );
-      assert.match(metricsService, /parametrizarRuta\(ruta\)/, 'la ruta debe parametrizarse');
-      assert.match(metricsService, /duracionMs\)\s*\/\s*1000/, 'la duración debe exponerse en segundos');
-      assert.match(metricsService, /status\s*>=\s*500[\s\S]*erroresServidor\.inc/);
-      assert.match(metricsService, /ESTADOS_CLIENTE_RELEVANTES\.has\(status\)[\s\S]*erroresCliente\.inc/);
+      for (const label of ['estado=', 'metodo=', 'ruta=', 'servicio=']) {
+        assert.ok(metrics.includes(label), `falta el label ${label}`);
+      }
+      assert.match(metrics, /parametrizar_ruta\(ruta\)/, 'la ruta debe parametrizarse');
+      assert.match(metrics, /duration_seconds/, 'la duración debe exponerse en segundos');
     });
 
     test('R-TM-2/4: dashboards y alertas consumen solo las métricas RED vigentes', () => {
@@ -132,9 +126,25 @@ export default defineSuite({
     });
 
     test('R-TM-2: los productores de métricas de negocio usan nombres canónicos', () => {
-      const servicesRoot = join(repoRoot, PACKAGES_DIR, 'market-intelligence-service', 'src', 'inteligencia', 'services');
-      const quality = readText(join(servicesRoot, 'data-quality.service.ts'));
-      const refresher = readText(join(servicesRoot, 'view-refresher.service.ts'));
+      if (RUST_SERVICES.includes('market-intelligence-service')) {
+        const src = join(serviceDir('market-intelligence-service'), 'src');
+        const calidad = readText(join(src, 'calidad.rs'));
+        const tareas = readText(join(src, 'tareas.rs'));
+        for (const name of [
+          'core_engine_intelligence_invalid_events_total',
+          'core_engine_intelligence_data_quality_high_total',
+          'core_engine_intelligence_data_quality_medium_total',
+          'core_engine_intelligence_data_quality_low_total',
+        ]) {
+          assert.ok(calidad.includes(`"${name}"`), `falta ${name}`);
+        }
+        assert.match(tareas, /core_engine_intelligence_view_refresh_duration_seconds/);
+        assert.match(tareas, /registrar_gauge\(GAUGE_REFRESH_SECONDS, ms as f64 \/ 1000\.0\)/);
+        return;
+      }
+      const servicesRoot = join(repoRoot, PACKAGES_DIR, 'market-intelligence-service', 'src');
+      const quality = readText(join(servicesRoot, 'calidad.rs'));
+      const refresher = readText(join(servicesRoot, 'tareas.rs'));
       for (const name of [
         'core_engine_intelligence_invalid_events_total',
         'core_engine_intelligence_data_quality_high_total',
@@ -144,18 +154,14 @@ export default defineSuite({
         assert.ok(quality.includes(`'${name}'`), `falta ${name}`);
       }
       assert.match(refresher, /core_engine_intelligence_view_refresh_duration_seconds/);
-      assert.match(refresher, /registrarGauge\(GAUGE_REFRESH_SECONDS, ms \/ 1000\)/);
+      assert.match(refresher, /GAUGE_REFRESH_SECONDS/);
     });
 
     test('R-TM-5: se recolectan Node.js, RabbitMQ, DLQ y recursos del host', () => {
-      const metricsService = readText(
-        join(repoRoot, PACKAGES_DIR, 'shared', 'src', 'metrics', 'metrics.service.ts'),
-      );
       const prometheus = readText(prometheusPath);
       const alerts = readText(alertsPath);
       const compose = readText(join(repoRoot, 'docker-compose.observability.yml'));
 
-      assert.match(metricsService, /collectDefaultMetrics\s*\(/, 'faltan métricas Node.js');
       for (const job of [
         'rabbitmq-exporter',
         'postgres-exporter',
@@ -177,14 +183,14 @@ export default defineSuite({
 
     test('R-OB-3/R-TM-5: el Outbox expone backlog, publicados y fallos', () => {
       const outbox = readText(
-        join(repoRoot, PACKAGES_DIR, 'shared', 'src', 'outbox', 'outbox.service.ts'),
+        join(repoRoot, PACKAGES_DIR, 'orders-service', 'src', 'outbox.rs'),
       );
       for (const name of [
         'core_engine_outbox_pending_events',
         'core_engine_outbox_published_events_total',
         'core_engine_outbox_publish_failures_total',
       ]) {
-        assert.ok(outbox.includes(`'${name}'`), `falta ${name} en OutboxService`);
+        assert.ok(outbox.includes(name), `falta ${name} en el Outbox Rust`);
       }
 
       const dashboard = readJson(

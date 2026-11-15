@@ -91,7 +91,9 @@ function readJsonAt(root, sha, file) {
 
 function checkVersionMatch(root, sha, tag) {
   const expected = tag.slice(1);
-  const workspaces = ['shared', ...SERVICES_NODE];
+  // `shared` se retiró al migrar identity a Rust; solo quedan los
+  // workspaces Node vivos (hoy ninguno: todos los servicios son crates Rust).
+  const workspaces = [...SERVICES_NODE];
   const files = ['package.json', ...workspaces.map((ws) => `packages/${ws}/package.json`)];
   const problems = [];
 

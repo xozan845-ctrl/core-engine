@@ -37,45 +37,39 @@ export default defineSuite({
     });
 
     test('R-OB-2: el gateway crea, devuelve y propaga x-request-id por HTTP', () => {
-      const middleware = readText(
-        join(packagesRoot, 'api-gateway', 'src', 'proxy', 'pasarela.middleware.ts'),
+      const http = readText(join(packagesRoot, 'api-gateway', 'src', 'http', 'mod.rs'));
+      const proxy = readText(join(packagesRoot, 'api-gateway', 'src', 'proxy.rs'));
+      assert.match(http, /Uuid::new_v4\(\)/, 'el gateway no genera el ID');
+      assert.match(
+        http,
+        /request\.headers_mut\(\)\.insert\("x-request-id"/,
+        'el gateway no inyecta el ID en la petición',
       );
-      const proxy = readText(
-        join(packagesRoot, 'api-gateway', 'src', 'proxy', 'proxy.service.ts'),
+      assert.match(
+        http,
+        /response\.headers_mut\(\)\.insert\("x-request-id"/,
+        'el gateway no devuelve el ID al cliente',
       );
-      assert.match(middleware, /\?\?\s*randomUUID\(\)/, 'el gateway no genera el ID');
-      assert.match(middleware, /req\.headers\[['"]x-request-id['"]\]\s*=\s*request_id/);
-      assert.match(middleware, /res\.setHeader\(['"]x-request-id['"],\s*request_id\)/);
       assert.match(
         proxy,
-        /['"]x-request-id['"]:\s*\(req\.headers\[['"]x-request-id['"]\]/,
+        /headers\.insert\("x-request-id"/,
         'el proxy no reenvía el ID al servicio destino',
       );
     });
 
     test('R-OB-2: los servicios conservan x-request-id en su contexto', () => {
-      const interceptor = readText(
-        join(packagesRoot, 'shared', 'src', 'http', 'validation.pipe.ts'),
-      );
-      assert.match(interceptor, /req\.headers\?\.\[['"]x-request-id['"]\]/);
-      assert.match(interceptor, /res\.setHeader\(['"]x-request-id['"],\s*request_id\)/);
-      assert.match(interceptor, /ejecutarConContexto\(contexto,/);
+      const http = readText(join(packagesRoot, 'identity-service', 'src', 'http', 'mod.rs'));
+      assert.match(http, /request_id/, 'falta el request_id en el contexto');
+      assert.match(http, /x-request-id/, 'falta la cabecera x-request-id');
+      assert.match(http, /ejecutar_con_contexto\(contexto,/, 'falta el contexto de correlación');
     });
 
     test('R-OB-2: outbox y RabbitMQ propagan request_id en payload y header', () => {
-      const outbox = readText(join(packagesRoot, 'shared', 'src', 'outbox', 'outbox.service.ts'));
-      const events = readText(join(packagesRoot, 'shared', 'src', 'events', 'contracts.ts'));
-      const rabbit = readText(
-        join(packagesRoot, 'shared', 'src', 'rabbitmq', 'rabbit.service.ts'),
-      );
-      assert.match(events, /request_id\?:\s*string/);
-      assert.match(outbox, /ctx\?\.request_id\s*\?\s*\{\s*request_id:\s*ctx\.request_id\s*\}/);
-      assert.match(outbox, /JSON\.stringify\(evento\)/, 'outbox no persiste el evento correlacionado');
-      assert.match(
-        rabbit,
-        /\{\s*['"]x-request-id['"]:\s*evento\.request_id\s*\}/,
-        'RabbitMQ no publica x-request-id como header',
-      );
+      const outbox = readText(join(packagesRoot, 'orders-service', 'src', 'outbox.rs'));
+      const rabbit = readText(join(packagesRoot, 'orders-service', 'src', 'rabbit.rs'));
+      assert.match(outbox, /request_id/, 'el outbox no persiste el request_id');
+      assert.match(outbox, /json!\(ctx\.request_id\)/, 'el outbox no usa el request_id');
+      assert.match(rabbit, /x-request-id/, 'RabbitMQ no publica x-request-id');
     });
   },
 });

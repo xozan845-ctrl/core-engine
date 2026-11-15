@@ -1,6 +1,6 @@
 # Core Engine · scheduling-service (Rust)
 # Contexto de build: raíz del repositorio (igual que el Dockerfile TypeScript).
-FROM rust:1.89-bookworm AS build
+FROM rust:1.94.1-bookworm AS build
 WORKDIR /repo
 
 COPY packages/scheduling-service/Cargo.toml packages/scheduling-service/Cargo.lock ./packages/scheduling-service/

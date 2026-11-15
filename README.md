@@ -1,6 +1,6 @@
 # Core Engine · Core Engine
 
-Plataforma de comercio electronico distribuido (microservicios sobre Node.js/NestJS + TypeScript y Rust)
+Plataforma de comercio electronico distribuido (microservicios en Rust y PostgreSQL/Supabase)
 conforme al documento **Core Engine_Informe.docx v1.6**: CQRS + Event Sourcing en las ordenes,
 RabbitMQ con outbox y DLQ, Postgres/Supabase-compatible con esquema por dominio, API Gateway
 con autenticacion en el borde, observabilidad (Prometheus + Grafana) y suite de pruebas.
@@ -69,8 +69,8 @@ Eventos del bus (topic `core-engine.events`): `order.created`, `stock.reservado`
 > (R-EN-1).
 
 ```bash
-npm install                       # instala los workspaces (enlaza @core/shared, ...)
-npm run build                     # compila shared + gateway + los 12 microservicios
+npm install                       # instala el tooling Node de scripts (ESLint, pg)
+npm run lint                      # lint de los scripts de gobernanza
 npm test                          # los 14 workspaces, cada uno con --coverage
 cp .env.example .env              # variables de DESARROLLO (producción: .env.production.example)
 docker compose -f docker-compose.dev.yml up -d --build   # app: Postgres + RabbitMQ + MinIO + Mailpit + gateway y 12 servicios (8080 host + datos/broker 5432/5672/15672 + minio 9000/9001 + mailpit 1025/8025)
@@ -90,13 +90,13 @@ seeds del plan contable NIC e indices). En **Supabase** (staging/prod) aplique a
 | Servicio | Puerto interno | Expuesto al host | Esquema | Fuente |
 |---|---|---|---|---|
 | api-gateway | 8080 | **Sí** (dev `8080:8080`; stage/prod `127.0.0.1:8080:8080` tras Traefik) | — | `packages/api-gateway` |
-| identity-service | 3001 | No | `identity` | `packages/identity-service` |
-| catalog-service | 3002 | No | `catalog` | `packages/catalog-service` |
-| stores-service | 3003 | No | `stores` | `packages/stores-service` |
-| orders-service | 3004 | No | `orders` | `packages/orders-service` |
+| identity-service | 3001 | No | `identity` | `packages/identity-service` (Rust) |
+| catalog-service | 3002 | No | `catalog` | `packages/catalog-service` (Rust) |
+| stores-service | 3003 | No | `stores` | `packages/stores-service` (Rust) |
+| orders-service | 3004 | No | `orders` | `packages/orders-service` (Rust) |
 | logistics-service | 3005 | No | `logistics` | `packages/logistics-service` |
 | scheduling-service | 3011 | No | `scheduling` | `packages/scheduling-service` |
-| commissions-service | 3006 | No *(solo stage; fuera de prod)* | `commissions` | `packages/commissions-service` |
+| commissions-service | 3006 | No *(solo stage; fuera de prod)* | `commissions` | `packages/commissions-service` (Rust) |
 | finance-service | 3007 | No | `finance` | `packages/finance-service` |
 | field-service | 3008 | No | `field` | `packages/field-service` |
 | market-intelligence-service | 3009 | No *(fuera de stage/prod)* | `intelligence` | `packages/market-intelligence-service` |
@@ -197,9 +197,8 @@ El **API Gateway** sirve en su `/docs` el **documento agregado de la superficie
 pública**: `scripts/tools/swagger-aggregate.mjs` fusiona
 `docs/openapi/<servicio>/{public,internal}.openapi.json` y escribe dos artefactos:
 
-- `docs/api/core-engine.openapi.json` — contrato público (solo `/api/v1/**`), que
-  también se publica en `packages/api-gateway/src/openapi.agregado.ts` (generado,
-  versionado y verificado por el gate G-8);
+- `docs/api/core-engine.openapi.json` — contrato público (solo `/api/v2/**`),
+  versionado y verificado por el gate G-8, que el gateway sirve en `/docs-json`;
 - `docs/api/core-engine.internal.openapi.json` — contrato interno (solo
   `/internal/**`, con `x-internal-key`), que **nunca** se expone por el gateway.
 
