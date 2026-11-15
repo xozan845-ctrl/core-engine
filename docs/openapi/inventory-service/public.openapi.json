@@ -1,0 +1,17 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "inventory-service",
+    "version": "1.0.9",
+    "description": "Inventario y almacenes: stock, lotes FEFO, ubicaciones, movimientos y reservas (ADR-0018)."
+  },
+  "servers": [
+    {
+      "url": "http://localhost:8080/api/v2"
+    }
+  ],
+  "paths": {},
+  "components": {
+    "schemas": {}
+  }
+}
