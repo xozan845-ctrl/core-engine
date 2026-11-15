@@ -214,7 +214,10 @@ gates y del smoke de `staging`.
   todavía; el servicio no se registra en `SERVICES` hasta el PR de corte para
   no desplegar una imagen vacía en `staging`.
 - PR 3a completo: configuración de inventario, proveedores, niveles de
-  stock, resumen y lotes FEFO con consumo atómico. Las tablas siguen en el
-  esquema `catalog` como fuente transitoria; el PR 5 las mueve a `inventory`.
-- 50 pruebas unitarias + 7 de PostgreSQL; cobertura medida 81,15 % líneas /
-  76,44 % funciones.
+  stock, resumen y lotes FEFO con consumo atómico.
+- PR 3b completo: ubicaciones, stock por ubicación, transferencias,
+  movimientos, ajustes y superficie interna. Las tablas siguen en el esquema
+  `catalog` como fuente transitoria; el PR 5 las mueve a `inventory`.
+- 60 pruebas unitarias + 7 de PostgreSQL de inventario + 4 de ubicaciones y
+  movimientos + 1 HTTP integral; cobertura medida 85,75 % líneas / 81,91 %
+  funciones.

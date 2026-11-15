@@ -5,6 +5,8 @@ use crate::config::Config;
 use crate::db::Db;
 use crate::inventario::Inventario;
 use crate::metrics::Metrics;
+use crate::movimientos::Movimientos;
+use crate::ubicaciones::Ubicaciones;
 use std::sync::Arc;
 use std::time::Instant;
 
@@ -17,6 +19,8 @@ pub struct AppState {
     /// negocio fallarán con 500 si no hay base de datos.
     pub db: Option<Arc<Db>>,
     pub inventario: Option<Arc<Inventario>>,
+    pub ubicaciones: Option<Arc<Ubicaciones>>,
+    pub movimientos: Option<Arc<Movimientos>>,
     pub inicio: Instant,
 }
 
@@ -28,6 +32,8 @@ impl AppState {
             capacidades: Arc::new(CapacidadesNoDisponible),
             db: None,
             inventario: None,
+            ubicaciones: None,
+            movimientos: None,
             inicio: Instant::now(),
         }
     }
@@ -39,12 +45,16 @@ impl AppState {
         capacidades: Arc<dyn Capacidades>,
     ) -> Self {
         let inventario = Arc::new(Inventario::nueva(Arc::clone(&db)));
+        let ubicaciones = Arc::new(Ubicaciones::nueva(Arc::clone(&db)));
+        let movimientos = Arc::new(Movimientos::nueva(Arc::clone(&db)));
         Self {
             config: Arc::new(config),
             metrics,
             capacidades,
             db: Some(db),
             inventario: Some(inventario),
+            ubicaciones: Some(ubicaciones),
+            movimientos: Some(movimientos),
             inicio: Instant::now(),
         }
     }
@@ -57,6 +67,18 @@ impl AppState {
 
     pub fn inventario(&self) -> Result<&Arc<Inventario>, crate::errors::ApiError> {
         self.inventario
+            .as_ref()
+            .ok_or_else(crate::errors::ApiError::interno)
+    }
+
+    pub fn ubicaciones(&self) -> Result<&Arc<Ubicaciones>, crate::errors::ApiError> {
+        self.ubicaciones
+            .as_ref()
+            .ok_or_else(crate::errors::ApiError::interno)
+    }
+
+    pub fn movimientos(&self) -> Result<&Arc<Movimientos>, crate::errors::ApiError> {
+        self.movimientos
             .as_ref()
             .ok_or_else(crate::errors::ApiError::interno)
     }
