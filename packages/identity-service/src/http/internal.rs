@@ -139,6 +139,24 @@ pub async fn capacidades_empresas(
     ok(json!({ "capacidades": filas }))
 }
 
+/// POST /internal/extensiones/valores
+pub async fn valores_extensiones(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    Cuerpo(dto): Cuerpo,
+) -> Result<Response, ApiError> {
+    clave_valida(&headers, state.config.internal_api_key.as_deref())?;
+    let empresa_id = texto(&dto, "empresa_id")?;
+    let recurso = texto(&dto, "recurso")?;
+    let recurso_ids = arreglo_texto(&dto, "recurso_ids")?;
+    let valores = state
+        .servicios()?
+        .extensiones
+        .valores_por_recursos(&empresa_id, &recurso, &recurso_ids)
+        .await?;
+    ok(json!({ "valores": valores }))
+}
+
 /// GET /internal/partes/:id?empresa_id=...
 pub async fn parte(
     State(state): State<AppState>,
@@ -159,6 +177,19 @@ pub async fn parte(
         return Err(ApiError::no_encontrado("Parte", &id));
     }
     ok(json!({ "id": id, "empresa_id": empresa_id }))
+}
+
+fn texto(dto: &Value, campo: &str) -> Result<String, ApiError> {
+    dto.get(campo)
+        .and_then(Value::as_str)
+        .map(str::trim)
+        .filter(|valor| !valor.is_empty())
+        .map(str::to_string)
+        .ok_or_else(|| {
+            ApiError::validacion(json!([
+                {"campo": campo, "restricciones": ["isString"]}
+            ]))
+        })
 }
 
 fn arreglo_texto(dto: &Value, campo: &str) -> Result<Vec<String>, ApiError> {

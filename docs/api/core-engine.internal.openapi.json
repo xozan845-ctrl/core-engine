@@ -767,6 +767,53 @@
         ]
       }
     },
+    "/internal/extensiones/valores": {
+      "post": {
+        "operationId": "InternalController_valoresExtensiones",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ValoresExtensionRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Valores activos por recurso",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "valores"
+                  ],
+                  "properties": {
+                    "valores": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/ValorExtensionResponseDto"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "internalKey": []
+          }
+        ],
+        "summary": "Valores de extensiones por recurso (servicio→servicio)",
+        "tags": [
+          "Extensiones (interno)"
+        ]
+      }
+    },
     "/internal/partes/{id}": {
       "get": {
         "operationId": "InternalController_parte",
@@ -2358,6 +2405,54 @@
           "fulfillment",
           "requiere_agenda",
           "trazabilidad"
+        ]
+      },
+      "ValoresExtensionRequestDto": {
+        "type": "object",
+        "properties": {
+          "empresa_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "recurso": {
+            "type": "string"
+          },
+          "recurso_ids": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        },
+        "required": [
+          "empresa_id",
+          "recurso",
+          "recurso_ids"
+        ]
+      },
+      "ValorExtensionResponseDto": {
+        "type": "object",
+        "properties": {
+          "recurso_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "codigo": {
+            "type": "string"
+          },
+          "version_schema": {
+            "type": "integer"
+          },
+          "valores": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "recurso_id",
+          "codigo",
+          "version_schema",
+          "valores"
         ]
       },
       "EmpresaResponseDto": {
