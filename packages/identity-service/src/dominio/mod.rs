@@ -3,6 +3,7 @@
 pub mod api_keys;
 pub mod auth;
 pub mod capacidades;
+pub mod configuracion_operativa;
 pub mod configuracion_sitio;
 pub mod empresas;
 pub mod extensiones;

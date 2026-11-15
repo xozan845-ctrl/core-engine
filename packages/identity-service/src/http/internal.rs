@@ -79,6 +79,21 @@ pub async fn empresa(
     ok(empresa)
 }
 
+/// GET /internal/empresas/:id/configuracion
+pub async fn empresa_configuracion(
+    State(state): State<AppState>,
+    Path(id): Path<String>,
+    headers: HeaderMap,
+) -> Result<Response, ApiError> {
+    clave_valida(&headers, state.config.internal_api_key.as_deref())?;
+    let configuracion = state
+        .servicios()?
+        .configuracion_operativa
+        .obtener(&id)
+        .await?;
+    ok(serde_json::to_value(configuracion).map_err(|_| ApiError::interno())?)
+}
+
 /// GET /internal/empresas/:id/tema
 pub async fn empresa_tema(
     State(state): State<AppState>,

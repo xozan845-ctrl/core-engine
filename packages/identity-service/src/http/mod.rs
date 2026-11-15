@@ -169,6 +169,10 @@ pub fn build_router(state: AppState) -> Router {
             get(internal::contar_vendedores),
         )
         .route("/internal/empresas/{id}", get(internal::empresa))
+        .route(
+            "/internal/empresas/{id}/configuracion",
+            get(internal::empresa_configuracion),
+        )
         .route("/internal/empresas/{id}/tema", get(internal::empresa_tema))
         .route(
             "/internal/configuracion-sitio/tema",
