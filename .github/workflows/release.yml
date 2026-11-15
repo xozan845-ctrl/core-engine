@@ -126,6 +126,7 @@ jobs:
           - api-gateway
           - identity-service
           - catalog-service
+          - inventory-service
           - stores-service
           - orders-service
           - logistics-service
