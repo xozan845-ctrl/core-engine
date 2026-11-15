@@ -3,6 +3,8 @@
 pub mod envelope;
 pub mod internal;
 pub mod inventario;
+pub mod movimientos;
+pub mod ubicaciones;
 pub mod validacion;
 
 use crate::auth::{clave_interna_valida, UsuarioContexto};
@@ -15,7 +17,7 @@ use axum::extract::{FromRequest, MatchedPath, Request, State};
 use axum::http::{header, HeaderMap, HeaderValue, StatusCode};
 use axum::middleware::{self, Next};
 use axum::response::{Html, IntoResponse, Response};
-use axum::routing::{get, post};
+use axum::routing::{get, patch, post};
 use axum::{Json, Router};
 use serde_json::Value;
 use std::time::Instant;
@@ -65,6 +67,36 @@ pub fn build_router(state: AppState) -> Router {
         .route(
             "/api/v2/catalog/configuracion-inventario",
             get(inventario::configuracion).put(inventario::guardar_configuracion),
+        )
+        // ubicaciones y stock por ubicación
+        .route(
+            "/api/v2/admin/ubicaciones",
+            get(ubicaciones::listar).post(ubicaciones::crear),
+        )
+        .route(
+            "/api/v2/admin/ubicaciones/transferencias",
+            post(ubicaciones::transferir),
+        )
+        .route(
+            "/api/v2/admin/ubicaciones/items/{item_id}/stock",
+            get(ubicaciones::stock_item),
+        )
+        .route(
+            "/api/v2/admin/ubicaciones/{id}",
+            patch(ubicaciones::actualizar),
+        )
+        .route(
+            "/api/v2/admin/ubicaciones/{id}/stock",
+            get(ubicaciones::stock_ubicacion),
+        )
+        .route(
+            "/api/v2/admin/ubicaciones/{id}/stock/{item_id}",
+            axum::routing::put(ubicaciones::fijar_stock),
+        )
+        // movimientos de inventario
+        .route(
+            "/api/v2/catalog/inventario/movimientos",
+            get(movimientos::listar).post(movimientos::crear),
         )
         // superficie interna
         .route("/internal/inventario/resumen", get(internal::resumen))

@@ -57,3 +57,49 @@ CREATE TABLE catalog.reservas_ordenes (
   items_json jsonb NOT NULL,
   creado_en  timestamptz NOT NULL DEFAULT NOW()
 );
+
+CREATE TABLE catalog.ubicaciones (
+  id             uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  empresa_id     uuid NOT NULL,
+  codigo         text NOT NULL,
+  nombre         text NOT NULL,
+  tipo           text NOT NULL DEFAULT 'bodega',
+  direccion      text NOT NULL DEFAULT '',
+  predeterminada boolean NOT NULL DEFAULT false,
+  activo         boolean NOT NULL DEFAULT true,
+  creado_en      timestamptz NOT NULL DEFAULT NOW(),
+  actualizado_en timestamptz NOT NULL DEFAULT NOW(),
+  UNIQUE (empresa_id, codigo)
+);
+
+CREATE TABLE catalog.item_stock_ubicacion (
+  empresa_id     uuid NOT NULL,
+  item_id        uuid NOT NULL,
+  ubicacion_id   uuid NOT NULL,
+  stock          integer NOT NULL DEFAULT 0,
+  actualizado_en timestamptz NOT NULL DEFAULT NOW(),
+  PRIMARY KEY (item_id, ubicacion_id)
+);
+
+CREATE TABLE catalog.movimientos_inventario (
+  id                uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  empresa_id        uuid NOT NULL,
+  tipo              text NOT NULL,
+  motivo            text NOT NULL DEFAULT '',
+  referencia        text NOT NULL DEFAULT '',
+  ubicacion_origen  text NOT NULL DEFAULT '',
+  ubicacion_destino text NOT NULL DEFAULT '',
+  lineas            jsonb NOT NULL DEFAULT '[]'::jsonb,
+  creado_por        uuid,
+  creado_en         timestamptz NOT NULL DEFAULT NOW()
+);
+
+CREATE TABLE catalog.ajustes_stock (
+  id                uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  empresa_id        uuid NOT NULL,
+  item_id           uuid NOT NULL,
+  cantidad_anterior integer NOT NULL,
+  cantidad_nueva    integer NOT NULL,
+  motivo            text NOT NULL DEFAULT '',
+  realizado_en      timestamptz NOT NULL DEFAULT NOW()
+);
