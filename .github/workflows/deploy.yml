@@ -4,9 +4,10 @@ name: Deploy
 #   dev   → build local (base + overlay dev)
 #   stage → consume las imágenes promovidas en GHCR (:stage)
 #   prod  → consume las imágenes promovidas en GHCR (:prod)
-# Tras el `up` se ejecuta el smoke del entorno (R-CD-12): `GET /health`, login y
-# una lectura real del catálogo en stage/prod; en dev, el flujo E2E completo
-# (`npm run demo`). Stage/prod requieren SMOKE_ADMIN_EMAIL/SMOKE_ADMIN_PASSWORD.
+# Tras el `up` se ejecuta el smoke del entorno (R-CD-12): en dev y stage (stack
+# efímero del runner, con las imágenes `:stage` ya promovidas) corre el flujo
+# E2E completo `npm run demo`; en prod, un smoke remoto de solo lectura que
+# exige SMOKE_ADMIN_EMAIL/SMOKE_ADMIN_PASSWORD del environment.
 # Si existen SMOKE_EMPRESARIO_EMAIL/SMOKE_EMPRESARIO_PASSWORD, el smoke valida
 # además `/api/v2/empresarios/me/ventas` (commissions-service en stage, ADR-37).
 on:
@@ -68,9 +69,13 @@ jobs:
             prod)  echo "files=-f docker-compose.yml"  >> "$GITHUB_OUTPUT"; echo "port=8080" >> "$GITHUB_OUTPUT"; echo "build=" >> "$GITHUB_OUTPUT" ;;
           esac
 
-      - name: 🧰 Prepare development environment
-        if: github.event.inputs.environment == 'dev'
-        run: cp .env.example .env
+      - name: 🧰 Prepare environment file
+        # Dev y stage levantan un stack efímero en el runner: si no hay `.env`
+        # (p. ej. runner hosted), se parte de la plantilla. Prod conserva el
+        # archivo del entorno real.
+        if: github.event.inputs.environment != 'prod'
+        run: |
+          if [ ! -f .env ]; then cp .env.example .env; fi
 
       - name: 🚀 Bring the stack up
         env:
@@ -94,14 +99,14 @@ jobs:
           docker compose ${{ steps.cfg.outputs.files }} logs
           exit 1
 
-      - name: 🧪 Smoke E2E de desarrollo (R-CD-12)
-        if: github.event.inputs.environment == 'dev'
+      - name: 🧪 Smoke E2E del stack (R-CD-12)
+        if: github.event.inputs.environment != 'prod'
         env:
           BASE_URL: http://localhost:${{ steps.cfg.outputs.port }}
         run: npm run demo
 
       - name: 🧾 Verificar logs sin errores inesperados (R-E-8)
-        if: github.event.inputs.environment == 'dev' && success()
+        if: github.event.inputs.environment != 'prod' && success()
         run: |
           logs="$(docker compose ${{ steps.cfg.outputs.files }} logs --no-color)"
           if printf '%s\n' "$logs" | grep -E '"nivel":"error"|UnhandledPromiseRejection|uncaughtException'; then
@@ -110,7 +115,7 @@ jobs:
           fi
 
       - name: 🧪 Smoke remoto de solo lectura (R-CD-12)
-        if: github.event.inputs.environment != 'dev'
+        if: github.event.inputs.environment == 'prod'
         env:
           BASE_URL: http://localhost:${{ steps.cfg.outputs.port }}
           ADMIN_EMAIL: ${{ secrets.SMOKE_ADMIN_EMAIL }}
