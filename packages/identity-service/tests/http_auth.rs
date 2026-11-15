@@ -11,6 +11,7 @@ use identity_service::db::Db;
 use identity_service::dominio::api_keys::ApiKeys;
 use identity_service::dominio::auth::Auth;
 use identity_service::dominio::capacidades::Capacidades;
+use identity_service::dominio::configuracion_operativa::ConfiguracionOperativaService;
 use identity_service::dominio::configuracion_sitio::ConfiguracionSitio;
 use identity_service::dominio::empresas::Empresas;
 use identity_service::dominio::extensiones::Extensiones;
@@ -139,6 +140,9 @@ async fn preparar() -> Option<Contexto> {
             usuarios: Arc::clone(&usuarios),
             api_keys,
             capacidades: Arc::clone(&capacidades),
+            configuracion_operativa: Arc::new(ConfiguracionOperativaService::nueva(Arc::clone(
+                &db,
+            ))),
             configuracion: Arc::new(ConfiguracionSitio::nueva(
                 Arc::clone(&db),
                 Arc::clone(&storage),
@@ -2209,6 +2213,24 @@ async fn debe_servir_la_api_interna_con_clave() {
     .await;
     assert_eq!(status, StatusCode::OK);
     assert_eq!(empresa["id"], empresa_id);
+
+    let (status, configuracion) = enviar(
+        &ctx.app,
+        "GET",
+        &format!("/internal/empresas/{empresa_id}/configuracion"),
+        Value::Null,
+        &clave,
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK);
+    assert_eq!(configuracion["empresa_id"], empresa_id);
+    assert_eq!(configuracion["vertical_id"], "retail");
+    assert_eq!(configuracion["pack"]["codigo"], "pack_retail");
+    assert_eq!(configuracion["modelos"][0], "comercio");
+    assert_eq!(configuracion["items"], json!(["producto"]));
+    assert_eq!(configuracion["fulfillment"], json!([]));
+    assert_eq!(configuracion["requiere_agenda"], false);
+
     let (status, tema) = enviar(
         &ctx.app,
         "GET",

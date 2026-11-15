@@ -628,6 +628,43 @@
         ]
       }
     },
+    "/internal/empresas/{id}/configuracion": {
+      "get": {
+        "operationId": "InternalController_empresaConfiguracion",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "description": "Id de la empresa",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Configuración operativa efectiva",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConfiguracionOperativaResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "internalKey": []
+          }
+        ],
+        "summary": "Configuración operativa por empresa (servicio→servicio)",
+        "tags": [
+          "Usuarios (interno)"
+        ]
+      }
+    },
     "/internal/empresas/{id}/tema": {
       "get": {
         "operationId": "InternalController_empresaTema",
@@ -2258,6 +2295,69 @@
         },
         "required": [
           "vendedores"
+        ]
+      },
+      "ConfiguracionOperativaResponseDto": {
+        "type": "object",
+        "properties": {
+          "empresa_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "vertical_id": {
+            "type": "string",
+            "nullable": true
+          },
+          "pack": {
+            "type": "object",
+            "nullable": true,
+            "properties": {
+              "codigo": {
+                "type": "string"
+              },
+              "version": {
+                "type": "integer"
+              }
+            },
+            "required": [
+              "codigo",
+              "version"
+            ]
+          },
+          "modelos": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "fulfillment": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "requiere_agenda": {
+            "type": "boolean"
+          },
+          "trazabilidad": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "empresa_id",
+          "vertical_id",
+          "pack",
+          "modelos",
+          "items",
+          "fulfillment",
+          "requiere_agenda",
+          "trazabilidad"
         ]
       },
       "EmpresaResponseDto": {
