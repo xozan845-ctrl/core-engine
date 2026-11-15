@@ -24,8 +24,7 @@ use std::time::Instant;
 use uuid::Uuid;
 
 /// Documento OpenAPI público versionado (golden del contrato, R-C-7).
-const OPENAPI_PUBLICO: &str =
-    include_str!("../../../../docs/openapi/inventory-service/public.openapi.json");
+const OPENAPI_PUBLICO: &str = include_str!("../../openapi/public.openapi.json");
 
 const DOCS_HTML: &str = r#"<!doctype html>
 <html lang="es">
