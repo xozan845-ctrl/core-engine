@@ -2,7 +2,7 @@
   "name": "core-engine",
   "version": "1.0.9",
   "private": true,
-  "description": "Core Engine - plataforma de comercio electronico distribuido (microservicios Rust + PostgreSQL/Supabase + Docker)",
+  "description": "Core Engine - plataforma multi-vertical por capacidades sobre microservicios Rust + PostgreSQL/Supabase + Docker",
   "scripts": {
     "demo": "node scripts/cli.mjs smoke",
     "smoke:remote": "node scripts/tools/smoke-remote.mjs",
