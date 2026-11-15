@@ -3,7 +3,7 @@
 //! Utilidades de integración: esquema `catalog` transitorio y fixtures.
 
 use serde_json::json;
-use sqlx::{Connection, PgConnection, PgPool};
+use sqlx::{Connection, PgConnection};
 use std::sync::Arc;
 
 pub use inventory_service::db::Db;
