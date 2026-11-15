@@ -131,7 +131,10 @@ mod tests {
         assert_eq!(config.puerto, PUERTO_COMMISSIONS);
         assert_eq!(config.servicio, NOMBRE_SERVICIO);
         assert_eq!(config.orders_service_url, "http://orders-service:3004");
-        assert_eq!(config.inventory_service_url, "http://inventory-service:3013");
+        assert_eq!(
+            config.inventory_service_url,
+            "http://inventory-service:3013"
+        );
         assert_eq!(config.identity_service_url, "http://identity-service:3001");
         assert_eq!(
             config.internal_request_timeout_ms,
