@@ -1,0 +1,21 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "inventory-service (interno)",
+    "version": "1.0.9",
+    "description": "Superficie interna de inventario."
+  },
+  "x-servicio": "inventory-service",
+  "x-superficie": "interna",
+  "paths": {},
+  "components": {
+    "securitySchemes": {
+      "internalKey": {
+        "type": "apiKey",
+        "in": "header",
+        "name": "x-internal-key"
+      }
+    },
+    "schemas": {}
+  }
+}

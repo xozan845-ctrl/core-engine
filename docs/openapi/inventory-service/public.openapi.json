@@ -12,6 +12,20 @@
   ],
   "paths": {},
   "components": {
+    "securitySchemes": {
+      "bearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT"
+      }
+    },
     "schemas": {}
-  }
+  },
+  "x-servicio": "inventory-service",
+  "x-superficie": "publica",
+  "security": [
+    {
+      "bearerAuth": []
+    }
+  ]
 }
