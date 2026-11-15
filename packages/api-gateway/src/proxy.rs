@@ -51,12 +51,19 @@ pub fn destinos(config: &Config) -> Vec<Destino> {
             ],
         },
         Destino {
+            nombre: "inventory",
+            url: config.inventory_url.clone(),
+            patrones: vec![
+                patron(r"^/api/v2/admin/inventario(/|$)", &["*"]),
+                patron(r"^/api/v2/admin/ubicaciones(/|$)", &["*"]),
+                patron(r"^/api/v2/catalog/inventario(/|$)", &["*"]),
+                patron(r"^/api/v2/catalog/configuracion-inventario$", &["*"]),
+            ],
+        },
+        Destino {
             nombre: "catalog",
             url: config.catalog_url.clone(),
-            patrones: vec![
-                patron(r"^/api/v2/catalog/", &["*"]),
-                patron(r"^/api/v2/admin/inventario(/|$)", &["*"]),
-            ],
+            patrones: vec![patron(r"^/api/v2/catalog/", &["*"])],
         },
         Destino {
             nombre: "stores",
@@ -315,6 +322,19 @@ mod tests {
         assert_eq!(
             encontrar_destino(&destinos, "/api/v2/finanzas/resumen", "GET").map(|d| d.nombre),
             Some("finance")
+        );
+        assert_eq!(
+            encontrar_destino(&destinos, "/api/v2/admin/inventario", "GET").map(|d| d.nombre),
+            Some("inventory")
+        );
+        assert_eq!(
+            encontrar_destino(&destinos, "/api/v2/catalog/inventario/movimientos", "GET")
+                .map(|d| d.nombre),
+            Some("inventory")
+        );
+        assert_eq!(
+            encontrar_destino(&destinos, "/api/v2/catalog/items", "GET").map(|d| d.nombre),
+            Some("catalog")
         );
         assert!(encontrar_destino(&destinos, "/api/v2/no-existe", "GET").is_none());
     }

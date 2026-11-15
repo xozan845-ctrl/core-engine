@@ -5,6 +5,7 @@ use identity_service::db::Db;
 use identity_service::dominio::api_keys::ApiKeys;
 use identity_service::dominio::auth::Auth;
 use identity_service::dominio::capacidades::Capacidades;
+use identity_service::dominio::configuracion_operativa::ConfiguracionOperativaService;
 use identity_service::dominio::configuracion_sitio::ConfiguracionSitio;
 use identity_service::dominio::empresas::Empresas;
 use identity_service::dominio::extensiones::Extensiones;
@@ -82,6 +83,7 @@ async fn main() {
     let sesiones = Arc::new(Sesiones::nueva(Arc::clone(&db)));
     let api_keys = Arc::new(ApiKeys::nueva(Arc::clone(&db), &config));
     let capacidades = Arc::new(Capacidades::nueva(Arc::clone(&db)));
+    let configuracion_operativa = Arc::new(ConfiguracionOperativaService::nueva(Arc::clone(&db)));
     let packs = Arc::new(Packs::nueva(Arc::clone(&db)));
     let auth = Arc::new(Auth::nueva(
         Arc::clone(&usuarios),
@@ -119,6 +121,7 @@ async fn main() {
             usuarios,
             api_keys,
             capacidades,
+            configuracion_operativa,
             configuracion,
             empresas,
             extensiones,

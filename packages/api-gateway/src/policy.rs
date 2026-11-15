@@ -123,7 +123,7 @@ pub fn politicas() -> &'static [Politica] {
             p(r"^/api/v2/storage/bucket$", &["POST"], Some(vec![SUPER_ADMIN, ADMIN])),
             p(r"^/api/v2/storage/", &["*"], Some(todos.clone())),
             p(r"^/api/v2/api-keys(/|$)", &["GET", "POST", "DELETE"], Some(vec![SUPER_ADMIN, ADMIN, EMPRESARIO])),
-            p(r"^/api/v2/admin/inventario", &["GET", "POST", "PATCH"], Some(vec![SUPER_ADMIN, ADMIN])),
+            p(r"^/api/v2/admin/(inventario|ubicaciones)", &["*"], Some(vec![SUPER_ADMIN, ADMIN, EMPRESARIO])),
             p(r"^/api/v2/admin/", &["*"], Some(vec![SUPER_ADMIN, ADMIN])),
             p(r"^/api/v2/comercio/", &["*"], Some(vec![SUPER_ADMIN, ADMIN, EMPRESARIO, VENDEDOR])),
             p(r"^/api/v2/finanzas/", &["*"], Some(vec![SUPER_ADMIN, ADMIN])),

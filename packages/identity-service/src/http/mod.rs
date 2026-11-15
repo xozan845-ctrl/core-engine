@@ -169,6 +169,10 @@ pub fn build_router(state: AppState) -> Router {
             get(internal::contar_vendedores),
         )
         .route("/internal/empresas/{id}", get(internal::empresa))
+        .route(
+            "/internal/empresas/{id}/configuracion",
+            get(internal::empresa_configuracion),
+        )
         .route("/internal/empresas/{id}/tema", get(internal::empresa_tema))
         .route(
             "/internal/configuracion-sitio/tema",
@@ -177,6 +181,10 @@ pub fn build_router(state: AppState) -> Router {
         .route(
             "/internal/empresas/capacidades",
             post(internal::capacidades_empresas),
+        )
+        .route(
+            "/internal/extensiones/valores",
+            post(internal::valores_extensiones),
         )
         .route("/internal/partes/{id}", get(internal::parte))
         .route(
@@ -232,6 +240,10 @@ pub fn build_router(state: AppState) -> Router {
         .route(
             "/api/v2/empresas/{empresa_id}/capacidades",
             get(capacidades::listar),
+        )
+        .route(
+            "/api/v2/empresas/{empresa_id}/features",
+            get(capacidades::manifiesto),
         )
         .route(
             "/api/v2/empresas/{empresa_id}/capacidades/{capacidad}",

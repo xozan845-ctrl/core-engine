@@ -4,13 +4,11 @@ pub mod componentes;
 pub mod empresa;
 pub mod envelope;
 pub mod internal;
-pub mod inventario;
 pub mod items;
 pub mod operaciones;
 pub mod precios;
 pub mod series;
 pub mod tarifas;
-pub mod ubicaciones;
 pub mod validacion;
 
 use crate::auth::{clave_interna_valida, UsuarioContexto};
@@ -23,7 +21,7 @@ use axum::extract::{FromRequest, MatchedPath, Request, State};
 use axum::http::{header, HeaderMap, HeaderValue, StatusCode};
 use axum::middleware::{self, Next};
 use axum::response::{Html, IntoResponse, Response};
-use axum::routing::{get, patch, post, put};
+use axum::routing::{get, patch, post};
 use axum::{Json, Router};
 use serde_json::Value;
 use std::time::Instant;
@@ -154,11 +152,6 @@ pub fn build_router(state: AppState) -> Router {
             "/api/v2/catalog/items/{id}/componentes/{componente_id}",
             patch(componentes::actualizar).delete(componentes::eliminar),
         )
-        // operaciones
-        .route(
-            "/api/v2/catalog/configuracion-inventario",
-            get(operaciones::configuracion).put(operaciones::guardar_configuracion),
-        )
         .route(
             "/api/v2/catalog/items/importar",
             post(operaciones::importar),
@@ -184,61 +177,12 @@ pub fn build_router(state: AppState) -> Router {
                 .patch(operaciones::actualizar_promocion)
                 .delete(operaciones::eliminar_promocion),
         )
-        .route(
-            "/api/v2/catalog/inventario/movimientos",
-            get(operaciones::listar_movimientos).post(operaciones::crear_movimiento),
-        )
         // superficie interna
         .route("/internal/items/lote", get(internal::lote_items))
         .route("/internal/items/precios", post(internal::precios_lote))
         .route("/internal/items/{id}", get(internal::item_por_id))
         .route("/internal/items/{id}/cotizacion", get(internal::cotizacion))
         .route("/internal/items/{id}/precio", get(internal::precio))
-        .route(
-            "/internal/inventario/resumen",
-            get(internal::resumen_inventario),
-        )
-        .route(
-            "/internal/inventario/lineas",
-            get(internal::lineas_inventario),
-        )
-        .route("/api/v2/admin/inventario", get(inventario::listar))
-        .route(
-            "/api/v2/admin/inventario/proveedores",
-            post(inventario::crear_proveedor),
-        )
-        .route(
-            "/api/v2/admin/inventario/lotes",
-            get(inventario::listar_lotes).post(inventario::crear_lote),
-        )
-        .route(
-            "/api/v2/admin/inventario/lotes/consumir",
-            post(inventario::consumir_lote),
-        )
-        .route(
-            "/api/v2/admin/ubicaciones",
-            get(ubicaciones::listar).post(ubicaciones::crear),
-        )
-        .route(
-            "/api/v2/admin/ubicaciones/transferencias",
-            post(ubicaciones::transferir),
-        )
-        .route(
-            "/api/v2/admin/ubicaciones/items/{item_id}/stock",
-            get(ubicaciones::stock_item),
-        )
-        .route(
-            "/api/v2/admin/ubicaciones/{id}",
-            patch(ubicaciones::actualizar),
-        )
-        .route(
-            "/api/v2/admin/ubicaciones/{id}/stock",
-            get(ubicaciones::stock_ubicacion),
-        )
-        .route(
-            "/api/v2/admin/ubicaciones/{id}/stock/{item_id}",
-            put(ubicaciones::fijar_stock),
-        )
         .fallback(no_encontrado)
         .with_state(state.clone());
     aplicar_capas(router, state)
@@ -271,6 +215,99 @@ pub(crate) async fn autorizar(
     )
     .await?;
     Ok(usuario)
+}
+
+/// `true` si el modelo permite el tipo de ítem; lista vacía = sin restricción.
+pub(crate) fn tipo_permitido(config: &crate::auth::ConfiguracionOperativa, tipo: &str) -> bool {
+    config.items.is_empty() || config.items.iter().any(|permitido| permitido == tipo)
+}
+
+/// Valida el tipo de ítem contra los defaults del pack (identity interno).
+pub(crate) async fn validar_tipo_permitido(
+    state: &AppState,
+    empresa: &str,
+    tipo: &str,
+) -> Result<(), ApiError> {
+    let config = state
+        .capacidades
+        .configuracion(empresa)
+        .await
+        .map_err(|_| ApiError::servicio_no_disponible("identity-service"))?;
+    if let Some(config) = config {
+        if !tipo_permitido(&config, tipo) {
+            return Err(ApiError::dominio(
+                "TIPO_ITEM_NO_PERMITIDO",
+                format!("El modelo operativo de la empresa no permite items de tipo \"{tipo}\"."),
+            ));
+        }
+    }
+    Ok(())
+}
+
+/// Id del ítem en la vista (`item_id` o `id`).
+fn id_de_item(item: &serde_json::Value) -> Option<&str> {
+    item.get("item_id")
+        .or_else(|| item.get("id"))
+        .and_then(serde_json::Value::as_str)
+}
+
+/// Fusiona los valores de extensión de un ítem bajo `extensiones[codigo]`.
+fn fusionar_extensiones(item: &mut serde_json::Value, valores: &[crate::auth::ValorExtension]) {
+    let Some(id) = id_de_item(item).map(str::to_string) else {
+        return;
+    };
+    let mut mapa = serde_json::Map::new();
+    for valor in valores.iter().filter(|valor| valor.recurso_id == id) {
+        mapa.insert(valor.codigo.clone(), valor.valores.clone());
+    }
+    if !mapa.is_empty() {
+        item["extensiones"] = serde_json::Value::Object(mapa);
+    }
+}
+
+/// Adjunta extensiones a un ítem o a una página `{items:[...]}`. Es aditivo:
+/// si identity no responde, la respuesta del catálogo no se bloquea.
+pub(crate) async fn adjuntar_extensiones(
+    state: &AppState,
+    empresa: &str,
+    respuesta: &mut serde_json::Value,
+) {
+    let ids: Vec<String> = respuesta
+        .get("items")
+        .and_then(serde_json::Value::as_array)
+        .map(|items| {
+            items
+                .iter()
+                .filter_map(id_de_item)
+                .map(str::to_string)
+                .collect()
+        })
+        .unwrap_or_else(|| {
+            id_de_item(respuesta)
+                .map(str::to_string)
+                .into_iter()
+                .collect()
+        });
+    if ids.is_empty() {
+        return;
+    }
+    let Some(valores) = state
+        .capacidades
+        .valores_extensiones(empresa, "item", &ids)
+        .await
+    else {
+        return;
+    };
+    if let Some(items) = respuesta
+        .get_mut("items")
+        .and_then(serde_json::Value::as_array_mut)
+    {
+        for item in items {
+            fusionar_extensiones(item, &valores);
+        }
+    } else {
+        fusionar_extensiones(respuesta, &valores);
+    }
 }
 
 async fn health(State(state): State<AppState>) -> Json<crate::metrics::MetricaSalud> {
@@ -532,6 +569,86 @@ mod tests {
         assert_eq!(valor["data"]["ok"], true);
         assert_eq!(valor["meta"]["path"], "/api/v2/prueba");
         assert_eq!(valor["meta"]["statusCode"], 200);
+    }
+
+    #[test]
+    fn debe_permitir_cualquier_tipo_sin_restriccion() {
+        let config = crate::auth::ConfiguracionOperativa::default();
+        assert!(tipo_permitido(&config, "producto"));
+        assert!(tipo_permitido(&config, "servicio"));
+        assert!(tipo_permitido(&config, "alquiler"));
+    }
+
+    #[test]
+    fn debe_respetar_los_items_del_modelo() {
+        let config = crate::auth::ConfiguracionOperativa {
+            items: vec!["servicio".to_string()],
+            ..Default::default()
+        };
+        assert!(tipo_permitido(&config, "servicio"));
+        assert!(!tipo_permitido(&config, "producto"));
+    }
+
+    struct CapacidadesRestringidas;
+
+    #[async_trait::async_trait]
+    impl crate::auth::Capacidades for CapacidadesRestringidas {
+        async fn activas(
+            &self,
+            _empresa_id: &str,
+            _requeridas: &[&str],
+        ) -> Result<Vec<crate::auth::CapacidadActiva>, ()> {
+            Ok(Vec::new())
+        }
+
+        async fn configuracion(
+            &self,
+            _empresa_id: &str,
+        ) -> Result<Option<crate::auth::ConfiguracionOperativa>, ()> {
+            Ok(Some(crate::auth::ConfiguracionOperativa {
+                items: vec!["servicio".to_string()],
+                ..Default::default()
+            }))
+        }
+    }
+
+    #[tokio::test]
+    async fn debe_rechazar_un_tipo_que_el_modelo_no_permite() {
+        let mut state = estado_de_prueba(config());
+        state.capacidades = std::sync::Arc::new(CapacidadesRestringidas);
+        let error = validar_tipo_permitido(&state, "empresa", "producto")
+            .await
+            .expect_err("tipo no permitido");
+        assert_eq!(error.codigo, "TIPO_ITEM_NO_PERMITIDO");
+        validar_tipo_permitido(&state, "empresa", "servicio")
+            .await
+            .expect("tipo permitido");
+    }
+
+    #[test]
+    fn debe_fusionar_extensiones_por_item() {
+        let mut item = serde_json::json!({ "item_id": "i-1", "nombre": "Cafe" });
+        let valores = vec![crate::auth::ValorExtension {
+            recurso_id: "i-1".into(),
+            codigo: "ficha".into(),
+            version_schema: 1,
+            valores: serde_json::json!({ "edad": 20 }),
+        }];
+        fusionar_extensiones(&mut item, &valores);
+        assert_eq!(item["extensiones"]["ficha"]["edad"], 20);
+    }
+
+    #[test]
+    fn debe_ignorar_extensiones_de_otro_item() {
+        let mut item = serde_json::json!({ "item_id": "i-1" });
+        let valores = vec![crate::auth::ValorExtension {
+            recurso_id: "i-2".into(),
+            codigo: "ficha".into(),
+            version_schema: 1,
+            valores: serde_json::json!({ "edad": 20 }),
+        }];
+        fusionar_extensiones(&mut item, &valores);
+        assert!(item.get("extensiones").is_none());
     }
 
     #[tokio::test]

@@ -261,83 +261,6 @@
         ]
       }
     },
-    "/internal/inventario/resumen": {
-      "get": {
-        "operationId": "InternalController_resumen",
-        "parameters": [
-          {
-            "name": "empresa_id",
-            "required": false,
-            "in": "query",
-            "description": "Filtra el resumen por empresa (ADR-27)",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Resumen de inventario",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ResumenInventarioResponseDto"
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "internalKey": []
-          }
-        ],
-        "summary": "Resumen de inventario (servicio→servicio)",
-        "tags": [
-          "Catálogo (interno)"
-        ]
-      }
-    },
-    "/internal/inventario/lineas": {
-      "get": {
-        "operationId": "InternalController_lineas",
-        "parameters": [
-          {
-            "name": "empresa_id",
-            "required": false,
-            "in": "query",
-            "description": "Filtra las líneas por empresa (ADR-27)",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Líneas de inventario",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/components/schemas/LineaInventarioResponseDto"
-                  }
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "internalKey": []
-          }
-        ],
-        "summary": "Líneas de inventario (servicio→servicio)",
-        "tags": [
-          "Catálogo (interno)"
-        ]
-      }
-    },
     "/internal/finance/sujetos/{usuarioId}": {
       "get": {
         "operationId": "InternoController_sujeto",
@@ -628,6 +551,43 @@
         ]
       }
     },
+    "/internal/empresas/{id}/configuracion": {
+      "get": {
+        "operationId": "InternalController_empresaConfiguracion",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "description": "Id de la empresa",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Configuración operativa efectiva",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConfiguracionOperativaResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "internalKey": []
+          }
+        ],
+        "summary": "Configuración operativa por empresa (servicio→servicio)",
+        "tags": [
+          "Usuarios (interno)"
+        ]
+      }
+    },
     "/internal/empresas/{id}/tema": {
       "get": {
         "operationId": "InternalController_empresaTema",
@@ -730,6 +690,53 @@
         ]
       }
     },
+    "/internal/extensiones/valores": {
+      "post": {
+        "operationId": "InternalController_valoresExtensiones",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ValoresExtensionRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Valores activos por recurso",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "valores"
+                  ],
+                  "properties": {
+                    "valores": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/ValorExtensionResponseDto"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "internalKey": []
+          }
+        ],
+        "summary": "Valores de extensiones por recurso (servicio→servicio)",
+        "tags": [
+          "Extensiones (interno)"
+        ]
+      }
+    },
     "/internal/partes/{id}": {
       "get": {
         "operationId": "InternalController_parte",
@@ -773,6 +780,78 @@
         "summary": "Parte por id y empresa (servicio→servicio)",
         "tags": [
           "Usuarios (interno)"
+        ]
+      }
+    },
+    "/internal/inventario/resumen": {
+      "get": {
+        "summary": "Resumen de inventario",
+        "parameters": [
+          {
+            "name": "empresa_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Resumen",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Clave interna invalida"
+          }
+        },
+        "security": [
+          {
+            "internalKey": []
+          }
+        ]
+      }
+    },
+    "/internal/inventario/lineas": {
+      "get": {
+        "summary": "Lineas de inventario",
+        "parameters": [
+          {
+            "name": "empresa_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Lineas",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Clave interna invalida"
+          }
+        },
+        "security": [
+          {
+            "internalKey": []
+          }
         ]
       }
     },
@@ -2258,6 +2337,117 @@
         },
         "required": [
           "vendedores"
+        ]
+      },
+      "ConfiguracionOperativaResponseDto": {
+        "type": "object",
+        "properties": {
+          "empresa_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "vertical_id": {
+            "type": "string",
+            "nullable": true
+          },
+          "pack": {
+            "type": "object",
+            "nullable": true,
+            "properties": {
+              "codigo": {
+                "type": "string"
+              },
+              "version": {
+                "type": "integer"
+              }
+            },
+            "required": [
+              "codigo",
+              "version"
+            ]
+          },
+          "modelos": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "fulfillment": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "requiere_agenda": {
+            "type": "boolean"
+          },
+          "trazabilidad": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "empresa_id",
+          "vertical_id",
+          "pack",
+          "modelos",
+          "items",
+          "fulfillment",
+          "requiere_agenda",
+          "trazabilidad"
+        ]
+      },
+      "ValoresExtensionRequestDto": {
+        "type": "object",
+        "properties": {
+          "empresa_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "recurso": {
+            "type": "string"
+          },
+          "recurso_ids": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        },
+        "required": [
+          "empresa_id",
+          "recurso",
+          "recurso_ids"
+        ]
+      },
+      "ValorExtensionResponseDto": {
+        "type": "object",
+        "properties": {
+          "recurso_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "codigo": {
+            "type": "string"
+          },
+          "version_schema": {
+            "type": "integer"
+          },
+          "valores": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "recurso_id",
+          "codigo",
+          "version_schema",
+          "valores"
         ]
       },
       "EmpresaResponseDto": {

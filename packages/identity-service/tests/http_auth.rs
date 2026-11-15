@@ -11,6 +11,7 @@ use identity_service::db::Db;
 use identity_service::dominio::api_keys::ApiKeys;
 use identity_service::dominio::auth::Auth;
 use identity_service::dominio::capacidades::Capacidades;
+use identity_service::dominio::configuracion_operativa::ConfiguracionOperativaService;
 use identity_service::dominio::configuracion_sitio::ConfiguracionSitio;
 use identity_service::dominio::empresas::Empresas;
 use identity_service::dominio::extensiones::Extensiones;
@@ -139,6 +140,9 @@ async fn preparar() -> Option<Contexto> {
             usuarios: Arc::clone(&usuarios),
             api_keys,
             capacidades: Arc::clone(&capacidades),
+            configuracion_operativa: Arc::new(ConfiguracionOperativaService::nueva(Arc::clone(
+                &db,
+            ))),
             configuracion: Arc::new(ConfiguracionSitio::nueva(
                 Arc::clone(&db),
                 Arc::clone(&storage),
@@ -724,6 +728,84 @@ async fn debe_listar_y_actualizar_capacidades_por_empresa() {
         &ctx.app,
         "GET",
         &format!("/api/v2/empresas/{empresa}/capacidades"),
+        Value::Null,
+        &headers(&comprador),
+    )
+    .await;
+    assert_eq!(status, StatusCode::FORBIDDEN);
+}
+
+#[tokio::test]
+async fn debe_exponer_el_manifiesto_de_capacidades_y_features() {
+    let Some(ctx) = preparar().await else {
+        return;
+    };
+    let admin_usuario = ctx
+        .usuarios
+        .crear(CrearUsuario {
+            nombre: "Admin manifiesto".into(),
+            correo: format!("admin-{}@tienda.test", Uuid::new_v4()),
+            contrasena: "secreto123".into(),
+            rol: "super_admin".into(),
+            tenant_id: None,
+            personal_id: None,
+        })
+        .await
+        .expect("admin");
+    let admin_id = admin_usuario.id;
+    let empresa = Uuid::new_v4().to_string();
+    let admin = autorizacion(&admin_id, "super_admin");
+    let mut tx = ctx.db.transaccion().await.expect("tx");
+    sqlx::query(
+        "INSERT INTO identity.empresas
+           (id, nombre, slug, vertical_id, pack_codigo, pack_version, creado_por)
+         VALUES ($1::uuid, 'Empresa manifiesto', $2, 'retail', 'pack_retail', 1, $3::uuid)",
+    )
+    .bind(&empresa)
+    .bind(format!("manifiesto-{}", &empresa[..8]))
+    .bind(&admin_id)
+    .execute(&mut *tx)
+    .await
+    .expect("empresa");
+    for capacidad in ["catalogo_items", "inventario_stock"] {
+        sqlx::query(
+            "INSERT INTO identity.empresa_capacidades
+               (empresa_id, capacidad_codigo, activo, config, actualizado_en)
+             VALUES ($1::uuid, $2, true, '{}'::jsonb, NOW())",
+        )
+        .bind(&empresa)
+        .bind(capacidad)
+        .execute(&mut *tx)
+        .await
+        .expect("capacidad");
+    }
+    tx.commit().await.expect("commit");
+
+    let (status, manifiesto) = enviar(
+        &ctx.app,
+        "GET",
+        &format!("/api/v2/empresas/{empresa}/features"),
+        Value::Null,
+        &headers(&admin),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK);
+    let data = &manifiesto["data"];
+    assert_eq!(data["empresa_id"], empresa);
+    assert_eq!(data["vertical_id"], "retail");
+    assert_eq!(data["pack"]["codigo"], "pack_retail");
+    assert_eq!(data["pack"]["version"], 1);
+    assert_eq!(data["modelos"][0]["codigo"], "comercio");
+    let features = data["features"].as_array().expect("features");
+    assert!(features.iter().any(|feature| feature == "catalogo.items"));
+    assert!(features.iter().any(|feature| feature == "inventario.stock"));
+    assert!(!features.iter().any(|feature| feature == "agenda.citas"));
+
+    let comprador = autorizacion(&Uuid::new_v4().to_string(), "comprador");
+    let (status, _) = enviar(
+        &ctx.app,
+        "GET",
+        &format!("/api/v2/empresas/{empresa}/features"),
         Value::Null,
         &headers(&comprador),
     )
@@ -1980,6 +2062,38 @@ async fn debe_gestionar_extensiones_y_validar_json_schema() {
     assert_eq!(status, StatusCode::OK);
     assert_eq!(guardados["data"]["version_schema"], 1);
 
+    let clave = [("x-internal-key", "clave-interna-test")];
+    let (status, internos) = enviar(
+        &ctx.app,
+        "POST",
+        "/internal/extensiones/valores",
+        json!({
+            "empresa_id": empresa_id,
+            "recurso": "cliente",
+            "recurso_ids": [recurso_id]
+        }),
+        &clave,
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK);
+    assert_eq!(internos["valores"][0]["codigo"], "ficha_cliente");
+    assert_eq!(internos["valores"][0]["version_schema"], 1);
+    assert_eq!(internos["valores"][0]["valores"]["edad"], 20);
+
+    let (status, _) = enviar(
+        &ctx.app,
+        "POST",
+        "/internal/extensiones/valores",
+        json!({
+            "empresa_id": empresa_id,
+            "recurso": "cliente",
+            "recurso_ids": [recurso_id]
+        }),
+        &[],
+    )
+    .await;
+    assert_eq!(status, StatusCode::FORBIDDEN);
+
     let (status, error) = enviar(
         &ctx.app,
         "PUT",
@@ -2131,6 +2245,24 @@ async fn debe_servir_la_api_interna_con_clave() {
     .await;
     assert_eq!(status, StatusCode::OK);
     assert_eq!(empresa["id"], empresa_id);
+
+    let (status, configuracion) = enviar(
+        &ctx.app,
+        "GET",
+        &format!("/internal/empresas/{empresa_id}/configuracion"),
+        Value::Null,
+        &clave,
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK);
+    assert_eq!(configuracion["empresa_id"], empresa_id);
+    assert_eq!(configuracion["vertical_id"], "retail");
+    assert_eq!(configuracion["pack"]["codigo"], "pack_retail");
+    assert_eq!(configuracion["modelos"][0], "comercio");
+    assert_eq!(configuracion["items"], json!(["producto"]));
+    assert_eq!(configuracion["fulfillment"], json!([]));
+    assert_eq!(configuracion["requiere_agenda"], false);
+
     let (status, tema) = enviar(
         &ctx.app,
         "GET",

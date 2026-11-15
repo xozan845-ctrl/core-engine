@@ -4,6 +4,7 @@ use crate::config::Config;
 use crate::dominio::api_keys::ApiKeys;
 use crate::dominio::auth::Auth;
 use crate::dominio::capacidades::Capacidades;
+use crate::dominio::configuracion_operativa::ConfiguracionOperativaService;
 use crate::dominio::configuracion_sitio::ConfiguracionSitio;
 use crate::dominio::empresas::Empresas;
 use crate::dominio::extensiones::Extensiones;
@@ -23,6 +24,7 @@ pub struct Servicios {
     pub usuarios: Arc<Usuarios>,
     pub api_keys: Arc<ApiKeys>,
     pub capacidades: Arc<Capacidades>,
+    pub configuracion_operativa: Arc<ConfiguracionOperativaService>,
     pub configuracion: Arc<ConfiguracionSitio>,
     pub empresas: Arc<Empresas>,
     pub extensiones: Arc<Extensiones>,

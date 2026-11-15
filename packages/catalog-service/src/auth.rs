@@ -8,6 +8,7 @@ use crate::errors::ApiError;
 use async_trait::async_trait;
 use axum::http::HeaderMap;
 use serde::Deserialize;
+use serde_json::Value;
 use std::time::Duration;
 
 pub const ROLES: [&str; 9] = [
@@ -109,6 +110,35 @@ pub struct CapacidadActiva {
     pub activo: bool,
 }
 
+#[derive(Debug, Clone, Deserialize, PartialEq)]
+pub struct ValorExtension {
+    pub recurso_id: String,
+    pub codigo: String,
+    #[serde(default)]
+    pub version_schema: i32,
+    #[serde(default)]
+    pub valores: Value,
+}
+
+#[derive(Debug, Clone, Default, Deserialize, PartialEq)]
+struct RespuestaExtensiones {
+    #[serde(default)]
+    valores: Vec<ValorExtension>,
+}
+
+/// Defaults operativos del pack/modelo de la empresa (identity interno).
+#[derive(Debug, Clone, Default, Deserialize, PartialEq, Eq)]
+pub struct ConfiguracionOperativa {
+    #[serde(default)]
+    pub items: Vec<String>,
+    #[serde(default)]
+    pub fulfillment: Vec<String>,
+    #[serde(default)]
+    pub requiere_agenda: bool,
+    #[serde(default)]
+    pub trazabilidad: bool,
+}
+
 /// Consulta de capacidades a identity (R-AR-5): lectura idempotente por la
 /// superficie interna, con timeout y fallo cerrado.
 #[async_trait]
@@ -118,6 +148,21 @@ pub trait Capacidades: Send + Sync {
         empresa_id: &str,
         requeridas: &[&str],
     ) -> Result<Vec<CapacidadActiva>, ()>;
+
+    /// Configuración operativa efectiva; `None` = sin restricción.
+    async fn configuracion(&self, _empresa_id: &str) -> Result<Option<ConfiguracionOperativa>, ()> {
+        Ok(None)
+    }
+
+    /// Valores de extensiones por recurso; `None` = no disponible (degradar).
+    async fn valores_extensiones(
+        &self,
+        _empresa_id: &str,
+        _recurso: &str,
+        _recurso_ids: &[String],
+    ) -> Option<Vec<ValorExtension>> {
+        None
+    }
 }
 
 pub struct CapacidadesHttp {
@@ -174,6 +219,65 @@ impl Capacidades for CapacidadesHttp {
             .json::<RespuestaCapacidades>()
             .await
             .map(|cuerpo| cuerpo.capacidades)
+            .map_err(|_| ())
+    }
+
+    async fn valores_extensiones(
+        &self,
+        empresa_id: &str,
+        recurso: &str,
+        recurso_ids: &[String],
+    ) -> Option<Vec<ValorExtension>> {
+        if recurso_ids.is_empty() {
+            return Some(Vec::new());
+        }
+        let cliente = reqwest::Client::builder()
+            .timeout(self.timeout)
+            .build()
+            .ok()?;
+        let respuesta = cliente
+            .post(format!("{}/internal/extensiones/valores", self.url))
+            .header("content-type", "application/json")
+            .header("x-internal-key", &self.clave)
+            .json(&serde_json::json!({
+                "empresa_id": empresa_id,
+                "recurso": recurso,
+                "recurso_ids": recurso_ids,
+            }))
+            .send()
+            .await
+            .ok()?;
+        if !respuesta.status().is_success() {
+            return None;
+        }
+        let cuerpo = respuesta.json::<RespuestaExtensiones>().await.ok()?;
+        Some(cuerpo.valores)
+    }
+
+    async fn configuracion(&self, empresa_id: &str) -> Result<Option<ConfiguracionOperativa>, ()> {
+        let cliente = reqwest::Client::builder()
+            .timeout(self.timeout)
+            .build()
+            .map_err(|_| ())?;
+        let respuesta = cliente
+            .get(format!(
+                "{}/internal/empresas/{empresa_id}/configuracion",
+                self.url
+            ))
+            .header("x-internal-key", &self.clave)
+            .send()
+            .await
+            .map_err(|_| ())?;
+        if respuesta.status() == reqwest::StatusCode::NOT_FOUND {
+            return Ok(None);
+        }
+        if !respuesta.status().is_success() {
+            return Err(());
+        }
+        respuesta
+            .json::<ConfiguracionOperativa>()
+            .await
+            .map(Some)
             .map_err(|_| ())
     }
 }
