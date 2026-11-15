@@ -12,7 +12,9 @@ transferencias, reservas y configuración de inventario.
   lotes FEFO con consumo atómico.
 - PR 3b: ubicaciones, stock por ubicación, transferencias, movimientos,
   ajustes y superficie interna.
-- Pendiente: consumidor de saga (PR 4) y migración al esquema `inventory`
+- PR 4: consumidor `inventory.pedidos` con reserva atómica, FEFO, series,
+  componentes BOM, devolución, idempotencia, Outbox y DLQ.
+- Pendiente: migración al esquema `inventory` y corte de gateway/clientes
   (PR 5).
 
 Mientras dure la transición, el SQL apunta a `catalog.*`; el PR 5 mueve las
@@ -28,7 +30,7 @@ cargo run   # requiere DATABASE_URL
 ```
 
 Variables de entorno: `PORT` (3013), `SERVICIO`, `DATABASE_URL`,
-`RABBITMQ_URL` (se exigirá en el PR 4), `INTERNAL_API_KEY`,
+`RABBITMQ_URL`, `INTERNAL_API_KEY`,
 `IDENTITY_SERVICE_URL`, `ITEM_SERVICE_URL`, `OUTBOX_TABLA`
 (`inventory.outbox`) e `INTERNAL_REQUEST_TIMEOUT_MS`.
 

@@ -22,7 +22,7 @@ smoke de `staging` haya pasado.**
 | 2 | `feat/inventory-scaffold` | Completo | `cargo fmt/clippy/test/llvm-cov` (83,30/75,60) |
 | 3a | `feat/inventory-core` | Completo | PostgreSQL + HTTP (81,15/76,44) |
 | 3b | `feat/inventory-locations` | Completo | PostgreSQL + HTTP (85,75/81,91) |
-| 4 | `feat/inventory-saga` | Pendiente | Saga + concurrencia + Outbox |
+| 4 | `feat/inventory-saga` | Completo | Saga + FEFO + series + Outbox (80,97/77,04) |
 | 5 | `feat/inventory-cutover` | Pendiente | Integración + contrato |
 | 6 | `feat/pricing-scaffold-domain` | Pendiente | Suite + contrato |
 | 7 | `feat/pricing-cutover` | Pendiente | Integración + contrato |

@@ -1,9 +1,8 @@
 //! Configuración de runtime del servicio.
 //!
 //! Las variables críticas se validan al arrancar y el proceso falla rápido si
-//! faltan (R-MS-5). En este primer corte solo `DATABASE_URL` es obligatoria;
-//! `RABBITMQ_URL` se exigirá cuando el consumidor de la saga se incorpore en el
-//! PR 4 de ADR-0018.
+//! faltan (R-MS-5): `DATABASE_URL` y `RABBITMQ_URL` son obligatorias desde que
+//! el consumidor de la saga y el Outbox forman parte del servicio.
 
 use std::env;
 
@@ -81,6 +80,9 @@ impl Config {
         if self.database_url.is_none() {
             return Err(ConfigError::Faltante("DATABASE_URL"));
         }
+        if self.rabbitmq_url.is_none() {
+            return Err(ConfigError::Faltante("RABBITMQ_URL"));
+        }
         Ok(())
     }
 }
@@ -143,18 +145,27 @@ mod tests {
     }
 
     #[test]
-    fn debe_fallar_el_arranque_sin_base_de_datos() {
+    fn debe_fallar_el_arranque_sin_dependencias_criticas() {
         let config = Config::from_pairs(Vec::<(&str, &str)>::new()).expect("config");
         assert_eq!(
             config.validar_arranque(),
             Err(ConfigError::Faltante("DATABASE_URL"))
         );
+        let config =
+            Config::from_pairs([("DATABASE_URL", "postgres://localhost/core")]).expect("config");
+        assert_eq!(
+            config.validar_arranque(),
+            Err(ConfigError::Faltante("RABBITMQ_URL"))
+        );
     }
 
     #[test]
-    fn debe_aceptar_el_arranque_con_base_de_datos() {
-        let config =
-            Config::from_pairs([("DATABASE_URL", "postgres://localhost/core")]).expect("config");
+    fn debe_aceptar_el_arranque_con_base_de_datos_y_broker() {
+        let config = Config::from_pairs([
+            ("DATABASE_URL", "postgres://localhost/core"),
+            ("RABBITMQ_URL", "amqp://localhost"),
+        ])
+        .expect("config");
         assert!(config.validar_arranque().is_ok());
     }
 }

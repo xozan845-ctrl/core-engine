@@ -1,13 +1,15 @@
-//! Arranque de `inventory-service`: configuración, PostgreSQL, router y
-//! apagado ordenado. El consumidor de la saga y RabbitMQ se incorporan en el
-//! PR 4 de ADR-0018.
+//! Arranque de `inventory-service`: configuración, PostgreSQL, RabbitMQ,
+//! consumidor de la saga, Outbox y apagado ordenado.
 
-use inventory_service::auth::{Capacidades, CapacidadesHttp};
+use inventory_service::auth::CapacidadesHttp;
 use inventory_service::config::Config;
+use inventory_service::consumidor::{cola, handler_consumidor, PedidosConsumer};
 use inventory_service::db::Db;
 use inventory_service::http::build_router;
 use inventory_service::logs::{ejecutar_con_contexto, ContextoCorrelacion};
 use inventory_service::metrics::Metrics;
+use inventory_service::outbox::Outbox;
+use inventory_service::rabbit::Rabbit;
 use inventory_service::state::AppState;
 use std::sync::Arc;
 
@@ -42,12 +44,39 @@ async fn main() {
         }
     };
 
-    let capacidades: Arc<dyn Capacidades> = Arc::new(CapacidadesHttp::nueva(
+    let rabbit = Arc::new(Rabbit::nueva(
+        config.rabbitmq_url.as_deref().unwrap_or_default(),
+    ));
+    if let Err(error) = rabbit.conectar().await {
+        eprintln!("No se pudo conectar a RabbitMQ: {error}");
+        std::process::exit(1);
+    }
+
+    let outbox = Arc::new(Outbox::nueva(config.outbox_tabla.clone()));
+    if rabbit.declarar_colas(vec![cola()]).await.is_err() {
+        eprintln!("No se pudo declarar la cola inventory.pedidos");
+        std::process::exit(1);
+    }
+    let consumidor = Arc::new(PedidosConsumer::nuevo(Arc::clone(&db), Arc::clone(&outbox)));
+    rabbit
+        .consumir("inventory.pedidos", handler_consumidor(consumidor))
+        .await;
+    rabbit.iniciar_supervisor();
+    rabbit.activar_reintento(std::time::Duration::from_secs(10));
+
+    let capacidades = Arc::new(CapacidadesHttp::nueva(
         config.identity_service_url.clone(),
         config.internal_api_key.clone(),
         config.internal_request_timeout_ms,
     ));
-    let metrics = Arc::new(Metrics::nueva(servicio));
+    let metrics = Arc::new(Metrics::nueva(servicio.clone()));
+    let tarea_outbox = iniciar_outbox(
+        Arc::clone(&outbox),
+        Arc::clone(&db),
+        Arc::clone(&rabbit),
+        Arc::clone(&metrics),
+    );
+
     let estado = AppState::con_db(config, Arc::clone(&metrics), Arc::clone(&db), capacidades);
     let app = build_router(estado);
 
@@ -73,9 +102,34 @@ async fn main() {
                 inventory_service::campos! { "msg": "Fallo el servidor HTTP", "err": error.to_string() },
             );
         }
+        tarea_outbox.abort();
+        rabbit.cerrar().await;
         db.cerrar().await;
     })
     .await;
+}
+
+fn iniciar_outbox(
+    outbox: Arc<Outbox>,
+    db: Arc<Db>,
+    rabbit: Arc<Rabbit>,
+    metrics: Arc<Metrics>,
+) -> tokio::task::JoinHandle<()> {
+    tokio::spawn(async move {
+        let mut ticker = tokio::time::interval(std::time::Duration::from_secs(1));
+        loop {
+            ticker.tick().await;
+            if let Err(error) = outbox.publicar_pendientes(&db, &rabbit, &metrics).await {
+                inventory_service::logs::error(
+                    "outbox",
+                    inventory_service::campos! {
+                        "msg": "Fallo al publicar pendientes",
+                        "err": format!("{error:?}"),
+                    },
+                );
+            }
+        }
+    })
 }
 
 async fn apagar() {
