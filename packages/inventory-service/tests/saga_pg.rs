@@ -7,21 +7,17 @@ use inventory_service::consumidor::PedidosConsumer;
 use inventory_service::outbox::Outbox;
 use serde_json::{json, Value};
 use std::sync::Arc;
-use tokio::sync::Mutex;
 use uuid::Uuid;
 
-static DB_LOCK: Mutex<()> = Mutex::const_new(());
-
 struct Contexto {
-    _guard: tokio::sync::MutexGuard<'static, ()>,
+    _guard: DbLock,
     consumidor: Arc<PedidosConsumer>,
     db: Arc<Db>,
 }
 
 async fn preparar() -> Contexto {
     let url = url().expect("TEST_DATABASE_URL");
-    let guard = DB_LOCK.lock().await;
-    provisionar(&url).await;
+    let guard = provisionar(&url).await;
     let db = db().await;
     let outbox = Arc::new(Outbox::nueva("inventory.outbox"));
     let consumidor = Arc::new(PedidosConsumer::nuevo(Arc::clone(&db), outbox));
@@ -361,8 +357,7 @@ async fn debe_expandir_componentes_bom_al_reservar() {
 #[tokio::test]
 async fn debe_revertir_el_stock_si_falla_el_outbox() {
     let url = url().expect("TEST_DATABASE_URL");
-    let _guard = DB_LOCK.lock().await;
-    provisionar(&url).await;
+    let _guard = provisionar(&url).await;
     let db = db().await;
     crear_item(&db, ITEM, "SKU-ATOMICO", 10, 1000).await;
     let consumidor = PedidosConsumer::nuevo(
