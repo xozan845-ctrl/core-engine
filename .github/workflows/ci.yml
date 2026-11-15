@@ -140,6 +140,10 @@ jobs:
             dir: packages/catalog-service
             lines: 40
             functions: 43
+          - service: inventory-service
+            dir: packages/inventory-service
+            lines: 79
+            functions: 72
           - service: storage-service
             dir: packages/storage-service
             lines: 54

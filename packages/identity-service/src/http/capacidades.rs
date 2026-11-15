@@ -36,6 +36,22 @@ pub async fn listar(
     ok(serde_json::to_value(capacidades).map_err(|_| ApiError::interno())?)
 }
 
+/// GET /api/v2/empresas/:empresaId/features
+pub async fn manifiesto(
+    State(state): State<AppState>,
+    Path(empresa_id): Path<String>,
+    headers: HeaderMap,
+) -> Result<Response, ApiError> {
+    let actor = UsuarioContexto::desde_headers_o_error(&headers)?;
+    actor.exigir_roles(&["super_admin", "admin", "empresario"], &[])?;
+    let manifiesto = state
+        .servicios()?
+        .capacidades
+        .manifiesto(&empresa_id, &actor)
+        .await?;
+    ok(serde_json::to_value(manifiesto).map_err(|_| ApiError::interno())?)
+}
+
 /// PATCH /api/v2/empresas/:empresaId/capacidades/:capacidad
 pub async fn actualizar(
     State(state): State<AppState>,

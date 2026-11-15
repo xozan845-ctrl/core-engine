@@ -2230,784 +2230,6 @@
         ]
       }
     },
-    "/api/v2/admin/inventario": {
-      "get": {
-        "operationId": "InventarioController_listar",
-        "parameters": [
-          {
-            "name": "empresa_id",
-            "required": false,
-            "in": "query",
-            "description": "Filtra el inventario de una empresa (ADR-27)",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Líneas de inventario",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "required": [
-                    "data",
-                    "meta"
-                  ],
-                  "properties": {
-                    "data": {
-                      "type": "array",
-                      "items": {
-                        "$ref": "#/components/schemas/LineaInventarioResponseDto"
-                      }
-                    },
-                    "meta": {
-                      "$ref": "#/components/schemas/MetaRespuesta"
-                    }
-                  }
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "bearer": []
-          }
-        ],
-        "summary": "Niveles de stock (admin; Tabla 21)",
-        "tags": [
-          "Catálogo"
-        ]
-      }
-    },
-    "/api/v2/admin/inventario/proveedores": {
-      "post": {
-        "operationId": "InventarioController_crearProveedor",
-        "parameters": [],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/CrearProveedorInventarioRequestDto"
-              }
-            }
-          }
-        },
-        "responses": {
-          "201": {
-            "description": "Proveedor creado",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "required": [
-                    "data",
-                    "meta"
-                  ],
-                  "properties": {
-                    "data": {
-                      "$ref": "#/components/schemas/ProveedorInventarioResponseDto"
-                    },
-                    "meta": {
-                      "$ref": "#/components/schemas/MetaRespuesta"
-                    }
-                  }
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "bearer": []
-          }
-        ],
-        "summary": "Crear proveedor de inventario",
-        "tags": [
-          "Catálogo"
-        ]
-      }
-    },
-    "/api/v2/admin/inventario/lotes": {
-      "post": {
-        "operationId": "InventarioController_crearLote",
-        "parameters": [],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/CrearLoteInventarioRequestDto"
-              }
-            }
-          }
-        },
-        "responses": {
-          "201": {
-            "description": "Lote creado",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "required": [
-                    "data",
-                    "meta"
-                  ],
-                  "properties": {
-                    "data": {
-                      "$ref": "#/components/schemas/LoteInventarioResponseDto"
-                    },
-                    "meta": {
-                      "$ref": "#/components/schemas/MetaRespuesta"
-                    }
-                  }
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "bearer": []
-          }
-        ],
-        "summary": "Registrar lote y vencimiento de un item",
-        "tags": [
-          "Catálogo"
-        ]
-      },
-      "get": {
-        "operationId": "InventarioController_listarLotes",
-        "parameters": [
-          {
-            "name": "empresa_id",
-            "required": true,
-            "in": "query",
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "item_id",
-            "required": true,
-            "in": "query",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Lotes activos",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "required": [
-                    "data",
-                    "meta"
-                  ],
-                  "properties": {
-                    "data": {
-                      "type": "array",
-                      "items": {
-                        "$ref": "#/components/schemas/LoteInventarioResponseDto"
-                      }
-                    },
-                    "meta": {
-                      "$ref": "#/components/schemas/MetaRespuesta"
-                    }
-                  }
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "bearer": []
-          }
-        ],
-        "summary": "Listar lotes de inventario",
-        "tags": [
-          "Catálogo"
-        ]
-      }
-    },
-    "/api/v2/admin/inventario/lotes/consumir": {
-      "post": {
-        "operationId": "InventarioController_consumirLotes",
-        "parameters": [],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/ConsumirLotesRequestDto"
-              }
-            }
-          }
-        },
-        "responses": {
-          "201": {
-            "description": "Consumo aplicado por lote",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "required": [
-                    "data",
-                    "meta"
-                  ],
-                  "properties": {
-                    "data": {
-                      "$ref": "#/components/schemas/ConsumoLotesResponseDto"
-                    },
-                    "meta": {
-                      "$ref": "#/components/schemas/MetaRespuesta"
-                    }
-                  }
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "bearer": []
-          }
-        ],
-        "summary": "Consumir cantidades de lotes aplicando FEFO",
-        "tags": [
-          "Catálogo"
-        ]
-      }
-    },
-    "/api/v2/admin/ubicaciones": {
-      "get": {
-        "operationId": "UbicacionesController_listar",
-        "parameters": [
-          {
-            "name": "empresa_id",
-            "required": false,
-            "in": "query",
-            "description": "Solo admin global",
-            "schema": {}
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Ubicaciones",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "required": [
-                    "data",
-                    "meta"
-                  ],
-                  "properties": {
-                    "data": {
-                      "type": "array",
-                      "items": {
-                        "$ref": "#/components/schemas/UbicacionInventarioResponseDto"
-                      }
-                    },
-                    "meta": {
-                      "$ref": "#/components/schemas/MetaRespuesta"
-                    }
-                  }
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "bearer": []
-          }
-        ],
-        "summary": "Listar bodegas y sucursales de la empresa",
-        "tags": [
-          "Catálogo · Ubicaciones"
-        ]
-      },
-      "post": {
-        "operationId": "UbicacionesController_crear",
-        "parameters": [
-          {
-            "name": "empresa_id",
-            "required": false,
-            "in": "query",
-            "description": "Solo admin global",
-            "schema": {}
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/CrearUbicacionInventarioRequestDto"
-              }
-            }
-          }
-        },
-        "responses": {
-          "201": {
-            "description": "Ubicacion creada",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "required": [
-                    "data",
-                    "meta"
-                  ],
-                  "properties": {
-                    "data": {
-                      "$ref": "#/components/schemas/UbicacionInventarioResponseDto"
-                    },
-                    "meta": {
-                      "$ref": "#/components/schemas/MetaRespuesta"
-                    }
-                  }
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "bearer": []
-          }
-        ],
-        "summary": "Crear una bodega o sucursal",
-        "tags": [
-          "Catálogo · Ubicaciones"
-        ]
-      }
-    },
-    "/api/v2/admin/ubicaciones/{id}": {
-      "patch": {
-        "operationId": "UbicacionesController_actualizar",
-        "parameters": [
-          {
-            "name": "id",
-            "required": true,
-            "in": "path",
-            "schema": {
-              "format": "uuid",
-              "type": "string"
-            }
-          },
-          {
-            "name": "empresa_id",
-            "required": false,
-            "in": "query",
-            "description": "Solo admin global",
-            "schema": {}
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/ActualizarUbicacionInventarioRequestDto"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "Ubicacion actualizada",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "required": [
-                    "data",
-                    "meta"
-                  ],
-                  "properties": {
-                    "data": {
-                      "$ref": "#/components/schemas/UbicacionInventarioResponseDto"
-                    },
-                    "meta": {
-                      "$ref": "#/components/schemas/MetaRespuesta"
-                    }
-                  }
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "bearer": []
-          }
-        ],
-        "summary": "Actualizar una ubicacion",
-        "tags": [
-          "Catálogo · Ubicaciones"
-        ]
-      }
-    },
-    "/api/v2/admin/ubicaciones/transferencias": {
-      "post": {
-        "operationId": "UbicacionesController_trasladar",
-        "parameters": [
-          {
-            "name": "empresa_id",
-            "required": false,
-            "in": "query",
-            "description": "Solo admin global",
-            "schema": {}
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/TrasladarStockInventarioRequestDto"
-              }
-            }
-          }
-        },
-        "responses": {
-          "201": {
-            "description": "Stock trasladado",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "required": [
-                    "data",
-                    "meta"
-                  ],
-                  "properties": {
-                    "data": {
-                      "$ref": "#/components/schemas/TrasladoInventarioResponseDto"
-                    },
-                    "meta": {
-                      "$ref": "#/components/schemas/MetaRespuesta"
-                    }
-                  }
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "bearer": []
-          }
-        ],
-        "summary": "Trasladar stock entre dos ubicaciones",
-        "tags": [
-          "Catálogo · Ubicaciones"
-        ]
-      }
-    },
-    "/api/v2/admin/ubicaciones/items/{itemId}/stock": {
-      "get": {
-        "operationId": "UbicacionesController_stockItem",
-        "parameters": [
-          {
-            "name": "itemId",
-            "required": true,
-            "in": "path",
-            "schema": {
-              "format": "uuid",
-              "type": "string"
-            }
-          },
-          {
-            "name": "empresa_id",
-            "required": false,
-            "in": "query",
-            "description": "Solo admin global",
-            "schema": {}
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Stock por ubicacion",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "required": [
-                    "data",
-                    "meta"
-                  ],
-                  "properties": {
-                    "data": {
-                      "$ref": "#/components/schemas/StockItemUbicacionesInventarioResponseDto"
-                    },
-                    "meta": {
-                      "$ref": "#/components/schemas/MetaRespuesta"
-                    }
-                  }
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "bearer": []
-          }
-        ],
-        "summary": "Consultar el desglose de stock de un item",
-        "tags": [
-          "Catálogo · Ubicaciones"
-        ]
-      }
-    },
-    "/api/v2/admin/ubicaciones/{id}/stock": {
-      "get": {
-        "operationId": "UbicacionesController_listarStock",
-        "parameters": [
-          {
-            "name": "id",
-            "required": true,
-            "in": "path",
-            "schema": {
-              "format": "uuid",
-              "type": "string"
-            }
-          },
-          {
-            "name": "empresa_id",
-            "required": false,
-            "in": "query",
-            "description": "Solo admin global",
-            "schema": {}
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Stock de la ubicacion",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "required": [
-                    "data",
-                    "meta"
-                  ],
-                  "properties": {
-                    "data": {
-                      "type": "array",
-                      "items": {
-                        "$ref": "#/components/schemas/StockUbicacionInventarioResponseDto"
-                      }
-                    },
-                    "meta": {
-                      "$ref": "#/components/schemas/MetaRespuesta"
-                    }
-                  }
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "bearer": []
-          }
-        ],
-        "summary": "Listar el stock de una ubicacion",
-        "tags": [
-          "Catálogo · Ubicaciones"
-        ]
-      }
-    },
-    "/api/v2/admin/ubicaciones/{id}/stock/{itemId}": {
-      "put": {
-        "operationId": "UbicacionesController_ajustarStock",
-        "parameters": [
-          {
-            "name": "id",
-            "required": true,
-            "in": "path",
-            "schema": {
-              "format": "uuid",
-              "type": "string"
-            }
-          },
-          {
-            "name": "itemId",
-            "required": true,
-            "in": "path",
-            "schema": {
-              "format": "uuid",
-              "type": "string"
-            }
-          },
-          {
-            "name": "empresa_id",
-            "required": false,
-            "in": "query",
-            "description": "Solo admin global",
-            "schema": {}
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/AjustarStockUbicacionInventarioRequestDto"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "Stock ajustado",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "required": [
-                    "data",
-                    "meta"
-                  ],
-                  "properties": {
-                    "data": {
-                      "$ref": "#/components/schemas/StockUbicacionInventarioResponseDto"
-                    },
-                    "meta": {
-                      "$ref": "#/components/schemas/MetaRespuesta"
-                    }
-                  }
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "bearer": []
-          }
-        ],
-        "summary": "Fijar el stock de un item en una ubicacion",
-        "tags": [
-          "Catálogo · Ubicaciones"
-        ]
-      }
-    },
-    "/api/v2/catalog/configuracion-inventario": {
-      "get": {
-        "operationId": "OperacionesController_configuracion",
-        "parameters": [
-          {
-            "name": "empresa_id",
-            "required": false,
-            "in": "query",
-            "schema": {
-              "format": "uuid"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "required": [
-                    "data",
-                    "meta"
-                  ],
-                  "properties": {
-                    "data": {
-                      "$ref": "#/components/schemas/ConfiguracionInventarioResponseDto"
-                    },
-                    "meta": {
-                      "$ref": "#/components/schemas/MetaRespuesta"
-                    }
-                  }
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "bearer": []
-          }
-        ],
-        "summary": "Obtener la configuración de inventario de la empresa",
-        "tags": [
-          "Catálogo · Operaciones"
-        ]
-      },
-      "put": {
-        "operationId": "OperacionesController_guardarConfiguracion",
-        "parameters": [
-          {
-            "name": "empresa_id",
-            "required": false,
-            "in": "query",
-            "schema": {
-              "format": "uuid"
-            }
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/ActualizarConfiguracionInventarioRequestDto"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "required": [
-                    "data",
-                    "meta"
-                  ],
-                  "properties": {
-                    "data": {
-                      "$ref": "#/components/schemas/ConfiguracionInventarioResponseDto"
-                    },
-                    "meta": {
-                      "$ref": "#/components/schemas/MetaRespuesta"
-                    }
-                  }
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "bearer": []
-          }
-        ],
-        "summary": "Guardar la configuración de inventario",
-        "tags": [
-          "Catálogo · Operaciones"
-        ]
-      }
-    },
     "/api/v2/catalog/items/importar": {
       "post": {
         "operationId": "OperacionesController_importar",
@@ -3641,135 +2863,6 @@
           }
         ],
         "summary": "Dar de baja una promoción",
-        "tags": [
-          "Catálogo · Operaciones"
-        ]
-      }
-    },
-    "/api/v2/catalog/inventario/movimientos": {
-      "get": {
-        "operationId": "OperacionesController_listarMovimientos",
-        "parameters": [
-          {
-            "name": "empresa_id",
-            "required": false,
-            "in": "query",
-            "schema": {
-              "format": "uuid",
-              "type": "string"
-            }
-          },
-          {
-            "name": "tipo",
-            "required": false,
-            "in": "query",
-            "schema": {
-              "type": "string",
-              "enum": [
-                "entrada",
-                "salida",
-                "ajuste",
-                "traslado"
-              ]
-            }
-          },
-          {
-            "name": "pagina",
-            "required": false,
-            "in": "query",
-            "schema": {
-              "minimum": 1,
-              "type": "number"
-            }
-          },
-          {
-            "name": "limite",
-            "required": false,
-            "in": "query",
-            "schema": {
-              "minimum": 1,
-              "maximum": 100,
-              "type": "number"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "required": [
-                    "data",
-                    "meta"
-                  ],
-                  "properties": {
-                    "data": {
-                      "$ref": "#/components/schemas/PaginaMovimientosResponseDto"
-                    },
-                    "meta": {
-                      "$ref": "#/components/schemas/MetaRespuesta"
-                    }
-                  }
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "bearer": []
-          }
-        ],
-        "summary": "Listar movimientos y traslados de inventario",
-        "tags": [
-          "Catálogo · Operaciones"
-        ]
-      },
-      "post": {
-        "operationId": "OperacionesController_registrarMovimiento",
-        "parameters": [],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/CrearMovimientoInventarioRequestDto"
-              }
-            }
-          }
-        },
-        "responses": {
-          "201": {
-            "description": "",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "required": [
-                    "data",
-                    "meta"
-                  ],
-                  "properties": {
-                    "data": {
-                      "$ref": "#/components/schemas/MovimientoInventarioResponseDto"
-                    },
-                    "meta": {
-                      "$ref": "#/components/schemas/MetaRespuesta"
-                    }
-                  }
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "bearer": []
-          }
-        ],
-        "summary": "Registrar entrada, salida, ajuste o traslado",
         "tags": [
           "Catálogo · Operaciones"
         ]
@@ -11738,6 +10831,55 @@
         ]
       }
     },
+    "/api/v2/empresas/{empresaId}/features": {
+      "get": {
+        "operationId": "CapacidadesController_manifiesto",
+        "parameters": [
+          {
+            "name": "empresaId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Manifiesto de capacidades, modelos y features de la empresa",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/ManifiestoEmpresaResponseDto"
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/MetaRespuesta"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Manifiesto de capacidades y features de una empresa",
+        "tags": [
+          "Capacidades"
+        ]
+      }
+    },
     "/api/v2/empresas/{empresaId}/capacidades/{capacidad}": {
       "patch": {
         "operationId": "CapacidadesController_actualizar",
@@ -14693,6 +13835,484 @@
         "summary": "Intercambiar una API key por un JWT corto",
         "tags": [
           "API keys"
+        ]
+      }
+    },
+    "/api/v2/admin/inventario": {
+      "get": {
+        "summary": "Listar niveles de stock",
+        "responses": {
+          "200": {
+            "description": "Niveles de stock",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No autorizado"
+          },
+          "403": {
+            "description": "Capacidad no activa"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
+    "/api/v2/admin/inventario/proveedores": {
+      "post": {
+        "summary": "Crear proveedor",
+        "responses": {
+          "201": {
+            "description": "Proveedor creado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validacion"
+          },
+          "403": {
+            "description": "Capacidad no activa"
+          },
+          "409": {
+            "description": "Conflicto"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
+    "/api/v2/admin/inventario/lotes": {
+      "get": {
+        "summary": "Listar lotes",
+        "responses": {
+          "200": {
+            "description": "Lotes",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Capacidad no activa"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      },
+      "post": {
+        "summary": "Crear lote",
+        "responses": {
+          "201": {
+            "description": "Lote creado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validacion"
+          },
+          "409": {
+            "description": "Conflicto"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
+    "/api/v2/admin/inventario/lotes/consumir": {
+      "post": {
+        "summary": "Consumir lotes en orden FEFO",
+        "responses": {
+          "201": {
+            "description": "Consumo aplicado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validacion"
+          },
+          "409": {
+            "description": "Stock o lote insuficiente"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
+    "/api/v2/catalog/configuracion-inventario": {
+      "get": {
+        "summary": "Leer configuracion de inventario",
+        "responses": {
+          "200": {
+            "description": "Configuracion",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Capacidad no activa"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      },
+      "put": {
+        "summary": "Guardar configuracion de inventario",
+        "responses": {
+          "200": {
+            "description": "Configuracion guardada",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validacion"
+          },
+          "403": {
+            "description": "Capacidad no activa"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
+    "/api/v2/admin/ubicaciones": {
+      "get": {
+        "summary": "Listar ubicaciones",
+        "responses": {
+          "200": {
+            "description": "Ubicaciones",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Capacidad no activa"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      },
+      "post": {
+        "summary": "Crear ubicacion",
+        "responses": {
+          "201": {
+            "description": "Ubicacion creada",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validacion"
+          },
+          "409": {
+            "description": "Conflicto"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
+    "/api/v2/admin/ubicaciones/transferencias": {
+      "post": {
+        "summary": "Transferir stock entre ubicaciones",
+        "responses": {
+          "201": {
+            "description": "Transferencia aplicada",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validacion"
+          },
+          "409": {
+            "description": "Stock insuficiente"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
+    "/api/v2/admin/ubicaciones/items/{item_id}/stock": {
+      "get": {
+        "summary": "Stock de un item por ubicacion",
+        "parameters": [
+          {
+            "name": "item_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Stock por ubicacion",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Item no encontrado"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
+    "/api/v2/admin/ubicaciones/{id}": {
+      "patch": {
+        "summary": "Actualizar ubicacion",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Ubicacion actualizada",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validacion"
+          },
+          "404": {
+            "description": "Ubicacion no encontrada"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
+    "/api/v2/admin/ubicaciones/{id}/stock": {
+      "get": {
+        "summary": "Stock de una ubicacion",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Stock de la ubicacion",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Ubicacion no encontrada"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
+    "/api/v2/admin/ubicaciones/{id}/stock/{item_id}": {
+      "put": {
+        "summary": "Fijar stock de un item en una ubicacion",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "item_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Stock fijado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validacion"
+          },
+          "409": {
+            "description": "Conflicto"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
+    "/api/v2/catalog/inventario/movimientos": {
+      "get": {
+        "summary": "Listar movimientos de inventario",
+        "responses": {
+          "200": {
+            "description": "Movimientos",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validacion"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      },
+      "post": {
+        "summary": "Crear movimiento de inventario",
+        "responses": {
+          "201": {
+            "description": "Movimiento creado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validacion"
+          },
+          "409": {
+            "description": "Stock insuficiente"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
         ]
       }
     },
@@ -19707,6 +19327,11 @@
         "type": "apiKey",
         "in": "header",
         "name": "x-internal-key"
+      },
+      "bearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT"
       }
     },
     "schemas": {
@@ -21281,6 +20906,12 @@
       "ItemResponseDto": {
         "type": "object",
         "properties": {
+          "extensiones": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "object"
+            }
+          },
           "item_id": {
             "type": "string",
             "format": "uuid"
@@ -31081,6 +30712,120 @@
           "actualizado_en"
         ]
       },
+      "ManifiestoEmpresaResponseDto": {
+        "type": "object",
+        "properties": {
+          "empresa_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "vertical_id": {
+            "type": "string",
+            "nullable": true
+          },
+          "pack": {
+            "type": "object",
+            "nullable": true,
+            "properties": {
+              "codigo": {
+                "type": "string"
+              },
+              "version": {
+                "type": "integer"
+              },
+              "nombre": {
+                "type": "string"
+              },
+              "config": {
+                "type": "object"
+              }
+            },
+            "required": [
+              "codigo",
+              "version",
+              "nombre",
+              "config"
+            ]
+          },
+          "modelos": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "codigo": {
+                  "type": "string"
+                },
+                "nombre": {
+                  "type": "string"
+                },
+                "descripcion": {
+                  "type": "string"
+                },
+                "config": {
+                  "type": "object"
+                }
+              },
+              "required": [
+                "codigo",
+                "nombre",
+                "descripcion",
+                "config"
+              ]
+            }
+          },
+          "capacidades": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "codigo": {
+                  "type": "string"
+                },
+                "nombre": {
+                  "type": "string"
+                },
+                "modulo": {
+                  "type": "string"
+                },
+                "activo": {
+                  "type": "boolean"
+                },
+                "config": {
+                  "type": "object"
+                },
+                "features": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                }
+              },
+              "required": [
+                "codigo",
+                "nombre",
+                "modulo",
+                "activo",
+                "config",
+                "features"
+              ]
+            }
+          },
+          "features": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": [
+          "empresa_id",
+          "vertical_id",
+          "pack",
+          "modelos",
+          "capacidades",
+          "features"
+        ]
+      },
       "EmpresaResponseDto": {
         "type": "object",
         "properties": {
@@ -32555,6 +32300,19 @@
         },
         "required": [
           "personal_id"
+        ]
+      },
+      "Envelope": {
+        "type": "object",
+        "properties": {
+          "data": {},
+          "meta": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data",
+          "meta"
         ]
       },
       "AsignarProveedorRequestDto": {

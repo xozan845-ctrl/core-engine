@@ -92,7 +92,7 @@ Pasos:
 7. **Healthcheck/Readiness**: `GET /health` (liveness del gateway; lo usa el
    healthcheck de Dockploy, siempre abierto) y `GET /ready` (readiness agregada:
    responde **503** si algún microservicio del entorno desplegado no está `ok`;
-   son 9 en producción y 10 en stage porque incluye `commissions-service`, ADR-37;
+   son 10 en producción y 11 en stage porque incluye `inventory-service` (ADR-0018) y `commissions-service` (ADR-37);
    lo usa el smoke, R-CD-12). `/ready` exige `x-internal-key` salvo
    `READY_PUBLIC=true` (solo desarrollo) y está limitado a 10 req/min por IP con
    caché de 5 s.

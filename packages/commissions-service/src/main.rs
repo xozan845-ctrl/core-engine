@@ -86,7 +86,7 @@ async fn main() {
         config.internal_request_timeout_ms,
     ));
     let kpis: Arc<dyn Kpis> = Arc::new(KpisHttp::nueva(
-        config.catalog_service_url.clone(),
+        config.inventory_service_url.clone(),
         config.identity_service_url.clone(),
         config.internal_api_key.clone(),
         config.internal_request_timeout_ms,

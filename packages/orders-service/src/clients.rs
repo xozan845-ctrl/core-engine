@@ -29,6 +29,25 @@ pub struct Capacidad {
     pub activo: bool,
 }
 
+#[derive(Debug, Clone, Default, Deserialize, Serialize, PartialEq)]
+pub struct ConfiguracionOperativa {
+    #[serde(default)]
+    pub items: Vec<String>,
+    #[serde(default)]
+    pub fulfillment: Vec<String>,
+    #[serde(default)]
+    pub requiere_agenda: bool,
+    #[serde(default)]
+    pub trazabilidad: bool,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub enum ConfiguracionExterna {
+    Ok(ConfiguracionOperativa),
+    SinConfiguracion,
+    Error,
+}
+
 #[derive(Debug, Clone, Deserialize, Serialize, PartialEq)]
 pub struct OfertaExterna {
     pub id: String,
@@ -108,6 +127,11 @@ pub trait ClientesPort: Send + Sync {
         empresas: &[String],
         capacidades: &[String],
     ) -> Option<Vec<Capacidad>>;
+
+    /// Configuración operativa del pack; `SinConfiguracion` = sin restricción.
+    async fn configuracion(&self, _empresa_id: &str) -> ConfiguracionExterna {
+        ConfiguracionExterna::SinConfiguracion
+    }
     async fn ofertas(&self, ids: &[String]) -> Vec<OfertaExterna>;
     async fn precios(
         &self,
@@ -186,6 +210,32 @@ impl Clientes {
         }
         let cuerpo = respuesta.json::<RespuestaCapacidades>().await.ok()?;
         Some(cuerpo.capacidades)
+    }
+
+    pub async fn configuracion(&self, empresa_id: &str) -> ConfiguracionExterna {
+        let respuesta = match self
+            .http
+            .get(format!(
+                "{}/internal/empresas/{empresa_id}/configuracion",
+                self.identity_url
+            ))
+            .header("x-internal-key", &self.clave)
+            .send()
+            .await
+        {
+            Ok(respuesta) => respuesta,
+            Err(_) => return ConfiguracionExterna::Error,
+        };
+        if respuesta.status() == reqwest::StatusCode::NOT_FOUND {
+            return ConfiguracionExterna::SinConfiguracion;
+        }
+        if !respuesta.status().is_success() {
+            return ConfiguracionExterna::Error;
+        }
+        match respuesta.json::<ConfiguracionOperativa>().await {
+            Ok(config) => ConfiguracionExterna::Ok(config),
+            Err(_) => ConfiguracionExterna::Error,
+        }
     }
 
     pub async fn ofertas(&self, ids: &[String]) -> Vec<OfertaExterna> {
@@ -437,6 +487,10 @@ impl ClientesPort for Clientes {
         capacidades: &[String],
     ) -> Option<Vec<Capacidad>> {
         Clientes::capacidades(self, empresas, capacidades).await
+    }
+
+    async fn configuracion(&self, empresa_id: &str) -> ConfiguracionExterna {
+        Clientes::configuracion(self, empresa_id).await
     }
     async fn ofertas(&self, ids: &[String]) -> Vec<OfertaExterna> {
         Clientes::ofertas(self, ids).await
