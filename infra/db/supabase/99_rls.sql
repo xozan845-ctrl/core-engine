@@ -1288,3 +1288,11 @@ CREATE POLICY outbox_app ON inventory.outbox
   FOR ALL TO core_engine_app
   USING (true)
   WITH CHECK (true);
+
+-- El poller del Outbox corre sin claims de usuario; el rol de aplicación debe
+-- poder reclamar y publicar los pendientes.
+DROP POLICY IF EXISTS outbox_app ON inventory.outbox;
+CREATE POLICY outbox_app ON inventory.outbox
+  FOR ALL TO core_engine_app
+  USING (true)
+  WITH CHECK (true);
