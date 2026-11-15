@@ -129,7 +129,10 @@ impl Kpis for KpisHttp {
     async fn inventario(&self) -> InventarioResumen {
         let respuesta = match self
             .cliente
-            .get(format!("{}/internal/inventario/resumen", self.inventario_url))
+            .get(format!(
+                "{}/internal/inventario/resumen",
+                self.inventario_url
+            ))
             .header("x-internal-key", &self.clave)
             .timeout(self.timeout)
             .send()
