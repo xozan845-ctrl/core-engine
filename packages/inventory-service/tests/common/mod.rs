@@ -3,7 +3,7 @@
 //! Utilidades de integración: esquema `catalog` transitorio y fixtures.
 
 use serde_json::json;
-use sqlx::PgPool;
+use sqlx::{Connection, PgConnection, PgPool};
 use std::sync::Arc;
 
 pub use inventory_service::db::Db;
@@ -15,13 +15,21 @@ pub fn url() -> Option<String> {
     std::env::var("TEST_DATABASE_URL").ok()
 }
 
-pub async fn provisionar(url: &str) {
-    let pool = PgPool::connect(url).await.expect("postgres");
-    sqlx::raw_sql(include_str!("../schema.sql"))
-        .execute(&pool)
+/// Serializa todas las suites de inventario con un advisory lock de PostgreSQL.
+/// La conexión se mantiene viva en el contexto y libera el lock al hacer drop.
+pub struct DbLock(#[allow(dead_code)] PgConnection);
+
+pub async fn provisionar(url: &str) -> DbLock {
+    let mut conexion = PgConnection::connect(url).await.expect("postgres");
+    sqlx::query("SELECT pg_advisory_lock(918273645)")
+        .execute(&mut conexion)
         .await
-        .expect("esquema catalog");
-    pool.close().await;
+        .expect("lock de pruebas");
+    sqlx::raw_sql(include_str!("../schema.sql"))
+        .execute(&mut conexion)
+        .await
+        .expect("esquema inventory/catalog");
+    DbLock(conexion)
 }
 
 pub async fn db() -> Arc<Db> {
