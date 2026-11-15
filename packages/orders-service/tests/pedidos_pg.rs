@@ -287,6 +287,7 @@ async fn provisionar(url: &str) {
           monto_cents integer NOT NULL,
           moneda text NOT NULL DEFAULT 'NIO',
           referencia text NOT NULL DEFAULT '',
+          motivo_rechazo text NOT NULL DEFAULT '',
           confirmado_por uuid,
           confirmado_en timestamptz,
           creado_en timestamptz NOT NULL DEFAULT NOW(),
@@ -1207,4 +1208,111 @@ async fn debe_gestionar_metodos_de_pago() {
     assert_eq!(response.status(), StatusCode::OK);
     let actualizado = json_de(response).await;
     assert_eq!(actualizado["data"]["activo"], false);
+}
+
+async fn crear_orden_manual(router: axum::Router) -> (String, String) {
+    use axum::body::Body;
+    use axum::http::{Request, StatusCode};
+    use tower::ServiceExt;
+    let mut request = Request::post("/api/v2/orders").header("content-type", "application/json");
+    for (clave, valor) in headers_comprador() {
+        request = request.header(clave, valor);
+    }
+    let response = router
+        .clone()
+        .oneshot(
+            request
+                .body(Body::from(format!(
+                    r#"{{"tipo_orden":"compra","metodo_pago":"efectivo","items":[{{"oferta_id":"{OFERTA}","cantidad":1,"fulfillment":"none"}}]}}"#
+                )))
+                .expect("request"),
+        )
+        .await
+        .expect("response");
+    assert_eq!(response.status(), StatusCode::CREATED);
+    let orden = json_de(response).await;
+    let order_id = orden["data"]["id"].as_str().expect("order id").to_string();
+
+    let mut request = Request::get(format!("/api/v2/admin/pagos?order_id={order_id}"));
+    for (clave, valor) in headers_admin() {
+        request = request.header(clave, valor);
+    }
+    let response = router
+        .oneshot(request.body(Body::empty()).expect("request"))
+        .await
+        .expect("response");
+    assert_eq!(response.status(), StatusCode::OK);
+    let pagos = json_de(response).await;
+    let pago_id = pagos["data"][0]["id"]
+        .as_str()
+        .expect("pago id")
+        .to_string();
+    (order_id, pago_id)
+}
+
+#[tokio::test]
+async fn debe_confirmar_y_rechazar_pagos_manuales() {
+    use axum::body::Body;
+    use axum::http::{Request, StatusCode};
+    use tower::ServiceExt;
+    let _guard = DB_LOCK.lock().await;
+    let Some(db) = con_bd().await else { return };
+    let router = router_completo(Arc::clone(&db), 10).await;
+
+    let (order_id, pago_id) = crear_orden_manual(router.clone()).await;
+    let mut request = Request::post(format!("/api/v2/admin/pagos/{pago_id}/confirmar"));
+    for (clave, valor) in headers_admin() {
+        request = request.header(clave, valor);
+    }
+    let response = router
+        .clone()
+        .oneshot(request.body(Body::empty()).expect("request"))
+        .await
+        .expect("response");
+    assert_eq!(response.status(), StatusCode::OK);
+    let pago = json_de(response).await;
+    assert_eq!(pago["data"]["estado"], "confirmado");
+
+    let mut request = Request::get(format!("/api/v2/orders/{order_id}"));
+    for (clave, valor) in headers_comprador() {
+        request = request.header(clave, valor);
+    }
+    let response = router
+        .clone()
+        .oneshot(request.body(Body::empty()).expect("request"))
+        .await
+        .expect("response");
+    let orden = json_de(response).await;
+    assert_eq!(orden["data"]["estado"], "pagada");
+
+    let (order_id, pago_id) = crear_orden_manual(router.clone()).await;
+    let mut request = Request::post(format!("/api/v2/admin/pagos/{pago_id}/rechazar"))
+        .header("content-type", "application/json");
+    for (clave, valor) in headers_admin() {
+        request = request.header(clave, valor);
+    }
+    let response = router
+        .clone()
+        .oneshot(
+            request
+                .body(Body::from(r#"{"motivo":"sin fondos"}"#))
+                .expect("request"),
+        )
+        .await
+        .expect("response");
+    assert_eq!(response.status(), StatusCode::OK);
+    let pago = json_de(response).await;
+    assert_eq!(pago["data"]["estado"], "rechazado");
+    assert_eq!(pago["data"]["motivo_rechazo"], "sin fondos");
+
+    let mut request = Request::get(format!("/api/v2/orders/{order_id}"));
+    for (clave, valor) in headers_comprador() {
+        request = request.header(clave, valor);
+    }
+    let response = router
+        .oneshot(request.body(Body::empty()).expect("request"))
+        .await
+        .expect("response");
+    let orden = json_de(response).await;
+    assert_eq!(orden["data"]["estado"], "cancelada");
 }

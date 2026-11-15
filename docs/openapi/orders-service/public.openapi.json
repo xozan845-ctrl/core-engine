@@ -658,6 +658,166 @@
         ]
       }
     },
+    "/api/v2/admin/pagos": {
+      "get": {
+        "operationId": "PagosController_listarPagos",
+        "parameters": [
+          {
+            "name": "order_id",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Pagos de la orden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
+                  "properties": {
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/OrdersPagoResponseDto"
+                      }
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/MetaRespuesta"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Listar pagos de una orden (admin)",
+        "tags": [
+          "Pagos"
+        ]
+      }
+    },
+    "/api/v2/admin/pagos/{id}/confirmar": {
+      "post": {
+        "operationId": "PagosController_confirmarPago",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Pago confirmado y orden pagada",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/OrdersPagoResponseDto"
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/MetaRespuesta"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Confirmar pago manual (admin)",
+        "tags": [
+          "Pagos"
+        ]
+      }
+    },
+    "/api/v2/admin/pagos/{id}/rechazar": {
+      "post": {
+        "operationId": "PagosController_rechazarPago",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/OrdersRechazarPagoRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Pago rechazado y orden cancelada",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/OrdersPagoResponseDto"
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/MetaRespuesta"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Rechazar pago manual (admin)",
+        "tags": [
+          "Pagos"
+        ]
+      }
+    },
     "/api/v2/orders/{id}": {
       "get": {
         "operationId": "PedidosController_detalle",
@@ -2289,6 +2449,78 @@
       }
     },
     "schemas": {
+      "OrdersPagoResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "order_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "empresa_id": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true
+          },
+          "metodo_codigo": {
+            "type": "string"
+          },
+          "estado": {
+            "type": "string"
+          },
+          "monto_cents": {
+            "type": "integer"
+          },
+          "moneda": {
+            "type": "string"
+          },
+          "referencia": {
+            "type": "string"
+          },
+          "motivo_rechazo": {
+            "type": "string"
+          },
+          "confirmado_por": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true
+          },
+          "confirmado_en": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "creado_en": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "order_id",
+          "empresa_id",
+          "metodo_codigo",
+          "estado",
+          "monto_cents",
+          "moneda",
+          "referencia",
+          "motivo_rechazo",
+          "confirmado_por",
+          "confirmado_en",
+          "creado_en"
+        ]
+      },
+      "OrdersRechazarPagoRequestDto": {
+        "type": "object",
+        "properties": {
+          "motivo": {
+            "type": "string"
+          }
+        }
+      },
       "OrdersMetodoPagoResponseDto": {
         "type": "object",
         "properties": {

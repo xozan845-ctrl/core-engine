@@ -4,8 +4,9 @@
 //! registro `orders.pagos` guarda intentos/confirmaciones; la confirmación
 //! manual (efectivo/transferencia) mueve la orden a `pagada`.
 
-use crate::db::Db;
+use crate::db::{iso_ms, uuid_opcional, uuid_texto, Db};
 use crate::errors::ApiError;
+use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
 use sqlx::Row;
@@ -18,6 +19,22 @@ pub struct MetodoPago {
     pub requiere_confirmacion: bool,
     pub activo: bool,
     pub config: Value,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct Pago {
+    pub id: String,
+    pub order_id: String,
+    pub empresa_id: Option<String>,
+    pub metodo_codigo: String,
+    pub estado: String,
+    pub monto_cents: i64,
+    pub moneda: String,
+    pub referencia: String,
+    pub motivo_rechazo: String,
+    pub confirmado_por: Option<String>,
+    pub confirmado_en: Option<String>,
+    pub creado_en: String,
 }
 
 pub struct Pagos {
@@ -44,6 +61,90 @@ impl Pagos {
         .map_err(crate::event_store::error_db)?;
         tx.commit().await.map_err(crate::event_store::error_db)?;
         filas.iter().map(fila_metodo).collect()
+    }
+
+    pub async fn listar_por_orden(&self, order_id: &str) -> Result<Vec<Pago>, ApiError> {
+        let mut tx = self
+            .db
+            .transaccion()
+            .await
+            .map_err(crate::event_store::error_db)?;
+        let filas = sqlx::query(
+            "SELECT id, order_id, empresa_id, metodo_codigo, estado, monto_cents,
+                    moneda, referencia, motivo_rechazo, confirmado_por,
+                    confirmado_en, creado_en
+               FROM orders.pagos
+              WHERE order_id = $1::uuid
+              ORDER BY creado_en DESC",
+        )
+        .bind(order_id)
+        .fetch_all(&mut *tx)
+        .await
+        .map_err(crate::event_store::error_db)?;
+        tx.commit().await.map_err(crate::event_store::error_db)?;
+        filas.iter().map(fila_pago).collect()
+    }
+
+    pub async fn confirmar(&self, pago_id: &str, actor_id: &str) -> Result<Pago, ApiError> {
+        self.procesar(pago_id, "confirmado", "", actor_id).await
+    }
+
+    pub async fn rechazar(
+        &self,
+        pago_id: &str,
+        motivo: &str,
+        actor_id: &str,
+    ) -> Result<Pago, ApiError> {
+        self.procesar(pago_id, "rechazado", motivo, actor_id).await
+    }
+
+    async fn procesar(
+        &self,
+        pago_id: &str,
+        estado: &str,
+        motivo: &str,
+        actor_id: &str,
+    ) -> Result<Pago, ApiError> {
+        let mut tx = self
+            .db
+            .transaccion()
+            .await
+            .map_err(crate::event_store::error_db)?;
+        let fila = sqlx::query(
+            "UPDATE orders.pagos
+                SET estado = $2,
+                    motivo_rechazo = CASE WHEN $2 = 'rechazado' THEN $3 ELSE motivo_rechazo END,
+                    confirmado_por = $4::uuid,
+                    confirmado_en = NOW(),
+                    actualizado_en = NOW()
+              WHERE id = $1::uuid AND estado = 'pendiente'
+              RETURNING id, order_id, empresa_id, metodo_codigo, estado, monto_cents,
+                        moneda, referencia, motivo_rechazo, confirmado_por,
+                        confirmado_en, creado_en",
+        )
+        .bind(pago_id)
+        .bind(estado)
+        .bind(motivo)
+        .bind(actor_id)
+        .fetch_optional(&mut *tx)
+        .await
+        .map_err(crate::event_store::error_db)?;
+        let Some(fila) = fila else {
+            let existe: Option<String> =
+                sqlx::query_scalar("SELECT estado FROM orders.pagos WHERE id = $1::uuid")
+                    .bind(pago_id)
+                    .fetch_optional(&mut *tx)
+                    .await
+                    .map_err(crate::event_store::error_db)?;
+            return match existe {
+                Some(estado) => Err(ApiError::conflicto(format!(
+                    "El pago ya fue procesado (estado {estado})."
+                ))),
+                None => Err(ApiError::no_encontrado("Pago", pago_id)),
+            };
+        };
+        tx.commit().await.map_err(crate::event_store::error_db)?;
+        fila_pago(&fila)
     }
 
     /// Método activo por código; `None` si no existe o está inactivo.
@@ -183,6 +284,43 @@ impl Pagos {
         tx.commit().await.map_err(crate::event_store::error_db)?;
         fila_metodo(&fila)
     }
+}
+
+fn fila_pago(fila: &sqlx::postgres::PgRow) -> Result<Pago, ApiError> {
+    let confirmado_en: Option<DateTime<Utc>> = fila
+        .try_get("confirmado_en")
+        .map_err(crate::event_store::error_db)?;
+    let creado_en: DateTime<Utc> = fila
+        .try_get("creado_en")
+        .map_err(crate::event_store::error_db)?;
+    Ok(Pago {
+        id: uuid_texto(fila, "id").map_err(crate::event_store::error_db)?,
+        order_id: uuid_texto(fila, "order_id").map_err(crate::event_store::error_db)?,
+        empresa_id: uuid_opcional(fila, "empresa_id").map_err(crate::event_store::error_db)?,
+        metodo_codigo: fila
+            .try_get("metodo_codigo")
+            .map_err(crate::event_store::error_db)?,
+        estado: fila
+            .try_get("estado")
+            .map_err(crate::event_store::error_db)?,
+        monto_cents: i64::from(
+            fila.try_get::<i32, _>("monto_cents")
+                .map_err(crate::event_store::error_db)?,
+        ),
+        moneda: fila
+            .try_get("moneda")
+            .map_err(crate::event_store::error_db)?,
+        referencia: fila
+            .try_get("referencia")
+            .map_err(crate::event_store::error_db)?,
+        motivo_rechazo: fila
+            .try_get("motivo_rechazo")
+            .map_err(crate::event_store::error_db)?,
+        confirmado_por: uuid_opcional(fila, "confirmado_por")
+            .map_err(crate::event_store::error_db)?,
+        confirmado_en: confirmado_en.map(iso_ms),
+        creado_en: iso_ms(creado_en),
+    })
 }
 
 fn fila_metodo(fila: &sqlx::postgres::PgRow) -> Result<MetodoPago, ApiError> {
