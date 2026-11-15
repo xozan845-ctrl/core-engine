@@ -6,20 +6,16 @@ use common::*;
 use inventory_service::inventario::Inventario;
 use serde_json::json;
 use std::sync::Arc;
-use tokio::sync::Mutex;
-
-static DB_LOCK: Mutex<()> = Mutex::const_new(());
 
 struct Contexto {
-    _guard: tokio::sync::MutexGuard<'static, ()>,
+    _guard: DbLock,
     inventario: Arc<Inventario>,
     db: Arc<Db>,
 }
 
 async fn preparar() -> Contexto {
     let url = url().expect("TEST_DATABASE_URL");
-    let guard = DB_LOCK.lock().await;
-    provisionar(&url).await;
+    let guard = provisionar(&url).await;
     let db = db().await;
     let inventario = Arc::new(Inventario::nueva(Arc::clone(&db)));
     Contexto {

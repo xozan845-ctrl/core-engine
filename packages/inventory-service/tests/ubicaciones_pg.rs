@@ -7,12 +7,9 @@ use inventory_service::movimientos::Movimientos;
 use inventory_service::ubicaciones::Ubicaciones;
 use serde_json::json;
 use std::sync::Arc;
-use tokio::sync::Mutex;
-
-static DB_LOCK: Mutex<()> = Mutex::const_new(());
 
 struct Contexto {
-    _guard: tokio::sync::MutexGuard<'static, ()>,
+    _guard: DbLock,
     ubicaciones: Arc<Ubicaciones>,
     movimientos: Arc<Movimientos>,
     db: Arc<Db>,
@@ -20,8 +17,7 @@ struct Contexto {
 
 async fn preparar() -> Contexto {
     let url = url().expect("TEST_DATABASE_URL");
-    let guard = DB_LOCK.lock().await;
-    provisionar(&url).await;
+    let guard = provisionar(&url).await;
     let db = db().await;
     let ubicaciones = Arc::new(Ubicaciones::nueva(Arc::clone(&db)));
     let movimientos = Arc::new(Movimientos::nueva(Arc::clone(&db)));

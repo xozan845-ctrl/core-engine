@@ -13,15 +13,11 @@ use inventory_service::metrics::Metrics;
 use inventory_service::state::AppState;
 use serde_json::{json, Value};
 use std::sync::Arc;
-use tokio::sync::Mutex;
 use tower::ServiceExt;
 
-static DB_LOCK: Mutex<()> = Mutex::const_new(());
-
-async fn estado() -> (tokio::sync::MutexGuard<'static, ()>, AppState, Arc<Db>) {
+async fn estado() -> (DbLock, AppState, Arc<Db>) {
     let url = url().expect("TEST_DATABASE_URL");
-    let guard = DB_LOCK.lock().await;
-    provisionar(&url).await;
+    let guard = provisionar(&url).await;
     let db = db().await;
     let config = Config::from_pairs([
         ("SERVICIO", "inventory-service"),
