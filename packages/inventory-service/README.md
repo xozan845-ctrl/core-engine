@@ -34,8 +34,10 @@ Variables de entorno: `PORT` (3013), `SERVICIO`, `DATABASE_URL`,
 
 ## Contrato
 
-El OpenAPI público vive en
-[`docs/openapi/inventory-service/public.openapi.json`](../../docs/openapi/inventory-service/public.openapi.json).
+Mientras el servicio no está en `SERVICES`, el OpenAPI vive en
+[`packages/inventory-service/openapi/`](./openapi/) para no colisionar con
+`catalog-service` en el contrato agregado. En el PR 5 se mueve a
+`docs/openapi/inventory-service/`.
 Las rutas se conservan con el prefijo `/api/v2/admin/inventario`,
 `/api/v2/admin/ubicaciones` y `/api/v2/catalog/inventario` para no romper el
 gateway ni los clientes internos.
