@@ -1281,19 +1281,10 @@ CREATE POLICY outbox_admin ON inventory.outbox
   FOR ALL TO authenticated
   USING (auth.rol() IN ('super_admin', 'admin'))
   WITH CHECK (auth.rol() IN ('super_admin', 'admin'));
-
--- ── identity.negocios (ADR-0019) ─────────────────────────────────────────
--- Un negocio pertenece a una empresa; el aislamiento sigue siendo por tenant.
-ALTER TABLE identity.negocios ENABLE ROW LEVEL SECURITY;
-DROP POLICY IF EXISTS negocios_admin ON identity.negocios;
-DROP POLICY IF EXISTS negocios_tenant ON identity.negocios;
-DROP POLICY IF EXISTS negocios_app ON identity.negocios;
-CREATE POLICY negocios_admin ON identity.negocios FOR ALL TO authenticated
-  USING (auth.rol() IN ('super_admin', 'admin'))
-  WITH CHECK (auth.rol() IN ('super_admin', 'admin'));
-CREATE POLICY negocios_tenant ON identity.negocios FOR ALL TO authenticated
-  USING (empresa_id::text = (auth.jwt() ->> 'tenant_id'))
-  WITH CHECK (auth.rol() = 'empresario'
-          AND empresa_id::text = (auth.jwt() ->> 'tenant_id'));
-CREATE POLICY negocios_app ON identity.negocios FOR SELECT TO core_engine_app
-  USING (true);
+-- El poller del Outbox corre sin claims de usuario; el rol de aplicación debe
+-- poder reclamar y publicar los pendientes.
+DROP POLICY IF EXISTS outbox_app ON inventory.outbox;
+CREATE POLICY outbox_app ON inventory.outbox
+  FOR ALL TO core_engine_app
+  USING (true)
+  WITH CHECK (true);
