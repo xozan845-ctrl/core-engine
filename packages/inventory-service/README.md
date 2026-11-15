@@ -20,6 +20,11 @@ transferencias, reservas y configuración de inventario.
 Mientras dure la transición, el SQL apunta a `catalog.*`; el PR 5 mueve las
 tablas al esquema propio y elimina esa dependencia.
 
+> **No ejecutar `inventory-service` contra la misma base mientras
+> `catalog-service` siga consumiendo `catalog.pedidos`.** Ambos descuentan
+> stock y duplicarían la reserva. El corte de consumidores es parte del PR 5 y
+> debe hacerse con el flag de gateway apagado hacia el servicio viejo.
+
 ## Comandos
 
 ```bash
