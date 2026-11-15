@@ -70,7 +70,7 @@ impl Reservas {
             let lotes = sqlx::query(
                 "SELECT id, cantidad_disponible,
                         (vence_en IS NOT NULL AND vence_en < CURRENT_DATE) AS vencido
-                   FROM catalog.lotes_inventario
+                   FROM inventory.lotes_inventario
                   WHERE empresa_id = $1::uuid AND item_id = $2::uuid AND cantidad_disponible > 0
                   ORDER BY vence_en NULLS LAST, creado_en, id
                   FOR UPDATE",
@@ -95,7 +95,7 @@ impl Reservas {
                     Ok(asignaciones) => {
                         for (lote_id, cantidad) in asignaciones {
                             sqlx::query(
-                                "UPDATE catalog.lotes_inventario
+                                "UPDATE inventory.lotes_inventario
                                     SET cantidad_disponible = cantidad_disponible - $1,
                                         actualizado_en = NOW()
                                   WHERE id = $2::uuid",
@@ -106,7 +106,7 @@ impl Reservas {
                             .await
                             .map_err(interno)?;
                             sqlx::query(
-                                "INSERT INTO catalog.reservas_lotes
+                                "INSERT INTO inventory.reservas_lotes
                                    (order_id, lote_id, empresa_id, item_id, cantidad)
                                  VALUES ($1::uuid, $2::uuid, $3::uuid, $4::uuid, $5)",
                             )
@@ -131,7 +131,7 @@ impl Reservas {
                 let series = sqlx::query(
                     "SELECT s.id
                        FROM catalog.item_series s
-                       LEFT JOIN catalog.ubicaciones u ON u.id = s.ubicacion_id
+                       LEFT JOIN inventory.ubicaciones u ON u.id = s.ubicacion_id
                       WHERE s.empresa_id = $1::uuid AND s.item_id = $2::uuid
                         AND s.estado = 'disponible'
                       ORDER BY (u.predeterminada IS TRUE) DESC, s.creado_en, s.id
@@ -197,7 +197,7 @@ impl Reservas {
         }
 
         sqlx::query(
-            "INSERT INTO catalog.reservas_ordenes (order_id, items_json, creado_en)
+            "INSERT INTO inventory.reservas_ordenes (order_id, items_json, creado_en)
              VALUES ($1::uuid, $2::jsonb, NOW())",
         )
         .bind(order_id)
@@ -242,7 +242,7 @@ impl Reservas {
             .map_err(interno)?;
         }
         sqlx::query(
-            "INSERT INTO catalog.ajustes_stock
+            "INSERT INTO inventory.ajustes_stock
                (empresa_id, item_id, cantidad_anterior, cantidad_nueva, motivo, realizado_en)
              SELECT i.empresa_id, i.id, i.stock - x.cantidad, i.stock,
                     'devolucion orden ' || $1, NOW()
@@ -257,22 +257,22 @@ impl Reservas {
         .await
         .map_err(interno)?;
         sqlx::query(
-            "UPDATE catalog.lotes_inventario l
+            "UPDATE inventory.lotes_inventario l
                 SET cantidad_disponible = LEAST(l.cantidad_inicial, l.cantidad_disponible + r.cantidad),
                     actualizado_en = NOW()
-               FROM catalog.reservas_lotes r
+               FROM inventory.reservas_lotes r
               WHERE r.lote_id = l.id AND r.order_id = $1::uuid",
         )
         .bind(order_id)
         .execute(&mut **tx)
         .await
         .map_err(interno)?;
-        sqlx::query("DELETE FROM catalog.reservas_lotes WHERE order_id = $1::uuid")
+        sqlx::query("DELETE FROM inventory.reservas_lotes WHERE order_id = $1::uuid")
             .bind(order_id)
             .execute(&mut **tx)
             .await
             .map_err(interno)?;
-        sqlx::query("DELETE FROM catalog.reservas_ordenes WHERE order_id = $1::uuid")
+        sqlx::query("DELETE FROM inventory.reservas_ordenes WHERE order_id = $1::uuid")
             .bind(order_id)
             .execute(&mut **tx)
             .await
@@ -300,7 +300,7 @@ impl Reservas {
                  UPDATE catalog.item_series s
                     SET estado = 'devuelto', devuelto_en = NOW(),
                         ubicacion_id = COALESCE((
-                          SELECT u.id FROM catalog.ubicaciones u
+                          SELECT u.id FROM inventory.ubicaciones u
                            WHERE u.empresa_id = $2::uuid AND u.predeterminada AND u.activo
                            LIMIT 1
                         ), s.ubicacion_id),
@@ -350,7 +350,7 @@ impl Reservas {
         event_id: &str,
     ) -> Result<bool, ApiError> {
         let fila =
-            sqlx::query("SELECT 1 FROM catalog.eventos_procesados WHERE event_id = $1::uuid")
+            sqlx::query("SELECT 1 FROM inventory.eventos_procesados WHERE event_id = $1::uuid")
                 .bind(event_id)
                 .fetch_optional(&mut **tx)
                 .await
@@ -364,7 +364,7 @@ impl Reservas {
         tipo: &str,
     ) -> Result<(), ApiError> {
         sqlx::query(
-            "INSERT INTO catalog.eventos_procesados (event_id, tipo, procesado_en)
+            "INSERT INTO inventory.eventos_procesados (event_id, tipo, procesado_en)
              VALUES ($1::uuid, $2, NOW()) ON CONFLICT (event_id) DO NOTHING",
         )
         .bind(event_id)

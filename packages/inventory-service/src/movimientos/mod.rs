@@ -57,7 +57,7 @@ impl Movimientos {
         let mut tx = self.db.transaccion().await.map_err(interno)?;
         let total: i32 = {
             let sql = format!(
-                "SELECT COUNT(*)::int AS n FROM catalog.movimientos_inventario {where_clause}"
+                "SELECT COUNT(*)::int AS n FROM inventory.movimientos_inventario {where_clause}"
             );
             let mut consulta = sqlx::query(&sql);
             for parametro in &params {
@@ -71,7 +71,7 @@ impl Movimientos {
         };
         let sql = format!(
             "SELECT {COLUMNAS}
-               FROM catalog.movimientos_inventario {where_clause}
+               FROM inventory.movimientos_inventario {where_clause}
               ORDER BY creado_en DESC LIMIT ${} OFFSET ${}",
             params.len() + 1,
             params.len() + 2
@@ -166,7 +166,7 @@ impl Movimientos {
                     .map(str::to_string)
                     .unwrap_or_else(|| format!("movimiento {}", cabecera.tipo));
                 sqlx::query(
-                    "INSERT INTO catalog.ajustes_stock
+                    "INSERT INTO inventory.ajustes_stock
                        (id, empresa_id, item_id, cantidad_anterior, cantidad_nueva, motivo,
                         realizado_en)
                      VALUES (gen_random_uuid(), $1::uuid, $2::uuid, $3, $4, $5, NOW())",
@@ -194,7 +194,7 @@ impl Movimientos {
         let referencia = texto_opcional(datos, "referencia").unwrap_or_default();
         let lineas_json = Value::Array(lineas_salida).to_string();
         let fila = sqlx::query(&format!(
-            "INSERT INTO catalog.movimientos_inventario
+            "INSERT INTO inventory.movimientos_inventario
                (empresa_id, tipo, motivo, referencia, ubicacion_origen, ubicacion_destino,
                 lineas, creado_por)
              VALUES ($1::uuid, $2, $3, $4, $5, $6, $7::jsonb, $8::uuid)
@@ -220,7 +220,7 @@ impl Movimientos {
         let mut tx = self.db.transaccion().await.map_err(interno)?;
         let fila = sqlx::query(
             "SELECT permitir_stock_negativo
-               FROM catalog.configuracion_inventario WHERE empresa_id = $1::uuid",
+               FROM inventory.configuracion_inventario WHERE empresa_id = $1::uuid",
         )
         .bind(empresa_id)
         .fetch_optional(&mut *tx)

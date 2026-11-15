@@ -19,7 +19,7 @@ pub struct Config {
     pub rabbitmq_url: Option<String>,
     pub internal_api_key: Option<String>,
     pub orders_service_url: String,
-    pub catalog_service_url: String,
+    pub inventory_service_url: String,
     pub identity_service_url: String,
     pub internal_request_timeout_ms: u64,
     pub outbox_tabla: String,
@@ -70,8 +70,8 @@ impl Config {
                 .unwrap_or_else(|| "http://orders-service:3004".to_string())
                 .trim_end_matches('/')
                 .to_string(),
-            catalog_service_url: leer("CATALOG_SERVICE_URL")
-                .unwrap_or_else(|| "http://catalog-service:3002".to_string())
+            inventory_service_url: leer("INVENTORY_SERVICE_URL")
+                .unwrap_or_else(|| "http://inventory-service:3013".to_string())
                 .trim_end_matches('/')
                 .to_string(),
             identity_service_url: leer("IDENTITY_SERVICE_URL")
@@ -131,7 +131,7 @@ mod tests {
         assert_eq!(config.puerto, PUERTO_COMMISSIONS);
         assert_eq!(config.servicio, NOMBRE_SERVICIO);
         assert_eq!(config.orders_service_url, "http://orders-service:3004");
-        assert_eq!(config.catalog_service_url, "http://catalog-service:3002");
+        assert_eq!(config.inventory_service_url, "http://inventory-service:3013");
         assert_eq!(config.identity_service_url, "http://identity-service:3001");
         assert_eq!(
             config.internal_request_timeout_ms,
@@ -150,7 +150,7 @@ mod tests {
             ("DATABASE_URL", "postgres://localhost/core"),
             ("RABBITMQ_URL", "amqp://localhost"),
             ("ORDERS_SERVICE_URL", "http://orders:3004/"),
-            ("CATALOG_SERVICE_URL", "http://catalog:3002/"),
+            ("INVENTORY_SERVICE_URL", "http://inventory:3013/"),
             ("IDENTITY_SERVICE_URL", "http://identity:3001/"),
             ("OUTBOX_TABLA", "commissions.outbox"),
             ("COMMISSION_RATE", "0.15"),
@@ -163,7 +163,7 @@ mod tests {
             Some("postgres://localhost/core")
         );
         assert_eq!(config.orders_service_url, "http://orders:3004");
-        assert_eq!(config.catalog_service_url, "http://catalog:3002");
+        assert_eq!(config.inventory_service_url, "http://inventory:3013");
         assert_eq!(config.identity_service_url, "http://identity:3001");
         assert_eq!(config.outbox_tabla, "commissions.outbox");
         assert!((config.tasa_comision() - 0.15).abs() < f64::EPSILON);

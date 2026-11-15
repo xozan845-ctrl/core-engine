@@ -1,8 +1,10 @@
 -- Esquema mínimo de la migración para las pruebas de inventario (ADR-0018).
--- El servicio usa `catalog.*` como fuente transitoria hasta el PR 5; este
+-- Esquema de pruebas del corte PR 5: `inventory` para inventario y `catalog`
 -- esquema reproduce solo las tablas que el dominio necesita.
 DROP SCHEMA IF EXISTS catalog CASCADE;
+DROP SCHEMA IF EXISTS inventory CASCADE;
 CREATE SCHEMA catalog;
+CREATE SCHEMA inventory;
 
 CREATE TABLE catalog.items (
   id              uuid PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -21,7 +23,7 @@ CREATE TABLE catalog.items (
   actualizado_en  timestamptz NOT NULL DEFAULT NOW()
 );
 
-CREATE TABLE catalog.configuracion_inventario (
+CREATE TABLE inventory.configuracion_inventario (
   empresa_id                uuid PRIMARY KEY,
   metodo_costeo             text NOT NULL DEFAULT 'promedio',
   permitir_stock_negativo   boolean NOT NULL DEFAULT false,
@@ -31,7 +33,7 @@ CREATE TABLE catalog.configuracion_inventario (
   actualizado_en            timestamptz NOT NULL DEFAULT NOW()
 );
 
-CREATE TABLE catalog.proveedores (
+CREATE TABLE inventory.proveedores (
   id         uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   empresa_id uuid NOT NULL,
   codigo     text NOT NULL,
@@ -41,7 +43,7 @@ CREATE TABLE catalog.proveedores (
   activo     boolean NOT NULL DEFAULT true
 );
 
-CREATE TABLE catalog.lotes_inventario (
+CREATE TABLE inventory.lotes_inventario (
   id                  uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   empresa_id          uuid NOT NULL,
   item_id             uuid NOT NULL,
@@ -54,13 +56,13 @@ CREATE TABLE catalog.lotes_inventario (
   actualizado_en      timestamptz NOT NULL DEFAULT NOW()
 );
 
-CREATE TABLE catalog.reservas_ordenes (
+CREATE TABLE inventory.reservas_ordenes (
   order_id   uuid PRIMARY KEY,
   items_json jsonb NOT NULL,
   creado_en  timestamptz NOT NULL DEFAULT NOW()
 );
 
-CREATE TABLE catalog.ubicaciones (
+CREATE TABLE inventory.ubicaciones (
   id             uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   empresa_id     uuid NOT NULL,
   codigo         text NOT NULL,
@@ -74,7 +76,7 @@ CREATE TABLE catalog.ubicaciones (
   UNIQUE (empresa_id, codigo)
 );
 
-CREATE TABLE catalog.item_stock_ubicacion (
+CREATE TABLE inventory.item_stock_ubicacion (
   empresa_id     uuid NOT NULL,
   item_id        uuid NOT NULL,
   ubicacion_id   uuid NOT NULL,
@@ -83,7 +85,7 @@ CREATE TABLE catalog.item_stock_ubicacion (
   PRIMARY KEY (item_id, ubicacion_id)
 );
 
-CREATE TABLE catalog.movimientos_inventario (
+CREATE TABLE inventory.movimientos_inventario (
   id                uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   empresa_id        uuid NOT NULL,
   tipo              text NOT NULL,
@@ -96,7 +98,7 @@ CREATE TABLE catalog.movimientos_inventario (
   creado_en         timestamptz NOT NULL DEFAULT NOW()
 );
 
-CREATE TABLE catalog.ajustes_stock (
+CREATE TABLE inventory.ajustes_stock (
   id                uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   empresa_id        uuid NOT NULL,
   item_id           uuid NOT NULL,
@@ -130,7 +132,7 @@ CREATE TABLE catalog.item_series (
   actualizado_en timestamptz NOT NULL DEFAULT NOW()
 );
 
-CREATE TABLE catalog.reservas_lotes (
+CREATE TABLE inventory.reservas_lotes (
   order_id   uuid NOT NULL,
   lote_id    uuid NOT NULL,
   empresa_id uuid NOT NULL,
@@ -138,13 +140,13 @@ CREATE TABLE catalog.reservas_lotes (
   cantidad   integer NOT NULL
 );
 
-CREATE TABLE catalog.eventos_procesados (
+CREATE TABLE inventory.eventos_procesados (
   event_id     uuid PRIMARY KEY,
   tipo         text NOT NULL,
   procesado_en timestamptz NOT NULL DEFAULT NOW()
 );
 
-CREATE TABLE catalog.outbox (
+CREATE TABLE inventory.outbox (
   event_id     uuid PRIMARY KEY,
   tipo         text NOT NULL,
   payload      jsonb NOT NULL,

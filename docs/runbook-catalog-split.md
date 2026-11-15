@@ -23,7 +23,7 @@ smoke de `staging` haya pasado.**
 | 3a | `feat/inventory-core` | Completo | PostgreSQL + HTTP (81,15/76,44) |
 | 3b | `feat/inventory-locations` | Completo | PostgreSQL + HTTP (85,75/81,91) |
 | 4 | `feat/inventory-saga` | Completo | Saga + FEFO + series + Outbox (80,97/77,04) |
-| 5 | `feat/inventory-cutover` | Pendiente | Integración + contrato |
+| 5 | `feat/inventory-cutover` | Completo | Esquema + gateway + compose + CI (80,97/77,04) |
 | 6 | `feat/pricing-scaffold-domain` | Pendiente | Suite + contrato |
 | 7 | `feat/pricing-cutover` | Pendiente | Integración + contrato |
 | 8 | `feat/item-service` | Pendiente | Build + OpenAPI |

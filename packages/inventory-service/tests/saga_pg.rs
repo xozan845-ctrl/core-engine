@@ -23,7 +23,7 @@ async fn preparar() -> Contexto {
     let guard = DB_LOCK.lock().await;
     provisionar(&url).await;
     let db = db().await;
-    let outbox = Arc::new(Outbox::nueva("catalog.outbox"));
+    let outbox = Arc::new(Outbox::nueva("inventory.outbox"));
     let consumidor = Arc::new(PedidosConsumer::nuevo(Arc::clone(&db), outbox));
     Contexto {
         _guard: guard,
@@ -41,7 +41,7 @@ fn evento(tipo: &str, event_id: Uuid, data: Value) -> Value {
 }
 
 async fn outbox_tipos(db: &Db) -> Vec<String> {
-    sqlx::query_scalar("SELECT tipo FROM catalog.outbox ORDER BY creado_en")
+    sqlx::query_scalar("SELECT tipo FROM inventory.outbox ORDER BY creado_en")
         .fetch_all(db.pool())
         .await
         .expect("outbox")
@@ -79,7 +79,7 @@ async fn debe_reservar_stock_y_emitir_eventos_en_una_transaccion() {
         vec!["stock.reservado", "stock.updated"]
     );
     let reservas: i64 =
-        sqlx::query_scalar("SELECT COUNT(*) FROM catalog.reservas_ordenes WHERE order_id = $1")
+        sqlx::query_scalar("SELECT COUNT(*) FROM inventory.reservas_ordenes WHERE order_id = $1")
             .bind(order_id)
             .fetch_one(ctx.db.pool())
             .await
@@ -130,7 +130,7 @@ async fn debe_rechazar_todo_el_stock_si_una_linea_no_alcanza() {
     assert_eq!(stock(&ctx.db).await, 2);
     assert_eq!(outbox_tipos(&ctx.db).await, vec!["stock.fallido"]);
     let reservas: i64 =
-        sqlx::query_scalar("SELECT COUNT(*) FROM catalog.reservas_ordenes WHERE order_id = $1")
+        sqlx::query_scalar("SELECT COUNT(*) FROM inventory.reservas_ordenes WHERE order_id = $1")
             .bind(order_id)
             .fetch_one(ctx.db.pool())
             .await
@@ -258,7 +258,7 @@ async fn debe_reservar_lotes_en_orden_fefo_y_registrar_asignaciones() {
     let ctx = preparar().await;
     crear_item(&ctx.db, ITEM, "SKU-FEFO-SAGA", 10, 1000).await;
     sqlx::query(
-        "INSERT INTO catalog.lotes_inventario
+        "INSERT INTO inventory.lotes_inventario
            (empresa_id, item_id, codigo_lote, vence_en, cantidad_inicial, cantidad_disponible)
          VALUES ($1::uuid, $2::uuid, 'L-TARDE', '2026-12-31', 10, 10),
                 ($1::uuid, $2::uuid, 'L-PRONTO', '2026-11-20', 4, 4)",
@@ -283,13 +283,13 @@ async fn debe_reservar_lotes_en_orden_fefo_y_registrar_asignaciones() {
         .expect("reserva");
 
     let pronto: i32 = sqlx::query_scalar(
-        "SELECT cantidad_disponible FROM catalog.lotes_inventario WHERE codigo_lote = 'L-PRONTO'",
+        "SELECT cantidad_disponible FROM inventory.lotes_inventario WHERE codigo_lote = 'L-PRONTO'",
     )
     .fetch_one(ctx.db.pool())
     .await
     .expect("pronto");
     let tarde: i32 = sqlx::query_scalar(
-        "SELECT cantidad_disponible FROM catalog.lotes_inventario WHERE codigo_lote = 'L-TARDE'",
+        "SELECT cantidad_disponible FROM inventory.lotes_inventario WHERE codigo_lote = 'L-TARDE'",
     )
     .fetch_one(ctx.db.pool())
     .await
@@ -297,7 +297,7 @@ async fn debe_reservar_lotes_en_orden_fefo_y_registrar_asignaciones() {
     assert_eq!(pronto, 0);
     assert_eq!(tarde, 9);
     let asignaciones: i64 =
-        sqlx::query_scalar("SELECT COUNT(*) FROM catalog.reservas_lotes WHERE order_id = $1")
+        sqlx::query_scalar("SELECT COUNT(*) FROM inventory.reservas_lotes WHERE order_id = $1")
             .bind(order_id)
             .fetch_one(ctx.db.pool())
             .await
@@ -367,7 +367,7 @@ async fn debe_revertir_el_stock_si_falla_el_outbox() {
     crear_item(&db, ITEM, "SKU-ATOMICO", 10, 1000).await;
     let consumidor = PedidosConsumer::nuevo(
         Arc::clone(&db),
-        Arc::new(Outbox::nueva("catalog.outbox_inexistente")),
+        Arc::new(Outbox::nueva("inventory.outbox_inexistente")),
     );
     let error = consumidor
         .manejar(evento(

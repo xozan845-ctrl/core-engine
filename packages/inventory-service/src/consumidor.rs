@@ -2,7 +2,7 @@
 //!
 //! Réplica de `pedidos.consumer.ts`: el catálogo descuenta stock de forma
 //! atómica al crear la orden (RN-03) y revierte stock en devoluciones (RN-06).
-//! La idempotencia usa `event_id` en `catalog.eventos_procesados`; stock,
+//! La idempotencia usa `event_id` en `inventory.eventos_procesados`; stock,
 //! eventos de outbox y la marca de idempotencia comparten una transacción.
 
 use crate::db::Db;

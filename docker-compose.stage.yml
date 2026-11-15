@@ -137,6 +137,15 @@ services:
       PORT: 3002
       OUTBOX_TABLA: catalog.outbox
 
+  inventory-service:
+    <<: *servicio-base
+    image: ghcr.io/xozan845-ctrl/core-engine-inventory-service:stage
+    pull_policy: always
+    environment:
+      SERVICIO: inventory-service
+      PORT: 3013
+      OUTBOX_TABLA: inventory.outbox
+
   stores-service:
     <<: *servicio-base
     image: ghcr.io/xozan845-ctrl/core-engine-stores-service:stage

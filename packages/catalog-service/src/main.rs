@@ -4,7 +4,6 @@
 use catalog_service::auth::CapacidadesHttp;
 use catalog_service::componentes::Componentes;
 use catalog_service::config::Config;
-use catalog_service::consumidor::{cola, handler_consumidor, PedidosConsumer};
 use catalog_service::db::Db;
 use catalog_service::http::build_router;
 use catalog_service::inventario::Inventario;
@@ -91,18 +90,6 @@ async fn main() {
         Some(Arc::clone(&outbox)),
     ));
 
-    if rabbit.declarar_colas(vec![cola()]).await.is_err() {
-        eprintln!("No se pudo declarar la cola catalog.pedidos");
-        std::process::exit(1);
-    }
-    let consumidor = Arc::new(PedidosConsumer::nuevo(
-        Arc::clone(&db),
-        Arc::clone(&outbox),
-        Arc::clone(&productos),
-    ));
-    rabbit
-        .consumir("catalog.pedidos", handler_consumidor(consumidor))
-        .await;
     rabbit.iniciar_supervisor();
     rabbit.activar_reintento(std::time::Duration::from_secs(10));
 

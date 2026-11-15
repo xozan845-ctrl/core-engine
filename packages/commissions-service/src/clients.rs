@@ -100,7 +100,7 @@ struct RespuestaVendedores {
 
 #[derive(Clone)]
 pub struct KpisHttp {
-    catalogo_url: String,
+    inventario_url: String,
     identidad_url: String,
     clave: String,
     timeout: Duration,
@@ -109,13 +109,13 @@ pub struct KpisHttp {
 
 impl KpisHttp {
     pub fn nueva(
-        catalogo_url: String,
+        inventario_url: String,
         identidad_url: String,
         clave: Option<String>,
         timeout_ms: u64,
     ) -> Self {
         Self {
-            catalogo_url,
+            inventario_url,
             identidad_url,
             clave: clave.unwrap_or_default(),
             timeout: Duration::from_millis(timeout_ms),
@@ -129,7 +129,7 @@ impl Kpis for KpisHttp {
     async fn inventario(&self) -> InventarioResumen {
         let respuesta = match self
             .cliente
-            .get(format!("{}/internal/inventario/resumen", self.catalogo_url))
+            .get(format!("{}/internal/inventario/resumen", self.inventario_url))
             .header("x-internal-key", &self.clave)
             .timeout(self.timeout)
             .send()

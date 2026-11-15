@@ -1,7 +1,7 @@
 # inventory-service · Rust
 
 Primer corte de `catalog-service` según [ADR-0018](../../docs/adr/0018-catalog-split-item-pricing-inventory.md).
-El servicio será dueño de stock, lotes FEFO, ubicaciones, movimientos, ajustes,
+El servicio es dueño de stock, lotes FEFO, ubicaciones, movimientos, ajustes,
 transferencias, reservas y configuración de inventario.
 
 ## Estado
@@ -14,16 +14,15 @@ transferencias, reservas y configuración de inventario.
   ajustes y superficie interna.
 - PR 4: consumidor `inventory.pedidos` con reserva atómica, FEFO, series,
   componentes BOM, devolución, idempotencia, Outbox y DLQ.
-- Pendiente: migración al esquema `inventory` y corte de gateway/clientes
-  (PR 5).
+- PR 5: esquema `inventory`, `inventory.outbox`, RLS, gateway, compose, CI y
+  retirada del consumidor viejo de `catalog-service`.
+- `catalog.items.stock` sigue como proyección transitoria hasta `item-service`
+  (PR 8); el resto del inventario ya es propiedad de `inventory-service`.
 
-Mientras dure la transición, el SQL apunta a `catalog.*`; el PR 5 mueve las
-tablas al esquema propio y elimina esa dependencia.
-
-> **No ejecutar `inventory-service` contra la misma base mientras
-> `catalog-service` siga consumiendo `catalog.pedidos`.** Ambos descuentan
-> stock y duplicarían la reserva. El corte de consumidores es parte del PR 5 y
-> debe hacerse con el flag de gateway apagado hacia el servicio viejo.
+Las tablas propias viven en `inventory.*`. `catalog.items` y
+`catalog.items.stock` siguen siendo el dato maestro transitorio del ítem hasta
+la extracción de `item-service` (PR 8); no reactivar el consumidor de
+`catalog.pedidos` en `catalog-service`.
 
 ## Comandos
 
@@ -31,7 +30,7 @@ tablas al esquema propio y elimina esa dependencia.
 cargo fmt --check
 cargo clippy --locked --all-targets -- -D warnings
 cargo test
-cargo run   # requiere DATABASE_URL
+cargo run   # requiere DATABASE_URL y RABBITMQ_URL
 ```
 
 Variables de entorno: `PORT` (3013), `SERVICIO`, `DATABASE_URL`,
@@ -41,10 +40,9 @@ Variables de entorno: `PORT` (3013), `SERVICIO`, `DATABASE_URL`,
 
 ## Contrato
 
-Mientras el servicio no está en `SERVICES`, el OpenAPI vive en
-[`packages/inventory-service/openapi/`](./openapi/) para no colisionar con
-`catalog-service` en el contrato agregado. En el PR 5 se mueve a
-`docs/openapi/inventory-service/`.
+El OpenAPI vive en
+[`docs/openapi/inventory-service/`](../../docs/openapi/inventory-service/) y
+entra en el contrato agregado del gateway.
 Las rutas se conservan con el prefijo `/api/v2/admin/inventario`,
 `/api/v2/admin/ubicaciones` y `/api/v2/catalog/inventario` para no romper el
 gateway ni los clientes internos.
