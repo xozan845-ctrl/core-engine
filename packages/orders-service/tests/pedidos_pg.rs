@@ -14,6 +14,7 @@ use orders_service::contratos::{Contratos, CrearContratoInput, FinalizarContrato
 use orders_service::db::Db;
 use orders_service::entregas::EntregasDigitales;
 use orders_service::outbox::Outbox;
+use orders_service::pagos::Pagos;
 use orders_service::pedidos::Pedidos;
 use orders_service::salon::{CrearComandaInput, CrearMesaInput, Salon};
 use orders_service::suscripciones::{CrearSuscripcionInput, Suscripciones};
@@ -262,6 +263,36 @@ async fn provisionar(url: &str) {
           creado_en timestamptz NOT NULL DEFAULT NOW(),
           publicado_en timestamptz
         );
+        CREATE TABLE orders.metodos_pago (
+          codigo text PRIMARY KEY,
+          nombre text NOT NULL,
+          requiere_confirmacion boolean NOT NULL DEFAULT true,
+          activo boolean NOT NULL DEFAULT true,
+          config jsonb NOT NULL DEFAULT '{}'::jsonb,
+          creado_en timestamptz NOT NULL DEFAULT NOW(),
+          actualizado_en timestamptz NOT NULL DEFAULT NOW()
+        );
+        INSERT INTO orders.metodos_pago (codigo, nombre, requiere_confirmacion) VALUES
+          ('simulado', 'Simulado', false),
+          ('credito', 'Crédito', false),
+          ('efectivo', 'Efectivo', true),
+          ('transferencia', 'Transferencia', true);
+
+        CREATE TABLE orders.pagos (
+          id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+          order_id uuid NOT NULL,
+          empresa_id uuid,
+          metodo_codigo text NOT NULL,
+          estado text NOT NULL,
+          monto_cents integer NOT NULL,
+          moneda text NOT NULL DEFAULT 'NIO',
+          referencia text NOT NULL DEFAULT '',
+          confirmado_por uuid,
+          confirmado_en timestamptz,
+          creado_en timestamptz NOT NULL DEFAULT NOW(),
+          actualizado_en timestamptz NOT NULL DEFAULT NOW()
+        );
+
         CREATE TABLE orders.eventos_procesados (
           event_id uuid PRIMARY KEY,
           tipo text NOT NULL,
@@ -772,6 +803,7 @@ async fn router_completo(db: Arc<Db>, stock: i64) -> axum::Router {
     let contratos = Arc::new(Contratos::nueva(Arc::clone(&db)));
     let suscripciones = Arc::new(Suscripciones::nueva(Arc::clone(&db), Arc::clone(&checkout)));
     let salon = Arc::new(Salon::nueva(Arc::clone(&db)));
+    let pagos = Arc::new(Pagos::nueva(Arc::clone(&db)));
     let estado = AppState::con_dependencias(
         config,
         Arc::new(Metrics::nueva("orders-service")),
@@ -785,6 +817,7 @@ async fn router_completo(db: Arc<Db>, stock: i64) -> axum::Router {
         contratos,
         suscripciones,
         salon,
+        pagos,
     );
     build_router(estado)
 }
@@ -1026,4 +1059,94 @@ async fn debe_transicionar_y_leer_la_historia_por_http_interno() {
     assert_eq!(response.status(), StatusCode::OK);
     let valor = json_de(response).await;
     assert_eq!(valor.as_array().expect("historia").len(), 2);
+}
+
+fn headers_admin() -> [(&'static str, &'static str); 2] {
+    [
+        ("x-user-id", "99999999-9999-4999-8999-999999999999"),
+        ("x-user-rol", "super_admin"),
+    ]
+}
+
+#[tokio::test]
+async fn debe_gestionar_metodos_de_pago() {
+    use axum::body::Body;
+    use axum::http::{Request, StatusCode};
+    use tower::ServiceExt;
+    let _guard = DB_LOCK.lock().await;
+    let Some(db) = con_bd().await else { return };
+    let router = router_completo(Arc::clone(&db), 10).await;
+
+    let mut request = Request::get("/api/v2/orders/metodos-pago");
+    for (clave, valor) in headers_comprador() {
+        request = request.header(clave, valor);
+    }
+    let response = router
+        .clone()
+        .oneshot(request.body(Body::empty()).expect("request"))
+        .await
+        .expect("response");
+    assert_eq!(response.status(), StatusCode::OK);
+    let listado = json_de(response).await;
+    let codigos: Vec<&str> = listado["data"]
+        .as_array()
+        .expect("metodos")
+        .iter()
+        .filter_map(|metodo| metodo["codigo"].as_str())
+        .collect();
+    assert!(codigos.contains(&"efectivo"));
+    assert!(codigos.contains(&"transferencia"));
+
+    let mut request =
+        Request::post("/api/v2/admin/metodos-pago").header("content-type", "application/json");
+    for (clave, valor) in headers_admin() {
+        request = request.header(clave, valor);
+    }
+    let response = router
+        .clone()
+        .oneshot(
+            request
+                .body(Body::from(
+                    r#"{"codigo":"contra_entrega","nombre":"Contra entrega"}"#,
+                ))
+                .expect("request"),
+        )
+        .await
+        .expect("response");
+    assert_eq!(response.status(), StatusCode::CREATED);
+    let creado = json_de(response).await;
+    assert_eq!(creado["data"]["requiere_confirmacion"], true);
+
+    let mut request =
+        Request::post("/api/v2/admin/metodos-pago").header("content-type", "application/json");
+    for (clave, valor) in headers_comprador() {
+        request = request.header(clave, valor);
+    }
+    let response = router
+        .clone()
+        .oneshot(
+            request
+                .body(Body::from(r#"{"codigo":"otro","nombre":"Otro"}"#))
+                .expect("request"),
+        )
+        .await
+        .expect("response");
+    assert_eq!(response.status(), StatusCode::FORBIDDEN);
+
+    let mut request = Request::patch("/api/v2/admin/metodos-pago/contra_entrega")
+        .header("content-type", "application/json");
+    for (clave, valor) in headers_admin() {
+        request = request.header(clave, valor);
+    }
+    let response = router
+        .oneshot(
+            request
+                .body(Body::from(r#"{"activo":false}"#))
+                .expect("request"),
+        )
+        .await
+        .expect("response");
+    assert_eq!(response.status(), StatusCode::OK);
+    let actualizado = json_de(response).await;
+    assert_eq!(actualizado["data"]["activo"], false);
 }

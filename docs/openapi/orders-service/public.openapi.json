@@ -511,6 +511,153 @@
         ]
       }
     },
+    "/api/v2/orders/metodos-pago": {
+      "get": {
+        "operationId": "PagosController_listarMetodos",
+        "responses": {
+          "200": {
+            "description": "Métodos de pago configurados",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
+                  "properties": {
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/OrdersMetodoPagoResponseDto"
+                      }
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/MetaRespuesta"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Listar métodos de pago",
+        "tags": [
+          "Pagos"
+        ]
+      }
+    },
+    "/api/v2/admin/metodos-pago": {
+      "post": {
+        "operationId": "PagosController_crearMetodo",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/OrdersCrearMetodoPagoRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Método de pago creado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/OrdersMetodoPagoResponseDto"
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/MetaRespuesta"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Crear método de pago (admin)",
+        "tags": [
+          "Pagos"
+        ]
+      }
+    },
+    "/api/v2/admin/metodos-pago/{codigo}": {
+      "patch": {
+        "operationId": "PagosController_actualizarMetodo",
+        "parameters": [
+          {
+            "name": "codigo",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/OrdersActualizarMetodoPagoRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Método de pago actualizado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/OrdersMetodoPagoResponseDto"
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/MetaRespuesta"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Actualizar método de pago (admin)",
+        "tags": [
+          "Pagos"
+        ]
+      }
+    },
     "/api/v2/orders/{id}": {
       "get": {
         "operationId": "PedidosController_detalle",
@@ -2142,6 +2289,74 @@
       }
     },
     "schemas": {
+      "OrdersMetodoPagoResponseDto": {
+        "type": "object",
+        "properties": {
+          "codigo": {
+            "type": "string"
+          },
+          "nombre": {
+            "type": "string"
+          },
+          "requiere_confirmacion": {
+            "type": "boolean"
+          },
+          "activo": {
+            "type": "boolean"
+          },
+          "config": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "codigo",
+          "nombre",
+          "requiere_confirmacion",
+          "activo",
+          "config"
+        ]
+      },
+      "OrdersCrearMetodoPagoRequestDto": {
+        "type": "object",
+        "properties": {
+          "codigo": {
+            "type": "string"
+          },
+          "nombre": {
+            "type": "string"
+          },
+          "requiere_confirmacion": {
+            "type": "boolean"
+          },
+          "activo": {
+            "type": "boolean"
+          },
+          "config": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "codigo",
+          "nombre"
+        ]
+      },
+      "OrdersActualizarMetodoPagoRequestDto": {
+        "type": "object",
+        "properties": {
+          "nombre": {
+            "type": "string"
+          },
+          "requiere_confirmacion": {
+            "type": "boolean"
+          },
+          "activo": {
+            "type": "boolean"
+          },
+          "config": {
+            "type": "object"
+          }
+        }
+      },
       "ActualizarCantidadRequestDto": {
         "type": "object",
         "properties": {

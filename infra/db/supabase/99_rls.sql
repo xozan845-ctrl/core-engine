@@ -1296,3 +1296,25 @@ CREATE POLICY outbox_app ON inventory.outbox
   FOR ALL TO core_engine_app
   USING (true)
   WITH CHECK (true);
+
+-- ── orders.metodos_pago y orders.pagos (Fase 2 · pagos) ─────────────────────
+ALTER TABLE orders.metodos_pago ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS metodos_pago_lectura ON orders.metodos_pago;
+CREATE POLICY metodos_pago_lectura ON orders.metodos_pago
+  FOR SELECT TO authenticated USING (activo);
+DROP POLICY IF EXISTS metodos_pago_admin ON orders.metodos_pago;
+CREATE POLICY metodos_pago_admin ON orders.metodos_pago
+  FOR ALL TO authenticated
+  USING (auth.rol() IN ('super_admin', 'admin'))
+  WITH CHECK (auth.rol() IN ('super_admin', 'admin'));
+
+ALTER TABLE orders.pagos ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS pagos_admin ON orders.pagos;
+CREATE POLICY pagos_admin ON orders.pagos
+  FOR ALL TO authenticated
+  USING (auth.rol() IN ('super_admin', 'admin'))
+  WITH CHECK (auth.rol() IN ('super_admin', 'admin'));
+DROP POLICY IF EXISTS pagos_empresa ON orders.pagos;
+CREATE POLICY pagos_empresa ON orders.pagos
+  FOR SELECT TO authenticated
+  USING (empresa_id::text = (auth.jwt() ->> 'tenant_id'));
