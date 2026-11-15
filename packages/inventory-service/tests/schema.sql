@@ -12,6 +12,8 @@ CREATE TABLE catalog.items (
   nombre          text NOT NULL,
   precio_cents    integer NOT NULL DEFAULT 0,
   track_inventory boolean NOT NULL DEFAULT true,
+  track_serial    boolean NOT NULL DEFAULT false,
+  garantia_meses  integer,
   stock           integer,
   estado          text NOT NULL DEFAULT 'activo',
   parent_item_id  uuid,
@@ -102,4 +104,51 @@ CREATE TABLE catalog.ajustes_stock (
   cantidad_nueva    integer NOT NULL,
   motivo            text NOT NULL DEFAULT '',
   realizado_en      timestamptz NOT NULL DEFAULT NOW()
+);
+
+
+CREATE TABLE catalog.item_componentes (
+  id                 uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  empresa_id         uuid NOT NULL,
+  item_id            uuid NOT NULL,
+  componente_item_id uuid NOT NULL,
+  cantidad           integer NOT NULL DEFAULT 1
+);
+
+CREATE TABLE catalog.item_series (
+  id             uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  empresa_id     uuid NOT NULL,
+  item_id        uuid NOT NULL,
+  serial         text NOT NULL,
+  estado         text NOT NULL DEFAULT 'disponible',
+  order_id       uuid,
+  ubicacion_id   uuid,
+  vendido_en     timestamptz,
+  devuelto_en    timestamptz,
+  garantia_hasta date,
+  creado_en      timestamptz NOT NULL DEFAULT NOW(),
+  actualizado_en timestamptz NOT NULL DEFAULT NOW()
+);
+
+CREATE TABLE catalog.reservas_lotes (
+  order_id   uuid NOT NULL,
+  lote_id    uuid NOT NULL,
+  empresa_id uuid NOT NULL,
+  item_id    uuid NOT NULL,
+  cantidad   integer NOT NULL
+);
+
+CREATE TABLE catalog.eventos_procesados (
+  event_id     uuid PRIMARY KEY,
+  tipo         text NOT NULL,
+  procesado_en timestamptz NOT NULL DEFAULT NOW()
+);
+
+CREATE TABLE catalog.outbox (
+  event_id     uuid PRIMARY KEY,
+  tipo         text NOT NULL,
+  payload      jsonb NOT NULL,
+  estado       text NOT NULL DEFAULT 'pendiente',
+  creado_en    timestamptz NOT NULL DEFAULT NOW(),
+  publicado_en timestamptz
 );
