@@ -273,6 +273,33 @@ pub(crate) async fn autorizar(
     Ok(usuario)
 }
 
+/// `true` si el modelo permite el tipo de ítem; lista vacía = sin restricción.
+pub(crate) fn tipo_permitido(config: &crate::auth::ConfiguracionOperativa, tipo: &str) -> bool {
+    config.items.is_empty() || config.items.iter().any(|permitido| permitido == tipo)
+}
+
+/// Valida el tipo de ítem contra los defaults del pack (identity interno).
+pub(crate) async fn validar_tipo_permitido(
+    state: &AppState,
+    empresa: &str,
+    tipo: &str,
+) -> Result<(), ApiError> {
+    let config = state
+        .capacidades
+        .configuracion(empresa)
+        .await
+        .map_err(|_| ApiError::servicio_no_disponible("identity-service"))?;
+    if let Some(config) = config {
+        if !tipo_permitido(&config, tipo) {
+            return Err(ApiError::dominio(
+                "TIPO_ITEM_NO_PERMITIDO",
+                format!("El modelo operativo de la empresa no permite items de tipo \"{tipo}\"."),
+            ));
+        }
+    }
+    Ok(())
+}
+
 async fn health(State(state): State<AppState>) -> Json<crate::metrics::MetricaSalud> {
     Json(state.metrics.salud())
 }
@@ -532,6 +559,60 @@ mod tests {
         assert_eq!(valor["data"]["ok"], true);
         assert_eq!(valor["meta"]["path"], "/api/v2/prueba");
         assert_eq!(valor["meta"]["statusCode"], 200);
+    }
+
+    #[test]
+    fn debe_permitir_cualquier_tipo_sin_restriccion() {
+        let config = crate::auth::ConfiguracionOperativa::default();
+        assert!(tipo_permitido(&config, "producto"));
+        assert!(tipo_permitido(&config, "servicio"));
+        assert!(tipo_permitido(&config, "alquiler"));
+    }
+
+    #[test]
+    fn debe_respetar_los_items_del_modelo() {
+        let config = crate::auth::ConfiguracionOperativa {
+            items: vec!["servicio".to_string()],
+            ..Default::default()
+        };
+        assert!(tipo_permitido(&config, "servicio"));
+        assert!(!tipo_permitido(&config, "producto"));
+    }
+
+    struct CapacidadesRestringidas;
+
+    #[async_trait::async_trait]
+    impl crate::auth::Capacidades for CapacidadesRestringidas {
+        async fn activas(
+            &self,
+            _empresa_id: &str,
+            _requeridas: &[&str],
+        ) -> Result<Vec<crate::auth::CapacidadActiva>, ()> {
+            Ok(Vec::new())
+        }
+
+        async fn configuracion(
+            &self,
+            _empresa_id: &str,
+        ) -> Result<Option<crate::auth::ConfiguracionOperativa>, ()> {
+            Ok(Some(crate::auth::ConfiguracionOperativa {
+                items: vec!["servicio".to_string()],
+                ..Default::default()
+            }))
+        }
+    }
+
+    #[tokio::test]
+    async fn debe_rechazar_un_tipo_que_el_modelo_no_permite() {
+        let mut state = estado_de_prueba(config());
+        state.capacidades = std::sync::Arc::new(CapacidadesRestringidas);
+        let error = validar_tipo_permitido(&state, "empresa", "producto")
+            .await
+            .expect_err("tipo no permitido");
+        assert_eq!(error.codigo, "TIPO_ITEM_NO_PERMITIDO");
+        validar_tipo_permitido(&state, "empresa", "servicio")
+            .await
+            .expect("tipo permitido");
     }
 
     #[tokio::test]
