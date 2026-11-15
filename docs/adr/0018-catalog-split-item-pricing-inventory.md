@@ -206,4 +206,10 @@ gates y del smoke de `staging`.
 ## Estado de implementación (2026-11-15)
 
 - ADR aceptado; rama de migración `feat/catalog-split` creada desde `develop`.
-- Sin cambios de código todavía: el PR 1 solo registra la decisión y el plan.
+- PR 1 completo: ADR, índice y runbook con la matriz de pruebas y el rollback.
+- PR 2 completo: andamiaje de `inventory-service` (config fail-fast, PostgreSQL
+  con RLS, envelope, auth, errores, logs, métricas, `/health`, `/metrics`,
+  `/docs` y `/docs-json`). Sin rutas de dominio, consumidor ni RabbitMQ
+  todavía; el servicio no se registra en `SERVICES` hasta el PR de corte para
+  no desplegar una imagen vacía en `staging`.
+- 37 pruebas unitarias; cobertura medida 83,30 % líneas / 75,60 % funciones.
