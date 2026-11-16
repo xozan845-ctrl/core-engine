@@ -871,6 +871,7 @@ async fn router_completo(db: Arc<Db>, stock: i64) -> axum::Router {
     let suscripciones = Arc::new(Suscripciones::nueva(Arc::clone(&db), Arc::clone(&checkout)));
     let salon = Arc::new(Salon::nueva(Arc::clone(&db)));
     let pagos = Arc::new(Pagos::nueva(Arc::clone(&db)));
+    let tipos = Arc::new(TiposOrden::nueva(Arc::clone(&db)));
     let estado = AppState::con_dependencias(
         config,
         Arc::new(Metrics::nueva("orders-service")),
@@ -885,6 +886,7 @@ async fn router_completo(db: Arc<Db>, stock: i64) -> axum::Router {
         suscripciones,
         salon,
         pagos,
+        tipos,
     );
     build_router(estado)
 }
@@ -1441,4 +1443,89 @@ async fn debe_aceptar_un_tipo_de_orden_creado_por_configuracion() {
         .transicionar(&orden.id, "pagada", Some("config"), Some("test"), None)
         .await
         .expect("transicion configurada");
+}
+
+#[tokio::test]
+async fn debe_gestionar_tipos_y_transiciones_por_admin() {
+    use axum::body::Body;
+    use axum::http::{Request, StatusCode};
+    use tower::ServiceExt;
+    let _guard = DB_LOCK.lock().await;
+    let Some(db) = con_bd().await else { return };
+    let router = router_completo(Arc::clone(&db), 10).await;
+
+    let mut request =
+        Request::post("/api/v2/admin/tipos-orden").header("content-type", "application/json");
+    for (clave, valor) in headers_admin() {
+        request = request.header(clave, valor);
+    }
+    let response = router
+        .clone()
+        .oneshot(
+            request
+                .body(Body::from(
+                    r#"{"codigo":"reparto_express","nombre":"Reparto express"}"#,
+                ))
+                .expect("request"),
+        )
+        .await
+        .expect("response");
+    assert_eq!(response.status(), StatusCode::CREATED);
+
+    let mut request = Request::post("/api/v2/admin/tipos-orden/reparto_express/transiciones")
+        .header("content-type", "application/json");
+    for (clave, valor) in headers_admin() {
+        request = request.header(clave, valor);
+    }
+    let response = router
+        .clone()
+        .oneshot(
+            request
+                .body(Body::from(r#"{"desde":"creada","hasta":"pagada"}"#))
+                .expect("request"),
+        )
+        .await
+        .expect("response");
+    assert_eq!(response.status(), StatusCode::CREATED);
+
+    let mut request = Request::get("/api/v2/admin/tipos-orden/reparto_express");
+    for (clave, valor) in headers_admin() {
+        request = request.header(clave, valor);
+    }
+    let response = router
+        .clone()
+        .oneshot(request.body(Body::empty()).expect("request"))
+        .await
+        .expect("response");
+    assert_eq!(response.status(), StatusCode::OK);
+    let detalle = json_de(response).await;
+    assert_eq!(detalle["data"]["tipo"]["codigo"], "reparto_express");
+    assert_eq!(detalle["data"]["transiciones"].as_array().unwrap().len(), 1);
+
+    let mut request =
+        Request::post("/api/v2/admin/tipos-orden").header("content-type", "application/json");
+    for (clave, valor) in headers_comprador() {
+        request = request.header(clave, valor);
+    }
+    let response = router
+        .clone()
+        .oneshot(
+            request
+                .body(Body::from(r#"{"codigo":"otro","nombre":"Otro"}"#))
+                .expect("request"),
+        )
+        .await
+        .expect("response");
+    assert_eq!(response.status(), StatusCode::FORBIDDEN);
+
+    let mut request =
+        Request::delete("/api/v2/admin/tipos-orden/reparto_express/transiciones/creada/pagada");
+    for (clave, valor) in headers_admin() {
+        request = request.header(clave, valor);
+    }
+    let response = router
+        .oneshot(request.body(Body::empty()).expect("request"))
+        .await
+        .expect("response");
+    assert_eq!(response.status(), StatusCode::NO_CONTENT);
 }
