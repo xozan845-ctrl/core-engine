@@ -15,7 +15,7 @@ use std::time::Duration;
 pub struct Clientes {
     http: reqwest::Client,
     stores_url: String,
-    catalog_url: String,
+    item_url: String,
     pricing_url: String,
     identity_url: String,
     scheduling_url: String,
@@ -177,7 +177,7 @@ impl Clientes {
         Arc::new(Self {
             http,
             stores_url: config.stores_service_url.clone(),
-            catalog_url: config.catalog_service_url.clone(),
+            item_url: config.item_service_url.clone(),
             pricing_url: config.pricing_service_url.clone(),
             identity_url: config.identity_service_url.clone(),
             scheduling_url: config.scheduling_service_url.clone(),
@@ -450,7 +450,7 @@ impl Clientes {
             .http
             .get(format!(
                 "{}/internal/items/lote?skus={unidos}",
-                self.catalog_url
+                self.item_url
             ))
             .header("x-internal-key", &self.clave)
             .send()

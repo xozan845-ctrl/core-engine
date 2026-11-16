@@ -31,7 +31,7 @@ jobs:
         service:
           - api-gateway
           - identity-service
-          - catalog-service
+          - item-service
           - inventory-service
           - pricing-service
           - stores-service

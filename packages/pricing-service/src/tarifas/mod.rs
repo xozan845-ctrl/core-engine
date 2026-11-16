@@ -270,7 +270,7 @@ impl Tarifas {
     ) -> Result<ItemPrecio, ApiError> {
         let mut tx = self.db.transaccion().await.map_err(interno)?;
         let fila = sqlx::query(
-            "SELECT id, tipo, precio_cents FROM catalog.items
+            "SELECT id, tipo, precio_cents FROM item.items
               WHERE id = $1::uuid AND empresa_id = $2::uuid AND eliminado_en IS NULL",
         )
         .bind(item_id)

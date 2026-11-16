@@ -234,6 +234,9 @@ gates y del smoke de `staging`.
   efímero.
 - E2E local `npm run demo` 39/39 tras aplicar `75_inventory_schema` sobre la
   base de desarrollo y corregir la RLS del poller (`outbox_app`).
+- PR 8 completo: `item-service` con esquema `item`, migración `81_item_schema`,
+  gateway, compose, CI, release/promote/stage-images y OpenAPI. `catalog-service`
+  queda retirado del repo; precios e inventario ya viven en sus servicios.
 - PR 6-7 completos: `pricing-service` con listas, precios, escalas, tarifas,
   cotizaciones y promociones; esquema `pricing`, migración `79_pricing_schema`,
   gateway, compose, CI, release/promote y OpenAPI. `catalog.items.precio_cents`

@@ -130,7 +130,7 @@ async fn debe_consumir_lotes_en_orden_fefo_y_descontar_stock() {
     assert_eq!(pronto["cantidad_disponible"], 3);
     assert_eq!(tarde["cantidad_disponible"], 5);
 
-    let stock: (i32,) = sqlx::query_as("SELECT stock FROM catalog.items WHERE id = $1::uuid")
+    let stock: (i32,) = sqlx::query_as("SELECT stock FROM item.items WHERE id = $1::uuid")
         .bind(ITEM)
         .fetch_one(ctx.db.pool())
         .await

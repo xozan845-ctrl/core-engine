@@ -11,7 +11,7 @@ las demás (`R-AR-2` es la regla más citada del repo).
 | Archivo | Contenido | Sufijo |
 |---|---|---|
 | `01-arquitectura.md` | CQRS/Event Sourcing por dominio, coreografía vs HTTP síncrono, outbox, DLQ, autonomía, ACL, caché con TTL | `R-AR` (1–7) |
-| `02-naming.md` | Archivos y carpetas, sufijos NestJS/CQRS, clases/DTOs, camelCase, `snake_case`, idioma, Conventional Commits | `R-NC` (1–8) |
+| `02-naming.md` | Archivos y carpetas Rust, módulos por agregado, tipos/DTOs, `snake_case`, `snake_case` en BD, idioma, Conventional Commits | `R-NC` (1–8) |
 
 > Los documentos derivados de este área (**AUDIT, CHECKLIST, historiales**) no
 > viven aquí: están en [`../_meta/`](../_meta/README.md). Un área de reglas solo

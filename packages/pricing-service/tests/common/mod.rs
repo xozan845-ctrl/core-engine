@@ -38,7 +38,7 @@ pub async fn db() -> Arc<Db> {
 
 pub async fn crear_item(db: &Db, codigo: &str, precio_cents: i32) {
     sqlx::query(
-        "INSERT INTO catalog.items (id, empresa_id, tipo, codigo, nombre, precio_cents, estado)
+        "INSERT INTO item.items (id, empresa_id, tipo, codigo, nombre, precio_cents, estado)
          VALUES ($1::uuid, $2::uuid, 'producto', $3, $4, $5, 'activo')",
     )
     .bind(ITEM)

@@ -73,8 +73,8 @@ pub fn destinos(config: &Config) -> Vec<Destino> {
             ],
         },
         Destino {
-            nombre: "catalog",
-            url: config.catalog_url.clone(),
+            nombre: "item",
+            url: config.item_url.clone(),
             patrones: vec![patron(r"^/api/v2/catalog/", &["*"])],
         },
         Destino {
@@ -346,7 +346,7 @@ mod tests {
         );
         assert_eq!(
             encontrar_destino(&destinos, "/api/v2/catalog/items", "GET").map(|d| d.nombre),
-            Some("catalog")
+            Some("item")
         );
         assert!(encontrar_destino(&destinos, "/api/v2/no-existe", "GET").is_none());
     }

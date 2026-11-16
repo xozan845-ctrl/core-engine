@@ -13,6 +13,7 @@ use orders_service::consumer::{PedidosConsumer, STOCK_FALLIDO, STOCK_RESERVADO};
 use orders_service::contratos::{Contratos, CrearContratoInput, FinalizarContratoInput};
 use orders_service::db::Db;
 use orders_service::entregas::EntregasDigitales;
+use orders_service::fulfillments::Fulfillments;
 use orders_service::outbox::Outbox;
 use orders_service::pagos::Pagos;
 use orders_service::pedidos::Pedidos;
@@ -421,6 +422,10 @@ async fn provisionar(url: &str) {
         .execute(&pool)
         .await
         .expect("tipos de orden");
+    sqlx::raw_sql(include_str!("../../../infra/db/init/81_fulfillments.sql"))
+        .execute(&pool)
+        .await
+        .expect("fulfillments");
     pool.close().await;
 }
 
@@ -478,6 +483,7 @@ fn infra(db: Arc<Db>, stock: i64) -> (Arc<Checkout>, Arc<Carrito>, Arc<Pedidos>)
         outbox: Outbox::nueva("orders.outbox"),
         pagos: Arc::new(Pagos::nueva(Arc::clone(&db))),
         tipos: Arc::new(TiposOrden::nueva(Arc::clone(&db))),
+        fulfillments: Arc::new(Fulfillments::nueva(Arc::clone(&db))),
         tasa_comision: 0.12,
     });
     (checkout, carrito, pedidos)
@@ -865,12 +871,15 @@ async fn router_completo(db: Arc<Db>, stock: i64) -> axum::Router {
         outbox: Outbox::nueva("orders.outbox"),
         pagos: Arc::new(Pagos::nueva(Arc::clone(&db))),
         tipos: Arc::new(TiposOrden::nueva(Arc::clone(&db))),
+        fulfillments: Arc::new(Fulfillments::nueva(Arc::clone(&db))),
         tasa_comision: 0.12,
     });
     let contratos = Arc::new(Contratos::nueva(Arc::clone(&db)));
     let suscripciones = Arc::new(Suscripciones::nueva(Arc::clone(&db), Arc::clone(&checkout)));
     let salon = Arc::new(Salon::nueva(Arc::clone(&db)));
     let pagos = Arc::new(Pagos::nueva(Arc::clone(&db)));
+    let tipos = Arc::new(TiposOrden::nueva(Arc::clone(&db)));
+    let fulfillments = Arc::new(Fulfillments::nueva(Arc::clone(&db)));
     let estado = AppState::con_dependencias(
         config,
         Arc::new(Metrics::nueva("orders-service")),
@@ -885,6 +894,8 @@ async fn router_completo(db: Arc<Db>, stock: i64) -> axum::Router {
         suscripciones,
         salon,
         pagos,
+        tipos,
+        fulfillments,
     );
     build_router(estado)
 }
@@ -1441,4 +1452,219 @@ async fn debe_aceptar_un_tipo_de_orden_creado_por_configuracion() {
         .transicionar(&orden.id, "pagada", Some("config"), Some("test"), None)
         .await
         .expect("transicion configurada");
+}
+
+#[tokio::test]
+async fn debe_gestionar_tipos_y_transiciones_por_admin() {
+    use axum::body::Body;
+    use axum::http::{Request, StatusCode};
+    use tower::ServiceExt;
+    let _guard = DB_LOCK.lock().await;
+    let Some(db) = con_bd().await else { return };
+    let router = router_completo(Arc::clone(&db), 10).await;
+
+    let mut request =
+        Request::post("/api/v2/admin/tipos-orden").header("content-type", "application/json");
+    for (clave, valor) in headers_admin() {
+        request = request.header(clave, valor);
+    }
+    let response = router
+        .clone()
+        .oneshot(
+            request
+                .body(Body::from(
+                    r#"{"codigo":"reparto_express","nombre":"Reparto express"}"#,
+                ))
+                .expect("request"),
+        )
+        .await
+        .expect("response");
+    assert_eq!(response.status(), StatusCode::CREATED);
+
+    let mut request = Request::post("/api/v2/admin/tipos-orden/reparto_express/transiciones")
+        .header("content-type", "application/json");
+    for (clave, valor) in headers_admin() {
+        request = request.header(clave, valor);
+    }
+    let response = router
+        .clone()
+        .oneshot(
+            request
+                .body(Body::from(r#"{"desde":"creada","hasta":"pagada"}"#))
+                .expect("request"),
+        )
+        .await
+        .expect("response");
+    assert_eq!(response.status(), StatusCode::CREATED);
+
+    let mut request = Request::get("/api/v2/admin/tipos-orden/reparto_express");
+    for (clave, valor) in headers_admin() {
+        request = request.header(clave, valor);
+    }
+    let response = router
+        .clone()
+        .oneshot(request.body(Body::empty()).expect("request"))
+        .await
+        .expect("response");
+    assert_eq!(response.status(), StatusCode::OK);
+    let detalle = json_de(response).await;
+    assert_eq!(detalle["data"]["tipo"]["codigo"], "reparto_express");
+    assert_eq!(detalle["data"]["transiciones"].as_array().unwrap().len(), 1);
+
+    let mut request =
+        Request::post("/api/v2/admin/tipos-orden").header("content-type", "application/json");
+    for (clave, valor) in headers_comprador() {
+        request = request.header(clave, valor);
+    }
+    let response = router
+        .clone()
+        .oneshot(
+            request
+                .body(Body::from(r#"{"codigo":"otro","nombre":"Otro"}"#))
+                .expect("request"),
+        )
+        .await
+        .expect("response");
+    assert_eq!(response.status(), StatusCode::FORBIDDEN);
+
+    let mut request =
+        Request::delete("/api/v2/admin/tipos-orden/reparto_express/transiciones/creada/pagada");
+    for (clave, valor) in headers_admin() {
+        request = request.header(clave, valor);
+    }
+    let response = router
+        .oneshot(request.body(Body::empty()).expect("request"))
+        .await
+        .expect("response");
+    assert_eq!(response.status(), StatusCode::NO_CONTENT);
+}
+
+#[tokio::test]
+async fn debe_gestionar_fulfillments_por_admin() {
+    use axum::body::Body;
+    use axum::http::{Request, StatusCode};
+    use tower::ServiceExt;
+    let _guard = DB_LOCK.lock().await;
+    let Some(db) = con_bd().await else { return };
+    let router = router_completo(Arc::clone(&db), 10).await;
+
+    let mut request = Request::get("/api/v2/orders/fulfillments");
+    for (clave, valor) in headers_comprador() {
+        request = request.header(clave, valor);
+    }
+    let response = router
+        .clone()
+        .oneshot(request.body(Body::empty()).expect("request"))
+        .await
+        .expect("response");
+    assert_eq!(response.status(), StatusCode::OK);
+    let listado = json_de(response).await;
+    let codigos: Vec<&str> = listado["data"]
+        .as_array()
+        .expect("fulfillments")
+        .iter()
+        .filter_map(|fulfillment| fulfillment["codigo"].as_str())
+        .collect();
+    assert!(codigos.contains(&"delivery"));
+    assert!(codigos.contains(&"digital"));
+
+    let mut request =
+        Request::post("/api/v2/admin/fulfillments").header("content-type", "application/json");
+    for (clave, valor) in headers_admin() {
+        request = request.header(clave, valor);
+    }
+    let response = router
+        .clone()
+        .oneshot(
+            request
+                .body(Body::from(
+                    r#"{"codigo":"retiro_tienda","nombre":"Retiro en tienda"}"#,
+                ))
+                .expect("request"),
+        )
+        .await
+        .expect("response");
+    assert_eq!(response.status(), StatusCode::CREATED);
+
+    let mut request =
+        Request::post("/api/v2/admin/fulfillments").header("content-type", "application/json");
+    for (clave, valor) in headers_comprador() {
+        request = request.header(clave, valor);
+    }
+    let response = router
+        .clone()
+        .oneshot(
+            request
+                .body(Body::from(r#"{"codigo":"otro","nombre":"Otro"}"#))
+                .expect("request"),
+        )
+        .await
+        .expect("response");
+    assert_eq!(response.status(), StatusCode::FORBIDDEN);
+
+    let mut request = Request::patch("/api/v2/admin/fulfillments/retiro_tienda")
+        .header("content-type", "application/json");
+    for (clave, valor) in headers_admin() {
+        request = request.header(clave, valor);
+    }
+    let response = router
+        .oneshot(
+            request
+                .body(Body::from(r#"{"activo":false}"#))
+                .expect("request"),
+        )
+        .await
+        .expect("response");
+    assert_eq!(response.status(), StatusCode::OK);
+    let actualizado = json_de(response).await;
+    assert_eq!(actualizado["data"]["activo"], false);
+}
+
+#[tokio::test]
+async fn debe_validar_el_fulfillment_contra_el_registro() {
+    let _guard = DB_LOCK.lock().await;
+    let Some(db) = con_bd().await else { return };
+    let (checkout, _, _) = infra(Arc::clone(&db), 10);
+    sqlx::query(
+        "INSERT INTO orders.fulfillments (codigo, nombre)
+         VALUES ('retiro_tienda', 'Retiro en tienda')
+         ON CONFLICT (codigo) DO NOTHING",
+    )
+    .execute(db.pool())
+    .await
+    .expect("fulfillment");
+
+    let orden = checkout
+        .ejecutar(
+            &ComandoCrear {
+                items: Some(vec![LineaEntrada {
+                    oferta_id: OFERTA.to_string(),
+                    cantidad: 1,
+                    fulfillment: Some("retiro_tienda".to_string()),
+                    fulfillment_config: None,
+                }]),
+                ..compra(1)
+            },
+            COMPRADOR,
+        )
+        .await
+        .expect("orden con fulfillment configurado");
+    assert_eq!(orden.items[0].fulfillment.as_deref(), Some("retiro_tienda"));
+
+    let error = checkout
+        .ejecutar(
+            &ComandoCrear {
+                items: Some(vec![LineaEntrada {
+                    oferta_id: OFERTA.to_string(),
+                    cantidad: 1,
+                    fulfillment: Some("no_existe".to_string()),
+                    fulfillment_config: None,
+                }]),
+                ..compra(1)
+            },
+            COMPRADOR,
+        )
+        .await
+        .expect_err("fulfillment invalido");
+    assert_eq!(error.codigo, "FULFILLMENT_INVALIDO");
 }

@@ -69,58 +69,49 @@ validaban el comportamiento erróneo de la implementación en vez del requisito
 ## Cómo auditar (este repo)
 
 ```bash
-# Suite completa con cobertura (lo que corre CI: 13 workspaces con tests).
-# No añadas `-- --coverage`: el script raíz ya pasa el flag a cada workspace.
-npm test
-
-# Un solo servicio
-npm run test -w @core/orders-service
-npm run test -w @core/api-gateway
-
-# Lint (job `lint`) y compilación (job `build`) — G-7
-npm run lint
-npm run build
+# Unit + cobertura de un servicio (lo que corre el job `rust` de CI)
+cd packages/orders-service
+cargo fmt --check
+cargo clippy --locked --all-targets -- -D warnings
+cargo llvm-cov --locked --ignore-filename-regex 'src/main\.rs' \
+  --fail-under-lines 62 --fail-under-functions 63
 
 # Motor de gobernanza: reglas ejecutables (job `rules-check`) y sus autotests
 npm run rules:check
 npm run test:engine
+npm run test:smoke
 
-# Puerta de seguridad (R-QA-6 / ci.yml "Security Gate")
+# Integración API+BD sobre PostgreSQL efímero (job `rust`/integración)
+TEST_DATABASE_URL=postgres://core_engine_test:test_only@127.0.0.1:5432/core_engine_test \
+  npm run test:integration
+TEST_DATABASE_URL=postgres://core_engine_test:test_only@127.0.0.1:5432/core_engine_test \
+  npm run multi-vertical:check
+
+# Lint de scripts y seguridad (jobs `lint` y `security-gate`) — G-7 / R-QA-6
+npm run lint
+npm run security:secrets
 npm audit --audit-level=high
 
 # E2E end-to-end sobre el stack levantado (TC-01..TC-08, RN-01..RN-08)
 docker compose -f docker-compose.dev.yml up -d --build
 npm run demo
+npm run demo:verticals
 ```
 
-## Pendientes (deuda abierta)
+## Estado de los gates
 
-- **Tooling JS parcialmente fuera de ESLint**: `eslint.config.mjs` cubre
-  `packages/*/src/**/*.ts` (el alcance de G-7) y ahora también el motor de
-  gobernanza (`scripts/**/*.mjs`); `qa-harness/` sigue sin lintearse.
-- **G-4 parcial**: existen suites con PostgreSQL efímero para stock y
-  configuración de sitio API+BD, pero todavía faltan otros flujos críticos.
-  **G-5**: envelope `{data,meta}` aplicado en todo `/api/v2`; los errores
-  400/401/403/404/409/500 se validan en runtime. G-8 protege el documento
-  OpenAPI, pero no sustituye las pruebas runtime. **G-6** es gate de release:
-  `release.yml` ejecuta `e2e.yml` (smoke R-E-1..7 + R-E-8) antes de publicar
-  imágenes; no corre en cada PR.
-- **Cobertura (ratchet R-COV-1)**: de los 13 workspaces, **13 cumplen su `coverageThreshold`** y **11 ya alcanzan
-  el objetivo 80/70** de líneas/ramas. `market-intelligence` y `shared` siguen
-  bajo el objetivo. `identity-service` recuperó su umbral con specs de
-  controllers y ramas de servicio. El detalle vigente vive en
-  [`../_meta/AUDIT.md`](../_meta/AUDIT.md).
-- **Specs pendientes (R-U-18/R-COV-2)**: el baseline de lógica sin spec se
-  mantiene versionado y el recuento vigente está en
-  [`../_meta/AUDIT.md`](../_meta/AUDIT.md); el `baseline:guard` impide que esa
-  deuda aumente en un PR.
-- **R-FL-3**: el setup central `scripts/config/test-timezone.mjs` fija
-  `America/Managua` para las 13 suites Vitest y los 5 runners de mutation; CI y
-  los workflows E2E/deploy también fijan la misma zona.
+- **G-1/G-3**: los 13 crates Rust pasan `cargo llvm-cov` con el umbral de la
+  matriz de `ci.yml` (tabla en `06-estandares-cobertura.md`). El motor de
+  gobernanza corre con `test:engine` y `test:smoke`.
+- **G-4**: `npm run test:integration` cubre la matriz multi-vertical sobre
+  PostgreSQL efímero real.
+- **G-5/G-8**: envelope `{data,meta}` en todo `/api/v2` y contrato OpenAPI
+  regenerado y verificado con `git diff --exit-code`.
+- **G-6**: `release.yml` ejecuta `e2e.yml` (smoke R-E-1..R-E-8) antes de
+  publicar imágenes; no corre en cada PR.
+- **G-7**: `npm run lint` + `cargo fmt --check` y `cargo clippy` por crate.
+- **Zona horaria**: el job `rust`, el E2E y los workflows de deploy fijan
+  `TZ=America/Managua` (R-FL-3).
 
-**Cerrado en la 3ª auditoría (2026-10-03):** `shared` puro **7/7** con spec
-(R-U-17) y guards/pipes (`service-auth`, `validation.pipe`) testeados (R-U-15);
-controllers de **0/25 a 24/25**. Tests 175 → 358.
-
-Todas quedan registradas en [`../_meta/AUDIT.md`](../_meta/AUDIT.md) en la
-próxima auditoría (R-COV-3).
+El detalle numérico vigente vive en [`../_meta/AUDIT.md`](../_meta/AUDIT.md)
+(R-COV-3).

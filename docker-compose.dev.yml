@@ -137,16 +137,15 @@ services:
       SMTP_USER: ${SMTP_USER:-}
       SMTP_PASSWORD: ${SMTP_PASSWORD:-}
 
-  catalog-service:
+  item-service:
     <<: *servicio-base
-    # ADR-0016: el servicio es Rust y tiene su propio Dockerfile multi-stage.
     build:
       context: .
-      dockerfile: packages/catalog-service/Dockerfile
+      dockerfile: packages/item-service/Dockerfile
     environment:
-      SERVICIO: catalog-service
-      PORT: 3002
-      OUTBOX_TABLA: catalog.outbox
+      SERVICIO: item-service
+      PORT: 3015
+      OUTBOX_TABLA: item.outbox
 
   inventory-service:
     <<: *servicio-base

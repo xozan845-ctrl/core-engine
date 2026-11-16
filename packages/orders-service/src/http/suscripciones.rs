@@ -25,11 +25,7 @@ const CREAR: &[ReglaCampo] = &[
     campo("comprador_id", false, &[Regla::Uuid]),
     campo("cliente_parte_id", false, &[Regla::Uuid]),
     campo("metodo_pago", false, &[Regla::Texto]),
-    campo(
-        "fulfillment",
-        false,
-        &[Regla::En(&crate::suscripciones::FULFILLMENTS_SUSCRIPCION)],
-    ),
+    campo("fulfillment", false, &[Regla::Texto]),
     campo(
         "intervalo",
         true,
@@ -75,6 +71,14 @@ async fn crear(
     let usuario = autorizar(&state, &headers).await?;
     validar(CREAR, &cuerpo)?;
     let empresa = usuario.empresa_de(query(&params, "empresa_id"))?;
+    if let Some(fulfillment) = cuerpo
+        .get("fulfillment")
+        .and_then(Value::as_str)
+        .map(str::trim)
+        .filter(|valor| !valor.is_empty())
+    {
+        state.fulfillments()?.validar(fulfillment).await?;
+    }
     let input: crate::suscripciones::CrearSuscripcionInput =
         serde_json::from_value(Value::Object(objeto(&cuerpo))).map_err(|_| {
             ApiError::validacion(serde_json::json!([{"campo": "oferta_id", "restricciones": []}]))
