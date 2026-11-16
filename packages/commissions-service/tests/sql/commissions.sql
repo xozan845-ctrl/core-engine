@@ -94,3 +94,9 @@ CREATE TABLE IF NOT EXISTS commissions.outbox (
   creado_en    timestamptz NOT NULL DEFAULT NOW(),
   publicado_en timestamptz
 );
+
+CREATE SCHEMA IF NOT EXISTS identity;
+CREATE TABLE IF NOT EXISTS identity.negocios (
+  id     uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  nombre text NOT NULL
+);
