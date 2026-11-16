@@ -30,6 +30,8 @@ const ACTUALIZAR: &[ReglaCampo] = &[
     campo("item_id", false, &[Regla::Uuid]),
 ];
 
+const ESQUEMA: &[ReglaCampo] = &[campo("esquema", true, &[Regla::Objeto])];
+
 fn created(valor: Value) -> Result<Response, ApiError> {
     Ok((StatusCode::CREATED, Json(valor)).into_response())
 }
@@ -136,6 +138,59 @@ pub async fn eliminar(
         .eliminar(&empresa_id, &parte_id, &registro_id, &actor)
         .await?;
     ok(respuesta)
+}
+
+/// `GET /api/v2/empresas/:empresaId/registros/esquemas`.
+pub async fn listar_esquemas(
+    State(state): State<AppState>,
+    Path(empresa_id): Path<String>,
+    headers: HeaderMap,
+    Query(query): Query<HashMap<String, String>>,
+) -> Result<Response, ApiError> {
+    let actor = actor(&headers)?;
+    actor.exigir_roles(&["super_admin", "admin", "empresario"], &[])?;
+    let esquemas = state
+        .servicios()?
+        .registros
+        .listar_esquemas(&empresa_id, query.get("tipo").map(String::as_str), &actor)
+        .await?;
+    ok(Value::Array(esquemas))
+}
+
+/// `GET /api/v2/empresas/:empresaId/registros/esquemas/:tipo`.
+pub async fn obtener_esquema(
+    State(state): State<AppState>,
+    Path((empresa_id, tipo)): Path<(String, String)>,
+    headers: HeaderMap,
+) -> Result<Response, ApiError> {
+    let actor = actor(&headers)?;
+    actor.exigir_roles(&["super_admin", "admin", "empresario"], &[])?;
+    let esquema = state
+        .servicios()?
+        .registros
+        .obtener_esquema(&empresa_id, &tipo, &actor)
+        .await?
+        .ok_or_else(|| ApiError::no_encontrado("Esquema de registro", &tipo))?;
+    ok(esquema)
+}
+
+/// `PUT /api/v2/empresas/:empresaId/registros/esquemas/:tipo`.
+pub async fn guardar_esquema(
+    State(state): State<AppState>,
+    Path((empresa_id, tipo)): Path<(String, String)>,
+    headers: HeaderMap,
+    Cuerpo(cuerpo): Cuerpo,
+) -> Result<Response, ApiError> {
+    let actor = actor(&headers)?;
+    actor.exigir_roles(&["super_admin", "admin", "empresario"], &[])?;
+    validar(ESQUEMA, &cuerpo)?;
+    let esquema = cuerpo.get("esquema").cloned().unwrap_or(Value::Null);
+    let fila = state
+        .servicios()?
+        .registros
+        .guardar_esquema(&empresa_id, &tipo, &esquema, &actor)
+        .await?;
+    created(fila)
 }
 
 #[cfg(test)]

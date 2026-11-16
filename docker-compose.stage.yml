@@ -12,8 +12,8 @@
 # `core-engine`. La observabilidad es opcional:
 #   docker compose -f docker-compose.stage.yml -f docker-compose.observability.yml up -d
 # `commissions-service` SI se despliega en stage (portal de empresa, ADR-37),
-# pero sigue fuera de produccion. `market-intelligence-service` no entra en
-# stage ni produccion: vive en `docker-compose.dev.yml` (desarrollo).
+# pero sigue fuera de produccion. `market-intelligence-service` se despliega
+# en stage y produccion desde la Fase 6 (analitica transversal).
 
 x-servicio-base: &servicio-base
   env_file:
@@ -200,6 +200,15 @@ services:
       SERVICIO: commissions-service
       PORT: 3006
       OUTBOX_TABLA: commissions.outbox
+
+  market-intelligence-service:
+    <<: *servicio-base
+    image: ghcr.io/xozan845-ctrl/core-engine-market-intelligence-service:stage
+    pull_policy: always
+    environment:
+      SERVICIO: market-intelligence-service
+      PORT: 3009
+      OUTBOX_TABLA: intelligence.outbox
 
   finance-service:
     <<: *servicio-base

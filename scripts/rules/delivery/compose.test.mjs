@@ -13,10 +13,10 @@ import { GHCR_OWNER, SERVICES, WORKFLOWS_DIR } from '../../config/project.mjs';
  */
 
 // Exclusiones por entorno: stage valida commissions (ADR-37), pero produccion
-// lo mantiene fuera (ADR-17/ADR-22). market-intelligence queda fuera de ambos
-// y solo vive en desarrollo (`docker-compose.dev.yml`).
-const EXCLUDED_FROM_STAGE = ['market-intelligence-service'];
-const EXCLUDED_FROM_PROD = ['commissions-service', 'market-intelligence-service'];
+// lo mantiene fuera (ADR-17/ADR-22). market-intelligence se despliega en
+// stage y produccion desde la Fase 6.
+const EXCLUDED_FROM_STAGE = [];
+const EXCLUDED_FROM_PROD = ['commissions-service'];
 
 const COMPOSES = [
   { rel: 'docker-compose.stage.yml', tag: 'stage', excluded: EXCLUDED_FROM_STAGE },
@@ -74,6 +74,24 @@ export default defineSuite({
         /^ {2}commissions-service:$/m,
         'produccion no debe definir commissions-service (ADR-17/ADR-22)',
       );
+
+      for (const [rel, tag] of [
+        ['docker-compose.stage.yml', 'stage'],
+        ['docker-compose.yml', 'prod'],
+      ]) {
+        const content = read(rel);
+        assert.match(
+          content,
+          /^ {2}market-intelligence-service:$/m,
+          `${rel} debe definir market-intelligence-service (Fase 6)`,
+        );
+        assert.ok(
+          content.includes(
+            `image: ghcr.io/${GHCR_OWNER}/core-engine-market-intelligence-service:${tag}`,
+          ),
+          `${rel} debe consumir la imagen :${tag} de market-intelligence-service`,
+        );
+      }
     });
 
     test('dev construye local: `docker-compose.dev.yml` define los 11 microservicios con `build:`', () => {
@@ -88,7 +106,7 @@ export default defineSuite({
       for (const svc of SERVICES) {
         assert.ok(
           content.includes(`SERVICIO: ${svc}`),
-          `${rel}: falta el servicio \`${svc}\` (dev es el único entorno con los 11)`,
+          `${rel}: falta el servicio \`${svc}\``,
         );
       }
     });
