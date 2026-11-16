@@ -20,7 +20,8 @@ before(async () => {
   try {
     const { rows: [{ existe }] } = await client.query('SELECT to_regnamespace(\'identity\') IS NOT NULL AS existe');
     const { rows: [{ catalogoFinal }] } = await client.query(
-      `SELECT to_regclass('catalog.items') IS NOT NULL AND to_regclass('catalog.productos') IS NULL AS "catalogoFinal"`,
+      `SELECT to_regclass('item.items') IS NOT NULL
+              AND to_regnamespace('catalog') IS NULL AS "catalogoFinal"`,
     );
     // Si el esquema ya existe (otras suites crean catalog), 01e puede fallar
     // porque la vista legacy ya no está; 24 y 29 son aditivas e idempotentes.

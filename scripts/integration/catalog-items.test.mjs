@@ -1,8 +1,8 @@
 import assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
-import { readFile } from 'node:fs/promises';
 import test, { after, before } from 'node:test';
 import pg from 'pg';
+import { asegurarEsquemaFinal } from './esquema.mjs';
 
 const connectionString = process.env.TEST_DATABASE_URL;
 if (!connectionString) throw new Error('TEST_DATABASE_URL requerida para la BD efimera');
@@ -11,25 +11,7 @@ if (databaseUrl.pathname !== '/core_engine_test' || !['localhost', '127.0.0.1'].
   throw new Error('La suite solo acepta core_engine_test en localhost');
 }
 
-// Cadena completa del catálogo: crea las fuentes legacy, las migra a items y
-// las retira. Así la suite prueba el esquema final, no un estado intermedio.
-const MIGRACIONES = [
-  '01_esquemas.sql',
-  '01c_cqrs_catalog.sql',
-  '01e_adr25_empresas.sql',
-  '01f_slugs.sql',
-  '01h_catalogo_por_empresa.sql',
-  '01i_variantes_imagenes.sql',
-  '11_catalogo_productos_servicios.sql',
-  '12_catalogo_operaciones_avanzadas.sql',
-  '25_catalog_items.sql',
-  '26_stores_items.sql',
-  '42a_catalog_items_vista_reset.sql',
-  '43_catalog_item_model.sql',
-  '44_catalog_items_metadatos.sql',
-  '48_catalog_retiro_legacy.sql',
-];
-
+// Esquema final del corte: item/pricing/inventory y `catalog` retirado.
 let client;
 
 before(async () => {
@@ -37,21 +19,7 @@ before(async () => {
   await client.connect();
   await client.query('SELECT pg_advisory_lock(38194201)');
   try {
-    // La migración 48 retira las tablas legacy: si el esquema final ya está
-    // aplicado no se reejecuta la cadena destructiva.
-    const { rows: [{ final }] } = await client.query(
-      `SELECT to_regclass('catalog.items') IS NOT NULL
-              AND to_regclass('catalog.productos') IS NULL AS final`,
-    );
-    if (final) return;
-    const { rows: [{ existe }] } = await client.query(
-      'SELECT to_regnamespace(\'identity\') IS NOT NULL AS existe',
-    );
-    const migraciones = existe ? MIGRACIONES.filter((name) => name !== '01_esquemas.sql') : MIGRACIONES;
-    for (const name of migraciones) {
-      const sql = await readFile(new URL(`../../infra/db/init/${name}`, import.meta.url), 'utf8');
-      await client.query(sql);
-    }
+    await asegurarEsquemaFinal(client);
   } finally {
     await client.query('SELECT pg_advisory_unlock(38194201)');
   }
@@ -61,7 +29,7 @@ after(async () => {
   await client?.end();
 });
 
-test('items es la única fuente y admite variantes e imágenes', { concurrency: false }, async () => {
+test('item.items es la única fuente y admite variantes e imágenes', { concurrency: false }, async () => {
   const empresaId = randomUUID();
   const padreId = randomUUID();
   const varianteId = randomUUID();
@@ -71,7 +39,7 @@ test('items es la única fuente y admite variantes e imágenes', { concurrency: 
   await client.query('BEGIN');
   try {
     await client.query(
-      `INSERT INTO catalog.items
+      `INSERT INTO item.items
          (id, empresa_id, tipo, codigo, nombre, precio_cents, track_inventory, stock,
           marca, codigo_barras, unidad)
        VALUES ($1, $2, 'producto', 'PADRE-01', 'Producto padre', 1500, true, 7,
@@ -79,21 +47,21 @@ test('items es la única fuente y admite variantes e imágenes', { concurrency: 
       [padreId, empresaId],
     );
     await client.query(
-      `INSERT INTO catalog.items
+      `INSERT INTO item.items
          (id, empresa_id, tipo, codigo, nombre, precio_cents, track_inventory, stock,
           parent_item_id)
        VALUES ($1, $2, 'producto', 'PADRE-01-ROJO', 'Variante roja', 1600, true, 3, $3)`,
       [varianteId, empresaId, padreId],
     );
     await client.query(
-      `INSERT INTO catalog.item_imagenes (id, empresa_id, item_id, objeto_id, orden, es_principal)
+      `INSERT INTO item.item_imagenes (id, empresa_id, item_id, objeto_id, orden, es_principal)
        VALUES ($1, $2, $3, $4, 0, true)`,
       [imagenId, empresaId, padreId, objetoId],
     );
     const { rows: [item] } = await client.query(
       `SELECT i.codigo, i.marca, i.codigo_barras, i.unidad, i.parent_item_id,
-              (SELECT COUNT(*)::int FROM catalog.item_imagenes ii WHERE ii.item_id = i.id) AS imagenes
-         FROM catalog.items i WHERE i.id = $1`,
+              (SELECT COUNT(*)::int FROM item.item_imagenes ii WHERE ii.item_id = i.id) AS imagenes
+         FROM item.items i WHERE i.id = $1`,
       [padreId],
     );
     assert.deepEqual(item, {
@@ -105,7 +73,7 @@ test('items es la única fuente y admite variantes e imágenes', { concurrency: 
       imagenes: 1,
     });
     const { rows: [variante] } = await client.query(
-      'SELECT parent_item_id FROM catalog.items WHERE id = $1',
+      'SELECT parent_item_id FROM item.items WHERE id = $1',
       [varianteId],
     );
     assert.equal(variante.parent_item_id, padreId);
@@ -126,7 +94,7 @@ test('las ofertas usan item_id y ya no conservan columnas legacy', { concurrency
   await client.query('BEGIN');
   try {
     await client.query(
-      `INSERT INTO catalog.items
+      `INSERT INTO item.items
         (id, empresa_id, tipo, codigo, nombre, precio_cents, track_inventory, stock)
        VALUES ($1, $2, 'alquiler', 'ALQ-001', 'Alquiler item', 5000, false, NULL)`,
       [itemId, empresaId],
@@ -150,12 +118,11 @@ test('las ofertas usan item_id y ya no conservan columnas legacy', { concurrency
       [tiendaId],
     );
     assert.deepEqual(oferta, { item_type: 'alquiler', item_id: itemId, stock: null });
-    const { rows: [legacy] } = await client.query(
-      `SELECT to_regclass('catalog.productos') AS productos,
-              to_regclass('catalog.servicios') AS servicios,
-              to_regclass('catalog.producto_imagenes') AS imagenes`,
+    const { rows: [retirado] } = await client.query(
+      `SELECT to_regnamespace('catalog') AS catalog,
+              to_regclass('item.items') AS items`,
     );
-    assert.deepEqual(legacy, { productos: null, servicios: null, imagenes: null });
+    assert.deepEqual(retirado, { catalog: null, items: 'item.items' });
     await client.query('ROLLBACK');
   } catch (error) {
     await client.query('ROLLBACK');

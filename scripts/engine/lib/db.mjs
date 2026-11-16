@@ -114,6 +114,14 @@ export function readRlsStatus(root) {
     )) {
       tables.delete(`${match[1].toLowerCase()}.${match[2].toLowerCase()}`);
     }
+    for (const match of sql.matchAll(
+      /DROP SCHEMA\s+(?:IF EXISTS\s+)?([a-z_][a-z0-9_]*)/gi,
+    )) {
+      const schema = `${match[1].toLowerCase()}.`;
+      for (const table of [...tables]) {
+        if (table.startsWith(schema)) tables.delete(table);
+      }
+    }
   }
 
   const rlsPath = join(root, RLS_FILE);

@@ -66,15 +66,17 @@ de `orders.orden_vista`; se eliminó la policy de la tabla legacy
 - Migración `42_personal_unico.sql`.
 
 **Fase 3 (catálogo):** completada.
-- `catalog.items` es la única fuente: productos, servicios y alquileres viven en
+- `item.items` es la única fuente: productos, servicios y alquileres viven en
   la misma tabla y las variantes usan `parent_item_id`.
-- Las imágenes se guardan en `catalog.item_imagenes`; `productos`,
+- Las imágenes se guardan en `item.item_imagenes`; `productos`,
   `servicios` y `producto_imagenes` fueron retiradas junto con sus triggers de
   sincronización (migraciones `42a`, `44` y `48`).
+- El esquema `catalog` completo se retiró en la migración `85` (ADR-0018); los
+  datos viven en `item`, `pricing` e `inventory`.
 - Las operaciones (combos, promociones, ajustes, histórico) referencian
   `item_id`; `stores.ofertas` ya no conserva `producto_id`.
 - `catalog.combos` se retiró (migración `68`): un combo es un item con
-  `es_combo = true` y sus componentes viven en `catalog.item_componentes`. La
+  `es_combo = true` y sus componentes viven en `item.item_componentes`. La
   API `/catalog/combos` se mantiene como adaptador sin tabla duplicada.
 - Los endpoints legacy `/catalog/productos*` y `/catalog/servicios*` se
   retiraron; la edición del catálogo vive en `/catalog/items` y los endpoints
@@ -86,7 +88,7 @@ de `orders.orden_vista`; se eliminó la policy de la tabla legacy
 ## Decisión de la Fase 3
 
 Variantes como items hijos con `parent_item_id` e imágenes en
-`catalog.item_imagenes`. La reescritura del catálogo quedó ejecutada; `items`
+`item.item_imagenes`. La reescritura del catálogo quedó ejecutada; `items`
 es la única fuente de verdad.
 
 ---
