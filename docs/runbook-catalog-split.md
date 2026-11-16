@@ -106,6 +106,9 @@ el mismo despliegue, con el gateway apuntando al servicio nuevo.
 2. Confirmar que `PATCH /api/v2/catalog/items/<item>` con `stock` responde
    `STOCK_GESTIONADO_POR_INVENTARIO`; el ajuste se hace por
    `/api/v2/admin/inventario`.
+   - Un item nuevo con stock debe aparecer en la ubicación predeterminada
+     (`inventory.item_stock_ubicacion`); una entrada/salida debe mover el total
+     y el desglose, y publicar `stock.updated` en `inventory.outbox`.
 3. Ejecutar el smoke remoto con las credenciales del environment:
 
 ```bash

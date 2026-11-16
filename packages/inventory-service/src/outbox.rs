@@ -89,6 +89,31 @@ impl Outbox {
         Ok(())
     }
 
+    /// Publica `stock.updated` (RN-02) dentro de la transacción del cambio de
+    /// stock. `origen` identifica la operación y `tipo_evento` el motivo.
+    pub async fn insertar_stock_updated(
+        &self,
+        tx: &mut Transaction<'_, Postgres>,
+        origen: &str,
+        tipo_evento: &str,
+        items: Vec<Value>,
+    ) -> Result<(), ApiError> {
+        if items.is_empty() {
+            return Ok(());
+        }
+        self.insertar_en_transaccion(
+            tx,
+            "stock.updated",
+            json!({
+                "order_id": origen,
+                "tipo": tipo_evento,
+                "items": items,
+            }),
+        )
+        .await?;
+        Ok(())
+    }
+
     pub async fn insertar_en_transaccion(
         &self,
         tx: &mut Transaction<'_, Postgres>,

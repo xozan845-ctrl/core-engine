@@ -7,6 +7,7 @@
 
 use crate::db::{fila_a_json, interno, Db};
 use crate::errors::ApiError;
+use crate::outbox::Outbox;
 use serde_json::{json, Map, Value};
 use sqlx::{Postgres, Row, Transaction};
 use std::sync::Arc;
@@ -20,6 +21,7 @@ const COLUMNAS: &str = "id, empresa_id, codigo, nombre, tipo, direccion, predete
 
 pub struct Ubicaciones {
     db: Arc<Db>,
+    outbox: Option<Arc<Outbox>>,
 }
 
 struct ItemVerificado {
@@ -31,8 +33,8 @@ struct ItemVerificado {
 }
 
 impl Ubicaciones {
-    pub fn nueva(db: Arc<Db>) -> Self {
-        Self { db }
+    pub fn nueva(db: Arc<Db>, outbox: Option<Arc<Outbox>>) -> Self {
+        Self { db, outbox }
     }
 
     pub async fn listar(&self, empresa_id: &str) -> Result<Vec<Value>, ApiError> {
@@ -59,9 +61,19 @@ impl Ubicaciones {
         let nombre = validar_nombre(input.get("nombre"))?;
         let tipo = validar_tipo(input.get("tipo"))?;
         let direccion = direccion_crear(input.get("direccion"));
-        let predeterminada = input.get("predeterminada").and_then(Value::as_bool) == Some(true);
+        let solicitada = input.get("predeterminada").and_then(Value::as_bool) == Some(true);
 
         let mut tx = self.db.transaccion().await.map_err(interno)?;
+        // La primera ubicación de la empresa es la predeterminada: el trigger
+        // de stock inicial necesita una para sembrar los items nuevos.
+        let existentes: i64 = sqlx::query_scalar(
+            "SELECT COUNT(*) FROM inventory.ubicaciones WHERE empresa_id = $1::uuid",
+        )
+        .bind(empresa_id)
+        .fetch_one(&mut *tx)
+        .await
+        .map_err(error_ubicacion)?;
+        let predeterminada = solicitada || existentes == 0;
         if predeterminada {
             sqlx::query(
                 "UPDATE inventory.ubicaciones SET predeterminada = false, actualizado_en = NOW()
@@ -313,7 +325,21 @@ impl Ubicaciones {
         .execute(&mut *tx)
         .await
         .map_err(interno)?;
-        sincronizar_total(&mut tx, empresa_id, item_id).await?;
+        let total = sincronizar_total(&mut tx, empresa_id, item_id).await?;
+        if let Some(outbox) = &self.outbox {
+            outbox
+                .insertar_stock_updated(
+                    &mut tx,
+                    &format!("ajuste-ubicacion-{item_id}"),
+                    "ajuste_ubicacion",
+                    vec![json!({
+                        "empresa_id": empresa_id,
+                        "sku": item.codigo,
+                        "stock_restante": total,
+                    })],
+                )
+                .await?;
+        }
         let fila = sqlx::query(
             "SELECT s.ubicacion_id, u.codigo AS ubicacion_codigo, u.nombre AS ubicacion_nombre,
                     s.item_id, i.codigo AS sku, i.nombre, s.stock, i.stock AS stock_total
@@ -507,12 +533,12 @@ async fn sincronizar_total(
     tx: &mut Transaction<'static, Postgres>,
     empresa_id: &str,
     item_id: &str,
-) -> Result<(), ApiError> {
+) -> Result<i32, ApiError> {
     sqlx::query("SELECT set_config('inventory.stock_sync', 'on', true)")
         .execute(&mut **tx)
         .await
         .map_err(interno)?;
-    sqlx::query(
+    let total: i32 = sqlx::query_scalar(
         "UPDATE item.items
             SET stock = (
                   SELECT COALESCE(SUM(stock), 0)::int
@@ -520,18 +546,19 @@ async fn sincronizar_total(
                    WHERE empresa_id = $1::uuid AND item_id = $2::uuid
                 ),
                 actualizado_en = NOW()
-          WHERE id = $2::uuid AND empresa_id = $1::uuid",
+          WHERE id = $2::uuid AND empresa_id = $1::uuid
+          RETURNING stock",
     )
     .bind(empresa_id)
     .bind(item_id)
-    .execute(&mut **tx)
+    .fetch_one(&mut **tx)
     .await
     .map_err(interno)?;
     sqlx::query("SELECT set_config('inventory.stock_sync', 'off', true)")
         .execute(&mut **tx)
         .await
         .map_err(interno)?;
-    Ok(())
+    Ok(total)
 }
 
 fn campo_texto(valor: &Value, clave: &str) -> String {
