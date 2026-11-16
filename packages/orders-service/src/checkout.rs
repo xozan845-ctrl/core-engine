@@ -51,6 +51,8 @@ pub struct ComandoCrear {
     #[serde(default)]
     pub metodo_pago: Option<String>,
     #[serde(default)]
+    pub moneda_pago: Option<String>,
+    #[serde(default)]
     pub lista_precio_codigo: Option<String>,
     #[serde(default)]
     pub segmento_codigo: Option<String>,
@@ -391,6 +393,38 @@ impl Checkout {
                 .collect()
         };
 
+        let moneda_orden = moneda_orden.unwrap_or_else(|| "NIO".to_string());
+        let moneda_pago = match comando
+            .moneda_pago
+            .as_deref()
+            .map(str::trim)
+            .filter(|valor| !valor.is_empty())
+        {
+            Some(valor) => normalizar_moneda(valor)?,
+            None => moneda_orden.clone(),
+        };
+        let total_pagado_cents = if moneda_pago == moneda_orden {
+            total
+        } else {
+            let tasa = self
+                .clientes
+                .tipo_cambio(&moneda_orden, &moneda_pago)
+                .await
+                .ok_or_else(|| {
+                    ApiError::dominio(
+                        "TIPO_CAMBIO_NO_DISPONIBLE",
+                        format!("No hay una tasa publicada de {moneda_orden} a {moneda_pago}."),
+                    )
+                })?;
+            let monto = (total as f64 * tasa).round() as i64;
+            if monto <= 0 {
+                return Err(ApiError::dominio(
+                    "TIPO_CAMBIO_INVALIDO",
+                    "La tasa publicada produce un monto invalido.",
+                ));
+            }
+            monto
+        };
         let resumen = resumen_fulfillment(&items);
         let evento_payload = json!({
             "order_id": order_id,
@@ -401,6 +435,8 @@ impl Checkout {
             "estado": "creada",
             "tipo_orden": tipo_orden,
             "metodo_pago": metodo_pago,
+            "moneda_pago": moneda_pago,
+            "total_pagado_cents": total_pagado_cents,
             "fulfillment_config": resumen,
             "creado_en": creado_en,
         });
@@ -420,7 +456,9 @@ impl Checkout {
                 "cliente_parte_id": comando.cliente_parte_id,
                 "items": items,
                 "total_cents": total,
-                "moneda": moneda_orden.clone().unwrap_or_else(|| "NIO".to_string()),
+                "moneda": moneda_orden,
+                "moneda_pago": moneda_pago,
+                "total_pagado_cents": total_pagado_cents,
                 "estado": "creada",
                 "tipo_orden": tipo_orden,
                 "metodo_pago": metodo_pago,
@@ -450,8 +488,8 @@ impl Checkout {
                 &order_id,
                 empresa_pago.as_deref(),
                 &metodo,
-                total,
-                &moneda_orden.clone().unwrap_or_else(|| "NIO".to_string()),
+                total_pagado_cents,
+                &moneda_pago,
             )
             .await?;
 
@@ -471,7 +509,7 @@ impl Checkout {
             } else {
                 money::comision(total, 0.12)?
             },
-            moneda: moneda_orden.unwrap_or_else(|| "NIO".to_string()),
+            moneda: moneda_orden,
             items,
             direccion_envio: Value::Null,
             creado_en: creado_en.clone(),
@@ -1052,6 +1090,17 @@ pub fn reconstruir_desde_eventos(
         }
     }
     Some(estado)
+}
+
+fn normalizar_moneda(valor: &str) -> Result<String, ApiError> {
+    let codigo = valor.trim().to_uppercase();
+    let valido = codigo.len() == 3 && codigo.chars().all(|c| c.is_ascii_uppercase());
+    if !valido {
+        return Err(ApiError::validacion(json!([
+            {"campo": "moneda_pago", "restricciones": ["matches"]}
+        ])));
+    }
+    Ok(codigo)
 }
 
 /// Empresa del pago cuando todas las líneas pertenecen a la misma; si no,
