@@ -1,8 +1,8 @@
 # ADR-0019: Fidelización como capacidad seleccionable por configuración
 
 - **Fecha**: 2026-11-16
-- **Estado**: Aceptado — implementación en curso (fase 1: capacidad y alta de
-  empresa)
+- **Estado**: Aceptado — implementación en curso (fases 1-2: capacidad, alta de
+  empresa, modelo de datos y administración por empresa)
 - **Ámbito**: `identity-service` (capacidades, verticales, packs, alta de
   empresa, manifiesto), `orders-service` (programas, tarjetas, movimientos,
   recompensas y canjes), PostgreSQL/RLS, OpenAPI, CI/CD y documentación
@@ -88,6 +88,11 @@ Reglas:
 - RLS por `empresa_id`; el cliente solo ve su tarjeta y sus movimientos.
 - Los montos siguen la regla global: enteros en centavos y strings de dos
   decimales en JSON.
+
+La fase 2 implementa el modelo, el dominio (`programa`, `tarjetas`,
+`movimientos`, `recompensas`, `canjes`), los endpoints de administración por
+empresa y la acumulación idempotente como método de dominio. La conexión con el
+ciclo de la orden y la vista del cliente se entregan en la fase 3.
 
 ### 4. Servicio propio como evolución
 

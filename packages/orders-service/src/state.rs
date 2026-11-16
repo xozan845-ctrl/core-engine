@@ -8,6 +8,7 @@ use crate::contratos::Contratos;
 use crate::db::Db;
 use crate::entregas::EntregasDigitales;
 use crate::errors::ApiError;
+use crate::fidelizacion::Fidelizacion;
 use crate::fulfillments::Fulfillments;
 use crate::metrics::Metrics;
 use crate::pagos::Pagos;
@@ -36,6 +37,7 @@ pub struct AppState {
     pub pagos: Option<Arc<Pagos>>,
     pub tipos: Option<Arc<TiposOrden>>,
     pub fulfillments: Option<Arc<Fulfillments>>,
+    pub fidelizacion: Option<Arc<Fidelizacion>>,
     pub inicio: Instant,
 }
 
@@ -58,6 +60,7 @@ impl AppState {
             pagos: None,
             tipos: None,
             fulfillments: None,
+            fidelizacion: None,
             inicio: Instant::now(),
         }
     }
@@ -80,6 +83,7 @@ impl AppState {
         tipos: Arc<TiposOrden>,
         fulfillments: Arc<Fulfillments>,
     ) -> Self {
+        let fidelizacion = Arc::new(Fidelizacion::nueva(Arc::clone(&db)));
         Self {
             config: Arc::new(config),
             metrics,
@@ -96,6 +100,7 @@ impl AppState {
             pagos: Some(pagos),
             tipos: Some(tipos),
             fulfillments: Some(fulfillments),
+            fidelizacion: Some(fidelizacion),
             inicio: Instant::now(),
         }
     }
@@ -150,5 +155,9 @@ impl AppState {
 
     pub fn fulfillments(&self) -> Result<&Arc<Fulfillments>, ApiError> {
         self.fulfillments.as_ref().ok_or_else(ApiError::interno)
+    }
+
+    pub fn fidelizacion(&self) -> Result<&Arc<Fidelizacion>, ApiError> {
+        self.fidelizacion.as_ref().ok_or_else(ApiError::interno)
     }
 }
