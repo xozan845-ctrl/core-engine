@@ -9,6 +9,7 @@
 use crate::db::{fila_a_json, interno, Db};
 use crate::errors::ApiError;
 use crate::money::Money;
+use crate::outbox::Outbox;
 use chrono::{Local, NaiveDate, TimeZone};
 use serde_json::{json, Map, Value};
 use sqlx::postgres::PgRow;
@@ -21,6 +22,7 @@ pub const METODOS_COSTEO: [&str; 3] = ["promedio", "fifo", "ueps"];
 
 pub struct Inventario {
     db: Arc<Db>,
+    outbox: Option<Arc<Outbox>>,
 }
 
 /// Lote candidato para el consumo FEFO (ya ordenado por la consulta).
@@ -125,8 +127,8 @@ fn booleano_configuracion(cambios: &Value, clave: &str, actual: bool) -> bool {
 }
 
 impl Inventario {
-    pub fn nueva(db: Arc<Db>) -> Self {
-        Self { db }
+    pub fn nueva(db: Arc<Db>, outbox: Option<Arc<Outbox>>) -> Self {
+        Self { db, outbox }
     }
 
     /// Configuración de inventario de la empresa o los valores por defecto.
@@ -518,7 +520,7 @@ impl Inventario {
 
         let mut tx = self.db.transaccion().await.map_err(interno)?;
         let item = sqlx::query(
-            "SELECT track_inventory FROM item.items
+            "SELECT track_inventory, codigo FROM item.items
               WHERE id = $1::uuid AND empresa_id = $2::uuid AND estado = 'activo'
               FOR UPDATE",
         )
@@ -608,11 +610,25 @@ impl Inventario {
         .fetch_optional(&mut *tx)
         .await
         .map_err(interno)?;
-        if stock.is_none() {
+        let Some(stock) = stock else {
             return Err(ApiError::dominio(
                 "STOCK_INSUFICIENTE",
                 "El stock del item no alcanza para el consumo.",
             ));
+        };
+        if let Some(outbox) = &self.outbox {
+            outbox
+                .insertar_stock_updated(
+                    &mut tx,
+                    &format!("consumo-lote-{item_id}"),
+                    "consumo_lote",
+                    vec![json!({
+                        "empresa_id": empresa_id,
+                        "sku": item.get::<String, _>("codigo"),
+                        "stock_restante": stock.get::<i32, _>("stock"),
+                    })],
+                )
+                .await?;
         }
         tx.commit().await.map_err(interno)?;
 
