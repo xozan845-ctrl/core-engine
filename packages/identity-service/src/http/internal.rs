@@ -124,6 +124,11 @@ pub async fn capacidades_empresas(
     clave_valida(&headers, state.config.internal_api_key.as_deref())?;
     let empresa_ids = arreglo_texto(&dto, "empresa_ids")?;
     let capacidades = arreglo_texto(&dto, "capacidades")?;
+    let negocio_id = dto
+        .get("negocio_id")
+        .and_then(Value::as_str)
+        .map(str::trim)
+        .filter(|valor| !valor.is_empty());
     for empresa_id in &empresa_ids {
         if !es_uuid(empresa_id) {
             return Err(ApiError::validacion(json!([
@@ -131,10 +136,17 @@ pub async fn capacidades_empresas(
             ])));
         }
     }
+    if let Some(negocio_id) = negocio_id {
+        if !es_uuid(negocio_id) {
+            return Err(ApiError::validacion(json!([
+                {"campo": "negocio_id", "restricciones": ["isUUID"]}
+            ])));
+        }
+    }
     let filas = state
         .servicios()?
         .capacidades
-        .activas_de_empresas(&empresa_ids, &capacidades)
+        .activas_de_empresas(&empresa_ids, &capacidades, negocio_id)
         .await?;
     ok(json!({ "capacidades": filas }))
 }

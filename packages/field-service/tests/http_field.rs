@@ -422,3 +422,68 @@ async fn debe_exigir_la_capacidad_de_rutas_y_la_de_campo() {
     db.cerrar().await;
     pool.close().await;
 }
+
+#[tokio::test]
+async fn debe_ejecutar_el_crud_de_vehiculos_por_http() {
+    let Some(url) = url() else {
+        eprintln!("TEST_DATABASE_URL no definida: se omite la integración");
+        return;
+    };
+    let (db, _pool) = preparar(&url).await;
+    let tenant = Uuid::new_v4().to_string();
+    let app = app(
+        Arc::clone(&db),
+        Arc::new(CapacidadesFijas(Vec::new(), tenant.clone())),
+    )
+    .await;
+
+    let (status, valor) = pedir(
+        &app,
+        Method::POST,
+        "/api/v2/field/vehiculos",
+        headers("admin", &tenant),
+        Some(json!({
+            "placa": "M-123456",
+            "marca": "Toyota",
+            "modelo": "Hilux",
+            "anio": 2024,
+            "tipo": "camioneta"
+        })),
+    )
+    .await;
+    assert_eq!(status, StatusCode::CREATED);
+    assert_eq!(valor["data"]["placa"], "M-123456");
+    let id = valor["data"]["id"].as_str().expect("id").to_string();
+
+    let (status, valor) = pedir(
+        &app,
+        Method::GET,
+        "/api/v2/field/vehiculos",
+        headers("admin", &tenant),
+        None,
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK);
+    assert_eq!(valor["data"].as_array().expect("lista").len(), 1);
+
+    let (status, valor) = pedir(
+        &app,
+        Method::PATCH,
+        &format!("/api/v2/field/vehiculos/{id}"),
+        headers("admin", &tenant),
+        Some(json!({"estado": "mantenimiento"})),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK);
+    assert_eq!(valor["data"]["estado"], "mantenimiento");
+
+    let (status, _) = pedir(
+        &app,
+        Method::DELETE,
+        &format!("/api/v2/field/vehiculos/{id}"),
+        headers("admin", &tenant),
+        None,
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK);
+}

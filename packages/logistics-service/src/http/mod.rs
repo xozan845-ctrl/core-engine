@@ -165,6 +165,7 @@ async fn correlacion(State(state): State<AppState>, request: Request, next: Next
         usuario_id: usuario.as_ref().map(|u| u.user_id.clone()),
         rol: usuario.as_ref().map(|u| u.rol.clone()),
         tenant_id: usuario.as_ref().and_then(|u| u.tenant_id.clone()),
+        negocio_id: usuario.as_ref().and_then(|u| u.negocio_id.clone()),
     };
 
     let mut response = ejecutar_con_contexto(contexto, async move {

@@ -23,6 +23,7 @@ pub struct Comprobante {
     pub tipo: String,
     pub orden_id: Option<String>,
     pub parte_id: Option<String>,
+    pub negocio_id: Option<String>,
     pub base_gravada_cents: i64,
     pub iva_cents: i64,
     pub exento_cents: i64,
@@ -37,6 +38,7 @@ pub struct Comprobante {
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct SerieComprobante {
     pub serie: String,
+    pub negocio_id: Option<String>,
     pub tipo: String,
     pub prefijo: String,
     pub secuencial_actual: i64,
@@ -54,6 +56,8 @@ pub trait Ordenes: Send + Sync {
 #[derive(Debug, Clone, Deserialize, PartialEq)]
 pub struct OrdenResumen {
     pub total_cents: i64,
+    #[serde(default)]
+    pub negocio_id: Option<String>,
 }
 
 pub struct OrdenesHttp {
@@ -147,21 +151,24 @@ impl Facturacion {
         desde: Option<DateTime<Utc>>,
         hasta: Option<DateTime<Utc>>,
         estado: Option<&str>,
+        negocio_id: Option<&str>,
     ) -> Result<Vec<Comprobante>, ApiError> {
         let filas = sqlx::query(
-            "SELECT id, serie, numero, tipo, orden_id, parte_id, base_gravada_cents,
+            "SELECT id, serie, numero, tipo, orden_id, negocio_id, parte_id, base_gravada_cents,
                     iva_cents, exento_cents, total_cents, moneda, estado,
                     datos_cliente, emitido_en, creado_en
              FROM finance.comprobantes
              WHERE ($1::timestamptz IS NULL OR creado_en >= $1)
                AND ($2::timestamptz IS NULL OR creado_en <= $2)
                AND ($3::text IS NULL OR estado = $3)
+               AND ($4::uuid IS NULL OR negocio_id = $4::uuid)
              ORDER BY creado_en DESC
              LIMIT 300",
         )
         .bind(desde)
         .bind(hasta)
         .bind(estado)
+        .bind(negocio_id)
         .fetch_all(self.db.pool())
         .await
         .map_err(error_db)?;
@@ -169,10 +176,21 @@ impl Facturacion {
     }
 
     pub async fn series(&self) -> Result<Vec<SerieComprobante>, ApiError> {
+        self.series_de(None).await
+    }
+
+    pub async fn series_de(
+        &self,
+        negocio_id: Option<&str>,
+    ) -> Result<Vec<SerieComprobante>, ApiError> {
         let filas = sqlx::query(
-            "SELECT serie, tipo, prefijo, secuencial_actual, ruc_emisor, jurisdiccion, activa
-             FROM finance.series_comprobantes ORDER BY serie",
+            "SELECT serie, negocio_id, tipo, prefijo, secuencial_actual, ruc_emisor,
+                    jurisdiccion, activa
+             FROM finance.series_comprobantes
+              WHERE ($1::uuid IS NULL OR negocio_id IS NULL OR negocio_id = $1::uuid)
+              ORDER BY serie",
         )
+        .bind(negocio_id)
         .fetch_all(self.db.pool())
         .await
         .map_err(error_db)?;
@@ -191,12 +209,24 @@ impl Facturacion {
             .consultar(&dto.orden_id)
             .await
             .ok_or_else(|| ApiError::no_encontrado("Orden", &dto.orden_id))?;
+        let negocio_uuid = orden
+            .negocio_id
+            .as_deref()
+            .map(uuid::Uuid::parse_str)
+            .transpose()
+            .map_err(|_| ApiError::interno())?;
 
         let serie = sqlx::query(
-            "SELECT serie, tipo, prefijo, secuencial_actual, ruc_emisor, jurisdiccion, activa
-             FROM finance.series_comprobantes WHERE tipo = $1 AND activa ORDER BY serie LIMIT 1",
+            "SELECT serie, negocio_id, tipo, prefijo, secuencial_actual, ruc_emisor,
+                    jurisdiccion, activa
+             FROM finance.series_comprobantes
+              WHERE tipo = $1 AND activa
+                AND (negocio_id = $2::uuid OR negocio_id IS NULL)
+              ORDER BY (negocio_id IS NOT NULL) DESC, serie
+              LIMIT 1",
         )
         .bind(&dto.tipo)
+        .bind(negocio_uuid)
         .fetch_optional(self.db.pool())
         .await
         .map_err(error_db)?
@@ -231,12 +261,12 @@ impl Facturacion {
         let mut tx = self.db.transaccion().await.map_err(error_db)?;
         let fila = sqlx::query(
             "INSERT INTO finance.comprobantes
-               (id, serie, numero, tipo, orden_id, parte_id, base_gravada_cents,
+               (id, serie, numero, tipo, orden_id, negocio_id, parte_id, base_gravada_cents,
                 iva_cents, exento_cents, total_cents, moneda, estado, datos_cliente,
                 emitido_en)
-             VALUES (gen_random_uuid(), $1, $2, $3, $4, $5, $6, $7, 0, $8, 'C$', $9, $10,
-                     CASE WHEN $9 = 'EMITIDO' THEN NOW() ELSE NULL END)
-             RETURNING id, serie, numero, tipo, orden_id, parte_id, base_gravada_cents,
+             VALUES (gen_random_uuid(), $1, $2, $3, $4, $5, $6, $7, $8, 0, $9, 'C$', $10, $11,
+                     CASE WHEN $10 = 'EMITIDO' THEN NOW() ELSE NULL END)
+             RETURNING id, serie, numero, tipo, orden_id, negocio_id, parte_id, base_gravada_cents,
                        iva_cents, exento_cents, total_cents, moneda, estado,
                        datos_cliente, emitido_en, creado_en",
         )
@@ -248,6 +278,7 @@ impl Facturacion {
                 {"campo": "orden_id", "restricciones": ["isUuid"]}
             ]))
         })?)
+        .bind(negocio_uuid)
         .bind(
             parte_id
                 .as_deref()
@@ -363,6 +394,7 @@ fn comprobante_de_fila(fila: &sqlx::postgres::PgRow) -> Comprobante {
         numero: fila.try_get("numero").unwrap_or_default(),
         tipo: fila.try_get("tipo").unwrap_or_default(),
         orden_id: uuid_texto(fila, "orden_id").ok(),
+        negocio_id: uuid_texto(fila, "negocio_id").ok(),
         parte_id: uuid_texto(fila, "parte_id").ok(),
         base_gravada_cents: fila.try_get::<i32, _>("base_gravada_cents").unwrap_or(0) as i64,
         iva_cents: fila.try_get::<i32, _>("iva_cents").unwrap_or(0) as i64,
@@ -383,6 +415,7 @@ fn comprobante_de_fila(fila: &sqlx::postgres::PgRow) -> Comprobante {
 fn serie_de_fila(fila: &sqlx::postgres::PgRow) -> SerieComprobante {
     SerieComprobante {
         serie: fila.try_get("serie").unwrap_or_default(),
+        negocio_id: uuid_texto(fila, "negocio_id").ok(),
         tipo: fila.try_get("tipo").unwrap_or_default(),
         prefijo: fila.try_get("prefijo").unwrap_or_default(),
         secuencial_actual: fila.try_get::<i32, _>("secuencial_actual").unwrap_or(0) as i64,
@@ -403,6 +436,7 @@ mod tests {
         async fn consultar(&self, order_id: &str) -> Option<OrdenResumen> {
             (order_id == "orden-1").then_some(OrdenResumen {
                 total_cents: 100_000,
+                negocio_id: None,
             })
         }
     }

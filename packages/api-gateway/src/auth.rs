@@ -11,6 +11,8 @@ pub const TENANT_HEADER: &str = "x-tenant";
 pub const PERSONAL_HEADER: &str = "x-user-personal";
 pub const PARTICIPACION_HEADER: &str = "x-user-participacion";
 pub const ROL_EMPRESA_HEADER: &str = "x-user-rol-empresa";
+pub const NEGOCIO_HEADER: &str = "x-negocio";
+pub const PERMISOS_HEADER: &str = "x-user-permisos";
 
 #[derive(Debug, Clone, Deserialize, PartialEq)]
 pub struct TokenPayload {
@@ -23,6 +25,9 @@ pub struct TokenPayload {
     pub personal_id: Option<String>,
     pub participacion_porcentaje: Option<i64>,
     pub rol_empresa_id: Option<String>,
+    pub negocio_id: Option<String>,
+    #[serde(default)]
+    pub permisos: Vec<String>,
 }
 
 pub fn verificar_token(token: &str, secreto: &str) -> Result<TokenPayload, ApiError> {
@@ -92,6 +97,12 @@ pub fn aplicar_auth(
     if let Some(rol_empresa) = payload.rol_empresa_id {
         salida.insert(ROL_EMPRESA_HEADER.to_string(), rol_empresa);
     }
+    if let Some(negocio) = payload.negocio_id {
+        salida.insert(NEGOCIO_HEADER.to_string(), negocio);
+    }
+    if !payload.permisos.is_empty() {
+        salida.insert(PERMISOS_HEADER.to_string(), payload.permisos.join(","));
+    }
     let _ = (metodo, ruta);
     Ok(salida)
 }
@@ -113,6 +124,8 @@ mod tests {
             "rol": rol,
             "tipo": tipo,
             "tenant_id": "11111111-1111-4111-8111-111111111111",
+            "negocio_id": "22222222-2222-4222-8222-222222222222",
+            "permisos": ["ordenes.leer", "catalogo.leer"],
             "exp": chrono::Utc::now().timestamp() + 3600,
         });
         encode(
@@ -154,6 +167,14 @@ mod tests {
         assert_eq!(
             inyectadas.get("x-user-rol").map(String::as_str),
             Some("empresario")
+        );
+        assert_eq!(
+            inyectadas.get("x-negocio").map(String::as_str),
+            Some("22222222-2222-4222-8222-222222222222")
+        );
+        assert_eq!(
+            inyectadas.get("x-user-permisos").map(String::as_str),
+            Some("ordenes.leer,catalogo.leer")
         );
     }
 

@@ -487,7 +487,7 @@ impl Registros {
         };
         let filas = self
             .capacidades
-            .activas_de_empresas(&[empresa_id.to_string()], &[requerida.to_string()])
+            .activas_de_empresas(&[empresa_id.to_string()], &[requerida.to_string()], None)
             .await?;
         let activa = filas.iter().any(|fila| {
             fila.get("empresa_id").and_then(Value::as_str) == Some(empresa_id)

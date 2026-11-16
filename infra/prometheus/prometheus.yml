@@ -24,6 +24,7 @@ scrape_configs:
           - 'market-intelligence-service:3009'
           - 'storage-service:3010'
           - 'notifications-service:3012'
+          - 'analytics-service:3016'
         labels:
           plataforma: core-engine
 

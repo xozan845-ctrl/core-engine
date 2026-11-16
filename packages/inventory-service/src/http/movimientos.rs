@@ -126,11 +126,14 @@ fn validar_lineas_movimiento(valor: &Value) -> Result<(), ApiError> {
 pub async fn listar(
     State(state): State<AppState>,
     headers: HeaderMap,
-    Query(query): Query<HashMap<String, String>>,
+    Query(mut query): Query<HashMap<String, String>>,
 ) -> Result<Response, ApiError> {
     let usuario = autorizar(&state, &headers, ROLES_INVENTARIO, &[], CAP_STOCK).await?;
     validar_query(LISTAR_MOVIMIENTOS, &query)?;
     let empresa = empresa(&usuario, query.get("empresa_id").map(String::as_str))?;
+    if let Some(negocio) = usuario.negocio_id.as_ref() {
+        query.insert("negocio_id".into(), negocio.clone());
+    }
     ok(state.movimientos()?.listar(&empresa, &json!(query)).await?)
 }
 

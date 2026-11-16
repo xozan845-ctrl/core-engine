@@ -367,6 +367,12 @@
             "description": "Empresa propietaria de las líneas despachadas",
             "format": "uuid"
           },
+          "negocio_id": {
+            "type": "string",
+            "description": "Negocio de las líneas despachadas",
+            "format": "uuid",
+            "nullable": true
+          },
           "parte_id": {
             "type": "object",
             "description": "Referencia universal opcional del destinatario",
@@ -436,6 +442,12 @@
             "type": "string",
             "description": "Empresa propietaria de las líneas despachadas",
             "format": "uuid"
+          },
+          "negocio_id": {
+            "type": "string",
+            "description": "Negocio de las líneas despachadas",
+            "format": "uuid",
+            "nullable": true
           },
           "parte_id": {
             "type": "object",

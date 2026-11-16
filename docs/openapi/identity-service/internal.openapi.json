@@ -898,6 +898,11 @@
             "items": {
               "type": "string"
             }
+          },
+          "negocio_id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Negocio activo; si falta se conserva el contrato por empresa"
           }
         },
         "required": [

@@ -79,6 +79,78 @@ impl Auth {
                 "El usuario del token ya no existe.",
             ));
         };
+        let mut usuario = usuario;
+        if let Some(negocio) = sesion.negocio_id.clone() {
+            usuario.negocio_id = Some(negocio);
+        }
+        self.emitir(&usuario, jti)
+    }
+
+    /// Cambia el negocio activo de una sesión y reemite los tokens.
+    pub async fn cambiar_negocio(
+        &self,
+        usuario_id: &str,
+        refresh_token: &str,
+        negocio_id: &str,
+    ) -> Result<Sesion, ApiError> {
+        if Uuid::parse_str(negocio_id).is_err() {
+            return Err(ApiError::dominio(
+                "NEGOCIO_INVALIDO",
+                "El id de negocio no es un UUID valido.",
+            ));
+        }
+        let payload = verificar_token(refresh_token, &self.secreto)
+            .map_err(|_| ApiError::no_autorizado("El refresh_token es invalido o expiro."))?;
+        if payload.tipo != "refresh" || payload.sub != usuario_id {
+            return Err(ApiError::no_autorizado(
+                "El refresh_token no pertenece a esta sesion.",
+            ));
+        }
+        let Some(jti) = payload.jti.as_deref() else {
+            return Err(ApiError::no_autorizado(
+                "El token no tiene una sesion asociada.",
+            ));
+        };
+        let Some(sesion) = self.sesiones.activa_por_jti(jti).await? else {
+            return Err(ApiError::no_autorizado(
+                "La sesion fue cerrada; inicia sesion de nuevo.",
+            ));
+        };
+        if sesion.usuario_id != usuario_id {
+            return Err(ApiError::no_autorizado(
+                "La sesion fue cerrada; inicia sesion de nuevo.",
+            ));
+        }
+        let Some(mut usuario) = self.usuarios.encontrar_por_id(usuario_id).await? else {
+            return Err(ApiError::no_autorizado(
+                "El usuario del token ya no existe.",
+            ));
+        };
+        let Some(empresa_id) = usuario.tenant_id.as_deref() else {
+            return Err(ApiError::dominio(
+                "TENANT_REQUERIDO",
+                "El usuario no tiene una empresa activa.",
+            ));
+        };
+        if !self
+            .usuarios
+            .negocio_accesible(usuario_id, empresa_id, negocio_id)
+            .await?
+        {
+            return Err(ApiError::acceso_denegado(
+                "El negocio no existe o no está asignado a tu usuario.",
+            ));
+        }
+        if !self
+            .sesiones
+            .actualizar_negocio(jti, usuario_id, negocio_id)
+            .await?
+        {
+            return Err(ApiError::no_autorizado(
+                "La sesion fue cerrada; inicia sesion de nuevo.",
+            ));
+        }
+        usuario.negocio_id = Some(negocio_id.to_string());
         self.emitir(&usuario, jti)
     }
 
@@ -113,7 +185,9 @@ impl Auth {
     async fn sesion_de(&self, usuario: &Usuario) -> Result<Sesion, ApiError> {
         let jti = Uuid::new_v4().to_string();
         let expira_en = Utc::now() + Duration::seconds(self.refresh_ttl as i64);
-        self.sesiones.crear(&usuario.id, &jti, expira_en).await?;
+        self.sesiones
+            .crear(&usuario.id, &jti, expira_en, usuario.negocio_id.as_deref())
+            .await?;
         self.emitir(usuario, &jti)
     }
 
@@ -142,6 +216,8 @@ fn a_token(usuario: &Usuario) -> UsuarioToken {
         personal_id: usuario.personal_id.clone(),
         participacion_porcentaje: usuario.participacion_porcentaje,
         rol_empresa_id: usuario.rol_empresa_id.clone(),
+        negocio_id: usuario.negocio_id.clone(),
+        permisos: usuario.permisos.clone(),
     }
 }
 
@@ -160,6 +236,8 @@ mod tests {
             personal_id: None,
             participacion_porcentaje: Some(50),
             rol_empresa_id: None,
+            negocio_id: Some("n-1".into()),
+            permisos: vec!["ordenes.leer".into()],
             avatar_objeto_id: Some("a-1".into()),
             avatar_url: Some("/a".into()),
             creado_en: "2026-11-13T00:00:00.000Z".into(),

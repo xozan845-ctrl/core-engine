@@ -16,6 +16,7 @@ use uuid::Uuid;
 pub mod carrito;
 pub mod contratos;
 pub mod entregas;
+pub mod fidelizacion;
 pub mod fulfillments;
 pub mod interno;
 pub mod pagos;
@@ -56,6 +57,7 @@ pub fn build_router(state: AppState) -> Router {
         .merge(pagos::rutas())
         .merge(tipos_orden::rutas())
         .merge(fulfillments::rutas())
+        .merge(fidelizacion::rutas())
         .merge(carrito::rutas())
         .merge(entregas::rutas())
         .merge(contratos::rutas())
@@ -185,7 +187,7 @@ pub async fn exigir_capacidades(
     let requeridas: Vec<String> = capacidades.iter().map(|c| c.to_string()).collect();
     let filas = state
         .clientes()?
-        .capacidades(&empresas, &requeridas)
+        .capacidades(&empresas, usuario.negocio_id.as_deref(), &requeridas)
         .await
         .ok_or_else(|| ApiError::servicio_no_disponible("identity-service"))?;
     let activas: std::collections::HashSet<&str> = filas
@@ -273,6 +275,7 @@ pub(crate) async fn correlacion(
         usuario_id: usuario_id.clone(),
         rol,
         tenant_id: usuario.as_ref().and_then(|u| u.tenant_id.clone()),
+        negocio_id: usuario.as_ref().and_then(|u| u.negocio_id.clone()),
     };
 
     let mut response = ejecutar_con_contexto(contexto, async move {

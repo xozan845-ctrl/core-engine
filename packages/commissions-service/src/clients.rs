@@ -9,6 +9,7 @@ pub struct ItemOrden {
     pub oferta_id: String,
     pub vendedor_id: Option<String>,
     pub empresa_id: Option<String>,
+    pub negocio_id: Option<String>,
     pub tienda_id: Option<String>,
     pub participacion_porcentaje: Option<i64>,
     pub precio_unitario_cents: i64,

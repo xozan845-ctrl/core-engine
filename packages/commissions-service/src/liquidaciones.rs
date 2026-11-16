@@ -5,7 +5,9 @@
 //! liquidación.
 
 use crate::campos;
-use crate::db::{centavos_i32, error_db, fecha, parsear_uuid, timestamp, uuid_texto, Db};
+use crate::db::{
+    centavos_i32, error_db, fecha, parsear_uuid, timestamp, uuid_opcional, uuid_texto, Db,
+};
 use crate::errors::ApiError;
 use async_trait::async_trait;
 use chrono::{Datelike, NaiveDate};
@@ -35,6 +37,7 @@ pub struct Liquidacion {
 pub struct LiquidacionEmpresa {
     pub id: String,
     pub empresa_id: String,
+    pub negocio_id: Option<String>,
     pub periodo_inicio: String,
     pub periodo_fin: String,
     pub monto_cents: i64,
@@ -109,6 +112,14 @@ fn sumar(mapa: &mut Vec<(String, i64)>, clave: String, monto: i64) {
     }
 }
 
+fn sumar_clave<K: PartialEq>(mapa: &mut Vec<(K, i64)>, clave: K, monto: i64) {
+    if let Some(fila) = mapa.iter_mut().find(|(actual, _)| actual == &clave) {
+        fila.1 += monto;
+    } else {
+        mapa.push((clave, monto));
+    }
+}
+
 impl Liquidacion {
     fn desde_fila(fila: &PgRow) -> Result<Self, sqlx::Error> {
         Ok(Self {
@@ -128,6 +139,7 @@ impl LiquidacionEmpresa {
         Ok(Self {
             id: uuid_texto(fila, "id")?,
             empresa_id: uuid_texto(fila, "empresa_id")?,
+            negocio_id: uuid_opcional(fila, "negocio_id")?,
             periodo_inicio: fecha(fila, "periodo_inicio")?,
             periodo_fin: fecha(fila, "periodo_fin")?,
             monto_cents: i64::from(fila.try_get::<i32, _>("monto_cents")?),
@@ -143,7 +155,11 @@ pub trait LiquidacionesPort: Send + Sync {
     async fn cerrar_periodo_anterior(&self, fecha: NaiveDate)
         -> Result<Vec<Liquidacion>, ApiError>;
     async fn de_vendedor(&self, vendedor_id: &str) -> Result<Vec<Liquidacion>, ApiError>;
-    async fn de_empresa(&self, empresa_id: &str) -> Result<Vec<LiquidacionEmpresa>, ApiError>;
+    async fn de_empresa(
+        &self,
+        empresa_id: &str,
+        negocio_id: Option<&str>,
+    ) -> Result<Vec<LiquidacionEmpresa>, ApiError>;
     async fn marcar_pagada(&self, liquidacion_id: &str) -> Result<Option<Liquidacion>, ApiError>;
 }
 
@@ -192,7 +208,7 @@ impl LiquidacionesPort for Liquidaciones {
             "UPDATE commissions.comisiones SET estado = 'liquidada'
              WHERE estado = 'acreditada' AND creado_en >= $1::date
                AND creado_en <= $2::date + INTERVAL '1 day' - INTERVAL '1 second'
-             RETURNING id, vendedor_id, empresa_id, monto_vendedor_cents, monto_empresario_cents",
+             RETURNING id, vendedor_id, empresa_id, negocio_id, monto_vendedor_cents, monto_empresario_cents",
         )
         .bind(inicio_fecha)
         .bind(fin_fecha)
@@ -204,9 +220,9 @@ impl LiquidacionesPort for Liquidaciones {
             return Ok(Vec::new());
         }
 
-        // 2. consolidar por vendedor y empresa
+        // 2. consolidar por vendedor y por (empresa, negocio)
         let mut por_vendedor: Vec<(String, i64)> = Vec::new();
-        let mut por_empresa: Vec<(String, i64)> = Vec::new();
+        let mut por_empresa: Vec<((String, Option<String>), i64)> = Vec::new();
         for fila in filas {
             let vendedor = uuid_texto(&fila, "vendedor_id").map_err(error_db)?;
             let empresa = fila
@@ -214,6 +230,7 @@ impl LiquidacionesPort for Liquidaciones {
                 .map_err(error_db)?
                 .map(|valor| valor.to_string())
                 .unwrap_or_default();
+            let negocio = uuid_opcional(&fila, "negocio_id").map_err(error_db)?;
             let monto_vendedor = i64::from(
                 fila.try_get::<i32, _>("monto_vendedor_cents")
                     .map_err(error_db)?,
@@ -225,7 +242,7 @@ impl LiquidacionesPort for Liquidaciones {
             );
             sumar(&mut por_vendedor, vendedor, monto_vendedor);
             if !empresa.is_empty() {
-                sumar(&mut por_empresa, empresa, monto_empresario);
+                sumar_clave(&mut por_empresa, (empresa, negocio), monto_empresario);
             }
         }
 
@@ -244,11 +261,11 @@ impl LiquidacionesPort for Liquidaciones {
         .await
         .map_err(error_db)?;
         let compensaciones_empresas = sqlx::query(
-            "SELECT empresa_id, COALESCE(SUM(monto_empresario_cents), 0)::int AS total
+            "SELECT empresa_id, negocio_id, COALESCE(SUM(monto_empresario_cents), 0)::int AS total
              FROM commissions.compensaciones_devoluciones
              WHERE creado_en >= $1::date
                AND creado_en <= $2::date + INTERVAL '1 day' - INTERVAL '1 second'
-             GROUP BY empresa_id",
+             GROUP BY empresa_id, negocio_id",
         )
         .bind(inicio_fecha)
         .bind(fin_fecha)
@@ -263,8 +280,9 @@ impl LiquidacionesPort for Liquidaciones {
         }
         for fila in compensaciones_empresas {
             let empresa = uuid_texto(&fila, "empresa_id").map_err(error_db)?;
+            let negocio = uuid_opcional(&fila, "negocio_id").map_err(error_db)?;
             let total = i64::from(fila.try_get::<i32, _>("total").map_err(error_db)?);
-            sumar(&mut por_empresa, empresa, total);
+            sumar_clave(&mut por_empresa, (empresa, negocio), total);
         }
 
         // 4. crear liquidaciones aprobadas
@@ -293,18 +311,24 @@ impl LiquidacionesPort for Liquidaciones {
                 liquidaciones.push(Liquidacion::desde_fila(&fila).map_err(error_db)?);
             }
         }
-        for (empresa_id, monto) in por_empresa {
+        for ((empresa_id, negocio_id), monto) in por_empresa {
             if monto == 0 {
                 continue;
             }
             let mut tx = self.db.transaccion().await.map_err(error_db)?;
             sqlx::query(
                 "INSERT INTO commissions.liquidaciones_empresas
-                    (id, empresa_id, periodo_inicio, periodo_fin, monto_cents, estado)
-                 VALUES (gen_random_uuid(), $1,$2,$3,$4,'aprobada')
-                 ON CONFLICT (empresa_id, periodo_inicio) DO NOTHING",
+                    (id, empresa_id, negocio_id, periodo_inicio, periodo_fin, monto_cents, estado)
+                 VALUES (gen_random_uuid(), $1,$2,$3,$4,$5,'aprobada')
+                 ON CONFLICT (empresa_id, COALESCE(negocio_id, '00000000-0000-0000-0000-000000000000'::uuid), periodo_inicio) DO NOTHING",
             )
             .bind(parsear_uuid(&empresa_id)?)
+            .bind(
+                negocio_id
+                    .as_deref()
+                    .map(parsear_uuid)
+                    .transpose()?,
+            )
             .bind(inicio_fecha)
             .bind(fin_fecha)
             .bind(centavos_i32(monto)?)
@@ -342,14 +366,24 @@ impl LiquidacionesPort for Liquidaciones {
         .await
     }
 
-    async fn de_empresa(&self, empresa_id: &str) -> Result<Vec<LiquidacionEmpresa>, ApiError> {
+    async fn de_empresa(
+        &self,
+        empresa_id: &str,
+        negocio_id: Option<&str>,
+    ) -> Result<Vec<LiquidacionEmpresa>, ApiError> {
         let mut tx = self.db.transaccion().await.map_err(error_db)?;
         let filas = sqlx::query(
-            "SELECT id, empresa_id, periodo_inicio, periodo_fin, monto_cents, estado, creado_en
+            "SELECT id, empresa_id, negocio_id, periodo_inicio, periodo_fin, monto_cents, estado, creado_en
              FROM commissions.liquidaciones_empresas WHERE empresa_id = $1
+               AND ($2::uuid IS NULL OR negocio_id = $2::uuid)
              ORDER BY periodo_inicio DESC LIMIT 100",
         )
         .bind(parsear_uuid(empresa_id)?)
+        .bind(
+            negocio_id
+                .map(parsear_uuid)
+                .transpose()?,
+        )
         .fetch_all(&mut *tx)
         .await
         .map_err(error_db)?;
@@ -399,7 +433,11 @@ impl LiquidacionesPort for LiquidacionesNoDisponible {
         Err(ApiError::servicio_no_disponible("commissions-service"))
     }
 
-    async fn de_empresa(&self, _empresa_id: &str) -> Result<Vec<LiquidacionEmpresa>, ApiError> {
+    async fn de_empresa(
+        &self,
+        _empresa_id: &str,
+        _negocio_id: Option<&str>,
+    ) -> Result<Vec<LiquidacionEmpresa>, ApiError> {
         Err(ApiError::servicio_no_disponible("commissions-service"))
     }
 

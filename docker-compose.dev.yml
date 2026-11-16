@@ -256,6 +256,15 @@ services:
       PORT: 3009
       OUTBOX_TABLA: intelligence.outbox
 
+  analytics-service:
+    <<: *servicio-base
+    build:
+      context: .
+      dockerfile: packages/analytics-service/Dockerfile
+    environment:
+      SERVICIO: analytics-service
+      PORT: 3016
+
   storage-service:
     <<: *servicio-base
     build:

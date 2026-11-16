@@ -25,6 +25,10 @@ const LOGIN: &[ReglaCampo] = &[
 ];
 
 const REFRESH: &[ReglaCampo] = &[campo("refresh_token", true, &[Regla::Texto])];
+const NEGOCIO_ACTIVO: &[ReglaCampo] = &[
+    campo("negocio_id", true, &[Regla::Uuid]),
+    campo("refresh_token", true, &[Regla::Texto]),
+];
 
 const LOGOUT: &[ReglaCampo] = &[campo("refresh_token", false, &[Regla::Texto])];
 
@@ -130,6 +134,36 @@ pub async fn refresh(
         .ok_or_else(|| ApiError::dominio("TOKEN_FALTANTE", "El refresh_token es obligatorio."))?;
     let sesion = state.servicios()?.auth.refrescar(&token).await?;
     created(serde_json::to_value(sesion).map_err(|_| ApiError::interno())?)
+}
+
+/// POST /api/v2/auth/negocio-activo
+pub async fn cambiar_negocio(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    Cuerpo(dto): Cuerpo,
+) -> Result<Response, ApiError> {
+    validar(NEGOCIO_ACTIVO, &dto)?;
+    let usuario = UsuarioContexto::desde_headers_o_error(&headers)?;
+    let sesion = state
+        .servicios()?
+        .auth
+        .cambiar_negocio(
+            &usuario.user_id,
+            &valor(&dto, "refresh_token").unwrap_or_default(),
+            &valor(&dto, "negocio_id").unwrap_or_default(),
+        )
+        .await?;
+    created(serde_json::to_value(sesion).map_err(|_| ApiError::interno())?)
+}
+
+/// GET /api/v2/auth/negocios
+pub async fn negocios_disponibles(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+) -> Result<Response, ApiError> {
+    let usuario = UsuarioContexto::desde_headers_o_error(&headers)?;
+    let negocios = state.servicios()?.negocios.disponibles(&usuario).await?;
+    ok(Value::Array(negocios))
 }
 
 /// POST /api/v2/auth/logout
