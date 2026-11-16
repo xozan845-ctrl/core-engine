@@ -4,6 +4,7 @@
 //! conservar el contrato completo de la fila sin duplicar 30 campos Rust.
 
 use crate::db::Db;
+use crate::dominio::auditoria;
 use crate::dominio::media::{
     background_de, con_background_urls, normalizar_background, validar_background, BackgroundInput,
 };
@@ -171,10 +172,69 @@ impl Empresas {
                 .await
                 .map_err(interno)?;
             sqlx::query(
+                "INSERT INTO identity.negocios
+                   (empresa_id, codigo, nombre, vertical_id, pack_codigo,
+                    pack_version, es_predeterminado, creado_por)
+                 VALUES ($1::uuid, 'principal', $2, $3, $4, $5, true, $6::uuid)
+                 ON CONFLICT (empresa_id, codigo) DO NOTHING",
+            )
+            .bind(&empresa_id)
+            .bind(if nombre.chars().count() > 120 {
+                nombre.chars().take(120).collect::<String>()
+            } else {
+                nombre.clone()
+            })
+            .bind(&pack.vertical_codigo)
+            .bind(&pack.codigo)
+            .bind(pack.version)
+            .bind(&input.usuario_id)
+            .execute(&mut *tx)
+            .await
+            .map_err(interno)?;
+            auditoria::registrar(
+                &mut tx,
+                &input.usuario_id,
+                &empresa_id,
+                None,
+                "empresa.creada",
+                "empresa",
+                Some(&empresa_id),
+                json!({ "nombre": nombre, "slug": slug }),
+            )
+            .await?;
+            sqlx::query(
+                "INSERT INTO identity.roles_empresa
+                   (empresa_id, negocio_id, codigo, nombre, permisos, creado_por)
+                 SELECT $1::uuid, n.id, p.codigo, p.nombre, p.permisos, $2::uuid
+                   FROM identity.negocios n
+                   JOIN identity.plantillas_roles p ON p.vertical_id = n.vertical_id
+                  WHERE n.empresa_id = $1::uuid AND n.es_predeterminado
+                 ON CONFLICT DO NOTHING",
+            )
+            .bind(&empresa_id)
+            .bind(&input.usuario_id)
+            .execute(&mut *tx)
+            .await
+            .map_err(interno)?;
+            sqlx::query(
+                "INSERT INTO inventory.ubicaciones
+                   (empresa_id, negocio_id, codigo, nombre, tipo, predeterminada)
+                 SELECT $1::uuid, n.id,
+                        'principal_' || substr(replace(n.id::text, '-', ''), 1, 8),
+                        'Principal', 'bodega', true
+                   FROM identity.negocios n
+                  WHERE n.empresa_id = $1::uuid AND n.es_predeterminado
+                 ON CONFLICT DO NOTHING",
+            )
+            .bind(&empresa_id)
+            .execute(&mut *tx)
+            .await
+            .map_err(interno)?;
+            sqlx::query(
                 "INSERT INTO identity.roles_empresa
                    (empresa_id, codigo, nombre, permisos, creado_por)
                  VALUES ($1::uuid, 'empresario', 'Empresario', '{}'::jsonb, $2::uuid)
-                 ON CONFLICT (empresa_id, codigo) DO NOTHING",
+                 ON CONFLICT DO NOTHING",
             )
             .bind(&empresa_id)
             .bind(&input.usuario_id)
@@ -242,6 +302,19 @@ impl Empresas {
                 .await
                 .map_err(interno)?;
             }
+            sqlx::query(
+                "INSERT INTO identity.negocio_capacidades
+                   (negocio_id, capacidad_codigo, config, activo)
+                 SELECT n.id, ec.capacidad_codigo, ec.config, ec.activo
+                   FROM identity.negocios n
+                   JOIN identity.empresa_capacidades ec ON ec.empresa_id = n.empresa_id
+                  WHERE n.empresa_id = $1::uuid AND n.es_predeterminado
+                 ON CONFLICT (negocio_id, capacidad_codigo) DO NOTHING",
+            )
+            .bind(&empresa_id)
+            .execute(&mut *tx)
+            .await
+            .map_err(interno)?;
             sqlx::query(
                 "UPDATE identity.usuarios SET tenant_id = $1::uuid, rol = 'empresario'
                   WHERE id = $2::uuid",

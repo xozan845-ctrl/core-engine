@@ -16,6 +16,7 @@ pub struct ContextoCorrelacion {
     pub usuario_id: Option<String>,
     pub rol: Option<String>,
     pub tenant_id: Option<String>,
+    pub negocio_id: Option<String>,
 }
 
 task_local! {
@@ -45,6 +46,9 @@ fn linea(nivel: &str, servicio: &str, campos: Map<String, Value>) -> String {
     salida.insert("servicio".into(), Value::String(servicio.to_string()));
     if let Some(ctx) = &ctx {
         salida.insert("request_id".into(), Value::String(ctx.request_id.clone()));
+        if let Some(negocio) = &ctx.negocio_id {
+            salida.insert("negocio_id".into(), Value::String(negocio.clone()));
+        }
     }
     for (clave, valor) in campos {
         salida.insert(clave, valor);

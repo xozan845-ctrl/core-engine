@@ -18,7 +18,7 @@ pub const MARGEN_MINIMO: i64 = 0;
 pub const MARGEN_MAXIMO: i64 = 90;
 const URL_IMAGEN_PUBLICA: &str = "/api/v2/storage/public/objetos";
 
-const COLUMNAS_OFERTA: &str = "o.id, o.tienda_id, t.vendedor_id, t.empresa_id,
+const COLUMNAS_OFERTA: &str = "o.id, o.tienda_id, t.vendedor_id, t.empresa_id, t.negocio_id,
   t.participacion_porcentaje, o.item_type, o.item_id, o.sku,
   o.producto_nombre, o.atributos, o.imagen_objeto_id, o.margen,
   o.precio_base_cents, o.precio_venta_cents, o.stock, o.estado, o.moneda,
@@ -181,6 +181,12 @@ pub fn serializar(fila: &Value) -> Result<Value, ApiError> {
         objeto.insert(
             "empresa_id".into(),
             fila.get("empresa_id").cloned().unwrap_or(Value::Null),
+        );
+    }
+    if fila.get("negocio_id").is_some() {
+        objeto.insert(
+            "negocio_id".into(),
+            fila.get("negocio_id").cloned().unwrap_or(Value::Null),
         );
     }
     if fila.get("participacion_porcentaje").is_some() {

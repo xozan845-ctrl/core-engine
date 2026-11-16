@@ -25,6 +25,7 @@ pub struct Comision {
     pub order_id: String,
     pub linea_clave: Option<String>,
     pub empresa_id: Option<String>,
+    pub negocio_id: Option<String>,
     pub tienda_id: Option<String>,
     pub vendedor_id: String,
     pub venta_cents: i64,
@@ -51,6 +52,7 @@ pub struct DatosLinea {
     pub order_id: String,
     pub linea_clave: String,
     pub empresa_id: String,
+    pub negocio_id: Option<String>,
     pub tienda_id: String,
     pub vendedor_id: String,
     pub venta_cents: i64,
@@ -64,6 +66,7 @@ impl Comision {
             order_id: uuid_texto(fila, "order_id")?,
             linea_clave: fila.try_get::<Option<String>, _>("linea_clave")?,
             empresa_id: uuid_opcional(fila, "empresa_id")?,
+            negocio_id: uuid_opcional(fila, "negocio_id")?,
             tienda_id: uuid_opcional(fila, "tienda_id")?,
             vendedor_id: uuid_texto(fila, "vendedor_id")?,
             venta_cents: i64::from(fila.try_get::<i32, _>("venta_cents")?),
@@ -167,15 +170,22 @@ impl Comisiones {
 
         let fila = sqlx::query(
             "INSERT INTO commissions.comisiones
-                (id, order_id, linea_clave, empresa_id, tienda_id, vendedor_id, venta_cents,
+                (id, order_id, linea_clave, empresa_id, negocio_id, tienda_id, vendedor_id, venta_cents,
                  comision_cents, monto_vendedor_cents, monto_empresario_cents,
                  participacion_porcentaje, estado)
-             VALUES (gen_random_uuid(), $1,$2,$3,$4,$5,$6,$7,$8,$9,$10,'acreditada')
+             VALUES (gen_random_uuid(), $1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,'acreditada')
              RETURNING *",
         )
         .bind(order_id)
         .bind(&datos.linea_clave)
         .bind(parsear_uuid(&datos.empresa_id)?)
+        .bind(
+            datos
+                .negocio_id
+                .as_deref()
+                .map(parsear_uuid)
+                .transpose()?,
+        )
         .bind(parsear_uuid(&datos.tienda_id)?)
         .bind(parsear_uuid(&datos.vendedor_id)?)
         .bind(centavos_i32(datos.venta_cents)?)
@@ -216,9 +226,9 @@ impl Comisiones {
             let monto_empresario = comision.monto_empresario_cents.unwrap_or(0);
             sqlx::query(
                 "INSERT INTO commissions.compensaciones_devoluciones
-                    (id, comision_id, order_id, vendedor_id, empresa_id, monto_cents,
+                    (id, comision_id, order_id, vendedor_id, empresa_id, negocio_id, monto_cents,
                      monto_empresario_cents, motivo, creado_en)
-                 VALUES (gen_random_uuid(), $1,$2,$3,$4,$5,$6,$7,NOW())",
+                 VALUES (gen_random_uuid(), $1,$2,$3,$4,$5,$6,$7,$8,NOW())",
             )
             .bind(parsear_uuid(&comision.id)?)
             .bind(order_uuid)
@@ -226,6 +236,13 @@ impl Comisiones {
             .bind(
                 comision
                     .empresa_id
+                    .as_deref()
+                    .map(parsear_uuid)
+                    .transpose()?,
+            )
+            .bind(
+                comision
+                    .negocio_id
                     .as_deref()
                     .map(parsear_uuid)
                     .transpose()?,
@@ -311,7 +328,7 @@ impl ComisionesPort for Comisiones {
 
     async fn comisiones_de(&self, vendedor_id: &str) -> Result<Vec<Comision>, ApiError> {
         self.listar(
-            "SELECT id, order_id, linea_clave, empresa_id, tienda_id, vendedor_id, venta_cents,
+            "SELECT id, order_id, linea_clave, empresa_id, negocio_id, tienda_id, vendedor_id, venta_cents,
                     comision_cents, monto_vendedor_cents, monto_empresario_cents,
                     participacion_porcentaje, estado, creado_en
              FROM commissions.comisiones WHERE vendedor_id = $1
@@ -323,7 +340,7 @@ impl ComisionesPort for Comisiones {
 
     async fn comisiones_por_orden(&self, order_id: &str) -> Result<Vec<Comision>, ApiError> {
         self.listar(
-            "SELECT id, order_id, linea_clave, empresa_id, tienda_id, vendedor_id, venta_cents,
+            "SELECT id, order_id, linea_clave, empresa_id, negocio_id, tienda_id, vendedor_id, venta_cents,
                     comision_cents, monto_vendedor_cents, monto_empresario_cents,
                     participacion_porcentaje, estado, creado_en
              FROM commissions.comisiones WHERE order_id = $1",

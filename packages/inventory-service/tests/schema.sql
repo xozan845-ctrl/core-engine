@@ -9,6 +9,7 @@ CREATE SCHEMA inventory;
 CREATE TABLE item.items (
   id              uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   empresa_id      uuid NOT NULL,
+  negocio_id      uuid,
   tipo            text NOT NULL DEFAULT 'producto',
   codigo          text NOT NULL,
   nombre          text NOT NULL,
@@ -25,6 +26,7 @@ CREATE TABLE item.items (
 
 CREATE TABLE inventory.configuracion_inventario (
   empresa_id                uuid PRIMARY KEY,
+  negocio_id                uuid,
   metodo_costeo             text NOT NULL DEFAULT 'promedio',
   permitir_stock_negativo   boolean NOT NULL DEFAULT false,
   alerta_stock_bajo         boolean NOT NULL DEFAULT true,
@@ -32,10 +34,15 @@ CREATE TABLE inventory.configuracion_inventario (
   unidad_defecto            text NOT NULL DEFAULT 'Unidad (u)',
   actualizado_en            timestamptz NOT NULL DEFAULT NOW()
 );
+ALTER TABLE inventory.configuracion_inventario ADD COLUMN IF NOT EXISTS negocio_id uuid;
+CREATE UNIQUE INDEX IF NOT EXISTS idx_configuracion_inventario_empresa_negocio
+  ON inventory.configuracion_inventario (empresa_id,
+    COALESCE(negocio_id, '00000000-0000-0000-0000-000000000000'::uuid));
 
 CREATE TABLE inventory.proveedores (
   id         uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   empresa_id uuid NOT NULL,
+  negocio_id uuid,
   codigo     text NOT NULL,
   nombre     text NOT NULL,
   correo     text NOT NULL DEFAULT '',
@@ -65,6 +72,7 @@ CREATE TABLE inventory.reservas_ordenes (
 CREATE TABLE inventory.ubicaciones (
   id             uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   empresa_id     uuid NOT NULL,
+  negocio_id     uuid,
   codigo         text NOT NULL,
   nombre         text NOT NULL,
   tipo           text NOT NULL DEFAULT 'bodega',

@@ -213,6 +213,10 @@ pub fn registrar(router: Router<AppState>) -> Router<AppState> {
         )
         .route("/api/v2/finanzas/libro-ventas", get(finanzas::libro_ventas))
         .route(
+            "/api/v2/finanzas/libro-ventas/negocios",
+            get(finanzas::libro_ventas_negocios),
+        )
+        .route(
             "/api/v2/finanzas/libro-compras",
             get(finanzas::libro_compras),
         )

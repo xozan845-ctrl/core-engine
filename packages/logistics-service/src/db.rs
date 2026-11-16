@@ -39,6 +39,7 @@ impl Db {
                     "sub": sub,
                     "rol": ctx.rol.unwrap_or_else(|| "anon".to_string()),
                     "tenant_id": ctx.tenant_id,
+                    "negocio_id": ctx.negocio_id,
                 });
                 sqlx::query("SELECT set_config('request.jwt.claims', $1, true)")
                     .bind(claims.to_string())

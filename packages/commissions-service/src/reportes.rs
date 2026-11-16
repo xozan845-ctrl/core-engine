@@ -9,6 +9,7 @@ use crate::errors::ApiError;
 use crate::money;
 use async_trait::async_trait;
 use serde::Serialize;
+use serde_json::{json, Value};
 use sqlx::Row;
 use std::sync::Arc;
 
@@ -52,6 +53,16 @@ pub fn construir_reporte(
 #[async_trait]
 pub trait ReportesPort: Send + Sync {
     async fn kpis(&self) -> Result<ReporteKpi, ApiError>;
+
+    async fn por_negocio(
+        &self,
+        _empresa_id: &str,
+        _negocio_id: Option<&str>,
+        _desde: Option<&str>,
+        _hasta: Option<&str>,
+    ) -> Result<Vec<Value>, ApiError> {
+        Ok(Vec::new())
+    }
 }
 
 pub struct Reportes {
@@ -111,6 +122,60 @@ impl Reportes {
         )
         .await
     }
+
+    /// Reporte agregado por negocio para una empresa.
+    pub async fn por_negocio(
+        &self,
+        empresa_id: &str,
+        negocio_id: Option<&str>,
+        desde: Option<&str>,
+        hasta: Option<&str>,
+    ) -> Result<Vec<Value>, ApiError> {
+        let mut tx = self.db.transaccion().await.map_err(error_db)?;
+        let filas = sqlx::query(
+            "SELECT c.negocio_id,
+                    n.nombre AS negocio_nombre,
+                    COUNT(DISTINCT c.order_id)::bigint AS ordenes,
+                    COALESCE(SUM(c.venta_cents), 0)::bigint AS ventas_cents,
+                    COALESCE(SUM(c.comision_cents), 0)::bigint AS comisiones_cents,
+                    COALESCE(SUM(c.monto_empresario_cents), 0)::bigint AS empresario_cents
+               FROM commissions.comisiones c
+               LEFT JOIN identity.negocios n ON n.id = c.negocio_id
+              WHERE c.empresa_id = $1::uuid
+                AND ($2::uuid IS NULL OR c.negocio_id = $2::uuid)
+                AND ($3::timestamptz IS NULL OR c.creado_en >= $3::timestamptz)
+                AND ($4::timestamptz IS NULL OR c.creado_en <= $4::timestamptz)
+              GROUP BY c.negocio_id, n.nombre
+              ORDER BY ventas_cents DESC",
+        )
+        .bind(crate::db::parsear_uuid(empresa_id)?)
+        .bind(negocio_id.map(crate::db::parsear_uuid).transpose()?)
+        .bind(desde)
+        .bind(hasta)
+        .fetch_all(&mut *tx)
+        .await
+        .map_err(error_db)?;
+        tx.commit().await.map_err(error_db)?;
+        filas
+            .iter()
+            .map(|fila| {
+                let ventas: i64 = fila.try_get("ventas_cents").map_err(error_db)?;
+                let comisiones: i64 = fila.try_get("comisiones_cents").map_err(error_db)?;
+                let empresario: i64 = fila.try_get("empresario_cents").map_err(error_db)?;
+                Ok(json!({
+                    "negocio_id": fila.try_get::<Option<uuid::Uuid>, _>("negocio_id").map_err(error_db)?,
+                    "negocio_nombre": fila.try_get::<Option<String>, _>("negocio_nombre").map_err(error_db)?,
+                    "ordenes": fila.try_get::<i64, _>("ordenes").map_err(error_db)?,
+                    "ventas_cents": ventas,
+                    "ventas": money::string(ventas),
+                    "comisiones_cents": comisiones,
+                    "comisiones": money::string(comisiones),
+                    "empresario_cents": empresario,
+                    "empresario": money::string(empresario),
+                }))
+            })
+            .collect()
+    }
 }
 
 #[async_trait]
@@ -132,6 +197,16 @@ impl ReportesPort for Reportes {
             inventario,
             vendedores,
         ))
+    }
+
+    async fn por_negocio(
+        &self,
+        empresa_id: &str,
+        negocio_id: Option<&str>,
+        desde: Option<&str>,
+        hasta: Option<&str>,
+    ) -> Result<Vec<Value>, ApiError> {
+        Reportes::por_negocio(self, empresa_id, negocio_id, desde, hasta).await
     }
 }
 

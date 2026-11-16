@@ -10,11 +10,11 @@ use commissions_service::outbox::Outbox;
 use commissions_service::pedidos::PedidosConsumer;
 use commissions_service::reportes::ReportesPort;
 use sqlx::PgPool;
-use std::sync::{Arc, OnceLock};
-use tokio::sync::Mutex;
+use std::sync::Arc;
+use tokio::sync::OnceCell;
 use uuid::Uuid;
 
-static MIGRACION: OnceLock<Mutex<()>> = OnceLock::new();
+static MIGRACION: OnceCell<()> = OnceCell::const_new();
 
 fn url() -> Option<String> {
     std::env::var("TEST_DATABASE_URL").ok()
@@ -23,11 +23,14 @@ fn url() -> Option<String> {
 async fn preparar() -> Option<(Arc<Db>, PgPool)> {
     let url = url()?;
     let pool = PgPool::connect(&url).await.expect("postgres");
-    let _guard = MIGRACION.get_or_init(|| Mutex::new(())).lock().await;
-    sqlx::raw_sql(include_str!("sql/commissions.sql"))
-        .execute(&pool)
-        .await
-        .expect("migracion commissions");
+    MIGRACION
+        .get_or_init(|| async {
+            sqlx::raw_sql(include_str!("sql/commissions.sql"))
+                .execute(&pool)
+                .await
+                .expect("migracion commissions");
+        })
+        .await;
     let db = Arc::new(Db::conectar(&url).await.expect("pool del servicio"));
     Some((db, pool))
 }
@@ -48,6 +51,7 @@ fn item(empresa: Uuid, tienda: Uuid, vendedor: Uuid, oferta: Uuid) -> ItemOrden 
         oferta_id: oferta.to_string(),
         vendedor_id: Some(vendedor.to_string()),
         empresa_id: Some(empresa.to_string()),
+        negocio_id: None,
         tienda_id: Some(tienda.to_string()),
         participacion_porcentaje: Some(60),
         precio_unitario_cents: 115_000,
@@ -67,6 +71,7 @@ async fn debe_acreditar_una_linea_una_sola_vez_y_con_los_montos_de_rn04() {
         order_id: order_id.clone(),
         linea_clave: "of-1".into(),
         empresa_id: Uuid::new_v4().to_string(),
+        negocio_id: None,
         tienda_id: Uuid::new_v4().to_string(),
         vendedor_id: Uuid::new_v4().to_string(),
         venta_cents: 115_000,
@@ -119,6 +124,7 @@ async fn debe_compensar_una_devolucion_una_sola_vez() {
         order_id: order_id.clone(),
         linea_clave: "of-2".into(),
         empresa_id: empresa.to_string(),
+        negocio_id: None,
         tienda_id: Uuid::new_v4().to_string(),
         vendedor_id: Uuid::new_v4().to_string(),
         venta_cents: 10_000,
@@ -418,4 +424,59 @@ async fn debe_registrar_pago_y_compensar_por_eventos() {
 
     db.pool().close().await;
     pool.close().await;
+}
+
+#[tokio::test]
+async fn debe_reportar_ventas_y_comisiones_por_negocio() {
+    let Some((db, pool)) = preparar().await else {
+        eprintln!("TEST_DATABASE_URL no definida: se omite la integracion");
+        return;
+    };
+    let empresa = Uuid::new_v4();
+    let negocio_a = Uuid::new_v4();
+    let negocio_b = Uuid::new_v4();
+    for (negocio, venta, comision) in [
+        (negocio_a, 10_000, 1_200),
+        (negocio_a, 5_000, 600),
+        (negocio_b, 8_000, 960),
+    ] {
+        sqlx::query(
+            "INSERT INTO commissions.comisiones
+               (order_id, linea_clave, empresa_id, negocio_id, tienda_id, vendedor_id,
+                venta_cents, comision_cents, monto_vendedor_cents, monto_empresario_cents)
+             VALUES ($1, 'of-1', $2, $3, $4, $5, $6, $7, $6 - $7, 0)",
+        )
+        .bind(Uuid::new_v4())
+        .bind(empresa)
+        .bind(negocio)
+        .bind(Uuid::new_v4())
+        .bind(Uuid::new_v4())
+        .bind(venta)
+        .bind(comision)
+        .execute(&pool)
+        .await
+        .expect("comision");
+    }
+    let reportes =
+        commissions_service::reportes::Reportes::nueva(Arc::clone(&db), Arc::new(KpisNoDisponible));
+    let filas = reportes
+        .por_negocio(&empresa.to_string(), None, None, None)
+        .await
+        .expect("reporte por negocio");
+    assert_eq!(filas.len(), 2);
+    let total: i64 = filas
+        .iter()
+        .filter_map(|fila| fila["ventas_cents"].as_i64())
+        .sum();
+    assert_eq!(total, 23_000);
+    let comisiones: i64 = filas
+        .iter()
+        .filter_map(|fila| fila["comisiones_cents"].as_i64())
+        .sum();
+    assert_eq!(comisiones, 2_760);
+    let empresario: i64 = filas
+        .iter()
+        .filter_map(|fila| fila["empresario_cents"].as_i64())
+        .sum();
+    assert_eq!(empresario, 0);
 }

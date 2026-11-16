@@ -27,7 +27,7 @@ use std::sync::Arc;
 use tema::{plantilla_de, resolver_personalizacion, tema_parcial_de, TemaHerencia};
 use uuid::Uuid;
 
-pub const CAMPOS_TIENDA: &str = "id, empresa_id, propietario_usuario_id, participacion_porcentaje, vendedor_id, nombre, descripcion, slug, logo_objeto_id, background_objeto_id, background_media_type, background_poster_objeto_id, background_alt, background_overlay, background_position, background_activo, background_movil_objeto_id, background_movil_media_type, background_movil_poster_objeto_id, background_movil_alt, background_movil_activo, plantilla_override, tema_override, hero_titulo, hero_subtitulo, hero_cta_texto, hero_cta_url, seo_titulo, seo_descripcion, seo_imagen_objeto_id, personalizacion_actualizada_en, secciones, sobre_nosotros, politicas, redes, anuncio_texto, anuncio_enlace, anuncio_activo, contenido_actualizado_en, creado_en, actualizado_en";
+pub const CAMPOS_TIENDA: &str = "id, empresa_id, negocio_id, propietario_usuario_id, participacion_porcentaje, vendedor_id, nombre, descripcion, slug, logo_objeto_id, background_objeto_id, background_media_type, background_poster_objeto_id, background_alt, background_overlay, background_position, background_activo, background_movil_objeto_id, background_movil_media_type, background_movil_poster_objeto_id, background_movil_alt, background_movil_activo, plantilla_override, tema_override, hero_titulo, hero_subtitulo, hero_cta_texto, hero_cta_url, seo_titulo, seo_descripcion, seo_imagen_objeto_id, personalizacion_actualizada_en, secciones, sobre_nosotros, politicas, redes, anuncio_texto, anuncio_enlace, anuncio_activo, contenido_actualizado_en, creado_en, actualizado_en";
 
 const MAX_INTENTOS_SLUG: i64 = 50;
 
@@ -121,14 +121,20 @@ impl Tiendas {
         }
     }
 
-    pub async fn de_empresa(&self, empresa_id: &str) -> Result<Vec<Value>, ApiError> {
+    pub async fn de_empresa(
+        &self,
+        empresa_id: &str,
+        negocio_id: Option<&str>,
+    ) -> Result<Vec<Value>, ApiError> {
         let mut tx = self.db.transaccion().await.map_err(crate::db::interno)?;
         let filas = sqlx::query(&format!(
             "SELECT {CAMPOS_TIENDA}
              FROM stores.tiendas WHERE empresa_id = $1::uuid
+               AND ($2::uuid IS NULL OR negocio_id = $2::uuid)
              ORDER BY creado_en DESC LIMIT 200"
         ))
         .bind(empresa_id)
+        .bind(negocio_id)
         .fetch_all(&mut *tx)
         .await
         .map_err(crate::db::interno)?;
@@ -254,6 +260,7 @@ impl Tiendas {
     pub async fn crear(
         &self,
         empresa_id: &str,
+        negocio_id: Option<&str>,
         propietario_id: &str,
         participacion: Option<i64>,
         nombre: &str,
@@ -261,6 +268,18 @@ impl Tiendas {
         slug_solicitado: Option<&str>,
         vendedor_id: Option<&str>,
     ) -> Result<Value, ApiError> {
+        let negocio_id = match negocio_id {
+            Some(id) => Some(id.to_string()),
+            None => sqlx::query_scalar(
+                "SELECT id FROM identity.negocios
+                  WHERE empresa_id = $1::uuid AND es_predeterminado LIMIT 1",
+            )
+            .bind(empresa_id)
+            .fetch_optional(self.db.pool())
+            .await
+            .map_err(crate::db::interno)?
+            .map(|id: Uuid| id.to_string()),
+        };
         let nombre_final = nombre.trim();
         let longitud = nombre_final.chars().count();
         if !(2..=100).contains(&longitud) {
@@ -283,12 +302,13 @@ impl Tiendas {
             let mut tx = self.db.transaccion().await.map_err(crate::db::interno)?;
             let resultado = sqlx::query(&format!(
                 "INSERT INTO stores.tiendas
-                   (id, empresa_id, propietario_usuario_id, vendedor_id, participacion_porcentaje, nombre, descripcion, slug)
-                 VALUES ($1, $2::uuid, $3::uuid, $4::uuid, $5::int, $6, $7, $8)
+                   (id, empresa_id, negocio_id, propietario_usuario_id, vendedor_id, participacion_porcentaje, nombre, descripcion, slug)
+                 VALUES ($1, $2::uuid, $3::uuid, $4::uuid, $5::uuid, $6::int, $7, $8, $9)
                  RETURNING {CAMPOS_TIENDA}"
             ))
             .bind(Uuid::new_v4())
             .bind(empresa_id)
+            .bind(negocio_id.as_deref())
             .bind(propietario_id)
             .bind(vendedor_id)
             .bind(participacion)

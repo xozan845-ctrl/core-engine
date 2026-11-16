@@ -227,6 +227,26 @@ pub async fn libro_ventas(
     Ok(Json(state.contabilidad.libro_ventas(desde, hasta).await?))
 }
 
+pub async fn libro_ventas_negocios(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    Query(query): Query<HashMap<String, String>>,
+) -> Result<Json<Vec<Value>>, ApiError> {
+    let usuario = contexto(&state, &headers, &ROLES_FINANZAS, &[], &[CAP_FACTURACION]).await?;
+    let desde = fecha_query(query.get("desde"))?;
+    let hasta = fecha_query(query.get("hasta"))?;
+    let negocio = usuario
+        .negocio_id
+        .clone()
+        .or_else(|| query.get("negocioId").cloned().filter(|v| !v.is_empty()));
+    Ok(Json(
+        state
+            .contabilidad
+            .libro_ventas_negocios(desde, hasta, negocio.as_deref())
+            .await?,
+    ))
+}
+
 pub async fn libro_compras(
     State(state): State<AppState>,
     headers: HeaderMap,
@@ -411,7 +431,12 @@ pub async fn comprobantes_listar(
     Ok(Json(
         state
             .facturacion
-            .listar(desde, hasta, query.get("estado").map(String::as_str))
+            .listar(
+                desde,
+                hasta,
+                query.get("estado").map(String::as_str),
+                query.get("negocioId").map(String::as_str),
+            )
             .await?,
     ))
 }
@@ -419,9 +444,15 @@ pub async fn comprobantes_listar(
 pub async fn comprobantes_series(
     State(state): State<AppState>,
     headers: HeaderMap,
+    Query(query): Query<HashMap<String, String>>,
 ) -> Result<Json<Vec<SerieComprobante>>, ApiError> {
     contexto(&state, &headers, &ROLES_FINANZAS, &[], &[CAP_FACTURACION]).await?;
-    Ok(Json(state.facturacion.series().await?))
+    Ok(Json(
+        state
+            .facturacion
+            .series_de(query.get("negocioId").map(String::as_str))
+            .await?,
+    ))
 }
 
 pub async fn comprobantes_emitir(

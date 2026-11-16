@@ -15,6 +15,8 @@ use axum::extract::{Path, Query, State};
 use axum::http::{HeaderMap, StatusCode};
 use axum::Json;
 use serde::Deserialize;
+use serde_json::{json, Value};
+use std::collections::HashMap;
 
 const CAPACIDAD_LIQUIDACIONES: &str = "liquidaciones";
 const ROLES_VENDEDOR: [&str; 1] = ["vendedor"];
@@ -62,12 +64,19 @@ pub async fn mis_liquidaciones(
 pub async fn liquidaciones_empresa(
     State(state): State<AppState>,
     headers: HeaderMap,
+    Query(params): Query<HashMap<String, String>>,
 ) -> Result<Json<Vec<LiquidacionEmpresa>>, ApiError> {
     let usuario = autorizar(&state, &headers, &ROLES_EMPRESARIO).await?;
     let Some(tenant) = usuario.tenant_id.as_deref() else {
         return Err(ApiError::no_encontrado("Empresa", "activa"));
     };
-    Ok(Json(state.liquidaciones.de_empresa(tenant).await?))
+    let negocio = negocio_de(&usuario, &params);
+    Ok(Json(
+        state
+            .liquidaciones
+            .de_empresa(tenant, negocio.as_deref())
+            .await?,
+    ))
 }
 
 pub async fn corte_manual(
@@ -118,12 +127,28 @@ pub async fn estado_cuenta_vendedor(
 pub async fn estado_cuenta_empresa(
     State(state): State<AppState>,
     headers: HeaderMap,
+    Query(params): Query<HashMap<String, String>>,
 ) -> Result<Json<EstadoCuentaEmpresa>, ApiError> {
     let usuario = autorizar(&state, &headers, &ROLES_EMPRESARIO).await?;
     let Some(tenant) = usuario.tenant_id.as_deref() else {
         return Err(ApiError::no_encontrado("Empresa", "activa"));
     };
-    Ok(Json(state.ventas.estado_cuenta_empresa(tenant).await?))
+    let negocio = negocio_de(&usuario, &params);
+    Ok(Json(
+        state
+            .ventas
+            .estado_cuenta_empresa(tenant, negocio.as_deref())
+            .await?,
+    ))
+}
+
+fn negocio_de(usuario: &UsuarioContexto, params: &HashMap<String, String>) -> Option<String> {
+    usuario.negocio_id.clone().or_else(|| {
+        params
+            .get("negocioId")
+            .cloned()
+            .filter(|valor| !valor.is_empty())
+    })
 }
 
 pub async fn reportes(
@@ -132,4 +157,46 @@ pub async fn reportes(
 ) -> Result<Json<ReporteKpi>, ApiError> {
     let _usuario = autorizar(&state, &headers, &ROLES_ADMIN).await?;
     Ok(Json(state.reportes.kpis().await?))
+}
+
+/// `GET /api/v2/empresarios/me/reportes/negocios`.
+pub async fn reportes_negocios(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    Query(params): Query<HashMap<String, String>>,
+) -> Result<Json<Value>, ApiError> {
+    let usuario = autorizar(&state, &headers, &ROLES_EMPRESARIO).await?;
+    let Some(tenant) = usuario.tenant_id.as_deref() else {
+        return Err(ApiError::no_encontrado("Empresa", "activa"));
+    };
+    let negocio = usuario
+        .negocio_id
+        .clone()
+        .or_else(|| params.get("negocioId").cloned().filter(|v| !v.is_empty()));
+    let desde = fecha_reporte(params.get("desde"))?;
+    let hasta = fecha_reporte(params.get("hasta"))?;
+    let filas = state
+        .reportes
+        .por_negocio(
+            tenant,
+            negocio.as_deref(),
+            desde.as_deref(),
+            hasta.as_deref(),
+        )
+        .await?;
+    Ok(Json(Value::Array(filas)))
+}
+
+fn fecha_reporte(valor: Option<&String>) -> Result<Option<String>, ApiError> {
+    let Some(valor) = valor.filter(|valor| !valor.is_empty()) else {
+        return Ok(None);
+    };
+    let valido = chrono::NaiveDate::parse_from_str(valor, "%Y-%m-%d").is_ok()
+        || chrono::DateTime::parse_from_rfc3339(valor).is_ok();
+    if !valido {
+        return Err(ApiError::validacion(json!([
+            {"campo": "fecha", "restricciones": ["isDate"]}
+        ])));
+    }
+    Ok(Some(valor.to_string()))
 }

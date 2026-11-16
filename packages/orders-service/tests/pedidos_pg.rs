@@ -51,6 +51,7 @@ impl ClientesPort for ClientesFake {
     async fn capacidades(
         &self,
         _empresas: &[String],
+        _negocio_id: Option<&str>,
         _capacidades: &[String],
     ) -> Option<Vec<Capacidad>> {
         Some(self.capacidades.clone())
@@ -69,6 +70,7 @@ impl ClientesPort for ClientesFake {
             tienda_id: TIENDA.to_string(),
             vendedor_id: VENDEDOR.to_string(),
             empresa_id: EMPRESA.to_string(),
+            negocio_id: None,
             participacion_porcentaje: Some(10),
             item_type: "producto".to_string(),
             item_id: "66666666-6666-6666-6666-666666666666".to_string(),
@@ -181,6 +183,7 @@ async fn provisionar(url: &str) {
           comprador_id uuid NOT NULL,
           parte_id uuid,
           tienda_id uuid NOT NULL,
+          negocio_id uuid,
           estado text NOT NULL,
           total_cents integer NOT NULL DEFAULT 0,
           comision_cents integer NOT NULL DEFAULT 0,

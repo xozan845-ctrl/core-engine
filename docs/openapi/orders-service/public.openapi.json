@@ -435,6 +435,102 @@
         ]
       }
     },
+    "/api/v2/orders/empresa/resumen": {
+      "get": {
+        "operationId": "PedidosController_resumenPorNegocio",
+        "parameters": [
+          {
+            "name": "empresaId",
+            "required": false,
+            "in": "query",
+            "description": "Solo admin/super_admin; el empresario usa su empresa activa",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "negocioId",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "desde",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "date"
+            }
+          },
+          {
+            "name": "hasta",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "date"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Resumen de ventas por negocio",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
+                  "properties": {
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "negocio_id": {
+                            "type": "string",
+                            "format": "uuid",
+                            "nullable": true
+                          },
+                          "negocio_nombre": {
+                            "type": "string",
+                            "nullable": true
+                          },
+                          "ordenes": {
+                            "type": "integer"
+                          },
+                          "total_cents": {
+                            "type": "integer"
+                          }
+                        }
+                      }
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/MetaRespuesta"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Resumen agregado de ventas por negocio",
+        "tags": [
+          "Pedidos"
+        ]
+      }
+    },
     "/api/v2/orders/empresa": {
       "get": {
         "operationId": "PedidosController_porEmpresa",
@@ -454,6 +550,16 @@
             "in": "query",
             "schema": {
               "type": "string"
+            }
+          },
+          {
+            "name": "negocioId",
+            "required": false,
+            "in": "query",
+            "description": "Filtra por negocio; si el actor tiene negocio en sesión se fuerza ese valor",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
             }
           },
           {
@@ -4603,6 +4709,12 @@
             "description": "Id de la tienda",
             "format": "uuid"
           },
+          "negocio_id": {
+            "type": "string",
+            "description": "Negocio de la tienda",
+            "format": "uuid",
+            "nullable": true
+          },
           "fulfillment": {
             "type": "string",
             "enum": [
@@ -4735,6 +4847,12 @@
             "type": "string",
             "description": "Id de la tienda",
             "format": "uuid"
+          },
+          "negocio_id": {
+            "type": "string",
+            "description": "Negocio común de las líneas de la orden",
+            "format": "uuid",
+            "nullable": true
           },
           "estado": {
             "type": "string",

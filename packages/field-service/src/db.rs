@@ -51,6 +51,9 @@ impl Db {
                 if let Some(tenant) = ctx.tenant_id {
                     claims.insert("tenant_id".into(), Value::String(tenant));
                 }
+                if let Some(negocio) = ctx.negocio_id {
+                    claims.insert("negocio_id".into(), Value::String(negocio));
+                }
                 sqlx::query("SELECT set_config('request.jwt.claims', $1, true)")
                     .bind(Value::Object(claims).to_string())
                     .execute(&mut *tx)

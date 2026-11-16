@@ -56,6 +56,7 @@ export const SERVICES = [
   'market-intelligence-service',
   'storage-service',
   'notifications-service',
+  'analytics-service',
 ];
 
 /**
@@ -85,6 +86,7 @@ export const RUST_SERVICES = [
   'inventory-service',
   'pricing-service',
   'identity-service',
+  'analytics-service',
 ];
 
 /** Servicios Node/NestJS con suite Vitest (todos menos los migrados a Rust). */
@@ -144,6 +146,8 @@ export const ALLOWED_COMMIT_SCOPES = [
   'field-service',
   'market-intelligence',
   'market-intelligence-service',
+  'analytics',
+  'analytics-service',
   'storage',
   'storage-service',
   'notifications',

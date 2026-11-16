@@ -187,7 +187,7 @@ pub async fn exigir_capacidades(
     let requeridas: Vec<String> = capacidades.iter().map(|c| c.to_string()).collect();
     let filas = state
         .clientes()?
-        .capacidades(&empresas, &requeridas)
+        .capacidades(&empresas, usuario.negocio_id.as_deref(), &requeridas)
         .await
         .ok_or_else(|| ApiError::servicio_no_disponible("identity-service"))?;
     let activas: std::collections::HashSet<&str> = filas
@@ -275,6 +275,7 @@ pub(crate) async fn correlacion(
         usuario_id: usuario_id.clone(),
         rol,
         tenant_id: usuario.as_ref().and_then(|u| u.tenant_id.clone()),
+        negocio_id: usuario.as_ref().and_then(|u| u.negocio_id.clone()),
     };
 
     let mut response = ejecutar_con_contexto(contexto, async move {

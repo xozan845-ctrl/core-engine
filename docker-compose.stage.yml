@@ -229,6 +229,14 @@ services:
       PORT: 3008
       OUTBOX_TABLA: field.outbox
 
+  analytics-service:
+    <<: *servicio-base
+    image: ghcr.io/xozan845-ctrl/core-engine-analytics-service:stage
+    pull_policy: always
+    environment:
+      SERVICIO: analytics-service
+      PORT: 3016
+
   storage-service:
     <<: *servicio-base
     image: ghcr.io/xozan845-ctrl/core-engine-storage-service:stage

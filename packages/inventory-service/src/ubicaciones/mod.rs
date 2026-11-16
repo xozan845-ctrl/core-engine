@@ -16,7 +16,8 @@ use uuid::Uuid;
 /// Tipos de ubicación admitidos por el contrato.
 pub const TIPOS_UBICACION: [&str; 4] = ["bodega", "sucursal", "almacen", "otro"];
 
-const COLUMNAS: &str = "id, empresa_id, codigo, nombre, tipo, direccion, predeterminada,
+const COLUMNAS: &str =
+    "id, empresa_id, negocio_id, codigo, nombre, tipo, direccion, predeterminada,
   activo, creado_en, actualizado_en";
 
 pub struct Ubicaciones {
@@ -30,6 +31,7 @@ struct ItemVerificado {
     nombre: String,
     stock: Option<i32>,
     track_inventory: bool,
+    negocio_id: Option<String>,
 }
 
 impl Ubicaciones {
@@ -37,15 +39,21 @@ impl Ubicaciones {
         Self { db, outbox }
     }
 
-    pub async fn listar(&self, empresa_id: &str) -> Result<Vec<Value>, ApiError> {
+    pub async fn listar(
+        &self,
+        empresa_id: &str,
+        negocio_id: Option<&str>,
+    ) -> Result<Vec<Value>, ApiError> {
         let mut tx = self.db.transaccion().await.map_err(interno)?;
         let filas = sqlx::query(&format!(
             "SELECT {COLUMNAS}
                FROM inventory.ubicaciones
               WHERE empresa_id = $1::uuid
+                AND ($2::uuid IS NULL OR negocio_id IS NULL OR negocio_id = $2::uuid)
               ORDER BY predeterminada DESC, nombre"
         ))
         .bind(empresa_id)
+        .bind(negocio_id)
         .fetch_all(&mut *tx)
         .await
         .map_err(interno)?;
@@ -56,7 +64,12 @@ impl Ubicaciones {
             .collect()
     }
 
-    pub async fn crear(&self, empresa_id: &str, input: &Value) -> Result<Value, ApiError> {
+    pub async fn crear(
+        &self,
+        empresa_id: &str,
+        negocio_id: Option<&str>,
+        input: &Value,
+    ) -> Result<Value, ApiError> {
         let codigo = validar_codigo(input.get("codigo"))?;
         let nombre = validar_nombre(input.get("nombre"))?;
         let tipo = validar_tipo(input.get("tipo"))?;
@@ -77,20 +90,23 @@ impl Ubicaciones {
         if predeterminada {
             sqlx::query(
                 "UPDATE inventory.ubicaciones SET predeterminada = false, actualizado_en = NOW()
-                  WHERE empresa_id = $1::uuid AND predeterminada",
+                  WHERE empresa_id = $1::uuid AND predeterminada
+                    AND negocio_id IS NOT DISTINCT FROM $2::uuid",
             )
             .bind(empresa_id)
+            .bind(negocio_id)
             .execute(&mut *tx)
             .await
             .map_err(error_ubicacion)?;
         }
         let creada = sqlx::query(&format!(
             "INSERT INTO inventory.ubicaciones
-               (empresa_id, codigo, nombre, tipo, direccion, predeterminada)
-             VALUES ($1::uuid, $2, $3, $4, $5, $6)
+               (empresa_id, negocio_id, codigo, nombre, tipo, direccion, predeterminada)
+             VALUES ($1::uuid, $2::uuid, $3, $4, $5, $6, $7)
              RETURNING {COLUMNAS}"
         ))
         .bind(empresa_id)
+        .bind(negocio_id)
         .bind(&codigo)
         .bind(&nombre)
         .bind(&tipo)
@@ -135,10 +151,16 @@ impl Ubicaciones {
     pub async fn actualizar(
         &self,
         empresa_id: &str,
+        negocio_id: Option<&str>,
         ubicacion_id: &str,
         input: &Value,
     ) -> Result<Value, ApiError> {
         let actual = self.buscar(empresa_id, ubicacion_id).await?;
+        if let Some(negocio) = negocio_id {
+            if actual.get("negocio_id").and_then(Value::as_str) != Some(negocio) {
+                return Err(ApiError::no_encontrado("Ubicacion", ubicacion_id));
+            }
+        }
         let actual_codigo = campo_texto(&actual, "codigo");
         let actual_nombre = campo_texto(&actual, "nombre");
         let actual_tipo = campo_texto(&actual, "tipo");
@@ -196,10 +218,12 @@ impl Ubicaciones {
         if predeterminada && !actual_predeterminada {
             sqlx::query(
                 "UPDATE inventory.ubicaciones SET predeterminada = false, actualizado_en = NOW()
-                  WHERE empresa_id = $1::uuid AND predeterminada AND id <> $2::uuid",
+                  WHERE empresa_id = $1::uuid AND predeterminada AND id <> $2::uuid
+                    AND negocio_id IS NOT DISTINCT FROM $3::uuid",
             )
             .bind(empresa_id)
             .bind(ubicacion_id)
+            .bind(actual.get("negocio_id").and_then(Value::as_str))
             .execute(&mut *tx)
             .await
             .map_err(error_ubicacion)?;
@@ -362,9 +386,19 @@ impl Ubicaciones {
     }
 
     /// Traslada stock entre dos ubicaciones sin alterar el total del item.
-    pub async fn transferir(&self, empresa_id: &str, input: &Value) -> Result<Value, ApiError> {
+    pub async fn transferir(
+        &self,
+        empresa_id: &str,
+        negocio_id: Option<&str>,
+        input: &Value,
+    ) -> Result<Value, ApiError> {
         let item_id = auto_texto(input.get("item_id"));
         let item = self.verificar_item(empresa_id, &item_id).await?;
+        if let Some(negocio) = negocio_id {
+            if item.negocio_id.as_deref() != Some(negocio) {
+                return Err(ApiError::no_encontrado("Item", &item_id));
+            }
+        }
         let cantidad = validar_cantidad(input.get("cantidad"))?;
         let origen_id = auto_texto(input.get("origen_id"));
         let destino_id = auto_texto(input.get("destino_id"));
@@ -374,8 +408,18 @@ impl Ubicaciones {
                 "El origen y el destino deben ser distintos.",
             ));
         }
-        self.buscar_activa(empresa_id, &origen_id).await?;
-        self.buscar_activa(empresa_id, &destino_id).await?;
+        let origen = self.buscar_activa(empresa_id, &origen_id).await?;
+        let destino = self.buscar_activa(empresa_id, &destino_id).await?;
+        if origen.get("negocio_id") != destino.get("negocio_id") {
+            return Err(ApiError::conflicto(
+                "Las ubicaciones pertenecen a negocios distintos.",
+            ));
+        }
+        if let Some(negocio) = negocio_id {
+            if origen.get("negocio_id").and_then(Value::as_str) != Some(negocio) {
+                return Err(ApiError::no_encontrado("Ubicacion", &origen_id));
+            }
+        }
 
         let mut tx = self.db.transaccion().await.map_err(interno)?;
         let origen = sqlx::query(
@@ -506,7 +550,7 @@ impl Ubicaciones {
         validar_uuid(item_id, "item")?;
         let mut tx = self.db.transaccion().await.map_err(interno)?;
         let fila = sqlx::query(
-            "SELECT id, codigo, nombre, stock, track_inventory
+            "SELECT id, codigo, nombre, stock, track_inventory, negocio_id
                FROM item.items
               WHERE id = $1::uuid AND empresa_id = $2::uuid AND eliminado_en IS NULL",
         )
@@ -525,6 +569,10 @@ impl Ubicaciones {
             nombre: fila.get("nombre"),
             stock: fila.try_get("stock").map_err(interno)?,
             track_inventory: fila.get("track_inventory"),
+            negocio_id: fila
+                .try_get::<Option<Uuid>, _>("negocio_id")
+                .map_err(interno)?
+                .map(|id| id.to_string()),
         })
     }
 }

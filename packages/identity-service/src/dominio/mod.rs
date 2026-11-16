@@ -1,6 +1,7 @@
 //! Dominio de identidad. Cada módulo replica un servicio NestJS y concentra
 //! su SQL; los handlers HTTP solo validan y traducen.
 pub mod api_keys;
+pub mod auditoria;
 pub mod auth;
 pub mod capacidades;
 pub mod configuracion_operativa;
@@ -9,6 +10,7 @@ pub mod empresas;
 pub mod extensiones;
 pub mod features;
 pub mod media;
+pub mod negocios;
 pub mod packs;
 pub mod partes;
 pub mod password_reset;
