@@ -11,10 +11,10 @@ use commissions_service::pedidos::PedidosConsumer;
 use commissions_service::reportes::ReportesPort;
 use sqlx::PgPool;
 use std::sync::{Arc, OnceLock};
-use tokio::sync::Mutex;
+use tokio::sync::OnceCell;
 use uuid::Uuid;
 
-static MIGRACION: OnceLock<Mutex<()>> = OnceLock::new();
+static MIGRACION: OnceCell<()> = OnceCell::const_new();
 
 fn url() -> Option<String> {
     std::env::var("TEST_DATABASE_URL").ok()
@@ -23,11 +23,14 @@ fn url() -> Option<String> {
 async fn preparar() -> Option<(Arc<Db>, PgPool)> {
     let url = url()?;
     let pool = PgPool::connect(&url).await.expect("postgres");
-    let _guard = MIGRACION.get_or_init(|| Mutex::new(())).lock().await;
-    sqlx::raw_sql(include_str!("sql/commissions.sql"))
-        .execute(&pool)
-        .await
-        .expect("migracion commissions");
+    MIGRACION
+        .get_or_init(|| async {
+            sqlx::raw_sql(include_str!("sql/commissions.sql"))
+                .execute(&pool)
+                .await
+                .expect("migracion commissions");
+        })
+        .await;
     let db = Arc::new(Db::conectar(&url).await.expect("pool del servicio"));
     Some((db, pool))
 }
