@@ -37,6 +37,11 @@ pub fn rutas() -> Router<AppState> {
             patch(actualizar_recompensa),
         )
         .route("/api/v2/fidelizacion/canjes", post(canjear))
+        .route("/api/v2/fidelizacion/mis-tarjetas", get(mis_tarjetas))
+        .route(
+            "/api/v2/fidelizacion/mis-tarjetas/{id}/movimientos",
+            get(mis_movimientos),
+        )
 }
 
 /// Exige empresario con la capacidad `fidelizacion` activa en su tenant.
@@ -211,4 +216,38 @@ pub async fn canjear(
         .canjear(&empresa, &dto, &actor.user_id)
         .await?;
     created(serde_json::to_value(canje).map_err(|_| ApiError::interno())?)
+}
+
+/// `GET /api/v2/fidelizacion/mis-tarjetas` (comprador).
+pub async fn mis_tarjetas(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+) -> Result<Response, ApiError> {
+    let actor = UsuarioContexto::desde_headers_o_error(&headers)?;
+    actor.exigir_roles(&["comprador"], &[])?;
+    let tarjetas = state
+        .fidelizacion()?
+        .listar_tarjetas_de_comprador(&actor.user_id)
+        .await?;
+    ok(serde_json::to_value(tarjetas).map_err(|_| ApiError::interno())?)
+}
+
+/// `GET /api/v2/fidelizacion/mis-tarjetas/:id/movimientos` (comprador).
+pub async fn mis_movimientos(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    Path(id): Path<String>,
+    Query(query): Query<HashMap<String, String>>,
+) -> Result<Response, ApiError> {
+    let actor = UsuarioContexto::desde_headers_o_error(&headers)?;
+    actor.exigir_roles(&["comprador"], &[])?;
+    let limite = query
+        .get("limite")
+        .and_then(|valor| valor.parse::<i64>().ok())
+        .unwrap_or(50);
+    let movimientos = state
+        .fidelizacion()?
+        .movimientos_de_comprador(&actor.user_id, &id, limite)
+        .await?;
+    ok(serde_json::to_value(movimientos).map_err(|_| ApiError::interno())?)
 }

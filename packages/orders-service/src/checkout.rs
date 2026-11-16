@@ -9,6 +9,7 @@ use crate::clients::{
 use crate::db::{iso_ms, Db};
 use crate::errors::ApiError;
 use crate::event_store::{error_db, parsear_uuid, OrderEventStore};
+use crate::fidelizacion::Fidelizacion;
 use crate::fulfillments::Fulfillments;
 use crate::money;
 use crate::order_state::ItemOrden;
@@ -652,10 +653,68 @@ impl Checkout {
         }
         tx.commit().await.map_err(error_db)?;
 
-        self.vistas
+        let vista = self
+            .vistas
             .encontrar(&self.db, order_id)
             .await?
-            .ok_or_else(|| ApiError::no_encontrado("Orden", order_id))
+            .ok_or_else(|| ApiError::no_encontrado("Orden", order_id))?;
+        if estado_nuevo == "pagada" {
+            self.acumular_fidelizacion(&vista).await;
+        }
+        Ok(vista)
+    }
+
+    /// Acumula puntos de fidelización cuando la orden pasa a `pagada`.
+    ///
+    /// Es *best-effort*: un fallo de fidelización no revierte el pago ya
+    /// confirmado. La acumulación es idempotente por `(tarjeta, orden)`, así
+    /// que un reintento posterior no duplica puntos.
+    async fn acumular_fidelizacion(&self, vista: &OrderView) {
+        let Some(parte_id) = vista.parte_id.as_deref() else {
+            return;
+        };
+        let mut por_empresa: HashMap<String, i64> = HashMap::new();
+        for item in &vista.items {
+            let subtotal = item.precio_unitario_cents.saturating_mul(item.cantidad);
+            if subtotal > 0 {
+                *por_empresa.entry(item.empresa_id.clone()).or_default() += subtotal;
+            }
+        }
+        if por_empresa.is_empty() {
+            return;
+        }
+        let empresas: Vec<String> = por_empresa.keys().cloned().collect();
+        let Some(capacidades) = self
+            .clientes
+            .capacidades(&empresas, &["fidelizacion".to_string()])
+            .await
+        else {
+            crate::logs::warn(
+                "fidelizacion",
+                crate::campos! { "msg": "identity no disponible; no se acumulan puntos", "order_id": vista.id },
+            );
+            return;
+        };
+        let activas: HashSet<String> = capacidades
+            .iter()
+            .filter(|fila| fila.activo && fila.capacidad_codigo == "fidelizacion")
+            .map(|fila| fila.empresa_id.clone())
+            .collect();
+        let fidelizacion = Fidelizacion::nueva(Arc::clone(&self.db));
+        for (empresa, subtotal) in por_empresa {
+            if !activas.contains(&empresa) {
+                continue;
+            }
+            if let Err(error) = fidelizacion
+                .acumular_por_orden(&empresa, parte_id, &vista.id, subtotal)
+                .await
+            {
+                crate::logs::error(
+                    "fidelizacion",
+                    crate::campos! { "msg": "no se pudieron acumular puntos", "order_id": vista.id, "empresa_id": empresa, "err": error.mensaje },
+                );
+            }
+        }
     }
 
     async fn insertar_outbox(

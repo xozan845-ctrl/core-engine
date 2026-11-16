@@ -495,6 +495,11 @@ fn infra_con(
                 capacidad_codigo: "mesas".to_string(),
                 activo: true,
             },
+            Capacidad {
+                empresa_id: EMPRESA.to_string(),
+                capacidad_codigo: "fidelizacion".to_string(),
+                activo: true,
+            },
         ],
     });
     let carrito = Arc::new(Carrito::nueva(Arc::clone(&db), Arc::clone(&clientes)));
@@ -1976,4 +1981,125 @@ async fn debe_exponer_fidelizacion_solo_con_la_capacidad_activa() {
     assert_eq!(response.status(), StatusCode::FORBIDDEN);
     let error = json_de(response).await;
     assert_eq!(error["codigo"], "CAPACIDAD_NO_ACTIVA");
+}
+
+#[tokio::test]
+async fn debe_acumular_puntos_al_pagar_la_orden() {
+    let _guard = DB_LOCK.lock().await;
+    let Some(db) = con_bd().await else { return };
+    let (checkout, _, _) = infra(Arc::clone(&db), 10);
+    let fidelizacion = Fidelizacion::nueva(Arc::clone(&db));
+    let parte = crear_parte(&db, EMPRESA, "Cliente checkout").await;
+    fidelizacion
+        .guardar_programa(
+            EMPRESA,
+            &json!({"nombre": "Puntos checkout", "puntos_por_unidad": 1}),
+        )
+        .await
+        .expect("programa");
+    let tarjeta = fidelizacion
+        .crear_tarjeta(EMPRESA, &json!({"parte_id": parte}))
+        .await
+        .expect("tarjeta");
+
+    let comando = ComandoCrear {
+        cliente_parte_id: Some(parte),
+        ..compra(1)
+    };
+    let orden = checkout.ejecutar(&comando, COMPRADOR).await.expect("orden");
+    let vista = checkout
+        .transicionar(&orden.id, "pagada", Some("pago_confirmado"), None, None)
+        .await
+        .expect("pagada");
+    assert_eq!(vista.estado, "pagada");
+
+    let tarjeta = fidelizacion
+        .obtener_tarjeta(EMPRESA, &tarjeta.id)
+        .await
+        .expect("tarjeta");
+    assert_eq!(tarjeta.puntos, 100);
+    let movimientos = fidelizacion
+        .listar_movimientos(EMPRESA, &tarjeta.id, 10)
+        .await
+        .expect("movimientos");
+    assert_eq!(movimientos.len(), 1);
+    assert_eq!(movimientos[0].order_id.as_deref(), Some(orden.id.as_str()));
+}
+
+#[tokio::test]
+async fn debe_exponer_mis_tarjetas_al_comprador() {
+    use axum::body::Body;
+    use axum::http::{Request, StatusCode};
+    use tower::ServiceExt;
+    let _guard = DB_LOCK.lock().await;
+    let Some(db) = con_bd().await else { return };
+    let (checkout, _, _) = infra(Arc::clone(&db), 10);
+    let fidelizacion = Fidelizacion::nueva(Arc::clone(&db));
+    let parte = crear_parte(&db, EMPRESA, "Comprador con tarjeta").await;
+    fidelizacion
+        .guardar_programa(
+            EMPRESA,
+            &json!({"nombre": "Puntos comprador", "puntos_por_unidad": 2}),
+        )
+        .await
+        .expect("programa");
+    let tarjeta = fidelizacion
+        .crear_tarjeta(EMPRESA, &json!({"parte_id": parte}))
+        .await
+        .expect("tarjeta");
+    let comando = ComandoCrear {
+        cliente_parte_id: Some(parte),
+        ..compra(1)
+    };
+    let orden = checkout.ejecutar(&comando, COMPRADOR).await.expect("orden");
+    checkout
+        .transicionar(&orden.id, "pagada", Some("pago_confirmado"), None, None)
+        .await
+        .expect("pagada");
+
+    let router = router_completo(Arc::clone(&db), 10).await;
+    let mut request = Request::get("/api/v2/fidelizacion/mis-tarjetas");
+    request = request.header("x-user-id", COMPRADOR);
+    request = request.header("x-user-rol", "comprador");
+    let response = router
+        .clone()
+        .oneshot(request.body(Body::empty()).expect("request"))
+        .await
+        .expect("response");
+    assert_eq!(response.status(), StatusCode::OK);
+    let listado = json_de(response).await;
+    let tarjetas = listado["data"].as_array().expect("tarjetas");
+    assert_eq!(tarjetas.len(), 1);
+    assert_eq!(tarjetas[0]["codigo"], tarjeta.codigo);
+    assert_eq!(tarjetas[0]["puntos"], 200);
+
+    let mut request = Request::get(format!(
+        "/api/v2/fidelizacion/mis-tarjetas/{}/movimientos",
+        tarjeta.id
+    ));
+    request = request.header("x-user-id", COMPRADOR);
+    request = request.header("x-user-rol", "comprador");
+    let response = router
+        .clone()
+        .oneshot(request.body(Body::empty()).expect("request"))
+        .await
+        .expect("response");
+    assert_eq!(response.status(), StatusCode::OK);
+    let movimientos = json_de(response).await;
+    assert_eq!(
+        movimientos["data"].as_array().expect("movimientos").len(),
+        1
+    );
+
+    // Otro comprador no ve la tarjeta.
+    let mut request = Request::get("/api/v2/fidelizacion/mis-tarjetas");
+    request = request.header("x-user-id", Uuid::new_v4().to_string());
+    request = request.header("x-user-rol", "comprador");
+    let response = router
+        .oneshot(request.body(Body::empty()).expect("request"))
+        .await
+        .expect("response");
+    assert_eq!(response.status(), StatusCode::OK);
+    let listado = json_de(response).await;
+    assert!(listado["data"].as_array().expect("tarjetas").is_empty());
 }
