@@ -1,10 +1,85 @@
 # Core Engine
 
-**Plataforma multi-vertical por capacidades** (microservicios en Rust y
-PostgreSQL/Supabase). Un mismo backend opera negocios de rubros distintos: una
-empresa nueva elige una **vertical**, adopta un **pack** versionado y activa sus
-**capacidades**; no hay microservicios por rubro ni cambios de código para
-arrancar un negocio nuevo.
+**Core Engine es una fábrica de negocios multi-vertical**: una plataforma de
+microservicios en **Rust** sobre **PostgreSQL/Supabase** que permite operar
+negocios de rubros distintos sobre el mismo backend, sin crear un servicio por
+rubro y sin desplegar código para arrancar un negocio nuevo.
+
+La idea central es simple: **el rubro no es código, es configuración**. Una
+empresa nueva elige una **vertical** (retail, farmacia, belleza, dental, flota,
+taller, restaurante…), adopta un **pack versionado** y activa un conjunto de
+**capacidades**. El backend enciende solo las funciones que el pack declara y el
+frontend compone la experiencia a partir del **manifiesto de features** de la
+empresa.
+
+## La idea en una frase
+
+> Un mismo núcleo de servicios (identidad, catálogo, pedidos, agenda, logística,
+> pagos, finanzas, comisiones, analítica) se recombina por configuración para
+> operar una tienda, una distribuidora, una farmacia, un salón de belleza, una
+> clínica, una flota o un restaurante, sin bifurcar el código.
+
+## El problema que resuelve
+
+Construir software para un rubro suele terminar en uno de dos extremos:
+
+1. **Un producto por rubro**: código duplicado, equipos duplicados y contratos
+   que se separan con el tiempo.
+2. **Un ERP genérico**: un motor de workflow enorme que obliga a configurar
+   todo y no resuelve bien ningún negocio concreto.
+
+Core Engine toma un camino intermedio: **bounded contexts por capacidad de
+negocio** y **composición por configuración**. Las reglas transversales
+(identidad, permisos, tenancy, eventos, outbox, auditoría, observabilidad) se
+escriben una vez; lo que cambia por rubro se expresa como vertical + pack +
+capacidades + configuración.
+
+## Cómo lo resuelve
+
+- **Vertical**: el modelo de operación inicial del negocio (retail, farmacia,
+  belleza, dental, flota, o una vertical creada por un admin).
+- **Pack versionado**: un preset de capacidades y configuración para esa
+  vertical (`pack_retail`, `pack_farmacia`, …).
+- **Capacidad**: la autoridad real de negocio (`catalogo_items`,
+  `agenda_recursos`, `pagos`, `fidelizacion`, …). Cada servicio valida sus
+  capacidades antes de operar; una capacidad inactiva devuelve
+  `CAPACIDAD_NO_ACTIVA`.
+- **Manifiesto**: `GET /api/v2/empresas/:id/features` devuelve qué puede hacer
+  la empresa. El frontend muestra solo lo activo, sin hardcodear el rubro.
+- **Configuración por empresa**: atributos JSON Schema, listas de precio,
+  escalas, tarifas, ubicaciones, extensiones, tema, reglas de fidelización, etc.
+
+## Principios de diseño
+
+| Principio | Consecuencia |
+|---|---|
+| Multi-vertical por capacidades | No hay `farmacia-service` ni `dental-service`; hay servicios transversales y gating |
+| Contratos primero | OpenAPI versionado por servicio; envelope `{data, meta}`; errores estructurados |
+| Tenancy fuerte | RLS por empresa, roles y permisos; un tenant no ve datos de otro |
+| Event-driven donde aporta | Outbox + RabbitMQ + DLQ; CQRS/Event Sourcing solo en `orders` |
+| Migraciones aditivas | Nada se rompe al activar una capacidad o promover un pack |
+| Configuración explícita | Una capacidad nueva se implementa una vez y luego se selecciona por pack/vertical/add-on |
+| Fallar cerrado | Sin secreto, sin capacidad o sin tasa publicada, la operación se rechaza |
+
+## Qué es y qué no es
+
+- **Es** una plataforma para operar negocios reales de comercio, servicios y
+  logística con un backend común.
+- **No** es un ERP universal, un motor de workflow genérico ni un framework de
+  bajo código.
+- **No** crea un microservicio por rubro: los rubros se componen.
+- **No** convierte por sí solo una regla de negocio nueva en configuración: si
+  la capacidad no existe, primero se implementa (una vez) y después se vuelve
+  seleccionable.
+
+## Para quién
+
+- Equipos que quieren lanzar **varios negocios o verticales** sin multiplicar
+  el backend.
+- Empresas que necesitan **multi-tenant**, roles, RLS y auditoría desde el día
+  uno.
+- Productos que crecerán por **capacidades** (pagos, fidelización, agenda,
+  logística, analítica) y no por forks de código.
 
 La decisión que rige la arquitectura es
 [**ADR-0001 · Plataforma multi-vertical por capacidades**](docs/adr/0001-plataforma-multi-vertical.md)
@@ -12,10 +87,6 @@ La decisión que rige la arquitectura es
 **Core Engine_Informe.docx v1.6** acota el dominio comercial original; el modelo
 por capacidades lo generaliza a retail, farmacia, belleza, dental, flota,
 talleres y verticales que se definan por configuración.
-
-Límites deliberados (ADR-0001): **no** es un ERP universal ni un motor de
-workflow genérico, y `historia_clinica` / `recetas` quedan fuera de la primera
-fase.
 
 Requiere **Node >= 20 (uso v24)**, **Rust estable** y **Docker con Compose v2**.
 Todas las rutas públicas van por el gateway (`http://localhost:8080/api/v2/...`).
@@ -39,6 +110,80 @@ reparacion *        reparacion v1                 liquidaciones
 no código nuevo: [`docs/blueprints/tecnologia-reparacion.md`](docs/blueprints/tecnologia-reparacion.md)
 compone las piezas existentes (ítems, inventario, agenda, cotizaciones,
 logística, crédito y registros).
+
+### Cómo se crea un negocio (sin desplegar código)
+
+1. El usuario elige una **vertical** (`retail`, `farmacia`, `belleza`, `dental`,
+   `flota`, o una creada por un admin).
+2. Elige un **pack** de esa vertical (`pack_retail`, `pack_farmacia`, …).
+3. El pack trae **capacidades activas**; el usuario puede sumar **add-ons**
+   permitidos por la vertical.
+4. Se crea la empresa con `POST /api/v2/empresas` indicando `vertical_id`,
+   `pack_codigo` y, opcionalmente, `capacidades_extra`.
+5. `GET /api/v2/empresas/:id/features` devuelve el **manifiesto**; el frontend
+   muestra solo los módulos activos.
+6. Un admin puede crear **verticales, modelos y packs** por API
+   (`/api/v2/packs/...`) usando capacidades existentes.
+
+```bash
+# 1) consultar verticales y packs disponibles
+curl -H "Authorization: Bearer $TOKEN" http://localhost:8080/api/v2/packs/verticales
+curl -H "Authorization: Bearer $TOKEN" "http://localhost:8080/api/v2/packs?vertical_id=retail"
+
+# 2) crear la empresa con el pack y un add-on (ej. fidelización)
+curl -X POST http://localhost:8080/api/v2/empresas \
+  -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
+  -d '{"nombre":"TechFix","slug":"techfix","vertical_id":"retail",
+       "pack_codigo":"pack_retail","pack_version":1,
+       "capacidades_extra":["fidelizacion"]}'
+
+# 3) verificar el manifiesto efectivo
+curl -H "Authorization: Bearer $TOKEN" \
+  http://localhost:8080/api/v2/empresas/<empresaId>/features
+```
+
+### Niveles de extensibilidad
+
+| Nivel | ¿Requiere código? | Ejemplos |
+|---|---|---|
+| **Configuración pura** | No | Nuevo pack/vertical con capacidades existentes, atributos JSON Schema, listas de precio, extensiones, contratos, suscripciones, mesas |
+| **Capacidad nueva en un servicio existente** | Sí, una vez | Fidelización dentro de `orders`/`finance` |
+| **Servicio nuevo** | Sí + infraestructura | `loyalty-service` como bounded context propio |
+
+La diferencia importa: **no todo es configuración**. Un pack nuevo con
+capacidades existentes es configuración; una **tarjeta de fidelización** con
+puntos, recompensas y canjes es una **capacidad nueva**. Se implementa una vez
+(migración, dominio, endpoints, eventos, RLS y tests) y, a partir de ahí, sí se
+vuelve seleccionable por configuración, igual que pagos, agenda o fulfillments.
+
+### Qué es configuración pura y qué exige código
+
+| Necesidad | Cómo se resuelve |
+|---|---|
+| Un nuevo rubro que usa catálogo, stock, agenda o rutas | Vertical + pack con capacidades existentes (sin código) |
+| Campos extra por empresa (ficha técnica, expediente, etc.) | Extensiones versionadas + JSON Schema (sin código) |
+| Precios por segmento, escalas, tarifas, promociones | Configuración de catálogo/pricing (sin código) |
+| Reglas de operación (tipos de ítem, fulfillment, estados) | Registros configurables ya implementados (sin código) |
+| Puntos, tarjetas, recompensas y canjes | **Capacidad nueva** `fidelizacion` (código una vez) |
+| Pasarela de pago real, transportista externo, facturación electrónica | Integración nueva (código + credenciales) |
+| Nómina, MRP, CRM con pipeline, workflow genérico | Fuera de alcance (no es un ERP) |
+
+### Ejemplos de rubros
+
+| Rubro | Vertical / modelo | Capacidades principales |
+|---|---|---|
+| Tienda, minimarket, ferretería, librería | `retail` / comercio | catálogo, stock, código de barras, delivery/pickup, facturación |
+| Distribuidora / mayorista | `retail` / comercio | + listas de precio, escalas, ubicaciones, proveedores |
+| Farmacia / botica | `farmacia` / comercio trazable | + lotes, vencimiento, FEFO |
+| Salón, spa, barbería | `belleza` / servicios agendados | agenda, recursos, citas, facturación |
+| Clínica / consultorio | `dental` / servicios agendados | agenda, historia clínica, recetas, registros |
+| Flota / última milla | `flota` / logística | rutas, vehículos, field, cotizaciones, fulfillments |
+| Restaurante / bar | `mixto` | mesas, comandas, catálogo, delivery/pickup |
+| Taller / mantenimiento | `mixto` | agenda, servicios, repuestos, contratos |
+| Alquiler de equipos | `mixto` | ítem alquiler, contratos/depósito, agenda |
+| Membresías / cursos / digital | `mixto` | suscripciones, entrega digital, contratos |
+| Venta a crédito | cualquiera | `ventas_credito` + finance |
+| Fidelización | add-on | `fidelizacion` (tarjetas, puntos, recompensas, canjes) |
 
 ### Verticales sembradas
 
@@ -68,7 +213,15 @@ logística, crédito y registros).
 | `liquidaciones` | commissions | Comisiones y liquidaciones |
 | `operacion_campo` | field | Personal, visitas, tracking e incidencias |
 | `inteligencia_mercado` | intelligence | Demanda, tendencias, forecast y score |
-| `historia_clinica` / `recetas` | clinical | Fuera de la primera fase |
+| `historia_clinica` | clinical | Registros clínicos por parte, validados por JSON Schema |
+| `recetas` | clinical | Recetas por parte, validadas por JSON Schema |
+| `registros` | records | Expedientes, mantenimiento y registros genéricos |
+| `fulfillment_digital` | orders | Entrega digital con accesos, descargas y expiración |
+| `contratos` | orders | Contratos con depósito, garantía y retención |
+| `suscripciones` | orders | Compras recurrentes semanales/mensuales/anuales |
+| `mesas` | orders | Mesas, comandas y estaciones de preparación |
+| `ventas_credito` | finance | Cuentas de crédito y checkout con método `credito` |
+| `fidelizacion` | loyalty | Tarjetas, puntos, recompensas y canjes (capacidad nueva) |
 
 Los servicios **siempre activos** (`identity-service`, `api-gateway`,
 `storage-service`, `notifications-service`) no se gatean. Los servicios de
@@ -76,6 +229,47 @@ feature validan `CapabilityGuard` antes de operar: una capacidad inactiva
 devuelve el error estructurado `CAPACIDAD_NO_ACTIVA` y sus rutas no se anuncian
 en el pack del tenant. El aislamiento de datos entre tenants es por **RLS**
 (esquema por dominio + `empresa_id`).
+
+### Fidelización (capacidad nueva)
+
+La fidelización no es configuración pura: es una **capacidad nueva** que se
+implementa una vez y luego se selecciona por pack, vertical o add-on.
+
+**Modelo**
+
+- `programa` por empresa: activo, puntos por unidad de moneda, expiración,
+  niveles y reglas.
+- `tarjeta` por empresa + cliente (`identity.partes`): código, puntos y estado.
+- `movimientos`: acumulaciones, canjes, ajustes y expiraciones; con
+  `order_id`/`event_id` para idempotencia.
+- `recompensas`: catálogo de premios con costo en puntos y stock opcional.
+- `canjes`: canje de una recompensa por una tarjeta, con estado y vínculo a la
+  orden.
+
+**Flujo**
+
+1. El cliente compra y la orden pasa a `pagada`.
+2. Se acumulan puntos de forma idempotente (una sola vez por orden).
+3. El cliente consulta su tarjeta y su historial.
+4. En checkout puede canjear una recompensa: se validan puntos, se descuentan y
+   se aplica el beneficio.
+5. La empresa administra programa, recompensas y ajustes; el cliente solo ve su
+   tarjeta (RLS por empresa y parte).
+
+**Cómo se selecciona al crear el negocio**
+
+- La capacidad `fidelizacion` se ofrece como **add-on** en las verticales que la
+  permiten.
+- El alta de empresa acepta `capacidades_extra: ["fidelizacion"]` para activarla
+  en la misma transacción.
+- También puede activarse después con
+  `PATCH /api/v2/empresas/:id/capacidades/fidelizacion`.
+- El manifiesto (`GET /empresas/:id/features`) expone
+  `fidelizacion.programas`, `fidelizacion.tarjetas` y `fidelizacion.canjes`; el
+  frontend muestra el módulo solo si está activo.
+
+> Estado: capacidad nueva; implementación en curso. Cuando esté publicada, se
+> selecciona exactamente igual que pagos, agenda o fulfillments.
 
 ### Alta de un tenant nuevo
 
@@ -113,7 +307,7 @@ Migración de tenants existentes, pilotos y rollback:
                            │  red interna Docker `core-engine` (microservicios sin puerto al host)
   identity  item     inventory  pricing  stores  orders  logistics  scheduling  commissions  finance  field  intelligence  storage  notifications
     :3001    :3015    :3013     :3014   :3003   :3004     :3005      :3011       :3006      :3007   :3008     :3009      :3010      :3012
-  (commissions solo stage · market-intelligence solo dev)
+  (commissions solo stage · market-intelligence en stage/prod)
        RabbitMQ · topic core-engine.events (+ DLQ, AD-04) + Postgres 16 + MinIO (un bucket por tenant, ADR-24)
 ```
 
@@ -125,7 +319,7 @@ Los bounded contexts se organizan **por capacidad de negocio**, no por rubro:
 `dentista-service`, `farmacia-service` ni `pulperia-service` (ADR-0001).
 
 **Punto de entrada unico:** solo el servicio `gateway` publica un puerto de aplicación al host
-(`8080:8080`); los **catorce microservicios** escuchan en `3001`–`3014` **solo dentro de la red interna
+(`8080:8080`); los **servicios** escuchan en `3001`–`3014` **solo dentro de la red interna
 Docker `core-engine`** y no tienen mapeo de puertos al host. La excepción es **MinIO** (`9000`), que se
 publica en **loopback** porque es el host local que Traefik firma como dominio HTTPS en las URLs
 prefirmadas (ADR-24). Toda llamada externa pasa por `http://localhost:8080/api/v2/...` (o el dominio

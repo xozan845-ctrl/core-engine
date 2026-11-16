@@ -304,7 +304,7 @@ impl Checkout {
                     .clientes
                     .cotizacion(&item.empresa_id, &item.item_id, desde, hasta)
                     .await
-                    .ok_or_else(|| ApiError::servicio_no_disponible("catalog-service"))?;
+                    .ok_or_else(|| ApiError::servicio_no_disponible("pricing-service"))?;
                 let disponible = self
                     .clientes
                     .disponibilidad(&item.empresa_id, &recurso_id, &inicia_en, &termina_en)
@@ -738,7 +738,7 @@ impl Checkout {
                 }
                 PreciosExternos::Error => {
                     if comando.lista_precio_codigo.is_some() || comando.segmento_codigo.is_some() {
-                        return Err(ApiError::servicio_no_disponible("catalog-service"));
+                        return Err(ApiError::servicio_no_disponible("pricing-service"));
                     }
                 }
                 PreciosExternos::Ok(precios) => {
