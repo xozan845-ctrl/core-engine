@@ -9,10 +9,11 @@
 
 > [!IMPORTANT]
 > **Actualización 2026-10-14 — entrega por imágenes (GHCR).** El despliegue ya no
-> construye desde el `Dockerfile` raíz en cada push: `release.yml` construye y
-> publica **una imagen por servicio** en GHCR al empujar un tag `vX.Y.Z`
-> (`R-CD-1..4`), `promote.yml` la mueve a `:stage`/`:prod` **por digest** (`R-CD-3`)
-> y el entorno arranca con **`docker-compose.stage.yml`** (stage) / **`docker-compose.yml`**
+> construye desde el `Dockerfile` raíz en cada push: `stage-images.yml` construye
+> las imágenes `:stage` desde la rama `staging`; `release.yml` construye una
+> imagen por servicio al empujar un tag `vX.Y.Z` desde `main` y `promote.yml`
+> mueve la de producción `:prod` **por digest** (`R-CD-3`). El entorno arranca
+> con **`docker-compose.stage.yml`** (stage) / **`docker-compose.yml`**
 > (producción), que consumen esas imágenes. Pasos nuevos: `docker login ghcr.io` en el host (o
 > una credencial de registry en Dockploy) y las variables del entorno en la
 > pestaña *Environment* (plantillas `.env.stage.example` /
@@ -92,7 +93,7 @@ Pasos:
 7. **Healthcheck/Readiness**: `GET /health` (liveness del gateway; lo usa el
    healthcheck de Dockploy, siempre abierto) y `GET /ready` (readiness agregada:
    responde **503** si algún microservicio del entorno desplegado no está `ok`;
-   son 9 en producción y 10 en stage porque incluye `commissions-service`, ADR-37;
+   son 11 en producción y 12 en stage porque incluye `inventory-service` (ADR-0018) y `commissions-service` (ADR-37);
    lo usa el smoke, R-CD-12). `/ready` exige `x-internal-key` salvo
    `READY_PUBLIC=true` (solo desarrollo) y está limitado a 10 req/min por IP con
    caché de 5 s.
@@ -239,7 +240,8 @@ Con los dos environments operativos y la tabla §4 completa:
   producción: no está en esos composes y el `up --remove-orphans` lo elimina. Si
   persistiera, `docker rm -f <proyecto>-market-intelligence-service-1` (ADR-17).
 - **`commissions-service` no arranca en stage**: comprueba que la imagen
-  `ghcr.io/<owner>/core-engine-commissions-service:stage` esté promovida
-  (`promote.yml`) y que `01e_adr25_empresas.sql` esté aplicada en la BD de stage
+  `ghcr.io/<owner>/core-engine-commissions-service:stage` exista (la construye
+  `stage-images.yml` en cada push a `staging`) y que `01e_adr25_empresas.sql`
+  esté aplicada en la BD de stage
   (ver §3). En producción es esperado que no exista: `commissions` sigue fuera
   de `docker-compose.yml` (ADR-17/ADR-37).

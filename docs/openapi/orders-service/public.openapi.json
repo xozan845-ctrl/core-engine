@@ -511,6 +511,583 @@
         ]
       }
     },
+    "/api/v2/orders/metodos-pago": {
+      "get": {
+        "operationId": "PagosController_listarMetodos",
+        "responses": {
+          "200": {
+            "description": "Métodos de pago configurados",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
+                  "properties": {
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/OrdersMetodoPagoResponseDto"
+                      }
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/MetaRespuesta"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Listar métodos de pago",
+        "tags": [
+          "Pagos"
+        ]
+      }
+    },
+    "/api/v2/admin/metodos-pago": {
+      "post": {
+        "operationId": "PagosController_crearMetodo",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/OrdersCrearMetodoPagoRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Método de pago creado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/OrdersMetodoPagoResponseDto"
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/MetaRespuesta"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Crear método de pago (admin)",
+        "tags": [
+          "Pagos"
+        ]
+      }
+    },
+    "/api/v2/admin/metodos-pago/{codigo}": {
+      "patch": {
+        "operationId": "PagosController_actualizarMetodo",
+        "parameters": [
+          {
+            "name": "codigo",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/OrdersActualizarMetodoPagoRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Método de pago actualizado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/OrdersMetodoPagoResponseDto"
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/MetaRespuesta"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Actualizar método de pago (admin)",
+        "tags": [
+          "Pagos"
+        ]
+      }
+    },
+    "/api/v2/orders/fulfillments": {
+      "get": {
+        "operationId": "FulfillmentsController_listar",
+        "responses": {
+          "200": {
+            "description": "Fulfillments activos",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": ["data", "meta"],
+                  "properties": {
+                    "data": {
+                      "type": "array",
+                      "items": {"$ref": "#/components/schemas/OrdersFulfillmentResponseDto"}
+                    },
+                    "meta": {"$ref": "#/components/schemas/MetaRespuesta"}
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [{"bearer": []}],
+        "summary": "Listar fulfillments",
+        "tags": ["Fulfillments"]
+      }
+    },
+    "/api/v2/admin/fulfillments": {
+      "post": {
+        "operationId": "FulfillmentsController_crear",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {"$ref": "#/components/schemas/OrdersCrearFulfillmentRequestDto"}
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Fulfillment creado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": ["data", "meta"],
+                  "properties": {
+                    "data": {"$ref": "#/components/schemas/OrdersFulfillmentResponseDto"},
+                    "meta": {"$ref": "#/components/schemas/MetaRespuesta"}
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [{"bearer": []}],
+        "summary": "Crear fulfillment (admin)",
+        "tags": ["Fulfillments"]
+      }
+    },
+    "/api/v2/admin/fulfillments/{codigo}": {
+      "patch": {
+        "operationId": "FulfillmentsController_actualizar",
+        "parameters": [
+          {"name": "codigo", "required": true, "in": "path", "schema": {"type": "string"}}
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {"$ref": "#/components/schemas/OrdersActualizarFulfillmentRequestDto"}
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Fulfillment actualizado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": ["data", "meta"],
+                  "properties": {
+                    "data": {"$ref": "#/components/schemas/OrdersFulfillmentResponseDto"},
+                    "meta": {"$ref": "#/components/schemas/MetaRespuesta"}
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [{"bearer": []}],
+        "summary": "Actualizar fulfillment (admin)",
+        "tags": ["Fulfillments"]
+      }
+    },
+    "/api/v2/admin/tipos-orden": {
+      "get": {
+        "operationId": "TiposOrdenController_listar",
+        "responses": {
+          "200": {
+            "description": "Tipos de orden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": ["data", "meta"],
+                  "properties": {
+                    "data": {
+                      "type": "array",
+                      "items": {"$ref": "#/components/schemas/OrdersTipoOrdenResponseDto"}
+                    },
+                    "meta": {"$ref": "#/components/schemas/MetaRespuesta"}
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [{"bearer": []}],
+        "summary": "Listar tipos de orden (admin)",
+        "tags": ["Tipos de orden"]
+      },
+      "post": {
+        "operationId": "TiposOrdenController_crear",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {"$ref": "#/components/schemas/OrdersCrearTipoOrdenRequestDto"}
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Tipo creado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": ["data", "meta"],
+                  "properties": {
+                    "data": {"$ref": "#/components/schemas/OrdersTipoOrdenResponseDto"},
+                    "meta": {"$ref": "#/components/schemas/MetaRespuesta"}
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [{"bearer": []}],
+        "summary": "Crear tipo de orden (admin)",
+        "tags": ["Tipos de orden"]
+      }
+    },
+    "/api/v2/admin/tipos-orden/{codigo}": {
+      "get": {
+        "operationId": "TiposOrdenController_detalle",
+        "parameters": [
+          {"name": "codigo", "required": true, "in": "path", "schema": {"type": "string"}}
+        ],
+        "responses": {
+          "200": {
+            "description": "Tipo con sus transiciones",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": ["data", "meta"],
+                  "properties": {
+                    "data": {"$ref": "#/components/schemas/OrdersTipoOrdenDetalleResponseDto"},
+                    "meta": {"$ref": "#/components/schemas/MetaRespuesta"}
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [{"bearer": []}],
+        "summary": "Detalle de tipo de orden (admin)",
+        "tags": ["Tipos de orden"]
+      },
+      "patch": {
+        "operationId": "TiposOrdenController_actualizar",
+        "parameters": [
+          {"name": "codigo", "required": true, "in": "path", "schema": {"type": "string"}}
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {"$ref": "#/components/schemas/OrdersActualizarTipoOrdenRequestDto"}
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Tipo actualizado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": ["data", "meta"],
+                  "properties": {
+                    "data": {"$ref": "#/components/schemas/OrdersTipoOrdenResponseDto"},
+                    "meta": {"$ref": "#/components/schemas/MetaRespuesta"}
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [{"bearer": []}],
+        "summary": "Actualizar tipo de orden (admin)",
+        "tags": ["Tipos de orden"]
+      }
+    },
+    "/api/v2/admin/tipos-orden/{codigo}/transiciones": {
+      "post": {
+        "operationId": "TiposOrdenController_agregarTransicion",
+        "parameters": [
+          {"name": "codigo", "required": true, "in": "path", "schema": {"type": "string"}}
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {"$ref": "#/components/schemas/OrdersCrearTransicionRequestDto"}
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Transición creada",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": ["data", "meta"],
+                  "properties": {
+                    "data": {"$ref": "#/components/schemas/OrdersTransicionResponseDto"},
+                    "meta": {"$ref": "#/components/schemas/MetaRespuesta"}
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [{"bearer": []}],
+        "summary": "Agregar transición (admin)",
+        "tags": ["Tipos de orden"]
+      }
+    },
+    "/api/v2/admin/tipos-orden/{codigo}/transiciones/{desde}/{hasta}": {
+      "delete": {
+        "operationId": "TiposOrdenController_eliminarTransicion",
+        "parameters": [
+          {"name": "codigo", "required": true, "in": "path", "schema": {"type": "string"}},
+          {"name": "desde", "required": true, "in": "path", "schema": {"type": "string"}},
+          {"name": "hasta", "required": true, "in": "path", "schema": {"type": "string"}}
+        ],
+        "responses": {
+          "204": {"description": "Transición eliminada"}
+        },
+        "security": [{"bearer": []}],
+        "summary": "Eliminar transición (admin)",
+        "tags": ["Tipos de orden"]
+      }
+    },
+    "/api/v2/admin/pagos": {
+      "get": {
+        "operationId": "PagosController_listarPagos",
+        "parameters": [
+          {
+            "name": "order_id",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Pagos de la orden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
+                  "properties": {
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/OrdersPagoResponseDto"
+                      }
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/MetaRespuesta"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Listar pagos de una orden (admin)",
+        "tags": [
+          "Pagos"
+        ]
+      }
+    },
+    "/api/v2/admin/pagos/{id}/confirmar": {
+      "post": {
+        "operationId": "PagosController_confirmarPago",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Pago confirmado y orden pagada",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/OrdersPagoResponseDto"
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/MetaRespuesta"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Confirmar pago manual (admin)",
+        "tags": [
+          "Pagos"
+        ]
+      }
+    },
+    "/api/v2/admin/pagos/{id}/rechazar": {
+      "post": {
+        "operationId": "PagosController_rechazarPago",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/OrdersRechazarPagoRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Pago rechazado y orden cancelada",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/OrdersPagoResponseDto"
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/MetaRespuesta"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Rechazar pago manual (admin)",
+        "tags": [
+          "Pagos"
+        ]
+      }
+    },
     "/api/v2/orders/{id}": {
       "get": {
         "operationId": "PedidosController_detalle",
@@ -2142,6 +2719,232 @@
       }
     },
     "schemas": {
+      "OrdersPagoResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "order_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "empresa_id": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true
+          },
+          "metodo_codigo": {
+            "type": "string"
+          },
+          "estado": {
+            "type": "string"
+          },
+          "monto_cents": {
+            "type": "integer"
+          },
+          "moneda": {
+            "type": "string"
+          },
+          "referencia": {
+            "type": "string"
+          },
+          "motivo_rechazo": {
+            "type": "string"
+          },
+          "confirmado_por": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true
+          },
+          "confirmado_en": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "creado_en": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "order_id",
+          "empresa_id",
+          "metodo_codigo",
+          "estado",
+          "monto_cents",
+          "moneda",
+          "referencia",
+          "motivo_rechazo",
+          "confirmado_por",
+          "confirmado_en",
+          "creado_en"
+        ]
+      },
+      "OrdersRechazarPagoRequestDto": {
+        "type": "object",
+        "properties": {
+          "motivo": {
+            "type": "string"
+          }
+        }
+      },
+      "OrdersFulfillmentResponseDto": {
+        "type": "object",
+        "properties": {
+          "codigo": {"type": "string"},
+          "nombre": {"type": "string"},
+          "requiere_direccion": {"type": "boolean"},
+          "activo": {"type": "boolean"},
+          "config": {"type": "object"}
+        },
+        "required": ["codigo", "nombre", "requiere_direccion", "activo", "config"]
+      },
+      "OrdersCrearFulfillmentRequestDto": {
+        "type": "object",
+        "properties": {
+          "codigo": {"type": "string"},
+          "nombre": {"type": "string"},
+          "requiere_direccion": {"type": "boolean"},
+          "activo": {"type": "boolean"},
+          "config": {"type": "object"}
+        },
+        "required": ["codigo", "nombre"]
+      },
+      "OrdersActualizarFulfillmentRequestDto": {
+        "type": "object",
+        "properties": {
+          "nombre": {"type": "string"},
+          "requiere_direccion": {"type": "boolean"},
+          "activo": {"type": "boolean"},
+          "config": {"type": "object"}
+        }
+      },
+      "OrdersTipoOrdenResponseDto": {
+        "type": "object",
+        "properties": {
+          "codigo": {"type": "string"},
+          "nombre": {"type": "string"},
+          "activo": {"type": "boolean"},
+          "config": {"type": "object"}
+        },
+        "required": ["codigo", "nombre", "activo", "config"]
+      },
+      "OrdersTransicionResponseDto": {
+        "type": "object",
+        "properties": {
+          "desde": {"type": "string"},
+          "hasta": {"type": "string"}
+        },
+        "required": ["desde", "hasta"]
+      },
+      "OrdersTipoOrdenDetalleResponseDto": {
+        "type": "object",
+        "properties": {
+          "tipo": {"$ref": "#/components/schemas/OrdersTipoOrdenResponseDto"},
+          "transiciones": {
+            "type": "array",
+            "items": {"$ref": "#/components/schemas/OrdersTransicionResponseDto"}
+          }
+        },
+        "required": ["tipo", "transiciones"]
+      },
+      "OrdersCrearTipoOrdenRequestDto": {
+        "type": "object",
+        "properties": {
+          "codigo": {"type": "string"},
+          "nombre": {"type": "string"},
+          "activo": {"type": "boolean"},
+          "config": {"type": "object"}
+        },
+        "required": ["codigo", "nombre"]
+      },
+      "OrdersActualizarTipoOrdenRequestDto": {
+        "type": "object",
+        "properties": {
+          "nombre": {"type": "string"},
+          "activo": {"type": "boolean"},
+          "config": {"type": "object"}
+        }
+      },
+      "OrdersCrearTransicionRequestDto": {
+        "type": "object",
+        "properties": {
+          "desde": {"type": "string"},
+          "hasta": {"type": "string"}
+        },
+        "required": ["desde", "hasta"]
+      },
+      "OrdersMetodoPagoResponseDto": {
+        "type": "object",
+        "properties": {
+          "codigo": {
+            "type": "string"
+          },
+          "nombre": {
+            "type": "string"
+          },
+          "requiere_confirmacion": {
+            "type": "boolean"
+          },
+          "activo": {
+            "type": "boolean"
+          },
+          "config": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "codigo",
+          "nombre",
+          "requiere_confirmacion",
+          "activo",
+          "config"
+        ]
+      },
+      "OrdersCrearMetodoPagoRequestDto": {
+        "type": "object",
+        "properties": {
+          "codigo": {
+            "type": "string"
+          },
+          "nombre": {
+            "type": "string"
+          },
+          "requiere_confirmacion": {
+            "type": "boolean"
+          },
+          "activo": {
+            "type": "boolean"
+          },
+          "config": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "codigo",
+          "nombre"
+        ]
+      },
+      "OrdersActualizarMetodoPagoRequestDto": {
+        "type": "object",
+        "properties": {
+          "nombre": {
+            "type": "string"
+          },
+          "requiere_confirmacion": {
+            "type": "boolean"
+          },
+          "activo": {
+            "type": "boolean"
+          },
+          "config": {
+            "type": "object"
+          }
+        }
+      },
       "ActualizarCantidadRequestDto": {
         "type": "object",
         "properties": {
@@ -2815,22 +3618,12 @@
           },
           "metodo_pago": {
             "type": "string",
-            "enum": [
-              "simulado",
-              "credito"
-            ],
             "default": "simulado"
           },
           "fulfillment": {
             "type": "string",
-            "enum": [
-              "delivery",
-              "pickup",
-              "onsite",
-              "digital",
-              "none"
-            ],
-            "default": "none"
+            "default": "none",
+            "description": "Código de un fulfillment activo (orders.fulfillments)."
           },
           "intervalo": {
             "type": "string",
@@ -2890,12 +3683,13 @@
           },
           "metodo_pago": {
             "type": "string",
-            "description": "Medio de pago: simulado o credito (requiere cliente_parte_id con cupo)",
-            "enum": [
-              "simulado",
-              "credito"
-            ],
+            "description": "Código de un método de pago activo (orders.metodos_pago). Credito requiere cliente_parte_id con cupo.",
             "default": "simulado"
+          },
+          "moneda_pago": {
+            "type": "string",
+            "description": "Moneda de pago explícita; si difiere de la orden se usa la tasa publicada en finance.",
+            "example": "USD"
           },
           "lista_precio_codigo": {
             "type": "string",
@@ -3091,14 +3885,8 @@
           },
           "fulfillment": {
             "type": "string",
-            "enum": [
-              "delivery",
-              "pickup",
-              "onsite",
-              "digital",
-              "none"
-            ],
-            "default": "none"
+            "default": "none",
+            "description": "Código de un fulfillment activo (orders.fulfillments)."
           },
           "fulfillment_config": {
             "type": "object",
@@ -3308,10 +4096,6 @@
           },
           "metodo_pago": {
             "type": "string",
-            "enum": [
-              "simulado",
-              "credito"
-            ],
             "example": "simulado"
           },
           "fulfillment_config": {

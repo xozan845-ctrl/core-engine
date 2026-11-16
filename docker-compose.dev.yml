@@ -1,6 +1,6 @@
 # Core Engine · DESARROLLO (construye las imágenes en local)
 # Entorno completo y autocontenido: Postgres + RabbitMQ + MinIO + gateway + los
-# 12 microservicios (incluye `scheduling-service`, `commissions-service` y `market-intelligence-service`,
+# 14 microservicios (incluye `scheduling-service`, `commissions-service` y `market-intelligence-service`,
 # que NO se despliegan en producción). Publica al host los puertos de datos y
 # broker SOLO para desarrollo (conectar un cliente de BD o abrir la UI de
 # RabbitMQ en localhost).
@@ -137,16 +137,37 @@ services:
       SMTP_USER: ${SMTP_USER:-}
       SMTP_PASSWORD: ${SMTP_PASSWORD:-}
 
-  catalog-service:
+  item-service:
     <<: *servicio-base
-    # ADR-0016: el servicio es Rust y tiene su propio Dockerfile multi-stage.
     build:
       context: .
-      dockerfile: packages/catalog-service/Dockerfile
+      dockerfile: packages/item-service/Dockerfile
     environment:
-      SERVICIO: catalog-service
-      PORT: 3002
-      OUTBOX_TABLA: catalog.outbox
+      SERVICIO: item-service
+      PORT: 3015
+      OUTBOX_TABLA: item.outbox
+
+  inventory-service:
+    <<: *servicio-base
+    # ADR-0018: inventario separado de catalog-service.
+    build:
+      context: .
+      dockerfile: packages/inventory-service/Dockerfile
+    environment:
+      SERVICIO: inventory-service
+      PORT: 3013
+      OUTBOX_TABLA: inventory.outbox
+
+  pricing-service:
+    <<: *servicio-base
+    # ADR-0018: precios separados de catalog-service.
+    build:
+      context: .
+      dockerfile: packages/pricing-service/Dockerfile
+    environment:
+      SERVICIO: pricing-service
+      PORT: 3014
+      OUTBOX_TABLA: pricing.outbox
 
   stores-service:
     <<: *servicio-base

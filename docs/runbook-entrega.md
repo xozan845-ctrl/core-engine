@@ -19,11 +19,11 @@ está repartido entre [`.github/README.md`](../.github/README.md),
 ```mermaid
 flowchart LR
     A[rama develop] -->|PR| B[staging]
+    B -->|push| SI["stage-images.yml\n14 imágenes :stage"]
     B -->|PR, CI verde| C[main]
-    C -->|git tag vX.Y.Z| R["release.yml\n12 imágenes + digests"]
-    R -->|"promote.yml env=stage, source=vX.Y.Z"| S["GHCR :stage"]
+    C -->|git tag vX.Y.Z| R["release.yml\n14 imágenes + digests"]
     R -->|"promote.yml env=prod, source=vX.Y.Z"| P["GHCR :prod"]
-    S --> DS[deploy.yml env=stage → docker-compose.stage.yml]
+    SI --> DS[deploy.yml env=stage → docker-compose.stage.yml]
     P --> DP[deploy.yml env=prod → docker-compose.yml]
 ```
 
@@ -33,12 +33,12 @@ Cada servicio se publica y se promueve con su propia imagen:
 ghcr.io/xozan845-ctrl/core-engine-<servicio>:<tag|stage|prod>
 ```
 
-Servicios: `api-gateway`, `identity-service`, `catalog-service`, `stores-service`,
+Servicios: `api-gateway`, `identity-service`, `item-service`, `stores-service`,
 `orders-service`, `logistics-service`, `scheduling-service`, `commissions-service`,
 `finance-service`, `field-service`, `market-intelligence-service`, `storage-service`,
 `notifications-service`
-(13 imágenes; `commissions` solo se despliega en stage y `market-intelligence` solo
-en desarrollo).
+(13 imágenes; `commissions` solo se despliega en stage y `market-intelligence` en
+stage y producción desde la Fase 6).
 
 ---
 

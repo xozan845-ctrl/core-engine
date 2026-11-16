@@ -61,7 +61,7 @@ async fn main() {
         config.internal_request_timeout_ms,
     ));
     let catalogo = Arc::new(CatalogoHttp::nueva(
-        config.catalog_service_url.clone(),
+        config.item_service_url.clone(),
         config.internal_api_key.clone(),
         config.internal_request_timeout_ms,
     ));

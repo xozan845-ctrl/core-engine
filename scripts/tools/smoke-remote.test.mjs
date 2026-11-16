@@ -60,6 +60,12 @@ function happyPath(req, res) {
   if (req.url.startsWith('/api/v2/catalog/items')) {
     return json(res, 200, { items: [{ id: 'p1' }], total: 1 });
   }
+  if (req.url.startsWith('/api/v2/admin/inventario')) {
+    return json(res, 200, [{ sku: 'SKU-1', stock: 1 }]);
+  }
+  if (req.url.startsWith('/api/v2/catalog/configuracion-inventario')) {
+    return json(res, 200, { metodo_costeo: 'promedio' });
+  }
   return json(res, 404, { codigo: 'NO_ENCONTRADO' });
 }
 
@@ -72,6 +78,8 @@ test('smoke-remote: valida salud, login y lectura sin escribir datos', async () 
     'GET /health',
     'POST /api/v2/auth/login',
     'GET /api/v2/catalog/items?limite=1&empresa_id=00000000-0000-4000-8000-000000000001',
+    'GET /api/v2/admin/inventario?empresa_id=00000000-0000-4000-8000-000000000001',
+    'GET /api/v2/catalog/configuracion-inventario?empresa_id=00000000-0000-4000-8000-000000000001',
   ]);
 });
 
@@ -85,6 +93,8 @@ test('smoke-remote: usa SMOKE_EMPRESA_ID cuando se configura', async () => {
     'GET /health',
     'POST /api/v2/auth/login',
     'GET /api/v2/catalog/items?limite=1&empresa_id=22222222-2222-4222-8222-222222222222',
+    'GET /api/v2/admin/inventario?empresa_id=22222222-2222-4222-8222-222222222222',
+    'GET /api/v2/catalog/configuracion-inventario?empresa_id=22222222-2222-4222-8222-222222222222',
   ]);
 });
 
@@ -146,6 +156,8 @@ test('smoke-remote: verifica ventas de empresa cuando hay credenciales de empres
     'GET /health',
     'POST /api/v2/auth/login',
     'GET /api/v2/catalog/items?limite=1&empresa_id=00000000-0000-4000-8000-000000000001',
+    'GET /api/v2/admin/inventario?empresa_id=00000000-0000-4000-8000-000000000001',
+    'GET /api/v2/catalog/configuracion-inventario?empresa_id=00000000-0000-4000-8000-000000000001',
     'POST /api/v2/auth/login',
     'GET /api/v2/empresarios/me/ventas',
   ]);

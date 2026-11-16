@@ -9,15 +9,18 @@ use orders_service::consumer::PedidosConsumer;
 use orders_service::contratos::Contratos;
 use orders_service::db::Db;
 use orders_service::entregas::EntregasDigitales;
+use orders_service::fulfillments::Fulfillments;
 use orders_service::http::build_router;
 use orders_service::logs::{ejecutar_con_contexto, ContextoCorrelacion};
 use orders_service::metrics::Metrics;
 use orders_service::outbox::Outbox;
+use orders_service::pagos::Pagos;
 use orders_service::pedidos::Pedidos;
 use orders_service::rabbit::{ColaConfig, Handler, Rabbit};
 use orders_service::salon::Salon;
 use orders_service::state::AppState;
 use orders_service::suscripciones::Suscripciones;
+use orders_service::tipos_orden::TiposOrden;
 use orders_service::views::OrderViewRepository;
 use std::sync::Arc;
 use std::time::Duration;
@@ -90,11 +93,17 @@ async fn main() {
         vistas: Arc::clone(&vistas),
         pedidos: Arc::clone(&pedidos),
         outbox: Outbox::nueva(&outbox_tabla),
+        pagos: Arc::new(Pagos::nueva(Arc::clone(&db))),
+        tipos: Arc::new(TiposOrden::nueva(Arc::clone(&db))),
+        fulfillments: Arc::new(Fulfillments::nueva(Arc::clone(&db))),
         tasa_comision: config.tasa_comision,
     });
     let contratos = Arc::new(Contratos::nueva(Arc::clone(&db)));
     let suscripciones = Arc::new(Suscripciones::nueva(Arc::clone(&db), Arc::clone(&checkout)));
     let salon = Arc::new(Salon::nueva(Arc::clone(&db)));
+    let pagos = Arc::new(Pagos::nueva(Arc::clone(&db)));
+    let tipos = Arc::new(TiposOrden::nueva(Arc::clone(&db)));
+    let fulfillments = Arc::new(Fulfillments::nueva(Arc::clone(&db)));
 
     let consumidor = Arc::new(PedidosConsumer::nuevo(
         Arc::clone(&db),
@@ -128,6 +137,9 @@ async fn main() {
         contratos,
         suscripciones,
         salon,
+        pagos,
+        tipos,
+        fulfillments,
     );
     let app = build_router(estado);
 

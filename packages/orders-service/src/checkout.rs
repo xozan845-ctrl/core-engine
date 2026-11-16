@@ -3,14 +3,19 @@
 //! Además aplica transiciones (logística → orders) y replay.
 
 use crate::carrito::{Carrito, ItemCarrito};
-use crate::clients::{ClientesPort, CreditoEstado, OfertaExterna, PreciosExternos};
+use crate::clients::{
+    ClientesPort, ConfiguracionExterna, CreditoEstado, OfertaExterna, PreciosExternos,
+};
 use crate::db::{iso_ms, Db};
 use crate::errors::ApiError;
 use crate::event_store::{error_db, parsear_uuid, OrderEventStore};
+use crate::fulfillments::Fulfillments;
 use crate::money;
-use crate::order_state::{validar_transicion_por_tipo, ItemOrden, FULFILLMENTS, TIPOS_ORDEN};
+use crate::order_state::ItemOrden;
 use crate::outbox::Outbox;
+use crate::pagos::Pagos;
 use crate::pedidos::Pedidos;
+use crate::tipos_orden::TiposOrden;
 use crate::views::{OrderView, OrderViewRepository};
 use chrono::{Duration, Utc};
 use serde::{Deserialize, Serialize};
@@ -45,6 +50,8 @@ pub struct ComandoCrear {
     pub usar_carrito: bool,
     #[serde(default)]
     pub metodo_pago: Option<String>,
+    #[serde(default)]
+    pub moneda_pago: Option<String>,
     #[serde(default)]
     pub lista_precio_codigo: Option<String>,
     #[serde(default)]
@@ -98,6 +105,9 @@ pub struct Checkout {
     pub vistas: Arc<OrderViewRepository>,
     pub pedidos: Arc<Pedidos>,
     pub outbox: Outbox,
+    pub pagos: Arc<Pagos>,
+    pub tipos: Arc<TiposOrden>,
+    pub fulfillments: Arc<Fulfillments>,
     pub tasa_comision: f64,
 }
 
@@ -108,14 +118,33 @@ impl Checkout {
         comando: &ComandoCrear,
         cliente_id: &str,
     ) -> Result<OrderView, ApiError> {
-        let tipo_orden = validar_tipo_orden(&comando.tipo_orden)?;
+        if comando.tipo_orden.trim().is_empty() {
+            return Err(ApiError::dominio(
+                "TIPO_ORDEN_REQUERIDO",
+                "El tipo de orden es obligatorio.",
+            ));
+        }
+        let tipo_orden = self.tipos.validar_tipo(&comando.tipo_orden).await?;
         let es_cotizacion = tipo_orden == "cotizacion";
         let es_reserva = tipo_orden == "reserva";
-        let metodo_pago = if comando.metodo_pago.as_deref() == Some("credito") {
-            "credito"
-        } else {
-            "simulado"
-        };
+        let metodo_pago = comando
+            .metodo_pago
+            .as_deref()
+            .map(str::trim)
+            .filter(|valor| !valor.is_empty())
+            .unwrap_or("simulado")
+            .to_lowercase();
+        let fulfillments_permitidos = self.fulfillments.codigos_activos().await?;
+        let metodo = self
+            .pagos
+            .metodo_activo(&metodo_pago)
+            .await?
+            .ok_or_else(|| {
+                ApiError::dominio(
+                    "METODO_PAGO_INVALIDO",
+                    format!("El metodo de pago \"{metodo_pago}\" no existe o esta inactivo."),
+                )
+            })?;
         if es_reserva && comando.cliente_parte_id.is_none() {
             return Err(ApiError::dominio(
                 "PARTE_REQUERIDA",
@@ -182,8 +211,12 @@ impl Checkout {
                 }
             }
             moneda_orden = Some(moneda_oferta);
-            let fulfillment =
-                validar_fulfillment(linea.fulfillment.as_deref(), tipo_orden, &oferta.item_type)?;
+            let fulfillment = validar_fulfillment(
+                linea.fulfillment.as_deref(),
+                &tipo_orden,
+                &oferta.item_type,
+                &fulfillments_permitidos,
+            )?;
             if fulfillment == "digital" {
                 let url = url_entrega_digital(oferta.atributos.as_ref());
                 let Some(url) = url else {
@@ -229,7 +262,7 @@ impl Checkout {
             }
         }
 
-        self.validar_capacidades(&items, tipo_orden, metodo_pago)
+        self.validar_capacidades(&items, &tipo_orden, &metodo_pago)
             .await?;
 
         if es_reserva {
@@ -360,6 +393,38 @@ impl Checkout {
                 .collect()
         };
 
+        let moneda_orden = moneda_orden.unwrap_or_else(|| "NIO".to_string());
+        let moneda_pago = match comando
+            .moneda_pago
+            .as_deref()
+            .map(str::trim)
+            .filter(|valor| !valor.is_empty())
+        {
+            Some(valor) => normalizar_moneda(valor)?,
+            None => moneda_orden.clone(),
+        };
+        let total_pagado_cents = if moneda_pago == moneda_orden {
+            total
+        } else {
+            let tasa = self
+                .clientes
+                .tipo_cambio(&moneda_orden, &moneda_pago)
+                .await
+                .ok_or_else(|| {
+                    ApiError::dominio(
+                        "TIPO_CAMBIO_NO_DISPONIBLE",
+                        format!("No hay una tasa publicada de {moneda_orden} a {moneda_pago}."),
+                    )
+                })?;
+            let monto = (total as f64 * tasa).round() as i64;
+            if monto <= 0 {
+                return Err(ApiError::dominio(
+                    "TIPO_CAMBIO_INVALIDO",
+                    "La tasa publicada produce un monto invalido.",
+                ));
+            }
+            monto
+        };
         let resumen = resumen_fulfillment(&items);
         let evento_payload = json!({
             "order_id": order_id,
@@ -370,6 +435,8 @@ impl Checkout {
             "estado": "creada",
             "tipo_orden": tipo_orden,
             "metodo_pago": metodo_pago,
+            "moneda_pago": moneda_pago,
+            "total_pagado_cents": total_pagado_cents,
             "fulfillment_config": resumen,
             "creado_en": creado_en,
         });
@@ -389,7 +456,9 @@ impl Checkout {
                 "cliente_parte_id": comando.cliente_parte_id,
                 "items": items,
                 "total_cents": total,
-                "moneda": moneda_orden.clone().unwrap_or_else(|| "NIO".to_string()),
+                "moneda": moneda_orden,
+                "moneda_pago": moneda_pago,
+                "total_pagado_cents": total_pagado_cents,
                 "estado": "creada",
                 "tipo_orden": tipo_orden,
                 "metodo_pago": metodo_pago,
@@ -413,6 +482,16 @@ impl Checkout {
             }
             return Err(error);
         }
+        let empresa_pago = empresa_unica(&items);
+        self.pagos
+            .registrar(
+                &order_id,
+                empresa_pago.as_deref(),
+                &metodo,
+                total_pagado_cents,
+                &moneda_pago,
+            )
+            .await?;
 
         let primer_item = items.first();
         Ok(OrderView {
@@ -430,7 +509,7 @@ impl Checkout {
             } else {
                 money::comision(total, 0.12)?
             },
-            moneda: moneda_orden.unwrap_or_else(|| "NIO".to_string()),
+            moneda: moneda_orden,
             items,
             direccion_envio: Value::Null,
             creado_en: creado_en.clone(),
@@ -527,7 +606,9 @@ impl Checkout {
         }
         let estado = reconstruir_desde_eventos(&historia)
             .ok_or_else(|| ApiError::no_encontrado("Orden", order_id))?;
-        validar_transicion_por_tipo(&estado.tipo_orden, &estado.estado, estado_nuevo)?;
+        self.tipos
+            .validar(&estado.tipo_orden, &estado.estado, estado_nuevo)
+            .await?;
         let actor_final = actor.unwrap_or("sistema");
         let ocurrido_en = iso_ms(Utc::now());
 
@@ -728,14 +809,38 @@ impl Checkout {
             .filter(|fila| fila.activo)
             .map(|fila| format!("{}:{}", fila.empresa_id, fila.capacidad_codigo))
             .collect();
-        for empresa in empresas {
+        for empresa in &empresas {
             let faltantes: Vec<String> = capacidades
                 .iter()
                 .filter(|capacidad| !activas.contains(&format!("{empresa}:{capacidad}")))
                 .cloned()
                 .collect();
             if !faltantes.is_empty() {
-                return Err(ApiError::capacidad_no_activa(&faltantes, &empresa));
+                return Err(ApiError::capacidad_no_activa(&faltantes, empresa));
+            }
+        }
+        for empresa in &empresas {
+            let config = match self.clientes.configuracion(empresa).await {
+                ConfiguracionExterna::Ok(config) => config,
+                ConfiguracionExterna::SinConfiguracion => continue,
+                ConfiguracionExterna::Error => {
+                    return Err(ApiError::servicio_no_disponible("identity-service"))
+                }
+            };
+            if config.fulfillment.is_empty() {
+                continue;
+            }
+            for item in items.iter().filter(|item| &item.empresa_id == empresa) {
+                let fulfillment = item.fulfillment.as_deref();
+                if !fulfillment_permitido(&config, fulfillment) {
+                    return Err(ApiError::dominio(
+                        "FULFILLMENT_NO_PERMITIDO",
+                        format!(
+                            "El modelo operativo de la empresa no permite fulfillment \"{}\".",
+                            fulfillment.unwrap_or("none")
+                        ),
+                    ));
+                }
             }
         }
         Ok(())
@@ -840,29 +945,14 @@ fn agrupar(lineas: &[LineaEntrada]) -> Result<Vec<LineaAgrupada>, ApiError> {
         .collect())
 }
 
-fn validar_tipo_orden(valor: &str) -> Result<&str, ApiError> {
-    if valor.is_empty() {
-        return Err(ApiError::dominio(
-            "TIPO_ORDEN_REQUERIDO",
-            "El tipo de orden es obligatorio.",
-        ));
-    }
-    if !TIPOS_ORDEN.contains(&valor) {
-        return Err(ApiError::dominio(
-            "TIPO_ORDEN_INVALIDO",
-            "El tipo de orden no es valido.",
-        ));
-    }
-    Ok(valor)
-}
-
 fn validar_fulfillment(
     valor: Option<&str>,
     tipo_orden: &str,
     item_type: &str,
+    permitidos: &[String],
 ) -> Result<String, ApiError> {
     let fulfillment = valor.unwrap_or("none");
-    if !FULFILLMENTS.contains(&fulfillment) {
+    if !permitidos.iter().any(|permitido| permitido == fulfillment) {
         return Err(ApiError::dominio(
             "FULFILLMENT_INVALIDO",
             "El fulfillment no es valido.",
@@ -1002,6 +1092,47 @@ pub fn reconstruir_desde_eventos(
     Some(estado)
 }
 
+fn normalizar_moneda(valor: &str) -> Result<String, ApiError> {
+    let codigo = valor.trim().to_uppercase();
+    let valido = codigo.len() == 3 && codigo.chars().all(|c| c.is_ascii_uppercase());
+    if !valido {
+        return Err(ApiError::validacion(json!([
+            {"campo": "moneda_pago", "restricciones": ["matches"]}
+        ])));
+    }
+    Ok(codigo)
+}
+
+/// Empresa del pago cuando todas las líneas pertenecen a la misma; si no,
+/// `None` (orden multi-empresa).
+fn empresa_unica(items: &[ItemOrden]) -> Option<String> {
+    let mut empresas = items.iter().map(|item| item.empresa_id.as_str());
+    let primera = empresas.next()?;
+    if empresas.all(|empresa| empresa == primera) {
+        Some(primera.to_string())
+    } else {
+        None
+    }
+}
+
+/// `true` si el fulfillment está permitido por el pack; lista vacía = sin
+/// restricción (compatibilidad con packs antiguos).
+fn fulfillment_permitido(
+    config: &crate::clients::ConfiguracionOperativa,
+    fulfillment: Option<&str>,
+) -> bool {
+    if config.fulfillment.is_empty() {
+        return true;
+    }
+    match fulfillment {
+        Some(valor) => config
+            .fulfillment
+            .iter()
+            .any(|permitido| permitido == valor),
+        None => true,
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -1103,17 +1234,46 @@ mod tests {
     }
 
     #[test]
+    fn debe_permitir_fulfillment_sin_restriccion() {
+        let config = crate::clients::ConfiguracionOperativa::default();
+        assert!(fulfillment_permitido(&config, Some("delivery")));
+        assert!(fulfillment_permitido(&config, None));
+    }
+
+    #[test]
+    fn debe_respetar_los_fulfillment_del_modelo() {
+        let config = crate::clients::ConfiguracionOperativa {
+            fulfillment: vec!["delivery".to_string(), "pickup".to_string()],
+            ..Default::default()
+        };
+        assert!(fulfillment_permitido(&config, Some("delivery")));
+        assert!(fulfillment_permitido(&config, Some("pickup")));
+        assert!(fulfillment_permitido(&config, None));
+        assert!(!fulfillment_permitido(&config, Some("onsite")));
+    }
+
+    fn permitidos() -> Vec<String> {
+        ["delivery", "pickup", "onsite", "digital", "none"]
+            .iter()
+            .map(|valor| (*valor).to_string())
+            .collect()
+    }
+
+    #[test]
     fn debe_validar_las_reglas_de_fulfillment() {
         assert_eq!(
-            validar_fulfillment(None, "compra", "producto").expect("none"),
+            validar_fulfillment(None, "compra", "producto", &permitidos()).expect("none"),
             "none"
         );
         assert_eq!(
-            validar_fulfillment(Some("onsite"), "reserva", "servicio").expect("onsite"),
+            validar_fulfillment(Some("onsite"), "reserva", "servicio", &permitidos())
+                .expect("onsite"),
             "onsite"
         );
-        assert!(validar_fulfillment(Some("delivery"), "reserva", "servicio").is_err());
-        assert!(validar_fulfillment(Some("onsite"), "reserva", "producto").is_err());
-        assert!(validar_fulfillment(Some("otro"), "compra", "producto").is_err());
+        assert!(
+            validar_fulfillment(Some("delivery"), "reserva", "servicio", &permitidos()).is_err()
+        );
+        assert!(validar_fulfillment(Some("onsite"), "reserva", "producto", &permitidos()).is_err());
+        assert!(validar_fulfillment(Some("otro"), "compra", "producto", &permitidos()).is_err());
     }
 }

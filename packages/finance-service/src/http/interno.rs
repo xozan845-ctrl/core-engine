@@ -83,3 +83,19 @@ pub async fn declaraciones(
             .await?,
     ))
 }
+
+pub async fn tipo_cambio(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    Query(params): Query<HashMap<String, String>>,
+) -> Result<Json<Value>, ApiError> {
+    exigir_interna(&state, &headers)?;
+    let base = params.get("base").map(String::as_str).unwrap_or_default();
+    let quote = params.get("quote").map(String::as_str).unwrap_or_default();
+    let fila = state
+        .comercio
+        .tipo_cambio_vigente(base, quote)
+        .await?
+        .ok_or_else(|| ApiError::no_encontrado("Tipo de cambio", quote))?;
+    Ok(Json(fila))
+}

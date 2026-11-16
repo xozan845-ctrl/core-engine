@@ -12,332 +12,6 @@
   ],
   "tags": [],
   "paths": {
-    "/internal/items/lote": {
-      "get": {
-        "operationId": "InternalController_lote",
-        "parameters": [
-          {
-            "name": "skus",
-            "required": false,
-            "in": "query",
-            "description": "Códigos separados por coma",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Items encontrados",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/components/schemas/LoteItemResponseDto"
-                  }
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "internalKey": []
-          }
-        ],
-        "summary": "Lote de items por códigos (servicio→servicio)",
-        "tags": [
-          "Catálogo (interno)"
-        ]
-      }
-    },
-    "/internal/items/{id}": {
-      "get": {
-        "operationId": "InternalController_itemPorId",
-        "parameters": [
-          {
-            "name": "id",
-            "required": true,
-            "in": "path",
-            "description": "Id del item",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Item encontrado",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ItemResponseDto"
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "internalKey": []
-          }
-        ],
-        "summary": "Item unificado por id (servicio→servicio)",
-        "tags": [
-          "Catálogo (interno)"
-        ]
-      }
-    },
-    "/internal/items/{id}/cotizacion": {
-      "get": {
-        "operationId": "InternalController_cotizar",
-        "parameters": [
-          {
-            "name": "id",
-            "required": true,
-            "in": "path",
-            "description": "Id del item",
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "empresa_id",
-            "required": true,
-            "in": "query",
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "desde",
-            "required": true,
-            "in": "query",
-            "schema": {
-              "example": "2026-12-20",
-              "type": "string"
-            }
-          },
-          {
-            "name": "hasta",
-            "required": true,
-            "in": "query",
-            "schema": {
-              "example": "2026-12-22",
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Cotización del rango",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/CotizacionItemResponseDto"
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "internalKey": []
-          }
-        ],
-        "summary": "Cotizar un item por rango de fechas (servicio→servicio)",
-        "tags": [
-          "Catálogo (interno)"
-        ]
-      }
-    },
-    "/internal/items/{id}/precio": {
-      "get": {
-        "operationId": "InternalController_precio",
-        "parameters": [
-          {
-            "name": "id",
-            "required": true,
-            "in": "path",
-            "description": "Id del item",
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "empresa_id",
-            "required": true,
-            "in": "query",
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "cantidad",
-            "required": false,
-            "in": "query",
-            "schema": {
-              "example": 1,
-              "type": "string"
-            }
-          },
-          {
-            "name": "lista",
-            "required": false,
-            "in": "query",
-            "schema": {
-              "example": "mayorista",
-              "type": "string"
-            }
-          },
-          {
-            "name": "segmento",
-            "required": false,
-            "in": "query",
-            "schema": {
-              "example": "mayorista",
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Precio resuelto",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/PrecioItemInternoResponseDto"
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "internalKey": []
-          }
-        ],
-        "summary": "Resolver el precio de un item por cantidad (servicio→servicio)",
-        "tags": [
-          "Catálogo (interno)"
-        ]
-      }
-    },
-    "/internal/items/precios": {
-      "post": {
-        "operationId": "InternalController_preciosPorLote",
-        "parameters": [],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/ResolverPreciosInternoRequestDto"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "Precios resueltos",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/PreciosInternosResponseDto"
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "internalKey": []
-          }
-        ],
-        "summary": "Resolver precios por lote (servicio→servicio)",
-        "tags": [
-          "Catálogo (interno)"
-        ]
-      }
-    },
-    "/internal/inventario/resumen": {
-      "get": {
-        "operationId": "InternalController_resumen",
-        "parameters": [
-          {
-            "name": "empresa_id",
-            "required": false,
-            "in": "query",
-            "description": "Filtra el resumen por empresa (ADR-27)",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Resumen de inventario",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ResumenInventarioResponseDto"
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "internalKey": []
-          }
-        ],
-        "summary": "Resumen de inventario (servicio→servicio)",
-        "tags": [
-          "Catálogo (interno)"
-        ]
-      }
-    },
-    "/internal/inventario/lineas": {
-      "get": {
-        "operationId": "InternalController_lineas",
-        "parameters": [
-          {
-            "name": "empresa_id",
-            "required": false,
-            "in": "query",
-            "description": "Filtra las líneas por empresa (ADR-27)",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Líneas de inventario",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/components/schemas/LineaInventarioResponseDto"
-                  }
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "internalKey": []
-          }
-        ],
-        "summary": "Líneas de inventario (servicio→servicio)",
-        "tags": [
-          "Catálogo (interno)"
-        ]
-      }
-    },
     "/internal/finance/sujetos/{usuarioId}": {
       "get": {
         "operationId": "InternoController_sujeto",
@@ -370,6 +44,50 @@
           }
         ],
         "summary": "Situación fiscal de un usuario (para identity)",
+        "tags": [
+          "Finanzas (interno)"
+        ]
+      }
+    },
+    "/internal/finance/tipos-cambio": {
+      "get": {
+        "operationId": "InternoController_tipoCambio",
+        "parameters": [
+          {
+            "name": "base",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "quote",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Tasa vigente",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TipoCambioInternoResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "internalKey": []
+          }
+        ],
+        "summary": "Tipo de cambio vigente (servicio→servicio)",
         "tags": [
           "Finanzas (interno)"
         ]
@@ -628,6 +346,43 @@
         ]
       }
     },
+    "/internal/empresas/{id}/configuracion": {
+      "get": {
+        "operationId": "InternalController_empresaConfiguracion",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "description": "Id de la empresa",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Configuración operativa efectiva",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConfiguracionOperativaResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "internalKey": []
+          }
+        ],
+        "summary": "Configuración operativa por empresa (servicio→servicio)",
+        "tags": [
+          "Usuarios (interno)"
+        ]
+      }
+    },
     "/internal/empresas/{id}/tema": {
       "get": {
         "operationId": "InternalController_empresaTema",
@@ -730,6 +485,53 @@
         ]
       }
     },
+    "/internal/extensiones/valores": {
+      "post": {
+        "operationId": "InternalController_valoresExtensiones",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ValoresExtensionRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Valores activos por recurso",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "valores"
+                  ],
+                  "properties": {
+                    "valores": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/ValorExtensionResponseDto"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "internalKey": []
+          }
+        ],
+        "summary": "Valores de extensiones por recurso (servicio→servicio)",
+        "tags": [
+          "Extensiones (interno)"
+        ]
+      }
+    },
     "/internal/partes/{id}": {
       "get": {
         "operationId": "InternalController_parte",
@@ -773,6 +575,191 @@
         "summary": "Parte por id y empresa (servicio→servicio)",
         "tags": [
           "Usuarios (interno)"
+        ]
+      }
+    },
+    "/internal/inventario/resumen": {
+      "get": {
+        "summary": "Resumen de inventario",
+        "parameters": [
+          {
+            "name": "empresa_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Resumen",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Clave interna invalida"
+          }
+        },
+        "security": [
+          {
+            "internalKey": []
+          }
+        ]
+      }
+    },
+    "/internal/inventario/lineas": {
+      "get": {
+        "summary": "Lineas de inventario",
+        "parameters": [
+          {
+            "name": "empresa_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Lineas",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Clave interna invalida"
+          }
+        },
+        "security": [
+          {
+            "internalKey": []
+          }
+        ]
+      }
+    },
+    "/internal/items/lote": {
+      "get": {
+        "operationId": "InternalController_lote",
+        "parameters": [
+          {
+            "name": "skus",
+            "required": false,
+            "in": "query",
+            "description": "Códigos separados por coma",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Items encontrados",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/LoteItemResponseDto"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "internalKey": []
+          }
+        ],
+        "summary": "Lote de items por códigos (servicio→servicio)",
+        "tags": [
+          "Catálogo (interno)"
+        ]
+      }
+    },
+    "/internal/items/{id}": {
+      "get": {
+        "operationId": "InternalController_itemPorId",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "description": "Id del item",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Item encontrado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ItemResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "internalKey": []
+          }
+        ],
+        "summary": "Item unificado por id (servicio→servicio)",
+        "tags": [
+          "Catálogo (interno)"
+        ]
+      }
+    },
+    "/internal/pagos/webhook": {
+      "post": {
+        "operationId": "PagosController_webhookPago",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/WebhookPagoRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Pago procesado por el proveedor",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WebhookPagoResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "internalKey": []
+          }
+        ],
+        "summary": "Webhook de proveedor de pagos (secreto compartido)",
+        "tags": [
+          "Pagos (interno)"
         ]
       }
     },
@@ -989,6 +976,178 @@
         "summary": "Historia inmutable de eventos de una orden",
         "tags": [
           "Pedidos (interno)"
+        ]
+      }
+    },
+    "/internal/items/{id}/cotizacion": {
+      "get": {
+        "operationId": "InternalController_cotizar",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "description": "Id del item",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "empresa_id",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "desde",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "example": "2026-12-20",
+              "type": "string"
+            }
+          },
+          {
+            "name": "hasta",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "example": "2026-12-22",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Cotización del rango",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CotizacionItemResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "internalKey": []
+          }
+        ],
+        "summary": "Cotizar un item por rango de fechas (servicio→servicio)",
+        "tags": [
+          "Catálogo (interno)"
+        ]
+      }
+    },
+    "/internal/items/{id}/precio": {
+      "get": {
+        "operationId": "InternalController_precio",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "description": "Id del item",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "empresa_id",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "cantidad",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "example": 1,
+              "type": "string"
+            }
+          },
+          {
+            "name": "lista",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "example": "mayorista",
+              "type": "string"
+            }
+          },
+          {
+            "name": "segmento",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "example": "mayorista",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Precio resuelto",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PrecioItemInternoResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "internalKey": []
+          }
+        ],
+        "summary": "Resolver el precio de un item por cantidad (servicio→servicio)",
+        "tags": [
+          "Catálogo (interno)"
+        ]
+      }
+    },
+    "/internal/items/precios": {
+      "post": {
+        "operationId": "InternalController_preciosPorLote",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ResolverPreciosInternoRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Precios resueltos",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PreciosInternosResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "internalKey": []
+          }
+        ],
+        "summary": "Resolver precios por lote (servicio→servicio)",
+        "tags": [
+          "Catálogo (interno)"
         ]
       }
     },
@@ -1488,6 +1647,796 @@
       }
     },
     "schemas": {
+      "CreditoOrdenResponseDto": {
+        "type": "object",
+        "properties": {
+          "credito_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "balance_cents": {
+            "type": "number"
+          },
+          "limite_cents": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "credito_id",
+          "balance_cents",
+          "limite_cents"
+        ]
+      },
+      "DeclaracionResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Id de la declaración",
+            "format": "uuid"
+          },
+          "jurisdiccion": {
+            "type": "string",
+            "description": "Jurisdicción",
+            "example": "NI"
+          },
+          "tipo": {
+            "type": "string",
+            "description": "Tipo",
+            "enum": [
+              "IVA",
+              "IR",
+              "CUOTA_FIJA"
+            ],
+            "example": "IVA"
+          },
+          "periodo_inicio": {
+            "type": "string",
+            "description": "Inicio del periodo",
+            "format": "date"
+          },
+          "periodo_fin": {
+            "type": "string",
+            "description": "Fin del periodo",
+            "format": "date"
+          },
+          "base_gravada_cents": {
+            "type": "number",
+            "description": "Base gravada en centavos",
+            "example": 1150000
+          },
+          "iva_debitado_cents": {
+            "type": "number",
+            "description": "IVA debitado en centavos",
+            "example": 172500
+          },
+          "iva_credito_cents": {
+            "type": "number",
+            "description": "IVA crédito en centavos",
+            "example": 0
+          },
+          "iva_a_pagar_cents": {
+            "type": "number",
+            "description": "IVA a pagar en centavos",
+            "example": 172500
+          },
+          "renta_bruta_cents": {
+            "type": "number",
+            "description": "Renta bruta en centavos",
+            "example": 1150000
+          },
+          "renta_gravable_cents": {
+            "type": "number",
+            "description": "Renta gravable en centavos",
+            "example": 575000
+          },
+          "ir_a_pagar_cents": {
+            "type": "number",
+            "description": "IR a pagar en centavos",
+            "example": 172500
+          },
+          "cuota_cents": {
+            "type": "number",
+            "description": "Cuota fija en centavos",
+            "example": 5000
+          },
+          "estado": {
+            "type": "string",
+            "description": "Estado",
+            "enum": [
+              "PENDIENTE",
+              "GENERADA",
+              "PRESENTADA",
+              "PAGADA",
+              "CANCELADA"
+            ],
+            "example": "GENERADA"
+          },
+          "detalle": {
+            "type": "object",
+            "description": "Detalle de la declaración",
+            "nullable": true
+          },
+          "generada_en": {
+            "type": "string",
+            "description": "Fecha de generación",
+            "format": "date-time"
+          },
+          "presentada_en": {
+            "type": "string",
+            "description": "Fecha de presentación",
+            "format": "date-time"
+          },
+          "creado_en": {
+            "type": "string",
+            "description": "Fecha de creación (ISO 8601 UTC)",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "jurisdiccion",
+          "tipo",
+          "periodo_inicio",
+          "periodo_fin",
+          "base_gravada_cents",
+          "iva_debitado_cents",
+          "iva_credito_cents",
+          "iva_a_pagar_cents",
+          "renta_bruta_cents",
+          "renta_gravable_cents",
+          "ir_a_pagar_cents",
+          "cuota_cents",
+          "estado",
+          "creado_en"
+        ]
+      },
+      "RegistrarCreditoInternoRequestDto": {
+        "type": "object",
+        "properties": {
+          "empresa_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "parte_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "order_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "monto_cents": {
+            "type": "number",
+            "minimum": 1
+          },
+          "concepto": {
+            "type": "string",
+            "minLength": 1
+          },
+          "vendedor_id": {
+            "type": "string",
+            "format": "uuid"
+          }
+        },
+        "required": [
+          "empresa_id",
+          "parte_id",
+          "order_id",
+          "monto_cents",
+          "concepto"
+        ]
+      },
+      "TipoCambioInternoResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "base": {
+            "type": "string"
+          },
+          "quote": {
+            "type": "string"
+          },
+          "tasa": {
+            "type": "string"
+          },
+          "vigente_desde": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "creado_por": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "creado_en": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "base",
+          "quote",
+          "tasa",
+          "vigente_desde",
+          "creado_por",
+          "creado_en"
+        ]
+      },
+      "SujetoTributarioResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Id del sujeto",
+            "format": "uuid"
+          },
+          "jurisdiccion": {
+            "type": "string",
+            "description": "Jurisdicción",
+            "example": "NI"
+          },
+          "regimen_id": {
+            "type": "string",
+            "description": "Id del régimen",
+            "format": "uuid"
+          },
+          "regimen_nombre": {
+            "type": "string",
+            "description": "Nombre del régimen"
+          },
+          "razon_social": {
+            "type": "string",
+            "description": "Razón social"
+          },
+          "ruc": {
+            "type": "string",
+            "description": "RUC"
+          },
+          "es_plataforma": {
+            "type": "boolean",
+            "description": "¿Es la plataforma?",
+            "example": false
+          },
+          "estado": {
+            "type": "string",
+            "description": "Estado",
+            "enum": [
+              "ACTIVO",
+              "BAJA"
+            ],
+            "example": "ACTIVO"
+          },
+          "creado_en": {
+            "type": "string",
+            "description": "Fecha de creación (ISO 8601 UTC)",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "jurisdiccion",
+          "razon_social",
+          "es_plataforma",
+          "estado",
+          "creado_en"
+        ]
+      },
+      "ContarVendedoresResponseDto": {
+        "type": "object",
+        "properties": {
+          "vendedores": {
+            "type": "number",
+            "description": "Cantidad de usuarios con rol vendedor",
+            "example": 12
+          }
+        },
+        "required": [
+          "vendedores"
+        ]
+      },
+      "ConfiguracionOperativaResponseDto": {
+        "type": "object",
+        "properties": {
+          "empresa_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "vertical_id": {
+            "type": "string",
+            "nullable": true
+          },
+          "pack": {
+            "type": "object",
+            "nullable": true,
+            "properties": {
+              "codigo": {
+                "type": "string"
+              },
+              "version": {
+                "type": "integer"
+              }
+            },
+            "required": [
+              "codigo",
+              "version"
+            ]
+          },
+          "modelos": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "fulfillment": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "requiere_agenda": {
+            "type": "boolean"
+          },
+          "trazabilidad": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "empresa_id",
+          "vertical_id",
+          "pack",
+          "modelos",
+          "items",
+          "fulfillment",
+          "requiere_agenda",
+          "trazabilidad"
+        ]
+      },
+      "ValoresExtensionRequestDto": {
+        "type": "object",
+        "properties": {
+          "empresa_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "recurso": {
+            "type": "string"
+          },
+          "recurso_ids": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        },
+        "required": [
+          "empresa_id",
+          "recurso",
+          "recurso_ids"
+        ]
+      },
+      "ValorExtensionResponseDto": {
+        "type": "object",
+        "properties": {
+          "recurso_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "codigo": {
+            "type": "string"
+          },
+          "version_schema": {
+            "type": "integer"
+          },
+          "valores": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "recurso_id",
+          "codigo",
+          "version_schema",
+          "valores"
+        ]
+      },
+      "EmpresaResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "nombre": {
+            "type": "string"
+          },
+          "vertical_id": {
+            "type": "object",
+            "nullable": true,
+            "description": "Código dinámico de la vertical"
+          },
+          "pack_codigo": {
+            "type": "object",
+            "nullable": true,
+            "description": "Código dinámico del pack"
+          },
+          "pack_version": {
+            "type": "object",
+            "nullable": true,
+            "minimum": 1
+          },
+          "slug": {
+            "type": "string",
+            "description": "Slug público actual",
+            "example": "distribuidora-piloto"
+          },
+          "estado": {
+            "type": "string"
+          },
+          "creado_por": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "creado_en": {
+            "type": "string"
+          },
+          "ruc": {
+            "type": "object",
+            "nullable": true
+          },
+          "razon_social": {
+            "type": "string"
+          },
+          "nombre_comercial": {
+            "type": "string"
+          },
+          "descripcion": {
+            "type": "string"
+          },
+          "telefono": {
+            "type": "string"
+          },
+          "correo_contacto": {
+            "type": "string"
+          },
+          "sitio_web": {
+            "type": "string"
+          },
+          "direccion": {
+            "type": "string"
+          },
+          "ciudad": {
+            "type": "string"
+          },
+          "departamento": {
+            "type": "string"
+          },
+          "pais": {
+            "type": "string"
+          },
+          "moneda": {
+            "type": "string"
+          },
+          "zona_horaria": {
+            "type": "string"
+          },
+          "sector": {
+            "type": "string"
+          },
+          "representante_legal": {
+            "type": "string"
+          },
+          "horario_atencion": {
+            "type": "string"
+          },
+          "logo_objeto_id": {
+            "type": "object",
+            "nullable": true,
+            "format": "uuid"
+          },
+          "logo_url": {
+            "type": "object",
+            "nullable": true,
+            "description": "URL pública derivada del logo"
+          },
+          "background_objeto_id": {
+            "type": "string",
+            "nullable": true,
+            "format": "uuid"
+          },
+          "background_media_type": {
+            "type": "string",
+            "nullable": true,
+            "enum": [
+              "imagen",
+              "video"
+            ]
+          },
+          "background_url": {
+            "type": "string",
+            "nullable": true,
+            "description": "URL pública derivada del fondo"
+          },
+          "background_poster_objeto_id": {
+            "type": "string",
+            "nullable": true,
+            "format": "uuid"
+          },
+          "background_poster_url": {
+            "type": "string",
+            "nullable": true,
+            "description": "URL pública derivada del poster"
+          },
+          "background_alt": {
+            "type": "string"
+          },
+          "background_overlay": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 100
+          },
+          "background_position": {
+            "type": "string",
+            "enum": [
+              "center",
+              "top",
+              "bottom",
+              "left",
+              "right"
+            ]
+          },
+          "background_activo": {
+            "type": "boolean"
+          },
+          "plantilla": {
+            "type": "string",
+            "enum": [
+              "clasica",
+              "minimal",
+              "boutique",
+              "mercado"
+            ]
+          },
+          "tema": {
+            "$ref": "#/components/schemas/TemaResponseDto"
+          },
+          "origen_personalizacion": {
+            "$ref": "#/components/schemas/OrigenPersonalizacionResponseDto"
+          },
+          "actualizado_en": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "nombre",
+          "slug",
+          "estado",
+          "creado_por",
+          "creado_en"
+        ]
+      },
+      "OrigenPersonalizacionResponseDto": {
+        "type": "object",
+        "properties": {
+          "plantilla": {
+            "type": "string",
+            "description": "Nivel que aportó la plantilla efectiva",
+            "enum": [
+              "tienda",
+              "empresa",
+              "plataforma",
+              "defecto"
+            ]
+          },
+          "tema": {
+            "type": "string",
+            "description": "Nivel más específico que aportó overrides de tema",
+            "enum": [
+              "tienda",
+              "empresa",
+              "plataforma",
+              "defecto"
+            ]
+          }
+        },
+        "required": [
+          "plantilla",
+          "tema"
+        ]
+      },
+      "TemaOverridesResponseDto": {
+        "type": "object",
+        "properties": {
+          "plantilla_override": {
+            "type": "string",
+            "description": "Plantilla override o null si hereda",
+            "enum": [
+              "clasica",
+              "minimal",
+              "boutique",
+              "mercado"
+            ],
+            "nullable": true
+          },
+          "tema_override": {
+            "type": "object",
+            "description": "Overrides parciales de tema",
+            "additionalProperties": true
+          }
+        },
+        "required": [
+          "plantilla_override",
+          "tema_override"
+        ]
+      },
+      "TemaResponseDto": {
+        "type": "object",
+        "properties": {
+          "color_primario": {
+            "type": "string",
+            "description": "Color primario (hex)",
+            "example": "#1F2937"
+          },
+          "color_secundario": {
+            "type": "string",
+            "description": "Color secundario (hex)",
+            "example": "#F59E0B"
+          },
+          "color_acento": {
+            "type": "string",
+            "description": "Color de acento (hex)",
+            "example": "#10B981"
+          },
+          "color_fondo": {
+            "type": "string",
+            "description": "Color de fondo (hex)",
+            "example": "#FFFFFF"
+          },
+          "color_texto": {
+            "type": "string",
+            "description": "Color de texto (hex)",
+            "example": "#111827"
+          },
+          "fuente": {
+            "type": "string",
+            "description": "Fuente del tema",
+            "enum": [
+              "system",
+              "inter",
+              "poppins",
+              "montserrat",
+              "playfair"
+            ],
+            "example": "system"
+          },
+          "radio_bordes": {
+            "type": "number",
+            "description": "Radio de bordes en píxeles",
+            "minimum": 0,
+            "maximum": 32,
+            "example": 12
+          },
+          "modo": {
+            "type": "string",
+            "description": "Modo de color",
+            "enum": [
+              "claro",
+              "oscuro",
+              "auto"
+            ],
+            "example": "claro"
+          }
+        },
+        "required": [
+          "color_primario",
+          "color_secundario",
+          "color_acento",
+          "color_fondo",
+          "color_texto",
+          "fuente",
+          "radio_bordes",
+          "modo"
+        ]
+      },
+      "UsuarioResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Id del usuario",
+            "format": "uuid"
+          },
+          "nombre": {
+            "type": "string",
+            "description": "Nombre del usuario"
+          },
+          "correo": {
+            "type": "string",
+            "description": "Correo del usuario",
+            "format": "email"
+          },
+          "rol": {
+            "type": "string",
+            "description": "Rol del usuario",
+            "enum": [
+              "admin",
+              "vendedor",
+              "comprador",
+              "logistica",
+              "coordinador",
+              "supervisor",
+              "operativo"
+            ],
+            "example": "vendedor"
+          },
+          "tenant_id": {
+            "type": "string",
+            "description": "Tenant del usuario",
+            "format": "uuid"
+          },
+          "personal_id": {
+            "type": "string",
+            "description": "Ficha de personal vinculada",
+            "format": "uuid"
+          },
+          "avatar_objeto_id": {
+            "type": "object",
+            "description": "Objeto de storage del avatar",
+            "nullable": true,
+            "format": "uuid"
+          },
+          "avatar_url": {
+            "type": "object",
+            "description": "URL pública del avatar",
+            "nullable": true
+          },
+          "creado_en": {
+            "type": "string",
+            "description": "Fecha de creación (ISO 8601 UTC)",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "nombre",
+          "correo",
+          "rol",
+          "creado_en"
+        ]
+      },
+      "VerificarCapacidadesRequestDto": {
+        "type": "object",
+        "properties": {
+          "empresa_ids": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          "capacidades": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": [
+          "empresa_ids",
+          "capacidades"
+        ]
+      },
       "CotizacionItemResponseDto": {
         "type": "object",
         "properties": {
@@ -2008,158 +2957,37 @@
           "valor_inventario_cents"
         ]
       },
-      "CreditoOrdenResponseDto": {
+      "WebhookPagoRequestDto": {
         "type": "object",
         "properties": {
-          "credito_id": {
+          "pago_id": {
             "type": "string",
             "format": "uuid"
-          },
-          "balance_cents": {
-            "type": "number"
-          },
-          "limite_cents": {
-            "type": "number"
-          }
-        },
-        "required": [
-          "credito_id",
-          "balance_cents",
-          "limite_cents"
-        ]
-      },
-      "DeclaracionResponseDto": {
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "string",
-            "description": "Id de la declaración",
-            "format": "uuid"
-          },
-          "jurisdiccion": {
-            "type": "string",
-            "description": "Jurisdicción",
-            "example": "NI"
-          },
-          "tipo": {
-            "type": "string",
-            "description": "Tipo",
-            "enum": [
-              "IVA",
-              "IR",
-              "CUOTA_FIJA"
-            ],
-            "example": "IVA"
-          },
-          "periodo_inicio": {
-            "type": "string",
-            "description": "Inicio del periodo",
-            "format": "date"
-          },
-          "periodo_fin": {
-            "type": "string",
-            "description": "Fin del periodo",
-            "format": "date"
-          },
-          "base_gravada_cents": {
-            "type": "number",
-            "description": "Base gravada en centavos",
-            "example": 1150000
-          },
-          "iva_debitado_cents": {
-            "type": "number",
-            "description": "IVA debitado en centavos",
-            "example": 172500
-          },
-          "iva_credito_cents": {
-            "type": "number",
-            "description": "IVA crédito en centavos",
-            "example": 0
-          },
-          "iva_a_pagar_cents": {
-            "type": "number",
-            "description": "IVA a pagar en centavos",
-            "example": 172500
-          },
-          "renta_bruta_cents": {
-            "type": "number",
-            "description": "Renta bruta en centavos",
-            "example": 1150000
-          },
-          "renta_gravable_cents": {
-            "type": "number",
-            "description": "Renta gravable en centavos",
-            "example": 575000
-          },
-          "ir_a_pagar_cents": {
-            "type": "number",
-            "description": "IR a pagar en centavos",
-            "example": 172500
-          },
-          "cuota_cents": {
-            "type": "number",
-            "description": "Cuota fija en centavos",
-            "example": 5000
           },
           "estado": {
             "type": "string",
-            "description": "Estado",
             "enum": [
-              "PENDIENTE",
-              "GENERADA",
-              "PRESENTADA",
-              "PAGADA",
-              "CANCELADA"
-            ],
-            "example": "GENERADA"
+              "confirmado",
+              "rechazado"
+            ]
           },
-          "detalle": {
-            "type": "object",
-            "description": "Detalle de la declaración",
-            "nullable": true
+          "motivo": {
+            "type": "string"
           },
-          "generada_en": {
+          "actor": {
             "type": "string",
-            "description": "Fecha de generación",
-            "format": "date-time"
-          },
-          "presentada_en": {
-            "type": "string",
-            "description": "Fecha de presentación",
-            "format": "date-time"
-          },
-          "creado_en": {
-            "type": "string",
-            "description": "Fecha de creación (ISO 8601 UTC)",
-            "format": "date-time"
+            "format": "uuid"
           }
         },
         "required": [
-          "id",
-          "jurisdiccion",
-          "tipo",
-          "periodo_inicio",
-          "periodo_fin",
-          "base_gravada_cents",
-          "iva_debitado_cents",
-          "iva_credito_cents",
-          "iva_a_pagar_cents",
-          "renta_bruta_cents",
-          "renta_gravable_cents",
-          "ir_a_pagar_cents",
-          "cuota_cents",
-          "estado",
-          "creado_en"
+          "pago_id",
+          "estado"
         ]
       },
-      "RegistrarCreditoInternoRequestDto": {
+      "WebhookPagoResponseDto": {
         "type": "object",
         "properties": {
-          "empresa_id": {
-            "type": "string",
-            "format": "uuid"
-          },
-          "parte_id": {
+          "id": {
             "type": "string",
             "format": "uuid"
           },
@@ -2167,485 +2995,57 @@
             "type": "string",
             "format": "uuid"
           },
-          "monto_cents": {
-            "type": "number",
-            "minimum": 1
-          },
-          "concepto": {
+          "empresa_id": {
             "type": "string",
-            "minLength": 1
-          },
-          "vendedor_id": {
-            "type": "string",
-            "format": "uuid"
-          }
-        },
-        "required": [
-          "empresa_id",
-          "parte_id",
-          "order_id",
-          "monto_cents",
-          "concepto"
-        ]
-      },
-      "SujetoTributarioResponseDto": {
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "string",
-            "description": "Id del sujeto",
-            "format": "uuid"
-          },
-          "jurisdiccion": {
-            "type": "string",
-            "description": "Jurisdicción",
-            "example": "NI"
-          },
-          "regimen_id": {
-            "type": "string",
-            "description": "Id del régimen",
-            "format": "uuid"
-          },
-          "regimen_nombre": {
-            "type": "string",
-            "description": "Nombre del régimen"
-          },
-          "razon_social": {
-            "type": "string",
-            "description": "Razón social"
-          },
-          "ruc": {
-            "type": "string",
-            "description": "RUC"
-          },
-          "es_plataforma": {
-            "type": "boolean",
-            "description": "¿Es la plataforma?",
-            "example": false
-          },
-          "estado": {
-            "type": "string",
-            "description": "Estado",
-            "enum": [
-              "ACTIVO",
-              "BAJA"
-            ],
-            "example": "ACTIVO"
-          },
-          "creado_en": {
-            "type": "string",
-            "description": "Fecha de creación (ISO 8601 UTC)",
-            "format": "date-time"
-          }
-        },
-        "required": [
-          "id",
-          "jurisdiccion",
-          "razon_social",
-          "es_plataforma",
-          "estado",
-          "creado_en"
-        ]
-      },
-      "ContarVendedoresResponseDto": {
-        "type": "object",
-        "properties": {
-          "vendedores": {
-            "type": "number",
-            "description": "Cantidad de usuarios con rol vendedor",
-            "example": 12
-          }
-        },
-        "required": [
-          "vendedores"
-        ]
-      },
-      "EmpresaResponseDto": {
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "string",
-            "format": "uuid"
-          },
-          "nombre": {
-            "type": "string"
-          },
-          "vertical_id": {
-            "type": "object",
-            "nullable": true,
-            "description": "Código dinámico de la vertical"
-          },
-          "pack_codigo": {
-            "type": "object",
-            "nullable": true,
-            "description": "Código dinámico del pack"
-          },
-          "pack_version": {
-            "type": "object",
-            "nullable": true,
-            "minimum": 1
-          },
-          "slug": {
-            "type": "string",
-            "description": "Slug público actual",
-            "example": "distribuidora-piloto"
-          },
-          "estado": {
-            "type": "string"
-          },
-          "creado_por": {
-            "type": "string",
-            "format": "uuid"
-          },
-          "creado_en": {
-            "type": "string"
-          },
-          "ruc": {
-            "type": "object",
+            "format": "uuid",
             "nullable": true
           },
-          "razon_social": {
+          "metodo_codigo": {
             "type": "string"
           },
-          "nombre_comercial": {
+          "estado": {
             "type": "string"
           },
-          "descripcion": {
-            "type": "string"
-          },
-          "telefono": {
-            "type": "string"
-          },
-          "correo_contacto": {
-            "type": "string"
-          },
-          "sitio_web": {
-            "type": "string"
-          },
-          "direccion": {
-            "type": "string"
-          },
-          "ciudad": {
-            "type": "string"
-          },
-          "departamento": {
-            "type": "string"
-          },
-          "pais": {
-            "type": "string"
+          "monto_cents": {
+            "type": "integer"
           },
           "moneda": {
             "type": "string"
           },
-          "zona_horaria": {
+          "referencia": {
             "type": "string"
           },
-          "sector": {
+          "motivo_rechazo": {
             "type": "string"
           },
-          "representante_legal": {
-            "type": "string"
-          },
-          "horario_atencion": {
-            "type": "string"
-          },
-          "logo_objeto_id": {
-            "type": "object",
-            "nullable": true,
-            "format": "uuid"
-          },
-          "logo_url": {
-            "type": "object",
-            "nullable": true,
-            "description": "URL pública derivada del logo"
-          },
-          "background_objeto_id": {
+          "confirmado_por": {
             "type": "string",
-            "nullable": true,
-            "format": "uuid"
-          },
-          "background_media_type": {
-            "type": "string",
-            "nullable": true,
-            "enum": [
-              "imagen",
-              "video"
-            ]
-          },
-          "background_url": {
-            "type": "string",
-            "nullable": true,
-            "description": "URL pública derivada del fondo"
-          },
-          "background_poster_objeto_id": {
-            "type": "string",
-            "nullable": true,
-            "format": "uuid"
-          },
-          "background_poster_url": {
-            "type": "string",
-            "nullable": true,
-            "description": "URL pública derivada del poster"
-          },
-          "background_alt": {
-            "type": "string"
-          },
-          "background_overlay": {
-            "type": "number",
-            "minimum": 0,
-            "maximum": 100
-          },
-          "background_position": {
-            "type": "string",
-            "enum": [
-              "center",
-              "top",
-              "bottom",
-              "left",
-              "right"
-            ]
-          },
-          "background_activo": {
-            "type": "boolean"
-          },
-          "plantilla": {
-            "type": "string",
-            "enum": [
-              "clasica",
-              "minimal",
-              "boutique",
-              "mercado"
-            ]
-          },
-          "tema": {
-            "$ref": "#/components/schemas/TemaResponseDto"
-          },
-          "origen_personalizacion": {
-            "$ref": "#/components/schemas/OrigenPersonalizacionResponseDto"
-          },
-          "actualizado_en": {
-            "type": "string",
-            "format": "date-time"
-          }
-        },
-        "required": [
-          "id",
-          "nombre",
-          "slug",
-          "estado",
-          "creado_por",
-          "creado_en"
-        ]
-      },
-      "OrigenPersonalizacionResponseDto": {
-        "type": "object",
-        "properties": {
-          "plantilla": {
-            "type": "string",
-            "description": "Nivel que aportó la plantilla efectiva",
-            "enum": [
-              "tienda",
-              "empresa",
-              "plataforma",
-              "defecto"
-            ]
-          },
-          "tema": {
-            "type": "string",
-            "description": "Nivel más específico que aportó overrides de tema",
-            "enum": [
-              "tienda",
-              "empresa",
-              "plataforma",
-              "defecto"
-            ]
-          }
-        },
-        "required": [
-          "plantilla",
-          "tema"
-        ]
-      },
-      "TemaOverridesResponseDto": {
-        "type": "object",
-        "properties": {
-          "plantilla_override": {
-            "type": "string",
-            "description": "Plantilla override o null si hereda",
-            "enum": [
-              "clasica",
-              "minimal",
-              "boutique",
-              "mercado"
-            ],
+            "format": "uuid",
             "nullable": true
           },
-          "tema_override": {
-            "type": "object",
-            "description": "Overrides parciales de tema",
-            "additionalProperties": true
-          }
-        },
-        "required": [
-          "plantilla_override",
-          "tema_override"
-        ]
-      },
-      "TemaResponseDto": {
-        "type": "object",
-        "properties": {
-          "color_primario": {
+          "confirmado_en": {
             "type": "string",
-            "description": "Color primario (hex)",
-            "example": "#1F2937"
-          },
-          "color_secundario": {
-            "type": "string",
-            "description": "Color secundario (hex)",
-            "example": "#F59E0B"
-          },
-          "color_acento": {
-            "type": "string",
-            "description": "Color de acento (hex)",
-            "example": "#10B981"
-          },
-          "color_fondo": {
-            "type": "string",
-            "description": "Color de fondo (hex)",
-            "example": "#FFFFFF"
-          },
-          "color_texto": {
-            "type": "string",
-            "description": "Color de texto (hex)",
-            "example": "#111827"
-          },
-          "fuente": {
-            "type": "string",
-            "description": "Fuente del tema",
-            "enum": [
-              "system",
-              "inter",
-              "poppins",
-              "montserrat",
-              "playfair"
-            ],
-            "example": "system"
-          },
-          "radio_bordes": {
-            "type": "number",
-            "description": "Radio de bordes en píxeles",
-            "minimum": 0,
-            "maximum": 32,
-            "example": 12
-          },
-          "modo": {
-            "type": "string",
-            "description": "Modo de color",
-            "enum": [
-              "claro",
-              "oscuro",
-              "auto"
-            ],
-            "example": "claro"
-          }
-        },
-        "required": [
-          "color_primario",
-          "color_secundario",
-          "color_acento",
-          "color_fondo",
-          "color_texto",
-          "fuente",
-          "radio_bordes",
-          "modo"
-        ]
-      },
-      "UsuarioResponseDto": {
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "string",
-            "description": "Id del usuario",
-            "format": "uuid"
-          },
-          "nombre": {
-            "type": "string",
-            "description": "Nombre del usuario"
-          },
-          "correo": {
-            "type": "string",
-            "description": "Correo del usuario",
-            "format": "email"
-          },
-          "rol": {
-            "type": "string",
-            "description": "Rol del usuario",
-            "enum": [
-              "admin",
-              "vendedor",
-              "comprador",
-              "logistica",
-              "coordinador",
-              "supervisor",
-              "operativo"
-            ],
-            "example": "vendedor"
-          },
-          "tenant_id": {
-            "type": "string",
-            "description": "Tenant del usuario",
-            "format": "uuid"
-          },
-          "personal_id": {
-            "type": "string",
-            "description": "Ficha de personal vinculada",
-            "format": "uuid"
-          },
-          "avatar_objeto_id": {
-            "type": "object",
-            "description": "Objeto de storage del avatar",
-            "nullable": true,
-            "format": "uuid"
-          },
-          "avatar_url": {
-            "type": "object",
-            "description": "URL pública del avatar",
+            "format": "date-time",
             "nullable": true
           },
           "creado_en": {
             "type": "string",
-            "description": "Fecha de creación (ISO 8601 UTC)",
             "format": "date-time"
           }
         },
         "required": [
           "id",
-          "nombre",
-          "correo",
-          "rol",
+          "order_id",
+          "empresa_id",
+          "metodo_codigo",
+          "estado",
+          "monto_cents",
+          "moneda",
+          "referencia",
+          "motivo_rechazo",
+          "confirmado_por",
+          "confirmado_en",
           "creado_en"
-        ]
-      },
-      "VerificarCapacidadesRequestDto": {
-        "type": "object",
-        "properties": {
-          "empresa_ids": {
-            "type": "array",
-            "items": {
-              "type": "string",
-              "format": "uuid"
-            }
-          },
-          "capacidades": {
-            "type": "array",
-            "items": {
-              "type": "string"
-            }
-          }
-        },
-        "required": [
-          "empresa_ids",
-          "capacidades"
         ]
       },
       "HistoriaEventoResponseDto": {

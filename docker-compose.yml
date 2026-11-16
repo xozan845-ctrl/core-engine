@@ -12,9 +12,9 @@
 # `core-engine`. La observabilidad es opcional:
 #   docker compose -f docker-compose.yml -f docker-compose.observability.yml up -d
 #
-# `commissions-service` y `market-intelligence-service` no entran en este
-# compose (producción): commissions se despliega en stage (ADR-37) y ambos
-# viven en `docker-compose.dev.yml` (desarrollo).
+# `commissions-service` no entra en este compose (producción): se despliega
+# en stage (ADR-37). `market-intelligence-service` se despliega en stage y
+# producción desde la Fase 6 (analítica transversal).
 #
 # Entornos (3): producción = este archivo · pre-producción = `docker-compose.stage.yml`
 # · desarrollo = `docker-compose.dev.yml` (construye local).
@@ -124,14 +124,32 @@ services:
       PORT: 3001
       OUTBOX_TABLA: identity.outbox
 
-  catalog-service:
+  item-service:
     <<: *servicio-base
-    image: ghcr.io/xozan845-ctrl/core-engine-catalog-service:prod
+    image: ghcr.io/xozan845-ctrl/core-engine-item-service:prod
     pull_policy: always
     environment:
-      SERVICIO: catalog-service
-      PORT: 3002
-      OUTBOX_TABLA: catalog.outbox
+      SERVICIO: item-service
+      PORT: 3015
+      OUTBOX_TABLA: item.outbox
+
+  inventory-service:
+    <<: *servicio-base
+    image: ghcr.io/xozan845-ctrl/core-engine-inventory-service:prod
+    pull_policy: always
+    environment:
+      SERVICIO: inventory-service
+      PORT: 3013
+      OUTBOX_TABLA: inventory.outbox
+
+  pricing-service:
+    <<: *servicio-base
+    image: ghcr.io/xozan845-ctrl/core-engine-pricing-service:prod
+    pull_policy: always
+    environment:
+      SERVICIO: pricing-service
+      PORT: 3014
+      OUTBOX_TABLA: pricing.outbox
 
   stores-service:
     <<: *servicio-base
@@ -187,6 +205,15 @@ services:
       SERVICIO: field-service
       PORT: 3008
       OUTBOX_TABLA: field.outbox
+
+  market-intelligence-service:
+    <<: *servicio-base
+    image: ghcr.io/xozan845-ctrl/core-engine-market-intelligence-service:prod
+    pull_policy: always
+    environment:
+      SERVICIO: market-intelligence-service
+      PORT: 3009
+      OUTBOX_TABLA: intelligence.outbox
 
   storage-service:
     <<: *servicio-base

@@ -28,6 +28,20 @@ impl Db {
         &self.pool
     }
 
+    /// Transacción con claims de servicio interno (super_admin). Se usa para
+    /// escrituras del servicio que no tienen un usuario con tenant (p. ej. el
+    /// registro de un pago del comprador).
+    pub async fn transaccion_servicio(
+        &self,
+    ) -> Result<sqlx::Transaction<'static, sqlx::Postgres>, sqlx::Error> {
+        let mut tx = self.pool.begin().await?;
+        sqlx::query("SELECT set_config('request.jwt.claims', $1, true)")
+            .bind(json!({ "rol": "super_admin" }).to_string())
+            .execute(&mut *tx)
+            .await?;
+        Ok(tx)
+    }
+
     /// Transacción con los claims de RLS del contexto actual.
     pub async fn transaccion(
         &self,
