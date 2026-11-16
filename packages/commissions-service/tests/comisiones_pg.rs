@@ -10,7 +10,7 @@ use commissions_service::outbox::Outbox;
 use commissions_service::pedidos::PedidosConsumer;
 use commissions_service::reportes::ReportesPort;
 use sqlx::PgPool;
-use std::sync::{Arc, OnceLock};
+use std::sync::Arc;
 use tokio::sync::OnceCell;
 use uuid::Uuid;
 
