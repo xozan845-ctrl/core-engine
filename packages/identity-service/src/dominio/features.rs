@@ -99,6 +99,14 @@ pub const FEATURES_POR_CAPACIDAD: &[(&str, &[&str])] = &[
         &["comisiones.liquidaciones", "comisiones.reportes"],
     ),
     (
+        "fidelizacion",
+        &[
+            "fidelizacion.programas",
+            "fidelizacion.tarjetas",
+            "fidelizacion.canjes",
+        ],
+    ),
+    (
         "inteligencia_mercado",
         &[
             "inteligencia.demanda",

@@ -27,6 +27,7 @@ este índice evita mezclar las decisiones nuevas con las ADR históricas.
 | [0016](./0016-catalog-service-en-rust.md) | Aceptado (implementado) | Reescribir `catalog-service` en Rust con paridad de contrato, items, precios, inventario, stock y eventos |
 | [0017](./0017-identity-service-en-rust.md) | Aceptado (implementado) | Reescribir `identity-service` en Rust con paridad de contrato, JWT, sesiones, usuarios, empresas, personal, partes y métricas |
 | [0018](./0018-catalog-split-item-pricing-inventory.md) | Aceptado (implementado; `catalog` retirado) | Separar `catalog-service` en `item-service`, `pricing-service` e `inventory-service` por bounded context |
+| [0019](./0019-fidelizacion-por-capacidades.md) | Aceptado (implementado) | Fidelización como capacidad nueva, add-on seleccionable en el alta de empresa |
 
 ## Convención
 
