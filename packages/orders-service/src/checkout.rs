@@ -699,7 +699,7 @@ impl Checkout {
         let empresas: Vec<String> = por_empresa.keys().cloned().collect();
         let Some(capacidades) = self
             .clientes
-            .capacidades(&empresas, &["fidelizacion".to_string()])
+            .capacidades(&empresas, None, &["fidelizacion".to_string()])
             .await
         else {
             crate::logs::warn(

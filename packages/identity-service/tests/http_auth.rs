@@ -3207,5 +3207,3 @@ async fn debe_aislar_roles_por_negocio_en_rls() {
         tx.rollback().await.expect("rollback rls");
     }
 }
-
-#[tokio::test]
