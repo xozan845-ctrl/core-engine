@@ -627,322 +627,6 @@
         ]
       }
     },
-    "/api/v2/catalog/items/{id}/tarifas": {
-      "get": {
-        "operationId": "TarifasController_listar",
-        "parameters": [
-          {
-            "name": "id",
-            "required": true,
-            "in": "path",
-            "schema": {
-              "format": "uuid",
-              "type": "string"
-            }
-          },
-          {
-            "name": "empresa_id",
-            "required": false,
-            "in": "query",
-            "description": "Solo admin global",
-            "schema": {}
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Tarifas del item",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "required": [
-                    "data",
-                    "meta"
-                  ],
-                  "properties": {
-                    "data": {
-                      "type": "array",
-                      "items": {
-                        "$ref": "#/components/schemas/TarifaItemResponseDto"
-                      }
-                    },
-                    "meta": {
-                      "$ref": "#/components/schemas/MetaRespuesta"
-                    }
-                  }
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "bearer": []
-          }
-        ],
-        "summary": "Listar tarifas por fecha de un item",
-        "tags": [
-          "Catálogo · Tarifas"
-        ]
-      },
-      "post": {
-        "operationId": "TarifasController_crear",
-        "parameters": [
-          {
-            "name": "id",
-            "required": true,
-            "in": "path",
-            "schema": {
-              "format": "uuid",
-              "type": "string"
-            }
-          },
-          {
-            "name": "empresa_id",
-            "required": false,
-            "in": "query",
-            "description": "Solo admin global",
-            "schema": {}
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/CrearTarifaRequestDto"
-              }
-            }
-          }
-        },
-        "responses": {
-          "201": {
-            "description": "Tarifa creada",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "required": [
-                    "data",
-                    "meta"
-                  ],
-                  "properties": {
-                    "data": {
-                      "$ref": "#/components/schemas/TarifaItemResponseDto"
-                    },
-                    "meta": {
-                      "$ref": "#/components/schemas/MetaRespuesta"
-                    }
-                  }
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "bearer": []
-          }
-        ],
-        "summary": "Crear una tarifa por rango de fechas",
-        "tags": [
-          "Catálogo · Tarifas"
-        ]
-      }
-    },
-    "/api/v2/catalog/items/{id}/tarifas/{tarifaId}": {
-      "patch": {
-        "operationId": "TarifasController_actualizar",
-        "parameters": [
-          {
-            "name": "id",
-            "required": true,
-            "in": "path",
-            "schema": {
-              "format": "uuid",
-              "type": "string"
-            }
-          },
-          {
-            "name": "tarifaId",
-            "required": true,
-            "in": "path",
-            "schema": {
-              "format": "uuid",
-              "type": "string"
-            }
-          },
-          {
-            "name": "empresa_id",
-            "required": false,
-            "in": "query",
-            "description": "Solo admin global",
-            "schema": {}
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/ActualizarTarifaRequestDto"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "Tarifa actualizada",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "required": [
-                    "data",
-                    "meta"
-                  ],
-                  "properties": {
-                    "data": {
-                      "$ref": "#/components/schemas/TarifaItemResponseDto"
-                    },
-                    "meta": {
-                      "$ref": "#/components/schemas/MetaRespuesta"
-                    }
-                  }
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "bearer": []
-          }
-        ],
-        "summary": "Actualizar una tarifa por fecha",
-        "tags": [
-          "Catálogo · Tarifas"
-        ]
-      },
-      "delete": {
-        "operationId": "TarifasController_eliminar",
-        "parameters": [
-          {
-            "name": "id",
-            "required": true,
-            "in": "path",
-            "schema": {
-              "format": "uuid",
-              "type": "string"
-            }
-          },
-          {
-            "name": "tarifaId",
-            "required": true,
-            "in": "path",
-            "schema": {
-              "format": "uuid",
-              "type": "string"
-            }
-          },
-          {
-            "name": "empresa_id",
-            "required": false,
-            "in": "query",
-            "description": "Solo admin global",
-            "schema": {}
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Tarifa eliminada"
-          }
-        },
-        "security": [
-          {
-            "bearer": []
-          }
-        ],
-        "summary": "Eliminar una tarifa por fecha",
-        "tags": [
-          "Catálogo · Tarifas"
-        ]
-      }
-    },
-    "/api/v2/catalog/items/{id}/cotizacion": {
-      "get": {
-        "operationId": "TarifasController_cotizar",
-        "parameters": [
-          {
-            "name": "id",
-            "required": true,
-            "in": "path",
-            "schema": {
-              "format": "uuid",
-              "type": "string"
-            }
-          },
-          {
-            "name": "desde",
-            "required": true,
-            "in": "query",
-            "schema": {
-              "example": "2026-12-18",
-              "type": "string"
-            }
-          },
-          {
-            "name": "hasta",
-            "required": true,
-            "in": "query",
-            "schema": {
-              "example": "2026-12-22",
-              "type": "string"
-            }
-          },
-          {
-            "name": "empresa_id",
-            "required": false,
-            "in": "query",
-            "description": "Solo admin global",
-            "schema": {}
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Cotización del rango",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "required": [
-                    "data",
-                    "meta"
-                  ],
-                  "properties": {
-                    "data": {
-                      "$ref": "#/components/schemas/CotizacionItemResponseDto"
-                    },
-                    "meta": {
-                      "$ref": "#/components/schemas/MetaRespuesta"
-                    }
-                  }
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "bearer": []
-          }
-        ],
-        "summary": "Cotizar un item por rango de fechas (tarifas + precio base)",
-        "tags": [
-          "Catálogo · Tarifas"
-        ]
-      }
-    },
     "/api/v2/catalog/items/{id}/componentes": {
       "get": {
         "operationId": "ComponentesController_listar",
@@ -1182,741 +866,6 @@
         "summary": "Quitar un componente de la composición",
         "tags": [
           "Catálogo · Composición"
-        ]
-      }
-    },
-    "/api/v2/catalog/listas-precio": {
-      "get": {
-        "operationId": "PreciosController_listarListas",
-        "parameters": [
-          {
-            "name": "empresa_id",
-            "required": false,
-            "in": "query",
-            "description": "Solo admin global",
-            "schema": {}
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Listas de precio",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "required": [
-                    "data",
-                    "meta"
-                  ],
-                  "properties": {
-                    "data": {
-                      "type": "array",
-                      "items": {
-                        "$ref": "#/components/schemas/ListaPrecioResponseDto"
-                      }
-                    },
-                    "meta": {
-                      "$ref": "#/components/schemas/MetaRespuesta"
-                    }
-                  }
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "bearer": []
-          }
-        ],
-        "summary": "Listar listas de precio de la empresa",
-        "tags": [
-          "Catálogo · Precios"
-        ]
-      },
-      "post": {
-        "operationId": "PreciosController_crearLista",
-        "parameters": [
-          {
-            "name": "empresa_id",
-            "required": false,
-            "in": "query",
-            "description": "Solo admin global",
-            "schema": {}
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/CrearListaPrecioRequestDto"
-              }
-            }
-          }
-        },
-        "responses": {
-          "201": {
-            "description": "Lista creada",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "required": [
-                    "data",
-                    "meta"
-                  ],
-                  "properties": {
-                    "data": {
-                      "$ref": "#/components/schemas/ListaPrecioResponseDto"
-                    },
-                    "meta": {
-                      "$ref": "#/components/schemas/MetaRespuesta"
-                    }
-                  }
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "bearer": []
-          }
-        ],
-        "summary": "Crear una lista de precio o segmento",
-        "tags": [
-          "Catálogo · Precios"
-        ]
-      }
-    },
-    "/api/v2/catalog/listas-precio/{listaId}": {
-      "patch": {
-        "operationId": "PreciosController_actualizarLista",
-        "parameters": [
-          {
-            "name": "listaId",
-            "required": true,
-            "in": "path",
-            "schema": {
-              "format": "uuid",
-              "type": "string"
-            }
-          },
-          {
-            "name": "empresa_id",
-            "required": false,
-            "in": "query",
-            "description": "Solo admin global",
-            "schema": {}
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/ActualizarListaPrecioRequestDto"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "Lista actualizada",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "required": [
-                    "data",
-                    "meta"
-                  ],
-                  "properties": {
-                    "data": {
-                      "$ref": "#/components/schemas/ListaPrecioResponseDto"
-                    },
-                    "meta": {
-                      "$ref": "#/components/schemas/MetaRespuesta"
-                    }
-                  }
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "bearer": []
-          }
-        ],
-        "summary": "Actualizar una lista de precio",
-        "tags": [
-          "Catálogo · Precios"
-        ]
-      }
-    },
-    "/api/v2/catalog/listas-precio/{listaId}/precios": {
-      "get": {
-        "operationId": "PreciosController_listarPrecios",
-        "parameters": [
-          {
-            "name": "listaId",
-            "required": true,
-            "in": "path",
-            "schema": {
-              "format": "uuid",
-              "type": "string"
-            }
-          },
-          {
-            "name": "empresa_id",
-            "required": false,
-            "in": "query",
-            "description": "Solo admin global",
-            "schema": {}
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Precios de la lista",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "required": [
-                    "data",
-                    "meta"
-                  ],
-                  "properties": {
-                    "data": {
-                      "type": "array",
-                      "items": {
-                        "$ref": "#/components/schemas/PrecioItemResponseDto"
-                      }
-                    },
-                    "meta": {
-                      "$ref": "#/components/schemas/MetaRespuesta"
-                    }
-                  }
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "bearer": []
-          }
-        ],
-        "summary": "Listar precios y escalas de una lista",
-        "tags": [
-          "Catálogo · Precios"
-        ]
-      },
-      "post": {
-        "operationId": "PreciosController_crearPrecio",
-        "parameters": [
-          {
-            "name": "listaId",
-            "required": true,
-            "in": "path",
-            "schema": {
-              "format": "uuid",
-              "type": "string"
-            }
-          },
-          {
-            "name": "empresa_id",
-            "required": false,
-            "in": "query",
-            "description": "Solo admin global",
-            "schema": {}
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/CrearPrecioListaRequestDto"
-              }
-            }
-          }
-        },
-        "responses": {
-          "201": {
-            "description": "Precio creado",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "required": [
-                    "data",
-                    "meta"
-                  ],
-                  "properties": {
-                    "data": {
-                      "$ref": "#/components/schemas/PrecioItemResponseDto"
-                    },
-                    "meta": {
-                      "$ref": "#/components/schemas/MetaRespuesta"
-                    }
-                  }
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "bearer": []
-          }
-        ],
-        "summary": "Agregar un precio o rango de cantidad a una lista",
-        "tags": [
-          "Catálogo · Precios"
-        ]
-      }
-    },
-    "/api/v2/catalog/listas-precio/{listaId}/precios/{precioId}": {
-      "patch": {
-        "operationId": "PreciosController_actualizarPrecio",
-        "parameters": [
-          {
-            "name": "listaId",
-            "required": true,
-            "in": "path",
-            "schema": {
-              "format": "uuid",
-              "type": "string"
-            }
-          },
-          {
-            "name": "precioId",
-            "required": true,
-            "in": "path",
-            "schema": {
-              "format": "uuid",
-              "type": "string"
-            }
-          },
-          {
-            "name": "empresa_id",
-            "required": false,
-            "in": "query",
-            "description": "Solo admin global",
-            "schema": {}
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/ActualizarPrecioRequestDto"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "Precio actualizado",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "required": [
-                    "data",
-                    "meta"
-                  ],
-                  "properties": {
-                    "data": {
-                      "$ref": "#/components/schemas/PrecioItemResponseDto"
-                    },
-                    "meta": {
-                      "$ref": "#/components/schemas/MetaRespuesta"
-                    }
-                  }
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "bearer": []
-          }
-        ],
-        "summary": "Actualizar un precio de la lista",
-        "tags": [
-          "Catálogo · Precios"
-        ]
-      },
-      "delete": {
-        "operationId": "PreciosController_eliminarPrecio",
-        "parameters": [
-          {
-            "name": "listaId",
-            "required": true,
-            "in": "path",
-            "schema": {
-              "format": "uuid",
-              "type": "string"
-            }
-          },
-          {
-            "name": "precioId",
-            "required": true,
-            "in": "path",
-            "schema": {
-              "format": "uuid",
-              "type": "string"
-            }
-          },
-          {
-            "name": "empresa_id",
-            "required": false,
-            "in": "query",
-            "description": "Solo admin global",
-            "schema": {}
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Precio eliminado"
-          }
-        },
-        "security": [
-          {
-            "bearer": []
-          }
-        ],
-        "summary": "Eliminar un precio de la lista",
-        "tags": [
-          "Catálogo · Precios"
-        ]
-      }
-    },
-    "/api/v2/catalog/items/{id}/escalas": {
-      "get": {
-        "operationId": "PreciosController_listarEscalas",
-        "parameters": [
-          {
-            "name": "id",
-            "required": true,
-            "in": "path",
-            "schema": {
-              "format": "uuid",
-              "type": "string"
-            }
-          },
-          {
-            "name": "empresa_id",
-            "required": false,
-            "in": "query",
-            "description": "Solo admin global",
-            "schema": {}
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Escalas del item",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "required": [
-                    "data",
-                    "meta"
-                  ],
-                  "properties": {
-                    "data": {
-                      "type": "array",
-                      "items": {
-                        "$ref": "#/components/schemas/PrecioItemResponseDto"
-                      }
-                    },
-                    "meta": {
-                      "$ref": "#/components/schemas/MetaRespuesta"
-                    }
-                  }
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "bearer": []
-          }
-        ],
-        "summary": "Listar escalas base de un item (tipo_precio = escala)",
-        "tags": [
-          "Catálogo · Precios"
-        ]
-      },
-      "post": {
-        "operationId": "PreciosController_crearEscala",
-        "parameters": [
-          {
-            "name": "id",
-            "required": true,
-            "in": "path",
-            "schema": {
-              "format": "uuid",
-              "type": "string"
-            }
-          },
-          {
-            "name": "empresa_id",
-            "required": false,
-            "in": "query",
-            "description": "Solo admin global",
-            "schema": {}
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/CrearEscalaRequestDto"
-              }
-            }
-          }
-        },
-        "responses": {
-          "201": {
-            "description": "Escala creada",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "required": [
-                    "data",
-                    "meta"
-                  ],
-                  "properties": {
-                    "data": {
-                      "$ref": "#/components/schemas/PrecioItemResponseDto"
-                    },
-                    "meta": {
-                      "$ref": "#/components/schemas/MetaRespuesta"
-                    }
-                  }
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "bearer": []
-          }
-        ],
-        "summary": "Agregar una escala de cantidad al item",
-        "tags": [
-          "Catálogo · Precios"
-        ]
-      }
-    },
-    "/api/v2/catalog/items/{id}/escalas/{escalaId}": {
-      "patch": {
-        "operationId": "PreciosController_actualizarEscala",
-        "parameters": [
-          {
-            "name": "id",
-            "required": true,
-            "in": "path",
-            "schema": {
-              "format": "uuid",
-              "type": "string"
-            }
-          },
-          {
-            "name": "escalaId",
-            "required": true,
-            "in": "path",
-            "schema": {
-              "format": "uuid",
-              "type": "string"
-            }
-          },
-          {
-            "name": "empresa_id",
-            "required": false,
-            "in": "query",
-            "description": "Solo admin global",
-            "schema": {}
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/ActualizarPrecioRequestDto"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "Escala actualizada",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "required": [
-                    "data",
-                    "meta"
-                  ],
-                  "properties": {
-                    "data": {
-                      "$ref": "#/components/schemas/PrecioItemResponseDto"
-                    },
-                    "meta": {
-                      "$ref": "#/components/schemas/MetaRespuesta"
-                    }
-                  }
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "bearer": []
-          }
-        ],
-        "summary": "Actualizar una escala del item",
-        "tags": [
-          "Catálogo · Precios"
-        ]
-      },
-      "delete": {
-        "operationId": "PreciosController_eliminarEscala",
-        "parameters": [
-          {
-            "name": "id",
-            "required": true,
-            "in": "path",
-            "schema": {
-              "format": "uuid",
-              "type": "string"
-            }
-          },
-          {
-            "name": "escalaId",
-            "required": true,
-            "in": "path",
-            "schema": {
-              "format": "uuid",
-              "type": "string"
-            }
-          },
-          {
-            "name": "empresa_id",
-            "required": false,
-            "in": "query",
-            "description": "Solo admin global",
-            "schema": {}
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Escala eliminada"
-          }
-        },
-        "security": [
-          {
-            "bearer": []
-          }
-        ],
-        "summary": "Eliminar una escala del item",
-        "tags": [
-          "Catálogo · Precios"
-        ]
-      }
-    },
-    "/api/v2/catalog/items/{id}/precio": {
-      "get": {
-        "operationId": "PreciosController_resolver",
-        "parameters": [
-          {
-            "name": "id",
-            "required": true,
-            "in": "path",
-            "schema": {
-              "format": "uuid",
-              "type": "string"
-            }
-          },
-          {
-            "name": "empresa_id",
-            "required": false,
-            "in": "query",
-            "description": "Solo admin global",
-            "schema": {}
-          },
-          {
-            "name": "segmento",
-            "required": false,
-            "in": "query",
-            "schema": {
-              "example": "mayorista"
-            }
-          },
-          {
-            "name": "lista",
-            "required": false,
-            "in": "query",
-            "schema": {
-              "example": "mayorista"
-            }
-          },
-          {
-            "name": "cantidad",
-            "required": false,
-            "in": "query",
-            "schema": {
-              "example": 1
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Precio resuelto",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "required": [
-                    "data",
-                    "meta"
-                  ],
-                  "properties": {
-                    "data": {
-                      "$ref": "#/components/schemas/PrecioResueltoResponseDto"
-                    },
-                    "meta": {
-                      "$ref": "#/components/schemas/MetaRespuesta"
-                    }
-                  }
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "bearer": []
-          }
-        ],
-        "summary": "Resolver el precio unitario por cantidad, lista o segmento",
-        "tags": [
-          "Catálogo · Precios"
         ]
       }
     },
@@ -2605,264 +1554,6 @@
           }
         ],
         "summary": "Dar de baja un combo",
-        "tags": [
-          "Catálogo · Operaciones"
-        ]
-      }
-    },
-    "/api/v2/catalog/promociones": {
-      "get": {
-        "operationId": "OperacionesController_listarPromociones",
-        "parameters": [
-          {
-            "name": "empresa_id",
-            "required": false,
-            "in": "query",
-            "schema": {
-              "format": "uuid",
-              "type": "string"
-            }
-          },
-          {
-            "name": "estado",
-            "required": false,
-            "in": "query",
-            "schema": {
-              "type": "string",
-              "enum": [
-                "activo",
-                "inactivo"
-              ]
-            }
-          },
-          {
-            "name": "pagina",
-            "required": false,
-            "in": "query",
-            "schema": {
-              "minimum": 1,
-              "type": "number"
-            }
-          },
-          {
-            "name": "limite",
-            "required": false,
-            "in": "query",
-            "schema": {
-              "minimum": 1,
-              "maximum": 100,
-              "type": "number"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "required": [
-                    "data",
-                    "meta"
-                  ],
-                  "properties": {
-                    "data": {
-                      "$ref": "#/components/schemas/PaginaPromocionesResponseDto"
-                    },
-                    "meta": {
-                      "$ref": "#/components/schemas/MetaRespuesta"
-                    }
-                  }
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "bearer": []
-          }
-        ],
-        "summary": "Listar promociones de la empresa",
-        "tags": [
-          "Catálogo · Operaciones"
-        ]
-      },
-      "post": {
-        "operationId": "OperacionesController_crearPromocion",
-        "parameters": [],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/CrearPromocionRequestDto"
-              }
-            }
-          }
-        },
-        "responses": {
-          "201": {
-            "description": "",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "required": [
-                    "data",
-                    "meta"
-                  ],
-                  "properties": {
-                    "data": {
-                      "$ref": "#/components/schemas/PromocionResponseDto"
-                    },
-                    "meta": {
-                      "$ref": "#/components/schemas/MetaRespuesta"
-                    }
-                  }
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "bearer": []
-          }
-        ],
-        "summary": "Crear una promoción",
-        "tags": [
-          "Catálogo · Operaciones"
-        ]
-      }
-    },
-    "/api/v2/catalog/promociones/{id}": {
-      "get": {
-        "operationId": "OperacionesController_detallePromocion",
-        "parameters": [
-          {
-            "name": "id",
-            "required": true,
-            "in": "path",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "required": [
-                    "data",
-                    "meta"
-                  ],
-                  "properties": {
-                    "data": {
-                      "$ref": "#/components/schemas/PromocionResponseDto"
-                    },
-                    "meta": {
-                      "$ref": "#/components/schemas/MetaRespuesta"
-                    }
-                  }
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "bearer": []
-          }
-        ],
-        "summary": "Detalle de una promoción",
-        "tags": [
-          "Catálogo · Operaciones"
-        ]
-      },
-      "patch": {
-        "operationId": "OperacionesController_actualizarPromocion",
-        "parameters": [
-          {
-            "name": "id",
-            "required": true,
-            "in": "path",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/ActualizarPromocionRequestDto"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "required": [
-                    "data",
-                    "meta"
-                  ],
-                  "properties": {
-                    "data": {
-                      "$ref": "#/components/schemas/PromocionResponseDto"
-                    },
-                    "meta": {
-                      "$ref": "#/components/schemas/MetaRespuesta"
-                    }
-                  }
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "bearer": []
-          }
-        ],
-        "summary": "Actualizar una promoción",
-        "tags": [
-          "Catálogo · Operaciones"
-        ]
-      },
-      "delete": {
-        "operationId": "OperacionesController_eliminarPromocion",
-        "parameters": [
-          {
-            "name": "id",
-            "required": true,
-            "in": "path",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "204": {
-            "description": "Promoción dada de baja"
-          }
-        },
-        "security": [
-          {
-            "bearer": []
-          }
-        ],
-        "summary": "Dar de baja una promoción",
         "tags": [
           "Catálogo · Operaciones"
         ]
@@ -17760,6 +16451,1315 @@
         "summary": "Avanzar el estado de una comanda",
         "tags": [
           "Salón · Mesas y comandas"
+        ]
+      }
+    },
+    "/api/v2/catalog/items/{id}/tarifas": {
+      "get": {
+        "operationId": "TarifasController_listar",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "name": "empresa_id",
+            "required": false,
+            "in": "query",
+            "description": "Solo admin global",
+            "schema": {}
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Tarifas del item",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
+                  "properties": {
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/TarifaItemResponseDto"
+                      }
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/MetaRespuesta"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Listar tarifas por fecha de un item",
+        "tags": [
+          "Catálogo · Tarifas"
+        ]
+      },
+      "post": {
+        "operationId": "TarifasController_crear",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "name": "empresa_id",
+            "required": false,
+            "in": "query",
+            "description": "Solo admin global",
+            "schema": {}
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CrearTarifaRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Tarifa creada",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/TarifaItemResponseDto"
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/MetaRespuesta"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Crear una tarifa por rango de fechas",
+        "tags": [
+          "Catálogo · Tarifas"
+        ]
+      }
+    },
+    "/api/v2/catalog/items/{id}/tarifas/{tarifaId}": {
+      "patch": {
+        "operationId": "TarifasController_actualizar",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "name": "tarifaId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "name": "empresa_id",
+            "required": false,
+            "in": "query",
+            "description": "Solo admin global",
+            "schema": {}
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ActualizarTarifaRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Tarifa actualizada",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/TarifaItemResponseDto"
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/MetaRespuesta"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Actualizar una tarifa por fecha",
+        "tags": [
+          "Catálogo · Tarifas"
+        ]
+      },
+      "delete": {
+        "operationId": "TarifasController_eliminar",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "name": "tarifaId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "name": "empresa_id",
+            "required": false,
+            "in": "query",
+            "description": "Solo admin global",
+            "schema": {}
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Tarifa eliminada"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Eliminar una tarifa por fecha",
+        "tags": [
+          "Catálogo · Tarifas"
+        ]
+      }
+    },
+    "/api/v2/catalog/items/{id}/cotizacion": {
+      "get": {
+        "operationId": "TarifasController_cotizar",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "name": "desde",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "example": "2026-12-18",
+              "type": "string"
+            }
+          },
+          {
+            "name": "hasta",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "example": "2026-12-22",
+              "type": "string"
+            }
+          },
+          {
+            "name": "empresa_id",
+            "required": false,
+            "in": "query",
+            "description": "Solo admin global",
+            "schema": {}
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Cotización del rango",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/CotizacionItemResponseDto"
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/MetaRespuesta"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Cotizar un item por rango de fechas (tarifas + precio base)",
+        "tags": [
+          "Catálogo · Tarifas"
+        ]
+      }
+    },
+    "/api/v2/catalog/listas-precio": {
+      "get": {
+        "operationId": "PreciosController_listarListas",
+        "parameters": [
+          {
+            "name": "empresa_id",
+            "required": false,
+            "in": "query",
+            "description": "Solo admin global",
+            "schema": {}
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Listas de precio",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
+                  "properties": {
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/ListaPrecioResponseDto"
+                      }
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/MetaRespuesta"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Listar listas de precio de la empresa",
+        "tags": [
+          "Catálogo · Precios"
+        ]
+      },
+      "post": {
+        "operationId": "PreciosController_crearLista",
+        "parameters": [
+          {
+            "name": "empresa_id",
+            "required": false,
+            "in": "query",
+            "description": "Solo admin global",
+            "schema": {}
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CrearListaPrecioRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Lista creada",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/ListaPrecioResponseDto"
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/MetaRespuesta"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Crear una lista de precio o segmento",
+        "tags": [
+          "Catálogo · Precios"
+        ]
+      }
+    },
+    "/api/v2/catalog/listas-precio/{listaId}": {
+      "patch": {
+        "operationId": "PreciosController_actualizarLista",
+        "parameters": [
+          {
+            "name": "listaId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "name": "empresa_id",
+            "required": false,
+            "in": "query",
+            "description": "Solo admin global",
+            "schema": {}
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ActualizarListaPrecioRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Lista actualizada",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/ListaPrecioResponseDto"
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/MetaRespuesta"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Actualizar una lista de precio",
+        "tags": [
+          "Catálogo · Precios"
+        ]
+      }
+    },
+    "/api/v2/catalog/listas-precio/{listaId}/precios": {
+      "get": {
+        "operationId": "PreciosController_listarPrecios",
+        "parameters": [
+          {
+            "name": "listaId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "name": "empresa_id",
+            "required": false,
+            "in": "query",
+            "description": "Solo admin global",
+            "schema": {}
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Precios de la lista",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
+                  "properties": {
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/PrecioItemResponseDto"
+                      }
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/MetaRespuesta"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Listar precios y escalas de una lista",
+        "tags": [
+          "Catálogo · Precios"
+        ]
+      },
+      "post": {
+        "operationId": "PreciosController_crearPrecio",
+        "parameters": [
+          {
+            "name": "listaId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "name": "empresa_id",
+            "required": false,
+            "in": "query",
+            "description": "Solo admin global",
+            "schema": {}
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CrearPrecioListaRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Precio creado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/PrecioItemResponseDto"
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/MetaRespuesta"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Agregar un precio o rango de cantidad a una lista",
+        "tags": [
+          "Catálogo · Precios"
+        ]
+      }
+    },
+    "/api/v2/catalog/listas-precio/{listaId}/precios/{precioId}": {
+      "patch": {
+        "operationId": "PreciosController_actualizarPrecio",
+        "parameters": [
+          {
+            "name": "listaId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "name": "precioId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "name": "empresa_id",
+            "required": false,
+            "in": "query",
+            "description": "Solo admin global",
+            "schema": {}
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ActualizarPrecioRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Precio actualizado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/PrecioItemResponseDto"
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/MetaRespuesta"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Actualizar un precio de la lista",
+        "tags": [
+          "Catálogo · Precios"
+        ]
+      },
+      "delete": {
+        "operationId": "PreciosController_eliminarPrecio",
+        "parameters": [
+          {
+            "name": "listaId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "name": "precioId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "name": "empresa_id",
+            "required": false,
+            "in": "query",
+            "description": "Solo admin global",
+            "schema": {}
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Precio eliminado"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Eliminar un precio de la lista",
+        "tags": [
+          "Catálogo · Precios"
+        ]
+      }
+    },
+    "/api/v2/catalog/items/{id}/escalas": {
+      "get": {
+        "operationId": "PreciosController_listarEscalas",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "name": "empresa_id",
+            "required": false,
+            "in": "query",
+            "description": "Solo admin global",
+            "schema": {}
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Escalas del item",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
+                  "properties": {
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/PrecioItemResponseDto"
+                      }
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/MetaRespuesta"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Listar escalas base de un item (tipo_precio = escala)",
+        "tags": [
+          "Catálogo · Precios"
+        ]
+      },
+      "post": {
+        "operationId": "PreciosController_crearEscala",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "name": "empresa_id",
+            "required": false,
+            "in": "query",
+            "description": "Solo admin global",
+            "schema": {}
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CrearEscalaRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Escala creada",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/PrecioItemResponseDto"
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/MetaRespuesta"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Agregar una escala de cantidad al item",
+        "tags": [
+          "Catálogo · Precios"
+        ]
+      }
+    },
+    "/api/v2/catalog/items/{id}/escalas/{escalaId}": {
+      "patch": {
+        "operationId": "PreciosController_actualizarEscala",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "name": "escalaId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "name": "empresa_id",
+            "required": false,
+            "in": "query",
+            "description": "Solo admin global",
+            "schema": {}
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ActualizarPrecioRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Escala actualizada",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/PrecioItemResponseDto"
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/MetaRespuesta"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Actualizar una escala del item",
+        "tags": [
+          "Catálogo · Precios"
+        ]
+      },
+      "delete": {
+        "operationId": "PreciosController_eliminarEscala",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "name": "escalaId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "name": "empresa_id",
+            "required": false,
+            "in": "query",
+            "description": "Solo admin global",
+            "schema": {}
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Escala eliminada"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Eliminar una escala del item",
+        "tags": [
+          "Catálogo · Precios"
+        ]
+      }
+    },
+    "/api/v2/catalog/items/{id}/precio": {
+      "get": {
+        "operationId": "PreciosController_resolver",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "name": "empresa_id",
+            "required": false,
+            "in": "query",
+            "description": "Solo admin global",
+            "schema": {}
+          },
+          {
+            "name": "segmento",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "example": "mayorista"
+            }
+          },
+          {
+            "name": "lista",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "example": "mayorista"
+            }
+          },
+          {
+            "name": "cantidad",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "example": 1
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Precio resuelto",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/PrecioResueltoResponseDto"
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/MetaRespuesta"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Resolver el precio unitario por cantidad, lista o segmento",
+        "tags": [
+          "Catálogo · Precios"
+        ]
+      }
+    },
+    "/api/v2/catalog/promociones": {
+      "get": {
+        "operationId": "OperacionesController_listarPromociones",
+        "parameters": [
+          {
+            "name": "empresa_id",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "name": "estado",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "activo",
+                "inactivo"
+              ]
+            }
+          },
+          {
+            "name": "pagina",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "type": "number"
+            }
+          },
+          {
+            "name": "limite",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 100,
+              "type": "number"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/PaginaPromocionesResponseDto"
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/MetaRespuesta"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Listar promociones de la empresa",
+        "tags": [
+          "Catálogo · Operaciones"
+        ]
+      },
+      "post": {
+        "operationId": "OperacionesController_crearPromocion",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CrearPromocionRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/PromocionResponseDto"
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/MetaRespuesta"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Crear una promoción",
+        "tags": [
+          "Catálogo · Operaciones"
+        ]
+      }
+    },
+    "/api/v2/catalog/promociones/{id}": {
+      "get": {
+        "operationId": "OperacionesController_detallePromocion",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/PromocionResponseDto"
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/MetaRespuesta"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Detalle de una promoción",
+        "tags": [
+          "Catálogo · Operaciones"
+        ]
+      },
+      "patch": {
+        "operationId": "OperacionesController_actualizarPromocion",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ActualizarPromocionRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/PromocionResponseDto"
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/MetaRespuesta"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Actualizar una promoción",
+        "tags": [
+          "Catálogo · Operaciones"
+        ]
+      },
+      "delete": {
+        "operationId": "OperacionesController_eliminarPromocion",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Promoción dada de baja"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Dar de baja una promoción",
+        "tags": [
+          "Catálogo · Operaciones"
         ]
       }
     },

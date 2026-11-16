@@ -21,6 +21,7 @@ pub struct Config {
     pub internal_api_key: Option<String>,
     pub stores_service_url: String,
     pub catalog_service_url: String,
+    pub pricing_service_url: String,
     pub identity_service_url: String,
     pub scheduling_service_url: String,
     pub finance_service_url: String,
@@ -73,6 +74,11 @@ impl Config {
                 &leer,
                 "CATALOG_SERVICE_URL",
                 "http://catalog-service:3002",
+            ),
+            pricing_service_url: url_con_default(
+                &leer,
+                "PRICING_SERVICE_URL",
+                "http://pricing-service:3014",
             ),
             identity_service_url: url_con_default(
                 &leer,
@@ -163,6 +169,7 @@ mod tests {
             ("RABBITMQ_URL", "amqp://localhost"),
             ("STORES_SERVICE_URL", "http://stores:3003/"),
             ("CATALOG_SERVICE_URL", "http://catalog:3002/"),
+            ("PRICING_SERVICE_URL", "http://pricing:3014/"),
             ("IDENTITY_SERVICE_URL", "http://identity:3001/"),
             ("SCHEDULING_SERVICE_URL", "http://scheduling:3011/"),
             ("FINANCE_SERVICE_URL", "http://finance:3007/"),
@@ -174,6 +181,7 @@ mod tests {
         assert_eq!(config.puerto, 4004);
         assert_eq!(config.stores_service_url, "http://stores:3003");
         assert_eq!(config.catalog_service_url, "http://catalog:3002");
+        assert_eq!(config.pricing_service_url, "http://pricing:3014");
         assert_eq!(config.identity_service_url, "http://identity:3001");
         assert_eq!(config.scheduling_service_url, "http://scheduling:3011");
         assert_eq!(config.finance_service_url, "http://finance:3007");

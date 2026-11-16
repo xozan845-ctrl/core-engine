@@ -144,9 +144,13 @@ jobs:
             dir: packages/inventory-service
             lines: 79
             functions: 72
+          - service: pricing-service
+            dir: packages/pricing-service
+            lines: 53
+            functions: 52
           - service: storage-service
             dir: packages/storage-service
-            lines: 54
+            lines: 53
             functions: 52
           - service: orders-service
             dir: packages/orders-service

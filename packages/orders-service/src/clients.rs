@@ -16,6 +16,7 @@ pub struct Clientes {
     http: reqwest::Client,
     stores_url: String,
     catalog_url: String,
+    pricing_url: String,
     identity_url: String,
     scheduling_url: String,
     finance_url: String,
@@ -177,6 +178,7 @@ impl Clientes {
             http,
             stores_url: config.stores_service_url.clone(),
             catalog_url: config.catalog_service_url.clone(),
+            pricing_url: config.pricing_service_url.clone(),
             identity_url: config.identity_service_url.clone(),
             scheduling_url: config.scheduling_service_url.clone(),
             finance_url: config.finance_service_url.clone(),
@@ -289,7 +291,7 @@ impl Clientes {
         }
         let Some(respuesta) = self
             .http
-            .post(format!("{}/internal/items/precios", self.catalog_url))
+            .post(format!("{}/internal/items/precios", self.pricing_url))
             .header("content-type", "application/json")
             .header("x-internal-key", &self.clave)
             .json(&cuerpo)
@@ -329,7 +331,7 @@ impl Clientes {
             .http
             .get(format!(
                 "{}/internal/items/{}/cotizacion?{query}",
-                self.catalog_url,
+                self.pricing_url,
                 urlencoding::encode(item_id)
             ))
             .header("x-internal-key", &self.clave)
