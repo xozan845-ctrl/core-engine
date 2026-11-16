@@ -60,21 +60,34 @@ volvería a sesgar la plataforma hacia un solo vertical y al legado
 
 | Dominio | Tablas propias | Notas |
 |---|---|---|
-| `item-service` | `items`, `item_atributo_esquemas`, `item_imagenes`, `item_componentes`, `item_series`, `productos`, `servicios`, `producto_imagenes`, `producto_catalogo_vista`, `combos` | `items` deja de ser dueño de precio y stock. `combos` guarda la composición; su precio pasa a `pricing-service` |
-| `pricing-service` | `listas_precio`, `lista_precio_items`, `historico_precios`, `item_tarifas`, `promociones` | `lista_precio_items` con `lista_id NULL` sigue siendo la escala base. `promociones` migra de `producto_id` a `item_id` |
-| `inventory-service` | `lotes_inventario`, `ubicaciones`, `item_stock_ubicacion`, `movimientos_inventario`, `ajustes_stock`, `reservas_lotes`, `reservas_ordenes`, `configuracion_inventario`, `proveedores` | `stock`, `track_inventory`, `stock_minimo` y `stock_maximo` salen de `items`/`productos` y pasan a inventario |
+| `item-service` | `item.items`, `item.item_atributo_esquemas`, `item.item_imagenes`, `item.item_componentes`, `item.item_series`, `item.historico_precios`, `item.outbox` | `items` conserva el precio base, los umbrales `stock_minimo`/`stock_maximo` y `track_inventory`/`track_serial`. `stock` y `precio_cents` son proyecciones del contrato de items |
+| `pricing-service` | `pricing.listas_precio`, `pricing.lista_precio_items`, `pricing.item_tarifas`, `pricing.promociones`, `pricing.outbox` | Resuelve listas, escalas, tarifas, cotizaciones y promociones. `lista_precio_items` con `lista_id NULL` es la escala base |
+| `inventory-service` | `inventory.ubicaciones`, `inventory.item_stock_ubicacion`, `inventory.lotes_inventario`, `inventory.movimientos_inventario`, `inventory.ajustes_stock`, `inventory.reservas_lotes`, `inventory.reservas_ordenes`, `inventory.configuracion_inventario`, `inventory.proveedores`, `inventory.outbox` | `item_stock_ubicacion` es la fuente de las cantidades; `item.items.stock` es la proyección total mantenida por triggers |
 
 Reglas:
 
-- Cada servicio es dueño exclusivo de su `SCHEMA` (R-DB-1). No hay claves
-  foráneas entre esquemas.
+- Cada servicio es dueño de escritura de su `SCHEMA` (R-DB-1). Las lecturas
+  cruzadas son read-models explícitos de la transición: `inventory` y
+  `pricing` leen `item.items`; `item` valida la ubicación de una serie contra
+  `inventory.ubicaciones`. No hay escrituras cruzadas salvo las proyecciones
+  acordadas (`item.items.stock` por triggers de inventario y
+  `item.items.tipo_precio` por pricing).
+- Hay dos FKs entre esquemas como red de seguridad del read-model:
+  `stores.ofertas.item_id → item.items` y
+  `item.item_series.ubicacion_id → inventory.ubicaciones`. El resto de
+  referencias usa `item_id` lógico (UUID/texto) sin FK.
 - `item_id` es el identificador global del ítem vendible. `pricing-service` e
-  `inventory-service` lo referencian como texto/UUID, sin FK.
-- `costo_cents` se queda como dato de costeo en inventario/procurement; el
-  precio de venta y las listas viven en `pricing-service`. `item-service` no
-  escribe precios ni stock.
-- `proveedores` pasa a inventario; si el vertical necesita compras y órdenes
-  de compra, se evalúa un `procurement-service` posterior.
+  `inventory-service` lo referencian como texto/UUID.
+- `item-service` es dueño del precio base y de su histórico
+  (`item.historico_precios`). `pricing-service` no lo reescribe: solo resuelve
+  listas/tarifas y marca `tipo_precio`.
+- El stock inicial se captura al crear el item; a partir de ahí todas las
+  variaciones las escribe `inventory-service` y `PATCH` con `stock` se rechaza.
+- `costo_cents` se queda como dato de costeo en item/inventario. `proveedores`
+  vive en inventario; si el vertical necesita compras y órdenes de compra, se
+  evalúa un `procurement-service` posterior.
+- Contrato v2 pendiente: retirar `stock` y `precio_cents` del payload de items
+  exige resolverlos por API interna o versionar el contrato.
 
 ### 2. Contratos e integración
 
@@ -265,6 +278,12 @@ gates y del smoke de `staging`.
   (FKs/vistas) y se conservan `item`, `pricing` e `inventory` como únicos
   esquemas del dominio. Con esto se cierra la ventana de rollback por tablas
   antiguas: volver atrás requiere restaurar un backup previo a `85`.
+- PR 12 completo: contrato y propiedad de datos alineados. El OpenAPI de
+  `item-service` deja de documentar `stock` como editable en `PATCH` y
+  describe `STOCK_GESTIONADO_POR_INVENTARIO`; se retira el DTO duplicado de
+  `pricing-service` que provocaba la colisión del contrato agregado. La
+  matriz de propiedad de datos refleja el estado real (precio base e histórico
+  en item, stock por ubicación en inventario) y deja explícito el contrato v2.
 - `stock` y `precio_cents` siguen en `item.items` como proyección del contrato
   de items: `inventory-service` mantiene el stock por trigger y los clientes
   leen ambos campos en `GET /catalog/items`. Retirarlos exige versionar el
