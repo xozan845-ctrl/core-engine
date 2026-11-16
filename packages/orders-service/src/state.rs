@@ -8,6 +8,7 @@ use crate::contratos::Contratos;
 use crate::db::Db;
 use crate::entregas::EntregasDigitales;
 use crate::errors::ApiError;
+use crate::fulfillments::Fulfillments;
 use crate::metrics::Metrics;
 use crate::pagos::Pagos;
 use crate::pedidos::Pedidos;
@@ -34,6 +35,7 @@ pub struct AppState {
     pub salon: Option<Arc<Salon>>,
     pub pagos: Option<Arc<Pagos>>,
     pub tipos: Option<Arc<TiposOrden>>,
+    pub fulfillments: Option<Arc<Fulfillments>>,
     pub inicio: Instant,
 }
 
@@ -55,6 +57,7 @@ impl AppState {
             salon: None,
             pagos: None,
             tipos: None,
+            fulfillments: None,
             inicio: Instant::now(),
         }
     }
@@ -75,6 +78,7 @@ impl AppState {
         salon: Arc<Salon>,
         pagos: Arc<Pagos>,
         tipos: Arc<TiposOrden>,
+        fulfillments: Arc<Fulfillments>,
     ) -> Self {
         Self {
             config: Arc::new(config),
@@ -91,6 +95,7 @@ impl AppState {
             salon: Some(salon),
             pagos: Some(pagos),
             tipos: Some(tipos),
+            fulfillments: Some(fulfillments),
             inicio: Instant::now(),
         }
     }
@@ -141,5 +146,9 @@ impl AppState {
 
     pub fn tipos(&self) -> Result<&Arc<TiposOrden>, ApiError> {
         self.tipos.as_ref().ok_or_else(ApiError::interno)
+    }
+
+    pub fn fulfillments(&self) -> Result<&Arc<Fulfillments>, ApiError> {
+        self.fulfillments.as_ref().ok_or_else(ApiError::interno)
     }
 }

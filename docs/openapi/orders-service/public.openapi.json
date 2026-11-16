@@ -658,6 +658,103 @@
         ]
       }
     },
+    "/api/v2/orders/fulfillments": {
+      "get": {
+        "operationId": "FulfillmentsController_listar",
+        "responses": {
+          "200": {
+            "description": "Fulfillments activos",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": ["data", "meta"],
+                  "properties": {
+                    "data": {
+                      "type": "array",
+                      "items": {"$ref": "#/components/schemas/OrdersFulfillmentResponseDto"}
+                    },
+                    "meta": {"$ref": "#/components/schemas/MetaRespuesta"}
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [{"bearer": []}],
+        "summary": "Listar fulfillments",
+        "tags": ["Fulfillments"]
+      }
+    },
+    "/api/v2/admin/fulfillments": {
+      "post": {
+        "operationId": "FulfillmentsController_crear",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {"$ref": "#/components/schemas/OrdersCrearFulfillmentRequestDto"}
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Fulfillment creado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": ["data", "meta"],
+                  "properties": {
+                    "data": {"$ref": "#/components/schemas/OrdersFulfillmentResponseDto"},
+                    "meta": {"$ref": "#/components/schemas/MetaRespuesta"}
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [{"bearer": []}],
+        "summary": "Crear fulfillment (admin)",
+        "tags": ["Fulfillments"]
+      }
+    },
+    "/api/v2/admin/fulfillments/{codigo}": {
+      "patch": {
+        "operationId": "FulfillmentsController_actualizar",
+        "parameters": [
+          {"name": "codigo", "required": true, "in": "path", "schema": {"type": "string"}}
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {"$ref": "#/components/schemas/OrdersActualizarFulfillmentRequestDto"}
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Fulfillment actualizado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": ["data", "meta"],
+                  "properties": {
+                    "data": {"$ref": "#/components/schemas/OrdersFulfillmentResponseDto"},
+                    "meta": {"$ref": "#/components/schemas/MetaRespuesta"}
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [{"bearer": []}],
+        "summary": "Actualizar fulfillment (admin)",
+        "tags": ["Fulfillments"]
+      }
+    },
     "/api/v2/admin/tipos-orden": {
       "get": {
         "operationId": "TiposOrdenController_listar",
@@ -2692,6 +2789,37 @@
           "motivo": {
             "type": "string"
           }
+        }
+      },
+      "OrdersFulfillmentResponseDto": {
+        "type": "object",
+        "properties": {
+          "codigo": {"type": "string"},
+          "nombre": {"type": "string"},
+          "requiere_direccion": {"type": "boolean"},
+          "activo": {"type": "boolean"},
+          "config": {"type": "object"}
+        },
+        "required": ["codigo", "nombre", "requiere_direccion", "activo", "config"]
+      },
+      "OrdersCrearFulfillmentRequestDto": {
+        "type": "object",
+        "properties": {
+          "codigo": {"type": "string"},
+          "nombre": {"type": "string"},
+          "requiere_direccion": {"type": "boolean"},
+          "activo": {"type": "boolean"},
+          "config": {"type": "object"}
+        },
+        "required": ["codigo", "nombre"]
+      },
+      "OrdersActualizarFulfillmentRequestDto": {
+        "type": "object",
+        "properties": {
+          "nombre": {"type": "string"},
+          "requiere_direccion": {"type": "boolean"},
+          "activo": {"type": "boolean"},
+          "config": {"type": "object"}
         }
       },
       "OrdersTipoOrdenResponseDto": {

@@ -1398,3 +1398,14 @@ CREATE POLICY outbox_admin ON pricing.outbox FOR ALL TO authenticated
 DROP POLICY IF EXISTS outbox_app ON pricing.outbox;
 CREATE POLICY outbox_app ON pricing.outbox FOR ALL TO core_engine_app
   USING (true) WITH CHECK (true);
+
+-- ── orders.fulfillments (Fase 4) ────────────────────────────────────────────
+ALTER TABLE orders.fulfillments ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS fulfillments_lectura ON orders.fulfillments;
+CREATE POLICY fulfillments_lectura ON orders.fulfillments
+  FOR SELECT TO authenticated USING (activo);
+DROP POLICY IF EXISTS fulfillments_admin ON orders.fulfillments;
+CREATE POLICY fulfillments_admin ON orders.fulfillments
+  FOR ALL TO authenticated
+  USING (auth.rol() IN ('super_admin', 'admin'))
+  WITH CHECK (auth.rol() IN ('super_admin', 'admin'));

@@ -9,6 +9,7 @@ use orders_service::consumer::PedidosConsumer;
 use orders_service::contratos::Contratos;
 use orders_service::db::Db;
 use orders_service::entregas::EntregasDigitales;
+use orders_service::fulfillments::Fulfillments;
 use orders_service::http::build_router;
 use orders_service::logs::{ejecutar_con_contexto, ContextoCorrelacion};
 use orders_service::metrics::Metrics;
@@ -101,6 +102,7 @@ async fn main() {
     let salon = Arc::new(Salon::nueva(Arc::clone(&db)));
     let pagos = Arc::new(Pagos::nueva(Arc::clone(&db)));
     let tipos = Arc::new(TiposOrden::nueva(Arc::clone(&db)));
+    let fulfillments = Arc::new(Fulfillments::nueva(Arc::clone(&db)));
 
     let consumidor = Arc::new(PedidosConsumer::nuevo(
         Arc::clone(&db),
@@ -136,6 +138,7 @@ async fn main() {
         salon,
         pagos,
         tipos,
+        fulfillments,
     );
     let app = build_router(estado);
 
