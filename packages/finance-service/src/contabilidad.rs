@@ -574,6 +574,66 @@ impl Contabilidad {
         Ok(filas.iter().map(libro_iva_de_fila).collect())
     }
 
+    /// Libro de ventas por negocio (DGI + ADR-0019).
+    pub async fn libro_ventas_negocios(
+        &self,
+        desde: Option<DateTime<Utc>>,
+        hasta: Option<DateTime<Utc>>,
+        negocio_id: Option<&str>,
+    ) -> Result<Vec<Value>, ApiError> {
+        let filas = sqlx::query(
+            "SELECT c.negocio_id,
+                    n.nombre AS negocio_nombre,
+                    COUNT(*)::int AS comprobantes,
+                    COALESCE(SUM(c.base_gravada_cents), 0)::int AS base_gravada_cents,
+                    COALESCE(SUM(c.iva_cents), 0)::int AS iva_cents,
+                    COALESCE(SUM(c.exento_cents), 0)::int AS exento_cents,
+                    COALESCE(SUM(c.total_cents), 0)::int AS total_cents
+               FROM finance.comprobantes c
+               LEFT JOIN identity.negocios n ON n.id = c.negocio_id
+              WHERE c.estado = 'EMITIDO'
+                AND ($1::timestamptz IS NULL OR c.emitido_en >= $1)
+                AND ($2::timestamptz IS NULL OR c.emitido_en <= $2)
+                AND ($3::uuid IS NULL OR c.negocio_id = $3::uuid)
+              GROUP BY c.negocio_id, n.nombre
+              ORDER BY total_cents DESC",
+        )
+        .bind(desde)
+        .bind(hasta)
+        .bind(
+            negocio_id
+                .map(uuid::Uuid::parse_str)
+                .transpose()
+                .map_err(|_| ApiError::interno())?,
+        )
+        .fetch_all(self.db.pool())
+        .await
+        .map_err(error_db)?;
+        Ok(filas
+            .iter()
+            .map(|fila| {
+                let base: i64 =
+                    i64::from(fila.try_get::<i32, _>("base_gravada_cents").unwrap_or(0));
+                let iva: i64 = i64::from(fila.try_get::<i32, _>("iva_cents").unwrap_or(0));
+                let exento: i64 = i64::from(fila.try_get::<i32, _>("exento_cents").unwrap_or(0));
+                let total: i64 = i64::from(fila.try_get::<i32, _>("total_cents").unwrap_or(0));
+                json!({
+                    "negocio_id": fila.try_get::<Option<uuid::Uuid>, _>("negocio_id").ok(),
+                    "negocio_nombre": fila.try_get::<Option<String>, _>("negocio_nombre").ok(),
+                    "comprobantes": fila.try_get::<i32, _>("comprobantes").unwrap_or(0),
+                    "base_gravada_cents": base,
+                    "base_gravada": money::string(base),
+                    "iva_cents": iva,
+                    "iva": money::string(iva),
+                    "exento_cents": exento,
+                    "exento": money::string(exento),
+                    "total_cents": total,
+                    "total": money::string(total),
+                })
+            })
+            .collect())
+    }
+
     /// Libro de compras (DGI): en el MVP el crédito fiscal es cero.
     pub async fn libro_compras(
         &self,
