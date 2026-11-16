@@ -9,12 +9,14 @@ use http_body_util::BodyExt;
 use identity_service::config::Config;
 use identity_service::db::Db;
 use identity_service::dominio::api_keys::ApiKeys;
+use identity_service::dominio::auditoria::Auditoria;
 use identity_service::dominio::auth::Auth;
 use identity_service::dominio::capacidades::Capacidades;
 use identity_service::dominio::configuracion_operativa::ConfiguracionOperativaService;
 use identity_service::dominio::configuracion_sitio::ConfiguracionSitio;
 use identity_service::dominio::empresas::Empresas;
 use identity_service::dominio::extensiones::Extensiones;
+use identity_service::dominio::negocios::Negocios;
 use identity_service::dominio::packs::Packs;
 use identity_service::dominio::partes::Partes;
 use identity_service::dominio::password_reset::PasswordReset;
@@ -65,7 +67,7 @@ async fn provisionar(url: &str) {
     sqlx::raw_sql(
         "DROP SCHEMA IF EXISTS identity, catalog, stores, orders, logistics,
              commissions, finance, scheduling, field, intelligence, storage,
-             notifications, auth CASCADE",
+             notifications, auth, inventory, pricing, item, analytics CASCADE",
     )
     .execute(&pool)
     .await
@@ -121,8 +123,11 @@ async fn preparar() -> Option<Contexto> {
     ));
     let api_keys = Arc::new(ApiKeys::nueva(Arc::clone(&db), &config));
     let capacidades = Arc::new(Capacidades::nueva(Arc::clone(&db)));
+    let negocios = Arc::new(Negocios::nuevo(Arc::clone(&db)));
+    let auditoria = Arc::new(Auditoria::nueva(Arc::clone(&db)));
     let personal = Arc::new(Personal::nueva(
         Arc::clone(&db),
+        Arc::clone(&negocios),
         Arc::clone(&auth),
         email.clone(),
         Arc::new(Stores::nueva("http://127.0.0.1:9", None, 1000)),
@@ -137,6 +142,7 @@ async fn preparar() -> Option<Contexto> {
         metrics,
         Servicios {
             auth,
+            auditoria,
             usuarios: Arc::clone(&usuarios),
             api_keys,
             capacidades: Arc::clone(&capacidades),
@@ -154,6 +160,7 @@ async fn preparar() -> Option<Contexto> {
                 Arc::clone(&storage),
             )),
             extensiones,
+            negocios,
             personal,
             partes,
             registros,
@@ -2614,6 +2621,8 @@ async fn debe_sembrar_administrador_y_tenant_de_plataforma() {
     identity_service::seed::sembrar(&ctx.usuarios, &ctx.db, &config).await;
     assert!(ctx.usuarios.existe_admin().await.expect("admin"));
 }
+
+#[tokio::test]
 async fn debe_crear_negocios_y_acotar_roles_e_invitaciones() {
     let Some(ctx) = preparar().await else {
         return;
