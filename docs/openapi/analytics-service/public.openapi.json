@@ -1,0 +1,1395 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "core-engine · analytics-service",
+    "version": "1.0.9"
+  },
+  "x-servicio": "analytics-service",
+  "tags": [
+    {
+      "name": "Analytics",
+      "description": "Analítica de negocio, empresa y plataforma"
+    }
+  ],
+  "paths": {
+    "/api/v2/analytics/negocios": {
+      "get": {
+        "operationId": "AnalyticsController_negocios",
+        "parameters": [
+          {
+            "name": "empresaId",
+            "required": false,
+            "in": "query",
+            "description": "Solo admin/super_admin; el empresario usa su tenant",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "negocioId",
+            "required": false,
+            "in": "query",
+            "description": "El negocio activo de la sesión tiene prioridad",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "desde",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "date"
+            }
+          },
+          {
+            "name": "hasta",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "date"
+            }
+          },
+          {
+            "name": "formato",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "json",
+                "csv"
+              ],
+              "default": "json"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Analítica por negocio",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
+                  "properties": {
+                    "data": {
+                      "type": "object",
+                      "required": [
+                        "empresa_id",
+                        "totales",
+                        "negocios",
+                        "evolucion"
+                      ],
+                      "properties": {
+                        "empresa_id": {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        "negocio_id": {
+                          "type": "string",
+                          "format": "uuid",
+                          "nullable": true
+                        },
+                        "desde": {
+                          "type": "string",
+                          "nullable": true
+                        },
+                        "hasta": {
+                          "type": "string",
+                          "nullable": true
+                        },
+                        "totales": {
+                          "type": "object",
+                          "properties": {
+                            "ordenes": {
+                              "type": "integer"
+                            },
+                            "ventas_cents": {
+                              "type": "integer"
+                            },
+                            "comisiones_cents": {
+                              "type": "integer"
+                            },
+                            "margen_estimado_cents": {
+                              "type": "integer"
+                            },
+                            "ticket_promedio_cents": {
+                              "type": "integer"
+                            }
+                          }
+                        },
+                        "negocios": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "negocio_id": {
+                                "type": "string",
+                                "format": "uuid",
+                                "nullable": true
+                              },
+                              "negocio_nombre": {
+                                "type": "string",
+                                "nullable": true
+                              },
+                              "ordenes": {
+                                "type": "integer"
+                              },
+                              "clientes_unicos": {
+                                "type": "integer"
+                              },
+                              "ventas_cents": {
+                                "type": "integer"
+                              },
+                              "comisiones_cents": {
+                                "type": "integer"
+                              },
+                              "margen_estimado_cents": {
+                                "type": "integer"
+                              },
+                              "ticket_promedio_cents": {
+                                "type": "integer"
+                              }
+                            }
+                          }
+                        },
+                        "evolucion": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "negocio_id": {
+                                "type": "string",
+                                "format": "uuid",
+                                "nullable": true
+                              },
+                              "periodo": {
+                                "type": "string"
+                              },
+                              "ordenes": {
+                                "type": "integer"
+                              },
+                              "ventas_cents": {
+                                "type": "integer"
+                              }
+                            }
+                          }
+                        }
+                      }
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/MetaRespuesta"
+                    }
+                  }
+                }
+              },
+              "text/csv": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Analítica por negocio",
+        "tags": [
+          "Analytics"
+        ]
+      }
+    },
+    "/api/v2/analytics/negocios/cohortes": {
+      "get": {
+        "operationId": "AnalyticsController_cohortes",
+        "parameters": [
+          {
+            "name": "empresaId",
+            "required": false,
+            "in": "query",
+            "description": "Solo admin/super_admin; el empresario usa su tenant",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "negocioId",
+            "required": false,
+            "in": "query",
+            "description": "El negocio activo de la sesión tiene prioridad",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "desde",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "date"
+            }
+          },
+          {
+            "name": "hasta",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "date"
+            }
+          },
+          {
+            "name": "formato",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "json",
+                "csv"
+              ],
+              "default": "json"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Cohortes por negocio",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
+                  "properties": {
+                    "data": {
+                      "type": "object",
+                      "required": [
+                        "empresa_id",
+                        "totales",
+                        "cohortes"
+                      ],
+                      "properties": {
+                        "empresa_id": {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        "negocio_id": {
+                          "type": "string",
+                          "format": "uuid",
+                          "nullable": true
+                        },
+                        "desde": {
+                          "type": "string",
+                          "nullable": true
+                        },
+                        "hasta": {
+                          "type": "string",
+                          "nullable": true
+                        },
+                        "totales": {
+                          "type": "object",
+                          "properties": {
+                            "cohortes": {
+                              "type": "integer"
+                            },
+                            "clientes": {
+                              "type": "integer"
+                            },
+                            "retencion_mes_1_pct": {
+                              "type": "number"
+                            }
+                          }
+                        },
+                        "cohortes": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "periodo": {
+                                "type": "string"
+                              },
+                              "clientes": {
+                                "type": "integer"
+                              },
+                              "meses": {
+                                "type": "array",
+                                "items": {
+                                  "type": "object",
+                                  "properties": {
+                                    "indice": {
+                                      "type": "integer"
+                                    },
+                                    "periodo": {
+                                      "type": "string"
+                                    },
+                                    "clientes": {
+                                      "type": "integer"
+                                    },
+                                    "ordenes": {
+                                      "type": "integer"
+                                    },
+                                    "ventas_cents": {
+                                      "type": "integer"
+                                    },
+                                    "retencion_pct": {
+                                      "type": "number"
+                                    }
+                                  }
+                                }
+                              }
+                            }
+                          }
+                        }
+                      }
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/MetaRespuesta"
+                    }
+                  }
+                }
+              },
+              "text/csv": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Cohortes de retención",
+        "tags": [
+          "Analytics"
+        ]
+      }
+    },
+    "/api/v2/analytics/empresa": {
+      "get": {
+        "operationId": "AnalyticsController_empresa",
+        "parameters": [
+          {
+            "name": "empresaId",
+            "required": false,
+            "in": "query",
+            "description": "Solo admin/super_admin; el empresario usa su tenant",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "desde",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "date"
+            }
+          },
+          {
+            "name": "hasta",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "date"
+            }
+          },
+          {
+            "name": "formato",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "json",
+                "csv"
+              ],
+              "default": "json"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Consolidado de la empresa",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
+                  "properties": {
+                    "data": {
+                      "type": "object",
+                      "required": [
+                        "empresa_id",
+                        "totales",
+                        "negocios",
+                        "evolucion"
+                      ],
+                      "properties": {
+                        "empresa_id": {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        "negocio_id": {
+                          "type": "string",
+                          "format": "uuid",
+                          "nullable": true
+                        },
+                        "desde": {
+                          "type": "string",
+                          "nullable": true
+                        },
+                        "hasta": {
+                          "type": "string",
+                          "nullable": true
+                        },
+                        "totales": {
+                          "type": "object",
+                          "properties": {
+                            "ordenes": {
+                              "type": "integer"
+                            },
+                            "ventas_cents": {
+                              "type": "integer"
+                            },
+                            "comisiones_cents": {
+                              "type": "integer"
+                            },
+                            "margen_estimado_cents": {
+                              "type": "integer"
+                            },
+                            "ticket_promedio_cents": {
+                              "type": "integer"
+                            }
+                          }
+                        },
+                        "negocios": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "negocio_id": {
+                                "type": "string",
+                                "format": "uuid",
+                                "nullable": true
+                              },
+                              "negocio_nombre": {
+                                "type": "string",
+                                "nullable": true
+                              },
+                              "ordenes": {
+                                "type": "integer"
+                              },
+                              "clientes_unicos": {
+                                "type": "integer"
+                              },
+                              "ventas_cents": {
+                                "type": "integer"
+                              },
+                              "comisiones_cents": {
+                                "type": "integer"
+                              },
+                              "margen_estimado_cents": {
+                                "type": "integer"
+                              },
+                              "ticket_promedio_cents": {
+                                "type": "integer"
+                              }
+                            }
+                          }
+                        },
+                        "evolucion": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "negocio_id": {
+                                "type": "string",
+                                "format": "uuid",
+                                "nullable": true
+                              },
+                              "periodo": {
+                                "type": "string"
+                              },
+                              "ordenes": {
+                                "type": "integer"
+                              },
+                              "ventas_cents": {
+                                "type": "integer"
+                              }
+                            }
+                          }
+                        }
+                      }
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/MetaRespuesta"
+                    }
+                  }
+                }
+              },
+              "text/csv": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Analítica consolidada de la empresa",
+        "tags": [
+          "Analytics"
+        ]
+      }
+    },
+    "/api/v2/analytics/plataforma": {
+      "get": {
+        "operationId": "AnalyticsController_plataforma",
+        "parameters": [
+          {
+            "name": "desde",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "date"
+            }
+          },
+          {
+            "name": "hasta",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "date"
+            }
+          },
+          {
+            "name": "formato",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "json",
+                "csv"
+              ],
+              "default": "json"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Consolidado de la plataforma",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
+                  "properties": {
+                    "data": {
+                      "type": "object",
+                      "required": [
+                        "totales",
+                        "empresas",
+                        "evolucion"
+                      ],
+                      "properties": {
+                        "desde": {
+                          "type": "string",
+                          "nullable": true
+                        },
+                        "hasta": {
+                          "type": "string",
+                          "nullable": true
+                        },
+                        "totales": {
+                          "type": "object",
+                          "properties": {
+                            "empresas": {
+                              "type": "integer"
+                            },
+                            "ordenes": {
+                              "type": "integer"
+                            },
+                            "ventas_cents": {
+                              "type": "integer"
+                            },
+                            "comisiones_cents": {
+                              "type": "integer"
+                            },
+                            "margen_estimado_cents": {
+                              "type": "integer"
+                            },
+                            "ticket_promedio_cents": {
+                              "type": "integer"
+                            }
+                          }
+                        },
+                        "empresas": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "empresa_id": {
+                                "type": "string",
+                                "format": "uuid"
+                              },
+                              "empresa_nombre": {
+                                "type": "string",
+                                "nullable": true
+                              },
+                              "negocios": {
+                                "type": "integer"
+                              },
+                              "ordenes": {
+                                "type": "integer"
+                              },
+                              "clientes_unicos": {
+                                "type": "integer"
+                              },
+                              "ventas_cents": {
+                                "type": "integer"
+                              },
+                              "comisiones_cents": {
+                                "type": "integer"
+                              },
+                              "margen_estimado_cents": {
+                                "type": "integer"
+                              },
+                              "ticket_promedio_cents": {
+                                "type": "integer"
+                              }
+                            }
+                          }
+                        },
+                        "evolucion": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "periodo": {
+                                "type": "string"
+                              },
+                              "ordenes": {
+                                "type": "integer"
+                              },
+                              "ventas_cents": {
+                                "type": "integer"
+                              }
+                            }
+                          }
+                        }
+                      }
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/MetaRespuesta"
+                    }
+                  }
+                }
+              },
+              "text/csv": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Analítica global de la plataforma",
+        "tags": [
+          "Analytics"
+        ]
+      }
+    },
+    "/api/v2/analytics/reportes": {
+      "get": {
+        "operationId": "AnalyticsController_listarReportes",
+        "parameters": [
+          {
+            "name": "empresaId",
+            "required": false,
+            "in": "query",
+            "description": "Solo admin/super_admin; el empresario usa su tenant",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Reportes programados",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
+                  "properties": {
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "format": "uuid"
+                          },
+                          "empresa_id": {
+                            "type": "string",
+                            "format": "uuid"
+                          },
+                          "negocio_id": {
+                            "type": "string",
+                            "format": "uuid",
+                            "nullable": true
+                          },
+                          "nombre": {
+                            "type": "string"
+                          },
+                          "tipo": {
+                            "type": "string",
+                            "enum": [
+                              "analitica",
+                              "cohortes"
+                            ]
+                          },
+                          "formato": {
+                            "type": "string",
+                            "enum": [
+                              "json",
+                              "csv"
+                            ]
+                          },
+                          "frecuencia": {
+                            "type": "string",
+                            "enum": [
+                              "diaria",
+                              "semanal",
+                              "mensual"
+                            ]
+                          },
+                          "destino": {
+                            "type": "string"
+                          },
+                          "activo": {
+                            "type": "boolean"
+                          },
+                          "ultima_ejecucion": {
+                            "type": "string",
+                            "format": "date-time",
+                            "nullable": true
+                          },
+                          "proxima_ejecucion": {
+                            "type": "string",
+                            "format": "date-time"
+                          },
+                          "creado_en": {
+                            "type": "string",
+                            "format": "date-time"
+                          }
+                        }
+                      }
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/MetaRespuesta"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Listar reportes programados",
+        "tags": [
+          "Analytics"
+        ]
+      },
+      "post": {
+        "operationId": "AnalyticsController_crearReporte",
+        "parameters": [
+          {
+            "name": "empresaId",
+            "required": false,
+            "in": "query",
+            "description": "Solo admin/super_admin; el empresario usa su tenant",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "nombre",
+                  "tipo",
+                  "formato",
+                  "frecuencia",
+                  "destino",
+                  "proxima_ejecucion"
+                ],
+                "properties": {
+                  "nombre": {
+                    "type": "string"
+                  },
+                  "tipo": {
+                    "type": "string",
+                    "enum": [
+                      "analitica",
+                      "cohortes"
+                    ]
+                  },
+                  "formato": {
+                    "type": "string",
+                    "enum": [
+                      "json",
+                      "csv"
+                    ]
+                  },
+                  "frecuencia": {
+                    "type": "string",
+                    "enum": [
+                      "diaria",
+                      "semanal",
+                      "mensual"
+                    ]
+                  },
+                  "destino": {
+                    "type": "string"
+                  },
+                  "proxima_ejecucion": {
+                    "type": "string",
+                    "format": "date-time"
+                  },
+                  "negocio_id": {
+                    "type": "string",
+                    "format": "uuid"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Reporte creado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
+                  "properties": {
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        "empresa_id": {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        "negocio_id": {
+                          "type": "string",
+                          "format": "uuid",
+                          "nullable": true
+                        },
+                        "nombre": {
+                          "type": "string"
+                        },
+                        "tipo": {
+                          "type": "string",
+                          "enum": [
+                            "analitica",
+                            "cohortes"
+                          ]
+                        },
+                        "formato": {
+                          "type": "string",
+                          "enum": [
+                            "json",
+                            "csv"
+                          ]
+                        },
+                        "frecuencia": {
+                          "type": "string",
+                          "enum": [
+                            "diaria",
+                            "semanal",
+                            "mensual"
+                          ]
+                        },
+                        "destino": {
+                          "type": "string"
+                        },
+                        "activo": {
+                          "type": "boolean"
+                        },
+                        "ultima_ejecucion": {
+                          "type": "string",
+                          "format": "date-time",
+                          "nullable": true
+                        },
+                        "proxima_ejecucion": {
+                          "type": "string",
+                          "format": "date-time"
+                        },
+                        "creado_en": {
+                          "type": "string",
+                          "format": "date-time"
+                        }
+                      }
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/MetaRespuesta"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Programar un reporte",
+        "tags": [
+          "Analytics"
+        ]
+      }
+    },
+    "/api/v2/analytics/reportes/{id}": {
+      "patch": {
+        "operationId": "AnalyticsController_estadoReporte",
+        "parameters": [
+          {
+            "name": "empresaId",
+            "required": false,
+            "in": "query",
+            "description": "Solo admin/super_admin; el empresario usa su tenant",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "activo"
+                ],
+                "properties": {
+                  "activo": {
+                    "type": "boolean"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Reporte actualizado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
+                  "properties": {
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        "empresa_id": {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        "negocio_id": {
+                          "type": "string",
+                          "format": "uuid",
+                          "nullable": true
+                        },
+                        "nombre": {
+                          "type": "string"
+                        },
+                        "tipo": {
+                          "type": "string",
+                          "enum": [
+                            "analitica",
+                            "cohortes"
+                          ]
+                        },
+                        "formato": {
+                          "type": "string",
+                          "enum": [
+                            "json",
+                            "csv"
+                          ]
+                        },
+                        "frecuencia": {
+                          "type": "string",
+                          "enum": [
+                            "diaria",
+                            "semanal",
+                            "mensual"
+                          ]
+                        },
+                        "destino": {
+                          "type": "string"
+                        },
+                        "activo": {
+                          "type": "boolean"
+                        },
+                        "ultima_ejecucion": {
+                          "type": "string",
+                          "format": "date-time",
+                          "nullable": true
+                        },
+                        "proxima_ejecucion": {
+                          "type": "string",
+                          "format": "date-time"
+                        },
+                        "creado_en": {
+                          "type": "string",
+                          "format": "date-time"
+                        }
+                      }
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/MetaRespuesta"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Activar o pausar un reporte",
+        "tags": [
+          "Analytics"
+        ]
+      }
+    },
+    "/api/v2/analytics/reportes/{id}/ejecutar": {
+      "post": {
+        "operationId": "AnalyticsController_ejecutarReporte",
+        "parameters": [
+          {
+            "name": "empresaId",
+            "required": false,
+            "in": "query",
+            "description": "Solo admin/super_admin; el empresario usa su tenant",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Ejecución generada",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
+                  "properties": {
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        "reporte_id": {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        "empresa_id": {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        "negocio_id": {
+                          "type": "string",
+                          "format": "uuid",
+                          "nullable": true
+                        },
+                        "tipo": {
+                          "type": "string"
+                        },
+                        "formato": {
+                          "type": "string"
+                        },
+                        "estado": {
+                          "type": "string",
+                          "enum": [
+                            "ok",
+                            "error"
+                          ]
+                        },
+                        "contenido": {
+                          "type": "string"
+                        },
+                        "error": {
+                          "type": "string"
+                        },
+                        "ejecutada_en": {
+                          "type": "string",
+                          "format": "date-time"
+                        }
+                      }
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/MetaRespuesta"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Ejecutar un reporte ahora",
+        "tags": [
+          "Analytics"
+        ]
+      }
+    },
+    "/api/v2/analytics/reportes/{id}/ejecuciones": {
+      "get": {
+        "operationId": "AnalyticsController_ejecucionesReporte",
+        "parameters": [
+          {
+            "name": "empresaId",
+            "required": false,
+            "in": "query",
+            "description": "Solo admin/super_admin; el empresario usa su tenant",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Historial de ejecuciones",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
+                  "properties": {
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "format": "uuid"
+                          },
+                          "reporte_id": {
+                            "type": "string",
+                            "format": "uuid"
+                          },
+                          "empresa_id": {
+                            "type": "string",
+                            "format": "uuid"
+                          },
+                          "negocio_id": {
+                            "type": "string",
+                            "format": "uuid",
+                            "nullable": true
+                          },
+                          "tipo": {
+                            "type": "string"
+                          },
+                          "formato": {
+                            "type": "string"
+                          },
+                          "estado": {
+                            "type": "string",
+                            "enum": [
+                              "ok",
+                              "error"
+                            ]
+                          },
+                          "contenido": {
+                            "type": "string"
+                          },
+                          "error": {
+                            "type": "string"
+                          },
+                          "ejecutada_en": {
+                            "type": "string",
+                            "format": "date-time"
+                          }
+                        }
+                      }
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/MetaRespuesta"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Historial de un reporte",
+        "tags": [
+          "Analytics"
+        ]
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "MetaRespuesta": {
+        "type": "object",
+        "required": [
+          "timestamp",
+          "path",
+          "method",
+          "statusCode"
+        ],
+        "properties": {
+          "timestamp": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "path": {
+            "type": "string"
+          },
+          "method": {
+            "type": "string"
+          },
+          "statusCode": {
+            "type": "integer"
+          }
+        }
+      }
+    },
+    "securitySchemes": {
+      "bearer": {
+        "type": "http",
+        "scheme": "bearer"
+      }
+    }
+  },
+  "x-superficie": "publica"
+}
