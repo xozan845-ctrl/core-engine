@@ -43,7 +43,9 @@ cargo llvm-cov --locked --ignore-filename-regex 'src/main\.rs' \
 | `orders-service` | 62 | 63 |
 | `storage-service` | 54 | 52 |
 | `finance-service` | 52 | 45 |
-| `catalog-service` | 40 | 43 |
+| `item-service` | 40 | 43 |
+| `pricing-service` | 53 | 52 |
+| `inventory-service` | 79 | 72 |
 
 - **Alcance** (R-COV-4): todo `src/**`, excluyendo `main.rs` (bootstrap).
   `llvm-cov` no mide ramas: la métrica de branches queda **N/A** y se justifica

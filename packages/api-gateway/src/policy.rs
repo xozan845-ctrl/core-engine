@@ -72,6 +72,7 @@ pub fn politicas() -> &'static [Politica] {
             p(r"^/api/v2/catalog/items(/|$)", &["*"], Some(vec![SUPER_ADMIN, ADMIN, EMPRESARIO])),
             p(r"^/api/v2/catalog/(configuracion-inventario|escanear|combos|inventario)(/|$)", &["*"], Some(vec![SUPER_ADMIN, ADMIN, EMPRESARIO])),
             p(r"^/api/v2/catalog/(listas-precio|promociones)(/|$)", &["*"], Some(vec![SUPER_ADMIN, ADMIN, EMPRESARIO])),
+            p(r"^/api/v2/catalog/series(/|$)", &["*"], Some(vec![SUPER_ADMIN, ADMIN, EMPRESARIO])),
             p(r"^/api/v2/catalog/items/[^/]+/(precio|escalas|tarifas|cotizacion)(/|$)", &["*"], Some(vec![SUPER_ADMIN, ADMIN, EMPRESARIO])),
             p(r"^/api/v2/tiendas/[^/]+/slug$", &["PATCH"], Some(vec![VENDEDOR, EMPRESARIO])),
             p(r"^/api/v2/tiendas/[^/]+/logo$", &["PATCH"], Some(vec![SUPER_ADMIN, ADMIN, VENDEDOR, EMPRESARIO])),
@@ -182,5 +183,7 @@ mod tests {
         assert_eq!(politica.roles, Some(vec![SUPER_ADMIN, ADMIN]));
         let media = encontrar_politica("/api/v2/storage/public/objetos/abc", "GET").expect("media");
         assert!(media.roles.is_none());
+        let series = encontrar_politica("/api/v2/catalog/series/abc", "PATCH").expect("series");
+        assert_eq!(series.roles, Some(vec![SUPER_ADMIN, ADMIN, EMPRESARIO]));
     }
 }

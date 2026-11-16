@@ -4,7 +4,7 @@
 //!   degradación a defaults si no responde (R-AR-7/R-RB-4).
 //! - `storage-service`: metadata de un objeto para validar logo, fondos,
 //!   pósteres e imagen SEO.
-//! - `catalog-service`: item unificado antes de publicar una oferta.
+//! - `item-service`: item unificado antes de publicar una oferta.
 
 use async_trait::async_trait;
 use serde::Deserialize;
