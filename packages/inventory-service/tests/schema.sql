@@ -1,12 +1,12 @@
 -- Esquema mínimo de la migración para las pruebas de inventario (ADR-0018).
 -- Esquema de pruebas del corte PR 5: `inventory` para inventario y `catalog`
 -- esquema reproduce solo las tablas que el dominio necesita.
-DROP SCHEMA IF EXISTS catalog CASCADE;
+DROP SCHEMA IF EXISTS item CASCADE;
 DROP SCHEMA IF EXISTS inventory CASCADE;
-CREATE SCHEMA catalog;
+CREATE SCHEMA item;
 CREATE SCHEMA inventory;
 
-CREATE TABLE catalog.items (
+CREATE TABLE item.items (
   id              uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   empresa_id      uuid NOT NULL,
   tipo            text NOT NULL DEFAULT 'producto',
@@ -109,7 +109,7 @@ CREATE TABLE inventory.ajustes_stock (
 );
 
 
-CREATE TABLE catalog.item_componentes (
+CREATE TABLE item.item_componentes (
   id                 uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   empresa_id         uuid NOT NULL,
   item_id            uuid NOT NULL,
@@ -117,7 +117,7 @@ CREATE TABLE catalog.item_componentes (
   cantidad           integer NOT NULL DEFAULT 1
 );
 
-CREATE TABLE catalog.item_series (
+CREATE TABLE item.item_series (
   id             uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   empresa_id     uuid NOT NULL,
   item_id        uuid NOT NULL,

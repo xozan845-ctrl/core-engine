@@ -260,7 +260,7 @@ impl Inventario {
         let mut condiciones = vec![
             "i.tipo = 'producto'".to_string(),
             "i.eliminado_en IS NULL".to_string(),
-            "NOT EXISTS (SELECT 1 FROM catalog.items v WHERE v.parent_item_id = i.id AND v.eliminado_en IS NULL)"
+            "NOT EXISTS (SELECT 1 FROM item.items v WHERE v.parent_item_id = i.id AND v.eliminado_en IS NULL)"
                 .to_string(),
         ];
         let mut params: Vec<String> = Vec::new();
@@ -287,7 +287,7 @@ impl Inventario {
                     i.precio_cents AS precio_base_cents,
                     (i.stock * i.precio_cents)::int AS valor_disponible_cents,
                     ((i.stock + COALESCE(r.reservado, 0)) * i.precio_cents)::int AS valor_total_cents
-               FROM catalog.items i
+               FROM item.items i
                LEFT JOIN reservas r
                  ON r.empresa_id = i.empresa_id::text AND r.sku = LOWER(i.codigo)
               {filtro}
@@ -364,17 +364,17 @@ impl Inventario {
     pub async fn resumen(&self, empresa_id: Option<&str>) -> Result<Value, ApiError> {
         let filtro = if empresa_id.is_some_and(|valor| !valor.is_empty()) {
             "WHERE i.empresa_id = $1::uuid AND i.tipo = 'producto' AND i.eliminado_en IS NULL
-               AND NOT EXISTS (SELECT 1 FROM catalog.items v WHERE v.parent_item_id = i.id AND v.eliminado_en IS NULL)"
+               AND NOT EXISTS (SELECT 1 FROM item.items v WHERE v.parent_item_id = i.id AND v.eliminado_en IS NULL)"
         } else {
             "WHERE i.tipo = 'producto' AND i.eliminado_en IS NULL
-               AND NOT EXISTS (SELECT 1 FROM catalog.items v WHERE v.parent_item_id = i.id AND v.eliminado_en IS NULL)"
+               AND NOT EXISTS (SELECT 1 FROM item.items v WHERE v.parent_item_id = i.id AND v.eliminado_en IS NULL)"
         };
         let sql = format!(
             "SELECT COUNT(*)::int AS productos,
                     COUNT(*) FILTER (WHERE i.stock = 0)::int AS agotados,
                     COALESCE(SUM(i.stock), 0)::int AS stock_total,
                     COALESCE(SUM(i.stock * i.precio_cents), 0)::int AS valor_inventario_cents
-               FROM catalog.items i {filtro}"
+               FROM item.items i {filtro}"
         );
         let mut tx = self.db.transaccion().await.map_err(interno)?;
         let fila = sqlx::query(&sql);
@@ -427,7 +427,7 @@ impl Inventario {
         let item_id = texto(datos, "item_id");
         let mut tx = self.db.transaccion().await.map_err(interno)?;
         let item = sqlx::query(
-            "SELECT track_inventory FROM catalog.items
+            "SELECT track_inventory FROM item.items
               WHERE id = $1::uuid AND empresa_id = $2::uuid AND estado = 'activo'",
         )
         .bind(&item_id)
@@ -518,7 +518,7 @@ impl Inventario {
 
         let mut tx = self.db.transaccion().await.map_err(interno)?;
         let item = sqlx::query(
-            "SELECT track_inventory FROM catalog.items
+            "SELECT track_inventory FROM item.items
               WHERE id = $1::uuid AND empresa_id = $2::uuid AND estado = 'activo'
               FOR UPDATE",
         )
@@ -597,7 +597,7 @@ impl Inventario {
 
         let cantidad_i32 = i32::try_from(cantidad).map_err(|_| ApiError::interno())?;
         let stock = sqlx::query(
-            "UPDATE catalog.items
+            "UPDATE item.items
                 SET stock = stock - $3, actualizado_en = NOW()
               WHERE id = $1::uuid AND empresa_id = $2::uuid AND stock >= $3
               RETURNING stock",

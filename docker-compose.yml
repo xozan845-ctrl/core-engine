@@ -124,14 +124,14 @@ services:
       PORT: 3001
       OUTBOX_TABLA: identity.outbox
 
-  catalog-service:
+  item-service:
     <<: *servicio-base
-    image: ghcr.io/xozan845-ctrl/core-engine-catalog-service:prod
+    image: ghcr.io/xozan845-ctrl/core-engine-item-service:prod
     pull_policy: always
     environment:
-      SERVICIO: catalog-service
-      PORT: 3002
-      OUTBOX_TABLA: catalog.outbox
+      SERVICIO: item-service
+      PORT: 3015
+      OUTBOX_TABLA: item.outbox
 
   inventory-service:
     <<: *servicio-base

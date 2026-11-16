@@ -698,7 +698,7 @@ impl Precios {
         let mut tx = self.db.transaccion().await.map_err(interno)?;
         let fila = sqlx::query(
             "SELECT id, precio_cents, tipo_precio
-               FROM catalog.items
+               FROM item.items
               WHERE id = $1::uuid AND empresa_id = $2::uuid AND eliminado_en IS NULL",
         )
         .bind(&id)
@@ -767,7 +767,7 @@ impl Precios {
     async fn marcar_escala(&self, empresa_id: &str, item_id: &str) -> Result<(), ApiError> {
         let mut tx = self.db.transaccion().await.map_err(interno)?;
         sqlx::query(
-            "UPDATE catalog.items
+            "UPDATE item.items
                 SET tipo_precio = 'escala', actualizado_en = NOW()
               WHERE id = $1::uuid AND empresa_id = $2::uuid AND tipo_precio <> 'escala'",
         )
@@ -787,7 +787,7 @@ impl Precios {
     ) -> Result<(), ApiError> {
         let mut tx = self.db.transaccion().await.map_err(interno)?;
         sqlx::query(
-            "UPDATE catalog.items i
+            "UPDATE item.items i
                 SET tipo_precio = CASE WHEN EXISTS (
                       SELECT 1 FROM pricing.lista_precio_items p
                        WHERE p.empresa_id = i.empresa_id AND p.item_id = i.id

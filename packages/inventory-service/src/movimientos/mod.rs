@@ -148,7 +148,7 @@ impl Movimientos {
             }
             if cabecera.tipo != "traslado" {
                 sqlx::query(
-                    "UPDATE catalog.items
+                    "UPDATE item.items
                         SET stock = $3, actualizado_en = NOW()
                       WHERE id = $1::uuid AND empresa_id = $2::uuid AND tipo = 'producto'
                         AND eliminado_en IS NULL",
@@ -265,7 +265,7 @@ impl Movimientos {
         let fila = match item_id {
             Some(item_id) => sqlx::query(
                 "SELECT id, codigo AS sku, nombre, stock
-                   FROM catalog.items
+                   FROM item.items
                   WHERE empresa_id = $1::uuid AND tipo = 'producto' AND id = $2::uuid
                     AND eliminado_en IS NULL",
             )
@@ -276,7 +276,7 @@ impl Movimientos {
             .map_err(interno)?,
             None => sqlx::query(
                 "SELECT id, codigo AS sku, nombre, stock
-                   FROM catalog.items
+                   FROM item.items
                   WHERE empresa_id = $1::uuid AND tipo = 'producto'
                     AND upper(codigo) = upper($2) AND eliminado_en IS NULL",
             )

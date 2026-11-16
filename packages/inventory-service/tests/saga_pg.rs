@@ -44,7 +44,7 @@ async fn outbox_tipos(db: &Db) -> Vec<String> {
 }
 
 async fn stock(db: &Db) -> i32 {
-    sqlx::query_scalar("SELECT stock FROM catalog.items WHERE id = $1::uuid")
+    sqlx::query_scalar("SELECT stock FROM item.items WHERE id = $1::uuid")
         .bind(ITEM)
         .fetch_one(db.pool())
         .await
@@ -138,7 +138,7 @@ async fn debe_rechazar_todo_el_stock_si_una_linea_no_alcanza() {
 async fn debe_reintegrar_stock_y_series_en_la_devolucion() {
     let ctx = preparar().await;
     sqlx::query(
-        "INSERT INTO catalog.items
+        "INSERT INTO item.items
            (id, empresa_id, tipo, codigo, nombre, precio_cents, track_inventory, track_serial,
             stock, estado)
          VALUES ($1::uuid, $2::uuid, 'producto', 'SKU-SERIAL', 'Serial', 1000, true, true, 1, 'activo')",
@@ -149,7 +149,7 @@ async fn debe_reintegrar_stock_y_series_en_la_devolucion() {
     .await
     .expect("item");
     sqlx::query(
-        "INSERT INTO catalog.item_series (empresa_id, item_id, serial, estado)
+        "INSERT INTO item.item_series (empresa_id, item_id, serial, estado)
          VALUES ($1::uuid, $2::uuid, 'SER-1', 'disponible')",
     )
     .bind(EMPRESA)
@@ -170,7 +170,7 @@ async fn debe_reintegrar_stock_y_series_en_la_devolucion() {
         ))
         .await
         .expect("reserva");
-    let estado: String = sqlx::query_scalar("SELECT estado FROM catalog.item_series")
+    let estado: String = sqlx::query_scalar("SELECT estado FROM item.item_series")
         .fetch_one(ctx.db.pool())
         .await
         .expect("estado");
@@ -189,7 +189,7 @@ async fn debe_reintegrar_stock_y_series_en_la_devolucion() {
         .await
         .expect("devolucion");
     assert_eq!(stock(&ctx.db).await, 1);
-    let estado: String = sqlx::query_scalar("SELECT estado FROM catalog.item_series")
+    let estado: String = sqlx::query_scalar("SELECT estado FROM item.item_series")
         .fetch_one(ctx.db.pool())
         .await
         .expect("estado");
@@ -306,7 +306,7 @@ async fn debe_expandir_componentes_bom_al_reservar() {
     let ctx = preparar().await;
     let componente = "22222222-2222-4222-8222-222222222222";
     sqlx::query(
-        "INSERT INTO catalog.items
+        "INSERT INTO item.items
            (id, empresa_id, tipo, codigo, nombre, precio_cents, track_inventory, stock, estado)
          VALUES ($1::uuid, $2::uuid, 'producto', 'COMBO-BOM', 'Combo', 0, true, 2, 'activo'),
                 ($3::uuid, $2::uuid, 'producto', 'COMP-BOM', 'Componente', 0, true, 10, 'activo')",
@@ -318,7 +318,7 @@ async fn debe_expandir_componentes_bom_al_reservar() {
     .await
     .expect("items");
     sqlx::query(
-        "INSERT INTO catalog.item_componentes (empresa_id, item_id, componente_item_id, cantidad)
+        "INSERT INTO item.item_componentes (empresa_id, item_id, componente_item_id, cantidad)
          VALUES ($1::uuid, $2::uuid, $3::uuid, 2)",
     )
     .bind(EMPRESA)
@@ -346,7 +346,7 @@ async fn debe_expandir_componentes_bom_al_reservar() {
         .expect("bom reserva");
 
     let stock_componente: i32 =
-        sqlx::query_scalar("SELECT stock FROM catalog.items WHERE id = $1::uuid")
+        sqlx::query_scalar("SELECT stock FROM item.items WHERE id = $1::uuid")
             .bind(componente)
             .fetch_one(ctx.db.pool())
             .await
@@ -376,7 +376,7 @@ async fn debe_revertir_el_stock_si_falla_el_outbox() {
         .await
         .expect_err("outbox");
     assert!(!error.is_empty());
-    let stock: i32 = sqlx::query_scalar("SELECT stock FROM catalog.items WHERE id = $1::uuid")
+    let stock: i32 = sqlx::query_scalar("SELECT stock FROM item.items WHERE id = $1::uuid")
         .bind(ITEM)
         .fetch_one(db.pool())
         .await

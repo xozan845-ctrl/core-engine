@@ -276,7 +276,7 @@ impl Promociones {
             let mut tx = self.db.transaccion().await.map_err(interno)?;
             let fila = match item_id {
                 Some(item_id) => sqlx::query(
-                    "SELECT id, codigo AS sku FROM catalog.items
+                    "SELECT id, codigo AS sku FROM item.items
                       WHERE empresa_id = $1::uuid AND tipo = 'producto' AND id = $2::uuid
                         AND eliminado_en IS NULL",
                 )
@@ -286,7 +286,7 @@ impl Promociones {
                 .await
                 .map_err(interno)?,
                 None => sqlx::query(
-                    "SELECT id, codigo AS sku FROM catalog.items
+                    "SELECT id, codigo AS sku FROM item.items
                       WHERE empresa_id = $1::uuid AND tipo = 'producto'
                         AND upper(codigo) = upper($2) AND eliminado_en IS NULL",
                 )

@@ -54,10 +54,10 @@ logística, crédito y registros).
 
 | Capacidad | Módulo | Habilita |
 |---|---|---|
-| `catalogo_items` | catalog | Productos, servicios y alquileres |
-| `inventario_stock` | catalog | Stock, mínimos/máximos y movimientos |
-| `inventario_lotes` | catalog | Lotes, vencimiento y consumo FEFO |
-| `codigo_barras` | catalog | Etiquetas y escaneo en mostrador |
+| `catalogo_items` | item | Productos, servicios y alquileres |
+| `inventario_stock` | inventory | Stock, mínimos/máximos y movimientos |
+| `inventario_lotes` | inventory | Lotes, vencimiento y consumo FEFO |
+| `codigo_barras` | item | Etiquetas y escaneo en mostrador |
 | `agenda_recursos` | scheduling | Recursos, disponibilidad, citas y bloqueos |
 | `fulfillment_delivery` | logistics | Entrega con flota de plataforma |
 | `fulfillment_pickup` | logistics | Retiro en tienda |
@@ -111,15 +111,15 @@ Migración de tenants existentes, pilotos y rollback:
                     │   :8080     │  Politicas por ruta/rol (Tabla 21) · UNICO puerto al host
                     └──────┬──────┘
                            │  red interna Docker `core-engine` (microservicios sin puerto al host)
-  identity  catalog  inventory  pricing  stores  orders  logistics  scheduling  commissions  finance  field  intelligence  storage  notifications
-    :3001    :3002    :3013     :3014   :3003   :3004     :3005      :3011       :3006      :3007   :3008     :3009      :3010      :3012
+  identity  item     inventory  pricing  stores  orders  logistics  scheduling  commissions  finance  field  intelligence  storage  notifications
+    :3001    :3015    :3013     :3014   :3003   :3004     :3005      :3011       :3006      :3007   :3008     :3009      :3010      :3012
   (commissions solo stage · market-intelligence solo dev)
        RabbitMQ · topic core-engine.events (+ DLQ, AD-04) + Postgres 16 + MinIO (un bucket por tenant, ADR-24)
 ```
 
 Los bounded contexts se organizan **por capacidad de negocio**, no por rubro:
 `identity` es la autoridad de tenants, roles, verticales, capacidades y packs;
-`catalog`, `stores`, `orders`, `scheduling`, `logistics`, `finance`,
+`item`, `stores`, `orders`, `scheduling`, `logistics`, `finance`,
 `commissions` y `field` habilitan las capacidades del pack; `storage`,
 `notifications` y `intelligence` son transversales. No existen
 `dentista-service`, `farmacia-service` ni `pulperia-service` (ADR-0001).
@@ -135,7 +135,7 @@ del gateway en stage/produccion).
   CRUD convencional sobre su propio esquema (baja tasa de escritura).
 - **Outbox pattern** (ADR-03): cada servicio publica sus eventos en `x.outbox` en la misma
   transaccion; un reenviador los mueve al broker. RabbitMQ confirma publicacion (confirm channel).
-- **Saga** (ADR-02): `order.created` → catalog descuenta stock (atomico) → `stock.reservado` →
+- **Saga** (ADR-02): `order.created` → inventory descuenta stock (atomico) → `stock.reservado` →
   orders marca `pagada` y emite `payment.procesado` → logistics crea el envio → ...
   `stock.fallido` revierte la orden a `cancelada`.
 - **DLQ con backoff exponencial** (AD-04): reintentos hasta `REINTENTOS_MAXIMOS`; luego el
@@ -212,7 +212,7 @@ seeds del plan contable NIC e indices). En **Supabase** (staging/prod) aplique a
 |---|---|---|---|---|
 | api-gateway | 8080 | **Sí** (dev `8080:8080`; stage/prod `127.0.0.1:8080:8080` tras Traefik) | — | `packages/api-gateway` |
 | identity-service | 3001 | No | `identity` | `packages/identity-service` (Rust) |
-| catalog-service | 3002 | No | `catalog` | `packages/catalog-service` (Rust) |
+| item-service | 3015 | No | `item` | `packages/item-service` (Rust, ADR-0018) |
 | inventory-service | 3013 | No | `inventory` | `packages/inventory-service` (Rust, ADR-0018) |
 | pricing-service | 3014 | No | `pricing` | `packages/pricing-service` (Rust, ADR-0018) |
 | stores-service | 3003 | No | `stores` | `packages/stores-service` (Rust) |
@@ -277,7 +277,9 @@ Toda ruta pública empieza por `/api/v2/` y toda ruta interna por `/internal/`
 | auth | `/auth/{registro,login,refresh,logout,me,token}` |
 | tenancy | `/empresas/**` (alta con `vertical_id` + `pack_codigo`, perfil, slug, roles, puestos, personal, partes, registros, extensiones y capacidades) |
 | packs | `/packs`, `/packs/verticales`, `/packs/modelos-operacion`, `/packs/{codigo}/{version}` |
-| catálogo | `/catalog/items/**` (productos, servicios, alquileres, variantes, imágenes, tarifas, escalas, componentes, series), `/catalog/listas-precio/**`, `/catalog/combos`, `/catalog/promociones`, `/catalog/inventario/movimientos` |
+| catálogo | `/catalog/items/**` (productos, servicios, alquileres, variantes, imágenes, componentes, series), `/catalog/combos`, `/catalog/importar`, `/catalog/escanear` |
+| precios | `/catalog/listas-precio/**`, `/catalog/items/{id}/{precio,escalas,tarifas,cotizacion}`, `/catalog/promociones` |
+| inventario | `/admin/inventario/**`, `/admin/ubicaciones/**`, `/catalog/inventario/movimientos` |
 | tiendas | `/tiendas/{id}` + logo, `tema.css`, background, contenido, personalización y slug |
 | órdenes | `/orders/**`, `/carrito/**`, `/pedidos/{id}/entregas-digitales`, `/entregas-digitales/{token}`, `/contratos/**`, `/suscripciones/**`, `/mesas`, `/comandas` |
 | agenda | `/scheduling/{recursos,disponibilidad,bloqueos,citas,recordatorios}` |
