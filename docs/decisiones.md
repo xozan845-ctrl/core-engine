@@ -114,7 +114,7 @@ Este archivo registra decisiones técnicas deliberadas que se apartan del texto 
 - **Estado**: Implementado
 - **Contexto**: `OfertasService.sincronizarStockDeOferta` existía pero no se invocaba (código muerto). No había consumidor de `stock.updated`.
 - **Decisión**:
-  - `catalog-service` al reservar/reintegrar stock publica `stock.updated` con `{items: [{sku, stock_restante}]}`.
+  - `inventory-service` publica `stock.updated` con `{items: [{sku, stock_restante}]}` al reservar, reintegrar, mover stock o ajustar una ubicación.
   - `stores-service` nuevo `StockConsumer` consume `stock.updated` y llama `sincronizarStockDeOferta(sku, stock_restante)` con idempotencia (`stores.eventos_procesados`).
   - Cola `stores.stock` añadida en `rabbit.constants.ts`.
 
