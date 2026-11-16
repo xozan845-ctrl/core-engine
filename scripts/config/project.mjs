@@ -45,6 +45,7 @@ export const SERVICES = [
   'identity-service',
   'catalog-service',
   'inventory-service',
+  'pricing-service',
   'stores-service',
   'orders-service',
   'logistics-service',
@@ -82,6 +83,7 @@ export const RUST_SERVICES = [
   'orders-service',
   'catalog-service',
   'inventory-service',
+  'pricing-service',
   'identity-service',
 ];
 
@@ -124,6 +126,8 @@ export const ALLOWED_COMMIT_SCOPES = [
   'catalog-service',
   'inventory',
   'inventory-service',
+  'pricing',
+  'pricing-service',
   'stores',
   'stores-service',
   'orders',

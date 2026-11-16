@@ -88,70 +88,6 @@ pub fn build_router(state: AppState) -> Router {
             "/api/v2/catalog/items/{id}/imagenes/{imagen_id}",
             axum::routing::delete(items::eliminar_imagen),
         )
-        // precios
-        .route(
-            "/api/v2/catalog/listas-precio",
-            get(precios::listar_listas).post(precios::crear_lista),
-        )
-        .route(
-            "/api/v2/catalog/listas-precio/{lista_id}",
-            patch(precios::actualizar_lista),
-        )
-        .route(
-            "/api/v2/catalog/listas-precio/{lista_id}/precios",
-            get(precios::listar_precios).post(precios::crear_precio),
-        )
-        .route(
-            "/api/v2/catalog/listas-precio/{lista_id}/precios/{precio_id}",
-            patch(precios::actualizar_precio).delete(precios::eliminar_precio),
-        )
-        .route(
-            "/api/v2/catalog/items/{id}/escalas",
-            get(precios::listar_escalas).post(precios::crear_escala),
-        )
-        .route(
-            "/api/v2/catalog/items/{id}/escalas/{escala_id}",
-            patch(precios::actualizar_escala).delete(precios::eliminar_escala),
-        )
-        .route(
-            "/api/v2/catalog/items/{id}/precio",
-            get(precios::resolver_precio),
-        )
-        // tarifas
-        .route(
-            "/api/v2/catalog/items/{id}/tarifas",
-            get(tarifas::listar).post(tarifas::crear),
-        )
-        .route(
-            "/api/v2/catalog/items/{id}/tarifas/{tarifa_id}",
-            patch(tarifas::actualizar).delete(tarifas::eliminar),
-        )
-        .route(
-            "/api/v2/catalog/items/{id}/cotizacion",
-            get(tarifas::cotizar),
-        )
-        // series
-        .route(
-            "/api/v2/catalog/items/{id}/series",
-            get(series::listar).post(series::crear),
-        )
-        .route(
-            "/api/v2/catalog/items/{id}/serializacion",
-            patch(series::habilitar),
-        )
-        .route(
-            "/api/v2/catalog/series/{id}",
-            patch(series::actualizar).get(series::buscar),
-        )
-        // componentes
-        .route(
-            "/api/v2/catalog/items/{id}/componentes",
-            get(componentes::listar).post(componentes::crear),
-        )
-        .route(
-            "/api/v2/catalog/items/{id}/componentes/{componente_id}",
-            patch(componentes::actualizar).delete(componentes::eliminar),
-        )
         .route(
             "/api/v2/catalog/items/importar",
             post(operaciones::importar),
@@ -167,22 +103,9 @@ pub fn build_router(state: AppState) -> Router {
                 .patch(operaciones::actualizar_combo)
                 .delete(operaciones::eliminar_combo),
         )
-        .route(
-            "/api/v2/catalog/promociones",
-            get(operaciones::listar_promociones).post(operaciones::crear_promocion),
-        )
-        .route(
-            "/api/v2/catalog/promociones/{id}",
-            get(operaciones::detalle_promocion)
-                .patch(operaciones::actualizar_promocion)
-                .delete(operaciones::eliminar_promocion),
-        )
         // superficie interna
         .route("/internal/items/lote", get(internal::lote_items))
-        .route("/internal/items/precios", post(internal::precios_lote))
         .route("/internal/items/{id}", get(internal::item_por_id))
-        .route("/internal/items/{id}/cotizacion", get(internal::cotizacion))
-        .route("/internal/items/{id}/precio", get(internal::precio))
         .fallback(no_encontrado)
         .with_state(state.clone());
     aplicar_capas(router, state)

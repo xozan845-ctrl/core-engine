@@ -1349,3 +1349,52 @@ CREATE POLICY transiciones_orden_admin ON orders.transiciones_orden
   FOR ALL TO authenticated
   USING (auth.rol() IN ('super_admin', 'admin'))
   WITH CHECK (auth.rol() IN ('super_admin', 'admin'));
+-- ── pricing (ADR-0018) ──────────────────────────────────────────────────────
+ALTER TABLE pricing.listas_precio ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS listas_precio_admin ON pricing.listas_precio;
+CREATE POLICY listas_precio_admin ON pricing.listas_precio FOR ALL TO authenticated
+  USING (auth.rol() IN ('super_admin', 'admin'))
+  WITH CHECK (auth.rol() IN ('super_admin', 'admin'));
+DROP POLICY IF EXISTS listas_precio_empresa ON pricing.listas_precio;
+CREATE POLICY listas_precio_empresa ON pricing.listas_precio FOR ALL TO authenticated
+  USING (auth.rol() = 'empresario' AND empresa_id::text = (auth.jwt() ->> 'tenant_id'))
+  WITH CHECK (auth.rol() = 'empresario' AND empresa_id::text = (auth.jwt() ->> 'tenant_id'));
+
+ALTER TABLE pricing.lista_precio_items ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS lista_precio_items_admin ON pricing.lista_precio_items;
+CREATE POLICY lista_precio_items_admin ON pricing.lista_precio_items FOR ALL TO authenticated
+  USING (auth.rol() IN ('super_admin', 'admin'))
+  WITH CHECK (auth.rol() IN ('super_admin', 'admin'));
+DROP POLICY IF EXISTS lista_precio_items_empresa ON pricing.lista_precio_items;
+CREATE POLICY lista_precio_items_empresa ON pricing.lista_precio_items FOR ALL TO authenticated
+  USING (auth.rol() = 'empresario' AND empresa_id::text = (auth.jwt() ->> 'tenant_id'))
+  WITH CHECK (auth.rol() = 'empresario' AND empresa_id::text = (auth.jwt() ->> 'tenant_id'));
+
+ALTER TABLE pricing.item_tarifas ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS item_tarifas_admin ON pricing.item_tarifas;
+CREATE POLICY item_tarifas_admin ON pricing.item_tarifas FOR ALL TO authenticated
+  USING (auth.rol() IN ('super_admin', 'admin'))
+  WITH CHECK (auth.rol() IN ('super_admin', 'admin'));
+DROP POLICY IF EXISTS item_tarifas_empresa ON pricing.item_tarifas;
+CREATE POLICY item_tarifas_empresa ON pricing.item_tarifas FOR ALL TO authenticated
+  USING (auth.rol() = 'empresario' AND empresa_id::text = (auth.jwt() ->> 'tenant_id'))
+  WITH CHECK (auth.rol() = 'empresario' AND empresa_id::text = (auth.jwt() ->> 'tenant_id'));
+
+ALTER TABLE pricing.promociones ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS promociones_admin ON pricing.promociones;
+CREATE POLICY promociones_admin ON pricing.promociones FOR ALL TO authenticated
+  USING (auth.rol() IN ('super_admin', 'admin'))
+  WITH CHECK (auth.rol() IN ('super_admin', 'admin'));
+DROP POLICY IF EXISTS promociones_empresa ON pricing.promociones;
+CREATE POLICY promociones_empresa ON pricing.promociones FOR ALL TO authenticated
+  USING (auth.rol() = 'empresario' AND empresa_id::text = (auth.jwt() ->> 'tenant_id'))
+  WITH CHECK (auth.rol() = 'empresario' AND empresa_id::text = (auth.jwt() ->> 'tenant_id'));
+
+ALTER TABLE pricing.outbox ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS outbox_admin ON pricing.outbox;
+CREATE POLICY outbox_admin ON pricing.outbox FOR ALL TO authenticated
+  USING (auth.rol() IN ('super_admin', 'admin'))
+  WITH CHECK (auth.rol() IN ('super_admin', 'admin'));
+DROP POLICY IF EXISTS outbox_app ON pricing.outbox;
+CREATE POLICY outbox_app ON pricing.outbox FOR ALL TO core_engine_app
+  USING (true) WITH CHECK (true);

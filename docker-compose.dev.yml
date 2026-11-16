@@ -1,6 +1,6 @@
 # Core Engine · DESARROLLO (construye las imágenes en local)
 # Entorno completo y autocontenido: Postgres + RabbitMQ + MinIO + gateway + los
-# 13 microservicios (incluye `scheduling-service`, `commissions-service` y `market-intelligence-service`,
+# 14 microservicios (incluye `scheduling-service`, `commissions-service` y `market-intelligence-service`,
 # que NO se despliegan en producción). Publica al host los puertos de datos y
 # broker SOLO para desarrollo (conectar un cliente de BD o abrir la UI de
 # RabbitMQ en localhost).
@@ -158,6 +158,17 @@ services:
       SERVICIO: inventory-service
       PORT: 3013
       OUTBOX_TABLA: inventory.outbox
+
+  pricing-service:
+    <<: *servicio-base
+    # ADR-0018: precios separados de catalog-service.
+    build:
+      context: .
+      dockerfile: packages/pricing-service/Dockerfile
+    environment:
+      SERVICIO: pricing-service
+      PORT: 3014
+      OUTBOX_TABLA: pricing.outbox
 
   stores-service:
     <<: *servicio-base

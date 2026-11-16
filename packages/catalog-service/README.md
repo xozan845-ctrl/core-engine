@@ -24,13 +24,14 @@ Variables: `PORT` (3002), `SERVICIO`, `DATABASE_URL`, `RABBITMQ_URL`,
 - Items unificados (producto/servicio/alquiler), atributos JSON Schema,
   variantes, imágenes, componentes, tarifas, series, listas de precio, precios
   y escalas.
-- Inventario, lotes FEFO, ubicaciones, transferencias y movimientos: migrados
-  a `inventory-service` (ADR-0018). El código legacy permanece sin rutas.
-- Legacy `productos`/`servicios` con stock como proyección transitoria hasta
-  la extracción de `item-service`.
+- Inventario: migrado a `inventory-service` (ADR-0018).
+- Precios, listas, escalas, tarifas, cotizaciones y promociones: migrados a
+  `pricing-service` (ADR-0018). El código legacy permanece sin rutas.
+- Legacy `productos`/`servicios` con stock y precio base como proyección
+  transitoria hasta la extracción de `item-service`.
 - El consumidor `catalog.pedidos` se retiró; la saga vive en
   `inventory-service`.
-- Superficie interna `/internal/items/**`.
+- Superficie interna `/internal/items/lote` y `/internal/items/{id}`.
 - Envelope, errores normalizados, `/health`, `/metrics`, `/docs` y
   `/docs-json`.
 - Imagen Docker multi-stage (puerto 3002) y cobertura con `cargo-llvm-cov`.
