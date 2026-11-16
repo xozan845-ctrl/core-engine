@@ -1,3 +1,4 @@
+use super::helpers::*;
 use super::*;
 
 use serde_json::json as j;
@@ -165,4 +166,18 @@ fn debe_validar_las_lineas_de_compra() {
     };
 
     assert!(validar_lineas(&[invalida]).is_err());
+}
+
+#[test]
+fn debe_validar_campos_de_texto_lista_rango_fecha_y_email() {
+    validar_texto("Banco", "nombre", 3).expect("texto valido");
+    assert!(validar_texto("ab", "nombre", 3).is_err());
+    validar_in("ingreso", "tipo", &["ingreso", "gasto"]).expect("valor permitido");
+    assert!(validar_in("otro", "tipo", &["ingreso", "gasto"]).is_err());
+    validar_rango(50.0, "porcentaje", 0.0, 100.0).expect("rango valido");
+    assert!(validar_rango(101.0, "porcentaje", 0.0, 100.0).is_err());
+    validar_fecha("2030-04-15", "fecha").expect("fecha valida");
+    assert!(validar_fecha("15/04/2030", "fecha").is_err());
+    validar_email("duena@example.com", "email").expect("email valido");
+    assert!(validar_email("sin-arroba", "email").is_err());
 }
