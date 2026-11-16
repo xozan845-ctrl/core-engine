@@ -11,7 +11,7 @@ scrape_configs:
       - targets:
           - 'gateway:8080'
           - 'identity-service:3001'
-          - 'catalog-service:3002'
+          - 'item-service:3015'
           - 'inventory-service:3013'
           - 'pricing-service:3014'
           - 'stores-service:3003'

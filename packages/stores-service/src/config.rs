@@ -18,7 +18,7 @@ pub struct Config {
     pub internal_api_key: Option<String>,
     pub identity_service_url: String,
     pub storage_service_url: String,
-    pub catalog_service_url: String,
+    pub item_service_url: String,
     pub platform_tenant_id: Option<String>,
     pub tema_herencia_ttl_ms: u64,
     pub internal_request_timeout_ms: u64,
@@ -76,8 +76,8 @@ impl Config {
                 .unwrap_or_else(|| "http://storage-service:3010".to_string())
                 .trim_end_matches('/')
                 .to_string(),
-            catalog_service_url: leer("CATALOG_SERVICE_URL")
-                .unwrap_or_else(|| "http://catalog-service:3002".to_string())
+            item_service_url: leer("ITEM_SERVICE_URL")
+                .unwrap_or_else(|| "http://item-service:3015".to_string())
                 .trim_end_matches('/')
                 .to_string(),
             platform_tenant_id: leer("PLATFORM_TENANT_ID"),
@@ -118,7 +118,7 @@ mod tests {
         assert_eq!(config.servicio, NOMBRE_SERVICIO);
         assert_eq!(config.identity_service_url, "http://identity-service:3001");
         assert_eq!(config.storage_service_url, "http://storage-service:3010");
-        assert_eq!(config.catalog_service_url, "http://catalog-service:3002");
+        assert_eq!(config.item_service_url, "http://item-service:3015");
         assert_eq!(config.tema_herencia_ttl_ms, 60_000);
         assert_eq!(config.internal_request_timeout_ms, 3000);
         assert_eq!(config.database_url, None);
@@ -134,7 +134,7 @@ mod tests {
             ("RABBITMQ_URL", "amqp://localhost"),
             ("IDENTITY_SERVICE_URL", "http://identity:3001/"),
             ("STORAGE_SERVICE_URL", "http://storage:3010/"),
-            ("CATALOG_SERVICE_URL", "http://catalog:3002/"),
+            ("ITEM_SERVICE_URL", "http://item:3015/"),
             ("PLATFORM_TENANT_ID", "t-plataforma"),
             ("TEMA_HERENCIA_TTL_MS", "1500"),
             ("INTERNAL_REQUEST_TIMEOUT_MS", "2500"),
@@ -149,7 +149,7 @@ mod tests {
         assert_eq!(config.rabbitmq_url.as_deref(), Some("amqp://localhost"));
         assert_eq!(config.identity_service_url, "http://identity:3001");
         assert_eq!(config.storage_service_url, "http://storage:3010");
-        assert_eq!(config.catalog_service_url, "http://catalog:3002");
+        assert_eq!(config.item_service_url, "http://item:3015");
         assert_eq!(config.platform_tenant_id.as_deref(), Some("t-plataforma"));
         assert_eq!(config.tema_herencia_ttl_ms, 1500);
         assert_eq!(config.internal_request_timeout_ms, 2500);

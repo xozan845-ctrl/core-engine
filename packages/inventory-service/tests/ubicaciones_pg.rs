@@ -155,7 +155,7 @@ async fn debe_registrar_un_movimiento_de_entrada_y_listarlo() {
     assert_eq!(movimiento["lineas"][0]["stock_anterior"], 10);
     assert_eq!(movimiento["lineas"][0]["stock_nuevo"], 15);
 
-    let stock: (i32,) = sqlx::query_as("SELECT stock FROM catalog.items WHERE id = $1::uuid")
+    let stock: (i32,) = sqlx::query_as("SELECT stock FROM item.items WHERE id = $1::uuid")
         .bind(ITEM)
         .fetch_one(ctx.db.pool())
         .await

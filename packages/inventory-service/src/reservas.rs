@@ -37,9 +37,9 @@ impl Reservas {
         for item in &lineas {
             let lock = sqlx::query(
                 "SELECT i.stock, i.id AS item_id, i.track_serial, i.garantia_meses,
-                        EXISTS (SELECT 1 FROM catalog.items v
+                        EXISTS (SELECT 1 FROM item.items v
                                  WHERE v.parent_item_id = i.id AND v.eliminado_en IS NULL) AS tiene_variantes
-                   FROM catalog.items i
+                   FROM item.items i
                   WHERE i.empresa_id = $1::uuid AND LOWER(i.codigo) = LOWER($2)
                     AND i.tipo = 'producto' AND i.estado = 'activo'
                     AND i.eliminado_en IS NULL FOR UPDATE",
@@ -130,7 +130,7 @@ impl Reservas {
             if track_serial {
                 let series = sqlx::query(
                     "SELECT s.id
-                       FROM catalog.item_series s
+                       FROM item.item_series s
                        LEFT JOIN inventory.ubicaciones u ON u.id = s.ubicacion_id
                       WHERE s.empresa_id = $1::uuid AND s.item_id = $2::uuid
                         AND s.estado = 'disponible'
@@ -153,7 +153,7 @@ impl Reservas {
                     .map(|fila| fila.get::<Uuid, _>("id"))
                     .collect::<Vec<_>>();
                 sqlx::query(
-                    "UPDATE catalog.item_series
+                    "UPDATE item.item_series
                         SET estado = 'vendido', order_id = $1::uuid, vendido_en = NOW(),
                             ubicacion_id = NULL,
                             garantia_hasta = CASE WHEN $3::int IS NULL THEN NULL
@@ -170,7 +170,7 @@ impl Reservas {
             }
 
             sqlx::query(
-                "UPDATE catalog.items
+                "UPDATE item.items
                     SET stock = stock - $3, actualizado_en = NOW()
                   WHERE empresa_id = $1::uuid AND LOWER(codigo) = LOWER($2)
                     AND tipo = 'producto' AND eliminado_en IS NULL
@@ -229,7 +229,7 @@ impl Reservas {
         let lineas = lineas_de(items);
         for item in &lineas {
             sqlx::query(
-                "UPDATE catalog.items
+                "UPDATE item.items
                     SET stock = stock + $3, actualizado_en = NOW()
                   WHERE empresa_id = $1::uuid AND LOWER(codigo) = LOWER($2)
                     AND tipo = 'producto' AND eliminado_en IS NULL",
@@ -246,7 +246,7 @@ impl Reservas {
                (empresa_id, item_id, cantidad_anterior, cantidad_nueva, motivo, realizado_en)
              SELECT i.empresa_id, i.id, i.stock - x.cantidad, i.stock,
                     'devolucion orden ' || $1, NOW()
-               FROM catalog.items i
+               FROM item.items i
                JOIN jsonb_to_recordset($2::jsonb) AS x(empresa_id uuid, sku text, cantidad int)
                  ON i.empresa_id = x.empresa_id AND LOWER(i.codigo) = LOWER(x.sku)
               WHERE i.tipo = 'producto' AND i.eliminado_en IS NULL",
@@ -289,15 +289,15 @@ impl Reservas {
             sqlx::query(
                 "WITH objetivo AS (
                    SELECT s.id
-                     FROM catalog.item_series s
-                     JOIN catalog.items i ON i.id = s.item_id
+                     FROM item.item_series s
+                     JOIN item.items i ON i.id = s.item_id
                     WHERE s.order_id = $1::uuid AND s.estado = 'vendido'
                       AND i.empresa_id = $2::uuid AND LOWER(i.codigo) = LOWER($3)
                     ORDER BY s.vendido_en, s.id
                     LIMIT $4
                     FOR UPDATE OF s
                  )
-                 UPDATE catalog.item_series s
+                 UPDATE item.item_series s
                     SET estado = 'devuelto', devuelto_en = NOW(),
                         ubicacion_id = COALESCE((
                           SELECT u.id FROM inventory.ubicaciones u
@@ -329,7 +329,7 @@ impl Reservas {
         }
         let filas = sqlx::query(
             "SELECT i.empresa_id, LOWER(i.codigo) AS sku, i.stock AS stock_restante
-               FROM catalog.items i
+               FROM item.items i
                JOIN jsonb_to_recordset($1::jsonb) AS x(empresa_id uuid, sku text)
                  ON i.empresa_id = x.empresa_id AND LOWER(i.codigo) = LOWER(x.sku)
               WHERE i.tipo = 'producto' AND i.eliminado_en IS NULL",
@@ -391,22 +391,22 @@ async fn expandir_componentes(
         let resultado = sqlx::query(
             "WITH RECURSIVE bom(item_id, cantidad, ruta) AS (
                SELECT c.componente_item_id, c.cantidad, ARRAY[$1::uuid, c.componente_item_id]
-                 FROM catalog.item_componentes c
+                 FROM item.item_componentes c
                 WHERE c.empresa_id = $2::uuid AND c.item_id = $1::uuid
                UNION ALL
                SELECT c.componente_item_id, bom.cantidad * c.cantidad, bom.ruta || c.componente_item_id
                  FROM bom
-                 JOIN catalog.item_componentes c
+                 JOIN item.item_componentes c
                    ON c.item_id = bom.item_id AND c.empresa_id = $2::uuid
                 WHERE NOT (c.componente_item_id = ANY(bom.ruta))
                   AND array_length(bom.ruta, 1) < 6
              )
              SELECT i.id AS item_id, i.codigo AS sku, SUM(bom.cantidad)::int AS cantidad
                FROM bom
-               JOIN catalog.items i
+               JOIN item.items i
                  ON i.id = bom.item_id AND i.eliminado_en IS NULL AND i.tipo = 'producto'
               WHERE NOT EXISTS (
-                SELECT 1 FROM catalog.item_componentes c2
+                SELECT 1 FROM item.item_componentes c2
                  WHERE c2.item_id = i.id AND c2.empresa_id = $2::uuid
               )
               GROUP BY i.id, i.codigo",

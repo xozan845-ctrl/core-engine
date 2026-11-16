@@ -33,7 +33,7 @@ Cada servicio se publica y se promueve con su propia imagen:
 ghcr.io/xozan845-ctrl/core-engine-<servicio>:<tag|stage|prod>
 ```
 
-Servicios: `api-gateway`, `identity-service`, `catalog-service`, `stores-service`,
+Servicios: `api-gateway`, `identity-service`, `item-service`, `stores-service`,
 `orders-service`, `logistics-service`, `scheduling-service`, `commissions-service`,
 `finance-service`, `field-service`, `market-intelligence-service`, `storage-service`,
 `notifications-service`
