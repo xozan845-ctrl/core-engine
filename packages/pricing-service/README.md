@@ -1,6 +1,6 @@
 # pricing-service · Rust
 
-Motor de precios separado de `catalog-service` según [ADR-0018](../../docs/adr/0018-catalog-split-item-pricing-inventory.md).
+Motor de precios según [ADR-0018](../../docs/adr/0018-catalog-split-item-pricing-inventory.md).
 
 ## Estado
 
