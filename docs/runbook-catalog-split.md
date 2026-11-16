@@ -125,7 +125,9 @@ npm run smoke:remote
   `commissions` e `inventory`; el flag de gateway debe apuntar otra vez a
   `catalog` para las rutas de inventario.
 - **Datos:** no borrar `catalog.*` ni `inventory.*`. Las tablas antiguas se
-  conservan precisamente para rollback.
+  conservan precisamente para rollback. Al volver a `catalog-service` hay que
+  repuntar `stores.ofertas.item_id` a `catalog.items` antes de reactivar la
+  escritura de items en el esquema viejo.
 - **Consumidores:** si la saga falla, detener `inventory-service` y reactivar
   temporalmente el consumidor de `catalog-service` solo con la cola
   `catalog.pedidos`; nunca ambos a la vez.
