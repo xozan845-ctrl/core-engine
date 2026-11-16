@@ -97,5 +97,7 @@
   "81_item_schema.sql": "27bf4accb0bb953141fffe8c9ed3f5a55c5e326c61b52b54da4a5e2fff383d5d",
   "82_registros_esquemas.sql": "4332852caed587bf06a66a869726aa9d9b0dee3da7912e2285bee55e62adcc5e",
   "83_item_fk_externas.sql": "0dd2526d502c467c79c0af5385d19800432c879604fc697a47a55f15d0c2117e",
-  "83_tipos_cambio.sql": "ebfd82f9c7acdcef6fa2a41841b01a9cb5d9972f49ff7d2624a62750bfe99340"
+  "83_tipos_cambio.sql": "ebfd82f9c7acdcef6fa2a41841b01a9cb5d9972f49ff7d2624a62750bfe99340",
+  "84_inventory_stock_owner.sql": "ba263eb573e9b309f06ec1c28ea5e672880aa8d33d87dde2c5334214a072c050",
+  "85_retiro_catalog.sql": "281d382fcc7a0c9a5389882698e9d25f750e19f3c5ae6526eaa601e3828d3e29"
 }

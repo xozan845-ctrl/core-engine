@@ -149,7 +149,7 @@ services:
 
   inventory-service:
     <<: *servicio-base
-    # ADR-0018: inventario separado de catalog-service.
+    # ADR-0018: inventario en su propio servicio.
     build:
       context: .
       dockerfile: packages/inventory-service/Dockerfile
@@ -160,7 +160,7 @@ services:
 
   pricing-service:
     <<: *servicio-base
-    # ADR-0018: precios separados de catalog-service.
+    # ADR-0018: precios en su propio servicio.
     build:
       context: .
       dockerfile: packages/pricing-service/Dockerfile

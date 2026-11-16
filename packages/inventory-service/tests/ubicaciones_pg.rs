@@ -4,6 +4,7 @@ mod common;
 
 use common::*;
 use inventory_service::movimientos::Movimientos;
+use inventory_service::outbox::Outbox;
 use inventory_service::ubicaciones::Ubicaciones;
 use serde_json::json;
 use std::sync::Arc;
@@ -19,8 +20,12 @@ async fn preparar() -> Contexto {
     let url = url().expect("TEST_DATABASE_URL");
     let guard = provisionar(&url).await;
     let db = db().await;
-    let ubicaciones = Arc::new(Ubicaciones::nueva(Arc::clone(&db)));
-    let movimientos = Arc::new(Movimientos::nueva(Arc::clone(&db)));
+    let outbox = Arc::new(Outbox::nueva("inventory.outbox"));
+    let ubicaciones = Arc::new(Ubicaciones::nueva(
+        Arc::clone(&db),
+        Some(Arc::clone(&outbox)),
+    ));
+    let movimientos = Arc::new(Movimientos::nueva(Arc::clone(&db), Some(outbox)));
     Contexto {
         _guard: guard,
         ubicaciones,
@@ -135,6 +140,13 @@ async fn debe_rechazar_un_traslado_sin_stock_suficiente() {
 #[tokio::test]
 async fn debe_registrar_un_movimiento_de_entrada_y_listarlo() {
     let ctx = preparar().await;
+    ctx.ubicaciones
+        .crear(
+            EMPRESA,
+            &json!({"codigo": "principal", "nombre": "Principal", "tipo": "bodega"}),
+        )
+        .await
+        .expect("ubicacion");
     crear_item(&ctx.db, ITEM, "SKU-MOV", 10, 1000).await;
     let movimiento = ctx
         .movimientos
@@ -162,6 +174,26 @@ async fn debe_registrar_un_movimiento_de_entrada_y_listarlo() {
         .expect("stock");
     assert_eq!(stock.0, 15);
 
+    let por_ubicacion: i32 = sqlx::query_scalar(
+        "SELECT stock FROM inventory.item_stock_ubicacion
+          WHERE item_id = $1::uuid",
+    )
+    .bind(ITEM)
+    .fetch_one(ctx.db.pool())
+    .await
+    .expect("stock ubicacion");
+    assert_eq!(por_ubicacion, 15);
+
+    let eventos: Vec<(String, serde_json::Value)> =
+        sqlx::query_as("SELECT tipo, payload FROM inventory.outbox ORDER BY creado_en")
+            .fetch_all(ctx.db.pool())
+            .await
+            .expect("outbox");
+    assert_eq!(eventos.len(), 1);
+    assert_eq!(eventos[0].0, "stock.updated");
+    assert_eq!(eventos[0].1["data"]["items"][0]["sku"], "SKU-MOV");
+    assert_eq!(eventos[0].1["data"]["items"][0]["stock_restante"], 15);
+
     let pagina = ctx
         .movimientos
         .listar(EMPRESA, &json!({"pagina": 1, "limite": 20}))
@@ -188,4 +220,89 @@ async fn debe_rechazar_una_salida_sin_stock_suficiente() {
         .await
         .expect_err("stock");
     assert_eq!(error.codigo, "STOCK_INSUFICIENTE");
+}
+
+#[tokio::test]
+async fn debe_crear_stock_inicial_en_la_ubicacion_predeterminada() {
+    let ctx = preparar().await;
+    ctx.ubicaciones
+        .crear(
+            EMPRESA,
+            &json!({"codigo": "principal", "nombre": "Principal", "tipo": "bodega"}),
+        )
+        .await
+        .expect("ubicacion");
+
+    crear_item(&ctx.db, ITEM, "SKU-INICIAL", 7, 1000).await;
+
+    let ubicacion_stock: i32 = sqlx::query_scalar(
+        "SELECT stock FROM inventory.item_stock_ubicacion WHERE item_id = $1::uuid",
+    )
+    .bind(ITEM)
+    .fetch_one(ctx.db.pool())
+    .await
+    .expect("stock inicial");
+    assert_eq!(ubicacion_stock, 7);
+}
+
+#[tokio::test]
+async fn debe_fijar_stock_por_ubicacion_y_publicar_evento() {
+    let ctx = preparar().await;
+    let ubicacion = ctx
+        .ubicaciones
+        .crear(
+            EMPRESA,
+            &json!({"codigo": "principal", "nombre": "Principal", "tipo": "bodega"}),
+        )
+        .await
+        .expect("ubicacion");
+    let ubicacion_id = ubicacion["id"].as_str().expect("id").to_string();
+    crear_item(&ctx.db, ITEM, "SKU-AJUSTE", 10, 1000).await;
+
+    ctx.ubicaciones
+        .fijar_stock(EMPRESA, &ubicacion_id, ITEM, &json!(12))
+        .await
+        .expect("ajuste");
+
+    let stock: (i32,) = sqlx::query_as("SELECT stock FROM item.items WHERE id = $1::uuid")
+        .bind(ITEM)
+        .fetch_one(ctx.db.pool())
+        .await
+        .expect("stock");
+    assert_eq!(stock.0, 12);
+
+    let ubicacion_stock: i32 = sqlx::query_scalar(
+        "SELECT stock FROM inventory.item_stock_ubicacion
+          WHERE item_id = $1::uuid AND ubicacion_id = $2::uuid",
+    )
+    .bind(ITEM)
+    .bind(&ubicacion_id)
+    .fetch_one(ctx.db.pool())
+    .await
+    .expect("stock ubicacion");
+    assert_eq!(ubicacion_stock, 12);
+
+    let evento: (String, serde_json::Value) = sqlx::query_as(
+        "SELECT tipo, payload FROM inventory.outbox ORDER BY creado_en DESC LIMIT 1",
+    )
+    .fetch_one(ctx.db.pool())
+    .await
+    .expect("evento");
+    assert_eq!(evento.0, "stock.updated");
+    assert_eq!(evento.1["data"]["tipo"], "ajuste_ubicacion");
+    assert_eq!(evento.1["data"]["items"][0]["stock_restante"], 12);
+
+    // Un lote vacío no debe publicar nada.
+    let outbox = Outbox::nueva("inventory.outbox");
+    let mut tx = ctx.db.transaccion().await.expect("tx");
+    outbox
+        .insertar_stock_updated(&mut tx, "sin-items", "ajuste", vec![])
+        .await
+        .expect("sin items");
+    tx.commit().await.expect("commit");
+    let eventos: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM inventory.outbox")
+        .fetch_one(ctx.db.pool())
+        .await
+        .expect("eventos");
+    assert_eq!(eventos, 1);
 }

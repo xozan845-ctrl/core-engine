@@ -77,7 +77,13 @@ async fn main() {
         Arc::clone(&metrics),
     );
 
-    let estado = AppState::con_db(config, Arc::clone(&metrics), Arc::clone(&db), capacidades);
+    let estado = AppState::con_db(
+        config,
+        Arc::clone(&metrics),
+        Arc::clone(&db),
+        capacidades,
+        Some(Arc::clone(&outbox)),
+    );
     let app = build_router(estado);
 
     let listener = match tokio::net::TcpListener::bind(("0.0.0.0", puerto)).await {

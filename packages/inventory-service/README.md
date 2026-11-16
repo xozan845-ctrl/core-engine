@@ -1,6 +1,6 @@
 # inventory-service · Rust
 
-Primer corte de `catalog-service` según [ADR-0018](../../docs/adr/0018-catalog-split-item-pricing-inventory.md).
+Corte de inventario según [ADR-0018](../../docs/adr/0018-catalog-split-item-pricing-inventory.md).
 El servicio es dueño de stock, lotes FEFO, ubicaciones, movimientos, ajustes,
 transferencias, reservas y configuración de inventario.
 
@@ -15,14 +15,16 @@ transferencias, reservas y configuración de inventario.
 - PR 4: consumidor `inventory.pedidos` con reserva atómica, FEFO, series,
   componentes BOM, devolución, idempotencia, Outbox y DLQ.
 - PR 5: esquema `inventory`, `inventory.outbox`, RLS, gateway, compose, CI y
-  retirada del consumidor viejo de `catalog-service`.
-- `catalog.items.stock` sigue como proyección transitoria hasta `item-service`
-  (PR 8); el resto del inventario ya es propiedad de `inventory-service`.
+  retirada del consumidor de pedidos heredado.
+- PR 10: `inventory.item_stock_ubicacion` es la fuente del stock. Los triggers
+  de alta y delta viven en `item.items` y escriben en `inventory.*`; cada
+  movimiento, consumo de lote y ajuste por ubicación publica `stock.updated`
+  por `inventory.outbox` (RN-02).
 
-Las tablas propias viven en `inventory.*`. `catalog.items` y
-`catalog.items.stock` siguen siendo el dato maestro transitorio del ítem hasta
-la extracción de `item-service` (PR 8); no reactivar el consumidor de
-`catalog.pedidos` en `catalog-service`.
+Las tablas propias viven en `inventory.*`. `item.items.stock` se conserva como
+proyección del total del contrato de items y la mantienen estos triggers; el
+consumidor de pedidos vive en `inventory.pedidos` (no reactivar
+`catalog.pedidos`).
 
 ## Comandos
 
