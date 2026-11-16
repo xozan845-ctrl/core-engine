@@ -40,6 +40,7 @@ impl Ordenes for OrdenesFijas {
     async fn consultar(&self, order_id: &str) -> Option<OrdenResumen> {
         (order_id == "22222222-2222-4222-8222-222222222222").then_some(OrdenResumen {
             total_cents: 100_000,
+            negocio_id: None,
         })
     }
 }
@@ -259,6 +260,7 @@ async fn provisionar(url: &str) {
           numero text NOT NULL,
           tipo text NOT NULL,
           orden_id uuid,
+          negocio_id uuid,
           parte_id uuid,
           base_gravada_cents integer NOT NULL,
           iva_cents integer NOT NULL,
@@ -270,8 +272,10 @@ async fn provisionar(url: &str) {
           emitido_en timestamptz,
           creado_en timestamptz NOT NULL DEFAULT NOW()
         );
+        ALTER TABLE finance.comprobantes ADD COLUMN IF NOT EXISTS negocio_id uuid;
         CREATE TABLE finance.series_comprobantes (
           serie text PRIMARY KEY,
+          negocio_id uuid,
           tipo text NOT NULL,
           prefijo text NOT NULL,
           secuencial_actual integer NOT NULL DEFAULT 0,
@@ -279,6 +283,7 @@ async fn provisionar(url: &str) {
           jurisdiccion text NOT NULL,
           activa boolean NOT NULL DEFAULT true
         );
+        ALTER TABLE finance.series_comprobantes ADD COLUMN IF NOT EXISTS negocio_id uuid;
         CREATE TABLE finance.proyecciones (
           id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
           nombre text NOT NULL,
