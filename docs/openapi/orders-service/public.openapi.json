@@ -3255,6 +3255,110 @@
           "Fidelización"
         ]
       }
+    },
+    "/api/v2/fidelizacion/mis-tarjetas": {
+      "get": {
+        "operationId": "FidelizacionController_misTarjetas",
+        "responses": {
+          "200": {
+            "description": "Tarjetas del comprador autenticado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
+                  "properties": {
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/FidelizacionTarjetaResponseDto"
+                      }
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/MetaRespuesta"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Consultar mis tarjetas (comprador)",
+        "tags": [
+          "Fidelización"
+        ]
+      }
+    },
+    "/api/v2/fidelizacion/mis-tarjetas/{id}/movimientos": {
+      "get": {
+        "operationId": "FidelizacionController_misMovimientos",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "limite",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 200,
+              "default": 50
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Movimientos de mi tarjeta",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
+                  "properties": {
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/FidelizacionMovimientoResponseDto"
+                      }
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/MetaRespuesta"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Historial de mi tarjeta (comprador)",
+        "tags": [
+          "Fidelización"
+        ]
+      }
     }
   },
   "components": {

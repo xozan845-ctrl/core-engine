@@ -1,8 +1,9 @@
 # ADR-0019: Fidelización como capacidad seleccionable por configuración
 
 - **Fecha**: 2026-11-16
-- **Estado**: Aceptado — implementación en curso (fases 1-2: capacidad, alta de
-  empresa, modelo de datos y administración por empresa)
+- **Estado**: Aceptado — implementación en curso (fases 1-3: capacidad, alta de
+  empresa, modelo de datos, administración por empresa, acumulación al pagar y
+  vista del comprador)
 - **Ámbito**: `identity-service` (capacidades, verticales, packs, alta de
   empresa, manifiesto), `orders-service` (programas, tarjetas, movimientos,
   recompensas y canjes), PostgreSQL/RLS, OpenAPI, CI/CD y documentación
@@ -91,8 +92,11 @@ Reglas:
 
 La fase 2 implementa el modelo, el dominio (`programa`, `tarjetas`,
 `movimientos`, `recompensas`, `canjes`), los endpoints de administración por
-empresa y la acumulación idempotente como método de dominio. La conexión con el
-ciclo de la orden y la vista del cliente se entregan en la fase 3.
+empresa y la acumulación idempotente como método de dominio. La fase 3 conecta
+la acumulación con `Checkout::transicionar` (pago automático, confirmación
+manual y webhook) y expone `mis-tarjetas` al comprador, derivando la propiedad
+de la tarjeta de sus propias órdenes (`orden_vista.comprador_id`) para no
+exponer tarjetas de otros clientes del mismo tenant.
 
 ### 4. Servicio propio como evolución
 

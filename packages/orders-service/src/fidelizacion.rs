@@ -232,6 +232,69 @@ impl Fidelizacion {
             .ok_or_else(|| ApiError::no_encontrado("Tarjeta", tarjeta_id))
     }
 
+    /// Tarjetas de un comprador: solo las partes que aparecen en sus propias
+    /// órdenes (evita exponer tarjetas de otros clientes del mismo tenant).
+    pub async fn listar_tarjetas_de_comprador(
+        &self,
+        comprador_id: &str,
+    ) -> Result<Vec<Tarjeta>, ApiError> {
+        let mut tx = self.db.transaccion().await.map_err(error_db)?;
+        let filas = sqlx::query(&format!(
+            "SELECT {COLUMNAS_TARJETA}
+               FROM orders.fidelizacion_tarjetas t
+               JOIN identity.partes p ON p.id = t.parte_id
+              WHERE t.parte_id IN (
+                    SELECT DISTINCT parte_id FROM orders.orden_vista
+                     WHERE comprador_id = $1::uuid AND parte_id IS NOT NULL)
+              ORDER BY t.actualizado_en DESC"
+        ))
+        .bind(comprador_id)
+        .fetch_all(&mut *tx)
+        .await
+        .map_err(error_db)?;
+        tx.commit().await.map_err(error_db)?;
+        filas.iter().map(fila_tarjeta).collect()
+    }
+
+    pub async fn movimientos_de_comprador(
+        &self,
+        comprador_id: &str,
+        tarjeta_id: &str,
+        limite: i64,
+    ) -> Result<Vec<Movimiento>, ApiError> {
+        let limite = limite.clamp(1, 200);
+        let mut tx = self.db.transaccion().await.map_err(error_db)?;
+        let propia = sqlx::query(
+            "SELECT 1 FROM orders.fidelizacion_tarjetas t
+              WHERE t.id = $1::uuid
+                AND t.parte_id IN (
+                    SELECT DISTINCT parte_id FROM orders.orden_vista
+                     WHERE comprador_id = $2::uuid AND parte_id IS NOT NULL)",
+        )
+        .bind(tarjeta_id)
+        .bind(comprador_id)
+        .fetch_optional(&mut *tx)
+        .await
+        .map_err(error_db)?;
+        if propia.is_none() {
+            return Err(ApiError::no_encontrado("Tarjeta", tarjeta_id));
+        }
+        let filas = sqlx::query(&format!(
+            "SELECT {COLUMNAS_MOVIMIENTO}
+               FROM orders.fidelizacion_movimientos
+              WHERE tarjeta_id = $1::uuid
+              ORDER BY creado_en DESC
+              LIMIT $2"
+        ))
+        .bind(tarjeta_id)
+        .bind(limite)
+        .fetch_all(&mut *tx)
+        .await
+        .map_err(error_db)?;
+        tx.commit().await.map_err(error_db)?;
+        filas.iter().map(fila_movimiento).collect()
+    }
+
     pub async fn crear_tarjeta(&self, empresa_id: &str, dto: &Value) -> Result<Tarjeta, ApiError> {
         let parte_id = texto(dto, "parte_id");
         if parte_id.is_empty() {
