@@ -31,7 +31,10 @@ pub async fn resumen(
     exigir_clave(&state, &headers)?;
     ok(state
         .inventario()?
-        .resumen(query.get("empresa_id").map(String::as_str))
+        .resumen(
+            query.get("empresa_id").map(String::as_str),
+            query.get("negocio_id").map(String::as_str),
+        )
         .await?)
 }
 
@@ -45,7 +48,10 @@ pub async fn lineas(
     ok(Value::Array(
         state
             .inventario()?
-            .listar(query.get("empresa_id").map(String::as_str))
+            .listar(
+                query.get("empresa_id").map(String::as_str),
+                query.get("negocio_id").map(String::as_str),
+            )
             .await?,
     ))
 }

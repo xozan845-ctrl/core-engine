@@ -132,14 +132,24 @@ impl Inventario {
     }
 
     /// Configuración de inventario de la empresa o los valores por defecto.
-    pub async fn configuracion(&self, empresa_id: &str) -> Result<Value, ApiError> {
+    pub async fn configuracion(
+        &self,
+        empresa_id: &str,
+        negocio_id: Option<&str>,
+    ) -> Result<Value, ApiError> {
         let mut tx = self.db.transaccion().await.map_err(interno)?;
         let fila = sqlx::query(
-            "SELECT empresa_id, metodo_costeo, permitir_stock_negativo, alerta_stock_bajo,
-                    actualizar_costo_en_compra, unidad_defecto, actualizado_en
-               FROM inventory.configuracion_inventario WHERE empresa_id = $1::uuid",
+            "SELECT empresa_id, negocio_id, metodo_costeo, permitir_stock_negativo,
+                    alerta_stock_bajo, actualizar_costo_en_compra, unidad_defecto,
+                    actualizado_en
+               FROM inventory.configuracion_inventario
+              WHERE empresa_id = $1::uuid
+                AND (negocio_id = $2::uuid OR negocio_id IS NULL)
+              ORDER BY (negocio_id IS NOT NULL) DESC
+              LIMIT 1",
         )
         .bind(empresa_id)
+        .bind(negocio_id)
         .fetch_optional(&mut *tx)
         .await
         .map_err(interno)?;
@@ -148,6 +158,7 @@ impl Inventario {
             Some(fila) => fila_a_json(&fila).map_err(interno),
             None => Ok(json!({
                 "empresa_id": empresa_id,
+                "negocio_id": negocio_id,
                 "metodo_costeo": "promedio",
                 "permitir_stock_negativo": false,
                 "alerta_stock_bajo": true,
@@ -162,9 +173,10 @@ impl Inventario {
     pub async fn guardar_configuracion(
         &self,
         empresa_id: &str,
+        negocio_id: Option<&str>,
         cambios: &Value,
     ) -> Result<Value, ApiError> {
-        let actual = self.configuracion(empresa_id).await?;
+        let actual = self.configuracion(empresa_id, negocio_id).await?;
         let actual_metodo = actual
             .get("metodo_costeo")
             .and_then(Value::as_str)
@@ -225,20 +237,23 @@ impl Inventario {
         let mut tx = self.db.transaccion().await.map_err(interno)?;
         let fila = sqlx::query(
             "INSERT INTO inventory.configuracion_inventario
-               (empresa_id, metodo_costeo, permitir_stock_negativo, alerta_stock_bajo,
+               (empresa_id, negocio_id, metodo_costeo, permitir_stock_negativo, alerta_stock_bajo,
                 actualizar_costo_en_compra, unidad_defecto)
-             VALUES ($1::uuid, $2, $3, $4, $5, $6)
-             ON CONFLICT (empresa_id) DO UPDATE SET
+             VALUES ($1::uuid, $2::uuid, $3, $4, $5, $6, $7)
+             ON CONFLICT (empresa_id, COALESCE(negocio_id, '00000000-0000-0000-0000-000000000000'::uuid))
+             DO UPDATE SET
                metodo_costeo = EXCLUDED.metodo_costeo,
                permitir_stock_negativo = EXCLUDED.permitir_stock_negativo,
                alerta_stock_bajo = EXCLUDED.alerta_stock_bajo,
                actualizar_costo_en_compra = EXCLUDED.actualizar_costo_en_compra,
                unidad_defecto = EXCLUDED.unidad_defecto,
                actualizado_en = NOW()
-             RETURNING empresa_id, metodo_costeo, permitir_stock_negativo, alerta_stock_bajo,
-                       actualizar_costo_en_compra, unidad_defecto, actualizado_en",
+             RETURNING empresa_id, negocio_id, metodo_costeo, permitir_stock_negativo,
+                       alerta_stock_bajo, actualizar_costo_en_compra, unidad_defecto,
+                       actualizado_en",
         )
         .bind(empresa_id)
+        .bind(negocio_id)
         .bind(&metodo)
         .bind(permitir_stock_negativo)
         .bind(alerta_stock_bajo)
@@ -258,7 +273,11 @@ impl Inventario {
     }
 
     /// Niveles de stock de la bodega desde la proyección CQRS (H-06).
-    pub async fn listar(&self, empresa_id: Option<&str>) -> Result<Vec<Value>, ApiError> {
+    pub async fn listar(
+        &self,
+        empresa_id: Option<&str>,
+        negocio_id: Option<&str>,
+    ) -> Result<Vec<Value>, ApiError> {
         let mut condiciones = vec![
             "i.tipo = 'producto'".to_string(),
             "i.eliminado_en IS NULL".to_string(),
@@ -268,7 +287,11 @@ impl Inventario {
         let mut params: Vec<String> = Vec::new();
         if let Some(empresa) = empresa_id.filter(|valor| !valor.is_empty()) {
             params.push(empresa.to_string());
-            condiciones.insert(0, "i.empresa_id = $1::uuid".to_string());
+            condiciones.insert(0, format!("i.empresa_id = ${}::uuid", params.len()));
+        }
+        if let Some(negocio) = negocio_id.filter(|valor| !valor.is_empty()) {
+            params.push(negocio.to_string());
+            condiciones.push(format!("i.negocio_id = ${}::uuid", params.len()));
         }
         let filtro = format!("WHERE {}", condiciones.join(" AND "));
         let sql = format!(
@@ -363,14 +386,27 @@ impl Inventario {
     }
 
     /// Totales del inventario para las rutas internas.
-    pub async fn resumen(&self, empresa_id: Option<&str>) -> Result<Value, ApiError> {
-        let filtro = if empresa_id.is_some_and(|valor| !valor.is_empty()) {
-            "WHERE i.empresa_id = $1::uuid AND i.tipo = 'producto' AND i.eliminado_en IS NULL
-               AND NOT EXISTS (SELECT 1 FROM item.items v WHERE v.parent_item_id = i.id AND v.eliminado_en IS NULL)"
-        } else {
-            "WHERE i.tipo = 'producto' AND i.eliminado_en IS NULL
-               AND NOT EXISTS (SELECT 1 FROM item.items v WHERE v.parent_item_id = i.id AND v.eliminado_en IS NULL)"
-        };
+    pub async fn resumen(
+        &self,
+        empresa_id: Option<&str>,
+        negocio_id: Option<&str>,
+    ) -> Result<Value, ApiError> {
+        let mut condiciones = vec![
+            "i.tipo = 'producto'".to_string(),
+            "i.eliminado_en IS NULL".to_string(),
+            "NOT EXISTS (SELECT 1 FROM item.items v WHERE v.parent_item_id = i.id AND v.eliminado_en IS NULL)"
+                .to_string(),
+        ];
+        let mut params: Vec<String> = Vec::new();
+        if let Some(empresa) = empresa_id.filter(|valor| !valor.is_empty()) {
+            params.push(empresa.to_string());
+            condiciones.insert(0, format!("i.empresa_id = ${}::uuid", params.len()));
+        }
+        if let Some(negocio) = negocio_id.filter(|valor| !valor.is_empty()) {
+            params.push(negocio.to_string());
+            condiciones.push(format!("i.negocio_id = ${}::uuid", params.len()));
+        }
+        let filtro = format!("WHERE {}", condiciones.join(" AND "));
         let sql = format!(
             "SELECT COUNT(*)::int AS productos,
                     COUNT(*) FILTER (WHERE i.stock = 0)::int AS agotados,
@@ -379,14 +415,11 @@ impl Inventario {
                FROM item.items i {filtro}"
         );
         let mut tx = self.db.transaccion().await.map_err(interno)?;
-        let fila = sqlx::query(&sql);
-        let fila = match empresa_id.filter(|valor| !valor.is_empty()) {
-            Some(empresa) => fila.bind(empresa),
-            None => fila,
+        let mut consulta = sqlx::query(&sql);
+        for parametro in &params {
+            consulta = consulta.bind(parametro);
         }
-        .fetch_optional(&mut *tx)
-        .await
-        .map_err(interno)?;
+        let fila = consulta.fetch_optional(&mut *tx).await.map_err(interno)?;
         tx.commit().await.map_err(interno)?;
         match fila {
             Some(fila) => fila_a_json(&fila).map_err(interno),
@@ -402,11 +435,18 @@ impl Inventario {
     pub async fn crear_proveedor(&self, datos: &Value) -> Result<Value, ApiError> {
         let mut tx = self.db.transaccion().await.map_err(interno)?;
         let fila = sqlx::query(
-            "INSERT INTO inventory.proveedores (empresa_id, codigo, nombre, correo, telefono)
-             VALUES ($1::uuid, UPPER($2), $3, $4, $5)
-             RETURNING id, empresa_id, codigo, nombre, correo, telefono, activo",
+            "INSERT INTO inventory.proveedores
+               (empresa_id, negocio_id, codigo, nombre, correo, telefono)
+             VALUES ($1::uuid, $2::uuid, UPPER($3), $4, $5, $6)
+             RETURNING id, empresa_id, negocio_id, codigo, nombre, correo, telefono, activo",
         )
         .bind(texto(datos, "empresa_id"))
+        .bind(
+            datos
+                .get("negocio_id")
+                .and_then(Value::as_str)
+                .filter(|valor| !valor.is_empty()),
+        )
         .bind(texto(datos, "codigo"))
         .bind(texto(datos, "nombre"))
         .bind(texto(datos, "correo"))

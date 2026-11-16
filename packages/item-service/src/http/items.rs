@@ -57,6 +57,7 @@ const CREAR_ITEM: &[ReglaCampo] = &[
     campo("es_materia_prima", false, &[Regla::Booleano]),
     campo("ubicacion", false, &[Regla::Texto]),
     campo("empresa_id", false, &[Regla::Uuid]),
+    campo("negocio_id", false, &[Regla::Uuid]),
 ];
 
 const CREAR_ALQUILER: &[ReglaCampo] = &[
@@ -69,6 +70,7 @@ const CREAR_ALQUILER: &[ReglaCampo] = &[
     campo("atributos", false, &[Regla::Objeto]),
     campo("estado", false, &[Regla::En(&["activo", "inactivo"])]),
     campo("empresa_id", false, &[Regla::Uuid]),
+    campo("negocio_id", false, &[Regla::Uuid]),
 ];
 
 const GUARDAR_ESQUEMA: &[ReglaCampo] = &[
@@ -151,6 +153,9 @@ pub async fn listar(
         }
         filtros.insert(clave, Value::String(valor));
     }
+    if let Some(negocio) = usuario.negocio_id.as_ref() {
+        filtros.insert("negocio_id".into(), Value::String(negocio.clone()));
+    }
     let mut respuesta = state.items()?.listar(&Value::Object(filtros)).await?;
     super::adjuntar_extensiones(&state, &empresa, &mut respuesta).await;
     ok(respuesta)
@@ -160,7 +165,7 @@ pub async fn listar(
 pub async fn crear(
     State(state): State<AppState>,
     headers: HeaderMap,
-    Cuerpo(cuerpo): Cuerpo,
+    Cuerpo(mut cuerpo): Cuerpo,
 ) -> Result<Response, ApiError> {
     let usuario = autorizar(
         &state,
@@ -177,6 +182,11 @@ pub async fn crear(
         .and_then(Value::as_str)
         .unwrap_or_default();
     super::validar_tipo_permitido(&state, &empresa, tipo).await?;
+    if let Some(negocio) = usuario.negocio_id.as_ref() {
+        if let Some(objeto) = cuerpo.as_object_mut() {
+            objeto.insert("negocio_id".into(), Value::String(negocio.clone()));
+        }
+    }
     created(state.items()?.crear_item(&cuerpo, &empresa).await?)
 }
 
@@ -184,7 +194,7 @@ pub async fn crear(
 pub async fn crear_alquiler(
     State(state): State<AppState>,
     headers: HeaderMap,
-    Cuerpo(cuerpo): Cuerpo,
+    Cuerpo(mut cuerpo): Cuerpo,
 ) -> Result<Response, ApiError> {
     let usuario = autorizar(
         &state,
@@ -197,6 +207,11 @@ pub async fn crear_alquiler(
     validar(CREAR_ALQUILER, &cuerpo)?;
     let empresa = empresa_de_escritura(&usuario, cuerpo.get("empresa_id").and_then(Value::as_str))?;
     super::validar_tipo_permitido(&state, &empresa, "alquiler").await?;
+    if let Some(negocio) = usuario.negocio_id.as_ref() {
+        if let Some(objeto) = cuerpo.as_object_mut() {
+            objeto.insert("negocio_id".into(), Value::String(negocio.clone()));
+        }
+    }
     created(state.items()?.crear_alquiler(&cuerpo, &empresa).await?)
 }
 
@@ -350,22 +365,29 @@ async fn item_con_empresa(
     usuario: &UsuarioContexto,
     id: &str,
 ) -> Result<Value, ApiError> {
-    if usuario.rol != "super_admin" && usuario.rol != "admin" {
+    let item = if usuario.rol != "super_admin" && usuario.rol != "admin" {
         let tenant = usuario
             .tenant_id
             .as_deref()
             .ok_or_else(|| ApiError::no_encontrado("Empresa", "activa"))?;
-        return state
+        state
             .items()?
             .encontrar_por_id(id, Some(tenant))
             .await?
-            .ok_or_else(|| ApiError::no_encontrado("Item", id));
+            .ok_or_else(|| ApiError::no_encontrado("Item", id))?
+    } else {
+        state
+            .items()?
+            .encontrar_por_id(id, None)
+            .await?
+            .ok_or_else(|| ApiError::no_encontrado("Item", id))?
+    };
+    if let Some(negocio) = usuario.negocio_id.as_deref() {
+        if item.get("negocio_id").and_then(Value::as_str) != Some(negocio) {
+            return Err(ApiError::no_encontrado("Item", id));
+        }
     }
-    state
-        .items()?
-        .encontrar_por_id(id, None)
-        .await?
-        .ok_or_else(|| ApiError::no_encontrado("Item", id))
+    Ok(item)
 }
 
 /// `PATCH /api/v2/catalog/items/:id`.
