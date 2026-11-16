@@ -254,8 +254,14 @@ gates y del smoke de `staging`.
 - Validación en `staging` (2026-11-16): PR de promoción #719, fix de FK
   `83_item_fk_externas` (#721/#723) y deploy stage con `npm run demo` 39/39 y
   gate de logs sin errores. `item-service:stage` publicado desde `staging`.
+- PR 10 completo: `inventory.item_stock_ubicacion` es la fuente del stock.
+  La migración `84_inventory_stock_owner` mueve los triggers de alta y delta de
+  `catalog.items` a `item.items` (escribiendo en `inventory.*`), repara el
+  desglose contra el total y garantiza una ubicación predeterminada por
+  empresa. Movimientos, consumo de lotes y ajustes por ubicación publican
+  `stock.updated` para refrescar las ofertas (RN-02).
 - `stock` y `precio_cents` siguen en `item.items` como proyección del contrato
-  de items: `pricing-service` e `inventory-service` los mantienen y los
-  clientes los leen en `GET /catalog/items`. Retirarlos exige versionar el
-  contrato o resolver stock/precio por llamada interna; queda fuera de esta
-  limpieza y requiere su propio ADR.
+  de items: `inventory-service` mantiene el stock por trigger y los clientes
+  leen ambos campos en `GET /catalog/items`. Retirarlos exige versionar el
+  contrato o resolver precio/stock por llamada interna; requiere su propio
+  ADR.

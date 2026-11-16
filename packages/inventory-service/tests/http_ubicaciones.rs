@@ -31,6 +31,7 @@ async fn estado() -> (DbLock, AppState, Arc<Db>) {
         metrics,
         Arc::clone(&db),
         Arc::new(CapacidadesFijas(vec![])),
+        None,
     );
     state.capacidades = Arc::new(CapacidadesFijas(vec![
         CapacidadActiva {

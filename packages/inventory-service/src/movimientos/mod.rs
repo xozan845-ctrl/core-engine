@@ -1,11 +1,12 @@
 //! Movimientos de inventario: entradas, salidas, ajustes y traslados.
 //!
-//! Extraído de `catalog-service` (ADR-0018). En este PR el evento
-//! `stock.updated` todavía lo emite `catalog-service`; el Outbox de inventario
-//! llega con el consumidor de la saga (PR 4).
+//! Extraído de `catalog-service` (ADR-0018). Cada entrada, salida o ajuste
+//! publica `stock.updated` por el Outbox para que `stores-service` refresque
+//! el stock visible de sus ofertas (RN-02).
 
 use crate::db::{fila_a_json, interno, Db};
 use crate::errors::ApiError;
+use crate::outbox::Outbox;
 use crate::paginacion::{crear_pagina, parsear_paginacion};
 use serde_json::{json, Value};
 use sqlx::Row;
@@ -19,6 +20,7 @@ const COLUMNAS: &str = "id, empresa_id, tipo, motivo, referencia,
 
 pub struct Movimientos {
     db: Arc<Db>,
+    outbox: Option<Arc<Outbox>>,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -37,8 +39,8 @@ struct CabeceraMovimiento {
 }
 
 impl Movimientos {
-    pub fn nueva(db: Arc<Db>) -> Self {
-        Self { db }
+    pub fn nueva(db: Arc<Db>, outbox: Option<Arc<Outbox>>) -> Self {
+        Self { db, outbox }
     }
 
     pub async fn listar(&self, empresa_id: &str, filtros: &Value) -> Result<Value, ApiError> {
@@ -192,7 +194,7 @@ impl Movimientos {
 
         let motivo = texto_opcional(datos, "motivo").unwrap_or_default();
         let referencia = texto_opcional(datos, "referencia").unwrap_or_default();
-        let lineas_json = Value::Array(lineas_salida).to_string();
+        let lineas_json = Value::Array(lineas_salida.clone()).to_string();
         let fila = sqlx::query(&format!(
             "INSERT INTO inventory.movimientos_inventario
                (empresa_id, tipo, motivo, referencia, ubicacion_origen, ubicacion_destino,
@@ -212,6 +214,31 @@ impl Movimientos {
         .await
         .map_err(interno)?;
         let movimiento = fila_a_json(&fila).map_err(interno)?;
+        if cabecera.tipo != "traslado" {
+            if let Some(outbox) = &self.outbox {
+                let items = lineas_salida
+                    .iter()
+                    .map(|linea| {
+                        json!({
+                            "empresa_id": empresa_id,
+                            "sku": linea.get("sku").cloned().unwrap_or(Value::Null),
+                            "stock_restante": linea.get("stock_nuevo").cloned().unwrap_or(json!(0)),
+                        })
+                    })
+                    .collect();
+                outbox
+                    .insertar_stock_updated(
+                        &mut tx,
+                        &format!(
+                            "movimiento-{}",
+                            movimiento.get("id").and_then(Value::as_str).unwrap_or("")
+                        ),
+                        &cabecera.tipo,
+                        items,
+                    )
+                    .await?;
+            }
+        }
         tx.commit().await.map_err(interno)?;
         Ok(serializar(&movimiento))
     }
@@ -426,6 +453,34 @@ mod tests {
         assert_eq!(calcular_stock("salida", 10, 3), 7);
         assert_eq!(calcular_stock("ajuste", 10, 3), 3);
         assert_eq!(calcular_stock("traslado", 10, 3), 10);
+    }
+
+    #[test]
+    fn debe_serializar_y_filtrar_movimientos() {
+        let movimiento = serializar(&json!({
+            "id": "11111111-1111-4111-8111-111111111111",
+            "tipo": "entrada",
+            "lineas": [{"sku": "SKU-1", "cantidad": 2}],
+        }));
+        assert_eq!(movimiento["id"], "11111111-1111-4111-8111-111111111111");
+        assert_eq!(movimiento["motivo"], "");
+        assert_eq!(movimiento["referencia"], "");
+        assert_eq!(movimiento["lineas"][0]["sku"], "SKU-1");
+
+        assert_eq!(
+            filtro_texto(&json!({"tipo": "entrada"}), "tipo"),
+            Some("entrada".into())
+        );
+        assert_eq!(filtro_texto(&json!({"tipo": 7}), "tipo"), Some("7".into()));
+        assert_eq!(filtro_texto(&json!({"tipo": null}), "tipo"), None);
+        assert_eq!(
+            texto_opcional(&json!({"motivo": "  compra  "}), "motivo"),
+            Some("compra".into())
+        );
+        assert_eq!(texto_opcional(&json!({}), "motivo"), None);
+        assert_eq!(entero_de(Some(&json!("5"))), Some(5));
+        assert_eq!(entero_de(Some(&json!(1.5))), None);
+        assert_eq!(entero_de(None), None);
     }
 
     #[test]

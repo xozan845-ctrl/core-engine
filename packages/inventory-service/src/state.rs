@@ -6,6 +6,7 @@ use crate::db::Db;
 use crate::inventario::Inventario;
 use crate::metrics::Metrics;
 use crate::movimientos::Movimientos;
+use crate::outbox::Outbox;
 use crate::ubicaciones::Ubicaciones;
 use std::sync::Arc;
 use std::time::Instant;
@@ -43,10 +44,11 @@ impl AppState {
         metrics: Arc<Metrics>,
         db: Arc<Db>,
         capacidades: Arc<dyn Capacidades>,
+        outbox: Option<Arc<Outbox>>,
     ) -> Self {
-        let inventario = Arc::new(Inventario::nueva(Arc::clone(&db)));
-        let ubicaciones = Arc::new(Ubicaciones::nueva(Arc::clone(&db)));
-        let movimientos = Arc::new(Movimientos::nueva(Arc::clone(&db)));
+        let inventario = Arc::new(Inventario::nueva(Arc::clone(&db), outbox.clone()));
+        let ubicaciones = Arc::new(Ubicaciones::nueva(Arc::clone(&db), outbox.clone()));
+        let movimientos = Arc::new(Movimientos::nueva(Arc::clone(&db), outbox));
         Self {
             config: Arc::new(config),
             metrics,

@@ -4,6 +4,7 @@ mod common;
 
 use common::*;
 use inventory_service::inventario::Inventario;
+use inventory_service::outbox::Outbox;
 use serde_json::json;
 use std::sync::Arc;
 
@@ -17,7 +18,8 @@ async fn preparar() -> Contexto {
     let url = url().expect("TEST_DATABASE_URL");
     let guard = provisionar(&url).await;
     let db = db().await;
-    let inventario = Arc::new(Inventario::nueva(Arc::clone(&db)));
+    let outbox = Arc::new(Outbox::nueva("inventory.outbox"));
+    let inventario = Arc::new(Inventario::nueva(Arc::clone(&db), Some(outbox)));
     Contexto {
         _guard: guard,
         inventario,
@@ -136,6 +138,16 @@ async fn debe_consumir_lotes_en_orden_fefo_y_descontar_stock() {
         .await
         .expect("stock");
     assert_eq!(stock.0, 8);
+
+    let evento: (String, serde_json::Value) = sqlx::query_as(
+        "SELECT tipo, payload FROM inventory.outbox ORDER BY creado_en DESC LIMIT 1",
+    )
+    .fetch_one(ctx.db.pool())
+    .await
+    .expect("evento stock.updated");
+    assert_eq!(evento.0, "stock.updated");
+    assert_eq!(evento.1["data"]["items"][0]["sku"], "SKU-FEFO");
+    assert_eq!(evento.1["data"]["items"][0]["stock_restante"], 8);
 }
 
 #[tokio::test]
