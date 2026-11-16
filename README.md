@@ -54,10 +54,10 @@ logística, crédito y registros).
 
 | Capacidad | Módulo | Habilita |
 |---|---|---|
-| `catalogo_items` | catalog | Productos, servicios y alquileres |
-| `inventario_stock` | catalog | Stock, mínimos/máximos y movimientos |
-| `inventario_lotes` | catalog | Lotes, vencimiento y consumo FEFO |
-| `codigo_barras` | catalog | Etiquetas y escaneo en mostrador |
+| `catalogo_items` | item | Productos, servicios y alquileres |
+| `inventario_stock` | inventory | Stock, mínimos/máximos y movimientos |
+| `inventario_lotes` | inventory | Lotes, vencimiento y consumo FEFO |
+| `codigo_barras` | item | Etiquetas y escaneo en mostrador |
 | `agenda_recursos` | scheduling | Recursos, disponibilidad, citas y bloqueos |
 | `fulfillment_delivery` | logistics | Entrega con flota de plataforma |
 | `fulfillment_pickup` | logistics | Retiro en tienda |
@@ -111,21 +111,21 @@ Migración de tenants existentes, pilotos y rollback:
                     │   :8080     │  Politicas por ruta/rol (Tabla 21) · UNICO puerto al host
                     └──────┬──────┘
                            │  red interna Docker `core-engine` (microservicios sin puerto al host)
-  identity  catalog  stores  orders  logistics  scheduling  commissions  finance  field  intelligence  storage  notifications
-    :3001    :3002    :3003   :3004     :3005      :3011       :3006      :3007   :3008     :3009      :3010      :3012
+  identity  item     inventory  pricing  stores  orders  logistics  scheduling  commissions  finance  field  intelligence  storage  notifications
+    :3001    :3015    :3013     :3014   :3003   :3004     :3005      :3011       :3006      :3007   :3008     :3009      :3010      :3012
   (commissions solo stage · market-intelligence solo dev)
        RabbitMQ · topic core-engine.events (+ DLQ, AD-04) + Postgres 16 + MinIO (un bucket por tenant, ADR-24)
 ```
 
 Los bounded contexts se organizan **por capacidad de negocio**, no por rubro:
 `identity` es la autoridad de tenants, roles, verticales, capacidades y packs;
-`catalog`, `stores`, `orders`, `scheduling`, `logistics`, `finance`,
+`item`, `stores`, `orders`, `scheduling`, `logistics`, `finance`,
 `commissions` y `field` habilitan las capacidades del pack; `storage`,
 `notifications` y `intelligence` son transversales. No existen
 `dentista-service`, `farmacia-service` ni `pulperia-service` (ADR-0001).
 
 **Punto de entrada unico:** solo el servicio `gateway` publica un puerto de aplicación al host
-(`8080:8080`); los **doce microservicios** escuchan en `3001`–`3012` **solo dentro de la red interna
+(`8080:8080`); los **catorce microservicios** escuchan en `3001`–`3014` **solo dentro de la red interna
 Docker `core-engine`** y no tienen mapeo de puertos al host. La excepción es **MinIO** (`9000`), que se
 publica en **loopback** porque es el host local que Traefik firma como dominio HTTPS en las URLs
 prefirmadas (ADR-24). Toda llamada externa pasa por `http://localhost:8080/api/v2/...` (o el dominio
@@ -135,7 +135,7 @@ del gateway en stage/produccion).
   CRUD convencional sobre su propio esquema (baja tasa de escritura).
 - **Outbox pattern** (ADR-03): cada servicio publica sus eventos en `x.outbox` en la misma
   transaccion; un reenviador los mueve al broker. RabbitMQ confirma publicacion (confirm channel).
-- **Saga** (ADR-02): `order.created` → catalog descuenta stock (atomico) → `stock.reservado` →
+- **Saga** (ADR-02): `order.created` → inventory descuenta stock (atomico) → `stock.reservado` →
   orders marca `pagada` y emite `payment.procesado` → logistics crea el envio → ...
   `stock.fallido` revierte la orden a `cancelada`.
 - **DLQ con backoff exponencial** (AD-04): reintentos hasta `REINTENTOS_MAXIMOS`; luego el
@@ -181,7 +181,7 @@ npm run test:engine               # unitarias del motor de reglas
 npm run test:smoke                # unitarias de los scripts de smoke
 npm run rules:check               # verificación de reglas del repositorio
 cp .env.example .env              # variables de DESARROLLO (producción: .env.production.example)
-docker compose -f docker-compose.dev.yml up -d --build   # app: Postgres + RabbitMQ + MinIO + Mailpit + gateway y 12 servicios (8080 host + datos/broker 5432/5672/15672 + minio 9000/9001 + mailpit 1025/8025)
+docker compose -f docker-compose.dev.yml up -d --build   # app: Postgres + RabbitMQ + MinIO + Mailpit + gateway y 14 servicios (8080 host + datos/broker 5432/5672/15672 + minio 9000/9001 + mailpit 1025/8025)
 npm run demo                      # ejercicio end-to-end (TC-01..TC-08, RN-01..RN-08)
 npm run demo:verticals            # E2E de los pilotos belleza y flota contra el gateway real
 
@@ -212,7 +212,9 @@ seeds del plan contable NIC e indices). En **Supabase** (staging/prod) aplique a
 |---|---|---|---|---|
 | api-gateway | 8080 | **Sí** (dev `8080:8080`; stage/prod `127.0.0.1:8080:8080` tras Traefik) | — | `packages/api-gateway` |
 | identity-service | 3001 | No | `identity` | `packages/identity-service` (Rust) |
-| catalog-service | 3002 | No | `catalog` | `packages/catalog-service` (Rust) |
+| item-service | 3015 | No | `item` | `packages/item-service` (Rust, ADR-0018) |
+| inventory-service | 3013 | No | `inventory` | `packages/inventory-service` (Rust, ADR-0018) |
+| pricing-service | 3014 | No | `pricing` | `packages/pricing-service` (Rust, ADR-0018) |
 | stores-service | 3003 | No | `stores` | `packages/stores-service` (Rust) |
 | orders-service | 3004 | No | `orders` | `packages/orders-service` (Rust) |
 | logistics-service | 3005 | No | `logistics` | `packages/logistics-service` |
@@ -275,7 +277,9 @@ Toda ruta pública empieza por `/api/v2/` y toda ruta interna por `/internal/`
 | auth | `/auth/{registro,login,refresh,logout,me,token}` |
 | tenancy | `/empresas/**` (alta con `vertical_id` + `pack_codigo`, perfil, slug, roles, puestos, personal, partes, registros, extensiones y capacidades) |
 | packs | `/packs`, `/packs/verticales`, `/packs/modelos-operacion`, `/packs/{codigo}/{version}` |
-| catálogo | `/catalog/items/**` (productos, servicios, alquileres, variantes, imágenes, tarifas, escalas, componentes, series), `/catalog/listas-precio/**`, `/catalog/combos`, `/catalog/promociones`, `/catalog/inventario/movimientos` |
+| catálogo | `/catalog/items/**` (productos, servicios, alquileres, variantes, imágenes, componentes, series), `/catalog/combos`, `/catalog/importar`, `/catalog/escanear` |
+| precios | `/catalog/listas-precio/**`, `/catalog/items/{id}/{precio,escalas,tarifas,cotizacion}`, `/catalog/promociones` |
+| inventario | `/admin/inventario/**`, `/admin/ubicaciones/**`, `/catalog/inventario/movimientos` |
 | tiendas | `/tiendas/{id}` + logo, `tema.css`, background, contenido, personalización y slug |
 | órdenes | `/orders/**`, `/carrito/**`, `/pedidos/{id}/entregas-digitales`, `/entregas-digitales/{token}`, `/contratos/**`, `/suscripciones/**`, `/mesas`, `/comandas` |
 | agenda | `/scheduling/{recursos,disponibilidad,bloqueos,citas,recordatorios}` |
@@ -286,7 +290,7 @@ Toda ruta pública empieza por `/api/v2/` y toda ruta interna por `/internal/`
 | administración | `/admin/**` (inventario, lotes, ubicaciones, reportes, envíos y storage por tenant) |
 | inteligencia | `/inteligencia/**` (mapa de calor, rendimiento, cobertura, demanda, tendencias, forecast, anomalías y score) |
 | storage | `/storage/**` (buckets, subidas, objetos y media pública) |
-| operación | `GET /health` (liveness), `GET /ready` (readiness agregada: 9 servicios en producción, 10 en stage), `GET /metrics`, Swagger en `/docs` y `/docs-json` |
+| operación | `GET /health` (liveness), `GET /ready` (readiness agregada: 11 servicios en producción, 12 en stage), `GET /metrics`, Swagger en `/docs` y `/docs-json` |
 
 Endpoints internos (servicio→servicio) protegidos con `x-internal-key`:
 `internal/items/**`, `internal/inventario/**`, `internal/usuarios/:id`,
@@ -326,7 +330,7 @@ pública**: `scripts/tools/swagger-aggregate.mjs` fusiona
 npm run swagger:export   # regenera docs/openapi/<servicio>/{public,internal} + los dos agregados de docs/api/
 ```
 
-Cobertura actual: **417/417 operaciones documentadas** en los 12 servicios con
+Cobertura actual: **426/426 operaciones documentadas** en los 14 servicios con
 contrato versionado: **381 públicas** (270 rutas) y **36 internas** (todas con
 `x-internal-key` y schema de respuesta).
 

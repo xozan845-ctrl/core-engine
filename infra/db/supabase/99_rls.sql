@@ -1163,3 +1163,353 @@ CREATE POLICY comandas_lectura ON orders.comandas
   FOR SELECT TO authenticated
   USING (auth.rol() IN ('empresario', 'vendedor', 'coordinador', 'supervisor', 'operativo')
          AND empresa_id::text = (auth.jwt() ->> 'tenant_id'));
+
+-- ── inventory (ADR-0018) ────────────────────────────────────────────────────
+ALTER TABLE inventory.configuracion_inventario ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS configuracion_inventario_admin ON inventory.configuracion_inventario;
+CREATE POLICY configuracion_inventario_admin ON inventory.configuracion_inventario
+  FOR ALL TO authenticated
+  USING (auth.rol() IN ('super_admin', 'admin'))
+  WITH CHECK (auth.rol() IN ('super_admin', 'admin'));
+DROP POLICY IF EXISTS configuracion_inventario_empresa ON inventory.configuracion_inventario;
+CREATE POLICY configuracion_inventario_empresa ON inventory.configuracion_inventario
+  FOR ALL TO authenticated
+  USING (auth.rol() = 'empresario' AND empresa_id::text = (auth.jwt() ->> 'tenant_id'))
+  WITH CHECK (auth.rol() = 'empresario' AND empresa_id::text = (auth.jwt() ->> 'tenant_id'));
+
+ALTER TABLE inventory.proveedores ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS proveedores_admin ON inventory.proveedores;
+CREATE POLICY proveedores_admin ON inventory.proveedores
+  FOR ALL TO authenticated
+  USING (auth.rol() IN ('super_admin', 'admin'))
+  WITH CHECK (auth.rol() IN ('super_admin', 'admin'));
+DROP POLICY IF EXISTS proveedores_empresa ON inventory.proveedores;
+CREATE POLICY proveedores_empresa ON inventory.proveedores
+  FOR ALL TO authenticated
+  USING (auth.rol() = 'empresario' AND empresa_id::text = (auth.jwt() ->> 'tenant_id'))
+  WITH CHECK (auth.rol() = 'empresario' AND empresa_id::text = (auth.jwt() ->> 'tenant_id'));
+
+ALTER TABLE inventory.lotes_inventario ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS lotes_inventario_admin ON inventory.lotes_inventario;
+CREATE POLICY lotes_inventario_admin ON inventory.lotes_inventario
+  FOR ALL TO authenticated
+  USING (auth.rol() IN ('super_admin', 'admin'))
+  WITH CHECK (auth.rol() IN ('super_admin', 'admin'));
+DROP POLICY IF EXISTS lotes_inventario_empresa ON inventory.lotes_inventario;
+CREATE POLICY lotes_inventario_empresa ON inventory.lotes_inventario
+  FOR ALL TO authenticated
+  USING (auth.rol() = 'empresario' AND empresa_id::text = (auth.jwt() ->> 'tenant_id'))
+  WITH CHECK (auth.rol() = 'empresario' AND empresa_id::text = (auth.jwt() ->> 'tenant_id'));
+
+ALTER TABLE inventory.ubicaciones ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS ubicaciones_admin ON inventory.ubicaciones;
+CREATE POLICY ubicaciones_admin ON inventory.ubicaciones
+  FOR ALL TO authenticated
+  USING (auth.rol() IN ('super_admin', 'admin'))
+  WITH CHECK (auth.rol() IN ('super_admin', 'admin'));
+DROP POLICY IF EXISTS ubicaciones_empresa ON inventory.ubicaciones;
+CREATE POLICY ubicaciones_empresa ON inventory.ubicaciones
+  FOR ALL TO authenticated
+  USING (auth.rol() = 'empresario' AND empresa_id::text = (auth.jwt() ->> 'tenant_id'))
+  WITH CHECK (auth.rol() = 'empresario' AND empresa_id::text = (auth.jwt() ->> 'tenant_id'));
+
+ALTER TABLE inventory.item_stock_ubicacion ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS item_stock_ubicacion_admin ON inventory.item_stock_ubicacion;
+CREATE POLICY item_stock_ubicacion_admin ON inventory.item_stock_ubicacion
+  FOR ALL TO authenticated
+  USING (auth.rol() IN ('super_admin', 'admin'))
+  WITH CHECK (auth.rol() IN ('super_admin', 'admin'));
+DROP POLICY IF EXISTS item_stock_ubicacion_empresa ON inventory.item_stock_ubicacion;
+CREATE POLICY item_stock_ubicacion_empresa ON inventory.item_stock_ubicacion
+  FOR ALL TO authenticated
+  USING (auth.rol() = 'empresario' AND empresa_id::text = (auth.jwt() ->> 'tenant_id'))
+  WITH CHECK (auth.rol() = 'empresario' AND empresa_id::text = (auth.jwt() ->> 'tenant_id'));
+
+ALTER TABLE inventory.movimientos_inventario ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS movimientos_inventario_admin ON inventory.movimientos_inventario;
+CREATE POLICY movimientos_inventario_admin ON inventory.movimientos_inventario
+  FOR ALL TO authenticated
+  USING (auth.rol() IN ('super_admin', 'admin'))
+  WITH CHECK (auth.rol() IN ('super_admin', 'admin'));
+DROP POLICY IF EXISTS movimientos_inventario_empresa ON inventory.movimientos_inventario;
+CREATE POLICY movimientos_inventario_empresa ON inventory.movimientos_inventario
+  FOR ALL TO authenticated
+  USING (auth.rol() = 'empresario' AND empresa_id::text = (auth.jwt() ->> 'tenant_id'))
+  WITH CHECK (auth.rol() = 'empresario' AND empresa_id::text = (auth.jwt() ->> 'tenant_id'));
+
+ALTER TABLE inventory.ajustes_stock ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS ajustes_stock_admin ON inventory.ajustes_stock;
+CREATE POLICY ajustes_stock_admin ON inventory.ajustes_stock
+  FOR ALL TO authenticated
+  USING (auth.rol() IN ('super_admin', 'admin'))
+  WITH CHECK (auth.rol() IN ('super_admin', 'admin'));
+DROP POLICY IF EXISTS ajustes_stock_empresa ON inventory.ajustes_stock;
+CREATE POLICY ajustes_stock_empresa ON inventory.ajustes_stock
+  FOR ALL TO authenticated
+  USING (auth.rol() = 'empresario' AND empresa_id::text = (auth.jwt() ->> 'tenant_id'))
+  WITH CHECK (auth.rol() = 'empresario' AND empresa_id::text = (auth.jwt() ->> 'tenant_id'));
+
+ALTER TABLE inventory.reservas_lotes ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS reservas_lotes_admin ON inventory.reservas_lotes;
+CREATE POLICY reservas_lotes_admin ON inventory.reservas_lotes
+  FOR ALL TO authenticated
+  USING (auth.rol() IN ('super_admin', 'admin'))
+  WITH CHECK (auth.rol() IN ('super_admin', 'admin'));
+DROP POLICY IF EXISTS reservas_lotes_empresa ON inventory.reservas_lotes;
+CREATE POLICY reservas_lotes_empresa ON inventory.reservas_lotes
+  FOR ALL TO authenticated
+  USING (auth.rol() = 'empresario' AND empresa_id::text = (auth.jwt() ->> 'tenant_id'))
+  WITH CHECK (auth.rol() = 'empresario' AND empresa_id::text = (auth.jwt() ->> 'tenant_id'));
+
+ALTER TABLE inventory.reservas_ordenes ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS reservas_ordenes_admin ON inventory.reservas_ordenes;
+CREATE POLICY reservas_ordenes_admin ON inventory.reservas_ordenes
+  FOR ALL TO authenticated
+  USING (auth.rol() IN ('super_admin', 'admin'))
+  WITH CHECK (auth.rol() IN ('super_admin', 'admin'));
+
+ALTER TABLE inventory.eventos_procesados ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS eventos_procesados_admin ON inventory.eventos_procesados;
+CREATE POLICY eventos_procesados_admin ON inventory.eventos_procesados
+  FOR ALL TO authenticated
+  USING (auth.rol() IN ('super_admin', 'admin'))
+  WITH CHECK (auth.rol() IN ('super_admin', 'admin'));
+
+ALTER TABLE inventory.outbox ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS outbox_admin ON inventory.outbox;
+CREATE POLICY outbox_admin ON inventory.outbox
+  FOR ALL TO authenticated
+  USING (auth.rol() IN ('super_admin', 'admin'))
+  WITH CHECK (auth.rol() IN ('super_admin', 'admin'));
+-- El poller del Outbox corre sin claims de usuario; el rol de aplicación debe
+-- poder reclamar y publicar los pendientes.
+DROP POLICY IF EXISTS outbox_app ON inventory.outbox;
+CREATE POLICY outbox_app ON inventory.outbox
+  FOR ALL TO core_engine_app
+  USING (true)
+  WITH CHECK (true);
+
+-- El poller del Outbox corre sin claims de usuario; el rol de aplicación debe
+-- poder reclamar y publicar los pendientes.
+DROP POLICY IF EXISTS outbox_app ON inventory.outbox;
+CREATE POLICY outbox_app ON inventory.outbox
+  FOR ALL TO core_engine_app
+  USING (true)
+  WITH CHECK (true);
+
+-- ── orders.metodos_pago y orders.pagos (Fase 2 · pagos) ─────────────────────
+ALTER TABLE orders.metodos_pago ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS metodos_pago_lectura ON orders.metodos_pago;
+CREATE POLICY metodos_pago_lectura ON orders.metodos_pago
+  FOR SELECT TO authenticated USING (activo);
+DROP POLICY IF EXISTS metodos_pago_admin ON orders.metodos_pago;
+CREATE POLICY metodos_pago_admin ON orders.metodos_pago
+  FOR ALL TO authenticated
+  USING (auth.rol() IN ('super_admin', 'admin'))
+  WITH CHECK (auth.rol() IN ('super_admin', 'admin'));
+
+ALTER TABLE orders.pagos ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS pagos_admin ON orders.pagos;
+CREATE POLICY pagos_admin ON orders.pagos
+  FOR ALL TO authenticated
+  USING (auth.rol() IN ('super_admin', 'admin'))
+  WITH CHECK (auth.rol() IN ('super_admin', 'admin'));
+DROP POLICY IF EXISTS pagos_empresa ON orders.pagos;
+CREATE POLICY pagos_empresa ON orders.pagos
+  FOR SELECT TO authenticated
+  USING (empresa_id::text = (auth.jwt() ->> 'tenant_id'));
+
+-- ── orders.estados_orden, tipos_orden y transiciones (Fase 3) ───────────────
+ALTER TABLE orders.estados_orden ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS estados_orden_lectura ON orders.estados_orden;
+CREATE POLICY estados_orden_lectura ON orders.estados_orden
+  FOR SELECT TO authenticated USING (true);
+DROP POLICY IF EXISTS estados_orden_admin ON orders.estados_orden;
+CREATE POLICY estados_orden_admin ON orders.estados_orden
+  FOR ALL TO authenticated
+  USING (auth.rol() IN ('super_admin', 'admin'))
+  WITH CHECK (auth.rol() IN ('super_admin', 'admin'));
+
+ALTER TABLE orders.tipos_orden ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS tipos_orden_lectura ON orders.tipos_orden;
+CREATE POLICY tipos_orden_lectura ON orders.tipos_orden
+  FOR SELECT TO authenticated USING (activo);
+DROP POLICY IF EXISTS tipos_orden_admin ON orders.tipos_orden;
+CREATE POLICY tipos_orden_admin ON orders.tipos_orden
+  FOR ALL TO authenticated
+  USING (auth.rol() IN ('super_admin', 'admin'))
+  WITH CHECK (auth.rol() IN ('super_admin', 'admin'));
+
+ALTER TABLE orders.transiciones_orden ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS transiciones_orden_lectura ON orders.transiciones_orden;
+CREATE POLICY transiciones_orden_lectura ON orders.transiciones_orden
+  FOR SELECT TO authenticated USING (true);
+DROP POLICY IF EXISTS transiciones_orden_admin ON orders.transiciones_orden;
+CREATE POLICY transiciones_orden_admin ON orders.transiciones_orden
+  FOR ALL TO authenticated
+  USING (auth.rol() IN ('super_admin', 'admin'))
+  WITH CHECK (auth.rol() IN ('super_admin', 'admin'));
+-- ── pricing (ADR-0018) ──────────────────────────────────────────────────────
+ALTER TABLE pricing.listas_precio ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS listas_precio_admin ON pricing.listas_precio;
+CREATE POLICY listas_precio_admin ON pricing.listas_precio FOR ALL TO authenticated
+  USING (auth.rol() IN ('super_admin', 'admin'))
+  WITH CHECK (auth.rol() IN ('super_admin', 'admin'));
+DROP POLICY IF EXISTS listas_precio_empresa ON pricing.listas_precio;
+CREATE POLICY listas_precio_empresa ON pricing.listas_precio FOR ALL TO authenticated
+  USING (auth.rol() = 'empresario' AND empresa_id::text = (auth.jwt() ->> 'tenant_id'))
+  WITH CHECK (auth.rol() = 'empresario' AND empresa_id::text = (auth.jwt() ->> 'tenant_id'));
+
+ALTER TABLE pricing.lista_precio_items ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS lista_precio_items_admin ON pricing.lista_precio_items;
+CREATE POLICY lista_precio_items_admin ON pricing.lista_precio_items FOR ALL TO authenticated
+  USING (auth.rol() IN ('super_admin', 'admin'))
+  WITH CHECK (auth.rol() IN ('super_admin', 'admin'));
+DROP POLICY IF EXISTS lista_precio_items_empresa ON pricing.lista_precio_items;
+CREATE POLICY lista_precio_items_empresa ON pricing.lista_precio_items FOR ALL TO authenticated
+  USING (auth.rol() = 'empresario' AND empresa_id::text = (auth.jwt() ->> 'tenant_id'))
+  WITH CHECK (auth.rol() = 'empresario' AND empresa_id::text = (auth.jwt() ->> 'tenant_id'));
+
+ALTER TABLE pricing.item_tarifas ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS item_tarifas_admin ON pricing.item_tarifas;
+CREATE POLICY item_tarifas_admin ON pricing.item_tarifas FOR ALL TO authenticated
+  USING (auth.rol() IN ('super_admin', 'admin'))
+  WITH CHECK (auth.rol() IN ('super_admin', 'admin'));
+DROP POLICY IF EXISTS item_tarifas_empresa ON pricing.item_tarifas;
+CREATE POLICY item_tarifas_empresa ON pricing.item_tarifas FOR ALL TO authenticated
+  USING (auth.rol() = 'empresario' AND empresa_id::text = (auth.jwt() ->> 'tenant_id'))
+  WITH CHECK (auth.rol() = 'empresario' AND empresa_id::text = (auth.jwt() ->> 'tenant_id'));
+
+ALTER TABLE pricing.promociones ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS promociones_admin ON pricing.promociones;
+CREATE POLICY promociones_admin ON pricing.promociones FOR ALL TO authenticated
+  USING (auth.rol() IN ('super_admin', 'admin'))
+  WITH CHECK (auth.rol() IN ('super_admin', 'admin'));
+DROP POLICY IF EXISTS promociones_empresa ON pricing.promociones;
+CREATE POLICY promociones_empresa ON pricing.promociones FOR ALL TO authenticated
+  USING (auth.rol() = 'empresario' AND empresa_id::text = (auth.jwt() ->> 'tenant_id'))
+  WITH CHECK (auth.rol() = 'empresario' AND empresa_id::text = (auth.jwt() ->> 'tenant_id'));
+
+ALTER TABLE pricing.outbox ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS outbox_admin ON pricing.outbox;
+CREATE POLICY outbox_admin ON pricing.outbox FOR ALL TO authenticated
+  USING (auth.rol() IN ('super_admin', 'admin'))
+  WITH CHECK (auth.rol() IN ('super_admin', 'admin'));
+DROP POLICY IF EXISTS outbox_app ON pricing.outbox;
+CREATE POLICY outbox_app ON pricing.outbox FOR ALL TO core_engine_app
+  USING (true) WITH CHECK (true);
+
+-- ── orders.fulfillments (Fase 4) ────────────────────────────────────────────
+ALTER TABLE orders.fulfillments ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS fulfillments_lectura ON orders.fulfillments;
+CREATE POLICY fulfillments_lectura ON orders.fulfillments
+  FOR SELECT TO authenticated USING (activo);
+DROP POLICY IF EXISTS fulfillments_admin ON orders.fulfillments;
+CREATE POLICY fulfillments_admin ON orders.fulfillments
+  FOR ALL TO authenticated
+  USING (auth.rol() IN ('super_admin', 'admin'))
+  WITH CHECK (auth.rol() IN ('super_admin', 'admin'));
+-- ── item (ADR-0018) ─────────────────────────────────────────────────────────
+DO $$
+DECLARE tabla text;
+BEGIN
+  FOREACH tabla IN ARRAY ARRAY['items','item_atributo_esquemas','item_imagenes','item_componentes','item_series','historico_precios'] LOOP
+    EXECUTE format('ALTER TABLE item.%I ENABLE ROW LEVEL SECURITY', tabla);
+    EXECUTE format('DROP POLICY IF EXISTS %I ON item.%I', tabla || '_admin', tabla);
+    EXECUTE format('CREATE POLICY %I ON item.%I FOR ALL TO authenticated USING (auth.rol() IN (''super_admin'', ''admin'')) WITH CHECK (auth.rol() IN (''super_admin'', ''admin''))', tabla || '_admin', tabla);
+    EXECUTE format('DROP POLICY IF EXISTS %I ON item.%I', tabla || '_empresa', tabla);
+    EXECUTE format('CREATE POLICY %I ON item.%I FOR ALL TO authenticated USING (auth.rol() = ''empresario'' AND empresa_id::text = (auth.jwt() ->> ''tenant_id'')) WITH CHECK (auth.rol() = ''empresario'' AND empresa_id::text = (auth.jwt() ->> ''tenant_id''))', tabla || '_empresa', tabla);
+  END LOOP;
+END $$;
+
+ALTER TABLE item.outbox ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS outbox_admin ON item.outbox;
+DROP POLICY IF EXISTS outbox_app ON item.outbox;
+CREATE POLICY outbox_admin ON item.outbox FOR ALL TO authenticated USING (auth.rol() IN ('super_admin','admin')) WITH CHECK (auth.rol() IN ('super_admin','admin'));
+CREATE POLICY outbox_app ON item.outbox FOR ALL TO core_engine_app USING (true) WITH CHECK (true);
+ALTER TABLE item.items ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS items_admin ON item.items;
+CREATE POLICY items_admin ON item.items FOR ALL TO authenticated
+  USING (auth.rol() IN ('super_admin','admin'))
+  WITH CHECK (auth.rol() IN ('super_admin','admin'));
+DROP POLICY IF EXISTS items_empresa ON item.items;
+CREATE POLICY items_empresa ON item.items FOR ALL TO authenticated
+  USING (auth.rol() = 'empresario' AND empresa_id::text = (auth.jwt() ->> 'tenant_id'))
+  WITH CHECK (auth.rol() = 'empresario' AND empresa_id::text = (auth.jwt() ->> 'tenant_id'));
+
+
+
+ALTER TABLE item.item_atributo_esquemas ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS item_atributo_esquemas_admin ON item.item_atributo_esquemas;
+CREATE POLICY item_atributo_esquemas_admin ON item.item_atributo_esquemas FOR ALL TO authenticated
+  USING (auth.rol() IN ('super_admin','admin'))
+  WITH CHECK (auth.rol() IN ('super_admin','admin'));
+DROP POLICY IF EXISTS item_atributo_esquemas_empresa ON item.item_atributo_esquemas;
+CREATE POLICY item_atributo_esquemas_empresa ON item.item_atributo_esquemas FOR ALL TO authenticated
+  USING (auth.rol() = 'empresario' AND empresa_id::text = (auth.jwt() ->> 'tenant_id'))
+  WITH CHECK (auth.rol() = 'empresario' AND empresa_id::text = (auth.jwt() ->> 'tenant_id'));
+
+ALTER TABLE item.item_imagenes ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS item_imagenes_admin ON item.item_imagenes;
+CREATE POLICY item_imagenes_admin ON item.item_imagenes FOR ALL TO authenticated
+  USING (auth.rol() IN ('super_admin','admin'))
+  WITH CHECK (auth.rol() IN ('super_admin','admin'));
+DROP POLICY IF EXISTS item_imagenes_empresa ON item.item_imagenes;
+CREATE POLICY item_imagenes_empresa ON item.item_imagenes FOR ALL TO authenticated
+  USING (auth.rol() = 'empresario' AND empresa_id::text = (auth.jwt() ->> 'tenant_id'))
+  WITH CHECK (auth.rol() = 'empresario' AND empresa_id::text = (auth.jwt() ->> 'tenant_id'));
+
+ALTER TABLE item.item_componentes ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS item_componentes_admin ON item.item_componentes;
+CREATE POLICY item_componentes_admin ON item.item_componentes FOR ALL TO authenticated
+  USING (auth.rol() IN ('super_admin','admin'))
+  WITH CHECK (auth.rol() IN ('super_admin','admin'));
+DROP POLICY IF EXISTS item_componentes_empresa ON item.item_componentes;
+CREATE POLICY item_componentes_empresa ON item.item_componentes FOR ALL TO authenticated
+  USING (auth.rol() = 'empresario' AND empresa_id::text = (auth.jwt() ->> 'tenant_id'))
+  WITH CHECK (auth.rol() = 'empresario' AND empresa_id::text = (auth.jwt() ->> 'tenant_id'));
+
+ALTER TABLE item.item_series ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS item_series_admin ON item.item_series;
+CREATE POLICY item_series_admin ON item.item_series FOR ALL TO authenticated
+  USING (auth.rol() IN ('super_admin','admin'))
+  WITH CHECK (auth.rol() IN ('super_admin','admin'));
+DROP POLICY IF EXISTS item_series_empresa ON item.item_series;
+CREATE POLICY item_series_empresa ON item.item_series FOR ALL TO authenticated
+  USING (auth.rol() = 'empresario' AND empresa_id::text = (auth.jwt() ->> 'tenant_id'))
+  WITH CHECK (auth.rol() = 'empresario' AND empresa_id::text = (auth.jwt() ->> 'tenant_id'));
+
+
+ALTER TABLE item.historico_precios ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS historico_precios_admin ON item.historico_precios;
+CREATE POLICY historico_precios_admin ON item.historico_precios FOR ALL TO authenticated
+  USING (auth.rol() IN ('super_admin','admin'))
+  WITH CHECK (auth.rol() IN ('super_admin','admin'));
+DROP POLICY IF EXISTS historico_precios_empresa ON item.historico_precios;
+CREATE POLICY historico_precios_empresa ON item.historico_precios FOR ALL TO authenticated
+  USING (auth.rol() = 'empresario' AND empresa_id::text = (auth.jwt() ->> 'tenant_id'))
+  WITH CHECK (auth.rol() = 'empresario' AND empresa_id::text = (auth.jwt() ->> 'tenant_id'));
+
+-- ── identity.registros_esquemas (Fase 5) ────────────────────────────────────
+ALTER TABLE identity.registros_esquemas ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS registros_esquemas_admin ON identity.registros_esquemas;
+CREATE POLICY registros_esquemas_admin ON identity.registros_esquemas
+  FOR ALL TO authenticated
+  USING (auth.rol() IN ('super_admin', 'admin'))
+  WITH CHECK (auth.rol() IN ('super_admin', 'admin'));
+DROP POLICY IF EXISTS registros_esquemas_empresa ON identity.registros_esquemas;
+CREATE POLICY registros_esquemas_empresa ON identity.registros_esquemas
+  FOR ALL TO authenticated
+  USING (auth.rol() = 'empresario' AND empresa_id::text = (auth.jwt() ->> 'tenant_id'))
+  WITH CHECK (auth.rol() = 'empresario' AND empresa_id::text = (auth.jwt() ->> 'tenant_id'));
+
+-- ── finance.tipos_cambio (Fase 7) ───────────────────────────────────────────
+ALTER TABLE finance.tipos_cambio ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS tipos_cambio_lectura ON finance.tipos_cambio;
+CREATE POLICY tipos_cambio_lectura ON finance.tipos_cambio
+  FOR SELECT TO authenticated USING (true);
+DROP POLICY IF EXISTS tipos_cambio_admin ON finance.tipos_cambio;
+CREATE POLICY tipos_cambio_admin ON finance.tipos_cambio
+  FOR ALL TO authenticated
+  USING (auth.rol() IN ('super_admin', 'admin'))
+  WITH CHECK (auth.rol() IN ('super_admin', 'admin'));

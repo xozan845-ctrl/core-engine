@@ -15,7 +15,8 @@ use std::time::Duration;
 pub struct Clientes {
     http: reqwest::Client,
     stores_url: String,
-    catalog_url: String,
+    item_url: String,
+    pricing_url: String,
     identity_url: String,
     scheduling_url: String,
     finance_url: String,
@@ -27,6 +28,25 @@ pub struct Capacidad {
     pub empresa_id: String,
     pub capacidad_codigo: String,
     pub activo: bool,
+}
+
+#[derive(Debug, Clone, Default, Deserialize, Serialize, PartialEq)]
+pub struct ConfiguracionOperativa {
+    #[serde(default)]
+    pub items: Vec<String>,
+    #[serde(default)]
+    pub fulfillment: Vec<String>,
+    #[serde(default)]
+    pub requiere_agenda: bool,
+    #[serde(default)]
+    pub trazabilidad: bool,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub enum ConfiguracionExterna {
+    Ok(ConfiguracionOperativa),
+    SinConfiguracion,
+    Error,
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize, PartialEq)]
@@ -108,6 +128,16 @@ pub trait ClientesPort: Send + Sync {
         empresas: &[String],
         capacidades: &[String],
     ) -> Option<Vec<Capacidad>>;
+
+    /// Tasa publicada base→quote; `None` si no hay o finance no responde.
+    async fn tipo_cambio(&self, _base: &str, _quote: &str) -> Option<f64> {
+        None
+    }
+
+    /// Configuración operativa del pack; `SinConfiguracion` = sin restricción.
+    async fn configuracion(&self, _empresa_id: &str) -> ConfiguracionExterna {
+        ConfiguracionExterna::SinConfiguracion
+    }
     async fn ofertas(&self, ids: &[String]) -> Vec<OfertaExterna>;
     async fn precios(
         &self,
@@ -152,7 +182,8 @@ impl Clientes {
         Arc::new(Self {
             http,
             stores_url: config.stores_service_url.clone(),
-            catalog_url: config.catalog_service_url.clone(),
+            item_url: config.item_service_url.clone(),
+            pricing_url: config.pricing_service_url.clone(),
             identity_url: config.identity_service_url.clone(),
             scheduling_url: config.scheduling_service_url.clone(),
             finance_url: config.finance_service_url.clone(),
@@ -186,6 +217,54 @@ impl Clientes {
         }
         let cuerpo = respuesta.json::<RespuestaCapacidades>().await.ok()?;
         Some(cuerpo.capacidades)
+    }
+
+    pub async fn tipo_cambio(&self, base: &str, quote: &str) -> Option<f64> {
+        let respuesta = self
+            .http
+            .get(format!(
+                "{}/internal/finance/tipos-cambio",
+                self.finance_url
+            ))
+            .query(&[("base", base), ("quote", quote)])
+            .header("x-internal-key", &self.clave)
+            .send()
+            .await
+            .ok()?;
+        if !respuesta.status().is_success() {
+            return None;
+        }
+        let cuerpo: Value = respuesta.json().await.ok()?;
+        let tasa = cuerpo.get("tasa")?;
+        tasa.as_str()
+            .and_then(|valor| valor.parse::<f64>().ok())
+            .or_else(|| tasa.as_f64())
+    }
+
+    pub async fn configuracion(&self, empresa_id: &str) -> ConfiguracionExterna {
+        let respuesta = match self
+            .http
+            .get(format!(
+                "{}/internal/empresas/{empresa_id}/configuracion",
+                self.identity_url
+            ))
+            .header("x-internal-key", &self.clave)
+            .send()
+            .await
+        {
+            Ok(respuesta) => respuesta,
+            Err(_) => return ConfiguracionExterna::Error,
+        };
+        if respuesta.status() == reqwest::StatusCode::NOT_FOUND {
+            return ConfiguracionExterna::SinConfiguracion;
+        }
+        if !respuesta.status().is_success() {
+            return ConfiguracionExterna::Error;
+        }
+        match respuesta.json::<ConfiguracionOperativa>().await {
+            Ok(config) => ConfiguracionExterna::Ok(config),
+            Err(_) => ConfiguracionExterna::Error,
+        }
     }
 
     pub async fn ofertas(&self, ids: &[String]) -> Vec<OfertaExterna> {
@@ -239,7 +318,7 @@ impl Clientes {
         }
         let Some(respuesta) = self
             .http
-            .post(format!("{}/internal/items/precios", self.catalog_url))
+            .post(format!("{}/internal/items/precios", self.pricing_url))
             .header("content-type", "application/json")
             .header("x-internal-key", &self.clave)
             .json(&cuerpo)
@@ -279,7 +358,7 @@ impl Clientes {
             .http
             .get(format!(
                 "{}/internal/items/{}/cotizacion?{query}",
-                self.catalog_url,
+                self.pricing_url,
                 urlencoding::encode(item_id)
             ))
             .header("x-internal-key", &self.clave)
@@ -398,7 +477,7 @@ impl Clientes {
             .http
             .get(format!(
                 "{}/internal/items/lote?skus={unidos}",
-                self.catalog_url
+                self.item_url
             ))
             .header("x-internal-key", &self.clave)
             .send()
@@ -437,6 +516,14 @@ impl ClientesPort for Clientes {
         capacidades: &[String],
     ) -> Option<Vec<Capacidad>> {
         Clientes::capacidades(self, empresas, capacidades).await
+    }
+
+    async fn tipo_cambio(&self, base: &str, quote: &str) -> Option<f64> {
+        Clientes::tipo_cambio(self, base, quote).await
+    }
+
+    async fn configuracion(&self, empresa_id: &str) -> ConfiguracionExterna {
+        Clientes::configuracion(self, empresa_id).await
     }
     async fn ofertas(&self, ids: &[String]) -> Vec<OfertaExterna> {
         Clientes::ofertas(self, ids).await

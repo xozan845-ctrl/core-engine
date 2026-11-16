@@ -12,8 +12,8 @@
 # `core-engine`. La observabilidad es opcional:
 #   docker compose -f docker-compose.stage.yml -f docker-compose.observability.yml up -d
 # `commissions-service` SI se despliega en stage (portal de empresa, ADR-37),
-# pero sigue fuera de produccion. `market-intelligence-service` no entra en
-# stage ni produccion: vive en `docker-compose.dev.yml` (desarrollo).
+# pero sigue fuera de produccion. `market-intelligence-service` se despliega
+# en stage y produccion desde la Fase 6 (analitica transversal).
 
 x-servicio-base: &servicio-base
   env_file:
@@ -128,14 +128,32 @@ services:
       PORT: 3001
       OUTBOX_TABLA: identity.outbox
 
-  catalog-service:
+  item-service:
     <<: *servicio-base
-    image: ghcr.io/xozan845-ctrl/core-engine-catalog-service:stage
+    image: ghcr.io/xozan845-ctrl/core-engine-item-service:stage
     pull_policy: always
     environment:
-      SERVICIO: catalog-service
-      PORT: 3002
-      OUTBOX_TABLA: catalog.outbox
+      SERVICIO: item-service
+      PORT: 3015
+      OUTBOX_TABLA: item.outbox
+
+  inventory-service:
+    <<: *servicio-base
+    image: ghcr.io/xozan845-ctrl/core-engine-inventory-service:stage
+    pull_policy: always
+    environment:
+      SERVICIO: inventory-service
+      PORT: 3013
+      OUTBOX_TABLA: inventory.outbox
+
+  pricing-service:
+    <<: *servicio-base
+    image: ghcr.io/xozan845-ctrl/core-engine-pricing-service:stage
+    pull_policy: always
+    environment:
+      SERVICIO: pricing-service
+      PORT: 3014
+      OUTBOX_TABLA: pricing.outbox
 
   stores-service:
     <<: *servicio-base
@@ -182,6 +200,15 @@ services:
       SERVICIO: commissions-service
       PORT: 3006
       OUTBOX_TABLA: commissions.outbox
+
+  market-intelligence-service:
+    <<: *servicio-base
+    image: ghcr.io/xozan845-ctrl/core-engine-market-intelligence-service:stage
+    pull_policy: always
+    environment:
+      SERVICIO: market-intelligence-service
+      PORT: 3009
+      OUTBOX_TABLA: intelligence.outbox
 
   finance-service:
     <<: *servicio-base

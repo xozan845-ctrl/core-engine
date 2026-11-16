@@ -28,59 +28,58 @@ Matriz completa en [`06-estandares-cobertura.md`](../test/06-estandares-cobertur
 ## 2. Universales (todo PR)
 
 - [ ] **R0** — Los tests asientan el requisito, no la implementación (nada de "actualizar el expected para que pase").
-- [ ] **R-U-2/R-U-3** — Nombres `debe <comportamiento> cuando <condición>`; un escenario por `it`.
-- [x] **R-FL-3** — `TZ=America/Managua` fijada en el setup central de las 12 suites Vitest y en el runner Rust, los 5 runners de mutation, CI y los workflows E2E/deploy.
-- [ ] **R-COV-1** — La cobertura no baja respecto a `main`.
-- [ ] **R-COV-2** — Todo archivo de lógica tocado (`*.service.ts`, `*.consumer.ts`, código puro de `shared`) tiene spec (o excepción documentada).
-- [ ] **R-COV-5** — N/A en este repo (sin frontend; ID **reservado**, nunca se reutiliza). Si algún día hay UI, su ratchet sigue el método de R-COV-1.
-- [ ] **G-7** — Lint/tsc/build en verde.
+- [ ] **R-U-2/R-U-3** — Nombres `debe_<comportamiento>_cuando_<condición>`; un escenario por `#[test]`/`#[tokio::test]`.
+- [x] **R-FL-3** — `TZ=America/Managua` fijada en el job `rust`, en `e2e.yml` y en los workflows de deploy.
+- [ ] **R-COV-1** — La cobertura del crate no baja del umbral vigente en `.github/workflows/ci.yml`.
+- [ ] **R-COV-2** — Todo caso de uso, handler o consumidor tocado tiene pruebas en el mismo PR (`mod tests` o `tests/<dominio>_*.rs`).
+- [ ] **R-COV-5** — N/A en este repo (sin frontend; ID **reservado**, nunca se reutiliza).
+- [ ] **G-7** — `npm run lint` + `cargo fmt --check` + `cargo clippy --locked --all-targets -- -D warnings` en verde.
 
 ## 3. Unit ([`01-reglas-unit.md`](../test/01-reglas-unit.md))
 
 - [ ] **R-U-4** — El test puede fallar (sin asserts triviales).
 - [ ] **R-U-5/6** — Fechas con timezone explícita + boundary (cambio de día UTC vs local, fin de mes, bisiesto).
-- [ ] **R-U-8/9** — Inputs `null/undefined/vacío` y parsers con input corrupto/malicioso.
-- [ ] **R-U-10/11** — Controllers: además del mock, se validan los valores construidos (fechas, filtros, DTOs).
-- [ ] **R-U-12/13** — Use-cases: happy path + precondición + propagación de error; errores con HTTP code + shape.
-- [ ] **R-U-18** — Todo use-case nuevo trae su spec en el mismo PR.
+- [ ] **R-U-8/9** — Inputs nulos/vacíos y parsers con input corrupto/malicioso.
+- [ ] **R-U-10/11** — Handlers y casos de uso: además del doble del puerto, se validan los valores construidos (fechas, filtros, montos, campos normalizados).
+- [ ] **R-U-12/13** — Casos de uso: happy path + precondición + propagación del error; errores con `codigo` + mensaje + shape (`ApiError`).
+- [ ] **R-U-18** — Todo caso de uso, handler o consumidor nuevo trae sus pruebas en el mismo PR.
 
 ## 4. Integración API+BD ([`02-reglas-integracion.md`](../test/02-reglas-integracion.md))
 
-> Existe una suite API+BD en PostgreSQL efímero para catálogo y configuración de
-> sitio; estos ítems siguen siendo el checklist para ampliar la cobertura G-4.
+> La suite `test:integration` corre sobre PostgreSQL/PostGIS efímero real y cubre
+> la matriz multi-vertical, packs, RLS, enforcement y concurrencia de Outbox.
 
 - [ ] **R-I-1** — Todo endpoint tocado tiene ≥1 test happy-path con BD real.
 - [ ] **R-I-2** — Filtros/paginación: asertar conjunto **exacto** (conteo + IDs) y que la paginación conserva filtros.
 - [ ] **R-I-3** — Filtros `dateFrom/dateTo` cruzando medianoche local, asertando contra el día local (`TZ`), no UTC.
 - [ ] **R-I-4/5** — 401 sin token / 403 rol insuficiente; login completo contra BD real.
-- [ ] **R-I-6/7/8** — 400 shape de error, 404/409; sin datos residuales tras fallos.
+- [ ] **R-I-6/7/8** — 400 con `{codigo,mensaje,detalles?}`, 404/409; sin datos residuales tras fallos.
 - [ ] **R-I-9/10** — Cada test crea/limpia sus datos; seed con boundary.
 
 ## 5. Contrato ([`04-reglas-contrato.md`](../test/04-reglas-contrato.md))
 
-> La suite API+BD verifica errores normalizados en configuración de sitio. El
-> envelope de éxito requiere una migración versionada `/api/v2` antes de marcar
-> G-5 como completo.
+> El envelope `{data,meta}` está aplicado en todo `/api/v2`; los errores se
+> validan en runtime y el contrato público se regenera con `swagger:export`.
 
-- [ ] **R-C-1** — Éxito: envelope `{ data, meta: { timestamp, path, method, statusCode } }`; pendiente de migración versionada `/api/v2` para no romper `/api/v2`. Errores sin `meta` (R-C-8).
-- [ ] **R-C-3** — Respuestas vía DTO; nunca entidades/rows de persistencia crudos ni campos sensibles.
+- [ ] **R-C-1** — Éxito: envelope `{ data, meta: { timestamp, path, method, statusCode } }` en `/api/v2`; errores sin `meta` (R-C-8).
+- [ ] **R-C-3** — Respuestas serializadas explícitamente; nunca filas de persistencia crudas ni campos sensibles.
 - [ ] **R-C-4** — Fechas ISO 8601 UTC con `Z`.
 - [ ] **R-C-5** — Semántica de `dateFrom`/`dateTo` = día local documentada.
-- [x] **R-C-8** — Errores 400/401 en configuración y 403/404/409/500 en prueba runtime del filtro global; todos validan `{codigo,mensaje,detalles?}` sin `stack` ni detalles internos.
-- [ ] **R-C-11** — Campo nuevo: DTO + test de contrato + actualización de quien lo consume, en el mismo PR.
-- [ ] **R-DO-8** — Rutas públicas bajo `/api/v2/`, internas bajo `/internal/`; el contrato público no mezcla superficies y todo controlador interno usa `ClaveInternaGuard`.
-- [ ] **R-DO-9** — Ninguna ruta estática queda tapada por una ruta `:param` previa en el mismo controlador y método.
+- [x] **R-C-8** — Todos los errores validan `{codigo,mensaje,detalles?}` sin `stack` ni detalles internos.
+- [ ] **R-C-11** — Campo nuevo: DTO/serialización + test de contrato + actualización de quien lo consume, en el mismo PR.
+- [ ] **R-DO-8** — Rutas públicas bajo `/api/v2/`, internas bajo `/internal/`; el contrato público no mezcla superficies y todo handler interno usa `ClaveInternaGuard`.
+- [ ] **R-DO-9** — Ninguna ruta estática queda tapada por una ruta `:param` previa en el mismo router y método.
 - [ ] **R-DO-10** — Toda operación documenta respuesta de éxito (schema 200/201 o 204/DELETE sin contenido).
 
 ## 6. E2E ([`03-reglas-e2e.md`](../test/03-reglas-e2e.md))
 
 > `e2e.yml` ejecuta `docker compose -f docker-compose.dev.yml up -d --build` +
-> `npm run demo` en tags de release y manualmente; la cobertura sigue siendo
-> parcial porque falta R-E-4; R-E-8 ya inspecciona los logs del stack.
+> `npm run demo` en tags de release y manualmente (G-6); R-E-8 inspecciona los
+> logs del stack.
 
 - [x] **R-E-4** — `npm run demo` crea dos registros de asistencia en días vecinos, incluido 23:30 local, y verifica que cada filtro solo devuelve su día local.
-- [x] **R-E-8** — `e2e.yml` inspecciona logs del stack y falla ante `nivel:error`, `UnhandledPromiseRejection` o `uncaughtException`.
-- [ ] **R-E-9/10** — Verificación por datos (texto/conteos/URL), selectores estables (`data-testid`).
+- [x] **R-E-8** — `e2e.yml` inspecciona logs del stack y falla ante `nivel:error` o pánico del proceso.
+- [ ] **R-E-9/10** — Verificación por datos (texto/conteos/URL) y selectores estables.
 - [ ] **R-E-11** — Suite hermética: fixtures idempotentes creados por el test o por un seed versionado en el repo; pasa contra BD recreada de cero.
 
 ## 7. Si es bug (antes de todo lo anterior)
@@ -91,13 +90,13 @@ Matriz completa en [`06-estandares-cobertura.md`](../test/06-estandares-cobertur
 
 ## 8. Antes de merge (CI)
 
-- [x] **G-1** unit backend (job `test`, `npm test`) — ✅ 12/12 workspaces Vitest + job `rust` (ver [`AUDIT.md`](./AUDIT.md))
+- [x] **G-1** unit backend — ✅ job `rust` (`cargo llvm-cov`, 13 servicios) + `test:engine`/`test:smoke` (ver [`AUDIT.md`](./AUDIT.md))
 - [ ] **G-2** unit frontend — **N/A** (sin frontend; ID reservado)
-- [x] **G-3** cobertura ≥ `coverageThreshold` vigente por workspace (ratchet R-COV-1) — ✅ 12/12 Vitest + gate `cargo-llvm-cov` (ver [`AUDIT.md`](./AUDIT.md))
-- [ ] **G-4** integración — ⏸ parcial: catálogo y configuración de sitio API+BD; faltan otros flujos críticos (R-I-12)
-- [ ] **G-5** contrato — ⏸ pendiente: todos los shapes de error 400/401/403/404/409/500 están cubiertos; el envelope de éxito requiere `/api/v2` (R-C-7)
-- [ ] **G-7** lint + build (jobs `lint` y `build`) ✅
-- [ ] **G-6** E2E de flujos — ⏸ parcial: `e2e.yml` manual/tag ejecuta `npm run demo`; cubre 7/7 flujos R-E-1..7 y R-E-8, pero no es gate de cada PR.
+- [x] **G-3** cobertura ≥ umbral del crate en `ci.yml` (ratchet R-COV-1) — ✅ (ver [`AUDIT.md`](./AUDIT.md))
+- [x] **G-4** integración — ✅ PostgreSQL efímero: matriz multi-vertical, packs, RLS, enforcement, pilotos y Outbox (`test:integration`)
+- [x] **G-5** contrato — ✅ envelope `{data,meta}` en `/api/v2`; errores 400/401/403/404/409/500 verificados en runtime
+- [ ] **G-7** lint + build — ✅ `npm run lint` + `cargo fmt`/`clippy`/`check` (jobs `lint` y `rust`)
+- [x] **G-6** E2E de flujos — ✅ gate de release: `release.yml` ejecuta `e2e.yml` antes de publicar imágenes
 - [x] **G-8** spec OpenAPI — ✅ `npm run swagger:export` + `git diff --exit-code` en CI (R-C-7)
 
 ## 9. Git — antes de subir ([`rules/git/`](../git/README.md))

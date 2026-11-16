@@ -8,10 +8,13 @@ use crate::contratos::Contratos;
 use crate::db::Db;
 use crate::entregas::EntregasDigitales;
 use crate::errors::ApiError;
+use crate::fulfillments::Fulfillments;
 use crate::metrics::Metrics;
+use crate::pagos::Pagos;
 use crate::pedidos::Pedidos;
 use crate::salon::Salon;
 use crate::suscripciones::Suscripciones;
+use crate::tipos_orden::TiposOrden;
 use crate::views::OrderViewRepository;
 use std::sync::Arc;
 use std::time::Instant;
@@ -30,6 +33,9 @@ pub struct AppState {
     pub contratos: Option<Arc<Contratos>>,
     pub suscripciones: Option<Arc<Suscripciones>>,
     pub salon: Option<Arc<Salon>>,
+    pub pagos: Option<Arc<Pagos>>,
+    pub tipos: Option<Arc<TiposOrden>>,
+    pub fulfillments: Option<Arc<Fulfillments>>,
     pub inicio: Instant,
 }
 
@@ -49,6 +55,9 @@ impl AppState {
             contratos: None,
             suscripciones: None,
             salon: None,
+            pagos: None,
+            tipos: None,
+            fulfillments: None,
             inicio: Instant::now(),
         }
     }
@@ -67,6 +76,9 @@ impl AppState {
         contratos: Arc<Contratos>,
         suscripciones: Arc<Suscripciones>,
         salon: Arc<Salon>,
+        pagos: Arc<Pagos>,
+        tipos: Arc<TiposOrden>,
+        fulfillments: Arc<Fulfillments>,
     ) -> Self {
         Self {
             config: Arc::new(config),
@@ -81,6 +93,9 @@ impl AppState {
             contratos: Some(contratos),
             suscripciones: Some(suscripciones),
             salon: Some(salon),
+            pagos: Some(pagos),
+            tipos: Some(tipos),
+            fulfillments: Some(fulfillments),
             inicio: Instant::now(),
         }
     }
@@ -123,5 +138,17 @@ impl AppState {
 
     pub fn salon(&self) -> Result<&Arc<Salon>, ApiError> {
         self.salon.as_ref().ok_or_else(ApiError::interno)
+    }
+
+    pub fn pagos(&self) -> Result<&Arc<Pagos>, ApiError> {
+        self.pagos.as_ref().ok_or_else(ApiError::interno)
+    }
+
+    pub fn tipos(&self) -> Result<&Arc<TiposOrden>, ApiError> {
+        self.tipos.as_ref().ok_or_else(ApiError::interno)
+    }
+
+    pub fn fulfillments(&self) -> Result<&Arc<Fulfillments>, ApiError> {
+        self.fulfillments.as_ref().ok_or_else(ApiError::interno)
     }
 }

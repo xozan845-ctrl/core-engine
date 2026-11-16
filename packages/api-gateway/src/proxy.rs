@@ -51,12 +51,31 @@ pub fn destinos(config: &Config) -> Vec<Destino> {
             ],
         },
         Destino {
-            nombre: "catalog",
-            url: config.catalog_url.clone(),
+            nombre: "inventory",
+            url: config.inventory_url.clone(),
             patrones: vec![
-                patron(r"^/api/v2/catalog/", &["*"]),
                 patron(r"^/api/v2/admin/inventario(/|$)", &["*"]),
+                patron(r"^/api/v2/admin/ubicaciones(/|$)", &["*"]),
+                patron(r"^/api/v2/catalog/inventario(/|$)", &["*"]),
+                patron(r"^/api/v2/catalog/configuracion-inventario$", &["*"]),
             ],
+        },
+        Destino {
+            nombre: "pricing",
+            url: config.pricing_url.clone(),
+            patrones: vec![
+                patron(r"^/api/v2/catalog/listas-precio(/|$)", &["*"]),
+                patron(
+                    r"^/api/v2/catalog/items/[^/]+/(precio|escalas|tarifas|cotizacion)(/|$)",
+                    &["*"],
+                ),
+                patron(r"^/api/v2/catalog/promociones(/|$)", &["*"]),
+            ],
+        },
+        Destino {
+            nombre: "item",
+            url: config.item_url.clone(),
+            patrones: vec![patron(r"^/api/v2/catalog/", &["*"])],
         },
         Destino {
             nombre: "stores",
@@ -315,6 +334,19 @@ mod tests {
         assert_eq!(
             encontrar_destino(&destinos, "/api/v2/finanzas/resumen", "GET").map(|d| d.nombre),
             Some("finance")
+        );
+        assert_eq!(
+            encontrar_destino(&destinos, "/api/v2/admin/inventario", "GET").map(|d| d.nombre),
+            Some("inventory")
+        );
+        assert_eq!(
+            encontrar_destino(&destinos, "/api/v2/catalog/inventario/movimientos", "GET")
+                .map(|d| d.nombre),
+            Some("inventory")
+        );
+        assert_eq!(
+            encontrar_destino(&destinos, "/api/v2/catalog/items", "GET").map(|d| d.nombre),
+            Some("item")
         );
         assert!(encontrar_destino(&destinos, "/api/v2/no-existe", "GET").is_none());
     }

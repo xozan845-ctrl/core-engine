@@ -9,7 +9,7 @@ globales (hoy: la excepción OLAP de Inteligencia de Mercado).
 
 | Archivo | Contenido | Sufijo |
 |---|---|---|
-| `01-estructura.md` | Ubicación de código, clean architecture interna, DI, DTOs, env, shutdown | `R-MS` (1–6) |
+| `01-estructura.md` | Layout del crate Rust, capas internas, DI por `AppState`, DTOs, env fail-fast, shutdown, división de módulos y README por paquete | `R-MS` (1–8) |
 | `02-excepcion-olap.md` | Excepción OLAP de `market-intelligence-service`: CQRS analítico, PostGIS, data contracts, Kafka fase 2, feature store | `R-MI` (1–5) |
 
 > Los documentos derivados de este área (**AUDIT, CHECKLIST, historiales**) no
@@ -20,7 +20,7 @@ globales (hoy: la excepción OLAP de Inteligencia de Mercado).
 
 | Prefijo | Rango | Archivo | Ámbito |
 |---|---|---|---|
-| `R-MS-*` | 1–6 | `01-estructura.md` | Estructura y ciclo de vida de un servicio |
+| `R-MS-*` | 1–8 | `01-estructura.md` | Estructura, modularidad y ciclo de vida de un servicio |
 | `R-MI-*` | 1–5 | `02-excepcion-olap.md` | Excepción analítica (OLAP) de market-intelligence |
 
 ## Reglas de otras áreas que exige esta (cross-refs)
@@ -32,6 +32,8 @@ globales (hoy: la excepción OLAP de Inteligencia de Mercado).
 | `R-MS-5` | Fail-fast de env → `R-DS-1` (`../data/02-seguridad.md`) |
 | `R-MI-1` | Única excepción a `R-AR-1` (CRUD convencional por defecto) |
 
-## Pendientes
+## Verificación
 
-- Pendiente de auditar: entra en la próxima revisión (`R-COV-3`).
+- `01-estructura.md` se audita en cada revisión de `R-COV-3`; la suite
+  `microservices-ci-contract` valida que cada servicio declare su crate, su
+  Dockerfile y su README.

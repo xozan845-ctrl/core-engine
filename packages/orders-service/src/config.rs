@@ -20,13 +20,15 @@ pub struct Config {
     pub rabbitmq_url: Option<String>,
     pub internal_api_key: Option<String>,
     pub stores_service_url: String,
-    pub catalog_service_url: String,
+    pub item_service_url: String,
+    pub pricing_service_url: String,
     pub identity_service_url: String,
     pub scheduling_service_url: String,
     pub finance_service_url: String,
     pub internal_request_timeout_ms: u64,
     pub outbox_tabla: String,
     pub tasa_comision: f64,
+    pub pago_webhook_secret: Option<String>,
 }
 
 impl Config {
@@ -68,10 +70,15 @@ impl Config {
                 "STORES_SERVICE_URL",
                 "http://stores-service:3003",
             ),
-            catalog_service_url: url_con_default(
+            item_service_url: url_con_default(
                 &leer,
-                "CATALOG_SERVICE_URL",
-                "http://catalog-service:3002",
+                "ITEM_SERVICE_URL",
+                "http://item-service:3015",
+            ),
+            pricing_service_url: url_con_default(
+                &leer,
+                "PRICING_SERVICE_URL",
+                "http://pricing-service:3014",
             ),
             identity_service_url: url_con_default(
                 &leer,
@@ -97,6 +104,7 @@ impl Config {
                 None => TIMEOUT_INTERNO_DEFAULT_MS,
             },
             outbox_tabla: leer("OUTBOX_TABLA").unwrap_or_else(|| "orders.outbox".to_string()),
+            pago_webhook_secret: leer("PAGO_WEBHOOK_SECRET"),
             tasa_comision: match leer("COMMISSION_RATE") {
                 Some(valor) => valor
                     .parse::<f64>()
@@ -160,7 +168,8 @@ mod tests {
             ("DATABASE_URL", "postgres://localhost/core"),
             ("RABBITMQ_URL", "amqp://localhost"),
             ("STORES_SERVICE_URL", "http://stores:3003/"),
-            ("CATALOG_SERVICE_URL", "http://catalog:3002/"),
+            ("ITEM_SERVICE_URL", "http://item:3015/"),
+            ("PRICING_SERVICE_URL", "http://pricing:3014/"),
             ("IDENTITY_SERVICE_URL", "http://identity:3001/"),
             ("SCHEDULING_SERVICE_URL", "http://scheduling:3011/"),
             ("FINANCE_SERVICE_URL", "http://finance:3007/"),
@@ -171,7 +180,8 @@ mod tests {
         .expect("config");
         assert_eq!(config.puerto, 4004);
         assert_eq!(config.stores_service_url, "http://stores:3003");
-        assert_eq!(config.catalog_service_url, "http://catalog:3002");
+        assert_eq!(config.item_service_url, "http://item:3015");
+        assert_eq!(config.pricing_service_url, "http://pricing:3014");
         assert_eq!(config.identity_service_url, "http://identity:3001");
         assert_eq!(config.scheduling_service_url, "http://scheduling:3011");
         assert_eq!(config.finance_service_url, "http://finance:3007");

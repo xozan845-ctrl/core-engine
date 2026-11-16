@@ -76,6 +76,18 @@ impl PedidosConsumer {
                         .map_err(|e| e.to_string())?,
                 );
                 let metodo: String = actual.try_get("metodo_pago").map_err(|e| e.to_string())?;
+                let requiere_confirmacion: bool = sqlx::query_scalar(
+                    "SELECT requiere_confirmacion FROM orders.metodos_pago WHERE codigo = $1",
+                )
+                .bind(&metodo)
+                .fetch_optional(self.db.pool())
+                .await
+                .map_err(|e| e.to_string())?
+                .unwrap_or(false);
+                if requiere_confirmacion {
+                    self.marcar_procesado(evento).await?;
+                    return Ok(());
+                }
                 let es_credito = metodo == "credito";
                 let pago = serde_json::json!({
                     "order_id": order_id,

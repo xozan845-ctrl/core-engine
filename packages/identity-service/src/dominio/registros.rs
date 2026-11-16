@@ -91,6 +91,167 @@ impl Registros {
         self.buscar(empresa_id, parte_id, registro_id).await
     }
 
+    pub async fn listar_esquemas(
+        &self,
+        empresa_id: &str,
+        tipo: Option<&str>,
+        actor: &UsuarioContexto,
+    ) -> Result<Vec<Value>, ApiError> {
+        self.validar_empresa(empresa_id, actor).await?;
+        let tipo = match tipo {
+            Some(valor) if !valor.trim().is_empty() => Some(validar_tipo(valor)?),
+            _ => None,
+        };
+        let mut tx = self.db.transaccion().await.map_err(interno)?;
+        let filas = sqlx::query(
+            "SELECT to_jsonb(e) AS datos FROM identity.registros_esquemas e
+              WHERE e.empresa_id = $1::uuid
+                AND ($2::text IS NULL OR e.tipo = $2)
+              ORDER BY e.tipo, e.version DESC",
+        )
+        .bind(empresa_id)
+        .bind(&tipo)
+        .fetch_all(&mut *tx)
+        .await
+        .map_err(interno)?;
+        tx.commit().await.map_err(interno)?;
+        filas
+            .iter()
+            .map(|fila| {
+                let datos: Value = fila.try_get("datos").map_err(interno)?;
+                Ok(normalizar_fechas(datos, &["creado_en", "actualizado_en"]))
+            })
+            .collect()
+    }
+
+    pub async fn obtener_esquema(
+        &self,
+        empresa_id: &str,
+        tipo: &str,
+        actor: &UsuarioContexto,
+    ) -> Result<Option<Value>, ApiError> {
+        self.validar_empresa(empresa_id, actor).await?;
+        let tipo = validar_tipo(tipo)?;
+        let mut tx = self.db.transaccion().await.map_err(interno)?;
+        let fila = sqlx::query(
+            "SELECT to_jsonb(e) AS datos FROM identity.registros_esquemas e
+              WHERE e.empresa_id = $1::uuid AND e.tipo = $2 AND e.activo = true",
+        )
+        .bind(empresa_id)
+        .bind(&tipo)
+        .fetch_optional(&mut *tx)
+        .await
+        .map_err(interno)?;
+        tx.commit().await.map_err(interno)?;
+        fila.map(|fila| {
+            let datos: Value = fila.try_get("datos").map_err(interno)?;
+            Ok(normalizar_fechas(datos, &["creado_en", "actualizado_en"]))
+        })
+        .transpose()
+    }
+
+    /// Guarda una nueva versión activa del esquema y desactiva la anterior.
+    pub async fn guardar_esquema(
+        &self,
+        empresa_id: &str,
+        tipo: &str,
+        esquema: &Value,
+        actor: &UsuarioContexto,
+    ) -> Result<Value, ApiError> {
+        self.validar_empresa(empresa_id, actor).await?;
+        let tipo = validar_tipo(tipo)?;
+        validar_esquema_nuevo(esquema)?;
+        let mut tx = self.db.transaccion().await.map_err(interno)?;
+        sqlx::query("SELECT pg_advisory_xact_lock(hashtext($1::text || ':' || $2))")
+            .bind(empresa_id)
+            .bind(&tipo)
+            .execute(&mut *tx)
+            .await
+            .map_err(interno)?;
+        let version: i32 = sqlx::query_scalar(
+            "SELECT COALESCE(MAX(version), 0) + 1
+               FROM identity.registros_esquemas
+              WHERE empresa_id = $1::uuid AND tipo = $2",
+        )
+        .bind(empresa_id)
+        .bind(&tipo)
+        .fetch_one(&mut *tx)
+        .await
+        .map_err(interno)?;
+        sqlx::query(
+            "UPDATE identity.registros_esquemas
+                SET activo = false, actualizado_en = NOW()
+              WHERE empresa_id = $1::uuid AND tipo = $2 AND activo = true",
+        )
+        .bind(empresa_id)
+        .bind(&tipo)
+        .execute(&mut *tx)
+        .await
+        .map_err(interno)?;
+        let fila = sqlx::query(
+            "INSERT INTO identity.registros_esquemas AS r
+               (empresa_id, tipo, version, esquema, activo, creado_por)
+             VALUES ($1::uuid, $2, $3, $4::jsonb, true, $5::uuid)
+             RETURNING to_jsonb(r) AS datos",
+        )
+        .bind(empresa_id)
+        .bind(&tipo)
+        .bind(version)
+        .bind(esquema)
+        .bind(&actor.user_id)
+        .fetch_optional(&mut *tx)
+        .await
+        .map_err(interno)?
+        .ok_or_else(|| {
+            ApiError::dominio(
+                "ESQUEMA_REGISTRO_NO_CREADO",
+                "No se pudo guardar el esquema.",
+            )
+        })?;
+        tx.commit().await.map_err(interno)?;
+        let datos: Value = fila.try_get("datos").map_err(interno)?;
+        Ok(normalizar_fechas(datos, &["creado_en", "actualizado_en"]))
+    }
+
+    async fn esquema_activo(
+        &self,
+        empresa_id: &str,
+        tipo: &str,
+    ) -> Result<Option<Value>, ApiError> {
+        let mut tx = self.db.transaccion().await.map_err(interno)?;
+        let esquema: Option<Value> = sqlx::query_scalar(
+            "SELECT esquema FROM identity.registros_esquemas
+              WHERE empresa_id = $1::uuid AND tipo = $2 AND activo = true",
+        )
+        .bind(empresa_id)
+        .bind(tipo)
+        .fetch_optional(&mut *tx)
+        .await
+        .map_err(interno)?;
+        tx.commit().await.map_err(interno)?;
+        Ok(esquema)
+    }
+
+    async fn validar_contra_esquema(
+        &self,
+        empresa_id: &str,
+        tipo: &str,
+        datos: &Value,
+    ) -> Result<(), ApiError> {
+        let Some(esquema) = self.esquema_activo(empresa_id, tipo).await? else {
+            return Ok(());
+        };
+        let (valido, errores) = crate::dominio::extensiones::validar_json_schema(&esquema, datos)?;
+        if !valido {
+            return Err(ApiError::dominio(
+                "REGISTRO_INVALIDO",
+                "Los datos no cumplen el esquema del registro.",
+            )
+            .con_detalles(json!({ "errores": errores })));
+        }
+        Ok(())
+    }
+
     pub async fn crear(
         &self,
         empresa_id: &str,
@@ -103,6 +264,8 @@ impl Registros {
         self.exigir_capacidad(empresa_id, &tipo).await?;
         let titulo = titulo_de(datos)?;
         let datos_json = validar_datos(datos.get("datos"))?;
+        self.validar_contra_esquema(empresa_id, &tipo, &datos_json)
+            .await?;
         let adjuntos = validar_adjuntos(datos.get("adjuntos"))?;
         let cita_id = validar_uuid_opcional(datos.get("cita_id"), "cita_id")?;
         let item_id = validar_uuid_opcional(datos.get("item_id"), "item_id")?;
@@ -158,6 +321,8 @@ impl Registros {
             Some(_) => validar_datos(datos.get("datos"))?,
             None => actual.get("datos").cloned().unwrap_or_else(|| json!({})),
         };
+        self.validar_contra_esquema(empresa_id, &tipo, &datos_json)
+            .await?;
         let adjuntos = match datos.get("adjuntos") {
             Some(_) => validar_adjuntos(datos.get("adjuntos"))?,
             None => actual.get("adjuntos").cloned().unwrap_or_else(|| json!([])),
@@ -258,16 +423,15 @@ impl Registros {
         Ok(normalizar_fechas(datos, &["creado_en", "actualizado_en"]))
     }
 
-    async fn validar_acceso(
+    async fn validar_empresa(
         &self,
         empresa_id: &str,
-        parte_id: &str,
         actor: &UsuarioContexto,
     ) -> Result<(), ApiError> {
-        if !es_uuid(empresa_id) || !es_uuid(parte_id) {
+        if !es_uuid(empresa_id) {
             return Err(ApiError::dominio(
-                "PARTE_INVALIDA",
-                "La empresa o la parte no son validas.",
+                "EMPRESA_INVALIDA",
+                "La empresa no es valida.",
             ));
         }
         if !actor.es_admin_global() {
@@ -282,6 +446,22 @@ impl Registros {
                 ));
             }
         }
+        Ok(())
+    }
+
+    async fn validar_acceso(
+        &self,
+        empresa_id: &str,
+        parte_id: &str,
+        actor: &UsuarioContexto,
+    ) -> Result<(), ApiError> {
+        if !es_uuid(parte_id) {
+            return Err(ApiError::dominio(
+                "PARTE_INVALIDA",
+                "La empresa o la parte no son validas.",
+            ));
+        }
+        self.validar_empresa(empresa_id, actor).await?;
         let mut tx = self.db.transaccion().await.map_err(interno)?;
         let parte = sqlx::query(
             "SELECT 1 FROM identity.partes
@@ -371,6 +551,37 @@ fn validar_titulo_estricto(valor: &Value) -> Result<String, ApiError> {
         ));
     }
     Ok(titulo.to_string())
+}
+
+fn validar_esquema_nuevo(esquema: &Value) -> Result<(), ApiError> {
+    if !esquema.is_object() {
+        return Err(ApiError::dominio(
+            "ESQUEMA_REGISTRO_INVALIDO",
+            "El esquema debe ser un objeto JSON.",
+        ));
+    }
+    if serde_json::to_vec(esquema)
+        .map(|bytes| bytes.len())
+        .unwrap_or(0)
+        > MAX_DATOS_BYTES
+    {
+        return Err(ApiError::dominio(
+            "ESQUEMA_REGISTRO_INVALIDO",
+            format!("El esquema no puede superar {MAX_DATOS_BYTES} bytes."),
+        ));
+    }
+    if crate::dominio::extensiones::contiene_ref(esquema) {
+        return Err(ApiError::dominio(
+            "ESQUEMA_REGISTRO_INVALIDO",
+            "Las referencias externas ($ref) no están permitidas.",
+        ));
+    }
+    jsonschema::validator_for(esquema)
+        .map(|_| ())
+        .map_err(|error| {
+            ApiError::dominio("ESQUEMA_REGISTRO_INVALIDO", "El esquema JSON no es válido.")
+                .con_detalles(json!({ "mensaje": error.to_string() }))
+        })
 }
 
 fn validar_datos(valor: Option<&Value>) -> Result<Value, ApiError> {

@@ -16,10 +16,13 @@ use uuid::Uuid;
 pub mod carrito;
 pub mod contratos;
 pub mod entregas;
+pub mod fulfillments;
 pub mod interno;
+pub mod pagos;
 pub mod pedidos;
 pub mod salon;
 pub mod suscripciones;
+pub mod tipos_orden;
 pub mod validacion;
 
 /// Documento OpenAPI público versionado (golden del contrato, R-C-7).
@@ -50,6 +53,9 @@ pub fn build_router(state: AppState) -> Router {
         .route("/docs", get(docs))
         .route("/docs-json", get(docs_json))
         .merge(pedidos::rutas())
+        .merge(pagos::rutas())
+        .merge(tipos_orden::rutas())
+        .merge(fulfillments::rutas())
         .merge(carrito::rutas())
         .merge(entregas::rutas())
         .merge(contratos::rutas())

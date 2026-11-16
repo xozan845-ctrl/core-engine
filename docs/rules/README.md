@@ -42,7 +42,7 @@ rules/
 | Área | Estado | Índice | Contenido |
 |---|---|---|---|
 | `architecture/` | ✅ **activa** (sin auditar) | [`architecture/README.md`](./architecture/README.md) | Arquitectura: CQRS/Event Sourcing por dominio, coreografía, outbox, DLQ, autonomía, caché TTL; naming de archivos/clases/tablas/commits (IDs `R-AR/R-NC`) |
-| `microservice/` | ✅ **activa** (sin auditar) | [`microservice/README.md`](./microservice/README.md) | Estructura de servicios (clean architecture, DI, DTOs, fail-fast, shutdown) y excepción OLAP de `market-intelligence` (IDs `R-MS/R-MI`) |
+| `microservice/` | ✅ **activa** (sin auditar) | [`microservice/README.md`](./microservice/README.md) | Estructura de crates Rust (capas `http/` y dominio, DI por `AppState`, DTOs, fail-fast, shutdown, división de módulos, README por paquete) y excepción OLAP de `market-intelligence` (IDs `R-MS/R-MI`) |
 | `gateway/` | ✅ **activa** (sin auditar) | [`gateway/README.md`](./gateway/README.md) | API Gateway: single entry point, edge offloading, JWT + scrub de headers, TTLs, errores normalizados (ADR-06), versionamiento (IDs `R-GW`) |
 | `data/` | ✅ **activa** (sin auditar) | [`data/README.md`](./data/README.md) | Integridad (centavos, stock atómico, estados, idempotencia, partida doble) y seguridad (secretos, PII, DTOs, rate limiting, `npm audit`) (IDs `R-DI/R-DS`) |
 | `db/` | ✅ **activa** (sin auditar) | [`db/README.md`](./db/README.md) | Postgres: schema-per-service, RLS, transacciones, índices, soft delete, migraciones; Supabase: paridad, Auth, secretos (IDs `R-DB/R-SB`) |
@@ -72,18 +72,14 @@ rules/
 
 El área `test/` es el ejemplo canónico al que apuntan las demás.
 
-## Origen y deudas de esta reestructuración
+## Origen de esta reestructuración
 
 - Las áreas `architecture/ data/ db/ gateway/ microservice/ observability/` nacieron
   de las "Reglas Doradas" que vivían sueltas en la raíz (heredadas de otro proyecto)
   y se convirtieron al formato `| ID | Regla |` con IDs propios al reorganizarse.
-- **Cerrado:** la deuda de los snapshots heredados en `_meta/` se resolvió en la
-  primera auditoría de Core Engine (Etapa 3, 2026-10-01, R-COV-3) y las
-  herencias de `test/01..05` y del README raíz en la Etapa 5 del plan de deudas
-  (Prisma, Angular, `prisma/seed.ts` y ejemplos de asistencia sustituidos por la
-  realidad de este repo). Queda como deuda lo que sigue sin implementar (capas
-  sin suites, robustez) — ver [`test/README.md`](./test/README.md) y
-  [`_meta/AUDIT.md`](./_meta/AUDIT.md).
+- Las herencias de `test/01..05` y del README raíz se sustituyeron por la realidad
+  de este repo (Rust, `cargo`, `sqlx`, `axum`) en la Etapa 5 del plan, y las reglas
+  de estructura/nomenclatura se reescribieron al conmutar todos los servicios.
 - **Modelo CD de tres entornos (2026-10-01):** `R-CD-*` se trasladaron de
   `ci/03-deploy.md` a la nueva área [`cd/`](./cd/README.md) (mismas IDs, nunca
   se renumeran) y se añadieron `R-CD-9..13` (entornos Dockploy, gate, smoke,
