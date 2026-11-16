@@ -37,6 +37,7 @@ pub struct CrearEmpresa {
     pub vertical_id: Option<String>,
     pub pack_codigo: Option<String>,
     pub pack_version: Option<i32>,
+    pub capacidades_extra: Vec<String>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -206,6 +207,41 @@ impl Empresas {
             .execute(&mut *tx)
             .await
             .map_err(interno)?;
+            for capacidad in &input.capacidades_extra {
+                let codigo = capacidad.trim().to_lowercase();
+                if codigo.is_empty() {
+                    continue;
+                }
+                let disponible = sqlx::query(
+                    "SELECT 1 FROM identity.vertical_capacidades vc
+                       JOIN identity.capacidades c ON c.codigo = vc.capacidad_codigo
+                      WHERE vc.vertical_codigo = $1 AND vc.capacidad_codigo = $2
+                        AND c.activo = true",
+                )
+                .bind(&pack.vertical_codigo)
+                .bind(&codigo)
+                .fetch_optional(&mut *tx)
+                .await
+                .map_err(interno)?;
+                if disponible.is_none() {
+                    return Err(ApiError::dominio(
+                        "CAPACIDAD_NO_DISPONIBLE",
+                        format!("La capacidad \"{codigo}\" no esta disponible para la vertical."),
+                    ));
+                }
+                sqlx::query(
+                    "INSERT INTO identity.empresa_capacidades AS ec
+                       (empresa_id, capacidad_codigo, config, activo)
+                     VALUES ($1::uuid, $2, '{}'::jsonb, true)
+                     ON CONFLICT (empresa_id, capacidad_codigo) DO UPDATE
+                       SET activo = true, actualizado_en = NOW()",
+                )
+                .bind(&empresa_id)
+                .bind(&codigo)
+                .execute(&mut *tx)
+                .await
+                .map_err(interno)?;
+            }
             sqlx::query(
                 "UPDATE identity.usuarios SET tenant_id = $1::uuid, rol = 'empresario'
                   WHERE id = $2::uuid",
