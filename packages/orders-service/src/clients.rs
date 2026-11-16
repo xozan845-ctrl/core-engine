@@ -56,6 +56,8 @@ pub struct OfertaExterna {
     pub vendedor_id: String,
     pub empresa_id: String,
     #[serde(default)]
+    pub negocio_id: Option<String>,
+    #[serde(default)]
     pub participacion_porcentaje: Option<i64>,
     pub item_type: String,
     pub item_id: String,
@@ -126,6 +128,7 @@ pub trait ClientesPort: Send + Sync {
     async fn capacidades(
         &self,
         empresas: &[String],
+        negocio_id: Option<&str>,
         capacidades: &[String],
     ) -> Option<Vec<Capacidad>>;
 
@@ -195,6 +198,7 @@ impl Clientes {
     pub async fn capacidades(
         &self,
         empresas: &[String],
+        negocio_id: Option<&str>,
         capacidades: &[String],
     ) -> Option<Vec<Capacidad>> {
         if empresas.is_empty() || capacidades.is_empty() {
@@ -208,7 +212,11 @@ impl Clientes {
             ))
             .header("content-type", "application/json")
             .header("x-internal-key", &self.clave)
-            .json(&json!({ "empresa_ids": empresas, "capacidades": capacidades }))
+            .json(&json!({
+                "empresa_ids": empresas,
+                "capacidades": capacidades,
+                "negocio_id": negocio_id,
+            }))
             .send()
             .await
             .ok()?;
@@ -513,9 +521,10 @@ impl ClientesPort for Clientes {
     async fn capacidades(
         &self,
         empresas: &[String],
+        negocio_id: Option<&str>,
         capacidades: &[String],
     ) -> Option<Vec<Capacidad>> {
-        Clientes::capacidades(self, empresas, capacidades).await
+        Clientes::capacidades(self, empresas, negocio_id, capacidades).await
     }
 
     async fn tipo_cambio(&self, base: &str, quote: &str) -> Option<f64> {
