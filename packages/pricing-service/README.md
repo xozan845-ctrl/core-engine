@@ -1,6 +1,6 @@
 # pricing-service · Rust
 
-Motor de precios separado de `catalog-service` según [ADR-0018](../../docs/adr/0018-catalog-split-item-pricing-inventory.md).
+Motor de precios según [ADR-0018](../../docs/adr/0018-catalog-split-item-pricing-inventory.md).
 
 ## Estado
 
@@ -10,7 +10,7 @@ Motor de precios separado de `catalog-service` según [ADR-0018](../../docs/adr/
 - Superficie interna para orders/stores: precios en lote, precio resuelto y cotización.
 - Outbox `pricing.outbox` preparado para `price.changed`.
 
-`catalog.items` y `catalog.items.precio_cents` siguen siendo el dato maestro transitorio hasta `item-service`.
+`item.items` es la fuente del item y de su precio base; este servicio resuelve listas, escalas, tarifas, cotizaciones y promociones, y solo actualiza el flag `tipo_precio` del item.
 
 ## Comandos
 

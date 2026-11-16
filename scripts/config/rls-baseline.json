@@ -1,6 +1,4 @@
 [
-  "catalog.eventos_procesados",
-  "catalog.outbox",
   "commissions.compensaciones_devoluciones",
   "commissions.eventos_procesados",
   "commissions.outbox",

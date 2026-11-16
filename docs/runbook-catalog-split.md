@@ -63,6 +63,9 @@ el mismo despliegue, con el gateway apuntando al servicio nuevo.
 - Las tablas movidas se copian, se validan y luego se retiran del esquema
   `catalog` en un PR posterior; no se renombra una tabla en el mismo PR que se
   cambia el código.
+- La migración `85_retiro_catalog` borra el esquema `catalog` completo tras
+  validar que no queden FKs ni vistas externas. A partir de ahí no hay rollback
+  por tablas antiguas: se restaura un backup previo a `85`.
 - Las vistas de compatibilidad se mantienen solo mientras haya consumidores
   legacy; cada una debe tener fecha de retirada.
 - RLS: toda tabla nueva entra con política por tenant y se actualiza el
@@ -106,6 +109,9 @@ el mismo despliegue, con el gateway apuntando al servicio nuevo.
 2. Confirmar que `PATCH /api/v2/catalog/items/<item>` con `stock` responde
    `STOCK_GESTIONADO_POR_INVENTARIO`; el ajuste se hace por
    `/api/v2/admin/inventario`.
+   - Un item nuevo con stock debe aparecer en la ubicación predeterminada
+     (`inventory.item_stock_ubicacion`); una entrada/salida debe mover el total
+     y el desglose, y publicar `stock.updated` en `inventory.outbox`.
 3. Ejecutar el smoke remoto con las credenciales del environment:
 
 ```bash
@@ -126,13 +132,12 @@ npm run smoke:remote
 
 ## Rollback
 
-- **Código:** volver a la imagen/digest anterior de `gateway`, `catalog`,
-  `commissions` e `inventory`; el flag de gateway debe apuntar otra vez a
-  `catalog` para las rutas de inventario.
-- **Datos:** no borrar `catalog.*` ni `inventory.*`. Las tablas antiguas se
-  conservan precisamente para rollback. Al volver a `catalog-service` hay que
-  repuntar `stores.ofertas.item_id` a `catalog.items` antes de reactivar la
-  escritura de items en el esquema viejo.
+- **Código:** volver a la imagen/digest anterior de `gateway`, `item`,
+  `pricing`, `inventory`, `commissions` y `stores`, sin cambios de esquema.
+- **Datos:** el esquema `catalog` ya no existe (migración `85`). Para volver a
+  `catalog-service` hay que restaurar un backup previo a `85` (incluye
+  `catalog.*`) y repuntar `stores.ofertas.item_id` a `catalog.items`. Nunca
+  reactivar `catalog.pedidos` junto a `inventory.pedidos`.
 - **Consumidores:** si la saga falla, detener `inventory-service` y reactivar
-  temporalmente el consumidor de `catalog-service` solo con la cola
-  `catalog.pedidos`; nunca ambos a la vez.
+  temporalmente el consumidor de la imagen antigua de `catalog-service` solo
+  con la cola `catalog.pedidos`, tras restaurar el backup.
