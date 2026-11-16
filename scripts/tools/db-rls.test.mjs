@@ -81,6 +81,22 @@ test('db-rls: falla si el baseline queda obsoleto', (t) => {
   assert.match(result.stderr, /a\.legacy: ya tiene RLS y policy; elimina la excepción/);
 });
 
+test('db-rls: DROP SCHEMA retira sus tablas del inventario', (t) => {
+  const { root, baseline } = createFixture(t);
+  writeFileSync(
+    join(root, 'infra', 'db', 'init', '03_retiro.sql'),
+    'DROP SCHEMA a CASCADE;\n',
+  );
+
+  const update = run(root, baseline, '--update');
+  assert.equal(update.status, 0, update.stderr);
+  assert.deepEqual(JSON.parse(readFileSync(baseline, 'utf8')), []);
+
+  const check = run(root, baseline);
+  assert.equal(check.status, 0, check.stderr);
+  assert.match(check.stdout, /0 tablas en el baseline RLS/);
+});
+
 test('db-rls: --update regenera el baseline con la deuda actual', (t) => {
   const { root, baseline } = createFixture(t);
   writeFileSync(
