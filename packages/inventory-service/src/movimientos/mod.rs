@@ -58,7 +58,13 @@ impl Movimientos {
         {
             params.push(negocio);
             condiciones.push(format!(
-                "m.item_id IN (SELECT id FROM catalog.items WHERE negocio_id = ${}::uuid)",
+                "EXISTS (
+                   SELECT 1
+                     FROM jsonb_array_elements(m.lineas) AS linea
+                     JOIN item.items i
+                       ON i.id = NULLIF(linea->>'item_id', '')::uuid
+                    WHERE i.negocio_id = ${}::uuid
+                 )",
                 params.len()
             ));
         }

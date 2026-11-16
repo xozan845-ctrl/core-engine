@@ -284,6 +284,12 @@ gates y del smoke de `staging`.
   `pricing-service` que provocaba la colisión del contrato agregado. La
   matriz de propiedad de datos refleja el estado real (precio base e histórico
   en item, stock por ubicación en inventario) y deja explícito el contrato v2.
+- PR 13 completo: contrato interno v2 de items ([ADR-0020](./0020-contrato-v2-items.md)).
+  `/internal/v2/items/**` devuelve metadata sin precio/stock/series;
+  `stores-service` resuelve precio en `pricing-service` y stock en
+  `inventory-service`; `orders-service` compone metadata v2 con el batch de
+  stock de inventario. El contrato público mantiene `precio`/`stock` como
+  campos deprecados hasta migrar el frontend.
 - `stock` y `precio_cents` siguen en `item.items` como proyección del contrato
   de items: `inventory-service` mantiene el stock por trigger y los clientes
   leen ambos campos en `GET /catalog/items`. Retirarlos exige versionar el
