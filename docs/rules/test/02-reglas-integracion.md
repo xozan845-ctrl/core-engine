@@ -1,11 +1,11 @@
 # 02 — Reglas de Tests de Integración (API + BD)
 
-Aplica a: pruebas que levantan la app NestJS real (o módulos reales con la capa de
-datos real: SQL sobre Postgres) y ejecutan requests HTTP contra una **BD de test
-real** (Postgres de test, no mock).
+Aplica a: pruebas que levantan el binario Rust real (router `axum` + `sqlx`) y
+ejecutan requests HTTP contra una **BD de test real** (Postgres de test, no
+mock). Viven en `packages/<servicio>/tests/*_pg.rs` o `*_http.rs`.
 
-> Los mocks en los tests de controller prueban los mocks. Solo una prueba con BD real
-> valida consultas SQL, filtros de fecha, paginación y transacciones.
+> Los mocks en las pruebas de handler prueban los mocks. Solo una prueba con BD
+> real valida consultas SQL, filtros de fecha, paginación, RLS y transacciones.
 
 ## Alcance mínimo por endpoint
 
@@ -26,7 +26,7 @@ real** (Postgres de test, no mock).
 
 | ID | Regla |
 |---|---|
-| R-I-6 | Payload inválido → `400` con shape de error conocido (campo `message`/`errors`). |
+| R-I-6 | Payload inválido → `400` con el shape de error del proyecto: `{codigo, mensaje, detalles?}` (sin `stack` ni detalles internos). |
 | R-I-7 | Recurso inexistente → `404`; recurso duplicado/conflicto → `409`. |
 | R-I-8 | Los casos de error deben **no dejar datos residuales** en la BD (rollback verificado en transacciones de escritura fallida). |
 
