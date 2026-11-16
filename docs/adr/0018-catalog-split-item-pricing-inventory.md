@@ -260,6 +260,11 @@ gates y del smoke de `staging`.
   desglose contra el total y garantiza una ubicación predeterminada por
   empresa. Movimientos, consumo de lotes y ajustes por ubicación publican
   `stock.updated` para refrescar las ofertas (RN-02).
+- PR 11 completo: retiro definitivo del esquema `catalog` con la migración
+  `85_retiro_catalog`. Antes de borrar se validan dependencias externas
+  (FKs/vistas) y se conservan `item`, `pricing` e `inventory` como únicos
+  esquemas del dominio. Con esto se cierra la ventana de rollback por tablas
+  antiguas: volver atrás requiere restaurar un backup previo a `85`.
 - `stock` y `precio_cents` siguen en `item.items` como proyección del contrato
   de items: `inventory-service` mantiene el stock por trigger y los clientes
   leen ambos campos en `GET /catalog/items`. Retirarlos exige versionar el
