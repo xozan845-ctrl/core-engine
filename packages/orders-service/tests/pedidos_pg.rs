@@ -18,6 +18,7 @@ use orders_service::pagos::Pagos;
 use orders_service::pedidos::Pedidos;
 use orders_service::salon::{CrearComandaInput, CrearMesaInput, Salon};
 use orders_service::suscripciones::{CrearSuscripcionInput, Suscripciones};
+use orders_service::tipos_orden::TiposOrden;
 use orders_service::views::OrderViewRepository;
 use serde_json::{json, Value};
 use std::sync::Arc;
@@ -416,6 +417,10 @@ async fn provisionar(url: &str) {
     .execute(&pool)
     .await
     .expect("migracion orders");
+    sqlx::raw_sql(include_str!("../../../infra/db/init/80_tipos_orden.sql"))
+        .execute(&pool)
+        .await
+        .expect("tipos de orden");
     pool.close().await;
 }
 
@@ -1370,4 +1375,29 @@ async fn debe_procesar_un_webhook_de_pago_con_secreto() {
         .expect("response");
     let orden = json_de(response).await;
     assert_eq!(orden["data"]["estado"], "pagada");
+}
+
+#[tokio::test]
+async fn debe_leer_y_validar_la_matriz_de_tipos_de_orden() {
+    let _guard = DB_LOCK.lock().await;
+    let Some(db) = con_bd().await else { return };
+    let tipos = TiposOrden::nueva(Arc::clone(&db));
+    let lista = tipos.listar().await.expect("tipos");
+    assert!(lista.iter().any(|tipo| tipo.codigo == "compra"));
+    assert!(lista.iter().any(|tipo| tipo.codigo == "cotizacion"));
+
+    tipos
+        .validar("compra", "pagada", "en_preparacion")
+        .await
+        .expect("transicion valida");
+    let error = tipos
+        .validar("compra", "creada", "entregada")
+        .await
+        .expect_err("transicion invalida");
+    assert_eq!(error.codigo, "TRANSICION_INVALIDA");
+    let error = tipos
+        .validar("no_existe", "creada", "pagada")
+        .await
+        .expect_err("tipo invalido");
+    assert_eq!(error.codigo, "TIPO_ORDEN_INVALIDO");
 }

@@ -1318,3 +1318,34 @@ DROP POLICY IF EXISTS pagos_empresa ON orders.pagos;
 CREATE POLICY pagos_empresa ON orders.pagos
   FOR SELECT TO authenticated
   USING (empresa_id::text = (auth.jwt() ->> 'tenant_id'));
+
+-- ── orders.estados_orden, tipos_orden y transiciones (Fase 3) ───────────────
+ALTER TABLE orders.estados_orden ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS estados_orden_lectura ON orders.estados_orden;
+CREATE POLICY estados_orden_lectura ON orders.estados_orden
+  FOR SELECT TO authenticated USING (true);
+DROP POLICY IF EXISTS estados_orden_admin ON orders.estados_orden;
+CREATE POLICY estados_orden_admin ON orders.estados_orden
+  FOR ALL TO authenticated
+  USING (auth.rol() IN ('super_admin', 'admin'))
+  WITH CHECK (auth.rol() IN ('super_admin', 'admin'));
+
+ALTER TABLE orders.tipos_orden ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS tipos_orden_lectura ON orders.tipos_orden;
+CREATE POLICY tipos_orden_lectura ON orders.tipos_orden
+  FOR SELECT TO authenticated USING (activo);
+DROP POLICY IF EXISTS tipos_orden_admin ON orders.tipos_orden;
+CREATE POLICY tipos_orden_admin ON orders.tipos_orden
+  FOR ALL TO authenticated
+  USING (auth.rol() IN ('super_admin', 'admin'))
+  WITH CHECK (auth.rol() IN ('super_admin', 'admin'));
+
+ALTER TABLE orders.transiciones_orden ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS transiciones_orden_lectura ON orders.transiciones_orden;
+CREATE POLICY transiciones_orden_lectura ON orders.transiciones_orden
+  FOR SELECT TO authenticated USING (true);
+DROP POLICY IF EXISTS transiciones_orden_admin ON orders.transiciones_orden;
+CREATE POLICY transiciones_orden_admin ON orders.transiciones_orden
+  FOR ALL TO authenticated
+  USING (auth.rol() IN ('super_admin', 'admin'))
+  WITH CHECK (auth.rol() IN ('super_admin', 'admin'));
