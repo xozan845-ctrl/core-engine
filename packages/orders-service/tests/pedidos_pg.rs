@@ -483,6 +483,7 @@ fn infra(db: Arc<Db>, stock: i64) -> (Arc<Checkout>, Arc<Carrito>, Arc<Pedidos>)
         outbox: Outbox::nueva("orders.outbox"),
         pagos: Arc::new(Pagos::nueva(Arc::clone(&db))),
         tipos: Arc::new(TiposOrden::nueva(Arc::clone(&db))),
+        fulfillments: Arc::new(Fulfillments::nueva(Arc::clone(&db))),
         tasa_comision: 0.12,
     });
     (checkout, carrito, pedidos)
@@ -870,6 +871,7 @@ async fn router_completo(db: Arc<Db>, stock: i64) -> axum::Router {
         outbox: Outbox::nueva("orders.outbox"),
         pagos: Arc::new(Pagos::nueva(Arc::clone(&db))),
         tipos: Arc::new(TiposOrden::nueva(Arc::clone(&db))),
+        fulfillments: Arc::new(Fulfillments::nueva(Arc::clone(&db))),
         tasa_comision: 0.12,
     });
     let contratos = Arc::new(Contratos::nueva(Arc::clone(&db)));
@@ -1616,4 +1618,53 @@ async fn debe_gestionar_fulfillments_por_admin() {
     assert_eq!(response.status(), StatusCode::OK);
     let actualizado = json_de(response).await;
     assert_eq!(actualizado["data"]["activo"], false);
+}
+
+#[tokio::test]
+async fn debe_validar_el_fulfillment_contra_el_registro() {
+    let _guard = DB_LOCK.lock().await;
+    let Some(db) = con_bd().await else { return };
+    let (checkout, _, _) = infra(Arc::clone(&db), 10);
+    sqlx::query(
+        "INSERT INTO orders.fulfillments (codigo, nombre)
+         VALUES ('retiro_tienda', 'Retiro en tienda')
+         ON CONFLICT (codigo) DO NOTHING",
+    )
+    .execute(db.pool())
+    .await
+    .expect("fulfillment");
+
+    let orden = checkout
+        .ejecutar(
+            &ComandoCrear {
+                items: Some(vec![LineaEntrada {
+                    oferta_id: OFERTA.to_string(),
+                    cantidad: 1,
+                    fulfillment: Some("retiro_tienda".to_string()),
+                    fulfillment_config: None,
+                }]),
+                ..compra(1)
+            },
+            COMPRADOR,
+        )
+        .await
+        .expect("orden con fulfillment configurado");
+    assert_eq!(orden.items[0].fulfillment.as_deref(), Some("retiro_tienda"));
+
+    let error = checkout
+        .ejecutar(
+            &ComandoCrear {
+                items: Some(vec![LineaEntrada {
+                    oferta_id: OFERTA.to_string(),
+                    cantidad: 1,
+                    fulfillment: Some("no_existe".to_string()),
+                    fulfillment_config: None,
+                }]),
+                ..compra(1)
+            },
+            COMPRADOR,
+        )
+        .await
+        .expect_err("fulfillment invalido");
+    assert_eq!(error.codigo, "FULFILLMENT_INVALIDO");
 }
