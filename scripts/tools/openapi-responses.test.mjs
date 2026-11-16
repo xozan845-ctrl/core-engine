@@ -50,3 +50,12 @@ test('debe documentar schema de éxito en los servicios migrados cuando se expor
     );
   }
 });
+
+test('el contrato de item no documenta stock como editable', () => {
+  const documento = JSON.parse(
+    readFileSync(resolve(repoRoot, 'docs/openapi/item-service/public.openapi.json'), 'utf8'),
+  );
+  const esquema = documento.components.schemas.ActualizarItemCatalogoRequestDto;
+  assert.equal(esquema.properties.stock, undefined);
+  assert.match(esquema.description ?? '', /STOCK_GESTIONADO_POR_INVENTARIO/);
+});
