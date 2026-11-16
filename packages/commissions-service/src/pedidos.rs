@@ -82,6 +82,7 @@ impl PedidosConsumer {
             usuario_id: Some(USUARIO_SISTEMA.to_string()),
             rol: Some("super_admin".to_string()),
             tenant_id: None,
+            negocio_id: None,
         };
         ejecutar_con_contexto(contexto, async {
             match tipo.as_str() {
@@ -154,6 +155,7 @@ impl PedidosConsumer {
                         order_id: order_id.clone(),
                         linea_clave: item.oferta_id.clone(),
                         empresa_id: empresa_id.clone(),
+                        negocio_id: item.negocio_id.clone(),
                         tienda_id: tienda_id.clone(),
                         vendedor_id: vendedor_id.clone(),
                         venta_cents,
@@ -166,11 +168,13 @@ impl PedidosConsumer {
             };
             let payload = serde_json::json!({
                 "order_id": order_id,
+                "linea_clave": item.oferta_id,
                 "monto_cents": comision.comision_cents,
                 "monto_vendedor_cents": comision.monto_vendedor_cents,
                 "monto_empresario_cents": comision.monto_empresario_cents.unwrap_or(0),
                 "vendedor_id": vendedor_id,
                 "empresa_id": empresa_id,
+                "negocio_id": comision.negocio_id,
                 "tienda_id": tienda_id,
                 "participacion_porcentaje": participacion,
             });
