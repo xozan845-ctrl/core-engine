@@ -193,9 +193,10 @@ gates y del smoke de `staging`.
   añadir pruebas de contrato e integración.
 - Durante la transición conviven los servicios; el gateway debe enrutar por
   prefijo y el rollback debe estar documentado.
-- `81_item_schema` copia `catalog.items` a `item.items` y repunta las claves
-  foráneas externas (hoy `stores.ofertas.item_id`): con el corte, las ofertas
-  se validan contra `item.items` y la tabla vieja queda solo para rollback.
+- `81_item_schema` copia `catalog.items` a `item.items` y `83_item_fk_externas`
+  repunta las claves foráneas externas (hoy `stores.ofertas.item_id`): con el
+  corte, las ofertas se validan contra `item.items` y la tabla vieja queda solo
+  para rollback.
 
 ## Criterios de aceptación
 

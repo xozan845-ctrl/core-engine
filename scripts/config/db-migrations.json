@@ -94,6 +94,7 @@
   "79_pricing_schema.sql": "f5814b84094f82ee4eb700fa3154ea7eeff8502df502cccc3a24cfde06b9f241",
   "80_tipos_orden.sql": "fce41a457ef5f639bb1f2e80f846321725410422bf49783816c13401dda90ab6",
   "81_fulfillments.sql": "08148da4657851ab261495fc6fe5d2f31bffe02a3d6077652b3d1268c92831a3",
-  "81_item_schema.sql": "43ae01b8ef3426ec0f0c5b9d1e459c9097ec857b9e96313529e371c43cd500f5",
-  "82_registros_esquemas.sql": "4332852caed587bf06a66a869726aa9d9b0dee3da7912e2285bee55e62adcc5e"
+  "81_item_schema.sql": "27bf4accb0bb953141fffe8c9ed3f5a55c5e326c61b52b54da4a5e2fff383d5d",
+  "82_registros_esquemas.sql": "4332852caed587bf06a66a869726aa9d9b0dee3da7912e2285bee55e62adcc5e",
+  "83_item_fk_externas.sql": "0dd2526d502c467c79c0af5385d19800432c879604fc697a47a55f15d0c2117e"
 }

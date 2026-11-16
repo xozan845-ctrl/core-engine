@@ -1,9 +1,8 @@
 -- ADR-0018 · corte del catálogo maestro a `item-service`.
 --
--- Copia items, esquemas de atributos, imagenes, componentes, series e
--- historico de precios desde `catalog` a `item`. Precios e inventario ya viven
--- en sus propios esquemas. Las tablas viejas se conservan para rollback hasta
--- la limpieza final.
+-- Copia items, productos, servicios, componentes, series y combos desde
+-- `catalog` a `item`. Precios e inventario ya viven en sus propios esquemas.
+-- Las tablas viejas se conservan para rollback hasta la limpieza final.
 
 CREATE SCHEMA IF NOT EXISTS item;
 
@@ -92,26 +91,6 @@ BEGIN
     ALTER TABLE item.item_series
       ADD CONSTRAINT item_series_ubicacion_fk
       FOREIGN KEY (ubicacion_id) REFERENCES inventory.ubicaciones(id) ON DELETE SET NULL NOT VALID;
-  END IF;
-END $$;
-
--- Repunta las claves foráneas externas que apuntaban a `catalog.items`: los
--- servicios ya escriben items nuevos en `item.items`, así que una FK a la tabla
--- vieja rechazaría ofertas y referencias legítimas (ADR-0018).
-DO $$
-BEGIN
-  IF to_regclass('stores.ofertas') IS NOT NULL
-     AND EXISTS (
-       SELECT 1 FROM pg_constraint
-        WHERE conname = 'ofertas_item_id_fkey'
-          AND conrelid = 'stores.ofertas'::regclass
-          AND confrelid = 'catalog.items'::regclass
-     ) THEN
-    ALTER TABLE stores.ofertas DROP CONSTRAINT ofertas_item_id_fkey;
-    ALTER TABLE stores.ofertas
-      ADD CONSTRAINT ofertas_item_id_fkey
-      FOREIGN KEY (item_id) REFERENCES item.items(id) NOT VALID;
-    ALTER TABLE stores.ofertas VALIDATE CONSTRAINT ofertas_item_id_fkey;
   END IF;
 END $$;
 
