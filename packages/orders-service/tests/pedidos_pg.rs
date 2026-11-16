@@ -477,6 +477,7 @@ fn infra(db: Arc<Db>, stock: i64) -> (Arc<Checkout>, Arc<Carrito>, Arc<Pedidos>)
         pedidos: Arc::clone(&pedidos),
         outbox: Outbox::nueva("orders.outbox"),
         pagos: Arc::new(Pagos::nueva(Arc::clone(&db))),
+        tipos: Arc::new(TiposOrden::nueva(Arc::clone(&db))),
         tasa_comision: 0.12,
     });
     (checkout, carrito, pedidos)
@@ -863,6 +864,7 @@ async fn router_completo(db: Arc<Db>, stock: i64) -> axum::Router {
         pedidos: Arc::clone(&pedidos),
         outbox: Outbox::nueva("orders.outbox"),
         pagos: Arc::new(Pagos::nueva(Arc::clone(&db))),
+        tipos: Arc::new(TiposOrden::nueva(Arc::clone(&db))),
         tasa_comision: 0.12,
     });
     let contratos = Arc::new(Contratos::nueva(Arc::clone(&db)));
@@ -1400,4 +1402,43 @@ async fn debe_leer_y_validar_la_matriz_de_tipos_de_orden() {
         .await
         .expect_err("tipo invalido");
     assert_eq!(error.codigo, "TIPO_ORDEN_INVALIDO");
+}
+
+#[tokio::test]
+async fn debe_aceptar_un_tipo_de_orden_creado_por_configuracion() {
+    let _guard = DB_LOCK.lock().await;
+    let Some(db) = con_bd().await else { return };
+    let (checkout, _, _) = infra(Arc::clone(&db), 10);
+    sqlx::query(
+        "INSERT INTO orders.tipos_orden (codigo, nombre)
+         VALUES ('devolucion_express', 'Devolucion express')
+         ON CONFLICT (codigo) DO NOTHING",
+    )
+    .execute(db.pool())
+    .await
+    .expect("tipo");
+    sqlx::query(
+        "INSERT INTO orders.transiciones_orden (tipo_codigo, desde, hasta)
+         VALUES ('devolucion_express', 'creada', 'pagada')
+         ON CONFLICT DO NOTHING",
+    )
+    .execute(db.pool())
+    .await
+    .expect("transicion");
+
+    let orden = checkout
+        .ejecutar(
+            &ComandoCrear {
+                tipo_orden: "devolucion_express".to_string(),
+                ..compra(1)
+            },
+            COMPRADOR,
+        )
+        .await
+        .expect("orden");
+    assert_eq!(orden.tipo_orden, "devolucion_express");
+    checkout
+        .transicionar(&orden.id, "pagada", Some("config"), Some("test"), None)
+        .await
+        .expect("transicion configurada");
 }

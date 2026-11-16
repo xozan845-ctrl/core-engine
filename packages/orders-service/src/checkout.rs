@@ -10,10 +10,11 @@ use crate::db::{iso_ms, Db};
 use crate::errors::ApiError;
 use crate::event_store::{error_db, parsear_uuid, OrderEventStore};
 use crate::money;
-use crate::order_state::{validar_transicion_por_tipo, ItemOrden, FULFILLMENTS, TIPOS_ORDEN};
+use crate::order_state::{ItemOrden, FULFILLMENTS};
 use crate::outbox::Outbox;
 use crate::pagos::Pagos;
 use crate::pedidos::Pedidos;
+use crate::tipos_orden::TiposOrden;
 use crate::views::{OrderView, OrderViewRepository};
 use chrono::{Duration, Utc};
 use serde::{Deserialize, Serialize};
@@ -102,6 +103,7 @@ pub struct Checkout {
     pub pedidos: Arc<Pedidos>,
     pub outbox: Outbox,
     pub pagos: Arc<Pagos>,
+    pub tipos: Arc<TiposOrden>,
     pub tasa_comision: f64,
 }
 
@@ -112,7 +114,13 @@ impl Checkout {
         comando: &ComandoCrear,
         cliente_id: &str,
     ) -> Result<OrderView, ApiError> {
-        let tipo_orden = validar_tipo_orden(&comando.tipo_orden)?;
+        if comando.tipo_orden.trim().is_empty() {
+            return Err(ApiError::dominio(
+                "TIPO_ORDEN_REQUERIDO",
+                "El tipo de orden es obligatorio.",
+            ));
+        }
+        let tipo_orden = self.tipos.validar_tipo(&comando.tipo_orden).await?;
         let es_cotizacion = tipo_orden == "cotizacion";
         let es_reserva = tipo_orden == "reserva";
         let metodo_pago = comando
@@ -199,7 +207,7 @@ impl Checkout {
             }
             moneda_orden = Some(moneda_oferta);
             let fulfillment =
-                validar_fulfillment(linea.fulfillment.as_deref(), tipo_orden, &oferta.item_type)?;
+                validar_fulfillment(linea.fulfillment.as_deref(), &tipo_orden, &oferta.item_type)?;
             if fulfillment == "digital" {
                 let url = url_entrega_digital(oferta.atributos.as_ref());
                 let Some(url) = url else {
@@ -245,7 +253,7 @@ impl Checkout {
             }
         }
 
-        self.validar_capacidades(&items, tipo_orden, &metodo_pago)
+        self.validar_capacidades(&items, &tipo_orden, &metodo_pago)
             .await?;
 
         if es_reserva {
@@ -553,7 +561,9 @@ impl Checkout {
         }
         let estado = reconstruir_desde_eventos(&historia)
             .ok_or_else(|| ApiError::no_encontrado("Orden", order_id))?;
-        validar_transicion_por_tipo(&estado.tipo_orden, &estado.estado, estado_nuevo)?;
+        self.tipos
+            .validar(&estado.tipo_orden, &estado.estado, estado_nuevo)
+            .await?;
         let actor_final = actor.unwrap_or("sistema");
         let ocurrido_en = iso_ms(Utc::now());
 
@@ -888,22 +898,6 @@ fn agrupar(lineas: &[LineaEntrada]) -> Result<Vec<LineaAgrupada>, ApiError> {
         .into_iter()
         .filter_map(|clave| mapa.remove(&clave))
         .collect())
-}
-
-fn validar_tipo_orden(valor: &str) -> Result<&str, ApiError> {
-    if valor.is_empty() {
-        return Err(ApiError::dominio(
-            "TIPO_ORDEN_REQUERIDO",
-            "El tipo de orden es obligatorio.",
-        ));
-    }
-    if !TIPOS_ORDEN.contains(&valor) {
-        return Err(ApiError::dominio(
-            "TIPO_ORDEN_INVALIDO",
-            "El tipo de orden no es valido.",
-        ));
-    }
-    Ok(valor)
 }
 
 fn validar_fulfillment(
