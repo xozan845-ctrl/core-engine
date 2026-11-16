@@ -1,9 +1,8 @@
 # ADR-0019: Fidelización como capacidad seleccionable por configuración
 
 - **Fecha**: 2026-11-16
-- **Estado**: Aceptado — implementación en curso (fases 1-3: capacidad, alta de
-  empresa, modelo de datos, administración por empresa, acumulación al pagar y
-  vista del comprador)
+- **Estado**: Aceptado (implementado) — capacidad, alta por configuración,
+  modelo, administración por empresa, acumulación al pagar y vista del comprador
 - **Ámbito**: `identity-service` (capacidades, verticales, packs, alta de
   empresa, manifiesto), `orders-service` (programas, tarjetas, movimientos,
   recompensas y canjes), PostgreSQL/RLS, OpenAPI, CI/CD y documentación
@@ -11,6 +10,7 @@
   [ADR-0002](./0002-envelope-y-desacoplamiento.md),
   [ADR-0013](./0013-orders-service-en-rust.md),
   [ADR-0017](./0017-identity-service-en-rust.md)
+- **Runbook**: [fidelización](../runbook-fidelizacion.md)
 
 ## Contexto
 
