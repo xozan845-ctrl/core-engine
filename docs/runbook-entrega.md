@@ -37,8 +37,8 @@ Servicios: `api-gateway`, `identity-service`, `item-service`, `stores-service`,
 `orders-service`, `logistics-service`, `scheduling-service`, `commissions-service`,
 `finance-service`, `field-service`, `market-intelligence-service`, `storage-service`,
 `notifications-service`
-(13 imágenes; `commissions` solo se despliega en stage y `market-intelligence` solo
-en desarrollo).
+(13 imágenes; `commissions` solo se despliega en stage y `market-intelligence` en
+stage y producción desde la Fase 6).
 
 ---
 
