@@ -8,29 +8,29 @@ CREATE SCHEMA IF NOT EXISTS item;
 
 CREATE TABLE IF NOT EXISTS item.items
   (LIKE catalog.items INCLUDING ALL);
-INSERT INTO item.items SELECT * FROM catalog.items ON CONFLICT (id) DO NOTHING;
+INSERT INTO item.items SELECT * FROM catalog.items ON CONFLICT DO NOTHING;
 
 CREATE TABLE IF NOT EXISTS item.item_atributo_esquemas
   (LIKE catalog.item_atributo_esquemas INCLUDING ALL);
 INSERT INTO item.item_atributo_esquemas
-SELECT * FROM catalog.item_atributo_esquemas ON CONFLICT (id) DO NOTHING;
+SELECT * FROM catalog.item_atributo_esquemas ON CONFLICT DO NOTHING;
 
 CREATE TABLE IF NOT EXISTS item.item_imagenes
   (LIKE catalog.item_imagenes INCLUDING ALL);
-INSERT INTO item.item_imagenes SELECT * FROM catalog.item_imagenes ON CONFLICT (id) DO NOTHING;
+INSERT INTO item.item_imagenes SELECT * FROM catalog.item_imagenes ON CONFLICT DO NOTHING;
 
 CREATE TABLE IF NOT EXISTS item.item_componentes
   (LIKE catalog.item_componentes INCLUDING ALL);
-INSERT INTO item.item_componentes SELECT * FROM catalog.item_componentes ON CONFLICT (id) DO NOTHING;
+INSERT INTO item.item_componentes SELECT * FROM catalog.item_componentes ON CONFLICT DO NOTHING;
 
 CREATE TABLE IF NOT EXISTS item.item_series
   (LIKE catalog.item_series INCLUDING ALL);
-INSERT INTO item.item_series SELECT * FROM catalog.item_series ON CONFLICT (id) DO NOTHING;
+INSERT INTO item.item_series SELECT * FROM catalog.item_series ON CONFLICT DO NOTHING;
 
 CREATE TABLE IF NOT EXISTS item.historico_precios
   (LIKE catalog.historico_precios INCLUDING ALL);
 INSERT INTO item.historico_precios
-SELECT * FROM catalog.historico_precios ON CONFLICT (id) DO NOTHING;
+SELECT * FROM catalog.historico_precios ON CONFLICT DO NOTHING;
 
 CREATE TABLE IF NOT EXISTS item.outbox
   (LIKE catalog.outbox INCLUDING ALL);
