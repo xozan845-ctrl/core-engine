@@ -56,7 +56,7 @@ impl AppState {
         let tenant = usuario.tenant()?;
         let capacidades = self
             .capacidades
-            .activas(tenant, requeridas)
+            .activas_en(tenant, usuario.negocio_id.as_deref(), requeridas)
             .await
             .map_err(|_| ApiError::servicio_no_disponible("identity-service"))?;
         let activas: Vec<&str> = capacidades

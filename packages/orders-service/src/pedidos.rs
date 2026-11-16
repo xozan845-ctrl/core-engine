@@ -40,10 +40,29 @@ impl Pedidos {
         }
         if usuario.rol == "empresario" {
             if let Some(tenant) = usuario.tenant_id.as_deref() {
+                let negocio = usuario.negocio_id.as_deref();
                 let items: Vec<ItemOrden> = orden
                     .items
                     .iter()
-                    .filter(|i| i.empresa_id == tenant)
+                    .filter(|i| {
+                        i.empresa_id == tenant
+                            && negocio.is_none_or(|n| i.negocio_id.as_deref() == Some(n))
+                    })
+                    .cloned()
+                    .collect();
+                if !items.is_empty() {
+                    return self.recortar(orden, items);
+                }
+            }
+        }
+        if usuario.rol != "vendedor" && usuario.rol != "comprador" {
+            if let (Some(tenant), Some(negocio)) =
+                (usuario.tenant_id.as_deref(), usuario.negocio_id.as_deref())
+            {
+                let items: Vec<ItemOrden> = orden
+                    .items
+                    .iter()
+                    .filter(|i| i.empresa_id == tenant && i.negocio_id.as_deref() == Some(negocio))
                     .cloned()
                     .collect();
                 if !items.is_empty() {
@@ -54,11 +73,19 @@ impl Pedidos {
         Err(ApiError::acceso_denegado("No tiene acceso a esta orden."))
     }
 
-    pub fn para_empresa(&self, orden: OrderView, empresa_id: &str) -> Result<OrderView, ApiError> {
+    pub fn para_empresa(
+        &self,
+        orden: OrderView,
+        empresa_id: &str,
+        negocio_id: Option<&str>,
+    ) -> Result<OrderView, ApiError> {
         let items = orden
             .items
             .iter()
-            .filter(|i| i.empresa_id == empresa_id)
+            .filter(|i| {
+                i.empresa_id == empresa_id
+                    && negocio_id.is_none_or(|n| i.negocio_id.as_deref() == Some(n))
+            })
             .cloned()
             .collect();
         self.recortar(orden, items)
@@ -170,6 +197,7 @@ mod tests {
             vendedor_id: vendedor.into(),
             tienda_id: "t-1".into(),
             empresa_id: empresa.into(),
+            negocio_id: None,
             participacion_porcentaje: Some(10),
             item_type: "producto".into(),
             item_id: "i-1".into(),
@@ -185,6 +213,7 @@ mod tests {
             comprador_id: "c-1".into(),
             parte_id: None,
             tienda_id: "t-1".into(),
+            negocio_id: None,
             estado: "pagada".into(),
             total_cents: 300,
             comision_cents: 36,

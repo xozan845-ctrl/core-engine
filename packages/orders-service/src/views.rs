@@ -10,8 +10,9 @@ use crate::order_state::ItemOrden;
 use serde::Serialize;
 use serde_json::Value;
 use sqlx::Row;
+use uuid::Uuid;
 
-const COLUMNAS: &str = "id, vendedor_id, comprador_id, parte_id, tienda_id, estado, total_cents, comision_cents, moneda,
+const COLUMNAS: &str = "id, vendedor_id, comprador_id, parte_id, tienda_id, negocio_id, estado, total_cents, comision_cents, moneda,
               items_json, direccion_envio, creado_en, actualizado_en,
               tipo_orden, metodo_pago, fulfillment_config,
               pagada_en, enviada_en, entregada_en, cancelada_en, devuelta_en";
@@ -23,6 +24,7 @@ pub struct OrderView {
     pub comprador_id: String,
     pub parte_id: Option<String>,
     pub tienda_id: String,
+    pub negocio_id: Option<String>,
     pub estado: String,
     pub total_cents: i64,
     pub comision_cents: i64,
@@ -118,13 +120,15 @@ impl OrderViewRepository {
         estado: Option<&str>,
         vendedor_id: Option<&str>,
         empresa_id: Option<&str>,
+        negocio_id: Option<&str>,
     ) -> Result<Vec<OrderView>, ApiError> {
         let filas = sqlx::query(&format!(
             "SELECT {COLUMNAS} FROM orders.orden_vista
              WHERE EXISTS (SELECT 1 FROM jsonb_array_elements(items_json) item
                            WHERE item->>'tienda_id' = $1
                              AND ($2::text IS NULL OR item->>'empresa_id' = $2)
-                             AND ($3::text IS NULL OR item->>'vendedor_id' = $3))
+                             AND ($3::text IS NULL OR item->>'vendedor_id' = $3)
+                             AND ($5::text IS NULL OR item->>'negocio_id' = $5))
                AND ($4::text IS NULL OR estado = $4)
              ORDER BY creado_en DESC LIMIT 100"
         ))
@@ -132,6 +136,7 @@ impl OrderViewRepository {
         .bind(empresa_id)
         .bind(vendedor_id)
         .bind(estado)
+        .bind(negocio_id)
         .fetch_all(db.pool())
         .await
         .map_err(error_db)?;
@@ -144,24 +149,77 @@ impl OrderViewRepository {
         empresa_id: &str,
         estado: Option<&str>,
         tienda_id: Option<&str>,
+        negocio_id: Option<&str>,
         limite: Option<i64>,
     ) -> Result<Vec<OrderView>, ApiError> {
         let filas = sqlx::query(&format!(
             "SELECT {COLUMNAS} FROM orders.orden_vista
              WHERE EXISTS (SELECT 1 FROM jsonb_array_elements(items_json) item
                            WHERE item->>'empresa_id' = $1
-                             AND ($2::text IS NULL OR item->>'tienda_id' = $2))
-               AND ($3::text IS NULL OR estado = $3)
-             ORDER BY creado_en DESC LIMIT $4"
+                             AND ($2::text IS NULL OR item->>'tienda_id' = $2)
+                             AND ($3::text IS NULL OR item->>'negocio_id' = $3))
+               AND ($4::text IS NULL OR estado = $4)
+             ORDER BY creado_en DESC LIMIT $5"
         ))
         .bind(empresa_id)
         .bind(tienda_id)
+        .bind(negocio_id)
         .bind(estado)
         .bind(limite.unwrap_or(100))
         .fetch_all(db.pool())
         .await
         .map_err(error_db)?;
         filas.iter().map(serializar).collect()
+    }
+
+    pub async fn resumen_por_negocio(
+        &self,
+        db: &crate::db::Db,
+        empresa_id: &str,
+        negocio_id: Option<&str>,
+        desde: Option<&str>,
+        hasta: Option<&str>,
+    ) -> Result<Vec<Value>, ApiError> {
+        let filas = sqlx::query(
+            "WITH lineas AS (
+               SELECT o.id AS order_id,
+                      NULLIF(item->>'negocio_id', '')::uuid AS negocio_id,
+                      COALESCE((item->>'cantidad')::bigint, 0) AS cantidad,
+                      COALESCE((item->>'precio_unitario_cents')::bigint, 0) AS precio
+                 FROM orders.orden_vista o,
+                      jsonb_array_elements(o.items_json) item
+                WHERE item->>'empresa_id' = $1
+                  AND ($2::uuid IS NULL OR NULLIF(item->>'negocio_id', '')::uuid = $2)
+                  AND ($3::timestamptz IS NULL OR o.creado_en >= $3::timestamptz)
+                  AND ($4::timestamptz IS NULL OR o.creado_en <= $4::timestamptz)
+             )
+             SELECT l.negocio_id,
+                    n.nombre AS negocio_nombre,
+                    COUNT(DISTINCT l.order_id)::bigint AS ordenes,
+                    COALESCE(SUM(l.cantidad * l.precio), 0)::bigint AS total_cents
+               FROM lineas l
+               LEFT JOIN identity.negocios n ON n.id = l.negocio_id
+              GROUP BY l.negocio_id, n.nombre
+              ORDER BY total_cents DESC",
+        )
+        .bind(empresa_id)
+        .bind(negocio_id)
+        .bind(desde)
+        .bind(hasta)
+        .fetch_all(db.pool())
+        .await
+        .map_err(error_db)?;
+        filas
+            .iter()
+            .map(|fila| {
+                Ok(serde_json::json!({
+                    "negocio_id": fila.try_get::<Option<Uuid>, _>("negocio_id").map_err(error_db)?,
+                    "negocio_nombre": fila.try_get::<Option<String>, _>("negocio_nombre").map_err(error_db)?,
+                    "ordenes": fila.try_get::<i64, _>("ordenes").map_err(error_db)?,
+                    "total_cents": fila.try_get::<i64, _>("total_cents").map_err(error_db)?,
+                }))
+            })
+            .collect()
     }
 
     pub async fn listar_todo(
@@ -218,6 +276,7 @@ pub fn serializar(fila: &sqlx::postgres::PgRow) -> Result<OrderView, ApiError> {
         comprador_id: crate::db::uuid_texto(fila, "comprador_id").map_err(error_db)?,
         parte_id: crate::db::uuid_opcional(fila, "parte_id").map_err(error_db)?,
         tienda_id: crate::db::uuid_texto(fila, "tienda_id").map_err(error_db)?,
+        negocio_id: crate::db::uuid_opcional(fila, "negocio_id").map_err(error_db)?,
         estado: fila.try_get("estado").map_err(error_db)?,
         total_cents: i64::from(fila.try_get::<i32, _>("total_cents").map_err(error_db)?),
         comision_cents: i64::from(fila.try_get::<i32, _>("comision_cents").map_err(error_db)?),
@@ -273,6 +332,7 @@ mod tests {
             comprador_id: "c-1".into(),
             parte_id: None,
             tienda_id: "t-1".into(),
+            negocio_id: None,
             estado: "creada".into(),
             total_cents: 100,
             comision_cents: 12,

@@ -16,7 +16,6 @@
   "finance.plan_cuentas",
   "finance.proyecciones",
   "finance.regimenes_fiscales",
-  "finance.series_comprobantes",
   "finance.sujetos_fiscales",
   "identity.outbox",
   "identity.sesiones",

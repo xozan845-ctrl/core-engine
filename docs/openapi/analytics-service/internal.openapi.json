@@ -1,0 +1,65 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "core-engine · analytics-service (interna)",
+    "version": "1.0.9"
+  },
+  "x-servicio": "analytics-service",
+  "paths": {
+    "/internal/analytics/reportes/ejecutar": {
+      "post": {
+        "operationId": "AnalyticsController_ejecutarReportesVencidos",
+        "parameters": [
+          {
+            "name": "limite",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "default": 20
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Reportes vencidos ejecutados",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "ejecutados": {
+                      "type": "integer"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "summary": "Ejecutar reportes vencidos",
+        "tags": [
+          "Interna"
+        ]
+      }
+    }
+  },
+  "components": {
+    "schemas": {},
+    "securitySchemes": {
+      "internalKey": {
+        "type": "apiKey",
+        "in": "header",
+        "name": "x-internal-key"
+      }
+    }
+  },
+  "security": [
+    {
+      "internalKey": []
+    }
+  ],
+  "x-superficie": "interna"
+}

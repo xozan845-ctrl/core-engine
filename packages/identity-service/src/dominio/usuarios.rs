@@ -11,6 +11,7 @@ use crate::errors::ApiError;
 use crate::storage::Storage;
 use chrono::{DateTime, Utc};
 use serde::Serialize;
+use serde_json::Value;
 use sqlx::postgres::PgRow;
 use sqlx::Row;
 use std::sync::Arc;
@@ -19,7 +20,20 @@ const COLUMNAS: &str = "u.id, u.nombre, u.correo, u.rol, u.tenant_id, u.personal
        u.participacion_porcentaje, u.avatar_objeto_id, u.creado_en,
        (SELECT a.rol_empresa_id FROM identity.asignaciones_personal a
          WHERE a.usuario_id = u.id AND a.empresa_id = u.tenant_id AND a.estado = 'activa'
-         LIMIT 1) AS rol_empresa_id";
+         ORDER BY a.creado_en DESC LIMIT 1) AS rol_empresa_id,
+       (SELECT CASE
+                 WHEN r.codigo = 'empresario' AND r.negocio_id IS NULL THEN NULL
+                 ELSE a.negocio_id
+               END
+          FROM identity.asignaciones_personal a
+          JOIN identity.roles_empresa r ON r.id = a.rol_empresa_id
+         WHERE a.usuario_id = u.id AND a.empresa_id = u.tenant_id AND a.estado = 'activa'
+         ORDER BY a.creado_en DESC LIMIT 1) AS negocio_id,
+       (SELECT r.permisos
+          FROM identity.asignaciones_personal a
+          JOIN identity.roles_empresa r ON r.id = a.rol_empresa_id
+         WHERE a.usuario_id = u.id AND a.empresa_id = u.tenant_id AND a.estado = 'activa'
+         ORDER BY a.creado_en DESC LIMIT 1) AS permisos";
 
 #[derive(Debug, Clone, Serialize, PartialEq)]
 pub struct Usuario {
@@ -35,6 +49,10 @@ pub struct Usuario {
     pub participacion_porcentaje: Option<i64>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub rol_empresa_id: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub negocio_id: Option<String>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub permisos: Vec<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub avatar_objeto_id: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -88,6 +106,41 @@ impl Usuarios {
         .map_err(interno)?;
         tx.commit().await.map_err(interno)?;
         fila.map(|fila| sanear(&fila)).transpose().map_err(interno)
+    }
+
+    /// Comprueba que el usuario pueda operar en el negocio dentro de su empresa.
+    pub async fn negocio_accesible(
+        &self,
+        usuario_id: &str,
+        empresa_id: &str,
+        negocio_id: &str,
+    ) -> Result<bool, ApiError> {
+        if !es_uuid(usuario_id) || !es_uuid(empresa_id) || !es_uuid(negocio_id) {
+            return Ok(false);
+        }
+        let mut tx = self.db.transaccion().await.map_err(interno)?;
+        let fila = sqlx::query(
+            "SELECT 1
+               FROM identity.negocios n
+              WHERE n.id = $1::uuid AND n.empresa_id = $2::uuid AND n.estado = 'activo'
+                AND EXISTS (
+                  SELECT 1
+                    FROM identity.asignaciones_personal a
+                    JOIN identity.roles_empresa r ON r.id = a.rol_empresa_id
+                   WHERE a.usuario_id = $3::uuid AND a.empresa_id = $2::uuid
+                     AND a.estado = 'activa'
+                     AND (a.negocio_id = n.id OR r.negocio_id = n.id
+                          OR (r.codigo = 'empresario' AND r.negocio_id IS NULL))
+                )",
+        )
+        .bind(negocio_id)
+        .bind(empresa_id)
+        .bind(usuario_id)
+        .fetch_optional(&mut *tx)
+        .await
+        .map_err(interno)?;
+        tx.commit().await.map_err(interno)?;
+        Ok(fila.is_some())
     }
 
     pub async fn encontrar_por_correo(
@@ -398,6 +451,20 @@ fn sanear(fila: &PgRow) -> Result<Usuario, sqlx::Error> {
     let personal_id: Option<uuid::Uuid> = fila.try_get("personal_id")?;
     let avatar_objeto_id: Option<uuid::Uuid> = fila.try_get("avatar_objeto_id")?;
     let rol_empresa_id: Option<uuid::Uuid> = fila.try_get("rol_empresa_id")?;
+    let negocio_id: Option<uuid::Uuid> = fila.try_get("negocio_id")?;
+    let permisos_json: Option<Value> = fila.try_get("permisos")?;
+    let permisos = permisos_json
+        .as_ref()
+        .and_then(|valor| valor.get("acciones"))
+        .and_then(Value::as_array)
+        .map(|acciones| {
+            acciones
+                .iter()
+                .filter_map(Value::as_str)
+                .map(str::to_string)
+                .collect()
+        })
+        .unwrap_or_default();
     let participacion: Option<i32> = fila.try_get("participacion_porcentaje")?;
     let creado_en: DateTime<Utc> = fila.try_get("creado_en")?;
     let avatar_texto = avatar_objeto_id.map(|valor| valor.to_string());
@@ -410,6 +477,8 @@ fn sanear(fila: &PgRow) -> Result<Usuario, sqlx::Error> {
         personal_id: personal_id.map(|valor| valor.to_string()),
         participacion_porcentaje: participacion.map(i64::from),
         rol_empresa_id: rol_empresa_id.map(|valor| valor.to_string()),
+        negocio_id: negocio_id.map(|valor| valor.to_string()),
+        permisos,
         avatar_url: avatar_texto
             .as_ref()
             .map(|id| format!("/api/v2/storage/public/objetos/{id}")),
@@ -577,7 +646,7 @@ impl Usuarios {
             "INSERT INTO identity.roles_empresa
                (empresa_id, codigo, nombre, permisos, creado_por)
              VALUES ($1::uuid, 'vendedor', 'Vendedor', '{}'::jsonb, $2::uuid)
-             ON CONFLICT (empresa_id, codigo) DO NOTHING",
+             ON CONFLICT DO NOTHING",
         )
         .bind(&datos.empresa_id)
         .bind(id.to_string())

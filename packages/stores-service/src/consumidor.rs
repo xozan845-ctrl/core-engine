@@ -36,6 +36,7 @@ impl StockConsumer {
             usuario_id: Some("00000000-0000-0000-0000-000000000000".to_string()),
             rol: Some("super_admin".to_string()),
             tenant_id: None,
+            negocio_id: None,
         };
         let consumer = self;
         ejecutar_con_contexto(contexto, async move {
