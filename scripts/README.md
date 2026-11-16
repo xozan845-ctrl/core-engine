@@ -226,7 +226,7 @@ Los `npm scripts` de la raíz son **envoltorios** (sin ruptura para CI ni local)
 (30 000 ms) por espera asíncrona. Reintenta una sola vez las peticiones GET
 si falla la red; las mutaciones no se repiten sin clave de idempotencia.
 `npm run smoke:remote` es el smoke de solo lectura para stage/prod
-(`/health`, login y `GET /api/v2/catalog/productos`); lo ejecuta `deploy.yml`
+(`/health`, login y `GET /api/v2/catalog/items`); lo ejecuta `deploy.yml`
 tras el despliegue (R-CD-12) y exige `ADMIN_EMAIL`/`ADMIN_PASSWORD` del
 environment. `test:smoke` prueba ese contrato con un servidor HTTP efímero y
 no sustituye el workflow E2E de release/manual (G-6), que ejecuta `npm run demo`
