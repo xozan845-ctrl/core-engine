@@ -34,7 +34,7 @@ async fn autorizar(
     let tenant = usuario.tenant()?;
     let activas = state
         .capacidades
-        .activas(tenant, &[CAPACIDAD_AGENDA])
+        .activas_en(tenant, usuario.negocio_id.as_deref(), &[CAPACIDAD_AGENDA])
         .await
         .map_err(|_| ApiError::servicio_no_disponible("identity-service"))?;
     let activa = activas.iter().any(|capacidad| {
