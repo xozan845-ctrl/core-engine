@@ -12,7 +12,7 @@ use axum::extract::{Path, State};
 use axum::http::{header, HeaderMap, HeaderValue, StatusCode};
 use axum::response::{IntoResponse, Response};
 use axum::Json;
-use serde_json::Value;
+use serde_json::{json, Value};
 
 const PERFIL: &[ReglaCampo] = &[
     campo("ruc", false, &[Regla::Texto, Regla::MaxLongitud(30)]),
@@ -96,6 +96,7 @@ const CREAR: &[ReglaCampo] = &[
         &[Regla::Texto, Regla::Coincide("segmento")],
     ),
     campo("pack_version", false, &[Regla::Entero, Regla::Min(1.0)]),
+    campo("capacidades_extra", false, &[Regla::Arreglo]),
 ];
 
 const PACK: &[ReglaCampo] = &[
@@ -162,6 +163,7 @@ pub async fn crear(
                 .get("pack_version")
                 .and_then(Value::as_i64)
                 .and_then(|valor| i32::try_from(valor).ok()),
+            capacidades_extra: capacidades_extra(&dto)?,
         })
         .await?;
     created(empresa)
@@ -298,6 +300,25 @@ pub async fn crear_vendedor(
         )
         .await?;
     created(vendedor)
+}
+
+fn capacidades_extra(dto: &Value) -> Result<Vec<String>, ApiError> {
+    match dto.get("capacidades_extra") {
+        None | Some(Value::Null) => Ok(Vec::new()),
+        Some(Value::Array(items)) => items
+            .iter()
+            .map(|item| {
+                item.as_str().map(str::to_string).ok_or_else(|| {
+                    ApiError::validacion(json!([
+                        {"campo": "capacidades_extra", "restricciones": ["isString"]}
+                    ]))
+                })
+            })
+            .collect(),
+        Some(_) => Err(ApiError::validacion(json!([
+            {"campo": "capacidades_extra", "restricciones": ["isArray"]}
+        ]))),
+    }
 }
 
 #[cfg(test)]

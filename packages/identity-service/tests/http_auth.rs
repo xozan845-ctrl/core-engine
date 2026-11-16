@@ -1324,6 +1324,108 @@ async fn debe_crear_gestionar_y_resolver_empresas() {
 }
 
 #[tokio::test]
+async fn debe_activar_capacidades_extra_al_crear_empresa() {
+    let Some(ctx) = preparar().await else {
+        return;
+    };
+    let empresario = ctx
+        .usuarios
+        .crear(CrearUsuario {
+            nombre: "Empresario fidelidad".into(),
+            correo: correo(),
+            contrasena: "secreto123".into(),
+            rol: "empresario".into(),
+            tenant_id: None,
+            personal_id: None,
+        })
+        .await
+        .expect("empresario");
+    let actor = autorizacion(&empresario.id, "empresario");
+    let slug = format!("fidelidad-{}", &Uuid::new_v4().simple().to_string()[..8]);
+
+    let (status, creada) = enviar(
+        &ctx.app,
+        "POST",
+        "/api/v2/empresas",
+        json!({
+            "nombre": "Empresa con fidelidad",
+            "slug": slug,
+            "vertical_id": "retail",
+            "pack_codigo": "pack_retail",
+            "capacidades_extra": ["fidelizacion"]
+        }),
+        &headers(&actor),
+    )
+    .await;
+    assert_eq!(status, StatusCode::CREATED);
+    let empresa_id = creada["data"]["id"].as_str().expect("id").to_string();
+
+    let (status, manifiesto) = enviar(
+        &ctx.app,
+        "GET",
+        &format!("/api/v2/empresas/{empresa_id}/features"),
+        Value::Null,
+        &headers(&[
+            ("x-user-id", empresario.id.clone()),
+            ("x-user-rol", "empresario".to_string()),
+            ("x-user-email", "actor@test.dev".to_string()),
+            ("x-tenant", empresa_id.clone()),
+        ]),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK);
+    let capacidades = manifiesto["data"]["capacidades"]
+        .as_array()
+        .expect("capacidades");
+    let fidelizacion = capacidades
+        .iter()
+        .find(|capacidad| capacidad["codigo"] == "fidelizacion")
+        .expect("capacidad fidelizacion");
+    assert_eq!(fidelizacion["activo"], true);
+    assert_eq!(fidelizacion["modulo"], "loyalty");
+    let features = manifiesto["data"]["features"].as_array().expect("features");
+    for feature in [
+        "fidelizacion.programas",
+        "fidelizacion.tarjetas",
+        "fidelizacion.canjes",
+    ] {
+        assert!(
+            features.iter().any(|valor| valor == feature),
+            "falta la feature {feature}"
+        );
+    }
+
+    let otro = ctx
+        .usuarios
+        .crear(CrearUsuario {
+            nombre: "Empresario invalido".into(),
+            correo: correo(),
+            contrasena: "secreto123".into(),
+            rol: "empresario".into(),
+            tenant_id: None,
+            personal_id: None,
+        })
+        .await
+        .expect("empresario");
+    let (status, error) = enviar(
+        &ctx.app,
+        "POST",
+        "/api/v2/empresas",
+        json!({
+            "nombre": "Empresa con capacidad invalida",
+            "slug": format!("invalida-{}", &Uuid::new_v4().simple().to_string()[..8]),
+            "vertical_id": "retail",
+            "pack_codigo": "pack_retail",
+            "capacidades_extra": ["no_existe"]
+        }),
+        &headers(&autorizacion(&otro.id, "empresario")),
+    )
+    .await;
+    assert_eq!(status, StatusCode::BAD_REQUEST);
+    assert_eq!(error["codigo"], "CAPACIDAD_NO_DISPONIBLE");
+}
+
+#[tokio::test]
 async fn debe_negar_empresas_a_quien_no_es_miembro() {
     let Some(ctx) = preparar().await else {
         return;

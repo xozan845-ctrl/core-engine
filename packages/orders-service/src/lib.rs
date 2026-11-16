@@ -19,6 +19,7 @@ pub mod db;
 pub mod entregas;
 pub mod errors;
 pub mod event_store;
+pub mod fidelizacion;
 pub mod fulfillments;
 pub mod http;
 pub mod logs;
