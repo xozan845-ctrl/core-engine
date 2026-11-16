@@ -40,8 +40,14 @@ En producción `JWT_SECRET`, `ADMIN_EMAIL` y `ADMIN_PASSWORD` son obligatorias.
   contra `storage-service`.
 - **Capacidades, verticales y packs**: lectura y altas administrativas, con
   guard de empresario activo por tenant.
-- **Empresas**: alta con pack/vertical, perfil, slug con historial y 301,
-  cambio de pack, logo/fondos y alta de vendedores.
+- **Empresas**: alta con pack/vertical, negocio `principal` automático,
+  perfil, slug con historial y 301, cambio de pack, logo/fondos y alta de
+  vendedores.
+- **Negocios**: unidades operativas por empresa con vertical, pack y
+  capacidades propios; el segundo negocio exige un `empresario` activo
+  (ADR-0019). El JWT lleva `negocio_id` y la autorización por negocio usa
+  `personal.leer`, `personal.gestionar`, `capacidades.leer` y
+  `capacidades.gestionar`.
 - **Configuración del sitio**: fondos y panel de IA, plantilla y tema.
 - **API keys**: creación, listado, revocación y canje por JWT corto.
 - **Base compartida**: tema (herencia y overrides), medios (imagen/video) y

@@ -114,6 +114,26 @@ async fn sembrar_tenant_plataforma(db: &Db, config: &Config) {
         );
         return;
     }
+    let negocio = sqlx::query(
+        "INSERT INTO identity.negocios
+           (empresa_id, codigo, nombre, vertical_id, pack_codigo, pack_version,
+            es_predeterminado, creado_por)
+         SELECT $1::uuid, 'principal', e.nombre, e.vertical_id, e.pack_codigo,
+                e.pack_version, true, e.creado_por
+           FROM identity.empresas e
+          WHERE e.id = $1::uuid
+         ON CONFLICT (empresa_id, codigo) DO NOTHING",
+    )
+    .bind(id)
+    .execute(&mut *tx)
+    .await;
+    if let Err(error) = negocio {
+        logs::warn(
+            "seed",
+            campos! { "msg": "No se pudo asegurar el negocio principal", "err": error.to_string() },
+        );
+        return;
+    }
     let capacidades = sqlx::query(
         "INSERT INTO identity.empresa_capacidades (empresa_id, capacidad_codigo, config, activo)
          SELECT $1::uuid, capacidad_codigo, config, activo
@@ -128,6 +148,25 @@ async fn sembrar_tenant_plataforma(db: &Db, config: &Config) {
         logs::warn(
             "seed",
             campos! { "msg": "No se pudieron sembrar las capacidades del tenant", "err": error.to_string() },
+        );
+        return;
+    }
+    let capacidades_negocio = sqlx::query(
+        "INSERT INTO identity.negocio_capacidades
+           (negocio_id, capacidad_codigo, config, activo)
+         SELECT n.id, ec.capacidad_codigo, ec.config, ec.activo
+           FROM identity.negocios n
+           JOIN identity.empresa_capacidades ec ON ec.empresa_id = n.empresa_id
+          WHERE n.empresa_id = $1::uuid AND n.es_predeterminado
+         ON CONFLICT (negocio_id, capacidad_codigo) DO NOTHING",
+    )
+    .bind(id)
+    .execute(&mut *tx)
+    .await;
+    if let Err(error) = capacidades_negocio {
+        logs::warn(
+            "seed",
+            campos! { "msg": "No se pudieron sembrar las capacidades del negocio", "err": error.to_string() },
         );
         return;
     }

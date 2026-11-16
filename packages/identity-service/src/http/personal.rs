@@ -4,7 +4,7 @@ use super::validacion::{campo, validar, Regla, ReglaCampo};
 use super::Cuerpo;
 use crate::auth::UsuarioContexto;
 use crate::dominio::personal::{
-    AceptarInvitacion, AsignarPersonal, CrearInvitacion, CrearPuesto, CrearRol,
+    AceptarInvitacion, AsignarPersonal, CrearInvitacion, CrearPuesto, CrearRol, TransferirPersonal,
 };
 use crate::errors::ApiError;
 use crate::state::AppState;
@@ -23,6 +23,7 @@ const ROL: &[ReglaCampo] = &[
         &[Regla::Texto, Regla::MaxLongitud(500)],
     ),
     campo("permisos", true, &[Regla::Objeto]),
+    campo("negocio_id", false, &[Regla::Uuid]),
 ];
 
 const PUESTO: &[ReglaCampo] = &[
@@ -30,6 +31,7 @@ const PUESTO: &[ReglaCampo] = &[
     campo("nombre", true, &[Regla::Texto, Regla::Longitud(2, 120)]),
     campo("tipo", false, &[Regla::Texto, Regla::Coincide("segmento")]),
     campo("tienda_id", false, &[Regla::Uuid]),
+    campo("negocio_id", false, &[Regla::Uuid]),
     campo("metadata", false, &[Regla::Objeto]),
 ];
 
@@ -38,6 +40,7 @@ const ASIGNACION: &[ReglaCampo] = &[
     campo("rol_empresa_id", true, &[Regla::Uuid]),
     campo("tienda_id", false, &[Regla::Uuid]),
     campo("puesto_id", false, &[Regla::Uuid]),
+    campo("negocio_id", false, &[Regla::Uuid]),
     campo("metadata", false, &[Regla::Objeto]),
 ];
 
@@ -48,10 +51,19 @@ const INVITACION: &[ReglaCampo] = &[
     campo("rol_empresa_id", true, &[Regla::Uuid]),
     campo("tienda_id", false, &[Regla::Uuid]),
     campo("puesto_id", false, &[Regla::Uuid]),
+    campo("negocio_id", false, &[Regla::Uuid]),
     campo("metadata", false, &[Regla::Objeto]),
 ];
 
 const ROL_ESTADO: &[ReglaCampo] = &[campo("activo", true, &[Regla::Booleano])];
+
+const TRANSFERIR: &[ReglaCampo] = &[
+    campo("origen_id", true, &[Regla::Uuid]),
+    campo("destino_id", true, &[Regla::Uuid]),
+    campo("rol_empresa_id", true, &[Regla::Uuid]),
+    campo("tienda_id", false, &[Regla::Uuid]),
+    campo("puesto_id", false, &[Regla::Uuid]),
+];
 
 const ACEPTAR: &[ReglaCampo] = &[
     campo("nombre", true, &[Regla::Texto, Regla::Longitud(2, 120)]),
@@ -67,9 +79,9 @@ fn ok(valor: Value) -> Result<Response, ApiError> {
 }
 
 fn actor(headers: &HeaderMap) -> Result<UsuarioContexto, ApiError> {
-    let actor = UsuarioContexto::desde_headers_o_error(headers)?;
-    actor.exigir_roles(&["super_admin", "admin", "empresario"], &[])?;
-    Ok(actor)
+    // La autorización fina por empresa/negocio y permisos se resuelve en el
+    // dominio; aquí solo se exige un contexto de identidad válido.
+    UsuarioContexto::desde_headers_o_error(headers)
 }
 
 pub async fn crear_rol(
@@ -97,6 +109,10 @@ pub async fn crear_rol(
                     .get("permisos")
                     .cloned()
                     .unwrap_or_else(|| serde_json::json!({})),
+                negocio_id: dto
+                    .get("negocio_id")
+                    .and_then(Value::as_str)
+                    .map(str::to_string),
             },
         )
         .await?;
@@ -160,6 +176,10 @@ pub async fn crear_puesto(
                     .get("tienda_id")
                     .and_then(Value::as_str)
                     .map(str::to_string),
+                negocio_id: dto
+                    .get("negocio_id")
+                    .and_then(Value::as_str)
+                    .map(str::to_string),
                 metadata: dto.get("metadata").cloned(),
             },
         )
@@ -206,6 +226,10 @@ pub async fn asignar(
                     .get("puesto_id")
                     .and_then(Value::as_str)
                     .map(str::to_string),
+                negocio_id: dto
+                    .get("negocio_id")
+                    .and_then(Value::as_str)
+                    .map(str::to_string),
                 metadata: dto.get("metadata").cloned(),
             },
         )
@@ -225,6 +249,39 @@ pub async fn listar_asignaciones(
         .listar_asignaciones(&actor, &empresa_id)
         .await?;
     ok(Value::Array(asignaciones))
+}
+
+pub async fn transferir(
+    State(state): State<AppState>,
+    Path((empresa_id, usuario_id)): Path<(String, String)>,
+    headers: HeaderMap,
+    Cuerpo(dto): Cuerpo,
+) -> Result<Response, ApiError> {
+    validar(TRANSFERIR, &dto)?;
+    let actor = actor(&headers)?;
+    let asignacion = state
+        .servicios()?
+        .personal
+        .transferir(
+            &actor,
+            &empresa_id,
+            TransferirPersonal {
+                usuario_id,
+                origen_id: texto(&dto, "origen_id"),
+                destino_id: texto(&dto, "destino_id"),
+                rol_empresa_id: texto(&dto, "rol_empresa_id"),
+                tienda_id: dto
+                    .get("tienda_id")
+                    .and_then(Value::as_str)
+                    .map(str::to_string),
+                puesto_id: dto
+                    .get("puesto_id")
+                    .and_then(Value::as_str)
+                    .map(str::to_string),
+            },
+        )
+        .await?;
+    created(asignacion)
 }
 
 pub async fn crear_invitacion(
@@ -255,6 +312,10 @@ pub async fn crear_invitacion(
                     .map(str::to_string),
                 puesto_id: dto
                     .get("puesto_id")
+                    .and_then(Value::as_str)
+                    .map(str::to_string),
+                negocio_id: dto
+                    .get("negocio_id")
                     .and_then(Value::as_str)
                     .map(str::to_string),
                 metadata: dto.get("metadata").cloned(),

@@ -6,7 +6,9 @@
 
 use crate::auth::{hash_contrasena, UsuarioContexto};
 use crate::db::{iso_ms, Db};
+use crate::dominio::auditoria;
 use crate::dominio::auth::Auth;
+use crate::dominio::negocios::Negocios;
 use crate::dominio::usuarios::{correo_valido, Usuario};
 use crate::email::{Email, EmailMessage};
 use crate::errors::ApiError;
@@ -31,6 +33,7 @@ pub struct CrearRol {
     pub nombre: String,
     pub descripcion: Option<String>,
     pub permisos: Value,
+    pub negocio_id: Option<String>,
 }
 
 #[derive(Debug, Clone)]
@@ -39,6 +42,7 @@ pub struct CrearPuesto {
     pub nombre: String,
     pub tipo: Option<String>,
     pub tienda_id: Option<String>,
+    pub negocio_id: Option<String>,
     pub metadata: Option<Value>,
 }
 
@@ -48,6 +52,7 @@ pub struct AsignarPersonal {
     pub rol_empresa_id: String,
     pub tienda_id: Option<String>,
     pub puesto_id: Option<String>,
+    pub negocio_id: Option<String>,
     pub metadata: Option<Value>,
 }
 
@@ -59,7 +64,18 @@ pub struct CrearInvitacion {
     pub rol_empresa_id: String,
     pub tienda_id: Option<String>,
     pub puesto_id: Option<String>,
+    pub negocio_id: Option<String>,
     pub metadata: Option<Value>,
+}
+
+#[derive(Debug, Clone)]
+pub struct TransferirPersonal {
+    pub usuario_id: String,
+    pub origen_id: String,
+    pub destino_id: String,
+    pub rol_empresa_id: String,
+    pub tienda_id: Option<String>,
+    pub puesto_id: Option<String>,
 }
 
 #[derive(Debug, Clone)]
@@ -68,8 +84,69 @@ pub struct AceptarInvitacion {
     pub contrasena: String,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum AccionPersonal {
+    Leer,
+    Gestionar,
+}
+
+impl AccionPersonal {
+    fn permiso(self) -> &'static str {
+        match self {
+            Self::Leer => "personal.leer",
+            Self::Gestionar => "personal.gestionar",
+        }
+    }
+}
+
+#[derive(Debug, Clone)]
+struct AsignacionActor {
+    negocio_id: Option<String>,
+    rol_negocio_id: Option<String>,
+    codigo: String,
+    permisos: Vec<String>,
+}
+
+/// Alcance efectivo del actor dentro de una empresa. `empresa_global` solo es
+/// cierto para un `empresario` con rol transversal o un admin de plataforma.
+#[derive(Debug, Clone)]
+struct ContextoPersonal {
+    empresa_global: bool,
+    negocio_id: Option<String>,
+    asignaciones: Vec<AsignacionActor>,
+}
+
+impl ContextoPersonal {
+    fn autorizado(&self, accion: AccionPersonal, negocio_id: Option<&str>) -> bool {
+        self.asignaciones.iter().any(|asignacion| {
+            let alcance = match (asignacion.rol_negocio_id.as_deref(), negocio_id) {
+                (None, _) => true,
+                (Some(rol), Some(objetivo)) => rol == objetivo,
+                (Some(_), None) => false,
+            };
+            alcance
+                && (asignacion.codigo == "empresario"
+                    || asignacion
+                        .permisos
+                        .iter()
+                        .any(|permiso| permiso == accion.permiso()))
+        })
+    }
+
+    fn puede_leer(&self) -> bool {
+        self.asignaciones.iter().any(|asignacion| {
+            asignacion.codigo == "empresario"
+                || asignacion
+                    .permisos
+                    .iter()
+                    .any(|permiso| permiso == AccionPersonal::Leer.permiso())
+        })
+    }
+}
+
 pub struct Personal {
     db: Arc<Db>,
+    negocios: Arc<Negocios>,
     auth: Arc<Auth>,
     email: Arc<dyn Email>,
     stores: Arc<Stores>,
@@ -79,6 +156,7 @@ pub struct Personal {
 impl Personal {
     pub fn nueva(
         db: Arc<Db>,
+        negocios: Arc<Negocios>,
         auth: Arc<Auth>,
         email: Arc<dyn Email>,
         stores: Arc<Stores>,
@@ -86,6 +164,7 @@ impl Personal {
     ) -> Self {
         Self {
             db,
+            negocios,
             auth,
             email,
             stores,
@@ -99,7 +178,7 @@ impl Personal {
         empresa_id: &str,
         datos: CrearRol,
     ) -> Result<Value, ApiError> {
-        self.assert_empresario(actor, empresa_id).await?;
+        let contexto = self.contexto(actor, empresa_id).await?;
         let codigo = validar_codigo(&datos.codigo, CODIGO)?;
         let nombre = datos.nombre.trim();
         if !(2..=120).contains(&nombre.chars().count()) {
@@ -109,22 +188,43 @@ impl Personal {
             ));
         }
         let permisos = validar_permisos(&datos.permisos)?;
+        self.validar_catalogo_permisos(&permisos).await?;
+        // `None` conserva el rol transversal de la empresa cuando el actor
+        // administra toda la empresa; un rol de negocio acota su alcance.
+        let negocio_id = match datos.negocio_id.as_deref() {
+            Some(id) => self.negocios.resolver(empresa_id, Some(id)).await?,
+            None if contexto.empresa_global => None,
+            None => contexto.negocio_id.clone(),
+        };
+        Self::exigir_gestion(&contexto, negocio_id.as_deref())?;
         let mut tx = self.db.transaccion().await.map_err(interno)?;
         let fila = sqlx::query(
             "INSERT INTO identity.roles_empresa AS r
-               (empresa_id, codigo, nombre, descripcion, permisos, creado_por)
-             VALUES ($1::uuid, $2, $3, $4, $5::jsonb, $6::uuid)
+               (empresa_id, codigo, nombre, descripcion, permisos, negocio_id, creado_por)
+             VALUES ($1::uuid, $2, $3, $4, $5::jsonb, $6::uuid, $7::uuid)
              RETURNING to_jsonb(r) AS datos",
         )
         .bind(empresa_id)
         .bind(&codigo)
         .bind(nombre)
         .bind(datos.descripcion.as_deref().unwrap_or("").trim())
-        .bind(permisos)
+        .bind(&permisos)
+        .bind(negocio_id.as_deref())
         .bind(&actor.user_id)
         .fetch_optional(&mut *tx)
         .await
         .map_err(conflicto_codigo)?;
+        auditoria::registrar(
+            &mut tx,
+            &actor.user_id,
+            empresa_id,
+            negocio_id.as_deref(),
+            "rol.creado",
+            "rol_empresa",
+            None,
+            json!({ "codigo": codigo, "nombre": nombre, "permisos": permisos }),
+        )
+        .await?;
         tx.commit().await.map_err(interno)?;
         let fila =
             fila.ok_or_else(|| ApiError::dominio("ROL_FALLIDO", "No se pudo crear el rol."))?;
@@ -137,13 +237,22 @@ impl Personal {
         actor: &UsuarioContexto,
         empresa_id: &str,
     ) -> Result<Vec<Value>, ApiError> {
-        self.assert_acceso(actor, empresa_id).await?;
+        let contexto = self.contexto(actor, empresa_id).await?;
+        Self::exigir_lectura(&contexto)?;
+        let empresa_global = contexto.empresa_global;
+        let negocio_id = contexto.negocio_id.clone();
         let mut tx = self.db.transaccion().await.map_err(interno)?;
         let filas = sqlx::query(
             "SELECT to_jsonb(r) AS datos FROM identity.roles_empresa r
-              WHERE r.empresa_id = $1::uuid ORDER BY r.nombre",
+              WHERE r.empresa_id = $1::uuid
+                AND ($2::boolean
+                     OR r.negocio_id IS NULL
+                     OR ($3::uuid IS NOT NULL AND r.negocio_id = $3::uuid))
+              ORDER BY r.nombre",
         )
         .bind(empresa_id)
+        .bind(empresa_global)
+        .bind(negocio_id)
         .fetch_all(&mut *tx)
         .await
         .map_err(interno)?;
@@ -164,8 +273,20 @@ impl Personal {
         rol_id: &str,
         activo: bool,
     ) -> Result<Value, ApiError> {
-        self.assert_empresario(actor, empresa_id).await?;
+        let contexto = self.contexto(actor, empresa_id).await?;
         let mut tx = self.db.transaccion().await.map_err(interno)?;
+        let actual = sqlx::query(
+            "SELECT negocio_id FROM identity.roles_empresa
+              WHERE id = $1::uuid AND empresa_id = $2::uuid",
+        )
+        .bind(rol_id)
+        .bind(empresa_id)
+        .fetch_optional(&mut *tx)
+        .await
+        .map_err(interno)?
+        .ok_or_else(|| ApiError::no_encontrado("Rol", rol_id))?;
+        let negocio_id: Option<Uuid> = actual.try_get("negocio_id").map_err(interno)?;
+        Self::exigir_gestion(&contexto, negocio_id.map(|id| id.to_string()).as_deref())?;
         let fila = sqlx::query(
             "UPDATE identity.roles_empresa AS r
                 SET activo = $1, actualizado_en = NOW()
@@ -179,6 +300,17 @@ impl Personal {
         .await
         .map_err(interno)?
         .ok_or_else(|| ApiError::no_encontrado("Rol", rol_id))?;
+        auditoria::registrar(
+            &mut tx,
+            &actor.user_id,
+            empresa_id,
+            negocio_id.map(|id| id.to_string()).as_deref(),
+            "rol.actualizado",
+            "rol_empresa",
+            Some(rol_id),
+            json!({ "activo": activo }),
+        )
+        .await?;
         tx.commit().await.map_err(interno)?;
         let datos: Value = fila.try_get("datos").map_err(interno)?;
         Ok(normalizar_fechas(datos, &["creado_en", "actualizado_en"]))
@@ -190,7 +322,7 @@ impl Personal {
         empresa_id: &str,
         datos: CrearPuesto,
     ) -> Result<Value, ApiError> {
-        self.assert_empresario(actor, empresa_id).await?;
+        let contexto = self.contexto(actor, empresa_id).await?;
         let codigo = validar_codigo(&datos.codigo, CODIGO)?;
         let tipo = validar_codigo(datos.tipo.as_deref().unwrap_or("operativo"), "tipo")?;
         let nombre = datos.nombre.trim();
@@ -204,11 +336,21 @@ impl Personal {
             self.assert_tienda(empresa_id, tienda_id).await?;
         }
         validar_objeto(datos.metadata.as_ref(), "metadata")?;
+        let objetivo = datos
+            .negocio_id
+            .clone()
+            .or_else(|| contexto.negocio_id.clone());
+        let negocio_id = self
+            .negocios
+            .resolver(empresa_id, objetivo.as_deref())
+            .await?;
+        Self::exigir_gestion(&contexto, negocio_id.as_deref())?;
         let mut tx = self.db.transaccion().await.map_err(interno)?;
         let fila = sqlx::query(
             "INSERT INTO identity.puestos_empresa AS p
-               (empresa_id, codigo, nombre, tipo, tienda_id, metadata, creado_por)
-             VALUES ($1::uuid, $2, $3, $4, $5::uuid, COALESCE($6::jsonb, '{}'::jsonb), $7::uuid)
+               (empresa_id, codigo, nombre, tipo, tienda_id, negocio_id, metadata, creado_por)
+             VALUES ($1::uuid, $2, $3, $4, $5::uuid, $6::uuid,
+                     COALESCE($7::jsonb, '{}'::jsonb), $8::uuid)
              RETURNING to_jsonb(p) AS datos",
         )
         .bind(empresa_id)
@@ -216,6 +358,7 @@ impl Personal {
         .bind(nombre)
         .bind(&tipo)
         .bind(datos.tienda_id.as_deref())
+        .bind(negocio_id.as_deref())
         .bind(datos.metadata.clone())
         .bind(&actor.user_id)
         .fetch_optional(&mut *tx)
@@ -233,13 +376,22 @@ impl Personal {
         actor: &UsuarioContexto,
         empresa_id: &str,
     ) -> Result<Vec<Value>, ApiError> {
-        self.assert_acceso(actor, empresa_id).await?;
+        let contexto = self.contexto(actor, empresa_id).await?;
+        Self::exigir_lectura(&contexto)?;
+        let empresa_global = contexto.empresa_global;
+        let negocio_id = contexto.negocio_id.clone();
         let mut tx = self.db.transaccion().await.map_err(interno)?;
         let filas = sqlx::query(
             "SELECT to_jsonb(p) AS datos FROM identity.puestos_empresa p
-              WHERE p.empresa_id = $1::uuid ORDER BY p.nombre",
+              WHERE p.empresa_id = $1::uuid
+                AND ($2::boolean
+                     OR p.negocio_id IS NULL
+                     OR ($3::uuid IS NOT NULL AND p.negocio_id = $3::uuid))
+              ORDER BY p.nombre",
         )
         .bind(empresa_id)
+        .bind(empresa_global)
+        .bind(negocio_id)
         .fetch_all(&mut *tx)
         .await
         .map_err(interno)?;
@@ -259,9 +411,10 @@ impl Personal {
         empresa_id: &str,
         datos: AsignarPersonal,
     ) -> Result<Value, ApiError> {
-        self.assert_empresario(actor, empresa_id).await?;
+        let contexto = self.contexto(actor, empresa_id).await?;
         self.assert_miembro(empresa_id, &datos.usuario_id).await?;
-        self.assert_rol(empresa_id, &datos.rol_empresa_id, false)
+        let rol_negocio = self
+            .assert_rol(empresa_id, &datos.rol_empresa_id, false)
             .await?;
         if datos.tienda_id.is_none() && datos.puesto_id.is_none() {
             return Err(ApiError::dominio(
@@ -272,18 +425,31 @@ impl Personal {
         if let Some(tienda_id) = datos.tienda_id.as_deref() {
             self.assert_tienda(empresa_id, tienda_id).await?;
         }
-        if let Some(puesto_id) = datos.puesto_id.as_deref() {
+        let puesto_negocio = if let Some(puesto_id) = datos.puesto_id.as_deref() {
             self.assert_puesto(empresa_id, puesto_id, datos.tienda_id.as_deref())
-                .await?;
-        }
+                .await?
+        } else {
+            None
+        };
         validar_objeto(datos.metadata.as_ref(), "metadata")?;
+        let objetivo = datos
+            .negocio_id
+            .clone()
+            .or_else(|| contexto.negocio_id.clone());
+        let negocio_id = self
+            .negocios
+            .resolver(empresa_id, objetivo.as_deref())
+            .await?;
+        Self::exigir_gestion(&contexto, negocio_id.as_deref())?;
+        validar_alcance_negocio(negocio_id.as_deref(), rol_negocio.as_deref(), "rol")?;
+        validar_alcance_negocio(negocio_id.as_deref(), puesto_negocio.as_deref(), "puesto")?;
         let mut tx = self.db.transaccion().await.map_err(interno)?;
         let fila = sqlx::query(
             "INSERT INTO identity.asignaciones_personal AS a
                (empresa_id, usuario_id, rol_empresa_id, tienda_id, puesto_id,
-                metadata, creado_por)
-             VALUES ($1::uuid, $2::uuid, $3::uuid, $4::uuid, $5::uuid,
-                     COALESCE($6::jsonb, '{}'::jsonb), $7::uuid)
+                negocio_id, metadata, creado_por)
+             VALUES ($1::uuid, $2::uuid, $3::uuid, $4::uuid, $5::uuid, $6::uuid,
+                     COALESCE($7::jsonb, '{}'::jsonb), $8::uuid)
              RETURNING to_jsonb(a) AS datos",
         )
         .bind(empresa_id)
@@ -291,6 +457,7 @@ impl Personal {
         .bind(&datos.rol_empresa_id)
         .bind(datos.tienda_id.as_deref())
         .bind(datos.puesto_id.as_deref())
+        .bind(negocio_id.as_deref())
         .bind(datos.metadata.clone())
         .bind(&actor.user_id)
         .fetch_optional(&mut *tx)
@@ -312,7 +479,10 @@ impl Personal {
         actor: &UsuarioContexto,
         empresa_id: &str,
     ) -> Result<Vec<Value>, ApiError> {
-        self.assert_acceso(actor, empresa_id).await?;
+        let contexto = self.contexto(actor, empresa_id).await?;
+        Self::exigir_lectura(&contexto)?;
+        let empresa_global = contexto.empresa_global;
+        let negocio_id = contexto.negocio_id.clone();
         let mut tx = self.db.transaccion().await.map_err(interno)?;
         let filas = sqlx::query(
             "SELECT to_jsonb(a) || jsonb_build_object(
@@ -328,9 +498,14 @@ impl Personal {
                LEFT JOIN identity.puestos_empresa p
                  ON p.id = a.puesto_id AND p.empresa_id = a.empresa_id
               WHERE a.empresa_id = $1::uuid
+                AND ($2::boolean
+                     OR a.negocio_id IS NULL
+                     OR ($3::uuid IS NOT NULL AND a.negocio_id = $3::uuid))
               ORDER BY a.creado_en DESC",
         )
         .bind(empresa_id)
+        .bind(empresa_global)
+        .bind(negocio_id)
         .fetch_all(&mut *tx)
         .await
         .map_err(interno)?;
@@ -375,24 +550,109 @@ impl Personal {
         Ok(asignaciones)
     }
 
+    pub async fn transferir(
+        &self,
+        actor: &UsuarioContexto,
+        empresa_id: &str,
+        datos: TransferirPersonal,
+    ) -> Result<Value, ApiError> {
+        let contexto = self.contexto(actor, empresa_id).await?;
+        if !contexto.empresa_global {
+            return Err(ApiError::acceso_denegado(
+                "Solo un empresario transversal puede transferir personal entre negocios.",
+            ));
+        }
+        let rol_negocio = self
+            .assert_rol(empresa_id, &datos.rol_empresa_id, true)
+            .await?;
+        let destino = self
+            .negocios
+            .resolver(empresa_id, Some(&datos.destino_id))
+            .await?;
+        let origen = self
+            .negocios
+            .resolver(empresa_id, Some(&datos.origen_id))
+            .await?;
+        validar_alcance_negocio(destino.as_deref(), rol_negocio.as_deref(), "rol")?;
+        let puesto_negocio = if let Some(puesto_id) = datos.puesto_id.as_deref() {
+            self.assert_puesto(empresa_id, puesto_id, datos.tienda_id.as_deref())
+                .await?
+        } else {
+            None
+        };
+        validar_alcance_negocio(destino.as_deref(), puesto_negocio.as_deref(), "puesto")?;
+        let mut tx = self.db.transaccion().await.map_err(interno)?;
+        let fila = sqlx::query(
+            "UPDATE identity.asignaciones_personal AS a
+                SET negocio_id = $1::uuid, rol_empresa_id = $2::uuid,
+                    tienda_id = $3::uuid, puesto_id = $4::uuid
+              WHERE a.empresa_id = $5::uuid AND a.usuario_id = $6::uuid
+                AND a.negocio_id = $7::uuid AND a.estado = 'activa'
+              RETURNING to_jsonb(a) AS datos",
+        )
+        .bind(destino.as_deref())
+        .bind(&datos.rol_empresa_id)
+        .bind(datos.tienda_id.as_deref())
+        .bind(datos.puesto_id.as_deref())
+        .bind(empresa_id)
+        .bind(&datos.usuario_id)
+        .bind(origen.as_deref())
+        .fetch_optional(&mut *tx)
+        .await
+        .map_err(interno)?
+        .ok_or_else(|| {
+            ApiError::no_encontrado(
+                "Asignacion",
+                &format!("{}:{}", datos.usuario_id, datos.origen_id),
+            )
+        })?;
+        auditoria::registrar(
+            &mut tx,
+            &actor.user_id,
+            empresa_id,
+            destino.as_deref(),
+            "personal.transferido",
+            "asignacion_personal",
+            Some(&datos.usuario_id),
+            json!({ "origen_id": datos.origen_id, "destino_id": datos.destino_id }),
+        )
+        .await?;
+        tx.commit().await.map_err(interno)?;
+        fila.try_get("datos").map_err(interno)
+    }
+
     pub async fn crear_invitacion(
         &self,
         actor: &UsuarioContexto,
         empresa_id: &str,
         datos: CrearInvitacion,
     ) -> Result<Value, ApiError> {
-        self.assert_empresario(actor, empresa_id).await?;
+        let contexto = self.contexto(actor, empresa_id).await?;
         let correo = validar_correo_invitacion(&datos.correo)?;
-        self.assert_rol(empresa_id, &datos.rol_empresa_id, true)
+        let rol_negocio = self
+            .assert_rol(empresa_id, &datos.rol_empresa_id, true)
             .await?;
         if let Some(tienda_id) = datos.tienda_id.as_deref() {
             self.assert_tienda(empresa_id, tienda_id).await?;
         }
-        if let Some(puesto_id) = datos.puesto_id.as_deref() {
+        let puesto_negocio = if let Some(puesto_id) = datos.puesto_id.as_deref() {
             self.assert_puesto(empresa_id, puesto_id, datos.tienda_id.as_deref())
-                .await?;
-        }
+                .await?
+        } else {
+            None
+        };
         validar_objeto(datos.metadata.as_ref(), "metadata")?;
+        let objetivo = datos
+            .negocio_id
+            .clone()
+            .or_else(|| contexto.negocio_id.clone());
+        let negocio_id = self
+            .negocios
+            .resolver(empresa_id, objetivo.as_deref())
+            .await?;
+        Self::exigir_gestion(&contexto, negocio_id.as_deref())?;
+        validar_alcance_negocio(negocio_id.as_deref(), rol_negocio.as_deref(), "rol")?;
+        validar_alcance_negocio(negocio_id.as_deref(), puesto_negocio.as_deref(), "puesto")?;
         let token = token_aleatorio();
         let expira = Utc::now() + Duration::hours(TOKEN_TTL_HORAS);
         let tipo = datos.tipo.as_deref().unwrap_or("invitacion");
@@ -406,11 +666,12 @@ impl Personal {
             "WITH creada AS (
                INSERT INTO identity.invitaciones_personal
                  (empresa_id, correo, nombre, tipo, rol_empresa_id, tienda_id,
-                  puesto_id, metadata, token_hash, expira_en, creada_por_usuario_id)
+                  puesto_id, negocio_id, metadata, token_hash, expira_en,
+                  creada_por_usuario_id)
                VALUES ($1::uuid, $2, $3, $4, $5::uuid, $6::uuid, $7::uuid,
-                       COALESCE($8::jsonb, '{}'::jsonb), $9, $10, $11::uuid)
+                       $8::uuid, COALESCE($9::jsonb, '{}'::jsonb), $10, $11, $12::uuid)
                RETURNING id, empresa_id, correo, nombre, tipo, rol_empresa_id,
-                         tienda_id, puesto_id, estado, expira_en
+                         tienda_id, puesto_id, negocio_id, estado, expira_en
              )
              SELECT to_jsonb(c) || jsonb_build_object(
                       'rol_nombre', r.nombre,
@@ -433,6 +694,7 @@ impl Personal {
         .bind(&datos.rol_empresa_id)
         .bind(datos.tienda_id.as_deref())
         .bind(datos.puesto_id.as_deref())
+        .bind(negocio_id.as_deref())
         .bind(datos.metadata.clone())
         .bind(hash_token(&token))
         .bind(expira)
@@ -440,6 +702,21 @@ impl Personal {
         .fetch_optional(&mut *tx)
         .await
         .map_err(interno)?;
+        auditoria::registrar(
+            &mut tx,
+            &actor.user_id,
+            empresa_id,
+            negocio_id.as_deref(),
+            "invitacion.creada",
+            "invitacion_personal",
+            None,
+            json!({
+                "correo": correo,
+                "rol_empresa_id": datos.rol_empresa_id,
+                "tipo": tipo,
+            }),
+        )
+        .await?;
         tx.commit().await.map_err(interno)?;
         let fila = fila
             .ok_or_else(|| ApiError::conflicto("No se pudo generar el enlace de incorporación."))?;
@@ -457,16 +734,24 @@ impl Personal {
         actor: &UsuarioContexto,
         empresa_id: &str,
     ) -> Result<Vec<Value>, ApiError> {
-        self.assert_acceso(actor, empresa_id).await?;
+        let contexto = self.contexto(actor, empresa_id).await?;
+        Self::exigir_lectura(&contexto)?;
+        let empresa_global = contexto.empresa_global;
+        let negocio_id = contexto.negocio_id.clone();
         let mut tx = self.db.transaccion().await.map_err(interno)?;
         let filas = sqlx::query(
             "SELECT to_jsonb(i) || jsonb_build_object('rol_nombre', r.nombre) AS datos
                FROM identity.invitaciones_personal i
                JOIN identity.roles_empresa r ON r.id = i.rol_empresa_id
               WHERE i.empresa_id = $1::uuid
+                AND ($2::boolean
+                     OR i.negocio_id IS NULL
+                     OR ($3::uuid IS NOT NULL AND i.negocio_id = $3::uuid))
               ORDER BY i.creada_en DESC",
         )
         .bind(empresa_id)
+        .bind(empresa_global)
+        .bind(negocio_id)
         .fetch_all(&mut *tx)
         .await
         .map_err(interno)?;
@@ -486,8 +771,20 @@ impl Personal {
         empresa_id: &str,
         invitacion_id: &str,
     ) -> Result<Value, ApiError> {
-        self.assert_empresario(actor, empresa_id).await?;
+        let contexto = self.contexto(actor, empresa_id).await?;
         let mut tx = self.db.transaccion().await.map_err(interno)?;
+        let invitacion = sqlx::query(
+            "SELECT negocio_id FROM identity.invitaciones_personal
+              WHERE id = $1::uuid AND empresa_id = $2::uuid AND estado = 'pendiente'",
+        )
+        .bind(invitacion_id)
+        .bind(empresa_id)
+        .fetch_optional(&mut *tx)
+        .await
+        .map_err(interno)?
+        .ok_or_else(|| ApiError::no_encontrado("Invitación", invitacion_id))?;
+        let negocio_id: Option<Uuid> = invitacion.try_get("negocio_id").map_err(interno)?;
+        Self::exigir_gestion(&contexto, negocio_id.map(|id| id.to_string()).as_deref())?;
         let fila = sqlx::query(
             "UPDATE identity.invitaciones_personal
                 SET estado = 'revocada', revocada_en = NOW()
@@ -500,6 +797,17 @@ impl Personal {
         .await
         .map_err(interno)?
         .ok_or_else(|| ApiError::no_encontrado("Invitación", invitacion_id))?;
+        auditoria::registrar(
+            &mut tx,
+            &actor.user_id,
+            empresa_id,
+            negocio_id.map(|id| id.to_string()).as_deref(),
+            "invitacion.revocada",
+            "invitacion_personal",
+            Some(invitacion_id),
+            json!({}),
+        )
+        .await?;
         tx.commit().await.map_err(interno)?;
         let _: Uuid = fila.try_get("id").map_err(interno)?;
         Ok(json!({ "ok": true }))
@@ -568,10 +876,26 @@ impl Personal {
             .get("puesto_id")
             .and_then(Value::as_str)
             .map(str::to_string);
+        let negocio_id = invitacion
+            .get("negocio_id")
+            .and_then(Value::as_str)
+            .map(str::to_string);
         let metadata = invitacion
             .get("metadata")
             .cloned()
             .unwrap_or_else(|| json!({}));
+        let permisos = invitacion
+            .get("rol_permisos")
+            .and_then(|valor| valor.get("acciones"))
+            .and_then(Value::as_array)
+            .map(|acciones| {
+                acciones
+                    .iter()
+                    .filter_map(Value::as_str)
+                    .map(str::to_string)
+                    .collect()
+            })
+            .unwrap_or_default();
         let fila = sqlx::query(
             "INSERT INTO identity.usuarios
                (nombre, correo, contrasena_hash, rol, tenant_id)
@@ -588,15 +912,17 @@ impl Personal {
         let usuario_id: Uuid = fila.try_get("id").map_err(interno)?;
         sqlx::query(
             "INSERT INTO identity.asignaciones_personal AS a
-               (empresa_id, usuario_id, rol_empresa_id, tienda_id, puesto_id, metadata, creado_por)
-             VALUES ($1::uuid, $2::uuid, $3::uuid, $4::uuid, $5::uuid,
-                     COALESCE($6::jsonb, '{}'::jsonb), $2::uuid)",
+               (empresa_id, usuario_id, rol_empresa_id, tienda_id, puesto_id,
+                negocio_id, metadata, creado_por)
+             VALUES ($1::uuid, $2::uuid, $3::uuid, $4::uuid, $5::uuid, $6::uuid,
+                     COALESCE($7::jsonb, '{}'::jsonb), $2::uuid)",
         )
         .bind(&empresa_id)
         .bind(usuario_id.to_string())
         .bind(&rol_empresa_id)
         .bind(tienda_id.as_deref())
         .bind(puesto_id.as_deref())
+        .bind(negocio_id.as_deref())
         .bind(metadata)
         .execute(&mut *tx)
         .await
@@ -611,6 +937,17 @@ impl Personal {
         .execute(&mut *tx)
         .await
         .map_err(interno)?;
+        auditoria::registrar(
+            &mut tx,
+            &usuario_id.to_string(),
+            &empresa_id,
+            negocio_id.as_deref(),
+            "invitacion.aceptada",
+            "invitacion_personal",
+            Some(&texto(&invitacion, "id")),
+            json!({ "correo": correo }),
+        )
+        .await?;
         tx.commit().await.map_err(interno)?;
 
         let creado_en: DateTime<Utc> = fila.try_get("creado_en").map_err(interno)?;
@@ -623,6 +960,8 @@ impl Personal {
             personal_id: None,
             participacion_porcentaje: None,
             rol_empresa_id: Some(rol_empresa_id.clone()),
+            negocio_id: negocio_id.clone(),
+            permisos,
             avatar_objeto_id: None,
             avatar_url: None,
             creado_en: iso_ms(creado_en),
@@ -678,6 +1017,7 @@ impl Personal {
         let sql = format!(
             "SELECT to_jsonb(i) || jsonb_build_object(
                       'rol_nombre', r.nombre,
+                      'rol_permisos', r.permisos,
                       'empresa_nombre', e.nombre
                     ) AS datos
                FROM identity.invitaciones_personal i
@@ -698,54 +1038,159 @@ impl Personal {
         Ok(datos)
     }
 
-    async fn assert_acceso(
+    async fn validar_catalogo_permisos(&self, permisos: &Value) -> Result<(), ApiError> {
+        let acciones: Vec<String> = permisos
+            .get("acciones")
+            .and_then(Value::as_array)
+            .map(|items| {
+                items
+                    .iter()
+                    .filter_map(Value::as_str)
+                    .map(str::to_string)
+                    .collect()
+            })
+            .unwrap_or_default();
+        let mut tx = self.db.transaccion().await.map_err(interno)?;
+        let encontrados = sqlx::query_scalar::<_, String>(
+            "SELECT codigo FROM identity.permisos
+              WHERE codigo = ANY($1::text[]) AND activo = true",
+        )
+        .bind(&acciones)
+        .fetch_all(&mut *tx)
+        .await
+        .map_err(interno)?;
+        tx.commit().await.map_err(interno)?;
+        let faltantes: Vec<&str> = acciones
+            .iter()
+            .map(String::as_str)
+            .filter(|accion| !encontrados.iter().any(|codigo| codigo == accion))
+            .collect();
+        if !faltantes.is_empty() {
+            return Err(ApiError::dominio(
+                "PERMISO_INVALIDO",
+                format!(
+                    "Acciones no registradas en el catálogo: {}.",
+                    faltantes.join(", ")
+                ),
+            ));
+        }
+        Ok(())
+    }
+
+    async fn contexto(
         &self,
         actor: &UsuarioContexto,
         empresa_id: &str,
-    ) -> Result<(), ApiError> {
+    ) -> Result<ContextoPersonal, ApiError> {
         if actor.es_admin_global() {
-            return Ok(());
+            return Ok(ContextoPersonal {
+                empresa_global: true,
+                negocio_id: actor.negocio_id.clone(),
+                asignaciones: vec![AsignacionActor {
+                    negocio_id: actor.negocio_id.clone(),
+                    rol_negocio_id: None,
+                    codigo: "empresario".to_string(),
+                    permisos: Vec::new(),
+                }],
+            });
         }
-        if actor.rol != "empresario" || actor.tenant_id.as_deref() != Some(empresa_id) {
+        if actor.tenant_id.as_deref() != Some(empresa_id) {
             return Err(ApiError::acceso_denegado(
                 "No tienes acceso a esta empresa.",
             ));
         }
-        self.assert_empresario(actor, empresa_id).await
-    }
-
-    async fn assert_empresario(
-        &self,
-        actor: &UsuarioContexto,
-        empresa_id: &str,
-    ) -> Result<(), ApiError> {
-        if actor.es_admin_global() {
-            return Ok(());
-        }
-        if actor.rol != "empresario" || actor.tenant_id.as_deref() != Some(empresa_id) {
-            return Err(ApiError::acceso_denegado(
-                "Solo el empresario activo puede administrar personal.",
-            ));
-        }
         let mut tx = self.db.transaccion().await.map_err(interno)?;
-        let miembro = sqlx::query(
-            "SELECT 1 FROM identity.asignaciones_personal a
+        let filas = sqlx::query(
+            "SELECT a.negocio_id, r.negocio_id AS rol_negocio_id, r.codigo, r.permisos
+               FROM identity.asignaciones_personal a
                JOIN identity.roles_empresa r ON r.id = a.rol_empresa_id
               WHERE a.empresa_id = $1::uuid AND a.usuario_id = $2::uuid
-                AND r.codigo = 'empresario' AND a.estado = 'activa'",
+                AND a.estado = 'activa'",
         )
         .bind(empresa_id)
         .bind(&actor.user_id)
-        .fetch_optional(&mut *tx)
+        .fetch_all(&mut *tx)
         .await
         .map_err(interno)?;
         tx.commit().await.map_err(interno)?;
-        if miembro.is_none() {
+        if filas.is_empty() {
             return Err(ApiError::acceso_denegado(
-                "El usuario no es empresario activo de esta empresa.",
+                "No tienes una asignación activa en esta empresa.",
             ));
         }
-        Ok(())
+        let mut asignaciones = Vec::with_capacity(filas.len());
+        for fila in filas {
+            let negocio_id: Option<Uuid> = fila.try_get("negocio_id").map_err(interno)?;
+            let rol_negocio_id: Option<Uuid> = fila.try_get("rol_negocio_id").map_err(interno)?;
+            let codigo: String = fila.try_get("codigo").map_err(interno)?;
+            let permisos: Value = fila.try_get("permisos").map_err(interno)?;
+            let acciones = permisos
+                .get("acciones")
+                .and_then(Value::as_array)
+                .map(|items| {
+                    items
+                        .iter()
+                        .filter_map(Value::as_str)
+                        .map(str::to_string)
+                        .collect()
+                })
+                .unwrap_or_default();
+            asignaciones.push(AsignacionActor {
+                negocio_id: negocio_id.map(|id| id.to_string()),
+                rol_negocio_id: rol_negocio_id.map(|id| id.to_string()),
+                codigo,
+                permisos: acciones,
+            });
+        }
+        let empresa_global = asignaciones.iter().any(|asignacion| {
+            asignacion.rol_negocio_id.is_none() && asignacion.codigo == "empresario"
+        });
+        let negocio_id = actor
+            .negocio_id
+            .as_ref()
+            .filter(|negocio| {
+                asignaciones.iter().any(|asignacion| {
+                    asignacion.negocio_id.as_deref() == Some(negocio.as_str())
+                        || asignacion.rol_negocio_id.as_deref() == Some(negocio.as_str())
+                })
+            })
+            .cloned()
+            .or_else(|| {
+                asignaciones
+                    .iter()
+                    .find_map(|asignacion| asignacion.negocio_id.clone())
+            })
+            .or_else(|| {
+                asignaciones
+                    .iter()
+                    .find_map(|asignacion| asignacion.rol_negocio_id.clone())
+            });
+        Ok(ContextoPersonal {
+            empresa_global,
+            negocio_id,
+            asignaciones,
+        })
+    }
+
+    fn exigir_lectura(contexto: &ContextoPersonal) -> Result<(), ApiError> {
+        if contexto.puede_leer() {
+            return Ok(());
+        }
+        Err(ApiError::acceso_denegado(
+            "Tu rol no permite consultar el personal de esta empresa.",
+        ))
+    }
+
+    fn exigir_gestion(
+        contexto: &ContextoPersonal,
+        negocio_id: Option<&str>,
+    ) -> Result<(), ApiError> {
+        if contexto.autorizado(AccionPersonal::Gestionar, negocio_id) {
+            return Ok(());
+        }
+        Err(ApiError::acceso_denegado(
+            "Tu rol no permite administrar personal en este negocio.",
+        ))
     }
 
     async fn assert_rol(
@@ -753,9 +1198,9 @@ impl Personal {
         empresa_id: &str,
         rol_id: &str,
         activo: bool,
-    ) -> Result<(), ApiError> {
+    ) -> Result<Option<String>, ApiError> {
         let sql = format!(
-            "SELECT id FROM identity.roles_empresa
+            "SELECT id, negocio_id FROM identity.roles_empresa
               WHERE id = $1::uuid AND empresa_id = $2::uuid{}",
             if activo { " AND activo = true" } else { "" }
         );
@@ -767,10 +1212,11 @@ impl Personal {
             .await
             .map_err(interno)?;
         tx.commit().await.map_err(interno)?;
-        if fila.is_none() {
+        let Some(fila) = fila else {
             return Err(ApiError::no_encontrado("Rol", rol_id));
-        }
-        Ok(())
+        };
+        let negocio_id: Option<Uuid> = fila.try_get("negocio_id").map_err(interno)?;
+        Ok(negocio_id.map(|id| id.to_string()))
     }
 
     async fn assert_puesto(
@@ -778,10 +1224,10 @@ impl Personal {
         empresa_id: &str,
         puesto_id: &str,
         tienda_id: Option<&str>,
-    ) -> Result<(), ApiError> {
+    ) -> Result<Option<String>, ApiError> {
         let mut tx = self.db.transaccion().await.map_err(interno)?;
         let fila = sqlx::query(
-            "SELECT tienda_id FROM identity.puestos_empresa
+            "SELECT tienda_id, negocio_id FROM identity.puestos_empresa
               WHERE id = $1::uuid AND empresa_id = $2::uuid AND activo = true",
         )
         .bind(puesto_id)
@@ -797,7 +1243,8 @@ impl Personal {
                 return Err(ApiError::conflicto("El puesto pertenece a otra tienda."));
             }
         }
-        Ok(())
+        let negocio_id: Option<Uuid> = fila.try_get("negocio_id").map_err(interno)?;
+        Ok(negocio_id.map(|id| id.to_string()))
     }
 
     async fn assert_tienda(&self, empresa_id: &str, tienda_id: &str) -> Result<(), ApiError> {
@@ -869,6 +1316,22 @@ fn validar_objeto(valor: Option<&Value>, campo: &str) -> Result<(), ApiError> {
             return Err(ApiError::dominio(
                 format!("{}_INVALIDO", campo.to_uppercase()),
                 format!("{campo} debe ser un objeto JSON."),
+            ));
+        }
+    }
+    Ok(())
+}
+
+fn validar_alcance_negocio(
+    negocio: Option<&str>,
+    recurso: Option<&str>,
+    nombre: &str,
+) -> Result<(), ApiError> {
+    if let (Some(negocio), Some(recurso)) = (negocio, recurso) {
+        if negocio != recurso {
+            return Err(ApiError::dominio(
+                "NEGOCIO_INCOHERENTE",
+                format!("El {nombre} pertenece a otro negocio."),
             ));
         }
     }
