@@ -5725,6 +5725,113 @@
         ]
       }
     },
+    "/api/v2/finanzas/tipos-cambio": {
+      "get": {
+        "operationId": "ComercioController_tiposCambioListar",
+        "parameters": [
+          {
+            "name": "base",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "quote",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Tipos de cambio publicados",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
+                  "properties": {
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/TipoCambioResponseDto"
+                      }
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/MetaRespuesta"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Listar tipos de cambio",
+        "tags": [
+          "Finanzas"
+        ]
+      }
+    },
+    "/api/v2/admin/tipos-cambio": {
+      "post": {
+        "operationId": "ComercioController_tiposCambioRegistrar",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RegistrarTipoCambioRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Tipo de cambio registrado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/TipoCambioResponseDto"
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/MetaRespuesta"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Registrar tipo de cambio (admin)",
+        "tags": [
+          "Finanzas"
+        ]
+      }
+    },
     "/api/v2/comercio/caja/metodos-pago": {
       "get": {
         "operationId": "ComercioController_listarMetodosPago",
@@ -25745,6 +25852,64 @@
         "required": [
           "gmv_cents",
           "incremento_vs_mes12"
+        ]
+      },
+      "TipoCambioResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "base": {
+            "type": "string"
+          },
+          "quote": {
+            "type": "string"
+          },
+          "tasa": {
+            "type": "string"
+          },
+          "vigente_desde": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "creado_por": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "creado_en": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "base",
+          "quote",
+          "tasa",
+          "vigente_desde",
+          "creado_por",
+          "creado_en"
+        ]
+      },
+      "RegistrarTipoCambioRequestDto": {
+        "type": "object",
+        "properties": {
+          "base": {
+            "type": "string"
+          },
+          "quote": {
+            "type": "string"
+          },
+          "tasa": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "base",
+          "quote",
+          "tasa"
         ]
       },
       "MetodoPagoResponseDto": {
