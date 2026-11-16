@@ -1,6 +1,6 @@
 //! Multi-bodega/sucursal (Fase P1.2, ADR-0001).
 //!
-//! Réplica de `ubicaciones.service.ts`. `catalog.items.stock` es el total de la
+//! Réplica de `ubicaciones.service.ts`. `item.items.stock` es el total de la
 //! empresa y `item_stock_ubicacion` su desglose: la primera ubicación absorbe
 //! el stock existente, las transferencias no alteran el total y `fijar_stock`
 //! resincroniza el total del item dentro de la misma transacción.
@@ -105,7 +105,7 @@ impl Ubicaciones {
             sqlx::query(
                 "INSERT INTO inventory.item_stock_ubicacion (empresa_id, item_id, ubicacion_id, stock)
                  SELECT i.empresa_id, i.id, $2::uuid, COALESCE(i.stock, 0)
-                   FROM catalog.items i
+                   FROM item.items i
                   WHERE i.empresa_id = $1::uuid AND i.tipo = 'producto'
                     AND i.track_inventory AND i.eliminado_en IS NULL
                  ON CONFLICT (item_id, ubicacion_id) DO NOTHING",
@@ -263,7 +263,7 @@ impl Ubicaciones {
                     s.item_id, i.codigo AS sku, i.nombre, s.stock, i.stock AS stock_total
                FROM inventory.item_stock_ubicacion s
                JOIN inventory.ubicaciones u ON u.id = s.ubicacion_id
-               JOIN catalog.items i ON i.id = s.item_id
+               JOIN item.items i ON i.id = s.item_id
               WHERE s.empresa_id = $1::uuid AND s.ubicacion_id = $2::uuid AND i.eliminado_en IS NULL
               ORDER BY i.nombre",
         )
@@ -319,7 +319,7 @@ impl Ubicaciones {
                     s.item_id, i.codigo AS sku, i.nombre, s.stock, i.stock AS stock_total
                FROM inventory.item_stock_ubicacion s
                JOIN inventory.ubicaciones u ON u.id = s.ubicacion_id
-               JOIN catalog.items i ON i.id = s.item_id
+               JOIN item.items i ON i.id = s.item_id
               WHERE s.empresa_id = $1::uuid AND s.item_id = $2::uuid AND s.ubicacion_id = $3::uuid",
         )
         .bind(empresa_id)
@@ -406,7 +406,7 @@ impl Ubicaciones {
                     s.item_id, i.codigo AS sku, i.nombre, s.stock, i.stock AS stock_total
                FROM inventory.item_stock_ubicacion s
                JOIN inventory.ubicaciones u ON u.id = s.ubicacion_id
-               JOIN catalog.items i ON i.id = s.item_id
+               JOIN item.items i ON i.id = s.item_id
               WHERE s.empresa_id = $1::uuid AND s.item_id = $2::uuid
                 AND s.ubicacion_id IN ($3::uuid, $4::uuid)",
         )
@@ -481,7 +481,7 @@ impl Ubicaciones {
         let mut tx = self.db.transaccion().await.map_err(interno)?;
         let fila = sqlx::query(
             "SELECT id, codigo, nombre, stock, track_inventory
-               FROM catalog.items
+               FROM item.items
               WHERE id = $1::uuid AND empresa_id = $2::uuid AND eliminado_en IS NULL",
         )
         .bind(item_id)
@@ -513,7 +513,7 @@ async fn sincronizar_total(
         .await
         .map_err(interno)?;
     sqlx::query(
-        "UPDATE catalog.items
+        "UPDATE item.items
             SET stock = (
                   SELECT COALESCE(SUM(stock), 0)::int
                     FROM inventory.item_stock_ubicacion

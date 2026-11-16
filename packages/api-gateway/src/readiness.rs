@@ -17,8 +17,8 @@ pub const SERVICIOS_PRODUCCION: [Servicio; 11] = [
         puerto: 3001,
     },
     Servicio {
-        nombre: "catalog",
-        puerto: 3002,
+        nombre: "item",
+        puerto: 3015,
     },
     Servicio {
         nombre: "inventory",
@@ -64,8 +64,8 @@ pub const SERVICIOS_STAGE: [Servicio; 12] = [
         puerto: 3001,
     },
     Servicio {
-        nombre: "catalog",
-        puerto: 3002,
+        nombre: "item",
+        puerto: 3015,
     },
     Servicio {
         nombre: "inventory",

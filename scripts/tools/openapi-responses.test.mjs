@@ -10,7 +10,7 @@ import { repoRoot } from '../engine/lib/paths.mjs';
  * añade aquí; nunca se quita uno ya migrado.
  */
 const SERVICIOS_MIGRADOS = [
-  'catalog-service',
+  'item-service',
   'finance-service',
   'field-service',
   'identity-service',

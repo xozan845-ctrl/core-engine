@@ -1,7 +1,7 @@
 # 01 — Reglas de Unit Tests
 
-Aplica a: `*.spec.ts` de utils, value-objects, entidades, factories, servicios/consumers
-(lógica), controllers (lógica), pipes/guards/interceptors.
+Aplica a: `mod tests` de utils, value-objects, entidades, factories, dominio y
+consumidores (lógica), handlers HTTP y middleware/guards del gateway.
 
 ## Semántica del requisito
 
@@ -31,22 +31,22 @@ Aplica a: `*.spec.ts` de utils, value-objects, entidades, factories, servicios/c
 
 | ID | Regla |
 |---|---|
-| R-U-10 | El mock **no sustituye** la asertación de dominio. En controller: además de "se llamó al repo", verificar que los **valores construidos** (fechas, filtros, DTOs) son correctos según el requisito. |
-| R-U-11 | Prohibido el test que solo verifica que un mock fue llamado sin validar argumentos semánticos (p.ej. `expect(repo.find).toHaveBeenCalled()` solo). |
-| R-U-12 | Todo use-case (servicio/consumer con lógica de negocio) debe tener tests de: camino feliz, validación de precondición (error), y propagación de error del repositorio. |
-| R-U-13 | Respuestas de error: assert de **código HTTP + mensaje/shape**, no solo `rejects.toThrow()`. |
+| R-U-10 | El mock **no sustituye** la asertación de dominio. En un handler HTTP o caso de uso: además de "se llamó al puerto/repositorio", verificar que los **valores construidos** (fechas, filtros, montos, campos normalizados) son correctos según el requisito. |
+| R-U-11 | Prohibido el test que solo verifica que un doble fue llamado sin validar argumentos semánticos (p.ej. un `assert!(mock.fue_llamado())` sin revisar el filtro o el monto). |
+| R-U-12 | Todo caso de uso (función de dominio o consumidor con lógica) debe tener tests de: camino feliz, validación de precondición (error) y propagación del error de base de datos o del puerto. |
+| R-U-13 | Respuestas de error: assert de **código HTTP + `codigo`/mensaje/shape** (`ApiError`), no solo que la función devuelva `Err`. |
 
 ## Frontend (N/A hoy) y guardas/pipes/interceptors
 
 | ID | Regla |
 |---|---|
 | R-U-14 | **N/A hoy — sin frontend en el repo** (G-2 y R-COV-5 **reservados**, nunca reutilizados). El día que exista UI: todo componente con lógica (emisión de eventos, formularios, inputs condicionales) tiene spec con interacción simulada (`click`, `emit`, `ngModel`). |
-| R-U-15 | Pipes, guards e interceptors del backend: test de cada rama (guard con/sin token y con rol insuficiente, interceptor con/sin contexto, filtro de errores 401 vs 500). Hoy aplica a los de `shared` (`service-auth`, `validation.pipe`, filters). |
+| R-U-15 | Middleware y guards del gateway: test de cada rama (con/sin token, rol insuficiente, cabecera interna, límite de tasa y mapeo de errores 401 vs 403 vs 500). |
 | R-U-16 | Los specs no deben importar symbols inexistentes ni usar APIs privadas de la implementación (evita specs rotos). |
 
 ## Cobertura de archivos unit
 
 | ID | Regla |
 |---|---|
-| R-U-17 | **100% de archivos de código puro**: `packages/shared/src` (utils, VOs, factories, helpers — los módulos Nest de infraestructura `db/`, `rabbitmq/`, `outbox/`, `metrics/`, `logging/` quedan fuera) y el código puro de cada servicio (`*.helper.ts`, VOs, factories) deben tener spec. Son código puro, sin excusa. *(Antes apuntaba a `domain/` y `core/shared/utils/`, rutas del proyecto origen: no existen aquí — 0 carpetas `domain/`.)* |
-| R-U-18 | Todo use-case o servicio nuevo agrega su spec en el mismo PR. |
+| R-U-17 | **Código puro con `mod tests`**: las funciones puras de cada crate (validaciones, cálculo de montos, normalización, FEFO, transiciones de estado) llevan pruebas unitarias en el mismo archivo. La infraestructura (`db.rs`, `rabbit.rs`, `outbox.rs`, `metrics.rs`, `logs.rs`) se cubre con las suites de integración del crate, no con mocks de broker. |
+| R-U-18 | Todo caso de uso, handler o consumidor nuevo agrega sus pruebas en el mismo PR (`mod tests` o `tests/<dominio>_*.rs`). |

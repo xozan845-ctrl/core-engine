@@ -1,10 +1,10 @@
-DROP SCHEMA IF EXISTS catalog CASCADE;
+DROP SCHEMA IF EXISTS item CASCADE;
 DROP SCHEMA IF EXISTS pricing CASCADE;
-CREATE SCHEMA catalog;
+CREATE SCHEMA item;
 CREATE SCHEMA pricing;
 CREATE EXTENSION IF NOT EXISTS btree_gist;
 
-CREATE TABLE catalog.items (
+CREATE TABLE item.items (
   id            uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   empresa_id    uuid NOT NULL,
   tipo          text NOT NULL DEFAULT 'producto',

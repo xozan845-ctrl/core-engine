@@ -14,7 +14,7 @@ Reglas transversales que suben la calidad más allá del happy-path.
 
 | ID | Regla |
 |---|---|
-| R-PB-1 | Funciones puras de transformación (parsers de fecha, conversores, cálculos de dinero/comisiones, exportadores CSV) deben tener **property tests**: invariantes generadas con cientos de inputs aleatorios. Implementado en las suites Rust de dinero/estado; `proptest`/`cargo-mutants` queda como deuda de la auditoría (R-COV-3). |
+| R-PB-1 | Las funciones puras de transformación (parsers de fecha, conversores, cálculos de dinero/comisiones, exportadores CSV) que tengan invariantes algebraicos deben probarse con **property tests** (`proptest` como dev-dependency del crate): cientos de inputs generados contra la propiedad, no solo ejemplos elegidos a mano. Si una función no tiene invariantes, se justifica en el PR y se cubre con casos boundary. |
 | R-PB-2 | Propiedades mínimas para fechas: `parse(format(x))` conserva el día local; inicio de rango ≤ fin de rango; `dateFrom=dateTo=D` solo devuelve registros del día local D (monotonicidad y partición: suma de días = total del rango). |
 | R-PB-3 | Propiedades de dinero y ciclo de la orden: invariantes de consistencia (centavos siempre enteros y ≥ 0, comisión = rate × base exacta, transiciones de estado solo por la máquina permitida — `validarTransicion` —, idempotencia de reejecución sobre los mismos eventos). `Money` rechaza centavos negativos y normaliza `-0`; los property tests cubren round-trip, suma/resta, márgenes, comisión, formato y todas las transiciones. |
 
@@ -22,15 +22,15 @@ Reglas transversales que suben la calidad más allá del happy-path.
 
 | ID | Regla |
 |---|---|
-| R-MT-1 | Módulos críticos (`identity`/auth, `orders` (CQRS + event sourcing), `commissions`/`finance` (dinero)) se someten a mutation testing (Stryker) en periodicidad mensual o pre-release. Todos los servicios migraron a Rust: no queda Stryker/mutation.yml Node. La mutación se cubre con property/unit tests y `cargo-mutants` queda como deuda registrada para la siguiente auditoría (R-COV-3). |
-| R-MT-2 | **Rangos de mutantes eliminados: ≥ 90% para módulos críticos** (`identity`, `finance` — gate `break` de Stryker), ≥ 80% para cualquier otro módulo sometido a mutación, y por debajo de **70% el release queda bloqueado** (piso absoluto). Mutantes sobrevivientes → tests débiles a corregir antes del release. **Histórico (2026-11-04):** las mediciones de `shared`, `orders-service`, `identity-service` y `finance-service` se conservan como referencia. Todos migraron a Rust; su dominio se cubre con property/unit tests y la deuda de `cargo-mutants` se revisa en la auditoría (R-COV-3). |
-| R-MT-3 | Un test que no mata ningún mutante (equivalentes descartados) se mejora o elimina. |
+| R-MT-1 | Los módulos críticos (`identity`/auth, `orders` (CQRS + event sourcing), `commissions`/`finance` (dinero)) exigen pruebas que **maten mutaciones de lógica**: cada rama de validación, cada transición de estado y cada fórmula de dinero tiene al menos un caso que falla si se invierte la condición, se cambia un operador o se altera un límite. La mutación se ejerce con property/unit tests en `mod tests`; el criterio no depende de una herramienta concreta. |
+| R-MT-2 | **Umbral de calidad:** para módulos críticos, toda condición de negocio (autorización, montos, stock, estados) debe tener un caso positivo y uno negativo; una rama sin caso contrario no es aceptable aunque la cobertura de líneas sea alta. Los property tests de R-PB-3 cubren los invariantes de dinero y transiciones. Un test que solo recorre el camino feliz no cumple R-MT-1. |
+| R-MT-3 | Un test que no puede fallar ante un cambio de la lógica (asserts triviales, mocks que se autoafirman) se mejora o se elimina. |
 
 ## Robustez de entradas y concurrencia
 
 | ID | Regla |
 |---|---|
-| R-RB-1 | Fuzz mínimo en parsers externos (query params, CSV export/import, payloads de mensajería y bodies de llegada por el gateway): entradas truncadas, Unicode raro, campos de más, números como strings. Implementado en las suites Rust de paginación/rutas; `proptest` queda como deuda de la auditoría. |
+| R-RB-1 | Fuzz mínimo en parsers externos (query params, CSV export/import, payloads de mensajería y bodies de llegada por el gateway): entradas truncadas, Unicode raro, campos de más, números como strings. Se cubre con casos de tabla en `mod tests` de cada parser y, cuando el parser lo permita, con `proptest`. |
 | R-RB-2 | Límites de rate/size: probar listados con `limit` gigante, búsqueda con string enorme, payload sobre el máximo permitido. |
 | R-RB-3 | Outbox/saga: probar reentrada/overlap (dos reenvíos del outbox o dos eventos de la misma saga simultáneos) y comportamiento ante fallo parcial (¿quedan datos a medias?, ¿va a DLQ con backoff?). |
 | R-RB-4 | Timeouts y caída de un servicio o del broker: el sistema degrada con error controlado, no excepción cruda. Implementado en los clientes HTTP Rust (`reqwest` con timeout) y check ejecutable en `microservices-ci-contract`. |
