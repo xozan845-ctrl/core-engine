@@ -1070,6 +1070,12 @@
             "description": "Empresa propietaria",
             "format": "uuid"
           },
+          "negocio_id": {
+            "type": "string",
+            "description": "Negocio de la tienda",
+            "format": "uuid",
+            "nullable": true
+          },
           "participacion_porcentaje": {
             "type": "number",
             "description": "Participación congelable del vendedor",
@@ -1864,6 +1870,12 @@
             "type": "string",
             "description": "Empresa propietaria",
             "format": "uuid"
+          },
+          "negocio_id": {
+            "type": "string",
+            "description": "Negocio de la tienda",
+            "format": "uuid",
+            "nullable": true
           },
           "propietario_usuario_id": {
             "type": "string",

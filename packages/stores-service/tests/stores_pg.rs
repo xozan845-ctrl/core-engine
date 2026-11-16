@@ -54,6 +54,7 @@ async fn crear_tienda(tiendas: &Tiendas, nombre: &str, slug: Option<&str>) -> se
     tiendas
         .crear(
             EMPRESA,
+            None,
             USUARIO,
             Some(10),
             nombre,
@@ -118,6 +119,7 @@ async fn debe_resolver_colisiones_de_slug_y_rechazar_duplicados() {
     let error = tiendas
         .crear(
             EMPRESA,
+            None,
             USUARIO,
             Some(10),
             "Otra Tienda",
@@ -132,6 +134,7 @@ async fn debe_resolver_colisiones_de_slug_y_rechazar_duplicados() {
     let segunda = tiendas
         .crear(
             EMPRESA,
+            None,
             USUARIO,
             Some(10),
             "Mi Tienda",
@@ -364,6 +367,7 @@ async fn debe_asignar_y_desasignar_vendedor_y_listar_por_ids() {
     let tienda = tiendas
         .crear(
             EMPRESA,
+            None,
             USUARIO,
             None,
             "Tienda Libre",
@@ -390,7 +394,7 @@ async fn debe_asignar_y_desasignar_vendedor_y_listar_por_ids() {
 
     let lote = tiendas.por_ids(&[id.to_string()]).await.expect("lote");
     assert_eq!(lote.len(), 1);
-    let empresa = tiendas.de_empresa(EMPRESA).await.expect("empresa");
+    let empresa = tiendas.de_empresa(EMPRESA, None).await.expect("empresa");
     assert_eq!(empresa.len(), 1);
 
     tiendas
