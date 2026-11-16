@@ -1,7 +1,7 @@
 //! `pricing-service` — motor de precios (ADR-0018).
 //!
 //! Listas de precio, escalas, tarifas, cotizaciones, histórico y promociones.
-//! Sustituye la superficie de precios de `catalog-service` sin cambiar el
+//! Sustituye la superficie de precios heredada sin cambiar el
 //! contrato HTTP ni la resolución que consumen orders y stores.
 
 #![allow(dead_code)]

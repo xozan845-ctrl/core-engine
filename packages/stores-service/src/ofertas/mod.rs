@@ -1,7 +1,7 @@
 //! Ofertas: relación vendedor-item con precio final (Tabla 11).
 //!
 //! RN-01: precio venta = base × (1 + margen); RN-02: no se publica con stock
-//! menor a 1. El catálogo maestro se consulta a `catalog-service` (REST).
+//! menor a 1. El catálogo maestro se consulta a `item-service` (REST).
 
 use crate::clients::Catalogo;
 use crate::db::{fila_a_json, Db};

@@ -35,7 +35,6 @@ const SERVICIOS_SIEMPRE_ACTIVOS = [
  * publica y perfil fiscal del vendedor.
  */
 const CONTROLADORES_TRANSVERSALES = [
-  'packages/catalog-service/src/internal/internal.controller.ts',
   'packages/orders-service/src/pedidos/carrito/carrito.controller.ts',
   'packages/orders-service/src/pedidos/interno.controller.ts',
   'packages/stores-service/src/internal/internal.controller.ts',

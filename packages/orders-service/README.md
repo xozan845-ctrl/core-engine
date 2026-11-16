@@ -50,7 +50,8 @@ cambia; el OpenAPI versionado vive en `docs/openapi/orders-service/`.
 | `OUTBOX_TABLA` | `orders.outbox` | Tabla del Outbox |
 | `COMMISSION_RATE` | `0.12` | Tasa de comisión (RN-04) |
 | `STORES_SERVICE_URL` | `http://stores-service:3003` | Ofertas y precios |
-| `CATALOG_SERVICE_URL` | `http://catalog-service:3002` | Stock, precios y cotización |
+| `ITEM_SERVICE_URL` | `http://item-service:3015` | Items y stock proyectado |
+| `PRICING_SERVICE_URL` | `http://pricing-service:3014` | Precios y cotización |
 | `IDENTITY_SERVICE_URL` | `http://identity-service:3001` | Capacidades |
 | `SCHEDULING_SERVICE_URL` | `http://scheduling-service:3011` | Disponibilidad de reservas |
 | `FINANCE_SERVICE_URL` | `http://finance-service:3007` | Crédito de órdenes |
