@@ -1,0 +1,30 @@
+# Core Engine · analytics-service (Rust)
+# Contexto de build: raíz del repositorio (igual que el resto de servicios).
+FROM rust:1.94.1-bookworm AS build
+WORKDIR /repo
+
+COPY packages/analytics-service/Cargo.toml packages/analytics-service/Cargo.lock ./packages/analytics-service/
+COPY docs/openapi/analytics-service ./docs/openapi/analytics-service
+
+# Cachea las dependencias con un binario vacío antes de copiar el código real.
+RUN cd packages/analytics-service \
+    && mkdir -p src \
+    && echo "fn main() {}" > src/main.rs \
+    && cargo build --release --locked
+
+COPY packages/analytics-service/src ./packages/analytics-service/src
+COPY packages/analytics-service/tests ./packages/analytics-service/tests
+RUN touch packages/analytics-service/src/main.rs \
+    && cd packages/analytics-service \
+    && cargo build --release --locked
+
+FROM debian:bookworm-slim AS runtime
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
+WORKDIR /app
+COPY --from=build /repo/packages/analytics-service/target/release/analytics-service /usr/local/bin/analytics-service
+ENV NODE_ENV=production
+EXPOSE 3016
+USER 10001:10001
+ENTRYPOINT ["/usr/local/bin/analytics-service"]
