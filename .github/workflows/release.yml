@@ -127,6 +127,7 @@ jobs:
           - identity-service
           - catalog-service
           - inventory-service
+          - pricing-service
           - stores-service
           - orders-service
           - logistics-service

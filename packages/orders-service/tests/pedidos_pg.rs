@@ -18,6 +18,7 @@ use orders_service::pagos::Pagos;
 use orders_service::pedidos::Pedidos;
 use orders_service::salon::{CrearComandaInput, CrearMesaInput, Salon};
 use orders_service::suscripciones::{CrearSuscripcionInput, Suscripciones};
+use orders_service::tipos_orden::TiposOrden;
 use orders_service::views::OrderViewRepository;
 use serde_json::{json, Value};
 use std::sync::Arc;
@@ -287,6 +288,7 @@ async fn provisionar(url: &str) {
           monto_cents integer NOT NULL,
           moneda text NOT NULL DEFAULT 'NIO',
           referencia text NOT NULL DEFAULT '',
+          motivo_rechazo text NOT NULL DEFAULT '',
           confirmado_por uuid,
           confirmado_en timestamptz,
           creado_en timestamptz NOT NULL DEFAULT NOW(),
@@ -415,6 +417,10 @@ async fn provisionar(url: &str) {
     .execute(&pool)
     .await
     .expect("migracion orders");
+    sqlx::raw_sql(include_str!("../../../infra/db/init/80_tipos_orden.sql"))
+        .execute(&pool)
+        .await
+        .expect("tipos de orden");
     pool.close().await;
 }
 
@@ -470,6 +476,8 @@ fn infra(db: Arc<Db>, stock: i64) -> (Arc<Checkout>, Arc<Carrito>, Arc<Pedidos>)
         vistas,
         pedidos: Arc::clone(&pedidos),
         outbox: Outbox::nueva("orders.outbox"),
+        pagos: Arc::new(Pagos::nueva(Arc::clone(&db))),
+        tipos: Arc::new(TiposOrden::nueva(Arc::clone(&db))),
         tasa_comision: 0.12,
     });
     (checkout, carrito, pedidos)
@@ -504,6 +512,62 @@ async fn debe_crear_orden_con_evento_y_outbox() {
         .await
         .expect("eventos");
     assert_eq!(eventos, 1);
+}
+
+fn compra_con_metodo(cantidad: i64, metodo: &str) -> ComandoCrear {
+    ComandoCrear {
+        metodo_pago: Some(metodo.to_string()),
+        ..compra(cantidad)
+    }
+}
+
+#[tokio::test]
+async fn debe_dejar_pendiente_el_pago_manual_hasta_confirmacion() {
+    let _guard = DB_LOCK.lock().await;
+    let Some(db) = con_bd().await else { return };
+    let (checkout, _, _) = infra(Arc::clone(&db), 10);
+    let orden = checkout
+        .ejecutar(&compra_con_metodo(1, "efectivo"), COMPRADOR)
+        .await
+        .expect("orden");
+    assert_eq!(orden.estado, "creada");
+    assert_eq!(orden.metodo_pago, "efectivo");
+    let (estado, metodo): (String, String) =
+        sqlx::query_as("SELECT estado, metodo_codigo FROM orders.pagos WHERE order_id = $1::uuid")
+            .bind(Uuid::parse_str(&orden.id).expect("uuid"))
+            .fetch_one(db.pool())
+            .await
+            .expect("pago");
+    assert_eq!(estado, "pendiente");
+    assert_eq!(metodo, "efectivo");
+
+    let consumer = PedidosConsumer::nuevo(Arc::clone(&db), Arc::clone(&checkout));
+    consumer
+        .manejar(json!({
+            "event_id": Uuid::new_v4().to_string(),
+            "tipo": STOCK_RESERVADO,
+            "data": {"order_id": orden.id}
+        }))
+        .await
+        .expect("consumir");
+    let vista = OrderViewRepository
+        .encontrar(&db, &orden.id)
+        .await
+        .expect("vista")
+        .expect("existe");
+    assert_eq!(vista.estado, "creada");
+}
+
+#[tokio::test]
+async fn debe_rechazar_un_metodo_de_pago_desconocido() {
+    let _guard = DB_LOCK.lock().await;
+    let Some(db) = con_bd().await else { return };
+    let (checkout, _, _) = infra(Arc::clone(&db), 10);
+    let error = checkout
+        .ejecutar(&compra_con_metodo(1, "no_existe"), COMPRADOR)
+        .await
+        .expect_err("metodo invalido");
+    assert_eq!(error.codigo, "METODO_PAGO_INVALIDO");
 }
 
 #[tokio::test]
@@ -763,6 +827,7 @@ async fn router_completo(db: Arc<Db>, stock: i64) -> axum::Router {
     let config = Config::from_pairs([
         ("SERVICIO", "orders-service"),
         ("INTERNAL_API_KEY", "clave-interna"),
+        ("PAGO_WEBHOOK_SECRET", "webhook-secreto"),
     ])
     .expect("config");
     let clientes: Arc<dyn ClientesPort> = Arc::new(ClientesFake {
@@ -798,6 +863,8 @@ async fn router_completo(db: Arc<Db>, stock: i64) -> axum::Router {
         vistas: Arc::clone(&vistas),
         pedidos: Arc::clone(&pedidos),
         outbox: Outbox::nueva("orders.outbox"),
+        pagos: Arc::new(Pagos::nueva(Arc::clone(&db))),
+        tipos: Arc::new(TiposOrden::nueva(Arc::clone(&db))),
         tasa_comision: 0.12,
     });
     let contratos = Arc::new(Contratos::nueva(Arc::clone(&db)));
@@ -1149,4 +1216,229 @@ async fn debe_gestionar_metodos_de_pago() {
     assert_eq!(response.status(), StatusCode::OK);
     let actualizado = json_de(response).await;
     assert_eq!(actualizado["data"]["activo"], false);
+}
+
+async fn crear_orden_manual(router: axum::Router) -> (String, String) {
+    use axum::body::Body;
+    use axum::http::{Request, StatusCode};
+    use tower::ServiceExt;
+    let mut request = Request::post("/api/v2/orders").header("content-type", "application/json");
+    for (clave, valor) in headers_comprador() {
+        request = request.header(clave, valor);
+    }
+    let response = router
+        .clone()
+        .oneshot(
+            request
+                .body(Body::from(format!(
+                    r#"{{"tipo_orden":"compra","metodo_pago":"efectivo","items":[{{"oferta_id":"{OFERTA}","cantidad":1,"fulfillment":"none"}}]}}"#
+                )))
+                .expect("request"),
+        )
+        .await
+        .expect("response");
+    assert_eq!(response.status(), StatusCode::CREATED);
+    let orden = json_de(response).await;
+    let order_id = orden["data"]["id"].as_str().expect("order id").to_string();
+
+    let mut request = Request::get(format!("/api/v2/admin/pagos?order_id={order_id}"));
+    for (clave, valor) in headers_admin() {
+        request = request.header(clave, valor);
+    }
+    let response = router
+        .oneshot(request.body(Body::empty()).expect("request"))
+        .await
+        .expect("response");
+    assert_eq!(response.status(), StatusCode::OK);
+    let pagos = json_de(response).await;
+    let pago_id = pagos["data"][0]["id"]
+        .as_str()
+        .expect("pago id")
+        .to_string();
+    (order_id, pago_id)
+}
+
+#[tokio::test]
+async fn debe_confirmar_y_rechazar_pagos_manuales() {
+    use axum::body::Body;
+    use axum::http::{Request, StatusCode};
+    use tower::ServiceExt;
+    let _guard = DB_LOCK.lock().await;
+    let Some(db) = con_bd().await else { return };
+    let router = router_completo(Arc::clone(&db), 10).await;
+
+    let (order_id, pago_id) = crear_orden_manual(router.clone()).await;
+    let mut request = Request::post(format!("/api/v2/admin/pagos/{pago_id}/confirmar"));
+    for (clave, valor) in headers_admin() {
+        request = request.header(clave, valor);
+    }
+    let response = router
+        .clone()
+        .oneshot(request.body(Body::empty()).expect("request"))
+        .await
+        .expect("response");
+    assert_eq!(response.status(), StatusCode::OK);
+    let pago = json_de(response).await;
+    assert_eq!(pago["data"]["estado"], "confirmado");
+
+    let mut request = Request::get(format!("/api/v2/orders/{order_id}"));
+    for (clave, valor) in headers_comprador() {
+        request = request.header(clave, valor);
+    }
+    let response = router
+        .clone()
+        .oneshot(request.body(Body::empty()).expect("request"))
+        .await
+        .expect("response");
+    let orden = json_de(response).await;
+    assert_eq!(orden["data"]["estado"], "pagada");
+
+    let (order_id, pago_id) = crear_orden_manual(router.clone()).await;
+    let mut request = Request::post(format!("/api/v2/admin/pagos/{pago_id}/rechazar"))
+        .header("content-type", "application/json");
+    for (clave, valor) in headers_admin() {
+        request = request.header(clave, valor);
+    }
+    let response = router
+        .clone()
+        .oneshot(
+            request
+                .body(Body::from(r#"{"motivo":"sin fondos"}"#))
+                .expect("request"),
+        )
+        .await
+        .expect("response");
+    assert_eq!(response.status(), StatusCode::OK);
+    let pago = json_de(response).await;
+    assert_eq!(pago["data"]["estado"], "rechazado");
+    assert_eq!(pago["data"]["motivo_rechazo"], "sin fondos");
+
+    let mut request = Request::get(format!("/api/v2/orders/{order_id}"));
+    for (clave, valor) in headers_comprador() {
+        request = request.header(clave, valor);
+    }
+    let response = router
+        .oneshot(request.body(Body::empty()).expect("request"))
+        .await
+        .expect("response");
+    let orden = json_de(response).await;
+    assert_eq!(orden["data"]["estado"], "cancelada");
+}
+
+#[tokio::test]
+async fn debe_procesar_un_webhook_de_pago_con_secreto() {
+    use axum::body::Body;
+    use axum::http::{Request, StatusCode};
+    use tower::ServiceExt;
+    let _guard = DB_LOCK.lock().await;
+    let Some(db) = con_bd().await else { return };
+    let router = router_completo(Arc::clone(&db), 10).await;
+    let (order_id, pago_id) = crear_orden_manual(router.clone()).await;
+
+    let request = Request::post("/internal/pagos/webhook")
+        .header("content-type", "application/json")
+        .header("x-webhook-secret", "incorrecto");
+    let response = router
+        .clone()
+        .oneshot(
+            request
+                .body(Body::from(format!(
+                    r#"{{"pago_id":"{pago_id}","estado":"confirmado"}}"#
+                )))
+                .expect("request"),
+        )
+        .await
+        .expect("response");
+    assert_eq!(response.status(), StatusCode::FORBIDDEN);
+
+    let request = Request::post("/internal/pagos/webhook")
+        .header("content-type", "application/json")
+        .header("x-webhook-secret", "webhook-secreto");
+    let response = router
+        .clone()
+        .oneshot(
+            request
+                .body(Body::from(format!(
+                    r#"{{"pago_id":"{pago_id}","estado":"confirmado"}}"#
+                )))
+                .expect("request"),
+        )
+        .await
+        .expect("response");
+    assert_eq!(response.status(), StatusCode::OK);
+
+    let mut request = Request::get(format!("/api/v2/orders/{order_id}"));
+    for (clave, valor) in headers_comprador() {
+        request = request.header(clave, valor);
+    }
+    let response = router
+        .oneshot(request.body(Body::empty()).expect("request"))
+        .await
+        .expect("response");
+    let orden = json_de(response).await;
+    assert_eq!(orden["data"]["estado"], "pagada");
+}
+
+#[tokio::test]
+async fn debe_leer_y_validar_la_matriz_de_tipos_de_orden() {
+    let _guard = DB_LOCK.lock().await;
+    let Some(db) = con_bd().await else { return };
+    let tipos = TiposOrden::nueva(Arc::clone(&db));
+    let lista = tipos.listar().await.expect("tipos");
+    assert!(lista.iter().any(|tipo| tipo.codigo == "compra"));
+    assert!(lista.iter().any(|tipo| tipo.codigo == "cotizacion"));
+
+    tipos
+        .validar("compra", "pagada", "en_preparacion")
+        .await
+        .expect("transicion valida");
+    let error = tipos
+        .validar("compra", "creada", "entregada")
+        .await
+        .expect_err("transicion invalida");
+    assert_eq!(error.codigo, "TRANSICION_INVALIDA");
+    let error = tipos
+        .validar("no_existe", "creada", "pagada")
+        .await
+        .expect_err("tipo invalido");
+    assert_eq!(error.codigo, "TIPO_ORDEN_INVALIDO");
+}
+
+#[tokio::test]
+async fn debe_aceptar_un_tipo_de_orden_creado_por_configuracion() {
+    let _guard = DB_LOCK.lock().await;
+    let Some(db) = con_bd().await else { return };
+    let (checkout, _, _) = infra(Arc::clone(&db), 10);
+    sqlx::query(
+        "INSERT INTO orders.tipos_orden (codigo, nombre)
+         VALUES ('devolucion_express', 'Devolucion express')
+         ON CONFLICT (codigo) DO NOTHING",
+    )
+    .execute(db.pool())
+    .await
+    .expect("tipo");
+    sqlx::query(
+        "INSERT INTO orders.transiciones_orden (tipo_codigo, desde, hasta)
+         VALUES ('devolucion_express', 'creada', 'pagada')
+         ON CONFLICT DO NOTHING",
+    )
+    .execute(db.pool())
+    .await
+    .expect("transicion");
+
+    let orden = checkout
+        .ejecutar(
+            &ComandoCrear {
+                tipo_orden: "devolucion_express".to_string(),
+                ..compra(1)
+            },
+            COMPRADOR,
+        )
+        .await
+        .expect("orden");
+    assert_eq!(orden.tipo_orden, "devolucion_express");
+    checkout
+        .transicionar(&orden.id, "pagada", Some("config"), Some("test"), None)
+        .await
+        .expect("transicion configurada");
 }

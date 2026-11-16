@@ -61,6 +61,18 @@ pub fn destinos(config: &Config) -> Vec<Destino> {
             ],
         },
         Destino {
+            nombre: "pricing",
+            url: config.pricing_url.clone(),
+            patrones: vec![
+                patron(r"^/api/v2/catalog/listas-precio(/|$)", &["*"]),
+                patron(
+                    r"^/api/v2/catalog/items/[^/]+/(precio|escalas|tarifas|cotizacion)(/|$)",
+                    &["*"],
+                ),
+                patron(r"^/api/v2/catalog/promociones(/|$)", &["*"]),
+            ],
+        },
+        Destino {
             nombre: "catalog",
             url: config.catalog_url.clone(),
             patrones: vec![patron(r"^/api/v2/catalog/", &["*"])],
