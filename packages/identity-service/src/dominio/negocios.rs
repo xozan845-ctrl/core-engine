@@ -1,4 +1,4 @@
-//! Negocios: unidad operativa dentro de una empresa (ADR-0019).
+//! Negocios: unidad operativa dentro de una empresa (ADR-0021).
 //!
 //! La empresa sigue siendo el tenant fiscal y el límite de RLS. Cada negocio
 //! aporta su vertical y su pack; una empresa simple nace con el negocio
@@ -62,7 +62,7 @@ impl Negocios {
 
     /// Añade un negocio a una empresa. El negocio principal se crea junto con
     /// la empresa; a partir del segundo se exige un `empresario` activo de la
-    /// empresa (regla de negocio de ADR-0019).
+    /// empresa (regla de negocio de ADR-0021).
     pub async fn crear(
         &self,
         actor: &UsuarioContexto,

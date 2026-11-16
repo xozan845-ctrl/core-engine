@@ -12,6 +12,45 @@
   ],
   "tags": [],
   "paths": {
+    "/internal/analytics/reportes/ejecutar": {
+      "post": {
+        "operationId": "AnalyticsController_ejecutarReportesVencidos",
+        "parameters": [
+          {
+            "name": "limite",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "default": 20
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Reportes vencidos ejecutados",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "ejecutados": {
+                      "type": "integer"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "summary": "Ejecutar reportes vencidos",
+        "tags": [
+          "Interna"
+        ]
+      }
+    },
     "/internal/finance/sujetos/{usuarioId}": {
       "get": {
         "operationId": "InternoController_sujeto",
@@ -1439,6 +1478,16 @@
               "format": "uuid",
               "type": "string"
             }
+          },
+          {
+            "name": "negocio_id",
+            "required": false,
+            "in": "query",
+            "description": "Filtra por negocio; si falta devuelve todas",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
           }
         ],
         "responses": {
@@ -2430,6 +2479,11 @@
             "items": {
               "type": "string"
             }
+          },
+          "negocio_id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Negocio activo; si falta se conserva el contrato por empresa"
           }
         },
         "required": [

@@ -1,4 +1,4 @@
--- ADR-0019 iteración 12: administración de negocios.
+-- ADR-0021 iteración 12: administración de negocios.
 BEGIN;
 
 ALTER TABLE identity.negocios

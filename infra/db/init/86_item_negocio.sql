@@ -1,4 +1,4 @@
--- ADR-0019 fase 4 (portado a ADR-0018): negocio en items.
+-- ADR-0021 fase 4 (portado a ADR-0018): negocio en items.
 --
 -- `item.items` sustituye a `catalog.items`; el negocio separa catálogo y stock
 -- por unidad operativa y los items existentes quedan en el principal.

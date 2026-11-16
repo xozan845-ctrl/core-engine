@@ -1,4 +1,4 @@
--- ADR-0019: comprobantes fiscales por negocio.
+-- ADR-0021: comprobantes fiscales por negocio.
 --
 -- El comprobante conserva la orden como referencia; `negocio_id` permite
 -- reportes de IVA/ventas por unidad operativa.

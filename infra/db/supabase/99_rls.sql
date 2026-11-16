@@ -1325,7 +1325,7 @@ CREATE POLICY fidelizacion_canjes_empresa ON orders.fidelizacion_canjes
   FOR ALL TO authenticated
   USING (empresa_id::text = (auth.jwt() ->> 'tenant_id'))
   WITH CHECK (empresa_id::text = (auth.jwt() ->> 'tenant_id'));
--- ── identity.negocios (ADR-0019) ─────────────────────────────────────────
+-- ── identity.negocios (ADR-0021) ─────────────────────────────────────────
 -- Un negocio pertenece a una empresa; el aislamiento sigue siendo por tenant.
 ALTER TABLE identity.negocios ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS negocios_admin ON identity.negocios;
@@ -1341,7 +1341,7 @@ CREATE POLICY negocios_tenant ON identity.negocios FOR ALL TO authenticated
 CREATE POLICY negocios_app ON identity.negocios FOR ALL TO core_engine_app
   USING (true) WITH CHECK (true);
 
--- ── identity.negocio_capacidades (ADR-0019 fase 3) ───────────────────────
+-- ── identity.negocio_capacidades (ADR-0021 fase 3) ───────────────────────
 ALTER TABLE identity.negocio_capacidades ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS negocio_capacidades_admin ON identity.negocio_capacidades;
 DROP POLICY IF EXISTS negocio_capacidades_tenant ON identity.negocio_capacidades;
@@ -1365,7 +1365,7 @@ CREATE POLICY negocio_capacidades_tenant ON identity.negocio_capacidades
 CREATE POLICY negocio_capacidades_app ON identity.negocio_capacidades
   FOR ALL TO core_engine_app USING (true) WITH CHECK (true);
 
--- ── identity.permisos (ADR-0019 iteración 7) ─────────────────────────────
+-- ── identity.permisos (ADR-0021 iteración 7) ─────────────────────────────
 ALTER TABLE identity.permisos ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS permisos_admin ON identity.permisos;
 DROP POLICY IF EXISTS permisos_lectura ON identity.permisos;
@@ -1378,7 +1378,7 @@ CREATE POLICY permisos_lectura ON identity.permisos FOR SELECT TO authenticated
 CREATE POLICY permisos_app ON identity.permisos FOR SELECT TO core_engine_app
   USING (true);
 
--- ── RLS restrictiva por negocio (ADR-0019 iteración 8) ───────────────────
+-- ── RLS restrictiva por negocio (ADR-0021 iteración 8) ───────────────────
 CREATE OR REPLACE FUNCTION auth.negocio_actual() RETURNS text
 LANGUAGE sql STABLE AS $$
   SELECT NULLIF(auth.jwt() ->> 'negocio_id', '')
@@ -1433,7 +1433,7 @@ CREATE POLICY stores_ofertas_negocio_restrictiva ON stores.ofertas
        AND (t.negocio_id IS NULL OR t.negocio_id::text = auth.negocio_actual())
   ));
 
--- ── inventory por negocio (ADR-0019 iteración 9) ─────────────────────────
+-- ── inventory por negocio (ADR-0021 iteración 9) ─────────────────────────
 ALTER TABLE inventory.ubicaciones ADD COLUMN IF NOT EXISTS negocio_id uuid;
 ALTER TABLE inventory.proveedores ADD COLUMN IF NOT EXISTS negocio_id uuid;
 ALTER TABLE inventory.configuracion_inventario ADD COLUMN IF NOT EXISTS negocio_id uuid;
@@ -1463,7 +1463,7 @@ BEGIN
   END LOOP;
 END $$;
 
--- ── finance.series_comprobantes por negocio (ADR-0019 iteración 10) ──────
+-- ── finance.series_comprobantes por negocio (ADR-0021 iteración 10) ──────
 ALTER TABLE finance.series_comprobantes ADD COLUMN IF NOT EXISTS negocio_id uuid;
 ALTER TABLE finance.series_comprobantes ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS series_comprobantes_admin ON finance.series_comprobantes;
@@ -1483,7 +1483,7 @@ CREATE POLICY series_comprobantes_negocio_restrictiva ON finance.series_comproba
          OR negocio_id IS NULL
          OR negocio_id::text = auth.negocio_actual());
 
--- ── identity.auditoria (ADR-0019 iteración 11) ───────────────────────────
+-- ── identity.auditoria (ADR-0021 iteración 11) ───────────────────────────
 ALTER TABLE identity.auditoria ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS auditoria_admin ON identity.auditoria;
 DROP POLICY IF EXISTS auditoria_tenant ON identity.auditoria;
@@ -1499,7 +1499,7 @@ CREATE POLICY auditoria_tenant ON identity.auditoria FOR SELECT TO authenticated
 CREATE POLICY auditoria_app ON identity.auditoria FOR ALL TO core_engine_app
   USING (true) WITH CHECK (true);
 
--- ── identity.plantillas_roles (ADR-0019 iteración 12) ─────────────────────
+-- ── identity.plantillas_roles (ADR-0021 iteración 12) ─────────────────────
 ALTER TABLE identity.plantillas_roles ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS plantillas_roles_admin ON identity.plantillas_roles;
 DROP POLICY IF EXISTS plantillas_roles_tenant ON identity.plantillas_roles;
@@ -1512,7 +1512,7 @@ CREATE POLICY plantillas_roles_tenant ON identity.plantillas_roles FOR SELECT TO
 CREATE POLICY plantillas_roles_app ON identity.plantillas_roles FOR SELECT TO core_engine_app
   USING (true);
 
--- ── analytics.* (ADR-0019/0020: analytics-service) ──────────────────────
+-- ── analytics.* (ADR-0021/0020: analytics-service) ──────────────────────
 ALTER TABLE analytics.hechos_venta ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS hechos_venta_admin ON analytics.hechos_venta;
 DROP POLICY IF EXISTS hechos_venta_empresa ON analytics.hechos_venta;

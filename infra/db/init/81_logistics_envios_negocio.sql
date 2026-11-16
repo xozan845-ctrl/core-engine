@@ -1,4 +1,4 @@
--- ADR-0019 fase 4: negocio en envíos logísticos.
+-- ADR-0021 fase 4: negocio en envíos logísticos.
 --
 -- La guía se prepara por (orden, empresa, negocio). Los envíos existentes
 -- quedan en el negocio principal de su empresa.

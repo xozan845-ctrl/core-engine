@@ -1,4 +1,4 @@
--- ADR-0019 iteración 6: negocio activo por sesión.
+-- ADR-0021 iteración 6: negocio activo por sesión.
 --
 -- El negocio activo deja de depender de la asignación más reciente: cada
 -- refresh token conserva el negocio elegido y el cambio se hace por sesión.

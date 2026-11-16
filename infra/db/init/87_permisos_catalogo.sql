@@ -1,4 +1,4 @@
--- ADR-0019 iteración 7: catálogo de permisos por acción.
+-- ADR-0021 iteración 7: catálogo de permisos por acción.
 --
 -- Las acciones se versionan por módulo y dejan de ser texto libre en los
 -- roles. Los servicios validan que el token incluya la acción requerida.

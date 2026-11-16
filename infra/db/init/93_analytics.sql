@@ -1,4 +1,4 @@
--- ADR-0019 / ADR-0020: analytics-service como único dueño de la analítica.
+-- ADR-0021 / ADR-0022: analytics-service como único dueño de la analítica.
 --
 -- `orders-service` publica hechos; `commissions-service` publica comisiones;
 -- `analytics-service` mantiene la proyección y expone negocio, empresa y

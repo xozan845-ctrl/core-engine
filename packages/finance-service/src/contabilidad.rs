@@ -574,7 +574,7 @@ impl Contabilidad {
         Ok(filas.iter().map(libro_iva_de_fila).collect())
     }
 
-    /// Libro de ventas por negocio (DGI + ADR-0019).
+    /// Libro de ventas por negocio (DGI + ADR-0021).
     pub async fn libro_ventas_negocios(
         &self,
         desde: Option<DateTime<Utc>>,

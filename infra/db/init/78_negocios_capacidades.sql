@@ -1,4 +1,4 @@
--- ADR-0019 fase 3: capacidades por negocio.
+-- ADR-0021 fase 3: capacidades por negocio.
 --
 -- `empresa_capacidades` se conserva como vista legada/union. La autoridad por
 -- negocio es `negocio_capacidades`; el guard interno resuelve por `negocio_id`

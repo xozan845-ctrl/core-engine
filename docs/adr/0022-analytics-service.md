@@ -1,10 +1,10 @@
-# ADR-0020: `analytics-service` como único dueño de la analítica
+# ADR-0022: `analytics-service` como único dueño de la analítica
 
 - **Fecha**: 2026-11-16
 - **Estado**: Aceptado — implementación inicial con negocio, empresa y plataforma
 - **Ámbito**: analítica de gestión, cohortes, reportes programados
 - **Referencias**: [ADR-0009](./0009-market-intelligence-service-en-rust.md),
-  [ADR-0019](./0019-negocios-por-empresa.md)
+  [ADR-0021](./0021-negocios-por-empresa.md)
 
 ## Contexto
 

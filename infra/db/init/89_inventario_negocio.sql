@@ -1,4 +1,4 @@
--- ADR-0019 iteración 9: inventario completo por negocio.
+-- ADR-0021 iteración 9: inventario completo por negocio.
 --
 -- Ubicaciones, proveedores y configuración pueden acotarse a un negocio.
 -- `negocio_id NULL` conserva el comportamiento compartido por empresa.
