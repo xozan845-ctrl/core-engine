@@ -9,8 +9,9 @@ use crate::clients::{
 use crate::db::{iso_ms, Db};
 use crate::errors::ApiError;
 use crate::event_store::{error_db, parsear_uuid, OrderEventStore};
+use crate::fulfillments::Fulfillments;
 use crate::money;
-use crate::order_state::{ItemOrden, FULFILLMENTS};
+use crate::order_state::ItemOrden;
 use crate::outbox::Outbox;
 use crate::pagos::Pagos;
 use crate::pedidos::Pedidos;
@@ -104,6 +105,7 @@ pub struct Checkout {
     pub outbox: Outbox,
     pub pagos: Arc<Pagos>,
     pub tipos: Arc<TiposOrden>,
+    pub fulfillments: Arc<Fulfillments>,
     pub tasa_comision: f64,
 }
 
@@ -130,6 +132,7 @@ impl Checkout {
             .filter(|valor| !valor.is_empty())
             .unwrap_or("simulado")
             .to_lowercase();
+        let fulfillments_permitidos = self.fulfillments.codigos_activos().await?;
         let metodo = self
             .pagos
             .metodo_activo(&metodo_pago)
@@ -206,8 +209,12 @@ impl Checkout {
                 }
             }
             moneda_orden = Some(moneda_oferta);
-            let fulfillment =
-                validar_fulfillment(linea.fulfillment.as_deref(), &tipo_orden, &oferta.item_type)?;
+            let fulfillment = validar_fulfillment(
+                linea.fulfillment.as_deref(),
+                &tipo_orden,
+                &oferta.item_type,
+                &fulfillments_permitidos,
+            )?;
             if fulfillment == "digital" {
                 let url = url_entrega_digital(oferta.atributos.as_ref());
                 let Some(url) = url else {
@@ -904,9 +911,10 @@ fn validar_fulfillment(
     valor: Option<&str>,
     tipo_orden: &str,
     item_type: &str,
+    permitidos: &[String],
 ) -> Result<String, ApiError> {
     let fulfillment = valor.unwrap_or("none");
-    if !FULFILLMENTS.contains(&fulfillment) {
+    if !permitidos.iter().any(|permitido| permitido == fulfillment) {
         return Err(ApiError::dominio(
             "FULFILLMENT_INVALIDO",
             "El fulfillment no es valido.",
@@ -1195,18 +1203,28 @@ mod tests {
         assert!(!fulfillment_permitido(&config, Some("onsite")));
     }
 
+    fn permitidos() -> Vec<String> {
+        ["delivery", "pickup", "onsite", "digital", "none"]
+            .iter()
+            .map(|valor| (*valor).to_string())
+            .collect()
+    }
+
     #[test]
     fn debe_validar_las_reglas_de_fulfillment() {
         assert_eq!(
-            validar_fulfillment(None, "compra", "producto").expect("none"),
+            validar_fulfillment(None, "compra", "producto", &permitidos()).expect("none"),
             "none"
         );
         assert_eq!(
-            validar_fulfillment(Some("onsite"), "reserva", "servicio").expect("onsite"),
+            validar_fulfillment(Some("onsite"), "reserva", "servicio", &permitidos())
+                .expect("onsite"),
             "onsite"
         );
-        assert!(validar_fulfillment(Some("delivery"), "reserva", "servicio").is_err());
-        assert!(validar_fulfillment(Some("onsite"), "reserva", "producto").is_err());
-        assert!(validar_fulfillment(Some("otro"), "compra", "producto").is_err());
+        assert!(
+            validar_fulfillment(Some("delivery"), "reserva", "servicio", &permitidos()).is_err()
+        );
+        assert!(validar_fulfillment(Some("onsite"), "reserva", "producto", &permitidos()).is_err());
+        assert!(validar_fulfillment(Some("otro"), "compra", "producto", &permitidos()).is_err());
     }
 }

@@ -34983,14 +34983,8 @@
           },
           "fulfillment": {
             "type": "string",
-            "enum": [
-              "delivery",
-              "pickup",
-              "onsite",
-              "digital",
-              "none"
-            ],
-            "default": "none"
+            "default": "none",
+            "description": "Código de un fulfillment activo (orders.fulfillments)."
           },
           "intervalo": {
             "type": "string",
@@ -35247,14 +35241,8 @@
           },
           "fulfillment": {
             "type": "string",
-            "enum": [
-              "delivery",
-              "pickup",
-              "onsite",
-              "digital",
-              "none"
-            ],
-            "default": "none"
+            "default": "none",
+            "description": "Código de un fulfillment activo (orders.fulfillments)."
           },
           "fulfillment_config": {
             "type": "object",
