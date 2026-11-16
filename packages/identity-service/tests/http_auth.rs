@@ -1942,6 +1942,152 @@ async fn debe_gestionar_registros_y_exigir_capacidad() {
 }
 
 #[tokio::test]
+async fn debe_validar_registros_contra_esquemas_versionados() {
+    let Some(ctx) = preparar().await else {
+        return;
+    };
+    let empresario = ctx
+        .usuarios
+        .crear(CrearUsuario {
+            nombre: "Empresario".into(),
+            correo: correo(),
+            contrasena: "secreto123".into(),
+            rol: "empresario".into(),
+            tenant_id: None,
+            personal_id: None,
+        })
+        .await
+        .expect("empresario");
+    let actor_base = autorizacion(&empresario.id, "empresario");
+    let slug = format!("empresa-{}", &Uuid::new_v4().simple().to_string()[..8]);
+    let (_, creada) = enviar(
+        &ctx.app,
+        "POST",
+        "/api/v2/empresas",
+        json!({
+            "nombre": "Empresa esquemas",
+            "slug": slug,
+            "vertical_id": "retail",
+            "pack_codigo": "pack_retail",
+            "pack_version": 1
+        }),
+        &headers(&actor_base),
+    )
+    .await;
+    let empresa_id = creada["data"]["id"].as_str().expect("empresa").to_string();
+    let mut actor_pares = actor_base.clone();
+    actor_pares.push(("x-tenant", empresa_id.clone()));
+    let actor = headers(&actor_pares);
+    let (_, parte) = enviar(
+        &ctx.app,
+        "POST",
+        &format!("/api/v2/empresas/{empresa_id}/partes"),
+        json!({ "tipo": "persona", "nombre": "Paciente" }),
+        &actor,
+    )
+    .await;
+    let parte_id = parte["data"]["id"].as_str().expect("parte").to_string();
+
+    let esquema_v1 = json!({
+        "type": "object",
+        "required": ["texto"],
+        "properties": { "texto": { "type": "string" } }
+    });
+    let (status, esquema) = enviar(
+        &ctx.app,
+        "PUT",
+        &format!("/api/v2/empresas/{empresa_id}/registros/esquemas/nota"),
+        json!({ "esquema": esquema_v1 }),
+        &actor,
+    )
+    .await;
+    assert_eq!(status, StatusCode::CREATED);
+    assert_eq!(esquema["data"]["version"], 1);
+    assert_eq!(esquema["data"]["activo"], true);
+
+    let (status, error) = enviar(
+        &ctx.app,
+        "POST",
+        &format!("/api/v2/empresas/{empresa_id}/partes/{parte_id}/registros"),
+        json!({ "tipo": "nota", "datos": {} }),
+        &actor,
+    )
+    .await;
+    assert_eq!(status, StatusCode::BAD_REQUEST);
+    assert_eq!(error["codigo"], "REGISTRO_INVALIDO");
+
+    let (status, _) = enviar(
+        &ctx.app,
+        "POST",
+        &format!("/api/v2/empresas/{empresa_id}/partes/{parte_id}/registros"),
+        json!({ "tipo": "nota", "datos": { "texto": "ok" } }),
+        &actor,
+    )
+    .await;
+    assert_eq!(status, StatusCode::CREATED);
+
+    let (status, activo) = enviar(
+        &ctx.app,
+        "GET",
+        &format!("/api/v2/empresas/{empresa_id}/registros/esquemas/nota"),
+        Value::Null,
+        &actor,
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK);
+    assert_eq!(activo["data"]["version"], 1);
+
+    let esquema_v2 = json!({
+        "type": "object",
+        "required": ["texto", "autor"],
+        "properties": {
+            "texto": { "type": "string" },
+            "autor": { "type": "string" }
+        }
+    });
+    let (status, esquema) = enviar(
+        &ctx.app,
+        "PUT",
+        &format!("/api/v2/empresas/{empresa_id}/registros/esquemas/nota"),
+        json!({ "esquema": esquema_v2 }),
+        &actor,
+    )
+    .await;
+    assert_eq!(status, StatusCode::CREATED);
+    assert_eq!(esquema["data"]["version"], 2);
+
+    let (status, listado) = enviar(
+        &ctx.app,
+        "GET",
+        &format!("/api/v2/empresas/{empresa_id}/registros/esquemas?tipo=nota"),
+        Value::Null,
+        &actor,
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK);
+    let versiones = listado["data"].as_array().expect("esquemas");
+    assert_eq!(versiones.len(), 2);
+    assert_eq!(
+        versiones
+            .iter()
+            .filter(|item| item["activo"] == true)
+            .count(),
+        1
+    );
+
+    let (status, error) = enviar(
+        &ctx.app,
+        "POST",
+        &format!("/api/v2/empresas/{empresa_id}/partes/{parte_id}/registros"),
+        json!({ "tipo": "nota", "datos": { "texto": "ok" } }),
+        &actor,
+    )
+    .await;
+    assert_eq!(status, StatusCode::BAD_REQUEST);
+    assert_eq!(error["codigo"], "REGISTRO_INVALIDO");
+}
+
+#[tokio::test]
 async fn debe_gestionar_extensiones_y_validar_json_schema() {
     let Some(ctx) = preparar().await else {
         return;

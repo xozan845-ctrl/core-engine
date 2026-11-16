@@ -162,6 +162,14 @@ pub fn build_router(state: AppState) -> Router {
                 .patch(registros::actualizar)
                 .delete(registros::eliminar),
         )
+        .route(
+            "/api/v2/empresas/{empresa_id}/registros/esquemas",
+            get(registros::listar_esquemas),
+        )
+        .route(
+            "/api/v2/empresas/{empresa_id}/registros/esquemas/{tipo}",
+            get(registros::obtener_esquema).put(registros::guardar_esquema),
+        )
         .route("/internal/usuarios/{id}", get(internal::usuario))
         .route("/internal/vendedores", get(internal::vendedores))
         .route(
