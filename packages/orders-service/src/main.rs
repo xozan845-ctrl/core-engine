@@ -100,6 +100,7 @@ async fn main() {
     let suscripciones = Arc::new(Suscripciones::nueva(Arc::clone(&db), Arc::clone(&checkout)));
     let salon = Arc::new(Salon::nueva(Arc::clone(&db)));
     let pagos = Arc::new(Pagos::nueva(Arc::clone(&db)));
+    let tipos = Arc::new(TiposOrden::nueva(Arc::clone(&db)));
 
     let consumidor = Arc::new(PedidosConsumer::nuevo(
         Arc::clone(&db),
@@ -134,6 +135,7 @@ async fn main() {
         suscripciones,
         salon,
         pagos,
+        tipos,
     );
     let app = build_router(estado);
 

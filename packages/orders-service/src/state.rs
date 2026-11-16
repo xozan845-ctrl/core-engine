@@ -13,6 +13,7 @@ use crate::pagos::Pagos;
 use crate::pedidos::Pedidos;
 use crate::salon::Salon;
 use crate::suscripciones::Suscripciones;
+use crate::tipos_orden::TiposOrden;
 use crate::views::OrderViewRepository;
 use std::sync::Arc;
 use std::time::Instant;
@@ -32,6 +33,7 @@ pub struct AppState {
     pub suscripciones: Option<Arc<Suscripciones>>,
     pub salon: Option<Arc<Salon>>,
     pub pagos: Option<Arc<Pagos>>,
+    pub tipos: Option<Arc<TiposOrden>>,
     pub inicio: Instant,
 }
 
@@ -52,6 +54,7 @@ impl AppState {
             suscripciones: None,
             salon: None,
             pagos: None,
+            tipos: None,
             inicio: Instant::now(),
         }
     }
@@ -71,6 +74,7 @@ impl AppState {
         suscripciones: Arc<Suscripciones>,
         salon: Arc<Salon>,
         pagos: Arc<Pagos>,
+        tipos: Arc<TiposOrden>,
     ) -> Self {
         Self {
             config: Arc::new(config),
@@ -86,6 +90,7 @@ impl AppState {
             suscripciones: Some(suscripciones),
             salon: Some(salon),
             pagos: Some(pagos),
+            tipos: Some(tipos),
             inicio: Instant::now(),
         }
     }
@@ -132,5 +137,9 @@ impl AppState {
 
     pub fn pagos(&self) -> Result<&Arc<Pagos>, ApiError> {
         self.pagos.as_ref().ok_or_else(ApiError::interno)
+    }
+
+    pub fn tipos(&self) -> Result<&Arc<TiposOrden>, ApiError> {
+        self.tipos.as_ref().ok_or_else(ApiError::interno)
     }
 }

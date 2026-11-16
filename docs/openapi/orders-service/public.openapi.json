@@ -658,6 +658,179 @@
         ]
       }
     },
+    "/api/v2/admin/tipos-orden": {
+      "get": {
+        "operationId": "TiposOrdenController_listar",
+        "responses": {
+          "200": {
+            "description": "Tipos de orden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": ["data", "meta"],
+                  "properties": {
+                    "data": {
+                      "type": "array",
+                      "items": {"$ref": "#/components/schemas/OrdersTipoOrdenResponseDto"}
+                    },
+                    "meta": {"$ref": "#/components/schemas/MetaRespuesta"}
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [{"bearer": []}],
+        "summary": "Listar tipos de orden (admin)",
+        "tags": ["Tipos de orden"]
+      },
+      "post": {
+        "operationId": "TiposOrdenController_crear",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {"$ref": "#/components/schemas/OrdersCrearTipoOrdenRequestDto"}
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Tipo creado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": ["data", "meta"],
+                  "properties": {
+                    "data": {"$ref": "#/components/schemas/OrdersTipoOrdenResponseDto"},
+                    "meta": {"$ref": "#/components/schemas/MetaRespuesta"}
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [{"bearer": []}],
+        "summary": "Crear tipo de orden (admin)",
+        "tags": ["Tipos de orden"]
+      }
+    },
+    "/api/v2/admin/tipos-orden/{codigo}": {
+      "get": {
+        "operationId": "TiposOrdenController_detalle",
+        "parameters": [
+          {"name": "codigo", "required": true, "in": "path", "schema": {"type": "string"}}
+        ],
+        "responses": {
+          "200": {
+            "description": "Tipo con sus transiciones",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": ["data", "meta"],
+                  "properties": {
+                    "data": {"$ref": "#/components/schemas/OrdersTipoOrdenDetalleResponseDto"},
+                    "meta": {"$ref": "#/components/schemas/MetaRespuesta"}
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [{"bearer": []}],
+        "summary": "Detalle de tipo de orden (admin)",
+        "tags": ["Tipos de orden"]
+      },
+      "patch": {
+        "operationId": "TiposOrdenController_actualizar",
+        "parameters": [
+          {"name": "codigo", "required": true, "in": "path", "schema": {"type": "string"}}
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {"$ref": "#/components/schemas/OrdersActualizarTipoOrdenRequestDto"}
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Tipo actualizado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": ["data", "meta"],
+                  "properties": {
+                    "data": {"$ref": "#/components/schemas/OrdersTipoOrdenResponseDto"},
+                    "meta": {"$ref": "#/components/schemas/MetaRespuesta"}
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [{"bearer": []}],
+        "summary": "Actualizar tipo de orden (admin)",
+        "tags": ["Tipos de orden"]
+      }
+    },
+    "/api/v2/admin/tipos-orden/{codigo}/transiciones": {
+      "post": {
+        "operationId": "TiposOrdenController_agregarTransicion",
+        "parameters": [
+          {"name": "codigo", "required": true, "in": "path", "schema": {"type": "string"}}
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {"$ref": "#/components/schemas/OrdersCrearTransicionRequestDto"}
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Transición creada",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": ["data", "meta"],
+                  "properties": {
+                    "data": {"$ref": "#/components/schemas/OrdersTransicionResponseDto"},
+                    "meta": {"$ref": "#/components/schemas/MetaRespuesta"}
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [{"bearer": []}],
+        "summary": "Agregar transición (admin)",
+        "tags": ["Tipos de orden"]
+      }
+    },
+    "/api/v2/admin/tipos-orden/{codigo}/transiciones/{desde}/{hasta}": {
+      "delete": {
+        "operationId": "TiposOrdenController_eliminarTransicion",
+        "parameters": [
+          {"name": "codigo", "required": true, "in": "path", "schema": {"type": "string"}},
+          {"name": "desde", "required": true, "in": "path", "schema": {"type": "string"}},
+          {"name": "hasta", "required": true, "in": "path", "schema": {"type": "string"}}
+        ],
+        "responses": {
+          "204": {"description": "Transición eliminada"}
+        },
+        "security": [{"bearer": []}],
+        "summary": "Eliminar transición (admin)",
+        "tags": ["Tipos de orden"]
+      }
+    },
     "/api/v2/admin/pagos": {
       "get": {
         "operationId": "PagosController_listarPagos",
@@ -2520,6 +2693,61 @@
             "type": "string"
           }
         }
+      },
+      "OrdersTipoOrdenResponseDto": {
+        "type": "object",
+        "properties": {
+          "codigo": {"type": "string"},
+          "nombre": {"type": "string"},
+          "activo": {"type": "boolean"},
+          "config": {"type": "object"}
+        },
+        "required": ["codigo", "nombre", "activo", "config"]
+      },
+      "OrdersTransicionResponseDto": {
+        "type": "object",
+        "properties": {
+          "desde": {"type": "string"},
+          "hasta": {"type": "string"}
+        },
+        "required": ["desde", "hasta"]
+      },
+      "OrdersTipoOrdenDetalleResponseDto": {
+        "type": "object",
+        "properties": {
+          "tipo": {"$ref": "#/components/schemas/OrdersTipoOrdenResponseDto"},
+          "transiciones": {
+            "type": "array",
+            "items": {"$ref": "#/components/schemas/OrdersTransicionResponseDto"}
+          }
+        },
+        "required": ["tipo", "transiciones"]
+      },
+      "OrdersCrearTipoOrdenRequestDto": {
+        "type": "object",
+        "properties": {
+          "codigo": {"type": "string"},
+          "nombre": {"type": "string"},
+          "activo": {"type": "boolean"},
+          "config": {"type": "object"}
+        },
+        "required": ["codigo", "nombre"]
+      },
+      "OrdersActualizarTipoOrdenRequestDto": {
+        "type": "object",
+        "properties": {
+          "nombre": {"type": "string"},
+          "activo": {"type": "boolean"},
+          "config": {"type": "object"}
+        }
+      },
+      "OrdersCrearTransicionRequestDto": {
+        "type": "object",
+        "properties": {
+          "desde": {"type": "string"},
+          "hasta": {"type": "string"}
+        },
+        "required": ["desde", "hasta"]
       },
       "OrdersMetodoPagoResponseDto": {
         "type": "object",
