@@ -17,6 +17,7 @@ pub struct Clientes {
     stores_url: String,
     item_url: String,
     pricing_url: String,
+    inventory_url: String,
     identity_url: String,
     scheduling_url: String,
     finance_url: String,
@@ -96,6 +97,24 @@ pub struct Cotizacion {
     pub total_cents: i64,
     #[serde(default)]
     pub dias: i64,
+}
+
+#[derive(Debug, Deserialize)]
+struct ItemV2Stock {
+    empresa_id: String,
+    sku: String,
+    #[serde(default)]
+    track_serial: bool,
+    estado: String,
+}
+
+#[derive(Debug, Deserialize)]
+struct StockV2 {
+    sku: String,
+    #[serde(default)]
+    stock: i64,
+    #[serde(default)]
+    seriales_disponibles: i64,
 }
 
 #[derive(Debug, Clone, Deserialize, PartialEq)]
@@ -187,6 +206,7 @@ impl Clientes {
             stores_url: config.stores_service_url.clone(),
             item_url: config.item_service_url.clone(),
             pricing_url: config.pricing_service_url.clone(),
+            inventory_url: config.inventory_service_url.clone(),
             identity_url: config.identity_service_url.clone(),
             scheduling_url: config.scheduling_service_url.clone(),
             finance_url: config.finance_service_url.clone(),
@@ -484,7 +504,7 @@ impl Clientes {
         let respuesta = self
             .http
             .get(format!(
-                "{}/internal/items/lote?skus={unidos}",
+                "{}/internal/v2/items/lote?skus={unidos}",
                 self.item_url
             ))
             .header("x-internal-key", &self.clave)
@@ -494,7 +514,54 @@ impl Clientes {
         if !respuesta.status().is_success() {
             return None;
         }
-        respuesta.json::<Vec<ItemStock>>().await.ok()
+        let items = respuesta.json::<Vec<ItemV2Stock>>().await.ok()?;
+
+        let mut empresas: Vec<String> = Vec::new();
+        for item in &items {
+            if !empresas.iter().any(|empresa| empresa == &item.empresa_id) {
+                empresas.push(item.empresa_id.clone());
+            }
+        }
+        let mut stock_por_empresa: Vec<Vec<StockV2>> = Vec::new();
+        for empresa in &empresas {
+            let codigos: Vec<String> = items
+                .iter()
+                .filter(|item| &item.empresa_id == empresa)
+                .map(|item| item.sku.clone())
+                .collect();
+            let respuesta = self
+                .http
+                .post(format!("{}/internal/inventario/stock", self.inventory_url))
+                .header("x-internal-key", &self.clave)
+                .json(&json!({ "empresa_id": empresa, "skus": codigos }))
+                .send()
+                .await
+                .ok()?;
+            if !respuesta.status().is_success() {
+                return None;
+            }
+            stock_por_empresa.push(respuesta.json::<Vec<StockV2>>().await.ok()?);
+        }
+
+        let mut salida = Vec::with_capacity(items.len());
+        for item in items {
+            let indice = empresas
+                .iter()
+                .position(|empresa| empresa == &item.empresa_id)?;
+            let stock = stock_por_empresa
+                .get(indice)?
+                .iter()
+                .find(|linea| linea.sku.eq_ignore_ascii_case(&item.sku));
+            salida.push(ItemStock {
+                empresa_id: item.empresa_id,
+                sku: item.sku,
+                stock: stock.map(|linea| linea.stock).unwrap_or(0),
+                track_serial: item.track_serial,
+                seriales_disponibles: stock.map(|linea| linea.seriales_disponibles).unwrap_or(0),
+                estado: item.estado,
+            });
+        }
+        Some(salida)
     }
 }
 

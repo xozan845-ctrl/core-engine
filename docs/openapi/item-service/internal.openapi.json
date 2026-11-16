@@ -52,7 +52,8 @@
         "summary": "Lote de items por códigos (servicio→servicio)",
         "tags": [
           "Catálogo (interno)"
-        ]
+        ],
+        "deprecated": true
       }
     },
     "/internal/items/{id}": {
@@ -89,7 +90,85 @@
         "summary": "Item unificado por id (servicio→servicio)",
         "tags": [
           "Catálogo (interno)"
-        ]
+        ],
+        "deprecated": true
+      }
+    },
+    "/internal/v2/items/lote": {
+      "get": {
+        "operationId": "InternalV2Controller_lote",
+        "summary": "Lote de items por codigos (contrato v2, sin precio/stock)",
+        "tags": [
+          "Catalogo (interno v2)"
+        ],
+        "security": [
+          {
+            "internalKey": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "skus",
+            "in": "query",
+            "required": false,
+            "description": "Codigos separados por coma",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Items encontrados",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/LoteItemV2ResponseDto"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/internal/v2/items/{id}": {
+      "get": {
+        "operationId": "InternalV2Controller_itemPorId",
+        "summary": "Item por id (contrato v2, sin precio/stock)",
+        "tags": [
+          "Catalogo (interno v2)"
+        ],
+        "security": [
+          {
+            "internalKey": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "Id del item",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Item encontrado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ItemV2ResponseDto"
+                }
+              }
+            }
+          }
+        }
       }
     }
   },
@@ -626,6 +705,194 @@
           "stock_total",
           "valor_inventario_cents"
         ]
+      },
+      "ItemV2ResponseDto": {
+        "type": "object",
+        "properties": {
+          "item_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "empresa_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "tipo": {
+            "type": "string",
+            "enum": [
+              "producto",
+              "servicio",
+              "alquiler"
+            ]
+          },
+          "codigo": {
+            "type": "string"
+          },
+          "nombre": {
+            "type": "string"
+          },
+          "descripcion": {
+            "type": "string"
+          },
+          "categoria": {
+            "type": "string"
+          },
+          "costo": {
+            "type": "string",
+            "example": "500.00"
+          },
+          "track_inventory": {
+            "type": "boolean"
+          },
+          "track_serial": {
+            "type": "boolean"
+          },
+          "duration_minutes": {
+            "type": "object",
+            "nullable": true
+          },
+          "atributos": {
+            "type": "object",
+            "additionalProperties": true
+          },
+          "parent_item_id": {
+            "type": "object",
+            "nullable": true,
+            "format": "uuid"
+          },
+          "marca": {
+            "type": "string"
+          },
+          "codigo_barras": {
+            "type": "string"
+          },
+          "unidad": {
+            "type": "string"
+          },
+          "permite_fracciones": {
+            "type": "boolean"
+          },
+          "unidad_compra": {
+            "type": "string"
+          },
+          "contenido_cantidad": {
+            "type": "number"
+          },
+          "contenido_unidad": {
+            "type": "string"
+          },
+          "tipo_precio": {
+            "type": "string",
+            "enum": [
+              "fijo",
+              "escala"
+            ]
+          },
+          "tipo_costo": {
+            "type": "string",
+            "enum": [
+              "fijo",
+              "escala"
+            ]
+          },
+          "stock_minimo": {
+            "type": "number"
+          },
+          "stock_maximo": {
+            "type": "object",
+            "nullable": true
+          },
+          "garantia_meses": {
+            "type": "object",
+            "nullable": true
+          },
+          "es_materia_prima": {
+            "type": "boolean"
+          },
+          "ubicacion": {
+            "type": "string"
+          },
+          "imagenes": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ItemImagenResponseDto"
+            }
+          },
+          "estado": {
+            "type": "string",
+            "enum": [
+              "activo",
+              "inactivo"
+            ]
+          },
+          "creado_en": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "actualizado_en": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "item_id",
+          "empresa_id",
+          "tipo",
+          "codigo",
+          "nombre",
+          "descripcion",
+          "categoria",
+          "costo",
+          "track_inventory",
+          "track_serial",
+          "duration_minutes",
+          "atributos",
+          "parent_item_id",
+          "marca",
+          "codigo_barras",
+          "unidad",
+          "permite_fracciones",
+          "unidad_compra",
+          "contenido_cantidad",
+          "contenido_unidad",
+          "tipo_precio",
+          "tipo_costo",
+          "stock_minimo",
+          "stock_maximo",
+          "garantia_meses",
+          "es_materia_prima",
+          "ubicacion",
+          "imagenes",
+          "estado",
+          "creado_en",
+          "actualizado_en"
+        ],
+        "description": "Metadata del item para el contrato interno v2: sin precio ni stock (los resuelven pricing-service e inventory-service)."
+      },
+      "LoteItemV2ResponseDto": {
+        "type": "object",
+        "properties": {
+          "empresa_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "sku": {
+            "type": "string"
+          },
+          "track_serial": {
+            "type": "boolean"
+          },
+          "estado": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "empresa_id",
+          "sku",
+          "track_serial",
+          "estado"
+        ],
+        "description": "Metadata de disponibilidad por SKU; sin precio, stock ni series (los resuelven pricing/inventory)."
       }
     }
   },

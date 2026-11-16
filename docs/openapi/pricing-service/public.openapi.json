@@ -2848,7 +2848,9 @@
           },
           "precio": {
             "type": "string",
-            "example": "1500.00"
+            "example": "1500.00",
+            "deprecated": true,
+            "description": "Proyeccion del contrato v1. Usa pricing-service para resolver el precio."
           },
           "costo": {
             "type": "string",
@@ -2862,7 +2864,9 @@
           },
           "stock": {
             "type": "object",
-            "nullable": true
+            "nullable": true,
+            "deprecated": true,
+            "description": "Proyeccion del contrato v1. Usa inventory-service para el stock por ubicacion."
           },
           "duration_minutes": {
             "type": "object",

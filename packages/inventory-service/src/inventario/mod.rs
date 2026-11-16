@@ -386,6 +386,62 @@ impl Inventario {
     }
 
     /// Totales del inventario para las rutas internas.
+    /// Stock y series disponibles por lote de SKUs (contrato interno v2).
+    pub async fn stock_lote(
+        &self,
+        empresa_id: &str,
+        skus: &[String],
+    ) -> Result<Vec<Value>, ApiError> {
+        if skus.is_empty() {
+            return Ok(Vec::new());
+        }
+        if Uuid::parse_str(empresa_id).is_err() {
+            return Err(ApiError::validacion(serde_json::json!([{
+                "campo": "empresa_id",
+                "restricciones": ["uuid"],
+            }])));
+        }
+        let codigos: Vec<String> = skus.iter().map(|sku| sku.to_uppercase()).collect();
+        let mut tx = self.db.transaccion().await.map_err(interno)?;
+        let filas = sqlx::query(
+            "SELECT i.id AS item_id, i.empresa_id, i.codigo AS sku,
+                    i.track_serial, i.estado,
+                    CASE WHEN EXISTS (
+                           SELECT 1 FROM inventory.item_stock_ubicacion s
+                            WHERE s.item_id = i.id
+                         )
+                         THEN (
+                           SELECT COALESCE(SUM(s.stock), 0)::int
+                             FROM inventory.item_stock_ubicacion s
+                            WHERE s.item_id = i.id
+                         )
+                         ELSE COALESCE(i.stock, 0)
+                    END AS stock,
+                    COALESCE((
+                      SELECT COUNT(*)::int
+                        FROM item.item_series se
+                       WHERE se.item_id = i.id AND se.estado = 'disponible'
+                    ), 0) AS seriales_disponibles
+               FROM item.items i
+              WHERE i.empresa_id = $1::uuid
+                AND i.tipo = 'producto'
+                AND i.eliminado_en IS NULL
+                AND upper(i.codigo) = ANY($2::text[])
+              ORDER BY i.codigo",
+        )
+        .bind(empresa_id)
+        .bind(&codigos)
+        .fetch_all(&mut *tx)
+        .await
+        .map_err(interno)?;
+        tx.commit().await.map_err(interno)?;
+        filas
+            .iter()
+            .map(fila_a_json)
+            .collect::<Result<Vec<_>, _>>()
+            .map_err(interno)
+    }
+
     pub async fn resumen(
         &self,
         empresa_id: Option<&str>,
