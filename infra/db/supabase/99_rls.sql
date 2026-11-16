@@ -1502,3 +1502,14 @@ CREATE POLICY registros_esquemas_empresa ON identity.registros_esquemas
   FOR ALL TO authenticated
   USING (auth.rol() = 'empresario' AND empresa_id::text = (auth.jwt() ->> 'tenant_id'))
   WITH CHECK (auth.rol() = 'empresario' AND empresa_id::text = (auth.jwt() ->> 'tenant_id'));
+
+-- ── finance.tipos_cambio (Fase 7) ───────────────────────────────────────────
+ALTER TABLE finance.tipos_cambio ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS tipos_cambio_lectura ON finance.tipos_cambio;
+CREATE POLICY tipos_cambio_lectura ON finance.tipos_cambio
+  FOR SELECT TO authenticated USING (true);
+DROP POLICY IF EXISTS tipos_cambio_admin ON finance.tipos_cambio;
+CREATE POLICY tipos_cambio_admin ON finance.tipos_cambio
+  FOR ALL TO authenticated
+  USING (auth.rol() IN ('super_admin', 'admin'))
+  WITH CHECK (auth.rol() IN ('super_admin', 'admin'));

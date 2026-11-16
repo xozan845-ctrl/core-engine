@@ -257,166 +257,12 @@ impl Series {
     /// (el `item_id` es opcional, igual que en la reserva de stock). Si una
     /// línea serializada no tiene unidades suficientes se devuelve
     /// `SERIAL_INSUFICIENTE` para que el llamador revierta la transacción.
-    pub async fn asignar(
-        &self,
-        tx: &mut Transaction<'_, Postgres>,
-        order_id: &str,
-        items: &Value,
-    ) -> Result<Value, ApiError> {
-        let lineas = items.as_array().ok_or_else(|| {
-            ApiError::dominio("ITEMS_INVALIDOS", "Las lineas deben ser un arreglo.")
-        })?;
-        let mut asignadas: i64 = 0;
-        for linea in lineas {
-            let empresa_id = texto_de(linea, "empresa_id");
-            let sku = texto_de(linea, "sku");
-            let cantidad = validar_cantidad(item_cantidad(linea))?;
-            let item_id = linea
-                .get("item_id")
-                .and_then(Value::as_str)
-                .filter(|valor| !valor.is_empty())
-                .map(str::to_string);
-            let item = self
-                .item_para_serie(tx, &empresa_id, item_id.as_deref(), &sku)
-                .await?;
-            let Some(item) = item else {
-                return Err(ApiError::no_encontrado(
-                    "Item",
-                    item_id.as_deref().unwrap_or(&sku),
-                ));
-            };
-            if !item.track_serial {
-                continue;
-            }
-
-            let filas = sqlx::query(
-                "SELECT s.id
-                   FROM item.item_series s
-                   LEFT JOIN item.ubicaciones u ON u.id = s.ubicacion_id
-                  WHERE s.empresa_id = $1::uuid AND s.item_id = $2::uuid AND s.estado = 'disponible'
-                  ORDER BY (u.predeterminada IS TRUE) DESC, s.creado_en, s.id
-                  LIMIT $3
-                  FOR UPDATE OF s",
-            )
-            .bind(&empresa_id)
-            .bind(&item.id)
-            .bind(cantidad)
-            .fetch_all(&mut **tx)
-            .await
-            .map_err(interno)?;
-            if (filas.len() as i64) < cantidad {
-                return Err(ApiError::dominio(
-                    "SERIAL_INSUFICIENTE",
-                    "No hay suficientes unidades serializadas disponibles.",
-                )
-                .con_detalles(json!({
-                    "item_id": item.id,
-                    "sku": sku,
-                    "requeridas": cantidad,
-                    "disponibles": filas.len(),
-                })));
-            }
-            let ids = filas
-                .iter()
-                .map(|fila| fila.get::<Uuid, _>("id"))
-                .collect::<Vec<_>>();
-
-            sqlx::query(
-                "UPDATE item.item_series
-                    SET estado = 'vendido', order_id = $1::uuid, vendido_en = NOW(),
-                        ubicacion_id = NULL,
-                        garantia_hasta = CASE WHEN $3::int IS NULL THEN NULL
-                          ELSE (CURRENT_DATE + ($3::int || ' months')::interval)::date END,
-                        actualizado_en = NOW()
-                  WHERE id = ANY($2::uuid[])",
-            )
-            .bind(order_id)
-            .bind(ids.as_slice())
-            .bind(item.garantia_meses)
-            .execute(&mut **tx)
-            .await
-            .map_err(interno)?;
-            asignadas += ids.len() as i64;
-        }
-        Ok(json!({ "ok": true, "asignadas": asignadas }))
-    }
-
     /// Libera las unidades que una orden tenía asignadas (por ejemplo al
     /// cancelar antes de la entrega): vuelven a `disponible` y a la ubicación
     /// predeterminada de la empresa.
-    pub async fn liberar(
-        &self,
-        tx: &mut Transaction<'_, Postgres>,
-        order_id: &str,
-    ) -> Result<Value, ApiError> {
-        let resultado = sqlx::query(
-            "UPDATE item.item_series s
-                SET estado = 'disponible', order_id = NULL, vendido_en = NULL,
-                    garantia_hasta = NULL, devuelto_en = NULL,
-                    ubicacion_id = COALESCE((
-                      SELECT u.id FROM item.ubicaciones u
-                       WHERE u.empresa_id = s.empresa_id AND u.predeterminada AND u.activo
-                       LIMIT 1
-                    ), s.ubicacion_id),
-                    actualizado_en = NOW()
-              WHERE s.order_id = $1::uuid AND s.estado IN ('vendido', 'reservado')",
-        )
-        .bind(order_id)
-        .execute(&mut **tx)
-        .await
-        .map_err(interno)?;
-        Ok(json!({ "ok": true, "liberadas": resultado.rows_affected() as i64 }))
-    }
-
     /// Marca como devueltas las unidades vendidas de una orden. Toma primero
     /// las más antiguas y restaura la ubicación predeterminada. Se ejecuta en
     /// la misma transacción que el reintegro de stock (RN-06).
-    pub async fn devolver_en_transaccion(
-        &self,
-        tx: &mut Transaction<'_, Postgres>,
-        order_id: &str,
-        items: &Value,
-    ) -> Result<Value, ApiError> {
-        let lineas = items.as_array().ok_or_else(|| {
-            ApiError::dominio("ITEMS_INVALIDOS", "Las lineas deben ser un arreglo.")
-        })?;
-        for item in lineas {
-            let empresa_id = texto_de(item, "empresa_id");
-            let sku = texto_de(item, "sku");
-            let cantidad = validar_cantidad(item_cantidad(item))?;
-            sqlx::query(
-                "WITH objetivo AS (
-                   SELECT s.id
-                     FROM item.item_series s
-                     JOIN item.items i ON i.id = s.item_id
-                    WHERE s.order_id = $1::uuid AND s.estado = 'vendido'
-                      AND i.empresa_id = $2::uuid AND LOWER(i.codigo) = LOWER($3)
-                    ORDER BY s.vendido_en, s.id
-                    LIMIT $4
-                    FOR UPDATE OF s
-                 )
-                 UPDATE item.item_series s
-                    SET estado = 'devuelto', devuelto_en = NOW(),
-                        ubicacion_id = COALESCE((
-                          SELECT u.id FROM item.ubicaciones u
-                           WHERE u.empresa_id = $2::uuid AND u.predeterminada AND u.activo
-                           LIMIT 1
-                        ), s.ubicacion_id),
-                        actualizado_en = NOW()
-                   FROM objetivo o
-                  WHERE s.id = o.id",
-            )
-            .bind(order_id)
-            .bind(&empresa_id)
-            .bind(&sku)
-            .bind(cantidad)
-            .execute(&mut **tx)
-            .await
-            .map_err(interno)?;
-        }
-        Ok(json!({ "ok": true }))
-    }
-
     async fn buscar(&self, empresa_id: &str, serie_id: &str) -> Result<Value, ApiError> {
         let id = validar_uuid(serie_id, "serie")?;
         let mut tx = self.db.transaccion().await.map_err(interno)?;
@@ -488,7 +334,9 @@ impl Series {
         let id = validar_uuid(&ubicacion, "ubicacion")?;
         let mut tx = self.db.transaccion().await.map_err(interno)?;
         let fila = sqlx::query(
-            "SELECT id FROM item.ubicaciones WHERE id = $1::uuid AND empresa_id = $2::uuid AND activo",
+            // `ubicaciones` pertenece a inventory-service (ADR-0018); se lee
+            // solo para validar la referencia que guarda `item.item_series`.
+            "SELECT id FROM inventory.ubicaciones WHERE id = $1::uuid AND empresa_id = $2::uuid AND activo",
         )
         .bind(&id)
         .bind(empresa_id)

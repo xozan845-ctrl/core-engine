@@ -42,6 +42,7 @@ fn url() -> Option<String> {
 struct ClientesFake {
     stock: i64,
     capacidades: Vec<Capacidad>,
+    tasa: Option<f64>,
 }
 
 #[async_trait]
@@ -52,6 +53,10 @@ impl ClientesPort for ClientesFake {
         _capacidades: &[String],
     ) -> Option<Vec<Capacidad>> {
         Some(self.capacidades.clone())
+    }
+
+    async fn tipo_cambio(&self, _base: &str, _quote: &str) -> Option<f64> {
+        self.tasa
     }
 
     async fn ofertas(&self, ids: &[String]) -> Vec<OfertaExterna> {
@@ -449,8 +454,17 @@ fn compra(cantidad: i64) -> ComandoCrear {
 }
 
 fn infra(db: Arc<Db>, stock: i64) -> (Arc<Checkout>, Arc<Carrito>, Arc<Pedidos>) {
+    infra_con(db, stock, None)
+}
+
+fn infra_con(
+    db: Arc<Db>,
+    stock: i64,
+    tasa: Option<f64>,
+) -> (Arc<Checkout>, Arc<Carrito>, Arc<Pedidos>) {
     let clientes: Arc<dyn ClientesPort> = Arc::new(ClientesFake {
         stock,
+        tasa,
         capacidades: vec![
             Capacidad {
                 empresa_id: EMPRESA.to_string(),
@@ -838,6 +852,7 @@ async fn router_completo(db: Arc<Db>, stock: i64) -> axum::Router {
     .expect("config");
     let clientes: Arc<dyn ClientesPort> = Arc::new(ClientesFake {
         stock,
+        tasa: None,
         capacidades: vec![
             Capacidad {
                 empresa_id: EMPRESA.to_string(),
@@ -1667,4 +1682,54 @@ async fn debe_validar_el_fulfillment_contra_el_registro() {
         .await
         .expect_err("fulfillment invalido");
     assert_eq!(error.codigo, "FULFILLMENT_INVALIDO");
+}
+
+#[tokio::test]
+async fn debe_convertir_con_moneda_pago_explicita() {
+    let _guard = DB_LOCK.lock().await;
+    let Some(db) = con_bd().await else { return };
+    let (checkout, _, _) = infra_con(Arc::clone(&db), 10, Some(36.5));
+    let orden = checkout
+        .ejecutar(
+            &ComandoCrear {
+                moneda_pago: Some("USD".to_string()),
+                ..compra_con_metodo(1, "simulado")
+            },
+            COMPRADOR,
+        )
+        .await
+        .expect("orden convertida");
+    assert_eq!(orden.moneda, "NIO");
+    assert_eq!(orden.total_cents, 10_000);
+
+    let (moneda, monto): (String, i32) =
+        sqlx::query_as("SELECT moneda, monto_cents FROM orders.pagos WHERE order_id = $1::uuid")
+            .bind(Uuid::parse_str(&orden.id).expect("uuid"))
+            .fetch_one(db.pool())
+            .await
+            .expect("pago");
+    assert_eq!(moneda, "USD");
+    assert_eq!(monto, 365_000);
+
+    let payload: Value = sqlx::query_scalar(
+        "SELECT payload FROM orders.outbox WHERE tipo = 'order.created' LIMIT 1",
+    )
+    .fetch_one(db.pool())
+    .await
+    .expect("outbox");
+    assert_eq!(payload["data"]["moneda_pago"], "USD");
+    assert_eq!(payload["data"]["total_pagado_cents"], 365_000);
+
+    let (sin_tasa, _, _) = infra(Arc::clone(&db), 10);
+    let error = sin_tasa
+        .ejecutar(
+            &ComandoCrear {
+                moneda_pago: Some("USD".to_string()),
+                ..compra_con_metodo(1, "simulado")
+            },
+            COMPRADOR,
+        )
+        .await
+        .expect_err("sin tasa");
+    assert_eq!(error.codigo, "TIPO_CAMBIO_NO_DISPONIBLE");
 }

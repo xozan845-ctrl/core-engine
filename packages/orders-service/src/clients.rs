@@ -129,6 +129,11 @@ pub trait ClientesPort: Send + Sync {
         capacidades: &[String],
     ) -> Option<Vec<Capacidad>>;
 
+    /// Tasa publicada base→quote; `None` si no hay o finance no responde.
+    async fn tipo_cambio(&self, _base: &str, _quote: &str) -> Option<f64> {
+        None
+    }
+
     /// Configuración operativa del pack; `SinConfiguracion` = sin restricción.
     async fn configuracion(&self, _empresa_id: &str) -> ConfiguracionExterna {
         ConfiguracionExterna::SinConfiguracion
@@ -212,6 +217,28 @@ impl Clientes {
         }
         let cuerpo = respuesta.json::<RespuestaCapacidades>().await.ok()?;
         Some(cuerpo.capacidades)
+    }
+
+    pub async fn tipo_cambio(&self, base: &str, quote: &str) -> Option<f64> {
+        let respuesta = self
+            .http
+            .get(format!(
+                "{}/internal/finance/tipos-cambio",
+                self.finance_url
+            ))
+            .query(&[("base", base), ("quote", quote)])
+            .header("x-internal-key", &self.clave)
+            .send()
+            .await
+            .ok()?;
+        if !respuesta.status().is_success() {
+            return None;
+        }
+        let cuerpo: Value = respuesta.json().await.ok()?;
+        let tasa = cuerpo.get("tasa")?;
+        tasa.as_str()
+            .and_then(|valor| valor.parse::<f64>().ok())
+            .or_else(|| tasa.as_f64())
     }
 
     pub async fn configuracion(&self, empresa_id: &str) -> ConfiguracionExterna {
@@ -489,6 +516,10 @@ impl ClientesPort for Clientes {
         capacidades: &[String],
     ) -> Option<Vec<Capacidad>> {
         Clientes::capacidades(self, empresas, capacidades).await
+    }
+
+    async fn tipo_cambio(&self, base: &str, quote: &str) -> Option<f64> {
+        Clientes::tipo_cambio(self, base, quote).await
     }
 
     async fn configuracion(&self, empresa_id: &str) -> ConfiguracionExterna {

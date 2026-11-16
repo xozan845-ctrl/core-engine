@@ -16,21 +16,23 @@ cargo run                     # requiere DATABASE_URL y RABBITMQ_URL
 
 Variables: `PORT` (3015), `SERVICIO`, `DATABASE_URL`, `RABBITMQ_URL`,
 `INTERNAL_API_KEY`, `IDENTITY_SERVICE_URL`, `STORAGE_SERVICE_URL`,
-`STORES_SERVICE_URL`, `OUTBOX_TABLA` (`catalog.outbox`),
+`STORES_SERVICE_URL`, `OUTBOX_TABLA` (`item.outbox`),
 `INTERNAL_REQUEST_TIMEOUT_MS`.
 
 ## Alcance
 
 - Items unificados (producto/servicio/alquiler), atributos JSON Schema,
-  variantes, imágenes, componentes, tarifas, series, listas de precio, precios
-  y escalas.
-- Inventario: migrado a `inventory-service` (ADR-0018).
-- Precios, listas, escalas, tarifas, cotizaciones y promociones: migrados a
-  `pricing-service` (ADR-0018). El código legacy permanece sin rutas.
-- Legacy `productos`/`servicios` con stock y precio base como proyección
-  transitoria hasta la extracción de `item-service`.
-- El consumidor `catalog.pedidos` se retiró; la saga vive en
-  `inventory-service`.
+  variantes, imágenes, componentes, series y combos.
+- Precios, listas, escalas, tarifas, cotizaciones y promociones viven en
+  `pricing-service`; el código duplicado se retiró de este crate (ADR-0018).
+- Inventario, lotes, ubicaciones y movimientos viven en `inventory-service`.
+  `item-service` no escribe tablas de inventario; solo valida la ubicación de
+  una serie contra `inventory.ubicaciones`.
+- `stock` y `precio_cents` de `item.items` se conservan como proyección de
+  lectura del contrato de items. El stock se ajusta por
+  `/api/v2/admin/inventario`; un `PATCH` con `stock` responde
+  `STOCK_GESTIONADO_POR_INVENTARIO`.
+- El consumidor de pedidos y la saga viven en `inventory-service`.
 - Superficie interna `/internal/items/lote` y `/internal/items/{id}`.
 - Envelope, errores normalizados, `/health`, `/metrics`, `/docs` y
   `/docs-json`.

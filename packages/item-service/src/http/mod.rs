@@ -6,9 +6,7 @@ pub mod envelope;
 pub mod internal;
 pub mod items;
 pub mod operaciones;
-pub mod precios;
 pub mod series;
-pub mod tarifas;
 pub mod validacion;
 
 use crate::auth::{clave_interna_valida, UsuarioContexto};
@@ -87,6 +85,28 @@ pub fn build_router(state: AppState) -> Router {
         .route(
             "/api/v2/catalog/items/{id}/imagenes/{imagen_id}",
             axum::routing::delete(items::eliminar_imagen),
+        )
+        // series
+        .route(
+            "/api/v2/catalog/items/{id}/series",
+            get(series::listar).post(series::crear),
+        )
+        .route(
+            "/api/v2/catalog/items/{id}/serializacion",
+            patch(series::habilitar),
+        )
+        .route(
+            "/api/v2/catalog/series/{id}",
+            patch(series::actualizar).get(series::buscar),
+        )
+        // componentes
+        .route(
+            "/api/v2/catalog/items/{id}/componentes",
+            get(componentes::listar).post(componentes::crear),
+        )
+        .route(
+            "/api/v2/catalog/items/{id}/componentes/{componente_id}",
+            patch(componentes::actualizar).delete(componentes::eliminar),
         )
         .route(
             "/api/v2/catalog/items/importar",

@@ -118,6 +118,14 @@ pub fn registrar(router: Router<AppState>) -> Router<AppState> {
                 .put(comercio::configuracion_documentos_guardar),
         )
         .route(
+            "/api/v2/finanzas/tipos-cambio",
+            get(comercio::tipos_cambio_listar),
+        )
+        .route(
+            "/api/v2/admin/tipos-cambio",
+            post(comercio::tipos_cambio_registrar),
+        )
+        .route(
             "/api/v2/comercio/caja/metodos-pago",
             get(comercio::metodos_pago_listar).post(comercio::metodos_pago_crear),
         )
@@ -286,6 +294,7 @@ pub fn registrar(router: Router<AppState>) -> Router<AppState> {
             "/internal/finance/sujetos/{usuarioId}",
             get(interno::sujeto),
         )
+        .route("/internal/finance/tipos-cambio", get(interno::tipo_cambio))
         .route(
             "/internal/finance/creditos",
             post(interno::registrar_credito),

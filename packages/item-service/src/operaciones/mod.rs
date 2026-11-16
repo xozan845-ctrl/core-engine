@@ -1,11 +1,10 @@
 //! Operaciones avanzadas del catálogo (R-PS-04).
 //!
-//! Réplica de `operaciones.service.ts`: configuración de inventario,
-//! importación de productos, escaneo por código, combos, promociones y
-//! movimientos/traslados. Las reglas de cálculo (filas válidas/omitidas,
-//! costos y márgenes de combos, vigencias y cantidades de promociones, stock
-//! resultante de cada movimiento) viven en funciones puras para poder
-//! probarlas sin base de datos.
+//! Réplica de `operaciones.service.ts`: importación de productos, escaneo por
+//! código y combos. Las reglas de cálculo (filas válidas/omitidas, costos y
+//! márgenes de combos) viven en funciones puras para poder probarlas sin base
+//! de datos. Precios, promociones e inventario pertenecen a `pricing-service`
+//! e `inventory-service` (ADR-0018).
 //!
 //! Reutiliza los módulos hermanos ya portados: `Productos::crear` (con
 //! `empresa_validada`), `Productos::validar_empresa_catalogo`,
@@ -28,21 +27,6 @@ use std::sync::Arc;
 use uuid::Uuid;
 
 const MAX_IMPORTACION: usize = 200;
-const MAX_LINEAS: usize = 200;
-const UNIDAD_DEFECTO: &str = "Unidad (u)";
-const EVENTO_STOCK_UPDATED: &str = "stock.updated";
-const METODOS_COSTEO: [&str; 3] = ["promedio", "fifo", "ueps"];
-const TIPOS_PROMOCION: [&str; 4] = [
-    "2x1",
-    "descuento_cantidad",
-    "descuento_porcentaje",
-    "regalo",
-];
-const TIPOS_MOVIMIENTO: [&str; 4] = ["entrada", "salida", "ajuste", "traslado"];
-
-const COLUMNAS_CONFIGURACION: &str = "empresa_id, metodo_costeo, permitir_stock_negativo,
-  alerta_stock_bajo, actualizar_costo_en_compra, unidad_defecto, actualizado_en";
-
 const SELECT_COMBO: &str = "SELECT i.id, i.empresa_id, i.codigo AS sku, i.nombre, i.descripcion,
   i.codigo_barras, i.precio_cents, i.estado,
   COALESCE(
@@ -63,27 +47,6 @@ const SELECT_COMBO: &str = "SELECT i.id, i.empresa_id, i.codigo AS sku, i.nombre
  LEFT JOIN item.items ci
    ON ci.id = ic.componente_item_id AND ci.eliminado_en IS NULL";
 
-const COLUMNAS_PROMOCION: &str = "id, empresa_id, nombre, tipo, item_id, sku,
-  cantidad_requerida, cantidad_gratis, descuento_porcentaje,
-  fecha_desde::text AS fecha_desde, fecha_hasta::text AS fecha_hasta,
-  estado, creado_en, actualizado_en";
-
-const RETURNING_PROMOCION: &str = "RETURNING id, empresa_id, nombre, tipo, item_id, sku,
-  cantidad_requerida, cantidad_gratis, descuento_porcentaje,
-  fecha_desde::text AS fecha_desde, fecha_hasta::text AS fecha_hasta,
-  estado, creado_en, actualizado_en";
-
-const COLUMNAS_MOVIMIENTO: &str = "id, empresa_id, tipo, motivo, referencia,
-  ubicacion_origen, ubicacion_destino, lineas, creado_por, creado_en";
-
-/// Operaciones de catálogo por empresa.
-pub struct Operaciones {
-    db: Arc<Db>,
-    outbox: Option<Arc<Outbox>>,
-    productos: Arc<Productos>,
-    servicios: Arc<Servicios>,
-}
-
 #[derive(Debug, Clone, PartialEq)]
 struct ItemResuelto {
     id: String,
@@ -103,25 +66,12 @@ struct ComponenteResuelto {
     cantidad: i64,
 }
 
-#[derive(Debug, Clone, PartialEq)]
-struct PromocionNormalizada {
-    nombre: String,
-    tipo: String,
-    item_id: Option<String>,
-    sku: String,
-    cantidad_requerida: Option<i64>,
-    cantidad_gratis: Option<i64>,
-    descuento_porcentaje: Option<i64>,
-    fecha_desde: String,
-    fecha_hasta: String,
-    estado: String,
-}
-
-#[derive(Debug, Clone, PartialEq)]
-struct CabeceraMovimiento {
-    tipo: String,
-    origen: String,
-    destino: String,
+/// Operaciones de catálogo por empresa: importación, escaneo y combos.
+pub struct Operaciones {
+    db: Arc<Db>,
+    outbox: Option<Arc<Outbox>>,
+    productos: Arc<Productos>,
+    servicios: Arc<Servicios>,
 }
 
 impl Operaciones {
@@ -144,103 +94,6 @@ impl Operaciones {
             servicios,
             db,
             outbox,
-        }
-    }
-
-    // ── configuración ────────────────────────────────────────────────────
-
-    pub async fn configuracion(&self, empresa_id: &str) -> Result<Value, ApiError> {
-        let mut tx = self.db.transaccion().await.map_err(interno)?;
-        let fila = sqlx::query(&format!(
-            "SELECT {COLUMNAS_CONFIGURACION}
-               FROM item.configuracion_inventario WHERE empresa_id = $1::uuid"
-        ))
-        .bind(empresa_id)
-        .fetch_optional(&mut *tx)
-        .await
-        .map_err(interno)?;
-        tx.commit().await.map_err(interno)?;
-        match fila {
-            Some(fila) => serializar_configuracion(&fila_a_json(&fila).map_err(interno)?),
-            None => Ok(configuracion_por_defecto(empresa_id)),
-        }
-    }
-
-    pub async fn guardar_configuracion(
-        &self,
-        empresa_id: &str,
-        cambios: &Value,
-    ) -> Result<Value, ApiError> {
-        let actual = self.configuracion(empresa_id).await?;
-        let metodo = cambios
-            .get("metodo_costeo")
-            .and_then(Value::as_str)
-            .unwrap_or_else(|| {
-                actual
-                    .get("metodo_costeo")
-                    .and_then(Value::as_str)
-                    .unwrap_or("")
-            });
-        if !METODOS_COSTEO.contains(&metodo) {
-            return Err(ApiError::dominio(
-                "METODO_COSTEO_INVALIDO",
-                "El método de costeo no es válido.",
-            ));
-        }
-        let booleano = |clave: &str| {
-            cambios
-                .get(clave)
-                .and_then(Value::as_bool)
-                .unwrap_or_else(|| actual.get(clave).and_then(Value::as_bool).unwrap_or(false))
-        };
-        let unidad = cambios
-            .get("unidad_defecto")
-            .and_then(Value::as_str)
-            .map(str::trim)
-            .unwrap_or_else(|| {
-                actual
-                    .get("unidad_defecto")
-                    .and_then(Value::as_str)
-                    .unwrap_or("")
-            })
-            .to_string();
-        let unidad = if unidad.is_empty() {
-            UNIDAD_DEFECTO.to_string()
-        } else {
-            unidad
-        };
-
-        let mut tx = self.db.transaccion().await.map_err(interno)?;
-        let fila = sqlx::query(&format!(
-            "INSERT INTO item.configuracion_inventario
-               (empresa_id, metodo_costeo, permitir_stock_negativo, alerta_stock_bajo,
-                actualizar_costo_en_compra, unidad_defecto)
-             VALUES ($1::uuid, $2, $3, $4, $5, $6)
-             ON CONFLICT (empresa_id) DO UPDATE SET
-               metodo_costeo = EXCLUDED.metodo_costeo,
-               permitir_stock_negativo = EXCLUDED.permitir_stock_negativo,
-               alerta_stock_bajo = EXCLUDED.alerta_stock_bajo,
-               actualizar_costo_en_compra = EXCLUDED.actualizar_costo_en_compra,
-               unidad_defecto = EXCLUDED.unidad_defecto,
-               actualizado_en = NOW()
-             RETURNING {COLUMNAS_CONFIGURACION}"
-        ))
-        .bind(empresa_id)
-        .bind(metodo)
-        .bind(booleano("permitir_stock_negativo"))
-        .bind(booleano("alerta_stock_bajo"))
-        .bind(booleano("actualizar_costo_en_compra"))
-        .bind(&unidad)
-        .fetch_optional(&mut *tx)
-        .await
-        .map_err(interno)?;
-        tx.commit().await.map_err(interno)?;
-        match fila {
-            Some(fila) => serializar_configuracion(&fila_a_json(&fila).map_err(interno)?),
-            None => Err(ApiError::dominio(
-                "CONFIGURACION_NO_GUARDADA",
-                "No se pudo guardar la configuración.",
-            )),
         }
     }
 
@@ -635,427 +488,6 @@ impl Operaciones {
         Ok(())
     }
 
-    // ── promociones ──────────────────────────────────────────────────────
-
-    pub async fn listar_promociones(
-        &self,
-        empresa_id: &str,
-        filtros: &Value,
-    ) -> Result<Value, ApiError> {
-        let pagina = filtro_texto(filtros, "pagina");
-        let limite = filtro_texto(filtros, "limite");
-        let paginacion = parsear_paginacion(pagina.as_deref(), limite.as_deref());
-        let mut params: Vec<String> = vec![empresa_id.to_string()];
-        let mut condiciones = vec![
-            "empresa_id = $1::uuid".to_string(),
-            "eliminado_en IS NULL".to_string(),
-        ];
-        if let Some(estado) = filtro_texto(filtros, "estado").filter(|valor| !valor.is_empty()) {
-            params.push(estado);
-            condiciones.push(format!("estado = ${}", params.len()));
-        }
-        let where_clause = format!("WHERE {}", condiciones.join(" AND "));
-
-        let mut tx = self.db.transaccion().await.map_err(interno)?;
-        let sql_total = format!("SELECT COUNT(*)::int AS n FROM item.promociones {where_clause}");
-        let mut consulta_total = sqlx::query(&sql_total);
-        for parametro in &params {
-            consulta_total = consulta_total.bind(parametro);
-        }
-        let total: i32 = consulta_total
-            .fetch_one(&mut *tx)
-            .await
-            .map_err(interno)?
-            .get("n");
-        let sql = format!(
-            "SELECT {COLUMNAS_PROMOCION}
-               FROM item.promociones {where_clause}
-              ORDER BY creado_en DESC LIMIT ${} OFFSET ${}",
-            params.len() + 1,
-            params.len() + 2
-        );
-        let mut consulta = sqlx::query(&sql);
-        for parametro in &params {
-            consulta = consulta.bind(parametro);
-        }
-        let filas = consulta
-            .bind(paginacion.limite)
-            .bind((paginacion.pagina - 1) * paginacion.limite)
-            .fetch_all(&mut *tx)
-            .await
-            .map_err(interno)?;
-        tx.commit().await.map_err(interno)?;
-
-        let mut promociones = Vec::with_capacity(filas.len());
-        for fila in &filas {
-            promociones.push(serializar_promocion(&fila_a_json(fila).map_err(interno)?));
-        }
-        Ok(crear_pagina(promociones, total as i64, paginacion))
-    }
-
-    pub async fn obtener_promocion(
-        &self,
-        id: &str,
-        empresa_id: &str,
-    ) -> Result<Option<Value>, ApiError> {
-        if !es_uuid(id) {
-            return Ok(None);
-        }
-        let mut tx = self.db.transaccion().await.map_err(interno)?;
-        let fila = sqlx::query(&format!(
-            "SELECT {COLUMNAS_PROMOCION}
-               FROM item.promociones
-              WHERE id = $1::uuid AND empresa_id = $2::uuid AND eliminado_en IS NULL"
-        ))
-        .bind(id)
-        .bind(empresa_id)
-        .fetch_optional(&mut *tx)
-        .await
-        .map_err(interno)?;
-        tx.commit().await.map_err(interno)?;
-        fila.map(|fila| fila_a_json(&fila).map(|valor| serializar_promocion(&valor)))
-            .transpose()
-            .map_err(interno)
-    }
-
-    pub async fn crear_promocion(
-        &self,
-        empresa_id: &str,
-        datos: &Value,
-    ) -> Result<Value, ApiError> {
-        let normalizada = self.normalizar_promocion(empresa_id, datos).await?;
-        let mut tx = self.db.transaccion().await.map_err(interno)?;
-        let fila = sqlx::query(&format!(
-            "INSERT INTO item.promociones
-               (empresa_id, nombre, tipo, item_id, sku, cantidad_requerida, cantidad_gratis,
-                descuento_porcentaje, fecha_desde, fecha_hasta, estado)
-             VALUES ($1::uuid, $2, $3, $4::uuid, $5, $6, $7, $8, $9::date, $10::date, $11)
-             {RETURNING_PROMOCION}"
-        ))
-        .bind(empresa_id)
-        .bind(&normalizada.nombre)
-        .bind(&normalizada.tipo)
-        .bind(normalizada.item_id.as_deref())
-        .bind(&normalizada.sku)
-        .bind(normalizada.cantidad_requerida)
-        .bind(normalizada.cantidad_gratis)
-        .bind(normalizada.descuento_porcentaje)
-        .bind(&normalizada.fecha_desde)
-        .bind(&normalizada.fecha_hasta)
-        .bind(&normalizada.estado)
-        .fetch_optional(&mut *tx)
-        .await
-        .map_err(interno)?;
-        tx.commit().await.map_err(interno)?;
-        match fila {
-            Some(fila) => Ok(serializar_promocion(&fila_a_json(&fila).map_err(interno)?)),
-            None => Err(ApiError::dominio(
-                "PROMOCION_NO_CREADA",
-                "No se pudo crear la promoción.",
-            )),
-        }
-    }
-
-    pub async fn actualizar_promocion(
-        &self,
-        id: &str,
-        empresa_id: &str,
-        datos: &Value,
-    ) -> Result<Value, ApiError> {
-        let actual = self
-            .obtener_promocion(id, empresa_id)
-            .await?
-            .ok_or_else(|| ApiError::no_encontrado("Promoción", id))?;
-
-        let mut combinada = Map::new();
-        for clave in ["nombre", "tipo", "sku", "estado"] {
-            let valor = datos
-                .get(clave)
-                .filter(|valor| !valor.is_null())
-                .cloned()
-                .or_else(|| actual.get(clave).cloned())
-                .unwrap_or(Value::Null);
-            combinada.insert(clave.to_string(), valor);
-        }
-        let item_id = datos
-            .get("item_id")
-            .filter(|valor| !valor.is_null())
-            .cloned()
-            .or_else(|| {
-                actual
-                    .get("item_id")
-                    .filter(|valor| !valor.is_null())
-                    .cloned()
-            })
-            .unwrap_or(Value::Null);
-        combinada.insert("item_id".into(), item_id);
-        for clave in [
-            "cantidad_requerida",
-            "cantidad_gratis",
-            "descuento_porcentaje",
-            "fecha_desde",
-            "fecha_hasta",
-        ] {
-            let valor = match datos.get(clave) {
-                Some(valor) => valor.clone(),
-                None => actual.get(clave).cloned().unwrap_or(Value::Null),
-            };
-            combinada.insert(clave.to_string(), valor);
-        }
-
-        let normalizada = self
-            .normalizar_promocion(empresa_id, &Value::Object(combinada))
-            .await?;
-        let mut tx = self.db.transaccion().await.map_err(interno)?;
-        let fila = sqlx::query(&format!(
-            "UPDATE item.promociones SET
-               nombre = $3, tipo = $4, item_id = $5::uuid, sku = $6, cantidad_requerida = $7,
-               cantidad_gratis = $8, descuento_porcentaje = $9, fecha_desde = $10::date,
-               fecha_hasta = $11::date, estado = $12, actualizado_en = NOW()
-             WHERE id = $1::uuid AND empresa_id = $2::uuid AND eliminado_en IS NULL
-             {RETURNING_PROMOCION}"
-        ))
-        .bind(id)
-        .bind(empresa_id)
-        .bind(&normalizada.nombre)
-        .bind(&normalizada.tipo)
-        .bind(normalizada.item_id.as_deref())
-        .bind(&normalizada.sku)
-        .bind(normalizada.cantidad_requerida)
-        .bind(normalizada.cantidad_gratis)
-        .bind(normalizada.descuento_porcentaje)
-        .bind(&normalizada.fecha_desde)
-        .bind(&normalizada.fecha_hasta)
-        .bind(&normalizada.estado)
-        .fetch_optional(&mut *tx)
-        .await
-        .map_err(interno)?;
-        tx.commit().await.map_err(interno)?;
-        match fila {
-            Some(fila) => Ok(serializar_promocion(&fila_a_json(&fila).map_err(interno)?)),
-            None => Err(ApiError::no_encontrado("Promoción", id)),
-        }
-    }
-
-    pub async fn eliminar_promocion(&self, id: &str, empresa_id: &str) -> Result<(), ApiError> {
-        let mut tx = self.db.transaccion().await.map_err(interno)?;
-        let fila = sqlx::query(
-            "UPDATE item.promociones SET eliminado_en = NOW(), actualizado_en = NOW()
-              WHERE id = $1::uuid AND empresa_id = $2::uuid AND eliminado_en IS NULL
-              RETURNING id",
-        )
-        .bind(id)
-        .bind(empresa_id)
-        .fetch_optional(&mut *tx)
-        .await
-        .map_err(interno)?;
-        tx.commit().await.map_err(interno)?;
-        if fila.is_none() {
-            return Err(ApiError::no_encontrado("Promoción", id));
-        }
-        Ok(())
-    }
-
-    // ── movimientos de inventario ────────────────────────────────────────
-
-    pub async fn movimientos(&self, empresa_id: &str, filtros: &Value) -> Result<Value, ApiError> {
-        let pagina = filtro_texto(filtros, "pagina");
-        let limite = filtro_texto(filtros, "limite");
-        let paginacion = parsear_paginacion(pagina.as_deref(), limite.as_deref());
-        let mut params: Vec<String> = vec![empresa_id.to_string()];
-        let mut condiciones = vec!["empresa_id = $1::uuid".to_string()];
-        if let Some(tipo) = filtro_texto(filtros, "tipo").filter(|valor| !valor.is_empty()) {
-            params.push(tipo);
-            condiciones.push(format!("tipo = ${}", params.len()));
-        }
-        let where_clause = format!("WHERE {}", condiciones.join(" AND "));
-
-        let mut tx = self.db.transaccion().await.map_err(interno)?;
-        let sql_total =
-            format!("SELECT COUNT(*)::int AS n FROM item.movimientos_inventario {where_clause}");
-        let mut consulta_total = sqlx::query(&sql_total);
-        for parametro in &params {
-            consulta_total = consulta_total.bind(parametro);
-        }
-        let total: i32 = consulta_total
-            .fetch_one(&mut *tx)
-            .await
-            .map_err(interno)?
-            .get("n");
-        let sql = format!(
-            "SELECT {COLUMNAS_MOVIMIENTO}
-               FROM item.movimientos_inventario {where_clause}
-              ORDER BY creado_en DESC LIMIT ${} OFFSET ${}",
-            params.len() + 1,
-            params.len() + 2
-        );
-        let mut consulta = sqlx::query(&sql);
-        for parametro in &params {
-            consulta = consulta.bind(parametro);
-        }
-        let filas = consulta
-            .bind(paginacion.limite)
-            .bind((paginacion.pagina - 1) * paginacion.limite)
-            .fetch_all(&mut *tx)
-            .await
-            .map_err(interno)?;
-        tx.commit().await.map_err(interno)?;
-
-        let mut movimientos = Vec::with_capacity(filas.len());
-        for fila in &filas {
-            movimientos.push(serializar_movimiento(&fila_a_json(fila).map_err(interno)?));
-        }
-        Ok(crear_pagina(movimientos, total as i64, paginacion))
-    }
-
-    pub async fn crear_movimiento(
-        &self,
-        empresa_id: &str,
-        datos: &Value,
-        usuario_id: Option<&str>,
-    ) -> Result<Value, ApiError> {
-        let cabecera = validar_cabecera_movimiento(datos)?;
-        let config = self.configuracion(empresa_id).await?;
-        let permitir_stock_negativo = config
-            .get("permitir_stock_negativo")
-            .and_then(Value::as_bool)
-            .unwrap_or(false);
-        let lineas = datos
-            .get("lineas")
-            .and_then(Value::as_array)
-            .cloned()
-            .unwrap_or_default();
-        let productos = self.resolver_productos(empresa_id, &lineas).await?;
-
-        let mut tx = self.db.transaccion().await.map_err(interno)?;
-        let mut lineas_salida: Vec<Value> = Vec::with_capacity(lineas.len());
-        let mut stock_items: Vec<Value> = Vec::new();
-        for (indice, linea) in lineas.iter().enumerate() {
-            let producto = &productos[indice];
-            let cantidad = entero_de(linea.get("cantidad")).ok_or_else(|| {
-                ApiError::dominio(
-                    "CANTIDAD_INVALIDA",
-                    "La cantidad debe ser un entero mayor o igual a 0.",
-                )
-            })?;
-            if cantidad < 0 {
-                return Err(ApiError::dominio(
-                    "CANTIDAD_INVALIDA",
-                    "La cantidad debe ser un entero mayor o igual a 0.",
-                ));
-            }
-            let anterior = producto.stock;
-            let nuevo = calcular_stock(&cabecera.tipo, anterior, cantidad);
-            if nuevo < 0 && !permitir_stock_negativo {
-                return Err(ApiError::dominio(
-                    "STOCK_INSUFICIENTE",
-                    format!(
-                        "Stock insuficiente para {} (disponible {}).",
-                        producto.sku, anterior
-                    ),
-                ));
-            }
-            if cabecera.tipo != "traslado" {
-                sqlx::query(
-                    "UPDATE item.items
-                        SET stock = $3, actualizado_en = NOW()
-                      WHERE id = $1::uuid AND empresa_id = $2::uuid AND tipo = 'producto'
-                        AND eliminado_en IS NULL",
-                )
-                .bind(&producto.id)
-                .bind(empresa_id)
-                .bind(nuevo)
-                .execute(&mut *tx)
-                .await
-                .map_err(interno)?;
-                let motivo = datos
-                    .get("motivo")
-                    .filter(|valor| !valor.is_null())
-                    .and_then(Value::as_str)
-                    .map(str::to_string)
-                    .unwrap_or_else(|| format!("movimiento {}", cabecera.tipo));
-                sqlx::query(
-                    "INSERT INTO item.ajustes_stock
-                       (id, empresa_id, item_id, cantidad_anterior, cantidad_nueva, motivo,
-                        realizado_en)
-                     VALUES (gen_random_uuid(), $1::uuid, $2::uuid, $3, $4, $5, NOW())",
-                )
-                .bind(empresa_id)
-                .bind(&producto.id)
-                .bind(anterior)
-                .bind(nuevo)
-                .bind(motivo)
-                .execute(&mut *tx)
-                .await
-                .map_err(interno)?;
-                stock_items.push(json!({
-                    "empresa_id": empresa_id,
-                    "sku": producto.sku,
-                    "stock_restante": nuevo,
-                }));
-            }
-            lineas_salida.push(json!({
-                "item_id": producto.id,
-                "sku": producto.sku,
-                "nombre": producto.nombre,
-                "cantidad": cantidad,
-                "stock_anterior": anterior,
-                "stock_nuevo": nuevo,
-            }));
-        }
-
-        let motivo = texto_opcional(datos, "motivo").unwrap_or_default();
-        let referencia = texto_opcional(datos, "referencia").unwrap_or_default();
-        let lineas_json = Value::Array(lineas_salida).to_string();
-        let fila = sqlx::query(&format!(
-            "INSERT INTO item.movimientos_inventario
-               (empresa_id, tipo, motivo, referencia, ubicacion_origen, ubicacion_destino,
-                lineas, creado_por)
-             VALUES ($1::uuid, $2, $3, $4, $5, $6, $7::jsonb, $8)
-             RETURNING {COLUMNAS_MOVIMIENTO}"
-        ))
-        .bind(empresa_id)
-        .bind(&cabecera.tipo)
-        .bind(&motivo)
-        .bind(&referencia)
-        .bind(&cabecera.origen)
-        .bind(&cabecera.destino)
-        .bind(lineas_json)
-        .bind(usuario_id)
-        .fetch_one(&mut *tx)
-        .await
-        .map_err(interno)?;
-        let movimiento = fila_a_json(&fila).map_err(interno)?;
-        let movimiento_id = movimiento
-            .get("id")
-            .and_then(Value::as_str)
-            .unwrap_or("")
-            .to_string();
-
-        if let Some(outbox) = &self.outbox {
-            if !stock_items.is_empty() {
-                let tipo_evento = match cabecera.tipo.as_str() {
-                    "entrada" => "entrada",
-                    "salida" => "salida",
-                    _ => "ajuste",
-                };
-                outbox
-                    .insertar_en_transaccion(
-                        &mut tx,
-                        EVENTO_STOCK_UPDATED,
-                        json!({
-                            "order_id": format!("movimiento-{movimiento_id}"),
-                            "tipo": tipo_evento,
-                            "items": stock_items,
-                        }),
-                    )
-                    .await?;
-            }
-        }
-        tx.commit().await.map_err(interno)?;
-        Ok(serializar_movimiento(&movimiento))
-    }
-
     // ── helpers ──────────────────────────────────────────────────────────
 
     async fn hidratar_combos(&self, filas: Vec<Value>) -> Result<Vec<Value>, ApiError> {
@@ -1267,30 +699,6 @@ impl Operaciones {
         Ok(())
     }
 
-    async fn normalizar_promocion(
-        &self,
-        empresa_id: &str,
-        datos: &Value,
-    ) -> Result<PromocionNormalizada, ApiError> {
-        let mut normalizada = validar_promocion(datos)?;
-        let item_id = datos
-            .get("item_id")
-            .and_then(Value::as_str)
-            .filter(|valor| !valor.is_empty());
-        let sku = datos
-            .get("sku")
-            .and_then(Value::as_str)
-            .filter(|valor| !valor.is_empty());
-        if item_id.is_some() || sku.is_some() {
-            let item = self
-                .buscar_item(empresa_id, item_id, sku.unwrap_or(""))
-                .await?;
-            normalizada.item_id = Some(item.id);
-            normalizada.sku = item.sku;
-        }
-        Ok(normalizada)
-    }
-
     async fn resolver_productos(
         &self,
         empresa_id: &str,
@@ -1362,44 +770,6 @@ impl Operaciones {
 
 // ── funciones puras (probadas sin base de datos) ─────────────────────────
 
-fn configuracion_por_defecto(empresa_id: &str) -> Value {
-    json!({
-        "empresa_id": empresa_id,
-        "metodo_costeo": "promedio",
-        "permitir_stock_negativo": false,
-        "alerta_stock_bajo": true,
-        "actualizar_costo_en_compra": true,
-        "unidad_defecto": UNIDAD_DEFECTO,
-        "actualizado_en": "1970-01-01T00:00:00.000Z",
-    })
-}
-
-fn serializar_configuracion(fila: &Value) -> Result<Value, ApiError> {
-    Ok(json!({
-        "empresa_id": fila.get("empresa_id").cloned().unwrap_or(Value::Null),
-        "metodo_costeo": fila.get("metodo_costeo").cloned().unwrap_or(Value::Null),
-        "permitir_stock_negativo": fila
-            .get("permitir_stock_negativo")
-            .and_then(Value::as_bool)
-            .unwrap_or(false),
-        "alerta_stock_bajo": fila
-            .get("alerta_stock_bajo")
-            .and_then(Value::as_bool)
-            .unwrap_or(true),
-        "actualizar_costo_en_compra": fila
-            .get("actualizar_costo_en_compra")
-            .and_then(Value::as_bool)
-            .unwrap_or(true),
-        "unidad_defecto": fila
-            .get("unidad_defecto")
-            .and_then(Value::as_str)
-            .unwrap_or(UNIDAD_DEFECTO),
-        "actualizado_en": fila.get("actualizado_en").cloned().unwrap_or(Value::Null),
-    }))
-}
-
-/// Construye el `datos` que consume `Productos::crear`, conservando el orden y
-/// los campos opcionales de `ImportarProductoFila`.
 fn datos_producto_importado(fila: &Value, empresa_id: &str) -> Value {
     let mut datos = Map::new();
     datos.insert("empresa_id".into(), Value::String(empresa_id.to_string()));
@@ -1428,167 +798,6 @@ fn datos_producto_importado(fila: &Value, empresa_id: &str) -> Value {
     Value::Object(datos)
 }
 
-fn serializar_promocion(fila: &Value) -> Value {
-    json!({
-        "id": fila.get("id").cloned().unwrap_or(Value::Null),
-        "empresa_id": fila.get("empresa_id").cloned().unwrap_or(Value::Null),
-        "nombre": fila.get("nombre").cloned().unwrap_or(Value::Null),
-        "tipo": fila.get("tipo").cloned().unwrap_or(Value::Null),
-        "item_id": fila.get("item_id").cloned().unwrap_or(Value::Null),
-        "sku": fila.get("sku").and_then(Value::as_str).unwrap_or(""),
-        "cantidad_requerida": fila.get("cantidad_requerida").cloned().unwrap_or(Value::Null),
-        "cantidad_gratis": fila.get("cantidad_gratis").cloned().unwrap_or(Value::Null),
-        "descuento_porcentaje": fila
-            .get("descuento_porcentaje")
-            .cloned()
-            .unwrap_or(Value::Null),
-        "fecha_desde": fecha_corta(fila.get("fecha_desde")),
-        "fecha_hasta": fecha_corta(fila.get("fecha_hasta")),
-        "estado": estado_serializado(fila.get("estado")),
-        "creado_en": fila.get("creado_en").cloned().unwrap_or(Value::Null),
-        "actualizado_en": fila.get("actualizado_en").cloned().unwrap_or(Value::Null),
-    })
-}
-
-fn serializar_movimiento(fila: &Value) -> Value {
-    json!({
-        "id": fila.get("id").cloned().unwrap_or(Value::Null),
-        "empresa_id": fila.get("empresa_id").cloned().unwrap_or(Value::Null),
-        "tipo": fila.get("tipo").cloned().unwrap_or(Value::Null),
-        "motivo": fila.get("motivo").and_then(Value::as_str).unwrap_or(""),
-        "referencia": fila.get("referencia").and_then(Value::as_str).unwrap_or(""),
-        "ubicacion_origen": fila
-            .get("ubicacion_origen")
-            .and_then(Value::as_str)
-            .unwrap_or(""),
-        "ubicacion_destino": fila
-            .get("ubicacion_destino")
-            .and_then(Value::as_str)
-            .unwrap_or(""),
-        "lineas": fila.get("lineas").cloned().unwrap_or_else(|| json!([])),
-        "creado_por": fila.get("creado_por").cloned().unwrap_or(Value::Null),
-        "creado_en": fila.get("creado_en").cloned().unwrap_or(Value::Null),
-    })
-}
-
-fn validar_promocion(datos: &Value) -> Result<PromocionNormalizada, ApiError> {
-    let nombre = validar_nombre(&texto(datos, "nombre"))?;
-    let tipo = datos
-        .get("tipo")
-        .and_then(Value::as_str)
-        .unwrap_or("")
-        .to_string();
-    if !TIPOS_PROMOCION.contains(&tipo.as_str()) {
-        return Err(ApiError::dominio(
-            "TIPO_PROMOCION_INVALIDO",
-            "El tipo de promoción no es válido.",
-        ));
-    }
-    let mut cantidad_requerida = entero_de(datos.get("cantidad_requerida"));
-    let mut cantidad_gratis = entero_de(datos.get("cantidad_gratis"));
-    let descuento = entero_de(datos.get("descuento_porcentaje"));
-    match tipo.as_str() {
-        "2x1" => {
-            cantidad_requerida = Some(2);
-            cantidad_gratis = Some(1);
-        }
-        "regalo" => {
-            if cantidad_requerida.unwrap_or(0) < 1 || cantidad_gratis.unwrap_or(0) < 1 {
-                return Err(ApiError::dominio(
-                    "PROMOCION_INVALIDA",
-                    "La promoción de regalo requiere cantidades.",
-                ));
-            }
-        }
-        "descuento_cantidad" => {
-            if cantidad_requerida.unwrap_or(0) < 1 {
-                return Err(ApiError::dominio(
-                    "PROMOCION_INVALIDA",
-                    "Indica la cantidad requerida.",
-                ));
-            }
-            if !descuento_valido(descuento) {
-                return Err(ApiError::dominio(
-                    "PROMOCION_INVALIDA",
-                    "El descuento debe estar entre 1 y 100.",
-                ));
-            }
-        }
-        _ => {
-            if !descuento_valido(descuento) {
-                return Err(ApiError::dominio(
-                    "PROMOCION_INVALIDA",
-                    "El descuento debe estar entre 1 y 100.",
-                ));
-            }
-        }
-    }
-    let fecha_desde = fecha_corta(datos.get("fecha_desde"));
-    let fecha_hasta = fecha_corta(datos.get("fecha_hasta"));
-    if fecha_desde.is_empty() || fecha_hasta.is_empty() || fecha_hasta < fecha_desde {
-        return Err(ApiError::dominio(
-            "VIGENCIA_INVALIDA",
-            "La vigencia de la promoción no es válida.",
-        ));
-    }
-    Ok(PromocionNormalizada {
-        nombre,
-        tipo,
-        item_id: None,
-        sku: String::new(),
-        cantidad_requerida,
-        cantidad_gratis,
-        descuento_porcentaje: descuento,
-        fecha_desde,
-        fecha_hasta,
-        estado: estado_operativo(datos),
-    })
-}
-
-fn validar_cabecera_movimiento(datos: &Value) -> Result<CabeceraMovimiento, ApiError> {
-    let tipo = datos
-        .get("tipo")
-        .and_then(Value::as_str)
-        .unwrap_or("")
-        .to_string();
-    if !TIPOS_MOVIMIENTO.contains(&tipo.as_str()) {
-        return Err(ApiError::dominio(
-            "TIPO_MOVIMIENTO_INVALIDO",
-            "El tipo de movimiento no es válido.",
-        ));
-    }
-    let lineas = datos
-        .get("lineas")
-        .and_then(Value::as_array)
-        .map(Vec::as_slice)
-        .unwrap_or(&[]);
-    if lineas.is_empty() {
-        return Err(ApiError::dominio(
-            "LINEAS_REQUERIDAS",
-            "El movimiento requiere al menos una línea.",
-        ));
-    }
-    if lineas.len() > MAX_LINEAS {
-        return Err(ApiError::dominio(
-            "DEMASIADAS_LINEAS",
-            format!("El máximo es {MAX_LINEAS} líneas."),
-        ));
-    }
-    let origen = texto_opcional(datos, "ubicacion_origen").unwrap_or_default();
-    let destino = texto_opcional(datos, "ubicacion_destino").unwrap_or_default();
-    if tipo == "traslado" && (origen.is_empty() || destino.is_empty() || origen == destino) {
-        return Err(ApiError::dominio(
-            "TRASLADO_INVALIDO",
-            "Un traslado requiere ubicación de origen y destino distintas.",
-        ));
-    }
-    Ok(CabeceraMovimiento {
-        tipo,
-        origen,
-        destino,
-    })
-}
-
 fn cantidad_componente(componente: &Value) -> Result<i64, ApiError> {
     entero_de(componente.get("cantidad"))
         .filter(|cantidad| *cantidad >= 1)
@@ -1611,17 +820,6 @@ fn registrar_componente_unico(vistos: &mut Vec<String>, item_id: &str) -> Result
     Ok(())
 }
 
-fn calcular_stock(tipo: &str, anterior: i64, cantidad: i64) -> i64 {
-    match tipo {
-        "entrada" => anterior.saturating_add(cantidad),
-        "salida" => anterior.saturating_sub(cantidad),
-        "ajuste" => cantidad,
-        _ => anterior,
-    }
-}
-
-/// `Math.round(((precio - costo) / precio) * 1000) / 10`, con el redondeo de
-/// JavaScript (mitad hacia +∞) para conservar el `margen` del contrato.
 fn calcular_margen(precio_cents: i64, costo_total_cents: i64) -> f64 {
     if precio_cents <= 0 {
         return 0.0;
@@ -1636,10 +834,6 @@ fn redondear_js(valor: f64) -> f64 {
     } else {
         (valor + 0.5).floor()
     }
-}
-
-fn descuento_valido(descuento: Option<i64>) -> bool {
-    matches!(descuento, Some(valor) if (1..=100).contains(&valor))
 }
 
 fn normalizar_sku(valor: &str) -> Result<String, ApiError> {
@@ -1744,15 +938,6 @@ fn f64_a_entero(valor: f64) -> Option<i64> {
     }
 }
 
-fn fecha_corta(valor: Option<&Value>) -> String {
-    let texto = match valor {
-        Some(Value::String(texto)) => texto.clone(),
-        Some(Value::Null) | None => String::new(),
-        Some(otro) => otro.to_string(),
-    };
-    texto.chars().take(10).collect()
-}
-
 fn estado_operativo(datos: &Value) -> String {
     if datos.get("estado").and_then(Value::as_str) == Some("inactivo") {
         "inactivo".to_string()
@@ -1839,69 +1024,6 @@ mod tests {
     }
 
     #[test]
-    fn debe_validar_promociones_y_normalizar_2x1() {
-        let dos_por_uno = validar_promocion(&json!({
-            "nombre": "2x1",
-            "tipo": "2x1",
-            "fecha_desde": "2026-10-01T00:00:00.000Z",
-            "fecha_hasta": "2026-12-31",
-        }))
-        .expect("2x1");
-        assert_eq!(dos_por_uno.cantidad_requerida, Some(2));
-        assert_eq!(dos_por_uno.cantidad_gratis, Some(1));
-        assert_eq!(dos_por_uno.fecha_desde, "2026-10-01");
-
-        let regalo_sin_cantidades = validar_promocion(&json!({
-            "nombre": "Regalo",
-            "tipo": "regalo",
-            "fecha_desde": "2026-10-01",
-            "fecha_hasta": "2026-12-31",
-        }))
-        .expect_err("regalo");
-        assert_eq!(regalo_sin_cantidades.codigo, "PROMOCION_INVALIDA");
-
-        let descuento_invalido = validar_promocion(&json!({
-            "nombre": "Descuento",
-            "tipo": "descuento_porcentaje",
-            "descuento_porcentaje": 200,
-            "fecha_desde": "2026-10-01",
-            "fecha_hasta": "2026-12-31",
-        }))
-        .expect_err("descuento");
-        assert_eq!(descuento_invalido.codigo, "PROMOCION_INVALIDA");
-
-        let vigencia_invertida = validar_promocion(&json!({
-            "nombre": "Promo",
-            "tipo": "2x1",
-            "fecha_desde": "2026-12-31",
-            "fecha_hasta": "2026-10-01",
-        }))
-        .expect_err("vigencia");
-        assert_eq!(vigencia_invertida.codigo, "VIGENCIA_INVALIDA");
-
-        let tipo_invalido = validar_promocion(&json!({
-            "nombre": "Promo",
-            "tipo": "otro",
-            "fecha_desde": "2026-10-01",
-            "fecha_hasta": "2026-12-31",
-        }))
-        .expect_err("tipo");
-        assert_eq!(tipo_invalido.codigo, "TIPO_PROMOCION_INVALIDO");
-
-        let descuento_cantidad = validar_promocion(&json!({
-            "nombre": "Descuento",
-            "tipo": "descuento_cantidad",
-            "cantidad_requerida": 3,
-            "descuento_porcentaje": 10,
-            "fecha_desde": "2026-10-01",
-            "fecha_hasta": "2026-12-31",
-        }))
-        .expect("descuento_cantidad");
-        assert_eq!(descuento_cantidad.cantidad_requerida, Some(3));
-        assert_eq!(descuento_cantidad.descuento_porcentaje, Some(10));
-    }
-
-    #[test]
     fn debe_validar_cantidades_y_duplicados_de_componentes() {
         assert_eq!(
             cantidad_componente(&json!({"cantidad": 2})).expect("cantidad"),
@@ -1928,51 +1050,6 @@ mod tests {
                 .codigo,
             "COMPONENTE_DUPLICADO"
         );
-    }
-
-    #[test]
-    fn debe_calcular_el_stock_de_cada_movimiento() {
-        assert_eq!(calcular_stock("entrada", 10, 5), 15);
-        assert_eq!(calcular_stock("salida", 10, 5), 5);
-        assert_eq!(calcular_stock("ajuste", 10, 3), 3);
-        assert_eq!(calcular_stock("traslado", 10, 5), 10);
-    }
-
-    #[test]
-    fn debe_validar_cabeceras_de_movimiento() {
-        let cabecera = validar_cabecera_movimiento(&json!({
-            "tipo": "traslado",
-            "ubicacion_origen": "A",
-            "ubicacion_destino": "B",
-            "lineas": [{"sku": "SKU-1", "cantidad": 1}],
-        }))
-        .expect("traslado");
-        assert_eq!(cabecera.tipo, "traslado");
-        assert_eq!(cabecera.origen, "A");
-
-        let sin_lineas = validar_cabecera_movimiento(&json!({
-            "tipo": "entrada",
-            "lineas": [],
-        }))
-        .expect_err("sin lineas");
-        assert_eq!(sin_lineas.codigo, "LINEAS_REQUERIDAS");
-
-        let traslado_invalido = validar_cabecera_movimiento(&json!({
-            "tipo": "traslado",
-            "ubicacion_origen": "A",
-            "ubicacion_destino": "A",
-            "lineas": [{"sku": "SKU-1", "cantidad": 1}],
-        }))
-        .expect_err("traslado invalido");
-        assert_eq!(traslado_invalido.codigo, "TRASLADO_INVALIDO");
-
-        let demasiadas = validar_cabecera_movimiento(&json!({
-            "tipo": "entrada",
-            "lineas": (0..201).map(|_| json!({"sku": "SKU-1", "cantidad": 1}))
-                .collect::<Vec<_>>(),
-        }))
-        .expect_err("demasiadas");
-        assert_eq!(demasiadas.codigo, "DEMASIADAS_LINEAS");
     }
 
     #[test]
