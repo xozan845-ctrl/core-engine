@@ -422,3 +422,58 @@ async fn debe_registrar_pago_y_compensar_por_eventos() {
     db.pool().close().await;
     pool.close().await;
 }
+
+#[tokio::test]
+async fn debe_reportar_ventas_y_comisiones_por_negocio() {
+    let Some((db, pool)) = preparar().await else {
+        eprintln!("TEST_DATABASE_URL no definida: se omite la integracion");
+        return;
+    };
+    let empresa = Uuid::new_v4();
+    let negocio_a = Uuid::new_v4();
+    let negocio_b = Uuid::new_v4();
+    for (negocio, venta, comision) in [
+        (negocio_a, 10_000, 1_200),
+        (negocio_a, 5_000, 600),
+        (negocio_b, 8_000, 960),
+    ] {
+        sqlx::query(
+            "INSERT INTO commissions.comisiones
+               (order_id, linea_clave, empresa_id, negocio_id, tienda_id, vendedor_id,
+                venta_cents, comision_cents, monto_vendedor_cents, monto_empresario_cents)
+             VALUES ($1, 'of-1', $2, $3, $4, $5, $6, $7, $6 - $7, 0)",
+        )
+        .bind(Uuid::new_v4())
+        .bind(empresa)
+        .bind(negocio)
+        .bind(Uuid::new_v4())
+        .bind(Uuid::new_v4())
+        .bind(venta)
+        .bind(comision)
+        .execute(&pool)
+        .await
+        .expect("comision");
+    }
+    let reportes =
+        commissions_service::reportes::Reportes::nueva(Arc::clone(&db), Arc::new(KpisNoDisponible));
+    let filas = reportes
+        .por_negocio(&empresa.to_string(), None, None, None)
+        .await
+        .expect("reporte por negocio");
+    assert_eq!(filas.len(), 2);
+    let total: i64 = filas
+        .iter()
+        .filter_map(|fila| fila["ventas_cents"].as_i64())
+        .sum();
+    assert_eq!(total, 23_000);
+    let comisiones: i64 = filas
+        .iter()
+        .filter_map(|fila| fila["comisiones_cents"].as_i64())
+        .sum();
+    assert_eq!(comisiones, 2_760);
+    let empresario: i64 = filas
+        .iter()
+        .filter_map(|fila| fila["empresario_cents"].as_i64())
+        .sum();
+    assert_eq!(empresario, 0);
+}
