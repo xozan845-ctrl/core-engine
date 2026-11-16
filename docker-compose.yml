@@ -142,6 +142,15 @@ services:
       PORT: 3013
       OUTBOX_TABLA: inventory.outbox
 
+  pricing-service:
+    <<: *servicio-base
+    image: ghcr.io/xozan845-ctrl/core-engine-pricing-service:prod
+    pull_policy: always
+    environment:
+      SERVICIO: pricing-service
+      PORT: 3014
+      OUTBOX_TABLA: pricing.outbox
+
   stores-service:
     <<: *servicio-base
     image: ghcr.io/xozan845-ctrl/core-engine-stores-service:prod

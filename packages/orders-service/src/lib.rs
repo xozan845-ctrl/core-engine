@@ -31,4 +31,5 @@ pub mod rabbit;
 pub mod salon;
 pub mod state;
 pub mod suscripciones;
+pub mod tipos_orden;
 pub mod views;

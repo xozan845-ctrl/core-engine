@@ -11,7 +11,7 @@ pub struct Servicio {
     pub puerto: u16,
 }
 
-pub const SERVICIOS_PRODUCCION: [Servicio; 10] = [
+pub const SERVICIOS_PRODUCCION: [Servicio; 11] = [
     Servicio {
         nombre: "identity",
         puerto: 3001,
@@ -23,6 +23,10 @@ pub const SERVICIOS_PRODUCCION: [Servicio; 10] = [
     Servicio {
         nombre: "inventory",
         puerto: 3013,
+    },
+    Servicio {
+        nombre: "pricing",
+        puerto: 3014,
     },
     Servicio {
         nombre: "stores",
@@ -54,7 +58,7 @@ pub const SERVICIOS_PRODUCCION: [Servicio; 10] = [
     },
 ];
 
-pub const SERVICIOS_STAGE: [Servicio; 11] = [
+pub const SERVICIOS_STAGE: [Servicio; 12] = [
     Servicio {
         nombre: "identity",
         puerto: 3001,
@@ -66,6 +70,10 @@ pub const SERVICIOS_STAGE: [Servicio; 11] = [
     Servicio {
         nombre: "inventory",
         puerto: 3013,
+    },
+    Servicio {
+        nombre: "pricing",
+        puerto: 3014,
     },
     Servicio {
         nombre: "stores",
@@ -158,9 +166,9 @@ mod tests {
 
     #[test]
     fn debe_elegir_la_lista_por_entorno() {
-        assert_eq!(servicios("stage").len(), 11);
-        assert_eq!(servicios("production").len(), 10);
-        assert_eq!(servicios("").len(), 10);
+        assert_eq!(servicios("stage").len(), 12);
+        assert_eq!(servicios("production").len(), 11);
+        assert_eq!(servicios("").len(), 11);
     }
 
     #[test]

@@ -19,6 +19,7 @@ use orders_service::rabbit::{ColaConfig, Handler, Rabbit};
 use orders_service::salon::Salon;
 use orders_service::state::AppState;
 use orders_service::suscripciones::Suscripciones;
+use orders_service::tipos_orden::TiposOrden;
 use orders_service::views::OrderViewRepository;
 use std::sync::Arc;
 use std::time::Duration;
@@ -91,6 +92,8 @@ async fn main() {
         vistas: Arc::clone(&vistas),
         pedidos: Arc::clone(&pedidos),
         outbox: Outbox::nueva(&outbox_tabla),
+        pagos: Arc::new(Pagos::nueva(Arc::clone(&db))),
+        tipos: Arc::new(TiposOrden::nueva(Arc::clone(&db))),
         tasa_comision: config.tasa_comision,
     });
     let contratos = Arc::new(Contratos::nueva(Arc::clone(&db)));

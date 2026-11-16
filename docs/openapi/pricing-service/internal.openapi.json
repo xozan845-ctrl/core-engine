@@ -1,0 +1,730 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "pricing-service (interno)",
+    "version": "1.0.9",
+    "description": "Precios, listas, escalas, tarifas, cotizaciones y promociones (ADR-0018)."
+  },
+  "x-servicio": "pricing-service",
+  "x-superficie": "interna",
+  "servers": [
+    {
+      "url": "http://pricing-service:3014"
+    }
+  ],
+  "security": [
+    {
+      "internalKey": []
+    }
+  ],
+  "paths": {
+    "/internal/items/{id}/cotizacion": {
+      "get": {
+        "operationId": "InternalController_cotizar",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "description": "Id del item",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "empresa_id",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "desde",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "example": "2026-12-20",
+              "type": "string"
+            }
+          },
+          {
+            "name": "hasta",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "example": "2026-12-22",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Cotización del rango",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CotizacionItemResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "internalKey": []
+          }
+        ],
+        "summary": "Cotizar un item por rango de fechas (servicio→servicio)",
+        "tags": [
+          "Catálogo (interno)"
+        ]
+      }
+    },
+    "/internal/items/{id}/precio": {
+      "get": {
+        "operationId": "InternalController_precio",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "description": "Id del item",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "empresa_id",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "cantidad",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "example": 1,
+              "type": "string"
+            }
+          },
+          {
+            "name": "lista",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "example": "mayorista",
+              "type": "string"
+            }
+          },
+          {
+            "name": "segmento",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "example": "mayorista",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Precio resuelto",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PrecioItemInternoResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "internalKey": []
+          }
+        ],
+        "summary": "Resolver el precio de un item por cantidad (servicio→servicio)",
+        "tags": [
+          "Catálogo (interno)"
+        ]
+      }
+    },
+    "/internal/items/precios": {
+      "post": {
+        "operationId": "InternalController_preciosPorLote",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ResolverPreciosInternoRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Precios resueltos",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PreciosInternosResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "internalKey": []
+          }
+        ],
+        "summary": "Resolver precios por lote (servicio→servicio)",
+        "tags": [
+          "Catálogo (interno)"
+        ]
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "bearer": {
+        "scheme": "bearer",
+        "bearerFormat": "JWT",
+        "type": "http"
+      },
+      "internalKey": {
+        "type": "apiKey",
+        "in": "header",
+        "name": "x-internal-key"
+      }
+    },
+    "schemas": {
+      "CotizacionItemResponseDto": {
+        "type": "object",
+        "properties": {
+          "item_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "desde": {
+            "type": "string",
+            "format": "date"
+          },
+          "hasta": {
+            "type": "string",
+            "format": "date"
+          },
+          "dias": {
+            "type": "number"
+          },
+          "total_cents": {
+            "type": "number"
+          },
+          "desglose": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/DesgloseTarifaResponseDto"
+            }
+          }
+        },
+        "required": [
+          "item_id",
+          "desde",
+          "hasta",
+          "dias",
+          "total_cents",
+          "desglose"
+        ]
+      },
+      "DesgloseTarifaResponseDto": {
+        "type": "object",
+        "properties": {
+          "desde": {
+            "type": "string",
+            "format": "date"
+          },
+          "hasta": {
+            "type": "string",
+            "format": "date"
+          },
+          "dias": {
+            "type": "number"
+          },
+          "precio_cents": {
+            "type": "number"
+          },
+          "subtotal_cents": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "desde",
+          "hasta",
+          "dias",
+          "precio_cents",
+          "subtotal_cents"
+        ]
+      },
+      "ItemImagenResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "objeto_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "orden": {
+            "type": "number"
+          },
+          "es_principal": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "id",
+          "objeto_id",
+          "orden",
+          "es_principal"
+        ]
+      },
+      "ItemResponseDto": {
+        "type": "object",
+        "properties": {
+          "item_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "empresa_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "tipo": {
+            "type": "string",
+            "enum": [
+              "producto",
+              "servicio",
+              "alquiler"
+            ]
+          },
+          "codigo": {
+            "type": "string"
+          },
+          "nombre": {
+            "type": "string"
+          },
+          "descripcion": {
+            "type": "string"
+          },
+          "categoria": {
+            "type": "string"
+          },
+          "precio": {
+            "type": "string",
+            "example": "1500.00"
+          },
+          "costo": {
+            "type": "string",
+            "example": "500.00"
+          },
+          "track_inventory": {
+            "type": "boolean"
+          },
+          "track_serial": {
+            "type": "boolean"
+          },
+          "stock": {
+            "type": "object",
+            "nullable": true
+          },
+          "duration_minutes": {
+            "type": "object",
+            "nullable": true
+          },
+          "atributos": {
+            "type": "object",
+            "additionalProperties": true
+          },
+          "parent_item_id": {
+            "type": "object",
+            "nullable": true,
+            "format": "uuid"
+          },
+          "marca": {
+            "type": "string"
+          },
+          "codigo_barras": {
+            "type": "string"
+          },
+          "unidad": {
+            "type": "string"
+          },
+          "permite_fracciones": {
+            "type": "boolean"
+          },
+          "unidad_compra": {
+            "type": "string"
+          },
+          "contenido_cantidad": {
+            "type": "number"
+          },
+          "contenido_unidad": {
+            "type": "string"
+          },
+          "tipo_precio": {
+            "type": "string",
+            "enum": [
+              "fijo",
+              "escala"
+            ]
+          },
+          "tipo_costo": {
+            "type": "string",
+            "enum": [
+              "fijo",
+              "escala"
+            ]
+          },
+          "stock_minimo": {
+            "type": "number"
+          },
+          "stock_maximo": {
+            "type": "object",
+            "nullable": true
+          },
+          "garantia_meses": {
+            "type": "object",
+            "nullable": true
+          },
+          "es_materia_prima": {
+            "type": "boolean"
+          },
+          "ubicacion": {
+            "type": "string"
+          },
+          "imagenes": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ItemImagenResponseDto"
+            }
+          },
+          "estado": {
+            "type": "string",
+            "enum": [
+              "activo",
+              "inactivo"
+            ]
+          },
+          "creado_en": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "actualizado_en": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "item_id",
+          "empresa_id",
+          "tipo",
+          "codigo",
+          "nombre",
+          "descripcion",
+          "categoria",
+          "precio",
+          "costo",
+          "track_inventory",
+          "track_serial",
+          "stock",
+          "duration_minutes",
+          "atributos",
+          "parent_item_id",
+          "marca",
+          "codigo_barras",
+          "unidad",
+          "permite_fracciones",
+          "unidad_compra",
+          "contenido_cantidad",
+          "contenido_unidad",
+          "tipo_precio",
+          "tipo_costo",
+          "stock_minimo",
+          "stock_maximo",
+          "garantia_meses",
+          "es_materia_prima",
+          "ubicacion",
+          "imagenes",
+          "estado",
+          "creado_en",
+          "actualizado_en"
+        ]
+      },
+      "LineaInventarioResponseDto": {
+        "type": "object",
+        "properties": {
+          "empresa_id": {
+            "type": "string",
+            "description": "Empresa dueña del producto (ADR-27)",
+            "format": "uuid"
+          },
+          "sku": {
+            "type": "string",
+            "description": "SKU del producto",
+            "example": "SKU-001"
+          },
+          "nombre": {
+            "type": "string",
+            "description": "Nombre del producto"
+          },
+          "stock": {
+            "type": "number",
+            "description": "Stock físico en bodega",
+            "example": 12
+          },
+          "disponible": {
+            "type": "number",
+            "description": "Stock disponible (neto de reservas)",
+            "example": 10
+          },
+          "reservado": {
+            "type": "number",
+            "description": "Unidades reservadas por órdenes activas",
+            "example": 2
+          },
+          "estado": {
+            "type": "string",
+            "description": "Estado del producto",
+            "example": "disponible"
+          },
+          "precio_base": {
+            "type": "string",
+            "description": "Precio base en córdobas con dos decimales",
+            "example": "1000.00"
+          },
+          "valor_disponible_cents": {
+            "type": "number",
+            "description": "Valor del stock disponible en centavos",
+            "example": 1000000
+          },
+          "valor_total_cents": {
+            "type": "number",
+            "description": "Valor del stock físico total en centavos",
+            "example": 1200000
+          }
+        },
+        "required": [
+          "sku",
+          "nombre",
+          "stock",
+          "disponible",
+          "reservado",
+          "estado",
+          "precio_base",
+          "valor_disponible_cents",
+          "valor_total_cents"
+        ]
+      },
+      "LineaPrecioInternaRequestDto": {
+        "type": "object",
+        "properties": {
+          "clave": {
+            "type": "string",
+            "description": "Clave opaca para correlacionar la respuesta",
+            "example": "oferta-1"
+          },
+          "item_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "cantidad": {
+            "type": "number",
+            "minimum": 1
+          }
+        },
+        "required": [
+          "clave",
+          "item_id",
+          "cantidad"
+        ]
+      },
+      "LoteItemResponseDto": {
+        "type": "object",
+        "properties": {
+          "empresa_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "sku": {
+            "type": "string"
+          },
+          "stock": {
+            "type": "number"
+          },
+          "track_serial": {
+            "type": "boolean"
+          },
+          "seriales_disponibles": {
+            "type": "number"
+          },
+          "estado": {
+            "type": "string",
+            "enum": [
+              "disponible",
+              "agotado"
+            ]
+          }
+        },
+        "required": [
+          "empresa_id",
+          "sku",
+          "stock",
+          "track_serial",
+          "seriales_disponibles",
+          "estado"
+        ]
+      },
+      "PrecioItemInternoResponseDto": {
+        "type": "object",
+        "properties": {
+          "item_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "cantidad": {
+            "type": "number"
+          },
+          "origen": {
+            "type": "string",
+            "enum": [
+              "lista",
+              "escala",
+              "base"
+            ]
+          },
+          "precio_unitario_cents": {
+            "type": "number"
+          },
+          "precio_total_cents": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "item_id",
+          "cantidad",
+          "origen",
+          "precio_unitario_cents",
+          "precio_total_cents"
+        ]
+      },
+      "PrecioLineaInternaResponseDto": {
+        "type": "object",
+        "properties": {
+          "clave": {
+            "type": "string"
+          },
+          "origen": {
+            "type": "string",
+            "enum": [
+              "lista",
+              "escala",
+              "base"
+            ]
+          },
+          "precio_unitario_cents": {
+            "type": "number"
+          },
+          "precio_total_cents": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "clave",
+          "origen",
+          "precio_unitario_cents",
+          "precio_total_cents"
+        ]
+      },
+      "PreciosInternosResponseDto": {
+        "type": "object",
+        "properties": {
+          "precios": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PrecioLineaInternaResponseDto"
+            }
+          }
+        },
+        "required": [
+          "precios"
+        ]
+      },
+      "ResolverPreciosInternoRequestDto": {
+        "type": "object",
+        "properties": {
+          "empresa_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "lista_codigo": {
+            "type": "string",
+            "example": "mayorista"
+          },
+          "segmento_codigo": {
+            "type": "string",
+            "example": "mayorista"
+          },
+          "lineas": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/LineaPrecioInternaRequestDto"
+            }
+          }
+        },
+        "required": [
+          "empresa_id",
+          "lineas"
+        ]
+      },
+      "ResumenInventarioResponseDto": {
+        "type": "object",
+        "properties": {
+          "productos": {
+            "type": "number",
+            "description": "Total de productos",
+            "example": 20
+          },
+          "agotados": {
+            "type": "number",
+            "description": "Productos agotados",
+            "example": 2
+          },
+          "stock_total": {
+            "type": "number",
+            "description": "Unidades en stock",
+            "example": 120
+          },
+          "valor_inventario_cents": {
+            "type": "number",
+            "description": "Valor del inventario en centavos",
+            "example": 12000000
+          }
+        },
+        "required": [
+          "productos",
+          "agotados",
+          "stock_total",
+          "valor_inventario_cents"
+        ]
+      }
+    }
+  }
+}
