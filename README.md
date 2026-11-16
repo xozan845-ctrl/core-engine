@@ -221,7 +221,7 @@ vuelve seleccionable por configuración, igual que pagos, agenda o fulfillments.
 | `suscripciones` | orders | Compras recurrentes semanales/mensuales/anuales |
 | `mesas` | orders | Mesas, comandas y estaciones de preparación |
 | `ventas_credito` | finance | Cuentas de crédito y checkout con método `credito` |
-| `fidelizacion` | loyalty | Tarjetas, puntos, recompensas y canjes (capacidad nueva) |
+| `fidelizacion` | loyalty | Tarjetas, puntos, recompensas y canjes (implementada) |
 
 Los servicios **siempre activos** (`identity-service`, `api-gateway`,
 `storage-service`, `notifications-service`) no se gatean. Los servicios de
@@ -230,31 +230,76 @@ devuelve el error estructurado `CAPACIDAD_NO_ACTIVA` y sus rutas no se anuncian
 en el pack del tenant. El aislamiento de datos entre tenants es por **RLS**
 (esquema por dominio + `empresa_id`).
 
-### Fidelización (capacidad nueva)
+### Fidelización (capacidad implementada)
 
 La fidelización no es configuración pura: es una **capacidad nueva** que se
-implementa una vez y luego se selecciona por pack, vertical o add-on.
+implementa una vez y luego se selecciona por pack, vertical o add-on. Ya está
+implementada como `fidelizacion` dentro de `orders-service`.
 
-**Modelo**
+**Modelo** (`orders.fidelizacion_*`)
 
-- `programa` por empresa: activo, puntos por unidad de moneda, expiración,
-  niveles y reglas.
-- `tarjeta` por empresa + cliente (`identity.partes`): código, puntos y estado.
-- `movimientos`: acumulaciones, canjes, ajustes y expiraciones; con
-  `order_id`/`event_id` para idempotencia.
+- `programa` por empresa: activo, puntos por unidad de moneda, expiración y
+  reglas.
+- `tarjeta` por empresa + parte (`identity.partes`): código `FID-XXXXXXXX`,
+  saldo y estado (`activa`, `bloqueada`, `cerrada`).
+- `movimientos`: acumulaciones, canjes, ajustes y expiraciones, con `saldo_tras`
+  y `order_id` para idempotencia.
 - `recompensas`: catálogo de premios con costo en puntos y stock opcional.
-- `canjes`: canje de una recompensa por una tarjeta, con estado y vínculo a la
-  orden.
+- `canjes`: canje de una recompensa por una tarjeta, con estado y vínculo
+  opcional a la orden.
 
 **Flujo**
 
-1. El cliente compra y la orden pasa a `pagada`.
-2. Se acumulan puntos de forma idempotente (una sola vez por orden).
-3. El cliente consulta su tarjeta y su historial.
-4. En checkout puede canjear una recompensa: se validan puntos, se descuentan y
-   se aplica el beneficio.
-5. La empresa administra programa, recompensas y ajustes; el cliente solo ve su
-   tarjeta (RLS por empresa y parte).
+1. La empresa configura el programa y emite tarjetas a sus partes.
+2. Cuando la orden pasa a `pagada` (pago automático, confirmación manual o
+   webhook), se acumulan puntos **una sola vez por orden** y por empresa.
+3. El comprador consulta su tarjeta y su historial; solo ve tarjetas derivadas
+   de sus propias órdenes.
+4. La empresa ajusta puntos o registra canjes; el canje valida saldo y stock y
+   descuenta ambos en una transacción.
+5. RLS por `empresa_id`: el comprador no ve tarjetas de otros clientes.
+
+> Para acumular puntos, el checkout debe identificar al cliente con
+> `cliente_parte_id`. Sin parte no hay tarjeta asociada y no se acumula.
+
+**API**
+
+| Método | Ruta | Rol |
+|---|---|---|
+| GET/PUT | `/api/v2/fidelizacion/programa` | empresario |
+| GET/POST | `/api/v2/fidelizacion/tarjetas` | empresario |
+| GET | `/api/v2/fidelizacion/tarjetas/:id` | empresario |
+| GET | `/api/v2/fidelizacion/tarjetas/:id/movimientos` | empresario |
+| POST | `/api/v2/fidelizacion/tarjetas/:id/ajustes` | empresario |
+| GET/POST | `/api/v2/fidelizacion/recompensas` | empresario |
+| PATCH | `/api/v2/fidelizacion/recompensas/:id` | empresario |
+| POST | `/api/v2/fidelizacion/canjes` | empresario |
+| GET | `/api/v2/fidelizacion/mis-tarjetas` | comprador |
+| GET | `/api/v2/fidelizacion/mis-tarjetas/:id/movimientos` | comprador |
+
+Todas las rutas de empresa exigen la capacidad activa; si no lo está devuelven
+`CAPACIDAD_NO_ACTIVA`.
+
+```bash
+# programa: 2 puntos por cada unidad de moneda
+curl -X PUT http://localhost:8080/api/v2/fidelizacion/programa \
+  -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
+  -d '{"nombre":"Puntos TechFix","puntos_por_unidad":2,"expira_meses":12}'
+
+# emitir tarjeta a una parte
+curl -X POST http://localhost:8080/api/v2/fidelizacion/tarjetas \
+  -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
+  -d '{"parte_id":"<parteId>"}'
+
+# recompensa y canje
+curl -X POST http://localhost:8080/api/v2/fidelizacion/recompensas \
+  -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
+  -d '{"codigo":"cafe","nombre":"Café gratis","puntos":250,"stock":10}'
+
+curl -X POST http://localhost:8080/api/v2/fidelizacion/canjes \
+  -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
+  -d '{"codigo_tarjeta":"FID-XXXXXXXX","recompensa_codigo":"cafe"}'
+```
 
 **Cómo se selecciona al crear el negocio**
 
@@ -268,8 +313,9 @@ implementa una vez y luego se selecciona por pack, vertical o add-on.
   `fidelizacion.programas`, `fidelizacion.tarjetas` y `fidelizacion.canjes`; el
   frontend muestra el módulo solo si está activo.
 
-> Estado: capacidad nueva; implementación en curso. Cuando esté publicada, se
-> selecciona exactamente igual que pagos, agenda o fulfillments.
+> Estado: **implementada**. El descuento automático de la recompensa en
+> el checkout queda como evolución; hoy el canje se registra y puede vincularse
+> a una orden con `order_id`.
 
 ### Alta de un tenant nuevo
 
