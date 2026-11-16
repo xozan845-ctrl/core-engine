@@ -100,5 +100,6 @@
   "83_tipos_cambio.sql": "ebfd82f9c7acdcef6fa2a41841b01a9cb5d9972f49ff7d2624a62750bfe99340",
   "84_inventory_stock_owner.sql": "ba263eb573e9b309f06ec1c28ea5e672880aa8d33d87dde2c5334214a072c050",
   "85_retiro_catalog.sql": "281d382fcc7a0c9a5389882698e9d25f750e19f3c5ae6526eaa601e3828d3e29",
-  "86_fidelizacion_capacidad.sql": "88b3ac2b75bedc8d141997057cc08ffcc9e5341be05c37809d6ab29b5e21c9bf"
+  "86_fidelizacion_capacidad.sql": "88b3ac2b75bedc8d141997057cc08ffcc9e5341be05c37809d6ab29b5e21c9bf",
+  "87_fidelizacion.sql": "a19976bba8e4d3f342c59c05a8ade7549cd5e00095a84ecfac3b1af06d768718"
 }

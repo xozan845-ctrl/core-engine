@@ -17184,6 +17184,558 @@
         ]
       }
     },
+    "/api/v2/fidelizacion/programa": {
+      "get": {
+        "operationId": "FidelizacionController_programa",
+        "responses": {
+          "200": {
+            "description": "Programa vigente o null",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
+                  "properties": {
+                    "data": {
+                      "nullable": true,
+                      "allOf": [
+                        {
+                          "$ref": "#/components/schemas/FidelizacionProgramaResponseDto"
+                        }
+                      ]
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/MetaRespuesta"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Consultar el programa de fidelización",
+        "tags": [
+          "Fidelización"
+        ]
+      },
+      "put": {
+        "operationId": "FidelizacionController_guardarPrograma",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FidelizacionGuardarProgramaRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Programa guardado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/FidelizacionProgramaResponseDto"
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/MetaRespuesta"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Crear o actualizar el programa",
+        "tags": [
+          "Fidelización"
+        ]
+      }
+    },
+    "/api/v2/fidelizacion/tarjetas": {
+      "get": {
+        "operationId": "FidelizacionController_listarTarjetas",
+        "parameters": [
+          {
+            "name": "parte_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Tarjetas de la empresa",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
+                  "properties": {
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/FidelizacionTarjetaResponseDto"
+                      }
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/MetaRespuesta"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Listar tarjetas",
+        "tags": [
+          "Fidelización"
+        ]
+      },
+      "post": {
+        "operationId": "FidelizacionController_crearTarjeta",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FidelizacionCrearTarjetaRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Tarjeta emitida",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/FidelizacionTarjetaResponseDto"
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/MetaRespuesta"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Emitir tarjeta para una parte",
+        "tags": [
+          "Fidelización"
+        ]
+      }
+    },
+    "/api/v2/fidelizacion/tarjetas/{id}": {
+      "get": {
+        "operationId": "FidelizacionController_obtenerTarjeta",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Tarjeta",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/FidelizacionTarjetaResponseDto"
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/MetaRespuesta"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Consultar una tarjeta",
+        "tags": [
+          "Fidelización"
+        ]
+      }
+    },
+    "/api/v2/fidelizacion/tarjetas/{id}/movimientos": {
+      "get": {
+        "operationId": "FidelizacionController_listarMovimientos",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "limite",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 200,
+              "default": 50
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Movimientos de la tarjeta",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
+                  "properties": {
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/FidelizacionMovimientoResponseDto"
+                      }
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/MetaRespuesta"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Historial de puntos",
+        "tags": [
+          "Fidelización"
+        ]
+      }
+    },
+    "/api/v2/fidelizacion/tarjetas/{id}/ajustes": {
+      "post": {
+        "operationId": "FidelizacionController_ajustar",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FidelizacionAjusteRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Movimiento de ajuste",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/FidelizacionMovimientoResponseDto"
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/MetaRespuesta"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Ajustar puntos manualmente",
+        "tags": [
+          "Fidelización"
+        ]
+      }
+    },
+    "/api/v2/fidelizacion/recompensas": {
+      "get": {
+        "operationId": "FidelizacionController_listarRecompensas",
+        "responses": {
+          "200": {
+            "description": "Recompensas de la empresa",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
+                  "properties": {
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/FidelizacionRecompensaResponseDto"
+                      }
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/MetaRespuesta"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Listar recompensas",
+        "tags": [
+          "Fidelización"
+        ]
+      },
+      "post": {
+        "operationId": "FidelizacionController_crearRecompensa",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FidelizacionCrearRecompensaRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Recompensa creada",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/FidelizacionRecompensaResponseDto"
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/MetaRespuesta"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Crear recompensa",
+        "tags": [
+          "Fidelización"
+        ]
+      }
+    },
+    "/api/v2/fidelizacion/recompensas/{id}": {
+      "patch": {
+        "operationId": "FidelizacionController_actualizarRecompensa",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FidelizacionActualizarRecompensaRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Recompensa actualizada",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/FidelizacionRecompensaResponseDto"
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/MetaRespuesta"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Actualizar recompensa",
+        "tags": [
+          "Fidelización"
+        ]
+      }
+    },
+    "/api/v2/fidelizacion/canjes": {
+      "post": {
+        "operationId": "FidelizacionController_canjear",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FidelizacionCanjearRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Canje confirmado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/FidelizacionCanjeResponseDto"
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/MetaRespuesta"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Canjear una recompensa",
+        "tags": [
+          "Fidelización"
+        ]
+      }
+    },
     "/api/v2/catalog/items/{id}/tarifas": {
       "get": {
         "operationId": "TarifasController_listar",
@@ -36154,6 +36706,363 @@
           "version",
           "creado_en"
         ]
+      },
+      "FidelizacionProgramaResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "empresa_id": {
+            "type": "string"
+          },
+          "nombre": {
+            "type": "string"
+          },
+          "activo": {
+            "type": "boolean"
+          },
+          "puntos_por_unidad": {
+            "type": "integer",
+            "description": "Puntos por cada unidad de moneda (100 centavos)"
+          },
+          "expira_meses": {
+            "type": "integer",
+            "nullable": true
+          },
+          "config": {
+            "type": "object"
+          },
+          "creado_en": {
+            "type": "string"
+          },
+          "actualizado_en": {
+            "type": "string"
+          }
+        }
+      },
+      "FidelizacionGuardarProgramaRequestDto": {
+        "type": "object",
+        "required": [
+          "nombre"
+        ],
+        "properties": {
+          "nombre": {
+            "type": "string",
+            "minLength": 2,
+            "maxLength": 120
+          },
+          "activo": {
+            "type": "boolean",
+            "default": true
+          },
+          "puntos_por_unidad": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 100000,
+            "default": 1
+          },
+          "expira_meses": {
+            "type": "integer",
+            "minimum": 1,
+            "nullable": true
+          },
+          "config": {
+            "type": "object"
+          }
+        }
+      },
+      "FidelizacionTarjetaResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "empresa_id": {
+            "type": "string"
+          },
+          "programa_id": {
+            "type": "string"
+          },
+          "parte_id": {
+            "type": "string"
+          },
+          "parte_nombre": {
+            "type": "string"
+          },
+          "codigo": {
+            "type": "string"
+          },
+          "puntos": {
+            "type": "integer"
+          },
+          "estado": {
+            "type": "string",
+            "enum": [
+              "activa",
+              "bloqueada",
+              "cerrada"
+            ]
+          },
+          "creado_en": {
+            "type": "string"
+          },
+          "actualizado_en": {
+            "type": "string"
+          }
+        }
+      },
+      "FidelizacionCrearTarjetaRequestDto": {
+        "type": "object",
+        "required": [
+          "parte_id"
+        ],
+        "properties": {
+          "parte_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "codigo": {
+            "type": "string",
+            "description": "Código de tarjeta; si se omite se genera FID-XXXXXXXX",
+            "pattern": "^[A-Z0-9][A-Z0-9-]{3,31}$"
+          }
+        }
+      },
+      "FidelizacionMovimientoResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "empresa_id": {
+            "type": "string"
+          },
+          "tarjeta_id": {
+            "type": "string"
+          },
+          "tipo": {
+            "type": "string",
+            "enum": [
+              "acumulacion",
+              "canje",
+              "ajuste",
+              "expiracion"
+            ]
+          },
+          "puntos": {
+            "type": "integer"
+          },
+          "saldo_tras": {
+            "type": "integer"
+          },
+          "order_id": {
+            "type": "string",
+            "nullable": true
+          },
+          "event_id": {
+            "type": "string",
+            "nullable": true
+          },
+          "descripcion": {
+            "type": "string"
+          },
+          "creado_por": {
+            "type": "string",
+            "nullable": true
+          },
+          "creado_en": {
+            "type": "string"
+          }
+        }
+      },
+      "FidelizacionAjusteRequestDto": {
+        "type": "object",
+        "required": [
+          "puntos"
+        ],
+        "properties": {
+          "puntos": {
+            "type": "integer",
+            "description": "Positivo suma, negativo resta"
+          },
+          "descripcion": {
+            "type": "string",
+            "maxLength": 500
+          }
+        }
+      },
+      "FidelizacionRecompensaResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "empresa_id": {
+            "type": "string"
+          },
+          "codigo": {
+            "type": "string"
+          },
+          "nombre": {
+            "type": "string"
+          },
+          "descripcion": {
+            "type": "string"
+          },
+          "puntos": {
+            "type": "integer"
+          },
+          "stock": {
+            "type": "integer",
+            "nullable": true
+          },
+          "activo": {
+            "type": "boolean"
+          },
+          "config": {
+            "type": "object"
+          },
+          "creado_en": {
+            "type": "string"
+          },
+          "actualizado_en": {
+            "type": "string"
+          }
+        }
+      },
+      "FidelizacionCrearRecompensaRequestDto": {
+        "type": "object",
+        "required": [
+          "codigo",
+          "nombre",
+          "puntos"
+        ],
+        "properties": {
+          "codigo": {
+            "type": "string",
+            "pattern": "^[a-z0-9][a-z0-9_-]{1,39}$"
+          },
+          "nombre": {
+            "type": "string",
+            "minLength": 2,
+            "maxLength": 120
+          },
+          "descripcion": {
+            "type": "string",
+            "maxLength": 500
+          },
+          "puntos": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "stock": {
+            "type": "integer",
+            "minimum": 0,
+            "nullable": true
+          },
+          "activo": {
+            "type": "boolean",
+            "default": true
+          },
+          "config": {
+            "type": "object"
+          }
+        }
+      },
+      "FidelizacionActualizarRecompensaRequestDto": {
+        "type": "object",
+        "properties": {
+          "nombre": {
+            "type": "string",
+            "minLength": 2,
+            "maxLength": 120
+          },
+          "descripcion": {
+            "type": "string",
+            "maxLength": 500
+          },
+          "puntos": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "stock": {
+            "type": "integer",
+            "minimum": 0,
+            "nullable": true
+          },
+          "activo": {
+            "type": "boolean"
+          },
+          "config": {
+            "type": "object"
+          }
+        }
+      },
+      "FidelizacionCanjeResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "empresa_id": {
+            "type": "string"
+          },
+          "tarjeta_id": {
+            "type": "string"
+          },
+          "recompensa_id": {
+            "type": "string"
+          },
+          "movimiento_id": {
+            "type": "string"
+          },
+          "order_id": {
+            "type": "string",
+            "nullable": true
+          },
+          "estado": {
+            "type": "string",
+            "enum": [
+              "confirmado",
+              "anulado"
+            ]
+          },
+          "puntos": {
+            "type": "integer"
+          },
+          "creado_por": {
+            "type": "string",
+            "nullable": true
+          },
+          "creado_en": {
+            "type": "string"
+          }
+        }
+      },
+      "FidelizacionCanjearRequestDto": {
+        "type": "object",
+        "properties": {
+          "tarjeta_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "codigo_tarjeta": {
+            "type": "string"
+          },
+          "recompensa_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "recompensa_codigo": {
+            "type": "string"
+          },
+          "order_id": {
+            "type": "string",
+            "format": "uuid"
+          }
+        },
+        "description": "Indica tarjeta y recompensa por id o por código"
       },
       "BloqueoResponseDto": {
         "type": "object",

@@ -1264,3 +1264,64 @@ CREATE POLICY tipos_cambio_admin ON finance.tipos_cambio
   FOR ALL TO authenticated
   USING (auth.rol() IN ('super_admin', 'admin'))
   WITH CHECK (auth.rol() IN ('super_admin', 'admin'));
+
+-- ── orders.fidelizacion_* (Fase 8) ──────────────────────────────────────────
+ALTER TABLE orders.fidelizacion_programas ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS fidelizacion_programas_admin ON orders.fidelizacion_programas;
+CREATE POLICY fidelizacion_programas_admin ON orders.fidelizacion_programas
+  FOR ALL TO authenticated
+  USING (auth.rol() IN ('super_admin', 'admin'))
+  WITH CHECK (auth.rol() IN ('super_admin', 'admin'));
+DROP POLICY IF EXISTS fidelizacion_programas_empresa ON orders.fidelizacion_programas;
+CREATE POLICY fidelizacion_programas_empresa ON orders.fidelizacion_programas
+  FOR ALL TO authenticated
+  USING (empresa_id::text = (auth.jwt() ->> 'tenant_id'))
+  WITH CHECK (empresa_id::text = (auth.jwt() ->> 'tenant_id'));
+
+ALTER TABLE orders.fidelizacion_tarjetas ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS fidelizacion_tarjetas_admin ON orders.fidelizacion_tarjetas;
+CREATE POLICY fidelizacion_tarjetas_admin ON orders.fidelizacion_tarjetas
+  FOR ALL TO authenticated
+  USING (auth.rol() IN ('super_admin', 'admin'))
+  WITH CHECK (auth.rol() IN ('super_admin', 'admin'));
+DROP POLICY IF EXISTS fidelizacion_tarjetas_empresa ON orders.fidelizacion_tarjetas;
+CREATE POLICY fidelizacion_tarjetas_empresa ON orders.fidelizacion_tarjetas
+  FOR ALL TO authenticated
+  USING (empresa_id::text = (auth.jwt() ->> 'tenant_id'))
+  WITH CHECK (empresa_id::text = (auth.jwt() ->> 'tenant_id'));
+
+ALTER TABLE orders.fidelizacion_movimientos ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS fidelizacion_movimientos_admin ON orders.fidelizacion_movimientos;
+CREATE POLICY fidelizacion_movimientos_admin ON orders.fidelizacion_movimientos
+  FOR ALL TO authenticated
+  USING (auth.rol() IN ('super_admin', 'admin'))
+  WITH CHECK (auth.rol() IN ('super_admin', 'admin'));
+DROP POLICY IF EXISTS fidelizacion_movimientos_empresa ON orders.fidelizacion_movimientos;
+CREATE POLICY fidelizacion_movimientos_empresa ON orders.fidelizacion_movimientos
+  FOR ALL TO authenticated
+  USING (empresa_id::text = (auth.jwt() ->> 'tenant_id'))
+  WITH CHECK (empresa_id::text = (auth.jwt() ->> 'tenant_id'));
+
+ALTER TABLE orders.fidelizacion_recompensas ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS fidelizacion_recompensas_admin ON orders.fidelizacion_recompensas;
+CREATE POLICY fidelizacion_recompensas_admin ON orders.fidelizacion_recompensas
+  FOR ALL TO authenticated
+  USING (auth.rol() IN ('super_admin', 'admin'))
+  WITH CHECK (auth.rol() IN ('super_admin', 'admin'));
+DROP POLICY IF EXISTS fidelizacion_recompensas_empresa ON orders.fidelizacion_recompensas;
+CREATE POLICY fidelizacion_recompensas_empresa ON orders.fidelizacion_recompensas
+  FOR ALL TO authenticated
+  USING (empresa_id::text = (auth.jwt() ->> 'tenant_id'))
+  WITH CHECK (empresa_id::text = (auth.jwt() ->> 'tenant_id'));
+
+ALTER TABLE orders.fidelizacion_canjes ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS fidelizacion_canjes_admin ON orders.fidelizacion_canjes;
+CREATE POLICY fidelizacion_canjes_admin ON orders.fidelizacion_canjes
+  FOR ALL TO authenticated
+  USING (auth.rol() IN ('super_admin', 'admin'))
+  WITH CHECK (auth.rol() IN ('super_admin', 'admin'));
+DROP POLICY IF EXISTS fidelizacion_canjes_empresa ON orders.fidelizacion_canjes;
+CREATE POLICY fidelizacion_canjes_empresa ON orders.fidelizacion_canjes
+  FOR ALL TO authenticated
+  USING (empresa_id::text = (auth.jwt() ->> 'tenant_id'))
+  WITH CHECK (empresa_id::text = (auth.jwt() ->> 'tenant_id'));
