@@ -65,6 +65,7 @@ async fn contexto(
         .clientes()?
         .capacidades(
             std::slice::from_ref(&empresa),
+            None,
             &["fidelizacion".to_string()],
         )
         .await
