@@ -29,6 +29,7 @@ const CONFIGURACION: &[ReglaCampo] = &[
 
 const CREAR_PROVEEDOR: &[ReglaCampo] = &[
     campo("empresa_id", true, &[Regla::Uuid]),
+    campo("negocio_id", false, &[Regla::Uuid]),
     campo("codigo", true, &[Regla::Texto]),
     campo("nombre", true, &[Regla::Texto]),
     campo("correo", false, &[Regla::Texto]),
@@ -76,6 +77,15 @@ fn empresa(usuario: &UsuarioContexto, solicitada: Option<&str>) -> Result<String
         .ok_or_else(|| ApiError::dominio("EMPRESA_REQUERIDA", "Indica empresa_id."))
 }
 
+fn negocio(usuario: &UsuarioContexto, query: &HashMap<String, String>) -> Option<String> {
+    usuario.negocio_id.clone().or_else(|| {
+        query
+            .get("negocio_id")
+            .cloned()
+            .filter(|valor| !valor.is_empty())
+    })
+}
+
 /// `GET /api/v2/admin/inventario`.
 pub async fn listar(
     State(state): State<AppState>,
@@ -93,16 +103,22 @@ pub async fn listar(
     } else {
         query.get("empresa_id").map(String::as_str)
     };
-    ok(Value::Array(state.inventario()?.listar(empresa).await?))
+    let negocio = usuario
+        .negocio_id
+        .as_deref()
+        .or_else(|| query.get("negocio_id").map(String::as_str));
+    ok(Value::Array(
+        state.inventario()?.listar(empresa, negocio).await?,
+    ))
 }
 
 /// `POST /api/v2/admin/inventario/proveedores`.
 pub async fn crear_proveedor(
     State(state): State<AppState>,
     headers: HeaderMap,
-    Cuerpo(cuerpo): Cuerpo,
+    Cuerpo(mut cuerpo): Cuerpo,
 ) -> Result<Response, ApiError> {
-    autorizar(
+    let usuario = autorizar(
         &state,
         &headers,
         ROLES_INVENTARIO_ADMIN,
@@ -111,6 +127,11 @@ pub async fn crear_proveedor(
     )
     .await?;
     validar(CREAR_PROVEEDOR, &cuerpo)?;
+    if let Some(negocio) = usuario.negocio_id.as_ref() {
+        if let Some(objeto) = cuerpo.as_object_mut() {
+            objeto.insert("negocio_id".into(), Value::String(negocio.clone()));
+        }
+    }
     created(state.inventario()?.crear_proveedor(&cuerpo).await?)
 }
 
@@ -181,7 +202,11 @@ pub async fn configuracion(
 ) -> Result<Response, ApiError> {
     let usuario = autorizar(&state, &headers, ROLES_INVENTARIO, &[], CAP_STOCK).await?;
     let empresa = empresa(&usuario, query.get("empresa_id").map(String::as_str))?;
-    ok(state.inventario()?.configuracion(&empresa).await?)
+    let negocio = negocio(&usuario, &query);
+    ok(state
+        .inventario()?
+        .configuracion(&empresa, negocio.as_deref())
+        .await?)
 }
 
 /// `PUT /api/v2/catalog/configuracion-inventario`.
@@ -194,9 +219,10 @@ pub async fn guardar_configuracion(
     let usuario = autorizar(&state, &headers, ROLES_INVENTARIO, &[], CAP_STOCK).await?;
     validar(CONFIGURACION, &cuerpo)?;
     let empresa = empresa(&usuario, query.get("empresa_id").map(String::as_str))?;
+    let negocio = negocio(&usuario, &query);
     ok(state
         .inventario()?
-        .guardar_configuracion(&empresa, &cuerpo)
+        .guardar_configuracion(&empresa, negocio.as_deref(), &cuerpo)
         .await?)
 }
 

@@ -49,7 +49,7 @@ async fn provisionar(url: &str) {
     sqlx::raw_sql(
         "DROP SCHEMA IF EXISTS identity, catalog, stores, orders, logistics,
              commissions, finance, scheduling, field, intelligence, storage,
-             notifications, auth CASCADE",
+             notifications, auth, inventory, pricing, item, analytics CASCADE",
     )
     .execute(&pool)
     .await

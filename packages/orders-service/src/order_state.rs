@@ -32,6 +32,8 @@ pub struct ItemOrden {
     pub vendedor_id: String,
     pub tienda_id: String,
     pub empresa_id: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub negocio_id: Option<String>,
     pub participacion_porcentaje: Option<i64>,
     pub item_type: String,
     pub item_id: String,

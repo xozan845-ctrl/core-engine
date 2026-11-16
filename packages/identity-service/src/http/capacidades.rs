@@ -76,6 +76,44 @@ pub async fn actualizar(
     ok(serde_json::to_value(capacidad).map_err(|_| ApiError::interno())?)
 }
 
+/// GET /api/v2/empresas/:empresaId/negocios/:negocioId/capacidades
+pub async fn listar_negocio(
+    State(state): State<AppState>,
+    Path((empresa_id, negocio_id)): Path<(String, String)>,
+    headers: HeaderMap,
+) -> Result<Response, ApiError> {
+    let actor = UsuarioContexto::desde_headers_o_error(&headers)?;
+    let capacidades = state
+        .servicios()?
+        .capacidades
+        .listar_negocio(&empresa_id, &negocio_id, &actor)
+        .await?;
+    ok(serde_json::to_value(capacidades).map_err(|_| ApiError::interno())?)
+}
+
+/// PATCH /api/v2/empresas/:empresaId/negocios/:negocioId/capacidades/:capacidad
+pub async fn actualizar_negocio(
+    State(state): State<AppState>,
+    Path((empresa_id, negocio_id, capacidad)): Path<(String, String, String)>,
+    headers: HeaderMap,
+    Cuerpo(dto): Cuerpo,
+) -> Result<Response, ApiError> {
+    validar(ACTUALIZAR, &dto)?;
+    let actor = UsuarioContexto::desde_headers_o_error(&headers)?;
+    let activo = dto.get("activo").and_then(Value::as_bool).ok_or_else(|| {
+        ApiError::validacion(serde_json::json!([
+            {"campo": "activo", "restricciones": ["isBoolean"]}
+        ]))
+    })?;
+    let config = dto.get("config").filter(|valor| !valor.is_null()).cloned();
+    let capacidad = state
+        .servicios()?
+        .capacidades
+        .actualizar_negocio(&empresa_id, &negocio_id, &capacidad, activo, config, &actor)
+        .await?;
+    ok(serde_json::to_value(capacidad).map_err(|_| ApiError::interno())?)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

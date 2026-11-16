@@ -40,7 +40,17 @@
     "/api/v2/empresarios/me/liquidaciones": {
       "get": {
         "operationId": "LiquidacionesController_deMiEmpresa",
-        "parameters": [],
+        "parameters": [
+          {
+            "name": "negocioId",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
         "responses": {
           "200": {
             "description": "Liquidaciones del empresario",
@@ -183,7 +193,17 @@
     "/api/v2/empresarios/me/ventas": {
       "get": {
         "operationId": "VentasEmpresaController_estado",
-        "parameters": [],
+        "parameters": [
+          {
+            "name": "negocioId",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
         "responses": {
           "200": {
             "description": "Estado de cuenta de la empresa",
@@ -204,6 +224,76 @@
         "summary": "Estado de cuenta de ventas/comisiones de la empresa",
         "tags": [
           "Comisiones · Ventas"
+        ]
+      }
+    },
+    "/api/v2/empresarios/me/reportes/negocios": {
+      "get": {
+        "operationId": "ReportesController_porNegocio",
+        "parameters": [
+          {
+            "name": "negocioId",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "desde",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "date"
+            }
+          },
+          {
+            "name": "hasta",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "date"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Ventas y comisiones por negocio",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
+                  "properties": {
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "type": "object"
+                      }
+                    },
+                    "meta": {
+                      "type": "object"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Reporte agregado de ventas y comisiones por negocio",
+        "tags": [
+          "Comisiones · Reportes"
         ]
       }
     },
@@ -347,6 +437,12 @@
             "type": "string",
             "description": "Id de la empresa",
             "format": "uuid"
+          },
+          "negocio_id": {
+            "type": "string",
+            "description": "Negocio consultado",
+            "format": "uuid",
+            "nullable": true
           },
           "ventas": {
             "description": "Ventas de la empresa",
@@ -539,6 +635,12 @@
             "type": "string",
             "description": "Id de la empresa beneficiaria",
             "format": "uuid"
+          },
+          "negocio_id": {
+            "type": "string",
+            "description": "Negocio de la liquidación",
+            "format": "uuid",
+            "nullable": true
           },
           "periodo_inicio": {
             "type": "string",
@@ -737,6 +839,12 @@
             "type": "string",
             "description": "Id de la orden",
             "format": "uuid"
+          },
+          "negocio_id": {
+            "type": "string",
+            "description": "Negocio de la venta",
+            "format": "uuid",
+            "nullable": true
           },
           "venta": {
             "type": "string",

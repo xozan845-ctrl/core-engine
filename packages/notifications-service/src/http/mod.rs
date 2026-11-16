@@ -126,6 +126,7 @@ async fn correlacion(State(state): State<AppState>, request: Request, next: Next
         usuario_id: None,
         rol: None,
         tenant_id: None,
+        negocio_id: None,
     };
 
     let mut response = ejecutar_con_contexto(contexto, async move {

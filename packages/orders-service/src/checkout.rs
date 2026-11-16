@@ -245,6 +245,7 @@ impl Checkout {
                 vendedor_id: oferta.vendedor_id.clone(),
                 tienda_id: oferta.tienda_id.clone(),
                 empresa_id: oferta.empresa_id.clone(),
+                negocio_id: oferta.negocio_id.clone(),
                 participacion_porcentaje: oferta.participacion_porcentaje,
                 item_type: oferta.item_type.clone(),
                 item_id: oferta.item_id.clone(),
@@ -495,6 +496,17 @@ impl Checkout {
             .await?;
 
         let primer_item = items.first();
+        let negocio_id = {
+            let unicos: HashSet<&str> = items
+                .iter()
+                .filter_map(|item| item.negocio_id.as_deref())
+                .collect();
+            if unicos.len() == 1 {
+                unicos.into_iter().next().map(str::to_string)
+            } else {
+                None
+            }
+        };
         Ok(OrderView {
             id: order_id,
             vendedor_id: primer_item
@@ -503,6 +515,7 @@ impl Checkout {
             comprador_id: cliente_id.to_string(),
             parte_id: comando.cliente_parte_id.clone(),
             tienda_id: primer_item.map(|i| i.tienda_id.clone()).unwrap_or_default(),
+            negocio_id,
             estado: "creada".to_string(),
             total_cents: total,
             comision_cents: if es_cotizacion {
@@ -686,7 +699,7 @@ impl Checkout {
         let empresas: Vec<String> = por_empresa.keys().cloned().collect();
         let Some(capacidades) = self
             .clientes
-            .capacidades(&empresas, &["fidelizacion".to_string()])
+            .capacidades(&empresas, None, &["fidelizacion".to_string()])
             .await
         else {
             crate::logs::warn(
@@ -822,60 +835,69 @@ impl Checkout {
         tipo_orden: &str,
         metodo_pago: &str,
     ) -> Result<(), ApiError> {
-        let mut requeridas: HashSet<&str> = HashSet::new();
-        if tipo_orden == "cotizacion" {
-            requeridas.insert("cotizaciones");
-        }
-        if metodo_pago == "credito" {
-            requeridas.insert("ventas_credito");
-        }
+        let mut grupos: HashMap<(String, Option<String>), Vec<&ItemOrden>> = HashMap::new();
         for item in items {
-            match item.fulfillment.as_deref() {
-                Some("delivery") => {
-                    requeridas.insert("fulfillment_delivery");
-                }
-                Some("pickup") => {
-                    requeridas.insert("fulfillment_pickup");
-                }
-                Some("onsite") => {
-                    requeridas.insert("fulfillment_onsite");
-                }
-                Some("digital") => {
-                    requeridas.insert("fulfillment_digital");
-                }
-                _ => {}
-            }
+            grupos
+                .entry((item.empresa_id.clone(), item.negocio_id.clone()))
+                .or_default()
+                .push(item);
         }
-        if requeridas.is_empty() {
-            return Ok(());
-        }
-        let empresas: Vec<String> = {
-            let mut vistos = HashSet::new();
-            items
-                .iter()
-                .filter(|item| vistos.insert(item.empresa_id.clone()))
-                .map(|item| item.empresa_id.clone())
-                .collect()
-        };
-        let capacidades: Vec<String> = requeridas.iter().map(|c| c.to_string()).collect();
-        let filas = self
-            .clientes
-            .capacidades(&empresas, &capacidades)
-            .await
-            .ok_or_else(|| ApiError::servicio_no_disponible("identity-service"))?;
-        let activas: HashSet<String> = filas
-            .iter()
-            .filter(|fila| fila.activo)
-            .map(|fila| format!("{}:{}", fila.empresa_id, fila.capacidad_codigo))
+        let empresas: Vec<String> = grupos
+            .keys()
+            .map(|(empresa, _)| empresa.clone())
+            .collect::<std::collections::HashSet<_>>()
+            .into_iter()
             .collect();
-        for empresa in &empresas {
+        for ((empresa, negocio), grupo) in grupos {
+            let mut requeridas: HashSet<&str> = HashSet::new();
+            if tipo_orden == "cotizacion" {
+                requeridas.insert("cotizaciones");
+            }
+            if metodo_pago == "credito" {
+                requeridas.insert("ventas_credito");
+            }
+            for item in &grupo {
+                match item.fulfillment.as_deref() {
+                    Some("delivery") => {
+                        requeridas.insert("fulfillment_delivery");
+                    }
+                    Some("pickup") => {
+                        requeridas.insert("fulfillment_pickup");
+                    }
+                    Some("onsite") => {
+                        requeridas.insert("fulfillment_onsite");
+                    }
+                    Some("digital") => {
+                        requeridas.insert("fulfillment_digital");
+                    }
+                    _ => {}
+                }
+            }
+            if requeridas.is_empty() {
+                continue;
+            }
+            let capacidades: Vec<String> = requeridas.iter().map(|c| c.to_string()).collect();
+            let filas = self
+                .clientes
+                .capacidades(
+                    std::slice::from_ref(&empresa),
+                    negocio.as_deref(),
+                    &capacidades,
+                )
+                .await
+                .ok_or_else(|| ApiError::servicio_no_disponible("identity-service"))?;
+            let activas: HashSet<&str> = filas
+                .iter()
+                .filter(|fila| fila.activo && fila.empresa_id == empresa)
+                .map(|fila| fila.capacidad_codigo.as_str())
+                .collect();
             let faltantes: Vec<String> = capacidades
                 .iter()
-                .filter(|capacidad| !activas.contains(&format!("{empresa}:{capacidad}")))
+                .filter(|capacidad| !activas.contains(capacidad.as_str()))
                 .cloned()
                 .collect();
             if !faltantes.is_empty() {
-                return Err(ApiError::capacidad_no_activa(&faltantes, empresa));
+                return Err(ApiError::capacidad_no_activa(&faltantes, &empresa));
             }
         }
         for empresa in &empresas {

@@ -24,6 +24,7 @@ fn contexto(request_id: String, servicio: &str) -> ContextoCorrelacion {
         usuario_id: Some(USUARIO_SERVICIO.to_string()),
         rol: Some("super_admin".to_string()),
         tenant_id: None,
+        negocio_id: None,
     }
 }
 
@@ -305,6 +306,7 @@ mod tests {
             estado: "en_preparacion".into(),
             creado_en: "2026-09-01T00:00:00.000Z".into(),
             empresa_id: "empresa-1".into(),
+            negocio_id: None,
             proveedor_tipo: Some("empresa".into()),
             proveedor_tenant_id: Some("empresa-1".into()),
             parte_id: None,

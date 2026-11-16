@@ -92,6 +92,13 @@ SELECT pg_catalog.set_config('search_path', '', false);
 --
 
 CREATE SCHEMA item;
+CREATE SCHEMA IF NOT EXISTS identity;
+DROP TABLE IF EXISTS identity.negocios CASCADE;
+CREATE TABLE identity.negocios (
+    id uuid DEFAULT gen_random_uuid() NOT NULL PRIMARY KEY,
+    empresa_id uuid NOT NULL,
+    es_predeterminado boolean DEFAULT false NOT NULL
+);
 
 --
 -- Name: historico_precios; Type: TABLE; Schema: item; Owner: -
@@ -186,6 +193,7 @@ CREATE TABLE item.item_series (
 CREATE TABLE item.items (
     id uuid DEFAULT gen_random_uuid() NOT NULL,
     empresa_id uuid NOT NULL,
+    negocio_id uuid,
     tipo text NOT NULL,
     codigo text NOT NULL,
     nombre text NOT NULL,

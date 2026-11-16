@@ -43,6 +43,7 @@ async fn debe_absorber_stock_en_la_primera_ubicacion_y_transferir() {
         .ubicaciones
         .crear(
             EMPRESA,
+            None,
             &json!({"codigo": "central", "nombre": "Bodega Central", "tipo": "bodega"}),
         )
         .await
@@ -62,6 +63,7 @@ async fn debe_absorber_stock_en_la_primera_ubicacion_y_transferir() {
         .ubicaciones
         .crear(
             EMPRESA,
+            None,
             &json!({"codigo": "sucursal", "nombre": "Sucursal Norte", "tipo": "sucursal"}),
         )
         .await
@@ -72,6 +74,7 @@ async fn debe_absorber_stock_en_la_primera_ubicacion_y_transferir() {
         .ubicaciones
         .transferir(
             EMPRESA,
+            None,
             &json!({
                 "item_id": ITEM,
                 "origen_id": central_id,
@@ -109,6 +112,7 @@ async fn debe_rechazar_un_traslado_sin_stock_suficiente() {
         .ubicaciones
         .crear(
             EMPRESA,
+            None,
             &json!({"codigo": "bodega-a", "nombre": "Bodega A"}),
         )
         .await
@@ -117,6 +121,7 @@ async fn debe_rechazar_un_traslado_sin_stock_suficiente() {
         .ubicaciones
         .crear(
             EMPRESA,
+            None,
             &json!({"codigo": "bodega-b", "nombre": "Bodega B"}),
         )
         .await
@@ -125,6 +130,7 @@ async fn debe_rechazar_un_traslado_sin_stock_suficiente() {
         .ubicaciones
         .transferir(
             EMPRESA,
+            None,
             &json!({
                 "item_id": ITEM,
                 "origen_id": a["id"],
@@ -143,6 +149,7 @@ async fn debe_registrar_un_movimiento_de_entrada_y_listarlo() {
     ctx.ubicaciones
         .crear(
             EMPRESA,
+            None,
             &json!({"codigo": "principal", "nombre": "Principal", "tipo": "bodega"}),
         )
         .await
@@ -228,6 +235,7 @@ async fn debe_crear_stock_inicial_en_la_ubicacion_predeterminada() {
     ctx.ubicaciones
         .crear(
             EMPRESA,
+            None,
             &json!({"codigo": "principal", "nombre": "Principal", "tipo": "bodega"}),
         )
         .await
@@ -252,6 +260,7 @@ async fn debe_fijar_stock_por_ubicacion_y_publicar_evento() {
         .ubicaciones
         .crear(
             EMPRESA,
+            None,
             &json!({"codigo": "principal", "nombre": "Principal", "tipo": "bodega"}),
         )
         .await

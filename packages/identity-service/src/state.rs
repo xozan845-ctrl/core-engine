@@ -2,12 +2,14 @@
 
 use crate::config::Config;
 use crate::dominio::api_keys::ApiKeys;
+use crate::dominio::auditoria::Auditoria;
 use crate::dominio::auth::Auth;
 use crate::dominio::capacidades::Capacidades;
 use crate::dominio::configuracion_operativa::ConfiguracionOperativaService;
 use crate::dominio::configuracion_sitio::ConfiguracionSitio;
 use crate::dominio::empresas::Empresas;
 use crate::dominio::extensiones::Extensiones;
+use crate::dominio::negocios::Negocios;
 use crate::dominio::packs::Packs;
 use crate::dominio::partes::Partes;
 use crate::dominio::password_reset::PasswordReset;
@@ -21,6 +23,7 @@ use std::time::Instant;
 #[derive(Clone)]
 pub struct Servicios {
     pub auth: Arc<Auth>,
+    pub auditoria: Arc<Auditoria>,
     pub usuarios: Arc<Usuarios>,
     pub api_keys: Arc<ApiKeys>,
     pub capacidades: Arc<Capacidades>,
@@ -28,6 +31,7 @@ pub struct Servicios {
     pub configuracion: Arc<ConfiguracionSitio>,
     pub empresas: Arc<Empresas>,
     pub extensiones: Arc<Extensiones>,
+    pub negocios: Arc<Negocios>,
     pub personal: Arc<Personal>,
     pub partes: Arc<Partes>,
     pub registros: Arc<Registros>,

@@ -153,6 +153,108 @@
         ]
       }
     },
+    "/api/v2/auth/negocio-activo": {
+      "post": {
+        "operationId": "AuthController_cambiarNegocio",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "negocio_id",
+                  "refresh_token"
+                ],
+                "properties": {
+                  "negocio_id": {
+                    "type": "string",
+                    "format": "uuid"
+                  },
+                  "refresh_token": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Sesión con el nuevo negocio activo",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/SesionResponseDto"
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/MetaRespuesta"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Cambiar el negocio activo de la sesión",
+        "tags": [
+          "Auth"
+        ]
+      }
+    },
+    "/api/v2/auth/negocios": {
+      "get": {
+        "operationId": "AuthController_negociosDisponibles",
+        "responses": {
+          "200": {
+            "description": "Negocios disponibles para el actor",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
+                  "properties": {
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "type": "object"
+                      }
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/MetaRespuesta"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Listar negocios disponibles para cambiar la sesión",
+        "tags": [
+          "Auth"
+        ]
+      }
+    },
     "/api/v2/auth/logout": {
       "post": {
         "operationId": "AuthController_logout",
@@ -1354,6 +1456,144 @@
           }
         ],
         "summary": "Activar o desactivar una capacidad de la empresa",
+        "tags": [
+          "Capacidades"
+        ]
+      }
+    },
+    "/api/v2/empresas/{empresaId}/negocios/{negocioId}/capacidades": {
+      "get": {
+        "operationId": "CapacidadesController_listarNegocio",
+        "parameters": [
+          {
+            "name": "empresaId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "name": "negocioId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Capacidades del negocio",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
+                  "properties": {
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/EmpresaCapacidadResponseDto"
+                      }
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/MetaRespuesta"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Listar las capacidades de un negocio",
+        "tags": [
+          "Capacidades"
+        ]
+      }
+    },
+    "/api/v2/empresas/{empresaId}/negocios/{negocioId}/capacidades/{capacidad}": {
+      "patch": {
+        "operationId": "CapacidadesController_actualizarNegocio",
+        "parameters": [
+          {
+            "name": "empresaId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "name": "negocioId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "name": "capacidad",
+            "required": true,
+            "in": "path",
+            "description": "Codigo estable de capacidad",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ActualizarCapacidadRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Capacidad del negocio actualizada",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/EmpresaCapacidadResponseDto"
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/MetaRespuesta"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Activar o desactivar una capacidad de un negocio",
         "tags": [
           "Capacidades"
         ]
@@ -3074,6 +3314,483 @@
         ]
       }
     },
+    "/api/v2/empresas/{empresaId}/auditoria": {
+      "get": {
+        "operationId": "AuditoriaController_listar",
+        "parameters": [
+          {
+            "name": "empresaId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "negocio_id",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "accion",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "desde",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "hasta",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Eventos de auditoría",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
+                  "properties": {
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "type": "object"
+                      }
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/MetaRespuesta"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Listar auditoría de la empresa o negocio",
+        "tags": [
+          "Auditoría"
+        ]
+      }
+    },
+    "/api/v2/negocios/plantillas": {
+      "get": {
+        "operationId": "NegociosController_plantillas",
+        "parameters": [
+          {
+            "name": "vertical_id",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Plantillas de roles de la vertical",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
+                  "properties": {
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "type": "object"
+                      }
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/MetaRespuesta"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Listar plantillas de roles por vertical",
+        "tags": [
+          "Negocios"
+        ]
+      }
+    },
+    "/api/v2/empresas/{empresaId}/negocios/{negocioId}/plantillas": {
+      "post": {
+        "operationId": "NegociosController_aplicarPlantilla",
+        "parameters": [
+          {
+            "name": "empresaId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "negocioId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Plantilla aplicada",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
+                  "properties": {
+                    "data": {
+                      "type": "object"
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/MetaRespuesta"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Aplicar plantillas de roles al negocio",
+        "tags": [
+          "Negocios"
+        ]
+      }
+    },
+    "/api/v2/empresas/{empresaId}/negocios/{negocioId}/estado": {
+      "patch": {
+        "operationId": "NegociosController_estado",
+        "parameters": [
+          {
+            "name": "empresaId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "negocioId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "estado"
+                ],
+                "properties": {
+                  "estado": {
+                    "type": "string",
+                    "enum": [
+                      "activo",
+                      "suspendido",
+                      "archivado"
+                    ]
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Negocio actualizado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
+                  "properties": {
+                    "data": {
+                      "type": "object"
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/MetaRespuesta"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Suspender, archivar o reactivar un negocio",
+        "tags": [
+          "Negocios"
+        ]
+      }
+    },
+    "/api/v2/empresas/{empresaId}/personal/{usuarioId}/transferir": {
+      "post": {
+        "operationId": "PersonalController_transferir",
+        "parameters": [
+          {
+            "name": "empresaId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "usuarioId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "origen_id",
+                  "destino_id",
+                  "rol_empresa_id"
+                ],
+                "properties": {
+                  "origen_id": {
+                    "type": "string",
+                    "format": "uuid"
+                  },
+                  "destino_id": {
+                    "type": "string",
+                    "format": "uuid"
+                  },
+                  "rol_empresa_id": {
+                    "type": "string",
+                    "format": "uuid"
+                  },
+                  "tienda_id": {
+                    "type": "string",
+                    "format": "uuid"
+                  },
+                  "puesto_id": {
+                    "type": "string",
+                    "format": "uuid"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Asignación transferida",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
+                  "properties": {
+                    "data": {
+                      "type": "object"
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/MetaRespuesta"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Transferir personal entre negocios",
+        "tags": [
+          "Personal"
+        ]
+      }
+    },
+    "/api/v2/empresas/{empresaId}/negocios": {
+      "get": {
+        "operationId": "NegociosController_listar",
+        "parameters": [
+          {
+            "name": "empresaId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Negocios de la empresa",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
+                  "properties": {
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "type": "object"
+                      }
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/MetaRespuesta"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Listar los negocios de la empresa",
+        "tags": [
+          "Negocios"
+        ]
+      },
+      "post": {
+        "operationId": "NegociosController_crear",
+        "parameters": [
+          {
+            "name": "empresaId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CrearNegocioRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Negocio creado; solo un empresario activo puede añadir más",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
+                  "properties": {
+                    "data": {
+                      "type": "object"
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/MetaRespuesta"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Añadir un negocio a la empresa",
+        "tags": [
+          "Negocios"
+        ]
+      }
+    },
     "/api/v2/empresas/{empresaId}/roles": {
       "post": {
         "operationId": "PersonalController_crearRol",
@@ -4763,6 +5480,11 @@
             "type": "string",
             "format": "uuid"
           },
+          "negocio_id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Negocio al que se acota la asignación; si se omite usa el negocio principal"
+          },
           "metadata": {
             "type": "object",
             "additionalProperties": true
@@ -5292,6 +6014,11 @@
             "type": "string",
             "format": "uuid"
           },
+          "negocio_id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Negocio al que se incorpora la persona; si se omite usa el negocio principal"
+          },
           "metadata": {
             "type": "object",
             "additionalProperties": true
@@ -5363,6 +6090,40 @@
         "required": [
           "codigo",
           "nombre"
+        ]
+      },
+      "CrearNegocioRequestDto": {
+        "type": "object",
+        "properties": {
+          "codigo": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9_]{1,39}$",
+            "example": "farmacia_centro"
+          },
+          "nombre": {
+            "type": "string",
+            "minLength": 2,
+            "maxLength": 120,
+            "example": "Farmacia Centro"
+          },
+          "vertical_id": {
+            "type": "string",
+            "example": "farmacia"
+          },
+          "pack_codigo": {
+            "type": "string",
+            "example": "pack_farmacia"
+          },
+          "pack_version": {
+            "type": "integer",
+            "minimum": 1
+          }
+        },
+        "required": [
+          "codigo",
+          "nombre",
+          "vertical_id",
+          "pack_codigo"
         ]
       },
       "CrearPackRequestDto": {
@@ -5479,6 +6240,11 @@
             "type": "string",
             "format": "uuid"
           },
+          "negocio_id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Negocio al que pertenece el puesto; si se omite usa el negocio principal"
+          },
           "metadata": {
             "type": "object",
             "additionalProperties": true
@@ -5569,6 +6335,11 @@
           },
           "permisos": {
             "$ref": "#/components/schemas/PermisosRequestDto"
+          },
+          "negocio_id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Negocio al que se acota el rol; si se omite el rol es transversal a la empresa"
           }
         },
         "required": [
@@ -7088,6 +7859,11 @@
             "description": "Ficha de personal vinculada",
             "format": "uuid"
           },
+          "negocio_id": {
+            "type": "string",
+            "description": "Negocio activo del usuario",
+            "format": "uuid"
+          },
           "avatar_objeto_id": {
             "type": "object",
             "description": "Objeto de storage del avatar",
@@ -7275,6 +8051,18 @@
             "type": "string",
             "description": "Ficha de personal vinculada",
             "format": "uuid"
+          },
+          "negocio_id": {
+            "type": "string",
+            "description": "Negocio activo del usuario",
+            "format": "uuid"
+          },
+          "permisos": {
+            "type": "array",
+            "description": "Acciones autorizadas del rol activo",
+            "items": {
+              "type": "string"
+            }
           }
         },
         "required": [
@@ -7322,6 +8110,11 @@
           "personal_id": {
             "type": "string",
             "description": "Ficha de personal vinculada",
+            "format": "uuid"
+          },
+          "negocio_id": {
+            "type": "string",
+            "description": "Negocio activo del usuario",
             "format": "uuid"
           },
           "avatar_objeto_id": {

@@ -92,17 +92,32 @@ pub fn politicas() -> &'static [Politica] {
             p(r"^/api/v2/empresas/[^/]+/perfil$", &["PATCH"], Some(vec![SUPER_ADMIN, ADMIN, EMPRESARIO])),
             p(r"^/api/v2/empresas/[^/]+/tipo$", &["PATCH"], Some(vec![SUPER_ADMIN, ADMIN, EMPRESARIO])),
             p(r"^/api/v2/empresas/[^/]+/vendedores$", &["POST", "GET"], Some(vec![EMPRESARIO])),
+            // La capacidad fina por negocio se valida en identity-service.
+            p(r"^/api/v2/empresas/[^/]+/negocios/[^/]+/capacidades(/|$)", &["GET", "PATCH"], Some(todos.clone())),
+            p(r"^/api/v2/empresas/[^/]+/negocios(/|$)", &["GET", "POST"], Some(vec![SUPER_ADMIN, ADMIN, EMPRESARIO])),
+            p(r"^/api/v2/empresas/[^/]+/negocios/[^/]+/plantillas$", &["POST"], Some(vec![SUPER_ADMIN, ADMIN, EMPRESARIO])),
+            p(r"^/api/v2/empresas/[^/]+/negocios/[^/]+/estado$", &["PATCH"], Some(vec![SUPER_ADMIN, ADMIN, EMPRESARIO])),
+            p(r"^/api/v2/negocios/plantillas$", &["GET"], Some(vec![SUPER_ADMIN, ADMIN, EMPRESARIO])),
+            p(r"^/api/v2/empresas/[^/]+/personal/[^/]+/transferir$", &["POST"], Some(vec![SUPER_ADMIN, ADMIN, EMPRESARIO])),
             p(r"^/api/v2/empresas/[^/]+/invitaciones/vendedores(/|$)", &["POST", "DELETE"], Some(vec![EMPRESARIO])),
-            p(r"^/api/v2/empresas/[^/]+/(roles|puestos|asignaciones-personal|invitaciones/personal)(/|$)", &["GET", "POST", "PATCH"], Some(vec![SUPER_ADMIN, ADMIN, EMPRESARIO])),
+            // La autorización fina de roles, puestos e invitaciones vive en
+            // identity-service: un rol de negocio puede administrar su negocio
+            // aunque su rol global no sea `empresario`.
+            p(r"^/api/v2/empresas/[^/]+/(roles|puestos|asignaciones-personal|invitaciones/personal)(/|$)", &["GET", "POST", "PATCH"], Some(todos.clone())),
             p(r"^/api/v2/incorporaciones/[^/]+$", &["GET"], None),
             p(r"^/api/v2/incorporaciones/[^/]+/aceptar$", &["POST"], None),
             p(r"^/api/v2/empresas/[^/]+/slug$", &["PATCH"], Some(vec![EMPRESARIO])),
             p(r"^/api/v2/empresas/", &["*"], Some(vec![SUPER_ADMIN, ADMIN, EMPRESARIO, VENDEDOR])),
             p(r"^/api/v2/auth/me$", &["GET"], None),
             p(r"^/api/v2/auth/logout$", &["POST"], Some(todos.clone())),
+            p(r"^/api/v2/auth/negocio-activo$", &["POST"], Some(todos.clone())),
+            p(r"^/api/v2/auth/negocios$", &["GET"], Some(todos.clone())),
             p(r"^/api/v2/auth/(cambiar-contrasena|vincular-personal)$", &["POST"], Some(todos.clone())),
             p(r"^/api/v2/vendedores/(me/ventas|me/liquidaciones)$", &["GET"], Some(vec![VENDEDOR])),
             p(r"^/api/v2/empresarios/me/liquidaciones$", &["GET"], Some(vec![EMPRESARIO])),
+            p(r"^/api/v2/empresarios/me/reportes/negocios$", &["GET"], Some(vec![EMPRESARIO])),
+            p(r"^/api/v2/analytics/plataforma$", &["GET"], Some(vec![SUPER_ADMIN, ADMIN])),
+            p(r"^/api/v2/analytics(/|$)", &["GET", "POST", "PATCH"], Some(vec![SUPER_ADMIN, ADMIN, EMPRESARIO])),
             p(r"^/api/v2/empresarios/me/ventas$", &["GET"], Some(vec![EMPRESARIO])),
             p(r"^/api/v2/empresarios/me/tiendas$", &["GET"], Some(vec![EMPRESARIO])),
             p(r"^/api/v2/empresarios/me/envios(/|$)", &["GET", "POST"], Some(vec![EMPRESARIO])),
@@ -118,6 +133,7 @@ pub fn politicas() -> &'static [Politica] {
             p(r"^/api/v2/orders/vendedor/mis-ventas$", &["GET"], Some(vec![VENDEDOR])),
             p(r"^/api/v2/orders/vendedor/comisiones$", &["GET"], Some(vec![SUPER_ADMIN, VENDEDOR, ADMIN])),
             p(r"^/api/v2/orders/tienda/[^/]+$", &["GET"], Some(vec![SUPER_ADMIN, EMPRESARIO, VENDEDOR, ADMIN])),
+            p(r"^/api/v2/orders/empresa/resumen$", &["GET"], Some(vec![SUPER_ADMIN, EMPRESARIO, ADMIN])),
             p(r"^/api/v2/orders/empresa$", &["GET"], Some(vec![SUPER_ADMIN, EMPRESARIO, ADMIN])),
             p(r"^/api/v2/orders/[^/]+/timeline$", &["GET"], Some(vec![SUPER_ADMIN, EMPRESARIO, COMPRADOR, VENDEDOR, ADMIN])),
             p(r"^/api/v2/orders/[^/]+$", &["GET"], Some(vec![SUPER_ADMIN, EMPRESARIO, COMPRADOR, VENDEDOR, ADMIN])),
@@ -185,5 +201,18 @@ mod tests {
         assert!(media.roles.is_none());
         let series = encontrar_politica("/api/v2/catalog/series/abc", "PATCH").expect("series");
         assert_eq!(series.roles, Some(vec![SUPER_ADMIN, ADMIN, EMPRESARIO]));
+        let negocios =
+            encontrar_politica("/api/v2/empresas/e-1/negocios", "POST").expect("negocios");
+        assert_eq!(negocios.roles, Some(vec![SUPER_ADMIN, ADMIN, EMPRESARIO]));
+        let capacidades =
+            encontrar_politica("/api/v2/empresas/e-1/negocios/n-1/capacidades", "PATCH")
+                .expect("capacidades negocio");
+        assert_eq!(capacidades.roles.as_ref().map(Vec::len), Some(ROLES.len()));
+        let negocio_activo =
+            encontrar_politica("/api/v2/auth/negocio-activo", "POST").expect("negocio-activo");
+        assert_eq!(
+            negocio_activo.roles.as_ref().map(Vec::len),
+            Some(ROLES.len())
+        );
     }
 }

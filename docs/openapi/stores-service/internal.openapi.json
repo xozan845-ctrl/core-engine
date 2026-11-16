@@ -146,6 +146,16 @@
               "format": "uuid",
               "type": "string"
             }
+          },
+          {
+            "name": "negocio_id",
+            "required": false,
+            "in": "query",
+            "description": "Filtra por negocio; si falta devuelve todas",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
           }
         ],
         "responses": {

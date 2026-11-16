@@ -49,6 +49,7 @@ pub fn rutas() -> Router<AppState> {
         .route("/api/v2/orders/admin/todas", get(todas))
         .route("/api/v2/orders/vendedor/mis-ventas", get(mis_ventas))
         .route("/api/v2/orders/tienda/{tienda_id}", get(por_tienda))
+        .route("/api/v2/orders/empresa/resumen", get(resumen_por_negocio))
         .route("/api/v2/orders/empresa", get(por_empresa))
         .route("/api/v2/orders/{id}", get(detalle))
         .route("/api/v2/orders/{id}/timeline", get(timeline))
@@ -290,9 +291,63 @@ async fn por_tienda(
             query(&params, "estado"),
             vendedor_id,
             empresa_id,
+            usuario.negocio_id.as_deref(),
         )
         .await?;
     ok(proyectar(&state, ordenes, &usuario, empresa_id)?)
+}
+
+async fn resumen_por_negocio(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    Query(params): Query<HashMap<String, String>>,
+) -> Result<Response, ApiError> {
+    let usuario = super::autorizar(
+        &headers,
+        &["super_admin", "empresario", "admin"],
+        &["ordenes.leer"],
+    )?;
+    let empresa = if usuario.es_empresario_o_rol_configurable() {
+        usuario.tenant()?.to_string()
+    } else {
+        query(&params, "empresaId")
+            .filter(|valor| !valor.is_empty())
+            .map(str::to_string)
+            .ok_or_else(|| {
+                ApiError::dominio("EMPRESA_REQUERIDA", "Indique la empresa a consultar.")
+            })?
+    };
+    let negocio = usuario
+        .negocio_id
+        .clone()
+        .or_else(|| query(&params, "negocioId").map(ToString::to_string));
+    let desde = fecha_resumen(query(&params, "desde"))?;
+    let hasta = fecha_resumen(query(&params, "hasta"))?;
+    let filas = state
+        .vistas()?
+        .resumen_por_negocio(
+            state.db()?,
+            &empresa,
+            negocio.as_deref(),
+            desde.as_deref(),
+            hasta.as_deref(),
+        )
+        .await?;
+    ok(Value::Array(filas))
+}
+
+fn fecha_resumen(valor: Option<&str>) -> Result<Option<String>, ApiError> {
+    let Some(valor) = valor.filter(|valor| !valor.is_empty()) else {
+        return Ok(None);
+    };
+    let valido = chrono::NaiveDate::parse_from_str(valor, "%Y-%m-%d").is_ok()
+        || chrono::DateTime::parse_from_rfc3339(valor).is_ok();
+    if !valido {
+        return Err(ApiError::validacion(json!([
+            {"campo": "fecha", "restricciones": ["isDate"]}
+        ])));
+    }
+    Ok(Some(valor.to_string()))
 }
 
 async fn por_empresa(
@@ -322,6 +377,10 @@ async fn por_empresa(
             "Indique la empresa a consultar.",
         ));
     };
+    let negocio_id = usuario
+        .negocio_id
+        .clone()
+        .or_else(|| query(&params, "negocioId").map(ToString::to_string));
     let ordenes = state
         .vistas()?
         .listar_de_empresa(
@@ -329,6 +388,7 @@ async fn por_empresa(
             &objetivo,
             query(&params, "estado"),
             query(&params, "tiendaId"),
+            negocio_id.as_deref(),
             query_numero(&params, "limite"),
         )
         .await?;
@@ -412,7 +472,7 @@ fn proyectar(
             let pedidos = state.pedidos()?;
             return ordenes
                 .into_iter()
-                .map(|orden| pedidos.para_empresa(orden, empresa))
+                .map(|orden| pedidos.para_empresa(orden, empresa, usuario.negocio_id.as_deref()))
                 .collect();
         }
     }

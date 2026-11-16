@@ -21,6 +21,7 @@ fn contexto(request_id: String, servicio: &str) -> ContextoCorrelacion {
         usuario_id: Some(USUARIO_SERVICIO.to_string()),
         rol: Some("super_admin".to_string()),
         tenant_id: None,
+        negocio_id: None,
     }
 }
 

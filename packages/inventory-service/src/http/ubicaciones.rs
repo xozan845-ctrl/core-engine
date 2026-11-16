@@ -75,6 +75,15 @@ fn empresa(usuario: &UsuarioContexto, solicitada: Option<&str>) -> Result<String
         .ok_or_else(|| ApiError::dominio("EMPRESA_REQUERIDA", "Indica empresa_id."))
 }
 
+fn negocio(usuario: &UsuarioContexto, query: &HashMap<String, String>) -> Option<String> {
+    usuario.negocio_id.clone().or_else(|| {
+        query
+            .get("negocio_id")
+            .cloned()
+            .filter(|valor| !valor.is_empty())
+    })
+}
+
 /// `GET /api/v2/admin/ubicaciones`.
 pub async fn listar(
     State(state): State<AppState>,
@@ -83,7 +92,13 @@ pub async fn listar(
 ) -> Result<Response, ApiError> {
     let usuario = autorizar(&state, &headers, ROLES_INVENTARIO, &[], CAPACIDAD).await?;
     let empresa = empresa(&usuario, query.get("empresa_id").map(String::as_str))?;
-    ok(Value::Array(state.ubicaciones()?.listar(&empresa).await?))
+    let negocio = negocio(&usuario, &query);
+    ok(Value::Array(
+        state
+            .ubicaciones()?
+            .listar(&empresa, negocio.as_deref())
+            .await?,
+    ))
 }
 
 /// `POST /api/v2/admin/ubicaciones`.
@@ -96,7 +111,13 @@ pub async fn crear(
     let usuario = autorizar(&state, &headers, ROLES_INVENTARIO, &[], CAPACIDAD).await?;
     validar(CREAR, &cuerpo)?;
     let empresa = empresa(&usuario, query.get("empresa_id").map(String::as_str))?;
-    created(state.ubicaciones()?.crear(&empresa, &cuerpo).await?)
+    let negocio = negocio(&usuario, &query);
+    created(
+        state
+            .ubicaciones()?
+            .crear(&empresa, negocio.as_deref(), &cuerpo)
+            .await?,
+    )
 }
 
 /// `PATCH /api/v2/admin/ubicaciones/:id`.
@@ -110,9 +131,10 @@ pub async fn actualizar(
     let usuario = autorizar(&state, &headers, ROLES_INVENTARIO, &[], CAPACIDAD).await?;
     validar(ACTUALIZAR, &cuerpo)?;
     let empresa = empresa(&usuario, query.get("empresa_id").map(String::as_str))?;
+    let negocio = negocio(&usuario, &query);
     ok(state
         .ubicaciones()?
-        .actualizar(&empresa, &id, &cuerpo)
+        .actualizar(&empresa, negocio.as_deref(), &id, &cuerpo)
         .await?)
 }
 
@@ -126,7 +148,13 @@ pub async fn transferir(
     let usuario = autorizar(&state, &headers, ROLES_INVENTARIO, &[], CAPACIDAD).await?;
     validar(TRASLADAR, &cuerpo)?;
     let empresa = empresa(&usuario, query.get("empresa_id").map(String::as_str))?;
-    created(state.ubicaciones()?.transferir(&empresa, &cuerpo).await?)
+    let negocio = negocio(&usuario, &query);
+    created(
+        state
+            .ubicaciones()?
+            .transferir(&empresa, negocio.as_deref(), &cuerpo)
+            .await?,
+    )
 }
 
 /// `GET /api/v2/admin/ubicaciones/items/:itemId/stock`.

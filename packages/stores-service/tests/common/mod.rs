@@ -40,6 +40,7 @@ pub async fn provisionar(url: &str) {
           descripcion text NOT NULL DEFAULT '',
           creado_en timestamptz NOT NULL DEFAULT NOW(),
           empresa_id uuid,
+          negocio_id uuid,
           propietario_usuario_id uuid,
           participacion_porcentaje integer,
           slug text NOT NULL,
@@ -146,6 +147,11 @@ pub async fn provisionar(url: &str) {
           usuario_id uuid NOT NULL,
           tienda_id uuid NOT NULL,
           estado text NOT NULL DEFAULT 'activa'
+        );
+        CREATE TABLE identity.negocios (
+          id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+          empresa_id uuid NOT NULL,
+          es_predeterminado boolean NOT NULL DEFAULT false
         );
         "#,
     )

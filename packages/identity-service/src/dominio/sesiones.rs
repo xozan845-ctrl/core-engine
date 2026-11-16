@@ -18,6 +18,7 @@ pub struct SesionActiva {
     pub id: String,
     pub usuario_id: String,
     pub jti: String,
+    pub negocio_id: Option<String>,
 }
 
 impl Sesiones {
@@ -30,14 +31,16 @@ impl Sesiones {
         usuario_id: &str,
         jti: &str,
         expira_en: DateTime<Utc>,
+        negocio_id: Option<&str>,
     ) -> Result<(), ApiError> {
         let mut tx = self.db.transaccion().await.map_err(interno)?;
         sqlx::query(
-            "INSERT INTO identity.sesiones (id, usuario_id, jti, expira_en)
-             VALUES (gen_random_uuid(), $1::uuid, $2::uuid, $3)",
+            "INSERT INTO identity.sesiones (id, usuario_id, jti, negocio_id, expira_en)
+             VALUES (gen_random_uuid(), $1::uuid, $2::uuid, $3::uuid, $4)",
         )
         .bind(usuario_id)
         .bind(jti)
+        .bind(negocio_id)
         .bind(expira_en)
         .execute(&mut *tx)
         .await
@@ -49,7 +52,7 @@ impl Sesiones {
     pub async fn activa_por_jti(&self, jti: &str) -> Result<Option<SesionActiva>, ApiError> {
         let mut tx = self.db.transaccion().await.map_err(interno)?;
         let fila = sqlx::query(
-            "SELECT id, usuario_id, jti
+            "SELECT id, usuario_id, jti, negocio_id
                FROM identity.sesiones
               WHERE jti = $1::uuid AND revocada_en IS NULL AND expira_en > NOW()",
         )
@@ -62,7 +65,32 @@ impl Sesiones {
             id: fila.get::<uuid::Uuid, _>("id").to_string(),
             usuario_id: fila.get::<uuid::Uuid, _>("usuario_id").to_string(),
             jti: fila.get::<uuid::Uuid, _>("jti").to_string(),
+            negocio_id: fila
+                .get::<Option<uuid::Uuid>, _>("negocio_id")
+                .map(|valor| valor.to_string()),
         }))
+    }
+
+    pub async fn actualizar_negocio(
+        &self,
+        jti: &str,
+        usuario_id: &str,
+        negocio_id: &str,
+    ) -> Result<bool, ApiError> {
+        let mut tx = self.db.transaccion().await.map_err(interno)?;
+        let resultado = sqlx::query(
+            "UPDATE identity.sesiones SET negocio_id = $1::uuid
+              WHERE jti = $2::uuid AND usuario_id = $3::uuid
+                AND revocada_en IS NULL AND expira_en > NOW()",
+        )
+        .bind(negocio_id)
+        .bind(jti)
+        .bind(usuario_id)
+        .execute(&mut *tx)
+        .await
+        .map_err(interno)?;
+        tx.commit().await.map_err(interno)?;
+        Ok(resultado.rows_affected() > 0)
     }
 
     pub async fn revocar(&self, jti: &str, usuario_id: &str) -> Result<u64, ApiError> {
@@ -113,6 +141,7 @@ mod tests {
             id: "id-1".into(),
             usuario_id: "u-1".into(),
             jti: "jti-1".into(),
+            negocio_id: Some("n-1".into()),
         };
         assert_eq!(sesion.usuario_id, "u-1");
         assert_eq!(sesion.jti, "jti-1");
