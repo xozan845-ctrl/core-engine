@@ -1,4 +1,4 @@
--- ADR-0019 iteración 8: RLS por negocio (defensa en profundidad).
+-- ADR-0021 iteración 8: RLS por negocio (defensa en profundidad).
 --
 -- Las policies permisivas existentes siguen aislando por empresa. Se añade una
 -- policy RESTRICTIVE por tabla con `negocio_id` para que un JWT con negocio

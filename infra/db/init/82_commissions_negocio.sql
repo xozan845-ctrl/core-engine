@@ -1,4 +1,4 @@
--- ADR-0019: comisiones por negocio.
+-- ADR-0021: comisiones por negocio.
 --
 -- Las comisiones ya se guardaban por empresa; `negocio_id` permite reportes y
 -- liquidaciones por unidad operativa sin cambiar el cálculo de RN-04.

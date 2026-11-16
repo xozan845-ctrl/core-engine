@@ -28,6 +28,8 @@ este índice evita mezclar las decisiones nuevas con las ADR históricas.
 | [0017](./0017-identity-service-en-rust.md) | Aceptado (implementado) | Reescribir `identity-service` en Rust con paridad de contrato, JWT, sesiones, usuarios, empresas, personal, partes y métricas |
 | [0018](./0018-catalog-split-item-pricing-inventory.md) | Aceptado (implementado; `catalog` retirado) | Separar `catalog-service` en `item-service`, `pricing-service` e `inventory-service` por bounded context |
 | [0019](./0019-fidelizacion-por-capacidades.md) | Aceptado (implementado) | Fidelización como capacidad nueva, add-on seleccionable en el alta de empresa |
+| [0021](./0021-negocios-por-empresa.md) | Aceptado (fases 1-4, reportes, liquidaciones, selector, permisos, RLS, inventario, facturación, auditoría, administración, analítica, cohortes y reportes programados delegados a `analytics-service`) | `negocio` como unidad operativa completa con ciclo de vida, plantillas, transferencia de personal y analítica centralizada en `analytics-service` |
+| [0022](./0022-analytics-service.md) | Aceptado | `analytics-service` como único dueño de la analítica de negocio, empresa y plataforma |
 
 ## Convención
 

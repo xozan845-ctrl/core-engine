@@ -1,4 +1,4 @@
-//! Auditoría de cambios sensibles por empresa y negocio (ADR-0019).
+//! Auditoría de cambios sensibles por empresa y negocio (ADR-0021).
 
 use crate::auth::UsuarioContexto;
 use crate::db::Db;

@@ -1,4 +1,4 @@
--- ADR-0019 iteración 10: series fiscales por negocio.
+-- ADR-0021 iteración 10: series fiscales por negocio.
 --
 -- La serie puede ser transversal (negocio_id NULL) o pertenecer a un negocio.
 -- La emisión prefiere la serie del negocio de la orden y cae a la transversal.

@@ -1,4 +1,4 @@
--- ADR-0019 iteración 11: auditoría por empresa y negocio.
+-- ADR-0021 iteración 11: auditoría por empresa y negocio.
 BEGIN;
 
 CREATE TABLE IF NOT EXISTS identity.auditoria (

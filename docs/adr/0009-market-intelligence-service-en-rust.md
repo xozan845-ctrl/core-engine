@@ -97,6 +97,24 @@ patrón de ADR-0004/0006/0008.
 - PostGIS es obligatorio para la agregación y el mapa de calor.
 - Durante la conmutación conviven la imagen TS y la Rust; solo una se despliega.
 
+
+## Relación con la analítica de negocios (ADR-0021)
+
+`market-intelligence-service` y la analítica de negocios no son el mismo
+bounded context:
+
+- Este servicio responde preguntas de mercado y campo: mapas de calor,
+  cobertura, demanda, tendencias, forecast y score de vendedores sobre hechos
+  geolocalizados (PostGIS).
+- La analítica de ADR-0021 responde preguntas de gestión por negocio: ventas,
+  comisiones, margen, ticket, evolución mensual y cohortes de clientes.
+- La primera consume eventos geoespaciales y de stock; la segunda consume
+  `order.completado` y `comision.acreditada`, y mantiene
+  `analytics.hechos_venta` / `analytics.comisiones`.
+
+Se mantienen separados para no mezclar predicción/geointeligencia con
+contabilidad operativa del tenant.
+
 ## Criterios de aceptación
 
 - `cargo fmt --check`, `cargo clippy -- -D warnings`, `cargo test` y la

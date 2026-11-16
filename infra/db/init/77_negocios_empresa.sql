@@ -1,4 +1,4 @@
--- ADR-0019: negocio como unidad operativa dentro de la empresa.
+-- ADR-0021: negocio como unidad operativa dentro de la empresa.
 --
 -- La empresa sigue siendo la identidad fiscal y el limite de RLS. El negocio
 -- aporta la vertical, el pack y el alcance de roles, personal e invitaciones.

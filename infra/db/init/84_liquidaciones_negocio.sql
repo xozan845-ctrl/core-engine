@@ -1,4 +1,4 @@
--- ADR-0019 iteración 5: liquidaciones y compensaciones por negocio.
+-- ADR-0021 iteración 5: liquidaciones y compensaciones por negocio.
 --
 -- El corte quincenal consolida por (empresa, negocio) y mantiene el libro del
 -- vendedor intacto. Las liquidaciones existentes quedan en el negocio principal.

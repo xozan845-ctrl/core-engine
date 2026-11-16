@@ -1,4 +1,4 @@
--- ADR-0019 fase 4: contexto de negocio en pedidos.
+-- ADR-0021 fase 4: contexto de negocio en pedidos.
 --
 -- La orden puede agrupar líneas de varias empresas; `negocio_id` se rellena
 -- solo cuando todas las líneas comparten el mismo negocio. El detalle por
