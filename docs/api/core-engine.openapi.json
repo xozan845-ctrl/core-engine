@@ -30321,10 +30321,6 @@
             "type": "string",
             "example": "1000.00"
           },
-          "stock": {
-            "type": "number",
-            "minimum": 0
-          },
           "costo": {
             "type": "string",
             "example": "150.00"
@@ -30405,7 +30401,8 @@
           "motivo": {
             "type": "string"
           }
-        }
+        },
+        "description": "Campos editables del item. El stock no se edita aquí: se ajusta en /api/v2/admin/inventario (inventory-service); un PATCH con stock responde STOCK_GESTIONADO_POR_INVENTARIO."
       },
       "ActualizarItemSerieRequestDto": {
         "type": "object",
