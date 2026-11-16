@@ -27972,6 +27972,16 @@
             "type": "number",
             "minimum": 1,
             "description": "Version concreta del pack; por defecto la ultima activa"
+          },
+          "capacidades_extra": {
+            "type": "array",
+            "description": "Capacidades add-on que se activan en la misma transaccion del alta. Deben estar disponibles en la vertical elegida.",
+            "items": {
+              "type": "string"
+            },
+            "example": [
+              "fidelizacion"
+            ]
           }
         },
         "required": [
