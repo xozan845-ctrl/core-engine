@@ -10,14 +10,6 @@ CREATE TABLE IF NOT EXISTS item.items
   (LIKE catalog.items INCLUDING ALL);
 INSERT INTO item.items SELECT * FROM catalog.items ON CONFLICT (id) DO NOTHING;
 
-CREATE TABLE IF NOT EXISTS item.productos
-  (LIKE catalog.productos INCLUDING ALL);
-INSERT INTO item.productos SELECT * FROM catalog.productos ON CONFLICT (id) DO NOTHING;
-
-CREATE TABLE IF NOT EXISTS item.servicios
-  (LIKE catalog.servicios INCLUDING ALL);
-INSERT INTO item.servicios SELECT * FROM catalog.servicios ON CONFLICT (id) DO NOTHING;
-
 CREATE TABLE IF NOT EXISTS item.item_atributo_esquemas
   (LIKE catalog.item_atributo_esquemas INCLUDING ALL);
 INSERT INTO item.item_atributo_esquemas
@@ -34,10 +26,6 @@ INSERT INTO item.item_componentes SELECT * FROM catalog.item_componentes ON CONF
 CREATE TABLE IF NOT EXISTS item.item_series
   (LIKE catalog.item_series INCLUDING ALL);
 INSERT INTO item.item_series SELECT * FROM catalog.item_series ON CONFLICT (id) DO NOTHING;
-
-CREATE TABLE IF NOT EXISTS item.combos
-  (LIKE catalog.combos INCLUDING ALL);
-INSERT INTO item.combos SELECT * FROM catalog.combos ON CONFLICT (id) DO NOTHING;
 
 CREATE TABLE IF NOT EXISTS item.historico_precios
   (LIKE catalog.historico_precios INCLUDING ALL);
@@ -63,8 +51,6 @@ SELECT i.id AS item_id,
        i.duration_minutes,
        i.atributos,
        i.estado,
-       i.source_type,
-       i.source_id,
        i.creado_en,
        i.actualizado_en
   FROM item.items i
@@ -132,8 +118,8 @@ DO $$
 DECLARE tabla text;
 BEGIN
   FOREACH tabla IN ARRAY ARRAY[
-    'items', 'productos', 'servicios', 'item_atributo_esquemas',
-    'item_imagenes', 'item_componentes', 'item_series', 'combos', 'historico_precios'
+    'items', 'item_atributo_esquemas',
+    'item_imagenes', 'item_componentes', 'item_series', 'historico_precios'
   ] LOOP
     EXECUTE format('ALTER TABLE item.%I ENABLE ROW LEVEL SECURITY', tabla);
     EXECUTE format('DROP POLICY IF EXISTS %I ON item.%I', tabla || '_admin', tabla);
