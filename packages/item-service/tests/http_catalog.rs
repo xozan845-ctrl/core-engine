@@ -83,6 +83,17 @@ async fn debe_exigir_autenticacion_validacion_y_clave_interna() {
     let (status, valor) = enviar("GET", "/api/v2/catalog/estado-inventario", &admin, None).await;
     assert_eq!(status, StatusCode::NOT_FOUND);
     assert_eq!(valor["codigo"], "NO_ENCONTRADO");
+
+    // Las rutas PIM de series y componentes deben existir (no 404). Sin base
+    // de datos fallan con 500, que es justo lo que distingue "registrada" de
+    // "ruta retirada" en este estado de prueba.
+    for ruta in [
+        "/api/v2/catalog/items/00000000-0000-4000-8000-000000000000/series",
+        "/api/v2/catalog/items/00000000-0000-4000-8000-000000000000/componentes",
+    ] {
+        let (status, _) = enviar("GET", ruta, &admin, None).await;
+        assert_ne!(status, StatusCode::NOT_FOUND, "ruta ausente: {ruta}");
+    }
 }
 
 #[tokio::test]

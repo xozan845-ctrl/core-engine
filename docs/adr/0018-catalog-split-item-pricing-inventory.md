@@ -86,8 +86,8 @@ Reglas:
   - `/api/v2/admin/inventario/**`, `/api/v2/admin/ubicaciones/**`,
     `/api/v2/catalog/inventario/**` → `inventory-service`
 - Las rutas internas se reparten igual:
-  - `/internal/items/**` → `item-service` (los precios en lote y cotización
-    pasan por `pricing-service`).
+  - `/internal/items/**` → `item-service` (lote de SKUs y detalle por id; los
+    precios en lote y la cotización viven en `pricing-service`).
   - `/internal/inventario/**` → `inventory-service`.
 - `orders`, `stores` y `commissions` siguen usando el mismo contrato; solo
   cambia la URL base del cliente o el gateway interno.
@@ -245,3 +245,17 @@ gates y del smoke de `staging`.
   cotizaciones y promociones; esquema `pricing`, migración `79_pricing_schema`,
   gateway, compose, CI, release/promote y OpenAPI. `catalog.items.precio_cents`
   queda como precio base transitorio hasta `item-service`.
+- PR 9 completo: limpieza de `item-service`. Se retiran los módulos duplicados
+  de precios, tarifas, inventario y ubicaciones, sus handlers y el consumidor
+  de pedidos; se restauran las rutas PIM de series y componentes que se habían
+  perdido en la extracción; el esquema de pruebas queda reducido a las tablas
+  propias del servicio. `PATCH /catalog/items/{id}` con `stock` responde
+  `STOCK_GESTIONADO_POR_INVENTARIO`.
+- Validación en `staging` (2026-11-16): PR de promoción #719, fix de FK
+  `83_item_fk_externas` (#721/#723) y deploy stage con `npm run demo` 39/39 y
+  gate de logs sin errores. `item-service:stage` publicado desde `staging`.
+- `stock` y `precio_cents` siguen en `item.items` como proyección del contrato
+  de items: `pricing-service` e `inventory-service` los mantienen y los
+  clientes los leen en `GET /catalog/items`. Retirarlos exige versionar el
+  contrato o resolver stock/precio por llamada interna; queda fuera de esta
+  limpieza y requiere su propio ADR.
