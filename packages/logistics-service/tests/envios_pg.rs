@@ -80,6 +80,7 @@ async fn provisionar(url: &str) {
           estado text NOT NULL DEFAULT 'en_preparacion',
           creado_en timestamptz NOT NULL DEFAULT NOW(),
           empresa_id uuid,
+          negocio_id uuid,
           proveedor_tipo text,
           proveedor_tenant_id uuid,
           parte_id uuid
@@ -147,6 +148,7 @@ fn orden(order_id: &str, empresas: &[&str]) -> OrdenExterna {
             .iter()
             .map(|empresa| OrdenItemExterna {
                 empresa_id: (*empresa).to_string(),
+                negocio_id: None,
                 sku: "SKU-1".to_string(),
                 cantidad: 1,
                 producto_nombre: "Cafe".to_string(),
@@ -183,6 +185,7 @@ async fn debe_preparar_envio_idempotente_y_derivar_la_flota() {
         .preparar_envio(
             "00000000-0000-4000-8000-000000000001",
             &empresa,
+            None,
             150_000,
             None,
         )
@@ -197,6 +200,7 @@ async fn debe_preparar_envio_idempotente_y_derivar_la_flota() {
         .preparar_envio(
             "00000000-0000-4000-8000-000000000001",
             &empresa,
+            None,
             150_000,
             None,
         )
@@ -222,6 +226,7 @@ async fn debe_preparar_envio_idempotente_y_derivar_la_flota() {
         .preparar_envio(
             "00000000-0000-4000-8000-000000000002",
             &otra_empresa,
+            None,
             1_000,
             None,
         )
@@ -313,11 +318,11 @@ async fn debe_avanzar_la_orden_cuando_todos_los_envios_llegan_al_estado() {
     );
 
     let a = envios
-        .preparar_envio(&order_id, &empresa_a, 1_500, None)
+        .preparar_envio(&order_id, &empresa_a, None, 1_500, None)
         .await
         .expect("envio a");
     let b = envios
-        .preparar_envio(&order_id, &empresa_b, 1_500, None)
+        .preparar_envio(&order_id, &empresa_b, None, 1_500, None)
         .await
         .expect("envio b");
     // Ambos envíos deben pertenecer a la flota que avanza.
@@ -379,6 +384,7 @@ async fn debe_rechazar_la_asignacion_de_un_envio_ya_fijado() {
         .preparar_envio(
             "00000000-0000-4000-8000-000000000009",
             &empresa,
+            None,
             1_000,
             None,
         )

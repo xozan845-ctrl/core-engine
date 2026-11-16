@@ -386,6 +386,74 @@
         ]
       }
     },
+    "/api/v2/finanzas/libro-ventas/negocios": {
+      "get": {
+        "operationId": "ContabilidadController_libroVentasNegocios",
+        "parameters": [
+          {
+            "name": "negocioId",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "desde",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "hasta",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Libro de ventas por negocio",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
+                  "properties": {
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "type": "object"
+                      }
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/MetaRespuesta"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Libro de ventas agrupado por negocio",
+        "tags": [
+          "Finanzas · Contabilidad"
+        ]
+      }
+    },
     "/api/v2/finanzas/libro-ventas": {
       "get": {
         "operationId": "ContabilidadController_libroVentas",
@@ -531,6 +599,15 @@
             "schema": {
               "type": "string"
             }
+          },
+          {
+            "name": "negocioId",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
           }
         ],
         "responses": {
@@ -621,7 +698,17 @@
     "/api/v2/finanzas/comprobantes/series": {
       "get": {
         "operationId": "FacturacionController_series",
-        "parameters": [],
+        "parameters": [
+          {
+            "name": "negocioId",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
         "responses": {
           "200": {
             "description": "Series de comprobantes",
@@ -5220,6 +5307,12 @@
             "description": "Id de la orden",
             "format": "uuid"
           },
+          "negocio_id": {
+            "type": "string",
+            "description": "Negocio de la orden",
+            "format": "uuid",
+            "nullable": true
+          },
           "parte_id": {
             "type": "object",
             "description": "Referencia universal del cliente",
@@ -8227,6 +8320,12 @@
             "type": "string",
             "description": "Serie",
             "example": "A"
+          },
+          "negocio_id": {
+            "type": "string",
+            "description": "Negocio de la serie; null si es transversal",
+            "format": "uuid",
+            "nullable": true
           },
           "tipo": {
             "type": "string",

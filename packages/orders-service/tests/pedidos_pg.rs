@@ -13,6 +13,7 @@ use orders_service::consumer::{PedidosConsumer, STOCK_FALLIDO, STOCK_RESERVADO};
 use orders_service::contratos::{Contratos, CrearContratoInput, FinalizarContratoInput};
 use orders_service::db::Db;
 use orders_service::entregas::EntregasDigitales;
+use orders_service::fidelizacion::Fidelizacion;
 use orders_service::fulfillments::Fulfillments;
 use orders_service::outbox::Outbox;
 use orders_service::pagos::Pagos;
@@ -50,6 +51,7 @@ impl ClientesPort for ClientesFake {
     async fn capacidades(
         &self,
         _empresas: &[String],
+        _negocio_id: Option<&str>,
         _capacidades: &[String],
     ) -> Option<Vec<Capacidad>> {
         Some(self.capacidades.clone())
@@ -68,6 +70,7 @@ impl ClientesPort for ClientesFake {
             tienda_id: TIENDA.to_string(),
             vendedor_id: VENDEDOR.to_string(),
             empresa_id: EMPRESA.to_string(),
+            negocio_id: None,
             participacion_porcentaje: Some(10),
             item_type: "producto".to_string(),
             item_id: "66666666-6666-6666-6666-666666666666".to_string(),
@@ -153,6 +156,15 @@ async fn provisionar(url: &str) {
         DROP SCHEMA IF EXISTS orders CASCADE;
         CREATE SCHEMA orders;
 
+        -- Fixture mínimo de partes universales (en producción vive en identity).
+        CREATE SCHEMA IF NOT EXISTS identity;
+        CREATE TABLE IF NOT EXISTS identity.partes (
+          id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+          empresa_id uuid NOT NULL,
+          nombre text NOT NULL DEFAULT '',
+          eliminado_en timestamptz
+        );
+
         CREATE TABLE orders.eventos (
           event_id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
           aggregate_id uuid NOT NULL,
@@ -171,6 +183,7 @@ async fn provisionar(url: &str) {
           comprador_id uuid NOT NULL,
           parte_id uuid,
           tienda_id uuid NOT NULL,
+          negocio_id uuid,
           estado text NOT NULL,
           total_cents integer NOT NULL DEFAULT 0,
           comision_cents integer NOT NULL DEFAULT 0,
@@ -431,6 +444,10 @@ async fn provisionar(url: &str) {
         .execute(&pool)
         .await
         .expect("fulfillments");
+    sqlx::raw_sql(include_str!("../../../infra/db/init/87_fidelizacion.sql"))
+        .execute(&pool)
+        .await
+        .expect("fidelizacion");
     pool.close().await;
 }
 
@@ -479,6 +496,11 @@ fn infra_con(
             Capacidad {
                 empresa_id: EMPRESA.to_string(),
                 capacidad_codigo: "mesas".to_string(),
+                activo: true,
+            },
+            Capacidad {
+                empresa_id: EMPRESA.to_string(),
+                capacidad_codigo: "fidelizacion".to_string(),
                 activo: true,
             },
         ],
@@ -867,6 +889,11 @@ async fn router_completo(db: Arc<Db>, stock: i64) -> axum::Router {
             Capacidad {
                 empresa_id: EMPRESA.to_string(),
                 capacidad_codigo: "mesas".to_string(),
+                activo: true,
+            },
+            Capacidad {
+                empresa_id: EMPRESA.to_string(),
+                capacidad_codigo: "fidelizacion".to_string(),
                 activo: true,
             },
         ],
@@ -1732,4 +1759,350 @@ async fn debe_convertir_con_moneda_pago_explicita() {
         .await
         .expect_err("sin tasa");
     assert_eq!(error.codigo, "TIPO_CAMBIO_NO_DISPONIBLE");
+}
+
+async fn crear_parte(db: &Db, empresa: &str, nombre: &str) -> String {
+    let id = Uuid::new_v4().to_string();
+    sqlx::query(
+        "INSERT INTO identity.partes (id, empresa_id, nombre)
+         VALUES ($1::uuid, $2::uuid, $3)",
+    )
+    .bind(&id)
+    .bind(empresa)
+    .bind(nombre)
+    .execute(db.pool())
+    .await
+    .expect("parte");
+    id
+}
+
+#[tokio::test]
+async fn debe_acumular_puntos_una_sola_vez_por_orden() {
+    let _guard = DB_LOCK.lock().await;
+    let Some(db) = con_bd().await else { return };
+    let fidelizacion = Fidelizacion::nueva(Arc::clone(&db));
+    let parte = crear_parte(&db, EMPRESA, "Cliente fiel").await;
+
+    let programa = fidelizacion
+        .guardar_programa(
+            EMPRESA,
+            &json!({"nombre": "Puntos TechFix", "puntos_por_unidad": 2}),
+        )
+        .await
+        .expect("programa");
+    assert_eq!(programa.puntos_por_unidad, 2);
+    assert!(programa.activo);
+
+    let tarjeta = fidelizacion
+        .crear_tarjeta(EMPRESA, &json!({"parte_id": parte}))
+        .await
+        .expect("tarjeta");
+    assert_eq!(tarjeta.puntos, 0);
+    assert!(tarjeta.codigo.starts_with("FID-"));
+    assert_eq!(tarjeta.parte_nombre, "Cliente fiel");
+
+    let orden = Uuid::new_v4().to_string();
+    let movimiento = fidelizacion
+        .acumular_por_orden(EMPRESA, &parte, &orden, 5_000)
+        .await
+        .expect("acumulacion")
+        .expect("movimiento");
+    assert_eq!(movimiento.puntos, 100);
+    assert_eq!(movimiento.saldo_tras, 100);
+
+    // Reintento de la misma orden: idempotente, no vuelve a sumar.
+    assert!(fidelizacion
+        .acumular_por_orden(EMPRESA, &parte, &orden, 5_000)
+        .await
+        .expect("reintento")
+        .is_none());
+    let tarjeta = fidelizacion
+        .obtener_tarjeta(EMPRESA, &tarjeta.id)
+        .await
+        .expect("tarjeta");
+    assert_eq!(tarjeta.puntos, 100);
+
+    let movimientos = fidelizacion
+        .listar_movimientos(EMPRESA, &tarjeta.id, 10)
+        .await
+        .expect("movimientos");
+    assert_eq!(movimientos.len(), 1);
+    assert_eq!(movimientos[0].tipo, "acumulacion");
+}
+
+#[tokio::test]
+async fn debe_canjear_recompensa_y_respetar_saldo_y_stock() {
+    let _guard = DB_LOCK.lock().await;
+    let Some(db) = con_bd().await else { return };
+    let fidelizacion = Fidelizacion::nueva(Arc::clone(&db));
+    let parte = crear_parte(&db, EMPRESA, "Cliente canje").await;
+    fidelizacion
+        .guardar_programa(
+            EMPRESA,
+            &json!({"nombre": "Canjes", "puntos_por_unidad": 1}),
+        )
+        .await
+        .expect("programa");
+    let tarjeta = fidelizacion
+        .crear_tarjeta(EMPRESA, &json!({"parte_id": parte, "codigo": "FID-CANJE1"}))
+        .await
+        .expect("tarjeta");
+    fidelizacion
+        .ajustar(
+            EMPRESA,
+            &tarjeta.id,
+            &json!({"puntos": 300, "descripcion": "Carga inicial"}),
+            VENDEDOR,
+        )
+        .await
+        .expect("ajuste");
+    let recompensa = fidelizacion
+        .crear_recompensa(
+            EMPRESA,
+            &json!({"codigo": "cafe", "nombre": "Café gratis", "puntos": 250, "stock": 2}),
+        )
+        .await
+        .expect("recompensa");
+    assert_eq!(recompensa.stock, Some(2));
+
+    let canje = fidelizacion
+        .canjear(
+            EMPRESA,
+            &json!({"codigo_tarjeta": "FID-CANJE1", "recompensa_codigo": "cafe"}),
+            VENDEDOR,
+        )
+        .await
+        .expect("canje");
+    assert_eq!(canje.puntos, 250);
+    assert_eq!(canje.estado, "confirmado");
+    let tarjeta = fidelizacion
+        .obtener_tarjeta(EMPRESA, &tarjeta.id)
+        .await
+        .expect("tarjeta");
+    assert_eq!(tarjeta.puntos, 50);
+    let recompensas = fidelizacion
+        .listar_recompensas(EMPRESA)
+        .await
+        .expect("recompensas");
+    assert_eq!(recompensas[0].stock, Some(1));
+
+    let error = fidelizacion
+        .canjear(
+            EMPRESA,
+            &json!({"codigo_tarjeta": "FID-CANJE1", "recompensa_codigo": "cafe"}),
+            VENDEDOR,
+        )
+        .await
+        .expect_err("saldo insuficiente");
+    assert_eq!(error.codigo, "PUNTOS_INSUFICIENTES");
+
+    let error = fidelizacion
+        .ajustar(EMPRESA, &tarjeta.id, &json!({"puntos": -1000}), VENDEDOR)
+        .await
+        .expect_err("saldo negativo");
+    assert_eq!(error.codigo, "PUNTOS_INSUFICIENTES");
+}
+
+fn headers_empresario() -> [(&'static str, &'static str); 3] {
+    [
+        ("x-user-id", "77777777-7777-4777-8777-777777777777"),
+        ("x-user-rol", "empresario"),
+        ("x-tenant", EMPRESA),
+    ]
+}
+
+#[tokio::test]
+async fn debe_exponer_fidelizacion_solo_con_la_capacidad_activa() {
+    use axum::body::Body;
+    use axum::http::{Request, StatusCode};
+    use tower::ServiceExt;
+    let _guard = DB_LOCK.lock().await;
+    let Some(db) = con_bd().await else { return };
+    let parte = crear_parte(&db, EMPRESA, "Cliente HTTP").await;
+    let router = router_completo(Arc::clone(&db), 10).await;
+
+    let mut request =
+        Request::put("/api/v2/fidelizacion/programa").header("content-type", "application/json");
+    for (clave, valor) in headers_empresario() {
+        request = request.header(clave, valor);
+    }
+    let response = router
+        .clone()
+        .oneshot(
+            request
+                .body(Body::from(
+                    json!({"nombre": "Programa HTTP", "puntos_por_unidad": 3}).to_string(),
+                ))
+                .expect("request"),
+        )
+        .await
+        .expect("response");
+    assert_eq!(response.status(), StatusCode::OK);
+    let programa = json_de(response).await;
+    assert_eq!(programa["data"]["puntos_por_unidad"], 3);
+
+    let mut request =
+        Request::post("/api/v2/fidelizacion/tarjetas").header("content-type", "application/json");
+    for (clave, valor) in headers_empresario() {
+        request = request.header(clave, valor);
+    }
+    let response = router
+        .clone()
+        .oneshot(
+            request
+                .body(Body::from(json!({"parte_id": parte}).to_string()))
+                .expect("request"),
+        )
+        .await
+        .expect("response");
+    assert_eq!(response.status(), StatusCode::CREATED);
+    let tarjeta = json_de(response).await;
+    assert_eq!(tarjeta["data"]["puntos"], 0);
+
+    let mut request = Request::get("/api/v2/fidelizacion/tarjetas");
+    for (clave, valor) in headers_empresario() {
+        request = request.header(clave, valor);
+    }
+    let response = router
+        .clone()
+        .oneshot(request.body(Body::empty()).expect("request"))
+        .await
+        .expect("response");
+    assert_eq!(response.status(), StatusCode::OK);
+    let listado = json_de(response).await;
+    assert_eq!(listado["data"].as_array().expect("tarjetas").len(), 1);
+
+    // Otra empresa del tenant no tiene la capacidad activa.
+    let mut request = Request::get("/api/v2/fidelizacion/tarjetas");
+    request = request.header("x-user-id", "77777777-7777-4777-8777-777777777777");
+    request = request.header("x-user-rol", "empresario");
+    request = request.header("x-tenant", Uuid::new_v4().to_string());
+    let response = router
+        .oneshot(request.body(Body::empty()).expect("request"))
+        .await
+        .expect("response");
+    assert_eq!(response.status(), StatusCode::FORBIDDEN);
+    let error = json_de(response).await;
+    assert_eq!(error["codigo"], "CAPACIDAD_NO_ACTIVA");
+}
+
+#[tokio::test]
+async fn debe_acumular_puntos_al_pagar_la_orden() {
+    let _guard = DB_LOCK.lock().await;
+    let Some(db) = con_bd().await else { return };
+    let (checkout, _, _) = infra(Arc::clone(&db), 10);
+    let fidelizacion = Fidelizacion::nueva(Arc::clone(&db));
+    let parte = crear_parte(&db, EMPRESA, "Cliente checkout").await;
+    fidelizacion
+        .guardar_programa(
+            EMPRESA,
+            &json!({"nombre": "Puntos checkout", "puntos_por_unidad": 1}),
+        )
+        .await
+        .expect("programa");
+    let tarjeta = fidelizacion
+        .crear_tarjeta(EMPRESA, &json!({"parte_id": parte}))
+        .await
+        .expect("tarjeta");
+
+    let comando = ComandoCrear {
+        cliente_parte_id: Some(parte),
+        ..compra(1)
+    };
+    let orden = checkout.ejecutar(&comando, COMPRADOR).await.expect("orden");
+    let vista = checkout
+        .transicionar(&orden.id, "pagada", Some("pago_confirmado"), None, None)
+        .await
+        .expect("pagada");
+    assert_eq!(vista.estado, "pagada");
+
+    let tarjeta = fidelizacion
+        .obtener_tarjeta(EMPRESA, &tarjeta.id)
+        .await
+        .expect("tarjeta");
+    assert_eq!(tarjeta.puntos, 100);
+    let movimientos = fidelizacion
+        .listar_movimientos(EMPRESA, &tarjeta.id, 10)
+        .await
+        .expect("movimientos");
+    assert_eq!(movimientos.len(), 1);
+    assert_eq!(movimientos[0].order_id.as_deref(), Some(orden.id.as_str()));
+}
+
+#[tokio::test]
+async fn debe_exponer_mis_tarjetas_al_comprador() {
+    use axum::body::Body;
+    use axum::http::{Request, StatusCode};
+    use tower::ServiceExt;
+    let _guard = DB_LOCK.lock().await;
+    let Some(db) = con_bd().await else { return };
+    let (checkout, _, _) = infra(Arc::clone(&db), 10);
+    let fidelizacion = Fidelizacion::nueva(Arc::clone(&db));
+    let parte = crear_parte(&db, EMPRESA, "Comprador con tarjeta").await;
+    fidelizacion
+        .guardar_programa(
+            EMPRESA,
+            &json!({"nombre": "Puntos comprador", "puntos_por_unidad": 2}),
+        )
+        .await
+        .expect("programa");
+    let tarjeta = fidelizacion
+        .crear_tarjeta(EMPRESA, &json!({"parte_id": parte}))
+        .await
+        .expect("tarjeta");
+    let comando = ComandoCrear {
+        cliente_parte_id: Some(parte),
+        ..compra(1)
+    };
+    let orden = checkout.ejecutar(&comando, COMPRADOR).await.expect("orden");
+    checkout
+        .transicionar(&orden.id, "pagada", Some("pago_confirmado"), None, None)
+        .await
+        .expect("pagada");
+
+    let router = router_completo(Arc::clone(&db), 10).await;
+    let mut request = Request::get("/api/v2/fidelizacion/mis-tarjetas");
+    request = request.header("x-user-id", COMPRADOR);
+    request = request.header("x-user-rol", "comprador");
+    let response = router
+        .clone()
+        .oneshot(request.body(Body::empty()).expect("request"))
+        .await
+        .expect("response");
+    assert_eq!(response.status(), StatusCode::OK);
+    let listado = json_de(response).await;
+    let tarjetas = listado["data"].as_array().expect("tarjetas");
+    assert_eq!(tarjetas.len(), 1);
+    assert_eq!(tarjetas[0]["codigo"], tarjeta.codigo);
+    assert_eq!(tarjetas[0]["puntos"], 200);
+
+    let mut request = Request::get(format!(
+        "/api/v2/fidelizacion/mis-tarjetas/{}/movimientos",
+        tarjeta.id
+    ));
+    request = request.header("x-user-id", COMPRADOR);
+    request = request.header("x-user-rol", "comprador");
+    let response = router
+        .clone()
+        .oneshot(request.body(Body::empty()).expect("request"))
+        .await
+        .expect("response");
+    assert_eq!(response.status(), StatusCode::OK);
+    let movimientos = json_de(response).await;
+    assert_eq!(
+        movimientos["data"].as_array().expect("movimientos").len(),
+        1
+    );
+
+    // Otro comprador no ve la tarjeta.
+    let mut request = Request::get("/api/v2/fidelizacion/mis-tarjetas");
+    request = request.header("x-user-id", Uuid::new_v4().to_string());
+    request = request.header("x-user-rol", "comprador");
+    let response = router
+        .oneshot(request.body(Body::empty()).expect("request"))
+        .await
+        .expect("response");
+    assert_eq!(response.status(), StatusCode::OK);
+    let listado = json_de(response).await;
+    assert!(listado["data"].as_array().expect("tarjetas").is_empty());
 }

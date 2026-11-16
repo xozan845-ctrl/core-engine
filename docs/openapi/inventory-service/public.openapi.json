@@ -21,6 +21,17 @@
     "/api/v2/admin/inventario": {
       "get": {
         "summary": "Listar niveles de stock",
+        "parameters": [
+          {
+            "name": "negocio_id",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
         "responses": {
           "200": {
             "description": "Niveles de stock",
@@ -159,6 +170,17 @@
     "/api/v2/catalog/configuracion-inventario": {
       "get": {
         "summary": "Leer configuracion de inventario",
+        "parameters": [
+          {
+            "name": "negocio_id",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
         "responses": {
           "200": {
             "description": "Configuracion",
@@ -182,6 +204,17 @@
       },
       "put": {
         "summary": "Guardar configuracion de inventario",
+        "parameters": [
+          {
+            "name": "negocio_id",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
         "responses": {
           "200": {
             "description": "Configuracion guardada",
@@ -210,6 +243,17 @@
     "/api/v2/admin/ubicaciones": {
       "get": {
         "summary": "Listar ubicaciones",
+        "parameters": [
+          {
+            "name": "negocio_id",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
         "responses": {
           "200": {
             "description": "Ubicaciones",
@@ -448,6 +492,17 @@
     "/api/v2/catalog/inventario/movimientos": {
       "get": {
         "summary": "Listar movimientos de inventario",
+        "parameters": [
+          {
+            "name": "negocio_id",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
         "responses": {
           "200": {
             "description": "Movimientos",

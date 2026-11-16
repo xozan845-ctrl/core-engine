@@ -12,6 +12,8 @@ use std::time::Duration;
 pub struct OrdenItemExterna {
     #[serde(default)]
     pub empresa_id: String,
+    #[serde(default)]
+    pub negocio_id: Option<String>,
     pub sku: String,
     pub cantidad: i64,
     pub producto_nombre: String,

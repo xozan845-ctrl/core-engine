@@ -4,7 +4,7 @@
 //! mismos montos formateados en córdobas con dos decimales.
 
 use crate::comisiones::{Comision, ComisionesPort};
-use crate::db::{error_db, fecha, parsear_uuid, timestamp, uuid_texto, Db};
+use crate::db::{error_db, fecha, parsear_uuid, timestamp, uuid_opcional, uuid_texto, Db};
 use crate::errors::ApiError;
 use crate::liquidaciones::{Liquidacion, LiquidacionEmpresa};
 use crate::money;
@@ -36,6 +36,7 @@ pub struct EstadoCuenta {
 #[derive(Debug, Clone, Serialize, PartialEq, Eq)]
 pub struct VentaEmpresa {
     pub order_id: String,
+    pub negocio_id: Option<String>,
     pub venta: String,
     pub comision: String,
     pub monto_empresario: String,
@@ -46,6 +47,7 @@ pub struct VentaEmpresa {
 #[derive(Debug, Clone, Serialize)]
 pub struct EstadoCuentaEmpresa {
     pub empresa_id: String,
+    pub negocio_id: Option<String>,
     pub ventas: Vec<VentaEmpresa>,
     pub comisiones_pendientes: String,
     pub liquidaciones: Vec<Value>,
@@ -85,6 +87,7 @@ fn liquidacion_empresa_desde_fila(fila: &PgRow) -> Result<LiquidacionEmpresa, sq
     Ok(LiquidacionEmpresa {
         id: uuid_texto(fila, "id")?,
         empresa_id: uuid_texto(fila, "empresa_id")?,
+        negocio_id: uuid_opcional(fila, "negocio_id")?,
         periodo_inicio: fecha(fila, "periodo_inicio")?,
         periodo_fin: fecha(fila, "periodo_fin")?,
         monto_cents: i64::from(fila.try_get::<i32, _>("monto_cents")?),
@@ -99,6 +102,7 @@ pub trait VentasPort: Send + Sync {
     async fn estado_cuenta_empresa(
         &self,
         empresa_id: &str,
+        negocio_id: Option<&str>,
     ) -> Result<EstadoCuentaEmpresa, ApiError>;
 }
 
@@ -127,6 +131,7 @@ fn venta_vendedor(comision: &Comision) -> VentaVendedor {
 fn venta_empresa(comision: &Comision) -> VentaEmpresa {
     VentaEmpresa {
         order_id: comision.order_id.clone(),
+        negocio_id: comision.negocio_id.clone(),
         venta: money::string(comision.venta_cents),
         comision: money::string(comision.comision_cents),
         monto_empresario: money::string(comision.monto_empresario_cents.unwrap_or(0)),
@@ -174,24 +179,38 @@ impl VentasPort for Ventas {
     async fn estado_cuenta_empresa(
         &self,
         empresa_id: &str,
+        negocio_id: Option<&str>,
     ) -> Result<EstadoCuentaEmpresa, ApiError> {
         let mut tx = self.db.transaccion().await.map_err(error_db)?;
         let comisiones = sqlx::query(
-            "SELECT id, order_id, linea_clave, empresa_id, tienda_id, vendedor_id, venta_cents,
+            "SELECT id, order_id, linea_clave, empresa_id, negocio_id, tienda_id, vendedor_id, venta_cents,
                     comision_cents, monto_vendedor_cents, monto_empresario_cents,
                     participacion_porcentaje, estado, creado_en
-             FROM commissions.comisiones WHERE empresa_id = $1 ORDER BY creado_en DESC LIMIT 200",
+             FROM commissions.comisiones WHERE empresa_id = $1
+               AND ($2::uuid IS NULL OR negocio_id = $2::uuid)
+             ORDER BY creado_en DESC LIMIT 200",
         )
         .bind(parsear_uuid(empresa_id)?)
+        .bind(
+            negocio_id
+                .map(parsear_uuid)
+                .transpose()?,
+        )
         .fetch_all(&mut *tx)
         .await
         .map_err(error_db)?;
         let liquidaciones_filas = sqlx::query(
-            "SELECT id, empresa_id, periodo_inicio, periodo_fin, monto_cents, estado, creado_en
+            "SELECT id, empresa_id, negocio_id, periodo_inicio, periodo_fin, monto_cents, estado, creado_en
              FROM commissions.liquidaciones_empresas WHERE empresa_id = $1
+               AND ($2::uuid IS NULL OR negocio_id = $2::uuid)
              ORDER BY periodo_inicio DESC LIMIT 50",
         )
         .bind(parsear_uuid(empresa_id)?)
+        .bind(
+            negocio_id
+                .map(parsear_uuid)
+                .transpose()?,
+        )
         .fetch_all(&mut *tx)
         .await
         .map_err(error_db)?;
@@ -216,6 +235,7 @@ impl VentasPort for Ventas {
             .sum::<i64>();
         Ok(EstadoCuentaEmpresa {
             empresa_id: empresa_id.to_string(),
+            negocio_id: negocio_id.map(str::to_string),
             ventas: comisiones.iter().map(venta_empresa).collect(),
             comisiones_pendientes: money::string(pendientes),
             liquidaciones,
@@ -235,6 +255,7 @@ impl VentasPort for VentasNoDisponible {
     async fn estado_cuenta_empresa(
         &self,
         _empresa_id: &str,
+        _negocio_id: Option<&str>,
     ) -> Result<EstadoCuentaEmpresa, ApiError> {
         Err(ApiError::servicio_no_disponible("commissions-service"))
     }
@@ -256,6 +277,7 @@ mod tests {
             order_id: "o-1".into(),
             linea_clave: Some("l-1".into()),
             empresa_id: Some("e-1".into()),
+            negocio_id: Some("n-1".into()),
             tienda_id: Some("t-1".into()),
             vendedor_id: "v-1".into(),
             venta_cents: venta,
@@ -291,6 +313,23 @@ mod tests {
         assert_eq!(venta.comision, "60.00");
         assert_eq!(venta.monto_empresario, "54.00");
         assert_eq!(venta.estado, "liquidada");
+    }
+
+    #[test]
+    fn debe_agregar_el_monto_formateado_a_la_liquidacion_empresa() {
+        let valor = liquidacion_empresa_con_monto(LiquidacionEmpresa {
+            id: "le-1".into(),
+            empresa_id: "e-1".into(),
+            negocio_id: Some("n-1".into()),
+            periodo_inicio: "2026-09-01T06:00:00.000Z".into(),
+            periodo_fin: "2026-09-15T06:00:00.000Z".into(),
+            monto_cents: 25_000,
+            estado: "aprobada".into(),
+            creado_en: "2026-09-16T00:00:00.000Z".into(),
+        })
+        .expect("valor");
+        assert_eq!(valor["monto"], "250.00");
+        assert_eq!(valor["negocio_id"], "n-1");
     }
 
     #[test]

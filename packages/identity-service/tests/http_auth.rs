@@ -9,12 +9,14 @@ use http_body_util::BodyExt;
 use identity_service::config::Config;
 use identity_service::db::Db;
 use identity_service::dominio::api_keys::ApiKeys;
+use identity_service::dominio::auditoria::Auditoria;
 use identity_service::dominio::auth::Auth;
 use identity_service::dominio::capacidades::Capacidades;
 use identity_service::dominio::configuracion_operativa::ConfiguracionOperativaService;
 use identity_service::dominio::configuracion_sitio::ConfiguracionSitio;
 use identity_service::dominio::empresas::Empresas;
 use identity_service::dominio::extensiones::Extensiones;
+use identity_service::dominio::negocios::Negocios;
 use identity_service::dominio::packs::Packs;
 use identity_service::dominio::partes::Partes;
 use identity_service::dominio::password_reset::PasswordReset;
@@ -65,7 +67,7 @@ async fn provisionar(url: &str) {
     sqlx::raw_sql(
         "DROP SCHEMA IF EXISTS identity, catalog, stores, orders, logistics,
              commissions, finance, scheduling, field, intelligence, storage,
-             notifications, auth CASCADE",
+             notifications, auth, inventory, pricing, item, analytics CASCADE",
     )
     .execute(&pool)
     .await
@@ -121,8 +123,11 @@ async fn preparar() -> Option<Contexto> {
     ));
     let api_keys = Arc::new(ApiKeys::nueva(Arc::clone(&db), &config));
     let capacidades = Arc::new(Capacidades::nueva(Arc::clone(&db)));
+    let negocios = Arc::new(Negocios::nuevo(Arc::clone(&db)));
+    let auditoria = Arc::new(Auditoria::nueva(Arc::clone(&db)));
     let personal = Arc::new(Personal::nueva(
         Arc::clone(&db),
+        Arc::clone(&negocios),
         Arc::clone(&auth),
         email.clone(),
         Arc::new(Stores::nueva("http://127.0.0.1:9", None, 1000)),
@@ -137,6 +142,7 @@ async fn preparar() -> Option<Contexto> {
         metrics,
         Servicios {
             auth,
+            auditoria,
             usuarios: Arc::clone(&usuarios),
             api_keys,
             capacidades: Arc::clone(&capacidades),
@@ -154,6 +160,7 @@ async fn preparar() -> Option<Contexto> {
                 Arc::clone(&storage),
             )),
             extensiones,
+            negocios,
             personal,
             partes,
             registros,
@@ -1321,6 +1328,108 @@ async fn debe_crear_gestionar_y_resolver_empresas() {
     .await;
     assert_eq!(status, StatusCode::OK);
     assert_eq!(pack["data"]["pack_version"], 2);
+}
+
+#[tokio::test]
+async fn debe_activar_capacidades_extra_al_crear_empresa() {
+    let Some(ctx) = preparar().await else {
+        return;
+    };
+    let empresario = ctx
+        .usuarios
+        .crear(CrearUsuario {
+            nombre: "Empresario fidelidad".into(),
+            correo: correo(),
+            contrasena: "secreto123".into(),
+            rol: "empresario".into(),
+            tenant_id: None,
+            personal_id: None,
+        })
+        .await
+        .expect("empresario");
+    let actor = autorizacion(&empresario.id, "empresario");
+    let slug = format!("fidelidad-{}", &Uuid::new_v4().simple().to_string()[..8]);
+
+    let (status, creada) = enviar(
+        &ctx.app,
+        "POST",
+        "/api/v2/empresas",
+        json!({
+            "nombre": "Empresa con fidelidad",
+            "slug": slug,
+            "vertical_id": "retail",
+            "pack_codigo": "pack_retail",
+            "capacidades_extra": ["fidelizacion"]
+        }),
+        &headers(&actor),
+    )
+    .await;
+    assert_eq!(status, StatusCode::CREATED);
+    let empresa_id = creada["data"]["id"].as_str().expect("id").to_string();
+
+    let (status, manifiesto) = enviar(
+        &ctx.app,
+        "GET",
+        &format!("/api/v2/empresas/{empresa_id}/features"),
+        Value::Null,
+        &headers(&[
+            ("x-user-id", empresario.id.clone()),
+            ("x-user-rol", "empresario".to_string()),
+            ("x-user-email", "actor@test.dev".to_string()),
+            ("x-tenant", empresa_id.clone()),
+        ]),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK);
+    let capacidades = manifiesto["data"]["capacidades"]
+        .as_array()
+        .expect("capacidades");
+    let fidelizacion = capacidades
+        .iter()
+        .find(|capacidad| capacidad["codigo"] == "fidelizacion")
+        .expect("capacidad fidelizacion");
+    assert_eq!(fidelizacion["activo"], true);
+    assert_eq!(fidelizacion["modulo"], "loyalty");
+    let features = manifiesto["data"]["features"].as_array().expect("features");
+    for feature in [
+        "fidelizacion.programas",
+        "fidelizacion.tarjetas",
+        "fidelizacion.canjes",
+    ] {
+        assert!(
+            features.iter().any(|valor| valor == feature),
+            "falta la feature {feature}"
+        );
+    }
+
+    let otro = ctx
+        .usuarios
+        .crear(CrearUsuario {
+            nombre: "Empresario invalido".into(),
+            correo: correo(),
+            contrasena: "secreto123".into(),
+            rol: "empresario".into(),
+            tenant_id: None,
+            personal_id: None,
+        })
+        .await
+        .expect("empresario");
+    let (status, error) = enviar(
+        &ctx.app,
+        "POST",
+        "/api/v2/empresas",
+        json!({
+            "nombre": "Empresa con capacidad invalida",
+            "slug": format!("invalida-{}", &Uuid::new_v4().simple().to_string()[..8]),
+            "vertical_id": "retail",
+            "pack_codigo": "pack_retail",
+            "capacidades_extra": ["no_existe"]
+        }),
+        &headers(&autorizacion(&otro.id, "empresario")),
+    )
+    .await;
+    assert_eq!(status, StatusCode::BAD_REQUEST);
+    assert_eq!(error["codigo"], "CAPACIDAD_NO_DISPONIBLE");
 }
 
 #[tokio::test]
@@ -2511,4 +2620,599 @@ async fn debe_sembrar_administrador_y_tenant_de_plataforma() {
     // Idempotente
     identity_service::seed::sembrar(&ctx.usuarios, &ctx.db, &config).await;
     assert!(ctx.usuarios.existe_admin().await.expect("admin"));
+}
+
+#[tokio::test]
+async fn debe_crear_negocios_y_acotar_roles_e_invitaciones() {
+    let Some(ctx) = preparar().await else {
+        return;
+    };
+    let empresario = ctx
+        .usuarios
+        .crear(CrearUsuario {
+            nombre: "Empresario".into(),
+            correo: correo(),
+            contrasena: "secreto123".into(),
+            rol: "empresario".into(),
+            tenant_id: None,
+            personal_id: None,
+        })
+        .await
+        .expect("empresario");
+    let actor = autorizacion(&empresario.id, "empresario");
+    let slug = format!("empresa-{}", &Uuid::new_v4().simple().to_string()[..8]);
+    let (status, creada) = enviar(
+        &ctx.app,
+        "POST",
+        "/api/v2/empresas",
+        json!({
+            "nombre": "Grupo de prueba",
+            "slug": slug,
+            "vertical_id": "retail",
+            "pack_codigo": "pack_retail"
+        }),
+        &headers(&actor),
+    )
+    .await;
+    assert_eq!(status, StatusCode::CREATED);
+    let empresa_id = creada["data"]["id"].as_str().expect("id").to_string();
+    let mut actor_pares = actor.clone();
+    actor_pares.push(("x-tenant", empresa_id.clone()));
+    let actor_headers = headers(&actor_pares);
+
+    // La empresa simple nace con su negocio principal, sin pasos extra.
+    let (status, negocios) = enviar(
+        &ctx.app,
+        "GET",
+        &format!("/api/v2/empresas/{empresa_id}/negocios"),
+        Value::Null,
+        &actor_headers,
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK);
+    let lista = negocios["data"].as_array().expect("negocios");
+    assert_eq!(lista.len(), 1);
+    assert_eq!(lista[0]["codigo"], "principal");
+    assert_eq!(lista[0]["es_predeterminado"], true);
+    let principal_id = lista[0]["id"].as_str().expect("principal").to_string();
+
+    // Un segundo tipo de negocio exige al empresario activo y aporta su pack.
+    let (status, farmacia) = enviar(
+        &ctx.app,
+        "POST",
+        &format!("/api/v2/empresas/{empresa_id}/negocios"),
+        json!({
+            "codigo": "farmacia_centro",
+            "nombre": "Farmacia Centro",
+            "vertical_id": "farmacia",
+            "pack_codigo": "pack_farmacia"
+        }),
+        &actor_headers,
+    )
+    .await;
+    assert_eq!(status, StatusCode::CREATED);
+    let negocio_id = farmacia["data"]["id"]
+        .as_str()
+        .expect("negocio id")
+        .to_string();
+    assert_eq!(farmacia["data"]["vertical_id"], "farmacia");
+    assert_eq!(farmacia["data"]["es_predeterminado"], false);
+
+    // Cada negocio tiene su propio conjunto de capacidades.
+    let (status, caps_farmacia) = enviar(
+        &ctx.app,
+        "GET",
+        &format!("/api/v2/empresas/{empresa_id}/negocios/{negocio_id}/capacidades"),
+        Value::Null,
+        &actor_headers,
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK);
+    let caps_farmacia = caps_farmacia["data"].as_array().expect("caps farmacia");
+    assert!(caps_farmacia
+        .iter()
+        .any(|cap| cap["capacidad_codigo"] == "inventario_lotes" && cap["activo"] == true));
+
+    let (status, caps_principal) = enviar(
+        &ctx.app,
+        "GET",
+        &format!("/api/v2/empresas/{empresa_id}/negocios/{principal_id}/capacidades"),
+        Value::Null,
+        &actor_headers,
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK);
+    let caps_principal = caps_principal["data"].as_array().expect("caps principal");
+    assert!(!caps_principal
+        .iter()
+        .any(|cap| cap["capacidad_codigo"] == "inventario_lotes"));
+
+    let (status, cap) = enviar(
+        &ctx.app,
+        "PATCH",
+        &format!(
+            "/api/v2/empresas/{empresa_id}/negocios/{negocio_id}/capacidades/inventario_lotes"
+        ),
+        json!({ "activo": false }),
+        &actor_headers,
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK);
+    assert_eq!(cap["data"]["activo"], false);
+
+    // Una capacidad que no aplica a la vertical del negocio se rechaza.
+    let (status, _) = enviar(
+        &ctx.app,
+        "PATCH",
+        &format!(
+            "/api/v2/empresas/{empresa_id}/negocios/{principal_id}/capacidades/inventario_lotes"
+        ),
+        json!({ "activo": true }),
+        &actor_headers,
+    )
+    .await;
+    assert_eq!(status, StatusCode::CONFLICT);
+
+    // El rol y la invitación quedan acotados a ese negocio.
+    let (status, rol) = enviar(
+        &ctx.app,
+        "POST",
+        &format!("/api/v2/empresas/{empresa_id}/roles"),
+        json!({
+            "codigo": "regente_custom",
+            "nombre": "Regente",
+            "permisos": { "acciones": ["catalogo.leer"] },
+            "negocio_id": negocio_id
+        }),
+        &actor_headers,
+    )
+    .await;
+    assert_eq!(status, StatusCode::CREATED);
+    assert_eq!(rol["data"]["negocio_id"], negocio_id);
+    let rol_id = rol["data"]["id"].as_str().expect("rol id").to_string();
+
+    let (status, invitacion) = enviar(
+        &ctx.app,
+        "POST",
+        &format!("/api/v2/empresas/{empresa_id}/invitaciones/personal"),
+        json!({
+            "correo": correo(),
+            "rol_empresa_id": rol_id,
+            "negocio_id": negocio_id
+        }),
+        &actor_headers,
+    )
+    .await;
+    assert_eq!(status, StatusCode::CREATED);
+    assert_eq!(invitacion["data"]["negocio_id"], negocio_id);
+
+    // Un rol o puesto de otro negocio no puede mezclarse en la invitación.
+    let (status, error) = enviar(
+        &ctx.app,
+        "POST",
+        &format!("/api/v2/empresas/{empresa_id}/invitaciones/personal"),
+        json!({
+            "correo": correo(),
+            "rol_empresa_id": rol_id,
+            "negocio_id": Uuid::new_v4().to_string()
+        }),
+        &actor_headers,
+    )
+    .await;
+    assert_eq!(status, StatusCode::NOT_FOUND);
+    assert_eq!(error["codigo"], "NO_ENCONTRADO");
+
+    // Un gerente invitado con rol de negocio puede administrar solo su negocio.
+    let (status, gerente_rol) = enviar(
+        &ctx.app,
+        "POST",
+        &format!("/api/v2/empresas/{empresa_id}/roles"),
+        json!({
+            "codigo": "gerente",
+            "nombre": "Gerente",
+            "permisos": { "acciones": ["personal.leer", "personal.gestionar"] },
+            "negocio_id": negocio_id
+        }),
+        &actor_headers,
+    )
+    .await;
+    assert_eq!(status, StatusCode::CREATED);
+    let gerente_rol_id = gerente_rol["data"]["id"]
+        .as_str()
+        .expect("rol gerente")
+        .to_string();
+    let correo_gerente = correo();
+    let (status, invitacion_gerente) = enviar(
+        &ctx.app,
+        "POST",
+        &format!("/api/v2/empresas/{empresa_id}/invitaciones/personal"),
+        json!({
+            "correo": correo_gerente,
+            "rol_empresa_id": gerente_rol_id,
+            "negocio_id": negocio_id
+        }),
+        &actor_headers,
+    )
+    .await;
+    assert_eq!(status, StatusCode::CREATED);
+    let url_invitacion = invitacion_gerente["data"]["url_invitacion"]
+        .as_str()
+        .expect("url invitacion");
+    let token = url_invitacion
+        .rsplit('/')
+        .next()
+        .expect("token invitacion")
+        .to_string();
+    let (status, aceptada) = enviar(
+        &ctx.app,
+        "POST",
+        &format!("/api/v2/incorporaciones/{token}/aceptar"),
+        json!({ "nombre": "Gerente", "contrasena": "secreto123" }),
+        &[],
+    )
+    .await;
+    assert_eq!(status, StatusCode::CREATED);
+    let gerente_id = aceptada["data"]["usuario"]["id"]
+        .as_str()
+        .expect("gerente")
+        .to_string();
+    assert_eq!(aceptada["data"]["usuario"]["negocio_id"], negocio_id);
+
+    // Al volver a iniciar sesión, el contexto conserva el negocio asignado.
+    let (status, login_gerente) = enviar(
+        &ctx.app,
+        "POST",
+        "/api/v2/auth/login",
+        json!({ "correo": correo_gerente, "contrasena": "secreto123" }),
+        &[],
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK);
+    assert_eq!(login_gerente["data"]["usuario"]["negocio_id"], negocio_id);
+
+    let mut gerente_pares = autorizacion(&gerente_id, "operativo");
+    gerente_pares.push(("x-tenant", empresa_id.clone()));
+    gerente_pares.push(("x-negocio", negocio_id.clone()));
+    let (status, _) = enviar(
+        &ctx.app,
+        "POST",
+        &format!("/api/v2/empresas/{empresa_id}/roles"),
+        json!({
+            "codigo": "auxiliar",
+            "nombre": "Auxiliar",
+            "permisos": { "acciones": ["personal.leer"] },
+            "negocio_id": negocio_id
+        }),
+        &headers(&gerente_pares),
+    )
+    .await;
+    assert_eq!(status, StatusCode::CREATED);
+
+    let (status, _) = enviar(
+        &ctx.app,
+        "POST",
+        &format!("/api/v2/empresas/{empresa_id}/roles"),
+        json!({
+            "codigo": "intruso",
+            "nombre": "Intruso",
+            "permisos": { "acciones": ["personal.gestionar"] },
+            "negocio_id": principal_id
+        }),
+        &headers(&gerente_pares),
+    )
+    .await;
+    assert_eq!(status, StatusCode::FORBIDDEN);
+
+    // Un rol de empresa distinto de empresario no puede añadir negocios.
+    let (status, vendedor) = enviar(
+        &ctx.app,
+        "POST",
+        &format!("/api/v2/empresas/{empresa_id}/vendedores"),
+        json!({
+            "nombre": "Encargado",
+            "correo": correo(),
+            "contrasena": "secreto123",
+            "participacion_porcentaje": 10
+        }),
+        &actor_headers,
+    )
+    .await;
+    assert_eq!(status, StatusCode::CREATED);
+    let vendedor_id = vendedor["data"]["id"]
+        .as_str()
+        .expect("vendedor")
+        .to_string();
+    let mut vendedor_pares = autorizacion(&vendedor_id, "vendedor");
+    vendedor_pares.push(("x-tenant", empresa_id.clone()));
+    let (status, _) = enviar(
+        &ctx.app,
+        "POST",
+        &format!("/api/v2/empresas/{empresa_id}/negocios"),
+        json!({
+            "codigo": "otro_negocio",
+            "nombre": "Otro negocio",
+            "vertical_id": "retail",
+            "pack_codigo": "pack_retail"
+        }),
+        &headers(&vendedor_pares),
+    )
+    .await;
+    assert_eq!(status, StatusCode::FORBIDDEN);
+
+    let (status, auditoria) = enviar(
+        &ctx.app,
+        "GET",
+        &format!("/api/v2/empresas/{empresa_id}/auditoria"),
+        Value::Null,
+        &actor_headers,
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK);
+    let eventos = auditoria["data"].as_array().expect("auditoria");
+    assert!(eventos
+        .iter()
+        .any(|evento| evento["accion"] == "negocio.creado"));
+    assert!(eventos
+        .iter()
+        .any(|evento| evento["accion"] == "rol.creado"));
+
+    let (status, plantillas) = enviar(
+        &ctx.app,
+        "GET",
+        "/api/v2/negocios/plantillas?vertical_id=farmacia",
+        Value::Null,
+        &actor_headers,
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK);
+    assert!(plantillas["data"].as_array().expect("plantillas").len() >= 2);
+
+    let (status, estado) = enviar(
+        &ctx.app,
+        "PATCH",
+        &format!("/api/v2/empresas/{empresa_id}/negocios/{negocio_id}/estado"),
+        json!({ "estado": "suspendido" }),
+        &actor_headers,
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK);
+    assert_eq!(estado["data"]["estado"], "suspendido");
+}
+
+#[tokio::test]
+async fn debe_cambiar_y_conservar_el_negocio_activo_de_la_sesion() {
+    let Some(ctx) = preparar().await else {
+        return;
+    };
+    let correo_owner = correo();
+    let owner = ctx
+        .usuarios
+        .crear(CrearUsuario {
+            nombre: "Dueño".into(),
+            correo: correo_owner.clone(),
+            contrasena: "secreto123".into(),
+            rol: "empresario".into(),
+            tenant_id: None,
+            personal_id: None,
+        })
+        .await
+        .expect("owner");
+    let actor = autorizacion(&owner.id, "empresario");
+    let slug = format!("empresa-{}", &Uuid::new_v4().simple().to_string()[..8]);
+    let (status, creada) = enviar(
+        &ctx.app,
+        "POST",
+        "/api/v2/empresas",
+        json!({
+            "nombre": "Empresa multi negocio",
+            "slug": slug,
+            "vertical_id": "retail",
+            "pack_codigo": "pack_retail"
+        }),
+        &headers(&actor),
+    )
+    .await;
+    assert_eq!(status, StatusCode::CREATED);
+    let empresa_id = creada["data"]["id"].as_str().expect("empresa").to_string();
+    let mut actor_pares = actor.clone();
+    actor_pares.push(("x-tenant", empresa_id.clone()));
+    let actor_headers = headers(&actor_pares);
+
+    let (status, segundo) = enviar(
+        &ctx.app,
+        "POST",
+        &format!("/api/v2/empresas/{empresa_id}/negocios"),
+        json!({
+            "codigo": "sucursal",
+            "nombre": "Sucursal",
+            "vertical_id": "farmacia",
+            "pack_codigo": "pack_farmacia"
+        }),
+        &actor_headers,
+    )
+    .await;
+    assert_eq!(status, StatusCode::CREATED);
+    let negocio_id = segundo["data"]["id"].as_str().expect("negocio").to_string();
+
+    let (status, negocios) = enviar(
+        &ctx.app,
+        "GET",
+        "/api/v2/auth/negocios",
+        Value::Null,
+        &actor_headers,
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK);
+    assert_eq!(negocios["data"].as_array().expect("negocios").len(), 2);
+
+    let (status, login) = enviar(
+        &ctx.app,
+        "POST",
+        "/api/v2/auth/login",
+        json!({ "correo": correo_owner, "contrasena": "secreto123" }),
+        &[],
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK);
+    let refresh = login["data"]["refresh_token"]
+        .as_str()
+        .expect("refresh")
+        .to_string();
+
+    let (status, cambiada) = enviar(
+        &ctx.app,
+        "POST",
+        "/api/v2/auth/negocio-activo",
+        json!({ "negocio_id": negocio_id, "refresh_token": refresh }),
+        &actor_headers,
+    )
+    .await;
+    assert_eq!(status, StatusCode::CREATED);
+    assert_eq!(cambiada["data"]["usuario"]["negocio_id"], negocio_id);
+    let refresh_negocio = cambiada["data"]["refresh_token"]
+        .as_str()
+        .expect("refresh negocio")
+        .to_string();
+
+    let (status, refrescada) = enviar(
+        &ctx.app,
+        "POST",
+        "/api/v2/auth/refresh",
+        json!({ "refresh_token": refresh_negocio }),
+        &[],
+    )
+    .await;
+    assert_eq!(status, StatusCode::CREATED);
+    assert_eq!(refrescada["data"]["usuario"]["negocio_id"], negocio_id);
+
+    let (status, _) = enviar(
+        &ctx.app,
+        "POST",
+        "/api/v2/auth/negocio-activo",
+        json!({
+            "negocio_id": Uuid::new_v4().to_string(),
+            "refresh_token": refresh_negocio
+        }),
+        &actor_headers,
+    )
+    .await;
+    assert_eq!(status, StatusCode::FORBIDDEN);
+}
+
+#[tokio::test]
+async fn debe_aislar_roles_por_negocio_en_rls() {
+    let Some(ctx) = preparar().await else {
+        return;
+    };
+    let empresa_id = Uuid::new_v4();
+    let usuario_id = Uuid::new_v4();
+    let negocio_a = Uuid::new_v4();
+    let negocio_b = Uuid::new_v4();
+    let correo = correo();
+    sqlx::query(
+        "INSERT INTO identity.usuarios (id, nombre, correo, contrasena_hash, rol)
+         VALUES ($1, 'RLS', $2, 'x', 'empresario')",
+    )
+    .bind(usuario_id)
+    .bind(&correo)
+    .execute(ctx.db.pool())
+    .await
+    .expect("usuario rls");
+    sqlx::query(
+        "INSERT INTO identity.empresas
+           (id, nombre, slug, vertical_id, pack_codigo, pack_version, creado_por)
+         VALUES ($1, 'RLS', $2, 'retail', 'pack_retail', 1, $3)",
+    )
+    .bind(empresa_id)
+    .bind(format!("rls-{}", &Uuid::new_v4().simple().to_string()[..8]))
+    .bind(usuario_id)
+    .execute(ctx.db.pool())
+    .await
+    .expect("empresa rls");
+    for (id, codigo) in [(negocio_a, "negocio_a"), (negocio_b, "negocio_b")] {
+        sqlx::query(
+            "INSERT INTO identity.negocios
+               (id, empresa_id, codigo, nombre, vertical_id, pack_codigo,
+                pack_version, creado_por)
+             VALUES ($1, $2, $3, $4, 'retail', 'pack_retail', 1, $5)",
+        )
+        .bind(id)
+        .bind(empresa_id)
+        .bind(codigo)
+        .bind(format!("Negocio {codigo}"))
+        .bind(usuario_id)
+        .execute(ctx.db.pool())
+        .await
+        .expect("negocio rls");
+    }
+    for (codigo, negocio) in [
+        ("transversal", None),
+        ("solo_a", Some(negocio_a)),
+        ("solo_b", Some(negocio_b)),
+    ] {
+        sqlx::query(
+            "INSERT INTO identity.roles_empresa
+               (empresa_id, codigo, nombre, permisos, negocio_id, creado_por)
+             VALUES ($1, $2, $2, '{}'::jsonb, $3, $4)",
+        )
+        .bind(empresa_id)
+        .bind(codigo)
+        .bind(negocio)
+        .bind(usuario_id)
+        .execute(ctx.db.pool())
+        .await
+        .expect("rol rls");
+    }
+    sqlx::query(
+        "DO $$ BEGIN
+           IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'authenticated') THEN
+             CREATE ROLE authenticated NOLOGIN;
+           END IF;
+         END $$",
+    )
+    .execute(ctx.db.pool())
+    .await
+    .expect("rol authenticated");
+    sqlx::query("GRANT USAGE ON SCHEMA identity TO authenticated")
+        .execute(ctx.db.pool())
+        .await
+        .expect("grant schema rls");
+    sqlx::query("GRANT SELECT ON identity.roles_empresa TO authenticated")
+        .execute(ctx.db.pool())
+        .await
+        .expect("grant tabla rls");
+
+    for (negocio, esperados) in [
+        (Some(negocio_a), 2_i64),
+        (Some(negocio_b), 2_i64),
+        (None, 3_i64),
+    ] {
+        let mut tx = ctx.db.pool().begin().await.expect("tx rls");
+        let claims = match negocio {
+            Some(id) => json!({
+                "rol": "empresario",
+                "tenant_id": empresa_id.to_string(),
+                "negocio_id": id.to_string()
+            }),
+            None => json!({
+                "rol": "empresario",
+                "tenant_id": empresa_id.to_string()
+            }),
+        };
+        sqlx::query("SELECT set_config('request.jwt.claims', $1, true)")
+            .bind(claims.to_string())
+            .execute(&mut *tx)
+            .await
+            .expect("claims rls");
+        sqlx::query("SET LOCAL ROLE authenticated")
+            .execute(&mut *tx)
+            .await
+            .expect("rol rls");
+        let total: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM identity.roles_empresa")
+            .fetch_one(&mut *tx)
+            .await
+            .expect("consulta rls");
+        assert_eq!(total, esperados);
+        tx.rollback().await.expect("rollback rls");
+    }
 }

@@ -37,6 +37,7 @@ pub struct Envio {
     pub estado: String,
     pub creado_en: String,
     pub empresa_id: String,
+    pub negocio_id: Option<String>,
     pub proveedor_tipo: Option<String>,
     pub proveedor_tenant_id: Option<String>,
     pub parte_id: Option<String>,
@@ -99,19 +100,25 @@ impl Envios {
         &self,
         order_id: &str,
         empresa_id: &str,
+        negocio_id: Option<&str>,
         monto_cents: i64,
         parte_id: Option<&str>,
     ) -> Result<Envio, ApiError> {
         let order_uuid = parsear_uuid(order_id)?;
         let empresa_uuid = parsear_uuid(empresa_id)?;
+        let negocio_uuid = negocio_id.map(parsear_uuid).transpose()?;
 
-        let existente =
-            sqlx::query("SELECT * FROM logistics.envios WHERE order_id = $1 AND empresa_id = $2")
-                .bind(order_uuid)
-                .bind(empresa_uuid)
-                .fetch_optional(self.db.pool())
-                .await
-                .map_err(error_db)?;
+        let existente = sqlx::query(
+            "SELECT * FROM logistics.envios
+              WHERE order_id = $1 AND empresa_id = $2
+                AND negocio_id IS NOT DISTINCT FROM $3",
+        )
+        .bind(order_uuid)
+        .bind(empresa_uuid)
+        .bind(negocio_uuid)
+        .fetch_optional(self.db.pool())
+        .await
+        .map_err(error_db)?;
 
         if let Some(fila) = existente {
             let envio = fila_envio(&fila)?;
@@ -126,7 +133,7 @@ impl Envios {
         }
 
         let guia = generar_guia();
-        let proveedor = self.proveedor_de_empresa(empresa_id).await?;
+        let proveedor = self.proveedor_de_empresa(empresa_id, negocio_id).await?;
         let parte_uuid = match parte_id {
             Some(valor) => Some(parsear_uuid(valor)?),
             None => None,
@@ -134,14 +141,15 @@ impl Envios {
 
         let fila = sqlx::query(
             "INSERT INTO logistics.envios
-                (id, guia, order_id, empresa_id, parte_id, proveedor_tipo,
+                (id, guia, order_id, empresa_id, negocio_id, parte_id, proveedor_tipo,
                  proveedor_tenant_id, monto_cents, estado)
-             VALUES ($1,$2,$3,$4,$5,$6,$7,$8,'en_preparacion') RETURNING *",
+             VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,'en_preparacion') RETURNING *",
         )
         .bind(Uuid::new_v4())
         .bind(&guia)
         .bind(order_uuid)
         .bind(empresa_uuid)
+        .bind(negocio_uuid)
         .bind(parte_uuid)
         .bind(proveedor.tipo.as_deref())
         .bind(
@@ -192,7 +200,7 @@ impl Envios {
             ));
         }
 
-        let mut montos: Vec<(String, i64)> = Vec::new();
+        let mut montos: Vec<((String, Option<String>), i64)> = Vec::new();
         for item in &orden.items {
             if item.empresa_id.trim().is_empty() {
                 return Err(ApiError::dominio(
@@ -201,27 +209,42 @@ impl Envios {
                 ));
             }
             let subtotal = item.precio_unitario_cents.saturating_mul(item.cantidad);
-            match montos.iter_mut().find(|(id, _)| id == &item.empresa_id) {
+            let clave = (item.empresa_id.clone(), item.negocio_id.clone());
+            match montos.iter_mut().find(|(id, _)| id == &clave) {
                 Some((_, total)) => *total += subtotal,
-                None => montos.push((item.empresa_id.clone(), subtotal)),
+                None => montos.push((clave, subtotal)),
             }
         }
 
         let mut envios = Vec::with_capacity(montos.len());
-        for (empresa, monto) in montos {
+        for ((empresa, negocio), monto) in montos {
             envios.push(
-                self.preparar_envio(order_id, &empresa, monto, orden.parte_id.as_deref())
-                    .await?,
+                self.preparar_envio(
+                    order_id,
+                    &empresa,
+                    negocio.as_deref(),
+                    monto,
+                    orden.parte_id.as_deref(),
+                )
+                .await?,
             );
         }
         Ok(envios)
     }
 
-    /// Deriva la flota de las capacidades activas de la empresa.
-    async fn proveedor_de_empresa(&self, empresa_id: &str) -> Result<Proveedor, ApiError> {
+    /// Deriva la flota de las capacidades activas de la empresa/negocio.
+    async fn proveedor_de_empresa(
+        &self,
+        empresa_id: &str,
+        negocio_id: Option<&str>,
+    ) -> Result<Proveedor, ApiError> {
         let filas = self
             .capacidades
-            .activas(empresa_id, &["logistica_rutas", "fulfillment_delivery"])
+            .activas_en(
+                empresa_id,
+                negocio_id,
+                &["logistica_rutas", "fulfillment_delivery"],
+            )
             .await
             .map_err(|_| ApiError::servicio_no_disponible("identity-service"))?;
         let activa = |codigo: &str| {
@@ -490,6 +513,7 @@ pub trait EnviosPort: Send + Sync {
         &self,
         order_id: &str,
         empresa_id: &str,
+        negocio_id: Option<&str>,
         monto_cents: i64,
         parte_id: Option<&str>,
     ) -> Result<Envio, ApiError>;
@@ -537,10 +561,19 @@ impl EnviosPort for Envios {
         &self,
         order_id: &str,
         empresa_id: &str,
+        negocio_id: Option<&str>,
         monto_cents: i64,
         parte_id: Option<&str>,
     ) -> Result<Envio, ApiError> {
-        Envios::preparar_envio(self, order_id, empresa_id, monto_cents, parte_id).await
+        Envios::preparar_envio(
+            self,
+            order_id,
+            empresa_id,
+            negocio_id,
+            monto_cents,
+            parte_id,
+        )
+        .await
     }
 
     async fn preparar_envios_de_orden(&self, order_id: &str) -> Result<Vec<Envio>, ApiError> {
@@ -621,6 +654,7 @@ impl EnviosPort for EnviosNoDisponible {
         &self,
         _: &str,
         _: &str,
+        _: Option<&str>,
         _: i64,
         _: Option<&str>,
     ) -> Result<Envio, ApiError> {
@@ -694,6 +728,7 @@ fn fila_envio(fila: &sqlx::postgres::PgRow) -> Result<Envio, ApiError> {
         empresa_id: uuid_opcional(fila, "empresa_id")
             .map_err(error_db)?
             .unwrap_or_default(),
+        negocio_id: uuid_opcional(fila, "negocio_id").map_err(error_db)?,
         proveedor_tipo: fila
             .try_get::<Option<String>, _>("proveedor_tipo")
             .map_err(error_db)?,
@@ -814,6 +849,7 @@ mod tests {
             estado: "en_preparacion".into(),
             creado_en: "2026-09-01T00:00:00.000Z".into(),
             empresa_id: "emp-1".into(),
+            negocio_id: None,
             proveedor_tipo: Some("empresa".into()),
             proveedor_tenant_id: Some("emp-1".into()),
             parte_id: None,

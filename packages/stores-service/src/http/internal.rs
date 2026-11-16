@@ -69,9 +69,14 @@ pub async fn tiendas_de_empresa(
     State(state): State<AppState>,
     headers: HeaderMap,
     Path(empresa_id): Path<String>,
+    Query(query): Query<HashMap<String, String>>,
 ) -> Result<Response, ApiError> {
     exigir_clave(&state, &headers)?;
-    let tiendas = state.tiendas()?.de_empresa(&empresa_id).await?;
+    let negocio_id = query
+        .get("negocio_id")
+        .map(String::as_str)
+        .filter(|valor| !valor.is_empty());
+    let tiendas = state.tiendas()?.de_empresa(&empresa_id, negocio_id).await?;
     Ok(Json(json!({ "tiendas": tiendas })).into_response())
 }
 

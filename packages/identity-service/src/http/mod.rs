@@ -5,6 +5,7 @@
 //! misma composición de capas (envelope, correlación y métricas).
 
 pub mod api_keys;
+pub mod auditoria;
 pub mod auth;
 pub mod capacidades;
 pub mod configuracion_sitio;
@@ -12,6 +13,7 @@ pub mod empresas;
 pub mod envelope;
 pub mod extensiones;
 pub mod internal;
+pub mod negocios;
 pub mod packs;
 pub mod partes;
 pub mod personal;
@@ -65,6 +67,8 @@ pub fn build_router(state: AppState) -> Router {
         .route("/api/v2/auth/registro", post(auth::registrar))
         .route("/api/v2/auth/login", post(auth::login))
         .route("/api/v2/auth/refresh", post(auth::refresh))
+        .route("/api/v2/auth/negocio-activo", post(auth::cambiar_negocio))
+        .route("/api/v2/auth/negocios", get(auth::negocios_disponibles))
         .route("/api/v2/auth/logout", post(auth::logout))
         .route("/api/v2/auth/crear-usuario", post(auth::crear_usuario))
         .route(
@@ -214,6 +218,27 @@ pub fn build_router(state: AppState) -> Router {
                 .delete(extensiones::eliminar_valores),
         )
         .route(
+            "/api/v2/empresas/{empresa_id}/negocios",
+            get(negocios::listar).post(negocios::crear),
+        )
+        .route(
+            "/api/v2/empresas/{empresa_id}/negocios/{negocio_id}/plantillas",
+            post(negocios::aplicar_plantilla),
+        )
+        .route(
+            "/api/v2/empresas/{empresa_id}/negocios/{negocio_id}/estado",
+            patch(negocios::archivar),
+        )
+        .route("/api/v2/negocios/plantillas", get(negocios::plantillas))
+        .route(
+            "/api/v2/empresas/{empresa_id}/personal/{usuario_id}/transferir",
+            post(personal::transferir),
+        )
+        .route(
+            "/api/v2/empresas/{empresa_id}/auditoria",
+            get(auditoria::listar),
+        )
+        .route(
             "/api/v2/empresas/{empresa_id}/roles",
             get(personal::listar_roles).post(personal::crear_rol),
         )
@@ -256,6 +281,14 @@ pub fn build_router(state: AppState) -> Router {
         .route(
             "/api/v2/empresas/{empresa_id}/capacidades/{capacidad}",
             patch(capacidades::actualizar),
+        )
+        .route(
+            "/api/v2/empresas/{empresa_id}/negocios/{negocio_id}/capacidades",
+            get(capacidades::listar_negocio),
+        )
+        .route(
+            "/api/v2/empresas/{empresa_id}/negocios/{negocio_id}/capacidades/{capacidad}",
+            patch(capacidades::actualizar_negocio),
         )
         .route("/api/v2/packs", get(packs::listar).post(packs::crear))
         .route(
@@ -372,6 +405,7 @@ async fn correlacion(State(state): State<AppState>, request: Request, next: Next
         usuario_id: usuario.as_ref().map(|u| u.user_id.clone()),
         rol: usuario.as_ref().map(|u| u.rol.clone()),
         tenant_id: usuario.as_ref().and_then(|u| u.tenant_id.clone()),
+        negocio_id: usuario.as_ref().and_then(|u| u.negocio_id.clone()),
     };
 
     let mut response = ejecutar_con_contexto(contexto, async move {

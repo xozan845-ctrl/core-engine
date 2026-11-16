@@ -51,6 +51,10 @@ pub struct TokenPayload {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub rol_empresa_id: Option<String>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub negocio_id: Option<String>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub permisos: Vec<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub jti: Option<String>,
     #[serde(default)]
     pub iat: i64,
@@ -69,6 +73,8 @@ pub struct UsuarioToken {
     pub personal_id: Option<String>,
     pub participacion_porcentaje: Option<i64>,
     pub rol_empresa_id: Option<String>,
+    pub negocio_id: Option<String>,
+    pub permisos: Vec<String>,
 }
 
 impl UsuarioToken {
@@ -83,6 +89,8 @@ impl UsuarioToken {
             personal_id: None,
             participacion_porcentaje: None,
             rol_empresa_id: None,
+            negocio_id: None,
+            permisos: Vec::new(),
         }
     }
 }
@@ -101,6 +109,10 @@ pub struct UsuarioSesion {
     pub participacion_porcentaje: Option<i64>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub rol_empresa_id: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub negocio_id: Option<String>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub permisos: Vec<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub avatar_objeto_id: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -127,6 +139,8 @@ fn base_payload(usuario: &UsuarioToken, tipo: &str, ttl_segundos: u64) -> TokenP
         personal_id: usuario.personal_id.clone(),
         participacion_porcentaje: usuario.participacion_porcentaje,
         rol_empresa_id: usuario.rol_empresa_id.clone(),
+        negocio_id: usuario.negocio_id.clone(),
+        permisos: usuario.permisos.clone(),
         jti: None,
         iat: ahora,
         exp: ahora + ttl_segundos as i64,
@@ -197,6 +211,8 @@ pub fn crear_sesion(
             personal_id: usuario.personal_id.clone(),
             participacion_porcentaje: usuario.participacion_porcentaje,
             rol_empresa_id: usuario.rol_empresa_id.clone(),
+            negocio_id: usuario.negocio_id.clone(),
+            permisos: usuario.permisos.clone(),
             avatar_objeto_id: None,
             avatar_url: None,
         },
@@ -227,6 +243,10 @@ pub struct UsuarioContexto {
     pub participacion_porcentaje: Option<i64>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub rol_empresa_id: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub negocio_id: Option<String>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub permisos: Vec<String>,
 }
 
 impl UsuarioContexto {
@@ -254,6 +274,17 @@ impl UsuarioContexto {
             participacion_porcentaje: leer("x-user-participacion")
                 .and_then(|valor| valor.parse::<i64>().ok()),
             rol_empresa_id: leer("x-user-rol-empresa"),
+            negocio_id: leer("x-negocio"),
+            permisos: leer("x-user-permisos")
+                .map(|valor| {
+                    valor
+                        .split(',')
+                        .map(str::trim)
+                        .filter(|permiso| !permiso.is_empty())
+                        .map(str::to_string)
+                        .collect()
+                })
+                .unwrap_or_default(),
         })
     }
 
@@ -268,7 +299,11 @@ impl UsuarioContexto {
         if roles.contains(&self.rol.as_str()) {
             return Ok(());
         }
-        if self.rol_empresa_id.is_some() && !permisos.is_empty() {
+        if !permisos.is_empty()
+            && permisos
+                .iter()
+                .all(|permiso| self.permisos.iter().any(|actual| actual == permiso))
+        {
             return Ok(());
         }
         Err(ApiError::acceso_denegado(format!(
@@ -308,6 +343,8 @@ mod tests {
             personal_id: None,
             participacion_porcentaje: Some(40),
             rol_empresa_id: None,
+            negocio_id: Some("33333333-3333-4333-8333-333333333333".into()),
+            permisos: vec!["ordenes.leer".into()],
         }
     }
 
@@ -322,6 +359,11 @@ mod tests {
             Some("22222222-2222-4222-8222-222222222222")
         );
         assert_eq!(payload.participacion_porcentaje, Some(40));
+        assert_eq!(
+            payload.negocio_id.as_deref(),
+            Some("33333333-3333-4333-8333-333333333333")
+        );
+        assert_eq!(payload.permisos, vec!["ordenes.leer".to_string()]);
         assert!(payload.exp > payload.iat);
         assert!(payload.jti.is_none());
     }

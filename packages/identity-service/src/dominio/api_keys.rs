@@ -215,6 +215,8 @@ impl ApiKeys {
             personal_id: None,
             participacion_porcentaje: None,
             rol_empresa_id: None,
+            negocio_id: None,
+            permisos: Vec::new(),
         };
         Ok(TokenApiKey {
             access_token: crear_access_token(&usuario, &self.secreto, self.access_ttl)?,

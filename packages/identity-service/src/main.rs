@@ -3,12 +3,14 @@
 use identity_service::config::Config;
 use identity_service::db::Db;
 use identity_service::dominio::api_keys::ApiKeys;
+use identity_service::dominio::auditoria::Auditoria;
 use identity_service::dominio::auth::Auth;
 use identity_service::dominio::capacidades::Capacidades;
 use identity_service::dominio::configuracion_operativa::ConfiguracionOperativaService;
 use identity_service::dominio::configuracion_sitio::ConfiguracionSitio;
 use identity_service::dominio::empresas::Empresas;
 use identity_service::dominio::extensiones::Extensiones;
+use identity_service::dominio::negocios::Negocios;
 use identity_service::dominio::packs::Packs;
 use identity_service::dominio::partes::Partes;
 use identity_service::dominio::password_reset::PasswordReset;
@@ -90,6 +92,7 @@ async fn main() {
         Arc::clone(&sesiones),
         &config,
     ));
+    let auditoria = Arc::new(Auditoria::nueva(Arc::clone(&db)));
     let password_reset = Arc::new(PasswordReset::nueva(
         Arc::clone(&db),
         Arc::clone(&usuarios),
@@ -103,10 +106,12 @@ async fn main() {
         3000,
     ));
     let extensiones = Arc::new(Extensiones::nueva(Arc::clone(&db)));
+    let negocios = Arc::new(Negocios::nuevo(Arc::clone(&db)));
     let partes = Arc::new(Partes::nueva(Arc::clone(&db)));
     let registros = Arc::new(Registros::nueva(Arc::clone(&db), Arc::clone(&capacidades)));
     let personal = Arc::new(Personal::nueva(
         Arc::clone(&db),
+        Arc::clone(&negocios),
         Arc::clone(&auth),
         Arc::clone(&email),
         stores,
@@ -118,6 +123,7 @@ async fn main() {
         metrics,
         Servicios {
             auth,
+            auditoria,
             usuarios,
             api_keys,
             capacidades,
@@ -125,6 +131,7 @@ async fn main() {
             configuracion,
             empresas,
             extensiones,
+            negocios,
             personal,
             partes,
             registros,

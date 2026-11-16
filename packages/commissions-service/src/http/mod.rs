@@ -73,6 +73,10 @@ pub fn build_router(state: AppState) -> Router {
             get(rutas::estado_cuenta_empresa),
         )
         .route("/api/v2/admin/reportes", get(rutas::reportes))
+        .route(
+            "/api/v2/empresarios/me/reportes/negocios",
+            get(rutas::reportes_negocios),
+        )
         .fallback(no_encontrado)
         .with_state(state.clone());
     aplicar_capas(router, state)
@@ -143,6 +147,7 @@ async fn correlacion(State(state): State<AppState>, request: Request, next: Next
         usuario_id: usuario.as_ref().map(|u| u.user_id.clone()),
         rol: usuario.as_ref().map(|u| u.rol.clone()),
         tenant_id: usuario.as_ref().and_then(|u| u.tenant_id.clone()),
+        negocio_id: usuario.as_ref().and_then(|u| u.negocio_id.clone()),
     };
 
     let mut response = ejecutar_con_contexto(contexto, async move {
@@ -282,7 +287,11 @@ mod tests {
             Ok(vec![liquidacion()])
         }
 
-        async fn de_empresa(&self, _empresa_id: &str) -> Result<Vec<LiquidacionEmpresa>, ApiError> {
+        async fn de_empresa(
+            &self,
+            _empresa_id: &str,
+            _negocio_id: Option<&str>,
+        ) -> Result<Vec<LiquidacionEmpresa>, ApiError> {
             Ok(vec![])
         }
 
@@ -314,9 +323,11 @@ mod tests {
         async fn estado_cuenta_empresa(
             &self,
             empresa_id: &str,
+            _negocio_id: Option<&str>,
         ) -> Result<EstadoCuentaEmpresa, ApiError> {
             Ok(EstadoCuentaEmpresa {
                 empresa_id: empresa_id.into(),
+                negocio_id: None,
                 ventas: vec![],
                 comisiones_pendientes: "0.00".into(),
                 liquidaciones: vec![],

@@ -65,6 +65,7 @@ pub async fn crear(
         .tiendas()?
         .crear(
             tenant,
+            usuario.negocio_id.as_deref(),
             &usuario.user_id,
             participacion,
             &cadena(&cuerpo, "nombre").unwrap_or_default(),
@@ -100,7 +101,12 @@ pub async fn tiendas_de_empresa(
         .tenant_id
         .as_deref()
         .ok_or_else(|| ApiError::no_encontrado("Empresa", "activa"))?;
-    ok(Value::Array(state.tiendas()?.de_empresa(tenant).await?))
+    ok(Value::Array(
+        state
+            .tiendas()?
+            .de_empresa(tenant, usuario.negocio_id.as_deref())
+            .await?,
+    ))
 }
 
 /// `GET /api/v2/tiendas/:id/tema.css` (público).

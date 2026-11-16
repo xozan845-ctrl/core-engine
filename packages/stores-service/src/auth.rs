@@ -40,6 +40,8 @@ pub struct UsuarioContexto {
     pub personal_id: Option<String>,
     pub participacion_porcentaje: Option<i64>,
     pub rol_empresa_id: Option<String>,
+    pub negocio_id: Option<String>,
+    pub permisos: Vec<String>,
 }
 
 impl UsuarioContexto {
@@ -68,6 +70,17 @@ impl UsuarioContexto {
             participacion_porcentaje: leer("x-user-participacion")
                 .and_then(|valor| valor.parse().ok()),
             rol_empresa_id: leer("x-user-rol-empresa"),
+            negocio_id: leer("x-negocio"),
+            permisos: leer("x-user-permisos")
+                .map(|valor| {
+                    valor
+                        .split(',')
+                        .map(str::trim)
+                        .filter(|permiso| !permiso.is_empty())
+                        .map(str::to_string)
+                        .collect()
+                })
+                .unwrap_or_default(),
         })
     }
 
@@ -82,7 +95,11 @@ impl UsuarioContexto {
         if roles.contains(&self.rol.as_str()) {
             return Ok(());
         }
-        if self.rol_empresa_id.is_some() && !permisos.is_empty() {
+        if !permisos.is_empty()
+            && permisos
+                .iter()
+                .all(|permiso| self.permisos.iter().any(|actual| actual == permiso))
+        {
             return Ok(());
         }
         Err(ApiError::acceso_denegado(format!(
@@ -122,6 +139,18 @@ pub trait Capacidades: Send + Sync {
         empresa_id: &str,
         requeridas: &[&str],
     ) -> Result<Vec<CapacidadActiva>, ()>;
+
+    /// Variante con negocio. Por defecto conserva el contrato anterior para
+    /// mocks y servicios que aun no propagan `x-negocio`.
+    async fn activas_en(
+        &self,
+        empresa_id: &str,
+        negocio_id: Option<&str>,
+        requeridas: &[&str],
+    ) -> Result<Vec<CapacidadActiva>, ()> {
+        let _ = negocio_id;
+        self.activas(empresa_id, requeridas).await
+    }
 }
 
 pub struct CapacidadesHttp {
@@ -153,6 +182,15 @@ impl Capacidades for CapacidadesHttp {
         empresa_id: &str,
         requeridas: &[&str],
     ) -> Result<Vec<CapacidadActiva>, ()> {
+        self.activas_en(empresa_id, None, requeridas).await
+    }
+
+    async fn activas_en(
+        &self,
+        empresa_id: &str,
+        negocio_id: Option<&str>,
+        requeridas: &[&str],
+    ) -> Result<Vec<CapacidadActiva>, ()> {
         if requeridas.is_empty() {
             return Ok(Vec::new());
         }
@@ -167,6 +205,7 @@ impl Capacidades for CapacidadesHttp {
             .json(&serde_json::json!({
                 "empresa_ids": [empresa_id],
                 "capacidades": requeridas,
+                "negocio_id": negocio_id,
             }))
             .send()
             .await
@@ -182,7 +221,6 @@ impl Capacidades for CapacidadesHttp {
     }
 }
 
-/// Implementación para tests: identity no disponible.
 pub struct CapacidadesNoDisponible;
 
 #[async_trait]
@@ -232,7 +270,7 @@ pub async fn autorizar(
     })?;
 
     let filas = capacidades
-        .activas(tenant, capacidades_extra)
+        .activas_en(tenant, usuario.negocio_id.as_deref(), capacidades_extra)
         .await
         .map_err(|_| ApiError::servicio_no_disponible("identity-service"))?;
     let activas = filas
@@ -322,6 +360,7 @@ mod tests {
             user_id: "u-1".into(),
             rol: "comprador".into(),
             rol_empresa_id: Some("r-1".into()),
+            permisos: vec!["tiendas.ofertas.gestionar".into()],
             ..Default::default()
         };
         assert!(usuario
