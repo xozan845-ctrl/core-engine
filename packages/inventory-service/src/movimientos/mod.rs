@@ -49,17 +49,25 @@ impl Movimientos {
             filtro_texto(filtros, "limite").as_deref(),
         );
         let mut params: Vec<String> = vec![empresa_id.to_string()];
-        let mut condiciones = vec!["empresa_id = $1::uuid".to_string()];
+        let mut condiciones = vec!["m.empresa_id = $1::uuid".to_string()];
         if let Some(tipo) = filtro_texto(filtros, "tipo").filter(|valor| !valor.is_empty()) {
             params.push(tipo);
-            condiciones.push(format!("tipo = ${}", params.len()));
+            condiciones.push(format!("m.tipo = ${}", params.len()));
+        }
+        if let Some(negocio) = filtro_texto(filtros, "negocio_id").filter(|valor| !valor.is_empty())
+        {
+            params.push(negocio);
+            condiciones.push(format!(
+                "m.item_id IN (SELECT id FROM catalog.items WHERE negocio_id = ${}::uuid)",
+                params.len()
+            ));
         }
         let where_clause = format!("WHERE {}", condiciones.join(" AND "));
 
         let mut tx = self.db.transaccion().await.map_err(interno)?;
         let total: i32 = {
             let sql = format!(
-                "SELECT COUNT(*)::int AS n FROM inventory.movimientos_inventario {where_clause}"
+                "SELECT COUNT(*)::int AS n FROM inventory.movimientos_inventario m {where_clause}"
             );
             let mut consulta = sqlx::query(&sql);
             for parametro in &params {
@@ -73,7 +81,7 @@ impl Movimientos {
         };
         let sql = format!(
             "SELECT {COLUMNAS}
-               FROM inventory.movimientos_inventario {where_clause}
+               FROM inventory.movimientos_inventario m {where_clause}
               ORDER BY creado_en DESC LIMIT ${} OFFSET ${}",
             params.len() + 1,
             params.len() + 2

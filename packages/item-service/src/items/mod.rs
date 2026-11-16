@@ -14,7 +14,7 @@ use uuid::Uuid;
 
 pub const TIPOS: [&str; 3] = ["producto", "servicio", "alquiler"];
 
-const COLUMNAS: &str = "i.id AS item_id, i.empresa_id, i.tipo, i.codigo, i.nombre,
+const COLUMNAS: &str = "i.id AS item_id, i.empresa_id, i.negocio_id, i.tipo, i.codigo, i.nombre,
   i.descripcion, i.categoria, i.precio_cents, i.costo_cents, i.track_inventory,
   i.track_serial, i.stock, i.duration_minutes, i.atributos, i.parent_item_id,
   i.marca, i.codigo_barras, i.unidad, i.permite_fracciones, i.unidad_compra,
@@ -22,7 +22,8 @@ const COLUMNAS: &str = "i.id AS item_id, i.empresa_id, i.tipo, i.codigo, i.nombr
   i.stock_minimo, i.stock_maximo, i.garantia_meses, i.es_materia_prima,
   i.ubicacion, i.estado, i.creado_en, i.actualizado_en";
 
-const COLUMNAS_RETURNING: &str = "id AS item_id, empresa_id, tipo, codigo, nombre, descripcion,
+const COLUMNAS_RETURNING: &str =
+    "id AS item_id, empresa_id, negocio_id, tipo, codigo, nombre, descripcion,
   categoria, precio_cents, costo_cents, track_inventory, track_serial, stock,
   duration_minutes, atributos, parent_item_id, marca, codigo_barras, unidad,
   permite_fracciones, unidad_compra, contenido_cantidad, contenido_unidad,
@@ -103,6 +104,47 @@ impl Items {
         Self { db }
     }
 
+    async fn resolver_negocio(
+        &self,
+        empresa_id: &str,
+        negocio_id: Option<&str>,
+    ) -> Result<Option<String>, ApiError> {
+        let mut tx = self.db.transaccion().await.map_err(interno)?;
+        let fila = match negocio_id {
+            Some(id) => {
+                if !es_uuid(id) {
+                    return Err(ApiError::dominio(
+                        "NEGOCIO_INVALIDO",
+                        "El id de negocio no es un UUID valido.",
+                    ));
+                }
+                sqlx::query(
+                    "SELECT id FROM identity.negocios
+                      WHERE id = $1::uuid AND empresa_id = $2::uuid",
+                )
+                .bind(id)
+                .bind(empresa_id)
+                .fetch_optional(&mut *tx)
+                .await
+                .map_err(interno)?
+                .map(|fila| fila.get::<Uuid, _>("id").to_string())
+                .map(Some)
+                .ok_or_else(|| ApiError::no_encontrado("Negocio", id))?
+            }
+            None => sqlx::query(
+                "SELECT id FROM identity.negocios
+                  WHERE empresa_id = $1::uuid AND es_predeterminado LIMIT 1",
+            )
+            .bind(empresa_id)
+            .fetch_optional(&mut *tx)
+            .await
+            .map_err(interno)?
+            .map(|fila| fila.get::<Uuid, _>("id").to_string()),
+        };
+        tx.commit().await.map_err(interno)?;
+        Ok(fila)
+    }
+
     pub async fn listar(&self, filtros: &Value) -> Result<Value, ApiError> {
         let empresa = la_empresa(filtros.get("empresa_id"))?;
         let paginacion = parsear_paginacion(
@@ -122,6 +164,16 @@ impl Items {
         if let Some(categoria) = texto_opcional(filtros, "categoria").filter(|v| !v.is_empty()) {
             params.push(categoria.to_lowercase());
             condiciones.push(format!("LOWER(i.categoria) = ${}", params.len()));
+        }
+        if let Some(negocio) = texto_opcional(filtros, "negocio_id").filter(|v| !v.is_empty()) {
+            if !es_uuid(negocio) {
+                return Err(ApiError::dominio(
+                    "NEGOCIO_INVALIDO",
+                    "El id de negocio no es un UUID valido.",
+                ));
+            }
+            params.push(negocio.to_string());
+            condiciones.push(format!("i.negocio_id = ${}::uuid", params.len()));
         }
         if let Some(q) = texto_opcional(filtros, "q").filter(|v| !v.is_empty()) {
             params.push(format!("%{}%", q.to_lowercase()));
@@ -328,6 +380,9 @@ impl Items {
             )
             .await?;
         self.exigir_codigo_libre(empresa_id, tipo, &codigo).await?;
+        let negocio_id = self
+            .resolver_negocio(empresa_id, texto_opcional(datos, "negocio_id"))
+            .await?;
 
         let mut tx = self.db.transaccion().await.map_err(interno)?;
         let resultado = sqlx::query(&format!(
@@ -337,9 +392,9 @@ impl Items {
                 parent_item_id, marca, codigo_barras, unidad, permite_fracciones,
                 unidad_compra, contenido_cantidad, contenido_unidad, tipo_precio,
                 tipo_costo, stock_minimo, stock_maximo, garantia_meses, es_materia_prima,
-                ubicacion)
+                ubicacion, negocio_id)
              VALUES ($1::uuid, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12::jsonb, $13, $14::uuid,
-                     $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27, $28)
+                     $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27, $28, $29::uuid)
              RETURNING {COLUMNAS_RETURNING}"
         ))
         .bind(empresa_id)
@@ -414,6 +469,7 @@ impl Items {
         .bind(entero(datos, "garantia_meses"))
         .bind(booleano(datos, "es_materia_prima").unwrap_or(false))
         .bind(texto(datos, "ubicacion"))
+        .bind(negocio_id.as_deref())
         .fetch_optional(&mut *tx)
         .await;
         match resultado {
@@ -457,12 +513,15 @@ impl Items {
             .await?;
         self.exigir_codigo_libre(empresa_id, "alquiler", &codigo)
             .await?;
+        let negocio_id = self
+            .resolver_negocio(empresa_id, texto_opcional(datos, "negocio_id"))
+            .await?;
         let mut tx = self.db.transaccion().await.map_err(interno)?;
         let fila = sqlx::query(&format!(
             "INSERT INTO item.items
                (empresa_id, tipo, codigo, nombre, descripcion, categoria, precio_cents,
-                costo_cents, track_inventory, stock, atributos, estado)
-             VALUES ($1::uuid, 'alquiler', $2, $3, $4, $5, $6, $7, false, NULL, $8::jsonb, $9)
+                costo_cents, track_inventory, stock, atributos, estado, negocio_id)
+             VALUES ($1::uuid, 'alquiler', $2, $3, $4, $5, $6, $7, false, NULL, $8::jsonb, $9, $10::uuid)
              RETURNING {COLUMNAS_RETURNING}"
         ))
         .bind(empresa_id)
@@ -485,6 +544,7 @@ impl Items {
         } else {
             "activo"
         })
+        .bind(negocio_id.as_deref())
         .fetch_optional(&mut *tx)
         .await
         .map_err(interno)?;

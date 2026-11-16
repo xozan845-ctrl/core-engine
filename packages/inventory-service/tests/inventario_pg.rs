@@ -30,7 +30,11 @@ async fn preparar() -> Contexto {
 #[tokio::test]
 async fn debe_leer_y_guardar_la_configuracion_de_inventario() {
     let ctx = preparar().await;
-    let inicial = ctx.inventario.configuracion(EMPRESA).await.expect("config");
+    let inicial = ctx
+        .inventario
+        .configuracion(EMPRESA, None)
+        .await
+        .expect("config");
     assert_eq!(inicial["metodo_costeo"], "promedio");
     assert_eq!(inicial["permitir_stock_negativo"], false);
 
@@ -38,6 +42,7 @@ async fn debe_leer_y_guardar_la_configuracion_de_inventario() {
         .inventario
         .guardar_configuracion(
             EMPRESA,
+            None,
             &json!({"metodo_costeo": "fifo", "permitir_stock_negativo": true}),
         )
         .await
@@ -45,7 +50,11 @@ async fn debe_leer_y_guardar_la_configuracion_de_inventario() {
     assert_eq!(guardada["metodo_costeo"], "fifo");
     assert_eq!(guardada["permitir_stock_negativo"], true);
 
-    let releida = ctx.inventario.configuracion(EMPRESA).await.expect("config");
+    let releida = ctx
+        .inventario
+        .configuracion(EMPRESA, None)
+        .await
+        .expect("config");
     assert_eq!(releida["metodo_costeo"], "fifo");
 }
 
@@ -54,7 +63,7 @@ async fn debe_rechazar_un_metodo_de_costeo_invalido() {
     let ctx = preparar().await;
     let error = ctx
         .inventario
-        .guardar_configuracion(EMPRESA, &json!({"metodo_costeo": "lifo"}))
+        .guardar_configuracion(EMPRESA, None, &json!({"metodo_costeo": "lifo"}))
         .await
         .expect_err("metodo");
     assert_eq!(error.codigo, "METODO_COSTEO_INVALIDO");
@@ -204,7 +213,11 @@ async fn debe_listar_stock_fisico_reservado_y_valorizado() {
     .await
     .expect("reserva");
 
-    let lineas = ctx.inventario.listar(Some(EMPRESA)).await.expect("lineas");
+    let lineas = ctx
+        .inventario
+        .listar(Some(EMPRESA), None)
+        .await
+        .expect("lineas");
     assert_eq!(lineas.len(), 1);
     let linea = &lineas[0];
     assert_eq!(linea["sku"], "SKU-LISTA");
@@ -230,7 +243,7 @@ async fn debe_resumir_productos_agotados_y_valor_del_inventario() {
 
     let resumen = ctx
         .inventario
-        .resumen(Some(EMPRESA))
+        .resumen(Some(EMPRESA), None)
         .await
         .expect("resumen");
     assert_eq!(resumen["productos"], 2);
