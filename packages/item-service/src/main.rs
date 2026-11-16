@@ -6,20 +6,16 @@ use item_service::componentes::Componentes;
 use item_service::config::Config;
 use item_service::db::Db;
 use item_service::http::build_router;
-use item_service::inventario::Inventario;
 use item_service::items::Items;
 use item_service::logs::{ejecutar_con_contexto, ContextoCorrelacion};
 use item_service::metrics::Metrics;
 use item_service::operaciones::Operaciones;
 use item_service::outbox::Outbox;
-use item_service::precios::Precios;
 use item_service::productos::Productos;
 use item_service::rabbit::Rabbit;
 use item_service::series::Series;
 use item_service::servicios::Servicios;
 use item_service::state::AppState;
-use item_service::tarifas::Tarifas;
-use item_service::ubicaciones::Ubicaciones;
 use std::sync::Arc;
 
 #[tokio::main]
@@ -69,8 +65,6 @@ async fn main() {
 
     let outbox = Arc::new(Outbox::nueva(config.outbox_tabla.clone()));
     let items = Arc::new(Items::nueva(Arc::clone(&db)));
-    let inventario = Arc::new(Inventario::nueva(Arc::clone(&db)));
-    let ubicaciones = Arc::new(Ubicaciones::nueva(Arc::clone(&db), Arc::clone(&items)));
     let productos = Arc::new(Productos::nueva(
         Arc::clone(&db),
         Some(Arc::clone(&outbox)),
@@ -81,8 +75,6 @@ async fn main() {
         Arc::clone(&productos),
         Some(Arc::clone(&items)),
     ));
-    let precios = Arc::new(Precios::nueva(Arc::clone(&db)));
-    let tarifas = Arc::new(Tarifas::nueva(Arc::clone(&db)));
     let series = Arc::new(Series::nueva(Arc::clone(&db)));
     let componentes = Arc::new(Componentes::nueva(Arc::clone(&db), Arc::clone(&items)));
     let operaciones = Arc::new(Operaciones::nueva(
@@ -107,12 +99,8 @@ async fn main() {
         Arc::clone(&db),
         capacidades,
         items,
-        inventario,
-        ubicaciones,
         productos,
         servicios,
-        precios,
-        tarifas,
         series,
         componentes,
         operaciones,

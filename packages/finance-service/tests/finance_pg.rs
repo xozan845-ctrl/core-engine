@@ -59,6 +59,16 @@ async fn provisionar(url: &str) {
           eliminado_en timestamptz
         );
 
+        CREATE TABLE finance.tipos_cambio (
+          id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+          base text NOT NULL,
+          quote text NOT NULL,
+          tasa numeric(18,8) NOT NULL,
+          vigente_desde timestamptz NOT NULL DEFAULT NOW(),
+          creado_por uuid NOT NULL,
+          creado_en timestamptz NOT NULL DEFAULT NOW()
+        );
+
         CREATE TABLE finance.plan_cuentas (
           codigo text PRIMARY KEY,
           nombre text NOT NULL,
@@ -812,4 +822,39 @@ async fn debe_guardar_y_releer_proyecciones() {
         .expect("proyeccion");
     assert_eq!(obtenida.totales.gmv_cents, creada.totales.gmv_cents);
     assert_eq!(obtenida.filas.len(), 12);
+}
+
+#[tokio::test]
+async fn debe_registrar_y_leer_tipos_de_cambio() {
+    let Some(url) = url() else { return };
+    let _guard = DB_LOCK.lock().await;
+    provisionar(&url).await;
+    let db = Arc::new(Db::conectar(&url).await.expect("db"));
+    let comercio = Comercio::nuevo(Arc::clone(&db));
+    let actor = usuario("super_admin", None);
+    let fila = comercio
+        .registrar_tipo_cambio("nio", "usd", "36.50000000", &actor)
+        .await
+        .expect("tipo de cambio");
+    assert_eq!(fila["base"], "NIO");
+    assert_eq!(fila["quote"], "USD");
+
+    let vigente = comercio
+        .tipo_cambio_vigente("NIO", "USD")
+        .await
+        .expect("vigente")
+        .expect("existe");
+    assert_eq!(vigente["base"], "NIO");
+
+    let lista = comercio
+        .listar_tipos_cambio(Some("NIO"), Some("USD"))
+        .await
+        .expect("lista");
+    assert_eq!(lista.len(), 1);
+
+    let error = comercio
+        .registrar_tipo_cambio("NIO", "NIO", "1", &actor)
+        .await
+        .expect_err("misma moneda");
+    assert_eq!(error.codigo, "VALIDACION");
 }

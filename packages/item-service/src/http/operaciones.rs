@@ -1,5 +1,5 @@
 //! Handlers de operaciones de catálogo (configuración, importación, escaneo,
-//! combos, promociones y movimientos de inventario).
+//! combos). Precios, promociones e inventario viven en sus propios servicios.
 
 use super::validacion::{self, campo, Regla, ReglaCampo};
 use super::{autorizar, Cuerpo};
@@ -16,18 +16,6 @@ use std::collections::HashMap;
 const CAP_ITEMS: &[&str] = &["catalogo_items"];
 const CAP_STOCK: &[&str] = &["inventario_stock", "catalogo_items"];
 const CAP_BARRAS: &[&str] = &["codigo_barras", "catalogo_items"];
-
-const CONFIGURACION: &[ReglaCampo] = &[
-    campo(
-        "metodo_costeo",
-        false,
-        &[Regla::En(&["promedio", "fifo", "ueps"])],
-    ),
-    campo("permitir_stock_negativo", false, &[Regla::Booleano]),
-    campo("alerta_stock_bajo", false, &[Regla::Booleano]),
-    campo("actualizar_costo_en_compra", false, &[Regla::Booleano]),
-    campo("unidad_defecto", false, &[Regla::Texto]),
-];
 
 const COMBO: &[ReglaCampo] = &[
     campo("sku", true, &[Regla::Texto, Regla::Coincide("sku")]),
@@ -46,79 +34,6 @@ const COMBO_ACTUALIZAR: &[ReglaCampo] = &[
     campo("precio", false, &[Regla::Texto, Regla::Coincide("monto")]),
     campo("estado", false, &[Regla::En(&["activo", "inactivo"])]),
     campo("componentes", false, &[Regla::Arreglo]),
-];
-
-const PROMOCION: &[ReglaCampo] = &[
-    campo("nombre", true, &[Regla::Texto, Regla::Longitud(2, 200)]),
-    campo(
-        "tipo",
-        true,
-        &[Regla::En(&[
-            "2x1",
-            "descuento_cantidad",
-            "descuento_porcentaje",
-            "regalo",
-        ])],
-    ),
-    campo("item_id", false, &[Regla::Uuid]),
-    campo("sku", false, &[Regla::Texto]),
-    campo(
-        "cantidad_requerida",
-        false,
-        &[Regla::Entero, Regla::Min(1.0)],
-    ),
-    campo("cantidad_gratis", false, &[Regla::Entero, Regla::Min(1.0)]),
-    campo(
-        "descuento_porcentaje",
-        false,
-        &[Regla::Entero, Regla::Min(1.0), Regla::Max(100.0)],
-    ),
-    campo("fecha_desde", true, &[Regla::Fecha]),
-    campo("fecha_hasta", true, &[Regla::Fecha]),
-    campo("estado", false, &[Regla::En(&["activo", "inactivo"])]),
-];
-
-const PROMOCION_ACTUALIZAR: &[ReglaCampo] = &[
-    campo("nombre", false, &[Regla::Texto, Regla::Longitud(2, 200)]),
-    campo(
-        "tipo",
-        false,
-        &[Regla::En(&[
-            "2x1",
-            "descuento_cantidad",
-            "descuento_porcentaje",
-            "regalo",
-        ])],
-    ),
-    campo("item_id", false, &[Regla::Uuid]),
-    campo("sku", false, &[Regla::Texto]),
-    campo(
-        "cantidad_requerida",
-        false,
-        &[Regla::Entero, Regla::Min(1.0)],
-    ),
-    campo("cantidad_gratis", false, &[Regla::Entero, Regla::Min(1.0)]),
-    campo(
-        "descuento_porcentaje",
-        false,
-        &[Regla::Entero, Regla::Min(1.0), Regla::Max(100.0)],
-    ),
-    campo("fecha_desde", false, &[Regla::Fecha]),
-    campo("fecha_hasta", false, &[Regla::Fecha]),
-    campo("estado", false, &[Regla::En(&["activo", "inactivo"])]),
-];
-
-const MOVIMIENTO: &[ReglaCampo] = &[
-    campo(
-        "tipo",
-        true,
-        &[Regla::En(&["entrada", "salida", "ajuste", "traslado"])],
-    ),
-    campo("motivo", false, &[Regla::Texto]),
-    campo("referencia", false, &[Regla::Texto]),
-    campo("ubicacion_origen", false, &[Regla::Texto]),
-    campo("ubicacion_destino", false, &[Regla::Texto]),
-    campo("lineas", true, &[Regla::Arreglo]),
 ];
 
 fn validar(esquema: &[ReglaCampo], cuerpo: &Value) -> Result<(), ApiError> {
@@ -267,64 +182,6 @@ fn validar_componentes(valor: &Value, campo: &'static str) -> Result<(), ApiErro
     Ok(())
 }
 
-fn validar_lineas_movimiento(valor: &Value) -> Result<(), ApiError> {
-    let Some(lineas) = valor.as_array() else {
-        return Err(ApiError::validacion(
-            json!([{ "campo": "lineas", "restricciones": ["isArray"] }]),
-        ));
-    };
-    if lineas.is_empty() {
-        return Err(ApiError::validacion(
-            json!([{ "campo": "lineas", "restricciones": ["arrayMinSize"] }]),
-        ));
-    }
-    for linea in lineas {
-        let valido = linea.as_object().is_some_and(|objeto| {
-            objeto
-                .get("sku")
-                .and_then(Value::as_str)
-                .is_some_and(|sku| !sku.is_empty())
-                && objeto
-                    .get("cantidad")
-                    .and_then(Value::as_i64)
-                    .is_some_and(|cantidad| cantidad >= 0)
-        });
-        if !valido {
-            return Err(ApiError::validacion(
-                json!([{ "campo": "lineas", "restricciones": [] }]),
-            ));
-        }
-    }
-    Ok(())
-}
-
-/// `GET /api/v2/catalog/configuracion-inventario`.
-pub async fn configuracion(
-    State(state): State<AppState>,
-    headers: HeaderMap,
-    Query(query): Query<HashMap<String, String>>,
-) -> Result<Response, ApiError> {
-    let usuario = autorizar(&state, &headers, ROLES_CATALOGO, &[], CAP_STOCK).await?;
-    let empresa = empresa(&usuario, query.get("empresa_id").map(String::as_str))?;
-    ok(state.operaciones()?.configuracion(&empresa).await?)
-}
-
-/// `PUT /api/v2/catalog/configuracion-inventario`.
-pub async fn guardar_configuracion(
-    State(state): State<AppState>,
-    headers: HeaderMap,
-    Query(query): Query<HashMap<String, String>>,
-    Cuerpo(cuerpo): Cuerpo,
-) -> Result<Response, ApiError> {
-    let usuario = autorizar(&state, &headers, ROLES_CATALOGO, &[], CAP_STOCK).await?;
-    validar(CONFIGURACION, &cuerpo)?;
-    let empresa = empresa(&usuario, query.get("empresa_id").map(String::as_str))?;
-    ok(state
-        .operaciones()?
-        .guardar_configuracion(&empresa, &cuerpo)
-        .await?)
-}
-
 /// `POST /api/v2/catalog/items/importar`.
 pub async fn importar(
     State(state): State<AppState>,
@@ -464,135 +321,3 @@ const LISTAR_PROMOCIONES: &[ReglaCampo] = &[
         &[Regla::Entero, Regla::Min(1.0), Regla::Max(100.0)],
     ),
 ];
-
-/// `GET /api/v2/catalog/promociones`.
-pub async fn listar_promociones(
-    State(state): State<AppState>,
-    headers: HeaderMap,
-    Query(query): Query<HashMap<String, String>>,
-) -> Result<Response, ApiError> {
-    let usuario = autorizar(&state, &headers, ROLES_CATALOGO, &[], CAP_ITEMS).await?;
-    validar_query(LISTAR_PROMOCIONES, &query)?;
-    let empresa = empresa(&usuario, query.get("empresa_id").map(String::as_str))?;
-    ok(state
-        .operaciones()?
-        .listar_promociones(&empresa, &json!(query))
-        .await?)
-}
-
-/// `POST /api/v2/catalog/promociones`.
-pub async fn crear_promocion(
-    State(state): State<AppState>,
-    headers: HeaderMap,
-    Query(query): Query<HashMap<String, String>>,
-    Cuerpo(cuerpo): Cuerpo,
-) -> Result<Response, ApiError> {
-    let usuario = autorizar(&state, &headers, ROLES_CATALOGO, &[], CAP_ITEMS).await?;
-    validar(PROMOCION, &cuerpo)?;
-    let empresa = empresa(&usuario, query.get("empresa_id").map(String::as_str))?;
-    created(
-        state
-            .operaciones()?
-            .crear_promocion(&empresa, &cuerpo)
-            .await?,
-    )
-}
-
-/// `GET /api/v2/catalog/promociones/:id`.
-pub async fn detalle_promocion(
-    State(state): State<AppState>,
-    headers: HeaderMap,
-    Path(id): Path<String>,
-    Query(query): Query<HashMap<String, String>>,
-) -> Result<Response, ApiError> {
-    let usuario = autorizar(&state, &headers, ROLES_CATALOGO, &[], CAP_ITEMS).await?;
-    let empresa = empresa(&usuario, query.get("empresa_id").map(String::as_str))?;
-    let promocion = state
-        .operaciones()?
-        .obtener_promocion(&id, &empresa)
-        .await?
-        .ok_or_else(|| ApiError::no_encontrado("Promoción", &id))?;
-    ok(promocion)
-}
-
-/// `PATCH /api/v2/catalog/promociones/:id`.
-pub async fn actualizar_promocion(
-    State(state): State<AppState>,
-    headers: HeaderMap,
-    Path(id): Path<String>,
-    Query(query): Query<HashMap<String, String>>,
-    Cuerpo(cuerpo): Cuerpo,
-) -> Result<Response, ApiError> {
-    let usuario = autorizar(&state, &headers, ROLES_CATALOGO, &[], CAP_ITEMS).await?;
-    validar(PROMOCION_ACTUALIZAR, &cuerpo)?;
-    let empresa = empresa(&usuario, query.get("empresa_id").map(String::as_str))?;
-    ok(state
-        .operaciones()?
-        .actualizar_promocion(&id, &empresa, &cuerpo)
-        .await?)
-}
-
-/// `DELETE /api/v2/catalog/promociones/:id`.
-pub async fn eliminar_promocion(
-    State(state): State<AppState>,
-    headers: HeaderMap,
-    Path(id): Path<String>,
-    Query(query): Query<HashMap<String, String>>,
-) -> Result<Response, ApiError> {
-    let usuario = autorizar(&state, &headers, ROLES_CATALOGO, &[], CAP_ITEMS).await?;
-    let empresa = empresa(&usuario, query.get("empresa_id").map(String::as_str))?;
-    state
-        .operaciones()?
-        .eliminar_promocion(&id, &empresa)
-        .await?;
-    sin_contenido()
-}
-
-const LISTAR_MOVIMIENTOS: &[ReglaCampo] = &[
-    campo("empresa_id", false, &[Regla::Uuid]),
-    campo(
-        "tipo",
-        false,
-        &[Regla::En(&["entrada", "salida", "ajuste", "traslado"])],
-    ),
-    campo("pagina", false, &[Regla::Numero, Regla::Min(1.0)]),
-    campo(
-        "limite",
-        false,
-        &[Regla::Numero, Regla::Min(1.0), Regla::Max(100.0)],
-    ),
-];
-
-/// `GET /api/v2/catalog/inventario/movimientos`.
-pub async fn listar_movimientos(
-    State(state): State<AppState>,
-    headers: HeaderMap,
-    Query(query): Query<HashMap<String, String>>,
-) -> Result<Response, ApiError> {
-    let usuario = autorizar(&state, &headers, ROLES_CATALOGO, &[], CAP_STOCK).await?;
-    validar_query(LISTAR_MOVIMIENTOS, &query)?;
-    let empresa = empresa(&usuario, query.get("empresa_id").map(String::as_str))?;
-    ok(state
-        .operaciones()?
-        .movimientos(&empresa, &json!(query))
-        .await?)
-}
-
-/// `POST /api/v2/catalog/inventario/movimientos`.
-pub async fn crear_movimiento(
-    State(state): State<AppState>,
-    headers: HeaderMap,
-    Query(query): Query<HashMap<String, String>>,
-    Cuerpo(cuerpo): Cuerpo,
-) -> Result<Response, ApiError> {
-    let usuario = autorizar(&state, &headers, ROLES_CATALOGO, &[], CAP_STOCK).await?;
-    validar(MOVIMIENTO, &cuerpo)?;
-    validar_lineas_movimiento(cuerpo.get("lineas").unwrap_or(&Value::Null))?;
-    let empresa = empresa(&usuario, query.get("empresa_id").map(String::as_str))?;
-    created(
-        state
-            .operaciones()?
-            .crear_movimiento(&empresa, &cuerpo, Some(&usuario.user_id))
-            .await?,
-    )
-}

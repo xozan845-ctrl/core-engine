@@ -101,7 +101,12 @@ el mismo despliegue, con el gateway apuntando al servicio nuevo.
 1. Confirmar que `/ready` incluye `inventory: ok` y que el gateway enruta:
    - `GET /api/v2/admin/inventario?empresa_id=<tenant>`
    - `GET /api/v2/catalog/configuracion-inventario?empresa_id=<tenant>`
-2. Ejecutar el smoke remoto con las credenciales del environment:
+   - `GET /api/v2/catalog/items/<item>/componentes` y
+     `GET /api/v2/catalog/items/<item>/series` (PIM en `item-service`)
+2. Confirmar que `PATCH /api/v2/catalog/items/<item>` con `stock` responde
+   `STOCK_GESTIONADO_POR_INVENTARIO`; el ajuste se hace por
+   `/api/v2/admin/inventario`.
+3. Ejecutar el smoke remoto con las credenciales del environment:
 
 ```bash
 BASE_URL=https://<stage> \
@@ -110,13 +115,13 @@ SMOKE_EMPRESA_ID=<tenant-con-datos> \
 npm run smoke:remote
 ```
 
-3. Verificar la saga completa en staging con una orden real de prueba:
+4. Verificar la saga completa en staging con una orden real de prueba:
    - `order.created` → `stock.reservado`
    - orden en `pagada`
    - `payment.procesado`
    - entrega → `order.completado`
    - `comision.acreditada` y asiento en finance
-4. Revisar `inventory.outbox` sin pendientes y `orders.resultados` sin mensajes
+5. Revisar `inventory.outbox` sin pendientes y `orders.resultados` sin mensajes
    atascados.
 
 ## Rollback

@@ -3686,6 +3686,11 @@
             "description": "Código de un método de pago activo (orders.metodos_pago). Credito requiere cliente_parte_id con cupo.",
             "default": "simulado"
           },
+          "moneda_pago": {
+            "type": "string",
+            "description": "Moneda de pago explícita; si difiere de la orden se usa la tasa publicada en finance.",
+            "example": "USD"
+          },
           "lista_precio_codigo": {
             "type": "string",
             "description": "Lista de precios por codigo (sustituye el precio base del item)",

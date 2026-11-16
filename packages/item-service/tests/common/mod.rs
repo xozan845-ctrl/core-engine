@@ -1,6 +1,6 @@
 #![allow(dead_code)]
 
-//! Utilidades de integración: esquema `catalog` y fixtures.
+//! Utilidades de integración: esquema `item` y fixtures.
 
 use serde_json::json;
 use sqlx::PgPool;
