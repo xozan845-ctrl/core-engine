@@ -167,6 +167,7 @@ fn debe_validar_las_lineas_de_compra() {
     assert!(validar_lineas(&[invalida]).is_err());
 }
 
+/// Cubre los validadores compartidos por los recursos de comercio.
 #[test]
 fn debe_validar_campos_de_texto_lista_rango_fecha_y_email() {
     validar_texto("Banco", "nombre", 3).expect("texto valido");
