@@ -316,6 +316,23 @@ mod tests {
     }
 
     #[test]
+    fn debe_agregar_el_monto_formateado_a_la_liquidacion_empresa() {
+        let valor = liquidacion_empresa_con_monto(LiquidacionEmpresa {
+            id: "le-1".into(),
+            empresa_id: "e-1".into(),
+            negocio_id: Some("n-1".into()),
+            periodo_inicio: "2026-09-01T06:00:00.000Z".into(),
+            periodo_fin: "2026-09-15T06:00:00.000Z".into(),
+            monto_cents: 25_000,
+            estado: "aprobada".into(),
+            creado_en: "2026-09-16T00:00:00.000Z".into(),
+        })
+        .expect("valor");
+        assert_eq!(valor["monto"], "250.00");
+        assert_eq!(valor["negocio_id"], "n-1");
+    }
+
+    #[test]
     fn debe_agregar_el_monto_formateado_al_final() {
         let valor = liquidacion_con_monto(Liquidacion {
             id: "l-1".into(),
