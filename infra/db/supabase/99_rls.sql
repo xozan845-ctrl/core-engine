@@ -1325,3 +1325,253 @@ CREATE POLICY fidelizacion_canjes_empresa ON orders.fidelizacion_canjes
   FOR ALL TO authenticated
   USING (empresa_id::text = (auth.jwt() ->> 'tenant_id'))
   WITH CHECK (empresa_id::text = (auth.jwt() ->> 'tenant_id'));
+-- ── identity.negocios (ADR-0019) ─────────────────────────────────────────
+-- Un negocio pertenece a una empresa; el aislamiento sigue siendo por tenant.
+ALTER TABLE identity.negocios ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS negocios_admin ON identity.negocios;
+DROP POLICY IF EXISTS negocios_tenant ON identity.negocios;
+DROP POLICY IF EXISTS negocios_app ON identity.negocios;
+CREATE POLICY negocios_admin ON identity.negocios FOR ALL TO authenticated
+  USING (auth.rol() IN ('super_admin', 'admin'))
+  WITH CHECK (auth.rol() IN ('super_admin', 'admin'));
+CREATE POLICY negocios_tenant ON identity.negocios FOR ALL TO authenticated
+  USING (empresa_id::text = (auth.jwt() ->> 'tenant_id'))
+  WITH CHECK (auth.rol() = 'empresario'
+          AND empresa_id::text = (auth.jwt() ->> 'tenant_id'));
+CREATE POLICY negocios_app ON identity.negocios FOR ALL TO core_engine_app
+  USING (true) WITH CHECK (true);
+
+-- ── identity.negocio_capacidades (ADR-0019 fase 3) ───────────────────────
+ALTER TABLE identity.negocio_capacidades ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS negocio_capacidades_admin ON identity.negocio_capacidades;
+DROP POLICY IF EXISTS negocio_capacidades_tenant ON identity.negocio_capacidades;
+DROP POLICY IF EXISTS negocio_capacidades_app ON identity.negocio_capacidades;
+CREATE POLICY negocio_capacidades_admin ON identity.negocio_capacidades
+  FOR ALL TO authenticated
+  USING (auth.rol() IN ('super_admin', 'admin'))
+  WITH CHECK (auth.rol() IN ('super_admin', 'admin'));
+CREATE POLICY negocio_capacidades_tenant ON identity.negocio_capacidades
+  FOR ALL TO authenticated
+  USING (EXISTS (
+    SELECT 1 FROM identity.negocios n
+     WHERE n.id = negocio_id
+       AND n.empresa_id::text = (auth.jwt() ->> 'tenant_id')
+  ))
+  WITH CHECK (auth.rol() = 'empresario' AND EXISTS (
+    SELECT 1 FROM identity.negocios n
+     WHERE n.id = negocio_id
+       AND n.empresa_id::text = (auth.jwt() ->> 'tenant_id')
+  ));
+CREATE POLICY negocio_capacidades_app ON identity.negocio_capacidades
+  FOR ALL TO core_engine_app USING (true) WITH CHECK (true);
+
+-- ── identity.permisos (ADR-0019 iteración 7) ─────────────────────────────
+ALTER TABLE identity.permisos ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS permisos_admin ON identity.permisos;
+DROP POLICY IF EXISTS permisos_lectura ON identity.permisos;
+DROP POLICY IF EXISTS permisos_app ON identity.permisos;
+CREATE POLICY permisos_admin ON identity.permisos FOR ALL TO authenticated
+  USING (auth.rol() IN ('super_admin', 'admin'))
+  WITH CHECK (auth.rol() IN ('super_admin', 'admin'));
+CREATE POLICY permisos_lectura ON identity.permisos FOR SELECT TO authenticated
+  USING (activo = true);
+CREATE POLICY permisos_app ON identity.permisos FOR SELECT TO core_engine_app
+  USING (true);
+
+-- ── RLS restrictiva por negocio (ADR-0019 iteración 8) ───────────────────
+CREATE OR REPLACE FUNCTION auth.negocio_actual() RETURNS text
+LANGUAGE sql STABLE AS $$
+  SELECT NULLIF(auth.jwt() ->> 'negocio_id', '')
+$$;
+
+DO $$
+DECLARE
+  tabla text;
+  nombre text;
+BEGIN
+  FOREACH tabla IN ARRAY ARRAY[
+    'identity.roles_empresa',
+    'identity.puestos_empresa',
+    'identity.asignaciones_personal',
+    'identity.invitaciones_personal',
+    'identity.negocio_capacidades',
+    'stores.tiendas',
+    'item.items',
+    'orders.orden_vista',
+    'commissions.comisiones',
+    'commissions.liquidaciones_empresas',
+    'commissions.compensaciones_devoluciones',
+    'finance.comprobantes',
+    'logistics.envios'
+  ] LOOP
+    nombre := replace(tabla, '.', '_') || '_negocio_restrictiva';
+    EXECUTE format('DROP POLICY IF EXISTS %I ON %s', nombre, tabla);
+    EXECUTE format(
+      'CREATE POLICY %I ON %s AS RESTRICTIVE FOR ALL TO authenticated
+         USING (auth.negocio_actual() IS NULL
+                OR negocio_id IS NULL
+                OR negocio_id::text = auth.negocio_actual())
+         WITH CHECK (auth.negocio_actual() IS NULL
+                OR negocio_id IS NULL
+                OR negocio_id::text = auth.negocio_actual())',
+      nombre, tabla
+    );
+  END LOOP;
+END $$;
+
+DROP POLICY IF EXISTS stores_ofertas_negocio_restrictiva ON stores.ofertas;
+CREATE POLICY stores_ofertas_negocio_restrictiva ON stores.ofertas
+  AS RESTRICTIVE FOR ALL TO authenticated
+  USING (auth.negocio_actual() IS NULL OR EXISTS (
+    SELECT 1 FROM stores.tiendas t
+     WHERE t.id = tienda_id
+       AND (t.negocio_id IS NULL OR t.negocio_id::text = auth.negocio_actual())
+  ))
+  WITH CHECK (auth.negocio_actual() IS NULL OR EXISTS (
+    SELECT 1 FROM stores.tiendas t
+     WHERE t.id = tienda_id
+       AND (t.negocio_id IS NULL OR t.negocio_id::text = auth.negocio_actual())
+  ));
+
+-- ── inventory por negocio (ADR-0019 iteración 9) ─────────────────────────
+ALTER TABLE inventory.ubicaciones ADD COLUMN IF NOT EXISTS negocio_id uuid;
+ALTER TABLE inventory.proveedores ADD COLUMN IF NOT EXISTS negocio_id uuid;
+ALTER TABLE inventory.configuracion_inventario ADD COLUMN IF NOT EXISTS negocio_id uuid;
+
+DO $$
+DECLARE
+  tabla text;
+  nombre text;
+BEGIN
+  FOREACH tabla IN ARRAY ARRAY[
+    'inventory.ubicaciones',
+    'inventory.proveedores',
+    'inventory.configuracion_inventario'
+  ] LOOP
+    nombre := replace(tabla, '.', '_') || '_negocio_restrictiva';
+    EXECUTE format('DROP POLICY IF EXISTS %I ON %s', nombre, tabla);
+    EXECUTE format(
+      'CREATE POLICY %I ON %s AS RESTRICTIVE FOR ALL TO authenticated
+         USING (auth.negocio_actual() IS NULL
+                OR negocio_id IS NULL
+                OR negocio_id::text = auth.negocio_actual())
+         WITH CHECK (auth.negocio_actual() IS NULL
+                OR negocio_id IS NULL
+                OR negocio_id::text = auth.negocio_actual())',
+      nombre, tabla
+    );
+  END LOOP;
+END $$;
+
+-- ── finance.series_comprobantes por negocio (ADR-0019 iteración 10) ──────
+ALTER TABLE finance.series_comprobantes ADD COLUMN IF NOT EXISTS negocio_id uuid;
+ALTER TABLE finance.series_comprobantes ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS series_comprobantes_admin ON finance.series_comprobantes;
+DROP POLICY IF EXISTS series_comprobantes_tenant ON finance.series_comprobantes;
+DROP POLICY IF EXISTS series_comprobantes_negocio_restrictiva ON finance.series_comprobantes;
+CREATE POLICY series_comprobantes_admin ON finance.series_comprobantes FOR ALL TO authenticated
+  USING (auth.rol() IN ('super_admin', 'admin'))
+  WITH CHECK (auth.rol() IN ('super_admin', 'admin'));
+CREATE POLICY series_comprobantes_tenant ON finance.series_comprobantes FOR SELECT TO authenticated
+  USING (true);
+CREATE POLICY series_comprobantes_negocio_restrictiva ON finance.series_comprobantes
+  AS RESTRICTIVE FOR ALL TO authenticated
+  USING (auth.negocio_actual() IS NULL
+         OR negocio_id IS NULL
+         OR negocio_id::text = auth.negocio_actual())
+  WITH CHECK (auth.negocio_actual() IS NULL
+         OR negocio_id IS NULL
+         OR negocio_id::text = auth.negocio_actual());
+
+-- ── identity.auditoria (ADR-0019 iteración 11) ───────────────────────────
+ALTER TABLE identity.auditoria ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS auditoria_admin ON identity.auditoria;
+DROP POLICY IF EXISTS auditoria_tenant ON identity.auditoria;
+DROP POLICY IF EXISTS auditoria_app ON identity.auditoria;
+CREATE POLICY auditoria_admin ON identity.auditoria FOR ALL TO authenticated
+  USING (auth.rol() IN ('super_admin', 'admin'))
+  WITH CHECK (auth.rol() IN ('super_admin', 'admin'));
+CREATE POLICY auditoria_tenant ON identity.auditoria FOR SELECT TO authenticated
+  USING (empresa_id::text = (auth.jwt() ->> 'tenant_id')
+         AND (auth.negocio_actual() IS NULL
+              OR negocio_id IS NULL
+              OR negocio_id::text = auth.negocio_actual()));
+CREATE POLICY auditoria_app ON identity.auditoria FOR ALL TO core_engine_app
+  USING (true) WITH CHECK (true);
+
+-- ── identity.plantillas_roles (ADR-0019 iteración 12) ─────────────────────
+ALTER TABLE identity.plantillas_roles ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS plantillas_roles_admin ON identity.plantillas_roles;
+DROP POLICY IF EXISTS plantillas_roles_tenant ON identity.plantillas_roles;
+DROP POLICY IF EXISTS plantillas_roles_app ON identity.plantillas_roles;
+CREATE POLICY plantillas_roles_admin ON identity.plantillas_roles FOR ALL TO authenticated
+  USING (auth.rol() IN ('super_admin', 'admin'))
+  WITH CHECK (auth.rol() IN ('super_admin', 'admin'));
+CREATE POLICY plantillas_roles_tenant ON identity.plantillas_roles FOR SELECT TO authenticated
+  USING (true);
+CREATE POLICY plantillas_roles_app ON identity.plantillas_roles FOR SELECT TO core_engine_app
+  USING (true);
+
+-- ── analytics.* (ADR-0019/0020: analytics-service) ──────────────────────
+ALTER TABLE analytics.hechos_venta ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS hechos_venta_admin ON analytics.hechos_venta;
+DROP POLICY IF EXISTS hechos_venta_empresa ON analytics.hechos_venta;
+DROP POLICY IF EXISTS hechos_venta_app ON analytics.hechos_venta;
+CREATE POLICY hechos_venta_admin ON analytics.hechos_venta FOR ALL TO authenticated
+  USING (auth.rol() IN ('super_admin', 'admin'))
+  WITH CHECK (auth.rol() IN ('super_admin', 'admin'));
+CREATE POLICY hechos_venta_empresa ON analytics.hechos_venta FOR SELECT TO authenticated
+  USING (auth.rol() = 'empresario'
+         AND empresa_id::text = (auth.jwt() ->> 'tenant_id'));
+CREATE POLICY hechos_venta_app ON analytics.hechos_venta FOR ALL TO core_engine_app
+  USING (true) WITH CHECK (true);
+
+ALTER TABLE analytics.comisiones ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS comisiones_admin ON analytics.comisiones;
+DROP POLICY IF EXISTS comisiones_empresa ON analytics.comisiones;
+DROP POLICY IF EXISTS comisiones_app ON analytics.comisiones;
+CREATE POLICY comisiones_admin ON analytics.comisiones FOR ALL TO authenticated
+  USING (auth.rol() IN ('super_admin', 'admin'))
+  WITH CHECK (auth.rol() IN ('super_admin', 'admin'));
+CREATE POLICY comisiones_empresa ON analytics.comisiones FOR SELECT TO authenticated
+  USING (auth.rol() = 'empresario'
+         AND empresa_id::text = (auth.jwt() ->> 'tenant_id'));
+CREATE POLICY comisiones_app ON analytics.comisiones FOR ALL TO core_engine_app
+  USING (true) WITH CHECK (true);
+
+ALTER TABLE analytics.eventos_procesados ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS eventos_procesados_admin ON analytics.eventos_procesados;
+DROP POLICY IF EXISTS eventos_procesados_app ON analytics.eventos_procesados;
+CREATE POLICY eventos_procesados_admin ON analytics.eventos_procesados FOR ALL TO authenticated
+  USING (auth.rol() IN ('super_admin', 'admin'))
+  WITH CHECK (auth.rol() IN ('super_admin', 'admin'));
+CREATE POLICY eventos_procesados_app ON analytics.eventos_procesados FOR ALL TO core_engine_app
+  USING (true) WITH CHECK (true);
+
+ALTER TABLE analytics.reportes_programados ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS reportes_programados_admin ON analytics.reportes_programados;
+DROP POLICY IF EXISTS reportes_programados_empresa ON analytics.reportes_programados;
+DROP POLICY IF EXISTS reportes_programados_app ON analytics.reportes_programados;
+CREATE POLICY reportes_programados_admin ON analytics.reportes_programados FOR ALL TO authenticated
+  USING (auth.rol() IN ('super_admin', 'admin'))
+  WITH CHECK (auth.rol() IN ('super_admin', 'admin'));
+CREATE POLICY reportes_programados_empresa ON analytics.reportes_programados FOR ALL TO authenticated
+  USING (auth.rol() = 'empresario'
+         AND empresa_id::text = (auth.jwt() ->> 'tenant_id'))
+  WITH CHECK (auth.rol() = 'empresario'
+              AND empresa_id::text = (auth.jwt() ->> 'tenant_id'));
+CREATE POLICY reportes_programados_app ON analytics.reportes_programados FOR ALL TO core_engine_app
+  USING (true) WITH CHECK (true);
+
+ALTER TABLE analytics.reporte_ejecuciones ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS reporte_ejecuciones_admin ON analytics.reporte_ejecuciones;
+DROP POLICY IF EXISTS reporte_ejecuciones_empresa ON analytics.reporte_ejecuciones;
+DROP POLICY IF EXISTS reporte_ejecuciones_app ON analytics.reporte_ejecuciones;
+CREATE POLICY reporte_ejecuciones_admin ON analytics.reporte_ejecuciones FOR ALL TO authenticated
+  USING (auth.rol() IN ('super_admin', 'admin'))
+  WITH CHECK (auth.rol() IN ('super_admin', 'admin'));
+CREATE POLICY reporte_ejecuciones_empresa ON analytics.reporte_ejecuciones FOR SELECT TO authenticated
+  USING (auth.rol() = 'empresario'
+         AND empresa_id::text = (auth.jwt() ->> 'tenant_id'));
+CREATE POLICY reporte_ejecuciones_app ON analytics.reporte_ejecuciones FOR ALL TO core_engine_app
+  USING (true) WITH CHECK (true);
