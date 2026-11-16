@@ -473,7 +473,7 @@ fn objeto(valor: Option<&Value>, codigo: &str) -> Result<Option<Value>, ApiError
     Ok(Some(valor.clone()))
 }
 
-fn contiene_ref(valor: &Value) -> bool {
+pub(crate) fn contiene_ref(valor: &Value) -> bool {
     match valor {
         Value::Array(items) => items.iter().any(contiene_ref),
         Value::Object(objeto) => objeto
@@ -523,7 +523,10 @@ fn validar_valores(esquema: &Value, valores: &Value) -> Result<(), ApiError> {
     Ok(())
 }
 
-fn validar_json_schema(esquema: &Value, datos: &Value) -> Result<(bool, Value), ApiError> {
+pub(crate) fn validar_json_schema(
+    esquema: &Value,
+    datos: &Value,
+) -> Result<(bool, Value), ApiError> {
     let validador = jsonschema::validator_for(esquema).map_err(|error| {
         ApiError::dominio(
             "ESQUEMA_EXTENSION_INVALIDO",

@@ -1116,6 +1116,132 @@
         ]
       }
     },
+    "/api/v2/empresas/{empresaId}/registros/esquemas": {
+      "get": {
+        "operationId": "RegistrosController_listarEsquemas",
+        "parameters": [
+          {
+            "name": "empresaId",
+            "required": true,
+            "in": "path",
+            "schema": {"format": "uuid", "type": "string"}
+          },
+          {
+            "name": "tipo",
+            "required": false,
+            "in": "query",
+            "schema": {"type": "string"}
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Versiones de esquemas de registro",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": ["data", "meta"],
+                  "properties": {
+                    "data": {
+                      "type": "array",
+                      "items": {"$ref": "#/components/schemas/EsquemaRegistroResponseDto"}
+                    },
+                    "meta": {"$ref": "#/components/schemas/MetaRespuesta"}
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [{"bearer": []}],
+        "summary": "Listar esquemas de registros por empresa",
+        "tags": ["Registros"]
+      }
+    },
+    "/api/v2/empresas/{empresaId}/registros/esquemas/{tipo}": {
+      "get": {
+        "operationId": "RegistrosController_obtenerEsquema",
+        "parameters": [
+          {
+            "name": "empresaId",
+            "required": true,
+            "in": "path",
+            "schema": {"format": "uuid", "type": "string"}
+          },
+          {
+            "name": "tipo",
+            "required": true,
+            "in": "path",
+            "schema": {"type": "string"}
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Esquema activo",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": ["data", "meta"],
+                  "properties": {
+                    "data": {"$ref": "#/components/schemas/EsquemaRegistroResponseDto"},
+                    "meta": {"$ref": "#/components/schemas/MetaRespuesta"}
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [{"bearer": []}],
+        "summary": "Obtener el esquema activo de un tipo de registro",
+        "tags": ["Registros"]
+      },
+      "put": {
+        "operationId": "RegistrosController_guardarEsquema",
+        "parameters": [
+          {
+            "name": "empresaId",
+            "required": true,
+            "in": "path",
+            "schema": {"format": "uuid", "type": "string"}
+          },
+          {
+            "name": "tipo",
+            "required": true,
+            "in": "path",
+            "schema": {"type": "string"}
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {"$ref": "#/components/schemas/GuardarEsquemaRegistroRequestDto"}
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Nueva versión activa del esquema",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": ["data", "meta"],
+                  "properties": {
+                    "data": {"$ref": "#/components/schemas/EsquemaRegistroResponseDto"},
+                    "meta": {"$ref": "#/components/schemas/MetaRespuesta"}
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [{"bearer": []}],
+        "summary": "Guardar una nueva versión del esquema de registro",
+        "tags": ["Registros"]
+      }
+    },
     "/api/v2/empresas/{empresaId}/features": {
       "get": {
         "operationId": "CapacidadesController_manifiesto",
@@ -5671,6 +5797,38 @@
           "config",
           "actualizado_en"
         ]
+      },
+      "EsquemaRegistroResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {"type": "string", "format": "uuid"},
+          "empresa_id": {"type": "string", "format": "uuid"},
+          "tipo": {"type": "string"},
+          "version": {"type": "integer"},
+          "esquema": {"type": "object"},
+          "activo": {"type": "boolean"},
+          "creado_por": {"type": "string", "format": "uuid"},
+          "creado_en": {"type": "string", "format": "date-time"},
+          "actualizado_en": {"type": "string", "format": "date-time"}
+        },
+        "required": [
+          "id",
+          "empresa_id",
+          "tipo",
+          "version",
+          "esquema",
+          "activo",
+          "creado_por",
+          "creado_en",
+          "actualizado_en"
+        ]
+      },
+      "GuardarEsquemaRegistroRequestDto": {
+        "type": "object",
+        "properties": {
+          "esquema": {"type": "object"}
+        },
+        "required": ["esquema"]
       },
       "ManifiestoEmpresaResponseDto": {
         "type": "object",

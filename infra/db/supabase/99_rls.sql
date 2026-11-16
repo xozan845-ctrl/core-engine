@@ -1489,3 +1489,16 @@ DROP POLICY IF EXISTS historico_precios_empresa ON item.historico_precios;
 CREATE POLICY historico_precios_empresa ON item.historico_precios FOR ALL TO authenticated
   USING (auth.rol() = 'empresario' AND empresa_id::text = (auth.jwt() ->> 'tenant_id'))
   WITH CHECK (auth.rol() = 'empresario' AND empresa_id::text = (auth.jwt() ->> 'tenant_id'));
+
+-- ── identity.registros_esquemas (Fase 5) ────────────────────────────────────
+ALTER TABLE identity.registros_esquemas ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS registros_esquemas_admin ON identity.registros_esquemas;
+CREATE POLICY registros_esquemas_admin ON identity.registros_esquemas
+  FOR ALL TO authenticated
+  USING (auth.rol() IN ('super_admin', 'admin'))
+  WITH CHECK (auth.rol() IN ('super_admin', 'admin'));
+DROP POLICY IF EXISTS registros_esquemas_empresa ON identity.registros_esquemas;
+CREATE POLICY registros_esquemas_empresa ON identity.registros_esquemas
+  FOR ALL TO authenticated
+  USING (auth.rol() = 'empresario' AND empresa_id::text = (auth.jwt() ->> 'tenant_id'))
+  WITH CHECK (auth.rol() = 'empresario' AND empresa_id::text = (auth.jwt() ->> 'tenant_id'));
