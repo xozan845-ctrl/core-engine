@@ -22,6 +22,7 @@ pub struct Config {
     pub stores_service_url: String,
     pub item_service_url: String,
     pub pricing_service_url: String,
+    pub inventory_service_url: String,
     pub identity_service_url: String,
     pub scheduling_service_url: String,
     pub finance_service_url: String,
@@ -79,6 +80,11 @@ impl Config {
                 &leer,
                 "PRICING_SERVICE_URL",
                 "http://pricing-service:3014",
+            ),
+            inventory_service_url: url_con_default(
+                &leer,
+                "INVENTORY_SERVICE_URL",
+                "http://inventory-service:3013",
             ),
             identity_service_url: url_con_default(
                 &leer,
@@ -158,6 +164,10 @@ mod tests {
         assert_eq!(config.outbox_tabla, "orders.outbox");
         assert_eq!(config.tasa_comision, TASA_COMISION_DEFAULT);
         assert_eq!(config.stores_service_url, "http://stores-service:3003");
+        assert_eq!(
+            config.inventory_service_url,
+            "http://inventory-service:3013"
+        );
         assert_eq!(config.database_url, None);
     }
 
@@ -170,6 +180,7 @@ mod tests {
             ("STORES_SERVICE_URL", "http://stores:3003/"),
             ("ITEM_SERVICE_URL", "http://item:3015/"),
             ("PRICING_SERVICE_URL", "http://pricing:3014/"),
+            ("INVENTORY_SERVICE_URL", "http://inventory:3013/"),
             ("IDENTITY_SERVICE_URL", "http://identity:3001/"),
             ("SCHEDULING_SERVICE_URL", "http://scheduling:3011/"),
             ("FINANCE_SERVICE_URL", "http://finance:3007/"),
@@ -182,6 +193,7 @@ mod tests {
         assert_eq!(config.stores_service_url, "http://stores:3003");
         assert_eq!(config.item_service_url, "http://item:3015");
         assert_eq!(config.pricing_service_url, "http://pricing:3014");
+        assert_eq!(config.inventory_service_url, "http://inventory:3013");
         assert_eq!(config.identity_service_url, "http://identity:3001");
         assert_eq!(config.scheduling_service_url, "http://scheduling:3011");
         assert_eq!(config.finance_service_url, "http://finance:3007");
