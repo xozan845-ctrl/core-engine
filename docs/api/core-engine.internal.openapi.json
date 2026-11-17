@@ -744,6 +744,81 @@
         }
       }
     },
+    "/internal/inventario/stock/inicial": {
+      "post": {
+        "operationId": "InternalController_stockInicial",
+        "summary": "Registra el stock inicial de un item (servicio a servicio)",
+        "tags": [
+          "Inventario (interno)"
+        ],
+        "security": [
+          {
+            "internalKey": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "empresa_id": {
+                    "type": "string",
+                    "format": "uuid"
+                  },
+                  "item_id": {
+                    "type": "string",
+                    "format": "uuid"
+                  },
+                  "sku": {
+                    "type": "string"
+                  },
+                  "cantidad": {
+                    "type": "number",
+                    "minimum": 0
+                  },
+                  "negocio_id": {
+                    "type": "string",
+                    "format": "uuid",
+                    "nullable": true
+                  }
+                },
+                "required": [
+                  "empresa_id",
+                  "item_id",
+                  "cantidad"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Stock inicial registrado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "item_id": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "sku": {
+                      "type": "string"
+                    },
+                    "stock": {
+                      "type": "number"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/internal/v2/items/lote": {
       "get": {
         "operationId": "InternalV2Controller_lote",
@@ -1243,6 +1318,76 @@
         "tags": [
           "Catálogo (interno)"
         ]
+      }
+    },
+    "/internal/items/{id}/precio-base": {
+      "put": {
+        "operationId": "InternalController_precioBase",
+        "summary": "Fija el precio base del item (servicio a servicio)",
+        "tags": [
+          "Precios (interno)"
+        ],
+        "security": [
+          {
+            "internalKey": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "empresa_id": {
+                    "type": "string",
+                    "format": "uuid"
+                  },
+                  "precio_cents": {
+                    "type": "number",
+                    "minimum": 0
+                  }
+                },
+                "required": [
+                  "empresa_id",
+                  "precio_cents"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Precio base actualizado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "item_id": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "precio_cents": {
+                      "type": "number"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
       }
     },
     "/internal/scheduling/disponibilidad": {

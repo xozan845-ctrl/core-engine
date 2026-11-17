@@ -366,49 +366,16 @@ pub(super) fn agregar_set(
     sets.push(format!("{columna} = ${}", params.len()));
 }
 
-pub(super) async fn registrar_historico(
-    tx: &mut Transaction<'_, Postgres>,
-    empresa_id: &str,
-    item_id: &str,
-    anterior: Option<i64>,
-    nuevo: i64,
-) -> Result<(), ApiError> {
-    sqlx::query(
-        "INSERT INTO item.historico_precios
-           (id, empresa_id, item_id, precio_anterior_cents, precio_nuevo_cents, vigente_desde)
-         VALUES (gen_random_uuid(), $1::uuid, $2::uuid, $3, $4, NOW())",
-    )
-    .bind(empresa_id)
-    .bind(item_id)
-    .bind(anterior)
-    .bind(nuevo)
-    .execute(&mut **tx)
-    .await
-    .map_err(interno)?;
-    Ok(())
-}
-
-/// Agrega stock y precio mínimo de las variantes al item padre.
+/// Marca el padre como actualizado tras cambiar sus variantes.
 pub(super) async fn recalcular_padre(
     tx: &mut Transaction<'_, Postgres>,
     padre_id: Uuid,
 ) -> Result<(), ApiError> {
-    sqlx::query(
-        "UPDATE item.items p
-            SET stock = agregado.stock,
-                precio_cents = agregado.precio,
-                actualizado_en = NOW()
-           FROM (
-             SELECT SUM(c.stock)::int AS stock, MIN(c.precio_cents)::int AS precio
-               FROM item.items c
-              WHERE c.parent_item_id = $1::uuid AND c.eliminado_en IS NULL
-           ) agregado
-          WHERE p.id = $1::uuid AND agregado.stock IS NOT NULL",
-    )
-    .bind(padre_id)
-    .execute(&mut **tx)
-    .await
-    .map_err(interno)?;
+    sqlx::query("UPDATE item.items SET actualizado_en = NOW() WHERE id = $1::uuid")
+        .bind(padre_id)
+        .execute(&mut **tx)
+        .await
+        .map_err(interno)?;
     Ok(())
 }
 

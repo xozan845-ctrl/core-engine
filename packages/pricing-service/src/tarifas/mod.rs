@@ -270,7 +270,15 @@ impl Tarifas {
     ) -> Result<ItemPrecio, ApiError> {
         let mut tx = self.db.transaccion().await.map_err(interno)?;
         let fila = sqlx::query(
-            "SELECT id, tipo, precio_cents FROM item.items
+            "SELECT i.id, i.tipo,
+                    COALESCE((
+                      SELECT p.precio_cents
+                        FROM pricing.lista_precio_items p
+                       WHERE p.item_id = i.id AND p.lista_id IS NULL
+                         AND p.desde_cantidad = 1
+                       LIMIT 1
+                    ), 0) AS precio_cents
+               FROM item.items i
               WHERE id = $1::uuid AND empresa_id = $2::uuid AND eliminado_en IS NULL",
         )
         .bind(item_id)

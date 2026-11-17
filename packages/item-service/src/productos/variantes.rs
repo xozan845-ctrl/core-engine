@@ -57,8 +57,8 @@ impl Productos {
         sqlx::query(
             "INSERT INTO item.items
                (id, empresa_id, tipo, codigo, nombre, descripcion, categoria,
-                precio_cents, track_inventory, stock, parent_item_id, atributos)
-             VALUES ($1::uuid, $2::uuid, 'producto', $3, $4, $5, $6, $7, true, $8, $9::uuid, $10::jsonb)",
+                track_inventory, parent_item_id, atributos)
+             VALUES ($1::uuid, $2::uuid, 'producto', $3, $4, $5, $6, true, $7::uuid, $8::jsonb)",
         )
         .bind(variante_id)
         .bind(empresa_id)
@@ -80,24 +80,37 @@ impl Productos {
         )
         .bind(texto(&padre, "descripcion"))
         .bind(&categoria)
-        .bind(precio.centavos)
-        .bind(stock)
         .bind(padre_id)
         .bind(atributos_de(datos).to_string())
         .execute(&mut *tx)
         .await
         .map_err(interno)?;
-        registrar_historico(
-            &mut tx,
-            empresa_id,
-            &variante_id.to_string(),
-            None,
-            precio.centavos,
-        )
-        .await?;
         insertar_imagenes(&mut tx, empresa_id, variante_id, &imagenes).await?;
         recalcular_padre(&mut tx, Uuid::parse_str(padre_id).map_err(interno)?).await?;
         tx.commit().await.map_err(interno)?;
+
+        if let Some(proyecciones) = self.items.as_ref().and_then(|items| items.proyecciones()) {
+            let resultado = async {
+                proyecciones
+                    .fijar_precio(empresa_id, &variante_id.to_string(), precio.centavos)
+                    .await?;
+                proyecciones
+                    .stock_inicial(empresa_id, &variante_id.to_string(), &sku, stock, None)
+                    .await?;
+                Ok::<(), ApiError>(())
+            }
+            .await;
+            if let Err(error) = resultado {
+                let mut tx = self.db.transaccion().await.map_err(interno)?;
+                sqlx::query("DELETE FROM item.items WHERE id = $1::uuid")
+                    .bind(variante_id)
+                    .execute(&mut *tx)
+                    .await
+                    .map_err(interno)?;
+                tx.commit().await.map_err(interno)?;
+                return Err(error);
+            }
+        }
 
         self.encontrar_por_id(&variante_id.to_string(), Some(empresa_id), true)
             .await?

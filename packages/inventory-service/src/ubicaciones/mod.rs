@@ -9,7 +9,7 @@ use crate::db::{fila_a_json, interno, Db};
 use crate::errors::ApiError;
 use crate::outbox::Outbox;
 use serde_json::{json, Map, Value};
-use sqlx::{Postgres, Row, Transaction};
+use sqlx::Row;
 use std::sync::Arc;
 use uuid::Uuid;
 
@@ -29,7 +29,6 @@ struct ItemVerificado {
     id: String,
     codigo: String,
     nombre: String,
-    stock: Option<i32>,
     track_inventory: bool,
     negocio_id: Option<String>,
 }
@@ -118,32 +117,6 @@ impl Ubicaciones {
         let Some(ubicacion) = creada else {
             return Err(ApiError::interno());
         };
-        let ubicacion_id: Uuid = ubicacion.try_get("id").map_err(interno)?;
-
-        let total: i32 = sqlx::query(
-            "SELECT COUNT(*)::int AS total FROM inventory.ubicaciones WHERE empresa_id = $1::uuid",
-        )
-        .bind(empresa_id)
-        .fetch_one(&mut *tx)
-        .await
-        .map_err(error_ubicacion)?
-        .get("total");
-        // La primera ubicación absorbe el stock que ya existía en el item.
-        if total == 1 {
-            sqlx::query(
-                "INSERT INTO inventory.item_stock_ubicacion (empresa_id, item_id, ubicacion_id, stock)
-                 SELECT i.empresa_id, i.id, $2::uuid, COALESCE(i.stock, 0)
-                   FROM item.items i
-                  WHERE i.empresa_id = $1::uuid AND i.tipo = 'producto'
-                    AND i.track_inventory AND i.eliminado_en IS NULL
-                 ON CONFLICT (item_id, ubicacion_id) DO NOTHING",
-            )
-            .bind(empresa_id)
-            .bind(ubicacion_id)
-            .execute(&mut *tx)
-            .await
-            .map_err(error_ubicacion)?;
-        }
         tx.commit().await.map_err(interno)?;
         fila_a_json(&ubicacion).map_err(interno)
     }
@@ -280,7 +253,7 @@ impl Ubicaciones {
             "item_id": item.id,
             "sku": item.codigo,
             "nombre": item.nombre,
-            "stock_total": item.stock,
+            "stock_total": total,
             "total_ubicaciones": total,
             "ubicaciones": ubicaciones,
         }))
@@ -296,7 +269,10 @@ impl Ubicaciones {
         let mut tx = self.db.transaccion().await.map_err(interno)?;
         let filas = sqlx::query(
             "SELECT s.ubicacion_id, u.codigo AS ubicacion_codigo, u.nombre AS ubicacion_nombre,
-                    s.item_id, i.codigo AS sku, i.nombre, s.stock, i.stock AS stock_total
+                    s.item_id, i.codigo AS sku, i.nombre, s.stock,
+                    (SELECT COALESCE(SUM(s2.stock), 0)::int
+                       FROM inventory.item_stock_ubicacion s2
+                      WHERE s2.item_id = i.id) AS stock_total
                FROM inventory.item_stock_ubicacion s
                JOIN inventory.ubicaciones u ON u.id = s.ubicacion_id
                JOIN item.items i ON i.id = s.item_id
@@ -349,7 +325,7 @@ impl Ubicaciones {
         .execute(&mut *tx)
         .await
         .map_err(interno)?;
-        let total = sincronizar_total(&mut tx, empresa_id, item_id).await?;
+        let total = crate::stock::total_en_transaccion(&mut tx, empresa_id, item_id).await?;
         if let Some(outbox) = &self.outbox {
             outbox
                 .insertar_stock_updated(
@@ -366,7 +342,10 @@ impl Ubicaciones {
         }
         let fila = sqlx::query(
             "SELECT s.ubicacion_id, u.codigo AS ubicacion_codigo, u.nombre AS ubicacion_nombre,
-                    s.item_id, i.codigo AS sku, i.nombre, s.stock, i.stock AS stock_total
+                    s.item_id, i.codigo AS sku, i.nombre, s.stock,
+                    (SELECT COALESCE(SUM(s2.stock), 0)::int
+                       FROM inventory.item_stock_ubicacion s2
+                      WHERE s2.item_id = i.id) AS stock_total
                FROM inventory.item_stock_ubicacion s
                JOIN inventory.ubicaciones u ON u.id = s.ubicacion_id
                JOIN item.items i ON i.id = s.item_id
@@ -473,7 +452,10 @@ impl Ubicaciones {
         .map_err(interno)?;
         let filas = sqlx::query(
             "SELECT s.ubicacion_id, u.codigo AS ubicacion_codigo, u.nombre AS ubicacion_nombre,
-                    s.item_id, i.codigo AS sku, i.nombre, s.stock, i.stock AS stock_total
+                    s.item_id, i.codigo AS sku, i.nombre, s.stock,
+                    (SELECT COALESCE(SUM(s2.stock), 0)::int
+                       FROM inventory.item_stock_ubicacion s2
+                      WHERE s2.item_id = i.id) AS stock_total
                FROM inventory.item_stock_ubicacion s
                JOIN inventory.ubicaciones u ON u.id = s.ubicacion_id
                JOIN item.items i ON i.id = s.item_id
@@ -550,7 +532,7 @@ impl Ubicaciones {
         validar_uuid(item_id, "item")?;
         let mut tx = self.db.transaccion().await.map_err(interno)?;
         let fila = sqlx::query(
-            "SELECT id, codigo, nombre, stock, track_inventory, negocio_id
+            "SELECT id, codigo, nombre, track_inventory, negocio_id
                FROM item.items
               WHERE id = $1::uuid AND empresa_id = $2::uuid AND eliminado_en IS NULL",
         )
@@ -567,7 +549,6 @@ impl Ubicaciones {
             id: fila.get::<Uuid, _>("id").to_string(),
             codigo: fila.get("codigo"),
             nombre: fila.get("nombre"),
-            stock: fila.try_get("stock").map_err(interno)?,
             track_inventory: fila.get("track_inventory"),
             negocio_id: fila
                 .try_get::<Option<Uuid>, _>("negocio_id")
@@ -575,38 +556,6 @@ impl Ubicaciones {
                 .map(|id| id.to_string()),
         })
     }
-}
-
-async fn sincronizar_total(
-    tx: &mut Transaction<'static, Postgres>,
-    empresa_id: &str,
-    item_id: &str,
-) -> Result<i32, ApiError> {
-    sqlx::query("SELECT set_config('inventory.stock_sync', 'on', true)")
-        .execute(&mut **tx)
-        .await
-        .map_err(interno)?;
-    let total: i32 = sqlx::query_scalar(
-        "UPDATE item.items
-            SET stock = (
-                  SELECT COALESCE(SUM(stock), 0)::int
-                    FROM inventory.item_stock_ubicacion
-                   WHERE empresa_id = $1::uuid AND item_id = $2::uuid
-                ),
-                actualizado_en = NOW()
-          WHERE id = $2::uuid AND empresa_id = $1::uuid
-          RETURNING stock",
-    )
-    .bind(empresa_id)
-    .bind(item_id)
-    .fetch_one(&mut **tx)
-    .await
-    .map_err(interno)?;
-    sqlx::query("SELECT set_config('inventory.stock_sync', 'off', true)")
-        .execute(&mut **tx)
-        .await
-        .map_err(interno)?;
-    Ok(total)
 }
 
 fn campo_texto(valor: &Value, clave: &str) -> String {
