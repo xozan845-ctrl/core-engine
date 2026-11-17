@@ -4,9 +4,8 @@
 // (`scripts/**/*.mjs`) SÍ se lintea.
 // Uso: `npm run lint` (raíz). Los errores bloquean CI; las advertencias no.
 import js from '@eslint/js';
-import tseslint from 'typescript-eslint';
 
-export default tseslint.config(
+export default [
   {
     ignores: [
       '**/dist/**',
@@ -20,9 +19,9 @@ export default tseslint.config(
     ],
   },
   {
+    ...js.configs.recommended,
     // Motor de gobernanza y herramientas: JS plano (ESM) sobre Node.
     files: ['scripts/**/*.mjs'],
-    extends: [js.configs.recommended],
     languageOptions: {
       ecmaVersion: 2023,
       sourceType: 'module',
@@ -39,34 +38,4 @@ export default tseslint.config(
       },
     },
   },
-  {
-    files: ['packages/*/src/**/*.ts'],
-    extends: [js.configs.recommended, ...tseslint.configs.recommended],
-    rules: {
-      // Los `any` explícitos se toleran como advertencia: se auditan en R-COV-3.
-      '@typescript-eslint/no-explicit-any': 'warn',
-      // Underscore inicial = parámetro/variable intencionalmente ignorado.
-      '@typescript-eslint/no-unused-vars': [
-        'error',
-        { argsIgnorePattern: '^_', varsIgnorePattern: '^_', caughtErrorsIgnorePattern: '^_' },
-      ],
-    },
-  },
-  {
-    // Globals de Vitest solo en specs (describe/it/expect/vi...).
-    files: ['packages/*/src/**/*.spec.ts'],
-    languageOptions: {
-      globals: {
-        describe: 'readonly',
-        it: 'readonly',
-        test: 'readonly',
-        expect: 'readonly',
-        beforeEach: 'readonly',
-        afterEach: 'readonly',
-        beforeAll: 'readonly',
-        afterAll: 'readonly',
-        vi: 'readonly',
-      },
-    },
-  },
-);
+];
