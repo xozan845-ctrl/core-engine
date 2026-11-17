@@ -19,6 +19,7 @@ use crate::money::Money;
 use crate::outbox::Outbox;
 use crate::paginacion::{crear_pagina, parsear_paginacion};
 use crate::productos::Productos;
+use crate::proyecciones::Proyecciones;
 use crate::servicios::Servicios;
 use serde_json::{json, Map, Value};
 use sqlx::Row;
@@ -28,7 +29,7 @@ use uuid::Uuid;
 
 const MAX_IMPORTACION: usize = 200;
 const SELECT_COMBO: &str = "SELECT i.id, i.empresa_id, i.codigo AS sku, i.nombre, i.descripcion,
-  i.codigo_barras, i.precio_cents, i.estado,
+  i.codigo_barras, i.estado,
   COALESCE(
     jsonb_agg(
       jsonb_build_object(
@@ -54,7 +55,6 @@ struct ItemResuelto {
     nombre: String,
     #[allow(dead_code)]
     costo_cents: i64,
-    stock: i64,
     es_combo: bool,
 }
 
@@ -72,13 +72,19 @@ pub struct Operaciones {
     outbox: Option<Arc<Outbox>>,
     productos: Arc<Productos>,
     servicios: Arc<Servicios>,
+    proyecciones: Option<Arc<Proyecciones>>,
 }
 
 impl Operaciones {
-    pub fn nueva(db: Arc<Db>, outbox: Option<Arc<Outbox>>) -> Self {
-        // Productos y servicios comparten la misma instancia de Items para que
-        // la validación de atributos (JSON Schema) sea consistente.
-        let items = Arc::new(Items::nueva(db.clone()));
+    pub fn nueva(
+        db: Arc<Db>,
+        outbox: Option<Arc<Outbox>>,
+        proyecciones: Option<Arc<Proyecciones>>,
+    ) -> Self {
+        let items = Arc::new(match proyecciones.clone() {
+            Some(proyecciones) => Items::con_proyecciones(db.clone(), proyecciones),
+            None => Items::nueva(db.clone()),
+        });
         let productos = Arc::new(Productos::nueva(
             db.clone(),
             outbox.clone(),
@@ -94,6 +100,7 @@ impl Operaciones {
             servicios,
             db,
             outbox,
+            proyecciones,
         }
     }
 
@@ -288,17 +295,16 @@ impl Operaciones {
             sqlx::query(
                 "INSERT INTO item.items
                    (id, empresa_id, tipo, codigo, nombre, descripcion, categoria,
-                    precio_cents, costo_cents, track_inventory, stock, atributos, estado,
+                    costo_cents, track_inventory, atributos, estado,
                     codigo_barras, es_combo)
-                 VALUES ($1::uuid, $2::uuid, 'producto', $3, $4, $5, 'combo', $6, 0, false,
-                         NULL, '{}'::jsonb, $7, $8, true)",
+                 VALUES ($1::uuid, $2::uuid, 'producto', $3, $4, $5, 'combo', 0, false,
+                         '{}'::jsonb, $6, $7, true)",
             )
             .bind(&id)
             .bind(empresa_id)
             .bind(&sku)
             .bind(&nombre)
             .bind(&descripcion)
-            .bind(precio.centavos)
             .bind(&estado)
             .bind(&codigo_barras)
             .execute(&mut *tx)
@@ -329,6 +335,21 @@ impl Operaciones {
                     )));
                 }
                 return Err(interno(error));
+            }
+        }
+        if let Some(proyecciones) = &self.proyecciones {
+            if let Err(error) = proyecciones
+                .fijar_precio(empresa_id, &id, precio.centavos)
+                .await
+            {
+                let mut tx = self.db.transaccion().await.map_err(interno)?;
+                sqlx::query("DELETE FROM item.items WHERE id = $1::uuid")
+                    .bind(&id)
+                    .execute(&mut *tx)
+                    .await
+                    .map_err(interno)?;
+                tx.commit().await.map_err(interno)?;
+                return Err(error);
             }
         }
         self.obtener_combo(&id, empresa_id)
@@ -394,10 +415,11 @@ impl Operaciones {
             Some(_) => texto_opcional(datos, "descripcion").unwrap_or_default(),
             None => texto(&actual, "descripcion"),
         };
-        let precio_cents = match datos.get("precio") {
-            Some(_) => monto_de(datos.get("precio"))?.centavos,
-            None => Money::parsear(&texto(&actual, "precio"))?.centavos,
-        };
+        let nuevo_precio = datos
+            .get("precio")
+            .map(|_| monto_de(datos.get("precio")))
+            .transpose()?
+            .map(|monto| monto.centavos);
         let estado = match datos.get("estado") {
             Some(_) => estado_operativo(datos),
             None => texto(&actual, "estado"),
@@ -408,7 +430,7 @@ impl Operaciones {
             let actualizado = sqlx::query(
                 "UPDATE item.items
                     SET nombre = $3, descripcion = $4, codigo_barras = $5,
-                        precio_cents = $6, estado = $7, actualizado_en = NOW()
+                        estado = $6, actualizado_en = NOW()
                   WHERE id = $1::uuid AND empresa_id = $2::uuid
                     AND tipo = 'producto' AND es_combo AND eliminado_en IS NULL",
             )
@@ -417,7 +439,6 @@ impl Operaciones {
             .bind(&nombre)
             .bind(&descripcion)
             .bind(&codigo_barras)
-            .bind(precio_cents)
             .bind(&estado)
             .execute(&mut *tx)
             .await?;
@@ -462,6 +483,11 @@ impl Operaciones {
                 }
                 return Err(interno(error));
             }
+        }
+        if let (Some(precio_cents), Some(proyecciones)) = (nuevo_precio, &self.proyecciones) {
+            proyecciones
+                .fijar_precio(empresa_id, id, precio_cents)
+                .await?;
         }
         self.obtener_combo(id, empresa_id)
             .await?
@@ -722,7 +748,7 @@ impl Operaciones {
         let mut tx = self.db.transaccion().await.map_err(interno)?;
         let fila = match item_id {
             Some(item_id) => sqlx::query(
-                "SELECT id, codigo AS sku, nombre, costo_cents, stock, es_combo
+                "SELECT id, codigo AS sku, nombre, costo_cents, es_combo
                    FROM item.items
                   WHERE empresa_id = $1::uuid AND tipo = 'producto' AND id = $2::uuid
                     AND eliminado_en IS NULL",
@@ -733,7 +759,7 @@ impl Operaciones {
             .await
             .map_err(interno)?,
             None => sqlx::query(
-                "SELECT id, codigo AS sku, nombre, costo_cents, stock, es_combo
+                "SELECT id, codigo AS sku, nombre, costo_cents, es_combo
                    FROM item.items
                   WHERE empresa_id = $1::uuid AND tipo = 'producto'
                     AND upper(codigo) = upper($2) AND eliminado_en IS NULL",
@@ -750,13 +776,11 @@ impl Operaciones {
         };
         let id: Uuid = fila.try_get("id").map_err(interno)?;
         let costo_cents: Option<i32> = fila.try_get("costo_cents").map_err(interno)?;
-        let stock: Option<i32> = fila.try_get("stock").map_err(interno)?;
         Ok(ItemResuelto {
             id: id.to_string(),
             sku: fila.try_get("sku").map_err(interno)?,
             nombre: fila.try_get("nombre").map_err(interno)?,
             costo_cents: costo_cents.unwrap_or(0) as i64,
-            stock: stock.unwrap_or(0) as i64,
             es_combo: fila.try_get("es_combo").map_err(interno)?,
         })
     }

@@ -43,12 +43,15 @@ async fn outbox_tipos(db: &Db) -> Vec<String> {
         .expect("outbox")
 }
 
-async fn stock(db: &Db) -> i32 {
-    sqlx::query_scalar("SELECT stock FROM item.items WHERE id = $1::uuid")
-        .bind(ITEM)
-        .fetch_one(db.pool())
-        .await
-        .expect("stock")
+async fn stock(db: &Db) -> i64 {
+    sqlx::query_scalar(
+        "SELECT COALESCE(SUM(stock), 0)::bigint
+           FROM inventory.item_stock_ubicacion WHERE item_id = $1::uuid",
+    )
+    .bind(ITEM)
+    .fetch_one(db.pool())
+    .await
+    .expect("stock")
 }
 
 #[tokio::test]
@@ -139,9 +142,8 @@ async fn debe_reintegrar_stock_y_series_en_la_devolucion() {
     let ctx = preparar().await;
     sqlx::query(
         "INSERT INTO item.items
-           (id, empresa_id, tipo, codigo, nombre, precio_cents, track_inventory, track_serial,
-            stock, estado)
-         VALUES ($1::uuid, $2::uuid, 'producto', 'SKU-SERIAL', 'Serial', 1000, true, true, 1, 'activo')",
+           (id, empresa_id, tipo, codigo, nombre, track_inventory, track_serial, estado)
+         VALUES ($1::uuid, $2::uuid, 'producto', 'SKU-SERIAL', 'Serial', true, true, 'activo')",
     )
     .bind(ITEM)
     .bind(EMPRESA)
@@ -157,6 +159,7 @@ async fn debe_reintegrar_stock_y_series_en_la_devolucion() {
     .execute(ctx.db.pool())
     .await
     .expect("serie");
+    sembrar_stock(&ctx.db, ITEM, 1).await;
 
     let order_id = Uuid::new_v4();
     ctx.consumidor
@@ -307,9 +310,9 @@ async fn debe_expandir_componentes_bom_al_reservar() {
     let componente = "22222222-2222-4222-8222-222222222222";
     sqlx::query(
         "INSERT INTO item.items
-           (id, empresa_id, tipo, codigo, nombre, precio_cents, track_inventory, stock, estado)
-         VALUES ($1::uuid, $2::uuid, 'producto', 'COMBO-BOM', 'Combo', 0, true, 2, 'activo'),
-                ($3::uuid, $2::uuid, 'producto', 'COMP-BOM', 'Componente', 0, true, 10, 'activo')",
+           (id, empresa_id, tipo, codigo, nombre, track_inventory, estado)
+         VALUES ($1::uuid, $2::uuid, 'producto', 'COMBO-BOM', 'Combo', true, 'activo'),
+                ($3::uuid, $2::uuid, 'producto', 'COMP-BOM', 'Componente', true, 'activo')",
     )
     .bind("11111111-1111-4111-8111-111111111111")
     .bind(EMPRESA)
@@ -317,6 +320,8 @@ async fn debe_expandir_componentes_bom_al_reservar() {
     .execute(ctx.db.pool())
     .await
     .expect("items");
+    sembrar_stock(&ctx.db, "11111111-1111-4111-8111-111111111111", 2).await;
+    sembrar_stock(&ctx.db, componente, 10).await;
     sqlx::query(
         "INSERT INTO item.item_componentes (empresa_id, item_id, componente_item_id, cantidad)
          VALUES ($1::uuid, $2::uuid, $3::uuid, 2)",
@@ -345,12 +350,14 @@ async fn debe_expandir_componentes_bom_al_reservar() {
         .await
         .expect("bom reserva");
 
-    let stock_componente: i32 =
-        sqlx::query_scalar("SELECT stock FROM item.items WHERE id = $1::uuid")
-            .bind(componente)
-            .fetch_one(ctx.db.pool())
-            .await
-            .expect("stock componente");
+    let stock_componente: i64 = sqlx::query_scalar(
+        "SELECT COALESCE(SUM(stock), 0)::bigint
+           FROM inventory.item_stock_ubicacion WHERE item_id = $1::uuid",
+    )
+    .bind(componente)
+    .fetch_one(ctx.db.pool())
+    .await
+    .expect("stock componente");
     assert_eq!(stock_componente, 6);
 }
 
@@ -376,10 +383,13 @@ async fn debe_revertir_el_stock_si_falla_el_outbox() {
         .await
         .expect_err("outbox");
     assert!(!error.is_empty());
-    let stock: i32 = sqlx::query_scalar("SELECT stock FROM item.items WHERE id = $1::uuid")
-        .bind(ITEM)
-        .fetch_one(db.pool())
-        .await
-        .expect("stock");
+    let stock: i64 = sqlx::query_scalar(
+        "SELECT COALESCE(SUM(stock), 0)::bigint
+           FROM inventory.item_stock_ubicacion WHERE item_id = $1::uuid",
+    )
+    .bind(ITEM)
+    .fetch_one(db.pool())
+    .await
+    .expect("stock");
     assert_eq!(stock, 10);
 }

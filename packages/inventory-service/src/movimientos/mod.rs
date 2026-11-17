@@ -163,18 +163,13 @@ impl Movimientos {
                 ));
             }
             if cabecera.tipo != "traslado" {
-                sqlx::query(
-                    "UPDATE item.items
-                        SET stock = $3, actualizado_en = NOW()
-                      WHERE id = $1::uuid AND empresa_id = $2::uuid AND tipo = 'producto'
-                        AND eliminado_en IS NULL",
+                crate::stock::aplicar_delta_en_transaccion(
+                    &mut tx,
+                    empresa_id,
+                    &item.id,
+                    nuevo - anterior,
                 )
-                .bind(&item.id)
-                .bind(empresa_id)
-                .bind(nuevo)
-                .execute(&mut *tx)
-                .await
-                .map_err(interno)?;
+                .await?;
                 let motivo = datos
                     .get("motivo")
                     .filter(|valor| !valor.is_null())
@@ -305,10 +300,15 @@ impl Movimientos {
         let mut tx = self.db.transaccion().await.map_err(interno)?;
         let fila = match item_id {
             Some(item_id) => sqlx::query(
-                "SELECT id, codigo AS sku, nombre, stock
-                   FROM item.items
-                  WHERE empresa_id = $1::uuid AND tipo = 'producto' AND id = $2::uuid
-                    AND eliminado_en IS NULL",
+                "SELECT i.id, i.codigo AS sku, i.nombre,
+                        COALESCE((
+                          SELECT SUM(s.stock)::int
+                            FROM inventory.item_stock_ubicacion s
+                           WHERE s.item_id = i.id
+                        ), 0) AS stock
+                   FROM item.items i
+                  WHERE i.empresa_id = $1::uuid AND i.tipo = 'producto' AND i.id = $2::uuid
+                    AND i.eliminado_en IS NULL",
             )
             .bind(empresa_id)
             .bind(item_id)
@@ -316,10 +316,15 @@ impl Movimientos {
             .await
             .map_err(interno)?,
             None => sqlx::query(
-                "SELECT id, codigo AS sku, nombre, stock
-                   FROM item.items
-                  WHERE empresa_id = $1::uuid AND tipo = 'producto'
-                    AND upper(codigo) = upper($2) AND eliminado_en IS NULL",
+                "SELECT i.id, i.codigo AS sku, i.nombre,
+                        COALESCE((
+                          SELECT SUM(s.stock)::int
+                            FROM inventory.item_stock_ubicacion s
+                           WHERE s.item_id = i.id
+                        ), 0) AS stock
+                   FROM item.items i
+                  WHERE i.empresa_id = $1::uuid AND i.tipo = 'producto'
+                    AND upper(i.codigo) = upper($2) AND i.eliminado_en IS NULL",
             )
             .bind(empresa_id)
             .bind(sku)

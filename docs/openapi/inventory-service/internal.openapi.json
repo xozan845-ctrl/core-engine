@@ -144,6 +144,81 @@
           }
         }
       }
+    },
+    "/internal/inventario/stock/inicial": {
+      "post": {
+        "operationId": "InternalController_stockInicial",
+        "summary": "Registra el stock inicial de un item (servicio a servicio)",
+        "tags": [
+          "Inventario (interno)"
+        ],
+        "security": [
+          {
+            "internalKey": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "empresa_id": {
+                    "type": "string",
+                    "format": "uuid"
+                  },
+                  "item_id": {
+                    "type": "string",
+                    "format": "uuid"
+                  },
+                  "sku": {
+                    "type": "string"
+                  },
+                  "cantidad": {
+                    "type": "number",
+                    "minimum": 0
+                  },
+                  "negocio_id": {
+                    "type": "string",
+                    "format": "uuid",
+                    "nullable": true
+                  }
+                },
+                "required": [
+                  "empresa_id",
+                  "item_id",
+                  "cantidad"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Stock inicial registrado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "item_id": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "sku": {
+                      "type": "string"
+                    },
+                    "stock": {
+                      "type": "number"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {

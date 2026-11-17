@@ -38,17 +38,27 @@ pub async fn db() -> Arc<Db> {
 
 pub async fn crear_item(db: &Db, codigo: &str, precio_cents: i32) {
     sqlx::query(
-        "INSERT INTO item.items (id, empresa_id, tipo, codigo, nombre, precio_cents, estado)
-         VALUES ($1::uuid, $2::uuid, 'producto', $3, $4, $5, 'activo')",
+        "INSERT INTO item.items (id, empresa_id, tipo, codigo, nombre, estado)
+         VALUES ($1::uuid, $2::uuid, 'producto', $3, $4, 'activo')",
     )
     .bind(ITEM)
     .bind(EMPRESA)
     .bind(codigo)
     .bind(format!("Item {codigo}"))
-    .bind(precio_cents)
     .execute(db.pool())
     .await
     .expect("item");
+    sqlx::query(
+        "INSERT INTO pricing.lista_precio_items
+           (empresa_id, lista_id, item_id, desde_cantidad, hasta_cantidad, precio_cents)
+         VALUES ($1::uuid, NULL, $2::uuid, 1, NULL, $3)",
+    )
+    .bind(EMPRESA)
+    .bind(ITEM)
+    .bind(precio_cents)
+    .execute(db.pool())
+    .await
+    .expect("precio base");
 }
 
 pub fn item_json() -> serde_json::Value {

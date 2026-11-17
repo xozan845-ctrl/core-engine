@@ -43,8 +43,8 @@ un modelo donde cada servicio sea la única fuente de su dato.
 4. **Contrato público**: `precio`, `precio_base`, `precio_desde`, `stock` y
    `stock_total` se retiraron de las respuestas de items, productos, variantes,
    servicios y combos. No hay frontend asociado, así que no queda ventana de
-   compatibilidad. Las columnas internas de `item.items` siguen existiendo como
-   almacenamiento transitorio, pero no forman parte de ningún contrato.
+   compatibilidad. Las columnas internas también se retiraron: el precio base
+   vive en `pricing` y el stock solo en `inventory`.
 5. **Consumidores internos migrados**: `stores-service` (oferta: metadata v2 +
    precio de pricing + stock de inventario) y `orders-service`
    (`items_lote`: metadata v2 + stock/series de inventario). Los dobles de
@@ -57,12 +57,14 @@ un modelo donde cada servicio sea la única fuente de su dato.
 | 1 | Endpoints v2, stock batch de inventario y migración de stores/orders | Implementada |
 | 2 | Frontend consume precio/stock desde pricing/inventory | No aplica (sin frontend) |
 | 3 | Retirar `precio`/`stock` del payload público | Implementada |
-| 3b | Retirar las columnas internas de `item.items` | Pendiente (sin impacto de contrato) |
+| 3b | Retirar las columnas internas de `item.items` | Implementada |
 | 4 | Retirar `/internal/items/**` v1 | Implementada |
 
-La fase 3 no tiene dependencia externa: no hay frontend. La fase 3b (columnas)
-exige mover el precio base a `pricing` y el stock inicial a `inventory`, y una
-migración inversa probada; no cambia el contrato público.
+La fase 3 no tenía dependencia externa: no hay frontend. La fase 3b movió el
+precio base a `pricing.lista_precio_items` (fila base con `lista_id NULL`) y el
+stock inicial a `inventory.item_stock_ubicacion`; `item.items` ya no tiene
+`precio_cents` ni `stock`. `item_service` delega ambos al crear/editar items,
+productos, variantes y combos.
 
 ## Consecuencias
 
@@ -72,6 +74,6 @@ migración inversa probada; no cambia el contrato público.
 - **Coste**: una llamada más por oferta/checkout (precio y stock), compensable
   con batch en checkout. Los errores de pricing/inventario son fail-closed en
   stores/orders, igual que antes con el catálogo.
-- **Rollback**: las proyecciones públicas siguen vivas; para volver a v1
-  interno hay que redeployar la imagen anterior de los consumidores. No hay
-  migración de datos en esta fase.
+- **Rollback**: el código anterior requiere una migración inversa que recree
+  `item.items.precio_cents/stock` desde pricing/inventory; no es automática.
+  El contrato público no cambia (los campos ya no se exponían desde v1.9.0).
