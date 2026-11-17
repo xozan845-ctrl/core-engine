@@ -96,7 +96,9 @@ empresa y la acumulación idempotente como método de dominio. La fase 3 conecta
 la acumulación con `Checkout::transicionar` (pago automático, confirmación
 manual y webhook) y expone `mis-tarjetas` al comprador, derivando la propiedad
 de la tarjeta de sus propias órdenes (`orden_vista.comprador_id`) para no
-exponer tarjetas de otros clientes del mismo tenant.
+exponer tarjetas de otros clientes del mismo tenant. La fase 4 agrega la
+expiración de puntos por inactividad (`expira_meses`) mediante un scheduler
+idempotente cada 6 horas.
 
 ### 4. Servicio propio como evolución
 

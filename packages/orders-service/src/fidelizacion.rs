@@ -924,6 +924,64 @@ impl Fidelizacion {
         tx.commit().await.map_err(error_db)?;
         fila_movimiento(&fila).map(Some)
     }
+
+    /// Expira los puntos de tarjetas activas sin movimientos durante
+    /// `expira_meses`. Devuelve cuántas tarjetas se expiraron.
+    ///
+    /// Es idempotente: una tarjeta con saldo 0 se omite, y la expiración se
+    /// registra como movimiento `expiracion` para conservar el historial.
+    pub async fn expirar_inactivas(&self) -> Result<u64, ApiError> {
+        let mut tx = self.db.transaccion().await.map_err(error_db)?;
+        let filas = sqlx::query(
+            "SELECT t.id, t.empresa_id, t.puntos
+               FROM orders.fidelizacion_tarjetas t
+               JOIN orders.fidelizacion_programas p ON p.id = t.programa_id
+              WHERE p.activo
+                AND p.expira_meses IS NOT NULL
+                AND t.estado = 'activa'
+                AND t.puntos > 0
+                AND COALESCE(
+                      (SELECT MAX(m.creado_en)
+                         FROM orders.fidelizacion_movimientos m
+                        WHERE m.tarjeta_id = t.id),
+                      t.creado_en
+                    ) < NOW() - make_interval(months => p.expira_meses)
+              FOR UPDATE OF t",
+        )
+        .fetch_all(&mut *tx)
+        .await
+        .map_err(error_db)?;
+        let mut expiradas = 0_u64;
+        for fila in &filas {
+            let tarjeta_id = uuid_texto(fila, "id").map_err(error_db)?;
+            let empresa_id = uuid_texto(fila, "empresa_id").map_err(error_db)?;
+            let puntos: i32 = fila.try_get("puntos").map_err(error_db)?;
+            sqlx::query(
+                "INSERT INTO orders.fidelizacion_movimientos
+                   (empresa_id, tarjeta_id, tipo, puntos, saldo_tras, descripcion)
+                 VALUES ($1::uuid, $2::uuid, 'expiracion', $3, 0,
+                         'Puntos expirados por inactividad')",
+            )
+            .bind(&empresa_id)
+            .bind(&tarjeta_id)
+            .bind(-puntos)
+            .execute(&mut *tx)
+            .await
+            .map_err(error_db)?;
+            sqlx::query(
+                "UPDATE orders.fidelizacion_tarjetas
+                    SET puntos = 0, actualizado_en = NOW()
+                  WHERE id = $1::uuid",
+            )
+            .bind(&tarjeta_id)
+            .execute(&mut *tx)
+            .await
+            .map_err(error_db)?;
+            expiradas += 1;
+        }
+        tx.commit().await.map_err(error_db)?;
+        Ok(expiradas)
+    }
 }
 
 fn fila_programa(fila: &sqlx::postgres::PgRow) -> Result<Programa, ApiError> {

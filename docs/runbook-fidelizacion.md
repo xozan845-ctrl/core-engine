@@ -44,6 +44,9 @@ no se activa, ninguna empresa existente cambia de comportamiento.
 - **Canjes**: `POST /api/v2/fidelizacion/canjes` por `tarjeta_id`/`codigo_tarjeta`
   y `recompensa_id`/`recompensa_codigo`. Valida tarjeta activa, saldo y stock, y
   descuenta todo en una transacción.
+- **Expiración**: un job cada 6 h expira los puntos de tarjetas activas sin
+  movimientos durante `expira_meses`. Registra un movimiento `expiracion` y deja
+  el saldo en 0; es idempotente. `expira_meses = null` desactiva la expiración.
 - **Comprador**: `GET /api/v2/fidelizacion/mis-tarjetas` y
   `GET /api/v2/fidelizacion/mis-tarjetas/:id/movimientos`. La propiedad se
   deriva de las órdenes propias (`orden_vista.comprador_id`).
@@ -84,5 +87,6 @@ SELECT tarjeta_id, order_id, puntos FROM orders.fidelizacion_movimientos
 - **Desactivar acumulación**: `PUT /programa` con `{"activo": false}`. No se
   acumulan puntos nuevos; los canjes siguen disponibles si la capacidad está
   activa.
+- **Detener la expiración**: `PUT /programa` con `{"expira_meses": null}`.
 - **No borrar tablas**: la migración 87 es aditiva y los datos son historial de
   puntos; un rollback destructivo requiere decisión explícita y respaldo.
