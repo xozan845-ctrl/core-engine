@@ -39,17 +39,34 @@ test('el stock de item.items se aísla por empresa y las reservas viven en inven
     const empresaOtra = randomUUID();
     await client.query(
       `INSERT INTO item.items
-         (empresa_id, tipo, codigo, nombre, precio_cents, track_inventory, stock)
-       VALUES ($1, 'producto', $2, 'Producto de regresion', 1000, true, 10),
-              ($3, 'producto', $2, 'Mismo codigo en otra empresa', 2000, true, 4)`,
+         (empresa_id, tipo, codigo, nombre, track_inventory)
+       VALUES ($1, 'producto', $2, 'Producto de regresion', true),
+              ($3, 'producto', $2, 'Mismo codigo en otra empresa', true)`,
       [empresaId, sku, empresaOtra],
+    );
+    await client.query(
+      `INSERT INTO inventory.ubicaciones (empresa_id, codigo, nombre, predeterminada)
+       VALUES ($1, 'principal', 'Principal', true),
+              ($2, 'principal', 'Principal', true)`,
+      [empresaId, empresaOtra],
+    );
+    await client.query(
+      `INSERT INTO inventory.item_stock_ubicacion (empresa_id, item_id, ubicacion_id, stock)
+       SELECT i.empresa_id, i.id, u.id,
+              CASE WHEN i.empresa_id = $1 THEN 10 ELSE 4 END
+         FROM item.items i
+         JOIN inventory.ubicaciones u ON u.empresa_id = i.empresa_id
+        WHERE i.codigo = $2`,
+      [empresaId, sku],
     );
     await assertStock(client, empresaId, sku, 10);
     await assertStock(client, empresaOtra, sku, 4);
 
     await client.query(
-      `UPDATE item.items SET stock = stock - 1
-        WHERE empresa_id = $1 AND codigo = $2`,
+      `UPDATE inventory.item_stock_ubicacion s
+          SET stock = stock - 1
+         FROM item.items i
+        WHERE s.item_id = i.id AND i.empresa_id = $1 AND i.codigo = $2`,
       [empresaId, sku],
     );
     await client.query(
@@ -67,7 +84,10 @@ test('el stock de item.items se aísla por empresa y las reservas viven en inven
     assert.equal(reserva.items_json[0].cantidad, 1);
 
     await client.query(
-      'UPDATE item.items SET stock = stock + 1 WHERE empresa_id = $1 AND codigo = $2',
+      `UPDATE inventory.item_stock_ubicacion s
+          SET stock = stock + 1
+         FROM item.items i
+        WHERE s.item_id = i.id AND i.empresa_id = $1 AND i.codigo = $2`,
       [empresaId, sku],
     );
     await client.query('DELETE FROM inventory.reservas_ordenes WHERE order_id = $1', [orderId]);
@@ -119,9 +139,11 @@ test('01e_adr25_empresas.sql deja el esquema que consume commissions-service', a
 
 async function assertStock(client, empresaId, sku, esperado) {
   const { rows: [row] } = await client.query(
-    `SELECT stock FROM item.items
-      WHERE empresa_id = $1 AND codigo = $2 AND tipo = 'producto'
-        AND eliminado_en IS NULL`,
+    `SELECT COALESCE(SUM(s.stock), 0)::int AS stock
+       FROM inventory.item_stock_ubicacion s
+       JOIN item.items i ON i.id = s.item_id
+      WHERE i.empresa_id = $1 AND i.codigo = $2 AND i.tipo = 'producto'
+        AND i.eliminado_en IS NULL`,
     [empresaId, sku],
   );
   assert.equal(row.stock, esperado);

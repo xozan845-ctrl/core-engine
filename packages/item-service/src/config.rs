@@ -18,6 +18,8 @@ pub struct Config {
     pub internal_api_key: Option<String>,
     pub identity_service_url: String,
     pub storage_service_url: String,
+    pub pricing_service_url: String,
+    pub inventory_service_url: String,
     pub outbox_tabla: String,
     pub internal_request_timeout_ms: u64,
 }
@@ -72,6 +74,14 @@ impl Config {
                 .to_string(),
             storage_service_url: leer("STORAGE_SERVICE_URL")
                 .unwrap_or_else(|| "http://storage-service:3010".to_string())
+                .trim_end_matches('/')
+                .to_string(),
+            pricing_service_url: leer("PRICING_SERVICE_URL")
+                .unwrap_or_else(|| "http://pricing-service:3014".to_string())
+                .trim_end_matches('/')
+                .to_string(),
+            inventory_service_url: leer("INVENTORY_SERVICE_URL")
+                .unwrap_or_else(|| "http://inventory-service:3013".to_string())
                 .trim_end_matches('/')
                 .to_string(),
             outbox_tabla: leer("OUTBOX_TABLA").unwrap_or_else(|| "item.outbox".to_string()),

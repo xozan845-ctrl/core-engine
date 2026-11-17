@@ -14,6 +14,7 @@ use crate::errors::ApiError;
 use crate::money::Money;
 use serde_json::{json, Map, Value};
 use sqlx::postgres::PgRow;
+use sqlx::Row;
 use std::sync::Arc;
 
 const CODIGO: &str = r"^[a-z][a-z0-9_-]{1,39}$";
@@ -407,6 +408,84 @@ impl Precios {
         Ok(json!({ "ok": true }))
     }
 
+    /// Fija el precio base del item (fila `lista_id NULL`, `desde_cantidad 1`).
+    pub async fn fijar_precio_base(
+        &self,
+        empresa_id: &str,
+        item_id: &str,
+        precio_cents: i64,
+    ) -> Result<Value, ApiError> {
+        if precio_cents < 0 {
+            return Err(ApiError::validacion(json!([{
+                "campo": "precio_cents",
+                "restricciones": ["min"],
+            }])));
+        }
+        let item = self.verificar_item(empresa_id, item_id).await?;
+        let mut tx = self.db.transaccion().await.map_err(interno)?;
+        let actual = sqlx::query(
+            "SELECT id, precio_cents
+               FROM pricing.lista_precio_items
+              WHERE empresa_id = $1::uuid AND item_id = $2::uuid
+                AND lista_id IS NULL AND desde_cantidad = 1
+              FOR UPDATE",
+        )
+        .bind(empresa_id)
+        .bind(&item.id)
+        .fetch_optional(&mut *tx)
+        .await
+        .map_err(interno)?;
+        let anterior = actual
+            .as_ref()
+            .map(|fila| fila.get::<i32, _>("precio_cents") as i64);
+        match actual {
+            Some(fila) => {
+                let id: uuid::Uuid = fila.try_get("id").map_err(interno)?;
+                sqlx::query(
+                    "UPDATE pricing.lista_precio_items
+                        SET precio_cents = $1, actualizado_en = NOW()
+                      WHERE id = $2::uuid",
+                )
+                .bind(precio_cents as i32)
+                .bind(id)
+                .execute(&mut *tx)
+                .await
+                .map_err(interno)?;
+            }
+            None => {
+                sqlx::query(
+                    "INSERT INTO pricing.lista_precio_items
+                       (empresa_id, lista_id, item_id, desde_cantidad, hasta_cantidad, precio_cents)
+                     VALUES ($1::uuid, NULL, $2::uuid, 1, NULL, $3)",
+                )
+                .bind(empresa_id)
+                .bind(&item.id)
+                .bind(precio_cents as i32)
+                .execute(&mut *tx)
+                .await
+                .map_err(interno)?;
+            }
+        }
+        sqlx::query(
+            "INSERT INTO pricing.historico_precios_base
+               (empresa_id, item_id, precio_anterior_cents, precio_nuevo_cents)
+             VALUES ($1::uuid, $2::uuid, $3, $4)",
+        )
+        .bind(empresa_id)
+        .bind(&item.id)
+        .bind(anterior)
+        .bind(precio_cents as i32)
+        .execute(&mut *tx)
+        .await
+        .map_err(interno)?;
+        tx.commit().await.map_err(interno)?;
+        self.actualizar_tipo_precio(empresa_id, &item.id).await?;
+        Ok(json!({
+            "item_id": item.id,
+            "precio_cents": precio_cents,
+        }))
+    }
+
     // ── escalas base del item ───────────────────────────────────────────────
 
     pub async fn escalas(&self, empresa_id: &str, item_id: &str) -> Result<Value, ApiError> {
@@ -493,19 +572,23 @@ impl Precios {
         let escala = self
             .buscar_escala(empresa_id, &item.id, lista_id, cantidad)
             .await?;
-        let origen = if escala.is_some() {
-            if lista.is_some() {
-                "lista"
-            } else {
-                "escala"
-            }
+        let origen = if lista.is_some() {
+            "lista"
+        } else if escala
+            .as_ref()
+            .and_then(|valor| entero_de(valor, "desde_cantidad"))
+            == Some(1)
+        {
+            "base"
+        } else if escala.is_some() {
+            "escala"
         } else {
             "base"
         };
         let precio_unitario = escala
             .as_ref()
             .and_then(|valor| entero_de(valor, "precio_cents"))
-            .unwrap_or(item.precio_cents);
+            .unwrap_or(0);
         let precio_total = multiplicar(precio_unitario, cantidad)?;
 
         Ok(json!({
@@ -697,7 +780,7 @@ impl Precios {
         let id = validar_uuid(item_id, "item")?;
         let mut tx = self.db.transaccion().await.map_err(interno)?;
         let fila = sqlx::query(
-            "SELECT id, precio_cents, tipo_precio
+            "SELECT id, tipo_precio
                FROM item.items
               WHERE id = $1::uuid AND empresa_id = $2::uuid AND eliminado_en IS NULL",
         )
@@ -711,7 +794,6 @@ impl Precios {
         let valor = fila_json(&fila)?;
         Ok(ItemPrecio {
             id: texto_de(&valor, "id"),
-            precio_cents: entero_de(&valor, "precio_cents").unwrap_or(0),
             tipo_precio: texto_de(&valor, "tipo_precio"),
         })
     }
@@ -791,7 +873,7 @@ impl Precios {
                 SET tipo_precio = CASE WHEN EXISTS (
                       SELECT 1 FROM pricing.lista_precio_items p
                        WHERE p.empresa_id = i.empresa_id AND p.item_id = i.id
-                         AND p.lista_id IS NULL
+                         AND p.lista_id IS NULL AND p.desde_cantidad > 1
                     ) THEN 'escala' ELSE 'fijo' END,
                     actualizado_en = NOW()
               WHERE i.id = $1::uuid AND i.empresa_id = $2::uuid",
@@ -808,7 +890,6 @@ impl Precios {
 
 struct ItemPrecio {
     id: String,
-    precio_cents: i64,
     tipo_precio: String,
 }
 

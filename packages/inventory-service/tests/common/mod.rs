@@ -40,21 +40,61 @@ pub async fn db() -> Arc<Db> {
     )
 }
 
-pub async fn crear_item(db: &Db, id: &str, codigo: &str, stock: i32, precio: i32) {
+pub async fn crear_item(db: &Db, id: &str, codigo: &str, stock: i32, _precio: i32) {
     sqlx::query(
         "INSERT INTO item.items
-           (id, empresa_id, tipo, codigo, nombre, precio_cents, track_inventory, stock, estado)
-         VALUES ($1::uuid, $2::uuid, 'producto', $3, $4, $5, true, $6, 'activo')",
+           (id, empresa_id, tipo, codigo, nombre, track_inventory, estado)
+         VALUES ($1::uuid, $2::uuid, 'producto', $3, $4, true, 'activo')",
     )
     .bind(id)
     .bind(EMPRESA)
     .bind(codigo)
     .bind(format!("Item {codigo}"))
-    .bind(precio)
-    .bind(stock)
     .execute(db.pool())
     .await
     .expect("item");
+
+    sembrar_stock(db, id, stock).await;
+}
+
+pub async fn sembrar_stock(db: &Db, item_id: &str, stock: i32) {
+    sqlx::query(
+        "INSERT INTO inventory.ubicaciones (empresa_id, codigo, nombre, predeterminada)
+         SELECT $1::uuid, 'principal', 'Principal', true
+          WHERE NOT EXISTS (
+            SELECT 1 FROM inventory.ubicaciones
+             WHERE empresa_id = $1::uuid AND activo
+          )
+         ON CONFLICT DO NOTHING",
+    )
+    .bind(EMPRESA)
+    .execute(db.pool())
+    .await
+    .expect("ubicacion inicial");
+
+    let ubicacion: uuid::Uuid = sqlx::query_scalar(
+        "SELECT id FROM inventory.ubicaciones
+          WHERE empresa_id = $1::uuid AND activo
+          ORDER BY predeterminada DESC, creado_en, id LIMIT 1",
+    )
+    .bind(EMPRESA)
+    .fetch_one(db.pool())
+    .await
+    .expect("ubicacion");
+
+    sqlx::query(
+        "INSERT INTO inventory.item_stock_ubicacion AS s
+           (empresa_id, item_id, ubicacion_id, stock)
+         VALUES ($1::uuid, $2::uuid, $3::uuid, $4)
+         ON CONFLICT (item_id, ubicacion_id) DO UPDATE SET stock = EXCLUDED.stock",
+    )
+    .bind(EMPRESA)
+    .bind(item_id)
+    .bind(ubicacion)
+    .bind(stock)
+    .execute(db.pool())
+    .await
+    .expect("stock inicial");
 }
 
 pub fn item_json() -> serde_json::Value {

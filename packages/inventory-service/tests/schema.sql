@@ -13,11 +13,9 @@ CREATE TABLE item.items (
   tipo            text NOT NULL DEFAULT 'producto',
   codigo          text NOT NULL,
   nombre          text NOT NULL,
-  precio_cents    integer NOT NULL DEFAULT 0,
   track_inventory boolean NOT NULL DEFAULT true,
   track_serial    boolean NOT NULL DEFAULT false,
   garantia_meses  integer,
-  stock           integer,
   estado          text NOT NULL DEFAULT 'activo',
   parent_item_id  uuid,
   eliminado_en    timestamptz,
@@ -162,114 +160,3 @@ CREATE TABLE inventory.outbox (
   creado_en    timestamptz NOT NULL DEFAULT NOW(),
   publicado_en timestamptz
 );
-
--- Triggers de propiedad del stock (migración 84).
-CREATE OR REPLACE FUNCTION inventory.aplicar_delta_stock_ubicacion() RETURNS trigger
-LANGUAGE plpgsql AS $$
-DECLARE
-  v_delta      integer := COALESCE(NEW.stock, 0) - COALESCE(OLD.stock, 0);
-  v_default    uuid;
-  v_ubicacion  uuid;
-  v_stock      integer;
-  v_quitar     integer;
-  v_restante   integer;
-BEGIN
-  IF v_delta = 0 OR NOT NEW.track_inventory THEN
-    RETURN NEW;
-  END IF;
-  IF current_setting('inventory.stock_sync', true) = 'on' THEN
-    RETURN NEW;
-  END IF;
-  -- Item sin desglose (empresa todavía sin ubicación activa): solo total.
-  IF NOT EXISTS (
-    SELECT 1 FROM inventory.item_stock_ubicacion WHERE item_id = NEW.id
-  ) THEN
-    RETURN NEW;
-  END IF;
-
-  PERFORM set_config('inventory.stock_sync', 'on', true);
-
-  SELECT u.id INTO v_default
-    FROM inventory.ubicaciones u
-   WHERE u.empresa_id = NEW.empresa_id AND u.activo AND u.predeterminada
-   LIMIT 1;
-
-  IF v_delta > 0 THEN
-    IF v_default IS NULL THEN
-      SELECT ubicacion_id INTO v_default
-        FROM inventory.item_stock_ubicacion
-       WHERE item_id = NEW.id
-       ORDER BY stock DESC, ubicacion_id
-       LIMIT 1;
-    END IF;
-    INSERT INTO inventory.item_stock_ubicacion AS s
-      (empresa_id, item_id, ubicacion_id, stock)
-    VALUES (NEW.empresa_id, NEW.id, v_default, v_delta)
-    ON CONFLICT (item_id, ubicacion_id) DO UPDATE
-      SET stock = s.stock + EXCLUDED.stock,
-          actualizado_en = NOW();
-  ELSE
-    v_restante := -v_delta;
-    FOR v_ubicacion, v_stock IN
-      SELECT ubicacion_id, stock
-        FROM inventory.item_stock_ubicacion
-       WHERE item_id = NEW.id AND stock > 0
-       ORDER BY (ubicacion_id = COALESCE(v_default, ubicacion_id)) DESC,
-                stock DESC,
-                ubicacion_id
-       FOR UPDATE
-    LOOP
-      EXIT WHEN v_restante <= 0;
-      v_quitar := LEAST(v_stock, v_restante);
-      UPDATE inventory.item_stock_ubicacion
-         SET stock = stock - v_quitar,
-             actualizado_en = NOW()
-       WHERE item_id = NEW.id AND ubicacion_id = v_ubicacion;
-      v_restante := v_restante - v_quitar;
-    END LOOP;
-    IF v_restante > 0 THEN
-      RAISE EXCEPTION 'STOCK_UBICACION_INCONSISTENTE'
-        USING DETAIL = 'El stock fisico del item no alcanza en sus ubicaciones.';
-    END IF;
-  END IF;
-
-  PERFORM set_config('inventory.stock_sync', 'off', true);
-  RETURN NEW;
-END;
-$$;
-
--- Un item nuevo nace con su stock en la ubicación predeterminada, si existe.
-CREATE OR REPLACE FUNCTION inventory.crear_stock_ubicacion_inicial() RETURNS trigger
-LANGUAGE plpgsql AS $$
-DECLARE
-  v_ubicacion uuid;
-BEGIN
-  IF NOT NEW.track_inventory OR NEW.eliminado_en IS NOT NULL THEN
-    RETURN NEW;
-  END IF;
-  SELECT id INTO v_ubicacion
-    FROM inventory.ubicaciones
-   WHERE empresa_id = NEW.empresa_id AND activo AND predeterminada
-   LIMIT 1;
-  IF v_ubicacion IS NULL THEN
-    RETURN NEW;
-  END IF;
-  INSERT INTO inventory.item_stock_ubicacion
-    (empresa_id, item_id, ubicacion_id, stock)
-  VALUES (NEW.empresa_id, NEW.id, v_ubicacion, COALESCE(NEW.stock, 0))
-  ON CONFLICT (item_id, ubicacion_id) DO NOTHING;
-  RETURN NEW;
-END;
-$$;
-
-DROP TRIGGER IF EXISTS trg_item_items_delta_stock ON item.items;
-CREATE TRIGGER trg_item_items_delta_stock
-  AFTER UPDATE OF stock ON item.items
-  FOR EACH ROW
-  EXECUTE FUNCTION inventory.aplicar_delta_stock_ubicacion();
-
-DROP TRIGGER IF EXISTS trg_item_items_stock_inicial ON item.items;
-CREATE TRIGGER trg_item_items_stock_inicial
-  AFTER INSERT ON item.items
-  FOR EACH ROW
-  EXECUTE FUNCTION inventory.crear_stock_ubicacion_inicial();
