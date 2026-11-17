@@ -315,3 +315,98 @@ async fn debe_fijar_stock_por_ubicacion_y_publicar_evento() {
         .expect("eventos");
     assert_eq!(eventos, 1);
 }
+
+#[tokio::test]
+async fn debe_filtrar_movimientos_por_negocio() {
+    let ctx = preparar().await;
+    let negocio = "22222222-2222-4222-8222-222222222222";
+    ctx.ubicaciones
+        .crear(
+            EMPRESA,
+            Some(negocio),
+            &json!({"codigo": "principal", "nombre": "Principal", "tipo": "bodega"}),
+        )
+        .await
+        .expect("ubicacion");
+    crear_item(&ctx.db, ITEM, "SKU-MOV-NEG", 10, 1000).await;
+    sqlx::query("UPDATE item.items SET negocio_id = $1::uuid WHERE id = $2::uuid")
+        .bind(negocio)
+        .bind(ITEM)
+        .execute(ctx.db.pool())
+        .await
+        .expect("negocio");
+    ctx.movimientos
+        .crear(
+            EMPRESA,
+            &json!({"tipo": "entrada", "lineas": [{"sku": "SKU-MOV-NEG", "cantidad": 2}]}),
+            None,
+        )
+        .await
+        .expect("movimiento");
+
+    let pagina = ctx
+        .movimientos
+        .listar(EMPRESA, &json!({"negocio_id": negocio}))
+        .await
+        .expect("listar negocio");
+    assert_eq!(pagina["total"], 1);
+
+    let otro = ctx
+        .movimientos
+        .listar(
+            EMPRESA,
+            &json!({"negocio_id": "33333333-3333-4333-8333-333333333333"}),
+        )
+        .await
+        .expect("listar otro");
+    assert_eq!(otro["total"], 0);
+}
+
+#[tokio::test]
+async fn debe_actualizar_ubicaciones_respetando_el_negocio() {
+    let ctx = preparar().await;
+    let negocio = "22222222-2222-4222-8222-222222222222";
+    let otra = "33333333-3333-4333-8333-333333333333";
+    let ubicacion = ctx
+        .ubicaciones
+        .crear(
+            EMPRESA,
+            Some(negocio),
+            &json!({"codigo": "norte", "nombre": "Norte", "tipo": "bodega"}),
+        )
+        .await
+        .expect("ubicacion");
+    let id = ubicacion["id"].as_str().expect("id").to_string();
+    crear_item(&ctx.db, ITEM, "SKU-UPD", 10, 1000).await;
+    ctx.ubicaciones
+        .fijar_stock(EMPRESA, &id, ITEM, &json!(5))
+        .await
+        .expect("stock");
+
+    let error = ctx
+        .ubicaciones
+        .actualizar(EMPRESA, Some(otra), &id, &json!({"nombre": "Otra"}))
+        .await
+        .expect_err("otro negocio");
+    assert_eq!(error.codigo, "NO_ENCONTRADO");
+
+    let error = ctx
+        .ubicaciones
+        .actualizar(EMPRESA, Some(negocio), &id, &json!({"activo": false}))
+        .await
+        .expect_err("con stock");
+    assert_eq!(error.codigo, "CONFLICTO");
+
+    let actualizada = ctx
+        .ubicaciones
+        .actualizar(
+            EMPRESA,
+            Some(negocio),
+            &id,
+            &json!({"nombre": "Norte 2", "predeterminada": true}),
+        )
+        .await
+        .expect("actualizar");
+    assert_eq!(actualizada["nombre"], "Norte 2");
+    assert_eq!(actualizada["predeterminada"], true);
+}

@@ -251,3 +251,87 @@ async fn debe_resumir_productos_agotados_y_valor_del_inventario() {
     assert_eq!(resumen["stock_total"], 10);
     assert_eq!(resumen["valor_inventario_cents"], 10_000);
 }
+
+#[tokio::test]
+async fn debe_entregar_stock_y_series_por_lote_de_skus() {
+    let ctx = preparar().await;
+    crear_item(&ctx.db, ITEM, "SKU-INTERNO", 10, 1000).await;
+
+    let lineas = ctx
+        .inventario
+        .stock_lote(EMPRESA, &["sku-interno".to_string()])
+        .await
+        .expect("stock lote");
+    assert_eq!(lineas.len(), 1);
+    assert_eq!(lineas[0]["sku"], "SKU-INTERNO");
+    assert_eq!(lineas[0]["empresa_id"], EMPRESA);
+    assert_eq!(lineas[0]["stock"], 10);
+    assert_eq!(lineas[0]["seriales_disponibles"], 0);
+}
+
+#[tokio::test]
+async fn debe_filtrar_inventario_por_negocio() {
+    let ctx = preparar().await;
+    let negocio = "22222222-2222-4222-8222-222222222222";
+    crear_item(&ctx.db, ITEM, "SKU-NEGOCIO", 5, 1000).await;
+    sqlx::query("UPDATE item.items SET negocio_id = $1::uuid WHERE id = $2::uuid")
+        .bind(negocio)
+        .bind(ITEM)
+        .execute(ctx.db.pool())
+        .await
+        .expect("negocio");
+
+    let lineas = ctx
+        .inventario
+        .listar(Some(EMPRESA), Some(negocio))
+        .await
+        .expect("listar negocio");
+    assert_eq!(lineas.len(), 1);
+    assert_eq!(lineas[0]["sku"], "SKU-NEGOCIO");
+
+    let resumen = ctx
+        .inventario
+        .resumen(Some(EMPRESA), Some(negocio))
+        .await
+        .expect("resumen negocio");
+    assert_eq!(resumen["productos"], 1);
+
+    let otro = ctx
+        .inventario
+        .listar(Some(EMPRESA), Some("33333333-3333-4333-8333-333333333333"))
+        .await
+        .expect("listar otro");
+    assert!(otro.is_empty());
+
+    let configuracion = ctx
+        .inventario
+        .configuracion(EMPRESA, Some(negocio))
+        .await
+        .expect("configuracion negocio");
+    assert_eq!(configuracion["negocio_id"], negocio);
+}
+
+#[tokio::test]
+async fn debe_validar_el_lote_de_stock() {
+    let ctx = preparar().await;
+    let vacio = ctx
+        .inventario
+        .stock_lote(EMPRESA, &[])
+        .await
+        .expect("vacio");
+    assert!(vacio.is_empty());
+
+    let error = ctx
+        .inventario
+        .stock_lote("no-es-uuid", &["SKU-1".to_string()])
+        .await
+        .expect_err("empresa invalida");
+    assert_eq!(error.codigo, "VALIDACION");
+
+    let inexistente = ctx
+        .inventario
+        .stock_lote(EMPRESA, &["NO-EXISTE".to_string()])
+        .await
+        .expect("inexistente");
+    assert!(inexistente.is_empty());
+}

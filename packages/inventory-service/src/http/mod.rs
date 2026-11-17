@@ -99,6 +99,7 @@ pub fn build_router(state: AppState) -> Router {
             get(movimientos::listar).post(movimientos::crear),
         )
         // superficie interna
+        .route("/internal/inventario/stock", post(internal::stock_lote))
         .route("/internal/inventario/resumen", get(internal::resumen))
         .route("/internal/inventario/lineas", get(internal::lineas))
         .fallback(no_encontrado)
