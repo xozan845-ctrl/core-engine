@@ -2025,14 +2025,8 @@
           "codigo_barras": {
             "type": "string"
           },
-          "precio": {
-            "type": "string"
-          },
           "costo_total": {
             "type": "string"
-          },
-          "margen": {
-            "type": "number"
           },
           "estado": {
             "type": "string",
@@ -2063,9 +2057,7 @@
           "nombre",
           "descripcion",
           "codigo_barras",
-          "precio",
           "costo_total",
-          "margen",
           "estado",
           "componentes",
           "creado_en",
@@ -2097,9 +2089,6 @@
           "nombre": {
             "type": "string"
           },
-          "stock": {
-            "type": "number"
-          },
           "cantidad": {
             "type": "number"
           },
@@ -2119,7 +2108,6 @@
           "componente_item_id",
           "codigo",
           "nombre",
-          "stock",
           "cantidad",
           "creado_en",
           "actualizado_en"
@@ -3179,12 +3167,6 @@
           "categoria": {
             "type": "string"
           },
-          "precio": {
-            "type": "string",
-            "example": "1500.00",
-            "deprecated": true,
-            "description": "Proyeccion del contrato v1. Usa pricing-service para resolver el precio."
-          },
           "costo": {
             "type": "string",
             "example": "500.00"
@@ -3194,12 +3176,6 @@
           },
           "track_serial": {
             "type": "boolean"
-          },
-          "stock": {
-            "type": "object",
-            "nullable": true,
-            "deprecated": true,
-            "description": "Proyeccion del contrato v1. Usa inventory-service para el stock por ubicacion."
           },
           "duration_minutes": {
             "type": "object",
@@ -3296,11 +3272,9 @@
           "nombre",
           "descripcion",
           "categoria",
-          "precio",
           "costo",
           "track_inventory",
           "track_serial",
-          "stock",
           "duration_minutes",
           "atributos",
           "parent_item_id",
@@ -4105,16 +4079,6 @@
             "type": "string",
             "description": "Categoría del producto"
           },
-          "precio_base": {
-            "type": "string",
-            "description": "Precio base en córdobas con dos decimales",
-            "example": "1000.00"
-          },
-          "stock": {
-            "type": "number",
-            "description": "Stock disponible (neto de reservas)",
-            "example": 10
-          },
           "estado": {
             "type": "string",
             "description": "Estado del producto",
@@ -4242,16 +4206,6 @@
             "items": {
               "$ref": "#/components/schemas/VarianteProductoResponseDto"
             }
-          },
-          "precio_desde": {
-            "type": "string",
-            "description": "Precio mínimo mostrable (\"desde\")",
-            "example": "1000.00"
-          },
-          "stock_total": {
-            "type": "number",
-            "description": "Stock agregado de las variantes o el propio",
-            "example": 25
           }
         },
         "required": [
@@ -4261,8 +4215,6 @@
           "nombre",
           "descripcion",
           "categoria",
-          "precio_base",
-          "stock",
           "estado",
           "estado_operativo",
           "costo",
@@ -4434,10 +4386,6 @@
           "codigo_barras": {
             "type": "string"
           },
-          "precio": {
-            "type": "string",
-            "example": "1500.00"
-          },
           "costo": {
             "type": "string",
             "example": "500.00"
@@ -4479,7 +4427,6 @@
           "categoria",
           "marca",
           "codigo_barras",
-          "precio",
           "costo",
           "unidad",
           "duracion_minutos",
@@ -4794,16 +4741,6 @@
             "description": "Atributos de la variante (color, talla, etc.)",
             "additionalProperties": true
           },
-          "precio_base": {
-            "type": "string",
-            "description": "Precio base en córdobas con dos decimales",
-            "example": "1500.00"
-          },
-          "stock": {
-            "type": "number",
-            "description": "Stock disponible",
-            "example": 10
-          },
           "estado": {
             "type": "string",
             "description": "Estado de la variante",
@@ -4831,8 +4768,6 @@
           "sku",
           "nombre",
           "atributos",
-          "precio_base",
-          "stock",
           "estado",
           "imagenes",
           "creado_en"
