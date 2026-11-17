@@ -94,6 +94,15 @@ async fn debe_exigir_autenticacion_validacion_y_clave_interna() {
         let (status, _) = enviar("GET", ruta, &admin, None).await;
         assert_ne!(status, StatusCode::NOT_FOUND, "ruta ausente: {ruta}");
     }
+
+    // Contrato v2: las rutas internas deben existir (sin DB fallan con 500).
+    for ruta in [
+        "/internal/v2/items/lote?skus=SKU-1",
+        "/internal/v2/items/00000000-0000-4000-8000-000000000000",
+    ] {
+        let (status, _) = enviar("GET", ruta, &[("x-internal-key", "secreta")], None).await;
+        assert_ne!(status, StatusCode::NOT_FOUND, "ruta ausente: {ruta}");
+    }
 }
 
 #[tokio::test]

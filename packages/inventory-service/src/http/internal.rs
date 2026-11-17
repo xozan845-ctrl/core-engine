@@ -38,6 +38,40 @@ pub async fn resumen(
         .await?)
 }
 
+/// `POST /internal/inventario/stock` — stock y series por SKUs.
+pub async fn stock_lote(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    Json(cuerpo): Json<Value>,
+) -> Result<Response, ApiError> {
+    exigir_clave(&state, &headers)?;
+    let empresa_id = cuerpo
+        .get("empresa_id")
+        .and_then(Value::as_str)
+        .unwrap_or("")
+        .to_string();
+    let skus = cuerpo
+        .get("skus")
+        .and_then(Value::as_array)
+        .map(|valores| {
+            valores
+                .iter()
+                .filter_map(Value::as_str)
+                .map(str::to_string)
+                .collect::<Vec<_>>()
+        })
+        .unwrap_or_default();
+    if empresa_id.is_empty() || skus.is_empty() {
+        return Err(ApiError::validacion(serde_json::json!([{
+            "campo": "empresa_id/skus",
+            "restricciones": [],
+        }])));
+    }
+    ok(Value::Array(
+        state.inventario()?.stock_lote(&empresa_id, &skus).await?,
+    ))
+}
+
 /// `GET /internal/inventario/lineas`.
 pub async fn lineas(
     State(state): State<AppState>,
