@@ -42,6 +42,8 @@ pub fn rutas() -> Router<AppState> {
             "/api/v2/fidelizacion/mis-tarjetas/{id}/movimientos",
             get(mis_movimientos),
         )
+        .route("/api/v2/fidelizacion/mis-recompensas", get(mis_recompensas))
+        .route("/api/v2/fidelizacion/mis-canjes", post(mis_canjes))
 }
 
 /// Exige empresario con la capacidad `fidelizacion` activa en su tenant.
@@ -251,4 +253,33 @@ pub async fn mis_movimientos(
         .movimientos_de_comprador(&actor.user_id, &id, limite)
         .await?;
     ok(serde_json::to_value(movimientos).map_err(|_| ApiError::interno())?)
+}
+
+/// `GET /api/v2/fidelizacion/mis-recompensas` (comprador).
+pub async fn mis_recompensas(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+) -> Result<Response, ApiError> {
+    let actor = UsuarioContexto::desde_headers_o_error(&headers)?;
+    actor.exigir_roles(&["comprador"], &[])?;
+    let recompensas = state
+        .fidelizacion()?
+        .listar_recompensas_de_comprador(&actor.user_id)
+        .await?;
+    ok(serde_json::to_value(recompensas).map_err(|_| ApiError::interno())?)
+}
+
+/// `POST /api/v2/fidelizacion/mis-canjes` (comprador).
+pub async fn mis_canjes(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    Cuerpo(dto): Cuerpo,
+) -> Result<Response, ApiError> {
+    let actor = UsuarioContexto::desde_headers_o_error(&headers)?;
+    actor.exigir_roles(&["comprador"], &[])?;
+    let canje = state
+        .fidelizacion()?
+        .canjear_de_comprador(&actor.user_id, &dto)
+        .await?;
+    created(serde_json::to_value(canje).map_err(|_| ApiError::interno())?)
 }
