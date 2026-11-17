@@ -98,7 +98,9 @@ manual y webhook) y expone `mis-tarjetas` al comprador, derivando la propiedad
 de la tarjeta de sus propias órdenes (`orden_vista.comprador_id`) para no
 exponer tarjetas de otros clientes del mismo tenant. La fase 4 agrega la
 expiración de puntos por inactividad (`expira_meses`) mediante un scheduler
-idempotente cada 6 horas.
+idempotente cada 6 horas, y el canje iniciado por el comprador
+(`mis-recompensas` y `mis-canjes`) con la misma validación de propiedad por
+órdenes propias.
 
 ### 4. Servicio propio como evolución
 

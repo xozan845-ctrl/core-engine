@@ -47,9 +47,11 @@ no se activa, ninguna empresa existente cambia de comportamiento.
 - **Expiración**: un job cada 6 h expira los puntos de tarjetas activas sin
   movimientos durante `expira_meses`. Registra un movimiento `expiracion` y deja
   el saldo en 0; es idempotente. `expira_meses = null` desactiva la expiración.
-- **Comprador**: `GET /api/v2/fidelizacion/mis-tarjetas` y
-  `GET /api/v2/fidelizacion/mis-tarjetas/:id/movimientos`. La propiedad se
-  deriva de las órdenes propias (`orden_vista.comprador_id`).
+- **Comprador**: `GET /api/v2/fidelizacion/mis-tarjetas`,
+  `GET /api/v2/fidelizacion/mis-tarjetas/:id/movimientos`,
+  `GET /api/v2/fidelizacion/mis-recompensas` y
+  `POST /api/v2/fidelizacion/mis-canjes`. La propiedad se deriva de las órdenes
+  propias (`orden_vista.comprador_id`).
 
 ## Diagnóstico
 

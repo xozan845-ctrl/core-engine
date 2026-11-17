@@ -3465,6 +3465,95 @@
           "Fidelización"
         ]
       }
+    },
+    "/api/v2/fidelizacion/mis-recompensas": {
+      "get": {
+        "operationId": "FidelizacionController_misRecompensas",
+        "responses": {
+          "200": {
+            "description": "Recompensas disponibles para el comprador",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
+                  "properties": {
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/FidelizacionRecompensaResponseDto"
+                      }
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/MetaRespuesta"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Consultar recompensas disponibles (comprador)",
+        "tags": [
+          "Fidelización"
+        ]
+      }
+    },
+    "/api/v2/fidelizacion/mis-canjes": {
+      "post": {
+        "operationId": "FidelizacionController_misCanjes",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FidelizacionCanjearRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Canje confirmado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/FidelizacionCanjeResponseDto"
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/MetaRespuesta"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Canjear una recompensa (comprador)",
+        "tags": [
+          "Fidelización"
+        ]
+      }
     }
   },
   "components": {
