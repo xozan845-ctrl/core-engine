@@ -30,7 +30,7 @@ impl Componentes {
         let mut tx = self.db.transaccion().await.map_err(interno)?;
         let filas = sqlx::query(
             "SELECT c.id, c.empresa_id, c.item_id, c.componente_item_id,
-                    i.codigo, i.nombre, i.stock, c.cantidad, c.creado_en, c.actualizado_en
+                    i.codigo, i.nombre, c.cantidad, c.creado_en, c.actualizado_en
                FROM item.item_componentes c
                JOIN item.items i ON i.id = c.componente_item_id
               WHERE c.empresa_id = $1::uuid AND c.item_id = $2::uuid
@@ -79,7 +79,7 @@ impl Componentes {
                              creado_en, actualizado_en
                  )
                  SELECT i.id, i.empresa_id, i.item_id, i.componente_item_id,
-                        it.codigo, it.nombre, it.stock, i.cantidad, i.creado_en, i.actualizado_en
+                        it.codigo, it.nombre, i.cantidad, i.creado_en, i.actualizado_en
                    FROM insertado i JOIN item.items it ON it.id = i.componente_item_id",
             )
             .bind(empresa_id)
@@ -228,7 +228,7 @@ impl Componentes {
         let mut tx = self.db.transaccion().await.map_err(interno)?;
         let fila = sqlx::query(
             "SELECT c.id, c.empresa_id, c.item_id, c.componente_item_id,
-                    i.codigo, i.nombre, i.stock, c.cantidad, c.creado_en, c.actualizado_en
+                    i.codigo, i.nombre, c.cantidad, c.creado_en, c.actualizado_en
                FROM item.item_componentes c
                JOIN item.items i ON i.id = c.componente_item_id
               WHERE c.id = $1::uuid AND c.empresa_id = $2::uuid AND c.item_id = $3::uuid",
@@ -253,7 +253,7 @@ impl Componentes {
     ) -> Result<ItemBasico, ApiError> {
         let mut tx = self.db.transaccion().await.map_err(interno)?;
         let fila = sqlx::query(
-            "SELECT id, tipo, codigo, nombre, stock FROM item.items
+            "SELECT id, tipo, codigo, nombre FROM item.items
               WHERE id = $1::uuid AND empresa_id = $2::uuid AND eliminado_en IS NULL",
         )
         .bind(item_id)

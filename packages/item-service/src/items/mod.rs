@@ -7,6 +7,7 @@ use crate::db::{fila_a_json, interno, Db};
 use crate::errors::ApiError;
 use crate::money::Money;
 use crate::paginacion::{crear_pagina, parsear_paginacion};
+use crate::proyecciones::Proyecciones;
 use serde_json::{json, Map, Value};
 use sqlx::{Postgres, Row, Transaction};
 use std::sync::Arc;
@@ -15,8 +16,8 @@ use uuid::Uuid;
 pub const TIPOS: [&str; 3] = ["producto", "servicio", "alquiler"];
 
 const COLUMNAS: &str = "i.id AS item_id, i.empresa_id, i.negocio_id, i.tipo, i.codigo, i.nombre,
-  i.descripcion, i.categoria, i.precio_cents, i.costo_cents, i.track_inventory,
-  i.track_serial, i.stock, i.duration_minutes, i.atributos, i.parent_item_id,
+  i.descripcion, i.categoria, i.costo_cents, i.track_inventory,
+  i.track_serial, i.duration_minutes, i.atributos, i.parent_item_id,
   i.marca, i.codigo_barras, i.unidad, i.permite_fracciones, i.unidad_compra,
   i.contenido_cantidad, i.contenido_unidad, i.tipo_precio, i.tipo_costo,
   i.stock_minimo, i.stock_maximo, i.garantia_meses, i.es_materia_prima,
@@ -24,7 +25,7 @@ const COLUMNAS: &str = "i.id AS item_id, i.empresa_id, i.negocio_id, i.tipo, i.c
 
 const COLUMNAS_RETURNING: &str =
     "id AS item_id, empresa_id, negocio_id, tipo, codigo, nombre, descripcion,
-  categoria, precio_cents, costo_cents, track_inventory, track_serial, stock,
+  categoria, costo_cents, track_inventory, track_serial,
   duration_minutes, atributos, parent_item_id, marca, codigo_barras, unidad,
   permite_fracciones, unidad_compra, contenido_cantidad, contenido_unidad,
   tipo_precio, tipo_costo, stock_minimo, stock_maximo, garantia_meses,
@@ -32,6 +33,7 @@ const COLUMNAS_RETURNING: &str =
 
 pub struct Items {
     db: Arc<Db>,
+    proyecciones: Option<Arc<Proyecciones>>,
 }
 
 fn texto(valor: &Value, clave: &str) -> String {
@@ -101,7 +103,21 @@ pub fn errores_esquema(esquema: &Value, atributos: &Value) -> Vec<Value> {
 
 impl Items {
     pub fn nueva(db: Arc<Db>) -> Self {
-        Self { db }
+        Self {
+            db,
+            proyecciones: None,
+        }
+    }
+
+    pub fn con_proyecciones(db: Arc<Db>, proyecciones: Arc<Proyecciones>) -> Self {
+        Self {
+            db,
+            proyecciones: Some(proyecciones),
+        }
+    }
+
+    pub fn proyecciones(&self) -> Option<&Proyecciones> {
+        self.proyecciones.as_deref()
     }
 
     async fn resolver_negocio(
@@ -287,15 +303,10 @@ impl Items {
             .collect::<Vec<_>>()
             .join(", ");
         let sql = format!(
-            "SELECT i.empresa_id, LOWER(i.codigo) AS sku, i.stock, i.track_serial,
+            "SELECT i.empresa_id, LOWER(i.codigo) AS sku, i.track_serial,
                     (SELECT COUNT(*)::int FROM item.item_series s
                       WHERE s.item_id = i.id AND s.estado = 'disponible') AS seriales_disponibles,
-                    CASE WHEN i.stock > 0
-                          AND (NOT i.track_serial OR EXISTS (
-                            SELECT 1 FROM item.item_series s
-                             WHERE s.item_id = i.id AND s.estado = 'disponible'
-                          ))
-                         THEN 'disponible' ELSE 'agotado' END AS estado
+                    i.estado
                FROM item.items i
               WHERE LOWER(i.codigo) IN ({marcadores})
                 AND i.tipo = 'producto' AND i.estado = 'activo' AND i.eliminado_en IS NULL
@@ -328,7 +339,7 @@ impl Items {
         } else {
             false
         };
-        if track_inventory {
+        let stock_inicial = if track_inventory {
             let stock = entero(datos, "stock").unwrap_or(-1);
             if stock < 0 {
                 return Err(ApiError::dominio(
@@ -336,7 +347,10 @@ impl Items {
                     "El stock debe ser un entero no negativo.",
                 ));
             }
-        }
+            Some(stock)
+        } else {
+            None
+        };
         let duration_minutes = if tipo == "servicio" {
             let duracion = entero(datos, "duration_minutes").unwrap_or(0);
             if !(1..=1440).contains(&duracion) {
@@ -387,14 +401,14 @@ impl Items {
         let mut tx = self.db.transaccion().await.map_err(interno)?;
         let resultado = sqlx::query(&format!(
             "INSERT INTO item.items
-               (empresa_id, tipo, codigo, nombre, descripcion, categoria, precio_cents,
-                costo_cents, track_inventory, stock, duration_minutes, atributos, estado,
+               (empresa_id, tipo, codigo, nombre, descripcion, categoria,
+                costo_cents, track_inventory, duration_minutes, atributos, estado,
                 parent_item_id, marca, codigo_barras, unidad, permite_fracciones,
                 unidad_compra, contenido_cantidad, contenido_unidad, tipo_precio,
                 tipo_costo, stock_minimo, stock_maximo, garantia_meses, es_materia_prima,
                 ubicacion, negocio_id)
-             VALUES ($1::uuid, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12::jsonb, $13, $14::uuid,
-                     $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27, $28, $29::uuid)
+             VALUES ($1::uuid, $2, $3, $4, $5, $6, $7, $8, $9, $10::jsonb, $11, $12::uuid,
+                     $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27::uuid)
              RETURNING {COLUMNAS_RETURNING}"
         ))
         .bind(empresa_id)
@@ -410,14 +424,8 @@ impl Items {
                 categoria
             }
         })
-        .bind(precio.centavos)
         .bind(costo.centavos)
         .bind(track_inventory)
-        .bind(if track_inventory {
-            entero(datos, "stock")
-        } else {
-            None
-        })
         .bind(duration_minutes)
         .bind(atributos.to_string())
         .bind(if texto(datos, "estado") == "inactivo" {
@@ -481,7 +489,43 @@ impl Items {
                         "No se pudo crear el item.",
                     ));
                 };
-                serializar(&fila_a_json(&fila).map_err(interno)?)
+                let item = serializar(&fila_a_json(&fila).map_err(interno)?)?;
+                if let Some(proyecciones) = &self.proyecciones {
+                    let item_id = item
+                        .get("item_id")
+                        .and_then(Value::as_str)
+                        .unwrap_or("")
+                        .to_string();
+                    let resultado = async {
+                        proyecciones
+                            .fijar_precio(empresa_id, &item_id, precio.centavos)
+                            .await?;
+                        if let Some(cantidad) = stock_inicial {
+                            proyecciones
+                                .stock_inicial(
+                                    empresa_id,
+                                    &item_id,
+                                    &codigo,
+                                    cantidad,
+                                    negocio_id.as_deref(),
+                                )
+                                .await?;
+                        }
+                        Ok::<(), ApiError>(())
+                    }
+                    .await;
+                    if let Err(error) = resultado {
+                        let mut tx = self.db.transaccion().await.map_err(interno)?;
+                        sqlx::query("DELETE FROM item.items WHERE id = $1::uuid")
+                            .bind(&item_id)
+                            .execute(&mut *tx)
+                            .await
+                            .map_err(interno)?;
+                        tx.commit().await.map_err(interno)?;
+                        return Err(error);
+                    }
+                }
+                Ok(item)
             }
             Err(error) => {
                 let _ = tx.rollback().await;
@@ -519,9 +563,9 @@ impl Items {
         let mut tx = self.db.transaccion().await.map_err(interno)?;
         let fila = sqlx::query(&format!(
             "INSERT INTO item.items
-               (empresa_id, tipo, codigo, nombre, descripcion, categoria, precio_cents,
-                costo_cents, track_inventory, stock, atributos, estado, negocio_id)
-             VALUES ($1::uuid, 'alquiler', $2, $3, $4, $5, $6, $7, false, NULL, $8::jsonb, $9, $10::uuid)
+               (empresa_id, tipo, codigo, nombre, descripcion, categoria,
+                costo_cents, track_inventory, atributos, estado, negocio_id)
+             VALUES ($1::uuid, 'alquiler', $2, $3, $4, $5, $6, false, $7::jsonb, $8, $9::uuid)
              RETURNING {COLUMNAS_RETURNING}"
         ))
         .bind(empresa_id)
@@ -536,7 +580,6 @@ impl Items {
                 categoria
             }
         })
-        .bind(precio.centavos)
         .bind(costo.centavos)
         .bind(atributos.to_string())
         .bind(if texto(datos, "estado") == "inactivo" {
@@ -555,7 +598,28 @@ impl Items {
                 "No se pudo crear el alquiler.",
             ));
         };
-        serializar(&fila_a_json(&fila).map_err(interno)?)
+        let item = serializar(&fila_a_json(&fila).map_err(interno)?)?;
+        if let Some(proyecciones) = &self.proyecciones {
+            let item_id = item
+                .get("item_id")
+                .and_then(Value::as_str)
+                .unwrap_or("")
+                .to_string();
+            if let Err(error) = proyecciones
+                .fijar_precio(empresa_id, &item_id, precio.centavos)
+                .await
+            {
+                let mut tx = self.db.transaccion().await.map_err(interno)?;
+                sqlx::query("DELETE FROM item.items WHERE id = $1::uuid")
+                    .bind(&item_id)
+                    .execute(&mut *tx)
+                    .await
+                    .map_err(interno)?;
+                tx.commit().await.map_err(interno)?;
+                return Err(error);
+            }
+        }
+        Ok(item)
     }
 
     pub async fn eliminar(&self, id: &str, empresa_id: &str) -> Result<(), ApiError> {

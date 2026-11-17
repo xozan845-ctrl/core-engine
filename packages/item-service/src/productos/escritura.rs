@@ -80,15 +80,15 @@ impl Productos {
         let mut tx = self.db.transaccion().await.map_err(interno)?;
         sqlx::query(
             "INSERT INTO item.items
-               (id, empresa_id, tipo, codigo, nombre, descripcion, categoria, precio_cents,
+               (id, empresa_id, tipo, codigo, nombre, descripcion, categoria,
                 costo_cents, marca, codigo_barras, unidad, permite_fracciones,
                 unidad_compra, contenido_cantidad, contenido_unidad, tipo_precio,
                 tipo_costo, stock_minimo, stock_maximo, garantia_meses,
-                es_materia_prima, ubicacion, estado, track_inventory, stock,
+                es_materia_prima, ubicacion, estado, track_inventory,
                 parent_item_id, atributos, actualizado_en)
              VALUES ($1::uuid, $2::uuid, 'producto', $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13,
-                     $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, true, $24,
-                     NULL, $25::jsonb, NOW())",
+                     $14, $15, $16, $17, $18, $19, $20, $21, true,
+                     NULL, $22::jsonb, NOW())",
         )
         .bind(padre_id)
         .bind(&empresa_id)
@@ -96,7 +96,6 @@ impl Productos {
         .bind(texto(datos, "nombre").trim().to_string())
         .bind(texto(datos, "descripcion").trim().to_string())
         .bind(categoria.trim().to_string())
-        .bind(precio.centavos)
         .bind(metadatos.costo_cents)
         .bind(&metadatos.marca)
         .bind(&metadatos.codigo_barras)
@@ -113,20 +112,11 @@ impl Productos {
         .bind(metadatos.es_materia_prima)
         .bind(&metadatos.ubicacion)
         .bind(&metadatos.estado_operativo)
-        .bind(stock)
         .bind(atributos_de(datos).to_string())
         .execute(&mut *tx)
         .await
         .map_err(interno)?;
-        registrar_historico(
-            &mut tx,
-            &empresa_id,
-            &padre_id.to_string(),
-            None,
-            precio.centavos,
-        )
-        .await?;
-
+        let mut proyecciones_variantes: Vec<(String, i64, i64)> = Vec::new();
         for variante in &variantes {
             let variante_id = Uuid::new_v4();
             let variante_sku = normalizar_sku(&variante.sku)?;
@@ -141,8 +131,8 @@ impl Productos {
             sqlx::query(
                 "INSERT INTO item.items
                    (id, empresa_id, tipo, codigo, nombre, descripcion, categoria,
-                    precio_cents, track_inventory, stock, parent_item_id, atributos)
-                 VALUES ($1::uuid, $2::uuid, 'producto', $3, $4, $5, $6, $7, true, $8, $9::uuid, $10::jsonb)",
+                    track_inventory, parent_item_id, atributos)
+                 VALUES ($1::uuid, $2::uuid, 'producto', $3, $4, $5, $6, true, $7::uuid, $8::jsonb)",
             )
             .bind(variante_id)
             .bind(&empresa_id)
@@ -150,21 +140,16 @@ impl Productos {
             .bind(nombre)
             .bind(texto(datos, "descripcion").trim().to_string())
             .bind(categoria.trim().to_string())
-            .bind(variante_precio.centavos)
-            .bind(variante_stock)
             .bind(padre_id)
             .bind(variante.atributos.to_string())
             .execute(&mut *tx)
             .await
             .map_err(interno)?;
-            registrar_historico(
-                &mut tx,
-                &empresa_id,
-                &variante_id.to_string(),
-                None,
+            proyecciones_variantes.push((
+                variante_id.to_string(),
                 variante_precio.centavos,
-            )
-            .await?;
+                variante_stock,
+            ));
             insertar_imagenes(&mut tx, &empresa_id, variante_id, &variante.imagenes).await?;
         }
 
@@ -173,6 +158,42 @@ impl Productos {
             recalcular_padre(&mut tx, padre_id).await?;
         }
         tx.commit().await.map_err(interno)?;
+
+        if let Some(proyecciones) = self.items.as_ref().and_then(|items| items.proyecciones()) {
+            let resultado = async {
+                proyecciones
+                    .fijar_precio(&empresa_id, &padre_id.to_string(), precio.centavos)
+                    .await?;
+                if proyecciones_variantes.is_empty() {
+                    proyecciones
+                        .stock_inicial(&empresa_id, &padre_id.to_string(), &sku, stock, None)
+                        .await?;
+                } else {
+                    for (variante_id, precio_cents, stock_variante) in &proyecciones_variantes {
+                        proyecciones
+                            .fijar_precio(&empresa_id, variante_id, *precio_cents)
+                            .await?;
+                        proyecciones
+                            .stock_inicial(&empresa_id, variante_id, "", *stock_variante, None)
+                            .await?;
+                    }
+                }
+                Ok::<(), ApiError>(())
+            }
+            .await;
+            if let Err(error) = resultado {
+                let mut tx = self.db.transaccion().await.map_err(interno)?;
+                sqlx::query(
+                    "DELETE FROM item.items WHERE id = $1::uuid OR parent_item_id = $1::uuid",
+                )
+                .bind(padre_id)
+                .execute(&mut *tx)
+                .await
+                .map_err(interno)?;
+                tx.commit().await.map_err(interno)?;
+                return Err(error);
+            }
+        }
 
         self.encontrar_por_id(&padre_id.to_string(), Some(&empresa_id), true)
             .await?
@@ -365,24 +386,10 @@ impl Productos {
             sets.push(format!("atributos = ${}::jsonb", params.len()));
         }
 
-        if cambios.get("precio_base").is_some() {
-            let nuevo = validar_precio(cambios.get("precio_base"))?;
-            agregar_set(
-                &mut sets,
-                &mut params,
-                "precio_cents",
-                Param::Entero(nuevo.centavos),
-            );
-            let anterior = Money::parsear(&texto(&previo, "precio_base"))?.centavos;
-            registrar_historico(
-                &mut tx,
-                &texto(&previo, "empresa_id"),
-                &texto(&previo, "id"),
-                Some(anterior),
-                nuevo.centavos,
-            )
-            .await?;
-        }
+        let nuevo_precio = match cambios.get("precio_base") {
+            Some(_) => Some(validar_precio(cambios.get("precio_base"))?.centavos),
+            None => None,
+        };
 
         if cambios.get("stock").is_some() {
             // El stock es de inventory-service (ADR-0018): item-service conserva
@@ -416,6 +423,24 @@ impl Productos {
             recalcular_padre(&mut tx, Uuid::parse_str(padre_id).map_err(interno)?).await?;
         }
         tx.commit().await.map_err(interno)?;
+
+        if let (Some(precio_cents), Some(proyecciones)) = (
+            nuevo_precio,
+            self.items.as_ref().and_then(|items| items.proyecciones()),
+        ) {
+            let empresa = empresa_id
+                .map(str::to_string)
+                .or_else(|| {
+                    previo
+                        .get("empresa_id")
+                        .and_then(Value::as_str)
+                        .map(str::to_string)
+                })
+                .unwrap_or_default();
+            proyecciones
+                .fijar_precio(&empresa, id, precio_cents)
+                .await?;
+        }
 
         self.encontrar_por_id(id, empresa_id, true)
             .await?

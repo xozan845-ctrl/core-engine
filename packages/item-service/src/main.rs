@@ -12,6 +12,7 @@ use item_service::metrics::Metrics;
 use item_service::operaciones::Operaciones;
 use item_service::outbox::Outbox;
 use item_service::productos::Productos;
+use item_service::proyecciones::Proyecciones;
 use item_service::rabbit::Rabbit;
 use item_service::series::Series;
 use item_service::servicios::Servicios;
@@ -64,7 +65,16 @@ async fn main() {
     ));
 
     let outbox = Arc::new(Outbox::nueva(config.outbox_tabla.clone()));
-    let items = Arc::new(Items::nueva(Arc::clone(&db)));
+    let proyecciones = Arc::new(Proyecciones::nueva(
+        config.pricing_service_url.clone(),
+        config.inventory_service_url.clone(),
+        config.internal_api_key.clone().unwrap_or_default(),
+        config.internal_request_timeout_ms,
+    ));
+    let items = Arc::new(Items::con_proyecciones(
+        Arc::clone(&db),
+        Arc::clone(&proyecciones),
+    ));
     let productos = Arc::new(Productos::nueva(
         Arc::clone(&db),
         Some(Arc::clone(&outbox)),
@@ -80,6 +90,7 @@ async fn main() {
     let operaciones = Arc::new(Operaciones::nueva(
         Arc::clone(&db),
         Some(Arc::clone(&outbox)),
+        Some(Arc::clone(&proyecciones)),
     ));
 
     rabbit.iniciar_supervisor();

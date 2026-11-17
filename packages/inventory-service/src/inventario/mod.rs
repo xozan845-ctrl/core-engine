@@ -8,7 +8,6 @@
 
 use crate::db::{fila_a_json, interno, Db};
 use crate::errors::ApiError;
-use crate::money::Money;
 use crate::outbox::Outbox;
 use chrono::{Local, NaiveDate, TimeZone};
 use serde_json::{json, Map, Value};
@@ -305,14 +304,16 @@ impl Inventario {
                 GROUP BY 1, 2
              )
              SELECT i.empresa_id, i.codigo AS sku, i.nombre,
-                    i.stock + COALESCE(r.reservado, 0) AS stock_fisico,
+                    COALESCE(s.total, 0) + COALESCE(r.reservado, 0) AS stock_fisico,
                     COALESCE(r.reservado, 0)::int AS reservado,
-                    i.stock AS disponible,
-                    CASE WHEN i.stock > 0 THEN 'disponible' ELSE 'agotado' END AS estado,
-                    i.precio_cents AS precio_base_cents,
-                    (i.stock * i.precio_cents)::int AS valor_disponible_cents,
-                    ((i.stock + COALESCE(r.reservado, 0)) * i.precio_cents)::int AS valor_total_cents
+                    COALESCE(s.total, 0)::int AS disponible,
+                    CASE WHEN COALESCE(s.total, 0) > 0 THEN 'disponible' ELSE 'agotado' END AS estado
                FROM item.items i
+               LEFT JOIN (
+                 SELECT item_id, SUM(stock)::int AS total
+                   FROM inventory.item_stock_ubicacion
+                  GROUP BY item_id
+               ) s ON s.item_id = i.id
                LEFT JOIN reservas r
                  ON r.empresa_id = i.empresa_id::text AND r.sku = LOWER(i.codigo)
               {filtro}
@@ -329,10 +330,6 @@ impl Inventario {
         let mut lineas = Vec::with_capacity(filas.len());
         for fila in &filas {
             let valor = fila_a_json(fila).map_err(interno)?;
-            let precio = valor
-                .get("precio_base_cents")
-                .and_then(Value::as_i64)
-                .unwrap_or(0);
             let mut linea = Map::new();
             linea.insert(
                 "empresa_id".into(),
@@ -362,30 +359,117 @@ impl Inventario {
                 "estado".into(),
                 valor.get("estado").cloned().unwrap_or(Value::Null),
             );
-            linea.insert(
-                "precio_base".into(),
-                Value::String(Money::desde_centavos(precio)?.string()),
-            );
-            linea.insert(
-                "valor_disponible_cents".into(),
-                valor
-                    .get("valor_disponible_cents")
-                    .cloned()
-                    .unwrap_or(Value::Null),
-            );
-            linea.insert(
-                "valor_total_cents".into(),
-                valor
-                    .get("valor_total_cents")
-                    .cloned()
-                    .unwrap_or(Value::Null),
-            );
             lineas.push(Value::Object(linea));
         }
         Ok(lineas)
     }
 
     /// Totales del inventario para las rutas internas.
+    /// Registra el stock inicial de un item creado por `item-service`.
+    pub async fn stock_inicial(
+        &self,
+        empresa_id: &str,
+        item_id: &str,
+        sku: &str,
+        cantidad: i64,
+        negocio_id: Option<&str>,
+    ) -> Result<Value, ApiError> {
+        if cantidad < 0 {
+            return Err(ApiError::validacion(serde_json::json!([{
+                "campo": "cantidad",
+                "restricciones": ["min"],
+            }])));
+        }
+        let mut tx = self.db.transaccion().await.map_err(interno)?;
+        let item = sqlx::query(
+            "SELECT id, track_inventory FROM item.items
+              WHERE id = $1::uuid AND empresa_id = $2::uuid
+                AND tipo = 'producto' AND eliminado_en IS NULL",
+        )
+        .bind(item_id)
+        .bind(empresa_id)
+        .fetch_optional(&mut *tx)
+        .await
+        .map_err(interno)?;
+        let Some(item) = item else {
+            return Err(ApiError::no_encontrado("Item", item_id));
+        };
+        if !item.get::<bool, _>("track_inventory") {
+            return Err(ApiError::dominio(
+                "INVENTARIO_NO_APLICA",
+                "El item no controla inventario.",
+            ));
+        }
+        let mut ubicacion: Option<Uuid> = sqlx::query_scalar(
+            "SELECT id FROM inventory.ubicaciones
+              WHERE empresa_id = $1::uuid AND activo AND predeterminada
+              ORDER BY creado_en, id LIMIT 1",
+        )
+        .bind(empresa_id)
+        .fetch_optional(&mut *tx)
+        .await
+        .map_err(interno)?;
+        if ubicacion.is_none() {
+            ubicacion = sqlx::query_scalar(
+                "SELECT id FROM inventory.ubicaciones
+                  WHERE empresa_id = $1::uuid AND activo
+                  ORDER BY creado_en, id LIMIT 1",
+            )
+            .bind(empresa_id)
+            .fetch_optional(&mut *tx)
+            .await
+            .map_err(interno)?;
+        }
+        let ubicacion = match ubicacion {
+            Some(id) => id,
+            None => sqlx::query_scalar(
+                "INSERT INTO inventory.ubicaciones
+                   (empresa_id, negocio_id, codigo, nombre, predeterminada)
+                 VALUES ($1::uuid, $2::uuid, 'principal', 'Principal', true)
+                 RETURNING id",
+            )
+            .bind(empresa_id)
+            .bind(negocio_id)
+            .fetch_one(&mut *tx)
+            .await
+            .map_err(interno)?,
+        };
+        sqlx::query(
+            "INSERT INTO inventory.item_stock_ubicacion AS s
+               (empresa_id, item_id, ubicacion_id, stock)
+             VALUES ($1::uuid, $2::uuid, $3::uuid, $4)
+             ON CONFLICT (item_id, ubicacion_id) DO UPDATE
+               SET stock = EXCLUDED.stock, actualizado_en = NOW()",
+        )
+        .bind(empresa_id)
+        .bind(item_id)
+        .bind(ubicacion.to_string())
+        .bind(cantidad as i32)
+        .execute(&mut *tx)
+        .await
+        .map_err(interno)?;
+        if let Some(outbox) = &self.outbox {
+            outbox
+                .insertar_stock_updated(
+                    &mut tx,
+                    &format!("stock-inicial-{item_id}"),
+                    "stock_inicial",
+                    vec![json!({
+                        "empresa_id": empresa_id,
+                        "sku": sku,
+                        "stock_restante": cantidad,
+                    })],
+                )
+                .await?;
+        }
+        tx.commit().await.map_err(interno)?;
+        Ok(json!({
+            "item_id": item_id,
+            "sku": sku,
+            "stock": cantidad,
+        }))
+    }
+
     /// Stock y series disponibles por lote de SKUs (contrato interno v2).
     pub async fn stock_lote(
         &self,
@@ -406,17 +490,11 @@ impl Inventario {
         let filas = sqlx::query(
             "SELECT i.id AS item_id, i.empresa_id, i.codigo AS sku,
                     i.track_serial, i.estado,
-                    CASE WHEN EXISTS (
-                           SELECT 1 FROM inventory.item_stock_ubicacion s
-                            WHERE s.item_id = i.id
-                         )
-                         THEN (
-                           SELECT COALESCE(SUM(s.stock), 0)::int
-                             FROM inventory.item_stock_ubicacion s
-                            WHERE s.item_id = i.id
-                         )
-                         ELSE COALESCE(i.stock, 0)
-                    END AS stock,
+                    COALESCE((
+                      SELECT SUM(s.stock)::int
+                        FROM inventory.item_stock_ubicacion s
+                       WHERE s.item_id = i.id
+                    ), 0) AS stock,
                     COALESCE((
                       SELECT COUNT(*)::int
                         FROM item.item_series se
@@ -464,11 +542,19 @@ impl Inventario {
         }
         let filtro = format!("WHERE {}", condiciones.join(" AND "));
         let sql = format!(
-            "SELECT COUNT(*)::int AS productos,
-                    COUNT(*) FILTER (WHERE i.stock = 0)::int AS agotados,
-                    COALESCE(SUM(i.stock), 0)::int AS stock_total,
-                    COALESCE(SUM(i.stock * i.precio_cents), 0)::int AS valor_inventario_cents
-               FROM item.items i {filtro}"
+            "WITH items AS (
+               SELECT i.id,
+                      COALESCE((
+                        SELECT SUM(s.stock)::int
+                          FROM inventory.item_stock_ubicacion s
+                         WHERE s.item_id = i.id
+                      ), 0) AS stock
+                 FROM item.items i {filtro}
+             )
+             SELECT COUNT(*)::int AS productos,
+                    COUNT(*) FILTER (WHERE stock = 0)::int AS agotados,
+                    COALESCE(SUM(stock), 0)::int AS stock_total
+               FROM items"
         );
         let mut tx = self.db.transaccion().await.map_err(interno)?;
         let mut consulta = sqlx::query(&sql);
@@ -483,7 +569,6 @@ impl Inventario {
                 "productos": 0,
                 "agotados": 0,
                 "stock_total": 0,
-                "valor_inventario_cents": 0,
             })),
         }
     }
@@ -693,25 +778,19 @@ impl Inventario {
             .map_err(interno)?;
         }
 
-        let cantidad_i32 = i32::try_from(cantidad).map_err(|_| ApiError::interno())?;
-        let stock = sqlx::query(
-            "UPDATE item.items
-                SET stock = stock - $3, actualizado_en = NOW()
-              WHERE id = $1::uuid AND empresa_id = $2::uuid AND stock >= $3
-              RETURNING stock",
-        )
-        .bind(&item_id)
-        .bind(&empresa_id)
-        .bind(cantidad_i32)
-        .fetch_optional(&mut *tx)
-        .await
-        .map_err(interno)?;
-        let Some(stock) = stock else {
-            return Err(ApiError::dominio(
-                "STOCK_INSUFICIENTE",
-                "El stock del item no alcanza para el consumo.",
-            ));
-        };
+        let stock =
+            crate::stock::aplicar_delta_en_transaccion(&mut tx, &empresa_id, &item_id, -cantidad)
+                .await
+                .map_err(|error| {
+                    if error.codigo == "STOCK_INSUFICIENTE" {
+                        ApiError::dominio(
+                            "STOCK_INSUFICIENTE",
+                            "El stock del item no alcanza para el consumo.",
+                        )
+                    } else {
+                        error
+                    }
+                })?;
         if let Some(outbox) = &self.outbox {
             outbox
                 .insertar_stock_updated(
@@ -721,7 +800,7 @@ impl Inventario {
                     vec![json!({
                         "empresa_id": empresa_id,
                         "sku": item.get::<String, _>("codigo"),
-                        "stock_restante": stock.get::<i32, _>("stock"),
+                        "stock_restante": stock,
                     })],
                 )
                 .await?;

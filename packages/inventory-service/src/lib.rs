@@ -22,4 +22,5 @@ pub mod paginacion;
 pub mod rabbit;
 pub mod reservas;
 pub mod state;
+pub mod stock;
 pub mod ubicaciones;

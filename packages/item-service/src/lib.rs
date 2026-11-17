@@ -23,6 +23,7 @@ pub mod operaciones;
 pub mod outbox;
 pub mod paginacion;
 pub mod productos;
+pub mod proyecciones;
 pub mod rabbit;
 pub mod series;
 pub mod servicios;

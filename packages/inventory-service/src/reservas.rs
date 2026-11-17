@@ -36,7 +36,12 @@ impl Reservas {
         let mut fallidos: Vec<Value> = Vec::new();
         for item in &lineas {
             let lock = sqlx::query(
-                "SELECT i.stock, i.id AS item_id, i.track_serial, i.garantia_meses,
+                "SELECT COALESCE((
+                          SELECT SUM(s.stock)::int
+                            FROM inventory.item_stock_ubicacion s
+                           WHERE s.item_id = i.id
+                        ), 0) AS stock,
+                        i.id AS item_id, i.track_serial, i.garantia_meses,
                         EXISTS (SELECT 1 FROM item.items v
                                  WHERE v.parent_item_id = i.id AND v.eliminado_en IS NULL) AS tiene_variantes
                    FROM item.items i
@@ -169,19 +174,13 @@ impl Reservas {
                 .map_err(interno)?;
             }
 
-            sqlx::query(
-                "UPDATE item.items
-                    SET stock = stock - $3, actualizado_en = NOW()
-                  WHERE empresa_id = $1::uuid AND LOWER(codigo) = LOWER($2)
-                    AND tipo = 'producto' AND eliminado_en IS NULL
-                  RETURNING codigo",
+            crate::stock::aplicar_delta_en_transaccion(
+                tx,
+                &item.empresa_id,
+                &item_id.to_string(),
+                -item.cantidad,
             )
-            .bind(&item.empresa_id)
-            .bind(&item.sku)
-            .bind(item.cantidad)
-            .execute(&mut **tx)
-            .await
-            .map_err(interno)?;
+            .await?;
         }
 
         if !fallidos.is_empty() {
@@ -228,34 +227,41 @@ impl Reservas {
     ) -> Result<(), ApiError> {
         let lineas = lineas_de(items);
         for item in &lineas {
-            sqlx::query(
-                "UPDATE item.items
-                    SET stock = stock + $3, actualizado_en = NOW()
+            let item_id: Option<Uuid> = sqlx::query_scalar(
+                "SELECT id FROM item.items
                   WHERE empresa_id = $1::uuid AND LOWER(codigo) = LOWER($2)
                     AND tipo = 'producto' AND eliminado_en IS NULL",
             )
             .bind(&item.empresa_id)
             .bind(&item.sku)
-            .bind(item.cantidad)
+            .fetch_optional(&mut **tx)
+            .await
+            .map_err(interno)?;
+            let Some(item_id) = item_id else { continue };
+            let anterior =
+                crate::stock::total_en_transaccion(tx, &item.empresa_id, &item_id.to_string())
+                    .await?;
+            let nuevo = crate::stock::aplicar_delta_en_transaccion(
+                tx,
+                &item.empresa_id,
+                &item_id.to_string(),
+                item.cantidad,
+            )
+            .await?;
+            sqlx::query(
+                "INSERT INTO inventory.ajustes_stock
+                   (empresa_id, item_id, cantidad_anterior, cantidad_nueva, motivo, realizado_en)
+                 VALUES ($1::uuid, $2::uuid, $3, $4, $5, NOW())",
+            )
+            .bind(&item.empresa_id)
+            .bind(item_id)
+            .bind(anterior as i32)
+            .bind(nuevo as i32)
+            .bind(format!("devolucion orden {order_id}"))
             .execute(&mut **tx)
             .await
             .map_err(interno)?;
         }
-        sqlx::query(
-            "INSERT INTO inventory.ajustes_stock
-               (empresa_id, item_id, cantidad_anterior, cantidad_nueva, motivo, realizado_en)
-             SELECT i.empresa_id, i.id, i.stock - x.cantidad, i.stock,
-                    'devolucion orden ' || $1, NOW()
-               FROM item.items i
-               JOIN jsonb_to_recordset($2::jsonb) AS x(empresa_id uuid, sku text, cantidad int)
-                 ON i.empresa_id = x.empresa_id AND LOWER(i.codigo) = LOWER(x.sku)
-              WHERE i.tipo = 'producto' AND i.eliminado_en IS NULL",
-        )
-        .bind(order_id)
-        .bind(lineas_json(&lineas).to_string())
-        .execute(&mut **tx)
-        .await
-        .map_err(interno)?;
         sqlx::query(
             "UPDATE inventory.lotes_inventario l
                 SET cantidad_disponible = LEAST(l.cantidad_inicial, l.cantidad_disponible + r.cantidad),
@@ -328,7 +334,12 @@ impl Reservas {
             return Ok(Value::Array(Vec::new()));
         }
         let filas = sqlx::query(
-            "SELECT i.empresa_id, LOWER(i.codigo) AS sku, i.stock AS stock_restante
+            "SELECT i.empresa_id, LOWER(i.codigo) AS sku,
+                    COALESCE((
+                      SELECT SUM(s.stock)::int
+                        FROM inventory.item_stock_ubicacion s
+                       WHERE s.item_id = i.id
+                    ), 0) AS stock_restante
                FROM item.items i
                JOIN jsonb_to_recordset($1::jsonb) AS x(empresa_id uuid, sku text)
                  ON i.empresa_id = x.empresa_id AND LOWER(i.codigo) = LOWER(x.sku)
