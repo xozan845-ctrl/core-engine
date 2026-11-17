@@ -117,5 +117,6 @@
   "90_series_comprobantes_negocio.sql": "98e3c8d001b0c8d9f2786e733a056f46c5bfadbdf95f304eeb6930f7de87d6a1",
   "91_auditoria_negocio.sql": "1964a8fdc89e7ec1914a41fb227a8796210344490951ab462a4e41107a7565eb",
   "92_negocios_admin.sql": "fc6024ebfcf71ab2b780ef8a4d813f39676c9a62af7f40ab9112e4ec142a931f",
-  "93_analytics.sql": "9adf73b7338f7f28e1c13f8c0d23b3e41ba78235d9d2aeaa7a0bffd181c4ce69"
+  "93_analytics.sql": "9adf73b7338f7f28e1c13f8c0d23b3e41ba78235d9d2aeaa7a0bffd181c4ce69",
+  "94_fidelizacion_expiracion.sql": "436673ee1b64ed4669a88c7efceab54bc65655b7564efa609a7a8022b04330f8"
 }

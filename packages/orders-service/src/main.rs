@@ -9,6 +9,7 @@ use orders_service::consumer::PedidosConsumer;
 use orders_service::contratos::Contratos;
 use orders_service::db::Db;
 use orders_service::entregas::EntregasDigitales;
+use orders_service::fidelizacion::Fidelizacion;
 use orders_service::fulfillments::Fulfillments;
 use orders_service::http::build_router;
 use orders_service::logs::{ejecutar_con_contexto, ContextoCorrelacion};
@@ -104,6 +105,7 @@ async fn main() {
     let pagos = Arc::new(Pagos::nueva(Arc::clone(&db)));
     let tipos = Arc::new(TiposOrden::nueva(Arc::clone(&db)));
     let fulfillments = Arc::new(Fulfillments::nueva(Arc::clone(&db)));
+    let fidelizacion = Arc::new(Fidelizacion::nueva(Arc::clone(&db)));
 
     let consumidor = Arc::new(PedidosConsumer::nuevo(
         Arc::clone(&db),
@@ -123,6 +125,7 @@ async fn main() {
         Arc::clone(&metrics),
     );
     let tarea_suscripciones = iniciar_suscripciones(Arc::clone(&suscripciones));
+    let tarea_fidelizacion = iniciar_fidelizacion(Arc::clone(&fidelizacion));
 
     let estado = AppState::con_dependencias(
         config,
@@ -167,6 +170,7 @@ async fn main() {
         }
         tarea_outbox.abort();
         tarea_suscripciones.abort();
+        tarea_fidelizacion.abort();
         rabbit.cerrar().await;
     })
     .await;
@@ -223,6 +227,34 @@ fn iniciar_suscripciones(suscripciones: Arc<Suscripciones>) -> tokio::task::Join
                     "orders.suscripciones",
                     orders_service::campos! {
                         "msg": "Fallo al renovar suscripciones",
+                        "err": error.mensaje,
+                    },
+                ),
+            }
+        }
+    })
+}
+
+fn iniciar_fidelizacion(fidelizacion: Arc<Fidelizacion>) -> tokio::task::JoinHandle<()> {
+    tokio::spawn(async move {
+        // Cada 6 horas: expira puntos de tarjetas inactivas. Es idempotente.
+        let mut ticker = tokio::time::interval(Duration::from_secs(6 * 3600));
+        ticker.tick().await;
+        loop {
+            ticker.tick().await;
+            match fidelizacion.expirar_inactivas().await {
+                Ok(expiradas) if expiradas > 0 => orders_service::logs::info(
+                    "orders.fidelizacion",
+                    orders_service::campos! {
+                        "msg": "Puntos expirados por inactividad",
+                        "tarjetas": expiradas,
+                    },
+                ),
+                Ok(_) => {}
+                Err(error) => orders_service::logs::error(
+                    "orders.fidelizacion",
+                    orders_service::campos! {
+                        "msg": "Fallo al expirar puntos",
                         "err": error.mensaje,
                     },
                 ),

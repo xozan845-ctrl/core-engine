@@ -238,8 +238,8 @@ implementada como `fidelizacion` dentro de `orders-service`.
 
 **Modelo** (`orders.fidelizacion_*`)
 
-- `programa` por empresa: activo, puntos por unidad de moneda, expiración y
-  reglas.
+- `programa` por empresa: activo, puntos por unidad de moneda, expiración
+  (`expira_meses` sin movimientos) y reglas.
 - `tarjeta` por empresa + parte (`identity.partes`): código `FID-XXXXXXXX`,
   saldo y estado (`activa`, `bloqueada`, `cerrada`).
 - `movimientos`: acumulaciones, canjes, ajustes y expiraciones, con `saldo_tras`
@@ -255,9 +255,12 @@ implementada como `fidelizacion` dentro de `orders-service`.
    webhook), se acumulan puntos **una sola vez por orden** y por empresa.
 3. El comprador consulta su tarjeta y su historial; solo ve tarjetas derivadas
    de sus propias órdenes.
-4. La empresa ajusta puntos o registra canjes; el canje valida saldo y stock y
+4. La empresa ajusta puntos o registra canjes; el comprador también canjea sus
+   propias recompensas con `mis-canjes`. El canje valida saldo y stock y
    descuenta ambos en una transacción.
-5. RLS por `empresa_id`: el comprador no ve tarjetas de otros clientes.
+5. Un job cada 6 h expira los puntos de tarjetas sin movimientos durante
+   `expira_meses` (movimiento `expiracion`, idempotente).
+6. RLS por `empresa_id`: el comprador no ve tarjetas de otros clientes.
 
 > Para acumular puntos, el checkout debe identificar al cliente con
 > `cliente_parte_id`. Sin parte no hay tarjeta asociada y no se acumula.
@@ -276,6 +279,8 @@ implementada como `fidelizacion` dentro de `orders-service`.
 | POST | `/api/v2/fidelizacion/canjes` | empresario |
 | GET | `/api/v2/fidelizacion/mis-tarjetas` | comprador |
 | GET | `/api/v2/fidelizacion/mis-tarjetas/:id/movimientos` | comprador |
+| GET | `/api/v2/fidelizacion/mis-recompensas` | comprador |
+| POST | `/api/v2/fidelizacion/mis-canjes` | comprador |
 
 Todas las rutas de empresa exigen la capacidad activa; si no lo está devuelven
 `CAPACIDAD_NO_ACTIVA`.

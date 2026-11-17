@@ -124,8 +124,6 @@ pub fn build_router(state: AppState) -> Router {
                 .delete(operaciones::eliminar_combo),
         )
         // superficie interna
-        .route("/internal/items/lote", get(internal::lote_items))
-        .route("/internal/items/{id}", get(internal::item_por_id))
         // contrato v2: metadata sin precio ni stock
         .route("/internal/v2/items/lote", get(internal::lote_items_v2))
         .route("/internal/v2/items/{id}", get(internal::item_por_id_v2))
