@@ -448,6 +448,12 @@ async fn provisionar(url: &str) {
         .execute(&pool)
         .await
         .expect("fidelizacion");
+    sqlx::raw_sql(include_str!(
+        "../../../infra/db/init/94_fidelizacion_expiracion.sql"
+    ))
+    .execute(&pool)
+    .await
+    .expect("expiracion fidelizacion");
     pool.close().await;
 }
 
@@ -2105,4 +2111,83 @@ async fn debe_exponer_mis_tarjetas_al_comprador() {
     assert_eq!(response.status(), StatusCode::OK);
     let listado = json_de(response).await;
     assert!(listado["data"].as_array().expect("tarjetas").is_empty());
+}
+
+#[tokio::test]
+async fn debe_expirar_puntos_de_tarjetas_inactivas() {
+    let _guard = DB_LOCK.lock().await;
+    let Some(db) = con_bd().await else { return };
+    let fidelizacion = Fidelizacion::nueva(Arc::clone(&db));
+    let inactiva = crear_parte(&db, EMPRESA, "Cliente inactivo").await;
+    let activa = crear_parte(&db, EMPRESA, "Cliente activo").await;
+    fidelizacion
+        .guardar_programa(
+            EMPRESA,
+            &json!({"nombre": "Puntos con expiración", "puntos_por_unidad": 1, "expira_meses": 1}),
+        )
+        .await
+        .expect("programa");
+    let tarjeta_inactiva = fidelizacion
+        .crear_tarjeta(EMPRESA, &json!({"parte_id": inactiva}))
+        .await
+        .expect("tarjeta inactiva");
+    let tarjeta_activa = fidelizacion
+        .crear_tarjeta(EMPRESA, &json!({"parte_id": activa}))
+        .await
+        .expect("tarjeta activa");
+    fidelizacion
+        .ajustar(
+            EMPRESA,
+            &tarjeta_inactiva.id,
+            &json!({"puntos": 100, "descripcion": "Carga vieja"}),
+            VENDEDOR,
+        )
+        .await
+        .expect("ajuste viejo");
+    fidelizacion
+        .ajustar(
+            EMPRESA,
+            &tarjeta_activa.id,
+            &json!({"puntos": 50, "descripcion": "Carga reciente"}),
+            VENDEDOR,
+        )
+        .await
+        .expect("ajuste reciente");
+    sqlx::query(
+        "UPDATE orders.fidelizacion_movimientos
+            SET creado_en = NOW() - INTERVAL '2 months'
+          WHERE tarjeta_id = $1::uuid",
+    )
+    .bind(Uuid::parse_str(&tarjeta_inactiva.id).expect("uuid"))
+    .execute(db.pool())
+    .await
+    .expect("antiguedad");
+
+    let expiradas = fidelizacion.expirar_inactivas().await.expect("expirar");
+    assert_eq!(expiradas, 1);
+    let inactiva = fidelizacion
+        .obtener_tarjeta(EMPRESA, &tarjeta_inactiva.id)
+        .await
+        .expect("tarjeta inactiva");
+    assert_eq!(inactiva.puntos, 0);
+    let activa = fidelizacion
+        .obtener_tarjeta(EMPRESA, &tarjeta_activa.id)
+        .await
+        .expect("tarjeta activa");
+    assert_eq!(activa.puntos, 50);
+    let movimientos = fidelizacion
+        .listar_movimientos(EMPRESA, &tarjeta_inactiva.id, 10)
+        .await
+        .expect("movimientos");
+    assert!(movimientos
+        .iter()
+        .any(|movimiento| movimiento.tipo == "expiracion"
+            && movimiento.puntos == -100
+            && movimiento.saldo_tras == 0));
+
+    // Idempotente: una segunda pasada no expira nada más.
+    assert_eq!(
+        fidelizacion.expirar_inactivas().await.expect("reintento"),
+        0
+    );
 }

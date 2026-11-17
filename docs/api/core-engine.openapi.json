@@ -39369,7 +39369,8 @@
           },
           "expira_meses": {
             "type": "integer",
-            "nullable": true
+            "nullable": true,
+            "description": "Meses sin movimientos antes de expirar los puntos; null desactiva la expiración"
           },
           "config": {
             "type": "object"
@@ -39406,7 +39407,8 @@
           "expira_meses": {
             "type": "integer",
             "minimum": 1,
-            "nullable": true
+            "nullable": true,
+            "description": "Meses sin movimientos antes de expirar los puntos; null desactiva la expiración"
           },
           "config": {
             "type": "object"
