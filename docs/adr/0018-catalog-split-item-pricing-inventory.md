@@ -99,7 +99,7 @@ Reglas:
   - `/api/v2/admin/inventario/**`, `/api/v2/admin/ubicaciones/**`,
     `/api/v2/catalog/inventario/**` → `inventory-service`
 - Las rutas internas se reparten igual:
-  - `/internal/items/**` → `item-service` (lote de SKUs y detalle por id; los
+  - `/internal/v2/items/**` → `item-service` (metadata sin precio/stock; los
     precios en lote y la cotización viven en `pricing-service`).
   - `/internal/inventario/**` → `inventory-service`.
 - `orders`, `stores` y `commissions` siguen usando el mismo contrato; solo
