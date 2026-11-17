@@ -44,6 +44,7 @@ jobs:
           - market-intelligence-service
           - storage-service
           - notifications-service
+          - analytics-service
     steps:
       - name: 📥 Checkout repository
         uses: actions/checkout@v7
