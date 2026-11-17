@@ -141,11 +141,14 @@ async fn debe_consumir_lotes_en_orden_fefo_y_descontar_stock() {
     assert_eq!(pronto["cantidad_disponible"], 3);
     assert_eq!(tarde["cantidad_disponible"], 5);
 
-    let stock: (i32,) = sqlx::query_as("SELECT stock FROM item.items WHERE id = $1::uuid")
-        .bind(ITEM)
-        .fetch_one(ctx.db.pool())
-        .await
-        .expect("stock");
+    let stock: (i64,) = sqlx::query_as(
+        "SELECT COALESCE(SUM(stock), 0)::bigint
+           FROM inventory.item_stock_ubicacion WHERE item_id = $1::uuid",
+    )
+    .bind(ITEM)
+    .fetch_one(ctx.db.pool())
+    .await
+    .expect("stock");
     assert_eq!(stock.0, 8);
 
     let evento: (String, serde_json::Value) = sqlx::query_as(
@@ -224,8 +227,6 @@ async fn debe_listar_stock_fisico_reservado_y_valorizado() {
     assert_eq!(linea["stock"], "12");
     assert_eq!(linea["disponible"], 10);
     assert_eq!(linea["reservado"], 2);
-    assert_eq!(linea["precio_base"], "10.00");
-    assert_eq!(linea["valor_disponible_cents"], 10_000);
 }
 
 #[tokio::test]
@@ -249,7 +250,6 @@ async fn debe_resumir_productos_agotados_y_valor_del_inventario() {
     assert_eq!(resumen["productos"], 2);
     assert_eq!(resumen["agotados"], 1);
     assert_eq!(resumen["stock_total"], 10);
-    assert_eq!(resumen["valor_inventario_cents"], 10_000);
 }
 
 #[tokio::test]
@@ -334,4 +334,158 @@ async fn debe_validar_el_lote_de_stock() {
         .await
         .expect("inexistente");
     assert!(inexistente.is_empty());
+}
+
+#[tokio::test]
+async fn debe_registrar_stock_inicial_en_la_ubicacion_predeterminada() {
+    let ctx = preparar().await;
+    sqlx::query(
+        "INSERT INTO item.items (id, empresa_id, tipo, codigo, nombre, track_inventory, estado)
+         VALUES ($1::uuid, $2::uuid, 'producto', 'SKU-INICIAL', 'Inicial', true, 'activo')",
+    )
+    .bind(ITEM)
+    .bind(EMPRESA)
+    .execute(ctx.db.pool())
+    .await
+    .expect("item");
+
+    let respuesta = ctx
+        .inventario
+        .stock_inicial(EMPRESA, ITEM, "SKU-INICIAL", 7, None)
+        .await
+        .expect("stock inicial");
+    assert_eq!(respuesta["stock"], 7);
+
+    let total: i64 = sqlx::query_scalar(
+        "SELECT COALESCE(SUM(stock), 0)::bigint
+           FROM inventory.item_stock_ubicacion WHERE item_id = $1::uuid",
+    )
+    .bind(ITEM)
+    .fetch_one(ctx.db.pool())
+    .await
+    .expect("total");
+    assert_eq!(total, 7);
+}
+
+#[tokio::test]
+async fn debe_validar_y_actualizar_el_stock_inicial() {
+    let ctx = preparar().await;
+    let error = ctx
+        .inventario
+        .stock_inicial(EMPRESA, ITEM, "SKU", -1, None)
+        .await
+        .expect_err("cantidad");
+    assert_eq!(error.codigo, "VALIDACION");
+
+    sqlx::query(
+        "INSERT INTO item.items (id, empresa_id, tipo, codigo, nombre, track_inventory, estado)
+         VALUES ($1::uuid, $2::uuid, 'producto', 'SKU-INICIAL-2', 'Inicial 2', true, 'activo'),
+                ($3::uuid, $2::uuid, 'producto', 'SERV-INICIAL', 'Servicio', false, 'activo')",
+    )
+    .bind(ITEM)
+    .bind(EMPRESA)
+    .bind("22222222-2222-4222-8222-222222222222")
+    .execute(ctx.db.pool())
+    .await
+    .expect("items");
+
+    let error = ctx
+        .inventario
+        .stock_inicial(
+            EMPRESA,
+            "22222222-2222-4222-8222-222222222222",
+            "SERV-INICIAL",
+            1,
+            None,
+        )
+        .await
+        .expect_err("no inventario");
+    assert_eq!(error.codigo, "INVENTARIO_NO_APLICA");
+
+    let error = ctx
+        .inventario
+        .stock_inicial(
+            EMPRESA,
+            "33333333-3333-4333-8333-333333333333",
+            "X",
+            1,
+            None,
+        )
+        .await
+        .expect_err("no existe");
+    assert_eq!(error.codigo, "NO_ENCONTRADO");
+
+    ctx.inventario
+        .stock_inicial(EMPRESA, ITEM, "SKU", 5, None)
+        .await
+        .expect("inicial");
+    ctx.inventario
+        .stock_inicial(EMPRESA, ITEM, "SKU", 9, None)
+        .await
+        .expect("actualizar");
+    let total: i64 = sqlx::query_scalar(
+        "SELECT COALESCE(SUM(stock), 0)::bigint
+           FROM inventory.item_stock_ubicacion WHERE item_id = $1::uuid",
+    )
+    .bind(ITEM)
+    .fetch_one(ctx.db.pool())
+    .await
+    .expect("total");
+    assert_eq!(total, 9);
+}
+
+#[tokio::test]
+async fn debe_aplicar_deltas_de_stock_en_ubicaciones() {
+    let ctx = preparar().await;
+    sqlx::query(
+        "INSERT INTO item.items (id, empresa_id, tipo, codigo, nombre, track_inventory, estado)
+         VALUES ($1::uuid, $2::uuid, 'producto', 'SKU-DELTA', 'Delta', true, 'activo')",
+    )
+    .bind(ITEM)
+    .bind(EMPRESA)
+    .execute(ctx.db.pool())
+    .await
+    .expect("item");
+
+    let mut tx = ctx.db.transaccion().await.expect("tx");
+    let error = inventory_service::stock::aplicar_delta_en_transaccion(&mut tx, EMPRESA, ITEM, 2)
+        .await
+        .expect_err("sin ubicacion");
+    assert_eq!(error.codigo, "SIN_UBICACION");
+    tx.rollback().await.expect("rollback");
+
+    ctx.inventario
+        .stock_inicial(EMPRESA, ITEM, "SKU-DELTA", 10, None)
+        .await
+        .expect("inicial");
+
+    let mut tx = ctx.db.transaccion().await.expect("tx");
+    let total = inventory_service::stock::aplicar_delta_en_transaccion(&mut tx, EMPRESA, ITEM, -3)
+        .await
+        .expect("salida");
+    assert_eq!(total, 7);
+    let error = inventory_service::stock::aplicar_delta_en_transaccion(&mut tx, EMPRESA, ITEM, -10)
+        .await
+        .expect_err("insuficiente");
+    assert_eq!(error.codigo, "STOCK_INSUFICIENTE");
+    tx.rollback().await.expect("rollback");
+}
+
+#[tokio::test]
+async fn debe_devolver_totales_vacios_para_una_empresa_sin_items() {
+    let ctx = preparar().await;
+    let otra = "99999999-9999-4999-8999-999999999999";
+    let lineas = ctx
+        .inventario
+        .listar(Some(otra), None)
+        .await
+        .expect("listar");
+    assert!(lineas.is_empty());
+    let resumen = ctx
+        .inventario
+        .resumen(Some(otra), None)
+        .await
+        .expect("resumen");
+    assert_eq!(resumen["productos"], 0);
+    assert_eq!(resumen["stock_total"], 0);
 }

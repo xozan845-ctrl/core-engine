@@ -26,13 +26,6 @@ impl Productos {
                 params.len()
             ));
         }
-        if let Some(estado) = filtros.get("estado").filter(|valor| valor_verdadero(valor)) {
-            condiciones.push(if texto_js(estado) == "disponible" {
-                "i.stock > 0".to_string()
-            } else {
-                "i.stock = 0".to_string()
-            });
-        }
         if let Some(categoria) = filtros
             .get("categoria")
             .filter(|valor| valor_verdadero(valor))
@@ -220,8 +213,7 @@ impl Productos {
             .collect::<Vec<_>>()
             .join(", ");
         let sql = format!(
-            "SELECT i.empresa_id, LOWER(i.codigo) AS sku, i.stock,
-                    CASE WHEN i.stock > 0 THEN 'disponible' ELSE 'agotado' END AS estado
+            "SELECT i.empresa_id, LOWER(i.codigo) AS sku, i.estado
                FROM item.items i
               WHERE LOWER(i.codigo) IN ({marcadores})
                 AND i.tipo = 'producto' AND i.estado = 'activo' AND i.eliminado_en IS NULL

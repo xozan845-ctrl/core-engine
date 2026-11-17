@@ -16,14 +16,14 @@ transferencias, reservas y configuración de inventario.
   componentes BOM, devolución, idempotencia, Outbox y DLQ.
 - PR 5: esquema `inventory`, `inventory.outbox`, RLS, gateway, compose, CI y
   retirada del consumidor de pedidos heredado.
-- PR 10: `inventory.item_stock_ubicacion` es la fuente del stock. Los triggers
-  de alta y delta viven en `item.items` y escriben en `inventory.*`; cada
+- PR 10: `inventory.item_stock_ubicacion` es la única fuente del stock; cada
   movimiento, consumo de lote y ajuste por ubicación publica `stock.updated`
   por `inventory.outbox` (RN-02).
+- Fase 3b de ADR-0020: `item.items.stock` ya no existe. Los triggers de la
+  proyección se retiraron y el alta de items usa
+  `POST /internal/inventario/stock/inicial`.
 
-Las tablas propias viven en `inventory.*`. `item.items.stock` se conserva como
-proyección del total del contrato de items y la mantienen estos triggers; el
-consumidor de pedidos vive en `inventory.pedidos` (no reactivar
+El consumidor de pedidos vive en `inventory.pedidos` (no reactivar
 `catalog.pedidos`).
 
 ## Comandos

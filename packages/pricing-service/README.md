@@ -10,7 +10,10 @@ Motor de precios según [ADR-0018](../../docs/adr/0018-catalog-split-item-pricin
 - Superficie interna para orders/stores: precios en lote, precio resuelto y cotización.
 - Outbox `pricing.outbox` preparado para `price.changed`.
 
-`item.items` es la fuente del item y de su precio base; este servicio resuelve listas, escalas, tarifas, cotizaciones y promociones, y solo actualiza el flag `tipo_precio` del item.
+El precio base vive en `pricing.lista_precio_items` (`lista_id NULL`,
+`desde_cantidad 1`). Este servicio resuelve listas, escalas, tarifas,
+cotizaciones y promociones, y recibe el precio base del item por
+`PUT /internal/items/{id}/precio-base`.
 
 ## Comandos
 

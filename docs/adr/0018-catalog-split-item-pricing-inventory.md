@@ -290,8 +290,6 @@ gates y del smoke de `staging`.
   `inventory-service`; `orders-service` compone metadata v2 con el batch de
   stock de inventario. El contrato público mantiene `precio`/`stock` como
   campos deprecados hasta migrar el frontend.
-- `stock` y `precio_cents` siguen en `item.items` como proyección del contrato
-  de items: `inventory-service` mantiene el stock por trigger y los clientes
-  leen ambos campos en `GET /catalog/items`. Retirarlos exige versionar el
-  contrato o resolver precio/stock por llamada interna; requiere su propio
-  ADR.
+- Fase 3b (ADR-0020): `item.items` ya no tiene `precio_cents` ni `stock`.
+  El precio base vive en `pricing` y el stock solo en `inventory`; item-service
+  delega ambas escrituras por API interna.

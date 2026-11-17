@@ -89,3 +89,35 @@ pub async fn lineas(
             .await?,
     ))
 }
+
+/// `POST /internal/inventario/stock/inicial`.
+pub async fn stock_inicial(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    Json(cuerpo): Json<Value>,
+) -> Result<Response, ApiError> {
+    exigir_clave(&state, &headers)?;
+    let empresa_id = cuerpo
+        .get("empresa_id")
+        .and_then(Value::as_str)
+        .unwrap_or("");
+    let item_id = cuerpo.get("item_id").and_then(Value::as_str).unwrap_or("");
+    let sku = cuerpo.get("sku").and_then(Value::as_str).unwrap_or("");
+    let cantidad = cuerpo.get("cantidad").and_then(Value::as_i64).unwrap_or(-1);
+    if empresa_id.is_empty() || item_id.is_empty() || cantidad < 0 {
+        return Err(ApiError::validacion(serde_json::json!([{
+            "campo": "empresa_id/item_id/cantidad",
+            "restricciones": [],
+        }])));
+    }
+    ok(state
+        .inventario()?
+        .stock_inicial(
+            empresa_id,
+            item_id,
+            sku,
+            cantidad,
+            cuerpo.get("negocio_id").and_then(Value::as_str),
+        )
+        .await?)
+}

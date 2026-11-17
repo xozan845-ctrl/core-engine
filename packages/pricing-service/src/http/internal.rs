@@ -127,3 +127,36 @@ pub async fn cotizacion(
         )
         .await?)
 }
+
+/// `PUT /internal/items/:id/precio-base`.
+pub async fn precio_base(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    Path(id): Path<String>,
+    Cuerpo(cuerpo): Cuerpo,
+) -> Result<Response, ApiError> {
+    exigir_clave(&state, &headers)?;
+    let empresa = cuerpo
+        .get("empresa_id")
+        .and_then(Value::as_str)
+        .unwrap_or("");
+    let precio = cuerpo
+        .get("precio_cents")
+        .and_then(Value::as_i64)
+        .ok_or_else(|| {
+            ApiError::validacion(json!([{
+                "campo": "precio_cents",
+                "restricciones": ["required", "integer"],
+            }]))
+        })?;
+    if empresa.is_empty() {
+        return Err(ApiError::validacion(json!([{
+            "campo": "empresa_id",
+            "restricciones": ["required"],
+        }])));
+    }
+    ok(state
+        .precios()?
+        .fijar_precio_base(empresa, &id, precio)
+        .await?)
+}

@@ -40,17 +40,16 @@ test('item.items es la única fuente y admite variantes e imágenes', { concurre
   try {
     await client.query(
       `INSERT INTO item.items
-         (id, empresa_id, tipo, codigo, nombre, precio_cents, track_inventory, stock,
+         (id, empresa_id, tipo, codigo, nombre, track_inventory,
           marca, codigo_barras, unidad)
-       VALUES ($1, $2, 'producto', 'PADRE-01', 'Producto padre', 1500, true, 7,
+       VALUES ($1, $2, 'producto', 'PADRE-01', 'Producto padre', true,
                'Core', '750000000001', 'Unidad (u)')`,
       [padreId, empresaId],
     );
     await client.query(
       `INSERT INTO item.items
-         (id, empresa_id, tipo, codigo, nombre, precio_cents, track_inventory, stock,
-          parent_item_id)
-       VALUES ($1, $2, 'producto', 'PADRE-01-ROJO', 'Variante roja', 1600, true, 3, $3)`,
+         (id, empresa_id, tipo, codigo, nombre, track_inventory, parent_item_id)
+       VALUES ($1, $2, 'producto', 'PADRE-01-ROJO', 'Variante roja', true, $3)`,
       [varianteId, empresaId, padreId],
     );
     await client.query(
@@ -95,8 +94,8 @@ test('las ofertas usan item_id y ya no conservan columnas legacy', { concurrency
   try {
     await client.query(
       `INSERT INTO item.items
-        (id, empresa_id, tipo, codigo, nombre, precio_cents, track_inventory, stock)
-       VALUES ($1, $2, 'alquiler', 'ALQ-001', 'Alquiler item', 5000, false, NULL)`,
+        (id, empresa_id, tipo, codigo, nombre, track_inventory)
+       VALUES ($1, $2, 'alquiler', 'ALQ-001', 'Alquiler item', false)`,
       [itemId, empresaId],
     );
     await client.query(

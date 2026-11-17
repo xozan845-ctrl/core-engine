@@ -29,18 +29,11 @@ const URL_IMAGEN_PUBLICA: &str = "/api/v2/storage/public/objetos";
 
 /// Columnas de lectura compartidas por listado, detalle y variantes.
 const COLUMNAS_PRODUCTO: &str = "i.id, i.empresa_id, i.codigo AS sku, i.nombre, i.descripcion,
-  i.categoria, i.precio_cents, i.precio_cents AS precio_base_cents, i.costo_cents,
-  i.marca, i.codigo_barras, i.unidad, i.permite_fracciones, i.unidad_compra,
-  i.contenido_cantidad, i.contenido_unidad, i.tipo_precio, i.tipo_costo,
+  i.categoria, i.costo_cents, i.marca, i.codigo_barras, i.unidad, i.permite_fracciones,
+  i.unidad_compra, i.contenido_cantidad, i.contenido_unidad, i.tipo_precio, i.tipo_costo,
   i.stock_minimo, i.stock_maximo, i.garantia_meses, i.es_materia_prima, i.ubicacion,
-  i.actualizado_en, i.stock, i.estado, i.creado_en,
-  i.parent_item_id AS producto_padre_id, i.atributos,
-  COALESCE((SELECT MIN(c.precio_cents) FROM item.items c
-             WHERE c.parent_item_id = i.id AND c.eliminado_en IS NULL),
-           i.precio_cents) AS precio_desde_cents,
-  COALESCE((SELECT SUM(c.stock) FROM item.items c
-             WHERE c.parent_item_id = i.id AND c.eliminado_en IS NULL),
-           i.stock) AS stock_total";
+  i.actualizado_en, i.estado, i.creado_en, i.parent_item_id AS producto_padre_id,
+  i.atributos";
 
 /// Existencia de variantes vendibles del item.
 const EXISTE_VARIANTES: &str = "EXISTS (SELECT 1 FROM item.items c
