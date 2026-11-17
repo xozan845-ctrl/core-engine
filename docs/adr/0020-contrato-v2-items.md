@@ -31,8 +31,8 @@ un modelo donde cada servicio sea la única fuente de su dato.
    `:id` devuelve la metadata completa del item (identidad, tipo,
    `track_inventory`, `track_serial`, atributos, estado, etc.); `lote` devuelve
    la metadata de disponibilidad por SKU (`empresa_id`, `sku`, `track_serial`,
-   `estado`). Ninguno incluye `precio`, `stock` ni `seriales_disponibles`. Los endpoints `/internal/items/**` quedan deprecados para clientes
-   externos al repo y se mantienen hasta cerrar la migración.
+   `estado`). Ninguno incluye `precio`, `stock` ni `seriales_disponibles`. Los
+   endpoints `/internal/items/**` v1 se retiraron al migrar stores y orders.
 2. **Precio**: `stores-service` y cualquier consumidor nuevo resuelven el precio
    base con `GET /internal/items/:id/precio` de `pricing-service`.
 3. **Stock**: los consumidores resuelven stock y series disponibles con
@@ -55,7 +55,7 @@ un modelo donde cada servicio sea la única fuente de su dato.
 | 1 | Endpoints v2, stock batch de inventario y migración de stores/orders | Implementada |
 | 2 | Frontend consume precio/stock desde pricing/inventory | Pendiente (fuera del repo) |
 | 3 | Retirar `precio`/`stock` del payload público y de `item.items` | Pendiente |
-| 4 | Retirar `/internal/items/**` v1 | Pendiente |
+| 4 | Retirar `/internal/items/**` v1 | Implementada |
 
 La fase 3 exige:
 
@@ -72,6 +72,6 @@ La fase 3 exige:
 - **Coste**: una llamada más por oferta/checkout (precio y stock), compensable
   con batch en checkout. Los errores de pricing/inventario son fail-closed en
   stores/orders, igual que antes con el catálogo.
-- **Rollback**: los endpoints v1 y las proyecciones siguen vivos en la fase 1;
-  volver atrás solo requiere apuntar los clientes a `/internal/items/**` de
-  nuevo. No hay migración de datos en esta fase.
+- **Rollback**: las proyecciones públicas siguen vivas; para volver a v1
+  interno hay que redeployar la imagen anterior de los consumidores. No hay
+  migración de datos en esta fase.
