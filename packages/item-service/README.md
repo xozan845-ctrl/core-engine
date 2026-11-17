@@ -33,7 +33,7 @@ Variables: `PORT` (3015), `SERVICIO`, `DATABASE_URL`, `RABBITMQ_URL`,
   `/api/v2/admin/inventario`; un `PATCH` con `stock` responde
   `STOCK_GESTIONADO_POR_INVENTARIO`.
 - El consumidor de pedidos y la saga viven en `inventory-service`.
-- Superficie interna `/internal/items/lote` y `/internal/items/{id}`.
+- Superficie interna v2 `/internal/v2/items/lote` y `/internal/v2/items/{id}`.
 - Envelope, errores normalizados, `/health`, `/metrics`, `/docs` y
   `/docs-json`.
 - Imagen Docker multi-stage (puerto 3015) y cobertura con `cargo-llvm-cov`.

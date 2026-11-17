@@ -76,9 +76,13 @@ async fn debe_exigir_autenticacion_validacion_y_clave_interna() {
     assert_eq!(valor["codigo"], "VALIDACION");
     assert_eq!(valor["detalles"][0]["campo"], "codigo");
 
-    let (status, valor) = enviar("GET", "/internal/items/lote", &[], None).await;
+    let (status, valor) = enviar("GET", "/internal/v2/items/lote", &[], None).await;
     assert_eq!(status, StatusCode::FORBIDDEN);
     assert_eq!(valor["codigo"], "ACCESO_DENEGADO");
+
+    // El contrato interno v1 se retiró (ADR-0020 fase 4).
+    let (status, _) = enviar("GET", "/internal/items/lote", &[], None).await;
+    assert_eq!(status, StatusCode::NOT_FOUND);
 
     let (status, valor) = enviar("GET", "/api/v2/catalog/estado-inventario", &admin, None).await;
     assert_eq!(status, StatusCode::NOT_FOUND);
