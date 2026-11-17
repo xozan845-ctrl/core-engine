@@ -197,11 +197,13 @@ fn debe_validar_uuids_canonicos() {
 fn debe_serializar_el_producto_con_montos_y_defaults() {
     let producto = serializar(&fila_producto(), &[], Vec::new()).expect("producto");
 
-    assert_eq!(producto["precio_base"], "1500.00");
+    assert!(producto.get("precio_base").is_none());
 
-    assert_eq!(producto["precio_desde"], "1500.00");
+    assert!(producto.get("precio_desde").is_none());
 
-    assert_eq!(producto["estado"], "disponible");
+    assert!(producto.get("stock").is_none());
+
+    assert_eq!(producto["estado"], "activo");
 
     assert_eq!(producto["estado_operativo"], "activo");
 
@@ -212,8 +214,6 @@ fn debe_serializar_el_producto_con_montos_y_defaults() {
     assert_eq!(producto["contenido_unidad"], "Sin contenido");
 
     assert_eq!(producto["tipo_precio"], "fijo");
-
-    assert_eq!(producto["stock_total"], 10);
 
     assert!(producto.get("variantes").is_none());
 

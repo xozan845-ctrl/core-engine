@@ -109,6 +109,7 @@ el mismo despliegue, con el gateway apuntando al servicio nuevo.
    - `GET /internal/v2/items/<item>` (metadata sin precio/stock) y
      `POST /internal/inventario/stock` (stock por SKU) para validar el
      contrato v2 de ADR-0020
+   - `GET /api/v2/catalog/items/<item>` no debe devolver `precio` ni `stock`
 2. Confirmar que `PATCH /api/v2/catalog/items/<item>` con `stock` responde
    `STOCK_GESTIONADO_POR_INVENTARIO`; el ajuste se hace por
    `/api/v2/admin/inventario`.

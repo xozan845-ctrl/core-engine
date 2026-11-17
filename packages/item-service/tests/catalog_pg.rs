@@ -45,8 +45,8 @@ async fn debe_crear_listar_y_validar_atributos_json_schema() {
     let ctx = preparar().await;
     let item = crear_item(&ctx, "SKU-1", "1000.00", 5).await;
     assert_eq!(item["codigo"], "SKU-1");
-    assert_eq!(item["precio"], "1000.00");
-    assert_eq!(item["stock"], 5);
+    assert!(item.get("precio").is_none());
+    assert!(item.get("stock").is_none());
     assert_eq!(item["track_inventory"], true);
 
     let pagina = ctx
