@@ -568,10 +568,6 @@ impl Operaciones {
                     "subtotal": Money::desde_centavos(subtotal)?.string(),
                 }));
             }
-            let precio_cents = fila
-                .get("precio_cents")
-                .and_then(Value::as_i64)
-                .unwrap_or(0);
             resultado.push(json!({
                 "id": fila.get("id").cloned().unwrap_or(Value::Null),
                 "empresa_id": fila.get("empresa_id").cloned().unwrap_or(Value::Null),
@@ -579,9 +575,7 @@ impl Operaciones {
                 "nombre": fila.get("nombre").cloned().unwrap_or(Value::Null),
                 "descripcion": fila.get("descripcion").cloned().unwrap_or(Value::Null),
                 "codigo_barras": fila.get("codigo_barras").cloned().unwrap_or(Value::Null),
-                "precio": Money::desde_centavos(precio_cents)?.string(),
                 "costo_total": Money::desde_centavos(costo_total)?.string(),
-                "margen": calcular_margen(precio_cents, costo_total),
                 "estado": estado_serializado(fila.get("estado")),
                 "componentes": componentes,
                 "creado_en": fila.get("creado_en").cloned().unwrap_or(Value::Null),

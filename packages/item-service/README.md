@@ -28,10 +28,12 @@ Variables: `PORT` (3015), `SERVICIO`, `DATABASE_URL`, `RABBITMQ_URL`,
 - Inventario, lotes, ubicaciones y movimientos viven en `inventory-service`.
   `item-service` no escribe tablas de inventario; solo valida la ubicación de
   una serie contra `inventory.ubicaciones`.
-- `stock` y `precio_cents` de `item.items` se conservan como proyección de
-  lectura del contrato de items. El stock se ajusta por
-  `/api/v2/admin/inventario`; un `PATCH` con `stock` responde
-  `STOCK_GESTIONADO_POR_INVENTARIO`.
+- El contrato público de items ya no incluye `precio`, `precio_base` ni
+  `stock`: se resuelven en `pricing-service` e `inventory-service`.
+  `item.items` conserva columnas internas de precio/stock como almacenamiento
+  transitorio (fase 3b de ADR-0020), invisibles para clientes.
+- El stock se ajusta por `/api/v2/admin/inventario`; un `PATCH` con `stock`
+  responde `STOCK_GESTIONADO_POR_INVENTARIO`.
 - El consumidor de pedidos y la saga viven en `inventory-service`.
 - Superficie interna v2 `/internal/v2/items/lote` y `/internal/v2/items/{id}`.
 - Envelope, errores normalizados, `/health`, `/metrics`, `/docs` y
