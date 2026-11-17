@@ -1231,13 +1231,13 @@ CREATE POLICY item_series_empresa ON item.item_series FOR ALL TO authenticated
   WITH CHECK (auth.rol() = 'empresario' AND empresa_id::text = (auth.jwt() ->> 'tenant_id'));
 
 
-ALTER TABLE item.historico_precios ENABLE ROW LEVEL SECURITY;
-DROP POLICY IF EXISTS historico_precios_admin ON item.historico_precios;
-CREATE POLICY historico_precios_admin ON item.historico_precios FOR ALL TO authenticated
+ALTER TABLE pricing.historico_precios_base ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS historico_precios_base_admin ON pricing.historico_precios_base;
+CREATE POLICY historico_precios_base_admin ON pricing.historico_precios_base FOR ALL TO authenticated
   USING (auth.rol() IN ('super_admin','admin'))
   WITH CHECK (auth.rol() IN ('super_admin','admin'));
-DROP POLICY IF EXISTS historico_precios_empresa ON item.historico_precios;
-CREATE POLICY historico_precios_empresa ON item.historico_precios FOR ALL TO authenticated
+DROP POLICY IF EXISTS historico_precios_base_empresa ON pricing.historico_precios_base;
+CREATE POLICY historico_precios_base_empresa ON pricing.historico_precios_base FOR ALL TO authenticated
   USING (auth.rol() = 'empresario' AND empresa_id::text = (auth.jwt() ->> 'tenant_id'))
   WITH CHECK (auth.rol() = 'empresario' AND empresa_id::text = (auth.jwt() ->> 'tenant_id'));
 

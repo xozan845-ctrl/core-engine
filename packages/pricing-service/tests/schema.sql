@@ -10,7 +10,6 @@ CREATE TABLE item.items (
   tipo          text NOT NULL DEFAULT 'producto',
   codigo        text NOT NULL,
   nombre        text NOT NULL,
-  precio_cents  integer NOT NULL DEFAULT 0,
   costo_cents   integer NOT NULL DEFAULT 0,
   tipo_precio   text NOT NULL DEFAULT 'fijo',
   tipo_costo    text NOT NULL DEFAULT 'fijo',
@@ -88,4 +87,13 @@ CREATE TABLE pricing.outbox (
   estado       text NOT NULL DEFAULT 'pendiente',
   creado_en    timestamptz NOT NULL DEFAULT NOW(),
   publicado_en timestamptz
+);
+
+CREATE TABLE IF NOT EXISTS pricing.historico_precios_base (
+  id                    uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  empresa_id            uuid NOT NULL,
+  item_id               uuid NOT NULL,
+  precio_anterior_cents integer,
+  precio_nuevo_cents    integer NOT NULL,
+  vigente_desde         timestamptz NOT NULL DEFAULT NOW()
 );

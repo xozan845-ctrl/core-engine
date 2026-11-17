@@ -35,6 +35,7 @@ const MIGRACIONES = [
   '83_item_fk_externas.sql',
   '84_inventory_stock_owner.sql',
   '85_retiro_catalog.sql',
+  '95_precio_stock_columnas.sql',
 ];
 
 const PRELUDIO = `

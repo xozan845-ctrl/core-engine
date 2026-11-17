@@ -107,6 +107,10 @@ pub fn build_router(state: AppState) -> Router {
         // superficie interna
         .route("/internal/items/precios", post(internal::precios_lote))
         .route("/internal/items/{id}/precio", get(internal::precio))
+        .route(
+            "/internal/items/{id}/precio-base",
+            axum::routing::put(internal::precio_base),
+        )
         .route("/internal/items/{id}/cotizacion", get(internal::cotizacion))
         .fallback(no_encontrado)
         .with_state(state.clone());

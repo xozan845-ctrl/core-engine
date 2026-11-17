@@ -189,6 +189,76 @@
           "Catálogo (interno)"
         ]
       }
+    },
+    "/internal/items/{id}/precio-base": {
+      "put": {
+        "operationId": "InternalController_precioBase",
+        "summary": "Fija el precio base del item (servicio a servicio)",
+        "tags": [
+          "Precios (interno)"
+        ],
+        "security": [
+          {
+            "internalKey": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "empresa_id": {
+                    "type": "string",
+                    "format": "uuid"
+                  },
+                  "precio_cents": {
+                    "type": "number",
+                    "minimum": 0
+                  }
+                },
+                "required": [
+                  "empresa_id",
+                  "precio_cents"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Precio base actualizado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "item_id": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "precio_cents": {
+                      "type": "number"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {

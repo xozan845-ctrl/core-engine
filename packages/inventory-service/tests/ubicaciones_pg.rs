@@ -58,6 +58,10 @@ async fn debe_absorber_stock_en_la_primera_ubicacion_y_transferir() {
     assert_eq!(detalle["stock_total"], 10);
     assert_eq!(detalle["total_ubicaciones"], 10);
     assert_eq!(detalle["ubicaciones"][0]["stock"], 10);
+    let principal_id = detalle["ubicaciones"][0]["ubicacion_id"]
+        .as_str()
+        .expect("principal")
+        .to_string();
 
     let sucursal = ctx
         .ubicaciones
@@ -69,6 +73,20 @@ async fn debe_absorber_stock_en_la_primera_ubicacion_y_transferir() {
         .await
         .expect("sucursal");
     let sucursal_id = sucursal["id"].as_str().expect("id").to_string();
+
+    ctx.ubicaciones
+        .transferir(
+            EMPRESA,
+            None,
+            &json!({
+                "item_id": ITEM,
+                "origen_id": principal_id,
+                "destino_id": central_id,
+                "cantidad": 10
+            }),
+        )
+        .await
+        .expect("traslado inicial");
 
     let traslado = ctx
         .ubicaciones
@@ -174,11 +192,14 @@ async fn debe_registrar_un_movimiento_de_entrada_y_listarlo() {
     assert_eq!(movimiento["lineas"][0]["stock_anterior"], 10);
     assert_eq!(movimiento["lineas"][0]["stock_nuevo"], 15);
 
-    let stock: (i32,) = sqlx::query_as("SELECT stock FROM item.items WHERE id = $1::uuid")
-        .bind(ITEM)
-        .fetch_one(ctx.db.pool())
-        .await
-        .expect("stock");
+    let stock: (i64,) = sqlx::query_as(
+        "SELECT COALESCE(SUM(stock), 0)::bigint
+           FROM inventory.item_stock_ubicacion WHERE item_id = $1::uuid",
+    )
+    .bind(ITEM)
+    .fetch_one(ctx.db.pool())
+    .await
+    .expect("stock");
     assert_eq!(stock.0, 15);
 
     let por_ubicacion: i32 = sqlx::query_scalar(
@@ -266,18 +287,21 @@ async fn debe_fijar_stock_por_ubicacion_y_publicar_evento() {
         .await
         .expect("ubicacion");
     let ubicacion_id = ubicacion["id"].as_str().expect("id").to_string();
-    crear_item(&ctx.db, ITEM, "SKU-AJUSTE", 10, 1000).await;
+    crear_item(&ctx.db, ITEM, "SKU-AJUSTE", 0, 1000).await;
 
     ctx.ubicaciones
         .fijar_stock(EMPRESA, &ubicacion_id, ITEM, &json!(12))
         .await
         .expect("ajuste");
 
-    let stock: (i32,) = sqlx::query_as("SELECT stock FROM item.items WHERE id = $1::uuid")
-        .bind(ITEM)
-        .fetch_one(ctx.db.pool())
-        .await
-        .expect("stock");
+    let stock: (i64,) = sqlx::query_as(
+        "SELECT COALESCE(SUM(stock), 0)::bigint
+           FROM inventory.item_stock_ubicacion WHERE item_id = $1::uuid",
+    )
+    .bind(ITEM)
+    .fetch_one(ctx.db.pool())
+    .await
+    .expect("stock");
     assert_eq!(stock.0, 12);
 
     let ubicacion_stock: i32 = sqlx::query_scalar(
@@ -409,4 +433,131 @@ async fn debe_actualizar_ubicaciones_respetando_el_negocio() {
         .expect("actualizar");
     assert_eq!(actualizada["nombre"], "Norte 2");
     assert_eq!(actualizada["predeterminada"], true);
+}
+
+#[tokio::test]
+async fn debe_actualizar_ubicaciones_y_rechazar_cambios_invalidos() {
+    let ctx = preparar().await;
+    let negocio = "22222222-2222-4222-8222-222222222222";
+    let otra = "33333333-3333-4333-8333-333333333333";
+    let ubicacion = ctx
+        .ubicaciones
+        .crear(
+            EMPRESA,
+            Some(negocio),
+            &json!({"codigo": "norte", "nombre": "Norte", "tipo": "bodega"}),
+        )
+        .await
+        .expect("ubicacion");
+    let id = ubicacion["id"].as_str().expect("id").to_string();
+    crear_item(&ctx.db, ITEM, "SKU-UPD", 5, 1000).await;
+    ctx.ubicaciones
+        .fijar_stock(EMPRESA, &id, ITEM, &json!(5))
+        .await
+        .expect("stock");
+
+    let error = ctx
+        .ubicaciones
+        .actualizar(EMPRESA, Some(otra), &id, &json!({"nombre": "Otra"}))
+        .await
+        .expect_err("otro negocio");
+    assert_eq!(error.codigo, "NO_ENCONTRADO");
+
+    let error = ctx
+        .ubicaciones
+        .actualizar(EMPRESA, Some(negocio), &id, &json!({"activo": false}))
+        .await
+        .expect_err("con stock");
+    assert_eq!(error.codigo, "CONFLICTO");
+
+    let actualizada = ctx
+        .ubicaciones
+        .actualizar(
+            EMPRESA,
+            Some(negocio),
+            &id,
+            &json!({"nombre": "Norte 2", "predeterminada": true}),
+        )
+        .await
+        .expect("actualizar");
+    assert_eq!(actualizada["nombre"], "Norte 2");
+
+    let listado = ctx
+        .ubicaciones
+        .listar(EMPRESA, Some(negocio))
+        .await
+        .expect("listar negocio");
+    assert_eq!(listado.len(), 1);
+    let todas = ctx
+        .ubicaciones
+        .listar(EMPRESA, None)
+        .await
+        .expect("listar todas");
+    assert!(!todas.is_empty());
+}
+
+#[tokio::test]
+async fn debe_rechazar_operaciones_invalidas_de_ubicaciones() {
+    let ctx = preparar().await;
+    let vacia = ctx
+        .ubicaciones
+        .crear(
+            EMPRESA,
+            None,
+            &json!({"codigo": "vacia", "nombre": "Vacía", "tipo": "bodega"}),
+        )
+        .await
+        .expect("ubicacion");
+    let vacia_id = vacia["id"].as_str().expect("id").to_string();
+    crear_item(&ctx.db, ITEM, "SKU-INV", 5, 1000).await;
+
+    let error = ctx
+        .ubicaciones
+        .transferir(
+            EMPRESA,
+            None,
+            &json!({
+                "item_id": ITEM,
+                "origen_id": vacia_id,
+                "destino_id": vacia_id,
+                "cantidad": 1
+            }),
+        )
+        .await
+        .expect_err("mismo destino");
+    assert_eq!(error.codigo, "TRASLADO_INVALIDO");
+
+    let error = ctx
+        .ubicaciones
+        .stock_por_item(EMPRESA, "00000000-0000-4000-8000-000000000000")
+        .await
+        .expect_err("item inexistente");
+    assert_eq!(error.codigo, "NO_ENCONTRADO");
+
+    let error = ctx
+        .ubicaciones
+        .stock_de_ubicacion(EMPRESA, "00000000-0000-4000-8000-000000000000")
+        .await
+        .expect_err("ubicacion inexistente");
+    assert_eq!(error.codigo, "NO_ENCONTRADO");
+
+    sqlx::query(
+        "INSERT INTO item.items (id, empresa_id, tipo, codigo, nombre, track_inventory, estado)
+         VALUES ('33333333-3333-4333-8333-333333333333', $1::uuid, 'producto', 'SIN-INV', 'Sin inventario', false, 'activo')",
+    )
+    .bind(EMPRESA)
+    .execute(ctx.db.pool())
+    .await
+    .expect("item sin inventario");
+    let error = ctx
+        .ubicaciones
+        .fijar_stock(
+            EMPRESA,
+            &vacia_id,
+            "33333333-3333-4333-8333-333333333333",
+            &json!(1),
+        )
+        .await
+        .expect_err("sin inventario");
+    assert_eq!(error.codigo, "INVENTARIO_NO_APLICA");
 }
