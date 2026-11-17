@@ -860,10 +860,6 @@ pub fn serializar(fila: &Value) -> Result<Value, ApiError> {
     objeto.insert("descripcion".into(), Value::String(texto("descripcion")));
     objeto.insert("categoria".into(), Value::String(texto("categoria")));
     objeto.insert(
-        "precio".into(),
-        Value::String(Money::desde_centavos(entero("precio_cents").unwrap_or(0))?.string()),
-    );
-    objeto.insert(
         "costo".into(),
         Value::String(Money::desde_centavos(entero("costo_cents").unwrap_or(0))?.string()),
     );
@@ -883,7 +879,6 @@ pub fn serializar(fila: &Value) -> Result<Value, ApiError> {
                 .unwrap_or(false),
         ),
     );
-    objeto.insert("stock".into(), opcional("stock"));
     objeto.insert("duration_minutes".into(), opcional("duration_minutes"));
     objeto.insert(
         "atributos".into(),
@@ -1101,7 +1096,8 @@ mod tests {
             "actualizado_en": "2026-11-13T00:00:00.000Z"
         });
         let item = serializar(&fila).expect("item");
-        assert_eq!(item["precio"], "1150.00");
+        assert!(item.get("precio").is_none());
+        assert!(item.get("stock").is_none());
         assert_eq!(item["unidad"], "Unidad (u)");
         assert_eq!(item["tipo_precio"], "fijo");
         assert_eq!(item["imagenes"], json!([]));

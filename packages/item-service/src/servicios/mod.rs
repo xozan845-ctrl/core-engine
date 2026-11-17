@@ -596,11 +596,6 @@ fn defecto(valor: String, por_defecto: &str) -> String {
 }
 
 fn serializar(fila: Value) -> Result<Value, ApiError> {
-    let precio = Money::desde_centavos(
-        fila.get("precio_cents")
-            .and_then(Value::as_i64)
-            .unwrap_or(0),
-    )?;
     let costo =
         Money::desde_centavos(fila.get("costo_cents").and_then(Value::as_i64).unwrap_or(0))?;
     let mut objeto = Map::new();
@@ -621,7 +616,6 @@ fn serializar(fila: Value) -> Result<Value, ApiError> {
         "codigo_barras".into(),
         Value::String(texto(&fila, "codigo_barras")),
     );
-    objeto.insert("precio".into(), Value::String(precio.string()));
     objeto.insert("costo".into(), Value::String(costo.string()));
     objeto.insert("unidad".into(), Value::String(texto(&fila, "unidad")));
     objeto.insert(
@@ -738,7 +732,7 @@ mod tests {
     #[test]
     fn debe_serializar_el_servicio_con_montos_y_defaults() {
         let servicio = serializar(fila_servicio()).expect("servicio");
-        assert_eq!(servicio["precio"], "1500.00");
+        assert!(servicio.get("precio").is_none());
         assert_eq!(servicio["costo"], "500.00");
         assert_eq!(servicio["duracion_minutos"], 60);
         assert_eq!(servicio["estado"], "activo");

@@ -490,22 +490,7 @@ pub(super) fn serializar(
     imagenes: &[Value],
     variantes: Vec<Value>,
 ) -> Result<Value, ApiError> {
-    let precio = Money::desde_centavos(
-        fila.get("precio_base_cents")
-            .and_then(entero_valor)
-            .unwrap_or(0),
-    )?;
     let costo = Money::desde_centavos(fila.get("costo_cents").and_then(entero_valor).unwrap_or(0))?;
-    let precio_desde = Money::desde_centavos(
-        fila.get("precio_desde_cents")
-            .and_then(entero_valor)
-            .unwrap_or_else(|| {
-                fila.get("precio_base_cents")
-                    .and_then(entero_valor)
-                    .unwrap_or(0)
-            }),
-    )?;
-    let stock = fila.get("stock").and_then(entero_valor).unwrap_or(0);
     let mut objeto = Map::new();
     objeto.insert("id".into(), Value::String(texto(fila, "id")));
     objeto.insert(
@@ -519,11 +504,16 @@ pub(super) fn serializar(
         Value::String(texto(fila, "descripcion")),
     );
     objeto.insert("categoria".into(), Value::String(texto(fila, "categoria")));
-    objeto.insert("precio_base".into(), Value::String(precio.string()));
-    objeto.insert("stock".into(), json!(stock));
     objeto.insert(
         "estado".into(),
-        Value::String(if stock > 0 { "disponible" } else { "agotado" }.to_string()),
+        Value::String(
+            if texto(fila, "estado") == "inactivo" {
+                "inactivo"
+            } else {
+                "activo"
+            }
+            .to_string(),
+        ),
     );
     objeto.insert(
         "estado_operativo".into(),
@@ -650,14 +640,6 @@ pub(super) fn serializar(
     if !variantes.is_empty() {
         objeto.insert("variantes".into(), Value::Array(variantes));
     }
-    objeto.insert("precio_desde".into(), Value::String(precio_desde.string()));
-    objeto.insert(
-        "stock_total".into(),
-        json!(fila
-            .get("stock_total")
-            .and_then(entero_valor)
-            .unwrap_or(stock)),
-    );
     Ok(Value::Object(objeto))
 }
 

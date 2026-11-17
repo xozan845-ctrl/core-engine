@@ -589,12 +589,12 @@ async function main() {
   paso('TC-03: el stock del catálogo decreció');
   const catalogo = await api(
     'GET',
-    `/api/v2/catalog/items/${producto.item_id ?? producto.id}?empresa_id=${encodeURIComponent(empresa.json.id)}`,
+    `/api/v2/admin/ubicaciones/items/${producto.item_id ?? producto.id}/stock?empresa_id=${encodeURIComponent(empresa.json.id)}`,
     null,
     tokenAdmin,
   );
-  if (catalogo.json?.stock === 9) ok(`stock=9`);
-  else fail(`stock=${catalogo.json?.stock}`);
+  if (catalogo.json?.stock_total === 9) ok(`stock=9`);
+  else fail(`stock=${catalogo.json?.stock_total}`);
 
   // ── 5. Logística: avance del ciclo de vida (Tabla 13) ─────────────────
   for (const [estado, descripcion] of [
@@ -688,15 +688,15 @@ async function main() {
     async () => {
       const r = await api(
         'GET',
-        `/api/v2/catalog/items/${producto.item_id ?? producto.id}?empresa_id=${encodeURIComponent(empresa.json.id)}`,
+        `/api/v2/admin/ubicaciones/items/${producto.item_id ?? producto.id}/stock?empresa_id=${encodeURIComponent(empresa.json.id)}`,
         null,
         tokenAdmin,
       );
-      return r.json?.stock === 10 ? r.json : null;
+      return r.json?.stock_total === 10 ? r.json : null;
     },
     'stock 10',
   );
-  ok(`stock=${stockReintegrado.stock}`);
+  ok(`stock=${stockReintegrado.stock_total}`);
 
   paso('Compensación de comisión en la próxima liquidación (RN-06)');
   const compensada = await esperar(
