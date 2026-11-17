@@ -40,9 +40,11 @@ un modelo donde cada servicio sea la única fuente de su dato.
    `{empresa_id, sku, stock, track_serial, seriales_disponibles, estado}` por
    SKU. El stock se calcula desde `inventory.item_stock_ubicacion` y usa
    `item.items.stock` solo como fallback cuando el item aún no tiene desglose.
-4. **Contrato público v1**: `precio` y `stock` de `ItemResponseDto` se marcan
-   como `deprecated` en OpenAPI. Se mantienen durante la ventana de migración
-   del frontend; no se eliminan en esta fase.
+4. **Contrato público**: `precio`, `precio_base`, `precio_desde`, `stock` y
+   `stock_total` se retiraron de las respuestas de items, productos, variantes,
+   servicios y combos. No hay frontend asociado, así que no queda ventana de
+   compatibilidad. Las columnas internas de `item.items` siguen existiendo como
+   almacenamiento transitorio, pero no forman parte de ningún contrato.
 5. **Consumidores internos migrados**: `stores-service` (oferta: metadata v2 +
    precio de pricing + stock de inventario) y `orders-service`
    (`items_lote`: metadata v2 + stock/series de inventario). Los dobles de
@@ -53,16 +55,14 @@ un modelo donde cada servicio sea la única fuente de su dato.
 | Fase | Cambio | Estado |
 |---|---|---|
 | 1 | Endpoints v2, stock batch de inventario y migración de stores/orders | Implementada |
-| 2 | Frontend consume precio/stock desde pricing/inventory | Pendiente (fuera del repo) |
-| 3 | Retirar `precio`/`stock` del payload público y de `item.items` | Pendiente |
+| 2 | Frontend consume precio/stock desde pricing/inventory | No aplica (sin frontend) |
+| 3 | Retirar `precio`/`stock` del payload público | Implementada |
+| 3b | Retirar las columnas internas de `item.items` | Pendiente (sin impacto de contrato) |
 | 4 | Retirar `/internal/items/**` v1 | Implementada |
 
-La fase 3 exige:
-
-- el frontend no lee `precio`/`stock` de `GET /catalog/items`;
-- no quedan consumidores de `/internal/items/**`;
-- una migración inversa probada para las columnas y los triggers de stock;
-- smoke de staging con el contrato v2 y el frontend actualizado.
+La fase 3 no tiene dependencia externa: no hay frontend. La fase 3b (columnas)
+exige mover el precio base a `pricing` y el stock inicial a `inventory`, y una
+migración inversa probada; no cambia el contrato público.
 
 ## Consecuencias
 
