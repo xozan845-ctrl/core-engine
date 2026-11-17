@@ -89,6 +89,61 @@
           }
         ]
       }
+    },
+    "/internal/inventario/stock": {
+      "post": {
+        "operationId": "InternalController_stockLote",
+        "summary": "Stock y series disponibles por lote de SKUs (servicio a servicio)",
+        "tags": [
+          "Inventario (interno)"
+        ],
+        "security": [
+          {
+            "internalKey": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "empresa_id": {
+                    "type": "string",
+                    "format": "uuid"
+                  },
+                  "skus": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  }
+                },
+                "required": [
+                  "empresa_id",
+                  "skus"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Stock por SKU",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/StockInternoLineaDto"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -99,6 +154,43 @@
         "name": "x-internal-key"
       }
     },
-    "schemas": {}
+    "schemas": {
+      "StockInternoLineaDto": {
+        "type": "object",
+        "properties": {
+          "item_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "empresa_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "sku": {
+            "type": "string"
+          },
+          "track_serial": {
+            "type": "boolean"
+          },
+          "estado": {
+            "type": "string"
+          },
+          "stock": {
+            "type": "number"
+          },
+          "seriales_disponibles": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "empresa_id",
+          "sku",
+          "stock",
+          "track_serial",
+          "seriales_disponibles",
+          "estado"
+        ]
+      }
+    }
   }
 }

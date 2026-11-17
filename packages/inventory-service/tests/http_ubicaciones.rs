@@ -225,6 +225,33 @@ async fn debe_cubrir_ubicaciones_movimientos_y_superficie_interna() {
     assert_eq!(movimientos.status(), StatusCode::OK);
     assert_eq!(json(movimientos).await["data"]["total"], 1);
 
+    let stock_interno = app
+        .clone()
+        .oneshot(
+            request("POST", "/internal/inventario/stock")
+                .header("x-internal-key", "secreta")
+                .body(Body::from(
+                    json!({"empresa_id": EMPRESA, "skus": ["SKU-HTTP"]}).to_string(),
+                ))
+                .expect("request"),
+        )
+        .await
+        .expect("response");
+    assert_eq!(stock_interno.status(), StatusCode::OK);
+    assert_eq!(json(stock_interno).await[0]["stock"], 17);
+
+    let stock_invalido = app
+        .clone()
+        .oneshot(
+            request("POST", "/internal/inventario/stock")
+                .header("x-internal-key", "secreta")
+                .body(Body::from(json!({"empresa_id": EMPRESA}).to_string()))
+                .expect("request"),
+        )
+        .await
+        .expect("response");
+    assert_eq!(stock_invalido.status(), StatusCode::BAD_REQUEST);
+
     let resumen = app
         .clone()
         .oneshot(

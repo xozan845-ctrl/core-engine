@@ -19,6 +19,8 @@ pub struct Config {
     pub identity_service_url: String,
     pub storage_service_url: String,
     pub item_service_url: String,
+    pub pricing_service_url: String,
+    pub inventory_service_url: String,
     pub platform_tenant_id: Option<String>,
     pub tema_herencia_ttl_ms: u64,
     pub internal_request_timeout_ms: u64,
@@ -80,6 +82,14 @@ impl Config {
                 .unwrap_or_else(|| "http://item-service:3015".to_string())
                 .trim_end_matches('/')
                 .to_string(),
+            pricing_service_url: leer("PRICING_SERVICE_URL")
+                .unwrap_or_else(|| "http://pricing-service:3014".to_string())
+                .trim_end_matches('/')
+                .to_string(),
+            inventory_service_url: leer("INVENTORY_SERVICE_URL")
+                .unwrap_or_else(|| "http://inventory-service:3013".to_string())
+                .trim_end_matches('/')
+                .to_string(),
             platform_tenant_id: leer("PLATFORM_TENANT_ID"),
             tema_herencia_ttl_ms: entero("TEMA_HERENCIA_TTL_MS", 60_000),
             internal_request_timeout_ms: entero("INTERNAL_REQUEST_TIMEOUT_MS", 3_000),
@@ -119,6 +129,11 @@ mod tests {
         assert_eq!(config.identity_service_url, "http://identity-service:3001");
         assert_eq!(config.storage_service_url, "http://storage-service:3010");
         assert_eq!(config.item_service_url, "http://item-service:3015");
+        assert_eq!(config.pricing_service_url, "http://pricing-service:3014");
+        assert_eq!(
+            config.inventory_service_url,
+            "http://inventory-service:3013"
+        );
         assert_eq!(config.tema_herencia_ttl_ms, 60_000);
         assert_eq!(config.internal_request_timeout_ms, 3000);
         assert_eq!(config.database_url, None);
@@ -135,6 +150,8 @@ mod tests {
             ("IDENTITY_SERVICE_URL", "http://identity:3001/"),
             ("STORAGE_SERVICE_URL", "http://storage:3010/"),
             ("ITEM_SERVICE_URL", "http://item:3015/"),
+            ("PRICING_SERVICE_URL", "http://pricing:3014/"),
+            ("INVENTORY_SERVICE_URL", "http://inventory:3013/"),
             ("PLATFORM_TENANT_ID", "t-plataforma"),
             ("TEMA_HERENCIA_TTL_MS", "1500"),
             ("INTERNAL_REQUEST_TIMEOUT_MS", "2500"),
@@ -150,6 +167,8 @@ mod tests {
         assert_eq!(config.identity_service_url, "http://identity:3001");
         assert_eq!(config.storage_service_url, "http://storage:3010");
         assert_eq!(config.item_service_url, "http://item:3015");
+        assert_eq!(config.pricing_service_url, "http://pricing:3014");
+        assert_eq!(config.inventory_service_url, "http://inventory:3013");
         assert_eq!(config.platform_tenant_id.as_deref(), Some("t-plataforma"));
         assert_eq!(config.tema_herencia_ttl_ms, 1500);
         assert_eq!(config.internal_request_timeout_ms, 2500);

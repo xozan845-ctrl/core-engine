@@ -6,6 +6,7 @@
 //!   pósteres e imagen SEO.
 //! - `item-service`: item unificado antes de publicar una oferta.
 
+use crate::ofertas::Money;
 use async_trait::async_trait;
 use serde::Deserialize;
 use serde_json::{Map, Value};
@@ -238,32 +239,98 @@ pub trait Catalogo: Send + Sync {
 }
 
 pub struct CatalogoHttp {
-    url: String,
+    item_url: String,
+    pricing_url: String,
+    inventory_url: String,
     clave: String,
     timeout: Duration,
 }
 
+#[derive(Debug, Deserialize)]
+struct ItemV2 {
+    item_id: String,
+    empresa_id: String,
+    tipo: String,
+    codigo: String,
+    nombre: String,
+    #[serde(default)]
+    track_inventory: bool,
+    #[serde(default)]
+    duration_minutes: Option<i64>,
+    #[serde(default)]
+    atributos: Value,
+    estado: String,
+}
+
+#[derive(Debug, Deserialize)]
+struct PrecioV2 {
+    precio_unitario_cents: i64,
+}
+
+#[derive(Debug, Deserialize)]
+struct StockV2 {
+    sku: String,
+    #[serde(default)]
+    stock: i64,
+}
+
 impl CatalogoHttp {
-    pub fn nueva(url: String, clave: Option<String>, timeout_ms: u64) -> Self {
+    pub fn nueva(
+        item_url: String,
+        pricing_url: String,
+        inventory_url: String,
+        clave: Option<String>,
+        timeout_ms: u64,
+    ) -> Self {
         Self {
-            url,
+            item_url,
+            pricing_url,
+            inventory_url,
             clave: clave.unwrap_or_default(),
             timeout: Duration::from_millis(timeout_ms),
         }
+    }
+
+    async fn stock(&self, empresa_id: &str, sku: &str) -> Option<Option<i64>> {
+        let respuesta = self
+            .cliente()
+            .post(format!("{}/internal/inventario/stock", self.inventory_url))
+            .header("x-internal-key", &self.clave)
+            .json(&serde_json::json!({
+                "empresa_id": empresa_id,
+                "skus": [sku],
+            }))
+            .send()
+            .await
+            .ok()?;
+        if !respuesta.status().is_success() {
+            return None;
+        }
+        let lineas = respuesta.json::<Vec<StockV2>>().await.ok()?;
+        Some(
+            lineas
+                .into_iter()
+                .find(|linea| linea.sku.eq_ignore_ascii_case(sku))
+                .map(|linea| linea.stock),
+        )
+    }
+
+    fn cliente(&self) -> reqwest::Client {
+        reqwest::Client::builder()
+            .timeout(self.timeout)
+            .build()
+            .unwrap_or_else(|_| reqwest::Client::new())
     }
 }
 
 #[async_trait]
 impl Catalogo for CatalogoHttp {
     async fn item(&self, item_id: &str) -> Option<ItemExterno> {
-        let cliente = reqwest::Client::builder()
-            .timeout(self.timeout)
-            .build()
-            .ok()?;
+        let cliente = self.cliente();
         let respuesta = cliente
             .get(format!(
-                "{}/internal/items/{}",
-                self.url,
+                "{}/internal/v2/items/{}",
+                self.item_url,
                 urlencoding::encode(item_id)
             ))
             .header("x-internal-key", &self.clave)
@@ -273,7 +340,46 @@ impl Catalogo for CatalogoHttp {
         if !respuesta.status().is_success() {
             return None;
         }
-        respuesta.json::<ItemExterno>().await.ok()
+        let item = respuesta.json::<ItemV2>().await.ok()?;
+
+        let respuesta = cliente
+            .get(format!(
+                "{}/internal/items/{}/precio?empresa_id={}",
+                self.pricing_url,
+                urlencoding::encode(item_id),
+                urlencoding::encode(&item.empresa_id)
+            ))
+            .header("x-internal-key", &self.clave)
+            .send()
+            .await
+            .ok()?;
+        if !respuesta.status().is_success() {
+            return None;
+        }
+        let precio = respuesta.json::<PrecioV2>().await.ok()?;
+        let precio = Money::desde_centavos(precio.precio_unitario_cents)
+            .ok()?
+            .string();
+
+        let stock = if item.track_inventory {
+            self.stock(&item.empresa_id, &item.codigo).await?
+        } else {
+            None
+        };
+
+        Some(ItemExterno {
+            item_id: item.item_id,
+            empresa_id: item.empresa_id,
+            tipo: item.tipo,
+            codigo: item.codigo,
+            nombre: item.nombre,
+            precio,
+            stock,
+            track_inventory: item.track_inventory,
+            duration_minutes: item.duration_minutes,
+            atributos: item.atributos,
+            estado: item.estado,
+        })
     }
 }
 

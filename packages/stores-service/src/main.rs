@@ -62,6 +62,8 @@ async fn main() {
     ));
     let catalogo = Arc::new(CatalogoHttp::nueva(
         config.item_service_url.clone(),
+        config.pricing_service_url.clone(),
+        config.inventory_service_url.clone(),
         config.internal_api_key.clone(),
         config.internal_request_timeout_ms,
     ));
