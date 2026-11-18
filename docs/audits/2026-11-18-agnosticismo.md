@@ -355,3 +355,17 @@ Para el MVP, el orden correcto es:
 
 Ese orden suma puntos reales al MVP sin reescribir la plataforma ni romper el
 marketplace que ya funciona.
+
+## 10. Seguimiento de implementación
+
+- **P0.1 — Comisión 0 y respuesta consistente: implementado en esta rama**
+  (`feat/agnosticismo-auditoria`). `money::comision` acepta `tasa = 0` en
+  orders, commissions y finance; `COMMISSION_RATE=0` es válido en orders y
+  commissions; la vista HTTP de la orden usa `self.tasa_comision` en lugar del
+  `0.12` hardcodeado. Cubierto con tests unitarios en los tres crates.
+- **P0.2 — Manifiesto de features por negocio:** pendiente.
+- **P0.3 — Documentación de estado:** este documento queda como fuente vigente
+  para el diagnóstico de agnosticismo.
+- **P1 — Modo venta directa, ubicación de despacho y promociones:** pendiente
+  de decisión de producto y ADR.
+
