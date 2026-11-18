@@ -1638,6 +1638,95 @@ async fn debe_confirmar_y_rechazar_pagos_manuales() {
 }
 
 #[tokio::test]
+async fn debe_reembolsar_conciliar_y_contracargar_por_http() {
+    use axum::body::Body;
+    use axum::http::{Request, StatusCode};
+    use tower::ServiceExt;
+    let _guard = DB_LOCK.lock().await;
+    let Some(db) = con_bd().await else { return };
+    let router = router_completo(Arc::clone(&db), 10).await;
+
+    let mut request = Request::post("/api/v2/orders").header("content-type", "application/json");
+    for (clave, valor) in headers_comprador() {
+        request = request.header(clave, valor);
+    }
+    let response = router
+        .clone()
+        .oneshot(
+            request
+                .body(Body::from(
+                    json!({"tipo_orden":"compra","items":[{"oferta_id":OFERTA,"cantidad":2}]})
+                        .to_string(),
+                ))
+                .expect("request"),
+        )
+        .await
+        .expect("response");
+    assert_eq!(response.status(), StatusCode::CREATED);
+    let orden = json_de(response).await;
+    let order_id = orden["data"]["id"].as_str().expect("order_id");
+    let pago_id: Uuid =
+        sqlx::query_scalar("SELECT id FROM orders.pagos WHERE order_id = $1::uuid")
+            .bind(Uuid::parse_str(order_id).expect("uuid"))
+            .fetch_one(db.pool())
+            .await
+            .expect("pago");
+
+    let mut request = Request::post(format!("/api/v2/admin/pagos/{pago_id}/reembolsar"))
+        .header("content-type", "application/json");
+    for (clave, valor) in headers_admin() {
+        request = request.header(clave, valor);
+    }
+    let response = router
+        .clone()
+        .oneshot(
+            request
+                .body(Body::from(r#"{"monto_cents":5000,"motivo":"prueba"}"#))
+                .expect("request"),
+        )
+        .await
+        .expect("response");
+    assert_eq!(response.status(), StatusCode::OK);
+    let pago = json_de(response).await;
+    assert_eq!(pago["data"]["estado"], "reembolsado_parcial");
+    assert_eq!(pago["data"]["monto_reembolsado_cents"], 5000);
+
+    let mut request = Request::post(format!("/api/v2/admin/pagos/{pago_id}/conciliar"));
+    for (clave, valor) in headers_admin() {
+        request = request.header(clave, valor);
+    }
+    let response = router
+        .clone()
+        .oneshot(request.body(Body::empty()).expect("request"))
+        .await
+        .expect("response");
+    assert_eq!(response.status(), StatusCode::OK);
+    let pago = json_de(response).await;
+    assert!(pago["data"]["conciliado_en"].is_string());
+
+    let (_, pago_contracargo) = crear_orden_manual(router.clone()).await;
+    let mut request = Request::post(format!(
+        "/api/v2/admin/pagos/{pago_contracargo}/contracargo"
+    ))
+    .header("content-type", "application/json");
+    for (clave, valor) in headers_admin() {
+        request = request.header(clave, valor);
+    }
+    let response = router
+        .clone()
+        .oneshot(
+            request
+                .body(Body::from(r#"{"monto_cents":10000,"motivo":"fraude"}"#))
+                .expect("request"),
+        )
+        .await
+        .expect("response");
+    assert_eq!(response.status(), StatusCode::OK);
+    let pago = json_de(response).await;
+    assert_eq!(pago["data"]["estado"], "contracargo");
+}
+
+#[tokio::test]
 async fn debe_procesar_un_webhook_de_pago_con_secreto() {
     use axum::body::Body;
     use axum::http::{Request, StatusCode};
