@@ -24926,6 +24926,668 @@
           "Tiendas"
         ]
       }
+    },
+    "/api/v2/tienda/items/{item_id}/resenas": {
+      "get": {
+        "operationId": "ResenasController_listarPublicas",
+        "parameters": [
+          {
+            "name": "item_id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "pagina",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "name": "limite",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Reseñas publicadas",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
+                  "properties": {
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "items": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "id": {
+                                "type": "string",
+                                "format": "uuid"
+                              },
+                              "empresa_id": {
+                                "type": "string",
+                                "format": "uuid"
+                              },
+                              "item_id": {
+                                "type": "string",
+                                "format": "uuid"
+                              },
+                              "comprador_id": {
+                                "type": "string",
+                                "format": "uuid"
+                              },
+                              "calificacion": {
+                                "type": "integer"
+                              },
+                              "titulo": {
+                                "type": "string"
+                              },
+                              "comentario": {
+                                "type": "string"
+                              },
+                              "estado": {
+                                "type": "string"
+                              },
+                              "creado_en": {
+                                "type": "string",
+                                "format": "date-time"
+                              },
+                              "actualizado_en": {
+                                "type": "string",
+                                "format": "date-time"
+                              }
+                            }
+                          }
+                        },
+                        "total": {
+                          "type": "integer"
+                        },
+                        "pagina": {
+                          "type": "integer"
+                        },
+                        "limite": {
+                          "type": "integer"
+                        },
+                        "paginas": {
+                          "type": "integer"
+                        },
+                        "promedio": {
+                          "type": "number"
+                        }
+                      }
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/MetaRespuesta"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "summary": "Listar reseñas públicas de un item",
+        "tags": [
+          "Reseñas"
+        ]
+      }
+    },
+    "/api/v2/comprador/resenas": {
+      "get": {
+        "operationId": "ResenasController_listarPropias",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Reseñas del comprador",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
+                  "properties": {
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "format": "uuid"
+                          },
+                          "empresa_id": {
+                            "type": "string",
+                            "format": "uuid"
+                          },
+                          "item_id": {
+                            "type": "string",
+                            "format": "uuid"
+                          },
+                          "comprador_id": {
+                            "type": "string",
+                            "format": "uuid"
+                          },
+                          "calificacion": {
+                            "type": "integer"
+                          },
+                          "titulo": {
+                            "type": "string"
+                          },
+                          "comentario": {
+                            "type": "string"
+                          },
+                          "estado": {
+                            "type": "string"
+                          },
+                          "creado_en": {
+                            "type": "string",
+                            "format": "date-time"
+                          },
+                          "actualizado_en": {
+                            "type": "string",
+                            "format": "date-time"
+                          }
+                        }
+                      }
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/MetaRespuesta"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Listar mis reseñas",
+        "tags": [
+          "Reseñas"
+        ]
+      },
+      "post": {
+        "operationId": "ResenasController_crear",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "item_id": {
+                    "type": "string",
+                    "format": "uuid"
+                  },
+                  "calificacion": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 5
+                  },
+                  "titulo": {
+                    "type": "string"
+                  },
+                  "comentario": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "item_id",
+                  "calificacion"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Reseña creada",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
+                  "properties": {
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        "empresa_id": {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        "item_id": {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        "comprador_id": {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        "calificacion": {
+                          "type": "integer"
+                        },
+                        "titulo": {
+                          "type": "string"
+                        },
+                        "comentario": {
+                          "type": "string"
+                        },
+                        "estado": {
+                          "type": "string"
+                        },
+                        "creado_en": {
+                          "type": "string",
+                          "format": "date-time"
+                        },
+                        "actualizado_en": {
+                          "type": "string",
+                          "format": "date-time"
+                        }
+                      }
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/MetaRespuesta"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Crear reseña",
+        "tags": [
+          "Reseñas"
+        ]
+      }
+    },
+    "/api/v2/comprador/resenas/{id}": {
+      "patch": {
+        "operationId": "ResenasController_actualizar",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "calificacion": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 5
+                  },
+                  "titulo": {
+                    "type": "string"
+                  },
+                  "comentario": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Reseña actualizada",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
+                  "properties": {
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        "empresa_id": {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        "item_id": {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        "comprador_id": {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        "calificacion": {
+                          "type": "integer"
+                        },
+                        "titulo": {
+                          "type": "string"
+                        },
+                        "comentario": {
+                          "type": "string"
+                        },
+                        "estado": {
+                          "type": "string"
+                        },
+                        "creado_en": {
+                          "type": "string",
+                          "format": "date-time"
+                        },
+                        "actualizado_en": {
+                          "type": "string",
+                          "format": "date-time"
+                        }
+                      }
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/MetaRespuesta"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Actualizar mi reseña",
+        "tags": [
+          "Reseñas"
+        ]
+      },
+      "delete": {
+        "operationId": "ResenasController_eliminar",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Reseña eliminada"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Eliminar mi reseña",
+        "tags": [
+          "Reseñas"
+        ]
+      }
+    },
+    "/api/v2/admin/resenas/{id}": {
+      "patch": {
+        "operationId": "ResenasController_moderar",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "estado": {
+                    "type": "string",
+                    "enum": [
+                      "pendiente",
+                      "publicada",
+                      "rechazada"
+                    ]
+                  }
+                },
+                "required": [
+                  "estado"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Reseña moderada",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
+                  "properties": {
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        "empresa_id": {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        "item_id": {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        "comprador_id": {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        "calificacion": {
+                          "type": "integer"
+                        },
+                        "titulo": {
+                          "type": "string"
+                        },
+                        "comentario": {
+                          "type": "string"
+                        },
+                        "estado": {
+                          "type": "string"
+                        },
+                        "creado_en": {
+                          "type": "string",
+                          "format": "date-time"
+                        },
+                        "actualizado_en": {
+                          "type": "string",
+                          "format": "date-time"
+                        }
+                      }
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/MetaRespuesta"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Moderar reseña",
+        "tags": [
+          "Reseñas"
+        ]
+      }
+    },
+    "/api/v2/comprador/favoritos": {
+      "get": {
+        "operationId": "FavoritosController_listar",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Favoritos",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
+                  "properties": {
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "type": "object"
+                      }
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/MetaRespuesta"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Listar favoritos",
+        "tags": [
+          "Wishlist"
+        ]
+      },
+      "post": {
+        "operationId": "FavoritosController_agregar",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "item_id": {
+                    "type": "string",
+                    "format": "uuid"
+                  }
+                },
+                "required": [
+                  "item_id"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": "Favorito agregado"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Agregar favorito",
+        "tags": [
+          "Wishlist"
+        ]
+      }
+    },
+    "/api/v2/comprador/favoritos/{item_id}": {
+      "delete": {
+        "operationId": "FavoritosController_eliminar",
+        "parameters": [
+          {
+            "name": "item_id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Favorito eliminado"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Eliminar favorito",
+        "tags": [
+          "Wishlist"
+        ]
+      }
     }
   },
   "components": {

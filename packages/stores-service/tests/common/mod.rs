@@ -153,6 +153,27 @@ pub async fn provisionar(url: &str) {
           empresa_id uuid NOT NULL,
           es_predeterminado boolean NOT NULL DEFAULT false
         );
+
+        CREATE TABLE stores.resenas (
+          id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+          empresa_id uuid NOT NULL,
+          item_id uuid NOT NULL,
+          comprador_id uuid NOT NULL,
+          calificacion integer NOT NULL,
+          titulo text NOT NULL DEFAULT '',
+          comentario text NOT NULL DEFAULT '',
+          estado text NOT NULL DEFAULT 'pendiente',
+          creado_en timestamptz NOT NULL DEFAULT NOW(),
+          actualizado_en timestamptz NOT NULL DEFAULT NOW(),
+          UNIQUE (item_id, comprador_id)
+        );
+        CREATE TABLE stores.favoritos (
+          comprador_id uuid NOT NULL,
+          item_id uuid NOT NULL,
+          empresa_id uuid NOT NULL,
+          creado_en timestamptz NOT NULL DEFAULT NOW(),
+          PRIMARY KEY (comprador_id, item_id)
+        );
         "#,
     )
     .execute(&pool)

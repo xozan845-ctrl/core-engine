@@ -105,6 +105,7 @@ async fn main() {
         temas,
         storage,
         catalogo,
+        Arc::clone(&db),
         tiendas,
         ofertas,
     );
