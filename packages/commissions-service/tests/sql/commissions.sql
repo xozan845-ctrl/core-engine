@@ -16,6 +16,7 @@ CREATE TABLE IF NOT EXISTS commissions.comisiones (
   monto_vendedor_cents     integer NOT NULL,
   monto_empresario_cents   integer,
   participacion_porcentaje integer CHECK (participacion_porcentaje BETWEEN 0 AND 100),
+  cantidad                 integer NOT NULL DEFAULT 1,
   estado                   text NOT NULL DEFAULT 'acreditada'
                              CHECK (estado IN ('acreditada', 'liquidada', 'compensada')),
   creado_en                timestamptz NOT NULL DEFAULT NOW()
@@ -100,3 +101,6 @@ CREATE TABLE IF NOT EXISTS identity.negocios (
   id     uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   nombre text NOT NULL
 );
+
+ALTER TABLE commissions.comisiones
+  ADD COLUMN IF NOT EXISTS cantidad integer NOT NULL DEFAULT 1;

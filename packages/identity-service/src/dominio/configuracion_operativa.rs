@@ -28,6 +28,8 @@ pub struct ConfiguracionOperativa {
     pub fulfillment: Vec<String>,
     pub requiere_agenda: bool,
     pub trazabilidad: bool,
+    pub requiere_vendedor: bool,
+    pub comision: bool,
 }
 
 pub struct ConfiguracionOperativaService {
@@ -85,7 +87,8 @@ impl ConfiguracionOperativaService {
         }
         tx.commit().await.map_err(interno)?;
 
-        let (items, fulfillment, requiere_agenda, trazabilidad) = combinar(&modelos);
+        let (items, fulfillment, requiere_agenda, trazabilidad, requiere_vendedor, comision) =
+            combinar(&modelos);
         Ok(ConfiguracionOperativa {
             empresa_id: empresa_id.to_string(),
             vertical_id,
@@ -95,17 +98,23 @@ impl ConfiguracionOperativaService {
             fulfillment,
             requiere_agenda,
             trazabilidad,
+            requiere_vendedor,
+            comision,
         })
     }
 }
 
 /// Une los defaults de todos los modelos del pack. Listas vacías significan
-/// "sin restricción" para no romper packs antiguos sin `config`.
-fn combinar(modelos: &[(String, Value)]) -> (Vec<String>, Vec<String>, bool, bool) {
+/// "sin restricción" para no romper packs antiguos sin `config`. Los flags
+/// ausentes conservan el comportamiento de marketplace (`true`); basta que un
+/// modelo declare `false` para desactivarlo en el pack.
+fn combinar(modelos: &[(String, Value)]) -> (Vec<String>, Vec<String>, bool, bool, bool, bool) {
     let mut items = Vec::new();
     let mut fulfillment = Vec::new();
     let mut requiere_agenda = false;
     let mut trazabilidad = false;
+    let mut requiere_vendedor = true;
+    let mut comision = true;
     for (_, config) in modelos {
         if let Some(lista) = config.get("items").and_then(Value::as_array) {
             items.extend(lista.iter().filter_map(Value::as_str).map(str::to_string));
@@ -119,12 +128,25 @@ fn combinar(modelos: &[(String, Value)]) -> (Vec<String>, Vec<String>, bool, boo
         if config.get("trazabilidad").and_then(Value::as_bool) == Some(true) {
             trazabilidad = true;
         }
+        if config.get("requiere_vendedor").and_then(Value::as_bool) == Some(false) {
+            requiere_vendedor = false;
+        }
+        if config.get("comision").and_then(Value::as_bool) == Some(false) {
+            comision = false;
+        }
     }
     items.sort();
     items.dedup();
     fulfillment.sort();
     fulfillment.dedup();
-    (items, fulfillment, requiere_agenda, trazabilidad)
+    (
+        items,
+        fulfillment,
+        requiere_agenda,
+        trazabilidad,
+        requiere_vendedor,
+        comision,
+    )
 }
 
 fn interno(error: sqlx::Error) -> ApiError {
@@ -154,20 +176,42 @@ mod tests {
                 }),
             ),
         ];
-        let (items, fulfillment, agenda, trazabilidad) = combinar(&modelos);
+        let (items, fulfillment, agenda, trazabilidad, requiere_vendedor, comision) =
+            combinar(&modelos);
         assert_eq!(items, vec!["producto", "servicio"]);
         assert_eq!(fulfillment, vec!["delivery", "pickup"]);
         assert!(agenda);
         assert!(trazabilidad);
+        assert!(requiere_vendedor);
+        assert!(comision);
     }
 
     #[test]
     fn debe_devolver_listas_vacias_sin_config() {
-        let (items, fulfillment, agenda, trazabilidad) =
+        let (items, fulfillment, agenda, trazabilidad, requiere_vendedor, comision) =
             combinar(&[("comercio".to_string(), json!({}))]);
         assert!(items.is_empty());
         assert!(fulfillment.is_empty());
         assert!(!agenda);
         assert!(!trazabilidad);
+        assert!(requiere_vendedor);
+        assert!(comision);
+    }
+
+    #[test]
+    fn debe_desactivar_marketplace_cuando_un_modelo_declara_venta_directa() {
+        let modelos = vec![
+            ("comercio".to_string(), json!({ "items": ["producto"] })),
+            (
+                "venta_directa".to_string(),
+                json!({
+                    "requiere_vendedor": false,
+                    "comision": false
+                }),
+            ),
+        ];
+        let (_, _, _, _, requiere_vendedor, comision) = combinar(&modelos);
+        assert!(!requiere_vendedor);
+        assert!(!comision);
     }
 }

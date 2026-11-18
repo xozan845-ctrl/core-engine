@@ -1,5 +1,6 @@
 //! Router HTTP y middlewares transversales del servicio de inventario.
 
+pub mod cupones;
 pub mod empresa;
 pub mod envelope;
 pub mod internal;
@@ -104,6 +105,17 @@ pub fn build_router(state: AppState) -> Router {
                 .patch(promociones::actualizar)
                 .delete(promociones::eliminar),
         )
+        // cupones
+        .route(
+            "/api/v2/catalog/cupones",
+            get(cupones::listar).post(cupones::crear),
+        )
+        .route(
+            "/api/v2/catalog/cupones/{id}",
+            get(cupones::detalle)
+                .patch(cupones::actualizar)
+                .delete(cupones::eliminar),
+        )
         // superficie interna
         .route("/internal/items/precios", post(internal::precios_lote))
         .route("/internal/items/{id}/precio", get(internal::precio))
@@ -112,6 +124,9 @@ pub fn build_router(state: AppState) -> Router {
             axum::routing::put(internal::precio_base),
         )
         .route("/internal/items/{id}/cotizacion", get(internal::cotizacion))
+        .route("/internal/cupones/validar", post(internal::cupon_validar))
+        .route("/internal/cupones/canjear", post(internal::cupon_canjear))
+        .route("/internal/cupones/liberar", post(internal::cupon_liberar))
         .fallback(no_encontrado)
         .with_state(state.clone());
     aplicar_capas(router, state)

@@ -226,6 +226,10 @@ pub fn registrar(router: Router<AppState>) -> Router<AppState> {
             get(finanzas::jurisdicciones_listar).post(finanzas::jurisdicciones_crear),
         )
         .route(
+            "/api/v2/finanzas/configuracion-fiscal",
+            get(finanzas::configuracion_fiscal_obtener).put(finanzas::configuracion_fiscal_guardar),
+        )
+        .route(
             "/api/v2/finanzas/regimenes",
             get(finanzas::regimenes_listar).post(finanzas::regimenes_crear),
         )
@@ -265,6 +269,10 @@ pub fn registrar(router: Router<AppState>) -> Router<AppState> {
         .route(
             "/api/v2/finanzas/comprobantes/{id}/anular",
             post(finanzas::comprobante_anular),
+        )
+        .route(
+            "/api/v2/finanzas/comprobantes/{id}/pdf",
+            get(finanzas::comprobante_pdf),
         )
         // ── finanzas: modelo ────────────────────────────────────────────────
         .route(

@@ -6,7 +6,6 @@
 
 use crate::auth::UsuarioContexto;
 use crate::errors::ApiError;
-use crate::money;
 use crate::order_state::ItemOrden;
 use crate::views::{OrderView, TimelineEvento};
 use serde_json::Value;
@@ -31,7 +30,7 @@ impl Pedidos {
             let items: Vec<ItemOrden> = orden
                 .items
                 .iter()
-                .filter(|i| i.vendedor_id == usuario.user_id)
+                .filter(|i| i.vendedor_id.as_deref() == Some(usuario.user_id.as_str()))
                 .cloned()
                 .collect();
             if !items.is_empty() {
@@ -99,7 +98,7 @@ impl Pedidos {
         let items = orden
             .items
             .iter()
-            .filter(|i| i.vendedor_id == vendedor_id)
+            .filter(|i| i.vendedor_id.as_deref() == Some(vendedor_id))
             .cloned()
             .collect();
         self.recortar(orden, items)
@@ -149,13 +148,29 @@ impl Pedidos {
         if items.is_empty() {
             return Err(ApiError::acceso_denegado("No tiene acceso a esta orden."));
         }
-        let total = self.total_de(&items);
-        let comision = money::comision(total, self.tasa_comision)?;
+        let total_bruto = self.total_de(&items);
+        let bruto_orden = orden
+            .total_cents
+            .saturating_add(orden.descuento_cupon_cents)
+            .max(1);
+        let cupon_visible = if orden.descuento_cupon_cents > 0 {
+            ((orden.descuento_cupon_cents as f64 * total_bruto as f64) / bruto_orden as f64).round()
+                as i64
+        } else {
+            0
+        };
+        let total = total_bruto.saturating_sub(cupon_visible);
+        let comision = if orden.total_cents <= 0 {
+            0
+        } else {
+            ((orden.comision_cents as f64 * total as f64) / orden.total_cents as f64).round() as i64
+        };
         Ok(OrderView {
             vendedor_id: items[0].vendedor_id.clone(),
             tienda_id: items[0].tienda_id.clone(),
             total_cents: total,
             comision_cents: comision,
+            descuento_cupon_cents: cupon_visible,
             items,
             ..orden
         })
@@ -164,7 +179,11 @@ impl Pedidos {
     fn total_de(&self, items: &[ItemOrden]) -> i64 {
         items
             .iter()
-            .map(|item| item.precio_unitario_cents * item.cantidad)
+            .map(|item| {
+                item.precio_unitario_cents
+                    .saturating_mul(item.cantidad)
+                    .saturating_sub(item.descuento_cents)
+            })
             .sum()
     }
 
@@ -176,6 +195,10 @@ impl Pedidos {
                     .and_then(Value::as_i64)
                     .unwrap_or(0)
                     * item.get("cantidad").and_then(Value::as_i64).unwrap_or(0)
+                    - item
+                        .get("descuento_cents")
+                        .and_then(Value::as_i64)
+                        .unwrap_or(0)
             })
             .sum()
     }
@@ -194,11 +217,15 @@ mod tests {
             producto_nombre: "Producto".into(),
             cantidad,
             precio_unitario_cents: precio,
-            vendedor_id: vendedor.into(),
+            descuento_cents: 0,
+            promocion_id: None,
+            vendedor_id: Some(vendedor.into()),
             tienda_id: "t-1".into(),
             empresa_id: empresa.into(),
             negocio_id: None,
             participacion_porcentaje: Some(10),
+            comision: true,
+            ubicacion_id: None,
             item_type: "producto".into(),
             item_id: "i-1".into(),
             fulfillment: None,
@@ -209,7 +236,7 @@ mod tests {
     fn orden() -> OrderView {
         OrderView {
             id: "o-1".into(),
-            vendedor_id: "v-1".into(),
+            vendedor_id: Some("v-1".into()),
             comprador_id: "c-1".into(),
             parte_id: None,
             tienda_id: "t-1".into(),
@@ -217,6 +244,8 @@ mod tests {
             estado: "pagada".into(),
             total_cents: 300,
             comision_cents: 36,
+            descuento_cupon_cents: 0,
+            cupon_codigo: None,
             moneda: "NIO".into(),
             items: vec![
                 item("of-1", "v-1", "e-1", 100, 1),
@@ -250,6 +279,26 @@ mod tests {
         assert_eq!(recortada.items.len(), 1);
         assert_eq!(recortada.total_cents, 100);
         assert_eq!(recortada.comision_cents, 12);
+    }
+
+    #[test]
+    fn debe_repartir_el_cupon_al_recortar_la_orden() {
+        let pedidos = Pedidos {
+            tasa_comision: 0.12,
+        };
+        let mut con_cupon = orden();
+        con_cupon.descuento_cupon_cents = 30;
+        con_cupon.cupon_codigo = Some("VERANO".into());
+        con_cupon.total_cents = 270;
+        let usuario = UsuarioContexto {
+            user_id: "v-1".into(),
+            rol: "vendedor".into(),
+            ..Default::default()
+        };
+        let recortada = pedidos.detalle_para(con_cupon, &usuario).expect("acceso");
+        assert_eq!(recortada.descuento_cupon_cents, 10);
+        assert_eq!(recortada.total_cents, 90);
+        assert_eq!(recortada.cupon_codigo.as_deref(), Some("VERANO"));
     }
 
     #[test]

@@ -16,6 +16,7 @@ pub mod config;
 pub mod consumer;
 pub mod contratos;
 pub mod db;
+pub mod devoluciones;
 pub mod entregas;
 pub mod errors;
 pub mod event_store;

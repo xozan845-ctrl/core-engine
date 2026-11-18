@@ -602,6 +602,68 @@ impl Precios {
         }))
     }
 
+    /// Devuelve la primera promoción vigente y aplicable a la línea. La
+    /// decisión de cuánto descontar vive en orders, que conoce el precio final
+    /// (base + margen de la oferta).
+    async fn promocion_vigente(
+        &self,
+        empresa_id: &str,
+        item_id: &str,
+        sku: &str,
+        cantidad: i64,
+    ) -> Result<Option<Value>, ApiError> {
+        let mut tx = self.db.transaccion().await.map_err(interno)?;
+        let filas = sqlx::query(
+            "SELECT id, nombre, tipo, cantidad_requerida, cantidad_gratis,
+                    descuento_porcentaje
+               FROM pricing.promociones
+              WHERE empresa_id = $1::uuid AND estado = 'activo'
+                AND eliminado_en IS NULL
+                AND fecha_desde <= CURRENT_DATE AND fecha_hasta >= CURRENT_DATE
+                AND (item_id = $2::uuid OR ($3 <> '' AND upper(sku) = upper($3)))
+              ORDER BY creado_en DESC, id",
+        )
+        .bind(empresa_id)
+        .bind(item_id)
+        .bind(sku)
+        .fetch_all(&mut *tx)
+        .await
+        .map_err(interno)?;
+        tx.commit().await.map_err(interno)?;
+
+        for fila in filas {
+            let tipo: String = fila.try_get("tipo").map_err(interno)?;
+            let requerida: i64 = fila
+                .try_get::<Option<i32>, _>("cantidad_requerida")
+                .map_err(interno)?
+                .map(i64::from)
+                .unwrap_or(match tipo.as_str() {
+                    "2x1" => 2,
+                    _ => 1,
+                });
+            if cantidad < requerida {
+                continue;
+            }
+            return Ok(Some(json!({
+                "id": fila
+                    .try_get::<uuid::Uuid, _>("id")
+                    .map(|id| id.to_string())
+                    .map_err(interno)?,
+                "nombre": fila.try_get::<String, _>("nombre").map_err(interno)?,
+                "tipo": tipo,
+                "cantidad_requerida": requerida,
+                "cantidad_gratis": fila
+                    .try_get::<Option<i32>, _>("cantidad_gratis")
+                    .map_err(interno)?
+                    .map(i64::from),
+                "descuento_porcentaje": fila
+                    .try_get::<Option<i32>, _>("descuento_porcentaje")
+                    .map_err(interno)?,
+            })));
+        }
+        Ok(None)
+    }
+
     /// Resuelve precios por lote con el shape del endpoint interno:
     /// `{empresa_id, lista_codigo?, segmento_codigo?, lineas:[{clave,item_id,cantidad}]}`.
     pub async fn precios_lote(&self, input: &Value) -> Result<Value, ApiError> {
@@ -639,9 +701,17 @@ impl Precios {
         for linea in lineas {
             let clave = linea.get("clave").map(texto_js).unwrap_or_default();
             let item_id = linea.get("item_id").map(texto_js).unwrap_or_default();
+            let sku = linea.get("sku").map(texto_js).unwrap_or_default();
             let cantidad = linea.get("cantidad").cloned().unwrap_or(Value::Null);
             let resuelto = self
                 .precio_de(&empresa, &item_id, &cantidad, &filtros)
+                .await?;
+            let cantidad_resuelta = resuelto
+                .get("cantidad")
+                .and_then(Value::as_i64)
+                .unwrap_or(0);
+            let promocion = self
+                .promocion_vigente(&empresa, &item_id, &sku, cantidad_resuelta)
                 .await?;
             precios.push(json!({
                 "clave": clave,
@@ -654,6 +724,7 @@ impl Precios {
                     .get("precio_total_cents")
                     .cloned()
                     .unwrap_or(Value::Null),
+                "promocion": promocion,
             }));
         }
         Ok(json!({ "precios": precios }))

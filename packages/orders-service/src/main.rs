@@ -87,6 +87,7 @@ async fn main() {
         tasa_comision: config.tasa_comision,
     });
     let entregas = Arc::new(EntregasDigitales::nueva(Arc::clone(&db)));
+    let pagos = Arc::new(Pagos::con_config(Arc::clone(&db), &config));
     let checkout = Arc::new(Checkout {
         db: Arc::clone(&db),
         clientes: Arc::clone(&clientes),
@@ -94,7 +95,7 @@ async fn main() {
         vistas: Arc::clone(&vistas),
         pedidos: Arc::clone(&pedidos),
         outbox: Outbox::nueva(&outbox_tabla),
-        pagos: Arc::new(Pagos::nueva(Arc::clone(&db))),
+        pagos: Arc::clone(&pagos),
         tipos: Arc::new(TiposOrden::nueva(Arc::clone(&db))),
         fulfillments: Arc::new(Fulfillments::nueva(Arc::clone(&db))),
         tasa_comision: config.tasa_comision,
@@ -102,7 +103,6 @@ async fn main() {
     let contratos = Arc::new(Contratos::nueva(Arc::clone(&db)));
     let suscripciones = Arc::new(Suscripciones::nueva(Arc::clone(&db), Arc::clone(&checkout)));
     let salon = Arc::new(Salon::nueva(Arc::clone(&db)));
-    let pagos = Arc::new(Pagos::nueva(Arc::clone(&db)));
     let tipos = Arc::new(TiposOrden::nueva(Arc::clone(&db)));
     let fulfillments = Arc::new(Fulfillments::nueva(Arc::clone(&db)));
     let fidelizacion = Arc::new(Fidelizacion::nueva(Arc::clone(&db)));

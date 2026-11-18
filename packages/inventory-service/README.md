@@ -83,7 +83,8 @@ catálogo maestro es de `item-service`; el precio es de `pricing-service`.
 - Una empresa puede tener una ubicación **predeterminada**. Las entradas usan
   la predeterminada o, si no existe, la primera activa; si no hay ninguna, el
   alta de **stock inicial** crea `principal` y las operaciones de delta
-  rechazan con `SIN_UBICACION`.
+  rechazan con `SIN_UBICACION`. Si el checkout envía `ubicacion_id`, la
+  reserva y el descuento se hacen **solo** en esa ubicación (ADR-0024).
 - `stock >= 0` salvo que la configuración permita negativos; aun así la saga de
   checkout exige disponibilidad real.
 - Los lotes vencidos **no** se consumen.
@@ -244,3 +245,7 @@ cargo test
 - [Contrato público](../../docs/openapi/inventory-service/public.openapi.json)
 - [Contrato interno](../../docs/openapi/inventory-service/internal.openapi.json)
 - [README de paquetes](../README.md)
+
+- `POST /internal/inventario/devolucion` (servicio a servicio): restock parcial
+  de una RMA, idempotente por `devolucion_id`; reintegra stock por ubicación,
+  series vendidas y lotes reservados.

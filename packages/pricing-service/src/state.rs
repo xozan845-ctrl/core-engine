@@ -2,6 +2,7 @@
 
 use crate::auth::{Capacidades, CapacidadesNoDisponible};
 use crate::config::Config;
+use crate::cupones::Cupones;
 use crate::db::Db;
 use crate::metrics::Metrics;
 use crate::precios::Precios;
@@ -19,6 +20,7 @@ pub struct AppState {
     pub precios: Option<Arc<Precios>>,
     pub tarifas: Option<Arc<Tarifas>>,
     pub promociones: Option<Arc<Promociones>>,
+    pub cupones: Option<Arc<Cupones>>,
     pub inicio: Instant,
 }
 
@@ -32,6 +34,7 @@ impl AppState {
             precios: None,
             tarifas: None,
             promociones: None,
+            cupones: None,
             inicio: Instant::now(),
         }
     }
@@ -49,6 +52,7 @@ impl AppState {
             precios: Some(Arc::new(Precios::nueva(Arc::clone(&db)))),
             tarifas: Some(Arc::new(Tarifas::nueva(Arc::clone(&db)))),
             promociones: Some(Arc::new(Promociones::nueva(Arc::clone(&db)))),
+            cupones: Some(Arc::new(Cupones::nueva(Arc::clone(&db)))),
             db: Some(db),
             inicio: Instant::now(),
         }
@@ -74,6 +78,12 @@ impl AppState {
 
     pub fn promociones(&self) -> Result<&Arc<Promociones>, crate::errors::ApiError> {
         self.promociones
+            .as_ref()
+            .ok_or_else(crate::errors::ApiError::interno)
+    }
+
+    pub fn cupones(&self) -> Result<&Arc<Cupones>, crate::errors::ApiError> {
+        self.cupones
             .as_ref()
             .ok_or_else(crate::errors::ApiError::interno)
     }

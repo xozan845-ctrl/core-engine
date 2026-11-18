@@ -61,6 +61,11 @@ pub async fn stock_lote(
                 .collect::<Vec<_>>()
         })
         .unwrap_or_default();
+    let ubicacion_id = cuerpo
+        .get("ubicacion_id")
+        .and_then(Value::as_str)
+        .map(str::trim)
+        .filter(|valor| !valor.is_empty());
     if empresa_id.is_empty() || skus.is_empty() {
         return Err(ApiError::validacion(serde_json::json!([{
             "campo": "empresa_id/skus",
@@ -68,7 +73,10 @@ pub async fn stock_lote(
         }])));
     }
     ok(Value::Array(
-        state.inventario()?.stock_lote(&empresa_id, &skus).await?,
+        state
+            .inventario()?
+            .stock_lote(&empresa_id, &skus, ubicacion_id)
+            .await?,
     ))
 }
 
@@ -120,4 +128,60 @@ pub async fn stock_inicial(
             cuerpo.get("negocio_id").and_then(Value::as_str),
         )
         .await?)
+}
+
+/// `POST /internal/inventario/devolucion` — restock parcial idempotente.
+pub async fn devolucion(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    Json(cuerpo): Json<Value>,
+) -> Result<Response, ApiError> {
+    exigir_clave(&state, &headers)?;
+    let order_id = cuerpo
+        .get("order_id")
+        .and_then(Value::as_str)
+        .filter(|valor| !valor.is_empty())
+        .ok_or_else(|| {
+            ApiError::validacion(serde_json::json!([{
+                "campo": "order_id",
+                "restricciones": ["isUuid"],
+            }]))
+        })?;
+    let devolucion_id = cuerpo
+        .get("devolucion_id")
+        .and_then(Value::as_str)
+        .filter(|valor| !valor.is_empty())
+        .ok_or_else(|| {
+            ApiError::validacion(serde_json::json!([{
+                "campo": "devolucion_id",
+                "restricciones": ["isUuid"],
+            }]))
+        })?;
+    let items = cuerpo
+        .get("items")
+        .and_then(Value::as_array)
+        .cloned()
+        .unwrap_or_default();
+    if items.is_empty() {
+        return Err(ApiError::validacion(serde_json::json!([{
+            "campo": "items",
+            "restricciones": ["arrayMinSize"],
+        }])));
+    }
+    let mut tx = state
+        .db
+        .as_ref()
+        .ok_or_else(ApiError::interno)?
+        .transaccion()
+        .await
+        .map_err(crate::db::interno)?;
+    crate::reservas::Reservas::reintegrar_lineas_en_transaccion(
+        &mut tx,
+        order_id,
+        devolucion_id,
+        &Value::Array(items),
+    )
+    .await?;
+    tx.commit().await.map_err(crate::db::interno)?;
+    ok(serde_json::json!({ "ok": true }))
 }

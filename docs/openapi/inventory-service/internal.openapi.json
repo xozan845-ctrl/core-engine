@@ -118,6 +118,12 @@
                     "items": {
                       "type": "string"
                     }
+                  },
+                  "ubicacion_id": {
+                    "type": "string",
+                    "format": "uuid",
+                    "nullable": true,
+                    "description": "Acota el stock y los seriales a una ubicación"
                   }
                 },
                 "required": [
@@ -218,6 +224,93 @@
             }
           }
         }
+      }
+    },
+    "/internal/inventario/devolucion": {
+      "post": {
+        "operationId": "InternalController_devolucion",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "order_id": {
+                    "type": "string",
+                    "format": "uuid"
+                  },
+                  "devolucion_id": {
+                    "type": "string",
+                    "format": "uuid"
+                  },
+                  "items": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "empresa_id": {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        "sku": {
+                          "type": "string"
+                        },
+                        "cantidad": {
+                          "type": "integer"
+                        },
+                        "ubicacion_id": {
+                          "type": "string",
+                          "format": "uuid",
+                          "nullable": true
+                        }
+                      },
+                      "required": [
+                        "empresa_id",
+                        "sku",
+                        "cantidad"
+                      ]
+                    }
+                  }
+                },
+                "required": [
+                  "order_id",
+                  "devolucion_id",
+                  "items"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Stock reintegrado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "ok": {
+                      "type": "boolean"
+                    }
+                  },
+                  "required": [
+                    "ok"
+                  ]
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "internalKey": []
+          }
+        ],
+        "summary": "Reintegrar stock de una devolución parcial",
+        "tags": [
+          "Inventario (interno)"
+        ]
       }
     }
   },

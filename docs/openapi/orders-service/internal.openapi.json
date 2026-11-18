@@ -454,15 +454,37 @@
             "description": "Precio unitario de venta en centavos",
             "example": 115000
           },
+          "descuento_cents": {
+            "type": "number",
+            "description": "Descuento aplicado por promoción en centavos",
+            "example": 0
+          },
+          "promocion_id": {
+            "type": "string",
+            "description": "Promoción aplicada a la línea",
+            "format": "uuid",
+            "nullable": true
+          },
           "vendedor_id": {
             "type": "string",
-            "description": "Id del vendedor",
-            "format": "uuid"
+            "description": "Id del vendedor; null en venta directa",
+            "format": "uuid",
+            "nullable": true
           },
           "tienda_id": {
             "type": "string",
             "description": "Id de la tienda",
             "format": "uuid"
+          },
+          "comision": {
+            "type": "boolean",
+            "description": "Indica si la línea genera comisión"
+          },
+          "ubicacion_id": {
+            "type": "string",
+            "description": "Bodega o sucursal desde la que se despacha la línea",
+            "format": "uuid",
+            "nullable": true
           },
           "fulfillment": {
             "type": "string",
@@ -487,7 +509,6 @@
           "producto_nombre",
           "cantidad",
           "precio_unitario_cents",
-          "vendedor_id",
           "tienda_id"
         ]
       },
@@ -501,8 +522,9 @@
           },
           "vendedor_id": {
             "type": "string",
-            "description": "Id del vendedor",
-            "format": "uuid"
+            "description": "Id del vendedor; null en venta directa",
+            "format": "uuid",
+            "nullable": true
           },
           "comprador_id": {
             "type": "string",
@@ -612,11 +634,19 @@
             "description": "Fecha de devolución (ISO 8601 UTC)",
             "nullable": true,
             "format": "date-time"
+          },
+          "cupon_codigo": {
+            "type": "string",
+            "description": "Código de cupón aplicado",
+            "nullable": true
+          },
+          "descuento_cupon_cents": {
+            "type": "integer",
+            "description": "Descuento de cupón en centavos"
           }
         },
         "required": [
           "id",
-          "vendedor_id",
           "comprador_id",
           "tienda_id",
           "estado",
