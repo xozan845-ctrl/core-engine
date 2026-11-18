@@ -1,8 +1,10 @@
 //! Router HTTP y middlewares transversales.
 
 pub mod envelope;
+pub mod favoritos;
 pub mod internal;
 pub mod ofertas;
+pub mod resenas;
 pub mod tiendas;
 pub mod validacion;
 
@@ -103,6 +105,8 @@ pub fn build_router(state: AppState) -> Router {
             post(internal::desasignar_vendedor),
         )
         .route("/internal/tiendas/{id}", get(internal::tienda_por_id))
+        .merge(resenas::rutas())
+        .merge(favoritos::rutas())
         .fallback(no_encontrado)
         .with_state(state.clone());
     aplicar_capas(router, state)

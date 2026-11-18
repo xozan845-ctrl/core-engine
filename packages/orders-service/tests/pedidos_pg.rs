@@ -6,12 +6,15 @@ use async_trait::async_trait;
 use orders_service::carrito::Carrito;
 use orders_service::checkout::{Checkout, ComandoCrear, LineaEntrada};
 use orders_service::clients::{
-    Capacidad, ClientesPort, Cotizacion, CreditoEstado, ItemStock, OfertaExterna, PreciosExternos,
+    Capacidad, ClientesPort, ConfiguracionExterna, ConfiguracionOperativa, Cotizacion,
+    CreditoEstado, CuponExterno, CuponValidado, ItemStock, OfertaExterna, PrecioLinea,
+    PreciosExternos, PromocionLinea, StockUbicacion,
 };
 use orders_service::config::Config;
 use orders_service::consumer::{PedidosConsumer, STOCK_FALLIDO, STOCK_RESERVADO};
 use orders_service::contratos::{Contratos, CrearContratoInput, FinalizarContratoInput};
 use orders_service::db::Db;
+use orders_service::devoluciones::{CrearDevolucionInput, Devoluciones, ItemDevolucionInput};
 use orders_service::entregas::EntregasDigitales;
 use orders_service::fidelizacion::Fidelizacion;
 use orders_service::fulfillments::Fulfillments;
@@ -44,6 +47,9 @@ struct ClientesFake {
     stock: i64,
     capacidades: Vec<Capacidad>,
     tasa: Option<f64>,
+    directo: bool,
+    promocion: Option<PromocionLinea>,
+    cupon: Option<CuponValidado>,
 }
 
 #[async_trait]
@@ -61,6 +67,18 @@ impl ClientesPort for ClientesFake {
         self.tasa
     }
 
+    async fn configuracion(&self, _empresa_id: &str) -> ConfiguracionExterna {
+        if self.directo {
+            ConfiguracionExterna::Ok(ConfiguracionOperativa {
+                requiere_vendedor: false,
+                comision: false,
+                ..Default::default()
+            })
+        } else {
+            ConfiguracionExterna::SinConfiguracion
+        }
+    }
+
     async fn ofertas(&self, ids: &[String]) -> Vec<OfertaExterna> {
         if ids.is_empty() {
             return Vec::new();
@@ -68,7 +86,11 @@ impl ClientesPort for ClientesFake {
         let oferta = OfertaExterna {
             id: OFERTA.to_string(),
             tienda_id: TIENDA.to_string(),
-            vendedor_id: VENDEDOR.to_string(),
+            vendedor_id: if self.directo {
+                None
+            } else {
+                Some(VENDEDOR.to_string())
+            },
             empresa_id: EMPRESA.to_string(),
             negocio_id: None,
             participacion_porcentaje: Some(10),
@@ -98,7 +120,16 @@ impl ClientesPort for ClientesFake {
         _lista_codigo: Option<&str>,
         _segmento_codigo: Option<&str>,
     ) -> PreciosExternos {
-        PreciosExternos::Ok(Vec::new())
+        match &self.promocion {
+            Some(promocion) => PreciosExternos::Ok(vec![PrecioLinea {
+                clave: OFERTA.to_string(),
+                origen: "base".to_string(),
+                precio_unitario_cents: 10_000,
+                precio_total_cents: 10_000,
+                promocion: Some(promocion.clone()),
+            }]),
+            None => PreciosExternos::Ok(Vec::new()),
+        }
     }
 
     async fn cotizacion(
@@ -147,6 +178,50 @@ impl ClientesPort for ClientesFake {
             estado: "activo".to_string(),
         }])
     }
+
+    async fn stock_ubicacion(
+        &self,
+        _empresa_id: &str,
+        _ubicacion_id: &str,
+        _skus: &[String],
+    ) -> Option<Vec<StockUbicacion>> {
+        Some(vec![StockUbicacion {
+            sku: "SKU-1".to_string(),
+            stock: self.stock,
+            seriales_disponibles: 0,
+        }])
+    }
+
+    async fn cupon_validar(
+        &self,
+        _empresa_id: &str,
+        _codigo: &str,
+        _monto_cents: i64,
+    ) -> CuponExterno {
+        match &self.cupon {
+            Some(cupon) => CuponExterno::Ok(cupon.clone()),
+            None => CuponExterno::NoDisponible,
+        }
+    }
+
+    async fn cupon_canjear(
+        &self,
+        _empresa_id: &str,
+        _codigo: &str,
+        _order_id: &str,
+        _monto_cents: i64,
+    ) -> Option<CuponValidado> {
+        self.cupon.clone()
+    }
+
+    async fn devolver_stock(
+        &self,
+        _order_id: &str,
+        _devolucion_id: &str,
+        _items: &[Value],
+    ) -> bool {
+        true
+    }
 }
 
 async fn provisionar(url: &str) {
@@ -179,7 +254,7 @@ async fn provisionar(url: &str) {
 
         CREATE TABLE orders.orden_vista (
           id uuid PRIMARY KEY,
-          vendedor_id uuid NOT NULL,
+          vendedor_id uuid,
           comprador_id uuid NOT NULL,
           parte_id uuid,
           tienda_id uuid NOT NULL,
@@ -187,6 +262,8 @@ async fn provisionar(url: &str) {
           estado text NOT NULL,
           total_cents integer NOT NULL DEFAULT 0,
           comision_cents integer NOT NULL DEFAULT 0,
+          descuento_cupon_cents integer NOT NULL DEFAULT 0,
+          cupon_codigo text,
           moneda text NOT NULL DEFAULT 'NIO',
           items_json jsonb NOT NULL DEFAULT '[]'::jsonb,
           direccion_envio jsonb,
@@ -228,7 +305,8 @@ async fn provisionar(url: &str) {
           IF NEW.tipo = 'OrderCreatedEvent' THEN
             INSERT INTO orders.orden_vista
               (id, vendedor_id, comprador_id, parte_id, tienda_id, estado,
-               total_cents, comision_cents, moneda, items_json, creado_en,
+               total_cents, comision_cents, descuento_cupon_cents, cupon_codigo,
+               moneda, items_json, creado_en,
                actualizado_en, tipo_orden, fulfillment_config, metodo_pago)
             VALUES (
               NEW.aggregate_id,
@@ -238,7 +316,9 @@ async fn provisionar(url: &str) {
               (NEW.payload->'items'->0->>'tienda_id')::uuid,
               'creada',
               (NEW.payload->>'total_cents')::int,
-              (NEW.payload->>'total_cents')::int * 12 / 100,
+              COALESCE((NEW.payload->>'comision_cents')::int, 0),
+              COALESCE((NEW.payload->>'descuento_cupon_cents')::int, 0),
+              NULLIF(NEW.payload->>'cupon_codigo', ''),
               'NIO',
               NEW.payload->'items',
               NEW.creado_en,
@@ -307,11 +387,49 @@ async fn provisionar(url: &str) {
           monto_cents integer NOT NULL,
           moneda text NOT NULL DEFAULT 'NIO',
           referencia text NOT NULL DEFAULT '',
+          proveedor text NOT NULL DEFAULT 'simulado',
+          monto_reembolsado_cents integer NOT NULL DEFAULT 0,
           motivo_rechazo text NOT NULL DEFAULT '',
           confirmado_por uuid,
+          conciliado_en timestamptz,
           confirmado_en timestamptz,
           creado_en timestamptz NOT NULL DEFAULT NOW(),
           actualizado_en timestamptz NOT NULL DEFAULT NOW()
+        );
+        CREATE TABLE orders.pagos_eventos (
+          id bigserial PRIMARY KEY,
+          pago_id uuid NOT NULL,
+          tipo text NOT NULL,
+          monto_cents integer NOT NULL DEFAULT 0,
+          motivo text NOT NULL DEFAULT '',
+          actor_id uuid,
+          payload jsonb NOT NULL DEFAULT '{}'::jsonb,
+          creado_en timestamptz NOT NULL DEFAULT NOW()
+        );
+        CREATE TABLE orders.devoluciones (
+          id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+          order_id uuid NOT NULL,
+          empresa_id uuid NOT NULL,
+          negocio_id uuid,
+          motivo text NOT NULL DEFAULT '',
+          estado text NOT NULL DEFAULT 'solicitada',
+          total_cents integer NOT NULL DEFAULT 0,
+          moneda text NOT NULL DEFAULT 'NIO',
+          creado_por uuid NOT NULL,
+          creado_en timestamptz NOT NULL DEFAULT NOW(),
+          actualizado_en timestamptz NOT NULL DEFAULT NOW()
+        );
+        CREATE TABLE orders.devolucion_lineas (
+          id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+          devolucion_id uuid NOT NULL,
+          oferta_id uuid NOT NULL,
+          sku text NOT NULL,
+          cantidad integer NOT NULL,
+          precio_unitario_cents integer NOT NULL,
+          descuento_cents integer NOT NULL DEFAULT 0,
+          total_cents integer NOT NULL,
+          restock boolean NOT NULL DEFAULT true,
+          ubicacion_id uuid
         );
 
         CREATE TABLE orders.eventos_procesados (
@@ -471,6 +589,7 @@ fn compra(cantidad: i64) -> ComandoCrear {
             cantidad,
             fulfillment: Some("none".to_string()),
             fulfillment_config: None,
+            ubicacion_id: None,
         }]),
         ..Default::default()
     }
@@ -480,14 +599,48 @@ fn infra(db: Arc<Db>, stock: i64) -> (Arc<Checkout>, Arc<Carrito>, Arc<Pedidos>)
     infra_con(db, stock, None)
 }
 
+fn infra_directo(db: Arc<Db>, stock: i64) -> (Arc<Checkout>, Arc<Carrito>, Arc<Pedidos>) {
+    infra_con_directo(db, stock, None, true, None, None)
+}
+
+fn infra_promocion(
+    db: Arc<Db>,
+    stock: i64,
+    promocion: PromocionLinea,
+) -> (Arc<Checkout>, Arc<Carrito>, Arc<Pedidos>) {
+    infra_con_directo(db, stock, None, false, Some(promocion), None)
+}
+
+fn infra_cupon(
+    db: Arc<Db>,
+    stock: i64,
+    cupon: CuponValidado,
+) -> (Arc<Checkout>, Arc<Carrito>, Arc<Pedidos>) {
+    infra_con_directo(db, stock, None, false, None, Some(cupon))
+}
+
 fn infra_con(
     db: Arc<Db>,
     stock: i64,
     tasa: Option<f64>,
 ) -> (Arc<Checkout>, Arc<Carrito>, Arc<Pedidos>) {
+    infra_con_directo(db, stock, tasa, false, None, None)
+}
+
+fn infra_con_directo(
+    db: Arc<Db>,
+    stock: i64,
+    tasa: Option<f64>,
+    directo: bool,
+    promocion: Option<PromocionLinea>,
+    cupon: Option<CuponValidado>,
+) -> (Arc<Checkout>, Arc<Carrito>, Arc<Pedidos>) {
     let clientes: Arc<dyn ClientesPort> = Arc::new(ClientesFake {
         stock,
         tasa,
+        directo,
+        promocion,
+        cupon,
         capacidades: vec![
             Capacidad {
                 empresa_id: EMPRESA.to_string(),
@@ -562,11 +715,220 @@ async fn debe_crear_orden_con_evento_y_outbox() {
     assert_eq!(eventos, 1);
 }
 
+#[tokio::test]
+async fn debe_crear_una_orden_de_venta_directa_sin_vendedor_ni_comision() {
+    let _guard = DB_LOCK.lock().await;
+    let Some(db) = con_bd().await else { return };
+    let (checkout, _, _) = infra_directo(Arc::clone(&db), 10);
+    let orden = checkout
+        .ejecutar(&compra(2), COMPRADOR)
+        .await
+        .expect("orden directa");
+    assert!(orden.vendedor_id.is_none());
+    assert_eq!(orden.comision_cents, 0);
+    assert!(!orden.items[0].comision);
+
+    let vista = OrderViewRepository
+        .encontrar(&db, &orden.id)
+        .await
+        .expect("vista")
+        .expect("existe");
+    assert!(vista.vendedor_id.is_none());
+    assert_eq!(vista.comision_cents, 0);
+}
+
+#[tokio::test]
+async fn debe_aplicar_la_promocion_al_total_de_la_orden() {
+    let _guard = DB_LOCK.lock().await;
+    let Some(db) = con_bd().await else { return };
+    let (checkout, _, _) = infra_promocion(
+        Arc::clone(&db),
+        10,
+        PromocionLinea {
+            id: "promo-1".into(),
+            nombre: "25%".into(),
+            tipo: "descuento_porcentaje".into(),
+            cantidad_requerida: None,
+            cantidad_gratis: None,
+            descuento_porcentaje: Some(25),
+        },
+    );
+    let orden = checkout
+        .ejecutar(&compra(2), COMPRADOR)
+        .await
+        .expect("orden con promocion");
+    assert_eq!(orden.items[0].descuento_cents, 5_000);
+    assert_eq!(orden.items[0].promocion_id.as_deref(), Some("promo-1"));
+    assert_eq!(orden.total_cents, 15_000);
+
+    let vista = OrderViewRepository
+        .encontrar(&db, &orden.id)
+        .await
+        .expect("vista")
+        .expect("existe");
+    assert_eq!(vista.total_cents, 15_000);
+    assert_eq!(vista.items[0].descuento_cents, 5_000);
+}
+
+#[tokio::test]
+async fn debe_reembolsar_conciliar_y_contracargar_un_pago() {
+    let _guard = DB_LOCK.lock().await;
+    let Some(db) = con_bd().await else { return };
+    let (checkout, _, _) = infra(Arc::clone(&db), 10);
+    let pagos = Pagos::nueva(Arc::clone(&db));
+    let orden = checkout
+        .ejecutar(&compra(2), COMPRADOR)
+        .await
+        .expect("orden");
+    let (pago_id, proveedor, referencia, estado): (Uuid, String, String, String) = sqlx::query_as(
+        "SELECT id, proveedor, referencia, estado FROM orders.pagos WHERE order_id = $1::uuid",
+    )
+    .bind(Uuid::parse_str(&orden.id).expect("uuid"))
+    .fetch_one(db.pool())
+    .await
+    .expect("pago");
+    assert_eq!(estado, "confirmado");
+    assert_eq!(proveedor, "simulado");
+    assert!(!referencia.is_empty());
+
+    let parcial = pagos
+        .reembolsar(&pago_id.to_string(), 5_000, "prueba", COMPRADOR)
+        .await
+        .expect("reembolso parcial");
+    assert_eq!(parcial.estado, "reembolsado_parcial");
+    assert_eq!(parcial.monto_reembolsado_cents, 5_000);
+
+    let total = pagos
+        .reembolsar(&pago_id.to_string(), 15_000, "resto", COMPRADOR)
+        .await
+        .expect("reembolso total");
+    assert_eq!(total.estado, "reembolsado");
+    assert_eq!(total.monto_reembolsado_cents, 20_000);
+
+    let conciliado = pagos
+        .conciliar(&pago_id.to_string(), COMPRADOR)
+        .await
+        .expect("conciliar");
+    assert!(conciliado.conciliado_en.is_some());
+
+    let eventos: i64 =
+        sqlx::query_scalar("SELECT COUNT(*) FROM orders.pagos_eventos WHERE pago_id = $1")
+            .bind(pago_id)
+            .fetch_one(db.pool())
+            .await
+            .expect("eventos");
+    assert_eq!(eventos, 3);
+}
+
+#[tokio::test]
+async fn debe_registrar_un_contracargo_sin_mover_la_orden() {
+    let _guard = DB_LOCK.lock().await;
+    let Some(db) = con_bd().await else { return };
+    let (checkout, _, _) = infra(Arc::clone(&db), 10);
+    let pagos = Pagos::nueva(Arc::clone(&db));
+    let orden = checkout
+        .ejecutar(&compra(1), COMPRADOR)
+        .await
+        .expect("orden");
+    let pago_id: Uuid = sqlx::query_scalar("SELECT id FROM orders.pagos WHERE order_id = $1::uuid")
+        .bind(Uuid::parse_str(&orden.id).expect("uuid"))
+        .fetch_one(db.pool())
+        .await
+        .expect("pago");
+    let pago = pagos
+        .contracargar(&pago_id.to_string(), 10_000, "fraude", COMPRADOR)
+        .await
+        .expect("contracargo");
+    assert_eq!(pago.estado, "contracargo");
+    assert_eq!(pago.monto_reembolsado_cents, 10_000);
+    let estado_orden: String =
+        sqlx::query_scalar("SELECT estado FROM orders.orden_vista WHERE id = $1::uuid")
+            .bind(Uuid::parse_str(&orden.id).expect("uuid"))
+            .fetch_one(db.pool())
+            .await
+            .expect("orden");
+    assert_eq!(estado_orden, "creada");
+}
+
 fn compra_con_metodo(cantidad: i64, metodo: &str) -> ComandoCrear {
     ComandoCrear {
         metodo_pago: Some(metodo.to_string()),
         ..compra(cantidad)
     }
+}
+
+fn compra_en_ubicacion(cantidad: i64, ubicacion_id: &str) -> ComandoCrear {
+    let mut comando = compra(cantidad);
+    if let Some(items) = comando.items.as_mut() {
+        if let Some(item) = items.first_mut() {
+            item.ubicacion_id = Some(ubicacion_id.to_string());
+        }
+    }
+    comando
+}
+
+fn compra_con_cupon(cantidad: i64, codigo: &str) -> ComandoCrear {
+    ComandoCrear {
+        cupon_codigo: Some(codigo.to_string()),
+        ..compra(cantidad)
+    }
+}
+
+#[tokio::test]
+async fn debe_aplicar_un_cupon_al_total_y_a_la_vista() {
+    let _guard = DB_LOCK.lock().await;
+    let Some(db) = con_bd().await else { return };
+    let (checkout, _, _) = infra_cupon(
+        Arc::clone(&db),
+        10,
+        CuponValidado {
+            cupon_id: "cupon-1".into(),
+            codigo: "VERANO-25".into(),
+            descuento_cents: 5_000,
+        },
+    );
+    let orden = checkout
+        .ejecutar(&compra_con_cupon(2, "VERANO-25"), COMPRADOR)
+        .await
+        .expect("orden con cupon");
+    assert_eq!(orden.descuento_cupon_cents, 5_000);
+    assert_eq!(orden.cupon_codigo.as_deref(), Some("VERANO-25"));
+    assert_eq!(orden.total_cents, 15_000);
+
+    let vista = OrderViewRepository
+        .encontrar(&db, &orden.id)
+        .await
+        .expect("vista")
+        .expect("existe");
+    assert_eq!(vista.total_cents, 15_000);
+    assert_eq!(vista.descuento_cupon_cents, 5_000);
+    assert_eq!(vista.cupon_codigo.as_deref(), Some("VERANO-25"));
+}
+
+#[tokio::test]
+async fn debe_conservar_la_ubicacion_elegida_en_la_linea_de_la_orden() {
+    let _guard = DB_LOCK.lock().await;
+    let Some(db) = con_bd().await else { return };
+    let (checkout, _, _) = infra(Arc::clone(&db), 10);
+    let ubicacion = Uuid::new_v4().to_string();
+    let orden = checkout
+        .ejecutar(&compra_en_ubicacion(1, &ubicacion), COMPRADOR)
+        .await
+        .expect("orden con ubicacion");
+    assert_eq!(
+        orden.items[0].ubicacion_id.as_deref(),
+        Some(ubicacion.as_str())
+    );
+
+    let vista = OrderViewRepository
+        .encontrar(&db, &orden.id)
+        .await
+        .expect("vista")
+        .expect("existe");
+    assert_eq!(
+        vista.items[0].ubicacion_id.as_deref(),
+        Some(ubicacion.as_str())
+    );
 }
 
 #[tokio::test]
@@ -845,6 +1207,270 @@ async fn debe_gestionar_mesas_y_comandas() {
 }
 
 #[tokio::test]
+async fn debe_crear_aprobar_y_recibir_una_devolucion_parcial() {
+    let _guard = DB_LOCK.lock().await;
+    let Some(db) = con_bd().await else { return };
+    let (checkout, _, _) = infra(Arc::clone(&db), 10);
+    let orden = checkout
+        .ejecutar(&compra(2), COMPRADOR)
+        .await
+        .expect("orden");
+    let devoluciones = Devoluciones::nueva(
+        Arc::clone(&db),
+        Arc::clone(&checkout.vistas),
+        Arc::clone(&checkout.clientes),
+        Outbox::nueva("orders.outbox"),
+    );
+    let admin = orders_service::auth::UsuarioContexto {
+        user_id: Uuid::new_v4().to_string(),
+        rol: "admin".to_string(),
+        ..Default::default()
+    };
+    let creada = devoluciones
+        .crear(
+            &orden.id,
+            &admin,
+            CrearDevolucionInput {
+                motivo: "producto dañado".into(),
+                items: vec![ItemDevolucionInput {
+                    oferta_id: OFERTA.to_string(),
+                    cantidad: 1,
+                    restock: true,
+                }],
+            },
+        )
+        .await
+        .expect("crear devolucion");
+    assert_eq!(creada.estado, "solicitada");
+    assert_eq!(creada.total_cents, 10_000);
+    assert_eq!(creada.lineas.len(), 1);
+
+    let aprobada = devoluciones
+        .aprobar(&creada.id, &admin)
+        .await
+        .expect("aprobar");
+    assert_eq!(aprobada.estado, "aprobada");
+    let recibida = devoluciones
+        .recibir(&creada.id, &admin)
+        .await
+        .expect("recibir");
+    assert_eq!(recibida.estado, "recibida");
+
+    let eventos: i64 =
+        sqlx::query_scalar("SELECT COUNT(*) FROM orders.outbox WHERE tipo = 'devolucion.recibida'")
+            .fetch_one(db.pool())
+            .await
+            .expect("eventos");
+    assert_eq!(eventos, 1);
+}
+
+#[tokio::test]
+async fn debe_impedir_devolver_mas_cantidad_que_la_comprada() {
+    let _guard = DB_LOCK.lock().await;
+    let Some(db) = con_bd().await else { return };
+    let (checkout, _, _) = infra(Arc::clone(&db), 10);
+    let orden = checkout
+        .ejecutar(&compra(1), COMPRADOR)
+        .await
+        .expect("orden");
+    let devoluciones = Devoluciones::nueva(
+        Arc::clone(&db),
+        Arc::clone(&checkout.vistas),
+        Arc::clone(&checkout.clientes),
+        Outbox::nueva("orders.outbox"),
+    );
+    let admin = orders_service::auth::UsuarioContexto {
+        user_id: Uuid::new_v4().to_string(),
+        rol: "admin".to_string(),
+        ..Default::default()
+    };
+    let error = devoluciones
+        .crear(
+            &orden.id,
+            &admin,
+            CrearDevolucionInput {
+                motivo: "".into(),
+                items: vec![ItemDevolucionInput {
+                    oferta_id: OFERTA.to_string(),
+                    cantidad: 2,
+                    restock: true,
+                }],
+            },
+        )
+        .await
+        .expect_err("excede");
+    assert_eq!(error.codigo, "CANTIDAD_EXCEDIDA");
+}
+
+#[tokio::test]
+async fn debe_rechazar_y_negar_permisos_en_una_devolucion() {
+    let _guard = DB_LOCK.lock().await;
+    let Some(db) = con_bd().await else { return };
+    let (checkout, _, _) = infra(Arc::clone(&db), 10);
+    let orden = checkout
+        .ejecutar(&compra(2), COMPRADOR)
+        .await
+        .expect("orden");
+    let devoluciones = Devoluciones::nueva(
+        Arc::clone(&db),
+        Arc::clone(&checkout.vistas),
+        Arc::clone(&checkout.clientes),
+        Outbox::nueva("orders.outbox"),
+    );
+    let admin = orders_service::auth::UsuarioContexto {
+        user_id: Uuid::new_v4().to_string(),
+        rol: "admin".to_string(),
+        ..Default::default()
+    };
+    let comprador = orders_service::auth::UsuarioContexto {
+        user_id: COMPRADOR.to_string(),
+        rol: "comprador".to_string(),
+        ..Default::default()
+    };
+    assert!(devoluciones
+        .obtener("no-uuid")
+        .await
+        .expect("none")
+        .is_none());
+    let creada = devoluciones
+        .crear(
+            &orden.id,
+            &comprador,
+            CrearDevolucionInput {
+                motivo: "prueba".into(),
+                items: vec![ItemDevolucionInput {
+                    oferta_id: OFERTA.to_string(),
+                    cantidad: 1,
+                    restock: true,
+                }],
+            },
+        )
+        .await
+        .expect("crear");
+    assert_eq!(
+        devoluciones
+            .aprobar(&creada.id, &comprador)
+            .await
+            .expect_err("403")
+            .codigo,
+        "ACCESO_DENEGADO"
+    );
+    let rechazada = devoluciones
+        .rechazar(&creada.id, &admin)
+        .await
+        .expect("rechazar");
+    assert_eq!(rechazada.estado, "rechazada");
+    assert_eq!(
+        devoluciones
+            .recibir(&creada.id, &admin)
+            .await
+            .expect_err("conflicto")
+            .codigo,
+        "CONFLICTO"
+    );
+}
+
+#[tokio::test]
+async fn debe_gestionar_devoluciones_parciales_por_http() {
+    use axum::body::Body;
+    use axum::http::{Request, StatusCode};
+    use tower::ServiceExt;
+    let _guard = DB_LOCK.lock().await;
+    let Some(db) = con_bd().await else { return };
+    let router = router_completo(Arc::clone(&db), 10).await;
+
+    let mut request = Request::post("/api/v2/orders").header("content-type", "application/json");
+    for (clave, valor) in headers_comprador() {
+        request = request.header(clave, valor);
+    }
+    let response = router
+        .clone()
+        .oneshot(
+            request
+                .body(Body::from(
+                    json!({"tipo_orden":"compra","items":[{"oferta_id":OFERTA,"cantidad":2}]})
+                        .to_string(),
+                ))
+                .expect("request"),
+        )
+        .await
+        .expect("response");
+    assert_eq!(response.status(), StatusCode::CREATED);
+    let orden = json_de(response).await;
+    let order_id = orden["data"]["id"].as_str().expect("order_id");
+
+    let mut request = Request::post(format!("/api/v2/orders/{order_id}/devoluciones"))
+        .header("content-type", "application/json");
+    for (clave, valor) in headers_comprador() {
+        request = request.header(clave, valor);
+    }
+    let response = router
+        .clone()
+        .oneshot(
+            request
+                .body(Body::from(format!(
+                    r#"{{"motivo":"dañado","items":[{{"oferta_id":"{OFERTA}","cantidad":1}}]}}"#
+                )))
+                .expect("request"),
+        )
+        .await
+        .expect("response");
+    assert_eq!(response.status(), StatusCode::CREATED);
+    let devolucion = json_de(response).await;
+    let devolucion_id = devolucion["data"]["id"].as_str().expect("devolucion");
+    assert_eq!(devolucion["data"]["estado"], "solicitada");
+
+    let mut request = Request::get(format!("/api/v2/orders/{order_id}/devoluciones"));
+    for (clave, valor) in headers_comprador() {
+        request = request.header(clave, valor);
+    }
+    let response = router
+        .clone()
+        .oneshot(request.body(Body::empty()).expect("request"))
+        .await
+        .expect("response");
+    assert_eq!(response.status(), StatusCode::OK);
+    let lista = json_de(response).await;
+    assert_eq!(lista["data"].as_array().expect("lista").len(), 1);
+
+    for accion in ["aprobar", "recibir"] {
+        let mut request = Request::post(format!(
+            "/api/v2/admin/devoluciones/{devolucion_id}/{accion}"
+        ));
+        for (clave, valor) in headers_admin() {
+            request = request.header(clave, valor);
+        }
+        let response = router
+            .clone()
+            .oneshot(request.body(Body::empty()).expect("request"))
+            .await
+            .expect("response");
+        assert_eq!(response.status(), StatusCode::OK);
+    }
+    let recibida = sqlx::query_scalar::<_, String>(
+        "SELECT estado FROM orders.devoluciones WHERE id = $1::uuid",
+    )
+    .bind(Uuid::parse_str(devolucion_id).expect("uuid"))
+    .fetch_one(db.pool())
+    .await
+    .expect("estado");
+    assert_eq!(recibida, "recibida");
+
+    let mut request = Request::post(format!(
+        "/api/v2/admin/devoluciones/{devolucion_id}/rechazar"
+    ));
+    for (clave, valor) in headers_comprador() {
+        request = request.header(clave, valor);
+    }
+    let response = router
+        .clone()
+        .oneshot(request.body(Body::empty()).expect("request"))
+        .await
+        .expect("response");
+    assert_eq!(response.status(), StatusCode::FORBIDDEN);
+}
+
+#[tokio::test]
 async fn debe_registrar_entregas_digitales_al_crear_la_orden() {
     let _guard = DB_LOCK.lock().await;
     let Some(db) = con_bd().await else { return };
@@ -881,6 +1507,9 @@ async fn router_completo(db: Arc<Db>, stock: i64) -> axum::Router {
     let clientes: Arc<dyn ClientesPort> = Arc::new(ClientesFake {
         stock,
         tasa: None,
+        directo: false,
+        promocion: None,
+        cupon: None,
         capacidades: vec![
             Capacidad {
                 empresa_id: EMPRESA.to_string(),
@@ -1385,6 +2014,94 @@ async fn debe_confirmar_y_rechazar_pagos_manuales() {
 }
 
 #[tokio::test]
+async fn debe_reembolsar_conciliar_y_contracargar_por_http() {
+    use axum::body::Body;
+    use axum::http::{Request, StatusCode};
+    use tower::ServiceExt;
+    let _guard = DB_LOCK.lock().await;
+    let Some(db) = con_bd().await else { return };
+    let router = router_completo(Arc::clone(&db), 10).await;
+
+    let mut request = Request::post("/api/v2/orders").header("content-type", "application/json");
+    for (clave, valor) in headers_comprador() {
+        request = request.header(clave, valor);
+    }
+    let response = router
+        .clone()
+        .oneshot(
+            request
+                .body(Body::from(
+                    json!({"tipo_orden":"compra","items":[{"oferta_id":OFERTA,"cantidad":2}]})
+                        .to_string(),
+                ))
+                .expect("request"),
+        )
+        .await
+        .expect("response");
+    assert_eq!(response.status(), StatusCode::CREATED);
+    let orden = json_de(response).await;
+    let order_id = orden["data"]["id"].as_str().expect("order_id");
+    let pago_id: Uuid = sqlx::query_scalar("SELECT id FROM orders.pagos WHERE order_id = $1::uuid")
+        .bind(Uuid::parse_str(order_id).expect("uuid"))
+        .fetch_one(db.pool())
+        .await
+        .expect("pago");
+
+    let mut request = Request::post(format!("/api/v2/admin/pagos/{pago_id}/reembolsar"))
+        .header("content-type", "application/json");
+    for (clave, valor) in headers_admin() {
+        request = request.header(clave, valor);
+    }
+    let response = router
+        .clone()
+        .oneshot(
+            request
+                .body(Body::from(r#"{"monto_cents":5000,"motivo":"prueba"}"#))
+                .expect("request"),
+        )
+        .await
+        .expect("response");
+    assert_eq!(response.status(), StatusCode::OK);
+    let pago = json_de(response).await;
+    assert_eq!(pago["data"]["estado"], "reembolsado_parcial");
+    assert_eq!(pago["data"]["monto_reembolsado_cents"], 5000);
+
+    let mut request = Request::post(format!("/api/v2/admin/pagos/{pago_id}/conciliar"));
+    for (clave, valor) in headers_admin() {
+        request = request.header(clave, valor);
+    }
+    let response = router
+        .clone()
+        .oneshot(request.body(Body::empty()).expect("request"))
+        .await
+        .expect("response");
+    assert_eq!(response.status(), StatusCode::OK);
+    let pago = json_de(response).await;
+    assert!(pago["data"]["conciliado_en"].is_string());
+
+    let (_, pago_contracargo) = crear_orden_manual(router.clone()).await;
+    let mut request = Request::post(format!(
+        "/api/v2/admin/pagos/{pago_contracargo}/contracargo"
+    ))
+    .header("content-type", "application/json");
+    for (clave, valor) in headers_admin() {
+        request = request.header(clave, valor);
+    }
+    let response = router
+        .clone()
+        .oneshot(
+            request
+                .body(Body::from(r#"{"monto_cents":10000,"motivo":"fraude"}"#))
+                .expect("request"),
+        )
+        .await
+        .expect("response");
+    assert_eq!(response.status(), StatusCode::OK);
+    let pago = json_de(response).await;
+    assert_eq!(pago["data"]["estado"], "contracargo");
+}
+
+#[tokio::test]
 async fn debe_procesar_un_webhook_de_pago_con_secreto() {
     use axum::body::Body;
     use axum::http::{Request, StatusCode};
@@ -1690,6 +2407,7 @@ async fn debe_validar_el_fulfillment_contra_el_registro() {
                     cantidad: 1,
                     fulfillment: Some("retiro_tienda".to_string()),
                     fulfillment_config: None,
+                    ubicacion_id: None,
                 }]),
                 ..compra(1)
             },
@@ -1707,6 +2425,7 @@ async fn debe_validar_el_fulfillment_contra_el_registro() {
                     cantidad: 1,
                     fulfillment: Some("no_existe".to_string()),
                     fulfillment_config: None,
+                    ubicacion_id: None,
                 }]),
                 ..compra(1)
             },

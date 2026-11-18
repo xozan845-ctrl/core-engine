@@ -1393,6 +1393,64 @@
         ]
       }
     },
+    "/api/v2/empresas/{empresaId}/negocios/{negocioId}/features": {
+      "get": {
+        "operationId": "CapacidadesController_manifiestoNegocio",
+        "parameters": [
+          {
+            "name": "empresaId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "name": "negocioId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Manifiesto de capacidades, modelos y features del negocio",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/ManifiestoEmpresaResponseDto"
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/MetaRespuesta"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Manifiesto de capacidades y features de un negocio",
+        "tags": [
+          "Capacidades"
+        ]
+      }
+    },
     "/api/v2/empresas/{empresaId}/capacidades/{capacidad}": {
       "patch": {
         "operationId": "CapacidadesController_actualizar",
@@ -6617,6 +6675,11 @@
           "empresa_id": {
             "type": "string",
             "format": "uuid"
+          },
+          "negocio_id": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true
           },
           "vertical_id": {
             "type": "string",

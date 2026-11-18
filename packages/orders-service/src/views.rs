@@ -12,7 +12,8 @@ use serde_json::Value;
 use sqlx::Row;
 use uuid::Uuid;
 
-const COLUMNAS: &str = "id, vendedor_id, comprador_id, parte_id, tienda_id, negocio_id, estado, total_cents, comision_cents, moneda,
+const COLUMNAS: &str = "id, vendedor_id, comprador_id, parte_id, tienda_id, negocio_id, estado, total_cents, comision_cents,
+              descuento_cupon_cents, cupon_codigo, moneda,
               items_json, direccion_envio, creado_en, actualizado_en,
               tipo_orden, metodo_pago, fulfillment_config,
               pagada_en, enviada_en, entregada_en, cancelada_en, devuelta_en";
@@ -20,7 +21,7 @@ const COLUMNAS: &str = "id, vendedor_id, comprador_id, parte_id, tienda_id, nego
 #[derive(Debug, Clone, Serialize, PartialEq)]
 pub struct OrderView {
     pub id: String,
-    pub vendedor_id: String,
+    pub vendedor_id: Option<String>,
     pub comprador_id: String,
     pub parte_id: Option<String>,
     pub tienda_id: String,
@@ -28,6 +29,10 @@ pub struct OrderView {
     pub estado: String,
     pub total_cents: i64,
     pub comision_cents: i64,
+    #[serde(default)]
+    pub descuento_cupon_cents: i64,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub cupon_codigo: Option<String>,
     pub moneda: String,
     pub items: Vec<ItemOrden>,
     pub direccion_envio: Value,
@@ -272,7 +277,7 @@ pub fn serializar(fila: &sqlx::postgres::PgRow) -> Result<OrderView, ApiError> {
     let items: Vec<ItemOrden> = serde_json::from_value(items_json).unwrap_or_default();
     Ok(OrderView {
         id: crate::db::uuid_texto(fila, "id").map_err(error_db)?,
-        vendedor_id: crate::db::uuid_texto(fila, "vendedor_id").map_err(error_db)?,
+        vendedor_id: crate::db::uuid_opcional(fila, "vendedor_id").map_err(error_db)?,
         comprador_id: crate::db::uuid_texto(fila, "comprador_id").map_err(error_db)?,
         parte_id: crate::db::uuid_opcional(fila, "parte_id").map_err(error_db)?,
         tienda_id: crate::db::uuid_texto(fila, "tienda_id").map_err(error_db)?,
@@ -280,6 +285,13 @@ pub fn serializar(fila: &sqlx::postgres::PgRow) -> Result<OrderView, ApiError> {
         estado: fila.try_get("estado").map_err(error_db)?,
         total_cents: i64::from(fila.try_get::<i32, _>("total_cents").map_err(error_db)?),
         comision_cents: i64::from(fila.try_get::<i32, _>("comision_cents").map_err(error_db)?),
+        descuento_cupon_cents: i64::from(
+            fila.try_get::<i32, _>("descuento_cupon_cents").unwrap_or(0),
+        ),
+        cupon_codigo: fila
+            .try_get::<Option<String>, _>("cupon_codigo")
+            .ok()
+            .flatten(),
         moneda: fila.try_get("moneda").map_err(error_db)?,
         items,
         direccion_envio: fila
@@ -328,7 +340,7 @@ mod tests {
     fn debe_serializar_una_vista_de_prueba() {
         let vista = OrderView {
             id: "o-1".into(),
-            vendedor_id: "v-1".into(),
+            vendedor_id: Some("v-1".into()),
             comprador_id: "c-1".into(),
             parte_id: None,
             tienda_id: "t-1".into(),
@@ -336,6 +348,8 @@ mod tests {
             estado: "creada".into(),
             total_cents: 100,
             comision_cents: 12,
+            descuento_cupon_cents: 0,
+            cupon_codigo: None,
             moneda: "NIO".into(),
             items: Vec::new(),
             direccion_envio: Value::Null,

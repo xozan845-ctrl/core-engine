@@ -12,8 +12,16 @@ pub struct ItemOrden {
     pub negocio_id: Option<String>,
     pub tienda_id: Option<String>,
     pub participacion_porcentaje: Option<i64>,
+    #[serde(default = "comision_por_defecto")]
+    pub comision: bool,
     pub precio_unitario_cents: i64,
     pub cantidad: i64,
+    #[serde(default)]
+    pub descuento_cents: i64,
+}
+
+fn comision_por_defecto() -> bool {
+    true
 }
 
 #[derive(Debug, Clone, Deserialize, PartialEq, Eq)]

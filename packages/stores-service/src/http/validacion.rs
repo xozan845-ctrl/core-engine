@@ -135,7 +135,7 @@ pub fn validar(esquema: &[ReglaCampo], cuerpo: &Value) -> Result<(), ApiError> {
     }
 }
 
-const fn campo(nombre: &'static str, requerido: bool, reglas: &'static [Regla]) -> ReglaCampo {
+pub const fn campo(nombre: &'static str, requerido: bool, reglas: &'static [Regla]) -> ReglaCampo {
     ReglaCampo {
         campo: nombre,
         requerido,

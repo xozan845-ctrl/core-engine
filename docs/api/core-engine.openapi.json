@@ -4746,6 +4746,197 @@
         ]
       }
     },
+    "/api/v2/finanzas/configuracion-fiscal": {
+      "get": {
+        "operationId": "TributacionController_configuracionFiscal",
+        "parameters": [
+          {
+            "name": "empresa_id",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "negocio_id",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Jurisdicción efectiva del tenant",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
+                  "properties": {
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "empresa_id": {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        "negocio_id": {
+                          "type": "string",
+                          "format": "uuid",
+                          "nullable": true
+                        },
+                        "jurisdiccion": {
+                          "$ref": "#/components/schemas/JurisdiccionResponseDto"
+                        },
+                        "facturacion_electronica": {
+                          "type": "boolean"
+                        },
+                        "formato_pdf": {
+                          "type": "boolean"
+                        },
+                        "proveedor_electronico": {
+                          "type": "string"
+                        },
+                        "ambiente_electronico": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "empresa_id",
+                        "jurisdiccion"
+                      ]
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/MetaRespuesta"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Consultar la configuración fiscal del tenant",
+        "tags": [
+          "Finanzas · Tributación"
+        ]
+      },
+      "put": {
+        "operationId": "TributacionController_guardarConfiguracionFiscal",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "jurisdiccion": {
+                    "type": "string",
+                    "example": "NI"
+                  },
+                  "empresa_id": {
+                    "type": "string",
+                    "format": "uuid"
+                  },
+                  "negocio_id": {
+                    "type": "string",
+                    "format": "uuid",
+                    "nullable": true
+                  },
+                  "facturacion_electronica": {
+                    "type": "boolean"
+                  },
+                  "formato_pdf": {
+                    "type": "boolean"
+                  },
+                  "proveedor_electronico": {
+                    "type": "string",
+                    "enum": [
+                      "simulado",
+                      "http"
+                    ]
+                  },
+                  "ambiente_electronico": {
+                    "type": "string",
+                    "enum": [
+                      "pruebas",
+                      "produccion"
+                    ]
+                  }
+                },
+                "required": [
+                  "jurisdiccion"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Configuración fiscal guardada",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
+                  "properties": {
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "empresa_id": {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        "negocio_id": {
+                          "type": "string",
+                          "format": "uuid",
+                          "nullable": true
+                        },
+                        "jurisdiccion": {
+                          "$ref": "#/components/schemas/JurisdiccionResponseDto"
+                        }
+                      },
+                      "required": [
+                        "empresa_id",
+                        "jurisdiccion"
+                      ]
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/MetaRespuesta"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Guardar la configuración fiscal del tenant",
+        "tags": [
+          "Finanzas · Tributación"
+        ]
+      }
+    },
     "/api/v2/finanzas/regimenes": {
       "get": {
         "operationId": "TributacionController_regimenes",
@@ -8497,6 +8688,44 @@
         ]
       }
     },
+    "/api/v2/finanzas/comprobantes/{id}/pdf": {
+      "get": {
+        "operationId": "FacturacionController_comprobantePdf",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "PDF del comprobante",
+            "content": {
+              "application/pdf": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Descargar comprobante en PDF",
+        "tags": [
+          "Finanzas · Facturación"
+        ]
+      }
+    },
     "/api/v2/auth/registro": {
       "post": {
         "operationId": "AuthController_registrar",
@@ -9931,6 +10160,64 @@
           }
         ],
         "summary": "Manifiesto de capacidades y features de una empresa",
+        "tags": [
+          "Capacidades"
+        ]
+      }
+    },
+    "/api/v2/empresas/{empresaId}/negocios/{negocioId}/features": {
+      "get": {
+        "operationId": "CapacidadesController_manifiestoNegocio",
+        "parameters": [
+          {
+            "name": "empresaId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "name": "negocioId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Manifiesto de capacidades, modelos y features del negocio",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/ManifiestoEmpresaResponseDto"
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/MetaRespuesta"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Manifiesto de capacidades y features de un negocio",
         "tags": [
           "Capacidades"
         ]
@@ -17972,6 +18259,197 @@
         ]
       }
     },
+    "/api/v2/admin/pagos/{id}/reembolsar": {
+      "post": {
+        "operationId": "PagosController_reembolsarPago",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "monto_cents": {
+                    "type": "integer",
+                    "minimum": 1
+                  },
+                  "motivo": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "monto_cents"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Reembolso total o parcial registrado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/OrdersPagoResponseDto"
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/MetaRespuesta"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Reembolsar un pago (admin)",
+        "tags": [
+          "Pagos"
+        ]
+      }
+    },
+    "/api/v2/admin/pagos/{id}/contracargo": {
+      "post": {
+        "operationId": "PagosController_contracargoPago",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "monto_cents": {
+                    "type": "integer",
+                    "minimum": 1
+                  },
+                  "motivo": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "monto_cents"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Contracargo registrado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/OrdersPagoResponseDto"
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/MetaRespuesta"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Registrar un contracargo (admin)",
+        "tags": [
+          "Pagos"
+        ]
+      }
+    },
+    "/api/v2/admin/pagos/{id}/conciliar": {
+      "post": {
+        "operationId": "PagosController_conciliarPago",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Pago conciliado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/OrdersPagoResponseDto"
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/MetaRespuesta"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Conciliar un pago (admin)",
+        "tags": [
+          "Pagos"
+        ]
+      }
+    },
     "/api/v2/orders/{id}": {
       "get": {
         "operationId": "PedidosController_detalle",
@@ -20333,6 +20811,703 @@
         ]
       }
     },
+    "/api/v2/orders/{id}/devoluciones": {
+      "get": {
+        "operationId": "DevolucionesController_listar",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Devoluciones de la orden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
+                  "properties": {
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "format": "uuid"
+                          },
+                          "order_id": {
+                            "type": "string",
+                            "format": "uuid"
+                          },
+                          "empresa_id": {
+                            "type": "string",
+                            "format": "uuid"
+                          },
+                          "negocio_id": {
+                            "type": "string",
+                            "format": "uuid",
+                            "nullable": true
+                          },
+                          "motivo": {
+                            "type": "string"
+                          },
+                          "estado": {
+                            "type": "string"
+                          },
+                          "total_cents": {
+                            "type": "integer"
+                          },
+                          "moneda": {
+                            "type": "string"
+                          },
+                          "creado_por": {
+                            "type": "string",
+                            "format": "uuid"
+                          },
+                          "creado_en": {
+                            "type": "string",
+                            "format": "date-time"
+                          },
+                          "actualizado_en": {
+                            "type": "string",
+                            "format": "date-time"
+                          },
+                          "lineas": {
+                            "type": "array",
+                            "items": {
+                              "type": "object",
+                              "properties": {
+                                "id": {
+                                  "type": "string",
+                                  "format": "uuid"
+                                },
+                                "oferta_id": {
+                                  "type": "string",
+                                  "format": "uuid"
+                                },
+                                "sku": {
+                                  "type": "string"
+                                },
+                                "cantidad": {
+                                  "type": "integer"
+                                },
+                                "precio_unitario_cents": {
+                                  "type": "integer"
+                                },
+                                "descuento_cents": {
+                                  "type": "integer"
+                                },
+                                "total_cents": {
+                                  "type": "integer"
+                                },
+                                "restock": {
+                                  "type": "boolean"
+                                },
+                                "ubicacion_id": {
+                                  "type": "string",
+                                  "format": "uuid",
+                                  "nullable": true
+                                }
+                              }
+                            }
+                          }
+                        }
+                      }
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/MetaRespuesta"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Listar devoluciones de una orden",
+        "tags": [
+          "Devoluciones"
+        ]
+      },
+      "post": {
+        "operationId": "DevolucionesController_crear",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "motivo": {
+                    "type": "string"
+                  },
+                  "items": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "oferta_id": {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        "cantidad": {
+                          "type": "integer",
+                          "minimum": 1
+                        },
+                        "restock": {
+                          "type": "boolean"
+                        }
+                      },
+                      "required": [
+                        "oferta_id",
+                        "cantidad"
+                      ]
+                    }
+                  }
+                },
+                "required": [
+                  "items"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Devolución creada",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
+                  "properties": {
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        "order_id": {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        "empresa_id": {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        "negocio_id": {
+                          "type": "string",
+                          "format": "uuid",
+                          "nullable": true
+                        },
+                        "motivo": {
+                          "type": "string"
+                        },
+                        "estado": {
+                          "type": "string"
+                        },
+                        "total_cents": {
+                          "type": "integer"
+                        },
+                        "moneda": {
+                          "type": "string"
+                        },
+                        "creado_por": {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        "creado_en": {
+                          "type": "string",
+                          "format": "date-time"
+                        },
+                        "actualizado_en": {
+                          "type": "string",
+                          "format": "date-time"
+                        },
+                        "lineas": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "id": {
+                                "type": "string",
+                                "format": "uuid"
+                              },
+                              "oferta_id": {
+                                "type": "string",
+                                "format": "uuid"
+                              },
+                              "sku": {
+                                "type": "string"
+                              },
+                              "cantidad": {
+                                "type": "integer"
+                              },
+                              "precio_unitario_cents": {
+                                "type": "integer"
+                              },
+                              "descuento_cents": {
+                                "type": "integer"
+                              },
+                              "total_cents": {
+                                "type": "integer"
+                              },
+                              "restock": {
+                                "type": "boolean"
+                              },
+                              "ubicacion_id": {
+                                "type": "string",
+                                "format": "uuid",
+                                "nullable": true
+                              }
+                            }
+                          }
+                        }
+                      }
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/MetaRespuesta"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Crear devolución parcial",
+        "tags": [
+          "Devoluciones"
+        ]
+      }
+    },
+    "/api/v2/admin/devoluciones/{id}/aprobar": {
+      "post": {
+        "operationId": "DevolucionesController_aprobar",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Devolución aprobar",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
+                  "properties": {
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        "order_id": {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        "empresa_id": {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        "negocio_id": {
+                          "type": "string",
+                          "format": "uuid",
+                          "nullable": true
+                        },
+                        "motivo": {
+                          "type": "string"
+                        },
+                        "estado": {
+                          "type": "string"
+                        },
+                        "total_cents": {
+                          "type": "integer"
+                        },
+                        "moneda": {
+                          "type": "string"
+                        },
+                        "creado_por": {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        "creado_en": {
+                          "type": "string",
+                          "format": "date-time"
+                        },
+                        "actualizado_en": {
+                          "type": "string",
+                          "format": "date-time"
+                        },
+                        "lineas": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "id": {
+                                "type": "string",
+                                "format": "uuid"
+                              },
+                              "oferta_id": {
+                                "type": "string",
+                                "format": "uuid"
+                              },
+                              "sku": {
+                                "type": "string"
+                              },
+                              "cantidad": {
+                                "type": "integer"
+                              },
+                              "precio_unitario_cents": {
+                                "type": "integer"
+                              },
+                              "descuento_cents": {
+                                "type": "integer"
+                              },
+                              "total_cents": {
+                                "type": "integer"
+                              },
+                              "restock": {
+                                "type": "boolean"
+                              },
+                              "ubicacion_id": {
+                                "type": "string",
+                                "format": "uuid",
+                                "nullable": true
+                              }
+                            }
+                          }
+                        }
+                      }
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/MetaRespuesta"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "aprobar devolución",
+        "tags": [
+          "Devoluciones"
+        ]
+      }
+    },
+    "/api/v2/admin/devoluciones/{id}/recibir": {
+      "post": {
+        "operationId": "DevolucionesController_recibir",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Devolución recibir",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
+                  "properties": {
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        "order_id": {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        "empresa_id": {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        "negocio_id": {
+                          "type": "string",
+                          "format": "uuid",
+                          "nullable": true
+                        },
+                        "motivo": {
+                          "type": "string"
+                        },
+                        "estado": {
+                          "type": "string"
+                        },
+                        "total_cents": {
+                          "type": "integer"
+                        },
+                        "moneda": {
+                          "type": "string"
+                        },
+                        "creado_por": {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        "creado_en": {
+                          "type": "string",
+                          "format": "date-time"
+                        },
+                        "actualizado_en": {
+                          "type": "string",
+                          "format": "date-time"
+                        },
+                        "lineas": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "id": {
+                                "type": "string",
+                                "format": "uuid"
+                              },
+                              "oferta_id": {
+                                "type": "string",
+                                "format": "uuid"
+                              },
+                              "sku": {
+                                "type": "string"
+                              },
+                              "cantidad": {
+                                "type": "integer"
+                              },
+                              "precio_unitario_cents": {
+                                "type": "integer"
+                              },
+                              "descuento_cents": {
+                                "type": "integer"
+                              },
+                              "total_cents": {
+                                "type": "integer"
+                              },
+                              "restock": {
+                                "type": "boolean"
+                              },
+                              "ubicacion_id": {
+                                "type": "string",
+                                "format": "uuid",
+                                "nullable": true
+                              }
+                            }
+                          }
+                        }
+                      }
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/MetaRespuesta"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "recibir devolución",
+        "tags": [
+          "Devoluciones"
+        ]
+      }
+    },
+    "/api/v2/admin/devoluciones/{id}/rechazar": {
+      "post": {
+        "operationId": "DevolucionesController_rechazar",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Devolución rechazar",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
+                  "properties": {
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        "order_id": {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        "empresa_id": {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        "negocio_id": {
+                          "type": "string",
+                          "format": "uuid",
+                          "nullable": true
+                        },
+                        "motivo": {
+                          "type": "string"
+                        },
+                        "estado": {
+                          "type": "string"
+                        },
+                        "total_cents": {
+                          "type": "integer"
+                        },
+                        "moneda": {
+                          "type": "string"
+                        },
+                        "creado_por": {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        "creado_en": {
+                          "type": "string",
+                          "format": "date-time"
+                        },
+                        "actualizado_en": {
+                          "type": "string",
+                          "format": "date-time"
+                        },
+                        "lineas": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "id": {
+                                "type": "string",
+                                "format": "uuid"
+                              },
+                              "oferta_id": {
+                                "type": "string",
+                                "format": "uuid"
+                              },
+                              "sku": {
+                                "type": "string"
+                              },
+                              "cantidad": {
+                                "type": "integer"
+                              },
+                              "precio_unitario_cents": {
+                                "type": "integer"
+                              },
+                              "descuento_cents": {
+                                "type": "integer"
+                              },
+                              "total_cents": {
+                                "type": "integer"
+                              },
+                              "restock": {
+                                "type": "boolean"
+                              },
+                              "ubicacion_id": {
+                                "type": "string",
+                                "format": "uuid",
+                                "nullable": true
+                              }
+                            }
+                          }
+                        }
+                      }
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/MetaRespuesta"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "rechazar devolución",
+        "tags": [
+          "Devoluciones"
+        ]
+      }
+    },
     "/api/v2/catalog/items/{id}/tarifas": {
       "get": {
         "operationId": "TarifasController_listar",
@@ -21381,6 +22556,327 @@
         "summary": "Resolver el precio unitario por cantidad, lista o segmento",
         "tags": [
           "Catálogo · Precios"
+        ]
+      }
+    },
+    "/api/v2/catalog/cupones": {
+      "get": {
+        "operationId": "CuponesController_listar",
+        "parameters": [
+          {
+            "name": "empresa_id",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "activo",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "pagina",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1
+            }
+          },
+          {
+            "name": "limite",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Cupones de la empresa",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
+                  "properties": {
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "items": {
+                          "type": "array",
+                          "items": {
+                            "$ref": "#/components/schemas/CuponResponseDto"
+                          }
+                        },
+                        "total": {
+                          "type": "integer"
+                        },
+                        "pagina": {
+                          "type": "integer"
+                        },
+                        "limite": {
+                          "type": "integer"
+                        },
+                        "paginas": {
+                          "type": "integer"
+                        }
+                      },
+                      "required": [
+                        "items",
+                        "total",
+                        "pagina",
+                        "limite",
+                        "paginas"
+                      ]
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/MetaRespuesta"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Listar cupones",
+        "tags": [
+          "Cupones"
+        ]
+      },
+      "post": {
+        "operationId": "CuponesController_crear",
+        "parameters": [
+          {
+            "name": "empresa_id",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CuponRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Cupón creado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/CuponResponseDto"
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/MetaRespuesta"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Crear cupón",
+        "tags": [
+          "Cupones"
+        ]
+      }
+    },
+    "/api/v2/catalog/cupones/{id}": {
+      "get": {
+        "operationId": "CuponesController_detalle",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "empresa_id",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Cupón",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/CuponResponseDto"
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/MetaRespuesta"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Detalle de cupón",
+        "tags": [
+          "Cupones"
+        ]
+      },
+      "patch": {
+        "operationId": "CuponesController_actualizar",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "empresa_id",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CuponRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Cupón actualizado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/CuponResponseDto"
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/MetaRespuesta"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Actualizar cupón",
+        "tags": [
+          "Cupones"
+        ]
+      },
+      "delete": {
+        "operationId": "CuponesController_eliminar",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "empresa_id",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Cupón eliminado"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Eliminar cupón",
+        "tags": [
+          "Cupones"
         ]
       }
     },
@@ -23498,6 +24994,668 @@
         "summary": "Tienda pública con sus ofertas (UUID o slug; ruta pública)",
         "tags": [
           "Tiendas"
+        ]
+      }
+    },
+    "/api/v2/tienda/items/{item_id}/resenas": {
+      "get": {
+        "operationId": "ResenasController_listarPublicas",
+        "parameters": [
+          {
+            "name": "item_id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "pagina",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "name": "limite",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Reseñas publicadas",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
+                  "properties": {
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "items": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "id": {
+                                "type": "string",
+                                "format": "uuid"
+                              },
+                              "empresa_id": {
+                                "type": "string",
+                                "format": "uuid"
+                              },
+                              "item_id": {
+                                "type": "string",
+                                "format": "uuid"
+                              },
+                              "comprador_id": {
+                                "type": "string",
+                                "format": "uuid"
+                              },
+                              "calificacion": {
+                                "type": "integer"
+                              },
+                              "titulo": {
+                                "type": "string"
+                              },
+                              "comentario": {
+                                "type": "string"
+                              },
+                              "estado": {
+                                "type": "string"
+                              },
+                              "creado_en": {
+                                "type": "string",
+                                "format": "date-time"
+                              },
+                              "actualizado_en": {
+                                "type": "string",
+                                "format": "date-time"
+                              }
+                            }
+                          }
+                        },
+                        "total": {
+                          "type": "integer"
+                        },
+                        "pagina": {
+                          "type": "integer"
+                        },
+                        "limite": {
+                          "type": "integer"
+                        },
+                        "paginas": {
+                          "type": "integer"
+                        },
+                        "promedio": {
+                          "type": "number"
+                        }
+                      }
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/MetaRespuesta"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "summary": "Listar reseñas públicas de un item",
+        "tags": [
+          "Reseñas"
+        ]
+      }
+    },
+    "/api/v2/comprador/resenas": {
+      "get": {
+        "operationId": "ResenasController_listarPropias",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Reseñas del comprador",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
+                  "properties": {
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "format": "uuid"
+                          },
+                          "empresa_id": {
+                            "type": "string",
+                            "format": "uuid"
+                          },
+                          "item_id": {
+                            "type": "string",
+                            "format": "uuid"
+                          },
+                          "comprador_id": {
+                            "type": "string",
+                            "format": "uuid"
+                          },
+                          "calificacion": {
+                            "type": "integer"
+                          },
+                          "titulo": {
+                            "type": "string"
+                          },
+                          "comentario": {
+                            "type": "string"
+                          },
+                          "estado": {
+                            "type": "string"
+                          },
+                          "creado_en": {
+                            "type": "string",
+                            "format": "date-time"
+                          },
+                          "actualizado_en": {
+                            "type": "string",
+                            "format": "date-time"
+                          }
+                        }
+                      }
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/MetaRespuesta"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Listar mis reseñas",
+        "tags": [
+          "Reseñas"
+        ]
+      },
+      "post": {
+        "operationId": "ResenasController_crear",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "item_id": {
+                    "type": "string",
+                    "format": "uuid"
+                  },
+                  "calificacion": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 5
+                  },
+                  "titulo": {
+                    "type": "string"
+                  },
+                  "comentario": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "item_id",
+                  "calificacion"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Reseña creada",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
+                  "properties": {
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        "empresa_id": {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        "item_id": {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        "comprador_id": {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        "calificacion": {
+                          "type": "integer"
+                        },
+                        "titulo": {
+                          "type": "string"
+                        },
+                        "comentario": {
+                          "type": "string"
+                        },
+                        "estado": {
+                          "type": "string"
+                        },
+                        "creado_en": {
+                          "type": "string",
+                          "format": "date-time"
+                        },
+                        "actualizado_en": {
+                          "type": "string",
+                          "format": "date-time"
+                        }
+                      }
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/MetaRespuesta"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Crear reseña",
+        "tags": [
+          "Reseñas"
+        ]
+      }
+    },
+    "/api/v2/comprador/resenas/{id}": {
+      "patch": {
+        "operationId": "ResenasController_actualizar",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "calificacion": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 5
+                  },
+                  "titulo": {
+                    "type": "string"
+                  },
+                  "comentario": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Reseña actualizada",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
+                  "properties": {
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        "empresa_id": {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        "item_id": {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        "comprador_id": {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        "calificacion": {
+                          "type": "integer"
+                        },
+                        "titulo": {
+                          "type": "string"
+                        },
+                        "comentario": {
+                          "type": "string"
+                        },
+                        "estado": {
+                          "type": "string"
+                        },
+                        "creado_en": {
+                          "type": "string",
+                          "format": "date-time"
+                        },
+                        "actualizado_en": {
+                          "type": "string",
+                          "format": "date-time"
+                        }
+                      }
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/MetaRespuesta"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Actualizar mi reseña",
+        "tags": [
+          "Reseñas"
+        ]
+      },
+      "delete": {
+        "operationId": "ResenasController_eliminar",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Reseña eliminada"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Eliminar mi reseña",
+        "tags": [
+          "Reseñas"
+        ]
+      }
+    },
+    "/api/v2/admin/resenas/{id}": {
+      "patch": {
+        "operationId": "ResenasController_moderar",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "estado": {
+                    "type": "string",
+                    "enum": [
+                      "pendiente",
+                      "publicada",
+                      "rechazada"
+                    ]
+                  }
+                },
+                "required": [
+                  "estado"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Reseña moderada",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
+                  "properties": {
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        "empresa_id": {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        "item_id": {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        "comprador_id": {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        "calificacion": {
+                          "type": "integer"
+                        },
+                        "titulo": {
+                          "type": "string"
+                        },
+                        "comentario": {
+                          "type": "string"
+                        },
+                        "estado": {
+                          "type": "string"
+                        },
+                        "creado_en": {
+                          "type": "string",
+                          "format": "date-time"
+                        },
+                        "actualizado_en": {
+                          "type": "string",
+                          "format": "date-time"
+                        }
+                      }
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/MetaRespuesta"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Moderar reseña",
+        "tags": [
+          "Reseñas"
+        ]
+      }
+    },
+    "/api/v2/comprador/favoritos": {
+      "get": {
+        "operationId": "FavoritosController_listar",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Favoritos",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
+                  "properties": {
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "type": "object"
+                      }
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/MetaRespuesta"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Listar favoritos",
+        "tags": [
+          "Wishlist"
+        ]
+      },
+      "post": {
+        "operationId": "FavoritosController_agregar",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "item_id": {
+                    "type": "string",
+                    "format": "uuid"
+                  }
+                },
+                "required": [
+                  "item_id"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": "Favorito agregado"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Agregar favorito",
+        "tags": [
+          "Wishlist"
+        ]
+      }
+    },
+    "/api/v2/comprador/favoritos/{item_id}": {
+      "delete": {
+        "operationId": "FavoritosController_eliminar",
+        "parameters": [
+          {
+            "name": "item_id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Favorito eliminado"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Eliminar favorito",
+        "tags": [
+          "Wishlist"
         ]
       }
     }
@@ -26784,6 +28942,24 @@
             "type": "string",
             "description": "Fecha de creación (ISO 8601 UTC)",
             "format": "date-time"
+          },
+          "empresa_id": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true
+          },
+          "electronica_estado": {
+            "type": "string",
+            "nullable": true
+          },
+          "electronica_referencia": {
+            "type": "string",
+            "nullable": true
+          },
+          "electronica_enviada_en": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
           }
         },
         "required": [
@@ -31878,6 +34054,11 @@
           "empresa_id": {
             "type": "string",
             "format": "uuid"
+          },
+          "negocio_id": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true
           },
           "vertical_id": {
             "type": "string",
@@ -37641,12 +39822,24 @@
           "referencia": {
             "type": "string"
           },
+          "proveedor": {
+            "type": "string",
+            "description": "Pasarela que creó el cargo (simulado/http/manual)"
+          },
+          "monto_reembolsado_cents": {
+            "type": "integer"
+          },
           "motivo_rechazo": {
             "type": "string"
           },
           "confirmado_por": {
             "type": "string",
             "format": "uuid",
+            "nullable": true
+          },
+          "conciliado_en": {
+            "type": "string",
+            "format": "date-time",
             "nullable": true
           },
           "confirmado_en": {
@@ -37668,8 +39861,11 @@
           "monto_cents",
           "moneda",
           "referencia",
+          "proveedor",
+          "monto_reembolsado_cents",
           "motivo_rechazo",
           "confirmado_por",
+          "conciliado_en",
           "confirmado_en",
           "creado_en"
         ]
@@ -38095,8 +40291,9 @@
           },
           "vendedor_id": {
             "type": "string",
-            "description": "Id del vendedor",
-            "format": "uuid"
+            "description": "Id del vendedor; null en venta directa",
+            "format": "uuid",
+            "nullable": true
           },
           "sku": {
             "type": "string",
@@ -38127,7 +40324,6 @@
           "oferta_id",
           "cantidad",
           "tienda_id",
-          "vendedor_id",
           "sku",
           "producto_nombre",
           "precio_venta",
@@ -38679,6 +40875,11 @@
             "type": "string",
             "description": "Segmento de precio; se resuelve a su lista activa",
             "example": "mayorista"
+          },
+          "cupon_codigo": {
+            "type": "string",
+            "description": "Código de cupón aplicado al total",
+            "nullable": true
           }
         },
         "required": [
@@ -38870,6 +41071,12 @@
           "fulfillment_config": {
             "type": "object",
             "additionalProperties": true
+          },
+          "ubicacion_id": {
+            "type": "string",
+            "description": "Bodega o sucursal desde la que se despacha la línea",
+            "format": "uuid",
+            "nullable": true
           }
         },
         "required": [
@@ -38916,10 +41123,22 @@
             "description": "Precio unitario de venta en centavos",
             "example": 115000
           },
+          "descuento_cents": {
+            "type": "number",
+            "description": "Descuento aplicado por promoción en centavos",
+            "example": 0
+          },
+          "promocion_id": {
+            "type": "string",
+            "description": "Promoción aplicada a la línea",
+            "format": "uuid",
+            "nullable": true
+          },
           "vendedor_id": {
             "type": "string",
-            "description": "Id del vendedor",
-            "format": "uuid"
+            "description": "Id del vendedor; null en venta directa",
+            "format": "uuid",
+            "nullable": true
           },
           "tienda_id": {
             "type": "string",
@@ -38929,6 +41148,16 @@
           "negocio_id": {
             "type": "string",
             "description": "Negocio de la tienda",
+            "format": "uuid",
+            "nullable": true
+          },
+          "comision": {
+            "type": "boolean",
+            "description": "Indica si la línea genera comisión"
+          },
+          "ubicacion_id": {
+            "type": "string",
+            "description": "Bodega o sucursal desde la que se despacha la línea",
             "format": "uuid",
             "nullable": true
           },
@@ -38955,7 +41184,6 @@
           "producto_nombre",
           "cantidad",
           "precio_unitario_cents",
-          "vendedor_id",
           "tienda_id"
         ]
       },
@@ -39022,8 +41250,9 @@
           },
           "vendedor_id": {
             "type": "string",
-            "description": "Id del vendedor",
-            "format": "uuid"
+            "description": "Id del vendedor; null en venta directa",
+            "format": "uuid",
+            "nullable": true
           },
           "comprador_id": {
             "type": "string",
@@ -39135,11 +41364,19 @@
             "description": "Fecha de devolución (ISO 8601 UTC)",
             "nullable": true,
             "format": "date-time"
+          },
+          "cupon_codigo": {
+            "type": "string",
+            "description": "Código de cupón aplicado",
+            "nullable": true
+          },
+          "descuento_cupon_cents": {
+            "type": "integer",
+            "description": "Descuento de cupón en centavos"
           }
         },
         "required": [
           "id",
-          "vendedor_id",
           "comprador_id",
           "tienda_id",
           "estado",
@@ -39730,6 +41967,129 @@
           }
         },
         "description": "Indica tarjeta y recompensa por id o por código"
+      },
+      "CuponRequestDto": {
+        "type": "object",
+        "properties": {
+          "codigo": {
+            "type": "string",
+            "example": "VERANO-25"
+          },
+          "nombre": {
+            "type": "string"
+          },
+          "tipo": {
+            "type": "string",
+            "enum": [
+              "porcentaje",
+              "monto_fijo"
+            ]
+          },
+          "valor": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "minimo_compra_cents": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "maximo_descuento_cents": {
+            "type": "integer",
+            "nullable": true
+          },
+          "usos_maximos": {
+            "type": "integer",
+            "nullable": true
+          },
+          "fecha_desde": {
+            "type": "string",
+            "format": "date"
+          },
+          "fecha_hasta": {
+            "type": "string",
+            "format": "date"
+          },
+          "activo": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "codigo",
+          "nombre",
+          "tipo",
+          "valor",
+          "fecha_desde",
+          "fecha_hasta"
+        ]
+      },
+      "CuponResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "empresa_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "codigo": {
+            "type": "string"
+          },
+          "nombre": {
+            "type": "string"
+          },
+          "tipo": {
+            "type": "string"
+          },
+          "valor": {
+            "type": "integer"
+          },
+          "minimo_compra_cents": {
+            "type": "integer"
+          },
+          "maximo_descuento_cents": {
+            "type": "integer",
+            "nullable": true
+          },
+          "usos_maximos": {
+            "type": "integer",
+            "nullable": true
+          },
+          "usos_actuales": {
+            "type": "integer"
+          },
+          "fecha_desde": {
+            "type": "string",
+            "format": "date"
+          },
+          "fecha_hasta": {
+            "type": "string",
+            "format": "date"
+          },
+          "activo": {
+            "type": "boolean"
+          },
+          "creado_en": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "actualizado_en": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "empresa_id",
+          "codigo",
+          "nombre",
+          "tipo",
+          "valor",
+          "fecha_desde",
+          "fecha_hasta",
+          "activo"
+        ]
       },
       "BloqueoResponseDto": {
         "type": "object",

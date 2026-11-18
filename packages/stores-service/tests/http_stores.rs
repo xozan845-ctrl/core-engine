@@ -8,6 +8,7 @@ use common::*;
 use http_body_util::BodyExt;
 use serde_json::{json, Value};
 use std::sync::Arc;
+use stores_service::auth::CapacidadActiva;
 use stores_service::config::Config;
 use stores_service::http::{build_router, estado_de_prueba};
 use stores_service::metrics::Metrics;
@@ -41,6 +42,63 @@ fn estado_completo(db: Arc<stores_service::db::Db>) -> AppState {
         temas,
         storage,
         catalogo,
+        Arc::new(stores_service::clients::OrdenesSinConexion),
+        Arc::clone(&db),
+        tiendas,
+        ofertas,
+    )
+}
+
+struct OrdenesFijo(bool);
+
+#[async_trait::async_trait]
+impl stores_service::clients::Ordenes for OrdenesFijo {
+    async fn compra_verificada(
+        &self,
+        _order_id: &str,
+        _comprador_id: &str,
+        _item_id: &str,
+    ) -> bool {
+        self.0
+    }
+}
+
+fn estado_completo_verificado(db: Arc<stores_service::db::Db>, orden_valida: bool) -> AppState {
+    let config = Config::from_pairs([
+        ("SERVICIO", "stores-service"),
+        ("INTERNAL_API_KEY", "secreta"),
+    ])
+    .expect("config");
+    let temas = temas(None, json!({}), None, json!({}));
+    let storage = storage_vacio();
+    let catalogo = catalogo("1000.00", Some(5), true);
+    let tiendas = Arc::new(Tiendas::nueva(
+        Arc::clone(&db),
+        Arc::clone(&temas),
+        Arc::clone(&storage),
+    ));
+    let ofertas = Arc::new(Ofertas::nueva(Arc::clone(&db), Arc::clone(&catalogo)));
+    let capacidades: Arc<dyn stores_service::auth::Capacidades> = Arc::new(CapacidadesFijas(vec![
+        CapacidadActiva {
+            empresa_id: EMPRESA.to_string(),
+            capacidad_codigo: "catalogo_items".to_string(),
+            activo: true,
+        },
+        CapacidadActiva {
+            empresa_id: EMPRESA.to_string(),
+            capacidad_codigo: "resenas_verificadas".to_string(),
+            activo: true,
+        },
+    ]));
+    AppState::con_dependencias(
+        config,
+        Arc::new(Metrics::nueva("stores-service")),
+        capacidades,
+        temas,
+        storage,
+        catalogo,
+        Arc::new(OrdenesFijo(orden_valida)),
+        Arc::clone(&db),
         tiendas,
         ofertas,
     )
@@ -250,4 +308,213 @@ async fn debe_recorrer_el_flujo_de_tienda_y_oferta_por_http() {
     .await;
     assert_eq!(status, StatusCode::CREATED);
     assert_eq!(valor["ok"], true);
+}
+
+fn headers_comprador() -> [(&'static str, &'static str); 3] {
+    [
+        ("x-user-id", "99999999-9999-4999-8999-999999999999"),
+        ("x-user-rol", "comprador"),
+        ("x-user-email", "comprador@test.dev"),
+    ]
+}
+
+#[tokio::test]
+async fn debe_crear_moderar_resenas_y_gestionar_favoritos() {
+    let Some(url) = url() else { return };
+    let _guard = DB_LOCK.lock().await;
+    provisionar(&url).await;
+    let app = build_router(estado_completo(db().await));
+
+    let (status, resena, _) = enviar(
+        &app,
+        "POST",
+        "/api/v2/comprador/resenas",
+        &headers_comprador(),
+        Some(json!({
+            "item_id": ITEM,
+            "calificacion": 5,
+            "titulo": "Excelente",
+            "comentario": "Muy buen producto"
+        })),
+    )
+    .await;
+    assert_eq!(status, StatusCode::CREATED, "{resena}");
+    assert_eq!(resena["data"]["estado"], "pendiente");
+    let resena_id = resena["data"]["id"].as_str().expect("id");
+
+    let (status, propias, _) = enviar(
+        &app,
+        "GET",
+        "/api/v2/comprador/resenas",
+        &headers_comprador(),
+        None,
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK);
+    assert_eq!(propias["data"].as_array().expect("propias").len(), 1);
+
+    let (status, actualizada, _) = enviar(
+        &app,
+        "PATCH",
+        &format!("/api/v2/comprador/resenas/{resena_id}"),
+        &headers_comprador(),
+        Some(json!({ "titulo": "Excelente v2" })),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK);
+    assert_eq!(actualizada["data"]["titulo"], "Excelente v2");
+
+    let (status, _, _) = enviar(
+        &app,
+        "POST",
+        "/api/v2/comprador/resenas",
+        &headers_comprador(),
+        Some(json!({ "item_id": ITEM, "calificacion": 4 })),
+    )
+    .await;
+    assert_eq!(status, StatusCode::CONFLICT);
+
+    let (status, publicas, _) = enviar(
+        &app,
+        "GET",
+        &format!("/api/v2/tienda/items/{ITEM}/resenas"),
+        &[],
+        None,
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK);
+    assert_eq!(publicas["data"]["total"], 0);
+
+    let (status, _, _) = enviar(
+        &app,
+        "PATCH",
+        &format!("/api/v2/admin/resenas/{resena_id}"),
+        &headers_comprador(),
+        Some(json!({ "estado": "publicada" })),
+    )
+    .await;
+    assert_eq!(status, StatusCode::FORBIDDEN);
+
+    let (status, moderada, _) = enviar(
+        &app,
+        "PATCH",
+        &format!("/api/v2/admin/resenas/{resena_id}"),
+        &[("x-user-id", USUARIO), ("x-user-rol", "admin")],
+        Some(json!({ "estado": "publicada" })),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK);
+    assert_eq!(moderada["data"]["estado"], "publicada");
+
+    let (status, publicas, _) = enviar(
+        &app,
+        "GET",
+        &format!("/api/v2/tienda/items/{ITEM}/resenas"),
+        &[],
+        None,
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK);
+    assert_eq!(publicas["data"]["total"], 1);
+    assert_eq!(publicas["data"]["promedio"], 5.0);
+
+    let (status, _, _) = enviar(
+        &app,
+        "DELETE",
+        &format!("/api/v2/comprador/resenas/{resena_id}"),
+        &headers_comprador(),
+        None,
+    )
+    .await;
+    assert_eq!(status, StatusCode::NO_CONTENT);
+
+    let (status, _, _) = enviar(
+        &app,
+        "POST",
+        "/api/v2/comprador/favoritos",
+        &headers_comprador(),
+        Some(json!({ "item_id": ITEM })),
+    )
+    .await;
+    assert_eq!(status, StatusCode::NO_CONTENT);
+    let (status, favoritos, _) = enviar(
+        &app,
+        "GET",
+        "/api/v2/comprador/favoritos",
+        &headers_comprador(),
+        None,
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK);
+    assert_eq!(favoritos["data"].as_array().expect("favoritos").len(), 1);
+    let (status, _, _) = enviar(
+        &app,
+        "DELETE",
+        &format!("/api/v2/comprador/favoritos/{ITEM}"),
+        &headers_comprador(),
+        None,
+    )
+    .await;
+    assert_eq!(status, StatusCode::NO_CONTENT);
+}
+
+#[tokio::test]
+async fn debe_exigir_compra_verificada_solo_si_la_capacidad_esta_activa() {
+    let Some(url) = url() else { return };
+    let _guard = DB_LOCK.lock().await;
+    provisionar(&url).await;
+    let app = build_router(estado_completo_verificado(db().await, false));
+
+    let (status, error, _) = enviar(
+        &app,
+        "POST",
+        "/api/v2/comprador/resenas",
+        &headers_comprador(),
+        Some(json!({ "item_id": ITEM, "calificacion": 5 })),
+    )
+    .await;
+    assert_eq!(status, StatusCode::BAD_REQUEST);
+    assert_eq!(error["codigo"], "ORDER_ID_REQUERIDO");
+
+    let (status, error, _) = enviar(
+        &app,
+        "POST",
+        "/api/v2/comprador/resenas",
+        &headers_comprador(),
+        Some(json!({
+            "item_id": ITEM,
+            "calificacion": 5,
+            "order_id": "11111111-1111-4111-8111-111111111111"
+        })),
+    )
+    .await;
+    assert_eq!(status, StatusCode::BAD_REQUEST);
+    assert_eq!(error["codigo"], "COMPRA_NO_VERIFICADA");
+}
+
+#[tokio::test]
+async fn debe_marcar_la_resena_como_verificada_cuando_la_compra_existe() {
+    let Some(url) = url() else { return };
+    let _guard = DB_LOCK.lock().await;
+    provisionar(&url).await;
+    let app = build_router(estado_completo_verificado(db().await, true));
+
+    let (status, resena, _) = enviar(
+        &app,
+        "POST",
+        "/api/v2/comprador/resenas",
+        &headers_comprador(),
+        Some(json!({
+            "item_id": ITEM,
+            "calificacion": 5,
+            "order_id": "11111111-1111-4111-8111-111111111111"
+        })),
+    )
+    .await;
+    assert_eq!(status, StatusCode::CREATED);
+    assert_eq!(resena["data"]["compra_verificada"], true);
+    assert_eq!(
+        resena["data"]["order_id"],
+        "11111111-1111-4111-8111-111111111111"
+    );
 }

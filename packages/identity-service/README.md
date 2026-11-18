@@ -208,6 +208,9 @@ internos son objetos concretos (`Storage`, `Stores`).
   hace lo propio por negocio.
 - `GET /empresas/{empresaId}/features` devuelve el **manifiesto**: la unión de
   features de las capacidades activas según `dominio/features.rs`.
+- `GET /empresas/{empresaId}/negocios/{negocioId}/features` devuelve el
+  manifiesto del negocio; si no tiene capacidades propias, hereda las de la
+  empresa.
 - Una capacidad desconocida o no permitida devuelve `CAPACIDAD_INVALIDA` /
   `CAPACIDAD_NO_DISPONIBLE`.
 
@@ -216,6 +219,8 @@ internos son objetos concretos (`Storage`, `Stores`).
 - `GET /packs` lista packs activos; `POST /packs` crea una plantilla.
 - `GET/POST /packs/verticales` administra verticales.
 - `GET/POST /packs/modelos-operacion` administra modelos reutilizables.
+- El modelo `venta_directa` declara `requiere_vendedor: false` y
+  `comision: false`; un pack que lo incluye opera sin marketplace (ADR-0023).
 - `GET /packs/{codigo}/{version}` devuelve el pack versionado y sus
   capacidades/modelos.
 - Un pack incompatible con la vertical del negocio produce
@@ -300,7 +305,7 @@ Un esquema inválido devuelve `ESQUEMA_EXTENSION_INVALIDO`; datos inválidos,
 | Auth | `POST /auth/{registro,login,refresh,logout,crear-usuario,cambiar-contrasena,restablecer-contrasena,restablecer-contrasena/confirmar,vincular-personal,token}`, `GET /auth/me`, `GET /auth/negocios`, `POST /auth/negocio-activo` |
 | Usuarios | `GET /usuarios`, `GET /usuarios/{id}`, `PATCH /usuarios/{id}/avatar` |
 | Empresas | `POST /empresas`, `GET /empresas/{id}`, `PATCH /empresas/{id}/{pack,perfil,slug}`, `POST /empresas/{id}/vendedores` |
-| Capacidades | `GET/PATCH /empresas/{empresaId}/capacidades[/{capacidad}]`, idem por negocio, `GET /empresas/{empresaId}/features` |
+| Capacidades | `GET/PATCH /empresas/{empresaId}/capacidades[/{capacidad}]`, idem por negocio, `GET /empresas/{empresaId}/features`, `GET /empresas/{empresaId}/negocios/{negocioId}/features` |
 | Packs | `GET/POST /packs`, `GET/POST /packs/verticales`, `GET/POST /packs/modelos-operacion`, `GET /packs/{codigo}/{version}` |
 | Negocios | `GET/POST /empresas/{empresaId}/negocios`, `POST .../negocios/{id}/plantillas`, `PATCH .../negocios/{id}/estado`, `GET /negocios/plantillas`, `POST /empresas/{id}/personal/{usuarioId}/transferir` |
 | Personal | `GET/POST /empresas/{id}/roles`, `PATCH .../roles/{rolId}`, `GET/POST /empresas/{id}/puestos`, `GET/POST /empresas/{id}/asignaciones-personal`, `GET/POST /empresas/{id}/invitaciones/personal`, `POST .../invitaciones/personal/{id}/revocar`, `GET/POST /incorporaciones/{token}[/aceptar]` |

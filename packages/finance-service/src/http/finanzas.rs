@@ -479,6 +479,171 @@ pub async fn comprobante_anular(
         .ok_or_else(|| ApiError::no_encontrado("Comprobante", &id))
 }
 
+/// `GET /api/v2/finanzas/comprobantes/{id}/pdf` (capacidad electrónica).
+pub async fn comprobante_pdf(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    Path(id): Path<String>,
+) -> Result<axum::response::Response, ApiError> {
+    let usuario = contexto(
+        &state,
+        &headers,
+        &ROLES_FINANZAS,
+        &[],
+        &[CAP_FACTURACION, "facturacion_electronica"],
+    )
+    .await?;
+    let comprobante = state
+        .facturacion
+        .obtener(&id)
+        .await?
+        .ok_or_else(|| ApiError::no_encontrado("Comprobante", &id))?;
+    let empresa = comprobante
+        .empresa_id
+        .as_deref()
+        .ok_or_else(|| ApiError::dominio("EMPRESA_REQUERIDA", "Comprobante sin empresa."))?;
+    let pdf = state
+        .facturacion
+        .pdf_de(&id, empresa, comprobante.negocio_id.as_deref())
+        .await?
+        .ok_or_else(|| ApiError::no_encontrado("Comprobante", &id))?;
+    let _ = usuario;
+    axum::response::Response::builder()
+        .header(axum::http::header::CONTENT_TYPE, "application/pdf")
+        .header(
+            axum::http::header::CONTENT_DISPOSITION,
+            format!(
+                "attachment; filename=\"{}-{}.pdf\"",
+                comprobante.serie, comprobante.numero
+            ),
+        )
+        .body(axum::body::Body::from(pdf))
+        .map_err(|_| ApiError::interno())
+}
+
+// ── configuración fiscal por tenant ─────────────────────────────────────────
+
+#[derive(Debug, Clone, Deserialize, Default)]
+pub struct ConfiguracionFiscalRequest {
+    #[serde(default)]
+    pub jurisdiccion: Option<String>,
+    #[serde(default)]
+    pub empresa_id: Option<String>,
+    #[serde(default)]
+    pub negocio_id: Option<String>,
+    #[serde(default)]
+    pub facturacion_electronica: Option<bool>,
+    #[serde(default)]
+    pub formato_pdf: Option<bool>,
+    #[serde(default)]
+    pub proveedor_electronico: Option<String>,
+    #[serde(default)]
+    pub ambiente_electronico: Option<String>,
+}
+
+fn empresa_fiscal(
+    usuario: &crate::auth::UsuarioContexto,
+    empresa: Option<&String>,
+) -> Result<String, ApiError> {
+    if usuario.es_admin_global() {
+        return empresa
+            .map(String::as_str)
+            .map(str::trim)
+            .filter(|valor| !valor.is_empty())
+            .map(str::to_string)
+            .or_else(|| usuario.tenant_id.clone())
+            .ok_or_else(|| {
+                ApiError::validacion(json!([
+                    {"campo": "empresa_id", "restricciones": ["isString"]}
+                ]))
+            });
+    }
+    Ok(usuario.tenant()?.to_string())
+}
+
+/// `GET /api/v2/finanzas/configuracion-fiscal?empresa_id=&negocio_id=`.
+pub async fn configuracion_fiscal_obtener(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    Query(query): Query<HashMap<String, String>>,
+) -> Result<Json<Value>, ApiError> {
+    let usuario = contexto(
+        &state,
+        &headers,
+        &["super_admin", "admin", "empresario"],
+        &[],
+        &[],
+    )
+    .await?;
+    let empresa = empresa_fiscal(&usuario, query.get("empresa_id"))?;
+    let negocio = query
+        .get("negocio_id")
+        .cloned()
+        .or_else(|| usuario.negocio_id.clone());
+    let config = state
+        .tributacion
+        .configuracion_facturacion(&empresa, negocio.as_deref())
+        .await?;
+    Ok(Json(json!({
+        "empresa_id": empresa,
+        "negocio_id": negocio,
+        "jurisdiccion": config.jurisdiccion,
+        "facturacion_electronica": config.facturacion_electronica,
+        "formato_pdf": config.formato_pdf,
+        "proveedor_electronico": config.proveedor_electronico,
+        "ambiente_electronico": config.ambiente_electronico,
+    })))
+}
+
+/// `PUT /api/v2/finanzas/configuracion-fiscal`.
+pub async fn configuracion_fiscal_guardar(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    Json(dto): Json<ConfiguracionFiscalRequest>,
+) -> Result<Json<Value>, ApiError> {
+    let usuario = contexto(
+        &state,
+        &headers,
+        &["super_admin", "admin", "empresario"],
+        &[],
+        &[],
+    )
+    .await?;
+    let empresa = empresa_fiscal(&usuario, dto.empresa_id.as_ref())?;
+    let negocio = dto
+        .negocio_id
+        .clone()
+        .or_else(|| usuario.negocio_id.clone());
+    let jurisdiccion = dto.jurisdiccion.unwrap_or_default();
+    let facturacion_electronica = dto.facturacion_electronica.unwrap_or(false);
+    if facturacion_electronica || dto.formato_pdf.unwrap_or(false) {
+        state
+            .exigir_capacidades(&usuario, &["facturacion_electronica"])
+            .await?;
+    }
+    let config = state
+        .tributacion
+        .guardar_configuracion_facturacion(
+            &empresa,
+            negocio.as_deref(),
+            &jurisdiccion,
+            facturacion_electronica,
+            dto.formato_pdf.unwrap_or(false),
+            dto.proveedor_electronico.as_deref().unwrap_or("simulado"),
+            dto.ambiente_electronico.as_deref().unwrap_or("pruebas"),
+        )
+        .await?;
+    Ok(Json(json!({
+        "empresa_id": empresa,
+        "negocio_id": negocio,
+        "jurisdiccion": config.jurisdiccion,
+        "facturacion_electronica": config.facturacion_electronica,
+        "formato_pdf": config.formato_pdf,
+        "proveedor_electronico": config.proveedor_electronico,
+        "ambiente_electronico": config.ambiente_electronico,
+    })))
+}
+
 // ── modelo financiero ───────────────────────────────────────────────────────
 
 pub async fn proyecciones_crear(
