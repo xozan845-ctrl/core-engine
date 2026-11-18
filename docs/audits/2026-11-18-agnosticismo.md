@@ -384,5 +384,10 @@ marketplace que ya funciona.
   final; `descuento_cents`/`promocion_id` quedan en la línea y la comisión se
   calcula sobre el neto. Decisión en
   [ADR-0025](../adr/0025-promociones-en-checkout.md).
-- **P2 — Fiscal multi-jurisdicción y pagos reales:** pendiente.
+- **P2.1 — Fiscalidad por tenant: implementado (facturación).** La
+  jurisdicción se configura por empresa/negocio, el comprobante usa su moneda y
+  el IVA se calcula por línea con descuentos. Las declaraciones siguen siendo de
+  plataforma porque el libro mayor no tiene tenant. Decisión en
+  [ADR-0026](../adr/0026-fiscalidad-por-tenant.md).
+- **P2.2 — Pagos reales:** pendiente.
 

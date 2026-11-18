@@ -158,6 +158,96 @@ impl Tributacion {
         Ok(fila.as_ref().map(jurisdiccion_de_fila))
     }
 
+    /// Jurisdicción efectiva del tenant: negocio → empresa → primera activa
+    /// (solo como compatibilidad para datos legacy sin configuración).
+    pub async fn jurisdiccion_de(
+        &self,
+        empresa_id: &str,
+        negocio_id: Option<&str>,
+    ) -> Result<Option<Jurisdiccion>, ApiError> {
+        let fila = sqlx::query(
+            "SELECT j.codigo_pais, j.nombre, j.moneda, j.simbolo_moneda, j.tasa_iva,
+                    j.tasa_ir, j.periodicidad_declaracion, j.leyes, j.activa
+               FROM finance.configuracion_fiscal c
+               JOIN finance.jurisdicciones j ON j.codigo_pais = c.jurisdiccion
+              WHERE c.empresa_id = $1::uuid
+                AND (c.negocio_id = $2::uuid OR c.negocio_id IS NULL)
+              ORDER BY (c.negocio_id IS NOT NULL) DESC
+              LIMIT 1",
+        )
+        .bind(empresa_id)
+        .bind(negocio_id)
+        .fetch_optional(self.db.pool())
+        .await
+        .map_err(error_db)?;
+        match fila {
+            Some(fila) => Ok(Some(jurisdiccion_de_fila(&fila))),
+            None => self.jurisdiccion_activa().await,
+        }
+    }
+
+    pub async fn guardar_configuracion_fiscal(
+        &self,
+        empresa_id: &str,
+        negocio_id: Option<&str>,
+        jurisdiccion: &str,
+    ) -> Result<Jurisdiccion, ApiError> {
+        let empresa = uuid::Uuid::parse_str(empresa_id)
+            .map_err(|_| ApiError::dominio("EMPRESA_INVALIDA", "Empresa inválida."))?;
+        let negocio = negocio_id
+            .map(uuid::Uuid::parse_str)
+            .transpose()
+            .map_err(|_| ApiError::dominio("NEGOCIO_INVALIDO", "Negocio inválido."))?;
+        let codigo = jurisdiccion.trim().to_uppercase();
+        let existe = sqlx::query(
+            "SELECT codigo_pais FROM finance.jurisdicciones
+              WHERE codigo_pais = $1 AND activa",
+        )
+        .bind(&codigo)
+        .fetch_optional(self.db.pool())
+        .await
+        .map_err(error_db)?;
+        if existe.is_none() {
+            return Err(ApiError::no_encontrado("Jurisdiccion", &codigo));
+        }
+        match negocio {
+            Some(negocio) => {
+                sqlx::query(
+                    "INSERT INTO finance.configuracion_fiscal
+                       (empresa_id, negocio_id, jurisdiccion, actualizado_en)
+                     VALUES ($1, $2, $3, NOW())
+                     ON CONFLICT (empresa_id, negocio_id) WHERE negocio_id IS NOT NULL
+                     DO UPDATE SET jurisdiccion = EXCLUDED.jurisdiccion,
+                                   actualizado_en = NOW()",
+                )
+                .bind(empresa)
+                .bind(negocio)
+                .bind(&codigo)
+                .execute(self.db.pool())
+                .await
+                .map_err(error_db)?;
+            }
+            None => {
+                sqlx::query(
+                    "INSERT INTO finance.configuracion_fiscal
+                       (empresa_id, negocio_id, jurisdiccion, actualizado_en)
+                     VALUES ($1, NULL, $2, NOW())
+                     ON CONFLICT (empresa_id) WHERE negocio_id IS NULL
+                     DO UPDATE SET jurisdiccion = EXCLUDED.jurisdiccion,
+                                   actualizado_en = NOW()",
+                )
+                .bind(empresa)
+                .bind(&codigo)
+                .execute(self.db.pool())
+                .await
+                .map_err(error_db)?;
+            }
+        }
+        self.jurisdiccion_de(empresa_id, negocio_id)
+            .await?
+            .ok_or_else(ApiError::interno)
+    }
+
     pub async fn listar_jurisdicciones(&self) -> Result<Vec<Jurisdiccion>, ApiError> {
         let filas = sqlx::query(
             "SELECT codigo_pais, nombre, moneda, simbolo_moneda, tasa_iva, tasa_ir,

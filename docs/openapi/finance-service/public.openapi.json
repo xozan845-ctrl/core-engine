@@ -885,6 +885,91 @@
         ]
       }
     },
+    "/api/v2/finanzas/configuracion-fiscal": {
+      "get": {
+        "operationId": "TributacionController_configuracionFiscal",
+        "parameters": [
+          {"name": "empresa_id", "required": false, "in": "query", "schema": {"type": "string", "format": "uuid"}},
+          {"name": "negocio_id", "required": false, "in": "query", "schema": {"type": "string", "format": "uuid"}}
+        ],
+        "responses": {
+          "200": {
+            "description": "Jurisdicción efectiva del tenant",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": ["data", "meta"],
+                  "properties": {
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "empresa_id": {"type": "string", "format": "uuid"},
+                        "negocio_id": {"type": "string", "format": "uuid", "nullable": true},
+                        "jurisdiccion": {"$ref": "#/components/schemas/JurisdiccionResponseDto"}
+                      },
+                      "required": ["empresa_id", "jurisdiccion"]
+                    },
+                    "meta": {"$ref": "#/components/schemas/MetaRespuesta"}
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [{"bearer": []}],
+        "summary": "Consultar la configuración fiscal del tenant",
+        "tags": ["Finanzas · Tributación"]
+      },
+      "put": {
+        "operationId": "TributacionController_guardarConfiguracionFiscal",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "jurisdiccion": {"type": "string", "example": "NI"},
+                  "empresa_id": {"type": "string", "format": "uuid"},
+                  "negocio_id": {"type": "string", "format": "uuid", "nullable": true}
+                },
+                "required": ["jurisdiccion"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Configuración fiscal guardada",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": ["data", "meta"],
+                  "properties": {
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "empresa_id": {"type": "string", "format": "uuid"},
+                        "negocio_id": {"type": "string", "format": "uuid", "nullable": true},
+                        "jurisdiccion": {"$ref": "#/components/schemas/JurisdiccionResponseDto"}
+                      },
+                      "required": ["empresa_id", "jurisdiccion"]
+                    },
+                    "meta": {"$ref": "#/components/schemas/MetaRespuesta"}
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [{"bearer": []}],
+        "summary": "Guardar la configuración fiscal del tenant",
+        "tags": ["Finanzas · Tributación"]
+      }
+    },
     "/api/v2/finanzas/regimenes": {
       "get": {
         "operationId": "TributacionController_regimenes",

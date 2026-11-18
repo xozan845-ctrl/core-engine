@@ -54,10 +54,22 @@ pub trait Ordenes: Send + Sync {
 }
 
 #[derive(Debug, Clone, Deserialize, PartialEq)]
+pub struct OrdenItemFiscal {
+    #[serde(default)]
+    pub precio_unitario_cents: i64,
+    #[serde(default)]
+    pub cantidad: i64,
+    #[serde(default)]
+    pub descuento_cents: i64,
+}
+
+#[derive(Debug, Clone, Deserialize, PartialEq)]
 pub struct OrdenResumen {
     pub total_cents: i64,
     #[serde(default)]
     pub negocio_id: Option<String>,
+    #[serde(default)]
+    pub items: Vec<OrdenItemFiscal>,
 }
 
 pub struct OrdenesHttp {
@@ -238,16 +250,42 @@ impl Facturacion {
         })?;
         let serie = serie_de_fila(&serie);
 
-        let tasa_iva: Option<f64> = sqlx::query_scalar(
-            "SELECT tasa_iva FROM finance.jurisdicciones WHERE codigo_pais = $1",
+        let fila_jurisdiccion = sqlx::query(
+            "SELECT tasa_iva, moneda FROM finance.jurisdicciones WHERE codigo_pais = $1",
         )
         .bind(&serie.jurisdiccion)
         .fetch_optional(self.db.pool())
         .await
         .map_err(error_db)?;
-        let tasa_iva = tasa_iva.unwrap_or(0.15);
-        let base = money::desde_centavos(orden.total_cents)?;
-        let iva = money::multiplicar_por(base, tasa_iva)?;
+        let (tasa_iva, moneda) = match fila_jurisdiccion {
+            Some(fila) => (
+                fila.try_get::<f64, _>("tasa_iva").unwrap_or(0.15),
+                fila.try_get::<String, _>("moneda")
+                    .unwrap_or_else(|_| "NIO".to_string()),
+            ),
+            None => (0.15, "NIO".to_string()),
+        };
+        let (base, iva) = if orden.items.is_empty() {
+            let base = money::desde_centavos(orden.total_cents)?;
+            let iva = money::multiplicar_por(base, tasa_iva)?;
+            (base, iva)
+        } else {
+            let mut base = 0;
+            let mut iva = 0;
+            for item in &orden.items {
+                let neto = item
+                    .precio_unitario_cents
+                    .saturating_mul(item.cantidad)
+                    .saturating_sub(item.descuento_cents);
+                if neto <= 0 {
+                    continue;
+                }
+                let base_linea = money::desde_centavos(neto)?;
+                base = money::sumar(base, base_linea)?;
+                iva = money::sumar(iva, money::multiplicar_por(base_linea, tasa_iva)?)?;
+            }
+            (base, iva)
+        };
         let total = money::sumar(base, iva)?;
         let numero = format!("{}{:08}", serie.prefijo, serie.secuencial_actual + 1);
         let estado = if self.emitir { "EMITIDO" } else { "BORRADOR" };
@@ -264,8 +302,8 @@ impl Facturacion {
                (id, serie, numero, tipo, orden_id, negocio_id, parte_id, base_gravada_cents,
                 iva_cents, exento_cents, total_cents, moneda, estado, datos_cliente,
                 emitido_en)
-             VALUES (gen_random_uuid(), $1, $2, $3, $4, $5, $6, $7, $8, 0, $9, 'C$', $10, $11,
-                     CASE WHEN $10 = 'EMITIDO' THEN NOW() ELSE NULL END)
+             VALUES (gen_random_uuid(), $1, $2, $3, $4, $5, $6, $7, $8, 0, $9, $10, $11, $12,
+                     CASE WHEN $11 = 'EMITIDO' THEN NOW() ELSE NULL END)
              RETURNING id, serie, numero, tipo, orden_id, negocio_id, parte_id, base_gravada_cents,
                        iva_cents, exento_cents, total_cents, moneda, estado,
                        datos_cliente, emitido_en, creado_en",
@@ -293,6 +331,7 @@ impl Facturacion {
         .bind(base as i32)
         .bind(iva as i32)
         .bind(total as i32)
+        .bind(&moneda)
         .bind(estado)
         .bind(sqlx::types::Json(&datos_cliente))
         .fetch_one(&mut *tx)
@@ -437,6 +476,7 @@ mod tests {
             (order_id == "orden-1").then_some(OrdenResumen {
                 total_cents: 100_000,
                 negocio_id: None,
+                items: Vec::new(),
             })
         }
     }
