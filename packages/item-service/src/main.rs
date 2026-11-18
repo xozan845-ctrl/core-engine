@@ -80,11 +80,14 @@ async fn main() {
         Some(Arc::clone(&outbox)),
         Some(Arc::clone(&items)),
     ));
-    let servicios = Arc::new(Servicios::con_productos(
-        Arc::clone(&db),
-        Arc::clone(&productos),
-        Some(Arc::clone(&items)),
-    ));
+    let servicios = Arc::new(
+        Servicios::con_productos(
+            Arc::clone(&db),
+            Arc::clone(&productos),
+            Some(Arc::clone(&items)),
+        )
+        .con_proyecciones(Some(Arc::clone(&proyecciones))),
+    );
     let series = Arc::new(Series::nueva(Arc::clone(&db)));
     let componentes = Arc::new(Componentes::nueva(Arc::clone(&db), Arc::clone(&items)));
     let operaciones = Arc::new(Operaciones::nueva(
