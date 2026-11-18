@@ -119,5 +119,8 @@
   "92_negocios_admin.sql": "fc6024ebfcf71ab2b780ef8a4d813f39676c9a62af7f40ab9112e4ec142a931f",
   "93_analytics.sql": "9adf73b7338f7f28e1c13f8c0d23b3e41ba78235d9d2aeaa7a0bffd181c4ce69",
   "94_fidelizacion_expiracion.sql": "436673ee1b64ed4669a88c7efceab54bc65655b7564efa609a7a8022b04330f8",
-  "95_precio_stock_columnas.sql": "a39aa20d99bd8523c254365432787f3c1517122d38a175f07783e75bf2d0669b"
+  "95_precio_stock_columnas.sql": "a39aa20d99bd8523c254365432787f3c1517122d38a175f07783e75bf2d0669b",
+  "96_venta_directa.sql": "324498ef620fb818b0b154bddb9c28ecf74976b138833888b5f2ce8d18c50a94",
+  "97_fiscal_tenant.sql": "4adec56af1340cc8df7c00de455de5826914b338390c2b52ccea982b16fb9226",
+  "98_pagos_reales.sql": "2e3ee255099e6622fb282a68434d4df8c642ee20a3ec85a8156d8dbb9ac83001"
 }
