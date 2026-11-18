@@ -219,6 +219,8 @@ internos son objetos concretos (`Storage`, `Stores`).
 - `GET /packs` lista packs activos; `POST /packs` crea una plantilla.
 - `GET/POST /packs/verticales` administra verticales.
 - `GET/POST /packs/modelos-operacion` administra modelos reutilizables.
+- El modelo `venta_directa` declara `requiere_vendedor: false` y
+  `comision: false`; un pack que lo incluye opera sin marketplace (ADR-0023).
 - `GET /packs/{codigo}/{version}` devuelve el pack versionado y sus
   capacidades/modelos.
 - Un pack incompatible con la vertical del negocio produce

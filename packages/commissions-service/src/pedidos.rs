@@ -133,15 +133,17 @@ impl PedidosConsumer {
         }
         let mut acreditadas = 0usize;
         for item in &orden.items {
+            if !item.comision {
+                continue;
+            }
             let (Some(vendedor_id), Some(empresa_id), Some(tienda_id), Some(participacion)) = (
                 item.vendedor_id.clone(),
                 item.empresa_id.clone(),
                 item.tienda_id.clone(),
                 item.participacion_porcentaje,
             ) else {
-                return Err(ApiError::interno_mensaje(
-                    "La linea no tiene contexto empresarial completo.",
-                ));
+                // Venta directa sin vendedor: no hay comisión que acreditar.
+                continue;
             };
             let venta_cents = item
                 .precio_unitario_cents

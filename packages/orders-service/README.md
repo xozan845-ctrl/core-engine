@@ -158,7 +158,9 @@ Validaciones en orden:
 5. `reserva`: exige `cliente_parte_id`, `recurso_id`, `inicia_en`, `termina_en`,
    cantidad 1 y fechas ISO; verifica disponibilidad en scheduling.
 6. Precio: base + margen de la oferta; comisión `total × COMMISSION_RATE`
-   (RN-04; `0` desactiva la comisión). En cotización la comisión es 0 hasta aceptar.
+   (RN-04; `0` desactiva la comisión). El modelo `venta_directa` del pack
+   desactiva la comisión por línea y permite `vendedor_id` nulo (ADR-0023).
+   En cotización la comisión es 0 hasta aceptar.
 7. Crédito: registra la venta en finance antes de confirmar; si falla, se
    anula el crédito y no se crea la orden.
 8. Todo se persiste en una transacción: evento + outbox + proyección.
@@ -352,7 +354,8 @@ Idempotencia por `event_id` en `orders.eventos_procesados`.
 
 - Cada consulta filtra por `empresa_id`; el comprador solo ve sus órdenes.
 - El vendedor ve las de su tienda; el empresario las de su empresa; admin
-  todas.
+  todas. En venta directa (`vendedor_id` nulo) la orden se ve por empresa y
+  comprador, no por vendedor.
 - `empresa_id`/`negocio_id` se congelan en la orden al crearla.
 - La capacidad se valida contra `identity` por empresa **y negocio**.
 - El webhook usa un secreto propio y falla cerrado si no está configurado.

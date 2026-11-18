@@ -31,7 +31,7 @@ pub struct Capacidad {
     pub activo: bool,
 }
 
-#[derive(Debug, Clone, Default, Deserialize, Serialize, PartialEq)]
+#[derive(Debug, Clone, Deserialize, Serialize, PartialEq)]
 pub struct ConfiguracionOperativa {
     #[serde(default)]
     pub items: Vec<String>,
@@ -41,6 +41,27 @@ pub struct ConfiguracionOperativa {
     pub requiere_agenda: bool,
     #[serde(default)]
     pub trazabilidad: bool,
+    #[serde(default = "verdadero")]
+    pub requiere_vendedor: bool,
+    #[serde(default = "verdadero")]
+    pub comision: bool,
+}
+
+fn verdadero() -> bool {
+    true
+}
+
+impl Default for ConfiguracionOperativa {
+    fn default() -> Self {
+        Self {
+            items: Vec::new(),
+            fulfillment: Vec::new(),
+            requiere_agenda: false,
+            trazabilidad: false,
+            requiere_vendedor: true,
+            comision: true,
+        }
+    }
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -54,7 +75,7 @@ pub enum ConfiguracionExterna {
 pub struct OfertaExterna {
     pub id: String,
     pub tienda_id: String,
-    pub vendedor_id: String,
+    pub vendedor_id: Option<String>,
     pub empresa_id: String,
     #[serde(default)]
     pub negocio_id: Option<String>,

@@ -31,6 +31,7 @@ este índice evita mezclar las decisiones nuevas con las ADR históricas.
 | [0020](./0020-contrato-v2-items.md) | Aceptado (fase 1 implementada) | Contrato interno v2 de items sin `precio` ni `stock`; precio y stock se resuelven en pricing/inventory |
 | [0021](./0021-negocios-por-empresa.md) | Aceptado (fases 1-4, reportes, liquidaciones, selector, permisos, RLS, inventario, facturación, auditoría, administración, analítica, cohortes y reportes programados delegados a `analytics-service`) | `negocio` como unidad operativa completa con ciclo de vida, plantillas, transferencia de personal y analítica centralizada en `analytics-service` |
 | [0022](./0022-analytics-service.md) | Aceptado | `analytics-service` como único dueño de la analítica de negocio, empresa y plataforma |
+| [0023](./0023-venta-directa-sin-marketplace.md) | Aceptado (fase 1 implementada) | Venta directa configurable por pack: vendedor opcional y comisión explícita por línea |
 
 ## Convención
 

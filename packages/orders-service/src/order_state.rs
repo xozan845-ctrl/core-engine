@@ -29,18 +29,24 @@ pub struct ItemOrden {
     pub producto_nombre: String,
     pub cantidad: i64,
     pub precio_unitario_cents: i64,
-    pub vendedor_id: String,
+    pub vendedor_id: Option<String>,
     pub tienda_id: String,
     pub empresa_id: String,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub negocio_id: Option<String>,
     pub participacion_porcentaje: Option<i64>,
+    #[serde(default = "comision_por_defecto")]
+    pub comision: bool,
     pub item_type: String,
     pub item_id: String,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub fulfillment: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub fulfillment_config: Option<Value>,
+}
+
+fn comision_por_defecto() -> bool {
+    true
 }
 
 /// `true` si `de -> a` está permitido para el tipo de orden.

@@ -358,14 +358,23 @@ marketplace que ya funciona.
 
 ## 10. Seguimiento de implementación
 
-- **P0.1 — Comisión 0 y respuesta consistente: implementado en esta rama**
+- **P0.1 — Comisión 0 y respuesta consistente: implementado**
   (`feat/agnosticismo-auditoria`). `money::comision` acepta `tasa = 0` en
   orders, commissions y finance; `COMMISSION_RATE=0` es válido en orders y
   commissions; la vista HTTP de la orden usa `self.tasa_comision` en lugar del
   `0.12` hardcodeado. Cubierto con tests unitarios en los tres crates.
-- **P0.2 — Manifiesto de features por negocio:** pendiente.
+- **P0.2 — Manifiesto de features por negocio: implementado.** Nuevo
+  `GET /api/v2/empresas/{empresa_id}/negocios/{negocio_id}/features` con
+  fallback a las capacidades de la empresa; contrato, README y prueba de
+  integración actualizados.
+- **P1.1 — Venta directa por pack: implementado (fase 1).** Modelo
+  `venta_directa`, `vendedor_id` nullable, comisión explícita por línea,
+  `commissions-service` omite líneas sin vendedor o con `comision=false`.
+  Decisión registrada en [ADR-0023](../adr/0023-venta-directa-sin-marketplace.md).
+  La tienda sigue siendo el canal de publicación.
 - **P0.3 — Documentación de estado:** este documento queda como fuente vigente
   para el diagnóstico de agnosticismo.
-- **P1 — Modo venta directa, ubicación de despacho y promociones:** pendiente
-  de decisión de producto y ADR.
+- **P1.2 — Ubicación de despacho:** pendiente.
+- **P1.3 — Promociones aplicadas:** pendiente.
+- **P2 — Fiscal multi-jurisdicción y pagos reales:** pendiente.
 

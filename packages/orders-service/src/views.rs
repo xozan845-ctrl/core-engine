@@ -20,7 +20,7 @@ const COLUMNAS: &str = "id, vendedor_id, comprador_id, parte_id, tienda_id, nego
 #[derive(Debug, Clone, Serialize, PartialEq)]
 pub struct OrderView {
     pub id: String,
-    pub vendedor_id: String,
+    pub vendedor_id: Option<String>,
     pub comprador_id: String,
     pub parte_id: Option<String>,
     pub tienda_id: String,
@@ -272,7 +272,7 @@ pub fn serializar(fila: &sqlx::postgres::PgRow) -> Result<OrderView, ApiError> {
     let items: Vec<ItemOrden> = serde_json::from_value(items_json).unwrap_or_default();
     Ok(OrderView {
         id: crate::db::uuid_texto(fila, "id").map_err(error_db)?,
-        vendedor_id: crate::db::uuid_texto(fila, "vendedor_id").map_err(error_db)?,
+        vendedor_id: crate::db::uuid_opcional(fila, "vendedor_id").map_err(error_db)?,
         comprador_id: crate::db::uuid_texto(fila, "comprador_id").map_err(error_db)?,
         parte_id: crate::db::uuid_opcional(fila, "parte_id").map_err(error_db)?,
         tienda_id: crate::db::uuid_texto(fila, "tienda_id").map_err(error_db)?,
@@ -328,7 +328,7 @@ mod tests {
     fn debe_serializar_una_vista_de_prueba() {
         let vista = OrderView {
             id: "o-1".into(),
-            vendedor_id: "v-1".into(),
+            vendedor_id: Some("v-1".into()),
             comprador_id: "c-1".into(),
             parte_id: None,
             tienda_id: "t-1".into(),
