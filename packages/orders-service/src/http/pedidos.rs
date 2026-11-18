@@ -163,6 +163,7 @@ async fn aceptar_cotizacion(
             cantidad: item.cantidad,
             fulfillment: None,
             fulfillment_config: None,
+            ubicacion_id: None,
         })
         .collect();
     let comando = ComandoCrear {

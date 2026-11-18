@@ -154,7 +154,9 @@ Validaciones en orden:
    `onsite`→`fulfillment_onsite`, `digital`→`fulfillment_digital`;
    `cotizacion`→`cotizaciones`; `credito`→`ventas_credito`.
 3. Carrito no vacío ni expirado (RN-05).
-4. Cada línea: oferta activa, cantidad 1–99, stock suficiente.
+4. Cada línea: oferta activa, cantidad 1–99, stock suficiente. Si la línea
+   trae `ubicacion_id`, el stock se valida contra esa bodega/sucursal
+   (ADR-0024); sin ella se usa el total de la empresa.
 5. `reserva`: exige `cliente_parte_id`, `recurso_id`, `inicia_en`, `termina_en`,
    cantidad 1 y fechas ISO; verifica disponibilidad en scheduling.
 6. Precio: base + margen de la oferta; comisión `total × COMMISSION_RATE`

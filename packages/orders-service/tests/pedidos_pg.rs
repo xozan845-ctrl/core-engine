@@ -7,7 +7,7 @@ use orders_service::carrito::Carrito;
 use orders_service::checkout::{Checkout, ComandoCrear, LineaEntrada};
 use orders_service::clients::{
     Capacidad, ClientesPort, ConfiguracionExterna, ConfiguracionOperativa, Cotizacion,
-    CreditoEstado, ItemStock, OfertaExterna, PreciosExternos,
+    CreditoEstado, ItemStock, OfertaExterna, PreciosExternos, StockUbicacion,
 };
 use orders_service::config::Config;
 use orders_service::consumer::{PedidosConsumer, STOCK_FALLIDO, STOCK_RESERVADO};
@@ -163,6 +163,19 @@ impl ClientesPort for ClientesFake {
             track_serial: false,
             seriales_disponibles: 0,
             estado: "activo".to_string(),
+        }])
+    }
+
+    async fn stock_ubicacion(
+        &self,
+        _empresa_id: &str,
+        _ubicacion_id: &str,
+        _skus: &[String],
+    ) -> Option<Vec<StockUbicacion>> {
+        Some(vec![StockUbicacion {
+            sku: "SKU-1".to_string(),
+            stock: self.stock,
+            seriales_disponibles: 0,
         }])
     }
 }
@@ -489,6 +502,7 @@ fn compra(cantidad: i64) -> ComandoCrear {
             cantidad,
             fulfillment: Some("none".to_string()),
             fulfillment_config: None,
+            ubicacion_id: None,
         }]),
         ..Default::default()
     }
@@ -621,6 +635,42 @@ fn compra_con_metodo(cantidad: i64, metodo: &str) -> ComandoCrear {
         metodo_pago: Some(metodo.to_string()),
         ..compra(cantidad)
     }
+}
+
+fn compra_en_ubicacion(cantidad: i64, ubicacion_id: &str) -> ComandoCrear {
+    let mut comando = compra(cantidad);
+    if let Some(items) = comando.items.as_mut() {
+        if let Some(item) = items.first_mut() {
+            item.ubicacion_id = Some(ubicacion_id.to_string());
+        }
+    }
+    comando
+}
+
+#[tokio::test]
+async fn debe_conservar_la_ubicacion_elegida_en_la_linea_de_la_orden() {
+    let _guard = DB_LOCK.lock().await;
+    let Some(db) = con_bd().await else { return };
+    let (checkout, _, _) = infra(Arc::clone(&db), 10);
+    let ubicacion = Uuid::new_v4().to_string();
+    let orden = checkout
+        .ejecutar(&compra_en_ubicacion(1, &ubicacion), COMPRADOR)
+        .await
+        .expect("orden con ubicacion");
+    assert_eq!(
+        orden.items[0].ubicacion_id.as_deref(),
+        Some(ubicacion.as_str())
+    );
+
+    let vista = OrderViewRepository
+        .encontrar(&db, &orden.id)
+        .await
+        .expect("vista")
+        .expect("existe");
+    assert_eq!(
+        vista.items[0].ubicacion_id.as_deref(),
+        Some(ubicacion.as_str())
+    );
 }
 
 #[tokio::test]
@@ -1745,6 +1795,7 @@ async fn debe_validar_el_fulfillment_contra_el_registro() {
                     cantidad: 1,
                     fulfillment: Some("retiro_tienda".to_string()),
                     fulfillment_config: None,
+                    ubicacion_id: None,
                 }]),
                 ..compra(1)
             },
@@ -1762,6 +1813,7 @@ async fn debe_validar_el_fulfillment_contra_el_registro() {
                     cantidad: 1,
                     fulfillment: Some("no_existe".to_string()),
                     fulfillment_config: None,
+                    ubicacion_id: None,
                 }]),
                 ..compra(1)
             },

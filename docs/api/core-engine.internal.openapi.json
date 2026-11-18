@@ -717,6 +717,12 @@
                     "items": {
                       "type": "string"
                     }
+                  },
+                  "ubicacion_id": {
+                    "type": "string",
+                    "format": "uuid",
+                    "nullable": true,
+                    "description": "Acota el stock y los seriales a una ubicación"
                   }
                 },
                 "required": [
@@ -3423,6 +3429,12 @@
           "comision": {
             "type": "boolean",
             "description": "Indica si la línea genera comisión"
+          },
+          "ubicacion_id": {
+            "type": "string",
+            "description": "Bodega o sucursal desde la que se despacha la línea",
+            "format": "uuid",
+            "nullable": true
           },
           "fulfillment": {
             "type": "string",

@@ -374,7 +374,11 @@ marketplace que ya funciona.
   La tienda sigue siendo el canal de publicación.
 - **P0.3 — Documentación de estado:** este documento queda como fuente vigente
   para el diagnóstico de agnosticismo.
-- **P1.2 — Ubicación de despacho:** pendiente.
+- **P1.2 — Ubicación de despacho: implementado.** `LineaEntrada`/`ItemOrden`
+  aceptan `ubicacion_id`; orders valida el stock de esa ubicación y inventory
+  reserva/descuenta/reintegra solo allí. Sin ubicación se conserva el
+  comportamiento anterior. Decisión en
+  [ADR-0024](../adr/0024-ubicacion-despacho-por-linea.md).
 - **P1.3 — Promociones aplicadas:** pendiente.
 - **P2 — Fiscal multi-jurisdicción y pagos reales:** pendiente.
 

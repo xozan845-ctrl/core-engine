@@ -61,6 +61,11 @@ pub async fn stock_lote(
                 .collect::<Vec<_>>()
         })
         .unwrap_or_default();
+    let ubicacion_id = cuerpo
+        .get("ubicacion_id")
+        .and_then(Value::as_str)
+        .map(str::trim)
+        .filter(|valor| !valor.is_empty());
     if empresa_id.is_empty() || skus.is_empty() {
         return Err(ApiError::validacion(serde_json::json!([{
             "campo": "empresa_id/skus",
@@ -68,7 +73,10 @@ pub async fn stock_lote(
         }])));
     }
     ok(Value::Array(
-        state.inventario()?.stock_lote(&empresa_id, &skus).await?,
+        state
+            .inventario()?
+            .stock_lote(&empresa_id, &skus, ubicacion_id)
+            .await?,
     ))
 }
 

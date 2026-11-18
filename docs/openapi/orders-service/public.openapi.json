@@ -4742,6 +4742,12 @@
           "fulfillment_config": {
             "type": "object",
             "additionalProperties": true
+          },
+          "ubicacion_id": {
+            "type": "string",
+            "description": "Bodega o sucursal desde la que se despacha la línea",
+            "format": "uuid",
+            "nullable": true
           }
         },
         "required": [
@@ -4808,6 +4814,12 @@
           "comision": {
             "type": "boolean",
             "description": "Indica si la línea genera comisión"
+          },
+          "ubicacion_id": {
+            "type": "string",
+            "description": "Bodega o sucursal desde la que se despacha la línea",
+            "format": "uuid",
+            "nullable": true
           },
           "fulfillment": {
             "type": "string",

@@ -37,6 +37,8 @@ pub struct ItemOrden {
     pub participacion_porcentaje: Option<i64>,
     #[serde(default = "comision_por_defecto")]
     pub comision: bool,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub ubicacion_id: Option<String>,
     pub item_type: String,
     pub item_id: String,
     #[serde(skip_serializing_if = "Option::is_none")]

@@ -471,10 +471,13 @@ impl Inventario {
     }
 
     /// Stock y series disponibles por lote de SKUs (contrato interno v2).
+    /// Si se indica `ubicacion_id`, el stock y los seriales se acotan a esa
+    /// ubicación; sin ubicación se conserva el total de la empresa.
     pub async fn stock_lote(
         &self,
         empresa_id: &str,
         skus: &[String],
+        ubicacion_id: Option<&str>,
     ) -> Result<Vec<Value>, ApiError> {
         if skus.is_empty() {
             return Ok(Vec::new());
@@ -494,11 +497,13 @@ impl Inventario {
                       SELECT SUM(s.stock)::int
                         FROM inventory.item_stock_ubicacion s
                        WHERE s.item_id = i.id
+                         AND ($3::uuid IS NULL OR s.ubicacion_id = $3::uuid)
                     ), 0) AS stock,
                     COALESCE((
                       SELECT COUNT(*)::int
                         FROM item.item_series se
                        WHERE se.item_id = i.id AND se.estado = 'disponible'
+                         AND ($3::uuid IS NULL OR se.ubicacion_id = $3::uuid)
                     ), 0) AS seriales_disponibles
                FROM item.items i
               WHERE i.empresa_id = $1::uuid
@@ -509,6 +514,7 @@ impl Inventario {
         )
         .bind(empresa_id)
         .bind(&codigos)
+        .bind(ubicacion_id)
         .fetch_all(&mut *tx)
         .await
         .map_err(interno)?;
