@@ -129,3 +129,59 @@ pub async fn stock_inicial(
         )
         .await?)
 }
+
+/// `POST /internal/inventario/devolucion` — restock parcial idempotente.
+pub async fn devolucion(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    Json(cuerpo): Json<Value>,
+) -> Result<Response, ApiError> {
+    exigir_clave(&state, &headers)?;
+    let order_id = cuerpo
+        .get("order_id")
+        .and_then(Value::as_str)
+        .filter(|valor| !valor.is_empty())
+        .ok_or_else(|| {
+            ApiError::validacion(serde_json::json!([{
+                "campo": "order_id",
+                "restricciones": ["isUuid"],
+            }]))
+        })?;
+    let devolucion_id = cuerpo
+        .get("devolucion_id")
+        .and_then(Value::as_str)
+        .filter(|valor| !valor.is_empty())
+        .ok_or_else(|| {
+            ApiError::validacion(serde_json::json!([{
+                "campo": "devolucion_id",
+                "restricciones": ["isUuid"],
+            }]))
+        })?;
+    let items = cuerpo
+        .get("items")
+        .and_then(Value::as_array)
+        .cloned()
+        .unwrap_or_default();
+    if items.is_empty() {
+        return Err(ApiError::validacion(serde_json::json!([{
+            "campo": "items",
+            "restricciones": ["arrayMinSize"],
+        }])));
+    }
+    let mut tx = state
+        .db
+        .as_ref()
+        .ok_or_else(ApiError::interno)?
+        .transaccion()
+        .await
+        .map_err(crate::db::interno)?;
+    crate::reservas::Reservas::reintegrar_lineas_en_transaccion(
+        &mut tx,
+        order_id,
+        devolucion_id,
+        &Value::Array(items),
+    )
+    .await?;
+    tx.commit().await.map_err(crate::db::interno)?;
+    ok(serde_json::json!({ "ok": true }))
+}

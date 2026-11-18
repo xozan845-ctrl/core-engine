@@ -1638,3 +1638,36 @@ CREATE POLICY cupon_usos_empresa ON pricing.cupon_usos
 DROP POLICY IF EXISTS cupon_usos_app ON pricing.cupon_usos;
 CREATE POLICY cupon_usos_app ON pricing.cupon_usos
   FOR ALL TO core_engine_app USING (true) WITH CHECK (true);
+
+-- ── orders.devoluciones y orders.devolucion_lineas (RMA) ───────────────────
+ALTER TABLE orders.devoluciones ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS devoluciones_admin ON orders.devoluciones;
+CREATE POLICY devoluciones_admin ON orders.devoluciones
+  FOR ALL TO authenticated
+  USING (auth.rol() IN ('super_admin', 'admin'))
+  WITH CHECK (auth.rol() IN ('super_admin', 'admin'));
+DROP POLICY IF EXISTS devoluciones_comprador ON orders.devoluciones;
+CREATE POLICY devoluciones_comprador ON orders.devoluciones
+  FOR SELECT TO authenticated
+  USING (EXISTS (
+    SELECT 1 FROM orders.orden_vista o
+     WHERE o.id = order_id AND o.comprador_id::text = (auth.jwt() ->> 'sub')
+  ));
+DROP POLICY IF EXISTS devoluciones_app ON orders.devoluciones;
+CREATE POLICY devoluciones_app ON orders.devoluciones
+  FOR ALL TO core_engine_app USING (true) WITH CHECK (true);
+
+ALTER TABLE orders.devolucion_lineas ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS devolucion_lineas_admin ON orders.devolucion_lineas;
+CREATE POLICY devolucion_lineas_admin ON orders.devolucion_lineas
+  FOR ALL TO authenticated
+  USING (auth.rol() IN ('super_admin', 'admin'))
+  WITH CHECK (auth.rol() IN ('super_admin', 'admin'));
+DROP POLICY IF EXISTS devolucion_lineas_app ON orders.devolucion_lineas;
+CREATE POLICY devolucion_lineas_app ON orders.devolucion_lineas
+  FOR ALL TO core_engine_app USING (true) WITH CHECK (true);
+
+ALTER TABLE inventory.devoluciones_procesadas ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS devoluciones_procesadas_app ON inventory.devoluciones_procesadas;
+CREATE POLICY devoluciones_procesadas_app ON inventory.devoluciones_procesadas
+  FOR ALL TO core_engine_app USING (true) WITH CHECK (true);

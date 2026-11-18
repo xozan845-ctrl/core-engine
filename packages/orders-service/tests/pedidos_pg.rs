@@ -14,6 +14,7 @@ use orders_service::config::Config;
 use orders_service::consumer::{PedidosConsumer, STOCK_FALLIDO, STOCK_RESERVADO};
 use orders_service::contratos::{Contratos, CrearContratoInput, FinalizarContratoInput};
 use orders_service::db::Db;
+use orders_service::devoluciones::{CrearDevolucionInput, Devoluciones, ItemDevolucionInput};
 use orders_service::entregas::EntregasDigitales;
 use orders_service::fidelizacion::Fidelizacion;
 use orders_service::fulfillments::Fulfillments;
@@ -212,6 +213,15 @@ impl ClientesPort for ClientesFake {
     ) -> Option<CuponValidado> {
         self.cupon.clone()
     }
+
+    async fn devolver_stock(
+        &self,
+        _order_id: &str,
+        _devolucion_id: &str,
+        _items: &[Value],
+    ) -> bool {
+        true
+    }
 }
 
 async fn provisionar(url: &str) {
@@ -395,6 +405,31 @@ async fn provisionar(url: &str) {
           actor_id uuid,
           payload jsonb NOT NULL DEFAULT '{}'::jsonb,
           creado_en timestamptz NOT NULL DEFAULT NOW()
+        );
+        CREATE TABLE orders.devoluciones (
+          id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+          order_id uuid NOT NULL,
+          empresa_id uuid NOT NULL,
+          negocio_id uuid,
+          motivo text NOT NULL DEFAULT '',
+          estado text NOT NULL DEFAULT 'solicitada',
+          total_cents integer NOT NULL DEFAULT 0,
+          moneda text NOT NULL DEFAULT 'NIO',
+          creado_por uuid NOT NULL,
+          creado_en timestamptz NOT NULL DEFAULT NOW(),
+          actualizado_en timestamptz NOT NULL DEFAULT NOW()
+        );
+        CREATE TABLE orders.devolucion_lineas (
+          id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+          devolucion_id uuid NOT NULL,
+          oferta_id uuid NOT NULL,
+          sku text NOT NULL,
+          cantidad integer NOT NULL,
+          precio_unitario_cents integer NOT NULL,
+          descuento_cents integer NOT NULL DEFAULT 0,
+          total_cents integer NOT NULL,
+          restock boolean NOT NULL DEFAULT true,
+          ubicacion_id uuid
         );
 
         CREATE TABLE orders.eventos_procesados (
@@ -1169,6 +1204,202 @@ async fn debe_gestionar_mesas_y_comandas() {
         .await
         .expect("avanzar");
     assert_eq!(preparando.estado, "en_preparacion");
+}
+
+#[tokio::test]
+async fn debe_crear_aprobar_y_recibir_una_devolucion_parcial() {
+    let _guard = DB_LOCK.lock().await;
+    let Some(db) = con_bd().await else { return };
+    let (checkout, _, _) = infra(Arc::clone(&db), 10);
+    let orden = checkout
+        .ejecutar(&compra(2), COMPRADOR)
+        .await
+        .expect("orden");
+    let devoluciones = Devoluciones::nueva(
+        Arc::clone(&db),
+        Arc::clone(&checkout.vistas),
+        Arc::clone(&checkout.clientes),
+        Outbox::nueva("orders.outbox"),
+    );
+    let admin = orders_service::auth::UsuarioContexto {
+        user_id: Uuid::new_v4().to_string(),
+        rol: "admin".to_string(),
+        ..Default::default()
+    };
+    let creada = devoluciones
+        .crear(
+            &orden.id,
+            &admin,
+            CrearDevolucionInput {
+                motivo: "producto dañado".into(),
+                items: vec![ItemDevolucionInput {
+                    oferta_id: OFERTA.to_string(),
+                    cantidad: 1,
+                    restock: true,
+                }],
+            },
+        )
+        .await
+        .expect("crear devolucion");
+    assert_eq!(creada.estado, "solicitada");
+    assert_eq!(creada.total_cents, 10_000);
+    assert_eq!(creada.lineas.len(), 1);
+
+    let aprobada = devoluciones
+        .aprobar(&creada.id, &admin)
+        .await
+        .expect("aprobar");
+    assert_eq!(aprobada.estado, "aprobada");
+    let recibida = devoluciones
+        .recibir(&creada.id, &admin)
+        .await
+        .expect("recibir");
+    assert_eq!(recibida.estado, "recibida");
+
+    let eventos: i64 =
+        sqlx::query_scalar("SELECT COUNT(*) FROM orders.outbox WHERE tipo = 'devolucion.recibida'")
+            .fetch_one(db.pool())
+            .await
+            .expect("eventos");
+    assert_eq!(eventos, 1);
+}
+
+#[tokio::test]
+async fn debe_impedir_devolver_mas_cantidad_que_la_comprada() {
+    let _guard = DB_LOCK.lock().await;
+    let Some(db) = con_bd().await else { return };
+    let (checkout, _, _) = infra(Arc::clone(&db), 10);
+    let orden = checkout
+        .ejecutar(&compra(1), COMPRADOR)
+        .await
+        .expect("orden");
+    let devoluciones = Devoluciones::nueva(
+        Arc::clone(&db),
+        Arc::clone(&checkout.vistas),
+        Arc::clone(&checkout.clientes),
+        Outbox::nueva("orders.outbox"),
+    );
+    let admin = orders_service::auth::UsuarioContexto {
+        user_id: Uuid::new_v4().to_string(),
+        rol: "admin".to_string(),
+        ..Default::default()
+    };
+    let error = devoluciones
+        .crear(
+            &orden.id,
+            &admin,
+            CrearDevolucionInput {
+                motivo: "".into(),
+                items: vec![ItemDevolucionInput {
+                    oferta_id: OFERTA.to_string(),
+                    cantidad: 2,
+                    restock: true,
+                }],
+            },
+        )
+        .await
+        .expect_err("excede");
+    assert_eq!(error.codigo, "CANTIDAD_EXCEDIDA");
+}
+
+#[tokio::test]
+async fn debe_gestionar_devoluciones_parciales_por_http() {
+    use axum::body::Body;
+    use axum::http::{Request, StatusCode};
+    use tower::ServiceExt;
+    let _guard = DB_LOCK.lock().await;
+    let Some(db) = con_bd().await else { return };
+    let router = router_completo(Arc::clone(&db), 10).await;
+
+    let mut request = Request::post("/api/v2/orders").header("content-type", "application/json");
+    for (clave, valor) in headers_comprador() {
+        request = request.header(clave, valor);
+    }
+    let response = router
+        .clone()
+        .oneshot(
+            request
+                .body(Body::from(
+                    json!({"tipo_orden":"compra","items":[{"oferta_id":OFERTA,"cantidad":2}]})
+                        .to_string(),
+                ))
+                .expect("request"),
+        )
+        .await
+        .expect("response");
+    assert_eq!(response.status(), StatusCode::CREATED);
+    let orden = json_de(response).await;
+    let order_id = orden["data"]["id"].as_str().expect("order_id");
+
+    let mut request = Request::post(format!("/api/v2/orders/{order_id}/devoluciones"))
+        .header("content-type", "application/json");
+    for (clave, valor) in headers_comprador() {
+        request = request.header(clave, valor);
+    }
+    let response = router
+        .clone()
+        .oneshot(
+            request
+                .body(Body::from(format!(
+                    r#"{{"motivo":"dañado","items":[{{"oferta_id":"{OFERTA}","cantidad":1}}]}}"#
+                )))
+                .expect("request"),
+        )
+        .await
+        .expect("response");
+    assert_eq!(response.status(), StatusCode::CREATED);
+    let devolucion = json_de(response).await;
+    let devolucion_id = devolucion["data"]["id"].as_str().expect("devolucion");
+    assert_eq!(devolucion["data"]["estado"], "solicitada");
+
+    let mut request = Request::get(format!("/api/v2/orders/{order_id}/devoluciones"));
+    for (clave, valor) in headers_comprador() {
+        request = request.header(clave, valor);
+    }
+    let response = router
+        .clone()
+        .oneshot(request.body(Body::empty()).expect("request"))
+        .await
+        .expect("response");
+    assert_eq!(response.status(), StatusCode::OK);
+    let lista = json_de(response).await;
+    assert_eq!(lista["data"].as_array().expect("lista").len(), 1);
+
+    for accion in ["aprobar", "recibir"] {
+        let mut request = Request::post(format!(
+            "/api/v2/admin/devoluciones/{devolucion_id}/{accion}"
+        ));
+        for (clave, valor) in headers_admin() {
+            request = request.header(clave, valor);
+        }
+        let response = router
+            .clone()
+            .oneshot(request.body(Body::empty()).expect("request"))
+            .await
+            .expect("response");
+        assert_eq!(response.status(), StatusCode::OK);
+    }
+    let recibida = sqlx::query_scalar::<_, String>(
+        "SELECT estado FROM orders.devoluciones WHERE id = $1::uuid",
+    )
+    .bind(Uuid::parse_str(devolucion_id).expect("uuid"))
+    .fetch_one(db.pool())
+    .await
+    .expect("estado");
+    assert_eq!(recibida, "recibida");
+
+    let mut request = Request::post(format!(
+        "/api/v2/admin/devoluciones/{devolucion_id}/rechazar"
+    ));
+    for (clave, valor) in headers_comprador() {
+        request = request.header(clave, valor);
+    }
+    let response = router
+        .clone()
+        .oneshot(request.body(Body::empty()).expect("request"))
+        .await
+        .expect("response");
+    assert_eq!(response.status(), StatusCode::FORBIDDEN);
 }
 
 #[tokio::test]

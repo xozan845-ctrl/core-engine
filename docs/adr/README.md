@@ -37,6 +37,7 @@ este índice evita mezclar las decisiones nuevas con las ADR históricas.
 | [0026](./0026-fiscalidad-por-tenant.md) | Aceptado (implementado; declaraciones globales) | Jurisdicción fiscal por tenant, moneda desde la jurisdicción e IVA por línea |
 | [0027](./0027-pagos-proveedor-reembolsos.md) | Aceptado (implementado) | ACL de pasarela, cargo externo, reembolsos parciales, contracargo y conciliación |
 | [0028](./0028-cupones.md) | Aceptado (implementado) | Cupones por empresa con vigencia, mínimo, tope, usos y canje idempotente |
+| [0029](./0029-rma-devolucion-parcial.md) | Aceptado (implementado) | RMA por línea, restock idempotente y comisión proporcional |
 
 ## Convención
 

@@ -245,3 +245,7 @@ cargo test
 - [Contrato público](../../docs/openapi/inventory-service/public.openapi.json)
 - [Contrato interno](../../docs/openapi/inventory-service/internal.openapi.json)
 - [README de paquetes](../README.md)
+
+- `POST /internal/inventario/devolucion` (servicio a servicio): restock parcial
+  de una RMA, idempotente por `devolucion_id`; reintegra stock por ubicación,
+  series vendidas y lotes reservados.

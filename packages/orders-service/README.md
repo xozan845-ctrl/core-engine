@@ -419,3 +419,14 @@ cargo test
 - [Contrato público](../../docs/openapi/orders-service/public.openapi.json)
 - [Contrato interno](../../docs/openapi/orders-service/internal.openapi.json)
 - [README de paquetes](../README.md)
+
+### Devoluciones parciales (RMA)
+
+- `POST /api/v2/orders/{id}/devoluciones` body
+  `{motivo, items:[{oferta_id, cantidad, restock}]}`: crea una solicitud;
+  valida que la cantidad no supere lo comprado ni lo ya devuelto.
+- `GET /api/v2/orders/{id}/devoluciones`: historial de la orden.
+- `POST /api/v2/admin/devoluciones/{id}/aprobar|recibir|rechazar`.
+- `recibir` llama `POST /internal/inventario/devolucion` (stock, series y lotes
+  idempotentes) y emite `devolucion.recibida` para compensar la comisión
+  proporcional.

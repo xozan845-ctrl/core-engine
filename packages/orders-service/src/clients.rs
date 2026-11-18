@@ -282,6 +282,14 @@ pub trait ClientesPort: Send + Sync {
     }
 
     async fn cupon_liberar(&self, _empresa_id: &str, _codigo: &str, _order_id: &str) {}
+    async fn devolver_stock(
+        &self,
+        _order_id: &str,
+        _devolucion_id: &str,
+        _items: &[Value],
+    ) -> bool {
+        false
+    }
 }
 
 impl Clientes {
@@ -764,6 +772,29 @@ impl Clientes {
             .send()
             .await;
     }
+
+    pub async fn devolver_stock(
+        &self,
+        order_id: &str,
+        devolucion_id: &str,
+        items: &[Value],
+    ) -> bool {
+        self.http
+            .post(format!(
+                "{}/internal/inventario/devolucion",
+                self.inventory_url
+            ))
+            .header("x-internal-key", &self.clave)
+            .json(&json!({
+                "order_id": order_id,
+                "devolucion_id": devolucion_id,
+                "items": items,
+            }))
+            .send()
+            .await
+            .map(|respuesta| respuesta.status().is_success())
+            .unwrap_or(false)
+    }
 }
 
 #[derive(Deserialize)]
@@ -889,6 +920,10 @@ impl ClientesPort for Clientes {
 
     async fn cupon_liberar(&self, empresa_id: &str, codigo: &str, order_id: &str) {
         Clientes::cupon_liberar(self, empresa_id, codigo, order_id).await
+    }
+
+    async fn devolver_stock(&self, order_id: &str, devolucion_id: &str, items: &[Value]) -> bool {
+        Clientes::devolver_stock(self, order_id, devolucion_id, items).await
     }
 }
 
