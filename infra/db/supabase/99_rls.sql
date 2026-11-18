@@ -1608,3 +1608,33 @@ CREATE POLICY pagos_eventos_empresa ON orders.pagos_eventos
 DROP POLICY IF EXISTS pagos_eventos_app ON orders.pagos_eventos;
 CREATE POLICY pagos_eventos_app ON orders.pagos_eventos
   FOR ALL TO core_engine_app USING (true) WITH CHECK (true);
+
+-- ── pricing.cupones y pricing.cupon_usos (fase retail) ─────────────────────
+ALTER TABLE pricing.cupones ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS cupones_admin ON pricing.cupones;
+CREATE POLICY cupones_admin ON pricing.cupones
+  FOR ALL TO authenticated
+  USING (auth.rol() IN ('super_admin', 'admin'))
+  WITH CHECK (auth.rol() IN ('super_admin', 'admin'));
+DROP POLICY IF EXISTS cupones_empresa ON pricing.cupones;
+CREATE POLICY cupones_empresa ON pricing.cupones
+  FOR ALL TO authenticated
+  USING (auth.rol() = 'empresario' AND empresa_id::text = (auth.jwt() ->> 'tenant_id'))
+  WITH CHECK (auth.rol() = 'empresario' AND empresa_id::text = (auth.jwt() ->> 'tenant_id'));
+DROP POLICY IF EXISTS cupones_app ON pricing.cupones;
+CREATE POLICY cupones_app ON pricing.cupones
+  FOR ALL TO core_engine_app USING (true) WITH CHECK (true);
+
+ALTER TABLE pricing.cupon_usos ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS cupon_usos_admin ON pricing.cupon_usos;
+CREATE POLICY cupon_usos_admin ON pricing.cupon_usos
+  FOR ALL TO authenticated
+  USING (auth.rol() IN ('super_admin', 'admin'))
+  WITH CHECK (auth.rol() IN ('super_admin', 'admin'));
+DROP POLICY IF EXISTS cupon_usos_empresa ON pricing.cupon_usos;
+CREATE POLICY cupon_usos_empresa ON pricing.cupon_usos
+  FOR SELECT TO authenticated
+  USING (empresa_id::text = (auth.jwt() ->> 'tenant_id'));
+DROP POLICY IF EXISTS cupon_usos_app ON pricing.cupon_usos;
+CREATE POLICY cupon_usos_app ON pricing.cupon_usos
+  FOR ALL TO core_engine_app USING (true) WITH CHECK (true);

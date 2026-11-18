@@ -36,6 +36,7 @@ este índice evita mezclar las decisiones nuevas con las ADR históricas.
 | [0025](./0025-promociones-en-checkout.md) | Aceptado (implementado) | Pricing resuelve la promoción vigente y orders aplica el descuento sobre el precio final |
 | [0026](./0026-fiscalidad-por-tenant.md) | Aceptado (implementado; declaraciones globales) | Jurisdicción fiscal por tenant, moneda desde la jurisdicción e IVA por línea |
 | [0027](./0027-pagos-proveedor-reembolsos.md) | Aceptado (implementado) | ACL de pasarela, cargo externo, reembolsos parciales, contracargo y conciliación |
+| [0028](./0028-cupones.md) | Aceptado (implementado) | Cupones por empresa con vigencia, mínimo, tope, usos y canje idempotente |
 
 ## Convención
 

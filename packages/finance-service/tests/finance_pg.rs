@@ -53,6 +53,7 @@ impl Ordenes for OrdenesFijas {
                     descuento_cents: 0,
                 },
             ],
+            descuento_cupon_cents: 0,
         })
     }
 }

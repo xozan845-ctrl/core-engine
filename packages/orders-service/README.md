@@ -164,9 +164,11 @@ Validaciones en orden:
    cantidad 1 y fechas ISO; verifica disponibilidad en scheduling.
 6. Precio: base + margen de la oferta; comisión `total × COMMISSION_RATE`
    (RN-04; `0` desactiva la comisión). Las promociones vigentes de pricing se
-   aplican como descuento por línea sobre el precio final (ADR-0025). El modelo
-   `venta_directa` del pack desactiva la comisión por línea y permite
-   `vendedor_id` nulo (ADR-0023). En cotización la comisión es 0 hasta aceptar.
+   aplican como descuento por línea sobre el precio final (ADR-0025). Si la
+   orden trae `cupon_codigo`, pricing valida y canjea el cupón sobre el total
+   (ADR-0028). El modelo `venta_directa` del pack desactiva la comisión por
+   línea y permite `vendedor_id` nulo (ADR-0023). En cotización la comisión es
+   0 hasta aceptar.
 7. Crédito: registra la venta en finance antes de confirmar; si falla, se
    anula el crédito y no se crea la orden.
 8. Todo se persiste en una transacción: evento + outbox + proyección.

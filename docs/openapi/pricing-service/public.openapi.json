@@ -1069,6 +1069,156 @@
         ]
       }
     },
+    "/api/v2/catalog/cupones": {
+      "get": {
+        "operationId": "CuponesController_listar",
+        "parameters": [
+          {"name": "empresa_id", "required": false, "in": "query", "schema": {"type": "string", "format": "uuid"}},
+          {"name": "activo", "required": false, "in": "query", "schema": {"type": "boolean"}},
+          {"name": "pagina", "required": false, "in": "query", "schema": {"type": "integer", "minimum": 1}},
+          {"name": "limite", "required": false, "in": "query", "schema": {"type": "integer", "minimum": 1, "maximum": 100}}
+        ],
+        "responses": {
+          "200": {
+            "description": "Cupones de la empresa",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": ["data", "meta"],
+                  "properties": {
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "items": {"type": "array", "items": {"$ref": "#/components/schemas/CuponResponseDto"}},
+                        "total": {"type": "integer"},
+                        "pagina": {"type": "integer"},
+                        "limite": {"type": "integer"},
+                        "paginas": {"type": "integer"}
+                      },
+                      "required": ["items", "total", "pagina", "limite", "paginas"]
+                    },
+                    "meta": {"$ref": "#/components/schemas/MetaRespuesta"}
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [{"bearer": []}],
+        "summary": "Listar cupones",
+        "tags": ["Cupones"]
+      },
+      "post": {
+        "operationId": "CuponesController_crear",
+        "parameters": [
+          {"name": "empresa_id", "required": false, "in": "query", "schema": {"type": "string", "format": "uuid"}}
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {"$ref": "#/components/schemas/CuponRequestDto"}
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Cupón creado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": ["data", "meta"],
+                  "properties": {
+                    "data": {"$ref": "#/components/schemas/CuponResponseDto"},
+                    "meta": {"$ref": "#/components/schemas/MetaRespuesta"}
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [{"bearer": []}],
+        "summary": "Crear cupón",
+        "tags": ["Cupones"]
+      }
+    },
+    "/api/v2/catalog/cupones/{id}": {
+      "get": {
+        "operationId": "CuponesController_detalle",
+        "parameters": [
+          {"name": "id", "required": true, "in": "path", "schema": {"type": "string", "format": "uuid"}},
+          {"name": "empresa_id", "required": false, "in": "query", "schema": {"type": "string", "format": "uuid"}}
+        ],
+        "responses": {
+          "200": {
+            "description": "Cupón",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": ["data", "meta"],
+                  "properties": {
+                    "data": {"$ref": "#/components/schemas/CuponResponseDto"},
+                    "meta": {"$ref": "#/components/schemas/MetaRespuesta"}
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [{"bearer": []}],
+        "summary": "Detalle de cupón",
+        "tags": ["Cupones"]
+      },
+      "patch": {
+        "operationId": "CuponesController_actualizar",
+        "parameters": [
+          {"name": "id", "required": true, "in": "path", "schema": {"type": "string", "format": "uuid"}},
+          {"name": "empresa_id", "required": false, "in": "query", "schema": {"type": "string", "format": "uuid"}}
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {"$ref": "#/components/schemas/CuponRequestDto"}
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Cupón actualizado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": ["data", "meta"],
+                  "properties": {
+                    "data": {"$ref": "#/components/schemas/CuponResponseDto"},
+                    "meta": {"$ref": "#/components/schemas/MetaRespuesta"}
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [{"bearer": []}],
+        "summary": "Actualizar cupón",
+        "tags": ["Cupones"]
+      },
+      "delete": {
+        "operationId": "CuponesController_eliminar",
+        "parameters": [
+          {"name": "id", "required": true, "in": "path", "schema": {"type": "string", "format": "uuid"}},
+          {"name": "empresa_id", "required": false, "in": "query", "schema": {"type": "string", "format": "uuid"}}
+        ],
+        "responses": {"204": {"description": "Cupón eliminado"}},
+        "security": [{"bearer": []}],
+        "summary": "Eliminar cupón",
+        "tags": ["Cupones"]
+      }
+    },
     "/api/v2/catalog/promociones": {
       "get": {
         "operationId": "OperacionesController_listarPromociones",
@@ -3902,6 +4052,43 @@
           "actualizado_en",
           "creado_en"
         ]
+      },
+      "CuponRequestDto": {
+        "type": "object",
+        "properties": {
+          "codigo": {"type": "string", "example": "VERANO-25"},
+          "nombre": {"type": "string"},
+          "tipo": {"type": "string", "enum": ["porcentaje", "monto_fijo"]},
+          "valor": {"type": "integer", "minimum": 1},
+          "minimo_compra_cents": {"type": "integer", "minimum": 0},
+          "maximo_descuento_cents": {"type": "integer", "nullable": true},
+          "usos_maximos": {"type": "integer", "nullable": true},
+          "fecha_desde": {"type": "string", "format": "date"},
+          "fecha_hasta": {"type": "string", "format": "date"},
+          "activo": {"type": "boolean"}
+        },
+        "required": ["codigo", "nombre", "tipo", "valor", "fecha_desde", "fecha_hasta"]
+      },
+      "CuponResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {"type": "string", "format": "uuid"},
+          "empresa_id": {"type": "string", "format": "uuid"},
+          "codigo": {"type": "string"},
+          "nombre": {"type": "string"},
+          "tipo": {"type": "string"},
+          "valor": {"type": "integer"},
+          "minimo_compra_cents": {"type": "integer"},
+          "maximo_descuento_cents": {"type": "integer", "nullable": true},
+          "usos_maximos": {"type": "integer", "nullable": true},
+          "usos_actuales": {"type": "integer"},
+          "fecha_desde": {"type": "string", "format": "date"},
+          "fecha_hasta": {"type": "string", "format": "date"},
+          "activo": {"type": "boolean"},
+          "creado_en": {"type": "string", "format": "date-time"},
+          "actualizado_en": {"type": "string", "format": "date-time"}
+        },
+        "required": ["id", "empresa_id", "codigo", "nombre", "tipo", "valor", "fecha_desde", "fecha_hasta", "activo"]
       },
       "PromocionResponseDto": {
         "type": "object",

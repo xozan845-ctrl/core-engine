@@ -70,6 +70,8 @@ pub struct OrdenResumen {
     pub negocio_id: Option<String>,
     #[serde(default)]
     pub items: Vec<OrdenItemFiscal>,
+    #[serde(default)]
+    pub descuento_cupon_cents: i64,
 }
 
 pub struct OrdenesHttp {
@@ -284,6 +286,11 @@ impl Facturacion {
                 base = money::sumar(base, base_linea)?;
                 iva = money::sumar(iva, money::multiplicar_por(base_linea, tasa_iva)?)?;
             }
+            if orden.descuento_cupon_cents > 0 && base > 0 {
+                let cupon = orden.descuento_cupon_cents.min(base);
+                base -= cupon;
+                iva = money::multiplicar_por(base, tasa_iva)?;
+            }
             (base, iva)
         };
         let total = money::sumar(base, iva)?;
@@ -477,6 +484,7 @@ mod tests {
                 total_cents: 100_000,
                 negocio_id: None,
                 items: Vec::new(),
+                descuento_cupon_cents: 0,
             })
         }
     }

@@ -172,6 +172,8 @@ Requiere capacidad `catalogo_items` y rol de precios.
 | GET | `/api/v2/catalog/items/{id}/cotizacion` | Cotizar por rango |
 | GET/POST | `/api/v2/catalog/promociones` | Listar/crear promoción |
 | GET/PATCH/DELETE | `/api/v2/catalog/promociones/{id}` | Detalle/editar/baja |
+| GET/POST | `/api/v2/catalog/cupones` | Listar/crear cupón |
+| GET/PATCH/DELETE | `/api/v2/catalog/cupones/{id}` | Detalle/editar/baja |
 
 ---
 
