@@ -34,6 +34,7 @@ este índice evita mezclar las decisiones nuevas con las ADR históricas.
 | [0023](./0023-venta-directa-sin-marketplace.md) | Aceptado (fase 1 implementada) | Venta directa configurable por pack: vendedor opcional y comisión explícita por línea |
 | [0024](./0024-ubicacion-despacho-por-linea.md) | Aceptado (implementado) | Ubicación de despacho opcional por línea; inventory reserva y descuenta esa ubicación |
 | [0025](./0025-promociones-en-checkout.md) | Aceptado (implementado) | Pricing resuelve la promoción vigente y orders aplica el descuento sobre el precio final |
+| [0026](./0026-fiscalidad-por-tenant.md) | Aceptado (implementado; declaraciones globales) | Jurisdicción fiscal por tenant, moneda desde la jurisdicción e IVA por línea |
 
 ## Convención
 

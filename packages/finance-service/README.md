@@ -131,6 +131,13 @@ Todas las escrituras van en una transacción con outbox e idempotencia por
 - **Jurisdicciones** configurables (`codigo_pais`, moneda, `tasa_iva`,
   `tasa_ir`, periodicidad, leyes, activa). Nicaragua sembrada con IVA 15 % e IR
   mensual (Ley 822).
+- **Configuración fiscal por tenant** (`finance.configuracion_fiscal`):
+  `GET/PUT /finanzas/configuracion-fiscal` fija la jurisdicción por empresa y,
+  opcionalmente, por negocio. La resolución es negocio → empresa → primera
+  activa (compatibilidad legacy); ya no depende del orden alfabético.
+- **Comprobantes**: la moneda y el IVA salen de la jurisdicción de la serie; el
+  IVA se calcula **por línea** con el precio, cantidad y descuento de la orden
+  (no sobre un total ciego). La serie por negocio sigue mandando.
 - **Regímenes fiscales** por jurisdicción (RAMPRA, cuota fija, etc.).
 - **Sujetos tributarios** por usuario (RUC, razón social, régimen, estado).
 - **Declaraciones**: `IVA`, `IR` y `CUOTA_FIJA` informativa.
@@ -138,11 +145,15 @@ Todas las escrituras van en una transacción con outbox e idempotencia por
   - Idempotente por `(jurisdiccion, tipo, periodo_inicio)`.
   - Estados: `GENERADA`, `PRESENTADA`, `PAGADA`.
   - `POST /declaraciones/{id}/presentar` y `/pagar`.
+  - **Límite actual:** el libro mayor no tiene `empresa_id`; las declaraciones
+    siguen siendo de plataforma. La configuración por tenant ya aplica a
+    comprobantes y a `jurisdiccion_de`.
 - **Planificador**: el día **1** a partir de las **00:10** genera las
   declaraciones del mes anterior (una sola vez por periodo, en hora local).
 
-> La moneda de facturación es el córdoba (C$) por Ley 842; el servicio no
-> convierte automáticamente salvo que se registre un tipo de cambio.
+> La moneda de facturación sale de la jurisdicción configurada (por defecto
+> `NIO` para Nicaragua); el servicio no convierte automáticamente salvo que se
+> registre un tipo de cambio.
 
 ---
 
@@ -260,7 +271,7 @@ fecha esperada. Genera `TableroAlerta` con estado `ok`/`alerta`/`sin_dato`.
 | Área | Rutas |
 |---|---|
 | Contabilidad | `GET/POST /finanzas/cuentas`, `POST /cuentas/{codigo}/estado`, `GET/POST /asientos`, `POST /asientos/{id}/anular`, `GET /libro-mayor/{cuenta}`, `GET /libro-ventas[/negocios]`, `GET /libro-compras` |
-| Fiscal | `GET/POST /comprobantes`, `GET /comprobantes/series`, `POST /comprobantes/{id}/anular`, `GET/POST /jurisdicciones`, `GET/POST /regimenes`, `GET/POST /sujetos`, `POST /sujetos/{id}/baja`, `GET /declaraciones`, `POST /declaraciones/generar`, `POST /declaraciones/{id}/presentar`, `POST /declaraciones/{id}/pagar`, `GET /vendedores/me/fiscal`, `GET /tipos-cambio`, `POST /admin/tipos-cambio` |
+| Fiscal | `GET/POST /comprobantes`, `GET /comprobantes/series`, `POST /comprobantes/{id}/anular`, `GET/POST /jurisdicciones`, `GET/PUT /configuracion-fiscal`, `GET/POST /regimenes`, `GET/POST /sujetos`, `POST /sujetos/{id}/baja`, `GET /declaraciones`, `POST /declaraciones/generar`, `POST /declaraciones/{id}/presentar`, `POST /declaraciones/{id}/pagar`, `GET /vendedores/me/fiscal`, `GET /tipos-cambio`, `POST /admin/tipos-cambio` |
 | Planeación | `GET/POST /proyecciones`, `GET /proyecciones/{id}`, `/sensibilidad`, `/plan-bienal`, `GET /punto-equilibrio`, `/kpis`, `/tablero` |
 | Bancos/créditos | `GET/POST /comercio/bancos-cuentas`, `PATCH/DELETE .../{id}`, `GET/POST /comercio/creditos`, `POST .../{id}/pagar`, `/abonar`, `DELETE .../{id}`, `GET /comercio/credito-cuentas`, `PUT .../{parteId}` |
 | Gastos/compras | `GET/POST /comercio/gastos`, `PATCH/DELETE .../{id}`, `POST .../{id}/{pagar,cancelar}`, `GET/POST /comercio/cuentas-por-pagar`, `POST .../{id}/pagar`, `GET/POST /comercio/proveedores`, `GET/POST /comercio/compras`, `POST /compras/{directas,producto-nuevo}`, `POST /compras/{id}/anular`, `GET/POST /comercio/ordenes-compra`, `POST .../{id}/{convertir,anular}` |

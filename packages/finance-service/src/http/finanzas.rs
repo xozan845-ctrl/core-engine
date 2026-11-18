@@ -479,6 +479,99 @@ pub async fn comprobante_anular(
         .ok_or_else(|| ApiError::no_encontrado("Comprobante", &id))
 }
 
+// ── configuración fiscal por tenant ─────────────────────────────────────────
+
+#[derive(Debug, Clone, Deserialize, Default)]
+pub struct ConfiguracionFiscalRequest {
+    #[serde(default)]
+    pub jurisdiccion: Option<String>,
+    #[serde(default)]
+    pub empresa_id: Option<String>,
+    #[serde(default)]
+    pub negocio_id: Option<String>,
+}
+
+fn empresa_fiscal(
+    usuario: &crate::auth::UsuarioContexto,
+    empresa: Option<&String>,
+) -> Result<String, ApiError> {
+    if usuario.es_admin_global() {
+        return empresa
+            .map(String::as_str)
+            .map(str::trim)
+            .filter(|valor| !valor.is_empty())
+            .map(str::to_string)
+            .or_else(|| usuario.tenant_id.clone())
+            .ok_or_else(|| {
+                ApiError::validacion(json!([
+                    {"campo": "empresa_id", "restricciones": ["isString"]}
+                ]))
+            });
+    }
+    Ok(usuario.tenant()?.to_string())
+}
+
+/// `GET /api/v2/finanzas/configuracion-fiscal?empresa_id=&negocio_id=`.
+pub async fn configuracion_fiscal_obtener(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    Query(query): Query<HashMap<String, String>>,
+) -> Result<Json<Value>, ApiError> {
+    let usuario = contexto(
+        &state,
+        &headers,
+        &["super_admin", "admin", "empresario"],
+        &[],
+        &[],
+    )
+    .await?;
+    let empresa = empresa_fiscal(&usuario, query.get("empresa_id"))?;
+    let negocio = query
+        .get("negocio_id")
+        .cloned()
+        .or_else(|| usuario.negocio_id.clone());
+    let jurisdiccion = state
+        .tributacion
+        .jurisdiccion_de(&empresa, negocio.as_deref())
+        .await?;
+    Ok(Json(json!({
+        "empresa_id": empresa,
+        "negocio_id": negocio,
+        "jurisdiccion": jurisdiccion,
+    })))
+}
+
+/// `PUT /api/v2/finanzas/configuracion-fiscal`.
+pub async fn configuracion_fiscal_guardar(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    Json(dto): Json<ConfiguracionFiscalRequest>,
+) -> Result<Json<Value>, ApiError> {
+    let usuario = contexto(
+        &state,
+        &headers,
+        &["super_admin", "admin", "empresario"],
+        &[],
+        &[],
+    )
+    .await?;
+    let empresa = empresa_fiscal(&usuario, dto.empresa_id.as_ref())?;
+    let negocio = dto
+        .negocio_id
+        .clone()
+        .or_else(|| usuario.negocio_id.clone());
+    let jurisdiccion = dto.jurisdiccion.unwrap_or_default();
+    let guardada = state
+        .tributacion
+        .guardar_configuracion_fiscal(&empresa, negocio.as_deref(), &jurisdiccion)
+        .await?;
+    Ok(Json(json!({
+        "empresa_id": empresa,
+        "negocio_id": negocio,
+        "jurisdiccion": guardada,
+    })))
+}
+
 // ── modelo financiero ───────────────────────────────────────────────────────
 
 pub async fn proyecciones_crear(

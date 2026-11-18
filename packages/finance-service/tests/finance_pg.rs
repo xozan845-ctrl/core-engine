@@ -8,7 +8,7 @@ use finance_service::consumidor::Consumidor;
 use finance_service::contabilidad::{Contabilidad, DetalleAsiento, ParametrosAsiento};
 use finance_service::db::Db;
 use finance_service::facturacion::{
-    Comprobante, EmitirComprobante, Facturacion, OrdenResumen, Ordenes,
+    Comprobante, EmitirComprobante, Facturacion, OrdenItemFiscal, OrdenResumen, Ordenes,
 };
 use finance_service::finanzas::proyecciones::{Proyecciones, SupuestosProyeccion};
 use finance_service::outbox::Outbox;
@@ -41,6 +41,18 @@ impl Ordenes for OrdenesFijas {
         (order_id == "22222222-2222-4222-8222-222222222222").then_some(OrdenResumen {
             total_cents: 100_000,
             negocio_id: None,
+            items: vec![
+                OrdenItemFiscal {
+                    precio_unitario_cents: 60_000,
+                    cantidad: 1,
+                    descuento_cents: 0,
+                },
+                OrdenItemFiscal {
+                    precio_unitario_cents: 40_000,
+                    cantidad: 1,
+                    descuento_cents: 0,
+                },
+            ],
         })
     }
 }
@@ -212,6 +224,17 @@ async fn provisionar(url: &str) {
           leyes jsonb NOT NULL DEFAULT '{}',
           activa boolean NOT NULL DEFAULT true
         );
+        CREATE TABLE finance.configuracion_fiscal (
+          empresa_id uuid NOT NULL,
+          negocio_id uuid,
+          jurisdiccion text NOT NULL,
+          creado_en timestamptz NOT NULL DEFAULT NOW(),
+          actualizado_en timestamptz NOT NULL DEFAULT NOW()
+        );
+        CREATE UNIQUE INDEX ux_config_fiscal_empresa
+          ON finance.configuracion_fiscal (empresa_id) WHERE negocio_id IS NULL;
+        CREATE UNIQUE INDEX ux_config_fiscal_negocio
+          ON finance.configuracion_fiscal (empresa_id, negocio_id) WHERE negocio_id IS NOT NULL;
         CREATE TABLE finance.regimenes_fiscales (
           id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
           jurisdiccion text NOT NULL,
@@ -597,6 +620,51 @@ async fn debe_registrar_y_compensar_el_credito_de_una_orden() {
         .anular_credito_orden("22222222-2222-4222-8222-222222222222")
         .await
         .expect("anular de nuevo"));
+}
+
+#[tokio::test]
+async fn debe_resolver_y_guardar_la_jurisdiccion_por_tenant() {
+    let Some(url) = url() else { return };
+    let _guard = DB_LOCK.lock().await;
+    provisionar(&url).await;
+    let db = Arc::new(Db::conectar(&url).await.expect("db"));
+    let contabilidad = Arc::new(Contabilidad::nueva(
+        Arc::clone(&db),
+        Outbox::nueva("finance.outbox"),
+    ));
+    let tributacion = Tributacion::nueva(
+        Arc::clone(&db),
+        Outbox::nueva("finance.outbox"),
+        contabilidad,
+    );
+    let empresa = Uuid::new_v4().to_string();
+    let negocio = Uuid::new_v4().to_string();
+
+    let guardada = tributacion
+        .guardar_configuracion_fiscal(&empresa, None, "ni")
+        .await
+        .expect("config empresa");
+    assert_eq!(guardada.codigo_pais, "NI");
+    assert_eq!(guardada.moneda, "NIO");
+
+    let leida = tributacion
+        .jurisdiccion_de(&empresa, Some(&negocio))
+        .await
+        .expect("lectura")
+        .expect("jurisdiccion");
+    assert_eq!(leida.codigo_pais, "NI");
+
+    let negocio_guardado = tributacion
+        .guardar_configuracion_fiscal(&empresa, Some(&negocio), "NI")
+        .await
+        .expect("config negocio");
+    assert_eq!(negocio_guardado.codigo_pais, "NI");
+
+    let inexistente = tributacion
+        .guardar_configuracion_fiscal(&empresa, None, "XX")
+        .await
+        .expect_err("jurisdiccion inexistente");
+    assert_eq!(inexistente.codigo, "NO_ENCONTRADO");
 }
 
 #[tokio::test]
