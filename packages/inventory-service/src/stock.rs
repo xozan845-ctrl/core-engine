@@ -5,6 +5,87 @@ use crate::errors::ApiError;
 use sqlx::{Postgres, Row, Transaction};
 use uuid::Uuid;
 
+pub async fn stock_de_ubicacion_en_transaccion(
+    tx: &mut Transaction<'_, Postgres>,
+    empresa_id: &str,
+    item_id: &str,
+    ubicacion_id: Uuid,
+) -> Result<i64, ApiError> {
+    let stock: i64 = sqlx::query_scalar(
+        "SELECT COALESCE(stock, 0)::bigint
+           FROM inventory.item_stock_ubicacion
+          WHERE empresa_id = $1::uuid AND item_id = $2::uuid AND ubicacion_id = $3::uuid",
+    )
+    .bind(empresa_id)
+    .bind(item_id)
+    .bind(ubicacion_id)
+    .fetch_optional(&mut **tx)
+    .await
+    .map_err(interno)?
+    .unwrap_or(0);
+    Ok(stock)
+}
+
+pub async fn aplicar_delta_en_ubicacion_en_transaccion(
+    tx: &mut Transaction<'_, Postgres>,
+    empresa_id: &str,
+    item_id: &str,
+    ubicacion_id: Uuid,
+    delta: i64,
+) -> Result<i64, ApiError> {
+    if delta > 0 {
+        sqlx::query(
+            "INSERT INTO inventory.item_stock_ubicacion AS s
+               (empresa_id, item_id, ubicacion_id, stock)
+             VALUES ($1::uuid, $2::uuid, $3::uuid, $4)
+             ON CONFLICT (item_id, ubicacion_id) DO UPDATE
+               SET stock = s.stock + EXCLUDED.stock, actualizado_en = NOW()",
+        )
+        .bind(empresa_id)
+        .bind(item_id)
+        .bind(ubicacion_id)
+        .bind(delta as i32)
+        .execute(&mut **tx)
+        .await
+        .map_err(interno)?;
+    } else if delta < 0 {
+        let fila = sqlx::query(
+            "UPDATE inventory.item_stock_ubicacion
+                SET stock = stock + $1, actualizado_en = NOW()
+              WHERE empresa_id = $2::uuid AND item_id = $3::uuid
+                AND ubicacion_id = $4::uuid AND stock >= $5",
+        )
+        .bind(delta as i32)
+        .bind(empresa_id)
+        .bind(item_id)
+        .bind(ubicacion_id)
+        .bind((-delta) as i32)
+        .execute(&mut **tx)
+        .await
+        .map_err(interno)?;
+        if fila.rows_affected() == 0 {
+            return Err(ApiError::dominio(
+                "STOCK_INSUFICIENTE",
+                "El stock físico de la ubicación no alcanza.",
+            ));
+        }
+    }
+
+    let total: i64 = sqlx::query_scalar(
+        "SELECT COALESCE(stock, 0)::bigint
+           FROM inventory.item_stock_ubicacion
+          WHERE empresa_id = $1::uuid AND item_id = $2::uuid AND ubicacion_id = $3::uuid",
+    )
+    .bind(empresa_id)
+    .bind(item_id)
+    .bind(ubicacion_id)
+    .fetch_optional(&mut **tx)
+    .await
+    .map_err(interno)?
+    .unwrap_or(0);
+    Ok(total)
+}
+
 pub async fn total_en_transaccion(
     tx: &mut Transaction<'_, Postgres>,
     empresa_id: &str,

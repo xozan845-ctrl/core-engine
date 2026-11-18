@@ -118,6 +118,12 @@
                     "items": {
                       "type": "string"
                     }
+                  },
+                  "ubicacion_id": {
+                    "type": "string",
+                    "format": "uuid",
+                    "nullable": true,
+                    "description": "Acota el stock y los seriales a una ubicación"
                   }
                 },
                 "required": [

@@ -17,6 +17,7 @@ pub struct Linea {
     pub sku: String,
     pub cantidad: i64,
     pub item_id: Option<String>,
+    pub ubicacion_id: Option<String>,
 }
 
 pub struct Reservas;
@@ -35,11 +36,37 @@ impl Reservas {
 
         let mut fallidos: Vec<Value> = Vec::new();
         for item in &lineas {
+            let ubicacion_uuid = match item.ubicacion_id.as_deref() {
+                Some(valor) => match Uuid::parse_str(valor) {
+                    Ok(uuid) => Some(uuid),
+                    Err(_) => {
+                        fallidos.push(fallido(item, "ubicacion_invalida"));
+                        continue;
+                    }
+                },
+                None => None,
+            };
+            if let Some(ubicacion) = ubicacion_uuid {
+                let activa: Option<Uuid> = sqlx::query_scalar(
+                    "SELECT id FROM inventory.ubicaciones
+                      WHERE id = $1::uuid AND empresa_id = $2::uuid AND activo",
+                )
+                .bind(ubicacion)
+                .bind(&item.empresa_id)
+                .fetch_optional(&mut **tx)
+                .await
+                .map_err(interno)?;
+                if activa.is_none() {
+                    fallidos.push(fallido(item, "ubicacion_invalida"));
+                    continue;
+                }
+            }
             let lock = sqlx::query(
                 "SELECT COALESCE((
                           SELECT SUM(s.stock)::int
                             FROM inventory.item_stock_ubicacion s
                            WHERE s.item_id = i.id
+                             AND ($3::uuid IS NULL OR s.ubicacion_id = $3::uuid)
                         ), 0) AS stock,
                         i.id AS item_id, i.track_serial, i.garantia_meses,
                         EXISTS (SELECT 1 FROM item.items v
@@ -51,6 +78,7 @@ impl Reservas {
             )
             .bind(&item.empresa_id)
             .bind(&item.sku)
+            .bind(ubicacion_uuid)
             .fetch_optional(&mut **tx)
             .await
             .map_err(interno)?;
@@ -139,6 +167,7 @@ impl Reservas {
                        LEFT JOIN inventory.ubicaciones u ON u.id = s.ubicacion_id
                       WHERE s.empresa_id = $1::uuid AND s.item_id = $2::uuid
                         AND s.estado = 'disponible'
+                        AND ($4::uuid IS NULL OR s.ubicacion_id = $4::uuid)
                       ORDER BY (u.predeterminada IS TRUE) DESC, s.creado_en, s.id
                       LIMIT $3
                       FOR UPDATE OF s",
@@ -146,6 +175,7 @@ impl Reservas {
                 .bind(&item.empresa_id)
                 .bind(item_id)
                 .bind(item.cantidad)
+                .bind(ubicacion_uuid)
                 .fetch_all(&mut **tx)
                 .await
                 .map_err(interno)?;
@@ -174,13 +204,24 @@ impl Reservas {
                 .map_err(interno)?;
             }
 
-            crate::stock::aplicar_delta_en_transaccion(
-                tx,
-                &item.empresa_id,
-                &item_id.to_string(),
-                -item.cantidad,
-            )
-            .await?;
+            if let Some(ubicacion) = ubicacion_uuid {
+                crate::stock::aplicar_delta_en_ubicacion_en_transaccion(
+                    tx,
+                    &item.empresa_id,
+                    &item_id.to_string(),
+                    ubicacion,
+                    -item.cantidad,
+                )
+                .await?;
+            } else {
+                crate::stock::aplicar_delta_en_transaccion(
+                    tx,
+                    &item.empresa_id,
+                    &item_id.to_string(),
+                    -item.cantidad,
+                )
+                .await?;
+            }
         }
 
         if !fallidos.is_empty() {
@@ -238,16 +279,40 @@ impl Reservas {
             .await
             .map_err(interno)?;
             let Some(item_id) = item_id else { continue };
-            let anterior =
-                crate::stock::total_en_transaccion(tx, &item.empresa_id, &item_id.to_string())
-                    .await?;
-            let nuevo = crate::stock::aplicar_delta_en_transaccion(
-                tx,
-                &item.empresa_id,
-                &item_id.to_string(),
-                item.cantidad,
-            )
-            .await?;
+            let ubicacion = item
+                .ubicacion_id
+                .as_deref()
+                .and_then(|valor| Uuid::parse_str(valor).ok());
+            let (anterior, nuevo) = if let Some(ubicacion) = ubicacion {
+                let anterior = crate::stock::stock_de_ubicacion_en_transaccion(
+                    tx,
+                    &item.empresa_id,
+                    &item_id.to_string(),
+                    ubicacion,
+                )
+                .await?;
+                let nuevo = crate::stock::aplicar_delta_en_ubicacion_en_transaccion(
+                    tx,
+                    &item.empresa_id,
+                    &item_id.to_string(),
+                    ubicacion,
+                    item.cantidad,
+                )
+                .await?;
+                (anterior, nuevo)
+            } else {
+                let anterior =
+                    crate::stock::total_en_transaccion(tx, &item.empresa_id, &item_id.to_string())
+                        .await?;
+                let nuevo = crate::stock::aplicar_delta_en_transaccion(
+                    tx,
+                    &item.empresa_id,
+                    &item_id.to_string(),
+                    item.cantidad,
+                )
+                .await?;
+                (anterior, nuevo)
+            };
             sqlx::query(
                 "INSERT INTO inventory.ajustes_stock
                    (empresa_id, item_id, cantidad_anterior, cantidad_nueva, motivo, realizado_en)
@@ -334,14 +399,15 @@ impl Reservas {
             return Ok(Value::Array(Vec::new()));
         }
         let filas = sqlx::query(
-            "SELECT i.empresa_id, LOWER(i.codigo) AS sku,
+            "SELECT x.empresa_id, x.sku,
                     COALESCE((
                       SELECT SUM(s.stock)::int
                         FROM inventory.item_stock_ubicacion s
                        WHERE s.item_id = i.id
+                         AND (x.ubicacion_id IS NULL OR s.ubicacion_id = x.ubicacion_id)
                     ), 0) AS stock_restante
                FROM item.items i
-               JOIN jsonb_to_recordset($1::jsonb) AS x(empresa_id uuid, sku text)
+               JOIN jsonb_to_recordset($1::jsonb) AS x(empresa_id uuid, sku text, ubicacion_id uuid)
                  ON i.empresa_id = x.empresa_id AND LOWER(i.codigo) = LOWER(x.sku)
               WHERE i.tipo = 'producto' AND i.eliminado_en IS NULL",
         )
@@ -443,6 +509,7 @@ async fn expandir_componentes(
                     sku,
                     cantidad: (cantidad as i64) * item.cantidad,
                     item_id: Some(componente_id.to_string()),
+                    ubicacion_id: item.ubicacion_id.clone(),
                 },
             );
         }
@@ -498,6 +565,11 @@ pub fn lineas_de(valor: &Value) -> Vec<Linea> {
                         .and_then(Value::as_str)
                         .filter(|valor| !valor.is_empty())
                         .map(str::to_string),
+                    ubicacion_id: linea
+                        .get("ubicacion_id")
+                        .and_then(Value::as_str)
+                        .filter(|valor| !valor.is_empty())
+                        .map(str::to_string),
                 })
                 .collect()
         })
@@ -516,6 +588,9 @@ fn lineas_json(lineas: &[Linea]) -> Value {
                 if let Some(item_id) = &linea.item_id {
                     objeto.insert("item_id".into(), Value::String(item_id.clone()));
                 }
+                if let Some(ubicacion_id) = &linea.ubicacion_id {
+                    objeto.insert("ubicacion_id".into(), Value::String(ubicacion_id.clone()));
+                }
                 Value::Object(objeto)
             })
             .collect(),
@@ -528,8 +603,21 @@ pub fn claves_stock(valor: &Value) -> Vec<Value> {
     for linea in valor.as_array().map(Vec::as_slice).unwrap_or(&[]) {
         let empresa_id = texto(linea, "empresa_id");
         let sku = texto(linea, "sku").to_lowercase();
-        if vistas.insert(format!("{empresa_id}:{sku}")) {
-            salida.push(json!({ "empresa_id": empresa_id, "sku": sku }));
+        let ubicacion_id = linea
+            .get("ubicacion_id")
+            .and_then(Value::as_str)
+            .filter(|valor| !valor.is_empty())
+            .map(str::to_string);
+        let clave = format!(
+            "{empresa_id}:{sku}:{}",
+            ubicacion_id.as_deref().unwrap_or("")
+        );
+        if vistas.insert(clave) {
+            salida.push(json!({
+                "empresa_id": empresa_id,
+                "sku": sku,
+                "ubicacion_id": ubicacion_id,
+            }));
         }
     }
     salida
@@ -540,8 +628,17 @@ fn claves_stock_de_lineas(lineas: &[Linea]) -> Vec<Value> {
     let mut vistas = std::collections::HashSet::new();
     for linea in lineas {
         let sku = linea.sku.to_lowercase();
-        if vistas.insert(format!("{}:{sku}", linea.empresa_id)) {
-            salida.push(json!({ "empresa_id": linea.empresa_id, "sku": sku }));
+        let clave = format!(
+            "{}:{sku}:{}",
+            linea.empresa_id,
+            linea.ubicacion_id.as_deref().unwrap_or("")
+        );
+        if vistas.insert(clave) {
+            salida.push(json!({
+                "empresa_id": linea.empresa_id,
+                "sku": sku,
+                "ubicacion_id": linea.ubicacion_id,
+            }));
         }
     }
     salida
@@ -569,7 +666,12 @@ fn acumular(
     indices: &mut std::collections::HashMap<String, usize>,
     linea: Linea,
 ) {
-    let clave = format!("{}:{}", linea.empresa_id, linea.sku.to_lowercase());
+    let clave = format!(
+        "{}:{}:{}",
+        linea.empresa_id,
+        linea.sku.to_lowercase(),
+        linea.ubicacion_id.as_deref().unwrap_or("")
+    );
     match indices.get(&clave) {
         Some(indice) => acumuladas[*indice].cantidad += linea.cantidad,
         None => {
@@ -596,17 +698,30 @@ mod tests {
     fn debe_parsear_y_deduplicar_lineas() {
         let lineas = lineas_de(&json!([
             {"empresa_id": "e-1", "sku": "SKU-1", "cantidad": 2, "item_id": "i-1"},
-            {"empresa_id": "e-1", "sku": "SKU-2", "cantidad": 3}
+            {"empresa_id": "e-1", "sku": "SKU-2", "cantidad": 3},
+            {"empresa_id": "e-1", "sku": "SKU-3", "cantidad": 1, "ubicacion_id": "u-1"}
         ]));
-        assert_eq!(lineas.len(), 2);
+        assert_eq!(lineas.len(), 3);
         assert_eq!(lineas[0].cantidad, 2);
         assert_eq!(lineas[1].cantidad, 3);
+        assert_eq!(lineas[2].ubicacion_id.as_deref(), Some("u-1"));
         assert_eq!(
             claves_stock_de_lineas(&lineas),
             vec![
-                json!({"empresa_id": "e-1", "sku": "sku-1"}),
-                json!({"empresa_id": "e-1", "sku": "sku-2"})
+                json!({"empresa_id": "e-1", "sku": "sku-1", "ubicacion_id": null}),
+                json!({"empresa_id": "e-1", "sku": "sku-2", "ubicacion_id": null}),
+                json!({"empresa_id": "e-1", "sku": "sku-3", "ubicacion_id": "u-1"})
             ]
         );
+    }
+
+    #[test]
+    fn debe_separar_claves_de_stock_por_ubicacion() {
+        let claves = claves_stock(&json!([
+            {"empresa_id": "e-1", "sku": "SKU-1", "ubicacion_id": "u-1"},
+            {"empresa_id": "e-1", "sku": "SKU-1", "ubicacion_id": "u-2"},
+            {"empresa_id": "e-1", "sku": "SKU-1"}
+        ]));
+        assert_eq!(claves.len(), 3);
     }
 }

@@ -259,7 +259,7 @@ async fn debe_entregar_stock_y_series_por_lote_de_skus() {
 
     let lineas = ctx
         .inventario
-        .stock_lote(EMPRESA, &["sku-interno".to_string()])
+        .stock_lote(EMPRESA, &["sku-interno".to_string()], None)
         .await
         .expect("stock lote");
     assert_eq!(lineas.len(), 1);
@@ -316,21 +316,21 @@ async fn debe_validar_el_lote_de_stock() {
     let ctx = preparar().await;
     let vacio = ctx
         .inventario
-        .stock_lote(EMPRESA, &[])
+        .stock_lote(EMPRESA, &[], None)
         .await
         .expect("vacio");
     assert!(vacio.is_empty());
 
     let error = ctx
         .inventario
-        .stock_lote("no-es-uuid", &["SKU-1".to_string()])
+        .stock_lote("no-es-uuid", &["SKU-1".to_string()], None)
         .await
         .expect_err("empresa invalida");
     assert_eq!(error.codigo, "VALIDACION");
 
     let inexistente = ctx
         .inventario
-        .stock_lote(EMPRESA, &["NO-EXISTE".to_string()])
+        .stock_lote(EMPRESA, &["NO-EXISTE".to_string()], None)
         .await
         .expect("inexistente");
     assert!(inexistente.is_empty());
@@ -468,6 +468,128 @@ async fn debe_aplicar_deltas_de_stock_en_ubicaciones() {
         .await
         .expect_err("insuficiente");
     assert_eq!(error.codigo, "STOCK_INSUFICIENTE");
+    tx.rollback().await.expect("rollback");
+}
+
+#[tokio::test]
+async fn debe_reservar_stock_en_la_ubicacion_elegida() {
+    let ctx = preparar().await;
+    crear_item(&ctx.db, ITEM, "SKU-LOC", 10, 1000).await;
+    let segunda = uuid::Uuid::new_v4();
+    sqlx::query(
+        "INSERT INTO inventory.ubicaciones
+           (id, empresa_id, codigo, nombre, predeterminada, activo)
+         VALUES ($1::uuid, $2::uuid, 'sucursal', 'Sucursal', false, true)",
+    )
+    .bind(segunda)
+    .bind(EMPRESA)
+    .execute(ctx.db.pool())
+    .await
+    .expect("ubicacion secundaria");
+    sqlx::query(
+        "INSERT INTO inventory.item_stock_ubicacion
+           (empresa_id, item_id, ubicacion_id, stock)
+         VALUES ($1::uuid, $2::uuid, $3::uuid, 4)",
+    )
+    .bind(EMPRESA)
+    .bind(ITEM)
+    .bind(segunda)
+    .execute(ctx.db.pool())
+    .await
+    .expect("stock secundario");
+
+    let lineas = json!([{
+        "empresa_id": EMPRESA,
+        "sku": "SKU-LOC",
+        "cantidad": 3,
+        "item_id": ITEM,
+        "ubicacion_id": segunda.to_string(),
+    }]);
+    let mut tx = ctx.db.transaccion().await.expect("tx");
+    let reserva = inventory_service::reservas::Reservas::reservar_en_transaccion(
+        &mut tx,
+        "77777777-7777-4777-8777-777777777777",
+        &lineas,
+    )
+    .await
+    .expect("reserva");
+    assert_eq!(reserva["ok"], true);
+    tx.commit().await.expect("commit");
+
+    let stock_segunda: i64 = sqlx::query_scalar(
+        "SELECT stock::bigint FROM inventory.item_stock_ubicacion
+          WHERE item_id = $1::uuid AND ubicacion_id = $2::uuid",
+    )
+    .bind(ITEM)
+    .bind(segunda)
+    .fetch_one(ctx.db.pool())
+    .await
+    .expect("stock segunda");
+    assert_eq!(stock_segunda, 1);
+
+    let default: uuid::Uuid = sqlx::query_scalar(
+        "SELECT id FROM inventory.ubicaciones
+          WHERE empresa_id = $1::uuid AND predeterminada LIMIT 1",
+    )
+    .bind(EMPRESA)
+    .fetch_one(ctx.db.pool())
+    .await
+    .expect("default");
+    let stock_default: i64 = sqlx::query_scalar(
+        "SELECT stock::bigint FROM inventory.item_stock_ubicacion
+          WHERE item_id = $1::uuid AND ubicacion_id = $2::uuid",
+    )
+    .bind(ITEM)
+    .bind(default)
+    .fetch_one(ctx.db.pool())
+    .await
+    .expect("stock default");
+    assert_eq!(stock_default, 10);
+}
+
+#[tokio::test]
+async fn debe_rechazar_la_reserva_si_la_ubicacion_no_alcanza() {
+    let ctx = preparar().await;
+    crear_item(&ctx.db, ITEM, "SKU-LOC-CORTA", 10, 1000).await;
+    let segunda = uuid::Uuid::new_v4();
+    sqlx::query(
+        "INSERT INTO inventory.ubicaciones
+           (id, empresa_id, codigo, nombre, predeterminada, activo)
+         VALUES ($1::uuid, $2::uuid, 'sucursal', 'Sucursal', false, true)",
+    )
+    .bind(segunda)
+    .bind(EMPRESA)
+    .execute(ctx.db.pool())
+    .await
+    .expect("ubicacion secundaria");
+    sqlx::query(
+        "INSERT INTO inventory.item_stock_ubicacion
+           (empresa_id, item_id, ubicacion_id, stock)
+         VALUES ($1::uuid, $2::uuid, $3::uuid, 1)",
+    )
+    .bind(EMPRESA)
+    .bind(ITEM)
+    .bind(segunda)
+    .execute(ctx.db.pool())
+    .await
+    .expect("stock secundario");
+
+    let lineas = json!([{
+        "empresa_id": EMPRESA,
+        "sku": "SKU-LOC-CORTA",
+        "cantidad": 2,
+        "item_id": ITEM,
+        "ubicacion_id": segunda.to_string(),
+    }]);
+    let mut tx = ctx.db.transaccion().await.expect("tx");
+    let reserva = inventory_service::reservas::Reservas::reservar_en_transaccion(
+        &mut tx,
+        "88888888-8888-4888-8888-888888888888",
+        &lineas,
+    )
+    .await
+    .expect("reserva");
+    assert_eq!(reserva["ok"], false);
     tx.rollback().await.expect("rollback");
 }
 

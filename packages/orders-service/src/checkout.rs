@@ -38,6 +38,8 @@ pub struct LineaEntrada {
     pub fulfillment: Option<String>,
     #[serde(default)]
     pub fulfillment_config: Option<Value>,
+    #[serde(default)]
+    pub ubicacion_id: Option<String>,
 }
 
 #[derive(Debug, Clone, Default, Serialize, Deserialize, PartialEq)]
@@ -66,6 +68,7 @@ struct LineaAgrupada {
     cantidad: i64,
     fulfillment: Option<String>,
     fulfillment_config: Option<Value>,
+    ubicacion_id: Option<String>,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -249,6 +252,7 @@ impl Checkout {
                 negocio_id: oferta.negocio_id.clone(),
                 participacion_porcentaje: oferta.participacion_porcentaje,
                 comision: true,
+                ubicacion_id: linea.ubicacion_id.clone(),
                 item_type: oferta.item_type.clone(),
                 item_id: oferta.item_id.clone(),
                 fulfillment: Some(fulfillment.clone()),
@@ -966,13 +970,46 @@ impl Checkout {
             .iter()
             .map(|p| (format!("{}:{}", p.empresa_id, p.sku.to_lowercase()), p))
             .collect();
+        let mut stock_por_ubicacion: HashMap<
+            (String, String),
+            Vec<crate::clients::StockUbicacion>,
+        > = HashMap::new();
         for item in productos {
             let producto =
                 por_clave.get(&format!("{}:{}", item.empresa_id, item.sku.to_lowercase()));
-            let disponible = match producto {
-                Some(p) if p.track_serial => p.stock.min(p.seriales_disponibles),
-                Some(p) => p.stock,
-                None => 0,
+            let disponible = if let Some(ubicacion_id) = item.ubicacion_id.as_deref() {
+                let clave = (item.empresa_id.clone(), ubicacion_id.to_string());
+                if !stock_por_ubicacion.contains_key(&clave) {
+                    let Some(stocks) = self
+                        .clientes
+                        .stock_ubicacion(
+                            &item.empresa_id,
+                            ubicacion_id,
+                            std::slice::from_ref(&item.sku),
+                        )
+                        .await
+                    else {
+                        return Err(ApiError::servicio_no_disponible("inventory-service"));
+                    };
+                    stock_por_ubicacion.insert(clave.clone(), stocks);
+                }
+                let linea = stock_por_ubicacion.get(&clave).and_then(|lineas| {
+                    lineas
+                        .iter()
+                        .find(|linea| linea.sku.eq_ignore_ascii_case(&item.sku))
+                });
+                let stock = linea.map(|linea| linea.stock).unwrap_or(0);
+                let seriales = linea.map(|linea| linea.seriales_disponibles).unwrap_or(0);
+                match producto {
+                    Some(p) if p.track_serial => stock.min(seriales),
+                    _ => stock,
+                }
+            } else {
+                match producto {
+                    Some(p) if p.track_serial => p.stock.min(p.seriales_disponibles),
+                    Some(p) => p.stock,
+                    None => 0,
+                }
             };
             if producto.is_none() || disponible < item.cantidad {
                 return Err(ApiError::nueva(
@@ -983,6 +1020,7 @@ impl Checkout {
                 .con_detalles(json!({
                     "sku": item.sku,
                     "cantidad_solicitada": item.cantidad,
+                    "ubicacion_id": item.ubicacion_id,
                 })));
             }
         }
@@ -998,6 +1036,7 @@ fn lineas_de_carrito(items: &[ItemCarrito]) -> Vec<LineaEntrada> {
             cantidad: item.cantidad,
             fulfillment: Some("none".to_string()),
             fulfillment_config: None,
+            ubicacion_id: None,
         })
         .collect()
 }
@@ -1007,12 +1046,24 @@ fn agrupar(lineas: &[LineaEntrada]) -> Result<Vec<LineaAgrupada>, ApiError> {
     let mut orden: Vec<String> = Vec::new();
     for linea in lineas {
         let clave = linea.oferta_id.clone();
+        let ubicacion = linea
+            .ubicacion_id
+            .as_deref()
+            .map(str::trim)
+            .filter(|valor| !valor.is_empty())
+            .map(str::to_string);
         match mapa.get_mut(&clave) {
             Some(actual) => {
                 if actual.fulfillment != linea.fulfillment {
                     return Err(ApiError::dominio(
                         "FULFILLMENT_CONFLICTO",
                         "Una misma oferta no puede tener dos fulfillments distintos en una orden.",
+                    ));
+                }
+                if actual.ubicacion_id != ubicacion {
+                    return Err(ApiError::dominio(
+                        "UBICACION_CONFLICTO",
+                        "Una misma oferta no puede despacharse desde dos ubicaciones en una orden.",
                     ));
                 }
                 actual.cantidad += linea.cantidad;
@@ -1029,6 +1080,7 @@ fn agrupar(lineas: &[LineaEntrada]) -> Result<Vec<LineaAgrupada>, ApiError> {
                         cantidad: linea.cantidad,
                         fulfillment: linea.fulfillment.clone(),
                         fulfillment_config: linea.fulfillment_config.clone(),
+                        ubicacion_id: ubicacion,
                     },
                 );
             }
@@ -1240,12 +1292,14 @@ mod tests {
                 cantidad: 1,
                 fulfillment: Some("none".into()),
                 fulfillment_config: None,
+                ubicacion_id: None,
             },
             LineaEntrada {
                 oferta_id: "o-1".into(),
                 cantidad: 2,
                 fulfillment: Some("none".into()),
                 fulfillment_config: None,
+                ubicacion_id: None,
             },
         ];
         let agrupadas = agrupar(&lineas).expect("agrupar");
@@ -1261,12 +1315,14 @@ mod tests {
                 cantidad: 1,
                 fulfillment: Some("none".into()),
                 fulfillment_config: None,
+                ubicacion_id: None,
             },
             LineaEntrada {
                 oferta_id: "o-1".into(),
                 cantidad: 1,
                 fulfillment: Some("digital".into()),
                 fulfillment_config: None,
+                ubicacion_id: None,
             },
         ];
         assert_eq!(

@@ -203,6 +203,7 @@ mod tests {
             negocio_id: None,
             participacion_porcentaje: Some(10),
             comision: true,
+            ubicacion_id: None,
             item_type: "producto".into(),
             item_id: "i-1".into(),
             fulfillment: None,

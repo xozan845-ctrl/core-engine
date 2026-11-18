@@ -138,6 +138,16 @@ struct StockV2 {
     seriales_disponibles: i64,
 }
 
+#[derive(Debug, Clone, Deserialize, PartialEq, Eq)]
+pub struct StockUbicacion {
+    #[serde(default)]
+    pub sku: String,
+    #[serde(default)]
+    pub stock: i64,
+    #[serde(default)]
+    pub seriales_disponibles: i64,
+}
+
 #[derive(Debug, Clone, Deserialize, PartialEq)]
 pub struct ItemStock {
     #[serde(default)]
@@ -214,6 +224,14 @@ pub trait ClientesPort: Send + Sync {
     ) -> CreditoEstado;
     async fn anular_credito(&self, order_id: &str) -> bool;
     async fn items_lote(&self, skus: &[String]) -> Option<Vec<ItemStock>>;
+    async fn stock_ubicacion(
+        &self,
+        _empresa_id: &str,
+        _ubicacion_id: &str,
+        _skus: &[String],
+    ) -> Option<Vec<StockUbicacion>> {
+        None
+    }
 }
 
 impl Clientes {
@@ -584,6 +602,33 @@ impl Clientes {
         }
         Some(salida)
     }
+
+    pub async fn stock_ubicacion(
+        &self,
+        empresa_id: &str,
+        ubicacion_id: &str,
+        skus: &[String],
+    ) -> Option<Vec<StockUbicacion>> {
+        if skus.is_empty() {
+            return Some(Vec::new());
+        }
+        let respuesta = self
+            .http
+            .post(format!("{}/internal/inventario/stock", self.inventory_url))
+            .header("x-internal-key", &self.clave)
+            .json(&json!({
+                "empresa_id": empresa_id,
+                "ubicacion_id": ubicacion_id,
+                "skus": skus,
+            }))
+            .send()
+            .await
+            .ok()?;
+        if !respuesta.status().is_success() {
+            return None;
+        }
+        respuesta.json::<Vec<StockUbicacion>>().await.ok()
+    }
 }
 
 #[derive(Deserialize)]
@@ -677,6 +722,15 @@ impl ClientesPort for Clientes {
     }
     async fn items_lote(&self, skus: &[String]) -> Option<Vec<ItemStock>> {
         Clientes::items_lote(self, skus).await
+    }
+
+    async fn stock_ubicacion(
+        &self,
+        empresa_id: &str,
+        ubicacion_id: &str,
+        skus: &[String],
+    ) -> Option<Vec<StockUbicacion>> {
+        Clientes::stock_ubicacion(self, empresa_id, ubicacion_id, skus).await
     }
 }
 
