@@ -14,6 +14,7 @@ const RUTAS_PUBLICAS = new Set([
   'GET /api/v2/incorporaciones/{token}',
   'POST /api/v2/incorporaciones/{token}/aceptar',
   'GET /api/v2/tiendas/{id}',
+  'GET /api/v2/tienda/items/{item_id}/resenas',
   'GET /api/v2/storage/public/objetos/{id}',
   'HEAD /api/v2/storage/public/objetos/{id}',
   'POST /api/v2/auth/login',
