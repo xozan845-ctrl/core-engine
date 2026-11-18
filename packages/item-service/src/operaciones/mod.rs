@@ -90,11 +90,10 @@ impl Operaciones {
             outbox.clone(),
             Some(items.clone()),
         ));
-        let servicios = Arc::new(Servicios::con_productos(
-            db.clone(),
-            productos.clone(),
-            Some(items),
-        ));
+        let servicios = Arc::new(
+            Servicios::con_productos(db.clone(), productos.clone(), Some(items))
+                .con_proyecciones(proyecciones.clone()),
+        );
         Self {
             productos,
             servicios,

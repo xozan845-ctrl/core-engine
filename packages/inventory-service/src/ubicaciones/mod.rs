@@ -1,9 +1,9 @@
 //! Multi-bodega/sucursal (Fase P1.2, ADR-0001).
 //!
-//! Réplica de `ubicaciones.service.ts`. `item.items.stock` es el total de la
-//! empresa y `item_stock_ubicacion` su desglose: la primera ubicación absorbe
-//! el stock existente, las transferencias no alteran el total y `fijar_stock`
-//! resincroniza el total del item dentro de la misma transacción.
+//! Réplica de `ubicaciones.service.ts`. `inventory.item_stock_ubicacion` es la
+//! fuente única del stock (ADR-0020 fase 3b): la primera ubicación absorbe el
+//! stock existente, las transferencias no alteran el total y `fijar_stock`
+//! ajusta el desglose dentro de la misma transacción.
 
 use crate::db::{fila_a_json, interno, Db};
 use crate::errors::ApiError;
