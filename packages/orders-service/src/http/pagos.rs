@@ -25,6 +25,12 @@ pub fn rutas() -> Router<AppState> {
         .route("/api/v2/admin/pagos", get(listar_pagos))
         .route("/api/v2/admin/pagos/{id}/confirmar", post(confirmar_pago))
         .route("/api/v2/admin/pagos/{id}/rechazar", post(rechazar_pago))
+        .route("/api/v2/admin/pagos/{id}/reembolsar", post(reembolsar_pago))
+        .route(
+            "/api/v2/admin/pagos/{id}/contracargo",
+            post(contracargo_pago),
+        )
+        .route("/api/v2/admin/pagos/{id}/conciliar", post(conciliar_pago))
         .route("/internal/pagos/webhook", post(webhook_pago))
 }
 
@@ -112,6 +118,78 @@ pub async fn rechazar_pago(
         .rechazar(&id, &motivo, &actor.user_id)
         .await?;
     rechazar_y_cancelar(&state, pago, &motivo, &actor.user_id).await
+}
+
+/// `POST /api/v2/admin/pagos/:id/reembolsar` (admin).
+pub async fn reembolsar_pago(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    Path(id): Path<String>,
+    Cuerpo(dto): Cuerpo,
+) -> Result<Response, ApiError> {
+    let actor = UsuarioContexto::desde_headers_o_error(&headers)?;
+    actor.exigir_roles(&["super_admin", "admin"], &[])?;
+    let monto_cents = dto
+        .get("monto_cents")
+        .and_then(Value::as_i64)
+        .filter(|monto| *monto > 0)
+        .ok_or_else(|| {
+            ApiError::validacion(json!([
+                {"campo": "monto_cents", "restricciones": ["isInt", "min:1"]}
+            ]))
+        })?;
+    let motivo = dto
+        .get("motivo")
+        .and_then(Value::as_str)
+        .unwrap_or("")
+        .trim();
+    let pago = state
+        .pagos()?
+        .reembolsar(&id, monto_cents, motivo, &actor.user_id)
+        .await?;
+    ok(serde_json::to_value(pago).map_err(|_| ApiError::interno())?)
+}
+
+/// `POST /api/v2/admin/pagos/:id/contracargo` (admin).
+pub async fn contracargo_pago(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    Path(id): Path<String>,
+    Cuerpo(dto): Cuerpo,
+) -> Result<Response, ApiError> {
+    let actor = UsuarioContexto::desde_headers_o_error(&headers)?;
+    actor.exigir_roles(&["super_admin", "admin"], &[])?;
+    let monto_cents = dto
+        .get("monto_cents")
+        .and_then(Value::as_i64)
+        .filter(|monto| *monto > 0)
+        .ok_or_else(|| {
+            ApiError::validacion(json!([
+                {"campo": "monto_cents", "restricciones": ["isInt", "min:1"]}
+            ]))
+        })?;
+    let motivo = dto
+        .get("motivo")
+        .and_then(Value::as_str)
+        .unwrap_or("")
+        .trim();
+    let pago = state
+        .pagos()?
+        .contracargar(&id, monto_cents, motivo, &actor.user_id)
+        .await?;
+    ok(serde_json::to_value(pago).map_err(|_| ApiError::interno())?)
+}
+
+/// `POST /api/v2/admin/pagos/:id/conciliar` (admin).
+pub async fn conciliar_pago(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    Path(id): Path<String>,
+) -> Result<Response, ApiError> {
+    let actor = UsuarioContexto::desde_headers_o_error(&headers)?;
+    actor.exigir_roles(&["super_admin", "admin"], &[])?;
+    let pago = state.pagos()?.conciliar(&id, &actor.user_id).await?;
+    ok(serde_json::to_value(pago).map_err(|_| ApiError::interno())?)
 }
 
 /// `POST /internal/pagos/webhook` (proveedor de pagos; secreto compartido).

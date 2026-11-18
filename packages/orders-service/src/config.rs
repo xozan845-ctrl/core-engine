@@ -30,6 +30,9 @@ pub struct Config {
     pub outbox_tabla: String,
     pub tasa_comision: f64,
     pub pago_webhook_secret: Option<String>,
+    pub pago_proveedor: String,
+    pub pago_proveedor_url: Option<String>,
+    pub pago_proveedor_key: Option<String>,
 }
 
 impl Config {
@@ -111,6 +114,9 @@ impl Config {
             },
             outbox_tabla: leer("OUTBOX_TABLA").unwrap_or_else(|| "orders.outbox".to_string()),
             pago_webhook_secret: leer("PAGO_WEBHOOK_SECRET"),
+            pago_proveedor: leer("PAGO_PROVEEDOR").unwrap_or_else(|| "simulado".to_string()),
+            pago_proveedor_url: leer("PAGO_PROVEEDOR_URL"),
+            pago_proveedor_key: leer("PAGO_PROVEEDOR_KEY"),
             tasa_comision: match leer("COMMISSION_RATE") {
                 Some(valor) => valor
                     .parse::<f64>()
@@ -128,6 +134,9 @@ impl Config {
         }
         if self.rabbitmq_url.is_none() {
             return Err(ConfigError::Faltante("RABBITMQ_URL"));
+        }
+        if self.pago_proveedor.eq_ignore_ascii_case("http") && self.pago_proveedor_url.is_none() {
+            return Err(ConfigError::Faltante("PAGO_PROVEEDOR_URL"));
         }
         Ok(())
     }
