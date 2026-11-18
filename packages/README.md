@@ -37,16 +37,7 @@ son transversales a los rubros; no hay `farmacia-service` ni `dental-service`.
 | [`notifications-service`](./notifications-service/README.md) | 3012 | `notifications` | dev/stage/prod | Consumidor de eventos del pedido y correo transaccional (log/SMTP) |
 | [`analytics-service`](./analytics-service/README.md) | 3016 | `analytics` | dev/stage/prod | Hechos de venta, cohortes, reportes programados, analítica de negocio/empresa/plataforma |
 | [`commissions-service`](./commissions-service/README.md) | 3006 | `commissions` | **solo dev/stage** | Comisiones, liquidaciones quincenales, estado de cuenta de vendedor/empresa y reportes |
-| [`market-intelligence-service`](./market-intelligence-service/README.md) | 3009 | `intelligence` | dev/stage/prod* | Demanda, tendencias, forecast, anomalías, mapas de calor, scores y calidad de datos |
-
-\* El `README.md` raíz describe `market-intelligence-service` como “solo
-desarrollo”, pero `docker-compose.yml` y `docker-compose.stage.yml` **sí lo
-despliegan**. La fuente operativa es el compose; la contradicción está
-pendiente de normalizar en la documentación raíz.
-
-> **Puerto 3016:** `pricing-service` usa **3014**. El README raíz tiene una
-> errata que asigna 3016 a pricing; el compose y el código usan 3014, y 3016 es
-> de `analytics-service`.
+| [`market-intelligence-service`](./market-intelligence-service/README.md) | 3009 | `intelligence` | dev/stage/prod | Demanda, tendencias, forecast, anomalías, mapas de calor, scores y calidad de datos |
 
 ### Servicios siempre activos vs. servicios con capacidades
 
