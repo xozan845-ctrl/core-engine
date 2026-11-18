@@ -18189,6 +18189,197 @@
         ]
       }
     },
+    "/api/v2/admin/pagos/{id}/reembolsar": {
+      "post": {
+        "operationId": "PagosController_reembolsarPago",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "monto_cents": {
+                    "type": "integer",
+                    "minimum": 1
+                  },
+                  "motivo": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "monto_cents"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Reembolso total o parcial registrado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/OrdersPagoResponseDto"
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/MetaRespuesta"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Reembolsar un pago (admin)",
+        "tags": [
+          "Pagos"
+        ]
+      }
+    },
+    "/api/v2/admin/pagos/{id}/contracargo": {
+      "post": {
+        "operationId": "PagosController_contracargoPago",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "monto_cents": {
+                    "type": "integer",
+                    "minimum": 1
+                  },
+                  "motivo": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "monto_cents"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Contracargo registrado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/OrdersPagoResponseDto"
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/MetaRespuesta"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Registrar un contracargo (admin)",
+        "tags": [
+          "Pagos"
+        ]
+      }
+    },
+    "/api/v2/admin/pagos/{id}/conciliar": {
+      "post": {
+        "operationId": "PagosController_conciliarPago",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Pago conciliado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/OrdersPagoResponseDto"
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/MetaRespuesta"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Conciliar un pago (admin)",
+        "tags": [
+          "Pagos"
+        ]
+      }
+    },
     "/api/v2/orders/{id}": {
       "get": {
         "operationId": "PedidosController_detalle",
@@ -37863,12 +38054,24 @@
           "referencia": {
             "type": "string"
           },
+          "proveedor": {
+            "type": "string",
+            "description": "Pasarela que creó el cargo (simulado/http/manual)"
+          },
+          "monto_reembolsado_cents": {
+            "type": "integer"
+          },
           "motivo_rechazo": {
             "type": "string"
           },
           "confirmado_por": {
             "type": "string",
             "format": "uuid",
+            "nullable": true
+          },
+          "conciliado_en": {
+            "type": "string",
+            "format": "date-time",
             "nullable": true
           },
           "confirmado_en": {
@@ -37890,8 +38093,11 @@
           "monto_cents",
           "moneda",
           "referencia",
+          "proveedor",
+          "monto_reembolsado_cents",
           "motivo_rechazo",
           "confirmado_por",
+          "conciliado_en",
           "confirmado_en",
           "creado_en"
         ]

@@ -389,5 +389,9 @@ marketplace que ya funciona.
   el IVA se calcula por línea con descuentos. Las declaraciones siguen siendo de
   plataforma porque el libro mayor no tiene tenant. Decisión en
   [ADR-0026](../adr/0026-fiscalidad-por-tenant.md).
-- **P2.2 — Pagos reales:** pendiente.
+- **P2.2 — Pagos reales: implementado (capa de pagos).** ACL `ProveedorPagos`
+  con adaptador simulado y HTTP, cargo externo, reembolso total/parcial,
+  contracargo, conciliación y auditoría en `orders.pagos_eventos`. Decisión en
+  [ADR-0027](../adr/0027-pagos-proveedor-reembolsos.md). La conciliación
+  automática contra la pasarela queda como evolución.
 

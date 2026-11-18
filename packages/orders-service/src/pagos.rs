@@ -136,7 +136,7 @@ impl ProveedorPagos for ProveedorHttp {
             .get("referencia")
             .and_then(Value::as_str)
             .filter(|valor| !valor.is_empty())
-            .ok_or_else(|| ApiError::interno())?
+            .ok_or_else(ApiError::interno)?
             .to_string();
         Ok(CargoExterno { referencia })
     }
@@ -622,6 +622,7 @@ impl Pagos {
         fila_pago(&fila)
     }
 
+    #[allow(clippy::too_many_arguments)]
     async fn registrar_evento(
         &self,
         tx: &mut sqlx::Transaction<'_, sqlx::Postgres>,
