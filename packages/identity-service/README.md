@@ -1,86 +1,431 @@
-# identity-service · Rust
+# identity-service · identidad, tenancy y capacidades
 
-Reescritura en Rust de `identity-service` con **paridad de contrato**. La
-decisión y los invariantes están en
-[`docs/adr/0017-identity-service-en-rust.md`](../../../docs/adr/0017-identity-service-en-rust.md).
+`identity-service` es la **autoridad de identidad y tenancy** de Core Engine.
+Emite y revoca sesiones (JWT HS256), administra empresas y negocios, resuelve
+las **capacidades** efectivas de cada tenant, publica el **manifiesto de
+features**, gestiona personal/roles/permisos, partes universales, registros
+validados por JSON Schema y extensiones configurables, y expone la API interna
+que consumen el resto de microservicios.
 
-El crate vive en la raíz de `packages/identity-service/`; el TypeScript se
-retiró en la conmutación (PR 9) y el servicio se construye con `cargo`.
+Es uno de los servicios **siempre activos**: no está gateado por capacidad y es
+requisito de arranque del resto (todos consultan `identity` para resolver
+capacidades, tenants, temas o partes).
 
-## Comandos
+- Reescritura Rust con paridad de contrato:
+  [ADR-0017](../../docs/adr/0017-identity-service-en-rust.md)
+- Negocios por empresa:
+  [ADR-0021](../../docs/adr/0021-negocios-por-empresa.md)
+- Fidelización por capacidades:
+  [ADR-0019](../../docs/adr/0019-fidelizacion-por-capacidades.md)
+- Contrato OpenAPI:
+  [`docs/openapi/identity-service/`](../../docs/openapi/identity-service/)
+
+---
+
+## 1. Ficha técnica
+
+| Campo | Valor |
+|---|---|
+| Crate | `identity-service` (`packages/identity-service`) |
+| Stack | `axum` 0.8, `sqlx` 0.8, `jsonwebtoken` 9, `bcrypt`, `lettre`, `jsonschema` |
+| Puerto | `3001` (`PORT`) |
+| Esquema | `identity` |
+| Outbox | `identity.outbox` (`OUTBOX_TABLA`) |
+| Servicios que consume | `storage` (medios/avatares), `stores` (validación de tiendas) |
+| Servicios que lo consumen | Todos los gateados, `analytics`, `notifications`, `orders`, `finance`, `logistics`, `field`, `scheduling`, `stores`, `commissions`, `intelligence` |
+| Expuesto al host | No |
+| Entornos | dev, stage, producción |
+
+### Variables de entorno
+
+| Variable | Obligatoria | Default | Uso |
+|---|---|---|---|
+| `DATABASE_URL` | **Sí** | — | PostgreSQL; sin ella no arranca |
+| `RABBITMQ_URL` | No | — | Reservada; el servicio no abre RabbitMQ hoy |
+| `OUTBOX_TABLA` | No | `identity.outbox` | Reservada; no se escribe outbox hoy |
+| `PORT` | No | `3001` | Puerto HTTP |
+| `SERVICIO` | No | `identity-service` | Etiqueta de logs/métricas |
+| `NODE_ENV` | No | — | `production` exige secretos |
+| `JWT_SECRET` | **Sí en producción** | `dev_secret` | Firma HS256 |
+| `JWT_ACCESS_TTL` | No | `900s` | Acepta `s`, `m`, `h`, `d`; valor inválido cae a 7 d por compatibilidad |
+| `JWT_REFRESH_TTL` | No | `7d` | Idem |
+| `ADMIN_EMAIL` | **Sí en producción** | admin de desarrollo | Seed idempotente |
+| `ADMIN_PASSWORD` | **Sí en producción** | admin de desarrollo | Seed idempotente |
+| `FRONTEND_URL` | No | `http://localhost:5173` | Enlaces de invitación/reset |
+| `STORAGE_SERVICE_URL` | No | `http://storage-service:3010` | Validar medios |
+| `STORES_SERVICE_URL` | No | `http://stores-service:3003` | Validar tiendas |
+| `INTERNAL_API_KEY` | Recomendada | — | Protege `/internal/**` y llamadas salientes |
+| `PLATFORM_TENANT_ID` | No | — (sin default) | Tenant de assets de plataforma; sin él, la configuración de sitio no puede resolver medios de plataforma (`PLATFORM_TENANT_ID_NO_CONFIGURADO`) |
+| `PLATFORM_LOGISTICS_TENANT_ID` | No | `00000000-0000-4000-8000-000000000001` (aplicado por el seed) | Flota global |
+| `EMAIL_MODE` | No | `log` | `log` o `smtp` |
+| `EMAIL_FROM` | Sí con `smtp` | — | Remitente |
+| `SMTP_HOST` | Sí con `smtp` | — | Servidor SMTP |
+| `SMTP_PORT` | No | `587` | Puerto |
+| `SMTP_USER` / `SMTP_PASSWORD` | Juntos | — | Autenticación SMTP |
+
+`EMAIL_MODE` distinto de `log`/`smtp` impide arrancar. Con `smtp`,
+`SMTP_HOST`, `EMAIL_FROM` y el par usuario/contraseña se validan al inicio.
+
+---
+
+## 2. Arquitectura interna
+
+```
+src/
+├── main.rs              bootstrap: config, pool, dependencias, seed, router
+├── auth.rs              JWT HS256, bcrypt, claims, UsuarioContexto
+├── config.rs            entorno + fail-fast
+├── db.rs                pool, transacciones, RLS, helpers ISO/UUID
+├── email.rs             puerto Email: LogEmail / SmtpEmail (lettre)
+├── seed.rs              admin inicial + tenant de plataforma (best-effort)
+├── storage.rs           cliente interno de storage (validar avatar/medio)
+├── stores.rs            cliente interno de stores (validar tienda)
+├── http/                router, handlers, envelope, validación
+└── dominio/
+    ├── api_keys.rs             API keys hasheadas + canje por JWT
+    ├── auditoria.rs            bitácora por empresa/negocio
+    ├── auth.rs                 registro, login, refresh, logout
+    ├── capacidades.rs          capacidades por empresa
+    ├── configuracion_operativa.rs  modelos/items/fulfillment efectivos
+    ├── configuracion_sitio.rs  branding de plataforma
+    ├── empresas.rs             alta, perfil, slug, pack, vendedores
+    ├── extensiones.rs          JSON Schema versionado por empresa
+    ├── features.rs             mapa capacidad → features del manifiesto
+    ├── media.rs                fondos imagen/video + posiciones
+    ├── negocios.rs             unidad operativa (vertical/pack propios)
+    ├── packs.rs                verticales, packs, modelos
+    ├── partes.rs               personas/organizaciones y relaciones
+    ├── password_reset.rs       token de un uso, 30 min, hash SHA-256
+    ├── personal.rs             roles, puestos, asignaciones, invitaciones
+    ├── registros.rs            historia clínica, recetas, expedientes
+    ├── sesiones.rs             refresh persistido y revocable
+    ├── slug.rs                 normalización, reservados, UUID
+    ├── tema.rs                 plantillas, colores, herencia
+    └── usuarios.rs             credenciales, perfiles, avatares
+```
+
+**Regla de capas:** `http/` valida y traduce; `dominio/` contiene reglas y SQL
+explícito. `AppState` inyecta `Arc` de cada servicio de dominio; los clientes
+internos son objetos concretos (`Storage`, `Stores`).
+
+---
+
+## 3. Autenticación y sesiones
+
+### Registro y login
+
+- `POST /api/v2/auth/registro` acepta únicamente roles **`empresario`** y
+  **`comprador`** (`ROLES_REGISTRABLES`). Cualquier otro rol exige
+  `POST /auth/crear-usuario` por un admin.
+- Contraseñas con **bcrypt coste 10**; nunca se devuelve el hash.
+- Login compara con `bcrypt::verify`; error genérico para no filtrar si el
+  correo existe.
+- `POST /auth/refresh` valida firma, `tipo = refresh`, `jti` y que la sesión
+  siga activa en `identity.sesiones`. Rota el refresh y devuelve un par nuevo.
+- `POST /auth/logout` marca `revocada_en`; el refresh deja de servir.
+- `GET /auth/me` devuelve el perfil de la sesión actual.
+- `POST /auth/negocio-activo` re-emite tokens con otro `negocio_id` si el
+  usuario tiene acceso; `GET /auth/negocios` lista los disponibles.
+
+### Claims del JWT
+
+| Claim | Contenido |
+|---|---|
+| `sub` | UUID del usuario |
+| `email` | Correo |
+| `rol` | Rol global (9 posibles) |
+| `tipo` | `access` o `refresh` |
+| `nombre` | Nombre visible |
+| `tenant_id` | Empresa activa |
+| `personal_id` | Ficha de personal |
+| `participacion_porcentaje` | Participación del vendedor |
+| `rol_empresa_id` | Rol configurable dentro de la empresa |
+| `negocio_id` | Negocio activo |
+| `permisos` | Lista de permisos JSON (`ordenes.leer`, …) |
+| `jti` | Solo refresh; permite revocar |
+| `iat`, `exp` | Emisión y expiración |
+
+`expira_en` en la respuesta es el **TTL en segundos** (900), no un timestamp.
+
+### Contraseñas y recuperación
+
+- `POST /auth/cambiar-contrasena` (autenticado) exige la contraseña actual.
+- `POST /auth/restablecer-contrasena` responde **siempre igual** exista o no el
+  correo (OWASP A07).
+- `POST /auth/restablecer-contrasena/confirmar` consume un token de un solo uso:
+  en BD solo se guarda su SHA-256, vence a los **30 minutos**, y solicitar uno
+  nuevo invalida los anteriores.
+- La entrega usa `Email`: en dev escribe el enlace en logs; con SMTP usa
+  `lettre` y `FRONTEND_URL` para construir el enlace.
+
+### API keys (máquina a máquina)
+
+- Se crean con `POST /api/v2/api-keys`; el secreto se muestra **una vez**.
+- Se guarda solo el hash SHA-256 y un `prefijo` para identificarla.
+- `POST /api/v2/auth/token` intercambia `{api_key}` por un **JWT de acceso
+  corto** sin refresh. Roles permitidos: `empresario`, `vendedor`, `logistica`,
+  `coordinador`, `supervisor`, `operativo`.
+- Revocación con `DELETE /api/v2/api-keys/{id}`.
+- La key nunca se envía a los microservicios ni se acepta desde un navegador
+  (R-GW-8).
+
+---
+
+## 4. Tenancy: empresa, negocio, pack y capacidades
+
+### Empresa
+
+- `POST /api/v2/empresas` crea la empresa y el negocio **`principal`** en la
+  misma operación, con `vertical_id` y `pack_codigo`/`pack_version`.
+- Acepta `capacidades_extra` para add-ons (p. ej. `fidelizacion`).
+- `GET /empresas/{id}` resuelve por UUID **o slug**; solo miembros o admins.
+- `PATCH /empresas/{id}/perfil` actualiza datos comerciales/fiscales y logo.
+- `PATCH /empresas/{id}/slug` crea un slug nuevo, guarda historial en
+  `identity.empresa_slugs` y los anteriores responden `301`.
+- `PATCH /empresas/{id}/pack` cambia/actualiza el pack versionado.
+- `POST /empresas/{id}/vendedores` crea un vendedor con participación
+  predeterminada (regla RN-04).
+
+### Negocio
+
+- Es la unidad operativa con **vertical y pack propios** (ADR-0021).
+- Una empresa simple tiene `principal`; añadir un segundo negocio exige un
+  `empresario` activo y pasa por `POST /empresas/{id}/negocios`.
+- Ciclo de vida: `activo`, `suspendido`, `archivado`
+  (`PATCH .../negocios/{negocioId}/estado`).
+- `POST .../negocios/{negocioId}/plantillas` aplica plantillas de roles por
+  vertical; `GET /negocios/plantillas` las lista.
+- Transferencia de personal entre negocios:
+  `POST /empresas/{id}/personal/{usuarioId}/transferir`.
+- Cada negocio tiene sus capacidades (`identity.negocio_capacidades`), que se
+  consultan/activan por separado de las de la empresa.
+
+### Capacidades y manifiesto
+
+- `GET /empresas/{empresaId}/capacidades` lista las de la empresa.
+- `PATCH /empresas/{empresaId}/capacidades/{capacidad}` activa/desactiva.
+- `GET/PATCH /empresas/{empresaId}/negocios/{negocioId}/capacidades[/{capacidad}]`
+  hace lo propio por negocio.
+- `GET /empresas/{empresaId}/features` devuelve el **manifiesto**: la unión de
+  features de las capacidades activas según `dominio/features.rs`.
+- Una capacidad desconocida o no permitida devuelve `CAPACIDAD_INVALIDA` /
+  `CAPACIDAD_NO_DISPONIBLE`.
+
+### Packs, verticales y modelos
+
+- `GET /packs` lista packs activos; `POST /packs` crea una plantilla.
+- `GET/POST /packs/verticales` administra verticales.
+- `GET/POST /packs/modelos-operacion` administra modelos reutilizables.
+- `GET /packs/{codigo}/{version}` devuelve el pack versionado y sus
+  capacidades/modelos.
+- Un pack incompatible con la vertical del negocio produce
+  `PACK_VERTICAL_INCOMPATIBLE`.
+
+---
+
+## 5. Personal, roles y permisos
+
+- **Roles configurables por empresa** (`identity.roles_empresa`) con un JSON de
+  permisos; `POST/GET /empresas/{id}/roles` y
+  `PATCH /empresas/{id}/roles/{rolId}`.
+- **Puestos operativos** (`puestos_empresa`): `POST/GET /empresas/{id}/puestos`.
+- **Asignaciones** (`asignaciones_personal`): un miembro se asigna a un rol y,
+  opcionalmente, a una tienda/puesto. `POST/GET
+  /empresas/{id}/asignaciones-personal`.
+- **Invitaciones** de personal: enlace de **72 h** con token hasheado; se
+  revocan y se consumen por
+  `GET/POST /api/v2/incorporaciones/{token}[/aceptar]`.
+- Aceptar una incorporación crea cuenta, membresía y sesión, y valida la tienda
+  contra `stores-service`.
+- Permisos frecuentes: `personal.leer`, `personal.gestionar`,
+  `capacidades.leer`, `capacidades.gestionar`, `ordenes.leer`,
+  `catalogo.leer`, etc. Un rol de negocio puede administrar su negocio aunque
+  su rol global no sea `empresario`.
+- La autorización fina combina rol global + `rol_empresa_id` + `permisos` +
+  `negocio_id`.
+
+---
+
+## 6. Partes universales y registros
+
+### Partes
+
+Una **parte** es una persona u organización del tenant, sin acoplar el modelo a
+"cliente" o "paciente":
+
+- `GET/POST /empresas/{id}/partes`
+- `GET/PATCH/DELETE /empresas/{id}/partes/{parteId}` (DELETE archiva)
+- Contactos: `GET/POST/PATCH/DELETE .../contactos[/{contactoId}]`
+- Direcciones: `GET/POST/PATCH/DELETE .../direcciones[/{direccionId}]`
+- Relaciones: `GET/POST .../relaciones`, `DELETE .../relaciones/{relacionId}`
+
+Tipos: `persona`/`organizacion`; estados `activo`/`inactivo`/`archivado`.
+Contactos: `email`, `telefono`, `whatsapp`, `web`, `otro`. Direcciones:
+`fiscal`, `comercial`, `entrega`, `operativa`, `otro`. El borrado es lógico y
+arrastra datos derivados (registros, contactos, direcciones) de forma
+consistente.
+
+### Registros
+
+- `GET/POST /empresas/{id}/partes/{parteId}/registros`
+- `GET/PATCH/DELETE .../registros/{registroId}` (DELETE archiva)
+- Esquemas por tipo: `GET/PUT /empresas/{id}/registros/esquemas/{tipo}`,
+  `GET .../registros/esquemas`.
+- La **capacidad** (`historia_clinica`, `recetas`, `registros`) decide el
+  acceso; el rubro no.
+- `datos` se valida contra JSON Schema (máx. **64 KiB**) y admite hasta **10
+  adjuntos** referenciados de storage.
+
+### Extensiones
+
+- `GET/POST /empresas/{id}/extensiones`
+- `PATCH /empresas/{id}/extensiones/{codigo}` activa/desactiva una versión
+- `POST .../extensiones/{codigo}/validar` valida datos sin guardar
+- `GET/PUT/DELETE .../extensiones/{codigo}/valores/{recursoId}`
+
+Características: versionado por código, **una sola versión vigente**, JSON
+Schema sin `$ref`, máximo 64 KiB, activación explícita y valores por recurso.
+Un esquema inválido devuelve `ESQUEMA_EXTENSION_INVALIDO`; datos inválidos,
+`FORMULARIO_EXTENSION_INVALIDO` / `REGLAS_EXTENSION_INVALIDAS`.
+
+---
+
+## 7. API pública (resumen)
+
+> Fuente de verdad: `docs/openapi/identity-service/public.openapi.json`.
+> Todas las rutas pasan por el gateway (`/api/v2/...`).
+
+| Área | Rutas |
+|---|---|
+| Auth | `POST /auth/{registro,login,refresh,logout,crear-usuario,cambiar-contrasena,restablecer-contrasena,restablecer-contrasena/confirmar,vincular-personal,token}`, `GET /auth/me`, `GET /auth/negocios`, `POST /auth/negocio-activo` |
+| Usuarios | `GET /usuarios`, `GET /usuarios/{id}`, `PATCH /usuarios/{id}/avatar` |
+| Empresas | `POST /empresas`, `GET /empresas/{id}`, `PATCH /empresas/{id}/{pack,perfil,slug}`, `POST /empresas/{id}/vendedores` |
+| Capacidades | `GET/PATCH /empresas/{empresaId}/capacidades[/{capacidad}]`, idem por negocio, `GET /empresas/{empresaId}/features` |
+| Packs | `GET/POST /packs`, `GET/POST /packs/verticales`, `GET/POST /packs/modelos-operacion`, `GET /packs/{codigo}/{version}` |
+| Negocios | `GET/POST /empresas/{empresaId}/negocios`, `POST .../negocios/{id}/plantillas`, `PATCH .../negocios/{id}/estado`, `GET /negocios/plantillas`, `POST /empresas/{id}/personal/{usuarioId}/transferir` |
+| Personal | `GET/POST /empresas/{id}/roles`, `PATCH .../roles/{rolId}`, `GET/POST /empresas/{id}/puestos`, `GET/POST /empresas/{id}/asignaciones-personal`, `GET/POST /empresas/{id}/invitaciones/personal`, `POST .../invitaciones/personal/{id}/revocar`, `GET/POST /incorporaciones/{token}[/aceptar]` |
+| Partes | CRUD de partes, contactos, direcciones y relaciones bajo `/empresas/{id}/partes/**` |
+| Registros | CRUD de registros y esquemas bajo `/empresas/{id}/partes/{parteId}/registros` y `/empresas/{id}/registros/esquemas` |
+| Extensiones | `/empresas/{id}/extensiones/**` |
+| Configuración | `GET/PATCH /configuracion/sitio`; fondos y tema de plataforma |
+| Auditoría | `GET /empresas/{empresaId}/auditoria` |
+| API keys | `GET/POST /api-keys`, `DELETE /api-keys/{id}`, `POST /auth/token` |
+
+Roles: el gateway restringe por rol global; `identity` aplica además la
+autorización por tenant/negocio/permiso. Un empresario solo opera su empresa y
+solo si sigue siendo miembro activo con rol `empresario`.
+
+---
+
+## 8. API interna (`x-internal-key`)
+
+| Método | Ruta | Consumidor típico |
+|---|---|---|
+| GET | `/internal/usuarios/{id}` | Cualquier servicio que hidrata usuarios |
+| GET | `/internal/vendedores` | commissions, stores, intelligence |
+| GET | `/internal/contar-vendedores` | reportes |
+| GET | `/internal/empresas/{id}` | Todos |
+| GET | `/internal/empresas/{id}/configuracion` | item, pricing, inventory, orders, logistics |
+| GET | `/internal/empresas/{id}/tema` | stores |
+| GET | `/internal/configuracion-sitio/tema` | stores |
+| POST | `/internal/empresas/capacidades` | Gating por lote de empresas |
+| POST | `/internal/extensiones/valores` | Servicios que leen extensiones |
+| GET | `/internal/partes/{id}` | orders, finance, field, analytics |
+
+Las respuestas internas no usan envelope. La comparación de
+`x-internal-key` es en tiempo constante. Un fallo de red se traduce en
+`SERVICIO_NO_DISPONIBLE`; un 404 en `NO_ENCONTRADO`.
+
+---
+
+## 9. Eventos y outbox
+
+**Hoy `identity` no publica ni consume eventos de negocio.** Toda la integración
+con otros servicios es **síncrona por API interna** (`/internal/...`), que es
+justo el caso permitido por R-AR-2 para consultas de lectura: capacidades,
+empresas, tema, partes y configuración operativa.
+
+- El compose define `OUTBOX_TABLA=identity.outbox`, pero el servicio **no tiene
+  módulo `outbox.rs`, no abre RabbitMQ y no escribe eventos**. La variable queda
+  reservada para una evolución futura.
+- Consecuencia práctica: cuando cambia una capacidad o un negocio, los demás
+  servicios lo ven en su siguiente consulta a identity; no hay invalidación por
+  bus. La caché de tema de `stores` usa TTL (`TEMA_HERENCIA_TTL_MS`) para acotar
+  la ventana de datos obsoletos.
+- Si en el futuro se publican `empresa.creada`, `capacidad.actualizada`, etc.,
+  deberá añadirse el outbox transaccional y documentarse aquí.
+
+---
+
+## 10. Seguridad y aislamiento
+
+- **RLS**: el pool fija `request.jwt.claims`; las consultas filtran por
+  `empresa_id` y, cuando existe, `negocio_id`. `99_rls.sql` activa las
+  políticas en Supabase.
+- **Autorización en dos capas**: rol global (gateway + `auth.rs`) y
+  tenant/negocio/permiso (dominio). Los handlers de negocio comprueban
+  membresía activa.
+- **Borrado lógico**: partes, contactos, direcciones, relaciones y registros se
+  archivan; no se borran filas con historia.
+- **Tokens**: refresh con `jti` persistido; reset con hash y un solo uso;
+  invitaciones con hash y 72 h; API keys con hash.
+- **Slugs**: normalización determinista, lista de 37 reservados, rechazo de
+  UUID, sufijos ante colisión (máx. 50 intentos) e historial con `301`.
+- **Seed**: el admin y el tenant de plataforma se crean de forma idempotente y
+  *best-effort*; un fallo se registra y no impide arrancar.
+
+---
+
+## 11. Observabilidad y operación
+
+- `GET /health`: liveness.
+- `GET /metrics`: métricas Prometheus comunes
+  (`core_engine_http_requests_total`, errores, latencia, outbox).
+- `GET /docs`, `/docs-json`: OpenAPI versionado.
+- Logs JSON con `x-request-id` y contexto por tarea.
+- Apagado ordenado en `SIGINT`/`SIGTERM`; cierra pool y deja de aceptar
+  peticiones.
+- Worker de outbox cada segundo; sin consumidores de eventos propios.
+
+### Diagnóstico frecuente
+
+| Síntoma | Causa probable |
+|---|---|
+| `401` en todas las rutas | `JWT_SECRET` distinto entre gateway e identity |
+| `403 CAPACIDAD_NO_ACTIVA` en un servicio | Capacidad no activada en empresa/negocio |
+| Refresh inválido tras reinicio | Sesión revocada o `jti` no persistido |
+| Invitación “no válida” | Token vencido (72 h), ya usado o revocado |
+| `PACK_VERTICAL_INCOMPATIBLE` | Pack de otra vertical |
+| `NEGOCIO_INCOHERENTE` | Segundo negocio sin empresario activo |
+
+---
+
+## 12. Pruebas
 
 ```bash
 cd packages/identity-service
 cargo fmt --check
 cargo clippy --all-targets -- -D warnings
 cargo test
-cargo run   # requiere DATABASE_URL (fail-fast, R-MS-5)
+cargo llvm-cov --ignore-filename-regex 'src/main\.rs' --summary-only
 ```
 
-Variables de entorno: `PORT` (3001), `SERVICIO`, `DATABASE_URL`,
-`RABBITMQ_URL`, `OUTBOX_TABLA`, `JWT_SECRET`, `JWT_ACCESS_TTL`,
-`JWT_REFRESH_TTL`, `ADMIN_EMAIL`, `ADMIN_PASSWORD`, `FRONTEND_URL`,
-`STORAGE_SERVICE_URL`, `INTERNAL_API_KEY`, `NODE_ENV`.
+- `tests/http_auth.rs`: registro/login/refresh/logout, permisos y flujo HTTP.
+- `tests/auth_pg.rs`: persistencia de sesiones, revocación y RLS contra
+  PostgreSQL real (`TEST_DATABASE_URL`).
+- Cobertura de referencia del gate Rust: 79/75 (medida 81,65/76,98).
+- Casos cubiertos: seed idempotente, slugs con historial, capacidades por
+  negocio, invitaciones, extensiones, registros y API keys.
 
-En producción `JWT_SECRET`, `ADMIN_EMAIL` y `ADMIN_PASSWORD` son obligatorias.
+---
 
-## Alcance actual (implementado)
+## 13. Referencias
 
-- Configuración con `fail-fast` de variables obligatorias, TTL de JWT y SMTP.
-- JWT HS256 de `access`/`refresh` con el mismo payload que
-  `packages/shared/src/auth/jwt.utils.ts` y `jti` en el refresh.
-- bcrypt coste 10 y contexto `x-user-*` del gateway.
-- PostgreSQL con claims de RLS (`request.jwt.claims`).
-- **Auth y sesiones**: registro, login, refresh, logout, `/auth/me`, alta
-  administrativa, cambio y restablecimiento de contraseña, vinculación de
-  personal y revocación de sesiones en `identity.sesiones`.
-- **Correo**: puerto `Email` con modo `log` y SMTP (`lettre`) para el enlace de
-  restablecimiento.
-- **Usuarios**: listado, perfil con control admin/propio, avatar validado
-  contra `storage-service`.
-- **Capacidades, verticales y packs**: lectura y altas administrativas, con
-  guard de empresario activo por tenant.
-- **Empresas**: alta con pack/vertical, negocio `principal` automático,
-  perfil, slug con historial y 301, cambio de pack, logo/fondos y alta de
-  vendedores.
-- **Negocios**: unidades operativas por empresa con vertical, pack y
-  capacidades propios; el segundo negocio exige un `empresario` activo
-  (ADR-0019). El JWT lleva `negocio_id` y la autorización por negocio usa
-  `personal.leer`, `personal.gestionar`, `capacidades.leer` y
-  `capacidades.gestionar`.
-- **Configuración del sitio**: fondos y panel de IA, plantilla y tema.
-- **API keys**: creación, listado, revocación y canje por JWT corto.
-- **Base compartida**: tema (herencia y overrides), medios (imagen/video) y
-  slugs (normalización, reservados y sufijos).
-- **Personal**: roles con permisos JSON, puestos, asignaciones, invitaciones
-  de 72 h e incorporaciones que crean cuenta, membresía y sesión; tiendas
-  validadas contra `stores-service`.
-- **Partes y registros**: personas/organizaciones, contactos, direcciones,
-  relaciones y registros genéricos con capacidad y adjuntos.
-- **Extensiones**: versionado por código, JSON Schema sin `$ref`, activación
-  de la versión vigente y valores por recurso validados.
-- **API interna**: usuarios, vendedores, empresas, tema, capacidades y partes
-  con `x-internal-key`; seed idempotente del admin y del tenant de plataforma.
-- Errores `{codigo, mensaje, detalles?}`, envelope `{data, meta}`, logs JSON,
-  `x-request-id` y métricas Prometheus.
-- `/health`, `/metrics`, `/docs` y `/docs-json` (OpenAPI versionado).
-- Apagado ordenado ante `SIGINT`/`SIGTERM`.
-- Gate Rust en CI con cobertura 79/75 (medida 81,65/76,98).
-
-El servicio está conmutado: el binario Rust es el runtime activo y el TypeScript fue retirado.
-
-## Imagen Docker
-
-`packages/identity-service/Dockerfile` es la imagen multi-stage activa:
-
-```bash
-docker build -f packages/identity-service/Dockerfile -t core-engine-identity-service .
-```
-
-Expone el puerto 3001 y ejecuta como usuario `10001:10001`.
-
-## Cobertura
-
-```bash
-cargo llvm-cov --ignore-filename-regex 'src/main\.rs'
-```
+- [ADR-0017 · identity-service en Rust](../../docs/adr/0017-identity-service-en-rust.md)
+- [ADR-0021 · negocios por empresa](../../docs/adr/0021-negocios-por-empresa.md)
+- [ADR-0005 · autenticación de gateway sin gate de borde](../../docs/adr/0005-autenticacion-gateway-sin-gate-de-borde.md)
+- [Runbook multi-vertical](../../docs/runbook-multi-vertical.md)
+- [Runbook de autenticación del gateway](../../docs/runbook-gateway-auth.md)
+- [Contrato público](../../docs/openapi/identity-service/public.openapi.json)
+- [Contrato interno](../../docs/openapi/identity-service/internal.openapi.json)
+- [README de paquetes](../README.md)

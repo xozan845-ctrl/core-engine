@@ -31,6 +31,7 @@ pub struct Config {
     pub finance_url: String,
     pub field_url: String,
     pub intelligence_url: String,
+    pub analytics_url: String,
 }
 
 impl Config {
@@ -110,6 +111,7 @@ impl Config {
                 "market-intelligence",
                 3009,
             ),
+            analytics_url: url_servicio(&leer, "ANALYTICS_SERVICE_URL", "analytics", 3016),
         })
     }
 }
@@ -155,6 +157,7 @@ mod tests {
         assert_eq!(config.puerto, PUERTO_GATEWAY);
         assert_eq!(config.jwt_secret, "dev_secret");
         assert_eq!(config.identity_url, "http://identity-service:3001");
+        assert_eq!(config.analytics_url, "http://analytics-service:3016");
         assert_eq!(config.proxy_timeout_ms, 30_000);
         assert_eq!(config.ready_cache_ms, 5_000);
     }
