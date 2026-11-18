@@ -115,7 +115,7 @@ impl Config {
                 Some(valor) => valor
                     .parse::<f64>()
                     .ok()
-                    .filter(|tasa| tasa.is_finite() && *tasa > 0.0 && *tasa < 1.0)
+                    .filter(|tasa| tasa.is_finite() && *tasa >= 0.0 && *tasa < 1.0)
                     .unwrap_or(TASA_COMISION_DEFAULT),
                 None => TASA_COMISION_DEFAULT,
             },
@@ -219,6 +219,12 @@ mod tests {
             TIMEOUT_INTERNO_DEFAULT_MS
         );
         assert_eq!(config.tasa_comision, TASA_COMISION_DEFAULT);
+    }
+
+    #[test]
+    fn debe_aceptar_una_tasa_cero_para_venta_directa() {
+        let config = Config::from_pairs([("COMMISSION_RATE", "0")]).expect("config");
+        assert_eq!(config.tasa_comision, 0.0);
     }
 
     #[test]

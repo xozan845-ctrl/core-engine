@@ -204,4 +204,10 @@ mod tests {
         let vacia = Config::from_pairs([("COMMISSION_RATE", "")]).expect("config");
         assert!(vacia.tasa_comision().is_nan());
     }
+
+    #[test]
+    fn debe_aceptar_una_tasa_cero_para_venta_directa() {
+        let config = Config::from_pairs([("COMMISSION_RATE", "0")]).expect("config");
+        assert_eq!(config.tasa_comision(), 0.0);
+    }
 }

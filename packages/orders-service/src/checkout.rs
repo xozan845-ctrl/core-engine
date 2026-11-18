@@ -521,7 +521,7 @@ impl Checkout {
             comision_cents: if es_cotizacion {
                 0
             } else {
-                money::comision(total, 0.12)?
+                money::comision(total, self.tasa_comision)?
             },
             moneda: moneda_orden,
             items,

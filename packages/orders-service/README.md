@@ -158,7 +158,7 @@ Validaciones en orden:
 5. `reserva`: exige `cliente_parte_id`, `recurso_id`, `inicia_en`, `termina_en`,
    cantidad 1 y fechas ISO; verifica disponibilidad en scheduling.
 6. Precio: base + margen de la oferta; comisión `total × COMMISSION_RATE`
-   (RN-04). En cotización la comisión es 0 hasta aceptar.
+   (RN-04; `0` desactiva la comisión). En cotización la comisión es 0 hasta aceptar.
 7. Crédito: registra la venta en finance antes de confirmar; si falla, se
    anula el crédito y no se crea la orden.
 8. Todo se persiste en una transacción: evento + outbox + proyección.
